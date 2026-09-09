@@ -20,6 +20,16 @@ Hai bên nối nhau qua bảng `generation_jobs` trên Postgres, không qua HTTP
 | 4 | `docs/kien-truc/HARVEST_MANIFEST.md` | Thu hoạch gì từ repo nào, hạng REUSE/EXTEND/ADAPTER/BUILD |
 | 5 | `AGENTS.md` | Quy ước, bản đồ mã, bẫy |
 
+## Chạy tại máy
+
+```bash
+cp .env.example .env      # điền SESSION_SECRET
+docker compose up -d
+npm i
+npx prisma db push
+npm run dev
+```
+
 ## Trạng thái
 
 Khung repo. Chưa có bảng, chưa có route, chưa có job.

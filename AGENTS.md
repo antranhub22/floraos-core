@@ -8,10 +8,11 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 
 | Việc | Lệnh |
 |---|---|
-| Cài | `npm i && npx prisma db push` |
+| Cài | `docker compose up -d && npm i && npx prisma db push` |
 | Chạy web | `npm run dev` |
 | Chạy worker | `cd workers && python -m media_ai.worker` |
 | Test web | `npm test` |
+| Test đầu cuối | `npm run test:e2e` |
 | Test worker | `cd workers && python3 -m pytest tests -q` |
 | Typecheck | `npx tsc --noEmit` |
 | Test cách ly tenant | `npm run test:tenant` — *bắt buộc xanh trước mọi merge* |
@@ -83,7 +84,7 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 *(Mỗi lần một điều bất ngờ làm mất hơn một giờ, thêm một dòng.)*
 
 - Bộ ảnh vàng là điều kiện nghiệm thu P5. Không có nó thì không đổi được provider và không hồi quy được phần thu hoạch. Quy cách ở `docs/kien-truc/BO_ANH_VANG.md`.
-- `npm run test:tenant` cố tình thất bại tới khi P1 xong. Đừng "sửa" nó bằng cách cho nó xanh.
+- `npm run test:tenant` cố tình thất bại tới khi P1 xong — tệp `tests/tenant/chua-trien-khai.test.ts`. Đừng "sửa" nó bằng cách cho nó xanh; xoá nó khi có bộ test thật.
 
 ## Quy tắc làm việc
 
