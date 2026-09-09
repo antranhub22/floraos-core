@@ -1,0 +1,19 @@
+// Nguồn sự thật lược đồ của floraos-core.
+// Worker Python đọc lược đồ sinh sẵn, không tự khai bảng (V2 mục 3.1).
+//
+// Lược đồ còn trống. Bảng đầu tiên thuộc P1: organizations, workspaces,
+// memberships, roles, branches (V2 mục 15).
+//
+// Luật bắt buộc với mọi model thêm vào đây:
+//   1. Mọi bản ghi thuộc tenant mang organization_id, có index. Không ngoại lệ.
+//   2. Đặt tên snake_case tiếng Anh.
+//   3. generation_jobs tách ba trục: status / stage / result.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
