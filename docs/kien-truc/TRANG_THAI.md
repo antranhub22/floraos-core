@@ -10,9 +10,12 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: P4 viết mã xong, CHƯA xác minh trên Postgres thật.** P3 nghiệm thu xong
-tuyệt đối (mục 1 cũ, xem nhật ký) — 35/35 `test:tenant` xanh, `npm test` domain thuần
-cũng còn để xác nhận lại trong phiên P4 (chưa có lần chạy thật riêng cho nó).
+**Giai đoạn: P4 nghiệm thu xong.** Anh Tony chạy bốn lệnh xác minh trên Terminal Mac
+thật ngay sau khi mã viết xong — xanh hoàn toàn, không phát sinh lỗi nào phải sửa (khác
+P3, vốn mất ba vòng tìm-và-sửa). `npm run test:tenant` **41/41** (35 cũ của P1–P3 + 6 ca
+mới cho `business_profiles`/`brand_profiles`, đúng số dự kiến) · `npm test` (domain
+thuần, gồm `profile-rules.test.ts`) xanh · `npx tsc --noEmit` sạch · `prisma
+generate`/`db push` xanh.
 
 Repo nằm ở `~/Projects/floraos-core`, remote `antranhub22/floraos-core`.
 
@@ -20,31 +23,17 @@ Repo nằm ở `~/Projects/floraos-core`, remote `antranhub22/floraos-core`.
 
 Đã có (P2): thu hoạch R2 nguyên vẹn, `capability-catalog.ts` 113 mã, `permission-resolver.ts` ba lớp, `role_capabilities`/`capability_overrides`, 12 endpoint quyền.
 
-Đã có (P3), nghiệm thu xong: `assets`/`generation_jobs`(+`idempotency_key`)/`job_events`/`usage`/`audit_logs` · bốn module `src/modules/{assets,jobs,usage,audit}/` · `enqueueJob` (kiểm hạn mức → ghi usage → tạo job → NOTIFY, một giao dịch) · `GenerationJobRepository.claimNext` (`SKIP LOCKED`) · SSE `GET /jobs/:id/events` · `LocalDiskStorageProvider` (adapter tạm, nợ #15). **35/35 `npm run test:tenant` xanh trên Postgres thật** sau ba lỗi tìm-và-sửa (chi tiết ở nhật ký mục 8).
+Đã có (P3), nghiệm thu xong: `assets`/`generation_jobs`(+`idempotency_key`)/`job_events`/`usage`/`audit_logs` · bốn module `src/modules/{assets,jobs,usage,audit}/` · `enqueueJob` (kiểm hạn mức → ghi usage → tạo job → NOTIFY, một giao dịch) · `GenerationJobRepository.claimNext` (`SKIP LOCKED`) · SSE `GET /jobs/:id/events` · `LocalDiskStorageProvider` (adapter tạm, nợ #15).
 
-**Mới (P4, hôm nay):** `business_profiles` và `brand_profiles` (đặc tả 07 mục 4, thu
-hoạch E3 từ `SocialFlow/backend/brand_kit.py`) — tách đôi hồ sơ kinh doanh (pháp lý,
-liên hệ) khỏi hồ sơ thương hiệu (màu, font, tông giọng, hashtag, CTA), mỗi tổ chức đúng
-một bản ghi mỗi bảng (`@@unique([organization_id])`), khoá ngoại tới `organizations`
-ngay từ đầu (không lặp lại nợ #8). Module mới `src/modules/profiles/`
+Đã có (P4), nghiệm thu xong: `business_profiles`/`brand_profiles` (đặc tả 07 mục 4, thu
+hoạch E3 từ `SocialFlow/backend/brand_kit.py`) — tách đôi hồ sơ kinh doanh khỏi hồ sơ
+thương hiệu, mỗi tổ chức đúng một bản ghi mỗi bảng (`@@unique([organization_id])`), khoá
+ngoại tới `organizations` ngay từ đầu. Module `src/modules/profiles/`
 (`domain/profile-rules.ts` — validate mã hex, `display_name` bắt buộc; hai repository
-`upsert` theo ngữ nghĩa PUT-thay-toàn-bộ, trường vắng mặt thành `null`). Route
+`upsert` theo ngữ nghĩa PUT-thay-toàn-bộ, trường vắng mặt thành `null`, dùng
+`InputJsonValue` đúng quy ước P2 — không còn nợ `as never` như P3). Route
 `GET · PUT /business-profile` và `GET · PUT /brand-profile` dưới `/api/v1/`, gác bằng
-`F1`/`F2` **có sẵn từ P2** — không cần thêm mã năng lực nào (đặc tả 02 đã định nghĩa
-F1 `org.read`/F2 `org.update` đủ rộng cho hồ sơ tổ chức). Thêm coverage cách ly tenant ở
-cả hai tầng (`tests/tenant/cach-ly-repository.test.ts`, `cach-ly-endpoint.test.ts`) và
-test domain thuần (`profile-rules.test.ts`).
-
-**Chưa xác minh trên Postgres thật.** Cùng giới hạn sandbox đã ghi ở P3: `device_bash`
-của phiên này là một VM Linux (Ubuntu 22.04, `aarch64`) không có Docker và không ra
-mạng tới `binaries.prisma.sh`, còn `node_modules` mang nhị phân `rollup-darwin-arm64`
-(đồng bộ từ máy Mac thật) nên `vitest` không khởi động được ở đây. Không tự chạy được
-`prisma generate`/`prisma db push`/`npm test`/`npm run test:tenant`/`tsc --noEmit` cho
-phần chạm kiểu Prisma mới (`business_profiles`/`brand_profiles` chưa có trong client sinh
-sẵn). Bốn cột Json? (`social_links`/`operating_hours`/`hashtags`/`cta_templates`/`forbidden_styles`)
-dùng `as never` giống quy ước tạm của P3 (asset-repository.ts/usage-repository.ts/
-audit-log-repository.ts) — đổi lại `InputJsonValue` khi có client thật, cùng đợt với việc
-đó của P3 nếu còn tồn đọng.
+`F1`/`F2` có sẵn từ P2, không thêm mã năng lực mới.
 
 ## 2. Đọc theo thứ tự này
 
@@ -103,25 +92,12 @@ Không còn quyết định nào chặn. D1 · D2 · D3 · D4 chốt ngày 09/09
 
 ## 6. Việc kế tiếp
 
-1. **Chạy bốn lệnh xác minh P4 ở máy có mạng** — mã đã viết đủ (mục 1), chưa chạy được:
-   ```bash
-   docker compose up -d
-   npx prisma generate && npx prisma db push
-   npm test && npm run test:tenant
-   npx tsc --noEmit
-   ```
-   Sau khi `prisma generate` sinh client thật: kiểm lại kiểu của
-   `business_profiles`/`brand_profiles`, đổi `as never` ở
-   `business-profile-repository.ts`/`brand-profile-repository.ts` sang `as InputJsonValue`
-   nếu client cho phép (cùng việc còn treo từ P3 ở bốn tệp asset/usage/audit — làm chung
-   một đợt nếu tiện). Tích các ô P4 ở `Checklist_Thuc_Thi.md` chỉ sau khi cả bốn lệnh xanh
-   (hiện đã tích trước theo mã, cần xác nhận lại nếu có sửa).
-2. Sau khi P4 xanh thật: **P5** — M01 (phụ thuộc P3, đã xong) nếu bộ ảnh vàng đã sẵn sàng.
-3. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`, gán nhãn theo `QUY_UOC_DEM.md`. Bước đầu tiên là gom ảnh từ kho vận hành AVI GIFT.
-4. Khi làm P6: chốt cách tính chi phí lá và cành trang trí, vì quy ước đếm để loại này không có số lượng.
-5. Xác nhận với chủ sản phẩm giá trị mặc định của công tắc `cho_phep_tu_duyet` (`docs/dac-ta/TECHNICAL_DEBT.md` #12) trước khi màn hình duyệt đầu tiên đi vào sản xuất.
-6. Xác nhận với chủ sản phẩm bảng giá `cost_credit` theo `feature` — hiện là hằng số đoán hợp lý trong mã, không phải quyết định kinh doanh đã chốt (`TECHNICAL_DEBT.md` #14).
-7. Khi có UI onboarding thật cho M05 (LocalBudd): xác nhận `logo_asset_id` của
+1. **P5** — M01 Product Image Analysis (phụ thuộc P3, đã xong), nếu bộ ảnh vàng đã sẵn sàng. Đây là hạng mục kế tiếp trong lộ trình P0–P12.
+2. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`, gán nhãn theo `QUY_UOC_DEM.md`. Bước đầu tiên là gom ảnh từ kho vận hành AVI GIFT — điều kiện nghiệm thu P5, chưa sẵn sàng thì P5 chưa bắt đầu được.
+3. Khi làm P6: chốt cách tính chi phí lá và cành trang trí, vì quy ước đếm để loại này không có số lượng.
+4. Xác nhận với chủ sản phẩm giá trị mặc định của công tắc `cho_phep_tu_duyet` (`docs/dac-ta/TECHNICAL_DEBT.md` #12) trước khi màn hình duyệt đầu tiên đi vào sản xuất.
+5. Xác nhận với chủ sản phẩm bảng giá `cost_credit` theo `feature` — hiện là hằng số đoán hợp lý trong mã, không phải quyết định kinh doanh đã chốt (`TECHNICAL_DEBT.md` #14).
+6. Khi có UI onboarding thật cho M05 (LocalBudd): xác nhận `logo_asset_id` của
    `brand_profiles` có bắt buộc trỏ tới một `assets.kind = MASTER` đã duyệt hay chấp nhận
    bất kỳ asset nào — schema hiện không ràng buộc khoá ngoại (đặc tả 07 mục 4 khai
    `String?` thường), đây là quyết định UX chưa cần thiết ở P4.
@@ -161,3 +137,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | **P3 chạy Postgres thật lần hai, sửa lỗi thứ ba (ở bộ thử).** Sau khi sửa `pg_notify`, anh Tony chạy lại `npm run test:tenant` — vẫn 30/35, 5 đỏ nhưng đổi triệu chứng hoàn toàn (không còn `P2010`). Nguyên nhân: workspace mặc định `sign-up` tạo luôn `kind: "EXPERIENCE"`, nên bốn ca "đường CREDIT" của `enqueue-job.test.ts` dùng `a.ctx` chưa từng kiểm đúng đường CREDIT — luôn rơi vào đường TRIAL. Sửa: thêm `withProductionWorkspace()` tự dựng workspace `PRODUCTION` riêng cho bốn ca đó, sửa luôn assertion sai của ca EXPERIENCE (`credit_balance` phải giữ `TRIAL_CREDIT_BALANCE`, không phải `0`). `tsc --noEmit` sạch trên client Prisma thật — chờ anh Tony chạy lại lần ba xác nhận 35/35 |
 | 09/09 | **P3 nghiệm thu phần lõi — 35/35 `test:tenant` xanh.** Anh Tony chạy lại lần ba, xác nhận xanh hoàn toàn sau ba lỗi tìm-và-sửa (raw query `pg_notify`, hai test sai giả định credit mặc định, bốn test chưa kiểm đúng đường CREDIT vì workspace mặc định là EXPERIENCE). Tích các ô liên quan ở `Checklist_Thuc_Thi.md`. Còn `npm test` (domain thuần P3) chưa chạy thật xác nhận trong phiên này — mục còn lại duy nhất trước khi coi P3 xong tuyệt đối |
 | 09/09 | **P4 viết mã xong, CHƯA xác minh.** `business_profiles`/`brand_profiles` (đặc tả 07 mục 4, thu hoạch E3 từ `SocialFlow/backend/brand_kit.py`), khoá ngoại tới `organizations` ngay từ đầu. Module `src/modules/profiles/` (domain/use-cases/infra/adapters đủ bốn thư mục) — `BusinessProfileRepository`/`BrandProfileRepository.upsert` theo ngữ nghĩa PUT-thay-toàn-bộ. Route `GET · PUT /business-profile`, `GET · PUT /brand-profile` dưới `/api/v1/`, gác bằng `F1`/`F2` có sẵn từ P2 — không thêm mã năng lực. Test domain (`profile-rules.test.ts`) + cách ly tenant ở cả hai tầng repository/endpoint. Cùng giới hạn sandbox của P3 (không Docker, không mạng tới `binaries.prisma.sh`, `node_modules` sai kiến trúc máy) nên chưa tự chạy được `prisma generate`/`db push`/`npm test`/`npm run test:tenant` trong phiên này — bốn lệnh xác minh ở mục 6 |
+| 09/09 | **P4 nghiệm thu xong — 41/41 `test:tenant` xanh, xanh ngay lần đầu.** Anh Tony chạy bốn lệnh xác minh trên Terminal Mac thật (`docker compose up -d` · `prisma generate/db push` · `npm test` · `npm run test:tenant`) ngay sau khi mã viết xong — không phát sinh lỗi nào phải sửa, khác P3 (ba vòng tìm-và-sửa). 41 = 35 cũ + 6 ca mới cho hồ sơ, đúng số dự kiến. Nhân tiện đổi `as never` sang `as InputJsonValue` ở hai repository mới (`business-profile-repository.ts`/`brand-profile-repository.ts`) vì lúc này đã có client thật để đối chiếu — không còn nợ kiểu JSON như bốn tệp P3. `tsc --noEmit`/`eslint` sạch |

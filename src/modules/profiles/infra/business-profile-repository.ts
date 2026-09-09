@@ -1,4 +1,4 @@
-import type { business_profiles } from "./entities"
+import type { business_profiles, InputJsonValue } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy"
@@ -40,10 +40,9 @@ export class BusinessProfileRepository {
   }
 
   upsert(ctx: TenantContext, input: UpsertBusinessProfileInput): Promise<business_profiles> {
-    // `as never` cho các cột Json?: chưa có client sinh sẵn (P4, viết trước
-    // `prisma generate`) để đối chiếu hình dạng input thật — cùng nợ đã ghi ở
-    // asset-repository.ts/usage-repository.ts/audit-log-repository.ts (P3),
-    // đổi lại `InputJsonValue` khi có client.
+    // `InputJsonValue` — client đã sinh (P4 xác minh xong trên Postgres thật),
+    // đúng quy ước P2. `as never` chỉ còn là nợ của bốn tệp P3
+    // (asset-repository.ts/usage-repository.ts/audit-log-repository.ts).
     const fields = {
       legal_name: input.legal_name ?? null,
       display_name: input.display_name,
@@ -51,10 +50,10 @@ export class BusinessProfileRepository {
       email: input.email ?? null,
       address: input.address ?? null,
       website: input.website ?? null,
-      social_links: (input.social_links ?? null) as never,
+      social_links: (input.social_links ?? null) as InputJsonValue,
       tax_code: input.tax_code ?? null,
       description: input.description ?? null,
-      operating_hours: (input.operating_hours ?? null) as never,
+      operating_hours: (input.operating_hours ?? null) as InputJsonValue,
     }
 
     return this.db.business_profiles.upsert({

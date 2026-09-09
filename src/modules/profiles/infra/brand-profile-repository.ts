@@ -1,4 +1,4 @@
-import type { brand_profiles } from "./entities"
+import type { brand_profiles, InputJsonValue } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy"
@@ -34,7 +34,7 @@ export class BrandProfileRepository {
   }
 
   upsert(ctx: TenantContext, input: UpsertBrandProfileInput): Promise<brand_profiles> {
-    // `as never` — xem chú thích ở `BusinessProfileRepository.upsert`.
+    // `InputJsonValue` — xem chú thích ở `BusinessProfileRepository.upsert`.
     const fields = {
       primary_color: input.primary_color ?? null,
       secondary_color: input.secondary_color ?? null,
@@ -45,9 +45,9 @@ export class BrandProfileRepository {
       font_body: input.font_body ?? null,
       logo_asset_id: input.logo_asset_id ?? null,
       tone_of_voice: input.tone_of_voice ?? null,
-      hashtags: (input.hashtags ?? null) as never,
-      cta_templates: (input.cta_templates ?? null) as never,
-      forbidden_styles: (input.forbidden_styles ?? null) as never,
+      hashtags: (input.hashtags ?? null) as InputJsonValue,
+      cta_templates: (input.cta_templates ?? null) as InputJsonValue,
+      forbidden_styles: (input.forbidden_styles ?? null) as InputJsonValue,
     }
 
     return this.db.brand_profiles.upsert({

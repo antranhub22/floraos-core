@@ -38,15 +38,12 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P3 nghiệm thu xong** (35/35 `test:tenant` xanh trên Postgres
-thật). **P4 viết mã xong, chưa xác minh** — `business_profiles`/`brand_profiles`
+Trạng thái hiện tại: **P4 nghiệm thu xong** — `business_profiles`/`brand_profiles`
 (đặc tả 07 mục 4), module `src/modules/profiles/`, route `GET · PUT /business-profile` và
 `GET · PUT /brand-profile` (gác bằng `F1`/`F2` có sẵn từ P2, không thêm mã năng lực mới).
-Cùng sandbox không Docker/không mạng tới `binaries.prisma.sh`/kiến trúc máy sai đã ghi ở
-P3 — chưa tự chạy được `prisma generate`/`db push`/`npm test`/`npm run test:tenant` trong
-phiên viết P4. Xem `docs/dac-ta/Checklist_Thuc_Thi.md` mục P4 và
-`docs/kien-truc/TRANG_THAI.md` mục 6 cho bốn lệnh cần chạy trên máy có mạng trước khi
-tích các ô.
+`npm run test:tenant` 41/41 xanh, `npm test`/`tsc --noEmit`/`prisma generate`/`db push`
+xanh trên Postgres thật, không lỗi phát sinh. Hạng mục kế tiếp: **P5** — M01 (phụ thuộc
+P3, đã xong), chặn bởi bộ ảnh vàng chưa sẵn sàng (`docs/kien-truc/BO_ANH_VANG.md`).
 
 ## Luật thu hoạch
 
