@@ -59,9 +59,18 @@ Terminal thật (Mac, không qua cầu `device_bash`) — kết quả 35/35 test
 `device_bash` của phiên này là một VM Linux riêng (khác Terminal thật trên Mac), thiếu
 `@rollup/rollup-linux-arm64-gnu` nên không tự chạy lại `vitest` để xác nhận được — cùng
 giới hạn đã ghi trong `TECHNICAL_DEBT.md` #18 trước đây, chỉ khác là **lần này có log
-Postgres thật để đọc và sửa theo, không còn phải đoán.** **Việc kế tiếp thật sự trước khi
-coi P3 xong: anh Tony chạy lại `npm test && npm run test:tenant` một lần nữa, xác nhận
-35/35 xanh, rồi tích các ô ở `Checklist_Thuc_Thi.md`.**
+Postgres thật để đọc và sửa theo, không còn phải đoán.**
+
+**Vòng chạy thứ hai** (anh Tony chạy lại ngay sau khi nhận sửa #1): lỗi `pg_notify` hết,
+lộ ra **lỗi thứ ba — ở bộ thử, không phải mã**. Bốn ca "đường CREDIT" của
+`enqueue-job.test.ts` dùng thẳng `a.ctx`, nhưng workspace mặc định `sign-up` tạo LUÔN
+`kind: "EXPERIENCE"` (đúng thiết kế P1/P2), nên bốn ca đó chưa từng thật sự kiểm đường
+CREDIT — luôn đi đường TRIAL bất kể `credit_balance`. Sửa: thêm `withProductionWorkspace()`
+tự dựng workspace `PRODUCTION` riêng cho bốn ca đó; sửa luôn assertion sai của ca
+EXPERIENCE (kỳ vọng `credit_balance` giữ nguyên `TRIAL_CREDIT_BALANCE`, không phải `0`).
+`tsc --noEmit` sạch trên client Prisma thật. **Việc kế tiếp thật sự trước khi coi P3 xong:
+anh Tony chạy lại `npm test && npm run test:tenant` một lần nữa, xác nhận 35/35 xanh, rồi
+tích các ô ở `Checklist_Thuc_Thi.md`.**
 
 ## 2. Đọc theo thứ tự này
 
@@ -171,3 +180,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | **P2 verify xong trên máy có mạng.** `prisma generate`/`db push` (Postgres 16 qua Docker), `npm test` 48/48, `npm run test:tenant` 23/23. Sửa 1 lỗi type thật (`organization-repository.ts`, cột `settings` Json vs `exactOptionalPropertyTypes`) + thêm `InputJsonValue` vào `entities.ts`. Sửa 1 test P1 lỗi thời (`cach-ly-endpoint.test.ts` khoá hành vi "năng lực luôn rỗng" — nay sai vì P2 nạp `role_capabilities` thật lúc đăng ký), đối chiếu lại bằng `defaultCodesForSystemRole`. Không còn việc tồn đọng của P2 |
 | 09/09 | **P3 viết mã xong, CHƯA xác minh.** `assets`/`generation_jobs`(+`idempotency_key`)/`job_events`/`usage`/`audit_logs` + khoá ngoại nợ #8. Bốn module `assets`/`jobs`/`usage`/`audit`. `enqueueJob` (kiểm hạn mức → ghi usage → tạo job → NOTIFY, một giao dịch) · `GenerationJobRepository.claimNext` (`SKIP LOCKED`) · `PostgresQueueProvider` (`pg_notify` trong giao dịch) · SSE `GET /jobs/:id/events` (`Last-Event-ID`) · `LocalDiskStorageProvider` (adapter tạm cho `POST /assets/upload-url`) · `scripts/scan-stuck-jobs.ts` (`YC-J10`). Sandbox phiên này không có Docker/mạng ra `binaries.prisma.sh`, và `node_modules` sai kiến trúc máy (thiếu `@rollup/rollup-linux-arm64-gnu`) nên không chạy được `prisma generate`/`db push`/`npm test`/`npm run test:tenant` — chỉ `tsc --noEmit` (phần không chạm kiểu Prisma). Xem mục 6 việc kế tiếp và `TECHNICAL_DEBT.md` #14–18 |
 | 09/09 | **P3 chạy Postgres thật lần đầu, sửa 2 lỗi.** Anh Tony chạy `docker compose up -d` · `prisma generate/db push` · `npm run test:tenant` trên Terminal Mac thật — 30/35 xanh, 5 đỏ (đều trong `enqueue-job.test.ts`). Sửa: (1) `PostgresQueueProvider` — `pg_notify` qua `$queryRaw` ném `P2010` vì cột `void` không giải mã được, đổi `$executeRaw`; (2) hai ca thử sai giả định `credit_balance` mặc định 0 — bỏ sót `TRIAL_CREDIT_BALANCE` (20) `sign-up.ts` cấp sẵn, sửa test tự đặt lại 0 trước khi kỳ vọng chặn hạn mức. `tsc --noEmit` sạch; chưa tự chạy lại `vitest` được (VM `device_bash` khác Terminal thật, thiếu `@rollup/rollup-linux-arm64-gnu`) — chờ anh Tony chạy lại xác nhận 35/35 rồi tích `Checklist_Thuc_Thi.md` |
+| 09/09 | **P3 chạy Postgres thật lần hai, sửa lỗi thứ ba (ở bộ thử).** Sau khi sửa `pg_notify`, anh Tony chạy lại `npm run test:tenant` — vẫn 30/35, 5 đỏ nhưng đổi triệu chứng hoàn toàn (không còn `P2010`). Nguyên nhân: workspace mặc định `sign-up` tạo luôn `kind: "EXPERIENCE"`, nên bốn ca "đường CREDIT" của `enqueue-job.test.ts` dùng `a.ctx` chưa từng kiểm đúng đường CREDIT — luôn rơi vào đường TRIAL. Sửa: thêm `withProductionWorkspace()` tự dựng workspace `PRODUCTION` riêng cho bốn ca đó, sửa luôn assertion sai của ca EXPERIENCE (`credit_balance` phải giữ `TRIAL_CREDIT_BALANCE`, không phải `0`). `tsc --noEmit` sạch trên client Prisma thật — chờ anh Tony chạy lại lần ba xác nhận 35/35 |

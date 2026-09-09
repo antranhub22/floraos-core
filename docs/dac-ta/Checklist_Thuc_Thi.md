@@ -88,10 +88,23 @@ cho ra log trên; `npx tsc --noEmit` sau khi sửa thì sạch):
    cả hai ca tự đặt `credit_balance = 0` trước khi kỳ vọng bị chặn (cùng
    cách "đủ credit" đã tự nạp credit trước đó).
 
+**Vòng chạy thứ hai (09/09, cùng ngày, sau khi sửa lỗi #1)**: lỗi `pg_notify`
+đã hết, nhưng lộ ra **lỗi thứ ba, ở chính bộ thử chứ không phải mã**: cả bốn
+ca "đường CREDIT" dùng thẳng `a.ctx` (workspace mặc định của `sign-up`) —
+nhưng workspace mặc định đó LUÔN có `kind: "EXPERIENCE"` (đúng thiết kế
+P1/P2 — tổ chức mới là tổ chức trải nghiệm), nên `a.ctx` luôn đi đường hạn
+mức TRIAL bất kể `credit_balance` được đặt bao nhiêu — bốn ca này chưa từng
+kiểm được đường CREDIT như tên gọi. Sửa: thêm `withProductionWorkspace()`
+trong `enqueue-job.test.ts`, tự dựng một workspace `PRODUCTION` riêng cho
+bốn ca đó (đối xứng với ca "workspace EXPERIENCE" đã tự dựng workspace
+riêng của nó); sửa luôn assertion sai còn lại của ca EXPERIENCE — kỳ vọng
+`credit_balance` giữ nguyên `TRIAL_CREDIT_BALANCE` (20) chứ không phải `0`.
+`npx tsc --noEmit` sạch (chạy trên client Prisma thật, cùng thư mục đã
+`prisma generate` trên máy anh Tony).
+
 **Còn một việc trước khi tích các ô dưới**: chạy lại `npm test && npm run
 test:tenant` trên máy có Docker thật (Terminal, không phải qua cầu
-`device_bash`) để xác nhận 35/35 xanh sau hai sửa trên, rồi tích các ô còn
-lại theo kết quả.
+`device_bash`) để xác nhận 35/35 xanh, rồi tích các ô còn lại theo kết quả.
 
 - [ ] `assets` đủ cột metadata bắt buộc (`YC-A4`) — `prisma/schema.prisma`, `AssetRepository.create`
 - [ ] `parent_asset_id` và `version`; asset gốc không bao giờ bị ghi đè (`YC-A1` `YC-A2` `YC-A3`) — `domain/asset-rules.ts` (`nextVersion`), `register-asset.ts`
