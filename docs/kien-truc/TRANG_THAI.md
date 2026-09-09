@@ -14,7 +14,7 @@
 
 Repo nằm ở `~/Projects/floraos-core`, git đã khởi tạo, chưa có remote. Lược đồ Prisma còn trống — bảng đầu tiên thuộc P1.
 
-Hạng mục kế tiếp là **P1** — Organization · Workspace · Membership · Branch · cách ly tenant.
+D4 đã chốt, P1 mở khoá. Hạng mục kế tiếp là **P1** — Organization · Workspace · Membership · Branch · cách ly tenant.
 
 ## 2. Đọc theo thứ tự này
 
@@ -25,7 +25,7 @@ Hạng mục kế tiếp là **P1** — Organization · Workspace · Membership 
 | 3 | `01_PRD-FloraOS-Core.md` | Phạm vi, người dùng, bảy luật sản phẩm, tiêu chí nghiệm thu |
 | 4 | `HARVEST_MANIFEST.md` | Cái gì thu hoạch từ repo nào, hạng REUSE/EXTEND/ADAPTER/BUILD |
 | 5 | `M01_FLORAOS_VISION_CODING_AGENT_GUIDE.md` · `M04_FLORAOS_PRODUCT_IMAGE_OPTIMIZER_FULL.md` | Level 2 — chỉ đọc khi làm đúng module đó |
-| 6 | `BO_ANH_VANG.md` | Quy cách xây bộ ảnh vàng — điều kiện nghiệm thu P5 |
+| 6 | `BO_ANH_VANG.md` · `QUY_UOC_DEM.md` | Quy cách bộ ảnh vàng và quy ước đếm — điều kiện nghiệm thu P5 |
 
 `AGENTS.md` của `floraos-core` đã dựng từ bản khung; bản khung không còn hiệu lực.
 
@@ -60,21 +60,22 @@ Branch protection trên `main` của `floraos-core` bật khi P1 xong, với đi
 | **Đường A** | Dựng repo core MỚI, chép khuôn kiến trúc LocalBudd + luật nghiệp vụ FloraOS + thiết kế Asset/brand SocialFlow. Giữ tách ba repo. FloraOS v1 nghỉ hưu, không migrate dần | 09/09 |
 | **D5-c** | Cổng Vision ở mức Hợp đồng JSON (`VisionAnalyzer.analyze → ProductAnalysis`). Adapter GPT-4o trước, Florence-2+SAM2 sau, chỉ đổi khi thắng trên bộ ảnh vàng. **Thay quy tắc 4 cũ của M01** | 09/09 |
 | **D6-1** | Worker Python lấy việc từ `generation_jobs` bằng `SKIP LOCKED` + `LISTEN/NOTIFY`. `floraos-core` chứa cả `src/` (TS) và `workers/` (Python), chung một Postgres. Cấm `subprocess`+stdout, cấm job qua HTTP | 09/09 |
+| **D4** | `FloraOS` v1 đóng băng tính năng từ 09/09. Không ngoại lệ. Chỉ sửa lỗi chặn vận hành tới ngày cắt | 09/09 |
+| **Quy ước đếm** | Đơn vị là cành. Nụ đếm riêng; số chuẩn là số nhìn thấy trong ảnh, số đơn hàng ghi song song; lá trang trí không đếm; bao bì đếm như hoa; hoa hỏng vẫn tính kèm số hỏng riêng. Chi tiết ở `QUY_UOC_DEM.md` | 09/09 |
 
 ## 5. Còn mở — chặn việc
 
 | # | Quyết định | Chặn | Ghi chú |
 |---|---|---|---|
-| **D4** | Ngày đóng băng tính năng của `FloraOS` v1 | **P1** | Khung repo đã dựng trước khi chốt D4. Chốt là mở khoá P1 |
 | **D1** | SocialFlow lên đa tenant, hay ở lại làm worker đơn tenant? | P7 | Khuyến nghị: worker đơn tenant |
 | **D2** | Mã API AI: mỗi tổ chức tự mang khoá, hay khoá nền tảng + credit? | P3 | Quyết định kinh doanh |
 | **D3** | Job `COMPLETED / result = REJECTED` có tính phí không? | P3 | Quyết định kinh doanh |
 
 ## 6. Việc kế tiếp
 
-1. **Chốt D4** → mở khoá P1.
-2. **P1** — Organization · Workspace · Membership · Branch · cách ly tenant. **Trước mọi thu hoạch khác.** Không tạo bảng, route hay job của bất kỳ module nào trước khi P1 và P2 đạt nghiệm thu.
-3. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`. Bước đầu tiên là chốt quy ước đếm, không phải chụp ảnh.
+1. **P1** — Organization · Workspace · Membership · Branch · cách ly tenant. **Trước mọi thu hoạch khác.** Không tạo bảng, route hay job của bất kỳ module nào trước khi P1 và P2 đạt nghiệm thu.
+2. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`, gán nhãn theo `QUY_UOC_DEM.md`. Bước đầu tiên là gom ảnh từ kho vận hành AVI GIFT.
+3. Khi làm P6: chốt cách tính chi phí lá và cành trang trí, vì quy ước đếm để loại này không có số lượng.
 
 ## 7. Làm việc bằng nhiều tài khoản Claude cùng lúc
 
@@ -99,3 +100,5 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | Dựng khung `floraos-core`: cấu trúc theo V2 mục 3, `AGENTS.md`, năm cổng ở `src/core/ports/`, khung worker Python, `docs/kien-truc/`. Chưa có bảng, chưa có route |
 | 09/09 | `BO_ANH_VANG.md` — quy cách bộ ảnh vàng |
 | 09/09 | Bốn repo lên GitHub riêng tư dưới `antranhub22`, nhánh chính `main` |
+| 09/09 | Chốt D4 — `FloraOS` v1 đóng băng tính năng, không ngoại lệ |
+| 09/09 | Chốt quy ước đếm, `QUY_UOC_DEM.md`. Lược đồ nhãn bộ ảnh vàng đồng bộ theo |

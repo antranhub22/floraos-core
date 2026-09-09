@@ -12,19 +12,20 @@ Bộ ảnh vàng là **50–100 ảnh sản phẩm thật, có nhãn số lượ
 
 Xây song song với mọi pha khác, không chặn ai và không bị ai chặn. Bắt đầu được ngay hôm nay.
 
-## 2. Chốt quy ước đếm trước, chụp sau
+## 2. Quy ước đếm
 
-Đây là bước dễ bỏ qua nhất và là bước làm hỏng cả bộ ảnh nếu bỏ qua. Hai người gán nhãn cùng một bó hoa sẽ ra hai con số khác nhau nếu chưa thống nhất các trường hợp sau:
+Đáp án của người phải theo một chuẩn duy nhất, nếu không thì hai người gán nhãn cùng một bó hoa sẽ ra hai con số khác nhau và thước đo mất giá trị.
 
-- Nụ chưa nở có tính là một bông không?
-- Hoa gãy cổ, hoa bị che khuất hoàn toàn sau bó — tính hay không?
-- Cành phụ mọc từ một gốc chung tính một hay tính nhiều?
-- Lá và cành trang trí có nằm trong số lượng, hay chỉ nằm ở danh sách cấu phần?
-- Giấy gói, ruy băng, giỏ, hộp — tính là cấu phần hay là bao bì?
+Quy ước đã chốt ở `QUY_UOC_DEM.md`. Đọc trang đó trước khi gán nhãn ảnh đầu tiên. Tóm tắt:
 
-Viết câu trả lời thành một trang, đặt ở `docs/kien-truc/QUY_UOC_DEM.md`, và **mọi nhãn phải theo đúng trang đó**. Quy ước này phải khớp với con số mà `count_engine.py` chốt ra từ ba kênh đếm — nếu không, thước đo sẽ báo sai ngay cả khi mã chạy đúng.
+- Đơn vị là **cành**, không phải bông. Cành nhiều bông tính một.
+- Nụ chưa nở đếm riêng, không cộng vào số hoa.
+- Số chuẩn là số **nhìn thấy trong ảnh**; số trên đơn hàng ghi song song ở trường riêng.
+- Lá và cành trang trí ghi tên, không đếm số.
+- Giấy gói, ruy băng, giỏ, hộp đếm như hoa.
+- Hoa hỏng vẫn tính vào tổng, ghi thêm số hỏng ở trường riêng.
 
-Người chốt quy ước là người hiểu nghiệp vụ bán hàng, không phải người viết mã.
+Gặp trường hợp `QUY_UOC_DEM.md` chưa nói tới thì dừng và bổ sung vào trang đó, không tự quyết.
 
 ## 3. Quy mô và phân bổ
 
@@ -78,14 +79,22 @@ Một tệp JSON cho một ảnh:
   "product_name": "Bó hồng đỏ 20 bông",
   "product_form": "bo",
   "difficulty": "trung-binh",
+
+  "flower_count": 17,
+  "bud_count": 3,
+  "damaged_count": 1,
+  "order_count": 20,
+
   "components": [
-    { "canonical_component": "hoa-hong-do", "category": "flower",    "count": 20, "color": "do" },
-    { "canonical_component": "la-bach-dan", "category": "foliage",   "count": 6,  "color": "xanh-bac" },
-    { "canonical_component": "giay-goi-kraft", "category": "packaging", "count": 1, "color": "nau" }
+    { "canonical_component": "hoa-hong-do",    "category": "flower",    "count": 17,   "color": "do" },
+    { "canonical_component": "hoa-hong-do",    "category": "bud",       "count": 3,    "color": "do" },
+    { "canonical_component": "la-bach-dan",    "category": "foliage",   "count": null, "color": "xanh-bac" },
+    { "canonical_component": "giay-goi-kraft", "category": "packaging", "count": 1,    "color": "nau" },
+    { "canonical_component": "ruy-bang-lua",   "category": "packaging", "count": 1,    "color": "do" }
   ],
-  "total_flower_count": 20,
+
   "occluded": true,
-  "notes": "3 bông phía sau bị che một phần",
+  "notes": "3 cành phía sau bị che một phần; 1 cành gãy cổ",
   "labeled_by": "…",
   "labeled_at": "2026-09-10",
   "verified_by": "…",
@@ -95,7 +104,9 @@ Một tệp JSON cho một ảnh:
 
 `canonical_component` lấy từ đúng từ điển nguyên liệu của M01, không đặt tên tự do. Nhãn dùng tên ngoài từ điển là nhãn hỏng — nó không đối chiếu được với đầu ra của hệ thống.
 
-`total_flower_count` là con số mà `count_engine` phải chốt ra. Đây là trường được chấm điểm chính.
+`flower_count` là trường được chấm điểm chính. `order_count` **không tham gia chấm điểm** — máy chỉ nhìn ảnh.
+
+Bốn danh mục cấu phần: `flower` · `bud` · `foliage` · `packaging`. Ý nghĩa và cách đếm ở `QUY_UOC_DEM.md`.
 
 ## 7. Quy trình gán nhãn
 
@@ -125,8 +136,8 @@ Cùng một bộ ảnh, chạy qua từng adapter, so nhãn máy với nhãn ng�
 
 | Chỉ số | Định nghĩa |
 |---|---|
-| Tỉ lệ đếm đúng tuyệt đối | Phần trăm ảnh có `total_flower_count` khớp chính xác |
-| Sai số tuyệt đối trung bình | Trung bình `abs(máy − người)` trên `total_flower_count` |
+| Tỉ lệ đếm đúng tuyệt đối | Phần trăm ảnh có `flower_count` khớp chính xác |
+| Sai số tuyệt đối trung bình | Trung bình `abs(máy − người)` trên `flower_count` |
 | Tỉ lệ sai nặng | Phần trăm ảnh lệch từ 2 đơn vị trở lên |
 | Độ khớp cấu phần | Phần trăm `canonical_component` máy nhận đúng, tính cả thiếu và thừa |
 | Độ khớp màu | Phần trăm cấu phần đúng màu |
