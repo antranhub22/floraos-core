@@ -32,13 +32,13 @@ Hai điều chỉnh lớn gần bù nhau. Tổng 5–6 tháng giữ nguyên.
 
 Ba việc đầu không cần chờ P1. Chưa bắt đầu chúng là mất thời gian không lấy lại được, vì cả ba đều là điều kiện chặn ở cuối.
 
-## Quyết định còn mở
+## Quyết định
 
-| # | Nội dung | Chặn |
-|---|---|---|
-| D1 | `SocialFlow` lên đa tenant, hay ở lại làm worker đơn tenant | P7 |
-| D3 | Job `COMPLETED / result = REJECTED` có tính phí không | P3 |
+Không còn quyết định mở. D1 · D2 · D3 · D4 chốt ngày 09/09.
 
-D2 đã chốt: nền tảng giữ khoá nhà cung cấp, tính credit theo tổ chức.
-
-D3 chưa chốt nhưng không chặn việc viết mã: lược đồ đỡ cả hai hướng, hành vi mặc định đang viết là hoàn lại credit và vẫn ghi chi phí thật để đối soát. Đổi quyết định chỉ là đổi một giá trị.
+| # | Chốt |
+|---|---|
+| D1 | SocialFlow là worker đơn tenant, nhận `organization_id` từ core |
+| D2 | Nền tảng giữ khoá nhà cung cấp, tính credit theo tổ chức |
+| D3 | Job bị Identity Guard từ chối không tính phí khách; credit hoàn lại, `cost_usd` vẫn ghi sổ |
+| D4 | `FloraOS` v1 đóng băng tính năng từ 09/09, không ngoại lệ |

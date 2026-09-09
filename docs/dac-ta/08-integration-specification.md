@@ -20,7 +20,7 @@ Core phơi dữ liệu lõi ra cho hai engine ngoài. Bản đồ thu hoạch �
 
 `projects` là trường hợp riêng: nó chỉ có `owner_id`, một chủ sở hữu duy nhất, không có thành viên và không có vai. Vai trò của nó chuyển sang `workspaces` của core.
 
-**`SocialFlow` nhận `organization_id`** trên mọi lời gọi và dùng credential theo tổ chức thay cho bảng `accounts` toàn cục. Quyết định D1 còn mở: lên đa tenant, hay ở lại làm worker đơn tenant mà core gọi kèm ngữ cảnh tổ chức. Khuyến nghị trong tài liệu kiến trúc là worker đơn tenant — SQLite hiện tại không phục vụ đa tenant được.
+**`SocialFlow` nhận `organization_id`** trên mọi lời gọi và dùng credential theo tổ chức thay cho bảng `accounts` toàn cục. Quyết định D1 đã chốt: **worker đơn tenant.** SocialFlow không tự quản lý tổ chức; nó nhận `organization_id` trên mỗi lời gọi từ core và dùng credential tương ứng. SQLite giữ nguyên.
 
 ## 3. Xác thực máy gọi máy
 

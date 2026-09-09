@@ -342,9 +342,9 @@ Hạn mức chặn **trước** khi bản ghi job tồn tại. Module vượt h�
 
 ### Job bị Identity Guard từ chối
 
-Chưa có quyết định D3. Lược đồ đỡ cả hai hướng; hành vi mặc định đang viết là: ghi `usage` với `quantity = 1`, `cost_usd` thật, `cost_credit = 0`, và một bản ghi `status = REFUNDED` hoàn lại credit đã trừ lúc enqueue.
+Quyết định D3: **không tính phí khách.** Ghi `usage` với `quantity = 1`, `cost_usd` thật, `cost_credit = 0`, và một bản ghi `status = REFUNDED` hoàn lại credit đã trừ lúc enqueue.
 
-Lý do chọn mặc định này: GPU đã tiêu thụ nên chi phí phía nền tảng là thật và phải vào sổ để đối soát; nhưng khách không dùng được kết quả nên trừ credit của họ là bán một thứ không giao. Đổi sang tính phí chỉ là đổi giá trị `cost_credit`, không đổi lược đồ.
+Lý do: GPU đã tiêu thụ nên chi phí phía nền tảng là thật và phải vào sổ để đối soát; nhưng khách không dùng được kết quả nên trừ credit của họ là bán một thứ không giao.
 
 ## 8. Nhật ký kiểm toán — P3
 

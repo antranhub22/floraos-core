@@ -45,7 +45,7 @@ Mã lấy từ `FloraOS` cũ, `LocalBudd` hoặc `SocialFlow` **phải có hạn
 
 **Luật nghiệp vụ đi kèm test khoá nó.** Test xanh trên repo này thì mới coi là chuyển xong. Chưa có test thì chưa xong, dù mã đã chạy.
 
-Xếp hạng REUSE cho thứ thật ra là EXTEND là lỗi tốn kém nhất — `count_engine.py` phải gỡ `openpyxl` ra khỏi từng hàm, đó là EXTEND.
+Xếp hạng sai chiều nào cũng tốn. Bản đồ thu hoạch từng xếp `count_engine.py` là EXTEND vì cho rằng nó phụ thuộc `openpyxl`; mã thật chỉ import `numpy` và `scipy`. Đọc mã trước khi xếp hạng, đừng xếp theo trí nhớ.
 
 ## Chín câu hỏi trước khi viết mã
 

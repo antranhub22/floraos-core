@@ -89,7 +89,7 @@ Một tệp JSON cho một ảnh:
     { "canonical_component": "hoa-hong-do",    "category": "flower",    "count": 17,   "color": "do" },
     { "canonical_component": "hoa-hong-do",    "category": "bud",       "count": 3,    "color": "do" },
     { "canonical_component": "la-bach-dan",    "category": "foliage",   "count": null, "color": "xanh-bac" },
-    { "canonical_component": "giay-goi-kraft", "category": "packaging", "count": 1,    "color": "nau" },
+    { "canonical_component": "giay-goi-kraft", "category": "packaging", "count": 2,    "color": "nau" },
     { "canonical_component": "ruy-bang-lua",   "category": "packaging", "count": 1,    "color": "do" }
   ],
 

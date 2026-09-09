@@ -10,7 +10,7 @@
 | 2 | Số lượng chuẩn | Lấy **số nhìn thấy trong ảnh**. Số trên đơn hàng ghi song song ở trường riêng, và giao diện hiển thị cả hai |
 | 3 | Cành nhiều bông — baby, cẩm chướng chùm, cúc chùm | Đếm theo **cành**. Một cành là một đơn vị, bất kể trên cành có mấy bông |
 | 4 | Lá và cành trang trí — bạch đàn, dương xỉ, lá kim | Ghi tên, **không đếm số**. `count` để trống |
-| 5 | Giấy gói, ruy băng, giỏ, hộp | Là cấu phần, đếm như hoa |
+| 5 | Giấy gói, ruy băng, giỏ, hộp | Là cấu phần, đếm như hoa. Giấy gói đếm theo **số lớp** |
 | 6 | Hoa gãy cổ, héo, dập | Vẫn tính vào tổng, đồng thời ghi số hỏng ở trường riêng |
 
 ## Đơn vị
@@ -30,11 +30,13 @@ Bốn trường số, tách rời, không gộp:
 
 `order_count` **không dùng để chấm điểm máy** — máy chỉ nhìn ảnh, chấm nó bằng con số không nhìn thấy được là chấm sai. Trường này tồn tại để giao diện hiển thị cả hai số cho người dùng, và để phát hiện chênh lệch giữa ảnh và đơn.
 
-Cấu phần loại `foliage` có `count` để trống. Cấu phần loại `packaging` có `count` như hoa.
+Cấu phần loại `foliage` có `count` để trống. Cấu phần loại `packaging` có `count` như hoa; với giấy gói, `count` là **số lớp giấy**.
+
+Hợp đồng Vision hiện không có trường `quantity` ở `bom.wrapping`. Thêm trường đó là việc của P5; hợp đồng chỉ được thêm nên thao tác hợp lệ.
 
 ## Ví dụ
 
-Bó hồng đỏ, đơn ghi 20 bông. Ảnh thấy 17 cành hồng nở, trong đó 1 cành gãy cổ; thêm 3 nụ chưa nở; lá bạch đàn điểm xuyết; gói giấy kraft, buộc một ruy băng.
+Bó hồng đỏ, đơn ghi 20 bông. Ảnh thấy 17 cành hồng nở, trong đó 1 cành gãy cổ; thêm 3 nụ chưa nở; lá bạch đàn điểm xuyết; gói hai lớp giấy kraft, buộc một ruy băng.
 
 ```json
 {
@@ -46,7 +48,7 @@ Bó hồng đỏ, đơn ghi 20 bông. Ảnh thấy 17 cành hồng nở, trong �
     { "canonical_component": "hoa-hong-do",    "category": "flower",    "count": 17,   "color": "do" },
     { "canonical_component": "hoa-hong-do",    "category": "bud",       "count": 3,    "color": "do" },
     { "canonical_component": "la-bach-dan",    "category": "foliage",   "count": null, "color": "xanh-bac" },
-    { "canonical_component": "giay-goi-kraft", "category": "packaging", "count": 1,    "color": "nau" },
+    { "canonical_component": "giay-goi-kraft", "category": "packaging", "count": 2,    "color": "nau" },
     { "canonical_component": "ruy-bang-lua",   "category": "packaging", "count": 1,    "color": "do" }
   ]
 }

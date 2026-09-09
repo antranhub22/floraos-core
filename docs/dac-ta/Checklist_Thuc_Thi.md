@@ -86,7 +86,6 @@ Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bấ
 - [ ] `LocalBudd` bỏ năm bảng trùng, đọc core qua API
 - [ ] `/integration/products/:id/master-image` chỉ trả ảnh đã duyệt
 - [ ] Adapter `SocialFlow` nhận `organization_id`
-- [ ] Quyết định D1 đã chốt
 
 ## P8 — Nạp dữ liệu AVI GIFT
 

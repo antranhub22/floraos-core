@@ -61,16 +61,15 @@ Branch protection trên `main` của `floraos-core` bật khi P1 xong, với đi
 | **Đường A** | Dựng repo core MỚI, chép khuôn kiến trúc LocalBudd + luật nghiệp vụ FloraOS + thiết kế Asset/brand SocialFlow. Giữ tách ba repo. FloraOS v1 nghỉ hưu, không migrate dần | 09/09 |
 | **D5-c** | Cổng Vision ở mức Hợp đồng JSON (`VisionAnalyzer.analyze → ProductAnalysis`). Adapter GPT-4o trước, Florence-2+SAM2 sau, chỉ đổi khi thắng trên bộ ảnh vàng. **Thay quy tắc 4 cũ của M01** | 09/09 |
 | **D6-1** | Worker Python lấy việc từ `generation_jobs` bằng `SKIP LOCKED` + `LISTEN/NOTIFY`. `floraos-core` chứa cả `src/` (TS) và `workers/` (Python), chung một Postgres. Cấm `subprocess`+stdout, cấm job qua HTTP | 09/09 |
+| **D1** | SocialFlow là worker đơn tenant, nhận `organization_id` từ core | 09/09 |
+| **D2** | Nền tảng giữ khoá nhà cung cấp AI, tính credit theo tổ chức | 09/09 |
+| **D3** | Job bị Identity Guard từ chối không tính phí khách; credit hoàn lại | 09/09 |
 | **D4** | `FloraOS` v1 đóng băng tính năng từ 09/09. Không ngoại lệ. Chỉ sửa lỗi chặn vận hành tới ngày cắt | 09/09 |
 | **Quy ước đếm** | Đơn vị là cành. Nụ đếm riêng; số chuẩn là số nhìn thấy trong ảnh, số đơn hàng ghi song song; lá trang trí không đếm; bao bì đếm như hoa; hoa hỏng vẫn tính kèm số hỏng riêng. Chi tiết ở `QUY_UOC_DEM.md` | 09/09 |
 
 ## 5. Còn mở — chặn việc
 
-| # | Quyết định | Chặn | Ghi chú |
-|---|---|---|---|
-| **D1** | SocialFlow lên đa tenant, hay ở lại làm worker đơn tenant? | P7 | Khuyến nghị: worker đơn tenant |
-| **D2** | Mã API AI: mỗi tổ chức tự mang khoá, hay khoá nền tảng + credit? | P3 | Quyết định kinh doanh |
-| **D3** | Job `COMPLETED / result = REJECTED` có tính phí không? | P3 | Quyết định kinh doanh |
+Không còn quyết định nào chặn. D1 · D2 · D3 · D4 chốt ngày 09/09, xem mục 4.
 
 ## 6. Việc kế tiếp
 
@@ -104,3 +103,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | Chốt D4 — `FloraOS` v1 đóng băng tính năng, không ngoại lệ |
 | 09/09 | Chốt quy ước đếm, `QUY_UOC_DEM.md`. Lược đồ nhãn bộ ảnh vàng đồng bộ theo |
 | 09/09 | Rà soát mã thật ba repo; bộ đặc tả 13 tệp ở `floraos-core/docs/dac-ta/` |
+| 09/09 | Chốt D1, D2, D3. Sửa V2 và bản đồ thu hoạch theo mã thật: 18 mã trần cứng, dải E1–E8, count_engine và color_engine là REUSE |

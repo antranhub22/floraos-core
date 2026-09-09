@@ -182,7 +182,7 @@ User → Membership → Organization → Workspace → Branch
 
 ## 6. Xác thực và phân quyền
 
-**Thu hoạch R2:** chép bảng 76 mã năng lực từ `FloraOS/src/lib/maChucNang.ts` (A1–A7, B1–B16, C1–C28, D1–D17, E1–E7) kèm `tests/maChucNang.test.ts`.
+**Thu hoạch R2:** chép bảng 76 mã năng lực từ `FloraOS/floraos-web/src/lib/maChucNang.ts` (A1–A7, B1–B16, C1–C28, D1–D17, E1–E8) kèm `tests/maChucNang.test.ts`.
 
 **Giữ nguyên cơ chế cắt ba lớp** — đây là thứ FloraOS làm đúng và hiếm:
 
@@ -191,7 +191,7 @@ mặc định theo vai  →  bảng công tắc trong cấu hình  →  TRẦN C
                                                        (cắt sau cùng)
 ```
 
-26 mã có trần cứng. Trần cứng cắt **sau** bảng công tắc, nên không đường nào từ giao diện hay cơ sở dữ liệu mở được nó. Luật này chuyển sang core nguyên vẹn.
+18 mã có trần cứng. Trần cứng cắt **sau** bảng công tắc, nên không đường nào từ giao diện hay cơ sở dữ liệu mở được nó. Luật này chuyển sang core nguyên vẹn.
 
 **Ba mở rộng bắt buộc:**
 
@@ -461,14 +461,14 @@ floraos-core — AVI GIFT là tổ chức đầu tiên
 
 | # | Quyết định | Chặn pha | Khuyến nghị |
 |---|---|---|---|
-| **D1** | SocialFlow lên đa tenant, hay ở lại làm **worker đơn tenant** mà core gọi kèm ngữ cảnh org? | P7 | **Worker đơn tenant** — rẻ hơn nhiều, đúng tinh thần không ghép chặt core vào engine ngoài. SQLite hiện tại không phục vụ đa tenant được |
-| **D2** | Mã API AI: mỗi tổ chức tự mang khoá, hay khoá nền tảng + tính credit theo org? | P3 | Chưa khuyến nghị — phụ thuộc mô hình kinh doanh. Ảnh hưởng thẳng tới mục 9 và ma trận 13.1 |
-| **D3** | Job `COMPLETED / result = REJECTED` **có tính phí không**? | P3 | Chưa khuyến nghị — ảnh hưởng cả kế toán lẫn trải nghiệm |
-| **D4** | Ngày đóng băng tính năng của FloraOS v1 | P0 | Ngay khi tài liệu này được duyệt |
+| ~~**D1**~~ | **ĐÃ CHỐT 09/09 — worker đơn tenant.** SocialFlow nhận `organization_id` trên mỗi lời gọi, không tự quản lý tổ chức | — | — |
+| ~~**D2**~~ | **ĐÃ CHỐT 09/09 — khoá nền tảng, tính credit theo tổ chức.** Tổ chức không mang khoá riêng ở bản này | — | — |
+| ~~**D3**~~ | **ĐÃ CHỐT 09/09 — không tính phí.** Credit trừ lúc enqueue được hoàn lại; `cost_usd` thật vẫn ghi để đối soát nội bộ | — | — |
+| ~~**D4**~~ | **ĐÃ CHỐT 09/09 — đóng băng từ 09/09, không ngoại lệ** | — | — |
 | ~~**D5**~~ | **ĐÃ CHỐT 09/09 — D5-c: cổng ở mức Hợp đồng JSON.** Adapter GPT-4o làm trước (thu hoạch R1 nguyên vẹn); adapter Florence-2 + SAM2 làm sau, đổi khi thắng trên bộ ảnh vàng theo ma trận 13.1 | — | Xem 17.1 |
 | ~~**D6**~~ | **ĐÃ CHỐT 09/09 — D6-1: Postgres làm hàng đợi.** Worker Python lấy việc từ `generation_jobs` bằng `SELECT … FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`; HTTP nội bộ chỉ cho lời gọi ngắn đồng bộ | — | Xem 3.1 |
 
-**Còn mở: D1, D2, D3, D4.** D1 và D4 nên chốt trước khi bắt đầu P0. D2 và D3 phải chốt trước khi bắt đầu P3.
+**Không còn quyết định mở.** D1 · D2 · D3 · D4 chốt ngày 09/09.
 
 ### 17.1 D5 — quyết định: cổng ở mức Hợp đồng JSON (D5-c)
 

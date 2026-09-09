@@ -66,8 +66,8 @@ Phần còn lại của tài liệu này viết theo **Đường A**.
 | E2 | `generation_jobs` | `LocalBudd` | Đã có `status` + `step`. **Thêm trục thứ ba `result`** (SAFE/GOOD/WARNING/REJECTED) + `organization_id` + `cancelled` + retry. §10 nói rõ: từ chối bởi cổng an toàn **không phải** job lỗi |
 | E3 | `brand_config` → **BrandProfile** | `SocialFlow` | 20+ cột thương hiệu đã có (màu, font, tone, hashtag theo nền tảng, CTA, forbidden_styles). **Thêm:** `organization_id`, tách BusinessProfile khỏi BrandProfile |
 | E4 | `qa_results` → Review & Approval §9 | `LocalBudd` | Tổng quát hoá từ page_version sang mọi đầu ra AI; thêm `approved_by`/`approved_at` |
-| E5 | Ba kênh đếm độc lập + ngưỡng lệch | `FloraOS/analyzer/count_engine.py` (955 dòng) | Gỡ phụ thuộc openpyxl, trả về cấu trúc dữ liệu thay vì ghi sheet |
-| E6 | Engine màu + từ điển nguyên liệu | `FloraOS/analyzer/{color_engine,tu_dien,normalize}.py` (~1.020 dòng) | Như trên |
+| ~~E5~~ | **Xếp lại thành REUSE.** `count_engine.py` (955 dòng) chỉ import `numpy` và `scipy`, không chạm Excel | `FloraOS/python-service/analyzer/count_engine.py` | Bọc adapter, thêm test hồi quy trên bộ ảnh vàng |
+| ~~E6~~ | **Tách đôi.** `color_engine.py` (418) và `normalize.py` (207) là REUSE — thuần numpy, PIL, re. `tu_dien.py` (399) là EXTEND — có import `openpyxl` | `FloraOS/python-service/analyzer/` | Gỡ `openpyxl` khỏi riêng `tu_dien.py` |
 | E7 | Adapter đăng bài 6 nền tảng | `SocialFlow` (`automation*.py`, `facebook_graph.py`, `zalo-oa-automation.py`, `tiktok-automation.py`) | Nhận `organization_id` + credential theo org thay vì bảng `accounts` toàn cục |
 | E8 | `content_queue.approval_level` | `SocialFlow` | Nối vào E4 |
 
