@@ -64,7 +64,7 @@ export class UsageRepository {
         cost_credit: 0,
         cost_usd: input.costUsd,
         status: "REFUNDED" as const,
-        metadata: null,
+        metadata: null as never,
       }),
     })
   }

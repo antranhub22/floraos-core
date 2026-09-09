@@ -10,7 +10,7 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: P2 xong. Quyền chạy được — 113 mã, ba lớp cắt, endpoint quản lý tổ chức đã gác.**
+**Giai đoạn: P3 viết mã xong, đã chạy trên Postgres thật một lần, sửa 2 lỗi tìm được, chờ chạy lại xác nhận 35/35.**
 
 Repo nằm ở `~/Projects/floraos-core`, remote `antranhub22/floraos-core`.
 
@@ -40,14 +40,28 @@ tới sau commit); `GET /jobs/:id/events` là SSE đọc `job_events`, nối ti�
 `Last-Event-ID`; `POST /assets/upload-url` dùng `LocalDiskStorageProvider` (adapter tạm,
 xem `TECHNICAL_DEBT.md` #15) đứng sau cổng `StorageProvider`.
 
-**CHƯA xác minh trên máy có mạng.** Phiên viết mã này (09/09) không có Docker, không ra
-được `binaries.prisma.sh` (`npx prisma generate` 403 ngay ở bước tải `schema-engine` —
-nặng hơn P2, lần đó chỉ `db push` bị chặn), và `node_modules` cài cho kiến trúc khác máy
-hiện tại (thiếu `@rollup/rollup-linux-arm64-gnu`) nên `npm test`/`npm run test:tenant`
-không khởi động được. Chỉ chạy được `npx tsc --noEmit` cho phần không chạm kiểu sinh từ
-Prisma — không phát hiện lỗi, nhưng không thay được một lần chạy thật vì mọi model P3
-đều mới, `tsc` không thấy được field nào sai tên so với `schema.prisma` khi kiểu chưa
-sinh. **Việc kế tiếp thật sự trước khi coi P3 xong: chạy bốn lệnh xác minh ở mục 6.**
+**Đã chạy trên máy có mạng thật (09/09, cùng ngày).** Anh Tony tự chạy `docker compose
+up -d` · `npx prisma generate && npx prisma db push` (xanh) · `npm run test:tenant` trên
+Terminal thật (Mac, không qua cầu `device_bash`) — kết quả 35/35 test, 30 xanh 5 đỏ, cả
+5 ca đỏ đều trong `tests/tenant/enqueue-job.test.ts`. Đọc log tìm ra **hai lỗi thật**
+(sandbox trước không có DB nên không bắt được), đã sửa cả hai ngay trong phiên, `npx tsc
+--noEmit` sau khi sửa sạch:
+
+1. `PostgresQueueProvider.enqueue` dùng `db.$queryRaw` cho `SELECT pg_notify(...)` —
+   `pg_notify()` trả cột kiểu `void`, Prisma không giải mã được, ném `P2010` trên
+   Postgres thật. Sửa: đổi sang `$executeRaw` (chỉ cần tác dụng phụ NOTIFY).
+2. Hai ca thử `enqueue-job.test.ts` giả định tổ chức mới có `credit_balance = 0` theo
+   mặc định lược đồ — nhưng `sign-up.ts` đã cấp `TRIAL_CREDIT_BALANCE` (20) credit chào
+   mừng từ P1/P2, nên hạn mức không chặn như test kỳ vọng, luồng chạy tới lỗi #1 thay vì
+   ném `QUOTA_EXCEEDED`. Sửa: hai ca tự đặt `credit_balance = 0` trước khi kỳ vọng bị
+   chặn.
+
+`device_bash` của phiên này là một VM Linux riêng (khác Terminal thật trên Mac), thiếu
+`@rollup/rollup-linux-arm64-gnu` nên không tự chạy lại `vitest` để xác nhận được — cùng
+giới hạn đã ghi trong `TECHNICAL_DEBT.md` #18 trước đây, chỉ khác là **lần này có log
+Postgres thật để đọc và sửa theo, không còn phải đoán.** **Việc kế tiếp thật sự trước khi
+coi P3 xong: anh Tony chạy lại `npm test && npm run test:tenant` một lần nữa, xác nhận
+35/35 xanh, rồi tích các ô ở `Checklist_Thuc_Thi.md`.**
 
 ## 2. Đọc theo thứ tự này
 
@@ -156,3 +170,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | **P2 xong.** Thu hoạch R2 nguyên vẹn (`maChucNang.ts` + test, 25/25 qua `npm run test:harvest`) · `capability-catalog.ts` 113 mã sinh từ chính bản harvest, không gõ tay phần A–E · `permission-resolver.ts` ba lớp · `role_capabilities`/`capability_overrides` · `resolveSession` nạp năng lực thật, `GET /auth/me` trả ra · công tắc `cho_phep_tu_duyet` · 12 endpoint tổ chức/thành viên/vai/chi nhánh/workspace gác bằng mã năng lực · sửa một lỗi ở `handle()` (`src/core/http/response.ts`) không truyền được `context.params` cho route động của Next 16 — phát hiện khi viết endpoint đầu tiên có `[id]`. Chưa chạy được `prisma generate`/`db push`/`test:tenant` trong phiên này — sandbox chặn `binaries.prisma.sh` |
 | 09/09 | **P2 verify xong trên máy có mạng.** `prisma generate`/`db push` (Postgres 16 qua Docker), `npm test` 48/48, `npm run test:tenant` 23/23. Sửa 1 lỗi type thật (`organization-repository.ts`, cột `settings` Json vs `exactOptionalPropertyTypes`) + thêm `InputJsonValue` vào `entities.ts`. Sửa 1 test P1 lỗi thời (`cach-ly-endpoint.test.ts` khoá hành vi "năng lực luôn rỗng" — nay sai vì P2 nạp `role_capabilities` thật lúc đăng ký), đối chiếu lại bằng `defaultCodesForSystemRole`. Không còn việc tồn đọng của P2 |
 | 09/09 | **P3 viết mã xong, CHƯA xác minh.** `assets`/`generation_jobs`(+`idempotency_key`)/`job_events`/`usage`/`audit_logs` + khoá ngoại nợ #8. Bốn module `assets`/`jobs`/`usage`/`audit`. `enqueueJob` (kiểm hạn mức → ghi usage → tạo job → NOTIFY, một giao dịch) · `GenerationJobRepository.claimNext` (`SKIP LOCKED`) · `PostgresQueueProvider` (`pg_notify` trong giao dịch) · SSE `GET /jobs/:id/events` (`Last-Event-ID`) · `LocalDiskStorageProvider` (adapter tạm cho `POST /assets/upload-url`) · `scripts/scan-stuck-jobs.ts` (`YC-J10`). Sandbox phiên này không có Docker/mạng ra `binaries.prisma.sh`, và `node_modules` sai kiến trúc máy (thiếu `@rollup/rollup-linux-arm64-gnu`) nên không chạy được `prisma generate`/`db push`/`npm test`/`npm run test:tenant` — chỉ `tsc --noEmit` (phần không chạm kiểu Prisma). Xem mục 6 việc kế tiếp và `TECHNICAL_DEBT.md` #14–18 |
+| 09/09 | **P3 chạy Postgres thật lần đầu, sửa 2 lỗi.** Anh Tony chạy `docker compose up -d` · `prisma generate/db push` · `npm run test:tenant` trên Terminal Mac thật — 30/35 xanh, 5 đỏ (đều trong `enqueue-job.test.ts`). Sửa: (1) `PostgresQueueProvider` — `pg_notify` qua `$queryRaw` ném `P2010` vì cột `void` không giải mã được, đổi `$executeRaw`; (2) hai ca thử sai giả định `credit_balance` mặc định 0 — bỏ sót `TRIAL_CREDIT_BALANCE` (20) `sign-up.ts` cấp sẵn, sửa test tự đặt lại 0 trước khi kỳ vọng chặn hạn mức. `tsc --noEmit` sạch; chưa tự chạy lại `vitest` được (VM `device_bash` khác Terminal thật, thiếu `@rollup/rollup-linux-arm64-gnu`) — chờ anh Tony chạy lại xác nhận 35/35 rồi tích `Checklist_Thuc_Thi.md` |

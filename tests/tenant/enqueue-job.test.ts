@@ -10,10 +10,12 @@ import { createTenant, type Tenant } from "../helpers/fixtures"
 
 /**
  * `enqueueJob` — bốn việc trong một giao dịch (đặc tả 05 mục 6, `YC-U3`
- * `YC-U7`). Tổ chức mới có `credit_balance = 0` (giá trị mặc định của lược
- * đồ), nên phần lớn trường hợp thử ở đây tự nạp credit trước bằng
- * `prisma.organizations.update` — đi thẳng vào Postgres là hợp lệ trong
- * `tests/`, luật "không import client ngoài infra/" chỉ quét `src/`.
+ * `YC-U7`). Tổ chức mới KHÔNG có `credit_balance = 0` — `sign-up` cấp sẵn
+ * `TRIAL_CREDIT_BALANCE` (20) credit chào mừng — nên bộ thử ở đây luôn tự
+ * đặt lại `credit_balance` bằng `prisma.organizations.update` trước khi
+ * kiểm cả hai hướng (đủ credit và hết credit), thay vì dựa vào giá trị mặc
+ * định của lược đồ. Đi thẳng vào Postgres là hợp lệ trong `tests/`, luật
+ * "không import client ngoài infra/" chỉ quét `src/`.
  */
 describe("enqueueJob", () => {
   let a: Tenant
@@ -27,7 +29,12 @@ describe("enqueueJob", () => {
     await disconnectDatabase()
   })
 
-  it("hạn mức chặn TRƯỚC khi job vào bảng — tổ chức mới không có credit (YC-U3)", async () => {
+  it("hạn mức chặn TRƯỚC khi job vào bảng — tổ chức hết credit (YC-U3)", async () => {
+    await prisma.organizations.update({
+      where: { id: a.organizationId },
+      data: { credit_balance: 0 },
+    })
+
     await expect(
       enqueueJob(a.ctx, {
         feature: "vision.analyze",
@@ -129,6 +136,11 @@ describe("enqueueJob", () => {
   })
 
   it("ném AppError thật, không phải lỗi chung — route dịch được sang 422", async () => {
+    await prisma.organizations.update({
+      where: { id: a.organizationId },
+      data: { credit_balance: 0 },
+    })
+
     try {
       await enqueueJob(a.ctx, {
         feature: "vision.analyze",

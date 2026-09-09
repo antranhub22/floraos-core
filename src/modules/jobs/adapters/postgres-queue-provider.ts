@@ -48,7 +48,14 @@ export class PostgresQueueProvider implements QueueProvider {
       // Postgres trì hoãn phát NOTIFY tới sau khi giao dịch bao quanh commit
       // — gọi ngay trong `db` (dù `db` là `tx` hay `prisma` trần) vẫn đúng
       // thứ tự "đánh thức worker sau khi dòng job nhìn thấy được".
-      await db.$queryRaw`SELECT pg_notify(${notifyChannelFor(input.feature)}, ${job.id})`
+      //
+      // `$executeRaw`, không phải `$queryRaw`: `pg_notify()` trả về cột kiểu
+      // `void` — driver không giải mã được kiểu đó nên `$queryRaw` ném
+      // P2010 trên Postgres thật (bắt được khi chạy `npm run test:tenant`
+      // lần đầu, không thấy được trong sandbox vì không có DB). `$executeRaw`
+      // chỉ chạy câu lệnh và trả số dòng ảnh hưởng, không cố giải mã cột trả
+      // về, nên tránh được lỗi này — ta chỉ cần tác dụng phụ NOTIFY.
+      await db.$executeRaw`SELECT pg_notify(${notifyChannelFor(input.feature)}, ${job.id})`
 
       return { jobId: job.id }
     }
