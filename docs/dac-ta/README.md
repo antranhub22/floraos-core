@@ -15,6 +15,7 @@ Tài liệu để viết mã. Kiến trúc nền và quyết định gốc nằm
 | 06 | `06-api-specification.md` | Endpoint nào, năng lực nào gác, trả về gì |
 | 07 | `07-database-specification.md` | Bảng nào, cột nào, vì sao |
 | 08 | `08-integration-specification.md` | Core phơi gì ra, engine ngoài đọc thế nào |
+| 09 | `09-du-lieu-mau-experience.md` | Workspace dùng thử nạp sẵn những gì |
 | — | `Checklist_Thuc_Thi.md` | Pha này xong chưa |
 | — | `Roadmap.md` | Đang ở đâu, gì đã đổi so với kế hoạch |
 | — | `TECHNICAL_DEBT.md` | Đang nợ gì, trả khi nào |

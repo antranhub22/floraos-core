@@ -48,6 +48,25 @@ Token có hạn và xoay được mà không dừng dịch vụ: core chấp nh�
 
 Ảnh chờ duyệt không rò ra ngoài core. Đây là điểm dễ hỏng nhất của tích hợp: engine ngoài lấy được ảnh chưa duyệt rồi đăng lên mạng xã hội thì cổng duyệt trở thành trang trí.
 
+## 4b. Ánh xạ hồ sơ sang design contract của LocalBudd
+
+`design_contracts` của `LocalBudd` dựng từ hồ sơ do core giữ. Bảng ánh xạ:
+
+| `design_contract` | Lấy từ core |
+|---|---|
+| `colors.primary` | `brand_profiles.primary_color` |
+| `colors.secondary` | `brand_profiles.secondary_color` |
+| `colors.background` | `brand_profiles.background_color` |
+| `colors.text` | `brand_profiles.text_color` |
+| `typography.heading` | `brand_profiles.font_heading` |
+| `typography.body` | `brand_profiles.font_body` |
+| `vibe` | `brand_profiles.tone_of_voice` |
+| `layout_hints` | thuộc `LocalBudd`, core không giữ |
+
+Nội dung trang lấy từ `business_profiles`: tên hiển thị, điện thoại, email, địa chỉ, giờ mở cửa, website, liên kết mạng xã hội.
+
+`forbidden_styles` của `brand_profiles` là ràng buộc, không phải gợi ý: engine ngoài phải loại các kiểu nằm trong danh sách đó trước khi sinh.
+
 ## 5. Ranh giới bàn giao M04a sang M04b
 
 Master Image là ranh giới. Trước nó là `floraos-core`, sau nó là `SocialFlow`.

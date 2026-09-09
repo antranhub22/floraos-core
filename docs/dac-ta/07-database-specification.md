@@ -167,6 +167,8 @@ model business_profiles {
   phone           String?
   email           String?
   address         String?
+  website         String?
+  social_links    Json?
   tax_code        String?
   description     String?
   operating_hours Json?
@@ -182,6 +184,8 @@ model brand_profiles {
   primary_color    String?
   secondary_color  String?
   accent_color     String?
+  background_color String?
+  text_color       String?
   font_heading     String?
   font_body        String?
   logo_asset_id    String?
@@ -195,6 +199,8 @@ model brand_profiles {
   @@unique([organization_id])
 }
 ```
+
+`background_color` và `text_color` có mặt vì `design_contracts` của `LocalBudd` cần đủ bốn màu để dựng landing page. Thiếu hai trường này thì M05 phải tự đoán màu nền, và mỗi trang ra một kiểu.
 
 Thu hoạch E3 từ `SocialFlow/backend/brand_kit.py` — bảng `brand_config` ở đó gộp hồ sơ kinh doanh và hồ sơ thương hiệu làm một. Core tách đôi: hồ sơ kinh doanh là dữ liệu pháp lý và liên hệ, hồ sơ thương hiệu là dữ liệu tạo sinh. Landing page cần cả hai; sinh ảnh marketing chỉ cần cái sau.
 
