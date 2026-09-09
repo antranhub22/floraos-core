@@ -10,7 +10,7 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: P3 viết mã xong, đã chạy trên Postgres thật một lần, sửa 2 lỗi tìm được, chờ chạy lại xác nhận 35/35.**
+**Giai đoạn: P3 xong phần lõi — 35/35 `test:tenant` xanh trên Postgres thật. Còn `npm test` chưa có lần chạy thật xác nhận.**
 
 Repo nằm ở `~/Projects/floraos-core`, remote `antranhub22/floraos-core`.
 
@@ -68,9 +68,17 @@ lộ ra **lỗi thứ ba — ở bộ thử, không phải mã**. Bốn ca "đư
 CREDIT — luôn đi đường TRIAL bất kể `credit_balance`. Sửa: thêm `withProductionWorkspace()`
 tự dựng workspace `PRODUCTION` riêng cho bốn ca đó; sửa luôn assertion sai của ca
 EXPERIENCE (kỳ vọng `credit_balance` giữ nguyên `TRIAL_CREDIT_BALANCE`, không phải `0`).
-`tsc --noEmit` sạch trên client Prisma thật. **Việc kế tiếp thật sự trước khi coi P3 xong:
-anh Tony chạy lại `npm test && npm run test:tenant` một lần nữa, xác nhận 35/35 xanh, rồi
-tích các ô ở `Checklist_Thuc_Thi.md`.**
+`tsc --noEmit` sạch trên client Prisma thật.
+
+**Vòng chạy thứ ba**: anh Tony xác nhận **`npm run test:tenant` 35/35 xanh**. `P3 nghiệm
+thu xong phần cách ly tenant, giao dịch enqueueJob, hạn mức, SKIP LOCKED` — đã tích các ô
+tương ứng ở `Checklist_Thuc_Thi.md`. Còn sót `npm test` (domain thuần ngoài
+`tests/tenant/`: `asset-rules`/`job-rules`/`pricing`/`quota`/`storage-key`) chưa có lần
+chạy thật xác nhận trong phiên này — rủi ro thấp (test thuần, không chạm DB, `tsc` đã
+sạch) nhưng chưa "xanh thật" theo đúng chuẩn của `AGENTS.md`. Ba mục còn để trống ở P3 vẫn
+đúng lý do cũ, không phải lỗi: `YC-J10` (script quét job treo chưa gắn cron thật — việc
+triển khai), `YC-U7` (chưa có endpoint tạo job cụ thể theo feature để nối `Idempotency-Key`
+qua HTTP thật — P5/P9), `YC-R4` (chưa có hành động duyệt nào để `audit_logs` ghi — P5/P9).
 
 ## 2. Đọc theo thứ tự này
 
@@ -181,3 +189,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | **P3 viết mã xong, CHƯA xác minh.** `assets`/`generation_jobs`(+`idempotency_key`)/`job_events`/`usage`/`audit_logs` + khoá ngoại nợ #8. Bốn module `assets`/`jobs`/`usage`/`audit`. `enqueueJob` (kiểm hạn mức → ghi usage → tạo job → NOTIFY, một giao dịch) · `GenerationJobRepository.claimNext` (`SKIP LOCKED`) · `PostgresQueueProvider` (`pg_notify` trong giao dịch) · SSE `GET /jobs/:id/events` (`Last-Event-ID`) · `LocalDiskStorageProvider` (adapter tạm cho `POST /assets/upload-url`) · `scripts/scan-stuck-jobs.ts` (`YC-J10`). Sandbox phiên này không có Docker/mạng ra `binaries.prisma.sh`, và `node_modules` sai kiến trúc máy (thiếu `@rollup/rollup-linux-arm64-gnu`) nên không chạy được `prisma generate`/`db push`/`npm test`/`npm run test:tenant` — chỉ `tsc --noEmit` (phần không chạm kiểu Prisma). Xem mục 6 việc kế tiếp và `TECHNICAL_DEBT.md` #14–18 |
 | 09/09 | **P3 chạy Postgres thật lần đầu, sửa 2 lỗi.** Anh Tony chạy `docker compose up -d` · `prisma generate/db push` · `npm run test:tenant` trên Terminal Mac thật — 30/35 xanh, 5 đỏ (đều trong `enqueue-job.test.ts`). Sửa: (1) `PostgresQueueProvider` — `pg_notify` qua `$queryRaw` ném `P2010` vì cột `void` không giải mã được, đổi `$executeRaw`; (2) hai ca thử sai giả định `credit_balance` mặc định 0 — bỏ sót `TRIAL_CREDIT_BALANCE` (20) `sign-up.ts` cấp sẵn, sửa test tự đặt lại 0 trước khi kỳ vọng chặn hạn mức. `tsc --noEmit` sạch; chưa tự chạy lại `vitest` được (VM `device_bash` khác Terminal thật, thiếu `@rollup/rollup-linux-arm64-gnu`) — chờ anh Tony chạy lại xác nhận 35/35 rồi tích `Checklist_Thuc_Thi.md` |
 | 09/09 | **P3 chạy Postgres thật lần hai, sửa lỗi thứ ba (ở bộ thử).** Sau khi sửa `pg_notify`, anh Tony chạy lại `npm run test:tenant` — vẫn 30/35, 5 đỏ nhưng đổi triệu chứng hoàn toàn (không còn `P2010`). Nguyên nhân: workspace mặc định `sign-up` tạo luôn `kind: "EXPERIENCE"`, nên bốn ca "đường CREDIT" của `enqueue-job.test.ts` dùng `a.ctx` chưa từng kiểm đúng đường CREDIT — luôn rơi vào đường TRIAL. Sửa: thêm `withProductionWorkspace()` tự dựng workspace `PRODUCTION` riêng cho bốn ca đó, sửa luôn assertion sai của ca EXPERIENCE (`credit_balance` phải giữ `TRIAL_CREDIT_BALANCE`, không phải `0`). `tsc --noEmit` sạch trên client Prisma thật — chờ anh Tony chạy lại lần ba xác nhận 35/35 |
+| 09/09 | **P3 nghiệm thu phần lõi — 35/35 `test:tenant` xanh.** Anh Tony chạy lại lần ba, xác nhận xanh hoàn toàn sau ba lỗi tìm-và-sửa (raw query `pg_notify`, hai test sai giả định credit mặc định, bốn test chưa kiểm đúng đường CREDIT vì workspace mặc định là EXPERIENCE). Tích các ô liên quan ở `Checklist_Thuc_Thi.md`. Còn `npm test` (domain thuần P3) chưa chạy thật xác nhận trong phiên này — mục còn lại duy nhất trước khi coi P3 xong tuyệt đối |
