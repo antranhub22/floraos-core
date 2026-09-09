@@ -12,17 +12,24 @@ Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bấ
 - [x] `prisma/schema.prisma` trống, chỉ có `datasource` và `generator`
 - [x] `npm run test:tenant` tồn tại và thất bại có chủ đích
 
-## P1 — Tổ chức và cách ly tenant
+## P1 — Tổ chức và cách ly tenant · xong
 
-- [ ] Bảy bảng nền dựng đủ: `users` `sessions` `organizations` `workspaces` `branches` `roles` `memberships` (`YC-T1`)
-- [ ] `TenantContext` giải từ `sessions.organization_id` phía máy chủ (`YC-T2`)
-- [ ] Repository nhận `TenantContext` bắt buộc, tự chèn điều kiện lọc (`YC-T3`)
-- [ ] Không module nào import `PrismaClient` ngoài `infra/`
-- [ ] Bản ghi tổ chức khác trả 404, không trả 403 (`YC-T4`)
-- [ ] `POST /session/organization` là nơi duy nhất client nêu tên tổ chức
-- [ ] Bộ test cách ly phủ mọi bảng có `organization_id`, chạy trong CI (`YC-T10`)
-- [ ] **`npm run test:tenant` xanh thật** — gỡ script thất bại có chủ đích
-- [ ] Không còn bất kỳ khoá ghi toàn cục nào (`YC-T9`)
+- [x] Bảy bảng nền dựng đủ: `users` `sessions` `organizations` `workspaces` `branches` `roles` `memberships` (`YC-T1`)
+- [x] `TenantContext` giải từ `sessions.organization_id` phía máy chủ (`YC-T2`)
+- [x] Repository nhận `TenantContext` bắt buộc, tự chèn điều kiện lọc (`YC-T3`)
+- [x] Không module nào import `PrismaClient` ngoài `infra/`
+- [x] Bản ghi tổ chức khác trả 404, không trả 403 (`YC-T4`)
+- [x] `POST /session/organization` là nơi duy nhất client nêu tên tổ chức
+- [x] Bộ test cách ly phủ mọi bảng có `organization_id`, chạy trong CI (`YC-T10`)
+- [x] **`npm run test:tenant` xanh thật** — gỡ script thất bại có chủ đích
+- [x] Không còn bất kỳ khoá ghi toàn cục nào (`YC-T9`)
+- [x] Lược đồ và client theo Prisma 7: `prisma.config.ts`, driver adapter `@prisma/adapter-pg`, `datasource` không mang `url`
+- [x] `eslint.config.mjs` — trước đó `npm run lint` dừng ngay vì thiếu tệp cấu hình, nên cổng thứ hai của CI chưa từng chạy
+
+Endpoint gác bằng mã năng lực — `/members`, `/roles`, `/branches`, `/workspaces`,
+`/organizations/current` — thuộc P2, cùng pha với bảng 76 mã gác chúng. Ở P1
+`requireCapability` từ chối mọi mã: cổng chưa có bảng quyền thì chặn hết, không
+mở tạm.
 
 ## P2 — Quyền
 

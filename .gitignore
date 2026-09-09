@@ -1,5 +1,8 @@
 node_modules/
 .next/
+
+# Client Prisma sinh sẵn — sinh lại bằng `npx prisma generate`
+src/generated/
 dist/
 build/
 *.tsbuildinfo

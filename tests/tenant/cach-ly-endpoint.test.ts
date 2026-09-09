@@ -1,0 +1,111 @@
+import { afterAll, beforeEach, describe, expect, it } from "vitest"
+
+import { GET as authMe } from "@/app/api/v1/auth/me/route"
+import { GET as listOrganizations } from "@/app/api/v1/organizations/route"
+import { POST as switchOrganization } from "@/app/api/v1/session/organization/route"
+
+import { disconnectDatabase, resetDatabase } from "../helpers/database"
+import { createTenant, readJson, withSession, type Tenant } from "../helpers/fixtures"
+
+const BASE = "http://localhost/api/v1"
+
+/**
+ * Cùng phép thử ở mức endpoint (`YC-T10`): gọi endpoint bằng ngữ cảnh phiên của
+ * tổ chức khác và soi kết quả.
+ *
+ * `POST /session/organization` là endpoint duy nhất của P1 nhận một mã tổ chức
+ * từ client, nên nó là chỗ duy nhất phép thử "404 chứ không 403" có ý nghĩa —
+ * và cũng là chỗ dễ sai nhất.
+ */
+describe("cách ly tenant ở tầng endpoint", () => {
+  let a: Tenant
+  let b: Tenant
+
+  beforeEach(async () => {
+    await resetDatabase()
+    a = await createTenant("alpha")
+    b = await createTenant("beta")
+  })
+
+  afterAll(async () => {
+    await disconnectDatabase()
+  })
+
+  it("GET /auth/me chỉ trả tổ chức của chính phiên", async () => {
+    const response = await authMe(withSession(`${BASE}/auth/me`, b.token))
+    expect(response.status).toBe(200)
+
+    const body = await readJson(response)
+    const organization = body.organization as { id: string }
+    expect(organization.id).toBe(b.organizationId)
+    expect(organization.id).not.toBe(a.organizationId)
+  })
+
+  it("GET /auth/me không trả năng lực nào trước khi có bảng quyền", async () => {
+    const body = await readJson(await authMe(withSession(`${BASE}/auth/me`, a.token)))
+    expect(body.capabilities).toEqual([])
+  })
+
+  it("GET /organizations chỉ liệt kê tổ chức người gọi là thành viên", async () => {
+    const body = await readJson(
+      await listOrganizations(withSession(`${BASE}/organizations`, a.token))
+    )
+    const data = body.data as Array<{ id: string }>
+    expect(data.map((row) => row.id)).toEqual([a.organizationId])
+  })
+
+  it("POST /session/organization sang tổ chức của người khác trả 404, không trả 403", async () => {
+    const response = await switchOrganization(
+      withSession(`${BASE}/session/organization`, b.token, {
+        method: "POST",
+        body: JSON.stringify({ organization_id: a.organizationId }),
+      })
+    )
+
+    expect(response.status).toBe(404)
+    const body = await readJson(response)
+    expect((body.error as { code: string }).code).toBe("NOT_FOUND")
+  })
+
+  it("POST /session/organization với mã tổ chức không tồn tại trả cùng một đáp ứng", async () => {
+    const khongTonTai = await switchOrganization(
+      withSession(`${BASE}/session/organization`, b.token, {
+        method: "POST",
+        body: JSON.stringify({ organization_id: "khong-co-that" }),
+      })
+    )
+    const cuaNguoiKhac = await switchOrganization(
+      withSession(`${BASE}/session/organization`, b.token, {
+        method: "POST",
+        body: JSON.stringify({ organization_id: a.organizationId }),
+      })
+    )
+
+    expect(khongTonTai.status).toBe(cuaNguoiKhac.status)
+    expect(await readJson(khongTonTai)).toEqual(await readJson(cuaNguoiKhac))
+  })
+
+  it("POST /session/organization sang tổ chức của chính mình vẫn chạy", async () => {
+    const response = await switchOrganization(
+      withSession(`${BASE}/session/organization`, a.token, {
+        method: "POST",
+        body: JSON.stringify({ organization_id: a.organizationId }),
+      })
+    )
+    expect(response.status).toBe(200)
+  })
+
+  it("không có phiên thì không endpoint nào trả dữ liệu", async () => {
+    const withoutCookie = new Request(`${BASE}/auth/me`)
+    const response = await authMe(withoutCookie)
+    expect(response.status).toBe(401)
+    expect((((await readJson(response)).error as { code: string })).code).toBe(
+      "UNAUTHENTICATED"
+    )
+  })
+
+  it("token giả không mở được phiên nào", async () => {
+    const response = await authMe(withSession(`${BASE}/auth/me`, "token-bia-ra"))
+    expect(response.status).toBe(401)
+  })
+})

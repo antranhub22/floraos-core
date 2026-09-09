@@ -26,15 +26,19 @@ Hai bên nối nhau qua bảng `generation_jobs` trên Postgres, không qua HTTP
 cp .env.example .env      # điền SESSION_SECRET
 docker compose up -d
 npm i
+npx prisma generate
 npx prisma db push
+npx prisma db seed        # bốn vai hệ thống
 npm run dev
 ```
 
+Chuỗi kết nối nằm ở `prisma.config.ts` cho lệnh dòng lệnh và ở driver adapter cho `PrismaClient`; Prisma 7 không nhận `url` trong `schema.prisma`.
+
 ## Trạng thái
 
-Khung repo. Chưa có bảng, chưa có route, chưa có job.
+**P1 xong.** Bảy bảng nền, ngữ cảnh tổ chức giải từ phiên phía máy chủ, bộ gác lọc theo tổ chức ở tầng repository, sáu endpoint phiên và tổ chức dưới `/api/v1/`, bộ test cách ly xanh trong CI.
 
-Hạng mục kế tiếp là **P1** — Organization · Workspace · Membership · Branch · cách ly tenant. Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 và P2 đạt nghiệm thu; làm ngược sẽ sinh ra lược đồ thiếu `organization_id` và phải migration lại khi đã có dữ liệu thật.
+Hạng mục kế tiếp là **P2** — quyền: 76 mã năng lực, ba lớp cắt, trần cứng cắt sau cùng. Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P2 đạt nghiệm thu; làm ngược sẽ sinh ra lược đồ thiếu `organization_id` và phải migration lại khi đã có dữ liệu thật.
 
 ## Ba repo còn lại
 

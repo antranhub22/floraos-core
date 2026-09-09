@@ -1,0 +1,117 @@
+import { afterAll, beforeEach, describe, expect, it } from "vitest"
+
+import { TenantScopeViolation, scopedWhere } from "@/core/tenancy"
+import { BranchRepository } from "@/modules/organization/infra/branch-repository"
+import { MembershipRepository } from "@/modules/organization/infra/membership-repository"
+import { OrganizationRepository } from "@/modules/organization/infra/organization-repository"
+import { RoleRepository } from "@/modules/organization/infra/role-repository"
+import { WorkspaceRepository } from "@/modules/organization/infra/workspace-repository"
+
+import { disconnectDatabase, resetDatabase } from "../helpers/database"
+import { createTenant, type Tenant } from "../helpers/fixtures"
+
+/**
+ * Bộ gác nằm ở tầng repository (`YC-T3`). Mỗi bảng có `organization_id` phải
+ * có một trường hợp ở đây: đọc bản ghi của tổ chức A bằng ngữ cảnh của tổ chức
+ * B, kết quả phải là **không tìm thấy** — không phải lỗi quyền, vì lỗi quyền
+ * đã tiết lộ rằng bản ghi tồn tại (đặc tả 07 mục 11).
+ */
+describe("cách ly tenant ở tầng repository", () => {
+  let a: Tenant
+  let b: Tenant
+
+  beforeEach(async () => {
+    await resetDatabase()
+    a = await createTenant("alpha")
+    b = await createTenant("beta")
+  })
+
+  afterAll(async () => {
+    await disconnectDatabase()
+  })
+
+  it("organizations — tổ chức hiện tại chỉ là tổ chức của chính ngữ cảnh", async () => {
+    const repository = new OrganizationRepository()
+
+    const own = await repository.current(a.ctx)
+    expect(own?.id).toBe(a.organizationId)
+
+    const other = await repository.current(b.ctx)
+    expect(other?.id).toBe(b.organizationId)
+    expect(other?.id).not.toBe(a.organizationId)
+  })
+
+  it("workspaces — workspace của A không đọc được bằng ngữ cảnh của B", async () => {
+    const repository = new WorkspaceRepository()
+
+    expect(await repository.findById(a.ctx, a.ctx.workspaceId)).not.toBeNull()
+    expect(await repository.findById(b.ctx, a.ctx.workspaceId)).toBeNull()
+
+    const listOfB = await repository.list(b.ctx)
+    expect(listOfB.map((row) => row.id)).toEqual([b.ctx.workspaceId])
+  })
+
+  it("branches — chi nhánh của A không đọc, không sửa được bằng ngữ cảnh của B", async () => {
+    const repository = new BranchRepository()
+    const branchOfA = await repository.create(a.ctx, { name: "Chi nhánh 1", code: "CN01" })
+
+    expect(await repository.findById(a.ctx, branchOfA.id)).not.toBeNull()
+    expect(await repository.findById(b.ctx, branchOfA.id)).toBeNull()
+    expect(await repository.findByCode(b.ctx, "CN01")).toBeNull()
+    expect(await repository.list(b.ctx)).toEqual([])
+
+    // Ghi cũng phải trượt: cập nhật theo khoá chính mà không lọc tổ chức là
+    // đường sửa được dữ liệu của tổ chức khác nếu đoán đúng id.
+    expect(await repository.update(b.ctx, branchOfA.id, { name: "Bị đổi tên" })).toBeNull()
+    const unchanged = await repository.findById(a.ctx, branchOfA.id)
+    expect(unchanged?.name).toBe("Chi nhánh 1")
+  })
+
+  it("roles — vai riêng của A không đọc được bằng ngữ cảnh của B", async () => {
+    const repository = new RoleRepository()
+    const roleOfA = await repository.create(a.ctx, { key: "thu_ngan", name: "Thu ngân" })
+
+    expect(await repository.findById(a.ctx, roleOfA.id)).not.toBeNull()
+    expect(await repository.findById(b.ctx, roleOfA.id)).toBeNull()
+    expect(await repository.findAssignableById(b.ctx, roleOfA.id)).toBeNull()
+    expect(await repository.listForOrganization(b.ctx)).toEqual([])
+  })
+
+  it("roles — vai hệ thống dùng chung, và đó là ngoại lệ duy nhất", async () => {
+    const repository = new RoleRepository()
+    const founder = await repository.findSystemRoleByKey("dieu_hanh")
+    expect(founder).not.toBeNull()
+
+    // Vai hệ thống có organization_id = null nên mọi tổ chức gán được.
+    expect(await repository.findAssignableById(a.ctx, founder!.id)).not.toBeNull()
+    expect(await repository.findAssignableById(b.ctx, founder!.id)).not.toBeNull()
+
+    // Nhưng nó không nằm trong danh sách vai *của* tổ chức nào.
+    expect(await repository.listForOrganization(a.ctx)).toEqual([])
+  })
+
+  it("memberships — tư cách thành viên của A không đọc được bằng ngữ cảnh của B", async () => {
+    const repository = new MembershipRepository()
+
+    const ofA = await repository.findForCurrentUser(a.ctx)
+    expect(ofA).not.toBeNull()
+    expect(await repository.findById(b.ctx, ofA!.id)).toBeNull()
+
+    const listOfB = await repository.list(b.ctx)
+    expect(listOfB).toHaveLength(1)
+    expect(listOfB[0]?.user_id).toBe(b.userId)
+  })
+
+  it("bộ gác từ chối mệnh đề where tự khai organization_id", () => {
+    expect(() => scopedWhere(a.ctx, { organization_id: b.organizationId })).toThrow(
+      TenantScopeViolation
+    )
+  })
+
+  it("bộ gác luôn ghi đè bằng tổ chức của ngữ cảnh", () => {
+    expect(scopedWhere(a.ctx, { id: "bat-ky" })).toEqual({
+      id: "bat-ky",
+      organization_id: a.organizationId,
+    })
+  })
+})

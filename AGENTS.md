@@ -8,7 +8,7 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 
 | Việc | Lệnh |
 |---|---|
-| Cài | `docker compose up -d && npm i && npx prisma db push` |
+| Cài | `docker compose up -d && npm i && npx prisma generate && npx prisma db push && npx prisma db seed` |
 | Chạy web | `npm run dev` |
 | Chạy worker | `cd workers && python -m media_ai.worker` |
 | Test web | `npm test` |
@@ -38,7 +38,7 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: khung repo, chưa có bảng nào. Hạng mục kế tiếp là P1.
+Trạng thái hiện tại: **P1 xong** — bảy bảng nền, `TenantContext`, bộ gác ở tầng repository, sáu endpoint phiên và tổ chức, bộ test cách ly xanh. Hạng mục kế tiếp là **P2**.
 
 ## Luật thu hoạch
 
@@ -68,15 +68,21 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 
 | Vùng | Đường dẫn | Ghi chú |
 |---|---|---|
-| Ngữ cảnh tenant | `src/core/tenancy/` | bộ gác truy vấn — P1 |
-| Năng lực & quyền | `src/core/rbac/` | 76 mã thu hoạch từ `FloraOS/floraos-web/src/lib/maChucNang.ts` — P2 |
+| Ngữ cảnh tenant | `src/core/tenancy/tenant-context.ts` | `TenantContext`, `scopedWhere`, `scopedData` — luật thuần, không import hạ tầng |
+| Client cơ sở dữ liệu | `src/core/tenancy/infra/prisma.ts` | thể hiện `PrismaClient` duy nhất; chỉ tệp trong `infra/` được import |
+| Hình dạng lỗi và cookie | `src/core/http/` | `AppError` tám mã · cookie phiên · `handle()` bọc route |
+| Năng lực & quyền | `src/core/rbac/capabilities.ts` | cổng `requireCapability`, chặn hết cho tới khi P2 nạp 76 mã từ `FloraOS/floraos-web/src/lib/maChucNang.ts` |
 | Cổng ra ngoài | `src/core/ports/` | `VisionAnalyzer` · `LLMProvider` · `StorageProvider` · `QueueProvider` · `PublisherProvider` |
+| Module tổ chức | `src/modules/organization/` | đăng ký, đăng nhập, phiên, đổi tổ chức; repository của cả bảy bảng nền |
 | Module | `src/modules/<tên>/` | bốn thư mục mỗi module |
-| API | `src/app/api/v1/` | chưa có route |
-| Lược đồ | `prisma/schema.prisma` | còn trống; worker đọc bản sinh sẵn, không tự khai bảng |
+| API | `src/app/api/v1/` | `auth/{signup,login,logout,me}` · `organizations` · `session/organization` |
+| Lược đồ | `prisma/schema.prisma` | bảy bảng nền; worker đọc bản sinh sẵn, không tự khai bảng |
+| Chuỗi kết nối | `prisma.config.ts` | Prisma 7 không nhận `url` trong `schema.prisma` nữa |
+| Vai hệ thống | `prisma/seed.ts` | bốn vai, `organization_id = null` |
 | Worker phân tích ảnh | `workers/vision/` | M01 — P5 |
 | Worker tối ưu ảnh | `workers/media_ai/` | M04a — P9 |
-| Test cách ly tenant | `tests/tenant/` | `npm run test:tenant` |
+| Test cách ly tenant | `tests/tenant/` | bốn tệp; `npm run test:tenant` |
+| Đồ dùng cho test | `tests/helpers/` | dọn bảng, dựng hai tổ chức bằng đúng luồng đăng ký thật |
 | Tài liệu kiến trúc | `docs/kien-truc/` | 8 tệp, xem `TRANG_THAI.md` |
 
 ## Bẫy
@@ -84,7 +90,10 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 *(Mỗi lần một điều bất ngờ làm mất hơn một giờ, thêm một dòng.)*
 
 - Bộ ảnh vàng là điều kiện nghiệm thu P5. Không có nó thì không đổi được provider và không hồi quy được phần thu hoạch. Quy cách ở `docs/kien-truc/BO_ANH_VANG.md`.
-- `npm run test:tenant` cố tình thất bại tới khi P1 xong — tệp `tests/tenant/chua-trien-khai.test.ts`. Đừng "sửa" nó bằng cách cho nó xanh; xoá nó khi có bộ test thật.
+- Prisma 7 **không đọc `url` trong `schema.prisma`** nữa. Chuỗi kết nối nằm ở `prisma.config.ts` cho lệnh dòng lệnh, và ở driver adapter `@prisma/adapter-pg` cho `PrismaClient`. Bỏ qua điều này thì `prisma generate` dừng ở `P1012`.
+- `prisma.config.ts` cũng không tự nạp `.env`. Nó gọi `process.loadEnvFile` khi tệp có mặt; trên CI biến nằm sẵn trong môi trường.
+- `prisma generate` và `prisma db push` **tải nhị phân schema-engine từ `binaries.prisma.sh`**. Máy không ra được host đó thì hai lệnh này không chạy, dù mọi thứ khác offline được. Sinh lược đồ ở nơi có mạng, hoặc mở host đó trên proxy.
+- `npm run lint` từng dừng ngay vì repo thiếu `eslint.config.mjs` — cổng thứ hai của CI chưa từng chạy trong suốt P0. Thêm một cổng vào CI thì chạy thử nó một lần tại máy.
 
 ## Kết thúc mỗi việc — bắt buộc
 

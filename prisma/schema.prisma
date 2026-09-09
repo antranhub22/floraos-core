@@ -1,19 +1,147 @@
 // Nguồn sự thật lược đồ của floraos-core.
 // Worker Python đọc lược đồ sinh sẵn, không tự khai bảng (V2 mục 3.1).
 //
-// Lược đồ còn trống. Bảng đầu tiên thuộc P1: organizations, workspaces,
-// memberships, roles, branches (V2 mục 15).
-//
 // Luật bắt buộc với mọi model thêm vào đây:
 //   1. Mọi bản ghi thuộc tenant mang organization_id, có index. Không ngoại lệ.
 //   2. Đặt tên snake_case tiếng Anh.
 //   3. generation_jobs tách ba trục: status / stage / result.
+//
+// `users` là bảng duy nhất không có organization_id — một người thuộc nhiều
+// tổ chức qua `memberships`.
+//
+// Chuỗi kết nối không nằm trong tệp này. Prisma 7 đọc nó từ `prisma.config.ts`
+// cho lệnh migrate, và từ driver adapter cho `PrismaClient`.
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+// ── Kiểu liệt kê ────────────────────────────────────────────────────────────
+// Bộ giá trị của P1. Các enum còn lại (job_status, asset_kind, …) thêm ở pha
+// sở hữu bảng tương ứng.
+
+enum organization_type {
+  EXPERIENCE
+  SINGLE
+  CHAIN
+}
+
+enum workspace_kind {
+  EXPERIENCE
+  PRODUCTION
+}
+
+enum membership_status {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+enum trial_status {
+  ACTIVE
+  EXHAUSTED
+  EXPIRED
+}
+
+// ── Nền tảng đa tenant — P1 ─────────────────────────────────────────────────
+
+model users {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String?
+  name          String?
+  avatar_url    String?
+  locale        String   @default("vi")
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  memberships memberships[]
+  sessions    sessions[]
+}
+
+model sessions {
+  id              String    @id @default(uuid())
+  user_id         String
+  token_hash      String    @unique
+  organization_id String? // tổ chức đang hoạt động của phiên
+  created_at      DateTime  @default(now())
+  expires_at      DateTime
+  revoked_at      DateTime?
+
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model organizations {
+  id             String            @id @default(uuid())
+  name           String
+  slug           String            @unique
+  type           organization_type @default(SINGLE)
+  credit_balance Int               @default(0)
+  credit_plan    String?
+  settings       Json? // bảng công tắc cấp tổ chức, gồm cho_phep_tu_duyet
+  created_at     DateTime          @default(now())
+  updated_at     DateTime          @updatedAt
+}
+
+model workspaces {
+  id              String         @id @default(uuid())
+  organization_id String
+  name            String
+  kind            workspace_kind @default(PRODUCTION)
+  trial_count     Int            @default(0)
+  trial_limit     Int?
+  trial_reset_at  DateTime?
+  trial_status    trial_status?
+  created_at      DateTime       @default(now())
+
+  @@index([organization_id])
+}
+
+model branches {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  code            String
+  address         String?
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+
+  @@unique([organization_id, code])
+  @@index([organization_id])
+}
+
+model roles {
+  id              String   @id @default(uuid())
+  organization_id String? // null = vai hệ thống, dùng chung mọi tổ chức
+  key             String // dieu_hanh · sale · dieu_phoi · experience_user
+  name            String
+  is_system       Boolean  @default(false)
+  created_at      DateTime @default(now())
+
+  @@unique([organization_id, key])
+  @@index([organization_id])
+}
+
+model memberships {
+  id              String            @id @default(uuid())
+  organization_id String
+  user_id         String
+  role_id         String
+  branch_id       String? // null = phạm vi toàn tổ chức
+  status          membership_status @default(INVITED)
+  invited_at      DateTime          @default(now())
+  joined_at       DateTime?
+
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([organization_id, user_id])
+  @@index([organization_id])
+  @@index([user_id])
 }

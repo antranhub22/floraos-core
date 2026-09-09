@@ -10,11 +10,15 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: khung repo `floraos-core` đã dựng. Chưa có bảng, chưa có route, chưa có job.**
+**Giai đoạn: P1 xong. Nền đa tenant chạy được, có cổng chặn.**
 
-Repo nằm ở `~/Projects/floraos-core`, git đã khởi tạo, chưa có remote. Lược đồ Prisma còn trống — bảng đầu tiên thuộc P1.
+Repo nằm ở `~/Projects/floraos-core`, remote `antranhub22/floraos-core`.
 
-D4 đã chốt, P1 mở khoá. Hạng mục kế tiếp là **P1** — Organization · Workspace · Membership · Branch · cách ly tenant.
+Đã có: bảy bảng nền (`users` `sessions` `organizations` `workspaces` `branches` `roles` `memberships`) · `TenantContext` giải từ `sessions.organization_id` phía máy chủ · bộ gác lọc theo tổ chức ở tầng repository · sáu endpoint `/api/v1/` không gác bằng mã năng lực (`auth/signup`, `auth/login`, `auth/logout`, `auth/me`, `GET /organizations`, `POST /session/organization`) · bộ test cách ly bốn tệp, 21 trường hợp, xanh.
+
+Chưa có: bảng năng lực, và vì thế chưa có endpoint nào gác bằng mã năng lực. `requireCapability` hiện từ chối mọi mã — cổng chưa có bảng quyền thì chặn hết, không mở tạm.
+
+Hạng mục kế tiếp là **P2** — quyền.
 
 ## 2. Đọc theo thứ tự này
 
@@ -73,7 +77,7 @@ Không còn quyết định nào chặn. D1 · D2 · D3 · D4 chốt ngày 09/09
 
 ## 6. Việc kế tiếp
 
-1. **P1** — Organization · Workspace · Membership · Branch · cách ly tenant. **Trước mọi thu hoạch khác.** Không tạo bảng, route hay job của bất kỳ module nào trước khi P1 và P2 đạt nghiệm thu.
+1. **P2** — quyền. Thu hoạch R2: 76 mã và 18 trần cứng từ `FloraOS/floraos-web/src/lib/maChucNang.ts`, chép kèm `maChucNang.test.ts` và giữ nó xanh không sửa một dòng. Ba bảng còn lại của lược đồ quyền (`role_capabilities`, `capability_overrides`) và nhóm endpoint gác bằng `F1`–`F8` thuộc pha này. Vẫn chưa tạo bảng, route hay job của bất kỳ module nào trước khi P2 đạt nghiệm thu.
 2. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`, gán nhãn theo `QUY_UOC_DEM.md`. Bước đầu tiên là gom ảnh từ kho vận hành AVI GIFT.
 3. Khi làm P6: chốt cách tính chi phí lá và cành trang trí, vì quy ước đếm để loại này không có số lượng.
 
@@ -104,3 +108,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | Chốt quy ước đếm, `QUY_UOC_DEM.md`. Lược đồ nhãn bộ ảnh vàng đồng bộ theo |
 | 09/09 | Rà soát mã thật ba repo; bộ đặc tả 13 tệp ở `floraos-core/docs/dac-ta/` |
 | 09/09 | Chốt D1, D2, D3. Sửa V2 và bản đồ thu hoạch theo mã thật: 18 mã trần cứng, dải E1–E8, count_engine và color_engine là REUSE |
+| 09/09 | **P1 xong.** Bảy bảng nền, `TenantContext`, bộ gác ở tầng repository, sáu endpoint phiên và tổ chức, bộ test cách ly 21 trường hợp. Lược đồ và client chuyển sang cách khai của Prisma 7 (`prisma.config.ts` + driver adapter); thêm `eslint.config.mjs` vì `npm run lint` trước đó dừng ngay khi chạy |

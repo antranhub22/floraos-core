@@ -10,4 +10,16 @@ Luật áp cho mọi endpoint:
 - Endpoint duyệt tách khỏi endpoint sinh kết quả: `/x/[id]/approve`.
 - Thao tác AI dài trả về `job_id`, không chặn HTTP.
 
-Chưa có route nào. Route thật chỉ được tạo sau khi P1 và P2 đạt nghiệm thu.
+## Route hiện có — P1
+
+| Method | Path | Ghi chú |
+|---|---|---|
+| POST | `/auth/signup` | Tạo người dùng và tổ chức trải nghiệm của họ |
+| POST | `/auth/login` | |
+| POST | `/auth/logout` | |
+| GET | `/auth/me` | Người dùng, tổ chức hiện tại, danh sách năng lực đã tính sẵn |
+| GET | `/organizations` | Các tổ chức người gọi là thành viên |
+| POST | `/session/organization` | Đổi tổ chức đang hoạt động — chỗ duy nhất client nêu tên một tổ chức |
+
+Route gác bằng mã năng lực thuộc P2, cùng pha với bảng 76 mã gác chúng. Route
+của module thuộc pha sở hữu module đó.
