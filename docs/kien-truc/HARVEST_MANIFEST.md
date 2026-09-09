@@ -13,7 +13,7 @@ Hướng "dựng mới + tận dụng" là đúng, và lý do mạnh hơn nhiề
 
 | Repo | Mảnh đã làm đúng | Mảnh còn thiếu hoàn toàn |
 |---|---|---|
-| **FloraOS** | **RBAC theo năng lực** (76 mã, 26 trần cứng, cắt 3 lớp) · **engine giá** có test bất biến hai phía · **hợp đồng AI Vision** (40KB prompt/schema) | Đa tenant · Postgres làm nguồn sự thật · Asset · Usage · job bền |
+| **FloraOS** | **RBAC theo năng lực** (76 mã, 18 trần cứng, cắt 3 lớp) · **engine giá** có test bất biến hai phía · **hợp đồng AI Vision** (40KB prompt/schema) | Đa tenant · Postgres làm nguồn sự thật · Asset · Usage · job bền |
 | **LocalBudd** | **Kiến trúc hexagonal sạch** (`core/ports`, 8 module × domain/use-cases/infra/adapters) · Postgres+Prisma 17 model · **`generation_jobs` đã tách `status` + `step`** · `qa_results` · Next.js 16 / React 19 | Org/Membership/RBAC · Usage · trục `result` của job · Branch |
 | **SocialFlow** | **`assets` đã có phả hệ**: `parent_asset_id`, `sha256`, `origin`, `provider`, `cost_usd`, `metadata`, `state` · `brand_config` (= BrandProfile) · adapter đăng bài 6 nền tảng · `video_jobs` có `cost_usd` | SQLite (không đa tenant được) · frontend một tệp không build step · không RBAC |
 
@@ -50,10 +50,10 @@ Phần còn lại của tài liệu này viết theo **Đường A**.
 | # | Tài sản | Nguồn | Vì sao thuần | Test khoá |
 |---|---|---|---|---|
 | R1 | **Hợp đồng AI Vision** — `Prompt.md` (10.6KB), `Schema.json` (14KB), `Prescreen.json`, `config.json`, `san_xuat.json`, `hidden_materials.json` | `FloraOS/python-service/analyzer/` | **40KB dữ liệu thuần, không một dòng mã.** Tài sản giá trị nhất của cả ba repo | Bộ ảnh vàng (`run.py --eval golden/`) |
-| R2 | **Bảng 76 mã năng lực** + 26 trần cứng + hàm `duocPhep`/`vaiDuocPhep` | `FloraOS/src/lib/maChucNang.ts` | **Không import gì cả.** Tự chạy được, tự test được | `tests/maChucNang.test.ts` |
-| R3 | **Công thức giá** | `FloraOS/src/lib/pricing.ts` (227 dòng, import 1 module nội bộ) | Gần thuần | `tests/pricing.test.ts` |
+| R2 | **Bảng 76 mã năng lực** + 18 trần cứng + hàm `duocPhep`/`vaiDuocPhep` | `FloraOS/floraos-web/src/lib/maChucNang.ts` | **Không import gì cả.** Tự chạy được, tự test được | `FloraOS/floraos-web/tests/maChucNang.test.ts` |
+| R3 | **Công thức giá** | `FloraOS/floraos-web/src/lib/pricing.ts` (227 dòng, import 1 module nội bộ) | Gần thuần | `FloraOS/floraos-web/tests/pricing.test.ts` |
 | R4 | Bất biến làm tròn từng cấu phần | `FloraOS` `pricing.ts` ↔ `template_validator.py` | Là **luật**, không phải mã | `pricing.test.ts` + `test_bat_bien.py` — **chép cả hai** |
-| R5 | Sàn/Trần, chặn giá, mức thu, ước phí | `FloraOS/src/lib/{chanGia,sanTran,mucThu,uocPhi}.ts` | Thuần | `chanGia.test.ts`, `uocPhi.test.ts` |
+| R5 | Sàn/Trần, chặn giá, mức thu, ước phí | `FloraOS/floraos-web/src/lib/{chanGia,sanTran,mucThu,uocPhi}.ts` | Thuần | `FloraOS/floraos-web/tests/chanGia.test.ts`, `uocPhi.test.ts` |
 | R6 | **Khuôn hexagonal** — `core/ports/`, `modules/<tên>/{domain,use-cases,infra,adapters}` | `LocalBudd/src/` | Là **quy ước**, chép cấu trúc chứ không chép mã | — |
 | R7 | Enum `job_status` + `job_step` | `LocalBudd/prisma/schema.prisma` | Đúng §10 sẵn | — |
 | R8 | Bộ 8 tài liệu đặc tả MVP | `LocalBudd/ORG_docx/` | Đặc biệt `07-database-specification` và `08-repository-technical-audit` | — |

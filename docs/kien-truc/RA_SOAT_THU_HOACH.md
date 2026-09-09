@@ -44,7 +44,7 @@ Trường của `bom.flowers`: `nhom_hoa` · `name` · `shade` · `color` · `qu
 
 ## 3. Bảng thu hoạch xác thực
 
-### FloraOS — `floraos-web/src/lib/`
+### FloraOS — `FloraOS/floraos-web/src/lib/`
 
 | Tài sản | Tệp | Dòng | Phụ thuộc | Hạng |
 |---|---|---|---|---|
@@ -59,9 +59,9 @@ Trường của `bom.flowers`: `nhom_hoa` · `name` · `shade` · `color` · `qu
 | Sàn/Trần | `sanTran.ts` | 102 | | REUSE |
 | Chặn giá | `chanGia.ts` | 62 | | REUSE |
 
-Test đi kèm, `floraos-web/tests/`, 1.430 dòng: `taiKhoan` 230 · `locTraCuu` 219 · `maChucNang` 172 · `pricing` 107 · `chanGia` 85 · `uocPhi` 83 · `settingsLogic` 81 · `giaChieuBBang` 75 · `mucThu` 65 · `nhapTay` 65 · `khoaRieng` 53 · `dinhMuc` 46 · `kyThanhToan` 40 · `loiNguoiDung` 38.
+Test đi kèm, `FloraOS/floraos-web/tests/`, 1.430 dòng: `taiKhoan` 230 · `locTraCuu` 219 · `maChucNang` 172 · `pricing` 107 · `chanGia` 85 · `uocPhi` 83 · `settingsLogic` 81 · `giaChieuBBang` 75 · `mucThu` 65 · `nhapTay` 65 · `khoaRieng` 53 · `dinhMuc` 46 · `kyThanhToan` 40 · `loiNguoiDung` 38.
 
-### FloraOS — `python-service/analyzer/`
+### FloraOS — `FloraOS/python-service/analyzer/`
 
 | Tài sản | Tệp | Dòng | Import | Hạng |
 |---|---|---|---|---|
@@ -81,14 +81,14 @@ Test đi kèm, `floraos-web/tests/`, 1.430 dòng: `taiKhoan` 230 · `locTraCuu` 
 
 | Tài sản | Vị trí | Quy mô | Hạng |
 |---|---|---|---|
-| Khuôn thư mục module | `src/modules/` — 8 module | | REUSE khuôn |
-| Cổng | `src/core/ports/` | **1 tệp** (`LLMProvider.ts`) | BUILD phần còn lại |
-| Lược đồ | `prisma/schema.prisma` | 274 dòng, 17 model, 10 enum | tham chiếu |
+| Khuôn thư mục module | `LocalBudd/src/modules/` — 8 module | | REUSE khuôn |
+| Cổng | `LocalBudd/src/core/ports/` | **1 tệp** (`LLMProvider.ts`) | BUILD phần còn lại |
+| Lược đồ | `LocalBudd/prisma/schema.prisma` | 274 dòng, 17 model, 10 enum | tham chiếu |
 | `generation_jobs` | | `id · type · status · step · payload · result · created_at · updated_at` | EXTEND — thiếu `organization_id`, thiếu trục `result` dạng phán quyết, thiếu `cancelled` |
 | Enum `job_status` | | `pending · processing · completed · failed` | EXTEND — thêm `cancelled` |
 | Enum `job_step` | | `init · generating · upscaling · finalizing` | tham chiếu — mỗi module tự khai `stage` riêng |
-| Mẫu route | `src/app/api/v1/` — 33 route | có sẵn mẫu `/pages/[id]/approve` | REUSE mẫu |
-| Bộ 8 tài liệu | `ORG_docx/` | 15.889 dòng | REUSE làm chuẩn trình bày |
+| Mẫu route | `LocalBudd/src/app/api/v1/` — 33 route | có sẵn mẫu `/pages/[id]/approve` | REUSE mẫu |
+| Bộ 8 tài liệu | `LocalBudd/ORG_docx/` | 15.889 dòng | REUSE làm chuẩn trình bày |
 
 `media_assets` của LocalBudd chỉ có `id · job_id · url · status · created_at` — không dùng được, bảng `assets` lấy từ SocialFlow.
 
@@ -96,7 +96,7 @@ Không model nào của LocalBudd có `organization_id`. `projects.owner_id` là
 
 ### SocialFlow
 
-Bảng `assets` thật trong `socialflow.db`, 23 cột — khai gốc ở `backend/asset_inventory.py`, sáu cột thêm bằng `backend/migrations.py`:
+Bảng `assets` thật trong `socialflow.db`, 23 cột — khai gốc ở `SocialFlow/backend/asset_inventory.py`, sáu cột thêm bằng `SocialFlow/backend/migrations.py`:
 
 `id · asset_id · asset_type · source · title · description · file_path · file_url · file_size · duration_seconds · aspect_ratio · campaign · topic · tags · metadata · state · created_at · updated_at · sha256 · origin · provider · cost_usd · thumb_path · parent_asset_id`
 

@@ -2,7 +2,7 @@
 
 Nội dung thuộc **P2**, sau khi P1 đạt nghiệm thu.
 
-Thu hoạch R2: 76 mã năng lực và 26 trần cứng từ `FloraOS/src/lib/maChucNang.ts`, chép kèm `tests/maChucNang.test.ts`. Test xanh trên repo này thì mới coi là chuyển xong.
+Thu hoạch R2: 76 mã năng lực và 18 trần cứng từ `FloraOS/floraos-web/src/lib/maChucNang.ts`, chép kèm `FloraOS/floraos-web/tests/maChucNang.test.ts`. Test xanh trên repo này thì mới coi là chuyển xong.
 
 Ba lớp cắt, giữ nguyên thứ tự:
 

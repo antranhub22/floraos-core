@@ -25,3 +25,8 @@ du-lieu-van-hanh/
 *.xlsx
 !docs/**/*.xlsx
 golden/images/
+
+# Next
+.next/
+next-env.d.ts
+*.tsbuildinfo

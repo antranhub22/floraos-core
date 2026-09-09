@@ -102,7 +102,7 @@ Guard PASS không thay thế Approve. Tải ảnh về không phải là phê du
 - Không có khoá ghi toàn cục. Đồng thời hoá bằng giao dịch cơ sở dữ liệu.
 
 ### 7.2 Phân quyền
-- 76 mã năng lực, 26 mã có trần cứng. Ba lớp cắt: mặc định theo vai → bảng công tắc → trần cứng cắt sau cùng.
+- 76 mã năng lực, 18 mã có trần cứng. Ba lớp cắt: mặc định theo vai → bảng công tắc → trần cứng cắt sau cùng.
 - Quyền là bộ ba `(vai, mã, phạm vi)` với phạm vi ∈ {organization, branch}.
 - Vai là bản ghi, không phải enum. Vai tối thiểu: Experience User · Admin/Điều hành · Sale · Điều phối.
 - Cặp năng lực tách bắt buộc: `vision.analyze` ↔ `product.approve`; `media.optimize` ↔ `media.approve`.
@@ -252,4 +252,4 @@ Chín câu hỏi phải trả lời trước mỗi hạng mục: hạng thu ho�
 | Năng lực gác | Mục 7.2 |
 | Trạng thái | — |
 
-Giá trị đưa lên Master Index: ngưỡng đồng thời 100–500 · SLA 10–30 giây · dải chi phí ảnh và video · kích thước bộ ảnh vàng 50–100 · 76 mã năng lực, 26 trần cứng · tổng thời lượng lộ trình 5–6 tháng.
+Giá trị đưa lên Master Index: ngưỡng đồng thời 100–500 · SLA 10–30 giây · dải chi phí ảnh và video · kích thước bộ ảnh vàng 50–100 · 76 mã năng lực, 18 trần cứng · tổng thời lượng lộ trình 5–6 tháng.

@@ -229,8 +229,8 @@ Kiểm ở **tầng repository**, không ở route. Route quên kiểm là chuy�
 
 Endpoint không bao giờ hỏi "người này có phải Điều hành không". Nó hỏi "người này có `I2` không". Hard-code theo vai giao diện là lỗi chặn ở review.
 
-## 7. Điểm cần chủ sản phẩm xác nhận
+## 7. Nguồn của bảng
 
-Tài liệu kiến trúc V2 mục 6 ghi **26 mã có trần cứng**; mã nguồn có **18**. Bảng ở mục 3 theo mã nguồn. Cần xác nhận sửa con số ở tài liệu V2, hoặc bổ sung 8 mã trần cứng còn thiếu — hai hướng dẫn tới hai hệ thống quyền khác nhau.
+Bảng ở mục 3 sinh từ `FloraOS/floraos-web/src/lib/maChucNang.ts`. Ba con số đã đối chiếu với mã nguồn và xác nhận ngày 09/09: **76 mã**, **18 mã có trần cứng**, dải nhóm E là **E1–E8**. Tài liệu kiến trúc V2 đã sửa theo.
 
-Tài liệu V2 cũng ghi dải `E1–E7`; mã nguồn là `E1–E8`.
+Khi bảng năng lực trong mã đổi, sinh lại bảng này chứ không sửa tay.

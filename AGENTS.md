@@ -69,7 +69,7 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Vùng | Đường dẫn | Ghi chú |
 |---|---|---|
 | Ngữ cảnh tenant | `src/core/tenancy/` | bộ gác truy vấn — P1 |
-| Năng lực & quyền | `src/core/rbac/` | 76 mã thu hoạch từ `FloraOS/src/lib/maChucNang.ts` — P2 |
+| Năng lực & quyền | `src/core/rbac/` | 76 mã thu hoạch từ `FloraOS/floraos-web/src/lib/maChucNang.ts` — P2 |
 | Cổng ra ngoài | `src/core/ports/` | `VisionAnalyzer` · `LLMProvider` · `StorageProvider` · `QueueProvider` · `PublisherProvider` |
 | Module | `src/modules/<tên>/` | bốn thư mục mỗi module |
 | API | `src/app/api/v1/` | chưa có route |
