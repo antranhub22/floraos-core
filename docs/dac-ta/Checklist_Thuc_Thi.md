@@ -51,12 +51,14 @@ Endpoint gác bằng mã năng lực đã dựng cùng pha: `GET·PATCH /organiz
 `GET·POST /branches` · `PATCH /branches/:id` (`F6`/`F7`/`F7`) ·
 `GET·POST /workspaces` (`F1`/`F8`).
 
-**Chưa xác minh trong phiên này**: mọi phần chạm cơ sở dữ liệu (`npx prisma generate`,
-`npx prisma db push`, `npm run test:tenant`, phần còn lại của `npm test`) — sandbox
-không ra được `binaries.prisma.sh` (đúng cái bẫy đã ghi ở `AGENTS.md`). Chạy bốn lệnh
-đó tại máy có mạng trước khi coi P2 nghiệm thu xong. `npm run typecheck`, `npm run lint`,
-`npm run test:harvest`, và toàn bộ test thuần (không đụng Prisma) đã chạy xanh trong
-phiên này.
+**Đã xác minh trên máy có mạng (2026-09-09)**: `npx prisma generate`, `npx prisma db push`
+(Postgres 16 qua `docker compose up -d`, khớp `docker-compose.yml`), `npm test` (48/48),
+và `npm run test:tenant` (23/23) đều xanh. Một test P1 (`cach-ly-endpoint.test.ts` — "GET
+/auth/me không trả năng lực nào trước khi có bảng quyền") khoá hành vi placeholder cũ
+(`NO_CAPABILITIES` rỗng); đã sửa lại để khoá hành vi P2 thật — người sáng lập tổ chức
+(vai `dieu_hanh`) có năng lực mặc định ngay lúc đăng ký vì `ensureSystemRoles()` giờ nạp
+`role_capabilities`. Đối chiếu bằng `defaultCodesForSystemRole(FOUNDER_ROLE_KEY)`, không
+chép tay danh sách mã. P2 nghiệm thu xong.
 
 ## P3 — Asset · Job · Usage
 

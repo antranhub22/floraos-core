@@ -3,6 +3,8 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { GET as authMe } from "@/app/api/v1/auth/me/route"
 import { GET as listOrganizations } from "@/app/api/v1/organizations/route"
 import { POST as switchOrganization } from "@/app/api/v1/session/organization/route"
+import { defaultCodesForSystemRole } from "@/core/rbac/capability-catalog"
+import { FOUNDER_ROLE_KEY } from "@/modules/organization/domain/system-roles"
 
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, readJson, withSession, type Tenant } from "../helpers/fixtures"
@@ -41,9 +43,15 @@ describe("cách ly tenant ở tầng endpoint", () => {
     expect(organization.id).not.toBe(a.organizationId)
   })
 
-  it("GET /auth/me không trả năng lực nào trước khi có bảng quyền", async () => {
+  it("GET /auth/me trả đúng năng lực mặc định của vai điều hành — không rỗng, không lẫn tổ chức khác", async () => {
+    // P1 khoá hành vi "luôn rỗng" vì chưa có role_capabilities. P2 nạp bảng
+    // này ngay lúc ensureSystemRoles(), nên người sáng lập (vai dieu_hanh)
+    // có năng lực ngay khi đăng ký — test này khoá lại hành vi mới đó, so
+    // với đúng nguồn sự thật (defaultCodesForSystemRole), không phải danh
+    // sách chép tay dễ lệch.
     const body = await readJson(await authMe(withSession(`${BASE}/auth/me`, a.token)))
-    expect(body.capabilities).toEqual([])
+    const expected = defaultCodesForSystemRole(FOUNDER_ROLE_KEY).sort()
+    expect(body.capabilities).toEqual(expected)
   })
 
   it("GET /organizations chỉ liệt kê tổ chức người gọi là thành viên", async () => {

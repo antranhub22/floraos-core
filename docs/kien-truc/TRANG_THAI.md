@@ -18,13 +18,15 @@ Repo nằm ở `~/Projects/floraos-core`, remote `antranhub22/floraos-core`.
 
 Đã có (P2): thu hoạch R2 nguyên vẹn (`src/lib/maChucNang.ts` + `tests/maChucNang.test.ts`, `npm run test:harvest` xanh 25/25, không sửa một dòng) · `capability-catalog.ts` — 113 mã (76 thu hoạch + 37 mới), 30 mã có trần cứng · `permission-resolver.ts` — ba lớp, trần cứng cắt sau cùng · hai bảng `role_capabilities`/`capability_overrides` · `resolveSession` nạp `TenantContext.capabilities` thật, `GET /auth/me` trả năng lực đã tính · công tắc `cho_phep_tu_duyet` (`self-approval-policy.ts`) · 12 endpoint mới gác bằng mã năng lực: `organizations/current` (GET/PATCH) · `members` (GET/POST invite/DELETE/PATCH role) · `roles` (GET/POST/PATCH capabilities) · `branches` (GET/POST/PATCH) · `workspaces` (GET/POST).
 
-**Chưa xác minh trong phiên viết mã này**: mọi thứ chạm cơ sở dữ liệu thật —
-`npx prisma generate`, `npx prisma db push`, `npm run test:tenant`, phần còn lại của
-`npm test`. Phiên chạy trong một sandbox không ra được `binaries.prisma.sh` (đúng bẫy
-đã ghi ở `AGENTS.md`). `npm run typecheck`, `npm run lint`, `npm run test:harvest`, và
-mọi test không đụng Prisma (50 trường hợp: `capability-catalog`, `permission-resolver`,
-`self-approval-policy`, cộng bộ test P1) đã chạy xanh. **Việc đầu tiên ở máy có mạng:**
-`npx prisma generate && npx prisma db push && npm run typecheck && npm test && npm run test:tenant`.
+**Đã xác minh trên máy có mạng (2026-09-09)**: `npx prisma generate`, `npx prisma db push`
+(Postgres 16 qua `docker compose up -d`), `npm run typecheck`, `npm test` (48/48), và
+`npm run test:tenant` (23/23) đều xanh. Trong lúc verify phát sinh và đã sửa: (1) lỗi
+type thật ở `organization-repository.ts` — cột `settings` (Json) va `exactOptionalPropertyTypes`,
+sửa bằng cách dựng `data` tường minh thay vì truyền thẳng input tuỳ chọn; thêm re-export
+`InputJsonValue` ở `entities.ts` cho việc này; (2) một test P1 khoá hành vi placeholder
+(`GET /auth/me` luôn trả năng lực rỗng) nay đã lỗi thời vì P2 nạp `role_capabilities`
+thật lúc đăng ký — sửa lại để khoá đúng hành vi mới, đối chiếu `defaultCodesForSystemRole`.
+**P2 nghiệm thu xong, không còn việc tồn đọng.**
 
 Hạng mục kế tiếp là **P3** — Asset · Job · Usage.
 
@@ -120,3 +122,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | Chốt D1, D2, D3. Sửa V2 và bản đồ thu hoạch theo mã thật: 18 mã trần cứng, dải E1–E8, count_engine và color_engine là REUSE |
 | 09/09 | **P1 xong.** Bảy bảng nền, `TenantContext`, bộ gác ở tầng repository, sáu endpoint phiên và tổ chức, bộ test cách ly 21 trường hợp. Lược đồ và client chuyển sang cách khai của Prisma 7 (`prisma.config.ts` + driver adapter); thêm `eslint.config.mjs` vì `npm run lint` trước đó dừng ngay khi chạy |
 | 09/09 | **P2 xong.** Thu hoạch R2 nguyên vẹn (`maChucNang.ts` + test, 25/25 qua `npm run test:harvest`) · `capability-catalog.ts` 113 mã sinh từ chính bản harvest, không gõ tay phần A–E · `permission-resolver.ts` ba lớp · `role_capabilities`/`capability_overrides` · `resolveSession` nạp năng lực thật, `GET /auth/me` trả ra · công tắc `cho_phep_tu_duyet` · 12 endpoint tổ chức/thành viên/vai/chi nhánh/workspace gác bằng mã năng lực · sửa một lỗi ở `handle()` (`src/core/http/response.ts`) không truyền được `context.params` cho route động của Next 16 — phát hiện khi viết endpoint đầu tiên có `[id]`. Chưa chạy được `prisma generate`/`db push`/`test:tenant` trong phiên này — sandbox chặn `binaries.prisma.sh` |
+| 09/09 | **P2 verify xong trên máy có mạng.** `prisma generate`/`db push` (Postgres 16 qua Docker), `npm test` 48/48, `npm run test:tenant` 23/23. Sửa 1 lỗi type thật (`organization-repository.ts`, cột `settings` Json vs `exactOptionalPropertyTypes`) + thêm `InputJsonValue` vào `entities.ts`. Sửa 1 test P1 lỗi thời (`cach-ly-endpoint.test.ts` khoá hành vi "năng lực luôn rỗng" — nay sai vì P2 nạp `role_capabilities` thật lúc đăng ký), đối chiếu lại bằng `defaultCodesForSystemRole`. Không còn việc tồn đọng của P2 |

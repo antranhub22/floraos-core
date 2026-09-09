@@ -1,4 +1,4 @@
-import type { organization_type, organizations } from "./entities"
+import type { InputJsonValue, organization_type, organizations } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy"
@@ -31,9 +31,13 @@ export class OrganizationRepository {
     ctx: TenantContext,
     input: { name?: string; settings?: Record<string, unknown> }
   ): Promise<organizations | null> {
+    const data: { name?: string; settings?: InputJsonValue } = {}
+    if (input.name !== undefined) data.name = input.name
+    if (input.settings !== undefined) data.settings = input.settings as InputJsonValue
+
     const result = await this.db.organizations.updateMany({
       where: { id: ctx.organizationId },
-      data: input,
+      data,
     })
     if (result.count === 0) return null
     return this.current(ctx)

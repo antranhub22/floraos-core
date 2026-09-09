@@ -6,6 +6,8 @@
  * đơn giản thay vì bằng review — xem
  * `tests/tenant/khong-import-prisma-ngoai-infra.test.ts`.
  */
+import type { Prisma } from "@/generated/prisma/client"
+
 export type {
   branches,
   capability_overrides,
@@ -22,3 +24,6 @@ export type {
   workspace_kind,
   workspaces,
 } from "@/generated/prisma/client"
+
+/** Kiểu giá trị JSON hợp lệ để ghi vào cột `Json` qua Prisma. */
+export type InputJsonValue = Prisma.InputJsonValue
