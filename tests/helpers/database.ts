@@ -2,6 +2,11 @@ import { prisma } from "@/core/tenancy/infra/prisma"
 import { ensureSystemRoles } from "@/modules/organization/use-cases/ensure-system-roles"
 
 const TENANT_TABLES = [
+  "audit_logs",
+  "usage",
+  "job_events",
+  "generation_jobs",
+  "assets",
   "capability_overrides",
   "role_capabilities",
   "memberships",
@@ -14,9 +19,10 @@ const TENANT_TABLES = [
 ] as const
 
 /**
- * Dọn sạch chín bảng nền giữa các trường hợp thử (bảy của P1, cộng hai bảng quyền của P2). Bộ test cách ly phải bắt đầu
- * từ một cơ sở dữ liệu rỗng, nếu không thì "không tìm thấy" có thể là do dữ
- * liệu sót lại chứ không do bộ gác.
+ * Dọn sạch mười bốn bảng nền giữa các trường hợp thử (bảy của P1, hai bảng
+ * quyền của P2, năm bảng Asset/Job/Usage/Audit của P3). Bộ test cách ly phải
+ * bắt đầu từ một cơ sở dữ liệu rỗng, nếu không thì "không tìm thấy" có thể là
+ * do dữ liệu sót lại chứ không do bộ gác.
  */
 export async function resetDatabase(): Promise<void> {
   await prisma.$executeRawUnsafe(

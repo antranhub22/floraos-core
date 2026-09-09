@@ -62,21 +62,45 @@ chép tay danh sách mã. P2 nghiệm thu xong.
 
 ## P3 — Asset · Job · Usage
 
-- [ ] `assets` đủ cột metadata bắt buộc (`YC-A4`)
-- [ ] `parent_asset_id` và `version`; asset gốc không bao giờ bị ghi đè (`YC-A1` `YC-A2` `YC-A3`)
-- [ ] `generated_flags` không mặc định ngầm (`YC-A5`)
-- [ ] `generation_jobs` ba trục tách rời (`YC-J1` `YC-J2`)
-- [ ] `COMPLETED/REJECTED` không phải `FAILED`; retry trả 409 (`YC-J3`)
-- [ ] `CANCELLED` huỷ được job `PENDING` (`YC-J4`)
-- [ ] Worker lấy việc bằng `SKIP LOCKED` + `LISTEN/NOTIFY` (`YC-J7`)
-- [ ] Không `subprocess`, không job qua HTTP (`YC-J8`)
-- [ ] Nhật ký cộng dồn, nối lại được bằng `Last-Event-ID` (`YC-J9`)
-- [ ] Tiến trình quét job treo quá 15 phút (`YC-J10`)
-- [ ] Một bảng `usage` duy nhất (`YC-U1` `YC-U2`)
-- [ ] Hạn mức kiểm trước khi job vào bảng, cùng một giao dịch (`YC-U3`)
-- [ ] Worker không ghi `usage` (`YC-U4`)
-- [ ] `Idempotency-Key` trên mọi endpoint tạo job (`YC-U7`)
-- [ ] `audit_logs` ghi mọi hành động duyệt (`YC-R4`)
+Mã viết đầy đủ (09/09) — `prisma/schema.prisma` (`assets`, `generation_jobs`
++ `idempotency_key`, `job_events`, `usage`, `audit_logs`, cộng khoá ngoại tới
+`organizations` cho bốn bảng nợ #8), bốn module (`src/modules/{assets,jobs,usage,audit}/`
+đủ bốn thư mục), route dưới `/api/v1/{assets,jobs,usage,audit-logs,storage}`.
+**CHƯA xác minh** — sandbox phiên này không có Docker, không ra được mạng tới
+`binaries.prisma.sh` (`npx prisma generate`/`db push` đều 403 ngay ở bước tải
+`schema-engine`), và `node_modules` cài cho kiến trúc khác máy chạy hiện tại
+(thiếu `@rollup/rollup-linux-arm64-gnu`, nên cả `npm test` lẫn `npm run
+test:tenant` đều không khởi động được). Chỉ chạy được `npx tsc --noEmit` cho
+phần không chạm kiểu sinh từ Prisma. Trước khi tích các ô dưới, người tiếp
+theo (tài khoản Claude khác hoặc người thật, trên máy có mạng — xem mục 7 của
+`TRANG_THAI.md`) chạy:
+
+```bash
+docker compose up -d
+npx prisma generate && npx prisma db push
+npm test && npm run test:tenant
+npx tsc --noEmit
+```
+
+...và sửa mọi lỗi phát sinh. Đã tự đọc lại toàn bộ mã theo đúng quy ước của
+`branches`/`workspaces` (P1) và đối chiếu từng trường với `07-database-specification.md`,
+nhưng đó không thay được một lần chạy thật — xem `TECHNICAL_DEBT.md` #18.
+
+- [ ] `assets` đủ cột metadata bắt buộc (`YC-A4`) — `prisma/schema.prisma`, `AssetRepository.create`
+- [ ] `parent_asset_id` và `version`; asset gốc không bao giờ bị ghi đè (`YC-A1` `YC-A2` `YC-A3`) — `domain/asset-rules.ts` (`nextVersion`), `register-asset.ts`
+- [ ] `generated_flags` không mặc định ngầm (`YC-A5`) — `requiresExplicitGeneratedFlags`/`isValidGeneratedFlags`, từ chối ở `register-asset.ts` nếu thiếu
+- [ ] `generation_jobs` ba trục tách rời (`YC-J1` `YC-J2`) — `prisma/schema.prisma`, `domain/job-rules.ts`
+- [ ] `COMPLETED/REJECTED` không phải `FAILED`; retry trả 409 (`YC-J3`) — `canRetry`, `retry-job.ts`
+- [ ] `CANCELLED` huỷ được job `PENDING` (`YC-J4`) — `canCancel`, `cancel-job.ts`
+- [ ] Worker lấy việc bằng `SKIP LOCKED` + `LISTEN/NOTIFY` (`YC-J7`) — `GenerationJobRepository.claimNext` (SQL thô), `PostgresQueueProvider.enqueue` (`pg_notify` trong giao dịch), test `tests/tenant/skip-locked-claim.test.ts` chứng minh hai lời gọi đồng thời không trùng job — **chưa chạy được**
+- [ ] Không `subprocess`, không job qua HTTP (`YC-J8`) — đúng theo thiết kế (không có mã nào gọi `subprocess`/HTTP nội bộ cho job); `workers/` P3 chưa có worker Python thật (M01/M04a ở P5/P9)
+- [ ] Nhật ký cộng dồn, nối lại được bằng `Last-Event-ID` (`YC-J9`) — bảng `job_events` (đặc tả 07 mục 6.1), `JobEventRepository`, route SSE `GET /jobs/:id/events` đọc header `Last-Event-ID`/`?after=`
+- [ ] Tiến trình quét job treo quá 15 phút (`YC-J10`) — `scanStuckJobs`/`GenerationJobRepository.markStuckAsFailed`, script `scripts/scan-stuck-jobs.ts` (chưa gắn cron thật — việc triển khai, không phải việc mã)
+- [ ] Một bảng `usage` duy nhất (`YC-U1` `YC-U2`) — `prisma/schema.prisma`, không repo/module nào khác dựng bảng usage riêng
+- [ ] Hạn mức kiểm trước khi job vào bảng, cùng một giao dịch (`YC-U3`) — `enqueue-job.ts` (`runInTransaction`: kiểm hạn mức → ghi usage → tạo generation_jobs → NOTIFY), `tests/tenant/enqueue-job.test.ts` — **chưa chạy được**
+- [ ] Worker không ghi `usage` (`YC-U4`) — đúng theo thiết kế; `UsageRepository` chỉ được gọi từ `src/modules/usage` và `enqueue-job.ts` (phía core), không có mã Python nào ghi bảng này
+- [ ] `Idempotency-Key` trên mọi endpoint tạo job (`YC-U7`) — `enqueueJob` bắt buộc `idempotencyKey`, `domain/idempotency.ts` đọc header — P3 chưa có endpoint tạo job cụ thể theo feature (`/vision/analyses`, `/media/optimizations` ở P5/P9) để nối header thật vào; cơ chế đã sẵn cho các endpoint đó gọi `enqueueJob`
+- [ ] `audit_logs` ghi mọi hành động duyệt (`YC-R4`) — hạ tầng dựng đủ (bảng, `AuditLogRepository`, `recordAuditLog`, `GET /audit-logs`), nhưng **chưa có hành động duyệt nào để ghi** — P3 không có endpoint `*.approve` (`H3`/`I2` ở P5/P9); mục này chỉ thật sự "xong" khi endpoint duyệt đầu tiên gọi `recordAuditLog` trong cùng giao dịch
 
 ## P4 — Hồ sơ
 

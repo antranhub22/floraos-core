@@ -28,7 +28,26 @@ sửa bằng cách dựng `data` tường minh thay vì truyền thẳng input t
 thật lúc đăng ký — sửa lại để khoá đúng hành vi mới, đối chiếu `defaultCodesForSystemRole`.
 **P2 nghiệm thu xong, không còn việc tồn đọng.**
 
-Hạng mục kế tiếp là **P3** — Asset · Job · Usage.
+Hạng mục kế tiếp đã có mã (09/09): **P3 — Asset · Job · Usage.** `prisma/schema.prisma`
+thêm `assets` · `generation_jobs` (+ `idempotency_key`) · `job_events` · `usage` ·
+`audit_logs`, cộng khoá ngoại `organization_id → organizations` cho bốn bảng nợ #8
+(`workspaces`/`branches`/`capability_overrides`/`memberships`). Bốn module mới
+(`src/modules/{assets,jobs,usage,audit}/`, đủ bốn thư mục): `enqueueJob` gộp kiểm hạn
+mức + ghi `usage` + tạo `generation_jobs` + `NOTIFY` trong một giao dịch (đặc tả 05 mục
+6); `GenerationJobRepository.claimNext` dùng `SELECT … FOR UPDATE SKIP LOCKED`;
+`PostgresQueueProvider` gọi `pg_notify` trong cùng giao dịch (Postgres tự trì hoãn phát
+tới sau commit); `GET /jobs/:id/events` là SSE đọc `job_events`, nối tiếp qua
+`Last-Event-ID`; `POST /assets/upload-url` dùng `LocalDiskStorageProvider` (adapter tạm,
+xem `TECHNICAL_DEBT.md` #15) đứng sau cổng `StorageProvider`.
+
+**CHƯA xác minh trên máy có mạng.** Phiên viết mã này (09/09) không có Docker, không ra
+được `binaries.prisma.sh` (`npx prisma generate` 403 ngay ở bước tải `schema-engine` —
+nặng hơn P2, lần đó chỉ `db push` bị chặn), và `node_modules` cài cho kiến trúc khác máy
+hiện tại (thiếu `@rollup/rollup-linux-arm64-gnu`) nên `npm test`/`npm run test:tenant`
+không khởi động được. Chỉ chạy được `npx tsc --noEmit` cho phần không chạm kiểu sinh từ
+Prisma — không phát hiện lỗi, nhưng không thay được một lần chạy thật vì mọi model P3
+đều mới, `tsc` không thấy được field nào sai tên so với `schema.prisma` khi kiểu chưa
+sinh. **Việc kế tiếp thật sự trước khi coi P3 xong: chạy bốn lệnh xác minh ở mục 6.**
 
 ## 2. Đọc theo thứ tự này
 
@@ -87,11 +106,24 @@ Không còn quyết định nào chặn. D1 · D2 · D3 · D4 chốt ngày 09/09
 
 ## 6. Việc kế tiếp
 
-1. **Chạy bốn lệnh xác minh P2 ở máy có mạng** (mục 1) trước khi coi P2 nghiệm thu xong — sandbox viết mã không ra được `binaries.prisma.sh`.
-2. **P3** — Asset · GenerationJob · Usage trong một đợt (đặc tả kiến trúc V2 mục 7–9). Job worker Python lấy việc bằng `SKIP LOCKED` + `LISTEN/NOTIFY`; hạn mức kiểm tại điểm enqueue, cùng đường mã với việc ghi `usage`.
+1. **Chạy bốn lệnh xác minh P3 ở máy có mạng** — mã đã viết đủ (mục 1), chưa chạy được:
+   ```bash
+   docker compose up -d
+   npx prisma generate && npx prisma db push
+   npm test && npm run test:tenant
+   npx tsc --noEmit
+   ```
+   Sửa mọi lỗi phát sinh (đặc biệt: kiểu JSON — `as never` dùng ở bốn tệp
+   `asset-repository.ts`/`usage-repository.ts`/`audit-log-repository.ts` thay vì
+   `as InputJsonValue` như quy ước P2, vì chưa có client sinh sẵn để đối chiếu hình dạng
+   input thật; đổi lại đúng quy ước khi có client) trước khi tích các ô P3 ở
+   `Checklist_Thuc_Thi.md`.
+2. Sau khi P3 xanh: **P4** — BusinessProfile/BrandProfile (thu hoạch E3), hoặc **P5** — M01
+   (phụ thuộc P3) nếu bộ ảnh vàng đã sẵn sàng.
 3. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`, gán nhãn theo `QUY_UOC_DEM.md`. Bước đầu tiên là gom ảnh từ kho vận hành AVI GIFT.
 4. Khi làm P6: chốt cách tính chi phí lá và cành trang trí, vì quy ước đếm để loại này không có số lượng.
 5. Xác nhận với chủ sản phẩm giá trị mặc định của công tắc `cho_phep_tu_duyet` (`docs/dac-ta/TECHNICAL_DEBT.md` #12) trước khi màn hình duyệt đầu tiên đi vào sản xuất.
+6. Xác nhận với chủ sản phẩm bảng giá `cost_credit` theo `feature` — hiện là hằng số đoán hợp lý trong mã, không phải quyết định kinh doanh đã chốt (`TECHNICAL_DEBT.md` #14).
 
 ## 7. Làm việc bằng nhiều tài khoản Claude cùng lúc
 
@@ -123,3 +155,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | **P1 xong.** Bảy bảng nền, `TenantContext`, bộ gác ở tầng repository, sáu endpoint phiên và tổ chức, bộ test cách ly 21 trường hợp. Lược đồ và client chuyển sang cách khai của Prisma 7 (`prisma.config.ts` + driver adapter); thêm `eslint.config.mjs` vì `npm run lint` trước đó dừng ngay khi chạy |
 | 09/09 | **P2 xong.** Thu hoạch R2 nguyên vẹn (`maChucNang.ts` + test, 25/25 qua `npm run test:harvest`) · `capability-catalog.ts` 113 mã sinh từ chính bản harvest, không gõ tay phần A–E · `permission-resolver.ts` ba lớp · `role_capabilities`/`capability_overrides` · `resolveSession` nạp năng lực thật, `GET /auth/me` trả ra · công tắc `cho_phep_tu_duyet` · 12 endpoint tổ chức/thành viên/vai/chi nhánh/workspace gác bằng mã năng lực · sửa một lỗi ở `handle()` (`src/core/http/response.ts`) không truyền được `context.params` cho route động của Next 16 — phát hiện khi viết endpoint đầu tiên có `[id]`. Chưa chạy được `prisma generate`/`db push`/`test:tenant` trong phiên này — sandbox chặn `binaries.prisma.sh` |
 | 09/09 | **P2 verify xong trên máy có mạng.** `prisma generate`/`db push` (Postgres 16 qua Docker), `npm test` 48/48, `npm run test:tenant` 23/23. Sửa 1 lỗi type thật (`organization-repository.ts`, cột `settings` Json vs `exactOptionalPropertyTypes`) + thêm `InputJsonValue` vào `entities.ts`. Sửa 1 test P1 lỗi thời (`cach-ly-endpoint.test.ts` khoá hành vi "năng lực luôn rỗng" — nay sai vì P2 nạp `role_capabilities` thật lúc đăng ký), đối chiếu lại bằng `defaultCodesForSystemRole`. Không còn việc tồn đọng của P2 |
+| 09/09 | **P3 viết mã xong, CHƯA xác minh.** `assets`/`generation_jobs`(+`idempotency_key`)/`job_events`/`usage`/`audit_logs` + khoá ngoại nợ #8. Bốn module `assets`/`jobs`/`usage`/`audit`. `enqueueJob` (kiểm hạn mức → ghi usage → tạo job → NOTIFY, một giao dịch) · `GenerationJobRepository.claimNext` (`SKIP LOCKED`) · `PostgresQueueProvider` (`pg_notify` trong giao dịch) · SSE `GET /jobs/:id/events` (`Last-Event-ID`) · `LocalDiskStorageProvider` (adapter tạm cho `POST /assets/upload-url`) · `scripts/scan-stuck-jobs.ts` (`YC-J10`). Sandbox phiên này không có Docker/mạng ra `binaries.prisma.sh`, và `node_modules` sai kiến trúc máy (thiếu `@rollup/rollup-linux-arm64-gnu`) nên không chạy được `prisma generate`/`db push`/`npm test`/`npm run test:tenant` — chỉ `tsc --noEmit` (phần không chạm kiểu Prisma). Xem mục 6 việc kế tiếp và `TECHNICAL_DEBT.md` #14–18 |

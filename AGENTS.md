@@ -38,11 +38,16 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P2 xong** — bảng 76 mã thu hoạch nguyên vẹn cộng 37 mã mới (113
-tổng), ba lớp cắt, `role_capabilities`/`capability_overrides`, `GET /auth/me` trả năng
-lực đã tính, và 12 endpoint quản lý tổ chức/thành viên/vai/chi nhánh/workspace gác bằng
-mã năng lực. Hạng mục kế tiếp là **P3**. Xem `docs/dac-ta/Checklist_Thuc_Thi.md` mục P2
-về phần chưa xác minh được trong sandbox không có mạng ra `binaries.prisma.sh`.
+Trạng thái hiện tại: **P3 viết mã xong, chưa xác minh** — `assets`/`generation_jobs`
+(+`idempotency_key`)/`job_events`/`usage`/`audit_logs`, bốn module `src/modules/{assets,jobs,usage,audit}/`,
+`enqueueJob` gộp kiểm hạn mức + usage + job + NOTIFY trong một giao dịch,
+`GenerationJobRepository.claimNext` (`SKIP LOCKED`), SSE `GET /jobs/:id/events`. Sandbox
+phiên viết P3 không có Docker và không ra mạng tới `binaries.prisma.sh` — nặng hơn P2 (P2
+chỉ `db push` bị chặn; P3 cả `prisma generate` cũng 403) — cộng `node_modules` sai kiến
+trúc máy (thiếu `@rollup/rollup-linux-arm64-gnu`) nên `npm test`/`npm run test:tenant`
+không khởi động được. Xem `docs/dac-ta/Checklist_Thuc_Thi.md` mục P3 và
+`docs/kien-truc/TRANG_THAI.md` mục 6 cho bốn lệnh cần chạy trên máy có mạng trước khi
+tích các ô.
 
 ## Luật thu hoạch
 
@@ -88,8 +93,13 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Vai hệ thống | `prisma/seed.ts` | bốn vai, `organization_id = null` |
 | Worker phân tích ảnh | `workers/vision/` | M01 — P5 |
 | Worker tối ưu ảnh | `workers/media_ai/` | M04a — P9 |
-| Test cách ly tenant | `tests/tenant/` | bốn tệp; `npm run test:tenant` |
-| Đồ dùng cho test | `tests/helpers/` | dọn bảng, dựng hai tổ chức bằng đúng luồng đăng ký thật |
+| Test cách ly tenant | `tests/tenant/` | sáu tệp (bốn của P1/P2, cộng `skip-locked-claim.test.ts` và `enqueue-job.test.ts` của P3); `npm run test:tenant` |
+| Đồ dùng cho test | `tests/helpers/` | dọn bảng (mười bốn bảng từ P3), dựng hai tổ chức bằng đúng luồng đăng ký thật |
+| Module asset | `src/modules/assets/` | `AssetRepository`, `LocalDiskStorageProvider` (adapter tạm — nợ #15), route `/api/v1/assets*`, `/api/v1/storage/[...key]` |
+| Module job | `src/modules/jobs/` | `GenerationJobRepository` (`claimNext` = `SKIP LOCKED`), `JobEventRepository`, `PostgresQueueProvider`, `enqueueJob`, route `/api/v1/jobs*` (gồm SSE `events`) |
+| Module usage | `src/modules/usage/` | `UsageRepository`, bảng giá `domain/pricing.ts` (nợ #14), route `/api/v1/usage*` |
+| Module audit | `src/modules/audit/` | `AuditLogRepository`, `recordAuditLog` — chưa có nơi gọi tới khi duyệt đầu tiên ở P5 |
+| Quét job treo | `scripts/scan-stuck-jobs.ts` | `YC-J10`, chạy bằng cron ngoài, chưa gắn lịch thật |
 | Tài liệu kiến trúc | `docs/kien-truc/` | 8 tệp, xem `TRANG_THAI.md` |
 
 ## Bẫy

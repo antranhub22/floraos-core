@@ -63,6 +63,26 @@ export class WorkspaceRepository {
   }
 
   /**
+   * Tăng `trial_count` có điều kiện — dùng trong giao dịch `enqueue-job` khi
+   * workspace là `EXPERIENCE` (đặc tả 07 mục 11.1, `YC-U6`). So sánh
+   * `trial_count < trial_limit` là so cột với cột, Prisma không diễn tả được
+   * qua API fluent (`lt` chỉ nhận giá trị literal) nên phải viết SQL thô —
+   * vẫn có điều kiện ngay trong câu `UPDATE`, chốt chặn đua giống
+   * `OrganizationRepository.tryDeductCredit`. `trial_limit IS NULL` nghĩa là
+   * không giới hạn (workspace trải nghiệm chưa cấu hình hạn mức).
+   */
+  async tryConsumeTrial(workspaceId: string): Promise<boolean> {
+    const rows = await this.db.$queryRaw<Array<{ trial_count: number }>>`
+      UPDATE workspaces
+         SET trial_count = trial_count + 1
+       WHERE id = ${workspaceId}
+         AND (trial_limit IS NULL OR trial_count < trial_limit)
+      RETURNING trial_count
+    `
+    return rows.length > 0
+  }
+
+  /**
    * Workspace mặc định của tổ chức đang hoạt động của phiên, dùng để dựng
    * `TenantContext`. Tham số `organizationId` chỉ được phép đến từ
    * `sessions.organization_id`, tức là từ phía máy chủ — đây là bước *sinh ra*

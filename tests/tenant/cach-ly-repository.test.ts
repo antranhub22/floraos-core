@@ -7,6 +7,10 @@ import { MembershipRepository } from "@/modules/organization/infra/membership-re
 import { OrganizationRepository } from "@/modules/organization/infra/organization-repository"
 import { RoleRepository } from "@/modules/organization/infra/role-repository"
 import { WorkspaceRepository } from "@/modules/organization/infra/workspace-repository"
+import { AssetRepository } from "@/modules/assets/infra/asset-repository"
+import { AuditLogRepository } from "@/modules/audit/infra/audit-log-repository"
+import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
+import { UsageRepository } from "@/modules/usage/infra/usage-repository"
 
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, type Tenant } from "../helpers/fixtures"
@@ -128,6 +132,79 @@ describe("cách ly tenant ở tầng repository", () => {
     const listOfB = await repository.list(b.ctx)
     expect(listOfB).toHaveLength(1)
     expect(listOfB[0]?.user_id).toBe(b.userId)
+  })
+
+  it("assets — asset của A không đọc được bằng ngữ cảnh của B (YC-A, đặc tả 07 mục 5)", async () => {
+    const repository = new AssetRepository()
+    const created = await repository.create(a.ctx, {
+      id: "11111111-1111-1111-1111-111111111111",
+      productId: null,
+      parentAssetId: null,
+      kind: "ORIGINAL",
+      version: 1,
+      storageKey: `org/${a.organizationId}/unfiled/11111111-1111-1111-1111-111111111111.jpg`,
+      mimeType: "image/jpeg",
+      createdBy: a.userId,
+    })
+
+    expect(await repository.findById(a.ctx, created.id)).not.toBeNull()
+    expect(await repository.findById(b.ctx, created.id)).toBeNull()
+    expect(await repository.list(b.ctx, { limit: 10 })).toEqual([])
+    expect(await repository.delete(b.ctx, created.id)).toBe(false)
+
+    const stillThere = await repository.findById(a.ctx, created.id)
+    expect(stillThere).not.toBeNull()
+  })
+
+  it("generation_jobs — job của A không đọc, không huỷ được bằng ngữ cảnh của B (đặc tả 07 mục 6)", async () => {
+    const repository = new GenerationJobRepository()
+    const created = await repository.create(a.ctx, {
+      workspaceId: a.ctx.workspaceId,
+      branchId: null,
+      userId: a.userId,
+      productId: null,
+      feature: "vision.analyze",
+      payload: { asset_ids: [] },
+      idempotencyKey: "test-key-cach-ly-1",
+    })
+
+    expect(await repository.findById(a.ctx, created.id)).not.toBeNull()
+    expect(await repository.findById(b.ctx, created.id)).toBeNull()
+    expect(
+      await repository.findByIdempotencyKey(b.ctx, "vision.analyze", "test-key-cach-ly-1")
+    ).toBeNull()
+    expect(await repository.list(b.ctx, { limit: 10 })).toEqual([])
+    expect(await repository.cancelIfPending(b.ctx, created.id)).toBeNull()
+
+    const stillPending = await repository.findById(a.ctx, created.id)
+    expect(stillPending?.status).toBe("PENDING")
+  })
+
+  it("usage — dòng usage của A không đọc được bằng ngữ cảnh của B (đặc tả 07 mục 7)", async () => {
+    const repository = new UsageRepository()
+    await repository.record(a.ctx, {
+      workspaceId: a.ctx.workspaceId,
+      userId: a.userId,
+      feature: "vision.analyze",
+      costCredit: 1,
+      status: "ENQUEUED",
+    })
+
+    expect(await repository.list(a.ctx, { limit: 10 })).toHaveLength(1)
+    expect(await repository.list(b.ctx, { limit: 10 })).toEqual([])
+    expect(await repository.summaryByFeature(b.ctx)).toEqual([])
+  })
+
+  it("audit_logs — bản ghi kiểm toán của A không đọc được bằng ngữ cảnh của B (YC-R4, đặc tả 07 mục 8)", async () => {
+    const repository = new AuditLogRepository()
+    await repository.record(a.ctx, {
+      action: "product.approve",
+      entityType: "product_analyses",
+      entityId: "bat-ky",
+    })
+
+    expect(await repository.list(a.ctx, { limit: 10 })).toHaveLength(1)
+    expect(await repository.list(b.ctx, { limit: 10 })).toEqual([])
   })
 
   it("bộ gác từ chối mệnh đề where tự khai organization_id", () => {

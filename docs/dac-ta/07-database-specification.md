@@ -271,6 +271,8 @@ model generation_jobs {
   stage           String?               // chỉ có giá trị khi status = PROCESSING
   result          String?               // phán quyết nghiệp vụ, độc lập với status
 
+  idempotency_key String?               // YC-U7 — chống trùng 24 giờ
+
   payload         Json
   output          Json?
   error           String?
@@ -281,11 +283,45 @@ model generation_jobs {
   completed_at    DateTime?
   cancelled_at    DateTime?
 
+  @@unique([organization_id, feature, idempotency_key])
   @@index([organization_id])
   @@index([status, created_at])         // worker quét bằng index này
   @@index([organization_id, user_id])
 }
 ```
+
+`idempotency_key` không có ở bản đặc tả gốc của tài liệu này — thêm ở P3 để
+thực thi `YC-U7` (đặc tả 06 mục 2: *"Mọi POST tạo job nhận Idempotency-Key.
+Cùng khoá trong 24 giờ trả lại job cũ thay vì tạo job mới"*). Duy nhất theo
+(`organization_id`, `feature`, `idempotency_key`) — hai tổ chức, hoặc hai
+tính năng của cùng một tổ chức, dùng lại cùng chuỗi khoá không đụng nhau.
+
+### 6.1 Nhật ký tiến trình — `job_events`
+
+Đặc tả 05 mục 8 nói *"một bảng phụ theo `job_id` với số thứ tự tăng dần,
+không giữ trong bộ nhớ"* nhưng không đặt tên hay khai cột — làm ở đây, vì
+lược đồ là nguồn sự thật của cả tệp này.
+
+```prisma
+model job_events {
+  id         String   @id @default(uuid())
+  job_id     String
+  seq        Int
+  event      String              // stage · log · done
+  payload    Json
+  created_at DateTime @default(now())
+
+  @@unique([job_id, seq])
+  @@index([job_id, seq])
+}
+```
+
+Ghi cộng dồn, không sửa/xoá dòng đã ghi. `GET /jobs/:id/events` (SSE, đặc tả
+06 mục 7) đọc từ đây, nối tiếp qua `Last-Event-ID` bằng `seq` cuối client đã
+thấy (`YC-J9`). `seq` tính bằng `MAX(seq)+1` trong phạm vi một `job_id` — an
+toàn vì một job chỉ có đúng một worker sở hữu sau khi `claimNext` (mục 6),
+không có hai người ghi đồng thời trong vận hành bình thường; đây là một giả
+định, không phải khoá — ghi ở `TECHNICAL_DEBT.md`.
 
 ### Bộ giá trị của `stage` và `result` theo module
 

@@ -25,5 +25,10 @@ export type {
   workspaces,
 } from "@/generated/prisma/client"
 
+// P3 — kiểu bản ghi thu hoạch/asset/job/usage/audit, tái xuất theo đúng quy
+// ước ở đầu tệp. Từng module (assets/jobs/usage/audit) chỉ import từ tệp
+// entities.ts của MODULE ĐÓ (xem src/modules/<tên>/infra/entities.ts), tệp
+// này giữ nguyên phạm vi P1/P2 của nó.
+
 /** Kiểu giá trị JSON hợp lệ để ghi vào cột `Json` qua Prisma. */
 export type InputJsonValue = Prisma.InputJsonValue

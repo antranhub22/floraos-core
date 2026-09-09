@@ -60,3 +60,8 @@ export function validationFailed(details?: Record<string, unknown>): AppError {
 export function conflict(message: string): AppError {
   return new AppError("CONFLICT", message)
 }
+
+/** Hạn mức chặn tại điểm tạo job, trước khi job vào bảng (`YC-U3`). */
+export function quotaExceeded(message: string, details?: Record<string, unknown>): AppError {
+  return new AppError("QUOTA_EXCEEDED", message, details)
+}

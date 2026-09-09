@@ -93,6 +93,18 @@ model organizations {
   settings       Json? // bảng công tắc cấp tổ chức, gồm cho_phep_tu_duyet
   created_at     DateTime          @default(now())
   updated_at     DateTime          @updatedAt
+
+  // Khoá ngoại tới organizations mở lại ở P3 (TECHNICAL_DEBT #8) — bốn bảng
+  // dưới đây là bốn bảng nợ đó; assets/generation_jobs/usage/audit_logs khai
+  // khoá ngoại ngay từ khi tạo, không nợ.
+  workspaces            workspaces[]
+  branches              branches[]
+  capability_overrides  capability_overrides[]
+  memberships           memberships[]
+  assets                assets[]
+  generation_jobs       generation_jobs[]
+  usage                 usage[]
+  audit_logs            audit_logs[]
 }
 
 model workspaces {
@@ -106,6 +118,8 @@ model workspaces {
   trial_status    trial_status?
   created_at      DateTime       @default(now())
 
+  organization organizations @relation(fields: [organization_id], references: [id])
+
   @@index([organization_id])
 }
 
@@ -117,6 +131,8 @@ model branches {
   address         String?
   is_active       Boolean  @default(true)
   created_at      DateTime @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id])
 
   @@unique([organization_id, code])
   @@index([organization_id])
@@ -176,6 +192,8 @@ model capability_overrides {
   updated_by      String
   updated_at      DateTime @updatedAt
 
+  organization organizations @relation(fields: [organization_id], references: [id])
+
   @@unique([organization_id, role_id, capability_code])
   @@index([organization_id])
 }
@@ -190,9 +208,203 @@ model memberships {
   invited_at      DateTime          @default(now())
   joined_at       DateTime?
 
-  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user         users         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id])
 
   @@unique([organization_id, user_id])
   @@index([organization_id])
   @@index([user_id])
+}
+
+// ── Asset · Job · Usage · Audit — P3 ────────────────────────────────────────
+// Đặc tả 07 mục 5–8. Bốn bảng dưới khai organization_id NOT NULL kèm khoá
+// ngoại tới organizations ngay từ đầu — không lặp lại nợ #8 của bốn bảng P1.
+
+enum asset_kind {
+  ORIGINAL
+  ANALYZED
+  ENHANCED
+  MASTER
+  MARKETING
+  CATALOG
+  LANDING
+  SOCIAL
+}
+
+enum asset_state {
+  PROCESSING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum job_status {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+/**
+ * Thu hoạch E1 từ bảng `assets` thật của SocialFlow (23 cột), thêm 11 cột —
+ * đặc tả 07 mục 5. Asset gốc bất biến (`YC-A1`); dẫn xuất là bản ghi mới, nối
+ * bằng `parent_asset_id` và `version` (`YC-A2` `YC-A3`). `generated_flags`
+ * không bao giờ mặc định ngầm (`YC-A5`) — `domain/asset-rules.ts` từ chối tạo
+ * asset dẫn xuất thiếu cờ này.
+ */
+model assets {
+  id              String      @id @default(uuid())
+  organization_id String
+  product_id      String? // null ở workspace trải nghiệm
+  parent_asset_id String? // phả hệ; asset gốc có null
+  kind            asset_kind
+  state           asset_state @default(PROCESSING)
+  version         Int         @default(1)
+
+  storage_key  String // org/<organization_id>/<product_id>/<asset_id>.<ext>
+  thumb_key    String?
+  mime_type    String
+  width        Int?
+  height       Int?
+  aspect_ratio String?
+  file_size    Int?
+
+  provider         String?
+  model            String?
+  model_version    String?
+  pipeline_version String?
+  parameters       Json?
+  prompt           String?
+
+  input_sha256    String?
+  output_sha256   String?
+  quality_score   Float?
+  identity_score  Float?
+  generated_flags Json? // { generative_fill_used, requires_reshoot_warning }
+  cost_usd        Float?
+
+  metadata   Json?
+  created_by String
+  created_at DateTime @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id])
+  @@index([organization_id, product_id])
+  @@index([parent_asset_id])
+  @@index([output_sha256])
+}
+
+/**
+ * Thu hoạch E2 từ `LocalBudd` (`status` + `step`), thêm trục thứ ba `result`
+ * — đặc tả 07 mục 6. Ba trục không gộp (`YC-J1` `YC-J2`).
+ *
+ * `idempotency_key` không có ở bản đặc tả 07 gốc; thêm ở đây để thực thi
+ * `YC-U7` (chống trùng 24 giờ). Lược đồ là nguồn sự thật — tài liệu 07 đã cập
+ * nhật theo cùng đợt commit này.
+ */
+model generation_jobs {
+  id              String  @id @default(uuid())
+  organization_id String
+  workspace_id    String
+  branch_id       String?
+  user_id         String
+  product_id      String?
+
+  feature String // vision.analyze · media.optimize · catalog.generate …
+  status  job_status @default(PENDING)
+  stage   String? // chỉ có giá trị khi status = PROCESSING
+  result  String? // phán quyết nghiệp vụ, độc lập với status
+
+  idempotency_key String? // YC-U7 — duy nhất theo (organization_id, feature)
+
+  payload  Json
+  output   Json?
+  error    String?
+  attempts Int    @default(0)
+
+  created_at   DateTime  @default(now())
+  started_at   DateTime?
+  completed_at DateTime?
+  cancelled_at DateTime?
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+  events       job_events[]
+
+  @@unique([organization_id, feature, idempotency_key])
+  @@index([organization_id])
+  @@index([status, created_at]) // worker quét bằng index này
+  @@index([organization_id, user_id])
+}
+
+/**
+ * Bảng phụ cho nhật ký tiến trình job — đặc tả 05 mục 8: "một bảng phụ theo
+ * job_id với số thứ tự tăng dần, không giữ trong bộ nhớ". Tên bảng và cột
+ * không có ở đặc tả 07 gốc; đặt ở đây vì lược đồ là nguồn sự thật. Ghi cộng
+ * dồn, không sửa/xoá dòng đã ghi. `seq` tăng dần trong phạm vi một job —
+ * client nối tiếp qua `Last-Event-ID` (`YC-J9`).
+ */
+model job_events {
+  id         String   @id @default(uuid())
+  job_id     String
+  seq        Int
+  event      String // stage · log · done
+  payload    Json
+  created_at DateTime @default(now())
+
+  job generation_jobs @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@unique([job_id, seq])
+  @@index([job_id, seq])
+}
+
+/**
+ * Một bảng usage duy nhất cho toàn hệ thống (`YC-U1` `YC-U2`) — đặc tả 07 mục
+ * 7. Ghi tại điểm tạo job phía core, trong cùng giao dịch với kiểm hạn mức và
+ * tạo `generation_jobs` (`YC-U3`). Worker không bao giờ ghi bảng này
+ * (`YC-U4`).
+ */
+model usage {
+  id              String  @id @default(uuid())
+  organization_id String
+  workspace_id    String
+  user_id         String
+  job_id          String?
+  feature         String
+  quantity        Int     @default(1)
+  cost_credit     Int     @default(0)
+  cost_usd        Float? // chi phí thật phía nhà cung cấp, để đối soát
+  status          String // ENQUEUED · COMPLETED · REFUNDED
+  metadata        Json?
+  created_at      DateTime @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id, created_at])
+  @@index([job_id])
+}
+
+/**
+ * Nhật ký kiểm toán — đặc tả 07 mục 8. Mọi hành động duyệt sinh một bản ghi
+ * (`YC-R4`); bảng dựng ở P3 làm hạ tầng dùng chung — endpoint duyệt đầu tiên
+ * gọi tới nó bắt đầu từ M01 (`H3`, P5).
+ */
+model audit_logs {
+  id              String   @id @default(uuid())
+  organization_id String
+  user_id         String
+  action          String // product.approve · media.approve · role.manage …
+  entity_type     String
+  entity_id       String
+  before          Json?
+  after           Json?
+  ip              String?
+  user_agent      String?
+  created_at      DateTime @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id, created_at])
+  @@index([entity_type, entity_id])
 }

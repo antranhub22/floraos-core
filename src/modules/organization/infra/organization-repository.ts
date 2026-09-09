@@ -54,6 +54,33 @@ export class OrganizationRepository {
   }
 
   /**
+   * Trừ credit có điều kiện — dùng trong giao dịch `enqueue-job` (đặc tả 05
+   * mục 6, `YC-U3`). `updateMany` với `credit_balance: { gte: cost }` ngay
+   * trong `where` là chốt chặn đua: hai job cùng lúc chỉ một cái trừ được
+   * nếu số dư không đủ cho cả hai — không cần `SELECT … FOR UPDATE` riêng.
+   * Trả `false` nghĩa là không đủ credit; use-case dịch thành
+   * `QUOTA_EXCEEDED` (422) và toàn bộ giao dịch cha rollback, nên job không
+   * bao giờ được tạo khi hạn mức chặn (`YC-U3`).
+   */
+  async tryDeductCredit(ctx: TenantContext, cost: number): Promise<boolean> {
+    if (cost <= 0) return true
+    const result = await this.db.organizations.updateMany({
+      where: { id: ctx.organizationId, credit_balance: { gte: cost } },
+      data: { credit_balance: { decrement: cost } },
+    })
+    return result.count > 0
+  }
+
+  /** Hoàn credit — job bị Identity Guard từ chối, quyết định D3. */
+  async refundCredit(ctx: TenantContext, amount: number): Promise<void> {
+    if (amount <= 0) return
+    await this.db.organizations.updateMany({
+      where: { id: ctx.organizationId },
+      data: { credit_balance: { increment: amount } },
+    })
+  }
+
+  /**
    * Danh sách tổ chức người dùng là thành viên — nguồn của `GET /organizations`
    * và của bộ chọn tổ chức. Đây là truy vấn duy nhất trong core đi ngang qua
    * nhiều tổ chức, và nó lọc theo `user_id` chứ không theo tham số của client.

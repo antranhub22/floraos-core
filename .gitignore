@@ -33,3 +33,6 @@ golden/images/
 .next/
 next-env.d.ts
 *.tsbuildinfo
+
+# Kho tệp cục bộ của LocalDiskStorageProvider (dev only) — P3
+var/storage/
