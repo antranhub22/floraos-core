@@ -44,12 +44,14 @@ git -c core.quotepath=false show \
 
 | Repo | Vai trò | Git |
 |---|---|---|
-| **`floraos-core`** | Core mới — Org/RBAC/Product/Asset/Job/Usage + M01, M02, M03, M04a | ✓ 09/09 — **chưa có remote** |
-| `FloraOS` | v1, nghỉ hưu. Phục vụ AVI GIFT tới ngày cắt. **Nguồn thu hoạch.** | ✓ 09/09 — **chưa có remote** |
-| `LocalBudd` | M05 Landing Page · M06 Catalog | ✓ 09/09 — **chưa có remote** |
+| **`floraos-core`** | Core mới — Org/RBAC/Product/Asset/Job/Usage + M01, M02, M03, M04a | ✓ `antranhub22/floraos-core` (riêng tư) |
+| `FloraOS` | v1, nghỉ hưu. Phục vụ AVI GIFT tới ngày cắt. **Nguồn thu hoạch.** | ✓ `antranhub22/floraos-v1` (riêng tư) |
+| `LocalBudd` | M05 Landing Page · M06 Catalog | ✓ `antranhub22/localbudd` (riêng tư) |
 | `SocialFlow` | M04b Marketing Creative · M07 Social Publishing | ✓ có remote GitHub |
 
-**Ba repo chưa có remote — vẫn chỉ tồn tại trên một máy.** Tạo repo riêng tư và `git push -u origin main` là việc cần làm sớm.
+Cả bốn repo đều có bản sao ngoài máy. Nhánh chính của cả bốn là `main`.
+
+Branch protection trên `main` của `floraos-core` bật khi P1 xong, với điều kiện `npm run test:tenant` phải xanh. Đây là cổng duy nhất chặn được lỗi cách ly tenant.
 
 ## 4. Đã chốt
 
@@ -71,9 +73,8 @@ git -c core.quotepath=false show \
 ## 6. Việc kế tiếp
 
 1. **Chốt D4** → mở khoá P1.
-2. Tạo repo riêng tư trên GitHub cho `floraos-core`, `FloraOS` và `LocalBudd`, push lên. *(Ba repo này chưa có bản sao nào ngoài máy hiện tại.)*
-3. **P1** — Organization · Workspace · Membership · Branch · cách ly tenant. **Trước mọi thu hoạch khác.** Không tạo bảng, route hay job của bất kỳ module nào trước khi P1 và P2 đạt nghiệm thu.
-4. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`. Bước đầu tiên là chốt quy ước đếm, không phải chụp ảnh.
+2. **P1** — Organization · Workspace · Membership · Branch · cách ly tenant. **Trước mọi thu hoạch khác.** Không tạo bảng, route hay job của bất kỳ module nào trước khi P1 và P2 đạt nghiệm thu.
+3. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`. Bước đầu tiên là chốt quy ước đếm, không phải chụp ảnh.
 
 ## 7. Làm việc bằng nhiều tài khoản Claude cùng lúc
 
@@ -97,3 +98,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | PRD `01_PRD-FloraOS-Core.md` |
 | 09/09 | Dựng khung `floraos-core`: cấu trúc theo V2 mục 3, `AGENTS.md`, năm cổng ở `src/core/ports/`, khung worker Python, `docs/kien-truc/`. Chưa có bảng, chưa có route |
 | 09/09 | `BO_ANH_VANG.md` — quy cách bộ ảnh vàng |
+| 09/09 | Bốn repo lên GitHub riêng tư dưới `antranhub22`, nhánh chính `main` |
