@@ -86,6 +86,18 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 - Bộ ảnh vàng là điều kiện nghiệm thu P5. Không có nó thì không đổi được provider và không hồi quy được phần thu hoạch. Quy cách ở `docs/kien-truc/BO_ANH_VANG.md`.
 - `npm run test:tenant` cố tình thất bại tới khi P1 xong — tệp `tests/tenant/chua-trien-khai.test.ts`. Đừng "sửa" nó bằng cách cho nó xanh; xoá nó khi có bộ test thật.
 
+## Kết thúc mỗi việc — bắt buộc
+
+Việc chưa ghi lại là việc lần sau không ai biết đã làm. Trước khi báo xong, làm đủ ba bước, **trong cùng lần đó**:
+
+1. **Tích ô trong `docs/dac-ta/Checklist_Thuc_Thi.md`.** Đổi `- [ ]` thành `- [x]` cho đúng những ô vừa làm xong. Không tích trước, không tích ô chỉ làm một nửa.
+2. **Nếu ô vừa tích là ô cuối của một pha** — cập nhật `docs/kien-truc/TRANG_THAI.md`: mục 1 (đang ở đâu), mục 6 (việc kế tiếp), và thêm một dòng vào mục 8 (nhật ký).
+3. **Commit cả mã lẫn tài liệu trong cùng một commit.** Tách ra là tạo ra khoảng thời gian mã và tài liệu lệch nhau.
+
+Phát sinh thêm việc chưa có trong checklist thì **thêm ô mới** vào đúng pha, đừng làm âm thầm. Gặp thứ phải chấp nhận tạm thì thêm một dòng vào `docs/dac-ta/TECHNICAL_DEBT.md` kèm điều kiện trả.
+
+Đầu mỗi phiên làm việc: đọc `TRANG_THAI.md` rồi tới `Checklist_Thuc_Thi.md`. Ô chưa tích đầu tiên chính là việc kế tiếp.
+
 ## Quy tắc làm việc
 
 - Nêu tên các tệp định mở trước khi mở.
