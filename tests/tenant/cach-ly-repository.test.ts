@@ -11,6 +11,8 @@ import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { AuditLogRepository } from "@/modules/audit/infra/audit-log-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { UsageRepository } from "@/modules/usage/infra/usage-repository"
+import { BrandProfileRepository } from "@/modules/profiles/infra/brand-profile-repository"
+import { BusinessProfileRepository } from "@/modules/profiles/infra/business-profile-repository"
 
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, type Tenant } from "../helpers/fixtures"
@@ -205,6 +207,48 @@ describe("cách ly tenant ở tầng repository", () => {
 
     expect(await repository.list(a.ctx, { limit: 10 })).toHaveLength(1)
     expect(await repository.list(b.ctx, { limit: 10 })).toEqual([])
+  })
+
+  it("business_profiles — hồ sơ kinh doanh của A không lộ sang ngữ cảnh của B (đặc tả 07 mục 4)", async () => {
+    const repository = new BusinessProfileRepository()
+
+    expect(await repository.current(a.ctx)).toBeNull()
+    await repository.upsert(a.ctx, { display_name: "Tiệm hoa của A" })
+
+    const own = await repository.current(a.ctx)
+    expect(own?.display_name).toBe("Tiệm hoa của A")
+    expect(own?.organization_id).toBe(a.organizationId)
+
+    // B chưa từng ghi gì — ngữ cảnh của B không thấy hồ sơ của A, kể cả gián
+    // tiếp qua một bản ghi "current" nào khác.
+    expect(await repository.current(b.ctx)).toBeNull()
+
+    await repository.upsert(b.ctx, { display_name: "Tiệm hoa của B" })
+    expect((await repository.current(a.ctx))?.display_name).toBe("Tiệm hoa của A")
+    expect((await repository.current(b.ctx))?.display_name).toBe("Tiệm hoa của B")
+  })
+
+  it("business_profiles — PUT thay toàn bộ bản ghi, trường vắng mặt thành null", async () => {
+    const repository = new BusinessProfileRepository()
+    await repository.upsert(a.ctx, { display_name: "Tiệm hoa", phone: "0900000000" })
+    expect((await repository.current(a.ctx))?.phone).toBe("0900000000")
+
+    await repository.upsert(a.ctx, { display_name: "Tiệm hoa" })
+    expect((await repository.current(a.ctx))?.phone).toBeNull()
+  })
+
+  it("brand_profiles — hồ sơ thương hiệu của A không lộ sang ngữ cảnh của B (đặc tả 07 mục 4)", async () => {
+    const repository = new BrandProfileRepository()
+
+    expect(await repository.current(a.ctx)).toBeNull()
+    await repository.upsert(a.ctx, { primary_color: "#0A74DA" })
+
+    expect((await repository.current(a.ctx))?.primary_color).toBe("#0A74DA")
+    expect(await repository.current(b.ctx)).toBeNull()
+
+    await repository.upsert(b.ctx, { primary_color: "#F5A623" })
+    expect((await repository.current(a.ctx))?.primary_color).toBe("#0A74DA")
+    expect((await repository.current(b.ctx))?.primary_color).toBe("#F5A623")
   })
 
   it("bộ gác từ chối mệnh đề where tự khai organization_id", () => {

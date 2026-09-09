@@ -38,14 +38,13 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P3 viết mã xong, chưa xác minh** — `assets`/`generation_jobs`
-(+`idempotency_key`)/`job_events`/`usage`/`audit_logs`, bốn module `src/modules/{assets,jobs,usage,audit}/`,
-`enqueueJob` gộp kiểm hạn mức + usage + job + NOTIFY trong một giao dịch,
-`GenerationJobRepository.claimNext` (`SKIP LOCKED`), SSE `GET /jobs/:id/events`. Sandbox
-phiên viết P3 không có Docker và không ra mạng tới `binaries.prisma.sh` — nặng hơn P2 (P2
-chỉ `db push` bị chặn; P3 cả `prisma generate` cũng 403) — cộng `node_modules` sai kiến
-trúc máy (thiếu `@rollup/rollup-linux-arm64-gnu`) nên `npm test`/`npm run test:tenant`
-không khởi động được. Xem `docs/dac-ta/Checklist_Thuc_Thi.md` mục P3 và
+Trạng thái hiện tại: **P3 nghiệm thu xong** (35/35 `test:tenant` xanh trên Postgres
+thật). **P4 viết mã xong, chưa xác minh** — `business_profiles`/`brand_profiles`
+(đặc tả 07 mục 4), module `src/modules/profiles/`, route `GET · PUT /business-profile` và
+`GET · PUT /brand-profile` (gác bằng `F1`/`F2` có sẵn từ P2, không thêm mã năng lực mới).
+Cùng sandbox không Docker/không mạng tới `binaries.prisma.sh`/kiến trúc máy sai đã ghi ở
+P3 — chưa tự chạy được `prisma generate`/`db push`/`npm test`/`npm run test:tenant` trong
+phiên viết P4. Xem `docs/dac-ta/Checklist_Thuc_Thi.md` mục P4 và
 `docs/kien-truc/TRANG_THAI.md` mục 6 cho bốn lệnh cần chạy trên máy có mạng trước khi
 tích các ô.
 
@@ -99,6 +98,7 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Module job | `src/modules/jobs/` | `GenerationJobRepository` (`claimNext` = `SKIP LOCKED`), `JobEventRepository`, `PostgresQueueProvider`, `enqueueJob`, route `/api/v1/jobs*` (gồm SSE `events`) |
 | Module usage | `src/modules/usage/` | `UsageRepository`, bảng giá `domain/pricing.ts` (nợ #14), route `/api/v1/usage*` |
 | Module audit | `src/modules/audit/` | `AuditLogRepository`, `recordAuditLog` — chưa có nơi gọi tới khi duyệt đầu tiên ở P5 |
+| Module hồ sơ | `src/modules/profiles/` | `BusinessProfileRepository`/`BrandProfileRepository` — một bản ghi mỗi tổ chức (`@@unique([organization_id])`), `upsert` = ngữ nghĩa PUT (trường vắng mặt thành null). Route `business-profile`/`brand-profile` dưới `/api/v1/`, gác bằng `F1`/`F2` sẵn có |
 | Quét job treo | `scripts/scan-stuck-jobs.ts` | `YC-J10`, chạy bằng cron ngoài, chưa gắn lịch thật |
 | Tài liệu kiến trúc | `docs/kien-truc/` | 8 tệp, xem `TRANG_THAI.md` |
 

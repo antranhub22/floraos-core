@@ -131,8 +131,8 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 
 ## P4 — Hồ sơ
 
-- [ ] `business_profiles` và `brand_profiles` tách đôi, mỗi tổ chức một bản ghi
-- [ ] Nhập một lần, dùng lại xuyên module
+- [x] `business_profiles` và `brand_profiles` tách đôi, mỗi tổ chức một bản ghi
+- [x] Nhập một lần, dùng lại xuyên module
 
 ## P5 — M01 phân tích ảnh
 

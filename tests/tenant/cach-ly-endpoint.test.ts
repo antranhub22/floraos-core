@@ -1,6 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 
 import { GET as authMe } from "@/app/api/v1/auth/me/route"
+import { GET as getBrandProfile, PUT as putBrandProfile } from "@/app/api/v1/brand-profile/route"
+import {
+  GET as getBusinessProfile,
+  PUT as putBusinessProfile,
+} from "@/app/api/v1/business-profile/route"
 import { GET as listOrganizations } from "@/app/api/v1/organizations/route"
 import { POST as switchOrganization } from "@/app/api/v1/session/organization/route"
 import { defaultCodesForSystemRole } from "@/core/rbac/capability-catalog"
@@ -115,5 +120,61 @@ describe("cách ly tenant ở tầng endpoint", () => {
   it("token giả không mở được phiên nào", async () => {
     const response = await authMe(withSession(`${BASE}/auth/me`, "token-bia-ra"))
     expect(response.status).toBe(401)
+  })
+
+  it("PUT /business-profile rồi GET chỉ đọc lại được bằng chính phiên đã ghi (đặc tả 06 mục 5)", async () => {
+    const put = await putBusinessProfile(
+      withSession(`${BASE}/business-profile`, a.token, {
+        method: "PUT",
+        body: JSON.stringify({ display_name: "Tiệm hoa của A", phone: "0900000000" }),
+      })
+    )
+    expect(put.status).toBe(200)
+    expect((await readJson(put)).display_name).toBe("Tiệm hoa của A")
+
+    const ownRead = await readJson(await getBusinessProfile(withSession(`${BASE}/business-profile`, a.token)))
+    expect(ownRead.display_name).toBe("Tiệm hoa của A")
+    expect(ownRead.phone).toBe("0900000000")
+
+    // B chưa từng PUT — tổ chức của B đọc hồ sơ của chính nó, vẫn trống.
+    const otherRead = await readJson(
+      await getBusinessProfile(withSession(`${BASE}/business-profile`, b.token))
+    )
+    expect(otherRead).toEqual(null)
+  })
+
+  it("PUT /business-profile thiếu display_name trả 400 VALIDATION_FAILED", async () => {
+    const response = await putBusinessProfile(
+      withSession(`${BASE}/business-profile`, a.token, {
+        method: "PUT",
+        body: JSON.stringify({ phone: "0900000000" }),
+      })
+    )
+    expect(response.status).toBe(400)
+    expect((await readJson(response)).error).toMatchObject({ code: "VALIDATION_FAILED" })
+  })
+
+  it("PUT /brand-profile rồi GET chỉ đọc lại được bằng chính phiên đã ghi, mã màu sai hình dạng bị chặn", async () => {
+    const invalid = await putBrandProfile(
+      withSession(`${BASE}/brand-profile`, a.token, {
+        method: "PUT",
+        body: JSON.stringify({ primary_color: "khong-phai-hex" }),
+      })
+    )
+    expect(invalid.status).toBe(400)
+
+    const put = await putBrandProfile(
+      withSession(`${BASE}/brand-profile`, a.token, {
+        method: "PUT",
+        body: JSON.stringify({ primary_color: "#0A74DA", tone_of_voice: "thân thiện" }),
+      })
+    )
+    expect(put.status).toBe(200)
+
+    const ownRead = await readJson(await getBrandProfile(withSession(`${BASE}/brand-profile`, a.token)))
+    expect(ownRead.primary_color).toBe("#0A74DA")
+
+    const otherRead = await readJson(await getBrandProfile(withSession(`${BASE}/brand-profile`, b.token)))
+    expect(otherRead).toEqual(null)
   })
 })

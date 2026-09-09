@@ -105,6 +105,8 @@ model organizations {
   generation_jobs       generation_jobs[]
   usage                 usage[]
   audit_logs            audit_logs[]
+  business_profile      business_profiles?
+  brand_profile         brand_profiles?
 }
 
 model workspaces {
@@ -407,4 +409,64 @@ model audit_logs {
 
   @@index([organization_id, created_at])
   @@index([entity_type, entity_id])
+}
+
+// ── Hồ sơ kinh doanh và thương hiệu — P4 ────────────────────────────────────
+// Đặc tả 07 mục 4. Thu hoạch E3 từ `SocialFlow/backend/brand_kit.py`
+// (`brand_config` gộp cả hai làm một). Core tách đôi: hồ sơ kinh doanh là dữ
+// liệu pháp lý và liên hệ (đọc/sửa qua F1/F2, dùng chung cho M05 Landing Page
+// và tích hợp ngoài); hồ sơ thương hiệu là dữ liệu tạo sinh (màu, font, tông
+// giọng, hashtag, CTA — dùng cho M04b/M05/M07). Mỗi tổ chức đúng một bản ghi
+// mỗi bảng (`@@unique([organization_id])`) — nhập một lần, dùng lại xuyên
+// module (Checklist P4).
+
+model business_profiles {
+  id              String   @id @default(uuid())
+  organization_id String
+  legal_name      String?
+  display_name    String
+  phone           String?
+  email           String?
+  address         String?
+  website         String?
+  social_links    Json?
+  tax_code        String?
+  description     String?
+  operating_hours Json?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id])
+}
+
+/**
+ * `background_color` và `text_color` có mặt vì `design_contracts` của
+ * `LocalBudd` cần đủ bốn màu để dựng landing page — thiếu hai trường này thì
+ * M05 phải tự đoán màu nền, và mỗi trang ra một kiểu (đặc tả 07 mục 4).
+ * `hashtags`/`cta_templates` là Json vì khác nhau theo nền tảng, đúng hình
+ * dạng đã có ở `brand_config.hashtags_<nền tảng>` của SocialFlow.
+ */
+model brand_profiles {
+  id                String   @id @default(uuid())
+  organization_id   String
+  primary_color     String?
+  secondary_color   String?
+  accent_color      String?
+  background_color  String?
+  text_color        String?
+  font_heading      String?
+  font_body         String?
+  logo_asset_id     String?
+  tone_of_voice     String?
+  hashtags          Json? // theo nền tảng
+  cta_templates     Json?
+  forbidden_styles  Json?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id])
 }
