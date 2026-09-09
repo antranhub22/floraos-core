@@ -48,6 +48,11 @@ enum trial_status {
   EXPIRED
 }
 
+enum capability_scope {
+  ORGANIZATION
+  BRANCH
+}
+
 // ── Nền tảng đa tenant — P1 ─────────────────────────────────────────────────
 
 model users {
@@ -125,7 +130,53 @@ model roles {
   is_system       Boolean  @default(false)
   created_at      DateTime @default(now())
 
+  capabilities role_capabilities[]
+
   @@unique([organization_id, key])
+  @@index([organization_id])
+}
+
+/**
+ * Bảng công tắc: mã năng lực nào đang bật cho một vai (đặc tả 02 mục 1, lớp
+ * hai). Vai hệ thống (`organization_id = null` của chính `roles`) được nạp
+ * sẵn từ bản mặc định trong `src/core/rbac/capability-catalog.ts` lúc
+ * `ensureSystemRoles`. Vai riêng của tổ chức có switchboard của chính nó.
+ *
+ * Trần cứng (lớp ba) KHÔNG nằm ở đây — nó là hằng trong mã, xem
+ * `src/core/rbac/capability-catalog.ts`. Một dòng bật ở bảng này cho một mã
+ * đã bị trần cứng chặn vẫn không mở được năng lực đó.
+ */
+model role_capabilities {
+  id              String           @id @default(uuid())
+  role_id         String
+  capability_code String // A1 … L6, xem đặc tả 02
+  scope           capability_scope @default(ORGANIZATION)
+
+  role roles @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([role_id, capability_code])
+}
+
+/**
+ * Ngoại lệ theo tổ chức, đè lên switchboard của một vai hệ thống mà tổ chức
+ * không sở hữu (`roles.organization_id = null`) nên không sửa trực tiếp
+ * được. `allowed = true` bật thêm một mã; `allowed = false` tắt một mã đang
+ * bật mặc định. Vai riêng của tổ chức không cần dùng bảng này — tổ chức sửa
+ * thẳng `role_capabilities` của vai đó.
+ *
+ * Trần cứng vẫn cắt sau cùng: `allowed = true` cho một mã có trần cứng không
+ * bao gồm vai đó không mở được năng lực (`YC-Q3`).
+ */
+model capability_overrides {
+  id              String   @id @default(uuid())
+  organization_id String
+  role_id         String
+  capability_code String
+  allowed         Boolean
+  updated_by      String
+  updated_at      DateTime @updatedAt
+
+  @@unique([organization_id, role_id, capability_code])
   @@index([organization_id])
 }
 

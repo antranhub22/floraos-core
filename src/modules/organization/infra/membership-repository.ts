@@ -1,7 +1,7 @@
 import type { membership_status, memberships } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
-import { scopedWhere, type TenantContext } from "@/core/tenancy"
+import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 
 import type { DbClient } from "./db-client"
 
@@ -65,5 +65,48 @@ export class MembershipRepository {
         joined_at: input.joinedAt,
       },
     })
+  }
+
+  /**
+   * Mời một người đã có `users.id` vào tổ chức hiện tại — nguồn của
+   * `POST /members/invite` (`F3`, đặc tả 06 mục 4). Việc tìm-hoặc-tạo `users`
+   * theo email thuộc use-case, không thuộc repository này: repository chỉ
+   * biết về thành viên, không biết về danh tính.
+   */
+  invite(
+    ctx: TenantContext,
+    input: { userId: string; roleId: string; branchId: string | null }
+  ): Promise<memberships> {
+    return this.db.memberships.create({
+      data: scopedData(ctx, {
+        user_id: input.userId,
+        role_id: input.roleId,
+        branch_id: input.branchId,
+        status: "INVITED" as const,
+        joined_at: null,
+      }),
+    })
+  }
+
+  /**
+   * Gỡ một thành viên — nguồn của `DELETE /members/:id` (`F4`). Đi qua
+   * `deleteMany` với điều kiện tổ chức, không qua `delete` theo khoá chính,
+   * cùng lý do với `BranchRepository.update`: tránh sửa được bản ghi của tổ
+   * chức khác nếu đoán đúng id. Số dòng chạm tới bằng 0 nghĩa là không tìm
+   * thấy — tầng trên dịch thành 404 (`YC-T4`).
+   */
+  async remove(ctx: TenantContext, id: string): Promise<boolean> {
+    const result = await this.db.memberships.deleteMany({ where: scopedWhere(ctx, { id }) })
+    return result.count > 0
+  }
+
+  /** Đổi vai của một thành viên — nguồn của `PATCH /members/:id/role` (`F5`). */
+  async updateRole(ctx: TenantContext, id: string, roleId: string): Promise<memberships | null> {
+    const result = await this.db.memberships.updateMany({
+      where: scopedWhere(ctx, { id }),
+      data: { role_id: roleId },
+    })
+    if (result.count === 0) return null
+    return this.findById(ctx, id)
   }
 }

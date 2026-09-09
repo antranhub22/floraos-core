@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude 'tests/tenant/**' --exclude 'node_modules/**'",
+    "test:harvest": "tsx --test tests/maChucNang.test.ts",
     "test:tenant": "vitest run tests/tenant",
     "test:e2e": "playwright test",
     "db:push": "prisma db push",

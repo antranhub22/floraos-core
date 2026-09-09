@@ -31,19 +31,32 @@ Endpoint gác bằng mã năng lực — `/members`, `/roles`, `/branches`, `/wo
 `requireCapability` từ chối mọi mã: cổng chưa có bảng quyền thì chặn hết, không
 mở tạm.
 
-## P2 — Quyền
+## P2 — Quyền · xong
 
-- [ ] 76 mã chuyển sang nguyên vẹn, `maChucNang.test.ts` xanh không sửa một dòng (`YC-Q1`)
-- [ ] Ba lớp cắt đúng thứ tự, trần cứng cắt sau cùng (`YC-Q2`)
-- [ ] Bảng trần cứng là hằng trong mã, không trong cơ sở dữ liệu (`YC-Q3`)
-- [ ] 18 mã trần cứng — hoặc con số đã được chủ sản phẩm xác nhận lại (`YC-Q3`)
-- [ ] Quyền là bộ ba `(vai, mã, phạm vi)` (`YC-Q4`)
-- [ ] Vai là bản ghi; không còn `enum Role` (`YC-Q5`)
-- [ ] Bốn cặp năng lực tách rời, không cặp nào gói chung (`YC-Q6`)
-- [ ] Không có `if (role === …)` ở bất kỳ đâu (`YC-Q7`)
-- [ ] Điều hành có mọi năng lực của Sale và Điều phối (`YC-Q8`)
-- [ ] Công tắc `cho_phep_tu_duyet` hoạt động (`YC-Q9`)
-- [ ] `GET /auth/me` trả danh sách năng lực đã tính sẵn
+- [x] 76 mã chuyển sang nguyên vẹn, `maChucNang.test.ts` xanh không sửa một dòng (`YC-Q1`) — `npm run test:harvest`, 25/25
+- [x] Ba lớp cắt đúng thứ tự, trần cứng cắt sau cùng (`YC-Q2`) — `capability-catalog.ts` + `permission-resolver.ts`
+- [x] Bảng trần cứng là hằng trong mã, không trong cơ sở dữ liệu (`YC-Q3`) — `hardCap` trong `CAPABILITIES`, không có cột nào trong `capability_overrides`/`role_capabilities`
+- [x] 18 mã trần cứng ở phần thu hoạch, cộng 12 mã mới — 30 tổng cộng (`YC-Q3`) — `capability-catalog.test.ts`
+- [x] Quyền là bộ ba `(vai, mã, phạm vi)` (`YC-Q4`) — `role_capabilities.scope`, `CapabilityGrant.scope`
+- [x] Vai là bản ghi; không còn `enum Role` (`YC-Q5`) — chốt từ P1
+- [x] Bốn cặp năng lực tách rời, không cặp nào gói chung (`YC-Q6`) — `SPLIT_CAPABILITY_PAIRS`
+- [x] Không có `if (role === …)` ở bất kỳ đâu (`YC-Q7`) — kiểm bằng `passesHardCap(code, roleKey)`, không so vai UI
+- [x] Điều hành có mọi năng lực của Sale và Điều phối (`YC-Q8`) — trừ nhóm Trải nghiệm (`K1`), test khoá bất biến này
+- [x] Công tắc `cho_phep_tu_duyet` hoạt động (`YC-Q9`) — `self-approval-policy.ts`, mặc định `true` (giả định cần chủ sản phẩm xác nhận, xem `TECHNICAL_DEBT.md`)
+- [x] `GET /auth/me` trả danh sách năng lực đã tính sẵn — `resolveSession` nạp `ctx.capabilities`, `describeSession` trả ra
+
+Endpoint gác bằng mã năng lực đã dựng cùng pha: `GET·PATCH /organizations/current` (`F1`/`F2`) ·
+`GET /members` · `POST /members/invite` · `DELETE /members/:id` · `PATCH /members/:id/role` (`F1`/`F3`/`F4`/`F5`) ·
+`GET·POST /roles` · `PATCH /roles/:id/capabilities` (`F1`/`F5`/`F5`) ·
+`GET·POST /branches` · `PATCH /branches/:id` (`F6`/`F7`/`F7`) ·
+`GET·POST /workspaces` (`F1`/`F8`).
+
+**Chưa xác minh trong phiên này**: mọi phần chạm cơ sở dữ liệu (`npx prisma generate`,
+`npx prisma db push`, `npm run test:tenant`, phần còn lại của `npm test`) — sandbox
+không ra được `binaries.prisma.sh` (đúng cái bẫy đã ghi ở `AGENTS.md`). Chạy bốn lệnh
+đó tại máy có mạng trước khi coi P2 nghiệm thu xong. `npm run typecheck`, `npm run lint`,
+`npm run test:harvest`, và toàn bộ test thuần (không đụng Prisma) đã chạy xanh trong
+phiên này.
 
 ## P3 — Asset · Job · Usage
 

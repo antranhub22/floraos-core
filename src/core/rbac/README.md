@@ -1,19 +1,50 @@
-# Năng lực và quyền
+# Năng lực và quyền — P2
 
-Nội dung thuộc **P2**, sau khi P1 đạt nghiệm thu.
+Từ vựng và ba lớp cắt ở `capability-catalog.ts` và `permission-resolver.ts`.
+Bảng cơ sở dữ liệu (`role_capabilities`, `capability_overrides`) và việc gộp
+theo `TenantContext` nằm ở `src/modules/organization/infra/capability-repository.ts`.
 
-Thu hoạch R2: 76 mã năng lực và 18 trần cứng từ `FloraOS/floraos-web/src/lib/maChucNang.ts`, chép kèm `FloraOS/floraos-web/tests/maChucNang.test.ts`. Test xanh trên repo này thì mới coi là chuyển xong.
+**Thu hoạch R2**: `src/lib/maChucNang.ts` + `tests/maChucNang.test.ts` chép
+nguyên vẹn từ `FloraOS/floraos-web/src/lib/maChucNang.ts`, xanh không sửa một
+dòng (`npm run test:harvest`, `YC-Q1`). 76 mã đầu của `capability-catalog.ts`
+(`A1`…`E8`) SINH từ chính bản harvest đó — xem
+`capability-catalog.test.ts`, phần "khớp nguyên vẹn với bản harvest" — không
+gõ tay, để không lặp lại điểm lệch 3 ở `docs/kien-truc/RA_SOAT_THU_HOACH.md`.
 
 Ba lớp cắt, giữ nguyên thứ tự:
 
 ```
-mặc định theo vai  →  bảng công tắc trong cấu hình  →  TRẦN CỨNG (cắt sau cùng)
+mặc định theo vai  →  bảng công tắc của tổ chức  →  TRẦN CỨNG (cắt sau cùng)
 ```
 
-Trần cứng cắt sau bảng công tắc, nên không đường nào từ giao diện hay cơ sở dữ liệu mở được nó.
+- **Lớp một** — `role_capabilities` của bốn vai hệ thống, seed từ
+  `defaultCodesForSystemRole()` lúc `ensureSystemRoles`. Vai riêng của tổ chức
+  không có mặc định: bắt đầu rỗng.
+- **Lớp hai** — `capability_overrides`, theo `(organization_id, role_id, capability_code)`.
+  Nguồn của `PATCH /roles/:id/capabilities` (đặc tả 06 mục 4), dùng thống nhất
+  cho cả vai hệ thống lẫn vai riêng.
+- **Lớp ba** — trần cứng, hằng trong `capability-catalog.ts` (`hardCap`), cắt
+  sau cùng ở `permission-resolver.applyHardCap`. 30 mã có trần cứng: 18 thu
+  hoạch (`docs/dac-ta/02-function-catalog.md` mục 3) cộng 12 mã mới (mục 4).
 
-Ba mở rộng bắt buộc so với bản của FloraOS:
+Trần cứng cắt sau bảng công tắc, nên không đường nào từ giao diện hay cơ sở
+dữ liệu mở được nó — kể cả một ngoại lệ `allowed: true` ghi thẳng vào
+`capability_overrides` (xem test "bật ngoại lệ cho một mã có trần cứng vẫn
+không mở được năng lực" ở `permission-resolver.test.ts`).
 
-- Quyền là bộ ba `(vai, mã, phạm vi)` với phạm vi thuộc {organization, branch}.
-- Vai là bản ghi, không phải enum. Bỏ giá trị di sản `MANAGER`.
-- Năng lực duyệt tách khỏi năng lực sinh kết quả: `vision.analyze` ↔ `product.approve`, `media.optimize` ↔ `media.approve`.
+Ba mở rộng so với bản của FloraOS:
+
+- Quyền là bộ ba `(vai, mã, phạm vi)` — `role_capabilities.scope` ∈
+  `{ORGANIZATION, BRANCH}`.
+- Vai là bản ghi, không phải enum. Vai riêng của tổ chức mang khoá tự đặt,
+  không khớp bất kỳ trần cứng nào — một năng lực có trần cứng không bao giờ
+  mở được cho vai riêng, kể cả khi tổ chức bật nó ở bảng công tắc.
+- Năng lực duyệt tách khỏi năng lực sinh kết quả — bốn cặp ở
+  `SPLIT_CAPABILITY_PAIRS`: `vision.analyze`↔`product.approve`,
+  `media.optimize`↔`media.approve`, `catalog.create`↔`catalog.publish`,
+  `landing.create`↔`landing.publish`.
+
+Công tắc `cho_phep_tu_duyet` (đặc tả 02 mục 2, `YC-Q9`) nằm ở
+`src/modules/organization/domain/self-approval-policy.ts` — không đổi năng
+lực, chỉ đổi việc một bản ghi tự tạo có hiện trong hàng đợi duyệt của chính
+người tạo hay không.

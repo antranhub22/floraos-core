@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest"
 
 import { TenantScopeViolation, scopedWhere } from "@/core/tenancy"
 import { BranchRepository } from "@/modules/organization/infra/branch-repository"
+import { CapabilityRepository } from "@/modules/organization/infra/capability-repository"
 import { MembershipRepository } from "@/modules/organization/infra/membership-repository"
 import { OrganizationRepository } from "@/modules/organization/infra/organization-repository"
 import { RoleRepository } from "@/modules/organization/infra/role-repository"
@@ -88,6 +89,33 @@ describe("cách ly tenant ở tầng repository", () => {
 
     // Nhưng nó không nằm trong danh sách vai *của* tổ chức nào.
     expect(await repository.listForOrganization(a.ctx)).toEqual([])
+  })
+
+  it("capability_overrides — ngoại lệ quyền của A không đọc được bằng ngữ cảnh của B", async () => {
+    const roles = new RoleRepository()
+    const capabilities = new CapabilityRepository()
+    const founder = await roles.findSystemRoleByKey("dieu_hanh")
+    if (!founder) throw new Error("thiếu vai hệ thống dieu_hanh — chạy ensureSystemRoles trước")
+
+    // A bật một ngoại lệ cho vai hệ thống Điều hành trong TỔ CHỨC CỦA A.
+    await capabilities.upsertOverride(a.ctx, {
+      roleId: founder.id,
+      capabilityCode: "A3",
+      allowed: false,
+      updatedBy: a.userId,
+    })
+
+    const ofA = await capabilities.listOverridesForRole(a.ctx, founder.id)
+    expect(ofA.map((row) => row.capability_code)).toEqual(["A3"])
+
+    // Vai hệ thống dùng chung nên B đọc được CÙNG role.id — nhưng ngoại lệ
+    // của A không được lộ sang ngữ cảnh của B.
+    const ofB = await capabilities.listOverridesForRole(b.ctx, founder.id)
+    expect(ofB).toEqual([])
+
+    // Quyền hiệu lực của B với vai Điều hành vẫn có A3 — không bị A tắt mất.
+    const grantsOfB = await capabilities.resolveGrants(b.organizationId, founder.id, founder.key)
+    expect(grantsOfB.map((g) => g.code)).toContain("A3")
   })
 
   it("memberships — tư cách thành viên của A không đọc được bằng ngữ cảnh của B", async () => {

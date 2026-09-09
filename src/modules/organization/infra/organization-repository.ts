@@ -22,6 +22,23 @@ export class OrganizationRepository {
     return this.db.organizations.findUnique({ where: { slug } })
   }
 
+  /**
+   * Sửa hồ sơ tổ chức hiện tại — nguồn của `PATCH /organizations/current`
+   * (`F2`). Lọc theo `ctx.organizationId`, không theo id truyền vào — không
+   * đường nào sửa được tổ chức khác dù có đoán đúng id.
+   */
+  async update(
+    ctx: TenantContext,
+    input: { name?: string; settings?: Record<string, unknown> }
+  ): Promise<organizations | null> {
+    const result = await this.db.organizations.updateMany({
+      where: { id: ctx.organizationId },
+      data: input,
+    })
+    if (result.count === 0) return null
+    return this.current(ctx)
+  }
+
   /** Chỉ dùng lúc đăng ký, khi chưa có ngữ cảnh nào để gác. */
   create(input: {
     name: string

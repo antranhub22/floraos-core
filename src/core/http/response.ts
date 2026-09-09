@@ -31,11 +31,19 @@ export function errorResponse(error: unknown): Response {
   )
 }
 
-/** Bọc một handler để mọi `AppError` ném ra đều thành đáp ứng đúng hình dạng. */
-export function handle(fn: (request: Request) => Promise<Response>) {
-  return async (request: Request): Promise<Response> => {
+/**
+ * Bọc một handler để mọi `AppError` ném ra đều thành đáp ứng đúng hình dạng.
+ *
+ * Generic theo `Args` để cùng một `handle` dùng được cho cả route tĩnh (chỉ
+ * `request`) lẫn route động của Next.js, vốn gọi handler bằng
+ * `(request, { params })` với `params` là một `Promise` (Next 16).
+ */
+export function handle<Args extends unknown[]>(
+  fn: (request: Request, ...args: Args) => Promise<Response>
+) {
+  return async (request: Request, ...args: Args): Promise<Response> => {
     try {
-      return await fn(request)
+      return await fn(request, ...args)
     } catch (error) {
       return errorResponse(error)
     }

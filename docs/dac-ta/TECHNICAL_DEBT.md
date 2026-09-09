@@ -11,6 +11,9 @@
 | 8 | Bốn bảng thuộc tenant chưa có khoá ngoại về `organizations` | Lược đồ ở đặc tả 07 mục 3 khai `organization_id` là cột thường; bộ gác và bộ test cách ly đang giữ tính đúng đắn | Cùng đợt với P3, khi số bảng thuộc tenant tăng gấp đôi |
 | 9 | Người mở tổ chức nhận vai `dieu_hanh`, không phải `experience_user` | Vai `experience_user` chỉ có `K1` và `K2` nên người vừa đăng ký sẽ không đọc nổi tổ chức của chính mình. Đây là một dòng hằng ở `domain/system-roles.ts` | P10, khi Experience Mode chốt ai nhận vai nào |
 | 10 | Chưa giới hạn tần suất trên endpoint đăng nhập (`YC-S5`) | Cần một kho đếm dùng chung mà bản này chưa có | P12 |
+| 11 | Vai riêng của tổ chức không bao giờ nhận được một năng lực có trần cứng, kể cả một vai "quản lý khu vực" có chủ đích tương đương Điều hành | Trần cứng (`hardCap`) đặt tên các khoá vai HỆ THỐNG cụ thể; vai tự đặt không khớp bất kỳ trần nào — lựa chọn an toàn theo mặc định, xem `permission-resolver.ts` | Khi có tổ chức Chuỗi thật cần một cấp quyền giữa Điều phối và Điều hành |
+| 12 | Mặc định của công tắc `cho_phep_tu_duyet` là `true` (chưa cấu hình thì Điều hành tự duyệt được) | Đặc tả 02 mục 2 nêu công tắc nhưng không nói giá trị mặc định; `true` khớp phát biểu "Điều hành là tập cha" nhưng là một giả định, chưa phải quyết định đã chốt | Xác nhận với chủ sản phẩm ở P3 hoặc P9, trước khi màn hình duyệt đầu tiên (`H3`/`I2`) đi vào sản xuất |
+| 13 | `POST /members/invite` tạo `users` với `password_hash` rỗng nhưng chưa có luồng email hay màn nhận lời mời để người được mời tự đặt mật khẩu | Ngoài phạm vi P2 — P2 chỉ dựng bộ gác quyền, chưa dựng luồng thông báo. Người được mời hiện không đăng nhập được cho tới khi luồng này có | Trước khi tính năng mời thành viên dùng thật, không gắn với một pha cụ thể trong lộ trình P0–P12 |
 
 Đã trả ngày 09/09 (P1): nợ #1 — `npm run test:tenant` nay xanh thật trên bộ test cách ly, tệp thất bại có chủ đích đã gỡ.
 

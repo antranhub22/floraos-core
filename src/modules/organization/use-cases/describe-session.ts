@@ -16,19 +16,22 @@ export type SessionDescription = {
 /**
  * Nội dung của `GET /auth/me` (đặc tả 06 mục 3).
  *
- * `capabilities` là danh sách mã đã tính sẵn cho phiên hiện tại. Giao diện đọc
- * nó để ẩn hiện nút; máy chủ vẫn kiểm lại ở mọi endpoint — giao diện ẩn nút
- * không phải là phép kiểm quyền. Danh sách còn rỗng cho tới P2.
+ * `capabilities` là danh sách mã đã tính sẵn cho phiên hiện tại — ba lớp quyền
+ * (`src/core/rbac/`) đã chạy xong ở `resolveSession`, đây chỉ đọc lại kết quả.
+ * Giao diện đọc nó để ẩn hiện nút; máy chủ vẫn kiểm lại ở mọi endpoint —
+ * giao diện ẩn nút không phải là phép kiểm quyền.
  */
 export async function describeSession(
   resolved: ResolvedSession
 ): Promise<SessionDescription> {
+  const ctx = resolved.ctx
   const base = {
     user: { id: resolved.user.id, name: resolved.user.name, email: resolved.user.email },
-    capabilities: [] as string[],
+    // Danh sách mã đã tính sẵn cho phiên hiện tại (đặc tả 06 mục 3). Giao
+    // diện đọc để ẩn hiện nút; máy chủ vẫn kiểm lại ở mọi endpoint.
+    capabilities: ctx ? Array.from(ctx.capabilities).sort() : ([] as string[]),
   }
 
-  const ctx = resolved.ctx
   if (!ctx || !resolved.membership) {
     return {
       ...base,

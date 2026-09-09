@@ -13,6 +13,10 @@ const config = [
       "src/generated/**",
       "workers/**",
       "next-env.d.ts",
+      // Thu hoạch R2, chép nguyên vẹn — `npm run test:harvest` giữ nó xanh
+      // không sửa một dòng (`YC-Q1`). Lint theo cấu hình của floraos-core
+      // không áp dụng cho mã harvest từ một repo khác.
+      "tests/maChucNang.test.ts",
     ],
   },
   ...coreWebVitals,

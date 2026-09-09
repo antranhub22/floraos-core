@@ -10,15 +10,23 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: P1 xong. Nền đa tenant chạy được, có cổng chặn.**
+**Giai đoạn: P2 xong. Quyền chạy được — 113 mã, ba lớp cắt, endpoint quản lý tổ chức đã gác.**
 
 Repo nằm ở `~/Projects/floraos-core`, remote `antranhub22/floraos-core`.
 
-Đã có: bảy bảng nền (`users` `sessions` `organizations` `workspaces` `branches` `roles` `memberships`) · `TenantContext` giải từ `sessions.organization_id` phía máy chủ · bộ gác lọc theo tổ chức ở tầng repository · sáu endpoint `/api/v1/` không gác bằng mã năng lực (`auth/signup`, `auth/login`, `auth/logout`, `auth/me`, `GET /organizations`, `POST /session/organization`) · bộ test cách ly bốn tệp, 21 trường hợp, xanh.
+Đã có (P1): bảy bảng nền · `TenantContext` giải từ `sessions.organization_id` phía máy chủ · bộ gác lọc theo tổ chức ở tầng repository · bộ test cách ly.
 
-Chưa có: bảng năng lực, và vì thế chưa có endpoint nào gác bằng mã năng lực. `requireCapability` hiện từ chối mọi mã — cổng chưa có bảng quyền thì chặn hết, không mở tạm.
+Đã có (P2): thu hoạch R2 nguyên vẹn (`src/lib/maChucNang.ts` + `tests/maChucNang.test.ts`, `npm run test:harvest` xanh 25/25, không sửa một dòng) · `capability-catalog.ts` — 113 mã (76 thu hoạch + 37 mới), 30 mã có trần cứng · `permission-resolver.ts` — ba lớp, trần cứng cắt sau cùng · hai bảng `role_capabilities`/`capability_overrides` · `resolveSession` nạp `TenantContext.capabilities` thật, `GET /auth/me` trả năng lực đã tính · công tắc `cho_phep_tu_duyet` (`self-approval-policy.ts`) · 12 endpoint mới gác bằng mã năng lực: `organizations/current` (GET/PATCH) · `members` (GET/POST invite/DELETE/PATCH role) · `roles` (GET/POST/PATCH capabilities) · `branches` (GET/POST/PATCH) · `workspaces` (GET/POST).
 
-Hạng mục kế tiếp là **P2** — quyền.
+**Chưa xác minh trong phiên viết mã này**: mọi thứ chạm cơ sở dữ liệu thật —
+`npx prisma generate`, `npx prisma db push`, `npm run test:tenant`, phần còn lại của
+`npm test`. Phiên chạy trong một sandbox không ra được `binaries.prisma.sh` (đúng bẫy
+đã ghi ở `AGENTS.md`). `npm run typecheck`, `npm run lint`, `npm run test:harvest`, và
+mọi test không đụng Prisma (50 trường hợp: `capability-catalog`, `permission-resolver`,
+`self-approval-policy`, cộng bộ test P1) đã chạy xanh. **Việc đầu tiên ở máy có mạng:**
+`npx prisma generate && npx prisma db push && npm run typecheck && npm test && npm run test:tenant`.
+
+Hạng mục kế tiếp là **P3** — Asset · Job · Usage.
 
 ## 2. Đọc theo thứ tự này
 
@@ -77,9 +85,11 @@ Không còn quyết định nào chặn. D1 · D2 · D3 · D4 chốt ngày 09/09
 
 ## 6. Việc kế tiếp
 
-1. **P2** — quyền. Thu hoạch R2: 76 mã và 18 trần cứng từ `FloraOS/floraos-web/src/lib/maChucNang.ts`, chép kèm `maChucNang.test.ts` và giữ nó xanh không sửa một dòng. Ba bảng còn lại của lược đồ quyền (`role_capabilities`, `capability_overrides`) và nhóm endpoint gác bằng `F1`–`F8` thuộc pha này. Vẫn chưa tạo bảng, route hay job của bất kỳ module nào trước khi P2 đạt nghiệm thu.
-2. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`, gán nhãn theo `QUY_UOC_DEM.md`. Bước đầu tiên là gom ảnh từ kho vận hành AVI GIFT.
-3. Khi làm P6: chốt cách tính chi phí lá và cành trang trí, vì quy ước đếm để loại này không có số lượng.
+1. **Chạy bốn lệnh xác minh P2 ở máy có mạng** (mục 1) trước khi coi P2 nghiệm thu xong — sandbox viết mã không ra được `binaries.prisma.sh`.
+2. **P3** — Asset · GenerationJob · Usage trong một đợt (đặc tả kiến trúc V2 mục 7–9). Job worker Python lấy việc bằng `SKIP LOCKED` + `LISTEN/NOTIFY`; hạn mức kiểm tại điểm enqueue, cùng đường mã với việc ghi `usage`.
+3. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`, gán nhãn theo `QUY_UOC_DEM.md`. Bước đầu tiên là gom ảnh từ kho vận hành AVI GIFT.
+4. Khi làm P6: chốt cách tính chi phí lá và cành trang trí, vì quy ước đếm để loại này không có số lượng.
+5. Xác nhận với chủ sản phẩm giá trị mặc định của công tắc `cho_phep_tu_duyet` (`docs/dac-ta/TECHNICAL_DEBT.md` #12) trước khi màn hình duyệt đầu tiên đi vào sản xuất.
 
 ## 7. Làm việc bằng nhiều tài khoản Claude cùng lúc
 
@@ -109,3 +119,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | Rà soát mã thật ba repo; bộ đặc tả 13 tệp ở `floraos-core/docs/dac-ta/` |
 | 09/09 | Chốt D1, D2, D3. Sửa V2 và bản đồ thu hoạch theo mã thật: 18 mã trần cứng, dải E1–E8, count_engine và color_engine là REUSE |
 | 09/09 | **P1 xong.** Bảy bảng nền, `TenantContext`, bộ gác ở tầng repository, sáu endpoint phiên và tổ chức, bộ test cách ly 21 trường hợp. Lược đồ và client chuyển sang cách khai của Prisma 7 (`prisma.config.ts` + driver adapter); thêm `eslint.config.mjs` vì `npm run lint` trước đó dừng ngay khi chạy |
+| 09/09 | **P2 xong.** Thu hoạch R2 nguyên vẹn (`maChucNang.ts` + test, 25/25 qua `npm run test:harvest`) · `capability-catalog.ts` 113 mã sinh từ chính bản harvest, không gõ tay phần A–E · `permission-resolver.ts` ba lớp · `role_capabilities`/`capability_overrides` · `resolveSession` nạp năng lực thật, `GET /auth/me` trả ra · công tắc `cho_phep_tu_duyet` · 12 endpoint tổ chức/thành viên/vai/chi nhánh/workspace gác bằng mã năng lực · sửa một lỗi ở `handle()` (`src/core/http/response.ts`) không truyền được `context.params` cho route động của Next 16 — phát hiện khi viết endpoint đầu tiên có `[id]`. Chưa chạy được `prisma generate`/`db push`/`test:tenant` trong phiên này — sandbox chặn `binaries.prisma.sh` |

@@ -4,6 +4,7 @@ import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import { SYSTEM_ROLES } from "@/modules/organization/domain/system-roles"
 
+import { CapabilityRepository } from "./capability-repository"
 import type { DbClient } from "./db-client"
 
 export class RoleRepository {
@@ -41,6 +42,18 @@ export class RoleRepository {
     })
   }
 
+  /**
+   * Như `findAssignableById`, nhưng dùng lúc chưa có `TenantContext` — ở
+   * `resolve-session.ts`, đây chính là bước *dựng* ngữ cảnh nên chưa có gì để
+   * gác (giống lý do `MembershipRepository.findForUserInOrganization` không
+   * nhận ctx).
+   */
+  findAssignableByIdForOrganization(organizationId: string, id: string): Promise<roles | null> {
+    return this.db.roles.findFirst({
+      where: { id, OR: [{ organization_id: organizationId }, { organization_id: null }] },
+    })
+  }
+
   /** Vai riêng của tổ chức. Gán năng lực cho vai thuộc P2. */
   create(ctx: TenantContext, input: { key: string; name: string }): Promise<roles> {
     return this.db.roles.create({
@@ -67,12 +80,19 @@ export class RoleRepository {
   async ensureSystemRoles(): Promise<void> {
     await this.db.$executeRawUnsafe("SELECT pg_advisory_xact_lock(4207001)")
 
+    const capabilities = new CapabilityRepository(this.db)
     for (const role of SYSTEM_ROLES) {
       const existing = await this.findSystemRoleByKey(role.key)
-      if (existing) continue
-      await this.db.roles.create({
-        data: { organization_id: null, key: role.key, name: role.name, is_system: true },
-      })
+      const record =
+        existing ??
+        (await this.db.roles.create({
+          data: { organization_id: null, key: role.key, name: role.name, is_system: true },
+        }))
+
+      // Idempotent qua `skipDuplicates` — an toàn gọi lại dù vai đã có sẵn,
+      // và là cách một catalog năng lực thêm mã mới tự nạp vào vai hệ thống
+      // ở lần seed kế tiếp mà không cần một đường migrate riêng.
+      await capabilities.seedDefaultsForSystemRole(record.id, record.key)
     }
   }
 }

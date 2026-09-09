@@ -3,14 +3,13 @@ import { readCookie, SESSION_COOKIE } from "@/core/http/cookies"
 import type { TenantContext } from "@/core/tenancy"
 import { isUsable } from "@/modules/organization/domain/session-policy"
 import type { memberships, sessions, users } from "@/modules/organization/infra/entities"
+import { CapabilityRepository } from "@/modules/organization/infra/capability-repository"
 import { MembershipRepository } from "@/modules/organization/infra/membership-repository"
+import { RoleRepository } from "@/modules/organization/infra/role-repository"
 import { SessionRepository } from "@/modules/organization/infra/session-repository"
 import { hashSessionToken } from "@/modules/organization/infra/session-token"
 import { UserRepository } from "@/modules/organization/infra/user-repository"
 import { WorkspaceRepository } from "@/modules/organization/infra/workspace-repository"
-
-/** Năng lực rỗng cho tới khi bảng 76 mã có mặt — xem `src/core/rbac/`. P2. */
-const NO_CAPABILITIES: ReadonlySet<string> = Object.freeze(new Set<string>())
 
 export type ResolvedSession = {
   readonly user: users
@@ -62,6 +61,23 @@ export async function resolveSession(request: Request): Promise<ResolvedSession>
     throw new AppError("INTERNAL", "Tổ chức không có workspace nào")
   }
 
+  const role = await new RoleRepository().findAssignableByIdForOrganization(
+    session.organization_id,
+    membership.role_id
+  )
+  if (!role) {
+    throw new AppError("INTERNAL", "Tư cách thành viên trỏ tới một vai không còn tồn tại")
+  }
+
+  // Ba lớp quyền tính một lần ở biên (đặc tả 02 mục 1): switchboard của vai,
+  // đè bằng ngoại lệ của tổ chức, rồi trần cứng cắt sau cùng. `ctx.capabilities`
+  // là kết quả cuối, chỉ còn việc `hasCapability`/`requireCapability` tra cứu.
+  const grants = await new CapabilityRepository().resolveGrants(
+    session.organization_id,
+    role.id,
+    role.key
+  )
+
   return {
     user,
     session,
@@ -71,7 +87,7 @@ export async function resolveSession(request: Request): Promise<ResolvedSession>
       workspaceId: workspace.id,
       userId: user.id,
       branchId: membership.branch_id,
-      capabilities: NO_CAPABILITIES,
+      capabilities: new Set(grants.map((grant) => grant.code)),
     },
   }
 }

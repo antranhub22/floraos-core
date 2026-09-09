@@ -38,7 +38,11 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P1 xong** — bảy bảng nền, `TenantContext`, bộ gác ở tầng repository, sáu endpoint phiên và tổ chức, bộ test cách ly xanh. Hạng mục kế tiếp là **P2**.
+Trạng thái hiện tại: **P2 xong** — bảng 76 mã thu hoạch nguyên vẹn cộng 37 mã mới (113
+tổng), ba lớp cắt, `role_capabilities`/`capability_overrides`, `GET /auth/me` trả năng
+lực đã tính, và 12 endpoint quản lý tổ chức/thành viên/vai/chi nhánh/workspace gác bằng
+mã năng lực. Hạng mục kế tiếp là **P3**. Xem `docs/dac-ta/Checklist_Thuc_Thi.md` mục P2
+về phần chưa xác minh được trong sandbox không có mạng ra `binaries.prisma.sh`.
 
 ## Luật thu hoạch
 
@@ -71,11 +75,14 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Ngữ cảnh tenant | `src/core/tenancy/tenant-context.ts` | `TenantContext`, `scopedWhere`, `scopedData` — luật thuần, không import hạ tầng |
 | Client cơ sở dữ liệu | `src/core/tenancy/infra/prisma.ts` | thể hiện `PrismaClient` duy nhất; chỉ tệp trong `infra/` được import |
 | Hình dạng lỗi và cookie | `src/core/http/` | `AppError` tám mã · cookie phiên · `handle()` bọc route |
-| Năng lực & quyền | `src/core/rbac/capabilities.ts` | cổng `requireCapability`, chặn hết cho tới khi P2 nạp 76 mã từ `FloraOS/floraos-web/src/lib/maChucNang.ts` |
+| Năng lực & quyền | `src/core/rbac/` | `capability-catalog.ts` (113 mã, ba lớp) · `permission-resolver.ts` (trần cứng) · `capabilities.ts` (`hasCapability`/`requireCapability`) |
+| Harvest R2 | `src/lib/maChucNang.ts` + `tests/maChucNang.test.ts` | nguyên vẹn từ `FloraOS/floraos-web/src/lib/`, xanh qua `npm run test:harvest` (`node:test`, không qua vitest/tsc — xem `vitest.config.ts`, `tsconfig.json`, `eslint.config.mjs`) |
+| Bảng quyền | `src/modules/organization/infra/capability-repository.ts` | `role_capabilities` (lớp một) · `capability_overrides` (lớp hai, theo tổ chức) |
+| Công tắc tự duyệt | `src/modules/organization/domain/self-approval-policy.ts` | `cho_phep_tu_duyet`, đọc từ `organizations.settings` |
 | Cổng ra ngoài | `src/core/ports/` | `VisionAnalyzer` · `LLMProvider` · `StorageProvider` · `QueueProvider` · `PublisherProvider` |
 | Module tổ chức | `src/modules/organization/` | đăng ký, đăng nhập, phiên, đổi tổ chức; repository của cả bảy bảng nền |
 | Module | `src/modules/<tên>/` | bốn thư mục mỗi module |
-| API | `src/app/api/v1/` | `auth/{signup,login,logout,me}` · `organizations` · `session/organization` |
+| API | `src/app/api/v1/` | `auth/{signup,login,logout,me}` · `organizations` · `session/organization` (P1) · `organizations/current` · `members` · `roles` · `branches` · `workspaces` (P2) |
 | Lược đồ | `prisma/schema.prisma` | bảy bảng nền; worker đọc bản sinh sẵn, không tự khai bảng |
 | Chuỗi kết nối | `prisma.config.ts` | Prisma 7 không nhận `url` trong `schema.prisma` nữa |
 | Vai hệ thống | `prisma/seed.ts` | bốn vai, `organization_id = null` |

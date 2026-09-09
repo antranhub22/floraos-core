@@ -8,10 +8,13 @@
  */
 export type {
   branches,
+  capability_overrides,
+  capability_scope,
   membership_status,
   memberships,
   organization_type,
   organizations,
+  role_capabilities,
   roles,
   sessions,
   trial_status,
