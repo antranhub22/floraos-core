@@ -126,8 +126,16 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 - [x] Một bảng `usage` duy nhất (`YC-U1` `YC-U2`) — `prisma/schema.prisma`, không repo/module nào khác dựng bảng usage riêng
 - [x] Hạn mức kiểm trước khi job vào bảng, cùng một giao dịch (`YC-U3`) — `enqueue-job.ts` (`runInTransaction`: kiểm hạn mức → ghi usage → tạo generation_jobs → NOTIFY), `tests/tenant/enqueue-job.test.ts` — **xanh (6/6), sau khi sửa 3 lỗi thật (xem banner P3 phía trên)**
 - [x] Worker không ghi `usage` (`YC-U4`) — đúng theo thiết kế; `UsageRepository` chỉ được gọi từ `src/modules/usage` và `enqueue-job.ts` (phía core), không có mã Python nào ghi bảng này
-- [ ] `Idempotency-Key` trên mọi endpoint tạo job (`YC-U7`) — `enqueueJob` bắt buộc `idempotencyKey`, `domain/idempotency.ts` đọc header — P3 chưa có endpoint tạo job cụ thể theo feature (`/vision/analyses`, `/media/optimizations` ở P5/P9) để nối header thật vào; cơ chế đã sẵn cho các endpoint đó gọi `enqueueJob`
-- [ ] `audit_logs` ghi mọi hành động duyệt (`YC-R4`) — hạ tầng dựng đủ (bảng, `AuditLogRepository`, `recordAuditLog`, `GET /audit-logs`), nhưng **chưa có hành động duyệt nào để ghi** — P3 không có endpoint `*.approve` (`H3`/`I2` ở P5/P9); mục này chỉ thật sự "xong" khi endpoint duyệt đầu tiên gọi `recordAuditLog` trong cùng giao dịch
+- [x] `Idempotency-Key` trên mọi endpoint tạo job (`YC-U7`) — `enqueueJob` bắt buộc `idempotencyKey`, `domain/idempotency.ts` đọc header — P3 chưa có endpoint tạo job cụ thể theo feature (`/vision/analyses`, `/media/optimizations` ở P5/P9) để nối header thật vào; cơ chế đã sẵn cho các endpoint đó gọi `enqueueJob`. **Tích 09/10:** cả hai endpoint tạo job
+  nay đã có và đều BẮT BUỘC khoá — `POST /vision/analyses` (P5) đọc header qua
+  `readIdempotencyKey`, `POST /integration/jobs` (P7) đọc trường `idempotency_key` của thân
+  yêu cầu (máy gọi máy, không phải trình duyệt). Đợt soát 09/10 bịt luôn lỗ cuối: hai request
+  cùng khoá gửi ĐỒNG THỜI trước đó trả 500 (`P2002` nổi lên) vì cửa kiểm trùng lặp đọc trước
+  giao dịch — nay `enqueueJob` bắt lỗi đó và trả lại job của người thắng
+- [x] `audit_logs` ghi mọi hành động duyệt (`YC-R4`) — hạ tầng dựng đủ (bảng, `AuditLogRepository`, `recordAuditLog`, `GET /audit-logs`), nhưng **chưa có hành động duyệt nào để ghi** — P3 không có endpoint `*.approve` (`H3`/`I2` ở P5/P9); mục này chỉ thật sự "xong" khi endpoint duyệt đầu tiên gọi `recordAuditLog` trong cùng giao dịch.
+  **Tích 09/10:** `POST /vision/analyses/:id/approve` (`H3`, P5) làm đúng vậy — ghi Product
+  Master → chuyển `APPROVED` → `recordAuditLog`, cả ba trong một `runInTransaction`. Endpoint
+  duyệt tiếp theo (`media.approve`/`I2`, P9) phải theo cùng khuôn
 
 ## P4 — Hồ sơ
 
@@ -164,8 +172,15 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 
 ## P8 — Nạp dữ liệu AVI GIFT
 
-- [ ] Adapter Excel một chiều; không đường nào ghi ngược
-- [ ] Dữ liệu nhập đủ, đối chiếu với bảng nghiệm thu của `BAN_GIAO.md`
+- [x] Adapter Excel một chiều; không đường nào ghi ngược *(09/10: `scripts/nap-avi-gift/doc-excel.py`
+  chỉ ĐỌC hai tệp `.xlsx` và ghi ra `catalog.json` trung gian; `nap-avi-gift-vao-core.ts` chỉ đọc
+  JSON đó. Không tệp nào trong `scripts/nap-avi-gift/` mở tệp Excel ở chế độ ghi, và không tệp nào
+  đọc `he_thong.json` của AVI GIFT. Soát lại toàn bộ đường đi 09/10)*
+- [ ] Dữ liệu nhập đủ, đối chiếu với bảng nghiệm thu của `BAN_GIAO.md` *(09/10: mã đã sẵn sàng —
+  `test:tenant` **79/79** xanh trên Postgres thật, trong đó 9 ca mới của
+  `tests/tenant/avi-gift-import.test.ts` khoá tính idempotent và cách ly tổ chức của chính lượt
+  nạp; chạy khô `mapCatalogRowToProduct` trên toàn bộ 1.316 dòng thật cho 1.316/1.316 OK. Còn
+  chờ: lượt nạp THẬT chưa chạy, và nợ #34 (9–14 sản phẩm có ảnh thật) chưa làm)*
 
 ## P9 — M04a tối ưu ảnh
 
