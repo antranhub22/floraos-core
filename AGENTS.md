@@ -15,6 +15,7 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 | Test đầu cuối | `npm run test:e2e` |
 | Test worker | `cd workers && python3 -m pytest tests -q` |
 | Typecheck | `npx tsc --noEmit` |
+| Dựng CSDL cho test | `npm run db:test:setup` — **chạy một lần** sau `docker compose up -d` |
 | Test cách ly tenant | `npm run test:tenant` — *bắt buộc xanh trước mọi merge* |
 
 ## Quy ước
@@ -142,6 +143,8 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 - Prisma 7 **không đọc `url` trong `schema.prisma`** nữa. Chuỗi kết nối nằm ở `prisma.config.ts` cho lệnh dòng lệnh, và ở driver adapter `@prisma/adapter-pg` cho `PrismaClient`. Bỏ qua điều này thì `prisma generate` dừng ở `P1012`.
 - `prisma.config.ts` cũng không tự nạp `.env`. Nó gọi `process.loadEnvFile` khi tệp có mặt; trên CI biến nằm sẵn trong môi trường.
 - `prisma generate` và `prisma db push` **tải nhị phân schema-engine từ `binaries.prisma.sh`**. Máy không ra được host đó thì hai lệnh này không chạy, dù mọi thứ khác offline được. Sinh lược đồ ở nơi có mạng, hoặc mở host đó trên proxy.
+- `npm run test:tenant` XOÁ SẠCH database nó trỏ tới (`TRUNCATE` 22 bảng trước mỗi ca thử). Tới 09/10 nó dùng chung database với môi trường phát triển, nên cổng bắt buộc này cuốn mất tổ chức AVI GIFT cùng 1.316 SKU — hai lần trong một tối. Nay nó trỏ sang `floraos_test` và `tests/helpers/database.ts` TỪ CHỐI chạy nếu tên database không kết thúc bằng `_test`. Dựng database đó một lần bằng `npm run db:test:setup`; nếu quên, lỗi đầu tiên anh gặp sẽ nói thẳng phải chạy lệnh gì.
+- Biến `DATABASE_URL` export ra shell theo `cd` sang repo khác, và `process.loadEnvFile()` KHÔNG ghi đè biến đã có sẵn. Chạy `set -a && source .env` trong `LocalBudd` rồi `cd` sang đây là đủ để `npx prisma db push` của core trỏ vào Supabase của LocalBudd — suýt xảy ra 09/10. Trước mọi lệnh Prisma: `echo "[$DATABASE_URL]"` phải rỗng, và nhìn dòng `Datasource "db"` nó in ra.
 - `npm run lint` từng dừng ngay vì repo thiếu `eslint.config.mjs` — cổng thứ hai của CI chưa từng chạy trong suốt P0. Thêm một cổng vào CI thì chạy thử nó một lần tại máy.
 - Sandbox `device_bash` từng chặn `npx vitest`/`npx tsc` bằng lỗi `Cannot find module '@rollup/rollup-linux-arm64-gnu'` (kiến trúc gói sai trong `node_modules` cài sẵn). Sửa bằng `npm install @rollup/rollup-linux-arm64-gnu --no-save` — chạy được thật `vitest`/`tsc --noEmit` trong sandbox từ đó, không cần đợi anh Tony chạy trên máy thật mới biết type có sai không.
 - Tên tệp/thư mục tiếng Việt có dấu qua cầu nối máy Mac (`device_bash`) ở dạng Unicode **NFD** (tổ hợp dấu rời), còn chuỗi gõ trong mã nguồn ở đây là **NFC**. So khớp chuỗi trực tiếp (`"giỏ" in ten_thu_muc`) luôn sai lặng lẽ, không báo lỗi. Luôn `unicodedata.normalize("NFC", ...)` cả hai phía trước khi so — xem `scripts/xay-dung-bo-anh-vang.py`.

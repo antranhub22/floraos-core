@@ -1,4 +1,5 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
+import { env } from "@/lib/env"
 import { ensureSystemRoles } from "@/modules/organization/use-cases/ensure-system-roles"
 
 const TENANT_TABLES = [
@@ -27,6 +28,41 @@ const TENANT_TABLES = [
 ] as const
 
 /**
+ * Chốt chặn: bộ test này XOÁ SẠCH database nó trỏ tới, nên nó chỉ được phép
+ * trỏ tới một database có tên kết thúc bằng `_test`.
+ *
+ * Không phải phòng xa. Ngày 09/10 `npm run test:tenant` chạy trên chính
+ * database phát triển và cuốn mất tổ chức AVI GIFT cùng 1.316 SKU — hai lần
+ * trong một tối, vì `AGENTS.md` bắt cổng này xanh trước MỌI merge. Nợ #46.
+ *
+ * Dựng database test: `npm run db:test:setup`.
+ */
+function bat_buoc_la_database_test(): void {
+  let ten_db: string
+  try {
+    ten_db = new URL(env.DATABASE_URL).pathname.replace(/^\//, "")
+  } catch {
+    throw new Error(`DATABASE_URL không phải một URL đọc được: ${env.DATABASE_URL}`)
+  }
+
+  if (!ten_db.endsWith("_test")) {
+    throw new Error(
+      [
+        `TỪ CHỐI CHẠY: bộ test cách ly sẽ TRUNCATE toàn bộ database "${ten_db}",`,
+        `mà tên nó không kết thúc bằng "_test".`,
+        ``,
+        `Đây gần như chắc chắn là database phát triển của anh. Dựng database`,
+        `test một lần bằng:`,
+        ``,
+        `    npm run db:test:setup`,
+        ``,
+        `rồi chạy lại \`npm run test:tenant\` — script đó tự trỏ sang database test.`,
+      ].join("\n")
+    )
+  }
+}
+
+/**
  * Dọn sạch hai mươi hai bảng nền giữa các trường hợp thử (bảy của P1, hai
  * bảng quyền của P2, năm bảng Asset/Job/Usage/Audit của P3, hai bảng Hồ sơ
  * của P4, năm bảng Product Master/Analysis của P5, một bảng token tích hợp
@@ -34,6 +70,7 @@ const TENANT_TABLES = [
  * thì "không tìm thấy" có thể là do dữ liệu sót lại chứ không do bộ gác.
  */
 export async function resetDatabase(): Promise<void> {
+  bat_buoc_la_database_test()
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${TENANT_TABLES.join(", ")} RESTART IDENTITY CASCADE`
   )

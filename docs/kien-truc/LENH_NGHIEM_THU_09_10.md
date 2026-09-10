@@ -98,6 +98,17 @@ một cửa sổ Terminal mới.
 Và mỗi lần `prisma db push` chạy, nhìn dòng `Datasource "db"` nó in ra: phải là
 `localhost:5432`. Thấy `supabase` là **Ctrl+C ngay**, đừng trả lời `yes`.
 
+Dựng database riêng cho bộ test — **một lần duy nhất**, nếu chưa chạy bao giờ:
+
+```bash
+cd ~/Projects/floraos-core
+npm run db:test:setup
+```
+
+`npm run test:tenant` `TRUNCATE` sạch database nó trỏ tới. Nó nay trỏ sang
+`floraos_test`, và từ chối chạy nếu tên database không kết thúc bằng `_test`
+(nợ #46 — trước đó nó xoá mất dữ liệu AVI GIFT hai lần trong một tối).
+
 ```bash
 cd ~/Projects/floraos-core
 npm install

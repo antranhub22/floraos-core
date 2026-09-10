@@ -407,6 +407,8 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | Ngày | Việc |
 |---|---|
 | 09/10 | Rà soát đồng bộ ba repo (`RA_SOAT_DONG_BO_BA_REPO.md`): core ↔ LocalBudd ~60% (hợp đồng đúng, chưa nối điện), core ↔ SocialFlow ~5%. Anh Tony chốt bốn quyết định |
+| 09/10 | Trả nợ #46 — `test:tenant` sang database riêng `floraos_test`, `npm run db:test:setup`, chốt chặn từ chối database không kết thúc bằng `_test` |
+| 09/10 | Xác minh đầu-cuối: LocalBudd đọc danh mục core bằng JWT của chính người dùng, cùng `id` sản phẩm. Phát hiện khối `pricing` vượt biên, chặn bằng `boundary-capabilities.ts` |
 | 09/10 | Đợt 0+1+2: bảng cổng 3100/3000/8000; `/integration/*` nhận `X-FloraOS-SSO` (đóng lỗ rò dữ liệu chéo tổ chức); Master Image trả URL ký sẵn; đặc tả 08 sửa theo D1 đa tenant thật |
 | 09/09 | Rà soát FloraOS: phát hiện Excel là nguồn sự thật + khoá ghi toàn cục → bác bỏ hướng nâng cấp tại chỗ. hồ sơ `SAAS_GAP_ANALYSIS.md`, nay chỉ còn trong git |
 | 09/09 | Rà soát LocalBudd và SocialFlow: ba repo làm ba mảnh khác nhau của cùng kiến trúc. Chốt Đường A. `HARVEST_MANIFEST.md` |
