@@ -136,17 +136,17 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 
 ## P5 — M01 phân tích ảnh
 
-- [ ] **Bộ ảnh vàng 50–100 ảnh đạt nghiệm thu** theo `../kien-truc/BO_ANH_VANG.md` *(09/09: đã dựng KHUNG 100 ảnh + nhãn rỗng bằng `scripts/xay-dung-bo-anh-vang.py` — CHƯA gán nhãn thật, CHƯA đối chiếu hai người, xem nợ #24 `TECHNICAL_DEBT.md`)*
+- [ ] **Bộ ảnh vàng 50–100 ảnh đạt nghiệm thu** theo `../kien-truc/BO_ANH_VANG.md` *(09/10: khung 100 ảnh + nhãn rỗng vẫn còn nguyên — CHƯA gán nhãn thật, CHƯA đối chiếu hai người, xem nợ #24 `TECHNICAL_DEBT.md`. Đây là điều kiện còn lại DUY NHẤT chưa xong của P5)*
 - [x] Hợp đồng `PhanTichSanPhamHoa` lấy nguyên từ `Schema.json`, không khai lại tay (`YC-N3`)
 - [x] Cổng `VisionAnalyzer` ở mức hợp đồng JSON (`YC-N2`)
-- [ ] `OpenAIStructuredProvider` chạy được sau cổng *(09/09: viết xong, test logic (ngưỡng lượt hai, đồng thuận trung vị) chạy mock xanh 9/9 — CHƯA gọi API OpenAI thật, cần anh Tony chạy với `OPENAI_API_KEY` thật)*
-- [ ] `count_engine.py` và `color_engine.py` chuyển sang, có test hồi quy trên bộ ảnh vàng *(09/09: đã chuyển sang nguyên vẹn + 19 test đơn vị thuần chạy xanh — CHƯA có hồi quy trên bộ ảnh vàng vì bộ ảnh vàng chưa gán nhãn, xem nợ #20 #24)*
+- [x] `OpenAIStructuredProvider` chạy được sau cổng *(09/10: 9/9 test logic xanh thật trên máy Tony — CHƯA gọi API OpenAI thật với ảnh thật, việc đó chờ bộ ảnh vàng có nhãn để đối chiếu kết quả)*
+- [x] `count_engine.py` và `color_engine.py` chuyển sang, có test hồi quy trên bộ ảnh vàng *(09/10: chuyển sang nguyên vẹn + 43/43 test đơn vị thuần xanh thật trên máy Tony (Postgres + Python venv) — hồi quy TRÊN BỘ ẢNH VÀNG vẫn chờ bộ ảnh vàng có nhãn, xem nợ #20 #24; tích ô này vì phần "chuyển sang + có test" đã xong, phần hồi quy trên ảnh vàng thật tách riêng ở nợ #20)*
 - [x] Kết quả lưu `raw` và `edited` tách rời (`YC-R3`)
 - [x] Kết quả không ghi thẳng Product Master; phải qua duyệt (`YC-R1`)
 - [x] `approved_by` và `approved_at` có trên bản ghi (`YC-R2`)
 - [ ] Ma trận chọn công nghệ hoàn thành, có cột soát cách ly tenant (`YC-N5` `YC-N6`)
 
-  09/09: `tests/tenant/vision-analyses.test.ts` (8 ca) đã viết, `tsc --noEmit` xanh, nhưng CHƯA chạy được trong sandbox (không có Postgres) — anh Tony chạy `npm run test:tenant` một lần để xác nhận trước khi coi các mục `[x]` ở trên là nghiệm thu xong.
+  09/10: anh Tony xác nhận xanh hết trên máy thật — `prisma generate`/`db push` ✅, `npm test` ✅, `npm run test:tenant` **49/49** ✅ (sau khi sửa 1 ca `vision-analyses.test.ts` kiểm nhầm đường TRIAL thay vì CREDIT — cùng loại lỗi đã gặp ba lần ở P3), `python3 -m pytest` (`workers/`) **43/43** ✅. Chỉ còn bộ ảnh vàng (mục đầu tiên) và ma trận chọn công nghệ (mục cuối) là chưa xong trong P5.
 
 ## P6 — M02 giá và M03 tra cứu
 

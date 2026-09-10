@@ -38,14 +38,14 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P5 viết mã xong, CHƯA xác minh trên Postgres thật.** M01 —
-hợp đồng Vision + `OpenAIStructuredProvider` + `count_engine`/`color_engine` chuyển sang +
-worker `SKIP LOCKED`/`LISTEN` + module `src/modules/products/` + route `/vision/analyses*`.
-Bộ ảnh vàng đã dựng KHUNG (100 ảnh, `scripts/xay-dung-bo-anh-vang.py`) nhưng CHƯA gán nhãn
-thật — vẫn chưa đạt nghiệm thu (`docs/kien-truc/BO_ANH_VANG.md` mục 8). Anh Tony đã xác
-nhận tiến hành viết mã P5 trước, không chờ bộ ảnh vàng, cho đúng phần REUSE/EXTEND không
-phụ thuộc nó. Chi tiết đầy đủ ở `docs/kien-truc/TRANG_THAI.md` mục 1 và `TECHNICAL_DEBT.md`
-#19-25.
+Trạng thái hiện tại: **P5 nghiệm thu phần lõi — 49/49 `test:tenant` xanh, 43/43
+`pytest` xanh, trên Postgres thật.** M01 — hợp đồng Vision + `OpenAIStructuredProvider` +
+`count_engine`/`color_engine` chuyển sang + worker `SKIP LOCKED`/`LISTEN` + module
+`src/modules/products/` + route `/vision/analyses*`, tất cả đã xác minh trên máy thật của
+anh Tony. Còn hai việc chặn P5 nghiệm thu tuyệt đối: bộ ảnh vàng chưa gán nhãn thật (khung
+100 ảnh đã dựng, `scripts/xay-dung-bo-anh-vang.py` — `docs/kien-truc/BO_ANH_VANG.md` mục 8,
+nợ #24) và ma trận chọn công nghệ chưa làm. Chi tiết đầy đủ ở
+`docs/kien-truc/TRANG_THAI.md` mục 1 và `TECHNICAL_DEBT.md` #19-25.
 
 ## Luật thu hoạch
 
