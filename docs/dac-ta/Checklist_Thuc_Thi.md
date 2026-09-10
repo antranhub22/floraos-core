@@ -170,19 +170,23 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 - [x] `/integration/products/:id/master-image` chỉ trả ảnh đã duyệt — đúng theo đặc tả 08 mục 4; luôn 404 cho tới khi P9 đặt được `APPROVED` (nợ #30, không phải lỗi)
 - [x] Adapter `SocialFlow` nhận `organization_id` — cột + lọc trên `accounts` (khoá ngoại UNIQUE(platform) toàn cục vẫn còn, chỉ chặn ghi đè khác tổ chức thay vì âm thầm ghi đè); D1 (SocialFlow đa tenant hay đơn tenant) vẫn còn mở vì repo chưa có cơ chế xác thực máy gọi máy, và `posts`/các bảng còn lại của SocialFlow chưa có `organization_id` (`SocialFlow/TECHNICAL_DEBT.md`) — nghiệm thu trên máy thật 09/10 (curl end-to-end trên `backend/socialflow.db` thật: tạo tài khoản mới dưới một tổ chức, chặn 409 khi tổ chức khác giành cùng platform, lọc đúng theo `organization_id` cả hai chiều, ba tài khoản thật có sẵn không bị ảnh hưởng)
 
-## P8 — Nạp dữ liệu AVI GIFT
+## P8 — Nạp dữ liệu AVI GIFT · xong
 
 - [x] Adapter Excel một chiều; không đường nào ghi ngược *(09/10: `scripts/nap-avi-gift/doc-excel.py`
   chỉ ĐỌC hai tệp `.xlsx` và ghi ra `catalog.json` trung gian; `nap-avi-gift-vao-core.ts` chỉ đọc
   JSON đó. Không tệp nào trong `scripts/nap-avi-gift/` mở tệp Excel ở chế độ ghi, và không tệp nào
   đọc `he_thong.json` của AVI GIFT. Soát lại toàn bộ đường đi 09/10)*
-- [ ] Dữ liệu nhập đủ, đối chiếu với bảng nghiệm thu của `BAN_GIAO.md` *(09/10: mã đã sẵn sàng —
-  `test:tenant` **79/79** xanh trên Postgres thật, trong đó 9 ca mới của
-  `tests/tenant/avi-gift-import.test.ts` khoá tính idempotent và cách ly tổ chức của chính lượt
-  nạp; chạy khô `mapCatalogRowToProduct` trên toàn bộ 1.316 dòng thật cho 1.316/1.316 OK. Phần
-  ảnh thật (nợ #34) cũng viết mã xong 09/10 — **8** lượt phân tích / 16 ảnh (không phải "9–14"),
-  `tests/tenant/avi-gift-analyses.test.ts` 8 ca, chạy khô 8/8 OK. Còn chờ ĐÚNG một việc: hai lượt
-  nạp THẬT chưa chạy trên Postgres — xem `TRANG_THAI.md` mục 6, việc 9 và 10)*
+- [x] Dữ liệu nhập đủ, đối chiếu với nguồn *(09/10: **hai lượt nạp chạy thật trên Postgres**,
+  tổ chức AVI GIFT `18dc7e62`. `npm run doi-chieu` khớp HOÀN TOÀN 8/8 dòng — sản phẩm 1.319
+  (1.316 danh mục + 3 mã chỉ có ở lượt phân tích), `ACTIVE` 3, asset 16 (tất cả `ORIGINAL` +
+  `PENDING`, chưa qua Identity Guard), lượt phân tích 8 (tất cả `APPROVED`), job tổng hợp 1,
+  `usage` 0. Số dư credit giữ nguyên 500 sau lượt nạp phân tích — chứng minh dữ liệu lịch sử
+  không bị tính phí lần hai. Ba mã `GHTM`/`MM17082026`/`KG-20260831-001` đều có mặt và mang dấu
+  `attributes.aviGiftImport.notInPriceCatalog`.*
+  *Ghi chú: Checklist bản đầu ghi "đối chiếu với bảng nghiệm thu của `BAN_GIAO.md`" — đọc tệp đó
+  thì nó là bảng nghiệm thu GIAO DIỆN của v1 (tạo thẻ, xuất PNG/PDF, kịch bản Zalo), không phải
+  bảng số liệu dữ liệu. Nguồn đối chiếu đúng là hai tệp JSON trung gian, vì chúng sinh trực tiếp
+  từ Excel và `results.jsonl` thật; `BAN_GIAO.md` vẫn là căn cứ cho P11.)*
 
 ## P9 — M04a tối ưu ảnh
 

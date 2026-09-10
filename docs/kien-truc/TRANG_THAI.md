@@ -10,8 +10,15 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: P8 — Nạp dữ liệu AVI GIFT, phần danh mục giá viết mã xong,
-CHƯA xác minh trên Postgres thật (09/10, H7 — đặc tả 08 mục 6).** Module mới
+**Giai đoạn: P8 XONG (09/10) — AVI GIFT đã nằm trong core. Tiếp theo là P9.**
+Hai lượt nạp đã chạy THẬT trên Postgres, tổ chức `18dc7e62`: 1.319 sản phẩm
+(1.316 danh mục giá + 3 mã chỉ có ở lượt phân tích), 16 asset, 8 lượt phân
+tích `APPROVED`, 1 job tổng hợp, 0 bản ghi `usage`, credit giữ nguyên 500.
+`npm run doi-chieu` khớp hoàn toàn 8/8 dòng. Cả hai ô của P8 ở
+`Checklist_Thuc_Thi.md` đã tích.
+
+Phần mô tả chi tiết bên dưới giữ nguyên làm hồ sơ cách lượt nạp được dựng.
+(09/10, H7 — đặc tả 08 mục 6).** Module mới
 `src/modules/avi-gift-import/` (bốn thư mục, `AGENTS.md`): `domain/catalog-mapping.ts`
 (thuần, không import Prisma) map một dòng JSON trung gian sang một dòng nạp
 `products`; `use-cases/bootstrap-avi-gift-organization.ts` dựng tổ chức AVI
@@ -268,8 +275,17 @@ Không còn quyết định nào chặn. D1 · D2 · D3 · D4 chốt ngày 09/09
 `eslint` 0 lỗi 0 cảnh báo · `npm test` 149/149 · `pytest` 43/43 · `npm run build`
 33/33 route. Nhánh `soat-p1-p8-va-sua` sẵn sàng merge vào `main`.
 
-**Toàn bộ phần MÃ của P8 đã xong.** Việc còn lại duy nhất của pha này là chạy hai
-lượt nạp THẬT (mục 9 và 10 dưới đây) rồi đối chiếu `BAN_GIAO.md`.
+**P8 ĐÃ XONG hoàn toàn (09/10)** — hai lượt nạp chạy thật, `npm run doi-chieu`
+khớp 8/8, cả hai ô checklist đã tích. Mục 9 và 10 dưới đây giữ lại làm hồ sơ
+cách chạy, không còn là việc phải làm.
+
+**Việc lớn tiếp theo: P9 — M04a tối ưu ảnh + Identity Guard.** Nó đứng đúng chỗ
+để làm ngay: 16 ảnh thật vừa nạp là dữ liệu để Guard chạy trên đó; nó trả nợ
+#30 (`assets.approval_state` hiện không có đường nào đặt `APPROVED`, nên
+`GET /integration/products/:id/master-image` luôn trả 404 và LocalBudd chưa lấy
+được ảnh nào từ core); và nó là nơi thực thi D3 — `OrganizationRepository.refundCredit`
+đang KHÔNG có lời gọi nào trong repo, đúng tình trạng của `addCredit` trước
+ngày 09/10.
 
 **P7 — `LocalBudd` bỏ bốn bảng còn lại** (`products`/`product_assets`/
 `generation_jobs`/`projects`) — chặn thật, không phải việc chưa làm: đặc tả
@@ -389,3 +405,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/10 | **`test:tenant` lần đầu cho nợ #34 — 79/87, 8 ca đỏ, sửa một lỗi THẬT.** Cả 8 ca đỏ cùng một nguyên nhân: `createCompletedHistorical` ghi `{ imported: N }` vào `generation_jobs.result`, mà cột đó là `String?` chứ KHÔNG phải Json. Đây là nợ `as never` của P3 (ghi từ P4) cuối cùng cũng cắn: `payload: input.payload as never` là khuôn có sẵn trong chính tệp đó, chép sang cho `result` thì `never` nhận mọi giá trị nên `tsc` sạch, `eslint` sạch, và 149 ca `npm test` cũng xanh — chỉ Postgres thật mới bắt được. Sửa ba lớp: (1) `result = null` và chuyển số liệu sang `payload`, vì `result` là cột PHÁN QUYẾT nghiệp vụ của Identity Guard (P9), lượt nạp lịch sử không đi qua cổng nào nên không có phán quyết để ghi; (2) trả hết nợ `as never` — đổi sang `InputJsonValue` ở `usage`/`audit`/`job_events`/`assets`/`generation_jobs`, và `null as never` thành `Prisma.DbNull` (NULL của SQL, khác `JsonNull` là chuỗi JSON `null` NẰM TRONG cột — phân biệt mà `as never` che mất); không còn `as never` nào trong `src/`; (3) thêm hai assertion khoá đúng chỗ vừa sai (`result` phải null, `payload.analysisCount` phải có). `tsc` sạch · `eslint` 0/0 · `npm test` 149/149 |
 | 09/10 | **Nợ #34 nghiệm thu — `test:tenant` 87/87 xanh trên Postgres thật.** Sau vòng sửa lỗi `generation_jobs.result` (xem dòng trên), anh Tony chạy lại: xanh đủ 87 ca (79 của đợt soát + 8 ca mới của `avi-gift-analyses.test.ts`). **Toàn bộ phần MÃ của P8 xong** — cả hai lượt nạp (danh mục 1.316 SKU và phân tích ảnh 8 lượt/16 ảnh) đã có mã, có test cách ly tenant, có script chạy. Việc còn lại của P8 chỉ là CHẠY THẬT hai lượt nạp rồi đối chiếu `BAN_GIAO.md` trước khi tích ô "Dữ liệu nhập đủ" |
 | 09/10 | **Sửa: script nạp không tự nạp `.env`.** Lượt chạy thật đầu tiên vỡ ngay ở `src/lib/env.ts` — "Cấu hình thiếu hoặc sai: DATABASE_URL, SESSION_SECRET, INTEGRATION_TOKEN_SECRET". Nguyên nhân: `npx tsx scripts/…` không nạp `.env`; `npm test` nạp qua `tests/setup.ts`, Next tự nạp, còn `db:seed` thì đã mang sẵn cờ `--env-file-if-exists=.env` từ trước — bốn script mới (`nap-credit`, `nap-avi-gift-vao-core`, `nap-avi-gift-phan-tich`, `scan-stuck-jobs`) đều thiếu cờ đó. Sửa bằng cách thêm bốn script npm (`nap:danh-muc`, `nap:phan-tich`, `nap:credit`, `quet-job-treo`) mang sẵn cờ, thay vì bắt người chạy nhớ; sửa luôn mọi lệnh in ra console, chú thích đầu tệp và tài liệu cho khớp. `scan-stuck-jobs.ts` cũng mắc lỗi này — dòng cron mẫu trong chú thích của nó sẽ không bao giờ chạy được |
+| 09/10 | **P8 XONG — hai lượt nạp chạy thật trên Postgres, đối chiếu khớp hoàn toàn.** Tổ chức AVI GIFT `18dc7e62-a515-419a-9bc6-d3184435e7f9`. `npm run doi-chieu` (script mới, số kỳ vọng SUY từ chính `catalog.json`/`analyses.json` chứ không gõ tay) khớp 8/8 dòng: sản phẩm **1.319** (1.316 danh mục + 3 mã chỉ có ở lượt phân tích), `ACTIVE` 3, asset **16** (tất cả `ORIGINAL` + `PENDING`), lượt phân tích **8** (tất cả `APPROVED`), job tổng hợp 1, `usage` **0**. Số dư credit giữ nguyên **500** sau lượt nạp phân tích — chứng minh dữ liệu lịch sử không bị tính phí lần hai. Ba mã `GHTM`/`MM17082026`/`KG-20260831-001` đều có mặt và mang dấu `notInPriceCatalog`. Tích cả hai ô của P8. Phát hiện kèm: `Checklist_Thuc_Thi.md` bảo đối chiếu với "bảng nghiệm thu của `BAN_GIAO.md`", nhưng tệp đó là bảng nghiệm thu GIAO DIỆN của v1 (tạo thẻ, xuất PNG/PDF, kịch bản Zalo), không phải bảng số liệu — nguồn đối chiếu đúng cho lượt nạp là hai tệp JSON trung gian; `BAN_GIAO.md` vẫn là căn cứ cho P11 |
