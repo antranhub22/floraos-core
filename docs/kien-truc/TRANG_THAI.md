@@ -281,17 +281,24 @@ Rà soát ba repo (`RA_SOAT_DONG_BO_BA_REPO.md`) tìm ra: mặt tiếp giáp cor
 3. **Master Image trả `url` ký sẵn** (15 phút, `origin` từ chính lời gọi) — mở đường bàn giao M04a→M04b, vốn tắc vì `storage_key` trần không tải được.
 4. **Đặc tả 08 sửa lại theo sự thật** — D1 = đa tenant thật (mâu thuẫn Level-1/Level-2 đã báo và đã được anh Tony phân xử), năm bảng của LocalBudd ghi đúng thực tế, thêm mục 4c về hạn mức chặn thật.
 
-**Việc anh Tony phải chạy trên máy thật để nghiệm thu đợt này:**
+**NGHIỆM THU XONG trên Postgres thật — anh Tony chạy 09/10, 21:56:**
 
-```
-npm run test:tenant     # phải xanh, gồm 7 ca mới của tests/tenant/integration-sso.test.ts
-npm test                # 175/175 trong sandbox
-npx tsc --noEmit        # sạch trong sandbox
-```
+| Cổng | Kết quả |
+|---|---|
+| `npx prisma db push` | already in sync, `localhost:5432` |
+| `npm run db:seed` | bốn vai hệ thống |
+| `npx tsc --noEmit` | sạch |
+| `npm test` | **175/175** |
+| `npm run test:tenant` | **108/108** trên 13 tệp — gồm cả 7 ca mới của `integration-sso.test.ts` |
+| `npm run build` | sạch, 41 route |
 
-Và ở `LocalBudd`: `npx prisma generate` + `npx prisma db push` (sandbox không ra được `binaries.prisma.sh`, nên 20 lỗi TypeScript "thiếu `organization_id`/`core_product_id`" ở repo đó **chỉ** do client Prisma cũ, không do mã).
+Ca then chốt xanh: *"người của tổ chức B chỉ thấy sản phẩm của B, kể cả khi A đã cấp token tích hợp"* — lỗ rò dữ liệu chéo tổ chức (`RA_SOAT_DONG_BO_BA_REPO.md` mục 3.1) đóng thật, có test khoá. **Nợ #42 đã trả.**
 
-Việc kế tiếp sau đó: **Đợt 3 — nối `SocialFlow`** (`RA_SOAT_DONG_BO_BA_REPO.md` mục 5).
+Ở `LocalBudd`: `prisma generate` + `db push` + migration nền `0_init` đã chạy xong trên Supabase thật (`migrate status`: up to date), 20 lỗi TypeScript biến mất.
+
+**Sự cố suýt xảy ra, đã ghi vào `LENH_NGHIEM_THU_09_10.md`:** `set -a && source .env` chạy trong LocalBudd export `DATABASE_URL` của Supabase ra cả shell; biến đó theo `cd` sang `floraos-core`, và `process.loadEnvFile()` của `prisma.config.ts` không ghi đè biến đã có — nên `prisma db push` của core suýt đồng bộ lược đồ core lên database của LocalBudd. Bắt được ở dòng `Datasource "db"` trước khi áp dụng; `migrate diff` và số đếm bản ghi sau đó xác nhận Supabase còn nguyên.
+
+Việc kế tiếp: xác minh luồng SSO đầu-cuối bằng curl (`LENH_NGHIEM_THU_09_10.md` Bước 5), rồi **Đợt 3 — nối `SocialFlow`** (`RA_SOAT_DONG_BO_BA_REPO.md` mục 5).
 
 ---
 
