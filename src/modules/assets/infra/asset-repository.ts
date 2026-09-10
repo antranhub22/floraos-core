@@ -99,6 +99,50 @@ export class AssetRepository {
   }
 
   /**
+   * Master Image do MỘT job M04a sinh ra. `assets` không có cột `job_id`
+   * (đặc tả 07 mục 5 không khai), nên worker ghi `job_id` vào `metadata` và
+   * chỗ này lọc theo đường JSON đó — vẫn đi qua `scopedWhere` nên bộ gác tổ
+   * chức không hở.
+   */
+  findMasterByJobId(ctx: TenantContext, jobId: string): Promise<assets | null> {
+    return this.db.assets.findFirst({
+      where: scopedWhere(ctx, {
+        kind: "MASTER" as asset_kind,
+        metadata: { path: ["job_id"], equals: jobId },
+      }),
+      orderBy: { created_at: "desc" },
+    })
+  }
+
+  /**
+   * Cổng 2 — Review & Approve (`media.approve`/`I2`, P9). Đây là đường DUY
+   * NHẤT đặt `approval_state = APPROVED` cho một asset, và là chỗ trả nợ #30:
+   * trước P9 không có đường nào nên `GET /integration/products/:id/master-image`
+   * luôn trả 404.
+   *
+   * `updateMany` + điều kiện `approval_state: PENDING` ngay trong `where` là
+   * chốt chặn đua: hai người bấm duyệt cùng lúc chỉ một người thắng, người
+   * kia thấy `count === 0` và nhận 409 thay vì ghi đè `approved_by` của
+   * người trước.
+   */
+  async approve(
+    ctx: TenantContext,
+    id: string,
+    input: { approvedBy: string; approvedAt: Date }
+  ): Promise<assets | null> {
+    const result = await this.db.assets.updateMany({
+      where: scopedWhere(ctx, { id, approval_state: "PENDING" as approval_state }),
+      data: {
+        approval_state: "APPROVED" as approval_state,
+        approved_by: input.approvedBy,
+        approved_at: input.approvedAt,
+      },
+    })
+    if (result.count === 0) return null
+    return this.findById(ctx, id)
+  }
+
+  /**
    * Master Image mới nhất đã DUYỆT của một sản phẩm — P7,
    * `GET /integration/products/:id/master-image` (đặc tả 08 mục 4: "Chỉ ảnh
    * approval_state = APPROVED"). `parent_asset_id: null` loại các bản dẫn

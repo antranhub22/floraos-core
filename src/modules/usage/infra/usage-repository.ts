@@ -51,6 +51,15 @@ export class UsageRepository {
    * lịch sử. Hoàn credit vào `organizations.credit_balance` là việc của
    * use-case gọi hàm này, cùng một giao dịch.
    */
+  /** Các dòng `usage` của một job — `refundRejectedJob` đọc để biết đã hoàn
+   *  chưa (chốt idempotent) và để lấy lại số credit đã trừ lúc enqueue. */
+  listByJob(ctx: TenantContext, jobId: string): Promise<usage[]> {
+    return this.db.usage.findMany({
+      where: scopedWhere(ctx, { job_id: jobId }),
+      orderBy: { created_at: "asc" },
+    })
+  }
+
   recordRefund(
     ctx: TenantContext,
     input: { workspaceId: string; userId: string; jobId: string; feature: string; costUsd: number | null }

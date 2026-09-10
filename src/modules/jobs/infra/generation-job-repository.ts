@@ -180,6 +180,30 @@ export class GenerationJobRepository {
   }
 
   /**
+   * Job bị Identity Guard từ chối — đầu vào của tiến trình hoàn credit
+   * (D3, `scripts/hoan-credit.ts`).
+   *
+   * KHÔNG lọc sẵn "đã hoàn hay chưa" ở đây: `usage.job_id` là cột thường,
+   * không có quan hệ Prisma tới `generation_jobs` (đặc tả 07 mục 7 khai nó
+   * là `String?` trần), nên `usage: { none: … }` không dùng được. Việc lọc
+   * nằm ở `refundRejectedJob`, vốn đằng nào cũng phải đọc lại các dòng
+   * `usage` của job để biết đã trừ bao nhiêu credit — và chính nó là chốt
+   * idempotent, nên lọc hai lần cũng không thêm an toàn.
+   *
+   * Chạy toàn hệ thống, KHÔNG dùng `scopedWhere` — có chủ đích, cùng lý do
+   * `markStuckAsFailed`: nó không phục vụ một ngữ cảnh người dùng nào. Mỗi
+   * dòng trả về mang theo `organization_id` của chính nó, và use-case hoàn
+   * credit dựng ngữ cảnh từ đúng giá trị đó chứ không từ tham số nào khác.
+   */
+  listRejected(feature: string, limit: number): Promise<generation_jobs[]> {
+    return this.db.generation_jobs.findMany({
+      where: { feature, status: "COMPLETED", result: "REJECTED" },
+      orderBy: { completed_at: "asc" },
+      take: limit,
+    })
+  }
+
+  /**
    * Tiến trình quét (`YC-J10`): job `PROCESSING` quá `started_at + 15 phút`
    * bị đánh dấu `FAILED`. Chạy toàn hệ thống, không theo một tổ chức — đây
    * KHÔNG dùng `scopedWhere` có chủ đích, vì nó không phục vụ một ngữ cảnh

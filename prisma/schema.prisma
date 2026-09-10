@@ -301,6 +301,13 @@ model assets {
   // phải một lỗi.
   approval_state approval_state @default(PENDING)
 
+  // P9 — cổng 2 Review & Approve (`media.approve`/`I2`). M04 mục 5.1 đòi ghi
+  // rõ AI ai duyệt và lúc nào trên chính bản ghi ảnh, không chỉ ở audit log:
+  // audit log trả lời "chuyện gì đã xảy ra", hai cột này trả lời "ảnh này
+  // hiện do ai chịu trách nhiệm" mà không phải quét lịch sử.
+  approved_by    String?
+  approved_at    DateTime?
+
   metadata   Json?
   created_by String
   created_at DateTime @default(now())

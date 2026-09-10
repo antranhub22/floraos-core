@@ -4,7 +4,11 @@ import { prisma } from "@/core/tenancy/infra/prisma"
 
 import type { DbClient } from "./db-client"
 
-export type JobEventType = "stage" | "log" | "done"
+/** `guard` thêm ở P9: khối bốn điểm của Identity Guard. Nó nằm ở đây chứ
+ *  không ở một cột riêng vì đặc tả 07 không khai bảng nào cho M04a, và chỗ
+ *  cần đọc nó nhất là lúc bị TỪ CHỐI — đúng lúc không có `assets` nào được
+ *  tạo để gắn metadata vào. */
+export type JobEventType = "stage" | "log" | "done" | "guard"
 
 /**
  * Nhật ký tiến trình job — đặc tả 05 mục 8, `YC-J9`. Bảng phụ, ghi cộng dồn
@@ -35,6 +39,17 @@ export class JobEventRepository {
       return tx.job_events.create({
         data: { job_id: jobId, seq, event, payload: payload as InputJsonValue },
       })
+    })
+  }
+
+  /** Sự kiện MỚI NHẤT thuộc một loại — `getOptimization` đọc khối `guard`
+   *  và khối `done` của job. Không nhận `TenantContext` vì `job_events`
+   *  không mang `organization_id`; quyền sở hữu job phải kiểm ở tầng trên
+   *  TRƯỚC khi gọi, đúng cách route SSE `GET /jobs/:id/events` đang làm. */
+  findLatestByType(jobId: string, event: JobEventType): Promise<job_events | null> {
+    return this.db.job_events.findFirst({
+      where: { job_id: jobId, event },
+      orderBy: { seq: "desc" },
     })
   }
 

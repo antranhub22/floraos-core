@@ -178,7 +178,9 @@ def _ghi_asset_master(
                 "parameters": json.dumps(ket_qua_tang_cuong["parameters"]),
                 "identity_score": khoi_guard["identity_score"],
                 "generated_flags": json.dumps(ket_qua_tang_cuong["generated_flags"]),
-                "metadata": json.dumps({"identity_guard": khoi_guard}),
+                # `assets` không có cột `job_id` (đặc tả 07 mục 5) — ghi vào metadata
+                # để phía TS tra ngược được từ job sang Master Image nó sinh ra.
+                "metadata": json.dumps({"job_id": job["id"], "identity_guard": khoi_guard}),
                 "created_by": job["user_id"],
             },
         )
