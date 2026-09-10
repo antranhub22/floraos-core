@@ -53,6 +53,46 @@ export class ProductAnalysisRepository {
     })
   }
 
+  /** Tra theo ảnh đã phân tích — chốt idempotent của lượt nạp lịch sử
+   *  (P8, nợ #34): một ảnh chỉ có đúng một lượt phân tích được nạp. */
+  findByAssetId(ctx: TenantContext, assetId: string): Promise<product_analyses | null> {
+    return this.db.product_analyses.findFirst({ where: scopedWhere(ctx, { asset_id: assetId }) })
+  }
+
+  /**
+   * Tạo một lượt phân tích ĐÃ DUYỆT SẴN — chỉ dùng cho dữ liệu lịch sử đã
+   * qua vận hành thật ở v1 (P8, nợ #34). Luồng bình thường KHÔNG được gọi
+   * hàm này: máy phân tích xong thì `create()` (PENDING), rồi người duyệt
+   * qua `POST /vision/analyses/:id/approve` (`H3`) — đó là luật "kết quả
+   * không ghi thẳng Product Master, phải qua duyệt" (`YC-R1`).
+   *
+   * Ngoại lệ ở đây hẹp và có lý do: tám lượt này đã được người của AVI GIFT
+   * dùng để bán hàng thật ở v1. Bắt duyệt lại là bắt xác nhận lại một việc
+   * đã làm. `approvedBy`/`approvedAt` vẫn ghi thật, nên vẫn truy vết được ai
+   * chịu trách nhiệm và từ lúc nào.
+   */
+  createApprovedHistorical(
+    ctx: TenantContext,
+    input: CreateProductAnalysisInput & ApproveAnalysisInput
+  ): Promise<product_analyses> {
+    return this.db.product_analyses.create({
+      data: scopedData(ctx, {
+        product_id: input.productId,
+        asset_id: input.assetId,
+        job_id: input.jobId,
+        provider: input.provider,
+        model: input.model,
+        model_version: input.modelVersion,
+        contract_name: input.contractName,
+        contract_version: input.contractVersion,
+        raw: input.raw as InputJsonValue,
+        approval_state: "APPROVED" as approval_state,
+        approved_by: input.approvedBy,
+        approved_at: input.approvedAt,
+      }),
+    })
+  }
+
   /**
    * `PATCH /vision/analyses/:id` (`H2`). Chặn sửa bản đã `APPROVED` ngay ở
    * mệnh đề `where` — cùng khuôn `updateMany` + đọc lại như

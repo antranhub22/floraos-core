@@ -179,8 +179,10 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 - [ ] Dữ liệu nhập đủ, đối chiếu với bảng nghiệm thu của `BAN_GIAO.md` *(09/10: mã đã sẵn sàng —
   `test:tenant` **79/79** xanh trên Postgres thật, trong đó 9 ca mới của
   `tests/tenant/avi-gift-import.test.ts` khoá tính idempotent và cách ly tổ chức của chính lượt
-  nạp; chạy khô `mapCatalogRowToProduct` trên toàn bộ 1.316 dòng thật cho 1.316/1.316 OK. Còn
-  chờ: lượt nạp THẬT chưa chạy, và nợ #34 (9–14 sản phẩm có ảnh thật) chưa làm)*
+  nạp; chạy khô `mapCatalogRowToProduct` trên toàn bộ 1.316 dòng thật cho 1.316/1.316 OK. Phần
+  ảnh thật (nợ #34) cũng viết mã xong 09/10 — **8** lượt phân tích / 16 ảnh (không phải "9–14"),
+  `tests/tenant/avi-gift-analyses.test.ts` 8 ca, chạy khô 8/8 OK. Còn chờ ĐÚNG một việc: hai lượt
+  nạp THẬT chưa chạy trên Postgres — xem `TRANG_THAI.md` mục 6, việc 9 và 10)*
 
 ## P9 — M04a tối ưu ảnh
 
