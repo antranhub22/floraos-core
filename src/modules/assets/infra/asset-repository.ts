@@ -145,11 +145,24 @@ export class AssetRepository {
   /**
    * Master Image mới nhất đã DUYỆT của một sản phẩm — P7,
    * `GET /integration/products/:id/master-image` (đặc tả 08 mục 4: "Chỉ ảnh
-   * approval_state = APPROVED"). `parent_asset_id: null` loại các bản dẫn
-   * xuất (ratio Smart Reframe) khỏi vai trò "chính nó là Master" — chúng đọc
-   * qua `listDerivedFrom`. Trước khi P9 (Identity Guard) đặt được
-   * `APPROVED`, hàm này luôn trả `null` — đúng luật "ảnh chờ duyệt không rò
-   * ra ngoài", không phải lỗi (nợ #30, `TECHNICAL_DEBT.md`).
+   * approval_state = APPROVED").
+   *
+   * **Sửa 09/10 (P9):** bản P7 còn một điều kiện `parent_asset_id: null`,
+   * viết với giả định "Master là asset gốc, các bản dẫn xuất (ratio Smart
+   * Reframe) mới có cha". Giả định đó SAI khi P9 dựng xong đường tạo Master
+   * thật: Master do M04a sinh ra LUÔN có cha là ảnh `ORIGINAL` mà nó được
+   * tăng cường từ đó — đúng `YC-A1`/`YC-A2`/`YC-A3` ("asset gốc không bao
+   * giờ bị ghi đè", phả hệ qua `parent_asset_id`). Điều kiện cũ khiến hàm
+   * này KHÔNG BAO GIỜ tìm thấy gì, kể cả sau khi ảnh đã được duyệt.
+   *
+   * Bản dẫn xuất theo tỉ lệ vẫn bị loại, nhưng bằng `kind`: chúng là
+   * `MARKETING`/`CATALOG`/`SOCIAL`… chứ không phải `MASTER`. Lọc theo vai
+   * trò đúng hơn lọc theo phả hệ — một asset có cha không nói lên nó là bản
+   * dẫn xuất phụ.
+   *
+   * Điểm lệch này chỉ lộ ra khi cả hai pha cùng tồn tại: P7 không có đường
+   * nào tạo Master để thử, P9 mới có. Ca thử khoá nó gọi endpoint TRƯỚC và
+   * SAU lượt duyệt trong cùng một ca (`tests/tenant/media-optimizations.test.ts`).
    */
   findApprovedMaster(ctx: TenantContext, productId: string): Promise<assets | null> {
     return this.db.assets.findFirst({
@@ -157,7 +170,6 @@ export class AssetRepository {
         product_id: productId,
         kind: "MASTER" as asset_kind,
         approval_state: "APPROVED" as approval_state,
-        parent_asset_id: null,
       }),
       orderBy: { version: "desc" },
     })
