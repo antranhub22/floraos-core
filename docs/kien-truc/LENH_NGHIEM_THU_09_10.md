@@ -4,6 +4,15 @@ Chạy trên Terminal Mac thật. Thứ tự có phụ thuộc: Bước 1 mở k
 
 Ba cổng đã chốt: **floraos-core 3100 · LocalBudd 3000 · SocialFlow 8000**.
 
+> **Hai cái bẫy của zsh, đã gặp thật ngày 09/10.**
+> 1. **Dán từng lệnh một, đừng dán cả khối.** Khi một lệnh dừng lại hỏi
+>    (`prisma db push` hỏi xác nhận), những dòng dán sau nó sẽ bị đọc làm CÂU
+>    TRẢ LỜI cho câu hỏi đó.
+> 2. **Đừng gõ chú thích `#` sau lệnh.** zsh tương tác không bật
+>    `interactive_comments`, nên `docker compose ps # chờ healthy` bị hiểu là
+>    tên service và báo lỗi. Mọi lệnh trong tài liệu này đã bỏ hết chú thích
+>    cuối dòng vì lý do đó.
+
 ---
 
 ## Bước 0 — Postgres cho floraos-core
@@ -11,7 +20,7 @@ Ba cổng đã chốt: **floraos-core 3100 · LocalBudd 3000 · SocialFlow 8000*
 ```bash
 cd ~/Projects/floraos-core
 docker compose up -d
-docker compose ps          # chờ tới khi healthy
+docker compose ps
 ```
 
 ---
@@ -34,12 +43,17 @@ Xem SQL trước khi đụng vào nó:
 
 ```bash
 cd ~/Projects/LocalBudd
-set -a && source .env && set +a
-npx prisma migrate diff \
-  --from-url "$DIRECT_URL" \
-  --to-schema-datamodel prisma/schema.prisma \
-  --script
+npx prisma migrate diff --from-url "$(grep '^DIRECT_URL=' .env | cut -d= -f2- | tr -d '"')" --to-schema-datamodel prisma/schema.prisma --script
 ```
+
+> **KHÔNG dùng `set -a && source .env && set +a` ở đây.** Lệnh đó export
+> `DATABASE_URL`/`DIRECT_URL` của LocalBudd ra TOÀN BỘ shell, và biến đó KHÔNG
+> mất khi `cd` sang repo khác. `prisma.config.ts` của floraos-core dùng
+> `process.loadEnvFile('.env')`, hàm này không ghi đè biến đã có sẵn trong môi
+> trường — nên lệnh `prisma db push` chạy sau đó ở floraos-core sẽ trỏ vào
+> **Supabase của LocalBudd** thay vì Postgres localhost, và đồng bộ lược đồ
+> core lên đúng cái database chứa dữ liệu LocalBudd. Đã suýt xảy ra thật ngày
+> 09/10. Cách trên đọc `DIRECT_URL` ngay tại chỗ, không để lại gì trong shell.
 
 Kết quả mong đợi: chỉ có `ALTER TABLE ... ADD COLUMN` cho `sessions.organization_id`,
 `projects.organization_id`, `products.core_product_id`, cộng một `CREATE UNIQUE INDEX`
@@ -62,12 +76,27 @@ npx prisma migrate diff \
   --to-schema-datamodel prisma/schema.prisma \
   --script > prisma/migrations/0_init/migration.sql
 npx prisma migrate resolve --applied 0_init
-npx prisma migrate status      # phải báo "Database schema is up to date"
+npx prisma migrate status
 ```
+
+`migrate status` phải báo `Database schema is up to date!`.
 
 ---
 
 ## Bước 2 — floraos-core: nghiệm thu
+
+**Chốt chặn trước khi gõ bất cứ lệnh Prisma nào của core.** Chuỗi kết nối rò từ
+shell là cách nhanh nhất để ghi nhầm lược đồ core lên database của LocalBudd:
+
+```bash
+echo "[$DATABASE_URL]"
+```
+
+Phải in ra `[]` rỗng. Nếu còn giá trị: `unset DATABASE_URL DIRECT_URL`, hoặc mở
+một cửa sổ Terminal mới.
+
+Và mỗi lần `prisma db push` chạy, nhìn dòng `Datasource "db"` nó in ra: phải là
+`localhost:5432`. Thấy `supabase` là **Ctrl+C ngay**, đừng trả lời `yes`.
 
 ```bash
 cd ~/Projects/floraos-core
@@ -76,11 +105,11 @@ npx prisma generate
 npx prisma db push
 npm run db:seed
 
-npx tsc --noEmit          # kỳ vọng: sạch
-npx eslint src tests      # kỳ vọng: 0 lỗi (1 cảnh báo font, có từ trước)
-npm test                  # kỳ vọng: 175/175
-npm run test:tenant       # kỳ vọng: XANH — gồm 7 ca mới integration-sso.test.ts
-npm run build             # kỳ vọng: build sạch
+npx tsc --noEmit
+npx eslint src tests
+npm test
+npm run test:tenant
+npm run build
 cd workers && python3 -m pytest tests -q && cd ..
 ```
 
@@ -94,9 +123,9 @@ liệu chéo tổ chức, chưa từng chạy trên DB thật.
 
 ```bash
 cd ~/Projects/LocalBudd
-npm run typecheck    # kỳ vọng: 0 lỗi (trước generate là 20)
-npm test             # kỳ vọng: 14/14
-npx eslint .         # kỳ vọng: 166 vấn đề — có từ trước, baseline là 167
+npm run typecheck
+npm test
+npx eslint .
 npm run build
 ```
 
@@ -106,13 +135,13 @@ npm run build
 
 ```bash
 # Cửa sổ 1
-cd ~/Projects/floraos-core && npm run dev        # http://localhost:3100
+cd ~/Projects/floraos-core && npm run dev
 
 # Cửa sổ 2
-cd ~/Projects/LocalBudd && npm run dev           # http://localhost:3000
+cd ~/Projects/LocalBudd && npm run dev
 
 # Cửa sổ 3
-cd ~/Projects/SocialFlow && ./start.sh           # http://localhost:8000
+cd ~/Projects/SocialFlow && ./start.sh
 ```
 
 ---
@@ -123,7 +152,6 @@ cd ~/Projects/SocialFlow && ./start.sh           # http://localhost:8000
 mục của ĐÚNG tổ chức đó.
 
 ```bash
-# 5a. Đăng nhập vào core, giữ cookie
 curl -si -X POST http://localhost:3100/api/v1/auth/login \
   -H 'content-type: application/json' \
   -d '{"email":"<email cua anh>","password":"<mat khau>"}' \
@@ -133,19 +161,15 @@ curl -si -X POST http://localhost:3100/api/v1/auth/login \
 Kỳ vọng: thấy **hai** `Set-Cookie` — `floraos_session` và `floraos_sso`.
 
 ```bash
-# 5b. Lấy JWT SSO ra biến
 SSO=$(awk '$6=="floraos_sso"{print $7}' /tmp/floraos-cookies.txt)
-echo "${SSO:0:40}..."      # phải in ra một chuỗi JWT, không rỗng
+echo "${SSO:0:40}..."
 
-# 5c. Gọi thẳng Integration API bằng danh tính người dùng (đường MỚI)
 curl -s http://localhost:3100/api/v1/integration/products \
   -H "X-FloraOS-SSO: $SSO" | head -c 500; echo
 
-# 5d. Hồ sơ thương hiệu và hồ sơ kinh doanh
 curl -s http://localhost:3100/api/v1/integration/brand-profile    -H "X-FloraOS-SSO: $SSO"; echo
 curl -s http://localhost:3100/api/v1/integration/business-profile -H "X-FloraOS-SSO: $SSO"; echo
 
-# 5e. Master Image — kỳ vọng có trường "url" tuyệt đối, không chỉ storage_key
 PID=$(curl -s "http://localhost:3100/api/v1/integration/products?limit=1" \
   -H "X-FloraOS-SSO: $SSO" | sed -E 's/.*"id":"([^"]+)".*/\1/')
 curl -s "http://localhost:3100/api/v1/integration/products/$PID/master-image" \
@@ -156,12 +180,10 @@ curl -s "http://localhost:3100/api/v1/integration/products/$PID/master-image" \
 `approval_state = APPROVED` — không phải lỗi.
 
 ```bash
-# 5f. JWT giả phải bị từ chối — kỳ vọng 401
 curl -s -o /dev/null -w '%{http_code}\n' \
   http://localhost:3100/api/v1/integration/products \
   -H "X-FloraOS-SSO: ${SSO}x"
 
-# 5g. Không có chứng thư nào — kỳ vọng 401
 curl -s -o /dev/null -w '%{http_code}\n' \
   http://localhost:3100/api/v1/integration/products
 ```
