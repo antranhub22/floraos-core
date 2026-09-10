@@ -220,7 +220,7 @@ describe("cách ly tenant — Integration Layer (P7)", () => {
     await putBrandProfile(
       withSession(`${BASE}/brand-profile`, a.token, {
         method: "PUT",
-        body: JSON.stringify({ display_name: "Alpha Florist", primary_color: "#1A73E8" }),
+        body: JSON.stringify({ primary_color: "#1A73E8", tone_of_voice: "ấm, gần gũi" }),
       })
     )
 
@@ -243,15 +243,21 @@ describe("cách ly tenant — Integration Layer (P7)", () => {
 
     // Khác `business-profile` (chỉ LOCALBUDD): bộ nhận diện thương hiệu là
     // thứ SocialFlow cần để dựng nội dung, nên cả hai engine đều đọc được.
+    // `brand_profiles` KHÔNG có `display_name` — tên hiển thị nằm ở
+    // `business_profiles`; ở đây danh tính là màu/font/tông giọng.
     for (const token of [localbudd.token as string, socialflow.token as string]) {
       const response = await getIntegrationBrandProfile(
         withBearer(`${BASE}/integration/brand-profile`, token)
       )
       expect(response.status).toBe(200)
-      expect((await readJson(response)).display_name).toBe("Alpha Florist")
+      const body = await readJson(response)
+      expect(body.primary_color).toBe("#1A73E8")
+      expect(body.tone_of_voice).toBe("ấm, gần gũi")
     }
 
-    // Token của tổ chức B không bao giờ thấy hồ sơ của A (`YC-T4`).
+    // Token của tổ chức B không bao giờ thấy hồ sơ của A (`YC-T4`). B chưa
+    // nhập hồ sơ thương hiệu nào nên `getBrandProfile` trả `null` — điều cần
+    // khoá là B KHÔNG đọc ra màu của A, không phải mã lỗi cụ thể.
     const foreign = await readJson(
       await issueToken(
         withSession(`${BASE}/integration-tokens`, b.token, {
@@ -263,7 +269,8 @@ describe("cách ly tenant — Integration Layer (P7)", () => {
     const foreignResponse = await getIntegrationBrandProfile(
       withBearer(`${BASE}/integration/brand-profile`, foreign.token as string)
     )
-    expect((await readJson(foreignResponse)).display_name).not.toBe("Alpha Florist")
+    expect(foreignResponse.status).toBe(200)
+    expect(await foreignResponse.json()).toBeNull()
   })
 
   it("GET /integration/products/:id/master-image trả 404 khi chưa có Master Image APPROVED (nợ #30) và khi sản phẩm thuộc tổ chức khác", async () => {
