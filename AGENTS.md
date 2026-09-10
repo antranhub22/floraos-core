@@ -38,14 +38,26 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P5 nghiệm thu phần lõi — 49/49 `test:tenant` xanh, 43/43
-`pytest` xanh, trên Postgres thật.** M01 — hợp đồng Vision + `OpenAIStructuredProvider` +
-`count_engine`/`color_engine` chuyển sang + worker `SKIP LOCKED`/`LISTEN` + module
-`src/modules/products/` + route `/vision/analyses*`, tất cả đã xác minh trên máy thật của
-anh Tony. Còn hai việc chặn P5 nghiệm thu tuyệt đối: bộ ảnh vàng chưa gán nhãn thật (khung
-100 ảnh đã dựng, `scripts/xay-dung-bo-anh-vang.py` — `docs/kien-truc/BO_ANH_VANG.md` mục 8,
-nợ #24) và ma trận chọn công nghệ chưa làm. Chi tiết đầy đủ ở
-`docs/kien-truc/TRANG_THAI.md` mục 1 và `TECHNICAL_DEBT.md` #19-25.
+Trạng thái hiện tại: **P6 viết mã xong, CHƯA xác minh trên Postgres thật.** M02
+(`quotePrice`/`checkPriceInvariants`/`checkPriceGuard`, thu hoạch R3/R4/R5) +
+`pricing_rules` CRUD chèn-chỉ (`effective_from` giữ lịch sử) + `GET·PUT
+/pricing-rules` (`L5`/`L6`). M03 (`filterProductLookup`) + `GET·POST /products` +
+`GET·PATCH /products/:id`. Phạm vi hẹp lại theo xác nhận chủ sản phẩm 09/10:
+không dựng luồng "thẻ chào giá" (`pricing_card`, C1–C28 — nợ #26), chi phí
+lá/cành trang trí để nợ kỹ thuật (#27). `tsc --noEmit` sạch, `npm test`
+117/117 (36 ca mới), `eslint` sạch trong sandbox; `test:tenant` (10 ca mới)
+chưa chạy được — sandbox không có Postgres, bốn lệnh xác minh chờ ở
+`TRANG_THAI.md` mục 6.
+
+P5 nghiệm thu phần lõi trước đó — 49/49 `test:tenant` xanh, 43/43 `pytest`
+xanh, trên Postgres thật. M01 — hợp đồng Vision + `OpenAIStructuredProvider` +
+`count_engine`/`color_engine` chuyển sang + worker `SKIP LOCKED`/`LISTEN` +
+route `/vision/analyses*`, đã xác minh trên máy thật của anh Tony. Còn hai
+việc chặn P5 nghiệm thu tuyệt đối, không chặn P6: bộ ảnh vàng chưa gán nhãn
+thật (khung 100 ảnh đã dựng, `scripts/xay-dung-bo-anh-vang.py` —
+`docs/kien-truc/BO_ANH_VANG.md` mục 8, nợ #24) và ma trận chọn công nghệ chưa
+làm. Chi tiết đầy đủ ở `docs/kien-truc/TRANG_THAI.md` mục 1 và
+`TECHNICAL_DEBT.md` #19-29.
 
 ## Luật thu hoạch
 
@@ -91,6 +103,8 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Vai hệ thống | `prisma/seed.ts` | bốn vai, `organization_id = null` |
 | Worker phân tích ảnh | `workers/vision/` | M01 — P5. `contracts/` (Schema.json/Prompt.md nguyên vẹn) · `analyzer/` (`count_engine.py`/`color_engine.py`/`tu_dien.py`, REUSE/EXTEND) · `providers/` (`base.py` cổng, `openai_structured.py` BUILD) · `jobs/worker.py` (`SKIP LOCKED`+`LISTEN`, D6-1). Test: `workers/tests/vision/` |
 | Module sản phẩm | `src/modules/products/` | `products`/`product_variants`/`product_images`/`product_analyses`/`pricing_rules` (đặc tả 07 mục 9). `product-analysis-rules.ts` (thuần: `canEditAnalysis`/`canApproveAnalysis`/`resolveEffectiveAnalysis` = `edited ?? raw`). Route `/api/v1/vision/analyses*` (`H1`/`H2`/`H3`) — duyệt ghi Product Master + `audit_logs` trong một giao dịch |
+| M02 giá (P6) | `src/modules/products/domain/{pricing,price-guard,pricing-input,pricing-rules}.ts` | `quotePrice`/`checkPriceInvariants` (thu hoạch R3+R4) · `checkPriceGuard` (R5, chỉ phần `chanGia.ts` — `sanTran.ts` không thuần, nợ #29) · `pricing-rules.ts` (danh mục 4 khoá, hợp nhất tổ chức/chi nhánh). `infra/pricing-rule-repository.ts` CHÈN-CHỈ (`effective_from`, không `upsert`). Route `GET·PUT /pricing-rules` (`L5`/`L6`). KHÔNG có luồng "thẻ chào giá" (`pricing_card`, nợ #26) |
+| M03 tra cứu (P6) | `src/modules/products/domain/product-lookup.ts` | `filterProductLookup` — cắt khối `pricing` theo `L5`, thu hoạch hình dạng từ `locTraCuu.ts` (dữ liệu giá đã tính sẵn theo mã, thuộc `pricing_card`, không mang sang). Route `GET /products` (lọc `branch_id`/`status`/`category`, phân trang con trỏ) + `GET·PATCH /products/:id` (`L1`/`L3`, `ARCHIVED` đòi thêm `L4`) + `POST /products` (`L2`) |
 | Dựng bộ ảnh vàng | `scripts/xay-dung-bo-anh-vang.py` | Chọn ảnh rõ nhất mỗi sản phẩm từ `BoAnhVang/` (ngoài git), ghi khung `golden/images`+`golden/labels`+`manifest.csv`. KHÔNG tự đếm — xem `docs/kien-truc/BO_ANH_VANG.md` |
 | Worker tối ưu ảnh | `workers/media_ai/` | M04a — P9 |
 | Test cách ly tenant | `tests/tenant/` | sáu tệp (bốn của P1/P2, cộng `skip-locked-claim.test.ts` và `enqueue-job.test.ts` của P3); `npm run test:tenant` |

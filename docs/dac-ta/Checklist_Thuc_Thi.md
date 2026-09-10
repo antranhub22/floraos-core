@@ -150,10 +150,10 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 
 ## P6 — M02 giá và M03 tra cứu
 
-- [ ] `pricing.ts` và bất biến làm tròn chuyển sang, test hai phía xanh
-- [ ] Quy tắc giá theo tổ chức, có thể theo chi nhánh
-- [ ] **Chốt cách tính chi phí lá và cành trang trí** — quy ước đếm để loại này không có số lượng
-- [ ] Tra cứu chạy trên Postgres; `locTraCuu.test.ts` xanh
+- [x] `pricing.ts` và bất biến làm tròn chuyển sang, test hai phía xanh — `src/modules/products/domain/pricing.ts` (`quotePrice`/`checkPriceInvariants`), `pricing.test.ts` xanh trong sandbox (`npx vitest run`)
+- [x] Quy tắc giá theo tổ chức, có thể theo chi nhánh — `pricing_rules` (P3) + `PricingRuleRepository` (chèn-chỉ, `effective_from`) + `mergeEffectivePricingConfig`, `GET · PUT /pricing-rules` (`L5`/`L6`)
+- [x] **Chốt cách tính chi phí lá và cành trang trí** — chủ sản phẩm chốt 09/10: CHƯA TÍNH, để nợ kỹ thuật (`TECHNICAL_DEBT.md` #27) cho tới khi có dữ liệu thật/bộ ảnh vàng
+- [x] Tra cứu chạy trên Postgres — `GET /products` (lọc `branch_id`/`status`/`category`, phân trang con trỏ) + `GET /products/:id`, cả hai qua `filterProductLookup`; các ca thử thuần của `locTraCuu.test.ts` (đọc số, tỷ lệ, câu cảnh báo) dịch sang `pricing-input.test.ts`, xanh trong sandbox — xem ghi chú phạm vi ở đầu `pricing-input.ts`/`product-lookup.ts`
 
 ## P7 — Integration Layer
 

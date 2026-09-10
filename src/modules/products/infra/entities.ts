@@ -3,6 +3,7 @@ import type { Prisma } from "@/generated/prisma/client"
 
 export type {
   approval_state,
+  pricing_rules,
   product_analyses,
   product_status,
   products,

@@ -53,7 +53,7 @@ Phần còn lại của tài liệu này viết theo **Đường A**.
 | R2 | **Bảng 76 mã năng lực** + 18 trần cứng + hàm `duocPhep`/`vaiDuocPhep` | `FloraOS/floraos-web/src/lib/maChucNang.ts` | **Không import gì cả.** Tự chạy được, tự test được | `FloraOS/floraos-web/tests/maChucNang.test.ts` |
 | R3 | **Công thức giá** | `FloraOS/floraos-web/src/lib/pricing.ts` (227 dòng, import 1 module nội bộ) | Gần thuần | `FloraOS/floraos-web/tests/pricing.test.ts` |
 | R4 | Bất biến làm tròn từng cấu phần | `FloraOS` `pricing.ts` ↔ `template_validator.py` | Là **luật**, không phải mã | `pricing.test.ts` + `test_bat_bien.py` — **chép cả hai** |
-| R5 | Sàn/Trần, chặn giá, mức thu, ước phí | `FloraOS/floraos-web/src/lib/{chanGia,sanTran,mucThu,uocPhi}.ts` | Thuần | `FloraOS/floraos-web/tests/chanGia.test.ts`, `uocPhi.test.ts` |
+| R5 | Chặn giá theo Sàn/Trần | `FloraOS/floraos-web/src/lib/chanGia.ts` (62 dòng, thuần) — **không** `mucThu.ts`/`uocPhi.ts` (xếp nhầm, xem điểm lệch #10 `RA_SOAT_THU_HOACH.md`: `mucThu.ts` là bảng UAT năng lực, không phải giá; `uocPhi.ts` thuộc M01/Usage). `sanTran.ts` (102 dòng) chỉ phần quyết định trùng `chanGia.ts` là REUSE — phần còn lại gọi thẳng dịch vụ Excel (`server-only`), không thuần (điểm lệch #11) | `FloraOS/floraos-web/tests/chanGia.test.ts` |
 | R6 | **Khuôn hexagonal** — `core/ports/`, `modules/<tên>/{domain,use-cases,infra,adapters}` | `LocalBudd/src/` | Là **quy ước**, chép cấu trúc chứ không chép mã | — |
 | R7 | Enum `job_status` + `job_step` | `LocalBudd/prisma/schema.prisma` | Đúng §10 sẵn | — |
 | R8 | Bộ 8 tài liệu đặc tả MVP | `LocalBudd/ORG_docx/` | Đặc biệt `07-database-specification` và `08-repository-technical-audit` | — |

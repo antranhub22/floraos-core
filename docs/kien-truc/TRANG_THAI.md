@@ -10,19 +10,45 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: P5 nghiệm thu phần lõi — 49/49 `test:tenant` xanh trên Postgres thật,
-43/43 `pytest` xanh (workers/).** Anh Tony chạy đủ bốn lệnh xác minh (`prisma
-generate`/`db push` · `npm test` · `npm run test:tenant` · `python3 -m pytest`) trên
-Terminal Mac thật — xanh hết sau khi sửa đúng một lỗi (test `vision-analyses.test.ts`
-kiểm nhầm đường TRIAL thay vì CREDIT, cùng dạng lỗi đã gặp ba lần ở P3). Bộ ảnh vàng
-VẪN CHƯA đạt nghiệm thu — khung 100 ảnh + nhãn rỗng đã dựng (`scripts/xay-dung-bo-anh-vang.py`)
-nhưng chưa ai gán nhãn thật, chưa đối chiếu hai người (`BO_ANH_VANG.md` mục 7-8, nợ #24
-`TECHNICAL_DEBT.md`) — đây là điều kiện DUY NHẤT còn chặn P5 nghiệm thu tuyệt đối, cùng
-với ma trận chọn công nghệ (`Checklist_Thuc_Thi.md`) chưa làm. Anh Tony đã xác nhận qua
-trao đổi trực tiếp và từ chối một đề nghị để AI tự gán nhãn (xem nợ #24) — đếm vẫn phải
-là việc của người.
+**Giai đoạn: P6 viết mã xong — M02 (giá) + M03 (tra cứu sản phẩm) — CHƯA xác
+minh trên Postgres thật.** `npx tsc --noEmit` sạch, `npm test` **117/117 xanh
+thật** trong sandbox (36 ca mới của P6: `pricing.test.ts` 11 · `price-guard.test.ts`
+7 · `pricing-input.test.ts` 5 · `pricing-rules.test.ts` 9 · `product-lookup.test.ts`
+4), `npx eslint` sạch. `npm run test:tenant tests/tenant/products-pricing.test.ts`
+(10 ca mới) chạy được và dừng đúng ở "Can't reach database server" — cùng giới
+hạn sandbox đã ghi ở P3/P4/P5 (không có `docker`, cổng 5432 đóng), không phải
+lỗi mã. Bốn lệnh xác minh còn lại ở mục 6.
 
-P4 nghiệm thu xong trước đó: anh Tony chạy bốn lệnh xác minh trên Terminal Mac thật
+Phạm vi P6 đã hẹp lại so với đọc đầu tiên của `HARVEST_MANIFEST.md`, chốt với
+anh Tony qua hai câu hỏi 09/10: (1) chỉ dựng ENGINE giá cốt lõi
+(`quotePrice`/`checkPriceInvariants`/`checkPriceGuard` + `pricing_rules` CRUD
+theo tổ chức/chi nhánh + `GET/PUT /pricing-rules`), KHÔNG dựng luồng "thẻ chào
+giá" (nhóm năng lực `pricing_card`, C1–C28, đã có sẵn trong `capability-catalog.ts`
+từ R2 nhưng ngoài phạm vi PRD/Checklist P6 — nợ #26); (2) chi phí lá/cành
+trang trí CHƯA TÍNH, để nợ kỹ thuật thay vì đoán một con số kinh doanh — nợ
+#27. Soát nguồn harvest cho P6 còn lật ra hai điểm lệch tài liệu/mã mới
+(`mucThu.ts`/`uocPhi.ts` xếp nhầm M02, `sanTran.ts` không thuần như tưởng) —
+điểm lệch #10, #11 ở `RA_SOAT_THU_HOACH.md`, nợ #28/#29, đã sửa
+`HARVEST_MANIFEST.md` mục 3.1 theo mã thật.
+
+Đã có (P6), **viết mã xong CHƯA xác minh trên Postgres thật**: `src/modules/products/domain/`
+thêm `pricing.ts` (`quotePrice`/`checkPriceInvariants`, thu hoạch R3+R4) ·
+`price-guard.ts` (`checkPriceGuard`, thu hoạch R5 phần `chanGia.ts`) ·
+`pricing-input.ts` (đọc số/tỷ lệ/câu cảnh báo, thu hoạch từ `locTraCuu.ts`) ·
+`pricing-rules.ts` (danh mục bốn khoá `pricing_rules`, giá trị mặc định, hợp
+nhất tổ chức/chi nhánh) · `product-lookup.ts` (`filterProductLookup`, M03 —
+cắt khối `pricing` theo `L5`). `infra/pricing-rule-repository.ts`
+(CHÈN-CHỈ, `effective_from` giữ lịch sử giá, không `upsert`) ·
+`product-repository.ts` thêm `list`/`update`. Năm use-case mới (`list-products`,
+`create-product`, `get-product`, `update-product`, `get-pricing-rules`,
+`put-pricing-rules`). Ba route: `GET·POST /products`, `GET·PATCH /products/:id`
+(chuyển `ARCHIVED` đòi thêm `L4`, không chỉ `L3`), `GET·PUT /pricing-rules`.
+36 test domain thuần + 10 test cách ly tenant mới (`tests/tenant/products-pricing.test.ts`).
+
+**P5** vẫn còn hai việc mở, không chặn P6: bộ ảnh vàng chưa gán nhãn thật và
+ma trận chọn công nghệ chưa làm (nợ #24, mục 6 dưới đây).
+
+**P4 nghiệm thu xong trước đó: anh Tony chạy bốn lệnh xác minh trên Terminal Mac thật
 ngay sau khi mã viết xong — xanh hoàn toàn, không phát sinh lỗi nào phải sửa (khác
 P3, vốn mất ba vòng tìm-và-sửa). `npm run test:tenant` **41/41** (35 cũ của P1–P3 + 6 ca
 mới cho `business_profiles`/`brand_profiles`, đúng số dự kiến) · `npm test` (domain
@@ -120,17 +146,24 @@ Không còn quyết định nào chặn. D1 · D2 · D3 · D4 chốt ngày 09/09
 
 ## 6. Việc kế tiếp
 
-1. **Gán nhãn thật cho bộ ảnh vàng** — khung 100 ảnh đã dựng ở `golden/` (`scripts/xay-dung-bo-anh-vang.py`), còn thiếu đúng phần việc của người: mở từng `golden/labels/g*.json`, đếm theo `QUY_UOC_DEM.md`, điền `labeled_by`; người thứ hai gán độc lập ≥30% để đối chiếu (`BO_ANH_VANG.md` mục 7) rồi mới điền `verified_by`. Đây là điều kiện DUY NHẤT còn chặn P5 nghiệm thu tuyệt đối và điều kiện đổi provider Vision (D5-c) — chưa có nhãn thật thì chưa đo được gì. Đã hỏi và từ chối để AI tự làm việc này (nợ #24) — cần người thật.
-2. Sau khi có nhãn: chạy `OpenAIStructuredProvider` với `OPENAI_API_KEY` thật trên đúng các ảnh trong `golden/images/`, so kết quả máy với nhãn người theo `BO_ANH_VANG.md` mục 9 — đây mới là phép đo thật đầu tiên của M01.
-3. Làm ma trận chọn công nghệ (`Checklist_Thuc_Thi.md` mục cuối P5, `YC-N5` `YC-N6`) — mục còn lại duy nhất khác của P5.
-4. Xác nhận với anh Tony các giả định đã ghi ở `TECHNICAL_DEBT.md` #19-25 của P5 (ngưỡng đồng thuận, tự tạo `products` khi duyệt không có `product_id`, khoá PATCH sau khi duyệt, quy ước chữ cái đầu mã sản phẩm suy ra `product_form`, "kệ" xếp vào "lẵng").
-3. Khi làm P6: chốt cách tính chi phí lá và cành trang trí, vì quy ước đếm để loại này không có số lượng.
-4. Xác nhận với chủ sản phẩm giá trị mặc định của công tắc `cho_phep_tu_duyet` (`docs/dac-ta/TECHNICAL_DEBT.md` #12) trước khi màn hình duyệt đầu tiên đi vào sản xuất.
-5. Xác nhận với chủ sản phẩm bảng giá `cost_credit` theo `feature` — hiện là hằng số đoán hợp lý trong mã, không phải quyết định kinh doanh đã chốt (`TECHNICAL_DEBT.md` #14).
-6. Khi có UI onboarding thật cho M05 (LocalBudd): xác nhận `logo_asset_id` của
+1. **Xác minh P6 trên Postgres thật** — bốn lệnh xác minh (`prisma generate`/`db push` ·
+   `npm test` · `npm run test:tenant` · `npx eslint`) trên Terminal Mac thật. Sandbox phiên
+   viết mã P6 không có `docker`/cổng 5432 đóng (cùng giới hạn P3/P4/P5 sớm) — đã chạy được
+   `tsc --noEmit` (sạch) · `npm test` (117/117, gồm 36 ca mới) · `eslint` (sạch) ·
+   `products-pricing.test.ts` dừng đúng ở "Can't reach database server" (xác nhận mã không
+   lỗi, chỉ thiếu Postgres). Việc kế tiếp chỉ còn chạy bốn lệnh trên máy có Postgres.
+2. **Gán nhãn thật cho bộ ảnh vàng** — khung 100 ảnh đã dựng ở `golden/` (`scripts/xay-dung-bo-anh-vang.py`), còn thiếu đúng phần việc của người: mở từng `golden/labels/g*.json`, đếm theo `QUY_UOC_DEM.md`, điền `labeled_by`; người thứ hai gán độc lập ≥30% để đối chiếu (`BO_ANH_VANG.md` mục 7) rồi mới điền `verified_by`. Đây là điều kiện DUY NHẤT còn chặn P5 nghiệm thu tuyệt đối và điều kiện đổi provider Vision (D5-c) — chưa có nhãn thật thì chưa đo được gì. Đã hỏi và từ chối để AI tự làm việc này (nợ #24) — cần người thật.
+3. Sau khi có nhãn: chạy `OpenAIStructuredProvider` với `OPENAI_API_KEY` thật trên đúng các ảnh trong `golden/images/`, so kết quả máy với nhãn người theo `BO_ANH_VANG.md` mục 9 — đây mới là phép đo thật đầu tiên của M01.
+4. Làm ma trận chọn công nghệ (`Checklist_Thuc_Thi.md` mục cuối P5, `YC-N5` `YC-N6`) — mục còn lại duy nhất khác của P5.
+5. Xác nhận với anh Tony các giả định đã ghi ở `TECHNICAL_DEBT.md` #19-25 của P5 (ngưỡng đồng thuận, tự tạo `products` khi duyệt không có `product_id`, khoá PATCH sau khi duyệt, quy ước chữ cái đầu mã sản phẩm suy ra `product_form`, "kệ" xếp vào "lẵng").
+6. Xác nhận với chủ sản phẩm giá trị mặc định của công tắc `cho_phep_tu_duyet` (`docs/dac-ta/TECHNICAL_DEBT.md` #12) trước khi màn hình duyệt đầu tiên đi vào sản xuất.
+7. Xác nhận với chủ sản phẩm bảng giá `cost_credit` theo `feature` — hiện là hằng số đoán hợp lý trong mã, không phải quyết định kinh doanh đã chốt (`TECHNICAL_DEBT.md` #14).
+8. Khi có UI onboarding thật cho M05 (LocalBudd): xác nhận `logo_asset_id` của
    `brand_profiles` có bắt buộc trỏ tới một `assets.kind = MASTER` đã duyệt hay chấp nhận
    bất kỳ asset nào — schema hiện không ràng buộc khoá ngoại (đặc tả 07 mục 4 khai
    `String?` thường), đây là quyết định UX chưa cần thiết ở P4.
+9. Khi quyết định xây luồng "thẻ chào giá" (`pricing_card`, C1–C28, nợ #26): chốt nguồn
+   `effectiveCostVnd` (giá vốn hiệu lực) — `gia_von.py` chưa xếp vào đợt harvest nào.
 
 ## 7. Làm việc bằng nhiều tài khoản Claude cùng lúc
 
@@ -171,5 +204,6 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | **Bộ ảnh vàng: dựng khung tự động.** Anh Tony bỏ ảnh thô vào `BoAnhVang/` (845 tệp, 335 thư mục sản phẩm, đã sắp theo dịp/dạng). Viết `scripts/xay-dung-bo-anh-vang.py`: chọn ảnh rõ nhất mỗi sản phẩm (phương sai Laplace), lấy mẫu 100 ảnh theo đúng tỉ trọng thư mục cha, suy `product_form` từ tên thư mục hoặc chữ cái đầu mã sản phẩm (B=bó, G=giỏ, K=lẵng — nợ #25). Sửa một lỗi Unicode giữa chừng: tên thư mục qua cầu nối máy Mac ở dạng NFD, so khớp chuỗi phải chuẩn hoá NFC trước. Ghi `golden/images/`(100, ngoài git) + `golden/labels/*.json` RỖNG + `manifest.csv` + `golden/QUY_UOC_DEM.md` (bản sao). Thêm `BoAnhVang/` vào `.gitignore` (ảnh khách hàng, trước đó chưa bị loại — rủi ro thật nếu ai đó `git add -A`). KHÔNG tự đếm — đếm là việc của người theo `BO_ANH_VANG.md` mục 7, xem nợ #24 |
 | 09/09 | **P5 viết mã xong, CHƯA xác minh trên Postgres thật.** Xem mục 1 "Đang ở đâu" và "Đang có (P5)" ở trên cho danh sách đầy đủ. Quyết định của anh Tony: viết mã ngay phần REUSE/EXTEND không cần bộ ảnh vàng, không chờ nghiệm thu bộ ảnh. Sandbox phiên này không có Postgres (cổng 5432 đóng) và không có mạng ra `binaries.prisma.sh` — giống giới hạn đã ghi ở P3/P4. Điểm khác P3/P4: sự cố `@rollup/rollup-linux-arm64-gnu` đã tìm ra cách sửa (`npm install @rollup/rollup-linux-arm64-gnu --no-save`), nên lần này chạy được thật `vitest`/`tsc --noEmit` trong sandbox, không chỉ viết rồi để đó — 43 test Python (`workers/tests/vision/`, mới) + 9 test TS (`product-analysis-rules.test.ts`, mới) xanh thật. Bốn lệnh xác minh còn lại ở mục 6 |
 | 09/10 | **P5 nghiệm thu phần lõi — 49/49 `test:tenant` xanh, 43/43 `pytest` xanh, trên máy thật.** Anh Tony chạy đủ bốn lệnh xác minh (`prisma generate`/`db push` · `npm test` · `npm run test:tenant` · `python3 -m pytest`). Giữa chừng máy hết dung lượng ổ đĩa lúc cài `pip install` — dọn Trash xong cài lại được, không phải lỗi mã. `npm run test:tenant` lần đầu 48/49, một ca đỏ: `vision-analyses.test.ts` kiểm `cost_credit` giả định đường CREDIT nhưng workspace mặc định của `sign-up` luôn là EXPERIENCE (đường TRIAL, `cost_credit=0` đúng thiết kế) — cùng dạng lỗi đã gặp ba lần ở P3. Sửa bằng cách đổi `kind` của chính workspace mặc định (sớm nhất theo `created_at`) sang `PRODUCTION` trong test, vì route đi qua phiên thật luôn giải ra workspace sớm nhất (`findDefaultForSessionOrganization`), không phải workspace tạo thêm — khác cách `enqueue-job.test.ts` làm (gọi thẳng `enqueueJob()`, tự truyền `ctx`). Còn hai việc chặn P5 nghiệm thu tuyệt đối: bộ ảnh vàng chưa gán nhãn (nợ #24 — anh Tony hỏi AI có tự làm được không, đã từ chối vì phá giá trị phép đo) và ma trận chọn công nghệ chưa làm |
+| 09/10 | **P6 viết mã xong, CHƯA xác minh trên Postgres thật.** M02 (`quotePrice`/`checkPriceInvariants`/`checkPriceGuard`, thu hoạch R3/R4/R5 phần `chanGia.ts`) + `pricing_rules` CRUD chèn-chỉ (`effective_from` giữ lịch sử) + `GET·PUT /pricing-rules` (`L5`/`L6`). M03 (`filterProductLookup`, cắt khối `pricing` theo `L5`) + `GET /products` (lọc `branch_id`/`status`/`category`, phân trang con trỏ) + `GET·PATCH /products/:id` (chuyển `ARCHIVED` đòi thêm `L4`) + `POST /products`. Phạm vi hẹp lại theo xác nhận của anh Tony (hai câu hỏi 09/10): không dựng luồng "thẻ chào giá" (`pricing_card`, C1–C28, nợ #26), chi phí lá/cành trang trí để nợ kỹ thuật (#27) thay vì đoán số. Soát nguồn harvest lật ra hai điểm lệch tài liệu/mã mới (`mucThu.ts`/`uocPhi.ts` xếp nhầm M02, `sanTran.ts` không thuần) — điểm lệch #10/#11 `RA_SOAT_THU_HOACH.md`, nợ #28/#29, sửa `HARVEST_MANIFEST.md` mục 3.1 theo mã thật. `tsc --noEmit` sạch · `npm test` 117/117 (36 ca mới) · `eslint` sạch · `products-pricing.test.ts` (10 ca mới) dừng đúng ở "Can't reach database server" — sandbox phiên này không có `docker`/cổng 5432 đóng, cùng giới hạn đã gặp ở P3/P4/P5. Bốn lệnh xác minh trên Postgres thật ở mục 6 |
 
 

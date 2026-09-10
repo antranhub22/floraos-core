@@ -2,7 +2,7 @@
 
 Mọi con số dưới đây đọc từ tệp nguồn, có đường dẫn và số dòng. Tài liệu nào nói khác thì tài liệu sai.
 
-## 1. Chín điểm lệch
+## 1. Mười một điểm lệch
 
 | # | Tài liệu nói | Mã thật | Hệ quả |
 |---|---|---|---|
@@ -15,8 +15,10 @@ Mọi con số dưới đây đọc từ tệp nguồn, có đường dẫn và 
 | 7 | Khuôn hexagonal của LocalBudd là hình mẫu (R6) | `src/core/ports/` chỉ có **một** tệp: `LLMProvider.ts` | Khuôn thư mục dùng được, nhưng phần cổng gần như phải xây mới |
 | 8 | Bao bì đếm như hoa (quy ước đếm mục 5) | `bom.wrapping` trong `Schema.json` **không có** trường `quantity`; `bom.accessories` thì có | Ruy băng, thiệp đếm được; giấy gói thì không, trừ khi thêm trường |
 | 9 | Dạng sản phẩm ghi tự do trong nhãn bộ ảnh vàng | `identity.category` đã là enum sáu giá trị | Nhãn phải dùng enum, không dùng chuỗi tự do |
+| 10 | `mucThu.ts` (363 dòng) xếp REUSE cho M02 ("Mức thu") | Là bảng UAT/nghiệm thu năng lực Điều hành (giá trị/cách thử/đạt khi cho từng mã năng lực), không đụng tới giá sản phẩm | Không mang sang P6. `HARVEST_MANIFEST.md` mục 3.1 (dòng R5) phải bỏ tệp này khỏi danh sách nguồn |
+| 11 | `sanTran.ts` (102 dòng) xếp REUSE, ngụ ý thuần như `chanGia.ts` | `import 'server-only'`, gọi thẳng `goiDichVu()`/`docHeThong()` — một dịch vụ Excel, không thuần. Chỉ `quyetDinhChan` (đã nằm sẵn trong `chanGia.ts`) là REUSE thật | P6 chỉ mang `quyetDinhChan`; phần tra Sàn/Trần viết lại thành repository đọc `pricing_rules` (`PricingRuleRepository`) |
 
-Điểm 1, 2, 3 nằm trong tài liệu Level 1 và cần chủ sản phẩm xác nhận trước khi sửa. Điểm 4, 5, 6 nằm trong `HARVEST_MANIFEST.md`. Điểm 8, 9 nằm trong `QUY_UOC_DEM.md` và `BO_ANH_VANG.md`.
+Điểm 1, 2, 3 nằm trong tài liệu Level 1 và cần chủ sản phẩm xác nhận trước khi sửa. Điểm 4, 5, 6 nằm trong `HARVEST_MANIFEST.md`. Điểm 8, 9 nằm trong `QUY_UOC_DEM.md` và `BO_ANH_VANG.md`. Điểm 10, 11 nằm trong `HARVEST_MANIFEST.md` mục 3.1 (bảng R1–R8), phát hiện lúc soát nguồn cho P6 (09/10) — xem `TECHNICAL_DEBT.md` #28, #29.
 
 ## 2. Hợp đồng Vision — nguồn sự thật của `ProductAnalysis`
 
