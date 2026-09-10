@@ -38,12 +38,14 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P4 nghiệm thu xong** — `business_profiles`/`brand_profiles`
-(đặc tả 07 mục 4), module `src/modules/profiles/`, route `GET · PUT /business-profile` và
-`GET · PUT /brand-profile` (gác bằng `F1`/`F2` có sẵn từ P2, không thêm mã năng lực mới).
-`npm run test:tenant` 41/41 xanh, `npm test`/`tsc --noEmit`/`prisma generate`/`db push`
-xanh trên Postgres thật, không lỗi phát sinh. Hạng mục kế tiếp: **P5** — M01 (phụ thuộc
-P3, đã xong), chặn bởi bộ ảnh vàng chưa sẵn sàng (`docs/kien-truc/BO_ANH_VANG.md`).
+Trạng thái hiện tại: **P5 viết mã xong, CHƯA xác minh trên Postgres thật.** M01 —
+hợp đồng Vision + `OpenAIStructuredProvider` + `count_engine`/`color_engine` chuyển sang +
+worker `SKIP LOCKED`/`LISTEN` + module `src/modules/products/` + route `/vision/analyses*`.
+Bộ ảnh vàng đã dựng KHUNG (100 ảnh, `scripts/xay-dung-bo-anh-vang.py`) nhưng CHƯA gán nhãn
+thật — vẫn chưa đạt nghiệm thu (`docs/kien-truc/BO_ANH_VANG.md` mục 8). Anh Tony đã xác
+nhận tiến hành viết mã P5 trước, không chờ bộ ảnh vàng, cho đúng phần REUSE/EXTEND không
+phụ thuộc nó. Chi tiết đầy đủ ở `docs/kien-truc/TRANG_THAI.md` mục 1 và `TECHNICAL_DEBT.md`
+#19-25.
 
 ## Luật thu hoạch
 
@@ -87,7 +89,9 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Lược đồ | `prisma/schema.prisma` | bảy bảng nền; worker đọc bản sinh sẵn, không tự khai bảng |
 | Chuỗi kết nối | `prisma.config.ts` | Prisma 7 không nhận `url` trong `schema.prisma` nữa |
 | Vai hệ thống | `prisma/seed.ts` | bốn vai, `organization_id = null` |
-| Worker phân tích ảnh | `workers/vision/` | M01 — P5 |
+| Worker phân tích ảnh | `workers/vision/` | M01 — P5. `contracts/` (Schema.json/Prompt.md nguyên vẹn) · `analyzer/` (`count_engine.py`/`color_engine.py`/`tu_dien.py`, REUSE/EXTEND) · `providers/` (`base.py` cổng, `openai_structured.py` BUILD) · `jobs/worker.py` (`SKIP LOCKED`+`LISTEN`, D6-1). Test: `workers/tests/vision/` |
+| Module sản phẩm | `src/modules/products/` | `products`/`product_variants`/`product_images`/`product_analyses`/`pricing_rules` (đặc tả 07 mục 9). `product-analysis-rules.ts` (thuần: `canEditAnalysis`/`canApproveAnalysis`/`resolveEffectiveAnalysis` = `edited ?? raw`). Route `/api/v1/vision/analyses*` (`H1`/`H2`/`H3`) — duyệt ghi Product Master + `audit_logs` trong một giao dịch |
+| Dựng bộ ảnh vàng | `scripts/xay-dung-bo-anh-vang.py` | Chọn ảnh rõ nhất mỗi sản phẩm từ `BoAnhVang/` (ngoài git), ghi khung `golden/images`+`golden/labels`+`manifest.csv`. KHÔNG tự đếm — xem `docs/kien-truc/BO_ANH_VANG.md` |
 | Worker tối ưu ảnh | `workers/media_ai/` | M04a — P9 |
 | Test cách ly tenant | `tests/tenant/` | sáu tệp (bốn của P1/P2, cộng `skip-locked-claim.test.ts` và `enqueue-job.test.ts` của P3); `npm run test:tenant` |
 | Đồ dùng cho test | `tests/helpers/` | dọn bảng (mười bốn bảng từ P3), dựng hai tổ chức bằng đúng luồng đăng ký thật |
@@ -108,6 +112,9 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 - `prisma.config.ts` cũng không tự nạp `.env`. Nó gọi `process.loadEnvFile` khi tệp có mặt; trên CI biến nằm sẵn trong môi trường.
 - `prisma generate` và `prisma db push` **tải nhị phân schema-engine từ `binaries.prisma.sh`**. Máy không ra được host đó thì hai lệnh này không chạy, dù mọi thứ khác offline được. Sinh lược đồ ở nơi có mạng, hoặc mở host đó trên proxy.
 - `npm run lint` từng dừng ngay vì repo thiếu `eslint.config.mjs` — cổng thứ hai của CI chưa từng chạy trong suốt P0. Thêm một cổng vào CI thì chạy thử nó một lần tại máy.
+- Sandbox `device_bash` từng chặn `npx vitest`/`npx tsc` bằng lỗi `Cannot find module '@rollup/rollup-linux-arm64-gnu'` (kiến trúc gói sai trong `node_modules` cài sẵn). Sửa bằng `npm install @rollup/rollup-linux-arm64-gnu --no-save` — chạy được thật `vitest`/`tsc --noEmit` trong sandbox từ đó, không cần đợi anh Tony chạy trên máy thật mới biết type có sai không.
+- Tên tệp/thư mục tiếng Việt có dấu qua cầu nối máy Mac (`device_bash`) ở dạng Unicode **NFD** (tổ hợp dấu rời), còn chuỗi gõ trong mã nguồn ở đây là **NFC**. So khớp chuỗi trực tiếp (`"giỏ" in ten_thu_muc`) luôn sai lặng lẽ, không báo lỗi. Luôn `unicodedata.normalize("NFC", ...)` cả hai phía trước khi so — xem `scripts/xay-dung-bo-anh-vang.py`.
+- `BoAnhVang/` (ảnh thô để dựng bộ ảnh vàng) từng KHÔNG có trong `.gitignore` — ảnh sản phẩm của khách hàng đã có nguy cơ vào git nếu ai đó lỡ `git add -A`. Đã thêm vào `.gitignore` ngày 09/09. Mọi thư mục chứa ảnh khách hàng ngoài `golden/images/` cần rà lại `.gitignore` trước khi coi là an toàn.
 
 ## Kết thúc mỗi việc — bắt buộc
 

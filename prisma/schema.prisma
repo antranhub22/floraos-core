@@ -107,6 +107,11 @@ model organizations {
   audit_logs            audit_logs[]
   business_profile      business_profiles?
   brand_profile         brand_profiles?
+  products              products[]
+  product_variants      product_variants[]
+  product_images        product_images[]
+  product_analyses      product_analyses[]
+  pricing_rules         pricing_rules[]
 }
 
 model workspaces {
@@ -469,4 +474,138 @@ model brand_profiles {
   organization organizations @relation(fields: [organization_id], references: [id])
 
   @@unique([organization_id])
+}
+
+// ── P5 — Sản phẩm và phân tích ảnh (M01) ────────────────────────────────────
+// Thu hoạch từ đặc tả 07 mục 9. Bốn bảng Product Master + kết quả phân tích.
+// Có khoá ngoại `organizations` ngay từ đầu — không lặp lại nợ #8 của P3
+// (`TECHNICAL_DEBT.md` #8: bốn bảng thuộc tenant của P3 thiếu khoá ngoại vì
+// đặc tả 07 mục 3 khai `organization_id` là cột thường lúc đó).
+
+enum product_status {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum approval_state {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model products {
+  id              String         @id @default(uuid())
+  organization_id String
+  branch_id       String?
+  code            String
+  name            String
+  category        String? // enum identity.category của hợp đồng Vision — Schema.json, không khai lại tay
+  shape           String?
+  facing          String?
+  container       String?
+  status          product_status @default(DRAFT)
+  attributes      Json?
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+  variants     product_variants[]
+  images       product_images[]
+  analyses     product_analyses[]
+
+  @@unique([organization_id, code])
+  @@index([organization_id])
+}
+
+model product_variants {
+  id              String   @id @default(uuid())
+  organization_id String
+  product_id      String
+  name            String
+  size            String?
+  multiplier      Float    @default(1)
+  attributes      Json?
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+  product      products      @relation(fields: [product_id], references: [id])
+
+  @@index([organization_id, product_id])
+}
+
+model product_images {
+  id              String   @id @default(uuid())
+  organization_id String
+  product_id      String
+  asset_id        String
+  role            String // MAIN · GALLERY · CATALOG · SOCIAL
+  position        Int      @default(0)
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+  product      products      @relation(fields: [product_id], references: [id])
+
+  @@unique([organization_id, product_id, asset_id, role])
+  @@index([organization_id, product_id])
+}
+
+/**
+ * Kết quả phân tích ảnh — `raw` và `edited` tách rời tuyệt đối (đặc tả 07
+ * mục 9, `YC-R3`). `raw` là dự đoán gốc của máy theo đúng hợp đồng
+ * `PhanTichSanPhamHoa` (`workers/vision/contracts/Schema.json`, R1), không
+ * bao giờ bị ghi đè. `edited` là bản người sửa trước khi duyệt (`PATCH
+ * /vision/analyses/:id`, `H2`) — dữ liệu huấn luyện tương lai nằm ở cặp
+ * *raw/edited* này, không được gộp làm một.
+ *
+ * `product_id` để trống khi phân tích chưa gắn vào sản phẩm nào (`POST
+ * /vision/analyses` cho phép `product_id: null`, đặc tả 06 mục 8) —
+ * `approveAnalysis` tạo `products` mới trong trường hợp đó (xem
+ * `use-cases/approve-analysis.ts`).
+ */
+model product_analyses {
+  id                String         @id @default(uuid())
+  organization_id   String
+  product_id        String?
+  asset_id          String
+  job_id            String
+
+  provider          String
+  model             String
+  model_version     String
+  contract_name     String // "PhanTichSanPhamHoa"
+  contract_version  String
+
+  raw               Json // dự đoán gốc của máy, bất biến
+  edited            Json? // bản người sửa, lưu tách biệt
+  approval_state    approval_state @default(PENDING)
+  approved_by       String?
+  approved_at       DateTime?
+
+  created_at        DateTime       @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+  product      products?      @relation(fields: [product_id], references: [id])
+
+  @@index([organization_id])
+  @@index([organization_id, product_id])
+  @@index([job_id])
+}
+
+/**
+ * Bảng dựng cùng đợt vì đặc tả 07 mục 9 khai chung một khối lược đồ với
+ * `products`, nhưng **logic giá (M02) thuộc P6, chưa xây ở đây** — bảng này
+ * đứng rỗng cho tới khi P6 bắt đầu, đúng luật "core sở hữu entity nhiều
+ * module đọc" (kiến trúc V2 mục 2.1), không phải một ngoại lệ nhảy pha.
+ */
+model pricing_rules {
+  id              String   @id @default(uuid())
+  organization_id String
+  branch_id       String?
+  key             String // san · tran · muc_thu · lam_tron …
+  value           Json
+  effective_from  DateTime @default(now())
+  created_by      String
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id, key])
 }

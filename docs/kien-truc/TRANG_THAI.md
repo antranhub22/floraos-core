@@ -10,8 +10,16 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: P4 nghiệm thu xong.** Anh Tony chạy bốn lệnh xác minh trên Terminal Mac
-thật ngay sau khi mã viết xong — xanh hoàn toàn, không phát sinh lỗi nào phải sửa (khác
+**Giai đoạn: P5 viết mã xong, CHƯA xác minh trên Postgres thật.** Bộ ảnh vàng
+CHƯA đạt nghiệm thu — đã dựng KHUNG (100 ảnh chọn tự động từ `BoAnhVang/` +
+`golden/labels/*.json` rỗng + `manifest.csv`, bằng `scripts/xay-dung-bo-anh-vang.py`)
+nhưng chưa gán nhãn thật, chưa đối chiếu hai người (`BO_ANH_VANG.md` mục 7-8, nợ #24
+`TECHNICAL_DEBT.md`). Anh Tony đã xác nhận qua trao đổi trực tiếp: **tiến hành viết mã
+P5 ngay với phần REUSE/EXTEND không cần bộ ảnh vàng**, không chờ nghiệm thu bộ ảnh —
+đúng tinh thần P3 (viết mã xong trước, xác minh Postgres thật sau).
+
+P4 nghiệm thu xong trước đó: anh Tony chạy bốn lệnh xác minh trên Terminal Mac thật
+ngay sau khi mã viết xong — xanh hoàn toàn, không phát sinh lỗi nào phải sửa (khác
 P3, vốn mất ba vòng tìm-và-sửa). `npm run test:tenant` **41/41** (35 cũ của P1–P3 + 6 ca
 mới cho `business_profiles`/`brand_profiles`, đúng số dự kiến) · `npm test` (domain
 thuần, gồm `profile-rules.test.ts`) xanh · `npx tsc --noEmit` sạch · `prisma
@@ -34,6 +42,22 @@ ngoại tới `organizations` ngay từ đầu. Module `src/modules/profiles/`
 `InputJsonValue` đúng quy ước P2 — không còn nợ `as never` như P3). Route
 `GET · PUT /business-profile` và `GET · PUT /brand-profile` dưới `/api/v1/`, gác bằng
 `F1`/`F2` có sẵn từ P2, không thêm mã năng lực mới.
+
+Đang có (P5), **viết mã xong CHƯA xác minh trên Postgres thật**: hợp đồng
+`PhanTichSanPhamHoa` (`workers/vision/contracts/`, nguyên vẹn từ v1) · cổng
+`VisionAnalyzer` (`workers/vision/providers/base.py`) · `OpenAIStructuredProvider`
+(BUILD — 2 lượt gọi + đồng thuận trung vị qua `chot()`, CHƯA gọi API thật) ·
+`count_engine.py`/`color_engine.py`/`tu_dien.py` chuyển sang nguyên vẹn (E5/E6) · worker
+`workers/vision/jobs/worker.py` (`SKIP LOCKED` + `LISTEN/NOTIFY`, đúng D6-1) · module
+`src/modules/products/` (bốn thư mục domain/use-cases/infra/adapters) · route
+`POST /vision/analyses`, `GET · PATCH /vision/analyses/:id`,
+`POST /vision/analyses/:id/approve` (`H1`/`H2`/`H3`) · duyệt ghi Product Master + audit
+log trong một giao dịch, không ghi thẳng. 43 test Python + 9 test TS mới chạy xanh thật
+trong sandbox (sự cố `@rollup/rollup-linux-arm64-gnu` đã sửa, xem `TECHNICAL_DEBT.md`).
+Chưa chạy: `prisma generate`/`db push` (schema mới `products`/`product_variants`/
+`product_images`/`product_analyses`/`pricing_rules`), `npm run test:tenant` (8 ca mới ở
+`tests/tenant/vision-analyses.test.ts`), và `OpenAIStructuredProvider` với API thật —
+xem mục 6 và `TECHNICAL_DEBT.md` #19–25.
 
 ## 2. Đọc theo thứ tự này
 
@@ -92,8 +116,9 @@ Không còn quyết định nào chặn. D1 · D2 · D3 · D4 chốt ngày 09/09
 
 ## 6. Việc kế tiếp
 
-1. **P5** — M01 Product Image Analysis (phụ thuộc P3, đã xong), nếu bộ ảnh vàng đã sẵn sàng. Đây là hạng mục kế tiếp trong lộ trình P0–P12.
-2. Song song, không chặn ai: **bộ ảnh vàng 50–100 ảnh** theo `BO_ANH_VANG.md`, gán nhãn theo `QUY_UOC_DEM.md`. Bước đầu tiên là gom ảnh từ kho vận hành AVI GIFT — điều kiện nghiệm thu P5, chưa sẵn sàng thì P5 chưa bắt đầu được.
+1. **Anh Tony chạy bốn lệnh xác minh P5 trên Terminal Mac thật**: `prisma generate`/`db push` (lược đồ mới mục "Đang có (P5)" ở trên) · `npm test` · `npm run test:tenant` (mong đợi 41 cũ + 8 mới = 49) · `python3 -m pytest workers/tests` (mong đợi 43, đã xanh trong sandbox này, cần xác nhận lại trên máy thật). Xong bốn lệnh mới tích nốt các ô còn trống ở `Checklist_Thuc_Thi.md` mục P5.
+2. **Gán nhãn thật cho bộ ảnh vàng** — khung 100 ảnh đã dựng ở `golden/` (`scripts/xay-dung-bo-anh-vang.py`), còn thiếu đúng phần việc của người: mở từng `golden/labels/g*.json`, đếm theo `QUY_UOC_DEM.md`, điền `labeled_by`; người thứ hai gán độc lập ≥30% để đối chiếu (`BO_ANH_VANG.md` mục 7) rồi mới điền `verified_by`. Đây vẫn là điều kiện nghiệm thu P5 chính thức và điều kiện đổi provider Vision (D5-c) — chưa có nhãn thật thì chưa đo được gì.
+3. Xác nhận với anh Tony các giả định đã ghi ở `TECHNICAL_DEBT.md` #19-25 của P5 (ngưỡng đồng thuận, tự tạo `products` khi duyệt không có `product_id`, khoá PATCH sau khi duyệt, quy ước chữ cái đầu mã sản phẩm suy ra `product_form`, "kệ" xếp vào "lẵng").
 3. Khi làm P6: chốt cách tính chi phí lá và cành trang trí, vì quy ước đếm để loại này không có số lượng.
 4. Xác nhận với chủ sản phẩm giá trị mặc định của công tắc `cho_phep_tu_duyet` (`docs/dac-ta/TECHNICAL_DEBT.md` #12) trước khi màn hình duyệt đầu tiên đi vào sản xuất.
 5. Xác nhận với chủ sản phẩm bảng giá `cost_credit` theo `feature` — hiện là hằng số đoán hợp lý trong mã, không phải quyết định kinh doanh đã chốt (`TECHNICAL_DEBT.md` #14).
@@ -138,3 +163,6 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/09 | **P3 nghiệm thu phần lõi — 35/35 `test:tenant` xanh.** Anh Tony chạy lại lần ba, xác nhận xanh hoàn toàn sau ba lỗi tìm-và-sửa (raw query `pg_notify`, hai test sai giả định credit mặc định, bốn test chưa kiểm đúng đường CREDIT vì workspace mặc định là EXPERIENCE). Tích các ô liên quan ở `Checklist_Thuc_Thi.md`. Còn `npm test` (domain thuần P3) chưa chạy thật xác nhận trong phiên này — mục còn lại duy nhất trước khi coi P3 xong tuyệt đối |
 | 09/09 | **P4 viết mã xong, CHƯA xác minh.** `business_profiles`/`brand_profiles` (đặc tả 07 mục 4, thu hoạch E3 từ `SocialFlow/backend/brand_kit.py`), khoá ngoại tới `organizations` ngay từ đầu. Module `src/modules/profiles/` (domain/use-cases/infra/adapters đủ bốn thư mục) — `BusinessProfileRepository`/`BrandProfileRepository.upsert` theo ngữ nghĩa PUT-thay-toàn-bộ. Route `GET · PUT /business-profile`, `GET · PUT /brand-profile` dưới `/api/v1/`, gác bằng `F1`/`F2` có sẵn từ P2 — không thêm mã năng lực. Test domain (`profile-rules.test.ts`) + cách ly tenant ở cả hai tầng repository/endpoint. Cùng giới hạn sandbox của P3 (không Docker, không mạng tới `binaries.prisma.sh`, `node_modules` sai kiến trúc máy) nên chưa tự chạy được `prisma generate`/`db push`/`npm test`/`npm run test:tenant` trong phiên này — bốn lệnh xác minh ở mục 6 |
 | 09/09 | **P4 nghiệm thu xong — 41/41 `test:tenant` xanh, xanh ngay lần đầu.** Anh Tony chạy bốn lệnh xác minh trên Terminal Mac thật (`docker compose up -d` · `prisma generate/db push` · `npm test` · `npm run test:tenant`) ngay sau khi mã viết xong — không phát sinh lỗi nào phải sửa, khác P3 (ba vòng tìm-và-sửa). 41 = 35 cũ + 6 ca mới cho hồ sơ, đúng số dự kiến. Nhân tiện đổi `as never` sang `as InputJsonValue` ở hai repository mới (`business-profile-repository.ts`/`brand-profile-repository.ts`) vì lúc này đã có client thật để đối chiếu — không còn nợ kiểu JSON như bốn tệp P3. `tsc --noEmit`/`eslint` sạch |
+| 09/09 | **Bộ ảnh vàng: dựng khung tự động.** Anh Tony bỏ ảnh thô vào `BoAnhVang/` (845 tệp, 335 thư mục sản phẩm, đã sắp theo dịp/dạng). Viết `scripts/xay-dung-bo-anh-vang.py`: chọn ảnh rõ nhất mỗi sản phẩm (phương sai Laplace), lấy mẫu 100 ảnh theo đúng tỉ trọng thư mục cha, suy `product_form` từ tên thư mục hoặc chữ cái đầu mã sản phẩm (B=bó, G=giỏ, K=lẵng — nợ #25). Sửa một lỗi Unicode giữa chừng: tên thư mục qua cầu nối máy Mac ở dạng NFD, so khớp chuỗi phải chuẩn hoá NFC trước. Ghi `golden/images/`(100, ngoài git) + `golden/labels/*.json` RỖNG + `manifest.csv` + `golden/QUY_UOC_DEM.md` (bản sao). Thêm `BoAnhVang/` vào `.gitignore` (ảnh khách hàng, trước đó chưa bị loại — rủi ro thật nếu ai đó `git add -A`). KHÔNG tự đếm — đếm là việc của người theo `BO_ANH_VANG.md` mục 7, xem nợ #24 |
+| 09/09 | **P5 viết mã xong, CHƯA xác minh trên Postgres thật.** Xem mục 1 "Đang ở đâu" và "Đang có (P5)" ở trên cho danh sách đầy đủ. Quyết định của anh Tony: viết mã ngay phần REUSE/EXTEND không cần bộ ảnh vàng, không chờ nghiệm thu bộ ảnh. Sandbox phiên này không có Postgres (cổng 5432 đóng) và không có mạng ra `binaries.prisma.sh` — giống giới hạn đã ghi ở P3/P4. Điểm khác P3/P4: sự cố `@rollup/rollup-linux-arm64-gnu` đã tìm ra cách sửa (`npm install @rollup/rollup-linux-arm64-gnu --no-save`), nên lần này chạy được thật `vitest`/`tsc --noEmit` trong sandbox, không chỉ viết rồi để đó — 43 test Python (`workers/tests/vision/`, mới) + 9 test TS (`product-analysis-rules.test.ts`, mới) xanh thật. Bốn lệnh xác minh còn lại ở mục 6 |
+

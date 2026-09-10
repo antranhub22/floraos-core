@@ -29,6 +29,10 @@ du-lieu-van-hanh/
 !docs/**/*.xlsx
 golden/images/
 
+# Ảnh thô nguồn để dựng bộ ảnh vàng (scripts/xay-dung-bo-anh-vang.py) —
+# dữ liệu sản phẩm của khách hàng, không vào git (BO_ANH_VANG.md mục 10)
+BoAnhVang/
+
 # Next
 .next/
 next-env.d.ts
