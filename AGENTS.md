@@ -38,10 +38,19 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P7 (`floraos-core`) viết mã xong, chưa xác minh trên
-Postgres thật** — token máy gọi máy (`integration_tokens`, `YC-T8`), mã năng
-lực mới `F9` (114 mã, 31 trần cứng), sáu route `/api/v1/integration/*` (đặc
-tả 06 mục 11). Chi tiết đầy đủ ở `docs/kien-truc/TRANG_THAI.md` mục 1.
+Trạng thái hiện tại: **P8 — nạp dữ liệu AVI GIFT, phần danh mục giá viết mã
+xong, chưa xác minh trên Postgres thật** — module `src/modules/avi-gift-import/`
+(`domain/catalog-mapping.ts` thuần + `use-cases/{bootstrap-avi-gift-organization,
+import-catalog}.ts`), `scripts/nap-avi-gift/doc-excel.py` (Python, đọc Excel
+thật → `catalog.json`) + `scripts/nap-avi-gift-vao-core.ts` (orchestrator).
+1.316 SKU, `npm test` 140/140. Còn lại: 9–14 sản phẩm có ảnh thật chưa nạp
+(nợ #34), lượt nạp thật + đối chiếu `BAN_GIAO.md` chưa chạy. Chi tiết đầy đủ
+ở `docs/kien-truc/TRANG_THAI.md` mục 1.
+
+P7 (`floraos-core`) nghiệm thu xong trước đó trên Postgres thật (`test:tenant`
+69/69) — token máy gọi máy (`integration_tokens`, `YC-T8`), mã năng lực mới
+`F9` (114 mã, 31 trần cứng), sáu route `/api/v1/integration/*` (đặc tả 06
+mục 11).
 
 P6 nghiệm thu xong trước đó. M02
 (`quotePrice`/`checkPriceInvariants`/`checkPriceGuard`, thu hoạch R3/R4/R5) +
@@ -120,11 +129,14 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Module hồ sơ | `src/modules/profiles/` | `BusinessProfileRepository`/`BrandProfileRepository` — một bản ghi mỗi tổ chức (`@@unique([organization_id])`), `upsert` = ngữ nghĩa PUT (trường vắng mặt thành null). Route `business-profile`/`brand-profile` dưới `/api/v1/`, gác bằng `F1`/`F2` sẵn có |
 | Quét job treo | `scripts/scan-stuck-jobs.ts` | `YC-J10`, chạy bằng cron ngoài, chưa gắn lịch thật |
 | Module tích hợp (P7) | `src/modules/integration/` | `integration_tokens` (`YC-T8`, HMAC `INTEGRATION_TOKEN_SECRET`) · `resolve-integration-context.ts` (`requireIntegrationContext` + `toTenantContext` — tái dùng thẳng use-case của phiên người dùng, `capabilities` luôn rỗng) · `issue/rotate/revoke/list-integration-token.ts` (`F9`) · `get-master-image.ts` · `check-capabilities.ts`. Route quản trị `/api/v1/integration-tokens*` (`F9`) · route máy gọi máy `/api/v1/integration/*` (products, products/:id/master-image, business-profile, brand-profile, jobs, usage, capabilities/check) |
+| Module nạp AVI GIFT (P8) | `src/modules/avi-gift-import/` | `domain/catalog-mapping.ts` thuần (`mapCatalogRowToProduct`/`deriveProductStatus`/`validateCatalogRow`) · `use-cases/bootstrap-avi-gift-organization.ts` (tổ chức `SINGLE`, KHÔNG tái dùng `signUp` vì đó cố định `EXPERIENCE`+trial) · `use-cases/import-catalog.ts` (idempotent theo `code`, gọi thẳng `ProductRepository`). Nguồn Excel đọc bằng Python NGOÀI `src/` — xem `scripts/nap-avi-gift/doc-excel.py` |
 | Tài liệu kiến trúc | `docs/kien-truc/` | 8 tệp, xem `TRANG_THAI.md` |
 
 ## Bẫy
 
 *(Mỗi lần một điều bất ngờ làm mất hơn một giờ, thêm một dòng.)*
+- `excel_parser.py`/`ket_qua_phan_tich.py` bản gốc (v1) dò cột ảnh qua bốn tên đoán — không tên nào khớp dữ liệu thật của AVI GIFT (`Đường dẫn ảnh`). Đọc tên cột thật từ chính workbook (`ws.iter_rows` lấy hàng tiêu đề) trước khi viết adapter đọc Excel, đừng tin tên cột trong mã nguồn v1 — điểm lệch #12, `RA_SOAT_THU_HOACH.md`.
+- Thư mục dữ liệu vận hành của một khách hàng thật (vd `FloraOS Vận hành/`) có thể chứa khoá API thật ở dạng thô (`he_thong.json` của AVI GIFT có `openai_api_key` — nợ #36). Đọc CÓ CHỌN LỌC đúng những tệp cần cho việc đang làm, không `cat`/liệt kê toàn bộ nội dung một thư mục dữ liệu khách hàng khi chưa cần — và không bao giờ chép các tệp dạng `he_thong.json`/`.env` vào `scripts/` hay bất kỳ đường dẫn nào sẽ commit.
 
 - Bộ ảnh vàng là điều kiện nghiệm thu P5. Không có nó thì không đổi được provider và không hồi quy được phần thu hoạch. Quy cách ở `docs/kien-truc/BO_ANH_VANG.md`.
 - Prisma 7 **không đọc `url` trong `schema.prisma`** nữa. Chuỗi kết nối nằm ở `prisma.config.ts` cho lệnh dòng lệnh, và ở driver adapter `@prisma/adapter-pg` cho `PrismaClient`. Bỏ qua điều này thì `prisma generate` dừng ở `P1012`.

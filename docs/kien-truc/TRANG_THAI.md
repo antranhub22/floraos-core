@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-10 (P7) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-10 (P8) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -10,7 +10,65 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: P7 — Integration Layer, phần `floraos-core` nghiệm thu xong trên
+**Giai đoạn: P8 — Nạp dữ liệu AVI GIFT, phần danh mục giá viết mã xong,
+CHƯA xác minh trên Postgres thật (09/10, H7 — đặc tả 08 mục 6).** Module mới
+`src/modules/avi-gift-import/` (bốn thư mục, `AGENTS.md`): `domain/catalog-mapping.ts`
+(thuần, không import Prisma) map một dòng JSON trung gian sang một dòng nạp
+`products`; `use-cases/bootstrap-avi-gift-organization.ts` dựng tổ chức AVI
+GIFT (`type=SINGLE`, chốt với anh Tony 09/10 — "shop A/B" ở `BAN_GIAO.md` là
+đối tác nhận đơn ngoài, không phải chi nhánh nội bộ), workspace `PRODUCTION`,
+tài khoản admin `antranhub@gmail.com` với mật khẩu tạm sinh ngẫu nhiên (nợ
+#35); `use-cases/import-catalog.ts` nạp idempotent theo `code` (bỏ qua mã đã
+có, không ghi đè, an toàn chạy lại).
+
+Nguồn Excel (`01_NHAP-LIEU.xlsx` + `02_KET-QUA.xlsx` thật của AVI GIFT,
+1.316 SKU) không đọc thẳng từ TypeScript — `scripts/nap-avi-gift/doc-excel.py`
+(Python, `openpyxl`, ngoài `src/`, cùng vị trí `scripts/xay-dung-bo-anh-vang.py`)
+đọc MỘT LẦN, chuẩn hoá thành `catalog.json` trung gian (đã chạy thật trên dữ
+liệu AVI GIFT 09/10: 1.316 sản phẩm, BOM 5.872 dòng/1.300 mã, 0 mã trùng).
+Sheet 20 "Giá chào" của `02_KET-QUA.xlsx` là bản CHỐT (đúng ghi chú của
+`ket_qua_phan_tich.py` gốc) — nguồn chính cho tên/giá/Sàn/Trần/giá vốn; sheet
+09 của `01_NHAP-LIEU.xlsx` chỉ bổ sung cột `Dịp`. Phát hiện lệch tài liệu/mã
+mới trong lúc soát: cột ảnh thật tên `Đường dẫn ảnh`, không khớp bốn tên
+`excel_parser.py` gốc dò (`Link ảnh`/`Link Ảnh`/`Ảnh`/`Link_Anh`) — điểm lệch
+#12 `RA_SOAT_THU_HOACH.md`, nợ #33 (đã trả trong P8: script mới đọc đúng cột).
+
+`category`/`shape`/`facing`/`container` của `products` CỐ Ý để `null` cho cả
+1.316 dòng — đó là "enum `identity.category` của hợp đồng Vision" (đặc tả 07
+mục 9), dữ liệu MÁY nhận dạng qua M01 đã duyệt; từ vựng nghiệp vụ của AVI
+GIFT (`Kiểu`/`Cỡ`/`Mã kiểu chi tiết`) do CON NGƯỜI khai ở v1, không đi qua
+Vision, gán thẳng vào bốn cột đó sẽ giả mạo một kết quả AI chưa từng chạy —
+giữ nguyên trong `attributes.catalog`. `status` suy từ `Trạng thái hồ sơ`
+(`deriveProductStatus`) — tất cả 1.316 dòng hiện là `DRAFT` vì chưa có ảnh;
+hàm đọc giá trị thật thay vì hằng cứng nên một lượt nạp SAU (khi đã có ảnh)
+tự nâng đúng sản phẩm lên `ACTIVE` mà không sửa mã. Sàn/Trần theo mã (khi có
+— chỉ 42/1.316 SKU có giá vốn tính đủ) lưu ở `products.attributes.priceGuard`,
+không mở rộng `pricing_rules` (nợ #32, chốt với anh Tony 09/10).
+
+16 test domain mới (`catalog-mapping.test.ts`), `npm test` **140/140** xanh
+thật trong sandbox (124 cũ + 16 mới), `npx tsc --noEmit` sạch, `npx eslint .`
+sạch (2 cảnh báo có sẵn từ trước, không liên quan P8). `npm run test:tenant`
+CHƯA chạy được — sandbox phiên này không có `docker`, cùng giới hạn P3–P7;
+script nạp thật (`scripts/nap-avi-gift-vao-core.ts`) cũng CHƯA chạy trên
+Postgres thật vì cùng lý do. Bốn lệnh xác minh + lệnh chạy nạp ở mục 6.
+
+**Còn lại của P8, CHƯA làm** (chốt phạm vi "cả hai" với anh Tony 09/10):
+9–14 sản phẩm có ẢNH THẬT + phân tích nhận diện đầy đủ (`ket-qua/Product_Master.xlsx`,
+thư mục `images/`: `BHSK0001`, `GHTN0001`, `GHTG0008`, `MM17082026`, `GHTM`,
+bốn mã `KG-2026090x`) — cần dựng thêm `assets` (ảnh thật), một
+`generation_jobs` tổng hợp đại diện lượt phân tích lịch sử, và
+`product_analyses` (`approval_state=APPROVED`, coi lượt nạp là sự kiện duyệt
+một lần cho dữ liệu đã qua sử dụng vận hành thật — không mở lại luồng
+Review→Approve cho dữ liệu lịch sử). Nợ #34. Chưa tích ô nào ở
+`Checklist_Thuc_Thi.md` mục P8 — cả hai ô còn chờ xác minh trên Postgres thật
+và đối chiếu `BAN_GIAO.md`.
+
+**Phát hiện ngoài phạm vi mã, cần anh Tony xử lý ngay:** `FloraOS Vận hành/he_thong.json`
+(đọc lúc khảo sát cấu trúc thư mục cho P8) chứa `openai_api_key` ở dạng chuỗi
+thô, không mã hoá. Không tệp nào trong `scripts/nap-avi-gift/` đọc hay chép
+tệp này — nợ #36, xoay khoá ngay trên dashboard OpenAI.
+
+**Giai đoạn trước đó — P7 — Integration Layer, phần `floraos-core` nghiệm thu xong trên
 Postgres thật (09/10, `npm run test:tenant` 69/69 xanh).** `integration_tokens` (token máy gọi máy, ký
 HMAC bằng `INTEGRATION_TOKEN_SECRET`, tách khỏi `SESSION_SECRET` — `YC-T8`),
 xoay không dừng dịch vụ (token mới không tự thu hồi token cũ, đúng đặc tả 08
@@ -241,6 +299,26 @@ Nghiệm thu trên máy thật 09/10: chạy server qua `venv/bin/python -m uvic
    `String?` thường), đây là quyết định UX chưa cần thiết ở P4.
 8. Khi quyết định xây luồng "thẻ chào giá" (`pricing_card`, C1–C28, nợ #26): chốt nguồn
    `effectiveCostVnd` (giá vốn hiệu lực) — `gia_von.py` chưa xếp vào đợt harvest nào.
+9. **P8 — chạy lượt nạp AVI GIFT thật trên Postgres:**
+   ```bash
+   docker compose up -d && npx prisma generate && npx prisma db push
+   python3 scripts/nap-avi-gift/doc-excel.py "<đường dẫn thư mục 'FloraOS Vận hành'>" scripts/nap-avi-gift/du-lieu-trung-gian
+   npx tsx scripts/nap-avi-gift-vao-core.ts
+   ```
+   Ghi lại `organization_id` và đổi ngay mật khẩu tạm in ra console (nợ #35).
+   Đối chiếu số liệu (1.316 sản phẩm dự kiến) với `catalog.json` và với bảng
+   nghiệm thu `BAN_GIAO.md` trước khi tích ô "Dữ liệu nhập đủ" ở
+   `Checklist_Thuc_Thi.md` mục P8.
+10. **P8 — nạp 9–14 sản phẩm có ảnh thật** (nợ #34): dựng `assets` từ
+    `images/` thật, một `generation_jobs` tổng hợp, `product_analyses`
+    `APPROVED` từ `ket-qua/Product_Master.xlsx` (khác cấu trúc cột sheet
+    20/21 — hai hàng tiêu đề, cột "NHẬN DIỆN"/"SẢN XUẤT"/"TRUY VẾT").
+11. **Khẩn, ngoài phạm vi mã:** xoay khoá `openai_api_key` lộ trong
+    `FloraOS Vận hành/he_thong.json` (nợ #36).
+12. Xác nhận với anh Tony: 42/1.316 SKU của AVI GIFT có giá vốn tính đủ —
+    1.274 SKU còn lại (`priceStatus = "CHƯA CÓ GIÁ VỐN"`) có cần tính bổ
+    sung trước ngày cắt (P11), hay để nguyên trạng thái `DRAFT` chờ dữ liệu
+    sau.
 
 ## 7. Làm việc bằng nhiều tài khoản Claude cùng lúc
 
@@ -288,3 +366,4 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | 09/10 | **P7 — `LocalBudd` và `SocialFlow`, hết mức có thể trong phiên.** `LocalBudd`: bỏ `media_assets` (chết hẳn, không ai đọc), thêm `FloraOsCoreClient` (client HTTP thật, bốn thao tác READ đúng đặc tả); `products`/`product_assets`/`generation_jobs`/`projects` KHÔNG bỏ được — đặc tả 08 mục 4 chỉ định nghĩa endpoint đọc, không có endpoint ghi cho LocalBudd tạo Product Master, và không có cơ chế cho client chỉ-có-HTTP nhận/hoàn tất `generation_jobs` (core lấy job bằng `SELECT ... FOR UPDATE SKIP LOCKED`, cần Postgres trực tiếp) — ghi vào `LocalBudd/TECHNICAL_DEBT.md`, cần chủ sản phẩm quyết định. `SocialFlow`: `accounts` nhận cột `organization_id` qua `migrations.py` (đúng lệ forward-only của repo, không sửa UNIQUE(platform) cũ), mọi endpoint CRUD tài khoản (`GET/POST /api/accounts`, `login`, `check`, `delete`, `login-extended`, và `manual_login.py`) lọc theo tổ chức, `add_account` chặn 409 khi hai tổ chức tranh cùng platform (sửa luôn một lỗi thật: `INSERT OR REPLACE` cũ âm thầm ghi đè tài khoản tổ chức khác). Đây KHÔNG phải ranh giới bảo mật — SocialFlow không có cơ chế xác thực máy gọi máy nào, và D1 (đa tenant hay đơn tenant) vẫn còn mở vì `posts` và các bảng nghiệp vụ khác chưa có `organization_id` — ghi vào `SocialFlow/TECHNICAL_DEBT.md` (mới tạo). Xác minh: `ast.parse` (cú pháp) trên ba tệp sửa của SocialFlow, chạy `run_migrations()` thật trên bản sao `socialflow.db` (thêm cột + index sạch, idempotent); không khởi động được `uvicorn`/import `fastapi` trong sandbox này vì `backend/venv` là virtualenv macOS thật (symlink `python3` trỏ `/Library/Developer/CommandLineTools/...`), không phải lỗi mã. Đã tích lại `Checklist_Thuc_Thi.md` cho đúng thực tế (SocialFlow tích, LocalBudd chưa tích, cả hai kèm chú thích) |
 | 09/10 | **P7 — `SocialFlow` nghiệm thu trên máy thật.** Chạy `main.py` qua `venv/bin/python -m uvicorn main:app` trên máy Mac thật (cổng 8001, vì cổng 8000 bị một dịch vụ khác trên máy chiếm từ trước). Test end-to-end bằng curl trên `backend/socialflow.db` thật (đã có sẵn ba tài khoản `linkedin`/`instagram`/`facebook`, tất cả `organization_id = NULL`): tạo tài khoản `twitter` dưới một tổ chức khác — thành công; tổ chức thứ hai giành cùng platform — chặn đúng 409; `GET /api/accounts?organization_id=...` lọc đúng cả hai chiều (tổ chức test không thấy ba tài khoản thật, tổ chức mặc định không thấy tài khoản test); xoá tài khoản test sau khi xác minh, ba tài khoản thật không bị ảnh hưởng. Cập nhật `SocialFlow/TECHNICAL_DEBT.md` mục xác minh |
+| 09/10 | **P8 — nạp danh mục AVI GIFT viết mã xong, CHƯA xác minh trên Postgres thật.** `scripts/nap-avi-gift/doc-excel.py` (Python) đọc `01_NHAP-LIEU.xlsx`+`02_KET-QUA.xlsx` thật của AVI GIFT → `catalog.json` (1.316 sản phẩm, BOM 5.872 dòng/1.300 mã, chạy thật trong sandbox). Module `src/modules/avi-gift-import/` (`domain/catalog-mapping.ts` thuần + 16 test · `use-cases/{bootstrap-avi-gift-organization,import-catalog}.ts`) · `scripts/nap-avi-gift-vao-core.ts` orchestrator. Bốn câu hỏi chốt với anh Tony 09/10 (AskUserQuestion): phạm vi "cả hai" (danh mục giá + sản phẩm có ảnh thật — phần ảnh thật CHƯA làm, nợ #34), Sàn/Trần lưu ở `products.attributes` không mở `pricing_rules` (nợ #32), tổ chức `SINGLE`, admin `antranhub@gmail.com`. Phát hiện điểm lệch #12 (`RA_SOAT_THU_HOACH.md`): cột ảnh thật tên `Đường dẫn ảnh`, khác bốn tên `excel_parser.py` gốc dò — đã sửa trong script mới (nợ #33). Phát hiện ngoài phạm vi mã: `he_thong.json` của AVI GIFT lộ khoá OpenAI thô — nợ #36, khẩn. `npm test` 140/140 (124 cũ + 16 mới), `tsc --noEmit` sạch, `eslint .` sạch. `test:tenant` và lượt nạp thật CHƯA chạy — sandbox không có `docker`, cùng giới hạn P3–P7. Việc kế tiếp ở mục 6 |

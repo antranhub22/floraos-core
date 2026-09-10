@@ -40,3 +40,8 @@ next-env.d.ts
 
 # Kho tệp cục bộ của LocalDiskStorageProvider (dev only) — P3
 var/storage/
+
+# JSON trung gian nạp AVI GIFT (P8) — sinh lại được bằng
+# `python3 scripts/nap-avi-gift/doc-excel.py`, chứa dữ liệu giá/BOM thật của
+# AVI GIFT, không cần giữ một bản sao thứ hai ngoài cơ sở dữ liệu
+scripts/nap-avi-gift/du-lieu-trung-gian/
