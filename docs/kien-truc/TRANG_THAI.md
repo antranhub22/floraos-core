@@ -298,7 +298,15 @@ Ca then chốt xanh: *"người của tổ chức B chỉ thấy sản phẩm c�
 
 **Sự cố suýt xảy ra, đã ghi vào `LENH_NGHIEM_THU_09_10.md`:** `set -a && source .env` chạy trong LocalBudd export `DATABASE_URL` của Supabase ra cả shell; biến đó theo `cd` sang `floraos-core`, và `process.loadEnvFile()` của `prisma.config.ts` không ghi đè biến đã có — nên `prisma db push` của core suýt đồng bộ lược đồ core lên database của LocalBudd. Bắt được ở dòng `Datasource "db"` trước khi áp dụng; `migrate diff` và số đếm bản ghi sau đó xác nhận Supabase còn nguyên.
 
-Việc kế tiếp: xác minh luồng SSO đầu-cuối bằng curl (`LENH_NGHIEM_THU_09_10.md` Bước 5), rồi **Đợt 3 — nối `SocialFlow`** (`RA_SOAT_DONG_BO_BA_REPO.md` mục 5).
+**Luồng SSO đầu-cuối XÁC MINH XONG trên dữ liệu thật — 09/10 22:22.** `POST /auth/login` trả cả hai cookie; `GET /integration/products` với header `X-FloraOS-SSO` trả 200 và đúng danh mục của tổ chức trong claim `org`; `GET /api/v1/core-products` của LocalBudd (không mang token tích hợp nào) trả **cùng một sản phẩm, cùng `id`**. Token toàn cục đã bỏ được thật, không chỉ trên giấy.
+
+Ba việc phát sinh trong lượt xác minh, đã xử lý:
+
+- Dữ liệu AVI GIFT bị `test:tenant` xoá (nợ #46) — nạp lại bằng `nap:danh-muc` + `nap:phan-tich -- --org-id=<uuid>`.
+- Mật khẩu tạm của bootstrap chỉ in một lần — thêm `npm run mat-khau` (công cụ dev).
+- `GET /integration/products` trả `data: []` sau lượt nạp danh mục là ĐÚNG: cả 1.316 dòng của `catalog.json` có `profileStatus = "Chưa có ảnh"` nên là `DRAFT`, mà endpoint luôn lọc `status = ACTIVE` (đặc tả 08 mục 4). Sản phẩm `ACTIVE` đến từ lượt nạp phân tích ảnh.
+
+Việc kế tiếp: **Đợt 3 — nối `SocialFlow`** (`RA_SOAT_DONG_BO_BA_REPO.md` mục 5), và trả nợ #46.
 
 ---
 
