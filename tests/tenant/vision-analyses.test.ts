@@ -88,6 +88,17 @@ describe("cách ly tenant — M01 phân tích ảnh (P5)", () => {
   })
 
   it("POST /vision/analyses hợp lệ trả job_id và usage.cost_credit", async () => {
+    // Workspace mặc định của `sign-up` LUÔN là EXPERIENCE (đường TRIAL,
+    // cost_credit = 0 — xem chú thích đầu tệp `enqueue-job.test.ts`). Muốn
+    // kiểm đúng ví dụ đặc tả 06 mục 8 (`"cost_credit": 1`) phải đổi workspace
+    // MẶC ĐỊNH (sớm nhất theo created_at, xem `findDefaultForSessionOrganization`)
+    // sang PRODUCTION trước — không tạo thêm workspace mới như
+    // `withProductionWorkspace`, vì route đi qua phiên thật sẽ luôn giải ra
+    // workspace sớm nhất, không phải workspace vừa tạo thêm.
+    await prisma.workspaces.update({
+      where: { id: a.ctx.workspaceId },
+      data: { kind: "PRODUCTION" },
+    })
     const assetOfA = await seedAsset(a.ctx)
 
     const response = await createAnalysisRoute(
