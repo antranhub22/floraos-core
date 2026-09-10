@@ -157,10 +157,10 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 
 ## P7 — Integration Layer
 
-- [ ] Token máy gọi máy theo tổ chức, có ký, xoay được (`YC-T8`)
-- [ ] `LocalBudd` bỏ năm bảng trùng, đọc core qua API
-- [ ] `/integration/products/:id/master-image` chỉ trả ảnh đã duyệt
-- [ ] Adapter `SocialFlow` nhận `organization_id`
+- [x] Token máy gọi máy theo tổ chức, có ký, xoay được (`YC-T8`) — `integration_tokens` (HMAC, `INTEGRATION_TOKEN_SECRET`), `POST/GET/DELETE /integration-tokens` + `POST .../rotate` (`F9`), xoay không dừng dịch vụ (hai token cùng lúc cho tới khi tự thu hồi token cũ) — nghiệm thu trên Postgres thật 09/10 (`npm run test:tenant` 69/69 xanh, anh Tony)
+- [ ] `LocalBudd` bỏ năm bảng trùng, đọc core qua API — chỉ bỏ được `media_assets` (chết hẳn, không ai đọc); `products`/`product_assets`/`generation_jobs`/`projects` còn chặn vì đặc tả 08 mục 4 chỉ có endpoint đọc (`GET /integration/products`), chưa có endpoint ghi cho LocalBudd tạo Product Master, và chưa có cơ chế cho client chỉ-có-HTTP nhận/hoàn tất job — cần quyết định chủ sản phẩm (`LocalBudd/TECHNICAL_DEBT.md`, mục P7)
+- [x] `/integration/products/:id/master-image` chỉ trả ảnh đã duyệt — đúng theo đặc tả 08 mục 4; luôn 404 cho tới khi P9 đặt được `APPROVED` (nợ #30, không phải lỗi)
+- [x] Adapter `SocialFlow` nhận `organization_id` — cột + lọc trên `accounts` (khoá ngoại UNIQUE(platform) toàn cục vẫn còn, chỉ chặn ghi đè khác tổ chức thay vì âm thầm ghi đè); D1 (SocialFlow đa tenant hay đơn tenant) vẫn còn mở vì repo chưa có cơ chế xác thực máy gọi máy, và `posts`/các bảng còn lại của SocialFlow chưa có `organization_id` (`SocialFlow/TECHNICAL_DEBT.md`) — nghiệm thu trên máy thật 09/10 (curl end-to-end trên `backend/socialflow.db` thật: tạo tài khoản mới dưới một tổ chức, chặn 409 khi tổ chức khác giành cùng platform, lọc đúng theo `organization_id` cả hai chiều, ba tài khoản thật có sẵn không bị ảnh hưởng)
 
 ## P8 — Nạp dữ liệu AVI GIFT
 

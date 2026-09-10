@@ -24,8 +24,9 @@ mặc định theo vai  →  bảng công tắc của tổ chức  →  TRẦN C
   Nguồn của `PATCH /roles/:id/capabilities` (đặc tả 06 mục 4), dùng thống nhất
   cho cả vai hệ thống lẫn vai riêng.
 - **Lớp ba** — trần cứng, hằng trong `capability-catalog.ts` (`hardCap`), cắt
-  sau cùng ở `permission-resolver.applyHardCap`. 30 mã có trần cứng: 18 thu
-  hoạch (`docs/dac-ta/02-function-catalog.md` mục 3) cộng 12 mã mới (mục 4).
+  sau cùng ở `permission-resolver.applyHardCap`. 31 mã có trần cứng: 18 thu
+  hoạch (`docs/dac-ta/02-function-catalog.md` mục 3) cộng 12 mã mới (mục 4)
+  cộng `F9` (`integration.token.manage`, thêm ở P7 — đặc tả 08 mục 3).
 
 Trần cứng cắt sau bảng công tắc, nên không đường nào từ giao diện hay cơ sở
 dữ liệu mở được nó — kể cả một ngoại lệ `allowed: true` ghi thẳng vào

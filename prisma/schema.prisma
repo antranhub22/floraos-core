@@ -112,6 +112,7 @@ model organizations {
   product_images        product_images[]
   product_analyses      product_analyses[]
   pricing_rules         pricing_rules[]
+  integration_tokens    integration_tokens[]
 }
 
 model workspaces {
@@ -291,6 +292,15 @@ model assets {
   generated_flags Json? // { generative_fill_used, requires_reshoot_warning }
   cost_usd        Float?
 
+  // P7 — nợ #30 (TECHNICAL_DEBT.md): cột dựng ở P7 để
+  // `GET /integration/products/:id/master-image` lọc đúng theo đặc tả 08 mục
+  // 4 ("Chỉ ảnh approval_state = APPROVED"). P7 chỉ ĐỌC cột này — P9 (Identity
+  // Guard + Cổng 2 Review & Approve, `media.approve`/`I2`) mới là nơi ĐẶT nó.
+  // Trước khi P9 xong, cột luôn PENDING nên endpoint tích hợp luôn trả rỗng —
+  // đúng luật "ảnh chờ duyệt không rò ra ngoài core" (đặc tả 08 mục 4), không
+  // phải một lỗi.
+  approval_state approval_state @default(PENDING)
+
   metadata   Json?
   created_by String
   created_at DateTime @default(now())
@@ -301,6 +311,7 @@ model assets {
   @@index([organization_id, product_id])
   @@index([parent_asset_id])
   @@index([output_sha256])
+  @@index([organization_id, product_id, kind, approval_state])
 }
 
 /**
@@ -608,4 +619,43 @@ model pricing_rules {
   organization organizations @relation(fields: [organization_id], references: [id])
 
   @@index([organization_id, key])
+}
+
+// ── Integration Layer — P7 ───────────────────────────────────────────────
+// Đặc tả 06 mục 11, đặc tả 08. Token máy gọi máy cho `LocalBudd` (M05/M06) và
+// `SocialFlow` (M04b/M07) — YC-T8.
+
+enum integration_client {
+  LOCALBUDD
+  SOCIALFLOW
+}
+
+/**
+ * Core ký (HMAC, `INTEGRATION_TOKEN_SECRET`) và chỉ giữ `token_hash`, không
+ * giữ giá trị token thật — cùng quy ước với `sessions.token_hash`
+ * (`session-token.ts`). Phạm vi quyền KHÔNG đi qua 114 mã năng lực của người
+ * dùng: nó cố định theo `client` (đặc tả 08 mục 4) và áp thẳng trong từng
+ * route `/api/v1/integration/*` — token không phải một vai giao diện, nên
+ * không có hàng trong `role_capabilities`/`capability_overrides`.
+ *
+ * Xoay không dừng dịch vụ (đặc tả 08 mục 3): `rotated_from_id` nối token mới
+ * tới token cũ, nhưng tạo token mới KHÔNG tự thu hồi token cũ — core chấp
+ * nhận cả hai cùng lúc cho tới khi người quản trị tự thu hồi token cũ qua
+ * `DELETE /integration-tokens/:id` (`F9`).
+ */
+model integration_tokens {
+  id              String             @id @default(uuid())
+  organization_id String
+  client          integration_client
+  token_hash      String             @unique
+  created_by      String
+  created_at      DateTime           @default(now())
+  expires_at      DateTime
+  revoked_at      DateTime?
+  rotated_from_id String?
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id])
+  @@index([organization_id, client])
 }

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 195">
+  <g transform="translate(60,10) scale(1.0)">
+    <path d="M50,50 C48.5,45 41.5,38 50,32 C58.5,38 51.5,45 50,50 Z" fill="#E48692" transform="rotate(258 50 50)"/>
+    <path d="M50,50 C47,40 33,26 50,14 C67,26 53,40 50,50 Z" fill="#174C3C" transform="rotate(0 50 50)"/>
+    <path d="M50,50 C47,40 33,26 50,14 C67,26 53,40 50,50 Z" fill="#5F9670" transform="rotate(140 50 50)"/>
+    <circle cx="50" cy="50" r="3" fill="#174C3C"/>
+  </g>
+  <text x="110" y="163" text-anchor="middle" font-family="'Be Vietnam Pro', Arial, sans-serif" font-weight="800" font-size="34" letter-spacing="-0.3" fill="#174C3C">FloraOS</text>
+</svg>

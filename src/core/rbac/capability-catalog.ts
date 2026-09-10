@@ -10,8 +10,8 @@ import type { SystemRoleKey } from "@/modules/organization/domain/system-roles"
  * `macDinh`/`tranCung` luôn khớp mã nguồn, không khớp trí nhớ (xem bài học ở
  * `docs/kien-truc/RA_SOAT_THU_HOACH.md` mục 1, dòng 3).
  *
- * 37 mã còn lại (`F1`…`L6`) là năng lực mới của core, không tồn tại ở FloraOS
- * v1 — đặc tả 02 mục 4.
+ * 38 mã còn lại (`F1`…`L6`, cộng `F9` thêm ở P7) là năng lực mới của core,
+ * không tồn tại ở FloraOS v1 — đặc tả 02 mục 4 và đặc tả 08 mục 3 (P7).
  *
  * Mỗi năng lực có hai định danh: mã chữ cái (`code`, định danh chính, giữ
  * nguyên để `maChucNang.test.ts` không phải sửa) và tên đọc được (`name`,
@@ -131,7 +131,7 @@ const HARVESTED: Record<string, Omit<CapabilityDefinition, "code">> = {
   E8: { name: "system.orphan_image.manage", group: "system", label: "Xem và dọn ảnh mồ côi trong kho", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
 }
 
-// ─── F–L: 37 mã mới của core — đặc tả 02 mục 4 ──────────────────────────────
+// ─── F–L: 38 mã mới của core — đặc tả 02 mục 4, cộng F9 (P7, đặc tả 08 mục 3) ──
 // prettier-ignore
 const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   // F — Tổ chức và thành viên
@@ -143,6 +143,11 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   F6: { name: "branch.read", group: "org_member", label: "Xem danh sách chi nhánh", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   F7: { name: "branch.manage", group: "org_member", label: "Tạo, sửa, đóng chi nhánh", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   F8: { name: "workspace.manage", group: "org_member", label: "Tạo và cấu hình workspace", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  // P7 — đặc tả 06 mục 11, đặc tả 08 mục 3: cấp phát/thu hồi/xoay token máy
+  // gọi máy (YC-T8). Không thuộc 37 mã "F–L" gốc của đặc tả 02 mục 4 (viết
+  // trước P7) — thêm ở đây vì Integration Layer cần một cổng cho CHÍNH việc
+  // quản trị token, tách khỏi phạm vi quyền mà token đó mang khi gọi lại.
+  F9: { name: "integration.token.manage", group: "org_member", label: "Cấp phát, xoay và thu hồi token tích hợp máy-máy", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // G — Asset và job
   G1: { name: "asset.read", group: "asset_job", label: "Xem asset của tổ chức", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   G2: { name: "asset.upload", group: "asset_job", label: "Tải asset lên", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },

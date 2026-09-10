@@ -7,6 +7,11 @@ import { z } from "zod"
 const schema = z.object({
   DATABASE_URL: z.string().url(),
   SESSION_SECRET: z.string().min(16),
+  // P7 — khoá ký token máy gọi máy (YC-T8). Tách khỏi SESSION_SECRET: xoay
+  // khoá của người dùng và của engine ngoài là hai việc vận hành độc lập,
+  // dùng chung một khoá sẽ buộc xoay cả hai cùng lúc mỗi khi chỉ một phía
+  // cần xoay.
+  INTEGRATION_TOKEN_SECRET: z.string().min(16),
   OPENAI_API_KEY: z.string().optional(),
   STORAGE_ENDPOINT: z.string().optional(),
   STORAGE_BUCKET: z.string().optional(),

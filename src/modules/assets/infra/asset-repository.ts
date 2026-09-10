@@ -1,4 +1,4 @@
-import type { asset_kind, asset_state, assets } from "./entities"
+import type { approval_state, asset_kind, asset_state, assets } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
@@ -96,5 +96,34 @@ export class AssetRepository {
   async delete(ctx: TenantContext, id: string): Promise<boolean> {
     const result = await this.db.assets.deleteMany({ where: scopedWhere(ctx, { id }) })
     return result.count > 0
+  }
+
+  /**
+   * Master Image mới nhất đã DUYỆT của một sản phẩm — P7,
+   * `GET /integration/products/:id/master-image` (đặc tả 08 mục 4: "Chỉ ảnh
+   * approval_state = APPROVED"). `parent_asset_id: null` loại các bản dẫn
+   * xuất (ratio Smart Reframe) khỏi vai trò "chính nó là Master" — chúng đọc
+   * qua `listDerivedFrom`. Trước khi P9 (Identity Guard) đặt được
+   * `APPROVED`, hàm này luôn trả `null` — đúng luật "ảnh chờ duyệt không rò
+   * ra ngoài", không phải lỗi (nợ #30, `TECHNICAL_DEBT.md`).
+   */
+  findApprovedMaster(ctx: TenantContext, productId: string): Promise<assets | null> {
+    return this.db.assets.findFirst({
+      where: scopedWhere(ctx, {
+        product_id: productId,
+        kind: "MASTER" as asset_kind,
+        approval_state: "APPROVED" as approval_state,
+        parent_asset_id: null,
+      }),
+      orderBy: { version: "desc" },
+    })
+  }
+
+  /** Các bản dẫn xuất của một asset — "kèm các tỉ lệ" (đặc tả 06 mục 11). */
+  listDerivedFrom(ctx: TenantContext, parentAssetId: string): Promise<assets[]> {
+    return this.db.assets.findMany({
+      where: scopedWhere(ctx, { parent_asset_id: parentAssetId }),
+      orderBy: { created_at: "asc" },
+    })
   }
 }

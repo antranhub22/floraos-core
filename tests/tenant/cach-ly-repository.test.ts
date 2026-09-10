@@ -13,6 +13,7 @@ import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-rep
 import { UsageRepository } from "@/modules/usage/infra/usage-repository"
 import { BrandProfileRepository } from "@/modules/profiles/infra/brand-profile-repository"
 import { BusinessProfileRepository } from "@/modules/profiles/infra/business-profile-repository"
+import { IntegrationTokenRepository } from "@/modules/integration/infra/integration-token-repository"
 
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, type Tenant } from "../helpers/fixtures"
@@ -249,6 +250,26 @@ describe("cách ly tenant ở tầng repository", () => {
     await repository.upsert(b.ctx, { primary_color: "#F5A623" })
     expect((await repository.current(a.ctx))?.primary_color).toBe("#0A74DA")
     expect((await repository.current(b.ctx))?.primary_color).toBe("#F5A623")
+  })
+
+  it("integration_tokens — token của A không đọc, không thu hồi được bằng ngữ cảnh của B (P7, YC-T8)", async () => {
+    const repository = new IntegrationTokenRepository()
+    const tokenOfA = await repository.create(a.ctx, {
+      client: "LOCALBUDD",
+      tokenHash: "hash-gia-lap-cua-a",
+      createdBy: a.userId,
+      expiresAt: new Date(Date.now() + 86_400_000),
+    })
+
+    expect(await repository.findById(a.ctx, tokenOfA.id)).not.toBeNull()
+    expect(await repository.findById(b.ctx, tokenOfA.id)).toBeNull()
+    expect(await repository.list(b.ctx)).toEqual([])
+
+    expect(await repository.revoke(b.ctx, tokenOfA.id, new Date())).toBe(false)
+    const stillActive = await repository.findActiveByHash("hash-gia-lap-cua-a", new Date())
+    expect(stillActive?.revoked_at).toBeNull()
+
+    expect(await repository.revoke(a.ctx, tokenOfA.id, new Date())).toBe(true)
   })
 
   it("bộ gác từ chối mệnh đề where tự khai organization_id", () => {

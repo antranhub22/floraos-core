@@ -47,6 +47,18 @@ export function withSession(url: string, token: string, init?: RequestInit): Req
   return new Request(url, { ...init, headers })
 }
 
+/**
+ * Cùng vai trò với `withSession` nhưng cho token máy gọi máy (P7, `YC-T8`) —
+ * `Authorization: Bearer`, không phải cookie phiên. Dùng để gọi thẳng
+ * `/api/v1/integration/*` trong test cách ly tenant.
+ */
+export function withBearer(url: string, token: string, init?: RequestInit): Request {
+  const headers = new Headers(init?.headers)
+  headers.set("authorization", `Bearer ${token}`)
+  if (init?.body) headers.set("content-type", "application/json")
+  return new Request(url, { ...init, headers })
+}
+
 export async function readJson(response: Response): Promise<Record<string, unknown>> {
   return (await response.json()) as Record<string, unknown>
 }
