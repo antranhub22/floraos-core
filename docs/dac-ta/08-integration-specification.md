@@ -53,6 +53,12 @@ Cách sửa đã chốt (quyết định của anh Tony): mọi route `/integrat
 
 Hệ quả cho cổng "chỉ app này đọc được" ở mục 4: cổng đó chỉ áp cho nhánh token. Nhánh SSO không mang danh tính app đáng tin nên được gác bằng năng lực người dùng, vốn chặt hơn.
 
+**Ngoại lệ: năng lực không bao giờ vượt biên.** Luật của mục 4 là luật về ENGINE, không phải luật về NGƯỜI — thứ gì không được rời core thì không rời core, bất kể ai đang thao tác. Nhánh SSO mang năng lực thật của người dùng, nên nếu để nguyên, một người sáng lập (có `L5`) sẽ kéo được khối `pricing` của `GET /products` qua biên. Vì `LocalBudd` sinh landing page và catalogue CÔNG KHAI và cache lại dữ liệu sản phẩm, khối giá vượt biên là khối giá có đường tới trang public.
+
+Cách cưỡng chế: `modules/integration/domain/boundary-capabilities.ts` giữ danh sách mã bị trừ khỏi `capabilities` ở nhánh SSO — hiện là `L5`. Nó chỉ TRỪ, không bao giờ thêm; người không có `L5` vẫn không có `L5`. Người sáng lập vẫn xem được giá vốn trong giao diện của chính core, chuyện đó không đổi.
+
+Phát hiện trong lượt xác minh đầu-cuối 2026-09-10 (khối `pricing` hiện ra trong đáp ứng thật); quyết định của anh Tony cùng ngày.
+
 **Engine ngoài không bao giờ tự khai `organization_id`.** Nếu nó gửi lên, core bỏ qua giá trị đó — không phải trả lỗi, mà là bỏ qua, vì trả lỗi cho biết trường đó có tồn tại và có tác dụng.
 
 Token có phạm vi năng lực riêng, hẹp hơn năng lực của người dùng. Token của `LocalBudd` đọc được Product Master và Master Image đã duyệt; nó không có năng lực duyệt và không đọc được `audit_logs`.

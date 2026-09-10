@@ -1,5 +1,6 @@
 import { AppError, unauthenticated } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
+import { withoutBoundaryCapabilities } from "@/modules/integration/domain/boundary-capabilities"
 import {
   readIntegrationCredential,
   SSO_HEADER,
@@ -100,7 +101,10 @@ export function requireIntegrationClient(
  *
  * Nhánh `sso`: năng lực thật, giải bằng chính `tenantContextFor` mà
  * `resolveSession` dùng — một đường tính quyền duy nhất cho cả hai lối vào,
- * không có bản sao thứ hai để lệch nhau.
+ * không có bản sao thứ hai để lệch nhau — RỒI trừ đi những mã không bao giờ
+ * được vượt ranh giới core (`boundary-capabilities.ts`). Trừ, không bao giờ
+ * thêm: đây là ranh giới dữ liệu của đặc tả 08 mục 4, không phải một cơ chế
+ * phân quyền thứ hai.
  *
  * Nhánh `token`: `capabilities` luôn RỖNG. Token không phải một vai giao diện,
  * nên không được tra `hasCapability`/`requireCapability` — phạm vi của nó là
@@ -118,7 +122,10 @@ export async function toTenantContext(ic: IntegrationContext): Promise<TenantCon
     // hạn. Đây là lý do JWT cố tình sống ngắn (15 phút) chứ không mang sẵn
     // năng lực bên trong (`modules/sso/domain/sso-claims.ts`).
     if (!resolved) throw unauthenticated()
-    return resolved.ctx
+    return {
+      ...resolved.ctx,
+      capabilities: withoutBoundaryCapabilities(resolved.ctx.capabilities),
+    }
   }
 
   const workspace = await new WorkspaceRepository().findDefaultForSessionOrganization(

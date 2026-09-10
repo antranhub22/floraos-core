@@ -4,7 +4,7 @@ import { GET as getIntegrationBrandProfile } from "@/app/api/v1/integration/bran
 import { GET as getIntegrationBusinessProfile } from "@/app/api/v1/integration/business-profile/route"
 import { GET as listIntegrationProducts } from "@/app/api/v1/integration/products/route"
 import { POST as issueToken } from "@/app/api/v1/integration-tokens/route"
-import { POST as createProduct } from "@/app/api/v1/products/route"
+import { GET as listProductsBySession, POST as createProduct } from "@/app/api/v1/products/route"
 import { PUT as putBrandProfile } from "@/app/api/v1/brand-profile/route"
 import { PUT as putBusinessProfile } from "@/app/api/v1/business-profile/route"
 
@@ -147,6 +147,29 @@ describe("cách ly tenant — Integration Layer qua SSO", () => {
       )
     )
     expect(body.display_name).toBe("Tiệm hoa Alpha")
+  })
+
+  it("khối pricing KHÔNG vượt ranh giới core, dù người gọi có L5 thật", async () => {
+    await seedProduct(a, "A-001", "Bó hồng Alpha")
+
+    // Qua chính phiên người dùng ở core: người sáng lập có `L5` nên THẤY giá.
+    const trongCore = await readJson(
+      await listProductsBySession(withSession(`${BASE}/products?status=ACTIVE`, a.token))
+    )
+    expect((trongCore.data as Array<Record<string, unknown>>)[0]).toHaveProperty("pricing")
+
+    // Qua Integration API bằng chính JWT của người ấy: KHÔNG thấy giá.
+    const quaBien = await readJson(
+      await listIntegrationProducts(
+        withSso(`${BASE}/integration/products`, {
+          userId: a.userId,
+          organizationId: a.organizationId,
+        })
+      )
+    )
+    const sanPham = (quaBien.data as Array<Record<string, unknown>>)[0]
+    expect(sanPham).toBeDefined()
+    expect(sanPham).not.toHaveProperty("pricing")
   })
 
   it("BrandProfile đọc qua JWT của B trả đúng hồ sơ của B, không phải của A", async () => {
