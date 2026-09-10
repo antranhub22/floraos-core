@@ -1,0 +1,295 @@
+"""Worker M04a — tối ưu ảnh + Product Identity Guard.
+
+Cùng khuôn với `workers/vision/jobs/worker.py` (D6-1): lấy việc bằng
+`SELECT … FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`, không `subprocess`,
+không HTTP nội bộ, `organization_id` CHỈ lấy từ dòng job.
+
+Luồng một job (M04 mục 5, đặc tả 07 mục 6.1 cho bộ `stage`):
+
+    ANALYZING   phân tích ảnh GỐC  → dấu vân
+    ENHANCING   tăng cường          → ảnh mới
+    VERIFYING   phân tích lại + so  → phán quyết
+    GENERATING_OUTPUTS  ghi asset (chỉ khi KHÔNG bị từ chối)
+
+Hai điều dễ làm sai, đã chặn bằng cấu trúc:
+
+1. **`REJECTED` không phải job lỗi** (đặc tả 07 mục 6.1). Cổng từ chối nghĩa
+   là job chạy ĐÚNG và đi tới phán quyết: `status = COMPLETED`,
+   `result = REJECTED`. Ánh xạ sang `FAILED` làm retry chạy lại vô ích và
+   làm sai kế toán. Chỉ `except` cuối mới ghi `FAILED`, và nó chỉ bắt hỏng
+   kỹ thuật.
+
+2. **Bị từ chối thì KHÔNG ghi asset tăng cường** (M04 mục 5: "Giữ Original,
+   không trả ảnh đã enhance"). Ảnh gốc còn nguyên, không có dòng `assets`
+   mới nào, nên không có đường nào để ảnh đó lọt ra ngoài qua
+   `/media/optimizations/:id/download`.
+
+Worker KHÔNG ghi `usage` (`YC-U4`, luật 3 của `workers/README.md`). Hoàn
+credit cho job bị từ chối (D3) là việc của phía TS — xem
+`src/modules/media/use-cases/refund-rejected-job.ts`.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import uuid
+from pathlib import Path
+from typing import Any
+
+import psycopg
+from psycopg.rows import dict_row
+
+from media_ai.guard.compare import REJECTED
+from media_ai.guard.verifier import VisionIdentityVerifier
+from media_ai.providers.enhancement.passthrough import PassthroughEnhancer
+
+FEATURE = "media.optimize"
+PIPELINE_VERSION = "m04a-1"
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+STORAGE_ROOT = REPO_ROOT / "var" / "storage"
+
+
+def notify_channel_for(feature: str) -> str:
+    """Mirror của `notifyChannelFor` (`postgres-queue-provider.ts`)."""
+    return "floraos_job_" + re.sub(r"[^a-zA-Z0-9_]", "_", feature)
+
+
+def _read_bytes(storage_key: str) -> bytes:
+    return (STORAGE_ROOT / storage_key).read_bytes()
+
+
+def _write_bytes(storage_key: str, data: bytes) -> None:
+    path = STORAGE_ROOT / storage_key
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+
+
+def _emit_event(conn: psycopg.Connection, job_id: str, event: str, payload: dict) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO job_events (id, job_id, seq, event, payload, created_at)
+            VALUES (gen_random_uuid(), %(job_id)s,
+                    COALESCE((SELECT MAX(seq) FROM job_events WHERE job_id = %(job_id)s), 0) + 1,
+                    %(event)s, %(payload)s, now())
+            """,
+            {"job_id": job_id, "event": event, "payload": json.dumps(payload)},
+        )
+    conn.commit()
+
+
+def _set_stage(conn: psycopg.Connection, job_id: str, stage: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute("UPDATE generation_jobs SET stage = %s WHERE id = %s", (stage, job_id))
+    conn.commit()
+    _emit_event(conn, job_id, "stage", {"stage": stage})
+
+
+def claim_next(conn: psycopg.Connection, feature: str) -> dict[str, Any] | None:
+    with conn.transaction():
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT * FROM generation_jobs
+                 WHERE status = 'PENDING' AND feature = %s
+                 ORDER BY created_at
+                 FOR UPDATE SKIP LOCKED
+                 LIMIT 1
+                """,
+                (feature,),
+            )
+            job = cur.fetchone()
+            if job is None:
+                return None
+            cur.execute(
+                "UPDATE generation_jobs SET status = 'PROCESSING', started_at = now() WHERE id = %s",
+                (job["id"],),
+            )
+    return job
+
+
+def _doc_asset(conn: psycopg.Connection, organization_id: str, asset_id: str) -> dict[str, Any]:
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT id, product_id, storage_key, mime_type, version
+              FROM assets
+             WHERE id = %s AND organization_id = %s
+            """,
+            (asset_id, organization_id),
+        )
+        row = cur.fetchone()
+        if row is None:
+            raise LookupError(f"asset {asset_id} không thuộc tổ chức {organization_id}")
+        return row
+
+
+def _ghi_asset_master(
+    conn: psycopg.Connection,
+    job: dict[str, Any],
+    asset_goc: dict[str, Any],
+    data: bytes,
+    khoi_guard: dict[str, Any],
+    ket_qua_tang_cuong: dict[str, Any],
+    enhancer: Any,
+) -> str:
+    """Ghi Master Image mới. `approval_state` để `PENDING` — cổng 2 (Review &
+    Approve, `media.approve`/`I2`) mới là nơi đặt `APPROVED`; Guard PASS chỉ
+    cho phép NGƯỜI DÙNG XEM, không phải cho phép ghi vào Product Master
+    (M04 mục 5.1: "Guard PASS không thay thế được Approve")."""
+    asset_id = str(uuid.uuid4())
+    product_id = asset_goc["product_id"]
+    duoi = Path(asset_goc["storage_key"]).suffix.lstrip(".") or "jpg"
+    storage_key = (
+        f"org/{job['organization_id']}/{product_id or 'unfiled'}/{asset_id}.{duoi}"
+    )
+    _write_bytes(storage_key, data)
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO assets
+                (id, organization_id, product_id, parent_asset_id, kind, state, version,
+                 storage_key, mime_type, provider, model, model_version, pipeline_version,
+                 parameters, identity_score, generated_flags, metadata,
+                 approval_state, created_by, created_at)
+            VALUES
+                (%(id)s, %(organization_id)s, %(product_id)s, %(parent_asset_id)s,
+                 'MASTER', 'READY', %(version)s,
+                 %(storage_key)s, %(mime_type)s, %(provider)s, %(model)s, %(model_version)s,
+                 %(pipeline_version)s, %(parameters)s, %(identity_score)s, %(generated_flags)s,
+                 %(metadata)s, 'PENDING', %(created_by)s, now())
+            """,
+            {
+                "id": asset_id,
+                "organization_id": job["organization_id"],
+                "product_id": product_id,
+                "parent_asset_id": asset_goc["id"],
+                "version": (asset_goc["version"] or 1) + 1,
+                "storage_key": storage_key,
+                "mime_type": asset_goc["mime_type"],
+                "provider": enhancer.name,
+                "model": enhancer.name,
+                "model_version": enhancer.model_version,
+                "pipeline_version": PIPELINE_VERSION,
+                "parameters": json.dumps(ket_qua_tang_cuong["parameters"]),
+                "identity_score": khoi_guard["identity_score"],
+                "generated_flags": json.dumps(ket_qua_tang_cuong["generated_flags"]),
+                "metadata": json.dumps({"identity_guard": khoi_guard}),
+                "created_by": job["user_id"],
+            },
+        )
+    conn.commit()
+    return asset_id
+
+
+def process_job(
+    conn: psycopg.Connection,
+    job: dict[str, Any],
+    verifier: VisionIdentityVerifier,
+    enhancer: Any,
+) -> None:
+    payload = job["payload"] if isinstance(job["payload"], dict) else json.loads(job["payload"])
+    organization_id = job["organization_id"]  # luật 1 — chỉ từ dòng job
+
+    try:
+        asset_id = payload["asset_id"]
+        config = payload.get("config") or {}
+        asset_goc = _doc_asset(conn, organization_id, asset_id)
+        anh_goc = _read_bytes(asset_goc["storage_key"])
+        ngu_canh = {
+            "organization_id": organization_id,
+            "product_id": asset_goc["product_id"],
+            "asset_id": asset_id,
+        }
+
+        _set_stage(conn, job["id"], "ANALYZING")
+        dau_van = verifier.phan_tich(anh_goc, ngu_canh)
+
+        _set_stage(conn, job["id"], "ENHANCING")
+        ket_qua_tang_cuong = enhancer.enhance(anh_goc, config)
+
+        _set_stage(conn, job["id"], "VERIFYING")
+        khoi_guard = verifier.compare(dau_van, ket_qua_tang_cuong["image"], ngu_canh)
+        # Khối bốn điểm không có cột riêng trong lược đồ (đặc tả 07 không khai
+        # bảng nào cho M04a) — ghi vào `job_events` để phía TS đọc lại được
+        # kể cả khi KHÔNG có asset nào được tạo, tức là đúng lúc bị từ chối.
+        _emit_event(conn, job["id"], "guard", khoi_guard)
+
+        ket_qua = khoi_guard["result"]
+        master_asset_id: str | None = None
+        if ket_qua != REJECTED:
+            _set_stage(conn, job["id"], "GENERATING_OUTPUTS")
+            master_asset_id = _ghi_asset_master(
+                conn, job, asset_goc, ket_qua_tang_cuong["image"], khoi_guard,
+                ket_qua_tang_cuong, enhancer,
+            )
+        else:
+            # Giữ Original. Không ghi asset nào — không có đường nào để ảnh
+            # đã tăng cường lọt ra ngoài (M04 mục 5).
+            _emit_event(
+                conn, job["id"], "log",
+                {"message": "Identity Guard từ chối — giữ ảnh gốc", "ly_do": khoi_guard["ly_do"]},
+            )
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE generation_jobs
+                   SET status = 'COMPLETED', result = %s, stage = NULL, completed_at = now()
+                 WHERE id = %s
+                """,
+                (ket_qua, job["id"]),
+            )
+        conn.commit()
+        _emit_event(
+            conn, job["id"], "done",
+            {"status": "COMPLETED", "result": ket_qua, "master_asset_id": master_asset_id},
+        )
+
+    except Exception as exc:  # noqa: BLE001 — hỏng KỸ THUẬT, không phải phán quyết
+        conn.rollback()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE generation_jobs
+                   SET status = 'FAILED', error = %s, stage = NULL, attempts = attempts + 1
+                 WHERE id = %s
+                """,
+                (str(exc), job["id"]),
+            )
+        conn.commit()
+        _emit_event(conn, job["id"], "done", {"status": "FAILED", "error": str(exc)})
+
+
+def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
+    from vision.providers.openai_structured import OpenAIStructuredProvider
+
+    # MỘT instance analyzer cho cả hai lượt phân tích của mọi job — `YC-N4`
+    # được bảo đảm bằng cấu trúc, xem `guard/verifier.py`.
+    verifier = VisionIdentityVerifier(analyzer=OpenAIStructuredProvider())
+    enhancer = PassthroughEnhancer()
+    channel = notify_channel_for(FEATURE)
+
+    with psycopg.connect(database_url, autocommit=True) as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"LISTEN {channel}")
+
+        while True:
+            job = claim_next(conn, FEATURE)
+            if job is not None:
+                process_job(conn, job, verifier, enhancer)
+                continue
+            for _notify in conn.notifies(timeout=poll_interval_seconds):
+                break
+
+
+def main() -> None:
+    run_worker(os.environ["DATABASE_URL"])
+
+
+if __name__ == "__main__":
+    main()
