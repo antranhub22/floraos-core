@@ -190,12 +190,27 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 
 ## P9 — M04a tối ưu ảnh
 
-- [ ] Identity Guard là cổng cứng, chặn được một thay đổi sản phẩm mô phỏng
-- [ ] `REJECTED` giữ ảnh gốc, không trả ảnh tăng cường (`YC-R5`)
-- [ ] `WARNING` duyệt được nhưng có cảnh báo trước (`YC-R6`)
-- [ ] Guard dùng cùng provider và cùng model version hai lần (`YC-N4`)
-- [ ] Tăng cường chạy một lần; các tỉ lệ từ Smart Reframe
-- [ ] Tải về và duyệt là hai nút riêng, hai năng lực riêng
+Đợt một (09/10): **Identity Guard + cổng 2 Review & Approve**. Phần tăng
+cường ảnh thật và Smart Reframe để đợt sau — chỗ enhancement hiện cắm
+`PassthroughEnhancer` (trả đúng byte đưa vào, tên gọi nói thẳng nó không phải
+enhancer), nên pipeline chạy end-to-end được và Guard có thứ để gác.
+
+- [x] Identity Guard là cổng cứng, chặn được một thay đổi sản phẩm mô phỏng *(09/10:
+  `workers/media_ai/guard/` — `test_guard.py` 19 ca dựng đúng các kiểu sai lệch: đổi phân loại,
+  đổi vật chứa, đổi màu, thêm/mất thành phần, lệch số lượng. Ngưỡng 0,95 / 0,90 CHỐT VỚI CHỦ SẢN
+  PHẨM 09/10 — M04 mục 17.3/18.2 cấm agent tự đặt, và không tệp đặc tả nào cho con số)*
+- [x] `REJECTED` giữ ảnh gốc, không trả ảnh tăng cường (`YC-R5`) *(09/10: worker không ghi dòng
+  `assets` nào và không ghi tệp nào khi bị từ chối — `test_worker_m04a.py` khoá cả hai; phía TS
+  `approve` trả 409 và `download` trả 409)*
+- [x] `WARNING` duyệt được nhưng có cảnh báo trước (`YC-R6`) *(09/10: máy chủ trả cờ
+  `approval.requires_warning` thay vì để mỗi màn hình tự suy từ chuỗi `result`)*
+- [x] Guard dùng cùng provider và cùng model version hai lần (`YC-N4`) *(09/10: bảo đảm bằng CẤU
+  TRÚC — `VisionIdentityVerifier` giữ MỘT instance `VisionAnalyzer`, cả hai lượt phân tích đều đi
+  qua nó, không có đường nào truyền vào provider thứ hai)*
+- [ ] Tăng cường chạy một lần; các tỉ lệ từ Smart Reframe *(09/10: đợt sau —
+  `PassthroughEnhancer` là chỗ giữ vị trí; `outputs.ratios` trả object RỖNG chứ không bịa khoá)*
+- [x] Tải về và duyệt là hai nút riêng, hai năng lực riêng *(09/10: `I3` tải, `I2` duyệt; có ca
+  thử khoá "tải về xong ảnh vẫn `PENDING`")*
 
 ## P10 — Experience Mode
 
