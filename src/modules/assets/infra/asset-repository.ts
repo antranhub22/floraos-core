@@ -1,4 +1,4 @@
-import type { approval_state, asset_kind, asset_state, assets } from "./entities"
+import type { InputJsonValue, approval_state, asset_kind, asset_state, assets } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
@@ -74,15 +74,15 @@ export class AssetRepository {
         model: input.model ?? null,
         model_version: input.modelVersion ?? null,
         pipeline_version: input.pipelineVersion ?? null,
-        parameters: (input.parameters ?? null) as never,
+        parameters: (input.parameters ?? null) as InputJsonValue,
         prompt: input.prompt ?? null,
         input_sha256: input.inputSha256 ?? null,
         output_sha256: input.outputSha256 ?? null,
         quality_score: input.qualityScore ?? null,
         identity_score: input.identityScore ?? null,
-        generated_flags: (input.generatedFlags ?? null) as never,
+        generated_flags: (input.generatedFlags ?? null) as InputJsonValue,
         cost_usd: input.costUsd ?? null,
-        metadata: (input.metadata ?? null) as never,
+        metadata: (input.metadata ?? null) as InputJsonValue,
         created_by: input.createdBy,
       }),
     })

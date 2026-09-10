@@ -114,6 +114,11 @@ describe("nạp phân tích ảnh lịch sử AVI GIFT (P8, nợ #34)", () => {
     expect(job?.feature).toBe(HISTORICAL_JOB_FEATURE)
     expect(job?.idempotency_key).toBe(HISTORICAL_JOB_IDEMPOTENCY_KEY)
     expect(job?.completed_at).not.toBeNull()
+    // `result` là cột PHÁN QUYẾT (`String?`) của Identity Guard ở P9, không
+    // phải chỗ chứa số liệu lượt chạy — lượt nạp lịch sử không đi qua cổng
+    // nào nên không có phán quyết để ghi. Số liệu nằm ở `payload` (Json).
+    expect(job?.result).toBeNull()
+    expect((job?.payload as { analysisCount?: number }).analysisCount).toBe(1)
 
     // Lượt phân tích đã chạy và đã trả tiền ở v1 — tính credit hay ghi usage
     // lần nữa là tính hai lần cho một việc.

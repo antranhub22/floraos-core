@@ -96,8 +96,11 @@ export async function importAnalyses(
       productId: null,
       feature: HISTORICAL_JOB_FEATURE,
       idempotencyKey: HISTORICAL_JOB_IDEMPOTENCY_KEY,
-      payload: { source: ANALYSIS_IMPORT_SOURCE, note: "Lượt phân tích đã chạy ở FloraOS v1" },
-      result: { imported: rows.length },
+      payload: {
+        source: ANALYSIS_IMPORT_SOURCE,
+        note: "Lượt phân tích đã chạy ở FloraOS v1, nạp lại vào core",
+        analysisCount: rows.length,
+      },
       completedAt: deps.importedAt,
     }))
   result.jobId = job.id

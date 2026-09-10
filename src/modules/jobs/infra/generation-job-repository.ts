@@ -1,4 +1,4 @@
-import type { generation_jobs } from "./entities"
+import type { generation_jobs, InputJsonValue } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
@@ -47,7 +47,7 @@ export class GenerationJobRepository {
         feature: input.feature,
         status: "PENDING" as const,
         idempotency_key: input.idempotencyKey,
-        payload: input.payload as never,
+        payload: input.payload as InputJsonValue,
         attempts: 0,
       }),
     })
@@ -68,7 +68,7 @@ export class GenerationJobRepository {
    */
   createCompletedHistorical(
     ctx: TenantContext,
-    input: CreateJobInput & { completedAt: Date; result: unknown }
+    input: CreateJobInput & { completedAt: Date }
   ): Promise<generation_jobs> {
     return this.db.generation_jobs.create({
       data: scopedData(ctx, {
@@ -79,8 +79,13 @@ export class GenerationJobRepository {
         feature: input.feature,
         status: "COMPLETED" as const,
         idempotency_key: input.idempotencyKey,
-        payload: input.payload as never,
-        result: input.result as never,
+        payload: input.payload as InputJsonValue,
+        // `result` là PHÁN QUYẾT nghiệp vụ (`APPROVED`/`REJECTED`/`WARNING`
+        // của Identity Guard, P9 — `job-rules.ts`), một cột `String?`, không
+        // phải chỗ chứa số liệu lượt chạy. Lượt nạp lịch sử không có phán
+        // quyết nào để ghi: nó không chạy qua cổng nào cả. Số liệu lượt nạp
+        // nằm ở `payload`, cột Json đúng nghĩa.
+        result: null,
         attempts: 1,
         started_at: input.completedAt,
         completed_at: input.completedAt,

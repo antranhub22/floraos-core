@@ -1,4 +1,5 @@
-import type { usage } from "./entities"
+import { Prisma } from "@/generated/prisma/client"
+import type { InputJsonValue, usage } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
@@ -37,7 +38,7 @@ export class UsageRepository {
         cost_credit: input.costCredit,
         cost_usd: input.costUsd ?? null,
         status: input.status,
-        metadata: (input.metadata ?? null) as never,
+        metadata: (input.metadata ?? null) as InputJsonValue,
       }),
     })
   }
@@ -64,7 +65,11 @@ export class UsageRepository {
         cost_credit: 0,
         cost_usd: input.costUsd,
         status: "REFUNDED" as const,
-        metadata: null as never,
+        // `Prisma.DbNull` = NULL của SQL, khác `Prisma.JsonNull` (chuỗi
+        // JSON `null` NẰM TRONG cột). Ở đây muốn cột rỗng thật. Trước đây
+        // viết `null as never` — `never` nhận mọi thứ nên nó vừa che kiểu
+        // vừa che luôn sự phân biệt này.
+        metadata: Prisma.DbNull,
       }),
     })
   }

@@ -1,4 +1,4 @@
-import type { job_events } from "./entities"
+import type { InputJsonValue, job_events } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 
@@ -33,7 +33,7 @@ export class JobEventRepository {
       })
       const seq = (last?.seq ?? 0) + 1
       return tx.job_events.create({
-        data: { job_id: jobId, seq, event, payload: payload as never },
+        data: { job_id: jobId, seq, event, payload: payload as InputJsonValue },
       })
     })
   }

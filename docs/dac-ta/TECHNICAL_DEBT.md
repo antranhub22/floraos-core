@@ -69,3 +69,21 @@
 - **Số liệu nguồn AVI GIFT ghi sai trong `TRANG_THAI.md`** — BOM thật là 5.862 dòng/1.297 mã, không
   phải 5.872/1.300. Ghi thêm: chỉ 27/1.316 SKU có đủ cả Sàn và Trần (nên chỉ 27 dòng nhận
   `attributes.priceGuard`), và 3 SKU không có Giá bán.
+
+Đã trả ngày 09/10 (chạy `test:tenant` lần đầu cho nợ #34):
+
+- **`as never` ở bốn tệp Json của P3 — nay đã trả hết.** Nợ này ghi từ P4
+  ("`as never` chỉ còn là nợ của bốn tệp P3", `business-profile-repository.ts`)
+  và 09/10 nó gây ra một lỗi thật: `createCompletedHistorical` ghi một object
+  vào `generation_jobs.result`, mà cột đó là `String?` chứ không phải Json.
+  `as never` nhận MỌI giá trị nên `tsc` im lặng cho qua, `eslint` cũng vậy —
+  lỗi chỉ lộ khi chạy trên Postgres thật (8 ca đỏ). Đã đổi hết sang
+  `InputJsonValue` ở `usage`/`audit`/`job_events`/`assets`/`generation_jobs`,
+  và `null as never` thành `Prisma.DbNull` (NULL của SQL, khác `JsonNull` là
+  chuỗi JSON `null` nằm TRONG cột — một phân biệt mà `as never` che mất).
+  Không còn `as never` nào trong `src/`.
+- **`generation_jobs.result` dùng sai nghĩa.** Cột này là PHÁN QUYẾT nghiệp
+  vụ (`APPROVED`/`REJECTED`/`WARNING` của Identity Guard, P9 — xem
+  `job-rules.ts`), không phải chỗ chứa số liệu lượt chạy. Lượt nạp lịch sử
+  không đi qua cổng nào nên không có phán quyết để ghi: `result = null`, số
+  liệu chuyển sang `payload` (cột Json đúng nghĩa).

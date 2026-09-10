@@ -1,4 +1,4 @@
-import type { audit_logs } from "./entities"
+import type { InputJsonValue, audit_logs } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
@@ -32,8 +32,8 @@ export class AuditLogRepository {
         action: input.action,
         entity_type: input.entityType,
         entity_id: input.entityId,
-        before: (input.before ?? null) as never,
-        after: (input.after ?? null) as never,
+        before: (input.before ?? null) as InputJsonValue,
+        after: (input.after ?? null) as InputJsonValue,
         ip: input.ip ?? null,
         user_agent: input.userAgent ?? null,
       }),
