@@ -38,16 +38,15 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P6 viết mã xong, CHƯA xác minh trên Postgres thật.** M02
+Trạng thái hiện tại: **P6 nghiệm thu xong.** M02
 (`quotePrice`/`checkPriceInvariants`/`checkPriceGuard`, thu hoạch R3/R4/R5) +
 `pricing_rules` CRUD chèn-chỉ (`effective_from` giữ lịch sử) + `GET·PUT
 /pricing-rules` (`L5`/`L6`). M03 (`filterProductLookup`) + `GET·POST /products` +
 `GET·PATCH /products/:id`. Phạm vi hẹp lại theo xác nhận chủ sản phẩm 09/10:
 không dựng luồng "thẻ chào giá" (`pricing_card`, C1–C28 — nợ #26), chi phí
-lá/cành trang trí để nợ kỹ thuật (#27). `tsc --noEmit` sạch, `npm test`
-117/117 (36 ca mới), `eslint` sạch trong sandbox; `test:tenant` (10 ca mới)
-chưa chạy được — sandbox không có Postgres, bốn lệnh xác minh chờ ở
-`TRANG_THAI.md` mục 6.
+lá/cành trang trí để nợ kỹ thuật (#27). Anh Tony chạy bốn lệnh xác minh trên
+Terminal Mac thật — xanh toàn bộ, không phát sinh lỗi phải sửa (`npm test`
+117/117 gồm 36 ca mới, `npm run test:tenant` gồm 10 ca mới của P6).
 
 P5 nghiệm thu phần lõi trước đó — 49/49 `test:tenant` xanh, 43/43 `pytest`
 xanh, trên Postgres thật. M01 — hợp đồng Vision + `OpenAIStructuredProvider` +
