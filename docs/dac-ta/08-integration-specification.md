@@ -20,11 +20,38 @@ Core phơi dữ liệu lõi ra cho hai engine ngoài. Bản đồ thu hoạch �
 
 `projects` là trường hợp riêng: nó chỉ có `owner_id`, một chủ sở hữu duy nhất, không có thành viên và không có vai. Vai trò của nó chuyển sang `workspaces` của core.
 
-**`SocialFlow` nhận `organization_id`** trên mọi lời gọi và dùng credential theo tổ chức thay cho bảng `accounts` toàn cục. Quyết định D1 đã chốt: **worker đơn tenant.** SocialFlow không tự quản lý tổ chức; nó nhận `organization_id` trên mỗi lời gọi từ core và dùng credential tương ứng. SQLite giữ nguyên.
+> **Trạng thái thật, cập nhật 2026-09-10.** Mục tiêu năm bảng ở trên chưa đạt, và đã đi khác một phần theo quyết định B2c/B2d của Unified Shell — ghi ở đây để không ai đọc đặc tả rồi tưởng nó đã xảy ra:
+>
+> | Bảng | Ý định gốc | Thực tế |
+> |---|---|---|
+> | `media_assets` | bỏ | đã bỏ (chết hẳn, không ai đọc) |
+> | `products` | bỏ | CÒN, đổi nghĩa thành bản ghi THAM CHIẾU (`core_product_id`, unique theo project) — LocalBudd không còn tạo dữ liệu sản phẩm cục bộ |
+> | `product_assets` | bỏ | còn nguyên |
+> | `generation_jobs` | bỏ | CÒN — LocalBudd giữ hàng đợi job của riêng nó; core kiểm hạn mức qua `POST /integration/jobs` (xem mục 4c) |
+> | `projects` | bỏ, vai trò sang `workspaces` | còn nguyên, thêm `organization_id` |
+
+**`SocialFlow` nhận `organization_id`** trên mọi lời gọi. **Quyết định D1 chốt lại 2026-09-10 (anh Tony): đa tenant THẬT**, không phải "worker đơn tenant" như bản đặc tả này ghi trước đó. Bản cũ mâu thuẫn với `../kien-truc/UNIFIED_SHELL.md` mục 4 và với mã đã chạy — `organization_id` nay có mặt trên mọi bảng SocialFlow sở hữu (`posts`, `signals`, `content_plans`, `content_queue`, `assets` nội bộ, `brand_config`), sáu agent đã lọc theo tổ chức, và điều phối chạy lô song song theo tổ chức (D1 Pha 2, A1–A7). SQLite giữ nguyên.
+
+Việc còn thiếu ở `SocialFlow` KHÔNG phải mô hình tenant mà là **xác thực**: repo chưa có middleware nào xác minh người gọi, `organization_id` vẫn là giá trị bên gọi tự khai. Đó là Nhóm B3 của `UNIFIED_SHELL.md`.
 
 ## 3. Xác thực máy gọi máy
 
 Token cấp theo tổ chức, do core ký, mang `organization_id` bên trong.
+
+**Bổ sung 2026-09-10 — đường danh tính thứ hai: `X-FloraOS-SSO`.** Token máy gọi máy một mình không đủ cho một engine ngoài PHỤC VỤ NHIỀU TỔ CHỨC: nó gắn cứng vào đúng một tổ chức, nên khi `LocalBudd` giữ một token trong biến môi trường thì mọi người dùng đăng nhập vào đó — bất kể thuộc tổ chức nào — đều đọc dữ liệu của tổ chức đã cấp token. Đây là lỗi rò dữ liệu chéo tổ chức, phát hiện ở `../kien-truc/RA_SOAT_DONG_BO_BA_REPO.md` mục 3.1.
+
+Cách sửa đã chốt (quyết định của anh Tony): mọi route `/integration/*` chấp nhận thêm header `X-FloraOS-SSO` mang JWT `floraos_sso` — engine ngoài chuyển tiếp nguyên văn cookie mà chính người dùng đang giữ.
+
+| | `Authorization: Bearer` | `X-FloraOS-SSO` |
+|---|---|---|
+| Danh tính | app (máy gọi máy) | NGƯỜI DÙNG + tổ chức đang hoạt động của người đó |
+| `organization_id` từ đâu | bản ghi `integration_tokens` | claim `org` trong JWT do core ký |
+| Năng lực áp dụng | không có (`capabilities` rỗng) | năng lực THẬT của người đó, giải bằng cùng đường với phiên người dùng |
+| Dùng khi | lời gọi nền: cron, đối soát | mọi lời gọi thay mặt một người đang đăng nhập |
+
+**SSO thắng khi lời gọi mang cả hai** — phạm vi của nó hẹp hơn. Người không còn là thành viên `ACTIVE` bị từ chối ngay ở lời gọi kế tiếp, không chờ JWT hết hạn (JWT sống 15 phút, `modules/sso/domain/sso-claims.ts`).
+
+Hệ quả cho cổng "chỉ app này đọc được" ở mục 4: cổng đó chỉ áp cho nhánh token. Nhánh SSO không mang danh tính app đáng tin nên được gác bằng năng lực người dùng, vốn chặt hơn.
 
 **Engine ngoài không bao giờ tự khai `organization_id`.** Nếu nó gửi lên, core bỏ qua giá trị đó — không phải trả lỗi, mà là bỏ qua, vì trả lỗi cho biết trường đó có tồn tại và có tác dụng.
 
@@ -47,6 +74,16 @@ Token có hạn và xoay được mà không dừng dịch vụ: core chấp nh�
 | Kiểm quyền | cả hai | Hỏi một người có năng lực gì |
 
 Ảnh chờ duyệt không rò ra ngoài core. Đây là điểm dễ hỏng nhất của tích hợp: engine ngoài lấy được ảnh chưa duyệt rồi đăng lên mạng xã hội thì cổng duyệt trở thành trang trí.
+
+**Ảnh phải TẢI ĐƯỢC, không chỉ có `storage_key` (bổ sung 2026-09-10).** Bản đầu của `GET /integration/products/:id/master-image` trả `storage_key` trần. Kho tệp của core (`/api/v1/storage/[...key]`) chỉ nhận URL ký sẵn HMAC — không nhận token tích hợp lẫn cookie phiên — nên engine ngoài cầm `storage_key` mà không có đường nào lấy được byte ảnh: ranh giới bàn giao ở mục 5 không đi qua được. Nay mỗi ảnh trả kèm trường `url`: URL ký sẵn TUYỆT ĐỐI, hạn 15 phút, `origin` lấy từ chính lời gọi (nên vẫn đúng sau khi Nhóm C dựng proxy). Hạn ngắn có chủ đích: engine tải ngay, không lưu lại URL.
+
+### 4c. Hạn mức: chặn thật, không phải ghi nhận sau
+
+`POST /integration/jobs` tái dùng `enqueueJob`, nên nó kiểm hạn mức TRƯỚC khi tạo job và trả `QUOTA_EXCEEDED` (HTTP 422) khi tổ chức hết credit.
+
+**Quyết định 2026-09-10 (anh Tony):** engine ngoài phải `await` lời gọi này TRƯỚC khi ghi job vào hàng đợi của chính nó, và từ chối việc khi core nói không. Bản B2d trước đó gọi song song và nuốt lỗi, nên hạn mức của core chỉ là ghi nhận sau khi việc đã xảy ra — tổ chức hết credit vẫn sinh được trang.
+
+Đánh đổi đã chấp nhận khi chốt: **core không gọi được thì engine ngoài không chạy việc tính phí được.** Engine phải phân biệt hai thứ trong mã của nó — "core trả lời là không" (422, hết hạn mức) khác "không hỏi được core" (mạng/sập) — vì hai thứ đó cần hai câu trả lời khác nhau cho người dùng.
 
 ## 4b. Ánh xạ hồ sơ sang design contract của LocalBudd
 

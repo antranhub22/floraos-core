@@ -12,6 +12,12 @@ const schema = z.object({
   // dùng chung một khoá sẽ buộc xoay cả hai cùng lúc mỗi khi chỉ một phía
   // cần xoay.
   INTEGRATION_TOKEN_SECRET: z.string().min(16),
+  // Unified Shell (B1) — khoá ký JWT phiên liên-app đọc được bởi LocalBudd
+  // (Node) và SocialFlow (Python), xác minh tại chỗ không cần gọi lại CSDL
+  // floraos-core mỗi request. Tách khỏi SESSION_SECRET/INTEGRATION_TOKEN_SECRET
+  // cùng lý do đã ghi ở INTEGRATION_TOKEN_SECRET — ba khoá, ba vòng đời xoay
+  // độc lập.
+  SSO_SESSION_SECRET: z.string().min(16),
   OPENAI_API_KEY: z.string().optional(),
   STORAGE_ENDPOINT: z.string().optional(),
   STORAGE_BUCKET: z.string().optional(),

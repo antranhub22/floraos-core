@@ -1,6 +1,9 @@
 import type { TenantContext } from "@/core/tenancy"
 import { WorkspaceRepository } from "@/modules/organization/infra/workspace-repository"
 import { signUp } from "@/modules/organization/use-cases/sign-up"
+import { SSO_HEADER } from "@/modules/integration/domain/integration-credential"
+import { ssoClaimsFor } from "@/modules/sso/domain/sso-claims"
+import { signSsoToken } from "@/modules/sso/infra/sso-jwt"
 
 export type Tenant = {
   readonly organizationId: string
@@ -55,6 +58,31 @@ export function withSession(url: string, token: string, init?: RequestInit): Req
 export function withBearer(url: string, token: string, init?: RequestInit): Request {
   const headers = new Headers(init?.headers)
   headers.set("authorization", `Bearer ${token}`)
+  if (init?.body) headers.set("content-type", "application/json")
+  return new Request(url, { ...init, headers })
+}
+
+/**
+ * Lời gọi `/api/v1/integration/*` THAY MẶT một người dùng — JWT `floraos_sso`
+ * chuyển tiếp trong header `X-FloraOS-SSO`, đúng cách `LocalBudd`/`SocialFlow`
+ * gọi từ backend của chúng. Ký bằng chính `signSsoToken` của core để test
+ * khoá luôn cả khuôn JWT, không tự chế một chuỗi giả.
+ */
+export function withSso(
+  url: string,
+  input: { userId: string; organizationId: string | null; email?: string | null },
+  init?: RequestInit
+): Request {
+  const token = signSsoToken(
+    ssoClaimsFor({
+      userId: input.userId,
+      organizationId: input.organizationId,
+      email: input.email ?? null,
+      now: new Date(),
+    })
+  )
+  const headers = new Headers(init?.headers)
+  headers.set(SSO_HEADER, token)
   if (init?.body) headers.set("content-type", "application/json")
   return new Request(url, { ...init, headers })
 }

@@ -1,9 +1,12 @@
 import { z } from "zod"
 
+import { serializeSsoCookie } from "@/core/http/cookies"
 import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { resolveSession } from "@/modules/organization/use-cases/resolve-session"
 import { switchOrganization } from "@/modules/organization/use-cases/switch-organization"
+import { ssoClaimsFor, SSO_TOKEN_TTL_SECONDS } from "@/modules/sso/domain/sso-claims"
+import { signSsoToken } from "@/modules/sso/infra/sso-jwt"
 
 const schema = z.object({ organization_id: z.string() })
 
@@ -22,5 +25,21 @@ export const POST = handle(async (request) => {
     organizationId: parsed.data.organization_id,
   })
 
-  return jsonResponse({ organization })
+  // B1 (Unified Shell) — JWT liên-app mang `org` bên trong nó (không tra lại
+  // mỗi request), nên đổi tổ chức đang hoạt động phải phát hành JWT MỚI ngay,
+  // chứ không đợi hết hạn 15 phút rồi mới đúng — nếu không, LocalBudd/
+  // SocialFlow vẫn thấy tổ chức CŨ cho tới khi JWT cũ hết hạn tự nhiên.
+  const ssoToken = signSsoToken(
+    ssoClaimsFor({
+      userId: resolved.user.id,
+      organizationId: organization.id,
+      email: resolved.user.email,
+      now: new Date(),
+    })
+  )
+
+  return jsonResponse(
+    { organization },
+    { headers: { "set-cookie": serializeSsoCookie(ssoToken, SSO_TOKEN_TTL_SECONDS) } }
+  )
 })

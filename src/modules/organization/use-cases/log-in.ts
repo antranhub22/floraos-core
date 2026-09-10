@@ -9,7 +9,13 @@ import { UserRepository } from "@/modules/organization/infra/user-repository"
 
 export type LogInInput = { email: string; password: string }
 
-export type LogInResult = { token: string; userId: string; organizationId: string | null }
+export type LogInResult = {
+  token: string
+  userId: string
+  organizationId: string | null
+  // Unified Shell (B1) — để route mint JWT liên-app không cần tra lại user.
+  email: string | null
+}
 
 /**
  * Sai email và sai mật khẩu trả về cùng một câu trả lời. Phân biệt hai trường
@@ -42,5 +48,10 @@ export async function logIn(input: LogInInput): Promise<LogInResult> {
     expires_at: expiresAt(now),
   })
 
-  return { token, userId: user.id, organizationId: membership?.organization_id ?? null }
+  return {
+    token,
+    userId: user.id,
+    organizationId: membership?.organization_id ?? null,
+    email: user.email,
+  }
 }

@@ -16,5 +16,9 @@ export const GET = handle(async (request, context: { params: Promise<{ id: strin
   const ctx = await toTenantContext(ic)
 
   const { id } = await context.params
-  return jsonResponse(await getMasterImage(ctx, id))
+  // `origin` lấy từ chính lời gọi, không từ biến môi trường: URL ký sẵn phải
+  // trỏ về đúng máy chủ core mà engine ngoài vừa gọi tới, kể cả sau khi Nhóm C
+  // dựng proxy và ba app về chung một origin.
+  const origin = new URL(request.url).origin
+  return jsonResponse(await getMasterImage(ctx, id, { origin }))
 })

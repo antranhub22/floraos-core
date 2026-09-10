@@ -44,25 +44,49 @@ export async function resolveSession(request: Request): Promise<ResolvedSession>
     return { user, session, membership: null, ctx: null }
   }
 
-  // Tư cách thành viên kiểm lại ở mỗi lần giải ngữ cảnh: người bị gỡ khỏi tổ
-  // chức mất quyền đọc ngay, không phải chờ phiên hết hạn.
-  const membership = await new MembershipRepository().findForUserInOrganization(
-    user.id,
-    session.organization_id
-  )
-  if (!membership || membership.status !== "ACTIVE") {
+  const resolved = await tenantContextFor(user.id, session.organization_id)
+  if (!resolved) {
     return { user, session, membership: null, ctx: null }
   }
 
+  return { user, session, membership: resolved.membership, ctx: resolved.ctx }
+}
+
+/**
+ * Dựng `TenantContext` đầy đủ cho một cặp (người dùng, tổ chức) — tách khỏi
+ * `resolveSession` để dùng lại cho đường danh tính KHÁC cookie phiên: JWT
+ * `floraos_sso` mà `LocalBudd`/`SocialFlow` chuyển tiếp vào
+ * `/api/v1/integration/*` (xem `modules/integration/use-cases/
+ * resolve-integration-context.ts`).
+ *
+ * `null` = người này không còn là thành viên `ACTIVE` của tổ chức đó. Bên gọi
+ * quyết định điều đó nghĩa là gì: `resolveSession` trả phiên chưa gắn tổ chức,
+ * còn đường tích hợp trả `UNAUTHENTICATED`.
+ *
+ * `organizationId` LUÔN đến từ nguồn phía máy chủ đã xác minh (bản ghi
+ * `sessions`, hoặc chữ ký JWT do chính core ký) — không bao giờ từ body/query.
+ */
+export async function tenantContextFor(
+  userId: string,
+  organizationId: string
+): Promise<{ ctx: TenantContext; membership: memberships } | null> {
+  // Tư cách thành viên kiểm lại ở mỗi lần giải ngữ cảnh: người bị gỡ khỏi tổ
+  // chức mất quyền đọc ngay, không phải chờ phiên hết hạn.
+  const membership = await new MembershipRepository().findForUserInOrganization(
+    userId,
+    organizationId
+  )
+  if (!membership || membership.status !== "ACTIVE") return null
+
   const workspace = await new WorkspaceRepository().findDefaultForSessionOrganization(
-    session.organization_id
+    organizationId
   )
   if (!workspace) {
     throw new AppError("INTERNAL", "Tổ chức không có workspace nào")
   }
 
   const role = await new RoleRepository().findAssignableByIdForOrganization(
-    session.organization_id,
+    organizationId,
     membership.role_id
   )
   if (!role) {
@@ -72,23 +96,17 @@ export async function resolveSession(request: Request): Promise<ResolvedSession>
   // Ba lớp quyền tính một lần ở biên (đặc tả 02 mục 1): switchboard của vai,
   // đè bằng ngoại lệ của tổ chức, rồi trần cứng cắt sau cùng. `ctx.capabilities`
   // là kết quả cuối, chỉ còn việc `hasCapability`/`requireCapability` tra cứu.
-  const grants = await new CapabilityRepository().resolveGrants(
-    session.organization_id,
-    role.id,
-    role.key
-  )
+  const grants = await new CapabilityRepository().resolveGrants(organizationId, role.id, role.key)
 
   return {
-    user,
-    session,
-    membership,
     ctx: {
-      organizationId: session.organization_id,
+      organizationId,
       workspaceId: workspace.id,
-      userId: user.id,
+      userId,
       branchId: membership.branch_id,
       capabilities: new Set(grants.map((grant) => grant.code)),
     },
+    membership,
   }
 }
 

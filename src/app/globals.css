@@ -2,10 +2,37 @@
 @import "tw-animate-css";
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #174C3C;
+  --color-primary-dark: #0F332A;
+  --color-secondary: #5F9670;
+  /* Chữ nhỏ/đậm trên nền trắng dùng tông này thay vì --color-secondary —
+     #5F9670 trên trắng chỉ đạt ~3.45:1, dưới ngưỡng AA 4.5:1 cho chữ nhỏ. */
+  --color-secondary-text: #3D6B4C;
+  --color-accent: #E48692;
+
+  --color-bg: #FAFAF7;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F1F5F0;
+  --color-border: #E4E9E2;
+
+  --color-text: #1C2420;
+  --color-text-muted: #6E7A74;
+
+  --color-warning: #C97A2E;
+  --color-warning-bg: #FBF1E4;
+  --color-danger: #C4463D;
+  --color-danger-bg: #FBEBE9;
+  --color-success-bg: #EAF3EA;
 }
 
 html,
 body {
   min-height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
 }

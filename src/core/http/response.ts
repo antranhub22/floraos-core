@@ -2,10 +2,19 @@ import { AppError } from "./errors"
 
 export function jsonResponse(
   body: unknown,
-  init?: { status?: number; headers?: Record<string, string> }
+  init?: { status?: number; headers?: Record<string, string | string[]> }
 ): Response {
   const headers = new Headers({ "content-type": "application/json; charset=utf-8" })
-  for (const [key, value] of Object.entries(init?.headers ?? {})) headers.append(key, value)
+  // `string[]` cho một khoá — cần khi một response phải đặt NHIỀU Set-Cookie
+  // cùng lúc (Unified Shell B1: cookie phiên hiện có + cookie JWT liên-app),
+  // điều `Headers.set` không làm được vì nó ghi đè thay vì cộng dồn.
+  for (const [key, value] of Object.entries(init?.headers ?? {})) {
+    if (Array.isArray(value)) {
+      for (const v of value) headers.append(key, v)
+    } else {
+      headers.append(key, value)
+    }
+  }
   return new Response(JSON.stringify(body), { status: init?.status ?? 200, headers })
 }
 
