@@ -13,7 +13,10 @@ import { importAnalyses } from "@/modules/avi-gift-import/use-cases/import-analy
 //
 //   1. python3 scripts/nap-avi-gift/doc-phan-tich.py \
 //        "<thư mục FloraOS Vận hành>" scripts/nap-avi-gift/du-lieu-trung-gian
-//   2. npx tsx scripts/nap-avi-gift-phan-tich.ts --org-id=<uuid AVI GIFT>
+//   2. npm run nap:phan-tich -- --org-id=<uuid AVI GIFT>
+//
+// Dùng `npm run` chứ không `npx tsx` trực tiếp: script npm mang theo cờ
+// `--env-file-if-exists=.env` (xem `package.json`).
 //
 // Chạy SAU `nap-avi-gift-vao-core.ts` (danh mục giá): năm trong tám mã đã có
 // sẵn ở đó, lượt này nối vào chứ không tạo trùng. Ba mã còn lại (`GHTM`,
@@ -59,8 +62,8 @@ async function resolveContext(organizationId: string): Promise<TenantContext & {
 async function main(): Promise<void> {
   const organizationId = argValue("org-id")
   if (!organizationId) {
-    console.error("Dùng: npx tsx scripts/nap-avi-gift-phan-tich.ts --org-id=<uuid AVI GIFT>")
-    console.error("(chạy `npx tsx scripts/nap-credit.ts --list` để xem danh sách tổ chức)")
+    console.error("Dùng: npm run nap:phan-tich -- --org-id=<uuid AVI GIFT>")
+    console.error("(chạy `npm run nap:credit -- --list` để xem danh sách tổ chức)")
     process.exitCode = 1
     return
   }

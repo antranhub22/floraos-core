@@ -4,7 +4,7 @@ import { scanStuckJobs } from "../src/modules/jobs/use-cases/scan-stuck-jobs"
 // `YC-J10`. Chạy định kỳ ngoài request HTTP — ví dụ cron mỗi 5 phút (dòng
 // crontab, KHÔNG đặt trong khối /** */ — "*" liền "/" đóng khối sớm):
 //
-//   (mỗi-5-phút) cd /path/floraos-core && npx tsx scripts/scan-stuck-jobs.ts
+//   (mỗi-5-phút) cd /path/floraos-core && npm run quet-job-treo
 //
 // Không có tiến trình này thì một worker chết để lại job treo vĩnh viễn ở
 // `PROCESSING` (đặc tả 05 mục 7).

@@ -5,8 +5,12 @@ import { OrganizationRepository } from "@/modules/organization/infra/organizatio
  * Nạp credit cho một tổ chức. Thao tác của NGƯỜI VẬN HÀNH NỀN TẢNG — chạy
  * tay trên máy có quyền truy cập cơ sở dữ liệu, không qua HTTP.
  *
- *   npx tsx scripts/nap-credit.ts --org-id=<uuid> --amount=<số nguyên dương>
- *   npx tsx scripts/nap-credit.ts --list          # xem số dư mọi tổ chức
+ *   npm run nap:credit -- --org-id=<uuid> --amount=<số nguyên dương>
+ *   npm run nap:credit -- --list          # xem số dư mọi tổ chức
+ *
+ * Dùng `npm run` chứ không `npx tsx` trực tiếp: script npm mang theo cờ
+ * `--env-file-if-exists=.env` (xem `package.json`). Chạy thẳng `npx tsx` sẽ
+ * ném ngay ở `src/lib/env.ts` vì không biến môi trường nào được nạp.
  *
  * Vì sao là script chứ không phải endpoint (chốt với anh Tony 09/10): mở
  * endpoint đòi một mã năng lực "quản trị nền tảng" mà bộ 114 mã chưa có, và
@@ -55,8 +59,8 @@ async function main(): Promise<void> {
   const amountRaw = argValue("amount")
 
   if (!organizationId || !amountRaw) {
-    console.error("Dùng: npx tsx scripts/nap-credit.ts --org-id=<uuid> --amount=<số nguyên dương>")
-    console.error("      npx tsx scripts/nap-credit.ts --list")
+    console.error("Dùng: npm run nap:credit -- --org-id=<uuid> --amount=<số nguyên dương>")
+    console.error("      npm run nap:credit -- --list")
     process.exitCode = 1
     return
   }

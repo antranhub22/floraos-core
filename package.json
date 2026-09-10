@@ -12,6 +12,10 @@
     "test:harvest": "tsx --test tests/maChucNang.test.ts",
     "test:tenant": "vitest run tests/tenant",
     "test:e2e": "playwright test",
+    "nap:danh-muc": "tsx --env-file-if-exists=.env scripts/nap-avi-gift-vao-core.ts",
+    "nap:phan-tich": "tsx --env-file-if-exists=.env scripts/nap-avi-gift-phan-tich.ts",
+    "nap:credit": "tsx --env-file-if-exists=.env scripts/nap-credit.ts",
+    "quet-job-treo": "tsx --env-file-if-exists=.env scripts/scan-stuck-jobs.ts",
     "db:push": "prisma db push",
     "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "db:studio": "prisma studio"

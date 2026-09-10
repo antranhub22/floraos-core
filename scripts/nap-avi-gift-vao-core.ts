@@ -15,7 +15,11 @@ import type { CatalogSourceRow } from "@/modules/avi-gift-import/domain/catalog-
 //
 //   1. python3 scripts/nap-avi-gift/doc-excel.py \
 //        "<thư mục FloraOS Vận hành>" scripts/nap-avi-gift/du-lieu-trung-gian
-//   2. npx tsx scripts/nap-avi-gift-vao-core.ts [--org-id=<uuid có sẵn>]
+//   2. npm run nap:danh-muc -- [--org-id=<uuid có sẵn>]
+//
+// Dùng `npm run` chứ không `npx tsx` trực tiếp: script npm mang theo cờ
+// `--env-file-if-exists=.env`, mà `src/lib/env.ts` thì bắt buộc
+// DATABASE_URL/SESSION_SECRET/INTEGRATION_TOKEN_SECRET ngay lúc import.
 //
 // Không đọc thẳng .xlsx ở đây — bước 1 (Python, `openpyxl`) đã chuẩn hoá
 // thành `catalog.json`. Adapter một chiều: script này chỉ ĐỌC JSON, không có
@@ -60,7 +64,7 @@ async function resolveContext(existingOrgId: string | null): Promise<TenantConte
   console.log(`Tổ chức này dựng với credit_balance = 0 và workspace PRODUCTION,`)
   console.log(`nên MỌI lượt phân tích ảnh sẽ bị chặn "Không đủ credit" cho tới`)
   console.log(`khi nạp credit:`)
-  console.log(`  npx tsx scripts/nap-credit.ts --org-id=${bootstrap.organizationId} --amount=<số>`)
+  console.log(`  npm run nap:credit -- --org-id=${bootstrap.organizationId} --amount=<số>`)
   console.log("=".repeat(72))
   return {
     organizationId: bootstrap.organizationId,
