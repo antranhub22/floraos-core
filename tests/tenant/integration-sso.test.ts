@@ -152,11 +152,16 @@ describe("cách ly tenant — Integration Layer qua SSO", () => {
   it("khối pricing KHÔNG vượt ranh giới core, dù người gọi có L5 thật", async () => {
     await seedProduct(a, "A-001", "Bó hồng Alpha")
 
+    // `filterProductLookup` cắt khối giá bằng cách đặt `pricing: null` và kê
+    // tên trường bị cắt ở `redacted_fields` — nó KHÔNG bỏ hẳn khoá. Nên phép
+    // thử ở đây soi GIÁ TRỊ, không soi sự tồn tại của khoá.
+
     // Qua chính phiên người dùng ở core: người sáng lập có `L5` nên THẤY giá.
     const trongCore = await readJson(
       await listProductsBySession(withSession(`${BASE}/products?status=ACTIVE`, a.token))
     )
-    expect((trongCore.data as Array<Record<string, unknown>>)[0]).toHaveProperty("pricing")
+    const sanPhamTrongCore = (trongCore.data as Array<Record<string, unknown>>)[0]
+    expect(sanPhamTrongCore?.pricing).not.toBeNull()
 
     // Qua Integration API bằng chính JWT của người ấy: KHÔNG thấy giá.
     const quaBien = await readJson(
@@ -169,7 +174,8 @@ describe("cách ly tenant — Integration Layer qua SSO", () => {
     )
     const sanPham = (quaBien.data as Array<Record<string, unknown>>)[0]
     expect(sanPham).toBeDefined()
-    expect(sanPham).not.toHaveProperty("pricing")
+    expect(sanPham?.pricing).toBeNull()
+    expect(sanPham?.redacted_fields).toContain("pricing")
   })
 
   it("BrandProfile đọc qua JWT của B trả đúng hồ sơ của B, không phải của A", async () => {
