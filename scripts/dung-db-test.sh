@@ -35,7 +35,22 @@ fi
 
 # Đẩy lược đồ. `--accept-data-loss` an toàn ở ĐÂY và chỉ ở đây: database này
 # tồn tại để bị xoá sạch trước mỗi ca thử, không giữ dữ liệu của ai.
-DATABASE_URL="$URL_TEST" npx prisma db push --skip-generate --accept-data-loss
+#
+# KHÔNG có `--skip-generate`: Prisma 7 bỏ cờ đó. Truyền vào thì CLI in trang
+# trợ giúp và không đẩy gì cả — database được tạo nhưng RỖNG, và lỗi chỉ lộ ra
+# ở `npm run test:tenant` dưới dạng `relation "integration_tokens" does not
+# exist`. Gặp thật 09/10.
+DATABASE_URL="$URL_TEST" npx prisma db push --accept-data-loss
+
+# Nghiệm thu tại chỗ: một bảng có thật thì mới coi là xong. Không tin mã thoát
+# của lệnh trên một mình — chính cờ sai ở trên đã từng "thành công" mà không
+# tạo bảng nào.
+if ! docker compose exec -T db psql -U floraos -d "$TEN_DB" -tAc \
+       "SELECT to_regclass('public.integration_tokens')" | grep -q integration_tokens; then
+  echo "" >&2
+  echo "ĐẨY LƯỢC ĐỒ HỎNG: database $TEN_DB vẫn chưa có bảng. Xem lỗi phía trên." >&2
+  exit 1
+fi
 
 echo ""
 echo "Xong. npm run test:tenant từ giờ chạy trên $TEN_DB, không đụng dữ liệu phát triển."
