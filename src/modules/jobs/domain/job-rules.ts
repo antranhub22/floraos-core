@@ -51,3 +51,42 @@ export function isStuck(
 }
 
 export const STUCK_JOB_TIMEOUT_MS = STUCK_TIMEOUT_MS
+
+/** Tên chỉ mục duy nhất chặn hai job cùng `Idempotency-Key`
+ *  (`@@unique([organization_id, feature, idempotency_key])`,
+ *  `prisma/schema.prisma`). */
+const IDEMPOTENCY_KEY_FIELDS = ["organization_id", "feature", "idempotency_key"] as const
+
+/**
+ * Hai request cùng `Idempotency-Key` gửi ĐỒNG THỜI đều qua được cửa kiểm
+ * "đã có job chưa" của `enqueueJob` (cửa đó đọc trước khi mở giao dịch), rồi
+ * cái thua vỡ ở chỉ mục duy nhất. Đó là hành vi ĐÚNG về dữ liệu — không job
+ * nào bị tạo hai lần, không tổ chức nào bị trừ credit hai lần vì giao dịch
+ * cuộn lại — nhưng nếu để lỗi đó nổi lên thì client nhận 500 thay vì nhận
+ * lại chính job đã tạo, đúng ngữ nghĩa của `Idempotency-Key` (`YC-U7`).
+ *
+ * Hàm này nhận diện đúng lỗi đó để `enqueueJob` đọc lại job của người thắng
+ * và trả về như một lượt trùng lặp bình thường.
+ *
+ * Nhận diện bằng HÌNH DẠNG lỗi (`code === "P2002"` + danh sách trường), không
+ * import lớp lỗi của Prisma: `domain/` không được import hạ tầng
+ * (`AGENTS.md`), và `tests/tenant/khong-import-prisma-ngoai-infra.test.ts`
+ * khoá luật đó bằng test.
+ */
+export function isDuplicateIdempotencyError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false
+  const candidate = error as { code?: unknown; meta?: { target?: unknown } }
+  if (candidate.code !== "P2002") return false
+
+  const target = candidate.meta?.target
+  // Postgres qua Prisma trả `target` là mảng tên cột. Một số đường trả chuỗi
+  // (tên chỉ mục) — chấp nhận cả hai, và chấp nhận cả khi thiếu `target`
+  // (chỉ `generation_jobs` mới đi qua đường này trong `enqueueJob`).
+  if (Array.isArray(target)) {
+    return IDEMPOTENCY_KEY_FIELDS.every((field) => target.includes(field))
+  }
+  if (typeof target === "string") {
+    return IDEMPOTENCY_KEY_FIELDS.every((field) => target.includes(field))
+  }
+  return target === undefined
+}

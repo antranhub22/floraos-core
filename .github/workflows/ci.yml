@@ -23,6 +23,11 @@ jobs:
     env:
       DATABASE_URL: postgresql://floraos:floraos@localhost:5432/floraos
       SESSION_SECRET: ci-only-not-a-real-secret
+      # P7 (YC-T8) — `src/lib/env.ts` BẮT BUỘC biến này. Thiếu nó thì bước
+      # `npm run db:seed` ném ngay ở dòng import, trước cả `typecheck`, và
+      # cổng bắt buộc `test:tenant` không bao giờ chạy tới. Khoá riêng, không
+      # dùng lại SESSION_SECRET — giữ đúng lý do tách khoá của P7.
+      INTEGRATION_TOKEN_SECRET: ci-only-not-a-real-integration-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

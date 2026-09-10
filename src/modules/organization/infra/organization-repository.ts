@@ -71,6 +71,32 @@ export class OrganizationRepository {
     return result.count > 0
   }
 
+  /**
+   * Nạp credit cho một tổ chức — thao tác của NGƯỜI VẬN HÀNH NỀN TẢNG, không
+   * của người dùng trong tổ chức. Vì thế nhận thẳng `organizationId` chứ
+   * không nhận `TenantContext`: người chạy nó đứng ngoài mọi tổ chức, giống
+   * `create()` ngay trên.
+   *
+   * Không có endpoint HTTP nào gọi hàm này (chốt với anh Tony 09/10): đường
+   * duy nhất là `scripts/nap-credit.ts`, chạy tay trên máy có quyền truy cập
+   * cơ sở dữ liệu. Mở nó thành endpoint đòi một khái niệm "quản trị nền
+   * tảng" mà bộ 114 mã năng lực chưa có.
+   *
+   * Trả số dư mới, hoặc `null` nếu không có tổ chức nào mang `id` đó.
+   */
+  async topUpCredit(organizationId: string, amount: number): Promise<number | null> {
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new RangeError("Số credit nạp phải là số nguyên dương")
+    }
+    const result = await this.db.organizations.updateMany({
+      where: { id: organizationId },
+      data: { credit_balance: { increment: amount } },
+    })
+    if (result.count === 0) return null
+    const organization = await this.db.organizations.findUnique({ where: { id: organizationId } })
+    return organization?.credit_balance ?? null
+  }
+
   /** Hoàn credit — job bị Identity Guard từ chối, quyết định D3. */
   async refundCredit(ctx: TenantContext, amount: number): Promise<void> {
     if (amount <= 0) return

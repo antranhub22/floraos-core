@@ -216,6 +216,56 @@ describe("cách ly tenant — Integration Layer (P7)", () => {
     expect(deniedResponse.status).toBe(403)
   })
 
+  it("GET /integration/brand-profile đọc được bằng CẢ HAI loại token (đặc tả 08 mục 4)", async () => {
+    await putBrandProfile(
+      withSession(`${BASE}/brand-profile`, a.token, {
+        method: "PUT",
+        body: JSON.stringify({ display_name: "Alpha Florist", primary_color: "#1A73E8" }),
+      })
+    )
+
+    const localbudd = await readJson(
+      await issueToken(
+        withSession(`${BASE}/integration-tokens`, a.token, {
+          method: "POST",
+          body: JSON.stringify({ client: "LOCALBUDD" }),
+        })
+      )
+    )
+    const socialflow = await readJson(
+      await issueToken(
+        withSession(`${BASE}/integration-tokens`, a.token, {
+          method: "POST",
+          body: JSON.stringify({ client: "SOCIALFLOW" }),
+        })
+      )
+    )
+
+    // Khác `business-profile` (chỉ LOCALBUDD): bộ nhận diện thương hiệu là
+    // thứ SocialFlow cần để dựng nội dung, nên cả hai engine đều đọc được.
+    for (const token of [localbudd.token as string, socialflow.token as string]) {
+      const response = await getIntegrationBrandProfile(
+        withBearer(`${BASE}/integration/brand-profile`, token)
+      )
+      expect(response.status).toBe(200)
+      expect((await readJson(response)).display_name).toBe("Alpha Florist")
+    }
+
+    // Token của tổ chức B không bao giờ thấy hồ sơ của A (`YC-T4`).
+    const foreign = await readJson(
+      await issueToken(
+        withSession(`${BASE}/integration-tokens`, b.token, {
+          method: "POST",
+          body: JSON.stringify({ client: "LOCALBUDD" }),
+        })
+      )
+    )
+    const foreignResponse = await getIntegrationBrandProfile(
+      withBearer(`${BASE}/integration/brand-profile`, foreign.token as string)
+    )
+    expect((await readJson(foreignResponse)).display_name).not.toBe("Alpha Florist")
+  })
+
   it("GET /integration/products/:id/master-image trả 404 khi chưa có Master Image APPROVED (nợ #30) và khi sản phẩm thuộc tổ chức khác", async () => {
     const created = await readJson(
       await createProduct(

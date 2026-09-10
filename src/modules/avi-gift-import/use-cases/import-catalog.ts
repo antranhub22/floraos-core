@@ -3,6 +3,7 @@ import {
   mapCatalogRowToProduct,
   validateCatalogRow,
   type CatalogSourceRow,
+  type ProductImportRow,
 } from "@/modules/avi-gift-import/domain/catalog-mapping"
 import { ProductRepository } from "@/modules/products/infra/product-repository"
 
@@ -37,19 +38,33 @@ export async function importCatalog(
   const failed: Array<{ code: string; error: string }> = []
   const dataWarnings: string[] = []
 
+  // Map TOÀN BỘ trước khi chạm cơ sở dữ liệu: một dòng hỏng thì biết ngay ở
+  // đây, không phải sau khi đã ghi vài trăm dòng.
+  const mappedRows: ProductImportRow[] = []
   for (const row of rows) {
     dataWarnings.push(...validateCatalogRow(row))
-
-    let mapped
     try {
-      mapped = mapCatalogRowToProduct(row, importedAt)
+      mappedRows.push(mapCatalogRowToProduct(row, importedAt))
     } catch (error) {
       failed.push({ code: row.code || "(rỗng)", error: (error as Error).message })
-      continue
     }
+  }
 
-    const existing = await repo.findByCode(ctx, mapped.code)
-    if (existing) {
+  // Một lượt đọc cho cả danh mục thay vì một lượt mỗi dòng — xem
+  // `ProductRepository.listExistingCodes`. Vẫn giữ nguyên tính idempotent:
+  // mã đã có thì bỏ qua, không ghi đè.
+  const existingCodes = await repo.listExistingCodes(
+    ctx,
+    mappedRows.map((row) => row.code)
+  )
+
+  // Hai dòng cùng mã trong CÙNG tệp nguồn: dòng đầu tạo, dòng sau tính là
+  // bỏ qua — nếu chỉ dựa vào `existingCodes` đọc lúc đầu thì dòng sau sẽ
+  // chạy `create` và vỡ ở `@@unique([organization_id, code])`.
+  const writtenInThisRun = new Set<string>()
+
+  for (const mapped of mappedRows) {
+    if (existingCodes.has(mapped.code) || writtenInThisRun.has(mapped.code)) {
       skippedExisting += 1
       continue
     }
@@ -60,6 +75,7 @@ export async function importCatalog(
       status: mapped.status,
       attributes: mapped.attributes as unknown as Record<string, unknown>,
     })
+    writtenInThisRun.add(mapped.code)
     created += 1
   }
 

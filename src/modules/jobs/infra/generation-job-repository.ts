@@ -1,4 +1,4 @@
-import type { generation_jobs, job_status } from "./entities"
+import type { generation_jobs } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"

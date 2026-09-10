@@ -42,8 +42,30 @@
 | 35 | `bootstrapAviGiftOrganization` (P8) sinh mật khẩu tạm ngẫu nhiên cho tài khoản admin AVI GIFT (`antranhub@gmail.com`) — core chưa có luồng "bắt buộc đổi mật khẩu lần đăng nhập đầu" | Ngoài phạm vi P8 (nạp dữ liệu); chưa có đặc tả nào cho luồng đổi mật khẩu bắt buộc ở core | Trước khi tài khoản admin AVI GIFT dùng thật — anh Tony đổi mật khẩu ngay sau lần đăng nhập đầu, thủ công, cho tới khi luồng này có |
 | 36 | `FloraOS Vận hành/he_thong.json` (dữ liệu vận hành thật của AVI GIFT, đọc trong lúc khảo sát P8) chứa `openai_api_key` ở dạng CHUỖI THÔ, không mã hoá | Phát hiện ngoài ý muốn lúc đọc cấu trúc thư mục nguồn cho P8 — không phải một phần của lượt nạp (script `doc-excel.py` không đọc tệp này) | **Khẩn** — anh Tony xoay khoá OpenAI này ngay trên dashboard OpenAI, không chờ tới lượt nạp P8 tiếp theo. Không tệp nào trong `scripts/nap-avi-gift/` được đọc hay chép `he_thong.json` |
 
+| 37 | Nạp credit cho một tổ chức chỉ làm được bằng `scripts/nap-credit.ts` chạy tay trên máy có quyền truy cập cơ sở dữ liệu — không có endpoint HTTP nào | Chốt với anh Tony 09/10 (AskUserQuestion, phiên soát P1–P8): mở endpoint đòi một mã năng lực "quản trị nền tảng" mà bộ 114 mã chưa có, VÀ một khái niệm quản trị đứng NGOÀI mọi tổ chức mà đặc tả chưa định nghĩa — cả hai là thay đổi kiến trúc, không phải việc mở khoá vận hành. Script gọi `OrganizationRepository.topUpCredit`, đường duy nhất | Khi có mô hình bán hàng thật (gói credit, thanh toán) — lúc đó mới cần một mặt quản trị nền tảng đúng nghĩa |
+| 38 | `bootstrapAviGiftOrganization` dựng tổ chức với `credit_balance = 0` và workspace `PRODUCTION`, nên MỌI `enqueueJob` bị `quotaExceeded("Không đủ credit")` cho tới khi có người chạy `scripts/nap-credit.ts` | Con số credit khởi tạo là quyết định kinh doanh, không phải giá trị kỹ thuật — cấy một hằng số vào mã là đoán thay chủ sản phẩm. `nap-avi-gift-vao-core.ts` in sẵn lệnh nạp kèm `organization_id` ngay sau khi bootstrap để không ai quên | Trước ngày cắt (P11) — anh Tony chốt số credit cấp cho AVI GIFT và chạy lệnh |
+
 Đã trả ngày 09/09 (P1): nợ #1 — `npm run test:tenant` nay xanh thật trên bộ test cách ly, tệp thất bại có chủ đích đã gỡ.
 
 Đã trả ngày 09/09: con số trần cứng (18) · dải mã `E1–E8` · đường dẫn `maChucNang.ts` · hạng thu hoạch `count_engine` và `color_engine` · quyết định D1, D2, D3, D4.
 
 Đã trả ngày 09/09 (P5): sự cố sandbox `Cannot find module '@rollup/rollup-linux-arm64-gnu'` chặn `npx vitest`/`npx tsc` — sửa bằng `npm install @rollup/rollup-linux-arm64-gnu --no-save` (kiến trúc arm64 sai trong `node_modules` đã cài sẵn), cho phép chạy thật `vitest`/`tsc --noEmit` trong sandbox từ nay, không còn phải viết mã rồi để đó chưa xác minh được kiểu.
+
+Đã trả ngày 09/10 (phiên soát P1–P8):
+
+- **CI trên `main` đỏ từ P7** — `.github/workflows/ci.yml` thiếu `INTEGRATION_TOKEN_SECRET` mà
+  `src/lib/env.ts` bắt buộc từ P7. Bước `npm run db:seed` ném ở dòng import, TRƯỚC `typecheck`, nên
+  cổng bắt buộc `test:tenant` chưa từng chạy trên CI suốt P7 và P8. Đã thêm biến vào workflow.
+- **P8 không có ca thử nào chạm cơ sở dữ liệu** — đã thêm `tests/tenant/avi-gift-import.test.ts`
+  (9 ca) và một ca còn thiếu cho `GET /integration/brand-profile`.
+- **`enqueueJob` trả 500 khi hai request cùng `Idempotency-Key` vào đồng thời** — cửa kiểm trùng lặp
+  đọc TRƯỚC giao dịch nên cả hai qua được, người thua vỡ ở chỉ mục duy nhất. Dữ liệu vẫn đúng (giao
+  dịch cuộn lại, không trừ credit hai lần) nhưng mã lỗi sai. Đã bắt và trả lại job của người thắng
+  (`isDuplicateIdempotencyError`, thuần, có test).
+- **`importCatalog` chạy 1.316 lượt `findByCode`** — đổi sang `ProductRepository.listExistingCodes`
+  (một lượt `IN (…)` mỗi 500 mã), và chặn luôn trường hợp hai dòng trùng mã trong CÙNG tệp nguồn
+  (trước đó sẽ vỡ ở `@@unique([organization_id, code])`).
+- **`next.config.ts`** — `experimental.typedRoutes` đã dời lên cấp cao nhất ở Next 16.3.
+- **Số liệu nguồn AVI GIFT ghi sai trong `TRANG_THAI.md`** — BOM thật là 5.862 dòng/1.297 mã, không
+  phải 5.872/1.300. Ghi thêm: chỉ 27/1.316 SKU có đủ cả Sàn và Trần (nên chỉ 27 dòng nhận
+  `attributes.priceGuard`), và 3 SKU không có Giá bán.

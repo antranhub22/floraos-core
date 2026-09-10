@@ -56,6 +56,11 @@ async function resolveContext(existingOrgId: string | null): Promise<TenantConte
   console.log(`Tài khoản admin: ${ADMIN_EMAIL}`)
   console.log(`Mật khẩu tạm (đổi ngay sau khi đăng nhập lần đầu):`)
   console.log(`  ${bootstrap.temporaryPassword}`)
+  console.log("")
+  console.log(`Tổ chức này dựng với credit_balance = 0 và workspace PRODUCTION,`)
+  console.log(`nên MỌI lượt phân tích ảnh sẽ bị chặn "Không đủ credit" cho tới`)
+  console.log(`khi nạp credit:`)
+  console.log(`  npx tsx scripts/nap-credit.ts --org-id=${bootstrap.organizationId} --amount=<số>`)
   console.log("=".repeat(72))
   return {
     organizationId: bootstrap.organizationId,

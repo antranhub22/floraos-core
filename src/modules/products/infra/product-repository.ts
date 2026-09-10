@@ -68,6 +68,28 @@ export class ProductRepository {
   }
 
   /**
+   * Tập mã đã tồn tại trong tổ chức, trong SỐ mã được hỏi — dùng cho lượt
+   * nạp hàng loạt (P8): 1.316 lần `findByCode` là 1.316 lượt round-trip,
+   * một lần `findMany` với `code IN (…)` là một lượt.
+   *
+   * Cắt thành lô để câu SQL không phình vô hạn khi danh mục lớn dần. Chỉ
+   * `select` cột `code` — không kéo về `attributes` (tới 4KB mỗi dòng) chỉ
+   * để hỏi "đã có chưa".
+   */
+  async listExistingCodes(ctx: TenantContext, codes: string[]): Promise<Set<string>> {
+    const found = new Set<string>()
+    const CHUNK = 500
+    for (let i = 0; i < codes.length; i += CHUNK) {
+      const rows = await this.db.products.findMany({
+        where: scopedWhere(ctx, { code: { in: codes.slice(i, i + CHUNK) } }),
+        select: { code: true },
+      })
+      for (const row of rows) found.add(row.code)
+    }
+    return found
+  }
+
+  /**
    * `GET /products` (`L1`, đặc tả 06 mục 6) — M03, tra cứu chạy trên
    * Postgres. Lọc theo `branch_id`/`status`/`category`, phân trang kiểu con
    * trỏ giống `GenerationJobRepository.list` (`limit + 1` để biết còn trang
