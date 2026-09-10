@@ -34,7 +34,9 @@ Tài liệu hiện có (`UNIFIED_SHELL.md` B3) mô tả Đợt 3 như "một mid
 | `brand_kit.py` | 5 | 5 |
 | **Tổng** | **75** | **14** |
 
-**61 trên 75 route không có khái niệm tổ chức nào.** D1 (A1–A7) đã làm sạch tầng DỮ LIỆU và tầng AGENT — cột `organization_id` có mặt, sáu agent lọc đúng — nhưng tầng HTTP thì mới chạm tới 14 route.
+> **Sửa 09/10 sau khi làm E2:** bảng trên đếm bằng mắt và thiếu `analytics_store.py` (5 route) cùng một route dùng đường dẫn rỗng. Số đúng, sinh bằng `scripts/kiem_ke_route.py`: **75 route — 66 theo tổ chức, 7 trung tính, 2 quản trị máy chủ**; **52 route không nhắc tới `organization_id` ở đâu cả**. Bảng đầy đủ ở `SocialFlow/docs/KIEM_KE_ROUTE_DOT_3.md`.
+
+D1 (A1–A7) đã làm sạch tầng DỮ LIỆU và tầng AGENT — cột `organization_id` có mặt, sáu agent lọc đúng — nhưng tầng HTTP thì mới chạm tới 23 route, và "chạm" phần lớn nghĩa là NHẬN `organization_id` từ query của bên gọi, thứ E7 phải bỏ.
 
 ### 2.2 Lỗ rò nghiêm trọng nhất không phải thiếu xác thực, mà là endpoint thao-tác-theo-ID
 
@@ -92,8 +94,8 @@ Việc nặng nhất. Không rút gọn được: 61 route phải đi qua.
 
 | # | Việc | Phụ thuộc |
 |---|---|---|
-| E1 | Module xác minh JWT `floraos_sso` — HS256, đọc `SSO_SESSION_SECRET` dùng chung với core. **Dùng `hmac`/`hashlib`/`base64` của thư viện chuẩn, KHÔNG thêm PyJWT**: nó là bản dịch từng dòng của `floraos-core/src/modules/sso/infra/sso-jwt.ts` nên hai bên đối chiếu bằng mắt được, `hmac.compare_digest` đã cho so sánh chống đo thời gian, và `requirements.txt` không phải mọc thêm một phụ thuộc cho 25 dòng mã. Kèm test: chữ ký sai, payload sửa, hết hạn, hình dạng sai, `org` null | — |
-| E2 | **Kiểm kê 75 route thành bốn nhóm** trước khi sửa bất cứ route nào: (a) theo tổ chức — lấy org từ token; (b) trung tính — `/`, `/api/health`, `/api/video-providers`, `/api/avatar-catalog`; (c) quản trị máy chủ — `/api/config` đọc/ghi biến môi trường, không phải dữ liệu tổ chức; (d) chạy nền — điểm vào của APScheduler. Bảng này là đầu ra của E2, và là thứ review đối chiếu ở E8 | E1 |
+| E1 | ✅ **Xong 09/10** (`backend/sso_auth.py`, 32/32 test). Module xác minh JWT `floraos_sso` — HS256, đọc `SSO_SESSION_SECRET` dùng chung với core. **Dùng `hmac`/`hashlib`/`base64` của thư viện chuẩn, KHÔNG thêm PyJWT**: nó là bản dịch từng dòng của `floraos-core/src/modules/sso/infra/sso-jwt.ts` nên hai bên đối chiếu bằng mắt được, `hmac.compare_digest` đã cho so sánh chống đo thời gian, và `requirements.txt` không phải mọc thêm một phụ thuộc cho 25 dòng mã. Kèm test: chữ ký sai, payload sửa, hết hạn, hình dạng sai, `org` null | — |
+| E2 | ✅ **Xong 09/10.** **Kiểm kê 75 route thành bốn nhóm** trước khi sửa bất cứ route nào: (a) theo tổ chức — lấy org từ token; (b) trung tính — `/`, `/api/health`, `/api/video-providers`, `/api/avatar-catalog`; (c) quản trị máy chủ — `/api/config` đọc/ghi biến môi trường, không phải dữ liệu tổ chức; (d) chạy nền — điểm vào của APScheduler. Bảng này là đầu ra của E2, và là thứ review đối chiếu ở E8 | E1 |
 | E3 | `Depends(require_org)` của FastAPI: đọc cookie `floraos_sso` (host-only nên tự đi kèm giữa các cổng trên localhost), xác minh, trả `organization_id`. Áp lên toàn bộ nhóm (a). Route nào không xác minh được trả 401, không rơi về mặc định | E2 |
 | E4 | **Đóng lỗ thao-tác-theo-ID**: mọi truy vấn theo `{post_id}`/`{asset_id}`/`{job_id}` thêm `AND organization_id = ?`. Không tìm thấy trả 404, không phải 403 — cùng luật `YC-T4` của core: phân biệt hai thứ là xác nhận bản ghi tồn tại | E3 |
 | E5 | `video_jobs.organization_id` + index, qua `migrations.py` đúng khuôn A4; lọc theo tổ chức ở `video_jobs.py` và 13 route `heygen_routes.py` | E2 |
