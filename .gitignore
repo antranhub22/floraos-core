@@ -45,3 +45,9 @@ var/storage/
 # `python3 scripts/nap-avi-gift/doc-excel.py`, chứa dữ liệu giá/BOM thật của
 # AVI GIFT, không cần giữ một bản sao thứ hai ngoài cơ sở dữ liệu
 scripts/nap-avi-gift/du-lieu-trung-gian/
+
+# Python virtualenv của worker (dev only)
+workers/.venv-worker/
+
+# File tạm kiểm tra
+_tmp-*

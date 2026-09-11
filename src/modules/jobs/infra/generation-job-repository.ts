@@ -94,8 +94,8 @@ export class GenerationJobRepository {
   }
 
   /**
-   * `GET /jobs` (`G4` chỉ job của mình, `G5` toàn tổ chức — đặc tả 06 mục
-   * 7). `onlyMine` khi ngữ cảnh có `G4` mà không có `G5`; route quyết định
+   * `GET /jobs` (`G4` chỉ thấy job của mình, `G5` toàn tổ chức — đặc tả 06
+   * mục 7). `onlyMine` khi ngữ cảnh có `G4` mà không có `G5`; route quyết định
    * giá trị này, repository chỉ lọc theo nó.
    */
   list(
@@ -107,6 +107,27 @@ export class GenerationJobRepository {
       orderBy: [{ created_at: "desc" }, { id: "desc" }],
       take: options.limit,
       ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
+    })
+  }
+
+  /**
+   * Ứng viên hàng chờ duyệt M04a (`GET /media/optimizations`, `I2`, nợ #48).
+   * COMPLETED và không REJECTED (`REJECTED` không vào luồng duyệt — `YC-R5`)
+   * — use-case gọi hàm này còn lọc tiếp "Master Image đã duyệt hay chưa" vì
+   * `assets` không có quan hệ Prisma ngược lại đây để JOIN thẳng.
+   */
+  listCompletedNotRejected(
+    ctx: TenantContext,
+    options: { feature: string; limit: number }
+  ): Promise<generation_jobs[]> {
+    return this.db.generation_jobs.findMany({
+      where: scopedWhere(ctx, {
+        feature: options.feature,
+        status: "COMPLETED" as const,
+        NOT: { result: "REJECTED" },
+      }),
+      orderBy: [{ completed_at: "desc" }, { id: "desc" }],
+      take: options.limit,
     })
   }
 

@@ -36,6 +36,22 @@ export class ProductAnalysisRepository {
     return this.db.product_analyses.findFirst({ where: scopedWhere(ctx, { id }) })
   }
 
+  /**
+   * `GET /vision/analyses` (`H3`, nợ #48) — hàng chờ duyệt của màn "Duyệt".
+   * Chỉ `approval_state = PENDING`; không phải liệt kê toàn bộ lịch sử.
+   */
+  listPending(
+    ctx: TenantContext,
+    options: { limit: number; cursor?: string | null }
+  ): Promise<product_analyses[]> {
+    return this.db.product_analyses.findMany({
+      where: scopedWhere(ctx, { approval_state: "PENDING" as approval_state }),
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+      take: options.limit,
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
+    })
+  }
+
   create(ctx: TenantContext, input: CreateProductAnalysisInput): Promise<product_analyses> {
     return this.db.product_analyses.create({
       data: scopedData(ctx, {

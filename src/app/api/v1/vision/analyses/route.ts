@@ -5,6 +5,7 @@ import { requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
 import { readIdempotencyKey } from "@/modules/jobs/domain/idempotency"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
+import { listPendingAnalyses } from "@/modules/products/use-cases/list-pending-analyses"
 import { requestAnalysis } from "@/modules/products/use-cases/request-analysis"
 
 const postSchema = z.object({
@@ -44,4 +45,24 @@ export const POST = handle(async (request) => {
     },
     { status: 201 }
   )
+})
+
+/**
+ * `GET /vision/analyses` (`H3`, nợ #48 — TECHNICAL_DEBT.md). Chỉ liệt kê
+ * hàng chờ duyệt (`approval_state = PENDING`) — màn "Duyệt" chưa có nơi nào
+ * khác để lấy dữ liệu này trước đợt này.
+ */
+export const GET = handle(async (request) => {
+  const { ctx } = await requireTenantContext(request)
+  requireCapability(ctx, "H3")
+
+  const url = new URL(request.url)
+  const limitParam = url.searchParams.get("limit")
+  const limit = limitParam === null ? undefined : Number(limitParam)
+  if (limit !== undefined && !Number.isInteger(limit)) {
+    throw validationFailed({ limit: "Phải là số nguyên" })
+  }
+
+  const result = await listPendingAnalyses(ctx, { limit, cursor: url.searchParams.get("cursor") })
+  return jsonResponse(result)
 })

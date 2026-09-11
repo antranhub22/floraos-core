@@ -4,6 +4,7 @@ import { validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
 import { readIdempotencyKey } from "@/modules/jobs/domain/idempotency"
+import { listPendingOptimizations } from "@/modules/media/use-cases/list-pending-optimizations"
 import { requestOptimization } from "@/modules/media/use-cases/request-optimization"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 
@@ -39,4 +40,24 @@ export const POST = handle(async (request) => {
     },
     { status: 201 }
   )
+})
+
+/**
+ * `GET /media/optimizations` (`I2`, nợ #48 — TECHNICAL_DEBT.md). Chỉ liệt
+ * kê hàng chờ duyệt — xem `list-pending-optimizations.ts` vì sao đây không
+ * phải một trang phân trang con trỏ thật.
+ */
+export const GET = handle(async (request) => {
+  const { ctx } = await requireTenantContext(request)
+  requireCapability(ctx, "I2")
+
+  const url = new URL(request.url)
+  const limitParam = url.searchParams.get("limit")
+  const limit = limitParam === null ? undefined : Number(limitParam)
+  if (limit !== undefined && !Number.isInteger(limit)) {
+    throw validationFailed({ limit: "Phải là số nguyên" })
+  }
+
+  const result = await listPendingOptimizations(ctx, { limit })
+  return jsonResponse(result)
 })
