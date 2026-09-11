@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, AlertTriangle, Clock } from "lucide-react"
+import { Cpu, Bell, AlertTriangle, Clock } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -163,6 +163,17 @@ export function AdminDashboard() {
             </div>
           </Card>
         )}
+
+        <Card
+          className="flex cursor-pointer items-center justify-between gap-2 p-[18px] hover:shadow-md"
+          onClick={() => router.push("/bo-may")}
+        >
+          <div className="flex items-center gap-2 text-text-muted">
+            <Cpu size={16} strokeWidth={1.8} />
+            <div className="text-[13.5px] font-semibold text-text">Bộ máy phân tích ảnh</div>
+          </div>
+          <div className="text-[13px] font-bold text-primary">Xem và đổi →</div>
+        </Card>
 
         <Card className="flex flex-col gap-3.5 p-[18px]">
           <div className="text-[14.5px] font-bold">Job đang chạy và job lỗi</div>

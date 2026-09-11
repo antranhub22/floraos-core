@@ -26,40 +26,48 @@ cùng lúc với khi có bộ ảnh vàng để đo đối chiếu ba kênh.
 from __future__ import annotations
 
 import base64
-import json
 import tempfile
-from pathlib import Path
 from typing import Any
 
 from openai import OpenAI
 
 from vision.analyzer.count_engine import trung_vi
+from vision.analyzer.dem_tong import dem_tong
 from vision.analyzer.color_engine import extract_palette, get_color_name_from_hex
+from vision.providers.chung import (
+    CANH_DAI_MAC_DINH_PX,
+    SO_LAN_THU_LAI,
+    TIMEOUT_GOI_GIAY,
+    doc_dap_ung,
+    nap_json,
+    nap_text,
+    thu_nho_anh,
+)
 
-CONTRACTS_DIR = Path(__file__).resolve().parent.parent / "contracts"
 NGUONG_CHAY_LUOT_HAI = 70  # confidence tổng dưới ngưỡng này thì chạy lượt hai
 NGUONG_CHAY_LUOT_HAI_THANH_PHAN = 60  # hoặc một thành phần bom có confidence dưới ngưỡng này
 
 
-def _load_json(name: str) -> dict:
-    return json.loads((CONTRACTS_DIR / name).read_text(encoding="utf-8"))
-
-
-def _load_text(name: str) -> str:
-    return (CONTRACTS_DIR / name).read_text(encoding="utf-8")
 
 
 class _Contract:
     """Nạp một lần, dùng lại cho mọi lượt gọi — không đọc đĩa mỗi request."""
 
     def __init__(self) -> None:
-        self.schema = _load_json("Schema.json")
-        self.prompt = _load_text("Prompt.md")
-        self.config = _load_json("config.json")
+        self.schema = nap_json("Schema.json")
+        self.prompt = nap_text("Prompt.md")
+        self.config = nap_json("config.json")
 
     @property
     def name(self) -> str:
         return self.schema["name"]
+
+    def tham_so(self, khoa: str, mac_dinh: Any) -> Any:
+        """`config.json` là nơi chỉnh tham số vận hành — chính tệp đó khai
+        "Sửa ở đây, không sửa trong mã". Trước đây tệp được nạp rồi không ai
+        đọc, nên mọi con số trong đó không có tác dụng gì."""
+        gia_tri = self.config.get(khoa)
+        return mac_dinh if gia_tri is None else gia_tri
 
 
 _contract: _Contract | None = None
@@ -146,9 +154,11 @@ class OpenAIStructuredProvider:
 
     name = "openai_structured"
 
-    def __init__(self, client: OpenAI | None = None, model: str = "gpt-4o") -> None:
-        self._client = client or OpenAI()
-        self._model = model
+    def __init__(self, client: OpenAI | None = None, model: str | None = None) -> None:
+        contract = _contract_singleton()
+        self._client = client or OpenAI(timeout=TIMEOUT_GOI_GIAY, max_retries=SO_LAN_THU_LAI)
+        self._model = model or contract.tham_so("model", "gpt-4o")
+        self._canh_dai_px = int(contract.tham_so("anh_canh_dai_px", CANH_DAI_MAC_DINH_PX))
 
     @property
     def model_version(self) -> str:
@@ -157,23 +167,31 @@ class OpenAIStructuredProvider:
     def analyze(self, image: bytes, context: dict[str, Any]) -> dict:
         contract = _contract_singleton()
 
-        with tempfile.NamedTemporaryFile(suffix=".jpg") as tmp:
+        # Bảng màu đo trên ảnh GỐC, không đo trên bản đã thu nhỏ: tỷ lệ diện
+        # tích từng cụm là số đưa vào prompt và số đó phải nói về ảnh thật.
+        with tempfile.NamedTemporaryFile(suffix=".img") as tmp:
             tmp.write(image)
             tmp.flush()
             palette_result = extract_palette(tmp.name)
 
+        anh_gui, mime = thu_nho_anh(image, self._canh_dai_px)
+
         palette_block = _measured_palette_block(palette_result)
         catalog_block = _catalog_block()
-        image_b64 = base64.b64encode(image).decode("ascii")
+        image_b64 = base64.b64encode(anh_gui).decode("ascii")
 
-        round_one = self._call(contract, palette_block, catalog_block, image_b64, temperature=0)
+        round_one = self._call(contract, palette_block, catalog_block, image_b64, mime, temperature=0)
         result = round_one
         if _needs_second_round(round_one):
             round_two = self._call(
-                contract, palette_block, catalog_block, image_b64, temperature=0.2
+                contract, palette_block, catalog_block, image_b64, mime, temperature=0.2
             )
             _reconcile_quantity(result, round_two)
 
+        # Ba tổng đếm cộng SAU khi đồng thuận xong, không trước: lượt hai có
+        # thể đổi `quantity` từng dòng, và một tổng tính trước sẽ không còn
+        # khớp với các dòng nó cộng từ đó.
+        result.update(dem_tong(result))
         return result
 
     def _call(
@@ -182,6 +200,7 @@ class OpenAIStructuredProvider:
         palette_block: str,
         catalog_block: str,
         image_b64: str,
+        mime: str,
         temperature: float,
     ) -> dict:
         response = self._client.chat.completions.create(
@@ -196,10 +215,10 @@ class OpenAIStructuredProvider:
                         {"type": "text", "text": f"{palette_block}\n\n{catalog_block}"},
                         {
                             "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
+                            "image_url": {"url": f"data:{mime};base64,{image_b64}"},
                         },
                     ],
                 },
             ],
         )
-        return json.loads(response.choices[0].message.content)
+        return doc_dap_ung(response)

@@ -2,6 +2,8 @@ import { notFound, validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
+import { OrganizationRepository } from "@/modules/organization/infra/organization-repository"
+import { resolveVisionEngine, type VisionEngine } from "@/modules/products/domain/vision-engine"
 import { ProductRepository } from "@/modules/products/infra/product-repository"
 
 export type RequestAnalysisInput = {
@@ -13,6 +15,7 @@ export type RequestAnalysisInput = {
 export type RequestAnalysisResult = {
   jobId: string
   status: string
+  engine: VisionEngine
   usage: { costCredit: number; balanceAfter: number | null }
 }
 
@@ -27,6 +30,11 @@ export type RequestAnalysisResult = {
  * Một job cho cả lô — `job_id` trả về số ít đúng theo ví dụ đặc tả 06 mục 8;
  * worker ghi một `product_analyses` cho MỖI ảnh trong `asset_ids` khi xử lý
  * xong, không phải một cho cả lô.
+ *
+ * Bộ máy phân tích CHỐT VÀO `payload` ngay lúc tạo job, không để worker tra
+ * lại lúc nhận việc. Điều hành đổi bộ máy giữa lúc một lô đang xếp hàng thì
+ * lô đó vẫn chạy bằng bộ đã chọn khi bấm nút — nếu không, hai ảnh trong
+ * cùng một lô có thể chạy bằng hai bộ khác nhau và không ai biết.
  */
 export async function requestAnalysis(
   ctx: TenantContext,
@@ -47,9 +55,18 @@ export async function requestAnalysis(
     if (!product) throw notFound()
   }
 
+  const organization = await new OrganizationRepository().current(ctx)
+  const engine = resolveVisionEngine(
+    (organization?.settings as Record<string, unknown> | null) ?? null
+  )
+
   const { job, usage } = await enqueueJob(ctx, {
     feature: "vision.analyze",
-    payload: { asset_ids: input.assetIds, product_id: input.productId ?? null },
+    payload: {
+      asset_ids: input.assetIds,
+      product_id: input.productId ?? null,
+      engine,
+    },
     productId: input.productId ?? null,
     idempotencyKey: input.idempotencyKey,
   })
@@ -57,6 +74,7 @@ export async function requestAnalysis(
   return {
     jobId: job.id,
     status: job.status,
+    engine,
     usage: { costCredit: usage.costCredit, balanceAfter: usage.balanceAfter },
   }
 }

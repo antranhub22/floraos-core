@@ -41,6 +41,7 @@ export const POST = handle(async (request) => {
     {
       job_id: result.jobId,
       status: result.status,
+      engine: result.engine,
       usage: { cost_credit: result.usage.costCredit, balance_after: result.usage.balanceAfter },
     },
     { status: 201 }

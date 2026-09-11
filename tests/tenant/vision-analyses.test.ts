@@ -8,6 +8,7 @@ import {
 } from "@/app/api/v1/vision/analyses/[id]/route"
 import { POST as approveAnalysisRoute } from "@/app/api/v1/vision/analyses/[id]/approve/route"
 import { POST as createAnalysisRoute } from "@/app/api/v1/vision/analyses/route"
+import { GET as getEngineRoute, PUT as putEngineRoute } from "@/app/api/v1/vision/engine/route"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { ProductAnalysisRepository } from "@/modules/products/infra/product-analysis-repository"
@@ -208,5 +209,109 @@ describe("cách ly tenant — M01 phân tích ảnh (P5)", () => {
     )
 
     expect(response.status).toBe(404)
+  })
+
+  describe("bộ máy phân tích — Điều hành chọn cho cả tổ chức (H4)", () => {
+    it("chưa chọn gì thì chạy bộ đã biết hành vi, và liệt kê đủ ba bộ", async () => {
+      const body = await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, a.token)))
+      expect(body.dang_dung).toBe("openai_structured")
+      expect((body.danh_sach as { key: string }[]).map((b) => b.key)).toEqual([
+        "openai_structured",
+        "openai_direct",
+        "local_cv",
+      ])
+    })
+
+    it("đổi bộ máy rồi đọc lại thấy đúng, và ghi audit_logs", async () => {
+      const res = await putEngineRoute(
+        withSession(`${BASE}/vision/engine`, a.token, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bo_may: "openai_direct" }),
+        })
+      )
+      expect(res.status).toBe(200)
+      expect((await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, a.token)))).dang_dung).toBe(
+        "openai_direct"
+      )
+      expect(
+        await prisma.audit_logs.count({
+          where: { organization_id: a.organizationId, action: "vision.engine.change" },
+        })
+      ).toBe(1)
+    })
+
+    it("đổi bộ máy KHÔNG xoá công tắc khác trong cùng khối settings", async () => {
+      await prisma.organizations.update({
+        where: { id: a.organizationId },
+        data: { settings: { cho_phep_tu_duyet: false } },
+      })
+      await putEngineRoute(
+        withSession(`${BASE}/vision/engine`, a.token, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bo_may: "local_cv" }),
+        })
+      )
+      const to = await prisma.organizations.findUnique({ where: { id: a.organizationId } })
+      const settings = to!.settings as Record<string, unknown>
+      expect(settings.cho_phep_tu_duyet).toBe(false)
+      expect(settings.bo_may_phan_tich).toBe("local_cv")
+    })
+
+    it("tên bộ máy không có trong danh sách bị từ chối", async () => {
+      const res = await putEngineRoute(
+        withSession(`${BASE}/vision/engine`, a.token, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bo_may: "gpt-9-sieu-cap" }),
+        })
+      )
+      expect(res.status).toBe(400)
+    })
+
+    it("lựa chọn của A không ảnh hưởng tổ chức B (YC-T4)", async () => {
+      await putEngineRoute(
+        withSession(`${BASE}/vision/engine`, a.token, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bo_may: "openai_direct" }),
+        })
+      )
+      const cuaB = await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, b.token)))
+      expect(cuaB.dang_dung).toBe("openai_structured")
+    })
+
+    it("bộ máy CHỐT vào payload của job lúc tạo, không tra lại lúc worker nhận việc", async () => {
+      await putEngineRoute(
+        withSession(`${BASE}/vision/engine`, a.token, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bo_may: "openai_direct" }),
+        })
+      )
+      const assetId = await seedAsset(a.ctx)
+      const tao = await readJson(
+        await createAnalysisRoute(
+          withSession(`${BASE}/vision/analyses`, a.token, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "idempotency-key": randomUUID() },
+            body: JSON.stringify({ asset_ids: [assetId], product_id: null }),
+          })
+        )
+      )
+      expect(tao.engine).toBe("openai_direct")
+
+      // Điều hành đổi bộ máy SAU khi job đã xếp hàng — job cũ không đổi theo.
+      await putEngineRoute(
+        withSession(`${BASE}/vision/engine`, a.token, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bo_may: "local_cv" }),
+        })
+      )
+      const job = await prisma.generation_jobs.findUnique({ where: { id: tao.job_id as string } })
+      expect((job!.payload as Record<string, unknown>).engine).toBe("openai_direct")
+    })
   })
 })

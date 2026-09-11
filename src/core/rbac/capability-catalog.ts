@@ -162,6 +162,7 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   H1: { name: "vision.analyze", group: "vision", label: "Chạy phân tích ảnh sản phẩm", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   H2: { name: "vision.result.edit", group: "vision", label: "Sửa kết quả phân tích trước khi duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   H3: { name: "product.approve", group: "vision", label: "Duyệt kết quả, ghi vào Product Master", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  H4: { name: "vision.engine.manage", group: "vision", label: "Chọn bộ máy phân tích ảnh dùng cho cả tổ chức", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // I — Tối ưu ảnh
   I1: { name: "media.optimize", group: "media", label: "Chạy job tối ưu ảnh", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   I2: { name: "media.approve", group: "media", label: "Nâng Master Image thành ảnh chính thức của sản phẩm", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },

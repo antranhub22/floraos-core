@@ -603,6 +603,12 @@ model product_analyses {
   organization organizations @relation(fields: [organization_id], references: [id])
   product      products?      @relation(fields: [product_id], references: [id])
 
+  // Một ảnh chỉ có đúng một kết quả trong một lượt job. Không có ràng buộc
+  // này thì một job lô hỏng giữa chừng rồi chạy lại (`POST /jobs/:id/retry`)
+  // sẽ ghi lần hai cho những ảnh đã phân tích xong ở lần trước — hàng chờ
+  // duyệt nhân đôi, và người duyệt không biết bản nào là bản nên duyệt.
+  // Worker dựa vào chính ràng buộc này để chạy lại an toàn (`ON CONFLICT`).
+  @@unique([job_id, asset_id])
   @@index([organization_id])
   @@index([organization_id, product_id])
   @@index([job_id])

@@ -1,4 +1,6 @@
-psycopg[binary]>=3.1
+# `run_worker` gọi `conn.notifies(timeout=…)` — tham số đó có từ psycopg 3.2.
+# Cài đúng 3.1.x thì worker ném TypeError ngay lần thăm dò rỗng đầu tiên.
+psycopg[binary]>=3.2
 pydantic>=2.6
 pillow>=10.2
 numpy>=1.26

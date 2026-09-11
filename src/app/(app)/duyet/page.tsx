@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Download, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
@@ -104,6 +104,24 @@ export default function DuyetPage() {
     }
   }
 
+  async function boPhanTich(id: string) {
+    setLoi(null)
+    setDangDuyet(id)
+    try {
+      const res = await fetch(`/api/v1/vision/analyses/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ly_do: null }),
+      })
+      if (!res.ok) throw new Error(`Không bỏ được kết quả (${res.status})`)
+      await napLai()
+    } catch (e) {
+      setLoi(e instanceof Error ? e.message : "Không bỏ được kết quả")
+    } finally {
+      setDangDuyet(null)
+    }
+  }
+
   const dangTai = analyses === null && optimizations === null && !khongCoQuyenNao
 
   return (
@@ -143,6 +161,16 @@ export default function DuyetPage() {
                       {a.provider} · {dinhDangGio(a.created_at)}
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    disabled={dangDuyet === a.id}
+                    onClick={() => boPhanTich(a.id)}
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt disabled:opacity-40"
+                    aria-label="Bỏ kết quả này"
+                    title="Bỏ kết quả này"
+                  >
+                    <XCircle size={18} strokeWidth={1.8} />
+                  </button>
                   <Button
                     size="sm"
                     disabled={dangDuyet === a.id}
@@ -153,6 +181,24 @@ export default function DuyetPage() {
                 </div>
               ))
             )}
+
+            {/* Cùng năng lực H3 với danh sách phía trên, nên hiện cùng chỗ.
+                Tệp CSV mã hoá UTF-8 kèm BOM — Excel mở thẳng, không cần
+                bước nhập dữ liệu nào.
+
+                Dùng `<a>` chứ không `<Link>`: đây là một lượt TẢI TỆP từ
+                route API, không phải điều hướng trang. `<Link>` chuyển hướng
+                phía client nên trình duyệt không bao giờ thấy
+                `content-disposition: attachment`, và tệp không được lưu. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a
+              href="/api/v1/vision/analyses/export"
+              download
+              className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-border px-3.5 py-2.5 text-[12.5px] font-semibold text-text-muted hover:bg-surface-alt"
+            >
+              <Download size={15} strokeWidth={1.9} />
+              Tải toàn bộ lượt phân tích để đối soát
+            </a>
           </Card>
         )}
 

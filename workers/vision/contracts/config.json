@@ -78,5 +78,16 @@
   "so_ban_chup_giu": 30,
   "_ghi_chu_muc_cap_vao_prompt": "Mức nhầm nào của sheet 08 được đưa vào prompt. Khối cặp dễ nhầm là khối chữ tốn nhất: 63 cặp khoảng 5.240 token, gửi lại ở cả ba lượt, tức 15.700 token mỗi ảnh. Đo trên 40 ảnh đã chạy: một ảnh trung vị chỉ đụng tới 4 cặp, cao nhất 13. Giữ riêng mức Cao còn 38 cặp và 3.237 token, rẻ hơn 38% khối này. Phép hậu kiểm CHƯA TÁCH CẶP DỄ LẪN vẫn dùng toàn bộ bảng nên không mất lưới an toàn. Khai rỗng hoặc bỏ khoá này thì gửi cả bảng như cũ. Đổi xong phải chạy lại src/do_dinh_danh.py để xem 66% và 61% có tụt không.",
   "muc_cap_vao_prompt": [],
-  "_ghi_chu_che_do_chay": "Hai khoá so_luot_phan_tich và luon_chay_du_luot quyết định phần lớn chi phí. Chúng là MẶC ĐỊNH; cờ dòng lệnh --tiet-kiem và --day-du thắng chúng, và file khởi chạy hỏi chọn mỗi lần nên không cần sửa file này. Đo trên nhật ký đã lưu: đủ 3 lượt cho mọi ảnh là 4 lần gọi và 0,089 USD một ảnh; chỉ chạy thêm khi có cảnh báo là 2,0-2,6 lần gọi và 0,026 USD. Chênh nhau 3,4 lần, tức 1.295 ảnh là 115 USD so với 34 USD."
+  "_ghi_chu_che_do_chay": "Hai khoá so_luot_phan_tich và luon_chay_du_luot quyết định phần lớn chi phí. Chúng là MẶC ĐỊNH; cờ dòng lệnh --tiet-kiem và --day-du thắng chúng, và file khởi chạy hỏi chọn mỗi lần nên không cần sửa file này. Đo trên nhật ký đã lưu: đủ 3 lượt cho mọi ảnh là 4 lần gọi và 0,089 USD một ảnh; chỉ chạy thêm khi có cảnh báo là 2,0-2,6 lần gọi và 0,026 USD. Chênh nhau 3,4 lần, tức 1.295 ảnh là 115 USD so với 34 USD.",
+  "_ghi_chu_local_cv": "Tham số riêng của bộ máy `local_cv` (Cục bộ, SAM2 + Florence-2). `sam2_checkpoint`/`sam2_model_config` KHÔNG có giá trị mặc định vì trọng số không nằm trên PyPI — tải theo hướng dẫn ở đầu `vision/providers/local_cv_segmenter.py` rồi điền đường dẫn thật. Bỏ trống thì `Sam2Segmenter` ném lỗi nói rõ thiếu khoá nào ngay lúc dựng, không chờ tới lúc suy luận mới báo.",
+  "sam2_checkpoint": "/Users/tuan/Projects/floraos-core/workers/vision/checkpoints/sam2.1_hiera_small.pt",
+  "sam2_model_config": "configs/sam2.1/sam2.1_hiera_s.yaml",
+  "local_cv_device": "cpu",
+  "sam2_dien_tich_toi_thieu_ty_le": 0.001,
+  "sam2_on_dinh_toi_thieu": 0.9,
+  "sam2_so_luong_toi_da": 40,
+  "florence2_model_id": "florence-community/Florence-2-base",
+  "florence2_task_prompt": "<CAPTION>",
+  "florence2_max_new_tokens": 64,
+  "florence2_bbox_dem_ty_le": 0.08
 }

@@ -48,6 +48,9 @@ scripts/nap-avi-gift/du-lieu-trung-gian/
 
 # Python virtualenv của worker (dev only)
 workers/.venv-worker/
+workers/.venv-local-cv/
+workers/vision/checkpoints/
+workers/tmp_smoke_test_*.py
 
 # File tạm kiểm tra
 _tmp-*

@@ -26,6 +26,21 @@ export function canApproveAnalysis(state: ApprovalState): boolean {
 }
 
 /**
+ * `POST /vision/analyses/:id/reject` (`H3`). Chỉ bản còn `PENDING` từ chối
+ * được.
+ *
+ * Bản `APPROVED` đã ghi vào Product Master; từ chối nó sau đó để lại một sản
+ * phẩm mang dữ liệu của một phân tích bị bác, mà không có đường nào rút lại
+ * — đó là việc của luồng thu hồi duyệt, không phải của từ chối.
+ *
+ * Bản `REJECTED` từ chối lại không đổi gì; trả 409 để người gọi biết trạng
+ * thái thật thay vì tưởng vừa làm được một việc.
+ */
+export function canRejectAnalysis(state: ApprovalState): boolean {
+  return state === "PENDING"
+}
+
+/**
  * Bản sửa của người thắng bản gốc của máy khi có — cặp *raw/edited* tách
  * biệt (`YC-R3`) chỉ có ý nghĩa nếu nơi đọc kết quả luôn ưu tiên `edited`.
  */
@@ -34,6 +49,31 @@ export function resolveEffectiveAnalysis(
   edited: Record<string, unknown> | null
 ): Record<string, unknown> {
   return edited ?? raw
+}
+
+/**
+ * `PATCH /vision/analyses/:id` thay NGUYÊN bản `edited`, và `approveAnalysis`
+ * đọc `edited` thay cho `raw` khi có. Hai điều đó cộng lại nghĩa là một bản
+ * sửa thiếu khoá sẽ âm thầm xoá dữ liệu khỏi Product Master: gửi
+ * `{ edited: { bom: … } }` mà quên `identity` thì sản phẩm được duyệt với
+ * `category`, `shape`, `facing`, `container` đều null, và không có gì trong
+ * luồng báo cho ai biết.
+ *
+ * Luật: bản sửa phải giữ đủ mọi khoá cấp một mà máy đã trả. Sửa giá trị thì
+ * tuỳ ý — đó là việc của người soát; bỏ bớt khoá thì không.
+ */
+export function missingKeysInEdit(
+  raw: Record<string, unknown>,
+  edited: Record<string, unknown>
+): string[] {
+  return Object.keys(raw).filter((key) => !(key in edited))
+}
+
+export function isValidAnalysisEdit(
+  raw: Record<string, unknown>,
+  edited: Record<string, unknown>
+): boolean {
+  return missingKeysInEdit(raw, edited).length === 0
 }
 
 export type ProductFieldsFromAnalysis = {

@@ -14,7 +14,7 @@ import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { JobEventRepository } from "@/modules/jobs/infra/job-event-repository"
 import { MEDIA_OPTIMIZE_FEATURE } from "@/modules/media/use-cases/request-optimization"
-import { refundRejectedJob } from "@/modules/media/use-cases/refund-rejected-job"
+import { refundJob } from "@/modules/usage/use-cases/refund-job"
 
 import { disconnectDatabase, prisma, resetDatabase } from "../helpers/database"
 import { createTenant, readJson, withBearer, withSession, type Tenant } from "../helpers/fixtures"
@@ -309,6 +309,38 @@ describe("cách ly tenant — M04a tối ưu ảnh và hai cổng (P9)", () => {
     })
   })
 
+  /**
+   * Dựng một job ĐÃ TRỪ CREDIT THẬT, qua đúng đường `POST /media/optimizations`
+   * → `enqueueJob`.
+   *
+   * `seedJobDaChay` gọi thẳng `GenerationJobRepository.create` nên không sinh
+   * dòng `usage` nào và không trừ credit — dùng nó để thử hoàn credit thì
+   * `refundJob` trả `khong-co-gi-de-hoan` và ca thử đỏ vì fixture, không phải
+   * vì mã sai.
+   *
+   * Workspace mặc định của `signUp` là `EXPERIENCE` (đường TRIAL, không đụng
+   * `credit_balance`) và `beforeEach` reset lại mỗi ca, nên phải chuyển sang
+   * `PRODUCTION` TRONG từng ca — cùng cái bẫy đã gặp ở P3/P5.
+   */
+  async function seedJobDaTruCredit(tenant: Tenant): Promise<{ jobId: string; soDuSauKhiTru: number }> {
+    await prisma.workspaces.update({
+      where: { id: tenant.ctx.workspaceId },
+      data: { kind: "PRODUCTION" },
+    })
+    const assetId = await seedAsset(tenant.ctx, null)
+    const body = await readJson(
+      await createOptimizationRoute(
+        withSession(`${BASE}/media/optimizations`, tenant.token, {
+          method: "POST",
+          headers: { "idempotency-key": randomUUID() },
+          body: JSON.stringify({ asset_id: assetId }),
+        })
+      )
+    )
+    const to = await prisma.organizations.findUnique({ where: { id: tenant.organizationId } })
+    return { jobId: body.job_id as string, soDuSauKhiTru: to!.credit_balance }
+  }
+
   describe("D3 — hoàn credit khi Guard từ chối", () => {
     it("hoàn đúng số credit đã trừ, ghi dòng REFUNDED, và idempotent", async () => {
       // Workspace mặc định của `signUp` là EXPERIENCE (đường TRIAL, không trừ
@@ -335,7 +367,7 @@ describe("cách ly tenant — M04a tối ưu ảnh và hai cổng (P9)", () => {
         data: { status: "COMPLETED", result: "REJECTED", completed_at: new Date() },
       })
 
-      const lanMot = await refundRejectedJob(a.ctx, job!.id)
+      const lanMot = await refundJob(a.ctx, job!.id)
       expect(lanMot.refunded).toBe(true)
 
       const sauKhiHoan = await prisma.organizations.findUnique({ where: { id: a.organizationId } })
@@ -345,7 +377,7 @@ describe("cách ly tenant — M04a tối ưu ảnh và hai cổng (P9)", () => {
       })).toBe(1)
 
       // Chạy lại không hoàn lần hai.
-      const lanHai = await refundRejectedJob(a.ctx, job!.id)
+      const lanHai = await refundJob(a.ctx, job!.id)
       expect(lanHai.refunded).toBe(false)
       const cuoi = await prisma.organizations.findUnique({ where: { id: a.organizationId } })
       expect(cuoi!.credit_balance).toBe(sauKhiHoan!.credit_balance)
@@ -353,11 +385,62 @@ describe("cách ly tenant — M04a tối ưu ảnh và hai cổng (P9)", () => {
 
     it("job KHÔNG bị từ chối thì không hoàn gì", async () => {
       const { jobId } = await seedJobDaChay(a, "SAFE")
-      const ketQua = await refundRejectedJob(a.ctx, jobId)
+      const ketQua = await refundJob(a.ctx, jobId)
       expect(ketQua.refunded).toBe(false)
       expect(await prisma.usage.count({
         where: { organization_id: a.organizationId, status: "REFUNDED" },
       })).toBe(0)
+    })
+
+    it("job bị huỷ khi còn xếp hàng được hoàn credit", async () => {
+      const { jobId, soDuSauKhiTru } = await seedJobDaTruCredit(a)
+      await prisma.generation_jobs.update({
+        where: { id: jobId },
+        data: { status: "CANCELLED", result: null, cancelled_at: new Date() },
+      })
+
+      const ketQua = await refundJob(a.ctx, jobId)
+      expect(ketQua.refunded).toBe(true)
+      if (ketQua.refunded) expect(ketQua.lyDo).toBe("bi-huy")
+
+      const sau = await prisma.organizations.findUnique({ where: { id: a.organizationId } })
+      expect(sau!.credit_balance).toBeGreaterThan(soDuSauKhiTru)
+      expect(await prisma.usage.count({
+        where: { organization_id: a.organizationId, job_id: jobId, status: "REFUNDED" },
+      })).toBe(1)
+    })
+
+    it("job hỏng vì lỗi kỹ thuật được hoàn credit", async () => {
+      const { jobId, soDuSauKhiTru } = await seedJobDaTruCredit(a)
+      await prisma.generation_jobs.update({
+        where: { id: jobId },
+        data: { status: "FAILED", result: null, error: "worker timeout" },
+      })
+
+      const ketQua = await refundJob(a.ctx, jobId)
+      expect(ketQua.refunded).toBe(true)
+      if (ketQua.refunded) expect(ketQua.lyDo).toBe("loi-ky-thuat")
+
+      const sau = await prisma.organizations.findUnique({ where: { id: a.organizationId } })
+      expect(sau!.credit_balance).toBeGreaterThan(soDuSauKhiTru)
+
+      // Chạy lại không hoàn lần hai.
+      expect((await refundJob(a.ctx, jobId)).refunded).toBe(false)
+      const cuoi = await prisma.organizations.findUnique({ where: { id: a.organizationId } })
+      expect(cuoi!.credit_balance).toBe(sau!.credit_balance)
+    })
+
+    it("job chưa trừ credit thì không có gì để hoàn, dù ở trạng thái thuộc diện", async () => {
+      // Workspace EXPERIENCE đi đường hạn mức TRIAL, `credit_balance` không
+      // đổi — ghi một dòng REFUNDED rỗng chỉ làm bẩn sổ.
+      const { jobId } = await seedJobDaChay(a, "SAFE")
+      await prisma.generation_jobs.update({
+        where: { id: jobId },
+        data: { status: "FAILED", result: null },
+      })
+      const ketQua = await refundJob(a.ctx, jobId)
+      expect(ketQua.refunded).toBe(false)
+      if (!ketQua.refunded) expect(ketQua.reason).toBe("khong-co-gi-de-hoan")
     })
   })
 })

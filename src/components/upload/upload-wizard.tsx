@@ -33,6 +33,26 @@ type Step = "upload" | "confirm" | "running" | "result"
 
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 const MAX_PHOTOS = 10
+const MAX_FILE_SIZE_MB = 20
+
+const NHIP_HOI_MS = 2000
+// Job nằm `PENDING` quá lâu gần như luôn có đúng một nguyên nhân: tiến trình
+// worker Python không chạy. Chờ im lặng mãi làm người dùng tưởng hệ thống
+// hỏng; nói thẳng sau hai phút thì người vận hành biết phải bật cái gì.
+const CANH_BAO_CHO_XEP_HANG_LUOT = (2 * 60 * 1000) / NHIP_HOI_MS
+// Quét job treo phía máy chủ cắt ở 15 phút (`YC-J10`). Màn hình dừng theo
+// dõi ngay sau mốc đó — job vẫn còn nguyên trên máy chủ và mở lại được ở
+// trang theo dõi job.
+//
+// Đếm theo SỐ LƯỢT hỏi, không theo đồng hồ: `Date.now()` gọi trong phạm vi
+// component là hàm không thuần (`react-hooks/purity`), và số lượt cho ra một
+// mốc ổn định như nhau vì nhịp hỏi cố định.
+const NGUNG_THEO_DOI_LUOT = (16 * 60 * 1000) / NHIP_HOI_MS
+
+// Khoá lưu job đang/vừa chạy vào localStorage — rời trang (đóng tab, F5,
+// bấm nhầm link) không mất dấu lượt chạy: quay lại `/tai-anh` vẫn thấy đúng
+// tiến trình hoặc đúng kết quả, thay vì luôn bắt đầu lại từ bước Tải ảnh.
+const JOB_STORAGE_KEY = "floraos.tai-anh.lastJobId"
 
 type Photo = { id: number; file: File; previewUrl: string; name: string }
 type UploadedPhoto = Photo & { assetId: string }
@@ -99,10 +119,22 @@ export function UploadWizard() {
   const [analyses, setAnalyses] = useState<AnalysisRow[]>([])
   const [resultIndex, setResultIndex] = useState(0)
 
+  const [choLau, setChoLau] = useState(false)
+  const [dangHuy, setDangHuy] = useState(false)
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const soLuotHoiRef = useRef(0)
   const cancelledRef = useRef(false)
 
+  // React Strict Mode (chỉ bật ở môi trường dev) cố tình chạy each effect
+  // hai lần để bắt lỗi: gắn -> gỡ giả -> gắn lại. Lần gỡ giả đó chạy hàm dọn
+  // dẹp bên dưới, bật cancelledRef lên true — nếu không đặt lại về false ở
+  // đầu lần gắn thật, MỌI vòng lặp hỏi lại job sau này thấy cờ này là true
+  // thì tự thoát im lặng ngay từ dòng đầu, không báo lỗi, không polling —
+  // đúng triệu chứng "treo mãi ở Xếp hàng chờ xử lý" dù job đã xong ở
+  // server. Bản build production không có Strict Mode nên không dính lỗi
+  // này, nhưng dev thì luôn dính — đây là lỗi có từ trước, không phải mới.
   useEffect(() => {
+    cancelledRef.current = false
     return () => {
       cancelledRef.current = true
       if (pollTimer.current) clearTimeout(pollTimer.current)
@@ -119,6 +151,7 @@ export function UploadWizard() {
       const accepted: Photo[] = []
       let rejected = 0
       let overflow = 0
+      let quaNang = 0
       Array.from(files).forEach((file) => {
         if (accepted.length >= room) {
           overflow++
@@ -128,6 +161,10 @@ export function UploadWizard() {
           rejected++
           return
         }
+        if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+          quaNang++
+          return
+        }
         accepted.push({
           id: nextId.current++,
           file,
@@ -135,9 +172,10 @@ export function UploadWizard() {
           name: file.name.replace(/\.[^.]+$/, ""),
         })
       })
-      if (rejected > 0 || overflow > 0) {
+      if (rejected > 0 || overflow > 0 || quaNang > 0) {
         const parts: string[] = []
         if (rejected > 0) parts.push(`${rejected} tệp không phải ảnh jpg/png/webp/gif`)
+        if (quaNang > 0) parts.push(`${quaNang} ảnh nặng hơn ${MAX_FILE_SIZE_MB} MB`)
         if (overflow > 0) parts.push(`${overflow} ảnh vượt quá tối đa ${MAX_PHOTOS}`)
         setUploadNote(`Đã bỏ qua: ${parts.join(", ")}.`)
       }
@@ -175,6 +213,11 @@ export function UploadWizard() {
     setResultIndex(0)
     setRunError(null)
     setStep("upload")
+    try {
+      window.localStorage.removeItem(JOB_STORAGE_KEY)
+    } catch {
+      // bỏ qua — không chặn việc bắt đầu lượt mới
+    }
   }
 
   async function uploadAllPhotos(): Promise<UploadedPhoto[]> {
@@ -251,8 +294,16 @@ export function UploadWizard() {
       }
       setBalanceAfter(created.usage.balance_after)
       setJob({ id: created.job_id, status: created.status, stage: null, result: null, error: null })
+      try {
+        window.localStorage.setItem(JOB_STORAGE_KEY, created.job_id)
+      } catch {
+        // localStorage có thể bị chặn (chế độ riêng tư) — không chặn lượt
+        // chạy, chỉ mất khả năng khôi phục nếu người dùng rời trang.
+      }
 
       setRunPhase("waiting")
+      soLuotHoiRef.current = 0
+      setChoLau(false)
       await pollJob(created.job_id, assets)
     } catch (e) {
       setRunError(e instanceof Error ? e.message : "Có lỗi khi chạy phân tích")
@@ -279,19 +330,57 @@ export function UploadWizard() {
       return
     }
     if (row.status === "CANCELLED") {
-      setRunError("Lượt phân tích đã bị huỷ")
+      setRunError("Lượt phân tích đã bị huỷ.")
       return
     }
+
+    soLuotHoiRef.current += 1
+    const daHoi = soLuotHoiRef.current
+    setChoLau(row.status === "PENDING" && daHoi > CANH_BAO_CHO_XEP_HANG_LUOT)
+    if (daHoi > NGUNG_THEO_DOI_LUOT) {
+      setRunError(
+        `Lượt phân tích vẫn ở trạng thái ${row.status} sau 15 phút. Màn hình ngừng theo dõi, ` +
+          `job không mất — mở lại ở mục Lượt chạy để xem kết quả khi xong.`
+      )
+      return
+    }
+
     pollTimer.current = setTimeout(() => {
       pollJob(jobId, assets)
-    }, 2000)
+    }, NHIP_HOI_MS)
+  }
+
+  /** `POST /jobs/:id/cancel` (`G6`) — chỉ job còn `PENDING` huỷ được. */
+  async function huyJob() {
+    if (!job) return
+    setDangHuy(true)
+    try {
+      const res = await fetch(`/api/v1/jobs/${job.id}/cancel`, { method: "POST" })
+      if (!res.ok) {
+        setRunError(await extractError(res, "Không huỷ được lượt phân tích"))
+        return
+      }
+      if (pollTimer.current) clearTimeout(pollTimer.current)
+      setJob({ ...job, status: "CANCELLED" })
+      setRunError("Lượt phân tích đã bị huỷ.")
+      try {
+        window.localStorage.removeItem(JOB_STORAGE_KEY)
+      } catch {
+        // bỏ qua
+      }
+    } finally {
+      setDangHuy(false)
+    }
   }
 
   async function loadAnalyses(jobId: string, assets: UploadedPhoto[]) {
-    const wanted = new Set(assets.map((a) => a.assetId))
+    // `assets` rỗng nghĩa là đang khôi phục lượt chạy sau khi rời trang —
+    // không còn danh sách ảnh gốc để khớp theo `asset_id`, nên lấy MỌI dòng
+    // thuộc đúng `job_id` thay vì lọc theo một tập ảnh đã biết.
+    const wanted = assets.length > 0 ? new Set(assets.map((a) => a.assetId)) : null
     const found: AnalysisRow[] = []
     let cursor: string | null = null
-    for (let page = 0; page < 10 && found.length < wanted.size; page++) {
+    for (let page = 0; page < 10 && (wanted === null || found.length < wanted.size); page++) {
       const params = new URLSearchParams({ limit: "50" })
       if (cursor) params.set("cursor", cursor)
       const res = await fetch(`/api/v1/vision/analyses?${params.toString()}`)
@@ -301,28 +390,107 @@ export function UploadWizard() {
       }
       const data = (await res.json()) as { data: AnalysisRow[]; next_cursor: string | null }
       data.data.forEach((row) => {
-        if (row.job_id === jobId && wanted.has(row.asset_id)) found.push(row)
+        if (row.job_id === jobId && (wanted === null || wanted.has(row.asset_id))) found.push(row)
       })
       cursor = data.next_cursor
       if (!cursor) break
     }
     // Xếp theo đúng thứ tự ảnh đã chọn, không theo thứ tự trả về của hàng
-    // chờ duyệt (mới nhất trước).
-    const byAsset = new Map(found.map((row) => [row.asset_id, row]))
-    const ordered = assets.map((a) => byAsset.get(a.assetId)).filter((r): r is AnalysisRow => Boolean(r))
+    // chờ duyệt (mới nhất trước). Khi không còn danh sách ảnh gốc thì giữ
+    // nguyên thứ tự vừa gom được.
+    let ordered: AnalysisRow[]
+    if (wanted !== null) {
+      const byAsset = new Map(found.map((row) => [row.asset_id, row]))
+      ordered = assets.map((a) => byAsset.get(a.assetId)).filter((r): r is AnalysisRow => Boolean(r))
+    } else {
+      ordered = found
+    }
     setAnalyses(ordered)
     setResultIndex(0)
     setStep("result")
+    if (ordered.length === 0) {
+      try {
+        window.localStorage.removeItem(JOB_STORAGE_KEY)
+      } catch {
+        // bỏ qua
+      }
+    }
   }
 
-  async function saveEdit(analysisId: string, section: string, index: number, quantity: number) {
+  // Khôi phục lượt chạy khi mở lại `/tai-anh`: trước tiên tìm job vừa tạo ở
+  // chính tab này (`JOB_STORAGE_KEY`); nếu không có (tab mới, hoặc job đó
+  // được tạo trước khi có cơ chế lưu này), lấy lượt phân tích mới nhất còn
+  // đang chờ duyệt — vì một lượt vừa chạy xong luôn nằm ở đó cho tới khi ai
+  // duyệt/từ chối. Không có gì để khôi phục thì cứ để màn hình ở bước Tải
+  // ảnh, không phải lỗi cần báo.
+  useEffect(() => {
+    ;(async () => {
+      try {
+        let jobId: string | null = null
+        try {
+          jobId = window.localStorage.getItem(JOB_STORAGE_KEY)
+        } catch {
+          jobId = null
+        }
+
+        if (!jobId) {
+          const resPending = await fetch("/api/v1/vision/analyses?limit=1")
+          if (resPending.ok) {
+            const data = (await resPending.json()) as { data: AnalysisRow[] }
+            jobId = data.data[0]?.job_id ?? null
+          }
+        }
+        if (!jobId || cancelledRef.current) return
+
+        const resJob = await fetch(`/api/v1/jobs/${jobId}`)
+        if (!resJob.ok) {
+          window.localStorage.removeItem(JOB_STORAGE_KEY)
+          return
+        }
+        const { job: row } = (await resJob.json()) as { job: JobState }
+        if (cancelledRef.current) return
+        setJob(row)
+        if (row.status === "COMPLETED") {
+          await loadAnalyses(jobId, [])
+        } else if (row.status === "PENDING" || row.status === "PROCESSING") {
+          setStep("running")
+          setRunPhase(row.status === "PROCESSING" ? "processing" : "waiting")
+          soLuotHoiRef.current = 0
+          await pollJob(jobId, [])
+        }
+      } catch {
+        // Không khôi phục được thì cứ để màn hình ở bước Tải ảnh.
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function saveEdit(
+    analysisId: string,
+    section: string,
+    index: number,
+    sua: { quantity?: number; name?: string }
+  ) {
     const target = analyses.find((a) => a.id === analysisId)
     if (!target) return
     const clone = JSON.parse(JSON.stringify(effectiveAnalysis(target))) as Record<string, unknown>
     const bom = asRecord(clone.bom)
     const rows = asArray(bom[section])
     if (!rows[index]) return
-    rows[index] = { ...rows[index], quantity }
+
+    const row = { ...rows[index] }
+    if (sua.quantity !== undefined) row.quantity = sua.quantity
+    if (sua.name !== undefined) {
+      // Máy nhận sai loài là lỗi hệ thống, không phải dao động — cùng một
+      // ảnh gọi lại ba lượt vẫn ra cùng cái tên sai (`config.json`, ghi chú
+      // số lượt). Nên tên phải sửa được bằng tay, không chỉ số lượng.
+      // `ma` là mã danh mục máy gán theo tên cũ; tên đổi thì mã đó không còn
+      // căn cứ, bỏ trống để người soát gắn lại đúng mã.
+      if (section === "wrapping") row.layer = sua.name
+      else row.name = sua.name
+      row.ma = null
+    }
+    rows[index] = row
     bom[section] = rows
     clone.bom = bom
 
@@ -340,6 +508,16 @@ export function UploadWizard() {
     const res = await fetch(`/api/v1/vision/analyses/${analysisId}/approve`, { method: "POST" })
     if (!res.ok) throw new Error(await extractError(res, "Không duyệt được"))
     setAnalyses((cur) => cur.map((a) => (a.id === analysisId ? { ...a, approval_state: "APPROVED" } : a)))
+  }
+
+  async function rejectAnalysis(analysisId: string, lyDo: string) {
+    const res = await fetch(`/api/v1/vision/analyses/${analysisId}/reject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ly_do: lyDo.trim() === "" ? null : lyDo.trim() }),
+    })
+    if (!res.ok) throw new Error(await extractError(res, "Không từ chối được"))
+    setAnalyses((cur) => cur.map((a) => (a.id === analysisId ? { ...a, approval_state: "REJECTED" } : a)))
   }
 
   return (
@@ -385,6 +563,9 @@ export function UploadWizard() {
           phase={runPhase}
           job={job}
           error={runError}
+          choLau={choLau}
+          dangHuy={dangHuy}
+          onHuy={huyJob}
           onRetry={startAnalysis}
           onBackToConfirm={() => setStep("confirm")}
         />
@@ -401,7 +582,15 @@ export function UploadWizard() {
           canApprove={can("H3")}
           onSaveEdit={saveEdit}
           onApprove={approveAnalysis}
-          onFinish={() => router.push("/")}
+          onReject={rejectAnalysis}
+          onFinish={() => {
+            try {
+              window.localStorage.removeItem(JOB_STORAGE_KEY)
+            } catch {
+              // bỏ qua
+            }
+            router.push("/")
+          }}
           onRunAnother={resetWizard}
         />
       )}
@@ -576,6 +765,9 @@ function RunningStep({
   phase,
   job,
   error,
+  choLau,
+  dangHuy,
+  onHuy,
   onRetry,
   onBackToConfirm,
 }: {
@@ -583,6 +775,9 @@ function RunningStep({
   phase: RunPhase
   job: JobState | null
   error: string | null
+  choLau: boolean
+  dangHuy: boolean
+  onHuy: () => void
   onRetry: () => void
   onBackToConfirm: () => void
 }) {
@@ -647,12 +842,28 @@ function RunningStep({
         })}
       </Card>
 
+      {choLau && (
+        <div className="flex items-start gap-2.5 rounded-xl bg-warning-bg p-3.5">
+          <AlertTriangle size={16} strokeWidth={1.8} className="mt-0.5 flex-shrink-0 text-warning" />
+          <div className="text-xs leading-relaxed text-warning">
+            Lượt chạy đã xếp hàng hơn hai phút mà chưa có tiến trình nào nhận. Thường là tiến trình
+            phân tích ảnh chưa được bật. Báo người vận hành, hoặc huỷ lượt này rồi chạy lại sau.
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start gap-2.5 rounded-xl bg-surface-alt p-3.5">
         <Info size={16} strokeWidth={1.8} className="mt-0.5 flex-shrink-0 text-primary" />
         <div className="text-xs leading-relaxed text-text-muted">
-          Bạn có thể rời màn hình — job vẫn chạy tiếp ở máy chủ, quay lại đây để xem kết quả.
+          Job chạy ở máy chủ và không mất khi rời màn hình — mở lại ở mục Lượt chạy để xem kết quả.
         </div>
       </div>
+
+      {job?.status === "PENDING" && (
+        <Button variant="secondary" className="w-full" disabled={dangHuy} onClick={onHuy}>
+          {dangHuy ? "Đang huỷ..." : "Huỷ lượt phân tích"}
+        </Button>
+      )}
     </div>
   )
 }
@@ -693,6 +904,7 @@ function ResultStep({
   canApprove,
   onSaveEdit,
   onApprove,
+  onReject,
   onFinish,
   onRunAnother,
 }: {
@@ -704,15 +916,24 @@ function ResultStep({
   balanceAfter: number | null
   canEdit: boolean
   canApprove: boolean
-  onSaveEdit: (analysisId: string, section: string, rowIndex: number, quantity: number) => Promise<void>
+  onSaveEdit: (
+    analysisId: string,
+    section: string,
+    rowIndex: number,
+    sua: { quantity?: number; name?: string }
+  ) => Promise<void>
   onApprove: (analysisId: string) => Promise<void>
+  onReject: (analysisId: string, lyDo: string) => Promise<void>
   onFinish: () => void
   onRunAnother: () => void
 }) {
   const [editing, setEditing] = useState<{ section: string; rowIndex: number } | null>(null)
   const [editValue, setEditValue] = useState("")
+  const [editName, setEditName] = useState("")
   const [busy, setBusy] = useState(false)
   const [rowError, setRowError] = useState<string | null>(null)
+  const [moXacNhan, setMoXacNhan] = useState(false)
+  const [lyDoTuChoi, setLyDoTuChoi] = useState("")
 
   if (analyses.length === 0) {
     return (
@@ -735,6 +956,7 @@ function ResultStep({
     setRowError(null)
     try {
       await onApprove(currentId)
+      setMoXacNhan(false)
     } catch (e) {
       setRowError(e instanceof Error ? e.message : "Không duyệt được")
     } finally {
@@ -742,17 +964,40 @@ function ResultStep({
     }
   }
 
+  async function handleReject() {
+    setBusy(true)
+    setRowError(null)
+    try {
+      await onReject(currentId, lyDoTuChoi)
+      setMoXacNhan(false)
+      setLyDoTuChoi("")
+    } catch (e) {
+      setRowError(e instanceof Error ? e.message : "Không từ chối được")
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function handleSaveEdit(section: string) {
     if (!editing) return
-    const qty = Number(editValue)
-    if (!Number.isFinite(qty) || qty < 0) {
-      setRowError("Số lượng phải là số không âm")
+    const ten = editName.trim()
+    if (ten.length === 0) {
+      setRowError("Tên cấu phần không được để trống")
       return
+    }
+    const sua: { quantity?: number; name?: string } = { name: ten }
+    if (editValue !== "") {
+      const qty = Number(editValue)
+      if (!Number.isInteger(qty) || qty < 0) {
+        setRowError("Số lượng phải là số nguyên không âm")
+        return
+      }
+      sua.quantity = qty
     }
     setBusy(true)
     setRowError(null)
     try {
-      await onSaveEdit(currentId, section, editing.rowIndex, qty)
+      await onSaveEdit(currentId, section, editing.rowIndex, sua)
       setEditing(null)
     } catch (e) {
       setRowError(e instanceof Error ? e.message : "Không lưu được")
@@ -836,56 +1081,87 @@ function ResultStep({
                 const qty = rowQuantity(row)
                 const confidence = rowConfidence(row)
                 const color = rowColor(row)
-                const editable = canEdit && section !== "wrapping"
+                // Mọi cấu phần đều sửa được tên, kể cả lớp gói. Số lượng chỉ
+                // sửa được ở dòng máy có trả số — hợp đồng chưa có `quantity`
+                // cho lớp gói (nợ #2), và ô số trống trên một trường không
+                // tồn tại chỉ gây hiểu nhầm.
                 return (
-                  <div key={rowIndex} className="flex items-center gap-3">
-                    {color && (
-                      <div
-                        className="h-4 w-4 flex-shrink-0 rounded-md border border-border"
-                        style={{ background: colorSwatch(color) }}
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[13.5px] font-semibold">{rowLabel(section, row)}</div>
-                      {confidence != null && confidence < 70 && (
-                        <span className="mt-0.5 inline-flex items-center rounded-full border-[1.3px] border-warning px-1.5 py-0.5 text-[10.5px] font-bold text-warning">
-                          Chưa chắc — nên kiểm lại
-                        </span>
+                  <div key={rowIndex} className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      {color && (
+                        <div
+                          className="h-4 w-4 flex-shrink-0 rounded-md border border-border"
+                          style={{ background: colorSwatch(color) }}
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13.5px] font-semibold">{rowLabel(section, row)}</div>
+                        {confidence != null && confidence < 70 && (
+                          <span className="mt-0.5 inline-flex items-center rounded-full border-[1.3px] border-warning px-1.5 py-0.5 text-[10.5px] font-bold text-warning">
+                            Chưa chắc — nên kiểm lại
+                          </span>
+                        )}
+                      </div>
+                      {qty != null && !isEditingRow && (
+                        <div className="text-[13.5px] font-bold">× {qty}</div>
+                      )}
+                      {canEdit && !isEditingRow && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditing({ section, rowIndex })
+                            setEditName(rowLabel(section, row))
+                            setEditValue(qty != null ? String(qty) : "")
+                            setRowError(null)
+                          }}
+                          className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
+                          aria-label="Sửa cấu phần"
+                        >
+                          <Pencil size={16} strokeWidth={1.8} />
+                        </button>
                       )}
                     </div>
-                    {isEditingRow ? (
-                      <>
+
+                    {isEditingRow && (
+                      <div className="flex items-center gap-2 rounded-xl bg-surface-alt p-2.5">
                         <input
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="h-[34px] w-14 rounded-lg border-[1.5px] border-primary text-center text-[13.5px] font-bold outline-none"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Tên cấu phần"
+                          aria-label="Tên cấu phần"
+                          className="h-[34px] min-w-0 flex-1 rounded-lg border-[1.5px] border-primary bg-surface px-2 text-[13.5px] outline-none"
                         />
+                        {qty != null && (
+                          <input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            inputMode="numeric"
+                            aria-label="Số lượng"
+                            className="h-[34px] w-14 flex-shrink-0 rounded-lg border-[1.5px] border-primary bg-surface text-center text-[13.5px] font-bold outline-none"
+                          />
+                        )}
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => handleSaveEdit(section)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full text-secondary-text hover:bg-surface-alt disabled:opacity-40"
+                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-secondary-text hover:bg-surface disabled:opacity-40"
+                          aria-label="Lưu"
                         >
                           <Check size={17} strokeWidth={2.4} />
                         </button>
-                      </>
-                    ) : (
-                      <>
-                        {qty != null && <div className="text-[13.5px] font-bold">× {qty}</div>}
-                        {editable && qty != null && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditing({ section, rowIndex })
-                              setEditValue(String(qty))
-                              setRowError(null)
-                            }}
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
-                          >
-                            <Pencil size={16} strokeWidth={1.8} />
-                          </button>
-                        )}
-                      </>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            setEditing(null)
+                            setRowError(null)
+                          }}
+                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface disabled:opacity-40"
+                          aria-label="Bỏ sửa"
+                        >
+                          <X size={17} strokeWidth={2.2} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 )
@@ -927,15 +1203,213 @@ function ResultStep({
               Sang ảnh tiếp theo
             </Button>
           )
+        ) : current.approval_state === "REJECTED" ? (
+          <div className="flex flex-col gap-2">
+            <div className="text-center text-[12.5px] text-text-muted">
+              Kết quả này đã bị từ chối và không vào Product Master.
+            </div>
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => setIndex(Math.min(index + 1, analyses.length - 1))}
+              disabled={index === analyses.length - 1}
+            >
+              Sang ảnh tiếp theo
+            </Button>
+          </div>
         ) : canApprove ? (
-          <Button className="h-[50px] w-full" disabled={busy} onClick={handleApprove}>
-            {busy ? "Đang duyệt..." : "Duyệt"}
+          <Button className="h-[50px] w-full" disabled={busy} onClick={() => setMoXacNhan(true)}>
+            Kiểm tra và xác nhận
           </Button>
         ) : (
           <div className="rounded-xl bg-surface-alt px-3.5 py-3 text-center text-[12.5px] text-text-muted">
             Chỉ Điều hành mới duyệt được kết quả phân tích.
           </div>
         )}
+      </div>
+
+      {moXacNhan && (
+        <XacNhanDialog
+          analysis={current}
+          busy={busy}
+          loi={rowError}
+          lyDo={lyDoTuChoi}
+          setLyDo={setLyDoTuChoi}
+          onDuyet={handleApprove}
+          onTuChoi={handleReject}
+          onDong={() => {
+            setMoXacNhan(false)
+            setRowError(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * Hộp thoại xác nhận — chỗ duy nhất trong luồng người soát nhìn thấy TOÀN BỘ
+ * những gì sắp ghi vào Product Master cùng một lúc. Màn kết quả phía sau bày
+ * từng khối rời và cuộn dài; duyệt từ đó là duyệt một thứ chưa nhìn hết.
+ *
+ * Hai phán quyết đặt cạnh nhau, không phải một nút duyệt với đường từ chối
+ * giấu ở đâu đó: bỏ một kết quả sai phải dễ ngang nhận một kết quả đúng, nếu
+ * không thì người soát sẽ duyệt cho xong.
+ */
+function XacNhanDialog({
+  analysis,
+  busy,
+  loi,
+  lyDo,
+  setLyDo,
+  onDuyet,
+  onTuChoi,
+  onDong,
+}: {
+  analysis: AnalysisRow
+  busy: boolean
+  loi: string | null
+  lyDo: string
+  setLyDo: (v: string) => void
+  onDuyet: () => void
+  onTuChoi: () => void
+  onDong: () => void
+}) {
+  const [chonTuChoi, setChonTuChoi] = useState(false)
+  const hieuLuc = effectiveAnalysis(analysis)
+  const identity = asRecord(hieuLuc.identity)
+  const bom = asRecord(hieuLuc.bom)
+  const daSua = analysis.edited !== null
+
+  const tong: { nhan: string; gia_tri: number | null }[] = [
+    { nhan: "Số hoa", gia_tri: asNumber(hieuLuc.flower_count) },
+    { nhan: "Số nụ", gia_tri: asNumber(hieuLuc.bud_count) },
+    { nhan: "Số hỏng", gia_tri: asNumber(hieuLuc.damaged_count) },
+  ]
+
+  return (
+    <div
+      className="absolute inset-0 z-50 flex flex-col justify-end bg-black/50"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Xác nhận kết quả phân tích"
+    >
+      <button type="button" className="flex-1" aria-label="Đóng" onClick={onDong} />
+
+      <div className="flex max-h-[86%] flex-col rounded-t-2xl bg-surface">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <div className="text-[15px] font-extrabold">Xác nhận trước khi ghi</div>
+          <button
+            type="button"
+            onClick={onDong}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
+            aria-label="Đóng"
+          >
+            <X size={18} strokeWidth={2} />
+          </button>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-5">
+          <div className="text-[12.5px] leading-relaxed text-text-muted">
+            Duyệt sẽ ghi những dữ liệu dưới đây vào Product Master và dùng lại ở tính giá, tra cứu và
+            các kênh bán. {daSua ? "Bản này đã có chỉnh sửa của người soát." : "Bản này giữ nguyên dự đoán của máy."}
+          </div>
+
+          <Card className="flex flex-col gap-2 p-4">
+            <div className="text-[12.5px] font-bold uppercase tracking-wide text-text-muted">Nhận dạng</div>
+            {[
+              ["Dạng sản phẩm", asText(identity.category)],
+              ["Hình khối", asText(identity.shape)],
+              ["Mặt trình bày", asText(identity.facing)],
+              ["Vật chứa", asText(identity.container)],
+            ].map(([nhan, gia_tri]) => (
+              <div key={nhan} className="flex justify-between text-[13px]">
+                <span className="text-text-muted">{nhan}</span>
+                <span className={cn("font-semibold", !gia_tri && "text-text-muted")}>
+                  {gia_tri ?? "chưa xác định"}
+                </span>
+              </div>
+            ))}
+          </Card>
+
+          <Card className="flex justify-between gap-2 p-4">
+            {tong.map((t) => (
+              <div key={t.nhan} className="flex flex-1 flex-col items-center gap-1">
+                <div className="text-[11.5px] text-text-muted">{t.nhan}</div>
+                <div className={cn("text-[19px] font-extrabold", t.gia_tri === null && "text-text-muted")}>
+                  {t.gia_tri ?? "—"}
+                </div>
+              </div>
+            ))}
+          </Card>
+
+          {Object.keys(SECTION_LABELS).map((section) => {
+            const rows = asArray(bom[section])
+            if (rows.length === 0) return null
+            return (
+              <Card key={section} className="flex flex-col gap-2 p-4">
+                <div className="text-[12.5px] font-bold uppercase tracking-wide text-text-muted">
+                  {SECTION_LABELS[section]}
+                </div>
+                {rows.map((row, i) => {
+                  const qty = rowQuantity(row)
+                  return (
+                    <div key={i} className="flex items-center justify-between gap-3 text-[13px]">
+                      <span className="min-w-0 flex-1 truncate">{rowLabel(section, row)}</span>
+                      <span className="flex-shrink-0 font-bold">{qty === null ? "—" : `× ${qty}`}</span>
+                    </div>
+                  )
+                })}
+              </Card>
+            )
+          })}
+
+          {chonTuChoi && (
+            <Card className="flex flex-col gap-2 border-none bg-surface-alt p-4">
+              <label htmlFor="ly-do-tu-choi" className="text-[12.5px] font-bold">
+                Vì sao bỏ kết quả này
+              </label>
+              <input
+                id="ly-do-tu-choi"
+                value={lyDo}
+                onChange={(e) => setLyDo(e.target.value)}
+                placeholder="Nhận sai loài, ảnh chụp thiếu sản phẩm..."
+                className="h-[38px] rounded-lg border-[1.5px] border-border bg-surface px-2.5 text-[13px] outline-none focus:border-primary"
+              />
+              <div className="text-[11.5px] text-text-muted">
+                Câu này vào nhật ký kiểm toán — chỗ duy nhất còn giữ được lý do sau này.
+              </div>
+            </Card>
+          )}
+
+          {loi && (
+            <div className="rounded-lg bg-danger-bg px-2.5 py-2 text-center text-[11.5px] font-medium text-danger">
+              {loi}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-shrink-0 gap-2 border-t border-border p-5">
+          {chonTuChoi ? (
+            <>
+              <Button variant="secondary" className="flex-1" disabled={busy} onClick={() => setChonTuChoi(false)}>
+                Quay lại
+              </Button>
+              <Button className="flex-1" disabled={busy} onClick={onTuChoi}>
+                {busy ? "Đang bỏ..." : "Xác nhận bỏ"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" className="flex-1" disabled={busy} onClick={() => setChonTuChoi(true)}>
+                Bỏ kết quả
+              </Button>
+              <Button className="flex-1" disabled={busy} onClick={onDuyet}>
+                {busy ? "Đang duyệt..." : "Duyệt"}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

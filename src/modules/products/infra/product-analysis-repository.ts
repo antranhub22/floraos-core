@@ -52,6 +52,38 @@ export class ProductAnalysisRepository {
     })
   }
 
+  /**
+   * Mọi lượt phân tích của tổ chức, lọc theo trạng thái duyệt và khoảng
+   * thời gian — nguồn của bản xuất (`GET /vision/analyses/export`).
+   *
+   * Khác `listPending` ở chỗ không chốt cứng `PENDING`: bản xuất phục vụ đối
+   * soát, mà thứ đáng đối soát nhất là những lượt đã duyệt và đã từ chối.
+   */
+  listForExport(
+    ctx: TenantContext,
+    options: { states?: approval_state[]; from?: Date; to?: Date; limit: number }
+  ): Promise<product_analyses[]> {
+    const khoangThoiGian =
+      options.from || options.to
+        ? {
+            created_at: {
+              ...(options.from ? { gte: options.from } : {}),
+              ...(options.to ? { lte: options.to } : {}),
+            },
+          }
+        : {}
+    return this.db.product_analyses.findMany({
+      where: scopedWhere(ctx, {
+        ...(options.states && options.states.length > 0
+          ? { approval_state: { in: options.states } }
+          : {}),
+        ...khoangThoiGian,
+      }),
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+      take: options.limit,
+    })
+  }
+
   create(ctx: TenantContext, input: CreateProductAnalysisInput): Promise<product_analyses> {
     return this.db.product_analyses.create({
       data: scopedData(ctx, {
@@ -145,6 +177,33 @@ export class ProductAnalysisRepository {
       data: {
         product_id: productId,
         approval_state: "APPROVED" as approval_state,
+        approved_by: input.approvedBy,
+        approved_at: input.approvedAt,
+      },
+    })
+    if (result.count === 0) return null
+    return this.findById(ctx, id)
+  }
+
+  /**
+   * `POST /vision/analyses/:id/reject` (`H3`). Không đụng `product_id` và
+   * không đụng Product Master — từ chối là nói "kết quả này không dùng", chứ
+   * không phải rút lại thứ gì đã ghi (bản `APPROVED` không tới được đây).
+   *
+   * `approved_by`/`approved_at` mang nghĩa "ai chịu trách nhiệm cho phán
+   * quyết cuối và lúc nào", nên phán quyết từ chối cũng ghi vào hai cột đó —
+   * không thêm cột `rejected_by` song song, vì một bản ghi chỉ có đúng một
+   * phán quyết cuối tại một thời điểm.
+   */
+  async reject(
+    ctx: TenantContext,
+    id: string,
+    input: ApproveAnalysisInput
+  ): Promise<product_analyses | null> {
+    const result = await this.db.product_analyses.updateMany({
+      where: scopedWhere(ctx, { id, approval_state: "PENDING" as approval_state }),
+      data: {
+        approval_state: "REJECTED" as approval_state,
         approved_by: input.approvedBy,
         approved_at: input.approvedAt,
       },

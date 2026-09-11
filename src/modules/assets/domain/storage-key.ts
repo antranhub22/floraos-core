@@ -34,3 +34,37 @@ export function extensionForMimeType(mimeType: string): string {
   if (!ext) throw new Error(`Kiểu tệp không được hỗ trợ: ${mimeType}`)
   return ext
 }
+
+/**
+ * `POST /assets` nhận `storage_key` trong thân yêu cầu, nhưng đường dẫn hợp
+ * lệ chỉ có đúng một dạng — dạng mà `createUploadUrl` vừa ký. Hàm này dựng
+ * lại đường dẫn đó từ ngữ cảnh tổ chức phía máy chủ và so khớp.
+ *
+ * Không so khớp thì `storage_key` là một biến do client điều khiển trỏ vào
+ * đâu cũng được: `org/<tổ-chức-khác>/…` cho đọc ảnh xuyên tổ chức (vỡ luật 1
+ * và luật 2 của PRD), `../../…` cho đọc tệp ngoài kho. Bản ghi vẫn mang
+ * `organization_id` đúng nên mọi bộ lọc theo tenant phía sau đều cho qua —
+ * đường dẫn là chỗ duy nhất chặn được.
+ */
+export function storageKeyMatchesContext(
+  storageKey: string,
+  input: {
+    organizationId: string
+    productId: string | null
+    assetId: string
+    mimeType: string
+  }
+): boolean {
+  let expected: string
+  try {
+    expected = buildStorageKey({
+      organizationId: input.organizationId,
+      productId: input.productId,
+      assetId: input.assetId,
+      extension: extensionForMimeType(input.mimeType),
+    })
+  } catch {
+    return false
+  }
+  return storageKey === expected
+}

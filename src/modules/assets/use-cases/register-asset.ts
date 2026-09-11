@@ -5,6 +5,7 @@ import {
   nextVersion,
   requiresExplicitGeneratedFlags,
 } from "@/modules/assets/domain/asset-rules"
+import { storageKeyMatchesContext } from "@/modules/assets/domain/storage-key"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import type { asset_kind } from "@/modules/assets/infra/entities"
 
@@ -41,6 +42,20 @@ export type RegisterAssetInput = {
  */
 export async function registerAsset(ctx: TenantContext, input: RegisterAssetInput) {
   const repo = new AssetRepository()
+
+  if (
+    !storageKeyMatchesContext(input.storageKey, {
+      organizationId: ctx.organizationId,
+      productId: input.productId,
+      assetId: input.assetId,
+      mimeType: input.mimeType,
+    })
+  ) {
+    throw validationFailed({
+      storage_key:
+        "Không khớp đường dẫn đã ký cho tổ chức này — dùng đúng giá trị POST /assets/upload-url trả về",
+    })
+  }
 
   let parentVersion: number | null = null
   if (input.parentAssetId) {

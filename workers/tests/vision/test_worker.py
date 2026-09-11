@@ -36,6 +36,11 @@ class _FakeCursor:
             return self.conn.fetchone_queue.pop(0)
         return None
 
+    def fetchall(self):
+        if self.conn.fetchall_queue:
+            return self.conn.fetchall_queue.pop(0)
+        return []
+
 
 class _FakeTransaction:
     def __init__(self, conn):
@@ -49,9 +54,10 @@ class _FakeTransaction:
 
 
 class FakeConnection:
-    def __init__(self, fetchone_queue=None):
+    def __init__(self, fetchone_queue=None, fetchall_queue=None):
         self.executed: list[tuple[str, object]] = []
         self.fetchone_queue = list(fetchone_queue or [])
+        self.fetchall_queue = list(fetchall_queue or [])
         self.committed = 0
         self.rolled_back = 0
 
@@ -155,7 +161,7 @@ class TestProcessJob:
         params = [p for sql, p in conn.executed if "COMPLETED" in sql][0]
         assert params[0] == "LOW_CONFIDENCE"
 
-    def test_loi_ky_thuat_thi_failed_va_rollback(self, monkeypatch):
+    def test_loi_ky_thuat_thi_failed_va_khong_ghi_ket_qua_nao(self, monkeypatch):
         monkeypatch.setattr(worker, "_read_asset_bytes", lambda key: b"anh-gia")
         conn = FakeConnection(fetchone_queue=[("storage-key-1",)])
         provider = FakeProvider(raise_exc=RuntimeError("OpenAI lỗi giả lập"))
@@ -164,9 +170,67 @@ class TestProcessJob:
 
         failed = conn.sql_containing("SET status = 'FAILED'")
         assert len(failed) == 1
-        assert conn.rolled_back == 1
-        # không được có bản ghi product_analyses nào khi lỗi
+        # Ảnh duy nhất của lô lỗi ngay nên không có kết quả nào để giữ lại.
         assert conn.sql_containing("INSERT INTO product_analyses") == []
+        # Không `rollback()`: kết nối chạy autocommit nên lệnh đó không lấy
+        # lại được gì, và những ảnh đã xong trước ảnh lỗi là kết quả thật.
+        assert conn.rolled_back == 0
+
+    def test_lo_hong_giua_chung_giu_lai_ket_qua_cac_anh_da_xong(self, monkeypatch):
+        """Ba ảnh, ảnh thứ hai lỗi: ảnh đầu đã ghi xong thì giữ nguyên."""
+        monkeypatch.setattr(worker, "_read_asset_bytes", lambda key: b"anh-gia")
+        conn = FakeConnection(
+            fetchone_queue=[("storage-key-1",), ("storage-key-2",), ("storage-key-3",)]
+        )
+
+        class _HongOAnhThuHai(FakeProvider):
+            def analyze(self, image, context):
+                self.calls.append((image, context))
+                if len(self.calls) == 2:
+                    raise RuntimeError("nhà cung cấp lỗi ở ảnh thứ hai")
+                return {"confidence": 90}
+
+        provider = _HongOAnhThuHai(result={"confidence": 90})
+        worker.process_job(conn, self._job(asset_ids=("a1", "a2", "a3")), provider)
+
+        assert len(conn.sql_containing("INSERT INTO product_analyses")) == 1
+        assert conn.sql_containing("SET status = 'FAILED'")
+        assert conn.sql_containing("SET status = 'COMPLETED'") == []
+
+    def test_chay_lai_bo_qua_anh_da_co_ket_qua(self, monkeypatch):
+        """`POST /jobs/:id/retry` không được gọi lại nhà cung cấp cho ảnh cũ."""
+        monkeypatch.setattr(worker, "_read_asset_bytes", lambda key: b"anh-gia")
+        conn = FakeConnection(
+            fetchone_queue=[("storage-key-2",)],
+            fetchall_queue=[[("a1",)]],  # a1 đã phân tích xong ở lượt trước
+        )
+        provider = FakeProvider(result={"confidence": 88})
+
+        worker.process_job(conn, self._job(asset_ids=("a1", "a2")), provider)
+
+        assert [ctx["asset_id"] for _img, ctx in provider.calls] == ["a2"]
+        assert len(conn.sql_containing("INSERT INTO product_analyses")) == 1
+        assert conn.sql_containing("SET status = 'COMPLETED'")
+
+    def test_insert_ket_qua_chong_ghi_trung(self):
+        """Ràng buộc `@@unique([job_id, asset_id])` là thứ worker dựa vào."""
+        conn = FakeConnection(fetchone_queue=[("storage-key-1",)])
+        worker._insert_analysis(
+            conn,
+            {"id": "job-1", "organization_id": "org-1"},
+            "a1",
+            None,
+            FakeProvider(),
+            {"confidence": 90},
+        )
+        insert = conn.sql_containing("INSERT INTO product_analyses")[0]
+        assert "ON CONFLICT (job_id, asset_id) DO NOTHING" in insert
+
+    def test_storage_key_leo_ra_ngoai_kho_bi_chan(self):
+        import pytest as _pytest
+
+        with _pytest.raises(ValueError):
+            worker._read_asset_bytes("../../../etc/passwd")
 
     def test_asset_khong_thuoc_to_chuc_thi_that_bai_khong_lo_du_lieu_cheo(self, monkeypatch):
         # _asset_storage_key trả None (không tìm thấy vì sai organization_id)

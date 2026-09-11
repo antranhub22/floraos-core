@@ -113,6 +113,19 @@ Mảnh cánh lộ ra giữa các bông khác, và đơn vị bị che trên 60%,
 
 **Không tự bù phần khuất.** Chỉ khai số nhìn thấy; hệ thống nhân hệ số che khuất ở bước sau. Tự cộng thêm là tính hai lần.
 
+### Nụ và đơn vị hỏng đếm riêng
+
+Mỗi dòng hoa khai thêm hai con số, tách khỏi `quantity`:
+
+- `so_nu` — số nụ **chưa nở** của riêng loài đó. Nụ không cộng vào `quantity`. Nụ là phần còn khép kín, chưa thấy nhuỵ và chưa thấy cánh xoè; hé nở đã thấy cánh thì tính là bông, không tính là nụ.
+- `so_hong` — số đơn vị gãy cổ, héo, dập cánh của riêng loài đó. Những đơn vị này **đã nằm trong** `quantity`, không cộng thêm lần nữa.
+
+Không thấy nụ nào, hoặc không thấy đơn vị hỏng nào, thì khai `0`. Chỉ khai `null` khi ảnh không cho phép phân biệt — mờ, ngược sáng, khuất.
+
+### Lá và cành trang trí không đếm số
+
+Với mỗi phần tử trong `foliage`, khai `null` ở `quantity`. Lá nền và lá điểm nhấn tính theo bó hoặc theo mức khoán của dạng sản phẩm, không theo số cành, nên một con số ở đây không dùng vào việc gì và chỉ làm nhiễu phép đối chiếu. Tên loài, màu và `cluster_indices` vẫn khai đủ như mọi phần tử khác.
+
 ### Ngưỡng bất khả thi
 
 Đối chiếu con số với sức chứa vật lý của kiểu sản phẩm:

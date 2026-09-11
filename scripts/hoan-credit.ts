@@ -1,10 +1,10 @@
 import type { TenantContext } from "@/core/tenancy"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
-import { MEDIA_OPTIMIZE_FEATURE } from "@/modules/media/use-cases/request-optimization"
-import { refundRejectedJob } from "@/modules/media/use-cases/refund-rejected-job"
+import { refundJob } from "@/modules/usage/use-cases/refund-job"
 
-// Quyết định D3 — job bị Identity Guard từ chối không tính phí khách.
+// Hoàn credit cho lượt chạy khách không nhận được kết quả — ba diện ở
+// `usage/domain/refund-policy.ts`: Guard từ chối, bị huỷ, lỗi kỹ thuật.
 // Chạy định kỳ ngoài request HTTP, ví dụ cron mỗi 5 phút (dòng crontab,
 // KHÔNG đặt trong khối /** */ — "*" liền "/" đóng khối sớm):
 //
@@ -14,16 +14,13 @@ import { refundRejectedJob } from "@/modules/media/use-cases/refund-rejected-job
 // KHÔNG BAO GIỜ ghi `usage`. Hạn mức và credit là việc của core. Hệ quả:
 // hoàn credit nhất quán sau một khoảng, không tức thì.
 //
-// An toàn chạy lại: `refundRejectedJob` idempotent theo dòng `usage`
-// `REFUNDED` của chính job đó.
+// An toàn chạy lại: `refundJob` idempotent theo dòng `usage` `REFUNDED`
+// của chính job đó.
 
 const SO_JOB_MOI_LUOT = 200
 
 async function main(): Promise<void> {
-  const jobs = await new GenerationJobRepository().listRejected(
-    MEDIA_OPTIMIZE_FEATURE,
-    SO_JOB_MOI_LUOT
-  )
+  const jobs = await new GenerationJobRepository().listRefundable(SO_JOB_MOI_LUOT)
   if (jobs.length === 0) return
 
   let daHoan = 0
@@ -38,15 +35,18 @@ async function main(): Promise<void> {
       branchId: job.branch_id,
       capabilities: new Set<string>(),
     }
-    const ketQua = await refundRejectedJob(ctx, job.id)
+    const ketQua = await refundJob(ctx, job.id)
     if (ketQua.refunded) {
       daHoan += 1
       tongCredit += ketQua.creditHoanLai
-      console.log(`Hoàn ${ketQua.creditHoanLai} credit cho job ${job.id} (tổ chức ${job.organization_id})`)
+      console.log(
+        `Hoàn ${ketQua.creditHoanLai} credit cho job ${job.id} ` +
+          `(tổ chức ${job.organization_id}, diện ${ketQua.lyDo})`
+      )
     }
   }
 
-  if (daHoan > 0) console.log(`Đã hoàn ${tongCredit} credit cho ${daHoan} job bị Identity Guard từ chối`)
+  if (daHoan > 0) console.log(`Đã hoàn ${tongCredit} credit cho ${daHoan} lượt chạy`)
 }
 
 main()

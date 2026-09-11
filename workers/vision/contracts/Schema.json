@@ -262,7 +262,9 @@
         "dvt_dem",
         "mau",
         "mo_ta_mau",
-        "dau_hieu_nhan_dang"
+        "dau_hieu_nhan_dang",
+        "so_nu",
+        "so_hong"
        ],
        "properties": {
         "nhom_hoa": {
@@ -398,6 +400,20 @@
           "null"
          ],
          "description": "Đặc điểm hình thái làm căn cứ chọn mã."
+        },
+        "so_nu": {
+         "type": [
+          "integer",
+          "null"
+         ],
+         "description": "So NU CHUA NO cua rieng loai nay. Dem rieng, KHONG cong vao quantity. Khong thay nu nao thi 0; khong phan biet duoc thi null."
+        },
+        "so_hong": {
+         "type": [
+          "integer",
+          "null"
+         ],
+         "description": "So don vi HONG cua rieng loai nay: gay co, heo, dap canh. Da NAM TRONG quantity, khong cong them. Khong thay don vi hong nao thi 0."
         }
        }
       }

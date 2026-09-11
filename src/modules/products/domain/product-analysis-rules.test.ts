@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest"
 import {
   canApproveAnalysis,
   canEditAnalysis,
+  canRejectAnalysis,
   draftProductName,
   extractProductFieldsFromAnalysis,
+  missingKeysInEdit,
   resolveEffectiveAnalysis,
 } from "./product-analysis-rules"
 
@@ -90,5 +92,41 @@ describe("draftProductName", () => {
     expect(
       draftProductName({ category: null, shape: null, facing: null, container: null, attributes: {} })
     ).toBe("Sản phẩm chưa đặt tên")
+  })
+})
+
+describe("missingKeysInEdit", () => {
+  const raw = { identity: {}, bom: {}, confidence: 80, checklist: {} }
+
+  it("chấp nhận bản sửa giữ đủ khoá, dù đổi hết giá trị", () => {
+    expect(
+      missingKeysInEdit(raw, { identity: { category: "Bó hoa" }, bom: { flowers: [] }, confidence: 95, checklist: {} })
+    ).toEqual([])
+  })
+
+  it("chỉ ra đúng khoá bị bỏ rơi", () => {
+    expect(missingKeysInEdit(raw, { bom: {}, confidence: 80, checklist: {} })).toEqual(["identity"])
+  })
+
+  it("bản sửa rỗng bị chặn thay vì xoá trắng Product Master", () => {
+    expect(missingKeysInEdit(raw, {}).sort()).toEqual(["bom", "checklist", "confidence", "identity"])
+  })
+
+  it("thêm khoá mới không sao — hợp đồng chỉ được thêm, không được bớt", () => {
+    expect(missingKeysInEdit(raw, { ...raw, ghi_chu_nguoi_soat: "đếm lại 3 cành" })).toEqual([])
+  })
+})
+
+describe("canRejectAnalysis", () => {
+  it("chỉ bản còn chờ duyệt mới từ chối được", () => {
+    expect(canRejectAnalysis("PENDING")).toBe(true)
+  })
+
+  it("bản đã duyệt không từ chối được — dữ liệu đã vào Product Master", () => {
+    expect(canRejectAnalysis("APPROVED")).toBe(false)
+  })
+
+  it("từ chối lại một bản đã từ chối không đổi gì, nên bị chặn", () => {
+    expect(canRejectAnalysis("REJECTED")).toBe(false)
   })
 })

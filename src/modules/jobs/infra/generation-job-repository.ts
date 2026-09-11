@@ -216,10 +216,25 @@ export class GenerationJobRepository {
    * dòng trả về mang theo `organization_id` của chính nó, và use-case hoàn
    * credit dựng ngữ cảnh từ đúng giá trị đó chứ không từ tham số nào khác.
    */
-  listRejected(feature: string, limit: number): Promise<generation_jobs[]> {
+  /**
+   * Job thuộc diện hoàn credit, mọi `feature`. Ba diện ở
+   * `usage/domain/refund-policy.ts`; câu `where` dưới đây phải nói cùng một
+   * điều với `lyDoHoanCredit` — nó là bản dịch sang SQL của đúng luật đó,
+   * để tiến trình quét không phải kéo cả bảng job về rồi lọc trong bộ nhớ.
+   *
+   * Chạy toàn hệ thống, không theo một tổ chức — cùng lý do với
+   * `markStuckAsFailed`, nên không dùng `scopedWhere`.
+   */
+  listRefundable(limit: number): Promise<generation_jobs[]> {
     return this.db.generation_jobs.findMany({
-      where: { feature, status: "COMPLETED", result: "REJECTED" },
-      orderBy: { completed_at: "asc" },
+      where: {
+        OR: [
+          { status: "COMPLETED", result: "REJECTED" },
+          { status: "CANCELLED" },
+          { status: "FAILED" },
+        ],
+      },
+      orderBy: { created_at: "asc" },
       take: limit,
     })
   }

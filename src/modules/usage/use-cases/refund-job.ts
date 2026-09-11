@@ -1,17 +1,18 @@
 import type { TenantContext } from "@/core/tenancy"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { runInTransaction } from "@/modules/jobs/infra/transaction"
-import { isGuardResult, canApproveOptimization } from "@/modules/media/domain/optimization-rules"
 import { OrganizationRepository } from "@/modules/organization/infra/organization-repository"
+import { lyDoHoanCredit, type LyDoHoan } from "@/modules/usage/domain/refund-policy"
 import { UsageRepository } from "@/modules/usage/infra/usage-repository"
 
 export type RefundOutcome =
-  | { refunded: false; reason: "khong-phai-job-bi-tu-choi" | "da-hoan-truoc-do" | "khong-co-gi-de-hoan" }
-  | { refunded: true; creditHoanLai: number }
+  | { refunded: false; reason: "khong-thuoc-dien-hoan" | "da-hoan-truoc-do" | "khong-co-gi-de-hoan" }
+  | { refunded: true; creditHoanLai: number; lyDo: LyDoHoan }
 
 /**
- * Quyết định D3 — **job bị Identity Guard từ chối không tính phí khách**
- * (đặc tả 07 mục 7, "Job bị Identity Guard từ chối").
+ * Hoàn credit cho một lượt chạy khách không nhận được kết quả. Ba diện đủ
+ * điều kiện và lý lẽ của từng diện nằm ở `usage/domain/refund-policy.ts` —
+ * tệp này chỉ thi hành, không tự quyết diện nào.
  *
  * Ghi một dòng `usage` mới `status = REFUNDED` với `cost_credit = 0` (không
  * trừ thêm) và hoàn lại đúng số credit đã trừ lúc enqueue vào
@@ -32,17 +33,15 @@ export type RefundOutcome =
  * Idempotent: gọi lại không hoàn hai lần. Chốt là sự tồn tại của một dòng
  * `REFUNDED` cho chính `job_id` đó.
  */
-export async function refundRejectedJob(
+export async function refundJob(
   ctx: TenantContext,
   jobId: string
 ): Promise<RefundOutcome> {
   const job = await new GenerationJobRepository().findById(ctx, jobId)
-  if (!job || job.status !== "COMPLETED") {
-    return { refunded: false, reason: "khong-phai-job-bi-tu-choi" }
-  }
-  if (!isGuardResult(job.result) || canApproveOptimization(job.result)) {
-    return { refunded: false, reason: "khong-phai-job-bi-tu-choi" }
-  }
+  if (!job) return { refunded: false, reason: "khong-thuoc-dien-hoan" }
+
+  const lyDo = lyDoHoanCredit({ status: job.status, result: job.result })
+  if (lyDo === null) return { refunded: false, reason: "khong-thuoc-dien-hoan" }
 
   const usageRepo = new UsageRepository()
   const dong = await usageRepo.listByJob(ctx, jobId)
@@ -73,5 +72,5 @@ export async function refundRejectedJob(
     await new OrganizationRepository(tx).refundCredit(ctx, daTru)
   })
 
-  return { refunded: true, creditHoanLai: daTru }
+  return { refunded: true, creditHoanLai: daTru, lyDo }
 }
