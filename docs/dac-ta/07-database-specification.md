@@ -69,10 +69,17 @@ model organizations {
   type           organization_type @default(SINGLE)
   credit_balance Int               @default(0)
   credit_plan    String?
-  settings       Json?             // bảng công tắc cấp tổ chức, gồm cho_phep_tu_duyet
+  settings       Json?             // bảng công tắc cấp tổ chức — xem bảng khoá dưới đây
   created_at     DateTime          @default(now())
   updated_at     DateTime          @updatedAt
 }
+
+**Khoá của `organizations.settings`.** Cột Json chứ không phải bảng riêng: đây là những công tắc ít, đọc cùng lúc với chính bản ghi tổ chức, và không cái nào cần truy vấn theo giá trị. Mọi đường ghi vào cột này dùng **hợp nhất nông** — đặt một khoá không được xoá các khoá khác.
+
+| Khoá | Kiểu | Mặc định khi vắng | Nghĩa |
+|---|---|---|---|
+| `cho_phep_tu_duyet` | boolean | `true` | Bản ghi do chính người duyệt tạo có hiện trong hàng đợi duyệt của họ không |
+| `bo_may_phan_tich` | string | `"openai_structured"` | Bộ máy M01 chạy cho mọi lượt phân tích của tổ chức. Giá trị lạ rơi về mặc định thay vì ném lỗi — một khoá cấu hình hỏng không được chặn cả luồng phân tích |
 
 model workspaces {
   id              String        @id @default(uuid())
@@ -478,6 +485,7 @@ model product_analyses {
 
   created_at        DateTime       @default(now())
 
+  @@unique([job_id, asset_id])
   @@index([organization_id])
   @@index([organization_id, product_id])
   @@index([job_id])
@@ -497,6 +505,12 @@ model pricing_rules {
 ```
 
 **`raw` và `edited` tách rời.** Dự đoán gốc của máy không bao giờ bị ghi đè bởi bản người sửa. Đây là điều kiện để về sau có dữ liệu huấn luyện: cặp *máy đoán gì / người sửa thành gì* là thứ có giá trị nhất mà hệ thống sinh ra hằng ngày.
+
+`edited` chỉ giữ bản mới nhất, nên lịch sử từng lượt sửa nằm ở `audit_logs` (`product.analysis_edit`), không ở đây.
+
+**`@@unique([job_id, asset_id])` — một ảnh có đúng một kết quả trong một lượt job.** Không có ràng buộc này thì một job lô hỏng giữa chừng rồi chạy lại (`POST /jobs/:id/retry`) sẽ ghi lần hai cho những ảnh đã phân tích xong ở lần trước: hàng chờ duyệt nhân đôi, và người duyệt không biết bản nào là bản nên duyệt. Worker dựa vào chính ràng buộc này để chạy lại an toàn — nó đọc danh sách ảnh đã xong, bỏ qua chúng, và ghi kèm `ON CONFLICT DO NOTHING` làm rào cuối.
+
+**Đầu ra AI là kết quả từng phần, không phải giao dịch cả lô.** Kết nối của worker chạy `autocommit`, nên những ảnh phân tích xong trước ảnh gây lỗi đã được ghi và không lấy lại được. Chúng là kết quả thật và được giữ nguyên; job chuyển `FAILED`, và lần chạy lại tiếp tục từ đúng chỗ dừng thay vì gọi lại nhà cung cấp cho những ảnh đã xong.
 
 `pricing_rules` theo tổ chức, có thể theo chi nhánh — đổi so với FloraOS v1 nơi quy tắc giá là cấu hình toàn cục.
 

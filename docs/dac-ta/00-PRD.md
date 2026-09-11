@@ -78,9 +78,13 @@ Người dùng chỉ cung cấp phần động: ảnh, tên sản phẩm, vài t
 
 **Phân tích ảnh sản phẩm (M01)**
 ```
-Ảnh → job → phân tích → kết quả (chờ duyệt) → người sửa → duyệt (product.approve)
-→ ghi Product Master
+Ảnh → job → phân tích → kết quả (chờ duyệt) → người sửa
+                              ↓
+                    [Phán quyết]  ← cần product.approve (H3)
+                     ├─ duyệt   → ghi Product Master
+                     └─ từ chối → đóng bản ghi, KHÔNG chạm Product Master
 ```
+Bộ máy chạy phân tích chọn được ở cấp tổ chức (`H4`, trần cứng Điều hành): Đầy đủ · Gọn · Cục bộ. Cả ba trả cùng một hợp đồng JSON nên phần sau luồng không đổi.
 
 **Tối ưu ảnh sản phẩm (M04a) — hai cổng khác nhau**
 ```
@@ -102,7 +106,7 @@ Guard PASS không thay thế Approve. Tải ảnh về không phải là phê du
 - Không có khoá ghi toàn cục. Đồng thời hoá bằng giao dịch cơ sở dữ liệu.
 
 ### 7.2 Phân quyền
-- 76 mã năng lực, 18 mã có trần cứng. Ba lớp cắt: mặc định theo vai → bảng công tắc → trần cứng cắt sau cùng.
+- 115 mã năng lực (76 thu hoạch từ v1 ở dải A–E, 39 mã mới của core ở dải F–L), 32 mã có trần cứng. Ba lớp cắt: mặc định theo vai → bảng công tắc → trần cứng cắt sau cùng.
 - Quyền là bộ ba `(vai, mã, phạm vi)` với phạm vi ∈ {organization, branch}.
 - Vai là bản ghi, không phải enum. Vai tối thiểu: Experience User · Admin/Điều hành · Sale · Điều phối.
 - Cặp năng lực tách bắt buộc: `vision.analyze` ↔ `product.approve`; `media.optimize` ↔ `media.approve`.
@@ -164,7 +168,7 @@ Hệ quả có tên trong lộ trình (P7): `LocalBudd` bỏ `products`, `produc
 |---|---|---|---|
 | P0 | Dựng `floraos-core` theo khuôn kiến trúc | — | 1 tuần |
 | P1 | Organization · Workspace · Membership · Branch · cách ly tenant | P0 | 2–3 tuần |
-| P2 | RBAC — 76 mã, phạm vi org/branch, vai thành bản ghi, tách `*.approve` | P1 | 1–2 tuần |
+| P2 | RBAC — thu hoạch 76 mã, phạm vi org/branch, vai thành bản ghi, tách `*.approve` | P1 | 1–2 tuần |
 | P3 | Asset + GenerationJob + Usage trong một đợt | P1 | 2–3 tuần |
 | P4 | BusinessProfile + BrandProfile | P1 | 1 tuần |
 | P5 | M01 — hợp đồng AI, engine đếm, engine màu | P3 | 2–3 tuần |
@@ -204,6 +208,10 @@ Tổng thô 5–6 tháng với một đội nhỏ, P9 chạy song song.
 |---|---|---|
 | Đường A | Dựng repo core mới, thu hoạch từ ba repo, giữ tách ba repo. `FloraOS` v1 nghỉ hưu, không migrate dần | 09/09 |
 | D5-c | Cổng Vision ở mức hợp đồng JSON: `VisionAnalyzer.analyze → ProductAnalysis`. Adapter GPT-4o trước, Florence-2 + SAM2 sau, chỉ đổi khi thắng trên bộ ảnh vàng | 09/09 |
+| D5-d | Ba adapter cùng tồn tại sau cổng — Đầy đủ · Gọn · Cục bộ — và tổ chức chọn dùng bộ nào qua `H4`. Cổng nghiệm thu để đổi bộ MẶC ĐỊNH giữ nguyên: tự chọn là để thử, không thay phép đo trên bộ ảnh vàng | 09/11 |
+| D5-e | Bộ MẶC ĐỊNH nền tảng đổi từ Đầy đủ sang Cục bộ — ghi đè có chủ đích cổng D5-d, chốt qua AskUserQuestion với chủ sản phẩm, KHÔNG dựa trên đo bộ ảnh vàng (`golden/labels/` vẫn 0/100). Lý do: Cục bộ vừa chạy thử thật thành công (nợ #55) và không gửi ảnh ra ngoài; chưa có worker thật nào đang chạy tại thời điểm đổi (nợ #61) | 09/11 |
+| D3-b | Hoàn credit mở rộng thành ba diện: Guard từ chối · job bị huỷ khi còn chờ · job hỏng vì lỗi kỹ thuật. `COMPLETED` kèm `LOW_CONFIDENCE` không hoàn — đó là kết quả thật kèm cảnh báo | 09/11 |
+| D7 | Ba bộ máy thu cùng `vision.analyze = 1` credit, dù chi phí thật chênh nhau nhiều lần. Bảng giá theo bộ máy chờ mô hình bán hàng thật | 09/11 |
 | D6-1 | Postgres làm hàng đợi. Worker Python lấy việc bằng `SELECT … FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`. Cấm `subprocess` + parse stdout, cấm chạy job qua HTTP | 09/09 |
 
 **Còn mở**
@@ -252,4 +260,4 @@ Chín câu hỏi phải trả lời trước mỗi hạng mục: hạng thu ho�
 | Năng lực gác | Mục 7.2 |
 | Trạng thái | — |
 
-Giá trị đưa lên Master Index: ngưỡng đồng thời 100–500 · SLA 10–30 giây · dải chi phí ảnh và video · kích thước bộ ảnh vàng 50–100 · 76 mã năng lực, 18 trần cứng · tổng thời lượng lộ trình 5–6 tháng.
+Giá trị đưa lên Master Index: ngưỡng đồng thời 100–500 · SLA 10–30 giây · dải chi phí ảnh và video · kích thước bộ ảnh vàng 50–100 · 115 mã năng lực, 32 trần cứng · tổng thời lượng lộ trình 5–6 tháng.

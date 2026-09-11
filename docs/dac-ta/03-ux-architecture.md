@@ -7,7 +7,7 @@
 | Thiết bị | **Điện thoại trước, máy tính sau** | Thiết kế cho màn hẹp trước; màn rộng là mở rộng, không phải ngược lại |
 | Điểm vào | **Dashboard theo vai** | Experience vào lưới thẻ chức năng; cửa hàng và chuỗi vào dashboard Điều hành |
 | Tiến trình job | **Checklist theo bước là chính**, nhật ký mở ra khi cần | Người dùng thấy đang tới đâu mà không phải đọc log |
-| Duyệt | **Cả tại chỗ lẫn ở hàng đợi** | Duyệt ngay sau khi xem kết quả, hoặc gom lại duyệt hàng loạt |
+| Duyệt | **Cả tại chỗ lẫn ở hàng đợi** | Duyệt ngay sau khi xem kết quả, hoặc gom lại duyệt hàng loạt. Đường bỏ một kết quả đặt cạnh đường duyệt ở cả hai chỗ |
 
 Phạm vi chi nhánh không có bộ chọn ở bản đầu. RBAC vẫn đỡ sẵn phạm vi chi nhánh, nên thêm bộ chọn về sau không phải sửa quyền.
 
@@ -69,7 +69,9 @@ Hết hạn mức thì thẻ chuyển sang trạng thái khoá, kèm một đư�
 ## 6. Luồng phân tích ảnh
 
 ```
-Tải ảnh  →  Xác nhận ảnh  →  Đang chạy (checklist)  →  Kết quả  →  Sửa  →  Duyệt
+Tải ảnh  →  Xác nhận ảnh  →  Đang chạy (checklist)  →  Kết quả  →  Sửa
+                                                                   ↓
+                                                    Xác nhận  →  Duyệt / Bỏ
 ```
 
 **Tải ảnh.** Trên điện thoại, nút mở thẳng camera hoặc thư viện. Nhiều ảnh cùng lúc được, mỗi ảnh một job. Ảnh hiện ngay dưới dạng thu nhỏ trong lúc đang tải lên.
@@ -91,9 +93,29 @@ Một dòng chữ nhỏ dưới checklist là dòng nhật ký mới nhất. B�
 
 Cấu phần có độ tin cậy thấp được đánh dấu bằng viền, không bằng màu đỏ — màu đỏ ở đây báo sai, vì máy không sai, máy chỉ không chắc.
 
-**Sửa.** Sửa tại chỗ trên chính màn hình kết quả. Bản sửa lưu tách khỏi dự đoán gốc; giao diện luôn xem lại được máy đoán gì ban đầu.
+**Sửa.** Sửa tại chỗ trên chính màn hình kết quả — sửa được cả **tên cấu phần** lẫn số lượng, không chỉ số lượng. Máy nhận sai loài là lỗi hệ thống chứ không phải dao động: gọi lại cùng một mô hình trên cùng một ảnh vẫn ra cùng cái tên sai, nên tên phải sửa được bằng tay. Đổi tên thì mã danh mục của dòng đó bỏ trống để người soát gắn lại. Bản sửa lưu tách khỏi dự đoán gốc; giao diện luôn xem lại được máy đoán gì ban đầu.
 
-**Duyệt.** Một nút, chỉ hiện với người có `H3`. Duyệt xong, dữ liệu vào Product Master và màn hình gợi ý bước kế.
+**Xác nhận.** Nút cuối màn kết quả không duyệt thẳng — nó mở một hộp thoại bày trọn thứ sắp ghi vào Product Master: nhận dạng, ba tổng đếm, và mọi cấu phần trong một khung. Màn kết quả phía sau bày từng khối rời và cuộn dài, nên duyệt từ đó là duyệt một thứ chưa nhìn hết. Hộp thoại nói rõ bản này giữ nguyên dự đoán của máy hay đã có chỉnh sửa của người.
+
+**Duyệt hoặc bỏ.** Hai phán quyết đặt cạnh nhau trong hộp thoại, cùng cần `H3`. Bỏ một kết quả sai phải dễ ngang nhận một kết quả đúng — giấu đường từ chối sẽ đẩy người soát về phía duyệt cho xong. Duyệt thì dữ liệu vào Product Master và màn hình gợi ý bước kế; bỏ thì bản ghi đóng lại, không chạm Product Master, và lý do bỏ vào nhật ký kiểm toán.
+
+**Chờ quá lâu.** Job xếp hàng quá hai phút hiện cảnh báo rằng tiến trình phân tích nhiều khả năng chưa được bật, kèm nút huỷ lượt chạy. Màn hình ngừng theo dõi ở mốc mười lăm phút, khớp với quét job treo phía máy chủ, thay vì quay vô hạn — job không mất và mở lại được ở mục Lượt chạy.
+
+### 6.1 Màn chọn bộ máy phân tích
+
+Vào từ Dashboard Điều hành, đường `/bo-may`. Ai có `H1` đều xem được bộ nào đang chạy — người chạy phân tích cần biết để hiểu kết quả mình nhận; chỉ người có `H4` đổi được.
+
+Mỗi bộ hiện ba thông tin, và cả ba đều cần thiết trước khi chọn:
+
+| Thông tin | Vì sao hiện |
+|---|---|
+| Cách chạy | Nói rõ bộ đó làm gì khác nhau, không chỉ một cái tên |
+| Đã đo hay chưa | Nhãn trạng thái không phải nhãn tiếp thị — nó nói bộ đó đã chấm trên bộ ảnh vàng hay chưa |
+| Ảnh có rời hạ tầng không | Câu hỏi về quyền riêng tư dữ liệu khách hàng, phải trả lời trước khi chọn chứ không phải sau |
+
+Bày ba lựa chọn trông ngang nhau là nói dối bằng bố cục. Màn này có một dòng cảnh báo cố định: chỉ bộ đã chạy thật mới có căn cứ về độ chính xác, hai bộ còn lại chưa được chấm điểm nên chưa có căn cứ nói bộ nào đếm đúng hơn.
+
+Đổi xong, dòng chữ dưới nút nói rõ lượt phân tích đang chạy dở vẫn dùng bộ cũ.
 
 ## 7. Luồng tối ưu ảnh
 

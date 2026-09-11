@@ -123,3 +123,102 @@ Nợ mới ghi ngày 09/11 (nối Dashboard Điều hành `/` với dữ liệu 
 |---|---|---|---|
 | 47 | `AdminDashboard` fetch dữ liệu qua `fetch()` trong `useEffect` rồi `setState` — `eslint-config-next/core-web-vitals` (`react-hooks/set-state-in-effect`) coi đây là lỗi, không chỉ cảnh báo. Đã tắt rule tại chỗ cho khối `useEffect` đó | Đây là component đầu tiên trong app gọi API thật phía client — repo chưa có SWR/TanStack Query hay quy ước fetch nào khác để theo. Tắt rule tại một chỗ, không tắt toàn cục | Khi chọn một thư viện fetch/cache phía client (SWR hoặc TanStack Query là hai lựa chọn hợp lý nhất với Next App Router) — lúc đó viết lại theo đúng khuôn của thư viện, không còn `useEffect` gọi thẳng `fetch` |
 | 48 | Khối "Hàng chờ duyệt" trên Dashboard hiện "Sắp có", không hiển thị dữ liệu thật | `vision.analyses` và `media.optimizations` chỉ có `POST` (tạo, duyệt) — CHƯA có `GET` liệt kê bản ghi đang chờ duyệt (`result IS NULL` hoặc tương đương). Giả một danh sách rỗng hoặc dùng lại dữ liệu mẫu cũ sẽ sai hơn là nói thẳng chưa có | Viết `GET /vision/analyses` + `GET /media/optimizations` (lọc theo trạng thái chờ duyệt), theo đúng khuôn phân trang con trỏ đã dùng ở `listJobs`/`listProducts` — cần soát lại năng lực (`H1`/`H3`/`I1`/`I2`) trước khi mở endpoint đọc mới |
+
+Nợ mới ghi ngày 09/11 (soát mức sẵn sàng triển khai M01 — Phân tích ảnh sản phẩm):
+
+| # | Nợ | Vì sao chấp nhận | Trả khi nào |
+|---|---|---|---|
+| 49 | Job `CANCELLED` và job `FAILED` KHÔNG được hoàn credit. `refundRejectedJob` chỉ nhận job `COMPLETED` mang phán quyết Guard (`isGuardResult`), đúng phạm vi D3 — nhưng credit trừ tại điểm `enqueueJob` nên người dùng huỷ một lượt đang xếp hàng, hoặc gặp một lượt hỏng vì lỗi kỹ thuật, vẫn mất credit của lượt đó | D3 chốt ngày 09/09 chỉ nói về job bị Identity Guard từ chối; hai trạng thái này chưa có quyết định kinh doanh nào phủ. Không tự cấy một luật hoàn tiền vào mã là đoán thay chủ sản phẩm | Chủ sản phẩm chốt chính sách cho `CANCELLED` (khách chủ động dừng) và `FAILED` (nền tảng hỏng) — hai ca có lý lẽ khác nhau, không nhất thiết cùng một quyết định |
+| 50 | Hợp đồng `Schema.json` không có `flower_count`, `bud_count`, `damaged_count`. `BO_ANH_VANG.md` mục 6 khai đúng bốn trường đó trong lược đồ nhãn và mục 9 chấm điểm chính trên `flower_count` — máy và thước đo hiện không chia sẻ trường nào để so | Hợp đồng chỉ được THÊM trường (`YC-N3`), nên thao tác này hợp lệ; nhưng phép suy `flower_count` từ `bom.flowers[].quantity` phải chốt trước khi thêm, vì quy ước đếm 3 tính theo cành còn `dvt_dem` mở nhiều đơn vị | Cùng đợt nghiệm thu bộ ảnh vàng (nợ #24) — không đo được provider nào cho tới khi hai bên có chung một trường |
+| 51 | `bom.foliage[].quantity` là trường bắt buộc trong hợp đồng, trong khi `QUY_UOC_DEM.md` quy ước 4 yêu cầu lá và cành trang trí ghi tên và **không đếm số** (`count` để trống) | Hợp đồng thu hoạch nguyên vẹn từ v1 (R1), quy ước đếm chốt sau. Hai tài liệu đang nói hai điều khác nhau về cùng một trường | Cùng đợt với nợ #50 — chốt một trong hai bên rồi sửa bên còn lại, không để cả hai cùng đứng |
+| 52 | Không có đường nào đưa `product_analyses.approval_state` về `REJECTED`. Giá trị này có trong enum của lược đồ, có trong kiểu TS, `canApproveAnalysis`/`canEditAnalysis` đều xử lý nó — nhưng không endpoint nào đặt nó. Một kết quả sai không bỏ đi được, nó nằm lại hàng chờ duyệt vĩnh viễn | Đặc tả 06 mục 8 chỉ khai `POST /approve`, không khai `POST /reject`. Thêm một endpoint đổi trạng thái nghiệp vụ là quyết định sản phẩm, không phải chỗ trống kỹ thuật | Chủ sản phẩm xác nhận người soát cần "bỏ" một kết quả hay chỉ cần sửa rồi duyệt — cùng lúc với nợ #22 (thu hồi duyệt) |
+| 53 | Chưa có công cụ chấm điểm bộ ảnh vàng. `BO_ANH_VANG.md` mục 9 định nghĩa sáu chỉ số (đếm đúng tuyệt đối, sai số tuyệt đối trung bình, tỉ lệ sai nặng, độ khớp cấu phần, độ khớp màu, chi phí và thời gian) và cổng đổi provider dựa vào chúng; không có mã nào tính | Chỉ số tính trên `flower_count`, mà trường đó chưa có ở phía máy (nợ #50). Viết bộ chấm trước khi chốt phép suy là viết vào chỗ trống | Ngay sau nợ #50 — trước khi có nhãn thật thì bộ chấm không chạy được, nhưng nó phải sẵn sàng đúng lúc nhãn xong |
+| 54 | `workers/.venv-worker` trên máy phát triển dựng bằng Python 3.9.6 (CommandLineTools), trong khi `workers/pyproject.toml` khai `requires-python = ">=3.11"` và `[tool.ruff] target-version = "py311"` | Môi trường máy, không phải mã nguồn. Ghi lại vì nó có hệ quả thật: bộ test worker chưa từng chạy được bằng chính venv của repo | Dựng lại venv bằng Python 3.11 trở lên trước khi đưa worker lên máy chủ thật |
+
+Đã trả ngày 09/11 (đợt soát mức sẵn sàng triển khai M01):
+
+- **Nợ #49** — hoàn credit nay phủ ba diện, luật ở `usage/domain/refund-policy.ts`
+  (`lyDoHoanCredit`, thuần, 6 ca thử): Guard từ chối (D3, như cũ), job bị huỷ,
+  job hỏng vì lỗi kỹ thuật. `refundRejectedJob` đổi tên thành `refundJob` và
+  chuyển sang `modules/usage/use-cases/` — nó không còn là việc riêng của
+  M04a. `GenerationJobRepository.listRejected` thành `listRefundable`, quét
+  mọi `feature` thay vì chỉ `media.optimize`, nên lượt phân tích ảnh hỏng
+  cũng được hoàn. `npm run hoan-credit` không đổi cách gọi.
+- **Nợ #50** — hợp đồng nay mang ba tổng đếm. Chúng KHÔNG hỏi mô hình mà cộng
+  từ `bom` ngay sau khi nhận đáp ứng (`vision/analyzer/dem_tong.py`, thuần,
+  9 ca thử), nên không bao giờ có hai giá trị bất đồng trong cùng một bản
+  ghi. `Schema.json` thêm `so_nu` và `so_hong` cho mỗi dòng hoa — trước đó
+  hợp đồng không có chỗ nào khai nụ, nên quy ước đếm 1 và 6 không thực thi
+  được. Đơn vị giữ theo `dvt_dem` của từng loài, đúng quy ước đếm 3.
+- **Nợ #51** — không phải mâu thuẫn lược đồ: `bom.foliage[].quantity` vốn đã
+  là `["integer","null"]`. Thiếu sót nằm ở `Prompt.md`, nay có mục "Lá và
+  cành trang trí không đếm số" bảo mô hình khai `null` ở trường đó.
+- **Nợ #52** — `POST /vision/analyses/:id/reject` (`H3`), luật thuần
+  `canRejectAnalysis` (chỉ `PENDING`), ghi `audit_logs` action
+  `product.reject` trong cùng giao dịch, `ly_do` tuỳ chọn vào phần `after`.
+  Không chạm Product Master. Có nút trên cả màn kết quả lẫn hàng chờ duyệt.
+- **Nợ #53** — `GET /vision/analyses/export` (`H3`) trả CSV mã hoá UTF-8 kèm
+  BOM, một dòng cho mỗi cấu phần, cột `nguon` phân biệt số của máy với số của
+  người (`domain/analysis-export.ts`, thuần, 11 ca thử). Đây là tệp đối soát
+  vận hành, chưa phải bộ chấm điểm bộ ảnh vàng — bộ đó chờ nhãn thật (nợ #24).
+
+Ba lỗ chặn triển khai đóng cùng đợt, không có dòng nợ riêng vì chúng là lỗi
+chứ không phải đánh đổi có chủ đích:
+
+- **`POST /assets` nhận `storage_key` bất kỳ từ client.** Bản ghi mang
+  `organization_id` đúng nên mọi bộ lọc tenant cho qua, nhưng đường dẫn trỏ
+  được sang `org/<tổ-chức-khác>/…` (đọc ảnh xuyên tổ chức, vỡ luật 1 và 2)
+  hoặc ra ngoài kho bằng `..`. Nay `storageKeyMatchesContext` dựng lại đường
+  dẫn hợp lệ duy nhất phía máy chủ và so khớp; worker rào lần hai lúc đọc.
+- **Job lô hỏng giữa chừng nhân đôi kết quả khi chạy lại.** `product_analyses`
+  nay có `@@unique([job_id, asset_id])`; worker bỏ qua ảnh đã xong và ghi
+  kèm `ON CONFLICT DO NOTHING`. `conn.rollback()` trong nhánh lỗi đã gỡ — nó
+  không làm gì trên kết nối `autocommit` và che mất đúng sự thật đó.
+- **Worker thoát hẳn khi gặp sự cố hạ tầng.** `run_worker` nay nối lại theo
+  thang lùi 1→60 giây; ghi nhật ký không làm chết tiến trình; `SIGTERM` để
+  job đang chạy kết thúc rồi mới thoát.
+
+Siết thêm cùng đợt: lời gọi nhà cung cấp có hạn 120 giây và thử lại hai lần;
+đáp ứng bị cắt vì chạm trần token, bị từ chối, hay rỗng đều có câu lỗi riêng
+thay vì `JSONDecodeError`; ảnh thu về cạnh dài 1400 px theo `config.json`
+(tệp đó trước nay được nạp rồi không ai đọc); `PATCH /vision/analyses/:id`
+từ chối bản sửa bỏ sót khoá máy đã trả, vì bản sửa thay NGUYÊN bản gốc nên
+thiếu khoá là âm thầm xoá trắng trường tương ứng trong Product Master; lượt
+sửa nay ghi `audit_logs` action `product.analysis_edit`; `requirements.txt`
+nâng lên `psycopg>=3.2` vì `notifies(timeout=…)` có từ bản đó.
+
+Ghi ngày 09/11 (đợt ba bộ máy phân tích ảnh):
+
+Cổng `VisionAnalyzer` nay có ba hiện thực, chọn ở cấp tổ chức. Cả ba trả cùng
+hợp đồng `PhanTichSanPhamHoa`, nên Review, Approve, Product Master, M02 và
+M03 không biết bộ nào đã chạy — đúng D5-c (cổng ở mức hợp đồng JSON).
+
+| Khoá | Tên hiển thị | Cách chạy | Trạng thái |
+|---|---|---|---|
+| `openai_structured` | Đầy đủ | Đo bảng màu tại chỗ → gửi ảnh kèm bảng màu và `Prompt.md` (3.536 token) → một hoặc hai lượt, đồng thuận trung vị | Đã chạy thật |
+| `openai_direct` | Gọn | Gửi thẳng ảnh kèm `PromptGon.md` (~600 token), một lượt, không tiền xử lý | Chưa đo trên bộ ảnh vàng |
+| `local_cv` | Cục bộ | SAM2 tách → Florence-2 gọi tên → `color_engine` (chưa nối) → lắp ráp. Ảnh không rời hạ tầng | Có hiện thực, CHƯA chạy thử trên trọng số thật (nợ #55) |
+
+Đường chọn: `organizations.settings.bo_may_phan_tich` (cùng khối với
+`cho_phep_tu_duyet`, không dựng bảng mới) · `GET /vision/engine` (`H1` — ai
+chạy phân tích cũng xem được bộ nào đang chạy) · `PUT /vision/engine` (`H4`,
+mã năng lực mới, trần cứng `dieu_hanh`) · màn `/bo-may`.
+
+Bộ máy **chốt vào `payload` của job lúc tạo**, worker không tra lại lúc nhận
+việc. Điều hành đổi bộ máy giữa lúc một lô đang xếp hàng thì lô đó vẫn chạy
+bằng bộ đã chọn khi bấm nút — nếu không, hai ảnh cùng một lô có thể chạy
+bằng hai bộ khác nhau và không ai biết. Mỗi lần đổi ghi `audit_logs` action
+`vision.engine.change`.
+
+Danh mục năng lực: 114 → 115 mã, trần cứng 31 → 32. `H4` nằm ở dải mã mới
+(F–L) nên bộ 76 mã thu hoạch (A–E) không đổi.
+
+| # | Nợ | Vì sao chấp nhận | Trả khi nào |
+|---|---|---|---|
+| 55 | `local_cv` CÓ hiện thực `BoTachThucThe`/`Sam2Segmenter` và `BoGoiTen`/`Florence2Labeler`, đăng ký thật trong `registry._dung_local_cv`. **ĐÃ CHẠY THỬ THẬT THÀNH CÔNG 2026-09-11** trên máy thật (Apple Silicon, MPS, SAM2.1 Hiera Small + Florence-2-base) — ảnh `golden/images/g043.jpg`: SAM2 tách 37 thực thể hợp lý, pipeline đầy đủ qua `registry.lay_provider("local_cv").analyze()` ra đúng hình dạng `Schema.json`, `flower_count=18`, `confidence=55` (đúng trần đã định vì chưa có bộ phân loại — nợ #56), checklist tự suy đúng | Hai vướng đã gặp và đã sửa khi chạy thật: (1) `microsoft/Florence-2-base` (mã từ xa `trust_remote_code`) vỡ với `transformers>=4.52.1` nói chung và `5.17.0` cụ thể (`AttributeError: forced_bos_token_id`, rồi `EncoderDecoderCache.layers` ngay trong `generate()` của chính `transformers`) — chuyển sang `florence-community/Florence-2-base` (hỗ trợ Florence-2 NGUYÊN BẢN từ `transformers>=5.15.1`, không cần `trust_remote_code`) và ghim đúng `transformers==5.15.1` trong `requirements-local-cv.txt`; (2) gói `sam2` trên PyPI KHÔNG phải của Meta (bên thứ ba, bản cuối 12/2024) — cài đúng bản chính thức bằng `git clone facebookresearch/sam2` + `pip install -e ".[notebooks]"`. Quan sát MỚI, chưa phải lỗi: SAM2 tách nhiều mặt nạ chồng lấp (cả bó hoa lẫn từng phần con của nó), và `<CAPTION>` mô tả nguyên khung cắt nên vài dòng `bom` gần như lặp ý nhau — cùng gốc với nợ #56 (chưa có bộ phân loại loài để gộp/rút gọn nhãn), ghi thêm ở nợ #60 | **Đã đổi 09/11** — `trang_thai` `local_cv` từ `chua_san_sang` sang `thu_nghiem` (ngang `openai_direct`), chốt qua AskUserQuestion với chủ sản phẩm, đúng quy trình D5-c (không tự quyết một mình). Còn lại: đổi bộ MẶC ĐỊNH của cả ba vẫn chờ đo trên bộ ảnh vàng, không đổi bằng lập luận |
+| 56 | `local_cv` không có bộ phân loại loài THỊ GIÁC theo danh mục cửa hàng. **Giảm nhẹ một phần 09/11** (theo yêu cầu chủ sản phẩm): `local_cv_species.doan_ma_loai` so CHỮ nhãn thô của Florence-2 với alias tiếng Anh trong `contracts/species_catalog.json` (86 loài trích từ `FloraOS Vận hành/01_NHAP-LIEU.xlsx` sheet "02 Danh mục loại", 2026-09-11) — khớp rõ MỘT loài thì gán `ma`/tên chuẩn, nhập nhằng hoặc không khớp thì vẫn `ma: null` như cũ. `confidence` VẪN giữ trần 55 bất kể có khớp được mã hay không — chưa có đo lường trên bộ ảnh vàng để biện minh nâng trần (D5-c) | Đây KHÔNG phải bộ phân loại thị giác — chỉ so chữ với đúng nhãn Florence-2 tự nhả ra, không nhìn lại ảnh. Không dùng được cho các trường hợp Florence-2 mô tả sai chủ thể, hoặc loài không có alias tiếng Anh trong danh mục (khoảng 15/86 loài, xem `species_catalog.json`). Sheet "08 Cặp dễ nhầm" (63 cặp, dấu hiệu THỊ GIÁC) chưa dùng tới — chỉ có ích khi có bộ phân loại thị giác thật | Trả HẾT khi có bộ phân loại thị giác thật — cần ảnh có nhãn loài để huấn luyện, tức cùng chỗ nghẽn với bộ ảnh vàng (nợ #24) |
+| 57 | `local_cv` khai bảy trong mười ô `checklist` là "Không có" vì chưa phân biệt được vai trò từng loài | `Schema.json` không cho `null` ở các ô này. `confidence` thấp của cả bản ghi là thứ nói ra rằng phần này chưa nên tin | Cùng đợt với nợ #56 |
+| 58 | Cả ba bộ máy thu cùng `vision.analyze = 1` credit, dù chi phí thật chênh nhau nhiều lần | Chốt với chủ sản phẩm 09/11: giữ một mức, nền tảng chịu phần chênh. Bảng giá theo bộ máy là quyết định kinh doanh, chưa có mô hình bán hàng thật (cùng lý do nợ #14) | Khi có quyết định kinh doanh về gói giá |
+| 59 | `openai_direct` chưa đo trên bộ ảnh vàng, nên chưa có căn cứ nói nó đếm kém hơn hay hơn bộ đầy đủ | `BO_ANH_VANG.md` mục 9: "Không đổi bằng lập luận". Màn `/bo-may` nói thẳng điều này thay vì bày ba lựa chọn trông ngang nhau | Cùng đợt nghiệm thu bộ ảnh vàng (nợ #24) |
+| 60 | `local_cv` tách nhiều mặt nạ SAM2 chồng lấp cho cùng một vật thể (cả bó hoa lẫn từng bông con trong đó), và `Florence2Labeler` mô tả nguyên khung đã cắt chứ không riêng vùng mặt nạ — sinh nhiều dòng `bom` gần trùng ý nhau thay vì gộp lại | Quan sát thật từ đợt chạy thử 09/11 (`golden/images/g043.jpg`, 37 mặt nạ → 11 dòng `bom.flowers` sau khi gộp theo nhãn nguyên văn, nhiều dòng nội dung chồng lấp). `_nhom_theo_nhan` gộp theo NHÃN Y HỆT, không gộp theo ngữ nghĩa — chưa có bước lọc chồng lấp (non-max suppression) theo bbox trước khi gọi Florence-2 | Cùng đợt với nợ #56 (bộ phân loại loài) — cả hai đều cần dữ liệu có nhãn loài thật để hiệu chỉnh, không sửa bằng lập luận suông |
+| 61 | `VISION_ENGINE_MAC_DINH`/`registry.MAC_DINH` đổi thành `local_cv` (D5-e, 09/11) mà chưa có phép đo trên bộ ảnh vàng — ghi đè có chủ đích, không phải kết quả thắng đo được | Chốt với chủ sản phẩm qua AskUserQuestion, có cảnh báo rõ đây là ghi đè D5-d. Tại thời điểm đổi chưa có worker thật nào đang xử lý job nên chưa job nào lỗi ngay; nhưng worker đầu tiên bật lên phục vụ job thật BẮT BUỘC phải có `torch`, `transformers==5.15.1`, `sam2` cùng hai tệp trọng số SAM2 (`sam2.1_hiera_small.pt`) và Florence-2 (`florence-community/Florence-2-base`) trong đúng môi trường thực thi — thiếu một trong số này thì `registry.lay_provider` ném `NotImplementedError` cho MỌI job không tự chọn bộ máy khác qua `H4` | Khi bộ ảnh vàng có số đo thật (nợ #24) — lúc đó xác nhận lại `local_cv` có đúng là bộ nên mặc định hay trả về `openai_structured`. Trong lúc chờ: xác nhận môi trường worker thật trước khi worker đầu tiên xử lý job thật |

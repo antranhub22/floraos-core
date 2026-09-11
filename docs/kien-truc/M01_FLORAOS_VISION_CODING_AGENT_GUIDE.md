@@ -84,16 +84,22 @@ Trước khi tạo/sửa file, agent tự hỏi:
 ## 2. Checklist đồng bộ theo loại thay đổi
 
 ### A. Khi viết/sửa một Provider (`vision/providers/*.py`)
-- [ ] Class implement đầy đủ interface `VisionProvider` (mục 5) — không thêm method ngoài interface vào business logic dùng chung.
-- [ ] Method `detect()`, `segment()`, `recognize()` trả đúng shape dữ liệu như đặc tả interface, không tự đổi tên field.
-- [ ] Nếu provider không hỗ trợ một capability (vd. GPT-4o mini không có Segmenter) → trả `None` một cách tường minh, không raise lỗi, không giả lập mask rỗng gây hiểu nhầm.
-- [ ] Provider mới phải đăng ký vào `providers/registry.py` (mục 24 V1 / mục 5 V2) kèm: tên, version, checkpoint/model version, trạng thái (`experimental` / `production`).
-- [ ] Không gọi thẳng API bên ngoài (OpenAI, HuggingFace...) ở bất kỳ đâu ngoài file provider tương ứng.
 
-### B. Khi sửa Vision Orchestrator (`vision/orchestrator.py`)
-- [ ] Đối chiếu mục 6 — xác nhận Primary Provider cho V1 vẫn là `OpenSourceProvider`, trừ khi người dùng xác nhận đổi (đây là quyết định #9, không tự ý đổi).
-- [ ] Logic fallback (nếu có) phải đọc từ config, không hard-code tên provider trong nhánh if/else nghiệp vụ.
-- [ ] Orchestrator không được import trực tiếp class provider cụ thể — chỉ làm việc qua interface/registry.
+> **Đổi so với V1.1:** bản cũ khai interface ba method `detect()/segment()/recognize()` và chốt `OpenSourceProvider` làm Primary Provider. Quyết định **D5-c** ngày 09/09 (V2 mục 17.1) bãi bỏ cả hai: cổng đặt ở mức hợp đồng JSON, và không provider nào được chốt cứng trong tài liệu. Mục này viết theo cổng hiện hành.
+
+- [ ] Class hiện thực đúng giao thức `VisionAnalyzer` (`providers/base.py`): thuộc tính `name`, `model_version`, và một method `analyze(image, context) -> dict`. Không có `detect`/`segment`/`recognize` — cổng không ở mức đó.
+- [ ] `analyze()` trả `dict` đúng hình dạng `Schema.json`, đủ mọi trường bắt buộc. Trường provider không biết thì khai `null`, không khai chuỗi rỗng: `null` nói "máy không biết", chuỗi rỗng nói "máy biết là không có", và hai điều đó khác nhau ở màn duyệt.
+- [ ] Ba tổng đếm cộng bằng `dem_tong(ket_qua)` trước khi trả, không hỏi mô hình. Mọi adapter phải cho ra cùng một nghĩa ở cùng một trường.
+- [ ] Provider mới đăng ký vào `providers/registry.py`, và khoá đăng ký phải **khớp từng chữ** với `VISION_ENGINES` ở `src/modules/products/domain/vision-engine.ts`. Hai bên không có nguồn sự thật chung nào khác — có một ca thử khoá đúng ba khoá này, cùng khuôn với `notify_channel_for`.
+- [ ] Provider mới cũng phải có một mục trong `MO_TA_BO_MAY` phía TS: tên hiển thị, mô tả cách chạy, `trang_thai`, và `gui_anh_ra_ngoai`. `trang_thai` không phải nhãn tiếp thị — nó nói bộ đó đã đo trên bộ ảnh vàng hay chưa.
+- [ ] Nạp trọng số hoặc dựng client **một lần** lúc dựng provider, không nạp lại mỗi job. Sổ đăng ký dựng lười và giữ lại đúng vì lý do này.
+- [ ] Không gọi thẳng API bên ngoài (OpenAI, HuggingFace…) ở bất kỳ đâu ngoài tệp provider tương ứng.
+- [ ] Phần dùng chung giữa các adapter — thu nhỏ ảnh, đặt hạn gọi, đọc đáp ứng phòng thủ — để ở `providers/chung.py`, không chép sang từng lớp.
+
+### B. Khi sửa phần điều phối (`jobs/worker.py`)
+- [ ] Worker **không import lớp provider nào**. Nó lấy khoá bộ máy từ `payload.engine` của dòng job và hỏi `registry.lay_provider()`.
+- [ ] Bộ máy lấy từ chính dòng job, cùng luật với `organization_id` — không tra lại cấu hình tổ chức lúc nhận việc. Tổ chức đổi bộ máy giữa lúc một lô đang xếp hàng thì lô đó vẫn chạy bằng bộ đã chốt lúc tạo job.
+- [ ] Khoá lạ rơi về mặc định, không ném lỗi: một dòng job cũ ghi tên bộ máy đã bỏ vẫn phải chạy được. Cùng luật với `resolveVisionEngine` phía TS.
 
 ### C. Khi sửa JSON Contract / Schema (`vision/contracts/schema.py`)
 - [ ] Đối chiếu mục 8 — mọi field hiện có phải giữ nguyên tên, kiểu dữ liệu, ý nghĩa.
@@ -188,8 +194,10 @@ Trước khi báo cáo "đã xong" cho một task, agent tự chạy qua checkli
 [ ] Có import chéo giữa vision/ và vision_legacy/ không? (bắt buộc = KHÔNG có)
 [ ] Có sửa file nào trong vision_legacy/ mà không được yêu cầu tường minh không?
 [ ] JSON output có đúng 100% shape ở mục 8 không (kể cả field null hợp lệ)?
-[ ] Provider mới (nếu có) có implement đủ interface, có đăng ký registry không?
-[ ] Orchestrator có đang hard-code provider cụ thể không?
+[ ] Provider mới (nếu có) có hiện thực đủ `VisionAnalyzer`, có đăng ký `registry.py` không?
+[ ] Khoá bộ máy mới có khớp từng chữ với `VISION_ENGINES` phía TS, và có mục trong `MO_TA_BO_MAY` không?
+[ ] Worker có đang import thẳng một lớp provider không? (bắt buộc = KHÔNG)
+[ ] `analyze()` có cộng ba tổng đếm bằng `dem_tong` trước khi trả không?
 [ ] Task này thuộc Phase nào (mục 12)? Đã đánh dấu đúng checklist item chưa?
 [ ] Nếu task này hoàn thành một Phase → đã đối chiếu đủ Acceptance Criteria của Phase đó chưa (mục 12 + mục 15)?
 
@@ -201,6 +209,8 @@ Trước khi báo cáo "đã xong" cho một task, agent tự chạy qua checkli
 [ ] Usage có ghi ở phía core tại điểm enqueue, feature = "vision.analyze" (V2 mục 9)?
 [ ] Có kiểm tra trial/quota trước khi đưa job vào queue (V2 mục 11.1, 9)?
 [ ] Kết quả AI có đi qua Review/Approve trước khi ghi Product Master, không ghi thẳng? (V2 mục 10)
+[ ] Mọi tác nghiệp trên kết quả — sửa, duyệt, từ chối — có ghi `audit_logs` không?
+[ ] Bộ máy có chốt vào `payload` lúc tạo job, không tra lại lúc worker nhận việc?
 [ ] Endpoint có kiểm tra capability (vision.analyze / product.approve), không hard-code vai trò UI? (V2 mục 6)
 [ ] Task có nằm sau đúng Phase tiên quyết (V2 mục 15, P0–P12)? Xem bảng ánh xạ ở mục 1 Bước 2.
 [ ] Provider Vision có đi qua cổng VisionAnalyzer, không gọi thẳng API nhà cung cấp? (V2 mục 17.1)
@@ -227,6 +237,7 @@ Tenant: mọi bảng/route/storage mới đều có organization_id ✅
 Job: dùng chuẩn status/stage/result ✅
 Usage: đã ghi feature = "vision.analyze" ✅ / không phát sinh usage
 Approve: kết quả không ghi thẳng Product Master ✅
+Bộ máy: <khoá adapter đã đụng tới, hoặc "không đụng">
 Cần xác nhận thêm: <nếu có điểm mơ hồ cần người dùng quyết định>
 ```
 
@@ -251,9 +262,9 @@ Trong quá trình code, nếu agent phát hiện:
 ## 7. Tóm tắt quy tắc bất di bất dịch (không cần đọc lại toàn bộ mỗi lần)
 
 1. Không sửa `vision_legacy/` trừ khi được yêu cầu rõ ràng bằng tên file.
-2. Mọi provider phải qua cổng `VisionAnalyzer`; không module nào gọi thẳng API nhà cung cấp.
+2. Mọi provider phải qua cổng `VisionAnalyzer` và đăng ký ở `providers/registry.py`; không module nào gọi thẳng API nhà cung cấp, và không module nào import thẳng một lớp provider.
 3. JSON Contract chỉ được thêm field, không xóa/đổi field cũ.
-4. **Cổng Vision đặt ở mức Hợp đồng JSON, không ở mức `detect/segment/recognize`.** Cổng là `VisionAnalyzer.analyze(image, context) -> ProductAnalysis` (mục 8). Provider chọn **bằng số đo trên bộ ảnh vàng**, không chốt cứng trong tài liệu.
+4. **Cổng Vision đặt ở mức Hợp đồng JSON, không ở mức `detect/segment/recognize`.** Cổng là `VisionAnalyzer.analyze(image, context) -> ProductAnalysis` (mục 8). Ba adapter cùng tồn tại — `openai_structured` (Đầy đủ) · `openai_direct` (Gọn) · `local_cv` (Cục bộ) — và tổ chức chọn dùng bộ nào qua `H4`. Bộ **mặc định** chỉ đổi **bằng số đo trên bộ ảnh vàng**, không chốt cứng trong tài liệu và không đổi bằng lập luận.
    *(Thay quy tắc 4 của V1.1 — "Primary Provider = Florence-2 + SAM2, không phải OpenAI" — theo quyết định D5-c ngày 09/09, V2 mục 17.1. Lý do đổi: quy tắc cũ được viết trước khi biết hợp đồng GPT-4o 40KB trong `analyzer/` là tài sản đã chạy thật trên ảnh hoa của AVI GIFT; và hai hình dạng không cắm được vào cùng một interface ba method.)*
 5. Không inference trực tiếp trong HTTP request — luôn qua Job/Queue/Worker.
 6. Model load một lần, giữ trong memory/GPU, không load lại mỗi request.

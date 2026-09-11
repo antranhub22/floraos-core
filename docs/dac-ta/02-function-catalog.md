@@ -169,7 +169,8 @@ Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 |---|---|---|---|---|
 | `H1` | `vision.analyze` | Chạy phân tích ảnh sản phẩm | Điều hành · Điều phối · Sale | — |
 | `H2` | `vision.result.edit` | Sửa kết quả phân tích trước khi duyệt | Điều hành · Điều phối | — |
-| `H3` | `product.approve` | Duyệt kết quả, ghi vào Product Master | Điều hành | Điều hành |
+| `H3` | `product.approve` | Ra phán quyết trên kết quả phân tích — duyệt ghi Product Master, từ chối đóng bản ghi lại | Điều hành | Điều hành |
+| `H4` | `vision.engine.manage` | Chọn bộ máy phân tích ảnh dùng cho cả tổ chức | Điều hành | Điều hành |
 
 ### Tối ưu ảnh — nhóm I
 
@@ -205,6 +206,10 @@ Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 
 `product.approve` không nằm ở nhóm này — nó là `H3`, vì duyệt sản phẩm chính là duyệt kết quả phân tích ghi vào Product Master.
 
+**Duyệt và từ chối dùng chung `H3`.** Năng lực ở đây là *ra phán quyết trên kết quả AI*, và phán quyết gồm cả hai chiều. Tách thành hai mã sẽ dựng được một vai duyệt được mà không bỏ được — thứ không có nghĩa trong vận hành, và nó đẩy người soát về phía duyệt cho xong khi gặp một kết quả sai.
+
+**`H4` tách khỏi `H1`** vì hai việc khác hẳn nhau về hệ quả. `H1` chạy một lượt phân tích, sai thì bỏ lượt đó. `H4` đổi bộ máy cho MỌI lượt phân tích về sau của cả tổ chức, và hệ quả của nó chỉ lộ ra sau hàng trăm bản ghi. Trần cứng Điều hành vì vậy, và mỗi lần đổi ghi `audit_logs`.
+
 ### Trải nghiệm — nhóm K
 
 | Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
@@ -217,6 +222,7 @@ Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 | Chạy | Duyệt | Vì sao tách |
 |---|---|---|
 | `H1` `vision.analyze` | `H3` `product.approve` | Trong mô hình Chuỗi, Sale chạy phân tích nhưng Điều hành quyết dữ liệu nào vào Product Master |
+| `H1` `vision.analyze` | `H4` `vision.engine.manage` | Chạy một lượt phân tích khác hẳn việc đổi bộ máy cho mọi lượt của cả tổ chức |
 | `I1` `media.optimize` | `I2` `media.approve` | Tải ảnh về không phải là phê duyệt. Chỉ ảnh đã duyệt mới thành asset chính thức của sản phẩm |
 | `J1` `catalog.create` | `J2` `catalog.publish` | Soạn và phát hành ra ngoài là hai mức trách nhiệm |
 | `J3` `landing.create` | `J4` `landing.publish` | Như trên |

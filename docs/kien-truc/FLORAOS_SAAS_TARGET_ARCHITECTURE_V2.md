@@ -99,7 +99,7 @@ floraos-core/
 │   │   ├── ports/                LLMProvider · VisionProvider · StorageProvider
 │   │   │                         · QueueProvider · PublisherProvider
 │   │   ├── tenancy/              ngữ cảnh org, bộ gác truy vấn
-│   │   └── rbac/                 76 mã năng lực (thu hoạch R2)
+│   │   └── rbac/                 115 mã năng lực (76 thu hoạch R2 + 39 mã mới)
 │   ├── modules/<tên>/
 │   │   ├── domain/               thực thể + luật, KHÔNG import hạ tầng
 │   │   ├── use-cases/            điều phối
@@ -184,6 +184,8 @@ User → Membership → Organization → Workspace → Branch
 
 **Thu hoạch R2:** chép bảng 76 mã năng lực từ `FloraOS/floraos-web/src/lib/maChucNang.ts` (A1–A7, B1–B16, C1–C28, D1–D17, E1–E8) kèm `tests/maChucNang.test.ts`.
 
+**Mã mới của core** nằm ở dải F–L, tách khỏi dải thu hoạch để phần chuyển từ v1 luôn đối chiếu được nguyên vẹn: F (tổ chức và thành viên) · G (asset và job) · H (phân tích ảnh) · I (tối ưu ảnh) · J (kênh bán) · K (trải nghiệm) · L (sản phẩm và giá). Tổng danh mục **115 mã, 32 trần cứng**.
+
 **Giữ nguyên cơ chế cắt ba lớp** — đây là thứ FloraOS làm đúng và hiếm:
 
 ```
@@ -191,7 +193,9 @@ mặc định theo vai  →  bảng công tắc trong cấu hình  →  TRẦN C
                                                        (cắt sau cùng)
 ```
 
-18 mã có trần cứng. Trần cứng cắt **sau** bảng công tắc, nên không đường nào từ giao diện hay cơ sở dữ liệu mở được nó. Luật này chuyển sang core nguyên vẹn.
+18 mã thu hoạch có trần cứng, tổng cả danh mục là 32. Trần cứng cắt **sau** bảng công tắc, nên không đường nào từ giao diện hay cơ sở dữ liệu mở được nó. Luật này chuyển sang core nguyên vẹn.
+
+**Cặp năng lực tách bắt buộc ở M01:** `H1` chạy phân tích ↔ `H3` ra phán quyết (duyệt và từ chối dùng chung một mã, vì phán quyết gồm cả hai chiều — tách ra sẽ dựng được một vai duyệt được mà không bỏ được, thứ không có nghĩa trong vận hành) ↔ `H4` chọn bộ máy phân tích cho cả tổ chức. `H4` có trần cứng `dieu_hanh`: đổi bộ máy đổi chất lượng dữ liệu của mọi lượt phân tích về sau, nên nó không phải một công tắc thao tác mà là một quyết định cấp tổ chức.
 
 **Ba mở rộng bắt buộc:**
 
@@ -202,7 +206,8 @@ mặc định theo vai  →  bảng công tắc trong cấu hình  →  TRẦN C
 ```
 product.read · product.create · product.update · product.approve
 pricing.read · pricing.manage
-vision.analyze         (M01)
+vision.analyze         (M01 — chạy phân tích)
+vision.engine.manage   (M01 — chọn bộ máy phân tích cho cả tổ chức)
 media.optimize         (M04a — chạy job tối ưu)
 media.approve          (M04a — nâng Master Image thành ảnh chính thức)
 catalog.create · catalog.publish
@@ -358,6 +363,12 @@ Tám module, chín đơn vị triển khai (M04 tách đôi ở ranh giới Mast
 
 **M01 — Product Image Analysis.** Vào: ảnh sản phẩm, tên tuỳ chọn. Ra: nhận diện hoa/cấu phần, số lượng, cấu trúc, thuộc tính, màu, kích thước, độ tin cậy, dữ liệu sản phẩm có cấu trúc. Kết quả phải xem và sửa được; kết quả đã duyệt cập nhật Product Master.
 
+Ba tổng đếm `flower_count` · `bud_count` · `damaged_count` nằm trong hợp đồng theo `QUY_UOC_DEM.md`, và chúng là trường bộ ảnh vàng chấm điểm. Chúng cộng từ `bom` sau khi nhận đáp ứng, không hỏi mô hình.
+
+Kết quả đi tới một trong hai phán quyết, cả hai cần `H3`: **duyệt** ghi Product Master, **từ chối** đóng bản ghi lại mà không chạm Product Master. Cả hai ghi `audit_logs`, cùng với mọi lượt sửa (`product.analysis_edit`) — `product_analyses.edited` chỉ giữ bản mới nhất, nên nhật ký kiểm toán là nơi duy nhất còn lịch sử ai sửa gì lúc nào.
+
+Bộ máy chạy phân tích chọn được ở cấp tổ chức — xem mục 17.1.
+
 **M04a — Product Image Optimization.** Nguyên tắc chi phối: *Tăng cường sản phẩm, không tái sinh sản phẩm.* Nhận dạng sản phẩm — số lượng, màu, hình dáng, tỉ lệ tương đối — là bất biến; chỉ ánh sáng, độ nét, nhiễu, cân bằng trắng, nền và bố cục được đổi. **Product Identity Guard** chạy như cổng cứng bắt buộc sau tăng cường, so vân tay sản phẩm trước/sau bằng hợp đồng phân tích của M01. Phán quyết `SAFE`/`GOOD`/`WARNING`/`REJECTED`; `REJECTED` thì giữ ảnh gốc, không trả ảnh tăng cường. Tăng cường chạy **một lần** ra Master Image; các tỉ lệ khác đến từ Smart Reframe, không chạy lại AI.
 
 **M04a ở core, không ở SocialFlow** vì Identity Guard gọi M01 hai lần mỗi ảnh — giữ cạnh M01 tránh vòng gọi liên repo trong SLA xử lý, và đầu ra của nó là `assets` + `products`, entity lõi.
@@ -463,9 +474,10 @@ floraos-core — AVI GIFT là tổ chức đầu tiên
 |---|---|---|---|
 | ~~**D1**~~ | **ĐÃ CHỐT 09/09 — worker đơn tenant.** SocialFlow nhận `organization_id` trên mỗi lời gọi, không tự quản lý tổ chức | — | — |
 | ~~**D2**~~ | **ĐÃ CHỐT 09/09 — khoá nền tảng, tính credit theo tổ chức.** Tổ chức không mang khoá riêng ở bản này | — | — |
-| ~~**D3**~~ | **ĐÃ CHỐT 09/09 — không tính phí.** Credit trừ lúc enqueue được hoàn lại; `cost_usd` thật vẫn ghi để đối soát nội bộ | — | — |
+| ~~**D3**~~ | **ĐÃ CHỐT 09/09 — không tính phí.** Credit trừ lúc enqueue được hoàn lại; `cost_usd` thật vẫn ghi để đối soát nội bộ. **Mở rộng 09/11 (D3-b):** ba diện được hoàn, luật ở `usage/domain/refund-policy.ts` — Guard từ chối (như D3 gốc) · job bị huỷ khi còn `PENDING` (chưa lời gọi nhà cung cấp nào phát sinh) · job `FAILED` vì lỗi kỹ thuật (nền tảng hỏng, và chạy lại sinh một lượt tính phí mới nên không hoàn là thu tiền hai lần). `COMPLETED` với `LOW_CONFIDENCE` KHÔNG hoàn — đó là kết quả thật kèm cảnh báo | — | — |
 | ~~**D4**~~ | **ĐÃ CHỐT 09/09 — đóng băng từ 09/09, không ngoại lệ** | — | — |
-| ~~**D5**~~ | **ĐÃ CHỐT 09/09 — D5-c: cổng ở mức Hợp đồng JSON.** Adapter GPT-4o làm trước (thu hoạch R1 nguyên vẹn); adapter Florence-2 + SAM2 làm sau, đổi khi thắng trên bộ ảnh vàng theo ma trận 13.1 | — | Xem 17.1 |
+| ~~**D5**~~ | **ĐÃ CHỐT 09/09 — D5-c: cổng ở mức Hợp đồng JSON.** Adapter GPT-4o làm trước (thu hoạch R1 nguyên vẹn); adapter Florence-2 + SAM2 làm sau, đổi khi thắng trên bộ ảnh vàng theo ma trận 13.1. **Mở rộng 09/11 (D5-d):** ba adapter cùng tồn tại, tổ chức chọn dùng bộ nào qua `H4`. Cổng nghiệm thu để đổi MẶC ĐỊNH giữ nguyên — tự chọn là để thử, không thay phép đo | — | Xem 17.1 |
+| **D7** | **CHỐT 09/11 — ba bộ máy thu cùng một mức credit.** `vision.analyze = 1` bất kể bộ nào chạy, dù chi phí thật chênh nhau nhiều lần. Bảng giá theo bộ máy là quyết định kinh doanh, chưa có mô hình bán hàng thật | — | Mở lại cùng D2 |
 | ~~**D6**~~ | **ĐÃ CHỐT 09/09 — D6-1: Postgres làm hàng đợi.** Worker Python lấy việc từ `generation_jobs` bằng `SELECT … FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`; HTTP nội bộ chỉ cho lời gọi ngắn đồng bộ | — | Xem 3.1 |
 
 **Không còn quyết định mở.** D1 · D2 · D3 · D4 chốt ngày 09/09.
@@ -479,11 +491,25 @@ port VisionAnalyzer:
     analyze(image, context) -> ProductAnalysis     // đúng JSON Contract, M01 mục 8
 ```
 
-- **Adapter 1 — `OpenAIStructuredProvider`** (làm ở P5): một lời gọi structured output `response_format: json_schema` + đồng thuận 3 lượt + luật chạy lượt hai theo cảnh báo. Thu hoạch R1 nguyên vẹn.
-- **Adapter 2 — `OpenSourceProvider`** (sau, không chặn P5): Florence-2 → SAM2 → bộ nhận dạng loài, gộp thành cùng `ProductAnalysis`.
-- **Cổng nghiệm thu để đổi:** adapter 2 phải bằng hoặc hơn adapter 1 trên bộ ảnh vàng, đo bằng ma trận 13.1. Không đổi bằng lập luận, chỉ đổi bằng số đo.
+Ba adapter đứng sau cổng này, đăng ký ở `workers/vision/providers/registry.py`. Không module nào import thẳng một lớp adapter; worker cầm khoá bộ máy lấy từ dòng job và hỏi sổ đăng ký.
 
-**Ba kênh đếm giữ nguyên bất kể provider.** `count_engine.py` chốt số cuối từ `chot(kenh_llm, kenh_dt, kenh_chan)`; hai kênh sau thuần numpy và không thuộc phạm vi cổng này.
+| Khoá | Tên hiển thị | Cách chạy | Ảnh rời hạ tầng |
+|---|---|---|---|
+| `openai_structured` | Đầy đủ | Đo bảng màu tại chỗ (`color_engine`, thu hoạch R1) → gửi ảnh kèm bảng màu đo được và `Prompt.md` → một hoặc hai lượt, đồng thuận trung vị qua `count_engine.trung_vi` | Có |
+| `openai_direct` | Gọn | Gửi thẳng ảnh kèm `PromptGon.md`, một lượt, không tiền xử lý, không đồng thuận | Có |
+| `local_cv` | Cục bộ | SAM2 tách thực thể → Florence-2 gọi tên → `color_engine` → lắp ráp hợp đồng | Không |
+
+**Hai adapter đầu đều gọi nhà cung cấp.** Khác biệt giữa chúng không phải "tự xây hay gọi ngoài" — nó là lớp kỷ luật bọc quanh lời gọi: bảng màu đo được buộc mô hình giải trình theo số đã đo, `Prompt.md` mang đủ quy ước đếm, và lượt thứ hai lộ ra chỗ mô hình dao động. Bộ Gọn bỏ cả ba để đổi lấy chi phí và tốc độ.
+
+**Hợp đồng trả về không đổi giữa ba bộ.** Đó là điều kiện để Review, Approve, Product Master, M02 và M03 không biết bộ nào đã chạy. Ba tổng đếm (`flower_count`, `bud_count`, `damaged_count`) cộng tại chỗ từ `bom` ở cả ba adapter, không hỏi mô hình — một con số suy được từ các con số khác mà đi hỏi thì sẽ có ngày hai giá trị bất đồng trong cùng một bản ghi.
+
+**Chọn bộ máy là quyền của tổ chức, không phải hằng số trong mã.** Lựa chọn lưu ở `organizations.settings.bo_may_phan_tich`, đọc bằng `GET /vision/engine` (`H1`), ghi bằng `PUT /vision/engine` (`H4`, trần cứng `dieu_hanh`). Mỗi lần đổi ghi `audit_logs` action `vision.engine.change` — đó là chỗ duy nhất trả lời được vì sao kết quả hai giai đoạn khác nhau.
+
+**Bộ máy chốt vào `payload` của job lúc tạo**, worker không tra lại lúc nhận việc. Đổi bộ máy giữa lúc một lô đang xếp hàng thì lô đó vẫn chạy bằng bộ đã chọn lúc bấm nút; nếu tra lại thì hai ảnh cùng một lô có thể chạy bằng hai bộ khác nhau và không ai biết.
+
+**Cổng nghiệm thu để đổi mặc định:** một adapter chỉ được coi là thay được adapter đang chạy khi bằng hoặc hơn trên bộ ảnh vàng, đo bằng ma trận 13.1. Không đổi bằng lập luận, chỉ đổi bằng số đo. Việc tổ chức tự chọn bộ máy **không** thay cổng này: nó cho phép thử, và giao diện phải nói rõ bộ nào đã đo bộ nào chưa thay vì bày các lựa chọn trông ngang nhau.
+
+**Ba kênh đếm giữ nguyên bất kể provider.** `count_engine.py` chốt số cuối từ `chot(kenh_llm, kenh_dt, kenh_chan)`; hai kênh sau thuần numpy và không thuộc phạm vi cổng này. Đường chạy hiện tại mới nối kênh một — hai kênh còn lại cần hiệu chỉnh trên dữ liệu có đáp án, tức cần bộ ảnh vàng trước.
 
 **Bắt buộc kèm theo:** xây **bộ ảnh vàng 50–100 ảnh sản phẩm thật có nhãn số lượng đúng** trong P5. Chưa có bộ này thì không nghiệm thu được adapter nào, không hồi quy được phần thu hoạch, và ma trận 13.1 không có dữ liệu để điền.
 
