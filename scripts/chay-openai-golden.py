@@ -63,7 +63,7 @@ def main():
                 json.dump(result, f, ensure_ascii=False, indent=2)
             fc = result.get("flower_count") or (result.get("bom") or {}).get("flowers")
             conf = result.get("confidence")
-            print(f"  OK → confidence={conf}, flowers={len(fc) if fc else 'N/A'}")
+            print(f"  OK → confidence={conf}, flower_count={fc}")
         except Exception as e:
             print(f"  LỖI: {e}")
 
