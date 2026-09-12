@@ -1,0 +1,205 @@
+{
+  "palette_accounting": [
+    {
+      "cluster_index": 0,
+      "thuoc_ve": "Hoa cúc trắng",
+      "nhom": "Hoa",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 1,
+      "thuoc_ve": "Hoa cúc vàng nhạt",
+      "nhom": "Hoa",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 2,
+      "thuoc_ve": "Hoa cúc vàng đậm",
+      "nhom": "Hoa",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 3,
+      "thuoc_ve": "Lá xanh đậm",
+      "nhom": "Lá",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 4,
+      "thuoc_ve": "Lá xanh nhạt",
+      "nhom": "Lá",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 5,
+      "thuoc_ve": "Nơ đen",
+      "nhom": "Phụ kiện",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 6,
+      "thuoc_ve": "Lá xanh đậm",
+      "nhom": "Lá",
+      "confidence": 100
+    }
+  ],
+  "checklist": {
+    "hoa_chu_dao": "Có",
+    "hoa_phu": "Có",
+    "hoa_lap_day": "Có",
+    "la_nen": "Có",
+    "la_diem_nhan": "Không có",
+    "vat_lieu_goi": "Không có",
+    "day_buoc": "Có",
+    "ruy_bang": "Có",
+    "thiep_bien_chu": "Không có",
+    "phu_kien_trang_tri": "Không có"
+  },
+  "identity": {
+    "shape": "Bán cầu",
+    "facing": "Một mặt",
+    "category": "Hộp hoa",
+    "container": "Hộp vuông"
+  },
+  "bom": {
+    "flowers": [
+      {
+        "nhom_hoa": "Cúc",
+        "name": "Cúc trắng",
+        "shade": "Nhạt",
+        "color": "TM03 Trắng",
+        "quantity": 20,
+        "dem_tung_vung": [
+          7,
+          7,
+          6
+        ],
+        "bloom_diameter_ratio": 0.15,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa chủ đạo",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Bông",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng kem",
+        "dau_hieu_nhan_dang": "Cánh hoa dài, xếp lớp dày đặc",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Cúc",
+        "name": "Cúc vàng nhạt",
+        "shade": "Nhạt",
+        "color": "TM08 Vàng",
+        "quantity": 10,
+        "dem_tung_vung": [
+          4,
+          3,
+          3
+        ],
+        "bloom_diameter_ratio": 0.1,
+        "cluster_indices": [
+          1
+        ],
+        "role": "Hoa phụ",
+        "confidence": 80,
+        "ma": null,
+        "dvt_dem": "Bông",
+        "mau": "TM08 Vàng",
+        "mo_ta_mau": "Vàng nhạt",
+        "dau_hieu_nhan_dang": "Cánh hoa ngắn, xếp vòng tròn",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Cúc",
+        "name": "Cúc vàng đậm",
+        "shade": "Đậm",
+        "color": "TM08 Vàng",
+        "quantity": 5,
+        "dem_tung_vung": [
+          2,
+          2,
+          1
+        ],
+        "bloom_diameter_ratio": 0.1,
+        "cluster_indices": [
+          2
+        ],
+        "role": "Hoa lấp đầy",
+        "confidence": 80,
+        "ma": null,
+        "dvt_dem": "Bông",
+        "mau": "TM08 Vàng",
+        "mo_ta_mau": "Vàng đậm",
+        "dau_hieu_nhan_dang": "Cánh hoa ngắn, xếp vòng tròn",
+        "so_nu": 0,
+        "so_hong": 0
+      }
+    ],
+    "foliage": [
+      {
+        "name": "Lá xanh đậm",
+        "quantity": null,
+        "cluster_indices": [
+          3,
+          6
+        ],
+        "role": "Nền",
+        "confidence": 90,
+        "color": "Xanh đậm",
+        "ma": null,
+        "dvt_dem": "Lá",
+        "mau": "TM05 Xanh lá",
+        "mo_ta_mau": "Xanh đậm",
+        "dau_hieu_nhan_dang": "Lá nhỏ, mọc xen kẽ"
+      },
+      {
+        "name": "Lá xanh nhạt",
+        "quantity": null,
+        "cluster_indices": [
+          4
+        ],
+        "role": "Nền",
+        "confidence": 90,
+        "color": "Xanh nhạt",
+        "ma": null,
+        "dvt_dem": "Lá",
+        "mau": "TM05 Xanh lá",
+        "mo_ta_mau": "Xanh nhạt",
+        "dau_hieu_nhan_dang": "Lá nhỏ, mọc xen kẽ"
+      }
+    ],
+    "accessories": [
+      {
+        "name": "Nơ đen",
+        "material": "Vải",
+        "color": "Đen",
+        "quantity": 1,
+        "printed_text": null,
+        "confidence": 100,
+        "ma": null
+      }
+    ],
+    "wrapping": [
+      {
+        "layer": "Đai buộc",
+        "material": "Vải",
+        "color": "Đen",
+        "texture": "Trơn",
+        "confidence": 100,
+        "ma": null
+      }
+    ],
+    "materials_note": null
+  },
+  "confidence": 85,
+  "san_xuat": {
+    "so_tang_lop": 2
+  },
+  "flower_count": 35,
+  "bud_count": 0,
+  "damaged_count": 0
+}
