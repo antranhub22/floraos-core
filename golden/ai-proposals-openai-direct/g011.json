@@ -1,0 +1,99 @@
+{
+  "palette_accounting": [
+    {
+      "cluster_index": 0,
+      "thuoc_ve": "Hoa",
+      "nhom": "Hoa",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 1,
+      "thuoc_ve": "Phụ kiện",
+      "nhom": "Phụ kiện",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 2,
+      "thuoc_ve": "Nền ảnh",
+      "nhom": "Nền ảnh",
+      "confidence": 90
+    }
+  ],
+  "checklist": {
+    "hoa_chu_dao": "Có",
+    "hoa_phu": "Không có",
+    "hoa_lap_day": "Có",
+    "la_nen": "Không có",
+    "la_diem_nhan": "Không có",
+    "vat_lieu_goi": "Không có",
+    "day_buoc": "Có",
+    "ruy_bang": "Không có",
+    "thiep_bien_chu": "Có",
+    "phu_kien_trang_tri": "Có"
+  },
+  "identity": {
+    "shape": "Vòng tròn",
+    "facing": "Một mặt",
+    "category": "Vòng hoa",
+    "container": "Không có"
+  },
+  "bom": {
+    "flowers": [
+      {
+        "nhom_hoa": "Cúc",
+        "name": null,
+        "shade": "Nhạt",
+        "color": "TM09 Nhiều màu sắc",
+        "quantity": 60,
+        "dem_tung_vung": [
+          20,
+          20,
+          20
+        ],
+        "bloom_diameter_ratio": 0.1,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa chủ đạo",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM09 Nhiều màu sắc",
+        "mo_ta_mau": "Trắng và hồng nhạt",
+        "dau_hieu_nhan_dang": "Chrysanthemum",
+        "so_nu": 0,
+        "so_hong": 0
+      }
+    ],
+    "foliage": [],
+    "accessories": [
+      {
+        "name": "Nơ đen",
+        "material": "Vải",
+        "color": "Đen",
+        "quantity": 2,
+        "printed_text": null,
+        "confidence": 90,
+        "ma": null
+      },
+      {
+        "name": "Băng rôn",
+        "material": "Vải",
+        "color": "Đen",
+        "quantity": 1,
+        "printed_text": "Thành kính phân ưu!",
+        "confidence": 90,
+        "ma": null
+      }
+    ],
+    "wrapping": [],
+    "materials_note": null
+  },
+  "confidence": 90,
+  "san_xuat": {
+    "so_tang_lop": 1
+  },
+  "flower_count": 60,
+  "bud_count": 0,
+  "damaged_count": 0
+}

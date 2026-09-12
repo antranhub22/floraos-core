@@ -1,0 +1,159 @@
+{
+  "palette_accounting": [
+    {
+      "cluster_index": 0,
+      "thuoc_ve": "Hoa hồng",
+      "nhom": "Hoa",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 1,
+      "thuoc_ve": "Hoa cẩm tú cầu",
+      "nhom": "Hoa",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 2,
+      "thuoc_ve": "Hoa baby",
+      "nhom": "Hoa",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 3,
+      "thuoc_ve": "Lá",
+      "nhom": "Lá",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 4,
+      "thuoc_ve": "Bình hoa",
+      "nhom": "Vật liệu gói",
+      "confidence": 90
+    }
+  ],
+  "checklist": {
+    "hoa_chu_dao": "Có",
+    "hoa_phu": "Có",
+    "hoa_lap_day": "Có",
+    "la_nen": "Có",
+    "la_diem_nhan": "Có",
+    "vat_lieu_goi": "Có",
+    "day_buoc": "Không có",
+    "ruy_bang": "Không có",
+    "thiep_bien_chu": "Không có",
+    "phu_kien_trang_tri": "Không có"
+  },
+  "identity": {
+    "shape": "Bán cầu",
+    "facing": "Một mặt",
+    "category": "Bình hoa",
+    "container": "Bình thủy tinh"
+  },
+  "bom": {
+    "flowers": [
+      {
+        "nhom_hoa": "Hồng",
+        "name": null,
+        "shade": "Nhạt",
+        "color": "TM03 Trắng",
+        "quantity": 10,
+        "dem_tung_vung": [
+          3,
+          3,
+          4
+        ],
+        "bloom_diameter_ratio": 0.2,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa chủ đạo",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng kem",
+        "dau_hieu_nhan_dang": "Rose",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Cẩm tú cầu",
+        "name": null,
+        "shade": "Nhạt",
+        "color": "TM03 Trắng",
+        "quantity": 1,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.5,
+        "cluster_indices": [
+          1
+        ],
+        "role": "Hoa phụ",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng xanh",
+        "dau_hieu_nhan_dang": "Hydrangea",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Baby",
+        "name": null,
+        "shade": "Nhạt",
+        "color": "TM03 Trắng",
+        "quantity": 5,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.1,
+        "cluster_indices": [
+          2
+        ],
+        "role": "Hoa lấp đầy",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng tinh",
+        "dau_hieu_nhan_dang": "Gypsophila",
+        "so_nu": 0,
+        "so_hong": 0
+      }
+    ],
+    "foliage": [
+      {
+        "name": "Lá",
+        "quantity": null,
+        "cluster_indices": [
+          3
+        ],
+        "role": "Nền",
+        "confidence": 90,
+        "color": "Xanh đậm",
+        "ma": null,
+        "dvt_dem": "Lá",
+        "mau": "TM05 Xanh lá",
+        "mo_ta_mau": "Xanh đậm",
+        "dau_hieu_nhan_dang": "Foliage"
+      }
+    ],
+    "accessories": [],
+    "wrapping": [
+      {
+        "layer": "Lớp ngoài",
+        "material": "Thủy tinh",
+        "color": "Trong suốt",
+        "texture": "Trơn",
+        "confidence": 90,
+        "ma": null
+      }
+    ],
+    "materials_note": null
+  },
+  "confidence": 90,
+  "san_xuat": {
+    "so_tang_lop": 3
+  },
+  "flower_count": 16,
+  "bud_count": 0,
+  "damaged_count": 0
+}
