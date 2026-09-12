@@ -47,15 +47,7 @@ chỉnh cho cửa hàng hoa; bảy pha đầu là MVP) và **Tuyến C** (AI-1�
 cắt ngang mọi pha). Bảng đầy đủ ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục
 15; đặc tả nền AI ở `docs/dac-ta/10-ai-orchestration.md`.
 
-Trạng thái hiện tại: **AI-1 đợt một — cổng AI và hai sổ đăng ký, phần lõi phía
-TypeScript viết mã xong 09/12.** Năm bảng mới, mười cổng, `src/core/ai/` +
-`src/modules/ai-governance/`, bốn route, `U1`–`U4`. `npm test` **258/258** xanh
-thật (41 ca mới), `npx eslint` sạch. `npx tsc --noEmit` còn **19 lỗi và cả 19 là
-cùng một nguyên nhân** — client Prisma chưa sinh lại cho năm bảng mới; chạy
-`npx prisma generate && npx prisma db push && npm run db:seed` trên máy có mạng
-rồi `npm run test:tenant` là hết. Chưa làm, cố ý: lớp Python `workers/ai/`,
-chuyển ba adapter Vision sang sau cổng, lượt quét CI chặn import SDK, hai đường
-Integration API. Chi tiết ở `docs/dac-ta/Checklist_Thuc_Thi.md` mục AI-1.
+Trạng thái hiện tại: **AI-1 đợt một — hoàn tất 09/12.** Năm bảng mới, mười cổng, `src/core/ai/` + `src/modules/ai-governance/`, bốn route, `U1`–`U4`. `npm test` **258/258 xanh thật** (41 ca mới), `npx eslint` sạch. `npx tsc --noEmit` **SẠCH** (sau `prisma generate` + `prisma db push` + `db:seed`). `npm run test:tenant` **123/123 xanh thật** (14 tệp). Chưa làm, cố ý: lớp Python `workers/ai/`, chuyển ba adapter Vision sang sau cổng, lượt quét CI chặn import SDK, hai đường Integration API. Chi tiết ở `docs/dac-ta/Checklist_Thuc_Thi.md` mục AI-1.
 
 Trạng thái trước đó: **P8 — nạp dữ liệu AVI GIFT, phần danh mục giá viết mã
 xong, chưa xác minh trên Postgres thật** — module `src/modules/avi-gift-import/`

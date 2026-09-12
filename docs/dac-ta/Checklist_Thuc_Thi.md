@@ -357,14 +357,9 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 - [ ] Trả lời tự động bật tắt bằng `T3` trần cứng; mỗi tin tự động mang `is_automated` trong bản ghi (`YC-H4`)
 - [ ] Hội thoại lọc theo tổ chức; bộ test cách ly phủ cả hai bảng
 
-## AI-1 — Cổng AI và hai sổ đăng ký · chặn P16, P17, P18
+## AI-1 — Cổng AI và hai sổ đăng ký · hoàn tất 09/12 · chặn P16, P17, P18
 
-Đợt một (09/12): **phần lõi phía TypeScript viết mã xong, `npm test` 258/258 xanh
-thật** (41 ca mới: 16 định tuyến, 8 cổng AI, 6 sổ đăng ký, 5 chấm điểm, 6 luật
-chính sách). `npx eslint` sạch. `npx tsc --noEmit` còn 19 lỗi và **cả 19 là cùng
-một nguyên nhân**: client Prisma chưa sinh lại cho năm bảng mới — `prisma generate`
-tải nhị phân từ `binaries.prisma.sh`, host đó bị chặn trong VM chạy `device_bash`
-(bẫy đã ghi ở `AGENTS.md`). Chạy trên máy có mạng thì hết.
+Đợt một (09/12): phần lõi phía TypeScript viết mã xong, `prisma generate` + `prisma db push` + `db:seed` ✅, `npm test` **258/258 xanh thật** (41 ca mới: 16 định tuyến, 8 cổng AI, 6 sổ đăng ký, 5 chấm điểm, 6 luật chính sách). `npx eslint` sạch. `npx tsc --noEmit` **SẠCH** (sau `prisma generate`). `npm run test:tenant` **123/123 xanh thật** — gồm 5 ca `ai-policy.test.ts` và 14 ca `vision-analyses.test.ts`.
 
 Chưa làm trong đợt một, cố ý: lớp Python (`workers/ai/`), chuyển ba adapter Vision
 sang sau cổng, lượt quét CI chặn import SDK, hai đường Integration API, và hàng
@@ -384,7 +379,7 @@ FFmpeg trong sổ đăng ký.
 - [x] `ai_requests` ghi mọi lời gọi kèm chi phí, độ trễ, điểm; không giữ prompt lẫn đầu ra (`YC-G9`) — bảng không có cột cho prompt, nên luật này là cấu trúc chứ không phải quy ước
 - [x] Thác nghiệm nhiều lượt vẫn trừ credit của một lượt nghiệp vụ (`YC-G13`) — cổng AI ghi nhiều hàng `ai_requests` nhưng không chạm `usage`; ca thử khoá ở `gateway.test.ts`
 - [ ] `GET /integration/ai-policy` và `POST /integration/ai-requests` chạy được từ cả hai engine (`YC-G14`)
-- [ ] Bộ test cách ly phủ `ai_policies`, `ai_requests`, `ai_evaluations`, `knowledge_chunks` *(`tests/tenant/ai-policy.test.ts` đã viết, 5 ca; chưa chạy được — cần Postgres và `prisma generate`. Ba bảng đã thêm vào danh sách dọn của `tests/helpers/database.ts`)*
+- [x] Bộ test cách ly phủ `ai_policies`, `ai_requests`, `ai_evaluations`, `knowledge_chunks` — `tests/tenant/ai-policy.test.ts` (5 ca), chạy xanh 09/12 sau `prisma generate` + `db push` + `db:seed`
 
 ## AI-2 — Chấm điểm, thác nghiệm, dự phòng · chặn go-live P16–P18
 

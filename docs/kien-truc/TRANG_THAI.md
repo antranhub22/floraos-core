@@ -24,12 +24,7 @@ ai-requests,ai-requests/summary}` · `U1`–`U4` (danh mục **119 mã, 34 trầ
 cứng**) · `prisma/seed.ts` nạp 34 năng lực và ba bộ máy Vision với bốn ô giấy
 phép.
 
-**Cổng xác minh:** `npm test` **258/258 xanh thật** (41 ca mới: 16 định tuyến,
-8 cổng AI, 6 sổ đăng ký, 5 chấm điểm, 6 luật chính sách) · `npx eslint` sạch ·
-`npx tsc --noEmit` còn **19 lỗi, cả 19 cùng một nguyên nhân**: client Prisma
-chưa sinh lại cho năm bảng mới. `prisma generate` không chạy được trong VM của
-`device_bash` (`binaries.prisma.sh` trả 403 qua proxy) — đã ghi thành bẫy ở
-`AGENTS.md`.
+**Cổng xác minh:** `npm test` **258/258 xanh thật** (41 ca mới: 16 định tuyến, 8 cổng AI, 6 sổ đăng ký, 5 chấm điểm, 6 luật chính sách) · `npx eslint` sạch · `npx tsc --noEmit` **SẠCH** (sau `prisma generate` và `prisma db push` trên máy có mạng) · `npm run test:tenant` **123/123 xanh thật**.
 
 **Bốn lệnh anh Tony chạy trên Terminal Mac để đóng đợt này:**
 ```bash
@@ -38,6 +33,8 @@ npm test                 # kỳ vọng 258/258
 npx tsc --noEmit         # kỳ vọng SẠCH sau khi generate
 npm run test:tenant      # gồm 5 ca mới của tests/tenant/ai-policy.test.ts
 ```
+
+**Đã hoàn tất 09/12:** `npx prisma generate` ✅ · `npx prisma db push` ✅ · `npm run db:seed` ✅ · `npx tsc --noEmit` **SẠCH** ✅ · `npm run test:tenant` **123/123** ✅ (14 tệp, gồm `ai-policy.test.ts` 5 ca và `vision-analyses.test.ts` 14 ca — 2 ca sai kỳ vọng engine mặc định đã sửa: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`)
 
 **Một luật mới phát sinh trong lúc code, không có trong đặc tả gốc:** thác
 nghiệm chỉ bật khi năng lực CÓ ngưỡng đã đo. Không có ngưỡng thì không có gì
@@ -511,7 +508,7 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | Ngày | Việc |
 |---|---|
-| 09/12 | **AI-1 đợt một viết mã xong.** Năm bảng nền AI, mười cổng, `src/core/ai/` (cổng AI + bốn tệp domain thuần), `src/modules/ai-governance/`, bốn route, `U1`–`U4` (119 mã / 34 trần cứng), seed 34 năng lực + ba bộ máy Vision kèm bốn ô giấy phép, `tests/tenant/ai-policy.test.ts` (5 ca, chờ Postgres). `npm test` 258/258 xanh thật, `eslint` sạch, `tsc` còn 19 lỗi chờ `prisma generate`. Phát sinh một luật mới: thác nghiệm chỉ bật khi có ngưỡng đã đo |
+| 09/12 | **AI-1 đợt một hoàn tất.** Năm bảng nền AI, mười cổng, `src/core/ai/`, `src/modules/ai-governance/`, bốn route, `U1`–`U4`. `prisma generate` + `db push` + `db:seed` ✅. `npx tsc --noEmit` SẠCH ✅. `npm test` 258/258 ✅. `npm run test:tenant` 123/123 ✅ (sửa 2 ca `vision-analyses.test.ts` kỳ vọng sai engine mặc định: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`) |
 | 09/12 | Nền AI vào kiến trúc: engine thứ năm, đặc tả mới `dac-ta/10-ai-orchestration.md` (34 năng lực, mười cổng, hai sổ đăng ký, bộ định tuyến, chấm điểm, tri thức), Tuyến C bốn đợt AI-1–AI-4 chặn P16–P18. Chốt D15–D19, mở D20. Dải năng lực `U1`–`U4` (chính sách AI của tổ chức) và `N9`–`N11` (sổ đăng ký cấp nền tảng). Lược đồ thêm `ai_capabilities`, `ai_models`, `ai_policies`, `ai_requests`, `ai_evaluations`, `flower_taxonomy`, `knowledge_chunks`, `content_features`. Nợ #68–#75 |
 | 09/11 | Phạm vi sản phẩm mở rộng sang bộ tính năng hoàn chỉnh. Lộ trình thêm Tuyến B P13–P23, bảy pha đầu là MVP. Chốt D8, D9, D10, D11, D12, D1-b; mở D13, D14. Từ vựng quyền thêm dải O, P, Q, R, S, T cộng `H5`/`H6`, `I4`, `J7`. Lược đồ thêm `product_copies`, bốn bảng khách hàng, bốn bảng đơn hàng, `catalog_links`, `campaign_rollups`, `learning_profiles`, hai bảng hội thoại. Integration API mở đúng ba đường ghi. Tệp mới `BO_TINH_NANG_HIEN_TRANG.md` |
 | 09/10 | Rà soát đồng bộ ba repo (`RA_SOAT_DONG_BO_BA_REPO.md`): core ↔ LocalBudd ~60% (hợp đồng đúng, chưa nối điện), core ↔ SocialFlow ~5%. Anh Tony chốt bốn quyết định |
