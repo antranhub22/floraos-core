@@ -86,8 +86,13 @@
   "sam2_dien_tich_toi_thieu_ty_le": 0.001,
   "sam2_on_dinh_toi_thieu": 0.9,
   "sam2_so_luong_toi_da": 40,
+  "_ghi_chu_loc_chong_lap": "Nợ #60 (giảm nhẹ 09/11): SAM2 tách cả khung một bó hoa lẫn từng bông con nằm trong đó thành hai mặt nạ riêng. `sam2_nguong_chua_toi_thieu` là tỷ lệ diện tích mặt nạ NHỎ phải nằm trong mặt nạ LỚN để coi là bị chứa trọn; `sam2_ty_le_lon_hon_toi_thieu` là mặt nạ lớn phải to hơn mặt nạ nhỏ ít nhất bấy nhiêu lần mới bị coi là khung gộp. Bỏ mặt nạ LỚN, giữ mặt nạ NHỎ (đơn vị đếm được). Lọc theo KHUNG BAO, không phải đúng đa giác mặt nạ — rẻ nhưng có thể lầm ở cụm hoa dày. CHƯA đo trên bộ ảnh vàng (nợ #24) — hai số dưới đây là mặc định HỢP LÝ, không phải số đã đo, đúng D5-c.",
+  "sam2_nguong_chua_toi_thieu": 0.85,
+  "sam2_ty_le_lon_hon_toi_thieu": 1.5,
   "florence2_model_id": "florence-community/Florence-2-base",
   "florence2_task_prompt": "<CAPTION>",
   "florence2_max_new_tokens": 64,
-  "florence2_bbox_dem_ty_le": 0.08
+  "florence2_bbox_dem_ty_le": 0.08,
+  "_ghi_chu_no_mat_na": "Nợ #60 (giảm nhẹ 09/11): tô nền phẳng NGOÀI mặt nạ SAM2 (đã nở thêm dải này) trước khi đưa vùng cắt cho Florence-2 — cắt bớt ca mô hình mô tả nhầm sang vật ở nền xa (cánh tay, cái đĩa, con thuyền) thay vì vật thể vừa tách. `florence2_no_mat_na_ty_le` là bán kính nở, tính theo tỷ lệ CẠNH NGẮN của vùng đã cắt. CÓ RỦI RO đi kèm, không giấu: tô nền phẳng có thể làm caption XẤU ĐI với ảnh mà bối cảnh xung quanh thật sự giúp mô hình nhận diện (một bó hoa cầm trên tay). CHƯA đo trên ảnh thật (nợ #24) — số dưới đây là mặc định HỢP LÝ, không phải số đã đo, đúng D5-c. Đặt 0 thì tắt hẳn bước tô, quay về hành vi cũ (cắt nguyên khung bbox, không tô gì).",
+  "florence2_no_mat_na_ty_le": 0.15
 }

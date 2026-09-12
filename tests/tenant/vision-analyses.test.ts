@@ -214,7 +214,7 @@ describe("cách ly tenant — M01 phân tích ảnh (P5)", () => {
   describe("bộ máy phân tích — Điều hành chọn cho cả tổ chức (H4)", () => {
     it("chưa chọn gì thì chạy bộ đã biết hành vi, và liệt kê đủ ba bộ", async () => {
       const body = await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, a.token)))
-      expect(body.dang_dung).toBe("openai_structured")
+      expect(body.dang_dung).toBe("local_cv")
       expect((body.danh_sach as { key: string }[]).map((b) => b.key)).toEqual([
         "openai_structured",
         "openai_direct",
@@ -279,7 +279,7 @@ describe("cách ly tenant — M01 phân tích ảnh (P5)", () => {
         })
       )
       const cuaB = await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, b.token)))
-      expect(cuaB.dang_dung).toBe("openai_structured")
+      expect(cuaB.dang_dung).toBe("local_cv")
     })
 
     it("bộ máy CHỐT vào payload của job lúc tạo, không tra lại lúc worker nhận việc", async () => {

@@ -22,6 +22,34 @@ giả chạy trót lọt còn tệ hơn báo lỗi rõ ràng" đã nêu ở
 `registry._dung_local_cv`. Đổi sang token vùng là việc kế tiếp khi có bộ
 ảnh vàng để đo, ghi thêm ở `TECHNICAL_DEBT.md` khi làm.
 
+## Cập nhật 09/11 — tô nền ngoài mặt nạ (nợ #60, giảm nhẹ một phần)
+
+Quan sát thật ở nợ #60: cắt nguyên khung bbox (có đệm) rồi đưa cả khung cho
+`<CAPTION>` khiến Florence-2 đôi khi mô tả một vật Ở NỀN thay vì vật thể SAM2
+vừa tách — ảnh chụp tại cửa hàng có người cầm hoa, có bàn, có nền — một khung
+cắt rộng dễ chứa cả cánh tay, cái đĩa, tấm ga, cái thuyền ở xa. `Schema.json`
+không có chỗ nào phân biệt "mô hình mô tả đúng vật thể" khỏi "mô hình mô tả
+nhầm nền", nên những dòng này lọt thẳng vào `bom` như một sản phẩm hoa/lá.
+
+`_anh_da_ap_mat_na` tô các pixel NGOÀI mặt nạ (đã NỞ THÊM một dải nhỏ —
+`_no_rong_mat_na`, `_tinh_ban_kinh_no_px`) thành một màu nền phẳng trước khi
+đưa vùng đã cắt cho Florence-2 — giữ lại một dải bối cảnh SÁT vật thể (lý do
+đệm bbox ở `_cat_bbox_co_dem` vẫn còn nguyên: biên mặt nạ SAM2 đôi khi cắt
+sát cánh hoa, và ảnh vật thể trơ trên nền trắng, không còn chút bối cảnh nào,
+là kiểu ảnh khác xa phân bố ảnh Florence-2 học lúc huấn luyện) nhưng xoá phần
+nền Ở XA không thuộc vật thể — đúng loại lỗi nợ #60 mô tả.
+
+Đây là NGƯỠNG HEURISTIC CHƯA ĐO trên ảnh thật (nợ #24, cùng chỗ nghẽn với mọi
+tham số khác của bộ `local_cv`) — có mặc định hợp lý (`florence2_no_mat_na_ty_le`
+trong `config.json`) nhưng không phải số đã đo, đúng D5-c. Có RỦI RO THẬT
+đi kèm, không giấu: tô nền phẳng có thể làm caption XẤU ĐI với ảnh mà bối
+cảnh xung quanh thật sự giúp mô hình nhận diện (một bó hoa cầm trên tay,
+thiếu bàn tay cầm có thể khiến Florence-2 khó đoán tỷ lệ/góc nhìn hơn) — bù
+lại nó cắt được loại lỗi "mô tả nhầm hẳn sang vật khác ở xa" đã thấy thật.
+Không có mặt nạ (bộ tách khác không cung cấp `mat_na_nhi_phan`, hoặc mặt nạ
+không khớp kích thước ảnh) thì bỏ qua bước tô, trả nguyên khung đã cắt — HÀNH
+VI CŨ, không đổi.
+
 ## Độ chắc dựng từ đâu
 
 Florence-2 sinh chữ, không có "confidence" tự nhiên như một bộ phân loại.
@@ -99,6 +127,91 @@ def _cat_bbox_co_dem(
     return (x0, y0, x1, y1)
 
 
+def _tinh_ban_kinh_no_px(kich_thuoc_vung: tuple[int, int], ty_le_no: float) -> int:
+    """Bán kính nở mặt nạ tính bằng pixel, tỷ lệ theo CẠNH NGẮN của vùng đã
+    cắt — để dải bối cảnh giữ lại luôn ứng với cùng một tỷ lệ khung hình bất
+    kể vật thể to hay nhỏ trong ảnh gốc. `ty_le_no` hoặc kích thước 0/âm trả
+    0 (không nở), không trả số âm."""
+    rong, cao = kich_thuoc_vung
+    canh_ngan = min(rong, cao)
+    if canh_ngan <= 0 or ty_le_no <= 0:
+        return 0
+    return max(0, round(canh_ngan * ty_le_no))
+
+
+def _no_rong_mat_na(mat_na: Any, ban_kinh_px: int) -> Any:
+    """Nở mặt nạ nhị phân (mảng `numpy` 2 chiều kiểu bool) thêm `ban_kinh_px`
+    pixel mỗi hướng — dilation hình thoi bằng các phép dịch mảng thuần
+    `numpy`, cố tình không dùng `scipy.ndimage` để khỏi thêm phụ thuộc cho
+    một phép toán đơn giản, chạy đủ nhanh ở kích thước ảnh cắt (vài trăm
+    pixel) và bán kính vài chục pixel dùng ở đây.
+
+    `ban_kinh_px` 0 hoặc âm trả nguyên mặt nạ, không nở.
+    """
+    import numpy as np
+
+    if ban_kinh_px <= 0:
+        return mat_na
+    ket_qua = mat_na.copy()
+    for _ in range(ban_kinh_px):
+        dich_trai = np.zeros_like(ket_qua)
+        dich_trai[:, :-1] = ket_qua[:, 1:]
+        dich_phai = np.zeros_like(ket_qua)
+        dich_phai[:, 1:] = ket_qua[:, :-1]
+        dich_len = np.zeros_like(ket_qua)
+        dich_len[:-1, :] = ket_qua[1:, :]
+        dich_xuong = np.zeros_like(ket_qua)
+        dich_xuong[1:, :] = ket_qua[:-1, :]
+        ket_qua = ket_qua | dich_trai | dich_phai | dich_len | dich_xuong
+    return ket_qua
+
+
+def _anh_da_ap_mat_na(
+    anh: Any,
+    mat_na_nhi_phan: Any | None,
+    hop_cat: tuple[int, int, int, int],
+    ty_le_no_mat_na: float,
+    mau_nen: tuple[int, int, int] = (255, 255, 255),
+) -> Any:
+    """Cắt `anh` (một `PIL.Image` RGB) theo `hop_cat` rồi, nếu có
+    `mat_na_nhi_phan` (mặt nạ nhị phân kích thước bằng ẢNH GỐC, đúng hình
+    dạng SAM2 trả về ở khoá `segmentation`), tô các pixel NGOÀI mặt nạ (đã
+    nở thêm `ty_le_no_mat_na` — xem `_no_rong_mat_na`) trong vùng đã cắt
+    thành `mau_nen`. Xem mục "Cập nhật 09/11" ở docstring module để biết lý
+    do và rủi ro đi kèm.
+
+    Không có `mat_na_nhi_phan`, hoặc mặt nạ không khớp kích thước ảnh gốc
+    (dữ liệu hỏng hoặc một `BoTachThucThe` khác không tách mặt nạ pixel),
+    hoặc vùng mặt nạ bên trong khung cắt trống hoàn toàn (không nên xảy ra
+    với mặt nạ thật, nhưng dữ liệu giả/hỏng thì có thể) — trả nguyên khung đã
+    cắt, KHÔNG tô gì, an toàn hơn là tô nhầm hết ảnh thành một màu.
+    """
+    x0, y0, x1, y1 = hop_cat
+    anh_cat = anh.crop((x0, y0, x1, y1))
+    if mat_na_nhi_phan is None:
+        return anh_cat
+
+    import numpy as np
+
+    mat_na_day_du = np.asarray(mat_na_nhi_phan)
+    if mat_na_day_du.shape[:2] != (anh.size[1], anh.size[0]):
+        return anh_cat
+
+    mat_na_vung = mat_na_day_du[y0:y1, x0:x1]
+    if not mat_na_vung.any():
+        return anh_cat
+
+    ban_kinh = _tinh_ban_kinh_no_px(anh_cat.size, ty_le_no_mat_na)
+    mat_na_no = _no_rong_mat_na(mat_na_vung, ban_kinh)
+
+    mang_cat = np.array(anh_cat).copy()
+    mang_cat[~mat_na_no] = mau_nen
+
+    from PIL import Image as _Image
+
+    return _Image.fromarray(mang_cat)
+
+
 class Florence2Labeler:
     """`BoGoiTen` — Florence-2 chạy trên máy chủ của chính tổ chức.
 
@@ -115,6 +228,7 @@ class Florence2Labeler:
         task_prompt: str | None = None,
         max_new_tokens: int | None = None,
         ty_le_dem_bbox: float | None = None,
+        ty_le_no_mat_na: float | None = None,
     ) -> None:
         from vision.providers.chung import nap_json
 
@@ -126,6 +240,13 @@ class Florence2Labeler:
             ty_le_dem_bbox
             if ty_le_dem_bbox is not None
             else float(config.get("florence2_bbox_dem_ty_le", 0.08))
+        )
+        # Nợ #60 (giảm nhẹ 09/11) — xem docstring module. Mặc định 0.15 là số
+        # HỢP LÝ, KHÔNG phải số đã đo trên bộ ảnh vàng (D5-c).
+        self._ty_le_no_mat_na = (
+            ty_le_no_mat_na
+            if ty_le_no_mat_na is not None
+            else float(config.get("florence2_no_mat_na_ty_le", 0.15))
         )
 
         # Từ đây trở xuống mới đụng `torch`/`transformers` — import trong
@@ -180,8 +301,9 @@ class Florence2Labeler:
 
         with Image.open(io.BytesIO(image)) as anh:
             anh_rgb = anh.convert("RGB")
-            x0, y0, x1, y1 = _cat_bbox_co_dem(anh_rgb.size, mat_na.bbox, self._ty_le_dem_bbox)
-            anh_cat = anh_rgb.crop((x0, y0, x1, y1))
+            hop_cat = _cat_bbox_co_dem(anh_rgb.size, mat_na.bbox, self._ty_le_dem_bbox)
+            mat_na_nhi_phan = getattr(mat_na, "mat_na_nhi_phan", None)
+            anh_cat = _anh_da_ap_mat_na(anh_rgb, mat_na_nhi_phan, hop_cat, self._ty_le_no_mat_na)
 
         inputs = self._processor(
             text=self._task_prompt, images=anh_cat, return_tensors="pt"

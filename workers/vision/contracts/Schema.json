@@ -399,7 +399,7 @@
           "string",
           "null"
          ],
-         "description": "Đặc điểm hình thái làm căn cứ chọn mã."
+         "description": "Nhãn thô tiếng Anh gốc của mô hình — luôn có, khớp mã hay không."
         },
         "so_nu": {
          "type": [
@@ -533,7 +533,7 @@
           "string",
           "null"
          ],
-         "description": "Đặc điểm hình thái làm căn cứ chọn mã."
+         "description": "Nhãn thô tiếng Anh gốc của mô hình — luôn có, khớp mã hay không."
         }
        }
       }

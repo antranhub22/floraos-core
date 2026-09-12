@@ -35,10 +35,34 @@ Trước khi đổi bộ máy `local_cv` sang dùng thật (kể cả ở mức 
 
 `_bbox_xywh_chuan_hoa` và `_loc_va_chuan_hoa` không đụng tới `sam2`/`torch` —
 chúng chỉ làm số học trên kết quả `SAM2AutomaticMaskGenerator.generate()` đã
-trả về (một danh sách dict có khoá `area`, `bbox`, `stability_score`). Tách
-riêng để có test chạy thật trong MỌI môi trường, kể cả môi trường không có
-GPU — cùng tinh thần với `local_cv.lap_rap`: phần thuần luôn kiểm được,
-phần nạp mô hình chờ máy có GPU.
+trả về (một danh sách dict có khoá `area`, `bbox`, `stability_score`,
+`segmentation`). Tách riêng để có test chạy thật trong MỌI môi trường, kể cả
+môi trường không có GPU — cùng tinh thần với `local_cv.lap_rap`: phần thuần
+luôn kiểm được, phần nạp mô hình chờ máy có GPU.
+
+## Cập nhật 09/11 — lọc chồng lấp (nợ #60, giảm nhẹ một phần)
+
+Quan sát thật ở nợ #60: SAM2 tách CẢ khung một bó hoa lẫn từng bông con nằm
+trong đó thành hai mặt nạ riêng biệt — hai mặt nạ này không phải nhiễu (cả
+hai đều đủ diện tích, đủ ổn định), nên `dien_tich_toi_thieu`/`on_dinh_toi_thieu`
+không lọc được. Florence-2 gọi tên cả hai, sinh hai dòng `bom` gần như lặp ý
+nhau mà `_nhom_theo_nhan` (so CHỮ nguyên văn) không gộp lại được.
+
+`_loc_chong_lap` thêm một lượt lọc thứ ba: bỏ mặt nạ LỚN nếu nó gần như CHỨA
+TRỌN một mặt nạ khác nhỏ hơn đáng kể còn lại trong danh sách — giữ mặt nạ NHỎ
+(đơn vị đếm được: từng bông, từng cành), bỏ mặt nạ LỚN (khung gộp, không phải
+đơn vị đếm). Đây là lọc theo KHUNG BAO (bbox), không phải theo đúng đa giác
+mặt nạ — rẻ và đủ dùng cho phần lớn ca thật, nhưng có thể lầm hai vật thể
+tách biệt có khung bao lồng nhau (hiếm, nhưng có thể xảy ra ở cụm hoa dày).
+Đo trên bộ ảnh vàng thật (nợ #24) mới biết ngưỡng `nguong_chua_toi_thieu`/
+`ty_le_lon_hon_toi_thieu` có đúng hay cần đổi — CHƯA đo, đúng D5-c: hai tham
+số này có mặc định hợp lý nhưng KHÔNG phải số đã đo, và mở qua `config.json`
+để chỉnh không cần sửa mã.
+
+Lọc này tắt mặc định trong `_loc_va_chuan_hoa` khi không truyền hai tham số
+`nguong_chua_toi_thieu`/`ty_le_lon_hon_toi_thieu` — giữ nguyên hành vi test
+cũ (dùng bbox lồng nhau giả lập, không đại diện không gian thật) không đổi.
+`Sam2Segmenter` luôn truyền hai tham số này khi gọi thật.
 """
 
 from __future__ import annotations
@@ -47,13 +71,28 @@ from typing import Any
 
 
 class MatNaSam2:
-    """Hiện thực `MatNa` (`local_cv.MatNa`) bọc một dict SAM2 trả về."""
+    """Hiện thực `MatNa` (`local_cv.MatNa`) bọc một dict SAM2 trả về.
 
-    __slots__ = ("_bbox", "_dien_tich")
+    `mat_na_nhi_phan` là mặt nạ nhị phân đầy đủ kích thước ẢNH GỐC (đúng
+    hình dạng SAM2 trả về ở khoá `segmentation`), giữ lại NGOÀI giao thức
+    `MatNa` tối thiểu (`local_cv.py` chỉ cần `bbox`/`dien_tich`) để
+    `Florence2Labeler` dùng khi tô nền phần không thuộc vật thể — xem
+    `local_cv_labeler._anh_da_ap_mat_na`. Mặc định `None` cho mọi chỗ chưa
+    cung cấp được mặt nạ thật (test thuần, hoặc một `BoTachThucThe` khác
+    không tách mặt nạ pixel).
+    """
 
-    def __init__(self, bbox: tuple[float, float, float, float], dien_tich: float) -> None:
+    __slots__ = ("_bbox", "_dien_tich", "_mat_na_nhi_phan")
+
+    def __init__(
+        self,
+        bbox: tuple[float, float, float, float],
+        dien_tich: float,
+        mat_na_nhi_phan: Any | None = None,
+    ) -> None:
         self._bbox = bbox
         self._dien_tich = dien_tich
+        self._mat_na_nhi_phan = mat_na_nhi_phan
 
     @property
     def bbox(self) -> tuple[float, float, float, float]:
@@ -62,6 +101,10 @@ class MatNaSam2:
     @property
     def dien_tich(self) -> float:
         return self._dien_tich
+
+    @property
+    def mat_na_nhi_phan(self) -> Any | None:
+        return self._mat_na_nhi_phan
 
     def __repr__(self) -> str:  # pragma: no cover - tiện gỡ lỗi, không phải hành vi
         return f"MatNaSam2(bbox={self._bbox!r}, dien_tich={self._dien_tich!r})"
@@ -88,6 +131,78 @@ def _bbox_xywh_chuan_hoa(
     return (trai, tren, max(phai, trai), max(duoi, tren))
 
 
+def _dien_tich_bbox(bbox: tuple[float, float, float, float]) -> float:
+    return max(bbox[2] - bbox[0], 0.0) * max(bbox[3] - bbox[1], 0.0)
+
+
+def _dien_tich_giao(
+    a: tuple[float, float, float, float], b: tuple[float, float, float, float]
+) -> float:
+    """Diện tích phần giao của hai khung bao chuẩn hoá 0-1 (trái, trên, phải,
+    dưới). Hai khung không chạm nhau trả 0, không trả số âm."""
+    trai = max(a[0], b[0])
+    tren = max(a[1], b[1])
+    phai = min(a[2], b[2])
+    duoi = min(a[3], b[3])
+    if phai <= trai or duoi <= tren:
+        return 0.0
+    return (phai - trai) * (duoi - tren)
+
+
+def _ty_le_b_nam_trong_a(
+    a: tuple[float, float, float, float], b: tuple[float, float, float, float]
+) -> float:
+    """Tỷ lệ diện tích của `b` nằm trong `a` — 1.0 nghĩa là `b` nằm trọn
+    trong `a`, 0.0 nghĩa là không chạm nhau. `b` diện tích 0 (khung suy
+    biến) trả 0, không chia cho không."""
+    dien_tich_b = _dien_tich_bbox(b)
+    if dien_tich_b <= 0:
+        return 0.0
+    return _dien_tich_giao(a, b) / dien_tich_b
+
+
+def _loc_chong_lap(
+    danh_sach: list[MatNaSam2],
+    nguong_chua_toi_thieu: float,
+    ty_le_lon_hon_toi_thieu: float,
+) -> list[MatNaSam2]:
+    """Bỏ mặt nạ LỚN nếu nó gần như CHỨA TRỌN một mặt nạ khác nhỏ hơn đáng
+    kể còn lại trong `danh_sach` — xem mục "Cập nhật 09/11" ở docstring
+    module để biết lý do (nợ #60: bó hoa và từng bông con trong đó cùng
+    được SAM2 tách thành hai mặt nạ).
+
+    Bỏ mặt nạ lớn (không phải mặt nạ nhỏ) khi CẢ HAI đúng:
+
+    - mặt nạ nhỏ nằm trong mặt nạ lớn ít nhất `nguong_chua_toi_thieu` phần
+      diện tích của chính nó;
+    - mặt nạ lớn có diện tích ít nhất gấp `ty_le_lon_hon_toi_thieu` lần mặt
+      nạ nhỏ.
+
+    Hai mặt nạ kích thước ngang nhau, chồng nhau một phần (SAM2 tách đôi
+    cùng một vật thể ở biên mờ) KHÔNG rơi vào ca này — đó là một dạng trùng
+    lặp khác, chưa xử lý ở đây, để dành khi có ảnh thật để soát.
+
+    Hàm thuần, O(n²) — `n` đã bị `so_luong_toi_da` chặn trần ở nơi gọi nên
+    không đáng lo cho một ảnh thật.
+    """
+    if len(danh_sach) <= 1:
+        return list(danh_sach)
+
+    can_bo: set[int] = set()
+    for i, lon in enumerate(danh_sach):
+        if i in can_bo:
+            continue
+        for j, nho in enumerate(danh_sach):
+            if i == j or j in can_bo:
+                continue
+            if lon.dien_tich < nho.dien_tich * ty_le_lon_hon_toi_thieu:
+                continue
+            if _ty_le_b_nam_trong_a(lon.bbox, nho.bbox) >= nguong_chua_toi_thieu:
+                can_bo.add(i)
+                break
+    return [mn for i, mn in enumerate(danh_sach) if i not in can_bo]
+
+
 def _loc_va_chuan_hoa(
     mat_na_tho: list[dict[str, Any]],
     rong: int,
@@ -95,10 +210,12 @@ def _loc_va_chuan_hoa(
     dien_tich_toi_thieu: float,
     on_dinh_toi_thieu: float,
     so_luong_toi_da: int,
+    nguong_chua_toi_thieu: float | None = None,
+    ty_le_lon_hon_toi_thieu: float | None = None,
 ) -> list[MatNaSam2]:
     """Lọc nhiễu và chuẩn hoá đầu ra thô của `SAM2AutomaticMaskGenerator`.
 
-    Ba lý do lọc, không phải một:
+    Ba lý do lọc theo diện tích/ổn định, không phải một:
 
     - `dien_tich_toi_thieu` bỏ mặt nạ vụn (nếp gấp giấy gói, hạt bụi) — SAM2
       tự động tách MỌI thứ nó thấy được, kể cả chi tiết không ai quan tâm
@@ -111,14 +228,23 @@ def _loc_va_chuan_hoa(
       `local_cv._nhom_theo_nhan` gộp các nhãn giống nhau lại sau đó, nên cắt
       bớt thực thể nhỏ nhất không làm sai tổng đếm bao nhiêu.
 
-    Sắp theo diện tích giảm dần trước khi cắt bớt: giữ thực thể LỚN trước —
-    một cụm hoa chiếm nửa khung ảnh quan trọng hơn một mảnh lá ở góc ảnh.
+    Truyền cả `nguong_chua_toi_thieu` VÀ `ty_le_lon_hon_toi_thieu` (khác
+    `None`) thì chạy thêm `_loc_chong_lap` — bỏ luôn mặt nạ lớn chứa trọn
+    mặt nạ nhỏ (nợ #60). Để mặc định (`None`) thì TẮT bước này, giữ hành vi
+    cũ — `Sam2Segmenter` luôn truyền khi gọi thật; các ca thử trong tệp này
+    dùng bbox lồng nhau giả lập để kiểm sắp xếp/cắt trần, không đại diện
+    không gian thật, nên cố tình không bật lọc chồng lấp.
+
+    Sắp theo diện tích giảm dần trước khi lọc chồng lấp và cắt bớt: giữ thực
+    thể LỚN trước khi so — `_loc_chong_lap` cần biết thứ tự lớn/nhỏ, và giữ
+    thực thể LỚN trước khi cắt theo `so_luong_toi_da` — một cụm hoa chiếm
+    nửa khung ảnh quan trọng hơn một mảnh lá ở góc ảnh.
 
     Dòng thiếu `area` hoặc `bbox` bị bỏ qua thay vì làm hàm vỡ: một phiên
     bản SAM2 khác có thể đổi hình dạng dict trả về, và một mặt nạ đọc không
     được nên biến mất khỏi kết quả, không nên làm cả lượt phân tích lỗi.
     """
-    ung_vien: list[tuple[float, tuple[float, float, float, float]]] = []
+    ung_vien: list[MatNaSam2] = []
     for mn in mat_na_tho:
         dien_tich_px = mn.get("area")
         bbox = mn.get("bbox")
@@ -130,13 +256,23 @@ def _loc_va_chuan_hoa(
         ty_le = dien_tich_px / float(rong * cao) if rong and cao else 0.0
         if ty_le < dien_tich_toi_thieu:
             continue
-        ung_vien.append((ty_le, _bbox_xywh_chuan_hoa(tuple(bbox), rong, cao)))
+        ung_vien.append(
+            MatNaSam2(
+                bbox=_bbox_xywh_chuan_hoa(tuple(bbox), rong, cao),
+                dien_tich=ty_le,
+                mat_na_nhi_phan=mn.get("segmentation"),
+            )
+        )
 
-    ung_vien.sort(key=lambda cap: cap[0], reverse=True)
+    ung_vien.sort(key=lambda mn: mn.dien_tich, reverse=True)
+
+    if nguong_chua_toi_thieu is not None and ty_le_lon_hon_toi_thieu is not None:
+        ung_vien = _loc_chong_lap(ung_vien, nguong_chua_toi_thieu, ty_le_lon_hon_toi_thieu)
+
     if so_luong_toi_da > 0:
         ung_vien = ung_vien[:so_luong_toi_da]
 
-    return [MatNaSam2(bbox=bbox, dien_tich=ty_le) for ty_le, bbox in ung_vien]
+    return ung_vien
 
 
 class Sam2Segmenter:
@@ -160,6 +296,8 @@ class Sam2Segmenter:
         dien_tich_toi_thieu: float | None = None,
         on_dinh_toi_thieu: float | None = None,
         so_luong_toi_da: int | None = None,
+        nguong_chua_toi_thieu: float | None = None,
+        ty_le_lon_hon_toi_thieu: float | None = None,
     ) -> None:
         from vision.providers.chung import nap_json
 
@@ -191,6 +329,18 @@ class Sam2Segmenter:
             so_luong_toi_da
             if so_luong_toi_da is not None
             else int(config.get("sam2_so_luong_toi_da", 40))
+        )
+        # Nợ #60 (giảm nhẹ 09/11) — xem docstring module. Mặc định 0.85/1.5
+        # là số HỢP LÝ, KHÔNG phải số đã đo trên bộ ảnh vàng (D5-c).
+        self._nguong_chua_toi_thieu = (
+            nguong_chua_toi_thieu
+            if nguong_chua_toi_thieu is not None
+            else float(config.get("sam2_nguong_chua_toi_thieu", 0.85))
+        )
+        self._ty_le_lon_hon_toi_thieu = (
+            ty_le_lon_hon_toi_thieu
+            if ty_le_lon_hon_toi_thieu is not None
+            else float(config.get("sam2_ty_le_lon_hon_toi_thieu", 1.5))
         )
 
         # Từ đây trở xuống mới đụng `torch`/`sam2`/`numpy` — import trong
@@ -236,4 +386,6 @@ class Sam2Segmenter:
             dien_tich_toi_thieu=self._dien_tich_toi_thieu,
             on_dinh_toi_thieu=self._on_dinh_toi_thieu,
             so_luong_toi_da=self._so_luong_toi_da,
+            nguong_chua_toi_thieu=self._nguong_chua_toi_thieu,
+            ty_le_lon_hon_toi_thieu=self._ty_le_lon_hon_toi_thieu,
         )

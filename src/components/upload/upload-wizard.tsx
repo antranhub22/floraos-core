@@ -892,6 +892,14 @@ function rowQuantity(row: Record<string, unknown>): number | null {
 function rowConfidence(row: Record<string, unknown>): number | null {
   return asNumber(row.confidence)
 }
+// Nhãn thô gốc tiếng Anh của mô hình — luôn có với hoa/lá (bộ `local_cv`,
+// 09/11), không có với các bộ máy khác hay các khoang khác. Hiển thị phụ,
+// mờ, dưới tên chính — hữu ích nhất khi tên chính là "Chưa xác định được
+// tên giống" (không khớp được danh mục), để người soát còn manh mối sửa
+// tay thay vì chỉ thấy một dòng "chưa biết".
+function rowRawLabel(row: Record<string, unknown>): string | null {
+  return asText(row.dau_hieu_nhan_dang)
+}
 
 function ResultStep({
   analyses,
@@ -1081,6 +1089,8 @@ function ResultStep({
                 const qty = rowQuantity(row)
                 const confidence = rowConfidence(row)
                 const color = rowColor(row)
+                const rawLabel = rowRawLabel(row)
+                const label = rowLabel(section, row)
                 // Mọi cấu phần đều sửa được tên, kể cả lớp gói. Số lượng chỉ
                 // sửa được ở dòng máy có trả số — hợp đồng chưa có `quantity`
                 // cho lớp gói (nợ #2), và ô số trống trên một trường không
@@ -1095,7 +1105,15 @@ function ResultStep({
                         />
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="text-[13.5px] font-semibold">{rowLabel(section, row)}</div>
+                        <div className="text-[13.5px] font-semibold">{label}</div>
+                        {rawLabel && rawLabel !== label && (
+                          <div
+                            className="mt-0.5 truncate text-[11px] italic text-text-muted"
+                            title={rawLabel}
+                          >
+                            Mô hình mô tả: {rawLabel}
+                          </div>
+                        )}
                         {confidence != null && confidence < 70 && (
                           <span className="mt-0.5 inline-flex items-center rounded-full border-[1.3px] border-warning px-1.5 py-0.5 text-[10.5px] font-bold text-warning">
                             Chưa chắc — nên kiểm lại

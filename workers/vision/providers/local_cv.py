@@ -29,9 +29,10 @@ chỉ trả nhãn thô kiểu "a bouquet of yellow tulips", không tự biết m
 `local_cv_species.doan_ma_loai(nhan)` — so khớp CHỮ của nhãn thô với alias
 tiếng Anh trong `contracts/species_catalog.json` (trích xuất từ chính danh mục
 loài của cửa hàng). Khớp ĐÚNG MỘT loài rõ ràng thì `ma`/`name` nhận mã và tên
-chuẩn tiếng Việt của loài đó, nhãn gốc mô hình giữ lại ở `dau_hieu_nhan_dang`
-để không mất dấu vết; khớp nhập nhằng hoặc không khớp gì thì `ma` vẫn `null`,
-`name` vẫn là nhãn thô — y hệt hành vi cũ.
+chuẩn tiếng Việt của loài đó; khớp nhập nhằng hoặc không khớp gì thì `ma` vẫn
+`null`, `name` nhận nhãn thay thế tiếng Việt `TEN_CHUA_XAC_DINH` (xem mục
+"Cập nhật 09/11 lần hai" ngay dưới) — trong CẢ HAI trường hợp, nhãn tiếng Anh
+gốc của mô hình giữ nguyên ở `dau_hieu_nhan_dang` để không mất dấu vết.
 
 Đây **KHÔNG phải** nợ #56 đã trả: vẫn chỉ là so chữ, không phải mô hình thị
 giác nhận diện hình dạng/màu sắc thật, nên `confidence` vẫn bị giữ nguyên ở
@@ -41,6 +42,33 @@ nguyên tắc D5-c: không đổi bằng lập luận suông). Xem `local_cv_spe
 để biết chi tiết cách so khớp và giới hạn của nó.
 
 Chốt với chủ sản phẩm 09/11: trả thật, không chặn.
+
+## Cập nhật 09/11 lần hai — tên hiển thị luôn tiếng Việt
+
+Chủ sản phẩm yêu cầu kết quả hiển thị tiếng Việt. Trước bản này, `name` khi
+KHÔNG khớp được danh mục là nguyên nhãn thô tiếng Anh của Florence-2 (ví dụ
+"a close up of a white sheet on a bed") — đúng thật nhưng không phải tiếng
+Việt, và với các dòng SAM2/Florence-2 mô tả nhầm sang vật ở nền (nợ #60) thì
+câu tiếng Anh đó còn không mô tả một loài hoa/lá nào cả.
+
+Không dịch máy nhãn thô: dịch một câu tiếng Anh bất kỳ sang tiếng Việt cần
+một bước suy luận mới (một mô hình dịch, hoặc một bộ từ điển tự chế) mà độ
+đúng của nó KHÔNG kiểm chứng được ở đây — bịa một bản dịch nghe hợp lý còn
+tệ hơn để nguyên tiếng Anh, vì người soát có thể tưởng đó là điều mô hình
+THỊ GIÁC thật sự thấy. Thay vào đó, không khớp được danh mục thì `name` nhận
+đúng một chuỗi hằng tiếng Việt `TEN_CHUA_XAC_DINH` — nói thẳng "chưa biết",
+không giả vờ biết. Nhãn thô tiếng Anh gốc LUÔN được giữ lại ở
+`dau_hieu_nhan_dang` (trước bản này chỉ giữ khi CÓ khớp) để không mất bằng
+chứng — UI có thể hiển thị nó như một dòng phụ mờ cho người soát tham khảo
+khi sửa tay, dù bản thân nó không phải tiếng Việt.
+
+Hệ quả: một loài hoa CÓ THẬT nhưng không có alias tiếng Anh trong danh mục
+(khoảng 15/86 loài, xem `species_catalog.json`) giờ cũng hiện `name` là
+"Chưa xác định được tên giống" thay vì tên tiếng Anh Florence-2 đã gọi đúng
+— llùi một bước về độ thông tin so với trước, đổi lấy việc không hiện tiếng
+Anh cho người soát không đọc được. Đây là điều đã lường trước và đánh đổi có
+chủ đích, không phải sơ suất; giảm nhẹ được tới đâu phụ thuộc vào nợ #60 (ít
+nhãn nhầm hơn) và độ phủ thật của danh mục 86 loài trên ảnh thật — CHƯA đo.
 """
 
 from __future__ import annotations
@@ -55,6 +83,10 @@ from vision.providers.local_cv_species import doan_ma_loai
 # worker, nên mọi lượt chạy bằng bộ cục bộ đều vào hàng chờ duyệt có cảnh
 # báo — đúng thực tế, không phải bi quan cho vui.
 CONFIDENCE_KHONG_CO_DANH_MUC = 55
+
+# Nhãn thay cho tên khi KHÔNG khớp được danh mục loài — xem mục "Cập nhật
+# 09/11 lần hai" ở docstring module. Một hằng số, không phải dịch máy.
+TEN_CHUA_XAC_DINH = "Chưa xác định được tên giống"
 
 
 class MatNa(Protocol):
@@ -112,15 +144,15 @@ def _dong_hoa(nhan: str, so_luong: int, chac: int) -> dict:
     và hai điều đó khác nhau ở màn duyệt.
 
     `doan_ma_loai` so CHỮ nhãn thô với danh mục loài — khớp rõ một loài thì
-    `ma`/`name` nhận mã và tên chuẩn tiếng Việt, nhãn gốc dồn về
-    `dau_hieu_nhan_dang`; không khớp thì `ma` vẫn `null`, `name` vẫn nhãn
-    thô, y hệt trước đây. Xem docstring module để biết đây KHÔNG phải bộ
-    phân loại thị giác.
+    `ma`/`name` nhận mã và tên chuẩn tiếng Việt; không khớp thì `ma` vẫn
+    `null`, `name` nhận `TEN_CHUA_XAC_DINH` (xem docstring module). Nhãn gốc
+    tiếng Anh của mô hình LUÔN dồn về `dau_hieu_nhan_dang`, khớp hay không
+    cũng vậy — không mất bằng chứng.
     """
     ma, ten_chuan = doan_ma_loai(nhan)
     return {
         "nhom_hoa": None,
-        "name": ten_chuan if ma else nhan,
+        "name": ten_chuan if ma else TEN_CHUA_XAC_DINH,
         "shade": None,
         "color": None,
         "quantity": so_luong,
@@ -133,7 +165,7 @@ def _dong_hoa(nhan: str, so_luong: int, chac: int) -> dict:
         "dvt_dem": None,
         "mau": None,
         "mo_ta_mau": None,
-        "dau_hieu_nhan_dang": nhan if ma else None,
+        "dau_hieu_nhan_dang": nhan,
         "so_nu": None,
         "so_hong": None,
     }
@@ -142,11 +174,12 @@ def _dong_hoa(nhan: str, so_luong: int, chac: int) -> dict:
 def _dong_la(nhan: str, chac: int) -> dict:
     """Lá theo quy ước đếm 4: ghi tên, `quantity` để trống.
 
-    Cùng cơ chế so khớp danh mục với `_dong_hoa` — xem đó để biết chi tiết.
+    Cùng cơ chế so khớp danh mục và cùng quy ước tên hiển thị/`dau_hieu_nhan_dang`
+    với `_dong_hoa` — xem đó để biết chi tiết.
     """
     ma, ten_chuan = doan_ma_loai(nhan)
     return {
-        "name": ten_chuan if ma else nhan,
+        "name": ten_chuan if ma else TEN_CHUA_XAC_DINH,
         "quantity": None,
         "cluster_indices": [],
         "role": None,
@@ -156,7 +189,7 @@ def _dong_la(nhan: str, chac: int) -> dict:
         "dvt_dem": None,
         "mau": None,
         "mo_ta_mau": None,
-        "dau_hieu_nhan_dang": nhan if ma else None,
+        "dau_hieu_nhan_dang": nhan,
     }
 
 

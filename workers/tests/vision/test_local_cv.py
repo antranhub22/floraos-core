@@ -1,5 +1,6 @@
 from vision.providers.local_cv import (
     CONFIDENCE_KHONG_CO_DANH_MUC,
+    TEN_CHUA_XAC_DINH,
     LocalCvProvider,
     _nhom_theo_nhan,
     lap_rap,
@@ -68,14 +69,33 @@ class TestLapRap:
         assert dong["name"] == "Tulip"
         assert dong["dau_hieu_nhan_dang"] == "tulip"
 
-    def test_khong_khop_duoc_thi_van_tra_ma_null_nhu_cu(self):
-        """Nhãn không trùng alias nào trong danh mục — hành vi CŨ giữ nguyên,
-        không phải bộ phân loại thị giác nên không đoán bừa."""
+    def test_khop_duoc_thi_dau_hieu_nhan_dang_van_la_nhan_tho_khong_phai_ten_chuan(self):
+        """`dau_hieu_nhan_dang` luôn là nhãn GỐC của mô hình (bằng chứng),
+        không phải tên chuẩn đã tra — hai trường khác nhau dù có khớp."""
+        kq = lap_rap({("flowers", "TULIPS"): (1, 90)})
+        dong = kq["bom"]["flowers"][0]
+        assert dong["dau_hieu_nhan_dang"] == "TULIPS"
+        assert dong["name"] != dong["dau_hieu_nhan_dang"]
+
+    def test_khong_khop_duoc_thi_ma_null_va_ten_la_hang_so_tieng_viet(self):
+        """09/11 lần hai: nhãn không trùng alias nào trong danh mục thì `ma`
+        vẫn `null` như cũ (không phải bộ phân loại thị giác nên không đoán
+        bừa), nhưng `name` hiển thị đổi từ nguyên câu tiếng Anh sang hằng số
+        tiếng Việt `TEN_CHUA_XAC_DINH` — chủ sản phẩm yêu cầu kết quả hiển
+        thị tiếng Việt. Nhãn gốc tiếng Anh KHÔNG mất, vẫn còn nguyên ở
+        `dau_hieu_nhan_dang` (trước bản này chỉ giữ khi CÓ khớp)."""
         kq = lap_rap({("flowers", "a white sheet on a bed"): (1, 95)})
         dong = kq["bom"]["flowers"][0]
         assert dong["ma"] is None
-        assert dong["name"] == "a white sheet on a bed"
-        assert dong["dau_hieu_nhan_dang"] is None
+        assert dong["name"] == TEN_CHUA_XAC_DINH
+        assert dong["dau_hieu_nhan_dang"] == "a white sheet on a bed"
+
+    def test_la_khong_khop_duoc_cung_hanh_vi_nhu_hoa(self):
+        kq = lap_rap({("foliage", "a bare tree branch on a table"): (1, 95)})
+        dong = kq["bom"]["foliage"][0]
+        assert dong["ma"] is None
+        assert dong["name"] == TEN_CHUA_XAC_DINH
+        assert dong["dau_hieu_nhan_dang"] == "a bare tree branch on a table"
 
     def test_ha_confidence_xuong_duoi_nguong_low_confidence(self):
         """Ngưỡng `LOW_CONFIDENCE` của worker là 70 — mọi lượt chạy bằng bộ
