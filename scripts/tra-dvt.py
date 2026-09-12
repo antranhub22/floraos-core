@@ -45,6 +45,7 @@ def load_species_catalog():
     cong_nang_idx = header.index("Công năng")
     nhom_idx = header.index("Nhóm")
     dac_diem_idx = header.index("Đặc điểm phân biệt")
+    ten_khac_idx = header.index("Tên gọi khác")
 
     catalog = {}
     for row in data:
@@ -53,12 +54,21 @@ def load_species_catalog():
         cong_nang = row[cong_nang_idx]
         nhom = row[nhom_idx]
         dac_diem = row[dac_diem_idx]
+        ten_khac = row[ten_khac_idx]
         if ten:
+            ten_khac_list = []
+            if ten_khac:
+                ten_khac_str = str(ten_khac)
+                if ";" in ten_khac_str:
+                    ten_khac_list = [t.strip() for t in ten_khac_str.split(";")]
+                else:
+                    ten_khac_list = [ten_khac_str]
             catalog[str(ten).strip()] = {
                 "dvt": dtvt,
                 "cong_nang": cong_nang,
                 "nhom": nhom,
                 "dac_diem": dac_diem,
+                "ten_khac": ten_khac_list,
             }
     wb.close()
     return catalog
@@ -75,20 +85,46 @@ def load_proposals(limit=None):
     return proposals
 
 
-def match_species(flower_name, catalog):
+def match_species(flower_name, catalog, json_catalog=None):
     """Tìm loài trong catalog khớp với tên AI nhận diện."""
     flower_name_lower = str(flower_name).strip().lower()
     matches = []
 
     for ten_chuan, info in catalog.items():
         ten_chuan_lower = str(ten_chuan).lower()
-        # Exact match
+        ten_khac = info.get("ten_khac", []) if isinstance(info, dict) else []
+        ten_khac_lower = [str(t).strip().lower() for t in ten_khac] if ten_khac else []
+
         if flower_name_lower == ten_chuan_lower:
             matches.append((ten_chuan, info, "exact"))
-            continue
-        # Partial match
-        if flower_name_lower in ten_chuan_lower or ten_chuan_lower in flower_name_lower:
+        elif flower_name_lower in ten_chuan_lower or ten_chuan_lower in flower_name_lower:
             matches.append((ten_chuan, info, "partial"))
+        else:
+            for tk in ten_khac_lower:
+                if flower_name_lower == tk or flower_name_lower in tk or tk in flower_name_lower:
+                    matches.append((ten_chuan, info, "alias"))
+                    break
+
+    if json_catalog:
+        for entry in json_catalog.get("loai", []):
+            ten_chuan = entry.get("ten_chuan")
+            ten_khac = entry.get("ten_khac", [])
+            dvt = entry.get("dvt_chuan")
+            dac_diem = entry.get("dac_diem_phan_biet")
+            if ten_chuan and dvt:
+                ten_chuan_lower = str(ten_chuan).lower()
+                if flower_name_lower == ten_chuan_lower:
+                    already = any(m[0] == ten_chuan for m in matches)
+                    if not already:
+                        matches.append((ten_chuan, {"dvt": dvt, "dac_diem": dac_diem, "ten_khac": ten_khac}, "json_exact"))
+                else:
+                    for tk in ten_khac if isinstance(ten_khac, list) else []:
+                        tk_lower = str(tk).strip().lower()
+                        if flower_name_lower == tk_lower or flower_name_lower in tk_lower or tk_lower in flower_name_lower:
+                            already = any(m[0] == ten_chuan for m in matches)
+                            if not already:
+                                matches.append((ten_chuan, {"dvt": dvt, "dac_diem": dac_diem, "ten_khac": ten_khac}, "json_alias"))
+                            break
 
     return matches
 
