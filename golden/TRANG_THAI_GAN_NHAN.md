@@ -21,3 +21,13 @@ Sau khi có nhãn từ Người A, so sánh với `golden/ai-proposals/`:
 - AI đúng bao nhiêu %
 - AI sai ở trường nào (flower_count, components, ...)
 - Ghi vào `golden/ai-accuracy-report.csv`
+
+**Công cụ:** `scripts/so-sanh-ai-vs-nguoi.py` — tự động so sánh 3 trường số giữa AI và người, xuất CSV. Chạy sau khi cả hai nguồn có dữ liệu.
+
+## Trạng thái hiện tại (09/12)
+
+- [ ] AI đề xuất đang chạy trên 100 ảnh (`scripts/golden-ai-proposals.py`, background) — đã có N ảnh
+- [ ] Người A chưa bắt đầu đánh giá (KHÔNG xem AI proposal)
+- [ ] Người B chưa kiểm chứng
+- [ ] So sánh AI vs Người (sau khi có nhãn người)
+- [ ] Hoàn thiện manifest.csv
