@@ -61,20 +61,29 @@ def main():
         for field in COMPARE_FIELDS:
             ai_value = ai_raw.get(field)
             human_value = label.get(field)
-            if _is_empty(ai_value) or _is_empty(human_value):
+            ai_present = not _is_empty(ai_value)
+            human_present = not _is_empty(human_value)
+            if ai_present and human_present:
+                if ai_value == human_value:
+                    match = "YES"
+                    diff_abs = 0
+                else:
+                    match = "NO"
+                    diff_abs = abs(ai_value - human_value)
+            elif ai_present and not human_present:
+                match = "AI_ONLY"
+                diff_abs = ""
+            elif human_present and not ai_present:
+                match = "HUMAN_ONLY"
+                diff_abs = ""
+            else:
                 match = "PENDING"
                 diff_abs = ""
-            elif ai_value == human_value:
-                match = "YES"
-                diff_abs = 0
-            else:
-                match = "NO"
-                diff_abs = abs(ai_value - human_value)
             rows.append({
                 "image_id": image_id,
                 "field": field,
-                "ai_value": ai_value if not _is_empty(ai_value) else "",
-                "human_value": human_value if not _is_empty(human_value) else "",
+                "ai_value": ai_value if ai_present else "",
+                "human_value": human_value if human_present else "",
                 "match": match,
                 "diff_abs": diff_abs if diff_abs != "" else "",
             })
@@ -91,18 +100,22 @@ def main():
             writer.writerow(r)
 
     matches = sum(1 for r in rows if r["match"] == "YES")
+    mismatches = sum(1 for r in rows if r["match"] == "NO")
+    ai_only = sum(1 for r in rows if r["match"] == "AI_ONLY")
+    human_only = sum(1 for r in rows if r["match"] == "HUMAN_ONLY")
     pending = sum(1 for r in rows if r["match"] == "PENDING")
-    print(f"{matches}/{total} ô trùng khớp ({matches/total*100:.1f}%), {pending} chờ nhãn người")
+    print(f"{matches}/{total} trùng, {mismatches} sai, {ai_only} AI_chưa_người, {human_only} Người_chưa_AI, {pending} chờ")
     for field in COMPARE_FIELDS:
         field_rows = [r for r in rows if r["field"] == field]
-        f_matches = sum(1 for r in field_rows if r["match"] == "YES")
+        f_yes = sum(1 for r in field_rows if r["match"] == "YES")
+        f_no = sum(1 for r in field_rows if r["match"] == "NO")
+        f_ai_only = sum(1 for r in field_rows if r["match"] == "AI_ONLY")
+        f_human_only = sum(1 for r in field_rows if r["match"] == "HUMAN_ONLY")
         f_total = len(field_rows)
-        f_done = sum(1 for r in field_rows if r["match"] != "PENDING")
-        if f_done > 0:
-            avg_diff = sum(int(r["diff_abs"]) for r in field_rows if r["diff_abs"] != "") / f_done
-            print(f"  {field}: {f_matches}/{f_total} trùng ({f_done} đã có), sai lệch TB {avg_diff:.1f}")
+        if f_total > 0:
+            print(f"  {field}: {f_yes}/{f_total} trùng, {f_no} sai, {f_ai_only} AI_only, {f_human_only} Người_only")
         else:
-            print(f"  {field}: chưa có dữ liệu người")
+            print(f"  {field}: chưa có dữ liệu")
     print(f"Báo cáo: {REPORT_PATH}")
 
 

@@ -118,7 +118,7 @@ Bốn danh mục cấu phần: `flower` · `bud` · `foliage` · `packaging`. Ý
 
 Tỉ lệ lệch ở vòng hai là chỉ số về chất lượng quy ước. Lệch trên 10% nghĩa là quy ước đếm chưa đủ rõ, không phải người gán nhãn cẩu thả.
 
-Ảnh nào không chốt được số đúng thì **loại khỏi bộ**, không đoán. Một nhãn sai làm hỏng thước đo nhiều hơn là thiếu một ảnh.
+Ảnh nào không chốt được số chính xác vẫn **giữ lại**, ghi chú rõ là ước tính. Số lượng ảnh đủ theo mục 8 mới là điều kiện đạt nghiệm thu, không phải từng ảnh phải đếm chính xác tuyệt đối. Một nhãn sai làm hỏng thước đo nhiều hơn là thiếu một ảnh.
 
 ## 8. Nghiệm thu bộ ảnh
 

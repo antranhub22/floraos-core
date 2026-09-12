@@ -1,17 +1,48 @@
 {
   "image_id": "g011",
   "file": "g011.jpeg",
-  "source": "BoAnhVang/HOA CHIA BUỒN/KỆ HOA/MÀU TÍM/KHCH0078",
-  "product_name": "HOA CHIA BUỒN / KỆ HOA / MÀU TÍM / KHCH0078",
+  "source": "BoAnhVang/HOA CHIA BUỔN/KỆ HOA/MÀU TÍM/KHCH0078",
+  "product_name": "HOA CHIA BUỔN / KỆ HOA / MÀU TÍM / KHCH0078",
   "product_form": "lang",
-  "difficulty": null,
+  "difficulty": "hard",
   "flower_count": null,
-  "bud_count": null,
-  "damaged_count": null,
+  "bud_count": 0,
+  "damaged_count": 0,
   "order_count": null,
-  "components": [],
-  "occluded": null,
-  "notes": "",
+  "components": [
+    {
+      "canonical_component": "cuc-trang",
+      "category": "flower",
+      "count": null,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "cuc-tim-hong-nhat",
+      "category": "flower",
+      "count": null,
+      "color": "tim-hong-nhat"
+    },
+    {
+      "canonical_component": "foliage-xanh",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "nu-ruy-bang-den",
+      "category": "packaging",
+      "count": 2,
+      "color": "den"
+    },
+    {
+      "canonical_component": "bang-thanh-kinh-phan-uu",
+      "category": "packaging",
+      "count": 1,
+      "color": null
+    }
+  ],
+  "occluded": true,
+  "notes": "Chu dao: cuc trang + cuc tim/hong nhat. ~75 bông (uoc tinh). 2 cum nu/ruy-bang van den, 1 bang thanh kinh phan uu. Khong nhan dien nung -> bud_count: 0. Hoa kho kha lam. - chap nhan uoc tinh theo quy tac moi BO_ANH_VANG",
   "labeled_by": "",
   "labeled_at": "",
   "verified_by": "",

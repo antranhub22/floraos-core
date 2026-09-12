@@ -1,17 +1,66 @@
 {
   "image_id": "g008",
   "file": "g008.jpeg",
-  "source": "BoAnhVang/HOA CHIA BUỒN/GIỎ HOA/MÀU VÀNG/GHCB0023",
-  "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU VÀNG / GHCB0023",
+  "source": "BoAnhVang/HOA CHIA BUỔN/GIỎ HOA/MÀU VÀNG/GHCB0023",
+  "product_name": "HOA CHIA BUỔN / GIỎ HOA / MÀU VÀNG / GHCB0023",
   "product_form": "gio",
-  "difficulty": null,
+  "difficulty": "hard",
   "flower_count": null,
   "bud_count": null,
-  "damaged_count": null,
+  "damaged_count": 0,
   "order_count": null,
-  "components": [],
-  "occluded": null,
-  "notes": "",
+  "components": [
+    {
+      "canonical_component": "hoa-hong-vang",
+      "category": "flower",
+      "count": 10,
+      "color": "vang"
+    },
+    {
+      "canonical_component": "lily-vang",
+      "category": "flower",
+      "count": 4,
+      "color": "vang"
+    },
+    {
+      "canonical_component": "lan-vang-cam",
+      "category": "flower",
+      "count": null,
+      "color": "vang-cam"
+    },
+    {
+      "canonical_component": "lan-trang",
+      "category": "flower",
+      "count": null,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "la-cau-palm",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "foliage-xanh",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "nu-ruy-bang-vang-kem",
+      "category": "packaging",
+      "count": 1,
+      "color": "vang-kem"
+    },
+    {
+      "canonical_component": "gio-thung-go-trang",
+      "category": "packaging",
+      "count": 1,
+      "color": "trang"
+    }
+  ],
+  "occluded": true,
+  "notes": "Nguyen lieu kho kha lam: 65 hoa nở (uoc tinh), 50 nụ (uoc tinh). 10 hoa hong vang va 4 lily vang ghi chinh xac. 22 lan vang/cam va 29 lan trang uoc tinh. Gio/thung go trang, nu ruy bang vang kem. - chap nhan uoc tinh theo quy tac moi BO_ANH_VANG",
   "labeled_by": "",
   "labeled_at": "",
   "verified_by": "",

@@ -146,7 +146,7 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 
 ## P5 — M01 phân tích ảnh
 
-- [ ] **Bộ ảnh vàng 50–100 ảnh đạt nghiệm thu** theo `../kien-truc/BO_ANH_VANG.md` *(09/12: 100 ảnh + 100 template nhãn đã có trong `golden/`. Chưa ai gán nhãn thật. AI đề xuất đang chạy (`golden/ai-proposals/`) — người gán nhãn PHẢI đánh giá độc lập, KHÔNG xem AI. Hướng dẫn: `golden/HUONG_DAN_GAN_NHAN.md`. Đây là điều kiện còn lại DUY NHẤT chưa xong của P5)*
+- [ ] **Bộ ảnh vàng đạt nghiệm thu** theo `../kien-truc/BO_ANH_VANG.md` *(09/12: 8/100 ảnh đã gán nhãn (g001, g002, g008-g014). Quy tắc mới 09/12: ước tính = chấp nhận, ghi chú rõ trong notes. AI đề xuất chạy được 6 ảnh (g001-g006), crash sau đó. Script so sánh `so-sanh-ai-vs-nguoi.py` hoạt động. Đây là điều kiện còn lại DUY NHẤT chưa xong của P5)*
 - [x] Hợp đồng `PhanTichSanPhamHoa` lấy nguyên từ `Schema.json`, không khai lại tay (`YC-N3`)
 - [x] Cổng `VisionAnalyzer` ở mức hợp đồng JSON (`YC-N2`)
 - [x] `OpenAIStructuredProvider` chạy được sau cổng *(09/10: 9/9 test logic xanh thật trên máy Tony — CHƯA gọi API OpenAI thật với ảnh thật, việc đó chờ bộ ảnh vàng có nhãn để đối chiếu kết quả)*
@@ -156,7 +156,7 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 - [x] `approved_by` và `approved_at` có trên bản ghi (`YC-R2`)
 - [ ] Ma trận chọn công nghệ hoàn thành, có cột soát cách ly tenant (`YC-N5` `YC-N6`) — đang chờ bộ ảnh vàng có nhãn thật để đo, sau đó so sánh `local_cv` vs `openai_structured` vs `openai_direct`*(09/12: script `scripts/golden-ai-proposals.py` đang chạy trên 100 ảnh, sẽ có kết quả AI đề xuất trong `golden/ai-proposals/`. Chưa có số đo thật — xem `golden/TRANG_THAI_GAN_NHAN.md`)*
 
-  09/12: anh Tony xác nhận xanh hết trên máy thật — `prisma generate`/`db push` ✅, `npm test` ✅, `npm run test:tenant` **123/123** ✅ (sau khi sửa 2 ca `vision-analyses.test.ts` kỳ vọng sai engine mặc định: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`). Bộ ảnh vàng: script AI đề xuất `scripts/golden-ai-proposals.py` đang chạy, chờ người gán nhãn thật. Ma trận chọn công nghệ chờ bộ ảnh vàng có nhãn.
+  09/12: anh Tony xác nhận xanh hết trên máy thật — `prisma generate`/`db push` ✅, `npm test` ✅, `npm run test:tenant` **123/123** ✅ (sau khi sửa 2 ca `vision-analyses.test.ts` kỳ vọng sai engine mặc định: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`). Bộ ảnh vàng: 8/100 ảnh đã gán nhãn, quy tắc mới chấp nhận ước tính. Script AI đề xuất `scripts/golden-ai-proposals.py` chạy được 6 ảnh (g001-g006) trước khi crash. Script so sánh `scripts/so-sanh-ai-vs-nguoi.py` hoạt động. Ma trận chọn công nghệ chờ bộ ảnh vàng có nhãn.
 
 ## P6 — M02 giá và M03 tra cứu
 

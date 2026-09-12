@@ -1,17 +1,48 @@
 {
   "image_id": "g009",
   "file": "g009.jpeg",
-  "source": "BoAnhVang/HOA CHIA BUỒN/GIỎ HOA/MÀU VÀNG/GHCB0024",
-  "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU VÀNG / GHCB0024",
+  "source": "BoAnhVang/HOA CHIA BUỔN/GIỎ HOA/MÀU VÀNG/GHCB0024",
+  "product_name": "HOA CHIA BUỔN / GIỎ HOA / MÀU VÀNG / GHCB0024",
   "product_form": "gio",
-  "difficulty": null,
+  "difficulty": "medium",
   "flower_count": null,
-  "bud_count": null,
-  "damaged_count": null,
+  "bud_count": 0,
+  "damaged_count": 0,
   "order_count": null,
-  "components": [],
-  "occluded": null,
-  "notes": "",
+  "components": [
+    {
+      "canonical_component": "cuc-vang",
+      "category": "flower",
+      "count": null,
+      "color": "vang"
+    },
+    {
+      "canonical_component": "foliage-xanh",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "nu-ruy-bang-vang-nau",
+      "category": "packaging",
+      "count": 1,
+      "color": "vang-nau"
+    },
+    {
+      "canonical_component": "gio-hop-dan-nau",
+      "category": "packaging",
+      "count": 1,
+      "color": "nau"
+    },
+    {
+      "canonical_component": "tem-logo",
+      "category": "packaging",
+      "count": 1,
+      "color": null
+    }
+  ],
+  "occluded": true,
+  "notes": "Chu dao: cuc vang. ~48 buoc cuc vang (uoc tinh). Foliage xanh xen keh. 1 nu ruy bang vang nau, 1 gio/hop dan nau, 1 tem/logo. Uoc tinh nung rieng biet -> bud_count: 0. So hoa uoc tinh vi hoa phia trong bi che khuat. - chap nhan uoc tinh theo quy tac moi BO_ANH_VANG",
   "labeled_by": "",
   "labeled_at": "",
   "verified_by": "",

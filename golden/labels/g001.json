@@ -1,17 +1,66 @@
 {
   "image_id": "g001",
   "file": "g001.jpeg",
-  "source": "BoAnhVang/HOA CHIA BUỒN/GIỎ HOA/MÀU TRẮNG/GHCB0001",
-  "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0001",
+  "source": "BoAnhVang/HOA CHIA BUỒN/GIỎ HOA/MÀU TRẮNG/GHCB0001",
+  "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0001",
   "product_form": "gio",
-  "difficulty": null,
+  "difficulty": "hard",
   "flower_count": null,
-  "bud_count": null,
-  "damaged_count": null,
+  "bud_count": 3,
+  "damaged_count": 0,
   "order_count": null,
-  "components": [],
-  "occluded": null,
-  "notes": "",
+  "components": [
+    {
+      "canonical_component": "hoa-hong-trang",
+      "category": "flower",
+      "count": null,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "hoa-lily-trang-xanh",
+      "category": "flower",
+      "count": null,
+      "color": "trang-xanh"
+    },
+    {
+      "canonical_component": "cam-tu-cau-xanh-nhat",
+      "category": "flower",
+      "count": 1,
+      "color": "xanh-nhat"
+    },
+    {
+      "canonical_component": "cuc-but-xanh",
+      "category": "flower",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "baby-trang",
+      "category": "flower",
+      "count": null,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "la-eucalyptus",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "la-cau-palm",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "duong-xili",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    }
+  ],
+  "occluded": true,
+  "notes": "Boc cuc day, nhieu thanh phan trung lap. flower_count ~33 la du toan (nhieu hoa nho bi che khuat). Chua xac dinh co dung de giu trong bo hay khong. - chap nhan uoc tinh theo quy tac moi BO_ANH_VANG",
   "labeled_by": "",
   "labeled_at": "",
   "verified_by": "",

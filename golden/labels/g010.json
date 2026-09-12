@@ -1,17 +1,60 @@
 {
   "image_id": "g010",
   "file": "g010.jpeg",
-  "source": "BoAnhVang/HOA CHIA BUỒN/KỆ HOA/MÀU TÍM/KHCH0077",
-  "product_name": "HOA CHIA BUỒN / KỆ HOA / MÀU TÍM / KHCH0077",
+  "source": "BoAnhVang/HOA CHIA BUỔN/KỆ HOA/MÀU TÍM/KHCH0077",
+  "product_name": "HOA CHIA BUỔN / KỆ HOA / MÀU TÍM / KHCH0077",
   "product_form": "lang",
-  "difficulty": null,
+  "difficulty": "hard",
   "flower_count": null,
-  "bud_count": null,
-  "damaged_count": null,
+  "bud_count": 0,
+  "damaged_count": 0,
   "order_count": null,
-  "components": [],
-  "occluded": null,
-  "notes": "",
+  "components": [
+    {
+      "canonical_component": "cuc-trang",
+      "category": "flower",
+      "count": null,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "cuc-tim",
+      "category": "flower",
+      "count": null,
+      "color": "tim"
+    },
+    {
+      "canonical_component": "hong-trang",
+      "category": "flower",
+      "count": null,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "lily-trang",
+      "category": "flower",
+      "count": null,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "foliage-xanh",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "nu-ruy-bang-trang",
+      "category": "packaging",
+      "count": 1,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "bang-thanh-kinh-phan-uu",
+      "category": "packaging",
+      "count": 1,
+      "color": "trang"
+    }
+  ],
+  "occluded": true,
+  "notes": "Mau trang-tim. Cuc trang, cuc tim, hong trang, lily trang (khong biet so luong tung loai). ~60 hoa/cum hoa nhin thay (uoc tinh). Foliage xanh. 1 nu ruy bang trang, 1 bang thanh kinh phan uu. Khong xac dinh nung -> bud_count: 0. - chap nhan uoc tinh theo quy tac moi BO_ANH_VANG",
   "labeled_by": "",
   "labeled_at": "",
   "verified_by": "",

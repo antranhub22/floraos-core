@@ -1,17 +1,84 @@
 {
   "image_id": "g014",
   "file": "g014.jpeg",
-  "source": "BoAnhVang/HOA CHIA BUỒN/KỆ HOA/MÀU TÍM/KHCH0081",
-  "product_name": "HOA CHIA BUỒN / KỆ HOA / MÀU TÍM / KHCH0081",
+  "source": "BoAnhVang/HOA CHIA BUỔN/KỆ HOA/MÀU TÍM/KHCH0081",
+  "product_name": "HOA CHIA BUỔN / KỆ HOA / MÀU TÍM / KHCH0081",
   "product_form": "lang",
-  "difficulty": null,
+  "difficulty": "hard",
   "flower_count": null,
   "bud_count": null,
-  "damaged_count": null,
+  "damaged_count": 0,
   "order_count": null,
-  "components": [],
-  "occluded": null,
-  "notes": "",
+  "components": [
+    {
+      "canonical_component": "hong-tim",
+      "category": "flower",
+      "count": null,
+      "color": "tim"
+    },
+    {
+      "canonical_component": "cuc-trang",
+      "category": "flower",
+      "count": null,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "cuc-tim",
+      "category": "flower",
+      "count": null,
+      "color": "tim"
+    },
+    {
+      "canonical_component": "lan",
+      "category": "flower",
+      "count": null,
+      "color": null
+    },
+    {
+      "canonical_component": "hoa-phu",
+      "category": "flower",
+      "count": null,
+      "color": null
+    },
+    {
+      "canonical_component": "eucalyptus",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "duong-xi",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "foliage-xanh",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "cum-nu-van-trang",
+      "category": "packaging",
+      "count": 2,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "khung-khe-tre-go",
+      "category": "packaging",
+      "count": 1,
+      "color": "nau"
+    },
+    {
+      "canonical_component": "bang-thanh-kinh-phan-uu",
+      "category": "packaging",
+      "count": 1,
+      "color": null
+    }
+  ],
+  "occluded": true,
+  "notes": "Khe hoa 2 tang. Phan tren: vong hoa lon, phan duoi: cum hoa phu. Chu dao: hong tim, cuc trang, cuc tim, lan, hoa phu. ~55 hoa/cum hoa (uoc tinh), ~10 nui (uoc tinh). Eucalyptus, duong xi, foliage. 2 cum nu van trang, 1 khung khe tre go, 1 bang thanh kinh phan uu. Ca 55 va 10 deu la uoc tinh. - chap nhan uoc tinh theo quy tac moi BO_ANH_VANG",
   "labeled_by": "",
   "labeled_at": "",
   "verified_by": "",

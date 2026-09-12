@@ -1,17 +1,54 @@
 {
   "image_id": "g013",
   "file": "g013.jpeg",
-  "source": "BoAnhVang/HOA CHIA BUỒN/KỆ HOA/MÀU TÍM/KHCH0080",
-  "product_name": "HOA CHIA BUỒN / KỆ HOA / MÀU TÍM / KHCH0080",
+  "source": "BoAnhVang/HOA CHIA BUỔN/KỆ HOA/MÀU TÍM/KHCH0080",
+  "product_name": "HOA CHIA BUỔN / KỆ HOA / MÀU TÍM / KHCH0080",
   "product_form": "lang",
-  "difficulty": null,
+  "difficulty": "hard",
   "flower_count": null,
   "bud_count": null,
-  "damaged_count": null,
+  "damaged_count": 0,
   "order_count": null,
-  "components": [],
-  "occluded": null,
-  "notes": "",
+  "components": [
+    {
+      "canonical_component": "lan-dendro-tim-hong",
+      "category": "flower",
+      "count": null,
+      "color": "tim-hong"
+    },
+    {
+      "canonical_component": "nui-lan",
+      "category": "flower",
+      "count": null,
+      "color": "tim-hong"
+    },
+    {
+      "canonical_component": "foliage-xanh",
+      "category": "foliage",
+      "count": null,
+      "color": "xanh"
+    },
+    {
+      "canonical_component": "cum-nu-van-tim",
+      "category": "packaging",
+      "count": 2,
+      "color": "tim"
+    },
+    {
+      "canonical_component": "bo-ruy-bang-trang",
+      "category": "packaging",
+      "count": 1,
+      "color": "trang"
+    },
+    {
+      "canonical_component": "bang-thanh-chia-buon",
+      "category": "packaging",
+      "count": 1,
+      "color": null
+    }
+  ],
+  "occluded": true,
+  "notes": "Chu dao: lan dendro tim/hong. ~50 hoa lan nha (uoc tinh), ~15 nui lan (uoc tinh). Foliage xanh. 2 cum nu van tim, 1 bo ruy bang trang, 1 bang thanh chia buon. Ca 50 va 15 deu la uoc tinh. - chap nhan uoc tinh theo quy tac moi BO_ANH_VANG",
   "labeled_by": "",
   "labeled_at": "",
   "verified_by": "",
