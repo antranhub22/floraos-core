@@ -134,8 +134,10 @@ Tài liệu đã sửa theo trong cùng lượt: kiến trúc V2 (mục 2, 2.1, 
 `Checklist_Thuc_Thi.md` · `README.md`. Tệp mới `BO_TINH_NANG_HIEN_TRANG.md` giữ
 bảng đối chiếu từng tính năng với mã thật và sáu điểm lệch tài liệu phải đóng.
 
-**Việc kế tiếp theo thứ tự:** P13 (M04a đợt hai) → P15 (ba đường ghi) → P16, P17,
-P18, P19. P14 chạy song song được với P13.
+**Việc kế tiếp theo thứ tự:** P16 (M04b ảnh marketing) đã xong.
+P17 (M04c video) → P18 (M07 nội dung) → P19 (M06 catalog & QR) —
+P19 gần xong (6/7 checklist items, cặp J1↔J2 tách năng lực).
+P14 chạy song song được với P13.
 
 **Giai đoạn: P8 XONG (09/10) — AVI GIFT đã nằm trong core. P9 đợt một xong 09/10.**
 Hai lượt nạp đã chạy THẬT trên Postgres, tổ chức `18dc7e62`: 1.319 sản phẩm
