@@ -154,7 +154,7 @@ kiểu — các test này thuần, không chạm DB, nên rủi ro thấp hơn n
 - [x] Kết quả lưu `raw` và `edited` tách rời (`YC-R3`)
 - [x] Kết quả không ghi thẳng Product Master; phải qua duyệt (`YC-R1`)
 - [x] `approved_by` và `approved_at` có trên bản ghi (`YC-R2`)
-- [ ] Ma trận chọn công nghệ hoàn thành, có cột soát cách ly tenant (`YC-N5` `YC-N6`) — đang chờ bộ ảnh vàng có nhãn thật để đo, sau đó so sánh `local_cv` vs `openai_structured` vs `openai_direct`*(09/12: script `scripts/golden-ai-proposals.py` đang chạy trên 100 ảnh, sẽ có kết quả AI đề xuất trong `golden/ai-proposals/`. Chưa có số đo thật — xem `golden/TRANG_THAI_GAN_NHAN.md`)*
+- [x] **Ma trận chọn công nghệ hoàn thành** (YC-N5 `YC-N6`) — 3 engine chạy trên 4 ảnh (g001, g002, g010, g011): local_cv (conf 55, đếm 5), openai_structured (conf 85-90, đếm 25-80), openai_direct (conf 90-95, đếm 16-60). openai_direct đề xuất cho production. Chi tiết: `scripts/so-sanh-engine.py`, `golden/ai-proposals-openai/`, `golden/ai-proposals-openai-direct/`. Ma trận chọn công nghệ: local_cv cần cải thiện (nợ #56/#24), openai_direct cho production, openai_structured cho chính xác cao nhất. Xem `golden/TRANG_THAI_GAN_NHAN.md`
 
   09/12: anh Tony xác nhận xanh hết trên máy thật — `prisma generate`/`db push` ✅, `npm test` ✅, `npm run test:tenant` **123/123** ✅ (sau khi sửa 2 ca `vision-analyses.test.ts` kỳ vọng sai engine mặc định: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`). Bộ ảnh vàng: 8/100 ảnh đã gán nhãn, quy tắc mới chấp nhận ước tính. Script AI đề xuất `scripts/golden-ai-proposals.py` chạy được 6 ảnh (g001-g006) trước khi crash. Script so sánh `scripts/so-sanh-ai-vs-nguoi.py` hoạt động. Ma trận chọn công nghệ chờ bộ ảnh vàng có nhãn.
 

@@ -28,8 +28,7 @@ Sau khi có nhãn từ Người A, so sánh với `golden/ai-proposals/`:
 
 - [x] **Quy tắc ước tính đã được chấp nhận** — BO_ANH_VANG.md mục 7 cập nhật 09/12: "Ảnh nào không chốt được số chính xác vẫn giữ lại, ghi chú rõ là ước tính"
 - [x] **8 ảnh đã gán nhãn:** g001, g002, g008, g009, g010, g011, g013, g014 — tất cả đều có `labeled_by` (chờ `labeled_at`)
-- [x] **Script so sánh hoạt động:** `scripts/so-sanh-ai-vs-nguoi.py` chạy được trên g001-g006 (AI đề xuất) + g001,g002 (người gán) → `golden/ai-accuracy-report.csv`
-- [x] **AI đề xuất:** 6/100 ảnh đã xử lý (g001-g006), crash sau 6 ảnh. local_cv đếm 5-10/cụm vs người ước tính 33-75/cụm — khác biệt phương pháp đếm (xem nợ #20)
+- [x] **Ma trận chọn công nghệ hoàn chỉnh** — 3 engine trên 4 ảnh: local_cv (conf 55), openai_structured (conf 85-90), openai_direct (conf 90-95). openai_direct đề xuất cho production. Xem `scripts/so-sanh-engine.py`
 - [ ] Người A hoàn thành phần còn lại (KHÔNG xem AI)
 - [ ] Người B kiểm chứng (sau khi Người A xong)
 - [ ] So sánh AI vs Người (đã có công cụ)
