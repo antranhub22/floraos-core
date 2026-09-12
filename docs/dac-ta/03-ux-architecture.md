@@ -33,11 +33,18 @@ Không dựng hai bộ màn hình song song cho hai vai. Một bộ màn hình, 
 
 Điều hướng chính (thanh dưới trên điện thoại, thanh bên trên máy tính)
    Trang chủ · Sản phẩm · Tải ảnh · Duyệt · Thêm
+
+Mục `Thêm` mở danh sách mọi luồng còn lại, ẩn hiện theo năng lực
+   Soạn ảnh marketing · Video · Nội dung · Lịch đăng · Catalog và QR
+   · Landing page · Khách hàng · Đơn hàng · Số liệu · Hội thoại
+   · Cài đặt · Cài đặt AI
 ```
 
 `Tải ảnh` đặt ở giữa thanh điều hướng. Đó là việc lặp lại nhiều nhất trong ngày và là việc Sale làm bằng điện thoại ngay tại cửa hàng.
 
-`Duyệt` chỉ hiện với người có `H3` hoặc `I2`. Với người khác, vị trí đó là `Job của tôi`.
+`Duyệt` chỉ hiện với người có ít nhất một năng lực duyệt — `H3`, `H6`, `I2`, `P2`, `P4`, `O3`, `J2`, `J4`. Với người khác, vị trí đó là `Job của tôi`.
+
+Mục `Thêm` không phải một ngăn chứa những gì không xếp được chỗ. Bốn việc trên thanh chính là bốn việc lặp lại trong ngày; mọi thứ trong `Thêm` là việc làm theo đợt, và thứ tự trong đó theo đúng chuỗi giá trị: ảnh, video, nội dung, kênh, khách, đơn, số liệu.
 
 ## 4. Dashboard Điều hành
 
@@ -52,7 +59,9 @@ Bốn khối, xếp dọc trên điện thoại, hai cột trên máy tính. Th�
 
 Khối rỗng vẫn hiện, kèm một câu nói rõ vì sao rỗng và một nút dẫn tới việc tạo ra dữ liệu cho nó. Ẩn khối rỗng làm dashboard nhảy chỗ mỗi ngày một khác.
 
-Khối **Hàng chờ duyệt** không hiện các mục do chính người đang xem tạo ra, nếu công tắc `cho_phep_tu_duyet` của tổ chức đang tắt.
+Khối **Hàng chờ duyệt** gộp mọi loại đầu ra đang chờ — kết quả phân tích, dữ liệu bán hàng của sản phẩm, Master Image, biến thể marketing, video, nội dung đăng bài — và hiện loại của từng mục, vì trách nhiệm khi duyệt mỗi loại một khác. Khối này không hiện các mục do chính người đang xem tạo ra, nếu công tắc `cho_phep_tu_duyet` của tổ chức đang tắt.
+
+Tổ chức đã bật công tắc tự duyệt nội dung theo thời hạn thấy thêm một dòng trong khối này: số nội dung sẽ tự duyệt trong 24 giờ tới, kèm đường mở ra xem trước. Một công tắc đẩy nội dung ra ngoài mà không có chỗ nào đếm được số lượng là một công tắc không ai kiểm soát.
 
 ## 5. Màn hình Trải nghiệm
 
@@ -117,6 +126,25 @@ Bày ba lựa chọn trông ngang nhau là nói dối bằng bố cục. Màn n�
 
 Đổi xong, dòng chữ dưới nút nói rõ lượt phân tích đang chạy dở vẫn dùng bộ cũ.
 
+### 6.2 Màn chính sách AI
+
+Vào từ Dashboard Điều hành, đường `/cai-dat-ai`. Ai có `U1` đều xem được; chỉ người có `U2` đổi được, và đổi phần phân tích ảnh vẫn đòi thêm `H4`.
+
+Một hàng cho mỗi năng lực đang bật, và mỗi hàng nói đủ bốn điều trước khi người dùng đổi bất cứ thứ gì:
+
+| Thông tin | Vì sao hiện |
+|---|---|
+| Mô hình đang dùng và cách nó chạy | Một cái tên không nói được điều gì; người đổi cần biết nó khác gì cái đang chạy |
+| Đã đo hay chưa | Nhãn trạng thái, không phải nhãn tiếp thị — bộ chưa chấm trên bộ ảnh vàng thì nói thẳng là chưa có căn cứ |
+| Dữ liệu có rời hạ tầng không | Câu hỏi quyền riêng tư phải trả lời trước khi chọn, không phải sau |
+| Chi phí một lượt | Credit, và mức đó khác nhau theo năng lực |
+
+Màn này bày **trần**, không bày một lựa chọn duy nhất: người dùng mở phạm vi mà hệ thống được chọn trong đó. Một dòng cố định nói rõ điều đó, vì "chọn mô hình" và "cho phép dùng mô hình" là hai việc khác nhau và giao diện dễ làm người ta tưởng là một.
+
+Năng lực chạm dữ liệu cá nhân khách hàng hiện mức quyền riêng tư **khoá**, kèm một câu nói rõ vì sao không đổi được. Khoá một lựa chọn và nói lý do là cách duy nhất để người dùng không đi tìm nó ở chỗ khác.
+
+Màn hình cũng là chỗ đọc sổ chi phí: chi phí và độ trễ theo năng lực, theo mô hình, trong kỳ. Ai có `U3` mới thấy khối này.
+
 ## 7. Luồng tối ưu ảnh
 
 ```
@@ -139,13 +167,80 @@ Tải ảnh  →  Chọn kiểu  →  Đang chạy  →  Trước / Sau  →  T�
 
 **Tải về không phải là duyệt.** Hai nút riêng, đặt cách nhau, chữ khác nhau. Người dùng tải ảnh về dùng tạm được mà không biến nó thành ảnh chính thức của sản phẩm.
 
-## 8. Hàng đợi duyệt
+## 8. Luồng soạn ảnh marketing
+
+```
+Chọn sản phẩm  →  Chọn Master Image đã duyệt  →  Chọn nền và khuôn
+→  Xem lưới biến thể  →  Chọn cái giữ lại  →  Duyệt
+```
+
+Màn này **chỉ bày những Master Image đã duyệt**. Sản phẩm chưa có ảnh duyệt hiện một dòng nói rõ phải qua luồng tối ưu ảnh trước, kèm đường dẫn tới đó — không bày ảnh gốc như một lựa chọn, vì bày ra là mời người dùng đi đường tắt quanh cổng duyệt.
+
+Lưới biến thể bày nhiều phương án cùng lúc, mỗi ô ghi rõ nền và tỉ lệ. Không ô nào tự được chọn: người dùng đánh dấu cái giữ lại, và chỉ những cái được đánh dấu mới vào hàng chờ duyệt. Sinh ba mươi ô rồi đưa cả ba mươi vào hàng chờ là chuyển việc chọn sang cho người duyệt.
+
+Nút sửa ánh sáng, màu hay hình dáng bó hoa **không nằm ở màn này**. Chỗ của nó là luồng tối ưu ảnh, và bấm vào nó ở đây sẽ mở đúng luồng đó với một lượt mới có Identity Guard.
+
+## 9. Luồng video
+
+```
+Chọn ảnh đã duyệt  →  Chọn khuôn đầu ra  →  Chọn nhạc, giọng đọc, CTA
+→  Đang dựng  →  Xem lại  →  Duyệt
+```
+
+Sáu khuôn đầu ra bày kèm thời lượng, tỉ lệ và kênh mà nó dành cho: Reel 15s, TikTok 30s, Story, slideshow catalog, video sản phẩm cho landing page, motion quảng cáo.
+
+Trước khi bấm chạy, màn hình nói rõ chi phí của lượt này bằng credit và số credit còn lại — cùng khuôn với màn xác nhận ảnh, nhưng bắt buộc hơn, vì một lượt video tốn hơn một lượt ảnh một bậc.
+
+Màn xem lại có nút phát, thanh thời gian, và một dòng ghi những gì AI đã thêm vào: chuyển cảnh, nhạc, phụ đề, giọng đọc. Người duyệt phải biết mình đang duyệt cái gì được thêm, không chỉ duyệt kết quả trông ổn.
+
+## 10. Luồng nội dung và lịch đăng
+
+```
+Chọn sản phẩm  →  Chọn kênh  →  Sinh nội dung  →  Sửa
+→  Duyệt  →  Đặt vào lịch  →  Đăng
+```
+
+Nội dung luôn bắt đầu từ một sản phẩm, không từ một ô nhập chủ đề trống. Màn chọn kênh bày Facebook, Instagram, TikTok, Zalo OA cùng những kênh đã nối, và mỗi kênh nói rõ nó nhận dạng nội dung nào.
+
+Lịch đăng là màn theo tuần, mỗi mục hiện ảnh thu nhỏ, kênh, giờ và trạng thái. Kéo để đổi giờ. Mục chưa duyệt mang viền khác và không đăng được, kể cả khi đã có giờ.
+
+**Tổ chức bật tự duyệt theo thời hạn thấy đồng hồ đếm ngược trên từng mục**, và một dòng cố định trên đầu màn nói rõ công tắc đang bật cùng người đã bật nó. Ẩn thông tin này là biến một quyết định của tổ chức thành một hành vi âm thầm của hệ thống.
+
+## 11. Catalog, QR và trang chiến dịch
+
+Catalog là một màn danh sách có bộ lọc theo dịp, màu sắc, loại hoa, bộ sưu tập và khoảng giá — đúng những trục khách hỏi khi đứng trong cửa hàng.
+
+Mỗi catalog sinh được một liên kết kèm mã QR, tải về dạng ảnh để in. Màn quản lý liên kết hiện: liên kết nào đang sống, trỏ tới bộ sưu tập nào, mở bao nhiêu lượt, và nút thu hồi. Một mã QR đã dán ngoài cửa hàng thì thu hồi được nhưng không lấy lại được, nên nút thu hồi có hộp thoại xác nhận nói rõ điều đó.
+
+Trang chiến dịch chọn từ danh mục dịp của tổ chức — 20/10, Valentine, 8/3, Ngày của Mẹ, khai trương, hoa cưới — và tổ chức thêm dịp riêng được.
+
+## 12. Khách hàng và đơn hàng
+
+**Khách hàng.** Hồ sơ gồm thông tin liên hệ, lịch sử mua, và ngày đặc biệt. Ngày đặc biệt là phần sinh ra tiền: màn danh sách mặc định sắp theo ngày đặc biệt gần nhất, không sắp theo tên.
+
+Mỗi hồ sơ hiện rõ cơ sở đồng ý: khách đã đồng ý nhận nhắc mua hay chưa, đồng ý lúc nào. Chưa đồng ý thì nút tạo nhắc mua bị khoá, kèm câu nói rõ vì sao — không phải một lỗi khi bấm, mà là một trạng thái thấy trước khi bấm.
+
+**Đơn hàng.** Một bảng theo ngày với ba trục trạng thái tách rời: đơn, sản xuất, giao hàng. Trên màn hẹp, mỗi đơn là một thẻ; thợ cắm mở ứng dụng và thấy đúng việc được phân công cho mình, không thấy bảng điều phối toàn cửa hàng.
+
+Phiếu đơn và phiếu sản xuất in được từ điện thoại. Lời nhắn thiệp là một ô riêng, tách khỏi ghi chú nội bộ — nhầm hai thứ này là in ghi chú nội bộ lên thiệp gửi khách.
+
+## 13. Số liệu và hội thoại
+
+**Số liệu.** Một màn, bốn khối theo đúng thứ tự câu hỏi người bán hoa đặt ra: bài nào hiệu quả, sản phẩm nào bán tốt, chiến dịch nào có lãi, và hệ thống đã học được gì. Mỗi chỉ số ghi rõ nguồn và mốc thời gian; số liệu kế thừa từ trước khi tổ chức được gán hiện tách khỏi số liệu của chính tổ chức.
+
+Khối cuối bày hồ sơ phong cách dưới dạng câu người đọc được — "bài đăng buổi sáng có tương tác cao hơn", "ảnh nền sáng bán tốt hơn cho hoa tone đỏ" — kèm số bài đã dùng để kết luận. Một hồ sơ không nói được căn cứ của mình là một hồ sơ không ai dám để nó đổi cách viết bài.
+
+**Hội thoại.** Danh sách hội thoại, mỗi dòng hiện kênh, khách, tin cuối và ai đang phụ trách. Tin do trợ lý tự trả lời mang nhãn rõ trong chính dòng hội thoại, không chỉ trong nhật ký. Nút nhận hội thoại về cho người thật đặt ngay cạnh ô trả lời, không nằm trong menu phụ.
+
+## 14. Hàng đợi duyệt
 
 Danh sách gộp mọi thứ đang chờ từ mọi module, lọc theo loại và theo người tạo. Mỗi dòng: ảnh thu nhỏ, tên sản phẩm, loại, người tạo, thời điểm, và phán quyết máy nếu có.
 
-Chọn nhiều dòng để duyệt hàng loạt, tối đa 50 mục một lần. Mục có `WARNING` không nằm trong lựa chọn hàng loạt — phải mở ra xem rồi mới duyệt được từng cái.
+Sáu loại đi qua hàng đợi này, mỗi loại cần một năng lực khác nhau: kết quả phân tích (`H3`), dữ liệu bán hàng của sản phẩm (`H6`), Master Image (`I2`), biến thể marketing (`P2`), video (`P4`), nội dung đăng bài (`O3`). Người gọi chỉ thấy loại mình duyệt được; bộ lọc theo loại vì vậy không bao giờ bày một loại rỗng vì thiếu quyền.
 
-## 9. Trạng thái phải thiết kế, không được bỏ quên
+Chọn nhiều dòng để duyệt hàng loạt, tối đa 50 mục một lần. Hai loại không nằm trong lựa chọn hàng loạt và phải mở ra xem từng cái: mục có `WARNING`, và mọi video — một video 30 giây không xem hết thì duyệt hàng loạt chỉ là bấm cho xong.
+
+## 15. Trạng thái phải thiết kế, không được bỏ quên
 
 | Trạng thái | Yêu cầu |
 |---|---|
@@ -156,7 +251,7 @@ Chọn nhiều dòng để duyệt hàng loạt, tối đa 50 mục một lần.
 | Không đủ quyền | Ẩn nút thay vì hiện rồi báo lỗi khi bấm. Trường hợp phải hiện thì nói rõ ai duyệt được việc này |
 | Mất kết nối giữa job | Job vẫn chạy. Màn hình nối lại nhật ký từ vị trí cũ khi có mạng lại |
 
-## 10. Ngôn ngữ và cách viết
+## 16. Ngôn ngữ và cách viết
 
 Giao diện tiếng Việt. Thuật ngữ nghiệp vụ dùng từ người bán hoa dùng hằng ngày, không dùng từ kỹ thuật dịch máy.
 
@@ -164,7 +259,7 @@ Giao diện tiếng Việt. Thuật ngữ nghiệp vụ dùng từ người bán
 
 Thông báo lỗi nói việc người dùng làm được tiếp theo, không nói việc hệ thống vừa hỏng thế nào.
 
-## 11. Điện thoại trước nghĩa là gì
+## 17. Điện thoại trước nghĩa là gì
 
 - Vùng bấm tối thiểu 44 điểm ảnh mỗi chiều.
 - Việc chính nằm trong tầm ngón cái: nút hành động chính ở nửa dưới màn hình.

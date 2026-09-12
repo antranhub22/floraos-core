@@ -29,7 +29,19 @@ src/
 │   │   ├── layout.tsx           giải phiên, nạp năng lực, dựng khung điều hướng
 │   │   ├── page.tsx             dashboard theo vai
 │   │   ├── san-pham/
-│   │   ├── tai-anh/
+│   │   ├── tai-anh/            M01 phân tích ảnh
+│   │   ├── gia/                M02 tính giá
+│   │   ├── bo-may/             chọn bộ máy phân tích
+│   │   ├── cai-dat-ai/         chính sách AI của tổ chức, sổ chi phí lời gọi
+│   │   ├── anh-marketing/      M04b soạn biến thể
+│   │   ├── video/              M04c
+│   │   ├── noi-dung/           M07 soạn nội dung
+│   │   ├── lich-dang/          M07 lịch đăng
+│   │   ├── catalog/            M06 catalog và liên kết QR
+│   │   ├── khach-hang/         M09
+│   │   ├── don-hang/           M10
+│   │   ├── so-lieu/            M11
+│   │   ├── hoi-thoai/          M08
 │   │   ├── duyet/
 │   │   └── job/[id]/
 │   └── api/v1/                  route handler — xem tài liệu 06
@@ -45,6 +57,8 @@ src/
 ```
 
 Đường dẫn URL tiếng Việt không dấu, khớp cách người dùng gọi tên màn hình. Mã nguồn bên trong vẫn tiếng Anh.
+
+Bốn tuyến `anh-marketing`, `video`, `noi-dung`, `lich-dang` render trong shell của core nhưng gọi API của `SocialFlow` qua proxy theo đường dẫn — người dùng không rời shell, và ranh giới sở hữu dữ liệu không đổi vì điều đó. Tuyến nào thuộc engine ngoài thì ghi rõ trong chính tệp route, để không ai thêm một lời gọi Prisma vào đó.
 
 ## 3. Lấy dữ liệu
 

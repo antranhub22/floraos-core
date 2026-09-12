@@ -36,9 +36,17 @@ Sáu sản phẩm, phủ đủ sáu dạng của `identity.category` trong hợp
 | Kệ hoa | Kệ hoa khai trương |
 | Lẵng hoa | Lẵng hoa chia buồn |
 
-Mỗi sản phẩm có: một ảnh mẫu, một kết quả phân tích đã duyệt, một bảng cấu phần, một mức giá. Nhờ vậy người dùng mở màn hình nào cũng thấy có nội dung, không gặp màn hình rỗng.
+Mỗi sản phẩm có: một ảnh mẫu, một kết quả phân tích đã duyệt, một bộ dữ liệu bán hàng đã duyệt (tên, mô tả, thẻ, dịp), một bảng cấu phần, một mức giá, và một Master Image đã duyệt. Nhờ vậy người dùng mở màn hình nào cũng thấy có nội dung, không gặp màn hình rỗng — và các luồng của Creative Engine có thứ để soạn lên ngay từ lượt đầu, đúng luật "chỉ soạn trên ảnh đã duyệt".
 
 Ảnh mẫu là ảnh do chính đội tự chụp hoặc mua bản quyền. Không lấy ảnh của khách hàng thật, không lấy ảnh trên mạng.
+
+## 4b. Nội dung mẫu của các kênh
+
+Một catalog mẫu kèm liên kết và mã QR, một bộ biến thể marketing mẫu cho một sản phẩm, và hai bài viết mẫu ở trạng thái **đã duyệt nhưng chưa đăng**. Ba thứ này là nội dung nền để người dùng thấy màn catalog, màn soạn ảnh và lịch đăng có hình dạng thật.
+
+Không nạp sẵn video mẫu do AI sinh, không nạp sẵn số liệu hiệu quả, không nạp sẵn hồ sơ phong cách. Một lượt video là lượt tốn nhiều credit nhất, và số liệu hiệu quả giả sẽ dạy người dùng tin vào một con số chưa từng có ai xem. Hồ sơ phong cách mẫu còn tệ hơn: nó khiến hệ thống tỏ ra đã học được điều gì đó về một cửa hàng chưa tồn tại.
+
+Không nạp sẵn khách hàng mẫu và đơn hàng mẫu. Hồ sơ khách hàng hư cấu có tên và số điện thoại là đúng hình dạng dữ liệu cá nhân, và nó nằm lẫn trong danh sách thật sau khi chuyển đổi.
 
 ## 5. Quy tắc giá mẫu
 
@@ -53,7 +61,13 @@ Mỗi sản phẩm có: một ảnh mẫu, một kết quả phân tích đã du
 | `trial_reset_at` | không đặt lại tự động |
 | `trial_status` | `ACTIVE` |
 
-Một lượt phân tích ảnh trừ 1. Một lượt tối ưu ảnh trừ 2. Hết hạn mức thì thẻ chức năng chuyển sang trạng thái khoá, kèm đường dẫn chuyển thành tổ chức thật.
+Mức trừ theo chức năng, giá trị chốt ở D14 cho ba chức năng mới: một lượt phân tích ảnh trừ 1, một lượt sinh dữ liệu bán hàng trừ 1, một lượt tối ưu ảnh trừ 2. Biến thể marketing, video và nội dung trừ theo bảng giá của D14 — hạn mức dùng thử không mở ba chức năng đó trước khi bảng giá được chốt, vì một lượt video có thể tiêu hết hạn mức trong một lần bấm.
+
+Màn xác nhận của mỗi chức năng nói rõ mức trừ và số dư trước khi chạy. Hết hạn mức thì thẻ chức năng chuyển sang trạng thái khoá, kèm đường dẫn chuyển thành tổ chức thật.
+
+## 6b. Chính sách AI của workspace trải nghiệm
+
+Workspace trải nghiệm chạy bằng chính sách AI mặc định của nền tảng và **không đổi được** — vai Experience User không có `U2` lẫn `H4`. Màn chính sách AI vẫn mở được để xem, vì câu hỏi "ảnh của tôi có rời hạ tầng không" là câu hỏi người dùng có quyền biết trước khi tải ảnh đầu tiên lên, không phải sau khi chuyển thành tổ chức thật.
 
 ## 7. Chuyển thành tổ chức thật
 

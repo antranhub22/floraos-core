@@ -75,8 +75,13 @@ Cách ly cần một bộ test song song với bộ cách ly tenant đang chạy
 | N6 | Nhật ký toàn hệ thống | `audit_logs` đã có (đọc theo một tổ chức qua `G9`) + `platform_audit_logs` mới | API bỏ lọc `organization_id`, hợp hai nguồn, gác bằng `N6` | N6 |
 | N7 | Tạo tổ chức mới | `scripts/them-thanh-vien.ts`, logic seed workspace/membership điều hành đầu tiên đã có | API gói một luồng: tạo `organizations` + `workspaces` + thành viên điều hành đầu tiên | N7 |
 | N8 | Token tích hợp | `POST /integration-tokens` đã có (P7, dùng cho `LocalBudd`/`SocialFlow`) | UI danh sách theo tổ chức + thu hồi | N8 |
+| N9 | Sổ đăng ký mô hình | Chưa có — `registry.py` của worker Vision là sổ trong mã, không phải bảng | `ai_models` + UI bật tắt mô hình, bốn ô giấy phép bắt buộc điền (đặc tả 10 mục 5) | N9 |
+| N10 | Sổ đăng ký năng lực và ngưỡng | Chưa có | `ai_capabilities` + UI đặt ngưỡng chấp nhận theo năng lực | N10 |
+| N11 | Chi phí và chất lượng theo mô hình | Chưa có — `usage` theo `feature`, không theo mô hình | Báo cáo `ai_requests` tổng hợp theo mô hình: chi phí, độ trễ, điểm, tỷ lệ phải leo thác | N11 |
 
-Tám mã năng lực trên dùng dải mới **N** (tiếp theo A–L), tách khỏi mã module `M01`–`M08` để không trùng ký hiệu.
+Mười một mã năng lực trên dùng dải **N**, tách khỏi mã module `M01`–`M11` để không trùng ký hiệu.
+
+Ba mã cuối (`N9`–`N11`) là phần nền AI thuộc cấp nền tảng: một tổ chức đặt được chính sách AI của mình bằng `U2`, nhưng không thêm được mô hình vào hệ thống — ô giấy phép, ô lãnh thổ và ô phạm vi sử dụng cho phép của một mô hình không phải quyết định của một cửa hàng hoa. Chúng vào cùng đợt AI-1.
 
 ---
 

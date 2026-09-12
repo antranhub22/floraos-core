@@ -53,6 +53,28 @@ enum capability_scope {
   BRANCH
 }
 
+// Nền AI — đợt AI-1 (đặc tả 10). Sổ đăng ký năng lực và mô hình là dữ liệu
+// cấp NỀN TẢNG, không mang organization_id; chính sách, sổ chi phí và điểm
+// chấm thì thuộc tenant.
+
+enum ai_mode {
+  API
+  SELF_HOST
+  DETERMINISTIC
+}
+
+enum ai_privacy_level {
+  PUBLIC
+  SHOP
+  SENSITIVE
+}
+
+enum ai_measure_state {
+  CHUA_DO
+  THU_NGHIEM
+  SAN_XUAT
+}
+
 // ── Nền tảng đa tenant — P1 ─────────────────────────────────────────────────
 
 model users {
@@ -113,6 +135,9 @@ model organizations {
   product_analyses      product_analyses[]
   pricing_rules         pricing_rules[]
   integration_tokens    integration_tokens[]
+  ai_policies           ai_policies[]
+  ai_requests           ai_requests[]
+  ai_evaluations        ai_evaluations[]
 }
 
 model workspaces {
@@ -671,4 +696,120 @@ model integration_tokens {
 
   @@index([organization_id])
   @@index([organization_id, client])
+}
+
+// ── Nền AI — AI-1 ───────────────────────────────────────────────────────────
+
+/// Sổ đăng ký năng lực. Nội dung nạp từ `src/core/ai/domain/ai-capabilities.ts`
+/// (nguồn sự thật của định nghĩa, cùng lối với `capability-catalog.ts`); bảng
+/// giữ phần vận hành sửa được: ngưỡng chấp nhận và bật tắt.
+model ai_capabilities {
+  code             String           @id
+  module           String
+  kind             String // generative · measuring · deterministic
+  needs_approval   Boolean          @default(true)
+  privacy_floor    ai_privacy_level @default(SHOP)
+  accept_threshold Float? // null = chưa đo được (D20). Cổng AI chấm, ghi, KHÔNG chặn.
+  measure_channels Json
+  enabled          Boolean          @default(true)
+  updated_at       DateTime         @updatedAt
+
+  policies ai_policies[]
+}
+
+/// Sổ đăng ký mô hình. Bốn cột giấy phép KHÔNG cho phép rỗng vì lý do pháp lý,
+/// không vì lý do kỹ thuật (D18): mô hình thiếu một ô thì không bật được.
+model ai_models {
+  id             String           @id @default(uuid())
+  key            String           @unique
+  display_name   String
+  provider       String
+  mode           ai_mode
+  capabilities   Json // mã năng lực nó phục vụ
+  license        String
+  commercial_use Boolean
+  territory      String
+  allowed_use    String
+  cost_class     String
+  latency_class  String
+  quality_class  String
+  measure_state  ai_measure_state @default(CHUA_DO)
+  leaves_infra   Boolean // ảnh có rời hạ tầng không
+  enabled        Boolean          @default(false)
+  version        String
+  registered_by  String?
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @updatedAt
+}
+
+/// Chính sách của tổ chức — TRẦN mà bộ định tuyến được chọn trong đó (D17),
+/// không phải một lựa chọn duy nhất.
+model ai_policies {
+  id              String           @id @default(uuid())
+  organization_id String
+  capability_code String
+  allowed_models  Json // mảng key của ai_models
+  quality_target  String?
+  cost_ceiling    Int? // credit mỗi lượt
+  privacy_floor   ai_privacy_level
+  updated_by      String
+  updated_at      DateTime         @updatedAt
+
+  organization organizations   @relation(fields: [organization_id], references: [id])
+  capability   ai_capabilities @relation(fields: [capability_code], references: [code])
+
+  @@unique([organization_id, capability_code])
+  @@index([organization_id])
+}
+
+/// Sổ chi phí và chất lượng mỗi LỜI GỌI mô hình. Chỉ ghi thêm. Không giữ
+/// prompt lẫn đầu ra — prompt của một lượt sinh nằm ở metadata của asset.
+/// Một lượt nghiệp vụ sinh nhiều hàng khi thác nghiệm leo hoặc dự phòng chạy.
+model ai_requests {
+  id               String   @id @default(uuid())
+  organization_id  String
+  job_id           String?
+  capability_code  String
+  model_key        String
+  attempt          Int      @default(1)
+  escalated_from   String?
+  fallback_from    String?
+  source           String // CORE · LOCALBUDD · SOCIALFLOW
+  input_tokens     Int?
+  output_tokens    Int?
+  image_count      Int?
+  duration_seconds Float?
+  gpu_seconds      Float?
+  cost_usd         Float? // cùng kiểu với usage.cost_usd
+  latency_ms       Int?
+  quality_score    Float?
+  outcome          String // ACCEPTED · ESCALATED · FAILED · NEEDS_REVIEW
+  created_at       DateTime @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id, created_at])
+  @@index([organization_id, capability_code, model_key])
+  @@index([job_id])
+}
+
+/// Điểm chấm của một đầu ra AI. `needs_review` là cờ đưa bản ghi vào hàng chờ
+/// duyệt; nó KHÔNG thay Review → Approve và không thay Identity Guard.
+model ai_evaluations {
+  id              String   @id @default(uuid())
+  organization_id String
+  capability_code String
+  entity_type     String // product_analysis · product_copy · asset · post …
+  entity_id       String
+  scores          Json // một khoá cho mỗi kênh đã khai ở ai_capabilities
+  overall_score   Float
+  threshold_used  Float?
+  needs_review    Boolean  @default(false)
+  reason          String?
+  created_at      DateTime @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id, entity_type, entity_id])
+  @@index([organization_id, capability_code])
 }

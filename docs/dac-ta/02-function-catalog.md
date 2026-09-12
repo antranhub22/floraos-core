@@ -134,7 +134,22 @@ Thứ tự này là thứ tự thi hành, không phải thứ tự trình bày. 
 
 ## 4. Năng lực mới của core
 
-Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm chữ cái mới, tiếp nối quy ước sẵn có.
+Các nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm chữ cái mới, tiếp nối quy ước sẵn có. Dải `N` thuộc vận hành nền tảng và mang phạm vi `PLATFORM` — nó nằm ở `../kien-truc/DASHBOARD_VAN_HANH_NEN_TANG.md` mục 4, không nằm ở đây, vì nó không phải năng lực của một tổ chức.
+
+**Mã vào danh mục theo pha của module nó gác, không vào trước.** Bảng dưới nói mã nào đã có trong `capability-catalog.ts` và mã nào vào ở pha nào — đọc bảng này trước khi kiểm một mã trong mã nguồn, để không ai tìm một mã chưa tới lúc tồn tại:
+
+| Dải | Trạng thái |
+|---|---|
+| `F1`–`F9` · `G1`–`G9` · `H1`–`H4` · `I1`–`I3` · `J1`–`J6` · `K1`–`K2` · `L1`–`L6` · `U1`–`U4` | Đã có trong mã |
+| `H5` · `H6` | Vào ở P14 (M01b) |
+| `I4` | Vào ở P16 (M04b) |
+| `P1`–`P5` | Vào ở P16 và P17 |
+| `O1`–`O7` | Vào ở P18 (M07) |
+| `J7` | Vào ở P19 (M06) |
+| `S1`–`S4` | Vào ở P20 (M11) |
+| `Q1`–`Q8` | Vào ở P21 (M09) |
+| `R1`–`R8` | Vào ở P22 (M10) |
+| `T1`–`T4` | Vào ở P23 (M08) |
 
 ### Tổ chức và thành viên — nhóm F
 
@@ -148,6 +163,7 @@ Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 | `F6` | `branch.read` | Xem danh sách chi nhánh | Điều hành · Điều phối · Sale | — |
 | `F7` | `branch.manage` | Tạo, sửa, đóng chi nhánh | Điều hành | Điều hành |
 | `F8` | `workspace.manage` | Tạo và cấu hình workspace | Điều hành | Điều hành |
+| `F9` | `integration.token.manage` | Tạo, thu hồi và xoay token máy gọi máy của tổ chức | Điều hành | Điều hành |
 
 ### Asset và job — nhóm G
 
@@ -171,6 +187,8 @@ Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 | `H2` | `vision.result.edit` | Sửa kết quả phân tích trước khi duyệt | Điều hành · Điều phối | — |
 | `H3` | `product.approve` | Ra phán quyết trên kết quả phân tích — duyệt ghi Product Master, từ chối đóng bản ghi lại | Điều hành | Điều hành |
 | `H4` | `vision.engine.manage` | Chọn bộ máy phân tích ảnh dùng cho cả tổ chức | Điều hành | Điều hành |
+| `H5` | `product.copy.generate` | Sinh tên, mô tả, thẻ, dịp và phân khúc giá từ một lượt phân tích đã duyệt | Điều hành · Điều phối · Sale | — |
+| `H6` | `product.copy.approve` | Ghi phần dữ liệu bán hàng đã sinh vào Product Master | Điều hành | Điều hành |
 
 ### Tối ưu ảnh — nhóm I
 
@@ -179,6 +197,7 @@ Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 | `I1` | `media.optimize` | Chạy job tối ưu ảnh | Điều hành · Điều phối · Sale | — |
 | `I2` | `media.approve` | Nâng Master Image thành ảnh chính thức của sản phẩm | Điều hành | Điều hành |
 | `I3` | `media.download` | Tải ảnh đã tối ưu về máy | Điều hành · Điều phối · Sale | — |
+| `I4` | `media.preset.manage` | Đặt thư viện nền và khuôn bố cục dùng cho cả tổ chức | Điều hành | Điều hành |
 
 ### Kênh bán — nhóm J
 
@@ -189,7 +208,10 @@ Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 | `J3` | `landing.create` | Tạo landing page | Điều hành · Điều phối | — |
 | `J4` | `landing.publish` | Xuất bản landing page | Điều hành | — |
 | `J5` | `social.publish` | Đăng bài lên mạng xã hội | Điều hành | — |
-| `J6` | `chat.manage` | Quản lý hội thoại khách hàng | Điều hành · Điều phối | — |
+| `J6` | `chat.manage` | Mở và cấu hình kênh hội thoại khách hàng | Điều hành · Điều phối | — |
+| `J7` | `catalog.qr.manage` | Tạo, đổi và thu hồi liên kết catalog kèm mã QR | Điều hành · Điều phối | — |
+
+`J6` là năng lực cấp kênh — mở kênh, nối tài khoản, đặt cấu hình. Năng lực thao tác trong một hội thoại cụ thể nằm ở nhóm `T`.
 
 ### Sản phẩm và giá — nhóm L
 
@@ -217,6 +239,95 @@ Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 | `K1` | `experience.use` | Dùng workspace trải nghiệm trong hạn mức | Experience User | — |
 | `K2` | `experience.convert` | Chuyển workspace trải nghiệm thành tổ chức thật | Experience User · Điều hành | — |
 
+### Nội dung và đăng bài — nhóm O
+
+| Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
+|---|---|---|---|---|
+| `O1` | `content.generate` | Sinh nội dung cho một sản phẩm trên một kênh | Điều hành · Điều phối · Sale | — |
+| `O2` | `content.edit` | Sửa nội dung trước khi duyệt | Điều hành · Điều phối | — |
+| `O3` | `content.approve` | Duyệt hoặc bỏ một nội dung trước khi nó vào lịch đăng | Điều hành | Điều hành |
+| `O4` | `content.schedule` | Đặt lịch đăng, hẹn giờ, đổi và bỏ mục trong lịch | Điều hành · Điều phối | — |
+| `O5` | `channel.connect` | Nối và ngắt tài khoản nền tảng của tổ chức | Điều hành | Điều hành |
+| `O6` | `content.library.manage` | Quản lý thư viện nội dung, đăng lại nội dung cũ | Điều hành · Điều phối | — |
+| `O7` | `content.autoapprove.manage` | Bật tắt công tắc tự duyệt nội dung theo thời hạn của tổ chức | Điều hành | Điều hành |
+
+`O7` là công tắc duy nhất trong toàn danh mục cho phép một đầu ra AI đi ra ngoài mà không có người bấm duyệt, nên nó bị bó ba lớp: chỉ áp cho nội dung đăng bài, tắt theo mặc định, và mỗi lượt tự duyệt ghi `audit_logs` với người bật công tắc là người chịu trách nhiệm. Tắt công tắc thì hết thời hạn nội dung quay về hàng chờ, không tự đăng.
+
+### Ảnh và video marketing — nhóm P
+
+| Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
+|---|---|---|---|---|
+| `P1` | `creative.compose` | Soạn biến thể marketing trên một Master Image đã duyệt | Điều hành · Điều phối · Sale | — |
+| `P2` | `creative.approve` | Duyệt một biến thể marketing trước khi nó ra kênh | Điều hành | Điều hành |
+| `P3` | `video.generate` | Chạy job sinh video từ ảnh đã duyệt | Điều hành · Điều phối · Sale | — |
+| `P4` | `video.approve` | Duyệt một video trước khi nó ra kênh | Điều hành | Điều hành |
+| `P5` | `brand.watermark.manage` | Đặt logo, vị trí và độ mờ watermark cho cả tổ chức | Điều hành | Điều hành |
+
+Nhóm `P` không có mã nào cho phép sửa chính sản phẩm. Mọi thay đổi chạm vào bó hoa đi qua `I1` và Identity Guard, kể cả khi người dùng bấm nút trong màn soạn biến thể.
+
+### Khách hàng và nhắc mua lại — nhóm Q
+
+| Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
+|---|---|---|---|---|
+| `Q1` | `customer.read` | Xem hồ sơ khách hàng và lịch sử mua | Điều hành · Điều phối · Sale | — |
+| `Q2` | `customer.create` | Thêm khách hàng | Điều hành · Điều phối · Sale | — |
+| `Q3` | `customer.update` | Sửa hồ sơ khách hàng | Điều hành · Điều phối · Sale | — |
+| `Q4` | `customer.archive` | Ngừng theo dõi một hồ sơ khách hàng | Điều hành | Điều hành |
+| `Q5` | `customer.export` | Xuất danh sách khách hàng ra tệp | Điều hành | Điều hành |
+| `Q6` | `occasion.manage` | Quản lý ngày đặc biệt của khách hàng | Điều hành · Điều phối · Sale | — |
+| `Q7` | `reminder.campaign.manage` | Tạo và dừng chiến dịch nhắc mua lại | Điều hành | — |
+| `Q8` | `voucher.manage` | Tạo, sửa, thu hồi voucher | Điều hành | Điều hành |
+
+`Q5` có trần cứng vì xuất danh sách khách hàng là lấy toàn bộ dữ liệu cá nhân ra khỏi hệ thống trong một lần bấm. Xoá theo yêu cầu của chính khách hàng cuối không phải một năng lực của tổ chức — nó là một luồng riêng, không mở được bằng bất kỳ mã nào ở đây.
+
+### Đơn hàng và vận hành — nhóm R
+
+| Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
+|---|---|---|---|---|
+| `R1` | `order.read` | Xem đơn hàng | Điều hành · Điều phối · Sale · Thợ cắm | — |
+| `R2` | `order.create` | Tạo đơn hàng | Điều hành · Điều phối · Sale | — |
+| `R3` | `order.update` | Sửa đơn và cập nhật trạng thái sản xuất | Điều hành · Điều phối · Thợ cắm | — |
+| `R4` | `order.assign` | Phân công thợ cắm cho một đơn | Điều hành · Điều phối | — |
+| `R5` | `delivery.manage` | Theo dõi và cập nhật giao hàng, đặt khung giờ | Điều hành · Điều phối | — |
+| `R6` | `order.cancel` | Huỷ một đơn hàng | Điều hành | Điều hành |
+| `R7` | `order.print` | In phiếu đơn và phiếu sản xuất | Điều hành · Điều phối · Thợ cắm | — |
+| `R8` | `order.card_message.manage` | Quản lý lời nhắn thiệp của đơn | Điều hành · Điều phối · Sale | — |
+
+Nhóm `R` là phần đơn hàng của core. Luồng chào giá và bảng điều phối trong ngày giữ nguyên từ vựng thu hoạch `C1`–`C28`; hai nhóm không trùng nhau — `C` là dựng thẻ và chào giá, `R` là đơn đã nhận và việc sản xuất.
+
+### Phân tích hiệu quả và học — nhóm S
+
+| Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
+|---|---|---|---|---|
+| `S1` | `analytics.read` | Xem số liệu hiệu quả nội dung, sản phẩm, chiến dịch | Điều hành · Điều phối | — |
+| `S2` | `analytics.export` | Xuất số liệu ra tệp | Điều hành | — |
+| `S3` | `learning.profile.read` | Xem hồ sơ phong cách của tổ chức và căn cứ của nó | Điều hành · Điều phối | — |
+| `S4` | `learning.profile.manage` | Đặt lại hoặc đè tham số của hồ sơ phong cách | Điều hành | Điều hành |
+
+`S4` có trần cứng vì hồ sơ phong cách đổi đầu vào của mọi lượt sinh nội dung về sau của cả tổ chức — cùng loại hệ quả với `H4`, và cũng chỉ lộ ra sau hàng chục bản ghi.
+
+### Trợ lý hội thoại — nhóm T
+
+| Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
+|---|---|---|---|---|
+| `T1` | `conversation.read` | Xem hội thoại khách hàng | Điều hành · Điều phối · Sale | — |
+| `T2` | `conversation.reply` | Trả lời khách trong một hội thoại | Điều hành · Điều phối · Sale | — |
+| `T3` | `conversation.ai.manage` | Bật tắt trả lời tự động và đặt giới hạn của nó | Điều hành | Điều hành |
+| `T4` | `conversation.handoff` | Nhận hoặc chuyển một hội thoại cho người khác | Điều hành · Điều phối · Sale | — |
+
+### Chính sách AI của tổ chức — nhóm U
+
+| Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
+|---|---|---|---|---|
+| `U1` | `ai.policy.read` | Xem chính sách AI của tổ chức: năng lực đang bật, mô hình đang dùng, mức quyền riêng tư, ngưỡng | Điều hành · Điều phối | — |
+| `U2` | `ai.policy.manage` | Đặt chính sách AI của tổ chức — trần mà bộ định tuyến được chọn trong đó | Điều hành | Điều hành |
+| `U3` | `ai.request.read` | Đọc sổ chi phí và chất lượng từng lời gọi mô hình | Điều hành | Điều hành |
+| `U4` | `ai.eval.read` | Xem điểm chấm của một đầu ra AI và lý do nó bị đưa vào hàng chờ soát | Điều hành · Điều phối | — |
+
+`H4` là trường hợp riêng của `U2` cho đúng năng lực phân tích ảnh, và nó giữ nguyên — nó đã có trong mã, đã có màn hình, và đã có luật riêng về việc bày ba bộ máy kèm trạng thái đo lường. `U2` là cùng loại quyết định cho các năng lực còn lại: đổi mô hình của một năng lực đổi chất lượng mọi lượt chạy về sau của cả tổ chức, nên nó có trần cứng Điều hành và mỗi lần đổi ghi `audit_logs`.
+
+Sổ đăng ký mô hình và sổ đăng ký giấy phép **không** thuộc dải này. Chúng là dữ liệu cấp nền tảng, gác bằng dải `N` với phạm vi `PLATFORM` — một tổ chức không tự thêm mô hình vào hệ thống, vì ô giấy phép và ô lãnh thổ của một mô hình không phải quyết định của một cửa hàng hoa.
+
 ## 5. Cặp năng lực tách rời — không bao giờ gói chung
 
 | Chạy | Duyệt | Vì sao tách |
@@ -226,8 +337,12 @@ Sáu nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 | `I1` `media.optimize` | `I2` `media.approve` | Tải ảnh về không phải là phê duyệt. Chỉ ảnh đã duyệt mới thành asset chính thức của sản phẩm |
 | `J1` `catalog.create` | `J2` `catalog.publish` | Soạn và phát hành ra ngoài là hai mức trách nhiệm |
 | `J3` `landing.create` | `J4` `landing.publish` | Như trên |
+| `H5` `product.copy.generate` | `H6` `product.copy.approve` | Câu chữ bán hàng là đầu ra AI, và nó ghi vào Product Master — cùng mức trách nhiệm với số lượng và thành phần |
+| `P1` `creative.compose` | `P2` `creative.approve` | Biến thể ra kênh công khai; soạn và phát hành là hai mức trách nhiệm |
+| `P3` `video.generate` | `P4` `video.approve` | Như trên, cộng thêm chi phí mỗi lượt cao hơn một bậc |
+| `O1` `content.generate` | `O3` `content.approve` | Câu chữ đăng dưới tên thương hiệu; người sinh không phải người chịu trách nhiệm phát hành |
 
-Gói chung bất kỳ cặp nào ở trên là lỗi chặn ở review.
+Gói chung bất kỳ cặp nào ở trên là lỗi chặn ở review. **Một loại đầu ra AI mới luôn mang theo đúng một cặp của nó** — thêm engine sinh nội dung mà không thêm cặp là cách nhanh nhất để Luật 3 mất hiệu lực trên đúng phần dữ liệu đi ra ngoài công khai.
 
 ## 6. Cách kiểm quyền
 
@@ -237,6 +352,12 @@ Endpoint không bao giờ hỏi "người này có phải Điều hành không".
 
 ## 7. Nguồn của bảng
 
-Bảng ở mục 3 sinh từ `FloraOS/floraos-web/src/lib/maChucNang.ts`. Ba con số đã đối chiếu với mã nguồn và xác nhận ngày 09/09: **76 mã**, **18 mã có trần cứng**, dải nhóm E là **E1–E8**. Tài liệu kiến trúc V2 đã sửa theo.
+Bảng ở mục 3 sinh từ `FloraOS/floraos-web/src/lib/maChucNang.ts`. Ba con số đã đối chiếu với mã nguồn và xác nhận ngày 09/09: **76 mã**, **18 mã có trần cứng**, dải nhóm E là **E1–E8**.
+
+Bảng ở mục 4 đối chiếu với `floraos-core/src/core/rbac/capability-catalog.ts` và `capability-catalog.test.ts`. Tổng số mã và tổng số mã có trần cứng **chỉ đọc từ hai tệp đó**; không tài liệu nào trong bộ này giữ hai con số ấy dưới dạng hằng số, vì mỗi lần thêm một mã là một lần hai con số trong tài liệu lệch khỏi mã.
+
+Giá trị tại 09/12: **119 mã, 34 mã có trần cứng** — sau khi `U1`–`U4` vào ở đợt AI-1. Các mốc trước: 113 ngay sau P2, 114 / 31 sau `F9` ở P7, 115 / 32 sau `H4` theo D5-d. Con số nào cũng đúng tại mốc của nó; `capability-catalog.test.ts` là chỗ duy nhất khẳng định con số hiện hành.
+
+Bốn mươi bốn mã của `H5`, `H6`, `I4`, `J7`, các dải `O`, `P`, `Q`, `R`, `S`, `T` và dải `U` vào danh mục theo đúng pha của module chúng gác, không vào trước. Danh mục đích khi cả Tuyến B và Tuyến C xong: **159 mã, 48 trần cứng**. Mỗi lần thêm, đối chiếu lại bằng `capability-catalog.test.ts` chứ không cộng tay.
 
 Khi bảng năng lực trong mã đổi, sinh lại bảng này chứ không sửa tay.

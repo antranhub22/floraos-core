@@ -132,7 +132,7 @@ Nguyên tắc: **luật nghiệp vụ đi kèm test của nó, và test phải x
 
 1. **Đường A hay Đường B** ở mục 2 — quyết định này chặn mọi việc khác.
 2. **§2 của tài liệu đích phải sửa lại**: hoặc LocalBudd bỏ 5 bảng trùng, hoặc §2 công nhận LocalBudd là core. Không giữ nguyên §2 mà không làm gì được.
-3. **SocialFlow lên đa tenant, hay ở lại làm worker đơn tenant** mà core gọi kèm ngữ cảnh org? *(Khuyến nghị: worker đơn tenant — rẻ hơn nhiều, đúng tinh thần §11 "không ghép chặt core vào chi tiết cài đặt của SocialFlow".)*
+3. ~~**SocialFlow lên đa tenant, hay ở lại làm worker đơn tenant**~~ — **ĐÃ CHỐT 09/10: đa tenant thật** (D1-b). Câu hỏi gốc giữ lại làm hồ sơ: **SocialFlow lên đa tenant, hay ở lại làm worker đơn tenant** mà core gọi kèm ngữ cảnh org? *(Khuyến nghị: worker đơn tenant — rẻ hơn nhiều, đúng tinh thần §11 "không ghép chặt core vào chi tiết cài đặt của SocialFlow".)*
 4. **Mã API AI**: mỗi tổ chức tự mang khoá, hay khoá nền tảng + tính credit theo org?
 5. **Quy ước đặt tên**: FloraOS dùng tiếng Việt, LocalBudd dùng `snake_case` tiếng Anh, SocialFlow tiếng Anh. Core mới theo cái nào? *(Khuyến nghị: theo LocalBudd — `snake_case` tiếng Anh cho lược đồ, vì đó là khuôn được chép.)*
 6. **Job `COMPLETED / result = REJECTED` có tính phí không?** (§12 đã nêu, chưa trả lời.)

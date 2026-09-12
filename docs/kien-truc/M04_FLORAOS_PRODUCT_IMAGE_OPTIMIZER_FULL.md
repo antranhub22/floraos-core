@@ -21,9 +21,21 @@ GIAI ĐOẠN 2 — VIDEO                ← triển khai sau, khi Giai đoạn 1
 
 ---
 
-## A. Phân bổ repo — M04 tách đôi tại Master Image (quyết định 2026-09-09)
+## A. Phân bổ repo — M04 tách ba tại Master Image (quyết định 2026-09-09, mở rộng 2026-09-11)
 
-Toàn bộ phạm vi kỹ thuật trong tài liệu này **được giữ nguyên**, nhưng được thực thi ở **hai repo khác nhau**, ranh giới bàn giao là **Master Image**:
+**Phân bổ hiện hành, theo D8 và D10 của Kiến trúc V2 mục 17.** M04 tách **ba** đơn vị triển khai, ranh giới bàn giao vẫn là Master Image:
+
+| Đơn vị | Repo | Phạm vi trong tài liệu này |
+|---|---|---|
+| **M04a** Product Image Optimization | `floraos-core` | Giai đoạn 1 (Hình ảnh, Phase 1A–1E) — mục 1–13, 15, 16 |
+| **M04b** Marketing Creative | `SocialFlow` | Mở rộng — Marketing Creative Engine, phần cuối mục 14 |
+| **M04c** Video Studio | `SocialFlow` | Giai đoạn 2 (Video) |
+
+**Giai đoạn 2 chuyển sang `SocialFlow` thành M04c.** Bản 09/09 xếp video vào M04a trong core. Căn cứ chuyển: video là lớp dựng cảnh **phủ lên** Master Image và các tỉ lệ đã sinh — nó không sinh pixel mới trên chính bó hoa, nên nó không cần Identity Guard, tức không cần đứng cạnh M01. Đối lại, `SocialFlow` đã có `video_jobs`, adapter HeyGen/Veo và chi phí thật ghi sẵn, nên đây là EXTEND chứ không phải BUILD. Nội dung kỹ thuật của Giai đoạn 2 trong tài liệu này **giữ nguyên** và đọc như đặc tả của M04c.
+
+Hai luật của M04c, thừa hưởng nguyên từ luật M04b: khung đầu và khung cuối của một video luôn là ảnh đã duyệt; mô hình video không nhận lệnh tạo hình sản phẩm.
+
+Bảng dưới đây giữ lại cách chia đôi của bản 09/09 cho phần Hình ảnh và phần Creative:
 
 | | **M04a — Product Image Optimization** | **M04b — Marketing Creative** |
 |---|---|---|

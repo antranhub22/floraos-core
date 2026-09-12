@@ -11,6 +11,10 @@ floraos-core/
 │   ├── core/
 │   │   ├── ports/                VisionAnalyzer · LLMProvider · StorageProvider
 │   │   │                         · QueueProvider · PublisherProvider
+│   │   │                         · SegmentationProvider · ImageProvider
+│   │   │                         · VideoProvider · SpeechProvider
+│   │   │                         · EmbeddingProvider
+│   │   ├── ai/                   cổng AI — xem tài liệu 10
 │   │   ├── tenancy/              ngữ cảnh tổ chức, bộ gác truy vấn
 │   │   └── rbac/                 bảng năng lực, ba lớp cắt
 │   ├── modules/<tên>/
@@ -20,6 +24,7 @@ floraos-core/
 │   │   └── adapters/             ra ngoài
 │   └── app/api/v1/               route
 ├── workers/
+│   ├── ai/                       cổng AI phía Python: sổ đăng ký, định tuyến, chấm điểm
 │   ├── vision/                   M01
 │   └── media_ai/                 M04a
 └── tests/
@@ -45,7 +50,8 @@ route  →  use-case  →  repository  →  Prisma
 | `use-case` | Điều phối, mở giao dịch, gọi repository và cổng | Biết mình đang chạy trong HTTP |
 | `repository` | Truy vấn, **áp bộ gác tổ chức** | Chứa luật nghiệp vụ |
 | `domain` | Luật thuần | Import bất cứ thứ gì thuộc hạ tầng |
-| `adapter` | Nói chuyện với bên ngoài | Được module khác import trực tiếp |
+| `adapter` | Nói chuyện với bên ngoài. **Chỗ duy nhất SDK của nhà cung cấp AI xuất hiện** | Được module khác import trực tiếp |
+| `core/ai` | Giải năng lực, kiểm chính sách, chọn mô hình, kiểm lược đồ đầu ra, chấm điểm, ghi sổ chi phí | Chứa luật nghiệp vụ của module, hay biết module nào đang gọi |
 
 ## 3. Ngữ cảnh tổ chức
 

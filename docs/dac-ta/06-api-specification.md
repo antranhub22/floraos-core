@@ -238,8 +238,12 @@ Tải ảnh về (`/download`) **không** phải là phê duyệt. Hai việc kh
 
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
-| GET | `/approvals` | `H3` · `I2` | Mọi thứ đang chờ duyệt, gộp từ nhiều module |
-| POST | `/approvals/batch` | `H3` · `I2` | Duyệt hàng loạt, tối đa 50 mục |
+| GET | `/approvals` | `H3` · `H6` · `I2` · `P2` · `P4` · `O3` | Mọi thứ đang chờ duyệt, gộp từ nhiều module |
+| POST | `/approvals/batch` | như trên | Duyệt hàng loạt, tối đa 50 mục |
+
+Sáu loại đi qua hàng đợi này, mỗi loại một năng lực: kết quả phân tích (`H3`), dữ liệu bán hàng của sản phẩm (`H6`), Master Image (`I2`), biến thể marketing (`P2`), video (`P4`), nội dung đăng bài (`O3`). Hai loại cuối phát sinh ở engine ngoài và đi vào hàng đợi này qua đường đăng ký asset và số liệu ở mục 11 — cổng duyệt nằm ở core, không nằm ở engine.
+
+`POST /approvals/batch` từ chối mọi mục là video và mọi mục có `result = WARNING`; hai loại đó chỉ duyệt được từng cái sau khi mở ra xem.
 
 Trả về chỉ những mục người gọi có năng lực duyệt. Nếu công tắc `cho_phep_tu_duyet` của tổ chức đang tắt, bản ghi do chính người gọi tạo không xuất hiện trong danh sách này.
 
@@ -270,11 +274,235 @@ Authorization: Bearer <token cấp theo tổ chức>
 | POST | `/integration/jobs` | Tạo job thay mặt tổ chức |
 | POST | `/integration/usage` | Ghi mức dùng phát sinh ở engine ngoài |
 | POST | `/integration/capabilities/check` | Hỏi một người có năng lực gì |
+| GET | `/integration/learning-profile` | Hồ sơ phong cách của tổ chức, để engine soạn nội dung đọc |
+| POST | `/integration/assets/upload-url` | URL ký sẵn để engine ngoài tải byte lên; core sinh `storage_key` |
+| POST | `/integration/assets` | Đăng ký một asset dẫn xuất đã hoàn tất |
+| POST | `/integration/content-metrics` | Ghi số liệu hiệu quả của một nội dung đã đăng |
+| GET | `/integration/ai-policy` | Chính sách AI của tổ chức: năng lực được phép, mô hình đủ điều kiện, ngưỡng, sàn quyền riêng tư |
+| POST | `/integration/ai-requests` | Ghi số đo mỗi lời gọi mô hình: mô hình, chi phí, độ trễ, điểm chất lượng |
+
+**Ba đường ghi, không nhiều hơn.** `POST /integration/assets` nhận creative và video đã hoàn tất, bắt buộc `parent_asset_id` trỏ tới một asset `APPROVED` của cùng tổ chức — thiếu hoặc trỏ sai trả 422, vì một dẫn xuất không truy được về Master Image đã duyệt là một dẫn xuất không ai biết nó vẽ đúng sản phẩm nào. Asset đăng ký vào với `approval_state = PENDING` và đi vào hàng chờ duyệt ở mục 9; engine ngoài không đặt được trạng thái duyệt.
+
+`POST /integration/content-metrics` ghi vào `campaign_rollups`, mang cột nguồn và khoá tự nhiên theo `(organization_id, platform, external_post_id, ngày)` nên chạy lại không nhân đôi. Số liệu gốc vẫn thuộc engine; đây là bản dựng lại được để core nối với `orders`.
+
+`POST /integration/usage` ghi mức dùng phát sinh ngoài core với `cost_credit = 0` — credit đã trừ ở `POST /integration/jobs`, và trừ lần hai là thu tiền hai lần.
+
+### 11.1 Thân yêu cầu của bốn đường ghi
+
+```http
+POST /api/v1/integration/assets
+{
+  "parent_asset_id": "…",            // bắt buộc, phải là asset APPROVED cùng tổ chức
+  "product_id": "…",
+  "kind": "MARKETING",               // MARKETING · VIDEO · CATALOG · LANDING · SOCIAL
+  "storage_key": null,               // core tự sinh; giá trị client gửi bị bỏ qua
+  "upload_token": "…",               // lấy từ POST /integration/assets/upload-url
+  "mime_type": "image/png",
+  "aspect_ratio": "4x5",
+  "sha256": "…",
+  "provider": "…", "model": "…", "model_version": "…",
+  "pipeline_version": "…",
+  "parameters": { … }, "prompt": "…",
+  "generated_flags": { "generative_fill_used": false },   // không mặc định ngầm
+  "cost_usd": 0.042
+}
+```
+```json
+{ "asset_id": "…", "version": 2, "approval_state": "PENDING" }
+```
+
+`generated_flags` thiếu thì trả **422**, không trả 200 với giá trị mặc định — `YC-A5` áp cho cả đường này. `parent_asset_id` trỏ tới asset chưa duyệt hoặc thuộc tổ chức khác trả **404**, không trả 403.
+
+```http
+POST /api/v1/integration/content-metrics
+{
+  "rows": [
+    { "platform": "facebook", "external_post_id": "…", "metric_date": "2026-09-11",
+      "product_id": "…", "campaign_ref": "…",
+      "reach": 1820, "engagement": 96, "inbox": 7, "clicks": 34,
+      "cost_usd": 0, "is_legacy": false }
+  ]
+}
+```
+```json
+{ "accepted": 1, "updated": 0, "rejected": [] }
+```
+
+Khoá tự nhiên là `(organization_id, platform, external_post_id, metric_date)`; gửi lại cùng một hàng thì `updated` tăng, không nhân đôi. Trần 500 hàng mỗi lượt.
+
+```http
+POST /api/v1/integration/ai-requests
+{
+  "rows": [
+    { "capability_code": "creative_variants", "model_key": "…",
+      "attempt": 1, "escalated_from": null, "fallback_from": null,
+      "job_id": null,
+      "input_tokens": null, "output_tokens": null, "image_count": 3,
+      "duration_seconds": 8.4, "gpu_seconds": null,
+      "cost_usd": 0.061, "latency_ms": 8412,
+      "quality_score": 0.93, "outcome": "ACCEPTED" }
+  ]
+}
+```
+```json
+{ "accepted": 1 }
+```
+
+Bảng này chỉ ghi thêm và **không nhận prompt lẫn đầu ra** — gửi lên thì hai trường đó bị bỏ qua, cùng cách xử lý với `organization_id`. `capability_code` ngoài sổ đăng ký trả 400.
+
+```http
+GET /api/v1/integration/ai-policy
+```
+```json
+{
+  "capabilities": {
+    "creative_variants": {
+      "allowed_models": [
+        { "key": "…", "measure_state": "san_xuat", "leaves_infra": true }
+      ],
+      "privacy_floor": "public",
+      "accept_threshold": null,
+      "measure_channels": ["product_integrity", "composition"]
+    }
+  },
+  "generated_at": "2026-09-12T03:10:00Z",
+  "cache_ttl_seconds": 900
+}
+```
+
+Engine ngoài cache theo `cache_ttl_seconds`. Hết hạn mà không gọi được core thì **dùng bản cache cũ và không tự nới** — chính sách là một giới hạn, nên bản cũ chỉ có thể chặt hơn hoặc bằng, miễn là engine không tự thêm mô hình. Đây là chiều ngược với `POST /integration/jobs` ở mục 11: ở đó không gọi được core thì engine dừng việc tính phí, vì hạn mức là tiền của tổ chức và phải chặn thật.
+
+`GET /integration/ai-policy` và `POST /integration/ai-requests` là đôi giữ nền AI của engine ngoài đứng cùng luật với core. Chính sách đọc được thì engine cache lại; không đọc được thì dùng bản cache gần nhất và **không tự nới** — một engine tự quyết mô hình nào được dùng là một engine có thể gửi ảnh khách tới một nhà cung cấp chưa ai soát. `POST /integration/ai-requests` không mang dữ liệu nghiệp vụ nào, chỉ mang số đo về chính lời gọi, nên nó là đường ghi duy nhất không đi qua cổng duyệt.
 
 **Engine ngoài không bao giờ tự khai `organization_id`.** Nó nằm trong token, do core cấp và ký. Token có phạm vi năng lực riêng, hẹp hơn năng lực của người dùng.
 
 `/integration/products/:id/master-image` chỉ trả ảnh có `approval_state = APPROVED`. Ảnh chờ duyệt không rò ra ngoài core.
 
-## 12. Chưa có ở bản này
+## 12. Dữ liệu bán hàng của sản phẩm — M01b
+
+| Method | Path | Năng lực |
+|---|---|---|
+| POST | `/vision/copies` | `H5` |
+| GET | `/vision/copies` | `H6` |
+| GET | `/vision/copies/:id` | `H5` |
+| PATCH | `/vision/copies/:id` | `H2` |
+| POST | `/vision/copies/:id/approve` | `H6` |
+| POST | `/vision/copies/:id/reject` | `H6` |
+
+```http
+POST /api/v1/vision/copies
+Idempotency-Key: 91c4…
+
+{ "analysis_id": "…", "kenh": ["catalog", "facebook", "zalo"] }
+```
+
+`analysis_id` phải trỏ tới một lượt phân tích `APPROVED` của cùng tổ chức; lượt còn `PENDING` trả 422. Sinh câu chữ từ một kết quả chưa ai soát là đưa cái sai của máy đi thẳng ra kênh bán.
+
+Cùng khuôn với M01: `raw` giữ bản máy sinh, `PATCH` ghi vào `edited`, duyệt ghi vào Product Master trong một giao dịch cùng với `audit_logs`. Phân khúc giá trong kết quả là một **nhãn bán hàng**, không phải giá chào — giá chào vẫn tính từ `/pricing-rules` và engine giá.
+
+## 13. Catalog và liên kết QR — M06
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET · POST | `/catalog-links` | `J1` · `J7` | |
+| GET | `/catalog-links/:id` | `J1` | |
+| PATCH | `/catalog-links/:id` | `J7` | Đổi bộ sưu tập, đổi nhãn |
+| POST | `/catalog-links/:id/revoke` | `J7` | Thu hồi; không xoá bản ghi |
+| GET | `/catalog-links/:id/qr` | `J7` | Ảnh PNG mã QR để in |
+
+Liên kết thu hồi được nhưng không xoá được: một mã QR đã dán ngoài cửa hàng vẫn sẽ bị quét sau khi thu hồi, và bản ghi là chỗ duy nhất trả lời được lượt quét đó trỏ về đâu. Liên kết đã thu hồi trả trang "bộ sưu tập này đã đóng", không trả lỗi kỹ thuật.
+
+Trang catalog thuộc `LocalBudd`; core giữ liên kết vì nhiều module đọc nó.
+
+## 14. Khách hàng — M09
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/customers` | `Q1` | Sắp theo ngày đặc biệt gần nhất theo mặc định |
+| POST | `/customers` | `Q2` | |
+| GET · PATCH | `/customers/:id` | `Q1` · `Q3` | |
+| POST | `/customers/:id/archive` | `Q4` | |
+| GET | `/customers/export` | `Q5` | Mỗi lượt xuất ghi `audit_logs` |
+| GET · POST | `/customers/:id/occasions` | `Q1` · `Q6` | |
+| GET · POST | `/customers/:id/consents` | `Q1` · `Q3` | Cơ sở đồng ý, có mốc thời gian |
+| GET · POST | `/reminder-campaigns` | `Q1` · `Q7` | |
+| GET · POST | `/vouchers` | `Q1` · `Q8` | |
+
+`POST /reminder-campaigns` từ chối (422) mọi khách hàng chưa có bản ghi đồng ý còn hiệu lực, và đáp ứng nói rõ bao nhiêu khách bị loại vì lý do đó. Lọc âm thầm sẽ để người vận hành tưởng chiến dịch đã chạm tới cả danh sách.
+
+Nội dung nhắc mua sinh từ dịp và sản phẩm. Không endpoint nào gửi tên, số điện thoại hay địa chỉ khách hàng sang một nhà cung cấp AI; phần định danh ghép ở tầng gửi.
+
+## 15. Đơn hàng và vận hành — M10
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/orders` | `R1` | Lọc theo ngày, trạng thái, chi nhánh, người được phân công |
+| POST | `/orders` | `R2` | |
+| GET · PATCH | `/orders/:id` | `R1` · `R3` | |
+| POST | `/orders/:id/assign` | `R4` | |
+| POST | `/orders/:id/delivery` | `R5` | Cập nhật khung giờ và trạng thái giao |
+| POST | `/orders/:id/cancel` | `R6` | Bắt buộc có lý do |
+| GET | `/orders/:id/print` | `R7` | Phiếu đơn và phiếu sản xuất |
+| GET | `/orders/:id/events` | `R1` | Nhật ký đổi trạng thái, nguồn đo SLA |
+
+Ba trục trạng thái tách rời — đơn, sản xuất, giao hàng — và không gộp thành một enum, cùng lý do với ba trục của job ở mục 7. Mỗi lượt đổi sinh một bản ghi `order_events`; SLA đo từ bản ghi đó, không nhập tay.
+
+Giá trên đơn đọc từ engine giá. `POST /orders` từ chối một giá không truy được về quy tắc giá đang hiệu lực, trừ khi người gọi có đúng năng lực đè giá của nhóm `C`.
+
+## 16. Số liệu và hồ sơ phong cách — M11
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/analytics/content` | `S1` | Reach, engagement, bài hiệu quả nhất |
+| GET | `/analytics/products` | `S1` | Sản phẩm bán tốt, nối từ `orders` |
+| GET | `/analytics/campaigns` | `S1` | Hiệu quả và ROI từng chiến dịch |
+| GET | `/analytics/export` | `S2` | |
+| GET | `/learning-profile` | `S3` | Hồ sơ phong cách kèm căn cứ |
+| PUT | `/learning-profile` | `S4` | Đè tham số; ghi `audit_logs` |
+
+Mỗi chỉ số trả kèm `nguon` và `den_ngay`. Dữ liệu kế thừa từ trước khi tài khoản nền tảng được gán cho tổ chức trả trong một khối riêng, không cộng vào khối của tổ chức.
+
+`GET /learning-profile` trả mỗi kết luận kèm số bản ghi đã dùng để rút ra nó. Hồ sơ chưa đạt ngưỡng dữ liệu tối thiểu trả `du_lieu_du: false` và không được dùng để đổi tham số soạn nội dung.
+
+## 17. Hội thoại — M08
+
+| Method | Path | Năng lực |
+|---|---|---|
+| GET | `/conversations` | `T1` |
+| GET | `/conversations/:id` | `T1` |
+| POST | `/conversations/:id/messages` | `T2` |
+| POST | `/conversations/:id/handoff` | `T4` |
+| GET · PUT | `/conversations/settings` | `T1` · `T3` |
+
+Tin do trợ lý tự trả lời mang cờ `tu_dong: true` trong chính bản ghi tin nhắn, không chỉ trong nhật ký. Câu trả lời về giá đọc từ engine giá; đáp ứng mang `nguon_gia` trỏ về quy tắc giá đã dùng.
+
+## 18. Chính sách AI, sổ chi phí và điểm chấm
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/ai-policy` | `U1` | Năng lực đang bật, mô hình đang dùng, ngưỡng, mức quyền riêng tư |
+| PUT | `/ai-policy` | `U2` | Trần mà bộ định tuyến được chọn trong đó; ghi `audit_logs` |
+| GET | `/ai-capabilities` | `U1` | Danh mục năng lực kèm trạng thái đo lường của từng mô hình |
+| GET | `/ai-requests` | `U3` | Sổ chi phí và chất lượng từng lời gọi, lọc theo năng lực và khoảng thời gian |
+| GET | `/ai-requests/summary` | `U3` | Tổng hợp theo năng lực và theo mô hình: chi phí, độ trễ, điểm, tỷ lệ phải leo thác |
+| GET | `/ai-evaluations/:entity_type/:entity_id` | `U4` | Điểm chấm của một đầu ra và lý do nó vào hàng chờ soát |
+
+```http
+PUT /api/v1/ai-policy
+{
+  "capabilities": {
+    "product_vision":   { "engine": "local_cv", "privacy_floor": "shop" },
+    "content_generation": { "quality": "cao", "cost_ceiling_credit": 2 }
+  }
+}
+```
+
+`PUT` là **trần, không phải lệnh chọn**: nó khai phạm vi mà bộ định tuyến được chọn trong đó. Mô hình chưa đo trên bộ ảnh vàng chỉ vào được phạm vi này khi người gọi nêu tên nó tường minh — bộ định tuyến không tự lấy. Tên năng lực hoặc tên mô hình ngoài sổ đăng ký trả 400; mô hình thiếu một trong bốn ô giấy phép trả 422 kèm tên ô còn trống.
+
+Năng lực phân tích ảnh giữ endpoint riêng đã có (`GET · PUT /vision/engine`, `H1`/`H4`) vì nó có màn hình riêng và luật riêng về việc bày ba bộ máy kèm trạng thái đo lường. Hai đường không được lệch nhau: cả hai ghi cùng một chỗ trong cấu hình tổ chức, và `PUT /ai-policy` từ chối (409) khi thân yêu cầu đổi `product_vision` mà người gọi không có `H4`.
+
+`GET /ai-requests` phân trang con trỏ, trần 5.000 hàng mỗi lượt. Nó không bao giờ trả nội dung prompt hay đầu ra — chỉ số đo. Prompt của một lượt sinh nằm ở metadata của asset, gác bằng năng lực đọc asset.
+
+## 19. Chưa có ở bản này
 
 Endpoint mang khoá nhà cung cấp riêng của tổ chức. Quyết định D2 chốt nền tảng giữ khoá và tính credit, nên nhóm endpoint đó không tồn tại. Nếu D2 đổi về sau, nhóm này thêm vào dưới `/organizations/current/providers` mà không đụng tới endpoint nào đang có.

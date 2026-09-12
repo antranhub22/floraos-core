@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-10 (P8) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-12 (nền AI — cổng, sổ đăng ký, định tuyến, chấm điểm) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -10,7 +10,103 @@
 
 ## 1. Đang ở đâu
 
-**Giai đoạn: P8 XONG (09/10) — AVI GIFT đã nằm trong core. Tiếp theo là P9.**
+**AI-1 đợt một viết mã xong (09/12) — cổng AI và hai sổ đăng ký, phần lõi phía
+TypeScript.** Năm bảng mới (`ai_capabilities`, `ai_models` không mang
+`organization_id` vì là sổ đăng ký cấp nền tảng; `ai_policies`, `ai_requests`,
+`ai_evaluations` thuộc tenant) · mười cổng ở `src/core/ports/` (thêm
+`SegmentationProvider`, `ImageProvider`, `VideoProvider`, `SpeechProvider`,
+`EmbeddingProvider` cùng `shared-media.ts`) · `src/core/ai/`
+(`domain/ai-capabilities.ts` 34 năng lực, `domain/routing.ts` năm ràng buộc
+D17, `domain/privacy.ts`, `domain/evaluation.ts`, `gateway.ts` không import
+Prisma, `wiring.ts` là chỗ duy nhất nối repo thật) ·
+`src/modules/ai-governance/` · bốn route `/api/v1/{ai-policy,ai-capabilities,
+ai-requests,ai-requests/summary}` · `U1`–`U4` (danh mục **119 mã, 34 trần
+cứng**) · `prisma/seed.ts` nạp 34 năng lực và ba bộ máy Vision với bốn ô giấy
+phép.
+
+**Cổng xác minh:** `npm test` **258/258 xanh thật** (41 ca mới: 16 định tuyến,
+8 cổng AI, 6 sổ đăng ký, 5 chấm điểm, 6 luật chính sách) · `npx eslint` sạch ·
+`npx tsc --noEmit` còn **19 lỗi, cả 19 cùng một nguyên nhân**: client Prisma
+chưa sinh lại cho năm bảng mới. `prisma generate` không chạy được trong VM của
+`device_bash` (`binaries.prisma.sh` trả 403 qua proxy) — đã ghi thành bẫy ở
+`AGENTS.md`.
+
+**Bốn lệnh anh Tony chạy trên Terminal Mac để đóng đợt này:**
+```bash
+docker compose up -d && npx prisma generate && npx prisma db push && npm run db:seed
+npm test                 # kỳ vọng 258/258
+npx tsc --noEmit         # kỳ vọng SẠCH sau khi generate
+npm run test:tenant      # gồm 5 ca mới của tests/tenant/ai-policy.test.ts
+```
+
+**Một luật mới phát sinh trong lúc code, không có trong đặc tả gốc:** thác
+nghiệm chỉ bật khi năng lực CÓ ngưỡng đã đo. Không có ngưỡng thì không có gì
+phát hiện ra một kết quả rẻ-mà-tệ, nên "bắt đầu từ lớp chất lượng thấp" sẽ
+thành "luôn chạy mô hình rẻ nhất" — ngược thứ tự ưu tiên đã chốt Accuracy >
+Quality > Cost. Cờ do cổng AI đặt từ chính ngưỡng, không phải công tắc cấu
+hình. Đã ghi vào đặc tả 10 mục 8.
+
+**Chưa làm trong đợt một, cố ý:** lớp Python `workers/ai/` · chuyển ba adapter
+Vision sang sau cổng · lượt quét CI chặn import SDK nhà cung cấp · hai đường
+`GET /integration/ai-policy` và `POST /integration/ai-requests` · hàng FFmpeg
+trong sổ đăng ký (nợ #75).
+
+**Nền AI vào kiến trúc (09/12) — engine thứ năm.** Bốn engine trước nói FloraOS
+làm gì với AI; engine thứ năm nói FloraOS gọi AI thế nào, và nó là một tầng thật
+mà bốn engine kia đi qua. Đặc tả mới `dac-ta/10-ai-orchestration.md`: bốn luật ·
+ba mức triển khai · 34 năng lực `AIC-01`–`AIC-34` · mười cổng nhà cung cấp · hai
+sổ đăng ký (năng lực, mô hình kèm bốn ô giấy phép) · bộ định tuyến năm ràng buộc
+· thác nghiệm và chuỗi dự phòng · lớp chấm điểm · sàn quyền riêng tư · danh mục
+loài và truy hồi trên `pgvector` · bản đồ 34 năng lực kèm mức 1/mức 2/đường lai,
+endpoint, bảng và cách đo.
+
+Lộ trình thêm **Tuyến C**, bốn đợt `AI-1`–`AI-4`, cắt ngang hai tuyến kia:
+`AI-1` (cổng AI và hai sổ đăng ký) và `AI-2` (chấm điểm, thác, dự phòng) **chặn
+P16, P17, P18** — P16 là lần đầu FloraOS gọi một loại nhà cung cấp mới, và để
+tên nhà cung cấp đi vào mã `SocialFlow` trước khi có cổng thì rút ra sau đó đắt
+hơn đặt đúng chỗ ngay.
+
+Năm quyết định chốt: **D15** năng lực trước mô hình sau, mọi lời gọi qua cổng AI ·
+**D16** cổng AI là một lớp trong core, không phải dịch vụ thứ tư (một dịch vụ
+đứng giữa core và worker là đúng đường HTTP mà D6-1 cấm) · **D17** bộ định tuyến
+bị bó năm ràng buộc, D5-c không đổi · **D18** không mô hình nào vào production
+khi thiếu một trong bốn ô giấy phép · **D19** không thêm hạ tầng — `pgvector` trên
+Postgres đang dùng, hàng đợi vẫn là `generation_jobs`, không Redis. Mở thêm
+**D20** ngưỡng chấp nhận của từng năng lực ngoài Identity Guard.
+
+Bốn khuyến nghị của tài liệu nguồn bị xử theo quyết định đã chốt, lý do ghi ở
+`BO_TINH_NANG_HIEN_TRANG.md` mục 3.1: hàng đợi Redis · dịch vụ cổng AI riêng ·
+bộ định tuyến tự đổi mô hình theo chi phí · lược đồ đầu ra thị giác thứ hai.
+
+Tám nợ mới (#68–#75), trong đó hai cái đáng đọc trước khi bật worker thật: **#70**
+không có chuỗi dự phòng nên một môi trường worker thiếu trọng số làm MỌI lượt
+phân tích hỏng thay vì rơi về `openai_structured` (mặc định hiện là `local_cv`,
+nợ #61); **#69** lời gọi chưa mang mức quyền riêng tư, bắt buộc phải có trước P21
+khi dữ liệu cá nhân của khách hàng cuối vào hệ thống.
+
+**Phạm vi sản phẩm mở rộng (09/11) — bộ tính năng hoàn chỉnh cho cửa hàng hoa.**
+Lộ trình chia hai tuyến. Tuyến A là P0–P12 đã có, không đánh số lại. Tuyến B là
+P13–P23: M04a đợt hai · M01b dữ liệu bán hàng của sản phẩm · ba đường ghi của
+Integration API · M04b ảnh marketing · M04c video · M07 nội dung cho ngành hoa ·
+M06 catalog và QR · M11 phân tích và học · M09 khách hàng · M10 đơn hàng ·
+M08 hội thoại. Bảy pha đầu của Tuyến B là MVP.
+
+Sáu quyết định chốt cùng ngày: D8 phạm vi · D9 MVP · D10 video vào MVP ·
+D11 tự duyệt theo thời hạn chỉ cho nội dung đăng bài · D12 ba đường ghi của
+Integration API · D1-b đa tenant thật (chốt lại nghĩa của D1 theo mã đã chạy).
+Hai quyết định còn mở: D13 cơ sở đồng ý cho dữ liệu cá nhân khách hàng cuối
+(chặn go-live M09/M10) · D14 bảng giá credit cho biến thể ảnh, video, nội dung
+(chặn go-live P16–P18).
+
+Tài liệu đã sửa theo trong cùng lượt: kiến trúc V2 (mục 2, 2.1, 2.2, 4, 6, 8, 9,
+12, 13, 15, 16, 17) · đặc tả 00, 01, 02, 03, 06, 07, 08 · `Roadmap.md` ·
+`Checklist_Thuc_Thi.md` · `README.md`. Tệp mới `BO_TINH_NANG_HIEN_TRANG.md` giữ
+bảng đối chiếu từng tính năng với mã thật và sáu điểm lệch tài liệu phải đóng.
+
+**Việc kế tiếp theo thứ tự:** P13 (M04a đợt hai) → P15 (ba đường ghi) → P16, P17,
+P18, P19. P14 chạy song song được với P13.
+
+**Giai đoạn: P8 XONG (09/10) — AVI GIFT đã nằm trong core. P9 đợt một xong 09/10.**
 Hai lượt nạp đã chạy THẬT trên Postgres, tổ chức `18dc7e62`: 1.319 sản phẩm
 (1.316 danh mục giá + 3 mã chỉ có ở lượt phân tích), 16 asset, 8 lượt phân
 tích `APPROVED`, 1 job tổng hợp, 0 bản ghi `usage`, credit giữ nguyên 500.
@@ -218,6 +314,7 @@ thu — xem mục 6 và `TECHNICAL_DEBT.md` #19–25.
 | # | Tệp | Đọc để biết |
 |---|---|---|
 | 1 | `TRANG_THAI.md` (tệp này) | Đang ở đâu, làm gì tiếp |
+| 1b | `BO_TINH_NANG_HIEN_TRANG.md` | Bộ tính năng hoàn chỉnh và nền AI đối chiếu mã thật — cái nào đã có, cái nào còn phải xây, và bốn chỗ tài liệu nguồn va vào quyết định đã chốt |
 | 2 | `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` | **Level 1 — thắng tuyệt đối.** Kiến trúc đích, lộ trình P0–P12, quyết định |
 | 3 | `floraos-core/docs/dac-ta/` | **Bộ đặc tả 13 tệp** — PRD, yêu cầu kỹ thuật, danh mục năng lực, UX, frontend, backend, API, cơ sở dữ liệu, tích hợp, checklist, lộ trình, nợ kỹ thuật |
 | 4 | `HARVEST_MANIFEST.md` | Cái gì thu hoạch từ repo nào, hạng REUSE/EXTEND/ADAPTER/BUILD |
@@ -242,10 +339,10 @@ git -c core.quotepath=false show \
 
 | Repo | Vai trò | Git |
 |---|---|---|
-| **`floraos-core`** | Core mới — Org/RBAC/Product/Asset/Job/Usage + M01, M02, M03, M04a | ✓ `antranhub22/floraos-core` (riêng tư) |
+| **`floraos-core`** | Core — Org/RBAC/Product/Asset/Job/Usage/Customer/Order + M01, M01b, M02, M03, M04a, M09, M10, M11 | ✓ `antranhub22/floraos-core` (riêng tư) |
 | `FloraOS` | v1, nghỉ hưu. Phục vụ AVI GIFT tới ngày cắt. **Nguồn thu hoạch.** | ✓ `antranhub22/floraos-v1` (riêng tư) |
-| `LocalBudd` | M05 Landing Page · M06 Catalog | ✓ `antranhub22/localbudd` (riêng tư) |
-| `SocialFlow` | M04b Marketing Creative · M07 Social Publishing | ✓ có remote GitHub |
+| `LocalBudd` | M05 Landing Page · M06 Catalog và QR | ✓ `antranhub22/localbudd` (riêng tư) |
+| `SocialFlow` | M04b Marketing Creative · M04c Video Studio · M07 Social Publishing · số liệu nền tảng cho M11 | ✓ có remote GitHub |
 
 Cả bốn repo đều có bản sao ngoài máy. Nhánh chính của cả bốn là `main`.
 
@@ -258,7 +355,9 @@ Branch protection trên `main` của `floraos-core` bật khi P1 xong, với đi
 | **Đường A** | Dựng repo core MỚI, chép khuôn kiến trúc LocalBudd + luật nghiệp vụ FloraOS + thiết kế Asset/brand SocialFlow. Giữ tách ba repo. FloraOS v1 nghỉ hưu, không migrate dần | 09/09 |
 | **D5-c** | Cổng Vision ở mức Hợp đồng JSON (`VisionAnalyzer.analyze → ProductAnalysis`). Adapter GPT-4o trước, Florence-2+SAM2 sau, chỉ đổi khi thắng trên bộ ảnh vàng. **Thay quy tắc 4 cũ của M01** | 09/09 |
 | **D6-1** | Worker Python lấy việc từ `generation_jobs` bằng `SKIP LOCKED` + `LISTEN/NOTIFY`. `floraos-core` chứa cả `src/` (TS) và `workers/` (Python), chung một Postgres. Cấm `subprocess`+stdout, cấm job qua HTTP | 09/09 |
-| **D1** | SocialFlow là worker đơn tenant, nhận `organization_id` từ core | 09/09 |
+| **D1** | SocialFlow nhận `organization_id` từ core. **Chốt lại 09/10 (D1-b): đa tenant thật** — mọi bảng SocialFlow sở hữu có `organization_id`, sáu agent lọc theo tổ chức, điều phối chạy lô song song theo tổ chức. Cách hiểu "worker đơn tenant" không còn hiệu lực | 09/09 · 09/10 |
+| **D8–D12** | Bộ tính năng hoàn chỉnh là phạm vi sản phẩm · MVP là P13–P19 · video vào MVP · tự duyệt theo thời hạn chỉ cho nội dung đăng bài · Integration API mở đúng ba đường ghi. Chi tiết ở kiến trúc V2 mục 17 | 09/11 |
+| **D15–D19** | Năng lực trước mô hình sau, mọi lời gọi qua cổng AI · cổng AI là lớp trong core không phải dịch vụ thứ tư · bộ định tuyến bị bó năm ràng buộc · bốn ô giấy phép bắt buộc · không thêm hạ tầng cho nền AI. Chi tiết ở kiến trúc V2 mục 17 và 19 | 09/12 |
 | **D2** | Nền tảng giữ khoá nhà cung cấp AI, tính credit theo tổ chức | 09/09 |
 | **D3** | Job bị Identity Guard từ chối không tính phí khách; credit hoàn lại | 09/09 |
 | **D4** | `FloraOS` v1 đóng băng tính năng từ 09/09. Không ngoại lệ. Chỉ sửa lỗi chặn vận hành tới ngày cắt | 09/09 |
@@ -266,7 +365,13 @@ Branch protection trên `main` của `floraos-core` bật khi P1 xong, với đi
 
 ## 5. Còn mở — chặn việc
 
-Không còn quyết định nào chặn. D1 · D2 · D3 · D4 chốt ngày 09/09, xem mục 4.
+Hai quyết định chặn go-live, không chặn việc dựng lược đồ hay viết mã:
+
+| # | Nội dung | Chặn |
+|---|---|---|
+| D13 | Cơ sở pháp lý và hình dạng cơ chế đồng ý cho dữ liệu cá nhân của khách hàng cuối, gồm quyền xoá thuộc về chính khách hàng | Go-live M09, M10 |
+| D14 | Bảng giá `cost_credit` cho `creative.compose`, `video.generate`, `content.generate`. Chi phí thật một video chênh hai bậc so với một ảnh, nên D7 không mở rộng sang được | Go-live P16, P17, P18 |
+| D20 | Ngưỡng chấp nhận của từng năng lực ngoài `AIC-10`. Ngưỡng Identity Guard đã chốt (0,95 · 0,90); các năng lực còn lại chưa có dữ liệu có đáp án, nên chúng chạy bằng giá trị tạm có ghi nợ (nợ #72) | AI-2 |
 
 ## 6. Việc kế tiếp
 
@@ -406,6 +511,9 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | Ngày | Việc |
 |---|---|
+| 09/12 | **AI-1 đợt một viết mã xong.** Năm bảng nền AI, mười cổng, `src/core/ai/` (cổng AI + bốn tệp domain thuần), `src/modules/ai-governance/`, bốn route, `U1`–`U4` (119 mã / 34 trần cứng), seed 34 năng lực + ba bộ máy Vision kèm bốn ô giấy phép, `tests/tenant/ai-policy.test.ts` (5 ca, chờ Postgres). `npm test` 258/258 xanh thật, `eslint` sạch, `tsc` còn 19 lỗi chờ `prisma generate`. Phát sinh một luật mới: thác nghiệm chỉ bật khi có ngưỡng đã đo |
+| 09/12 | Nền AI vào kiến trúc: engine thứ năm, đặc tả mới `dac-ta/10-ai-orchestration.md` (34 năng lực, mười cổng, hai sổ đăng ký, bộ định tuyến, chấm điểm, tri thức), Tuyến C bốn đợt AI-1–AI-4 chặn P16–P18. Chốt D15–D19, mở D20. Dải năng lực `U1`–`U4` (chính sách AI của tổ chức) và `N9`–`N11` (sổ đăng ký cấp nền tảng). Lược đồ thêm `ai_capabilities`, `ai_models`, `ai_policies`, `ai_requests`, `ai_evaluations`, `flower_taxonomy`, `knowledge_chunks`, `content_features`. Nợ #68–#75 |
+| 09/11 | Phạm vi sản phẩm mở rộng sang bộ tính năng hoàn chỉnh. Lộ trình thêm Tuyến B P13–P23, bảy pha đầu là MVP. Chốt D8, D9, D10, D11, D12, D1-b; mở D13, D14. Từ vựng quyền thêm dải O, P, Q, R, S, T cộng `H5`/`H6`, `I4`, `J7`. Lược đồ thêm `product_copies`, bốn bảng khách hàng, bốn bảng đơn hàng, `catalog_links`, `campaign_rollups`, `learning_profiles`, hai bảng hội thoại. Integration API mở đúng ba đường ghi. Tệp mới `BO_TINH_NANG_HIEN_TRANG.md` |
 | 09/10 | Rà soát đồng bộ ba repo (`RA_SOAT_DONG_BO_BA_REPO.md`): core ↔ LocalBudd ~60% (hợp đồng đúng, chưa nối điện), core ↔ SocialFlow ~5%. Anh Tony chốt bốn quyết định |
 | 09/10 | Trả nợ #46 — `test:tenant` sang database riêng `floraos_test`, `npm run db:test:setup`, chốt chặn từ chối database không kết thúc bằng `_test`. **Nghiệm thu: 109/109 xanh trên `floraos_test`, dữ liệu AVI GIFT không bị đụng** |
 | 09/10 | Xác minh đầu-cuối: LocalBudd đọc danh mục core bằng JWT của chính người dùng, cùng `id` sản phẩm. Phát hiện khối `pricing` vượt biên, chặn bằng `boundary-capabilities.ts` |

@@ -31,6 +31,7 @@ export type CapabilityGroup =
   | "channel"
   | "product_pricing"
   | "experience"
+  | "ai_policy"
 
 export interface CapabilityDefinition {
   /** Mã chữ cái — định danh chính, ví dụ `B5`. */
@@ -183,6 +184,15 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   L6: { name: "pricing.manage", group: "product_pricing", label: "Sửa quy tắc giá của tổ chức", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // K — Trải nghiệm. Không nằm dưới quy tắc "Điều hành là tập cha": trải
   // nghiệm là một hạn mức dùng thử, không phải một mức quyền trong tổ chức.
+  // U — Chính sách AI của tổ chức (đặc tả 02 mục 4, đợt AI-1). `H4` là trường
+  // hợp riêng của `U2` cho đúng năng lực phân tích ảnh và giữ nguyên: nó đã có
+  // màn hình riêng và luật riêng về việc bày ba bộ máy kèm trạng thái đo lường.
+  // Sổ đăng ký mô hình KHÔNG nằm ở dải này — nó là dữ liệu cấp nền tảng, gác
+  // bằng dải `N` với phạm vi PLATFORM.
+  U1: { name: "ai.policy.read", group: "ai_policy", label: "Xem chính sách AI của tổ chức", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  U2: { name: "ai.policy.manage", group: "ai_policy", label: "Đặt chính sách AI của tổ chức", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  U3: { name: "ai.request.read", group: "ai_policy", label: "Đọc sổ chi phí và chất lượng từng lời gọi mô hình", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  U4: { name: "ai.eval.read", group: "ai_policy", label: "Xem điểm chấm của một đầu ra AI", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   K1: { name: "experience.use", group: "experience", label: "Dùng workspace trải nghiệm trong hạn mức", defaultRoles: ["experience_user"] },
   K2: { name: "experience.convert", group: "experience", label: "Chuyển workspace trải nghiệm thành tổ chức thật", defaultRoles: ["experience_user", "dieu_hanh"] },
 }

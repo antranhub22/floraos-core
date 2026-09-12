@@ -31,7 +31,10 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 - Job: ba trục `status` / `stage` / `result` tách rời. `COMPLETED + result=REJECTED` **không phải** `FAILED`.
 - `usage` ghi ở phía core **tại điểm tạo job**, không ghi ở worker.
 - Worker Python lấy việc bằng `SELECT … FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`. **Cấm `subprocess` + parse stdout. Cấm chạy job qua HTTP.**
-- Provider AI chỉ gọi qua cổng (`VisionAnalyzer`, `LLMProvider`, …). Không module nào gọi thẳng API nhà cung cấp.
+- Provider AI chỉ gọi qua cổng — mười cổng ở `src/core/ports/`. Không module nào gọi thẳng API nhà cung cấp.
+- **Mã nghiệp vụ gọi một NĂNG LỰC, không gọi một nhà cung cấp** (D15). Mọi lời gọi AI đi qua cổng AI ở `src/core/ai/`; SDK của nhà cung cấp chỉ được xuất hiện trong `adapters/`. Mô hình là một hàng trong `ai_models`, không phải một hằng trong mã.
+- **Mô hình không vào production khi thiếu một trong bốn ô giấy phép** (D18): `license`, `commercial_use`, `territory`, `allowed_use`. Bộ lọc nằm ở `eligibleModels()`, nên mô hình thiếu ô không lộ ra cả trong danh sách để chọn.
+- **Sàn quyền riêng tư cắt sau cùng**, cùng tính chất với trần cứng của RBAC: lời gọi `SENSITIVE` không có đường nào ra nhà cung cấp ngoài, kể cả qua bước dự phòng.
 
 ## Thứ tự pha — điều kiện chặn
 
@@ -39,7 +42,22 @@ Lộ trình P0–P12 ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
 
 **Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.** Làm ngược sẽ sinh ra lược đồ thiếu `organization_id`, rồi phải migration lại toàn bộ khi đã có dữ liệu thật. Đây là lỗi tốn kém nhất của cả lộ trình.
 
-Trạng thái hiện tại: **P8 — nạp dữ liệu AVI GIFT, phần danh mục giá viết mã
+Lộ trình có thêm hai tuyến kể từ 09/11: **Tuyến B** (P13–P23, bộ tính năng hoàn
+chỉnh cho cửa hàng hoa; bảy pha đầu là MVP) và **Tuyến C** (AI-1…AI-4, nền AI —
+cắt ngang mọi pha). Bảng đầy đủ ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục
+15; đặc tả nền AI ở `docs/dac-ta/10-ai-orchestration.md`.
+
+Trạng thái hiện tại: **AI-1 đợt một — cổng AI và hai sổ đăng ký, phần lõi phía
+TypeScript viết mã xong 09/12.** Năm bảng mới, mười cổng, `src/core/ai/` +
+`src/modules/ai-governance/`, bốn route, `U1`–`U4`. `npm test` **258/258** xanh
+thật (41 ca mới), `npx eslint` sạch. `npx tsc --noEmit` còn **19 lỗi và cả 19 là
+cùng một nguyên nhân** — client Prisma chưa sinh lại cho năm bảng mới; chạy
+`npx prisma generate && npx prisma db push && npm run db:seed` trên máy có mạng
+rồi `npm run test:tenant` là hết. Chưa làm, cố ý: lớp Python `workers/ai/`,
+chuyển ba adapter Vision sang sau cổng, lượt quét CI chặn import SDK, hai đường
+Integration API. Chi tiết ở `docs/dac-ta/Checklist_Thuc_Thi.md` mục AI-1.
+
+Trạng thái trước đó: **P8 — nạp dữ liệu AVI GIFT, phần danh mục giá viết mã
 xong, chưa xác minh trên Postgres thật** — module `src/modules/avi-gift-import/`
 (`domain/catalog-mapping.ts` thuần + `use-cases/{bootstrap-avi-gift-organization,
 import-catalog}.ts`), `scripts/nap-avi-gift/doc-excel.py` (Python, đọc Excel
@@ -92,6 +110,8 @@ Xếp hạng sai chiều nào cũng tốn. Bản đồ thu hoạch từng xếp 
 7. Có ghi `usage` không?
 8. Kết quả có cần duyệt trước khi thành dữ liệu chính thức không?
 9. Năng lực nào gác nó? Năng lực duyệt có tách riêng không?
+10. Hạng mục có gọi AI không? Nếu có: năng lực nào trong `ai_capabilities`, cổng nào trong mười cổng, và lời gọi đi qua `callCapability` chứ không qua SDK nhà cung cấp?
+11. Mô hình định dùng đã có hàng trong `ai_models` với đủ bốn ô giấy phép chưa? Mức quyền riêng tư của dữ liệu đi vào là gì?
 
 Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi phải chặn ở review.
 
@@ -104,15 +124,17 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Ngữ cảnh tenant | `src/core/tenancy/tenant-context.ts` | `TenantContext`, `scopedWhere`, `scopedData` — luật thuần, không import hạ tầng |
 | Client cơ sở dữ liệu | `src/core/tenancy/infra/prisma.ts` | thể hiện `PrismaClient` duy nhất; chỉ tệp trong `infra/` được import |
 | Hình dạng lỗi và cookie | `src/core/http/` | `AppError` tám mã · cookie phiên · `handle()` bọc route |
-| Năng lực & quyền | `src/core/rbac/` | `capability-catalog.ts` (114 mã, ba lớp — 113 tới P2, cộng `F9` ở P7) · `permission-resolver.ts` (trần cứng) · `capabilities.ts` (`hasCapability`/`requireCapability`) |
+| Năng lực & quyền | `src/core/rbac/` | `capability-catalog.ts` (**119 mã, 34 trần cứng** — 113 tới P2, `F9` ở P7, `H4` theo D5-d, `U1`–`U4` ở AI-1) · `permission-resolver.ts` (trần cứng) · `capabilities.ts` (`hasCapability`/`requireCapability`) |
 | Harvest R2 | `src/lib/maChucNang.ts` + `tests/maChucNang.test.ts` | nguyên vẹn từ `FloraOS/floraos-web/src/lib/`, xanh qua `npm run test:harvest` (`node:test`, không qua vitest/tsc — xem `vitest.config.ts`, `tsconfig.json`, `eslint.config.mjs`) |
 | Bảng quyền | `src/modules/organization/infra/capability-repository.ts` | `role_capabilities` (lớp một) · `capability_overrides` (lớp hai, theo tổ chức) |
 | Công tắc tự duyệt | `src/modules/organization/domain/self-approval-policy.ts` | `cho_phep_tu_duyet`, đọc từ `organizations.settings` |
-| Cổng ra ngoài | `src/core/ports/` | `VisionAnalyzer` · `LLMProvider` · `StorageProvider` · `QueueProvider` · `PublisherProvider` |
+| Cổng ra ngoài | `src/core/ports/` | Mười cổng: `VisionAnalyzer` · `LLMProvider` · `StorageProvider` · `QueueProvider` · `PublisherProvider` · `SegmentationProvider` · `ImageProvider` · `VideoProvider` · `SpeechProvider` · `EmbeddingProvider`, cộng kiểu dùng chung ở `shared-media.ts`. **Adapter không ghi kho tệp** — nó trả byte hoặc handle tạm, use-case ghi qua `StorageProvider` |
+| Nền AI (AI-1) | `src/core/ai/` | `domain/ai-capabilities.ts` (34 năng lực `AIC-01`–`AIC-34`, nguồn của lượt seed) · `domain/routing.ts` (năm ràng buộc D17; `cascade` chỉ bật khi có ngưỡng) · `domain/privacy.ts` (sàn cắt sau cùng) · `domain/evaluation.ts` (điểm tổng = kênh THẤP NHẤT; thiếu kênh là KHÔNG HỢP LỆ chứ không phải điểm 0) · `gateway.ts` (`callCapability`, không import Prisma) · `wiring.ts` (chỗ duy nhất nối repo thật) · `infra/` (bốn repository + `seed-ai-registry.ts`) |
+| Chính sách AI của tổ chức | `src/modules/ai-governance/` | `domain/policy-rules.ts` (chính sách là TRẦN, chỉ siết được, không nới) · use-case `get/put-ai-policy`, `list-ai-requests`. Route `/api/v1/{ai-policy,ai-capabilities,ai-requests,ai-requests/summary}` (`U1`/`U2`/`U3`); đổi `AIC-01` đòi thêm `H4` và kiểm trong use-case, không ở route |
 | Module tổ chức | `src/modules/organization/` | đăng ký, đăng nhập, phiên, đổi tổ chức; repository của cả bảy bảng nền |
 | Module | `src/modules/<tên>/` | bốn thư mục mỗi module |
 | API | `src/app/api/v1/` | `auth/{signup,login,logout,me}` · `organizations` · `session/organization` (P1) · `organizations/current` · `members` · `roles` · `branches` · `workspaces` (P2) |
-| Lược đồ | `prisma/schema.prisma` | bảy bảng nền; worker đọc bản sinh sẵn, không tự khai bảng |
+| Lược đồ | `prisma/schema.prisma` | 27 bảng. Năm bảng nền AI thêm ở AI-1: `ai_capabilities`/`ai_models` **không mang `organization_id`** (sổ đăng ký cấp nền tảng, ngoại lệ có chủ đích của Luật 1, ghi ở đặc tả 07 mục 15), còn `ai_policies`/`ai_requests`/`ai_evaluations` thuộc tenant như mọi bảng khác. Worker đọc bản sinh sẵn, không tự khai bảng |
 | Chuỗi kết nối | `prisma.config.ts` | Prisma 7 không nhận `url` trong `schema.prisma` nữa |
 | Vai hệ thống | `prisma/seed.ts` | bốn vai, `organization_id = null` |
 | Worker phân tích ảnh | `workers/vision/` | M01 — P5. `contracts/` (Schema.json/Prompt.md nguyên vẹn) · `analyzer/` (`count_engine.py`/`color_engine.py`/`tu_dien.py`, REUSE/EXTEND) · `providers/` (`base.py` cổng, `openai_structured.py` BUILD) · `jobs/worker.py` (`SKIP LOCKED`+`LISTEN`, D6-1). Test: `workers/tests/vision/` |
@@ -146,6 +168,8 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 - Prisma 7 BỎ cờ `--skip-generate` của `prisma db push`. Truyền vào thì CLI in trang trợ giúp và không đẩy gì cả — nhưng database vẫn được tạo, nên lỗi chỉ lộ ra rất muộn dưới dạng `relation "..." does not exist` lúc chạy test. Mọi script gọi `db push` nên kiểm lại bằng một truy vấn `to_regclass` thay vì tin mã thoát.
 - `npm run test:tenant` XOÁ SẠCH database nó trỏ tới (`TRUNCATE` 22 bảng trước mỗi ca thử). Tới 09/10 nó dùng chung database với môi trường phát triển, nên cổng bắt buộc này cuốn mất tổ chức AVI GIFT cùng 1.316 SKU — hai lần trong một tối. Nay nó trỏ sang `floraos_test` và `tests/helpers/database.ts` TỪ CHỐI chạy nếu tên database không kết thúc bằng `_test`. Dựng database đó một lần bằng `npm run db:test:setup`; nếu quên, lỗi đầu tiên anh gặp sẽ nói thẳng phải chạy lệnh gì.
 - Biến `DATABASE_URL` export ra shell theo `cd` sang repo khác, và `process.loadEnvFile()` KHÔNG ghi đè biến đã có sẵn. Chạy `set -a && source .env` trong `LocalBudd` rồi `cd` sang đây là đủ để `npx prisma db push` của core trỏ vào Supabase của LocalBudd — suýt xảy ra 09/10. Trước mọi lệnh Prisma: `echo "[$DATABASE_URL]"` phải rỗng, và nhìn dòng `Datasource "db"` nó in ra.
+- `prisma generate` KHÔNG chạy được trong VM của `device_bash`: nó tải nhị phân từ `binaries.prisma.sh` và host đó trả 403 qua proxy của VM (`PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` không giúp — bước sau vẫn phải tải chính tệp engine). Hệ quả cụ thể: thêm model vào `schema.prisma` thì `npx tsc --noEmit` báo `Property 'x' does not exist on type 'DbClient'` cho tới khi ai đó chạy `prisma generate` trên Terminal Mac thật. Phân loại lỗi `tsc` trước khi đi sửa: lỗi dạng đó là lỗi CHỜ, không phải lỗi mã.
+- `npm test` loại `tests/tenant/**` theo thiết kế; gọi thẳng `npx vitest run` sẽ kéo cả bộ test cách ly vào và nó TỪ CHỐI chạy vì database không kết thúc bằng `_test`. Dùng đúng hai lệnh: `npm test` và `npm run test:tenant`.
 - `npm run lint` từng dừng ngay vì repo thiếu `eslint.config.mjs` — cổng thứ hai của CI chưa từng chạy trong suốt P0. Thêm một cổng vào CI thì chạy thử nó một lần tại máy.
 - Sandbox `device_bash` từng chặn `npx vitest`/`npx tsc` bằng lỗi `Cannot find module '@rollup/rollup-linux-arm64-gnu'` (kiến trúc gói sai trong `node_modules` cài sẵn). Sửa bằng `npm install @rollup/rollup-linux-arm64-gnu --no-save` — chạy được thật `vitest`/`tsc --noEmit` trong sandbox từ đó, không cần đợi anh Tony chạy trên máy thật mới biết type có sai không.
 - Tên tệp/thư mục tiếng Việt có dấu qua cầu nối máy Mac (`device_bash`) ở dạng Unicode **NFD** (tổ hợp dấu rời), còn chuỗi gõ trong mã nguồn ở đây là **NFC**. So khớp chuỗi trực tiếp (`"giỏ" in ten_thu_muc`) luôn sai lặng lẽ, không báo lỗi. Luôn `unicodedata.normalize("NFC", ...)` cả hai phía trước khi so — xem `scripts/xay-dung-bo-anh-vang.py`.

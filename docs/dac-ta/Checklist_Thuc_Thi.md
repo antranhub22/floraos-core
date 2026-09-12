@@ -4,6 +4,8 @@ Một pha chỉ coi là xong khi mọi ô của nó tích được. Mã trong ng
 
 Không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi **P1 và P2** tích hết.
 
+P0–P12 là Tuyến A — nền tảng và module lõi. P13–P23 là Tuyến B — bộ tính năng hoàn chỉnh; bảy pha đầu của tuyến này là MVP. AI-1 đến AI-4 là Tuyến C — nền AI, cắt ngang hai tuyến kia. Bảng pha đầy đủ ở `../kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15.
+
 ## P0 — Khung repo · xong
 
 - [x] Cấu trúc thư mục theo `05-backend-architecture.md` mục 1
@@ -236,3 +238,183 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 - [ ] Ba mục quyền riêng tư nhóm `V` đạt, gồm consent trước go-live (`YC-V1`)
 - [ ] Bốn mục quan sát nhóm `O` đạt
 - [ ] Ngưỡng hiệu năng nhóm `P` đo được và đạt
+
+## P13 — M04a đợt hai: tăng cường ảnh và Smart Reframe · MVP
+
+- [ ] Lớp tăng cường thật thay `PassthroughEnhancer`, có đo trước sau trên bộ ảnh vàng
+- [ ] Tăng cường chạy **một lần** ra Master Image; bốn tỉ lệ 1:1, 4:5, 9:16, 16:9 đến từ Smart Reframe, không gọi lại AI
+- [ ] `outputs.ratios` trả đủ bốn khoá thật, không trả object rỗng
+- [ ] Màn bắt đầu một lượt tối ưu mới, gọi `POST /media/optimizations` thật
+- [ ] Ảnh dùng generative fill mang nhãn hiện rõ trên chính ảnh (`YC-A5`)
+- [ ] `assets.approval_state` đặt được `APPROVED` qua `I2`, và `GET /integration/products/:id/master-image` trả ảnh thật
+
+## P14 — M01b dữ liệu bán hàng của sản phẩm · MVP
+
+- [ ] Hai trường `phong_cach` và `dip_su_dung` thêm vào hợp đồng theo luật chỉ-thêm-trường (`YC-N3`)
+- [ ] `occasions` dựng xong, sáu dòng nạp sẵn khi tạo tổ chức, `dip_su_dung` gán theo mã trong bảng chứ không theo chuỗi tự do
+- [ ] `product_copies` với `raw` và `edited` tách rời (`YC-R3`)
+- [ ] `analysis_id` bắt buộc trỏ tới lượt phân tích `APPROVED`; lượt `PENDING` trả 422, có ca thử khoá
+- [ ] Cặp `H5` ↔ `H6` không gói chung (`YC-Q6`)
+- [ ] Duyệt ghi Product Master và `audit_logs` trong cùng một giao dịch
+- [ ] Phân khúc giá là nhãn bán hàng, không ghi vào bất kỳ trường giá nào của `orders` hay `pricing_rules`
+- [ ] `profile_version` ghi hồ sơ phong cách đã dùng, khi có
+
+## P15 — Ba đường ghi của Integration API · MVP
+
+- [ ] `POST /integration/assets` bắt buộc `parent_asset_id` trỏ asset `APPROVED` cùng tổ chức (`YC-M1` `YC-M5`)
+- [ ] Asset đăng ký vào với `approval_state = PENDING`; engine ngoài không đặt được trạng thái duyệt
+- [ ] `POST /integration/content-metrics` idempotent theo khoá tự nhiên bốn cột (`YC-L1`)
+- [ ] `POST /integration/usage` ghi `cost_credit = 0`, không trừ credit lần hai (`YC-U1`)
+- [ ] `GET /integration/learning-profile` chỉ trả hồ sơ `is_sufficient = true` (`YC-L4`)
+- [ ] Bộ test cách ly phủ ba đường ghi: token của tổ chức khác ghi vào trả không tìm thấy (`YC-T4` `YC-T10`)
+- [ ] `LocalBudd` bỏ `product_assets`; `products` giữ nghĩa tham chiếu
+
+## P16 — M04b ảnh marketing · MVP
+
+- [ ] Màn soạn chỉ bày Master Image `APPROVED`; ảnh gốc không xuất hiện như một lựa chọn (`YC-M1`)
+- [ ] Biến thể không gọi lại lớp tăng cường và không sinh pixel mới trên sản phẩm (`YC-M2`)
+- [ ] Đường sửa ánh sáng, màu, hình dáng bó hoa mở đúng luồng M04a với Identity Guard (`YC-M3`)
+- [ ] Xoá nền, đổi nền, mở rộng khung, retouch, watermark chạy được trên dữ liệu thật
+- [ ] Watermark và thư viện nền là cấu hình cấp tổ chức, gác bằng `P5` và `I4` (`YC-M8`)
+- [ ] Cặp `P1` ↔ `P2` không gói chung; chỉ biến thể được đánh dấu giữ lại mới vào hàng chờ duyệt
+- [ ] Dẫn xuất hoàn tất đăng ký về `assets` của core qua P15
+
+## P17 — M04c video · MVP
+
+- [ ] Sáu khuôn đầu ra chạy được: Reel 15s, TikTok 30s, Story, slideshow catalog, video sản phẩm, motion quảng cáo
+- [ ] Khung đầu và khung cuối là ảnh đã duyệt; mô hình video không nhận lệnh tạo hình sản phẩm (`YC-M4`)
+- [ ] `video_jobs` có `organization_id NOT NULL`, index, và lọc theo tổ chức ở mọi điểm đọc ghi (`YC-M6`)
+- [ ] Chi phí thật mỗi video ghi `usage` với `feature = video.generate`; hạn mức kiểm tại điểm tạo job (`YC-M7`)
+- [ ] Màn xác nhận nói rõ chi phí credit và số dư trước khi chạy
+- [ ] Màn xem lại ghi rõ AI đã thêm gì: chuyển cảnh, nhạc, phụ đề, giọng đọc
+- [ ] Cặp `P3` ↔ `P4` không gói chung; video không nằm trong duyệt hàng loạt
+- [ ] D14 chốt trước go-live — bảng giá credit cho `video.generate` (`YC-M9`)
+
+## P18 — M07 nội dung và đăng bài cho ngành hoa · MVP
+
+- [ ] Một nội dung luôn gắn với một bản ghi Product Master và một asset đã duyệt (`YC-C1`)
+- [ ] Nguồn đề tài là sản phẩm, dịp và mùa vụ của chính cửa hàng, không còn nguồn tin công nghệ kế thừa
+- [ ] Adapter Zalo OA chạy được
+- [ ] Cặp `O1` ↔ `O3` không gói chung (`YC-C2`)
+- [ ] Công tắc tự duyệt theo thời hạn chỉ đọc được ở luồng nội dung, tắt theo mặc định, gác bằng `O7` (`YC-C3`)
+- [ ] Mỗi lượt tự duyệt ghi `audit_logs` với người bật công tắc là người chịu trách nhiệm (`YC-C4`)
+- [ ] Công tắc tắt thì hết thời hạn nội dung quay về hàng chờ; không đường nào tự đăng (`YC-C5`)
+- [ ] Tài khoản nền tảng mang `organization_id`; credential một tổ chức không dùng được cho tổ chức khác (`YC-C6`)
+- [ ] Mọi endpoint thao tác theo định danh bản ghi lọc theo tổ chức, trả 404 cho tổ chức khác (`YC-C7`)
+- [ ] Không endpoint nào nhận `organization_id` từ client (`YC-C8`)
+- [ ] Lịch đăng chạy lô song song theo tổ chức; một tổ chức chạy dở không chặn tổ chức khác (`YC-C9`)
+- [ ] Lịch đăng và thư viện nội dung dùng được trên màn hẹp
+
+## P19 — M06 catalog và QR · MVP
+
+- [ ] Catalog lọc theo dịp, màu sắc, loại hoa, bộ sưu tập và khoảng giá
+- [ ] Catalog đọc Product Master và ảnh `APPROVED` qua Integration API, không giữ bản sao
+- [ ] `catalog_links` với `slug` unique toàn cục; liên kết thu hồi được, không xoá được
+- [ ] Liên kết đã thu hồi trả trang "bộ sưu tập đã đóng", không trả lỗi kỹ thuật
+- [ ] Mã QR tải về được dạng ảnh để in, gác bằng `J7`
+- [ ] Cặp `J1` ↔ `J2` không gói chung
+- [ ] Danh mục dịp đọc từ `occasions`; dịp đã gắn vào sản phẩm hay chiến dịch chỉ ngừng dùng được, không xoá cứng
+
+## P20 — M11 phân tích hiệu quả và học
+
+- [ ] `campaign_rollups` mang cột nguồn và dựng lại được; không đọc nó như số liệu gốc (`YC-L1`)
+- [ ] Phép nối ROI đọc `orders` của core, không suy doanh thu từ số liệu nền tảng (`YC-L2`)
+- [ ] Bảy chỉ số hiện được: reach, engagement, inbox, conversion, top post, top product, ROI campaign
+- [ ] Mỗi thay đổi của `learning_profiles` truy được về tập số liệu đã sinh ra nó (`YC-L3`)
+- [ ] Vòng học không đổi tham số trước ngưỡng dữ liệu tối thiểu (`YC-L4`)
+- [ ] Dữ liệu kế thừa phân biệt trong mọi báo cáo bằng `is_legacy` (`YC-L5`)
+- [ ] Đè hồ sơ gác bằng `S4` trần cứng và ghi `audit_logs` (`YC-L6`)
+- [ ] Hồ sơ bày kết luận dưới dạng câu người đọc được, kèm số bài đã dùng
+
+## P21 — M09 khách hàng và nhắc mua lại
+
+- [ ] Bốn bảng có `organization_id NOT NULL` và index (`YC-K1`)
+- [ ] `customer_consents` chèn-chỉ; rút lại đồng ý là một dòng mới (`YC-K2`)
+- [ ] Không trường định danh nào đi qua nhà cung cấp AI (`YC-K3`)
+- [ ] Nội dung nhắc mua sinh từ dịp và sản phẩm; định danh ghép ở tầng gửi (`YC-K4`)
+- [ ] Chiến dịch nhắc mua từ chối khách chưa có đồng ý còn hiệu lực, và nói rõ số khách bị loại
+- [ ] Luồng xoá theo yêu cầu của chính khách hàng cuối tồn tại, không mở được bằng mã năng lực nào của tổ chức (`YC-K5`)
+- [ ] Xuất danh sách gác bằng `Q5` trần cứng và ghi `audit_logs` (`YC-K6`)
+- [ ] D13 chốt trước go-live (`YC-K7`)
+
+## P22 — M10 đơn hàng và vận hành
+
+- [ ] Ba trục trạng thái tách rời: đơn, sản xuất, giao hàng (`YC-W1`)
+- [ ] Mỗi lượt đổi trạng thái sinh `order_events` với người thực hiện và thời điểm (`YC-W2`)
+- [ ] Phân công gác bằng `R4`; thợ cắm thấy đúng việc của mình, không thấy bảng điều phối toàn cửa hàng (`YC-W3`)
+- [ ] SLA đo từ `order_events`, không có cột chốt sẵn (`YC-W4`)
+- [ ] Giá trên đơn truy được về quy tắc giá qua `pricing_rule_ref` (`YC-W5`)
+- [ ] Huỷ đơn gác bằng `R6` trần cứng, bắt buộc lý do, ghi nhật ký kiểm toán (`YC-W6`)
+- [ ] Lời nhắn thiệp tách khỏi ghi chú nội bộ ở cả lược đồ và giao diện
+- [ ] In phiếu đơn và phiếu sản xuất làm được từ điện thoại
+- [ ] Luồng chào giá thu hoạch từ v1 chạy được theo bảng nghiệm thu của `BAN_GIAO.md` (nợ #26)
+
+## P23 — M08 trợ lý hội thoại
+
+- [ ] Trả lời từ Product Master, giá đã duyệt và vùng giao hàng của chính tổ chức (`YC-H1`)
+- [ ] Câu trả lời về giá đọc từ engine giá; `price_source` ghi quy tắc đã dùng (`YC-H2`)
+- [ ] Đường chuyển cho người thật luôn có, gác bằng `T4` (`YC-H3`)
+- [ ] Trả lời tự động bật tắt bằng `T3` trần cứng; mỗi tin tự động mang `is_automated` trong bản ghi (`YC-H4`)
+- [ ] Hội thoại lọc theo tổ chức; bộ test cách ly phủ cả hai bảng
+
+## AI-1 — Cổng AI và hai sổ đăng ký · chặn P16, P17, P18
+
+Đợt một (09/12): **phần lõi phía TypeScript viết mã xong, `npm test` 258/258 xanh
+thật** (41 ca mới: 16 định tuyến, 8 cổng AI, 6 sổ đăng ký, 5 chấm điểm, 6 luật
+chính sách). `npx eslint` sạch. `npx tsc --noEmit` còn 19 lỗi và **cả 19 là cùng
+một nguyên nhân**: client Prisma chưa sinh lại cho năm bảng mới — `prisma generate`
+tải nhị phân từ `binaries.prisma.sh`, host đó bị chặn trong VM chạy `device_bash`
+(bẫy đã ghi ở `AGENTS.md`). Chạy trên máy có mạng thì hết.
+
+Chưa làm trong đợt một, cố ý: lớp Python (`workers/ai/`), chuyển ba adapter Vision
+sang sau cổng, lượt quét CI chặn import SDK, hai đường Integration API, và hàng
+FFmpeg trong sổ đăng ký.
+
+- [x] `ai_capabilities` khai đủ 34 năng lực kèm loại, sàn quyền riêng tư và kênh chấm điểm — `src/core/ai/domain/ai-capabilities.ts` + `seed-ai-registry.ts`, `ai-capabilities.test.ts` (6 ca)
+- [x] `ai_models` với bốn ô giấy phép bắt buộc; mô hình thiếu một ô không bật được (`YC-G5`) — `licenseComplete()` ở `ai-registry-repository.ts`, lọc ngay trong `eligibleModels()` nên mô hình thiếu ô không lộ ra bất kỳ đâu; ca thử ở `routing.test.ts`
+- [ ] Cấu hình build FFmpeg có hàng riêng trong sổ đăng ký, khoá danh sách thành phần theo giấy phép *(nợ #75 — làm trước dòng mã FFmpeg đầu tiên của P17)*
+- [x] Mười cổng khai ở `src/core/ports/`; năm cổng cũ không đổi chữ ký — thêm `shared-media.ts` cùng năm cổng mới; `index.ts` xuất đủ mười
+- [ ] `src/core/ai/` và `workers/ai/` giải năng lực, kiểm chính sách, chọn mô hình, kiểm lược đồ đầu ra, ghi sổ *(phía TypeScript xong: `gateway.ts` + `wiring.ts`; phía Python chưa)*
+- [ ] Mã nghiệp vụ gọi năng lực, không gọi tên nhà cung cấp (`YC-G1`) *(cổng đã có; chưa chuyển lời gọi nào của M01 sang)*
+- [ ] SDK nhà cung cấp chỉ xuất hiện trong `adapters/`, có lượt quét chặn trong CI (`YC-G2`)
+- [ ] Ba adapter Vision đang có chuyển sang chạy sau cổng AI mà không đổi hợp đồng trả về
+- [x] `ai_policies` theo tổ chức; `GET · PUT /ai-policy` (`U1`/`U2`), đổi `product_vision` đòi thêm `H4` — `putAiPolicy` kiểm `H4` trong use-case chứ không ở route, để đường ghi của engine ngoài về sau không đi vòng qua nó
+- [x] Bộ định tuyến giữ đủ năm ràng buộc, mỗi ràng buộc có ca thử khoá (`YC-G6`–`YC-G8`, `YC-G10`, `YC-G12`) — `domain/routing.ts`, 16 ca. Phát sinh một luật mới trong lúc code: thác nghiệm chỉ bật khi năng lực CÓ ngưỡng đã đo, vì không có ngưỡng thì "bắt đầu từ lớp thấp" trở thành "luôn chạy mô hình rẻ nhất" — ngược thứ tự ưu tiên Accuracy > Quality > Cost
+- [x] Mô hình chốt vào `payload` của job lúc tạo; worker không tra lại (`YC-G8`) — `selectModel` trả `PINNED_NGOAI_TRAN` thay vì âm thầm đổi mô hình khi trần đổi sau lúc job xếp hàng
+- [x] `ai_requests` ghi mọi lời gọi kèm chi phí, độ trễ, điểm; không giữ prompt lẫn đầu ra (`YC-G9`) — bảng không có cột cho prompt, nên luật này là cấu trúc chứ không phải quy ước
+- [x] Thác nghiệm nhiều lượt vẫn trừ credit của một lượt nghiệp vụ (`YC-G13`) — cổng AI ghi nhiều hàng `ai_requests` nhưng không chạm `usage`; ca thử khoá ở `gateway.test.ts`
+- [ ] `GET /integration/ai-policy` và `POST /integration/ai-requests` chạy được từ cả hai engine (`YC-G14`)
+- [ ] Bộ test cách ly phủ `ai_policies`, `ai_requests`, `ai_evaluations`, `knowledge_chunks` *(`tests/tenant/ai-policy.test.ts` đã viết, 5 ca; chưa chạy được — cần Postgres và `prisma generate`. Ba bảng đã thêm vào danh sách dọn của `tests/helpers/database.ts`)*
+
+## AI-2 — Chấm điểm, thác nghiệm, dự phòng · chặn go-live P16–P18
+
+- [ ] Mỗi năng lực sinh có điểm chất lượng ghi vào `ai_evaluations` (`YC-E1`)
+- [ ] Điểm dưới ngưỡng đặt `needs_review = true` và đưa bản ghi vào hàng chờ duyệt (`YC-E2`)
+- [ ] Điểm chất lượng không thay Review → Approve và không thay Identity Guard (`YC-E3`)
+- [ ] Ngưỡng của Identity Guard giữ nguyên 0,95 và 0,90; các ngưỡng khác khai trong `ai_capabilities` (`YC-E4`)
+- [ ] Ngưỡng chưa đo được ghi rõ là giá trị tạm kèm một dòng nợ kỹ thuật, không đặt bằng lập luận (D20)
+- [ ] Thác chỉ leo lên; không đường nào hạ chất lượng để tiết kiệm (`YC-G10`)
+- [ ] Chuỗi dự phòng không vượt sàn quyền riêng tư; hết đường thì `FAILED` và hoàn credit (`YC-G11`)
+- [ ] Lời gọi mức `sensitive` không có đường nào ra nhà cung cấp bên ngoài, có ca thử khoá (`YC-G12`)
+- [ ] Nhà cung cấp mặc định sập: tính năng chạy bằng dự phòng, hoặc dừng sạch với credit hoàn — không treo
+- [ ] Đầu ra thiếu một kênh chấm đã khai bị coi là điểm không hợp lệ, không phải điểm 0 (`YC-E10`)
+
+## AI-3 — Tri thức ngành hoa · chặn P23
+
+- [ ] `flower_taxonomy` nạp từ danh mục 86 loài đã trích và bảng 63 cặp dễ nhầm
+- [ ] Nhãn mô hình tra qua danh mục để ra mã và tên chuẩn; mô hình không quyết giá trị vào cơ sở dữ liệu (`YC-E5`)
+- [ ] Không tra được thì mã để trống và nhãn gốc được giữ lại (`YC-E6`)
+- [ ] `pgvector` bật trên chính Postgres đang dùng; không thêm cơ sở dữ liệu vector nào (D19)
+- [ ] `knowledge_chunks` mang `organization_id`, có trong bộ test cách ly (`YC-E9`)
+- [ ] Truy hồi trả về chỗ nên đọc; câu trả lời đọc từ bản ghi thật theo thứ bậc nguồn sự thật (`YC-E7`)
+- [ ] Câu hỏi về giá, tồn trạng thái và trạng thái đơn trả lời từ dữ liệu giao dịch (`YC-E8`)
+- [ ] `flower_taxonomy` không có `organization_id` và lý do được ghi ở đặc tả 07 mục 16
+
+## AI-4 — Sự kiện miền và vòng học
+
+- [ ] Tám sự kiện miền ở đặc tả 10 mục 17 phát ra đúng chỗ, có bản ghi
+- [ ] Sự kiện là gợi ý: không sự kiện nào tự chạy một chức năng tính phí
+- [ ] `content_features` ghi đủ đặc trưng chữ và đặc trưng hình của mỗi nội dung đã đăng
+- [ ] `visual_style` nối ngược về `assets` của biến thể đã dùng
+- [ ] Vòng học chạy theo bốn pha; pha sau không bắt đầu trước khi pha trước có số đo
+- [ ] Hồ sơ phong cách nói được căn cứ kèm số bản ghi đã dùng (`YC-L3`)
