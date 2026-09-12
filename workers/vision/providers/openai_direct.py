@@ -37,7 +37,7 @@ from vision.providers.chung import (
     thu_nho_anh,
 )
 
-MODEL_MAC_DINH = "gpt-4o"
+MODEL_MAC_DINH = "gpt-4o-mini"
 
 
 class OpenAIDirectProvider:
@@ -50,9 +50,9 @@ class OpenAIDirectProvider:
         self.schema = nap_json("Schema.json")
         self.prompt = nap_text("PromptGon.md")
         self._client = client or OpenAI(timeout=TIMEOUT_GOI_GIAY, max_retries=SO_LAN_THU_LAI)
-        # `model_truc_tiep` để đổi mô hình của RIÊNG bộ này mà không đụng bộ
+        # `model_tien_kiem` để đổi mô hình của RIÊNG bộ này mà không đụng bộ
         # đầy đủ — hai bộ tồn tại song song nên chúng phải chỉnh được riêng.
-        self._model = model or config.get("model_truc_tiep") or MODEL_MAC_DINH
+        self._model = model or config.get("model_tien_kiem") or MODEL_MAC_DINH
         self._canh_dai_px = int(config.get("anh_canh_dai_px") or CANH_DAI_MAC_DINH_PX)
 
     @property

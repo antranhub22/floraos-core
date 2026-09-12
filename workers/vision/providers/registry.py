@@ -21,7 +21,7 @@ from typing import Any, Callable
 
 KHOA_BO_MAY = ("openai_structured", "openai_direct", "local_cv")
 
-MAC_DINH = "local_cv"
+MAC_DINH = "openai_direct"
 
 
 def _dung_openai_structured() -> Any:

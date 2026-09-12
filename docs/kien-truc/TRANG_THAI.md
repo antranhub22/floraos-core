@@ -34,7 +34,7 @@ npx tsc --noEmit         # kỳ vọng SẠCH sau khi generate
 npm run test:tenant      # gồm 5 ca mới của tests/tenant/ai-policy.test.ts
 ```
 
-**Đã hoàn tất 09/12:** `npx prisma generate` ✅ · `npx prisma db push` ✅ · `npm run db:seed` ✅ · `npx tsc --noEmit` **SẠCH** ✅ · `npm run test:tenant` **123/123** ✅ (14 tệp, gồm `ai-policy.test.ts` 5 ca và `vision-analyses.test.ts` 14 ca — 2 ca sai kỳ vọng engine mặc định đã sửa: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`)
+**Đã hoàn tất 09/12:** `npx prisma generate` ✅ · `npx prisma db push` ✅ · `npm run db:seed` ✅ · `npx tsc --noEmit` **SẠCH** ✅ · `npm run test:tenant` **123/123** ✅ (14 tệp, gồm `ai-policy.test.ts` 5 ca và `vision-analyses.test.ts` 14 ca — 2 ca sai kỳ vọng engine mặc định đã sửa: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`) · **Thêm 09/12:** engine mặc định đổi `local_cv` → `openai_direct` (rẻ nhất, nhanh nhất, ma trận 4 ảnh xác nhận), `MODEL_MAC_DINH` `gpt-4o` → `gpt-4o-mini`, bug config key `model_truc_tiep` → `model_tien_kiem` trong `openai_direct.py` đã sửa
 
 **Một luật mới phát sinh trong lúc code, không có trong đặc tả gốc:** thác
 nghiệm chỉ bật khi năng lực CÓ ngưỡng đã đo. Không có ngưỡng thì không có gì
@@ -77,7 +77,8 @@ bộ định tuyến tự đổi mô hình theo chi phí · lược đồ đầu
 
 Tám nợ mới (#68–#75), trong đó hai cái đáng đọc trước khi bật worker thật: **#70**
 không có chuỗi dự phòng nên một môi trường worker thiếu trọng số làm MỌI lượt
-phân tích hỏng thay vì rơi về `openai_structured` (mặc định hiện là `local_cv`,
+phân tích hỏng thay vì rơi về `openai_structured` (mặc định hiện là `openai_direct`,
+nặng hơn local_cv nhưng nhanh hơn gấp ba lần và rẻ hơn 16 lần — `gpt-4o-mini`)
 nợ #61); **#69** lời gọi chưa mang mức quyền riêng tư, bắt buộc phải có trước P21
 khi dữ liệu cá nhân của khách hàng cuối vào hệ thống.
 
@@ -508,9 +509,9 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | Ngày | Việc |
 |---|---|
-| 09/12 | **AI-1 đợt một hoàn tất.** Năm bảng nền AI, mười cổng, `src/core/ai/`, `src/modules/ai-governance/`, bốn route, `U1`–`U4`. `prisma generate` + `db push` + `db:seed` ✅. `npx tsc --noEmit` SẠCH ✅. `npm test` 258/258 ✅. `npm run test:tenant` 123/123 ✅ (sửa 2 ca `vision-analyses.test.ts` kỳ vọng sai engine mặc định: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`) |
+| 09/12 | **AI-1 đợt một hoàn tất.** Năm bảng nền AI, mười cổng, `src/core/ai/`, `src/modules/ai-governance/`, bốn route, `U1`–`U4`. `prisma generate` + `db push` + `db:seed` ✅. `npx tsc --noEmit` SẠCH ✅. `npm test` 258/258 ✅. `npm run test:tenant` 123/123 ✅ (sửa 2 ca `vision-analyses.test.ts` kỳ vọng sai engine mặc định: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`) · **Thêm:** engine mặc định `local_cv` → `openai_direct`, model `gpt-4o` → `gpt-4o-mini`, fix config key `model_truc_tiep` → `model_tien_kiem` |
 | 09/12 | Nền AI vào kiến trúc: engine thứ năm, đặc tả mới `dac-ta/10-ai-orchestration.md` (34 năng lực, mười cổng, hai sổ đăng ký, bộ định tuyến, chấm điểm, tri thức), Tuyến C bốn đợt AI-1–AI-4 chặn P16–P18. Chốt D15–D19, mở D20. Dải năng lực `U1`–`U4` (chính sách AI của tổ chức) và `N9`–`N11` (sổ đăng ký cấp nền tảng). Lược đồ thêm `ai_capabilities`, `ai_models`, `ai_policies`, `ai_requests`, `ai_evaluations`, `flower_taxonomy`, `knowledge_chunks`, `content_features`. Nợ #68–#75 |
-| 09/12 | **Bộ ảnh vàng:** 100 ảnh + 100 template nhãn có sẵn. `scripts/golden-ai-proposals.py` đang chạy (background) — local_cv (SAM2+Florence-2) phân tích 100 ảnh → `golden/ai-proposals/`. Người gán nhãn đánh giá độc lập, KHÔNG xem AI. Hướng dẫn: `golden/HUONG_DAN_GAN_NHAN.md`. Theo dõi: `golden/TRANG_THAI_GAN_NHAN.md`. Cập nhật 2 ca `vision-analyses.test.ts`: `openai_structured` → `local_cv` (VISION_ENGINE_MAC_DINH, D5-e 09/11) |
+| 09/12 | **Bộ ảnh vàng:** 100 ảnh + 100 template nhãn có sẵn. `scripts/golden-ai-proposals.py` đang chạy (background) — local_cv (SAM2+Florence-2) phân tích 100 ảnh → `golden/ai-proposals/`. Người gán nhãn đánh giá độc lập, KHÔNG xem AI. Hướng dẫn: `golden/HUONG_DAN_GAN_NHAN.md`. Theo dõi: `golden/TRANG_THAI_GAN_NHAN.md`. Cập nhật 2 ca `vision-analyses.test.ts`: `openai_structured` → `local_cv` (VISION_ENGINE_MAC_DINH, D5-e 09/11) · **Thêm:** engine mặc định `local_cv` → `openai_direct` (MAC_DINH registry + VISION_ENGINE_MAC_DINH), model `gpt-4o` → `gpt-4o-mini` (MODEL_MAC_DINH), fix config key `model_truc_tiep` → `model_tien_kiem` |
 | 09/11 | Phạm vi sản phẩm mở rộng sang bộ tính năng hoàn chỉnh. Lộ trình thêm Tuyến B P13–P23, bảy pha đầu là MVP. Chốt D8, D9, D10, D11, D12, D1-b; mở D13, D14. Từ vựng quyền thêm dải O, P, Q, R, S, T cộng `H5`/`H6`, `I4`, `J7`. Lược đồ thêm `product_copies`, bốn bảng khách hàng, bốn bảng đơn hàng, `catalog_links`, `campaign_rollups`, `learning_profiles`, hai bảng hội thoại. Integration API mở đúng ba đường ghi. Tệp mới `BO_TINH_NANG_HIEN_TRANG.md` |
 | 09/10 | Rà soát đồng bộ ba repo (`RA_SOAT_DONG_BO_BA_REPO.md`): core ↔ LocalBudd ~60% (hợp đồng đúng, chưa nối điện), core ↔ SocialFlow ~5%. Anh Tony chốt bốn quyết định |
 | 09/10 | Trả nợ #46 — `test:tenant` sang database riêng `floraos_test`, `npm run db:test:setup`, chốt chặn từ chối database không kết thúc bằng `_test`. **Nghiệm thu: 109/109 xanh trên `floraos_test`, dữ liệu AVI GIFT không bị đụng** |

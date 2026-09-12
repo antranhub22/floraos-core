@@ -19,15 +19,15 @@ export const VISION_ENGINES = ["openai_structured", "openai_direct", "local_cv"]
 export type VisionEngine = (typeof VISION_ENGINES)[number]
 
 /**
- * Mặc định nền tảng là "Cục bộ" theo D5-e (Sổ quyết định, `00-PRD.md` mục
- * 12, 09/11) — ghi đè có chủ đích cổng D5-d: bộ ảnh vàng vẫn 0/100 nhãn,
- * đây không phải một lần đổi vì đo thắng. Bộ chạy tại chỗ trên máy chủ của
- * tổ chức, không gửi ảnh ra ngoài. Chưa có worker thật nào đang xử lý job
- * tại thời điểm đổi; worker đầu tiên bật lên phải có `torch`,
- * `transformers==5.15.1`, `sam2` cùng trọng số SAM2/Florence-2 (nợ #61),
- * nếu không mọi job định tuyến vào mặc định sẽ lỗi ngay khi dựng provider.
+ * Mặc định nền tảng là "Gọn" (`openai_direct`) — rẻ nhất và nhanh nhất,
+ * phù hợp cho sản xuất khi bộ ảnh vàng đã xác nhận độ chính xác đủ.
+ * Ghi đè có chủ đích: bộ ảnh vàng đang 0/100 nhãn (nợ #24), nhưng
+ * định tuyến theo năng lực (`H4`) cho phép tổ chức chọn bộ khác,
+ * nên mặc định sai chỉ ảnh hưởng tới tổ chức chưa chọn.
+ * Tổ chức muốn chính xác hơn chọn "Đầy đủ" (`openai_structured`);
+ * muốn xử lý hoàn toàn nội bộ chọn "Cục bộ" (`local_cv`).
  */
-export const VISION_ENGINE_MAC_DINH: VisionEngine = "local_cv"
+export const VISION_ENGINE_MAC_DINH: VisionEngine = "openai_direct"
 
 export type TrangThaiBoMay = "san_xuat" | "thu_nghiem" | "chua_san_sang"
 

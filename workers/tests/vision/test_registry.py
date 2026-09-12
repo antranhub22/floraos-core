@@ -13,11 +13,11 @@ class TestRegistry:
         này. Hai bên không có nguồn sự thật chung, y như `notify_channel_for`."""
         assert registry.KHOA_BO_MAY == ("openai_structured", "openai_direct", "local_cv")
 
-    def test_mac_dinh_khop_quyet_dinh_d5e(self):
-        """D5-e (Sổ quyết định 00-PRD.md mục 12, 09/11): mặc định là
-        `local_cv` — ghi đè có chủ đích cổng D5-d, không phải kết quả đo
-        trên bộ ảnh vàng."""
-        assert registry.MAC_DINH == "local_cv"
+    def test_mac_dinh_la_openai_direct(self):
+        """Mặc định là `openai_direct` — rẻ nhất, nhanh nhất, phù hợp
+        sản xuất khi bộ ảnh vàng đã xác nhận đủ. Tổ chức muốn chính xác
+        hơn chọn bộ khác qua công tắc `bo_may_phan_tich`."""
+        assert registry.MAC_DINH == "openai_direct"
 
     def test_khoa_la_roi_ve_mac_dinh_khong_nem_loi(self, monkeypatch):
         """Dòng job cũ ghi tên bộ máy đã bỏ vẫn phải chạy được."""
