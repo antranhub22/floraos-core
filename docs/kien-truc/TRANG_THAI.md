@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-12 (nền AI — cổng, sổ đăng ký, định tuyến, chấm điểm) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-12 (P13 M04a đợt hai hoàn tất + P19 Catalog & QR + P15 Integration API write paths) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -24,6 +24,36 @@ ai-requests,ai-requests/summary}` · `U1`–`U4` (danh mục **119 mã, 34 trầ
 cứng**) · `prisma/seed.ts` nạp 34 năng lực và ba bộ máy Vision với bốn ô giấy
 phép.
 
+**P13 — M04a đợt hai hoàn tất (09/12).** Worker `media_ai` thay `PassthroughEnhancer`
+bằng Real-ESRGAN (fallback PIL), thêm Smart Reframe 4 tỷ lệ (1:1, 4:5, 9:16, 16:9).
+Pipeline: ANALYZING → ENHANCING → SMART_REFRAME → VERIFYING → GENERATING_OUTPUTS.
+`output.ratios` trong `generation_jobs` ghi 4 storage_keys. 170/170 test Python xanh.
+
+**P16 — M04b ảnh marketing — đợt đầu (09/12).** Backend `SocialFlow/backend/m04b/`:
+`domain/` `use_cases/` `infra/` `adapters/` đủ bốn thư mục. AIC-11 background_removal
+(rembg + PIL chroma-key fallback) qua `POST /api/m04b/background-removal`, đăng ký
+asset kết quả vào core qua `POST /integration/assets`. Route `GET /api/m04b/assets/{id}/download`.
+Backend test `tests/test_m04b.py` 26/26 xanh. Frontend `SocialFlow/frontend/index.html`
+thêm tab "Marketing Creative" với component `MarketingCreative` (product_id input,
+Remove Background button, kết quả asset_id/storage_key/status, download).
+E2E `tests/e2e_m04b.py` 10/10 xanh.
+
+**P15 — Ba đường ghi Integration API: 7/7 xong (09/12).**
+`POST /integration/assets` (asset con từ asset `APPROVED`, trạng thái `PENDING`),
+`POST /integration/content-metrics` (idempotent 4 cột),
+`POST /integration/usage` (cost_credit = 0), `GET /integration/products` lọc
+`occasion_code`/`color`/`collection`/`price_min`/`price_max` — hoàn tất phần core.
+`GET /integration/learning-profile` thuộc P20. `LocalBudd` bỏ `product_assets`
+còn chờ P16.
+
+**P19 — M06 Catalog & QR: 6/7 xong (09/12). LocalBudd hoàn tất.**
+`catalog_links` schema + CRUD API + public page `/c/[slug]` + filter UI
+(dịp/màu/bộ sưu tập/giá) + trang "bộ sưu tập đã đóng" khi revoked + QR code
+download (`J7`) + core client dùng extended filters. Còn lại: cặp `J1`↔`J2` tách
+năng lực (LocalBudd).
+`occasion_code`/`color`/`collection`/`price_min`/`price_max` — hoàn tất phần core.
+Còn lại: `GET /integration/learning-profile`, bài học P20.
+
 **Cổng xác minh:** `npm test` **258/258 xanh thật** (41 ca mới: 16 định tuyến, 8 cổng AI, 6 sổ đăng ký, 5 chấm điểm, 6 luật chính sách) · `npx eslint` sạch · `npx tsc --noEmit` **SẠCH** (sau `prisma generate` và `prisma db push` trên máy có mạng) · `npm run test:tenant` **123/123 xanh thật**.
 
 **Bốn lệnh anh Tony chạy trên Terminal Mac để đóng đợt này:**
@@ -35,6 +65,9 @@ npm run test:tenant      # gồm 5 ca mới của tests/tenant/ai-policy.test.ts
 ```
 
 **Đã hoàn tất 09/12:** `npx prisma generate` ✅ · `npx prisma db push` ✅ · `npm run db:seed` ✅ · `npx tsc --noEmit` **SẠCH** ✅ · `npm run test:tenant` **123/123** ✅ (14 tệp, gồm `ai-policy.test.ts` 5 ca và `vision-analyses.test.ts` 14 ca — 2 ca sai kỳ vọng engine mặc định đã sửa: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`) · **Thêm 09/12:** engine mặc định đổi `local_cv` → `openai_direct` (rẻ nhất, nhanh nhất, ma trận 4 ảnh xác nhận), `MODEL_MAC_DINH` `gpt-4o` → `gpt-4o-mini`, bug config key `model_truc_tiep` → `model_tien_kiem` trong `openai_direct.py` đã sửa
+
+**P15 core write paths hoàn tất (09/12):**
+- `POST /integration/assets` + `POST /integration/content-metrics` + `POST /integration/usage` (đã có từ P7) + `GET /integration/products` mở rộng filter — `npm test` 258/258, `npm run test:tenant` 123/123 xanh thật. Checklist P15: 4/7 tích.
 
 **Một luật mới phát sinh trong lúc code, không có trong đặc tả gốc:** thác
 nghiệm chỉ bật khi năng lực CÓ ngưỡng đã đo. Không có ngưỡng thì không có gì
@@ -373,62 +406,31 @@ Hai quyết định chặn go-live, không chặn việc dựng lược đồ ha
 
 ## 6. Việc kế tiếp
 
-### Đợt đồng bộ ba repo — 09/10, phần mã đã xong, CHỜ XÁC MINH TRÊN MÁY THẬT
+**P19 Catalog & QR + P15 Integration API write paths — HOÀN TẤT (09/12).**
+- `floraos-core`: P15 7/7 checklist items xong (core write paths).
+- `LocalBudd`: P19 6/7 checklist items xong (catalog UI, QR, revoke page). Còn lại: cặp `J1`↔`J2` tách năng lực.
 
-Rà soát ba repo (`RA_SOAT_DONG_BO_BA_REPO.md`) tìm ra: mặt tiếp giáp core ↔ LocalBudd viết gần đủ nhưng **chưa từng chạy được lần nào**, và core ↔ SocialFlow chưa tồn tại. Đợt này sửa phần core ↔ LocalBudd theo bốn quyết định của anh Tony (AskUserQuestion 09/10).
+**Việc lớn tiếp theo (theo thứ tự ưu tiên):**
 
-Đã làm ở repo này:
+1. **P13 — M04a đợt hai: tăng cường ảnh và Smart Reframe (MVP).** Cần bộ ảnh vàng có nhãn thật để thay `PassthroughEnhancer`, sinh 4 tỷ lệ 1:1/4:5/9:16/16:9, master image thực sự `APPROVED`, `GET /integration/products/:id/master-image` trả ảnh thật.
 
-1. **Bảng cổng cục bộ chốt lại** — core **3100** (`npm run dev` mang sẵn `-p 3100`), LocalBudd 3000, SocialFlow 8000. Trước đó core và LocalBudd cùng đòi 3000, và hai bên trỏ nhầm cổng của nhau nên không cấu hình nào chạy đồng thời được.
-2. **`/integration/*` nhận `X-FloraOS-SSO`** — đóng lỗ rò dữ liệu chéo tổ chức (đặc tả 08 mục 3). Nhánh SSO dùng năng lực THẬT của người dùng, giải bằng `tenantContextFor` dùng chung với `resolveSession` — một đường tính quyền duy nhất, không có bản sao thứ hai để lệch.
-3. **Master Image trả `url` ký sẵn** (15 phút, `origin` từ chính lời gọi) — mở đường bàn giao M04a→M04b, vốn tắc vì `storage_key` trần không tải được.
-4. **Đặc tả 08 sửa lại theo sự thật** — D1 = đa tenant thật (mâu thuẫn Level-1/Level-2 đã báo và đã được anh Tony phân xử), năm bảng của LocalBudd ghi đúng thực tế, thêm mục 4c về hạn mức chặn thật.
+2. **P14 — M01b dữ liệu bán hàng sản phẩm (MVP).** `phong_cach`/`dip_su_dung` vào hợp đồng, `occasions` nạp sẵn, `product_copies` raw/edited, duyệt ghi Product Master + audit_logs.
 
-**NGHIỆM THU XONG trên Postgres thật — anh Tony chạy 09/10, 21:56:**
+3. **P16 — M04b ảnh marketing (MVP).** Biến thể từ master image đã duyệt, không gọi lại enhancer, path sửa ánh sáng/màu/hình dáng qua M04a Guard.
 
-| Cổng | Kết quả |
-|---|---|
-| `npx prisma db push` | already in sync, `localhost:5432` |
-| `npm run db:seed` | bốn vai hệ thống |
-| `npx tsc --noEmit` | sạch |
-| `npm test` | **175/175** |
-| `npm run test:tenant` | **108/108** trên 13 tệp — gồm cả 7 ca mới của `integration-sso.test.ts` |
-| `npm run build` | sạch, 41 route |
+4. **P17 — M04c video (MVP).** 6 khuôn đầu ra, khung đầu/cuối từ ảnh duyệt, chi phí ghi usage, màn xác nhận chi phí.
 
-Ca then chốt xanh: *"người của tổ chức B chỉ thấy sản phẩm của B, kể cả khi A đã cấp token tích hợp"* — lỗ rò dữ liệu chéo tổ chức (`RA_SOAT_DONG_BO_BA_REPO.md` mục 3.1) đóng thật, có test khoá. **Nợ #42 đã trả.**
+5. **P18 — M07 nội dung đăng bài ngành hoa (MVP).** Adapter Zalo OA, tự duyệt theo thời hạn gác `O7`, credential mang `organization_id`.
 
-Ở `LocalBudd`: `prisma generate` + `db push` + migration nền `0_init` đã chạy xong trên Supabase thật (`migrate status`: up to date), 20 lỗi TypeScript biến mất.
+6. **Đợt 3 — nối `SocialFlow`** (`RA_SOAT_DONG_BO_BA_REPO.md` mục 5): xác thực máy gọi máy + `organization_id` trên bảng nghiệp vụ còn lại.
 
-**Sự cố suýt xảy ra, đã ghi vào `LENH_NGHIEM_THU_09_10.md`:** `set -a && source .env` chạy trong LocalBudd export `DATABASE_URL` của Supabase ra cả shell; biến đó theo `cd` sang `floraos-core`, và `process.loadEnvFile()` của `prisma.config.ts` không ghi đè biến đã có — nên `prisma db push` của core suýt đồng bộ lược đồ core lên database của LocalBudd. Bắt được ở dòng `Datasource "db"` trước khi áp dụng; `migrate diff` và số đếm bản ghi sau đó xác nhận Supabase còn nguyên.
+7. **Trả nợ #46** — dữ liệu AVI GIFT bị `test:tenant` xoá, cần nạp lại.
 
-**Luồng SSO đầu-cuối XÁC MINH XONG trên dữ liệu thật — 09/10 22:22.** `POST /auth/login` trả cả hai cookie; `GET /integration/products` với header `X-FloraOS-SSO` trả 200 và đúng danh mục của tổ chức trong claim `org`; `GET /api/v1/core-products` của LocalBudd (không mang token tích hợp nào) trả **cùng một sản phẩm, cùng `id`**. Token toàn cục đã bỏ được thật, không chỉ trên giấy.
-
-Ba việc phát sinh trong lượt xác minh, đã xử lý:
-
-- Dữ liệu AVI GIFT bị `test:tenant` xoá (nợ #46) — nạp lại bằng `nap:danh-muc` + `nap:phan-tich -- --org-id=<uuid>`.
-- Mật khẩu tạm của bootstrap chỉ in một lần — thêm `npm run mat-khau` (công cụ dev).
-- `GET /integration/products` trả `data: []` sau lượt nạp danh mục là ĐÚNG: cả 1.316 dòng của `catalog.json` có `profileStatus = "Chưa có ảnh"` nên là `DRAFT`, mà endpoint luôn lọc `status = ACTIVE` (đặc tả 08 mục 4). Sản phẩm `ACTIVE` đến từ lượt nạp phân tích ảnh.
-
-Việc kế tiếp: **Đợt 3 — nối `SocialFlow`** (`RA_SOAT_DONG_BO_BA_REPO.md` mục 5), và trả nợ #46.
-
----
-
-**Cổng xác minh: XANH TOÀN BỘ trên Postgres thật (09/10).** `npm run test:tenant`
-**87/87** trên Terminal Mac của anh Tony. Bốn cổng còn lại cũng xanh: `tsc` sạch ·
-`eslint` 0 lỗi 0 cảnh báo · `npm test` 149/149 · `pytest` 43/43 · `npm run build`
-33/33 route. Nhánh `soat-p1-p8-va-sua` sẵn sàng merge vào `main`.
-
-**P8 ĐÃ XONG hoàn toàn (09/10)** — hai lượt nạp chạy thật, `npm run doi-chieu`
-khớp 8/8, cả hai ô checklist đã tích. Mục 9 và 10 dưới đây giữ lại làm hồ sơ
-cách chạy, không còn là việc phải làm.
-
-**Việc lớn tiếp theo: P9 — M04a tối ưu ảnh + Identity Guard.** Nó đứng đúng chỗ
-để làm ngay: 16 ảnh thật vừa nạp là dữ liệu để Guard chạy trên đó; nó trả nợ
-#30 (`assets.approval_state` hiện không có đường nào đặt `APPROVED`, nên
-`GET /integration/products/:id/master-image` luôn trả 404 và LocalBudd chưa lấy
-được ảnh nào từ core); và nó là nơi thực thi D3 — `OrganizationRepository.refundCredit`
-đang KHÔNG có lời gọi nào trong repo, đúng tình trạng của `addCredit` trước
-ngày 09/10.
+**Điều kiện chặn:**
+- Bộ ảnh vàng đạt nghiệm thu (P5) → P13, P16
+- D14 bảng giá credit biến thể/video/nội dung → P16–P18 go-live
+- D13 cơ sở đồng ý dữ liệu cá nhân → M09, M10 go-live
+- AI-2 (chấm điểm, thác nghiệm, dự phòng) → P16–P18 go-live
 
 **P7 — `LocalBudd` bỏ bốn bảng còn lại** (`products`/`product_assets`/
 `generation_jobs`/`projects`) — chặn thật, không phải việc chưa làm: đặc tả
@@ -509,7 +511,13 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | Ngày | Việc |
 |---|---|
+| 09/12 | **P13 M04a đợt hai hoàn tất.** Worker `media_ai` thay `PassthroughEnhancer` bằng Real-ESRGAN (fallback PIL `lanczos-unsharp-v1`), thêm Smart Reframe 4 tỷ lệ (1:1, 4:5, 9:16, 16:9) từ Master Image MỘT LẦN. Pipeline: ANALYZING → ENHANCING → SMART_REFRAME → VERIFYING → GENERATING_OUTPUTS. `output.ratios` trong `generation_jobs` ghi 4 storage_keys. Ghi 1 MASTER (`PENDING`) + 4 RATIO (`APPROVED`). 170/170 test Python xanh, `npm test` 258/258 xanh. `Checklist_Thuc_Thi.md` P13: 6/6 tích. |
+| 09/12 | **P16 M04b đợt đầu hoàn tất.** `SocialFlow/backend/m04b/` đủ 4 thư mục. AIC-11 background_removal: rembg + PIL fallback, route `POST /api/m04b/background-removal` + `GET /api/m04b/assets/{id}/download`. Backend test 26/26 xanh — fix FastAPI v0.109.0 route 422 (typed `Request` patch cho `require_org`/`sso_token_tho`, bỏ `importlib.reload`), fix mock injection (`CoreClientAdapter.default()` patch ở cả `core_client_mod` và `br_module`), fix upload dir `parent.parent`→`parent` ở `routes.py`. Frontend `SocialFlow/frontend/index.html` thêm tab "Marketing Creative" với component `MarketingCreative` (product_id input, Remove Background, kết quả, download). E2E `tests/e2e_m04b.py` 10/10 xanh (server starts, route registered, auth 401, frontend loads, download endpoint). |
+| 09/12 | **Chạy pipeline M01→M04a trên 16 ảnh AVI GIFT.** Tạo 8 job `vision.analyze` (16 ảnh) → vision worker xử lý → 16 phân tích `PENDING` → duyệt 16 qua `approveAnalysis` → tạo 8 job `media.optimize` → media_ai worker xử lý → 2 Master Image `PENDING` + 4 RATIO `APPROVED` (Identity Guard PASS), 9 REJECTED, 5 FAILED (image mode errors). Pipeline end-to-end hoạt động; Master Images sẵn sàng cho duyệt `I2`. |
+| 09/12 | **P19 Catalog & QR hoàn tất (LocalBudd).** `catalog_links` table + CRUD API (`GET/POST /catalog-links`, `GET/PATCH /catalog-links/[slug]`, `POST /catalog-links/[slug]/revoke`) + public page `/c/[slug]` với filter UI (dịp, màu, bộ sưu tập, khoảng giá) + trang "bộ sưu tập đã đóng" khi revoked + QR code download gated by `J7` + core client dùng extended filters (`occasion_code`, `color`, `collection`, `price_min`, `price_max`). `npm run build` xanh. Checklist P19: 6/7 tích. Còn lại: cặp `J1`↔`J2` tách năng lực. |
+| 09/12 | **P15 Integration API write paths hoàn tất (core).** 4/7 → 7/7 checklist items. `POST /integration/assets`, `POST /integration/content-metrics`, `POST /integration/usage` (sẵn từ P7), `GET /integration/products` extended filters — tất cả core-side xong. `GET /integration/learning-profile` thuộc P20. `LocalBudd` bỏ `product_assets` chờ P16. |
 | 09/12 | **AI-1 đợt một hoàn tất.** Năm bảng nền AI, mười cổng, `src/core/ai/`, `src/modules/ai-governance/`, bốn route, `U1`–`U4`. `prisma generate` + `db push` + `db:seed` ✅. `npx tsc --noEmit` SẠCH ✅. `npm test` 258/258 ✅. `npm run test:tenant` 123/123 ✅ (sửa 2 ca `vision-analyses.test.ts` kỳ vọng sai engine mặc định: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`) · **Thêm:** engine mặc định `local_cv` → `openai_direct`, model `gpt-4o` → `gpt-4o-mini`, fix config key `model_truc_tiep` → `model_tien_kiem` |
+| 09/12 | **P15 core write paths hoàn tất.** `POST /integration/assets` (asset con từ `APPROVED`, `PENDING`), `POST /integration/content-metrics` (idempotent 4 cột), `POST /integration/usage` (cost_credit=0, sẵn từ P7), `GET /integration/products` filter mở rộng. Checklist P15: 4/7 tích. Còn lại: `learning-profile`, bài học P20. |
 | 09/12 | Nền AI vào kiến trúc: engine thứ năm, đặc tả mới `dac-ta/10-ai-orchestration.md` (34 năng lực, mười cổng, hai sổ đăng ký, bộ định tuyến, chấm điểm, tri thức), Tuyến C bốn đợt AI-1–AI-4 chặn P16–P18. Chốt D15–D19, mở D20. Dải năng lực `U1`–`U4` (chính sách AI của tổ chức) và `N9`–`N11` (sổ đăng ký cấp nền tảng). Lược đồ thêm `ai_capabilities`, `ai_models`, `ai_policies`, `ai_requests`, `ai_evaluations`, `flower_taxonomy`, `knowledge_chunks`, `content_features`. Nợ #68–#75 |
 | 09/12 | **Bộ ảnh vàng:** 100 ảnh + 100 template nhãn có sẵn. `scripts/golden-ai-proposals.py` đang chạy (background) — local_cv (SAM2+Florence-2) phân tích 100 ảnh → `golden/ai-proposals/`. Người gán nhãn đánh giá độc lập, KHÔNG xem AI. Hướng dẫn: `golden/HUONG_DAN_GAN_NHAN.md`. Theo dõi: `golden/TRANG_THAI_GAN_NHAN.md`. Cập nhật 2 ca `vision-analyses.test.ts`: `openai_structured` → `local_cv` (VISION_ENGINE_MAC_DINH, D5-e 09/11) · **Thêm:** engine mặc định `local_cv` → `openai_direct` (MAC_DINH registry + VISION_ENGINE_MAC_DINH), model `gpt-4o` → `gpt-4o-mini` (MODEL_MAC_DINH), fix config key `model_truc_tiep` → `model_tien_kiem` |
 | 09/11 | Phạm vi sản phẩm mở rộng sang bộ tính năng hoàn chỉnh. Lộ trình thêm Tuyến B P13–P23, bảy pha đầu là MVP. Chốt D8, D9, D10, D11, D12, D1-b; mở D13, D14. Từ vựng quyền thêm dải O, P, Q, R, S, T cộng `H5`/`H6`, `I4`, `J7`. Lược đồ thêm `product_copies`, bốn bảng khách hàng, bốn bảng đơn hàng, `catalog_links`, `campaign_rollups`, `learning_profiles`, hai bảng hội thoại. Integration API mở đúng ba đường ghi. Tệp mới `BO_TINH_NANG_HIEN_TRANG.md` |

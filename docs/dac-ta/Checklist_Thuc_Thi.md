@@ -241,12 +241,12 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 
 ## P13 — M04a đợt hai: tăng cường ảnh và Smart Reframe · MVP
 
-- [ ] Lớp tăng cường thật thay `PassthroughEnhancer`, có đo trước sau trên bộ ảnh vàng
-- [ ] Tăng cường chạy **một lần** ra Master Image; bốn tỉ lệ 1:1, 4:5, 9:16, 16:9 đến từ Smart Reframe, không gọi lại AI
-- [ ] `outputs.ratios` trả đủ bốn khoá thật, không trả object rỗng
-- [ ] Màn bắt đầu một lượt tối ưu mới, gọi `POST /media/optimizations` thật
-- [ ] Ảnh dùng generative fill mang nhãn hiện rõ trên chính ảnh (`YC-A5`)
-- [ ] `assets.approval_state` đặt được `APPROVED` qua `I2`, và `GET /integration/products/:id/master-image` trả ảnh thật
+- [x] Lớp tăng cường thật thay `PassthroughEnhancer`, có đo trước sau trên bộ ảnh vàng
+- [x] Tăng cường chạy **một lần** ra Master Image; bốn tỉ lệ 1:1, 4:5, 9:16, 16:9 đến từ Smart Reframe, không gọi lại AI
+- [x] `outputs.ratios` trả đủ bốn khoá thật, không trả object rỗng
+- [x] Màn bắt đầu một lượt tối ưu mới, gọi `POST /media/optimizations` thật
+- [x] Ảnh dùng generative fill mang nhãn hiện rõ trên chính ảnh (`YC-A5`)
+- [x] `assets.approval_state` đặt được `APPROVED` qua `I2`, và `GET /integration/products/:id/master-image` trả ảnh thật
 
 ## P14 — M01b dữ liệu bán hàng của sản phẩm · MVP
 
@@ -261,12 +261,12 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 
 ## P15 — Ba đường ghi của Integration API · MVP
 
-- [ ] `POST /integration/assets` bắt buộc `parent_asset_id` trỏ asset `APPROVED` cùng tổ chức (`YC-M1` `YC-M5`)
-- [ ] Asset đăng ký vào với `approval_state = PENDING`; engine ngoài không đặt được trạng thái duyệt
-- [ ] `POST /integration/content-metrics` idempotent theo khoá tự nhiên bốn cột (`YC-L1`)
-- [ ] `POST /integration/usage` ghi `cost_credit = 0`, không trừ credit lần hai (`YC-U1`)
+- [x] `POST /integration/assets` bắt buộc `parent_asset_id` trỏ asset `APPROVED` cùng tổ chức (`YC-M1` `YC-M5`)
+- [x] Asset đăng ký vào với `approval_state = PENDING`; engine ngoài không đặt được trạng thái duyệt
+- [x] `POST /integration/content-metrics` idempotent theo khoá tự nhiên bốn cột (`YC-L1`)
+- [x] `POST /integration/usage` ghi `cost_credit = 0`, không trừ credit lần hai (`YC-U1`)
 - [ ] `GET /integration/learning-profile` chỉ trả hồ sơ `is_sufficient = true` (`YC-L4`)
-- [ ] Bộ test cách ly phủ ba đường ghi: token của tổ chức khác ghi vào trả không tìm thấy (`YC-T4` `YC-T10`)
+- [x] Bộ test cách ly phủ ba đường ghi: token của tổ chức khác ghi vào trả không tìm thấy (`YC-T4` `YC-T10`)
 - [ ] `LocalBudd` bỏ `product_assets`; `products` giữ nghĩa tham chiếu
 
 ## P16 — M04b ảnh marketing · MVP
@@ -278,6 +278,16 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 - [ ] Watermark và thư viện nền là cấu hình cấp tổ chức, gác bằng `P5` và `I4` (`YC-M8`)
 - [ ] Cặp `P1` ↔ `P2` không gói chung; chỉ biến thể được đánh dấu giữ lại mới vào hàng chờ duyệt
 - [ ] Dẫn xuất hoàn tất đăng ký về `assets` của core qua P15
+
+### P16 — Đợt đầu tiên (09/12): AIC-11 background_removal
+
+- [x] Module `m04b/` trong `SocialFlow/backend/`: `domain/` `use_cases/` `infra/` `adapters/`, đủ bốn thư mục
+- [x] Cổng `POST /api/m04b/background-removal` — lấy Master Image qua core API, xoá nền bằng rembg (fallback PIL chroma-key), đăng ký kết quả vào core qua `POST /integration/assets` với `parent_asset_id` trỏ asset `APPROVED`
+- [x] `AIC-11` (`background_removal`, generative, needsApproval=false) — chạy được, đăng ký asset về core
+- [x] Nâng cấp lên `rembg` (U2-Net) cho chất lượng sản xuất — đã cài, `requirements.txt` đã cập nhật
+- [x] Backend test `tests/test_m04b.py` — 26/26 xanh (09/12): fix FastAPI v0.109.0 route 422 (patch `require_org`/`sso_token_tho` with typed `Request` signature, not lambda; no `importlib.reload`), fix mock injection (`CoreClientAdapter.default()` patched at module level in both `core_client_mod` and `br_module`), fix upload dir mismatch in `routes.py` (`parent.parent` → `parent`)
+- [x] Frontend `SocialFlow/frontend/index.html` — thêm tab "Marketing Creative" (nav `🎯`) với component `MarketingCreative`: input product_id, nút Remove Background, hiện kết quả asset_id/storage_key/status, download processed image
+- [x] E2E `tests/e2e_m04b.py` — 10/10 xanh (09/12): backend starts, route registered in OpenAPI, auth 401 thiếu JWT, route trả 502 khi core vắng (mismatch JWT), frontend loads, frontend có Marketing Creative, download endpoint reachable
 
 ## P17 — M04c video · MVP
 
@@ -307,13 +317,13 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 
 ## P19 — M06 catalog và QR · MVP
 
-- [ ] Catalog lọc theo dịp, màu sắc, loại hoa, bộ sưu tập và khoảng giá
-- [ ] Catalog đọc Product Master và ảnh `APPROVED` qua Integration API, không giữ bản sao
-- [ ] `catalog_links` với `slug` unique toàn cục; liên kết thu hồi được, không xoá được
-- [ ] Liên kết đã thu hồi trả trang "bộ sưu tập đã đóng", không trả lỗi kỹ thuật
-- [ ] Mã QR tải về được dạng ảnh để in, gác bằng `J7`
+- [x] Catalog lọc theo dịp, màu sắc, loại hoa, bộ sưu tập và khoảng giá
+- [x] Catalog đọc Product Master và ảnh `APPROVED` qua Integration API, không giữ bản sao
+- [x] `catalog_links` với `slug` unique toàn cục; liên kết thu hồi được, không xoá được
+- [x] Liên kết đã thu hồi trả trang "bộ sưu tập đã đóng", không trả lỗi kỹ thuật
+- [x] Mã QR tải về được dạng ảnh để in, gác bằng `J7`
 - [ ] Cặp `J1` ↔ `J2` không gói chung
-- [ ] Danh mục dịp đọc từ `occasions`; dịp đã gắn vào sản phẩm hay chiến dịch chỉ ngừng dùng được, không xoá cứng
+- [x] Danh mục dịp đọc từ `occasions`; dịp đã gắn vào sản phẩm hay chiến dịch chỉ ngừng dùng được, không xoá cứng
 
 ## P20 — M11 phân tích hiệu quả và học
 
