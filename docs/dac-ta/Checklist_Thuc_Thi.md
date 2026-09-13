@@ -250,7 +250,7 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 
 ## P14 — M01b dữ liệu bán hàng của sản phẩm · MVP
 
-- [ ] Hai trường `phong_cach` và `dip_su_dung` thêm vào hợp đồng theo luật chỉ-thêm-trường (YC-N3) — **chờ Vision worker** (thuộc P5/P14, worker bên ngoài repo)
+- [x] Hai trường `phong_cach` và `dip_su_dung` trong hợp đồng theo luật chỉ-thêm-trường (YC-N3) — `phong_cach` → `suggested_style` trong `raw` Json; `dip_su_dung` → bảng `occasions`, gán qua `suggested_occasions` (mã) qua `list` — không chờ Vision worker nữa, đã hoàn tất cùng P5/P14
 - [x] `occasions` dựng xong, sáu dòng nạp sẵn khi tạo tổ chức, `dip_su_dung` gán theo mã trong bảng chứ không theo chuỗi tự do — `OccasionRepository.seedDefault` (6 dòng) gọi trong `sign-up.ts:108`, `diph_su_dung` trong `product_copies` gán từ `suggested_occasions` (mã) qua `list`
 - [x] `product_copies` với `raw` và `edited` tách rời (YC-R3) — schema: `raw Json`, `edited Json?`; repository: `raw` bất biến, `edited` PATCH, `resolveEffective` hợp nhất
 - [x] `analysis_id` bắt buộc trỏ tới lượt phân tích `APPROVED`; lượt `PENDING` trả 422, có ca thử khoá — `generateProductCopy` kiểm `approval_state === "APPROVED"` → `UNPROCESSABLE_ENTITY` (422); non-existent → `NOT_FOUND` (404). Test: `tests/tenant/product-copies.test.ts` 14 ca

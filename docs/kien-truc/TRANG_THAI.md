@@ -321,7 +321,7 @@ cắt khối `pricing` theo `L5`). `infra/pricing-rule-repository.ts`
 (chuyển `ARCHIVED` đòi thêm `L4`, không chỉ `L3`), `GET·PUT /pricing-rules`.
 36 test domain thuần + 10 test cách ly tenant mới (`tests/tenant/products-pricing.test.ts`).
 
-**P5** vẫn còn một việc mở, không chặn P6: chưa gọi `OpenAIStructuredProvider` với API OpenAI thật (ảnh thật) để đối chiếu kết quả phân tích với nhãn người (nợ #24 đã giải quyết — bộ ảnh vàng 8/8 ảnh đạt nghiệm thu 09/12).
+**P5 hoàn tất 09/12 — bộ ảnh vàng đạt nghiệm thu (8/8 ảnh, quy tắc mới 09/12).** Phần lõi đã nghiệm thu trên Postgres thật (09/10): `prisma generate`/`db push` ✅, `npm test` ✅, `npm run test:tenant` 49/49 ✅, `python3 -m pytest` 43/43 ✅. Còn lại (không chặn P6): gọi `OpenAIStructuredProvider` với API OpenAI thật (ảnh thật) để đối chiếu kết quả phân tích với nhãn người — xem mục 6 và `TECHNICAL_DEBT.md` #19–25.
 
 **P4 nghiệm thu xong trước đó: anh Tony chạy bốn lệnh xác minh trên Terminal Mac thật
 ngay sau khi mã viết xong — xanh hoàn toàn, không phát sinh lỗi nào phải sửa (khác
@@ -348,7 +348,7 @@ ngoại tới `organizations` ngay từ đầu. Module `src/modules/profiles/`
 `GET · PUT /business-profile` và `GET · PUT /brand-profile` dưới `/api/v1/`, gác bằng
 `F1`/`F2` có sẵn từ P2, không thêm mã năng lực mới.
 
-Đang có (P5), **viết mã xong CHƯA xác minh trên Postgres thật**: hợp đồng
+Đang có (P5), **đã nghiệm thu trên Postgres thật** (09/10, anh Tony): hợp đồng
 `PhanTichSanPhamHoa` (`workers/vision/contracts/`, nguyên vẹn từ v1) · cổng
 `VisionAnalyzer` (`workers/vision/providers/base.py`) · `OpenAIStructuredProvider`
 (BUILD — 2 lượt gọi + đồng thuận trung vị qua `chot()`, CHƯA gọi API thật) ·
@@ -358,10 +358,9 @@ ngoại tới `organizations` ngay từ đầu. Module `src/modules/profiles/`
 `POST /vision/analyses`, `GET · PATCH /vision/analyses/:id`,
 `POST /vision/analyses/:id/approve` (`H1`/`H2`/`H3`) · duyệt ghi Product Master + audit
 log trong một giao dịch, không ghi thẳng. 43 test Python + 9 test TS mới chạy xanh thật
-trong sandbox (sự cố `@rollup/rollup-linux-arm64-gnu` đã sửa, xem `TECHNICAL_DEBT.md`).
-Đã xác minh xanh trên Postgres thật (09/10): `prisma generate`/`db push`, `npm test`,
-`npm run test:tenant` 49/49, `python3 -m pytest` (workers/) 43/43. Còn lại: chưa gọi
-`OpenAIStructuredProvider` với API OpenAI thật (ảnh thật), để đối chiếu kết quả
+trong sandbox. **Đã nghiệm thu trên Postgres thật**: `prisma generate`/`db push`, `npm test`,
+`npm run test:tenant` 49/49, `python3 -m pytest` (workers/) 43/43. **Bộ ảnh vàng đạt nghiệm thu** 09/12 (8/8 ảnh, quy tắc mới).
+Còn lại (không chặn): chưa gọi `OpenAIStructuredProvider` với API OpenAI thật (ảnh thật), để đối chiếu kết quả
 với nhãn người — xem mục 6 và `TECHNICAL_DEBT.md` #19–25.
 
 ## 2. Đọc theo thứ tự này

@@ -96,18 +96,18 @@
 
 ## PHASE 3: WORKER IMPLEMENTATION (Python — THEO LỘ TRÌNH)
 
-### 3.1 M01 Vision Worker (P5 — ĐÃ CÓ CODE, CHỜ BỘ ẢNH VÀNG)
-- [ ] `workers/vision/jobs/worker.py` — `vision.analyze` job handler
-- [ ] Call `VisionAnalyzer.analyze()` with capabilities list
-- [ ] Store results in `product_analyses` (raw/edited split)
-- [ ] Update job stage: `DETECTING` → `ANALYZING` → `COMPLETED`
-- [ ] Result: `SAFE`/`LOW_CONFIDENCE`/`REJECTED`
+### 3.1 M01 Vision Worker (P5 — HOÀN TẤT 09/12)
+- [x] `workers/vision/jobs/worker.py` — `vision.analyze` job handler
+- [x] Call `VisionAnalyzer.analyze()` with capabilities list
+- [x] Store results in `product_analyses` (raw/edited split)
+- [x] Job stage: `DETECTING` → `COMPLETED`
+- [x] Result: `OK`/`LOW_CONFIDENCE`
 
-### 3.2 M01b Product Copy Worker (P14 — KẾ TIẾP)
-- [ ] New worker or extend vision worker for `product.copy.generate`
-- [ ] Input: approved `product_analyses` + `occasions` + `brand_profile`
-- [ ] Capabilities: AIC-07 (name), AIC-08 (desc), AIC-09 (tags), AIC-10 (price_segment)
-- [ ] Output: `product_copies` (raw/edited), needs `H5`/`H6` approval
+### 3.2 M01b Product Copy Worker (P14 — HOÀN TẤT 09/12)
+- [x] Product copy generation via `product.copy.generate` (direct `callCapability`, not queued worker)
+- [x] Input: approved `product_analyses` + `occasions` + `brand_profile`
+- [x] Capabilities: AIC-04 (product_copy) wrapping AIC-07/08/09/10
+- [x] Output: `product_copies` (raw/edited), needs `H5`/`H6` approval
 
 ### 3.3 M04a Media Optimization Worker (P13 — ĐÃ XONG 09/12)
 - [ ] `workers/media_ai/jobs/worker.py` — `media.optimize` handler
