@@ -6,9 +6,10 @@ không HTTP nội bộ, `organization_id` CHỈ lấy từ dòng job.
 
 Luồng một job (M04 mục 5, đặc tả 07 mục 6.1 cho bộ `stage`):
 
-    ANALYZING   phân tích ảnh GỐC  → dấu vân
-    ENHANCING   tăng cường          → ảnh mới
-    VERIFYING   phân tích lại + so  → phán quyết
+    ANALYZING        phân tích ảnh GỐC  → dấu vân
+    ENHANCING        tăng cường          → Master Image (một lần)
+    SMART_REFRAME    tạo 4 tỷ lệ        → 1:1, 4:5, 9:16, 16:9 từ Master
+    VERIFYING        phân tích lại + so  → phán quyết Guard
     GENERATING_OUTPUTS  ghi asset (chỉ khi KHÔNG bị từ chối)
 
 Hai điều dễ làm sai, đã chặn bằng cấu trúc:
@@ -43,7 +44,8 @@ from psycopg.rows import dict_row
 
 from media_ai.guard.compare import REJECTED
 from media_ai.guard.verifier import VisionIdentityVerifier
-from media_ai.providers.enhancement.passthrough import PassthroughEnhancer
+from media_ai.providers.enhancement.realesrgan import get_enhancer
+from media_ai.providers.smart_reframe import SmartReframe
 
 FEATURE = "media.optimize"
 PIPELINE_VERSION = "m04a-1"
@@ -171,9 +173,9 @@ def _ghi_asset_master(
                 "version": (asset_goc["version"] or 1) + 1,
                 "storage_key": storage_key,
                 "mime_type": asset_goc["mime_type"],
-                "provider": enhancer.name,
-                "model": enhancer.name,
-                "model_version": enhancer.model_version,
+                "provider": getattr(enhancer, "name", "unknown"),
+                "model": getattr(enhancer, "name", "unknown"),
+                "model_version": getattr(enhancer, "model_version", "unknown"),
                 "pipeline_version": PIPELINE_VERSION,
                 "parameters": json.dumps(ket_qua_tang_cuong["parameters"]),
                 "identity_score": khoi_guard["identity_score"],
@@ -188,11 +190,68 @@ def _ghi_asset_master(
     return asset_id
 
 
+def _ghi_ratio_assets(
+    conn: psycopg.Connection,
+    job: dict[str, Any],
+    asset_goc: dict[str, Any],
+    master_asset_id: str,
+    ratio_images: dict[str, bytes],
+    enhancer: Any,
+) -> dict[str, str]:
+    """Ghi 4 ảnh tỷ lệ (1:1, 4:5, 9:16, 16:9) từ Smart Reframe.
+    Trả về dict ratio_key -> storage_key để ghi vào job.output.ratios."""
+    ratio_storage_keys: dict[str, str] = {}
+    product_id = asset_goc["product_id"]
+    duoi = Path(asset_goc["storage_key"]).suffix.lstrip(".") or "jpg"
+
+    for ratio_key, img_bytes in ratio_images.items():
+        asset_id = str(uuid.uuid4())
+        storage_key = (
+            f"org/{job['organization_id']}/{product_id or 'unfiled'}/{asset_id}_{ratio_key}.{duoi}"
+        )
+        _write_bytes(storage_key, img_bytes)
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO assets
+                    (id, organization_id, product_id, parent_asset_id, kind, state, version,
+                     storage_key, mime_type, provider, model, model_version, pipeline_version,
+                     parameters, generated_flags, metadata, approval_state, created_by, created_at)
+                VALUES
+                    (%(id)s, %(organization_id)s, %(product_id)s, %(parent_asset_id)s,
+                     'RATIO', 'READY', 1,
+                     %(storage_key)s, %(mime_type)s, %(provider)s, %(model)s, %(model_version)s,
+                     %(pipeline_version)s, '{}', '{"generative_fill_used": false, "requires_reshoot_warning": false}',
+                     %(metadata)s, 'APPROVED', %(created_by)s, now())
+                """,
+                {
+                    "id": asset_id,
+                    "organization_id": job["organization_id"],
+                    "product_id": product_id,
+                    "parent_asset_id": master_asset_id,
+                    "storage_key": storage_key,
+                    "mime_type": asset_goc["mime_type"],
+                    "provider": "smart_reframe",
+                    "model": "smart_reframe",
+                    "model_version": "center-crop-v1",
+                    "pipeline_version": PIPELINE_VERSION,
+                    "metadata": json.dumps({"job_id": job["id"], "ratio": ratio_key, "from_master": master_asset_id}),
+                    "created_by": job["user_id"],
+                },
+            )
+        conn.commit()
+        ratio_storage_keys[ratio_key] = storage_key
+
+    return ratio_storage_keys
+
+
 def process_job(
     conn: psycopg.Connection,
     job: dict[str, Any],
     verifier: VisionIdentityVerifier,
     enhancer: Any,
+    reframer: SmartReframe,
 ) -> None:
     payload = job["payload"] if isinstance(job["payload"], dict) else json.loads(job["payload"])
     organization_id = job["organization_id"]  # luật 1 — chỉ từ dòng job
@@ -214,42 +273,55 @@ def process_job(
         _set_stage(conn, job["id"], "ENHANCING")
         ket_qua_tang_cuong = enhancer.enhance(anh_goc, config)
 
+        # Smart Reframe: tạo 4 tỷ lệ từ Master Image MỘT LẦN (M04 mục 17.3)
+        _set_stage(conn, job["id"], "SMART_REFRAME")
+        ratio_images = reframer.reframe(ket_qua_tang_cuong["image"])
+        ratio_bytes = {k: v.image for k, v in ratio_images.items()}
+
         _set_stage(conn, job["id"], "VERIFYING")
         khoi_guard = verifier.compare(dau_van, ket_qua_tang_cuong["image"], ngu_canh)
-        # Khối bốn điểm không có cột riêng trong lược đồ (đặc tả 07 không khai
-        # bảng nào cho M04a) — ghi vào `job_events` để phía TS đọc lại được
-        # kể cả khi KHÔNG có asset nào được tạo, tức là đúng lúc bị từ chối.
         _emit_event(conn, job["id"], "guard", khoi_guard)
 
         ket_qua = khoi_guard["result"]
         master_asset_id: str | None = None
+        ratio_storage_keys: dict[str, str] = {}
+
         if ket_qua != REJECTED:
             _set_stage(conn, job["id"], "GENERATING_OUTPUTS")
             master_asset_id = _ghi_asset_master(
                 conn, job, asset_goc, ket_qua_tang_cuong["image"], khoi_guard,
                 ket_qua_tang_cuong, enhancer,
             )
+            # Ghi 4 ảnh tỷ lệ
+            ratio_storage_keys = _ghi_ratio_assets(
+                conn, job, asset_goc, master_asset_id, ratio_bytes, enhancer,
+            )
         else:
-            # Giữ Original. Không ghi asset nào — không có đường nào để ảnh
-            # đã tăng cường lọt ra ngoài (M04 mục 5).
             _emit_event(
                 conn, job["id"], "log",
                 {"message": "Identity Guard từ chối — giữ ảnh gốc", "ly_do": khoi_guard["ly_do"]},
             )
 
+        # Cập nhật job output với ratios storage_keys
+        output_payload = {
+            "master_asset_id": master_asset_id,
+            "ratios": ratio_storage_keys,
+        }
+
         with conn.cursor() as cur:
             cur.execute(
                 """
                 UPDATE generation_jobs
-                   SET status = 'COMPLETED', result = %s, stage = NULL, completed_at = now()
+                   SET status = 'COMPLETED', result = %s, stage = NULL, completed_at = now(),
+                       output = %s
                  WHERE id = %s
                 """,
-                (ket_qua, job["id"]),
+                (ket_qua, json.dumps(output_payload), job["id"]),
             )
         conn.commit()
         _emit_event(
             conn, job["id"], "done",
-            {"status": "COMPLETED", "result": ket_qua, "master_asset_id": master_asset_id},
+            {"status": "COMPLETED", "result": ket_qua, "master_asset_id": master_asset_id, "ratios": ratio_storage_keys},
         )
 
     except Exception as exc:  # noqa: BLE001 — hỏng KỸ THUẬT, không phải phán quyết
@@ -273,7 +345,8 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
     # MỘT instance analyzer cho cả hai lượt phân tích của mọi job — `YC-N4`
     # được bảo đảm bằng cấu trúc, xem `guard/verifier.py`.
     verifier = VisionIdentityVerifier(analyzer=OpenAIStructuredProvider())
-    enhancer = PassthroughEnhancer()
+    enhancer = get_enhancer()  # Real-ESRGAN (fallback PIL nếu thiếu model)
+    reframer = SmartReframe()  # Smart Reframe 4 tỷ lệ
     channel = notify_channel_for(FEATURE)
 
     with psycopg.connect(database_url, autocommit=True) as conn:
@@ -283,7 +356,7 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
         while True:
             job = claim_next(conn, FEATURE)
             if job is not None:
-                process_job(conn, job, verifier, enhancer)
+                process_job(conn, job, verifier, enhancer, reframer)
                 continue
             for _notify in conn.notifies(timeout=poll_interval_seconds):
                 break
