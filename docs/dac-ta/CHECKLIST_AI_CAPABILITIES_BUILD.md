@@ -219,11 +219,11 @@
 |-----------|--------|----------|
 | Feature Catalog + UI (Phase 1) | Tuần này | — |
 | Batch Job API (Phase 2) | Tuần này | Phase 1 |
-| M01b Worker (Phase 3.2) | P14 | Bộ ảnh vàng nghiệm thu |
+| M01b Worker (Phase 3.2) | P14 | Bộ ảnh vàng đạt nghiệm thu 09/12 |
 | M04b Creative full (Phase 3.4) | P16 | M04a Master Image approved |
 | M04c Video (Phase 3.5) | P17 | D14, AI-2, P16 |
 | M07 Content (Phase 3.6) | P18 | D14, AI-2, P16 |
-| Go-live MVP (P13–P19) | Theo lộ trình | D13, D14, AI-2, Bộ ảnh vàng |
+| Go-live MVP (P13–P19) | Theo lộ trình | D13, D14, AI-2 |
 
 ---
 
@@ -231,7 +231,7 @@
 
 | # | Nợ | Điều kiện trả |
 |---|-----|--------------|
-| #24 | Bộ ảnh vàng chưa đủ 8 nhãn thật | P5 nghiệm thu tuyệt đối |
+| #24 | **ĐÃ TRẢ 09/12.** 8 ảnh gán nhãn đủ `labeled_by` + `verified_by` → bộ ảnh vàng đạt nghiệm thu | Đã trả |
 | #56 | `local_cv` counting accuracy thấp | Cải thiện SAM2+Florence2 hoặc bỏ |
 | #61 | Fallback chain thiếu → worker crash | AI-2 fallback chain |
 | #69 | Privacy level chưa truyền trong job call | Trước P21 (M09) |

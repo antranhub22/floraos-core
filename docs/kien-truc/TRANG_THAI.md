@@ -321,7 +321,7 @@ cắt khối `pricing` theo `L5`). `infra/pricing-rule-repository.ts`
 (chuyển `ARCHIVED` đòi thêm `L4`, không chỉ `L3`), `GET·PUT /pricing-rules`.
 36 test domain thuần + 10 test cách ly tenant mới (`tests/tenant/products-pricing.test.ts`).
 
-**P5** vẫn còn hai việc mở, không chặn P6: bộ ảnh vàng 8/100 ảnh đã gán nhãn, chỉ cần 8 ảnh đạt yêu cầu theo luật mới 09/12 (nợ #24), và ma trận chọn công nghệ chưa làm.
+**P5** vẫn còn một việc mở, không chặn P6: chưa gọi `OpenAIStructuredProvider` với API OpenAI thật (ảnh thật) để đối chiếu kết quả phân tích với nhãn người (nợ #24 đã giải quyết — bộ ảnh vàng 8/8 ảnh đạt nghiệm thu 09/12).
 
 **P4 nghiệm thu xong trước đó: anh Tony chạy bốn lệnh xác minh trên Terminal Mac thật
 ngay sau khi mã viết xong — xanh hoàn toàn, không phát sinh lỗi nào phải sửa (khác
@@ -361,8 +361,8 @@ log trong một giao dịch, không ghi thẳng. 43 test Python + 9 test TS mớ
 trong sandbox (sự cố `@rollup/rollup-linux-arm64-gnu` đã sửa, xem `TECHNICAL_DEBT.md`).
 Đã xác minh xanh trên Postgres thật (09/10): `prisma generate`/`db push`, `npm test`,
 `npm run test:tenant` 49/49, `python3 -m pytest` (workers/) 43/43. Còn lại: chưa gọi
-`OpenAIStructuredProvider` với API OpenAI thật (ảnh thật), và bộ ảnh vàng chưa đạt nghiệm
-thu — xem mục 6 và `TECHNICAL_DEBT.md` #19–25.
+`OpenAIStructuredProvider` với API OpenAI thật (ảnh thật), để đối chiếu kết quả
+với nhãn người — xem mục 6 và `TECHNICAL_DEBT.md` #19–25.
 
 ## 2. Đọc theo thứ tự này
 
