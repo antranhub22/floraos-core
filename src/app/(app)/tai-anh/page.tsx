@@ -116,6 +116,23 @@ function mapSalesFields(raw: Record<string, unknown>): ResultField[] {
 }
 
 // ============================================================
+// FIELD MAPPER — product copy → ResultField[] (M01b)
+// ============================================================
+
+function mapProductCopyToFields2(copy: Record<string, unknown>, analysisRaw: Record<string, unknown> | null): ResultField[] {
+  const identity = analysisRaw ? (analysisRaw.identity as Record<string, unknown> | undefined) ?? {} : {}
+  return [
+    { key: "name", label: "Tên sản phẩm", type: "text", editable: true, value: (copy.suggested_name as string) ?? (identity.category as string) ?? "—" },
+    { key: "desc", label: "Mô tả bó hoa", type: "textarea", editable: true, value: (copy.suggested_description as string) ?? "" },
+    { key: "tags", label: "Thẻ phân loại", type: "list", editable: true, value: (copy.suggested_tags as string[]) ?? [], confidence: null, placeholder: "Thêm thẻ..." },
+    { key: "tones", label: "Tone màu dạng nhãn bán hàng", type: "list", editable: true, value: (copy.suggested_tags as string[]) ?? (Array.isArray(identity.color_tone) ? identity.color_tone as string[] : []), confidence: null, placeholder: "Thêm tone..." },
+    { key: "style", label: "Phong cách thiết kế", type: "text", editable: true, value: (copy.suggested_occasions as string[]) ? (copy.suggested_occasions as string[]).join(", ") : ((identity.style as string) ?? "—") },
+    { key: "occasions", label: "Dịp phù hợp", type: "list", editable: true, value: (copy.suggested_occasions as string[]) ?? [], confidence: null, placeholder: "Thêm dịp..." },
+    { key: "price-segment", label: "Phân khúc giá gợi ý", type: "readonly", editable: false, value: (copy.suggested_price_segment as string) ?? "—" },
+  ]
+}
+
+// ============================================================
 // MOCK DATA — chỉ dùng khi chưa có phân tích thật
 // ============================================================
 
@@ -159,10 +176,16 @@ export default function TaiAnhPage() {
   const [saved2, setSaved2] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [loadingAssets, setLoadingAssets] = useState(false)
+  const [productCopyData, setProductCopyData] = useState<Record<string, unknown> | null>(null)
+  const [copyId, setCopyId] = useState<string | null>(null)
+  const [copyApprovalState, setCopyApprovalState] = useState<"PENDING" | "APPROVED" | "REJECTED">("PENDING")
+  const [copyLoading, setCopyLoading] = useState(false)
 
   const canAnalyze = session.can("H1")
   const canEdit = session.can("H2")
   const canApprove = session.can("H3")
+  const canH5 = session.can("H5")
+  const canH6 = session.can("H6")
 
   // --- Load assets ---
   const loadAssets = async () => {
@@ -240,6 +263,75 @@ export default function TaiAnhPage() {
     } catch { /* polling will continue */ }
   }
 
+  // --- M01b: Product Copy APIs ---
+  async function generateProductCopyApi(analysisId: string, productId?: string | null) {
+    setCopyLoading(true)
+    try {
+      const res = await apiFetch("/api/v1/product-copies/generate", {
+        method: "POST",
+        body: JSON.stringify({ analysisId, productId }),
+      })
+      if (!res.ok) {
+        let message = "Không tạo được dữ liệu bán hàng"
+        try {
+          const body = (await res.json()) as { error?: { message?: string } }
+          message = body.error?.message ?? message
+        } catch { /* ignore */ }
+        setErrorMsg(message)
+        return null
+      }
+      const data = (await res.json()) as { copyId: string; raw: unknown }
+      setCopyId(data.copyId)
+      setProductCopyData(data.raw as Record<string, unknown>)
+      return data
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Lỗi tạo dữ liệu bán hàng")
+      return null
+    } finally {
+      setCopyLoading(false)
+    }
+  }
+
+  async function fetchProductCopyApi(id: string) {
+    try {
+      const res = await apiFetchWithAuth(`/api/v1/product-copies/${id}`)
+      if (!res.ok || !res.data) return null
+      return res.data as Record<string, unknown>
+    } catch { return null }
+  }
+
+  async function updateProductCopyApi(id: string, edited: Record<string, unknown>) {
+    try {
+      const res = await apiFetchWithAuth(`/api/v1/product-copies/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ edited }),
+      })
+      if (!res.ok || !res.data) return null
+      return res.data as Record<string, unknown>
+    } catch { return null }
+  }
+
+  async function approveProductCopyApi(id: string) {
+    try {
+      const res = await apiFetchWithAuth(`/api/v1/product-copies/${id}/approve`, {
+        method: "POST",
+      })
+      if (!res.ok || !res.data) return null
+      return res.data as Record<string, unknown>
+    } catch { return null }
+  }
+
+  async function rejectProductCopyApi(id: string, reason?: string) {
+    try {
+      const res = await apiFetchWithAuth(`/api/v1/product-copies/${id}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason ?? null }),
+      })
+      if (!res.ok || !res.data) return null
+      return res.data as Record<string, unknown>
+    } catch { return null }
+  }
+
   // --- Phase helpers ---
   function goConfirm() {
     if (selectedAssetIds.length === 0) return
@@ -313,7 +405,18 @@ export default function TaiAnhPage() {
   }
 
   function goResult2() {
-    setPhase("result2")
+    if (!analysisId) return
+    if (!canH5) {
+      setErrorMsg("Không có năng lực H5 (tạo dữ liệu bán hàng)")
+      return
+    }
+    setCopyLoading(true)
+    generateProductCopyApi(analysisId, null).then((result) => {
+      setCopyLoading(false)
+      if (result) {
+        setPhase("result2")
+      }
+    })
   }
 
   function goSaved() {
@@ -325,7 +428,7 @@ export default function TaiAnhPage() {
     setEditedFields((prev) => ({ ...(prev ?? {}), [key]: value }))
   }
   function handleFieldChange2(key: string, value: string | number | string[]) {
-    // M01b fields (mock) — no backend yet
+    setEditedFields((prev) => ({ ...(prev ?? {}), [key]: value }))
   }
   function handleFieldAdd1(key: string, item: { id: string; value: string }) {
     setEditedFields((prev) => {
@@ -334,7 +437,10 @@ export default function TaiAnhPage() {
     })
   }
   function handleFieldAdd2(key: string, item: { id: string; value: string }) {
-    // M01b fields (mock)
+    setEditedFields((prev) => {
+      const current = (prev?.[key] as string[]) ?? []
+      return { ...(prev ?? {}), [key]: [...current, item.value] }
+    })
   }
   function handleFieldRemove1(key: string, itemId: string) {
     setEditedFields((prev) => {
@@ -343,9 +449,13 @@ export default function TaiAnhPage() {
     })
   }
   function handleFieldRemove2(key: string, itemId: string) {
-    // M01b fields (mock)
+    setEditedFields((prev) => {
+      const current = (prev?.[key] as string[]) ?? []
+      return { ...(prev ?? {}), [key]: current.filter((v) => v !== itemId) }
+    })
   }
 
+  // --- Action handlers ---
   // --- Action handlers ---
   async function handleSaveDraft1() {
     if (!analysisId || !canEdit) {
@@ -431,19 +541,54 @@ export default function TaiAnhPage() {
     }
   }
 
-  function handleSaveDraft2() {
-    setSaved2(true)
-    setTimeout(() => setSaved2(false), 2000)
+  async function handleSaveDraft2() {
+    if (!copyId) return
+    try {
+      const res = await updateProductCopyApi(copyId, editedFields ?? {})
+      if (res) {
+        setSaved2(true)
+        setTimeout(() => setSaved2(false), 2000)
+        setProductCopyData(res as Record<string, unknown>)
+      } else {
+        setErrorMsg("Không lưu được nháp")
+      }
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Lỗi lưu nháp")
+    }
   }
-  function handleReject2() {
-    setJudgment2("blocked")
+  async function handleReject2() {
+    if (!copyId) return
+    try {
+      const res = await rejectProductCopyApi(copyId)
+      if (res) {
+        setJudgment2("blocked")
+        setCopyApprovalState("REJECTED")
+      } else {
+        setErrorMsg("Không từ chối được")
+      }
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Lỗi từ chối")
+    }
   }
   async function handleApprove2() {
-    if (judgment2 === "safe") {
-      setSaved2(true)
-      setJudgment2("safe")
-      setSaved2(false)
-      setTimeout(() => goSaved(), 800)
+    if (!copyId) return
+    if (!canH6) {
+      setErrorMsg("Không có năng lực H6 (duyệt dữ liệu bán hàng)")
+      return
+    }
+    try {
+      const res = await approveProductCopyApi(copyId)
+      if (res) {
+        setCopyApprovalState("APPROVED")
+        setSaved2(true)
+        setJudgment2("safe")
+        setSaved2(false)
+        setTimeout(() => goSaved(), 800)
+      } else {
+        setErrorMsg("Không duyệt được")
+      }
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Lỗi duyệt")
     }
   }
 
