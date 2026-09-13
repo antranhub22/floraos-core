@@ -30,54 +30,47 @@
 - [x] `GET /integration/products` extended filters
 
 ### 0.4 Dashboard Proxy (P15+ — ĐÃ XONG 09/12)
-- [x] `/api/v1/proxy/[...path]` with whitelist
+- [x] `/api/v1/proxy/[...path]` with whitelist (`src/modules/proxy/`)
 - [x] Forward `X-FloraOS-SSO` + `Authorization: Bearer`
 - [x] Creative Studio calling SocialFlow M04b (AIC-11)
 
 ---
 
-## PHASE 1: FEATURE CATALOG & UI (FE — TUẦN NÀY)
+## PHASE 1: FEATURE CATALOG & UI (FE — ĐÃ XÓNG)
 
 ### 1.1 Feature Catalog Library
-- [ ] `src/lib/feature-catalog.ts` — 34 SubFeature entries mapping AIC→RBAC→Module
-- [ ] `src/lib/credit-estimator.ts` — credit estimates per feature (D14 placeholder)
-- [ ] Types: `SubFeature`, `ModuleFeatureGroup`, `SelectionState`
-- [ ] Helpers: `getFeaturesByModule`, `getRunnableFeatures`, `estimateCredits`
-- [ ] Unit tests: `feature-catalog.test.ts`, `credit-estimator.test.ts`
+- [x] `src/lib/feature-catalog.ts` (990 lines) — 34 SubFeature entries mapping AIC→RBAC→Module, types `SubFeature`/`ModuleFeatureGroup`/`SelectionState`, helpers `getFeaturesByModule`/`getRunnableFeatures`/`estimateCredits`/`getJobFeatureForModule`/`checkFeatureDependencies`
+- [x] `src/lib/credit-estimator.ts` (339 lines) — credit estimates per feature (D14 placeholder: M01=10, M01b=5-8, M04a=15, M04b=1-5, M04c=15-40, M07=1-4)
+- [x] Types: `SubFeature`, `ModuleFeatureGroup`, `SelectionState`
+- [x] Unit tests: **chưa có** (`feature-catalog.test.ts`, `credit-estimator.test.ts`) — cần tạo
 
 ### 1.2 FeaturePicker Component
-- [ ] `src/components/dashboard/FeaturePicker.tsx` — main orchestrator
-- [ ] `ModuleSection` — collapsible per module (M01, M01b, M04a, M04b, M04c, M07, M09, M06, M05)
-- [ ] `FeatureCard` — checkbox + label + description + badges (AIC, privacy, credit, approval)
-- [ ] Dependency checks: `requiresApprovedInput`, `dependsOnMasterImage`, `requiresConsent`
-- [ ] RBAC gating: disable if `!capabilities.includes(rbacRun)`
-- [ ] Credit estimation summary bar
-- [ ] "Create Jobs" button → calls batch API
+- [x] `src/components/dashboard/FeaturePicker.tsx` (682 lines) — main orchestrator
+- [x] `ModuleSection` — collapsible per module (M01, M01b, M04a, M04b, M04c, M07, M09, M06, M05)
+- [x] `FeatureCard` — checkbox + label + description + badges (AIC, privacy, credit, approval)
+- [x] Dependency checks: `requiresApprovedInput`, `dependsOnMasterImage`, `requiresConsent`
+- [x] RBAC gating: disable if `!capabilities.includes(rbacRun)`
+- [x] Credit estimation summary bar
+- [x] "Create Jobs" button → calls `POST /api/v1/jobs/batch`
 
 ### 1.3 Product Feature Dashboard Page
-- [ ] `src/app/(app)/san-pham/[id]/tinh-nang/page.tsx`
-- [ ] Load product + check Master Image approval status
-- [ ] Integrate FeaturePicker
-- [ ] Show job progress (SSE) after submission
-- [ ] Link to approval queues per module
+- [x] `src/app/(app)/san-pham/[id]/tinh-nang/page.tsx` — Load product + check Master Image approval status, FeaturePicker, SSE job progress, approval queue links
+- [x] Sub-page: `src/app/(app)/san-pham/[id]/tinh-nang/product-copy/` — M01b copy management
 
 ### 1.4 Navigation & Mock Data Updates
-- [ ] Update `src/lib/mock-data.ts` — add `ai-features` feature, update statuses
-- [ ] Add route to `desktop-nav.tsx` or `experience-grid.tsx`
-- [ ] Update `FEATURE_ICONS` with new icons
+- [x] `src/lib/mock-data.ts` — `phân-tích-sản-phẩm` + `creative-studio` = `hoat_dong`, `waiting: false`
+- [x] Feature grid renders 10 modules with correct routes
+- [ ] `src/lib/mock-data.ts` — add `ai-features` feature, update all statuses (pending UI design)
+- [ ] Add route to `desktop-nav.tsx` or `experience-grid.tsx` for `ai-features`
 
 ---
 
-## PHASE 2: BATCH JOB API (BE — TUẦN NÀY)
+## PHASE 2: BATCH JOB API (BE — ĐÃ XÓNG)
 
 ### 2.1 Batch Job Creation Endpoint
-- [ ] `POST /api/v1/jobs/batch` — accept `{ productId, masterImageId, selectedFeatures[] }`
-- [ ] Validate RBAC for each feature (run capability)
-- [ ] Group features by module → create 1 job per module
-- [ ] Map module → feature string for usage tracking
-- [ ] Return `{ jobs: [{ jobId, feature, module }] }`
-- [ ] Idempotency-Key required
-- [ ] Integration tests: `tests/tenant/batch-jobs.test.ts`
+- [x] `POST /api/v1/jobs/batch` (`src/app/api/v1/jobs/batch/route.ts`) — accept `{ productId, feature, capabilities[], module }`, validate RBAC, group by module, return `{ jobs: [{ jobId, feature, module }] }`, Idempotency-Key required
+- [x] Module → feature mapping via `MODULE_TO_JOB_FEATURE` in feature-catalog.ts
+- [ ] Integration tests: `tests/tenant/batch-jobs.test.ts` — **chưa có**
 
 ### 2.2 Job Feature Payload Mapping
 | Module | Job Feature | Capabilities in Payload |
@@ -110,10 +103,11 @@
 - [x] Output: `product_copies` (raw/edited), needs `H5`/`H6` approval
 
 ### 3.3 M04a Media Optimization Worker (P13 — ĐÃ XONG 09/12)
-- [ ] `workers/media_ai/jobs/worker.py` — `media.optimize` handler
-- [ ] Real-ESRGAN enhancement + Identity Guard + Smart Reframe 4 ratios
-- [ ] Output: 1 MASTER (PENDING) + 4 RATIO (APPROVED) assets
-- [ ] Job stages: `ANALYZING` → `ENHANCING` → `SMART_REFRAME` → `VERIFYING` → `GENERATING_OUTPUTS`
+- [x] `workers/media_ai/jobs/worker.py` (370 lines) — `media.optimize` handler
+- [x] Real-ESRGAN enhancement + Identity Guard + Smart Reframe 4 ratios (1:1, 4:5, 9:16, 16:9)
+- [x] Output: 1 MASTER (`PENDING`) + 4 RATIO (`APPROVED`) assets
+- [x] Job stages: `ANALYZING` → `ENHANCING` → `SMART_REFRAME` → `VERIFYING` → `GENERATING_OUTPUTS`
+- [ ] Unit tests: `workers/tests/media_ai/` — existed, need verify current state
 
 ### 3.4 M04b Creative Worker (P16 — ĐỢT 1 XONG, ĐỢT 2 TIẾP)
 - [ ] `SocialFlow/backend/m04b/` — FastAPI handlers
@@ -166,9 +160,11 @@
 ## PHASE 4: APPROVAL WORKFLOWS (FE + BE)
 
 ### 4.1 M01b Approval (P14)
-- [ ] `product_copies` table (raw/edited, analysis_id FK)
-- [ ] `H5` run / `H6` approve capabilities
-- [ ] Approve → write to Product Master + `audit_logs` (1 TX)
+- [x] `product_copies` table (raw/edited, analysis_id FK) — schema in `prisma/schema.prisma`
+- [x] `H5` run / `H6` approve capabilities — `capability-catalog.ts`
+- [x] Approve → write to Product Master + `audit_logs` (1 TX) — `approveProductCopy` use-case, `runInTransaction`, `recordAuditLog`
+- [x] Reject → mark `REJECTED` + audit log — `rejectProductCopy` use-case
+- [x] Test: `tests/tenant/product-copies.test.ts` (14 ca)
 
 ### 4.2 M04b Approval (P16)
 - [ ] Creative variants → assets `PENDING` → `P1`/`P2` approve
@@ -215,15 +211,15 @@
 
 ## MILESTONES
 
-| Milestone | Target | Blockers |
-|-----------|--------|----------|
-| Feature Catalog + UI (Phase 1) | Tuần này | — |
-| Batch Job API (Phase 2) | Tuần này | Phase 1 |
-| M01b Worker (Phase 3.2) | P14 | Bộ ảnh vàng đạt nghiệm thu 09/12 |
-| M04b Creative full (Phase 3.4) | P16 | M04a Master Image approved |
-| M04c Video (Phase 3.5) | P17 | D14, AI-2, P16 |
-| M07 Content (Phase 3.6) | P18 | D14, AI-2, P16 |
-| Go-live MVP (P13–P19) | Theo lộ trình | D13, D14, AI-2 |
+| Milestone | Target | Status | Blockers |
+|-----------|--------|--------|----------|
+| Feature Catalog + UI (Phase 1) | Tuần này | **HOÀN TẤT** ✅ | — |
+| Batch Job API (Phase 2) | Tuần này | **HOÀN TẤT** ✅ | Phase 1 |
+| ~~M01b Worker (Phase 3.2)~~ | ~~P14~~ | **HOÀN TẤT** ✅ 09/12 | ~~Bộ ảnh vàng~~ |
+| M04b Creative full (Phase 3.4) | P16 | Chờ | M04a Master Image approved |
+| M04c Video (Phase 3.5) | P17 | Chờ | D14, AI-2, P16 |
+| M07 Content (Phase 3.6) | P18 | Chờ | D14, AI-2, P16 |
+| Go-live MVP (P13–P19) | Theo lộ trình | Chờ | D13, D14, AI-2 |
 
 ---
 
@@ -231,7 +227,8 @@
 
 | # | Nợ | Điều kiện trả |
 |---|-----|--------------|
-| #24 | **ĐÃ TRẢ 09/12.** 8 ảnh gán nhãn đủ `labeled_by` + `verified_by` → bộ ảnh vàng đạt nghiệm thu | Đã trả |
+| #24 | **ĐÃ TRẢ 09/12 + 09/14.** 8 ảnh gán nhãn + OpenAI Structured API thật trên 4/8 ảnh → `golden/ai-accuracy-report-openai.csv` | Đã trả |
+| #24a | OpenAI API thật trên 4/8 ảnh vàng còn lại (g003–g007, g009) | Trả khi đủ 8 ảnh → chốt provider |
 | #56 | `local_cv` counting accuracy thấp | Cải thiện SAM2+Florence2 hoặc bỏ |
 | #61 | Fallback chain thiếu → worker crash | AI-2 fallback chain |
 | #69 | Privacy level chưa truyền trong job call | Trước P21 (M09) |
