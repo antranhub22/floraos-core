@@ -1,0 +1,235 @@
+# Checklist tích hợp UI ↔ Backend — 10 chức năng UI/UX
+
+**Mục đích:** Nối từng trang UI trong `docs/FloraOS-UIUX-10-chuc-nang.md` với API thật ở `src/app/api/v1/`.
+
+**Nguyên tắc:**
+- Không mock trong UI khi backend đã có — gọi API thật, xử lý 401/403/409/502
+- Mỗi trang phải đọc `organization_id` từ session, không nhận từ body/query
+- Mỗi trang phải kiểm năng lực (`useSession().can(code)`) trước khi hiện nút hành động
+- Job chạy server → UI polling SSE `GET /jobs/:id/events` hoặc `GET /api/v1/jobs/:id`
+
+---
+
+## Tổng quan — 10 trang và trạng thái tích hợp
+
+| # | Trang | Module | Backend đã có? | Trạng thái |
+|---|-------|--------|---------------|------------|
+| 1 | Phân tích sản phẩm AI | M01 | ✅ vision/analyses | **Cần tích hợp** (mock) |
+| 2 | AI Creative Studio | M04a/M04b | ✅ media/optimizations + proxy | **Cần tích hợp** (mock) |
+| 3 | AI Video Studio | M04c | ❌ (P17 chưa xây) | Chờ backend |
+| 4 | AI Content Engine | M07 | ❌ (P18 chưa xây) | Chờ backend |
+| 5 | Social Publishing | M07 | ❌ (P18 chưa xây) | Chờ backend |
+| 6 | Catalog & Website | M06 | ✅ products + catalog-links | **Cần tích hợp** (mock) |
+| 7 | CRM & Khách hàng | M09 | ❌ (P21 chưa xây) | Chờ backend |
+| 8 | Đơn hàng & Vận hành | M10 | ❌ (P22 chưa xây) | Chờ backend |
+| 9 | AI Chat Assistant | M08 | ❌ (P23 chưa xây) | Chờ backend |
+| 10 | Analytics & Learning | M11 | ✅ usage + ai-governance | **Cần tích hợp** (hardcoded) |
+
+**4 trang cần tích hợp ngay** (có backend): #1 tai-anh, #2 creative-studio, #6 catalog, #10 so-lieu
+
+---
+
+## #1 — Phân tích sản phẩm AI (`src/app/(app)/tai-anh/page.tsx`)
+
+### Backend APIs cần nối
+
+| Endpoint | Method | Capability | Mục đích | Trạng thái |
+|----------|--------|-----------|----------|-----------|
+| `/api/v1/products` | GET | L1 | Lấy danh sách sản phẩm để chọn | ✅ Đã có |
+| `/api/v1/assets` | GET | G1 | Lấy ảnh để phân tích | ✅ Đã có |
+| `/api/v1/vision/analyses` | POST | H1 | Tạo job phân tích (bắt buộc `Idempotency-Key`) | ✅ Đã có |
+| `/api/v1/vision/analyses/:id` | GET | H1 | Lấy trạng thái kết quả phân tích | ✅ Đã có |
+| `/api/v1/vision/analyses/:id` | PATCH | H2 | Lưu nháp (ghi vào `edited`) | ✅ Đã có |
+| `/api/v1/vision/analyses/:id/approve` | POST | H3 | Duyệt (ghi Product Master + audit) | ✅ Đã có |
+| `/api/v1/vision/analyses/:id/reject` | POST | H3 | Từ chối | ✅ Đã có |
+| `/api/v1/jobs/:id/events` | GET (SSE) | G4 | Theo dõi tiến trình job thật | ✅ Đã có |
+
+### Checklist từng bước
+
+- [ ] **Bước 1:** Thêm `useSession()` vào tai-anh page để lấy `organization_id` và `capabilities`
+- [ ] **Bước 2:** Thay `MOCK_PHOTOS` bằng listing thật: `GET /api/v1/assets` (lọc theo tổ chức)
+- [ ] **Bước 3:** Thêm upload flow → `POST /api/v1/assets` (asset con) → lấy `asset_id`
+- [ ] **Bước 4:** Thay `simulateJob()` bằng `POST /api/v1/vision/analyses` với `{asset_ids, product_id}` + `Idempotency-Key` header
+- [ ] **Bước 5:** Thay polling `simulateJob()` bằng polling `GET /api/v1/vision/analyses/:id` (kiểm `status` + `stage`) hoặc SSE `/api/v1/jobs/:id/events`
+- [ ] **Bước 6:** Khi job `COMPLETED`, lấy kết quả từ `GET /api/v1/vision/analyses/:id` → map sang `ResultField[]` (phân tích nhận diện → Thẻ 1)
+- [ ] **Bước 7:** Kết nối `handleSaveDraft1` → `PATCH /api/v1/vision/analyses/:id` với `{edited: {...}}`
+- [ ] **Bước 8:** Kết nối `handleApprove1` → `POST /api/v1/vision/analyses/:id/approve` (xử lý 409 đã duyệt, 403 thiếu năng lực)
+- [ ] **Bước 9:** Kết nối `handleReject1` → `POST /api/v1/vision/analyses/:id/reject`
+- [ ] **Bước 10:** Gợi ý M01b → kiểm Product Master đã có bản ghi duyệt → chuyển sang kết quả bán hàng (M01b chưa xây — giữ mock có note)
+- [ ] **Bước 11:** Thêm handling cho: 401 (redirect login), 403 (hiện "không có quyền"), 409 (đã duyệt), 502 (core vắng)
+- [ ] **Bước 12:** Xóa comment "MOCK DATA — thay bằng API thật" khi hoàn tất
+
+### Lưu ý đặc biệt
+- `POST /vision/analyses` bắt buộc `Idempotency-Key` header → dùng `crypto.randomUUID()`
+- Năng lực `H1` (tạo), `H2` (sửa), `H3` (duyệt/từ chối) — kiểm `useSession().can()` ở UI
+- Thẻ kết quả 2 (M01b) hiện tại chưa có backend — giữ mock, comment rõ: "M01b backend đang xây"
+
+---
+
+## #2 — AI Creative Studio (`src/app/(app)/creative-studio/page.tsx`)
+
+### Backend APIs cần nối
+
+| Endpoint | Method | Capability | Mục đích | Trạng thái |
+|----------|--------|-----------|----------|-----------|
+| `/api/v1/products` | GET | L1 | Lấy sản phẩm để chọn ảnh gốc | ✅ Đã có |
+| `/api/v1/assets` | GET | G1 | Lấy ảnh gốc | ✅ Đã có |
+| `/api/v1/media/optimizations` | POST | I1 | Tạo job tối ưu ảnh (bắt buộc `Idempotency-Key`) | ✅ Đã có |
+| `/api/v1/media/optimizations/:id` | GET | I1 | Lấy trạng thái | ✅ Đã có |
+| `/api/v1/media/optimizations/:id/approve` | POST | I2 | Duyệt Master Image (trần cứng `dieu_hanh`) | ✅ Đã có |
+| `/api/v1/media/optimizations/:id/download` | GET | I3 | Tải ảnh đã tối ưu | ✅ Đã có |
+| `/api/v1/proxy/api/m04b/background-removal` | POST | (proxy) | Xoá nền qua SocialFlow (AIC-11) | ✅ Đã có |
+| `/api/v1/product-copies` | GET | H6 | Lấy dữ liệu bán hàng đã duyệt | ✅ Đã có |
+
+### Checklist từng bước
+
+- [ ] **Bước 1:** Thêm `useSession()` để kiểm năng lực `I1` (tối ưu), `I2` (duyệt), `I3` (tải)
+- [ ] **Bước 2:** Thay `MOCK_PHOTOS` Area A bằng listing thật: `GET /api/v1/assets` (ảnh ORIGINAL đã upload)
+- [ ] **Bước 3:** Kết nối "Tối ưu ảnh" → `POST /api/v1/media/optimizations` với `{asset_id}` + `Idempotency-Key`
+- [ ] **Bước 4:** Thay simulateJobA() bằng polling `GET /api/v1/media/optimizations/:id` hoặc SSE `/api/v1/jobs/:id/events`
+- [ ] **Bước 5:** Khi COMPLETED, kết nối `handleApproveA` → `POST /api/v1/media/optimizations/:id/approve` (xử lý Identity Guard REJECTED → ẩn nút Duyệt, hiện Chạy lại)
+- [ ] **Bước 6:** Kết nối download Master Image → `GET /api/v1/media/optimizations/:id/download` (trả signed URL)
+- [ ] **Bước 7:** Area B — biến thể marketing: gọi `POST /api/v1/proxy/api/m04b/background-removal` (creative-studio.tsx đã gọi proxy nhưng cần mapping kết quả)
+- [ ] **Bước 8:** Thay mock VARIANTS bằng kết quả thật từ proxy + `POST /api/v1/assets` cho mỗi biến thể
+- [ ] **Bước 9:** Kết nối duyệt biến thể → `POST /api/v1/product-copies/:id/approve` hoặc `POST /api/v1/vision/analyses/:id/approve`
+- [ ] **Bước 10:** Thêm handling: 401/403/409/502, Identity Guard REJECTED flow (ẩn Duyệt, hiện Chạy lại/Bỏ qua)
+- [ ] **Bước 11:** Xóa comment "MOCK DATA" khi hoàn tất
+
+### Lưu ý đặc biệt
+- `I2` có trần cứng `dieu_hanh` — UI không hiện nút Duyệt cho vai không đủ quyền
+- Identity Guard REJECTED: thẻ ẩn nút Duyệt, chỉ còn Chạy lại hoặc Bỏ qua (theo đặc tả UIUX 0.3)
+- Biến thể không gọi lại enhancer — UI phải hiểu: khi đã có Master Image, Area A thu gọn
+
+---
+
+## #6 — Catalog & Website (`src/app/(app)/catalog/page.tsx`)
+
+### Backend APIs cần nối
+
+| Endpoint | Method | Capability | Mục đích | Trạng thái |
+|----------|--------|-----------|----------|-----------|
+| `/api/v1/products` | GET | L1 | Lấy sản phẩm đã duyệt (thay MOCK_PRODUCTS) | ✅ Đã có |
+| `/api/v1/catalog-links` | GET | J1 | Lấy danh sách catalog | ✅ Đã có |
+| `/api/v1/catalog-links` | POST | J1 | Tạo catalog link | ✅ Đã có |
+| `/api/v1/catalog-links/:slug` | GET | — | Xem trước catalog (public) | ✅ Đã có |
+| `/api/v1/catalog-links/:slug` | PATCH | J1 | Cập nhật catalog | ✅ Đã có |
+| `/api/v1/catalog-links/:slug/revoke` | POST | J2 | Thu hồi catalog | ✅ Đã có |
+| `/api/v1/product-copies` | GET | H6 | Dữ liệu bán hàng | ✅ Đã có |
+| `/api/v1/proxy/api/v1/catalog-links` | GET | (proxy) | LocalBudd đọc catalog | ✅ Đã có |
+
+### Checklist từng bước
+
+- [ ] **Bước 1:** Thay `MOCK_PRODUCTS` bằng `GET /api/v1/products?limit=50` (lọc `status=ACTIVE` qua route, hoặc filter client)
+- [ ] **Bước 2:** Thêm tab Catalog: `GET /api/v1/catalog-links?include_revoked=true` → hiện danh sách catalog link
+- [ ] **Bước 3:** "Duyệt xuất bản" → `POST /api/v1/catalog-links` với `{slug, name, description, filters}`
+- [ ] **Bước 4:** "Xem trước catalog" → `GET /api/v1/catalog-links/:slug` hoặc proxy `/api/v1/proxy/api/v1/catalog-links/:slug?client=LOCALBUDD`
+- [ ] **Bước 5:** QR code: gọi `GET /api/v1/catalog-links/:slug` lấy URL, hiện QR (UI component QRCode)
+- [ ] **Bước 6:** Tab Landing: danh sách sản phẩm lấy từ `GET /api/v1/products` (đã thay ở Bước 1)
+- [ ] **Bước 7:** "Dựng trang" → placeholder (M05 builder đã chạy ở LocalBudd, gọi qua proxy)
+- [ ] **Bước 8:** Revoke: `POST /api/v1/catalog-links/:slug/revoke`
+- [ ] **Bước 9:** Thêm handling: 401/403/409/502, J1/J2 capability check
+- [ ] **Bước 10:** Lọc danh sách sản phẩm theo `status=ACTIVE` (sản phẩm chưa duyệt không xuất hiện — theo UIUX 6)
+
+### Lưu ý đặc biệt
+- `GET /catalog-links/:slug` public (không auth) — UI public page `/c/[slug]` khác với dashboard page
+- Catalog không có "Thẻ kết quả AI" — là view tổng hợp, hành động chính là chọn/gỡ và duyệt xuất bản
+- Product Master phải có `status=APPROVED` mới xuất hiện trong danh sách chọn
+
+---
+
+## #10 — Analytics & Learning (`src/app/(app)/so-lieu/page.tsx`)
+
+### Backend APIs cần nối
+
+| Endpoint | Method | Capability | Mục đích | Trạng thái |
+|----------|--------|-----------|----------|-----------|
+| `/api/v1/usage/summary` | GET | G8 | Metrics: reach, engagement, credit | ✅ Đã có |
+| `/api/v1/usage` | GET | G8 | Lịch sử usage chi tiết | ✅ Đã có |
+| `/api/v1/audit-logs` | GET | G9 | Nhật ký kiểm toán (cho learning) | ✅ Đã có |
+| `/api/v1/ai-requests` | GET | U3 | Lời gọi AI (cho diễn giải) | ✅ Đã có |
+| `/api/v1/ai-capabilities` | GET | U1 | Danh mục năng lực + mô hình | ✅ Đã có |
+| `/api/v1/ai-policy` | GET | U1 | Chính sách AI tổ chức | ✅ Đã có |
+| `/api/v1/ai-policy` | PUT | U2 | Cập nhật chính sách AI | ✅ Đã có |
+| `/api/v1/jobs` | GET | G4 | Lịch sử job (cho số liệu) | ✅ Đã có |
+
+### Checklist từng bước
+
+- [ ] **Bước 1:** Thay METRICS cứng bằng `GET /api/v1/usage/summary` → map `by_feature` sang 7 chỉ số (reach, engagement, inbox, conversion, top post, best product, ROI)
+- [ ] **Bước 2:** Thêm filter: khoảng thời gian, chiến dịch, sản phẩm (hiện tại chỉ buttons — cần gắn vào query params cho usage/audit APIs)
+- [ ] **Bước 3:** "Diễn giải chỉ số bất thường" → `GET /api/v1/ai-requests` (lọc theo feature/time) → AI phân tích xu hướng từ dữ liệu thật
+- [ ] **Bước 4:** Thay LEARNING_FIELDS cứng bằng `GET /api/v1/audit-logs` (lọc theo `learning.profile` action) → đọc tham số cũ/đề xuất
+- [ ] **Bước 5:** "Duyệt áp dụng" → `PUT /api/v1/ai-policy` với capability_code tương ứng
+- [ ] **Bước 6:** Lấy danh sách năng lực từ `GET /api/v1/ai-capabilities` để hiện capability picker
+- [ ] **Bước 7:** Thêm "Vòng học phong cách" — kiểm điều kiện: ~20 bài có số liệu (count từ `GET /api/v1/usage` hoặc `GET /api/v1/audit-logs`)
+- [ ] **Bước 8:** Thêm handling: 401/403/409/502, G8/G9/U1/U2/U3 capability check
+- [ ] **Bước 9:** Xóa hardcoded METRICS và LEARNING_FIELDS khi hoàn tất
+
+### Lưu ý đặc biệt
+- Không có endpoint ROI riêng — tính từ `usage` + `orders` ở backend, UI chỉ hiển thị
+- Vòng học ẩn khi < 20 bài — kiểm ở UI bằng count từ API
+- "Diễn giải" là tham khảo — không ghi đè dữ liệu (UIUX 10, bước ④)
+
+---
+
+## #5 — Social Publishing (`src/app/(app)/lich-dang/page.tsx`)
+
+### Backend APIs cần nối (khi M07 có)
+
+| Endpoint | Method | Capability | Mục đích | Trạng thái |
+|----------|--------|-----------|----------|-----------|
+| `/api/v1/content/posts` | GET | O5 | Thư viện nội dung đã duyệt | ❌ Chưa có |
+| `/api/v1/content/posts` | POST | O5 | Tạo lịch đăng | ❌ Chưa có |
+| `/api/v1/content/posts/:id/publish` | POST | O6 | Xác nhận lịch đăng | ❌ Chưa có |
+| `/api/v1/content/schedule` | GET | O6 | Lịch đăng | ❌ Chưa có |
+
+**Chờ P18 (M07 nội dung) xây dựng.** UI page đã có nhưng không có backend để nối.
+
+---
+
+## #3 — AI Video Studio (`src/app/(app)/video/page.tsx`)
+
+**Chờ P17 (M04c) xây dựng.** Không có backend API nào cho video.
+
+---
+
+## #4 — AI Content Engine (`src/app/(app)/noi-dung/page.tsx`)
+
+**Chờ P18 (M07) xây dựng.** Không có backend API nào cho content generation.
+
+---
+
+## #7 — CRM & Khách hàng (`src/app/(app)/khach-hang/page.tsx`)
+
+**Chờ P21 (M09) xây dựng.** Không có backend API nào cho CRM.
+
+---
+
+## #8 — Đơn hàng & Vận hành (`src/app/(app)/don-hang/page.tsx`)
+
+**Chờ P22 (M10) xây dựng.** Không có backend API nào cho orders.
+
+---
+
+## #9 — AI Chat Assistant (`src/app/(app)/hoi-thoai/page.tsx`)
+
+**Chờ P23 (M08) xây dựng.** Không có backend API nào cho chat.
+
+---
+
+## Thứ tự triển khai ưu tiên
+
+1. **tai-anh (#1)** — entry point chính, nhiều user nhất, gateway cho M01b
+2. **creative-studio (#2)** — nhiều user nhất sau #1, có proxy sẵn
+3. **catalog (#6)** — đơn giản nhất, chỉ CRUD
+4. **so-lieu (#10)** — toàn dữ liệu cứng cần thay
+
+---
+
+## Các trang đã tích hợp sẵn (không cần làm)
+
+| Trang | File | Backend đã nối |
+|-------|------|----------------|
+| Sản phẩm | `src/app/(app)/san-pham/page.tsx` | GET /api/v1/products ✅ |
+| Hàng chờ duyệt | `src/app/(app)/duyet/page.tsx` | GET/POST vision/analyses, media/optimizations, product-copies ✅ |
+| Admin Dashboard | `src/components/dashboard/admin-dashboard.tsx` | GET /jobs, /products, /usage/summary ✅ |
+| Creative Studio (proxy) | `src/components/creative/creative-studio.tsx` | POST /proxy/api/m04b/background-removal ✅ |

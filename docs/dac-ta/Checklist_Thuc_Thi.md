@@ -269,6 +269,42 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 - [x] Bộ test cách ly phủ ba đường ghi: token của tổ chức khác ghi vào trả không tìm thấy (`YC-T4` `YC-T10`)
 - [ ] `LocalBudd` bỏ `product_assets`; `products` giữ nghĩa tham chiếu
 
+## P15+ — Dashboard proxy sang engine ngoài · MVP
+
+*09/12 — làm dashboard core chạy tính năng thuộc LocalBudd/SocialFlow mà KHÔNG
+chuyển sang UI của app đó. Ba app ba cổng (core 3100 / LocalBudd 3000 /
+SocialFlow 8000) nên trình duyệt blocked mọi call cross-origin (CORS), và cookie
+`floraos_session`/`floraos_sso` host-only "localhost" tự đi kèm trong cùng một host
+nhưng KHÔNG tự đi qua cổng khác — giải pháp duy nhất đúng: core làm PROXY
+SERVER-SIDE.*
+
+- [x] Lớp proxy đủ bốn thư mục `src/modules/proxy/` (`domain/proxy-rules.ts` ·
+      `use-cases/proxy-request.ts` · `infra/proxy-http-adapter.ts` · route
+      `/api/v1/proxy/[...path]`)
+- [x] Whitelist path theo client — `SOCIALFLOW: ["api/m04b"]`,
+      `LOCALBUDD: ["api/v1/catalog-links", "api/v1/projects"]`; không proxy linh
+      tinh, không forward cookie core sang sibling
+- [x] Forward hai đường danh_identity đã có từ trước: `X-FloraOS-SSO` (JWT
+      `floraos_sso`, core đọc cookie rồi forward — sibling verify bằng
+      `SSO_SESSION_SECRET` dùng chung) và `Authorization: Bearer` (token
+      `integration_tokens`, `F9`). SSO thắng khi có cả hai (cùng quy ước với
+      `integration-credential.ts`)
+- [x] `SOCIALFLOW_URL`/`LOCALBUDD_URL` thêm vào `src/lib/env.ts` + `.env`
+- [x] Creative Studio (`/creative-studio`, `src/components/creative/creative-studio.tsx`)
+      — dashboard core gọi SocialFlow M04b xoá nền (AIC-11) qua proxy, hiện kết
+      quả ngay, không mở app khác
+- [x] `ai-image` (`src/lib/mock-data.ts`) đổi `chua_san_sang` → `hoat_dong`,
+      route `/creative-studio`; nav `Tạo ảnh AI` (`I1`) thêm vào
+      `desktop-nav.tsx`; `routeForFeature` ở `experience-grid.tsx` thêm
+      `/creative-studio`
+- [x] Test proxy: `proxy-rules.test.ts` (4 ca) + `proxy-request.test.ts` (14 ca,
+      mock adapter, không gọi HTTP thật) — 18 ca mới
+- [x] `npm test` 276/276 · `npx tsc --noEmit` sạch · `npx eslint` 0 lỗi
+- [ ] Xác minh end-to-end trên máy thật: chạy SocialFlow 8000 + core 3100, đăng
+      nhập core, bấm Creative Studio → xoá nền một sản phẩm thật → ảnh nền về
+      dashboard; kiểm 401 khi thiếu JWT, 403 khi tổ chức khác, 502 khi core vắng
+- [ ] Mở rộng whitelist: LocalBudd M06 Catalog/QR, SocialFlow M07/M08
+
 ## P16 — M04b ảnh marketing · MVP
 
 - [ ] Màn soạn chỉ bày Master Image `APPROVED`; ảnh gốc không xuất hiện như một lựa chọn (`YC-M1`)
@@ -423,3 +459,26 @@ FFmpeg trong sổ đăng ký.
 - [ ] `visual_style` nối ngược về `assets` của biến thể đã dùng
 - [ ] Vòng học chạy theo bốn pha; pha sau không bắt đầu trước khi pha trước có số đo
 - [ ] Hồ sơ phong cách nói được căn cứ kèm số bản ghi đã dùng (`YC-L3`)
+
+## UI/UX — Tích hợp 10 chức năng giao diện · bắt đầu 13/09
+
+Đây là công việc kết nối 10 trang UI trong `docs/FloraOS-UIUX-10-chuc-nang.md` với API thật ở `src/app/api/v1/`. 4 trang đã có backend để nối, 6 trang chờ backend tương ứng (M04c, M07, M09, M10, M08, M11).
+
+### Đã tích hợp
+
+- [x] **#1 — Phân tích sản phẩm AI** (`src/app/(app)/tai-anh/page.tsx`): POST/PATCH/GET `/api/v1/vision/analyses`, POST reject, SSE `/api/v1/jobs/:id/events`, dùng `useSession()` cho H1/H2/H3, asset listing từ `/api/v1/assets`, Idempotency-Key header, error handling 401/403/409/502
+- [x] **#2 — AI Creative Studio** (`src/app/(app)/creative-studio/page.tsx`): POST/GET `/api/v1/media/optimizations`, POST approve (Identity Guard REJECTED → ẩn Duyệt, WARNING → confirm dialog), GET download (I3), proxy `/api/v1/proxy/api/m04b/background-removal`, dùng `useSession()` cho I1/I2/I3
+- [x] **#6 — Catalog & Website** (`src/app/(app)/catalog/page.tsx`): GET `/api/v1/products` (thay MOCK_PRODUCTS, lọc ACTIVE), GET/POST/PATCH/POST-revoke `/api/v1/catalog-links`, 401 redirect
+- [x] **#10 — Analytics & Learning** (`src/app/(app)/so-lieu/page.tsx`): GET `/api/v1/usage/summary` (thay METRIC cứng), GET `/api/v1/ai-requests`, GET `/api/v1/audit-logs`, PUT `/api/v1/ai-policy`, dùng `useSession()` cho G8/G9/U1/U2/U3
+
+### Chờ backend
+
+- [ ] **#3 — AI Video Studio** — chờ P17 (M04c)
+- [ ] **#4 — AI Content Engine** — chờ P18 (M07)
+- [ ] **#5 — Social Publishing** — chờ P18 (M07)
+- [ ] **#7 — CRM & Khách hàng** — chờ P21 (M09)
+- [ ] **#8 — Đơn hàng & Vận hành** — chờ P22 (M10)
+- [ ] **#9 — AI Chat Assistant** — chờ P23 (M08)
+
+**Checklist chi tiết:** `docs/UIUX-Integrate-Checklist.md`
+
