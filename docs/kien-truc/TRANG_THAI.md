@@ -321,7 +321,7 @@ cắt khối `pricing` theo `L5`). `infra/pricing-rule-repository.ts`
 (chuyển `ARCHIVED` đòi thêm `L4`, không chỉ `L3`), `GET·PUT /pricing-rules`.
 36 test domain thuần + 10 test cách ly tenant mới (`tests/tenant/products-pricing.test.ts`).
 
-**P5 hoàn tất 09/12 — bộ ảnh vàng đạt nghiệm thu (8/8 ảnh, quy tắc mới 09/12).** Phần lõi đã nghiệm thu trên Postgres thật (09/10): `prisma generate`/`db push` ✅, `npm test` ✅, `npm run test:tenant` 49/49 ✅, `python3 -m pytest` 43/43 ✅. Còn lại (không chặn P6): gọi `OpenAIStructuredProvider` với API OpenAI thật (ảnh thật) để đối chiếu kết quả phân tích với nhãn người — xem mục 6 và `TECHNICAL_DEBT.md` #19–25.
+**P5 hoàn tất 09/12 — bộ ảnh vàng đạt nghiệm thu (8/8 ảnh, quy tắc mới 09/12).** Phần lõi đã nghiệm thu trên Postgres thật (09/10). **OpenAI Structured đã chạy API thật trên 4/8 ảnh vàng** (g001, g002, g010, g011 → `golden/ai-proposals-openai/`, báo cáo `golden/ai-accuracy-report-openai.csv`). Còn lại 4 ảnh (không chặn P6): nợ #24a. Xem mục 6 và `TECHNICAL_DEBT.md` #19–25.
 
 **P4 nghiệm thu xong trước đó: anh Tony chạy bốn lệnh xác minh trên Terminal Mac thật
 ngay sau khi mã viết xong — xanh hoàn toàn, không phát sinh lỗi nào phải sửa (khác
@@ -351,7 +351,7 @@ ngoại tới `organizations` ngay từ đầu. Module `src/modules/profiles/`
 Đang có (P5), **đã nghiệm thu trên Postgres thật** (09/10, anh Tony): hợp đồng
 `PhanTichSanPhamHoa` (`workers/vision/contracts/`, nguyên vẹn từ v1) · cổng
 `VisionAnalyzer` (`workers/vision/providers/base.py`) · `OpenAIStructuredProvider`
-(BUILD — 2 lượt gọi + đồng thuận trung vị qua `chot()`, CHƯA gọi API thật) ·
+(BUILD — 2 lượt gọi + đồng thuận trung vị qua `chot()`, **đã gọi API thật `gpt-4o-mini` trên 4/8 ảnh vàng** → `golden/ai-proposals-openai/`, đối chiếu nhãn người → `golden/ai-accuracy-report-openai.csv`) ·
 `count_engine.py`/`color_engine.py`/`tu_dien.py` chuyển sang nguyên vẹn (E5/E6) · worker
 `workers/vision/jobs/worker.py` (`SKIP LOCKED` + `LISTEN/NOTIFY`, đúng D6-1) · module
 `src/modules/products/` (bốn thư mục domain/use-cases/infra/adapters) · route
@@ -360,8 +360,7 @@ ngoại tới `organizations` ngay từ đầu. Module `src/modules/profiles/`
 log trong một giao dịch, không ghi thẳng. 43 test Python + 9 test TS mới chạy xanh thật
 trong sandbox. **Đã nghiệm thu trên Postgres thật**: `prisma generate`/`db push`, `npm test`,
 `npm run test:tenant` 49/49, `python3 -m pytest` (workers/) 43/43. **Bộ ảnh vàng đạt nghiệm thu** 09/12 (8/8 ảnh, quy tắc mới).
-Còn lại (không chặn): chưa gọi `OpenAIStructuredProvider` với API OpenAI thật (ảnh thật), để đối chiếu kết quả
-với nhãn người — xem mục 6 và `TECHNICAL_DEBT.md` #19–25.
+Còn lại (không chặn): gọi API thật trên 4 ảnh vàng còn lại (g003–g007, g009) — nợ #24a, xem `TECHNICAL_DEBT.md` #24a.
 
 ## 2. Đọc theo thứ tự này
 
@@ -536,6 +535,7 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | Ngày | Việc |
 |---|---|
+| 09/14 | **OpenAI Structured chạy trên ảnh thật.** Gọi `gpt-4o-mini` qua `OpenAIStructuredProvider` trên 4/8 ảnh vàng (g001, g002, g010, g011) → `golden/ai-proposals-openai/`. Kết quả: damaged_count 4/4 đúng, bud_count 2/2 đúng, flower_count AI ước tính (người không đếm được do occlusion). Xem `golden/ai-accuracy-report-openai.csv`. Nợ #24a: 4 ảnh còn lại. |
 | 09/14 | **P5 M01 Vision Worker + P14 M01b Product Copy — hoàn tất, tài liệu cập nhật.** CHECKLIST_AI_CAPABILITIES_BUILD.md §3.1/§3.2 tích xanh (M01 worker: `vision.analyze` handler, `DETECTING`→`COMPLETED`, `OK`/`LOW_CONFIDENCE`; M01b: `product.copy.generate` via `callCapability` trực tiếp, AIC-04 wrapping AIC-07/08/09/10). Checklist_Thuc_Thi.md P14 tích đầy đủ 6/6 (kể cả `phong_cach`→`suggested_style`/`dip_su_dung`→`occasions`). TRANG_THAI.md P5 cập nhật: HOÀN TẤT 09/12. **Chạy xác minh:** `npm test` 294/294 xanh, `npm run test:tenant` 145/145 xanh, `npx tsc --noEmit` (9 lỗi pre-existing ở product-copies tests, không phải mới). |
 | 09/12 | **P13 M04a đợt hai hoàn tất.** Worker `media_ai` thay `PassthroughEnhancer` bằng Real-ESRGAN (fallback PIL `lanczos-unsharp-v1`), thêm Smart Reframe 4 tỷ lệ (1:1, 4:5, 9:16, 16:9) từ Master Image MỘT LẦN. Pipeline: ANALYZING → ENHANCING → SMART_REFRAME → VERIFYING → GENERATING_OUTPUTS. `output.ratios` trong `generation_jobs` ghi 4 storage_keys. Ghi 1 MASTER (`PENDING`) + 4 RATIO (`APPROVED`). 170/170 test Python xanh, `npm test` 258/258 xanh. `Checklist_Thuc_Thi.md` P13: 6/6 tích. |
 | 09/12 | **P16 M04b đợt đầu hoàn tất.** `SocialFlow/backend/m04b/` đủ 4 thư mục. AIC-11 background_removal: rembg + PIL fallback, route `POST /api/m04b/background-removal` + `GET /api/m04b/assets/{id}/download`. Backend test 26/26 xanh — fix FastAPI v0.109.0 route 422 (typed `Request` patch cho `require_org`/`sso_token_tho`, bỏ `importlib.reload`), fix mock injection (`CoreClientAdapter.default()` patch ở cả `core_client_mod` và `br_module`), fix upload dir `parent.parent`→`parent` ở `routes.py`. Frontend `SocialFlow/frontend/index.html` thêm tab "Marketing Creative" với component `MarketingCreative` (product_id input, Remove Background, kết quả, download). E2E `tests/e2e_m04b.py` 10/10 xanh (server starts, route registered, auth 401, frontend loads, download endpoint). |

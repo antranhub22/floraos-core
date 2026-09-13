@@ -1,0 +1,13 @@
+image_id,field,ai_value,human_value,match,diff_abs
+g001,flower_count,25,,AI_ONLY,
+g001,bud_count,0,3,NO,3
+g001,damaged_count,0,0,YES,0
+g002,flower_count,35,,AI_ONLY,
+g002,bud_count,0,,AI_ONLY,
+g002,damaged_count,0,0,YES,0
+g010,flower_count,75,,AI_ONLY,
+g010,bud_count,0,0,YES,0
+g010,damaged_count,0,0,YES,0
+g011,flower_count,80,,AI_ONLY,
+g011,bud_count,0,0,YES,0
+g011,damaged_count,0,0,YES,0
