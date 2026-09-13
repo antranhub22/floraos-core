@@ -1,9 +1,153 @@
-// Dữ liệu mẫu cho bản xem UI trên localhost.
-// KHÔNG phải dữ liệu thật — thay bằng use-case/API thật khi nối backend.
-// Đặt tên và cấu trúc theo docs/dac-ta/09-du-lieu-mau-experience.md để nhất quán
-// với workspace trải nghiệm thật của sản phẩm.
+import { LucideIcon, ScanSearch, Sparkles, Video, FileText, Rss, LayoutGrid, Users, Package, MessageSquare, BarChart3, Zap } from "lucide-react"
 
 export type WorkspaceKind = "EXPERIENCE" | "PRODUCTION"
+export type FeatureId =
+  | "phân-tích-sản-phẩm"
+  | "creative-studio"
+  | "video-studio"
+  | "content-engine"
+  | "social-publishing"
+  | "catalog-website"
+  | "crm-khách-hàng"
+  | "đơn-hàng-vận-hành"
+  | "chat-assistant"
+  | "analytics-learning"
+  | "ai-features"
+
+export type ModuleStatus = "hoat_dong" | "chua_san_sang" | "chua_co" | "disabled"
+
+export type FeatureStatusMeta = {
+  label: string
+  dotClass: string
+  textClass: string
+  bgClass: string
+}
+
+export type FeatureItem = {
+  id: FeatureId
+  name: string
+  desc: string
+  iconName: keyof typeof FEATURE_ICONS
+  status?: ModuleStatus
+  statusMeta?: FeatureStatusMeta
+  route?: string
+  waiting?: boolean
+  disabled?: boolean
+}
+
+export const FEATURE_ICONS: Record<FeatureId, LucideIcon> = {
+  "phân-tích-sản-phẩm": ScanSearch,
+  "creative-studio": Sparkles,
+  "video-studio": Video,
+  "content-engine": FileText,
+  "social-publishing": Rss,
+  "catalog-website": LayoutGrid,
+  "crm-khách-hàng": Users,
+  "đơn-hàng-vận-hành": Package,
+  "chat-assistant": MessageSquare,
+  "analytics-learning": BarChart3,
+  "ai-features": Zap,
+}
+
+export const STATUS_META: Record<ModuleStatus, FeatureStatusMeta> = {
+  hoat_dong: { label: "Hoạt động", dotClass: "bg-secondary-text", textClass: "text-secondary-text", bgClass: "bg-success-bg" },
+  chua_san_sang: { label: "Chưa sẵn sàng", dotClass: "bg-warning", textClass: "text-warning", bgClass: "bg-warning-bg" },
+  chua_co: { label: "Chưa có", dotClass: "bg-text-muted", textClass: "text-text-muted", bgClass: "bg-surface-alt" },
+  disabled: { label: "Sắp có", dotClass: "bg-text-muted", textClass: "text-text-muted", bgClass: "bg-surface-alt" },
+}
+
+export const FEATURES: FeatureItem[] = [
+  {
+    id: "phân-tích-sản-phẩm",
+    name: "Phân tích sản phẩm bằng AI",
+    desc: "Chụp ảnh → nhận diện hoa, lá, cấu phần, màu sắc, số lượng",
+    iconName: "phân-tích-sản-phẩm",
+    status: "hoat_dong",
+    route: "/tai-anh",
+    waiting: false,
+  },
+  {
+    id: "creative-studio",
+    name: "AI Creative Studio",
+    desc: "Tối ưu ảnh → Master Image → biến thể marketing",
+    iconName: "creative-studio",
+    status: "hoat_dong",
+    route: "/creative-studio",
+    waiting: false,
+  },
+  {
+    id: "video-studio",
+    name: "AI Video Studio",
+    desc: "Reel · TikTok · Story · Slideshow · Motion ads",
+    iconName: "video-studio",
+    status: "chua_san_sang",
+    route: "/video",
+  },
+  {
+    id: "content-engine",
+    name: "AI Content Engine",
+    desc: "Sinh nội dung theo kênh: Facebook · Instagram · TikTok · Zalo",
+    iconName: "content-engine",
+    status: "chua_san_sang",
+    route: "/noi-dung",
+  },
+  {
+    id: "social-publishing",
+    name: "Social Publishing",
+    desc: "Lịch đăng, xem trước nền tảng, đăng lại thông minh",
+    iconName: "social-publishing",
+    status: "chua_san_sang",
+    route: "/lich-dang",
+  },
+  {
+    id: "catalog-website",
+    name: "Catalog & Website",
+    desc: "Catalog số + QR, Landing page chiến dịch",
+    iconName: "catalog-website",
+    status: "chua_san_sang",
+    route: "/catalog",
+  },
+  {
+    id: "crm-khách-hàng",
+    name: "CRM & Khách hàng",
+    desc: "Hồ sơ, ngày đặc biệt, nhắc mua, hội thoại",
+    iconName: "crm-khách-hàng",
+    status: "chua_co",
+    route: "/khach-hang",
+  },
+  {
+    id: "đơn-hàng-vận-hành",
+    name: "Đơn hàng & Vận hành",
+    desc: "Tạo đơn, phiếu chào giá, bảng Kanban, SLA",
+    iconName: "đơn-hàng-vận-hành",
+    status: "chua_co",
+    route: "/don-hang",
+  },
+  {
+    id: "chat-assistant",
+    name: "AI Chat Assistant",
+    desc: "Trả lời từ catalog, chuyển nhân viên, cấu hình",
+    iconName: "chat-assistant",
+    status: "chua_co",
+    route: "/hoi-thoai",
+  },
+  {
+    id: "analytics-learning",
+    name: "Analytics & Learning",
+    desc: "Số liệu, ROI, vòng học phong cách",
+    iconName: "analytics-learning",
+    status: "chua_san_sang",
+    route: "/so-lieu",
+  },
+  {
+    id: "ai-features",
+    name: "Tính năng AI cho sản phẩm",
+    desc: "Chọn từng tính năng Creative, Video, Content, Catalog, Landing",
+    iconName: "ai-features",
+    status: "disabled",
+    disabled: true,
+  },
+]
 
 export type MockSession = {
   userName: string
@@ -18,7 +162,6 @@ export const MOCK_SESSION: MockSession = {
   userInitials: "TN",
   orgName: "Tiệm hoa Mộc Lan",
   workspaceKind: "PRODUCTION",
-  // H3 = product.approve, I2 = media.approve — theo docs/dac-ta/02-function-catalog.md
   capabilities: ["H3", "I2", "B4"],
 }
 
@@ -36,90 +179,5 @@ export const PENDING_APPROVALS = [
   { id: "a2", name: "Hộp hoa hồng phấn", meta: "Sale · Trần Minh · 40 phút trước", tint: "#EEF4EE", color: "#174C3C" },
   { id: "a3", name: "Kệ hoa khai trương", meta: "Sale · Nguyễn Hà · 1 giờ trước", tint: "#E7EEE6", color: "#5F9670" },
 ]
-
-// Trạng thái triển khai thật của từng module theo "Bản đồ module" (PRD §5) —
-// đối chiếu trực tiếp với mã nguồn ba repo (floraos-core, LocalBudd,
-// SocialFlow) ngày 2026-09-11, không suy đoán từ tài liệu:
-//   hoat_dong      — có API thật + màn thao tác thật, dữ liệu qua lại đúng.
-//   chua_san_sang  — đã xây (API và/hoặc màn hình) nhưng chưa dùng được
-//                    trọn vẹn: thiếu một đầu (màn hoặc API), hoặc màn hiện
-//                    có chạy giả lập/không nối API thật.
-//   chua_co        — chưa có API lẫn màn hình nào cho chức năng này.
-export type ModuleStatus = "hoat_dong" | "chua_san_sang" | "chua_co"
-
-export const EXPERIENCE_MODULES = [
-  {
-    id: "m01",
-    name: "Phân tích ảnh sản phẩm",
-    desc: "Đưa ảnh lên, nhận diện hoa, lá và số lượng",
-    costPerUse: 1,
-    status: "hoat_dong" as ModuleStatus,
-  },
-  {
-    id: "m04a",
-    name: "Tối ưu ảnh sản phẩm",
-    desc: "Ảnh đẹp hơn, giữ đúng sản phẩm thật",
-    costPerUse: 2,
-    status: "chua_san_sang" as ModuleStatus,
-    statusNote:
-      "Đã có API tạo, duyệt và tải ảnh tối ưu (dùng được ở màn Duyệt/Job). Chưa có màn nào để bắt đầu một lượt tối ưu ảnh mới.",
-  },
-  {
-    id: "m02",
-    name: "Tính giá sản phẩm",
-    desc: "Ra giá bán tự động theo cấu phần",
-    costPerUse: 0,
-    status: "hoat_dong" as ModuleStatus,
-  },
-  {
-    id: "m03",
-    name: "Tra cứu sản phẩm",
-    desc: "Tìm nhanh trong kho dữ liệu đã có",
-    costPerUse: 0,
-    status: "hoat_dong" as ModuleStatus,
-  },
-] as const
-
-export const EXTERNAL_MODULES = [
-  {
-    id: "m04b",
-    name: "Ảnh marketing",
-    desc: "Thêm chữ, logo, khung nền theo mẫu thương hiệu",
-    product: "SocialFlow",
-    status: "chua_co" as ModuleStatus,
-    statusNote:
-      "Chưa có đường nối tới ảnh sản phẩm đã duyệt (Master Image) bên core. Phần đã có ở SocialFlow chỉ mới sinh gợi ý chữ/khung, chưa ghép lên ảnh sản phẩm thật.",
-  },
-  {
-    id: "m07",
-    name: "Đăng bài mạng xã hội",
-    desc: "Soạn và đăng lên các nền tảng đã kết nối",
-    product: "SocialFlow",
-    status: "hoat_dong" as ModuleStatus,
-  },
-  {
-    id: "m05",
-    name: "Trang landing page",
-    desc: "Dựng trang giới thiệu để chia sẻ sản phẩm",
-    product: "LocalBudd",
-    status: "hoat_dong" as ModuleStatus,
-  },
-  {
-    id: "m06",
-    name: "Catalog sản phẩm",
-    desc: "Tạo danh mục sản phẩm dạng in hoặc chia sẻ",
-    product: "LocalBudd",
-    status: "chua_co" as ModuleStatus,
-    statusNote: "Chưa có API lẫn màn hình nào cho chức năng này ở LocalBudd.",
-  },
-  {
-    id: "m08",
-    name: "Trò chuyện với khách hàng",
-    desc: "Trả lời khách tự động trên các kênh nhắn tin",
-    product: "Chưa có repo",
-    status: "chua_co" as ModuleStatus,
-    statusNote: "Chưa có repo nào phụ trách chức năng này — nằm trong lộ trình, xây sau (PRD §5, M08).",
-  },
-] as const
 
 export const TRIAL_LIMIT = 20
