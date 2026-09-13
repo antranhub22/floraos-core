@@ -480,5 +480,5 @@ FFmpeg trong sổ đăng ký.
 - [ ] **#8 — Đơn hàng & Vận hành** — chờ P22 (M10)
 - [ ] **#9 — AI Chat Assistant** — chờ P23 (M08)
 
-**Checklist chi tiết:** `docs/UIUX-Integrate-Checklist.md`
+**Checklist chi tiết:** `docs/UIUX-Integrate-Checklist.md` (API-level) · `docs/UIUX-Feature-Checklist.md` (feature-level, 115 tính năng, dùng để rà soát và triển khai)
 
