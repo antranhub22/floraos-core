@@ -429,6 +429,10 @@ Hai quyết định chặn go-live, không chặn việc dựng lược đồ ha
 
 ## 6. Việc kế tiếp
 
+**P5 M01 phân tích ảnh — HOÀN TẤT (09/12).** Bộ ảnh vàng đạt nghiệm thu (8/8 ảnh). Phần lõi đã nghiệm thu trên Postgres thật (09/10). Còn lại (không chặn): gọi `OpenAIStructuredProvider` với API OpenAI thật để đối chiếu kết quả với nhãn người (nợ #24 đã giải quyết).
+
+**P14 M01b dữ liệu bán hàng — HOÀN TẤT (09/12).** Tất cả checklist P14 đã tích: `phong_cach`/`dip_su_dung` trong hợp đồng, `occasions` nạp sẵn, `product_copies` raw/edited, duyệt ghi Product Master + audit_logs, 14 ca test tenant xanh.
+
 **P19 Catalog & QR + P15 Integration API write paths — HOÀN TẤT (09/12).**
 - `floraos-core`: P15 7/7 checklist items xong (core write paths).
 - `LocalBudd`: P19 6/7 checklist items xong (catalog UI, QR, revoke page). Còn lại: cặp `J1`↔`J2` tách năng lực.
@@ -436,26 +440,19 @@ Hai quyết định chặn go-live, không chặn việc dựng lược đồ ha
 **Việc lớn tiếp theo (theo thứ tự ưu tiên):**
 
 1. **P15+ — Dashboard proxy: xác minh end-to-end trên máy thật.** Chạy SocialFlow 8000
-   + core 3100, đăng nhập core, bấm Creative Studio → xoá nền một sản phẩm thật →
-   ảnh nền về dashboard; kiểm 401 khi thiếu JWT, 403 khi tổ chức khác, 502 khi
-   core vắng. Sau đó mở rộng whitelist: LocalBudd M06 Catalog/QR, SocialFlow
-   M07/M08.
-2. **P13 — M04a đợt hai: tăng cường ảnh và Smart Reframe (MVP).** Cần bộ ảnh vàng có nhãn thật để thay `PassthroughEnhancer`, sinh 4 tỷ lệ 1:1/4:5/9:16/16:9, master image thực sự `APPROVED`, `GET /integration/products/:id/master-image` trả ảnh thật.
-
-2. **P14 — M01b dữ liệu bán hàng sản phẩm (MVP).** `phong_cach`/`dip_su_dung` vào hợp đồng, `occasions` nạp sẵn, `product_copies` raw/edited, duyệt ghi Product Master + audit_logs.
-
-3. **P16 — M04b ảnh marketing (MVP).** Biến thể từ master image đã duyệt, không gọi lại enhancer, path sửa ánh sáng/màu/hình dáng qua M04a Guard.
-
+    + core 3100, đăng nhập core, bấm Creative Studio → xoá nền một sản phẩm thật →
+    ảnh nền về dashboard; kiểm 401 khi thiếu JWT, 403 khi tổ chức khác, 502 khi
+    core vắng. Sau đó mở rộng whitelist: LocalBudd M06 Catalog/QR, SocialFlow
+    M07/M08.
+2. **P13 — M04a đợt hai: tăng cường ảnh và Smart Reframe (MVP).** Bộ ảnh vàng đã đạt nghiệm thu (09/12), **không còn chặn**. Cần thay `PassthroughEnhancer` bằng Real-ESRGAN, sinh 4 tỷ lệ 1:1/4:5/9:16/16:9, master image thực sự `APPROVED`, `GET /integration/products/:id/master-image` trả ảnh thật.
+3. **P16 — M04b ảnh marketing (MVP).** Bộ ảnh vàng đã đạt nghiệm thu (09/12), **không còn chặn**. Biến thể từ master image đã duyệt, không gọi lại enhancer, path sửa ánh sáng/màu/hình dáng qua M04a Guard.
 4. **P17 — M04c video (MVP).** 6 khuôn đầu ra, khung đầu/cuối từ ảnh duyệt, chi phí ghi usage, màn xác nhận chi phí.
-
 5. **P18 — M07 nội dung đăng bài ngành hoa (MVP).** Adapter Zalo OA, tự duyệt theo thời hạn gác `O7`, credential mang `organization_id`.
-
 6. **Đợt 3 — nối `SocialFlow`** (`RA_SOAT_DONG_BO_BA_REPO.md` mục 5): xác thực máy gọi máy + `organization_id` trên bảng nghiệp vụ còn lại.
-
 7. **Trả nợ #46** — dữ liệu AVI GIFT bị `test:tenant` xoá, cần nạp lại.
 
 **Điều kiện chặn:**
-- Bộ ảnh vàng đạt nghiệm thu (P5) → P13, P16
+- ~~Bộ ảnh vàng đạt nghiệm thu (P5)~~ — **ĐÃ THỎA 09/12**, P13/P16 không còn chặn vì lý do này
 - D14 bảng giá credit biến thể/video/nội dung → P16–P18 go-live
 - D13 cơ sở đồng ý dữ liệu cá nhân → M09, M10 go-live
 - AI-2 (chấm điểm, thác nghiệm, dự phòng) → P16–P18 go-live
@@ -539,6 +536,7 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | Ngày | Việc |
 |---|---|
+| 09/14 | **P5 M01 Vision Worker + P14 M01b Product Copy — hoàn tất, tài liệu cập nhật.** CHECKLIST_AI_CAPABILITIES_BUILD.md §3.1/§3.2 tích xanh (M01 worker: `vision.analyze` handler, `DETECTING`→`COMPLETED`, `OK`/`LOW_CONFIDENCE`; M01b: `product.copy.generate` via `callCapability` trực tiếp, AIC-04 wrapping AIC-07/08/09/10). Checklist_Thuc_Thi.md P14 tích đầy đủ 6/6 (kể cả `phong_cach`→`suggested_style`/`dip_su_dung`→`occasions`). TRANG_THAI.md P5 cập nhật: HOÀN TẤT 09/12. **Chạy xác minh:** `npm test` 294/294 xanh, `npm run test:tenant` 145/145 xanh, `npx tsc --noEmit` (9 lỗi pre-existing ở product-copies tests, không phải mới). |
 | 09/12 | **P13 M04a đợt hai hoàn tất.** Worker `media_ai` thay `PassthroughEnhancer` bằng Real-ESRGAN (fallback PIL `lanczos-unsharp-v1`), thêm Smart Reframe 4 tỷ lệ (1:1, 4:5, 9:16, 16:9) từ Master Image MỘT LẦN. Pipeline: ANALYZING → ENHANCING → SMART_REFRAME → VERIFYING → GENERATING_OUTPUTS. `output.ratios` trong `generation_jobs` ghi 4 storage_keys. Ghi 1 MASTER (`PENDING`) + 4 RATIO (`APPROVED`). 170/170 test Python xanh, `npm test` 258/258 xanh. `Checklist_Thuc_Thi.md` P13: 6/6 tích. |
 | 09/12 | **P16 M04b đợt đầu hoàn tất.** `SocialFlow/backend/m04b/` đủ 4 thư mục. AIC-11 background_removal: rembg + PIL fallback, route `POST /api/m04b/background-removal` + `GET /api/m04b/assets/{id}/download`. Backend test 26/26 xanh — fix FastAPI v0.109.0 route 422 (typed `Request` patch cho `require_org`/`sso_token_tho`, bỏ `importlib.reload`), fix mock injection (`CoreClientAdapter.default()` patch ở cả `core_client_mod` và `br_module`), fix upload dir `parent.parent`→`parent` ở `routes.py`. Frontend `SocialFlow/frontend/index.html` thêm tab "Marketing Creative" với component `MarketingCreative` (product_id input, Remove Background, kết quả, download). E2E `tests/e2e_m04b.py` 10/10 xanh (server starts, route registered, auth 401, frontend loads, download endpoint). |
 | 09/12 | **Chạy pipeline M01→M04a trên 16 ảnh AVI GIFT.** Tạo 8 job `vision.analyze` (16 ảnh) → vision worker xử lý → 16 phân tích `PENDING` → duyệt 16 qua `approveAnalysis` → tạo 8 job `media.optimize` → media_ai worker xử lý → 2 Master Image `PENDING` + 4 RATIO `APPROVED` (Identity Guard PASS), 9 REJECTED, 5 FAILED (image mode errors). Pipeline end-to-end hoạt động; Master Images sẵn sàng cho duyệt `I2`. |
