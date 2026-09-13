@@ -1,452 +1,389 @@
-# Kế hoạch triển khai hoàn thiện 100% — 10 chức năng UI/UX
+# Kế hoạch triển khai — CẬP NHẬT sau khi trả lời Q1-Q26
 
-**Cơ sở:** `docs/UIUX-Feature-Checklist.md` (115 tính năng) + `docs/FloraOS-UIUX-10-chuc-nang.md` + `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md`
-**Ngày lập:** 13/09/2026
-**Trạng thái hiện tại:** 31/115 tính năng đã code (21%)
-
----
-
-## Phân loại lại theo thực tế backend
-
-Sau khi rà soát kỹ `src/app/api/v1/` và `src/modules/`, phát hiện:
-
-| Chức năng | Backend trạng thái thực | Cập nhật checklist |
-|---|---|---|
-| #1 Phân tích sản phẩm | M01 ✅, M01b ✅ (product-copies routes tồn tại) | UI chưa nối M01b |
-| #2 Creative Studio | M04a ✅, M04b proxy ✅, M04b full ❌ | UI mock cho M04b variants |
-| #3 Video Studio | M04c ❌ — không có route, không có module | Chờ P17 |
-| #4 Content Engine | M07 ❌ — không có route, không có module | Chờ P18 |
-| #5 Social Publishing | M07 ❌ — không có route, không có module | Chờ P18 |
-| #6 Catalog & Website | M06 ✅, M05 ❌ (LocalBudd) | UI có, M05 builder mock |
-| #7 CRM | M09 ❌ — không có route, không có module | Chờ P21 |
-| #8 Đơn hàng | M10 ❌ — không có route, không có module | Chờ P22 |
-| #9 Chat Assistant | M08 ❌ — **chưa có repo** | Chờ P23 |
-| #10 Analytics & Learning | M11 UI ✅, learning ❌ | UI có, learning mock |
+**Ngày:** 13/09/2026
+**Trạng thái:** 31/115 tính năng đã code (21%)
 
 ---
 
-## GIAI ĐOẠN 0: Nối UI với backend đã có (không cần xây mới)
+## Tổng hợp câu trả lời Q1-Q26
 
-**Mục tiêu:** Biến mock → API thật cho các tính năng backend đã tồn tại nhưng UI chưa kết nối. Ước lượng 2-3 tuần.
+| # | Câu trả lời | Quyết định |
+|---|-------------|-------------|
+| Q1 | Duyệt rồi Stop, nút Sinh nội dung bán hàng tùy chọn | M01b optional, UI conditional |
+| Q2 | Kiểm tra xem có chưa, nếu chưa triển khai độc lập | M04b: check SocialFlow → build mới |
+| Q3 | LocalBudd đã có, kiểm core proxy | M05 proxy cần thêm whitelist |
+| Q4 | Chưa biết, kiểm tra | Learning profile: KHÔNG CÓ → build mới |
+| Q5 | Kiểm SocialFlow, build mới nếu chưa | M04c: check → build |
+| Q6 | Framework placeholder | Credit: dùng khung placeholder |
+| Q7 | Đề xuất phương án | AI-2: implement gateway-level |
+| Q8 | Harvest SocialFlow | M07: extend SocialFlow |
+| Q9 | Kiểm SocialFlow, xây mới nếu chưa | Zalo OA: check → build new |
+| Q10 | Ưu tiên sau nếu không cấp thiết | O7: defer |
+| Q11 | Kiểm cách xử lý phổ biến | Content bound: standard approach |
+| Q12 | Chưa rõ, kiểm tra | Social accounts: check |
+| Q13 | Tiêu chuẩn thông thường | D13: standard consent |
+| Q14 | LLM Provider ưu tiên, đa lựa chọn | CRM AI: LLM provider |
+| Q15 | Contact, reuse | Customers: reuse users/memberships |
+| Q16 | Kiểm rồi xử lý | Orders: check schema, migrate |
+| Q17 | Realtime | SLA/chat: realtime |
+| Q18 | PDF/PNG/JPEG, support Vietnamese font | Print: multi-format |
+| Q19 | Fixed enum | Kanban: enum |
+| Q20 | Chọn phương án phù hợp | Quote: quote.run/quote.approve pair |
+| Q21 | Realtime | Chat: realtime |
+| Q22 | Bảng mới | Chat: new table |
+| Q23 | Có deep link | Chat: clickable |
+| Q24 | Có | Chat fallback: UI button |
+| Q25 | Có thể start UI mock | P23: parallel mock |
+| Q26 | Tự đề xuất | AI-2: implement now |
 
-### 0.1 — #1 Phân tích sản phẩm AI (`tai-anh`) — M01b kết nối
+---
 
-**Hạng mục:** BUILD (theo HARVEST_MANIFEST) — `src/modules/product-copies/` đã tồn tại
-**Backend đã có:** 5 routes `product-copies` (GET, POST generate, GET/PATCH/:id, POST approve, POST reject)
-**Capability:** H5 (generate) / H6 (approve) — split pair đã được khoá test
+## GIAI ĐOẠN 0 — UI kết nối backend có sẵn (2-3 tuần)
 
-| # | Tính năng | Action | Trạng thái |
-|---|-----------|--------|------------|
-| 1.12 | Gợi ý "Sinh nội dung bán hàng" | UI gọi POST /product-copies/generate khi nhấn nút | Mock → API |
-| 1.13 | Thẻ kết quả 2: nội dung bán hàng | UI map response từ product-copies sang ResultField[] | Mock → API |
-| 1.14 | Sửa/Thêm/Bớt Thẻ 2 | UI gọi PATCH /product-copies/:id | Mock → API |
-| 1.15 | Duyệt Thẻ 2 → ghi Product Master | UI gọi POST /product-copies/:id/approve | Mock → API |
-| 1.16 | Lưu vào Kho sản phẩm | Sau 1.15, redirect về san-pham | Mock → API |
+### 0.1 — #1 Phân tích sản phẩm: M01b connection ✅ BẮT ĐẦU NGAY
+
+**Xác nhận:** M01b backend ĐÃ CÓ (`product-copies` 5 routes + `src/modules/product-copies/`)
+**Capability:** H5 (generate) ↔ H6 (approve) — đã có split pair + test khoá
+
+| # | Tính năng | Action |
+|---|-----------|--------|
+| 1.12 | Gợi ý "Sinh nội dung bán hàng" (tùy chọn) | Connect POST /product-copies/generate |
+| 1.13 | Thẻ kết quả 2: nội dung bán hàng | Map response → ResultField[] |
+| 1.14 | Sửa/Thêm/Bớt Thẻ 2 | PATCH /product-copies/:id |
+| 1.15 | Duyệt Thẻ 2 → ghi Product Master | POST /product-copies/:id/approve |
+| 1.16 | Lưu vào Kho → quay về | After approve, redirect |
+
+**Công việc cụ thể:**
+- [ ] Đọc `src/modules/product-copies/use-cases/generate-product-copy.ts` (input/output contract)
+- [ ] Đọc `src/modules/product-copies/domain/product-copy-rules.ts` (validation rules)
+- [ ] Đọc `src/modules/product-copies/use-cases/approve-product-copy.ts` (approve flow)
+- [ ] Tạo `mapProductCopyToFields()` mapper (product-copies response → ResultField[])
+- [ ] Nối 5 API calls vào `tai-anh/page.tsx`
+- [ ] Xử lý: H6 trần cứng dieu_hanh (ẩn Duyệt cho vai không đủ)
+- [ ] Error handling: 401/403/409/502
+- [ ] Verify: analysis_id phải APPROVED (kiểm trong use-case)
+- [ ] Xóa MOCK_FIELDS_RESULT2 comment
+
+**Đọc tài liệu:** `src/core/ai/domain/routing.ts` — AIC-07..10 là model cho product copy (generative, measured).
+
+---
+
+### 0.2 — #2 Creative Studio: M04b mapping fix
+
+**Xác nhận:** M04a backend ✅, proxy M04b ✅ (whitelist `api/m04b` cho SOCIALFLOW), M04b full ❌
+
+| # | Tính năng | Action |
+|---|-----------|--------|
+| 2.20 | Proxy M04b mapping | Hoàn thiện mapping proxy → variant |
+| 2.13-2.19 | M04b full (background, frame, retouch, watermark, batch) | **Chờ P16 backend** |
 
 **Công việc:**
-- [ ] Đọc `src/modules/product-copies/use-cases/generate-product-copy.ts` — hiểu input/output
-- [ ] Đọc `src/modules/product-copies/domain/product-copy-rules.ts` — hiểu validation
-- [ ] Tạo `M1bFieldsMapper` (tương tự `mapAnalysisToFields1`) mapping product-copies response → ResultField[]
-- [ ] Nối 5 API calls vào tai-anh page
-- [ ] Xử lý Identity Guard cho M01b (H6 trần cứng dieu_hanh)
-- [ ] Xử lý error: 401/403/409/502
-- [ ] Verify: M01b analysis phải APPROVED mới gọi generate (kiểm trong use-case)
-
-**Câu hỏi cần xác nhận:**
-> Q1: M01b flow — sau khi duyệt Thẻ 2 (product copy), sản phẩm đã có trong Product Master (qua approve). Vậy Thẻ 1 và Thẻ 2 có độc lập không? User duyệt Thẻ 1 → stop, không cần Thẻ 2? Hay bắt buộc phải hoàn tất cả hai?
+- [ ] Đọc `src/components/creative/creative-studio.tsx` (proxy call + response mapping)
+- [ ] Hoàn thiện proxy response → UI variant structure mapping
+- [ ] Sau P16 backend: thay VARIANTS mock bằng kết quả thật
 
 ---
 
-### 0.2 — #2 Creative Studio — M04b remaining
+### 0.3 — #6 Catalog: Tab A polish + M05 proxy whitelist
 
-**Hạng mục:** BUILD (M04b creative) + ADAPTER (read Master Image) — theo HARVEST
-**Backend đã có:** media/optimizations (M04a), proxy M04b background-removal
-**Backend CẦN:** Background replacement, frame expansion, retouch, watermark, batch variants (P16 remaining)
+**Xác nhận:** M06 catalog-links ✅, M05 builder trên LocalBudd (cần proxy)
 
-| # | Tính năng | Action | Trạng thái |
-|---|-----------|--------|------------|
-| 2.13 | Chọn Master Image | UI lấy từ GET /api/v1/products (đã có) + GET /media/optimizations | UI mock → API |
-| 2.20 | Proxy M04b mapping | Hoàn thiện mapping proxy response → variant UI | Proxy có, mapping mock |
-| 2.14 | Background replacement | **Cần backend P16 remaining** | Chờ backend |
-| 2.15 | Frame expansion, retouch, watermark | **Cần backend P16 remaining** | Chờ backend |
-| 2.16 | Batch variants (matrix) | **Cần backend P16 remaining** | Chờ backend |
-| 2.17-2.19 | Duyệt/bỏ/lưu biến thể | UI + API (sau 2.14-2.16) | Chờ backend |
+| # | Tính năng | Action |
+|---|-----------|--------|
+| 6.2-6.3 | Filter, Bộ sưu tập | UI polish |
+| 6.4 | Xem trước catalog | Thêm `api/v1/projects` vào LOCALBUDD whitelist (hiện chỉ có `api/v1/catalog-links`) |
+| 6.6 | QR code | UI component |
 
-**Công việc (UI):**
-- [ ] Đọc `src/components/creative/creative-studio.tsx` — hiểu proxy call
-- [ ] Hoàn thiện mapping proxy response → UI variant structure
-- [ ] Thay VARIANTS mock bằng kết quả thật khi backend có
-
-**Câu hỏi cần xác nhận:**
-> Q2: M04b full — background replacement, frame expansion, retouch, watermark, batch variants — những tính năng này có backend nào sẵn sàng (SocialFlow) hay cần xây từ đầu? Timeline P16 remaining là khi nào?
+**Công việc:**
+- [ ] Thêm `api/v1/projects` vào LOCALBUDD proxy whitelist (`proxy-rules.ts`)
+- [ ] Hoàn thiện Tab A UI (filter, bộ sưu tập)
+- [ ] QR component
 
 ---
 
-### 0.3 — #6 Catalog & Website — Tab A hoàn thiện + M05
+### 0.4 — #10 Analytics: Learning — KHÔNG CÓ backend
 
-**Hạng mục:** M06 BUILD (core) + M05 REUSE (LocalBudd)
-**Backend đã có:** products, catalog-links (M06)
-**Backend CẦN:** M05 landing builder (LocalBudd side)
+**Xác nhận:** `GET/PUT /api/v1/learning-profile` — KHÔNG TỒN TẠI
 
-**Tab A — Catalog (cần hoàn thiện):**
-
-| # | Tính năng | Action | Trạng thái |
-|---|-----------|--------|------------|
-| 6.2 | Lọc/nhóm | UI filtering trên danh sách thật | UI có, verify |
-| 6.3 | Bộ sưu tập (drag-drop) | UI + PATCH catalog-links | UI mock → API |
-| 6.4 | Xem trước catalog | Gọi proxy LocalBudd | UI mock → proxy |
-| 6.6 | QR code | Gọi GET catalog-links/:slug + QR component | UI có, link mock |
-
-**Tab B — Landing (cần M05):**
-
-| # | Tính năng | Action | Trạng thái |
-|---|-----------|--------|------------|
-| 6.10-6.15 | Dựng trang, sửa, duyệt, lưu | **Cần M05 builder (LocalBudd)** | Chờ backend |
-
-**Câu hỏi cần xác nhận:**
-> Q3: M05 Landing builder — LocalBudd đã có (P15+ proxy), hay cần LocalBudd xây dựng trước? Timeline khi nào LocalBudd M05 sẵn sàng cho core proxy?
+→ Chuyển sang GIAI ĐOẠN 2 (P20). Learning section tạm giữ mock.
 
 ---
 
-### 0.4 — #10 Analytics & Learning — Vòng học phong cách
+## GIAI ĐOẠN 1 — Xây backend mới (8-12 tuần, song song)
 
-**Hạng mục:** EXTEND (post_metrics, content_insights) + BUILD (ROI join, learning loop) — HARVEST
-**Backend đã có:** usage, audit-logs, ai-requests, ai-policy
-**Backend CẦN:** learning-profile endpoint, learning history API
+### 1.1 — AI-2: Scoring, Cascade, Privacy Floor, Review Queue (2-3 tuần)
 
-| # | Tính năng | Action | Trạng thái |
-|---|-----------|--------|------------|
-| 10.12 | Hiện khi ≥ 20 bài | UI count từ usage/audit | UI có, API đếm |
-| 10.13-10.15 | Đề xuất học, sửa, duyệt | **Cần learning-profile backend** | Chờ backend (P20) |
-| 10.16 | Duyệt áp dụng → PUT ai-policy | API có, UI mock | UI mock → API |
-| 10.17-10.18 | Ảnh hưởng trang 1/4, lịch sử | **Cần learning history** | Chờ backend |
+**Tự đề xuất (Q7, Q26):**
 
-**Câu hỏi cần xác nhận:**
-> Q4: Learning profile (M11) — P20 theo roadmap, phụ thuộc P18, P19, P22. Có endpoint GET/PUT `/api/v1/learning-profile` nào đã có trên backend chưa?
+AI-2 là nền tảng chặn P17 (Video) và P18 (Content). Implement ở gateway level — existing infrastructure.
+
+| Deliverable | Chi tiết | Ước lượng |
+|---|----------|-----------|
+| Per-capability quality scoring | Mở rộng `evaluation.ts` — đánh giá output theo AIC capability, score từ channels | 1 tuần |
+| Cascade thresholds | `routing.ts` đã có `cascade` flag — wire với threshold từ `ai_capabilities.threshold` | 1 tuần |
+| Needs review queue | Thêm trường `needs_review` vào `ai_requests`, endpoint GET/POST `/api/v1/ai-requests/review` | 1 tuần |
+| Privacy floor enforcement | `privacy.ts` đã có — đảm bảo SENSITIVE không ra ngoài qua fallback | 0.5 tuần |
+| Fallback chains | `routing.ts` có `nextFallback`/`nextEscalation` — wire vào gateway | 0.5 tuần |
+
+**Test:** Unit tests thuần (không cần DB) cho `evaluation.ts`, `routing.ts`, `privacy.ts`.
+
+**Ưu tiên:** AI-2 phải hoàn thành trước P17, P18. Song song với GĐ 0.
 
 ---
 
-## GIAI ĐOẠN 1: Xây backend mới — Tuyến B MVP (P17–P19)
+### 1.2 — P16 Remaining: M04b Full (3-4 tuần)
 
-**Mục tiêu:** Xây backend APIs cho 3 module Video, Content+Social, hoàn thiện Catalog. Ước lượng 8-12 tuần (song song).
+**Xác nhận:** Check SocialFlow xem background replacement đã có chưa (Q2). Nếu chưa → BUILD mới.
 
-### 1.1 — P17: AI Video Studio (M04c)
+| # | Tính năng | Module | Notes |
+|---|-----------|--------|-------|
+| 2.14 | Background replacement (studio/living/hotel/wedding) | `src/modules/` mới | AIC-12? AIC-13? |
+| 2.15 | Frame expansion, retouch, watermark | `src/modules/` mới | AIC-15? AIC-17? |
+| 2.16 | Batch variants (matrix) | core use-case | Kết hợp background × layout × ratio × campaign |
+| 2.21 | Watermark logo từ brand_profiles.logo_asset_id | domain rule | |
 
-**Hạng mục:** EXTEND (HeyGen/Veo adapters, video_jobs) + BUILD (scene builder)
-**Dependencies:** P15 (done), P16 (M04b), AI-2 (scoring/cascade), D14 (credit pricing)
-**Harvest:** EXTEND + BUILD — SocialFlow side (HeyGen/Veo adapters), Core side (scene builder)
+**Câu hỏi:**
+> Q2b: SocialFlow M04b background replacement — đã có code chưa? Nếu có → ADAPTER. Nếu không → BUILD.
 
-**Module cần tạo:** `src/modules/video-studio/` (domain, use-cases, infra, adapters)
-**Routes cần tạo:**
-- `POST /video/jobs` — tạo job dựng video (feature = video.generate)
-- `GET /video/jobs/:id` — trạng thái
-- `POST /video/jobs/:id/cancel` — huỷ (G6)
-- `POST /video/jobs/:id/retry` — chạy lại (G7)
-- `GET /video/jobs/:id/events` — SSE
-- `POST /video/jobs/:id/approve-script` — duyệt kịch bản (P3 approve)
-- `POST /video/jobs/:id/approve-video` — duyệt video (P4 approve)
+---
+
+### 1.3 — P17: AI Video Studio M04c (4-5 tuần)
+
+**Xác nhận:** Cần check SocialFlow HeyGen/Veo (Q5) + Scene builder location + D14 credit (Q6).
 
 | # | Tính năng | Module/Route | Capability | Notes |
 |---|-----------|-------------|------------|-------|
-| 3.1-3.4 | Chọn khuôn, cấu hình, dựng kịch bản | POST /video/jobs | P1 (generate) | 6 khuôn, scene builder |
-| 3.5 | Thẻ kịch bản | GET /video/jobs/:id | P1 | cảnh, thời lượng, hiệu ứng |
-| 3.6 | Sửa kịch bản | PATCH /video/jobs/:id | P1 | |
-| 3.7 | Duyệt kịch bản | POST approve-script | P3 (approve) | trước khi dựng |
-| 3.8 | Dựng video | POST /video/jobs/:id/deploy | P1 | 1-3 phút, không chặn |
-| 3.9 | Thẻ kết quả video | GET /video/jobs/:id | P1 | trình phát, chi phí |
-| 3.10 | Duyệt video | POST approve-video | P4 (approve) | sau kết quả |
-| 3.11 | Lưu vào Kho video | assets.register | I3 | parent_asset_id → MI |
+| 3.1-3.4 | Chọn khuôn, cấu hình, dựng kịch bản | `POST /video/jobs` | P1 (generate) | 6 khuôn, scene builder |
+| 3.5 | Thẻ kịch bản | `GET /video/jobs/:id` | P1 | cảnh, thời lượng, hiệu ứng |
+| 3.6 | Sửa kịch bản | `PATCH /video/jobs/:id` | P1 | |
+| 3.7 | Duyệt kịch bản | `POST /video/jobs/:id/approve-script` | P3 | trước dựng |
+| 3.8 | Dựng video | `POST /video/jobs/:id/deploy` | P1 | 1-3 phút, không chặn |
+| 3.9 | Thẻ kết quả video | `GET /video/jobs/:id` | P1 | trình phát, chi phí |
+| 3.10 | Duyệt video | `POST /video/jobs/:id/approve-video` | P4 | sau kết quả |
+| 3.11 | Lưu vào Kho video | `POST /integration/assets` | I3 | parent_asset_id → MI |
 | 3.12 | Khung đầu/cuối khoá | domain rule | P1 | chỉ Master Image |
-| 3.13 | Job lỗi → thử lại | POST retry | G7 | không trừ hạn mức |
-| 3.14 | Chi phí → usage | enqueue | G8 | feature = video.generate |
+| 3.13 | Job lỗi → thử lại | `POST /video/jobs/:id/retry` | G7 | không trừ hạn mức |
+| 3.14 | Chi phí → usage | enqueue | G8 | feature = video.generate, placeholder |
 
-**Câu hỏi cần xác nhận:**
-> Q5: Video Studio — HeyGen/Veo adapters được harvest ở SocialFlow repo hay cần xây mới? Scene builder ở core hay SocialFlow? Ai phụ trách P17?
-> Q6: D14 (credit pricing cho video.generate) — bảng giá đã chốt chưa? Có ảnh hưởng đến UX hiển thị chi phí không?
-> Q7: AI-2 (scoring/cascade) cần gì cho Video? Đánh giá chất lượng video trước duyệt?
+**Module cần tạo:** `src/modules/video-studio/` (domain, use-cases, infra, adapters)
+**Câu hỏi:**
+> Q5b: HeyGen/Veo adapters — ở SocialFlow (harvest EXTEND) hay build mới ở core?
+> Q5b2: Scene builder ở core hay SocialFlow?
+> Q6b: D14 credit pricing cho video.generate — placeholder framework (Q6), có blocking không?
 
 ---
 
-### 1.2 — P18: AI Content Engine + Social Publishing (M07)
+### 1.4 — P18: AI Content Engine + Social Publishing M07 (6-8 tuần)
 
-**Hạng mục:** EXTEND (platform adapters, scheduler) + BUILD (flower strategy, Zalo OA)
-**Dependencies:** P15, P16, AI-2, Đợt 3 (E group)
+**Xác nhận:** Harvest từ SocialFlow (Q8). Zalo OA check (Q9).
 
 **Module cần tạo:** `src/modules/content-engine/` + `src/modules/social-publishing/`
-**Routes cần tạo (Content Engine):**
-- `POST /content/posts` — tạo nội dung theo kênh (feature = content.generate)
-- `GET /content/posts` — danh sách
-- `GET /content/posts/:id` — chi tiết
-- `PATCH /content/posts/:id` — sửa
-- `POST /content/posts/:id/approve` — duyệt (O1/O3 pair)
-- `POST /content/posts/:id/reject` — từ chối
-
-**Routes cần tạo (Social Publishing):**
-- `POST /content/schedule` — xác nhận lịch đăng
-- `GET /content/schedule` — lịch đăng
-- `POST /content/schedule/:id/publish` — đăng (O6)
 
 | # | Chức năng | Tính năng | Capability | Notes |
 |---|-----------|-----------|------------|-------|
 | **Content** | | | | |
-| 4.1-4.3 | Chọn sản phẩm, kênh, dịp | POST /content/posts | O1 | bound to PM + approved MI |
-| 4.5 | Thẻ kết quả từng kênh | GET /content/posts/:id | O1 | FB, IG, TikTok, Zalo OA, SEO |
-| 4.6 | Sửa nội dung | PATCH /content/posts/:id | O1 | |
-| 4.7 | Duyệt | POST approve | O3 | |
-| 4.8 | Lưu Thư viện nội dung | create in DB | O1 | |
+| 4.1-4.3 | Chọn sản phẩm, kênh, dịp | `POST /content/posts` | O1 | bound to PM + approved MI |
+| 4.5 | Thẻ kết quả từng kênh | `GET /content/posts/:id` | O1 | FB/IG/TikTok/Zalo OA/SEO |
+| 4.6 | Sửa nội dung | `PATCH /content/posts/:id` | O1 | |
+| 4.7 | Duyệt | `POST /content/posts/:id/approve` | O3 | |
+| 4.8 | Lưu Thư viện | DB insert | O1 | |
 | 4.9 | Chỉ báo giọng + dữ kiện | AI evaluation | AI-2 | |
 | 4.10 | Gợi ý lên lịch | UI redirect | — | → Social Publishing |
 | **Social** | | | | |
-| 5.1 | Chọn từ Thư viện | GET /content/posts (approved) | O3 | |
-| 5.2 | Chọn nền tảng + thời điểm | POST /content/schedule | O6 | |
-| 5.3 | Xem trước | UI | — | |
-| 5.5 | Xác nhận lịch đăng | POST schedule | O6 | không có bước Duyệt riêng |
-| 5.6 | Thẻ trạng thái | UI | — | Đã lên lịch/Đang đăng/Đã đăng/Lỗi |
-| 5.7 | Lịch đăng | GET /content/schedule | O6 | tuần/tháng, drag-drop |
-| 5.8 | Đăng lại thông minh | Analytics gợi ý | O6 | |
-| 5.9 | Tự duyệt theo thời hạn | PUT /content/settings | O7 (dieu_hanh, tắt mặc định) | |
-| 5.10 | Hết hạn → chờ duyệt lại | domain rule | O7 | if off → "Chờ duyệt lại" |
-| 5.11 | Đăng lỗi → thử lại | POST retry | O6 | không tính lượt đăng |
+| 5.1-5.5 | Lịch đăng | `POST/GET /content/schedule` | O6 | |
+| 5.6 | Thẻ trạng thái | UI | — | |
+| 5.7 | Lịch đăng view | `GET /content/schedule` | O6 | tuần/tháng |
+| 5.8 | Đăng lại thông minh | Analytics | O6 | |
+| 5.9 | Tự duyệt (defer) | `PUT /content/settings` | O7 | DEFER — không cấp thiết |
+| 5.11 | Đăng lỗi → thử lại | `POST retry` | O6 | |
 
-**Câu hỏi cần xác nhận:**
-> Q8: M07 — Social Flow adapters (Facebook, Instagram, TikTok, Zalo OA) — harvest ở SocialFlow repo hay xây mới? Platform adapter là gì?
-> Q9: Zalo OA adapter — có SDK hay API docs chưa? Đây là xây mới hoàn toàn?
-> Q10: O7 (tự duyệt) — là capability mới hay reuse existing? Kiểm trong use-case hay route?
-> Q11: Content luôn bound to Product Master + approved Master Image — rule này enforcement ở đâu? UI, route, hay domain?
-> Q12: Social accounts mang organization_id — bảng `social_accounts` đã có schema chưa?
+**Câu hỏi:**
+> Q8b: Social Flow platform adapters — có sẵn ở SocialFlow? ADAPTER (đọc) hay BUILD (mới)?
+> Q9b: Zalo OA adapter — có SDK/docs? If not → BUILD mới hoàn toàn.
+> Q11b: Content bound to PM + MI — enforcement: UI kiểm (product status=APPROVED), route kiểm (must be APPROVED), hay domain? Standard approach: route-level validation.
 
 ---
 
-### 1.3 — P19: Catalog & Website (M06) hoàn thiện + M05 Landing
-
-**Hạng mục:** M06 BUILD (core) + M05 REUSE (LocalBudd)
-**Dependencies:** P15
-**Status:** 6/7 DONE (LocalBudd) — còn capability pair J1/J2
+### 1.5 — P19: M06 Catalog hoàn thiện + M05 Proxy (2-3 tuần)
 
 | # | Tính năng | Action | Notes |
 |---|-----------|--------|-------|
-| 6.2-6.4 | Tab A hoàn thiện | UI + API | Backend đã có |
-| 6.6 | QR code | UI component | J7 capability check |
-| 6.8-6.15 | Tab B Landing | **Cần M05** | LocalBudd side |
+| 6.2-6.3 | Filter, Bộ sưu tập | UI | Backend đã có |
+| 6.4 | Xem trước | Thêm LOCALBUDD whitelist | Proxy |
+| 6.6 | QR code | UI | J7 check |
+| 6.8-6.15 | Landing page | LocalBudd side | Check LocalBudd M05 → proxy config |
 
 **Câu hỏi:**
-> Q3: M05 — timeline LocalBudd M05 builder cho core proxy?
+> Q3b: LocalBudd M05 sẵn sàng cho core proxy? Cần thêm `api/v1/projects` vào LOCALBUDD whitelist.
 
 ---
 
-## GIAI ĐOẠN 2: Xây backend — Post-MVP (P20–P23)
+## GIAI ĐOẠN 2 — Post-MVP (10-15 tuần)
 
-### 2.1 — P20: Analytics & Learning (M11)
+### 2.1 — P21: CRM & Khách hàng M09 (3-4 tuần)
 
-**Dependencies:** P18, P19, P22
-
-| # | Tính năng | Action | Notes |
-|---|-----------|--------|-------|
-| 10.12-10.18 | Vòng học phong cách | BUILD | learning-profile endpoint, history |
-| 10.9 | Diễn giải | EXTEND | AI-4 domain events |
-
-**Câu hỏi:**
-> Q4: Learning profile API — đã có trên backend chưa?
-
----
-
-### 2.2 — P21: CRM & Khách hàng (M09)
-
-**Hạng mục:** BUILD (floraos-core) — Customer PII = separate class
-**Dependencies:** P2, P3, **D13 (consent)**
+**Xác nhận:** Customer = Contact (reuse users/memberships — Q15). D13 standard consent (Q13). LLM provider cho AI (Q14).
 
 **Module cần tạo:** `src/modules/crm/`
-**Routes cần tạo:**
-- `GET /customers` — danh sách
-- `GET /customers/:id` — hồ sơ
-- `POST /customers` — tạo
-- `POST /customers/:id/campaigns` — gợi ý nhắc mua
-- `POST /customers/:id/campaigns/:campaignId/approve` — duyệt
-- `POST /customers/:id/delete-request` — yêu cầu xoá dữ liệu
-- `POST /customers/:id/consent` — cập nhật đồng ý
-- `POST /campaigns` — lên lịch gửi
+**Bảng mới:** Không có — reuse `users` (là customer), `memberships` (vai trò trong org).
+**Cần thêm:** `consent_logs` table (Q13), `customer_segments`?
 
-| # | Tính năng | Capability | Notes |
-|---|-----------|------------|-------|
-| 7.1-7.3 | Danh sách, hồ sơ, gợi ý AI | M09 | AI quét theo lô |
-| 7.4 | KHÔNG gửi PII ra ngoài | Privacy floor | D15 + D13 |
-| 7.5-7.8 | Thẻ kết quả, sửa, duyệt, lịch gửi | O-pattern | |
-| 7.9 | Đồng ý nhận nhắc | D13 | trạng thái + ngày |
-| 7.10 | Yêu cầu xoá dữ liệu | D13 | nút riêng, thực thi ngay |
-| 7.11 | Khối đồng ý bắt buộc | UI | |
+| # | Tính năng | Route | Capability | Notes |
+|---|-----------|-------|------------|-------|
+| 7.1 | Danh sách khách hàng | `GET /customers` | M09 | Từ users (role=customer?) |
+| 7.2 | Hồ sơ khách hàng | `GET /customers/:id` | M09 | Lịch sử mua từ orders |
+| 7.3 | Gợi ý nhắc mua | `POST /customers/:id/campaigns` | M09 | LLM provider, privacy floor |
+| 7.4 | KHÔNG gửi PII | Privacy | D15 | PII stays in infra |
+| 7.5-7.8 | Thẻ kết quả, sửa, duyệt, lịch gửi | CRUD | M09 | |
+| 7.9 | Đồng ý nhận nhắc | `POST /consent` | D13 | Bảng consent_logs |
+| 7.10 | Yêu cầu xoá dữ liệu | `POST /customers/:id/delete-request` | D13 | Standard practice |
+| 7.11 | Khối đồng ý | UI | D13 | |
 
-**Câu hỏi cần xác nhận:**
-> Q13: D13 (consent) — đã có schema/table chưa (consent_logs, consent_settings)? Quy tắc xoá dữ liệu: xoá toàn bộ hay ẩn? Deadline legal?
-> Q14: CRM gợi ý nhắc mua — gọi AI qua cổng nào? AIC-xx nào?
-> Q15: Bảng customers — new table hay reuse existing (users/memberships)?
+**Bảng cần migration:** `consent_logs` (customer_id, type, status, recorded_at, recorded_by)
 
 ---
 
-### 2.3 — P22: Đơn hàng & Vận hành (M10)
+### 2.2 — P22: Đơn hàng & Vận hành M10 (4-5 tuần)
 
-**Hạng mục:** EXTEND (C1–C28 + quote flow from v1) — HARVEST
-**Dependencies:** P6, P21
+**Xác nhận:** Fixed enum Kanban (Q19), Realtime SLA (Q17), PDF/PNG/JPEG + Vietnamese font (Q18). Quote: quote.run/quote.approve pair (Q20).
 
 **Module cần tạo:** `src/modules/orders/`
-**Routes cần tạo:**
-- `GET/POST /orders` — danh sách/tạo
-- `GET/PATCH /orders/:id` — chi tiết/sửa
-- `POST /orders/:id/quote` — tạo phiếu chào giá
-- `POST /orders/:id/approve` — duyệt
-- `POST /orders/:id/assign` — phân công thợ cắm
-- `POST /orders/:id/ship` — đánh dấu đã giao
-- `GET /orders/board` — Kanban board
+**Bảng cần migration:** `orders`, `order_items`, `quotes`, `order_status_history` (cho Kanban timeline)
 
-| # | Tính năng | Notes |
-|---|-----------|-------|
-| 8.1-8.3 | Tạo đơn | select khách, sản phẩm, ngày, lời nhắn |
-| 8.4-8.5 | Phiếu chào giá | price breakdown, A6 preview |
-| 8.6 | Duyệt | H1/H3 pair (quote.run/quote.approve) |
-| 8.9-8.11 | Kanban + phân công + SLA | trạng thái, drag-drop |
-| 8.12-8.15 | In phiếu, quá SLA | in không gắn duyệt, viền đỏ |
+| # | Tính năng | Route | Capability | Notes |
+|---|-----------|-------|------------|-------|
+| 8.1-8.3 | Tạo đơn | `GET/POST /orders` | M010 | |
+| 8.4-8.5 | Phiếu chào giá | `POST /orders/:id/quote` | quote.run | PDF/PNG/JPEG |
+| 8.6 | Duyệt | `POST /orders/:id/approve` | quote.approve | |
+| 8.9-8.11 | Kanban, phân công, SLA | `GET /orders/board`, `POST /orders/:id/assign` | M10 | fixed enum, realtime SSE |
+| 8.12-8.15 | In, quá SLA | Print service | M10 | Vietnamese font |
 
-**Câu hỏi cần xác nhận:**
-> Q16: M10 — quote flow: bảng `orders`, `order_items`, `quotes` đã có schema chưa? Hay cần migration?
-> Q17: SLA timer — realtime hay polling? Backend có WebSocket/SSE cho SLA không?
-> Q18: In phiếu — PDF generation ở core hay client? Có font/vietnamese support?
-> Q19: Kanban board — trạng thái đơn hàng mapping từ đâu? Mới/Phân công/Đang làm/Đã giao là enum hay free-text?
-> Q20: Phiếu chào giá — có capability pair riêng (quote.run/quote.approve) hay dùng H1/H3?
+**Bảng cần migration:** `orders`, `order_items`, `quotes`, `order_status_history`
+
+**Câu hỏi:**
+> Q16b: Kiểm tra schema → migration plan cụ thể?
 
 ---
 
-### 2.4 — P23: AI Chat Assistant (M08)
+### 2.3 — P20: Analytics & Learning M11 (3 weeks)
 
-**Hạng mục:** BUILD (new repo / new module)
-**Dependencies:** P19, P21, P22
-**Notes:** Chưa có repo. Cần thiết kế đầy đủ.
+**Xác nhận:** Learning profile KHÔNG có (Q4) → BUILD.
+
+| # | Tính năng | Action | Notes |
+|---|-----------|--------|-------|
+| 10.12-10.18 | Vòng học phong cách | BUILD | learning-profile endpoint + history |
+| 10.9 | Diễn giải | EXTEND | AI-4 domain events |
+
+**Bảng cần tạo:** `learning_profiles`, `learning_history`
+
+---
+
+### 2.4 — P23: AI Chat Assistant M08 (3-4 weeks)
+
+**Xác nhận:** Realtime (Q21), New table chat_messages (Q22), Deep links yes (Q23), UI fallback yes (Q24), Start UI mock early (Q25).
 
 **Module cần tạo:** `src/modules/chat-assistant/`
-**Routes cần tạo:**
-- `GET /chat/conversations` — danh sách
-- `GET /chat/conversations/:id` — lịch sử + AI trả lời
-- `POST /chat/conversations/:id/transfer` — chuyển nhân viên
-- `POST /chat/conversations/:id/flag` — gắn cờ
-- `GET /chat/config` — cấu hình phạm vi
-- `PUT /chat/config` — cập nhật
-- `POST /chat/config/preview` — mô phỏng 3 câu hỏi
-- `POST /chat/config/approve` — duyệt cấu hình
+**Bảng mới:** `chat_messages`, `chat_conversations`, `chat_configs`
 
-| # | Tính năng | Tab | Notes |
-|---|-----------|-----|-------|
-| 9.1-9.4 | Hội thoại, lịch sử, AI trả lời, nhãn "dẫn từ" | A | realtime |
-| 9.5 | Chuyển nhân viên | A | luôn hiện |
-| 9.6 | Gắn cờ | A | |
-| 9.7 | AI không trả lời → chuyển | A | rule |
-| 9.8-9.10 | Phạm vi, FAQ, ngưỡng | B | |
-| 9.11 | Xem trước | B | simulate 3 questions |
-| 9.12 | Duyệt cấu hình | B | |
+| # | Tính năng | Tab | Route | Notes |
+|---|-----------|-----|-------|-------|
+| 9.1-9.4 | Hội thoại, lịch sử, AI trả lời, nhãn "dẫn từ" | A | `GET/POST /chat/...` | Realtime SSE |
+| 9.5 | Chuyển nhân viên | A | `POST /chat/.../transfer` | |
+| 9.6 | Gắn cờ | A | `POST /chat/.../flag` | |
+| 9.7 | AI không tìm thấy → chuyển | A | UI rule | |
+| 9.8-9.10 | Phạm vi, FAQ, ngưỡng | B | `GET/PUT /chat/config` | |
+| 9.11 | Xem trước | B | `POST /chat/config/preview` | simulate 3 |
+| 9.12 | Duyệt cấu hình | B | `POST /chat/config/approve` | |
 
-**Câu hỏi cần xácẫn:**
-> Q21: Chat Assistant — realtime AI trả lời: WebSocket/SSE hay polling? AI trả lời dựa trên Product Master + giá đã duyệt — gọi qua cổng nào (LLM provider)?
-> Q22: Chat history lưu ở đâu? Bảng `chat_messages` mới hay reuse?
-> Q23: "Dẫn từ: [tên sản phẩm/trang giá]" — trỏ về bản ghi thật — là deep link đến product hay chỉ text?
-> Q24: AI không tìm thấy dữ liệu → nút chuyển nhân viên — rule này ở UI hay backend?
-> Q25: P23 phụ thuộc P19 (M06), P21 (CRM), P22 (Orders). P21/P22 chưa có schema. Timeline có bị trễ?
+**Câu hỏi:**
+> Q21b: Realtime AI trả lời — SSE hay WebSocket? LLM provider cổng nào?
+> Q22b: Chat schema — bảng `chat_messages`, `chat_conversations`, `chat_configs`?
 
 ---
 
-## Tổng quan phụ thuộc và timeline
+## AI-2: Phương án đề xuất (Q7, Q26)
 
-```
-P13 (done) ──→ P14 (M01b) ← GIAI ĐOẠN 0 bắt đầu ở đây
-                │
-P15 (done) ──→ P15+ E2E ← GIAI ĐOẠN 0 hoàn thành
-                │
-                ├──→ P16 (M04b full) ──→ P17 (M04c) ──→ P18 (M07)
-                │                        │            ╰──→ P19 (M06)
-                │                        │
-                │                    AI-2 (blocks P17/P18)
-                │                    D14 (blocks P17)
-                │
-                ├──→ P20 (M11) ← phụ P18, P19, P22
-                │
-                ├──→ P21 (M09) ← phụ P2, P3, D13
-                │
-                ├──→ P22 (M10) ← phụ P6, P21
-                │
-                └──→ P23 (M08) ← phụ P19, P21, P22
-```
+### Tại sao AI-2 quan trọng
+AI-2 là blocker cho P17 (Video) và P18 (Content). Cả hai đều cần: đánh giá chất lượng output AI, thác nghiệm khi chưa đạt ngưỡng, fallback khi model hỏng, và review queue khi AI không chắc.
 
-**Song song hóa:**
-- GIAI ĐOẠN 0 (UI kết nối): song song với P14, P16 remaining
-- P17, P18, P19: song song (nhưng chia sẻ AI-2, P15)
-- P21 có thể song song với P16/P17 (D13 là blocker riêng)
-- P22 phải chờ P21 + P6
-- P23 phải chờ P19, P21, P22
+### Phương án: Triển khai ở Gateway Level
+
+`src/core/ai/gateway.ts` đã có flow: resolve capability → load policy → selectModel → run adapter → **evaluate** → escalate/fallback/accept/reject. AI-2 chỉ cần mở rộng các bước evaluate, escalate, fallback.
+
+### Deliverables
+
+| # | Deliverable | File | Ước lượng | Trạng thái |
+|---|-------------|------|-----------|-------------|
+| A1 | Per-capability quality scoring | `domain/evaluation.ts` | 1 tuần | Extend — đã có `evaluateOutput()`, mở rộng thêm score channels |
+| A2 | Cascade thresholds | `domain/routing.ts` | 1 tuần | Extend — đã có `cascade` flag, wire với threshold config |
+| A3 | Needs review queue | `domain/ai-requests.ts` + routes | 1.5 tuần | New field `needs_review` + endpoint |
+| A4 | Privacy floor enforcement | `domain/privacy.ts` | 0.5 tuần | Đã có — verify + test |
+| A5 | Fallback chains | `domain/routing.ts` | 0.5 tuần | Đã có `nextFallback` — wire vào gateway |
+
+### Tổng: ~3.5 tuần, thuần domain logic (không cần DB), song song GĐ 0
+
+### Thứ tự
+A4 → A5 → A1 → A2 → A3 (A4, A5 sẵn sàng; A1-A3 cần mở rộng)
 
 ---
 
 ## GIAI ĐOẠN 3: AI Infrastructure (Tuyến C)
 
-| Batch | Scope | Blocks | Status |
-|---|---|---|---|
-| AI-1 | AI Gateway, 34 caps, 10 ports, org policies | P16-P18 | ✅ DONE |
-| AI-2 | Scoring, cascade, fallback, needs_review queue, privacy floor | P17-P18 | ❌ Next |
-| AI-3 | flower_taxonomy, knowledge_chunks, retrieval | P23 | ❌ |
-| AI-4 | Domain events, content_features, learning loop | P20 | ❌ |
-
-**Câu hỏi:**
-> Q26: AI-2 — team phụ trách? Timeline? Đây là blocker cho P17 (Video) và P18 (Content).
+| Batch | Scope | Trạng thái |
+|---|---|---|
+| AI-1 | Gateway, 34 caps, 10 ports, policies | ✅ DONE |
+| AI-2 | **Phương án đề xuất ở trên** | ❌ Proposed |
+| AI-3 | flower_taxonomy, knowledge_chunks | ❌ |
+| AI-4 | Domain events, content_features | ❌ |
 
 ---
 
-## CÂU HỎI TỔNG HỢP (cần trả lời trước khi bắt đầu)
+## Timeline tổng thể (updated)
 
-| # | Câu hỏi | Ảnh hưởng đến |
-|---|-----------|---------------|
-| Q1 | M01b flow — Thẻ 1 và Thẻ 2 độc lập hay tuần tự? | GIAI ĐOẠN 0.1 |
-| Q2 | M04b full — backend có sẵn (SocialFlow) hay xây mới? Timeline? | GIAI ĐOẠN 0.2, 1.1 |
-| Q3 | M05 Landing — LocalBudd đã sẵn sàng cho core proxy chưa? | GIAI ĐOẠN 0.3, 1.3 |
-| Q4 | Learning profile endpoint — đã có trên backend? | GIAI ĐOẠN 0.4 |
-| Q5 | M04c — HeyGen/Veo adapter harvest hay build mới? Scene builder ở đâu? | 1.1 |
-| Q6 | D14 — credit pricing cho video.generate đã chốt? | 1.1 |
-| Q7 | AI-2 cần gì cho Video? | 1.1, AI-2 |
-| Q8 | M07 — Social Flow platform adapters harvest hay mới? | 1.2 |
-| Q9 | Zalo OA adapter — SDK hay API docs có sẵn? | 1.2 |
-| Q10 | O7 (tự duyệt) — capability mới hay reuse? | 1.2 |
-| Q11 | Content bound to PM + MI — enforcement ở đâu? | 1.2 |
-| Q12 | Social accounts table — đã có schema? | 1.2 |
-| Q13 | D13 — consent schema, xoá toàn bộ hay ẩn? | 2.2 |
-| Q14 | CRM gợi ý nhắc mua — AI qua cổng nào? | 2.2 |
-| Q15 | CRM customers — bảng mới hay reuse? | 2.2 |
-| Q16 | M10 — orders/quotes schema đã có? | 2.3 |
-| Q17 | SLA timer — realtime hay polling? | 2.3 |
-| Q18 | In phiếu — PDF ở core hay client? | 2.3 |
-| Q19 | Kanban trạng thái — enum hay free-text? | 2.3 |
-| Q20 | Quote capability pair — riêng hay dùng H1/H3? | 2.3 |
-| Q21 | Chat AI trả lời realtime — WebSocket/SSE/polling? Cổng nào? | 2.4 |
-| Q22 | Chat history — bảng mới hay reuse? | 2.4 |
-| Q23 | "Dẫn từ" deep link — product hay text? | 2.4 |
-| Q24 | AI không tìm thấy → chuyển người — UI hay backend rule? | 2.4 |
-| Q25 | P23 timeline — có bị trễ vì phụ thuộc P19/P21/P22? | 2.4 |
-| Q26 | AI-2 — team, timeline? | AI-2, 1.1, 1.2 |
+```
+GĐ 0 (2-3 tuần)  ├─ 0.1 M01b connection ──────────────────────
+                  ├─ 0.2 M04b mapping ──────────┐
+                  ├─ 0.3 Catalog polish ─────────┤
+                  └─ 0.4 Learning → GĐ 2 ────────┘
+AI-2 (3.5 tuần)  ├── song song với GĐ 0
+P16 remaining ──┤ (Q2b check)
+P17 (4-5 wk) ───┤ (Q5b, Q5b2, Q6b check)
+P18 (6-8 wk) ───┤ (Q8b, Q9b, Q11b check)
+P19 (2-3 wk) ───┘ (Q3b check)
+P21 (3-4 wk) ──┤ (Q16b check)
+P22 (4-5 wk) ──┤ (song song P21, cần P21)
+P20 (3 wk) ────┘ (cần P18, P19, P22)
+P23 (3-4 wk) ──┘ (cần P19, P21, P22, UI mock sớm)
+```
 
 ---
 
-## Thứ tự ưu tiên đề xuất (khi có câu trả lời)
+## Hành động tiếp theo
 
-### Thứ tự 1: GIAI ĐOẠN 0 (UI kết nối — không cần xây backend)
-1. **M01b connection** (Q1 phải trả lời trước) — 4-5 tính năng, tác động trực tiếp đến trải nghiệm người dùng
-2. **M04b mapping fix** — proxy đã có, cần mapping thật
-3. **Catalog Tab A polish** — filter, bộ sưu tập, QR
-4. **Analytics learning section** — nếu learning backend có (Q4)
+### Ngay lập tức (không cần chờ)
+1. **Bắt đầu 0.1:** Đọc `src/modules/product-copies/` — connect M01b vào tai-anh
+2. **Bắt đầu AI-2:** A4, A5 (đã có code), rồi A1-A3
 
-### Thứ tự 2: GIAI ĐOẠN 1 (Backend mới — song song)
-1. **P16 remaining** (M04b full) — prerequisite cho P17
-2. **P17** (M04c Video) — Q5, Q6, Q7 phải trả lời
-3. **P18** (M07 Content+Social) — Q8-Q12 phải trả lời
-4. **P19** (M06 M05) — Q3 phải trả lời
+### Cần check (1-2 ngày)
+1. Q2b: SocialFlow M04b background replacement — có code không?
+2. Q5b/5b2: SocialFlow HeyGen/Veo + Scene builder — có không?
+3. Q8b/9b: SocialFlow M07 adapters + Zalo OA — có không?
+4. Q3b: LocalBudd M05 → proxy whitelist
+5. Q11b: Content bound enforcement — standard approach
+6. Q12: Social accounts — check SocialFlow schema
+7. Q16b: M10 schema — check → migration plan
 
-### Thứ tự 3: GIAI ĐOẠN 2 (Post-MVP)
-1. **P21** (CRM) — Q13-Q15, cần D13
-2. **P22** (Orders) — Q16-Q20, cần P21
-3. **P20** (Analytics & Learning) — Q4, cần P18/P19/P22
-4. **P23** (Chat) — Q21-Q25, cần P19/P21/P22
+### Cần quyết định (cá nhân)
+1. O7 (Q10): Ưu tiên sau? Hay bỏ?
+2. Q13b: D13 consent schema cụ thể?
+3. Q14b: CRM AI — LLM provider cụ thể (OpenAI? Others?)?
+4. Q21b: Chat realtime — SSE hay WebSocket?
 
-### Thứ tự 4: AI Infrastructure
-- AI-2 → AI-3 → AI-4 (theo lộ trình)
+---
+
+## Tài liệu liên quan
+- `docs/UIUX-Feature-Checklist.md` — 115 tính năng
+- `docs/UIUX-Implementation-Plan.md` — kế hoạch gốc + 26 câu hỏi
+- `src/modules/product-copies/` — M01b backend (đã có)
+- `src/core/ai/gateway.ts` — AI-2 target (đã có flow)
+- `src/core/ai/domain/routing.ts` — 5 ràng buộc D17
