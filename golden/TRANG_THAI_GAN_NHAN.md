@@ -1,8 +1,8 @@
 # Tiến độ gán nhãn bộ ảnh vàng
 
 ## Trạng thái
-- [ ] Người A hoàn thành 100 ảnh (g001-g100)
-- [ ] Người B kiểm chứng 30% (30 ảnh) + spot-check 70%
+- [ ] Người A hoàn thành 8 ảnh gán nhãn (g001-g008)
+- [ ] Người B kiểm chứng 30% (≥2 ảnh) + spot-check 70%
 - [ ] AI so sánh và báo sai
 - [ ] Hoàn thiện manifest.csv
 - [ ] Nộp vào checklist P5

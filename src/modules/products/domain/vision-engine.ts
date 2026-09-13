@@ -21,7 +21,7 @@ export type VisionEngine = (typeof VISION_ENGINES)[number]
 /**
  * Mặc định nền tảng là "Gọn" (`openai_direct`) — rẻ nhất và nhanh nhất,
  * phù hợp cho sản xuất khi bộ ảnh vàng đã xác nhận độ chính xác đủ.
- * Ghi đè có chủ đích: bộ ảnh vàng đang 0/100 nhãn (nợ #24), nhưng
+ * Ghi đè có chủ đích: bộ ảnh vàng đang 0/8 nhãn (nợ #24), nhưng
  * định tuyến theo năng lực (`H4`) cho phép tổ chức chọn bộ khác,
  * nên mặc định sai chỉ ảnh hưởng tới tổ chức chưa chọn.
  * Tổ chức muốn chính xác hơn chọn "Đầy đủ" (`openai_structured`);

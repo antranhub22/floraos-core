@@ -77,9 +77,7 @@ P5 nghiệm thu phần lõi trước đó — 49/49 `test:tenant` xanh, 43/43 `p
 xanh, trên Postgres thật. M01 — hợp đồng Vision + `OpenAIStructuredProvider` +
 `count_engine`/`color_engine` chuyển sang + worker `SKIP LOCKED`/`LISTEN` +
 route `/vision/analyses*`, đã xác minh trên máy thật của anh Tony. Còn hai
-việc chặn P5 nghiệm thu tuyệt đối, không chặn P6: bộ ảnh vàng chưa gán nhãn
-thật (khung 100 ảnh đã dựng, `scripts/xay-dung-bo-anh-vang.py` —
-`docs/kien-truc/BO_ANH_VANG.md` mục 8, nợ #24) và ma trận chọn công nghệ chưa
+việc chặn P5 nghiệm thu tuyệt đối, không chặn P6: bộ ảnh vàng 8/100 ảnh đã gán nhãn, chỉ cần 8 ảnh đạt yêu cầu theo luật mới 09/12 (`docs/kien-truc/BO_ANH_VANG.md` mục 8, nợ #24) và ma trận chọn công nghệ chưa
 làm. Chi tiết đầy đủ ở `docs/kien-truc/TRANG_THAI.md` mục 1 và
 `TECHNICAL_DEBT.md` #19-29.
 

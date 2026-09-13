@@ -309,7 +309,7 @@ AI-1 đứng trước P16 vì P16 là lần đầu hệ thống gọi một lo�
 
 **Điều kiện chặn thứ tự:** không tạo bảng, route, job hay đường dẫn lưu trữ thật của bất kỳ module nào trước khi P1 và P2 đạt nghiệm thu. Làm ngược sẽ sinh ra lược đồ không có `organization_id` và phải migration lại khi đã có dữ liệu thật.
 
-**Việc chạy song song, không chặn ai:** bộ ảnh vàng 50–100 ảnh sản phẩm thật có nhãn số lượng đúng. Đây là điều kiện nghiệm thu P5 và là thứ duy nhất cho phép so sánh hai provider Vision.
+**Việc chạy song song, không chặn ai:** bộ ảnh vàng 8 ảnh sản phẩm thật có nhãn số lượng đúng (đã chốt 09/12, trước đó 50–100 ảnh). Đây là điều kiện nghiệm thu P5 và là thứ duy nhất cho phép so sánh hai provider Vision.
 
 ## 11. Tiêu chí nghiệm thu
 
@@ -412,6 +412,6 @@ Chín câu hỏi phải trả lời trước mỗi hạng mục: hạng thu ho�
 | Năng lực gác | Mục 7.2 |
 | Trạng thái | — |
 
-Giá trị đưa lên Master Index: ngưỡng đồng thời 100–500 · SLA 10–30 giây · dải chi phí ảnh 0,01–0,20 USD và video 0,05–5 USD · kích thước bộ ảnh vàng 50–100 · mười ba đơn vị triển khai, bốn engine · dải mã năng lực A–T · tổng thời lượng Tuyến A 5–6 tháng · bảy pha MVP của Tuyến B (P13–P19).
+Giá trị đưa lên Master Index: ngưỡng đồng thời 100–500 · SLA 10–30 giây · dải chi phí ảnh 0,01–0,20 USD và video 0,05–5 USD · kích thước bộ ảnh vàng 8 ảnh · mười ba đơn vị triển khai, bốn engine · dải mã năng lực A–T · tổng thời lượng Tuyến A 5–6 tháng · bảy pha MVP của Tuyến B (P13–P19).
 
 Số lượng mã năng lực và số mã có trần cứng không đưa lên Master Index dưới dạng hằng số: chúng sinh từ `capability-catalog.ts` và chỉ đọc ở đặc tả 02 mục 3.

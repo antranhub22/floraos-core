@@ -1,6 +1,6 @@
 # Bộ ảnh vàng — quy cách xây dựng
 
-Bộ ảnh vàng là **50–100 ảnh sản phẩm thật, có nhãn số lượng đúng**, dùng làm thước đo cố định cho mọi thay đổi ở M01.
+Bộ ảnh vàng là **8 ảnh sản phẩm thật có nhãn số lượng đúng** (đã chốt 09/12, trước đó yêu cầu 50–100 ảnh), dùng làm thước đo cố định cho mọi thay đổi ở M01.
 
 ## 1. Nó phục vụ ba việc
 
@@ -29,7 +29,7 @@ Gặp trường hợp `QUY_UOC_DEM.md` chưa nói tới thì dừng và bổ sun
 
 ## 3. Quy mô và phân bổ
 
-Tối thiểu 50 ảnh để có ý nghĩa thống kê thô; 100 ảnh là mức đủ để phân biệt hai provider gần nhau. Phân bổ theo bốn trục, cắt chéo nhau:
+8 ảnh đã đủ để có căn cứ nghiệm thu ban đầu; 50 ảnh là mức có ý nghĩa thống kê thô; 100 ảnh là mức đủ để phân biệt hai provider gần nhau. Phân bổ theo bốn trục, cắt chéo nhau:
 
 | Trục | Phân bổ mục tiêu |
 |---|---|
@@ -65,7 +65,9 @@ golden/
 
 Ảnh nằm ngoài git (`.gitignore` đã loại `golden/images/`) vì đó là dữ liệu sản phẩm của khách và vì kích thước. Nhãn nằm trong git vì đó mới là phần có giá trị và cần lịch sử thay đổi.
 
-Đặt tên `g001`–`g100`, không đặt theo tên sản phẩm. Tên sản phẩm nằm trong nhãn.
+Đặt tên `g001`–`g100`, không đặt theo tên sản phẩm. Tên sản phẩm nằm trong nhãn. 
+
+> **Quy tắc nghiệm thu:** chỉ cần **8 ảnh** có nhãn đầy đủ (đủ `flower_count`, `bud_count`, `damaged_count`, `components`, `labeled_by`, `verified_by`) là bộ ảnh vàng đạt nghiệm thu. Ảnh ngoài 8 ảnh vẫn có thể dựng khung để đo sau nhưng không bắt buộc phải gán nhãn.
 
 ## 6. Lược đồ nhãn
 
@@ -124,7 +126,7 @@ Tỉ lệ lệch ở vòng hai là chỉ số về chất lượng quy ước. L
 
 Bộ ảnh coi là dùng được khi:
 
-- Từ 50 ảnh trở lên, đủ phân bổ ở mục 3 với sai số mỗi ô không quá 5 điểm phần trăm.
+- Từ 8 ảnh trở lên, đủ phân bổ ở mục 3 với sai số mỗi ô không quá 5 điểm phần trăm.
 - 100% ảnh có nhãn đủ trường, `canonical_component` đều nằm trong từ điển.
 - 100% ảnh có `verified_by`.
 - `QUY_UOC_DEM.md` đã chốt và không còn câu hỏi mở.

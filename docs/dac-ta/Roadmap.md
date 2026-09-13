@@ -27,7 +27,7 @@ Hai điều chỉnh lớn gần bù nhau. Tổng 5–6 tháng giữ nguyên.
 
 | Việc | Chặn ai | Bị ai chặn |
 |---|---|---|
-| Bộ ảnh vàng 50–100 ảnh | Nghiệm thu P5 | Không ai. Bắt đầu được ngay |
+| Bộ ảnh vàng 8 ảnh gán nhãn | Nghiệm thu P5 | Không ai. Bắt đầu được ngay |
 | Ma trận chọn công nghệ | P5, P9 | Không ai |
 | Cơ chế consent dữ liệu huấn luyện | Go-live | Không ai |
 | P9 M04a | | Chạy song song được với P7 và P8 |

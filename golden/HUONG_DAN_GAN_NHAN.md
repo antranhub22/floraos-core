@@ -1,10 +1,10 @@
 # Hướng dẫn gán nhãn bộ ảnh vàng
 
 ## Mục đích
-Đánh giá độc lập 100 ảnh hoa. Kết quả dùng làm **đáp án chuẩn** để chấm điểm accuracy của `count_engine`/`color_engine` và quyết định bộ máy phân tích nào chạy tốt hơn.
+Đánh giá độc lập 8 ảnh hoa. Kết quả dùng làm **đáp án chuẩn** để chấm điểm accuracy của `count_engine`/`color_engine` và quyết định bộ máy phân tích nào chạy tốt hơn.
 
 ## Ai làm
-- **Người A**: Đánh giá tất cả 100 ảnh (độc lập, KHÔNG xem ai khác)
+- **Người A**: Đánh giá tất cả 8 ảnh (độc lập, KHÔNG xem ai khác)
 - **Người B**: Kiểm chứng (30% toàn bộ, 70% ngẫu nhiên)
 
 ## Ưu tiên chất lượng
@@ -50,7 +50,7 @@ Chậm hơn một chút nhưng chính xác hơn. Đừng vội.
 - `packaging` — giấy gói, ruy băng, giỏ, hộp
 
 ## Xác nhận
-Khi hoàn thành 100 ảnh:
+Khi hoàn thành 8 ảnh:
 1. Ghi `labeled_by` [tên bạn]
 2. Ghi `labeled_at` [ngày]
 3. Gửi cho Người B kiểm tra

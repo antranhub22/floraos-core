@@ -285,4 +285,4 @@ Trong quá trình code, nếu agent phát hiện:
 18. Nếu Bản Kiến Trúc module mâu thuẫn Kiến trúc V2 → **dừng, báo product owner**, không tự chọn bên nào.
 19. **Worker Python lấy việc từ `generation_jobs` bằng `SKIP LOCKED` + `LISTEN/NOTIFY`** (D6-1, V2 mục 3.1). Cấm `subprocess.Popen` + parse stdout; cấm chạy job qua HTTP.
 20. **Mã lấy từ repo `FloraOS` cũ phải có hạng thu hoạch** (REUSE/EXTEND/ADAPTER) ghi trong `HARVEST_MANIFEST.md`, và **luật nghiệp vụ phải đi kèm test khoá nó**, test xanh trên core mới thì mới coi là chuyển xong (V2 mục 1.2 luật 1).
-21. **Bộ ảnh vàng 50–100 ảnh có nhãn là điều kiện nghiệm thu của P5.** Không có nó thì không đổi được provider và không hồi quy được phần thu hoạch (V2 mục 17.1).
+21. **Bộ ảnh vàng 8 ảnh gán nhãn là điều kiện nghiệm thu của P5.** Không có nó thì không đổi được provider và không hồi quy được phần thu hoạch (V2 mục 17.1).

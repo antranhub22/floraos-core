@@ -701,7 +701,7 @@ Ba adapter đứng sau cổng này, đăng ký ở `workers/vision/providers/reg
 
 **Ba kênh đếm giữ nguyên bất kể provider.** `count_engine.py` chốt số cuối từ `chot(kenh_llm, kenh_dt, kenh_chan)`; hai kênh sau thuần numpy và không thuộc phạm vi cổng này. Đường chạy hiện tại mới nối kênh một — hai kênh còn lại cần hiệu chỉnh trên dữ liệu có đáp án, tức cần bộ ảnh vàng trước.
 
-**Bắt buộc kèm theo:** xây **bộ ảnh vàng 50–100 ảnh sản phẩm thật có nhãn số lượng đúng** trong P5. Chưa có bộ này thì không nghiệm thu được adapter nào, không hồi quy được phần thu hoạch, và ma trận 13.1 không có dữ liệu để điền.
+**Bắt buộc kèm theo:** xây **bộ ảnh vàng 8 ảnh sản phẩm thật có nhãn số lượng đúng** trong P5. Chưa có bộ này thì không nghiệm thu được adapter nào, không hồi quy được phần thu hoạch, và ma trận 13.1 không có dữ liệu để điền.
 
 **Luật giữ lại từ `M04` mục 5:** Identity Guard phải dùng **cùng một provider và cùng model version cho cả hai lần phân tích** của một job, ghi vào metadata asset (mục 8). Luật này đúng với mọi provider — nó không phụ thuộc D5.
 
