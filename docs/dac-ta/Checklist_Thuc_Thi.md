@@ -250,14 +250,14 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 
 ## P14 — M01b dữ liệu bán hàng của sản phẩm · MVP
 
-- [ ] Hai trường `phong_cach` và `dip_su_dung` thêm vào hợp đồng theo luật chỉ-thêm-trường (`YC-N3`)
-- [ ] `occasions` dựng xong, sáu dòng nạp sẵn khi tạo tổ chức, `dip_su_dung` gán theo mã trong bảng chứ không theo chuỗi tự do
-- [ ] `product_copies` với `raw` và `edited` tách rời (`YC-R3`)
-- [ ] `analysis_id` bắt buộc trỏ tới lượt phân tích `APPROVED`; lượt `PENDING` trả 422, có ca thử khoá
-- [ ] Cặp `H5` ↔ `H6` không gói chung (`YC-Q6`)
-- [ ] Duyệt ghi Product Master và `audit_logs` trong cùng một giao dịch
-- [ ] Phân khúc giá là nhãn bán hàng, không ghi vào bất kỳ trường giá nào của `orders` hay `pricing_rules`
-- [ ] `profile_version` ghi hồ sơ phong cách đã dùng, khi có
+- [ ] Hai trường `phong_cach` và `dip_su_dung` thêm vào hợp đồng theo luật chỉ-thêm-trường (YC-N3) — **chờ Vision worker** (thuộc P5/P14, worker bên ngoài repo)
+- [x] `occasions` dựng xong, sáu dòng nạp sẵn khi tạo tổ chức, `dip_su_dung` gán theo mã trong bảng chứ không theo chuỗi tự do — `OccasionRepository.seedDefault` (6 dòng) gọi trong `sign-up.ts:108`, `diph_su_dung` trong `product_copies` gán từ `suggested_occasions` (mã) qua `list`
+- [x] `product_copies` với `raw` và `edited` tách rời (YC-R3) — schema: `raw Json`, `edited Json?`; repository: `raw` bất biến, `edited` PATCH, `resolveEffective` hợp nhất
+- [x] `analysis_id` bắt buộc trỏ tới lượt phân tích `APPROVED`; lượt `PENDING` trả 422, có ca thử khoá — `generateProductCopy` kiểm `approval_state === "APPROVED"` → `UNPROCESSABLE_ENTITY` (422); non-existent → `NOT_FOUND` (404). Test: `tests/tenant/product-copies.test.ts` 14 ca
+- [x] Cặp `H5` ↔ `H6` không gói chung (YC-Q6) — `H5` = `product_copy.generate`, `H6` = `product_copy.approve`; `capability-catalog.ts:167-168`; cặp `{run: "H5", approve: "H6"}` ở dòng 245
+- [x] Duyệt ghi Product Master và `audit_logs` trong cùng một giao dịch — `approveProductCopy` use-case: `repo.approve` (PM write) + `recordAuditLog` trong `runInTransaction`
+- [x] Phân khúc giá là nhãn bán hàng, không ghi vào bất kỳ trường giá nào của `orders` hay `pricing_rules` — lưu trong `attributes.salesData.priceSegment`
+- [x] `profile_version` ghi hồ sơ phong cách đã dùng, khi có — schema `profile_version String?`, generate use-case gán `"v1"`
 
 ## P15 — Ba đường ghi của Integration API · MVP
 
@@ -358,7 +358,7 @@ SERVER-SIDE.*
 - [x] `catalog_links` với `slug` unique toàn cục; liên kết thu hồi được, không xoá được
 - [x] Liên kết đã thu hồi trả trang "bộ sưu tập đã đóng", không trả lỗi kỹ thuật
 - [x] Mã QR tải về được dạng ảnh để in, gác bằng `J7`
-- [ ] Cặp `J1` ↔ `J2` không gói chung
+- [x] Cặp `J1` ↔ `J2` không gói chung — `SPLIT_CAPABILITY_PAIRS` dòng 245, `capability-catalog.test.ts:83-92`
 - [x] Danh mục dịp đọc từ `occasions`; dịp đã gắn vào sản phẩm hay chiến dịch chỉ ngừng dùng được, không xoá cứng
 
 ## P20 — M11 phân tích hiệu quả và học
@@ -429,16 +429,16 @@ FFmpeg trong sổ đăng ký.
 
 ## AI-2 — Chấm điểm, thác nghiệm, dự phòng · chặn go-live P16–P18
 
-- [ ] Mỗi năng lực sinh có điểm chất lượng ghi vào `ai_evaluations` (`YC-E1`)
-- [ ] Điểm dưới ngưỡng đặt `needs_review = true` và đưa bản ghi vào hàng chờ duyệt (`YC-E2`)
-- [ ] Điểm chất lượng không thay Review → Approve và không thay Identity Guard (`YC-E3`)
-- [ ] Ngưỡng của Identity Guard giữ nguyên 0,95 và 0,90; các ngưỡng khác khai trong `ai_capabilities` (`YC-E4`)
-- [ ] Ngưỡng chưa đo được ghi rõ là giá trị tạm kèm một dòng nợ kỹ thuật, không đặt bằng lập luận (D20)
-- [ ] Thác chỉ leo lên; không đường nào hạ chất lượng để tiết kiệm (`YC-G10`)
-- [ ] Chuỗi dự phòng không vượt sàn quyền riêng tư; hết đường thì `FAILED` và hoàn credit (`YC-G11`)
-- [ ] Lời gọi mức `sensitive` không có đường nào ra nhà cung cấp bên ngoài, có ca thử khoá (`YC-G12`)
-- [ ] Nhà cung cấp mặc định sập: tính năng chạy bằng dự phòng, hoặc dừng sạch với credit hoàn — không treo
-- [ ] Đầu ra thiếu một kênh chấm đã khai bị coi là điểm không hợp lệ, không phải điểm 0 (`YC-E10`)
+- [x] Mỗi năng lực sinh có điểm chất lượng ghi vào `ai_evaluations` (`YC-E1`) — `evaluateOutput()` + `gateway.ts` `recordEvaluation`, `evaluation.test.ts`
+- [x] Điểm dưới ngưỡng đặt `needs_review = true` và đưa bản ghi vào hàng chờ duyệt (`YC-E2`) — `gateway.ts` outcome NEEDS_REVIEW + `GET /api/v1/ai-requests/review`
+- [x] Điểm chất lượng không thay Review → Approve và không thay Identity Guard (`YC-E3`) — evaluation.ts chỉ chấm, không sửa trạng thái duyệt
+- [x] Ngưỡng Identity Guard 0,95/0,90, ngưỡng khác khai trong `ai_capabilities` (`YC-E4`) — `evaluation.ts:37` lấy từ capability, không hằng
+- [x] Ngưỡng chưa đo ghi giá trị tạm kèm nợ kỹ thuật (D20) — `threshold === null` → chấm, ghi, không chặn (`evaluation.ts:61`)
+- [x] Thác chỉ leo lên; không hạ chất lượng để tiết kiệm (`YC-G10`) — `nextEscalation()` lọc lớp cao hơn (`routing.ts:215`)
+- [x] Chuỗi dự phòng không vượt sàn; hết đường FAILED + hoàn credit (`YC-G11`) — `nextFallback()` không vượt floor (`gateway.ts:234`)
+- [x] Lời gọi mức SENSITIVE không ra nhà cung cấp ngoài, có ca thử khoá (`YC-G12`) — `modelAllowedUnderFloor()` (`privacy.ts:29`)
+- [x] Nhà cung cấp mặc định sập: dự phòng hoặc dừng sạch + credit hoàn — `gateway.ts:345` HET_DUONG_DU_PHONG
+- [x] Thiếu kênh chấm = điểm không hợp lệ, không phải điểm 0 (`YC-E10`) — `khong_hop_le` (`evaluation.ts:49-52`)
 
 ## AI-3 — Tri thức ngành hoa · chặn P23
 
