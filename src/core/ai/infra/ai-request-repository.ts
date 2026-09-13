@@ -87,4 +87,38 @@ export class AiRequestRepository {
       take: Math.min(filter.limit ?? 100, 5000),
     })
   }
+
+  listReviewQueue(
+    ctx: TenantContext,
+    limit = 100
+  ): Promise<ai_requests[]> {
+    return this.db.ai_requests.findMany({
+      where: {
+        organization_id: ctx.organizationId,
+        outcome: { in: ["NEEDS_REVIEW", "ESCALATED"] },
+      },
+      orderBy: { created_at: "desc" },
+      take: Math.min(limit, 5000),
+    })
+  }
+
+  getById(ctx: TenantContext, id: string): Promise<ai_requests | null> {
+    return this.db.ai_requests.findFirst({
+      where: {
+        id,
+        organization_id: ctx.organizationId,
+      },
+    })
+  }
+
+  updateOutcome(
+    ctx: TenantContext,
+    id: string,
+    outcome: "ACCEPTED" | "FAILED" | "NEEDS_REVIEW"
+  ): Promise<ai_requests | null> {
+    return this.db.ai_requests.update({
+      where: { id },
+      data: { outcome },
+    })
+  }
 }
