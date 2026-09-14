@@ -1,0 +1,138 @@
+/**
+ *Proxy use-case test — giải danh tính, dựng header, ánh xạ lỗi.
+ *
+ * Không gọi HTTP thật: mock adapter `proxyRequest` bằng `vi.mock`, chỉ kiểm
+ * logic orchestrate (identity → headers → error mapping). Test xanh trên repo
+ * này mới coi là proxy chuyển xong (AGENTS.md).
+ */
+
+import { describe, it, expect, vi } from "vitest"
+
+// Mock adapter trước khi import use-case — tránh real HTTP. Dùng
+// `importOriginal` để giữ lại `proxyErrorMessage` thật (nó parse JSON error
+// từ response sibling), chỉ mock `proxyRequest` (gọi HTTP).
+const proxyRequestMock = vi.fn()
+vi.mock("../infra/proxy-http-adapter", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../infra/proxy-http-adapter")>()
+  return {
+    ...actual,
+    proxyRequest: (...args: unknown[]) => proxyRequestMock(...args),
+    ProxyError: class ProxyError extends Error {},
+  }
+})
+
+import { SSO_HEADER } from "../domain/proxy-rules"
+import { readProxyIdentity, buildForwardHeaders, toProxyError, ProxyRouteError } from "./proxy-request"
+
+function mockRequest(headers: Record<string, string> = {}): Request {
+  return new Request("http://localhost/api/v1/proxy/api/m04b/x?client=SOCIALFLOW", {
+    method: "POST",
+    headers,
+  })
+}
+
+describe("readProxyIdentity", () => {
+  it("ưu tiên header SSO khi có cả hai", () => {
+    const req = mockRequest({
+      [SSO_HEADER]: "jwt-sso",
+      authorization: "Bearer token-nen",
+    })
+    const id = readProxyIdentity(req)
+    expect(id).toEqual({ kind: "sso", value: "jwt-sso" })
+  })
+
+  it("đọc cookie floraos_sso khi không có header", () => {
+    const req = mockRequest({ cookie: "floraos_session=abc; floraos_sso=jwt-cookie" })
+    const id = readProxyIdentity(req)
+    expect(id).toEqual({ kind: "sso", value: "jwt-cookie" })
+  })
+
+  it("fallback sang Authorization Bearer khi không có SSO", () => {
+    const req = mockRequest({ authorization: "Bearer my-token" })
+    const id = readProxyIdentity(req)
+    expect(id).toEqual({ kind: "token", value: "Bearer my-token" })
+  })
+
+  it("trả về none khi không có chứng thư nào", () => {
+    const req = mockRequest()
+    expect(readProxyIdentity(req)).toEqual({ kind: "none" })
+  })
+})
+
+describe("buildForwardHeaders", () => {
+  it("forward SSO header", () => {
+    const headers = buildForwardHeaders({
+      identity: { kind: "sso", value: "jwt" },
+      contentType: "application/json",
+      extra: { accept: "application/json" },
+    })
+    expect(headers["x-floraos-sso"]).toBe("jwt")
+    expect(headers["content-type"]).toBe("application/json")
+    expect(headers["authorization"]).toBeUndefined()
+  })
+
+  it("forward Authorization khi token", () => {
+    const headers = buildForwardHeaders({
+      identity: { kind: "token", value: "Bearer t" },
+      contentType: undefined,
+      extra: {},
+    })
+    expect(headers["authorization"]).toBe("Bearer t")
+    expect(headers["x-floraos-sso"]).toBeUndefined()
+  })
+
+  it("không forward gì khi none", () => {
+    const headers = buildForwardHeaders({
+      identity: { kind: "none" },
+      contentType: undefined,
+      extra: {},
+    })
+    expect(headers["x-floraos-sso"]).toBeUndefined()
+    expect(headers["authorization"]).toBeUndefined()
+  })
+})
+
+describe("toProxyError", () => {
+  it("null khi 2xx", () => {
+    expect(toProxyError({ status: 200, headers: {}, body: "" }, "SOCIALFLOW")).toBeNull()
+    expect(toProxyError({ status: 201, headers: {}, body: "" }, "SOCIALFLOW")).toBeNull()
+  })
+
+  it("401 → UNAUTHENTICATED", () => {
+    const err = toProxyError({ status: 401, headers: {}, body: "" }, "SOCIALFLOW")
+    expect(err).toBeInstanceOf(ProxyRouteError)
+    expect(err?.code).toBe("UNAUTHENTICATED")
+  })
+
+  it("403 → UNAUTHENTICATED", () => {
+    const err = toProxyError({ status: 403, headers: {}, body: "" }, "SOCIALFLOW")
+    expect(err?.code).toBe("UNAUTHENTICATED")
+  })
+
+  it("404 → NOT_FOUND", () => {
+    const err = toProxyError({ status: 404, headers: {}, body: "" }, "SOCIALFLOW")
+    expect(err?.code).toBe("NOT_FOUND")
+  })
+
+  it("400 → VALIDATION_FAILED", () => {
+    const err = toProxyError({ status: 400, headers: {}, body: "" }, "SOCIALFLOW")
+    expect(err?.code).toBe("VALIDATION_FAILED")
+  })
+
+  it("500 → INTERNAL", () => {
+    const err = toProxyError({ status: 500, headers: {}, body: "" }, "SOCIALFLOW")
+    expect(err?.code).toBe("INTERNAL")
+  })
+
+  it("đọc message từ JSON error", () => {
+    const err = toProxyError(
+      {
+        status: 400,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ error: { message: "product_id bắt buộc" } }),
+      },
+      "SOCIALFLOW"
+    )
+    expect(err?.message).toContain("product_id bắt buộc")
+  })
+})

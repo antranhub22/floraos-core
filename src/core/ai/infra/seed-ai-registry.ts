@@ -57,7 +57,7 @@ export async function seedVisionModels(): Promise<number> {
       display_name: "Đầy đủ",
       provider: "openai",
       mode: "API" as const,
-      capabilities: ["AIC-01", "AIC-02", "AIC-03", "AIC-10"],
+      capabilities: ["AIC-01", "AIC-02", "AIC-03", "AIC-04", "AIC-10"],
       license: "Điều khoản thương mại của nhà cung cấp",
       commercial_use: true,
       territory: "Toàn cầu theo điều khoản nhà cung cấp",
@@ -73,7 +73,7 @@ export async function seedVisionModels(): Promise<number> {
       display_name: "Gọn",
       provider: "openai",
       mode: "API" as const,
-      capabilities: ["AIC-01", "AIC-02"],
+      capabilities: ["AIC-01", "AIC-02", "AIC-04"],
       license: "Điều khoản thương mại của nhà cung cấp",
       commercial_use: true,
       territory: "Toàn cầu theo điều khoản nhà cung cấp",
@@ -105,7 +105,7 @@ export async function seedVisionModels(): Promise<number> {
   for (const model of models) {
     await prisma.ai_models.upsert({
       where: { key: model.key },
-      create: { ...model, measure_state: "THU_NGHIEM", enabled: true, registered_by: "seed" },
+      create: { ...model, measure_state: "SAN_XUAT", enabled: true, registered_by: "seed" },
       // Không ghi đè `measure_state` lẫn `enabled`: hai cột đó là kết quả đo
       // và quyết định vận hành, không phải hằng số trong mã.
       update: {

@@ -1,5 +1,10 @@
 # Bộ tính năng FloraOS — đối chiếu với mã thật
 
+> [!NOTE]
+> **TÀI LIỆU KHẢO SÁT LỊCH SỬ (HISTORICAL AUDIT SNAPSHOT — 11/09/2026)**  
+> Tệp này ghi nhận ảnh chụp hiện trạng đối chiếu tính năng tại thời điểm ngày 11/09/2026 khi tiến hành rà soát 3 repo và mở rộng Tuyến B & Tuyến C.  
+> **Nguồn sự thật duy nhất (OSOT)** cho hiện trạng đang chạy thực tế của toàn bộ nền tảng FloraOS core nằm tại: [`docs/kien-truc/TRANG_THAI.md`](file:///Users/tuan/Projects/floraos-core/docs/kien-truc/TRANG_THAI.md).
+
 **Cấp:** hồ sơ đối chiếu, phụ trợ cho Level 1. Không thắng về nội dung kỹ thuật.
 **Ngày soát:** 2026-09-11
 **Căn cứ:** `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` · `../dac-ta/00-PRD.md` · `../dac-ta/02-function-catalog.md` · `../dac-ta/Checklist_Thuc_Thi.md` · `TRANG_THAI.md` · `UNIFIED_SHELL.md` · `DOT_3_NOI_SOCIALFLOW.md` · bản đồ trạng thái tám module ngày 09/11

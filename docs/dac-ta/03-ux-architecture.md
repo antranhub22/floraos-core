@@ -1,5 +1,10 @@
 # 03 — Kiến trúc trải nghiệm
 
+> [!NOTE]
+> **VAI TRÒ TÀI LIỆU — KIẾN TRÚC TRẢI NGHIỆM CẤP KHUNG (UX FRAMEWORK & PRINCIPLES)**  
+> Tệp này quy định các nguyên tắc thiết kế trải nghiệm nền tảng, luồng phân vai (Role-based Navigation) và hành vi hệ thống chung.  
+> **Đặc tả chi tiết giao diện 10 màn hình chức năng lõi và tương tác trực quan** được duy trì tại: [`docs/FloraOS-UIUX-10-chuc-nang.md`](file:///Users/tuan/Projects/floraos-core/docs/FloraOS-UIUX-10-chuc-nang.md).
+
 ## 1. Bốn quyết định nền
 
 | Quyết định | Nội dung | Hệ quả |
@@ -8,6 +13,8 @@
 | Điểm vào | **Dashboard theo vai** | Experience vào lưới thẻ chức năng; cửa hàng và chuỗi vào dashboard Điều hành |
 | Tiến trình job | **Checklist theo bước là chính**, nhật ký mở ra khi cần | Người dùng thấy đang tới đâu mà không phải đọc log |
 | Duyệt | **Cả tại chỗ lẫn ở hàng đợi** | Duyệt ngay sau khi xem kết quả, hoặc gom lại duyệt hàng loạt. Đường bỏ một kết quả đặt cạnh đường duyệt ở cả hai chỗ |
+| Trường dữ liệu | **Nguyên tử hóa để tối ưu chỉnh sửa** | Tách biệt hoàn toàn văn bản với số lượng/đơn vị; không gộp chuỗi tự do để user click sửa trực tiếp từng thông số |
+| Nút tác vụ Tab | **Thống nhất góc trên bên phải (Top-Right Action Header)** | Mọi tab đặt nút tác vụ ở cùng vị trí cố định; kết hợp nút chính 1-chạm và menu mở rộng `...` để không phải bấm qua nhiều menu ẩn |
 
 Phạm vi chi nhánh không có bộ chọn ở bản đầu. RBAC vẫn đỡ sẵn phạm vi chi nhánh, nên thêm bộ chọn về sau không phải sửa quyền.
 

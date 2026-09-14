@@ -1,5 +1,7 @@
 import { validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
+import { AssetRepository } from "@/modules/assets/infra/asset-repository"
+import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
 import { ProductAnalysisRepository } from "@/modules/products/infra/product-analysis-repository"
 
 const DEFAULT_LIMIT = 25
@@ -29,5 +31,23 @@ export async function listPendingAnalyses(
   const page = hasMore ? rows.slice(0, limit) : rows
   const nextCursor = hasMore ? (page[page.length - 1]?.id ?? null) : null
 
-  return { data: page, next_cursor: nextCursor }
+  const assetRepo = new AssetRepository()
+  const storage = new LocalDiskStorageProvider()
+  const data = await Promise.all(
+    page.map(async (row) => {
+      let imageUrl: string | null = null
+      if (row.asset_id) {
+        const asset = await assetRepo.findById(ctx, row.asset_id)
+        if (asset?.storage_key) {
+          imageUrl = await storage.signedUrl(asset.storage_key, 24 * 60 * 60)
+        }
+      }
+      return {
+        ...row,
+        image_url: imageUrl,
+      }
+    })
+  )
+
+  return { data, next_cursor: nextCursor }
 }

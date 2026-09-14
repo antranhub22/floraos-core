@@ -11,6 +11,7 @@ export type ErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "QUOTA_EXCEEDED"
+  | "UNPROCESSABLE_ENTITY"
   | "RATE_LIMITED"
   | "INTERNAL"
 
@@ -21,6 +22,7 @@ const HTTP_STATUS: Record<ErrorCode, number> = {
   NOT_FOUND: 404,
   CONFLICT: 409,
   QUOTA_EXCEEDED: 422,
+  UNPROCESSABLE_ENTITY: 422,
   RATE_LIMITED: 429,
   INTERNAL: 500,
 }

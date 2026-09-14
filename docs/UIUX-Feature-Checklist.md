@@ -1,5 +1,10 @@
 # Checklist tính năng — 10 chức năng UI/UX
 
+> [!NOTE]
+> **ĐÃ ĐƯỢC HỢP NHẤT VÀO TÀI LIỆU CHUẨN (OSOT)**  
+> Tệp này đã được hợp nhất cùng `UIUX-Integrate-Checklist.md` vào **[`docs/UIUX-Execution-Checklist.md`](file:///Users/tuan/Projects/floraos-core/docs/UIUX-Execution-Checklist.md)**.  
+> Vui lòng theo dõi và cập nhật tiến độ thực thi UI & API tại tài liệu hợp nhất để đảm bảo tính duy nhất của dữ liệu.
+
 **Cơ sở:** `docs/FloraOS-UIUX-10-chuc-nang.md` — đặc tả UI/UX 10 chức năng lõi.
 **Mục đích:** Rà soát từng tính năng, xác định trạng thái (Đã code / Cần code / Chờ backend), và tiếp tục triển khai theo thứ tự ưu tiên.
 
@@ -15,7 +20,7 @@
 
 | # | Chức năng | Module | Tổng tính năng | Đã code | Cần code | Chờ backend |
 |---|-----------|--------|---------------|---------|----------|-------------|
-| 1 | Phân tích sản phẩm AI | M01/M01b | 11 | 9 | 2 | 0 |
+| 1 | Phân tích sản phẩm AI | M01/M01b/M01c | 28 | 27 | 1 | 0 |
 | 2 | AI Creative Studio | M04a/M04b | 14 | 8 | 4 | 2 |
 | 3 | AI Video Studio | M04c | 9 | 0 | 0 | 9 |
 | 4 | AI Content Engine | M07 | 10 | 0 | 0 | 10 |
@@ -25,7 +30,7 @@
 | 8 | Đơn hàng & Vận hành | M10 | 13 | 0 | 0 | 13 |
 | 9 | AI Chat Assistant | M08 | 12 | 0 | 0 | 12 |
 | 10 | Analytics & Learning | M11 | 12 | 7 | 2 | 3 |
-| | **Tổng** | | **115** | **31** | **8** | **80** |
+| | **Tổng** | | **127** | **49** | **7** | **71** |
 
 ---
 
@@ -51,11 +56,33 @@
 
 | # | Tính năng | Trạng thái | Ghi chú |
 |---|-----------|------------|---------|
-| 1.12 | Gợi ý "Sinh nội dung bán hàng" sau duyệt Thẻ 1 | ✅ UI có | Nút gợi ý hiện sau duyệt |
-| 1.13 | Sinh nội dung bán hàng (M01b) → Thẻ kết quả 2 | ❌ Chờ backend | M01b chưa xây, mock MOCK_FIELDS_RESULT2 |
-| 1.14 | Sửa/Thêm/Bớt Thẻ 2 (tên, mô tả, thẻ phân loại, tone, phong cách, dịp) | ❌ Chờ backend | Mock fields |
-| 1.15 | Duyệt Thẻ 2 → ghi phần bán hàng vào Product Master | ❌ Chờ backend | Không có API |
-| 1.16 | Lưu vào Kho sản phẩm → Quay về Trang chủ | ❌ Chờ backend | Phụ thuộc 1.15 |
+| 1.12 | Gợi ý "Sinh nội dung bán hàng" sau duyệt Thẻ 1 | ✅ Đã code | Nút gợi ý hiện sau duyệt, gọi POST /product-copies/generate |
+| 1.13 | Sinh nội dung bán hàng (M01b) → Thẻ kết quả 2 | ✅ Đã code | `generateProductCopyApi` → `mapProductCopyToFields2` |
+| 1.14 | Sửa/Thêm/Bớt Thẻ 2 (tên, mô tả, thẻ phân loại, tone, phong cách, dịp) | ✅ Đã code | `handleFieldChange2/Add2/Remove2`, PATCH /product-copies/:id |
+| 1.15 | Duyệt Thẻ 2 → ghi phần bán hàng vào Product Master | ✅ Đã code | `handleApprove2` → POST /product-copies/:id/approve (H6) |
+| 1.16 | Lưu vào Kho sản phẩm → Quay về Trang chủ | ✅ Đã code | Sau approve, `goSaved()` |
+
+### Luồng mở rộng: M01c — Thẻ Chào Sản Phẩm & Kịch bản tư vấn Sales
+
+| # | Tính năng | Trạng thái | Ghi chú |
+|---|-----------|------------|---------|
+| 1.17 | **Thẻ kết quả 3 (M01c)**: Tổng hợp dữ liệu M01a + M01b | ✅ Đã code | Component `SalesPitchCard` + `sales-pitch-template.ts` |
+| 1.18 | **Chỉnh sửa toàn bộ thông tin (8 khối trường)** trước khi xuất bản | ✅ Đã code | Tên, SKU, Hotline, Phong cách, Dịp, Cảm xúc, Cấu phần BOM, Kích thước, Báo giá, Quà tặng, Cam kết, Ghi chú |
+| 1.19 | **Chốt duyệt & Xuất bản Final** (Badge `FINAL`) | ✅ Đã code | Khóa form, chuyển badge FINAL, hỗ trợ mở khóa sửa lại nếu cần |
+| 1.20 | **Kiến trúc 3 Tab độc lập cách ly hiển thị** (Single Tab Isolation) | ✅ Đã code | Tab 1: Chỉnh sửa, Tab 2: Thẻ chào khách, Tab 3: Kịch bản Zalo (chỉ hiển thị 1 tab duy nhất, không chia đôi) |
+| 1.21 | **Kịch bản Zalo** định dạng emoji + 1-chạm sao chép | ✅ Đã code | Format chuẩn Sales Rep, nút copy clipboard kèm toast thông báo |
+| 1.22 | **Thẻ trực quan A6 Card Preview** | ✅ Đã code | Mockup thẻ thiệp A6 (105×148mm) sắc nét với ảnh hoa, giá, quà tặng |
+| 1.23 | **Bộ công cụ xuất đa định dạng**: Copy Zalo, PNG, JPEG, PDF A6 | ✅ Đã code | ClipboardItem binary PNG, html-to-image (PNG 2x, JPEG 95%), jsPDF (A6) |
+
+### Kho Dữ Liệu Sản Phẩm (`/kho-du-lieu`) & Sidebar DesktopNav
+
+| # | Tính năng | Trạng thái | Ghi chú |
+|---|-----------|------------|---------|
+| 1.24 | **Mục "Kho Dữ liệu" trên thanh Sidebar chính** | ✅ Đã code | `DesktopNav` icon `Folder` trỏ tới `/kho-du-lieu` |
+| 1.25 | **Kho phân vùng 1: Ảnh gốc (Raw Photos)** | ✅ Đã code | Lưới ảnh thiết bị & server, nút "Phân tích ảnh này" nối sang `/tai-anh` |
+| 1.26 | **Kho phân vùng 2: Ảnh đã duyệt (M01a Approved)** | ✅ Đã code | Thẻ cấu phần đã duyệt, nút "Sinh Copy (M01b)" & "Tạo Thẻ Chào (M01c)" |
+| 1.27 | **Kho phân vùng 3: Sale Pitch đã hoàn thành (Final)** | ✅ Đã code | Danh sách Thẻ chào hoàn thiện, nút "Xem Thẻ Chào", "Copy nhanh Zalo", "Xóa" |
+| 1.28 | **Điều hướng 2 chiều qua URL query params** | ✅ Đã code | Nhảy mượt mà giữa `/kho-du-lieu` và `/tai-anh` theo tab/id |
 
 ---
 

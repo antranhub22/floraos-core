@@ -164,6 +164,8 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   H2: { name: "vision.result.edit", group: "vision", label: "Sửa kết quả phân tích trước khi duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   H3: { name: "product.approve", group: "vision", label: "Duyệt kết quả, ghi vào Product Master", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   H4: { name: "vision.engine.manage", group: "vision", label: "Chọn bộ máy phân tích ảnh dùng cho cả tổ chức", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  H5: { name: "product_copy.generate", group: "vision", label: "Tạo dữ liệu bán hàng từ phân tích đã duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  H6: { name: "product_copy.approve", group: "vision", label: "Duyệt dữ liệu bán hàng, ghi Product Master", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // I — Tối ưu ảnh
   I1: { name: "media.optimize", group: "media", label: "Chạy job tối ưu ảnh", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   I2: { name: "media.approve", group: "media", label: "Nâng Master Image thành ảnh chính thức của sản phẩm", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
@@ -240,6 +242,7 @@ export const SPLIT_CAPABILITY_PAIRS: ReadonlyArray<{
   { run: "I1", approve: "I2" },
   { run: "J1", approve: "J2" },
   { run: "J3", approve: "J4" },
+  { run: "H5", approve: "H6" },
 ]
 
 /**

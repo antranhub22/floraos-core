@@ -1,5 +1,10 @@
 # CHECKLIST BUILD AI CAPABILITIES — FloraOS Core
 
+> [!NOTE]
+> **VAI TRÒ TÀI LIỆU — PHỤ LỤC KỸ THUẬT 34 AI CAPABILITIES (AIC-01 → AIC-34)**  
+> Tệp này theo dõi chi tiết kỹ thuật chuyên sâu cho tầng AI Orchestration Engine, AI Registry, Cổng Provider và Bộ định tuyến.  
+> **Checklist điều hành tổng thể toàn bộ dự án (P0 → P23, Tuyến B, Tuyến C AI-1 → AI-4)** là nguồn sự thật duy nhất (OSOT) nằm tại: [`docs/dac-ta/Checklist_Thuc_Thi.md`](file:///Users/tuan/Projects/floraos-core/docs/dac-ta/Checklist_Thuc_Thi.md).
+
 > Dựa trên 34 AI Capabilities (AIC-01 → AIC-34) trong `src/core/ai/domain/ai-capabilities.ts` và lộ trình Tuyến B (P13–P23) + Tuyến C (AI-1–AI-4). Mỗi ô = một task có thể verify riêng.
 
 ---

@@ -18,6 +18,7 @@ import { OrganizationRepository } from "@/modules/organization/infra/organizatio
 import { hashPassword } from "@/modules/organization/infra/password-hasher"
 import { RoleRepository } from "@/modules/organization/infra/role-repository"
 import { SessionRepository } from "@/modules/organization/infra/session-repository"
+import { OccasionRepository } from "@/modules/organization/infra/occasion-repository"
 import { hashSessionToken, newSessionToken } from "@/modules/organization/infra/session-token"
 import { runInTransaction } from "@/modules/organization/infra/transaction"
 import { UserRepository } from "@/modules/organization/infra/user-repository"
@@ -96,13 +97,15 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
       credit_balance: TRIAL_CREDIT_BALANCE,
     })
 
-    await workspaces.createForNewOrganization({
+    const workspace = await workspaces.createForNewOrganization({
       organizationId: organization.id,
       name: DEFAULT_WORKSPACE_NAME,
       kind: "EXPERIENCE",
       trial_limit: TRIAL_LIMIT,
       trial_status: "ACTIVE",
     })
+
+    await new OccasionRepository(tx).seedDefault({ organizationId: organization.id, workspaceId: workspace.id, userId: user.id, branchId: null, capabilities: new Set<string>() })
 
     const founderRole = await roles.findSystemRoleByKey(FOUNDER_ROLE_KEY)
     if (!founderRole) {

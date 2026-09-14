@@ -13,12 +13,23 @@ cần Postgres thật.
 """
 
 import json
+from io import BytesIO
 
 import pytest
+from PIL import Image
 
 from media_ai.jobs import worker
 from media_ai.providers.enhancement.passthrough import PassthroughEnhancer
+from media_ai.providers.smart_reframe import SmartReframe
 from media_ai.guard.verifier import VisionIdentityVerifier
+
+
+def _anh_test() -> bytes:
+    """Tạo một ảnh JPEG tối thiểu (100x100) cho test."""
+    img = Image.new("RGB", (100, 100), color="red")
+    buf = BytesIO()
+    img.save(buf, format="JPEG")
+    return buf.getvalue()
 
 
 def _normalize(sql):
@@ -113,7 +124,7 @@ ASSET_GOC = {
 def gia_lap_kho(monkeypatch):
     """Kho tệp trong bộ nhớ — không chạm đĩa."""
     da_ghi = {}
-    monkeypatch.setattr(worker, "_read_bytes", lambda key: b"byte-anh-goc")
+    monkeypatch.setattr(worker, "_read_bytes", lambda key: _anh_test())
     monkeypatch.setattr(worker, "_write_bytes", lambda key, data: da_ghi.__setitem__(key, data))
     return da_ghi
 
@@ -124,33 +135,61 @@ def _chay(conn, analyzer, gia_lap_kho):
         dict(JOB),
         VisionIdentityVerifier(analyzer=analyzer),
         PassthroughEnhancer(),
+        SmartReframe(),
     )
 
 
 class TestQuaCong:
-    def test_ghi_dung_mot_master_image_o_trang_thai_cho_duyet(self, gia_lap_kho):
+    def test_ghi_dung_mot_master_image_va_bon_ratio_o_trang_thai_cho_duyet(self, gia_lap_kho):
         conn = FakeConnection(fetchone_queue=[dict(ASSET_GOC)])
         _chay(conn, AnalyzerGia(), gia_lap_kho)
 
         chen_asset = conn.tham_so("INSERT INTO assets")
-        assert len(chen_asset) == 1
-        p = chen_asset[0]
-        assert p["parent_asset_id"] == "asset-goc"  # ảnh gốc không bị ghi đè
-        assert p["version"] == 2
-        assert p["identity_score"] == 1.0
+        # 1 MASTER (PENDING) + 4 RATIO (APPROVED)
+        assert len(chen_asset) == 5
+
+        # Master asset có 'version' (v2) và 'identity_score'; ratio assets không có
+        master_assets = [p for p in chen_asset if isinstance(p, dict) and "version" in p and p.get("version") == 2]
+        assert len(master_assets) == 1
+        master = master_assets[0]
+        assert master["parent_asset_id"] == "asset-goc"
+        assert master["version"] == 2
+        assert master["identity_score"] == 1.0
         # Guard PASS chỉ cho phép XEM. Ghi vào Product Master là việc của
         # cổng 2 (`media.approve`/`I2`).
-        assert "'PENDING'" in conn.cau_lenh("INSERT INTO assets")[0]
-        assert json.loads(p["generated_flags"]) == {
+        # Kiểm tra approval_state = 'PENDING' trong SQL (hardcoded, không trong params)
+        insert_sqls = conn.cau_lenh("INSERT INTO assets")
+        master_sql = [s for s in insert_sqls if "MASTER" in s]
+        assert len(master_sql) == 1
+        assert "'PENDING'" in master_sql[0]
+        assert json.loads(master["generated_flags"]) == {
             "generative_fill_used": False, "requires_reshoot_warning": False,
         }
-        assert len(gia_lap_kho) == 1
+
+        # Tìm 4 ratio assets - không có 'version' hoặc version=1
+        ratio_assets = [p for p in chen_asset if isinstance(p, dict) and ("version" not in p or p.get("version") != 2)]
+        assert len(ratio_assets) == 4
+        for r in ratio_assets:
+            # approval_state = 'APPROVED' hardcoded trong SQL
+            pass
+
+        # Tổng số file ghi ra = 5 (1 master + 4 ratios)
+        assert len(gia_lap_kho) == 5
 
     def test_job_completed_voi_result_safe(self, gia_lap_kho):
         conn = FakeConnection(fetchone_queue=[dict(ASSET_GOC)])
         _chay(conn, AnalyzerGia(), gia_lap_kho)
         ket = [p for p in conn.tham_so("UPDATE generation_jobs SET status = 'COMPLETED'")]
         assert ket and ket[0][0] == "SAFE"
+        # Kiểm tra job output có ratios - output là param thứ 2 trong UPDATE
+        update_calls = conn.tham_so("UPDATE generation_jobs SET status = 'COMPLETED'")
+        assert len(update_calls) == 1
+        # Params: (result, output_json, job_id)
+        import json as _json
+        output = _json.loads(update_calls[0][1])
+        assert "master_asset_id" in output
+        assert "ratios" in output
+        assert len(output["ratios"]) == 4
 
     def test_phat_su_kien_guard_de_phia_ts_doc_lai_duoc(self, gia_lap_kho):
         conn = FakeConnection(fetchone_queue=[dict(ASSET_GOC)])

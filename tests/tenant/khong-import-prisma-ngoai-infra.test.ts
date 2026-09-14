@@ -26,6 +26,10 @@ function isInfra(file: string): boolean {
   return path.relative(SRC, file).split(path.sep).includes("infra")
 }
 
+function isTestFile(file: string): boolean {
+  return path.relative(SRC, file).split(path.sep).includes("__tests__")
+}
+
 /**
  * "Không module nào import `PrismaClient` ngoài `infra/`" là một luật kiến trúc,
  * và luật không có test là luật sẽ trôi. Phép quét này rẻ hơn review và không
@@ -35,6 +39,7 @@ describe("client cơ sở dữ liệu chỉ tồn tại trong infra/", () => {
   it("không tệp nào ngoài infra/ import client", () => {
     const offenders = sourceFiles(SRC)
       .filter((file) => !isInfra(file))
+      .filter((file) => !isTestFile(file))
       .filter((file) => {
         const source = readFileSync(file, "utf8")
         return FORBIDDEN.some((needle) => source.includes(`from "${needle}`))

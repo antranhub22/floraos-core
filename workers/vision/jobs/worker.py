@@ -38,7 +38,7 @@ FEATURE = "vision.analyze"
 # người dùng hỏi.
 BACKOFF_DAU_GIAY = 1.0
 BACKOFF_TOI_DA_GIAY = 60.0
-CONTRACT_VERSION = "1"  # Schema.json chưa tự khai version — hằng số này là nơi duy nhất theo dõi.
+CONTRACT_VERSION = "2"  # Schema.json thêm phong_cach, dip_su_dung vào identity
 
 # repo_root/var/storage/<storage_key> — cùng STORAGE_ROOT của
 # `LocalDiskStorageProvider` (nợ #15, TECHNICAL_DEBT.md): chỉ đúng khi worker

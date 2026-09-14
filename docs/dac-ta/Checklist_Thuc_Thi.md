@@ -259,6 +259,19 @@ enhancer), nên pipeline chạy end-to-end được và Guard có thứ để g�
 - [x] Phân khúc giá là nhãn bán hàng, không ghi vào bất kỳ trường giá nào của `orders` hay `pricing_rules` — lưu trong `attributes.salesData.priceSegment`
 - [x] `profile_version` ghi hồ sơ phong cách đã dùng, khi có — schema `profile_version String?`, generate use-case gán `"v1"`
 
+## P14b — M01c Thẻ chào sản phẩm & Kịch bản tư vấn Sales · MVP
+
+- [x] Mẫu cấu trúc Thẻ chào sản phẩm (`SalesPitchData`) tổng hợp từ M01a (BOM kỹ thuật hoa/lá/vật chứa/kích thước) và M01b (thương mại: tên gợi ý, mô tả cảm xúc, phong cách, dịp sử dụng, phân khúc giá) — thuần domain tại `src/modules/products/domain/sales-pitch-template.ts`
+- [x] Bộ sinh kịch bản chat Zalo/Messenger (`generateZaloPitchScript`) tối ưu cho nhân viên Sales với format emoji chuyên nghiệp, đầy đủ thông số kỹ thuật + thông điệp cảm xúc + ưu đãi quà tặng
+- [x] Cho phép nhân viên Sales chỉnh sửa 100% 8 khối trường thông tin (Tên, SKU, Hotline, Phong cách, Dịp, Cảm xúc, Cấu phần BOM, Kích thước, Báo giá, Quà tặng, Cam kết, Ghi chú) trước khi xuất bản
+- [x] Nút **"Chốt duyệt & Xuất bản Final"** (Badge `FINAL`) khóa form, chuyển trạng thái hoàn thiện và lưu vào Kho; hỗ trợ mở khóa sửa lại nếu cần
+- [x] **Kiến trúc 3 Tab hiển thị độc lập cách ly nội dung** (Tab 1: Chỉnh sửa, Tab 2: Thẻ chào khách A6, Tab 3: Kịch bản Zalo) — chỉ hiển thị duy nhất nội dung của tab đang chọn, loại bỏ chia đôi màn hình gây phân tâm
+- [x] **Bộ công cụ xuất đa định dạng**: Copy ảnh vào Zalo / Clipboard (binary PNG), Tải PNG Retina 2x, Tải JPEG 95%, Xuất PDF A6 in ấn chuẩn 105×148mm qua jsPDF
+- [x] **Kho Dữ Liệu Sản Phẩm độc lập** (`/kho-du-lieu`) trên Sidebar DesktopNav với 3 phân vùng quản lý (1. Ảnh gốc, 2. Ảnh đã duyệt chờ sinh dữ liệu, 3. Sale Pitch đã hoàn thành) kèm liên kết 2 chiều sang `/tai-anh`
+- [x] Thẻ hiển thị trực quan A6 Card (`src/components/sales/sales-pitch-card.tsx`) với ảnh sản phẩm rõ nét, giá chào nổi bật, bảng thành phần chi tiết, nút 1-chạm sao chép kịch bản chat Zalo
+- [x] Tích hợp trơn tru vào luồng `/tai-anh` (Tab 3: `M01c: Thẻ chào sản phẩm`) với nút CTA chuyển tiếp từ Thẻ kết quả M01b và bộ chọn sản phẩm từ kho phân tích đã duyệt (`ApprovedAnalysesSelector`)
+- [x] Bộ kiểm thử unit tests khoá quy tắc nghiệp vụ template thẻ chào (`src/modules/products/domain/__tests__/sales-pitch-template.test.ts`) — 3/3 ca kiểm thử xanh
+
 ## P15 — Ba đường ghi của Integration API · MVP
 
 - [x] `POST /integration/assets` bắt buộc `parent_asset_id` trỏ asset `APPROVED` cùng tổ chức (`YC-M1` `YC-M5`)
@@ -480,5 +493,5 @@ FFmpeg trong sổ đăng ký.
 - [ ] **#8 — Đơn hàng & Vận hành** — chờ P22 (M10)
 - [ ] **#9 — AI Chat Assistant** — chờ P23 (M08)
 
-**Checklist chi tiết:** `docs/UIUX-Integrate-Checklist.md` (API-level) · `docs/UIUX-Feature-Checklist.md` (feature-level, 115 tính năng, dùng để rà soát và triển khai)
+**Checklist chi tiết hợp nhất:** [`docs/UIUX-Execution-Checklist.md`](file:///Users/tuan/Projects/floraos-core/docs/UIUX-Execution-Checklist.md) (tổng hợp feature-level và API integration của toàn bộ 10 chức năng)
 

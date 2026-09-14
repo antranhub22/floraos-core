@@ -11,6 +11,7 @@ import { redirect } from "next/navigation"
 
 import { SessionProvider } from "@/lib/session"
 import { BottomNav } from "@/components/layout/bottom-nav"
+import { DesktopNav } from "@/components/layout/desktop-nav"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -27,8 +28,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <SessionProvider session={session}>
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-none">
-        <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-none md:flex-row">
+        <DesktopNav />
+        <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</div>
         <BottomNav />
       </div>
     </SessionProvider>

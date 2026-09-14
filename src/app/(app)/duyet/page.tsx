@@ -1,18 +1,16 @@
 "use client"
 
-// Hàng chờ duyệt — trước đây là màn "Sắp có" (nợ #48, TECHNICAL_DEBT.md:
-// "vision.analyses và media.optimizations chỉ có POST, chưa có GET liệt
-// kê"). Nay nối hai endpoint đọc mới (list-pending-analyses.ts,
-// list-pending-optimizations.ts) cộng hai endpoint duyệt đã có sẵn.
-//
-// Một người có thể chỉ có H3 hoặc chỉ có I2 (không nhất thiết cả hai) —
-// gọi cả hai endpoint, 403 ở endpoint nào thì ẩn hẳn khối đó thay vì báo lỗi.
-
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, CheckCircle2, Download, XCircle } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Download, XCircle, Edit, Eye, RefreshCw, Folder, Camera, FileSpreadsheet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import {
+  TabActionHeader,
+  type TabItem,
+  type TabAction,
+  type TabOverflowAction,
+} from "@/components/ui/tab-header"
 
 type PendingAnalysis = {
   id: string
@@ -28,6 +26,27 @@ type PendingOptimization = {
   requires_warning: boolean
 }
 
+type PendingProductCopy = {
+  id: string
+  analysis_id: string
+  product_id: string | null
+  raw: {
+    suggested_name: string
+    suggested_description: string
+    suggested_tags: string[]
+    suggested_occasions: string[]
+    suggested_price_segment: string
+  }
+  edited: {
+    suggested_name?: string
+    suggested_description?: string
+    suggested_tags?: string[]
+    suggested_occasions?: string[]
+    suggested_price_segment?: string
+  } | null
+  created_at: string
+}
+
 function dinhDangGio(iso: string | null): string {
   if (!iso) return "—"
   return new Date(iso).toLocaleString("vi-VN")
@@ -37,17 +56,20 @@ export default function DuyetPage() {
   const router = useRouter()
   const [analyses, setAnalyses] = useState<PendingAnalysis[] | null>(null)
   const [optimizations, setOptimizations] = useState<PendingOptimization[] | null>(null)
+  const [productCopies, setProductCopies] = useState<PendingProductCopy[] | null>(null)
+  const [activeTab, setActiveTab] = useState<"analyses" | "optimizations" | "productCopies">("analyses")
   const [khongCoQuyenNao, setKhongCoQuyenNao] = useState(false)
   const [loi, setLoi] = useState<string | null>(null)
   const [dangDuyet, setDangDuyet] = useState<string | null>(null)
 
-  async function napLai() {
-    const [resAnalyses, resOptimizations] = await Promise.all([
+  const napLai = useCallback(async () => {
+    const [resAnalyses, resOptimizations, resProductCopies] = await Promise.all([
       fetch("/api/v1/vision/analyses?limit=20"),
       fetch("/api/v1/media/optimizations?limit=20"),
+      fetch("/api/v1/product-copies?approval_state=PENDING&limit=20"),
     ])
 
-    if (resAnalyses.status === 401 || resOptimizations.status === 401) {
+    if (resAnalyses.status === 401 || resOptimizations.status === 401 || resProductCopies.status === 401) {
       router.push("/dang-nhap")
       return
     }
@@ -66,14 +88,32 @@ export default function DuyetPage() {
       setOptimizations(null)
     }
 
-    setKhongCoQuyenNao(resAnalyses.status === 403 && resOptimizations.status === 403)
-  }
+    if (resProductCopies.ok) {
+      const data = (await resProductCopies.json()) as { data: PendingProductCopy[] }
+      setProductCopies(data.data)
+    } else if (resProductCopies.status === 403) {
+      setProductCopies(null)
+    }
+
+    setKhongCoQuyenNao(
+      resAnalyses.status === 403 &&
+      resOptimizations.status === 403 &&
+      resProductCopies.status === 403
+    )
+  }, [router])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    napLai().catch((e) => setLoi(e instanceof Error ? e.message : "Không tải được hàng chờ duyệt"))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    let cancelled = false
+    async function load() {
+      try {
+        await napLai()
+      } catch (e) {
+        if (!cancelled) setLoi(e instanceof Error ? e.message : "Không tải được hàng chờ duyệt")
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [napLai])
 
   async function duyetPhanTich(id: string) {
     setDangDuyet(id)
@@ -104,6 +144,19 @@ export default function DuyetPage() {
     }
   }
 
+  async function duyetProductCopy(id: string) {
+    setDangDuyet(id)
+    try {
+      const res = await fetch(`/api/v1/product-copies/${id}/approve`, { method: "POST" })
+      if (!res.ok) throw new Error(`Duyệt thất bại (${res.status})`)
+      await napLai()
+    } catch (e) {
+      setLoi(e instanceof Error ? e.message : "Duyệt thất bại")
+    } finally {
+      setDangDuyet(null)
+    }
+  }
+
   async function boPhanTich(id: string) {
     setLoi(null)
     setDangDuyet(id)
@@ -122,7 +175,25 @@ export default function DuyetPage() {
     }
   }
 
-  const dangTai = analyses === null && optimizations === null && !khongCoQuyenNao
+  async function boProductCopy(id: string) {
+    setLoi(null)
+    setDangDuyet(id)
+    try {
+      const res = await fetch(`/api/v1/product-copies/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Không phù hợp" }),
+      })
+      if (!res.ok) throw new Error(`Không bỏ được dữ liệu bán hàng (${res.status})`)
+      await napLai()
+    } catch (e) {
+      setLoi(e instanceof Error ? e.message : "Không bỏ được dữ liệu bán hàng")
+    } finally {
+      setDangDuyet(null)
+    }
+  }
+
+  const dangTai = analyses === null && optimizations === null && productCopies === null && !khongCoQuyenNao
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -142,11 +213,71 @@ export default function DuyetPage() {
         {khongCoQuyenNao && (
           <Card className="flex flex-col items-center gap-2 p-8 text-center">
             <div className="text-[13.5px] font-semibold">Tài khoản này chưa có quyền duyệt</div>
-            <div className="text-xs text-text-muted">Cần năng lực H3 (duyệt phân tích) hoặc I2 (duyệt ảnh tối ưu).</div>
+            <div className="text-xs text-text-muted">Cần năng lực H3 (duyệt phân tích), I2 (duyệt ảnh tối ưu) hoặc H6 (duyệt dữ liệu bán hàng).</div>
           </Card>
         )}
 
-        {analyses !== null && (
+        {/* Standardized SaaS Tab Action Header */}
+        <TabActionHeader
+          tabs={[
+            {
+              id: "analyses",
+              label: "Phân tích ảnh (M01a)",
+              icon: CheckCircle2,
+              badge: analyses?.length ?? 0,
+              badgeTone: "accent",
+            },
+            {
+              id: "optimizations",
+              label: "Ảnh tối ưu (M04a)",
+              icon: AlertTriangle,
+              badge: optimizations?.length ?? 0,
+              badgeTone: "warning",
+            },
+            {
+              id: "productCopies",
+              label: "Dữ liệu bán hàng (M01b)",
+              icon: Edit,
+              badge: productCopies?.length ?? 0,
+              badgeTone: "success",
+            },
+          ]}
+          activeTab={activeTab}
+          onTabChange={(tabId) => setActiveTab(tabId as "analyses" | "optimizations" | "productCopies")}
+          primaryActions={[
+            {
+              id: "refresh-queue",
+              label: "Làm mới hàng đợi",
+              icon: RefreshCw,
+              variant: "outline",
+              onClick: napLai,
+            },
+          ]}
+          overflowActions={[
+            {
+              id: "export-analyses",
+              label: "Tải toàn bộ lượt phân tích (CSV)",
+              icon: Download,
+              onClick: () => {
+                window.location.href = "/api/v1/vision/analyses/export"
+              },
+            },
+            {
+              id: "goto-kho",
+              label: "Chuyển tới Kho Dữ Liệu",
+              icon: Folder,
+              onClick: () => router.push("/kho-du-lieu"),
+            },
+            {
+              id: "goto-tai-anh",
+              label: "Chuyển tới Tải ảnh",
+              icon: Camera,
+              onClick: () => router.push("/tai-anh"),
+            },
+          ]}
+        />
+
+        {activeTab === "analyses" && analyses !== null && (
           <Card className="flex flex-col gap-3 p-[18px]">
             <div className="text-[14.5px] font-bold">Phân tích ảnh chờ duyệt ({analyses.length})</div>
             {analyses.length === 0 ? (
@@ -182,15 +313,6 @@ export default function DuyetPage() {
               ))
             )}
 
-            {/* Cùng năng lực H3 với danh sách phía trên, nên hiện cùng chỗ.
-                Tệp CSV mã hoá UTF-8 kèm BOM — Excel mở thẳng, không cần
-                bước nhập dữ liệu nào.
-
-                Dùng `<a>` chứ không `<Link>`: đây là một lượt TẢI TỆP từ
-                route API, không phải điều hướng trang. `<Link>` chuyển hướng
-                phía client nên trình duyệt không bao giờ thấy
-                `content-disposition: attachment`, và tệp không được lưu. */}
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/v1/vision/analyses/export"
               download
@@ -202,7 +324,7 @@ export default function DuyetPage() {
           </Card>
         )}
 
-        {optimizations !== null && (
+        {activeTab === "optimizations" && optimizations !== null && (
           <Card className="flex flex-col gap-3 p-[18px]">
             <div className="text-[14.5px] font-bold">Ảnh tối ưu chờ duyệt ({optimizations.length})</div>
             {optimizations.length === 0 ? (
@@ -229,6 +351,75 @@ export default function DuyetPage() {
                   >
                     {dangDuyet === o.job_id ? "Đang duyệt…" : "Duyệt"}
                   </Button>
+                </div>
+              ))
+            )}
+          </Card>
+        )}
+
+        {activeTab === "productCopies" && productCopies !== null && (
+          <Card className="flex flex-col gap-3 p-[18px]">
+            <div className="text-[14.5px] font-bold">Dữ liệu bán hàng chờ duyệt ({productCopies.length})</div>
+            {productCopies.length === 0 ? (
+              <div className="py-2 text-center text-[13px] text-text-muted">Không có mục nào chờ duyệt.</div>
+            ) : (
+              productCopies.map((pc) => (
+                <div key={pc.id} className="flex flex-col gap-2">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  <div className="flex items-center gap-3 cursor-pointer hover:bg-surface-alt/50 rounded-lg p-1.5" onClick={() => router.push(`/san-pham/${pc.product_id ?? "unknown"}/tinh-nang/product-copy/${pc.id}?return=${encodeURIComponent(window.location.pathname)}` as any)}>
+                    <CheckCircle2 size={18} strokeWidth={1.8} className="flex-shrink-0 text-secondary-text" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13.5px] font-semibold">{pc.raw.suggested_name}</div>
+                      <div className="truncate text-xs text-text-muted">
+                        Phân tích: {pc.analysis_id.slice(0, 8)} · {dinhDangGio(pc.created_at)}
+                        {pc.product_id && ` · SP: ${pc.product_id.slice(0, 8)}`}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={dangDuyet === pc.id}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        router.push(`/san-pham/${pc.product_id ?? "unknown"}/tinh-nang/product-copy/${pc.id}?return=${encodeURIComponent(window.location.pathname)}` as any)
+                      }}
+                      className="flex-shrink-0"
+                      aria-label="Xem chi tiết"
+                      title="Xem chi tiết"
+                    >
+                      <Eye size={18} strokeWidth={1.8} />
+                    </Button>
+                    <button
+                      type="button"
+                      disabled={dangDuyet === pc.id}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        boProductCopy(pc.id)
+                      }}
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt disabled:opacity-40"
+                      aria-label="Từ chối dữ liệu này"
+                      title="Từ chối dữ liệu này"
+                    >
+                      <XCircle size={18} strokeWidth={1.8} />
+                    </button>
+                    <Button
+                      size="sm"
+                      disabled={dangDuyet === pc.id}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        duyetProductCopy(pc.id)
+                      }}
+                    >
+                      {dangDuyet === pc.id ? "Đang duyệt…" : "Duyệt"}
+                    </Button>
+                  </div>
+                  {pc.edited && (
+                    <div className="ml-6 flex items-center gap-2 text-[11px] text-text-muted">
+                      <Edit size={12} strokeWidth={1.8} />
+                      <span>Đã chỉnh sửa: {Object.keys(pc.edited).join(", ")}</span>
+                    </div>
+                  )}
                 </div>
               ))
             )}

@@ -35,6 +35,26 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 - **Mã nghiệp vụ gọi một NĂNG LỰC, không gọi một nhà cung cấp** (D15). Mọi lời gọi AI đi qua cổng AI ở `src/core/ai/`; SDK của nhà cung cấp chỉ được xuất hiện trong `adapters/`. Mô hình là một hàng trong `ai_models`, không phải một hằng trong mã.
 - **Mô hình không vào production khi thiếu một trong bốn ô giấy phép** (D18): `license`, `commercial_use`, `territory`, `allowed_use`. Bộ lọc nằm ở `eligibleModels()`, nên mô hình thiếu ô không lộ ra cả trong danh sách để chọn.
 - **Sàn quyền riêng tư cắt sau cùng**, cùng tính chất với trần cứng của RBAC: lời gọi `SENSITIVE` không có đường nào ra nhà cung cấp ngoài, kể cả qua bước dự phòng.
+- **Tách biệt trường dữ liệu nguyên tử (Atomic Disaggregated Fields) để tối ưu khả năng chỉnh sửa (Editable)**:
+  - Tuyệt đối không gộp chung văn bản và số lượng/đơn vị vào cùng một chuỗi tự do (ví dụ: cấm gộp `"Hồng đỏ 10 cành"` thành 1 ô text).
+  - Bắt buộc phân rã thành các trường cấu trúc độc lập: tên hoa (text), số lượng (number), đơn vị (text), màu sắc (text), vai trò (select)... để người dùng có thể nhấp chuột sửa trực tiếp từng thông số mà không làm hỏng cấu trúc dữ liệu.
+  - Áp dụng nguyên tắc tương tự cho kích thước (`height`/`width` số, `unit` text), báo giá (`price`/`originalPrice` số), và danh sách quà tặng/cam kết (mảng các item độc lập có nút thêm/sửa/xóa từng dòng).
+- **Tiêu chuẩn hóa vị trí nút tác vụ chung của các Tab (Standardized Tab Action Header)**:
+  - Mọi tác vụ chung của các Tab (Copy, Lưu nháp, Duyệt/Chốt, Chỉnh sửa, Xuất file...) **bắt buộc phải nằm ở vị trí thống nhất: Góc trên cùng bên phải (Top-Right Action Header) của mỗi Tab**. Không đặt mỗi tab một vị trí khác nhau gây mất phương hướng cho người dùng.
+  - Cấu trúc thanh công cụ góc trên bên phải gồm 2 khối:
+    1. **Nút tác vụ chính 1-chạm (Primary Visible Buttons)**: Hiển thị trực tiếp các hành động tần suất cao (vd: "Chốt duyệt", "Copy nhanh Zalo", "Lưu nháp") để nhân viên thao tác ngay mà không bị che khuất.
+    2. **Menu tác vụ mở rộng (Action Overflow Menu / `...` More Options)**: Đặt ở góc ngoài cùng bên phải gom các tác vụ xuất file (Tải PNG, JPEG, PDF A6) hoặc thao tác phụ (Mở khóa sửa, Xóa). *Tránh dùng Hamburger Menu 3 gạch ngang để giấu toàn bộ tính năng chính* vì sẽ bắt người dùng phải click 2 lần cho các tác vụ thường xuyên.
+- **Tiêu chuẩn hóa khối hướng dẫn thao tác của các Tab tính năng (Standardized Feature Guidance Callout)**:
+  - Mọi Tab tính năng trong toàn bộ hệ thống (M01a, M01b, M01c, Catalog, Đơn hàng, Hội thoại, Kho dữ liệu, v.v.) khi hiển thị hướng dẫn thao tác ban đầu **bắt buộc phải tuân thủ chuẩn cấu trúc giống như M01a/M01b**:
+    1. **Khung viền (Border)**: Nét đứt màu đỏ nổi bật `border-2 border-dashed border-red-300` để phân biệt rõ ràng khối thông tin hướng dẫn cần chú ý đọc với các khối nhập liệu/dữ liệu khác.
+    2. **Nền (Background)**: Tông màu đỏ pastel dịu mắt `bg-red-50/70` hoặc `bg-red-50/80` (chống mỏi mắt, tương phản cao đạt chuẩn WCAG AA/AAA).
+    3. **Huy hiệu định danh (Guidance Tag/Badge)**: Nằm ở trên cùng, định dạng viên thuốc nhỏ gọn `inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold tracking-wider uppercase` kèm icon định danh (`Info`, `Camera`, `Sparkles`, `FileText`...) và nhãn định danh (vd: `HƯỚNG DẪN NHẬN DIỆN M01a`).
+    4. **Tiêu đề chính**: Căn giữa, chữ đậm `text-[16px] font-extrabold text-red-950 flex items-center justify-center gap-2` kèm icon minh họa.
+    5. **Mô tả nghiệp vụ**: Tối đa 2–3 dòng cô đọng, `text-[13px] leading-relaxed text-red-800/90 max-w-lg mx-auto`.
+    6. **Thanh mẹo thao tác nhanh / Tiêu chí cốt lõi (Bottom Tips Bar)**: Đường kẻ đứt nét ngang `border-t border-dashed border-red-200/90` kèm 2–4 mẹo gạch đầu dòng ngắn gọn (`📸/💡/⚡/✨/📝/🎯/📋/💬/🖼️`) với `text-[11.5px] font-medium text-red-700` để nhân viên nắm bắt quy tắc cốt lõi ngay tức thì.
+  - **Component chuẩn hóa**: Sử dụng component `<FeatureGuidanceCard />` tại `src/components/templates/guidance/feature-guidance-card.tsx` (re-export tại `@/components/ui/feature-guidance-card`).
+  - **Kiến trúc & Quy chuẩn hệ thống Template (SSOT)**: Tuân thủ đặc tả kỹ thuật tại `docs/kien-truc/FLORAOS_TEMPLATE_ENGINE_ARCHITECTURE.md` và Sổ tay SSOT toàn diện tại `docs/kien-truc/FLORAOS_TEMPLATE_SYSTEM_SSOT.md` (chuẩn hóa 10 chức năng, 5 họ template, Core Interpolation Engine, chuẩn biến `{{...}}`).
+  - **Quy tắc phê duyệt**: Cấm tự ý thay đổi cấu trúc, màu sắc hay vị trí của khối hướng dẫn này sang dạng khác khi chưa báo cáo và nhận phê duyệt từ Chủ sản phẩm.
 
 ## Thứ tự pha — điều kiện chặn
 

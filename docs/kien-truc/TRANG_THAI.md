@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-12 (P13 M04a đợt hai hoàn tất + P19 Catalog & QR + P15 Integration API write paths) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-14 (P14b M01c Thẻ chào sản phẩm & Kho dữ liệu hoàn tất + M01b Product Copy + OpenAI Structured ảnh thật) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -9,6 +9,14 @@
 ---
 
 ## 1. Đang ở đâu
+
+**P14b — M01c Thẻ chào sản phẩm & Kho Dữ Liệu (`/kho-du-lieu`) hoàn tất (09/14).**
+Component `SalesPitchCard` (`src/components/sales/sales-pitch-card.tsx`) + template domain `sales-pitch-template.ts` tổng hợp dữ liệu M01a + M01b cho nhân viên tư vấn bán hàng (Sales Rep). Hỗ trợ:
+- 100% chỉnh sửa 8 khối trường thông tin trước khi xuất bản (Tên, SKU, Hotline, Phong cách, Dịp, Cảm xúc, Cấu phần BOM hoa/lá/phụ kiện, Kích thước cao/rộng & vật chứa, Báo giá & Khuyến mãi, Quà tặng, Cam kết, Ghi chú dặn dò).
+- Nút "Chốt duyệt & Xuất bản Final" (Badge FINAL) khóa dữ liệu và lưu vào Kho; hỗ trợ mở khóa sửa lại nếu cần.
+- **Kiến trúc 3 Tab hiển thị độc lập cách ly nội dung (Single Tab Isolation)**: Tab 1: Chỉnh sửa toàn bộ thông tin, Tab 2: Thẻ chào khách (A6 Card visual preview), Tab 3: Kịch bản Zalo (chỉ hiển thị duy nhất nội dung tab đang chọn, loại bỏ chia đôi màn hình gây phân tâm).
+- **Bộ công cụ xuất đa định dạng**: Copy ảnh vào Zalo / Clipboard (`navigator.clipboard.write` binary PNG), Tải PNG Retina 2x, Tải JPEG 95% (`html-to-image`), Xuất PDF A6 in ấn chuẩn 105×148mm (`jspdf`).
+- **Kho Dữ Liệu Sản Phẩm độc lập** (`/kho-du-lieu`) tích hợp trực tiếp trên Sidebar chính DesktopNav (`Folder` icon) với 3 phân vùng quản lý: 1. Ảnh gốc (Raw Photos), 2. Ảnh đã duyệt chờ sinh dữ liệu (M01a Approved), 3. Sale Pitch đã hoàn thành (Finalized Pitches). Hỗ trợ điều hướng 2 chiều sang `/tai-anh` qua URL query params. Layout `/tai-anh` khôi phục full-width 100%. Unit test `sales-pitch-template.test.ts` 3/3 xanh.
 
 **AI-1 đợt một viết mã xong (09/12) — cổng AI và hai sổ đăng ký, phần lõi phía
 TypeScript.** Năm bảng mới (`ai_capabilities`, `ai_models` không mang
@@ -535,6 +543,7 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | Ngày | Việc |
 |---|---|
+| 09/14 | **P14b M01c Thẻ chào sản phẩm & Kho Dữ Liệu (`/kho-du-lieu`) — hoàn tất.** Thẻ chào sản phẩm (`SalesPitchCard`, `sales-pitch-template.ts`) tổng hợp M01a + M01b: 100% chỉnh sửa 8 khối trường trước khi chốt, nút "Chốt duyệt & Xuất bản Final" (Badge FINAL), kiến trúc 3 tab hiển thị độc lập cách ly nội dung (Tab 1: Chỉnh sửa toàn bộ thông tin, Tab 2: Thẻ chào khách A6, Tab 3: Kịch bản Zalo 1-chạm copy), bộ công cụ xuất đa định dạng (Copy ảnh vào Zalo / Clipboard binary PNG, Tải PNG Retina 2x, Tải JPEG 95%, Xuất PDF A6 qua jsPDF). Tích hợp Kho Dữ Liệu Sản Phẩm độc lập (`/kho-du-lieu`) trên Sidebar chính DesktopNav với 3 phân vùng quản lý (Ảnh gốc, Ảnh đã duyệt chờ sinh dữ liệu, Sale Pitch hoàn thành) và liên kết 2 chiều sang `/tai-anh`. Layout `/tai-anh` khôi phục full-width. Unit test `sales-pitch-template.test.ts` 3/3 xanh. |
 | 09/14 | **OpenAI Structured chạy trên ảnh thật.** Gọi `gpt-4o-mini` qua `OpenAIStructuredProvider` trên 4/8 ảnh vàng (g001, g002, g010, g011) → `golden/ai-proposals-openai/`. Kết quả: damaged_count 4/4 đúng, bud_count 2/2 đúng, flower_count AI ước tính (người không đếm được do occlusion). Xem `golden/ai-accuracy-report-openai.csv`. Nợ #24a: 4 ảnh còn lại. |
 | 09/14 | **P5 M01 Vision Worker + P14 M01b Product Copy — hoàn tất, tài liệu cập nhật.** CHECKLIST_AI_CAPABILITIES_BUILD.md §3.1/§3.2 tích xanh (M01 worker: `vision.analyze` handler, `DETECTING`→`COMPLETED`, `OK`/`LOW_CONFIDENCE`; M01b: `product.copy.generate` via `callCapability` trực tiếp, AIC-04 wrapping AIC-07/08/09/10). Checklist_Thuc_Thi.md P14 tích đầy đủ 6/6 (kể cả `phong_cach`→`suggested_style`/`dip_su_dung`→`occasions`). TRANG_THAI.md P5 cập nhật: HOÀN TẤT 09/12. **Chạy xác minh:** `npm test` 294/294 xanh, `npm run test:tenant` 145/145 xanh, `npx tsc --noEmit` (9 lỗi pre-existing ở product-copies tests, không phải mới). |
 | 09/12 | **P13 M04a đợt hai hoàn tất.** Worker `media_ai` thay `PassthroughEnhancer` bằng Real-ESRGAN (fallback PIL `lanczos-unsharp-v1`), thêm Smart Reframe 4 tỷ lệ (1:1, 4:5, 9:16, 16:9) từ Master Image MỘT LẦN. Pipeline: ANALYZING → ENHANCING → SMART_REFRAME → VERIFYING → GENERATING_OUTPUTS. `output.ratios` trong `generation_jobs` ghi 4 storage_keys. Ghi 1 MASTER (`PENDING`) + 4 RATIO (`APPROVED`). 170/170 test Python xanh, `npm test` 258/258 xanh. `Checklist_Thuc_Thi.md` P13: 6/6 tích. |

@@ -1,5 +1,10 @@
 # Checklist tích hợp UI ↔ Backend — 10 chức năng UI/UX
 
+> [!NOTE]
+> **ĐÃ ĐƯỢC HỢP NHẤT VÀO TÀI LIỆU CHUẨN (OSOT)**  
+> Tệp này đã được hợp nhất cùng `UIUX-Feature-Checklist.md` vào **[`docs/UIUX-Execution-Checklist.md`](file:///Users/tuan/Projects/floraos-core/docs/UIUX-Execution-Checklist.md)**.  
+> Vui lòng theo dõi và cập nhật tiến độ thực thi UI & API tại tài liệu hợp nhất để đảm bảo tính duy nhất của dữ liệu.
+
 **Mục đích:** Nối từng trang UI trong `docs/FloraOS-UIUX-10-chuc-nang.md` với API thật ở `src/app/api/v1/`.
 
 **Nguyên tắc:**
@@ -55,14 +60,21 @@
 - [ ] **Bước 7:** Kết nối `handleSaveDraft1` → `PATCH /api/v1/vision/analyses/:id` với `{edited: {...}}`
 - [ ] **Bước 8:** Kết nối `handleApprove1` → `POST /api/v1/vision/analyses/:id/approve` (xử lý 409 đã duyệt, 403 thiếu năng lực)
 - [ ] **Bước 9:** Kết nối `handleReject1` → `POST /api/v1/vision/analyses/:id/reject`
-- [ ] **Bước 10:** Gợi ý M01b → kiểm Product Master đã có bản ghi duyệt → chuyển sang kết quả bán hàng (M01b chưa xây — giữ mock có note)
+- [x] **Bước 10:** Gợi ý M01b → kiểm Product Master đã có bản ghi duyệt → chuyển sang kết quả bán hàng (M01b đã hoàn thiện, kết nối API đầy đủ)
+- [x] **Bước 10b:** Thêm capability M01c (Thẻ chào sản phẩm & kịch bản tư vấn Sales) tổng hợp M01a + M01b:
+  - Cho phép biên tập 100% 8 khối trường thông tin trước khi xuất bản.
+  - Nút "Chốt duyệt & Xuất bản Final" (Badge FINAL, lưu vào Kho).
+  - Kiến trúc 3 Tab độc lập cách ly nội dung: Tab 1: Chỉnh sửa toàn bộ thông tin, Tab 2: Thẻ chào khách (A6 Card), Tab 3: Kịch bản Zalo (chỉ hiển thị nội dung tab đang chọn).
+  - Bộ công cụ xuất đa định dạng: Copy ảnh vào Zalo / Clipboard, Tải PNG 2x, Tải JPEG 95%, Xuất PDF A6 qua jsPDF.
+- [x] **Bước 10c:** Tích hợp Kho Dữ Liệu Sản Phẩm độc lập (`/kho-du-lieu`) trên Sidebar chính DesktopNav với 3 phân vùng quản lý (Ảnh gốc, Ảnh đã duyệt chờ sinh dữ liệu, Sale Pitch đã hoàn thành) và điều hướng 2 chiều sang `/tai-anh`.
 - [ ] **Bước 11:** Thêm handling cho: 401 (redirect login), 403 (hiện "không có quyền"), 409 (đã duyệt), 502 (core vắng)
 - [ ] **Bước 12:** Xóa comment "MOCK DATA — thay bằng API thật" khi hoàn tất
 
 ### Lưu ý đặc biệt
 - `POST /vision/analyses` bắt buộc `Idempotency-Key` header → dùng `crypto.randomUUID()`
 - Năng lực `H1` (tạo), `H2` (sửa), `H3` (duyệt/từ chối) — kiểm `useSession().can()` ở UI
-- Thẻ kết quả 2 (M01b) hiện tại chưa có backend — giữ mock, comment rõ: "M01b backend đang xây"
+- Thẻ kết quả 2 (M01b) đã có backend — `POST /api/v1/product-copies/generate` (H5), `GET/PATCH /api/v1/product-copies/:id` (H5), `POST /api/v1/product-copies/:id/approve` (H6), `POST /api/v1/product-copies/:id/reject` (H6). Đã nối đầy đủ handler trong `tai-anh/page.tsx`: `handleFieldChange2/Add2/Remove2`, `handleSaveDraft2`, `handleApprove2`, `handleReject2`, `goResult2` → `generateProductCopyApi`. Fields mapper: `mapProductCopyToFields2`.
+- Thẻ kết quả 3 (M01c) hoàn thiện trọn vẹn: Component `SalesPitchCard` (`src/components/sales/sales-pitch-card.tsx`), domain model `sales-pitch-template.ts`, kịch bản chào khách Zalo 1-chạm copy, tích hợp bộ chọn sản phẩm đã duyệt `ApprovedAnalysesSelector`. Hỗ trợ 3 tab hiển thị độc lập, xuất đa định dạng PNG/JPEG/PDF A6/Clipboard, và kết nối với Kho Dữ Liệu 3 phân vùng.
 
 ---
 

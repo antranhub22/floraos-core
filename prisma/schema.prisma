@@ -138,6 +138,10 @@ model organizations {
   ai_policies           ai_policies[]
   ai_requests           ai_requests[]
   ai_evaluations        ai_evaluations[]
+  occasions             occasions[]
+  catalog_links         catalog_links[]
+  product_copies        product_copies[]
+  content_metrics       content_metrics[]
 }
 
 model workspaces {
@@ -262,6 +266,8 @@ enum asset_kind {
   CATALOG
   LANDING
   SOCIAL
+  VIDEO
+  RATIO
 }
 
 enum asset_state {
@@ -698,6 +704,32 @@ model integration_tokens {
   @@index([organization_id, client])
 }
 
+/// Số liệu hiệu quả nội dung — ghi từ engine ngoài (SocialFlow/LocalBudd) qua Integration API.
+/// Idempotent theo khoá tự nhiên: (organization_id, platform, content_id, metric_date).
+model content_metrics {
+  id              String   @id @default(uuid())
+  organization_id String
+  platform        String
+  content_id      String
+  metric_date     DateTime @db.Date
+
+  reach           Int?
+  impressions     Int?
+  engagement      Int?
+  clicks          Int?
+  conversions     Int?
+  spend_usd       Float?
+
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id, platform, content_id, metric_date])
+  @@index([organization_id])
+  @@index([organization_id, metric_date])
+}
+
 // ── Nền AI — AI-1 ───────────────────────────────────────────────────────────
 
 /// Sổ đăng ký năng lực. Nội dung nạp từ `src/core/ai/domain/ai-capabilities.ts`
@@ -812,4 +844,76 @@ model ai_evaluations {
 
   @@index([organization_id, entity_type, entity_id])
   @@index([organization_id, capability_code])
+}
+
+/// Danh mục dịp — nạp 6 dòng mặc định khi tạo tổ chức (P19, nợ #63).
+/// `dip_su_dung` của product_copies gán theo mã trong bảng này, không phải chuỗi tự do.
+model occasions {
+  id              String   @id @default(uuid())
+  organization_id String
+  code            String
+  name            String
+  sort_order      Int      @default(0)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id, code])
+  @@index([organization_id])
+}
+
+/// Liên kết catalog chia sẻ — slug unique toàn cục, thu hồi được, không xoá.
+/// LocalBudd đọc qua Integration API để render trang catalog công khai.
+model catalog_links {
+  id              String   @id @default(uuid())
+  organization_id String
+  slug            String   @unique
+  name            String
+  description     String?
+  filters         Json?
+  is_revoked      Boolean  @default(false)
+  revoked_at      DateTime?
+  revoked_by      String?
+  created_by      String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@index([organization_id])
+  @@index([slug])
+}
+
+// ── M01b — Product Sales Data (Tên, Mô tả, Thẻ, Phân khúc giá) ────────────────
+// P14: Dữ liệu bán hàng sinh từ lượt phân tích đã duyệt. `raw`/`edited` tách rời
+// (YC-R3). `analysis_id` trỏ tới `product_analyses` đã APPROVED.
+// Duyệt (`H6`) ghi Product Master + `audit_logs` trong một giao dịch.
+model product_copies {
+  id              String   @id @default(uuid())
+  organization_id String
+  analysis_id     String // bắt buộc: product_analyses đã APPROVED
+  product_id      String? // null khi phân tích chưa gắn sản phẩm (sẽ tạo mới khi duyệt)
+
+  // Dự đoán gốc của máy (bất biến) — keys: suggested_name, suggested_description,
+  // suggested_tags[], suggested_occasions[], suggested_price_segment
+  raw             Json
+  // Bản người sửa trước khi duyệt (PATCH /product-copies/:id, H5)
+  edited          Json?
+  approval_state  approval_state @default(PENDING)
+  approved_by     String?
+  approved_at     DateTime?
+
+  // Phiên bản hồ sơ phong cách đã dùng (learning_profiles.version), để truy xuất
+  profile_version String?
+
+  created_at      DateTime @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@unique([analysis_id]) // một lượt phân tích chỉ tạo một product_copy
+  @@index([organization_id])
+  @@index([organization_id, product_id])
+  @@index([approval_state])
 }

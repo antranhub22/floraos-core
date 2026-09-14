@@ -1,7 +1,12 @@
 # Kế hoạch triển khai — CẬP NHẬT sau khi trả lời Q1-Q26
 
-**Ngày:** 13/09/2026
-**Trạng thái:** 31/115 tính năng đã code (21%)
+> [!NOTE]
+> **TÀI LIỆU QUYẾT ĐỊNH KẾ HOẠCH & LỘ TRÌNH TRIỂN KHAI**  
+> Tệp này lưu trữ các quyết định kiến trúc sản phẩm dựa trên 26 câu hỏi (Q1–Q26) và phân kỳ giai đoạn (Phase 0, 1, 2).  
+> **Tiến độ chi tiết từng tính năng và API kết nối** được theo dõi tại tài liệu hợp nhất: [`docs/UIUX-Execution-Checklist.md`](file:///Users/tuan/Projects/floraos-core/docs/UIUX-Execution-Checklist.md).
+
+**Ngày:** 14/09/2026 (Cập nhật hoàn tất M01c & Kho dữ liệu)  
+**Trạng thái:** 49/127 tính năng đã code (39%)
 
 ---
 
@@ -40,31 +45,53 @@
 
 ## GIAI ĐOẠN 0 — UI kết nối backend có sẵn (2-3 tuần)
 
-### 0.1 — #1 Phân tích sản phẩm: M01b connection ✅ BẮT ĐẦU NGAY
+### 0.1 — #1 Phân tích sản phẩm: M01b connection ✅ HOÀN TẤT (13/09)
 
 **Xác nhận:** M01b backend ĐÃ CÓ (`product-copies` 5 routes + `src/modules/product-copies/`)
 **Capability:** H5 (generate) ↔ H6 (approve) — đã có split pair + test khoá
 
-| # | Tính năng | Action |
-|---|-----------|--------|
-| 1.12 | Gợi ý "Sinh nội dung bán hàng" (tùy chọn) | Connect POST /product-copies/generate |
-| 1.13 | Thẻ kết quả 2: nội dung bán hàng | Map response → ResultField[] |
-| 1.14 | Sửa/Thêm/Bớt Thẻ 2 | PATCH /product-copies/:id |
-| 1.15 | Duyệt Thẻ 2 → ghi Product Master | POST /product-copies/:id/approve |
-| 1.16 | Lưu vào Kho → quay về | After approve, redirect |
+| # | Tính năng | Trạng thái |
+|---|-----------|------------|
+| 1.12 | Gợi ý "Sinh nội dung bán hàng" (tùy chọn) | ✅ `goResult2` → `generateProductCopyApi` |
+| 1.13 | Thẻ kết quả 2: nội dung bán hàng | ✅ `mapProductCopyToFields2` |
+| 1.14 | Sửa/Thêm/Bớt Thẻ 2 | ✅ `handleFieldChange2/Add2/Remove2` + PATCH |
+| 1.15 | Duyệt Thẻ 2 → ghi Product Master | ✅ `handleApprove2` → POST approve (H6) |
+| 1.16 | Lưu vào Kho → quay về | ✅ `goSaved()` sau approve |
 
-**Công việc cụ thể:**
-- [ ] Đọc `src/modules/product-copies/use-cases/generate-product-copy.ts` (input/output contract)
-- [ ] Đọc `src/modules/product-copies/domain/product-copy-rules.ts` (validation rules)
-- [ ] Đọc `src/modules/product-copies/use-cases/approve-product-copy.ts` (approve flow)
-- [ ] Tạo `mapProductCopyToFields()` mapper (product-copies response → ResultField[])
-- [ ] Nối 5 API calls vào `tai-anh/page.tsx`
-- [ ] Xử lý: H6 trần cứng dieu_hanh (ẩn Duyệt cho vai không đủ)
-- [ ] Error handling: 401/403/409/502
-- [ ] Verify: analysis_id phải APPROVED (kiểm trong use-case)
-- [ ] Xóa MOCK_FIELDS_RESULT2 comment
+**Đã code:** `mapProductCopyToFields2`, 5 API helpers (`generateProductCopyApi`, `fetchProductCopyApi`, `updateProductCopyApi`, `approveProductCopyApi`, `rejectProductCopyApi`), tất cả handlers. Mock `MOCK_FIELDS_RESULT2` đã xóa — dùng `mapProductCopyToFields2(productCopyData, analysisData)` với fallback `MOCK_COPY_FIELDS_PLACEHOLDER`.
 
-**Đọc tài liệu:** `src/core/ai/domain/routing.ts` — AIC-07..10 là model cho product copy (generative, measured).
+### 0.1b — #1 Phân tích sản phẩm: M01c Thẻ Chào Khách & Kho Dữ Liệu ✅ HOÀN TẤT (14/09)
+
+**Xác nhận:** M01c tổng hợp dữ liệu M01a + M01b cho nhân viên tư vấn bán hàng (Sales Rep).
+**Thực thi:**
+- `src/components/sales/sales-pitch-card.tsx`:
+  - 8 khối trường thông tin cho phép chỉnh sửa 100% trước khi xuất bản.
+  - Nút "Chốt duyệt & Xuất bản Final" (Badge FINAL, lưu vào Kho).
+  - Kiến trúc 3 Tab độc lập cách ly hiển thị (Chỉnh sửa toàn bộ thông tin - Thẻ chào khách A6 - Kịch bản Zalo 1-chạm copy), loại bỏ chia đôi màn hình.
+  - Bộ công cụ xuất đa định dạng: Copy ảnh vào Zalo / Clipboard (`navigator.clipboard.write`), Tải PNG Retina 2x, Tải JPEG 95% (`html-to-image`), Xuất PDF A6 (`jspdf`).
+- `src/components/layout/desktop-nav.tsx`:
+  - Thêm tab "Kho Dữ liệu" (icon `Folder`) trên Sidebar chính dẫn sang `/kho-du-lieu`.
+- `src/app/(app)/kho-du-lieu/page.tsx`:
+  - Trang độc lập với 3 phân vùng: 1. Ảnh gốc (Raw Photos), 2. Ảnh đã duyệt chờ sinh dữ liệu (M01a Approved), 3. Sale Pitch đã hoàn thành (Final).
+  - Hỗ trợ nhảy 2 chiều sang `/tai-anh` qua URL query params (`tab`, `analysis_id`, `pitch_id`, `asset_id`).
+- `src/modules/products/domain/sales-pitch-template.ts`: Domain model & generator kịch bản Zalo.
+- Unit test: `src/modules/products/domain/__tests__/sales-pitch-template.test.ts` (3/3 pass).
+
+### 0.1c — Chuẩn hóa Khối Hướng Dẫn Thao Tác (Standardized Feature Guidance Callout) ✅ HOÀN TẤT (14/09)
+
+**Xác nhận:** Chuẩn hóa toàn hệ thống theo mẫu khối hướng dẫn M01a/M01b/M01c.
+**Thực thi:**
+- `src/components/ui/feature-guidance-card.tsx`:
+  - Component tái sử dụng toàn hệ thống `<FeatureGuidanceCard />`.
+  - Khung viền đứt nét màu đỏ: `border-2 border-dashed border-red-300`.
+  - Nền đỏ pastel dịu mắt tương phản cao WCAG: `bg-red-50/70`.
+  - Huy hiệu phân loại (`badgeLabel`) dạng pill `bg-red-100 text-red-700` kèm icon định danh (`Info`, `Sparkles`, `Camera`...).
+  - Tiêu đề đậm `text-red-950` và diễn giải nghiệp vụ `text-red-800/90`.
+  - Thanh mẹo nhanh đáy (`tips`): Đường kẻ nét đứt `border-t border-dashed border-red-200/90` kèm danh sách mẹo thao tác ngắn gọn.
+- Áp dụng vào `src/app/(app)/tai-anh/page.tsx`:
+  - Khắc phục khoảng trống lớn trên Tab M01a bằng cách đổi `justify-center` thành `pt-4 pb-12`.
+  - Cả 3 tab M01a, M01b, M01c chuyển đổi sang component `<FeatureGuidanceCard />`.
+- Quy chuẩn hóa vào `AGENTS.md`: Mọi tab tính năng mới trong toàn hệ thống bắt buộc áp dụng chuẩn này; mọi đề xuất tối ưu khác đều phải nhận phê duyệt từ Chủ sản phẩm.
 
 ---
 

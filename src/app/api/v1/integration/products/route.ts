@@ -30,6 +30,11 @@ export const GET = handle(async (request) => {
       status: "ACTIVE",
       ...(url.searchParams.has("branch_id") ? { branchId: url.searchParams.get("branch_id") } : {}),
       ...(url.searchParams.has("category") ? { category: url.searchParams.get("category") ?? "" } : {}),
+      ...(url.searchParams.has("occasion_code") ? { occasionCode: url.searchParams.get("occasion_code") ?? "" } : {}),
+      ...(url.searchParams.has("color") ? { color: url.searchParams.get("color") ?? "" } : {}),
+      ...(url.searchParams.has("collection") ? { collection: url.searchParams.get("collection") ?? "" } : {}),
+      ...(url.searchParams.has("price_min") ? { priceMin: Number(url.searchParams.get("price_min")) } : {}),
+      ...(url.searchParams.has("price_max") ? { priceMax: Number(url.searchParams.get("price_max")) } : {}),
     },
     { limit, cursor: url.searchParams.get("cursor") }
   )

@@ -54,3 +54,4 @@ workers/tmp_smoke_test_*.py
 
 # File tạm kiểm tra
 _tmp-*
+test-results/

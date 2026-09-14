@@ -1,10 +1,11 @@
 import { z } from "zod"
 
 import { validationFailed } from "@/core/http/errors"
-import { requireCapability } from "@/core/rbac/capabilities"
+import { hasCapability, requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
 import { readIdempotencyKey } from "@/modules/jobs/domain/idempotency"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
+import { listApprovedAnalyses } from "@/modules/products/use-cases/list-approved-analyses"
 import { listPendingAnalyses } from "@/modules/products/use-cases/list-pending-analyses"
 import { requestAnalysis } from "@/modules/products/use-cases/request-analysis"
 
@@ -49,21 +50,31 @@ export const POST = handle(async (request) => {
 })
 
 /**
- * `GET /vision/analyses` (`H3`, nợ #48 — TECHNICAL_DEBT.md). Chỉ liệt kê
- * hàng chờ duyệt (`approval_state = PENDING`) — màn "Duyệt" chưa có nơi nào
- * khác để lấy dữ liệu này trước đợt này.
+ * `GET /vision/analyses`
+ * - Mặc định (`approval_state = PENDING`, gác bằng `H3`): chỉ liệt kê hàng chờ duyệt.
+ * - `approval_state = APPROVED` (gác bằng `H5` hoặc `H3`): liệt kê phân tích đã duyệt phục vụ M01b.
  */
 export const GET = handle(async (request) => {
   const { ctx } = await requireTenantContext(request)
-  requireCapability(ctx, "H3")
 
   const url = new URL(request.url)
+  const approvalState = url.searchParams.get("approval_state")
+
   const limitParam = url.searchParams.get("limit")
   const limit = limitParam === null ? undefined : Number(limitParam)
   if (limit !== undefined && !Number.isInteger(limit)) {
     throw validationFailed({ limit: "Phải là số nguyên" })
   }
 
+  if (approvalState === "APPROVED") {
+    if (!hasCapability(ctx, "H5") && !hasCapability(ctx, "H3")) {
+      requireCapability(ctx, "H5")
+    }
+    const result = await listApprovedAnalyses(ctx, { limit, cursor: url.searchParams.get("cursor") })
+    return jsonResponse(result)
+  }
+
+  requireCapability(ctx, "H3")
   const result = await listPendingAnalyses(ctx, { limit, cursor: url.searchParams.get("cursor") })
   return jsonResponse(result)
 })

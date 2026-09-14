@@ -1,0 +1,410 @@
+# SỔ TAY KIẾN TRÚC & QUY CHUẨN TEMPLATE HỆ THỐNG FLORAOS (SSOT)
+## (FloraOS Standardized Template System — Single Source of Truth)
+
+> **Mã tài liệu:** `FLORAOS-SSOT-TEMPLATES-V1`  
+> **Phiên bản:** 1.0 (Production Standard)  
+> **Cập nhật:** 14/09/2026  
+> **Phạm vi áp dụng:** Toàn bộ mã nguồn `src/components/templates/`, `src/core/templates/` và tất cả các màn hình giao diện của FloraOS.  
+> **Mục đích:** Tài liệu duy nhất chứa toàn bộ cấu trúc, thông số kỹ thuật (Props, Token, Layout), hướng dẫn tra cứu, chỉnh sửa và nâng cấp mọi template trong toàn hệ thống.
+
+---
+
+## MỤC LỤC
+
+1. [Triết lý Thiết kế & Bộ Quy chuẩn Bắt buộc](#1-triết-lý-thiết-kế--bộ-quy-chuẩn-bắt-buộc)
+2. [Cấu trúc Thư mục Tổng thể & Bản đồ 10 Chức năng](#2-cấu-trúc-thư-mục-tổng-thể--bản-đồ-10-chức-năng)
+3. [Đặc tả Chi tiết Từng Template Theo 10 Chức Năng](#3-đặc-tả-chi-tiết-từng-template-theo-10-chức-năng)
+   - [Chức năng 1: Phân tích Ảnh Sản phẩm (Product Analysis M01)](#chức-năng-1-phân-tích-ảnh-sản-phẩm-product-analysis-m01)
+   - [Chức năng 2: Studio Sáng tạo Ảnh (Creative Studio M04)](#chức-năng-2-studio-sáng-tạo-ảnh-creative-studio-m04)
+   - [Chức năng 3: Studio Video Ngắn (Video Studio M05)](#chức-năng-3-studio-video-ngắn-video-studio-m05)
+   - [Chức năng 4: Cỗ máy Nội dung Đa kênh (Content Engine M06)](#chức-năng-4-cỗ-máy-nội-dung-đa-kênh-content-engine-m06)
+   - [Chức năng 5: Đăng bài Mạng xã hội (Social Publishing M07)](#chức-năng-5-đăng-bài-mạng-xã-hội-social-publishing-m07)
+   - [Chức năng 6: Danh mục & Báo giá Thông minh (Catalog & Pricing M02/M03)](#chức-năng-6-danh-mục--báo-giá-thông-minh-catalog--pricing-m02m03)
+   - [Chức năng 7: Khách hàng & Chăm sóc Tự động (CRM & Retention M08)](#chức-năng-7-khách-hàng--chăm-sóc-tự-động-crm--retention-m08)
+   - [Chức năng 8: Đơn hàng & Lệnh Xưởng hoa (Orders & Florist M09)](#chức-năng-8-đơn-hàng--lệnh-xưởng-hoa-orders--florist-m09)
+   - [Chức năng 9: Trợ lý AI Chat Đa kênh (Chat Assistant M10)](#chức-năng-9-trợ-lý-ai-chat-đa-kênh-chat-assistant-m10)
+   - [Chức năng 10: Báo cáo Vận hành & Giám sát AI (Analytics & Governance M11)](#chức-năng-10-báo-cáo-vận-hành--giám-sát-ai-analytics--governance-m11)
+4. [Hệ Thống Trộn Biến Cốt Lõi & Bảng Ánh Xạ Cơ Sở Dữ Liệu (Database Schema Mapping Matrix)](#4-hệ-thống-trộn-biến-cốt-lõi-interpolation-engine--token-catalog)
+   - [4.1. Danh mục Token Biến Chuẩn](#41-danh-mục-token-biến-chuẩn-standard-token-catalog)
+   - [4.2. Khung Ngữ Cảnh Dữ Liệu InterpolationContext](#42-khung-ngữ-cảnh-dữ-liệu-interpolationcontext)
+   - [4.3. Bảng Đối Soát Ánh Xạ Cơ Sở Dữ Liệu](#43-bảng-đối-soát-ánh-xạ-cơ-sở-dữ-liệu-database-schema-mapping-matrix)
+   - [4.4. Nguyên Tắc Trộn Biến An Toàn](#44-nguyên-tắc-trộn-biến-an-toàn-fault-tolerance--redos-protection)
+5. [Cẩm Nang Vận Hành: Tìm kiếm, Chỉnh sửa & Tạo mới Template](#5-cẩm-nang-vận-hành-tìm-kiếm-chỉnh-sửa--tạo-mới-template)
+6. [Quy trình Kiểm thử & Nghiệm thu (Verification Protocol)](#6-quy-trình-kiểm-thử--nghiệm-thu-verification-protocol)
+
+---
+
+## 1. TRIẾT LÝ THIẾT KẾ & BỘ QUY CHUẨN BẮT BUỘC
+
+Toàn bộ hệ thống Template của FloraOS tuân thủ nghiêm ngặt 5 quy chuẩn cốt lõi. Mọi thay đổi vi phạm các quy chuẩn này đều bị từ chối trong quá trình kiểm duyệt:
+
+### 1.1. Chuẩn Khối Hướng Dẫn Thao Tác (Feature Guidance Callout)
+Mọi Tab chức năng khi mở ra đều phải có khối hướng dẫn mở đầu đạt chuẩn viền đỏ đứt nét:
+- **Khung viền**: `border-2 border-dashed border-red-300`
+- **Nền**: `bg-red-50/70` hoặc `bg-red-50/80` (chống mỏi mắt, chuẩn WCAG AAA)
+- **Huy hiệu (Pill Badge)**: `inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold tracking-wider uppercase`
+- **Thanh mẹo (Bottom Tips Bar)**: `border-t border-dashed border-red-200/90` với các icon mẹo (`📸/💡/⚡/✨/🎯`) chữ `text-[11.5px] font-medium text-red-700`
+- **Component dùng chung**: Bắt buộc dùng `<FeatureGuidanceCard />` từ `@/components/templates/shared/feature-guidance-card`.
+
+### 1.2. Chuẩn Tác Vụ Góc Trên Bên Phải (Top-Right Action Header)
+- Mọi tab đều phải thống nhất cụm nút tác vụ ở **Góc trên cùng bên phải** qua `<TabActionHeader />`.
+- Tách bạch 2 khối: Nút tác vụ chính 1-chạm (Copy, Lưu nháp, Duyệt) và Menu mở rộng `...` (Tải PNG, PDF A6, Mở khóa sửa).
+
+### 1.3. Chuẩn Phân Rã Trường Nguyên Tử (Atomic Disaggregated Fields)
+- **Tuyệt đối không gộp chung văn bản**: Cấm lưu trữ `"Hồng đỏ 10 cành"` thành 1 ô text tự do.
+- **Bắt buộc phân rã**: Tên hoa (`text`), số lượng (`number`), đơn vị (`text`), màu sắc (`text`), vai trò (`select: main | secondary | filler | foliage | wrap`).
+- Cho phép người dùng nhấp đúp vào từng trường số liệu để chỉnh sửa mà không làm hỏng cấu trúc dữ liệu.
+
+### 1.4. Nguyên Tắc SRP & Giới Hạn 350 Dòng Code
+- 1 file = 1 lý do duy nhất để thay đổi.
+- Kích thước tối đa của mỗi file template là **350 dòng**. Nếu vượt quá, bắt buộc phải phân tách thành các component con hoặc hook.
+
+### 1.5. Cách Ly Hạ Tầng (Zero Infrastructure Leaks)
+- Các file trong `src/components/templates/` và `src/core/templates/` thuần túy là UI Component và Domain Logic.
+- **Tuyệt đối không import PrismaClient, DB Connection hay SDK nhà cung cấp AI ngoài** vào thư mục templates.
+
+---
+
+## 2. CẤU TRÚC THƯ MỤC TỔNG THỂ & BẢN ĐỒ 10 CHỨC NĂNG
+
+Toàn bộ hệ thống templates nằm tại `src/components/templates/`, chia theo **10 Thư mục Chức năng**:
+
+```text
+src/
+├── core/
+│   └── templates/                         # Lớp Xử lý Dữ liệu & Trộn biến (Clean Domain)
+│       ├── domain/
+│       │   ├── template-types.ts          # Types & Schemas của hệ thống template
+│       │   ├── variable-catalog.ts        # Bộ giải mã biến token chuẩn ({{product.name}}...)
+│       │   └── interpolation-engine.ts    # Động cơ thay thế biến an toàn (an toàn Regex)
+│       └── golden-templates.ts            # Kho System Golden Templates mặc định
+│
+└── components/
+    └── templates/                         # Lớp Trực quan & Giao diện người dùng
+        ├── shared/                        # 0. Khung dùng chung
+        │   └── feature-guidance-card.tsx  # Khung hướng dẫn viền đỏ đứt nét chuẩn
+        │
+        ├── product-analysis/              # 1. Phân tích ảnh sản phẩm (M01a/b/c)
+        ├── creative-studio/               # 2. Studio Sáng tạo Ảnh (M04a/b)
+        ├── video-studio/                  # 3. Studio Video Ngắn (M05)
+        ├── content-engine/                # 4. Máy Nội dung Đa kênh (M06)
+        ├── social-publishing/             # 5. Đăng bài Mạng xã hội (M07)
+        ├── catalog/                       # 6. Danh mục & Báo giá (M02/M03)
+        ├── crm/                           # 7. Khách hàng & Chăm sóc (M08)
+        ├── orders/                        # 8. Đơn hàng & Xưởng hoa (M09)
+        ├── chat-assistant/                # 9. Trợ lý AI Chat Đa kênh (M10)
+        ├── analytics/                     # 10. Báo cáo & Giám sát AI (M11)
+        └── index.ts                       # Barrel export toàn bộ hệ thống
+```
+
+---
+
+## 3. ĐẶC TẢ CHI TIẾT TỪNG TEMPLATE THEO 10 CHỨC NĂNG
+
+### Chức năng 1: Phân tích Ảnh Sản phẩm (Product Analysis M01)
+> **Đường dẫn thư mục:** `src/components/templates/product-analysis/`  
+> **Màn hình sử dụng:** `/tai-anh?tab=m01a`, `/tai-anh?tab=m01b`, `/tai-anh?tab=m01c`
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `m01a-guidance-card.tsx` | Guidance | Hướng dẫn tải ảnh chụp hoa & nhận diện cành hoa | Không có props (Preset tĩnh chuẩn) |
+| `m01b-guidance-card.tsx` | Guidance | Hướng dẫn sinh tên thương mại & mô tả SEO | Không có props (Preset tĩnh chuẩn) |
+| `m01c-guidance-card.tsx` | Guidance | Hướng dẫn tạo thẻ chào khách A6 & Zalo Script | Không có props (Preset tĩnh chuẩn) |
+| `analysis-result-card.tsx` | BOM / Result | Thẻ kết quả phân tích cấu phần hoa M01a, độ tin cậy AI, danh sách cành hoa nguyên tử, duyệt/từ chối | `fields`, `imageUrl`, `judgment`, `confidence`, `onApprove`, `onSaveDraft`, `onFieldChange`... |
+| `commercial-content-card.tsx` | Content | Thẻ nội dung bán hàng M01b (tên gợi ý, câu chuyện hoa, phân khúc giá, nút kho đã duyệt) | `fields`, `imageUrl`, `qualityScore`, `onBackToLibrary`, `onApprove`, `onSaveDraft`... |
+| `sales-pitch-card-a6.tsx` | Visual Pitch | Thẻ chào khách chuẩn A6 (105x148mm) tối ưu in ấn và chia sẻ ảnh kèm bảng giá, quà tặng | `data: SalesPitchData`, `onExportA6`, `onShare` |
+| `zalo-script-box.tsx` | Advisory | Hộp kịch bản tư vấn Zalo 1-chạm copy kèm icon sinh động và cấu phần chi tiết | `data: SalesPitchData`, `onCopyZalo` |
+
+---
+
+### Chức năng 2: Studio Sáng tạo Ảnh (Creative Studio M04)
+> **Đường dẫn thư mục:** `src/components/templates/creative-studio/`  
+> **Màn hình sử dụng:** `/sang-tao` (hoặc các màn hình tối ưu media AI)
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `creative-guidance-card.tsx` | Guidance | Hướng dẫn tách nền xưởng hoa và ghép bối cảnh studio | Không có props |
+| `before-after-preview-card.tsx` | Preview | Thẻ so sánh trực quan ảnh gốc chụp xưởng và ảnh đã tối ưu AI | `originalImageUrl`, `enhancedImageUrl`, `aspectRatio`, `onDownload` |
+| `studio-variant-card.tsx` | Variant Selector | Thẻ chọn phối cảnh (Bàn tiệc cưới, phòng khách, cầm tay) | `variants: StudioVariantItem[]`, `selectedId`, `onSelectVariant` |
+
+---
+
+### Chức năng 3: Studio Video Ngắn (Video Studio M05)
+> **Đường dẫn thư mục:** `src/components/templates/video-studio/`  
+> **Màn hình sử dụng:** `/video`
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `video-guidance-card.tsx` | Guidance | Hướng dẫn tạo video ngắn 9:16 cho TikTok / Reels / Shorts | Không có props |
+| `storyboard-script-card.tsx` | Script | Thẻ kịch bản phân cảnh 3 nhịp: Mở đầu - Cận cảnh hoa - CTA | `scenes: StoryboardScene[]`, `totalDurationSeconds`, `onCopyScript` |
+| `video-player-card.tsx` | Player Mockup | Khung chiếu video dọc 9:16 kèm phụ đề bán hàng và nút tải MP4 | `videoUrl`, `posterUrl`, `productName`, `price`, `onDownload`, `onShare` |
+
+---
+
+### Chức năng 4: Cỗ máy Nội dung Đa kênh (Content Engine M06)
+> **Đường dẫn thư mục:** `src/components/templates/content-engine/`  
+> **Màn hình sử dụng:** `/noi-dung`
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `content-guidance-card.tsx` | Guidance | Hướng dẫn tạo bài viết tiếp thị đa kênh & đa góc độ | Không có props |
+| `multichannel-post-card.tsx` | Post Template | Thẻ bài đăng chia tab Facebook, TikTok, Instagram, Zalo kèm sao chép | `posts: MultichannelPostItem[]`, `productName`, `onSchedulePost` |
+| `angle-selector-card.tsx` | Strategy Selector| Chọn góc tiếp cận bài viết: Cảm xúc, Kỹ thuật tay nghề hay Ưu đãi chốt đơn | `selectedAngle: "emotional" \| "technical" \| "promotional"`, `onSelectAngle` |
+
+---
+
+### Chức năng 5: Đăng bài Mạng xã hội (Social Publishing M07)
+> **Đường dẫn thư mục:** `src/components/templates/social-publishing/`  
+> **Màn hình sử dụng:** `/lich-dang`
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `publishing-guidance-card.tsx` | Guidance | Hướng dẫn lập lịch xuất bản và các khung giờ vàng tương tác | Không có props |
+| `schedule-calendar-card.tsx` | Calendar | Thẻ lịch trình phân phối nội dung, giờ phát và trạng thái bài | `posts: ScheduledPostItem[]`, `dateLabel` |
+| `channel-status-card.tsx` | Integration | Thẻ kiểm tra trạng thái kết nối token Fanpage / Zalo OA | `channels: ConnectedChannel[]`, `onReconnect` |
+
+---
+
+### Chức năng 6: Danh mục & Báo giá Thông minh (Catalog & Pricing M02/M03)
+> **Đường dẫn thư mục:** `src/components/templates/catalog/`  
+> **Màn hình sử dụng:** `/catalog`
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `catalog-guidance-card.tsx` | Guidance | Hướng dẫn thiết lập giá động và chia sẻ link catalog trực tuyến | Không có props |
+| `product-detail-card.tsx` | Catalog Card | Thẻ chi tiết sản phẩm catalog chuẩn Mobile, kèm nút tạo đơn & chia sẻ | `code`, `name`, `imageUrl`, `category`, `price`, `stemCount`, `occasions` |
+| `quote-summary-card.tsx` | Pricing BOM | Thẻ bảng tính giá cấu thành (hoa, lá, công thợ, bao bì, biên LN) | `items: CostBreakdownItem[]`, `laborCost`, `wrappingCost`, `suggestedPrice` |
+
+---
+
+### Chức năng 7: Khách hàng & Chăm sóc Tự động (CRM & Retention M08)
+> **Đường dẫn thư mục:** `src/components/templates/crm/`  
+> **Màn hình sử dụng:** `/khach-hang`
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `crm-guidance-card.tsx` | Guidance | Hướng dẫn quản lý sở thích khách hàng và ngày kỷ niệm | Không có props |
+| `customer-profile-card.tsx` | CRM Profile | Thẻ hồ sơ khách hàng VIP: Gu màu sắc, loại hoa ưa thích, lịch sử mua | `name`, `phone`, `tier`, `totalOrders`, `totalSpent`, `preferredColors`... |
+| `event-reminder-card.tsx` | Retention Alert | Thẻ nhắc ngày sinh nhật / kỷ niệm sắp tới kèm nút nhắn Zalo chăm sóc | `reminders: EventReminderItem[]`, `onSendZaloCare` |
+
+---
+
+### Chức năng 8: Đơn hàng & Lệnh Xưởng hoa (Orders & Florist M09)
+> **Đường dẫn thư mục:** `src/components/templates/orders/`  
+> **Màn hình sử dụng:** `/don-hang`
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `order-guidance-card.tsx` | Guidance | Hướng dẫn quy trình xử lý đơn hàng và bàn giao lệnh xưởng | Không có props |
+| `florist-ticket-card.tsx` | Florist Ticket | Phiếu lệnh cắm hoa cho thợ (định lượng hoa bắt buộc, ảnh mẫu, hạn giao) | `orderCode`, `productName`, `sampleImageUrl`, `items`, `wrapStyle`, `onPrint` |
+| `delivery-receipt-card.tsx` | Print A6 | Phiếu giao hàng A6 cho shipper kèm thiệp chúc mừng in hoa mỹ | `orderCode`, `recipientName`, `deliveryAddress`, `cardMessage`, `totalAmount` |
+
+---
+
+### Chức năng 9: Trợ lý AI Chat Đa kênh (Chat Assistant M10)
+> **Đường dẫn thư mục:** `src/components/templates/chat-assistant/`  
+> **Màn hình sử dụng:** `/hoi-thoai`
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `chat-guidance-card.tsx` | Guidance | Hướng dẫn trợ lý AI tự động tư vấn mẫu hoa và chốt đơn 24/7 | Không có props |
+| `chat-thread-card.tsx` | Chat Stream | Khung hiển thị hội thoại khách - AI kèm thẻ gợi ý sản phẩm và nhập liệu | `customerName`, `channel`, `messages: ChatMessage[]`, `onSendMessage` |
+| `human-takeover-banner.tsx` | Incident Alert | Banner cảnh báo nhân viên can thiệp xử lý khi khách khiếu nại | `reason`, `customerName`, `onAcceptTakeover`, `onDismiss` |
+
+---
+
+### Chức năng 10: Báo cáo Vận hành & Giám sát AI (Analytics & Governance M11)
+> **Đường dẫn thư mục:** `src/components/templates/analytics/`  
+> **Màn hình sử dụng:** `/bao-cao`
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `analytics-guidance-card.tsx`| Guidance | Hướng dẫn giám sát chỉ số kinh doanh và kiểm soát ngân sách AI | Không có props |
+| `kpi-summary-card.tsx` | KPI Dashboard | Thẻ tóm tắt 4 chỉ số vàng: Doanh thu, Đơn hàng, Tỷ lệ chuyển đổi, AOV | `revenue`, `orders`, `conversionRate`, `avgOrderValue`, `periodLabel` |
+| `ai-credit-usage-card.tsx` | Aegis Governance| Thẻ giám sát hạn mức tín dụng AI, cảnh báo vượt 80% hạn mức tháng | `usedTokens`, `totalTokens`, `costSpent`, `budgetLimit`, `capabilities` |
+
+---
+
+## 4. HỆ THỐNG TRỘN BIẾN CỐT LÕI (INTERPOLATION ENGINE & TOKEN CATALOG)
+
+Động cơ trộn biến nằm độc lập tại:
+- `src/core/templates/domain/interpolation-engine.ts`
+- `src/core/templates/domain/variable-catalog.ts`
+
+### 4.1. Danh mục Token Biến Chuẩn (Standard Token Catalog)
+
+| Biến Token | Ý nghĩa dữ liệu | Ví dụ kết quả sau khi nạp |
+|---|---|---|
+| `{{product.name}}` | Tên sản phẩm chính thức | Bó Hoa Nắng Mai Tươi Sáng |
+| `{{product.sku}}` | Mã SKU định danh | SP-2026-0914 |
+| `{{product.style}}` | Phong cách cắm/bó hoa | Bó tròn Hàn Quốc hiện đại |
+| `{{flower.summary_list}}` | Tóm tắt cấu phần các loại hoa | 10 Hồng Ohara, 5 Cúc Tana, Lá bạc |
+| `{{flower.main_tones}}` | Tone màu chủ đạo | Hồng pastel, Trắng kem |
+| `{{flower.wrapping}}` | Phong cách giấy gói & nơ | Giấy lụa chống thấm hồng cam, nơ voan |
+| `{{pricing.selling_price_vnd}}` | Giá bán thực tế định dạng VNĐ | 450.000đ |
+| `{{pricing.original_price_vnd}}` | Giá niêm yết trước giảm | 550.000đ |
+| `{{pricing.discount_percent}}` | Tỷ lệ giảm giá | 18% |
+| `{{pricing.segment}}` | Phân khúc thị trường | Tiêu chuẩn |
+| `{{service.gifts_bullets}}` | Quà tặng kèm theo dạng gạch đầu dòng | • Tặng kèm thiệp thiết kế riêng\n• Miễn phí in banner |
+| `{{service.commitments_bullets}}` | Cam kết chất lượng dịch vụ | • Hoa tươi trên 3 ngày\n• Chụp ảnh nghiệm thu trước khi giao |
+| `{{shop.name}}` | Tên thương hiệu tiệm hoa | Flora Tiệm Hoa Tươi |
+| `{{shop.hotline}}` | Số hotline liên hệ | 0988.123.456 |
+| `{{shop.address}}` | Địa chỉ showroom | 123 Đường Hoa, Quận 1, TP.HCM |
+| `{{shop.zalo_link}}` | Link Zalo OA | https://zalo.me/florashop |
+
+---
+
+### 4.2. Khung Ngữ Cảnh Dữ Liệu InterpolationContext
+
+Dữ liệu nạp vào Template Engine được chuẩn hóa qua giao diện `InterpolationContext` (`src/core/templates/domain/template-types.ts`):
+
+```typescript
+export interface InterpolationContext {
+  product?: {
+    name?: string
+    sku?: string
+    style?: string
+    category?: string
+    description?: string
+  }
+  flower?: {
+    summaryList?: string
+    mainTones?: string
+    facing?: string
+    wrapping?: string
+    totalStems?: number
+    items?: Array<{ name: string; quantity: number; color?: string; role?: string }>
+  }
+  pricing?: {
+    sellingPrice?: number
+    sellingPriceVnd?: string
+    originalPrice?: number
+    originalPriceVnd?: string
+    discountPercent?: number
+    segment?: string
+  }
+  service?: {
+    giftsList?: string[]
+    giftsBullets?: string
+    commitmentsList?: string[]
+    commitmentsBullets?: string
+  }
+  shop?: {
+    name?: string
+    hotline?: string
+    address?: string
+    zaloLink?: string
+    brandTone?: string
+  }
+}
+```
+
+---
+
+### 4.3. Bảng Đối Soát Ánh Xạ Cơ Sở Dữ Liệu (Database Schema Mapping Matrix)
+
+Hệ thống Template được đồng bộ hóa **100% hai chiều** với lược đồ cơ sở dữ liệu Prisma (`prisma/schema.prisma`):
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                             DATABASE ENTITIES (Prisma)                           │
+│  products · product_analyses · product_copies · business_profiles · brand_profiles │
+└────────────────────────────────────────┬─────────────────────────────────────────┘
+                                         │
+                                         ▼ (Domain Mappers & Resolvers)
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                       TOKEN CATALOG & TEMPLATE PROPS                             │
+│   {{product.*}} · {{flower.*}} · {{pricing.*}} · {{service.*}} · {{shop.*}}      │
+└────────────────────────────────────────┬─────────────────────────────────────────┘
+                                         │
+                                         ▼ (UI Projections)
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                         STANDARDIZED TEMPLATE COMPONENTS                         │
+│  AnalysisResultCard · CommercialContentCard · SalesPitchCardA6 · ZaloScriptBox... │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Chi tiết bảng ánh xạ tường minh từng trường dữ liệu:
+
+| Bảng CSDL (Prisma Model) | Trường CSDL (DB Field) | Biến Token / Props Template | Component Template Sử dụng | Ghi chú Đồng bộ |
+|---|---|---|---|---|
+| `products` | `code` | `{{product.sku}}` / `code` | `<AnalysisResultCard>`, `<ProductDetailCard>` | Mã định danh duy nhất trong tổ chức (`@@unique([organization_id, code])`). |
+| `products` | `name` | `{{product.name}}` / `productName` | Mọi Card của 10 chức năng | Tên sản phẩm chính thức trong Product Master. |
+| `products` | `category` | `{{product.category}}` / `category` | `<ProductDetailCard>`, `<CatalogGuidanceCard>` | Phân loại hoa (Bó hoa, Giỏ hoa, Kệ hoa, Bình hoa). |
+| `products` | `shape` | `{{product.style}}` / `wrapStyle` | `<FloristTicketCard>`, `<SalesPitchCardA6>` | Kiểu dáng thiết kế (Bó tròn, Tam giác, Thác đổ...). |
+| `products` | `facing` | `{{flower.facing}}` | `<SalesPitchCardA6>`, `<FloristTicketCard>` | Hướng nhìn mặt hoa: `ONE_SIDED` (1 mặt) hoặc `ALL_AROUND` (360 độ). |
+| `products` | `attributes.price_vnd` | `{{pricing.selling_price_vnd}}` | `<SalesPitchCardA6>`, `<ProductDetailCard>`, `<VideoPlayerCard>` | Giá bán chính thức tính theo VNĐ. |
+| `products` | `attributes.original_price_vnd`| `{{pricing.original_price_vnd}}` | `<SalesPitchCardA6>`, `<ProductDetailCard>` | Giá niêm yết gốc phục vụ tính chiết khấu khuyến mãi. |
+| `product_analyses` | `raw.components[]` / `edited.components[]` | `{{flower.summary_list}}` / `fields` (Atomic) | `<AnalysisResultCard>`, `<FloristTicketCard>` | Phân rã nguyên tử: `name`, `quantity`, `unit`, `color`, `role`. |
+| `product_analyses` | `raw.visual_elements.primary_colors` | `{{flower.main_tones}}` | `<AnalysisResultCard>`, `<SalesPitchCardA6>` | Bảng màu nhận diện thị giác máy tính AI M01a. |
+| `product_analyses` | `raw.visual_elements.wrap_style` | `{{flower.wrapping}}` | `<AnalysisResultCard>`, `<FloristTicketCard>` | Phong cách giấy gói & nơ được AI phân tích. |
+| `product_analyses` | `raw.quality.stem_count` | `{{flower.total_stems}}` / `stemCount` | `<AnalysisResultCard>`, `<ProductDetailCard>` | Tổng số cành hoa và lá trang trí. |
+| `product_analyses` | `approval_state` | `judgment` / `status` | `<AnalysisResultCard>` | Trạng thái phê duyệt: `PENDING`, `APPROVED`, `REJECTED`. |
+| `product_copies` | `raw.suggested_name` / `edited.suggested_name` | `fields["Tên sản phẩm"]` | `<CommercialContentCard>` | Tên thương mại do AI gợi ý dựa theo phong cách shop. |
+| `product_copies` | `raw.suggested_description` | `fields["Mô tả"]` | `<CommercialContentCard>`, `<MultichannelPostCard>` | Đoạn văn cảm xúc bán hàng và câu chuyện sản phẩm. |
+| `product_copies` | `raw.suggested_tags` | `fields["Thẻ phân loại"]` | `<CommercialContentCard>`, `<MultichannelPostCard>` | Danh sách từ khóa SEO và hashtag bán lẻ. |
+| `product_copies` | `raw.suggested_price_segment` | `{{pricing.segment}}` | `<CommercialContentCard>` | Định vị phân khúc giá: Tiết kiệm, Tiêu chuẩn, Cao cấp. |
+| `business_profiles` | `display_name` | `{{shop.name}}` | `<SalesPitchCardA6>`, `<DeliveryReceiptCard>`, `<ZaloScriptBox>` | Tên hiển thị tiệm hoa của tenant (đúng luật Tenant Isolation). |
+| `business_profiles` | `phone` | `{{shop.hotline}}` | `<SalesPitchCardA6>`, `<CustomerProfileCard>` | Số hotline liên hệ đặt hoa của tiệm. |
+| `business_profiles` | `address` | `{{shop.address}}` | `<DeliveryReceiptCard>` | Địa chỉ showroom hoặc xưởng gia công. |
+| `business_profiles` | `social_links.zalo` | `{{shop.zalo_link}}` | `<ZaloScriptBox>`, `<CustomerProfileCard>` | Đường dẫn tài khoản Zalo OA / cá nhân của tiệm. |
+| `brand_profiles` | `tone_of_voice` | Tone config | `<ContentGuidanceCard>`, `<MultichannelPostCard>` | Giọng văn thương hiệu: Thân thiện, Sang trọng, Trẻ trung... |
+| `brand_profiles` | `primary_color` | UI Styling | Toàn bộ Templates | Tông màu chủ đạo thương hiệu áp dụng khi render Template A6. |
+| `pricing_rules` | `key` (`san`, `tran`, `muc_thu`, `lam_tron`) | Engine Math | `<QuoteSummaryCard>`, `quotePrice()` | Công thức kiểm soát giá sàn/trần và biên lợi nhuận R3/R4/R5. |
+| `occasions` | `code`, `name` | `occasions[]` | `<SalesPitchCardA6>`, `<ProductDetailCard>`, `<EventReminderCard>` | Bảng tra cứu dịp tặng chuẩn hóa (sinh nhật, khai trương, kỷ niệm...). |
+| `catalog_links` | `slug` | `shareUrl` | `<ProductDetailCard>` | Slug chia sẻ danh mục trực tuyến ra kênh khách hàng ngoài. |
+
+### 4.4. Nguyên tắc Trộn Biến An Toàn (Fault Tolerance & ReDoS Protection)
+1. **Fallback an toàn**: Nếu biến không tồn tại trong context, parser tự động trả về chuỗi rỗng hoặc giá trị fallback khai báo sẵn, tuyệt đối không quăng ngoại lệ (throw error) gây sập ứng dụng.
+2. **Chống Regex DoS (ReDoS Protection)**: Engine biên dịch an toàn, không sử dụng regex lồng nhau đệ quy.
+3. **Purity & Isolation**: Toàn bộ logic giải mã token hoàn toàn độc lập với Prisma ORM, chạy được cả trên Edge runtime, Node.js lẫn trình duyệt.
+
+---
+
+## 5. CẨM NANG VẬN HÀNH: TÌM KIẾM, CHỈNH SỬA & TẠO MỚI TEMPLATE
+
+### 5.1. Quy trình 3 Bước Định vị Nhanh Template Cần Sửa
+Khi gặp lỗi hoặc nhận yêu cầu thay đổi giao diện ở bất kỳ tab nào:
+1. **Bước 1: Xác định Chức năng**  
+   - Xem tính năng đó thuộc phân hệ nào trong 10 phân hệ (vd: Phân tích ảnh ➔ `product-analysis`, Lịch đăng ➔ `social-publishing`).
+2. **Bước 2: Mở thư mục tương ứng trong `src/components/templates/<feature>/`**  
+   - Đọc file `index.ts` của thư mục đó để thấy ngay danh sách các template.
+3. **Bước 3: Mở file component cụ thể**  
+   - Tất cả các props đều được định nghĩa rõ ràng ở đầu file (`interface <ComponentName>Props`).
+
+### 5.2. Hướng dẫn Chỉnh sửa Template Hiện có
+- **Sửa text hướng dẫn hoặc mẹo**: Mở file `<feature>-guidance-card.tsx` tương ứng, cập nhật mảng `tips: [...]` hoặc `description`.
+- **Thêm trường dữ liệu hiển thị**: Mở interface props của template, bổ sung trường dữ liệu (ví dụ thêm `expiryDate?: string`), sau đó chèn vào JSX và chạy `npm test` để kiểm tra tương thích.
+- **Tuân thủ giới hạn 350 dòng**: Nếu component phình to, tách phần hiển thị con ra thành sub-component (vd: `SceneRow`, `MetricItem`).
+
+### 5.3. Hướng dẫn Tạo Mới Template Cho Một Chức Năng Mới
+Khi hệ thống có thêm tính năng mới:
+1. Tạo thư mục `src/components/templates/<new-feature>/`.
+2. Tạo file hướng dẫn `<new-feature>-guidance-card.tsx` sử dụng `<FeatureGuidanceCard />`.
+3. Tạo các file output card phục vụ chức năng đó (kế thừa các quy chuẩn viền, nút bấm, badge).
+4. Tạo `src/components/templates/<new-feature>/index.ts` export toàn bộ.
+5. Re-export trong `src/components/templates/index.ts`.
+6. Cập nhật tài liệu SSOT này.
+
+---
+
+## 6. QUY TRÌNH KIỂM THỬ & NGHIỆM THU (VERIFICATION PROTOCOL)
+
+Trước khi commit bất kỳ thay đổi nào liên quan đến template:
+
+1. **Kiểm tra Unit Test**:
+   ```bash
+   npm test
+   ```
+   *Bắt buộc 100% tests passed (Hiện tại: 309/309 tests).*
+
+2. **Kiểm tra TypeScript & Clean Code**:
+   ```bash
+   npx tsc --noEmit
+   ```
+   *Không phát sinh bất kỳ lỗi gãy type nào trong toàn bộ thư mục `src/components/templates/`.*
+
+3. **Kiểm tra Trực quan Giao diện**:
+   - Truy cập `http://localhost:3100/tai-anh?tab=m01a`, `m01b`, `m01c`.
+   - Kiểm tra khối hướng dẫn có viền đỏ đứt nét `border-dashed border-red-300`, nền hồng dịu `bg-red-50/70`, badge đỏ và tips gạch đầu dòng rõ ràng.
+   - Nút hành động chuẩn hóa nằm ở góc trên bên phải.

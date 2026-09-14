@@ -212,9 +212,9 @@ describe("cách ly tenant — M01 phân tích ảnh (P5)", () => {
   })
 
   describe("bộ máy phân tích — Điều hành chọn cho cả tổ chức (H4)", () => {
-    it("chưa chọn gì thì chạy bộ đã biết hành vi, và liệt kê đủ ba bộ", async () => {
+    it("chưa chọn gì thì chạy bộ mặc định (openai_direct), và liệt kê đủ ba bộ", async () => {
       const body = await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, a.token)))
-      expect(body.dang_dung).toBe("local_cv")
+      expect(body.dang_dung).toBe("openai_direct")
       expect((body.danh_sach as { key: string }[]).map((b) => b.key)).toEqual([
         "openai_structured",
         "openai_direct",
@@ -227,12 +227,12 @@ describe("cách ly tenant — M01 phân tích ảnh (P5)", () => {
         withSession(`${BASE}/vision/engine`, a.token, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bo_may: "openai_direct" }),
+          body: JSON.stringify({ bo_may: "local_cv" }),
         })
       )
       expect(res.status).toBe(200)
       expect((await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, a.token)))).dang_dung).toBe(
-        "openai_direct"
+        "local_cv"
       )
       expect(
         await prisma.audit_logs.count({
@@ -279,7 +279,7 @@ describe("cách ly tenant — M01 phân tích ảnh (P5)", () => {
         })
       )
       const cuaB = await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, b.token)))
-      expect(cuaB.dang_dung).toBe("local_cv")
+      expect(cuaB.dang_dung).toBe("openai_direct")
     })
 
     it("bộ máy CHỐT vào payload của job lúc tạo, không tra lại lúc worker nhận việc", async () => {

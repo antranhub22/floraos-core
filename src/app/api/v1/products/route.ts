@@ -26,12 +26,26 @@ export const GET = handle(async (request) => {
     throw validationFailed({ limit: "Phải là số nguyên" })
   }
 
+  const priceMinParam = url.searchParams.get("price_min")
+  const priceMaxParam = url.searchParams.get("price_max")
+  if (priceMinParam !== null && isNaN(Number(priceMinParam))) {
+    throw validationFailed({ price_min: "Phải là số" })
+  }
+  if (priceMaxParam !== null && isNaN(Number(priceMaxParam))) {
+    throw validationFailed({ price_max: "Phải là số" })
+  }
+
   const result = await listProducts(
     ctx,
     {
       ...(url.searchParams.has("branch_id") ? { branchId: url.searchParams.get("branch_id") } : {}),
       ...(statusParam !== null ? { status: statusParam as (typeof PRODUCT_STATUS)[number] } : {}),
       ...(url.searchParams.has("category") ? { category: url.searchParams.get("category") ?? "" } : {}),
+      ...(url.searchParams.has("occasion_code") ? { occasionCode: url.searchParams.get("occasion_code") ?? "" } : {}),
+      ...(url.searchParams.has("color") ? { color: url.searchParams.get("color") ?? "" } : {}),
+      ...(url.searchParams.has("collection") ? { collection: url.searchParams.get("collection") ?? "" } : {}),
+      ...(priceMinParam !== null ? { priceMin: Number(priceMinParam) } : {}),
+      ...(priceMaxParam !== null ? { priceMax: Number(priceMaxParam) } : {}),
     },
     { limit, cursor: url.searchParams.get("cursor") }
   )

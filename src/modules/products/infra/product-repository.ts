@@ -44,6 +44,11 @@ export type ListProductsFilters = {
   branchId?: string | null | undefined
   status?: product_status | undefined
   category?: string | undefined
+  occasionCode?: string | undefined
+  color?: string | undefined
+  collection?: string | undefined
+  priceMin?: number | undefined
+  priceMax?: number | undefined
 }
 
 export type ListProductsPage = {
@@ -104,6 +109,15 @@ export class ProductRepository {
       ...(filters.branchId !== undefined ? { branch_id: filters.branchId } : {}),
       ...(filters.status !== undefined ? { status: filters.status } : {}),
       ...(filters.category !== undefined ? { category: filters.category } : {}),
+      ...(filters.occasionCode !== undefined
+        ? { attributes: { path: ["occasionCodes"], array_contains: filters.occasionCode } }
+        : {}),
+      ...(filters.color !== undefined
+        ? { attributes: { path: ["color"], equals: filters.color } }
+        : {}),
+      ...(filters.collection !== undefined
+        ? { attributes: { path: ["collection"], equals: filters.collection } }
+        : {}),
     })
 
     return this.db.products.findMany({

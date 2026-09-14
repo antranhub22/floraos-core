@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronRight, ArrowLeft, AlertTriangle, QrCode, Globe } from "lucide-react"
+import { ChevronRight, ArrowLeft, AlertTriangle, QrCode, Globe, BookOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { TabActionHeader } from "@/components/ui/tab-header"
 
 type Product = {
   id: string
@@ -172,9 +173,43 @@ export default function CatalogWebsitePage() {
           </div>
         )}
 
-        <div className="flex items-center gap-2 mb-4">
-          <Button size="sm" variant={tab === "catalog" ? "primary" : "ghost"} onClick={() => setTab("catalog")}>Tab A — Catalog số</Button>
-          <Button size="sm" variant={tab === "landing" ? "primary" : "ghost"} onClick={() => setTab("landing")}>Tab B — Landing page</Button>
+        <div className="mb-5">
+          <TabActionHeader
+            tabs={[
+              { id: "catalog", label: "Catalog số trực tuyến", icon: BookOpen, badge: `${filtered.length} SP`, badgeTone: "neutral" },
+              { id: "landing", label: "Landing page chiến dịch", icon: Globe, badge: "M05", badgeTone: "accent" },
+            ]}
+            activeTab={tab}
+            onTabChange={(id) => setTab(id as "catalog" | "landing")}
+            primaryActions={
+              tab === "catalog"
+                ? [
+                    {
+                      id: "publish-qr",
+                      label: creatingLink ? "Đang tạo..." : "Xuất bản & Sinh QR",
+                      icon: QrCode,
+                      variant: "primary",
+                      disabled: creatingLink || selectedIds.length === 0,
+                      onClick: createCatalogLink,
+                    },
+                  ]
+                : []
+            }
+            overflowActions={[
+              {
+                id: "preview-catalog",
+                label: "Xem trước catalog mới nhất",
+                onClick: () => {
+                  const latest = catalogLinks[0]
+                  if (latest) {
+                    alert(`Xem trước tại: /c/${latest.slug} (link công khai, không cần đăng nhập)`)
+                  } else {
+                    alert("Chưa có catalog nào được xuất bản. Hãy chọn sản phẩm rồi bấm 'Xuất bản & Sinh QR'.")
+                  }
+                },
+              },
+            ]}
+          />
         </div>
 
         {tab === "catalog" && (

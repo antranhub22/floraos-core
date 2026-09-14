@@ -53,6 +53,24 @@ export class ProductAnalysisRepository {
   }
 
   /**
+   * Danh sách các phân tích đã duyệt của tổ chức — phục vụ M01b (dữ liệu bán hàng).
+   */
+  listApproved(
+    ctx: TenantContext,
+    options: { limit: number; cursor?: string | null }
+  ): Promise<Array<product_analyses & { product?: { id: string; name: string; code: string; category: string | null } | null }>> {
+    return this.db.product_analyses.findMany({
+      where: scopedWhere(ctx, { approval_state: "APPROVED" as approval_state }),
+      orderBy: [{ approved_at: "desc" }, { created_at: "desc" }, { id: "desc" }],
+      take: options.limit,
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
+      include: {
+        product: { select: { id: true, name: true, code: true, category: true } },
+      },
+    })
+  }
+
+  /**
    * Mọi lượt phân tích của tổ chức, lọc theo trạng thái duyệt và khoảng
    * thời gian — nguồn của bản xuất (`GET /vision/analyses/export`).
    *

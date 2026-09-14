@@ -1,5 +1,11 @@
 # Lộ trình
 
+> [!NOTE]
+> **NGUỒN SỰ THẬT DUY NHẤT (OSOT) CHO LỘ TRÌNH VÀ CÁC PHA DỰ ÁN**  
+> • Bảng đặc tả đầy đủ các pha (P0–P12, Tuyến B P13–P23, Tuyến C AI-1–AI-4) nằm tại **Mục 15** của [`docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md`](file:///Users/tuan/Projects/floraos-core/docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md#15-kế-hoạch-thực-thi-tổng-thể).  
+> • Tiến độ thực thi chi tiết của từng pha được quản lý tập trung tại: [`docs/dac-ta/Checklist_Thuc_Thi.md`](file:///Users/tuan/Projects/floraos-core/docs/dac-ta/Checklist_Thuc_Thi.md).  
+> Tệp này chỉ đóng vai trò tóm tắt nhanh các mốc điều chỉnh sau rà soát.
+
 Bảng pha đầy đủ nằm ở `../kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 15 — hai tuyến, P0–P12 là nền tảng và module lõi, P13–P23 là bộ tính năng hoàn chỉnh. Tài liệu này không chép lại bảng đó; nó ghi những gì đã thay đổi kể từ khi bảng ấy được viết.
 
 ## Trạng thái

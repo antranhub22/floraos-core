@@ -157,7 +157,9 @@
      "shape",
      "facing",
      "category",
-     "container"
+     "container",
+     "phong_cach",
+     "dip_su_dung"
     ],
     "properties": {
      "shape": {
@@ -210,26 +212,40 @@
        null
       ]
      },
-     "container": {
-      "type": [
-       "string",
-       "null"
-      ],
-      "enum": [
-       "Giấy gói",
-       "Giỏ mây",
-       "Hộp tròn",
-       "Hộp vuông",
-       "Bình thủy tinh",
-       "Bình gốm",
-       "Kệ 3 chân",
-       "Xốp cắm",
-       "Không có",
-       "Khác",
-       null
-      ]
+"container": {
+       "type": [
+        "string",
+        "null"
+       ],
+       "enum": [
+        "Giấy gói",
+        "Giỏ mây",
+        "Hộp tròn",
+        "Hộp vuông",
+        "Bình thủy tinh",
+        "Bình gốm",
+        "Kệ 3 chân",
+        "Xốp cắm",
+        "Không có",
+        "Khác",
+        null
+       ]
+      },
+      "phong_cach": {
+       "type": [
+        "string",
+        "null"
+       ],
+       "description": "Phong cách sản phẩm: Cổ điển, Hiện đại, Tối giản, Lãng mạn, Bohemian, Vintage..."
+      },
+      "dip_su_dung": {
+       "type": [
+        "string",
+        "null"
+       ],
+       "description": "Dịp sử dụng: Tết, Valentine, 8/3, Sinh nhật, Kỷ niệm, Cưới, Chia buồn, Khai trương..."
+      }
      }
-    }
    },
    "bom": {
     "type": "object",

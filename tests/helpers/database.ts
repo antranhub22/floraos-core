@@ -1,6 +1,7 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { env } from "@/lib/env"
 import { ensureSystemRoles } from "@/modules/organization/use-cases/ensure-system-roles"
+import { seedAiCapabilities, seedVisionModels } from "@/core/ai/infra/seed-ai-registry"
 
 const TENANT_TABLES = [
   // Nền AI — AI-1. `ai_capabilities` và `ai_models` KHÔNG nằm ở đây: chúng là
@@ -83,6 +84,10 @@ export async function resetDatabase(): Promise<void> {
   // Vai hệ thống là danh mục cài đặt, không phải dữ liệu thử: nạp lại đúng
   // như `npm run db:seed` làm sau khi đẩy lược đồ.
   await ensureSystemRoles()
+  // Sổ đăng ký nền AI (ai_capabilities, ai_models) không bị truncate ở trên,
+  // nhưng phải đảm bảo capabilities mới (như AIC-04) được upsert vào models.
+  await seedAiCapabilities()
+  await seedVisionModels()
 }
 
 export async function disconnectDatabase(): Promise<void> {

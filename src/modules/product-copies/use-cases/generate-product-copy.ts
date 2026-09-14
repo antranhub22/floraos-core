@@ -65,7 +65,7 @@ export async function generateProductCopy(ctx: TenantContext, input: {
     throw new AppError("UNPROCESSABLE_ENTITY", "Phân tích chưa được duyệt");
   }
 
-  if (analysis.product_id && analysis.product_id !== input.productId) {
+  if (input.productId && analysis.product_id && analysis.product_id !== input.productId) {
     throw new AppError("CONFLICT", "product_id không khớp với phân tích");
   }
 
@@ -120,6 +120,7 @@ export async function generateProductCopy(ctx: TenantContext, input: {
       capability: "product_copy",
       privacy: "SHOP",
       entity: { type: "product_copy", id: input.analysisId },
+      pinnedModelKey: "openai_structured",
     },
     adapterRun,
     deps

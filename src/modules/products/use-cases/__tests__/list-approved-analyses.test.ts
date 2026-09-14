@@ -1,0 +1,56 @@
+import { describe, expect, it, vi } from "vitest"
+import { listApprovedAnalyses } from "../list-approved-analyses"
+import type { TenantContext } from "@/core/tenancy"
+import { ProductAnalysisRepository } from "@/modules/products/infra/product-analysis-repository"
+
+vi.mock("@/modules/products/infra/product-analysis-repository")
+
+const ctx: TenantContext = {
+  organizationId: "org-1",
+  userId: "user-1",
+  workspaceId: "ws-1",
+  branchId: "br-1",
+  capabilities: new Set(["H5"]),
+}
+
+describe("listApprovedAnalyses", () => {
+  it("từ chối limit ngoài khoảng 1..100", async () => {
+    await expect(listApprovedAnalyses(ctx, { limit: 0 })).rejects.toMatchObject({
+      code: "VALIDATION_FAILED",
+      details: { limit: "Phải trong khoảng 1..100" },
+    })
+    await expect(listApprovedAnalyses(ctx, { limit: 101 })).rejects.toMatchObject({
+      code: "VALIDATION_FAILED",
+      details: { limit: "Phải trong khoảng 1..100" },
+    })
+  })
+
+  it("trả về danh sách và next_cursor khi có nhiều hơn limit", async () => {
+    const mockListApproved = vi.fn().mockResolvedValue([
+      { id: "ana-1", approval_state: "APPROVED" },
+      { id: "ana-2", approval_state: "APPROVED" },
+      { id: "ana-3", approval_state: "APPROVED" },
+    ])
+    vi.mocked(ProductAnalysisRepository).mockImplementation(() => ({
+      listApproved: mockListApproved,
+    } as any))
+
+    const res = await listApprovedAnalyses(ctx, { limit: 2 })
+    expect(mockListApproved).toHaveBeenCalledWith(ctx, { limit: 3, cursor: null })
+    expect(res.data).toHaveLength(2)
+    expect(res.next_cursor).toBe("ana-2")
+  })
+
+  it("trả về next_cursor = null khi ít hơn hoặc bằng limit", async () => {
+    const mockListApproved = vi.fn().mockResolvedValue([
+      { id: "ana-1", approval_state: "APPROVED" },
+    ])
+    vi.mocked(ProductAnalysisRepository).mockImplementation(() => ({
+      listApproved: mockListApproved,
+    } as any))
+
+    const res = await listApprovedAnalyses(ctx, { limit: 2 })
+    expect(res.data).toHaveLength(1)
+    expect(res.next_cursor).toBeNull()
+  })
+})
