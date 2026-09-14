@@ -47,6 +47,7 @@ export class AssetRepository {
     options: {
       productId?: string | undefined
       kind?: asset_kind | undefined
+      approvalState?: approval_state | undefined
       limit: number
       cursor?: string | null
     }
@@ -55,6 +56,7 @@ export class AssetRepository {
       where: scopedWhere(ctx, {
         ...(options.productId ? { product_id: options.productId } : {}),
         ...(options.kind ? { kind: options.kind } : {}),
+        ...(options.approvalState ? { approval_state: options.approvalState } : {}),
       }),
       orderBy: [{ created_at: "desc" }, { id: "desc" }],
       take: options.limit,

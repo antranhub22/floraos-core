@@ -151,17 +151,27 @@ def _bo_sac_do(mau: str | None) -> str | None:
 def _so_khop_mau(mau_truoc: str | None, mau_sau: str | None) -> tuple[bool, bool]:
     """So khớp màu giữa ảnh trước và sau.
     Trả về (khop, co_doi_sac_do):
-    - khop = True nếu trùng màu hoàn toàn HOẶC cùng màu cơ bản chỉ khác sắc độ ánh sáng (nhạt/đậm/sáng/pastel).
+    - khop = True nếu trùng màu hoàn toàn HOẶC cùng màu cơ bản chỉ khác sắc độ ánh sáng (nhạt/đậm/sáng/pastel) hoặc biến thể thông dụng của lá.
     - co_doi_sac_do = True nếu cùng màu cơ bản nhưng sắc độ ánh sáng có điều chỉnh nhẹ.
     """
-    if mau_truoc == mau_sau:
-        return True, False
     if not mau_truoc or not mau_sau:
-        return False, False
-    goc_truoc = _bo_sac_do(mau_truoc)
-    goc_sau = _bo_sac_do(mau_sau)
+        return (True, False) if not mau_truoc and not mau_sau else (False, False)
+
+    t_truoc = mau_truoc.strip().lower()
+    t_sau = mau_sau.strip().lower()
+    if t_truoc == t_sau:
+        return True, False
+
+    goc_truoc = _bo_sac_do(t_truoc)
+    goc_sau = _bo_sac_do(t_sau)
     if goc_truoc and goc_sau and goc_truoc == goc_sau:
         return True, True
+
+    # Chuẩn hoá biến thể thông dụng của màu xanh lá cây ("xanh lá", "xanh lá cây", "xanh lục" khớp với "xanh" / "xanh đậm")
+    GREEN_VARIANTS = {"xanh", "xanh lá", "xanh lá cây", "xanh lục"}
+    if goc_truoc in GREEN_VARIANTS and goc_sau in GREEN_VARIANTS:
+        return True, True
+
     return False, False
 
 

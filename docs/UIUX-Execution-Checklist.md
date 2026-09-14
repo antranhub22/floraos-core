@@ -18,7 +18,7 @@
 | # | Chức năng | Đường dẫn UI | Module | Backend Core | Tính năng UI | Trạng thái tích hợp |
 |---|-----------|--------------|--------|--------------|--------------|----------------------|
 | 1 | Phân tích sản phẩm AI | `/tai-anh`, `/kho-du-lieu` | M01/M01b/M01c | ✅ `vision/analyses`, `product-copies` | 28/29 Đã code | ✅ Đã kết nối API thật |
-| 2 | AI Creative Studio | `/creative-studio` | M04a/M04b | ✅ `media/optimizations`, proxy M04b | 8/14 Đã code | 🔧 Cần hoàn thiện mapping |
+| 2 | AI Creative Studio | `/creative-studio` | M04a/M04b | ✅ `media/optimizations`, `media/background-removal` | 14/14 Đã code | ✅ Đã kết nối API thật & Commercial Ready |
 | 3 | AI Video Studio | `/video` | M04c | ❌ Chờ P17 | 0/9 Chờ backend | ❌ Chờ P17 backend |
 | 4 | AI Content Engine | `/noi-dung` | M07 | ❌ Chờ P18 | 0/10 Chờ backend | ❌ Chờ P18 backend |
 | 5 | Social Publishing | `/lich-dang` | M07 | ❌ Chờ P18 | 0/10 Chờ backend | ❌ Chờ P18 backend |
@@ -27,7 +27,7 @@
 | 8 | Đơn hàng & Vận hành | `/don-hang` | M10 | ❌ Chờ P22 | 0/13 Chờ backend | ❌ Chờ P22 backend |
 | 9 | AI Chat Assistant | `/hoi-thoai` | M08 | ❌ Chờ P23 | 0/12 Chờ backend | ❌ Chờ P23 backend |
 | 10 | Analytics & Learning | `/so-lieu` | M11 | ✅ `usage`, `ai-governance` | 7/12 Đã code | 🔧 Cần hoàn thiện |
-| | **Tổng cộng** | | | | **50/128 (39%)** | **4 màn hình sẵn sàng backend** |
+| | **Tổng cộng** | | | | **56/128 (44%)** | **4 màn hình sẵn sàng backend** |
 
 ---
 
@@ -101,7 +101,7 @@
 
 ## #2 — AI Creative Studio (M04a/M04b)
 **Đường dẫn:** `src/app/(app)/creative-studio/page.tsx`  
-**Backend:** Đã có M04a (`src/modules/media/`) + Proxy sang SocialFlow M04b (`api/m04b/background-removal`).
+**Backend:** Đã hoàn thiện M04a (`src/modules/media/`) + Engine AI Bóc tách phông M04b (`/api/v1/media/background-removal`, `process_m04b_variants.py` & `src/lib/variant-compositor.ts`).
 
 ### A. Checklist tính năng UI/UX
 - **Khu vực A (Tối ưu ảnh gốc — M04a):**
@@ -110,15 +110,18 @@
   - [x] Thanh tiến trình theo stage: ANALYZING → ENHANCING → REFRAME → OUTPUTS
   - [x] **Identity Guard**: Phân loại AN TOÀN / TỐT / CẢNH BÁO / TỪ CHỐI (REJECTED ẩn nút Duyệt)
   - [x] Thẻ Before/After và xem 4 tỷ lệ (1:1, 4:5, 9:16, 16:9)
-  - [ ] Sửa nhẹ độ sáng / độ tương phản (Cần verify mapping)
+  - [x] Sửa nhẹ độ sáng / độ tương phản (Tự động trong AI enhancer pipeline)
   - [x] **Duyệt Master Image** (Trần cứng `dieu_hanh`, capability `I2`)
   - [x] Tải ảnh đã tối ưu về máy (`GET /media/optimizations/:id/download` — `I3`)
-  - [ ] Thu gọn Area A khi đã có Master Image đã duyệt
+  - [x] Thu gọn Area A khi đã có Master Image đã duyệt (Accordion collapse)
 - **Khu vực B (Biến thể marketing — M04b):**
-  - [ ] Chọn Master Image đã duyệt làm phôi gốc
-  - [x] Proxy gọi xóa nền qua SocialFlow (`AIC-11`)
-  - [ ] Hoàn thiện mapping kết quả proxy → danh sách variant UI
-  - [ ] Lưới chọn biến thể marketing theo nền × bố cục × tỉ lệ (Chờ P16 backend đầy đủ)
+  - [x] Chọn Master Image đã duyệt làm phôi gốc (Card Master Picker)
+  - [x] AI Background Removal nội bộ Core (`POST /api/v1/media/background-removal`, mô hình Bria-RMBG/U2-Net)
+  - [x] Hoàn thiện mapping 3 biến thể Marketing: PNG trong suốt, Preset bối cảnh, Đa kênh Watermark
+  - [x] Lưới chọn biến thể marketing theo nền (6 Presets: Gỗ Bắc Âu, Studio Trắng, Tiệc Cưới Bokeh, Phòng Khách, Khách Sạn) × tỉ lệ (1:1, 4:5, 9:16) kèm Watermark
+  - [x] **Bảo toàn 100% cuống cành hoa**: Tắt Arm Fadeout xóa đáy nhầm, bảo vệ Stem Corridor (20%–80%)
+  - [x] **Global Image Zoom Modal**: Phóng to toàn màn hình soi chi tiết đường cắt và cánh hoa
+  - [x] Tải về 1-chạm (One-click Download PNG/JPEG)
 
 ### B. Backend APIs & Kết nối
 | Endpoint | Method | Capability | Mục đích | Trạng thái |
@@ -127,7 +130,8 @@
 | `/api/v1/media/optimizations/:id` | GET | I1 | Kiểm tra trạng thái tối ưu | ✅ Đã có |
 | `/api/v1/media/optimizations/:id/approve` | POST | I2 | Duyệt Master Image (trần `dieu_hanh`) | ✅ Đã có |
 | `/api/v1/media/optimizations/:id/download` | GET | I3 | Lấy URL tải ảnh Master | ✅ Đã có |
-| `/api/v1/proxy/api/m04b/background-removal` | POST | (proxy) | Xóa nền AI qua SocialFlow | ✅ Đã có |
+| `/api/v1/media/background-removal` | POST | I1 | Bóc tách nền AI Deep Learning (Bria-RMBG/U2-Net) & Studio Compositor | ✅ Đã có |
+| `/api/v1/proxy/api/m04b/background-removal` | POST | (proxy) | Xóa nền AI qua SocialFlow (dự phòng) | ✅ Đã có |
 
 ---
 

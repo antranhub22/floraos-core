@@ -12,6 +12,7 @@ import { redirect } from "next/navigation"
 import { SessionProvider } from "@/lib/session"
 import { BottomNav } from "@/components/layout/bottom-nav"
 import { DesktopNav } from "@/components/layout/desktop-nav"
+import { GlobalImageZoom } from "@/components/ui/global-image-zoom"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -33,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</div>
         <BottomNav />
       </div>
+      <GlobalImageZoom />
     </SessionProvider>
   )
 }

@@ -36,3 +36,8 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
 }
+
+/* Con trỏ phóng to cho ảnh */
+img:not([data-no-zoom="true"]) {
+  cursor: zoom-in;
+}

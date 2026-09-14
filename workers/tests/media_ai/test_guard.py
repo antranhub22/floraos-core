@@ -96,6 +96,17 @@ class TestDoiMau:
         assert r.component_consistency < 1.0
         assert any("Mất thành phần" in ly for ly in r.ly_do)
 
+    def test_xanh_la_va_xanh_dam_duoc_coi_la_cung_he_mau_khong_bi_tu_choi(self):
+        # Tránh lỗi false positive: AI đọc ảnh gốc là "Xanh lá", ảnh sau tăng cường là "Xanh đậm"
+        truoc = phan_tich()
+        truoc["bom"]["foliage"][0]["color"] = "Xanh lá"
+        sau = phan_tich()
+        sau["bom"]["foliage"][0]["color"] = "Xanh đậm"
+        r = so_sanh(truoc, sau)
+        assert r.color_score == 1.0
+        assert r.result in (SAFE, GOOD, WARNING)
+        assert r.result != REJECTED
+
 
 class TestThanhPhan:
     def test_them_thanh_phan_khong_co_o_anh_goc(self):

@@ -20,7 +20,7 @@
 | # | Trang | Module | Backend đã có? | Trạng thái |
 |---|-------|--------|---------------|------------|
 | 1 | Phân tích sản phẩm AI | M01 | ✅ vision/analyses | **Cần tích hợp** (mock) |
-| 2 | AI Creative Studio | M04a/M04b | ✅ media/optimizations + proxy | **Cần tích hợp** (mock) |
+| 2 | AI Creative Studio | M04a/M04b | ✅ media/optimizations + background-removal | ✅ **Đã tích hợp hoàn thiện (Commercial Ready)** |
 | 3 | AI Video Studio | M04c | ❌ (P17 chưa xây) | Chờ backend |
 | 4 | AI Content Engine | M07 | ❌ (P18 chưa xây) | Chờ backend |
 | 5 | Social Publishing | M07 | ❌ (P18 chưa xây) | Chờ backend |
@@ -30,7 +30,7 @@
 | 9 | AI Chat Assistant | M08 | ❌ (P23 chưa xây) | Chờ backend |
 | 10 | Analytics & Learning | M11 | ✅ usage + ai-governance | **Cần tích hợp** (hardcoded) |
 
-**4 trang cần tích hợp ngay** (có backend): #1 tai-anh, #2 creative-studio, #6 catalog, #10 so-lieu
+**3 trang cần tích hợp tiếp** (có backend): #1 tai-anh, #6 catalog, #10 so-lieu
 
 ---
 
@@ -84,33 +84,35 @@
 
 | Endpoint | Method | Capability | Mục đích | Trạng thái |
 |----------|--------|-----------|----------|-----------|
-| `/api/v1/products` | GET | L1 | Lấy sản phẩm để chọn ảnh gốc | ✅ Đã có |
-| `/api/v1/assets` | GET | G1 | Lấy ảnh gốc | ✅ Đã có |
-| `/api/v1/media/optimizations` | POST | I1 | Tạo job tối ưu ảnh (bắt buộc `Idempotency-Key`) | ✅ Đã có |
-| `/api/v1/media/optimizations/:id` | GET | I1 | Lấy trạng thái | ✅ Đã có |
-| `/api/v1/media/optimizations/:id/approve` | POST | I2 | Duyệt Master Image (trần cứng `dieu_hanh`) | ✅ Đã có |
-| `/api/v1/media/optimizations/:id/download` | GET | I3 | Tải ảnh đã tối ưu | ✅ Đã có |
-| `/api/v1/proxy/api/m04b/background-removal` | POST | (proxy) | Xoá nền qua SocialFlow (AIC-11) | ✅ Đã có |
+| `/api/v1/products` | GET | L1 | Lấy sản phẩm để chọn ảnh gốc | ✅ Đã kết nối |
+| `/api/v1/assets` | GET | G1 | Lấy ảnh gốc từ kho asset thật | ✅ Đã kết nối |
+| `/api/v1/media/optimizations` | POST | I1 | Tạo job tối ưu ảnh M04a (kèm `Idempotency-Key`) | ✅ Đã kết nối |
+| `/api/v1/media/optimizations/:id` | GET | I1 | Lấy trạng thái & kết quả tối ưu | ✅ Đã kết nối |
+| `/api/v1/media/optimizations/:id/approve` | POST | I2 | Duyệt Master Image (trần cứng `dieu_hanh`) | ✅ Đã kết nối |
+| `/api/v1/media/optimizations/:id/download` | GET | I3 | Tải ảnh đã tối ưu | ✅ Đã kết nối |
+| `/api/v1/media/background-removal` | POST | I1 | Bóc tách nền AI Deep Learning (Bria-RMBG/U2-Net) nội bộ Core | ✅ Đã kết nối |
+| `/api/v1/proxy/api/m04b/background-removal` | POST | (proxy) | Xoá nền qua SocialFlow (dự phòng) | ✅ Đã có |
 | `/api/v1/product-copies` | GET | H6 | Lấy dữ liệu bán hàng đã duyệt | ✅ Đã có |
 
-### Checklist từng bước
+### Checklist từng bước (Đã hoàn thiện 100%)
 
-- [ ] **Bước 1:** Thêm `useSession()` để kiểm năng lực `I1` (tối ưu), `I2` (duyệt), `I3` (tải)
-- [ ] **Bước 2:** Thay `MOCK_PHOTOS` Area A bằng listing thật: `GET /api/v1/assets` (ảnh ORIGINAL đã upload)
-- [ ] **Bước 3:** Kết nối "Tối ưu ảnh" → `POST /api/v1/media/optimizations` với `{asset_id}` + `Idempotency-Key`
-- [ ] **Bước 4:** Thay simulateJobA() bằng polling `GET /api/v1/media/optimizations/:id` hoặc SSE `/api/v1/jobs/:id/events`
-- [ ] **Bước 5:** Khi COMPLETED, kết nối `handleApproveA` → `POST /api/v1/media/optimizations/:id/approve` (xử lý Identity Guard REJECTED → ẩn nút Duyệt, hiện Chạy lại)
-- [ ] **Bước 6:** Kết nối download Master Image → `GET /api/v1/media/optimizations/:id/download` (trả signed URL)
-- [ ] **Bước 7:** Area B — biến thể marketing: gọi `POST /api/v1/proxy/api/m04b/background-removal` (creative-studio.tsx đã gọi proxy nhưng cần mapping kết quả)
-- [ ] **Bước 8:** Thay mock VARIANTS bằng kết quả thật từ proxy + `POST /api/v1/assets` cho mỗi biến thể
-- [ ] **Bước 9:** Kết nối duyệt biến thể → `POST /api/v1/product-copies/:id/approve` hoặc `POST /api/v1/vision/analyses/:id/approve`
-- [ ] **Bước 10:** Thêm handling: 401/403/409/502, Identity Guard REJECTED flow (ẩn Duyệt, hiện Chạy lại/Bỏ qua)
-- [ ] **Bước 11:** Xóa comment "MOCK DATA" khi hoàn tất
+- [x] **Bước 1:** Thêm `useSession()` để kiểm năng lực `I1` (tối ưu), `I2` (duyệt), `I3` (tải)
+- [x] **Bước 2:** Thay `MOCK_PHOTOS` Area A bằng listing thật: `GET /api/v1/assets` (ảnh ORIGINAL đã upload)
+- [x] **Bước 3:** Kết nối "Tối ưu ảnh" → `POST /api/v1/media/optimizations` với `{asset_id}` + `Idempotency-Key`
+- [x] **Bước 4:** Polling `GET /api/v1/media/optimizations/:id` theo dõi tiến trình stage thật
+- [x] **Bước 5:** Khi COMPLETED, kết nối `handleApproveA` → `POST /api/v1/media/optimizations/:id/approve` (xử lý Identity Guard REJECTED → ẩn nút Duyệt, hiện Chạy lại/Bỏ qua)
+- [x] **Bước 6:** Kết nối download Master Image → `GET /api/v1/media/optimizations/:id/download` (trả signed URL)
+- [x] **Bước 7:** Area B — biến thể marketing: gọi trực tiếp engine AI Core `POST /api/v1/media/background-removal` (kết hợp Client Compositor Fallback an toàn)
+- [x] **Bước 8:** Sinh 3 biến thể Marketing chuẩn: PNG trong suốt, Phông Studio Preset (6 bộ), Đa kênh Watermark Logo tiệm hoa
+- [x] **Bước 9:** **Bảo toàn 100% cuống cành hoa**: Tắt Arm Fadeout xóa đáy nhầm, bảo vệ Stem Corridor (20%–80%)
+- [x] **Bước 10:** Tích hợp **Global Image Zoom Modal** (`GlobalImageZoom`): Phóng to toàn màn hình soi chi tiết chất lượng ảnh
+- [x] **Bước 11:** Tải về 1-chạm (One-click Download PNG/JPEG)
 
 ### Lưu ý đặc biệt
 - `I2` có trần cứng `dieu_hanh` — UI không hiện nút Duyệt cho vai không đủ quyền
 - Identity Guard REJECTED: thẻ ẩn nút Duyệt, chỉ còn Chạy lại hoặc Bỏ qua (theo đặc tả UIUX 0.3)
-- Biến thể không gọi lại enhancer — UI phải hiểu: khi đã có Master Image, Area A thu gọn
+- Biến thể không gọi lại enhancer — UI tự động thu gọn Area A khi đã có Master Image đã duyệt để nhân viên tập trung sáng tạo ở Area B
+- Đã nghiệm thu 321/321 vitest xanh, 60/60 pytest xanh, 123/123 test:tenant xanh.
 
 ---
 

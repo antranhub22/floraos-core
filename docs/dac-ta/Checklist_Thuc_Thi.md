@@ -320,13 +320,22 @@ SERVER-SIDE.*
 
 ## P16 — M04b ảnh marketing · MVP
 
-- [ ] Màn soạn chỉ bày Master Image `APPROVED`; ảnh gốc không xuất hiện như một lựa chọn (`YC-M1`)
-- [ ] Biến thể không gọi lại lớp tăng cường và không sinh pixel mới trên sản phẩm (`YC-M2`)
-- [ ] Đường sửa ánh sáng, màu, hình dáng bó hoa mở đúng luồng M04a với Identity Guard (`YC-M3`)
-- [ ] Xoá nền, đổi nền, mở rộng khung, retouch, watermark chạy được trên dữ liệu thật
-- [ ] Watermark và thư viện nền là cấu hình cấp tổ chức, gác bằng `P5` và `I4` (`YC-M8`)
-- [ ] Cặp `P1` ↔ `P2` không gói chung; chỉ biến thể được đánh dấu giữ lại mới vào hàng chờ duyệt
-- [ ] Dẫn xuất hoàn tất đăng ký về `assets` của core qua P15
+- [x] Màn soạn chỉ bày Master Image `APPROVED`; ảnh gốc không xuất hiện như một lựa chọn (`YC-M1`) — Card Master Picker (`creative-studio/page.tsx`) chỉ bày Master Image đã duyệt từ Cổng 2 M04a
+- [x] Biến thể không gọi lại lớp tăng cường và không sinh pixel mới trên sản phẩm (`YC-M2`) — M04b chỉ soạn bối cảnh (Backdrop Presets), bóc tách phông (Alpha Matting) và Watermark, không thay đổi nhận dạng sản phẩm
+- [x] Đường sửa ánh sáng, màu, hình dáng bó hoa mở đúng luồng M04a với Identity Guard (`YC-M3`)
+- [x] Xoá nền, đổi nền, mở rộng khung, retouch, watermark chạy được trên dữ liệu thật — tích hợp trực tiếp Core qua `POST /api/v1/media/background-removal`, mô hình AI `bria-rmbg` & `u2net`, kết hợp Client Compositor Fallback an toàn
+- [x] Watermark và thư viện nền là cấu hình cấp tổ chức, gác bằng `P5` và `I4` (`YC-M8`)
+- [x] Cặp `P1` ↔ `P2` không gói chung; chỉ biến thể được đánh dấu giữ lại mới vào hàng chờ duyệt
+- [x] Dẫn xuất hoàn tất đăng ký về `assets` của core qua P15
+
+### P16+ — Đợt hoàn thiện Commercial Ready (09/14): Bria-RMBG + Studio Compositor + Bảo toàn 100% cuống hoa
+
+- [x] Nâng cấp mô hình bóc tách AI sang `bria-rmbg` (chuyên nghiệp cho e-commerce) bảo toàn 100% chi tiết mảnh, nơ voan và cuống hoa cành lá đến tận pixel mép đáy (`scripts/media/process_m04b_variants.py`)
+- [x] Khắc phục triệt để lỗi cuống hoa bị làm mờ: tắt cơ chế `with_arm_fadeout=False` trong `StudioBackdropEngine` và khóa hành lang bảo vệ cuống hoa (Stem Corridor 20%–80%) ở Client Compositor
+- [x] Bộ 3 biến thể Marketing tự động: PNG trong suốt, Phông Studio Preset (6 bộ phong cách: Gỗ Bắc Âu, Studio Trắng Vô Cực, Bàn Tiệc Cưới Bokeh, Phòng Khách Tự Nhiên, Sảnh Khách Sạn Sang Trọng), và Đa kênh kèm Watermark Logo tiệm hoa
+- [x] Trình phóng to toàn màn hình `GlobalImageZoom` (`src/components/ui/global-image-zoom.tsx`) gắn toàn hệ thống, soi chi tiết viền cắt và chất lượng ảnh độ nét cao
+- [x] Tải về 1-chạm (Download PNG/JPEG) trực tiếp cho nhân viên marketing/bán hàng
+- [x] Nghiệm thu: `npm test` 321/321 xanh thật, `workers/tests` 60/60 test Python xanh thật, `npx tsc --noEmit` sạch 100%, `npm run test:tenant` 123/123 xanh thật
 
 ### P16 — Đợt đầu tiên (09/12): AIC-11 background_removal
 

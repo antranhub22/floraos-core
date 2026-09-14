@@ -293,7 +293,7 @@ class StudioBackdropEngine:
         style: StudioStyle = "warm_gray",
         with_shadow: bool = True,
         with_light_wrap: bool = True,
-        with_arm_fadeout: bool = True,
+        with_arm_fadeout: bool = False,
     ) -> Image.Image:
         """Ghép chủ thể RGBA vào phông Studio với hệ thống bóng đổ 2 tầng và Light Wrap quang học."""
         w, h = subject_rgba.size

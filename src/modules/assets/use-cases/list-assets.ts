@@ -16,6 +16,7 @@ export async function listAssets(
   options: {
     productId?: string | undefined
     kind?: string | undefined
+    approvalState?: string | undefined
     limit?: number | undefined
     cursor?: string | null | undefined
   }
@@ -28,6 +29,7 @@ export async function listAssets(
   const rows = await new AssetRepository().list(ctx, {
     productId: options.productId,
     kind: options.kind as import("@/modules/assets/infra/entities").asset_kind | undefined,
+    approvalState: options.approvalState as import("@/modules/assets/infra/entities").approval_state | undefined,
     limit: limit + 1,
     cursor: options.cursor ?? null,
   })

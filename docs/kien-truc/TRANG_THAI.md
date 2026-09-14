@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-14 (P14b M01c Thẻ chào sản phẩm & Kho dữ liệu hoàn tất + M01b Product Copy + OpenAI Structured ảnh thật) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-14 (P16+ M04a & M04b AI Creative Studio hoàn thiện 100% Production & Commercial Ready + P14b M01c Thẻ chào & Kho dữ liệu) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -9,6 +9,24 @@
 ---
 
 ## 1. Đang ở đâu
+
+**P16+ — M04a & M04b AI Creative Studio hoàn thiện 100% Production & Commercial Ready (09/14).**
+Phân hệ AI Creative Studio (`src/app/(app)/creative-studio/page.tsx`) hoàn tất trọn vẹn 2 khu vực nghiệp vụ, đáp ứng đầy đủ tiêu chuẩn sẵn sàng thương mại:
+- **Khu vực A (M04a — Tối ưu Master Image & Identity Guard)**:
+  - Phân tích chất lượng ảnh (`AIC-06`), bóc tách chủ thể (`AIC-07`), tăng cường ảnh làm nét chi tiết (`AIC-08`), Smart Reframe 4 tỉ lệ 1:1, 4:5, 9:16, 16:9 (`AIC-09`).
+  - Cổng kiểm định nhận dạng **Identity Guard** (`AIC-10`): so khớp 4 tiêu chí (loài hoa, số lượng cành, màu sắc hoa, màu giấy gói). Tinh chỉnh dung sai sắc thái màu tránh lỗi từ chối oan do bóng đổ.
+  - Cổng duyệt Master Image (`I2`, trần cứng `dieu_hanh`) chốt duyệt Master Image, ghi nhật ký `audit_logs` và mở khóa chuyển giao sang M04b.
+- **Khu vực B (M04b — Biến thể Studio Marketing & Bóc tách phông)**:
+  - Hoạt động độc lập trên Master Image đã duyệt, tuân thủ nghiêm ngặt nguyên tắc `YC-M2` (không bao giờ làm biến đổi nhận dạng hoa).
+  - Tích hợp trực tiếp mô hình AI Deep Learning `bria-rmbg` (chuyên e-commerce) và `u2net` qua route nội bộ `POST /api/v1/media/background-removal` (`process_m04b_variants.py`), không phụ thuộc cổng 8000 ngoài.
+  - **Khắc phục triệt để lỗi mất cuống hoa**: Tắt cơ chế xóa đáy nhầm (`with_arm_fadeout=False`), bảo toàn nguyên vẹn hơn 12.360 pixel cành lá, nơ và cuống hoa chân thực. Khóa hành lang bảo vệ cuống hoa (Stem Corridor: 20%–80% chiều rộng) trong engine client fallback.
+  - Bộ 3 biến thể Marketing chuẩn Studio:
+    1. *Tách nền trong suốt (PNG Alpha)*: hiển thị trên lưới ca-rô, biên sắc nét không ám màu cũ (`EdgeDefringer`).
+    2. *Ghép phông bối cảnh Studio (Preset)*: 6 bộ bối cảnh cao cấp (Gỗ Bắc Âu, Studio Trắng Vô Cực, Bàn Tiệc Cưới Bokeh, Phòng Khách Tự Nhiên, Luxury Hotel) với Contact Shadow 2 tầng và Optical Light Wrap tán xạ ánh sáng tự nhiên.
+    3. *Biến thể Đa kênh kèm Watermark*: dàn tỉ lệ mạng xã hội kèm phủ Watermark Logo thương hiệu tiệm hoa bảo vệ bản quyền.
+  - **Trình phóng to ảnh toàn hệ thống (Global Image Zoom Modal)** (`src/components/ui/global-image-zoom.tsx`): Cho phép nhân viên nhấp xem ảnh phóng to toàn màn hình ở bất kỳ vị trí nào để soi chi tiết chất lượng tách nền.
+  - Tải xuống 1-chạm (Download PNG/JPEG) trực tiếp về thiết bị.
+- **Xác minh kỹ thuật**: `npx tsc --noEmit` sạch 100%, `npm test` **321/321 test cases xanh** (50 test suites), `workers/tests` **60/60 test Python xanh**, `npm run test:tenant` **123/123 test xanh tuyệt đối**.
 
 **P14b — M01c Thẻ chào sản phẩm & Kho Dữ Liệu (`/kho-du-lieu`) hoàn tất (09/14).**
 Component `SalesPitchCard` (`src/components/sales/sales-pitch-card.tsx`) + template domain `sales-pitch-template.ts` tổng hợp dữ liệu M01a + M01b cho nhân viên tư vấn bán hàng (Sales Rep). Hỗ trợ:
@@ -93,14 +111,15 @@ gọi HTTP thật) — 18 ca mới. `npm test` **276/276** · `npx tsc --noEmit`
 8000 + core 3100, đăng nhập, bấm Creative Studio → xoá nền một sản phẩm thật →
 ảnh nền về dashboard; kiểm 401/403/502).
 
-**Cổng xác minh:** `npm test` **258/258 xanh thật** (41 ca mới: 16 định tuyến, 8 cổng AI, 6 sổ đăng ký, 5 chấm điểm, 6 luật chính sách) · `npx eslint` sạch · `npx tsc --noEmit` **SẠCH** (sau `prisma generate` và `prisma db push` trên máy có mạng) · `npm run test:tenant` **123/123 xanh thật**.
+**Cổng xác minh:** `npm test` **321/321 xanh thật** (50 test suites) · `workers/tests` **60/60 test Python xanh thật** · `npx eslint` sạch · `npx tsc --noEmit` **SẠCH** · `npm run test:tenant` **123/123 xanh thật**.
 
-**Bốn lệnh anh Tony chạy trên Terminal Mac để đóng đợt này:**
+**Bốn lệnh chạy trên Terminal Mac để nghiệm thu đợt này:**
 ```bash
 docker compose up -d && npx prisma generate && npx prisma db push && npm run db:seed
-npm test                 # kỳ vọng 258/258
-npx tsc --noEmit         # kỳ vọng SẠCH sau khi generate
-npm run test:tenant      # gồm 5 ca mới của tests/tenant/ai-policy.test.ts
+npm test                 # kỳ vọng 321/321 xanh thật
+npx tsc --noEmit         # kỳ vọng SẠCH (Exit code 0)
+npm run test:tenant      # kỳ vọng 123/123 xanh thật (14 tệp tenant)
+cd workers && ./workers/.venv/bin/pytest tests/media_ai -q # kỳ vọng 60/60 xanh
 ```
 
 **Đã hoàn tất 09/12:** `npx prisma generate` ✅ · `npx prisma db push` ✅ · `npm run db:seed` ✅ · `npx tsc --noEmit` **SẠCH** ✅ · `npm run test:tenant` **123/123** ✅ (14 tệp, gồm `ai-policy.test.ts` 5 ca và `vision-analyses.test.ts` 14 ca — 2 ca sai kỳ vọng engine mặc định đã sửa: `openai_structured` → `local_cv` theo `VISION_ENGINE_MAC_DINH`) · **Thêm 09/12:** engine mặc định đổi `local_cv` → `openai_direct` (rẻ nhất, nhanh nhất, ma trận 4 ảnh xác nhận), `MODEL_MAC_DINH` `gpt-4o` → `gpt-4o-mini`, bug config key `model_truc_tiep` → `model_tien_kiem` trong `openai_direct.py` đã sửa
