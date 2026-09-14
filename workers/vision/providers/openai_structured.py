@@ -99,6 +99,44 @@ def _catalog_block() -> str:
     return "DANH MỤC NGUYÊN LIỆU: (chưa có danh mục của cửa hàng cho tổ chức này — bỏ trống mã `ma`, khai tên tự do)"
 
 
+def _reference_block(ref: dict | None) -> str:
+    """Tạo khối hệ quy chiếu từ phân tích ảnh gốc (Ground-Truth Schema).
+
+    Dùng trong quy trình kiểm duyệt (Identity Guard) để cố định thuật ngữ định danh,
+    chủng loại hoa và phụ liệu, ngăn AI sinh từ đồng nghĩa hoặc đếm lệch ngẫu nhiên.
+    """
+    if not isinstance(ref, dict) or not ref:
+        return ""
+    lines = ["HỆ QUY CHIẾU THỰC TẾ ĐÃ XÁC THỰC CỦA SẢN PHẨM (REFERENCE BASELINE):"]
+    identity = ref.get("identity") or {}
+    bom = ref.get("bom") or {}
+
+    cat = identity.get("category")
+    shape = identity.get("shape")
+    container = identity.get("container")
+    if any((cat, shape, container)):
+        lines.append(f"  Định danh: {cat or '—'} | Dáng khối: {shape or '—'} | Vật chứa: {container or '—'}")
+
+    flowers = bom.get("flowers") or []
+    for f in flowers:
+        lines.append(f"  - Hoa: {f.get('name') or 'Hoa'} (Màu: {f.get('color') or '—'}, Số lượng: {f.get('quantity') or '—'})")
+
+    foliage = bom.get("foliage") or []
+    for fo in foliage:
+        lines.append(f"  - Lá/phụ kiện xanh: {fo.get('name') or 'Lá'} (Màu: {fo.get('color') or '—'})")
+
+    accessories = bom.get("accessories") or []
+    for a in accessories:
+        lines.append(f"  - Phụ kiện/dây nơ: {a.get('name') or 'Phụ kiện'} (Màu: {a.get('color') or '—'})")
+
+    wrapping = bom.get("wrapping") or []
+    for w in wrapping:
+        lines.append(f"  - Vật liệu gói: {w.get('material') or w.get('name') or 'Gói'} (Màu: {w.get('color') or '—'})")
+
+    lines.append("YÊU CẦU: Duy trì tính nhất quán cao nhất về thuật ngữ định danh, chủng loại và màu sắc đã xác thực ở hệ quy chiếu trên.")
+    return "\n".join(lines)
+
+
 def _overall_confidence(result: dict) -> int:
     value = result.get("confidence")
     return value if isinstance(value, int) else 0
@@ -178,13 +216,15 @@ class OpenAIStructuredProvider:
 
         palette_block = _measured_palette_block(palette_result)
         catalog_block = _catalog_block()
+        ref_block = _reference_block(context.get("reference_analysis"))
+        extra_blocks = f"{catalog_block}\n\n{ref_block}".strip() if ref_block else catalog_block
         image_b64 = base64.b64encode(anh_gui).decode("ascii")
 
-        round_one = self._call(contract, palette_block, catalog_block, image_b64, mime, temperature=0)
+        round_one = self._call(contract, palette_block, extra_blocks, image_b64, mime, temperature=0)
         result = round_one
         if _needs_second_round(round_one):
             round_two = self._call(
-                contract, palette_block, catalog_block, image_b64, mime, temperature=0.2
+                contract, palette_block, extra_blocks, image_b64, mime, temperature=0.2
             )
             _reconcile_quantity(result, round_two)
 

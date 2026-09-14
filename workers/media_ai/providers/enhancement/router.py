@@ -1,0 +1,52 @@
+"""Enhancer Router & Registry — Quản lý và định tuyến đa Provider cho M04a.
+
+Cho phép lựa chọn linh hoạt giữa:
+  - 'openai': OpenAI Images API (Mặc định)
+  - 'gemini': Google Gemini / Imagen API
+  - 'replicate': Replicate Super-Resolution Cloud
+  - 'local' / 'realesrgan': Real-ESRGAN / PIL cục bộ
+  - 'pil': Thuần PIL Lanczos 2x (không cần model hay API key)
+  - 'passthrough': Giữ nguyên ảnh gốc (đối chứng)
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+from media_ai.providers.base import ImageEnhancer
+from media_ai.providers.enhancement.gemini_enhancer import GeminiEnhancer
+from media_ai.providers.enhancement.openai_enhancer import OpenAIEnhancer
+from media_ai.providers.enhancement.passthrough import PassthroughEnhancer
+from media_ai.providers.enhancement.realesrgan import PILEnhancer, RealESRGANEnhancer
+from media_ai.providers.enhancement.replicate_enhancer import ReplicateEnhancer
+from media_ai.providers.enhancement.studio_enhancer import StudioEnhancer
+
+
+ENHANCER_REGISTRY: dict[str, type] = {
+    "studio": StudioEnhancer,
+    "openai": OpenAIEnhancer,
+    "gemini": GeminiEnhancer,
+    "replicate": ReplicateEnhancer,
+    "realesrgan": RealESRGANEnhancer,
+    "local": RealESRGANEnhancer,
+    "pil": PILEnhancer,
+    "passthrough": PassthroughEnhancer,
+}
+
+# Mặc định theo kiến trúc chuẩn M04a: dùng Studio Micro-Pipeline
+DEFAULT_PROVIDER = "studio"
+
+
+def resolve_enhancer(config: dict[str, Any] | None = None) -> ImageEnhancer:
+    """Trả về instance ImageEnhancer dựa trên config của job hoặc biến môi trường."""
+    cfg = config or {}
+    provider_key = (
+        cfg.get("enhancer_provider")
+        or os.environ.get("DEFAULT_ENHANCER_PROVIDER")
+        or DEFAULT_PROVIDER
+    )
+    provider_key = str(provider_key).strip().lower()
+
+    enhancer_cls = ENHANCER_REGISTRY.get(provider_key, StudioEnhancer)
+    return enhancer_cls()

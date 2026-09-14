@@ -14,5 +14,7 @@ export const GET = handle(async (request, context: { params: Promise<{ id: strin
   requireCapability(ctx, "I3")
 
   const { id } = await context.params
-  return jsonResponse(await downloadOptimization(ctx, id))
+  const urlObj = new URL(request.url)
+  const ratio = urlObj.searchParams.get("ratio") ?? undefined
+  return jsonResponse(await downloadOptimization(ctx, id, ratio))
 })

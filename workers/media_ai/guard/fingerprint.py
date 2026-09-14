@@ -12,6 +12,7 @@ hai `dict` kết quả Vision, đầu ra là hai dấu vân so được với nh
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -34,6 +35,52 @@ def _chuoi(value: Any) -> str | None:
     return s or None
 
 
+def _chuan_hoa_ten(nhom: str, s: str | None) -> str | None:
+    """Chuẩn hoá tên thành phần theo ngữ cảnh nhóm để loại bỏ tiền tố/hậu tố
+    tiếng Việt thông dụng, giúp hai lượt phân tích của cùng một ảnh (hoặc ảnh
+    tăng cường giữ nguyên hoa) khớp nhau về mặt từ vựng (ví dụ: 'tulip' == 'hoa tulip',
+    'giấy' == 'giấy gói', 'dây thừng' == 'dây lưới' == 'dây buộc').
+    """
+    if not s:
+        return None
+    s = str(s).strip().lower()
+    if nhom == "flowers":
+        # Bỏ tiền tố loài hoa: hoa, bông, cành, nhánh
+        s = re.sub(r"^(hoa|bông|cành|nhánh)\s+", "", s).strip()
+    elif nhom == "foliage":
+        # Bỏ tiền tố lá/nhánh phụ: cành, nhánh
+        s = re.sub(r"^(cành|nhánh)\s+", "", s).strip()
+    elif nhom == "wrapping":
+        s = re.sub(r"^(dây|cuộn|tấm|miếng)\s+", "", s).strip()
+        if s in ("giấy gói", "giấy bọc"):
+            s = "giấy"
+        else:
+            s = re.sub(r"\s+(gói|bọc|trang trí)$", "", s).strip()
+    elif nhom == "accessories":
+        # Bỏ tiền tố/hậu tố phụ liệu
+        s = re.sub(r"^(cuộn|tấm|miếng)\s+", "", s).strip()
+        s = re.sub(r"\s+(gói|bọc|trang trí|buộc|thắt)$", "", s).strip()
+        # Chuẩn hoá các loại dây buộc/dây thắt bó hoa (dây thừng, dây lưới, dây cói, dây đay, dây gai...)
+        # Trong ngành hoa, đây là phụ kiện buộc định hình bó hoa
+        tu_day = re.sub(r"^dây\s+", "", s).strip()
+        if tu_day in ("lưới", "thừng", "cói", "gai", "đay", "buộc", "quấn", "kẽm", "dù", "dây", "thừng gai", "thừng cói"):
+            s = "dây buộc"
+        elif tu_day in ("nơ", "ruy băng", "nơ ruy băng"):
+            s = "nơ ruy băng"
+    return s or None
+
+
+def _chuoi_mau(value: Any) -> str | None:
+    """Chuẩn hoá ô màu: bỏ khoảng trắng thừa, hạ chữ, bỏ tiền tố mã tông màu
+    chuẩn (TM01..TM09) nếu có để 'đỏ' và 'TM01 Đỏ' khớp nhau.
+    """
+    if value is None:
+        return None
+    s = str(value).strip().lower()
+    s = re.sub(r"^tm0[1-9]\s*", "", s).strip()
+    return s or None
+
+
 def _so(value: Any) -> float | None:
     if isinstance(value, bool) or value is None:
         return None
@@ -53,6 +100,7 @@ class ThanhPhan:
     ten: str | None
     mau: str | None
     so_luong: float | None
+    ten_goc: str | None = None
 
     @property
     def khoa(self) -> tuple[str, str | None]:
@@ -96,14 +144,16 @@ def _doc_thanh_phan(bom: Any) -> tuple[tuple[ThanhPhan, ...], float | None]:
                 continue
             # `wrapping` không có `name` mà có `material`; `flowers` có cả
             # `name` lẫn `mau`/`color`. Đọc theo thứ tự ưu tiên của hợp đồng.
-            ten = _chuoi(dong.get("name")) or _chuoi(dong.get("material"))
-            mau = _chuoi(dong.get("color")) or _chuoi(dong.get("mau"))
+            ten_raw = _chuoi(dong.get("name")) or _chuoi(dong.get("material"))
+            ten_chuan = _chuan_hoa_ten(nhom, ten_raw)
+            mau = _chuoi_mau(dong.get("color")) or _chuoi_mau(dong.get("mau"))
             ra.append(
                 ThanhPhan(
                     nhom=nhom,
-                    ten=ten,
+                    ten=ten_chuan,
                     mau=mau,
                     so_luong=_so(dong.get("quantity")),
+                    ten_goc=ten_raw,
                 )
             )
             r = _so(dong.get("bloom_diameter_ratio"))

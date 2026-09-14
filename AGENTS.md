@@ -9,8 +9,9 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 | Việc | Lệnh |
 |---|---|
 | Cài | `docker compose up -d && npm i && npx prisma generate && npx prisma db push && npx prisma db seed` |
+| Chạy toàn bộ (Web + DB + Workers) | `npm run dev:all` (tự bật Docker DB + Web 3100 + Worker Vision + Worker Media) |
 | Chạy web | `npm run dev` |
-| Chạy worker | `cd workers && python -m media_ai.worker` |
+| Chạy worker media | `npm run worker:media` (hoặc `cd workers && python -m media_ai.worker`) |
 | Test web | `npm test` |
 | Test đầu cuối | `npm run test:e2e` |
 | Test worker | `cd workers && python3 -m pytest tests -q` |

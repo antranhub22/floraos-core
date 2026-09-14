@@ -36,11 +36,18 @@ export const GET = handle(async (request, context: { params: Promise<{ key: stri
   verifyOrThrow(key, new URL(request.url))
 
   const bytes = await new LocalDiskStorageProvider().get(key)
-  // `Uint8Array<ArrayBufferLike>` (kiểu trả về của `fs/promises.readFile`) không khớp
-  // generic `BodyInit` của lib.dom trong TS gần đây (`Uint8Array<ArrayBuffer>` cụ thể) —
-  // ép kiểu qua `unknown`, không đổi byte nào.
+  let contentType = "application/octet-stream"
+  if (key.endsWith(".jpg") || key.endsWith(".jpeg")) contentType = "image/jpeg"
+  else if (key.endsWith(".png")) contentType = "image/png"
+  else if (key.endsWith(".webp")) contentType = "image/webp"
+  else if (key.endsWith(".gif")) contentType = "image/gif"
+  else if (key.endsWith(".svg")) contentType = "image/svg+xml"
+
   return new Response(bytes as unknown as BodyInit, {
     status: 200,
-    headers: { "content-type": "application/octet-stream" },
+    headers: {
+      "content-type": contentType,
+      "cache-control": "public, max-age=86400, immutable",
+    },
   })
 })

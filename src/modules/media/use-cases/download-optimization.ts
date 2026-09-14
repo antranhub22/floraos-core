@@ -21,7 +21,8 @@ const HAN_URL_GIAY = 5 * 60
  */
 export async function downloadOptimization(
   ctx: TenantContext,
-  jobId: string
+  jobId: string,
+  ratio?: string | undefined
 ): Promise<{ url: string; asset_id: string; expires_in: number }> {
   const job = await new GenerationJobRepository().findById(ctx, jobId)
   if (!job) throw notFound()
@@ -30,9 +31,23 @@ export async function downloadOptimization(
     throw conflict("Identity Guard đã từ chối ảnh này — chỉ ảnh gốc còn dùng được")
   }
 
-  const master = await new AssetRepository().findMasterByJobId(ctx, jobId)
+  const assetRepo = new AssetRepository()
+  const master = await assetRepo.findMasterByJobId(ctx, jobId)
   if (!master) throw notFound()
 
-  const url = await new LocalDiskStorageProvider().signedUrl(master.storage_key, HAN_URL_GIAY)
-  return { url, asset_id: master.id, expires_in: HAN_URL_GIAY }
+  let targetAsset = master
+  if (ratio) {
+    const derived = await assetRepo.listDerivedFrom(ctx, master.id)
+    const matched = derived.find((d) => {
+      if (d.kind !== "RATIO") return false
+      const meta = d.metadata && typeof d.metadata === "object" ? (d.metadata as Record<string, unknown>) : null
+      return meta?.ratio === ratio
+    })
+    if (matched) {
+      targetAsset = matched
+    }
+  }
+
+  const url = await new LocalDiskStorageProvider().signedUrl(targetAsset.storage_key, HAN_URL_GIAY)
+  return { url, asset_id: targetAsset.id, expires_in: HAN_URL_GIAY }
 }

@@ -1,5 +1,6 @@
 import { notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
+import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { JobEventRepository } from "@/modules/jobs/infra/job-event-repository"
@@ -14,9 +15,18 @@ import {
 export type OptimizationDetail = {
   job_id: string
   status: string
+  error: string | null
   result: string | null
   identity_guard: IdentityGuardBlock | null
-  outputs: { master: string | null; ratios: Record<string, string> }
+  outputs: {
+    master: string | null
+    master_url: string | null
+    original_url: string | null
+    ratios: Record<string, string>
+    ratio_urls: Record<string, string>
+    variant_urls?: Record<string, string>
+    variant_ratio_urls?: Record<string, Record<string, string>>
+  }
   approval: {
     state: "pending" | "approved" | "rejected"
     approved_by: string | null
@@ -28,6 +38,8 @@ export type OptimizationDetail = {
     requires_warning: boolean
   }
   flags: Record<string, unknown>
+  parameters?: Record<string, unknown>
+  applied_changes?: string[]
 }
 
 const TRANG_THAI: Record<string, "pending" | "approved" | "rejected"> = {
@@ -35,6 +47,8 @@ const TRANG_THAI: Record<string, "pending" | "approved" | "rejected"> = {
   APPROVED: "approved",
   REJECTED: "rejected",
 }
+
+const PREVIEW_EXPIRES_IN = 3600
 
 /**
  * `GET /media/optimizations/:id` (`I1`, đặc tả 06 mục 8). `:id` là `job_id` —
@@ -52,29 +66,108 @@ export async function getOptimization(
   const suKien = await new JobEventRepository().findLatestByType(jobId, "guard")
   const guard = parseIdentityGuardBlock(suKien?.payload)
 
-  const master = await new AssetRepository().findMasterByJobId(ctx, jobId)
+  const assetRepo = new AssetRepository()
+  const storage = new LocalDiskStorageProvider()
+
+  const master = await assetRepo.findMasterByJobId(ctx, jobId)
   const ketQua = isGuardResult(job.result) ? job.result : null
+
+  // Lấy ảnh gốc ban đầu từ job payload nếu có
+  let originalUrl: string | null = null
+  const payloadObj = job.payload && typeof job.payload === "object" ? (job.payload as Record<string, unknown>) : null
+  const rawAssetId = payloadObj?.asset_id ? String(payloadObj.asset_id) : null
+  if (rawAssetId) {
+    const rawAsset = await assetRepo.findById(ctx, rawAssetId)
+    if (rawAsset) {
+      originalUrl = await storage.signedUrl(rawAsset.storage_key, PREVIEW_EXPIRES_IN)
+    }
+  }
+
+  // Lấy Master Image URL
+  let masterUrl: string | null = null
+  if (master) {
+    masterUrl = await storage.signedUrl(master.storage_key, PREVIEW_EXPIRES_IN)
+  }
+
+  // Lấy các bản dẫn xuất tỷ lệ Smart Reframe (1:1, 4:5, 9:16, 16:9)
+  const ratios: Record<string, string> = {}
+  const ratioUrls: Record<string, string> = {}
+  if (master) {
+    const derived = await assetRepo.listDerivedFrom(ctx, master.id)
+    for (const d of derived) {
+      if (d.kind === "RATIO") {
+        const meta = d.metadata && typeof d.metadata === "object" ? (d.metadata as Record<string, unknown>) : null
+        const ratioKey = meta?.ratio ? String(meta.ratio) : null
+        if (ratioKey) {
+          ratios[ratioKey] = d.id
+          ratioUrls[ratioKey] = await storage.signedUrl(d.storage_key, PREVIEW_EXPIRES_IN)
+        }
+      }
+    }
+  }
+
+  // Lấy các bản biến thể đa phong cách (Studio, Lifestyle, Bokeh) nếu có
+  const jobOutput = job.output && typeof job.output === "object" ? (job.output as Record<string, unknown>) : null
+  const variantKeys = jobOutput?.variants && typeof jobOutput.variants === "object" ? (jobOutput.variants as Record<string, string>) : {}
+  const variantUrls: Record<string, string> = {}
+  for (const [vKey, vStorageKey] of Object.entries(variantKeys)) {
+    if (typeof vStorageKey === "string") {
+      variantUrls[vKey] = await storage.signedUrl(vStorageKey, PREVIEW_EXPIRES_IN)
+    }
+  }
+
+  // Lấy các bản Smart Reframe 4 tỷ lệ riêng cho từng biến thể
+  const variantRatiosRaw =
+    jobOutput?.variant_ratios && typeof jobOutput.variant_ratios === "object"
+      ? (jobOutput.variant_ratios as Record<string, Record<string, string>>)
+      : {}
+  const variantRatioUrls: Record<string, Record<string, string>> = {}
+  for (const [vKey, ratioMap] of Object.entries(variantRatiosRaw)) {
+    if (ratioMap && typeof ratioMap === "object") {
+      variantRatioUrls[vKey] = {}
+      for (const [rKey, rStorageKey] of Object.entries(ratioMap)) {
+        if (typeof rStorageKey === "string") {
+          variantRatioUrls[vKey][rKey] = await storage.signedUrl(rStorageKey, PREVIEW_EXPIRES_IN)
+        }
+      }
+    }
+  }
 
   return {
     job_id: job.id,
     status: job.status,
+    error: job.error,
     result: job.result,
     identity_guard: guard,
     outputs: {
-      // Bị từ chối thì KHÔNG có Master Image — worker không ghi asset nào
-      // (M04 mục 5: "Giữ Original, không trả ảnh đã enhance").
       master: master?.id ?? null,
-      // Smart Reframe (các tỉ lệ 1x1/4x5/9x16/16x9) thuộc nửa sau của P9,
-      // chưa dựng. Trả object RỖNG chứ không bịa khoá trỏ vào đâu cả.
-      ratios: {},
+      master_url: masterUrl,
+      original_url: originalUrl,
+      ratios,
+      ratio_urls: ratioUrls,
+      variant_urls: variantUrls,
+      variant_ratio_urls: variantRatioUrls,
     },
     approval: {
-      state: master ? (TRANG_THAI[master.approval_state] ?? "pending") : "pending",
+      state: ketQua === "REJECTED" ? "rejected" : master ? (TRANG_THAI[master.approval_state] ?? "pending") : "pending",
       approved_by: master?.approved_by ?? null,
       approved_at: master?.approved_at?.toISOString() ?? null,
       can_approve: Boolean(master) && ketQua !== null && canApproveOptimization(ketQua),
       requires_warning: ketQua !== null && requiresWarningBeforeApprove(ketQua),
     },
     flags: (master?.generated_flags as Record<string, unknown> | null) ?? {},
+    parameters: (master?.parameters as Record<string, unknown> | null) ?? {},
+    applied_changes: (() => {
+      const masterParams = (master?.parameters as Record<string, unknown> | null) ?? {}
+      if (Array.isArray(masterParams.applied_changes)) {
+        return masterParams.applied_changes.filter((x): x is string => typeof x === "string")
+      }
+      const jobOutput = job.output && typeof job.output === "object" ? (job.output as Record<string, unknown>) : null
+      if (Array.isArray(jobOutput?.applied_changes)) {
+        return jobOutput.applied_changes.filter((x): x is string => typeof x === "string")
+      }
+      return []
+    })(),
   }
 }
+

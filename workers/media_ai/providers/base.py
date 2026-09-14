@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Protocol, TypedDict
 
 
-class KetQuaTangCuong(TypedDict):
+class KetQuaTangCuong(TypedDict, total=False):
     """Đầu ra của một lượt tăng cường ảnh.
 
     `generated_flags` KHÔNG có giá trị mặc định ngầm (`YC-A5`): provider phải
@@ -26,6 +26,7 @@ class KetQuaTangCuong(TypedDict):
     image: bytes
     generated_flags: dict
     parameters: dict
+    variants: dict[str, bytes]
 
 
 class ImageEnhancer(Protocol):

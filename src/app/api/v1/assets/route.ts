@@ -55,6 +55,7 @@ export const GET = handle(async (request) => {
 
   const result = await listAssets(ctx, {
     productId: url.searchParams.get("product_id") ?? undefined,
+    kind: url.searchParams.get("kind") ?? undefined,
     limit,
     cursor: url.searchParams.get("cursor"),
   })

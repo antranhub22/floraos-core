@@ -219,3 +219,85 @@ class TestDauVan:
 
     def test_bom_khong_phai_dict_thi_dau_van_rong(self):
         assert rut_dau_van({"bom": "hỏng"}).thanh_phan == ()
+
+
+class TestChuanHoaTuVungVaSacDo:
+    def test_dong_nhat_ten_hoa_co_tien_to(self):
+        # 'Tulip' và 'Hoa tulip' là cùng một loài, không bị phạt mất/thêm thành phần
+        truoc = phan_tich()
+        truoc["bom"]["flowers"][0]["name"] = "Tulip"
+        sau = phan_tich()
+        sau["bom"]["flowers"][0]["name"] = "Hoa tulip"
+        r = so_sanh(truoc, sau)
+        assert r.component_consistency == 1.0
+        assert r.result == SAFE
+
+    def test_dong_nhat_giay_va_giay_goi(self):
+        # 'Giấy' và 'Giấy gói' trong wrapping là cùng một loại vật liệu
+        truoc = phan_tich()
+        truoc["bom"]["wrapping"][0]["material"] = "Giấy"
+        sau = phan_tich()
+        sau["bom"]["wrapping"][0]["material"] = "Giấy gói"
+        r = so_sanh(truoc, sau)
+        assert r.component_consistency == 1.0
+        assert r.result == SAFE
+
+    def test_sac_do_mau_do_anh_sang_van_dat_good(self):
+        # 'Vàng' và 'Vàng nhạt' do ánh sáng phòng chụp tăng cường: màu sắc vẫn chuẩn (color_score 1.0)
+        # và kết quả đạt GOOD chứ không bị REJECTED
+        truoc = phan_tich()
+        truoc["bom"]["accessories"][0]["name"] = "Dây lưới"
+        truoc["bom"]["accessories"][0]["color"] = "Vàng"
+        sau = phan_tich()
+        sau["bom"]["accessories"][0]["name"] = "Dây lưới"
+        sau["bom"]["accessories"][0]["color"] = "Vàng nhạt"
+        r = so_sanh(truoc, sau)
+        assert r.color_score == 1.0
+        assert r.result == GOOD
+        assert any("Sắc độ màu" in ly and "vàng → vàng nhạt" in ly for ly in r.ly_do)
+
+    def test_doi_han_mau_hoa_van_bi_tu_choi(self):
+        # 'Vàng' sang 'Đỏ' là đổi hoàn toàn màu sắc: vẫn bị REJECTED dứt khoát
+        truoc = phan_tich()
+        truoc["bom"]["flowers"][0]["color"] = "Vàng"
+        sau = phan_tich()
+        sau["bom"]["flowers"][0]["color"] = "Đỏ"
+        r = so_sanh(truoc, sau)
+        assert r.color_score < NGUONG_TU_CHOI
+        assert r.result == REJECTED
+
+    def test_dong_nhat_cac_loai_day_buoc_bo_hoa(self):
+        # 'Dây lưới' và 'Dây thừng' đều là phụ kiện dây buộc bó hoa, không tính mất/thêm thành phần
+        truoc = phan_tich()
+        truoc["bom"]["accessories"][0]["name"] = "Dây lưới"
+        sau = phan_tich()
+        sau["bom"]["accessories"][0]["name"] = "Dây thừng"
+        r = so_sanh(truoc, sau)
+        assert r.component_consistency == 1.0
+        assert r.result == SAFE
+
+    def test_dung_sai_dem_hoa_nhe_van_dat_good(self):
+        # Bó 10 bông so với 12 bông (lệch nhẹ do góc chụp che khuất) kết hợp dây buộc và sắc độ ánh sáng:
+        # Tổng điểm đạt >= 0.95 và kết quả ra GOOD (cho phép duyệt Master Image)
+        truoc = phan_tich()
+        truoc["bom"]["flowers"][0]["name"] = "Tulip"
+        truoc["bom"]["flowers"][0]["color"] = "Vàng"
+        truoc["bom"]["flowers"][0]["quantity"] = 10
+        truoc["bom"]["wrapping"][0]["material"] = "Giấy"
+        truoc["bom"]["accessories"][0]["name"] = "Dây lưới"
+        truoc["bom"]["accessories"][0]["color"] = "Vàng"
+
+        sau = phan_tich()
+        sau["bom"]["flowers"][0]["name"] = "Hoa tulip"
+        sau["bom"]["flowers"][0]["color"] = "Vàng nhạt"
+        sau["bom"]["flowers"][0]["quantity"] = 12
+        sau["bom"]["accessories"][0]["name"] = "Dây thừng"
+        sau["bom"]["accessories"][0]["color"] = "Vàng nhạt"
+        sau["bom"]["wrapping"][0]["material"] = "Giấy gói"
+
+        r = so_sanh(truoc, sau)
+        assert r.result == GOOD
+        assert r.diem_thap_nhat >= NGUONG_AN_TOAN
+        assert any("Số lượng tulip đổi: 10.0 → 12.0" in ly for ly in r.ly_do)
+
+

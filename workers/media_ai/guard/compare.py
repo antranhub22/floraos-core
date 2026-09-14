@@ -137,6 +137,34 @@ def _cham_nhan_dang(truoc: DauVanSanPham, sau: DauVanSanPham) -> tuple[float, li
     return _ty_le_khop(a, b), ly_do
 
 
+SAC_DO_HOP_LE = {"nhạt", "đậm", "sáng", "tối", "tươi", "pastel", "trầm", "phấn"}
+
+
+def _bo_sac_do(mau: str | None) -> str | None:
+    if not mau:
+        return None
+    tu_khoa = mau.split()
+    loc = [w for w in tu_khoa if w not in SAC_DO_HOP_LE]
+    return " ".join(loc) if loc else mau
+
+
+def _so_khop_mau(mau_truoc: str | None, mau_sau: str | None) -> tuple[bool, bool]:
+    """So khớp màu giữa ảnh trước và sau.
+    Trả về (khop, co_doi_sac_do):
+    - khop = True nếu trùng màu hoàn toàn HOẶC cùng màu cơ bản chỉ khác sắc độ ánh sáng (nhạt/đậm/sáng/pastel).
+    - co_doi_sac_do = True nếu cùng màu cơ bản nhưng sắc độ ánh sáng có điều chỉnh nhẹ.
+    """
+    if mau_truoc == mau_sau:
+        return True, False
+    if not mau_truoc or not mau_sau:
+        return False, False
+    goc_truoc = _bo_sac_do(mau_truoc)
+    goc_sau = _bo_sac_do(mau_sau)
+    if goc_truoc and goc_sau and goc_truoc == goc_sau:
+        return True, True
+    return False, False
+
+
 def _cham_mau(truoc: DauVanSanPham, sau: DauVanSanPham) -> tuple[float, list[str]]:
     """Màu chấm trên các thành phần CÓ MẶT Ở CẢ HAI bên. Thành phần bị thêm
     hay mất là chuyện của `component_consistency`; tính cả vào đây nữa là phạt
@@ -151,11 +179,18 @@ def _cham_mau(truoc: DauVanSanPham, sau: DauVanSanPham) -> tuple[float, list[str
     for khoa in chung:
         mau_truoc = a[khoa][0].mau
         mau_sau = b[khoa][0].mau
-        if mau_truoc == mau_sau:
+        tp_ref = a[khoa][0] or b[khoa][0]
+        ten_hien_thi = tp_ref.ten_goc or tp_ref.ten or khoa[1] or khoa[0]
+        dung, co_doi_sac = _so_khop_mau(mau_truoc, mau_sau)
+        if dung:
             khop += 1
+            if co_doi_sac:
+                ly_do.append(
+                    f"Sắc độ màu của {ten_hien_thi} có điều chỉnh nhẹ do ánh sáng: {mau_truoc or '—'} → {mau_sau or '—'}"
+                )
         else:
             ly_do.append(
-                f"Màu của {khoa[1] or khoa[0]} đổi: {mau_truoc or '—'} → {mau_sau or '—'}"
+                f"Màu của {ten_hien_thi} đổi: {mau_truoc or '—'} → {mau_sau or '—'}"
             )
     return khop / len(chung), ly_do
 
@@ -191,7 +226,8 @@ def _cham_thanh_phan(truoc: DauVanSanPham, sau: DauVanSanPham) -> tuple[float, l
     ly_do: list[str] = []
     diem: list[float] = []
     for khoa in sorted(moi_khoa, key=lambda k: (k[0], k[1] or "")):
-        ten = khoa[1] or khoa[0]
+        tp_ref = a[khoa][0] if khoa in a else b[khoa][0]
+        ten = tp_ref.ten_goc or tp_ref.ten or khoa[1] or khoa[0]
         if khoa not in b:
             diem.append(0.0)
             ly_do.append(f"Mất thành phần: {ten}")

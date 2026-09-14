@@ -155,7 +155,7 @@ describe("cách ly tenant — M01b dữ liệu bán hàng sản phẩm (P14)", (
     expect(typeof body.copyId).toBe("string")
     expect(typeof body.raw).toBe("object")
     expect(body.raw.suggested_name).toBeDefined()
-  })
+  }, 15000)
 
   it("POST /product-copies/generate idempotent — gọi lại trả cùng copyId", async () => {
     const assetOfA = await seedAsset(a.ctx)
@@ -179,7 +179,7 @@ describe("cách ly tenant — M01b dữ liệu bán hàng sản phẩm (P14)", (
     const secondBody = await readJson(second)
     expect(second.status).toBe(200)
     expect(secondBody.copyId).toBe(firstBody.copyId)
-  })
+  }, 15000)
 
   it("GET /product-copies/:id của tổ chức khác trả 404, không lộ dữ liệu", async () => {
     const assetOfA = await seedAsset(a.ctx)

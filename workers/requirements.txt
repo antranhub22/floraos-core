@@ -7,3 +7,6 @@ numpy>=1.26
 scipy>=1.12
 openai>=1.40
 pytest>=8.0
+rembg>=2.0
+onnxruntime>=1.18
+opencv-python>=4.9

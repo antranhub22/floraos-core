@@ -72,6 +72,16 @@ export class WorkspaceRepository {
    * không giới hạn (workspace trải nghiệm chưa cấu hình hạn mức).
    */
   async tryConsumeTrial(workspaceId: string): Promise<boolean> {
+    // Trong môi trường dev: nới rộng không giới hạn lượt dùng thử để thoải mái phát triển
+    if (process.env.NODE_ENV !== "production") {
+      await this.db.$queryRaw`
+        UPDATE workspaces
+           SET trial_count = trial_count + 1
+         WHERE id = ${workspaceId}
+      `
+      return true
+    }
+
     const rows = await this.db.$queryRaw<Array<{ trial_count: number }>>`
       UPDATE workspaces
          SET trial_count = trial_count + 1

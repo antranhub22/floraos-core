@@ -44,7 +44,7 @@ from psycopg.rows import dict_row
 
 from media_ai.guard.compare import REJECTED
 from media_ai.guard.verifier import VisionIdentityVerifier
-from media_ai.providers.enhancement.realesrgan import get_enhancer
+from media_ai.providers.enhancement.router import resolve_enhancer
 from media_ai.providers.smart_reframe import SmartReframe
 
 FEATURE = "media.optimize"
@@ -271,7 +271,10 @@ def process_job(
         dau_van = verifier.phan_tich(anh_goc, ngu_canh)
 
         _set_stage(conn, job["id"], "ENHANCING")
-        ket_qua_tang_cuong = enhancer.enhance(anh_goc, config)
+        config_with_schema = dict(config)
+        config_with_schema["original_analysis"] = dau_van
+        active_enhancer = resolve_enhancer(config_with_schema) if config_with_schema else enhancer
+        ket_qua_tang_cuong = active_enhancer.enhance(anh_goc, config_with_schema)
 
         # Smart Reframe: tạo 4 tỷ lệ từ Master Image MỘT LẦN (M04 mục 17.3)
         _set_stage(conn, job["id"], "SMART_REFRAME")
@@ -279,7 +282,9 @@ def process_job(
         ratio_bytes = {k: v.image for k, v in ratio_images.items()}
 
         _set_stage(conn, job["id"], "VERIFYING")
-        khoi_guard = verifier.compare(dau_van, ket_qua_tang_cuong["image"], ngu_canh)
+        ngu_canh_verifying = dict(ngu_canh)
+        ngu_canh_verifying["reference_analysis"] = dau_van
+        khoi_guard = verifier.compare(dau_van, ket_qua_tang_cuong["image"], ngu_canh_verifying)
         _emit_event(conn, job["id"], "guard", khoi_guard)
 
         ket_qua = khoi_guard["result"]
@@ -290,11 +295,11 @@ def process_job(
             _set_stage(conn, job["id"], "GENERATING_OUTPUTS")
             master_asset_id = _ghi_asset_master(
                 conn, job, asset_goc, ket_qua_tang_cuong["image"], khoi_guard,
-                ket_qua_tang_cuong, enhancer,
+                ket_qua_tang_cuong, active_enhancer,
             )
             # Ghi 4 ảnh tỷ lệ
             ratio_storage_keys = _ghi_ratio_assets(
-                conn, job, asset_goc, master_asset_id, ratio_bytes, enhancer,
+                conn, job, asset_goc, master_asset_id, ratio_bytes, active_enhancer,
             )
         else:
             _emit_event(
@@ -302,10 +307,41 @@ def process_job(
                 {"message": "Identity Guard từ chối — giữ ảnh gốc", "ly_do": khoi_guard["ly_do"]},
             )
 
-        # Cập nhật job output với ratios storage_keys
+        # Ghi các biến thể (Variants: Studio, Lifestyle, Bokeh) và sinh 4 tỷ lệ Smart Reframe cho từng biến thể
+        variant_storage_keys: dict[str, str] = {}
+        variant_ratios_storage: dict[str, dict[str, str]] = {}
+        variants = ket_qua_tang_cuong.get("variants") or {}
+
+        for v_key, v_bytes in variants.items():
+            v_asset_id = str(uuid.uuid4())
+            v_storage_key = (
+                f"org/{job['organization_id']}/{asset_goc['product_id'] or 'unfiled'}/{v_asset_id}_var_{v_key}.jpg"
+            )
+            _write_bytes(v_storage_key, v_bytes)
+            variant_storage_keys[v_key] = v_storage_key
+
+            # Tạo 4 tỷ lệ Smart Reframe cho từng biến thể (bảo toàn 100% bó hoa ở các tỷ lệ 1:1, 4:5, 9:16, 16:9)
+            v_reframed = reframer.reframe(v_bytes)
+            v_ratio_map: dict[str, str] = {}
+            for r_key, ref_img in v_reframed.items():
+                r_asset_id = str(uuid.uuid4())
+                r_storage_key = (
+                    f"org/{job['organization_id']}/{asset_goc['product_id'] or 'unfiled'}/{r_asset_id}_var_{v_key}_{r_key}.jpg"
+                )
+                _write_bytes(r_storage_key, ref_img.image)
+                v_ratio_map[r_key] = r_storage_key
+            variant_ratios_storage[v_key] = v_ratio_map
+
+        # Cập nhật job output với ratios storage_keys, variants, variant_ratios và applied_changes
+        applied_changes = (
+            ket_qua_tang_cuong.get("parameters", {}).get("applied_changes") or []
+        )
         output_payload = {
             "master_asset_id": master_asset_id,
             "ratios": ratio_storage_keys,
+            "variants": variant_storage_keys,
+            "variant_ratios": variant_ratios_storage,
+            "applied_changes": applied_changes,
         }
 
         with conn.cursor() as cur:
@@ -321,7 +357,15 @@ def process_job(
         conn.commit()
         _emit_event(
             conn, job["id"], "done",
-            {"status": "COMPLETED", "result": ket_qua, "master_asset_id": master_asset_id, "ratios": ratio_storage_keys},
+            {
+                "status": "COMPLETED",
+                "result": ket_qua,
+                "master_asset_id": master_asset_id,
+                "ratios": ratio_storage_keys,
+                "variants": variant_storage_keys,
+                "variant_ratios": variant_ratios_storage,
+                "applied_changes": applied_changes,
+            },
         )
 
     except Exception as exc:  # noqa: BLE001 — hỏng KỸ THUẬT, không phải phán quyết
@@ -339,17 +383,27 @@ def process_job(
         _emit_event(conn, job["id"], "done", {"status": "FAILED", "error": str(exc)})
 
 
+def _clean_database_url(url: str) -> str:
+    cleaned = url.strip().strip('"').strip("'")
+    if "?" in cleaned:
+        base, query = cleaned.split("?", 1)
+        params = [p for p in query.split("&") if not p.startswith("schema=")]
+        cleaned = f"{base}?{'&'.join(params)}" if params else base
+    return cleaned
+
+
 def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
     from vision.providers.openai_structured import OpenAIStructuredProvider
 
     # MỘT instance analyzer cho cả hai lượt phân tích của mọi job — `YC-N4`
     # được bảo đảm bằng cấu trúc, xem `guard/verifier.py`.
     verifier = VisionIdentityVerifier(analyzer=OpenAIStructuredProvider())
-    enhancer = get_enhancer()  # Real-ESRGAN (fallback PIL nếu thiếu model)
+    enhancer = resolve_enhancer()  # Đa Provider: Studio làm mặc định, kèm fallback Real-ESRGAN/PIL
     reframer = SmartReframe()  # Smart Reframe 4 tỷ lệ
     channel = notify_channel_for(FEATURE)
 
-    with psycopg.connect(database_url, autocommit=True) as conn:
+    cleaned_url = _clean_database_url(database_url)
+    with psycopg.connect(cleaned_url, autocommit=True) as conn:
         with conn.cursor() as cur:
             cur.execute(f"LISTEN {channel}")
 

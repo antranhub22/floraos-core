@@ -44,10 +44,18 @@ export class AssetRepository {
 
   list(
     ctx: TenantContext,
-    options: { productId?: string | undefined; limit: number; cursor?: string | null }
+    options: {
+      productId?: string | undefined
+      kind?: asset_kind | undefined
+      limit: number
+      cursor?: string | null
+    }
   ): Promise<assets[]> {
     return this.db.assets.findMany({
-      where: scopedWhere(ctx, options.productId ? { product_id: options.productId } : {}),
+      where: scopedWhere(ctx, {
+        ...(options.productId ? { product_id: options.productId } : {}),
+        ...(options.kind ? { kind: options.kind } : {}),
+      }),
       orderBy: [{ created_at: "desc" }, { id: "desc" }],
       take: options.limit,
       ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
