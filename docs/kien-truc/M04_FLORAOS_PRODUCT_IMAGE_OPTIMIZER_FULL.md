@@ -407,6 +407,38 @@ Generative background nâng cao → để dành cho Phase 3 (Creative Engine).
 Product Mask → Bounding Box → Center/Align → Crop → Aspect Ratio → [Master, 1:1, 4:5, 9:16, 16:9]
 ```
 
+### 4.5. StudioEnhancer Decoupled Micro-Pipeline & 3-Variant Visual System (Nâng cấp V1.3, 2026-09-14)
+
+Giải quyết trọn vẹn bài toán thực tế của cửa hàng hoa: Ảnh chụp điện thoại tại xưởng thường bị lẫn tem nhãn/hotline, ánh sáng không đồng đều, phông nền lộn xộn, độ phân giải nhỏ, và các tỷ lệ hiển thị mạng xã hội (Reels 9:16, Feed 1:1, Story) thường làm cắt xén cánh hoa.
+
+#### A. Micro-Pipeline 4 bước của StudioEnhancer
+1. **Localized Watermark / Stamp Eraser (`watermark_remover.py`):**
+   - Tự động nhận diện tem nhãn góc tròn và số điện thoại / chữ ký đóng dấu trên giấy gói hoa bằng phân tích độ tương phản cục bộ (`cv2.subtract(bg_gray, img_gray)`).
+   - **Saturation Gate chống bệt màu hoa:** Ràng buộc `img_hsv[:, :, 1] < 45` và diện tích thành phần liên thông $8 \le area \le 600\text{ px}$ để tuyệt đối không inpaint nhầm vào các cánh hoa đỏ đậm (đồng tiền), cam, vàng, tím.
+2. **AI Matting & Background Debris Filter (`rembg_segmenter.py` + `studio_enhancer.py`):**
+   - Bóc tách chủ thể bằng Rembg U2Net.
+   - **Connected Components Analysis:** Quét các khối liên thông trên kênh Alpha; loại bỏ triệt để các đốm cánh hoa rơi vãi hoặc mảnh vụn hậu cảnh lơ lửng ($area < max\_area \times 0.035$), chỉ giữ khối chủ thể chính (bó hoa + tay cầm).
+3. **Edge Defringing / Color Decontamination (`defringe.py`):**
+   - Lan truyền màu sắc thuần khiết từ vùng đặc ($alpha \ge 248$) ra các pixel biên bán trong suốt ($0 < alpha < 248$) bằng giải thuật Inpainting Telea, triệt tiêu hoàn toàn quầng viền ám màu rèm/tường cũ.
+4. **Studio Backdrop & Optical Compositing (`studio_backdrop.py`):**
+   - **Alpha Feathering:** Làm mềm viền quang học Sub-pixel $1.1\text{ px}$ chống cảm giác viền sắc dao cạo (sticker effect).
+   - **Arm Fadeout:** Chuyển mượt gradient $6\%$ ở mép đáy cẳng tay, loại bỏ vết cắt cụt cứng.
+   - **2-Tier Contact Shadow:** Kết hợp bóng tiếp xúc sát chân gốc (Ambient Occlusion, blur $5\text{ px}$) và bóng mềm hướng sáng Top-Left sang góc dưới phải (Directional Soft Shadow, blur $28\text{ px}$).
+   - **Optical Light Wrap:** Tán xạ quang học $4\text{ px}$ tràn nhẹ ánh sáng từ phông studio vào viền giấy gói và cánh hoa ngoài cùng.
+   - **Lanczos HD Upscaling & 4:4:4 Chroma:** Ảnh gốc $< 1200\text{ px}$ được nội suy siêu phân giải Lanczos lên $1280\text{ px}$ kết hợp Unsharp Mask vi phẫu; nén JPEG $95\%$ với `subsampling=0` (4:4:4 Chroma) chống nhòe sắc cạnh.
+
+#### B. Hệ thống 3 Phương án So sánh Trực quan Bằng Mắt
+Nhân viên cắm hoa và quản lý có thể quan sát và so sánh trực quan 4 tab:
+- **P.Án 1: Studio Cao Cấp (`studio`):** Phông Studio Ambiance thanh lịch (Warm Gray / Off-white), bóng đổ 2 tầng và tràn sáng viền hoa.
+- **P.Án 2: Ảnh Mộc Chân Thực (`lifestyle` / `lifestyle_clean`):** Giữ $100\%$ rèm cửa và ánh sáng phòng gốc, xóa sạch $100\%$ tem nhãn chữ ký. Tự nhiên tuyệt đối.
+- **P.Án 3: Không Gian AI Chiều Sâu (`bokeh` / `boutique_bokeh`):** Xóa phông tiệm hoa $f/1.8$ với đốm sáng bokeh ấm áp, ánh sáng xiên nghệ thuật.
+- **Ảnh Gốc Chụp Xưởng (`original`):** Đối chứng trực tiếp trước/sau.
+
+#### C. Multi-Variant Smart Reframe (Bảo toàn chủ thể đa tỷ lệ)
+- Khắc phục triệt để lỗi cắt xén bó hoa khi đổi tỷ lệ: Sinh đồng thời 4 tỷ lệ chuẩn ($1:1$, $4:5$, $9:16$, $16:9$) cho **cả 3 phương án** (Studio, Ảnh Mộc, Bokeh).
+- Sử dụng **Studio Ambiance Canvas Extension** với Alpha Feathering $32\text{ px}$ khi tỷ lệ đích lệch xa tỷ lệ gốc (như Reels $9:16$ hoặc Banner $16:9$), giữ trọn vẹn $100\%$ bó hoa, nơ và tay cầm ở trung tâm thị giác.
+- API và tầng use-case cấp Signed URL `variant_ratio_urls` và UI component `BeforeAfterPreviewCard` tự động chuyển đổi ảnh chuẩn xác theo từng phương án và tỷ lệ.
+
 ---
 
 ## 5. Product Identity Guard (Module quan trọng nhất)

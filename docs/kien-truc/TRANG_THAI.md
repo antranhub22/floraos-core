@@ -37,6 +37,14 @@ bằng Real-ESRGAN (fallback PIL), thêm Smart Reframe 4 tỷ lệ (1:1, 4:5, 9:
 Pipeline: ANALYZING → ENHANCING → SMART_REFRAME → VERIFYING → GENERATING_OUTPUTS.
 `output.ratios` trong `generation_jobs` ghi 4 storage_keys. 170/170 test Python xanh.
 
+**P13+ — M04a V1.3 Creative Studio hoàn thiện chất lượng & so sánh trực quan 3 phương án (09/14).**
+Worker `media_ai` bổ sung `StudioEnhancer` bóc tách Rembg + defringing khử ám màu viền + đổ bóng tiếp xúc 2 tầng (Ambient Occlusion + Directional Soft Shadow) + Optical Light Wrap tràn sáng 4px + Sub-pixel Alpha Feathering 1.1px + Arm Fadeout mượt mà.
+Khắc phục lỗi inpaint nhầm cánh hoa màu (đồng tiền/hồng/cúc) qua Saturation Gate (`hsv_s < 45`) và lọc diện tích nét chữ.
+Lọc sạch 100% đốm cánh hoa rơi vãi hậu cảnh bằng Connected Components trên Alpha mask. Tích hợp Super-Resolution Lanczos HD ($1280\text{ px}$) + 4:4:4 Chroma (`subsampling=0`).
+Hệ thống 3 phương án so sánh trực quan bằng mắt: P1 (Studio Cao Cấp), P2 (Ảnh Mộc Chân Thực - giữ rèm và ánh sáng phòng gốc, xóa tem nhãn chữ ký), P3 (Không Gian Bokeh f/1.8), kèm Ảnh Gốc đối chứng.
+Multi-Variant Smart Reframe sinh 4 tỷ lệ ($1:1$, $4:5$, $9:16$, $16:9$) cho cả 3 phương án với Studio Ambiance Canvas Extension, bảo toàn 100% bó hoa, nơ và tay cầm khi xem tỷ lệ dọc Reels/Story.
+API use-case trả `variant_ratio_urls` và UI `BeforeAfterPreviewCard` cập nhật mượt mà. Test web 314/314 xanh, test Python worker 100% xanh.
+
 **P16 — M04b ảnh marketing — đợt đầu (09/12).** Backend `SocialFlow/backend/m04b/`:
 `domain/` `use_cases/` `infra/` `adapters/` đủ bốn thư mục. AIC-11 background_removal
 (rembg + PIL chroma-key fallback) qua `POST /api/m04b/background-removal`, đăng ký
