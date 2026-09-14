@@ -273,7 +273,11 @@ def process_job(
         _set_stage(conn, job["id"], "ENHANCING")
         config_with_schema = dict(config)
         config_with_schema["original_analysis"] = dau_van
-        active_enhancer = resolve_enhancer(config_with_schema) if config_with_schema else enhancer
+        active_enhancer = (
+            resolve_enhancer(config_with_schema)
+            if config.get("enhancer_provider")
+            else enhancer
+        )
         ket_qua_tang_cuong = active_enhancer.enhance(anh_goc, config_with_schema)
 
         # Smart Reframe: tạo 4 tỷ lệ từ Master Image MỘT LẦN (M04 mục 17.3)
@@ -290,6 +294,8 @@ def process_job(
         ket_qua = khoi_guard["result"]
         master_asset_id: str | None = None
         ratio_storage_keys: dict[str, str] = {}
+        variant_storage_keys: dict[str, str] = {}
+        variant_ratios_storage: dict[str, dict[str, str]] = {}
 
         if ket_qua != REJECTED:
             _set_stage(conn, job["id"], "GENERATING_OUTPUTS")
@@ -301,36 +307,33 @@ def process_job(
             ratio_storage_keys = _ghi_ratio_assets(
                 conn, job, asset_goc, master_asset_id, ratio_bytes, active_enhancer,
             )
+
+            # Ghi các biến thể (Variants: Studio, Lifestyle, Bokeh) và sinh 4 tỷ lệ Smart Reframe cho từng biến thể
+            variants = ket_qua_tang_cuong.get("variants") or {}
+            for v_key, v_bytes in variants.items():
+                v_asset_id = str(uuid.uuid4())
+                v_storage_key = (
+                    f"org/{job['organization_id']}/{asset_goc['product_id'] or 'unfiled'}/{v_asset_id}_var_{v_key}.jpg"
+                )
+                _write_bytes(v_storage_key, v_bytes)
+                variant_storage_keys[v_key] = v_storage_key
+
+                # Tạo 4 tỷ lệ Smart Reframe cho từng biến thể (bảo toàn 100% bó hoa ở các tỷ lệ 1:1, 4:5, 9:16, 16:9)
+                v_reframed = reframer.reframe(v_bytes)
+                v_ratio_map: dict[str, str] = {}
+                for r_key, ref_img in v_reframed.items():
+                    r_asset_id = str(uuid.uuid4())
+                    r_storage_key = (
+                        f"org/{job['organization_id']}/{asset_goc['product_id'] or 'unfiled'}/{r_asset_id}_var_{v_key}_{r_key}.jpg"
+                    )
+                    _write_bytes(r_storage_key, ref_img.image)
+                    v_ratio_map[r_key] = r_storage_key
+                variant_ratios_storage[v_key] = v_ratio_map
         else:
             _emit_event(
                 conn, job["id"], "log",
                 {"message": "Identity Guard từ chối — giữ ảnh gốc", "ly_do": khoi_guard["ly_do"]},
             )
-
-        # Ghi các biến thể (Variants: Studio, Lifestyle, Bokeh) và sinh 4 tỷ lệ Smart Reframe cho từng biến thể
-        variant_storage_keys: dict[str, str] = {}
-        variant_ratios_storage: dict[str, dict[str, str]] = {}
-        variants = ket_qua_tang_cuong.get("variants") or {}
-
-        for v_key, v_bytes in variants.items():
-            v_asset_id = str(uuid.uuid4())
-            v_storage_key = (
-                f"org/{job['organization_id']}/{asset_goc['product_id'] or 'unfiled'}/{v_asset_id}_var_{v_key}.jpg"
-            )
-            _write_bytes(v_storage_key, v_bytes)
-            variant_storage_keys[v_key] = v_storage_key
-
-            # Tạo 4 tỷ lệ Smart Reframe cho từng biến thể (bảo toàn 100% bó hoa ở các tỷ lệ 1:1, 4:5, 9:16, 16:9)
-            v_reframed = reframer.reframe(v_bytes)
-            v_ratio_map: dict[str, str] = {}
-            for r_key, ref_img in v_reframed.items():
-                r_asset_id = str(uuid.uuid4())
-                r_storage_key = (
-                    f"org/{job['organization_id']}/{asset_goc['product_id'] or 'unfiled'}/{r_asset_id}_var_{v_key}_{r_key}.jpg"
-                )
-                _write_bytes(r_storage_key, ref_img.image)
-                v_ratio_map[r_key] = r_storage_key
-            variant_ratios_storage[v_key] = v_ratio_map
 
         # Cập nhật job output với ratios storage_keys, variants, variant_ratios và applied_changes
         applied_changes = (
