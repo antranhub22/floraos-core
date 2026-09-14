@@ -43,23 +43,25 @@ import {
   formatCurrencyVnd,
 } from "@/modules/products/domain/sales-pitch-template"
 
+export type StorageTab = "raw" | "approved" | "finalized"
+
 export interface RawAssetItem {
   id: string
   name: string
-  storage_key?: string
-  image_url?: string | null
-  mime_type?: string
-  file_size?: number
-  created_at?: string
-  isLocal?: boolean
-  file?: File
+  storage_key?: string | undefined
+  image_url?: string | null | undefined
+  mime_type?: string | undefined
+  file_size?: number | undefined
+  created_at?: string | undefined
+  isLocal?: boolean | undefined
+  file?: File | undefined
 }
 
 export interface ApprovedAnalysisItem {
   id: string
   product_id: string | null
   asset_id: string
-  image_url?: string | null
+  image_url?: string | null | undefined
   job_id: string
   provider: string
   model: string
@@ -74,13 +76,13 @@ export interface ApprovedAnalysisItem {
     name: string
     code: string
     category: string | null
-  } | null
+  } | null | undefined
 }
 
 interface AccountStorageHubProps {
-  initialTab?: StorageTab
-  localPhotos?: Array<{ id: string; file?: File; previewUrl: string; name: string }>
-  finalizedPitches?: SalesPitchData[]
+  initialTab?: StorageTab | undefined
+  localPhotos?: Array<{ id: string; file?: File | undefined; previewUrl: string; name: string }> | undefined
+  finalizedPitches?: SalesPitchData[] | undefined
   onSelectRawPhoto?: (photo: RawAssetItem) => void
   onSelectApprovedAnalysis?: (analysis: ApprovedAnalysisItem, targetTab: "m01b" | "m01c") => void
   onSelectFinalizedPitch?: (pitch: SalesPitchData) => void

@@ -6,21 +6,21 @@ import { ResultCard, type ResultField, type ResultFieldItem, type JudgmentState 
 
 export interface AnalysisResultCardProps {
   fields: ResultField[]
-  imageUrl?: string
-  judgment?: JudgmentState
-  confidence?: number | null
-  qualityLabel?: string
-  isSaved?: boolean
-  disabled?: boolean
-  stepNumber?: string
-  headerTitle?: string
-  onSaveDraft?: () => void
-  onReject?: () => void
-  onApprove?: () => void
-  onFieldChange?: (key: string, value: string | number | string[]) => void
-  onFieldAdd?: (key: string, item: ResultFieldItem) => void
-  onFieldRemove?: (key: string, itemId: string) => void
-  onItemChange?: (key: string, itemId: string, item: ResultFieldItem) => void
+  imageUrl?: string | null | undefined
+  judgment?: JudgmentState | undefined
+  confidence?: number | null | undefined
+  qualityLabel?: string | undefined
+  isSaved?: boolean | undefined
+  disabled?: boolean | undefined
+  stepNumber?: string | undefined
+  headerTitle?: string | undefined
+  onSaveDraft?: (() => void) | undefined
+  onReject?: (() => void) | undefined
+  onApprove?: (() => void) | undefined
+  onFieldChange?: ((key: string, value: string | number | string[]) => void) | undefined
+  onFieldAdd?: ((key: string, item: ResultFieldItem) => void) | undefined
+  onFieldRemove?: ((key: string, itemId: string) => void) | undefined
+  onItemChange?: ((key: string, itemId: string, item: ResultFieldItem) => void) | undefined
 }
 
 /**

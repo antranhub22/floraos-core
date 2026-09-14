@@ -155,6 +155,7 @@ export type MockSession = {
   orgName: string
   workspaceKind: WorkspaceKind
   capabilities: string[]
+  organization?: { id: string; name?: string } | undefined
 }
 
 export const MOCK_SESSION: MockSession = {
@@ -163,6 +164,7 @@ export const MOCK_SESSION: MockSession = {
   orgName: "Tiệm hoa Mộc Lan",
   workspaceKind: "PRODUCTION",
   capabilities: ["H3", "I2", "B4"],
+  organization: { id: "org_mock_default", name: "Tiệm hoa Mộc Lan" },
 }
 
 export const SAMPLE_PRODUCTS = [

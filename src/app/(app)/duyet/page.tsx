@@ -266,7 +266,7 @@ export default function DuyetPage() {
               id: "goto-kho",
               label: "Chuyển tới Kho Dữ Liệu",
               icon: Folder,
-              onClick: () => router.push("/kho-du-lieu"),
+              onClick: () => router.push("/tai-anh?tab=storage" as any),
             },
             {
               id: "goto-tai-anh",

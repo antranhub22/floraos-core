@@ -62,7 +62,9 @@ export function extractTemplateVariables(templateString: string): string[] {
   let match: RegExpExecArray | null
 
   while ((match = tokenRegex.exec(templateString)) !== null) {
-    vars.add(match[1])
+    if (match[1]) {
+      vars.add(match[1])
+    }
   }
 
   return Array.from(vars)

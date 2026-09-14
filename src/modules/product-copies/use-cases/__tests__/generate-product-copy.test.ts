@@ -75,10 +75,10 @@ import { callCapability } from "@/core/ai/gateway"
 import { createProductCopyAdapter } from "@/modules/product-copies/adapters/product-copy-adapter"
 
 describe("generateProductCopy", () => {
-  let mockAnalysisRepo: ReturnType<typeof vi.fn>
-  let mockBrandRepo: ReturnType<typeof vi.fn>
-  let mockOccasionRepo: ReturnType<typeof vi.fn>
-  let mockCopyRepo: ReturnType<typeof vi.fn>
+  let mockAnalysisRepo: any
+  let mockBrandRepo: any
+  let mockOccasionRepo: any
+  let mockCopyRepo: any
   let mockCallCapability: ReturnType<typeof vi.fn>
   let mockCreateAdapter: ReturnType<typeof vi.fn>
 
@@ -92,10 +92,10 @@ describe("generateProductCopy", () => {
     mockCallCapability = vi.fn()
     mockCreateAdapter = vi.fn()
 
-    vi.mocked(ProductAnalysisRepository).mockImplementation(() => mockAnalysisRepo)
-    vi.mocked(BrandProfileRepository).mockImplementation(() => mockBrandRepo)
-    vi.mocked(OccasionRepository).mockImplementation(() => mockOccasionRepo)
-    vi.mocked(ProductCopyRepository).mockImplementation(() => mockCopyRepo)
+    vi.mocked(ProductAnalysisRepository).mockImplementation(() => mockAnalysisRepo as any)
+    vi.mocked(BrandProfileRepository).mockImplementation(() => mockBrandRepo as any)
+    vi.mocked(OccasionRepository).mockImplementation(() => mockOccasionRepo as any)
+    vi.mocked(ProductCopyRepository).mockImplementation(() => mockCopyRepo as any)
     vi.mocked(callCapability).mockImplementation(mockCallCapability)
     vi.mocked(createProductCopyAdapter).mockImplementation(mockCreateAdapter)
   })

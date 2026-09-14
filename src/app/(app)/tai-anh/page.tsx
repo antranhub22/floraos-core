@@ -245,7 +245,7 @@ export default function TaiAnhPage() {
     })
     setLocalPhotos((prev) => {
       const updated = [...prev, ...newPhotos].slice(0, 10)
-      if (updated.length > 0) {
+      if (updated.length > 0 && updated[0]) {
         setAnalysisImageUrl(updated[0].previewUrl)
       }
       return updated
@@ -821,10 +821,11 @@ export default function TaiAnhPage() {
     })
   }
 
-  function handleFieldAdd2(key: string, item: { id: string; value: string }) {
+  function handleFieldAdd2(key: string, item: ResultFieldItem) {
+    if (!item.value) return
     setEditedFields((prev) => {
       const current = (prev?.[key] as string[]) ?? (productCopyData?.[key] as string[]) ?? []
-      return { ...(prev ?? {}), [key]: [...current, item.value] }
+      return { ...(prev ?? {}), [key]: [...current, item.value!] }
     })
   }
 

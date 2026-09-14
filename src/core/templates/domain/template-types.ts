@@ -48,40 +48,40 @@ export interface TemplateOverride {
 
 export interface InterpolationContext {
   product?: {
-    name?: string
-    sku?: string
-    style?: string
-    category?: string
-    description?: string
-  }
+    name?: string | undefined
+    sku?: string | undefined
+    style?: string | undefined
+    category?: string | undefined
+    description?: string | undefined
+  } | undefined
   flower?: {
-    summaryList?: string
-    mainTones?: string
-    facing?: string
-    wrapping?: string
-    totalStems?: number
-    items?: Array<{ name: string; quantity: number; color?: string; role?: string }>
-  }
+    summaryList?: string | undefined
+    mainTones?: string | undefined
+    facing?: string | undefined
+    wrapping?: string | undefined
+    totalStems?: number | undefined
+    items?: Array<{ name: string; quantity: number; color?: string | undefined; role?: string | undefined }> | undefined
+  } | undefined
   pricing?: {
-    sellingPrice?: number
-    sellingPriceVnd?: string
-    originalPrice?: number
-    originalPriceVnd?: string
-    discountPercent?: number
-    segment?: string
-  }
+    sellingPrice?: number | undefined
+    sellingPriceVnd?: string | undefined
+    originalPrice?: number | undefined
+    originalPriceVnd?: string | undefined
+    discountPercent?: number | undefined
+    segment?: string | undefined
+  } | undefined
   service?: {
-    giftsList?: string[]
-    giftsBullets?: string
-    commitmentsList?: string[]
-    commitmentsBullets?: string
-  }
+    giftsList?: string[] | undefined
+    giftsBullets?: string | undefined
+    commitmentsList?: string[] | undefined
+    commitmentsBullets?: string | undefined
+  } | undefined
   shop?: {
-    name?: string
-    hotline?: string
-    address?: string
-    zaloLink?: string
-    brandTone?: string
-  }
+    name?: string | undefined
+    hotline?: string | undefined
+    address?: string | undefined
+    zaloLink?: string | undefined
+    brandTone?: string | undefined
+  } | undefined
   [key: string]: unknown
 }

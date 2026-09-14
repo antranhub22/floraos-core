@@ -43,5 +43,8 @@ export const resolveAppSession = cache(async function resolveAppSession(
     orgName: described.organization?.name ?? "FloraOS",
     workspaceKind: (described.workspace?.kind as MockSession["workspaceKind"]) ?? "PRODUCTION",
     capabilities: described.capabilities,
+    organization: described.organization
+      ? { id: described.organization.id, name: described.organization.name }
+      : undefined,
   }
 })

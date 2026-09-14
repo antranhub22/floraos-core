@@ -8,13 +8,15 @@ export interface GuidanceTip {
 }
 
 export interface FeatureGuidanceCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  badgeLabel?: string
-  badgeIcon?: LucideIcon
+  badgeLabel?: string | undefined
+  tag?: string | undefined
+  badgeIcon?: LucideIcon | undefined
+  icon?: LucideIcon | undefined
   title: string
-  titleIcon?: LucideIcon
+  titleIcon?: LucideIcon | undefined
   description: string
-  tips?: Array<string | GuidanceTip>
-  maxWidthClassName?: string
+  tips?: Array<string | GuidanceTip> | undefined
+  maxWidthClassName?: string | undefined
 }
 
 /**
@@ -29,15 +31,21 @@ export interface FeatureGuidanceCardProps extends React.HTMLAttributes<HTMLDivEl
  */
 export function FeatureGuidanceCard({
   badgeLabel,
-  badgeIcon: BadgeIcon = Info,
+  tag,
+  badgeIcon,
+  icon,
   title,
-  titleIcon: TitleIcon,
+  titleIcon,
   description,
   tips = [],
   maxWidthClassName = "max-w-xl",
   className,
   ...props
 }: FeatureGuidanceCardProps) {
+  const effectiveBadgeLabel = badgeLabel ?? tag
+  const EffectiveBadgeIcon = badgeIcon ?? icon ?? Info
+  const EffectiveTitleIcon = titleIcon ?? (badgeIcon ? icon : undefined)
+
   return (
     <div
       className={cn(
@@ -47,15 +55,15 @@ export function FeatureGuidanceCard({
       )}
       {...props}
     >
-      {badgeLabel && (
+      {effectiveBadgeLabel && (
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold tracking-wider uppercase mb-2">
-          {BadgeIcon && <BadgeIcon size={13} className="text-red-600" />}
-          <span>{badgeLabel}</span>
+          {EffectiveBadgeIcon && <EffectiveBadgeIcon size={13} className="text-red-600" />}
+          <span>{effectiveBadgeLabel}</span>
         </div>
       )}
 
       <div className="text-[16px] font-extrabold text-red-950 flex items-center justify-center gap-2">
-        {TitleIcon && <TitleIcon size={18} className="text-red-600" />}
+        {EffectiveTitleIcon && <EffectiveTitleIcon size={18} className="text-red-600" />}
         <span>{title}</span>
       </div>
 

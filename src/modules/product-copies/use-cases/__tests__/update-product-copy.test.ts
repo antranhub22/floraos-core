@@ -34,7 +34,7 @@ describe("updateProductCopy", () => {
     const updateEdited = vi.fn().mockResolvedValue({})
     vi.mocked(ProductCopyRepository).mockImplementation(() => ({
       updateEdited,
-    }))
+    } as any))
 
     const validEdited = {
       suggested_name: "Updated Name",
@@ -53,7 +53,7 @@ describe("updateProductCopy", () => {
     const updateEdited = vi.fn().mockRejectedValue(new Error("NOT_FOUND"))
     vi.mocked(ProductCopyRepository).mockImplementation(() => ({
       updateEdited,
-    }))
+    } as any))
 
     const validEdited = {
       suggested_name: "Updated Name",
@@ -70,7 +70,7 @@ describe("updateProductCopy", () => {
     const updateEdited = vi.fn().mockRejectedValue(new Error("CANNOT_EDIT"))
     vi.mocked(ProductCopyRepository).mockImplementation(() => ({
       updateEdited,
-    }))
+    } as any))
 
     const validEdited = {
       suggested_name: "Updated Name",

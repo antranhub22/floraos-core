@@ -44,21 +44,21 @@ export interface QualityIndicator {
 }
 
 export interface ResultCardProps {
-  images?: ResultImage[]
-  beforeAfter?: { beforeSrc: string; afterSrc: string; caption?: string }
+  images?: ResultImage[] | undefined
+  beforeAfter?: { beforeSrc: string; afterSrc: string; caption?: string } | undefined
   fields: ResultField[]
-  quality?: QualityIndicator
+  quality?: QualityIndicator | undefined
   judgment: JudgmentState
-  onSaveDraft?: () => void
-  onReject?: () => void
-  onApprove?: () => void
-  onRunAgain?: () => void
-  onSkip?: () => void
-  onFieldChange?: (key: string, value: string | number | string[]) => void
-  onFieldAdd?: (key: string, item: ResultFieldItem) => void
-  onFieldRemove?: (key: string, itemId: string) => void
-  onItemChange?: (key: string, itemId: string, item: ResultFieldItem) => void
-  disabled?: boolean
+  onSaveDraft?: (() => void) | undefined
+  onReject?: (() => void) | undefined
+  onApprove?: (() => void) | undefined
+  onRunAgain?: (() => void) | undefined
+  onSkip?: (() => void) | undefined
+  onFieldChange?: ((key: string, value: string | number | string[]) => void) | undefined
+  onFieldAdd?: ((key: string, item: ResultFieldItem) => void) | undefined
+  onFieldRemove?: ((key: string, itemId: string) => void) | undefined
+  onItemChange?: ((key: string, itemId: string, item: ResultFieldItem) => void) | undefined
+  disabled?: boolean | undefined
 }
 
 function ConfidenceBadge({ value }: { value: number | null | undefined }) {

@@ -31,7 +31,7 @@ describe("getProductCopy", () => {
 
     vi.mocked(ProductCopyRepository).mockImplementation(() => ({
       findById: vi.fn().mockResolvedValue(mockCopy),
-    }))
+    } as any))
 
     const result = await getProductCopy(mockTenantContext, "copy-1")
 
@@ -41,7 +41,7 @@ describe("getProductCopy", () => {
   it("throws NOT_FOUND when copy not found", async () => {
     vi.mocked(ProductCopyRepository).mockImplementation(() => ({
       findById: vi.fn().mockResolvedValue(null),
-    }))
+    } as any))
 
     await expect(getProductCopy(mockTenantContext, "non-existent")).rejects.toThrow(AppError)
   })
@@ -57,7 +57,7 @@ describe("listProductCopies", () => {
 
     vi.mocked(ProductCopyRepository).mockImplementation(() => ({
       listByProduct: vi.fn().mockResolvedValue(mockCopies),
-    }))
+    } as any))
 
     const result = await listProductCopies(mockTenantContext, "product-1")
 
@@ -69,7 +69,7 @@ describe("listProductCopies", () => {
 
     vi.mocked(ProductCopyRepository).mockImplementation(() => ({
       listPendingApproval: vi.fn().mockResolvedValue(mockCopies),
-    }))
+    } as any))
 
     const result = await listProductCopies(mockTenantContext)
 

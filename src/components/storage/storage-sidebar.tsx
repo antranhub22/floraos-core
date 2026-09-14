@@ -63,9 +63,9 @@ export function StorageSidebar({
   // Combined unified items list with pipeline progress tags
   const unifiedItems = useMemo(() => {
     type UnifiedItem =
-      | { type: "raw"; id: string; data: RawAssetItem; title: string; subtitle: string; imageUrl?: string | null }
-      | { type: "approved"; id: string; data: ApprovedAnalysisItem; title: string; subtitle: string; imageUrl?: string | null }
-      | { type: "finalized"; id: string; data: SalesPitchData; title: string; subtitle: string; imageUrl?: string | null }
+      | { type: "raw"; id: string; data: RawAssetItem; title: string; subtitle: string; imageUrl?: string | null | undefined }
+      | { type: "approved"; id: string; data: ApprovedAnalysisItem; title: string; subtitle: string; imageUrl?: string | null | undefined }
+      | { type: "finalized"; id: string; data: SalesPitchData; title: string; subtitle: string; imageUrl?: string | null | undefined }
 
     const items: UnifiedItem[] = []
 
