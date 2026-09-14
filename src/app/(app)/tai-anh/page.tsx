@@ -122,11 +122,11 @@ function mapSalesFields(raw: Record<string, unknown>): ResultField[] {
 function mapProductCopyToFields2(copy: Record<string, unknown>, analysisRaw: Record<string, unknown> | null): ResultField[] {
   const identity = analysisRaw ? (analysisRaw.identity as Record<string, unknown> | undefined) ?? {} : {}
   return [
-    { key: "name", label: "Tên sản phẩm", type: "text", editable: true, value: (copy.suggested_name as string) ?? (identity.category as string) ?? "—" },
+    { key: "name", label: "Tên sản phẩm", type: "text", editable: true, value: (copy.suggested_name as string) ?? (identity.style as string) ?? "—" },
     { key: "desc", label: "Mô tả bó hoa", type: "textarea", editable: true, value: (copy.suggested_description as string) ?? "" },
     { key: "tags", label: "Thẻ phân loại", type: "list", editable: true, value: (copy.suggested_tags as string[]) ?? [], confidence: null, placeholder: "Thêm thẻ..." },
     { key: "tones", label: "Tone màu dạng nhãn bán hàng", type: "list", editable: true, value: (copy.suggested_tags as string[]) ?? (Array.isArray(identity.color_tone) ? identity.color_tone as string[] : []), confidence: null, placeholder: "Thêm tone..." },
-    { key: "style", label: "Phong cách thiết kế", type: "text", editable: true, value: (copy.suggested_occasions as string[]) ? (copy.suggested_occasions as string[]).join(", ") : ((identity.style as string) ?? "—") },
+    { key: "style", label: "Phong cách thiết kế", type: "text", editable: true, value: (copy.suggested_style as string) ?? (identity.style as string) ?? "—" },
     { key: "occasions", label: "Dịp phù hợp", type: "list", editable: true, value: (copy.suggested_occasions as string[]) ?? [], confidence: null, placeholder: "Thêm dịp..." },
     { key: "price-segment", label: "Phân khúc giá gợi ý", type: "readonly", editable: false, value: (copy.suggested_price_segment as string) ?? "—" },
   ]
@@ -414,6 +414,7 @@ export default function TaiAnhPage() {
     generateProductCopyApi(analysisId, null).then((result) => {
       setCopyLoading(false)
       if (result) {
+        setEditedFields(null)
         setPhase("result2")
       }
     })
@@ -543,8 +544,9 @@ export default function TaiAnhPage() {
 
   async function handleSaveDraft2() {
     if (!copyId) return
+    if (!editedFields || Object.keys(editedFields).length === 0) return
     try {
-      const res = await updateProductCopyApi(copyId, editedFields ?? {})
+      const res = await updateProductCopyApi(copyId, editedFields)
       if (res) {
         setSaved2(true)
         setTimeout(() => setSaved2(false), 2000)
@@ -632,7 +634,7 @@ export default function TaiAnhPage() {
               </div>
               <div className="text-[14px] font-semibold">Chụp ảnh hoặc chọn từ thư viện</div>
               <div className="text-[12px] text-text-muted">Nhiều ảnh cùng lúc được — mỗi ảnh một lượt phân tích</div>
-              <Button onClick={() => { loadAssets(); setPhase("confirm") }}>Chọn ảnh</Button>
+              <Button onClick={() => { loadAssets() }}>Chọn ảnh</Button>
             </Card>
             {assets.length > 0 && (
               <div className="flex flex-wrap gap-2 max-w-md justify-center">
@@ -652,6 +654,15 @@ export default function TaiAnhPage() {
                   </label>
                 ))}
               </div>
+            )}
+            {assets.length > 0 && (
+              <Button
+                className="h-[50px] px-8"
+                onClick={goConfirm}
+                disabled={selectedAssetIds.length === 0}
+              >
+                Tiếp tục — {selectedAssetIds.length} ảnh đã chọn
+              </Button>
             )}
             {loadingAssets && (
               <div className="text-[13px] text-text-muted">Đang tải danh sách ảnh…</div>
@@ -816,13 +827,16 @@ export default function TaiAnhPage() {
             </div>
 
             <ResultCard
-              fields={MOCK_FIELDS_RESULT2}
+              fields={productCopyData ? mapProductCopyToFields2(productCopyData as Record<string, unknown>, analysisData) : MOCK_COPY_FIELDS_PLACEHOLDER}
               judgment={judgment2}
               quality={{ score: 89, label: "Nội dung phù hợp giọng thương hiệu", status: "safe" }}
               onSaveDraft={handleSaveDraft2}
               onReject={handleReject2}
               onApprove={handleApprove2}
-              disabled={true}
+              onFieldChange={handleFieldChange2}
+              onFieldAdd={handleFieldAdd2}
+              onFieldRemove={handleFieldRemove2}
+              disabled={copyApprovalState === "APPROVED" || !canH6}
             />
 
             {saved2 && (
@@ -889,12 +903,12 @@ const MOCK_FIELDS_RESULT1_PLACEHOLDER: ResultField[] = [
   { key: "confidence", label: "Độ tin cậy tổng thể", type: "readonly", editable: false, value: "—" },
 ]
 
-const MOCK_FIELDS_RESULT2: ResultField[] = [
-  { key: "name", label: "Tên sản phẩm", type: "text", editable: true, value: "Bó hồng đỏ 20 cành" },
-  { key: "desc", label: "Mô tả bó hoa", type: "textarea", editable: true, value: "Bó hoa hồng đỏ 20 cành, kết hợp lá xanh tươi và nơ trắng tinh tế, phù hợp cho các dịp trang trọng." },
+const MOCK_COPY_FIELDS_PLACEHOLDER: ResultField[] = [
+  { key: "name", label: "Tên sản phẩm", type: "text", editable: true, value: "—" },
+  { key: "desc", label: "Mô tả bó hoa", type: "textarea", editable: true, value: "" },
   { key: "tags", label: "Thẻ phân loại", type: "list", editable: true, value: [], confidence: null, placeholder: "Thêm thẻ..." },
   { key: "tones", label: "Tone màu dạng nhãn bán hàng", type: "list", editable: true, value: [], confidence: null, placeholder: "Thêm tone..." },
-  { key: "style", label: "Phong cách thiết kế", type: "text", editable: true, value: "Tay vợt sang trọng" },
+  { key: "style", label: "Phong cách thiết kế", type: "text", editable: true, value: "—" },
   { key: "occasions", label: "Dịp phù hợp", type: "list", editable: true, value: [], confidence: null, placeholder: "Thêm dịp..." },
-  { key: "price-segment", label: "Phân khúc giá gợi ý", type: "readonly", editable: false, value: "Cao cấp" },
+  { key: "price-segment", label: "Phân khúc giá gợi ý", type: "readonly", editable: false, value: "—" },
 ]
