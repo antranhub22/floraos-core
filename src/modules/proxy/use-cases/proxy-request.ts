@@ -8,10 +8,13 @@
  */
 
 import { AppError } from "@/core/http/errors"
-import { readSsoCookie } from "@/core/http/cookies"
+import { readSsoCookie, serializeSsoCookie } from "@/core/http/cookies"
 import { env } from "@/lib/env"
+import { resolveSession } from "@/modules/organization/use-cases/resolve-session"
+import { ssoClaimsFor, SSO_TOKEN_TTL_SECONDS } from "@/modules/sso/domain/sso-claims"
+import { signSsoToken, verifySsoToken } from "@/modules/sso/infra/sso-jwt"
 import { proxyTimeoutSignal, proxyRequest, ProxyError, proxyErrorMessage } from "../infra/proxy-http-adapter"
-import { requireProxyUrl, SSO_HEADER, AUTHORIZATION_HEADER, NO_BODY_METHODS, type ProxyClient } from "../domain/proxy-rules"
+import { requireProxyUrl, SSO_HEADER, AUTHORIZATION_HEADER, NO_BODY_METHODS, PROXY_TIMEOUT_MS, type ProxyClient } from "../domain/proxy-rules"
 
 export { ProxyClient }
 
@@ -93,7 +96,33 @@ export async function callProxy(input: {
     input.client,
     input.client === "SOCIALFLOW" ? env.SOCIALFLOW_URL : env.LOCALBUDD_URL
   )
-  const identity = readProxyIdentity(input.request)
+  let identity = readProxyIdentity(input.request)
+  let freshSsoCookieHeader: string | null = null
+
+  // Tự động cấp/làm mới SSO JWT từ floraos_session nếu thiếu hoặc token đã hết hạn (15 phút)
+  const isSsoExpired =
+    identity.kind === "sso" &&
+    identity.value.split(".").length === 3 &&
+    verifySsoToken(identity.value, new Date()) === null
+
+  if (identity.kind === "none" || isSsoExpired) {
+    try {
+      const resolved = await resolveSession(input.request)
+      if (resolved.session.organization_id) {
+        const claims = ssoClaimsFor({
+          userId: resolved.user.id,
+          organizationId: resolved.session.organization_id,
+          email: resolved.user.email,
+          now: new Date(),
+        })
+        const freshToken = signSsoToken(claims)
+        identity = { kind: "sso", value: freshToken }
+        freshSsoCookieHeader = serializeSsoCookie(freshToken, SSO_TOKEN_TTL_SECONDS)
+      }
+    } catch {
+      // Bỏ qua nếu không có phiên
+    }
+  }
 
   const method = input.request.method.toUpperCase()
   const contentType = input.request.headers.get("content-type") ?? undefined
@@ -119,13 +148,17 @@ export async function callProxy(input: {
       body,
       signal,
     })
-    return { status: res.status, headers: res.headers, body: res.body }
+    const returnHeaders = { ...res.headers }
+    if (freshSsoCookieHeader) {
+      returnHeaders["set-cookie"] = freshSsoCookieHeader
+    }
+    return { status: res.status, headers: returnHeaders, body: res.body }
   } catch (err) {
     if (err instanceof ProxyError) {
       throw new ProxyRouteError(err.message, "INTERNAL")
     }
     if (err instanceof Error && err.name === "AbortError") {
-      throw new ProxyRouteError(`Proxy sang ${input.client} timeout sau ${20}s`, "INTERNAL")
+      throw new ProxyRouteError(`Proxy sang ${input.client} timeout sau ${Math.round(PROXY_TIMEOUT_MS / 1000)}s`, "INTERNAL")
     }
     throw new ProxyRouteError(
       `Không gọi được ${input.client}: ${err instanceof Error ? err.message : String(err)}`,

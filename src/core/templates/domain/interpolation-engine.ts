@@ -27,20 +27,22 @@ export function resolveVariablePath(context: InterpolationContext, key: string):
   return String(current)
 }
 
+import { sanitizeFlowerContent } from "@/core/ai/domain/flower-content-guard"
+
 /**
  * Trộn các biến số trong chuỗi template theo định dạng `{{key}}` hoặc `{{key | default: "..."}}`
  */
 export function interpolateTemplate(
   templateString: string,
   context: InterpolationContext,
-  options?: { fallback?: string }
+  options?: { fallback?: string; sanitize?: boolean; brandForbiddenStyles?: string | null }
 ): string {
   if (!templateString) return ""
 
   // Regex nhận diện {{ key }} hoặc {{ key | default: "giá trị mặc định" }}
   const tokenRegex = /\{\{\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*default:\s*["']([^"']*)["'])?\s*\}\}/g
 
-  return templateString.replace(tokenRegex, (match, key, defaultValue) => {
+  let result = templateString.replace(tokenRegex, (match, key, defaultValue) => {
     const resolved = resolveVariablePath(context, key)
     if (resolved !== undefined && resolved !== "") {
       return resolved
@@ -50,7 +52,17 @@ export function interpolateTemplate(
     }
     return options?.fallback ?? ""
   })
+
+  if (options?.sanitize) {
+    const sanitizedRes = sanitizeFlowerContent(result, {
+      brandForbiddenStyles: options.brandForbiddenStyles,
+    })
+    result = sanitizedRes.sanitizedText
+  }
+
+  return result
 }
+
 
 /**
  * Trích xuất danh sách tất cả các biến số được sử dụng trong chuỗi template

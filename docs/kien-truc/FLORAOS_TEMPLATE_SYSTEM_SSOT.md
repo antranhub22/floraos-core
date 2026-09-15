@@ -17,7 +17,7 @@
    - [Chức năng 1: Phân tích Ảnh Sản phẩm (Product Analysis M01)](#chức-năng-1-phân-tích-ảnh-sản-phẩm-product-analysis-m01)
    - [Chức năng 2: Studio Sáng tạo Ảnh (Creative Studio M04)](#chức-năng-2-studio-sáng-tạo-ảnh-creative-studio-m04)
    - [Chức năng 3: Studio Video Ngắn (Video Studio M05)](#chức-năng-3-studio-video-ngắn-video-studio-m05)
-   - [Chức năng 4: Cỗ máy Nội dung Đa kênh (Content Engine M06)](#chức-năng-4-cỗ-máy-nội-dung-đa-kênh-content-engine-m06)
+   - [Chức năng 4: Cỗ máy Nội dung Đa kênh (Content Engine M07 — SocialFlow)](#chức-năng-4-cỗ-máy-nội-dung-đa-kênh-content-engine-m07--socialflow)
    - [Chức năng 5: Đăng bài Mạng xã hội (Social Publishing M07)](#chức-năng-5-đăng-bài-mạng-xã-hội-social-publishing-m07)
    - [Chức năng 6: Danh mục & Báo giá Thông minh (Catalog & Pricing M02/M03)](#chức-năng-6-danh-mục--báo-giá-thông-minh-catalog--pricing-m02m03)
    - [Chức năng 7: Khách hàng & Chăm sóc Tự động (CRM & Retention M08)](#chức-năng-7-khách-hàng--chăm-sóc-tự-động-crm--retention-m08)
@@ -141,9 +141,10 @@ src/
 
 ---
 
-### Chức năng 4: Cỗ máy Nội dung Đa kênh (Content Engine M06)
+### Chức năng 4: Cỗ máy Nội dung Đa kênh (Content Engine M07 — SocialFlow)
 > **Đường dẫn thư mục:** `src/components/templates/content-engine/`  
-> **Màn hình sử dụng:** `/noi-dung`
+> **Màn hình sử dụng:** `/noi-dung`  
+> **Kiến trúc phân bổ:** UI Client nằm ở `floraos-core`, backend AI Content Engine nằm ở **`SocialFlow`** (gọi qua proxy `/api/v1/proxy/api/m07/*?client=SOCIALFLOW` kèm SSO JWT). *Lưu ý: M06 là Catalog & QR thuộc `LocalBudd`, không phải Content Engine.*
 
 | File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
 |---|---|---|---|

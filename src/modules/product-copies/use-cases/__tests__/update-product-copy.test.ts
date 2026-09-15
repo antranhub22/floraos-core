@@ -82,4 +82,16 @@ describe("updateProductCopy", () => {
 
     await expect(updateProductCopy(mockTenantContext, "copy-1", validEdited)).rejects.toThrow("CANNOT_EDIT")
   })
+
+  it("throws VALIDATION_FAILED when edited content contains flower banned phrases", async () => {
+    const bannedEdited = {
+      suggested_name: "Bó hoa vĩnh cửu không bao giờ tàn",
+      suggested_description: "Cam kết xả kho lỗ vốn",
+      suggested_tags: ["hoa vĩnh cửu"],
+    }
+
+    await expect(
+      updateProductCopy(mockTenantContext, "copy-1", bannedEdited)
+    ).rejects.toThrow(AppError)
+  })
 })

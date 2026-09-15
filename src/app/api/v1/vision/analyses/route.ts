@@ -66,8 +66,13 @@ export const GET = handle(async (request) => {
     throw validationFailed({ limit: "Phải là số nguyên" })
   }
 
-  if (approvalState === "APPROVED") {
-    if (!hasCapability(ctx, "H5") && !hasCapability(ctx, "H3")) {
+  const isApproved =
+    approvalState === "APPROVED" ||
+    approvalState === "approved" ||
+    url.searchParams.get("approved") === "true"
+
+  if (isApproved) {
+    if (!hasCapability(ctx, "H5") && !hasCapability(ctx, "H3") && !hasCapability(ctx, "L1")) {
       requireCapability(ctx, "H5")
     }
     const result = await listApprovedAnalyses(ctx, { limit, cursor: url.searchParams.get("cursor") })

@@ -16,6 +16,7 @@ import {
   Sparkles,
   Folder,
   Camera,
+  Share2,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
@@ -34,6 +35,7 @@ const SYSTEM_ITEMS: NavItem[] = [
   { href: "/cai-dat-ai", label: "Chính sách AI", icon: FlaskConical },
   { href: "/ho-so", label: "Hồ sơ", icon: CircleUserRound },
   { href: "/tich-hop", label: "Tích hợp", icon: BookOpen },
+  { href: "/ket-noi", label: "Kết nối nền tảng", icon: Share2 },
   { href: "/muc-dung", label: "Mức dùng", icon: WalletCards },
   { href: "/audit", label: "Nhật ký", icon: FileText },
 ]
@@ -47,6 +49,7 @@ const FUNCTION_ITEMS: NavItem[] = [
   { href: "/video", label: "Video Studio", icon: Home },
   { href: "/noi-dung", label: "Content Engine", icon: Home },
   { href: "/lich-dang", label: "Social Publishing", icon: Home },
+  { href: "/ket-noi", label: "Kết nối nền tảng", icon: Share2 },
   { href: "/catalog", label: "Catalog & Website", icon: Home },
   { href: "/khach-hang", label: "CRM & Khách hàng", icon: Home },
   { href: "/don-hang", label: "Đơn hàng", icon: Home },

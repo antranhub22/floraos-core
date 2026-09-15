@@ -208,7 +208,8 @@
 
 ## #4 — AI Content Engine (`src/app/(app)/noi-dung/page.tsx`)
 
-**Chờ P18 (M07) xây dựng.** Không có backend API nào cho content generation.
+**Chờ P18 (M07) tích hợp.** Backend engine thực thi nằm ở **`SocialFlow`** (pipeline 6-agent: `creator.py`, `PLATFORM_PROMPTS`, `brand_config`). Kế hoạch kết nối tương tự Creative Studio (M04b): sử dụng Server-side Proxy `/api/v1/proxy/api/m07/generate?client=SOCIALFLOW` kèm SSO JWT, gọi sang SocialFlow để sinh nội dung đa kênh dựa trên Product Master + BrandProfile.
+
 
 ---
 

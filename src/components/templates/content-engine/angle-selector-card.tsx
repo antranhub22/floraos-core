@@ -42,7 +42,7 @@ export function AngleSelectorCard({
   return (
     <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
       <div>
-        <div className="text-xs font-semibold text-text-muted">M06 Copywriting Angle</div>
+        <div className="text-xs font-semibold text-text-muted">Bước 2: Chọn góc độ tiếp cận (M07 Copywriting Angle)</div>
         <div className="text-[16px] font-extrabold text-text">Chọn góc tiếp cận bài viết</div>
       </div>
 

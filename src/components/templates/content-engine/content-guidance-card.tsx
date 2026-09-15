@@ -7,7 +7,7 @@ import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guida
 export function ContentGuidanceCard() {
   return (
     <FeatureGuidanceCard
-      tag="HƯỚNG DẪN MÁY NỘI DUNG M06"
+      tag="HƯỚNG DẪN MÁY NỘI DUNG M07"
       icon={Sparkles}
       title="Sinh bài viết bán hàng đa kênh & đa góc độ"
       description="Tự động tạo nội dung tiếp thị thích ứng theo văn phong của từng mạng xã hội: Facebook cảm xúc, TikTok bắt trend, Instagram hình ảnh và Zalo ngắn gọn."

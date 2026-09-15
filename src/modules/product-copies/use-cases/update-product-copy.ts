@@ -1,6 +1,7 @@
 import { AppError } from "@/core/http/errors";
 import { ProductCopyRepository } from "../infra/product-copy-repository";
-import { validateProductCopyEdited } from "../domain/product-copy-rules";
+import { validateProductCopyEdited, type ProductCopyEdited } from "../domain/product-copy-rules";
+import { assertFlowerContentAllowed } from "@/core/ai/domain/flower-content-guard";
 import type { TenantContext } from "@/core/tenancy";
 
 /**
@@ -14,6 +15,14 @@ export async function updateProductCopy(
 ): Promise<void> {
   if (!validateProductCopyEdited(edited)) {
     throw new AppError("VALIDATION_FAILED", "Dữ liệu sửa không hợp lệ");
+  }
+
+  const d = edited as ProductCopyEdited;
+  if (d.suggested_name) {
+    assertFlowerContentAllowed(d.suggested_name, "Tên sản phẩm");
+  }
+  if (d.suggested_description) {
+    assertFlowerContentAllowed(d.suggested_description, "Mô tả sản phẩm");
   }
 
   const repo = new ProductCopyRepository();

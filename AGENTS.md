@@ -9,7 +9,7 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 | Việc | Lệnh |
 |---|---|
 | Cài | `docker compose up -d && npm i && npx prisma generate && npx prisma db push && npx prisma db seed` |
-| Chạy toàn bộ (Web + DB + Workers) | `npm run dev:all` (tự bật Docker DB + Web 3100 + Worker Vision + Worker Media) |
+| Chạy toàn bộ (Web + DB + Workers + SocialFlow M07) | `npm run dev:all` (tự bật Docker DB + Ollama Qwen + Web 3100 + Worker Vision + Worker Media + SocialFlow 8000) |
 | Chạy web | `npm run dev` |
 | Chạy worker media | `npm run worker:media` (hoặc `cd workers && python -m media_ai.worker`) |
 | Test web | `npm test` |
@@ -164,6 +164,7 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Quét job treo | `scripts/scan-stuck-jobs.ts` | `YC-J10`, chạy bằng cron ngoài, chưa gắn lịch thật |
 | Module tích hợp (P7) | `src/modules/integration/` | `integration_tokens` (`YC-T8`, HMAC `INTEGRATION_TOKEN_SECRET`) · `resolve-integration-context.ts` (`requireIntegrationContext` + `toTenantContext` — tái dùng thẳng use-case của phiên người dùng, `capabilities` luôn rỗng) · `issue/rotate/revoke/list-integration-token.ts` (`F9`) · `get-master-image.ts` · `check-capabilities.ts`. Route quản trị `/api/v1/integration-tokens*` (`F9`) · route máy gọi máy `/api/v1/integration/*` (products, products/:id/master-image, business-profile, brand-profile, jobs, usage, capabilities/check) |
 | Module nạp AVI GIFT (P8) | `src/modules/avi-gift-import/` | `domain/catalog-mapping.ts` thuần (`mapCatalogRowToProduct`/`deriveProductStatus`/`validateCatalogRow`) · `use-cases/bootstrap-avi-gift-organization.ts` (tổ chức `SINGLE`, KHÔNG tái dùng `signUp` vì đó cố định `EXPERIENCE`+trial) · `use-cases/import-catalog.ts` (idempotent theo `code`, gọi thẳng `ProductRepository`). Nguồn Excel đọc bằng Python NGOÀI `src/` — xem `scripts/nap-avi-gift/doc-excel.py` |
+| An toàn nội dung & Từ điển từ cấm | `docs/kien-truc/TU_DIEN_TU_CAM_CONTENT_NGANH_HOA.md` + `src/core/ai/domain/flower-content-banned-lexicon.json` | SSOT kiểm soát chất lượng nội dung ngành hoa; `FlowerContentGuard` (`flower-content-guard.ts`) áp dụng toàn hệ thống (chặn HARD_BLOCK, cảnh báo WARNING, tích hợp `brand_profiles.forbidden_styles`) |
 | Tài liệu kiến trúc | `docs/kien-truc/` | 8 tệp, xem `TRANG_THAI.md` |
 
 ## Bẫy

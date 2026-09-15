@@ -37,10 +37,10 @@ export const SSO_HEADER = "x-floraos-sso"
 /** Tên header core forward token máy-gọi-máy. */
 export const AUTHORIZATION_HEADER = "authorization"
 
-/** Khoảng timeout khi gọi sibling, giây. Không để quá dài: proxy là đường đi
- * thay mặt, response phải về trình duyệt nhanh; job dài thì sibling trả
- * `job_id` và dashboard poll, không block proxy. */
-export const PROXY_TIMEOUT_MS = 20_000
+/** Khoảng timeout khi gọi sibling, mili-giây. Tăng lên 120s để đảm bảo đủ thời gian
+ * cho các tác vụ AI suy luận cục bộ (Local LLM Qwen sinh đa kênh Facebook,
+ * Instagram, TikTok, Zalo). */
+export const PROXY_TIMEOUT_MS = 120_000
 
 /** Danh sách method không forward body (GET/HEAD/DELETE). */
 export const NO_BODY_METHODS: readonly string[] = ["GET", "HEAD", "DELETE"]
