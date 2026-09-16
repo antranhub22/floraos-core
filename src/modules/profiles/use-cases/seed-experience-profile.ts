@@ -31,7 +31,7 @@ export const MOC_LAN_BRAND_PROFILE = {
   text_color: "#111827",
   font_heading: "Playfair Display",
   font_body: "Inter",
-  logo_asset_id: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=300&auto=format&fit=crop&q=80",
+  logo_asset_id: "/brand/moc-lan-logo.jpg",
   tone_of_voice: "romantic",
   hashtags: {
     default: ["#tiemhoamoclan", "#hoatuoisaigon", "#hoathietke", "#hoasinhnhat", "#hoatinhyeu"],
