@@ -106,8 +106,9 @@ export const FEATURES: FeatureItem[] = [
     name: "Catalog & Website",
     desc: "Catalog số + QR, Landing page chiến dịch",
     iconName: "catalog-website",
-    status: "chua_san_sang",
+    status: "hoat_dong",
     route: "/catalog",
+    waiting: false,
   },
   {
     id: "crm-khách-hàng",

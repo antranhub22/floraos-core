@@ -1,5 +1,3 @@
-import { validationFailed } from "@/core/http/errors"
-
 export const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export type CatalogLinkFilters = {

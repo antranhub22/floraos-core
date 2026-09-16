@@ -45,7 +45,7 @@ Ba module vận hành không thuộc engine nào vì chúng không sinh nội du
 | M04b | Ảnh marketing — xoá nền, đổi nền, mở rộng khung, retouch, watermark, biến thể | `SocialFlow` | Chưa có |
 | M04c | Video marketing — Reel, TikTok, Story, slideshow, motion quảng cáo | `SocialFlow` | Một phần |
 | M05 | Landing page chiến dịch | `LocalBudd` | Đã có |
-| M06 | Catalog và QR catalog | `LocalBudd` · `floraos-core` (liên kết) | Chưa có |
+| M06 | Catalog và QR catalog | `floraos-core` (M06/M05) | Đã hoàn thành (100% Commercial Ready) |
 | M07 | Nội dung và đăng bài đa nền tảng | `SocialFlow` | Một phần |
 | M08 | Trợ lý hội thoại khách hàng | Chưa có repo | Chưa có |
 | M09 | Khách hàng và nhắc mua lại | `floraos-core` | Chưa có |
@@ -131,11 +131,12 @@ Video từng nằm ngoài phạm vi bản này. Bộ tính năng hoàn chỉnh �
 
 | Tính năng | Trạng thái | Nằm ở đâu |
 |---|---|---|
-| Landing page theo chiến dịch | Đã có | `LocalBudd`: dự án → gắn sản phẩm → định hướng thẩm mỹ → layout → preview |
-| Landing page dựng từ hồ sơ thương hiệu của core | Đã có | `design_contract` dựng từ `brand_profiles` + `business_profiles`, `forbidden_styles` áp như ràng buộc cứng |
-| Catalog số — danh mục, giá, dịp, màu, loại hoa, bộ sưu tập | Chưa có | Không có route hay màn hình nào |
-| QR catalog tại cửa hàng | Chưa có | Liên kết catalog thuộc core (nhiều module đọc), trang catalog thuộc `LocalBudd` |
-| Khuôn chiến dịch theo mùa — 20/10, Valentine, 8/3, Mother's Day, khai trương, hoa cưới | Chưa có | Danh mục dịp là dữ liệu cấu hình cấp tổ chức |
+| Landing page theo chiến dịch | Đã có | `floraos-core` M05/M06: tab Landing page, 4 Archetypes (Minimal Luxury, Pastel Romantic, Festive Sale, Modern Split), Live preview Mobile/Desktop, Lead CTA form |
+| Landing page dựng từ hồ sơ thương hiệu của core | Đã có | `brand_profiles` + `business_profiles` (logo, màu chủ đạo, số điện thoại, địa chỉ), áp dụng trực tiếp lên `/c/[slug]` |
+| Catalog số — danh mục, giá, dịp, màu, loại hoa, bộ sưu tập | Đã có | Tuyến `/catalog` quản trị + storefront công khai `/c/[slug]`, tìm kiếm, lọc dịp, giá, modal chi tiết sản phẩm và nút Zalo 1-chạm |
+| QR catalog tại cửa hàng | Đã có | `src/core/media/qr-engine.ts`, tải PNG sắc nét 500px 1-chạm phục vụ in ấn và đặt tại bàn |
+| Khuôn chiến dịch theo mùa — 20/10, Valentine, 8/3, Ngày của Mẹ, Khai trương, Hoa cưới | Đã có | `CAMPAIGN_OCCASIONS` & `CAMPAIGN_ARCHETYPES` tại `landing-campaign-constants.ts` |
+| Chia sẻ đa nền tảng & Cầu nối M07 Content Engine | Đã có | Modal chia sẻ Facebook, Zalo, Copy caption; tích hợp 2 chiều sang `/noi-dung?catalog_slug=...` tự gắn link đặt hoa vào bài viết social |
 
 ### 2.7 CRM và khách hàng — M09
 
@@ -261,8 +262,8 @@ M09 và M10 mang tên, số điện thoại, địa chỉ, ngày kỷ niệm c�
 | 3 | M04a Image Studio | Một phần | Tăng cường thật thay `PassthroughEnhancer`; Smart Reframe cho bốn tỉ lệ; màn bắt đầu một lượt tối ưu |
 | 4 | M04b Creative Studio | Chưa có | Xoá nền, đổi nền, mở rộng khung, watermark, biến thể; đường đọc Master Image đã duyệt |
 | 5 | M04c Video Studio | Một phần | Sáu khuôn đầu ra; lớp dựng cảnh; `organization_id` trên `video_jobs`; usage về core |
-| 6 | M07 Content và Publishing | Một phần | Chiến lược nội dung ngành hoa; adapter Zalo OA; nội dung sinh từ sản phẩm thật; đóng ranh giới tổ chức trên toàn bộ route |
-| 7 | M06 Catalog | Chưa có | Trang catalog, bộ lọc, bộ sưu tập, liên kết QR |
+| 7 | M06 Catalog & Website | Đã hoàn thành | E-Catalog trực tuyến (/catalog & /c/[slug]), bộ lọc dịp/giá, Landing Page chiến dịch, QR marketing 1-chạm, chia sẻ Facebook/Zalo, cầu nối M07 |
+
 
 Bốn nhóm còn lại — M09 khách hàng, M10 đơn hàng, M08 hội thoại, M11 phân tích nâng cao — mở sau MVP. Riêng phần phân tích cơ bản (reach, engagement, top post) dùng được ngay từ số liệu `SocialFlow` đã có.
 

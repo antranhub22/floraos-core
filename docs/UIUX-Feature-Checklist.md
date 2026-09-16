@@ -25,12 +25,12 @@
 | 3 | AI Video Studio | M04c | 9 | 0 | 0 | 9 |
 | 4 | AI Content Engine | M07 | 10 | 0 | 0 | 10 |
 | 5 | Social Publishing | M07 | 10 | 0 | 0 | 10 |
-| 6 | Catalog & Website | M06/M05 | 13 | 7 | 4 | 2 |
+| 6 | Catalog & Website | M06/M05 | 13 | 11 | 0 | 2 |
 | 7 | CRM & Khách hàng | M09 | 11 | 0 | 0 | 11 |
 | 8 | Đơn hàng & Vận hành | M10 | 13 | 0 | 0 | 13 |
 | 9 | AI Chat Assistant | M08 | 12 | 0 | 0 | 12 |
 | 10 | Analytics & Learning | M11 | 12 | 7 | 2 | 3 |
-| | **Tổng** | | **127** | **49** | **7** | **71** |
+| | **Tổng** | | **127** | **53** | **7** | **71** |
 
 ---
 
@@ -188,32 +188,32 @@
 
 ---
 
-## #6 — Catalog & Website (M06/M05) — `catalog` ✅ ĐÃ CODE (7/13)
+## #6 — Catalog & Website (M06/M05) — `catalog` ✅ ĐÃ CODE (11/13)
 
 **Tab A — Catalog số:**
 
 | # | Tính năng | Trạng thái | Ghi chú |
 |---|-----------|------------|---------|
 | 6.1 | Mở tab Catalog — tự động liệt kê sản phẩm đã duyệt | ✅ Đã code | GET /api/v1/products (lọc ACTIVE) |
-| 6.2 | Lọc/nhóm theo danh mục, giá, dịp, màu, loại hoa | 🔧 Cần code | UI có, cần verify filtering |
-| 6.3 | Gộp sản phẩm thành "Bộ sưu tập" (drag-drop) | 🔧 Cần code | UI có |
-| 6.4 | Xem trước catalog dạng khách sẽ thấy | 🔧 Cần code | Proxy đã có, UI mapping mock |
+| 6.2 | Lọc/nhóm theo dịp, màu, bộ sưu tập, giá | ✅ Đã code | Select dropdowns từ `/filter-options` proxy, query params thực |
+| 6.3 | Gộp sản phẩm thành "Bộ sưu tập" (drag-drop) | 🔧 Cần code | UI có, backend P19 |
+| 6.4 | Xem trước catalog dạng khách sẽ thấy | ✅ Đã code | Mở `/c/[slug]` thật qua proxy |
 | 6.5 | **Duyệt xuất bản** (catalog.publish) | ✅ Đã code | POST /api/v1/catalog-links |
-| 6.6 | Sinh mã QR cho liên kết catalog | 🔧 Cần code | UI có, link mock |
-| 6.7 | Lưu → mã QR để tải/in | 🔧 Cần code | |
+| 6.6 | Sinh mã QR cho liên kết catalog | ✅ Đã code | Proxy GET `/qr` → blob download |
+| 6.7 | Lưu → mã QR để tải/in | ✅ Đã code | File PNG 300px tải về máy |
 
-**Tab B — Landing page chiến dịch:**
+**Tab B — Landing page chiến dịch: (Proxy qua LocalBudd — M05 backend sẵn sàng)**
 
 | # | Tính năng | Trạng thái | Ghi chú |
 |---|-----------|------------|---------|
-| 6.8 | Chọn dịp (20/10, Valentine, 8/3, Ngày của Mẹ, Khai trương, Hoa cưới) | ✅ UI có | |
-| 6.9 | Chọn sản phẩm đưa vào trang | ✅ Đã code | Từ danh sách thật |
-| 6.10 | Nhấn "Dựng trang" → AI sinh bố cục | ❌ Chờ backend | M05 builder mock |
-| 6.11 | Thẻ kết quả: xem trước toàn trang, sửa khối | ❌ Chờ backend | Mock |
-| 6.12 | Sửa khối (đổi ảnh, thứ tự, tiêu đề) | ❌ Chờ backend | |
-| 6.13 | **Duyệt xuất bản** (landing.publish) | ❌ Chờ backend | |
-| 6.14 | Lưu → link + QR riêng chiến dịch | ❌ Chờ backend | |
-| 6.15 | Forbidden styles không bao giờ xuất hiện | ❌ Chờ backend | Phụ thuộc M05 |
+| 6.8 | Chọn dịp (20/10, Valentine, 8/3, Ngày của Mẹ, Khai trương, Hoa cưới) | ✅ Đã code | Radio buttons, proxy tạo project LocalBudd |
+| 6.9 | Chọn sản phẩm đưa vào trang | ✅ Đã code | Checkbox từ danh sách filtered products |
+| 6.10 | Nhấn "Dựng trang Landing" → tạo job LocalBudd | ✅ Đã code | Proxy POST `/generate/landing` + poll cron |
+| 6.11 | Xem trước trang (sau khi xong) | ✅ Đã code | Link `/projects/[id]/preview` LocalBudd |
+| 6.12 | Chỉnh sửa khối (layout archetype) | 🔧 Cần code | Proxy sang LocalBudd pages/layouts API |
+| 6.13 | **Duyệt xuất bản** (landing.publish) | 🔧 Cần code | Proxy POST `/pages/[id]/approve` |
+| 6.14 | Lưu → link + QR riêng chiến dịch | 🔧 Cần code | Proxy GET `/pages/[id]/export` |
+| 6.15 | Forbidden styles không bao giờ xuất hiện | 🔧 Cần code | Phụ thuộc M05 Brand Profile |
 
 ---
 

@@ -172,9 +172,15 @@ src/
 
 | File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
 |---|---|---|---|
-| `catalog-guidance-card.tsx` | Guidance | Hướng dẫn thiết lập giá động và chia sẻ link catalog trực tuyến | Không có props |
+| `catalog-guidance-card.tsx` | Guidance | Hướng dẫn thiết lập giá động và chia sẻ link catalog trực tuyến | Không có props (Preset tĩnh chuẩn) |
 | `product-detail-card.tsx` | Catalog Card | Thẻ chi tiết sản phẩm catalog chuẩn Mobile, kèm nút tạo đơn & chia sẻ | `code`, `name`, `imageUrl`, `category`, `price`, `stemCount`, `occasions` |
 | `quote-summary-card.tsx` | Pricing BOM | Thẻ bảng tính giá cấu thành (hoa, lá, công thợ, bao bì, biên LN) | `items: CostBreakdownItem[]`, `laborCost`, `wrappingCost`, `suggestedPrice` |
+| `landing-template-hero.tsx` | Landing Hero | Banner chiến dịch nhận diện theo 4 Archetypes, đồng hồ đếm ngược FOMO và 3 huy hiệu cam kết | `headline`, `occasionId`, `archetypeId` |
+| `landing-template-products.tsx` | Landing Grid | Danh sách mẫu hoa tuyển chọn, ảnh hoa thật, huy hiệu Best Seller #1, giá ưu đãi VNĐ, CTA Zalo 1-chạm | `products: CatalogProduct[]`, `archetypeId` |
+| `landing-template-lead.tsx` | Lead Voucher | Khối bắt lead / voucher ưu đãi đặt sớm 10%, form số điện thoại Zalo và 3 cam kết vàng | `archetypeId`, `occasionTitle` |
+| `catalog-storefront.tsx` | Storefront | Giao diện E-Catalog & Landing Page công khai cho khách hàng cuối, hỗ trợ tìm kiếm, lọc dịp, responsive Mobile/Desktop | `initialData: PublicCatalogResult` |
+| `share-catalog-modal.tsx` | Social Share | Modal chia sẻ đa kênh Facebook, Zalo, sao chép caption bán hàng mẫu | `slug`, `name`, `description`, `onClose` |
+| `product-detail-modal.tsx` | Product Modal | Modal xem chi tiết sản phẩm chuẩn Mobile, cấu phần cành hoa và nút đặt nhanh Zalo | `product: PublicCatalogProduct`, `shop`, `onClose` |
 
 ---
 

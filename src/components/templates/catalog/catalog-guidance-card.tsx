@@ -7,14 +7,15 @@ import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guida
 export function CatalogGuidanceCard() {
   return (
     <FeatureGuidanceCard
-      tag="HƯỚNG DẪN DANH MỤC SẢN PHẨM M02/M03"
+      tag="HƯỚNG DẪN CATALOG & WEBSITE M06/M05"
       icon={BookOpen}
-      title="Quản lý danh mục & Báo giá điện tử"
-      description="Chuẩn hóa kho sản phẩm chính thức (Product Master) với định lượng hoa, bảng giá động theo chi nhánh và đường dẫn chia sẻ danh mục trực tuyến."
+      title="Quản lý Catalog số trực tuyến & Landing Page chiến dịch"
+      description="Xuất bản danh mục mẫu hoa điện tử tự động đồng bộ từ Product Master, sinh mã QR chia sẻ Zalo/Mạng xã hội và tạo trang đích chiến dịch bán hoa theo dịp lễ."
       tips={[
-        "💰 Thiết lập biên lợi nhuận và phụ phí công thợ linh hoạt theo từng sự kiện/ngày lễ",
-        "🔍 Tra cứu siêu tốc theo tone màu, loại hoa, dịp tặng và khoảng giá",
-        "📱 Chia sẻ link E-Catalog tối ưu hiển thị trên điện thoại cho khách hàng chọn mẫu",
+        "📱 Mọi mẫu hoa đã duyệt sẽ tự động cập nhật vào Catalog số trực tuyến",
+        "⚡ Sinh mã QR tải về ngay lập tức để in ấn thiệp hoặc gửi cho khách hàng quét trên điện thoại",
+        "🌐 Trang xem trước /c/[slug] tối ưu hiển thị hoàn hảo trên màn hình Zalo di động",
+        "🎯 Tùy chọn dịp chiến dịch và phong cách thiết kế theo đúng nhận diện thương hiệu",
       ]}
     />
   )

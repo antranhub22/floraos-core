@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import React, { useState, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Sparkles,
   ArrowLeft,
@@ -82,8 +82,11 @@ const FLOW_STEPS: FlowStep[] = [
   { key: "review", label: "Kiểm duyệt an toàn thương hiệu" },
 ]
 
-export default function ContentEnginePage() {
+function ContentEngineContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const catalogSlug = searchParams.get("catalog_slug")
+  const catalogName = searchParams.get("catalog_name")
 
   // Trạng thái dữ liệu
   const [products, setProducts] = useState<ProductOption[]>([])
@@ -234,13 +237,21 @@ export default function ContentEnginePage() {
       for (const ch of selectedChannels) {
         const chData = data.channels?.[ch]
         if (chData) {
+          let bodyText = chData.body || ""
+          if (catalogSlug && typeof window !== "undefined") {
+            const linkUrl = `${window.location.origin}/c/${catalogSlug}`
+            if (!bodyText.includes(`/c/${catalogSlug}`)) {
+              bodyText = `${bodyText}\n\n👉 Xem trọn bộ mẫu hoa & đặt trực tuyến tại:\n${linkUrl}`
+            }
+          }
+
           posts.push({
             postId: chData.post_id || data.result_id,
             channel: ch as any,
             channelLabel:
               CHANNELS_CONFIG.find((c) => c.id === ch)?.label || ch.toUpperCase(),
             headline: chData.title || `Bó hoa ${selectedProduct.name}`,
-            bodyText: chData.body || "",
+            bodyText,
             hashtags: chData.hashtags || [],
             cta: chData.cta,
             script: chData.script,
@@ -353,6 +364,28 @@ export default function ContentEnginePage() {
           >
             <CheckCircle2 size={16} />
             {notification.message}
+          </div>
+        )}
+
+        {/* Khối Chiến dịch Quảng bá Catalog nếu được mở từ Module M06 */}
+        {catalogSlug && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-50 via-amber-50 to-rose-50 border border-rose-200 flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-extrabold text-rose-950">
+                    Chiến dịch quảng bá Catalog: {catalogName || catalogSlug}
+                  </span>
+                  <Badge tone="accent">M06 → M07</Badge>
+                </div>
+                <p className="text-xs text-rose-800 mt-0.5">
+                  Bài viết đa kênh sinh ra sẽ tự động kèm liên kết đặt hoa trực tuyến: <code>/c/{catalogSlug}</code>
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -611,5 +644,13 @@ export default function ContentEnginePage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ContentEnginePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-text-muted">Đang tải xưởng nội dung AI...</div>}>
+      <ContentEngineContent />
+    </Suspense>
   )
 }

@@ -5,3 +5,4 @@
 export * from "./catalog-guidance-card"
 export * from "./product-detail-card"
 export * from "./quote-summary-card"
+export * from "@/components/catalog/landing-templates"

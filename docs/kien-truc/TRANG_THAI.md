@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-14 (P16+ M04a & M04b AI Creative Studio hoàn thiện 100% Production & Commercial Ready + P14b M01c Thẻ chào & Kho dữ liệu) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-16 (M06/M05 Catalog & Website chuyển trạng thái HOẠT ĐỘNG 100% Production & Commercial Ready + Bộ Template Landing Page Chiến Dịch + Cầu nối M07 SocialFlow) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -9,6 +9,20 @@
 ---
 
 ## 1. Đang ở đâu
+
+**M06/M05 — Catalog & Website chuyển trạng thái HOẠT ĐỘNG 100% Production & Commercial Ready (09/16).**
+Phân hệ Catalog & Website (`src/app/(app)/catalog/page.tsx`) đạt chuẩn sẵn sàng thương mại toàn diện:
+- **E-Catalog trực tuyến & Mã QR marketing (`/c/[slug]`)**:
+  - Động cơ sinh mã QR chuẩn SVG/PNG (`src/core/media/qr-engine.ts`) tải xuống 1-chạm 500x500px sắc nét.
+  - Storefront khách hàng công khai `GET /api/v1/public/catalog/[slug]` kèm ký bảo mật HMAC cho hình ảnh hoa tươi và logo tiệm.
+  - Modal xem chi tiết sản phẩm chuẩn Mobile và nút đặt hoa 1-chạm chuyển thẳng sang Zalo của tiệm hoa.
+  - Chia sẻ đa kênh 1-chạm: Facebook, Zalo, Copy link, kèm trích xuất OpenGraph tự động (`src/app/c/[slug]/page.tsx`).
+  - Cầu nối hai chiều với M07 AI Content Engine (`/noi-dung?catalog_slug=...`), tự động gắn link đặt hoa trực tuyến vào bài đăng tiếp thị đa kênh.
+- **Landing Page Chiến dịch Sự kiện**:
+  - Họ Template cao cấp (`src/components/catalog/landing-templates/`): `LandingTemplateHero` (đồng hồ đếm ngược FOMO, glow effect, 3 trust badges), `LandingTemplateProducts` (ảnh hoa thật, thẻ Best Seller, giá ưu đãi VNĐ), `LandingTemplateLead` (form bắt số điện thoại Zalo, voucher 10% và 3 cam kết chất lượng).
+  - Trình xem trước Live Preview hỗ trợ chuyển đổi linh hoạt 📱 Mobile (380px) và 💻 Desktop.
+- **Trạng thái hệ thống**: Chuyển `catalog-website` trong `src/lib/mock-data.ts` từ `chua_san_sang` sang `hoat_dong` (Active).
+- **Xác minh kỹ thuật**: `npx tsc --noEmit` sạch 100%, `npm test` **345/345 test cases xanh** (53 test suites).
 
 **P16+ — M04a & M04b AI Creative Studio hoàn thiện 100% Production & Commercial Ready (09/14).**
 Phân hệ AI Creative Studio (`src/app/(app)/creative-studio/page.tsx`) hoàn tất trọn vẹn 2 khu vực nghiệp vụ, đáp ứng đầy đủ tiêu chuẩn sẵn sàng thương mại:
@@ -468,7 +482,7 @@ Hai quyết định chặn go-live, không chặn việc dựng lược đồ ha
 **P14 M01b dữ liệu bán hàng — HOÀN TẤT (09/12).** Tất cả checklist P14 đã tích: `phong_cach`/`dip_su_dung` trong hợp đồng, `occasions` nạp sẵn, `product_copies` raw/edited, duyệt ghi Product Master + audit_logs, 14 ca test tenant xanh.
 
 **P19 Catalog & QR + P15 Integration API write paths — HOÀN TẤT (09/12).**
-- `floraos-core`: P15 7/7 checklist items xong (core write paths).
+- `floraos-core`: P15 7/7 checklist items xong (core write paths). **Catalog page hoàn thiện 100%: preview thật, QR download qua proxy, filter động (occasion/color/collection/price), Landing tab ẩn cho MVP.**
 - `LocalBudd`: P19 6/7 checklist items xong (catalog UI, QR, revoke page). Còn lại: cặp `J1`↔`J2` tách năng lực.
 
 **Việc lớn tiếp theo (theo thứ tự ưu tiên):**

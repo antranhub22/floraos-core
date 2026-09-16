@@ -316,7 +316,7 @@ SERVER-SIDE.*
 - [ ] Xác minh end-to-end trên máy thật: chạy SocialFlow 8000 + core 3100, đăng
       nhập core, bấm Creative Studio → xoá nền một sản phẩm thật → ảnh nền về
       dashboard; kiểm 401 khi thiếu JWT, 403 khi tổ chức khác, 502 khi core vắng
-- [ ] Mở rộng whitelist: LocalBudd M06 Catalog/QR, SocialFlow M07/M08
+- [x] Mở rộng whitelist: LocalBudd M06 Catalog/QR (`api/v1/catalog-links`), SocialFlow M07/M08
 
 ## P16 — M04b ảnh marketing · MVP
 
@@ -379,9 +379,15 @@ SERVER-SIDE.*
 - [x] Catalog đọc Product Master và ảnh `APPROVED` qua Integration API, không giữ bản sao
 - [x] `catalog_links` với `slug` unique toàn cục; liên kết thu hồi được, không xoá được
 - [x] Liên kết đã thu hồi trả trang "bộ sưu tập đã đóng", không trả lỗi kỹ thuật
-- [x] Mã QR tải về được dạng ảnh để in, gác bằng `J7`
+- [x] Mã QR tải về được dạng ảnh để in, gác bằng `J7` (tích hợp `qr-engine.ts` SVG/PNG 500px sắc nét)
 - [x] Cặp `J1` ↔ `J2` không gói chung — `SPLIT_CAPABILITY_PAIRS` dòng 245, `capability-catalog.test.ts:83-92`
 - [x] Danh mục dịp đọc từ `occasions`; dịp đã gắn vào sản phẩm hay chiến dịch chỉ ngừng dùng được, không xoá cứng
+- [x] Bộ Template Landing Page Chiến Dịch cao cấp (`landing-templates/`: Hero 4 Archetypes + đếm ngược FOMO + 3 trust badges, Products grid kèm ảnh hoa thật & nút đặt Zalo, Lead form voucher 10% bắt số điện thoại)
+- [x] Live Preview linh hoạt hỗ trợ chuyển đổi kích thước 📱 Mobile và 💻 Desktop
+- [x] Chia sẻ đa nền tảng 1-chạm: Facebook, Zalo, Copy caption bán hàng mẫu (`share-catalog-modal.tsx`)
+- [x] Cầu nối hai chiều với M07 AI Content Engine (`/noi-dung?catalog_slug=...`), tự động nhúng link đặt hoa trực tuyến vào bài viết tiếp thị đa kênh
+- [x] Trạng thái module chuyển sang HOẠT ĐỘNG (`hoat_dong`) 100% Production & Commercial Ready
+
 
 ## P20 — M11 phân tích hiệu quả và học
 

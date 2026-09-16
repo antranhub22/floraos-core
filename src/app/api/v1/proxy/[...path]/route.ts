@@ -23,7 +23,13 @@ import type { ProxyClient } from "@/modules/proxy/domain/proxy-rules"
 /** Whitelist path prefix theo client — không proxy linh tinh. */
 const ALLOWED_PREFIX: Record<ProxyClient, string[]> = {
   SOCIALFLOW: ["api/m04b", "api/m07", "api/posts", "api/accounts"],
-  LOCALBUDD: ["api/v1/catalog-links", "api/v1/projects"],
+  LOCALBUDD: [
+    "api/v1/catalog-links",
+    "api/v1/projects",
+    "api/v1/generate",
+    "api/v1/pages",
+    "api/v1/worker/cron",
+  ],
 }
 
 /** Kiểm path được phép proxy cho client này. */

@@ -1,4 +1,4 @@
-import { validationFailed, notFound } from "@/core/http/errors"
+import { validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import type { TenantContext } from "@/core/tenancy"
 import { CatalogLinkRepository } from "@/modules/catalog-links/infra/catalog-link-repository"

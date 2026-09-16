@@ -1,4 +1,3 @@
-import { notFound } from "@/core/http/errors"
 import { CatalogLinkRepository } from "@/modules/catalog-links/infra/catalog-link-repository"
 import type { CatalogLinkResult } from "@/modules/catalog-links/domain/catalog-link-rules"
 
