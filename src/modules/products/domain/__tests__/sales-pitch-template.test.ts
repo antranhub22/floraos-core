@@ -149,4 +149,26 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
     expect(script).toContain("CAM KẾT DỊCH VỤ TỪ SHOP")
     expect(script).toContain("Cao ~55cm × Rộng ~40cm")
   })
+
+  it("buildSalesPitchData tự động thừa hưởng tenantDefaults từ Master Profile khi không có overrides", () => {
+    const analysisRaw = {
+      product_name: "Lẵng lan hồ điệp",
+      bom: { flowers: [{ name: "Lan hồ điệp", quantity: 6, dvt_dem: "cành" }] },
+    }
+
+    const tenantDefaults = {
+      shopName: "Tiệm Hoa Sen Vàng Luxury",
+      shopHotline: "0988 777 666",
+      freeGifts: ["Tặng thiệp nghệ thuật thư pháp dát vàng", "Tặng bình xịt dưỡng hoa cao cấp"],
+      guarantees: ["Cam kết hoa tươi trên 10 ngày", "Bảo hành 1 đổi 1 trong 24h"],
+    }
+
+    const pitch = buildSalesPitchData(analysisRaw, null, undefined, null, tenantDefaults)
+
+    expect(pitch.shopName).toBe("Tiệm Hoa Sen Vàng Luxury")
+    expect(pitch.shopHotline).toBe("0988 777 666")
+    expect(pitch.freeGifts).toEqual(tenantDefaults.freeGifts)
+    expect(pitch.guarantees).toEqual(tenantDefaults.guarantees)
+  })
 })
+

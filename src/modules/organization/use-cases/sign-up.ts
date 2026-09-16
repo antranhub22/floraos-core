@@ -23,6 +23,7 @@ import { hashSessionToken, newSessionToken } from "@/modules/organization/infra/
 import { runInTransaction } from "@/modules/organization/infra/transaction"
 import { UserRepository } from "@/modules/organization/infra/user-repository"
 import { WorkspaceRepository } from "@/modules/organization/infra/workspace-repository"
+import { seedExperienceMasterProfile } from "@/modules/profiles/use-cases/seed-experience-profile"
 
 export type SignUpInput = {
   email: string
@@ -106,6 +107,7 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
     })
 
     await new OccasionRepository(tx).seedDefault({ organizationId: organization.id, workspaceId: workspace.id, userId: user.id, branchId: null, capabilities: new Set<string>() })
+    await seedExperienceMasterProfile(tx, organization.id)
 
     const founderRole = await roles.findSystemRoleByKey(FOUNDER_ROLE_KEY)
     if (!founderRole) {

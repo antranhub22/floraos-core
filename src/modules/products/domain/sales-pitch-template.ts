@@ -92,15 +92,23 @@ export const DEFAULT_GUARANTEES = [
   "Bảo hành đổi mới nếu hoa bị dập héo khi vận chuyển",
 ]
 
+export interface TenantSalesDefaults {
+  shopName?: string | null | undefined
+  shopHotline?: string | null | undefined
+  freeGifts?: string[] | null | undefined
+  guarantees?: string[] | null | undefined
+}
+
 /**
- * Xây dựng dữ liệu Thẻ Chào Sản Phẩm từ M01a + M01b + Overrides
+ * Xây dựng dữ liệu Thẻ Chào Sản Phẩm từ M01a + M01b + Overrides + Tenant Profile Defaults
  * Cho phép ghi đè 100% bất kỳ trường nào theo mong muốn của Sales.
  */
 export function buildSalesPitchData(
   analysisRaw: Record<string, unknown> | null | undefined,
   copyRaw?: Record<string, unknown> | null | undefined,
   overrides?: SalesPitchOverrides,
-  imageUrl?: string | null
+  imageUrl?: string | null,
+  tenantDefaults?: TenantSalesDefaults | null
 ): SalesPitchData {
   const a = analysisRaw ?? {}
   const bom = (a.bom as Record<string, unknown> | undefined) ?? {}
@@ -199,13 +207,20 @@ export function buildSalesPitchData(
     ? overrides.originalPriceVnd
     : priceVnd != null ? Math.round(priceVnd * 1.15 / 10000) * 10000 : null
 
-  // 9. Quà tặng & Cam kết
-  const freeGifts = overrides?.freeGifts ?? DEFAULT_FREE_GIFTS
-  const guarantees = overrides?.guarantees ?? DEFAULT_GUARANTEES
+  // 9. Quà tặng & Cam kết (Ưu tiên: Overrides -> Tenant Defaults -> System Defaults)
+  const defaultFreeGifts = tenantDefaults?.freeGifts && tenantDefaults.freeGifts.length > 0
+    ? tenantDefaults.freeGifts
+    : DEFAULT_FREE_GIFTS
+  const freeGifts = overrides?.freeGifts ?? defaultFreeGifts
 
-  // 10. Thông tin cửa hàng & Trạng thái xuất bản
-  const shopName = overrides?.shopName ?? "FloraOS Flower Boutique"
-  const shopHotline = overrides?.shopHotline ?? "1900 xxxx"
+  const defaultGuarantees = tenantDefaults?.guarantees && tenantDefaults.guarantees.length > 0
+    ? tenantDefaults.guarantees
+    : DEFAULT_GUARANTEES
+  const guarantees = overrides?.guarantees ?? defaultGuarantees
+
+  // 10. Thông tin cửa hàng & Trạng thái xuất bản (Ưu tiên: Overrides -> Tenant Profile -> Fallback)
+  const shopName = overrides?.shopName ?? tenantDefaults?.shopName ?? "FloraOS Flower Boutique"
+  const shopHotline = overrides?.shopHotline ?? tenantDefaults?.shopHotline ?? "1900 xxxx"
   const customNote = overrides?.customNote ?? null
   const status = overrides?.status ?? "DRAFT"
   const finalizedAt = overrides?.finalizedAt ?? null
