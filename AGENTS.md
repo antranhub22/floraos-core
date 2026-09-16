@@ -9,9 +9,10 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 | Việc | Lệnh |
 |---|---|
 | Cài | `docker compose up -d && npm i && npx prisma generate && npx prisma db push && npx prisma db seed` |
-| Chạy toàn bộ (Web + DB + Workers + SocialFlow M07) | `npm run dev:all` (tự bật Docker DB + Ollama Qwen + Web 3100 + Worker Vision + Worker Media + SocialFlow 8000) |
+| Chạy toàn bộ (Web + DB + Workers + SocialFlow M07) | `npm run dev:all` (tự bật Docker DB + Ollama Qwen + Web 3100 + Worker Vision + Worker Media + Worker Video + SocialFlow 8000) |
 | Chạy web | `npm run dev` |
-| Chạy worker media | `npm run worker:media` (hoặc `cd workers && python -m media_ai.worker`) |
+| Chạy worker media | `npm run worker:media` |
+| Chạy worker video | `npm run worker:video` (hoặc `cd workers && python -m media_ai.video.video_worker`) |
 | Test web | `npm test` |
 | Test đầu cuối | `npm run test:e2e` |
 | Test worker | `cd workers && python3 -m pytest tests -q` |
@@ -68,7 +69,9 @@ chỉnh cho cửa hàng hoa; bảy pha đầu là MVP) và **Tuyến C** (AI-1�
 cắt ngang mọi pha). Bảng đầy đủ ở `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục
 15; đặc tả nền AI ở `docs/dac-ta/10-ai-orchestration.md`.
 
-Trạng thái hiện tại: **AI-1 đợt một — hoàn tất 09/12.** Năm bảng mới, mười cổng, `src/core/ai/` + `src/modules/ai-governance/`, bốn route, `U1`–`U4`. `npm test` **258/258 xanh thật** (41 ca mới), `npx eslint` sạch. `npx tsc --noEmit` **SẠCH** (sau `prisma generate` + `prisma db push` + `db:seed`). `npm run test:tenant` **123/123 xanh thật** (14 tệp). Chưa làm, cố ý: lớp Python `workers/ai/`, chuyển ba adapter Vision sang sau cổng, lượt quét CI chặn import SDK, hai đường Integration API. Chi tiết ở `docs/dac-ta/Checklist_Thuc_Thi.md` mục AI-1.
+Trạng thái hiện tại: **P17 — M04c AI Video Studio hoàn tất 09/16.** Module `src/modules/video-studio/`, worker Python `workers/media_ai/video/`, component `src/components/video-studio/`. Hệ thống dựng video marketing hoa tươi dọc 9:16/1:1/16:9 6 khuôn (`VIDEO_FORMAT_SPECS`), biên soạn Storyboard chi tiết linh hoạt 2–15 cảnh, tự động cân bằng thời lượng, nút xóa cảnh nổi bật, menu Camera Motion Ken Burns (Zoom In/Out, Pan Up/Right, Static), 4 phong cách phụ đề, Edge TTS ducking nhạc nền, 2 cổng duyệt (Script & Video Output), kiến trúc Provider cắm rút: Phương án A `LocalCinematicProvider` (0 credit, ~0.45s/cảnh, mặc định hoạt động) + Phương án B Standby AI Generative (`GoogleVeoProvider` & `HeyGenProvider` qua `.env`). Trạng thái chuyển `hoat_dong` 🟢 trên Dashboard. `npm test` **357/357 xanh**, pytest worker **83/83 xanh**, `npm run test:tenant` **160/160 xanh thật**, `npx tsc --noEmit` **SẠCH**.
+
+Trạng thái trước đó: **AI-1 đợt một — hoàn tất 09/12.** Năm bảng mới, mười cổng, `src/core/ai/` + `src/modules/ai-governance/`, bốn route, `U1`–`U4`. `npm test` **258/258 xanh thật** (41 ca mới), `npx eslint` sạch. `npx tsc --noEmit` **SẠCH** (sau `prisma generate` + `prisma db push` + `db:seed`). `npm run test:tenant` **123/123 xanh thật** (14 tệp). Chưa làm, cố ý: lớp Python `workers/ai/`, chuyển ba adapter Vision sang sau cổng, lượt quét CI chặn import SDK, hai đường Integration API. Chi tiết ở `docs/dac-ta/Checklist_Thuc_Thi.md` mục AI-1.
 
 Trạng thái trước đó: **P8 — nạp dữ liệu AVI GIFT, phần danh mục giá viết mã
 xong, chưa xác minh trên Postgres thật** — module `src/modules/avi-gift-import/`
@@ -166,6 +169,7 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 | Module nạp AVI GIFT (P8) | `src/modules/avi-gift-import/` | `domain/catalog-mapping.ts` thuần (`mapCatalogRowToProduct`/`deriveProductStatus`/`validateCatalogRow`) · `use-cases/bootstrap-avi-gift-organization.ts` (tổ chức `SINGLE`, KHÔNG tái dùng `signUp` vì đó cố định `EXPERIENCE`+trial) · `use-cases/import-catalog.ts` (idempotent theo `code`, gọi thẳng `ProductRepository`). Nguồn Excel đọc bằng Python NGOÀI `src/` — xem `scripts/nap-avi-gift/doc-excel.py` |
 | An toàn nội dung & Từ điển từ cấm | `docs/kien-truc/TU_DIEN_TU_CAM_CONTENT_NGANH_HOA.md` + `src/core/ai/domain/flower-content-banned-lexicon.json` | SSOT kiểm soát chất lượng nội dung ngành hoa; `FlowerContentGuard` (`flower-content-guard.ts`) áp dụng toàn hệ thống (chặn HARD_BLOCK, cảnh báo WARNING, tích hợp `brand_profiles.forbidden_styles`) |
 | Module Catalog & Website (M06/M05) | `src/modules/catalog-links/` + `src/components/catalog/` | E-Catalog trực tuyến (`/catalog` & `/c/[slug]`), `qr-engine.ts` (mã QR SVG/PNG 500px), Storefront công khai `GET /api/v1/public/catalog/[slug]` (ký HMAC ảnh + logo), Modal chi tiết sản phẩm chuẩn Mobile, Chia sẻ mạng xã hội (`share-catalog-modal.tsx`), Họ Template Landing Page (`landing-templates/`: Hero, Products, Lead) 4 Archetypes kèm đồng hồ đếm ngược FOMO và CTA đặt Zalo, Cầu nối M07 AI Content Engine (`/noi-dung?catalog_slug=...`) tự động chèn liên kết đặt hoa trực tuyến |
+| Module Video Studio (M04c) | `src/modules/video-studio/` + `workers/media_ai/video/` + `src/components/video-studio/` | AI Video Studio (P17, `/video`). 6 khuôn (Reel, TikTok, Story, Slideshow, Product, Ad), kịch bản linh hoạt 2–15 cảnh, tự động cân bằng thời lượng, Camera Motion Ken Burns (Zoom In/Out, Pan Up/Right, Static), phụ đề đa phong cách (Modern Badge, Minimal, Highlight Box, Bottom Banner), lồng tiếng TTS ducking nhạc nền, 2 cổng duyệt (Script & Video Output), kiến trúc Provider cắm rút: Phương án A Local Cinematic FFmpeg (0 credit, ~0.45s/cảnh) + Phương án B Standby AI Generative (Google Veo & HeyGen) |
 | Tài liệu kiến trúc | `docs/kien-truc/` | 8 tệp, xem `TRANG_THAI.md` |
 
 

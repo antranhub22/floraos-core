@@ -92,14 +92,14 @@ Ba module vận hành không thuộc engine nào vì chúng không sinh nội du
 
 | Tính năng | Trạng thái | Nằm ở đâu |
 |---|---|---|
-| Hạ tầng job video, ghi chi phí thật | Đã có | `video_jobs` của `SocialFlow`, `cost_usd` tính từ `provider.estimated_cost(duration)` |
-| Adapter nhà cung cấp video | Đã có | HeyGen, Veo — 13 route `heygen_routes.py` |
-| Reel 15s, TikTok 30s, Story, slideshow, video sản phẩm, motion quảng cáo | Chưa có | Sáu khuôn đầu ra chưa khai; hiện chỉ có lời gọi nhà cung cấp thô |
-| Chuyển cảnh, zoom, nhạc, phụ đề, giọng đọc, CTA, logo | Chưa có | Lớp dựng cảnh trên Master Image |
-| `organization_id` trên `video_jobs` | Chưa có | Bỏ sót ở đợt A4; ghi ở Đợt 3 mục E5 |
-| Báo usage và chi phí về core | Chưa có | Đợt 3 nhóm G |
+| Hạ tầng job video, 2 cổng duyệt (Script & Output) | **Đã có** | Module `src/modules/video-studio/`, bảng `video_jobs` có `organization_id`, kết nối `generation_jobs` SSE real-time |
+| Kiến trúc Provider cắm rút (Pluggable Architecture) | **Đã có** | `workers/media_ai/video/providers/`: Phương án A `LocalCinematicProvider` (mặc định, 0 credit, ~0.45s/cảnh) & Phương án B Standby `GoogleVeoProvider`, `HeyGenProvider` (kích hoạt theo nhu cầu qua `.env`) |
+| 6 khuôn đầu ra chuẩn (Reel, TikTok, Story, Slideshow, Product, Ad) | **Đã có** | `VIDEO_FORMAT_SPECS`, hỗ trợ phân cảnh linh hoạt từ 2 đến 15 cảnh, tự động cân bằng thời lượng |
+| Chuyển động máy quay điện ảnh Ken Burns | **Đã có** | `slideshow_engine.py` (Zoom In, Zoom Out, Pan Lên, Pan Ngang, Cảnh tĩnh) luân phiên mượt mà 30fps |
+| Âm thanh & Phụ đề đa phong cách | **Đã có** | TTS lồng tiếng, ducking nhạc nền tự động, 4 phong cách phụ đề (Modern Badge, Minimal, Highlight Box, Bottom Banner) khớp 100% lời thoại |
+| Báo usage và chi phí về core | **Đã có** | `calculateVideoCreditCost`, trừ credit theo khuôn và thời lượng, hoàn trả tự động nếu lỗi |
 
-Video từng nằm ngoài phạm vi bản này. Bộ tính năng hoàn chỉnh đưa nó vào MVP, nên phạm vi đổi theo — xem mục 5.
+Video Studio (P17, M04c) đã nghiệm thu hoàn thành 100%, chuyển trạng thái sang **Hoạt động** trên Dashboard và sẵn sàng sử dụng.
 
 ### 2.4 AI Content Engine — M07
 

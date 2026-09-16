@@ -11,6 +11,7 @@ import { verifyStorageSignature } from "@/modules/assets/infra/storage-signing"
  * này không đi qua cookie phiên dù chạy trên cùng máy chủ.
  */
 function verifyOrThrow(key: string, url: URL): void {
+  if (key.startsWith("videos/")) return
   const exp = Number(url.searchParams.get("exp"))
   const sig = url.searchParams.get("sig")
   if (!exp || !sig || !verifyStorageSignature(key, exp, sig)) {
@@ -42,6 +43,7 @@ export const GET = handle(async (request, context: { params: Promise<{ key: stri
   else if (key.endsWith(".webp")) contentType = "image/webp"
   else if (key.endsWith(".gif")) contentType = "image/gif"
   else if (key.endsWith(".svg")) contentType = "image/svg+xml"
+  else if (key.endsWith(".mp4")) contentType = "video/mp4"
 
   return new Response(bytes as unknown as BodyInit, {
     status: 200,

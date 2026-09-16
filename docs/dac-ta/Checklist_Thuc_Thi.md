@@ -347,16 +347,18 @@ SERVER-SIDE.*
 - [x] Frontend `SocialFlow/frontend/index.html` — thêm tab "Marketing Creative" (nav `🎯`) với component `MarketingCreative`: input product_id, nút Remove Background, hiện kết quả asset_id/storage_key/status, download processed image
 - [x] E2E `tests/e2e_m04b.py` — 10/10 xanh (09/12): backend starts, route registered in OpenAPI, auth 401 thiếu JWT, route trả 502 khi core vắng (mismatch JWT), frontend loads, frontend có Marketing Creative, download endpoint reachable
 
-## P17 — M04c video · MVP
+## P17 — M04c video · MVP — HOÀN TẤT 09/16
 
-- [ ] Sáu khuôn đầu ra chạy được: Reel 15s, TikTok 30s, Story, slideshow catalog, video sản phẩm, motion quảng cáo
-- [ ] Khung đầu và khung cuối là ảnh đã duyệt; mô hình video không nhận lệnh tạo hình sản phẩm (`YC-M4`)
-- [ ] `video_jobs` có `organization_id NOT NULL`, index, và lọc theo tổ chức ở mọi điểm đọc ghi (`YC-M6`)
-- [ ] Chi phí thật mỗi video ghi `usage` với `feature = video.generate`; hạn mức kiểm tại điểm tạo job (`YC-M7`)
-- [ ] Màn xác nhận nói rõ chi phí credit và số dư trước khi chạy
-- [ ] Màn xem lại ghi rõ AI đã thêm gì: chuyển cảnh, nhạc, phụ đề, giọng đọc
-- [ ] Cặp `P3` ↔ `P4` không gói chung; video không nằm trong duyệt hàng loạt
-- [ ] D14 chốt trước go-live — bảng giá credit cho `video.generate` (`YC-M9`)
+- [x] Sáu khuôn đầu ra chạy được: Reel 15s, TikTok 30s, Story, slideshow catalog, video sản phẩm, motion quảng cáo (`VIDEO_FORMAT_SPECS`)
+- [x] Khung đầu và khung cuối là ảnh đã duyệt; mô hình video không nhận lệnh tạo hình sản phẩm (`YC-M4`)
+- [x] `video_jobs` có `organization_id NOT NULL`, index, và lọc theo tổ chức ở mọi điểm đọc ghi (`YC-M6`)
+- [x] Chi phí thật mỗi video ghi `usage` với `feature = video.generate`; hạn mức kiểm tại điểm tạo job (`YC-M7`)
+- [x] Màn xác nhận nói rõ chi phí credit và số dư trước khi chạy (`VideoCreateModal`)
+- [x] Màn xem lại ghi rõ AI đã thêm gì: chuyển cảnh Ken Burns, nhạc, phụ đề 4 phong cách, giọng đọc Edge TTS
+- [x] Cặp `P3` ↔ `P4` không gói chung; video không nằm trong duyệt hàng loạt (`approve-script` và `approve-video` tách rời)
+- [x] D14 chốt trước go-live — bảng giá credit cho `video.generate` (`YC-M9`, định mức 15-40 credit, 0 credit cho Local Cinematic)
+- [x] Nâng cấp Storyboard linh hoạt: 2 đến 15 cảnh, tự động chia đều thời lượng (auto-balancing duration), nút xóa cảnh nổi bật, menu Camera Motion Ken Burns (Zoom In/Out, Pan Up/Right, Static) luân phiên mượt mà
+- [x] Kiến trúc Provider cắm rút: Phương án A `LocalCinematicProvider` (mặc định, ~0.45s/cảnh, 0 credit) + Phương án B Standby `GoogleVeoProvider` & `HeyGenProvider` (kích hoạt qua `.env`, tự động fallback)
 
 ## P18 — M07 nội dung và đăng bài cho ngành hoa · MVP
 
@@ -490,18 +492,18 @@ FFmpeg trong sổ đăng ký.
 
 ## UI/UX — Tích hợp 10 chức năng giao diện · bắt đầu 13/09
 
-Đây là công việc kết nối 10 trang UI trong `docs/FloraOS-UIUX-10-chuc-nang.md` với API thật ở `src/app/api/v1/`. 4 trang đã có backend để nối, 6 trang chờ backend tương ứng (M04c, M07, M09, M10, M08, M11).
+Đây là công việc kết nối 10 trang UI trong `docs/FloraOS-UIUX-10-chuc-nang.md` với API thật ở `src/app/api/v1/`. 5 trang đã có backend để nối, 5 trang chờ backend tương ứng (M07, M09, M10, M08, M11).
 
 ### Đã tích hợp
 
 - [x] **#1 — Phân tích sản phẩm AI** (`src/app/(app)/tai-anh/page.tsx`): POST/PATCH/GET `/api/v1/vision/analyses`, POST reject, SSE `/api/v1/jobs/:id/events`, dùng `useSession()` cho H1/H2/H3, asset listing từ `/api/v1/assets`, Idempotency-Key header, error handling 401/403/409/502
 - [x] **#2 — AI Creative Studio** (`src/app/(app)/creative-studio/page.tsx`): POST/GET `/api/v1/media/optimizations`, POST approve (Identity Guard REJECTED → ẩn Duyệt, WARNING → confirm dialog), GET download (I3), proxy `/api/v1/proxy/api/m04b/background-removal`, dùng `useSession()` cho I1/I2/I3
+- [x] **#3 — AI Video Studio** (`src/app/(app)/video/page.tsx`): POST/GET `/api/v1/video/jobs`, PATCH `/api/v1/video/jobs/:id`, POST `/api/v1/video/jobs/:id/approve-script`, POST `/api/v1/video/jobs/:id/deploy`, POST `/api/v1/video/jobs/:id/approve-video`, SSE `/api/v1/video/jobs/:id/events`, dùng `useSession()` cho P1/P3/P4, Storyboard 2–15 cảnh, Camera Motion Ken Burns, auto-balance duration, xóa cảnh nổi bật, Provider cắm rút (Local Cinematic 0-credit + Standby Veo/HeyGen)
 - [x] **#6 — Catalog & Website** (`src/app/(app)/catalog/page.tsx`): GET `/api/v1/products` (thay MOCK_PRODUCTS, lọc ACTIVE), GET/POST/PATCH/POST-revoke `/api/v1/catalog-links`, 401 redirect
 - [x] **#10 — Analytics & Learning** (`src/app/(app)/so-lieu/page.tsx`): GET `/api/v1/usage/summary` (thay METRIC cứng), GET `/api/v1/ai-requests`, GET `/api/v1/audit-logs`, PUT `/api/v1/ai-policy`, dùng `useSession()` cho G8/G9/U1/U2/U3
 
 ### Chờ backend
 
-- [ ] **#3 — AI Video Studio** — chờ P17 (M04c)
 - [ ] **#4 — AI Content Engine** — chờ P18 (M07)
 - [ ] **#5 — Social Publishing** — chờ P18 (M07)
 - [ ] **#7 — CRM & Khách hàng** — chờ P21 (M09)

@@ -70,4 +70,83 @@ export class CatalogLinkRepository {
     })
     return result.count > 0
   }
+
+  async getPublicCatalogRaw(slug: string) {
+    const link = await this.db.catalog_links.findUnique({
+      where: { slug },
+    })
+
+    if (!link) return null
+    if (link.is_revoked || link.revoked_at) {
+      return { link, revoked: true as const }
+    }
+
+    const [org, bizProfile, brandProfile] = await Promise.all([
+      this.db.organizations.findUnique({
+        where: { id: link.organization_id },
+        select: { name: true },
+      }),
+      this.db.business_profiles.findUnique({
+        where: { organization_id: link.organization_id },
+      }),
+      this.db.brand_profiles.findUnique({
+        where: { organization_id: link.organization_id },
+      }),
+    ])
+
+    const filters = (link.filters as Record<string, unknown>) || {}
+    const productIds = Array.isArray(filters.product_ids) ? (filters.product_ids as string[]) : []
+
+    const productRows = await this.db.products.findMany({
+      where: {
+        organization_id: link.organization_id,
+        status: "ACTIVE",
+        ...(productIds.length > 0 ? { id: { in: productIds } } : {}),
+      },
+      orderBy: { created_at: "desc" },
+      take: 100,
+      include: {
+        images: {
+          orderBy: { position: "asc" },
+          take: 1,
+        },
+        analyses: {
+          where: { approval_state: "APPROVED" },
+          orderBy: { approved_at: "desc" },
+          take: 1,
+          select: { asset_id: true, raw: true, edited: true },
+        },
+      },
+    })
+
+    const assetIdSet = new Set<string>()
+    if (brandProfile?.logo_asset_id) {
+      assetIdSet.add(brandProfile.logo_asset_id)
+    }
+
+    for (const p of productRows) {
+      if (p.images[0]?.asset_id) {
+        assetIdSet.add(p.images[0].asset_id)
+      } else if (p.analyses[0]?.asset_id) {
+        assetIdSet.add(p.analyses[0].asset_id)
+      }
+    }
+
+    const assetRecords = assetIdSet.size > 0
+      ? await this.db.assets.findMany({
+          where: { id: { in: Array.from(assetIdSet) } },
+          select: { id: true, storage_key: true },
+        })
+      : []
+
+    return {
+      link,
+      revoked: false as const,
+      org,
+      bizProfile,
+      brandProfile,
+      productRows,
+      assetRecords,
+    }
+  }
 }

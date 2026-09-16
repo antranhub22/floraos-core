@@ -404,17 +404,29 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
     enhancer = resolve_enhancer()  # Đa Provider: Studio làm mặc định, kèm fallback Real-ESRGAN/PIL
     reframer = SmartReframe()  # Smart Reframe 4 tỷ lệ
     channel = notify_channel_for(FEATURE)
+    video_feature = "video.render"
+    video_channel = notify_channel_for(video_feature)
 
     cleaned_url = _clean_database_url(database_url)
     with psycopg.connect(cleaned_url, autocommit=True) as conn:
         with conn.cursor() as cur:
             cur.execute(f"LISTEN {channel}")
+            cur.execute(f"LISTEN {video_channel}")
 
         while True:
+            # 1. Xử lý tác vụ tối ưu ảnh M04a
             job = claim_next(conn, FEATURE)
             if job is not None:
                 process_job(conn, job, verifier, enhancer, reframer)
                 continue
+
+            # 2. Xử lý tác vụ dựng video M04c
+            video_job = claim_next(conn, video_feature)
+            if video_job is not None:
+                from media_ai.video.video_worker import process_video_job
+                process_video_job(conn, video_job)
+                continue
+
             for _notify in conn.notifies(timeout=poll_interval_seconds):
                 break
 

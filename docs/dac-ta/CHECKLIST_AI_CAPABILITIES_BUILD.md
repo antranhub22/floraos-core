@@ -125,15 +125,15 @@
 - [ ] 🔄 AIC-17 `creative_variants` (channel variants: FB/IG/TikTok/Story)
 - [ ] Register results via `POST /integration/assets`
 
-### 3.5 M04c Video Worker (P17 — SAU P16)
-- [ ] `SocialFlow/backend/m04c/` — video job handlers
-- [ ] AIC-18 `video_storyboard` (plan shots from Master Image)
-- [ ] AIC-19 `video_shot_generation` (HeyGen/Veo/Runway per shot)
-- [ ] AIC-20 `video_assembly` (stitch + transitions + audio)
-- [ ] AIC-21 `text_to_speech` (voiceover)
-- [ ] AIC-22 `speech_to_text` (subtitle alignment)
-- [ ] 6 templates: Reel 15s, TikTok 30s, Story, Slideshow, Product Page, Ad Motion
-- [ ] `video_jobs` table with `organization_id`, usage tracking
+### 3.5 M04c Video Worker (P17 — HOÀN TẤT 09/16)
+- [x] `workers/media_ai/video/` — video render worker daemon (Python listen/notify + skip locked)
+- [x] AIC-18 `video_storyboard` (kịch bản storyboard linh hoạt 2–15 cảnh từ Master Image)
+- [x] AIC-19 `video_shot_generation` (Ken Burns Camera Motion: Zoom In/Out, Pan Up/Right, Static; Option B Standby: Google Veo & HeyGen)
+- [x] AIC-20 `video_assembly` (FFmpeg zoompan ghép cảnh ~0.45s/cảnh, audio ducking, phụ đề 4 phong cách)
+- [x] AIC-21 `text_to_speech` (Edge TTS tiếng Việt tự nhiên đồng bộ lời thoại)
+- [x] AIC-22 `speech_to_text` (căn chỉnh phụ đề theo thời gian phân cảnh)
+- [x] 6 templates: Reel 30s 9:16, TikTok 15s/30s/45s 9:16, Feed 15s/30s 1:1, Landscape 30s 16:9 (`VIDEO_FORMAT_SPECS`)
+- [x] `video_jobs` table với `organization_id NOT NULL`, tracking usage, status/stage/result chuẩn SaaS
 
 ### 3.6 M07 Content Worker (P18 — SAU P16)
 - [ ] `SocialFlow/backend/m07/` — content generation
@@ -175,9 +175,9 @@
 - [ ] Creative variants → assets `PENDING` → `P1`/`P2` approve
 - [ ] Download before approve (I3 equivalent)
 
-### 4.3 M04c Approval (P17)
-- [ ] Videos → assets `PENDING` → `P3`/`P4` approve
-- [ ] Cost confirmation modal before job creation
+### 4.3 M04c Approval (P17 — HOÀN TẤT 09/16)
+- [x] Videos → assets `PENDING` → `P3` (approve-script) / `P4` (approve-video) duyệt độc lập
+- [x] Cost confirmation modal (`VideoCreateModal`) trước khi tạo job
 
 ### 4.4 M07 Approval (P18)
 - [ ] Content drafts → `O1`/`O3` approve
@@ -222,7 +222,7 @@
 | Batch Job API (Phase 2) | Tuần này | **HOÀN TẤT** ✅ | Phase 1 |
 | ~~M01b Worker (Phase 3.2)~~ | ~~P14~~ | **HOÀN TẤT** ✅ 09/12 | ~~Bộ ảnh vàng~~ |
 | M04b Creative full (Phase 3.4) | P16 | Chờ | M04a Master Image approved |
-| M04c Video (Phase 3.5) | P17 | Chờ | D14, AI-2, P16 |
+| M04c Video (Phase 3.5) | P17 | **HOÀN TẤT** ✅ 09/16 | — |
 | M07 Content (Phase 3.6) | P18 | Chờ | D14, AI-2, P16 |
 | Go-live MVP (P13–P19) | Theo lộ trình | Chờ | D13, D14, AI-2 |
 

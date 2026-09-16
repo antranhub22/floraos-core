@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-16 (M06/M05 Catalog & Website chuyển trạng thái HOẠT ĐỘNG 100% Production & Commercial Ready + Bộ Template Landing Page Chiến Dịch + Cầu nối M07 SocialFlow) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-16 (P17 M04c AI Video Studio chuyển trạng thái HOẠT ĐỘNG 100% Production & Commercial Ready + Động cơ Ken Burns + Provider Cắm Rút; M06/M05 Catalog & Website) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -9,6 +9,31 @@
 ---
 
 ## 1. Đang ở đâu
+
+**P17 — M04c AI Video Studio chuyển trạng thái HOẠT ĐỘNG 100% Production & Commercial Ready (09/16).**
+Phân hệ AI Video Studio (`src/app/(app)/video/page.tsx` + `src/modules/video-studio/` + `workers/media_ai/video/`) đạt chuẩn sẵn sàng thương mại toàn diện:
+- **6 khuôn chuẩn thương mại đa nền tảng (`VIDEO_FORMAT_SPECS`)**:
+  - TikTok dọc 9:16 (15s / 30s / 45s), Instagram Reels/YouTube Shorts 9:16 (30s), Facebook Feed vuông 1:1 (15s / 30s), Video ngang Landscape 16:9 (30s).
+- **Biên soạn kịch bản Storyboard trực quan & linh hoạt**:
+  - Hỗ trợ số lượng phân cảnh từ 2 đến 15 cảnh (linh hoạt tùy nhu cầu, nới lỏng giới hạn 10 cảnh cũ).
+  - Khóa chặt khung đầu và khung cuối vào Master Image / biến thể đã duyệt của sản phẩm (`YC-M4`).
+  - **Tự động cân bằng thời lượng (Auto-balancing Scene Duration)**: Tự động chia đều thời lượng cho từng cảnh dựa trên tổng thời lượng khuôn mẫu khi người dùng thêm hoặc bớt phân cảnh.
+  - **Nút xóa cảnh trực quan & nổi bật**: Nút `[🗑️ Xóa cảnh]` đỏ viền rõ ràng kèm hiệu ứng hover, thao tác xóa mượt mà không lo bị ẩn hay khó bấm.
+  - **Menu Camera Motion Ken Burns điện ảnh độc lập**: Mỗi cảnh có thể chọn hiệu ứng chuyển động riêng biệt (`ZOOM_IN`, `ZOOM_OUT`, `PAN_UP`, `PAN_RIGHT`, `STATIC`), mặc định tự động luân phiên tạo nhịp điệu chuyển động bắt mắt.
+- **Kiến trúc Provider cắm rút 2 phương án (Dual-Option Pluggable Provider Architecture)**:
+  - **Phương án A — `LocalCinematicProvider` (Mặc định hoạt động)**: Động cơ FFmpeg Ken Burns `zoompan` tối ưu hoá tốc độ cao (~0.45s/cảnh, 10.8x-22.8x speed), không phụ thuộc GPU ngoài, chi phí 0 credit, bảo toàn tuyệt đối chi tiết hoa tươi.
+  - **Phương án B — Standby AI Video Providers (`GoogleVeoProvider` & `HeyGenProvider`)**: Thu hoạch adapter từ SocialFlow, đóng gói hoàn chỉnh sẵn sàng chuyển đổi qua biến môi trường (`AI_VIDEO_PROVIDER=veo` hoặc `heygen`) mà không cần sửa code. Tự động fallback về Local Cinematic nếu thiếu API key hoặc gặp sự cố mạng.
+- **Xử lý âm thanh & phụ đề điện ảnh**:
+  - 4 phong cách phụ đề chuyên nghiệp: `MODERN_BADGE` (viên thuốc hiện đại), `MINIMAL_ELEGANT` (tinh tế tối giản), `HIGHLIGHT_BOX` (hộp nổi bật), `BOTTOM_BANNER` (dải băng chân trang).
+  - Tích hợp giọng đọc AI Edge TTS tiếng Việt tự nhiên đồng bộ theo phụ đề kịch bản cảnh.
+  - Tự động hạ âm lượng nhạc nền khi có giọng đọc (Audio Ducking) và hòa âm đa tầng chuẩn studio.
+- **Quy trình 2 cổng kiểm soát & duyệt độc lập**:
+  - Cổng 1 — Duyệt kịch bản (`POST /api/v1/video/jobs/:id/approve-script`, mã quyền `P3`): Rà soát lời thoại, thời lượng, chuyển động trước khi tốn tài nguyên render.
+  - Cổng 2 — Duyệt video thành phẩm (`POST /api/v1/video/jobs/:id/approve-video`, mã quyền `P4`): Xem trước video qua player HTML5, chốt duyệt lưu vào thư viện Asset chính thức.
+- **Theo dõi tiến trình thời gian thực (Real-time SSE)**:
+  - Luồng sự kiện SSE `/api/v1/video/jobs/:id/events` cập nhật từng bước (Soạn kịch bản -> Thu âm TTS -> Render Ken Burns -> Hòa âm -> Thành phẩm), thanh tiến trình mượt mà từ 0% đến 100%.
+- **Trạng thái hệ thống**: Chuyển `video-studio` trong `src/lib/mock-data.ts` từ `chua_san_sang` sang `hoat_dong` 🟢 (Active).
+- **Xác minh kỹ thuật**: `npm test` **357/357 test cases xanh** (54 test suites), `workers/tests` **83/83 test Python xanh 100%**, `npm run test:tenant` **160/160 test xanh**, `npx tsc --noEmit` **SẠCH**.
 
 **M06/M05 — Catalog & Website chuyển trạng thái HOẠT ĐỘNG 100% Production & Commercial Ready (09/16).**
 Phân hệ Catalog & Website (`src/app/(app)/catalog/page.tsx`) đạt chuẩn sẵn sàng thương mại toàn diện:
@@ -665,5 +690,6 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/13 | **Tích hợp UI ↔ Backend cho 4/10 chức năng UI/UX.** Bắt đầu từ `docs/UIUX-Integrate-Checklist.md`. 4 trang đã có backend được nối: (1) **Phân tích sản phẩm AI** — `tai-anh/page.tsx` dùng POST/PATCH/GET `/api/v1/vision/analyses`, POST reject, SSE `/api/v1/jobs/:id/events`, `useSession()` cho H1/H2/H3, asset listing, Idempotency-Key header; (2) **AI Creative Studio** — `creative-studio/page.tsx` dùng POST/GET `/api/v1/media/optimizations`, POST approve (Identity Guard REJECTED → ẩn Duyệt, WARNING → confirm), GET download (I3), proxy M04b; (3) **Catalog & Website** — `catalog/page.tsx` thay MOCK_PRODUCTS bằng GET `/api/v1/products`, GET/POST/PATCH/revoke `/api/v1/catalog-links`; (4) **Analytics & Learning** — `so-lieu/page.tsx` thay METRICS cứng bằng GET `/api/v1/usage/summary`, nối AI requests, audit logs, PUT `/api/v1/ai-policy`. 6 trang còn lại (#3 video, #4 content engine, #5 social publishing, #7 CRM, #8 orders, #9 chat) chờ backend tương ứng (P17/P18/P21/P22/P23). `npm test` 293/293 · `tsc --noEmit` SẠCH · checklist chi tiết ở `docs/UIUX-Integrate-Checklist.md` + `docs/dac-ta/Checklist_Thuc_Thi.md` mục UI/UX |
 | 09/15 | **Chuẩn hoá kiến trúc AI Content Engine (M07) ↔ SocialFlow.** Rà soát và đính chính định vị hệ thống: `SocialFlow` (AI Autonomous CMO) là repo sở hữu toàn bộ backend soạn thảo và xuất bản nội dung đa nền tảng (Facebook, Instagram, TikTok, Zalo OA...) cùng pipeline 6-agent (`scout`, `planner`, `creator`, `reviewer`, `publisher`, `analyst`). `LocalBudd` chỉ là AI Page Factory phục vụ Storefront (M05 Landing Page + M06 Catalog & QR). Giao diện `/noi-dung` (Chức năng #4) tại `floraos-core` là UI Shell & Template chuẩn hoá theo SSOT, kết nối backend sang `SocialFlow` qua cơ chế Server-side Proxy `/api/v1/proxy/api/m07/*?client=SOCIALFLOW` kèm SSO JWT, bảo đảm tenant isolation và không làm lộ UI SocialFlow ra ngoài. |
 | 09/15 | **Khởi tạo Từ điển từ cấm ngành hoa & FlowerContentGuard toàn hệ thống.** Ban hành tài liệu SSOT `docs/kien-truc/TU_DIEN_TU_CAM_CONTENT_NGANH_HOA.md` phân loại 4 nhóm từ vi phạm (cam kết sai lệch về hoa, AI slop, giật gân chợ búa, chính sách nền tảng) phục vụ chuyên gia rà soát/cập nhật. Đồng bộ file cấu hình máy đọc `src/core/ai/domain/flower-content-banned-lexicon.json`. Xây dựng domain service thuần túy `FlowerContentGuard` (`src/core/ai/domain/flower-content-guard.ts`) hỗ trợ kiểm tra vi phạm (`checkFlowerContent`), tự động làm sạch (`sanitizeFlowerContent`), chặn cứng với `AppError` (`assertFlowerContentAllowed`), và tích hợp `brand_profiles.forbidden_styles`. Bộ test `flower-content-guard.test.ts` đạt 8/8 test xanh. |
+| 09/16 | **Hoàn tất P17 — M04c AI Video Studio (Chức năng #3).** Nghiệm thu toàn diện hệ thống dựng video marketing hoa tươi dọc 9:16/1:1/16:9 (`/video`). 6 khuôn chuẩn (`VIDEO_FORMAT_SPECS`), biên soạn Storyboard chi tiết linh hoạt 2–15 cảnh, tự động cân bằng thời lượng theo khuôn (auto-balance duration), nút xóa cảnh nổi bật, menu Camera Motion điện ảnh độc lập (Zoom In, Zoom Out, Pan Lên, Pan Ngang, Cảnh tĩnh) luân phiên mượt mà. 4 phong cách phụ đề (Modern Badge, Minimal Elegant, Highlight Box, Bottom Banner) đồng bộ 100% lời thoại lồng tiếng TTS và ducking nhạc nền. Kiến trúc Provider cắm rút 2 phương án: Phương án A `LocalCinematicProvider` (mặc định, FFmpeg zoompan ~0.45s/cảnh, 0 credit) + Phương án B Standby `GoogleVeoProvider` & `HeyGenProvider` (kích hoạt qua `.env`). 2 cổng duyệt (Script Approval & Video Output Approval), SSE tiến trình render thời gian thực. Trạng thái chuyển thành `hoat_dong` 🟢 trên Dashboard. `npm test` 357/357 xanh · Pytest 83/83 xanh · `test:tenant` 160/160 xanh · `tsc --noEmit` SẠCH. |
 
 

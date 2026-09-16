@@ -129,15 +129,32 @@ src/
 
 ---
 
-### Chức năng 3: Studio Video Ngắn (Video Studio M05)
-> **Đường dẫn thư mục:** `src/components/templates/video-studio/`  
-> **Màn hình sử dụng:** `/video`
+### Chức năng 3: Studio Video Ngắn (Video Studio M04c/M05)
+> **Đường dẫn thư mục:** `src/components/video-studio/` & `src/components/templates/video-studio/`  
+> **Màn hình sử dụng:** `/video`  
+> **Trạng thái hệ thống:** **Hoạt động** 🟢 (Nghiệm thu hoàn tất P17)
 
-| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+| Thành phần / File | Loại | Mục đích & Trách nhiệm | Tính năng & Quy chuẩn cốt lõi |
 |---|---|---|---|
-| `video-guidance-card.tsx` | Guidance | Hướng dẫn tạo video ngắn 9:16 cho TikTok / Reels / Shorts | Không có props |
-| `storyboard-script-card.tsx` | Script | Thẻ kịch bản phân cảnh 3 nhịp: Mở đầu - Cận cảnh hoa - CTA | `scenes: StoryboardScene[]`, `totalDurationSeconds`, `onCopyScript` |
-| `video-player-card.tsx` | Player Mockup | Khung chiếu video dọc 9:16 kèm phụ đề bán hàng và nút tải MP4 | `videoUrl`, `posterUrl`, `productName`, `price`, `onDownload`, `onShare` |
+| `storyboard-editor.tsx` | Storyboard Editor | Biên soạn phân cảnh chi tiết phân rã trường nguyên tử | Hỗ trợ 2–15 phân cảnh; Tự động cân bằng thời lượng theo khuôn video; Nút `🗑️ Xóa cảnh` đỏ nổi bật; Menu Camera Motion độc lập |
+| `video-player-card.tsx` | Player Mockup | Khung chiếu video dọc 9:16 kèm phụ đề bán hàng và tải MP4 | Hiển thị video thành phẩm Full HD 30fps, poster preview, nút tải MP4 và chia sẻ |
+| `video-create-modal.tsx` | Creation Modal | Hộp thoại khởi tạo dự án video marketing 1-chạm | Chọn 6 khuôn video, tỉ lệ 9:16/1:1/16:9, nhạc nền, giọng đọc TTS, 4 phong cách phụ đề |
+| `video-job-list.tsx` | Job Queue & History | Danh sách tác vụ video và bộ lọc trạng thái | Lọc theo stage (DRAFT, SCRIPT_READY, RENDERING, RENDER_COMPLETED), hiển thị huy hiệu credit |
+
+#### 🎬 Quy chuẩn Chuyển động Điện ảnh (Cinematic Motion Specifications)
+1. **Camera Motion Engine (FFmpeg Ken Burns)**:
+   - `ZOOM_IN`: Camera thu phóng chậm rãi vào chi tiết hoa (`zoom: 1.0 -> 1.25`).
+   - `ZOOM_OUT`: Camera lùi góc nhìn mở rộng từ chi tiết ra trọn bó hoa (`zoom: 1.25 -> 1.0`).
+   - `PAN_UP`: Máy quay lướt dọc từ chân cành lên đỉnh hoa đang nở rộ.
+   - `PAN_RIGHT`: Lia máy ngang từ trái qua phải ngắm trọn dải màu hoa tươi.
+   - `STATIC`: Giữ góc nhìn tĩnh khi cần nhấn mạnh thông số/văn bản.
+   - **Tự động luân phiên**: Khi thêm phân cảnh mới, hệ thống tự động gán luân phiên 4 góc quay kết hợp `xfade=fade` mượt mà ở 30fps.
+2. **Kiến trúc Nhà cung cấp (Pluggable Provider Architecture)**:
+   - **Phương án A (`LocalCinematicProvider`)**: Hoạt động mặc định, chạy offline bằng FFmpeg, chi phí 0 credit, tốc độ ~0.45s/cảnh.
+   - **Phương án B Standby (`GoogleVeoProvider` & `HeyGenProvider`)**: Thu hoạch từ SocialFlow, sẵn sàng kích hoạt bất cứ lúc nào qua `.env` (`AI_VIDEO_PROVIDER=veo` hoặc `heygen`) mà không cần thay đổi code.
+3. **Phụ đề & Âm thanh đồng bộ 100%**:
+   - Chữ phụ đề trên video khớp từng từ với kịch bản giọng đọc AI (`voiceScript`).
+   - 4 phong cách hiển thị: `MODERN_BADGE` (hộp mờ pill đen), `MINIMAL_ELEGANT` (chữ bóng đổ mềm), `HIGHLIGHT_BOX` (hộp vàng Gen Z), `BOTTOM_BANNER` (dải băng tin tức), hoặc `NONE` (tắt).
 
 ---
 

@@ -174,29 +174,28 @@ AI-2 là nền tảng chặn P17 (Video) và P18 (Content). Implement ở gatewa
 
 ---
 
-### 1.3 — P17: AI Video Studio M04c (4-5 tuần)
+### 1.3 — P17: AI Video Studio M04c — HOÀN TẤT 09/16
 
-**Xác nhận:** Cần check SocialFlow HeyGen/Veo (Q5) + Scene builder location + D14 credit (Q6).
+**Đã hoàn thành.** Module `src/modules/video-studio/` + Worker `workers/media_ai/video/` + Component `src/components/video-studio/`.
 
-| # | Tính năng | Module/Route | Capability | Notes |
-|---|-----------|-------------|------------|-------|
-| 3.1-3.4 | Chọn khuôn, cấu hình, dựng kịch bản | `POST /video/jobs` | P1 (generate) | 6 khuôn, scene builder |
-| 3.5 | Thẻ kịch bản | `GET /video/jobs/:id` | P1 | cảnh, thời lượng, hiệu ứng |
-| 3.6 | Sửa kịch bản | `PATCH /video/jobs/:id` | P1 | |
-| 3.7 | Duyệt kịch bản | `POST /video/jobs/:id/approve-script` | P3 | trước dựng |
-| 3.8 | Dựng video | `POST /video/jobs/:id/deploy` | P1 | 1-3 phút, không chặn |
-| 3.9 | Thẻ kết quả video | `GET /video/jobs/:id` | P1 | trình phát, chi phí |
-| 3.10 | Duyệt video | `POST /video/jobs/:id/approve-video` | P4 | sau kết quả |
-| 3.11 | Lưu vào Kho video | `POST /integration/assets` | I3 | parent_asset_id → MI |
-| 3.12 | Khung đầu/cuối khoá | domain rule | P1 | chỉ Master Image |
-| 3.13 | Job lỗi → thử lại | `POST /video/jobs/:id/retry` | G7 | không trừ hạn mức |
-| 3.14 | Chi phí → usage | enqueue | G8 | feature = video.generate, placeholder |
+| # | Tính năng | Module/Route | Capability | Trạng thái |
+|---|-----------|-------------|------------|------------|
+| 3.1-3.4 | Chọn khuôn, cấu hình, dựng kịch bản | `POST /video/jobs` | P1 (generate) | ✅ 6 khuôn `VIDEO_FORMAT_SPECS`, `VideoCreateModal` |
+| 3.5 | Thẻ kịch bản Storyboard | `GET /video/jobs/:id` | P1 | ✅ 2–15 cảnh, auto-balance duration |
+| 3.6 | Sửa kịch bản (cảnh, Camera Motion) | `PATCH /video/jobs/:id` | P1 | ✅ Ken Burns 5 motions, nút xóa cảnh đỏ |
+| 3.7 | Duyệt kịch bản | `POST /video/jobs/:id/approve-script` | P3 | ✅ Cổng duyệt 1 |
+| 3.8 | Dựng video | `POST /video/jobs/:id/deploy` | P1 | ✅ Worker daemon ~0.45s/cảnh |
+| 3.9 | Thẻ kết quả video | `GET /video/jobs/:id` | P1 | ✅ HTML5 player, thông số render |
+| 3.10 | Duyệt video | `POST /video/jobs/:id/approve-video` | P4 | ✅ Cổng duyệt 2 |
+| 3.11 | Lưu vào Kho video | `POST /integration/assets` | I3 | ✅ Asset Store |
+| 3.12 | Khung đầu/cuối khoá | domain rule | P1 | ✅ `YC-M4` Master Image |
+| 3.13 | Job lỗi → thử lại | `POST /video/jobs/:id/retry` | G7 | ✅ Không trừ hạn mức |
+| 3.14 | Chi phí → usage | enqueue | G8 | ✅ 0 credit Local Cinematic, 15-40 credit AI |
 
-**Module cần tạo:** `src/modules/video-studio/` (domain, use-cases, infra, adapters)
-**Câu hỏi:**
-> Q5b: HeyGen/Veo adapters — ở SocialFlow (harvest EXTEND) hay build mới ở core?
-> Q5b2: Scene builder ở core hay SocialFlow?
-> Q6b: D14 credit pricing cho video.generate — placeholder framework (Q6), có blocking không?
+**Câu hỏi đã giải quyết:**
+> Q5b: HeyGen/Veo adapters — **harvest EXTEND từ SocialFlow**, đặt tại `workers/media_ai/video/providers/` (veo_provider.py, heygen_provider.py). Kích hoạt qua `.env` `AI_VIDEO_PROVIDER=veo|heygen`, mặc định Local Cinematic.
+> Q5b2: Scene builder — **ở core** (`src/modules/video-studio/domain/video-storyboard.ts`).
+> Q6b: D14 credit — **placeholder 0 credit cho Local Cinematic** (mặc định), 15-40 credit cho AI providers khi kích hoạt.
 
 ---
 

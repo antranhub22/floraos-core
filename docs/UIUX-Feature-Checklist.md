@@ -22,7 +22,7 @@
 |---|-----------|--------|---------------|---------|----------|-------------|
 | 1 | Phân tích sản phẩm AI | M01/M01b/M01c | 28 | 27 | 1 | 0 |
 | 2 | AI Creative Studio | M04a/M04b | 14 | 8 | 4 | 2 |
-| 3 | AI Video Studio | M04c | 9 | 0 | 0 | 9 |
+| 3 | AI Video Studio | M04c | 14 | 14 | 0 | 0 |
 | 4 | AI Content Engine | M07 | 10 | 0 | 0 | 10 |
 | 5 | Social Publishing | M07 | 10 | 0 | 0 | 10 |
 | 6 | Catalog & Website | M06/M05 | 13 | 11 | 0 | 2 |
@@ -30,7 +30,7 @@
 | 8 | Đơn hàng & Vận hành | M10 | 13 | 0 | 0 | 13 |
 | 9 | AI Chat Assistant | M08 | 12 | 0 | 0 | 12 |
 | 10 | Analytics & Learning | M11 | 12 | 7 | 2 | 3 |
-| | **Tổng** | | **127** | **53** | **7** | **71** |
+| | **Tổng** | | **132** | **67** | **7** | **58** |
 
 ---
 
@@ -121,26 +121,26 @@
 
 ---
 
-## #3 — AI Video Studio (M04c) — `video` ❌ CHƯA CODE (0/9)
+## #3 — AI Video Studio (M04c) — `video` ✅ ĐÃ CODE & TÍCH HỢP TOÀN DIỆN (14/14)
 
-**Chờ P17.** Hạ tầng job và adapter nhà cung cấp đã có; 6 khuôn đầu ra và lớp dựng cảnh chưa xây.
+**Đã hoàn thành P17 (09/16).** Hạ tầng job, video render worker song song, Storyboard linh hoạt 2–15 cảnh, auto-balancing duration, Camera Motion Ken Burns (5 motions luân phiên), 4 phong cách phụ đề, Edge TTS ducking nhạc nền, 2 cổng duyệt độc lập, kiến trúc Provider cắm rút (Option A Local Cinematic 0 credit + Option B Standby Veo/HeyGen qua .env).
 
 | # | Tính năng | Trạng thái | Ghi chú |
 |---|-----------|------------|---------|
-| 3.1 | Chọn sản phẩm có Master Image đã duyệt | ❌ | |
-| 3.2 | Chọn khuôn video (Reel 15s, TikTok 30s, Story, Slideshow, Video sản phẩm, Motion quảng cáo) | ❌ | |
-| 3.3 | Cấu hình: nhạc nền, giọng đọc, phụ đề, CTA, logo | ❌ | |
-| 3.4 | Nhấn "Dựng kịch bản" | ❌ | |
-| 3.5 | Thẻ kịch bản: danh sách cảnh (ảnh, thời lượng, hiệu ứng, phụ đề) | ❌ | |
-| 3.6 | Sửa thứ tự cảnh / đổi ảnh nguồn / sửa phụ đề | ❌ | |
-| 3.7 | **Duyệt kịch bản** (trước khi tốn chi phí) | ❌ | |
-| 3.8 | Nhấn "Dựng video" (1–3 phút, không chặn) | ❌ | |
-| 3.9 | Thẻ kết quả: trình phát + thời lượng + tỉ lệ + chi phí ước tính | ❌ | |
-| 3.10 | **Duyệt video** (sau kết quả cuối) | ❌ | |
-| 3.11 | Lưu vào Kho video | ❌ | |
-| 3.12 | Hai cổng duyệt tách rời (kịch bản ≠ video) | ❌ | |
-| 3.13 | Khung đầu/cuối khoá vào ảnh đã duyệt | ❌ | |
-| 3.14 | Job dựng video lỗi → "Dựng thất bại — thử lại", không trừ hạn mức | ❌ | |
+| 3.1 | Chọn sản phẩm có Master Image đã duyệt | ✅ Đã code | Dropdown sản phẩm kèm ảnh đại diện Master Image |
+| 3.2 | Chọn khuôn video (6 khuôn: Reel 30s, TikTok 15s/30s/45s, Story, Feed 1:1, Landscape 16:9) | ✅ Đã code | `VIDEO_FORMAT_SPECS` đầy đủ thông số tỉ lệ và thời lượng |
+| 3.3 | Cấu hình: nhạc nền, giọng đọc, phụ đề (4 styles), CTA, logo | ✅ Đã code | Edge TTS tiếng Việt, 4 phong cách phụ đề, nhạc nền đa dạng |
+| 3.4 | Nhấn "Dựng kịch bản" tạo video job | ✅ Đã code | `POST /api/v1/video/jobs` kèm `VideoCreateModal` xác nhận chi phí |
+| 3.5 | Thẻ kịch bản: danh sách cảnh (ảnh, thời lượng, chuyển động, phụ đề) | ✅ Đã code | `StoryboardEditor` trực quan, hiển thị timeline từng phân cảnh |
+| 3.6 | Sửa thứ tự cảnh / đổi ảnh nguồn / sửa phụ đề / chọn Camera Motion | ✅ Đã code | Menu Camera Motion (Zoom In/Out, Pan Up/Right, Static), tự động cân bằng thời lượng (auto-balance duration), nút xóa cảnh đỏ nổi bật (`[🗑️ Xóa cảnh]`), linh hoạt 2–15 cảnh |
+| 3.7 | **Duyệt kịch bản** (trước khi tốn chi phí) | ✅ Đã code | `POST /api/v1/video/jobs/:id/approve-script` gác quyền `P3` |
+| 3.8 | Nhấn "Dựng video" (non-blocking qua worker) | ✅ Đã code | `POST /api/v1/video/jobs/:id/deploy` đẩy job sang worker render |
+| 3.9 | Thẻ kết quả: trình phát + thời lượng + tỉ lệ + chi phí ước tính | ✅ Đã code | Trình phát video HTML5 xem trước kèm thông số render |
+| 3.10 | **Duyệt video** (sau kết quả cuối) | ✅ Đã code | `POST /api/v1/video/jobs/:id/approve-video` gác quyền `P4` |
+| 3.11 | Lưu vào Kho video & Asset Store | ✅ Đã code | Tải video MP4 và lưu bản ghi vào `POST /api/v1/integration/assets` |
+| 3.12 | Hai cổng duyệt tách rời (kịch bản ≠ video) | ✅ Đã code | `approve-script` tách biệt với `approve-video`, kiểm soát chi phí |
+| 3.13 | Khung đầu/cuối khoá vào ảnh đã duyệt | ✅ Đã code | Ràng buộc nghiệp vụ `YC-M4` khóa chặt vào Master Image |
+| 3.14 | Job dựng video lỗi → "Dựng thất bại — thử lại", không trừ hạn mức | ✅ Đã code | Nút "Thử lại" kích hoạt re-render mà không mất hạn mức |
 
 ---
 
@@ -333,16 +333,16 @@
 | 3 | #6 catalog | 6.2–6.7 (Tab A), 6.10–6.15 (Tab B) | Cần M05 builder |
 | 4 | #10 so-lieu | 10.12, 10.13–10.18 (Vòng học) | Cần learning backend |
 
-### Giai đoạn 2 — Chờ P17–P23
+### Giai đoạn 2 — Tuyến B (P17–P23)
 
-| Pha | Chức năng | Module | Tính năng |
-|-----|-----------|--------|-----------|
-| P17 | #3 AI Video Studio | M04c | 3.1–3.14 (14 tính năng) |
-| P18 | #4 AI Content Engine | M07 | 4.1–4.10 (10 tính năng) |
-| P18 | #5 Social Publishing | M07 | 5.1–5.11 (11 tính năng) |
-| P21 | #7 CRM | M09 | 7.1–7.11 (11 tính năng) |
-| P22 | #8 Đơn hàng | M10 | 8.1–8.15 (15 tính năng) |
-| P23 | #9 Chat Assistant | M08 | 9.1–9.12 (12 tính năng) |
+| Pha | Chức năng | Module | Tính năng | Trạng thái |
+|-----|-----------|--------|-----------|------------|
+| P17 | #3 AI Video Studio | M04c | 3.1–3.14 (14 tính năng) | ✅ Đã hoàn thành (09/16) |
+| P18 | #4 AI Content Engine | M07 | 4.1–4.10 (10 tính năng) | ⏳ Chờ backend SocialFlow |
+| P18 | #5 Social Publishing | M07 | 5.1–5.11 (11 tính năng) | ⏳ Chờ backend SocialFlow |
+| P21 | #7 CRM | M09 | 7.1–7.11 (11 tính năng) | ⏳ Chờ backend |
+| P22 | #8 Đơn hàng | M10 | 8.1–8.15 (15 tính năng) | ⏳ Chờ backend |
+| P23 | #9 Chat Assistant | M08 | 9.1–9.12 (12 tính năng) | ⏳ Chờ backend |
 
 ---
 

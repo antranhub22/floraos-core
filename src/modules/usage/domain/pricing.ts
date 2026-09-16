@@ -15,6 +15,7 @@ const FEATURE_COST_CREDIT: Readonly<Record<string, number>> = {
   "media.optimize": 2,
   "catalog.generate": 1,
   "landing.generate": 1,
+  "video.render": 5,
 }
 
 const DEFAULT_COST_CREDIT = 1

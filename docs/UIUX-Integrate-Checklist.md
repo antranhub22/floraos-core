@@ -21,7 +21,7 @@
 |---|-------|--------|---------------|------------|
 | 1 | Phân tích sản phẩm AI | M01 | ✅ vision/analyses | **Cần tích hợp** (mock) |
 | 2 | AI Creative Studio | M04a/M04b | ✅ media/optimizations + background-removal | ✅ **Đã tích hợp hoàn thiện (Commercial Ready)** |
-| 3 | AI Video Studio | M04c | ❌ (P17 chưa xây) | Chờ backend |
+| 3 | AI Video Studio | M04c | ✅ video/jobs + render worker | ✅ **Đã tích hợp hoàn thiện (Commercial Ready)** |
 | 4 | AI Content Engine | M07 | ❌ (P18 chưa xây) | Chờ backend |
 | 5 | Social Publishing | M07 | ❌ (P18 chưa xây) | Chờ backend |
 | 6 | Catalog & Website | M06 | ✅ products + catalog-links | **Cần tích hợp** (mock) |
@@ -202,7 +202,29 @@
 
 ## #3 — AI Video Studio (`src/app/(app)/video/page.tsx`)
 
-**Chờ P17 (M04c) xây dựng.** Không có backend API nào cho video.
+**Đã tích hợp hoàn thiện 100% Commercial Ready (09/16).** Đã kết nối đầy đủ hệ thống API core và Worker daemon render song song:
+
+### Backend APIs đã nối
+
+| Endpoint | Method | Capability | Mục đích | Trạng thái |
+|----------|--------|-----------|----------|------------|
+| `/api/v1/products` | GET | L1 | Lấy danh sách sản phẩm có Master Image | ✅ Đã nối |
+| `/api/v1/video/jobs` | POST | P1 | Tạo video job mới (kèm Idempotency-Key) | ✅ Đã nối |
+| `/api/v1/video/jobs` | GET | P1 | Lấy danh sách video jobs theo tổ chức | ✅ Đã nối |
+| `/api/v1/video/jobs/:id` | GET | P1 | Lấy chi tiết kịch bản phân cảnh Storyboard | ✅ Đã nối |
+| `/api/v1/video/jobs/:id` | PATCH | P1 | Cập nhật kịch bản (cảnh, âm thanh, phụ đề, Camera Motion) | ✅ Đã nối |
+| `/api/v1/video/jobs/:id/approve-script` | POST | P3 | Cổng duyệt 1: Duyệt kịch bản trước khi render | ✅ Đã nối |
+| `/api/v1/video/jobs/:id/deploy` | POST | P1 | Bắt đầu dựng video (đẩy job vào hàng đợi worker) | ✅ Đã nối |
+| `/api/v1/video/jobs/:id/approve-video` | POST | P4 | Cổng duyệt 2: Duyệt video thành phẩm chính thức | ✅ Đã nối |
+| `/api/v1/video/jobs/:id/events` | GET (SSE) | G4 | Theo dõi tiến trình render thời gian thực | ✅ Đã nối |
+| `/api/v1/integration/assets` | POST | I3 | Đăng ký video thành phẩm vào Asset Store | ✅ Đã nối |
+
+### Kiến trúc & Điểm nổi bật
+- **Storyboard linh hoạt 2–15 cảnh**: Tự động cân bằng thời lượng (auto-balance duration) khi thêm/bớt cảnh; nút xóa cảnh `[🗑️ Xóa cảnh]` đỏ viền rõ ràng.
+- **Menu Camera Motion Ken Burns điện ảnh**: 5 chuyển động độc lập (Zoom In, Zoom Out, Pan Up, Pan Right, Static) luân phiên.
+- **Kiến trúc Provider cắm rút**: Phương án A `LocalCinematicProvider` (0 credit, ~0.45s/cảnh) mặc định + Phương án B Standby `GoogleVeoProvider` & `HeyGenProvider` (kích hoạt qua `.env`).
+- **Phụ đề & Âm thanh**: 4 phong cách phụ đề, Edge TTS tiếng Việt, Audio Ducking nhạc nền tự động.
+- **Khóa khung đầu & cuối**: Tuân thủ nghiêm ngặt `YC-M4` khóa vào ảnh Master Image đã duyệt.
 
 ---
 

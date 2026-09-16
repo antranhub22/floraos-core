@@ -19,7 +19,7 @@
 |---|-----------|--------------|--------|--------------|--------------|----------------------|
 | 1 | Phân tích sản phẩm AI | `/tai-anh`, `/kho-du-lieu` | M01/M01b/M01c | ✅ `vision/analyses`, `product-copies` | 28/29 Đã code | ✅ Đã kết nối API thật |
 | 2 | AI Creative Studio | `/creative-studio` | M04a/M04b | ✅ `media/optimizations`, `media/background-removal` | 14/14 Đã code | ✅ Đã kết nối API thật & Commercial Ready |
-| 3 | AI Video Studio | `/video` | M04c | ❌ Chờ P17 | 0/9 Chờ backend | ❌ Chờ P17 backend |
+| 3 | AI Video Studio | `/video` | M04c | ✅ `video/jobs`, `workers/media_ai/video` | 14/14 Đã code | ✅ Đã kết nối API thật & Commercial Ready |
 | 4 | AI Content Engine | `/noi-dung` | M07 | ❌ Chờ P18 | 0/10 Chờ backend | ❌ Chờ P18 backend |
 | 5 | Social Publishing | `/lich-dang` | M07 | ❌ Chờ P18 | 0/10 Chờ backend | ❌ Chờ P18 backend |
 | 6 | Catalog & Website | `/catalog` | M06/M05 | ✅ `products`, `catalog-links` | 7/13 Đã code | 🔧 Cần hoàn thiện |
@@ -27,7 +27,7 @@
 | 8 | Đơn hàng & Vận hành | `/don-hang` | M10 | ❌ Chờ P22 | 0/13 Chờ backend | ❌ Chờ P22 backend |
 | 9 | AI Chat Assistant | `/hoi-thoai` | M08 | ❌ Chờ P23 | 0/12 Chờ backend | ❌ Chờ P23 backend |
 | 10 | Analytics & Learning | `/so-lieu` | M11 | ✅ `usage`, `ai-governance` | 7/12 Đã code | 🔧 Cần hoàn thiện |
-| | **Tổng cộng** | | | | **56/128 (44%)** | **4 màn hình sẵn sàng backend** |
+| | **Tổng cộng** | | | | **70/128 (55%)** | **5 màn hình sẵn sàng backend** |
 
 ---
 
@@ -135,6 +135,43 @@
 
 ---
 
+## #3 — AI Video Studio (M04c)
+**Đường dẫn:** `src/app/(app)/video/page.tsx`  
+**Backend:** Đã hoàn thiện toàn diện trên Core (`src/modules/video-studio/`) + Video Render Worker daemon (`workers/media_ai/video/`).
+
+### A. Checklist tính năng UI/UX
+- [x] Chọn sản phẩm có Master Image đã duyệt (`GET /api/v1/products`)
+- [x] Chọn khuôn video chuẩn thương mại 6 định dạng (TikTok 15s/30s/45s 9:16, Reels 30s 9:16, Feed 15s/30s 1:1, Landscape 30s 16:9)
+- [x] Cấu hình âm thanh & visual: Nhạc nền, giọng đọc AI Edge TTS, 4 phong cách phụ đề (Modern Badge, Minimal, Highlight Box, Bottom Banner), logo watermark
+- [x] Modal xác nhận chi phí tín dụng (Credit Cost Confirmation) trước khi tạo job (`VideoCreateModal`)
+- [x] Biên soạn kịch bản Storyboard trực quan & linh hoạt 2–15 cảnh (`StoryboardEditor`)
+- [x] **Tự động cân bằng thời lượng (Auto-balancing Scene Duration)** khi thêm/bớt phân cảnh
+- [x] **Nút xóa cảnh nổi bật (`[🗑️ Xóa cảnh]`)** màu đỏ rõ ràng, thao tác mượt mà
+- [x] **Menu Camera Motion Ken Burns điện ảnh**: Zoom In, Zoom Out, Pan Up, Pan Right, Static luân phiên
+- [x] Khóa chặt khung đầu & khung cuối vào Master Image / biến thể đã duyệt (`YC-M4`)
+- [x] **Cổng duyệt 1: Duyệt kịch bản** (`POST /api/v1/video/jobs/:id/approve-script` — `P3`) trước khi render
+- [x] **Dựng video non-blocking** qua Worker song song (`POST /api/v1/video/jobs/:id/deploy` — `P1`)
+- [x] Theo dõi tiến trình render thời gian thực qua Server-Sent Events (`GET /api/v1/video/jobs/:id/events` — `G4`)
+- [x] Trình phát video kết quả (HTML5 Player) kèm thông số kỹ thuật (tỉ lệ, thời lượng, dung lượng, credit)
+- [x] **Cổng duyệt 2: Duyệt video thành phẩm** (`POST /api/v1/video/jobs/:id/approve-video` — `P4`)
+- [x] Tải xuống video thành phẩm trực tiếp 1-chạm & lưu vào Thư viện Asset (`POST /api/v1/integration/assets`)
+- [x] Xử lý lỗi & nút "Thử lại": Render lỗi không trừ hạn mức, có thể bấm Re-render ngay
+
+### B. Backend APIs & Kết nối
+| Endpoint | Method | Capability | Mục đích | Trạng thái |
+|----------|--------|-----------|----------|------------|
+| `/api/v1/video/jobs` | POST | P1 | Tạo video job mới (kèm Idempotency-Key) | ✅ Đã có |
+| `/api/v1/video/jobs` | GET | P1 | Lấy danh sách video jobs của tổ chức | ✅ Đã có |
+| `/api/v1/video/jobs/:id` | GET | P1 | Chi tiết video job & kịch bản storyboard | ✅ Đã có |
+| `/api/v1/video/jobs/:id` | PATCH | P1 | Cập nhật kịch bản (scenes, audio, subtitle) | ✅ Đã có |
+| `/api/v1/video/jobs/:id/approve-script` | POST | P3 | Duyệt kịch bản trước khi render | ✅ Đã có |
+| `/api/v1/video/jobs/:id/deploy` | POST | P1 | Đưa job vào hàng đợi render worker | ✅ Đã có |
+| `/api/v1/video/jobs/:id/approve-video` | POST | P4 | Duyệt video thành phẩm chính thức | ✅ Đã có |
+| `/api/v1/video/jobs/:id/events` | GET (SSE) | G4 | Luồng SSE trạng thái & tiến trình render | ✅ Đã có |
+| `/api/v1/integration/assets` | POST | I3 | Lưu video thành phẩm vào Asset Store | ✅ Đã có |
+
+---
+
 ## #6 — Catalog & Website (M06/M05)
 **Đường dẫn:** `src/app/(app)/catalog/page.tsx`  
 **Backend:** Đã có M06 trên core (`src/modules/catalog-links/`), M05 builder trên LocalBudd (qua proxy).
@@ -186,7 +223,6 @@
 
 | Chức năng | Đường dẫn UI | Pha backend chờ | Mô tả phụ thuộc |
 |-----------|--------------|-----------------|-----------------|
-| **#3 AI Video Studio** | `/video` | **P17 (M04c)** | Hạ tầng job & nhà cung cấp đã có; chờ 6 template video và pipeline dựng cảnh |
 | **#4 AI Content Engine** | `/noi-dung` | **P18 (M07)** | Chờ bộ sinh bài viết đa kênh ngành hoa & template bài đăng |
 | **#5 Social Publishing** | `/lich-dang` | **P18 (M07)** | Chờ cơ chế xác thực kênh xã hội & hàng đợi xuất bản tự động |
 | **#7 CRM & Khách hàng** | `/khach-hang` | **P21 (M09)** | Chờ 4 bảng khách hàng, thẻ phân loại và cơ chế nhắc mua lại chu kỳ |

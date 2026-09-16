@@ -239,37 +239,48 @@ Chọn Master Image đã duyệt
 
 ## 3. AI Video Studio
 
-**Module:** M04c · **Trạng thái nền tảng:** hạ tầng job và adapter nhà cung cấp đã có; sáu khuôn đầu ra và lớp dựng cảnh chưa xây.
+**Module:** M04c · **Trạng thái nền tảng:** ✅ HOẠT ĐỘNG 100% Production & Commercial Ready (P17 hoàn tất 09/16). Hệ thống dựng video marketing hoa tươi hoàn chỉnh: 6 khuôn đa nền tảng, Storyboard linh hoạt 2–15 cảnh, Camera Motion Ken Burns điện ảnh, Provider cắm rút (Local Cinematic 0 credit + Standby Veo/HeyGen).
 
 ### Luồng người dùng
 
 ```
 Chọn sản phẩm có Master Image đã duyệt
-   → Chọn khuôn video: Reel 15s · TikTok 30s · Story · Slideshow · Video sản phẩm · Motion quảng cáo
-   → Cấu hình: nhạc nền · giọng đọc bật/tắt · phụ đề bật/tắt · CTA · vị trí logo
+   → Chọn khuôn video: TikTok 15s/30s/45s · Reels 30s · Feed 1:1 · Landscape 16:9
+   → Cấu hình: nhạc nền · giọng đọc Edge TTS · phụ đề 4 phong cách · CTA · logo
+   → Xác nhận chi phí credit (VideoCreateModal)
    → Nhấn "Dựng kịch bản"
-   → [Đang soạn kịch bản cảnh]
-   → THẺ KỊCH BẢN: danh sách cảnh (ảnh nguồn mỗi cảnh, thời lượng, hiệu ứng chuyển cảnh, dòng phụ đề)
-   → Sửa thứ tự cảnh / đổi ảnh nguồn từng cảnh / sửa phụ đề
-   → Duyệt kịch bản
+   → STORYBOARD EDITOR: 2–15 cảnh (thêm/xóa/sắp xếp)
+     • Mỗi cảnh: ảnh nguồn, thời lượng tự cân bằng, Camera Motion (Zoom In/Out, Pan Up/Right, Static), phụ đề
+     • Nút xóa cảnh [🗑️ Xóa cảnh] đỏ nổi bật
+     • Menu Camera Motion Ken Burns luân phiên tự động
+   → Duyệt kịch bản (Cổng 1 — P3)
    → Nhấn "Dựng video"
-   → [Đang dựng — có thể mất 1–3 phút, không chặn màn hình]
-   → THẺ KẾT QUẢ: trình phát video + thời lượng + tỉ lệ + chi phí ước tính
-   → Duyệt (video chính thức)
-   → Lưu vào Kho video → Quay về Trang chủ
+   → [Đang dựng — Worker FFmpeg Ken Burns ~0.45s/cảnh, SSE tiến trình 0%→100%]
+   → THẺ KẾT QUẢ: trình phát video HTML5 + thời lượng + tỉ lệ + chi phí
+   → Duyệt video (Cổng 2 — P4)
+   → Lưu vào Kho video & Asset Store → Quay về Trang chủ
 ```
 
 Hai cổng duyệt tách biệt: **duyệt kịch bản** (trước khi tốn chi phí dựng thật) và **duyệt video** (sau khi có kết quả cuối) — tránh dựng video tốn kém từ một kịch bản chưa ai xem qua.
 
-### Thẻ kịch bản
+### Thẻ kịch bản Storyboard
 
 | Trường | Sửa được | Thêm/bớt |
 |---|---|---|
-| Danh sách cảnh (ảnh nguồn + thời lượng) | Có | Có (thêm/xoá cảnh, khung đầu và khung cuối luôn khoá vào ảnh đã duyệt) |
-| Hiệu ứng chuyển cảnh | Có | — |
+| Danh sách cảnh (ảnh nguồn + thời lượng tự cân bằng) | Có | Có (thêm/xoá cảnh 2–15, khung đầu và khung cuối luôn khoá vào ảnh đã duyệt) |
+| Camera Motion Ken Burns (Zoom In/Out, Pan Up/Right, Static) | Có (menu dropdown mỗi cảnh) | Mặc định luân phiên tự động |
 | Nhạc nền | Có (đổi bản nhạc) | — |
-| Phụ đề từng cảnh | Có (sửa văn bản) | Có |
+| Phụ đề từng cảnh (4 phong cách: Modern Badge, Minimal, Highlight Box, Bottom Banner) | Có (sửa văn bản + chọn phong cách) | Có |
+| Giọng đọc AI Edge TTS | Có (bật/tắt) | — |
 | CTA cuối video | Có | — |
+
+### Kiến trúc Provider cắm rút
+
+| Phương án | Provider | Chi phí | Tốc độ | Kích hoạt |
+|-----------|----------|---------|--------|-----------|
+| **A (Mặc định)** | `LocalCinematicProvider` — FFmpeg Ken Burns zoompan | 0 credit | ~0.45s/cảnh | Mặc định hoạt động |
+| **B (Standby)** | `GoogleVeoProvider` — AI generative video | 15-40 credit | Phụ thuộc API | `AI_VIDEO_PROVIDER=veo` trong `.env` |
+| **B (Standby)** | `HeyGenProvider` — AI talking avatar | 15-40 credit | Phụ thuộc API | `AI_VIDEO_PROVIDER=heygen` trong `.env` |
 
 ### Trạng thái đặc biệt
 - Khung đầu/khung cuối không cho phép đổi sang ảnh chưa duyệt — ô chọn ảnh chỉ liệt kê Master Image và biến thể đã duyệt từ trang 2.

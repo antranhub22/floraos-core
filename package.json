@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "next dev -p 3100",
     "predev:all": "docker compose up -d && (which ollama >/dev/null && (curl -s http://127.0.0.1:11434/api/tags >/dev/null || (brew services start ollama 2>/dev/null || ollama serve >/dev/null 2>&1 &)) || true)",
-    "dev:all": "concurrently -k -p \"[{name}]\" -n \"web,vision,media,socialflow,localbudd\" -c \"cyan.bold,green.bold,magenta.bold,yellow.bold,blue.bold\" \"npm run dev\" \"npm run worker:vision\" \"npm run worker:media\" \"npm run worker:socialflow\" \"npm run worker:localbudd\"",
+    "dev:all": "concurrently -k -p \"[{name}]\" -n \"web,vision,media,video,socialflow,localbudd\" -c \"cyan.bold,green.bold,magenta.bold,red.bold,yellow.bold,blue.bold\" \"npm run dev\" \"npm run worker:vision\" \"npm run worker:media\" \"npm run worker:video\" \"npm run worker:socialflow\" \"npm run worker:localbudd\"",
     "worker:vision": "cd workers && set -a && [ -f ../.env ] && . ../.env && set +a && if [ -f .venv/bin/python ]; then .venv/bin/python -m vision.jobs.worker; else python3 -m vision.jobs.worker; fi",
     "worker:media": "cd workers && set -a && [ -f ../.env ] && . ../.env && set +a && if [ -f .venv/bin/python ]; then .venv/bin/python -m media_ai.jobs.worker; else python3 -m media_ai.jobs.worker; fi",
+    "worker:video": "cd workers && set -a && [ -f ../.env ] && . ../.env && set +a && if [ -f .venv/bin/python ]; then .venv/bin/python -m media_ai.video.video_worker; else python3 -m media_ai.video.video_worker; fi",
     "worker:socialflow": "cd ../SocialFlow/backend && if [ -f ../venv/bin/python ]; then ../venv/bin/python -m uvicorn main:app --port 8000 --reload; else uvicorn main:app --port 8000 --reload; fi",
     "worker:localbudd": "cd ../LocalBudd && npm run dev",
     "build": "next build",

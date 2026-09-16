@@ -142,6 +142,7 @@ model organizations {
   catalog_links         catalog_links[]
   product_copies        product_copies[]
   content_metrics       content_metrics[]
+  video_jobs            video_jobs[]
 }
 
 model workspaces {
@@ -917,3 +918,90 @@ model product_copies {
   @@index([organization_id, product_id])
   @@index([approval_state])
 }
+
+// ── M04c — AI Video Studio (Reel, TikTok, Story, Slideshow) ─────────────────
+
+enum video_format {
+  REEL_15S
+  TIKTOK_30S
+  STORY_15S
+  SLIDESHOW
+  PRODUCT_PAGE
+  AD_MOTION
+}
+
+enum video_stage {
+  DRAFT
+  SCRIPT_GENERATING
+  SCRIPT_READY
+  SCRIPT_APPROVED
+  RENDERING
+  RENDER_COMPLETED
+  APPROVED
+  REJECTED
+  FAILED
+}
+
+model video_jobs {
+  id                 String          @id @default(uuid())
+  organization_id    String
+  product_id         String?
+  title              String
+  format             video_format
+  stage              video_stage     @default(DRAFT)
+
+  // Cổng duyệt 1: Kịch bản (Script / Storyboard)
+  script_approval    approval_state  @default(PENDING)
+  script_approved_at DateTime?
+  script_approved_by String?
+
+  // Cổng duyệt 2: Video kết quả (Final Render)
+  video_approval     approval_state  @default(PENDING)
+  video_approved_at  DateTime?
+  video_approved_by  String?
+
+  // Cấu hình video
+  duration_seconds   Int             @default(15)
+  aspect_ratio       String          @default("9:16")
+  music_track        String?
+  voice_code         String?
+  has_subtitle       Boolean         @default(true)
+  caption_style      String          @default("MODERN_BADGE")
+  has_watermark      Boolean         @default(false)
+
+  // Tài sản đầu ra & Hạch toán
+  final_video_url    String?
+  final_asset_id     String?
+  cost_credits       Int             @default(0)
+  error_message      String?
+
+  created_at         DateTime        @default(now())
+  updated_at         DateTime        @updatedAt
+
+  organization       organizations   @relation(fields: [organization_id], references: [id])
+  scenes             video_scenes[]
+
+  @@index([organization_id])
+  @@index([organization_id, product_id])
+  @@index([stage])
+  @@index([script_approval])
+  @@index([video_approval])
+}
+
+model video_scenes {
+  id                String       @id @default(uuid())
+  video_job_id      String
+  scene_index       Int
+  duration_seconds  Float        @default(3.0)
+  image_asset_id    String?
+  text_overlay      String?
+  voice_script      String?
+  transition_effect String?      @default("fade")
+  created_at        DateTime     @default(now())
+
+  job               video_jobs   @relation(fields: [video_job_id], references: [id], onDelete: Cascade)
+
+  @@index([video_job_id])
+  @@unique([video_job_id, scene_index])
+}
+

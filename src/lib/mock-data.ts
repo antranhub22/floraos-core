@@ -80,8 +80,9 @@ export const FEATURES: FeatureItem[] = [
     name: "AI Video Studio",
     desc: "Reel · TikTok · Story · Slideshow · Motion ads",
     iconName: "video-studio",
-    status: "chua_san_sang",
+    status: "hoat_dong",
     route: "/video",
+    waiting: false,
   },
   {
     id: "content-engine",

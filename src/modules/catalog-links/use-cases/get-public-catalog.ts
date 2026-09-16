@@ -1,4 +1,4 @@
-import { prisma } from "@/core/tenancy/infra/prisma"
+import { CatalogLinkRepository } from "../infra/catalog-link-repository"
 import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
 
 export interface PublicCatalogShop {
@@ -59,86 +59,26 @@ const STORAGE_URL_TTL_SECONDS = 7 * 24 * 3600 // 7 ngày
  * và trích xuất đầy đủ thông tin bán hàng (mô tả, dịp, định lượng cành, giá).
  */
 export async function getPublicCatalog(slug: string): Promise<PublicCatalogResult> {
-  const link = await prisma.catalog_links.findUnique({
-    where: { slug },
-  })
+  const repo = new CatalogLinkRepository()
+  const rawData = await repo.getPublicCatalogRaw(slug)
 
-  if (!link) {
+  if (!rawData) {
     return { status: "NOT_FOUND" }
   }
 
-  if (link.is_revoked || link.revoked_at) {
+  if (rawData.revoked) {
     return {
       status: "REVOKED",
-      catalogName: link.name,
+      catalogName: rawData.link.name,
     }
   }
 
+  const { link, org, bizProfile, brandProfile, productRows, assetRecords } = rawData
   const storage = new LocalDiskStorageProvider()
-
-  // Fetch shop details
-  const [org, bizProfile, brandProfile] = await Promise.all([
-    prisma.organizations.findUnique({
-      where: { id: link.organization_id },
-      select: { name: true },
-    }),
-    prisma.business_profiles.findUnique({
-      where: { organization_id: link.organization_id },
-    }),
-    prisma.brand_profiles.findUnique({
-      where: { organization_id: link.organization_id },
-    }),
-  ])
-
-  // Parse filters
-  const filters = (link.filters as Record<string, unknown>) || {}
-  const productIds = Array.isArray(filters.product_ids) ? (filters.product_ids as string[]) : []
-
-  // Query products
-  const productRows = await prisma.products.findMany({
-    where: {
-      organization_id: link.organization_id,
-      status: "ACTIVE",
-      ...(productIds.length > 0 ? { id: { in: productIds } } : {}),
-    },
-    orderBy: { created_at: "desc" },
-    take: 100,
-    include: {
-      images: {
-        orderBy: { position: "asc" },
-        take: 1,
-      },
-      analyses: {
-        where: { approval_state: "APPROVED" },
-        orderBy: { approved_at: "desc" },
-        take: 1,
-        select: { asset_id: true, raw: true, edited: true },
-      },
-    },
-  })
-
-  // Thu thập tất cả asset IDs (từ ảnh sản phẩm, phân tích M01a, và logo tiệm)
-  const assetIdSet = new Set<string>()
-  if (brandProfile?.logo_asset_id) {
-    assetIdSet.add(brandProfile.logo_asset_id)
-  }
-
-  for (const p of productRows) {
-    if (p.images[0]?.asset_id) {
-      assetIdSet.add(p.images[0].asset_id)
-    } else if (p.analyses[0]?.asset_id) {
-      assetIdSet.add(p.analyses[0].asset_id)
-    }
-  }
 
   // Tải thông tin assets và ký URL hợp lệ
   const assetMap = new Map<string, string>()
-  if (assetIdSet.size > 0) {
-    const assetRecords = await prisma.assets.findMany({
-      where: { id: { in: Array.from(assetIdSet) } },
-      select: { id: true, storage_key: true },
-    })
-
+  if (assetRecords.length > 0) {
     await Promise.all(
       assetRecords.map(async (asset) => {
         try {
@@ -247,6 +187,8 @@ export async function getPublicCatalog(slug: string): Promise<PublicCatalogResul
       description,
     }
   })
+
+  const filters = (link.filters as Record<string, unknown>) || {}
 
   return {
     status: "ACTIVE",

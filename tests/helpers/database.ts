@@ -7,6 +7,8 @@ const TENANT_TABLES = [
   // Nền AI — AI-1. `ai_capabilities` và `ai_models` KHÔNG nằm ở đây: chúng là
   // sổ đăng ký cấp nền tảng, không phải dữ liệu thử của một tổ chức, và
   // `ensureSystemRoles` phía dưới cũng không dựng lại chúng.
+  "video_scenes",
+  "video_jobs",
   "ai_evaluations",
   "ai_requests",
   "ai_policies",

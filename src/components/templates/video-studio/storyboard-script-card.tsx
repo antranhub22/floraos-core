@@ -68,7 +68,7 @@ export function StoryboardScriptCard({
                 <span className="text-[11px] text-text-muted">{scene.durationSeconds}s</span>
               </div>
               <p className="mt-1 text-xs text-text-muted leading-relaxed italic">
-                "{scene.voiceoverText}"
+                &ldquo;{scene.voiceoverText}&rdquo;
               </p>
             </div>
           </div>
