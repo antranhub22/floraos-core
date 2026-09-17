@@ -21,7 +21,10 @@ from typing import Any, Callable
 
 KHOA_BO_MAY = ("openai_structured", "openai_direct", "local_cv")
 
-MAC_DINH = "openai_direct"
+# Phải khớp `VISION_ENGINE_MAC_DINH` phía TypeScript. Bộ "Đầy đủ" là bộ duy
+# nhất mang trạng thái `san_xuat`; một dòng job cũ không khai bộ máy rơi về
+# đây chứ không rơi vào một bộ chưa được đo.
+MAC_DINH = "openai_structured"
 
 
 def _dung_openai_structured() -> Any:
@@ -97,3 +100,58 @@ def lay_provider(khoa: str | None) -> Any:
     if ten not in _DA_DUNG:
         _DA_DUNG[ten] = _XUONG[ten]()
     return _DA_DUNG[ten]
+
+# ── Chuỗi dự phòng ─────────────────────────────────────────────────────────
+# Bộ máy chính dựng không nổi — thiếu trọng số, thiếu GPU, thiếu khoá API —
+# thì MỌI job của mọi tổ chức hỏng, kể cả những tổ chức không chọn bộ đó.
+# Trước đây `lay_provider` ném thẳng `NotImplementedError` và không ai bắt.
+#
+# Hai ràng buộc của D17 giữ nguyên ở đây:
+#   · sàn quyền riêng tư cắt sau cùng — một tổ chức chọn bộ CỤC BỘ vì không
+#     muốn ảnh rời hạ tầng thì KHÔNG có đường dự phòng nào gửi ảnh ra ngoài.
+#     Thà hỏng sạch và hoàn credit còn hơn lặng lẽ gửi ảnh đi.
+#   · thác chỉ leo lên — dự phòng của bộ Gọn là bộ Đầy đủ, không phải ngược
+#     lại: hỏng thì trả kết quả tốt hơn, không phải rẻ hơn.
+GUI_ANH_RA_NGOAI = {
+    "openai_structured": True,
+    "openai_direct": True,
+    "local_cv": False,
+}
+
+CHUOI_DU_PHONG: dict[str, tuple[str, ...]] = {
+    "openai_direct": ("openai_structured",),
+    "openai_structured": (),
+    "local_cv": (),  # sàn quyền riêng tư: không rơi ra ngoài hạ tầng
+}
+
+
+def du_phong_cho(khoa: str) -> tuple[str, ...]:
+    """Danh sách bộ máy được phép thay `khoa` khi nó dựng không nổi."""
+    ten = khoa if khoa in _XUONG else MAC_DINH
+    ra = []
+    for ke in CHUOI_DU_PHONG.get(ten, ()):
+        # Rào cuối, không tin bảng ở trên: bộ không gửi ảnh ra ngoài không
+        # bao giờ được thay bằng bộ có gửi.
+        if not GUI_ANH_RA_NGOAI.get(ten, True) and GUI_ANH_RA_NGOAI.get(ke, True):
+            continue
+        ra.append(ke)
+    return tuple(ra)
+
+
+def lay_provider_co_du_phong(khoa: str | None) -> tuple[Any, str, str | None]:
+    """`(provider, khoá đã dùng, khoá đã hỏng)`.
+
+    Ném `NotImplementedError` cuối cùng khi cả chuỗi đều dựng không nổi —
+    lúc đó job hỏng thật và credit được hoàn theo D3-b.
+    """
+    ten = khoa if khoa in _XUONG else MAC_DINH
+    try:
+        return lay_provider(ten), ten, None
+    except NotImplementedError as loi_dau:
+        for ke in du_phong_cho(ten):
+            try:
+                return lay_provider(ke), ke, ten
+            except NotImplementedError:
+                continue
+        raise loi_dau
+

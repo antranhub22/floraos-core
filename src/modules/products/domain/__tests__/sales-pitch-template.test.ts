@@ -9,7 +9,7 @@ import {
 
 describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Zalo)", () => {
   it("formatCurrencyVnd định dạng đúng số tiền", () => {
-    expect(formatCurrencyVnd(null)).toBe("Liên hệ báo giá")
+    expect(formatCurrencyVnd(null)).toBe("Chưa có giá, liên hệ shop")
     expect(formatCurrencyVnd(850000)).toContain("850.000")
   })
 
@@ -40,7 +40,7 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
       suggested_price_segment: "premium",
     }
 
-    const pitch = buildSalesPitchData(analysisRaw, copyRaw, { priceVnd: 990000 }, "https://example.com/flower.jpg")
+    const pitch = buildSalesPitchData(analysisRaw, copyRaw, { priceVnd: 990000 }, "https://example.com/flower.jpg", null)
 
     expect(pitch.productName).toBe("Tình Yêu Nồng Cháy")
     expect(pitch.style).toBe("Lãng mạn & Quý phái")
@@ -95,7 +95,8 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
         status: "FINALIZED",
         finalizedAt: "2026-09-14T10:30:00Z",
       },
-      "https://example.com/custom.jpg"
+      "https://example.com/custom.jpg",
+      null
     )
 
     expect(customPitch.productName).toBe("Bình Hoa Khởi Sắc 2026")
@@ -137,7 +138,9 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
         suggested_name: "Bó Tulip Vàng Nắng",
         suggested_description: "Mang lại năng lượng tươi mới.",
       },
-      { priceVnd: 850000 }
+      { priceVnd: 850000 },
+      null,
+      null
     )
 
     const script = generateZaloPitchScript(pitch)
@@ -169,6 +172,61 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
     expect(pitch.shopHotline).toBe("0988 777 666")
     expect(pitch.freeGifts).toEqual(tenantDefaults.freeGifts)
     expect(pitch.guarantees).toEqual(tenantDefaults.guarantees)
+  })
+
+  // --- Test hồi quy: chặn tái phát lỗi rà soát 17/09/2026 ---
+  // (thẻ chào A6 / kịch bản Zalo từng gửi tên tiệm "FloraOS Flower Boutique"
+  // và hotline "1900 xxxx" GIẢ cho MỌI khách hàng vì UI quên nối tenantDefaults)
+
+  it("KHÔNG được rơi về tên tiệm/hotline giả trông như thật khi tenantDefaults là null", () => {
+    const pitch = buildSalesPitchData(
+      { product_name: "Bó hoa bất kỳ", bom: { flowers: [{ name: "Hoa cúc", quantity: 5, dvt_dem: "cành" }] } },
+      null,
+      undefined,
+      null,
+      null
+    )
+
+    expect(pitch.shopName).not.toBe("FloraOS Flower Boutique")
+    expect(pitch.shopHotline).not.toBe("1900 xxxx")
+    // Fallback phải hiện rõ đây là chỗ trống cần cập nhật, không phải một
+    // thương hiệu/số điện thoại trông như thật.
+    expect(pitch.shopName).toBe("Chưa cập nhật tên tiệm")
+    expect(pitch.shopHotline).toBe("Chưa cập nhật hotline")
+  })
+
+  it("KHÔNG được tự bịa giá theo phân khúc khi chưa có giá cấu hình thật", () => {
+    const pitch = buildSalesPitchData(
+      {
+        product_name: "Bó hoa cao cấp",
+        bom: { flowers: [{ name: "Lan hồ điệp", quantity: 3, dvt_dem: "cành" }] },
+      },
+      { suggested_price_segment: "luxury" },
+      undefined,
+      null,
+      null
+    )
+
+    // Trước đây segment "luxury" sẽ tự bịa ra 2.500.000đ — giờ phải để trống.
+    expect(pitch.priceVnd).toBeNull()
+    expect(pitch.originalPriceVnd).toBeNull()
+    expect(formatCurrencyVnd(pitch.priceVnd)).toBe("Chưa có giá, liên hệ shop")
+  })
+
+  it("dùng ĐÚNG tên tiệm/hotline thật từ tenantDefaults thay vì giá trị giả khi gọi từ trang M01c", () => {
+    const pitch = buildSalesPitchData(
+      { product_name: "Giỏ hoa chúc mừng", bom: { flowers: [{ name: "Hướng dương", quantity: 7, dvt_dem: "cành" }] } },
+      null,
+      undefined,
+      null,
+      { shopName: "Tiệm Hoa Mộc Lan", shopHotline: "0977 123 456", freeGifts: null, guarantees: null }
+    )
+
+    const script = generateZaloPitchScript(pitch)
+    expect(pitch.shopName).toBe("Tiệm Hoa Mộc Lan")
+    expect(pitch.shopHotline).toBe("0977 123 456")
+    expect(script).toContain("0977 123 456")
+    expect(script).not.toContain("1900 xxxx")
   })
 })
 

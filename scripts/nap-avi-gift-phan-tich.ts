@@ -4,7 +4,7 @@ import path from "node:path"
 
 import type { TenantContext } from "@/core/tenancy"
 import { prisma } from "@/core/tenancy/infra/prisma"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import type { AnalysisSourceRow } from "@/modules/avi-gift-import/domain/analysis-mapping"
 import { importAnalyses } from "@/modules/avi-gift-import/use-cases/import-analyses"
 
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
 
   const ctx = await resolveContext(organizationId)
   const result = await importAnalyses(ctx, rows, {
-    storage: new LocalDiskStorageProvider(),
+    storage: getStorageProvider(),
     readImage: async (absolutePath) => new Uint8Array(await readFile(absolutePath)),
     importedAt: new Date(),
     // Người chịu trách nhiệm cho lượt duyệt một-lần này là quản trị AVI GIFT

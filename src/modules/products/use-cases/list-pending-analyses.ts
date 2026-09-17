@@ -1,7 +1,7 @@
 import { validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { ProductAnalysisRepository } from "@/modules/products/infra/product-analysis-repository"
 
 const DEFAULT_LIMIT = 25
@@ -32,7 +32,7 @@ export async function listPendingAnalyses(
   const nextCursor = hasMore ? (page[page.length - 1]?.id ?? null) : null
 
   const assetRepo = new AssetRepository()
-  const storage = new LocalDiskStorageProvider()
+  const storage = getStorageProvider()
   const data = await Promise.all(
     page.map(async (row) => {
       let imageUrl: string | null = null

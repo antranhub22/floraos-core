@@ -261,7 +261,7 @@ export function AccountStorageHub({
       const flowers = Array.isArray(bom.flowers)
         ? bom.flowers.map((f: { name?: string }) => f.name?.toLowerCase() ?? "").join(" ")
         : ""
-      const style = typeof identity.style === "string" ? identity.style.toLowerCase() : ""
+      const style = typeof identity.phong_cach === "string" ? identity.phong_cach.toLowerCase() : ""
       return pName.includes(q) || pCode.includes(q) || flowers.includes(q) || style.includes(q)
     })
   }, [approvedItems, searchQuery])
@@ -554,7 +554,7 @@ export function AccountStorageHub({
                 (effective.product_name as string) ||
                 (identity.category as string) ||
                 "Bó hoa thiết kế"
-              const displayStyle = (identity.phong_cach as string) || (identity.style as string) || "Hiện đại"
+              const displayStyle = (identity.phong_cach as string) || "Hiện đại"
               const displayOccasion = identity.dip_su_dung ? String(identity.dip_su_dung) : null
 
               return (

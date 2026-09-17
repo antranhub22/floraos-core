@@ -93,6 +93,47 @@ export class GenerationJobRepository {
     })
   }
 
+  /** Số job của tổ chức tạo từ mốc `tu` tới nay — nguồn đếm của trần vận hành. */
+  countSince(ctx: TenantContext, tu: Date): Promise<number> {
+    return this.db.generation_jobs.count({
+      where: scopedWhere(ctx, { created_at: { gte: tu } }),
+    })
+  }
+
+  /**
+   * Job chạy NGAY trong request đã tạo nó (`product.copy.generate`, M01b).
+   *
+   * Vẫn đi qua `enqueueJob` để có đủ ba thứ mà mọi lượt gọi mô hình phải có:
+   * kiểm hạn mức, một dòng `usage`, và một khoá `idempotency_key`. Khác ở
+   * chỗ không có worker nào nhận nó — lượt sinh câu chữ mất vài giây và
+   * người dùng đang đứng chờ trên màn hình, nên đẩy qua hàng đợi chỉ thêm
+   * một vòng chờ mà không đổi kết quả.
+   *
+   * Hai phương thức dưới đây là cách job đó ghi lại nó đã chạy: có mốc bắt
+   * đầu, có mốc kết thúc, và hỏng thì `FAILED` để `refundJob` nhìn thấy.
+   */
+  async startInline(ctx: TenantContext, id: string, now: Date): Promise<void> {
+    await this.db.generation_jobs.updateMany({
+      where: scopedWhere(ctx, { id, status: "PENDING" as const }),
+      data: { status: "PROCESSING", started_at: now, attempts: { increment: 1 } },
+    })
+  }
+
+  async finishInline(
+    ctx: TenantContext,
+    id: string,
+    input: { ok: boolean; error?: string | null; now: Date }
+  ): Promise<void> {
+    await this.db.generation_jobs.updateMany({
+      where: scopedWhere(ctx, { id }),
+      data: {
+        status: input.ok ? "COMPLETED" : "FAILED",
+        error: input.ok ? null : (input.error ?? "Lỗi không xác định"),
+        completed_at: input.now,
+      },
+    })
+  }
+
   /**
    * `GET /jobs` (`G4` chỉ thấy job của mình, `G5` toàn tổ chức — đặc tả 06
    * mục 7). `onlyMine` khi ngữ cảnh có `G4` mà không có `G5`; route quyết định

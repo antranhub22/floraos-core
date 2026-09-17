@@ -1,0 +1,34 @@
+/**
+ * POST /api/v1/crm/customers/[id]/consent
+ * Cập nhật sự đồng ý nhận tin tiếp thị (Consent).
+ * Quyền: Q6
+ */
+
+import { validationFailed } from "@/core/http/errors"
+import { handle, jsonResponse } from "@/core/http/response"
+import { requireCapability } from "@/core/rbac/capabilities"
+import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
+import { updateCustomerConsent } from "@/modules/crm/use-cases/update-customer-consent"
+
+const VALID_CHANNELS = ["ZALO_ZNS", "SMS", "PHONE_CALL", "PROMOTION"] as const
+
+export const POST = handle(async (request, context: { params: Promise<{ id: string }> }) => {
+  const { ctx } = await requireTenantContext(request)
+  requireCapability(ctx, "Q6")
+
+  const { id } = await context.params
+  const body = await request.json()
+
+  if (!VALID_CHANNELS.includes(body.channel)) {
+    throw validationFailed({ channel: `Kênh phải thuộc: ${VALID_CHANNELS.join(", ")}` })
+  }
+
+  const consent = await updateCustomerConsent(
+    ctx,
+    id,
+    body.channel,
+    Boolean(body.granted)
+  )
+
+  return jsonResponse({ consent })
+})

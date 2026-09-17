@@ -1,5 +1,6 @@
 import { AppError } from "@/core/http/errors";
 import { ProductCopyRepository } from "../infra/product-copy-repository";
+import { OccasionRepository } from "@/modules/organization/infra/occasion-repository";
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log";
 import { runInTransaction } from "@/modules/jobs/infra/transaction";
 import { scopedWhere } from "@/core/tenancy";
@@ -34,17 +35,24 @@ export async function approveProductCopy(
       throw new AppError("CONFLICT", "Phân tích gốc đã không còn trạng thái duyệt");
     }
 
-    const result = await repo.approve(ctx, id, ctx.userId, tx);
+    // Danh mục dịch của chính tổ chức — dùng để đổi TÊN dịp mà mô hình viết
+    // ra thành MÃ dịp mà bộ lọc tra cứu đọc.
+    const danhMucDip = await new OccasionRepository(tx).list(ctx);
+    const result = await repo.approve(ctx, id, ctx.userId, tx, danhMucDip);
 
     await recordAuditLog(ctx, {
       action: "product_copy.approve",
       entityType: "product_copy",
       entityId: id,
       before: { approval_state: "PENDING" as approval_state },
-      after: { 
-        approval_state: "APPROVED" as approval_state, 
+      after: {
+        approval_state: "APPROVED" as approval_state,
         product_id: result.product.id,
         product_name: result.product.name,
+        // Khoá của bước trước (bom, confidence, checklist, san_xuat) còn lại
+        // sau khi ghi phần bán hàng — bằng chứng bước này hợp nhất chứ không
+        // ghi đè `products.attributes`.
+        preserved_attribute_keys: result.preservedAttributeKeys,
       },
     }, tx);
 
@@ -70,7 +78,7 @@ export async function rejectProductCopy(
       entityType: "product_copy",
       entityId: id,
       before: { approval_state: "PENDING" as approval_state },
-      after: { approval_state: "REJECTED" as approval_state, reject_reason: reason },
+      after: { approval_state: "REJECTED" as approval_state, reject_reason: reason ?? null },
     }, tx);
   });
 }

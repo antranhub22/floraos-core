@@ -1,1 +1,1 @@
-export * from "@/components/templates/guidance/feature-guidance-card"
+export * from "@/components/templates/shared/feature-guidance-card"

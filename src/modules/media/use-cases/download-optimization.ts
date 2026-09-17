@@ -1,6 +1,6 @@
 import { conflict, notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { canApproveOptimization, isGuardResult } from "@/modules/media/domain/optimization-rules"
@@ -48,6 +48,6 @@ export async function downloadOptimization(
     }
   }
 
-  const url = await new LocalDiskStorageProvider().signedUrl(targetAsset.storage_key, HAN_URL_GIAY)
+  const url = await getStorageProvider().signedUrl(targetAsset.storage_key, HAN_URL_GIAY)
   return { url, asset_id: targetAsset.id, expires_in: HAN_URL_GIAY }
 }

@@ -1,10 +1,18 @@
 import type { DbClient } from "./db-client";
 import type { product_copies } from "./entities";
 import type { approval_state } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 
 import { prisma } from "@/core/tenancy/infra/prisma";
 import { scopedWhere, scopedData, ownedByTenant, type TenantContext } from "@/core/tenancy";
 import { AppError } from "@/core/http/errors";
+import { randomUUID } from "node:crypto";
+import { draftProductCode } from "@/modules/products/domain/product-code";
+import {
+  mergeSalesDataIntoAttributes,
+  preservedKeys,
+  type SalesData,
+} from "../domain/product-master-merge";
 
 interface ProductCopyOutput {
   suggested_name: string;
@@ -34,6 +42,11 @@ export class ProductCopyRepository {
     productId: string | null;
     raw: object;
     profileVersion?: string;
+    jobId?: string | null;
+    modelKey?: string | null;
+    provider?: string | null;
+    costUsd?: number | null;
+    latencyMs?: number | null;
   }): Promise<product_copies> {
     const analysis = await this.db.product_analyses.findFirst({
       where: scopedWhere(ctx, { id: input.analysisId, approval_state: "APPROVED" as approval_state }),
@@ -57,6 +70,11 @@ export class ProductCopyRepository {
         product_id: input.productId,
         raw: input.raw,
         profile_version: input.profileVersion ?? null,
+        job_id: input.jobId ?? null,
+        model_key: input.modelKey ?? null,
+        provider: input.provider ?? null,
+        cost_usd: input.costUsd ?? null,
+        latency_ms: input.latencyMs ?? null,
       }),
     });
   }
@@ -107,7 +125,7 @@ export class ProductCopyRepository {
     });
   }
 
-  async approve(ctx: TenantContext, id: string, approvedBy: string, tx: DbClient): Promise<{ productCopy: product_copies; product: { id: string; name: string } }> {
+  async approve(ctx: TenantContext, id: string, approvedBy: string, tx: DbClient, danhMucDip: ReadonlyArray<{ code: string; name: string }> = []): Promise<{ productCopy: product_copies; product: { id: string; name: string }; preservedAttributeKeys: string[] }> {
     const copy = await tx.product_copies.findFirst({
       where: scopedWhere(ctx, { id }),
     });
@@ -119,43 +137,58 @@ export class ProductCopyRepository {
 
     const effective = this.resolveEffective(copy.raw as ProductCopyRaw, copy.edited as ProductCopyRaw | null);
 
+    // Mô hình trả về TÊN dịp (nó chỉ được thấy tên). Bộ lọc tra cứu đọc MÃ.
+    // Ánh xạ ngược ở đây, bỏ qua tên không khớp danh mục nào thay vì bịa mã.
+    const chuan = (x: string) => x.trim().toLowerCase();
+    const occasionCodes = Array.from(
+      new Set(
+        effective.suggested_occasions
+          .map((ten) => danhMucDip.find((d) => chuan(d.name) === chuan(ten))?.code)
+          .filter((x): x is string => typeof x === "string")
+      )
+    );
+
+    const salesData: SalesData = {
+      description: effective.suggested_description,
+      tags: effective.suggested_tags,
+      occasions: effective.suggested_occasions,
+      occasionCodes,
+      priceSegment: effective.suggested_price_segment,
+    };
+
     let product;
+    let preservedAttributeKeys: string[] = [];
     if (copy.product_id) {
+      // Đọc `attributes` hiện có TRƯỚC khi ghi. Duyệt phân tích ảnh (`H3`) đã
+      // đặt `bom`, `confidence`, `checklist`, `san_xuat` vào đúng cột này và
+      // M02/M03 đọc chúng — ghi đè nguyên cột ở đây sẽ xoá trắng định mức vật
+      // tư của bó hoa mà không ai biết. Hợp nhất nông, giữ mọi khoá cũ.
+      const current = await tx.products.findFirst({
+        where: { id: copy.product_id, organization_id: ctx.organizationId },
+        select: { attributes: true },
+      });
+      if (!current) {
+        throw new AppError("CONFLICT", "Sản phẩm liên kết không còn tồn tại");
+      }
+      preservedAttributeKeys = preservedKeys(current.attributes);
+
       product = await tx.products.update({
         where: { id: copy.product_id, organization_id: ctx.organizationId },
         data: {
           name: effective.suggested_name,
-          attributes: {
-            salesData: {
-              description: effective.suggested_description,
-              tags: effective.suggested_tags,
-              occasions: effective.suggested_occasions,
-              priceSegment: effective.suggested_price_segment,
-            },
-          },
+          attributes: mergeSalesDataIntoAttributes(current.attributes, salesData) as Prisma.InputJsonValue,
           status: "ACTIVE",
         },
       });
     } else {
-      const code = effective.suggested_name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "")
-        .slice(0, 50);
-
+      // Sản phẩm mới: cùng quy ước mã với duyệt phân tích ảnh
+      // (`approveAnalysis`), không phải slug của tên do mô hình đặt.
       product = await tx.products.create({
         data: scopedData(ctx, {
-          code: await this.generateUniqueCode(tx, ctx.organizationId, code),
+          code: await this.generateUniqueCode(tx, ctx.organizationId, draftProductCode(randomUUID())),
           name: effective.suggested_name,
           status: "ACTIVE",
-          attributes: {
-            salesData: {
-              description: effective.suggested_description,
-              tags: effective.suggested_tags,
-              occasions: effective.suggested_occasions,
-              priceSegment: effective.suggested_price_segment,
-            },
-          },
+          attributes: mergeSalesDataIntoAttributes(null, salesData) as Prisma.InputJsonValue,
         }),
       });
 
@@ -174,7 +207,7 @@ export class ProductCopyRepository {
       },
     });
 
-    return { productCopy: updatedCopy, product };
+    return { productCopy: updatedCopy, product, preservedAttributeKeys };
   }
 
   async reject(ctx: TenantContext, id: string, tx: DbClient, reason?: string): Promise<product_copies> {
@@ -184,14 +217,15 @@ export class ProductCopyRepository {
 
     if (!copy) throw new AppError("NOT_FOUND", "Không tìm thấy dữ liệu bán hàng");
 
+    if (copy.approval_state !== "PENDING") {
+      throw new AppError("CONFLICT", "Chỉ bỏ được bản ghi đang chờ duyệt");
+    }
+
     return tx.product_copies.update({
       where: { id },
       data: {
         approval_state: "REJECTED" as approval_state,
-        edited: {
-          ...(copy.edited as object ?? {}),
-          reject_reason: reason,
-        },
+        reject_reason: reason ?? null,
       },
     });
   }

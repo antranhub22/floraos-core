@@ -1,0 +1,62 @@
+[
+  {
+    "image_id": "g001",
+    "file": "g001.jpeg",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0001"
+  },
+  {
+    "image_id": "g002",
+    "file": "g002.jpeg",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0002"
+  },
+  {
+    "image_id": "g003",
+    "file": "g003.png",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0003"
+  },
+  {
+    "image_id": "g004",
+    "file": "g004.png",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0004"
+  },
+  {
+    "image_id": "g005",
+    "file": "g005.png",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0005"
+  },
+  {
+    "image_id": "g006",
+    "file": "g006.png",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0006"
+  },
+  {
+    "image_id": "g010",
+    "file": "g010.jpeg",
+    "product_form": "lang",
+    "product_name": "HOA CHIA BUỒN / KỆ HOA / MÀU TÍM / KHCH0077"
+  },
+  {
+    "image_id": "g011",
+    "file": "g011.jpeg",
+    "product_form": "lang",
+    "product_name": "HOA CHIA BUỒN / KỆ HOA / MÀU TÍM / KHCH0078"
+  },
+  {
+    "image_id": "g040",
+    "file": "g040.jpg",
+    "product_form": "bo",
+    "product_name": "HOA CHÚC SỨC KHOẺ / BÓ HOA CHÚC SỨC KHOẺ / BHSK0001"
+  },
+  {
+    "image_id": "g049",
+    "file": "g049.jpeg",
+    "product_form": "bo",
+    "product_name": "HOA CƯỚI  / BHC0001"
+  }
+]

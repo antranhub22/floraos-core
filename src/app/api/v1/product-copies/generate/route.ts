@@ -1,35 +1,43 @@
 /**
- * POST /api/v1/product-copies/generate
- * Tạo dữ liệu bán hàng từ phân tích đã duyệt — H5
- * Body: { analysisId: string, productId?: string }
+ * `POST /api/v1/product-copies/generate` — sinh dữ liệu bán hàng từ một lượt
+ * phân tích đã duyệt (`H5`; duyệt kết quả là `H6`, tách riêng theo Luật 4).
+ *
+ * Đây là một điểm TẠO JOB: nó gọi mô hình và tiêu tiền nhà cung cấp, nên nó
+ * chịu đúng ràng buộc như `POST /vision/analyses` — `idempotency-key` bắt
+ * buộc (`YC-U7`), hạn mức kiểm phía core trước khi chạy (PRD mục 7.5).
+ *
+ * Body: `{ analysisId: string, productId?: string }`
  */
-import { handle } from "@/core/http/response";
-import { AppError } from "@/core/http/errors";
+import { handle, jsonResponse } from "@/core/http/response";
+import { AppError, validationFailed } from "@/core/http/errors";
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session";
+import { readIdempotencyKey } from "@/modules/jobs/domain/idempotency";
 import { generateProductCopy } from "@/modules/product-copies/use-cases/generate-product-copy";
 
 async function generateHandler(request: Request) {
   const { ctx } = await requireTenantContext(request);
 
-  // Check H5 capability
   if (!ctx.capabilities.has("H5")) {
     throw new AppError("CAPABILITY_DENIED", "Thiếu quyền H5 để tạo dữ liệu bán hàng");
   }
 
+  const idempotencyKey = readIdempotencyKey(request);
+  if (!idempotencyKey) {
+    throw validationFailed({ "idempotency-key": "Bắt buộc trên mọi endpoint tạo job (YC-U7)" });
+  }
+
   const body = await request.json().catch(() => null);
   if (!body?.analysisId) {
-    throw new AppError("VALIDATION_FAILED", "Thiếu analysisId");
+    throw validationFailed({ analysisId: "Bắt buộc" });
   }
 
   const result = await generateProductCopy(ctx, {
     analysisId: body.analysisId,
     productId: body.productId ?? null,
+    idempotencyKey,
   });
 
-  return new Response(JSON.stringify(result), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+  return jsonResponse(result);
 }
 
 export const POST = handle(generateHandler);

@@ -84,7 +84,7 @@ export function ApprovedAnalysesSelector({
       const flowers = Array.isArray(bom.flowers)
         ? bom.flowers.map((f: { name?: string }) => f.name?.toLowerCase() ?? "").join(" ")
         : ""
-      const style = typeof identity.style === "string" ? identity.style.toLowerCase() : ""
+      const style = typeof identity.phong_cach === "string" ? identity.phong_cach.toLowerCase() : ""
       return pName.includes(q) || pCode.includes(q) || flowers.includes(q) || style.includes(q)
     })
   }, [items, searchQuery])
@@ -160,7 +160,7 @@ export function ApprovedAnalysesSelector({
             })
             .join(", ")
           const moreFlowersCount = flowers.length > 3 ? flowers.length - 3 : 0
-          const style = (identity.phong_cach as string) ?? (identity.style as string) ?? (identity.category as string) ?? "Mẫu thiết kế"
+          const style = (identity.phong_cach as string) ?? (identity.category as string) ?? "Mẫu thiết kế"
           const totalStems = typeof effective.flower_count === "number" ? effective.flower_count : typeof effective.total_stems === "number" ? effective.total_stems : null
           const isSelected = selectedAnalysisId === item.id
 

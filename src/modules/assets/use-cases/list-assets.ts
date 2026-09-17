@@ -1,7 +1,7 @@
 import { validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { ProductRepository } from "@/modules/products/infra/product-repository"
 
 const DEFAULT_LIMIT = 25
@@ -37,7 +37,7 @@ export async function listAssets(
   const page = hasMore ? rows.slice(0, limit) : rows
   const nextCursor = hasMore ? (page[page.length - 1]?.id ?? null) : null
 
-  const storage = new LocalDiskStorageProvider()
+  const storage = getStorageProvider()
   const productRepo = new ProductRepository()
 
   // Lấy danh sách tên sản phẩm cho các asset đã liên kết

@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 
-import type { StorageProvider } from "@/core/ports"
+import type { StorageProvider, StorageMethod } from "@/core/ports"
 
 import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 
@@ -37,7 +37,13 @@ export class LocalDiskStorageProvider implements StorageProvider {
     return readFile(absolutePathFor(key))
   }
 
-  async signedUrl(key: string, expiresInSeconds: number): Promise<string> {
+  /** `_method` bỏ qua: route `/api/v1/storage/[...key]` nhận cả PUT lẫn GET
+   *  trên cùng một đường đã ký. */
+  async signedUrl(
+    key: string,
+    expiresInSeconds: number,
+    _method: StorageMethod = "GET"
+  ): Promise<string> {
     const expiresAt = Date.now() + expiresInSeconds * 1000
     const signature = signStorageUrl(key, expiresAt)
     return `/api/v1/storage/${key}?exp=${expiresAt}&sig=${signature}`

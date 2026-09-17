@@ -57,3 +57,25 @@ describe("danh mục bộ máy", () => {
     expect(isVisionEngine({})).toBe(false)
   })
 })
+
+/**
+ * Hai ca thử dưới đây khoá một luật sản phẩm, không khoá một giá trị: mặc
+ * định nền tảng phải là một bộ đã được đo. Đổi `VISION_ENGINE_MAC_DINH`
+ * sang một bộ `thu_nghiem` sẽ làm chúng đỏ, và đó là chỗ để dừng lại.
+ */
+describe("mặc định nền tảng phải là bộ đã được đo", () => {
+  it("bộ mặc định mang trạng thái san_xuat", () => {
+    expect(MO_TA_BO_MAY[VISION_ENGINE_MAC_DINH].trang_thai).toBe("san_xuat")
+  })
+
+  it("khoá lạ rơi về đúng bộ mặc định đó", () => {
+    expect(resolveVisionEngine({ [VISION_ENGINE_SETTINGS_KEY]: "bo-may-da-bo" })).toBe(
+      VISION_ENGINE_MAC_DINH
+    )
+  })
+
+  it("chỉ có đúng một bộ mang trạng thái san_xuat", () => {
+    const san_xuat = VISION_ENGINES.filter((k) => MO_TA_BO_MAY[k].trang_thai === "san_xuat")
+    expect(san_xuat).toEqual([VISION_ENGINE_MAC_DINH])
+  })
+})

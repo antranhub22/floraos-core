@@ -1,179 +1,242 @@
 "use client"
 
-import { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Check, ChevronRight, ArrowLeft, AlertTriangle, ClipboardList, Package } from "lucide-react"
+import { ArrowLeft, Plus, RefreshCw, Clock, Flower2, Truck, CheckCircle2, AlertTriangle, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { OrderGuidanceCard } from "@/components/templates/orders/order-guidance-card"
+import { CreateOrderModal } from "@/components/orders/create-order-modal"
+import { OrderDetailModal } from "@/components/orders/order-detail-modal"
 
-type Order = {
+type OrderItem = {
   id: string
-  customer: string
-  product: string
-  qty: number
-  price: number
-  status: "Moi" | "PhanCong" | "DangLam" | "DaGiao"
-  sla: string
-  staff?: string
+  code: string
+  status: string
+  productionStatus: string
+  deliveryStatus: string
+  totalVnd: number
+  cardMessage?: string
+  deliveryAddress?: { recipientName?: string; phone?: string; street?: string }
+  deliveryWindow?: { date: string; timeSlot?: string }
+  items?: Array<{ description: string; quantity: number }>
+  createdAt: string
 }
-
-const MOCK_ORDERS: Order[] = [
-  { id: "D001", customer: "Lan Anh", product: "Bó hồng đỏ 20 cành", qty: 2, price: 1200000, status: "Moi", sla: "2h 15p" },
-  { id: "D002", customer: "Minh Tuấn", product: "Giỏ hoa chúc mừng", qty: 1, price: 850000, status: "PhanCong", sla: "45p", staff: "Thợ Nguyễn" },
-  { id: "D003", customer: "Phương Thao", product: "Hộp hoa hồng phấn", qty: 3, price: 2100000, status: "DangLam", sla: "1h 30p", staff: "Thảo Tư" },
-  { id: "D004", customer: "Quang Vinh", product: "Bình hoa để bàn", qty: 1, price: 450000, status: "DaGiao", sla: "Đã giao" },
-]
-
-const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
-  Moi: "success",
-  PhanCong: "neutral",
-  DangLam: "warning",
-  DaGiao: "neutral",
-}
-
-const COLUMNS: { key: Order["status"]; label: string }[] = [
-  { key: "Moi", label: "Mới" },
-  { key: "PhanCong", label: "Phân công thợ cắm" },
-  { key: "DangLam", label: "Đang làm" },
-  { key: "DaGiao", label: "Đã giao" },
-]
-
-const FIELDS_ORDER: { key: string; label: string; type: "text" | "readonly"; editable: boolean; value: string }[] = [
-  { key: "customer", label: "Khách hàng", type: "text", editable: true, value: "" },
-  { key: "product", label: "Sản phẩm", type: "text", editable: false, value: "" },
-  { key: "qty", label: "Số lượng", type: "text", editable: true, value: "" },
-  { key: "message", label: "Lời nhắn thiệp", type: "text", editable: true, value: "" },
-  { key: "price", label: "Tổng tiền", type: "readonly", editable: false, value: "" },
-]
 
 export default function DonHangPage() {
   const router = useRouter()
-  const [phase, setPhase] = useState<"create" | "quote" | "running" | "approved" | "saved" | "kanban">("create")
-  const [jobPhase, setJobPhase] = useState<string | null>(null)
-  const [jobStatus, setJobStatus] = useState<"PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "CANCELLED" | null>(null)
-  const [fields, setFields] = useState<typeof FIELDS_ORDER>(FIELDS_ORDER.map((f) => ({ ...f, value: "" })))
-  const [judgment, setJudgment] = useState<"safe" | "warning" | "blocked">("safe")
-  const [saved, setSaved] = useState(false)
+  const [orders, setOrders] = useState<OrderItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
 
-  function goRunning() {
-    setPhase("running")
-    setJobStatus("PENDING")
-    setJobPhase("QUOTING")
-    setTimeout(() => { setJobStatus("PROCESSING"); setJobPhase("PRICING") }, 1000)
-    setTimeout(() => { setJobStatus("COMPLETED") }, 2500)
-    setTimeout(() => setPhase("quote"), 3000)
+  function loadOrders() {
+    setLoading(true)
+    fetch("/api/v1/orders")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.orders) setOrders(res.orders)
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false))
   }
 
+  useEffect(() => {
+    loadOrders()
+  }, [])
+
+  const filteredOrders = orders.filter((o) => {
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      o.code.toLowerCase().includes(q) ||
+      o.deliveryAddress?.recipientName?.toLowerCase().includes(q) ||
+      o.deliveryAddress?.phone?.includes(q) ||
+      o.items?.some((it) => it.description.toLowerCase().includes(q))
+    )
+  })
+
+  // Phân nhóm 4 cột Kanban
+  const colNew = filteredOrders.filter((o) => o.status === "DRAFT" || o.status === "CONFIRMED")
+  const colArranging = filteredOrders.filter(
+    (o) => o.status === "PROCESSING" && (o.productionStatus === "WAITING" || o.productionStatus === "ASSIGNED" || o.productionStatus === "ARRANGING")
+  )
+  const colDelivery = filteredOrders.filter(
+    (o) => (o.productionStatus === "READY" || o.deliveryStatus === "DISPATCHED" || o.deliveryStatus === "DELIVERING") && o.status !== "COMPLETED" && o.status !== "CANCELLED"
+  )
+  const colCompleted = filteredOrders.filter((o) => o.status === "COMPLETED" || o.status === "CANCELLED" || o.deliveryStatus === "DELIVERED")
+
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
+    <div className="flex h-full flex-col overflow-hidden bg-background">
+      {/* 1. Header chuẩn FloraOS */}
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 py-4">
         <div>
-          <div className="text-xs text-text-muted">M10</div>
-          <div className="text-[17px] font-extrabold text-primary">Đơn hàng & Vận hành</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-text-muted">M10 — Điều phối sản xuất & giao hàng</div>
+          <div className="text-lg font-extrabold text-foreground">Đơn Hàng & Vận Hành Xưởng Hoa</div>
         </div>
-        <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-1.5">
-          <ArrowLeft size={16} strokeWidth={2} /> Quay về Trang chủ
-        </Button>
+
+        {/* Top-Right Action Header */}
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={loadOrders} disabled={loading}>
+            <RefreshCw className={`mr-1.5 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Làm mới
+          </Button>
+          <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-semibold" onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" /> Tạo đơn mới
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
+            <ArrowLeft className="mr-1.5 h-4 w-4" /> Trang chủ
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto p-[18px]">
-        {phase === "create" && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-6">
-            <div className="text-center"><div className="text-[17px] font-extrabold">① Tạo đơn</div><div className="mt-1 text-[13px] text-text-muted">Chọn khách hàng + sản phẩm + ngày giao + lời nhắn thiệp</div></div>
-            <Card className="w-full max-w-md flex flex-col gap-3">
-              {fields.map((f) => (
-                <div key={f.key} className="flex flex-col gap-1">
-                  <label className="text-[12px] font-bold">{f.label}</label>
-                  {f.type === "text" ? (
-                    <input type="text" defaultValue={f.value}
-                      onChange={(e) => setFields((p) => p.map((x) => (x.key === f.key ? { ...x, value: e.target.value } : x)))}
-                      className="h-10 rounded-lg border-[1.5px] border-border bg-surface px-2.5 text-[13px] outline-none focus:border-primary" />
-                  ) : (
-                    <div className="h-10 flex items-center px-2.5 text-[13px] bg-surface rounded-lg">{f.value || "—"}</div>
-                  )}
-                </div>
-              ))}
-            </Card>
-            <Button onClick={goRunning} className="h-[50px] px-8">
-              <ClipboardList size={18} strokeWidth={2} className="mr-2" /> Tạo phiếu chào giá
-            </Button>
-          </div>
-        )}
+      {/* 2. Nội dung chính cuộn dọc */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Khối hướng dẫn thao tác chuẩn OrderGuidanceCard */}
+        <OrderGuidanceCard />
 
-        {phase === "running" && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-5">
-            <div className="text-center"><div className="text-[17px] font-extrabold">③ Đang xử lý</div><div className="mt-1 text-[13px] text-text-muted">{jobPhase ?? "Đang chuẩn bị..."}</div></div>
-            <div className="w-full max-w-md">
-              <div className="rounded-xl bg-surface-alt p-4 text-[12px] text-text-muted flex items-start gap-2">
-                <AlertTriangle size={16} strokeWidth={1.8} className="mt-0.5 flex-shrink-0 text-primary" />
-                Job chạy ở máy chủ — không mất khi rời trang
+        {/* Thanh tìm kiếm & bộ lọc */}
+        <div className="flex items-center justify-between">
+          <div className="w-80">
+            <input
+              type="text"
+              placeholder="Tìm theo mã đơn, người nhận, SĐT..."
+              className="w-full rounded-md border border-border bg-surface px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="text-xs text-text-muted">
+            Tổng cộng: <span className="font-bold text-foreground">{filteredOrders.length}</span> đơn hàng
+          </div>
+        </div>
+
+        {/* Kanban Board 4 cột */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+          {/* Cột 1: Mới / Chờ duyệt */}
+          <div className="flex flex-col rounded-xl border border-border bg-surface-raised/40 p-3">
+            <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                <span className="font-bold text-xs uppercase text-text-main">1. Mới tiếp nhận</span>
               </div>
+              <Badge tone="neutral" className="text-[10px]">{colNew.length}</Badge>
             </div>
-          </div>
-        )}
-
-        {phase === "quote" && (
-          <div className="flex flex-col items-center gap-5">
-            <div className="flex items-center justify-between w-full max-w-3xl">
-              <div><div className="text-xs text-text-muted">④ Thẻ phiếu chào giá</div><div className="text-[17px] font-extrabold">Phiếu chào giá</div></div>
-              <Badge tone={saved ? "success" : judgment === "blocked" ? "danger" : judgment === "warning" ? "warning" : "neutral"}>
-                {saved ? "Đã lưu nháp" : judgment === "blocked" ? "Bị chặn" : judgment === "warning" ? "Cảnh báo" : "Mới"}
-              </Badge>
-            </div>
-
-            <Card className="w-full max-w-3xl p-5">
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between text-[13px]"><span className="text-text-muted">Khách hàng</span><span className="font-semibold">{fields.find((f) => f.key === "customer")?.value || "—"}</span></div>
-                <div className="flex justify-between text-[13px]"><span className="text-text-muted">Sản phẩm</span><span className="font-semibold">{fields.find((f) => f.key === "product")?.value || "—"}</span></div>
-                <div className="flex justify-between text-[13px]"><span className="text-text-muted">Số lượng</span><span className="font-semibold">{fields.find((f) => f.key === "qty")?.value || "—"}</span></div>
-                <div className="flex justify-between text-[13px]"><span className="text-text-muted">Lời nhắn</span><span className="font-semibold">{fields.find((f) => f.key === "message")?.value || "—"}</span></div>
-                <div className="border-t border-border pt-3 flex justify-between text-[15px] font-extrabold"><span>Tổng tiền</span><span>{fields.find((f) => f.key === "price")?.value || "—"}</span></div>
-              </div>
-              <div className="mt-3 rounded-lg bg-surface-alt p-3 text-center text-[12px] text-text-muted">Xem trước bản in A6</div>
-            </Card>
-
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }}>Lưu nháp</Button>
-              {judgment !== "blocked" && (
-                <>
-                  <Button variant="ghost" onClick={() => setJudgment("blocked")}>Từ chối</Button>
-                  <Button onClick={() => { setSaved(true); setJudgment("safe"); setSaved(false); setPhase("kanban") }}>Duyệt (xác nhận đơn chính thức)</Button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {phase === "kanban" && (
-          <div className="flex flex-col gap-5">
-            <div className="text-center"><div className="text-[17px] font-extrabold">Bảng điều phối</div><div className="mt-1 text-[13px] text-text-muted">Kéo thẻ đơn sang cột kế, hoặc phân công thợ cắm trực tiếp</div></div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {COLUMNS.map((col) => (
-                <div key={col.key} className="flex flex-col gap-2">
-                  <div className="text-[13px] font-bold px-1">{col.label}</div>
-                  {MOCK_ORDERS.filter((o) => o.status === col.key).map((o) => (
-                    <Card key={o.id} className="p-3">
-                      <div className="text-[13px] font-bold">{o.id}</div>
-                      <div className="text-[11px] text-text-muted">{o.customer} · {o.product}</div>
-                      <div className="text-[11px] mt-1">SLA: {o.sla}</div>
-                      {o.staff && <div className="text-[11px]">Thợ: {o.staff}</div>}
-                      {col.key === "Moi" && (
-                        <input type="text" placeholder="Gán thợ cắm"
-                          onChange={(e) => {
-                            const target = MOCK_ORDERS.find((x) => x.id === o.id)
-                            if (target && e.target.value) target.staff = e.target.value
-                          }}
-                          className="mt-2 h-8 w-full rounded border border-border px-2 text-[12px] outline-none focus:border-primary" />
-                      )}
-                    </Card>
-                  ))}
-                </div>
+            <div className="space-y-3 flex-1 overflow-y-auto">
+              {colNew.map((ord) => (
+                <OrderCard key={ord.id} order={ord} onSelect={() => setSelectedOrderId(ord.id)} />
               ))}
             </div>
-            <div className="text-[12px] text-text-muted">Đơn quá giờ SLA → thẻ tự chuyển viền đỏ, nổi lên đầu cột. In phiếu đơn: nút riêng, không cần duyệt.</div>
           </div>
-        )}
+
+          {/* Cột 2: Đang cắm hoa */}
+          <div className="flex flex-col rounded-xl border border-border bg-surface-raised/40 p-3">
+            <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
+                <span className="font-bold text-xs uppercase text-text-main">2. Đang cắm hoa</span>
+              </div>
+              <Badge tone="neutral" className="text-[10px]">{colArranging.length}</Badge>
+            </div>
+            <div className="space-y-3 flex-1 overflow-y-auto">
+              {colArranging.map((ord) => (
+                <OrderCard key={ord.id} order={ord} onSelect={() => setSelectedOrderId(ord.id)} />
+              ))}
+            </div>
+          </div>
+
+          {/* Cột 3: Đang giao hàng */}
+          <div className="flex flex-col rounded-xl border border-border bg-surface-raised/40 p-3">
+            <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                <span className="font-bold text-xs uppercase text-text-main">3. Vận chuyển</span>
+              </div>
+              <Badge tone="neutral" className="text-[10px]">{colDelivery.length}</Badge>
+            </div>
+            <div className="space-y-3 flex-1 overflow-y-auto">
+              {colDelivery.map((ord) => (
+                <OrderCard key={ord.id} order={ord} onSelect={() => setSelectedOrderId(ord.id)} />
+              ))}
+            </div>
+          </div>
+
+          {/* Cột 4: Hoàn tất */}
+          <div className="flex flex-col rounded-xl border border-border bg-surface-raised/40 p-3">
+            <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                <span className="font-bold text-xs uppercase text-text-main">4. Hoàn tất / Đã giao</span>
+              </div>
+              <Badge tone="neutral" className="text-[10px]">{colCompleted.length}</Badge>
+            </div>
+            <div className="space-y-3 flex-1 overflow-y-auto">
+              {colCompleted.map((ord) => (
+                <OrderCard key={ord.id} order={ord} onSelect={() => setSelectedOrderId(ord.id)} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal tạo đơn hàng */}
+      <CreateOrderModal
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={loadOrders}
+      />
+
+      {/* Modal chi tiết đơn hàng & SLA */}
+      <OrderDetailModal
+        orderId={selectedOrderId}
+        onClose={() => setSelectedOrderId(null)}
+        onUpdated={loadOrders}
+      />
+    </div>
+  )
+}
+
+function OrderCard({ order, onSelect }: { order: OrderItem; onSelect: () => void }) {
+  return (
+    <div
+      onClick={onSelect}
+      className="cursor-pointer rounded-lg border border-border bg-surface p-3 transition-all hover:border-primary hover:shadow-md space-y-2 text-xs"
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-mono font-bold text-primary">{order.code}</span>
+        <span className="text-[10px] text-text-muted">
+          {new Date(order.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+        </span>
+      </div>
+
+      <div>
+        <div className="font-bold text-foreground">
+          {order.deliveryAddress?.recipientName ?? "Khách lẻ"}
+        </div>
+        <div className="text-text-muted truncate text-[11px]">
+          {order.deliveryAddress?.street ?? "Nhận tại tiệm"}
+        </div>
+      </div>
+
+      {order.items && order.items[0] && (
+        <div className="text-[11px] text-text-muted bg-surface-raised px-2 py-1 rounded">
+          🌸 {order.items[0].description} {order.items.length > 1 ? `(+${order.items.length - 1} món)` : ""}
+        </div>
+      )}
+
+      {order.cardMessage && (
+        <div className="truncate text-[10.5px] italic text-amber-700">
+          💌 {order.cardMessage}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between border-t border-border/50 pt-2">
+        <span className="font-bold text-red-600">
+          {order.totalVnd.toLocaleString("vi-VN")} đ
+        </span>
+        <span className="text-[10px] text-primary flex items-center gap-1 font-semibold">
+          <Eye className="h-3 w-3" /> Chi tiết
+        </span>
       </div>
     </div>
   )

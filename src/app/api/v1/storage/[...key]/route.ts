@@ -1,6 +1,6 @@
 import { handle, jsonResponse } from "@/core/http/response"
 import { validationFailed } from "@/core/http/errors"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { verifyStorageSignature } from "@/modules/assets/infra/storage-signing"
 
 /**
@@ -26,7 +26,7 @@ export const PUT = handle(async (request, context: { params: Promise<{ key: stri
 
   const contentType = request.headers.get("content-type") ?? "application/octet-stream"
   const body = new Uint8Array(await request.arrayBuffer())
-  await new LocalDiskStorageProvider().put(key, body, contentType)
+  await getStorageProvider().put(key, body, contentType)
 
   return jsonResponse({ ok: true, key })
 })
@@ -36,7 +36,7 @@ export const GET = handle(async (request, context: { params: Promise<{ key: stri
   const key = segments.join("/")
   verifyOrThrow(key, new URL(request.url))
 
-  const bytes = await new LocalDiskStorageProvider().get(key)
+  const bytes = await getStorageProvider().get(key)
   let contentType = "application/octet-stream"
   if (key.endsWith(".jpg") || key.endsWith(".jpeg")) contentType = "image/jpeg"
   else if (key.endsWith(".png")) contentType = "image/png"

@@ -94,7 +94,7 @@ export function StorageSidebar({
 
       const title =
         a.product?.name || (effective.product_name as string) || (identity.category as string) || "Bó hoa thiết kế"
-      const subtitle = `${flowerCount} cành • ${identity.phong_cach || identity.style || "Đã duyệt BOM"}`
+      const subtitle = `${flowerCount} cành • ${identity.phong_cach || "Đã duyệt BOM"}`
 
       items.push({
         type: "approved",

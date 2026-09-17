@@ -8,8 +8,6 @@ import {
   Menu,
   X,
   Settings2,
-  FlaskConical,
-  CircleUserRound,
   BookOpen,
   WalletCards,
   FileText,
@@ -17,6 +15,14 @@ import {
   Folder,
   Camera,
   Share2,
+  Bot,
+  Users,
+  ShoppingBag,
+  Video,
+  Globe,
+  Tag,
+  CircleUserRound,
+  FlaskConical,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
@@ -25,36 +31,46 @@ export type NavItem = {
   href: string
   label: string
   icon: typeof Home
+  badge?: string
+  badgeColor?: string
   code?: string
 }
 
-const SYSTEM_ITEMS: NavItem[] = [
-  { href: "/kho-du-lieu", label: "Kho Dữ liệu", icon: Folder },
-  { href: "/tai-anh", label: "Phân tích ảnh", icon: Camera },
-  { href: "/cai-dat", label: "Cài đặt", icon: Settings2 },
-  { href: "/cai-dat-ai", label: "Chính sách AI", icon: FlaskConical },
-  { href: "/ho-so", label: "Hồ sơ", icon: CircleUserRound },
-  { href: "/tich-hop", label: "Tích hợp", icon: BookOpen },
-  { href: "/ket-noi", label: "Kết nối nền tảng", icon: Share2 },
-  { href: "/muc-dung", label: "Mức dùng", icon: WalletCards },
-  { href: "/audit", label: "Nhật ký", icon: FileText },
+// 1. Khối Nổi Bật Đặc Biệt (SSOT Knowledge Base & AI Chat Assistant)
+const FEATURED_ITEMS: NavItem[] = [
+  {
+    href: "/tri-thuc",
+    label: "Tri thức & Nhập liệu",
+    icon: BookOpen,
+    badge: "SSOT Guide",
+    badgeColor: "bg-red-100 text-red-700",
+  },
+  {
+    href: "/hoi-thoai",
+    label: "AI Chat Assistant",
+    icon: Bot,
+    badge: "Đa Kênh",
+    badgeColor: "bg-rose-100 text-rose-700",
+  },
 ]
 
-const FUNCTION_ITEMS: NavItem[] = [
+// 2. Phân Hệ Nghiệp Vụ Cốt Lõi
+const CORE_ITEMS: NavItem[] = [
   { href: "/", label: "Trang chủ", icon: Home },
+  { href: "/san-pham", label: "Sản phẩm & Giá", icon: Tag },
+  { href: "/tai-anh", label: "Phân tích hoa Vision", icon: Camera },
+  { href: "/creative-studio", label: "Creative Studio", icon: Sparkles },
+  { href: "/video", label: "Video Studio 9:16", icon: Video },
+  { href: "/catalog", label: "Catalog & Website", icon: Globe },
+  { href: "/khach-hang", label: "CRM & Khách hàng", icon: Users },
+  { href: "/don-hang", label: "Đơn hàng & SLA", icon: ShoppingBag },
+]
+
+// 3. Quản Trị Hệ Thống
+const SYSTEM_ITEMS: NavItem[] = [
   { href: "/kho-du-lieu", label: "Kho Dữ liệu", icon: Folder },
-  { href: "/san-pham", label: "Sản phẩm", icon: Home },
-  { href: "/tai-anh", label: "Phân tích ảnh", icon: Camera },
-  { href: "/creative-studio", label: "Creative Studio", icon: Home },
-  { href: "/video", label: "Video Studio", icon: Home },
-  { href: "/noi-dung", label: "Content Engine", icon: Home },
-  { href: "/lich-dang", label: "Social Publishing", icon: Home },
-  { href: "/ket-noi", label: "Kết nối nền tảng", icon: Share2 },
-  { href: "/catalog", label: "Catalog & Website", icon: Home },
-  { href: "/khach-hang", label: "CRM & Khách hàng", icon: Home },
-  { href: "/don-hang", label: "Đơn hàng", icon: Home },
-  { href: "/hoi-thoai", label: "Chat Assistant", icon: Home },
-  { href: "/so-lieu", label: "Analytics", icon: Home },
+  { href: "/muc-dung", label: "Mức dùng Credit", icon: WalletCards },
+  { href: "/cai-dat", label: "Cài đặt", icon: Settings2 },
 ]
 
 export function DesktopNav() {
@@ -75,33 +91,80 @@ export function DesktopNav() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  function renderNavItem(item: NavItem) {
+    if (item.code && !can(item.code)) return null
+    const active =
+      pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
+    const Icon = item.icon
+
+    return (
+      <button
+        key={item.href}
+        type="button"
+        onClick={() => router.push(item.href as never)}
+        className={cn(
+          "group flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-[12.5px] font-medium transition-colors text-left",
+          active
+            ? "bg-red-50 font-bold text-red-700"
+            : "text-text-muted hover:bg-surface-alt hover:text-text"
+        )}
+        aria-current={active ? "page" : undefined}
+      >
+        <div className="flex items-center gap-2.5 truncate">
+          <Icon
+            size={16}
+            strokeWidth={active ? 2.2 : 1.9}
+            className={active ? "text-red-600" : "text-text-muted group-hover:text-text"}
+          />
+          <span className="truncate">{item.label}</span>
+        </div>
+        {item.badge && (
+          <span
+            className={cn(
+              "rounded-full px-1.5 py-0.2 text-[9.5px] font-extrabold tracking-wide uppercase shrink-0",
+              item.badgeColor || "bg-muted text-muted-foreground"
+            )}
+          >
+            {item.badge}
+          </span>
+        )}
+      </button>
+    )
+  }
+
   return (
-    <aside className="hidden h-dvh w-56 flex-shrink-0 flex-col border-r border-border bg-surface md:flex">
-      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary">
-          <Sparkles size={16} color="#fff" strokeWidth={2.2} />
+    <aside className="hidden h-dvh w-60 flex-shrink-0 flex-col border-r border-border bg-surface md:flex">
+      {/* Brand Header */}
+      <div className="flex h-14 items-center justify-between border-b border-border px-4">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-red-600 to-rose-700 text-white shadow-xs">
+            <Sparkles size={16} strokeWidth={2.2} />
+          </div>
+          <div className="flex flex-col">
+            <div className="text-[13px] font-extrabold text-primary leading-tight">FloraOS</div>
+            <div className="text-[10px] text-text-muted font-medium">SaaS Operations SSOT</div>
+          </div>
         </div>
-        <div className="flex flex-1 overflow-hidden">
-          <div className="text-[13px] font-extrabold text-primary truncate">FloraOS</div>
-        </div>
+
         <div ref={menuRef} className="relative">
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
             className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+              "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
               menuOpen ? "bg-surface-alt text-primary" : "text-text-muted hover:bg-surface-alt"
             )}
             aria-label="Menu chức năng"
           >
-            {menuOpen ? <X size={18} strokeWidth={2} /> : <Menu size={18} strokeWidth={2} />}
+            {menuOpen ? <X size={16} strokeWidth={2} /> : <Menu size={16} strokeWidth={2} />}
           </button>
+
           {menuOpen && (
-            <div className="absolute right-0 top-11 z-50 w-52 rounded-xl border border-border bg-surface py-1.5 shadow-lg">
-              <div className="px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-muted">
-                Chức năng
+            <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-border bg-surface py-1.5 shadow-xl">
+              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                Tất cả phân hệ
               </div>
-              {FUNCTION_ITEMS.map((item) => (
+              {[...FEATURED_ITEMS, ...CORE_ITEMS, ...SYSTEM_ITEMS].map((item) => (
                 <button
                   key={item.href}
                   type="button"
@@ -110,35 +173,12 @@ export function DesktopNav() {
                     router.push(item.href as never)
                   }}
                   className={cn(
-                    "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium transition-colors",
-                    pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
-                      ? "bg-primary/10 font-bold text-primary"
-                      : "text-text hover:bg-surface-alt"
+                    "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium transition-colors",
+                    pathname === item.href ? "bg-red-50 font-bold text-red-700" : "text-text hover:bg-surface-alt"
                   )}
                 >
-                  {item.label}
-                </button>
-              ))}
-              <div className="my-1 border-t border-border" />
-              <div className="px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-muted">
-                Hệ thống
-              </div>
-              {SYSTEM_ITEMS.map((item) => (
-                <button
-                  key={item.href}
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false)
-                    router.push(item.href as never)
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium transition-colors",
-                    pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
-                      ? "bg-primary/10 font-bold text-primary"
-                      : "text-text hover:bg-surface-alt"
-                  )}
-                >
-                  {item.label}
+                  <item.icon size={14} className="text-text-muted" />
+                  <span className="truncate">{item.label}</span>
                 </button>
               ))}
             </div>
@@ -146,41 +186,55 @@ export function DesktopNav() {
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-        {SYSTEM_ITEMS.map((item) => {
-          if (item.code && !can(item.code)) return null
-          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
-          const Icon = item.icon
-          return (
-            <button
-              key={item.href}
-              type="button"
-              onClick={() => router.push(item.href as never)}
-              className={cn(
-                "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors text-left",
-                active
-                  ? "bg-primary/10 font-bold text-primary"
-                  : "text-text-muted hover:bg-surface-alt hover:text-text"
-              )}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon size={16} strokeWidth={1.9} />
-              {item.label}
-            </button>
-          )
-        })}
+      {/* Main Navigation Scroll Area */}
+      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
+        {/* Khối Nổi Bật: Tri thức & AI Chat */}
+        <div className="space-y-1">
+          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+            Trợ Lý & Cẩm Nang
+          </div>
+          {FEATURED_ITEMS.map(renderNavItem)}
+        </div>
+
+        {/* Khối Nghiệp Vụ Cốt Lõi */}
+        <div className="space-y-1">
+          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+            Nghiệp Vụ Hoa Tươi
+          </div>
+          {CORE_ITEMS.map(renderNavItem)}
+        </div>
+
+        {/* Khối Quản Trị & Hệ Thống */}
+        <div className="space-y-1">
+          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+            Hệ Thống & Dữ Liệu
+          </div>
+          {SYSTEM_ITEMS.map(renderNavItem)}
+        </div>
       </nav>
 
-      <div className="border-t border-border p-3">
-        <div className="rounded-xl bg-surface-alt p-3">
-          <div className="flex items-center gap-2 text-[12.5px] font-semibold text-text">
-            <Bell size={15} className="text-text-muted" />
-            Trung tâm thông báo
+      {/* Footer Copilot Trigger & Thông Báo */}
+      <div className="border-t border-border p-3 space-y-2">
+        <button
+          type="button"
+          onClick={() => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))
+          }}
+          className="w-full flex items-center justify-between rounded-xl bg-red-50/80 hover:bg-red-100/80 border border-red-200/80 p-2.5 text-left transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-600 text-white shadow-xs">
+              <Bot size={13} />
+            </span>
+            <div>
+              <div className="text-[11.5px] font-bold text-red-950">FloraOS Copilot</div>
+              <div className="text-[10px] text-red-700 font-medium">Trợ lý hỗ trợ 24/7</div>
+            </div>
           </div>
-          <div className="mt-1 text-[11px] leading-snug text-text-muted">
-            Theo dõi job, lượt duyệt và thay đổi quan trọng.
-          </div>
-        </div>
+          <kbd className="rounded bg-white/80 px-1.5 py-0.5 text-[9.5px] font-mono text-red-900 border border-red-200">
+            ⌘K
+          </kbd>
+        </button>
       </div>
     </aside>
   )

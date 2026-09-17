@@ -19,15 +19,23 @@ export const VISION_ENGINES = ["openai_structured", "openai_direct", "local_cv"]
 export type VisionEngine = (typeof VISION_ENGINES)[number]
 
 /**
- * Mặc định nền tảng là "Gọn" (`openai_direct`) — rẻ nhất và nhanh nhất,
- * phù hợp cho sản xuất khi bộ ảnh vàng đã xác nhận độ chính xác đủ.
- * Ghi đè có chủ đích: bộ ảnh vàng đang 0/8 nhãn (nợ #24), nhưng
- * định tuyến theo năng lực (`H4`) cho phép tổ chức chọn bộ khác,
- * nên mặc định sai chỉ ảnh hưởng tới tổ chức chưa chọn.
- * Tổ chức muốn chính xác hơn chọn "Đầy đủ" (`openai_structured`);
- * muốn xử lý hoàn toàn nội bộ chọn "Cục bộ" (`local_cv`).
+ * Mặc định nền tảng là "Đầy đủ" (`openai_structured`) — bộ DUY NHẤT mang
+ * `trang_thai: "san_xuat"`.
+ *
+ * `trang_thai` nói một bộ đã được đo hay chưa, nên đặt một bộ `thu_nghiem`
+ * làm mặc định là đưa mọi tổ chức mới vào một đường chưa ai kiểm chứng —
+ * và tổ chức mới thì theo định nghĩa là tổ chức chưa chọn gì. Rẻ hơn và
+ * nhanh hơn không bù được việc không biết kết quả sai bao nhiêu: thứ tự ưu
+ * tiên khi đánh đổi ở PRD mục 9 là Accuracy > Quality > Cost > Speed.
+ *
+ * Tổ chức muốn rẻ và nhanh chọn "Gọn" (`openai_direct`); muốn xử lý hoàn
+ * toàn nội bộ chọn "Cục bộ" (`local_cv`). Cả hai bày rõ trạng thái
+ * `thu_nghiem` trên màn `/bo-may` trước khi chọn.
+ *
+ * Đổi mặc định này trở lại chỉ bằng số đo trên bộ ảnh vàng (D5-c: "Không
+ * đổi bằng lập luận"), không bằng một lượt chạy thử thành công.
  */
-export const VISION_ENGINE_MAC_DINH: VisionEngine = "openai_direct"
+export const VISION_ENGINE_MAC_DINH: VisionEngine = "openai_structured"
 
 export type TrangThaiBoMay = "san_xuat" | "thu_nghiem" | "chua_san_sang"
 

@@ -26,7 +26,8 @@ from typing import Any
 import psycopg
 from psycopg.rows import dict_row
 
-from vision.providers.registry import lay_provider
+from shared.storage import dang_dung_kho_dung_chung, doc_bytes
+from vision.providers.registry import lay_provider, lay_provider_co_du_phong
 
 log = logging.getLogger("vision.worker")
 
@@ -40,9 +41,9 @@ BACKOFF_DAU_GIAY = 1.0
 BACKOFF_TOI_DA_GIAY = 60.0
 CONTRACT_VERSION = "2"  # Schema.json thêm phong_cach, dip_su_dung vào identity
 
-# repo_root/var/storage/<storage_key> — cùng STORAGE_ROOT của
-# `LocalDiskStorageProvider` (nợ #15, TECHNICAL_DEBT.md): chỉ đúng khi worker
-# và web chạy chung một máy, chung một checkout. Thay khi có adapter S3/R2 thật.
+# Gốc đĩa dùng khi CHƯA cấu hình kho dùng chung. `shared.storage` quyết định
+# đọc từ S3/R2 hay từ đĩa theo đúng bốn biến môi trường mà phía web đọc, nên
+# web và worker không bao giờ nhìn vào hai kho khác nhau.
 REPO_ROOT = Path(__file__).resolve().parents[3]
 STORAGE_ROOT = REPO_ROOT / "var" / "storage"
 
@@ -58,13 +59,9 @@ def _read_asset_bytes(storage_key: str) -> bytes:
     (`storageKeyMatchesContext`) chặn đường dẫn giả mạo lúc ghi; rào này
     chặn lúc đọc, cho cả những dòng đã nằm sẵn trong bảng từ trước khi rào
     thứ nhất có. `..` trong `storage_key` mà không chặn là worker đọc được
-    tệp bất kỳ trên đĩa máy chủ.
+    tệp bất kỳ trên đĩa máy chủ — rào giữ nguyên ở cả đường S3 lẫn đường đĩa.
     """
-    goc = STORAGE_ROOT.resolve()
-    path = (goc / storage_key).resolve()
-    if path != goc and goc not in path.parents:
-        raise ValueError(f"storage_key nằm ngoài kho: {storage_key}")
-    return path.read_bytes()
+    return doc_bytes(storage_key, STORAGE_ROOT)
 
 
 def _emit_event(conn: psycopg.Connection, job_id: str, event: str, payload: dict) -> None:
@@ -180,8 +177,16 @@ def process_job(conn: psycopg.Connection, job: dict[str, Any], provider: Any = N
     #
     # `provider` truyền vào chỉ để bộ test tiêm bản giả; luồng thật để trống
     # và hỏi sổ đăng ký.
+    bo_may_da_hong: str | None = None
     if provider is None:
-        provider = lay_provider(payload.get("engine"))
+        provider, _bo_may, bo_may_da_hong = lay_provider_co_du_phong(payload.get("engine"))
+        if bo_may_da_hong:
+            log.warning(
+                "job %s: bộ máy %s dựng không nổi, chạy bằng %s",
+                job["id"],
+                bo_may_da_hong,
+                _bo_may,
+            )
 
     lowest_confidence = 100
     try:
@@ -204,20 +209,59 @@ def process_job(conn: psycopg.Connection, job: dict[str, Any], provider: Any = N
             storage_key = _asset_storage_key(conn, organization_id, asset_id)
             image_bytes = _read_asset_bytes(storage_key)
 
-            raw = provider.analyze(
-                image_bytes,
-                {"organization_id": organization_id, "product_id": product_id, "asset_id": asset_id},
-            )
+            bat_dau = time.monotonic()
+            try:
+                raw = provider.analyze(
+                    image_bytes,
+                    {
+                        "organization_id": organization_id,
+                        "product_id": product_id,
+                        "asset_id": asset_id,
+                    },
+                )
+            except Exception:
+                _ghi_ai_request(
+                    conn,
+                    job_id=job["id"],
+                    organization_id=organization_id,
+                    model_key=provider.name,
+                    outcome="FAILED",
+                    latency_ms=int((time.monotonic() - bat_dau) * 1000),
+                    fallback_from=bo_may_da_hong,
+                )
+                raise
+            do_tre_ms = int((time.monotonic() - bat_dau) * 1000)
+
             confidence = raw.get("confidence")
             if isinstance(confidence, (int, float)) and not isinstance(confidence, bool):
                 lowest_confidence = min(lowest_confidence, int(confidence))
+
+            _ghi_ai_request(
+                conn,
+                job_id=job["id"],
+                organization_id=organization_id,
+                model_key=provider.name,
+                outcome="ACCEPTED",
+                latency_ms=do_tre_ms,
+                quality_score=(
+                    confidence / 100
+                    if isinstance(confidence, (int, float)) and not isinstance(confidence, bool)
+                    else None
+                ),
+                fallback_from=bo_may_da_hong,
+            )
 
             _insert_analysis(conn, job, asset_id, product_id, provider, raw)
             _emit_event(
                 conn,
                 job["id"],
                 "log",
-                {"asset_id": asset_id, "status": "phân tích xong", "engine": provider.name},
+                {
+                    "asset_id": asset_id,
+                    "status": "phân tích xong",
+                    "engine": provider.name,
+                    "latency_ms": do_tre_ms,
+                },
             )
 
         result = "LOW_CONFIDENCE" if lowest_confidence < 70 else "OK"
@@ -250,6 +294,60 @@ def process_job(conn: psycopg.Connection, job: dict[str, Any], provider: Any = N
             )
         conn.commit()
         _emit_event(conn, job["id"], "done", {"status": "FAILED", "error": str(exc)})
+
+
+def _ghi_ai_request(
+    conn: psycopg.Connection,
+    *,
+    job_id: str,
+    organization_id: str,
+    model_key: str,
+    outcome: str,
+    latency_ms: int,
+    quality_score: float | None = None,
+    fallback_from: str | None = None,
+    attempt: int = 1,
+) -> None:
+    """Một dòng `ai_requests` cho MỖI lời gọi mô hình.
+
+    Đường phân tích ảnh là đường gọi AI đông nhất của nền tảng, và trước đợt
+    soát này nó không ghi một dòng nào: không độ trễ theo mô hình, không chi
+    phí theo mô hình, không dấu vết bộ máy nào đã chạy cho tổ chức nào. Hệ
+    quả là cổng đổi provider (`BO_ANH_VANG.md` mục 9, chỉ số 6 — chi phí và
+    thời gian mỗi ảnh) không có số để điền, và một bộ máy chậm dần đi không
+    ai thấy cho tới khi người dùng phàn nàn.
+
+    Ghi sổ KHÔNG BAO GIỜ làm chết job: một bảng nhật ký hỏng thì mất số liệu,
+    còn ném lỗi ở đây thì mất cả kết quả phân tích mà khách đã trả tiền.
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO ai_requests (
+                    id, organization_id, job_id, capability_code, model_key,
+                    attempt, fallback_from, source, latency_ms, quality_score,
+                    outcome, created_at
+                ) VALUES (
+                    gen_random_uuid()::text, %s, %s, 'AIC-01', %s,
+                    %s, %s, 'CORE', %s, %s,
+                    %s, now()
+                )
+                """,
+                (
+                    organization_id,
+                    job_id,
+                    model_key,
+                    attempt,
+                    fallback_from,
+                    latency_ms,
+                    quality_score,
+                    outcome,
+                ),
+            )
+        conn.commit()
+    except Exception:  # noqa: BLE001 — sổ hỏng không được kéo theo job
+        log.warning("không ghi được ai_requests cho job %s", job_id, exc_info=True)
 
 
 def _asset_storage_key(conn: psycopg.Connection, organization_id: str, asset_id: str) -> str:

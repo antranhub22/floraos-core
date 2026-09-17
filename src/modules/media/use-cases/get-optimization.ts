@@ -1,6 +1,6 @@
 import { notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { JobEventRepository } from "@/modules/jobs/infra/job-event-repository"
@@ -67,7 +67,7 @@ export async function getOptimization(
   const guard = parseIdentityGuardBlock(suKien?.payload)
 
   const assetRepo = new AssetRepository()
-  const storage = new LocalDiskStorageProvider()
+  const storage = getStorageProvider()
 
   const master = await assetRepo.findMasterByJobId(ctx, jobId)
   const ketQua = isGuardResult(job.result) ? job.result : null

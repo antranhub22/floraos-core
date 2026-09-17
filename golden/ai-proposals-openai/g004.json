@@ -1,0 +1,183 @@
+{
+  "palette_accounting": [
+    {
+      "cluster_index": 0,
+      "thuoc_ve": "Hoa cúc",
+      "nhom": "Hoa",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 1,
+      "thuoc_ve": "Hoa ly",
+      "nhom": "Hoa",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 2,
+      "thuoc_ve": "Hoa lan",
+      "nhom": "Hoa",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 3,
+      "thuoc_ve": "Hoa lan",
+      "nhom": "Hoa",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 4,
+      "thuoc_ve": "Lá",
+      "nhom": "Lá",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 5,
+      "thuoc_ve": "Lá",
+      "nhom": "Lá",
+      "confidence": 100
+    },
+    {
+      "cluster_index": 6,
+      "thuoc_ve": null,
+      "nhom": "Nền ảnh",
+      "confidence": 50
+    }
+  ],
+  "checklist": {
+    "hoa_chu_dao": "Có",
+    "hoa_phu": "Có",
+    "hoa_lap_day": "Có",
+    "la_nen": "Có",
+    "la_diem_nhan": "Không có",
+    "vat_lieu_goi": "Có",
+    "day_buoc": "Không có",
+    "ruy_bang": "Không có",
+    "thiep_bien_chu": "Không có",
+    "phu_kien_trang_tri": "Không có"
+  },
+  "identity": {
+    "shape": "Bán cầu",
+    "facing": "Một mặt",
+    "category": "Giỏ hoa",
+    "container": "Giỏ mây",
+    "phong_cach": "Hiện đại",
+    "dip_su_dung": "Khai trương"
+  },
+  "bom": {
+    "flowers": [
+      {
+        "nhom_hoa": "Cúc",
+        "name": "Cúc trắng",
+        "shade": "Vừa",
+        "color": "TM03 Trắng",
+        "quantity": 15,
+        "dem_tung_vung": [
+          5,
+          5,
+          5
+        ],
+        "bloom_diameter_ratio": 0.1,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa lấp đầy",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Bông",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng",
+        "dau_hieu_nhan_dang": "Cánh hoa nhỏ, xếp vòng tròn",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Ly",
+        "name": "Hoa ly vàng",
+        "shade": "Vừa",
+        "color": "TM08 Vàng",
+        "quantity": 3,
+        "dem_tung_vung": [
+          1,
+          1,
+          1
+        ],
+        "bloom_diameter_ratio": 0.2,
+        "cluster_indices": [
+          1
+        ],
+        "role": "Hoa chủ đạo",
+        "confidence": 95,
+        "ma": null,
+        "dvt_dem": "Bông",
+        "mau": "TM08 Vàng",
+        "mo_ta_mau": "Vàng nhạt",
+        "dau_hieu_nhan_dang": "Cánh hoa lớn, hình chuông",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Lan",
+        "name": "Hoa lan vàng",
+        "shade": "Vừa",
+        "color": "TM08 Vàng",
+        "quantity": 10,
+        "dem_tung_vung": [
+          3,
+          4,
+          3
+        ],
+        "bloom_diameter_ratio": 0.05,
+        "cluster_indices": [
+          2,
+          3
+        ],
+        "role": "Hoa phụ",
+        "confidence": 85,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM08 Vàng",
+        "mo_ta_mau": "Vàng nhạt",
+        "dau_hieu_nhan_dang": "Cánh hoa nhỏ, mọc thành chùm",
+        "so_nu": 5,
+        "so_hong": 0
+      }
+    ],
+    "foliage": [
+      {
+        "name": "Lá thông",
+        "quantity": null,
+        "cluster_indices": [
+          4,
+          5
+        ],
+        "role": "Nền",
+        "confidence": 90,
+        "color": "Xanh đậm",
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM05 Xanh lá",
+        "mo_ta_mau": "Xanh đậm",
+        "dau_hieu_nhan_dang": "Lá kim nhỏ, mọc dày"
+      }
+    ],
+    "accessories": [],
+    "wrapping": [
+      {
+        "layer": "Lớp ngoài",
+        "material": "Giỏ mây",
+        "color": "Trắng",
+        "texture": "Trơn",
+        "confidence": 100,
+        "ma": null
+      }
+    ],
+    "materials_note": null
+  },
+  "confidence": 90,
+  "san_xuat": {
+    "so_tang_lop": 3
+  },
+  "flower_count": 28,
+  "bud_count": 5,
+  "damaged_count": 0
+}

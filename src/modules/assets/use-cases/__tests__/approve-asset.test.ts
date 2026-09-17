@@ -55,8 +55,9 @@ vi.mock("@/modules/assets/infra/asset-repository", () => ({
   })),
 }))
 
-vi.mock("@/modules/assets/adapters/local-disk-storage-provider", () => ({
-  LocalDiskStorageProvider: vi.fn().mockImplementation(() => ({
+vi.mock("@/modules/assets/adapters/storage-provider-factory", () => ({
+  getStorageProvider: vi.fn().mockImplementation(() => ({
+    name: "gia-lap",
     signedUrl: vi.fn().mockResolvedValue("https://storage.floraos.vn/asset-1.png"),
   })),
 }))

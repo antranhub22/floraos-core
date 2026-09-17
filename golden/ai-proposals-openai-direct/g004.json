@@ -1,0 +1,145 @@
+{
+  "palette_accounting": [
+    {
+      "cluster_index": 0,
+      "thuoc_ve": "Hoa",
+      "nhom": "Hoa",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 1,
+      "thuoc_ve": "Lá",
+      "nhom": "Lá",
+      "confidence": 85
+    },
+    {
+      "cluster_index": 2,
+      "thuoc_ve": "Vật liệu gói",
+      "nhom": "Vật liệu gói",
+      "confidence": 80
+    }
+  ],
+  "checklist": {
+    "hoa_chu_dao": "Có",
+    "hoa_phu": "Có",
+    "hoa_lap_day": "Có",
+    "la_nen": "Có",
+    "la_diem_nhan": "Không có",
+    "vat_lieu_goi": "Có",
+    "day_buoc": "Có",
+    "ruy_bang": "Không có",
+    "thiep_bien_chu": "Không có",
+    "phu_kien_trang_tri": "Không có"
+  },
+  "identity": {
+    "shape": "Bán cầu",
+    "facing": "Một mặt",
+    "category": "Giỏ hoa",
+    "container": "Giỏ mây",
+    "phong_cach": "Hiện đại",
+    "dip_su_dung": "Sinh nhật"
+  },
+  "bom": {
+    "flowers": [
+      {
+        "nhom_hoa": "Ly",
+        "name": "Ly",
+        "shade": "Nhạt",
+        "color": "Vàng",
+        "quantity": 4,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 1.5,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa chủ đạo",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM04 Cam",
+        "mo_ta_mau": "Màu vàng nhạt",
+        "dau_hieu_nhan_dang": "Có",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Cúc",
+        "name": "Cúc",
+        "shade": "Nhạt",
+        "color": "Trắng",
+        "quantity": 5,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 1.2,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa phụ",
+        "confidence": 85,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Màu trắng",
+        "dau_hieu_nhan_dang": "Có",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Lan",
+        "name": "Lan",
+        "shade": "Nhạt",
+        "color": "Trắng",
+        "quantity": 6,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 1.3,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa phụ",
+        "confidence": 85,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Màu trắng",
+        "dau_hieu_nhan_dang": "Có",
+        "so_nu": 0,
+        "so_hong": 0
+      }
+    ],
+    "foliage": [
+      {
+        "name": "Lá xanh",
+        "quantity": 10,
+        "cluster_indices": [
+          1
+        ],
+        "role": "Nền",
+        "confidence": 80,
+        "color": "Xanh",
+        "ma": null,
+        "dvt_dem": "Lá",
+        "mau": "TM05 Xanh lá",
+        "mo_ta_mau": "Màu xanh tươi",
+        "dau_hieu_nhan_dang": "Có"
+      }
+    ],
+    "accessories": [],
+    "wrapping": [
+      {
+        "layer": "Lớp ngoài",
+        "material": "Mây",
+        "color": "Trắng",
+        "texture": "Trơn",
+        "confidence": 80,
+        "ma": null
+      }
+    ],
+    "materials_note": null
+  },
+  "confidence": 90,
+  "san_xuat": {
+    "so_tang_lop": 1
+  },
+  "flower_count": 15,
+  "bud_count": 0,
+  "damaged_count": 0
+}

@@ -1,4 +1,6 @@
 import { AppError, quotaExceeded, validationFailed } from "@/core/http/errors"
+import { log } from "@/core/observability/log"
+import { docCauHinhTran, moc, vuotTran } from "@/modules/jobs/domain/rate-limit"
 import type { TenantContext } from "@/core/tenancy"
 import { OrganizationRepository } from "@/modules/organization/infra/organization-repository"
 import { WorkspaceRepository } from "@/modules/organization/infra/workspace-repository"
@@ -55,6 +57,28 @@ export async function enqueueJob(
 
   const before = await dedupe()
   if (before) return before
+
+  // Trần vận hành, đứng TRƯỚC hạn mức credit. Hai thứ khác nhau: credit nói
+  // tổ chức còn bao nhiêu lượt, trần này nói bao nhiêu lượt cùng lúc. Đếm ở
+  // cơ sở dữ liệu chứ không đếm trong bộ nhớ tiến trình — nhiều tiến trình
+  // web đếm riêng thì trần thành vô nghĩa, và đó đúng là lỗi hệ v1 đã mắc
+  // với trạng thái job.
+  const cauHinhTran = docCauHinhTran(process.env)
+  const daTao = await new GenerationJobRepository().countSince(ctx, moc(new Date(), cauHinhTran))
+  if (vuotTran(daTao, cauHinhTran)) {
+    log.warn("job.rate_limited", {
+      organizationId: ctx.organizationId,
+      feature: input.feature,
+      daTao,
+      tran: cauHinhTran.tranMoiCuaSo,
+      cuaSoGiay: cauHinhTran.cuaSoGiay,
+    })
+    throw new AppError("RATE_LIMITED", "Quá nhiều lượt chạy trong thời gian ngắn, thử lại sau", {
+      da_tao: daTao,
+      tran: cauHinhTran.tranMoiCuaSo,
+      cua_so_giay: cauHinhTran.cuaSoGiay,
+    })
+  }
 
   const cost = costCreditForFeature(input.feature)
 

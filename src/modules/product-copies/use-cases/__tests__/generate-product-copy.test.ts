@@ -10,205 +10,281 @@ const mockTenantContext: TenantContext = {
   capabilities: new Set(["H5"]),
 }
 
+const KHOA = "idem-1"
+
+/**
+ * Hình dạng THẬT của hợp đồng Vision (`workers/vision/contracts/Schema.json`).
+ *
+ * Fixture cũ ở tệp này khai `identity.style` và `identity.color_tone` — hai
+ * trường KHÔNG có trong hợp đồng. Vì fixture tự bịa ra chúng, mọi ca thử đều
+ * xanh trong khi đường chạy thật đưa `undefined` vào lời nhắc gửi cho mô
+ * hình. Một fixture không khớp hợp đồng là một bộ test đo chính nó.
+ */
+const PHAN_TICH_THAT = {
+  identity: {
+    category: "Bó hoa",
+    shape: "tròn",
+    facing: "một mặt",
+    container: "giấy gói",
+    phong_cach: "Cổ điển",
+    dip_su_dung: "Kỷ niệm",
+  },
+  bom: {
+    flowers: [{ name: "Hồng đỏ", quantity: 20, mau: "đỏ", so_nu: 2, so_hong: 0 }],
+    foliage: [{ name: "Lá bạc", quantity: 5 }],
+    accessories: [],
+    wrapping: [{ layer: "ngoài", material: "giấy kraft", color: "nâu" }],
+  },
+  palette_accounting: [{ cluster_index: 0, nhom: "đỏ", thuoc_ve: "hoa", confidence: 90 }],
+  checklist: { hoa_chu_dao: "Hồng đỏ" },
+  san_xuat: { so_tang_lop: 3 },
+  flower_count: 20,
+  bud_count: 2,
+  damaged_count: 0,
+  confidence: 90,
+}
+
 vi.mock("@/modules/products/infra/product-analysis-repository", () => ({
-  ProductAnalysisRepository: vi.fn().mockImplementation(() => ({
-    findById: vi.fn(),
-    listPending: vi.fn(),
-    create: vi.fn(),
-    createApprovedHistorical: vi.fn(),
-    updateEdited: vi.fn(),
-    approve: vi.fn(),
-  })),
+  ProductAnalysisRepository: vi.fn().mockImplementation(() => ({ findById: vi.fn() })),
 }))
 
 vi.mock("@/modules/profiles/infra/brand-profile-repository", () => ({
-  BrandProfileRepository: vi.fn().mockImplementation(() => ({
-    current: vi.fn(),
-    upsert: vi.fn(),
-  })),
+  BrandProfileRepository: vi.fn().mockImplementation(() => ({ current: vi.fn() })),
 }))
 
 vi.mock("@/modules/organization/infra/occasion-repository", () => ({
-  OccasionRepository: vi.fn().mockImplementation(() => ({
-    list: vi.fn(),
-    seedDefault: vi.fn(),
-    findByCode: vi.fn(),
-  })),
+  OccasionRepository: vi.fn().mockImplementation(() => ({ list: vi.fn() })),
 }))
 
 vi.mock("@/modules/product-copies/infra/product-copy-repository", () => ({
   ProductCopyRepository: vi.fn().mockImplementation(() => ({
-    findById: vi.fn(),
+    db: {},
     findByAnalysisId: vi.fn(),
-    listByProduct: vi.fn(),
-    listPendingApproval: vi.fn(),
-    listByApprovalState: vi.fn(),
-    updateEdited: vi.fn(),
     createFromAnalysis: vi.fn(),
-    approve: vi.fn(),
-    reject: vi.fn(),
   })),
 }))
 
-vi.mock("@/core/ai/gateway", () => ({
-  callCapability: vi.fn(),
+vi.mock("@/modules/jobs/infra/generation-job-repository", () => ({
+  GenerationJobRepository: vi.fn().mockImplementation(() => ({
+    startInline: vi.fn(),
+    finishInline: vi.fn(),
+  })),
 }))
 
-vi.mock("@/core/ai/wiring", () => ({
-  aiGatewayDeps: vi.fn(),
-}))
-
+vi.mock("@/modules/jobs/use-cases/enqueue-job", () => ({ enqueueJob: vi.fn() }))
+vi.mock("@/modules/usage/use-cases/refund-job", () => ({ refundJob: vi.fn() }))
+vi.mock("@/core/ai/gateway", () => ({ callCapability: vi.fn() }))
+vi.mock("@/core/ai/wiring", () => ({ aiGatewayDeps: vi.fn() }))
 vi.mock("@/modules/product-copies/adapters/product-copy-adapter", () => ({
   createProductCopyAdapter: vi.fn(),
 }))
-
-vi.mock("@/core/ai/adapters/openai-llm-provider", () => ({
-  OpenAILLMProvider: vi.fn(),
-}))
+vi.mock("@/core/ai/adapters/openai-llm-provider", () => ({ OpenAILLMProvider: vi.fn() }))
 
 import { generateProductCopy } from "@/modules/product-copies/use-cases/generate-product-copy"
 import { ProductAnalysisRepository } from "@/modules/products/infra/product-analysis-repository"
 import { BrandProfileRepository } from "@/modules/profiles/infra/brand-profile-repository"
 import { OccasionRepository } from "@/modules/organization/infra/occasion-repository"
 import { ProductCopyRepository } from "@/modules/product-copies/infra/product-copy-repository"
+import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
+import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
+import { refundJob } from "@/modules/usage/use-cases/refund-job"
 import { callCapability } from "@/core/ai/gateway"
 import { createProductCopyAdapter } from "@/modules/product-copies/adapters/product-copy-adapter"
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 describe("generateProductCopy", () => {
-  let mockAnalysisRepo: any
-  let mockBrandRepo: any
-  let mockOccasionRepo: any
-  let mockCopyRepo: any
-  let mockCallCapability: ReturnType<typeof vi.fn>
-  let mockCreateAdapter: ReturnType<typeof vi.fn>
+  let analysisRepo: any
+  let brandRepo: any
+  let occasionRepo: any
+  let copyRepo: any
+  let jobRepo: any
+
+  const ketQuaAi = {
+    kind: "xong",
+    output: {
+      suggested_name: "Bó hồng đỏ cổ điển",
+      suggested_description: "Mô tả",
+      suggested_tags: ["hoa-hong"],
+      suggested_occasions: ["Kỷ niệm"],
+      suggested_price_segment: "standard",
+    },
+    model: { key: "openai_structured", provider: "openai" },
+    attempts: [{ model: "openai_structured", outcome: "ACCEPTED", costUsd: 0.002, latencyMs: 1200 }],
+    evaluation: { needsReview: false, scores: {}, overall: 1, thresholdUsed: null, reason: null },
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockAnalysisRepo = { findById: vi.fn() }
-    mockBrandRepo = { current: vi.fn() }
-    mockOccasionRepo = { list: vi.fn() }
-    mockCopyRepo = { findByAnalysisId: vi.fn(), createFromAnalysis: vi.fn() }
-    mockCallCapability = vi.fn()
-    mockCreateAdapter = vi.fn()
+    analysisRepo = { findById: vi.fn() }
+    brandRepo = { current: vi.fn().mockResolvedValue(null) }
+    occasionRepo = { list: vi.fn().mockResolvedValue([{ code: "ky-niem", name: "Kỷ niệm" }]) }
+    copyRepo = { db: {}, findByAnalysisId: vi.fn().mockResolvedValue(null), createFromAnalysis: vi.fn() }
+    jobRepo = { startInline: vi.fn(), finishInline: vi.fn() }
 
-    vi.mocked(ProductAnalysisRepository).mockImplementation(() => mockAnalysisRepo as any)
-    vi.mocked(BrandProfileRepository).mockImplementation(() => mockBrandRepo as any)
-    vi.mocked(OccasionRepository).mockImplementation(() => mockOccasionRepo as any)
-    vi.mocked(ProductCopyRepository).mockImplementation(() => mockCopyRepo as any)
-    vi.mocked(callCapability).mockImplementation(mockCallCapability)
-    vi.mocked(createProductCopyAdapter).mockImplementation(mockCreateAdapter)
+    vi.mocked(ProductAnalysisRepository).mockImplementation(() => analysisRepo)
+    vi.mocked(BrandProfileRepository).mockImplementation(() => brandRepo)
+    vi.mocked(OccasionRepository).mockImplementation(() => occasionRepo)
+    vi.mocked(ProductCopyRepository).mockImplementation(() => copyRepo)
+    vi.mocked(GenerationJobRepository).mockImplementation(() => jobRepo)
+    vi.mocked(enqueueJob).mockResolvedValue({
+      job: { id: "job-1" },
+      deduped: false,
+      usage: { costCredit: 1, balanceAfter: 99 },
+    } as any)
+    vi.mocked(createProductCopyAdapter).mockReturnValue((() => undefined) as any)
+    vi.mocked(callCapability).mockResolvedValue(ketQuaAi as any)
+    copyRepo.createFromAnalysis.mockResolvedValue({ id: "copy-moi", raw: ketQuaAi.output })
+    // `generateProductCopy` gọi `refundJob(...).catch(() => undefined)` trên đường lỗi (dòng
+    // hoàn credit khi job FAILED) — thiếu giá trị mặc định này làm mock trả `undefined` thay vì
+    // Promise, và `.catch` trên `undefined` ném TypeError che mất `AppError` thật đang được test.
+    vi.mocked(refundJob).mockResolvedValue(undefined as any)
   })
 
-  it("throws NOT_FOUND when analysis does not exist", async () => {
-    mockAnalysisRepo.findById.mockResolvedValue(null)
-    mockBrandRepo.current.mockResolvedValue(null)
-    mockOccasionRepo.list.mockResolvedValue([])
+  const daDuyet = (extra: Record<string, unknown> = {}) => ({
+    id: "analysis-1",
+    approval_state: "APPROVED",
+    product_id: null,
+    raw: PHAN_TICH_THAT,
+    edited: null,
+    ...extra,
+  })
+
+  it("phân tích không tồn tại thì không chạm hạn mức", async () => {
+    analysisRepo.findById.mockResolvedValue(null)
 
     await expect(
-      generateProductCopy(mockTenantContext, { analysisId: "non-existent" })
+      generateProductCopy(mockTenantContext, { analysisId: "khong-co", idempotencyKey: KHOA })
     ).rejects.toThrow(AppError)
-
-    expect(mockAnalysisRepo.findById).toHaveBeenCalledWith(mockTenantContext, "non-existent")
+    expect(enqueueJob).not.toHaveBeenCalled()
   })
 
-  it("returns existing copy when already generated", async () => {
-    const existingCopy = {
-      id: "copy-1",
-      analysis_id: "analysis-1",
-      raw: { suggested_name: "Test" },
-    }
+  it("phân tích chưa duyệt trả 422 và không chạm hạn mức", async () => {
+    analysisRepo.findById.mockResolvedValue(daDuyet({ approval_state: "PENDING" }))
 
-    mockCopyRepo.findByAnalysisId.mockResolvedValue(existingCopy)
-    mockAnalysisRepo.findById.mockResolvedValue({
-      id: "analysis-1",
-      approval_state: "APPROVED",
-      raw: { identity: { category: "Bó hoa" }, bom: {}, flower_count: 10, bud_count: 2, damaged_count: 0, confidence: 90 },
-      edited: null,
-      product_id: null,
-    })
-    mockBrandRepo.current.mockResolvedValue(null)
-    mockOccasionRepo.list.mockResolvedValue([])
+    const err = await generateProductCopy(mockTenantContext, {
+      analysisId: "analysis-1",
+      idempotencyKey: KHOA,
+    }).catch((e: Error) => e)
 
-    const result = await generateProductCopy(mockTenantContext, { analysisId: "analysis-1" })
-
-    expect(result.copyId).toBe("copy-1")
-    expect(result.raw).toEqual({ suggested_name: "Test" })
-  })
-
-  it("throws CONFLICT when product_id mismatches", async () => {
-    mockCopyRepo.findByAnalysisId.mockResolvedValue(null)
-    mockAnalysisRepo.findById.mockResolvedValue({
-      id: "analysis-1",
-      approval_state: "APPROVED",
-      product_id: "product-different",
-      raw: { identity: { category: "Bó hoa" }, bom: {}, flower_count: 10, bud_count: 2, damaged_count: 0, confidence: 90 },
-      edited: null,
-    })
-    mockBrandRepo.current.mockResolvedValue(null)
-    mockOccasionRepo.list.mockResolvedValue([])
-
-    await expect(
-      generateProductCopy(mockTenantContext, { analysisId: "analysis-1", productId: "product-1" })
-    ).rejects.toThrow(AppError)
-  })
-
-  it("throws VALIDATION_FAILED when analysis missing identity or bom", async () => {
-    mockCopyRepo.findByAnalysisId.mockResolvedValue(null)
-    mockAnalysisRepo.findById.mockResolvedValue({
-      id: "analysis-1",
-      approval_state: "APPROVED",
-      raw: { confidence: 90 },
-      edited: null,
-    })
-    mockBrandRepo.current.mockResolvedValue(null)
-    mockOccasionRepo.list.mockResolvedValue([])
-
-    await expect(
-      generateProductCopy(mockTenantContext, { analysisId: "analysis-1" })
-    ).rejects.toThrow(AppError)
-  })
-
-  it("generates new copy and saves it", async () => {
-    mockCopyRepo.findByAnalysisId.mockResolvedValue(null)
-    mockAnalysisRepo.findById.mockResolvedValue({
-      id: "analysis-1",
-      approval_state: "APPROVED",
-      raw: { identity: { category: "Bó hoa", style: "Cổ điển", color_tone: "Warm" }, bom: { flowers: [], foliage: [], accessories: [], wrapping: [] }, flower_count: 10, bud_count: 2, damaged_count: 0, confidence: 90 },
-      edited: null,
-      product_id: null,
-    })
-    mockBrandRepo.current.mockResolvedValue({ tone_of_voice: "Thân thiện", hashtags: ["hoa"], cta_templates: [] })
-    mockOccasionRepo.list.mockResolvedValue([{ code: "valentine", name: "Valentine" }])
-    mockCopyRepo.createFromAnalysis.mockResolvedValue({
-      id: "new-copy-1",
-      analysis_id: "analysis-1",
-      raw: { suggested_name: "Test Product", suggested_description: "Desc", suggested_tags: [], suggested_occasions: [], suggested_price_segment: "standard", suggested_style: "Cổ điển" },
-    })
-    mockCallCapability.mockResolvedValue({ kind: "xong", output: { suggested_name: "Test Product", suggested_description: "Desc", suggested_tags: [], suggested_occasions: [], suggested_price_segment: "standard" } })
-    mockCreateAdapter.mockReturnValue({})
-
-    const result = await generateProductCopy(mockTenantContext, { analysisId: "analysis-1" })
-
-    expect(result.copyId).toBe("new-copy-1")
-    expect(mockCallCapability).toHaveBeenCalled()
-  })
-
-  it("throws UNPROCESSABLE_ENTITY when analysis is PENDING", async () => {
-    mockCopyRepo.findByAnalysisId.mockResolvedValue(null)
-    mockAnalysisRepo.findById.mockResolvedValue({
-      id: "analysis-1",
-      approval_state: "PENDING",
-      raw: { identity: { category: "Bó hoa", style: "Cổ điển", color_tone: "Warm" }, bom: { flowers: [], foliage: [], accessories: [], wrapping: [] }, flower_count: 10, bud_count: 2, damaged_count: 0, confidence: 90 },
-      edited: null,
-      product_id: null,
-    })
-    mockBrandRepo.current.mockResolvedValue(null)
-    mockOccasionRepo.list.mockResolvedValue([])
-
-    const err = await generateProductCopy(mockTenantContext, { analysisId: "analysis-1" }).catch((e: Error) => e)
-    expect(err).toBeInstanceOf(AppError)
     expect((err as AppError).code).toBe("UNPROCESSABLE_ENTITY")
-    expect((err as AppError).status).toBe(422)
+    expect(enqueueJob).not.toHaveBeenCalled()
+  })
+
+  it("product_id lệch thì trả CONFLICT", async () => {
+    analysisRepo.findById.mockResolvedValue(daDuyet({ product_id: "sp-khac" }))
+
+    await expect(
+      generateProductCopy(mockTenantContext, {
+        analysisId: "analysis-1",
+        productId: "sp-1",
+        idempotencyKey: KHOA,
+      })
+    ).rejects.toThrow(AppError)
+    expect(enqueueJob).not.toHaveBeenCalled()
+  })
+
+  it("thiếu cả nhận dạng lẫn định mức thì dừng trước khi tính tiền", async () => {
+    analysisRepo.findById.mockResolvedValue(daDuyet({ raw: { confidence: 90 } }))
+
+    await expect(
+      generateProductCopy(mockTenantContext, { analysisId: "analysis-1", idempotencyKey: KHOA })
+    ).rejects.toThrow(AppError)
+    expect(enqueueJob).not.toHaveBeenCalled()
+  })
+
+  it("bản đã sinh trước đó trả lại nguyên, không gọi mô hình lần hai", async () => {
+    analysisRepo.findById.mockResolvedValue(daDuyet())
+    copyRepo.findByAnalysisId.mockResolvedValue({
+      id: "copy-cu",
+      raw: { suggested_name: "Cũ" },
+      model_key: "openai_structured",
+    })
+
+    const ra = await generateProductCopy(mockTenantContext, {
+      analysisId: "analysis-1",
+      idempotencyKey: KHOA,
+    })
+
+    expect(ra.copyId).toBe("copy-cu")
+    expect(enqueueJob).not.toHaveBeenCalled()
+    expect(callCapability).not.toHaveBeenCalled()
+  })
+
+  it("lượt chạy thật đi qua hạn mức, ghi usage và khoá idempotency", async () => {
+    analysisRepo.findById.mockResolvedValue(daDuyet())
+
+    const ra = await generateProductCopy(mockTenantContext, {
+      analysisId: "analysis-1",
+      idempotencyKey: KHOA,
+    })
+
+    expect(ra.copyId).toBe("copy-moi")
+    expect(enqueueJob).toHaveBeenCalledWith(
+      mockTenantContext,
+      expect.objectContaining({ feature: "product.copy.generate", idempotencyKey: KHOA })
+    )
+    expect(jobRepo.startInline).toHaveBeenCalled()
+    expect(jobRepo.finishInline).toHaveBeenCalledWith(
+      mockTenantContext,
+      "job-1",
+      expect.objectContaining({ ok: true })
+    )
+  })
+
+  it("không ghim mô hình — để bộ định tuyến của cổng AI chọn", async () => {
+    analysisRepo.findById.mockResolvedValue(daDuyet())
+
+    await generateProductCopy(mockTenantContext, { analysisId: "analysis-1", idempotencyKey: KHOA })
+
+    const yeuCau = vi.mocked(callCapability).mock.calls[0]?.[0] as unknown as Record<string, unknown>
+    expect(yeuCau.pinnedModelKey).toBeUndefined()
+    expect(yeuCau.jobId).toBe("job-1")
+  })
+
+  it("lưu lại mô hình, nhà cung cấp, chi phí và độ trễ của lượt gọi", async () => {
+    analysisRepo.findById.mockResolvedValue(daDuyet())
+
+    await generateProductCopy(mockTenantContext, { analysisId: "analysis-1", idempotencyKey: KHOA })
+
+    expect(copyRepo.createFromAnalysis).toHaveBeenCalledWith(
+      mockTenantContext,
+      expect.objectContaining({
+        jobId: "job-1",
+        modelKey: "openai_structured",
+        provider: "openai",
+        costUsd: 0.002,
+        latencyMs: 1200,
+      })
+    )
+  })
+
+  it("thiếu phong cách trong kết quả thì lấy lại từ đúng trường của hợp đồng", async () => {
+    analysisRepo.findById.mockResolvedValue(daDuyet())
+
+    await generateProductCopy(mockTenantContext, { analysisId: "analysis-1", idempotencyKey: KHOA })
+
+    const luu = copyRepo.createFromAnalysis.mock.calls[0][1]
+    expect(luu.raw.suggested_style).toBe("Cổ điển")
+  })
+
+  it("lượt chạy hỏng thì job FAILED và credit được hoàn", async () => {
+    analysisRepo.findById.mockResolvedValue(daDuyet())
+    vi.mocked(callCapability).mockResolvedValue({
+      kind: "khong_chay_duoc",
+      reason: "khong_co_mo_hinh_du_dieu_kien",
+      attempts: [],
+    } as any)
+
+    await expect(
+      generateProductCopy(mockTenantContext, { analysisId: "analysis-1", idempotencyKey: KHOA })
+    ).rejects.toThrow(AppError)
+
+    expect(jobRepo.finishInline).toHaveBeenCalledWith(
+      mockTenantContext,
+      "job-1",
+      expect.objectContaining({ ok: false })
+    )
+    expect(refundJob).toHaveBeenCalledWith(mockTenantContext, "job-1")
   })
 })

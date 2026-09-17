@@ -1,6 +1,6 @@
 import { notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import type { assets } from "@/modules/assets/infra/entities"
 import { ProductRepository } from "@/modules/products/infra/product-repository"
@@ -43,7 +43,7 @@ export type MasterImageResult = {
 }
 
 async function toIntegrationAsset(asset: assets, origin: string): Promise<IntegrationAsset> {
-  const path = await new LocalDiskStorageProvider().signedUrl(
+  const path = await getStorageProvider().signedUrl(
     asset.storage_key,
     MASTER_IMAGE_URL_TTL_SECONDS
   )

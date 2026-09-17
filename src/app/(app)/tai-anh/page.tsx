@@ -7,7 +7,8 @@ import { Camera, ChevronRight, Check, AlertTriangle, Sparkles, ArrowLeft, X, Upl
 import { type ResultField, type ResultFieldItem, type ResultImage, type JudgmentState } from "@/components/result/result-card"
 import { mapAnalysisFromSchema } from "@/modules/products/domain/analysis-schema-mapper"
 import { SalesPitchCard } from "@/components/sales/sales-pitch-card"
-import { buildSalesPitchData, type SalesPitchOverrides, type SalesPitchData } from "@/modules/products/domain/sales-pitch-template"
+import { buildSalesPitchData, type SalesPitchOverrides, type SalesPitchData, type TenantSalesDefaults } from "@/modules/products/domain/sales-pitch-template"
+import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
 import { FlowSteps, type FlowStep } from "@/components/flow/flow-steps"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -94,9 +95,9 @@ function mapProductCopyToFields2(copy: Record<string, unknown>, analysisRaw: Rec
     : []
 
   return [
-    { key: "suggested_name", label: "Tên sản phẩm gợi ý", type: "text", editable: true, value: (copy.suggested_name as string) ?? (identity.style as string) ?? "—" },
+    { key: "suggested_name", label: "Tên sản phẩm gợi ý", type: "text", editable: true, value: (copy.suggested_name as string) ?? (identity.category as string) ?? "—" },
     { key: "suggested_description", label: "Mô tả sản phẩm", type: "textarea", editable: true, value: (copy.suggested_description as string) ?? "" },
-    { key: "suggested_style", label: "Phong cách thiết kế", type: "text", editable: true, value: (copy.suggested_style as string) ?? (identity.style as string) ?? "—" },
+    { key: "suggested_style", label: "Phong cách thiết kế", type: "text", editable: true, value: (copy.suggested_style as string) ?? (identity.phong_cach as string) ?? "—" },
     { key: "suggested_tags", label: "Thẻ phân loại / SEO", type: "list", editable: true, value: tags, confidence: null, placeholder: "Thêm thẻ..." },
     { key: "suggested_occasions", label: "Dịp phù hợp", type: "list", editable: true, value: occasions, confidence: null, placeholder: "Thêm dịp..." },
     { key: "suggested_price_segment", label: "Phân khúc giá gợi ý", type: "readonly", editable: false, value: (copy.suggested_price_segment as string) ?? "standard" },
@@ -159,6 +160,21 @@ export default function TaiAnhPage() {
       return updated
     })
   }
+
+  // Hồ sơ tenant thật (business_profiles/brand_profiles) — bắt buộc nối vào
+  // buildSalesPitchData() để Thẻ chào A6 / kịch bản Zalo không rơi về tên
+  // tiệm/hotline giả khi gửi cho khách hàng thật (vá lỗi rà soát 17/09/2026).
+  const { business: tenantBusiness, brand: tenantBrand } = useTenantProfile()
+  const tenantSalesDefaults: TenantSalesDefaults | null = useMemo(() => {
+    if (!tenantBusiness && !tenantBrand) return null
+    const cta = (tenantBrand?.cta_templates as { free_gifts?: string[]; guarantees?: string[] } | null) ?? null
+    return {
+      shopName: tenantBusiness?.display_name ?? null,
+      shopHotline: tenantBusiness?.phone ?? null,
+      freeGifts: Array.isArray(cta?.free_gifts) && cta.free_gifts.length > 0 ? cta.free_gifts : null,
+      guarantees: Array.isArray(cta?.guarantees) && cta.guarantees.length > 0 ? cta.guarantees : null,
+    }
+  }, [tenantBusiness, tenantBrand])
 
   const [phase, setPhase] = useState<Phase>("upload")
   const [assets, setAssets] = useState<Array<{ id: string; name: string; storage_key: string }>>([])
@@ -418,6 +434,10 @@ export default function TaiAnhPage() {
     try {
       const res = await apiFetch("/api/v1/product-copies/generate", {
         method: "POST",
+        // Bắt buộc như mọi điểm tạo job: bấm hai lần, lỡ tay tải lại trang,
+        // hay mạng chập đều không được tính tiền lần thứ hai. Khoá theo
+        // lượt phân tích nên hai lần bấm cho cùng một bó hoa là cùng khoá.
+        headers: { "idempotency-key": `product-copy:${analysisId}` },
         body: JSON.stringify({ analysisId, productId }),
       })
       if (!res.ok) {
@@ -753,6 +773,16 @@ export default function TaiAnhPage() {
       if (key === "materials_note") {
         bom.materials_note = value
         return { ...prev, bom }
+      }
+      if (key.startsWith("checklist.")) {
+        const checklist = { ...((prev.checklist as Record<string, unknown>) ?? {}) }
+        checklist[key.slice("checklist.".length)] = value
+        return { ...prev, checklist }
+      }
+      if (key === "so_tang_lop") {
+        const san_xuat = { ...((prev.san_xuat as Record<string, unknown>) ?? {}) }
+        san_xuat.so_tang_lop = typeof value === "number" ? value : Number(value) || null
+        return { ...prev, san_xuat }
       }
       return { ...prev, [key]: value }
     })
@@ -1553,7 +1583,8 @@ export default function TaiAnhPage() {
                     analysisData,
                     productCopyData,
                     pitchOverrides,
-                    analysisImageUrl
+                    analysisImageUrl,
+                    tenantSalesDefaults
                   )}
                   onOverridesChange={setPitchOverrides}
                   onFinalize={handleFinalizePitch}

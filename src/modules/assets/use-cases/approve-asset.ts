@@ -1,7 +1,7 @@
 import { conflict, notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import { runInTransaction } from "@/modules/jobs/infra/transaction"
 
@@ -22,7 +22,7 @@ export async function approveAsset(ctx: TenantContext, assetId: string) {
     // Idempotent: nếu đã duyệt rồi thì trả về luôn
     let url: string | null = null
     try {
-      url = await new LocalDiskStorageProvider().signedUrl(asset.storage_key, PREVIEW_EXPIRES_IN)
+      url = await getStorageProvider().signedUrl(asset.storage_key, PREVIEW_EXPIRES_IN)
     } catch {
       url = null
     }
@@ -53,7 +53,7 @@ export async function approveAsset(ctx: TenantContext, assetId: string) {
 
   let url: string | null = null
   try {
-    url = await new LocalDiskStorageProvider().signedUrl(approvedAsset.storage_key, PREVIEW_EXPIRES_IN)
+    url = await getStorageProvider().signedUrl(approvedAsset.storage_key, PREVIEW_EXPIRES_IN)
   } catch {
     url = null
   }

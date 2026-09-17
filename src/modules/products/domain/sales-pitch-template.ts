@@ -105,10 +105,22 @@ export interface TenantSalesDefaults {
  */
 export function buildSalesPitchData(
   analysisRaw: Record<string, unknown> | null | undefined,
-  copyRaw?: Record<string, unknown> | null | undefined,
-  overrides?: SalesPitchOverrides,
-  imageUrl?: string | null,
-  tenantDefaults?: TenantSalesDefaults | null
+  // copyRaw/overrides/imageUrl không còn đánh dấu "?" (optional) — lý do
+  // thuần TypeScript: một tham số bắt buộc (tenantDefaults) không được phép
+  // đứng sau tham số optional trong khai báo vị trí. Giữ union "| undefined"
+  // để nơi gọi vẫn có thể truyền `undefined` khi không có, nhưng KHÔNG được
+  // bỏ hẳn tham số — bắt buộc mọi lời gọi phải cân nhắc rõ ràng cả 5 tham số.
+  copyRaw: Record<string, unknown> | null | undefined,
+  overrides: SalesPitchOverrides | undefined,
+  imageUrl: string | null | undefined,
+  /**
+   * Hồ sơ mặc định của tenant (business_profiles/brand_profiles) — BẮT BUỘC
+   * truyền (có thể là `null` khi tổ chức chưa nhập hồ sơ). Cố tình KHÔNG để
+   * optional để TypeScript chặn ngay lúc biên dịch nếu có nơi gọi quên nối
+   * dữ liệu tenant thật — đây chính là nguyên nhân gây lỗi tên tiệm/hotline
+   * giả hiển thị cho khách hàng thật, phát hiện ở đợt rà soát 17/09/2026.
+   */
+  tenantDefaults: TenantSalesDefaults | null
 ): SalesPitchData {
   const a = analysisRaw ?? {}
   const bom = (a.bom as Record<string, unknown> | undefined) ?? {}
@@ -128,7 +140,6 @@ export function buildSalesPitchData(
   const defaultStyle =
     (c.suggested_style as string) ||
     (identity.phong_cach as string) ||
-    (identity.style as string) ||
     "Hiện đại & Tinh tế"
   const style = overrides?.style ?? defaultStyle
 
@@ -194,18 +205,13 @@ export function buildSalesPitchData(
   const widthCm = overrides?.widthCm ?? 40
 
   // 8. Giá chào & Phân khúc
+  // KHÔNG tự bịa giá theo phân khúc: hiện chưa có nguồn giá bán chính thức
+  // nào (giá sản phẩm / pricing_rules) được nối tới bước này. Nếu chưa có
+  // override thật, để trống — UI phải hiện rõ "Chưa có giá, liên hệ shop"
+  // thay vì một con số trông như giá thật (quyết định Tony, rà soát 17/09/2026).
   const priceSegment = overrides?.priceSegment ?? (c.suggested_price_segment as string) ?? "standard"
-  const defaultPriceBySegment: Record<string, number> = {
-    budget: 450000,
-    standard: 750000,
-    premium: 1250000,
-    luxury: 2500000,
-  }
-  const fallbackPrice = defaultPriceBySegment[priceSegment] ?? 750000
-  const priceVnd = overrides?.priceVnd !== undefined ? overrides.priceVnd : fallbackPrice
-  const originalPriceVnd = overrides?.originalPriceVnd !== undefined
-    ? overrides.originalPriceVnd
-    : priceVnd != null ? Math.round(priceVnd * 1.15 / 10000) * 10000 : null
+  const priceVnd = overrides?.priceVnd !== undefined ? overrides.priceVnd : null
+  const originalPriceVnd = overrides?.originalPriceVnd !== undefined ? overrides.originalPriceVnd : null
 
   // 9. Quà tặng & Cam kết (Ưu tiên: Overrides -> Tenant Defaults -> System Defaults)
   const defaultFreeGifts = tenantDefaults?.freeGifts && tenantDefaults.freeGifts.length > 0
@@ -219,8 +225,11 @@ export function buildSalesPitchData(
   const guarantees = overrides?.guarantees ?? defaultGuarantees
 
   // 10. Thông tin cửa hàng & Trạng thái xuất bản (Ưu tiên: Overrides -> Tenant Profile -> Fallback)
-  const shopName = overrides?.shopName ?? tenantDefaults?.shopName ?? "FloraOS Flower Boutique"
-  const shopHotline = overrides?.shopHotline ?? tenantDefaults?.shopHotline ?? "1900 xxxx"
+  // Fallback KHÔNG được là một tên thương hiệu/hotline trông như thật (trước đây
+  // là "FloraOS Flower Boutique" / "1900 xxxx") — nếu tenant chưa nhập hồ sơ, phải
+  // hiện rõ đây là chỗ trống cần cập nhật, tránh gửi nhầm thông tin giả cho khách.
+  const shopName = overrides?.shopName ?? tenantDefaults?.shopName ?? "Chưa cập nhật tên tiệm"
+  const shopHotline = overrides?.shopHotline ?? tenantDefaults?.shopHotline ?? "Chưa cập nhật hotline"
   const customNote = overrides?.customNote ?? null
   const status = overrides?.status ?? "DRAFT"
   const finalizedAt = overrides?.finalizedAt ?? null
@@ -258,7 +267,7 @@ export function buildSalesPitchData(
  * Định dạng số tiền VND: 850000 -> "850.000 ₫"
  */
 export function formatCurrencyVnd(amount: number | null | undefined): string {
-  if (amount == null) return "Liên hệ báo giá"
+  if (amount == null) return "Chưa có giá, liên hệ shop"
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
 }
 

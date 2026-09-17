@@ -7,6 +7,17 @@ const TENANT_TABLES = [
   // Nền AI — AI-1. `ai_capabilities` và `ai_models` KHÔNG nằm ở đây: chúng là
   // sổ đăng ký cấp nền tảng, không phải dữ liệu thử của một tổ chức, và
   // `ensureSystemRoles` phía dưới cũng không dựng lại chúng.
+  "chat_messages",
+  "chat_conversations",
+  "chat_channel_integrations",
+  "vouchers",
+  "customer_consents",
+  "customer_occasions",
+  "order_events",
+  "order_assignments",
+  "order_items",
+  "orders",
+  "customers",
   "video_scenes",
   "video_jobs",
   "ai_evaluations",

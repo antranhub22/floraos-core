@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Phiếu đếm bộ ảnh vàng — FloraOS</title>
+<style>
+  :root{
+    --nen:#faf9f7; --the:#ffffff; --vien:#e3e0da; --chu:#2b2925; --mo:#6f6a62;
+    --nhan:#b0392e; --nu:#2f6f4e; --hong:#8a6a12; --xanh:#2d5c8a;
+    --bong:0 1px 2px rgba(0,0,0,.05), 0 6px 20px rgba(0,0,0,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--nen); color:var(--chu); display:flex; flex-direction:column;
+  }
+  header{
+    display:flex; align-items:center; gap:16px; padding:10px 18px;
+    background:var(--the); border-bottom:1px solid var(--vien); flex-wrap:wrap;
+  }
+  header h1{font-size:15px; margin:0; font-weight:600; letter-spacing:-.01em}
+  .tien-do{font-size:13px; color:var(--mo)}
+  .canh-phai{margin-left:auto; display:flex; gap:8px; align-items:center}
+  button{
+    font:inherit; font-size:13px; padding:6px 12px; border-radius:7px;
+    border:1px solid var(--vien); background:var(--the); color:var(--chu); cursor:pointer;
+  }
+  button:hover{background:#f4f2ee}
+  button.chinh{background:var(--chu); color:#fff; border-color:var(--chu)}
+  button.chinh:hover{background:#403c36}
+  button:disabled{opacity:.4; cursor:default}
+
+  main{flex:1; display:grid; grid-template-columns:minmax(0,1fr) 400px; min-height:0}
+  @media (max-width:1000px){ main{grid-template-columns:1fr; overflow:auto} }
+
+  /* ── khung ảnh ── */
+  .khung-anh{position:relative; overflow:hidden; background:#2b2925; min-height:0}
+  .boc{position:absolute; inset:0; overflow:auto; display:flex; align-items:center; justify-content:center}
+  .san{position:relative; line-height:0}
+  .san img{display:block; max-width:none; user-select:none; -webkit-user-drag:none}
+  .cham{
+    position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
+    color:#fff; font-size:11px; font-weight:700; line-height:22px; text-align:center;
+    cursor:pointer; box-shadow:0 0 0 2px rgba(255,255,255,.85); opacity:.92;
+  }
+  .cham.hoa{background:var(--nhan)} .cham.nu{background:var(--nu)} .cham.hong{background:var(--hong)}
+  .cham:hover{opacity:1; transform:scale(1.15)}
+
+  .thanh-cong-cu{
+    position:absolute; left:14px; bottom:14px; right:14px; display:flex; gap:8px;
+    align-items:center; flex-wrap:wrap;
+    background:rgba(255,255,255,.96); border:1px solid var(--vien);
+    border-radius:10px; padding:8px 10px; box-shadow:var(--bong);
+  }
+  .che-do{display:flex; gap:4px}
+  .che-do button{border-radius:6px; padding:5px 10px; font-size:13px}
+  .che-do button[aria-pressed="true"]{background:var(--chu); color:#fff; border-color:var(--chu)}
+  .che-do button .oval{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+  .m-hoa .oval{background:var(--nhan)} .m-nu .oval{background:var(--nu)} .m-hong .oval{background:var(--hong)}
+  .che-do button[aria-pressed="true"] .oval{box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+  .goi-y{font-size:12px; color:var(--mo); margin-left:auto}
+
+  /* ── bảng nhập ── */
+  .bang{
+    background:var(--the); border-left:1px solid var(--vien);
+    overflow:auto; padding:16px 18px 40px; min-height:0;
+  }
+  .ten-anh{font-size:13px; color:var(--mo); margin:0 0 2px}
+  .ten-sp{font-size:14px; font-weight:600; margin:0 0 16px; line-height:1.35}
+  fieldset{border:none; padding:0; margin:0 0 18px}
+  legend{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--mo); padding:0; margin-bottom:8px}
+  .hang-so{display:grid; grid-template-columns:1fr auto; gap:6px 10px; align-items:center; margin-bottom:6px}
+  .hang-so label{font-size:14px}
+  .hang-so .phu{display:block; font-size:12px; color:var(--mo)}
+  .o-so{
+    width:74px; text-align:center; font:inherit; font-weight:600; font-variant-numeric:tabular-nums;
+    padding:6px 8px; border:1px solid var(--vien); border-radius:7px; background:var(--nen);
+  }
+  .o-so.tu-dem{background:#f0efe9}
+  input[type=text], select, textarea{
+    font:inherit; width:100%; padding:6px 8px; border:1px solid var(--vien);
+    border-radius:7px; background:var(--nen); color:var(--chu);
+  }
+  textarea{resize:vertical; min-height:56px}
+
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th{text-align:left; font-weight:600; color:var(--mo); font-size:11px; text-transform:uppercase; letter-spacing:.05em; padding:0 4px 5px}
+  td{padding:2px 2px}
+  td input, td select{padding:5px 6px; font-size:13px}
+  .xoa{border:none; background:none; color:var(--mo); cursor:pointer; padding:4px 6px; font-size:15px; line-height:1}
+  .xoa:hover{color:var(--nhan)}
+
+  .quy-uoc{background:#f4f2ee; border-radius:9px; padding:12px 14px; font-size:12.5px; line-height:1.55; color:#4a453e}
+  .quy-uoc b{color:var(--chu)}
+  .quy-uoc ul{margin:6px 0 0; padding-left:18px}
+  .quy-uoc li{margin-bottom:3px}
+
+  .canh-bao{background:#fdf3f2; border:1px solid #f0d4d0; color:#8a3226; border-radius:8px; padding:9px 12px; font-size:12.5px; margin-bottom:14px}
+  .dieu-huong{display:flex; gap:8px; align-items:center; margin-top:18px; padding-top:16px; border-top:1px solid var(--vien)}
+  .dieu-huong .giua{flex:1; text-align:center; font-size:13px; color:var(--mo); font-variant-numeric:tabular-nums}
+  .danh-sach{display:flex; gap:4px; flex-wrap:wrap; margin-top:12px}
+  .danh-sach button{padding:4px 8px; font-size:12px; font-variant-numeric:tabular-nums}
+  .danh-sach button[aria-current="true"]{background:var(--chu); color:#fff; border-color:var(--chu)}
+  .danh-sach button.xong{border-color:#9ec5aa; background:#eef7f0}
+  .danh-sach button.xong[aria-current="true"]{background:var(--chu); color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Phiếu đếm bộ ảnh vàng</h1>
+  <span class="tien-do" id="tienDo">—</span>
+  <div class="canh-phai">
+    <label style="font-size:13px;color:var(--mo)">Người đếm
+      <input type="text" id="nguoiDem" placeholder="tên bạn" style="width:130px;display:inline-block;margin-left:6px">
+    </label>
+    <button id="btnTai" class="chinh">Tải phiếu về</button>
+  </div>
+</header>
+
+<main>
+  <section class="khung-anh">
+    <div class="boc" id="boc">
+      <div class="san" id="san">
+        <img id="anh" alt="">
+      </div>
+    </div>
+    <div class="thanh-cong-cu">
+      <div class="che-do" id="cheDo">
+        <button class="m-hoa" data-loai="hoa" aria-pressed="true"><span class="oval"></span>Cành hoa <b id="dHoa">0</b></button>
+        <button class="m-nu"  data-loai="nu"  aria-pressed="false"><span class="oval"></span>Nụ <b id="dNu">0</b></button>
+        <button class="m-hong" data-loai="hong" aria-pressed="false"><span class="oval"></span>Cành hỏng <b id="dHong">0</b></button>
+      </div>
+      <button id="btnLui">Bỏ dấu cuối</button>
+      <button id="btnXoaDau">Xoá hết dấu</button>
+      <span style="width:1px;height:20px;background:var(--vien)"></span>
+      <button id="btnThuNho">−</button>
+      <span id="mucZoom" style="font-size:12px;color:var(--mo);min-width:42px;text-align:center">100%</span>
+      <button id="btnPhongTo">+</button>
+      <button id="btnVua">Vừa khung</button>
+      <span class="goi-y">Bấm lên ảnh để đánh dấu · bấm vào dấu để bỏ</span>
+    </div>
+  </section>
+
+  <section class="bang">
+    <div class="canh-bao">
+      Đếm từ <b>ảnh</b>, không nhìn kết quả máy. Phiếu này cố tình không hiện số của máy —
+      nhìn trước rồi gật theo thì con số đó mang phán đoán của máy, và lấy nó chấm điểm chính máy là phép đo vòng tròn.
+    </div>
+
+    <p class="ten-anh" id="maAnh">—</p>
+    <p class="ten-sp" id="tenSp">—</p>
+
+    <fieldset>
+      <legend>Bốn con số</legend>
+      <div class="hang-so">
+        <label>Số cành hoa<span class="phu">Đếm theo cành, không theo bông</span></label>
+        <input class="o-so tu-dem" type="number" min="0" id="fFlower">
+      </div>
+      <div class="hang-so">
+        <label>Số nụ chưa nở<span class="phu">Đếm riêng, không cộng vào số cành hoa</span></label>
+        <input class="o-so tu-dem" type="number" min="0" id="fBud">
+      </div>
+      <div class="hang-so">
+        <label>Số cành hỏng<span class="phu">Gãy cổ, héo, dập — đã nằm trong số cành hoa</span></label>
+        <input class="o-so tu-dem" type="number" min="0" id="fDamaged">
+      </div>
+      <div class="hang-so">
+        <label>Số ghi trên đơn<span class="phu">Để trống nếu không tra được. Không dùng chấm điểm máy</span></label>
+        <input class="o-so" type="number" min="0" id="fOrder">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Cấu phần</legend>
+      <table>
+        <thead><tr><th style="width:44%">Tên</th><th style="width:24%">Loại</th><th style="width:16%">Số</th><th style="width:16%">Màu</th><th></th></tr></thead>
+        <tbody id="bangCauPhan"></tbody>
+      </table>
+      <button id="btnThemDong" style="margin-top:8px">+ Thêm cấu phần</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Ghi chú</legend>
+      <textarea id="fGhiChu" placeholder="Chỗ nào khó đếm, chỗ nào quy ước chưa nói tới…"></textarea>
+    </fieldset>
+
+    <div class="quy-uoc">
+      <b>Sáu quy ước đếm</b>
+      <ul>
+        <li>Nụ chưa nở đếm riêng, <b>không</b> cộng vào số cành hoa.</li>
+        <li>Lấy số <b>nhìn thấy trong ảnh</b>, không lấy số trên đơn.</li>
+        <li>Cành nhiều bông (baby, cẩm chướng chùm, cúc chùm) đếm theo <b>cành</b>, một cành là một đơn vị.</li>
+        <li>Lá và cành trang trí: <b>ghi tên, để trống số</b>.</li>
+        <li>Giấy gói, ruy băng, giỏ, hộp là cấu phần. Giấy gói đếm theo <b>số lớp</b>.</li>
+        <li>Hoa gãy, héo, dập <b>vẫn tính</b> vào tổng, đồng thời ghi ở ô cành hỏng.</li>
+      </ul>
+      <div style="margin-top:8px">Gặp tình huống sáu dòng trên chưa nói tới thì <b>dừng, không tự quyết</b> — ghi vào ô Ghi chú.</div>
+    </div>
+
+    <div class="dieu-huong">
+      <button id="btnTruoc">← Ảnh trước</button>
+      <span class="giua" id="viTri">—</span>
+      <button id="btnSau">Ảnh sau →</button>
+    </div>
+    <div class="danh-sach" id="danhSach"></div>
+  </section>
+</main>
+
+<script>
+window.DANH_SACH_ANH = [
+  {
+    "image_id": "g001",
+    "file": "g001.jpeg",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0001"
+  },
+  {
+    "image_id": "g002",
+    "file": "g002.jpeg",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0002"
+  },
+  {
+    "image_id": "g003",
+    "file": "g003.png",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0003"
+  },
+  {
+    "image_id": "g004",
+    "file": "g004.png",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0004"
+  },
+  {
+    "image_id": "g005",
+    "file": "g005.png",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0005"
+  },
+  {
+    "image_id": "g006",
+    "file": "g006.png",
+    "product_form": "gio",
+    "product_name": "HOA CHIA BUỒN / GIỎ HOA / MÀU TRẮNG / GHCB0006"
+  },
+  {
+    "image_id": "g010",
+    "file": "g010.jpeg",
+    "product_form": "lang",
+    "product_name": "HOA CHIA BUỒN / KỆ HOA / MÀU TÍM / KHCH0077"
+  },
+  {
+    "image_id": "g011",
+    "file": "g011.jpeg",
+    "product_form": "lang",
+    "product_name": "HOA CHIA BUỒN / KỆ HOA / MÀU TÍM / KHCH0078"
+  },
+  {
+    "image_id": "g040",
+    "file": "g040.jpg",
+    "product_form": "bo",
+    "product_name": "HOA CHÚC SỨC KHOẺ / BÓ HOA CHÚC SỨC KHOẺ / BHSK"
+  },
+  {
+    "image_id": "g049",
+    "file": "g049.jpeg",
+    "product_form": "bo",
+    "product_name": "HOA CƯỚI / BHC0001"
+  }
+];
+</script>
+<script>
+const LOAI_CAU_PHAN = [["flower","Hoa"],["bud","Nụ"],["foliage","Lá / cành trang trí"],["packaging","Gói, nơ, giỏ, hộp"]];
+const KHOA_LUU = "floraos.phieu-dem.v1";
+
+let danhSachAnh = [];
+let phieu = {};          // image_id -> { flower_count, bud_count, damaged_count, order_count, components[], ghi_chu, dau[] }
+let chiSo = 0;
+let cheDo = "hoa";
+let zoom = 1;
+let kichThuocGoc = { w: 0, h: 0 };
+
+/* ── lưu tạm ───────────────────────────────────────────────────────────── */
+function luuTam(){
+  try { localStorage.setItem(KHOA_LUU, JSON.stringify({ phieu, nguoi: el("nguoiDem").value })); }
+  catch (e) { /* file:// ở vài trình duyệt chặn — vẫn tải phiếu về được */ }
+}
+function docTam(){
+  try {
+    const t = localStorage.getItem(KHOA_LUU);
+    if (!t) return null;
+    return JSON.parse(t);
+  } catch (e) { return null; }
+}
+
+const el = (id) => document.getElementById(id);
+const anhHienTai = () => danhSachAnh[chiSo];
+function ban(){
+  const id = anhHienTai().image_id;
+  if (!phieu[id]) phieu[id] = { flower_count:null, bud_count:null, damaged_count:null, order_count:null, components:[], ghi_chu:"", dau:[] };
+  return phieu[id];
+}
+
+/* ── đánh dấu trên ảnh ─────────────────────────────────────────────────── */
+function demTheoLoai(loai){ return ban().dau.filter(d => d.loai === loai).length; }
+
+function veDau(){
+  const san = el("san");
+  san.querySelectorAll(".cham").forEach(n => n.remove());
+  const theoLoai = { hoa:0, nu:0, hong:0 };
+  ban().dau.forEach((d, i) => {
+    theoLoai[d.loai] += 1;
+    const n = document.createElement("div");
+    n.className = "cham " + d.loai;
+    n.style.left = (d.x * kichThuocGoc.w * zoom) + "px";
+    n.style.top  = (d.y * kichThuocGoc.h * zoom) + "px";
+    n.textContent = theoLoai[d.loai];
+    n.title = "Bấm để bỏ dấu này";
+    n.onclick = (ev) => { ev.stopPropagation(); ban().dau.splice(i,1); sauKhiDoiDau(); };
+    san.appendChild(n);
+  });
+  el("dHoa").textContent  = theoLoai.hoa;
+  el("dNu").textContent   = theoLoai.nu;
+  el("dHong").textContent = theoLoai.hong;
+}
+
+/* Dấu trên ảnh là công cụ đếm, không phải nguồn sự thật: nó chỉ ĐẨY số vào ô
+   khi ô còn trống hoặc đang khớp với số dấu. Người sửa tay một ô rồi đánh
+   thêm dấu thì con số họ gõ được giữ nguyên. */
+function sauKhiDoiDau(){
+  const b = ban();
+  const cap = [["hoa","flower_count","fFlower"],["nu","bud_count","fBud"],["hong","damaged_count","fDamaged"]];
+  cap.forEach(([loai, khoa, o]) => {
+    const dem = demTheoLoai(loai);
+    if (dem > 0) { b[khoa] = dem; el(o).value = dem; }
+  });
+  veDau(); capNhatTienDo(); luuTam();
+}
+
+/* ── vẽ bảng nhập ──────────────────────────────────────────────────────── */
+function veBangCauPhan(){
+  const tbody = el("bangCauPhan");
+  tbody.innerHTML = "";
+  ban().components.forEach((c, i) => {
+    const tr = document.createElement("tr");
+
+    const tdTen = document.createElement("td");
+    const iTen = document.createElement("input");
+    iTen.type = "text"; iTen.value = c.canonical_component || "";
+    iTen.placeholder = "hoa-hong-trang";
+    iTen.oninput = () => { c.canonical_component = iTen.value; luuTam(); };
+    tdTen.appendChild(iTen);
+
+    const tdLoai = document.createElement("td");
+    const sLoai = document.createElement("select");
+    LOAI_CAU_PHAN.forEach(([v, nhan]) => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = nhan; if (c.category === v) o.selected = true;
+      sLoai.appendChild(o);
+    });
+    sLoai.onchange = () => { c.category = sLoai.value; veBangCauPhan(); luuTam(); };
+    tdLoai.appendChild(sLoai);
+
+    const tdSo = document.createElement("td");
+    const iSo = document.createElement("input");
+    iSo.type = "number"; iSo.min = "0";
+    if (c.category === "foliage") {
+      // Quy ước 4: lá và cành trang trí ghi tên, không đếm số.
+      iSo.value = ""; iSo.disabled = true; iSo.placeholder = "—"; c.count = null;
+      iSo.title = "Quy ước 4: lá và cành trang trí không đếm số";
+    } else {
+      iSo.value = c.count == null ? "" : c.count;
+      iSo.oninput = () => { c.count = iSo.value === "" ? null : Number(iSo.value); luuTam(); };
+    }
+    tdSo.appendChild(iSo);
+
+    const tdMau = document.createElement("td");
+    const iMau = document.createElement("input");
+    iMau.type = "text"; iMau.value = c.color || ""; iMau.placeholder = "trang";
+    iMau.oninput = () => { c.color = iMau.value; luuTam(); };
+    tdMau.appendChild(iMau);
+
+    const tdXoa = document.createElement("td");
+    const bXoa = document.createElement("button");
+    bXoa.className = "xoa"; bXoa.textContent = "×"; bXoa.title = "Xoá dòng";
+    bXoa.onclick = () => { ban().components.splice(i,1); veBangCauPhan(); luuTam(); };
+    tdXoa.appendChild(bXoa);
+
+    tr.append(tdTen, tdLoai, tdSo, tdMau, tdXoa);
+    tbody.appendChild(tr);
+  });
+}
+
+function veBan(){
+  const a = anhHienTai(), b = ban();
+  el("maAnh").textContent = a.image_id + " · " + a.file + " · dạng: " + a.product_form;
+  el("tenSp").textContent = a.product_name;
+  el("fFlower").value  = b.flower_count  ?? "";
+  el("fBud").value     = b.bud_count     ?? "";
+  el("fDamaged").value = b.damaged_count ?? "";
+  el("fOrder").value   = b.order_count   ?? "";
+  el("fGhiChu").value  = b.ghi_chu || "";
+  veBangCauPhan();
+  el("viTri").textContent = "Ảnh " + (chiSo+1) + " / " + danhSachAnh.length;
+  el("btnTruoc").disabled = chiSo === 0;
+  el("btnSau").disabled   = chiSo === danhSachAnh.length - 1;
+  veDanhSach();
+}
+
+function daXong(id){
+  const b = phieu[id];
+  return !!(b && b.flower_count != null);
+}
+function veDanhSach(){
+  const d = el("danhSach"); d.innerHTML = "";
+  danhSachAnh.forEach((a, i) => {
+    const bt = document.createElement("button");
+    bt.textContent = a.image_id;
+    if (i === chiSo) bt.setAttribute("aria-current","true");
+    if (daXong(a.image_id)) bt.classList.add("xong");
+    bt.onclick = () => { chiSo = i; nap(); };
+    d.appendChild(bt);
+  });
+}
+function capNhatTienDo(){
+  const xong = danhSachAnh.filter(a => daXong(a.image_id)).length;
+  el("tienDo").textContent = "Đã đếm " + xong + " / " + danhSachAnh.length + " ảnh";
+  veDanhSach();
+}
+
+/* ── ảnh và thu phóng ──────────────────────────────────────────────────── */
+function datZoom(z){
+  zoom = Math.min(6, Math.max(.1, z));
+  const img = el("anh");
+  img.style.width  = (kichThuocGoc.w * zoom) + "px";
+  img.style.height = (kichThuocGoc.h * zoom) + "px";
+  el("san").style.width  = (kichThuocGoc.w * zoom) + "px";
+  el("san").style.height = (kichThuocGoc.h * zoom) + "px";
+  el("mucZoom").textContent = Math.round(zoom * 100) + "%";
+  veDau();
+}
+function vuaKhung(){
+  const boc = el("boc");
+  if (!kichThuocGoc.w) return;
+  datZoom(Math.min(boc.clientWidth / kichThuocGoc.w, boc.clientHeight / kichThuocGoc.h) * .96);
+}
+function nap(){
+  const a = anhHienTai();
+  const img = el("anh");
+  img.onload = () => {
+    kichThuocGoc = { w: img.naturalWidth, h: img.naturalHeight };
+    vuaKhung();
+  };
+  img.onerror = () => {
+    kichThuocGoc = { w: 600, h: 400 };
+    img.alt = "Không mở được ảnh " + a.file + " — phiếu phải nằm cùng thư mục với thư mục images/";
+    datZoom(1);
+  };
+  img.src = "images/" + a.file;
+  veBan();
+}
+
+/* ── tải phiếu về ──────────────────────────────────────────────────────── */
+function taiVe(){
+  const nguoi = el("nguoiDem").value.trim();
+  if (!nguoi) { alert("Điền tên người đếm ở góc trên bên phải trước khi tải phiếu về."); el("nguoiDem").focus(); return; }
+  const ra = {
+    phien_ban: 1,
+    labeled_by: nguoi,
+    labeled_at: new Date().toISOString(),
+    quy_uoc: "golden/QUY_UOC_DEM.md",
+    anh: danhSachAnh.map(a => {
+      const b = phieu[a.image_id] || {};
+      return {
+        image_id: a.image_id, file: a.file, product_form: a.product_form,
+        flower_count: b.flower_count ?? null,
+        bud_count: b.bud_count ?? null,
+        damaged_count: b.damaged_count ?? null,
+        order_count: b.order_count ?? null,
+        components: (b.components || []).filter(c => (c.canonical_component || "").trim() !== ""),
+        ghi_chu: b.ghi_chu || "",
+        so_dau_da_danh: (b.dau || []).length
+      };
+    })
+  };
+  const blob = new Blob([JSON.stringify(ra, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "phieu-dem-" + nguoi.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase() + ".json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ── nối sự kiện ───────────────────────────────────────────────────────── */
+function noiSuKien(){
+  el("san").addEventListener("click", (ev) => {
+    if (ev.target.classList.contains("cham")) return;
+    const r = el("anh").getBoundingClientRect();
+    ban().dau.push({
+      loai: cheDo,
+      x: (ev.clientX - r.left) / r.width,
+      y: (ev.clientY - r.top) / r.height
+    });
+    sauKhiDoiDau();
+  });
+
+  el("cheDo").querySelectorAll("button").forEach(bt => {
+    bt.onclick = () => {
+      cheDo = bt.dataset.loai;
+      el("cheDo").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === bt)));
+    };
+  });
+
+  el("btnLui").onclick     = () => { ban().dau.pop(); sauKhiDoiDau(); };
+  el("btnXoaDau").onclick  = () => { if (confirm("Xoá hết dấu trên ảnh này?")) { ban().dau = []; sauKhiDoiDau(); } };
+  el("btnPhongTo").onclick = () => datZoom(zoom * 1.25);
+  el("btnThuNho").onclick  = () => datZoom(zoom / 1.25);
+  el("btnVua").onclick     = vuaKhung;
+  el("btnTruoc").onclick   = () => { if (chiSo > 0) { chiSo--; nap(); } };
+  el("btnSau").onclick     = () => { if (chiSo < danhSachAnh.length - 1) { chiSo++; nap(); } };
+  el("btnTai").onclick     = taiVe;
+  el("btnThemDong").onclick = () => { ban().components.push({ canonical_component:"", category:"flower", count:null, color:"" }); veBangCauPhan(); };
+
+  [["fFlower","flower_count"],["fBud","bud_count"],["fDamaged","damaged_count"],["fOrder","order_count"]].forEach(([o, khoa]) => {
+    el(o).oninput = () => { ban()[khoa] = el(o).value === "" ? null : Number(el(o).value); capNhatTienDo(); luuTam(); };
+  });
+  el("fGhiChu").oninput = () => { ban().ghi_chu = el("fGhiChu").value; luuTam(); };
+  el("nguoiDem").oninput = luuTam;
+
+  document.addEventListener("keydown", (ev) => {
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    if (ev.key === "ArrowLeft")  el("btnTruoc").click();
+    if (ev.key === "ArrowRight") el("btnSau").click();
+    if (ev.key === "z" || ev.key === "Z") el("btnLui").click();
+    if (ev.key === "1") el("cheDo").children[0].click();
+    if (ev.key === "2") el("cheDo").children[1].click();
+    if (ev.key === "3") el("cheDo").children[2].click();
+  });
+
+  window.addEventListener("beforeunload", (ev) => {
+    const coSo = Object.values(phieu).some(b => b.flower_count != null);
+    if (coSo) { ev.preventDefault(); ev.returnValue = ""; }
+  });
+}
+
+/* ── khởi động ─────────────────────────────────────────────────────────── */
+(function khoiDong(){
+  danhSachAnh = window.DANH_SACH_ANH || [];
+  const tam = docTam();
+  if (tam && tam.phieu) {
+    phieu = tam.phieu;
+    el("nguoiDem").value = tam.nguoi || "";
+  }
+  noiSuKien();
+  nap();
+  capNhatTienDo();
+  window.addEventListener("resize", () => { /* giữ nguyên mức phóng người dùng đã chọn */ });
+})();
+</script>
+</body>
+</html>

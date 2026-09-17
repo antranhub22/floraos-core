@@ -16,12 +16,12 @@ export interface FloristFlowerItem {
 export interface FloristTicketCardProps {
   orderCode: string
   productName: string
-  sampleImageUrl?: string
+  sampleImageUrl?: string | undefined
   deadlineTime: string
-  floristName?: string
+  floristName?: string | undefined
   items: FloristFlowerItem[]
   wrapStyle: string
-  notes?: string
+  notes?: string | undefined
   onPrint?: () => void
   onComplete?: () => void
 }

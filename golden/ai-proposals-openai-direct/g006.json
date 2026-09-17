@@ -1,0 +1,125 @@
+{
+  "palette_accounting": [
+    {
+      "cluster_index": 0,
+      "thuoc_ve": "Hoa hồng",
+      "nhom": "Hoa",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 1,
+      "thuoc_ve": "Hoa lan",
+      "nhom": "Hoa",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 2,
+      "thuoc_ve": "Lá xanh",
+      "nhom": "Lá",
+      "confidence": 90
+    }
+  ],
+  "checklist": {
+    "hoa_chu_dao": "Có",
+    "hoa_phu": "Có",
+    "hoa_lap_day": "Có",
+    "la_nen": "Có",
+    "la_diem_nhan": "Có",
+    "vat_lieu_goi": "Không có",
+    "day_buoc": "Có",
+    "ruy_bang": "Không có",
+    "thiep_bien_chu": "Không có",
+    "phu_kien_trang_tri": "Có"
+  },
+  "identity": {
+    "shape": "Tròn",
+    "facing": "Hai mặt",
+    "category": "Bó hoa",
+    "container": "Giỏ mây",
+    "phong_cach": "Hiện đại",
+    "dip_su_dung": "Sinh nhật"
+  },
+  "bom": {
+    "flowers": [
+      {
+        "nhom_hoa": "Hồng",
+        "name": "Hồng trắng",
+        "shade": "Nhạt",
+        "color": "Trắng",
+        "quantity": 10,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.5,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa chủ đạo",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng tinh khiết",
+        "dau_hieu_nhan_dang": "Hồng",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Lan",
+        "name": "Lan hồ điệp",
+        "shade": "Nhạt",
+        "color": "Tím",
+        "quantity": 8,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.4,
+        "cluster_indices": [
+          1
+        ],
+        "role": "Hoa phụ",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM07 Tím",
+        "mo_ta_mau": "Tím nhẹ nhàng",
+        "dau_hieu_nhan_dang": "Lan",
+        "so_nu": 2,
+        "so_hong": 0
+      }
+    ],
+    "foliage": [
+      {
+        "name": "Lá xanh",
+        "quantity": 5,
+        "cluster_indices": [
+          2
+        ],
+        "role": "Nền",
+        "confidence": 90,
+        "color": "Xanh",
+        "ma": null,
+        "dvt_dem": "Lá",
+        "mau": "TM05 Xanh lá",
+        "mo_ta_mau": "Xanh tươi",
+        "dau_hieu_nhan_dang": "Lá xanh"
+      }
+    ],
+    "accessories": [
+      {
+        "name": "Thẻ chúc mừng",
+        "material": "Giấy",
+        "color": "Trắng",
+        "quantity": 1,
+        "printed_text": "Chúc mừng",
+        "confidence": 90,
+        "ma": null
+      }
+    ],
+    "wrapping": [],
+    "materials_note": null
+  },
+  "confidence": 90,
+  "san_xuat": {
+    "so_tang_lop": 1
+  },
+  "flower_count": 18,
+  "bud_count": 2,
+  "damaged_count": 0
+}

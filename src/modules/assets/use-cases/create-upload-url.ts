@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 
 import type { TenantContext } from "@/core/tenancy"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { buildStorageKey, extensionForMimeType } from "@/modules/assets/domain/storage-key"
 
 const UPLOAD_URL_TTL_SECONDS = 15 * 60
@@ -26,7 +26,9 @@ export async function createUploadUrl(
     extension,
   })
 
-  const uploadUrl = await new LocalDiskStorageProvider().signedUrl(storageKey, UPLOAD_URL_TTL_SECONDS)
+  // "PUT": URL này để client TẢI LÊN. Ở kho tương thích S3 một URL ký cho
+  // GET không dùng được để ghi — bỏ tham số là mọi lượt tải ảnh trả 403.
+  const uploadUrl = await getStorageProvider().signedUrl(storageKey, UPLOAD_URL_TTL_SECONDS, "PUT")
 
   return {
     asset_id: assetId,

@@ -1,0 +1,104 @@
+{
+  "palette_accounting": [
+    {
+      "cluster_index": 0,
+      "thuoc_ve": "Hoa",
+      "nhom": "Hoa",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 1,
+      "thuoc_ve": "Lá",
+      "nhom": "Lá",
+      "confidence": 85
+    },
+    {
+      "cluster_index": 2,
+      "thuoc_ve": "Phụ kiện",
+      "nhom": "Phụ kiện",
+      "confidence": 80
+    }
+  ],
+  "checklist": {
+    "hoa_chu_dao": "Có",
+    "hoa_phu": "Có",
+    "hoa_lap_day": "Có",
+    "la_nen": "Có",
+    "la_diem_nhan": "Có",
+    "vat_lieu_goi": "Không có",
+    "day_buoc": "Có",
+    "ruy_bang": "Có",
+    "thiep_bien_chu": "Có",
+    "phu_kien_trang_tri": "Có"
+  },
+  "identity": {
+    "shape": "Bán cầu",
+    "facing": "Hai mặt",
+    "category": "Bó hoa",
+    "container": "Hộp vuông",
+    "phong_cach": "Hiện đại",
+    "dip_su_dung": "Kỷ niệm, Chia buồn"
+  },
+  "bom": {
+    "flowers": [
+      {
+        "nhom_hoa": "Hồng",
+        "name": "Hồng trắng",
+        "shade": "Nhạt",
+        "color": "Trắng",
+        "quantity": 20,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 1.5,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa chủ đạo",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng tinh khiết",
+        "dau_hieu_nhan_dang": "Hồng",
+        "so_nu": 0,
+        "so_hong": 0
+      }
+    ],
+    "foliage": [
+      {
+        "name": "Lá xanh",
+        "quantity": null,
+        "cluster_indices": [
+          1
+        ],
+        "role": "Nền",
+        "confidence": 85,
+        "color": "Xanh",
+        "ma": null,
+        "dvt_dem": "Lá",
+        "mau": "TM05 Xanh lá",
+        "mo_ta_mau": "Xanh tươi",
+        "dau_hieu_nhan_dang": null
+      }
+    ],
+    "accessories": [
+      {
+        "name": "Bảng chữ",
+        "material": "Giấy",
+        "color": "Đen",
+        "quantity": 1,
+        "printed_text": "THU HỒNG- Trung Vương 81\nVô cùng thương tiếc Cô",
+        "confidence": 80,
+        "ma": null
+      }
+    ],
+    "wrapping": [],
+    "materials_note": null
+  },
+  "confidence": 90,
+  "san_xuat": {
+    "so_tang_lop": 1
+  },
+  "flower_count": 20,
+  "bud_count": 0,
+  "damaged_count": 0
+}

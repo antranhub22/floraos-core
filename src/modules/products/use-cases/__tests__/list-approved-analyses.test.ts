@@ -5,6 +5,19 @@ import { ProductAnalysisRepository } from "@/modules/products/infra/product-anal
 
 vi.mock("@/modules/products/infra/product-analysis-repository")
 
+// `list-approved-analyses.ts` cũng dựng `AssetRepository` và `getStorageProvider()` để ký URL
+// ảnh — không liên quan tới luật đang test ở đây (phân trang/`next_cursor`), nhưng phải mock
+// bằng factory (không dùng automock) vì `storage-provider-factory.ts` có `import "server-only"`
+// ở đầu tệp: automock của Vitest vẫn nạp module thật trước khi thay export, nên nó ném lỗi
+// "cannot be imported from a Client Component" ngay lúc collect test, trước khi chạy bất kỳ ca
+// thử nào — ba ca thử phía dưới không dùng `asset_id` nên không cần hành vi thật của hai mock này.
+vi.mock("@/modules/assets/infra/asset-repository", () => ({
+  AssetRepository: vi.fn().mockImplementation(() => ({ findById: vi.fn() })),
+}))
+vi.mock("@/modules/assets/adapters/storage-provider-factory", () => ({
+  getStorageProvider: vi.fn().mockReturnValue({ signedUrl: vi.fn() }),
+}))
+
 const ctx: TenantContext = {
   organizationId: "org-1",
   userId: "user-1",

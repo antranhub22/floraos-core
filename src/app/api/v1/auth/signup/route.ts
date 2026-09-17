@@ -22,6 +22,7 @@ export const POST = handle(async (request) => {
     password: parsed.data.password,
     name: parsed.data.name ?? null,
     organizationName: parsed.data.organization_name,
+    seedProfile: true,
   })
 
   return jsonResponse(

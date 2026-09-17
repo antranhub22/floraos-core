@@ -8,9 +8,19 @@
  * một tổ chức nằm rải rác theo từng nhân viên và không áp được policy
  * truy cập ở cấp thư mục.
  */
+/**
+ * URL ký sẵn để TẢI LÊN và để TẢI VỀ là hai chữ ký khác nhau ở kho tương
+ * thích S3. Bản đĩa cục bộ dùng chung một đường nên bỏ qua tham số này.
+ */
+export type StorageMethod = "GET" | "PUT";
+
 export interface StorageProvider {
   readonly name: string;
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
   get(key: string): Promise<Uint8Array>;
-  signedUrl(key: string, expiresInSeconds: number): Promise<string>;
+  signedUrl(
+    key: string,
+    expiresInSeconds: number,
+    method?: StorageMethod
+  ): Promise<string>;
 }

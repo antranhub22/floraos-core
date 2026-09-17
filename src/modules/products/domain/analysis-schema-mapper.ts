@@ -386,11 +386,14 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
       placeholder: "N/A",
     },
     {
+      // Sửa được: máy đọc số tầng lớp từ ảnh, và một bó chụp nghiêng thì nó
+      // đếm hụt. Người soát nhìn bó hoa thật nên họ mới là nguồn đúng.
       key: "so_tang_lop",
       label: FIELD_LABELS.so_tang_lop ?? "Cấu trúc sản xuất",
-      type: "readonly",
-      editable: false,
-      value: soTangLop != null ? `${soTangLop} tầng lớp cắm xếp` : "N/A",
+      type: "number",
+      editable: true,
+      value: soTangLop ?? 0,
+      confidence: null,
     },
     {
       key: "materials_note",
@@ -409,6 +412,19 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
       value: checklistItems,
       confidence: confidenceNum,
     },
+    // Mười cấu phần tiêu chuẩn, mỗi cấu phần một ô sửa được. Bảng gộp ở trên
+    // giữ nguyên để nhìn nhanh; mười ô dưới đây là đường sửa. Trước đây
+    // `checklist` chỉ xem được trên giao diện dù `PATCH /vision/analyses/:id`
+    // vẫn nhận — nghĩa là sửa được nhưng phải gọi API bằng tay.
+    ...checklistKeys.map((key) => ({
+      key: `checklist.${key}`,
+      label: CHECKLIST_LABELS[key] ?? key,
+      type: "text" as const,
+      editable: true,
+      value: checklist[key] != null && String(checklist[key]).trim() !== "" ? String(checklist[key]) : "N/A",
+      confidence: null,
+      placeholder: "Có / Không có / mô tả ngắn",
+    })),
     {
       key: "totals",
       label: FIELD_LABELS.totals ?? "Tổng số cành / hoa",

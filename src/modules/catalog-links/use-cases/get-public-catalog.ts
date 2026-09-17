@@ -1,5 +1,5 @@
 import { CatalogLinkRepository } from "../infra/catalog-link-repository"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 
 export interface PublicCatalogShop {
   name: string
@@ -74,7 +74,7 @@ export async function getPublicCatalog(slug: string): Promise<PublicCatalogResul
   }
 
   const { link, org, bizProfile, brandProfile, productRows, assetRecords } = rawData
-  const storage = new LocalDiskStorageProvider()
+  const storage = getStorageProvider()
 
   // Tải thông tin assets và ký URL hợp lệ
   const assetMap = new Map<string, string>()

@@ -11,6 +11,7 @@ import {
   resolveEffectiveAnalysis,
 } from "@/modules/products/domain/product-analysis-rules"
 import { ProductAnalysisRepository } from "@/modules/products/infra/product-analysis-repository"
+import { draftProductCode } from "@/modules/products/domain/product-code"
 import { ProductRepository } from "@/modules/products/infra/product-repository"
 
 import { getAnalysis, type AnalysisDetail } from "./get-analysis"
@@ -56,7 +57,7 @@ export async function approveAnalysis(ctx: TenantContext, id: string): Promise<A
       if (!updated) throw new AppError("INTERNAL", "Sản phẩm liên kết không còn tồn tại")
     } else {
       const created = await productRepo.create(ctx, {
-        code: `AUTO-${randomUUID().slice(0, 8).toUpperCase()}`,
+        code: draftProductCode(randomUUID()),
         name: draftProductName(fields),
         category: fields.category,
         shape: fields.shape,

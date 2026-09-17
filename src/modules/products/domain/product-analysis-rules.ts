@@ -116,8 +116,40 @@ export function extractProductFieldsFromAnalysis(
       confidence: analysis.confidence ?? null,
       checklist: analysis.checklist ?? null,
       san_xuat: analysis.san_xuat ?? null,
+      // `ProductRepository.list` lọc theo `attributes.color`. Không đường ghi
+      // nào từng đặt khoá đó, nên bộ lọc màu của màn tra cứu luôn trả rỗng
+      // dù Product Master có đủ dữ liệu màu trong `bom` và `palette_accounting`.
+      color: mauChuDao(analysis),
     },
   }
+}
+
+/**
+ * Tone màu chủ đạo, lấy theo thứ tự tin cậy giảm dần: nhóm màu đã ĐO ở
+ * `palette_accounting` trước, rồi màu khai trên dòng hoa đầu tiên.
+ *
+ * Một giá trị, không phải danh sách: `attributes.color` là khoá lọc, và bộ
+ * lọc "màu chủ đạo" của người bán hàng là một lựa chọn đơn.
+ */
+export function mauChuDao(analysis: Record<string, unknown>): string | null {
+  const cum = Array.isArray(analysis.palette_accounting) ? analysis.palette_accounting : []
+  for (const c of cum) {
+    const nhom = readNullableString((c as Record<string, unknown>)?.nhom)
+    if (nhom) return nhom
+  }
+
+  const bom =
+    typeof analysis.bom === "object" && analysis.bom !== null
+      ? (analysis.bom as Record<string, unknown>)
+      : {}
+  const hoa = Array.isArray(bom.flowers) ? bom.flowers : []
+  for (const h of hoa) {
+    const row = h as Record<string, unknown>
+    const mau = readNullableString(row?.mau) ?? readNullableString(row?.color)
+    if (mau) return mau
+  }
+
+  return null
 }
 
 /**

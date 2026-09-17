@@ -27,6 +27,26 @@ interface OpenAIResponse {
   model: string;
 }
 
+/**
+ * Khoá trong sổ đăng ký (`ai_models.key`) → mã mô hình của OpenAI.
+ *
+ * Bộ định tuyến của cổng AI chọn theo KHOÁ; chỉ adapter mới được biết khoá
+ * đó gọi ra mã nào phía nhà cung cấp — đúng chỗ duy nhất SDK và tên mô hình
+ * của nhà cung cấp được phép xuất hiện (PRD mục 7.15).
+ */
+const MA_MO_HINH_THEO_KHOA: Readonly<Record<string, string>> = {
+  openai_structured: "gpt-4o",
+  openai_direct: "gpt-4o-mini",
+};
+
+const MA_MO_HINH_MAC_DINH = "gpt-4o-mini";
+
+/** Giá công bố, USD cho mỗi triệu token. Dùng để ghi `cost_usd` vào sổ. */
+const GIA_TOKEN: Readonly<Record<string, { vao: number; ra: number }>> = {
+  "gpt-4o": { vao: 2.5, ra: 10 },
+  "gpt-4o-mini": { vao: 0.15, ra: 0.6 },
+};
+
 export class OpenAILLMProvider implements LLMProvider {
   readonly name = "openai";
 
@@ -48,8 +68,11 @@ export class OpenAILLMProvider implements LLMProvider {
       { role: "user", content: request.prompt },
     ];
 
+    const maMoHinh =
+      (request.model ? MA_MO_HINH_THEO_KHOA[request.model] : undefined) ?? MA_MO_HINH_MAC_DINH;
+
     const openAIRequest: OpenAIRequest = {
-      model: "gpt-4o-mini",
+      model: maMoHinh,
       messages,
       max_tokens: request.maxTokens ?? 1000,
       temperature: 0.7,
@@ -80,10 +103,15 @@ export class OpenAILLMProvider implements LLMProvider {
     
     let costUsd: number | undefined;
     if (data.usage) {
-      // Rough cost estimation for gpt-4o-mini
-      const inputCost = (data.usage.prompt_tokens / 1_000_000) * 0.15;
-      const outputCost = (data.usage.completion_tokens / 1_000_000) * 0.60;
-      costUsd = inputCost + outputCost;
+      // Giá theo ĐÚNG mô hình đã chạy. Tính giá của `gpt-4o-mini` cho một
+      // lượt chạy `gpt-4o` là ghi sai sổ gấp mười sáu lần, và sổ chi phí sai
+      // thì không đối soát được với hoá đơn nhà cung cấp.
+      const gia = GIA_TOKEN[maMoHinh] ?? GIA_TOKEN[MA_MO_HINH_MAC_DINH];
+      if (gia) {
+        costUsd =
+          (data.usage.prompt_tokens / 1_000_000) * gia.vao +
+          (data.usage.completion_tokens / 1_000_000) * gia.ra;
+      }
     }
 
     const result: LLMResponse = {
@@ -93,6 +121,12 @@ export class OpenAILLMProvider implements LLMProvider {
     };
     if (costUsd !== undefined) {
       result.costUsd = costUsd;
+    }
+    if (data.usage) {
+      Object.assign(result, {
+        inputTokens: data.usage.prompt_tokens,
+        outputTokens: data.usage.completion_tokens,
+      });
     }
     return result;
   }

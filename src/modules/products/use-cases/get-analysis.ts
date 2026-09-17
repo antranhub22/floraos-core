@@ -1,7 +1,7 @@
 import { notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
-import { LocalDiskStorageProvider } from "@/modules/assets/adapters/local-disk-storage-provider"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { ProductAnalysisRepository } from "@/modules/products/infra/product-analysis-repository"
 
 export type AnalysisDetail = {
@@ -32,7 +32,7 @@ export async function getAnalysis(ctx: TenantContext, id: string): Promise<Analy
   if (analysis.asset_id) {
     const asset = await new AssetRepository().findById(ctx, analysis.asset_id)
     if (asset?.storage_key) {
-      imageUrl = await new LocalDiskStorageProvider().signedUrl(asset.storage_key, 24 * 60 * 60)
+      imageUrl = await getStorageProvider().signedUrl(asset.storage_key, 24 * 60 * 60)
     }
   }
 

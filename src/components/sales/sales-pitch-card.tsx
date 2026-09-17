@@ -99,8 +99,10 @@ export function SalesPitchCard({
   const [guarantees, setGuarantees] = useState<string[]>(pitchData.guarantees ?? DEFAULT_GUARANTEES)
   const [newGuarantee, setNewGuarantee] = useState("")
 
-  const [shopName, setShopName] = useState(pitchData.shopName ?? "FloraOS Flower Boutique")
-  const [shopHotline, setShopHotline] = useState(pitchData.shopHotline ?? "1900 xxxx")
+  // Không dùng tên thương hiệu/hotline giả trông như thật làm fallback — nếu
+  // pitchData chưa có (hồ sơ tenant trống), phải hiện rõ đây là chỗ cần cập nhật.
+  const [shopName, setShopName] = useState(pitchData.shopName ?? "Chưa cập nhật tên tiệm")
+  const [shopHotline, setShopHotline] = useState(pitchData.shopHotline ?? "Chưa cập nhật hotline")
   const [customNote, setCustomNote] = useState(pitchData.customNote ?? "")
 
   const [status, setStatus] = useState<"DRAFT" | "FINALIZED">(pitchData.status ?? "DRAFT")

@@ -30,6 +30,7 @@ export type SignUpInput = {
   password: string
   name?: string | null
   organizationName: string
+  seedProfile?: boolean | undefined
 }
 
 export type SignUpResult = {
@@ -107,7 +108,9 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
     })
 
     await new OccasionRepository(tx).seedDefault({ organizationId: organization.id, workspaceId: workspace.id, userId: user.id, branchId: null, capabilities: new Set<string>() })
-    await seedExperienceMasterProfile(tx, organization.id)
+    if (input.seedProfile) {
+      await seedExperienceMasterProfile(tx, organization.id)
+    }
 
     const founderRole = await roles.findSystemRoleByKey(FOUNDER_ROLE_KEY)
     if (!founderRole) {

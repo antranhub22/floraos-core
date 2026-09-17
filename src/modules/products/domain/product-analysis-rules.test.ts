@@ -58,7 +58,7 @@ describe("extractProductFieldsFromAnalysis", () => {
       shape: null,
       facing: null,
       container: null,
-      attributes: { bom: null, confidence: null, checklist: null, san_xuat: null },
+      attributes: { bom: null, confidence: null, checklist: null, san_xuat: null, color: null },
     })
 
     expect(extractProductFieldsFromAnalysis({ identity: "không phải object" })).toEqual({
@@ -66,7 +66,7 @@ describe("extractProductFieldsFromAnalysis", () => {
       shape: null,
       facing: null,
       container: null,
-      attributes: { bom: null, confidence: null, checklist: null, san_xuat: null },
+      attributes: { bom: null, confidence: null, checklist: null, san_xuat: null, color: null },
     })
   })
 

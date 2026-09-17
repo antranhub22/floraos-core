@@ -143,6 +143,17 @@ model organizations {
   product_copies        product_copies[]
   content_metrics       content_metrics[]
   video_jobs            video_jobs[]
+  orders                orders[]
+  order_items           order_items[]
+  order_assignments     order_assignments[]
+  order_events          order_events[]
+  customers             customers[]
+  customer_occasions    customer_occasions[]
+  customer_consents     customer_consents[]
+  vouchers              vouchers[]
+  chat_conversations         chat_conversations[]
+  chat_messages              chat_messages[]
+  chat_channel_integrations  chat_channel_integrations[]
 }
 
 model workspaces {
@@ -909,6 +920,20 @@ model product_copies {
   // Phiên bản hồ sơ phong cách đã dùng (learning_profiles.version), để truy xuất
   profile_version String?
 
+  // Lý do từ chối — CỘT RIÊNG, không nhét vào `edited`. `edited` là bản sửa
+  // của người theo hình dạng câu chữ bán hàng; trộn một khoá quản trị vào đó
+  // làm `resolveEffective` phải phân biệt hai loại khoá trong cùng một object.
+  reject_reason   String?
+
+  // Truy vết lượt gọi mô hình đã sinh ra bản này — PRD mục 9, nhóm "Truy vết".
+  // Không có bốn cột này thì không đối soát được chi phí, không so sánh được
+  // hai mô hình, và không biết bản nào sinh ra bởi mô hình nào khi đổi mô hình.
+  job_id          String?
+  model_key       String?
+  provider        String?
+  cost_usd        Float?
+  latency_ms      Int?
+
   created_at      DateTime @default(now())
 
   organization organizations @relation(fields: [organization_id], references: [id])
@@ -1005,3 +1030,357 @@ model video_scenes {
   @@unique([video_job_id, scene_index])
 }
 
+// ── M10 — Đơn hàng và vận hành (P22) ────────────────────────────────────────
+
+enum order_status {
+  DRAFT
+  CONFIRMED
+  PROCESSING
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum production_status {
+  WAITING
+  ASSIGNED
+  ARRANGING
+  QUALITY_CHECK
+  READY
+}
+
+enum delivery_status {
+  PENDING
+  DISPATCHED
+  DELIVERING
+  DELIVERED
+  FAILED
+}
+
+model orders {
+  id                String            @id @default(uuid())
+  organization_id   String
+  branch_id         String?
+  code              String
+  customer_id       String?
+  status            order_status      @default(DRAFT)
+  production_status production_status @default(WAITING)
+  delivery_status   delivery_status   @default(PENDING)
+
+  total_vnd         Decimal           @db.Decimal(14, 2)
+  pricing_rule_ref  Json?                       // quy tắc giá đã dùng, để đối soát
+  voucher_id        String?
+  card_message      String?                     // lời nhắn thiệp, tách khỏi ghi chú nội bộ
+  internal_note     String?
+  delivery_window   Json?                       // ngày và khung giờ đã hẹn
+  delivery_address  Json?
+
+  created_by        String
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+
+  organization      organizations     @relation(fields: [organization_id], references: [id])
+  customer          customers?        @relation(fields: [customer_id], references: [id])
+  items             order_items[]
+  assignments       order_assignments[]
+  events            order_events[]
+
+  @@unique([organization_id, code])
+  @@index([organization_id, status])
+  @@index([organization_id, production_status])
+}
+
+model order_items {
+  id              String   @id @default(uuid())
+  organization_id String
+  order_id        String
+  product_id      String?
+  variant_id      String?
+  description     String?              // khi khách đặt mẫu ngoài danh mục
+  quantity        Int      @default(1)
+  unit_price_vnd  Decimal  @db.Decimal(14, 2)
+  metadata        Json?                // BOM có cấu trúc (FlowerBomItem[]), wrapStyle/ribbon, ảnh mẫu — từ Product Master Index lúc chọn mẫu, để phiếu cắm hoa (florist ticket) không phải bịa dữ liệu
+
+  organization    organizations @relation(fields: [organization_id], references: [id])
+  order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id])
+}
+
+model order_assignments {
+  id              String   @id @default(uuid())
+  organization_id String
+  order_id        String
+  assignee_id     String                // thành viên nhận việc cắm
+  assigned_by     String
+  difficulty      String?               // định mức tiền công theo độ khó
+  assigned_at     DateTime @default(now())
+  released_at     DateTime?
+
+  organization    organizations @relation(fields: [organization_id], references: [id])
+  order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, assignee_id])
+  @@index([organization_id, order_id])
+}
+
+model order_events {
+  id              String   @id @default(uuid())
+  organization_id String
+  order_id        String
+  axis            String                // order · production · delivery
+  from_value      String?
+  to_value        String
+  actor_id        String?
+  reason          String?
+  created_at      DateTime @default(now())
+
+  organization    organizations @relation(fields: [organization_id], references: [id])
+  order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id, created_at])
+}
+
+// ── M09 — CRM & Khách hàng ngành hoa (P21) ──────────────────────────────────
+
+enum customer_tier {
+  NEW
+  BRONZE
+  SILVER
+  GOLD
+  VIP
+}
+
+enum consent_channel {
+  ZALO_ZNS
+  SMS
+  PHONE_CALL
+  PROMOTION
+}
+
+enum voucher_discount_type {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model customers {
+  id                String         @id @default(uuid())
+  organization_id   String
+  code              String         // KH-0001, KH-0002
+  name              String
+  phone             String
+  email             String?
+  address           String?
+  tier              customer_tier  @default(NEW)
+  notes             String?
+  tags              String[]       @default([])
+  preferred_flowers String[]       @default([])
+  preferred_colors  String[]       @default([])
+
+  total_spent       Decimal        @default(0) @db.Decimal(14, 2)
+  order_count       Int            @default(0)
+  last_order_at     DateTime?
+
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  organization      organizations  @relation(fields: [organization_id], references: [id])
+  orders            orders[]
+  occasions         customer_occasions[]
+  consents          customer_consents[]
+  vouchers          vouchers[]
+  conversations     chat_conversations[]
+
+  @@unique([organization_id, phone])
+  @@unique([organization_id, code])
+  @@index([organization_id, tier])
+  @@index([organization_id, name])
+}
+
+model customer_occasions {
+  id                   String        @id @default(uuid())
+  organization_id      String
+  customer_id          String
+  name                 String        // Sinh nhật vợ, Kỷ niệm ngày cưới, Ngày của Mẹ...
+  date                 String        // MM-DD hoặc YYYY-MM-DD
+  is_recurring         Boolean       @default(true)
+  reminder_days_before Int           @default(7)
+  recipient_name       String?
+  notes                String?
+  created_at           DateTime      @default(now())
+
+  organization         organizations @relation(fields: [organization_id], references: [id])
+  customer             customers     @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, customer_id])
+  @@index([organization_id, date])
+}
+
+model customer_consents {
+  id              String          @id @default(uuid())
+  organization_id String
+  customer_id     String
+  channel         consent_channel
+  granted         Boolean         @default(true)
+  granted_at      DateTime        @default(now())
+  revoked_at      DateTime?
+  created_at      DateTime        @default(now())
+
+  organization    organizations   @relation(fields: [organization_id], references: [id])
+  customer        customers       @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  @@unique([customer_id, channel])
+  @@index([organization_id, customer_id])
+}
+
+model vouchers {
+  id               String                @id @default(uuid())
+  organization_id  String
+  customer_id      String?               // null nếu áp dụng công khai
+  code             String                // FLORA10, VIP2026
+  discount_type    voucher_discount_type @default(PERCENTAGE)
+  discount_value   Decimal               @db.Decimal(14, 2)
+  min_order_vnd    Decimal               @default(0) @db.Decimal(14, 2)
+  max_discount_vnd Decimal?              @db.Decimal(14, 2)
+  expires_at       DateTime?
+  is_used          Boolean               @default(false)
+  used_at          DateTime?
+  order_id         String?
+  created_at       DateTime              @default(now())
+
+  organization     organizations         @relation(fields: [organization_id], references: [id])
+  customer         customers?            @relation(fields: [customer_id], references: [id])
+
+  @@unique([organization_id, code])
+  @@index([organization_id, customer_id])
+}
+
+// ── M08 — AI Chat Assistant & Hội thoại (P23) ──────────────────────────────
+
+enum chat_channel {
+  WEB_WIDGET
+  INTERNAL_DASHBOARD
+  STOREFRONT_CATALOG
+  LANDING_PAGE
+  FACEBOOK_MESSENGER
+  ZALO_OA
+  EMBEDDED_WIDGET
+  ZALO
+}
+
+enum chat_sender_type {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model chat_conversations {
+  id              String        @id @default(uuid())
+  organization_id String
+  customer_id     String?
+  title           String        @default("Hội thoại tư vấn hoa")
+  channel         chat_channel  @default(WEB_WIDGET)
+  status          String        @default("ACTIVE") // ACTIVE, CLOSED
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+
+  organization    organizations @relation(fields: [organization_id], references: [id])
+  customer        customers?    @relation(fields: [customer_id], references: [id])
+  messages        chat_messages[]
+
+  @@index([organization_id, status])
+  @@index([organization_id, customer_id])
+}
+
+model chat_messages {
+  id              String            @id @default(uuid())
+  organization_id String
+  conversation_id String
+  sender_type     chat_sender_type
+  content         String
+  metadata        Json?             // Gợi ý hoa từ Master Index, Draft Order ID
+
+  created_at      DateTime          @default(now())
+
+  organization    organizations      @relation(fields: [organization_id], references: [id])
+  conversation    chat_conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, conversation_id, created_at])
+}
+
+model chat_channel_integrations {
+  id                       String        @id @default(uuid())
+  organization_id          String
+  channel                  chat_channel
+  is_enabled               Boolean       @default(false)
+  config                   Json          @default("{}")
+  subscription_expires_at  DateTime?
+  created_at               DateTime      @default(now())
+  updated_at               DateTime      @updatedAt
+
+  organization             organizations @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id, channel])
+  @@index([organization_id, is_enabled])
+}
+
+// ── Danh mục loài hoa ───────────────────────────────────────────────────────
+// NGOẠI LỆ DUY NHẤT của Luật 1 (mọi bảng thuộc tenant mang organization_id):
+// đây là tri thức ngành, không phải dữ liệu của một cửa hàng. Hồng vẫn là
+// hồng ở mọi tổ chức. Đặt `organization_id` vào đây sẽ buộc mỗi tổ chức mới
+// phải chép lại 86 loài, và hai tổ chức sẽ dần gọi cùng một loài bằng hai mã.
+//
+// Nguồn: `workers/vision/contracts/species_catalog.json`, trích từ sổ vận
+// hành thật của AVI GIFT. Từ tệp JSON đọc-một-chiều thành bảng: cần thế để
+// người vận hành sửa được tên và dấu hiệu phân biệt mà không phải sửa mã, và
+// để bước soát tên loài tra được bằng truy vấn thay vì nạp cả tệp vào bộ nhớ.
+
+model flower_taxonomy {
+  ma_loai      String  @id // LH001…
+  nhom         String  // Hoa · Lá · Phụ kiện
+  cong_nang    String? // Hoa chính · Hoa phụ · Hoa lấp đầy…
+  ten_chuan    String
+  ten_khac     Json    // string[] — tên gọi khác, dùng để so tên máy trả về
+  nhom_hoa     String?
+  dvt_chuan    String?
+  so_bong_tren_dvt Int?
+  duong_kinh_bong_cm Float?
+  dien_tich_phu_cm2  Float?
+  ty_le_nhuy_tren_bong Float?
+  mau_nhuy     String?
+  kieu_moc     String?
+  dai_mau_tu_nhien Json?  // string[]
+  dac_diem_phan_biet String?
+  mua_vu       String?
+  trang_thai   String  @default("Đang dùng")
+
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  cap_a flower_confusable_pairs[] @relation("loai_a")
+  cap_b flower_confusable_pairs[] @relation("loai_b")
+
+  @@index([ten_chuan])
+  @@index([nhom])
+}
+
+// 63 cặp dễ nhầm. Đây là chỗ bắt LỖI HỆ THỐNG của bước nhận diện — dạng lỗi
+// mà gọi lại mô hình ba lượt vẫn ra cùng một câu trả lời sai, nên cơ chế
+// đồng thuận không thấy. Máy trả về một loài nằm trong một cặp `Cao` thì
+// giao diện phải bày dấu hiệu tách của cả hai cho người soát nhìn, chứ không
+// im lặng nhận lấy tên máy đưa.
+model flower_confusable_pairs {
+  ma_cap          String @id // CN001…
+  ma_loai_a       String
+  ma_loai_b       String
+  dau_hieu_tach_a String
+  dau_hieu_tach_b String
+  muc_do_nham     String // Cao · Trung bình · Thấp
+
+  loai_a flower_taxonomy @relation("loai_a", fields: [ma_loai_a], references: [ma_loai])
+  loai_b flower_taxonomy @relation("loai_b", fields: [ma_loai_b], references: [ma_loai])
+
+  @@index([ma_loai_a])
+  @@index([ma_loai_b])
+  @@index([muc_do_nham])
+}

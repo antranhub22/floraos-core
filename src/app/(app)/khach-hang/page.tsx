@@ -1,177 +1,281 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Check, ChevronRight, ArrowLeft, AlertTriangle, Users, Heart, Send, ShieldCheck } from "lucide-react"
+import React, { useState, useEffect } from "react"
+import { Users, UserPlus, Sparkles, Search, Filter, Phone, Calendar, ArrowRight, ShieldCheck, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-
-const MOCK_CUSTOMERS = [
-  { id: "k1", name: "Lan Anh", upcoming: "18/10 — sinh nhật vợ", totalOrders: 5, lastBuy: "Bó hồng đỏ" },
-  { id: "k2", name: "Minh Tuấn", upcoming: "Không có", totalOrders: 2, lastBuy: "Giỏ hoa chúc mừng" },
-  { id: "k3", name: "Phương Thao", upcoming: "8/3 — Ngày của Mẹ", totalOrders: 8, lastBuy: "Hộp hoa hồng phấn" },
-]
-
-const CAMPAIGN_FIELDS = [
-  { key: "customer", label: "Tên khách hàng, dịp phát hiện", type: "readonly" as const, editable: false, value: "" },
-  { key: "reason", label: "Lý do gợi ý", type: "readonly" as const, editable: false, value: "" },
-  { key: "content", label: "Nội dung nhắc (soạn sẵn)", type: "text" as const, editable: true, value: "" },
-  { key: "channel", label: "Kênh gửi", type: "text" as const, editable: true, value: "" },
-  { key: "voucher", label: "Voucher đính kèm", type: "text" as const, editable: true, value: "" },
-]
+import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
+import { CreateCustomerModal } from "@/components/crm/create-customer-modal"
+import { CustomerDetailModal } from "@/components/crm/customer-detail-modal"
 
 export default function CRMPage() {
-  const router = useRouter()
-  const [phase, setPhase] = useState<"list" | "profile" | "running" | "results" | "saved">("list")
-  const [selectedCustomer, setSelectedCustomer] = useState<(typeof MOCK_CUSTOMERS)[0] | null>(null)
-  const [jobPhase, setJobPhase] = useState<string | null>(null)
-  const [jobStatus, setJobStatus] = useState<"PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "CANCELLED" | null>(null)
-  const [judgment, setJudgment] = useState<"safe" | "warning" | "blocked">("safe")
-  const [saved, setSaved] = useState(false)
-  const [consent, setConsent] = useState(true)
-  const [showDelete, setShowDelete] = useState(false)
+  const [customers, setCustomers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+  const [tierFilter, setTierFilter] = useState<string>("")
 
-  function runCampaign(c: typeof MOCK_CUSTOMERS[0]) {
-    setSelectedCustomer(c)
-    setPhase("running")
-    setJobStatus("PENDING")
-    setJobPhase("SCANNING")
-    setTimeout(() => { setJobStatus("PROCESSING"); setJobPhase("ANALYZING") }, 800)
-    setTimeout(() => { setJobStatus("COMPLETED") }, 2500)
-    setTimeout(() => { setPhase("results") }, 3000)
+  // Modals
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
+
+  // Reminders drawer
+  const [reminders, setReminders] = useState<any[]>([])
+  const [showReminders, setShowReminders] = useState(false)
+  const [scanningReminders, setScanningReminders] = useState(false)
+
+  function loadCustomers() {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (search.trim()) params.set("search", search.trim())
+    if (tierFilter) params.set("tier", tierFilter)
+
+    fetch(`/api/v1/crm/customers?${params.toString()}`)
+      .then((r) => r.json())
+      .then((res) => {
+        setCustomers(res.items ?? [])
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadCustomers()
+  }, [tierFilter])
+
+  async function handleScanReminders() {
+    setScanningReminders(true)
+    try {
+      const res = await fetch("/api/v1/crm/reminders/upcoming?days=14").then((r) => r.json())
+      setReminders(res.items ?? [])
+      setShowReminders(true)
+    } finally {
+      setScanningReminders(false)
+    }
+  }
+
+  const tierColors: Record<string, "danger" | "warning" | "neutral" | "success" | "accent"> = {
+    VIP: "danger",
+    GOLD: "warning",
+    SILVER: "accent",
+    BRONZE: "neutral",
+    NEW: "neutral",
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
+    <div className="flex flex-col min-h-screen bg-background">
+      {/* 1. Header chuẩn có Top-Right Action Header */}
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-6 py-4 backdrop-blur-sm">
         <div>
-          <div className="text-xs text-text-muted">M09</div>
-          <div className="text-[17px] font-extrabold text-primary">CRM & Khách hàng</div>
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-mono font-bold text-primary">
+              M09 CRM
+            </span>
+            <h1 className="text-xl font-extrabold text-foreground">CRM & Quản Lý Khách Hàng Ngành Hoa</h1>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Hồ sơ khách hàng hợp nhất (Customer Master Index) · Phân tầng RFM tự động · Nhắc hẹn ngày kỷ niệm
+          </p>
         </div>
-        <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-1.5">
-          <ArrowLeft size={16} strokeWidth={2} /> Quay về Trang chủ
-        </Button>
-      </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto p-[18px]">
-        {phase === "list" && (
-          <div className="flex flex-1 flex-col items-center gap-5">
-            <div className="text-center"><div className="text-[17px] font-extrabold">① Danh sách khách hàng</div><div className="mt-1 text-[13px] text-text-muted">Nhập tay hoặc tự động từ đơn hàng</div></div>
-            <div className="w-full max-w-3xl">
-              {MOCK_CUSTOMERS.map((c) => (
-                <Card key={c.id} className="flex items-center gap-4 mb-3">
-                  <div className="flex-1">
-                    <div className="text-[14px] font-bold">{c.name}</div>
-                    <div className="text-[12px] text-text-muted">{c.upcoming} · {c.totalOrders} đơn · Mua gần nhất: {c.lastBuy}</div>
+        {/* Top-Right Action Header */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleScanReminders}
+            disabled={scanningReminders}
+            className="border-red-200 text-red-700 hover:bg-red-50"
+          >
+            <Sparkles className="mr-1.5 h-4 w-4 text-red-600" />
+            {scanningReminders ? "Đang quét..." : "⚡ Quét dịp sắp tới (14 ngày)"}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setIsCreateOpen(true)}
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+          >
+            <UserPlus className="mr-1.5 h-4 w-4" /> Thêm khách hàng
+          </Button>
+        </div>
+      </header>
+
+      {/* 2. Main content */}
+      <main className="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
+        {/* Khối hướng dẫn SSOT FeatureGuidanceCard */}
+        <FeatureGuidanceCard
+          badgeLabel="HƯỚNG DẪN CRM & KHÁCH HÀNG M09"
+          badgeIcon={Users}
+          title="Quy trình Quản lý Khách hàng & Tiếp thị Chăm sóc Chuẩn SSOT"
+          description="Lưu trữ hồ sơ khách hàng toàn diện từ lịch sử đơn hàng M10, tự động phân hạng RFM (VIP/Vàng/Bạc/Đồng) và bảo vệ tuyệt đối quyền riêng tư khi gửi tin tiếp thị (Consent Engine)."
+          tips={[
+            { icon: "💎", text: "Phân tầng tự động: Dựa trên tổng chi tiêu và số đơn hàng thật từ M10" },
+            { icon: "🎂", text: "Lưu ngày kỷ niệm: Nhắc trước 7-14 ngày để tư vấn mẫu hoa và lời nhắn thiệp" },
+            { icon: "🛡️", text: "Bảo vệ Consent: Chỉ gửi tin nhắn qua Zalo/SMS khi khách đã đồng ý" },
+            { icon: "⚡", text: "Master Index: Đồng bộ gu màu và hoa ưa thích từ M01 Vision sang màn hình bán hàng" },
+          ]}
+        />
+
+        {/* Reminders Banner (nếu mở) */}
+        {showReminders && (
+          <div className="rounded-xl border border-red-300 bg-red-50/80 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-red-950 flex items-center gap-2">
+                <Gift className="h-4 w-4 text-red-600" />
+                Danh sách {reminders.length} dịp kỷ niệm sắp tới (trong 14 ngày tới)
+              </span>
+              <button
+                onClick={() => setShowReminders(false)}
+                className="text-xs font-semibold text-red-700 hover:underline"
+              >
+                Đóng danh sách
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {reminders.map((r, idx) => (
+                <div key={idx} className="rounded-lg border border-red-200 bg-white p-3 space-y-1 text-xs shadow-xs">
+                  <div className="flex items-center justify-between font-bold text-foreground">
+                    <span>{r.customerName}</span>
+                    <span className="text-red-600 font-extrabold">{r.daysLeft === 0 ? "Hôm nay!" : `Còn ${r.daysLeft} ngày`}</span>
                   </div>
-                  <Badge tone="neutral">{c.upcoming === "Không có" ? "Không có dịp" : "Có dịp"}</Badge>
-                  <Button onClick={() => runCampaign(c)} className="flex items-center gap-1">
-                    Gợi ý nhắc mua <Sparkles2 size={14} strokeWidth={2} />
-                  </Button>
-                </Card>
+                  <div className="text-text-muted">Dịp: <span className="font-semibold text-text-main">{r.occasionName}</span> ({r.targetDate})</div>
+                  <div className="text-text-muted">Gợi ý hoa: <span className="font-semibold text-red-700">{r.suggestedFlower}</span></div>
+                  <div className="text-text-muted">SĐT: {r.customerPhone}</div>
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        {phase === "running" && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-5">
-            <div className="text-center"><div className="text-[17px] font-extrabold">③ Đang phân tích</div><div className="mt-1 text-[13px] text-text-muted">AI quét theo lô — KHÔNG gửi tên/số điện thoại/địa chỉ ra ngoài</div></div>
-            <div className="w-full max-w-md">
-              <div className="rounded-xl bg-surface-alt p-4 text-[12px] text-text-muted flex items-start gap-2">
-                <ShieldCheck size={16} strokeWidth={1.8} className="mt-0.5 flex-shrink-0 text-primary" />
-                Chỉ đọc dịp + lịch sử mua — dữ liệu cá nhân không đi ngoài
-              </div>
-            </div>
-          </div>
-        )}
-
-        {phase === "results" && selectedCustomer && (
-          <div className="flex flex-col items-center gap-5">
-            <div className="flex items-center justify-between w-full max-w-3xl">
-              <div><div className="text-xs text-text-muted">④ Thẻ kết quả — Gợi ý nhắc mua</div><div className="text-[17px] font-extrabold">{selectedCustomer.name}</div></div>
-              <Badge tone={saved ? "success" : judgment === "blocked" ? "danger" : judgment === "warning" ? "warning" : "neutral"}>
-                {saved ? "Đã lưu nháp" : judgment === "blocked" ? "Bị chặn" : judgment === "warning" ? "Cảnh báo" : "An toàn"}
-              </Badge>
-            </div>
-
-            <div className="w-full max-w-3xl flex flex-col gap-3">
-              <ResultCardSimple fields={CAMPAIGN_FIELDS.map((f) => ({ ...f, value: f.key === "customer" ? `${selectedCustomer.name} — ${selectedCustomer.upcoming}` : f.key === "reason" ? `Mua ${selectedCustomer.lastBuy} cách đây ~2 tháng` : f.value }))} judgment={judgment}
-                onSaveDraft={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }}
-                onReject={() => setJudgment("blocked")}
-                onApprove={() => { setSaved(true); setJudgment("safe"); setSaved(false); setPhase("saved") }}
+        {/* Thanh công cụ tìm kiếm & lọc */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              loadCustomers()
+            }}
+            className="flex items-center gap-2 flex-1 max-w-md"
+          >
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Tìm theo tên, số điện thoại hoặc mã KH..."
+                className="w-full rounded-md border border-border bg-background pl-9 pr-3 py-2 text-sm focus:ring-1 focus:ring-primary"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <Button type="submit" variant="secondary" size="sm">
+              Tìm kiếm
+            </Button>
+          </form>
 
-            <div className="w-full max-w-3xl border-t border-border pt-5">
-              <div className="flex items-start gap-2.5 rounded-xl bg-warning-bg border border-warning p-4">
-                <AlertTriangle size={16} strokeWidth={1.8} className="mt-0.5 flex-shrink-0 text-warning" />
-                <div className="flex-1">
-                  <div className="text-[14px] font-bold text-warning">Đồng ý & quyền dữ liệu</div>
-                  <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                    <input type="checkbox" checked={consent} onChange={() => setConsent(!consent)} className="h-4 w-4 accent-primary" />
-                    <span className="text-[13px]">Khách hàng đồng ý nhận nhắc</span>
-                  </label>
-                  <button type="button" onClick={() => setShowDelete(!showDelete)} className="text-[12px] font-bold text-danger mt-1 block">
-                    Yêu cầu xoá dữ liệu
-                  </button>
-                  {showDelete && (
-                    <div className="mt-2 rounded-lg bg-surface-alt p-3 text-[12px] text-text-muted">
-                      Thực thi ngay khi khách hàng yêu cầu — xoá toàn bộ dữ liệu cá nhân.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+          {/* Bộ lọc phân tầng RFM */}
+          <div className="flex items-center gap-1.5 text-xs font-semibold">
+            <span className="text-muted-foreground mr-1">Phân tầng:</span>
+            {["", "VIP", "GOLD", "SILVER", "BRONZE", "NEW"].map((t) => (
+              <button
+                key={t}
+                onClick={() => setTierFilter(t)}
+                className={`px-2.5 py-1 rounded-md transition-colors ${
+                  tierFilter === t
+                    ? "bg-red-600 text-white font-bold"
+                    : "bg-surface-raised border border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t === "" ? "Tất cả" : t}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
-        {phase === "saved" && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-5">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-success-bg"><Check size={40} strokeWidth={2} className="text-secondary" /></div>
-            <div className="text-center"><div className="text-[17px] font-extrabold">Đã lưu — lên lịch gửi</div><div className="mt-1 text-[13px] text-text-muted">Nội dung nhắc mua đã vào hàng chờ gửi</div></div>
-            <Button onClick={() => router.push("/")}>Quay về Trang chủ</Button>
-          </div>
-        )}
-      </div>
+        {/* Bảng danh sách khách hàng */}
+        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
+          <table className="w-full text-left text-xs">
+            <thead className="border-b border-border bg-surface-raised font-bold text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">Mã KH</th>
+                <th className="px-4 py-3">Khách hàng</th>
+                <th className="px-4 py-3">Phân hạng</th>
+                <th className="px-4 py-3">Tổng chi tiêu</th>
+                <th className="px-4 py-3">Số đơn</th>
+                <th className="px-4 py-3">Dịp kỷ niệm</th>
+                <th className="px-4 py-3">Gu hoa ưa thích</th>
+                <th className="px-4 py-3 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                    Đang tải dữ liệu khách hàng...
+                  </td>
+                </tr>
+              ) : customers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                    Chưa có khách hàng nào phù hợp với điều kiện tìm kiếm.
+                  </td>
+                </tr>
+              ) : (
+                customers.map((c) => (
+                  <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 font-mono font-bold text-primary">{c.code}</td>
+                    <td className="px-4 py-3">
+                      <div className="font-bold text-foreground">{c.name}</div>
+                      <div className="text-[11px] text-muted-foreground">{c.phone}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={tierColors[c.metrics?.tier] ?? "neutral"} className="font-bold">
+                        {c.metrics?.tier}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 font-bold text-red-600">
+                      {Number(c.metrics?.totalSpentVnd ?? 0).toLocaleString("vi-VN")} đ
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-foreground">{c.metrics?.orderCount ?? 0} đơn</td>
+                    <td className="px-4 py-3">
+                      {c.occasions?.length > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-primary font-medium">
+                          <Calendar className="h-3 w-3" /> {c.occasions[0].name} ({c.occasions[0].date})
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {c.preferences?.preferredFlowers?.slice(0, 2).join(", ") || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedCustomerId(c.id)}
+                        className="text-xs font-semibold"
+                      >
+                        Hồ sơ Master <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </main>
+
+      {/* Modals */}
+      <CreateCustomerModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={loadCustomers}
+      />
+
+      <CustomerDetailModal
+        customerId={selectedCustomerId}
+        onClose={() => setSelectedCustomerId(null)}
+        onUpdated={loadCustomers}
+      />
     </div>
-  )
-}
-
-function ResultCardSimple({ fields, judgment, onSaveDraft, onReject, onApprove, quality, onFieldChange }: {
-  fields: { key: string; label: string; type: "text" | "readonly"; editable: boolean; value: string }[]
-  judgment: "safe" | "warning" | "blocked"
-  onSaveDraft?: () => void
-  onReject?: () => void
-  onApprove?: () => void
-  quality?: { score: number; label: string; status: "safe" }
-  onFieldChange?: (key: string, value: string) => void
-}) {
-  return (
-    <div className="flex flex-col gap-3 border border-border rounded-xl bg-surface p-4">
-      <div className="flex flex-col divide-y divide-border">
-        {fields.map((f) => (
-          <div key={f.key} className="flex items-center justify-between gap-2 py-2">
-            <span className="text-[13px] text-text-muted">{f.label}</span>
-            <span className={`text-[13px] ${f.editable ? "font-semibold text-text" : "font-semibold text-text"}`}>{f.value || "—"}</span>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-2 border-t border-border pt-3">
-        {onSaveDraft && <Button variant="secondary" onClick={onSaveDraft}>Lưu nháp</Button>}
-        {onReject && <Button variant="ghost" onClick={onReject}>Từ chối</Button>}
-        {onApprove && judgment !== "blocked" && <Button onClick={onApprove}>Duyệt</Button>}
-        {judgment === "blocked" && <div className="text-[12.5px] text-danger">Bị chặn — không thể duyệt</div>}
-      </div>
-    </div>
-  )
-}
-
-function Sparkles2({ size, strokeWidth }: { size?: number; strokeWidth?: number }) {
-  return (
-    <svg width={size ?? 24} height={size ?? 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth ?? 2}>
-      <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z" />
-    </svg>
   )
 }

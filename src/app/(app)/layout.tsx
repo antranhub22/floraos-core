@@ -15,6 +15,8 @@ import { DesktopNav } from "@/components/layout/desktop-nav"
 import { GlobalImageZoom } from "@/components/ui/global-image-zoom"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
 
+import { FloraOSGlobalCopilot } from "@/components/chat/floraos-global-copilot"
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
   const cookieHeader = cookieStore
@@ -35,6 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <BottomNav />
       </div>
       <GlobalImageZoom />
+      <FloraOSGlobalCopilot />
     </SessionProvider>
   )
 }

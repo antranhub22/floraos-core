@@ -1,0 +1,134 @@
+{
+  "palette_accounting": [
+    {
+      "cluster_index": 0,
+      "thuoc_ve": "Hoa",
+      "nhom": "Hoa",
+      "confidence": 90
+    },
+    {
+      "cluster_index": 1,
+      "thuoc_ve": "Lá",
+      "nhom": "Lá",
+      "confidence": 85
+    },
+    {
+      "cluster_index": 2,
+      "thuoc_ve": "Phụ kiện",
+      "nhom": "Phụ kiện",
+      "confidence": 80
+    }
+  ],
+  "checklist": {
+    "hoa_chu_dao": "Có",
+    "hoa_phu": "Có",
+    "hoa_lap_day": "Có",
+    "la_nen": "Có",
+    "la_diem_nhan": "Có",
+    "vat_lieu_goi": "Có",
+    "day_buoc": "Có",
+    "ruy_bang": "Có",
+    "thiep_bien_chu": "Không có",
+    "phu_kien_trang_tri": "Có"
+  },
+  "identity": {
+    "shape": "Tròn",
+    "facing": "Một mặt",
+    "category": "Bó hoa",
+    "container": "Giỏ mây",
+    "phong_cach": "Hiện đại",
+    "dip_su_dung": "Sinh nhật"
+  },
+  "bom": {
+    "flowers": [
+      {
+        "nhom_hoa": "Cúc",
+        "name": "Cúc trắng",
+        "shade": "Nhạt",
+        "color": "Trắng",
+        "quantity": 6,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.5,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa chủ đạo",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng tinh khiết",
+        "dau_hieu_nhan_dang": "Cúc",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Hồng",
+        "name": "Hồng trắng",
+        "shade": "Nhạt",
+        "color": "Trắng",
+        "quantity": 6,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.5,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa chủ đạo",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng tinh khiết",
+        "dau_hieu_nhan_dang": "Hồng",
+        "so_nu": 0,
+        "so_hong": 0
+      }
+    ],
+    "foliage": [
+      {
+        "name": "Lá xanh",
+        "quantity": null,
+        "cluster_indices": [
+          1
+        ],
+        "role": "Nền",
+        "confidence": 85,
+        "color": "Xanh",
+        "ma": null,
+        "dvt_dem": "Lá",
+        "mau": "TM05 Xanh lá",
+        "mo_ta_mau": "Xanh tươi",
+        "dau_hieu_nhan_dang": null
+      }
+    ],
+    "accessories": [
+      {
+        "name": "Ruy băng",
+        "material": "Vải",
+        "color": "Trắng",
+        "quantity": 1,
+        "printed_text": null,
+        "confidence": 80,
+        "ma": null
+      }
+    ],
+    "wrapping": [
+      {
+        "layer": "Lớp ngoài",
+        "material": "Giấy",
+        "color": "Trắng",
+        "texture": "Trơn",
+        "confidence": 80,
+        "ma": null
+      }
+    ],
+    "materials_note": null
+  },
+  "confidence": 90,
+  "san_xuat": {
+    "so_tang_lop": 1
+  },
+  "flower_count": 12,
+  "bud_count": 0,
+  "damaged_count": 0
+}

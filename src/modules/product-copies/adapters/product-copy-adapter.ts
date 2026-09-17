@@ -2,91 +2,117 @@ import type { LLMProvider, LLMRequest, LLMResponse } from "@/core/ports/llm-prov
 import type { AiModelCandidate } from "@/core/ai/domain/routing";
 import type { AdapterOutcome } from "@/core/ai/gateway";
 
+import type { HinhChieuPhanTich } from "../domain/analysis-projection";
+import {
+  chamBaKenh,
+  DAI_MO_TA,
+  DAI_THE,
+  TEN_TOI_DA,
+  type CopyOutput,
+  type NgữCảnhChấm,
+} from "../domain/copy-scoring";
+
 export interface ProductCopyInput {
-  analysis: {
-    identity: {
-      category: string;
-      style: string;
-      color_tone: string;
-      flower_count: number;
-      bud_count: number;
-      damaged_count: number;
-    };
-    bom: {
-      flowers: Array<{ name: string; quantity: number; confidence: number }>;
-      foliage: Array<{ name: string; quantity: number }>;
-      accessories: Array<{ name: string; quantity: number }>;
-      wrapping: Array<{ layer: string; material: string; color: string }>;
-    };
-    confidence: number;
-  };
+  /**
+   * Hình chiếu của hợp đồng Vision — dựng bằng `projectAnalysisForCopy`,
+   * KHÔNG đọc thẳng `raw`. Hợp đồng dùng khoá tiếng Việt và đọc sai tên
+   * trường không làm đỏ ca thử nào, chỉ đưa `undefined` vào lời nhắc.
+   */
+  analysis: HinhChieuPhanTich;
   brand: {
     tone_of_voice?: string | null;
     hashtags?: string[] | null;
     cta_templates?: string[] | null;
+    forbidden_styles?: string[] | null;
   };
   occasions: Array<{ code: string; name: string }>;
 }
 
-export interface ProductCopyOutput {
-  suggested_name: string;
-  suggested_description: string;
-  suggested_tags: string[];
-  suggested_occasions: string[];
+export type ProductCopyOutput = CopyOutput & {
   suggested_price_segment: "budget" | "standard" | "premium" | "luxury";
+};
+
+const PHAN_KHUC = ["budget", "standard", "premium", "luxury"] as const;
+
+function dong(nhan: string, gia_tri: string | number | null): string {
+  return `- ${nhan}: ${gia_tri === null || gia_tri === "" ? "chưa xác định" : gia_tri}`;
 }
 
-function buildPrompt(input: ProductCopyInput): string {
+export function buildPrompt(input: ProductCopyInput): string {
   const { analysis, brand, occasions } = input;
-  
-  const flowerNames = analysis.bom.flowers.map(f => `${f.name} (${f.quantity})`).join(", ") || "không có";
-  const foliageNames = analysis.bom.foliage.map(f => `${f.name} (${f.quantity})`).join(", ") || "không có";
-  const accessoryNames = analysis.bom.accessories.map(a => `${a.name} (${a.quantity})`).join(", ") || "không có";
-  const wrappingNames = analysis.bom.wrapping.map(w => `${w.layer}: ${w.material} ${w.color}`).join(", ") || "không có";
+  const bom = analysis.bom;
 
-  const occasionNames = occasions.map(o => o.name).join(", ") || "không có";
+  const ke = (ds: Array<{ name: string; quantity: number | null }>) =>
+    ds.length === 0
+      ? "không có"
+      : ds.map((x) => (x.quantity ? `${x.name} (${x.quantity})` : x.name)).join(", ");
+
+  const goi =
+    bom.wrapping.length === 0
+      ? "không có"
+      : bom.wrapping
+          .map((w) => [w.layer, w.material, w.color].filter(Boolean).join(" "))
+          .filter((x) => x.length > 0)
+          .join(", ") || "không có";
+
+  const tenDip = occasions.map((o) => o.name);
 
   return `Bạn là chuyên viên viết nội dung bán hàng cho cửa hàng hoa.
 
-THÔNG TIN SẢN PHẨM:
-- Danh mục: ${analysis.identity.category}
-- Phong cách: ${analysis.identity.style}
-- Tông màu: ${analysis.identity.color_tone}
-- Số lượng hoa chính: ${analysis.identity.flower_count}
-- Số lượng nụ: ${analysis.identity.bud_count}
-- Số lượng hỏng: ${analysis.identity.damaged_count}
-- Độ tin cậy phân tích: ${Math.round(analysis.confidence * 100)}%
+SẢN PHẨM
+${dong("Phân loại", analysis.identity.category)}
+${dong("Hình dáng", analysis.identity.shape)}
+${dong("Vật chứa", analysis.identity.container)}
+${dong("Phong cách thiết kế", analysis.identity.phong_cach)}
+${dong("Dịp sử dụng đã nhận diện", analysis.identity.dip_su_dung)}
+${dong("Tông màu chủ đạo", analysis.tone_mau.length > 0 ? analysis.tone_mau.join(", ") : null)}
+${dong("Tổng số cành", analysis.flower_count)}
+${dong("Số nụ", analysis.bud_count)}
+${dong("Độ tin cậy phân tích", analysis.confidence === null ? null : `${analysis.confidence}%`)}
 
-BILL OF MATERIALS:
-- Hoa chính: ${flowerNames}
-- Lá/cành: ${foliageNames}
-- Phụ kiện: ${accessoryNames}
-- Gói/Trang trí: ${wrappingNames}
+ĐỊNH MỨC VẬT TƯ
+${dong("Hoa", ke(bom.flowers))}
+${dong("Lá và cành", ke(bom.foliage))}
+${dong("Phụ kiện", ke(bom.accessories))}
+${dong("Gói và trang trí", goi)}
 
-THƯƠNG HIỆU:
-- Tone of voice: ${brand.tone_of_voice || "Chưa cấu hình"}
-- Hashtags gợi ý: ${brand.hashtags?.join(", ") || "Chưa cấu hình"}
-- CTA templates: ${brand.cta_templates?.join(" | ") || "Chưa cấu hình"}
+THƯƠNG HIỆU
+${dong("Giọng thương hiệu", brand.tone_of_voice ?? null)}
+${dong("Hashtag của cửa hàng", brand.hashtags?.join(", ") ?? null)}
+${dong("Mẫu kêu gọi hành động", brand.cta_templates?.join(" | ") ?? null)}
+${dong("Cụm từ KHÔNG được dùng", brand.forbidden_styles?.join(", ") ?? null)}
 
-DỊP GỢI Ý (từ dữ liệu cửa hàng):
-${occasionNames}
+DANH MỤC DỊP CỦA CỬA HÀNG
+${tenDip.length > 0 ? tenDip.join(", ") : "cửa hàng chưa khai dịch nào"}
 
-HÃY TRẢ VỀ JSON THEO ĐÚNG SCHEMA SAU:
-{
-  "suggested_name": "Tên sản phẩm hấp dẫn, ngắn gọn",
-  "suggested_description": "Mô tả chi tiết, cảm xúc, bán được",
-  "suggested_tags": ["tag1", "tag2", "tag3"],
-  "suggested_occasions": ["dip1", "dip2"],
-  "suggested_price_segment": "budget|standard|premium|luxury"
+RÀNG BUỘC
+- Chỉ viết về những gì có trong ĐỊNH MỨC VẬT TƯ ở trên. Không thêm loại hoa,
+  màu sắc hay chi tiết nào không có trong danh sách đó.
+- Không nêu con số nào ngoài những con số đã cho. Đặc biệt không tự đặt ra
+  số cành, số bông hay kích thước.
+- Trường nào ghi "chưa xác định" thì bỏ qua, không đoán thay.
+- suggested_name: tối đa ${TEN_TOI_DA} ký tự, tiếng Việt có dấu.
+- suggested_description: ${DAI_MO_TA.min}–${DAI_MO_TA.max} ký tự.
+- suggested_tags: ${DAI_THE.min}–${DAI_THE.max} thẻ, tiếng Việt KHÔNG dấu, viết thường, nối bằng dấu gạch ngang.
+- suggested_occasions: chỉ chọn từ DANH MỤC DỊP CỦA CỬA HÀNG, chép đúng tên.
+- suggested_price_segment: đúng một trong ${PHAN_KHUC.join(" | ")}.
+
+Trả về JSON đúng lược đồ đã cho, không thêm lời dẫn.`;
 }
 
-LƯU Ý:
-- suggested_name: Tối đa 100 ký tự, tiếng Việt, không ký tự đặc biệt
-- suggested_description: 200-500 ký tự, viết như người bán hàng thật
-- suggested_tags: 3-8 tag, tiếng Việt không dấu, lowercase
-- suggested_occasions: Chỉ chọn từ danh sách dịp gợi ý ở trên
-- suggested_price_segment: Chỉ một trong 4 giá trị cho phép
-`;
+function hopLe(output: unknown): output is ProductCopyOutput {
+  const o = output as Partial<ProductCopyOutput> | null;
+  return (
+    !!o &&
+    typeof o.suggested_name === "string" &&
+    o.suggested_name.length > 0 &&
+    typeof o.suggested_description === "string" &&
+    o.suggested_description.length > 0 &&
+    Array.isArray(o.suggested_tags) &&
+    Array.isArray(o.suggested_occasions) &&
+    typeof o.suggested_price_segment === "string" &&
+    (PHAN_KHUC as readonly string[]).includes(o.suggested_price_segment)
+  );
 }
 
 export function createProductCopyAdapter(
@@ -94,68 +120,84 @@ export function createProductCopyAdapter(
   input: ProductCopyInput,
   organizationId: string
 ): (model: AiModelCandidate) => Promise<AdapterOutcome<ProductCopyOutput>> {
-  return async (_model: AiModelCandidate) => {
+  return async (model: AiModelCandidate) => {
+    const batDau = Date.now();
     try {
-      const prompt = buildPrompt(input);
-      
       const request: LLMRequest = {
         organizationId,
-        prompt,
+        prompt: buildPrompt(input),
+        // Khoá mô hình mà bộ định tuyến của cổng AI vừa chọn. Bỏ qua tham số
+        // này là ghi vào `ai_requests` một quyết định chưa từng được thi hành.
+        model: model.key,
         jsonSchema: {
           type: "object",
           properties: {
-            suggested_name: { type: "string", maxLength: 100 },
-            suggested_description: { type: "string", minLength: 200, maxLength: 500 },
-            suggested_tags: { 
-              type: "array", 
+            suggested_name: { type: "string", maxLength: TEN_TOI_DA },
+            suggested_description: {
+              type: "string",
+              minLength: DAI_MO_TA.min,
+              maxLength: DAI_MO_TA.max,
+            },
+            suggested_tags: {
+              type: "array",
               items: { type: "string" },
-              minItems: 3,
-              maxItems: 8
+              minItems: DAI_THE.min,
+              maxItems: DAI_THE.max,
             },
-            suggested_occasions: { 
-              type: "array", 
-              items: { type: "string" }
+            suggested_occasions: {
+              type: "array",
+              items:
+                input.occasions.length > 0
+                  ? { type: "string", enum: input.occasions.map((o) => o.name) }
+                  : { type: "string" },
             },
-            suggested_price_segment: { 
-              type: "string", 
-              enum: ["budget", "standard", "premium", "luxury"]
-            },
+            suggested_price_segment: { type: "string", enum: [...PHAN_KHUC] },
           },
-          required: ["suggested_name", "suggested_description", "suggested_tags", "suggested_occasions", "suggested_price_segment"],
+          required: [
+            "suggested_name",
+            "suggested_description",
+            "suggested_tags",
+            "suggested_occasions",
+            "suggested_price_segment",
+          ],
           additionalProperties: false,
         },
         maxTokens: 1000,
       };
 
       const response: LLMResponse = await llmProvider.complete(request);
-      
-      let output: ProductCopyOutput;
+
+      let output: unknown;
       try {
         output = JSON.parse(response.text);
       } catch {
-        throw new Error("AI trả về không phải JSON hợp lệ");
+        throw new Error("Mô hình trả về không phải JSON hợp lệ");
       }
 
-      // Validate output
-      if (!output.suggested_name || !output.suggested_description || 
-          !Array.isArray(output.suggested_tags) || 
-          !Array.isArray(output.suggested_occasions) ||
-          !["budget", "standard", "premium", "luxury"].includes(output.suggested_price_segment)) {
-        throw new Error("Kết quả AI thiếu trường bắt buộc hoặc giá trị không hợp lệ");
+      if (!hopLe(output)) {
+        throw new Error("Kết quả thiếu trường bắt buộc hoặc phân khúc giá không hợp lệ");
       }
+
+      const ngu_canh: NgữCảnhChấm = {
+        analysis: input.analysis,
+        occasionNames: input.occasions.map((o) => o.name),
+        forbidden: input.brand.forbidden_styles ?? [],
+      };
 
       const result: AdapterOutcome<ProductCopyOutput> = {
         ok: true,
         output,
-        scores: {
-          factual: 0.8,
-          brand: 0.8,
-          readability: 0.8,
-        },
-        latencyMs: 0,
+        // Ba kênh mà `AIC-04` khai, chấm bằng luật tất định trên chính dữ
+        // liệu đã có — không phải ba hằng số.
+        scores: chamBaKenh(output, ngu_canh),
+        latencyMs: Date.now() - batDau,
       };
-      if (response.costUsd !== undefined) {
-        Object.assign(result, { costUsd: response.costUsd });
+      if (response.costUsd !== undefined) Object.assign(result, { costUsd: response.costUsd });
+      if (response.inputTokens !== undefined) {
+        Object.assign(result, { inputTokens: response.inputTokens });
+      }
+      if (response.outputTokens !== undefined) {
+        Object.assign(result, { outputTokens: response.outputTokens });
       }
       return result;
     } catch (error) {
