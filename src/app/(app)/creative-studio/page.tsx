@@ -35,7 +35,6 @@ import {
 } from "@/components/templates/creative-studio"
 import { getDefaultAutoCapabilityIds } from "@/modules/media/domain/optimization-capabilities"
 import { M04B_VARIANT_PRESETS, getVariantPreset } from "@/modules/media/domain/variant-presets"
-import { generateStudioVariants } from "@/lib/variant-compositor"
 
 // ============================================================
 // API HELPERS
@@ -75,23 +74,43 @@ const FLOW_M04A: FlowStep[] = [
   { key: "compose", label: "Dựng bố cục" },
 ]
 
+/**
+ * Bốn bước này là bốn giá trị `generation_jobs.stage` mà worker M04b ghi
+ * thật. Bản trước chạy ba nhãn theo `setTimeout(700)` / `setTimeout(1400)`,
+ * nên thanh tiến trình vẫn nhích đều kể cả khi worker đã chết.
+ */
 const FLOW_M04B: FlowStep[] = [
-  { key: "fetch", label: "Đọc Master Image" },
-  { key: "remove_bg", label: "Tách nền AI (AIC-11)" },
-  { key: "compose", label: "Ghép bối cảnh & Watermark" },
+  { key: "SEGMENTING", label: "Tách chủ thể khỏi nền" },
+  { key: "COMPOSING", label: "Ghép bối cảnh & đóng dấu" },
+  { key: "VERIFYING", label: "Đo toàn vẹn chủ thể" },
+  { key: "GENERATING_OUTPUTS", label: "Ghi vào kho ảnh" },
 ]
 
+/**
+ * Hình dạng `GET /media/variants/:id` trả về. Không trường nào do giao diện
+ * bịa: mỗi biến thể là một dòng `assets` thật và `url` là URL ký có hạn của
+ * kho tệp. Mức toàn vẹn là SỐ ĐO chung của cả lượt, nằm ở `M04bIntegrity`,
+ * không phải một con số riêng gán cho từng thẻ.
+ */
 export interface M04bVariantItem {
-  id: string
+  asset_id: string
+  variant_key: string
   title: string
-  bg: string
+  background: string
   ratio: string
-  url: string
-  assetId?: string | undefined
   watermark: boolean
-  generativeFill: boolean
-  integrityScore: number
-  approved: boolean
+  generative_fill_used: boolean
+  url: string
+  approval_state: "pending" | "approved" | "rejected"
+  approved_at: string | null
+}
+
+export interface M04bIntegrity {
+  subject_pixel_identity: number
+  generative_fill_used: boolean
+  source_master_asset_id: string
+  result: "SAFE" | "GOOD" | "WARNING" | "REJECTED"
+  ly_do: string[]
 }
 
 const FIELDS_M04A_DEFAULT: ResultField[] = [
@@ -159,12 +178,37 @@ function buildFieldsA(data: Record<string, unknown> | null, baseFields: ResultFi
 }
 
 const FIELDS_M04B: ResultField[] = [
-  { key: "background", label: "Nền đã dùng", type: "text", editable: true, value: "Tách nền trong suốt (PNG)" },
-  { key: "ratio", label: "Tỉ lệ khung", type: "text", editable: true, value: "1:1" },
-  { key: "watermark", label: "Watermark logo", type: "text", editable: true, value: "Bật" },
-  { key: "generative-fill", label: "Cờ generative fill", type: "readonly", editable: false, value: "Không" },
-  { key: "integrity", label: "Điểm toàn vẹn sản phẩm", type: "readonly", editable: false, value: "100% (Bảo toàn Master Image)" },
+  { key: "background", label: "Bối cảnh đã dùng", type: "readonly", editable: false, value: "—" },
+  { key: "ratio", label: "Tỉ lệ khung", type: "readonly", editable: false, value: "—" },
+  { key: "watermark", label: "Đóng dấu thương hiệu", type: "readonly", editable: false, value: "—" },
+  { key: "generative-fill", label: "Cờ generative fill", type: "readonly", editable: false, value: "—" },
+  { key: "integrity", label: "Toàn vẹn lõi chủ thể (đo được)", type: "readonly", editable: false, value: "Đang chờ đo..." },
 ]
+
+/**
+ * Năm ô đọc từ đáp ứng máy chủ, không ô nào sửa được.
+ *
+ * Bản trước để `editable: true` cho ba ô đầu. Sửa chúng không đổi được tấm
+ * ảnh đã dựng — nó chỉ đổi dòng chữ mô tả tấm ảnh, và một ô mô tả sai về
+ * chính thứ nó mô tả còn tệ hơn một ô không sửa được.
+ */
+function buildFieldsB(
+  source: { preset: string | null; ratio: string | null; watermark: boolean } | null,
+  toanVen: M04bIntegrity | null
+): ResultField[] {
+  if (!source) return FIELDS_M04B
+  const preset = source.preset ? getVariantPreset(source.preset).name : "—"
+  const doTrung = toanVen
+    ? `${(toanVen.subject_pixel_identity * 100).toFixed(2)}% (${toanVen.result})`
+    : "Chưa có số đo"
+  return [
+    { key: "background", label: "Bối cảnh đã dùng", type: "readonly", editable: false, value: preset },
+    { key: "ratio", label: "Tỉ lệ khung", type: "readonly", editable: false, value: source.ratio ?? "—" },
+    { key: "watermark", label: "Đóng dấu thương hiệu", type: "readonly", editable: false, value: source.watermark ? "Bật (logo của tiệm)" : "Tắt" },
+    { key: "generative-fill", label: "Cờ generative fill", type: "readonly", editable: false, value: toanVen?.generative_fill_used ? "Có (chỉ ở phần hậu cảnh)" : "Không" },
+    { key: "integrity", label: "Toàn vẹn lõi chủ thể (đo được)", type: "readonly", editable: false, value: doTrung },
+  ]
+}
 
 // ============================================================
 // PAGE
@@ -211,11 +255,10 @@ export default function CreativeStudioPage() {
   const [fieldsA, setFieldsA] = useState<ResultField[]>(FIELDS_M04A_DEFAULT)
   const [fieldsB, setFieldsB] = useState<ResultField[]>(FIELDS_M04B)
   const [savedA, setSavedA] = useState(false)
-  const [savedB, setSavedB] = useState(false)
   const [judgmentA, setJudgmentA] = useState<JudgmentState>("safe")
   const [judgmentB, setJudgmentB] = useState<JudgmentState>("safe")
   const [selectedRatio, setSelectedRatio] = useState<"1:1" | "4:5" | "9:16" | "16:9">("1:1")
-  const [variantIds, setVariantIds] = useState<string[]>(["v1"])
+  const [selectedVariantAssetId, setSelectedVariantAssetId] = useState<string>("")
   const [showBoundary, setShowBoundary] = useState(false)
   const [loadingAssets, setLoadingAssets] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -236,18 +279,17 @@ export default function CreativeStudioPage() {
   const [watermarkEnabled, setWatermarkEnabled] = useState<boolean>(true)
   const [variantRatio, setVariantRatio] = useState<"1:1" | "4:5" | "9:16" | "16:9">("1:1")
   const [generatedVariants, setGeneratedVariants] = useState<M04bVariantItem[]>([])
-  const [m04bResult, setM04bResult] = useState<{
-    asset_id?: string
-    storage_key?: string
-    mime_type?: string
-    width?: number
-    height?: number
-  } | null>(null)
+  const [variantJobId, setVariantJobId] = useState<string | null>(null)
+  const [variantIntegrity, setVariantIntegrity] = useState<M04bIntegrity | null>(null)
   const [loadingMasters, setLoadingMasters] = useState(false)
 
   const canOptimize = session.can("I1")
   const canApprove = session.can("I2")
   const canDownload = session.can("I3")
+  // Biến thể marketing có cặp năng lực riêng (`I4` chạy ↔ `I5` duyệt), không
+  // dùng ké `I1`/`I2` của M04a: hai việc khác nhau thì hai mã khác nhau.
+  const canRunVariant = session.can("I4")
+  const canApproveVariantCap = session.can("I5")
 
   // --- Load approved master images ---
   const loadApprovedMasters = async () => {
@@ -533,246 +575,197 @@ export default function CreativeStudioPage() {
     }
   }
 
-  function toggleVariant(id: string) {
-    setVariantIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
+  /** Chọn MỘT biến thể. Cổng duyệt hỏi "tấm nào", không hỏi "những tấm nào". */
+  function selectVariant(assetId: string) {
+    setSelectedVariantAssetId(assetId)
   }
 
+  /**
+   * Dựng biến thể marketing — `POST /media/variants` (`I4`).
+   *
+   * Ba thứ bản trước không có và nay có: một job thật trong hàng đợi (nên có
+   * tổ chức, có credit, có `Idempotency-Key`), tiến trình đọc từ `stage`
+   * thật của job, và kết quả là những dòng `assets` nằm trong kho — không
+   * phải ảnh base64 sống trong bộ nhớ tab trình duyệt.
+   *
+   * Không còn đường lùi tự dựng ảnh phía trình duyệt. Đường lùi cũ vẽ bằng
+   * canvas rồi gán "Toàn vẹn 98%" cho chính thứ nó vừa vẽ, và khi không tìm
+   * thấy ảnh nào thì lấy một tấm hoa trên Unsplash làm mẫu — người bán có
+   * thể đem ảnh của người khác đi đăng mà không biết. Hỏng thì nay báo hỏng.
+   */
   async function goRunningB() {
-    setPhase("running-b")
-    setJobStatus("PENDING")
-    setJobPhase("fetch")
-
-    // Lấy Master Image được chọn
-    const activeMaster =
-      approvedMasters.find((m) => m.id === selectedMasterId) ||
-      approvedMasters[0] ||
-      (optimizationData
-        ? {
-            id: String(optimizationData.master_asset_id || "master"),
-            product_id: (optimizationData.product_id as string) || (selectedAssetId ? assets.find((a) => a.id === selectedAssetId)?.product_name : null) || null,
-            name: (optimizationData.product_name as string) || "Bó hoa chính",
-            url: ((optimizationData.outputs as any)?.master_url as string) || ((optimizationData.outputs as any)?.original_url as string) || null,
-          }
-        : null) ||
-      (assets.find((a) => a.id === selectedMasterId) || assets[0]
-        ? {
-            id: (assets.find((a) => a.id === selectedMasterId) || assets[0])!.id,
-            product_id: null,
-            name: (assets.find((a) => a.id === selectedMasterId) || assets[0])!.name || "Ảnh mẫu tiệm hoa",
-            url: (assets.find((a) => a.id === selectedMasterId) || assets[0])!.url,
-          }
-        : {
-            id: "demo-master-1",
-            product_id: null,
-            name: "Bó hồng pastel Studio Demo",
-            url: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&auto=format&fit=crop&q=80",
-          })
-
-    const prodId = activeMaster?.product_id || (optimizationData?.product_id as string) || "prod-default"
-
-    setTimeout(() => setJobPhase("remove_bg"), 700)
-
-    try {
-      const res = await fetch("/api/v1/proxy/api/m04b/background-removal?client=SOCIALFLOW", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_id: prodId }),
-      })
-
-      const data = await res.json().catch(() => null)
-      setTimeout(() => setJobPhase("compose"), 1400)
-
-      setTimeout(async () => {
-        setJobStatus("COMPLETED")
-        setJobPhase(null)
-
-        const preset = getVariantPreset(selectedVariantPreset)
-        let generatedAssetId: string | undefined = undefined
-
-        if (res.ok && data?.asset_id) {
-          generatedAssetId = data.asset_id
-          setM04bResult({
-            asset_id: data.asset_id,
-            storage_key: data.storage_key,
-            mime_type: data.mime_type,
-            width: data.width,
-            height: data.height,
-          })
-        }
-
-        let newVariants: M04bVariantItem[] = []
-        if (activeMaster?.url) {
-          try {
-            newVariants = await generateStudioVariants({
-              sourceUrl: activeMaster.url,
-              selectedPreset: selectedVariantPreset,
-              ratio: variantRatio,
-              watermarkEnabled,
-              shopName: "FloraOS Tiệm Hoa",
-            })
-            if (generatedAssetId) {
-              newVariants = newVariants.map((v) => ({ ...v, assetId: generatedAssetId }))
-            }
-          } catch {
-            // fallback nếu canvas gặp sự cố
-          }
-        }
-
-        if (newVariants.length === 0) {
-          const primaryUrl = activeMaster?.url || ""
-          newVariants = [
-            {
-              id: `v-transparent-${Date.now()}`,
-              title: "Tách nền trong suốt (PNG)",
-              bg: "Trong suốt (Alpha)",
-              ratio: variantRatio,
-              url: primaryUrl,
-              assetId: generatedAssetId,
-              watermark: false,
-              generativeFill: false,
-              integrityScore: 100,
-              approved: false,
-            },
-            {
-              id: `v-preset-${Date.now()}`,
-              title: preset.name,
-              bg: preset.name,
-              ratio: variantRatio,
-              url: primaryUrl,
-              assetId: generatedAssetId,
-              watermark: watermarkEnabled,
-              generativeFill: selectedVariantPreset !== "transparent",
-              integrityScore: 98,
-              approved: false,
-            },
-            {
-              id: `v-social-${Date.now()}`,
-              title: `Biến thể đa kênh (${variantRatio})`,
-              bg: selectedVariantPreset === "transparent" ? "Studio trắng" : preset.name,
-              ratio: variantRatio,
-              url: primaryUrl,
-              assetId: generatedAssetId,
-              watermark: watermarkEnabled,
-              generativeFill: true,
-              integrityScore: 97,
-              approved: false,
-            },
-          ]
-        }
-
-        setGeneratedVariants(newVariants)
-        setVariantIds([newVariants[0]!.id, newVariants[1]!.id])
-        setFieldsB([
-          { key: "background", label: "Nền đã dùng", type: "text", editable: true, value: preset.name },
-          { key: "ratio", label: "Tỉ lệ khung", type: "text", editable: true, value: variantRatio },
-          { key: "watermark", label: "Watermark logo", type: "text", editable: true, value: watermarkEnabled ? "Bật (Logo shop)" : "Tắt" },
-          { key: "generative-fill", label: "Cờ generative fill", type: "readonly", editable: false, value: selectedVariantPreset === "transparent" ? "Không" : "Có (Phông nền)" },
-          { key: "integrity", label: "Điểm toàn vẹn sản phẩm", type: "readonly", editable: false, value: "100% (Bảo toàn Master Image)" },
-        ])
-        setPhase("result-b")
-      }, 1600)
-    } catch {
-      // Graceful fallback nếu SocialFlow worker đang offline: tự sinh 3 biến thể bằng Engine nội bộ Core
-      setTimeout(async () => {
-        setJobStatus("COMPLETED")
-        setJobPhase(null)
-        const preset = getVariantPreset(selectedVariantPreset)
-        let fallbackVariants: M04bVariantItem[] = []
-        if (activeMaster?.url) {
-          try {
-            fallbackVariants = await generateStudioVariants({
-              sourceUrl: activeMaster.url,
-              selectedPreset: selectedVariantPreset,
-              ratio: variantRatio,
-              watermarkEnabled,
-              shopName: "FloraOS Tiệm Hoa",
-            })
-          } catch {
-            // ignore
-          }
-        }
-        if (fallbackVariants.length === 0) {
-          fallbackVariants = [
-            {
-              id: `v-transparent-${Date.now()}`,
-              title: "Tách nền trong suốt (PNG)",
-              bg: "Trong suốt (Alpha)",
-              ratio: variantRatio,
-              url: activeMaster?.url || "",
-              watermark: false,
-              generativeFill: false,
-              integrityScore: 100,
-              approved: false,
-            },
-            {
-              id: `v-preset-${Date.now()}`,
-              title: preset.name,
-              bg: preset.name,
-              ratio: variantRatio,
-              url: activeMaster?.url || "",
-              watermark: watermarkEnabled,
-              generativeFill: true,
-              integrityScore: 98,
-              approved: false,
-            },
-            {
-              id: `v-social-${Date.now()}`,
-              title: `Biến thể đa kênh (${variantRatio})`,
-              bg: selectedVariantPreset === "transparent" ? "Studio trắng" : preset.name,
-              ratio: variantRatio,
-              url: activeMaster?.url || "",
-              watermark: watermarkEnabled,
-              generativeFill: true,
-              integrityScore: 97,
-              approved: false,
-            },
-          ]
-        }
-        setGeneratedVariants(fallbackVariants)
-        setVariantIds([fallbackVariants[0]!.id, fallbackVariants[1] ? fallbackVariants[1]!.id : fallbackVariants[0]!.id])
-        setFieldsB([
-          { key: "background", label: "Nền đã dùng", type: "text", editable: true, value: preset.name },
-          { key: "ratio", label: "Tỉ lệ khung", type: "text", editable: true, value: variantRatio },
-          { key: "watermark", label: "Watermark logo", type: "text", editable: true, value: watermarkEnabled ? "Bật (Logo shop)" : "Tắt" },
-          { key: "generative-fill", label: "Cờ generative fill", type: "readonly", editable: false, value: selectedVariantPreset === "transparent" ? "Không" : "Có (Phông nền)" },
-          { key: "integrity", label: "Điểm toàn vẹn sản phẩm", type: "readonly", editable: false, value: "100% (Bảo toàn Master Image)" },
-        ])
-        setPhase("result-b")
-      }, 1600)
+    if (!canRunVariant) {
+      setErrorMsg("Không có năng lực I4 (dựng biến thể marketing)")
+      setPhase("error")
+      return
     }
-  }
-
-  async function handleApproveB() {
-    if (!canApprove) {
-      setErrorMsg("Không có năng lực I2 (duyệt ảnh)")
+    const masterId = selectedMasterId || approvedMasters[0]?.id || ""
+    if (!masterId) {
+      setErrorMsg(
+        "Chưa có Master Image nào đã duyệt. Chạy Khu vực A rồi bấm Duyệt Master Image trước."
+      )
+      setPhase("error")
       return
     }
 
-    const targetAssetId = m04bResult?.asset_id || generatedVariants.find((v) => v.assetId)?.assetId
-    if (targetAssetId) {
-      try {
-        const res = await apiFetch(`/api/v1/assets/${targetAssetId}/approve`, { method: "POST" })
-        if (!res.ok) {
-          let message = "Không duyệt được biến thể"
-          try {
-            const b = await res.json()
-            message = b.error?.message ?? message
-          } catch { /* ignore */ }
-          setErrorMsg(message)
-          return
-        }
-      } catch (e) {
-        setErrorMsg(e instanceof Error ? e.message : "Lỗi duyệt asset")
-      }
-    }
+    setPhase("running-b")
+    setJobStatus("PENDING")
+    setJobPhase(null)
+    setErrorMsg(null)
+    setGeneratedVariants([])
+    setVariantIntegrity(null)
+    setSelectedVariantAssetId("")
 
-    setGeneratedVariants((prev) => prev.map((v) => ({ ...v, approved: true })))
-    setSavedB(true)
-    setJudgmentB("safe")
-    setTimeout(() => {
-      setSavedB(false)
-      setPhase("saved")
-    }, 1200)
+    const idempotencyKey = `var-${Date.now()}-${crypto.randomUUID()}`
+    try {
+      const res = await apiFetch("/api/v1/media/variants", {
+        method: "POST",
+        headers: { [IDEMPOTENCY_KEY_HEADER]: idempotencyKey },
+        body: JSON.stringify({
+          master_asset_id: masterId,
+          preset: selectedVariantPreset,
+          ratio: variantRatio,
+          watermark: watermarkEnabled,
+        }),
+      })
+      if (!res.ok) {
+        let message = "Không tạo được job biến thể"
+        try {
+          const body = (await res.json()) as { error?: { message?: string } }
+          message = body.error?.message ?? message
+        } catch { /* ignore */ }
+        setErrorMsg(message)
+        setPhase("error")
+        return
+      }
+      const data = (await res.json()) as { job_id: string }
+      setVariantJobId(data.job_id)
+      pollVariantJob(data.job_id)
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Lỗi tạo job biến thể")
+      setPhase("error")
+    }
+  }
+
+  /** Hỏi lại `GET /media/variants/:id` cho tới khi job kết thúc. */
+  async function pollVariantJob(jobId: string) {
+    try {
+      const res = await apiFetchWithAuth(`/api/v1/media/variants/${jobId}`)
+      if (!res.ok || !res.data) {
+        setTimeout(() => pollVariantJob(jobId), 2000)
+        return
+      }
+      const chiTiet = res.data as {
+        status: string
+        stage: string | null
+        error: string | null
+        source: { preset: string | null; ratio: string | null; watermark: boolean }
+        subject_integrity: M04bIntegrity | null
+        variants: M04bVariantItem[]
+        approval: { can_approve: boolean; requires_warning: boolean }
+      }
+
+      setJobPhase(chiTiet.stage)
+      setVariantIntegrity(chiTiet.subject_integrity)
+      setFieldsB(buildFieldsB(chiTiet.source, chiTiet.subject_integrity))
+
+      if (chiTiet.status === "COMPLETED") {
+        setJobStatus("COMPLETED")
+        setJobPhase(null)
+        setGeneratedVariants(chiTiet.variants)
+        setSelectedVariantAssetId(chiTiet.variants[0]?.asset_id ?? "")
+        // Cổng toàn vẹn từ chối nghĩa là có bước đã vẽ đè lên bó hoa. Worker
+        // không ghi asset nào cho lượt đó, nên màn này không có gì để bày ra
+        // và cũng không được giả vờ là có.
+        setJudgmentB(
+          chiTiet.subject_integrity?.result === "REJECTED"
+            ? "blocked"
+            : chiTiet.approval.requires_warning
+              ? "warning"
+              : "safe"
+        )
+        setPhase("result-b")
+        return
+      }
+
+      if (chiTiet.status === "FAILED") {
+        setJobStatus("FAILED")
+        setJobPhase(null)
+        setErrorMsg(chiTiet.error ?? "Dựng biến thể thất bại")
+        setPhase("error")
+        return
+      }
+
+      setJobStatus("PROCESSING")
+      setTimeout(() => pollVariantJob(jobId), 2000)
+    } catch {
+      setTimeout(() => pollVariantJob(jobId), 2000)
+    }
+  }
+
+  /** `POST /media/variants/:id/approve` (`I5`) — duyệt ĐÚNG tấm đang chọn. */
+  async function handleApproveB() {
+    if (!canApproveVariantCap) {
+      setErrorMsg("Không có năng lực I5 (duyệt biến thể marketing)")
+      return
+    }
+    if (!variantJobId || !selectedVariantAssetId) {
+      setErrorMsg("Chưa chọn biến thể nào để duyệt")
+      return
+    }
+    try {
+      const res = await apiFetch(`/api/v1/media/variants/${variantJobId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ asset_id: selectedVariantAssetId }),
+      })
+      if (!res.ok) {
+        let message = "Không duyệt được biến thể"
+        try {
+          const body = (await res.json()) as { error?: { message?: string } }
+          message = body.error?.message ?? message
+        } catch { /* ignore */ }
+        setErrorMsg(message)
+        return
+      }
+      const data = (await res.json()) as { variants: M04bVariantItem[] }
+      setGeneratedVariants(data.variants)
+      setJudgmentB("safe")
+      setErrorMsg(null)
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Lỗi duyệt biến thể")
+    }
+  }
+
+  /**
+   * `GET /media/variants/:id/download` (`I3`).
+   *
+   * Đi qua máy chủ để lấy URL ký có hạn thay vì mở thẳng URL đang hiện trên
+   * thẻ: URL xem trước hết hạn sau một giờ, và tải về là một năng lực riêng
+   * cần được kiểm ngay tại thời điểm bấm.
+   */
+  async function handleDownloadVariant(assetId: string) {
+    if (!variantJobId || !canDownload) {
+      setErrorMsg("Không có năng lực I3 (tải ảnh)")
+      return
+    }
+    try {
+      const res = await apiFetch(
+        `/api/v1/media/variants/${variantJobId}/download?asset_id=${encodeURIComponent(assetId)}`
+      )
+      if (!res.ok) {
+        let message = "Không tải được biến thể"
+        try {
+          const body = (await res.json()) as { error?: { message?: string } }
+          message = body.error?.message ?? message
+        } catch { /* ignore */ }
+        setErrorMsg(message)
+        return
+      }
+      const data = (await res.json()) as { url: string }
+      window.open(data.url, "_blank")
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Lỗi tải biến thể")
+    }
   }
 
   // --- Tabs and Action Header Configuration ---
@@ -831,8 +824,9 @@ export default function CreativeStudioPage() {
       onClick: goRunningB,
     })
   } else if (phase === "result-b") {
-    const isApproved = generatedVariants.some((v) => v.approved) || savedB
-    if (canApprove && !isApproved) {
+    const dangChon = generatedVariants.find((v) => v.asset_id === selectedVariantAssetId)
+    const daDuyet = dangChon?.approval_state === "approved"
+    if (canApproveVariantCap && dangChon && !daDuyet && judgmentB !== "blocked") {
       primaryActions.push({
         id: "approve-variant",
         label: "Duyệt biến thể đã chọn",
@@ -841,26 +835,18 @@ export default function CreativeStudioPage() {
         onClick: handleApproveB,
       })
     }
-    primaryActions.push({
-      id: "download-variant",
-      label: "Tải ảnh biến thể",
-      icon: Download,
-      variant: isApproved ? "primary" : "outline",
-      onClick: () => {
-        const activeVar = generatedVariants.find((v) => variantIds.includes(v.id)) || generatedVariants[0]
-        if (activeVar?.url) window.open(activeVar.url, "_blank")
-      },
-    })
-    primaryActions.push({
-      id: "save-draft-b",
-      label: savedB ? "Đã lưu nháp" : "Lưu nháp",
-      icon: Check,
-      variant: "outline",
-      onClick: () => {
-        setSavedB(true)
-        setTimeout(() => setSavedB(false), 2000)
-      },
-    })
+    if (dangChon) {
+      primaryActions.push({
+        id: "download-variant",
+        label: "Tải ảnh biến thể",
+        icon: Download,
+        variant: daDuyet ? "primary" : "outline",
+        onClick: () => handleDownloadVariant(dangChon.asset_id),
+      })
+    }
+    // Không còn nút "Lưu nháp" ở đây. Nút cũ chỉ bật một cờ rồi tự tắt sau
+    // hai giây — nó không lưu gì, và M04b cũng chưa có khái niệm bản nháp:
+    // biến thể đã là dòng `assets` ngay khi worker ghi xong.
   }
 
   const overflowActions: TabOverflowAction[] = []
@@ -1367,7 +1353,11 @@ export default function CreativeStudioPage() {
                       {masterApproved ? "Master Image đã duyệt — sẵn sàng tạo biến thể bối cảnh" : "Cần duyệt Master Image trước khi tạo biến thể"}
                     </div>
                   </div>
-                  <Button onClick={goRunningB} className="flex items-center gap-2" disabled={!masterApproved}>
+                  <Button
+                    onClick={goRunningB}
+                    className="flex items-center gap-2"
+                    disabled={!masterApproved || !canRunVariant}
+                  >
                     Tạo biến thể <ChevronRight size={16} strokeWidth={2.4} />
                   </Button>
                 </div>
@@ -1387,96 +1377,91 @@ export default function CreativeStudioPage() {
               </div>
             </div>
 
-            {/* Selected Master Image Card & Picker */}
-            {(() => {
-              const activeMaster =
-                approvedMasters.find((m) => m.id === selectedMasterId) ||
-                approvedMasters[0] ||
-                (optimizationData
-                  ? {
-                      id: String(optimizationData.master_asset_id || "master"),
-                      name: (optimizationData.product_name as string) || "Master Image vừa duyệt",
-                      url: ((optimizationData.outputs as any)?.master_url as string) || ((optimizationData.outputs as any)?.original_url as string) || null,
-                      isDemo: false,
-                    }
-                  : null) ||
-                (assets.find((a) => a.id === selectedMasterId) || assets[0]
-                  ? {
-                      id: (assets.find((a) => a.id === selectedMasterId) || assets[0])!.id,
-                      name: (assets.find((a) => a.id === selectedMasterId) || assets[0])!.name || "Ảnh hoa tiệm",
-                      url: (assets.find((a) => a.id === selectedMasterId) || assets[0])!.url,
-                      isDemo: false,
-                    }
-                  : {
-                      id: "demo-master-1",
-                      name: "Bó hồng pastel Studio Demo",
-                      url: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&auto=format&fit=crop&q=80",
-                      isDemo: true,
-                    })
+            {/* Ảnh nguồn — CHỈ Master Image đã duyệt.
+                Chuỗi lùi cũ ở đây rơi từ Master đã duyệt xuống ảnh `ORIGINAL`
+                bất kỳ, rồi cuối cùng xuống một tấm hoa trên Unsplash gắn nhãn
+                "Demo". Ba tầng lùi đó đều sai một cách khác nhau: dựng biến
+                thể từ ảnh chưa duyệt là đi vòng qua cổng 2, còn dựng từ ảnh
+                của người khác thì người bán có thể đem đăng mà không biết.
+                Máy chủ nay từ chối cả hai (409), nên giao diện cũng không
+                được bày ra như thể chúng dùng được. */}
+            {approvedMasters.length === 0 ? (
+              <Card className="w-full p-4.5 border-2 border-dashed border-warning bg-warning-bg flex flex-col gap-2 shadow-xs">
+                <div className="text-[14px] font-extrabold text-warning">
+                  Chưa có Master Image nào đã duyệt
+                </div>
+                <div className="text-[12.5px] text-warning">
+                  Biến thể marketing dựng trên bản đã qua cổng duyệt, nên bước này cần Khu vực A
+                  chạy xong và Master Image được bấm Duyệt trước.
+                </div>
+                <div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPhase(optimizationData ? "result-a" : "select")}
+                  >
+                    <ArrowLeft size={14} className="mr-1.5" /> Sang Khu vực A
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              (() => {
+                const activeMaster =
+                  approvedMasters.find((m) => m.id === selectedMasterId) ?? approvedMasters[0]!
 
-              const selectableItems =
-                approvedMasters.length > 0
-                  ? approvedMasters
-                  : assets.map((a) => ({ id: a.id, name: a.name }))
-
-              return (
-                <Card className="w-full p-4.5 border border-border bg-surface flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-border bg-surface-alt flex items-center justify-center relative shadow-xs">
-                      {activeMaster?.url ? (
-                        <img
-                          src={activeMaster.url}
-                          alt={activeMaster.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <ImageIcon size={24} className="text-text-muted" />
-                      )}
-                      <div className="absolute top-1 right-1 rounded-full bg-success-bg p-0.5 text-secondary">
-                        <Check size={10} strokeWidth={3} />
+                return (
+                  <Card className="w-full p-4.5 border border-border bg-surface flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-border bg-surface-alt flex items-center justify-center relative shadow-xs">
+                        {activeMaster.url ? (
+                          <img
+                            src={activeMaster.url}
+                            alt={activeMaster.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <ImageIcon size={24} className="text-text-muted" />
+                        )}
+                        <div className="absolute top-1 right-1 rounded-full bg-success-bg p-0.5 text-secondary">
+                          <Check size={10} strokeWidth={3} />
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-secondary">
+                            Master Image nguồn
+                          </span>
+                          <Badge tone="success" className="text-[10px]">Đã duyệt</Badge>
+                        </div>
+                        <div className="text-[14.5px] font-extrabold text-text truncate mt-0.5">
+                          {activeMaster.name}
+                        </div>
+                        <div className="text-[11.5px] text-text-muted mt-0.5">
+                          Mã ảnh: {activeMaster.id.slice(0, 8).toUpperCase()}
+                        </div>
                       </div>
                     </div>
-                    {(() => {
-                      const isDemo = activeMaster?.id === "demo-master-1"
-                      return (
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold uppercase tracking-wider text-secondary">
-                              {isDemo ? "Ảnh mẫu thử nghiệm" : "Master Image nguồn"}
-                            </span>
-                            <Badge tone={isDemo ? "neutral" : "success"} className="text-[10px]">
-                              {isDemo ? "Demo" : "Chuẩn HD"}
-                            </Badge>
-                          </div>
-                          <div className="text-[14.5px] font-extrabold text-text truncate mt-0.5">
-                            {activeMaster?.name || "Bó hoa Studio"}
-                          </div>
-                          <div className="text-[11.5px] text-text-muted mt-0.5">
-                            Mã ảnh: {activeMaster?.id ? activeMaster.id.slice(0, 8).toUpperCase() : "DEMO"}
-                          </div>
-                        </div>
-                      )
-                    })()}
-                  </div>
 
-                  {selectableItems.length > 1 && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <select
-                        value={selectedMasterId}
-                        onChange={(e) => setSelectedMasterId(e.target.value)}
-                        className="h-9 rounded-lg border border-border bg-background px-2.5 text-xs font-medium text-text outline-none focus:border-primary"
-                      >
-                        {selectableItems.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </Card>
-              )
-            })()}
+                    {approvedMasters.length > 1 && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <select
+                          value={selectedMasterId || activeMaster.id}
+                          onChange={(e) => setSelectedMasterId(e.target.value)}
+                          aria-label="Chọn Master Image nguồn"
+                          className="h-9 rounded-lg border border-border bg-background px-2.5 text-xs font-medium text-text outline-none focus:border-primary"
+                        >
+                          {approvedMasters.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </Card>
+                )
+              })()
+            )}
 
             {/* StudioVariantCard (SSOT Preset Selector) */}
             <div className="w-full">
@@ -1491,7 +1476,7 @@ export default function CreativeStudioPage() {
             <Card className="w-full p-4.5 border border-border bg-surface flex flex-col gap-4 shadow-xs">
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="text-xs font-semibold text-text-muted uppercase tracking-wider">Tùy biến xuất bản đa kênh</div>
-                <Badge tone="accent" className="text-[11px] font-bold">Chi phí: 2-3 credits (D14)</Badge>
+                <Badge tone="accent" className="text-[11px] font-bold">Chi phí: 1 credit / lượt</Badge>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1569,12 +1554,14 @@ export default function CreativeStudioPage() {
           <div className="flex flex-1 flex-col items-center gap-5 w-full max-w-xl mx-auto">
             <div className="text-center">
               <div className="text-[17px] font-extrabold">Đang sinh biến thể M04b</div>
-              <div className="mt-1 text-[13px] text-text-muted">{jobPhase ?? "Đang sinh..."}</div>
+              <div className="mt-1 text-[13px] text-text-muted">
+                {jobPhase ?? "Đang xếp hàng chờ worker nhận việc..."}
+              </div>
             </div>
             <div className="w-full">
               <FlowSteps
                 steps={FLOW_M04B}
-                currentStep={jobPhase ?? "compose"}
+                currentStep={jobPhase ?? "SEGMENTING"}
                 cancellable={jobStatus === "PENDING"}
                 onCancel={() => { setJobStatus("CANCELLED"); setPhase("area-b") }}
               />
@@ -1590,20 +1577,49 @@ export default function CreativeStudioPage() {
                 <div className="text-xs text-text-muted">④ Thẻ kết quả — M04b (Biến thể Marketing)</div>
                 <div className="text-[17px] font-extrabold">Danh sách biến thể đã sinh</div>
               </div>
-              <Badge tone={savedB ? "success" : judgmentB === "blocked" ? "danger" : "neutral"}>
-                {savedB ? "Đã lưu nháp" : `${variantIds.length}/${generatedVariants.length} đã chọn`}
+              <Badge tone={judgmentB === "blocked" ? "danger" : judgmentB === "warning" ? "warning" : "neutral"}>
+                {judgmentB === "blocked"
+                  ? "Bị cổng toàn vẹn từ chối"
+                  : `${generatedVariants.length} biến thể đã ghi vào kho`}
               </Badge>
             </div>
+
+            {/* Cổng toàn vẹn từ chối: nói thẳng, không bày thẻ rỗng */}
+            {judgmentB === "blocked" && (
+              <div className="w-full rounded-xl border-2 border-danger bg-danger-bg px-4 py-3 text-[13px] text-danger">
+                <div className="font-bold">Không có biến thể nào được ghi</div>
+                <div className="mt-1">
+                  Cổng toàn vẹn đo thấy lõi bó hoa bị thay đổi trong lúc ghép bối cảnh, nên không
+                  biến thể nào được lưu vào kho. Master Image của tiệm vẫn nguyên vẹn.
+                </div>
+                {variantIntegrity && variantIntegrity.ly_do.length > 0 ? (
+                  <ul className="mt-2 list-disc pl-5">
+                    {variantIntegrity.ly_do.map((ly, i) => (
+                      <li key={i}>{ly}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            )}
+
+            {/* Cảnh báo trước khi duyệt — cùng luật `YC-R6` của M04a */}
+            {judgmentB === "warning" && variantIntegrity && (
+              <div className="w-full rounded-xl border-2 border-warning bg-warning-bg px-4 py-3 text-[13px] text-warning">
+                Lõi chủ thể lệch nhẹ so với Master Image (
+                {(variantIntegrity.subject_pixel_identity * 100).toFixed(2)}%). Xem kỹ ảnh trước
+                khi duyệt.
+              </div>
+            )}
 
             {/* Variant Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
               {generatedVariants.map((v) => {
-                const isSelected = variantIds.includes(v.id)
-                const isTransparent = v.bg.toLowerCase().includes("trong suốt")
+                const isSelected = v.asset_id === selectedVariantAssetId
+                const isTransparent = v.variant_key === "transparent"
 
                 return (
                   <div
-                    key={v.id}
+                    key={v.asset_id}
                     className={`relative overflow-hidden rounded-xl border-2 bg-surface transition ${
                       isSelected ? "border-primary shadow-sm" : "border-border"
                     }`}
@@ -1632,38 +1648,47 @@ export default function CreativeStudioPage() {
                       )}
 
                       <div className="absolute top-2 left-2 flex flex-col gap-1">
-                        {isSelected && <Badge tone="accent" className="text-[10px]">Đã chọn</Badge>}
-                        {v.approved && <Badge tone="success" className="text-[10px]">Đã duyệt</Badge>}
+                        {isSelected && <Badge tone="accent" className="text-[10px]">Đang chọn</Badge>}
+                        {v.approval_state === "approved" && (
+                          <Badge tone="success" className="text-[10px]">Đã duyệt</Badge>
+                        )}
+                        {v.watermark && <Badge tone="neutral" className="text-[10px]">Có logo</Badge>}
                       </div>
                     </div>
 
                     <div className="p-3 flex flex-col gap-1 border-t border-border">
                       <div className="text-[13px] font-bold truncate text-text">{v.title}</div>
                       <div className="flex items-center justify-between text-[11px] text-text-muted">
-                        <span>Bối cảnh: {v.bg}</span>
-                        <span>{v.ratio}</span>
+                        <span className="truncate">Bối cảnh: {v.background || "—"}</span>
+                        <span className="flex-shrink-0 pl-2">{v.ratio}</span>
                       </div>
                       <div className="flex items-center justify-between pt-2 mt-1 border-t border-dashed border-border text-[10px]">
-                        <span className="text-secondary font-bold">Toàn vẹn: {v.integrityScore}%</span>
-                        {v.url && (
-                          <a
-                            href={v.url}
-                            download={`${v.title.replace(/\s+/g, "_")}.png`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary font-bold hover:underline flex items-center gap-1"
-                          >
-                            <Download size={11} /> Tải về
-                          </a>
-                        )}
+                        {/* Mức toàn vẹn là SỐ ĐO của cả lượt. Bản trước gán
+                            100 / 99 / 98 cho ba thẻ, không đo gì cả. */}
+                        <span className="text-secondary font-bold">
+                          {variantIntegrity
+                            ? `Lõi trùng khít ${(variantIntegrity.subject_pixel_identity * 100).toFixed(2)}%`
+                            : "Chưa có số đo"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadVariant(v.asset_id)}
+                          disabled={!canDownload}
+                          className="text-primary font-bold hover:underline flex items-center gap-1 disabled:opacity-40 disabled:no-underline"
+                        >
+                          <Download size={11} /> Tải về
+                        </button>
                       </div>
                     </div>
 
                     <button
                       type="button"
-                      onClick={() => toggleVariant(v.id)}
+                      onClick={() => selectVariant(v.asset_id)}
+                      aria-label={`Chọn biến thể ${v.title}`}
                       className={`absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold shadow-xs transition ${
-                        isSelected ? "bg-primary text-white" : "bg-surface-alt border border-border text-text-muted hover:border-primary"
+                        isSelected
+                          ? "bg-primary text-white"
+                          : "bg-surface-alt border border-border text-text-muted hover:border-primary"
                       }`}
                     >
                       {isSelected ? "✓" : "+"}
@@ -1674,15 +1699,24 @@ export default function CreativeStudioPage() {
             </div>
 
             {/* Dynamic ResultCard with Atomic Fields */}
+            {/* `quality` lấy từ SỐ ĐO của cổng toàn vẹn. Bản trước ghi cứng
+                `score: 98` cho mọi lượt, kể cả lượt chưa đo gì. */}
             <ResultCard
               fields={fieldsB}
               judgment={judgmentB}
-              quality={{ score: 98, label: "Biến thể marketing sẵn sàng xuất bản", status: "safe" }}
-              onSaveDraft={() => { setSavedB(true); setTimeout(() => setSavedB(false), 2000) }}
-              onReject={() => setJudgmentB("blocked")}
+              quality={{
+                score: variantIntegrity
+                  ? Math.round(variantIntegrity.subject_pixel_identity * 100)
+                  : 0,
+                label: variantIntegrity
+                  ? `Lõi chủ thể trùng khít ${(variantIntegrity.subject_pixel_identity * 100).toFixed(2)}% với Master Image`
+                  : "Chưa có số đo toàn vẹn",
+                status: judgmentB === "blocked" ? "blocked" : judgmentB === "warning" ? "warning" : "safe",
+              }}
               onApprove={handleApproveB}
-              disabled={!masterApproved}
-              onFieldChange={(key, value) => setFieldsB((p) => p.map((f) => (f.key === key ? { ...f, value } : f)))}
+              disabled={
+                !canApproveVariantCap || judgmentB === "blocked" || generatedVariants.length === 0
+              }
             />
 
             {/* Bottom Navigation */}
@@ -1691,7 +1725,7 @@ export default function CreativeStudioPage() {
                 <RotateCcw size={15} className="mr-1.5" /> Tạo thêm biến thể khác
               </Button>
               <Button onClick={() => setPhase("saved")} className="gap-1.5">
-                Lưu vào Kho ảnh marketing → Quay về Trang chủ
+                Xong → Quay về Trang chủ
               </Button>
             </div>
           </div>
@@ -1705,7 +1739,9 @@ export default function CreativeStudioPage() {
             </div>
             <div>
               <div className="text-[18px] font-extrabold">Đã lưu vào Kho ảnh sản phẩm</div>
-              <div className="mt-1 text-[13px] text-text-muted">Master Image và các tỷ lệ Smart Reframe đã được cập nhật thành công</div>
+              <div className="mt-1 text-[13px] text-text-muted">
+                Master Image, các tỷ lệ Smart Reframe và biến thể marketing đều nằm trong kho ảnh của tiệm
+              </div>
             </div>
             <Button onClick={() => router.push("/")} className="mt-2">Quay về Trang chủ</Button>
           </div>

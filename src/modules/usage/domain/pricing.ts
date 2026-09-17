@@ -12,10 +12,28 @@
  */
 const FEATURE_COST_CREDIT: Readonly<Record<string, number>> = {
   "vision.analyze": 1,
+  // Sinh câu chữ bán hàng (M01b). Một lượt gọi mô hình ngôn ngữ trên dữ liệu
+  // đã có sẵn, không đụng ảnh — rẻ hơn một lượt phân tích ảnh, nhưng KHÔNG
+  // miễn phí: bỏ nó khỏi bảng này là mọi lượt sinh nội dung chạy ngoài sổ,
+  // không trừ hạn mức và không đối soát được với hoá đơn nhà cung cấp.
+  "product.copy.generate": 1,
   "media.optimize": 2,
+  // Biến thể marketing (M04b). Rẻ hơn một lượt tối ưu vì nó KHÔNG gọi lại
+  // mô hình tăng cường: chủ thể đã có sẵn trong Master Image, lượt này chỉ
+  // tách nền, ghép bối cảnh và đóng khung. Nhưng vẫn là một lượt chạy mô
+  // hình phân đoạn trên GPU, nên không đặt 0 — để 0 là mở lại đúng cái lỗ
+  // mà P24 vừa vá: một đường chạy AI không đi qua sổ nào.
+  //
+  // Con số này là giả định tạm, cùng hạng với cả bảng — chốt giá thật cho
+  // biến thể là nợ #64 (D14), chờ chủ sản phẩm.
+  "media.variant": 1,
   "catalog.generate": 1,
   "landing.generate": 1,
   "video.render": 5,
+  "chat.channel.messenger_monthly": 50,
+  "chat.channel.zalo_monthly": 70,
+  "chat.channel.embed_monthly": 30,
+  "chat.message.ai_reply": 1,
 }
 
 const DEFAULT_COST_CREDIT = 1

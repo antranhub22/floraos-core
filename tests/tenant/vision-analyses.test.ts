@@ -212,9 +212,14 @@ describe("cách ly tenant — M01 phân tích ảnh (P5)", () => {
   })
 
   describe("bộ máy phân tích — Điều hành chọn cho cả tổ chức (H4)", () => {
-    it("chưa chọn gì thì chạy bộ mặc định (openai_direct), và liệt kê đủ ba bộ", async () => {
+    it("chưa chọn gì thì chạy bộ mặc định (openai_structured), và liệt kê đủ ba bộ", async () => {
       const body = await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, a.token)))
-      expect(body.dang_dung).toBe("openai_direct")
+      // Đọc từ `VISION_ENGINE_MAC_DINH` (`domain/vision-engine.ts`). Giá trị
+      // này đã lật hai lần (`local_cv` → `openai_direct` → `openai_structured`)
+      // mà không lần nào ca thử bắt được, vì tệp này im lặng suốt thời gian
+      // `server-only` làm nó không nạp nổi. Chốt lại với chủ sản phẩm 09/17:
+      // `openai_structured` là bộ mặc định đúng.
+      expect(body.dang_dung).toBe("openai_structured")
       expect((body.danh_sach as { key: string }[]).map((b) => b.key)).toEqual([
         "openai_structured",
         "openai_direct",
@@ -278,8 +283,15 @@ describe("cách ly tenant — M01 phân tích ảnh (P5)", () => {
           body: JSON.stringify({ bo_may: "openai_direct" }),
         })
       )
+      // B phải đọc ra bộ MẶC ĐỊNH, không phải bộ A vừa chọn.
+      //
+      // Bản trước kỳ vọng `openai_direct` ở đây — trùng khít với chính giá
+      // trị A vừa đặt, nên ca thử xanh dù lựa chọn của A có rò sang B hay
+      // không. Nó chỉ xanh được vì lúc đó `openai_direct` cũng đang là mặc
+      // định. Kỳ vọng mặc định `openai_structured` mới thật sự phân biệt
+      // được hai trường hợp.
       const cuaB = await readJson(await getEngineRoute(withSession(`${BASE}/vision/engine`, b.token)))
-      expect(cuaB.dang_dung).toBe("openai_direct")
+      expect(cuaB.dang_dung).toBe("openai_structured")
     })
 
     it("bộ máy CHỐT vào payload của job lúc tạo, không tra lại lúc worker nhận việc", async () => {

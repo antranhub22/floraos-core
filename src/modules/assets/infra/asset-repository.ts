@@ -185,6 +185,27 @@ export class AssetRepository {
     })
   }
 
+  /**
+   * Mọi asset do MỘT job sinh ra, lọc theo vai trò — M04b (P24).
+   *
+   * Khác `findMasterByJobId` ở chỗ một lượt M04b sinh NHIỀU asset cùng lúc
+   * (tách nền, bối cảnh, bản có watermark), nên đây trả danh sách chứ không
+   * trả bản mới nhất. Vẫn tra `metadata.job_id` vì `assets` không có cột
+   * `job_id` (đặc tả 07 mục 5), và vẫn đi qua `scopedWhere`.
+   *
+   * Thứ tự `created_at` tăng dần là thứ tự worker ghi, tức thứ tự giao diện
+   * bày ra — biến thể tách nền luôn đứng đầu.
+   */
+  listByJobId(ctx: TenantContext, jobId: string, kind: asset_kind): Promise<assets[]> {
+    return this.db.assets.findMany({
+      where: scopedWhere(ctx, {
+        kind,
+        metadata: { path: ["job_id"], equals: jobId },
+      }),
+      orderBy: [{ created_at: "asc" }, { id: "asc" }],
+    })
+  }
+
   /** Các bản dẫn xuất của một asset — "kèm các tỉ lệ" (đặc tả 06 mục 11). */
   listDerivedFrom(ctx: TenantContext, parentAssetId: string): Promise<assets[]> {
     return this.db.assets.findMany({

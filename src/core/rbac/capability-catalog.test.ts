@@ -21,15 +21,15 @@ const VAI_TO_KEY: Record<string, "dieu_hanh" | "dieu_phoi" | "sale"> = {
 const HARVESTED_CODES = MOI_MA.filter((ma) => /^[A-E]\d+$/.test(ma))
 
 describe("danh mục năng lực — đặc tả 02", () => {
-  it("121 mã: 76 thu hoạch (A–E) cộng 45 mã mới (F–L, cộng U1–U4 của đợt AI-1, cộng H5–H6 của P14)", () => {
+  it("143 mã: 76 thu hoạch (A–E) cộng 67 mã mới (F–L, U1–U4, H5–H6, R1–R8, Q1–Q8, T1–T4, I4–I5 của M04b)", () => {
     expect(HARVESTED_CODES.length).toBe(76)
-    expect(ALL_CAPABILITY_CODES.length).toBe(121)
+    expect(ALL_CAPABILITY_CODES.length).toBe(143)
   })
 
-  it("18 mã thu hoạch có trần cứng, tổng cả catalog là 35 — thêm U2, U3 của đợt AI-1 (`YC-Q3`) và H6 của P14", () => {
+  it("18 mã thu hoạch có trần cứng, tổng cả catalog là 39 — thêm I5, cổng duyệt biến thể M04b", () => {
     const harvestedHardCap = HARVESTED_CODES.filter((ma) => khai(ma).tranCung)
     expect(harvestedHardCap.length).toBe(18)
-    expect(HARD_CAPPED_CODES.length).toBe(35)
+    expect(HARD_CAPPED_CODES.length).toBe(39)
   })
 
   it("mỗi mã A–E khớp nguyên vẹn với bản harvest — không lệch khi mã nguồn đổi", () => {
@@ -80,8 +80,8 @@ describe("danh mục năng lực — đặc tả 02", () => {
     }
   })
 
-  it("năm cặp chạy/duyệt tách rời, không cặp nào gói chung (`YC-Q6`)", () => {
-    expect(SPLIT_CAPABILITY_PAIRS).toHaveLength(5)
+  it("sáu cặp chạy/duyệt tách rời, không cặp nào gói chung (`YC-Q6`)", () => {
+    expect(SPLIT_CAPABILITY_PAIRS).toHaveLength(6)
     for (const pair of SPLIT_CAPABILITY_PAIRS) {
       expect(pair.run).not.toBe(pair.approve)
       expect(isCapabilityCode(pair.run)).toBe(true)

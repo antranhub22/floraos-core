@@ -42,6 +42,7 @@ from typing import Any
 import psycopg
 from psycopg.rows import dict_row
 
+from shared.storage import doc_bytes, ghi_bytes
 from media_ai.guard.compare import REJECTED
 from media_ai.guard.verifier import VisionIdentityVerifier
 from media_ai.providers.enhancement.router import resolve_enhancer
@@ -60,13 +61,13 @@ def notify_channel_for(feature: str) -> str:
 
 
 def _read_bytes(storage_key: str) -> bytes:
-    return (STORAGE_ROOT / storage_key).read_bytes()
+    """Qua `shared.storage`: cùng bốn biến môi trường với phía web, nên ảnh
+    do web nhận nằm đúng chỗ worker tìm."""
+    return doc_bytes(storage_key, STORAGE_ROOT)
 
 
 def _write_bytes(storage_key: str, data: bytes) -> None:
-    path = STORAGE_ROOT / storage_key
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
+    ghi_bytes(storage_key, data, "application/octet-stream", STORAGE_ROOT)
 
 
 def _emit_event(conn: psycopg.Connection, job_id: str, event: str, payload: dict) -> None:
@@ -406,21 +407,33 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
     channel = notify_channel_for(FEATURE)
     video_feature = "video.render"
     video_channel = notify_channel_for(video_feature)
+    variant_feature = "media.variant"
+    variant_channel = notify_channel_for(variant_feature)
 
     cleaned_url = _clean_database_url(database_url)
     with psycopg.connect(cleaned_url, autocommit=True) as conn:
         with conn.cursor() as cur:
             cur.execute(f"LISTEN {channel}")
             cur.execute(f"LISTEN {video_channel}")
+            cur.execute(f"LISTEN {variant_channel}")
 
         while True:
+            # Thứ tự ưu tiên là thứ tự người dùng chờ: M04a đứng trước M04b vì
+            # không có Master Image thì không có biến thể nào để dựng.
             # 1. Xử lý tác vụ tối ưu ảnh M04a
             job = claim_next(conn, FEATURE)
             if job is not None:
                 process_job(conn, job, verifier, enhancer, reframer)
                 continue
 
-            # 2. Xử lý tác vụ dựng video M04c
+            # 2. Xử lý tác vụ dựng biến thể marketing M04b
+            variant_job = claim_next(conn, variant_feature)
+            if variant_job is not None:
+                from media_ai.jobs.variant_worker import process_variant_job
+                process_variant_job(conn, variant_job)
+                continue
+
+            # 3. Xử lý tác vụ dựng video M04c
             video_job = claim_next(conn, video_feature)
             if video_job is not None:
                 from media_ai.video.video_worker import process_video_job

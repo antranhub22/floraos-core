@@ -32,6 +32,9 @@ export type CapabilityGroup =
   | "product_pricing"
   | "experience"
   | "ai_policy"
+  | "order_operations"
+  | "crm"
+  | "ai_chat"
 
 export interface CapabilityDefinition {
   /** Mã chữ cái — định danh chính, ví dụ `B5`. */
@@ -170,6 +173,8 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   I1: { name: "media.optimize", group: "media", label: "Chạy job tối ưu ảnh", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   I2: { name: "media.approve", group: "media", label: "Nâng Master Image thành ảnh chính thức của sản phẩm", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   I3: { name: "media.download", group: "media", label: "Tải ảnh đã tối ưu về máy", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  I4: { name: "media.variant.run", group: "media", label: "Dựng biến thể marketing từ Master Image đã duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  I5: { name: "media.variant.approve", group: "media", label: "Duyệt một biến thể marketing thành ảnh dùng được", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // J — Kênh bán
   J1: { name: "catalog.create", group: "channel", label: "Tạo catalog", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   J2: { name: "catalog.publish", group: "channel", label: "Xuất bản catalog", defaultRoles: ["dieu_hanh"] },
@@ -197,6 +202,29 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   U4: { name: "ai.eval.read", group: "ai_policy", label: "Xem điểm chấm của một đầu ra AI", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   K1: { name: "experience.use", group: "experience", label: "Dùng workspace trải nghiệm trong hạn mức", defaultRoles: ["experience_user"] },
   K2: { name: "experience.convert", group: "experience", label: "Chuyển workspace trải nghiệm thành tổ chức thật", defaultRoles: ["experience_user", "dieu_hanh"] },
+  // R — Đơn hàng và vận hành (M10, P22 — đặc tả 02 mục 4, đặc tả 07 mục 12)
+  R1: { name: "order.read", group: "order_operations", label: "Xem đơn hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  R2: { name: "order.create", group: "order_operations", label: "Tạo đơn hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  R3: { name: "order.update", group: "order_operations", label: "Sửa đơn và cập nhật trạng thái sản xuất", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  R4: { name: "order.assign", group: "order_operations", label: "Phân công thợ cắm cho một đơn", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  R5: { name: "delivery.manage", group: "order_operations", label: "Theo dõi và cập nhật giao hàng, đặt khung giờ", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  R6: { name: "order.cancel", group: "order_operations", label: "Huỷ một đơn hàng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  R7: { name: "order.print", group: "order_operations", label: "In phiếu đơn và phiếu sản xuất", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  R8: { name: "order.card_message.manage", group: "order_operations", label: "Quản lý lời nhắn thiệp của đơn", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  // Q — CRM & Khách hàng ngành hoa (M09, P21)
+  Q1: { name: "crm.customer.read", group: "crm", label: "Xem thông tin khách hàng và hồ sơ RFM", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  Q2: { name: "crm.customer.create", group: "crm", label: "Thêm khách hàng mới", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  Q3: { name: "crm.customer.update", group: "crm", label: "Cập nhật hồ sơ, sở thích hoa và phân tầng khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  Q4: { name: "crm.customer.delete", group: "crm", label: "Xoá khách hàng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  Q5: { name: "crm.occasion.manage", group: "crm", label: "Thêm và quản lý ngày kỷ niệm của khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  Q6: { name: "crm.consent.manage", group: "crm", label: "Cập nhật quyền riêng tư và sự đồng ý nhận tin", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  Q7: { name: "crm.campaign.suggest", group: "crm", label: "Quét và chạy AI gợi ý nhắc mua theo dịp", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  Q8: { name: "crm.voucher.manage", group: "crm", label: "Tạo và quản lý voucher tri ân khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  // T — AI Chat Assistant & Hội thoại (M08, P23)
+  T1: { name: "chat.conversation.read", group: "ai_chat", label: "Xem lịch sử hội thoại và tin nhắn tư vấn", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  T2: { name: "chat.message.send", group: "ai_chat", label: "Gửi tin nhắn tư vấn và trò chuyện với AI", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  T3: { name: "chat.order.create", group: "ai_chat", label: "Tạo đơn hàng nhanh từ gợi ý trong hội thoại", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  T4: { name: "chat.config.manage", group: "ai_chat", label: "Cài đặt bot tự động và phong cách xưng hô", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
 }
 
 const ALL: Record<string, Omit<CapabilityDefinition, "code">> = { ...HARVESTED, ...CORE_NEW }
@@ -230,7 +258,7 @@ export const HARD_CAPPED_CODES: readonly string[] = ALL_CAPABILITY_CODES.filter(
 )
 
 /**
- * Bốn cặp chạy/duyệt tách rời — đặc tả 02 mục 5. Gói chung bất kỳ cặp nào là
+ * Sáu cặp chạy/duyệt tách rời — đặc tả 02 mục 5. Gói chung bất kỳ cặp nào là
  * lỗi chặn ở review (`YC-Q6`); danh sách này là chỗ một bộ test khoá bất biến
  * đó lại.
  */
@@ -240,6 +268,7 @@ export const SPLIT_CAPABILITY_PAIRS: ReadonlyArray<{
 }> = [
   { run: "H1", approve: "H3" },
   { run: "I1", approve: "I2" },
+  { run: "I4", approve: "I5" },
   { run: "J1", approve: "J2" },
   { run: "J3", approve: "J4" },
   { run: "H5", approve: "H6" },

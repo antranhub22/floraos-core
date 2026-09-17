@@ -106,6 +106,7 @@ describe("cách ly tenant — M01b dữ liệu bán hàng sản phẩm (P14)", (
     const response = await generateProductCopyRoute(
       withSession(`${BASE}/product-copies/generate`, b.token, {
         method: "POST",
+        headers: { "idempotency-key": randomUUID() },
         body: JSON.stringify({ analysisId: analysis.id }),
       })
     )
@@ -130,6 +131,7 @@ describe("cách ly tenant — M01b dữ liệu bán hàng sản phẩm (P14)", (
     const response = await generateProductCopyRoute(
       withSession(`${BASE}/product-copies/generate`, a.token, {
         method: "POST",
+        headers: { "idempotency-key": randomUUID() },
         body: JSON.stringify({ analysisId: analysis.id }),
       })
     )
@@ -144,13 +146,12 @@ describe("cách ly tenant — M01b dữ liệu bán hàng sản phẩm (P14)", (
     const response = await generateProductCopyRoute(
       withSession(`${BASE}/product-copies/generate`, a.token, {
         method: "POST",
+        headers: { "idempotency-key": randomUUID() },
         body: JSON.stringify({ analysisId: analysis.id }),
       })
     )
 
-    console.log("Status:", response.status)
-    const body = await readJson(response) as { copyId: string; raw: Record<string, unknown> }
-    console.log("Body:", JSON.stringify(body, null, 2))
+    const body = (await readJson(response)) as { copyId: string; raw: Record<string, unknown> }
     expect(response.status).toBe(200)
     expect(typeof body.copyId).toBe("string")
     expect(typeof body.raw).toBe("object")
@@ -161,9 +162,15 @@ describe("cách ly tenant — M01b dữ liệu bán hàng sản phẩm (P14)", (
     const assetOfA = await seedAsset(a.ctx)
     const analysis = await seedApprovedAnalysis(a.ctx, assetOfA)
 
+    // CÙNG một khoá cho cả hai lượt — đó chính là điều ca thử này khoá lại
+    // (`YC-U7`): gọi lại với cùng `Idempotency-Key` trả về bản ghi cũ chứ
+    // không sinh bản mới và không tiêu tiền nhà cung cấp lần hai.
+    const idempotencyKey = randomUUID()
+
     const first = await generateProductCopyRoute(
       withSession(`${BASE}/product-copies/generate`, a.token, {
         method: "POST",
+        headers: { "idempotency-key": idempotencyKey },
         body: JSON.stringify({ analysisId: analysis.id }),
       })
     )
@@ -173,6 +180,7 @@ describe("cách ly tenant — M01b dữ liệu bán hàng sản phẩm (P14)", (
     const second = await generateProductCopyRoute(
       withSession(`${BASE}/product-copies/generate`, a.token, {
         method: "POST",
+        headers: { "idempotency-key": idempotencyKey },
         body: JSON.stringify({ analysisId: analysis.id }),
       })
     )

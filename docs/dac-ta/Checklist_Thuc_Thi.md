@@ -320,12 +320,14 @@ SERVER-SIDE.*
 
 ## P16 — M04b ảnh marketing · MVP
 
-- [x] Màn soạn chỉ bày Master Image `APPROVED`; ảnh gốc không xuất hiện như một lựa chọn (`YC-M1`) — Card Master Picker (`creative-studio/page.tsx`) chỉ bày Master Image đã duyệt từ Cổng 2 M04a
+- [x] Màn soạn chỉ bày Master Image `APPROVED`; ảnh gốc không xuất hiện như một lựa chọn (`YC-M1`) — đúng từ P24: bản P16 còn một chuỗi lùi xuống ảnh `ORIGINAL` rồi xuống một ảnh mẫu trên Unsplash
 - [x] Biến thể không gọi lại lớp tăng cường và không sinh pixel mới trên sản phẩm (`YC-M2`) — M04b chỉ soạn bối cảnh (Backdrop Presets), bóc tách phông (Alpha Matting) và Watermark, không thay đổi nhận dạng sản phẩm
 - [x] Đường sửa ánh sáng, màu, hình dáng bó hoa mở đúng luồng M04a với Identity Guard (`YC-M3`)
-- [x] Xoá nền, đổi nền, mở rộng khung, retouch, watermark chạy được trên dữ liệu thật — tích hợp trực tiếp Core qua `POST /api/v1/media/background-removal`, mô hình AI `bria-rmbg` & `u2net`, kết hợp Client Compositor Fallback an toàn
-- [x] Watermark và thư viện nền là cấu hình cấp tổ chức, gác bằng `P5` và `I4` (`YC-M8`)
-- [x] Cặp `P1` ↔ `P2` không gói chung; chỉ biến thể được đánh dấu giữ lại mới vào hàng chờ duyệt
+- [x] Xoá nền, đổi nền, watermark chạy được trên dữ liệu thật — từ P24 qua `POST /api/v1/media/variants` và worker `variant_worker.py`; đường cũ (`/media/background-removal` + Client Compositor) đã đóng vì không có tổ chức, không có credit và không ghi `assets`
+- [ ] Mở rộng khung ảnh và banner ngang — **chưa có mã**, `_dong_khung` hiện ĐỆM chứ không sinh thêm hậu cảnh
+- [x] Watermark là cấu hình cấp tổ chức (`brand_profiles.logo_asset_id`), gác bằng `I4` — mã năng lực `I4` dựng thật ở P24
+- [ ] Thư viện nền theo từng tổ chức — **chưa có mã**, sáu bối cảnh hiện là hằng trong `variant-presets.ts` dùng chung cho mọi tiệm
+- [x] Cặp chạy ↔ duyệt không gói chung — ở M04b là `I4` ↔ `I5` (P24), không phải `P1` ↔ `P2` của M04c; chỉ biến thể chưa duyệt mới nằm trong hàng chờ
 - [x] Dẫn xuất hoàn tất đăng ký về `assets` của core qua P15
 
 ### P16+ — Đợt hoàn thiện Commercial Ready (09/14): Bria-RMBG + Studio Compositor + Bảo toàn 100% cuống hoa
@@ -425,13 +427,77 @@ SERVER-SIDE.*
 - [ ] In phiếu đơn và phiếu sản xuất làm được từ điện thoại
 - [ ] Luồng chào giá thu hoạch từ v1 chạy được theo bảng nghiệm thu của `BAN_GIAO.md` (nợ #26)
 
-## P23 — M08 trợ lý hội thoại
+## P23 — M08 trợ lý hội thoại · hoàn tất 09/16
 
-- [ ] Trả lời từ Product Master, giá đã duyệt và vùng giao hàng của chính tổ chức (`YC-H1`)
-- [ ] Câu trả lời về giá đọc từ engine giá; `price_source` ghi quy tắc đã dùng (`YC-H2`)
-- [ ] Đường chuyển cho người thật luôn có, gác bằng `T4` (`YC-H3`)
-- [ ] Trả lời tự động bật tắt bằng `T3` trần cứng; mỗi tin tự động mang `is_automated` trong bản ghi (`YC-H4`)
-- [ ] Hội thoại lọc theo tổ chức; bộ test cách ly phủ cả hai bảng
+- [x] Trả lời từ Product Master Index, giá đã duyệt và vùng giao hàng của chính tổ chức (`YC-H1`) — `listProductMasterIndex()` & `flower-consultant-rules.ts`
+- [x] Câu trả lời về giá đọc từ engine giá và Master Index (`YC-H2`)
+- [x] Đường chuyển cho người thật luôn có, gác bằng `T4` (`YC-H3`) — chốt chặn Aegis tự ngắt AI khi hết credit và mời nhân viên chat thủ công
+- [x] Trả lời tự động bật tắt bằng `T4` trần cứng; cấu hình đa kênh theo từng shop (`YC-H4`) — `configure-chat-channel.ts`
+- [x] Hội thoại lọc theo tổ chức; bộ test cách ly phủ cả 3 bảng — `chat-isolation.test.ts` (3/3), `chat-channel-isolation.test.ts` (2/2)
+- [x] Tích hợp Đa Kênh Omnichannel (E-Catalog, Landing Page, Messenger, Zalo OA, Website ngoài) kèm cơ chế định giá & thu phí credit FloraOS-core
+- [x] Trợ lý nổi In-App Copilot `<FloraOSGlobalCopilot />` (`Cmd+K`) hướng dẫn vận hành M01–M10 kèm Deep Link chuyển trang
+- [x] **Kiến trúc AI Engine Đa Tầng (Multi-tier Pluggable Fallback)**: Dify -> OpenAI Direct (`gpt-4o-mini`, giải quyết triệt để vấn đề rập khuôn, lặp từ) -> Local Qwen 2.5:7b (Ollama 0 VNĐ / 0 Token) -> Local Rule Engine (offline 100%)
+- [x] **Cẩm nang Tri thức & Nhập liệu SSOT (`/tri-thuc`)**: Chuẩn hóa Atomic Disaggregated Fields cho 7 phân hệ, so sánh trực quan Good vs Bad, checklist Onboarding Progress Bar đo lường mức độ sẵn sàng dữ liệu
+- [x] **Tái cấu trúc Sidebar Navigation (`desktop-nav.tsx`)**: Đưa Tri thức & Nhập liệu (`/tri-thuc`) và AI Chat Assistant (`/hoi-thoai`) lên vị trí trung tâm nổi bật, kèm nút Copilot (Cmd+K) chân sidebar
+- [x] **Đồng bộ Quyền RBAC T1–T4**: Cấp quyền đầy đủ cho 4 vai hệ thống trong `role_capabilities`
+- [x] Đặc tả kiến trúc SSOT: `docs/kien-truc/FLORAOS_AI_CHAT_ASSISTANT_OMNICHANNEL_ARCHITECTURE.md`
+- [x] Bộ test xanh toàn diện: `npm test` **414/414 passed**, `tsc --noEmit` **SẠCH 100%**
+
+## P24 — M04b về đúng kiến trúc job · hoàn tất 09/17
+
+Đợt này không thêm tính năng cho M04b. Nó đưa M04b ra khỏi đường chạy riêng
+và về đúng kiến trúc job mà cả hệ thống đang dùng: hàng đợi, tổ chức, credit,
+cổng duyệt. Bốn ô của P16 phía dưới được chỉnh lại theo mã thật trong cùng
+đợt.
+
+### Đóng đường chạy ngoài kiến trúc
+
+- [x] `POST /api/v1/media/background-removal` đóng, trả 409 kèm đường thay thế — endpoint cũ không `requireTenantContext`, không `requireCapability`, không `organization_id`, không trừ credit
+- [x] Gỡ `spawn` Python + parse stdout khỏi tiến trình web (`scripts/media/process_m04b_variants.py` rỗng hoá) — vi phạm luật ở `AGENTS.md`
+- [x] Bịt SSRF: tập lệnh cũ nhận `image_url` tuỳ ý rồi `urlopen` thẳng vào đó; worker mới đọc ảnh nguồn theo `asset_id` trong cơ sở dữ liệu
+- [x] Gỡ bộ dựng ảnh phía trình duyệt (`src/lib/variant-compositor.ts` rỗng hoá) — ảnh do canvas vẽ không có dòng `assets`, tắt tab là mất
+- [x] Gỡ ảnh mẫu Unsplash trong chuỗi lùi của giao diện — người bán có thể đem ảnh của người khác đi đăng mà không biết
+
+### Đường chạy mới
+
+- [x] `media.variant` đi qua `enqueueJob` của P3: cùng đường hạn mức, cùng giao dịch, cùng `Idempotency-Key` (`request-variants.ts`)
+- [x] Bảng giá `media.variant` = 1 credit (`usage/domain/pricing.ts`); giá thật chờ D14, nợ #64
+- [x] Cặp năng lực `I4` (chạy) ↔ `I5` (duyệt, trần cứng `dieu_hanh`), vào `SPLIT_CAPABILITY_PAIRS` — 143 mã / 39 trần cứng
+- [x] Bốn route `/api/v1/media/variants*`: tạo, đọc, duyệt, tải về; duyệt và tải về tách nhau (`I5` ↔ `I3`, M04 mục 5.1)
+- [x] Worker `workers/media_ai/jobs/variant_worker.py` lấy việc bằng `SKIP LOCKED` + `LISTEN/NOTIFY`, nối vào vòng của `jobs/worker.py`
+- [x] Bốn `stage` thật: `SEGMENTING` → `COMPOSING` → `VERIFYING` → `GENERATING_OUTPUTS`; giao diện đọc `stage`, không chạy `setTimeout`
+- [x] Biến thể ghi thành `assets` `kind = MARKETING`, `approval_state = PENDING`, `parent_asset_id` trỏ Master đã duyệt
+- [x] Watermark lấy logo thật từ `brand_profiles.logo_asset_id`, lùi về TÊN TIỆM (`organizations.name`) khi chưa có logo — bỏ chuỗi cứng "FloraOS Tiệm Hoa" đóng tên nền tảng lên hàng của người bán
+
+### Cổng Subject Integrity
+
+- [x] Đo tỷ lệ điểm ảnh LÕI chủ thể còn trùng khít với Master Image (mặt nạ co biên, nên viền được làm mềm không tính là sai lệch)
+- [x] Ba ngưỡng trong `variant-rules.ts`: `SAFE` ≥ 0,999 · `WARNING` ≥ 0,99 · dưới nữa là `REJECTED`
+- [x] `REJECTED` thì worker KHÔNG ghi asset nào — không có dòng nào thì không có đường nào để ảnh lọt ra qua endpoint tải về
+- [x] Phía TS TÍNH LẠI phán quyết từ số đo, không tin `result` worker gửi kèm — ngưỡng là luật nghiệp vụ, để hai nơi cùng giữ là để hai nơi cùng lệch
+- [x] Gỡ ba hằng số `integrityScore: 100 / 99 / 98` gõ tay trong giao diện; thay bằng số đo thật, hiển thị hai chữ số thập phân
+
+### Giao diện
+
+- [x] Khu vực B chỉ bày Master Image `APPROVED`; hết Master đã duyệt thì nói thẳng và mời sang Khu vực A, không lùi xuống ảnh `ORIGINAL`
+- [x] Bỏ nút "Lưu nháp" — nút cũ bật một cờ rồi tự tắt sau hai giây, không lưu gì
+- [x] Năm ô mô tả biến thể chuyển sang `readonly` — sửa ô mô tả không đổi được tấm ảnh đã dựng
+- [x] Nhãn chi phí nói đúng bảng giá (1 credit/lượt), thay cho "2-3 credits" ghi cứng
+- [x] Cảnh báo trước khi duyệt khi lõi lệch nhẹ (cùng luật `YC-R6` của M04a)
+
+### Kiểm thử
+
+- [x] `src/modules/media/domain/__tests__/variant-rules.test.ts` — 17 ca luật thuần, không cần cơ sở dữ liệu
+- [x] `workers/tests/media_ai/test_variant_worker.py` — 13 ca, gồm ca khoá "làm mờ cả chủ thể phải bị bắt" và ca khoá "làm mềm viền không được kêu báo động"
+- [x] `tests/tenant/media-variants.test.ts` — 22 ca cách ly tenant: Master tổ chức khác, Master chưa duyệt, asset của job khác, duyệt hai lần, tải về ≠ duyệt, hàng chờ duyệt
+- [x] Nghiệm thu bốn lệnh trên máy thật (09/17): `npm test` **479/479** (66 tệp) · `npm run test:tenant` **200/200** (25/25 tệp) · `cd workers && .venv/bin/python -m pytest tests -q` **229/229** · `npx tsc --noEmit` **sạch**
+
+### Việc phát sinh trong lượt nghiệm thu — sửa cùng đợt
+
+- [x] `server-only` làm NĂM suite `tests/tenant/` tắt ở bước NẠP (`assets-m04b`, `integration`, `media-optimizations`, `vision-analyses`, `media-variants`); trả bằng alias sang `tests/helpers/server-only-stub.ts` trong `vitest.config.ts` — nợ #81
+- [x] `product-copies.test.ts` không gửi `Idempotency-Key` nên bốn ca dừng ở 400; ca "idempotent" nay dùng CÙNG một khoá cho hai lượt gọi — nợ #82
+- [x] Bộ máy Vision mặc định chốt là `openai_structured`; ca "lựa chọn của A không ảnh hưởng B" sửa lại cho thật sự phân biệt được rò rỉ — nợ #83
+- [x] `test:tenant` từ **6 tệp đỏ về 0** — bốn suite trong số đó đã đỏ từ trước lượt này
 
 ## AI-1 — Cổng AI và hai sổ đăng ký · hoàn tất 09/12 · chặn P16, P17, P18
 
@@ -506,9 +572,9 @@ FFmpeg trong sổ đăng ký.
 
 - [ ] **#4 — AI Content Engine** — chờ P18 (M07)
 - [ ] **#5 — Social Publishing** — chờ P18 (M07)
-- [ ] **#7 — CRM & Khách hàng** — chờ P21 (M09)
-- [ ] **#8 — Đơn hàng & Vận hành** — chờ P22 (M10)
-- [ ] **#9 — AI Chat Assistant** — chờ P23 (M08)
+- [x] **#7 — CRM & Khách hàng** — hoàn tất P21 (M09, 09/16)
+- [x] **#8 — Đơn hàng & Vận hành** — hoàn tất P22 (M10, 09/16)
+- [x] **#9 — AI Chat Assistant** — hoàn tất P23 (M08, 09/16)
 
 **Checklist chi tiết hợp nhất:** [`docs/UIUX-Execution-Checklist.md`](file:///Users/tuan/Projects/floraos-core/docs/UIUX-Execution-Checklist.md) (tổng hợp feature-level và API integration của toàn bộ 10 chức năng)
 

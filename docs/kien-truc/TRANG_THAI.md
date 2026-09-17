@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-16 (P17 M04c AI Video Studio chuyển trạng thái HOẠT ĐỘNG 100% Production & Commercial Ready + Động cơ Ken Burns + Provider Cắm Rút; M06/M05 Catalog & Website) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-17 (P24 — M04b về đúng kiến trúc job: đóng endpoint không khoá cửa, cổng Subject Integrity đo được, cặp năng lực `I4`↔`I5`) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -9,6 +9,60 @@
 ---
 
 ## 1. Đang ở đâu
+
+**P24 — M04b về đúng kiến trúc job (09/17). Nghiệm thu xong trên máy thật.**
+Đợt này không thêm tính năng cho M04b mà đưa nó ra khỏi đường chạy riêng, về đúng kiến trúc job của cả hệ thống.
+
+Bốn điểm đã đóng, mỗi điểm đều đủ để chặn go-live:
+- `POST /api/v1/media/background-removal` chạy mô hình AI mà **không đòi đăng nhập, không kiểm năng lực, không gắn `organization_id`, không trừ credit**. Nay đóng, trả 409 kèm đường thay thế.
+- Endpoint đó `spawn` Python rồi đọc stdout ngay trong tiến trình web — trái luật ở `AGENTS.md` (*"Cấm `subprocess` + parse stdout. Cấm chạy job qua HTTP"*).
+- Tập lệnh nó gọi nhận `image_url` tuỳ ý từ payload rồi `urlopen` thẳng vào đó. Cộng với việc không đòi đăng nhập: bất kỳ ai cũng sai khiến được máy chủ đi lấy một địa chỉ bất kỳ, gồm cả điểm cuối metadata của nhà cung cấp đám mây (SSRF).
+- Biến thể trả về dưới dạng base64 trong JSON: không có dòng `assets`, không vào kho tệp, tắt tab là mất, không duyệt được, không đem đăng được.
+
+Đường chạy mới:
+- `media.variant` qua `enqueueJob` của P3 — cùng đường hạn mức, cùng giao dịch, cùng `Idempotency-Key`. Giá 1 credit/lượt (giá thật chờ D14, nợ #64).
+- Cặp năng lực `I4` (chạy) ↔ `I5` (duyệt, trần cứng `dieu_hanh`) — danh mục thành **143 mã / 39 trần cứng**.
+- Bốn route `/api/v1/media/variants*`; duyệt (`I5`) và tải về (`I3`) tách nhau đúng M04 mục 5.1.
+- Worker `workers/media_ai/jobs/variant_worker.py` lấy việc bằng `SKIP LOCKED` + `LISTEN/NOTIFY`, bốn `stage` thật mà giao diện đọc thẳng — thay cho ba nhãn chạy theo `setTimeout`.
+- Biến thể ghi thành `assets` `kind = MARKETING`, `approval_state = PENDING`, cha là Master đã duyệt.
+- Watermark lấy logo thật ở `brand_profiles.logo_asset_id`, lùi về tên tiệm; bỏ chuỗi cứng "FloraOS Tiệm Hoa" đóng tên nền tảng lên hàng của người bán.
+
+Cổng **Subject Integrity** — thay cho ba con số ghi cứng:
+- M04b không sinh pixel mới trên bó hoa, nên "có giữ nguyên không" là một phép ĐO chứ không phải một nhãn. Worker đo tỷ lệ điểm ảnh **lõi** chủ thể còn trùng khít với Master Image; mặt nạ co biên trước khi so, nên phần viền được làm mềm có chủ đích không bị tính là sai lệch.
+- Ngưỡng: `SAFE` ≥ 0,999 · `WARNING` ≥ 0,99 · dưới nữa `REJECTED`. Bị từ chối thì worker **không ghi asset nào**.
+- Phía TS tính lại phán quyết từ số đo thay vì tin `result` worker gửi kèm — ngưỡng là luật nghiệp vụ, giữ ở hai nơi là để hai nơi cùng lệch.
+- Giao diện cũ hiển thị `100% / 99% / 98%` cho ba thẻ; ba giá trị đó là hằng số gõ tay trong `page.tsx`, không phép đo nào chạy.
+
+**Nghiệm thu (09/17):** `npm test` **479/479** · `npm run test:tenant` **200/200** (25/25 tệp) · `pytest` worker **229/229** · `npx tsc --noEmit` **sạch**.
+
+Lượt nghiệm thu này kéo theo ba việc sửa nằm ngoài phạm vi M04b, vì cả ba đang che mất nhau:
+- **`server-only` làm năm suite `tests/tenant/` tắt ở bước NẠP** — `assets-m04b`, `integration`, `media-optimizations`, `vision-analyses`, và `media-variants` mới. Đúng một tệp trong `src/` dùng nó (`storage-provider-factory.ts` của lượt gom kho S3/R2) và năm suite đọc tới nó qua chuỗi route → use-case → factory. Bốn suite đầu đã đỏ TRƯỚC lượt này; không ai thấy vì dòng tổng kết chỉ nói "6 failed" còn mục "Failed Suites" nằm giữa một output dài. Nợ #81.
+- **`product-copies.test.ts` không gửi `Idempotency-Key`**, trong khi route bắt buộc theo `YC-U7` và kiểm trước bước tra tổ chức. Nợ #82.
+- **Bộ máy Vision mặc định** đã lật hai lần mà ca thử khoá nó lại thì nằm trong tệp không nạp nổi. Chốt với chủ sản phẩm: `openai_structured`. Nợ #83.
+
+`test:tenant` sau lượt này từ **6 tệp đỏ về 0**.
+
+**P23 — M08 AI Chat Assistant & Tích Hợp Đa Kênh Omnichannel hoàn tất (09/16).**
+Phân hệ AI Chat Assistant (`src/modules/chat-assistant/`, `src/app/(app)/hoi-thoai/`, `src/components/chat/`) đạt chuẩn sẵn sàng thương mại toàn diện:
+- **Kiến trúc AI Engine Đa Tầng (Multi-tier Pluggable Fallback)**:
+  - Tầng 1: Dify API (khi cấu hình `DIFY_API_KEY`).
+  - Tầng 2: OpenAI API trực tiếp (`gpt-4o-mini` qua `OPENAI_API_KEY`), văn phong tự nhiên, ấm áp, giải quyết triệt để vấn đề câu trả lời bị lặp từ rập khuôn.
+  - Tầng 3: Local Qwen 2.5:7b qua Ollama (`http://127.0.0.1:11434`), chi phí **0 VNĐ / 0 Token**, chạy hoàn toàn offline on-premise trên máy tiệm hoa.
+  - Tầng 4: Local Deterministic Rule Engine bảo vệ hệ thống 100% không bao giờ crash nếu mất mạng hoặc thiếu API key.
+- **Trợ lý In-App Copilot toàn hệ thống (`<FloraOSGlobalCopilot />`)**: Phím tắt `Cmd+K`, trực tuyến 24/7, tự động giải đáp vận hành M01–M10 từ cẩm nang tri thức SSOT (`saas-knowledge-base.ts`) kèm nút Deep Link mở ngay màn hình tính năng.
+- **Cẩm Nang Tri Thức & Quy Chuẩn Nhập Liệu SSOT (`/tri-thuc`)**: Trang hướng dẫn chuẩn hóa các trường nguyên tử (Atomic Disaggregated Fields) cho 7 phân hệ cốt lõi, bảng so sánh trực quan Good vs Bad, và thanh tiến độ Onboarding đo lường mức độ sẵn sàng dữ liệu của tiệm.
+- **Tái cấu trúc Sidebar Navigation (`desktop-nav.tsx`)**: Đưa mục "Tri thức & Nhập liệu" (`/tri-thuc`) và "AI Chat Assistant" (`/hoi-thoai`) lên vị trí trung tâm nổi bật, kèm nút Copilot (Cmd+K) ở chân sidebar.
+- **Tích hợp Đa Kênh (Omnichannel)**: 5 kênh tiếp xúc khách hàng: E-Catalog (`/c/[slug]`), Landing Page chiến dịch, Facebook Messenger (Fanpage Graph API), Zalo OA (Zalo Open API), và Mã nhúng JavaScript 1 dòng cho website ngoài (WordPress, Haravan, Shopify).
+- **Cơ chế định giá & thu phí nền tảng (Monetization Engine)**: Mô hình phí thuê bao kênh (0 - 70 credit/tháng) và phí tin nhắn AI (1 credit / 10 tin) qua `src/modules/usage/`. Chốt chặn tài nguyên Aegis tự động ngắt AI khi hết credit và mời nhân viên chat thủ công.
+- **Đồng bộ Quyền RBAC**: Cấp đủ quyền `T1`–`T4` vào `role_capabilities` cho cả 4 vai hệ thống.
+- **Đặc tả kiến trúc SSOT**: `docs/kien-truc/FLORAOS_AI_CHAT_ASSISTANT_OMNICHANNEL_ARCHITECTURE.md`.
+- **Kiểm thử**: `npm test` **414/414 tests xanh** (59 files), `chat-channel-isolation.test.ts` **2/2 xanh thật**, `chat-isolation.test.ts` **3/3 xanh thật**, `khong-import-prisma-ngoai-infra.test.ts` **2/2 xanh sạch**, `npx tsc --noEmit` **SẠCH 100%**.
+
+**P22 — M10 Đơn Hàng & Vận Hành hoàn tất (09/16).**
+Bảng Kanban 4 cột, Event Sourcing, đo lường SLA 180 phút, bóc tách lát cắt Thợ cắm hoa xưởng (giấu 100% giá), phiếu giao hàng & thiệp A6. 4 bảng CSDL mới, 8 mã năng lực `R1`–`R8`. `order-isolation.test.ts` **5/5 xanh thật**.
+
+**P21 — M09 CRM & Quản Lý Khách Hàng hoàn tất (09/16).**
+Customer Master Index SSOT, phân tầng RFM tự động (VIP/Gold/Silver/Bronze/New), quét ngày kỷ niệm trước 14 ngày, Consent Engine quyền riêng tư. 4 bảng CSDL mới, 8 mã năng lực `Q1`–`Q8`. `customer-isolation.test.ts` **4/4 xanh thật**.
 
 **P17 — M04c AI Video Studio chuyển trạng thái HOẠT ĐỘNG 100% Production & Commercial Ready (09/16).**
 Phân hệ AI Video Studio (`src/app/(app)/video/page.tsx` + `src/modules/video-studio/` + `workers/media_ai/video/`) đạt chuẩn sẵn sàng thương mại toàn diện:
@@ -512,6 +566,14 @@ Hai quyết định chặn go-live, không chặn việc dựng lược đồ ha
 
 **Việc lớn tiếp theo (theo thứ tự ưu tiên):**
 
+0. **Dọn sau P24.** Nghiệm thu bốn lệnh đã xong (09/17). Còn lại: `git rm` ba tệp đã rỗng hoá ở P24
+    (`src/lib/variant-compositor.ts`, `scripts/media/process_m04b_variants.py`,
+    `src/app/api/v1/media/background-removal/route.ts` — tệp thứ ba giữ lại nếu còn bản
+    dựng giao diện cũ đang trỏ vào URL đó), và xoá
+    `src/app/api/v1/media/variants/_probe/depth-probe.txt`.
+    Sau khi xanh: soát lại `SOCIALFLOW_URL` — `POST /api/v1/proxy/api/m04b/background-removal`
+    ở SocialFlow vẫn là một đường chạy riêng chưa rà theo cùng chuẩn.
+
 1. **P15+ — Dashboard proxy: xác minh end-to-end trên máy thật.** Chạy SocialFlow 8000
     + core 3100, đăng nhập core, bấm Creative Studio → xoá nền một sản phẩm thật →
     ảnh nền về dashboard; kiểm 401 khi thiếu JWT, 403 khi tổ chức khác, 502 khi
@@ -609,6 +671,8 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | Ngày | Việc |
 |---|---|
+| 09/17 | **P24 nghiệm thu xong.** `npm test` 479/479 · `test:tenant` **200/200, 25/25 tệp** · `pytest` worker 229/229 · `tsc` sạch. Lượt nghiệm thu kéo theo ba việc sửa ngoài phạm vi M04b: alias `server-only` trong `vitest.config.ts` (năm suite `tests/tenant/` tắt ở bước NẠP, bốn trong số đó đỏ từ trước — nợ #81) · `Idempotency-Key` cho `product-copies.test.ts` (nợ #82) · chốt bộ máy Vision mặc định `openai_structured` (nợ #83). `test:tenant` từ 6 tệp đỏ về 0. |
+| 09/17 | **P24 — M04b về đúng kiến trúc job.** Đóng `POST /media/background-removal` (không auth, không RBAC, không tổ chức, không credit, `spawn` Python + parse stdout, SSRF qua `image_url`). Dựng `media.variant` qua `enqueueJob`: 4 route `/media/variants*`, cặp `I4`↔`I5` (143 mã / 39 trần cứng), worker `variant_worker.py` với 4 `stage` thật, biến thể ghi thành `assets` `MARKETING`/`PENDING` cha là Master đã duyệt, watermark lấy logo thật từ `brand_profiles`. Cổng **Subject Integrity** đo tỷ lệ điểm ảnh lõi chủ thể trùng khít Master (mặt nạ co biên), ba ngưỡng 0,999 / 0,99, `REJECTED` không ghi asset; thay ba hằng số `100/99/98` gõ tay trong giao diện. Gỡ bộ dựng canvas phía trình duyệt và ảnh mẫu Unsplash trong chuỗi lùi. Test mới: `variant-rules.test.ts` 17 ca ✅ · `test_variant_worker.py` 13 ca ✅ · `media-variants.test.ts` 22 ca (chưa chạy). **Bốn lệnh nghiệm thu chưa chạy trên máy thật.** |
 | 09/14 | **P14b M01c Thẻ chào sản phẩm & Kho Dữ Liệu (`/kho-du-lieu`) — hoàn tất.** Thẻ chào sản phẩm (`SalesPitchCard`, `sales-pitch-template.ts`) tổng hợp M01a + M01b: 100% chỉnh sửa 8 khối trường trước khi chốt, nút "Chốt duyệt & Xuất bản Final" (Badge FINAL), kiến trúc 3 tab hiển thị độc lập cách ly nội dung (Tab 1: Chỉnh sửa toàn bộ thông tin, Tab 2: Thẻ chào khách A6, Tab 3: Kịch bản Zalo 1-chạm copy), bộ công cụ xuất đa định dạng (Copy ảnh vào Zalo / Clipboard binary PNG, Tải PNG Retina 2x, Tải JPEG 95%, Xuất PDF A6 qua jsPDF). Tích hợp Kho Dữ Liệu Sản Phẩm độc lập (`/kho-du-lieu`) trên Sidebar chính DesktopNav với 3 phân vùng quản lý (Ảnh gốc, Ảnh đã duyệt chờ sinh dữ liệu, Sale Pitch hoàn thành) và liên kết 2 chiều sang `/tai-anh`. Layout `/tai-anh` khôi phục full-width. Unit test `sales-pitch-template.test.ts` 3/3 xanh. |
 | 09/14 | **OpenAI Structured chạy trên ảnh thật.** Gọi `gpt-4o-mini` qua `OpenAIStructuredProvider` trên 4/8 ảnh vàng (g001, g002, g010, g011) → `golden/ai-proposals-openai/`. Kết quả: damaged_count 4/4 đúng, bud_count 2/2 đúng, flower_count AI ước tính (người không đếm được do occlusion). Xem `golden/ai-accuracy-report-openai.csv`. Nợ #24a: 4 ảnh còn lại. |
 | 09/14 | **P5 M01 Vision Worker + P14 M01b Product Copy — hoàn tất, tài liệu cập nhật.** CHECKLIST_AI_CAPABILITIES_BUILD.md §3.1/§3.2 tích xanh (M01 worker: `vision.analyze` handler, `DETECTING`→`COMPLETED`, `OK`/`LOW_CONFIDENCE`; M01b: `product.copy.generate` via `callCapability` trực tiếp, AIC-04 wrapping AIC-07/08/09/10). Checklist_Thuc_Thi.md P14 tích đầy đủ 6/6 (kể cả `phong_cach`→`suggested_style`/`dip_su_dung`→`occasions`). TRANG_THAI.md P5 cập nhật: HOÀN TẤT 09/12. **Chạy xác minh:** `npm test` 294/294 xanh, `npm run test:tenant` 145/145 xanh, `npx tsc --noEmit` (9 lỗi pre-existing ở product-copies tests, không phải mới). |
@@ -690,6 +754,8 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 | 09/13 | **Tích hợp UI ↔ Backend cho 4/10 chức năng UI/UX.** Bắt đầu từ `docs/UIUX-Integrate-Checklist.md`. 4 trang đã có backend được nối: (1) **Phân tích sản phẩm AI** — `tai-anh/page.tsx` dùng POST/PATCH/GET `/api/v1/vision/analyses`, POST reject, SSE `/api/v1/jobs/:id/events`, `useSession()` cho H1/H2/H3, asset listing, Idempotency-Key header; (2) **AI Creative Studio** — `creative-studio/page.tsx` dùng POST/GET `/api/v1/media/optimizations`, POST approve (Identity Guard REJECTED → ẩn Duyệt, WARNING → confirm), GET download (I3), proxy M04b; (3) **Catalog & Website** — `catalog/page.tsx` thay MOCK_PRODUCTS bằng GET `/api/v1/products`, GET/POST/PATCH/revoke `/api/v1/catalog-links`; (4) **Analytics & Learning** — `so-lieu/page.tsx` thay METRICS cứng bằng GET `/api/v1/usage/summary`, nối AI requests, audit logs, PUT `/api/v1/ai-policy`. 6 trang còn lại (#3 video, #4 content engine, #5 social publishing, #7 CRM, #8 orders, #9 chat) chờ backend tương ứng (P17/P18/P21/P22/P23). `npm test` 293/293 · `tsc --noEmit` SẠCH · checklist chi tiết ở `docs/UIUX-Integrate-Checklist.md` + `docs/dac-ta/Checklist_Thuc_Thi.md` mục UI/UX |
 | 09/15 | **Chuẩn hoá kiến trúc AI Content Engine (M07) ↔ SocialFlow.** Rà soát và đính chính định vị hệ thống: `SocialFlow` (AI Autonomous CMO) là repo sở hữu toàn bộ backend soạn thảo và xuất bản nội dung đa nền tảng (Facebook, Instagram, TikTok, Zalo OA...) cùng pipeline 6-agent (`scout`, `planner`, `creator`, `reviewer`, `publisher`, `analyst`). `LocalBudd` chỉ là AI Page Factory phục vụ Storefront (M05 Landing Page + M06 Catalog & QR). Giao diện `/noi-dung` (Chức năng #4) tại `floraos-core` là UI Shell & Template chuẩn hoá theo SSOT, kết nối backend sang `SocialFlow` qua cơ chế Server-side Proxy `/api/v1/proxy/api/m07/*?client=SOCIALFLOW` kèm SSO JWT, bảo đảm tenant isolation và không làm lộ UI SocialFlow ra ngoài. |
 | 09/15 | **Khởi tạo Từ điển từ cấm ngành hoa & FlowerContentGuard toàn hệ thống.** Ban hành tài liệu SSOT `docs/kien-truc/TU_DIEN_TU_CAM_CONTENT_NGANH_HOA.md` phân loại 4 nhóm từ vi phạm (cam kết sai lệch về hoa, AI slop, giật gân chợ búa, chính sách nền tảng) phục vụ chuyên gia rà soát/cập nhật. Đồng bộ file cấu hình máy đọc `src/core/ai/domain/flower-content-banned-lexicon.json`. Xây dựng domain service thuần túy `FlowerContentGuard` (`src/core/ai/domain/flower-content-guard.ts`) hỗ trợ kiểm tra vi phạm (`checkFlowerContent`), tự động làm sạch (`sanitizeFlowerContent`), chặn cứng với `AppError` (`assertFlowerContentAllowed`), và tích hợp `brand_profiles.forbidden_styles`. Bộ test `flower-content-guard.test.ts` đạt 8/8 test xanh. |
-| 09/16 | **Hoàn tất P17 — M04c AI Video Studio (Chức năng #3).** Nghiệm thu toàn diện hệ thống dựng video marketing hoa tươi dọc 9:16/1:1/16:9 (`/video`). 6 khuôn chuẩn (`VIDEO_FORMAT_SPECS`), biên soạn Storyboard chi tiết linh hoạt 2–15 cảnh, tự động cân bằng thời lượng theo khuôn (auto-balance duration), nút xóa cảnh nổi bật, menu Camera Motion điện ảnh độc lập (Zoom In, Zoom Out, Pan Lên, Pan Ngang, Cảnh tĩnh) luân phiên mượt mà. 4 phong cách phụ đề (Modern Badge, Minimal Elegant, Highlight Box, Bottom Banner) đồng bộ 100% lời thoại lồng tiếng TTS và ducking nhạc nền. Kiến trúc Provider cắm rút 2 phương án: Phương án A `LocalCinematicProvider` (mặc định, FFmpeg zoompan ~0.45s/cảnh, 0 credit) + Phương án B Standby `GoogleVeoProvider` & `HeyGenProvider` (kích hoạt qua `.env`). 2 cổng duyệt (Script Approval & Video Output Approval), SSE tiến trình render thời gian thực. Trạng thái chuyển thành `hoat_dong` 🟢 trên Dashboard. `npm test` 357/357 xanh · Pytest 83/83 xanh · `test:tenant` 160/160 xanh · `tsc --noEmit` SẠCH. |
+| 09/16 | **Hoàn tất P21 — M09 CRM & Quản Lý Khách Hàng (Chức năng #7).** Customer Master Index SSOT, phân tầng RFM tự động (VIP/Gold/Silver/Bronze/New), quét ngày kỷ niệm trước 14 ngày, Consent Engine quyền riêng tư. 4 bảng CSDL mới, 8 mã năng lực `Q1`–`Q8`. `customer-isolation.test.ts` 4/4 xanh thật. |
+| 09/16 | **Hoàn tất P22 — M10 Đơn Hàng & Vận Hành (Chức năng #8).** Bảng Kanban 4 cột, Event Sourcing, đo lường SLA 180 phút, bóc tách lát cắt Thợ cắm hoa xưởng (giấu 100% giá), in phiếu giao hàng & thiệp A6. 4 bảng CSDL mới, 8 mã năng lực `R1`–`R8`. `order-isolation.test.ts` 5/5 xanh thật. |
+| 09/16 | **Hoàn tất P23 — M08 AI Chat Assistant & Tích Hợp Đa Kênh Omnichannel (Chức năng #9).** Dual-Intent Router (SaaS Operations Help vs Flower Sales), trợ lý nổi toàn hệ thống `<FloraOSGlobalCopilot />` (`Cmd+K`), 5 kênh tiếp xúc (E-Catalog `/c/[slug]`, Landing Page, Facebook Messenger, Zalo OA, Script nhúng website ngoài). Monetization Engine (phí kênh 0–70 credit/tháng, 1 credit/10 tin), chốt chặn Aegis Protection. Nâng cấp **Kiến trúc AI Engine Đa Tầng**: Dify -> OpenAI Direct (`gpt-4o-mini`, giải quyết triệt để lặp câu từ) -> Local Qwen 2.5:7b qua Ollama (chi phí **0đ / 0 Token**) -> Local Rule Engine (offline 100%). Xây dựng hệ thống **Cẩm nang Tri thức & Nhập liệu SSOT (`/tri-thuc`)** cho 7 phân hệ cốt lõi kèm thanh Onboarding Progress Bar và tái cấu trúc Sidebar Navigation. `npm test` **414/414 xanh thật**, `chat-channel-isolation.test.ts` 2/2 xanh, `chat-isolation.test.ts` 3/3 xanh, `tsc --noEmit` SẠCH 100%. |
 
 

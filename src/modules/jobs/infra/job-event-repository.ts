@@ -8,7 +8,11 @@ import type { DbClient } from "./db-client"
  *  không ở một cột riêng vì đặc tả 07 không khai bảng nào cho M04a, và chỗ
  *  cần đọc nó nhất là lúc bị TỪ CHỐI — đúng lúc không có `assets` nào được
  *  tạo để gắn metadata vào. */
-export type JobEventType = "stage" | "log" | "done" | "guard"
+/** `variant_integrity` thêm ở P24 (M04b): số đo của cổng Subject Integrity —
+ *  tỷ lệ điểm ảnh lõi chủ thể còn trùng khít với Master Image sau khi ghép
+ *  bối cảnh. Nằm cùng chỗ với `guard` và vì cùng một lý do: `assets` không
+ *  được ghi khi lượt bị từ chối, nên số đo không có bản ghi nào để bám vào. */
+export type JobEventType = "stage" | "log" | "done" | "guard" | "variant_integrity"
 
 /**
  * Nhật ký tiến trình job — đặc tả 05 mục 8, `YC-J9`. Bảng phụ, ghi cộng dồn

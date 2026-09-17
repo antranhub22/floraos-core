@@ -75,18 +75,21 @@ Ba module vận hành không thuộc engine nào vì chúng không sinh nội du
 
 | Tính năng | Trạng thái | Ghi chú ranh giới |
 |---|---|---|
-| Phân tích chất lượng ảnh, tách sản phẩm | Một phần | Pipeline M04a có chỗ cắm; chỗ tăng cường hiện là `PassthroughEnhancer` |
-| Tăng cường ảnh sản phẩm — sáng, màu, nét | Một phần | Đợt hai của P9. Mọi thay đổi chạm vào chính sản phẩm chạy trong M04a và qua Identity Guard |
-| Master Image và các tỉ lệ 1:1, 4:5, 9:16, 16:9 | Một phần | `outputs.ratios` hiện trả object rỗng; Smart Reframe chưa xây |
+| Phân tích chất lượng ảnh, tách sản phẩm | Đã có | `StudioEnhancer` micro-pipeline: `RembgSegmenter` (bria-rmbg) → `EdgeDefringer` → `StudioBackdropEngine` |
+| Tăng cường ảnh sản phẩm — sáng, màu, nét | Đã có | P13. Đa provider qua `enhancement/router.py`: studio (mặc định), openai, gemini, replicate, realesrgan, pil |
+| Master Image và các tỉ lệ 1:1, 4:5, 9:16, 16:9 | Đã có | `SmartReframe` sinh 4 tỷ lệ từ Master MỘT LẦN; ghi 1 `MASTER` (`PENDING`) + 4 `RATIO` |
 | Identity Guard | Đã có | `workers/media_ai/guard/`, 19 ca thử, ngưỡng 0,95 / 0,90 |
 | Cổng duyệt ảnh, tải về tách khỏi duyệt | Đã có | `I3` tải, `I2` duyệt, có ca thử khoá "tải về xong ảnh vẫn chờ duyệt" |
-| Xoá nền ra PNG trong suốt | Chưa có | M04b |
-| Đổi nền — studio, phòng khách, khách sạn, lễ cưới | Chưa có | M04b, dựng trên Master Image đã duyệt |
-| Mở rộng khung ảnh, banner ngang | Chưa có | M04b |
-| Watermark logo cửa hàng | Chưa có | M04b, logo lấy từ `brand_profiles.logo_asset_id` |
-| Sinh 20–50 biến thể từ một ảnh gốc | Chưa có | M04b. Biến thể là **nền, bố cục, khung, chữ chồng** dựng trên cùng một Master Image — không phải sinh lại bó hoa |
+| Xoá nền ra PNG trong suốt | Đã có | P24. `media.variant` → `variant_worker.py`, ghi `assets` `kind = MARKETING` |
+| Đổi nền — studio, phòng khách, khách sạn, lễ cưới | Đã có | P24. Sáu bối cảnh, dựng trên Master Image đã duyệt; thư viện dùng chung mọi tổ chức (nợ #77) |
+| Watermark logo cửa hàng | Đã có | P24. `brand_profiles.logo_asset_id`, lùi về `organizations.name` khi chưa có logo |
+| Cổng toàn vẹn cho biến thể | Đã có | P24. Subject Integrity đo tỷ lệ điểm ảnh lõi chủ thể trùng khít Master; `REJECTED` không ghi asset nào |
+| Mở rộng khung ảnh, banner ngang | Chưa có | Nợ #78. `_dong_khung` đệm về đúng tỷ lệ, không sinh thêm hậu cảnh — outpainting là `AIC-13`, cần `protectMask` |
+| Sinh 20–50 biến thể từ một ảnh gốc | Một phần | Một lượt sinh tối đa ba biến thể (tách nền · bối cảnh · đóng dấu) ở một tỷ lệ. Chạy nhiều lượt thì ra nhiều biến thể, nhưng chưa có đường chạy lô |
 
 **Luật giữ nguyên:** một bó hoa chỉ được tăng cường **một lần** ra Master Image. Biến thể không gọi lại AI tăng cường và không đổi nhận dạng sản phẩm. Đường nào sinh ra pixel mới trên chính bó hoa đều thuộc M04a và phải qua Identity Guard, kể cả khi người dùng bấm nút trong màn Creative Studio.
+
+**Luật đó nay được ĐO, không chỉ được phát biểu (P24).** Vì lõi chủ thể phải giữ nguyên từng điểm ảnh, worker M04b đo tỷ lệ điểm ảnh lõi còn trùng khít với Master Image sau khi ghép bối cảnh (mặt nạ co biên, nên phần viền làm mềm có chủ đích không tính là sai lệch). Dưới 0,99 thì không biến thể nào được ghi. Bản trước hiển thị `100% / 99% / 98%` — ba hằng số gõ tay trong mã giao diện, không phép đo nào chạy.
 
 ### 2.3 AI Video Studio — M04c
 
