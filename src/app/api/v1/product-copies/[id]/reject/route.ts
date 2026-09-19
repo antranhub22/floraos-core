@@ -2,9 +2,9 @@
  * POST /api/v1/product-copies/:id/reject
  * Từ chối dữ liệu bán hàng — H6
  * Body: { reason?: string }
+ * Quyền H6 gác ở use-case `rejectProductCopy` (RS-9 18/09).
  */
 import { handle } from "@/core/http/response";
-import { AppError } from "@/core/http/errors";
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session";
 import { rejectProductCopy } from "@/modules/product-copies/use-cases/approve-product-copy";
 import { getProductCopy } from "@/modules/product-copies/use-cases/get-product-copy";
@@ -15,11 +15,6 @@ async function rejectHandler(
 ) {
   const { ctx } = await requireTenantContext(request);
   const { id } = await context.params;
-
-  // Check H6 capability
-  if (!ctx.capabilities.has("H6")) {
-    throw new AppError("CAPABILITY_DENIED", "Thiếu quyền H6 để từ chối dữ liệu bán hàng");
-  }
 
   const body = await request.json().catch(() => ({}));
   const reason = body.reason ?? null;

@@ -22,7 +22,15 @@ export interface ProductCopyInput {
   brand: {
     tone_of_voice?: string | null;
     hashtags?: string[] | null;
-    cta_templates?: string[] | null;
+    /**
+     * MỘT câu kêu gọi hành động — không phải mảng. Từ nợ #102 (17/09),
+     * `cta_templates` đúng nghĩa chỉ mang câu CTA; quà tặng/cam kết đã
+     * tách sang `default_offers`. Nợ #103 (cùng ngày): trước đây trường
+     * này bị ép kiểu `string[]` rồi `.join()`, vỡ runtime với hình dạng
+     * Json thật do giao diện lưu — nay gọi đúng `extractBrandCtaPhrase()`
+     * ở nơi dựng payload (`generate-product-copy.ts`).
+     */
+    cta_templates?: string | null;
     forbidden_styles?: string[] | null;
   };
   occasions: Array<{ code: string; name: string }>;
@@ -79,7 +87,7 @@ ${dong("Gói và trang trí", goi)}
 THƯƠNG HIỆU
 ${dong("Giọng thương hiệu", brand.tone_of_voice ?? null)}
 ${dong("Hashtag của cửa hàng", brand.hashtags?.join(", ") ?? null)}
-${dong("Mẫu kêu gọi hành động", brand.cta_templates?.join(" | ") ?? null)}
+${dong("Mẫu kêu gọi hành động", brand.cta_templates ?? null)}
 ${dong("Cụm từ KHÔNG được dùng", brand.forbidden_styles?.join(", ") ?? null)}
 
 DANH MỤC DỊP CỦA CỬA HÀNG

@@ -40,10 +40,12 @@ Ba mở rộng so với bản của FloraOS:
 - Vai là bản ghi, không phải enum. Vai riêng của tổ chức mang khoá tự đặt,
   không khớp bất kỳ trần cứng nào — một năng lực có trần cứng không bao giờ
   mở được cho vai riêng, kể cả khi tổ chức bật nó ở bảng công tắc.
-- Năng lực duyệt tách khỏi năng lực sinh kết quả — bốn cặp ở
+- Năng lực duyệt tách khỏi năng lực sinh kết quả — sáu cặp ở
   `SPLIT_CAPABILITY_PAIRS`: `vision.analyze`↔`product.approve`,
-  `media.optimize`↔`media.approve`, `catalog.create`↔`catalog.publish`,
-  `landing.create`↔`landing.publish`.
+  `media.optimize`↔`media.approve`, `media.variant.run`↔`media.variant.approve`
+  (`I4`↔`I5`, M04b, thêm ở P16/P24 khi module chuyển vào `floraos-core`),
+  `catalog.create`↔`catalog.publish`, `landing.create`↔`landing.publish`,
+  `product_copy.generate`↔`product_copy.approve` (`H5`↔`H6`).
 
 Công tắc `cho_phep_tu_duyet` (đặc tả 02 mục 2, `YC-Q9`) nằm ở
 `src/modules/organization/domain/self-approval-policy.ts` — không đổi năng

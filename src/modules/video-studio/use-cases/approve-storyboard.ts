@@ -15,8 +15,8 @@ export class ApproveStoryboardUseCase {
     ctx: TenantContext,
     jobId: string
   ): Promise<VideoJobWithScenes> {
-    // Cổng duyệt 1 đòi hỏi quyền phê duyệt Media (I2)
-    requireCapability(ctx, "I2");
+    // Cổng duyệt 1 — duyệt kịch bản. Tách khỏi I2 (Master Image) ở RS-1 18/09.
+    requireCapability(ctx, "P3");
 
     const job = await this.repo.findById(ctx, jobId);
     if (!job) {

@@ -9,7 +9,7 @@
  * Body: `{ analysisId: string, productId?: string }`
  */
 import { handle, jsonResponse } from "@/core/http/response";
-import { AppError, validationFailed } from "@/core/http/errors";
+import { validationFailed } from "@/core/http/errors";
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session";
 import { readIdempotencyKey } from "@/modules/jobs/domain/idempotency";
 import { generateProductCopy } from "@/modules/product-copies/use-cases/generate-product-copy";
@@ -17,10 +17,7 @@ import { generateProductCopy } from "@/modules/product-copies/use-cases/generate
 async function generateHandler(request: Request) {
   const { ctx } = await requireTenantContext(request);
 
-  if (!ctx.capabilities.has("H5")) {
-    throw new AppError("CAPABILITY_DENIED", "Thiếu quyền H5 để tạo dữ liệu bán hàng");
-  }
-
+  // Quyền H5 gác ở use-case `generateProductCopy` (RS-9 18/09).
   const idempotencyKey = readIdempotencyKey(request);
   if (!idempotencyKey) {
     throw validationFailed({ "idempotency-key": "Bắt buộc trên mọi endpoint tạo job (YC-U7)" });

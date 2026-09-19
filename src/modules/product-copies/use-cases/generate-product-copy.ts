@@ -1,4 +1,5 @@
 import { AppError } from "@/core/http/errors";
+import { requireCapability } from "@/core/rbac/capabilities";
 import { callCapability } from "@/core/ai/gateway";
 import { aiGatewayDeps } from "@/core/ai/wiring";
 import { OpenAILLMProvider } from "@/core/ai/adapters/openai-llm-provider";
@@ -12,6 +13,7 @@ import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-rep
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job";
 import { refundJob } from "@/modules/usage/use-cases/refund-job";
 import { parseBrandForbiddenStyles } from "@/core/ai/domain/flower-content-guard";
+import { extractBrandCtaPhrase, extractBrandHashtags } from "@/modules/profiles/domain/profile-rules";
 
 import { createProductCopyAdapter, type ProductCopyInput } from "../adapters/product-copy-adapter";
 import { duDeSinhCauChu, projectAnalysisForCopy } from "../domain/analysis-projection";
@@ -43,6 +45,8 @@ export async function generateProductCopy(
   ctx: TenantContext,
   input: GenerateProductCopyInput
 ): Promise<{ copyId: string; raw: unknown; needsReview: boolean; modelKey: string | null }> {
+  requireCapability(ctx, "H5");
+
   const copyRepo = new ProductCopyRepository();
   const analysisRepo = new ProductAnalysisRepository();
   const brandRepo = new BrandProfileRepository();
@@ -75,12 +79,18 @@ export async function generateProductCopy(
     occasionRepo.list(ctx),
   ]);
 
+  // `hashtags`/`cta_templates` là Json chưa khoá hình dạng — giao diện thật
+  // (`brand-profile-form.tsx`) lưu `{ default: ... }`, không phải mảng/chuỗi
+  // trần. Ép kiểu thẳng (`as string[]`) từng vỡ runtime khi `buildPrompt()`
+  // gọi `.join()` trên một object — nợ #103 trong TECHNICAL_DEBT.md, sửa
+  // 17/09. Đọc qua hai hàm thuần ở `profile-rules.ts`, không đoán hình dạng
+  // ở đây.
   const aiPayload: ProductCopyInput = {
     analysis: hinhChieu,
     brand: {
       tone_of_voice: brandProfile?.tone_of_voice ?? null,
-      hashtags: (brandProfile?.hashtags as string[] | null) ?? null,
-      cta_templates: (brandProfile?.cta_templates as string[] | null) ?? null,
+      hashtags: extractBrandHashtags(brandProfile?.hashtags ?? null),
+      cta_templates: extractBrandCtaPhrase(brandProfile?.cta_templates ?? null),
       forbidden_styles: parseBrandForbiddenStyles(
         (brandProfile?.forbidden_styles as string | null) ?? null
       ).map((r) => r.phrase),

@@ -1,9 +1,9 @@
 /**
  * POST /api/v1/product-copies/:id/approve
  * Duyệt dữ liệu bán hàng → ghi Product Master + audit_logs — H6
+ * Quyền H6 gác ở use-case `approveProductCopy` (RS-9 18/09).
  */
 import { handle } from "@/core/http/response";
-import { AppError } from "@/core/http/errors";
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session";
 import { approveProductCopy } from "@/modules/product-copies/use-cases/approve-product-copy";
 import { getProductCopy } from "@/modules/product-copies/use-cases/get-product-copy";
@@ -14,11 +14,6 @@ async function approveHandler(
 ) {
   const { ctx } = await requireTenantContext(request);
   const { id } = await context.params;
-
-  // Check H6 capability
-  if (!ctx.capabilities.has("H6")) {
-    throw new AppError("CAPABILITY_DENIED", "Thiếu quyền H6 để duyệt dữ liệu bán hàng");
-  }
 
   await approveProductCopy(ctx, id);
 

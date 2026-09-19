@@ -1,6 +1,7 @@
 /**
  * GET /api/v1/product-copies
  * List product copies — query params: product_id?, approval_state?
+ * Quyền: H5 — gác ở use-case `listProductCopies` (RS-8/RS-9 18/09).
  */
 import { handle } from "@/core/http/response";
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session";

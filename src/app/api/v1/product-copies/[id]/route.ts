@@ -1,6 +1,7 @@
 /**
  * GET /api/v1/product-copies/:id
  * PATCH /api/v1/product-copies/:id (update edited - H5)
+ * Quyền gác ở use-case (RS-8/RS-9 18/09): getProductCopy = H5, updateProductCopy = H5.
  */
 import { handle } from "@/core/http/response";
 import { AppError } from "@/core/http/errors";
@@ -29,11 +30,6 @@ async function patchHandler(
 ) {
   const { ctx } = await requireTenantContext(request);
   const { id } = await context.params;
-
-  // Check H5 capability
-  if (!ctx.capabilities.has("H5")) {
-    throw new AppError("CAPABILITY_DENIED", "Thiếu quyền H5 để sửa dữ liệu bán hàng");
-  }
 
   const body = await request.json().catch(() => null);
   if (!body?.edited) {

@@ -17,8 +17,8 @@ export class ApproveVideoOutputUseCase {
     ctx: TenantContext,
     jobId: string
   ): Promise<VideoJobWithScenes> {
-    // Cổng duyệt 2 đòi hỏi quyền phê duyệt Media (I2)
-    requireCapability(ctx, "I2");
+    // Cổng duyệt 2 — duyệt video thành phẩm. Tách khỏi I2 ở RS-1 18/09.
+    requireCapability(ctx, "P4");
 
     const job = await this.repo.findById(ctx, jobId);
     if (!job) {

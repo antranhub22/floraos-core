@@ -1,8 +1,15 @@
 import { AppError } from "@/core/http/errors";
+import { requireCapability } from "@/core/rbac/capabilities";
 import { ProductCopyRepository } from "../infra/product-copy-repository";
 import type { TenantContext } from "@/core/tenancy";
 
+/**
+ * Đọc một dữ liệu bán hàng — H5. RS-8 18/09: trước đợt soát, hai điểm đọc
+ * (đơn + danh sách) không gác quyền nào; dùng lại H5 vì dải H không có mã
+ * đọc riêng và mọi vai trò giữ H6 (duyệt) đều đã có H5 theo mặc định.
+ */
 export async function getProductCopy(ctx: TenantContext, id: string) {
+  requireCapability(ctx, "H5");
   const repo = new ProductCopyRepository();
   const copy = await repo.findById(ctx, id);
   if (!copy) throw new AppError("NOT_FOUND", "Không tìm thấy dữ liệu bán hàng");
@@ -10,6 +17,7 @@ export async function getProductCopy(ctx: TenantContext, id: string) {
 }
 
 export async function listProductCopies(ctx: TenantContext, productId?: string) {
+  requireCapability(ctx, "H5");
   const repo = new ProductCopyRepository();
   if (productId) {
     return repo.listByProduct(ctx, productId);

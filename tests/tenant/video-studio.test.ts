@@ -20,8 +20,9 @@ describe("Video Studio Tenant Isolation & Approval Lifecycle", () => {
     tenantA = await createTenant("alpha");
     tenantB = await createTenant("beta");
 
-    // Gán quyền Media cho cả 2 tenant (I1: media.optimize/create, I2: media.approve)
-    const caps = new Set(["I1", "I2"]);
+    // Gán quyền Media + duyệt video cho cả 2 tenant (I1: media.optimize/create;
+    // P3/P4: duyệt kịch bản/video — tách khỏi I2 ở RS-1 18/09).
+    const caps = new Set(["I1", "I2", "P3", "P4"]);
     tenantA = {
       ...tenantA,
       ctx: { ...tenantA.ctx, capabilities: new Set([...tenantA.ctx.capabilities, ...caps]) },

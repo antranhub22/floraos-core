@@ -175,6 +175,14 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   I3: { name: "media.download", group: "media", label: "Tải ảnh đã tối ưu về máy", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   I4: { name: "media.variant.run", group: "media", label: "Dựng biến thể marketing từ Master Image đã duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   I5: { name: "media.variant.approve", group: "media", label: "Duyệt một biến thể marketing thành ảnh dùng được", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  // P — Video Studio (M04c, P17). Soát 18/09 (RS-1) phát hiện hai cổng duyệt
+  // video (`approve-script`, `approve-video`) dùng chung `I2` — mã duyệt
+  // Master Image của M04a. Ở tầng dữ liệu hai cổng đã tách đúng
+  // (`video_jobs.script_approval` / `video_jobs.video_approval` là hai cột
+  // riêng); P3/P4 tách nốt ở tầng quyền cho khớp. Dải `P` đúng như đặc tả 02
+  // mục 4 dự tính cho M04b/M04c — M04b cuối cùng dùng lại `I4`/`I5`.
+  P3: { name: "video.approve_script", group: "media", label: "Duyệt kịch bản video trước khi tốn tài nguyên render", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  P4: { name: "video.approve_final", group: "media", label: "Duyệt video thành phẩm, lưu vào thư viện Asset chính thức", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // J — Kênh bán
   J1: { name: "catalog.create", group: "channel", label: "Tạo catalog", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   J2: { name: "catalog.publish", group: "channel", label: "Xuất bản catalog", defaultRoles: ["dieu_hanh"] },
@@ -216,10 +224,17 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   Q2: { name: "crm.customer.create", group: "crm", label: "Thêm khách hàng mới", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   Q3: { name: "crm.customer.update", group: "crm", label: "Cập nhật hồ sơ, sở thích hoa và phân tầng khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   Q4: { name: "crm.customer.delete", group: "crm", label: "Xoá khách hàng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
-  Q5: { name: "crm.occasion.manage", group: "crm", label: "Thêm và quản lý ngày kỷ niệm của khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
-  Q6: { name: "crm.consent.manage", group: "crm", label: "Cập nhật quyền riêng tư và sự đồng ý nhận tin", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  // Q5/Q6 đổi nghĩa 18/09 (RS-10). Đặc tả 02 nhóm Q luôn định nghĩa
+  // `Q5` = xuất danh sách khách hàng (trần cứng — lấy toàn bộ dữ liệu cá nhân
+  // ra khỏi hệ thống trong một lần bấm) và `Q6` = quản lý dịp; mã nguồn trước
+  // đây gán ngược (Q5 chạy occasion, Q6 chạy consent) và consent không hề có
+  // mã riêng trong đặc tả. Sửa lại khớp đặc tả — `GET /crm/customers/export`
+  // (chưa xây) giữ đúng trần cứng của nó khi được dựng; thêm `Q9` cho consent.
+  Q5: { name: "crm.customer.export", group: "crm", label: "Xuất danh sách khách hàng ra tệp", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  Q6: { name: "crm.occasion.manage", group: "crm", label: "Thêm và quản lý ngày kỷ niệm của khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   Q7: { name: "crm.campaign.suggest", group: "crm", label: "Quét và chạy AI gợi ý nhắc mua theo dịp", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   Q8: { name: "crm.voucher.manage", group: "crm", label: "Tạo và quản lý voucher tri ân khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  Q9: { name: "crm.consent.manage", group: "crm", label: "Cập nhật quyền riêng tư và sự đồng ý nhận tin", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   // T — AI Chat Assistant & Hội thoại (M08, P23)
   T1: { name: "chat.conversation.read", group: "ai_chat", label: "Xem lịch sử hội thoại và tin nhắn tư vấn", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   T2: { name: "chat.message.send", group: "ai_chat", label: "Gửi tin nhắn tư vấn và trò chuyện với AI", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },

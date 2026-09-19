@@ -1,4 +1,5 @@
 import { AppError } from "@/core/http/errors";
+import { requireCapability } from "@/core/rbac/capabilities";
 import { ProductCopyRepository } from "../infra/product-copy-repository";
 import { validateProductCopyEdited, type ProductCopyEdited } from "../domain/product-copy-rules";
 import { assertFlowerContentAllowed } from "@/core/ai/domain/flower-content-guard";
@@ -13,6 +14,8 @@ export async function updateProductCopy(
   id: string,
   edited: unknown
 ): Promise<void> {
+  requireCapability(ctx, "H5");
+
   if (!validateProductCopyEdited(edited)) {
     throw new AppError("VALIDATION_FAILED", "Dữ liệu sửa không hợp lệ");
   }

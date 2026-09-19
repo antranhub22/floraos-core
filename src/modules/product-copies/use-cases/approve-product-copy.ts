@@ -1,4 +1,5 @@
 import { AppError } from "@/core/http/errors";
+import { requireCapability } from "@/core/rbac/capabilities";
 import { ProductCopyRepository } from "../infra/product-copy-repository";
 import { OccasionRepository } from "@/modules/organization/infra/occasion-repository";
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log";
@@ -16,6 +17,8 @@ export async function approveProductCopy(
   ctx: TenantContext,
   id: string
 ): Promise<{ productId: string; copyId: string }> {
+  requireCapability(ctx, "H6");
+
   const repo = new ProductCopyRepository();
 
   return runInTransaction(async (tx: DbClient) => {
@@ -68,6 +71,8 @@ export async function rejectProductCopy(
   id: string,
   reason?: string
 ): Promise<void> {
+  requireCapability(ctx, "H6");
+
   const repo = new ProductCopyRepository();
 
   await runInTransaction(async (tx: DbClient) => {

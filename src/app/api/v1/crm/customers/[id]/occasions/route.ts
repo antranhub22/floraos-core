@@ -1,7 +1,7 @@
 /**
  * POST /api/v1/crm/customers/[id]/occasions
  * Thêm dịp kỷ niệm mới cho khách hàng.
- * Quyền: Q5
+ * Quyền: Q6 (RS-10 18/09 — trước đó ghi nhầm Q5, đã đổi nghĩa mã cho khớp đặc tả).
  */
 
 import { handle, jsonResponse } from "@/core/http/response"
@@ -11,7 +11,7 @@ import { addCustomerOccasion } from "@/modules/crm/use-cases/add-customer-occasi
 
 export const POST = handle(async (request, context: { params: Promise<{ id: string }> }) => {
   const { ctx } = await requireTenantContext(request)
-  requireCapability(ctx, "Q5")
+  requireCapability(ctx, "Q6")
 
   const { id } = await context.params
   const body = await request.json()

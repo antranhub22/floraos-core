@@ -1,7 +1,7 @@
 /**
  * POST /api/v1/crm/customers/[id]/consent
  * Cập nhật sự đồng ý nhận tin tiếp thị (Consent).
- * Quyền: Q6
+ * Quyền: Q9 (RS-10 18/09 — trước đó dùng nhầm Q6, nay có mã riêng cho consent).
  */
 
 import { validationFailed } from "@/core/http/errors"
@@ -14,7 +14,7 @@ const VALID_CHANNELS = ["ZALO_ZNS", "SMS", "PHONE_CALL", "PROMOTION"] as const
 
 export const POST = handle(async (request, context: { params: Promise<{ id: string }> }) => {
   const { ctx } = await requireTenantContext(request)
-  requireCapability(ctx, "Q6")
+  requireCapability(ctx, "Q9")
 
   const { id } = await context.params
   const body = await request.json()

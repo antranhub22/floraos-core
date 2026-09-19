@@ -63,9 +63,17 @@ async function batchJobHandler(request: Request) {
     throw new AppError("VALIDATION_FAILED", `Feature không khớp module: kỳ vọng ${expectedFeature}, nhận ${feature}`);
   }
 
-  // Check RBAC run capability for this module
+  // Check RBAC run capability for this module.
+  // RS-8 18/09: trước đợt soát, `module` ngoài 9 khoá của bảng này (ví dụ
+  // M03/M08/M11 — chưa có mã quyền "run" chính thức trong đặc tả) khiến
+  // `requiredRunCap` là `undefined` và điều kiện `if` bên dưới bị bỏ qua
+  // hoàn toàn — TRÔI QUA không gác quyền gì. Đóng theo kiểu "mặc định từ
+  // chối": module không có trong bảng thì chặn thẳng, không cho lọt.
   const requiredRunCap = MODULE_RUN_CAPABILITY[module];
-  if (requiredRunCap && !ctx.capabilities.has(requiredRunCap)) {
+  if (!requiredRunCap) {
+    throw new AppError("CAPABILITY_DENIED", `Module ${module} chưa có quyền "run" khai báo — chặn theo mặc định`);
+  }
+  if (!ctx.capabilities.has(requiredRunCap)) {
     throw new AppError("CAPABILITY_DENIED", `Thiếu quyền ${requiredRunCap} để chạy module ${module}`);
   }
 
