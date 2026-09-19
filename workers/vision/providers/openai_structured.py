@@ -38,7 +38,9 @@ from vision.providers.chung import (
     CANH_DAI_MAC_DINH_PX,
     SO_LAN_THU_LAI,
     TIMEOUT_GOI_GIAY,
+    MucDung,
     doc_dap_ung,
+    doc_muc_dung,
     nap_json,
     nap_text,
     thu_nho_anh,
@@ -220,6 +222,10 @@ class OpenAIStructuredProvider:
         extra_blocks = f"{catalog_block}\n\n{ref_block}".strip() if ref_block else catalog_block
         image_b64 = base64.b64encode(anh_gui).decode("ascii")
 
+        # Đặt lại trước mỗi ảnh: `muc_dung_lan_cuoi` nói về ẢNH NÀY, không
+        # phải mọi ảnh provider từng chạy — một instance dùng cho cả lô.
+        self.muc_dung_lan_cuoi = MucDung()
+
         round_one = self._call(contract, palette_block, extra_blocks, image_b64, mime, temperature=0)
         result = round_one
         if _needs_second_round(round_one):
@@ -261,4 +267,8 @@ class OpenAIStructuredProvider:
                 },
             ],
         )
+        # Cộng dồn TRƯỚC khi đọc thân: một đáp ứng bị cắt vì chạm trần token
+        # vẫn bị nhà cung cấp tính tiền, nên nó phải vào sổ chi phí dù
+        # `doc_dap_ung` sắp ném lỗi ngay dưới đây.
+        self.muc_dung_lan_cuoi.cong(doc_muc_dung(response))
         return doc_dap_ung(response)

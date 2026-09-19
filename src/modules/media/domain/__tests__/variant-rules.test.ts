@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  ALL_VARIANT_COMBINATIONS,
   canApproveVariant,
   isEligibleMasterForVariants,
   isVariantPresetId,
   isVariantRatio,
   parseVariantIntegrityBlock,
+  variantBatchIdempotencyKey,
   variantIntegrityResult,
   variantRequiresWarning,
+  VARIANT_PRESET_IDS,
+  VARIANT_RATIOS,
   SUBJECT_IDENTITY_SAFE,
   SUBJECT_IDENTITY_WARNING,
 } from "../variant-rules"
@@ -111,6 +115,37 @@ describe("M04b — luật thuần của biến thể marketing", () => {
     it("nhận đúng bốn tỷ lệ chuẩn marketing", () => {
       expect(isVariantRatio("9:16")).toBe(true)
       expect(isVariantRatio("3:2")).toBe(false)
+    })
+  })
+
+  describe("ma trận chạy lô (nợ #108)", () => {
+    it("đủ 6 × 4 = 24 tổ hợp, không thiếu không lặp", () => {
+      expect(ALL_VARIANT_COMBINATIONS).toHaveLength(VARIANT_PRESET_IDS.length * VARIANT_RATIOS.length)
+      const khoa = new Set(ALL_VARIANT_COMBINATIONS.map((c) => `${c.preset}:${c.ratio}`))
+      expect(khoa.size).toBe(ALL_VARIANT_COMBINATIONS.length)
+    })
+
+    it("mọi preset và mọi ratio đã chốt đều có mặt trong ma trận", () => {
+      for (const preset of VARIANT_PRESET_IDS) {
+        for (const ratio of VARIANT_RATIOS) {
+          expect(
+            ALL_VARIANT_COMBINATIONS.some((c) => c.preset === preset && c.ratio === ratio)
+          ).toBe(true)
+        }
+      }
+    })
+
+    it("khoá idempotency của từng job trong lô là duy nhất và bắt nguồn từ khoá gốc", () => {
+      const khoaGoc = "batch-abc"
+      const khoas = ALL_VARIANT_COMBINATIONS.map((c) => variantBatchIdempotencyKey(khoaGoc, c))
+      expect(new Set(khoas).size).toBe(khoas.length)
+      for (const k of khoas) expect(k.startsWith(`${khoaGoc}:`)).toBe(true)
+    })
+
+    it("cùng khoá gốc và cùng tổ hợp luôn ra cùng một khoá — dedupe đúng khi gọi lại", () => {
+      const a = variantBatchIdempotencyKey("batch-abc", { preset: "wedding", ratio: "4:5" })
+      const b = variantBatchIdempotencyKey("batch-abc", { preset: "wedding", ratio: "4:5" })
+      expect(a).toBe(b)
     })
   })
 })

@@ -1,10 +1,15 @@
+import { randomUUID } from "node:crypto"
+
 import { conflict, notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
 import {
+  ALL_VARIANT_COMBINATIONS,
   isEligibleMasterForVariants,
   MEDIA_VARIANT_FEATURE,
+  variantBatchIdempotencyKey,
+  type VariantCombination,
   type VariantPresetId,
   type VariantRatio,
 } from "@/modules/media/domain/variant-rules"
@@ -16,6 +21,10 @@ export type RequestVariantsInput = {
   preset: VariantPresetId
   ratio: VariantRatio
   watermark: boolean
+  /** AIC-14 — tự động cân bằng sáng/tương phản, CHỈ ở vùng nền đã ghép
+   *  (chốt 18/09, AskUserQuestion: "Chỉ chỉnh phông nền"). Mặc định tắt,
+   *  không đổi hành vi cũ khi không truyền. */
+  autoEnhance?: boolean
   idempotencyKey: string
 }
 
@@ -54,7 +63,95 @@ export async function requestVariants(ctx: TenantContext, input: RequestVariants
       preset: input.preset,
       ratio: input.ratio,
       watermark: input.watermark,
+      auto_enhance: input.autoEnhance ?? false,
     },
     idempotencyKey: input.idempotencyKey,
   })
+}
+
+export type RequestVariantBatchInput = {
+  masterAssetId: string
+  /** Bỏ trống = toàn bộ ma trận 24 tổ hợp (`ALL_VARIANT_COMBINATIONS`). */
+  combinations?: readonly VariantCombination[]
+  watermark: boolean
+  autoEnhance?: boolean
+  /** Khoá gốc của CẢ lượt gọi — mỗi job trong lô có khoá riêng dẫn xuất từ
+   *  khoá này (`variantBatchIdempotencyKey`), không dùng thẳng. */
+  idempotencyKey: string
+}
+
+export type RequestVariantBatchJobResult = {
+  preset: VariantPresetId
+  ratio: VariantRatio
+  jobId: string
+  status: string
+  deduped: boolean
+  costCredit: number
+}
+
+export type RequestVariantBatchResult = {
+  jobGroupId: string
+  jobs: RequestVariantBatchJobResult[]
+}
+
+/**
+ * `POST /media/variants/batch` (`I4`) — chạy lô nhiều tổ hợp preset×ratio
+ * trong MỘT lượt gọi (nợ #108, AIC-17 mở rộng).
+ *
+ * KHÔNG phải một đường job/hạn mức mới: mỗi tổ hợp vẫn đi qua nguyên
+ * `enqueueJob` — vẫn `Idempotency-Key` riêng (dẫn xuất từ khoá gốc, xem
+ * `variantBatchIdempotencyKey`), vẫn trừ credit riêng từng job (chốt 18/09:
+ * "Tính như hiện tại", không giảm giá theo lô). `job_group_id` là thứ DUY
+ * NHẤT lô này thêm — một khoá gom màn tiến độ, không phải khoá nghiệp vụ.
+ *
+ * Từng job gọi TUẦN TỰ (không `Promise.all`): mỗi lượt `enqueueJob` tự mở
+ * giao dịch riêng (kiểm hạn mức + trừ credit + tạo job), chạy song song 24
+ * giao dịch cùng lúc trên cùng một tổ chức chỉ để tranh khoá, không nhanh
+ * hơn được bao nhiêu. Một tổ hợp lỗi (hết credit/hạn mức) sẽ NÉM lỗi ra
+ * ngoài — các job đã tạo trước đó ở lô này đã commit xong, vẫn đứng, xem
+ * được qua `job_group_id`; đây là hệ quả tất yếu của "mỗi job một giao dịch
+ * riêng", không phải một lỗi cần vá.
+ */
+export async function requestVariantBatch(
+  ctx: TenantContext,
+  input: RequestVariantBatchInput
+): Promise<RequestVariantBatchResult> {
+  const master = await new AssetRepository().findById(ctx, input.masterAssetId)
+  if (!master) throw notFound()
+
+  if (!isEligibleMasterForVariants(master)) {
+    throw conflict(
+      "Biến thể marketing chỉ dựng được trên Master Image đã duyệt (cổng 2, media.approve)"
+    )
+  }
+
+  const combinations = input.combinations ?? ALL_VARIANT_COMBINATIONS
+  const jobGroupId = randomUUID()
+  const jobs: RequestVariantBatchJobResult[] = []
+
+  for (const combo of combinations) {
+    const result = await enqueueJob(ctx, {
+      feature: MEDIA_VARIANT_FEATURE,
+      productId: master.product_id,
+      payload: {
+        master_asset_id: input.masterAssetId,
+        preset: combo.preset,
+        ratio: combo.ratio,
+        watermark: input.watermark,
+        auto_enhance: input.autoEnhance ?? false,
+      },
+      idempotencyKey: variantBatchIdempotencyKey(input.idempotencyKey, combo),
+      jobGroupId,
+    })
+    jobs.push({
+      preset: combo.preset,
+      ratio: combo.ratio,
+      jobId: result.job.id,
+      status: result.job.status,
+      deduped: result.deduped,
+      costCredit: result.usage.costCredit,
+    })
+  }
+
+  return { jobGroupId, jobs }
 }

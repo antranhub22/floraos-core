@@ -11,6 +11,7 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Any
 
 from PIL import Image
@@ -35,6 +36,83 @@ def nap_json(ten: str) -> dict:
 
 def nap_text(ten: str) -> str:
     return (CONTRACTS_DIR / ten).read_text(encoding="utf-8")
+
+
+@dataclass
+class MucDung:
+    """Mức dùng THẬT của một lượt phân tích — cộng dồn qua mọi lời gọi của nó.
+
+    `ai_requests` có sẵn bốn cột `input_tokens`/`output_tokens`/`image_count`/
+    `cost_usd` từ AI-1, nhưng chưa ai điền. Hệ quả: câu "một lượt phân tích
+    tốn bao nhiêu" chỉ trả lời được bằng hoá đơn cuối tháng của nhà cung cấp,
+    không tách được theo tổ chức, theo bộ máy, hay theo ảnh.
+
+    Đọc từ `response.usage` của nhà cung cấp chứ không dựng lại bằng công thức
+    ô ảnh: công thức đếm token ảnh phụ thuộc cách mô hình chia ô và đổi theo
+    từng bản mô hình, còn `usage` là con số nhà cung cấp dùng để tính tiền
+    thật. Đo đúng thứ mình bị tính tiền.
+
+    Bộ Đầy đủ gọi mô hình HAI lượt khi confidence thấp, nên `so_lan_goi` là
+    một phần của con số — không phải mọi ảnh cùng giá.
+    """
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    input_cache_tokens: int = 0
+    so_lan_goi: int = 0
+
+    def cong(self, khac: "MucDung") -> None:
+        self.input_tokens += khac.input_tokens
+        self.output_tokens += khac.output_tokens
+        self.input_cache_tokens += khac.input_cache_tokens
+        self.so_lan_goi += khac.so_lan_goi
+
+
+def doc_muc_dung(response: Any) -> MucDung:
+    """`response.usage` → `MucDung`. Nhà cung cấp không trả `usage` thì trả
+    khối rỗng, KHÔNG đoán: một số 0 thật thà đọc ra "chưa đo được", còn một
+    số bịa đọc ra "đã đo"."""
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return MucDung()
+
+    chi_tiet = getattr(usage, "prompt_tokens_details", None)
+    cache = getattr(chi_tiet, "cached_tokens", 0) if chi_tiet is not None else 0
+
+    def so(ten: str) -> int:
+        v = getattr(usage, ten, 0)
+        return v if isinstance(v, int) else 0
+
+    return MucDung(
+        input_tokens=so("prompt_tokens"),
+        output_tokens=so("completion_tokens"),
+        input_cache_tokens=cache if isinstance(cache, int) else 0,
+        so_lan_goi=1,
+    )
+
+
+def tinh_cost_usd(model: str, muc_dung: MucDung, gia_token: dict) -> float | None:
+    """Tiền thật của một lượt, theo bảng giá trong `contracts/config.json`.
+
+    Trả `None` khi không có giá cho mô hình đó — thà để trống còn hơn ghi 0,
+    vì 0 trong sổ chi phí đọc ra "miễn phí".
+
+    Giá trong bảng tính theo USD trên MỘT TRIỆU token, đúng cách nhà cung cấp
+    niêm yết. Token đã đọc từ bộ đệm tính theo giá `vao_cache`, phần còn lại
+    tính giá `vao`.
+    """
+    gia = gia_token.get(model)
+    if not gia:
+        return None
+
+    vao_cache = min(muc_dung.input_cache_tokens, muc_dung.input_tokens)
+    vao_thuong = muc_dung.input_tokens - vao_cache
+
+    return (
+        vao_thuong * gia.get("vao", 0.0)
+        + vao_cache * gia.get("vao_cache", gia.get("vao", 0.0))
+        + muc_dung.output_tokens * gia.get("ra", 0.0)
+    ) / 1_000_000
 
 
 def doc_dap_ung(response: Any) -> dict:

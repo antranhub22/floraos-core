@@ -28,6 +28,11 @@ Hai điều dễ làm sai, đã chặn bằng cấu trúc:
 Worker KHÔNG ghi `usage` (`YC-U4`, luật 3 của `workers/README.md`). Hoàn
 credit cho job bị từ chối (D3) là việc của phía TS — xem
 `src/modules/media/use-cases/refund-rejected-job.ts`.
+
+**Chi phí thật (nợ #71).** Lượt gọi mô hình tăng cường (`AIC-08`) được ghi
+vào `ai_requests` qua `media_ai.providers.chung.ghi_ai_request` — cùng
+nguyên tắc với `vision/jobs/worker.py`: đo đúng thứ bị tính tiền, đọc từ
+chính provider (`so_do_chi_phi_anh`), không dựng lại công thức.
 """
 
 from __future__ import annotations
@@ -35,6 +40,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -45,6 +51,7 @@ from psycopg.rows import dict_row
 from shared.storage import doc_bytes, ghi_bytes
 from media_ai.guard.compare import REJECTED
 from media_ai.guard.verifier import VisionIdentityVerifier
+from media_ai.providers.chung import ghi_ai_request, so_do_chi_phi_anh
 from media_ai.providers.enhancement.router import resolve_enhancer
 from media_ai.providers.smart_reframe import SmartReframe
 
@@ -279,7 +286,44 @@ def process_job(
             if config.get("enhancer_provider")
             else enhancer
         )
-        ket_qua_tang_cuong = active_enhancer.enhance(anh_goc, config_with_schema)
+
+        bat_dau_tang_cuong = time.monotonic()
+        try:
+            ket_qua_tang_cuong = active_enhancer.enhance(anh_goc, config_with_schema)
+        except Exception:
+            ghi_ai_request(
+                conn,
+                job_id=job["id"],
+                organization_id=organization_id,
+                capability_code="AIC-08",
+                model_key=getattr(active_enhancer, "model_version", None)
+                or getattr(active_enhancer, "name", "unknown"),
+                outcome="FAILED",
+                latency_ms=int((time.monotonic() - bat_dau_tang_cuong) * 1000),
+                # Lượt hỏng vẫn bị nhà cung cấp tính tiền nếu nó đã kịp gọi
+                # mô hình — bỏ nó khỏi sổ là để chi phí thật cao hơn sổ mà
+                # không ai giải thích được khoảng lệch.
+                **so_do_chi_phi_anh(active_enhancer),
+            )
+            raise
+        ghi_ai_request(
+            conn,
+            job_id=job["id"],
+            organization_id=organization_id,
+            capability_code="AIC-08",
+            model_key=getattr(active_enhancer, "model_version", None)
+            or getattr(active_enhancer, "name", "unknown"),
+            # Bộ máy tự lùi PIL khi lỗi API (`OpenAIEnhancer`) không ném lỗi
+            # ra ngoài — phải đọc cờ `fallback` trong kết quả để phân biệt
+            # với một lượt thật sự dùng đúng mô hình đã chọn.
+            outcome=(
+                "FALLBACK"
+                if ket_qua_tang_cuong.get("parameters", {}).get("fallback")
+                else "ACCEPTED"
+            ),
+            latency_ms=int((time.monotonic() - bat_dau_tang_cuong) * 1000),
+            **so_do_chi_phi_anh(active_enhancer),
+        )
 
         # Smart Reframe: tạo 4 tỷ lệ từ Master Image MỘT LẦN (M04 mục 17.3)
         _set_stage(conn, job["id"], "SMART_REFRAME")

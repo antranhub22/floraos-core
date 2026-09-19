@@ -21,6 +21,7 @@ from PIL import Image, ImageEnhance, ImageFilter
 from scipy import ndimage
 
 from media_ai.providers.base import ImageEnhancer, KetQuaTangCuong
+from media_ai.providers.chung import doc_muc_dung_anh
 from media_ai.providers.enhancement.realesrgan import PILEnhancer
 
 
@@ -151,8 +152,19 @@ class OpenAIEnhancer:
         self.model = model
         self.model_version = model
         self._fallback = PILEnhancer()
+        # Mức dùng THẬT (token) của lượt `enhance()` gần nhất, đọc từ
+        # `response.usage` — `None` nghĩa là "chưa đo được lượt nào", không
+        # phải "đã đo và bằng 0" (nợ #71). Reset lại ở ĐẦU mỗi `enhance()`
+        # (không chỉ ở đây): instance này có thể bị gọi lại nhiều lượt, và
+        # một lượt lùi PIL không được kế thừa số đo của lượt OpenAI trước đó.
+        self.muc_dung_lan_cuoi = None
 
     def enhance(self, image: bytes, config: dict) -> KetQuaTangCuong:
+        # Reset đầu lượt (xem lý do ở __init__) — TRƯỚC mọi nhánh fallback
+        # phía dưới, để một lượt lùi PIL (thiếu key, hoặc lỗi API) không bao
+        # giờ vô tình mang theo số đo của lượt trước.
+        self.muc_dung_lan_cuoi = None
+
         mode = config.get("mode", "auto")
         if mode == "custom":
             selected_caps = config.get("selected_capabilities") or ["upscale_clarity"]
@@ -208,6 +220,13 @@ class OpenAIEnhancer:
                 prompt=prompt,
                 n=1,
             )
+
+            # Đo đúng thứ bị tính tiền — đọc `response.usage` của CHÍNH lượt
+            # gọi này, không dựng lại bằng công thức đếm ô ảnh (nợ #71). Đặt
+            # ngay sau khi có response THẬT, trước mọi bước xử lý phía dưới
+            # có thể ném lỗi (ghép ảnh, xoá watermark...), để một lỗi hậu kỳ
+            # không làm mất số đo của lượt gọi đã bị nhà cung cấp tính tiền.
+            self.muc_dung_lan_cuoi = doc_muc_dung_anh(response)
 
             item = response.data[0]
             if hasattr(item, "b64_json") and item.b64_json:

@@ -14,6 +14,8 @@ const postSchema = z.object({
   preset: z.enum(VARIANT_PRESET_IDS),
   ratio: z.enum(VARIANT_RATIOS),
   watermark: z.boolean().default(true),
+  // AIC-14 — chốt 18/09 (AskUserQuestion): chỉ chỉnh vùng nền, mặc định tắt.
+  auto_enhance: z.boolean().default(false),
 })
 
 /** `POST /media/variants` (`I4`) — M04b, dựng biến thể marketing. */
@@ -34,6 +36,7 @@ export const POST = handle(async (request) => {
     preset: parsed.data.preset,
     ratio: parsed.data.ratio,
     watermark: parsed.data.watermark,
+    autoEnhance: parsed.data.auto_enhance,
     idempotencyKey,
   })
 

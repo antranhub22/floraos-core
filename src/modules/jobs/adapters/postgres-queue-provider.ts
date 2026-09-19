@@ -30,6 +30,7 @@ export class PostgresQueueProvider implements QueueProvider {
       feature: string
       payload: unknown
       idempotencyKey: string
+      jobGroupId?: string | null
     },
     tx?: unknown
   ): Promise<{ jobId: string }> {
@@ -43,6 +44,7 @@ export class PostgresQueueProvider implements QueueProvider {
         feature: input.feature,
         payload: input.payload,
         idempotencyKey: input.idempotencyKey,
+        jobGroupId: input.jobGroupId ?? null,
       })
 
       // Postgres trì hoãn phát NOTIFY tới sau khi giao dịch bao quanh commit

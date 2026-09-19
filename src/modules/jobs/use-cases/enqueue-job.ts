@@ -19,6 +19,9 @@ export type EnqueueJobInput = {
   payload: unknown
   productId?: string | null | undefined
   idempotencyKey: string
+  /** Gom nhiều job cùng một lượt chạy lô (vd 30 biến thể, nợ #108) về một
+   *  màn tiến độ chung — KHÔNG phải khoá nghiệp vụ, không đổi hạn mức/credit. */
+  jobGroupId?: string | null | undefined
 }
 
 export type EnqueueJobResult = {
@@ -106,6 +109,7 @@ export async function enqueueJob(
           feature: input.feature,
           payload: input.payload,
           idempotencyKey: input.idempotencyKey,
+          jobGroupId: input.jobGroupId ?? null,
         },
         tx
       )

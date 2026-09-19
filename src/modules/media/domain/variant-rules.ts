@@ -54,6 +54,41 @@ export function isVariantRatio(value: unknown): value is VariantRatio {
 }
 
 /**
+ * Một tổ hợp (preset, ratio) — đơn vị nhỏ nhất của một lượt chạy lô AIC-17
+ * (nợ #108). Mỗi tổ hợp vẫn là MỘT job riêng qua `enqueueJob` — vẫn một
+ * `idempotency_key` riêng, vẫn trừ credit riêng (chốt 18/09, AskUserQuestion:
+ * "Tính như hiện tại"), `job_group_id` chỉ gom màn tiến độ.
+ */
+export type VariantCombination = {
+  preset: VariantPresetId
+  ratio: VariantRatio
+}
+
+/**
+ * Toàn bộ ma trận preset × ratio — 6 × 4 = 24 tổ hợp. Đây là "lô đầy đủ"
+ * khi người dùng không tự chọn tập con nào.
+ *
+ * Thứ tự CỐ ĐỊNH (ratio ngoài, preset trong): để một client theo dõi tiến
+ * độ theo thứ tự trả về, không phải đoán.
+ */
+export const ALL_VARIANT_COMBINATIONS: readonly VariantCombination[] = VARIANT_RATIOS.flatMap(
+  (ratio) => VARIANT_PRESET_IDS.map((preset) => ({ preset, ratio }))
+)
+
+/**
+ * Khoá `idempotency_key` riêng cho một job trong lô — bắt nguồn từ khoá của
+ * CẢ lượt gọi (`baseKey`, do client gửi qua header `Idempotency-Key`), nối
+ * thêm preset/ratio để 24 job không đụng `@@unique([organization_id,
+ * feature, idempotency_key])` của nhau, mà gọi lại CÙNG một lượt (cùng
+ * `baseKey`) vẫn dedupe đúng từng job — cùng nguyên tắc idempotency của mọi
+ * endpoint khác (`YC-U7`), chỉ mở rộng khoá cho khớp với "một lượt gọi tạo
+ * NHIỀU job".
+ */
+export function variantBatchIdempotencyKey(baseKey: string, combo: VariantCombination): string {
+  return `${baseKey}:${combo.preset}:${combo.ratio}`
+}
+
+/**
  * Ảnh nguồn của một lượt M04b phải là Master Image **đã duyệt**.
  *
  * Không phải để cho chặt chẽ hình thức: biến thể là thứ đem đi đăng bán, và

@@ -27,6 +27,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from shared.storage import dang_dung_kho_dung_chung, doc_bytes
+from vision.providers.chung import MucDung, nap_json, tinh_cost_usd
 from vision.providers.registry import lay_provider, lay_provider_co_du_phong
 
 log = logging.getLogger("vision.worker")
@@ -228,6 +229,10 @@ def process_job(conn: psycopg.Connection, job: dict[str, Any], provider: Any = N
                     outcome="FAILED",
                     latency_ms=int((time.monotonic() - bat_dau) * 1000),
                     fallback_from=bo_may_da_hong,
+                    # Lượt hỏng vẫn bị nhà cung cấp tính tiền nếu nó đã kịp
+                    # gọi mô hình — bỏ nó khỏi sổ là để chi phí thật cao hơn
+                    # sổ mà không ai giải thích được khoảng lệch.
+                    **_so_do_chi_phi(provider),
                 )
                 raise
             do_tre_ms = int((time.monotonic() - bat_dau) * 1000)
@@ -249,6 +254,7 @@ def process_job(conn: psycopg.Connection, job: dict[str, Any], provider: Any = N
                     else None
                 ),
                 fallback_from=bo_may_da_hong,
+                **_so_do_chi_phi(provider),
             )
 
             _insert_analysis(conn, job, asset_id, product_id, provider, raw)
@@ -260,6 +266,12 @@ def process_job(conn: psycopg.Connection, job: dict[str, Any], provider: Any = N
                     "asset_id": asset_id,
                     "status": "phân tích xong",
                     "engine": provider.name,
+                    # Bộ máy tổ chức đã CHỌN mà dựng không nổi, nếu có. Thác
+                    # dự phòng nay tụt xuống thang chất lượng (quyết định
+                    # 09/17, nợ #84), nên một lượt vẫn ra kết quả bằng bộ kém
+                    # hơn — dòng tiến trình người dùng đang xem phải nói ra
+                    # điều đó, không để nó đi im lặng.
+                    "fallback_from": bo_may_da_hong,
                     "latency_ms": do_tre_ms,
                 },
             )
@@ -296,6 +308,44 @@ def process_job(conn: psycopg.Connection, job: dict[str, Any], provider: Any = N
         _emit_event(conn, job["id"], "done", {"status": "FAILED", "error": str(exc)})
 
 
+def _so_do_chi_phi(provider: Any) -> dict[str, Any]:
+    """Mức dùng và tiền của lượt vừa chạy, đọc từ chính provider.
+
+    Hỏi provider chứ không tự tính lại: chỉ nó biết nó đã gọi mô hình mấy lần
+    (bộ Đầy đủ gọi HAI lượt khi confidence thấp) và bằng bản mô hình nào.
+
+    Bộ chạy cục bộ không có `muc_dung_lan_cuoi` — trả dict rỗng để
+    `_ghi_ai_request` giữ `None`, đúng nghĩa "không tiêu tiền nhà cung cấp"
+    thay vì "đã đo và bằng 0".
+    """
+    muc_dung = getattr(provider, "muc_dung_lan_cuoi", None)
+    if muc_dung is None:
+        return {}
+    model = getattr(provider, "model_version", None) or getattr(provider, "name", "")
+    return {
+        "muc_dung": muc_dung,
+        "cost_usd": tinh_cost_usd(str(model), muc_dung, _gia_token()),
+    }
+
+
+def _gia_token() -> dict:
+    """Bảng giá ở `contracts/config.json`, đọc một lần rồi giữ lại.
+
+    Giá nằm trong hợp đồng chứ không trong mã: đổi giá là một dòng JSON, và
+    lượt đổi đó không cần triển khai lại worker.
+    """
+    global _GIA_TOKEN_CACHE
+    if _GIA_TOKEN_CACHE is None:
+        try:
+            _GIA_TOKEN_CACHE = nap_json("config.json").get("gia_token") or {}
+        except Exception:  # noqa: BLE001 — thiếu bảng giá thì để trống cost_usd
+            _GIA_TOKEN_CACHE = {}
+    return _GIA_TOKEN_CACHE
+
+
+_GIA_TOKEN_CACHE: dict | None = None
+
+
 def _ghi_ai_request(
     conn: psycopg.Connection,
     *,
@@ -307,6 +357,9 @@ def _ghi_ai_request(
     quality_score: float | None = None,
     fallback_from: str | None = None,
     attempt: int = 1,
+    muc_dung: MucDung | None = None,
+    cost_usd: float | None = None,
+    image_count: int = 1,
 ) -> None:
     """Một dòng `ai_requests` cho MỖI lời gọi mô hình.
 
@@ -319,6 +372,17 @@ def _ghi_ai_request(
 
     Ghi sổ KHÔNG BAO GIỜ làm chết job: một bảng nhật ký hỏng thì mất số liệu,
     còn ném lỗi ở đây thì mất cả kết quả phân tích mà khách đã trả tiền.
+
+    **Bốn cột chi phí (09/17).** `input_tokens`/`output_tokens`/`image_count`/
+    `cost_usd` có trong lược đồ từ AI-1 nhưng chưa đường nào điền, nên câu
+    "một lượt phân tích tốn bao nhiêu" chỉ trả lời được bằng hoá đơn cuối
+    tháng của nhà cung cấp — không tách nổi theo tổ chức, theo bộ máy, hay
+    theo ảnh, và đó là nợ #71. Nay số đọc từ `response.usage` của chính nhà
+    cung cấp, nhân với bảng giá ở `contracts/config.json`.
+
+    `cost_usd` để TRỐNG khi không có giá cho mô hình đó, không ghi 0: một số 0
+    trong sổ chi phí đọc ra "miễn phí", và `local_cv` chạy trên máy nhà thì
+    đúng là 0 USD nhưng không đúng là 0 đồng.
     """
     try:
         with conn.cursor() as cur:
@@ -327,11 +391,13 @@ def _ghi_ai_request(
                 INSERT INTO ai_requests (
                     id, organization_id, job_id, capability_code, model_key,
                     attempt, fallback_from, source, latency_ms, quality_score,
-                    outcome, created_at
+                    input_tokens, output_tokens, image_count, cost_usd,
+                    duration_seconds, outcome, created_at
                 ) VALUES (
                     gen_random_uuid()::text, %s, %s, 'AIC-01', %s,
                     %s, %s, 'CORE', %s, %s,
-                    %s, now()
+                    %s, %s, %s, %s,
+                    %s, %s, now()
                 )
                 """,
                 (
@@ -342,6 +408,11 @@ def _ghi_ai_request(
                     fallback_from,
                     latency_ms,
                     quality_score,
+                    muc_dung.input_tokens if muc_dung else None,
+                    muc_dung.output_tokens if muc_dung else None,
+                    image_count,
+                    cost_usd,
+                    latency_ms / 1000.0,
                     outcome,
                 ),
             )

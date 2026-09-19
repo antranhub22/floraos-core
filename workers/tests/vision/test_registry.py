@@ -70,10 +70,26 @@ class TestChuoiDuPhong:
         cùng)."""
         assert registry.du_phong_cho("local_cv") == ()
 
-    def test_thac_chi_leo_len(self):
-        """Hỏng thì trả kết quả TỐT hơn, không phải rẻ hơn."""
-        assert registry.du_phong_cho("openai_direct") == ("openai_structured",)
-        assert registry.du_phong_cho("openai_structured") == ()
+    def test_thac_tut_xuong_theo_thang_chat_luong(self):
+        """Chủ sản phẩm chốt 09/17: hỏng thì VẪN ra kết quả, chỉ kém hơn.
+
+        Đảo lại luật "thác chỉ leo lên" của bản trước (nợ #84). Thứ tự phải
+        đúng thang — rơi từ Đầy đủ xuống Gọn trước, xuống Cục bộ sau cùng,
+        chứ không nhảy thẳng xuống đáy.
+        """
+        assert registry.du_phong_cho("openai_structured") == ("openai_direct", "local_cv")
+        assert registry.du_phong_cho("openai_direct") == ("local_cv",)
+
+    def test_khong_bo_nao_roi_nguoc_len_thang(self):
+        """Không có đường nào từ dưới leo lên — kể cả khi bộ trên còn sống.
+
+        Nếu một ngày ai đó thêm `local_cv: ("openai_structured",)` thì tổ
+        chức chọn Cục bộ sẽ bị gửi ảnh ra ngoài; ca này chặn cả hướng đó.
+        """
+        thang = ["openai_structured", "openai_direct", "local_cv"]
+        for i, bo in enumerate(thang):
+            for ke in registry.du_phong_cho(bo):
+                assert thang.index(ke) > i, f"{bo} rơi NGƯỢC lên {ke}"
 
     def test_chay_bang_du_phong_khi_bo_chinh_khong_dung_noi(self, monkeypatch):
         monkeypatch.setattr(registry, "_DA_DUNG", {})
@@ -82,11 +98,11 @@ class TestChuoiDuPhong:
             raise NotImplementedError("thiếu trọng số")
 
         monkeypatch.setitem(registry._XUONG, "openai_direct", hong)
-        monkeypatch.setitem(registry._XUONG, "openai_structured", lambda: "bo-day-du")
+        monkeypatch.setitem(registry._XUONG, "local_cv", lambda: "bo-cuc-bo")
 
         provider, da_dung, da_hong = registry.lay_provider_co_du_phong("openai_direct")
-        assert provider == "bo-day-du"
-        assert da_dung == "openai_structured"
+        assert provider == "bo-cuc-bo"
+        assert da_dung == "local_cv"
         assert da_hong == "openai_direct"
 
     def test_ca_chuoi_hong_thi_nem_loi_goc(self, monkeypatch):
@@ -97,14 +113,38 @@ class TestChuoiDuPhong:
         def hong():
             raise NotImplementedError("thiếu trọng số")
 
-        monkeypatch.setitem(registry._XUONG, "openai_direct", hong)
+        # Cả thang hỏng, kể cả đáy — không còn chỗ nào tụt xuống nữa.
         monkeypatch.setitem(registry._XUONG, "openai_structured", hong)
+        monkeypatch.setitem(registry._XUONG, "openai_direct", hong)
+        monkeypatch.setitem(registry._XUONG, "local_cv", hong)
 
         with pytest.raises(NotImplementedError):
-            registry.lay_provider_co_du_phong("openai_direct")
+            registry.lay_provider_co_du_phong("openai_structured")
 
     def test_khong_du_phong_thi_giu_nguyen_bo_da_chon(self, monkeypatch):
+        """Bộ Cục bộ là đáy thang — dựng được thì chạy, không có `fallback_from`."""
         monkeypatch.setattr(registry, "_DA_DUNG", {})
-        monkeypatch.setitem(registry._XUONG, "openai_structured", lambda: "bo-day-du")
+        monkeypatch.setitem(registry._XUONG, "local_cv", lambda: "bo-cuc-bo")
+        provider, da_dung, da_hong = registry.lay_provider_co_du_phong("local_cv")
+        assert (provider, da_dung, da_hong) == ("bo-cuc-bo", "local_cv", None)
+
+    def test_day_du_hong_thi_tut_dan_qua_hai_bac(self, monkeypatch):
+        """Đầy đủ hỏng, Gọn cũng hỏng → chạy bằng Cục bộ, và NÓI RA bộ đã hỏng.
+
+        `da_hong` là thứ ba chỗ ghi nhật ký bám vào (xem chú thích ở
+        `registry.py`). Mất nó là quyết định 09/17 thành một lượt hạ chất
+        lượng không ai hay.
+        """
+        monkeypatch.setattr(registry, "_DA_DUNG", {})
+
+        def hong():
+            raise NotImplementedError("thiếu khoá API")
+
+        monkeypatch.setitem(registry._XUONG, "openai_structured", hong)
+        monkeypatch.setitem(registry._XUONG, "openai_direct", hong)
+        monkeypatch.setitem(registry._XUONG, "local_cv", lambda: "bo-cuc-bo")
+
         provider, da_dung, da_hong = registry.lay_provider_co_du_phong("openai_structured")
-        assert (provider, da_dung, da_hong) == ("bo-day-du", "openai_structured", None)
+        assert provider == "bo-cuc-bo"
+        assert da_dung == "local_cv"
+        assert da_hong == "openai_structured"

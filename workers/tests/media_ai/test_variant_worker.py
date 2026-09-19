@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from io import BytesIO
 
+import time
+
 import numpy as np
 import pytest
 from PIL import Image, ImageFilter
@@ -16,9 +18,14 @@ from PIL import Image, ImageFilter
 from media_ai.jobs.variant_worker import (
     NGUONG_TU_CHOI,
     RATIO_PRESETS,
+    _ap_dung_auto_enhance,
+    _dan_lai_chu_the,
+    _doan_chu_the,
     _dong_khung,
     _do_lo_chu_the,
+    _mat_na_iopaint,
     _sang_bytes,
+    dung_bien_the,
 )
 
 
@@ -136,3 +143,251 @@ class TestXuatTep:
         data, mime, duoi = _sang_bytes(_anh_mau(60, 60))
         assert mime == "image/jpeg" and duoi == "jpg"
         assert Image.open(BytesIO(data)).mode == "RGB"
+
+
+class TestMatNaIOPaint:
+    """`_mat_na_iopaint` (nợ #104, tiếp #78) — dựng `product_mask` từ CHÍNH
+    alpha đã có, không chạy segmentation lần hai."""
+
+    def test_loi_la_0_con_lai_la_255(self):
+        alpha = _mat_na(120, 120)
+        mask_bytes = _mat_na_iopaint(alpha)
+        mask = Image.open(BytesIO(mask_bytes))
+
+        assert mask.mode == "L"
+        assert mask.size == alpha.size
+        arr = np.array(mask)
+        # Tâm hình tròn (chắc chắn trong lõi đã co-biên) phải là 0.
+        assert arr[60, 60] == 0
+        # Góc ảnh (chắc chắn ngoài chủ thể) phải là 255.
+        assert arr[0, 0] == 255
+
+    def test_khong_co_chu_the_thi_toan_255(self):
+        alpha_rong = Image.new("L", (80, 80), 0)
+        mask = Image.open(BytesIO(_mat_na_iopaint(alpha_rong)))
+        assert np.all(np.array(mask) == 255)
+
+
+class TestDanLaiChuThe:
+    """`_dan_lai_chu_the` (nợ #104) — belt-and-suspenders, dán đúng vị trí."""
+
+    def test_dan_dung_vi_tri_giu_nguyen_pixel(self):
+        chu_the = _anh_mau(100, 80).convert("RGBA")
+        chu_the.putalpha(255)
+        nen = Image.new("RGB", (300, 240), color=(200, 200, 200))
+        offset = (50, 40)
+
+        ket_qua = _dan_lai_chu_the(nen, chu_the, offset)
+
+        assert ket_qua.size == nen.size
+        vung_dan = np.array(ket_qua.convert("RGB"))[40:120, 50:150]
+        vung_goc = np.array(chu_the.convert("RGB"))
+        assert np.array_equal(vung_dan, vung_goc)
+        # Ngoài vùng dán vẫn là nền cũ, không bị đụng vào.
+        assert tuple(np.array(ket_qua.convert("RGB"))[0, 0]) == (200, 200, 200)
+
+
+class TestDungBienTheVoiExpander:
+    """Tích hợp `dung_bien_the()` ↔ một `ImageExpander` giả lập (nợ #104) —
+    khoá đúng đường nối product_mask → expand() → paste-back → dong_khung,
+    không cần IOPaint/GPU thật."""
+
+    class _ExpanderGiaLap:
+        name = "gia_lap"
+        model_version = "gia_lap-v1"
+
+        def __init__(self) -> None:
+            self.muc_dung_lan_cuoi: object | None = None
+            self.nhan_duoc_product_mask = False
+
+        def expand(self, image: bytes, ratio: str, product_mask: bytes | None = None):
+            self.nhan_duoc_product_mask = product_mask is not None
+            rong, cao = RATIO_PRESETS[ratio]
+            nen = Image.new("RGB", (rong, cao), color=(9, 9, 9))
+            buf = BytesIO()
+            nen.save(buf, format="PNG")
+
+            goc = Image.open(BytesIO(image))
+            dem_trai = (rong - goc.width) // 2
+            dem_tren = (cao - goc.height) // 2
+            self.muc_dung_lan_cuoi = object()
+
+            return {
+                "image": buf.getvalue(),
+                "generated_flags": {"generative_fill_used": True, "requires_reshoot_warning": False},
+                "parameters": {"paste_offset": [dem_trai, dem_tren]},
+            }
+
+    def test_paste_offset_duoc_dung_de_dan_lai_chu_the(self, monkeypatch):
+        gia_lap = self._ExpanderGiaLap()
+        monkeypatch.setattr(
+            "media_ai.jobs.variant_worker.resolve_expander", lambda ten: gia_lap
+        )
+
+        master = _anh_mau(200, 150)
+        buf = BytesIO()
+        master.convert("RGB").save(buf, format="PNG")
+
+        bien_the, do_trung, expander_dung = dung_bien_the(
+            buf.getvalue(),
+            preset="studio_white",
+            ratio="1:1",
+            watermark=False,
+            logo_bytes=None,
+            ten_tiem=None,
+            expand_provider="gia_lap",
+        )
+
+        styled = next(b for b in bien_the if b["key"] == "styled")
+        assert styled["image"].size == RATIO_PRESETS["1:1"]
+        # Engine giả lập nhận được product_mask (đúng ImageExpander mới).
+        assert gia_lap.nhan_duoc_product_mask is True
+        # Chạy thật (không tự lùi về Pad) — expander_dung phải khác None.
+        assert expander_dung is gia_lap
+        # Vùng đã dán lại KHÔNG còn là nền phẳng (9,9,9) của engine giả lập
+        # — nếu paste-back không chạy, cả khung sẽ toàn màu (9,9,9).
+        arr = np.array(styled["image"].convert("RGB"))
+        rong, cao = RATIO_PRESETS["1:1"]
+        giua = arr[cao // 2, rong // 2]
+        assert tuple(giua) != (9, 9, 9)
+
+
+class TestAutoEnhance:
+    """`_ap_dung_auto_enhance` (AIC-14, chốt 18/09: "Chỉ chỉnh phông nền")
+    — cân bằng sáng/tương phản KHÔNG được đụng một pixel nào của chủ thể."""
+
+    def test_chu_the_giu_nguyen_pixel_tuyet_doi_sau_khi_tang_sang(self):
+        chu_the = _anh_mau(100, 80).convert("RGBA")
+        chu_the.putalpha(_mat_na(100, 80))
+        # Nền phẳng tương phản thấp — chắc chắn autocontrast phải đổi nó.
+        nen = Image.new("RGB", (100, 80), color=(120, 120, 120)).convert("RGBA")
+        nen.putalpha(255)
+
+        ket_qua = _ap_dung_auto_enhance(nen, chu_the)
+
+        assert ket_qua.mode == "RGB"
+        assert ket_qua.size == nen.size
+
+        mask = np.array(chu_the.split()[3]) > 0
+        vung_ket_qua = np.array(ket_qua.convert("RGB"))[mask]
+        vung_goc = np.array(chu_the.convert("RGB"))[mask]
+        assert np.array_equal(vung_ket_qua, vung_goc)
+
+    def test_nen_thuc_su_doi_khi_bat_auto_enhance(self):
+        # Nền dải xám hẹp (100–150) — autocontrast phải kéo dải ra rộng hơn.
+        dai = np.linspace(100, 150, 80, dtype=np.uint8)
+        arr = np.tile(dai, (80, 1))
+        nen_hep = Image.fromarray(np.stack([arr, arr, arr], axis=-1), mode="RGB").convert("RGBA")
+        nen_hep.putalpha(255)
+        # Chủ thể rỗng (alpha toàn 0) — không dán gì đè lên, đo nguyên nền.
+        chu_the_rong = Image.new("RGBA", (80, 80), (0, 0, 0, 0))
+
+        ket_qua = _ap_dung_auto_enhance(nen_hep, chu_the_rong)
+
+        arr_ket_qua = np.array(ket_qua.convert("L"))
+        assert int(arr_ket_qua.max()) - int(arr_ket_qua.min()) > (150 - 100)
+
+
+class _SegmenterGiaLap:
+    """Thay `RembgSegmenter` thật (mô hình nặng) bằng một phép tách giả —
+    ca thử ở đây khoá HÀNH VI CACHE của `_doan_chu_the`, không khoá chất
+    lượng segmentation (đã có `RembgSegmenter` thật kiểm ở nơi khác)."""
+
+    def __init__(self, model_name: str = "bria-rmbg") -> None:
+        pass
+
+    def extract_subject(self, master_rgb: Image.Image):
+        _SO_LAN_TACH["n"] += 1
+        rgba = master_rgb.convert("RGBA")
+        alpha = Image.new("L", master_rgb.size, 255)
+        return rgba, alpha
+
+
+class _EdgeDefringerGiaLap:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+    def defringe(self, rgba: Image.Image) -> Image.Image:
+        return rgba
+
+
+_SO_LAN_TACH = {"n": 0}
+
+
+class TestDoanChuThe:
+    """`_doan_chu_the` (nợ #108) — cache tách chủ thể theo đĩa, khoá bằng
+    `master_asset_id`, cho một lượt chạy lô nhiều tổ hợp preset×ratio trên
+    CÙNG một Master Image."""
+
+    def setup_method(self):
+        _SO_LAN_TACH["n"] = 0
+
+    def _gia_lap(self, monkeypatch):
+        monkeypatch.setattr("media_ai.jobs.variant_worker.RembgSegmenter", _SegmenterGiaLap)
+        monkeypatch.setattr("media_ai.jobs.variant_worker.EdgeDefringer", _EdgeDefringerGiaLap)
+
+    def test_khong_cache_khi_thieu_tham_so(self, monkeypatch):
+        self._gia_lap(monkeypatch)
+        master = _anh_mau(40, 40)
+
+        _doan_chu_the(master, None, None)
+        _doan_chu_the(master, None, None)
+
+        assert _SO_LAN_TACH["n"] == 2
+
+    def test_cache_khi_du_master_asset_id_va_cache_dir(self, monkeypatch, tmp_path):
+        self._gia_lap(monkeypatch)
+        master = _anh_mau(40, 40)
+
+        rgba1, _ = _doan_chu_the(master, "asset-abc", tmp_path)
+        rgba2, _ = _doan_chu_the(master, "asset-abc", tmp_path)
+
+        assert _SO_LAN_TACH["n"] == 1
+        assert np.array_equal(np.array(rgba1.convert("RGBA")), np.array(rgba2.convert("RGBA")))
+
+    def test_master_khac_nhau_khong_dung_chung_cache(self, monkeypatch, tmp_path):
+        self._gia_lap(monkeypatch)
+        master = _anh_mau(40, 40)
+
+        _doan_chu_the(master, "asset-abc", tmp_path)
+        _doan_chu_the(master, "asset-khac", tmp_path)
+
+        assert _SO_LAN_TACH["n"] == 2
+
+
+class _SegmenterTreoGiaLap:
+    """Mô phỏng rembg/onnxruntime bị kẹt (nợ #112) — `extract_subject` ngủ
+    lâu hơn hạn giờ để khoá đúng hành vi: quá hạn phải ném `TimeoutError`
+    rõ ràng, không được treo vô thời hạn."""
+
+    def __init__(self, model_name: str = "bria-rmbg") -> None:
+        pass
+
+    def extract_subject(self, master_rgb: Image.Image):
+        time.sleep(5)
+        rgba = master_rgb.convert("RGBA")
+        alpha = Image.new("L", master_rgb.size, 255)
+        return rgba, alpha
+
+
+class TestDoanChuTheTimeout:
+    """`_doan_chu_the` (nợ #112, 18/09) — hạn giờ cho bước tách chủ thể."""
+
+    def test_qua_han_nem_timeout_error_ro_rang(self, monkeypatch):
+        monkeypatch.setattr("media_ai.jobs.variant_worker.RembgSegmenter", _SegmenterTreoGiaLap)
+        monkeypatch.setattr("media_ai.jobs.variant_worker.EdgeDefringer", _EdgeDefringerGiaLap)
+        monkeypatch.setenv("VARIANT_SEGMENTATION_TIMEOUT_SECONDS", "1")
+        master = _anh_mau(40, 40)
+
+        with pytest.raises(TimeoutError, match="vượt quá 1 giây"):
+            _doan_chu_the(master, None, None)
+
+    def test_khong_qua_han_van_tra_ket_qua_binh_thuong(self, monkeypatch):
+        monkeypatch.setattr("media_ai.jobs.variant_worker.RembgSegmenter", _SegmenterGiaLap)
+        monkeypatch.setattr("media_ai.jobs.variant_worker.EdgeDefringer", _EdgeDefringerGiaLap)
+        monkeypatch.setenv("VARIANT_SEGMENTATION_TIMEOUT_SECONDS", "5")
+        master = _anh_mau(40, 40)
+
+        rgba, alpha = _doan_chu_the(master, None, None)
+
+        assert rgba.size == master.size

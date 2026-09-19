@@ -31,7 +31,9 @@ from vision.providers.chung import (
     CANH_DAI_MAC_DINH_PX,
     SO_LAN_THU_LAI,
     TIMEOUT_GOI_GIAY,
+    MucDung,
     doc_dap_ung,
+    doc_muc_dung,
     nap_json,
     nap_text,
     thu_nho_anh,
@@ -84,6 +86,8 @@ class OpenAIDirectProvider:
                 },
             ],
         )
+        self.muc_dung_lan_cuoi = MucDung()
+        self.muc_dung_lan_cuoi.cong(doc_muc_dung(response))
         ket_qua = doc_dap_ung(response)
         # Ba tổng đếm cộng tại chỗ chứ không hỏi mô hình, y như bộ đầy đủ —
         # hai bộ phải cho ra cùng một nghĩa ở cùng một trường.

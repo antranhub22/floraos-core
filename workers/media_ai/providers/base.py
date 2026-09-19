@@ -69,3 +69,47 @@ class IdentityVerifier(Protocol):
     """
 
     def compare(self, original_fingerprint: dict, enhanced_image: bytes) -> dict: ...
+
+
+class KetQuaMoRong(TypedDict, total=False):
+    """Đầu ra của một lượt mở rộng khung ảnh (outpainting/expansion, AIC-13,
+    nợ #78, 17/09).
+
+    Cùng khuôn với `KetQuaTangCuong`: `generated_flags` không có giá trị mặc
+    định ngầm — bộ máy mở rộng LUÔN sinh pixel mới ở phần biên (đó là chính
+    việc nó làm), nhưng vẫn phải khai rõ trong từng lượt trả về chứ không
+    suy ra từ tên provider.
+    """
+
+    image: bytes
+    generated_flags: dict
+    parameters: dict
+
+
+class ImageExpander(Protocol):
+    """Mở khung ảnh ra đúng tỷ lệ đích bằng nội dung sinh thêm ở biên
+    (outpainting), thay vì chỉ đệm màu đặc như `dong_khung`
+    (`media_ai/image/ratio_frame.py`).
+
+    Nợ #78, 17/09: cổng có từ đợt này. Ba hiện thực: `PadExpander` (lùi
+    thẳng về đóng khung cũ, không sinh gì mới — mặc định), `ReplicateOutpainter`
+    (gọi `bria/expand-image` qua Replicate, Mức 1 quản lý) và `IOPaintExpander`
+    (nợ #104, tiếp theo #78 — IOPaint tự host, Mức 2 trọng số mở, xem tài
+    liệu "Tích hợp IOPaint Outpainting vào floraos-core"). Mọi lượt `expand`
+    lỗi phải tự lùi về `PadExpander` — xem `providers/expansion/*.py` — không
+    được ném lỗi lên job đang chạy.
+
+    `product_mask` (nợ #104): tham số MỚI, tuỳ chọn, lùi về tương thích
+    ngược — cùng khuôn `protectMask` đã đặc tả ở `ImageProvider.edit()`
+    (`src/core/ports/image-provider.ts`, §6.2 `docs/dac-ta/10-ai-orchestration.md`):
+    vùng KHÔNG được đổi vì đó là sản phẩm. `PadExpander`/`ReplicateOutpainter`
+    bỏ qua tham số này (không sửa gì, hành vi giữ nguyên); `IOPaintExpander`
+    là hiện thực đầu tiên thật sự dùng tới nó.
+    """
+
+    name: str
+    model_version: str
+
+    def expand(
+        self, image: bytes, ratio: str, product_mask: bytes | None = None
+    ) -> KetQuaMoRong: ...

@@ -10,3 +10,7 @@ pytest>=8.0
 rembg>=2.0
 onnxruntime>=1.18
 opencv-python>=4.9
+# `ReplicateOutpainter` (AIC-13, nợ #78, 17/09) gọi thẳng REST API của
+# Replicate — không dùng SDK `replicate` để khỏi thêm một tầng trừu tượng
+# chưa cần, cùng cách `openai_enhancer.py` tự quản việc gọi API của mình.
+httpx>=0.27

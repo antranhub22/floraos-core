@@ -27,15 +27,26 @@ Ba điều đã chặn bằng cấu trúc:
    nào thì không có đường nào để ảnh đó lọt ra qua endpoint tải về.
 
 Worker KHÔNG ghi `usage` (`YC-U4`) — credit trừ ở phía TS lúc tạo job.
+
+**Chi phí thật (nợ #71).** Toàn bộ pipeline (`RembgSegmenter`,
+`EdgeDefringer`, `StudioBackdropEngine`) là cục bộ, không gọi nhà cung cấp
+trả phí nào — `ai_requests` vẫn ghi một dòng (`AIC-17`) cho mỗi job để có độ
+trễ và số lần chạy theo tổ chức, với `cost_usd`/token để `None` (không đo
+được là chuyện khác hẳn với đo được và bằng 0).
 """
 
 from __future__ import annotations
 
 import json
+import logging
+import os
+import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import psycopg
@@ -43,10 +54,16 @@ from PIL import Image
 from psycopg.rows import dict_row
 
 from shared.storage import doc_bytes, ghi_bytes
+from media_ai.image.auto_retouch import tu_dong_can_bang_sang
 from media_ai.image.brand_watermark import dong_dau
 from media_ai.image.defringe import EdgeDefringer
+from media_ai.image.ratio_frame import RATIO_PRESETS, dong_khung
 from media_ai.image.studio_backdrop import StudioBackdropEngine
+from media_ai.providers.chung import ghi_ai_request, so_do_chi_phi_luot
+from media_ai.providers.expansion.router import resolve_expander
 from media_ai.providers.segmentation.rembg_segmenter import RembgSegmenter
+
+log = logging.getLogger("media_ai.jobs.variant_worker")
 
 FEATURE = "media.variant"
 PIPELINE_VERSION = "m04b-1"
@@ -54,17 +71,18 @@ PIPELINE_VERSION = "m04b-1"
 REPO_ROOT = Path(__file__).resolve().parents[3]
 STORAGE_ROOT = REPO_ROOT / "var" / "storage"
 
+# Cache tách chủ thể cho một lượt chạy lô nhiều biến thể (nợ #108, AIC-17 mở
+# rộng "30 mẫu khác nhau từ ảnh gốc"). Xem docstring `_doan_chu_the`.
+SEGMENTATION_CACHE_ROOT = STORAGE_ROOT / "cache" / "m04b_segmentation"
+
 # Cùng ngưỡng với `src/modules/media/domain/variant-rules.ts`. Phía TS tính
 # LẠI phán quyết từ số đo, nên hai bên lệch nhau thì phía TS thắng — ở đây
 # chỉ dùng để quyết định có ghi asset hay không.
 NGUONG_TU_CHOI = 0.99
 
-RATIO_PRESETS: dict[str, tuple[int, int]] = {
-    "1:1": (1024, 1024),
-    "4:5": (1024, 1280),
-    "9:16": (1080, 1920),
-    "16:9": (1920, 1080),
-}
+# `RATIO_PRESETS` giờ SỐNG ở `media_ai/image/ratio_frame.py` (nợ #78, 17/09)
+# — nhập lại ở đây để giữ nguyên tên cũ, vì `tests/media_ai/test_variant_worker.py`
+# import trực tiếp `RATIO_PRESETS` từ module này.
 
 PRESET_SANG_STUDIO_STYLE: dict[str, str] = {
     "transparent": "transparent",
@@ -174,6 +192,50 @@ def _co_bien(alpha: Image.Image, buoc: int = 3) -> np.ndarray:
     return np.array(m) >= 250
 
 
+def _mat_na_iopaint(alpha: Image.Image) -> bytes:
+    """Dựng `product_mask` cho `ImageExpander.expand()` (AIC-13, nợ #104 —
+    tích hợp IOPaint) từ CHÍNH kênh alpha đã có sẵn của `RembgSegmenter`,
+    KHÔNG chạy thêm một lượt segmentation nào (thiết kế tích hợp, mục 2).
+
+    Giá trị 0 (đen) = vùng LÕI đã co-biên (`_co_bien`, cùng hàm dùng để đo
+    Subject Integrity) — giữ nguyên. 255 (trắng) = phần còn lại của canvas
+    — được phép sinh mới. Dùng đúng vùng lõi đã co-biên chứ không phải toàn
+    bộ alpha: viền mềm (feathering) được phép engine vẽ đè, vì bước dán lại
+    chính xác (`_dan_lai_chu_the`, gọi ngay sau `expand()`) phủ lại đúng
+    nguyên khối `rgba` bất kể engine sinh gì ở viền.
+
+    Lưu ý (nợ #104, xem `iopaint_outpainter.py`): với `IOPaintExpander`,
+    mask này KHÔNG được IOPaint server dùng khi `use_extender=true` (đã xác
+    minh qua mã nguồn thật) — bảo vệ thật sự đến từ `_dan_lai_chu_the`.
+    Tham số vẫn được xây và truyền để khớp đặc tả `ImageExpander`/
+    `ImageProvider.edit(mask, protectMask)`, và để sẵn sàng cho một hiện
+    thực khác (không dùng `use_extender`) có đọc mask thật.
+    """
+    loi = _co_bien(alpha)
+    mat_na = np.where(loi, 0, 255).astype(np.uint8)
+    anh_mat_na = Image.fromarray(mat_na, mode="L")
+    buf = BytesIO()
+    anh_mat_na.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _dan_lai_chu_the(
+    anh_nen: Image.Image, rgba_chu_the: Image.Image, offset: tuple[int, int]
+) -> Image.Image:
+    """Dán lại NGUYÊN KHỐI `rgba_chu_the` (đã cắt từ Master, có alpha) lên
+    `anh_nen` (ảnh engine mở-rộng-khung vừa trả về, canvas đã lớn hơn) —
+    belt-and-suspenders (thiết kế tích hợp IOPaint, mục 3): dù cơ chế giữ-
+    nguyên của engine đã được xác minh ở mức nào, không tin riêng nó — luôn
+    dán đè lại bằng chính khối gốc TRƯỚC khi đóng khung, để `_do_lo_chu_the`
+    sau đó luôn đo trên đúng pixel gốc, không phải pixel do model sinh lại.
+
+    `offset` đến từ chính `parameters["paste_offset"]` mà engine trả về
+    (vd. `IOPaintExpander`) — không đoán vị trí ở đây."""
+    ket_qua = anh_nen.convert("RGBA")
+    ket_qua.alpha_composite(rgba_chu_the, dest=offset)
+    return ket_qua
+
+
 def _do_lo_chu_the(
     master_rgb: Image.Image,
     ket_qua_rgba: Image.Image,
@@ -204,28 +266,135 @@ def _do_lo_chu_the(
     return float(int(trung.sum()) / tong)
 
 
+# ─── Tách chủ thể (dùng chung cho cả lô, nợ #108) ──────────────────────────
+
+
+def _duong_dan_cache_chu_the(cache_dir: Path, master_asset_id: str) -> tuple[Path, Path]:
+    an_toan = "".join(k if k.isalnum() or k in "-_" else "_" for k in master_asset_id)
+    return cache_dir / f"{an_toan}_rgba.png", cache_dir / f"{an_toan}_alpha.png"
+
+
+def _doan_chu_the(
+    master_rgb: Image.Image,
+    master_asset_id: str | None,
+    cache_dir: Path | None,
+) -> tuple[Image.Image, Image.Image]:
+    """Tách chủ thể khỏi nền (`RembgSegmenter` + `EdgeDefringer`).
+
+    Bước này KHÔNG phụ thuộc `preset`/`ratio` — chỉ phụ thuộc chính Master
+    Image — nhưng trước nợ #108 mỗi job (mỗi tổ hợp preset×ratio) tự chạy
+    lại nó một lần. Một lượt chạy lô 24 tổ hợp trên CÙNG một Master Image
+    (`request-variants.ts#requestVariantBatch`) vì vậy tách chủ thể tới 24
+    lần cho một kết quả giống hệt nhau — đây là bước tốn thời gian nhất
+    trong `dung_bien_the` (model segmentation).
+
+    Cache theo ĐĨA, khoá bằng `master_asset_id`, KHÔNG theo bộ nhớ tiến
+    trình: job trong một lô chạy trên `claim_next` (`SELECT … FOR UPDATE
+    SKIP LOCKED`) nên có thể rơi vào các tiến trình worker khác nhau — cache
+    trong bộ nhớ một tiến trình không chắc job thứ hai của cùng lô gặp lại.
+
+    `master_asset_id=None` HOẶC `cache_dir=None` tắt cache hoàn toàn, trả về
+    y hệt hành vi trước nợ #108 — dùng trong các ca thử hiện có
+    (`test_variant_worker.py`) gọi `dung_bien_the` không kèm hai tham số
+    này.
+    """
+    if master_asset_id and cache_dir is not None:
+        duong_rgba, duong_alpha = _duong_dan_cache_chu_the(cache_dir, master_asset_id)
+        if duong_rgba.exists() and duong_alpha.exists():
+            rgba = Image.open(duong_rgba)
+            rgba.load()
+            alpha = Image.open(duong_alpha)
+            alpha.load()
+            return rgba, alpha
+
+    # nợ #109 (18/09): cho phép đổi sang model nhẹ hơn (vd `u2netp`) khi phát
+    # triển cục bộ để không phải chờ `bria-rmbg` (~1GB, chính xác hơn nhưng
+    # chậm hơn nhiều trên CPU) mỗi lần đổi ảnh gốc. Mặc định GIỮ NGUYÊN
+    # `bria-rmbg` — không đổi hành vi/chất lượng khi không đặt biến môi trường.
+    model_ten = os.environ.get("VARIANT_SEGMENTATION_MODEL", "bria-rmbg")
+
+    def _tach_va_khu_vien() -> tuple[Image.Image, Image.Image]:
+        rgba_kq, alpha_kq = RembgSegmenter(model_name=model_ten).extract_subject(master_rgb)
+        rgba_kq = EdgeDefringer(inpaint_radius=3, solid_threshold=245).defringe(rgba_kq)
+        return rgba_kq, alpha_kq
+
+    # nợ #112 (18/09): worker CHỈ MỘT tiến trình (nợ #109) — nếu bước tách
+    # chủ thể treo (rembg/onnxruntime kẹt, máy quá tải bởi 5-6 tiến trình
+    # `dev:all` chạy song song, …), trước đây job đứng PROCESSING VÔ THỜI
+    # HẠN và chặn đứng MỌI job M04b phía sau, không có cách nào tự phục
+    # hồi ngoài việc người dùng tự nhận ra và khởi động lại thủ công. Bọc
+    # bằng một luồng riêng có hạn giờ: quá hạn thì coi là lỗi kỹ thuật,
+    # job này bị đánh FAILED (nhánh `except Exception` sẵn có của
+    # `process_variant_job`), nhường chỗ cho job kế tiếp trong hàng đợi.
+    # LƯU Ý THẬT: Python không thể buộc dừng một luồng đang chạy — nếu bước
+    # tách chủ thể thật sự bị treo (không phải chỉ chậm), luồng đó vẫn tiếp
+    # tục chiếm CPU/bộ nhớ ngầm sau khi job bị đánh FAILED, tới khi tự xong
+    # hoặc tiến trình worker được khởi động lại — đây là giới hạn của cách
+    # tiếp cận này, không phải một lần dừng sạch sẽ thật sự.
+    timeout_giay = float(os.environ.get("VARIANT_SEGMENTATION_TIMEOUT_SECONDS", "90"))
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(_tach_va_khu_vien)
+        try:
+            rgba, alpha = future.result(timeout=timeout_giay)
+        except FuturesTimeoutError as exc:
+            raise TimeoutError(
+                f"Tách chủ thể (model={model_ten}) vượt quá {timeout_giay:.0f} giây "
+                "— máy có thể đang quá tải hoặc rembg/onnxruntime bị kẹt "
+                "(xem docs/dac-ta/TECHNICAL_DEBT.md, nợ #112)"
+            ) from exc
+
+    if master_asset_id and cache_dir is not None:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        duong_rgba, duong_alpha = _duong_dan_cache_chu_the(cache_dir, master_asset_id)
+        rgba.save(duong_rgba, format="PNG")
+        alpha.save(duong_alpha, format="PNG")
+
+    return rgba, alpha
+
+
+def _ap_dung_auto_enhance(anh_boi_canh: Image.Image, rgba_chu_the: Image.Image) -> Image.Image:
+    """AIC-14 — cân bằng sáng/tương phản tự động, CHỈ ở vùng nền (chốt
+    18/09, AskUserQuestion: "Chỉ chỉnh phông nền").
+
+    `tu_dong_can_bang_sang` chạy trên TOÀN khung `anh_boi_canh` (nền đã ghép
+    bối cảnh + chủ thể, cùng kích thước với `rgba_chu_the`, `composite()`
+    không đổi khung) — không tự nó biết chủ thể ở đâu. An toàn đến từ bước
+    NGAY SAU: dán lại NGUYÊN KHỐI `rgba_chu_the` GỐC (chưa qua bước cân
+    bằng sáng) đè lên, offset `(0, 0)` — cùng nguyên tắc belt-and-suspenders
+    với `_dan_lai_chu_the` (AIC-13): bất kể `tu_dong_can_bang_sang` làm gì
+    lên vùng chủ thể, kết quả cuối luôn là pixel GỐC ở đó.
+
+    Đánh đổi có chủ đích: viền đã làm mềm/light-wrap của `composite()` (alpha
+    feathering, quang sáng tràn viền) bị THAY bằng viền thô của
+    `rgba_chu_the` cho riêng lượt bật `auto_enhance` này — ưu tiên an toàn
+    (không đổi pixel bó hoa) hơn giữ độ mượt viền; giữ cả hai cùng lúc là
+    việc của một đợt sau (xem `TECHNICAL_DEBT.md`).
+
+    Trả về ảnh RGB (bỏ alpha), khớp mode `anh_boi_canh` truyền vào — giữ
+    nguyên hành vi định dạng tệp ở `_sang_bytes` (PNG chỉ khi còn alpha).
+    """
+    nang_sang = tu_dong_can_bang_sang(anh_boi_canh.convert("RGB")).convert("RGBA")
+    da_dan = _dan_lai_chu_the(nang_sang, rgba_chu_the, (0, 0))
+    return da_dan.convert("RGB")
+
+
 # ─── Dựng ảnh ──────────────────────────────────────────────────────────────
 
 
 def _dong_khung(anh: Image.Image, ratio: str) -> Image.Image:
-    """Đưa về đúng tỷ lệ bằng cách ĐỆM, không cắt.
+    """Uỷ quyền cho `media_ai.image.ratio_frame.dong_khung` (nợ #78,
+    17/09). Giữ tên cũ vì `tests/media_ai/test_variant_worker.py` import
+    trực tiếp `_dong_khung` — hành vi giữ y hệt, chỉ đổi chỗ hiện thực."""
+    return dong_khung(anh, ratio)
 
-    Cắt là cách nhanh nhất để mất mấy bông ngoài rìa hoặc cụt cuống — mà bảo
-    toàn trọn bó hoa chính là điều M04b hứa. Ảnh RGBA đệm trong suốt; ảnh
-    nền đặc đệm bằng màu góc trên trái, tức chính màu phông vừa ghép.
-    """
-    rong_dich, cao_dich = RATIO_PRESETS.get(ratio, RATIO_PRESETS["1:1"])
-    ty_le = min(rong_dich / anh.width, cao_dich / anh.height)
-    moi = (max(1, int(anh.width * ty_le)), max(1, int(anh.height * ty_le)))
-    vua = anh.resize(moi, Image.LANCZOS)
 
-    if anh.mode == "RGBA":
-        khung = Image.new("RGBA", (rong_dich, cao_dich), (0, 0, 0, 0))
-    else:
-        khung = Image.new("RGB", (rong_dich, cao_dich), anh.convert("RGB").getpixel((0, 0)))
-
-    khung.paste(vua, ((rong_dich - moi[0]) // 2, (cao_dich - moi[1]) // 2), vua if anh.mode == "RGBA" else None)
-    return khung
+def _anh_thanh_png_bytes(anh: Image.Image) -> bytes:
+    """PNG luôn — kể cả ảnh không có alpha — vì đây chỉ là dạng trung gian
+    gửi cho `ImageExpander` (`AIC-13`), không phải bytes lưu kho (đó là
+    việc của `_sang_bytes`, giữ JPEG cho ảnh không alpha để nhẹ kho)."""
+    buf = BytesIO()
+    anh.save(buf, format="PNG")
+    return buf.getvalue()
 
 
 def _sang_bytes(anh: Image.Image) -> tuple[bytes, str, str]:
@@ -245,16 +414,56 @@ def dung_bien_the(
     watermark: bool,
     logo_bytes: bytes | None,
     ten_tiem: str | None,
-) -> tuple[list[dict[str, Any]], float]:
-    """Dựng danh sách biến thể và đo lõi chủ thể.
+    expand_provider: str | None = None,
+    auto_enhance: bool = False,
+    master_asset_id: str | None = None,
+    cache_dir: Path | None = None,
+    on_stage: Callable[[str], None] | None = None,
+) -> tuple[list[dict[str, Any]], float, Any]:
+    """Dựng danh sách biến thể, đo lõi chủ thể, và trả về bộ mở-rộng-khung
+    (`ImageExpander`) đã dùng cho biến thể "styled" nếu có (`AIC-13`, nợ
+    #78, 17/09) — `None` khi job không yêu cầu `expand_provider` khác mặc
+    định `pad` (đóng khung màu đặc như trước, không đổi hành vi).
+
+    `expand_provider` CHỈ áp dụng cho biến thể "styled" — đây là bản DUY
+    NHẤT mà nội dung sinh thêm ở biên có ý nghĩa (đã là ảnh ghép bối cảnh
+    bằng generative fill); bản "transparent" giữ nguyên alpha-pad (mở rộng
+    một nền trong suốt không có nghĩa gì), và bản "branded" đóng khung lại
+    từ chính nguồn của nó (có thể là bản đã ghép bối cảnh hoặc rgba gốc)
+    độc lập — phạm vi hẹp này là quyết định có chủ đích, không phải thiếu
+    sót, và để lại quyết định "mở rộng luôn ảnh hưởng thế nào tới bản đóng
+    dấu" cho một đợt sau.
 
     Tách khỏi `process_variant_job` để chạy được trong test mà không cần
     Postgres — cùng lý do `optimization-rules.ts` không import Prisma.
+
+    Nợ #104 (tiếp #78): khi `expand_provider` được dùng, `expand()` nay
+    nhận thêm `product_mask` (dựng từ `alpha` sẵn có, `_mat_na_iopaint`) và
+    kết quả được dán lại chính xác (`_dan_lai_chu_the`) TRƯỚC khi đóng
+    khung — xem tài liệu "Tích hợp IOPaint Outpainting vào floraos-core".
+
+    `auto_enhance` (AIC-14, chốt 18/09): bật cân bằng sáng/tương phản tự
+    động cho bản "styled"/"branded", CHỈ ở vùng nền — xem
+    `_ap_dung_auto_enhance`. Mặc định tắt, không đổi hành vi cũ.
+
+    `master_asset_id`/`cache_dir` (nợ #108): khi CẢ HAI được truyền, bước
+    tách chủ thể được cache theo đĩa để một lượt chạy lô nhiều tổ hợp
+    preset×ratio trên CÙNG Master Image không tách lại 24 lần — xem
+    `_doan_chu_the`. Mặc định `None` giữ nguyên hành vi cũ (luôn tách mới).
+
+    `on_stage` (nợ #110, 18/09): callback tuỳ chọn gọi ĐÚNG lúc chuyển từ
+    bước tách chủ thể sang bước ghép bối cảnh — trước đây `process_variant_job`
+    tự ghi `stage="COMPOSING"` vào DB TRƯỚC KHI gọi hàm này, nên nhãn hiển thị
+    cho người dùng sai lệch với việc đang thật sự chạy (tách chủ thể, bước nặng
+    nhất, lại chạy dưới nhãn "Ghép bối cảnh & đóng dấu"). Mặc định `None` —
+    không đổi hành vi cho mọi lời gọi cũ (kể cả toàn bộ `test_variant_worker.py`).
     """
     master_rgb = Image.open(BytesIO(master_bytes)).convert("RGB")
 
-    rgba, alpha = RembgSegmenter(model_name="bria-rmbg").extract_subject(master_rgb)
-    rgba = EdgeDefringer(inpaint_radius=3, solid_threshold=245).defringe(rgba)
+    rgba, alpha = _doan_chu_the(master_rgb, master_asset_id, cache_dir)
+
+    if on_stage is not None:
+        on_stage("COMPOSING")
 
     engine = StudioBackdropEngine()
     style = PRESET_SANG_STUDIO_STYLE.get(preset, "warm_gray")
@@ -277,16 +486,74 @@ def dung_bien_the(
     # 2. Bối cảnh đã chọn. Bỏ qua khi người dùng chọn chính "trong suốt" —
     #    dựng hai bản giống hệt nhau chỉ để đủ số lượng là làm phiền người xem.
     anh_boi_canh: Image.Image | None = None
+    expander_dung: Any = None
     if style != "transparent":
         anh_boi_canh = engine.composite(
             rgba, style=style, with_shadow=True, with_light_wrap=True
         )
+
+        if auto_enhance:
+            anh_boi_canh = _ap_dung_auto_enhance(anh_boi_canh, rgba)
+
+        # Đóng khung bản "styled" — mặc định vẫn đệm màu đặc (`_dong_khung`,
+        # hành vi giữ nguyên). CHỈ khi job yêu cầu rõ một `expand_provider`
+        # khác mặc định mới gọi `ImageExpander` để sinh nội dung ở biên
+        # thay vì đệm — không tự bật, đúng bài học nợ #80 (đừng để một tính
+        # năng âm thầm đổi hành vi/tốn tiền không ai yêu cầu).
+        if expand_provider and expand_provider.strip().lower() != "pad":
+            expander_dung = resolve_expander(expand_provider)
+            try:
+                ket_qua_mo_rong = expander_dung.expand(
+                    _anh_thanh_png_bytes(anh_boi_canh),
+                    ratio,
+                    product_mask=_mat_na_iopaint(alpha),
+                )
+                anh_mo_rong = Image.open(BytesIO(ket_qua_mo_rong["image"]))
+                anh_mo_rong.load()
+
+                # Belt-and-suspenders (nợ #104, thiết kế tích hợp IOPaint
+                # mục 3): dán lại nguyên khối `rgba` gốc TRƯỚC khi đóng
+                # khung — chỉ engine nào tự báo `paste_offset` mới có bước
+                # này (`PadExpander`/`ReplicateOutpainter` không có trường
+                # này trong `parameters`, giữ nguyên hành vi cũ).
+                paste_offset = (ket_qua_mo_rong.get("parameters") or {}).get("paste_offset")
+                if paste_offset is not None:
+                    anh_mo_rong = _dan_lai_chu_the(anh_mo_rong, rgba, tuple(paste_offset))
+
+                # Lưới an toàn kích thước: bất kể `ImageExpander` cụ thể trả
+                # về đúng kích thước preset hay không (lược đồ
+                # `bria/expand-image` CHƯA xác minh, xem
+                # `replicate_outpainter.py`), luôn đi qua `dong_khung` một
+                # lần nữa để đảm bảo khung cuối ĐÚNG kích thước
+                # `RATIO_PRESETS` — nếu ảnh trả về đã đúng tỷ lệ thì bước
+                # này gần như chỉ resize, không mất nội dung đã sinh thêm.
+                anh_styled = dong_khung(anh_mo_rong, ratio)
+                if getattr(expander_dung, "muc_dung_lan_cuoi", None) is None:
+                    # Đã tự lùi về `PadExpander` bên trong (lỗi/thiếu
+                    # token/URL) — không có gì để ghi `AIC-13`, coi như
+                    # không dùng provider.
+                    expander_dung = None
+            except Exception:
+                # Lỗi ở CHÍNH mã dán-lại/đóng-khung của worker (không phải
+                # lỗi nội bộ của engine — engine đã tự lùi về Pad và không
+                # ném lỗi ra ngoài, xem docstring `replicate_outpainter.py`/
+                # `iopaint_outpainter.py`). Một job không bao giờ được vỡ vì
+                # bước bảo hiểm này — lùi hẳn về đóng khung màu đặc.
+                log.warning(
+                    "Mở rộng khung lỗi ngoài dự kiến ở variant_worker (dán lại/đóng khung) — lùi về đóng khung màu đặc",
+                    exc_info=True,
+                )
+                expander_dung = None
+                anh_styled = _dong_khung(anh_boi_canh, ratio)
+        else:
+            anh_styled = _dong_khung(anh_boi_canh, ratio)
+
         bien_the.append(
             {
                 "key": "styled",
                 "title": NHAN_PRESET.get(preset, "Bối cảnh studio"),
                 "background": NHAN_PRESET.get(preset, "Bối cảnh studio"),
-                "image": _dong_khung(anh_boi_canh, ratio),
+                "image": anh_styled,
                 "watermark": False,
                 "generative_fill_used": True,
             }
@@ -313,7 +580,7 @@ def dung_bien_the(
     de_do = anh_boi_canh if anh_boi_canh is not None else rgba
     do_trung = _do_lo_chu_the(master_rgb, de_do, alpha)
 
-    return bien_the, do_trung
+    return bien_the, do_trung, expander_dung
 
 
 # ─── Vòng đời một job ──────────────────────────────────────────────────────
@@ -409,6 +676,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
         preset = payload.get("preset") or "studio_white"
         ratio = payload.get("ratio") or "1:1"
         watermark = bool(payload.get("watermark", True))
+        auto_enhance = bool(payload.get("auto_enhance", False))
 
         master = _doc_asset(conn, organization_id, master_asset_id)
         # Lớp chặn thứ hai. Phía TS đã kiểm ở `request-variants.ts`; kiểm lại
@@ -424,10 +692,62 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
         master_bytes = doc_bytes(master["storage_key"], STORAGE_ROOT)
         logo_bytes, ten_tiem = _doc_thuong_hieu(conn, organization_id)
 
-        _set_stage(conn, job["id"], "COMPOSING")
-        bien_the, do_trung = dung_bien_the(
-            master_bytes, preset, ratio, watermark, logo_bytes, ten_tiem
+        # nợ #110 (18/09): KHÔNG ghi stage="COMPOSING" ở đây nữa — bước tách
+        # chủ thể thật (nặng nhất) mới sắp chạy bên trong `dung_bien_the`.
+        # Truyền `on_stage` để chính nó ghi "COMPOSING" đúng lúc chuyển việc.
+        bat_dau_bien_the = time.monotonic()
+        try:
+            bien_the, do_trung, expander_dung = dung_bien_the(
+                master_bytes, preset, ratio, watermark, logo_bytes, ten_tiem,
+                expand_provider=payload.get("expand_provider"),
+                auto_enhance=auto_enhance,
+                master_asset_id=master_asset_id,
+                cache_dir=SEGMENTATION_CACHE_ROOT,
+                on_stage=lambda stage: _set_stage(conn, job["id"], stage),
+            )
+        except Exception:
+            ghi_ai_request(
+                conn,
+                job_id=job["id"],
+                organization_id=organization_id,
+                capability_code="AIC-17",
+                model_key="rembg+studio_backdrop",
+                outcome="FAILED",
+                latency_ms=int((time.monotonic() - bat_dau_bien_the) * 1000),
+            )
+            raise
+        # 100% cục bộ, không tiêu tiền nhà cung cấp nào (xem docstring đầu
+        # file) — `cost_usd`/token để None, không ghi 0.
+        ghi_ai_request(
+            conn,
+            job_id=job["id"],
+            organization_id=organization_id,
+            capability_code="AIC-17",
+            model_key="rembg+studio_backdrop",
+            outcome="ACCEPTED",
+            latency_ms=int((time.monotonic() - bat_dau_bien_the) * 1000),
+            image_count=len(bien_the),
         )
+
+        if expander_dung is not None:
+            # AIC-13 — mở rộng khung bằng model sinh nội dung (nợ #78,
+            # 17/09). Chỉ ghi khi job THỰC SỰ yêu cầu provider khác mặc
+            # định VÀ provider đó đã thật sự chạy (không tự lùi về
+            # `PadExpander` bên trong — `dung_bien_the` đã đặt
+            # `expander_dung = None` cho trường hợp đó). `so_do_chi_phi_luot`
+            # tự trả `cost_usd = None` nếu provider không đo được, đúng
+            # nguyên tắc "chưa đo được khác 0" xuyên suốt cả hai worker.
+            ghi_ai_request(
+                conn,
+                job_id=job["id"],
+                organization_id=organization_id,
+                capability_code="AIC-13",
+                model_key=getattr(expander_dung, "model_version", None) or expander_dung.name,
+                outcome="ACCEPTED",
+                latency_ms=int((time.monotonic() - bat_dau_bien_the) * 1000),
+                image_count=1,
+                **so_do_chi_phi_luot(expander_dung),
+            )
 
         _set_stage(conn, job["id"], "VERIFYING")
         bi_tu_choi = do_trung < NGUONG_TU_CHOI
@@ -469,6 +789,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "preset": preset,
             "ratio": ratio,
             "watermark": watermark,
+            "auto_enhance": auto_enhance,
             "subject_pixel_identity": do_trung,
         }
         with conn.cursor() as cur:

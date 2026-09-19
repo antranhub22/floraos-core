@@ -13,6 +13,9 @@ export type CreateJobInput = {
   feature: string
   payload: unknown
   idempotencyKey: string
+  /** Gom nhiều job cùng một lượt chạy lô (vd 30 biến thể, nợ #108) về một
+   *  màn tiến độ chung. `undefined`/`null` cho mọi job không qua chạy lô. */
+  jobGroupId?: string | null
 }
 
 /**
@@ -47,6 +50,7 @@ export class GenerationJobRepository {
         feature: input.feature,
         status: "PENDING" as const,
         idempotency_key: input.idempotencyKey,
+        job_group_id: input.jobGroupId ?? null,
         payload: input.payload as InputJsonValue,
         attempts: 0,
       }),

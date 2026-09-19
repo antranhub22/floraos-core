@@ -110,17 +110,33 @@ def lay_provider(khoa: str | None) -> Any:
 #   · sàn quyền riêng tư cắt sau cùng — một tổ chức chọn bộ CỤC BỘ vì không
 #     muốn ảnh rời hạ tầng thì KHÔNG có đường dự phòng nào gửi ảnh ra ngoài.
 #     Thà hỏng sạch và hoàn credit còn hơn lặng lẽ gửi ảnh đi.
-#   · thác chỉ leo lên — dự phòng của bộ Gọn là bộ Đầy đủ, không phải ngược
-#     lại: hỏng thì trả kết quả tốt hơn, không phải rẻ hơn.
+#   · thác TỤT XUỐNG theo thang chất lượng: Đầy đủ → Gọn → Cục bộ. Chủ sản
+#     phẩm chốt hướng này ngày 09/17, **đảo lại** luật "thác chỉ leo lên" của
+#     bản trước (nợ #84). Đánh đổi đã cân: một lượt vẫn ra kết quả, chỉ kém
+#     hơn, thay vì hỏng sạch và hoàn credit.
+#
+#     Đánh đổi đó CHỈ chấp nhận được khi kết quả kém hơn không đi im lặng.
+#     Ba chỗ nói ra điều đó, và cả ba phải còn:
+#       1. `product_analyses.provider` ghi bộ máy ĐÃ CHẠY THẬT, không ghi bộ
+#          tổ chức đã chọn — nên màn duyệt đọc ra `local_cv` chứ không phải
+#          `openai_structured`.
+#       2. `ai_requests.fallback_from` ghi bộ đã hỏng, đọc được qua
+#          `GET /ai-requests` (`U3`).
+#       3. Sự kiện `log` của job mang `fallback_from`, nên dòng tiến trình
+#          người dùng đang xem nói thẳng ra.
+#     Bỏ một trong ba là biến quyết định này thành một lượt hạ chất lượng
+#     không ai hay.
 GUI_ANH_RA_NGOAI = {
     "openai_structured": True,
     "openai_direct": True,
     "local_cv": False,
 }
 
+# Thang chất lượng, cao xuống thấp: openai_structured › openai_direct › local_cv.
+# Mỗi bộ rơi xuống những bộ NẰM DƯỚI nó, theo đúng thứ tự.
 CHUOI_DU_PHONG: dict[str, tuple[str, ...]] = {
-    "openai_direct": ("openai_structured",),
-    "openai_structured": (),
+    "openai_structured": ("openai_direct", "local_cv"),
+    "openai_direct": ("local_cv",),
     "local_cv": (),  # sàn quyền riêng tư: không rơi ra ngoài hạ tầng
 }
 
@@ -131,7 +147,9 @@ def du_phong_cho(khoa: str) -> tuple[str, ...]:
     ra = []
     for ke in CHUOI_DU_PHONG.get(ten, ()):
         # Rào cuối, không tin bảng ở trên: bộ không gửi ảnh ra ngoài không
-        # bao giờ được thay bằng bộ có gửi.
+        # bao giờ được thay bằng bộ có gửi. Rào này ĐỘC LẬP với hướng thác —
+        # đảo hướng ở trên không được phép nới nó, vì sàn quyền riêng tư cắt
+        # sau cùng (D17).
         if not GUI_ANH_RA_NGOAI.get(ten, True) and GUI_ANH_RA_NGOAI.get(ke, True):
             continue
         ra.append(ke)
