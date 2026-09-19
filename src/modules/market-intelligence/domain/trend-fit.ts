@@ -82,11 +82,17 @@ export function evaluateProductTrendFit(input: EvaluateTrendFitInput): ProductIn
     },
   ];
 
-  // 2. Tính điểm phù hợp
-  const trendFitScore = 88;
-  const audienceFitScore = 92;
-  const contentFitScore = 90;
-  const overallFit: "HIGH" | "MEDIUM" | "LOW" = "HIGH";
+  // 2. Tính điểm phù hợp động dựa trên ma trận đối soát (trendFitMatrix)
+  const matchCount = trendFitMatrix.filter((i) => i.matchStatus === "MATCH").length;
+  const partialCount = trendFitMatrix.filter((i) => i.matchStatus === "PARTIAL").length;
+  const totalItems = trendFitMatrix.length || 1;
+
+  const rawFitRate = (matchCount * 1.0 + partialCount * 0.5) / totalItems;
+  const trendFitScore = Math.round(Math.min(98, Math.max(50, 60 + rawFitRate * 35)));
+  const audienceFitScore = Math.round(Math.min(98, Math.max(55, 65 + (context.confidence || 0.9) * 30)));
+  const contentFitScore = Math.round(trendFitScore * 0.5 + audienceFitScore * 0.5);
+  const overallFit: "HIGH" | "MEDIUM" | "LOW" =
+    contentFitScore >= 80 ? "HIGH" : contentFitScore >= 65 ? "MEDIUM" : "LOW";
 
   // 3. Khuyến nghị cải tiến sản phẩm (KEEP / IMPROVE / TEST)
   const improvements: ProductImprovement = {
@@ -166,22 +172,22 @@ export function evaluateProductTrendFit(input: EvaluateTrendFitInput): ProductIn
     },
     {
       id: "top-06",
-      title: "Tone hồng pastel vs Tone trắng kem: Kiểu nào lãng mạn hơn?",
+      title: `Tone ${mainColor.toLowerCase()} vs ${attributes.secondaryColors?.[0] || "tone trắng kem"}: Kiểu nào cuốn hút hơn?`,
       angleCategory: "PROBLEM_SOLUTION",
-      hook: "Đặt 2 bó hoa cạnh nhau mới thấy sự khác biệt diệu kỳ giữa hai phong cách này!",
+      hook: `Đặt 2 cách phối màu cạnh nhau mới thấy sự khác biệt diệu kỳ khi chọn ${mainColor.toLowerCase()}!`,
       format: "CAROUSEL_PHOTO_1_1",
-      cta: "Thả tim nếu bạn thích tone hồng, bình luận nếu chọn tone trắng kem nhé!",
+      cta: `Thả tim nếu bạn thích tone ${mainColor.toLowerCase()}, bình luận nếu chọn ${attributes.secondaryColors?.[0] || "tone khác"} nhé!`,
       evidenceNote: "Instagram / Pinterest: Định dạng so sánh A/B đạt tương tác cao hơn 72%.",
       platform: "tiktok",
     },
     {
       id: "top-07",
-      title: "Nên tặng hoa gì cho bạn gái theo phong cách tối giản (Minimalism)?",
+      title: `Bí quyết chọn ${dominantFlower.toLowerCase()} phong cách ${primaryStyle} chuẩn gu người nhận`,
       angleCategory: "EDUCATIONAL",
-      hook: "Người yêu theo chủ nghĩa tối giản ghét nhất hoa cắm quá màu mè, đây là công thức chuẩn!",
+      hook: `Đừng chọn hoa theo thói quen, phong cách ${primaryStyle} có công thức riêng để ghi điểm tuyệt đối!`,
       format: "REELS_TIKTOK_9_16",
-      cta: "Nhắn tin tiệm tư vấn cách gói giấy xi măng tối giản thanh lịch.",
-      evidenceNote: "Google Trends: Xu hướng 'hoa tối giản' tăng trưởng liên tục trong 90 ngày qua.",
+      cta: `Nhắn tin tiệm tư vấn cách gói hoa ${dominantFlower.toLowerCase()} thanh lịch.`,
+      evidenceNote: `Google Trends: Nhu cầu tìm kiếm phong cách '${primaryStyle}' tăng trưởng liên tục trong 90 ngày qua.`,
       platform: "google",
     },
     {
@@ -215,14 +221,19 @@ export function evaluateProductTrendFit(input: EvaluateTrendFitInput): ProductIn
     },
   ];
 
-  // 5. Đánh giá độ sẵn sàng nội dung (Readiness)
+  // 5. Đánh giá độ sẵn sàng nội dung (Readiness) động
+  const hasDominant = components.some((c) => c.role === "dominant" && (c.quantityEstimate || 0) > 0);
+  const hasOccasions = context.likelyOccasions && context.likelyOccasions.length > 0;
+  const hasAudience = Boolean(context.likelyAudience);
+  const hasPrice = (context.suggestedPrice || 0) > 0;
+
   const readiness: ProductContentReadiness = {
-    productRecognition: true,
-    trendFit: true,
-    audienceDefined: true,
-    positioningDefined: true,
-    visualQuality: "EXCELLENT",
-    videoPotential: true,
+    productRecognition: hasDominant,
+    trendFit: trendFitScore >= 70,
+    audienceDefined: hasOccasions && hasAudience,
+    positioningDefined: hasPrice,
+    visualQuality: imageUrl && !imageUrl.includes("placeholder") ? "EXCELLENT" : "ACCEPTABLE",
+    videoPotential: contentFitScore >= 75,
   };
 
   return {

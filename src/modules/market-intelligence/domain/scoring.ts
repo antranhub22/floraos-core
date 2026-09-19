@@ -117,3 +117,108 @@ export function calculateContentOpportunityScore(
 
   return clamp(raw);
 }
+
+export interface ContextualMetrics {
+  trendScore: number;
+  viralScore: number;
+  commercialScore: number;
+  contentOpportunityScore: number;
+  buyingIntent: number;
+  seasonalityFit: number;
+}
+
+/**
+ * Phân tích và dự phóng chỉ số ngữ cảnh thông minh cho từng chủ đề/loài hoa
+ * dựa trên: Mùa vụ tháng hiện tại, Dịp lễ (Occasion), Độ sốt dẻo Visual/TikTok và Phân khúc giá.
+ */
+export function estimateTopicContextMetrics(
+  topicName: string,
+  options?: { month?: number; priceSegment?: string }
+): ContextualMetrics {
+  const lower = topicName.toLowerCase();
+  const month = options?.month ?? new Date().getMonth() + 1;
+  const isHighEnd = options?.priceSegment === "cao_cap";
+
+  let buyingIntent = 72;
+  let seasonalityFit = 68;
+  let baseViral = 58;
+  let baseTrend = 62;
+
+  // 1. Phân loại theo Dịp lễ & Nhu cầu (Occasion & Intent)
+  if (lower.includes("cưới") || lower.includes("cầu hôn") || lower.includes("anniversary")) {
+    buyingIntent = 92;
+    seasonalityFit = month >= 9 && month <= 12 ? 94 : 70;
+    baseViral = 78;
+    baseTrend = month >= 9 && month <= 12 ? 86 : 68;
+  } else if (lower.includes("khai trương") || lower.includes("đối tác") || lower.includes("thăng chức") || lower.includes("hội nghị")) {
+    buyingIntent = 88;
+    seasonalityFit = 80;
+    baseViral = 52;
+    baseTrend = 72;
+  } else if (lower.includes("tốt nghiệp") || lower.includes("cử nhân")) {
+    buyingIntent = 85;
+    seasonalityFit = month === 9 || month === 10 || month === 5 || month === 6 ? 96 : 45;
+    baseViral = 76;
+    baseTrend = month === 9 || month === 10 || month === 5 || month === 6 ? 88 : 50;
+  } else if (lower.includes("20/10") || lower.includes("phụ nữ")) {
+    buyingIntent = 95;
+    seasonalityFit = month === 10 ? 98 : month === 9 ? 86 : 30;
+    baseViral = 84;
+    baseTrend = month === 10 ? 96 : month === 9 ? 84 : 40;
+  } else if (lower.includes("8/3") || lower.includes("valentine")) {
+    buyingIntent = 95;
+    seasonalityFit = month === 2 || month === 3 ? 98 : 35;
+    baseViral = 82;
+    baseTrend = month === 2 || month === 3 ? 95 : 42;
+  } else if (lower.includes("sinh nhật")) {
+    buyingIntent = 86;
+    seasonalityFit = 82;
+    baseViral = 68;
+    baseTrend = 74;
+  } else if (lower.includes("mẹ") || lower.includes("bố") || lower.includes("gia đình")) {
+    buyingIntent = 84;
+    seasonalityFit = month === 5 || month === 10 ? 92 : 75;
+    baseViral = 64;
+    baseTrend = 70;
+  }
+
+  // 2. Đặc tính Visual & Viral trên Mạng xã hội (TikTok/Reels/Pinterest)
+  if (
+    lower.includes("pastel") ||
+    lower.includes("tulip") ||
+    lower.includes("hàn quốc") ||
+    lower.includes("gấu bông") ||
+    lower.includes("tiktok") ||
+    lower.includes("cam cháy") ||
+    lower.includes("khổng lồ")
+  ) {
+    baseViral = Math.min(95, baseViral + 16);
+    baseTrend = Math.min(95, baseTrend + 8);
+  }
+  if (lower.includes("nhập khẩu") || lower.includes("mẫu đơn") || lower.includes("ohara") || lower.includes("ecuador")) {
+    buyingIntent = Math.min(96, buyingIntent + 6);
+    baseViral = Math.min(92, baseViral + 8);
+  }
+
+  // 3. Phù hợp phân khúc tiệm
+  const priceAlignment = isHighEnd ? 88 : 76;
+
+  const commercialScore = calculateCommercialScore({
+    buyingIntent,
+    seasonalityFit,
+    priceAlignment,
+  });
+
+  const trendScore = clamp(baseTrend);
+  const viralScore = clamp(baseViral);
+  const oppScore = calculateContentOpportunityScore(trendScore, viralScore, commercialScore);
+
+  return {
+    trendScore,
+    viralScore,
+    commercialScore,
+    contentOpportunityScore: oppScore,
+    buyingIntent,
+    seasonalityFit,
+  };
+}

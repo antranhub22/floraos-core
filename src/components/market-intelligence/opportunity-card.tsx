@@ -3,7 +3,7 @@
 import React from "react";
 import { Tag, ExternalLink, Video, Image as ImageIcon, TrendingUp, Play } from "lucide-react";
 import { determineTrendLifecycle, LIFECYCLE_SPECS } from "@/modules/market-intelligence/domain/trend-lifecycle";
-import { getOpportunityIllustration, getOpportunityHeadline } from "./opportunity-illustration";
+import { getDualOpportunityEvidencePreview, getOpportunityHeadline } from "./opportunity-illustration";
 
 export interface EvidenceReference {
   title: string;
@@ -11,6 +11,9 @@ export interface EvidenceReference {
   url: string;
   platform: string;
   engagementNote?: string;
+  thumbnailUrl?: string;
+  author?: string;
+  metrics?: string;
 }
 
 function FacebookIcon({ className }: { className?: string }) {
@@ -46,7 +49,8 @@ export function OpportunityCard({ item, onSelect }: OpportunityCardProps) {
   const references = item.evidenceReferences ?? [];
   const lifecycle = determineTrendLifecycle(item.trendScore, 0.4, 20);
   const spec = LIFECYCLE_SPECS[lifecycle];
-  const illustration = getOpportunityIllustration(item);
+  const dualEvidence = getDualOpportunityEvidencePreview(item);
+  const evidence = dualEvidence.primary;
   const headline = getOpportunityHeadline(item);
 
   return (
@@ -54,34 +58,90 @@ export function OpportunityCard({ item, onSelect }: OpportunityCardProps) {
       onClick={() => onSelect?.(item)}
       className="group relative rounded-2xl border border-stone-200/90 bg-white shadow-xs hover:border-rose-300 hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col overflow-hidden"
     >
-      {/* Ảnh minh họa theo chủ đề */}
-      <div className="relative aspect-[16/9] w-full overflow-hidden bg-stone-100">
+      {/* Banner Video Dẫn Chứng Thực Tế */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-stone-900 group/banner">
         <img
-          src={illustration.url}
-          alt={illustration.alt}
+          src={evidence.thumbnailUrl}
+          alt={evidence.alt}
           loading="lazy"
           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
-        <div className="absolute left-3 bottom-2.5 flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full bg-white/90 text-rose-700">
-            <Tag className="h-3 w-3" />
-            {item.topicName}
-          </span>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30" />
+
+        {/* Top badges: Lifecycle + Platforms */}
+        <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5 z-10">
           <span
-            className={`inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full border ${spec.bgClass} ${spec.colorClass} ${spec.borderClass}`}
+            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-xs ${spec.bgClass} ${spec.colorClass} ${spec.borderClass}`}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
             {spec.shortLabel}
           </span>
+          {/* Cả 2 nút dẫn chứng: TikTok & YouTube */}
+          <a
+            href={dualEvidence.tiktok.videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title={`Mở TikTok: ${dualEvidence.tiktok.title}`}
+            className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-black/80 text-pink-400 border border-pink-500/30 backdrop-blur-xs shadow-xs hover:scale-105 transition"
+          >
+            <Video className="h-3 w-3 text-pink-400" />
+            TikTok
+          </a>
+          <a
+            href={dualEvidence.youtube.videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title={`Mở YouTube: ${dualEvidence.youtube.title}`}
+            className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-red-600/90 text-white border border-red-500/30 backdrop-blur-xs shadow-xs hover:scale-105 transition"
+          >
+            <Play className="h-3 w-3 fill-current" />
+            YT
+          </a>
         </div>
-        <div className="absolute right-3 top-2.5 text-right bg-white/95 px-3 py-1.5 rounded-xl shadow-xs">
+
+        {/* Điểm cơ hội */}
+        <div className="absolute right-3 top-3 text-right bg-white/95 px-3 py-1.5 rounded-xl shadow-xs z-10">
           <div className="text-xl font-black text-rose-600 leading-none">
             {Math.round(item.contentOpportunityScore)}
           </div>
           <span className="text-[9px] text-stone-400 uppercase font-bold tracking-wider">
             Điểm cơ hội
           </span>
+        </div>
+
+        {/* Play overlay button */}
+        <div
+          onClick={(e) => {
+            if (evidence.videoUrl) {
+              e.stopPropagation();
+              window.open(evidence.videoUrl, "_blank", "noopener,noreferrer");
+            }
+          }}
+          title={`Mở xem video dẫn chứng trên ${evidence.platform}`}
+          className="absolute inset-0 flex items-center justify-center cursor-pointer"
+        >
+          <div className="h-10 w-10 rounded-full bg-white/90 text-stone-900 flex items-center justify-center shadow-lg opacity-80 group-hover/banner:opacity-100 group-hover/banner:scale-110 transition-all">
+            <Play className="h-4 w-4 fill-current translate-x-0.5 text-stone-900" />
+          </div>
+        </div>
+
+        {/* Bottom bar inside video banner: tác giả & lượt xem thật */}
+        <div className="absolute inset-x-3 bottom-2.5 flex items-center justify-between text-[11px] text-white/95 font-medium drop-shadow-md z-10">
+          <span className="truncate max-w-[70%] font-semibold">
+            {evidence.author} • {evidence.metrics}
+          </span>
+          <a
+            href={evidence.videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 text-[10.5px] font-bold text-white/90 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-xs px-2 py-0.5 rounded-lg transition"
+          >
+            <span>Xem video</span>
+            <ExternalLink size={11} />
+          </a>
         </div>
       </div>
 

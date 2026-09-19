@@ -140,8 +140,8 @@ export class MarketIntelligenceRepository {
         topic: { select: { canonical_name: true } },
       },
       orderBy: [
-        { content_opportunity_score: "desc" },
         { created_at: "desc" },
+        { content_opportunity_score: "desc" },
       ],
       take: options.limit + 1,
       ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),

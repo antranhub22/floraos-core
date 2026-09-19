@@ -22,10 +22,24 @@ export function ExecutiveSummaryCards({
   risingTrendCount,
   topicCount,
   occasionCount,
-  upcomingOccasions = ["Kỷ niệm ngày cưới", "Sinh nhật tháng 9", "Khai trương công ty", "Tốt nghiệp đại học"],
+  upcomingOccasions,
   activeFilter = "ALL",
   onSelectCategory,
 }: ExecutiveSummaryProps) {
+  const currentMonth = new Date().getMonth() + 1;
+  const defaultOccasions = [
+    currentMonth === 9 || currentMonth === 10
+      ? "Ngày Phụ nữ 20/10"
+      : currentMonth === 11
+      ? "Ngày Nhà giáo 20/11"
+      : currentMonth === 12 || currentMonth === 1
+      ? "Giáng sinh & Tết"
+      : "Valentine & 8/3",
+    `Sinh nhật tháng ${currentMonth}`,
+    "Kỷ niệm ngày cưới",
+    "Lễ tốt nghiệp đại học",
+  ];
+  const occasionsToDisplay = upcomingOccasions || defaultOccasions;
   const displayTotal = totalCount || opportunityCount || 10;
 
   return (
@@ -178,13 +192,13 @@ export function ExecutiveSummaryCards({
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className="text-2xl font-black text-purple-600">
-              {occasionCount !== undefined ? occasionCount : upcomingOccasions.length}
+              {occasionCount !== undefined ? occasionCount : occasionsToDisplay.length}
             </span>
             <span className="text-[11px] text-stone-400 font-medium">mẫu theo sự kiện</span>
           </div>
           <div className="mt-1 flex items-center justify-between text-[10.5px]">
             <span className="text-stone-500 line-clamp-1">
-              {upcomingOccasions.slice(0, 2).join(" · ")}
+              {occasionsToDisplay.slice(0, 2).join(" · ")}
             </span>
             <span className="text-purple-700 font-bold flex items-center gap-0.5">
               {activeFilter === "OCCASIONS" ? "Đang chọn ✓" : "Lọc xem →"}

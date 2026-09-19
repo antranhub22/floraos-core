@@ -782,6 +782,36 @@ Never fabricate missing metrics.
 
 Evidence should be attached directly to the trend/topic/recommendation.
 
+## 21.1 Dual Video Evidence Architecture (TikTok + YouTube)
+
+Every opportunity or trend item presented in the UI MUST display **dual video evidence thumbnails** from verified social platforms:
+1. **TikTok Evidence (Vertical 9:16)**:
+   - Video thumbnail with dark gradient overlay
+   - Platform badge (`TikTok` neon badge)
+   - Play icon overlay for visual affordance
+   - Real creator handle (e.g. `@hoatuoituongan`, `@queenflowers`, `@tiemhoanangxuan`)
+   - Real engagement metrics (e.g. `42.6k tim`, `28.4k tim`)
+   - Interactive link opening the verified TikTok video in a new tab (`window.open(url, "_blank")`)
+2. **YouTube Evidence (Horizontal 16:9)**:
+   - Video thumbnail with dark gradient overlay
+   - Platform badge (`YT` red badge)
+   - Play icon overlay
+   - Real YouTube creator channel handle
+   - Real views metrics
+   - Interactive link opening the verified YouTube video in a new tab
+
+Both thumbnails sit side-by-side on each card to guarantee tangible, transparent market proof for florist merchants.
+Centralized implementation lives in `src/components/market-intelligence/video-evidence-catalog.ts` and `opportunity-illustration.ts`.
+
+## 21.2 Raw Keyword Sanitization Rule (Anti-Keyword-Dumping)
+
+Under no circumstances should raw search query dumps (e.g. `Hoa 20/10, Bó hoa tốt nghiệp hướng dương, Hoa cưới mùa thu, Hoa cưới tone cam cháy...`) be displayed on user-facing UI elements:
+- **Strictly Prohibited**: Rendering comma-separated keyword dumps inside tag badges (`<Tag />`), card headers, or script quotes.
+- **Sanitization Pipeline**:
+  - **Headlines**: Processed via `getOpportunityHeadline(item)` to generate polished marketing titles (e.g. `BST Hoa 20/10 thanh lịch dẫn đầu xu hướng năm nay`).
+  - **Hooks & Scripts**: Processed via `formatCleanHook(hook)` to transform raw query interpolations into persuasive, natural florist marketing copy.
+  - **Database Sanitation**: The `topics` table must be sanitized to eliminate duplicate aggregate keyword strings, mapping them back to canonical topic entities.
+
 ---
 
 # 22. Evidence Confidence
@@ -1420,51 +1450,35 @@ ACTION
 # 43. Market Intelligence UI
 
 ```text
-MARKET INTELLIGENCE
+MARKET INTELLIGENCE & PRODUCT INTELLIGENCE
 
-[Daily] [Weekly] [Monthly]
+Header: Tiêu chí nghiên cứu (Ngành hoa, Địa lý, Chu kỳ Pulse, Cấu hình SaaS)
+[Quản trị tiêu chí SaaS] [Chu kỳ cập nhật: Tự động mỗi 12 giờ]
 
-Geography:
-[ Vietnam ▼ ]
+──────────────────────────────────────────────────────────────────────────
+4 TAB ĐIỀU HƯỚNG TỔNG THỂ (TOP-LEVEL FILTER CARDS):
 
-Focus:
-[ All ▼ ]
+[🔥 Cơ hội quan trọng]   [📈 Xu hướng bứt phá]   [💡 Chủ đề nên làm]   [📅 Mùa vụ & Dịp tới]
+  Score ≥ 60               Viral & Surging          Có sẵn Hook & Mẫu     Sắp diễn ra
+──────────────────────────────────────────────────────────────────────────
 
-────────────────────────
+CẤU TRÚC THẺ KẾT QUẢ VỚI DẪN CHỨNG VIDEO KÉP (DUAL VIDEO EVIDENCE CARD):
 
-TODAY'S SUMMARY
+┌────────────────────────────────────────────────────────────────────────┐
+│ [THUMBNAIL KÉP]       [THÔNG TIN XU HƯỚNG & HÀNH ĐỘNG]                │
+│                                                                        │
+│ ┌─────────┐┌─────────┐ [Đang tăng]  [⚡ 42.6k tim • TikTok]            │
+│ │ [TikTok]││ [YT]    │                                                 │
+│ │  ▶ Play ││  ▶ Play │ Tiêu đề: BST Hoa 20/10 thanh lịch dẫn đầu xu... │
+│ │ @creator││ @channel│ "Kịch bản: Bật mí bí quyết chọn hoa chuẩn gu..."│
+│ └─────────┘└─────────┘                                                 │
+│                        [Xem chi tiết →]    [📋 Sao chép] [🎬 Tạo Video]│
+└────────────────────────────────────────────────────────────────────────┘
 
-🔥 3 opportunities
-📈 5 rising trends
-💡 12 topics
-📅 5 upcoming occasions
-
-────────────────────────
-
-TOP OPPORTUNITIES
-
-[Opportunity Card]
-[View Evidence] [Create Content]
-
-────────────────────────
-
-TOP TRENDS
-
-[Trend Card]
-[View Evidence]
-
-────────────────────────
-
-TOPICS
-
-[Topic Card]
-[Create Content]
-
-────────────────────────
-
-REFERENCES
-
-[Image] [Video] [Article]
+QUY TẮC HIỂN THỊ:
+1. Cấm hiển thị tag chứa chuỗi từ khóa thô nối phẩy.
+2. Hai thumbnail TikTok & YouTube có thể nhấp trực tiếp để mở video kiểm chứng.
+3. Nút [Tạo Video] deep link sang /video?prompt=... với kịch bản đã làm sạch.
 ```
 
 ---

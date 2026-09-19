@@ -94,11 +94,7 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-stone-200 px-6 py-4 bg-stone-50/50">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/60">
-              <Tag className="h-3 w-3" />
-              {item.topicName}
-            </span>
-            <span className={`inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full border ${spec.bgClass} ${spec.colorClass} ${spec.borderClass}`}>
+            <span className={`inline-flex items-center gap-1 text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border ${spec.bgClass} ${spec.colorClass} ${spec.borderClass}`}>
               <span className="h-1.5 w-1.5 rounded-full bg-current" />
               {spec.label}
             </span>
@@ -152,7 +148,7 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
               2. Vì sao xu hướng này tăng
             </span>
             <p className="text-xs text-stone-600 leading-relaxed">
-              Nhu cầu tìm kiếm và mức độ thảo luận trên mạng xã hội đang tăng nhanh. Khách hàng ngày càng ưu chuộng sự phối màu tự nhiên, tinh tế và có câu chuyện cảm xúc rõ nét.
+              {getTrendRationale(item)}
             </p>
             {/* 3 Trục Điểm số với diễn giải ý nghĩa */}
             <div className="grid grid-cols-3 gap-2 pt-1 text-center">
@@ -292,13 +288,35 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
                         href={ref.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`flex items-center justify-between gap-2 p-2.5 rounded-xl border text-xs font-semibold transition group ${badgeBg}`}
+                        className={`flex items-center gap-3 p-2.5 rounded-xl border text-xs font-semibold transition group ${badgeBg}`}
                       >
-                        <div className="flex items-center gap-2 truncate">
-                          {icon}
-                          <span className="truncate">{ref.platform}</span>
+                        {ref.thumbnailUrl ? (
+                          <div className="relative h-12 w-16 rounded-lg overflow-hidden flex-shrink-0 bg-stone-900 border border-stone-200 shadow-2xs">
+                            <img src={ref.thumbnailUrl} alt={ref.title} className="h-full w-full object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition">
+                              <Play className="h-3 w-3 fill-white text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/80 flex-shrink-0 shadow-2xs">
+                            {icon}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 text-[10px] text-stone-500 uppercase tracking-wider font-bold">
+                            <span>{ref.platform}</span>
+                            {ref.metrics ? <span className="text-stone-400 font-normal">• {ref.metrics}</span> : null}
+                          </div>
+                          <div className="font-bold text-stone-800 truncate group-hover:text-rose-600 transition">
+                            {ref.title || ref.platform}
+                          </div>
+                          {ref.author ? (
+                            <div className="text-[10px] text-stone-500 truncate font-medium">
+                              Kênh: {ref.author}
+                            </div>
+                          ) : null}
                         </div>
-                        <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 flex-shrink-0" />
+                        <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 flex-shrink-0" />
                       </a>
                     );
                   })
@@ -342,4 +360,32 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
       </div>
     </div>
   );
+}
+
+function getTrendRationale(item: OpportunityItem): string {
+  const lifecycle = determineTrendLifecycle(item.trendScore, 0.4, 20);
+  const lower = item.topicName.toLowerCase();
+
+  if (lower.includes("cưới") || lower.includes("kỷ niệm")) {
+    return "Mùa cưới và các dịp kỷ niệm thu-đông đang bước vào giai đoạn cao điểm. Khách hàng sẵn sàng chi trả cho các mẫu hoa mang tính cá nhân hóa cao, phối màu trang nhã và lưu giữ khoảnh khắc ý nghĩa.";
+  }
+  if (lower.includes("20/10") || lower.includes("8/3") || lower.includes("phụ nữ")) {
+    return "Lực đẩy từ sự kiện ngày lễ lớn tạo ra lượng tìm kiếm đột biến. Tỷ lệ chốt đơn của các mẫu hoa quà tặng thiết kế sẵn và đặt trước hỏa tốc đạt mức cao nhất trong tháng.";
+  }
+  if (lower.includes("tốt nghiệp") || lower.includes("cử nhân")) {
+    return "Mùa tốt nghiệp các trường đại học và THPT tạo ra nhu cầu mua hoa chúc mừng chụp kỷ yếu rực rỡ, ưu tiên các tone màu tươi sáng và hoa giữ form tốt khi di chuyển ngoài trời.";
+  }
+  if (lower.includes("khai trương") || lower.includes("đối tác")) {
+    return "Nhu cầu tặng quà chúc mừng doanh nghiệp mở tiệm và ký kết hợp đồng ổn định, đòi hỏi kệ hoa sang trọng, tone màu tài lộc và độ bề thế cao.";
+  }
+  if (item.viralScore >= 75) {
+    return `Độ lan tỏa trên TikTok và Reels của ${item.topicName} đang tăng rất nhanh nhờ thị hiếu chuộng hoa visual bắt mắt, phối giấy gói tinh tế và hiệu ứng quay video hấp dẫn.`;
+  }
+  if (lifecycle === "GROWING") {
+    return `Nhu cầu tìm kiếm từ khóa "${item.topicName}" đang trên đà tăng trưởng liên tục trong 7 ngày qua. Đây là thời điểm vàng để tiệm lên mẫu và tiếp cận khách hàng sớm.`;
+  }
+  if (lifecycle === "PEAK") {
+    return `Chủ đề "${item.topicName}" đang ở đỉnh sóng thị trường với tỷ lệ tương tác và tìm kiếm cao nhất. Tiệm nên chuẩn bị sẵn nguồn hoa và đẩy mạnh bài đăng chốt đơn.`;
+  }
+  return `Nhu cầu tìm kiếm và mức độ thảo luận của "${item.topicName}" giữ mức ổn định cao. Khách hàng ưu chuộng kiểu cắm hiện đại, tươi lâu và phù hợp ngân sách tiệm.`;
 }

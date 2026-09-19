@@ -1,0 +1,232 @@
+# ĐẶC TẢ KIẾN TRÚC & KỸ THUẬT: FLORAOS MARKET & PRODUCT INTELLIGENCE ENGINE
+
+> **Mục tiêu tài liệu:** Thiết lập tài liệu Chuẩn Duy Nhất (Single Source of Truth - SSOT) về toàn bộ kiến trúc, ranh giới module, quy chuẩn dữ liệu, hệ thống dẫn chứng video kép (Dual Video Evidence Engine), và nguyên tắc chống tràn từ khóa thô (Anti-Keyword-Dumping Rule) của phân hệ **Market Intelligence & Product Intelligence** trong FloraOS-core.
+
+---
+
+## 1. Tổng Quan & Vai Trò Trong Hệ Sinh Thái FloraOS
+
+Phân hệ **FloraOS Intelligence Engine** không phải là một dashboard theo dõi xu hướng tĩnh (Google Trends Dashboard thông thường), mà là một động cơ chuyển hóa thông tin thành hành động:
+
+```
+EVIDENCE (Dẫn chứng thực tế)
+       ↓
+SIGNALS (Tín hiệu thị trường & mạng xã hội)
+       ↓
+TRENDS (Xu hướng theo chu kỳ vòng đời)
+       ↓
+OPPORTUNITIES (Cơ hội thương mại xếp hạng)
+       ↓
+TOPICS & HOOKS (Kịch bản nội dung được tinh chỉnh)
+       ↓
+ACTIONS (Handoff 1-chạm sang AI Video Studio / Content Engine)
+```
+
+Hệ thống cung cấp hai chế độ tiếp cận tương hỗ:
+
+1. **Market Intelligence (Nghiên cứu thị trường chủ động)**:
+   - Trả lời câu hỏi: *"Thị trường hoa hiện tại đang biến động ra sao, xu hướng nào đang bứt phá, và tiệm nên làm nội dung gì ngay lúc này?"*
+   - Cung cấp 4 góc nhìn chiến lược:
+     - **Cơ hội quan trọng (`IMPORTANT`)**: Các cơ hội điểm cao (Score ≥ 60) có tiềm năng thương mại lớn.
+     - **Xu hướng bứt phá (`RISING`)**: Các trào lưu đang trong pha tăng trưởng mạnh (`SURGING`), tương tác cao.
+     - **Chủ đề nên làm (`TOPICS`)**: Thư viện kịch bản, câu mở đầu (Hooks) giật tít để quay video ngắn.
+     - **Mùa vụ & Dịp tới (`OCCASIONS`)**: Đón đầu các ngày lễ (20/10, 8/3, tốt nghiệp, sinh nhật...).
+
+2. **Product Intelligence (Định vị & thẩm định sản phẩm có sẵn)**:
+   - Trả lời câu hỏi: *"Tiệm đã có mẫu hoa này, làm sao để biết nó có hợp thời không, bán cho ai, định vị ra sao và quay video gì?"*
+   - Nạp 1–3 ảnh sản phẩm thực tế → Bóc tách đặc tính → Đối chiếu với Shared Market Intelligence Core → Chấm điểm `Trend Fit`, `Audience Fit`, `Content Fit` và đề xuất 10 góc tiếp thị.
+
+---
+
+## 2. Các Nguyên Tắc Thiết Kế Bất Biến (Architectural Invariants)
+
+Bất kỳ thay đổi mã nguồn nào trong phân hệ Market Intelligence bắt buộc phải tuân thủ 6 nguyên tắc cốt lõi:
+
+### 2.1. Chuẩn Dẫn Chứng Video Kép Thực Tế (Dual-Platform Real Video Evidence)
+- **Quy tắc bắt buộc**: Mỗi cơ hội hoặc xu hướng hiển thị trên giao diện không được dùng ảnh minh họa chung chung không nguồn gốc. Thay vào đó, bắt buộc phải hiển thị **cặp thumbnail dẫn chứng video thực tế từ 2 nền tảng**:
+  1. **TikTok**: Video định dạng dọc (9:16), có nhãn nền tảng `TikTok` đen neon, nút Play overlay, tên kênh người sáng tạo thực tế (vd: `@hoatuoituongan`, `@queenflowers`, `@tiemhoanangxuan`...), và số liệu tương tác thật (`42.6k tim`, `28.4k tim`...).
+  2. **YouTube**: Video định dạng ngang (16:9), có nhãn nền tảng `YT` đỏ, nút Play overlay, và tên kênh YouTube tương ứng.
+- **Tương tác trực tiếp**: Cả hai thumbnail đều là các phần tử tương tác độc lập (`cursor-pointer`). Khi người dùng nhấp chuột, hệ thống kích hoạt `e.stopPropagation()` và mở trực tiếp video nguồn trên tab mới (`window.open(url, "_blank")`), bảo đảm tính xác thực 100% của xu hướng.
+- **Triển khai SSOT**: Quản lý tập trung tại [`video-evidence-catalog.ts`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/video-evidence-catalog.ts) và trích xuất qua `getDualOpportunityEvidencePreview(item)`.
+
+### 2.2. Quy Tắc Nghiêm Ngặt Chống Tràn Từ Khóa Thô (Strict Anti-Keyword-Dumping Rule)
+- **Vấn đề cần triệt tiêu**: Trong quá trình thu thập tín hiệu tìm kiếm (Google Trends, TikTok Search), chuỗi từ khóa đầu vào thường gồm 5–10 cụm từ nối nhau bằng dấu phẩy (vd: `Hoa 20/10, Bó hoa tốt nghiệp hướng dương, Hoa cưới mùa thu, Hoa cưới tone cam cháy...`).
+- **Luật bất biến**:
+  1. **Tuyệt đối CẤM** render chuỗi từ khóa nối phẩy lên bất kỳ huy hiệu tag (`<Tag />`) hoặc thẻ nào trên UI.
+  2. **Tuyệt đối CẤM** chèn chuỗi từ khóa thô vào trong tiêu đề cơ hội hoặc câu trích dẫn kịch bản (quotes/hooks).
+  3. **Bộ lọc làm sạch (Sanitization Pipeline)**:
+     - **Tiêu đề**: Đi qua `getOpportunityHeadline(item)` tại [`opportunity-illustration.ts`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/opportunity-illustration.ts) để chuẩn hóa thành câu tiêu đề marketing tinh tế (vd: *"BST Hoa 20/10 thanh lịch dẫn đầu xu hướng năm nay"*).
+     - **Kịch bản (Hooks)**: Đi qua `formatCleanHook(hook)` để tạo thành câu thoại kịch bản tự nhiên, mượt mà và ấm áp chuẩn phong cách tiệm hoa cao cấp.
+     - **Cơ sở dữ liệu (`topics`)**: Cơ sở dữ liệu phải được làm sạch, không lưu trữ các bản ghi chủ đề là chuỗi nối phẩy của nhiều từ khóa. Nếu phát hiện dữ liệu thô, phải tự động chuẩn hóa hoặc sáp nhập về chủ đề gốc.
+
+### 2.3. Nghiên Cứu Tập Trung 1 Lần & Cá Nhân Hóa Theo Tenant (Shared Intelligence Core)
+- Hệ thống nghiên cứu thị trường tập trung cấp nền tảng (Shared Intelligence), không để từng cửa hàng hoa phải chạy lại toàn bộ quy trình thu thập dữ liệu nặng nề.
+- Dữ liệu xu hướng chung được phân phối và **cá nhân hóa theo từng tenant** dựa trên:
+  - Danh mục sản phẩm hiện có của tiệm.
+  - Vị trí địa lý và phân khúc khách hàng của tiệm.
+  - Lịch trình quét thị trường tự động (Scheduled Pulse) do tiệm thiết lập.
+
+### 2.4. Cách Ly Dữ Liệu Đa Tenant Tuyệt Đối (Strict Tenant Isolation)
+- Cấu hình lịch quét thị trường (`TenantScheduleSettings`), tiêu chí quản trị SaaS (`SaaSAdminCriteria`) và kết quả thẩm định ảnh sản phẩm (`ProductIntelligenceAnalysis`) luôn gắn chặt với `organization_id` giải từ phiên máy chủ.
+- Kiểm tra tính cách ly đa tenant qua bộ kiểm thử tự động tại `tests/tenant/`.
+
+### 2.5. Handoff 1-Chạm Sang Quy Trình Sản Xuất (One-Click Production Handoff)
+- Market Intelligence không dừng lại ở mức xem báo cáo:
+  - Nút **"Sao chép"**: Copy nhanh kịch bản đã làm sạch vào clipboard để gửi Zalo hoặc dán vào bài đăng Facebook.
+  - Nút **"Tạo Video"**: Deep link trực tiếp sang phân hệ AI Video Studio (`/video?prompt=...`), tự động điền kịch bản và chủ đề vào Storyboard Creator để render video marketing 9:16 chuẩn TikTok/Reels ngay tức thì.
+
+### 2.6. Tuân Thủ Ranh Giới Kiến Trúc Sạch (Clean Architecture & SRP)
+- Kích thước mọi file thành phần phải nghiêm ngặt `< 350 dòng`.
+- Phân tách rõ ràng:
+  - `domain/`: Định nghĩa kiểu dữ liệu thuần, ma trận vòng đời sóng (`trend-lifecycle.ts`), thuật toán chấm điểm cơ hội (`scoring.ts`), phân loại thị trường (`market-taxonomy.ts`). Cấm import Prisma hoặc React.
+  - `use-cases/`: Điều phối luồng nghiệp vụ.
+  - `infra/`: Kết nối cơ sở dữ liệu và adapter bên ngoài (Google Trends, TikTok Scraper, Social Signals).
+  - `components/`: UI components chuyên biệt, độc lập trách nhiệm (Single Responsibility Principle).
+
+---
+
+## 3. Cấu Trúc Thư Mục & Phân Hệ Thành Phần
+
+```
+src/
+├── modules/market-intelligence/
+│   ├── domain/                               # Tầng nghiệp vụ thuần TypeScript (0 DB, 0 React)
+│   │   ├── trend-lifecycle.ts                # Chu kỳ sóng (EMERGING, SURGING, PEAK, EVERGREEN)
+│   │   ├── scoring.ts                        # Công thức tính điểm cơ hội (Opportunity Score 0-100)
+│   │   ├── market-taxonomy.ts                # Bảng danh mục ngành hoa, dịp lễ, phong cách, tone màu
+│   │   ├── tenant-schedule-settings.ts       # Cấu hình chu kỳ quét Pulse theo tenant
+│   │   └── product-trend-fit.ts              # Thuật toán so khớp ảnh sản phẩm với xu hướng
+│   ├── use-cases/                            # Tầng điều phối nghiệp vụ
+│   └── infra/                                # Tầng hạ tầng, adapters và repository
+│
+├── components/market-intelligence/            # Tầng giao diện người dùng chuyên biệt
+│   ├── brief-important-view.tsx              # Tab 1: Cơ hội quan trọng (Dual Video Evidence + Clean Badges)
+│   ├── brief-rising-view.tsx                 # Tab 2: Xu hướng bứt phá (Dual Video Evidence + Momentum)
+│   ├── brief-topics-view.tsx                 # Tab 3: Chủ đề nên làm (Thư viện kịch bản + Clean Hooks)
+│   ├── brief-occasions-view.tsx              # Tab 4: Mùa vụ & Dịp tới (Upcoming Occasions)
+│   ├── opportunity-card.tsx                  # Thẻ cơ hội dạng lưới (Grid View Card)
+│   ├── opportunity-detail-drawer.tsx         # Drawer xem toàn diện chi tiết cơ hội và video player
+│   ├── video-evidence-catalog.ts             # Từ điển SSOT chứa dữ liệu dẫn chứng video thật (TikTok & YT)
+│   ├── opportunity-illustration.ts           # Adapter trích xuất evidence kép và làm sạch headline
+│   ├── scheduled-pulse-panel.tsx             # Panel thông tin lịch quét tự động định kỳ
+│   ├── saas-admin-criteria-modal.tsx         # Modal quản trị tiêu chí quét ngành hoa cấp SaaS
+│   ├── product-intelligence-tab.tsx          # Tab thẩm định sản phẩm có sẵn (Upload 1-3 ảnh)
+│   └── settings/
+│       └── settings-schedule-tab.tsx         # Tab cài đặt chu kỳ quét thị trường của tiệm
+│
+└── app/
+    ├── (app)/market-intelligence/page.tsx    # Trang chính phân hệ Market Intelligence
+    └── api/v1/market-intelligence/
+        ├── product-intelligence/route.ts     # API phân tích độ khớp sản phẩm
+        └── ...
+```
+
+---
+
+## 4. Hệ Thống Dẫn Chứng Video Kép (Dual Video Evidence)
+
+### 4.1. Hợp Đồng Dữ Liệu Dẫn Chứng (`OpportunityEvidencePreview`)
+
+```typescript
+export interface VideoEvidenceItem {
+  platform: "tiktok" | "youtube";
+  thumbnailUrl: string;
+  videoUrl: string;
+  title: string;
+  author: string;
+  views: number;
+  metrics: string; // VD: "42.6k tim", "8.2k xem"
+  alt: string;
+}
+
+export interface OpportunityEvidencePreview {
+  tiktok: VideoEvidenceItem;
+  youtube: VideoEvidenceItem;
+  headline: string;
+  sourceKeyword: string;
+}
+```
+
+### 4.2. Từ Điển Dẫn Chứng Chuẩn SSOT (`video-evidence-catalog.ts`)
+- Lưu trữ bộ sưu tập dẫn chứng video hoa tươi thực tế đã được xác minh:
+  - **Chủ đề Ngày 20/10 / Phụ Nữ Việt Nam**: Kênh `@hoatuoituongan`, `@queenflowers` (TikTok) và các video workshop cắm hoa 20/10 (YouTube).
+  - **Chủ đề Hoa Cưới Tone Cam Cháy / Mùa Thu**: Kênh `@tiemhoanangxuan` (TikTok) và hướng dẫn phối hoa tone ấm (YouTube).
+  - **Chủ đề Bó Hoa Tốt Nghiệp Hướng Dương**: Video trao hoa lễ tốt nghiệp triệu view (TikTok) và video bó hoa hướng dương xòe tròn (YouTube).
+  - **Chủ đề Hoa Tulip Pastel Hàn Quốc**: Video unbox hoa nhập khẩu và phối giấy gói mờ pastel.
+  - **Chủ đề Giỏ Hoa Tặng Mẹ / Sinh Nhật**: Video giỏ hoa cúc mẫu đơn và hoa hồng kem pastel.
+
+---
+
+## 5. Quy Chuẩn Làm Sạch Dữ Liệu & Chống Tràn Từ Khóa
+
+```
+DỮ LIỆU CRAWL / GENERATOR THÔ:
+"Hoa 20/10, Bó hoa tốt nghiệp hướng dương, Hoa cưới mùa thu, Hoa cưới tone cam cháy..."
+                       │
+                       ▼
+          [BỘ LỌC LÀM SẠCH FLORAOS]
+                       │
+        ┌──────────────┴──────────────┐
+        ▼                             ▼
+getOpportunityHeadline()        formatCleanHook()
+        │                             │
+        ▼                             ▼
+"BST Hoa 20/10 thanh lịch        "Bật mí bí quyết chọn Hoa 20/10
+dẫn đầu xu hướng năm nay"        chuẩn gu & đong đầy tình cảm..."
+        │                             │
+        └──────────────┬──────────────┘
+                       ▼
+           GIAO DIỆN NGƯỜI DÙNG:
+- Không còn tag chứa 10 từ khóa nối phẩy.
+- Thẻ phân loại tinh gọn: ⚡ Bắt trend, 🎨 Hướng dẫn, 🎁 Quà tặng.
+- Huy hiệu tương tác thực tế: ⚡ 42.6k tim • TikTok.
+- Cặp thumbnail video TikTok + YouTube rõ ràng, chân thực.
+```
+
+---
+
+## 6. Ma Trận Vòng Đời Xu Hướng & Chấm Điểm Cơ Hội
+
+### 6.1. Bốn Pha Vòng Đời Xu Hướng (`TrendLifecycleStage`)
+1. **`EMERGING` (Mới chớm)**: Tốc độ tăng trưởng tìm kiếm cao (> 50%), tương tác video bắt đầu bùng nổ, mức độ cạnh tranh thị trường thấp. Phù hợp cho tiệm đi đầu đón sóng.
+2. **`SURGING` (Đang tăng mạnh)**: Độ quan tâm tăng phi mã (> 100%), video viral xuất hiện dày đặc, nhu cầu đặt hoa tăng đột biến. Phù hợp làm video TikTok/Reels để hút tương tác.
+3. **`PEAK` (Đỉnh điểm)**: Lưu lượng tìm kiếm đạt mức cao nhất, cạnh tranh khốc liệt. Phù hợp tung các chương trình khuyến mãi chốt đơn nhanh.
+4. **`EVERGREEN` (Bền vững / Ổn định)**: Nhu cầu ổn định quanh năm (hoa sinh nhật, hoa khai trương tone đỏ/vàng).
+
+### 6.2. Công Thức Chấm Điểm Cơ Hội (`Opportunity Score`)
+
+$$\text{Score} = w_s \cdot S_{\text{search}} + w_v \cdot S_{\text{viral}} + w_c \cdot S_{\text{commercial}} + w_t \cdot S_{\text{trend\_fit}}$$
+
+- $S_{\text{search}}$: Điểm tăng trưởng lưu lượng tìm kiếm từ Google Trends (0–100).
+- $S_{\text{viral}}$: Điểm tương tác từ lượt xem/thả tim video TikTok & YouTube (0–100).
+- $S_{\text{commercial}}$: Tính thương mại và khả năng sinh lời thực tế của sản phẩm hoa (0–100).
+- $S_{\text{trend\_fit}}$: Mức độ tương thích với năng lực và kho hoa của tiệm (0–100).
+- **Ngưỡng hiển thị**: Cơ hội có điểm $\ge 60$ được đưa vào danh sách **"Cơ hội quan trọng"** (`brief-important-view.tsx`).
+
+---
+
+## 7. Quy Trình Kiểm Thử & Nghiệm Thu (Quality Gate)
+
+1. **TypeScript Typecheck**:
+   ```bash
+   npx tsc --noEmit
+   ```
+   *Bắt buộc thoát mã 0, không có lỗi kiểu.*
+
+2. **Unit Tests Tầng Domain**:
+   ```bash
+   npm test tests/unit/market-intelligence/
+   ```
+   *Bao phủ 6 bộ kiểm thử: `trend-lifecycle.test.ts`, `scoring.test.ts`, `trend-fit.test.ts`, `market-taxonomy.test.ts`, `tenant-schedule-settings.test.ts`, `google-trends-adapter.test.ts` (27/27 test xanh).*
+
+3. **Tenant Isolation Verification**:
+   ```bash
+   npm run test:tenant
+   ```
+   *Bảo đảm cách ly dữ liệu giữa các tổ chức tuyệt đối.*
+
+4. **Kiểm Soát Giới Hạn File (SRP Limit)**:
+   ```bash
+   wc -l src/components/market-intelligence/*.tsx
+   ```
+   *Mọi file giao diện và logic đều phải dưới 350 dòng.*

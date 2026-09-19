@@ -44,6 +44,9 @@ export interface EvidenceReference {
   readonly url: string;
   readonly platform: string;
   readonly engagementNote?: string;
+  readonly thumbnailUrl?: string;
+  readonly author?: string;
+  readonly metrics?: string;
 }
 
 export interface ContentOpportunity {

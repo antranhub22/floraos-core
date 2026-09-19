@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { Flame, ArrowRight, Tag } from "lucide-react";
+import { Flame, ArrowRight, Tag, Play, Video, ExternalLink } from "lucide-react";
 import type { OpportunityItem } from "./opportunity-card";
 import { determineTrendLifecycle, LIFECYCLE_SPECS } from "@/modules/market-intelligence/domain/trend-lifecycle";
-import { getOpportunityIllustration, getOpportunityHeadline } from "./opportunity-illustration";
+import { getDualOpportunityEvidencePreview, getOpportunityHeadline } from "./opportunity-illustration";
 
 interface BriefImportantViewProps {
   opportunities: OpportunityItem[];
@@ -15,32 +15,48 @@ export function BriefImportantView({
   opportunities,
   onSelectOpportunity,
 }: BriefImportantViewProps) {
-  // Sắp xếp giảm dần theo điểm cơ hội kinh doanh (Top ROI trước)
-  const sorted = [...opportunities].sort(
-    (a, b) => b.contentOpportunityScore - a.contentOpportunityScore
-  );
-  // Lấy top 8 cơ hội có điểm cao nhất
-  const topItems = sorted.slice(0, 8);
+  // Sắp xếp ưu tiên các cơ hội mới nhất lên đầu, sau đó đến điểm cơ hội
+  const sorted = [...opportunities].sort((a, b) => {
+    const timeA = new Date(a.createdAt).getTime();
+    const timeB = new Date(b.createdAt).getTime();
+    if (timeB !== timeA) {
+      return timeB - timeA;
+    }
+    return b.contentOpportunityScore - a.contentOpportunityScore;
+  });
+
+  const topItems = sorted.slice(0, 10);
+
+  if (topItems.length === 0) {
+    return (
+      <div className="rounded-2xl border border-stone-200/80 bg-white p-12 text-center shadow-2xs">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 mb-3">
+          <Flame size={24} />
+        </div>
+        <h3 className="font-bold text-stone-800 text-base">Chưa có cơ hội thị trường nào</h3>
+        <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
+          Kích hoạt quét tín hiệu xu hướng để hệ thống phân tích và đề xuất cơ hội kinh doanh cho tiệm hoa của bạn.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-200">
-      {/* Banner Giới Thiệu Chuyên Sâu */}
-      <div className="rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-50/70 via-white to-stone-50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-600 text-white shadow-sm flex-shrink-0">
-            <Flame size={20} />
-          </div>
-          <div>
-            <h3 className="text-sm font-extrabold text-stone-900">Cơ hội nổi bật nhất</h3>
-            <p className="text-xs text-stone-500 mt-0.5">
-              Xếp hạng theo điểm tổng hợp tiềm năng thương mại, sức mua thực tế và độ nóng thị trường
-            </p>
-          </div>
+    <div className="space-y-4">
+      {/* Header chỉ mục */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-extrabold uppercase tracking-wider text-stone-800 flex items-center gap-2">
+            <Flame className="h-4 w-4 text-rose-600" />
+            Cơ hội nổi bật nhất
+          </h3>
+          <p className="text-xs text-stone-500 mt-0.5">
+            Xếp hạng theo tín hiệu thị trường kết hợp tệp khách hàng của tiệm
+          </p>
         </div>
-
-        <div className="flex items-center gap-2 text-xs font-bold text-rose-700 bg-rose-100/60 px-3 py-1.5 rounded-xl border border-rose-200 self-start sm:self-auto">
-          <span>{topItems.length} cơ hội tiềm năng cao</span>
-        </div>
+        <span className="text-xs font-bold text-stone-400">
+          Top {topItems.length} cơ hội
+        </span>
       </div>
 
       {/* Danh Sách Xếp Hạng Top Cơ Hội */}
@@ -48,7 +64,7 @@ export function BriefImportantView({
         {topItems.map((item, idx) => {
           const lifecycle = determineTrendLifecycle(item.trendScore, 0.4, 20);
           const spec = LIFECYCLE_SPECS[lifecycle];
-          const illustration = getOpportunityIllustration(item);
+          const evidence = getDualOpportunityEvidencePreview(item);
           const headline = getOpportunityHeadline(item);
           const rankColors = [
             "bg-amber-500 text-white shadow-xs", // #1
@@ -64,7 +80,7 @@ export function BriefImportantView({
               onClick={() => onSelectOpportunity(item)}
               className="group rounded-2xl border border-stone-200/90 bg-white p-4 shadow-2xs hover:border-rose-400 hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
-              {/* Cột trái: Rank, Ảnh minh họa & Tên cơ hội */}
+              {/* Cột trái: Rank, Khung Dual Thumbnail (TikTok & YouTube) & Tên cơ hội */}
               <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
                 <span
                   className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs font-black flex-shrink-0 ${rankClass}`}
@@ -72,20 +88,100 @@ export function BriefImportantView({
                   #{idx + 1}
                 </span>
 
-                <img
-                  src={illustration.url}
-                  alt={illustration.alt}
-                  loading="lazy"
-                  className="h-14 w-14 rounded-xl object-cover flex-shrink-0"
-                />
+                {/* Khung Chứa Cả 2 Thumbnail: TikTok & YouTube */}
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                  {/* Thumbnail TikTok */}
+                  <div
+                    onClick={(e) => {
+                      if (evidence.tiktok.videoUrl) {
+                        e.stopPropagation();
+                        window.open(evidence.tiktok.videoUrl, "_blank", "noopener,noreferrer");
+                      }
+                    }}
+                    title={`Mở xem dẫn chứng video thật trên TikTok: ${evidence.tiktok.title}`}
+                    className="relative h-16 w-16 sm:w-20 rounded-xl overflow-hidden flex-shrink-0 bg-stone-950 group/tiktok shadow-xs border border-stone-200/90 cursor-pointer hover:border-pink-400 transition-all hover:scale-[1.03]"
+                  >
+                    <img
+                      src={evidence.tiktok.thumbnailUrl}
+                      alt={evidence.tiktok.alt}
+                      loading="lazy"
+                      className="h-full w-full object-cover group-hover/tiktok:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+
+                    {/* Platform Badge TikTok */}
+                    <div className="absolute top-1 left-1">
+                      <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/85 text-pink-400 text-[8.5px] font-black uppercase tracking-wider backdrop-blur-xs border border-pink-500/30">
+                        <Video className="h-2 w-2 text-pink-400" />
+                        TikTok
+                      </span>
+                    </div>
+
+                    {/* Play icon overlay on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-70 group-hover/tiktok:opacity-100 transition-opacity">
+                      <div className="h-5 w-5 rounded-full bg-black/60 text-pink-400 flex items-center justify-center border border-pink-400/40">
+                        <Play className="h-2.5 w-2.5 fill-current translate-x-0.2 text-pink-400" />
+                      </div>
+                    </div>
+
+                    {/* Metrics/Author at bottom */}
+                    <div className="absolute bottom-1 inset-x-1 flex items-center justify-between text-[8px] text-white/95 font-semibold drop-shadow-xs">
+                      <span className="truncate" title={evidence.tiktok.author}>
+                        {evidence.tiktok.author}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Thumbnail YouTube */}
+                  <div
+                    onClick={(e) => {
+                      if (evidence.youtube.videoUrl) {
+                        e.stopPropagation();
+                        window.open(evidence.youtube.videoUrl, "_blank", "noopener,noreferrer");
+                      }
+                    }}
+                    title={`Mở xem dẫn chứng video thật trên YouTube: ${evidence.youtube.title}`}
+                    className="relative h-16 w-20 sm:w-24 rounded-xl overflow-hidden flex-shrink-0 bg-stone-950 group/yt shadow-xs border border-stone-200/90 cursor-pointer hover:border-red-400 transition-all hover:scale-[1.03]"
+                  >
+                    <img
+                      src={evidence.youtube.thumbnailUrl}
+                      alt={evidence.youtube.alt}
+                      loading="lazy"
+                      className="h-full w-full object-cover group-hover/yt:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+
+                    {/* Platform Badge YouTube */}
+                    <div className="absolute top-1 left-1">
+                      <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-red-600/90 text-white text-[8.5px] font-black uppercase tracking-wider backdrop-blur-xs">
+                        <Play className="h-2 w-2 fill-current" />
+                        YT
+                      </span>
+                    </div>
+
+                    {/* Play icon overlay on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-70 group-hover/yt:opacity-100 transition-opacity">
+                      <div className="h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center border border-white/40">
+                        <Play className="h-2.5 w-2.5 fill-current translate-x-0.2 text-white" />
+                      </div>
+                    </div>
+
+                    {/* Metrics/Author at bottom */}
+                    <div className="absolute bottom-1 inset-x-1 flex items-center justify-between text-[8px] text-white/95 font-semibold drop-shadow-xs">
+                      <span className="truncate" title={evidence.youtube.author}>
+                        {evidence.youtube.author}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="space-y-1 min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200/70">
-                      <Tag size={10} /> {item.topicName}
-                    </span>
                     <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${spec.bgClass} ${spec.colorClass} ${spec.borderClass}`}>
                       {spec.shortLabel}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-emerald-800 bg-emerald-50/90 px-2 py-0.5 rounded-full border border-emerald-200/80 shadow-2xs">
+                      ⚡ {evidence.primary.metrics}
                     </span>
                   </div>
 

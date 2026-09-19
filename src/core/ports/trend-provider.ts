@@ -15,18 +15,29 @@ export interface TrendSearchQuery {
   readonly channel?: string; // 'omnichannel' | 'web' | 'tiktok' | 'youtube'
 }
 
+export interface VideoEvidenceSnippet {
+  readonly title: string;
+  readonly platform: "TIKTOK_REELS" | "YOUTUBE" | "GOOGLE_TRENDS" | "IMAGE_PINTEREST";
+  readonly url: string;
+  readonly thumbnailUrl?: string | undefined;
+  readonly author?: string | undefined;
+  readonly metrics?: string | undefined;
+  readonly snippet?: string | undefined;
+}
+
 export interface TrendSignalData {
   readonly platform: string;
   readonly topicRaw: string;
   readonly countryCode: string;
-  readonly regionCode?: string | null;
-  readonly city?: string | null;
+  readonly regionCode?: string | null | undefined;
+  readonly city?: string | null | undefined;
   readonly industry: string;
   readonly metricName: string;
   readonly metricValue: number;
-  readonly growthRate?: number | null;
+  readonly growthRate?: number | null | undefined;
   readonly confidence: number;
   readonly capturedAt: Date;
+  readonly evidenceSnippets?: readonly VideoEvidenceSnippet[] | undefined;
 }
 
 export interface TrendTimeseriesPoint {

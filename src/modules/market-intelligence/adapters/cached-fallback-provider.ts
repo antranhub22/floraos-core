@@ -7,6 +7,7 @@ import type {
   ProviderHealthReport,
 } from "@/core/ports/trend-provider";
 import { marketIntelligenceRepo } from "../infra/market-intelligence-repository";
+import { estimateTopicContextMetrics } from "../domain/scoring";
 
 /**
  * Provider Fallback từ bộ nhớ đệm CSDL (`trend_timeseries` & `trend_signals`).
@@ -25,7 +26,7 @@ export class CachedFallbackProvider implements TrendProvider {
       const dbSignals = await marketIntelligenceRepo.findCachedSignals(query.query, geo, industry);
 
       if (dbSignals.length === 0) {
-        // Trả về tín hiệu tối thiểu nếu chưa từng có dữ liệu
+        const context = estimateTopicContextMetrics(query.query);
         return [
           {
             platform: "cached_fallback",
@@ -33,9 +34,9 @@ export class CachedFallbackProvider implements TrendProvider {
             countryCode: geo,
             industry,
             metricName: "cached_baseline",
-            metricValue: 40.0,
-            growthRate: 0.0,
-            confidence: 0.5,
+            metricValue: context.trendScore,
+            growthRate: Math.round(context.trendScore * 0.2 * 10) / 10,
+            confidence: 0.55,
             capturedAt: new Date(),
           },
         ];

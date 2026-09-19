@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { CalendarDays, Tag, ArrowRight, Sparkles, CheckCircle2 } from "lucide-react";
+import { CalendarDays, Tag, ArrowRight, Sparkles, CheckCircle2, Video, Play } from "lucide-react";
 import type { OpportunityItem } from "./opportunity-card";
 import { determineTrendLifecycle, LIFECYCLE_SPECS } from "@/modules/market-intelligence/domain/trend-lifecycle";
-import { getOpportunityIllustration, getOpportunityHeadline } from "./opportunity-illustration";
+import { getDualOpportunityEvidencePreview, getOpportunityHeadline } from "./opportunity-illustration";
 
 interface BriefOccasionsViewProps {
   opportunities: OpportunityItem[];
@@ -146,7 +146,8 @@ export function BriefOccasionsView({
           {matchingItems.map((item) => {
             const lifecycle = determineTrendLifecycle(item.trendScore, 0.4, 20);
             const spec = LIFECYCLE_SPECS[lifecycle];
-            const illustration = getOpportunityIllustration(item);
+            const dualEvidence = getDualOpportunityEvidencePreview(item);
+            const evidence = dualEvidence.primary;
             const headline = getOpportunityHeadline(item);
 
             return (
@@ -155,21 +156,44 @@ export function BriefOccasionsView({
                 onClick={() => onSelectOpportunity(item)}
                 className="group rounded-2xl border border-stone-200/90 bg-white shadow-2xs hover:border-purple-400 hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col overflow-hidden"
               >
-                <div className="relative aspect-[16/9] w-full overflow-hidden bg-stone-100">
+                <div className="relative aspect-[16/9] w-full overflow-hidden bg-stone-900">
                   <img
-                    src={illustration.url}
-                    alt={illustration.alt}
+                    src={evidence.thumbnailUrl}
+                    alt={evidence.alt}
                     loading="lazy"
                     className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/50 to-transparent" />
-                  <div className="absolute left-3 bottom-2.5 flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-white/90 text-purple-700">
-                      <Tag size={10} /> {item.topicName}
-                    </span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                  <div className="absolute left-3 top-2.5 flex flex-wrap items-center gap-1.5 z-10">
                     <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${spec.bgClass} ${spec.colorClass} ${spec.borderClass}`}>
                       {spec.shortLabel}
                     </span>
+                    <a
+                      href={dualEvidence.tiktok.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      title={`Mở TikTok: ${dualEvidence.tiktok.title}`}
+                      className="inline-flex items-center gap-1 text-[9.5px] font-black px-2 py-0.5 rounded-full bg-black/80 text-pink-400 border border-pink-500/30 backdrop-blur-xs shadow-xs hover:scale-105 transition"
+                    >
+                      <Video className="h-2.5 w-2.5 text-pink-400" />
+                      TikTok
+                    </a>
+                    <a
+                      href={dualEvidence.youtube.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      title={`Mở YouTube: ${dualEvidence.youtube.title}`}
+                      className="inline-flex items-center gap-1 text-[9.5px] font-black px-2 py-0.5 rounded-full bg-red-600/90 text-white border border-red-500/30 backdrop-blur-xs shadow-xs hover:scale-105 transition"
+                    >
+                      <Play className="h-2.5 w-2.5 fill-current" />
+                      YT
+                    </a>
+                  </div>
+                  <div className="absolute left-3 bottom-2 flex items-center gap-2 text-[10px] text-white/90 font-medium">
+                    <span className="truncate">{evidence.author}</span>
+                    <span>• {evidence.metrics}</span>
                   </div>
                 </div>
 

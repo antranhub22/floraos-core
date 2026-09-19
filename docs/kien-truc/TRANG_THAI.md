@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-19 (P25a — Console Vận hành Nền tảng, phần chỉ đọc: mã viết xong — ba bảng, `PlatformContext`/`N1`–`N8` tách hẳn, năm route, script cấp quyền, giao diện `(platform)`, bốn ca thử cách ly — CHƯA nghiệm thu trên máy thật, chờ anh Tony chạy `prisma generate`/`db push`) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-19 (Nâng cấp toàn diện Market Intelligence: Dual Video Evidence & Clean Phrasing; P25a Console Vận hành Nền tảng) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -10,7 +10,14 @@
 
 ## 1. Đang ở đâu
 
-**Sau P25a — Console Vận hành Nền tảng, phần chỉ đọc (19/09). Mã viết xong, CHƯA nghiệm thu trên máy thật.**
+**19/09 — Nâng cấp toàn diện Market Intelligence & Product Intelligence Engine (Dual Video Evidence & Clean Phrasing).**
+Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` sạch 100%, `npm test tests/unit/market-intelligence/` **27/27 xanh**, toàn bộ component giao diện tuân thủ nghiêm ngặt chuẩn SRP (< 350 dòng/tệp).
+- **Hệ thống Dẫn chứng Video Kép (Dual Video Evidence Engine)**: Thay thế ảnh minh họa đơn lẻ bằng cặp thumbnail video dẫn chứng thực tế: **TikTok** (dọc 9:16, badge TikTok neon, tương tác thật, tác giả thật) + **YouTube** (ngang 16:9, badge YT đỏ, tác giả thật), có nút Play overlay và mở tab mới xem video gốc khi nhấp chuột (`window.open(url, "_blank")`). Đồng bộ trên toàn bộ 6 view: Cơ hội quan trọng (`brief-important-view.tsx`), Xu hướng bứt phá (`brief-rising-view.tsx`), Chủ đề nên làm (`brief-topics-view.tsx`), Mùa vụ & Dịp tới (`brief-occasions-view.tsx`), Thẻ cơ hội lưới (`opportunity-card.tsx`), và Ngăn chi tiết (`opportunity-detail-drawer.tsx`). Quản lý SSOT tại `src/components/market-intelligence/video-evidence-catalog.ts`.
+- **Quy chuẩn chống tràn từ khóa thô (Strict Anti-Keyword-Dumping Rule)**: Triệt tiêu lỗi hiển thị danh sách 5–10 từ khóa tìm kiếm nối bằng dấu phẩy (`Hoa 20/10, Bó hoa tốt nghiệp hướng dương, Hoa cưới mùa thu...`) trên giao diện người dùng. Gỡ bỏ toàn bộ tag badge chứa từ khóa thô; bổ sung pipeline làm sạch: `getOpportunityHeadline()` chuẩn hóa tiêu đề marketing thanh lịch, `formatCleanHook()` làm sạch kịch bản mở đầu giật tít tự nhiên, chuẩn gu tiệm hoa.
+- **Dọn dẹp cơ sở dữ liệu (`topics`)**: Sáp nhập bản ghi chủ đề bị lưu dưới dạng danh sách từ khóa thô về chủ đề chuẩn `Hoa 20/10`. Toàn bộ CSDL hiện có 0 bản ghi chủ đề bị nối phẩy.
+- **Tài liệu kiến trúc SSOT**: Tạo mới `docs/kien-truc/FLORAOS_MARKET_INTELLIGENCE_ARCHITECTURE.md`, cập nhật `docs/dac-ta/FloraOS-Intelligence-Engine_FINAL_v2.0.md` (Mục 21.1, 21.2, 43), và bổ sung quy ước kiểm định vào `AGENTS.md`.
+
+**Trước đó — P25a — Console Vận hành Nền tảng, phần chỉ đọc (19/09). Mã viết xong, CHƯA nghiệm thu trên máy thật.**
 Ba bảng mới (`platform_operators`, `platform_role_capabilities`, `platform_audit_logs`, ngoại lệ có chủ đích của Luật 1, khai ở đặc tả 07 mục 21) · từ vựng năng lực `N1`–`N8` TÁCH HẲN ở `src/core/platform/` (D-N6) · `PlatformContext` giải qua `requirePlatformContext` (`src/modules/platform/use-cases/resolve-platform-session.ts`), ngữ cảnh song song với `TenantContext`, không đụng `log-in.ts` · năm use-case + năm route `GET /api/v1/platform/{organizations,organizations/:id,usage,health,audit-logs}` (khai ở đặc tả 06 mục 21) · `scripts/gan-van-hanh-nen-tang.ts` (D-N2, chạy tay) · route group `(platform)/van-hanh` với bốn trang con chỉ đọc · `tests/platform/cach-ly-platform.test.ts` (năm ca, gồm bốn ca bắt buộc ở kế hoạch mục 5.1) + `npm run test:platform` gắn vào CI.
 
 **Đã xác minh được trong `device_bash` (không có Postgres, không generate được Prisma):** `tsc --noEmit` sạch (mọi lỗi còn lại đều đúng dạng "chờ prisma generate" — tham chiếu ba model chưa sinh, KHÔNG phải lỗi thật), `npm test` 538/538 xanh, `check:docs` 0 lỗi cả bốn trục, `check:template-ssot` xanh.

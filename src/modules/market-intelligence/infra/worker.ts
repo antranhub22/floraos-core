@@ -1,3 +1,4 @@
+import type { VideoEvidenceSnippet } from "@/core/ports/trend-provider";
 import { Client } from "pg";
 import { prisma } from "@/core/tenancy/infra/prisma";
 import { TrendProviderChain } from "../adapters/trend-provider-chain";
@@ -6,6 +7,7 @@ import {
   calculateViralScore,
   calculateCommercialScore,
   calculateContentOpportunityScore,
+  estimateTopicContextMetrics,
   CURRENT_SCORING_MODEL_VERSION,
 } from "../domain/scoring";
 import { personalizeOpportunitiesForTenants } from "../use-cases/personalize-opportunities";
@@ -75,6 +77,7 @@ export async function executeSingleRun(runId: string, runType: string): Promise<
   let sourcesFailed = 0;
   let recordsCollected = 0;
   const createdTopicIds: string[] = [];
+  const topicEvidenceMap: Record<string, VideoEvidenceSnippet[]> = {};
 
   try {
     // Đảm bảo có sẵn bản ghi nguồn thị trường mặc định
@@ -177,25 +180,43 @@ export async function executeSingleRun(runId: string, runType: string): Promise<
               createdTopicIds.push(topic.id);
             }
 
-            // 3. Tính toán điểm số xu hướng với công thức thuần (domain/scoring.ts)
-            const trendScore = calculateTrendScore({
-              baselineInterest: sig.metricValue,
+            if (sig.evidenceSnippets && sig.evidenceSnippets.length > 0) {
+              topicEvidenceMap[topic.id] = [
+                ...(topicEvidenceMap[topic.id] || []),
+                ...sig.evidenceSnippets,
+              ];
+            }
+
+            // 3. Tính toán điểm số xu hướng với công thức ngữ cảnh động
+            const context = estimateTopicContextMetrics(topic.canonical_name);
+
+            const isTikTok = sig.platform === "tiktok_trends";
+            const isYouTube = sig.platform === "youtube_trends";
+
+            const calculatedViral = isTikTok
+              ? calculateViralScore({
+                  socialSignals: sig.metricValue * 2,
+                  engagementRate: Math.max(3, (sig.growthRate ?? 0) * 0.15),
+                  isBreakout: (sig.growthRate ?? 0) > 40,
+                })
+              : isYouTube
+              ? calculateViralScore({
+                  socialSignals: sig.metricValue * 1.5,
+                  engagementRate: 5,
+                  isBreakout: (sig.growthRate ?? 0) > 30,
+                })
+              : context.viralScore;
+
+            const calculatedTrend = calculateTrendScore({
+              baselineInterest: sig.metricValue || context.trendScore,
               growthRate: sig.growthRate ?? 0,
-              velocity: 0.1,
-              acceleration: 0.05,
+              velocity: (sig.growthRate ?? 0) > 30 ? 0.3 : 0.1,
+              acceleration: (sig.growthRate ?? 0) > 50 ? 0.1 : 0.02,
             });
 
-            const viralScore = calculateViralScore({
-              socialSignals: 100,
-              engagementRate: 5,
-              isBreakout: (sig.growthRate ?? 0) > 50,
-            });
-
-            const commercialScore = calculateCommercialScore({
-              buyingIntent: 80,
-              seasonalityFit: 85,
-              priceAlignment: 80,
-            });
+            const trendScore = Math.round((calculatedTrend * 0.45 + context.trendScore * 0.55) * 10) / 10;
+            const viralScore = Math.round((calculatedViral * 0.4 + context.viralScore * 0.6) * 10) / 10;
+            const commercialScore = context.commercialScore;
 
             const oppScore = calculateContentOpportunityScore(
               trendScore,
@@ -207,8 +228,8 @@ export async function executeSingleRun(runId: string, runType: string): Promise<
             await prisma.topic_scores.create({
               data: {
                 topic_id: topic.id,
-                geo_scope: sig.countryCode,
-                industry: sig.industry,
+                geo_scope: targetGeo,
+                industry: "florist",
                 period: "7d",
                 trend_score: trendScore,
                 viral_score: viralScore,
@@ -232,7 +253,10 @@ export async function executeSingleRun(runId: string, runType: string): Promise<
       console.log(
         `[MI-Worker] Bắt đầu cá nhân hóa cơ hội cho ${createdTopicIds.length} chủ đề mới...`
       );
-      const personalizeRes = await personalizeOpportunitiesForTenants(createdTopicIds);
+      const personalizeRes = await personalizeOpportunitiesForTenants(
+        createdTopicIds,
+        topicEvidenceMap
+      );
       opportunitiesCreated = personalizeRes.opportunitiesCreated;
     }
 
