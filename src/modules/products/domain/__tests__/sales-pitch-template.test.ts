@@ -3,6 +3,7 @@ import {
   buildSalesPitchData,
   generateZaloPitchScript,
   formatCurrencyVnd,
+  formatDimensions,
   DEFAULT_FREE_GIFTS,
   DEFAULT_GUARANTEES,
 } from "../sales-pitch-template"
@@ -11,6 +12,13 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
   it("formatCurrencyVnd định dạng đúng số tiền", () => {
     expect(formatCurrencyVnd(null)).toBe("Chưa có giá, liên hệ shop")
     expect(formatCurrencyVnd(850000)).toContain("850.000")
+  })
+
+  it("formatDimensions không bịa số khi thiếu chiều đo (nợ #96)", () => {
+    expect(formatDimensions(null, null)).toBe("chưa có kích thước cụ thể, liên hệ shop để xác nhận")
+    expect(formatDimensions(70, null)).toBe("chưa có kích thước cụ thể, liên hệ shop để xác nhận")
+    expect(formatDimensions(null, 50)).toBe("chưa có kích thước cụ thể, liên hệ shop để xác nhận")
+    expect(formatDimensions(70, 50)).toBe("Cao ~70cm × Rộng ~50cm")
   })
 
   it("buildSalesPitchData tổng hợp chuẩn từ M01a và M01b", () => {
@@ -150,7 +158,28 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
     expect(script).toContain("Hoa Tulip (10 bông)")
     expect(script).toContain("QUÀ TẶNG KÈM THEO")
     expect(script).toContain("CAM KẾT DỊCH VỤ TỪ SHOP")
-    expect(script).toContain("Cao ~55cm × Rộng ~40cm")
+    // Nợ #96: chưa có override kích thước thật -> KHÔNG hiện số bịa 55×40cm
+    // nữa, phải hiện rõ đây là ô trống cần xác nhận.
+    expect(script).toContain("chưa có kích thước cụ thể, liên hệ shop để xác nhận")
+    expect(script).not.toContain("Cao ~55cm × Rộng ~40cm")
+    expect(pitch.dimensions.heightCm).toBeNull()
+    expect(pitch.dimensions.widthCm).toBeNull()
+  })
+
+  it("buildSalesPitchData giữ nguyên kích thước thật khi Sales nhập override (nợ #96)", () => {
+    const pitch = buildSalesPitchData(
+      { bom: { flowers: [{ name: "Hoa Tulip", quantity: 10, dvt_dem: "bông" }] } },
+      null,
+      { heightCm: 70, widthCm: 50 },
+      null,
+      null
+    )
+
+    expect(pitch.dimensions.heightCm).toBe(70)
+    expect(pitch.dimensions.widthCm).toBe(50)
+
+    const script = generateZaloPitchScript(pitch)
+    expect(script).toContain("Cao ~70cm × Rộng ~50cm")
   })
 
   it("buildSalesPitchData tự động thừa hưởng tenantDefaults từ Master Profile khi không có overrides", () => {
@@ -213,6 +242,46 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
     expect(formatCurrencyVnd(pitch.priceVnd)).toBe("Chưa có giá, liên hệ shop")
   })
 
+  // --- Nợ #102: tách cta_templates (câu kêu gọi hành động) khỏi
+  // default_offers (quà tặng/cam kết) — chốt 17/09 với anh Tony ---
+
+  it("dùng câu kêu gọi hành động riêng của thương hiệu khi tenant đã cấu hình cta_templates", () => {
+    const pitch = buildSalesPitchData(
+      { product_name: "Bó hoa sinh nhật", bom: { flowers: [{ name: "Hoa hồng", quantity: 10, dvt_dem: "cành" }] } },
+      null,
+      undefined,
+      null,
+      {
+        shopName: "Tiệm Hoa Mộc Lan",
+        shopHotline: "0977 123 456",
+        freeGifts: null,
+        guarantees: null,
+        ctaPhrases: ["Nhắn Zalo ngay để giữ giá ưu đãi hôm nay ạ!", "Câu CTA thứ hai không dùng"],
+      }
+    )
+
+    expect(pitch.ctaPhrase).toBe("Nhắn Zalo ngay để giữ giá ưu đãi hôm nay ạ!")
+
+    const script = generateZaloPitchScript(pitch)
+    expect(script).toContain("Nhắn Zalo ngay để giữ giá ưu đãi hôm nay ạ!")
+    expect(script).not.toContain("Quý khách cần tư vấn thiệp chúc mừng riêng")
+  })
+
+  it("giữ nguyên câu đóng mặc định hệ thống khi tenant CHƯA cấu hình cta_templates", () => {
+    const pitch = buildSalesPitchData(
+      { product_name: "Bó hoa chúc mừng", bom: { flowers: [{ name: "Hoa cúc", quantity: 8, dvt_dem: "cành" }] } },
+      null,
+      undefined,
+      null,
+      { shopName: "Tiệm Hoa Mộc Lan", shopHotline: "0977 123 456", freeGifts: null, guarantees: null, ctaPhrases: null }
+    )
+
+    expect(pitch.ctaPhrase).toBeNull()
+
+    const script = generateZaloPitchScript(pitch)
+    expect(script).toContain("Quý khách cần tư vấn thiệp chúc mừng riêng hoặc đặt giao hoa hỏa tốc")
+  })
+
   it("dùng ĐÚNG tên tiệm/hotline thật từ tenantDefaults thay vì giá trị giả khi gọi từ trang M01c", () => {
     const pitch = buildSalesPitchData(
       { product_name: "Giỏ hoa chúc mừng", bom: { flowers: [{ name: "Hướng dương", quantity: 7, dvt_dem: "cành" }] } },
@@ -227,6 +296,147 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
     expect(pitch.shopHotline).toBe("0977 123 456")
     expect(script).toContain("0977 123 456")
     expect(script).not.toContain("1900 xxxx")
+  })
+
+  // --- Nợ #104: "giọng theo dịp" — chốt xây đầy đủ qua AskUserQuestion 17/09 ---
+
+  it("occasionRegister mặc định NEUTRAL khi tenant chưa cấu hình danh mục dịp", () => {
+    const pitch = buildSalesPitchData(
+      { product_name: "Bó hoa bất kỳ", identity: { dip_su_dung: "Chia buồn" }, bom: { flowers: [] } },
+      null,
+      undefined,
+      null,
+      null
+    )
+    expect(pitch.occasionRegister).toBe("NEUTRAL")
+  })
+
+  it("occasionRegister khớp CHÍNH XÁC theo tên dịp đầu tiên với danh mục tenant đã cấu hình", () => {
+    const pitch = buildSalesPitchData(
+      { product_name: "Vòng hoa viếng", identity: { dip_su_dung: "Chia buồn" }, bom: { flowers: [] } },
+      null,
+      undefined,
+      null,
+      {
+        shopName: null,
+        shopHotline: null,
+        freeGifts: null,
+        guarantees: null,
+        occasionRegistry: [
+          { name: "Chia buồn", register: "SOLEMN" },
+          { name: "Valentine", register: "FESTIVE" },
+        ],
+      }
+    )
+    expect(pitch.occasionRegister).toBe("SOLEMN")
+  })
+
+  it("occasionRegister KHÔNG suy đoán bằng từ khoá — chỉ khớp đúng tên, không khớp thì về NEUTRAL", () => {
+    const pitch = buildSalesPitchData(
+      // Dịp gợi ý chứa chữ "buồn" nhưng KHÔNG khớp nguyên văn "Chia buồn" —
+      // không được tự suy diễn ra SOLEMN.
+      { product_name: "Bó hoa", identity: { dip_su_dung: "Xin lỗi vì đã làm em buồn" }, bom: { flowers: [] } },
+      null,
+      undefined,
+      null,
+      { shopName: null, shopHotline: null, freeGifts: null, guarantees: null, occasionRegistry: [{ name: "Chia buồn", register: "SOLEMN" }] }
+    )
+    expect(pitch.occasionRegister).toBe("NEUTRAL")
+  })
+
+  it("kịch bản Zalo tông SOLEMN bớt emoji ăn mừng và không hiện dòng 'Phù hợp dịp'/QUÀ TẶNG KÈM THEO", () => {
+    const pitch = buildSalesPitchData(
+      { product_name: "Vòng hoa viếng", identity: { dip_su_dung: "Chia buồn" }, bom: { flowers: [{ name: "Hoa cúc trắng", quantity: 20, dvt_dem: "bông" }] } },
+      null,
+      undefined,
+      null,
+      {
+        shopName: "Tiệm Hoa Mộc Lan",
+        shopHotline: "0977 123 456",
+        freeGifts: null,
+        guarantees: null,
+        occasionRegistry: [{ name: "Chia buồn", register: "SOLEMN" }],
+      }
+    )
+
+    expect(pitch.occasionRegister).toBe("SOLEMN")
+    const script = generateZaloPitchScript(pitch)
+    expect(script).not.toContain("🎯 Phù hợp dịp")
+    expect(script).not.toContain("QUÀ TẶNG KÈM THEO")
+    expect(script).not.toContain("❤️")
+    expect(script).toContain("Hoa cúc trắng (20 bông)")
+    expect(script).toContain("0977 123 456")
+  })
+
+  it("kịch bản Zalo tông SOLEMN vẫn dùng câu CTA riêng của thương hiệu khi tenant đã cấu hình", () => {
+    const pitch = buildSalesPitchData(
+      { product_name: "Vòng hoa viếng", identity: { dip_su_dung: "Chia buồn" }, bom: { flowers: [] } },
+      null,
+      undefined,
+      null,
+      {
+        shopName: null,
+        shopHotline: null,
+        freeGifts: null,
+        guarantees: null,
+        ctaPhrases: ["Shop luôn sẵn sàng hỗ trợ quý khách"],
+        occasionRegistry: [{ name: "Chia buồn", register: "SOLEMN" }],
+      }
+    )
+
+    const script = generateZaloPitchScript(pitch)
+    expect(script).toContain("Shop luôn sẵn sàng hỗ trợ quý khách")
+    expect(script).not.toContain("Quý khách cần hỗ trợ thêm hoặc đặt giao hoa nhanh")
+  })
+
+  it("greetingLine (nợ #99) mặc định null khi tenant chưa cấu hình — không thêm dòng chào nào", () => {
+    const pitch = buildSalesPitchData(
+      { bom: { flowers: [{ name: "Hoa Tulip", quantity: 10, dvt_dem: "bông" }] } },
+      null,
+      undefined,
+      null,
+      null
+    )
+    expect(pitch.greetingLine).toBeNull()
+
+    const script = generateZaloPitchScript(pitch)
+    expect(script.startsWith("🌸 [THÔNG TIN SẢN PHẨM]")).toBe(true)
+  })
+
+  it("greetingLine (nợ #99) hiện đúng câu chào tenant ghi đè ở đầu kịch bản — cả hai tông", () => {
+    const base = buildSalesPitchData(
+      { product_name: "Bó hoa", bom: { flowers: [] } },
+      null,
+      undefined,
+      null,
+      {
+        shopName: null,
+        shopHotline: null,
+        freeGifts: null,
+        guarantees: null,
+        greetingLine: "Chào mừng quý khách đến với SiiN Store!",
+      }
+    )
+    expect(base.greetingLine).toBe("Chào mừng quý khách đến với SiiN Store!")
+    const script = generateZaloPitchScript(base)
+    expect(script.startsWith("Chào mừng quý khách đến với SiiN Store!\n\n🌸 [THÔNG TIN SẢN PHẨM]")).toBe(true)
+
+    const solemn = buildSalesPitchData(
+      { product_name: "Vòng hoa viếng", identity: { dip_su_dung: "Chia buồn" }, bom: { flowers: [] } },
+      null,
+      undefined,
+      null,
+      {
+        shopName: null,
+        shopHotline: null,
+        freeGifts: null,
+        guarantees: null,
+        greetingLine: "Kính gửi quý khách,",
+        occasionRegistry: [{ name: "Chia buồn", register: "SOLEMN" }],
+      }
+    )
+    const solemnScript = generateZaloPitchScript(solemn)
+    expect(solemnScript.startsWith("Kính gửi quý khách,\n\n[THÔNG TIN SẢN PHẨM]")).toBe(true)
   })
 })
 

@@ -16,7 +16,18 @@
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy/tenant-context"
-import type { ProductMasterIndex, FlowerBomItem } from "../domain/product-master-index"
+import type {
+  ProductMasterIndex,
+  FlowerBomItem,
+  FoliageBomItem,
+  AccessoryBomItem,
+  WrappingLayer,
+  DemUnit,
+  ProductVariant,
+  ProductGalleryImage,
+  StockStatus,
+} from "../domain/product-master-index"
+import { mergeOccasions } from "../domain/product-master-index"
 import { mauChuDao } from "../domain/product-analysis-rules"
 import { toneChuDao } from "@/modules/product-copies/domain/analysis-projection"
 
@@ -33,21 +44,42 @@ interface RawFlowerRow {
   color?: string | null
   role?: string | null
   shade?: string | null
+  /** Số nụ chưa nở của riêng loài này — đếm riêng, KHÔNG cộng vào `quantity` (nợ #90). */
+  so_nu?: number | null
+  /** Số cành hỏng/héo/dập của riêng loài này — đã NẰM TRONG `quantity` (nợ #90). */
+  so_hong?: number | null
 }
 
 interface RawAccessoryRow {
   name?: string | null
+  material?: string | null
+  color?: string | null
+  quantity?: number | null
+  printed_text?: string | null
 }
 
 interface RawWrappingLayer {
   layer?: string | null
   material?: string | null
   color?: string | null
+  texture?: string | null
 }
+
+const DEM_UNITS: readonly DemUnit[] = ["bông", "cành", "lá", "cây"]
 
 /** `dvt_dem` của hợp đồng Vision là "Bông"|"Cành"|"Lá"|"Cây" (viết hoa chữ cái đầu). */
 function normalizeUnit(raw: string | null | undefined): string | null {
   return typeof raw === "string" && raw.trim().length > 0 ? raw.trim().toLowerCase() : null
+}
+
+/**
+ * Chuẩn hoá đơn vị đếm về đúng 4 giá trị của `dvt_dem` (nợ kỹ thuật P-Fix-2, mục "chuẩn hoá
+ * đơn vị đếm"). Giá trị lạ hoặc thiếu (kể cả `unit` tự do cũ "nhánh"/"chùm" không nằm trong
+ * hợp đồng Vision) rơi về mặc định "cành" — giữ đúng hành vi mặc định trước bản sửa này.
+ */
+function toDemUnit(raw: string | null | undefined): DemUnit {
+  const normalized = normalizeUnit(raw)
+  return normalized !== null && (DEM_UNITS as readonly string[]).includes(normalized) ? (normalized as DemUnit) : "cành"
 }
 
 /** `bom.flowers[].role` của hợp đồng Vision là "Hoa chủ đạo"|"Hoa phụ"|"Hoa điểm xuyết"|"Hoa lấp đầy"|null — không phải "Chủ đạo"/"Phụ" trần trụi. */
@@ -58,12 +90,30 @@ function mapFlowerRole(raw: string | null | undefined): FlowerBomItem["role"] {
     case "Hoa phụ":
       return "Phụ"
     case "Hoa điểm xuyết":
-      return "Lá điểm"
+      // Đúng vai trò HOA "điểm xuyết" theo hợp đồng Vision — sửa nợ #89, KHÔNG còn dịch
+      // nhầm thành "Lá điểm" (một khái niệm thuộc về LÁ, không phải hoa).
+      return "Điểm xuyến"
     case "Hoa lấp đầy":
       return "Lấp đầy"
     default:
       // AI chưa xác định được vai trò (null/thiếu) — xếp tạm vào nhóm ít quan trọng nhất
       // thay vì đoán "Chủ đạo", để không đánh lừa thợ cắm hoa về hoa nào là hoa chính.
+      return "Lấp đầy"
+  }
+}
+
+/** `bom.foliage[].role` của hợp đồng Vision là "Nền"|"Viền"|"Điểm nhấn"|"Lấp đầy"|null. */
+function mapFoliageRole(raw: string | null | undefined): FoliageBomItem["role"] {
+  switch (raw) {
+    case "Nền":
+      return "Nền"
+    case "Viền":
+      return "Viền"
+    case "Điểm nhấn":
+      return "Điểm nhấn"
+    case "Lấp đầy":
+      return "Lấp đầy"
+    default:
       return "Lấp đầy"
   }
 }
@@ -77,7 +127,14 @@ export class ProductMasterIndexRepository {
     const row = await prisma.products.findFirst({
       where: { id: productId, organization_id: ctx.organizationId },
       include: {
-        images: { where: { role: "MAIN" }, take: 1 },
+        // Mọi ảnh (MAIN/GALLERY/CATALOG/SOCIAL) — trước bản sửa P-Fix-3b (17/09) chỉ lấy MAIN,
+        // ba vai trò còn lại của `product_images` bị bỏ qua hoàn toàn dù đã có sẵn trong schema.
+        images: true,
+        variants: true,
+        // Tồn kho theo chi nhánh (P-Fix-3a, migration chạy 17/09) — lấy MỌI dòng của sản phẩm
+        // rồi lọc đúng chi nhánh của sản phẩm (`products.branch_id`) trong `mapToMasterIndex`,
+        // vì `include` không lọc được theo cột của chính bản ghi cha trong cùng một truy vấn.
+        inventory: true,
         analyses: {
           where: { approval_state: "APPROVED" },
           orderBy: { created_at: "desc" },
@@ -94,7 +151,9 @@ export class ProductMasterIndexRepository {
     const rows = await prisma.products.findMany({
       where: { organization_id: ctx.organizationId },
       include: {
-        images: { where: { role: "MAIN" }, take: 1 },
+        images: true,
+        variants: true,
+        inventory: true,
         analyses: {
           where: { approval_state: "APPROVED" },
           orderBy: { created_at: "desc" },
@@ -122,19 +181,42 @@ export class ProductMasterIndexRepository {
     const flowers: FlowerBomItem[] = rawFlowers.map((f) => ({
       flowerName: f.name ?? f.nhom_hoa ?? "Hoa (chưa rõ tên)",
       quantity: Number(f.quantity ?? 1),
-      unit: normalizeUnit(f.dvt_dem) ?? normalizeUnit(f.unit) ?? "cành",
+      unit: toDemUnit(f.dvt_dem ?? f.unit),
       color: f.mo_ta_mau ?? f.mau ?? f.color ?? "Chưa rõ màu",
       role: mapFlowerRole(f.role),
       ...(f.shade ? { shade: f.shade } : {}),
+      ...(typeof f.so_nu === "number" ? { budCount: f.so_nu } : {}),
+      ...(typeof f.so_hong === "number" ? { damagedCount: f.so_hong } : {}),
     }))
 
+    // Cấu trúc atomic đầy đủ (số lượng/màu/vai trò/chất liệu/chữ in) thay vì chỉ giữ tên
+    // trần — trả nợ #88. Vẫn nhận cả dòng cũ là chuỗi trần (dữ liệu tạo tay từ trước bản
+    // sửa này) để không vỡ sản phẩm cũ, quy về cấu trúc mới với các trường còn lại "chưa rõ".
     const rawFoliage = asRowArray<RawFlowerRow | string>(bomData.foliage ?? attrsBom.foliage)
-    const foliage = rawFoliage.map((l) =>
-      typeof l === "string" ? l : (l.name ?? l.nhom_hoa ?? "Lá (chưa rõ tên)")
+    const foliage: FoliageBomItem[] = rawFoliage.map((l) =>
+      typeof l === "string"
+        ? { name: l || "Lá (chưa rõ tên)", quantity: null, unit: "cành", color: "Chưa rõ màu", role: "Lấp đầy" }
+        : {
+            name: l.name ?? l.nhom_hoa ?? "Lá (chưa rõ tên)",
+            quantity: typeof l.quantity === "number" ? l.quantity : null,
+            unit: toDemUnit(l.dvt_dem ?? l.unit),
+            color: l.mo_ta_mau ?? l.mau ?? l.color ?? "Chưa rõ màu",
+            role: mapFoliageRole(l.role),
+          }
     )
 
     const rawAccessories = asRowArray<RawAccessoryRow | string>(bomData.accessories ?? attrsBom.accessories)
-    const accessories = rawAccessories.map((a) => (typeof a === "string" ? a : (a.name ?? "Phụ kiện (chưa rõ tên)")))
+    const accessories: AccessoryBomItem[] = rawAccessories.map((a) =>
+      typeof a === "string"
+        ? { name: a || "Phụ kiện (chưa rõ tên)", material: "Chưa rõ chất liệu", color: "Chưa rõ màu", quantity: null, printedText: null }
+        : {
+            name: a.name ?? "Phụ kiện (chưa rõ tên)",
+            material: a.material ?? "Chưa rõ chất liệu",
+            color: a.color ?? "Chưa rõ màu",
+            quantity: typeof a.quantity === "number" ? a.quantity : null,
+            printedText: a.printed_text ?? null,
+          }
+    )
 
     // `bom.wrapping` là MẢNG các lớp gói {layer, material, color, texture}, không phải object đơn.
     const wrappingList = asRowArray<RawWrappingLayer>(bomData.wrapping ?? attrsBom.wrapping)
@@ -144,29 +226,131 @@ export class ProductMasterIndexRepository {
       : String(attrs.wrapStyle ?? "Chưa rõ kiểu gói")
 
     const tieWrap = wrappingList.find((w) => w.layer === "Đai buộc")
-    const ribbonFromAccessories = accessories.find((a) => a.includes("ruy") || a.includes("nơ"))
+    const ribbonFromAccessories = accessories.find((a) => a.name.includes("ruy") || a.name.includes("nơ"))?.name
     const ribbon = tieWrap
       ? [tieWrap.material, tieWrap.color].filter(Boolean).join(" ") || "Chưa rõ ruy băng"
       : (ribbonFromAccessories ?? "Chưa rõ ruy băng")
 
-    // Chưa có nguồn "giá bán lẻ chính thức" nào trong hệ thống cho một sản phẩm (xác nhận
-    // ở Giai đoạn 0: `products.attributes.price_vnd` chưa từng được ghi ở đâu). Bảng
-    // `pricing_rules` chỉ lưu một số ít luật giá CHUNG CHO CẢ TỔ CHỨC (vd `floor_ceiling_ratio`),
-    // không lưu giá theo từng mã sản phẩm — nên KHÔNG tra bảng đó bằng `key = mã sản phẩm`
-    // (câu tra cứu cũ luôn thất bại và ngầm rơi về số bịa 500.000đ cho mọi sản phẩm).
-    // Trả 0 khi chưa có giá thật — đây là cùng nguyên tắc "không bịa số" đã chốt cho Thẻ
-    // chào A6 (Giai đoạn 0); các nơi hiển thị/dùng số này phải tự xử lý giá trị 0 là
-    // "chưa có giá, liên hệ shop" thay vì hiển thị thẳng "0 đ" cho khách.
+    // Mảng lớp gói đầy đủ theo đúng hợp đồng Vision, cho những nơi tiêu thụ mới cần hơn
+    // hai chuỗi suy ra `wrapStyle`/`ribbon` ở trên (nợ #88, phần wrapping).
+    const wrapping: WrappingLayer[] = wrappingList.map((w) => ({
+      layer: w.layer ?? "Chưa rõ lớp",
+      material: w.material ?? "Chưa rõ chất liệu",
+      color: w.color ?? "Chưa rõ màu",
+      texture: w.texture ?? "Chưa rõ kết cấu",
+    }))
+
+    // Số tầng cắm (`san_xuat.so_tang_lop`) — phục vụ QC/định giá công thợ (nợ #90).
+    const sanXuat = (analysisData.san_xuat as Record<string, unknown> | undefined) ?? {}
+    const tierCount = typeof sanXuat.so_tang_lop === "number" ? sanXuat.so_tang_lop : undefined
+
+    // QUYẾT ĐỊNH CHỦ SẢN PHẨM 17/09 (nợ #87, TECHNICAL_DEBT.md): hệ thống KHÔNG lưu một giá
+    // niêm yết tĩnh theo từng sản phẩm — mọi giá bán thật phải đi qua `quotePrice()` (M02)
+    // gắn với một lượt tư vấn/đơn cụ thể, theo hạng đối tác và phụ phí tại thời điểm đó.
+    // Bảng `pricing_rules` chỉ lưu một số ít luật giá CHUNG CHO CẢ TỔ CHỨC (vd
+    // `floor_ceiling_ratio`), không lưu giá theo từng mã sản phẩm — KHÔNG tra bảng đó bằng
+    // `key = mã sản phẩm` (câu tra cứu cũ luôn thất bại và ngầm rơi về số bịa 500.000đ).
+    // Trả `null` (không phải 0) khi chưa có giá — kiểu `number | null` của `quotePriceVnd`
+    // buộc mọi nơi tiêu thụ phải xử lý tường minh "Liên hệ để báo giá", không còn có thể lặng
+    // lẽ hiển thị "0 đ" cho khách như khi field này còn là `number` mặc định 0.
     const priceFromAttrs = typeof attrs.price_vnd === "number" && attrs.price_vnd > 0 ? attrs.price_vnd : null
-    const quotePriceVnd = priceFromAttrs ?? 0
+    const quotePriceVnd = priceFromAttrs
+
+    // Mọi ảnh của sản phẩm — MAIN dựng `masterImageUrl` như cũ, ba vai trò còn lại
+    // (GALLERY/CATALOG/SOCIAL) dựng `galleryImages` (nợ mới P-Fix-3b, 17/09: trước bản sửa
+    // này ba vai trò đó bị bỏ qua hoàn toàn dù `product_images.role` đã khai sẵn cả bốn).
+    const allImages = asRowArray<{ role?: string | null; asset_id: string; position?: number | null }>(row.images)
+    const mainImage = allImages.find((img) => img.role === "MAIN")
+    const galleryImageRows = allImages
+      .filter((img): img is { role: "GALLERY" | "CATALOG" | "SOCIAL"; asset_id: string; position?: number | null } =>
+        img.role === "GALLERY" || img.role === "CATALOG" || img.role === "SOCIAL"
+      )
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
 
     let masterImageUrl: string | undefined = undefined
-    if (row.images?.[0]) {
-      const asset = await prisma.assets.findUnique({ where: { id: row.images[0].asset_id } })
-      if (asset?.storage_key) {
-        masterImageUrl = `/api/v1/storage/${asset.storage_key}`
+    const galleryImages: ProductGalleryImage[] = []
+    const assetIdsToResolve = [
+      ...(mainImage ? [mainImage.asset_id] : []),
+      ...galleryImageRows.map((img) => img.asset_id),
+    ]
+    if (assetIdsToResolve.length > 0) {
+      // Một lượt IN(...) thay vì N lượt findUnique — cùng lối tối ưu đã áp dụng cho
+      // `importCatalog` (nợ #37, đã trả 09/10), tránh lặp lại kiểu N+1 cũ cho MỖI ảnh.
+      const assets = await prisma.assets.findMany({ where: { id: { in: assetIdsToResolve } } })
+      const storageKeyById = new Map(assets.map((a) => [a.id, a.storage_key]))
+
+      if (mainImage) {
+        const key = storageKeyById.get(mainImage.asset_id)
+        if (key) masterImageUrl = `/api/v1/storage/${key}`
+      }
+      for (const img of galleryImageRows) {
+        const key = storageKeyById.get(img.asset_id)
+        if (key) galleryImages.push({ role: img.role, url: `/api/v1/storage/${key}` })
       }
     }
+
+    // Biến thể kích thước/gói — đọc từ `product_variants` (bảng đã có sẵn, chưa từng được
+    // Master Index đọc tới trước P-Fix-3a, 17/09). Chốt với chủ sản phẩm: chưa có dữ liệu
+    // size thật nào — mảng rỗng là đúng thực trạng, không phải một lỗi.
+    const variants: ProductVariant[] = asRowArray<{ id: string; name: string; size?: string | null; multiplier: number }>(
+      row.variants
+    ).map((v) => ({
+      id: v.id,
+      name: v.name,
+      size: v.size ?? undefined,
+      multiplier: v.multiplier,
+    }))
+
+    // Tag cảnh báo tự do (dị ứng/mùi hương/độc tính thú cưng) — chốt với chủ sản phẩm 17/09:
+    // tính năng THAM KHẢO, chưa có danh mục chuẩn hoá, nhân viên tự gõ vào
+    // `products.attributes.warningTags`. Mảng rỗng = chưa ai gắn cảnh báo, không phải "an toàn".
+    const warningTags = Array.isArray(attrs.warningTags) ? attrs.warningTags.filter((t) => typeof t === "string") : []
+
+    // Kích thước vật lý — chỉ đọc khi có số thật đã nhập ở `products.attributes.dimensions`,
+    // KHÔNG bịa mặc định "55×40" như `sales-pitch-template.ts` từng làm cho Thẻ chào A6 (nợ
+    // ghi riêng — xem TECHNICAL_DEBT.md, phát hiện lúc thêm trường này).
+    const rawDimensions = attrs.dimensions as Record<string, unknown> | undefined
+    const dimensions =
+      rawDimensions && typeof rawDimensions.heightCm === "number" && typeof rawDimensions.widthCm === "number"
+        ? { heightCm: rawDimensions.heightCm, widthCm: rawDimensions.widthCm }
+        : undefined
+
+    // Chính sách thay thế hoa tương đương — cờ + ghi chú tuỳ chọn ở `products.attributes.substitutionPolicy`.
+    const rawSubstitution = attrs.substitutionPolicy as Record<string, unknown> | undefined
+    const substitutionPolicy =
+      rawSubstitution && typeof rawSubstitution.allowed === "boolean"
+        ? { allowed: rawSubstitution.allowed, note: typeof rawSubstitution.note === "string" ? rawSubstitution.note : undefined }
+        : undefined
+
+    // Số ngày cam kết tươi — cấu hình CHUNG cấp tổ chức (chốt với chủ sản phẩm 17/09: một con
+    // số áp cho mọi sản phẩm, không phải theo từng mẫu). KHÔNG bịa mặc định "3 ngày" — để
+    // `undefined` cho tới khi tổ chức thật sự cấu hình `organizations.settings.freshness_guarantee_days`.
+    const org = await prisma.organizations.findUnique({
+      where: { id: ctx.organizationId },
+      select: { settings: true },
+    })
+    const orgSettings = (org?.settings as Record<string, unknown> | undefined) ?? {}
+    const freshnessGuaranteeDays =
+      typeof orgSettings.freshness_guarantee_days === "number" ? orgSettings.freshness_guarantee_days : undefined
+
+    // Tồn kho theo mẫu sản phẩm (không phải nguyên liệu rời) — chốt với chủ sản phẩm 17/09,
+    // migration `product_inventory` đã chạy thật trên máy anh Tony (nợ #95, đóng cùng đợt này).
+    // `product_inventory` là bảng THEO CHI NHÁNH (`branch_id` bắt buộc), còn `ProductMasterIndex.stock`
+    // là MỘT giá trị — khớp đúng chi nhánh mà CHÍNH sản phẩm này đang gắn (`products.branch_id`,
+    // cột đã có sẵn, tuỳ chọn). Sản phẩm CHƯA gắn chi nhánh cụ thể (branch_id null — hiện là
+    // toàn bộ AVI GIFT, một cửa hàng, chưa có bộ chọn chi nhánh — nợ #3) thì `stock` để
+    // `undefined`: không có "chi nhánh của sản phẩm" để tra, và gộp tồn kho nhiều chi nhánh
+    // thành MỘT trạng thái là một quyết định kinh doanh riêng chưa ai chốt — không suy diễn.
+    const inventoryRows = asRowArray<{ branch_id: string; status: string; quantity_available: number | null }>(
+      row.inventory
+    )
+    const matchingInventory = row.branch_id ? inventoryRows.find((inv) => inv.branch_id === row.branch_id) : undefined
+    const stock: ProductMasterIndex["stock"] = matchingInventory
+      ? {
+          status: matchingInventory.status as StockStatus,
+          quantityAvailable: matchingInventory.quantity_available ?? undefined,
+        }
+      : undefined
 
     const toneMau = toneChuDao(analysisData)
     const primaryColorFromAttrs = typeof attrs.color === "string" && attrs.color ? attrs.color : null
@@ -182,7 +366,15 @@ export class ProductMasterIndexRepository {
       facing: row.facing ?? "Một mặt",
       container: row.container ?? undefined,
       style: String(identity.phong_cach ?? "Chưa rõ phong cách"),
-      occasions: identity.dip_su_dung ? [String(identity.dip_su_dung)] : [],
+      // Hợp nhất dịp AI đoán (M01, `identity.dip_su_dung`) với dịp người duyệt
+      // M01b đã chỉnh tay (`attrs.salesData.occasions`) — trước bản sửa này chỉ
+      // đọc một nguồn, làm mất lựa chọn của người duyệt (nợ #92).
+      occasions: mergeOccasions(
+        Array.isArray((attrs.salesData as Record<string, unknown> | undefined)?.occasions)
+          ? ((attrs.salesData as Record<string, unknown>).occasions as unknown[]).map(String)
+          : undefined,
+        identity.dip_su_dung ? String(identity.dip_su_dung) : undefined
+      ),
       masterImageUrl,
       colorPalette: {
         primaryColor: toneMau[0] ?? primaryColorFromAttrs ?? mauChuDao(analysisData) ?? "Chưa rõ màu chủ đạo",
@@ -193,14 +385,22 @@ export class ProductMasterIndexRepository {
       bom: {
         flowers,
         foliage,
+        wrapping,
         wrapStyle,
         ribbon,
         accessories,
+        ...(tierCount !== undefined ? { tierCount } : {}),
       },
       pricing: {
         quotePriceVnd,
-        pricingRuleRef: undefined,
       },
+      variants,
+      stock,
+      galleryImages,
+      ...(freshnessGuaranteeDays !== undefined ? { freshnessGuaranteeDays } : {}),
+      warningTags,
+      ...(dimensions !== undefined ? { dimensions } : {}),
+      ...(substitutionPolicy !== undefined ? { substitutionPolicy } : {}),
     }
   }
 }

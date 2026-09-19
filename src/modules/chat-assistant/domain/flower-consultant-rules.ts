@@ -7,16 +7,20 @@ import type { ProductMasterIndex } from "@/modules/products/domain/product-maste
 import type { SuggestedFlowerCard } from "./chat-types"
 
 /**
- * `quotePriceVnd` bằng 0 nghĩa là sản phẩm CHƯA có giá bán lẻ thật cấu hình (Master Index
- * chưa có nguồn giá bán lẻ chính thức — xem rà soát mục 7.2). Không được coi 0 là một mức
- * giá thật khi tư vấn/báo giá cho khách.
+ * `quotePriceVnd = null` nghĩa là sản phẩm CHƯA có giá bán lẻ thật cấu hình — đúng quyết
+ * định của chủ sản phẩm 17/09 (nợ #87, `TECHNICAL_DEBT.md`): hệ thống không lưu giá niêm
+ * yết tĩnh, `ProductMasterIndexRepository` trả `null` khi chưa có giá. Không được coi
+ * `null` là một mức giá thật khi tư vấn/báo giá cho khách.
+ *
+ * Khai kiểu vị từ (`is number`) để mọi nơi gọi `if (hasRealPrice(x))` được TypeScript tự
+ * thu hẹp `x` về `number` ngay trong nhánh đó, không cần ép kiểu tay.
  */
-export function hasRealPrice(quotePriceVnd: number): boolean {
-  return quotePriceVnd > 0
+export function hasRealPrice(quotePriceVnd: number | null): quotePriceVnd is number {
+  return quotePriceVnd !== null && quotePriceVnd > 0
 }
 
 /** Chuỗi hiển thị giá trung thực cho khách trong chat — không bao giờ hiện "0 đ". */
-export function formatQuotePriceForChat(quotePriceVnd: number): string {
+export function formatQuotePriceForChat(quotePriceVnd: number | null): string {
   return hasRealPrice(quotePriceVnd) ? `${quotePriceVnd.toLocaleString("vi-VN")} đ` : "chưa cập nhật giá, liên hệ shop"
 }
 
@@ -87,7 +91,7 @@ export function matchProductsFromMasterIndex(
     const price = p.pricing.quotePriceVnd
     const priceKnown = hasRealPrice(price)
 
-    if (budget !== null && priceKnown) {
+    if (budget !== null && hasRealPrice(price)) {
       const diff = Math.abs(price - budget)
       const ratio = diff / budget
       if (ratio <= 0.15) score += 50

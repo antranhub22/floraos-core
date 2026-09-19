@@ -26,10 +26,18 @@ function makeProduct(overrides: Partial<ProductMasterIndex> & { quotePriceVnd: n
     bom: {
       flowers: [{ flowerName: "Hoa hồng", quantity: 20, unit: "cành", color: "Đỏ", role: "Chủ đạo" }],
       foliage: [],
+      wrapping: [],
       wrapStyle: "Giấy kraft",
       ribbon: "Ruy băng đỏ",
+      accessories: [],
     },
     pricing: { quotePriceVnd },
+    // Ba trường bắt buộc thêm ở P-Fix-3 (nợ #95, `ProductMasterIndex`) —
+    // fixture thử của module này không cần biến thể/ảnh/cảnh báo nên để
+    // mảng rỗng, không phải giá trị nghiệp vụ cần đoán.
+    variants: [],
+    galleryImages: [],
+    warningTags: [],
     ...rest,
   }
 }

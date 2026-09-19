@@ -31,10 +31,15 @@ export async function convertChatToDraftOrder(
     throw notFound()
   }
 
-  // Chưa có giá bán lẻ thật cấu hình cho sản phẩm này (Master Index trả 0 khi chưa có
-  // nguồn giá thật — xem rà soát mục 7.2). KHÔNG tự tạo đơn với giá 0đ; chặn lại và yêu
-  // cầu nhập giá tay, giống hệt nguyên tắc "không bịa giá" đã áp dụng cho Thẻ chào A6.
-  if (!hasRealPrice(product.pricing.quotePriceVnd)) {
+  // Chưa có giá bán lẻ thật cấu hình cho sản phẩm này (đúng thiết kế theo quyết định 17/09,
+  // nợ #87: hệ thống không lưu giá niêm yết tĩnh, Master Index trả `null` khi chưa có giá
+  // qua `quotePrice()`). KHÔNG tự tạo đơn với giá 0đ; chặn lại và yêu cầu nhập giá tay,
+  // giống hệt nguyên tắc "không bịa giá" đã áp dụng cho Thẻ chào A6.
+  //
+  // Đọc vào biến cục bộ TRƯỚC khi gác cổng — để `hasRealPrice` (vị từ kiểu `is number`)
+  // thu hẹp đúng biến này, không phải biểu thức truy cập thuộc tính lặp lại.
+  const priceVnd = product.pricing.quotePriceVnd
+  if (!hasRealPrice(priceVnd)) {
     throw validationFailed({
       priceVnd: `Mẫu hoa "${product.name}" chưa có giá bán cấu hình. Vui lòng tạo đơn thủ công và nhập giá trước khi chốt.`,
     })
@@ -55,7 +60,7 @@ export async function convertChatToDraftOrder(
         productId: product.id,
         description: `${product.name} [${product.code}]`,
         quantity: 1,
-        unitPriceVnd: product.pricing.quotePriceVnd,
+        unitPriceVnd: priceVnd,
       },
     ],
   })
@@ -65,7 +70,7 @@ export async function convertChatToDraftOrder(
     ctx,
     conversationId,
     "SYSTEM",
-    `⚡ Đã khởi tạo thành công Đơn hàng nháp **#${order.code}** (${product.name} — ${formatQuotePriceForChat(product.pricing.quotePriceVnd)}) vào hệ thống Vận hành M10.`,
+    `⚡ Đã khởi tạo thành công Đơn hàng nháp **#${order.code}** (${product.name} — ${formatQuotePriceForChat(priceVnd)}) vào hệ thống Vận hành M10.`,
     { createdOrderId: order.id, orderCode: order.code }
   )
 

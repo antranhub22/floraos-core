@@ -87,8 +87,11 @@ export function SalesPitchCard({
 
   const [container, setContainer] = useState(pitchData.container)
   const [wrapping, setWrapping] = useState(pitchData.wrapping)
-  const [heightCm, setHeightCm] = useState<number | string>(pitchData.dimensions.heightCm)
-  const [widthCm, setWidthCm] = useState<number | string>(pitchData.dimensions.widthCm)
+  // Nợ #96 (18/09): `dimensions.heightCm`/`widthCm` nay là `number | null` —
+  // không còn mặc định bịa 55×40. `?? ""` giữ đúng khuôn đã dùng cho
+  // `price`/`originalPrice` ngay dưới: null -> ô trống, không phải số 0.
+  const [heightCm, setHeightCm] = useState<number | string>(pitchData.dimensions.heightCm ?? "")
+  const [widthCm, setWidthCm] = useState<number | string>(pitchData.dimensions.widthCm ?? "")
 
   const [price, setPrice] = useState<number | string>(pitchData.priceVnd ?? "")
   const [originalPrice, setOriginalPrice] = useState<number | string>(pitchData.originalPriceVnd ?? "")
@@ -254,9 +257,13 @@ export function SalesPitchCard({
     accessoryItems,
     container,
     wrapping,
+    // Nợ #96 (18/09): bỏ hẳn "|| 55"/"|| 40" — đó chính là cách con số bịa
+    // cũ lọt vào runtime (kể cả khi Sales để trống, `Number("") || 55` vẫn
+    // ra 55). Giữ đúng khuôn `priceVnd`/`originalPriceVnd` ngay trên: trống
+    // -> `null`, không suy ra số mặc định.
     dimensions: {
-      heightCm: Number(heightCm) || 55,
-      widthCm: Number(widthCm) || 40,
+      heightCm: heightCm === "" ? null : Number(heightCm),
+      widthCm: widthCm === "" ? null : Number(widthCm),
     },
     priceVnd: price === "" ? null : Number(price),
     originalPriceVnd: originalPrice === "" ? null : Number(originalPrice),

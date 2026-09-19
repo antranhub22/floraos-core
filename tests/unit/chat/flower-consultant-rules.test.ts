@@ -63,8 +63,12 @@ describe("Flower Consultant Rules (M08 AI Chat)", () => {
         style: "Hiện đại",
         occasions: ["Sinh nhật", "Tình yêu"],
         colorPalette: { primaryColor: "Đỏ" },
-        bom: { flowers: [], foliage: [], wrapStyle: "Giấy xi măng", ribbon: "Nơ đỏ" },
+        bom: { flowers: [], foliage: [], wrapping: [], wrapStyle: "Giấy xi măng", ribbon: "Nơ đỏ", accessories: [] },
         pricing: { quotePriceVnd: 500000 },
+        // Ba trường bắt buộc thêm ở P-Fix-3 (nợ #95, `ProductMasterIndex`).
+        variants: [],
+        galleryImages: [],
+        warningTags: [],
       },
       {
         id: "p2",
@@ -78,8 +82,11 @@ describe("Flower Consultant Rules (M08 AI Chat)", () => {
         style: "Sang trọng",
         occasions: ["Khai trương"],
         colorPalette: { primaryColor: "Vàng" },
-        bom: { flowers: [], foliage: [], wrapStyle: "Kệ gỗ", ribbon: "Nơ vàng" },
+        bom: { flowers: [], foliage: [], wrapping: [], wrapStyle: "Kệ gỗ", ribbon: "Nơ vàng", accessories: [] },
         pricing: { quotePriceVnd: 1200000 },
+        variants: [],
+        galleryImages: [],
+        warningTags: [],
       },
     ]
 

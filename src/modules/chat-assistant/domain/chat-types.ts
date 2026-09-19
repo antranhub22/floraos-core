@@ -10,7 +10,8 @@ export interface SuggestedFlowerCard {
   productCode: string
   productName: string
   sampleImageUrl?: string | undefined
-  priceVnd: number
+  /** `null` = sản phẩm chưa có giá bán lẻ cấu hình (nợ #87) — UI phải hiện "liên hệ để báo giá". */
+  priceVnd: number | null
   category: string
   wrapStyle: string
   reason: string

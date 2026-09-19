@@ -12,15 +12,82 @@
 import type { FloristFlowerItem, FloristTicketCardProps } from "@/components/templates/orders/florist-ticket-card"
 import type { DeliveryReceiptCardProps } from "@/components/templates/orders/delivery-receipt-card"
 
+/** Đơn vị đếm — đúng `dvt_dem` của hợp đồng Vision (`Bông|Cành|Lá|Cây`), viết thường. */
+export type DemUnit = "bông" | "cành" | "lá" | "cây"
+
 /** Thành phần cành hoa nguyên tử trong công thức cắm hoa (Atomic BOM) */
 export interface FlowerBomItem {
   flowerName: string
   quantity: number
-  unit: string // cành | bông | nhánh | chùm
+  unit: DemUnit
   color: string
-  role: "Chủ đạo" | "Phụ" | "Lấp đầy" | "Lá điểm"
-  shade?: string // Đậm | Vừa | Nhạt
+  /**
+   * Đúng 4 vai trò của HOA theo hợp đồng Vision (`bom.flowers[].role`) — KHÔNG lẫn với vai
+   * trò của LÁ (`bom.foliage[].role`, xem `FoliageBomItem.role`). Trước bản sửa nợ #89,
+   * "Hoa điểm xuyết" từng bị dịch nhầm thành `"Lá điểm"`, một khái niệm thuộc về lá.
+   */
+  role: "Chủ đạo" | "Phụ" | "Điểm xuyến" | "Lấp đầy"
+  shade?: string | undefined // Đậm | Vừa | Nhạt
+  /** Số nụ chưa nở của riêng loài này (`so_nu`) — đếm riêng, KHÔNG cộng vào `quantity` (nợ #90). */
+  budCount?: number | undefined
+  /** Số cành hỏng/héo/dập của riêng loài này (`so_hong`) — đã NẰM TRONG `quantity` (nợ #90). */
+  damagedCount?: number | undefined
 }
+
+/** Lá/cành trang trí — cấu trúc nguyên tử thay vì chỉ giữ tên trần (nợ #88). */
+export interface FoliageBomItem {
+  name: string
+  /** `null` khi chưa xác định được số — quy ước đếm cho phép lá/cành trang trí không đếm số (nợ #51). */
+  quantity: number | null
+  unit: DemUnit
+  color: string
+  role: "Nền" | "Viền" | "Điểm nhấn" | "Lấp đầy"
+}
+
+/** Phụ kiện trang trí — cấu trúc nguyên tử thay vì chỉ giữ tên trần (nợ #88). */
+export interface AccessoryBomItem {
+  name: string
+  material: string
+  color: string
+  quantity: number | null
+  /** Chữ in trên chính phụ kiện, nguyên văn — `null` khi không có. */
+  printedText: string | null
+}
+
+/** Một lớp trong công thức gói — hợp đồng Vision khai đủ 4 lớp (nợ #88, phần wrapping). */
+export interface WrappingLayer {
+  layer: string
+  material: string
+  color: string
+  texture: string
+}
+
+/**
+ * Một biến thể kích thước/gói của sản phẩm — đọc từ bảng `product_variants` đã có sẵn
+ * trong Prisma nhưng trước bản sửa P-Fix-3a (17/09) chưa được Master Index đọc tới.
+ * Chốt với chủ sản phẩm 17/09: chưa có dữ liệu size thật nào — trường này chỉ dựng KHUNG,
+ * mảng rỗng cho tới khi có size thật được nhập.
+ */
+export interface ProductVariant {
+  id: string
+  name: string
+  size?: string | undefined
+  /** Hệ số nhân lên công thức/giá gốc của biến thể — vd 1.5 cho size "Lớn". */
+  multiplier: number
+}
+
+/** Một ảnh phụ ngoài ảnh chính (`masterImageUrl`) — đúng 3 vai trò còn lại của `product_images.role`. */
+export interface ProductGalleryImage {
+  role: "GALLERY" | "CATALOG" | "SOCIAL"
+  url: string
+}
+
+/**
+ * Trạng thái còn hàng của MẪU SẢN PHẨM (bó/giỏ dựng sẵn) — chốt với chủ sản phẩm 17/09:
+ * KHÔNG phải tồn kho nguyên liệu hoa rời. `PRE_ORDER_ONLY` = hết bản dựng sẵn, chỉ nhận đặt
+ * trước.
+ */
+export type StockStatus = "IN_STOCK" | "PRE_ORDER_ONLY" | "OUT_OF_STOCK"
 
 /** Cấu trúc Master Index hoàn chỉnh của một sản phẩm hoa */
 export interface ProductMasterIndex {
@@ -44,24 +111,106 @@ export interface ProductMasterIndex {
   colorPalette: {
     primaryColor: string
     secondaryColor?: string | undefined
-    harmonyTone?: string | undefined // Pastel, Rực rỡ, Trầm ấm, Đơn sắc
+    // `harmonyTone` (Pastel/Rực rỡ/Trầm ấm/Đơn sắc) đã BỎ — nợ #91, P-Fix-4 (17/09): khai
+    // trước cho đủ hình dạng type nhưng chưa từng có luật nào tính giá trị thật (rà `src/`
+    // xác nhận không nơi nào đọc field này). Không xây một luật suy đoán "trông hợp lý" khi
+    // chưa có tiêu chí thật — xoá khỏi type, thêm lại khi có luật thật.
   }
 
   // 4. Công thức cắm hoa xưởng (Florist Recipe / Atomic BOM)
   bom: {
     flowers: FlowerBomItem[]
-    foliage: string[] // Lá phụ (lá bạc, lá trầu bà, cỏ đồng tiền...)
+    /** Lá/cành trang trí — cấu trúc đầy đủ số lượng/màu/vai trò (nợ #88, đã trả 17/09). */
+    foliage: FoliageBomItem[]
+    /** Đầy đủ các lớp gói theo hợp đồng Vision. `wrapStyle`/`ribbon` bên dưới là suy ra từ
+     * mảng này (giữ lại nguyên trạng cho các nơi tiêu thụ cũ đang đọc hai trường chuỗi đó). */
+    wrapping: WrappingLayer[]
     wrapStyle: string // Giấy xi măng, giấy lụa mờ, xốp hoa, mica...
     ribbon: string // Nơ nhung đỏ, ruy băng lụa kem, dây thừng mộc...
-    accessories?: string[] | undefined // Đèn led, topper chữ, quả thông...
+    /** Phụ kiện trang trí — cấu trúc đầy đủ chất liệu/màu/số lượng/chữ in (nợ #88, đã trả 17/09). */
+    accessories: AccessoryBomItem[]
+    /** Số tầng cắm (`so_tang_lop`) — phục vụ QC/định giá công thợ (nợ #90). */
+    tierCount?: number | undefined
   }
 
   // 5. Thương mại & Định giá (Commercial & Pricing - M02)
   pricing: {
     costPriceVnd?: number | undefined // Giá vốn (BẢO MẬT NỘI BỘ)
-    quotePriceVnd: number // Giá bán chào khách
-    pricingRuleRef?: Record<string, unknown> | undefined
+    /**
+     * Giá bán chào khách. `null` = CHƯA CÓ giá niêm yết tĩnh cho sản phẩm này.
+     *
+     * Chốt với chủ sản phẩm 17/09 (nợ #87, `TECHNICAL_DEBT.md`): hệ thống
+     * KHÔNG lưu một giá cố định theo từng sản phẩm — mọi giá bán thật phải
+     * đi qua `quotePrice()` (M02) gắn với một lượt tư vấn/đơn cụ thể, theo
+     * hạng đối tác và phụ phí tại thời điểm đó. Field này gần như luôn
+     * `null` theo đúng thiết kế, không phải lỗi.
+     *
+     * BẮT BUỘC: mọi nơi hiển thị field này phải xử lý `null` thành "Liên hệ
+     * để báo giá" — tuyệt đối không coi `null`/thiếu giá trị là 0đ.
+     */
+    quotePriceVnd: number | null
+    // `pricingRuleRef` đã BỎ — nợ #91, P-Fix-4 (17/09): chưa nơi nào từng gán giá trị thật
+    // (rà `src/` xác nhận `product-master-index-repository.ts` chỉ từng gán `undefined`).
+    // KHÔNG lẫn với `pricingRuleRef` của `orders/domain/order-types.ts` — trường đó thuộc
+    // một luồng KHÁC (đơn hàng cụ thể, gắn với `quotePrice()` lúc chốt đơn) và đang dùng thật,
+    // không đụng tới. Thêm lại ở đây khi Master Index thật sự cần trỏ tới một luật giá áp dụng.
   }
+
+  // 6. Biến thể & tồn kho (P-Fix-3a, 17/09 — xem KE_HOACH_HOAN_THIEN_TEMPLATE_SYSTEM.md)
+  /** Đọc từ `product_variants`. Mảng rỗng khi sản phẩm chưa có biến thể nào (đúng thực trạng hiện tại). */
+  variants: ProductVariant[]
+  /**
+   * `undefined` = tổ chức CHƯA cấu hình theo dõi tồn kho cho sản phẩm này (bảng
+   * `product_inventory` chưa được nối — xem nợ mới trong `TECHNICAL_DEBT.md`, chờ migration
+   * chạy trước khi repository đọc bảng này). KHÔNG suy diễn "còn hàng" khi chưa có dữ liệu.
+   */
+  stock?:
+    | {
+        status: StockStatus
+        quantityAvailable?: number | undefined
+      }
+    | undefined
+
+  // 7. Nội dung thương mại bổ sung (P-Fix-3b, 17/09)
+  /** Ảnh phụ ngoài ảnh chính — GALLERY/CATALOG/SOCIAL. Mảng rỗng khi sản phẩm chỉ có ảnh MAIN. */
+  galleryImages: ProductGalleryImage[]
+  /**
+   * Số ngày cam kết tươi — cấu hình CẤP TỔ CHỨC (`organizations.settings.freshness_guarantee_days`),
+   * một con số chung áp cho mọi sản phẩm (chốt với chủ sản phẩm 17/09). `undefined` = tổ chức
+   * chưa cấu hình — KHÔNG bịa một mặc định "3 ngày" (khác với chuỗi cứng cũ ở Thẻ chào A6).
+   */
+  freshnessGuaranteeDays?: number | undefined
+  /**
+   * Tag cảnh báo tự do (dị ứng phấn hoa/mùi hương/độc tính thú cưng) — chốt với chủ sản phẩm
+   * 17/09: tính năng THAM KHẢO, nhân viên tự gõ, CHƯA có danh mục tag chuẩn hoá. Mảng rỗng =
+   * chưa ai gắn cảnh báo nào, không phải "đã xác nhận an toàn".
+   */
+  warningTags: string[]
+  /** Kích thước vật lý ước tính (cao × rộng). `undefined` khi chưa đo — không bịa số. */
+  dimensions?: { heightCm: number; widthCm: number } | undefined
+  /** Chính sách thay thế hoa tương đương khi hết nguyên liệu đúng loài trong BOM. */
+  substitutionPolicy?: { allowed: boolean; note?: string | undefined } | undefined
+}
+
+/**
+ * Hợp nhất "dịp sử dụng" từ hai nguồn cùng ghi vào `products.attributes` ở
+ * hai đợt duyệt khác nhau: `identity.dip_su_dung` (một giá trị AI đoán, ghi
+ * lúc duyệt M01) và `salesData.occasions` (người duyệt M01b chỉnh tay, có
+ * thể nhiều dịp — xem `product-master-merge.ts`).
+ *
+ * Trước bản sửa này, `ProductMasterIndexRepository.mapToMasterIndex` chỉ đọc
+ * `identity.dip_su_dung`, làm mất lựa chọn dịp mà người duyệt M01b đã chỉnh
+ * tay (nợ kỹ thuật #92, `TECHNICAL_DEBT.md`). Union + khử trùng, giữ dữ liệu
+ * người duyệt trước, AI đoán sau — không có nguồn nào thì trả mảng rỗng,
+ * không bịa một dịp mặc định.
+ */
+export function mergeOccasions(
+  salesDataOccasions: readonly string[] | undefined,
+  aiGuessedOccasion: string | undefined
+): string[] {
+  const fromSalesData = (salesDataOccasions ?? []).map((o) => o.trim()).filter(Boolean)
+  const fromAi = aiGuessedOccasion?.trim() ? [aiGuessedOccasion.trim()] : []
+  return Array.from(new Set([...fromSalesData, ...fromAi]))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
