@@ -67,14 +67,18 @@ export type BrandProfileInput = {
   tone_of_voice?: string | null | undefined
   hashtags?: Record<string, unknown> | null | undefined
   cta_templates?: Record<string, unknown> | null | undefined
+  default_offers?: Record<string, unknown> | null | undefined
   forbidden_styles?: Record<string, unknown> | null | undefined
 }
 
 /**
  * Chỉ năm trường màu có hình dạng kiểm được (mã hex). Các trường Json
- * (`hashtags`/`cta_templates`/`forbidden_styles`) khác nhau theo nền tảng
- * (đặc tả 07 mục 4) nên không có một hình dạng chung để khoá ở đây — giao
- * diện tự validate theo nền tảng nó hiển thị.
+ * (`hashtags`/`cta_templates`/`default_offers`/`forbidden_styles`) khác nhau
+ * theo nền tảng (đặc tả 07 mục 4) nên không có một hình dạng chung để khoá ở
+ * đây — giao diện tự validate theo nền tảng nó hiển thị. `cta_templates`
+ * (string[] câu kêu gọi hành động) và `default_offers` (`{free_gifts,
+ * guarantees}`) tách riêng từ 17/09 — trước đó cả hai bị gộp nhầm vào
+ * `cta_templates`, xem nợ #102 trong TECHNICAL_DEBT.md.
  */
 export function validateBrandProfileInput(
   input: Partial<Record<BrandColorField, string | null | undefined>>
@@ -87,4 +91,53 @@ export function validateBrandProfileInput(
     }
   }
   return errors
+}
+
+/**
+ * Đọc mảng hashtag từ Json `hashtags` chưa rõ hình dạng lúc đọc lại. Hai hình
+ * dạng thật đã thấy trong mã: mảng chuỗi phẳng, và `{ default: string[] }`
+ * (hình dạng do `brand-profile-form.tsx` — giao diện thật đang ghi trường
+ * này — lưu). Trước bản sửa nợ #103, `generate-product-copy.ts` ép kiểu
+ * thẳng `as string[]` rồi gọi `.join()` — vỡ runtime với hình dạng thứ hai,
+ * là hình dạng dữ liệu thật của mọi tổ chức đã lưu hồ sơ thương hiệu qua
+ * giao diện. Hình dạng lạ hoặc rỗng trả `null`, không đoán thay.
+ */
+export function extractBrandHashtags(raw: unknown): string[] | null {
+  if (Array.isArray(raw)) {
+    const cleaned = raw.filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    return cleaned.length > 0 ? cleaned : null
+  }
+  if (raw !== null && typeof raw === "object" && "default" in raw) {
+    const inner = (raw as { default?: unknown }).default
+    if (Array.isArray(inner)) {
+      const cleaned = inner.filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+      return cleaned.length > 0 ? cleaned : null
+    }
+  }
+  return null
+}
+
+/**
+ * Đọc MỘT câu kêu gọi hành động từ Json `cta_templates` chưa rõ hình dạng.
+ * Từ nợ #102 (17/09), `cta_templates` đúng nghĩa là một câu CTA — không còn
+ * mang `free_gifts`/`guarantees` (nay ở `default_offers`). Hai hình dạng
+ * thật đã thấy: chuỗi trơn, và `{ default: string }` (hình dạng do
+ * `brand-profile-form.tsx` lưu). Không đọc mảng ở đây — mảng chỉ còn xuất
+ * hiện trong dữ liệu CŨ trước 17/09 (`{free_gifts, guarantees}` lồng trong
+ * `cta_templates`), và hình dạng đó không phải một câu CTA nên trả `null`
+ * thay vì đoán. Xem nợ #103 trong TECHNICAL_DEBT.md.
+ */
+export function extractBrandCtaPhrase(raw: unknown): string | null {
+  if (typeof raw === "string") {
+    const trimmed = raw.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+  if (raw !== null && typeof raw === "object" && "default" in raw) {
+    const inner = (raw as { default?: unknown }).default
+    if (typeof inner === "string") {
+      const trimmed = inner.trim()
+      return trimmed.length > 0 ? trimmed : null
+    }
+  }
+  return null
 }

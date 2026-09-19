@@ -17,14 +17,22 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
   const [guarantees, setGuarantees] = useState<string[]>(DEFAULT_GUARANTEES)
 
   useEffect(() => {
-    if (initialBrandData?.cta_templates) {
-      const cta = initialBrandData.cta_templates as any
-      if (Array.isArray(cta.free_gifts) && cta.free_gifts.length > 0) {
-        setGifts(cta.free_gifts)
-      }
-      if (Array.isArray(cta.guarantees) && cta.guarantees.length > 0) {
-        setGuarantees(cta.guarantees)
-      }
+    // Từ 17/09 (nợ #102), quà tặng/cam kết đọc từ `default_offers` — trường
+    // riêng, tách khỏi `cta_templates` (nay đúng nghĩa câu kêu gọi hành
+    // động, dùng ở product-copy-adapter.ts). Tổ chức đã lưu TRƯỚC 17/09 vẫn
+    // còn dữ liệu ở vị trí cũ (`cta_templates.free_gifts`/`.guarantees`) —
+    // đọc dự phòng từ đó khi `default_offers` chưa có, để không mất dữ liệu
+    // AVI GIFT đã nhập qua form này trước bản sửa.
+    const offers = (initialBrandData?.default_offers as { free_gifts?: string[]; guarantees?: string[] } | null) ?? null
+    const legacyCta = (initialBrandData?.cta_templates as { free_gifts?: string[]; guarantees?: string[] } | null) ?? null
+
+    const giftsSource = offers?.free_gifts ?? legacyCta?.free_gifts
+    if (Array.isArray(giftsSource) && giftsSource.length > 0) {
+      setGifts(giftsSource)
+    }
+    const guaranteesSource = offers?.guarantees ?? legacyCta?.guarantees
+    if (Array.isArray(guaranteesSource) && guaranteesSource.length > 0) {
+      setGuarantees(guaranteesSource)
     }
   }, [initialBrandData])
 
@@ -71,8 +79,6 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
     const cleanGifts = gifts.map((g) => g.trim()).filter(Boolean)
     const cleanGuarantees = guarantees.map((g) => g.trim()).filter(Boolean)
 
-    const existingCta = (initialBrandData?.cta_templates as Record<string, unknown> | null) ?? {}
-
     const payload: UpsertBrandProfileInput = {
       primary_color: initialBrandData?.primary_color ?? null,
       secondary_color: initialBrandData?.secondary_color ?? null,
@@ -85,8 +91,11 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
       tone_of_voice: initialBrandData?.tone_of_voice ?? null,
       hashtags: (initialBrandData?.hashtags as Record<string, unknown> | null) ?? null,
       forbidden_styles: (initialBrandData?.forbidden_styles as Record<string, unknown> | null) ?? null,
-      cta_templates: {
-        ...existingCta,
+      // Từ 17/09 (nợ #102): quà tặng/cam kết ghi vào `default_offers`, KHÔNG
+      // còn ghi đè vào `cta_templates` — giữ nguyên `cta_templates` hiện có
+      // (câu kêu gọi hành động, nếu tổ chức đã cấu hình) thay vì đè mất.
+      cta_templates: (initialBrandData?.cta_templates as Record<string, unknown> | null) ?? null,
+      default_offers: {
         free_gifts: cleanGifts,
         guarantees: cleanGuarantees,
       },

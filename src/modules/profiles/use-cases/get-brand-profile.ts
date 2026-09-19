@@ -13,6 +13,7 @@ export type BrandProfileDetail = {
   tone_of_voice: string | null
   hashtags: Record<string, unknown> | null
   cta_templates: Record<string, unknown> | null
+  default_offers: Record<string, unknown> | null
   forbidden_styles: Record<string, unknown> | null
 }
 
@@ -35,6 +36,7 @@ export async function getBrandProfile(ctx: TenantContext): Promise<BrandProfileD
     tone_of_voice: profile.tone_of_voice,
     hashtags: (profile.hashtags as Record<string, unknown> | null) ?? null,
     cta_templates: (profile.cta_templates as Record<string, unknown> | null) ?? null,
+    default_offers: (profile.default_offers as Record<string, unknown> | null) ?? null,
     forbidden_styles: (profile.forbidden_styles as Record<string, unknown> | null) ?? null,
   }
 }

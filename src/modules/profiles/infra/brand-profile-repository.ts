@@ -17,6 +17,7 @@ export type UpsertBrandProfileInput = {
   tone_of_voice?: string | null | undefined
   hashtags?: Record<string, unknown> | null | undefined
   cta_templates?: Record<string, unknown> | null | undefined
+  default_offers?: Record<string, unknown> | null | undefined
   forbidden_styles?: Record<string, unknown> | null | undefined
 }
 
@@ -47,6 +48,7 @@ export class BrandProfileRepository {
       tone_of_voice: input.tone_of_voice ?? null,
       hashtags: (input.hashtags ?? null) as InputJsonValue,
       cta_templates: (input.cta_templates ?? null) as InputJsonValue,
+      default_offers: (input.default_offers ?? null) as InputJsonValue,
       forbidden_styles: (input.forbidden_styles ?? null) as InputJsonValue,
     }
 

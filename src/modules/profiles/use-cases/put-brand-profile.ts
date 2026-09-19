@@ -17,6 +17,7 @@ export type PutBrandProfileInput = {
   tone_of_voice?: string | null | undefined
   hashtags?: Record<string, unknown> | null | undefined
   cta_templates?: Record<string, unknown> | null | undefined
+  default_offers?: Record<string, unknown> | null | undefined
   forbidden_styles?: Record<string, unknown> | null | undefined
 }
 

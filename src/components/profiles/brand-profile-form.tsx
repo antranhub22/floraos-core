@@ -170,6 +170,14 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
       hashtags: { default: hashtagsList },
       cta_templates: { default: ctaText.trim() },
       forbidden_styles: { banned_words: bannedList },
+      // `PUT /brand-profile` thay TOÀN BỘ bản ghi (không phải patch từng
+      // trường) — cùng ngữ nghĩa với `BrandProfileRepository.upsert`. Form
+      // này không có ô nhập cho quà tặng/cam kết (`default_offers`, sở hữu
+      // bởi `SalesDefaultsForm`); không chuyển tiếp nguyên giá trị hiện có
+      // ở đây thì mỗi lần lưu màu/giọng văn sẽ XOÁ MẤT quà tặng/cam kết đã
+      // cấu hình ở màn hình khác — đúng lỗi mất dữ liệu đã xảy ra khi cả
+      // hai còn gộp chung vào `cta_templates` cũ (nợ #102, sửa 17/09).
+      default_offers: (initialData?.default_offers as Record<string, unknown> | null) ?? null,
     }
 
     await onSave(payload)

@@ -1,13 +1,15 @@
 "use client"
 
 import React, { useState } from "react"
-import { Building2, Palette, ShieldCheck, RotateCcw, Save, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react"
+import { Building2, Palette, ShieldCheck, CalendarHeart, RotateCcw, Save, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { TabActionHeader, type TabItem, type TabAction, type TabOverflowAction } from "@/components/ui/tab-header"
 import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
 import { BusinessProfileForm } from "@/components/profiles/business-profile-form"
 import { BrandProfileForm } from "@/components/profiles/brand-profile-form"
 import { SalesDefaultsForm } from "@/components/profiles/sales-defaults-form"
+import { GreetingLineOverrideForm } from "@/components/profiles/greeting-line-override-form"
+import { OccasionsSettingsForm } from "@/components/organization/occasions-settings-form"
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<string>("business")
@@ -40,6 +42,11 @@ export default function ProfilePage() {
       id: "sales",
       label: "Chính sách & Cam kết",
       icon: ShieldCheck,
+    },
+    {
+      id: "occasions",
+      label: "Dịp lễ & Giọng văn",
+      icon: CalendarHeart,
     },
   ]
 
@@ -130,12 +137,20 @@ export default function ProfilePage() {
           )}
 
           {activeTab === "sales" && (
-            <SalesDefaultsForm
-              initialBrandData={brand}
-              onSave={saveBrand}
-              saving={saving}
-            />
+            <div className="space-y-6">
+              <SalesDefaultsForm
+                initialBrandData={brand}
+                onSave={saveBrand}
+                saving={saving}
+              />
+              {/* Ghi đè template theo tenant (nợ #99/#105) — tự lưu riêng qua
+                  /api/v1/template-overrides, KHÔNG qua saveBrand/brand_profiles
+                  ở trên. Xem chú thích đầu tệp component. */}
+              <GreetingLineOverrideForm />
+            </div>
           )}
+
+          {activeTab === "occasions" && <OccasionsSettingsForm />}
         </div>
       )}
     </div>

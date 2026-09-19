@@ -28,6 +28,7 @@ const putSchema = z.object({
   tone_of_voice: z.string().nullable().optional(),
   hashtags: jsonObject,
   cta_templates: jsonObject,
+  default_offers: jsonObject,
   forbidden_styles: jsonObject,
 })
 
