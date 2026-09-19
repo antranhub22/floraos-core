@@ -60,7 +60,7 @@ export function BriefRisingView({
 
           return (
             <div
-              key={item.id}
+              key={`${item.id}-${idx}`}
               onClick={() => onSelectOpportunity(item)}
               className="group rounded-2xl border border-stone-200/90 bg-white p-4 shadow-2xs hover:border-emerald-400 hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >

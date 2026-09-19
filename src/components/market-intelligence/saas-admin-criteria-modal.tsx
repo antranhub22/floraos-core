@@ -265,11 +265,11 @@ export function SaaSAdminCriteriaModal({
 
             {/* Lưới chọn Keywords */}
             <div className="flex flex-wrap gap-1.5 p-3 rounded-xl border border-stone-200 bg-stone-50/50 max-h-48 overflow-y-auto">
-              {displayKeywords.map((k) => {
+              {displayKeywords.map((k, idx) => {
                 const isSelected = selectedTopics.includes(k);
                 return (
                   <button
-                    key={k}
+                    key={`${k}-${idx}`}
                     type="button"
                     onClick={() => toggleTopic(k)}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition ${

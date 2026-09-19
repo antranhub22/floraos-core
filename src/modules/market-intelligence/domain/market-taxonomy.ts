@@ -174,7 +174,7 @@ export const STYLE_AESTHETIC_KEYWORDS: readonly string[] = [
   "Hoa aesthetic tối giản",
   "Hoa aesthetic luxury",
   "Hoa aesthetic romantic",
-  "Bó hoa tự nhiên",
+  "Bó hoa natural",
   "Bó hoa phá cách",
   "Bó hoa nghệ thuật",
   "Bó hoa editorial",
@@ -384,17 +384,19 @@ export const MARKET_TAXONOMY_CATEGORIES: readonly TaxonomyCategory[] = [
 ];
 
 /** Toàn bộ 210 từ khóa cốt lõi phẳng */
-export const ALL_CORE_KEYWORDS: readonly string[] = [
-  ...OCCASION_KEYWORDS,
-  ...SEASONAL_KEYWORDS,
-  ...PRODUCT_FORM_KEYWORDS,
-  ...FLOWER_MATERIAL_KEYWORDS,
-  ...STYLE_AESTHETIC_KEYWORDS,
-  ...COLOR_VISUAL_KEYWORDS,
-  ...WRAPPING_MATERIAL_KEYWORDS,
-  ...NOVELTY_ADDON_KEYWORDS,
-  ...SOCIAL_VIRAL_KEYWORDS,
-];
+export const ALL_CORE_KEYWORDS: readonly string[] = Array.from(
+  new Set([
+    ...OCCASION_KEYWORDS,
+    ...SEASONAL_KEYWORDS,
+    ...PRODUCT_FORM_KEYWORDS,
+    ...FLOWER_MATERIAL_KEYWORDS,
+    ...STYLE_AESTHETIC_KEYWORDS,
+    ...COLOR_VISUAL_KEYWORDS,
+    ...WRAPPING_MATERIAL_KEYWORDS,
+    ...NOVELTY_ADDON_KEYWORDS,
+    ...SOCIAL_VIRAL_KEYWORDS,
+  ])
+);
 
 /** Gợi ý bộ từ khóa theo mùa vụ thông minh (tháng hiện tại) */
 export function getSeasonalRecommendedKeywords(targetMonth?: number): string[] {
