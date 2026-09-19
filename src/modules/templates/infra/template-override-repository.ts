@@ -1,9 +1,10 @@
 import type { DbClient } from "@/modules/organization/infra/db-client"
+import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import type { TemplateFamily } from "@/modules/templates/domain/template-override-rules"
 
 export class TemplateOverrideRepository {
-  constructor(private readonly db: DbClient) {}
+  constructor(private readonly db: DbClient = prisma) {}
 
   async findByKey(ctx: TenantContext, templateKey: string, fieldKey: string) {
     return this.db.template_overrides.findFirst({

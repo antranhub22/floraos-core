@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Cpu, Bell, AlertTriangle, Clock } from "lucide-react"
+import { Cpu, Bell, AlertTriangle, Clock, TrendingUp } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -173,6 +173,29 @@ export function AdminDashboard() {
             <div className="text-[13.5px] font-semibold text-text">Bộ máy phân tích ảnh</div>
           </div>
           <div className="text-[13px] font-bold text-primary">Xem và đổi →</div>
+        </Card>
+
+        <Card
+          className="flex cursor-pointer items-center justify-between gap-3 border-l-4 border-l-rose-500 bg-gradient-to-r from-rose-50/40 via-surface to-surface p-[18px] hover:shadow-md"
+          onClick={() => router.push("/market-intelligence")}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-rose-100/70 text-rose-700">
+              <TrendingUp size={20} strokeWidth={2} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 text-[13.5px] font-bold text-text">
+                Nghiên cứu Thị trường & Xu hướng
+                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10.5px] font-extrabold text-rose-700">
+                  Mới
+                </span>
+              </div>
+              <div className="text-xs text-text-muted">
+                Google Trends · SerpApi · Điểm số viral & gợi ý cơ hội nội dung
+              </div>
+            </div>
+          </div>
+          <div className="text-[13px] font-bold text-primary">Khám phá →</div>
         </Card>
 
         <Card className="flex flex-col gap-3.5 p-[18px]">

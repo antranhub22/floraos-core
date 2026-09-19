@@ -34,8 +34,10 @@ from vision.providers.chung import (
     MucDung,
     doc_dap_ung,
     doc_muc_dung,
+    goi_co_du_phong,
     nap_json,
     nap_text,
+    tham_so_goi,
     thu_nho_anh,
 )
 
@@ -47,7 +49,12 @@ class OpenAIDirectProvider:
 
     name = "openai_direct"
 
-    def __init__(self, client: OpenAI | None = None, model: str | None = None) -> None:
+    def __init__(
+        self,
+        client: OpenAI | None = None,
+        model: str | None = None,
+        muc_suy_luan: str | None = None,
+    ) -> None:
         config = nap_json("config.json")
         self.schema = nap_json("Schema.json")
         self.prompt = nap_text("PromptGon.md")
@@ -56,6 +63,10 @@ class OpenAIDirectProvider:
         # đầy đủ — hai bộ tồn tại song song nên chúng phải chỉnh được riêng.
         self._model = model or config.get("model_tien_kiem") or MODEL_MAC_DINH
         self._canh_dai_px = int(config.get("anh_canh_dai_px") or CANH_DAI_MAC_DINH_PX)
+        # Bộ Gọn chỉ có MỘT lượt, nên chỉ có MỘT mức suy luận — không có
+        # lượt hai để nâng mức, đúng với lý do bộ này tồn tại.
+        self._muc_suy_luan = muc_suy_luan or config.get("muc_suy_luan_gon")
+        self.canh_bao_tham_so: list[str] = []
 
     @property
     def model_version(self) -> str:
@@ -65,9 +76,11 @@ class OpenAIDirectProvider:
         anh_gui, mime = thu_nho_anh(image, self._canh_dai_px)
         image_b64 = base64.b64encode(anh_gui).decode("ascii")
 
-        response = self._client.chat.completions.create(
+        self.canh_bao_tham_so = []
+        response, canh_bao = goi_co_du_phong(
+            self._client,
             model=self._model,
-            temperature=0,
+            **tham_so_goi(self._model, 0, self._muc_suy_luan),
             response_format={"type": "json_schema", "json_schema": self.schema},
             messages=[
                 {"role": "system", "content": self.prompt},
@@ -86,6 +99,8 @@ class OpenAIDirectProvider:
                 },
             ],
         )
+        if canh_bao:
+            self.canh_bao_tham_so.append(canh_bao)
         self.muc_dung_lan_cuoi = MucDung()
         self.muc_dung_lan_cuoi.cong(doc_muc_dung(response))
         ket_qua = doc_dap_ung(response)

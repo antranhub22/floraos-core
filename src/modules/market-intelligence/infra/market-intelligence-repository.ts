@@ -1,0 +1,232 @@
+import { prisma } from "@/core/tenancy/infra/prisma"
+import type {
+  provider_health_status,
+  research_run_type,
+} from "@/generated/prisma/client"
+
+export class MarketIntelligenceRepository {
+  constructor(private readonly db = prisma) {}
+
+  // --- Provider Health ---
+  async upsertProviderHealth(data: {
+    provider: string
+    status: provider_health_status
+    latencyMs?: number | null | undefined
+    errorRate?: number | null | undefined
+    quotaStatus?: string | null | undefined
+  }) {
+    return this.db.provider_health.upsert({
+      where: { provider: data.provider },
+      create: {
+        provider: data.provider,
+        status: data.status,
+        latency_ms: data.latencyMs ?? null,
+        error_rate: data.errorRate ?? null,
+        quota_status: data.quotaStatus ?? null,
+        last_checked_at: new Date(),
+      },
+      update: {
+        status: data.status,
+        latency_ms: data.latencyMs ?? null,
+        error_rate: data.errorRate ?? null,
+        quota_status: data.quotaStatus ?? null,
+        last_checked_at: new Date(),
+      },
+    })
+  }
+
+  async getAllProviderHealth() {
+    return this.db.provider_health.findMany({
+      orderBy: { last_checked_at: "desc" },
+    })
+  }
+
+  // --- Cached Trend Queries for CachedFallbackProvider ---
+  async findCachedSignals(query: string, geo = "VN", industry = "florist") {
+    return this.db.trend_signals.findMany({
+      where: {
+        platform: { in: ["google_trends", "google_trends_serpapi"] },
+        country_code: geo,
+        industry,
+        topic_raw: { contains: query, mode: "insensitive" },
+      },
+      orderBy: { captured_at: "desc" },
+      take: 5,
+    })
+  }
+
+  async findCachedTimeseries(topic: string, geo = "VN") {
+    const topicRecord = await this.db.topics.findFirst({
+      where: { canonical_name: { contains: topic, mode: "insensitive" } },
+    })
+    if (!topicRecord) return []
+
+    return this.db.trend_timeseries.findMany({
+      where: { topic_id: topicRecord.id, geo_scope: geo },
+      orderBy: { date: "asc" },
+      take: 14,
+    })
+  }
+
+  async findCachedRelatedTopics(topic: string) {
+    return this.db.topics.findMany({
+      where: {
+        canonical_name: { not: topic },
+        industry: "florist",
+      },
+      orderBy: { last_seen_at: "desc" },
+      take: 3,
+    })
+  }
+
+  // --- Research Runs ---
+  async createResearchRun(runType: research_run_type) {
+    return this.db.research_runs.create({
+      data: {
+        run_type: runType,
+        status: "PENDING",
+      },
+    })
+  }
+
+  async triggerResearchRunAndNotify(
+    runType: research_run_type = "MANUAL",
+    params?: { keyword?: string | undefined; geo?: string | undefined; timeframe?: string | undefined; channel?: string | undefined }
+  ) {
+    const run = await this.db.research_runs.create({
+      data: {
+        run_type: runType,
+        status: "PENDING",
+        error_summary: params ? `PARAMS:${JSON.stringify(params)}` : null,
+        created_at: new Date(),
+      },
+    })
+    try {
+      await this.db.$executeRawUnsafe("NOTIFY market_intelligence_research;")
+    } catch {
+      // Worker vẫn quét được bằng SKIP LOCKED định kỳ
+    }
+    return run
+  }
+
+  async listResearchRuns(limit = 20) {
+    return this.db.research_runs.findMany({
+      orderBy: { created_at: "desc" },
+      take: limit,
+    })
+  }
+
+  // --- Content Opportunities ---
+  async countOpportunities(organizationId: string, minScore = 0) {
+    return this.db.content_opportunities.count({
+      where: {
+        organization_id: organizationId,
+        content_opportunity_score: { gte: minScore },
+      },
+    })
+  }
+
+  async listOpportunitiesWithTopic(
+    organizationId: string,
+    options: { minScore?: number | undefined; limit: number; cursor?: string | undefined }
+  ) {
+    const where = {
+      organization_id: organizationId,
+      content_opportunity_score: { gte: options.minScore ?? 0 },
+    }
+    return this.db.content_opportunities.findMany({
+      where,
+      include: {
+        topic: { select: { canonical_name: true } },
+      },
+      orderBy: [
+        { content_opportunity_score: "desc" },
+        { created_at: "desc" },
+      ],
+      take: options.limit + 1,
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
+    })
+  }
+
+  // --- Personalization Data ---
+  async getTenantsForPersonalization() {
+    return this.db.organizations.findMany({
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        brand_profile: {
+          select: {
+            tone_of_voice: true,
+            hashtags: true,
+            default_offers: true,
+          },
+        },
+        products: {
+          where: { status: "ACTIVE" },
+          select: {
+            id: true,
+            name: true,
+          },
+          take: 20,
+        },
+        pricing_rules: {
+          select: { key: true, value: true },
+          take: 5,
+        },
+        customers: {
+          select: { tier: true },
+          take: 100,
+        },
+      },
+    })
+  }
+
+  async getScoredTopics(topicIds?: string[] | undefined) {
+    return this.db.topics.findMany({
+      where: topicIds && topicIds.length > 0 ? { id: { in: topicIds } } : {},
+      include: {
+        scores: {
+          orderBy: { calculated_at: "desc" },
+          take: 1,
+        },
+      },
+    })
+  }
+
+  async createContentOpportunity(data: {
+    organizationId: string
+    topicId: string
+    audience: string | null
+    opportunitySummary: string
+    contentAngles: any
+    recommendedFormats: any
+    recommendedHooks: any
+    trendScore: number
+    viralScore: number
+    commercialScore: number
+    contentOpportunityScore: number
+    confidence: number
+    expiresAt: Date
+  }) {
+    return this.db.content_opportunities.create({
+      data: {
+        organization_id: data.organizationId,
+        topic_id: data.topicId,
+        audience: data.audience,
+        opportunity_summary: data.opportunitySummary,
+        content_angles: data.contentAngles,
+        recommended_formats: data.recommendedFormats,
+        recommended_hooks: data.recommendedHooks,
+        trend_score: data.trendScore,
+        viral_score: data.viralScore,
+        commercial_score: data.commercialScore,
+        content_opportunity_score: data.contentOpportunityScore,
+        confidence: data.confidence,
+        expires_at: data.expiresAt,
+      },
+    })
+  }
+}
+
+export const marketIntelligenceRepo = new MarketIntelligenceRepository()

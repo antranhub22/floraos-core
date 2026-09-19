@@ -72,6 +72,21 @@
       "vao": 0.15,
       "ra": 0.6,
       "vao_cache": 0.075
+    },
+    "gpt-5.6-sol": {
+      "vao": 4.0,
+      "ra": 20.0,
+      "vao_cache": 0.4
+    },
+    "gpt-5.6-terra": {
+      "vao": 2.0,
+      "ra": 12.0,
+      "vao_cache": 0.2
+    },
+    "gpt-5.6-luna": {
+      "vao": 0.2,
+      "ra": 1.2,
+      "vao_cache": 0.02
     }
   },
   "_ghi_chu_danh_muc": "Kho dữ liệu chủ. Đọc sheet 02 Danh mục loại, 03 Chi tiết nguyên liệu, 04 Chi tiết phụ liệu, 05 Quy đổi đơn vị. Vẫn đọc được file bốn sheet cũ Loai, SKU, Phu_Kien, Cong_Thuc. Đặt cạnh bản chạy, sửa được mà không cần đóng gói lại.",
@@ -94,5 +109,10 @@
   "florence2_max_new_tokens": 64,
   "florence2_bbox_dem_ty_le": 0.08,
   "_ghi_chu_no_mat_na": "Nợ #60 (giảm nhẹ 09/11): tô nền phẳng NGOÀI mặt nạ SAM2 (đã nở thêm dải này) trước khi đưa vùng cắt cho Florence-2 — cắt bớt ca mô hình mô tả nhầm sang vật ở nền xa (cánh tay, cái đĩa, con thuyền) thay vì vật thể vừa tách. `florence2_no_mat_na_ty_le` là bán kính nở, tính theo tỷ lệ CẠNH NGẮN của vùng đã cắt. CÓ RỦI RO đi kèm, không giấu: tô nền phẳng có thể làm caption XẤU ĐI với ảnh mà bối cảnh xung quanh thật sự giúp mô hình nhận diện (một bó hoa cầm trên tay). CHƯA đo trên ảnh thật (nợ #24) — số dưới đây là mặc định HỢP LÝ, không phải số đã đo, đúng D5-c. Đặt 0 thì tắt hẳn bước tô, quay về hành vi cũ (cắt nguyên khung bbox, không tô gì).",
-  "florence2_no_mat_na_ty_le": 0.15
+  "florence2_no_mat_na_ty_le": 0.15,
+  "_ghi_chu_gia_token_5_6": "Giá dòng GPT-5.6 (USD trên MỘT TRIỆU token), mức NGỮ CẢNH NGẮN — lời nhắc của M01 khoảng 6–9 nghìn token nên luôn nằm ở mức này, không chạm bậc ngữ cảnh dài. Đọc từ developers.openai.com/api/docs/pricing ngày 19/09/2026. Lưu ý giá sol đang là giá khuyến mại, nhà cung cấp công bố giữ ít nhất tới 21/11/2026 — hết khuyến mại là phải sửa lại ô này, không phải sửa trong mã. Token suy luận tính theo giá `ra`.",
+  "muc_suy_luan": null,
+  "muc_suy_luan_luot_hai": null,
+  "muc_suy_luan_gon": null,
+  "_ghi_chu_muc_suy_luan": "Mức suy luận cho dòng GPT-5 trở lên: none | low | medium | high | xhigh | max. `null` = không khai, để mặc định của nhà cung cấp. Ba khoá này KHÔNG có tác dụng gì với gpt-4o/gpt-4o-mini (mô hình cũ dùng `temperature`) — `tham_so_goi()` trong providers/chung.py chọn bộ tham số theo tên mô hình."
 }

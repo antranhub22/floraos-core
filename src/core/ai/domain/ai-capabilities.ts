@@ -70,6 +70,8 @@ const DEFINITIONS: Record<string, Omit<AiCapabilityDefinition, "code">> = {
   "AIC-32": { name: "chat_answer",                 module: "M08",  kind: "generative",    needsApproval: false, privacyFloor: "SHOP",      channels: ["source_grounded"] },
   "AIC-33": { name: "analytics_interpretation",    module: "M11",  kind: "generative",    needsApproval: false, privacyFloor: "SHOP",      channels: ["operator_agreement"] },
   "AIC-34": { name: "learning_pattern",            module: "M11",  kind: "generative",    needsApproval: false, privacyFloor: "SHOP",      channels: ["sample_size", "effect_measured"] },
+  "AIC-35": { name: "market_intel.topic_canonicalize", module: "MI", kind: "generative", needsApproval: false, privacyFloor: "PUBLIC",    channels: ["canonical_match"] },
+  "AIC-36": { name: "market_intel.opportunity_draft",  module: "MI", kind: "generative", needsApproval: true,  privacyFloor: "SHOP",      channels: ["factual", "brand"] },
 }
 
 export const AI_CAPABILITIES: Readonly<Record<string, AiCapabilityDefinition>> =

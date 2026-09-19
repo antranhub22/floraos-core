@@ -1,6 +1,5 @@
 import { notFound, validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
-import { prisma } from "@/core/tenancy/infra/prisma"
 import { OccasionRepository } from "@/modules/organization/infra/occasion-repository"
 import {
   validateUpdateOccasionInput,
@@ -22,7 +21,7 @@ export async function updateOccasion(ctx: TenantContext, id: string, input: Upda
     throw validationFailed({ body: "Không có trường nào để sửa" })
   }
 
-  const updated = await new OccasionRepository(prisma).update(ctx, id, validated)
+  const updated = await new OccasionRepository().update(ctx, id, validated)
   if (!updated) throw notFound()
   return updated
 }

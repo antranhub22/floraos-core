@@ -1,6 +1,5 @@
 import { conflict, validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
-import { prisma } from "@/core/tenancy/infra/prisma"
 import { OccasionRepository } from "@/modules/organization/infra/occasion-repository"
 import {
   validateCreateOccasionInput,
@@ -14,7 +13,7 @@ export async function createOccasion(ctx: TenantContext, input: CreateOccasionIn
     throw validationFailed({ [validated.field]: validated.message })
   }
 
-  const repository = new OccasionRepository(prisma)
+  const repository = new OccasionRepository()
   if (await repository.findByCode(ctx, validated.code)) {
     throw conflict(`Mã dịp ${validated.code} đã tồn tại`)
   }

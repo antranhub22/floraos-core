@@ -1,4 +1,5 @@
 import type { DbClient } from "@/modules/organization/infra/db-client"
+import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import type { OccasionRegisterValue } from "@/modules/organization/domain/occasion-rules"
 
@@ -29,7 +30,7 @@ const DEFAULT_OCCASIONS: ReadonlyArray<{
 ] as const
 
 export class OccasionRepository {
-  constructor(private readonly db: DbClient) {}
+  constructor(private readonly db: DbClient = prisma) {}
 
   async seedDefault(ctx: TenantContext): Promise<void> {
     const existing = await this.db.occasions.findMany({

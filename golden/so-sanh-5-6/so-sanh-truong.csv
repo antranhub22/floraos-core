@@ -1,0 +1,54 @@
+anh,co_che,model,muc_suy_luan,flower_count,bud_count,damaged_count,nguoi_bud_count,nguoi_damaged_count,so_dong_hoa,so_dong_la,so_dong_phu_kien,so_lop_goi,category,shape,phong_cach,dip_su_dung,confidence,ty_le_day_truong
+g001,Đầy đủ,gpt-4o,-,20,0,0,3,0,3,2,0,1,Giỏ hoa,Bán cầu,Hiện đại,Khai trương,85,0.9286
+g001,Đầy đủ,gpt-5.6-luna,high,29,4,0,3,0,6,5,1,0,Giỏ hoa,Bán cầu,Hiện đại,,82,0.8802
+g001,Đầy đủ,gpt-5.6-luna,low,58,4,0,3,0,6,5,1,0,Giỏ hoa,Bán cầu,Hiện đại tự nhiên,Sinh nhật,86,0.8996
+g001,Đầy đủ,gpt-5.6-sol,low,25,7,0,3,0,6,4,1,0,Lẵng hoa,Bán cầu,"Hiện đại, tự nhiên","Chúc mừng, khai trương, sinh nhật",87,0.89
+g001,Đầy đủ,gpt-5.6-terra,high,36,0,0,3,0,6,4,1,0,Giỏ hoa,Toả tia,Tự nhiên hiện đại,,87,0.8792
+g001,Đầy đủ,gpt-5.6-terra,low,19,0,0,3,0,6,4,1,0,Bình hoa,Toả tia,"Hiện đại, tự nhiên","Sinh nhật, chúc mừng, khai trương",85,0.8756
+g001,Gọn,gpt-4o-mini,-,20,0,0,3,0,4,2,2,1,Bó hoa,Tròn,Hiện đại,Sinh nhật,90,0.8819
+g001,Gọn,gpt-5.6-luna,high,22,2,0,3,0,5,4,2,0,Giỏ hoa,Tự do,"Hiện đại, tự nhiên, thanh lịch",,80,0.8737
+g001,Gọn,gpt-5.6-luna,low,24,2,0,3,0,5,4,1,0,Giỏ hoa,Tự do,"Hiện đại, tự nhiên","Sinh nhật, chúc mừng, trang trí",84,0.8852
+g001,Gọn,gpt-5.6-sol,high,29,10,0,3,0,6,5,2,0,Giỏ hoa,Toả tia,"Hiện đại, tự nhiên, thanh lịch với các nhánh lá vươn tỏa","Khai trương, chúc mừng, sinh nhật hoặc trang trí sự kiện",76,0.8776
+g001,Gọn,gpt-5.6-sol,low,31,6,0,3,0,6,5,1,2,Hộp hoa,Tự do,"Hiện đại, thanh lịch, thiên nhiên","Sinh nhật, kỷ niệm, chúc mừng",84,0.8879
+g001,Gọn,gpt-5.6-terra,high,35,2,0,3,0,7,5,1,1,Giỏ hoa,Toả tia,"Hiện đại, tự nhiên, tông trắng xanh thanh lịch","Sinh nhật, chúc mừng, khai trương, kỷ niệm",70,0.8875
+g001,Gọn,gpt-5.6-terra,low,26,0,0,3,0,6,4,1,0,Giỏ hoa,Toả tia,"Hiện đại, tự nhiên","Khai trương, sinh nhật, chúc mừng",80,0.8824
+g002,Đầy đủ,gpt-4o,-,35,0,0,,0,2,1,1,1,Hộp hoa,Bán cầu,Hiện đại,Khai trương,85,0.9304
+g002,Đầy đủ,gpt-5.6-luna,high,36,0,0,,0,3,2,3,0,Hộp hoa,Bán cầu,"Hiện đại, trang trọng",Chia buồn,84,0.894
+g002,Đầy đủ,gpt-5.6-luna,low,29,0,0,,0,3,3,3,0,Hộp hoa,Tự do,"Hiện đại, tự nhiên",,87,0.8834
+g002,Đầy đủ,gpt-5.6-sol,high,34,15,0,,0,2,2,3,0,Hộp hoa,Bán cầu,"Hiện đại, đơn sắc",Chia buồn,88,0.8971
+g002,Đầy đủ,gpt-5.6-sol,low,37,1,0,,0,2,2,2,0,Giỏ hoa,Bán cầu,"Hiện đại, thanh lịch, đơn sắc","Sinh nhật, chúc mừng, tri ân",89,0.8968
+g002,Đầy đủ,gpt-5.6-terra,high,39,2,0,,0,4,2,2,0,Giỏ hoa,Bán cầu,"Trang trọng, tối giản tông trắng xanh",Chia buồn,77,0.903
+g002,Đầy đủ,gpt-5.6-terra,low,38,0,0,,0,4,2,3,0,Giỏ hoa,Bán cầu,Tối giản trang trọng,Chia buồn,87,0.8876
+g002,Gọn,gpt-4o-mini,-,20,0,0,,0,2,1,2,1,Bó hoa,Tròn,Hiện đại,Sinh nhật,90,0.8932
+g002,Gọn,gpt-5.6-luna,high,29,8,0,,0,2,2,2,1,Hộp hoa,Bán cầu,"Hiện đại, đơn sắc, trang trọng",Chia buồn,64,0.9077
+g002,Gọn,gpt-5.6-luna,low,22,0,0,,0,2,2,3,0,Hộp hoa,Bán cầu,"Hiện đại, tối giản","Sinh nhật, chúc mừng, chia buồn",82,0.874
+g002,Gọn,gpt-5.6-sol,high,29,1,0,,0,2,3,3,0,Hộp hoa,Bán cầu,"Hiện đại, trang nhã, đơn sắc","Chia buồn, tưởng niệm hoặc trang trí trang trọng",76,0.8924
+g002,Gọn,gpt-5.6-sol,low,37,19,0,,0,2,2,4,1,Hộp hoa,Bán cầu,"Hiện đại, thanh lịch, đơn sắc","Sinh nhật, kỷ niệm, chúc mừng hoặc chia buồn nhẹ nhàng",87,0.8881
+g002,Gọn,gpt-5.6-terra,high,37,0,0,,0,3,2,3,0,Hộp hoa,Bán cầu,"Thanh lịch tự nhiên, tông trắng trang nhã","Chia buồn, viếng hoặc tặng dịp trang trọng",70,0.8897
+g002,Gọn,gpt-5.6-terra,low,36,0,0,,0,3,2,3,1,Giỏ hoa,Bán cầu,"Hiện đại, trang nhã tối giản","Chia buồn, viếng tang hoặc tưởng niệm",83,0.8831
+g009,Đầy đủ,gpt-4o,-,40,5,0,0,0,1,1,1,1,Hộp hoa,Bán cầu,Hiện đại,Khai trương,90,0.9231
+g009,Đầy đủ,gpt-5.6-luna,high,34,4,0,0,0,2,1,2,2,Hộp hoa,Bán cầu,Cổ điển,,77,0.9008
+g009,Đầy đủ,gpt-5.6-luna,low,51,5,0,0,0,2,1,1,2,Hộp hoa,Tròn,Hiện đại,"Chúc mừng, khai trương",80,0.9333
+g009,Đầy đủ,gpt-5.6-sol,low,41,3,0,0,0,2,2,2,0,Giỏ hoa,Bán cầu,"Hiện đại, rực rỡ",Chúc mừng,80,0.8984
+g009,Đầy đủ,gpt-5.6-terra,high,,,0,0,0,1,1,1,0,Giỏ hoa,Bán cầu,Hiện đại,,76,0.8471
+g009,Đầy đủ,gpt-5.6-terra,low,74,2,0,0,0,1,1,3,0,Giỏ hoa,Bán cầu,Hiện đại,Chúc mừng,80,0.902
+g009,Gọn,gpt-4o-mini,-,30,0,0,0,0,1,1,2,1,Bó hoa,Tròn,Hiện đại,Sinh nhật,90,0.9024
+g009,Gọn,gpt-5.6-luna,high,24,3,0,0,0,1,2,2,1,Giỏ hoa,Bán cầu,"Hiện đại, nổi bật",,62,0.8981
+g009,Gọn,gpt-5.6-luna,low,28,4,0,0,0,1,1,2,2,Hộp hoa,Bán cầu,"Hiện đại, trang trọng","Sinh nhật, chúc mừng, khai trương",72,0.9118
+g009,Gọn,gpt-5.6-sol,high,22,2,0,0,0,1,2,3,2,Hộp hoa,Bán cầu,"Hiện đại, tươi sáng, cắm dày theo khối tự nhiên",,68,0.9015
+g009,Gọn,gpt-5.6-sol,low,24,5,0,0,0,1,2,3,2,Hộp hoa,Bán cầu,"Hiện đại, rực rỡ","Sinh nhật, chúc mừng hoặc khai trương",80,0.8917
+g009,Gọn,gpt-5.6-terra,high,26,,0,0,0,1,1,3,2,Giỏ hoa,Bán cầu,"Cổ điển, trang trọng","Khai trương, chúc mừng, sinh nhật",70,0.8807
+g009,Gọn,gpt-5.6-terra,low,37,8,0,0,0,2,1,3,0,Giỏ hoa,Bán cầu,"Cổ điển, rực rỡ","Chúc mừng, sinh nhật, khai trương",67,0.8908
+g010,Đầy đủ,gpt-4o,-,75,0,0,0,0,3,1,1,1,Vòng hoa,Vòng tròn,,Chia buồn,90,0.9353
+g010,Đầy đủ,gpt-5.6-luna,high,66,0,0,0,0,5,1,2,2,Vòng hoa,Vòng tròn,"Trang nghiêm, truyền thống",Chia buồn,80,0.914
+g010,Đầy đủ,gpt-5.6-luna,low,51,3,0,0,0,5,2,3,2,Vòng hoa,Vòng tròn,"Trang trọng, cổ điển",Chia buồn,82,0.9078
+g010,Đầy đủ,gpt-5.6-sol,low,39,0,1,0,0,5,1,5,0,Kệ hoa,Tròn,"Trang trọng, cổ điển",Chia buồn,82,0.8788
+g010,Đầy đủ,gpt-5.6-terra,high,73,0,0,0,0,5,1,3,2,Kệ hoa,Vòng tròn,Cổ điển trang trọng,Chia buồn,80,0.899
+g010,Đầy đủ,gpt-5.6-terra,low,44,0,0,0,0,4,1,3,0,Vòng hoa,Vòng tròn,"Trang nghiêm, đối xứng",Chia buồn,85,0.9107
+g010,Gọn,gpt-4o-mini,-,35,0,0,0,0,3,1,2,1,Bó hoa,Tròn,Cổ điển,Tang lễ,90,0.8833
+g010,Gọn,gpt-5.6-luna,high,43,8,0,0,0,4,2,2,4,Vòng hoa,Vòng tròn,"Trang trọng, truyền thống, vòng hoa tang lễ",Chia buồn,78,0.9076
+g010,Gọn,gpt-5.6-luna,low,53,4,0,0,0,5,2,2,3,Vòng hoa,Vòng tròn,"Trang nghiêm, truyền thống",Chia buồn,78,0.9141
+g010,Gọn,gpt-5.6-sol,high,79,0,0,0,0,5,2,4,4,Vòng hoa,Vòng tròn,"Trang trọng, cổ điển",Chia buồn,70,0.9046
+g010,Gọn,gpt-5.6-sol,low,68,4,0,0,0,5,2,3,4,Vòng hoa,Vòng tròn,"Trang trọng, cổ điển",Chia buồn,68,0.9112
+g010,Gọn,gpt-5.6-terra,high,90,0,0,0,0,4,1,3,3,Vòng hoa,Vòng tròn,"Trang trọng, tang lễ truyền thống","Chia buồn, phúng viếng",58,0.9158
+g010,Gọn,gpt-5.6-terra,low,61,0,0,0,0,5,1,2,3,Vòng hoa,Vòng tròn,"Tang lễ truyền thống, trang trọng","Chia buồn, tang lễ",72,0.9247

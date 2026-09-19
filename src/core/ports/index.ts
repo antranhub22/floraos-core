@@ -9,3 +9,4 @@ export * from "./image-provider";
 export * from "./video-provider";
 export * from "./speech-provider";
 export * from "./embedding-provider";
+export * from "./trend-provider";

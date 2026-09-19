@@ -149,6 +149,7 @@ Các nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 | `Q1`–`Q8` | Vào ở P21 (M09) |
 | `R1`–`R8` | Vào ở P22 (M10) |
 | `T1`–`T4` | Vào ở P23 (M08) |
+| `V1`–`V3` | Nghiên cứu thị trường & Xu hướng (Market Intelligence Engine, Đợt A) |
 
 ### Tổ chức và thành viên — nhóm F
 
@@ -329,6 +330,16 @@ Nhóm `R` là phần đơn hàng của core. Luồng chào giá và bảng đi�
 `H4` là trường hợp riêng của `U2` cho đúng năng lực phân tích ảnh, và nó giữ nguyên — nó đã có trong mã, đã có màn hình, và đã có luật riêng về việc bày ba bộ máy kèm trạng thái đo lường. `U2` là cùng loại quyết định cho các năng lực còn lại: đổi mô hình của một năng lực đổi chất lượng mọi lượt chạy về sau của cả tổ chức, nên nó có trần cứng Điều hành và mỗi lần đổi ghi `audit_logs`.
 
 Sổ đăng ký mô hình và sổ đăng ký giấy phép **không** thuộc dải này. Chúng là dữ liệu cấp nền tảng, gác bằng dải `N` — một tổ chức không tự thêm mô hình vào hệ thống, vì ô giấy phép và ô lãnh thổ của một mô hình không phải quyết định của một cửa hàng hoa. Ba mã `N9`–`N11` (sổ mô hình, sổ ngưỡng, chi phí theo mô hình) chưa xây — thuộc tuyến AI-1, xem mục dưới.
+
+### Nghiên cứu thị trường & Xu hướng — nhóm V (Market Intelligence Engine, Đợt A)
+
+| Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
+|---|---|---|---|---|
+| `V1` | `market_intel.research.run` | Kích hoạt lượt nghiên cứu thị trường thủ công | Điều hành · Điều phối | — |
+| `V2` | `market_intel.opportunity.read` | Xem gợi ý cơ hội nội dung theo xu hướng | Điều hành · Điều phối · Sale | — |
+| `V3` | `market_intel.config.manage` | Quản lý cấu hình nguồn và trọng số xu hướng | Điều hành | Điều hành |
+
+`V3` có trần cứng Điều hành: việc thay đổi cấu hình nguồn dữ liệu hoặc trọng số chấm điểm xu hướng sẽ ảnh hưởng đến chất lượng phân tích của toàn bộ tổ chức về sau.
 
 ### Vận hành nền tảng — dải N (P25)
 

@@ -17,6 +17,7 @@ Tài liệu để viết mã. Kiến trúc nền và quyết định gốc nằm
 | 08 | `08-integration-specification.md` | Core phơi gì ra, engine ngoài đọc thế nào |
 | 09 | `09-du-lieu-mau-experience.md` | Workspace dùng thử nạp sẵn những gì |
 | 10 | `10-ai-orchestration.md` | Gọi AI thế nào — năng lực, sổ đăng ký, định tuyến, chấm điểm, tri thức |
+| — | `FloraOS-Intelligence-Engine_FINAL_v2.0.md` | Đặc tả đầy đủ Market Intelligence + Product Intelligence (Đợt A và các đợt sau) — nguồn dẫn hướng có hiệu lực, gộp cả bản v1.0 (giữ ở `FloraOS-Core_Market_Intelligence_Engine_FINAL.md`, chỉ để truy vết lịch sử) |
 | — | `Checklist_Thuc_Thi.md` | Pha này xong chưa |
 | — | `Roadmap.md` | Đang ở đâu, gì đã đổi so với kế hoạch |
 | — | `TECHNICAL_DEBT.md` | Đang nợ gì, trả khi nào |

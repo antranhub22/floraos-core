@@ -33,6 +33,8 @@ const ALLOWED_OVERRIDES: ReadonlyArray<{
 }> = [
   // Câu chào mở đầu kịch bản Zalo — field đầu tiên, xem sales-pitch-template.ts.
   { family: "ST", templateKey: "sales_pitch_zalo", fieldKey: "greeting_line", maxLength: 200 },
+  // Thiệp mừng / Lời chúc sinh nhật — họ GT, xem scoping-gaps-18-09.test.ts
+  { family: "GT", templateKey: "loi-chuc-sinh-nhat", fieldKey: "tieu_de", maxLength: 200 },
 ]
 
 export interface SetTemplateOverrideInput {

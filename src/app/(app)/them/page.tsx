@@ -6,7 +6,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Camera, ChevronRight } from "lucide-react"
+import { Camera, ChevronRight, TrendingUp } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -62,6 +62,23 @@ export default function ThemPage() {
           <div className="min-w-0 flex-1">
             <div className="text-[13.5px] font-semibold">Tải ảnh, để AI nhận diện</div>
             <div className="text-xs text-text-muted">Phân tích ảnh sản phẩm (M01)</div>
+          </div>
+          <ChevronRight size={18} strokeWidth={2} className="text-text-muted" />
+        </Card>
+
+        <Card
+          className="flex cursor-pointer items-center gap-3 p-3.5 hover:shadow-md"
+          onClick={() => router.push("/market-intelligence")}
+        >
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+            <TrendingUp size={20} strokeWidth={1.8} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-[13.5px] font-semibold text-text">
+              Nghiên cứu Thị trường & Xu hướng
+              <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-extrabold text-rose-700">Mới</span>
+            </div>
+            <div className="text-xs text-text-muted">Google Trends, SerpApi, cơ hội viral</div>
           </div>
           <ChevronRight size={18} strokeWidth={2} className="text-text-muted" />
         </Card>

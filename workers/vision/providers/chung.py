@@ -60,12 +60,18 @@ class MucDung:
     output_tokens: int = 0
     input_cache_tokens: int = 0
     so_lan_goi: int = 0
+    # Token suy luận của dòng GPT-5 trở lên. Nhà cung cấp tính nó theo giá
+    # token RA và đã cộng sẵn vào `completion_tokens`, nên KHÔNG cộng lại vào
+    # `output_tokens` — giữ riêng ở đây chỉ để trả lời được câu "tiền ra đi
+    # vào phần trả lời hay vào phần nghĩ".
+    reasoning_tokens: int = 0
 
     def cong(self, khac: "MucDung") -> None:
         self.input_tokens += khac.input_tokens
         self.output_tokens += khac.output_tokens
         self.input_cache_tokens += khac.input_cache_tokens
         self.so_lan_goi += khac.so_lan_goi
+        self.reasoning_tokens += khac.reasoning_tokens
 
 
 def doc_muc_dung(response: Any) -> MucDung:
@@ -83,11 +89,15 @@ def doc_muc_dung(response: Any) -> MucDung:
         v = getattr(usage, ten, 0)
         return v if isinstance(v, int) else 0
 
+    chi_tiet_ra = getattr(usage, "completion_tokens_details", None)
+    suy_luan = getattr(chi_tiet_ra, "reasoning_tokens", 0) if chi_tiet_ra is not None else 0
+
     return MucDung(
         input_tokens=so("prompt_tokens"),
         output_tokens=so("completion_tokens"),
         input_cache_tokens=cache if isinstance(cache, int) else 0,
         so_lan_goi=1,
+        reasoning_tokens=suy_luan if isinstance(suy_luan, int) else 0,
     )
 
 
@@ -113,6 +123,54 @@ def tinh_cost_usd(model: str, muc_dung: MucDung, gia_token: dict) -> float | Non
         + vao_cache * gia.get("vao_cache", gia.get("vao", 0.0))
         + muc_dung.output_tokens * gia.get("ra", 0.0)
     ) / 1_000_000
+
+
+# Dòng GPT-5 trở lên KHÔNG nhận `temperature`: truyền vào là lỗi 400, không
+# phải bị bỏ qua lặng lẽ. Nó nhận `reasoning_effort` thay thế. Hai họ mô hình
+# vì vậy cần hai bộ tham số khác nhau cho cùng một lời gọi, và chỗ duy nhất
+# biết điều đó phải là đây — không phải rải `if` trong từng adapter.
+HO_MO_HINH_SUY_LUAN = ("gpt-5", "gpt-6", "o1", "o3", "o4")
+
+MUC_SUY_LUAN = ("none", "low", "medium", "high", "xhigh", "max")
+
+
+def la_mo_hinh_suy_luan(model: str) -> bool:
+    return model.lower().startswith(HO_MO_HINH_SUY_LUAN)
+
+
+def tham_so_goi(model: str, temperature: float, muc_suy_luan: str | None = None) -> dict:
+    """Tham số riêng của họ mô hình cho `chat.completions.create`.
+
+    Mô hình cũ: `temperature`. Mô hình suy luận: `reasoning_effort` (bỏ qua
+    khi không khai, để mặc định của nhà cung cấp quyết định).
+    """
+    if la_mo_hinh_suy_luan(model):
+        if muc_suy_luan is None:
+            return {}
+        if muc_suy_luan not in MUC_SUY_LUAN:
+            raise ValueError(f"Mức suy luận lạ: {muc_suy_luan!r} — phải là một trong {MUC_SUY_LUAN}")
+        return {"reasoning_effort": muc_suy_luan}
+    return {"temperature": temperature}
+
+
+def goi_co_du_phong(client: Any, **kwargs: Any) -> Any:
+    """Gọi `chat.completions.create`, tự bỏ tham số mà nhà cung cấp chê.
+
+    `reasoning_effort` là tham số mới và tên của nó CHƯA được xác minh trên
+    tài khoản thật cho dòng 5.6 (tài liệu công bố mức suy luận nhưng không
+    nêu tên tham số của Chat Completions). Một lượt đo hỏng vì sai tên tham
+    số thì mất cả lượt chạy, nên: chê tham số nào thì bỏ đúng tham số đó rồi
+    gọi lại MỘT lần, và nói rõ đã bỏ gì — không nuốt lỗi.
+    """
+    try:
+        return client.chat.completions.create(**kwargs), None
+    except Exception as exc:  # noqa: BLE001
+        thong_bao = str(exc)
+        for ten in ("reasoning_effort", "temperature"):
+            if ten in kwargs and ten in thong_bao:
+                con_lai = {k: v for k, v in kwargs.items() if k != ten}
+                return client.chat.completions.create(**con_lai), f"đã bỏ `{ten}`: {thong_bao[:200]}"
+        raise
 
 
 def doc_dap_ung(response: Any) -> dict:

@@ -4,6 +4,7 @@
 > **VAI TRÒ TÀI LIỆU — KIẾN TRÚC TRẢI NGHIỆM CẤP KHUNG (UX FRAMEWORK & PRINCIPLES)**  
 > Tệp này quy định các nguyên tắc thiết kế trải nghiệm nền tảng, luồng phân vai (Role-based Navigation) và hành vi hệ thống chung.  
 > **Đặc tả chi tiết giao diện 10 màn hình chức năng lõi và tương tác trực quan** được duy trì tại: [`docs/FloraOS-UIUX-10-chuc-nang.md`](file:///Users/tuan/Projects/floraos-core/docs/FloraOS-UIUX-10-chuc-nang.md).
+> **Nguyên tắc bố cục thông tin nền tảng (áp dụng mọi page)** — Macro trước Micro, người dùng tự chọn hướng đi, tiết lộ thông tin theo lớp — nằm ở [`../kien-truc/MACRO_TO_MICRO_STORYTELLING_UX_FRAMEWORK.md`](../kien-truc/MACRO_TO_MICRO_STORYTELLING_UX_FRAMEWORK.md).
 
 ## 1. Bốn quyết định nền
 

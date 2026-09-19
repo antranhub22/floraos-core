@@ -624,8 +624,21 @@ P25a chỉ đọc (D-N5 áp dụng cho toàn bộ P25a, không riêng `/health`)
 | GET | `/platform/health` | `N5` | Đếm job theo trạng thái + danh sách job treo (chỉ đọc — không đánh dấu FAILED, xem `scripts/scan-stuck-jobs.ts`) |
 | GET | `/platform/audit-logs` | `N6` | Nhật ký xuyên tổ chức — hợp `audit_logs` mọi tổ chức và `platform_audit_logs` |
 
-## 22. Chưa có ở bản này
+## 22. Phân hệ Nghiên cứu Thị trường & Xu hướng (Market Intelligence Engine, Đợt A mở rộng)
+
+Đợt A mở rộng theo `FloraOS-Intelligence-Engine_FINAL_v2.0.md` (đặc tả đầy đủ, mục 8–19: Product Intelligence) — xem ghi chú mở rộng D-MI5 tại project claude.ai (`ke-hoach-market-intelligence-dot-a-19-09-2026.md`).
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/market-intelligence/opportunities` | `V2` | Danh sách cơ hội nội dung đã cá nhân hóa cho tổ chức |
+| POST | `/market-intelligence/research-runs` | `V1` | Kích hoạt lượt chạy nghiên cứu xu hướng thị trường — hỗ trợ tham số `channel` (mặc định chuỗi Google Trends → SerpApi; `youtube`/`tiktok` gọi riêng kênh; `omnichannel` gọi song song cả 3 nguồn để đối chiếu chéo, đúng cơ chế "cross-validation" ở mục 10 đặc tả v1.0 gốc). Kênh `facebook` đã bị GỠ 19/09/2026 — Facebook không có API công khai đo được mức thảo luận theo chủ đề, adapter trước đó chỉ suy diễn qua kết quả tìm kiếm Google (không phải số đo Facebook thật), nên đã xoá khỏi hệ thống thay vì tiếp tục trình bày như một kênh nghiên cứu (xem `TECHNICAL_DEBT.md`). Kênh `shopping` (hiển thị trên UI là "Google Shopping") **CHƯA XÂY** — chủ sản phẩm quyết định 19/09/2026 GIỮ lựa chọn này trên UI nhưng chưa có adapter thật; chọn kênh này hiện rơi xuống đúng chuỗi mặc định (Google Trends → SerpApi → Cached), không phải dữ liệu Google Shopping thật (nợ kỹ thuật #116) |
+| GET | `/market-intelligence/research-runs` | `V1` | Lịch sử các lượt chạy nghiên cứu thị trường |
+| GET | `/market-intelligence/health` | `V1` | Sức khỏe và trạng thái các nhà cung cấp dữ liệu xu hướng |
+| POST | `/market-intelligence/product-intelligence` | `V1` | Product Intelligence (v2.0 mục 8–19): phân tích ảnh sản phẩm hoa (Vision AI), đối soát Trend Fit, gợi ý định vị, cải tiến (KEEP/IMPROVE/TEST) và 10 chủ đề nội dung cụ thể. Không ghi bảng riêng ở Đợt A — chạy trực tiếp, không lưu lại `product_analysis_runs` (nợ kỹ thuật, xem `TECHNICAL_DEBT.md`) |
+
+## 23. Chưa có ở bản này
 
 Endpoint mang khoá nhà cung cấp riêng của tổ chức. Quyết định D2 chốt nền tảng giữ khoá và tính credit, nên nhóm endpoint đó không tồn tại. Nếu D2 đổi về sau, nhóm này thêm vào dưới `/organizations/current/providers` mà không đụng tới endpoint nào đang có.
 
 **Đã đánh dấu CHƯA XÂY trong chính các mục trên** (soát 18/09): mục 9 hàng đợi duyệt gộp · mục 16 toàn bộ M11 · bốn đường Integration ở mục 11 · `GET /crm/customers/export`, `/reminder-campaigns`, `/vouchers` ở mục 14 · `POST /orders/:id/delivery` ở mục 15 · `handoff` và `conversations/settings` ở mục 17 · `PATCH /catalog-links/:slug` và `/catalog-links/:slug/qr` ở mục 13 · `GET /ai-evaluations/…` ở mục 18. Gộp lại ở **RS-7** để anh Tony quyết cái nào còn trong kế hoạch, cái nào bỏ.
+

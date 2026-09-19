@@ -25,6 +25,7 @@ Worker Python đọc lược đồ sinh sẵn, không tự khai bảng.
 | `ai_capabilities` · `ai_models` | Sổ đăng ký nền AI cấp nền tảng; `tests/helpers/database.ts` cũng không truncate hai bảng này |
 | `flower_taxonomy` · `flower_confusable_pairs` | Tri thức ngành hoa, không phải dữ liệu của một cửa hàng — xem mục 16 |
 | `platform_operators` · `platform_role_capabilities` · `platform_audit_logs` | Console Vận hành Nền tảng (P25, 19/09) — dữ liệu của người vận hành xuyên tổ chức, không thuộc một tổ chức nào. Từ vựng năng lực `N1`–`N8` TÁCH HẲN khỏi `roles`/`role_capabilities` của tenant (D-N6) — không dùng `capability_scope`, không thêm giá trị `PLATFORM` vào enum đó. Xem `../kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md` mục 4.1 |
+| `market_sources` · `trend_signals` · `trend_timeseries` · `topics` · `topic_signals` · `topic_scores` · `research_runs` · `provider_health` | Dữ liệu nghiên cứu thị trường cấp nền tảng (Market Intelligence Engine, Đợt A) — thu thập xu hướng chung toàn ngành, không thuộc một tổ chức nào; chỉ có `content_opportunities` thuộc tenant |
 
 Một bảng tự nhận ngoại lệ mà không nêu được lý do ở trên là lỗi chặn ở review.
 
@@ -66,6 +67,11 @@ enum integration_client { LOCALBUDD  SOCIALFLOW }
 enum ai_mode           { API  SELF_HOST  DETERMINISTIC }
 enum ai_privacy_level  { PUBLIC  SHOP  SENSITIVE }
 enum ai_measure_state  { CHUA_DO  THU_NGHIEM  SAN_XUAT }
+enum market_source_status  { ACTIVE  DEGRADED  DISABLED }
+enum trend_topic_status    { EMERGING  RISING  STABLE  DECLINING  SEASONAL  BREAKOUT }
+enum research_run_type     { DAILY_DEEP  INTRADAY_PULSE  WEEKLY_DEEP  MANUAL }
+enum research_run_status   { PENDING  RUNNING  PARTIAL_SUCCESS  COMPLETED  FAILED }
+enum provider_health_status { HEALTHY  DEGRADED  UNAVAILABLE }
 ```
 
 `order_status`, `production_status` và `delivery_status` là ba enum riêng, không phải ba giá trị của một enum. Một đơn đã xác nhận, đang cắm, chưa giao là một trạng thái hợp lệ và thường gặp; gộp ba trục lại sẽ cần tích Descartes của chúng và sẽ mất một trục ngay lần đầu ai đó thêm giá trị.
@@ -1327,3 +1333,184 @@ model platform_audit_logs {
 ```
 
 `platform_operators.user_id` là `@unique` — một người chỉ một dòng vận hành; gán thêm năng lực đi qua `platform_role_capabilities`, không tạo dòng `platform_operators` mới. `platform_audit_logs` tách khỏi `audit_logs` (mục 8) vì `audit_logs.organization_id` là `NOT NULL` (D-N3) — hành động không thuộc tổ chức nào không ghi được vào đó. Gán/thu quyền vận hành hiện chạy tay qua `scripts/gan-van-hanh-nen-tang.ts`, không có route. Xem `../kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md` mục 4.1 và đặc tả 06 mục 21.
+
+## 22. Phân hệ Nghiên cứu Thị trường & Xu hướng (Market Intelligence Engine, Đợt A mở rộng)
+
+Tám bảng nghiên cứu dữ liệu thị trường là **GLOBAL** (ngoại lệ Luật 1 nêu ở mục 1), một bảng `content_opportunities` thuộc **TENANT** (`organization_id` bắt buộc).
+
+```prisma
+model market_sources {
+  id              String               @id @default(uuid())
+  provider        String
+  platform        String
+  source_type     String
+  status          market_source_status @default(ACTIVE)
+  last_success_at DateTime?
+  last_error_at   DateTime?
+  created_at      DateTime             @default(now())
+  updated_at      DateTime             @updatedAt
+
+  trend_signals trend_signals[]
+  topic_signals topic_signals[]
+
+  @@unique([provider, platform])
+}
+
+model trend_signals {
+  id           String   @id @default(uuid())
+  source_id    String
+  platform     String
+  country_code String   @default("VN")
+  region_code  String?
+  city         String?
+  industry     String   @default("florist")
+  topic_raw    String
+  metric_name  String
+  metric_value Float
+  growth_rate  Float?
+  confidence   Float    @default(1.0)
+  captured_at  DateTime @default(now())
+  created_at   DateTime @default(now())
+
+  source market_sources @relation(fields: [source_id], references: [id], onDelete: Cascade)
+
+  @@unique([source_id, platform, country_code, topic_raw, captured_at])
+  @@index([source_id])
+  @@index([platform, country_code])
+  @@index([captured_at])
+  @@index([industry])
+}
+
+model trend_timeseries {
+  id           String   @id @default(uuid())
+  topic_id     String
+  platform     String
+  geo_scope    String   @default("VN")
+  date         DateTime
+  value        Float
+  growth_rate  Float?
+  velocity     Float?
+  acceleration Float?
+  confidence   Float    @default(1.0)
+
+  topic topics @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  @@unique([topic_id, platform, geo_scope, date])
+  @@index([topic_id])
+  @@index([date])
+}
+
+model topics {
+  id             String             @id @default(uuid())
+  canonical_name String
+  description    String?
+  language       String             @default("vi")
+  industry       String             @default("florist")
+  status         trend_topic_status @default(EMERGING)
+  first_seen_at  DateTime           @default(now())
+  last_seen_at   DateTime           @default(now())
+
+  timeseries            trend_timeseries[]
+  signals               topic_signals[]
+  scores                topic_scores[]
+  content_opportunities content_opportunities[]
+
+  @@unique([canonical_name, industry])
+  @@index([status])
+  @@index([industry])
+  @@index([last_seen_at])
+}
+
+model topic_signals {
+  id                 String   @id @default(uuid())
+  topic_id           String
+  source_id          String
+  external_reference String?
+  signal_type        String
+  signal_value       Float
+  captured_at        DateTime @default(now())
+
+  topic  topics         @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  source market_sources @relation(fields: [source_id], references: [id], onDelete: Cascade)
+
+  @@index([topic_id])
+  @@index([source_id])
+}
+
+model topic_scores {
+  id                        String   @id @default(uuid())
+  topic_id                  String
+  geo_scope                 String   @default("VN")
+  industry                  String   @default("florist")
+  period                    String   @default("7d")
+  trend_score               Float
+  viral_score               Float
+  commercial_score          Float
+  content_opportunity_score Float
+  confidence                Float    @default(1.0)
+  calculated_at             DateTime @default(now())
+  model_version             String   @default("v1_florist")
+
+  topic topics @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  @@index([topic_id])
+  @@index([period])
+  @@index([content_opportunity_score])
+}
+
+model content_opportunities {
+  id                        String   @id @default(uuid())
+  organization_id           String
+  topic_id                  String
+  audience                  String?
+  opportunity_summary       String
+  content_angles            Json
+  recommended_formats       Json
+  recommended_hooks         Json
+  trend_score               Float
+  viral_score               Float
+  commercial_score          Float
+  content_opportunity_score Float
+  confidence                Float    @default(1.0)
+  expires_at                DateTime?
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  topic        topics        @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, content_opportunity_score])
+  @@index([organization_id])
+  @@index([topic_id])
+}
+
+model research_runs {
+  id                    String              @id @default(uuid())
+  run_type              research_run_type   @default(DAILY_DEEP)
+  status                research_run_status @default(PENDING)
+  started_at            DateTime?
+  completed_at          DateTime?
+  sources_attempted     Int                 @default(0)
+  sources_succeeded     Int                 @default(0)
+  sources_failed        Int                 @default(0)
+  records_collected     Int                 @default(0)
+  topics_created        Int                 @default(0)
+  opportunities_created Int                 @default(0)
+  error_summary         String?
+  created_at            DateTime            @default(now())
+
+  @@index([status, created_at])
+}
+
+model provider_health {
+  id              String                 @id @default(uuid())
+  provider        String                 @unique
+  status          provider_health_status @default(HEALTHY)
+  latency_ms      Int?
+  error_rate      Float?
+  quota_status    String?
+  last_checked_at DateTime               @default(now())
+
+  @@index([status])
+}
+```

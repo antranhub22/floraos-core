@@ -24,6 +24,7 @@ import {
   CircleUserRound,
   FlaskConical,
   LayoutTemplate,
+  TrendingUp,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
@@ -62,6 +63,13 @@ const CORE_ITEMS: NavItem[] = [
   { href: "/tai-anh", label: "Phân tích hoa Vision", icon: Camera },
   { href: "/creative-studio", label: "Creative Studio", icon: Sparkles },
   { href: "/video", label: "Video Studio 9:16", icon: Video },
+  {
+    href: "/market-intelligence",
+    label: "Nghiên cứu Thị trường",
+    icon: TrendingUp,
+    badge: "Mới",
+    badgeColor: "bg-rose-100 text-rose-700",
+  },
   { href: "/catalog", label: "Catalog & Website", icon: Globe },
   { href: "/khach-hang", label: "CRM & Khách hàng", icon: Users },
   { href: "/don-hang", label: "Đơn hàng & SLA", icon: ShoppingBag },

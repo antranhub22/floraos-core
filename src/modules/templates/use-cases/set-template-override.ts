@@ -1,6 +1,5 @@
 import { validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
-import { prisma } from "@/core/tenancy/infra/prisma"
 import { TemplateOverrideRepository } from "@/modules/templates/infra/template-override-repository"
 import {
   validateSetTemplateOverrideInput,
@@ -13,5 +12,5 @@ export async function setTemplateOverride(ctx: TenantContext, input: SetTemplate
   if ("field" in validated) {
     throw validationFailed({ [validated.field]: validated.message })
   }
-  return new TemplateOverrideRepository(prisma).upsert(ctx, validated)
+  return new TemplateOverrideRepository().upsert(ctx, validated)
 }

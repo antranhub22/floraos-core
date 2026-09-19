@@ -159,6 +159,7 @@ model organizations {
   chat_conversations         chat_conversations[]
   chat_messages              chat_messages[]
   chat_channel_integrations  chat_channel_integrations[]
+  content_opportunities      content_opportunities[]
 }
 
 model workspaces {
@@ -1559,3 +1560,229 @@ model platform_audit_logs {
   @@index([created_at])
   @@index([entity_type, entity_id])
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phân hệ Nghiên cứu Thị trường & Xu hướng (Market Intelligence Engine) — Đợt A
+// 8 bảng nghiên cứu dữ liệu thị trường là GLOBAL (ngoại lệ Luật 1 khai báo ở
+// đặc tả 07 mục 1 & 16), 1 bảng content_opportunities thuộc TENANT.
+
+enum market_source_status {
+  ACTIVE
+  DEGRADED
+  DISABLED
+}
+
+enum trend_topic_status {
+  EMERGING
+  RISING
+  STABLE
+  DECLINING
+  SEASONAL
+  BREAKOUT
+}
+
+enum research_run_type {
+  DAILY_DEEP
+  INTRADAY_PULSE
+  WEEKLY_DEEP
+  MANUAL
+}
+
+enum research_run_status {
+  PENDING
+  RUNNING
+  PARTIAL_SUCCESS
+  COMPLETED
+  FAILED
+}
+
+enum provider_health_status {
+  HEALTHY
+  DEGRADED
+  UNAVAILABLE
+}
+
+/// Nguồn thu thập dữ liệu xu hướng thị trường (Google Trends, SerpApi, v.v.)
+model market_sources {
+  id              String               @id @default(uuid())
+  provider        String
+  platform        String
+  source_type     String
+  status          market_source_status @default(ACTIVE)
+  last_success_at DateTime?
+  last_error_at   DateTime?
+  created_at      DateTime             @default(now())
+  updated_at      DateTime             @updatedAt
+
+  trend_signals trend_signals[]
+  topic_signals topic_signals[]
+
+  @@unique([provider, platform])
+}
+
+/// Tín hiệu xu hướng thu thập được từ các nguồn
+model trend_signals {
+  id           String   @id @default(uuid())
+  source_id    String
+  platform     String
+  country_code String   @default("VN")
+  region_code  String?
+  city         String?
+  industry     String   @default("florist")
+  topic_raw    String
+  metric_name  String
+  metric_value Float
+  growth_rate  Float?
+  confidence   Float    @default(1.0)
+  captured_at  DateTime @default(now())
+  created_at   DateTime @default(now())
+
+  source market_sources @relation(fields: [source_id], references: [id], onDelete: Cascade)
+
+  @@unique([source_id, platform, country_code, topic_raw, captured_at])
+  @@index([source_id])
+  @@index([platform, country_code])
+  @@index([captured_at])
+  @@index([industry])
+}
+
+/// Chuỗi thời gian của chủ đề xu hướng
+model trend_timeseries {
+  id           String   @id @default(uuid())
+  topic_id     String
+  platform     String
+  geo_scope    String   @default("VN")
+  date         DateTime
+  value        Float
+  growth_rate  Float?
+  velocity     Float?
+  acceleration Float?
+  confidence   Float    @default(1.0)
+
+  topic topics @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  @@unique([topic_id, platform, geo_scope, date])
+  @@index([topic_id])
+  @@index([date])
+}
+
+/// Chủ đề xu hướng được chuẩn hóa (canonical topics)
+model topics {
+  id             String             @id @default(uuid())
+  canonical_name String
+  description    String?
+  language       String             @default("vi")
+  industry       String             @default("florist")
+  status         trend_topic_status @default(EMERGING)
+  first_seen_at  DateTime           @default(now())
+  last_seen_at   DateTime           @default(now())
+
+  timeseries            trend_timeseries[]
+  signals               topic_signals[]
+  scores                topic_scores[]
+  content_opportunities content_opportunities[]
+
+  @@unique([canonical_name, industry])
+  @@index([status])
+  @@index([industry])
+  @@index([last_seen_at])
+}
+
+/// Nối giữa chủ đề và nguồn tín hiệu gốc
+model topic_signals {
+  id                 String   @id @default(uuid())
+  topic_id           String
+  source_id          String
+  external_reference String?
+  signal_type        String
+  signal_value       Float
+  captured_at        DateTime @default(now())
+
+  topic  topics         @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  source market_sources @relation(fields: [source_id], references: [id], onDelete: Cascade)
+
+  @@index([topic_id])
+  @@index([source_id])
+}
+
+/// Điểm số tổng hợp của chủ đề xu hướng
+model topic_scores {
+  id                        String   @id @default(uuid())
+  topic_id                  String
+  geo_scope                 String   @default("VN")
+  industry                  String   @default("florist")
+  period                    String   @default("7d")
+  trend_score               Float
+  viral_score               Float
+  commercial_score          Float
+  content_opportunity_score Float
+  confidence                Float    @default(1.0)
+  calculated_at             DateTime @default(now())
+  model_version             String   @default("v1_florist")
+
+  topic topics @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  @@index([topic_id])
+  @@index([period])
+  @@index([content_opportunity_score])
+}
+
+/// Gợi ý cơ hội nội dung được cá nhân hóa cho từng tổ chức (TENANT)
+model content_opportunities {
+  id                        String   @id @default(uuid())
+  organization_id           String
+  topic_id                  String
+  audience                  String?
+  opportunity_summary       String
+  content_angles            Json
+  recommended_formats       Json
+  recommended_hooks         Json
+  trend_score               Float
+  viral_score               Float
+  commercial_score          Float
+  content_opportunity_score Float
+  confidence                Float    @default(1.0)
+  expires_at                DateTime?
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  topic        topics        @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, content_opportunity_score])
+  @@index([organization_id])
+  @@index([topic_id])
+}
+
+/// Lượt chạy nghiên cứu thị trường — kiêm hàng đợi job cho worker
+model research_runs {
+  id                    String              @id @default(uuid())
+  run_type              research_run_type   @default(DAILY_DEEP)
+  status                research_run_status @default(PENDING)
+  started_at            DateTime?
+  completed_at          DateTime?
+  sources_attempted     Int                 @default(0)
+  sources_succeeded     Int                 @default(0)
+  sources_failed        Int                 @default(0)
+  records_collected     Int                 @default(0)
+  topics_created        Int                 @default(0)
+  opportunities_created Int                 @default(0)
+  error_summary         String?
+  created_at            DateTime            @default(now())
+
+  @@index([status, created_at])
+}
+
+/// Bảng theo dõi sức khỏe và chất lượng của các nhà cung cấp dữ liệu xu hướng
+model provider_health {
+  id              String                 @id @default(uuid())
+  provider        String                 @unique
+  status          provider_health_status @default(HEALTHY)
+  latency_ms      Int?
+  error_rate      Float?
+  quota_status    String?
+  last_checked_at DateTime               @default(now())
+
+  @@index([status])
+}
+

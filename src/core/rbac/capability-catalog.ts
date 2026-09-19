@@ -35,6 +35,7 @@ export type CapabilityGroup =
   | "order_operations"
   | "crm"
   | "ai_chat"
+  | "market_intelligence"
 
 export interface CapabilityDefinition {
   /** Mã chữ cái — định danh chính, ví dụ `B5`. */
@@ -240,6 +241,10 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   T2: { name: "chat.message.send", group: "ai_chat", label: "Gửi tin nhắn tư vấn và trò chuyện với AI", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   T3: { name: "chat.order.create", group: "ai_chat", label: "Tạo đơn hàng nhanh từ gợi ý trong hội thoại", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   T4: { name: "chat.config.manage", group: "ai_chat", label: "Cài đặt bot tự động và phong cách xưng hô", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  // V — Nghiên cứu thị trường & Xu hướng (Market Intelligence Engine, Đợt A)
+  V1: { name: "market_intel.research.run", group: "market_intelligence", label: "Kích hoạt lượt nghiên cứu thị trường", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  V2: { name: "market_intel.opportunity.read", group: "market_intelligence", label: "Xem gợi ý cơ hội nội dung theo xu hướng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  V3: { name: "market_intel.config.manage", group: "market_intelligence", label: "Quản lý cấu hình nguồn và trọng số xu hướng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
 }
 
 const ALL: Record<string, Omit<CapabilityDefinition, "code">> = { ...HARVESTED, ...CORE_NEW }

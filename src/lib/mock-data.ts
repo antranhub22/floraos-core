@@ -1,10 +1,11 @@
-import { LucideIcon, ScanSearch, Sparkles, Video, FileText, Rss, LayoutGrid, Users, Package, MessageSquare, BarChart3, Zap } from "lucide-react"
+import { LucideIcon, ScanSearch, Sparkles, Video, FileText, Rss, LayoutGrid, Users, Package, MessageSquare, BarChart3, Zap, TrendingUp } from "lucide-react"
 
 export type WorkspaceKind = "EXPERIENCE" | "PRODUCTION"
 export type FeatureId =
   | "phân-tích-sản-phẩm"
   | "creative-studio"
   | "video-studio"
+  | "market-intelligence"
   | "content-engine"
   | "social-publishing"
   | "catalog-website"
@@ -39,6 +40,7 @@ export const FEATURE_ICONS: Record<FeatureId, LucideIcon> = {
   "phân-tích-sản-phẩm": ScanSearch,
   "creative-studio": Sparkles,
   "video-studio": Video,
+  "market-intelligence": TrendingUp,
   "content-engine": FileText,
   "social-publishing": Rss,
   "catalog-website": LayoutGrid,
@@ -82,6 +84,15 @@ export const FEATURES: FeatureItem[] = [
     iconName: "video-studio",
     status: "hoat_dong",
     route: "/video",
+    waiting: false,
+  },
+  {
+    id: "market-intelligence",
+    name: "Nghiên cứu Thị trường & Xu hướng",
+    desc: "Google Trends · SerpApi · Điểm số viral & gợi ý cơ hội nội dung",
+    iconName: "market-intelligence",
+    status: "hoat_dong",
+    route: "/market-intelligence",
     waiting: false,
   },
   {

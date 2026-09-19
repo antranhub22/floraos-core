@@ -41,8 +41,11 @@ from vision.providers.chung import (
     MucDung,
     doc_dap_ung,
     doc_muc_dung,
+    goi_co_du_phong,
+    la_mo_hinh_suy_luan,
     nap_json,
     nap_text,
+    tham_so_goi,
     thu_nho_anh,
 )
 
@@ -194,11 +197,29 @@ class OpenAIStructuredProvider:
 
     name = "openai_structured"
 
-    def __init__(self, client: OpenAI | None = None, model: str | None = None) -> None:
+    def __init__(
+        self,
+        client: OpenAI | None = None,
+        model: str | None = None,
+        muc_suy_luan: str | None = None,
+        muc_suy_luan_luot_hai: str | None = None,
+    ) -> None:
         contract = _contract_singleton()
         self._client = client or OpenAI(timeout=TIMEOUT_GOI_GIAY, max_retries=SO_LAN_THU_LAI)
         self._model = model or contract.tham_so("model", "gpt-4o")
         self._canh_dai_px = int(contract.tham_so("anh_canh_dai_px", CANH_DAI_MAC_DINH_PX))
+        # Với mô hình suy luận, lượt hai KHÔNG còn là "lắc nhiệt độ rồi lấy
+        # trung vị" — nhiệt độ không tồn tại ở đó. Lượt hai trở thành lượt
+        # NGHĨ KỸ HƠN: cùng ảnh, cùng lời nhắc, nâng mức suy luận. Trung vị
+        # giữa hai lượt vẫn giữ nguyên vì nó không phụ thuộc cách sinh ra
+        # lượt hai.
+        self._muc_suy_luan = muc_suy_luan or contract.tham_so("muc_suy_luan", None)
+        self._muc_suy_luan_luot_hai = (
+            muc_suy_luan_luot_hai or contract.tham_so("muc_suy_luan_luot_hai", None)
+        )
+        # Ghi lại việc nhà cung cấp chê tham số nào, để lượt đo không âm thầm
+        # đo một thứ khác thứ mình tưởng đang đo.
+        self.canh_bao_tham_so: list[str] = []
 
     @property
     def model_version(self) -> str:
@@ -226,11 +247,17 @@ class OpenAIStructuredProvider:
         # phải mọi ảnh provider từng chạy — một instance dùng cho cả lô.
         self.muc_dung_lan_cuoi = MucDung()
 
-        round_one = self._call(contract, palette_block, extra_blocks, image_b64, mime, temperature=0)
+        self.canh_bao_tham_so = []
+        round_one = self._call(
+            contract, palette_block, extra_blocks, image_b64, mime,
+            temperature=0, muc_suy_luan=self._muc_suy_luan,
+        )
         result = round_one
         if _needs_second_round(round_one):
             round_two = self._call(
-                contract, palette_block, extra_blocks, image_b64, mime, temperature=0.2
+                contract, palette_block, extra_blocks, image_b64, mime,
+                temperature=0.2,
+                muc_suy_luan=self._muc_suy_luan_luot_hai or self._muc_suy_luan,
             )
             _reconcile_quantity(result, round_two)
 
@@ -248,10 +275,12 @@ class OpenAIStructuredProvider:
         image_b64: str,
         mime: str,
         temperature: float,
+        muc_suy_luan: str | None = None,
     ) -> dict:
-        response = self._client.chat.completions.create(
+        response, canh_bao = goi_co_du_phong(
+            self._client,
             model=self._model,
-            temperature=temperature,
+            **tham_so_goi(self._model, temperature, muc_suy_luan),
             response_format={"type": "json_schema", "json_schema": contract.schema},
             messages=[
                 {"role": "system", "content": contract.prompt},
@@ -267,6 +296,8 @@ class OpenAIStructuredProvider:
                 },
             ],
         )
+        if canh_bao:
+            self.canh_bao_tham_so.append(canh_bao)
         # Cộng dồn TRƯỚC khi đọc thân: một đáp ứng bị cắt vì chạm trần token
         # vẫn bị nhà cung cấp tính tiền, nên nó phải vào sổ chi phí dù
         # `doc_dap_ung` sắp ném lỗi ngay dưới đây.

@@ -19,6 +19,7 @@ import {
   Package,
   MessageCircle,
   BarChart3,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
@@ -34,6 +35,7 @@ const FEATURE_ICONS: Record<FeatureIdType, LucideIcon> = {
   "phân-tích-sản-phẩm": ScanSearch,
   "creative-studio": Sparkles,
   "video-studio": Video,
+  "market-intelligence": TrendingUp,
   "content-engine": FileText,
   "social-publishing": Rss,
   "catalog-website": LayoutGrid,
@@ -201,8 +203,9 @@ export function ExperienceGrid() {
             return (
               <div
                 key={mod.id}
+                onClick={() => openFeature(mod)}
                 className={cn(
-                  "flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5 transition-shadow hover:shadow-md",
+                  "flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5 transition-shadow hover:shadow-md cursor-pointer",
                   disabled && "opacity-45 cursor-not-allowed"
                 )}
               >
@@ -226,7 +229,10 @@ export function ExperienceGrid() {
                   <button
                     type="button"
                     disabled={disabled || !route}
-                    onClick={() => openFeature(mod)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openFeature(mod)
+                    }}
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-primary disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronRight size={17} strokeWidth={2.4} color="#fff" />

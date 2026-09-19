@@ -96,7 +96,7 @@ describe("cách ly tenant — nền AI (AI-1)", () => {
     expect(tongHop.data[0]?.escalation_rate).toBe(0)
   })
 
-  it("sổ đăng ký năng lực dùng chung: hai tổ chức đọc ra cùng 34 năng lực", async () => {
+  it("sổ đăng ký năng lực dùng chung: hai tổ chức đọc ra cùng 36 năng lực", async () => {
     const cuaA = (await readJson(
       await getAiCapabilities(withSession(`${BASE}/ai-capabilities`, a.token))
     )) as { capabilities: unknown[] }
@@ -104,8 +104,8 @@ describe("cách ly tenant — nền AI (AI-1)", () => {
       await getAiCapabilities(withSession(`${BASE}/ai-capabilities`, b.token))
     )) as { capabilities: unknown[] }
 
-    expect(cuaA.capabilities).toHaveLength(34)
-    expect(cuaB.capabilities).toHaveLength(34)
+    expect(cuaA.capabilities).toHaveLength(36)
+    expect(cuaB.capabilities).toHaveLength(36)
   })
 
   it("hạ sàn quyền riêng tư dưới sàn của chính năng lực bị từ chối", async () => {
