@@ -25,7 +25,7 @@ Luật 2 là luật dễ vi phạm nhất và cũng là luật đáng giá nhấ
 
 **Thứ tự lên mức không đảo được:** API → thu dữ liệu → đo → hiểu ca sai → trọng số mở → thu thêm dữ liệu → lai → chỉ khi đó mới tính tới tinh chỉnh mô hình. Tinh chỉnh trước khi biết mô hình sai ở đâu là trả tiền để khoá lại một cái sai chưa ai mô tả được.
 
-Bộ máy `local_cv` của M01 là mức 2 đã có thật — nó không phải mục tiêu tương lai. Nhưng nó vào mặc định bằng một quyết định ghi đè có chủ đích (D5-e), không bằng phép đo, và điều đó còn là nợ mở.
+Bộ máy `local_cv` của M01 là mức 2 đã có thật — nó không phải mục tiêu tương lai. Nó **từng** là mặc định qua quyết định ghi đè D5-e, rồi mặc định lật sang `openai_direct` (09/12) và **hiện là `openai_structured`** (nợ #83, chốt 09/17 — `workers/vision/providers/registry.py:27`, `src/modules/products/domain/vision-engine.ts:38`). Cổng D5-d chỉ bắt buộc đo trên bộ ảnh vàng khi đổi làm HẠ mặc định (RS-6, 18/09) — D5-e (Đầy đủ→Cục bộ) là lần HẠ duy nhất trong ba lần, và nó bằng lập luận chứ không bằng phép đo, nên đó vẫn là nợ mở thật. Hai lần sau (→`openai_direct`, →`openai_structured`) là NÂNG mặc định nên không bắt buộc qua cổng đo — không phải vi phạm.
 
 ## 3. Bản đồ tầng
 

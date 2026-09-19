@@ -37,7 +37,7 @@
 ### 0.4 Dashboard Proxy (P15+ — ĐÃ XONG 09/12)
 - [x] `/api/v1/proxy/[...path]` with whitelist (`src/modules/proxy/`)
 - [x] Forward `X-FloraOS-SSO` + `Authorization: Bearer`
-- [x] Creative Studio calling SocialFlow M04b (AIC-11)
+- [x] Proxy `/api/v1/proxy/api/m04b/*` sang SocialFlow (AIC-11) — dựng ở P15, còn sống nhưng KHÔNG còn UI nào gọi tới (nợ #80: chưa rà theo chuẩn P24; widget dashboard gọi trực tiếp đường này đã gỡ 17/09, xem nợ #76)
 
 ---
 
@@ -107,22 +107,22 @@
 - [x] Capabilities: AIC-04 (product_copy) wrapping AIC-07/08/09/10
 - [x] Output: `product_copies` (raw/edited), needs `H5`/`H6` approval
 
-### 3.3 M04a Media Optimization Worker (P13 — ĐÃ XONG 09/12)
+### 3.3 M04a Media Optimization Worker (P13 — ĐÃ XONG 09/12; AIC-15 mở mới 18/09, chưa viết mã)
 - [x] `workers/media_ai/jobs/worker.py` (370 lines) — `media.optimize` handler
 - [x] Real-ESRGAN enhancement + Identity Guard + Smart Reframe 4 ratios (1:1, 4:5, 9:16, 16:9)
 - [x] Output: 1 MASTER (`PENDING`) + 4 RATIO (`APPROVED`) assets
 - [x] Job stages: `ANALYZING` → `ENHANCING` → `SMART_REFRAME` → `VERIFYING` → `GENERATING_OUTPUTS`
 - [ ] Unit tests: `workers/tests/media_ai/` — existed, need verify current state
+- [ ] AIC-15 `image_retouch_generative` (AI sửa chi tiết trên bó hoa — vết bẩn, nếp giấy gói) — chốt 18/09 (AskUserQuestion): thuộc M04a, không thuộc M04b, đi qua Identity Guard đã có thay vì dựng cổng đo mới. Chưa có mã; kế hoạch kỹ thuật ở tài liệu "Kế hoạch mở rộng M04b" mục 4 (tên mục giữ nguyên dù phạm vi đã chuyển sang M04a)
 
-### 3.4 M04b Creative Worker (P16 — ĐỢT 1 XONG, ĐỢT 2 TIẾP)
-- [ ] `SocialFlow/backend/m04b/` — FastAPI handlers
-- [ ] ✅ AIC-11 `background_removal` (rembg + PIL fallback)
-- [ ] 🔄 AIC-12 `background_generation` (studio/room/hotel/wedding backgrounds)
-- [ ] 🔄 AIC-13 `image_expansion` (generative fill outpainting)
-- [ ] 🔄 AIC-14 `image_retouch_deterministic` (brightness/contrast/color)
-- [ ] 🔄 AIC-15 `image_retouch_generative` (AI retouch)
-- [ ] 🔄 AIC-16 `watermark` (org logo config)
-- [ ] 🔄 AIC-17 `creative_variants` (channel variants: FB/IG/TikTok/Story)
+### 3.4 M04b Creative Worker (P16 — nợ #80 đổi hạ tầng, nợ #78/#104/#105 mở rộng khung ảnh)
+- [x] `workers/media_ai/jobs/variant_worker.py` — `media.variants` job handler, qua `POST /api/v1/media/variants` (`request-variants.ts`, `I4`); thay hoàn toàn `SocialFlow/backend/m04b/` đã bỏ ở nợ #80
+- [x] AIC-11 `background_removal` — `RembgSegmenter` (model `bria-rmbg`), lùi PIL khi rembg lỗi
+- [x] AIC-12 `background_generation` — `StudioBackdropEngine`: phối cảnh studio/room/hotel/wedding bằng PIL/numpy thủ tục (gradient, đổ bóng, light wrap); khác tech "Diffusion mở" ghi ở `10-ai-orchestration.md`, chức năng đầu ra tương đương
+- [ ] AIC-13 `image_expansion` — bốn hiện thực `ImageExpander` dựng xong (`PadExpander`, `ReplicateOutpainter`, `IOPaintExpander`, `FalAIOutpainter`, nợ #78/#104/#105), chưa route/use-case nào truyền `expand_provider`; `request-variants.ts` không có trường này nên mọi job luôn chạy `PadExpander` (mặc định an toàn, nợ #80) — chưa tới người dùng cuối
+- [x] AIC-14 `image_retouch_deterministic` (brightness/contrast/color) — XÂY XONG 18/09: `tu_dong_can_bang_sang()` (`media_ai/image/auto_retouch.py`) + `_ap_dung_auto_enhance()` (`variant_worker.py`), chỉ chỉnh vùng nền đã ghép, dán lại nguyên khối chủ thể gốc đè lên (cùng nguyên tắc `_dan_lai_chu_the` của AIC-13) — không chạm pixel bó hoa, tương thích thẳng cổng Subject Integrity hiện có. Bật qua `auto_enhance: boolean` (mặc định `false`) ở `POST /media/variants`/`POST /media/variants/batch`. 6 ca thử mới xanh (nợ #106)
+- [x] AIC-16 `watermark` — `dong_dau()`, tra logo thật theo tổ chức
+- [x] AIC-17 `creative_variants` — MỞ RỘNG LÊN CHẠY LÔ 18/09, ĐÃ XÁC MINH TRÊN DATABASE DEV THẬT: `POST /media/variants/batch` (mới) + `requestVariantBatch()` chạy đủ ma trận 24 tổ hợp (6 preset × 4 ratio, `ALL_VARIANT_COMBINATIONS`) qua `job_group_id` gom màn tiến độ, mỗi job vẫn 1 credit riêng (nợ #108). Migration `generation_jobs.job_group_id` đã chạy thật trên máy anh Tony, `prisma generate` đã xong — cột có thật trong DB và trong Prisma Client. Worker thêm cache tách chủ thể theo đĩa (`_doan_chu_the`) để 24 job cùng Master Image không tách lại 24 lần
 - [ ] Register results via `POST /integration/assets`
 
 ### 3.5 M04c Video Worker (P17 — HOÀN TẤT 09/16)

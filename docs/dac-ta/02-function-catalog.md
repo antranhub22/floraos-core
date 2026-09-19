@@ -140,10 +140,9 @@ Các nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 
 | Dải | Trạng thái |
 |---|---|
-| `F1`–`F9` · `G1`–`G9` · `H1`–`H4` · `I1`–`I3` · `J1`–`J6` · `K1`–`K2` · `L1`–`L6` · `U1`–`U4` | Đã có trong mã |
+| `F1`–`F9` · `G1`–`G9` · `H1`–`H4` · `I1`–`I5` · `J1`–`J6` · `K1`–`K2` · `L1`–`L6` · `U1`–`U4` | Đã có trong mã |
 | `H5` · `H6` | Vào ở P14 (M01b) |
-| `I4` | Vào ở P16 (M04b) |
-| `P1`–`P5` | Vào ở P16 và P17 |
+| `P1`–`P5` | Vào ở P17 (M04c) — `P16` (M04b) dùng `I4`/`I5` thay vì dải `P`, xem mục "Tối ưu ảnh và biến thể marketing" dưới đây |
 | `O1`–`O7` | Vào ở P18 (M07) |
 | `J7` | Vào ở P19 (M06) |
 | `S1`–`S4` | Vào ở P20 (M11) |
@@ -190,14 +189,17 @@ Các nhóm dưới đây không tồn tại ở FloraOS v1. Chúng nhận nhóm 
 | `H5` | `product.copy.generate` | Sinh tên, mô tả, thẻ, dịp và phân khúc giá từ một lượt phân tích đã duyệt | Điều hành · Điều phối · Sale | — |
 | `H6` | `product.copy.approve` | Ghi phần dữ liệu bán hàng đã sinh vào Product Master | Điều hành | Điều hành |
 
-### Tối ưu ảnh — nhóm I
+### Tối ưu ảnh và biến thể marketing — nhóm I
 
 | Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
 |---|---|---|---|---|
-| `I1` | `media.optimize` | Chạy job tối ưu ảnh | Điều hành · Điều phối · Sale | — |
-| `I2` | `media.approve` | Nâng Master Image thành ảnh chính thức của sản phẩm | Điều hành | Điều hành |
-| `I3` | `media.download` | Tải ảnh đã tối ưu về máy | Điều hành · Điều phối · Sale | — |
-| `I4` | `media.preset.manage` | Đặt thư viện nền và khuôn bố cục dùng cho cả tổ chức | Điều hành | Điều hành |
+| `I1` | `media.optimize` | Chạy job tối ưu ảnh (M04a) | Điều hành · Điều phối · Sale | — |
+| `I2` | `media.approve` | Nâng Master Image thành ảnh chính thức của sản phẩm (M04a) | Điều hành | Điều hành |
+| `I3` | `media.download` | Tải ảnh đã tối ưu về máy (M04a và M04b) | Điều hành · Điều phối · Sale | — |
+| `I4` | `media.variant.run` | Dựng biến thể marketing từ Master Image đã duyệt (M04b, P16/P24) | Điều hành · Điều phối · Sale | — |
+| `I5` | `media.variant.approve` | Duyệt một biến thể marketing thành ảnh dùng được (M04b, P16/P24) | Điều hành | Điều hành |
+
+`I4`/`I5` là cặp chạy/duyệt tách rời của M04b (`SPLIT_CAPABILITY_PAIRS` ở `capability-catalog.ts`), không phải mã của M04a dù cùng nhóm chữ `I`. Trước P24, `I4` từng dự định là `media.preset.manage` (đặt thư viện nền cấp tổ chức — nợ #77) khi M04b còn gắn `SocialFlow`; khi M04b chuyển hẳn vào `floraos-core`, mã `I4` đã dùng cho cặp chạy/duyệt biến thể thay vì năng lực đó. `media.preset.manage` khi được xây (nợ #77) cần một mã mới, không phải `I4`.
 
 ### Kênh bán — nhóm J
 
@@ -358,6 +360,6 @@ Bảng ở mục 4 đối chiếu với `floraos-core/src/core/rbac/capability-c
 
 Giá trị tại 09/12: **119 mã, 34 mã có trần cứng** — sau khi `U1`–`U4` vào ở đợt AI-1. Các mốc trước: 113 ngay sau P2, 114 / 31 sau `F9` ở P7, 115 / 32 sau `H4` theo D5-d. Con số nào cũng đúng tại mốc của nó; `capability-catalog.test.ts` là chỗ duy nhất khẳng định con số hiện hành.
 
-Bốn mươi bốn mã của `H5`, `H6`, `I4`, `J7`, các dải `O`, `P`, `Q`, `R`, `S`, `T` và dải `U` vào danh mục theo đúng pha của module chúng gác, không vào trước. Danh mục đích khi cả Tuyến B và Tuyến C xong: **159 mã, 48 trần cứng**. Mỗi lần thêm, đối chiếu lại bằng `capability-catalog.test.ts` chứ không cộng tay.
+Bốn mươi ba mã của `H5`, `H6`, `J7`, các dải `O`, `P`, `Q`, `R`, `S`, `T` và dải `U` vào danh mục theo đúng pha của module chúng gác, không vào trước. (`I4`/`I5` đã vào ở P16/P24 cùng M04b, không còn trong danh sách chờ này.) Danh mục đích khi cả Tuyến B và Tuyến C xong: **159 mã, 48 trần cứng**. Mỗi lần thêm, đối chiếu lại bằng `capability-catalog.test.ts` chứ không cộng tay.
 
 Khi bảng năng lực trong mã đổi, sinh lại bảng này chứ không sửa tay.

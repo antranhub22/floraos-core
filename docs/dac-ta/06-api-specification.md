@@ -103,8 +103,8 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 | GET | `/products` | `L1` | Lọc theo `branch_id`, `status`, `category` |
 | POST | `/products` | `L2` | |
 | GET · PATCH | `/products/:id` | `L1` · `L3` | |
-| GET | `/products/:id/images` | `G1` | |
-| PUT | `/products/:id/images` | `G2` | Đặt lại thứ tự và vai trò ảnh |
+| GET | `/products/:id/images` | **CHƯA XÂY** `G1` | |
+| PUT | `/products/:id/images` | **CHƯA XÂY** `G2` | Đặt lại thứ tự và vai trò ảnh |
 | GET · PUT | `/pricing-rules` | `L5` · `L6` | Theo tổ chức, có thể theo chi nhánh |
 | POST | `/assets/upload-url` | `G2` | Trả URL ký sẵn; client tải thẳng lên kho |
 | POST | `/assets` | `G2` | Ghi nhận asset sau khi tải xong |
@@ -234,14 +234,28 @@ PUT /api/v1/vision/engine
 
 Tải ảnh về (`/download`) **không** phải là phê duyệt. Hai việc khác nhau, hai năng lực khác nhau.
 
+### M04b — biến thể marketing
+
+| Method | Path | Năng lực |
+|---|---|---|
+| POST | `/media/variants` | `I4` |
+| GET | `/media/variants` | `I5` |
+| GET | `/media/variants/:id` | `I4` |
+| POST | `/media/variants/:id/approve` | `I5` |
+| GET | `/media/variants/:id/download` | `I3` |
+
+`I4`/`I5` là cặp chạy/duyệt tách rời của M04b (`media.variant.run`/`media.variant.approve`), dựng ở P16/P24 khi M04b chuyển hẳn vào `floraos-core` thay vì `SocialFlow` — xem `docs/dac-ta/02-function-catalog.md` mục 4 và `src/core/rbac/capability-catalog.ts`. Biến thể chỉ dựng được từ Master Image đã qua `I2`; cổng Subject Integrity đo trên bản dựng và chặn ghi `assets` khi lệch quá ngưỡng, cùng luật với `I2`/Identity Guard ở M04a.
+
 ## 9. Hàng đợi duyệt
+
+> **CHƯA XÂY (soát 18/09).** Cả hai endpoint dưới đây đều chưa tồn tại trong mã. Việc duyệt hiện làm rời rạc qua từng endpoint `/…/:id/approve` của mỗi module. Xem **RS-7**.
 
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
-| GET | `/approvals` | `H3` · `H6` · `I2` · `P2` · `P4` · `O3` | Mọi thứ đang chờ duyệt, gộp từ nhiều module |
-| POST | `/approvals/batch` | như trên | Duyệt hàng loạt, tối đa 50 mục |
+| GET | `/approvals` | **CHƯA XÂY** | Mọi thứ đang chờ duyệt, gộp từ nhiều module. Năng lực dự tính: `H3` · `H6` · `I2` · `I5` · `P4` · `O3` |
+| POST | `/approvals/batch` | **CHƯA XÂY** | Duyệt hàng loạt, tối đa 50 mục |
 
-Sáu loại đi qua hàng đợi này, mỗi loại một năng lực: kết quả phân tích (`H3`), dữ liệu bán hàng của sản phẩm (`H6`), Master Image (`I2`), biến thể marketing (`P2`), video (`P4`), nội dung đăng bài (`O3`). Hai loại cuối phát sinh ở engine ngoài và đi vào hàng đợi này qua đường đăng ký asset và số liệu ở mục 11 — cổng duyệt nằm ở core, không nằm ở engine.
+Sáu loại đi qua hàng đợi này, mỗi loại một năng lực: kết quả phân tích (`H3`), dữ liệu bán hàng của sản phẩm (`H6`), Master Image (`I2`), biến thể marketing (`I5`, M04b — dựng trong `floraos-core` từ P24, không còn `P2` như dự tính ban đầu khi module này còn gắn `SocialFlow`), video (`P4`), nội dung đăng bài (`O3`). Hai loại cuối phát sinh ở engine ngoài và đi vào hàng đợi này qua đường đăng ký asset và số liệu ở mục 11 — cổng duyệt nằm ở core, không nằm ở engine.
 
 `POST /approvals/batch` từ chối mọi mục là video và mọi mục có `result = WARNING`; hai loại đó chỉ duyệt được từng cái sau khi mở ra xem.
 
@@ -259,7 +273,9 @@ Trả về chỉ những mục người gọi có năng lực duyệt. Nếu cô
 
 ## 11. Integration API — máy gọi máy
 
-Dành cho `LocalBudd` (M05, M06) và `SocialFlow` (M04b, M07).
+Dành cho `LocalBudd` (M05, M06) và `SocialFlow` (M07). *(M04b đã chuyển về core ở P24, không còn là engine ngoài.)*
+
+**Tám đường đang chạy thật** — đã xác minh 18/09 là có mặt ở cả hai phía: `LocalBudd/src/core/ports/FloraOsCoreClient.ts` gọi `products`, `products/:id/master-image`, `business-profile`, `brand-profile`, `capabilities/check`, `jobs`; `SocialFlow/backend/floraos_core.py` gọi `brand-profile`, `usage`. Bốn đường đánh dấu **CHƯA XÂY** dưới đây chỉ tồn tại trong đặc tả này.
 
 ```
 Authorization: Bearer <token cấp theo tổ chức>
@@ -274,12 +290,12 @@ Authorization: Bearer <token cấp theo tổ chức>
 | POST | `/integration/jobs` | Tạo job thay mặt tổ chức |
 | POST | `/integration/usage` | Ghi mức dùng phát sinh ở engine ngoài |
 | POST | `/integration/capabilities/check` | Hỏi một người có năng lực gì |
-| GET | `/integration/learning-profile` | Hồ sơ phong cách của tổ chức, để engine soạn nội dung đọc |
-| POST | `/integration/assets/upload-url` | URL ký sẵn để engine ngoài tải byte lên; core sinh `storage_key` |
+| GET | `/integration/learning-profile` | **CHƯA XÂY** — hồ sơ phong cách của tổ chức, để engine soạn nội dung đọc |
+| POST | `/integration/assets/upload-url` | **CHƯA XÂY** — URL ký sẵn để engine ngoài tải byte lên; core sinh `storage_key`. Xem **RS-4** |
 | POST | `/integration/assets` | Đăng ký một asset dẫn xuất đã hoàn tất |
 | POST | `/integration/content-metrics` | Ghi số liệu hiệu quả của một nội dung đã đăng |
-| GET | `/integration/ai-policy` | Chính sách AI của tổ chức: năng lực được phép, mô hình đủ điều kiện, ngưỡng, sàn quyền riêng tư |
-| POST | `/integration/ai-requests` | Ghi số đo mỗi lời gọi mô hình: mô hình, chi phí, độ trễ, điểm chất lượng |
+| GET | `/integration/ai-policy` | **CHƯA XÂY** — chính sách AI của tổ chức: năng lực được phép, mô hình đủ điều kiện, ngưỡng, sàn quyền riêng tư |
+| POST | `/integration/ai-requests` | **CHƯA XÂY** — ghi số đo mỗi lời gọi mô hình: mô hình, chi phí, độ trễ, điểm chất lượng |
 
 **Ba đường ghi, không nhiều hơn.** `POST /integration/assets` nhận creative và video đã hoàn tất, bắt buộc `parent_asset_id` trỏ tới một asset `APPROVED` của cùng tổ chức — thiếu hoặc trỏ sai trả 422, vì một dẫn xuất không truy được về Master Image đã duyệt là một dẫn xuất không ai biết nó vẽ đúng sản phẩm nào. Asset đăng ký vào với `approval_state = PENDING` và đi vào hàng chờ duyệt ở mục 9; engine ngoài không đặt được trạng thái duyệt.
 
@@ -295,8 +311,8 @@ POST /api/v1/integration/assets
   "parent_asset_id": "…",            // bắt buộc, phải là asset APPROVED cùng tổ chức
   "product_id": "…",
   "kind": "MARKETING",               // MARKETING · VIDEO · CATALOG · LANDING · SOCIAL
-  "storage_key": null,               // core tự sinh; giá trị client gửi bị bỏ qua
-  "upload_token": "…",               // lấy từ POST /integration/assets/upload-url
+  "storage_key": null,               // ⚠ ĐẶC TẢ ≠ MÃ — xem RS-4
+  "upload_token": "…",               // ⚠ ĐẶC TẢ ≠ MÃ — xem RS-4
   "mime_type": "image/png",
   "aspect_ratio": "4x5",
   "sha256": "…",
@@ -380,17 +396,21 @@ Engine ngoài cache theo `cache_ttl_seconds`. Hết hạn mà không gọi đư�
 
 ## 12. Dữ liệu bán hàng của sản phẩm — M01b
 
-| Method | Path | Năng lực |
-|---|---|---|
-| POST | `/vision/copies` | `H5` |
-| GET | `/vision/copies` | `H6` |
-| GET | `/vision/copies/:id` | `H5` |
-| PATCH | `/vision/copies/:id` | `H2` |
-| POST | `/vision/copies/:id/approve` | `H6` |
-| POST | `/vision/copies/:id/reject` | `H6` |
+> **Đổi tên 18/09.** Nhóm này từng được đặc tả dưới `/vision/copies`; route thật là **`/product-copies`** kể từ P14. Bảng dưới đã sửa theo mã.
+
+| Method | Path | Năng lực | Gác ở đâu |
+|---|---|---|---|
+| POST | `/product-copies/generate` | `H5` | route |
+| GET | `/product-copies` | **chưa gác** — xem **RS-8** | — |
+| GET | `/product-copies/:id` | `H5` | route |
+| PATCH | `/product-copies/:id` | `H5` | route |
+| POST | `/product-copies/:id/approve` | `H6` | route |
+| POST | `/product-copies/:id/reject` | `H6` | route |
+
+Nhóm này kiểm quyền bằng `ctx.capabilities.has("…")` viết tay thay vì `requireCapability(ctx, "…")` như phần còn lại của hệ thống. Hai lối viết cho cùng một phép kiểm — xem **RS-9**.
 
 ```http
-POST /api/v1/vision/copies
+POST /api/v1/product-copies/generate
 Idempotency-Key: 91c4…
 
 { "analysis_id": "…", "kenh": ["catalog", "facebook", "zalo"] }
@@ -402,33 +422,50 @@ Cùng khuôn với M01: `raw` giữ bản máy sinh, `PATCH` ghi vào `edited`, 
 
 ## 13. Catalog và liên kết QR — M06
 
+> **Đổi định danh 18/09.** Đặc tả cũ dùng `:id`; route thật định danh bằng **`:slug`**. Năng lực thật là `J1`/`J2`, không phải `J7` (`J7` chưa vào danh mục). Bảng dưới đã sửa theo mã.
+>
+> **RS-3 (18/09): Core chốt làm chủ DUY NHẤT bảng `catalog_links`.** `LocalBudd` đã bỏ bảng riêng của nó cùng ngày, chuyển sang gọi các endpoint `/integration/catalog-links*` dưới đây (`src/core/ports/FloraOsCoreClient.ts`). Nhân lúc sửa, phát hiện `PATCH` (đổi tên/mô tả/bộ lọc) trước đó nằm NHẦM ở tệp route của `/catalog-links/:slug/revoke` nên thực ra chạy tại `PATCH /catalog-links/:slug/revoke`, không phải `PATCH /catalog-links/:slug` như tài liệu cũ ngỡ — không ai từng gọi tới; đã dời về đúng chỗ.
+
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
-| GET · POST | `/catalog-links` | `J1` · `J7` | |
-| GET | `/catalog-links/:id` | `J1` | |
-| PATCH | `/catalog-links/:id` | `J7` | Đổi bộ sưu tập, đổi nhãn |
-| POST | `/catalog-links/:id/revoke` | `J7` | Thu hồi; không xoá bản ghi |
-| GET | `/catalog-links/:id/qr` | `J7` | Ảnh PNG mã QR để in |
+| GET · POST | `/catalog-links` | `J1` | Route phiên (cookie), dùng bởi giao diện core |
+| GET | `/catalog-links/:slug` | **chưa gác** — có chủ đích, xem **RS-8** | Công khai, khách quét QR không đăng nhập |
+| PATCH | `/catalog-links/:slug` | `J1` | Trước 18/09 nằm nhầm ở đường dẫn `/revoke` (xem trên) |
+| POST | `/catalog-links/:slug/revoke` | `J2` | Thu hồi; không xoá bản ghi |
+| GET · POST | `/integration/catalog-links` | `J1` (nhánh SSO) | Mới 18/09 (RS-3) — `LocalBudd` gọi thay mặt người dùng đang đăng nhập |
+| PATCH | `/integration/catalog-links/:slug` | `J1` (nhánh SSO) | Mới 18/09 (RS-3) |
+| POST | `/integration/catalog-links/:slug/revoke` | `J2` (nhánh SSO) | Mới 18/09 (RS-3) |
+| GET | `/public/catalog/:slug` | — *(công khai)* | Storefront khách xem; ảnh ký HMAC |
+
+**Chưa có:** `GET /catalog-links/:slug/qr` (ảnh PNG mã QR để in) ở core — `LocalBudd` tự sinh QR phía route của nó (`qrcode`, trỏ về `/c/:slug` của chính nó), core cũng có `src/core/media/qr-engine.ts` sinh QR phía giao diện, không qua endpoint. Xem **RS-7**.
 
 Liên kết thu hồi được nhưng không xoá được: một mã QR đã dán ngoài cửa hàng vẫn sẽ bị quét sau khi thu hồi, và bản ghi là chỗ duy nhất trả lời được lượt quét đó trỏ về đâu. Liên kết đã thu hồi trả trang "bộ sưu tập này đã đóng", không trả lỗi kỹ thuật.
 
-Trang catalog thuộc `LocalBudd`; core giữ liên kết vì nhiều module đọc nó.
+**Còn lại sau RS-3, CHƯA quyết:** trang catalog vẫn có hai bản RENDER song song — core phục vụ `/c/:slug` + `GET /api/v1/public/catalog/:slug`, và `LocalBudd` phục vụ `/c/:slug` của riêng nó (nay đọc dữ liệu từ core thay vì bảng riêng). RS-3 chỉ chốt ai làm chủ DỮ LIỆU (`catalog_links`) — chưa chốt ai phục vụ TRANG cho khách quét QR khi cả hai cùng tồn tại. Không chặn gì hôm nay (mỗi bên vẫn chạy được độc lập), nhưng là một quyết định sản phẩm còn treo, khác diện RS-3.
 
 ## 14. Khách hàng — M09
 
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
-| GET | `/customers` | `Q1` | Sắp theo ngày đặc biệt gần nhất theo mặc định |
-| POST | `/customers` | `Q2` | |
-| GET · PATCH | `/customers/:id` | `Q1` · `Q3` | |
-| POST | `/customers/:id/archive` | `Q4` | |
-| GET | `/customers/export` | `Q5` | Mỗi lượt xuất ghi `audit_logs` |
-| GET · POST | `/customers/:id/occasions` | `Q1` · `Q6` | |
-| GET · POST | `/customers/:id/consents` | `Q1` · `Q3` | Cơ sở đồng ý, có mốc thời gian |
-| GET · POST | `/reminder-campaigns` | `Q1` · `Q7` | |
-| GET · POST | `/vouchers` | `Q1` · `Q8` | |
+> **Đổi tiền tố 18/09.** Đặc tả cũ dùng `/customers`; route thật nằm dưới **`/crm/`**. Bảng dưới đã sửa theo mã.
 
-`POST /reminder-campaigns` từ chối (422) mọi khách hàng chưa có bản ghi đồng ý còn hiệu lực, và đáp ứng nói rõ bao nhiêu khách bị loại vì lý do đó. Lọc âm thầm sẽ để người vận hành tưởng chiến dịch đã chạm tới cả danh sách.
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/crm/customers` | `Q1` · `Q2` | Sắp theo ngày đặc biệt gần nhất theo mặc định |
+| POST | `/crm/customers` | `Q2` | |
+| GET | `/crm/customers/:id` | `Q1` · `Q3` · `Q4` | |
+| PATCH | `/crm/customers/:id` | `Q3` · `Q4` | |
+| DELETE | `/crm/customers/:id` | `Q4` | Thay cho `POST /customers/:id/archive` của bản cũ |
+| GET | `/crm/customers/:id/master-index` | `Q1` | Customer Master Index — SSOT một khách |
+| POST | `/crm/customers/:id/occasions` | `Q5` | |
+| POST | `/crm/customers/:id/consent` | `Q6` | Cơ sở đồng ý, có mốc thời gian |
+| GET | `/crm/reminders/upcoming` | `Q7` | Quét dịp trước 14 ngày |
+
+**Lệch nghĩa mã cần soát:** bản cũ gán `Q5` cho xuất danh sách và `Q6` cho dịp; mã thật gán `Q5` cho dịp và `Q6` cho đồng ý. Một trong hai sai — xem **RS-10**.
+
+**Chưa có:** `GET /crm/customers/export` (`Q5`, mỗi lượt xuất ghi `audit_logs`), `/reminder-campaigns` (`Q7`), `/vouchers` (`Q8` — bảng `vouchers` đã có trong lược đồ, endpoint thì chưa). Xem **RS-7**.
+
+Khi `POST /reminder-campaigns` được xây, nó phải từ chối (422) mọi khách hàng chưa có bản ghi đồng ý còn hiệu lực, và đáp ứng nói rõ bao nhiêu khách bị loại vì lý do đó. Lọc âm thầm sẽ để người vận hành tưởng chiến dịch đã chạm tới cả danh sách.
 
 Nội dung nhắc mua sinh từ dịp và sản phẩm. Không endpoint nào gửi tên, số điện thoại hay địa chỉ khách hàng sang một nhà cung cấp AI; phần định danh ghép ở tầng gửi.
 
@@ -440,10 +477,13 @@ Nội dung nhắc mua sinh từ dịp và sản phẩm. Không endpoint nào g�
 | POST | `/orders` | `R2` | |
 | GET · PATCH | `/orders/:id` | `R1` · `R3` | |
 | POST | `/orders/:id/assign` | `R4` | |
-| POST | `/orders/:id/delivery` | `R5` | Cập nhật khung giờ và trạng thái giao |
 | POST | `/orders/:id/cancel` | `R6` | Bắt buộc có lý do |
 | GET | `/orders/:id/print` | `R7` | Phiếu đơn và phiếu sản xuất |
 | GET | `/orders/:id/events` | `R1` | Nhật ký đổi trạng thái, nguồn đo SLA |
+
+**Chưa có:** `POST /orders/:id/delivery` (`R5` — cập nhật khung giờ và trạng thái giao). Trạng thái giao hiện đổi qua `PATCH /orders/:id`. Xem **RS-7**.
+
+`POST /orders/:id/cancel` gác `R6` **ở tầng use-case** (`cancel-order.ts:20`), không ở route — đúng luật nhưng khác lối viết của phần còn lại, xem **RS-9**.
 
 Ba trục trạng thái tách rời — đơn, sản xuất, giao hàng — và không gộp thành một enum, cùng lý do với ba trục của job ở mục 7. Mỗi lượt đổi sinh một bản ghi `order_events`; SLA đo từ bản ghi đó, không nhập tay.
 
@@ -451,14 +491,16 @@ Giá trên đơn đọc từ engine giá. `POST /orders` từ chối một giá 
 
 ## 16. Số liệu và hồ sơ phong cách — M11
 
+> **CHƯA XÂY (soát 18/09).** Không endpoint nào trong mục này tồn tại trong mã, và bảng `learning_profiles` cũng chưa có trong lược đồ. Dải năng lực `S1`–`S4` chưa vào danh mục. `src/lib/mock-data.ts` ghi `analytics-learning: chua_san_sang`, khớp với thực tế. Xem **RS-7**.
+
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
-| GET | `/analytics/content` | `S1` | Reach, engagement, bài hiệu quả nhất |
-| GET | `/analytics/products` | `S1` | Sản phẩm bán tốt, nối từ `orders` |
-| GET | `/analytics/campaigns` | `S1` | Hiệu quả và ROI từng chiến dịch |
-| GET | `/analytics/export` | `S2` | |
-| GET | `/learning-profile` | `S3` | Hồ sơ phong cách kèm căn cứ |
-| PUT | `/learning-profile` | `S4` | Đè tham số; ghi `audit_logs` |
+| GET | `/analytics/content` | **CHƯA XÂY** `S1` | Reach, engagement, bài hiệu quả nhất |
+| GET | `/analytics/products` | **CHƯA XÂY** `S1` | Sản phẩm bán tốt, nối từ `orders` |
+| GET | `/analytics/campaigns` | **CHƯA XÂY** `S1` | Hiệu quả và ROI từng chiến dịch |
+| GET | `/analytics/export` | **CHƯA XÂY** `S2` | |
+| GET | `/learning-profile` | **CHƯA XÂY** `S3` | Hồ sơ phong cách kèm căn cứ |
+| PUT | `/learning-profile` | **CHƯA XÂY** `S4` | Đè tham số; ghi `audit_logs` |
 
 Mỗi chỉ số trả kèm `nguon` và `den_ngay`. Dữ liệu kế thừa từ trước khi tài khoản nền tảng được gán cho tổ chức trả trong một khối riêng, không cộng vào khối của tổ chức.
 
@@ -466,13 +508,21 @@ Mỗi chỉ số trả kèm `nguon` và `den_ngay`. Dữ liệu kế thừa từ
 
 ## 17. Hội thoại — M08
 
-| Method | Path | Năng lực |
-|---|---|---|
-| GET | `/conversations` | `T1` |
-| GET | `/conversations/:id` | `T1` |
-| POST | `/conversations/:id/messages` | `T2` |
-| POST | `/conversations/:id/handoff` | `T4` |
-| GET · PUT | `/conversations/settings` | `T1` · `T3` |
+> **Đổi tiền tố 18/09.** Đặc tả cũ dùng `/conversations`; route thật nằm dưới **`/chat/`**. Bảng dưới đã sửa theo mã.
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/chat/conversations` | `T1` · `T2` | |
+| POST | `/chat/conversations` | `T2` | |
+| GET | `/chat/conversations/:id/messages` | `T1` · `T2` | Thay cho `GET /conversations/:id` của bản cũ |
+| POST | `/chat/conversations/:id/messages` | `T2` | |
+| POST | `/chat/conversations/:id/create-order` | `T3` | Chuyển hội thoại thành đơn nháp — M10 |
+| GET · POST | `/chat/channels` | **chưa gác** — xem **RS-8** | Cấu hình kênh; `configure-chat-channel.ts` gác `T4` nhưng route `/chat/channels` không gọi qua nó |
+| POST | `/chat/public/widget` | — *(công khai)* | Mã nhúng một dòng cho website ngoài |
+| GET · POST | `/chat/webhooks/facebook` | — *(chữ ký nền tảng)* | |
+| POST | `/chat/webhooks/zalo` | — *(chữ ký nền tảng)* | |
+
+**Chưa có:** `POST /chat/conversations/:id/handoff` (`T4` — chuyển cho người thật) và `GET · PUT /chat/conversations/settings` (`T1`/`T3`). Xem **RS-7**.
 
 Tin do trợ lý tự trả lời mang cờ `tu_dong: true` trong chính bản ghi tin nhắn, không chỉ trong nhật ký. Câu trả lời về giá đọc từ engine giá; đáp ứng mang `nguon_gia` trỏ về quy tắc giá đã dùng.
 
@@ -485,7 +535,8 @@ Tin do trợ lý tự trả lời mang cờ `tu_dong: true` trong chính bản g
 | GET | `/ai-capabilities` | `U1` | Danh mục năng lực kèm trạng thái đo lường của từng mô hình |
 | GET | `/ai-requests` | `U3` | Sổ chi phí và chất lượng từng lời gọi, lọc theo năng lực và khoảng thời gian |
 | GET | `/ai-requests/summary` | `U3` | Tổng hợp theo năng lực và theo mô hình: chi phí, độ trễ, điểm, tỷ lệ phải leo thác |
-| GET | `/ai-evaluations/:entity_type/:entity_id` | `U4` | Điểm chấm của một đầu ra và lý do nó vào hàng chờ soát |
+| GET | `/ai-evaluations/:entity_type/:entity_id` | **CHƯA XÂY** `U4` | Điểm chấm của một đầu ra và lý do nó vào hàng chờ soát. Bảng `ai_evaluations` đã có; endpoint thì chưa |
+| GET · POST | `/ai-requests/review` | `U3` | Hàng chờ soát đầu ra AI — **có trong mã, thiếu trong bản đặc tả cũ** |
 
 ```http
 PUT /api/v1/ai-policy
@@ -503,6 +554,58 @@ Năng lực phân tích ảnh giữ endpoint riêng đã có (`GET · PUT /visio
 
 `GET /ai-requests` phân trang con trỏ, trần 5.000 hàng mỗi lượt. Nó không bao giờ trả nội dung prompt hay đầu ra — chỉ số đo. Prompt của một lượt sinh nằm ở metadata của asset, gác bằng năng lực đọc asset.
 
-## 19. Chưa có ở bản này
+## 19. Video — M04c
+
+> **Bổ sung 18/09.** M04c dựng xong ở P17 nhưng chưa từng có mục nào trong đặc tả này.
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET · POST | `/video/jobs` | `I1` | Tạo và liệt kê job video |
+| GET | `/video/jobs/:id` | `I1` | |
+| PATCH | `/video/jobs/:id/storyboard` | `I1` | Biên soạn phân cảnh, 2–15 cảnh |
+| POST | `/video/jobs/:id/render` | `I1` | |
+| POST | `/video/jobs/:id/approve-script` | `I2` ⚠ | Cổng 1 — duyệt kịch bản |
+| POST | `/video/jobs/:id/approve-video` | `I2` ⚠ | Cổng 2 — duyệt video thành phẩm |
+
+**Chưa có:** `GET /video/jobs/:id/events`. TRANG_THAI mục P17 mô tả một luồng SSE ở đường này, nhưng thư mục `src/app/api/v1/video/jobs/[id]/` chỉ có `route.ts`, `storyboard`, `render`, `approve-script`, `approve-video` — **không có `events`**. Tiến trình render hiện đọc bằng cách nào thì chưa rõ; cần soát lại trước khi ghi vào đặc tả. Xem **RS-7**.
+
+⚠ **Hai cổng duyệt đang dùng chung mã `I2`**, vốn là mã duyệt Master Image của M04a. Đặc tả cũ ở nơi khác nói hai cổng này mang `P3` và `P4`; hai mã đó không tồn tại trong danh mục 143 mã. Hai cổng vì vậy không tách được, và `audit_logs` không phân biệt được ba hành động duyệt. Xem **RS-1**.
+
+Khuôn video là enum `video_format`: `REEL_15S` · `TIKTOK_30S` · `STORY_15S` · `SLIDESHOW` · `PRODUCT_PAGE` · `AD_MOTION`. Trạng thái là enum `video_stage` chín giá trị, xem đặc tả 07.
+
+## 20. Hạ tầng và nội bộ
+
+> **Bổ sung 18/09.** Các nhóm route này có trong mã từ lâu nhưng chưa từng có mục trong đặc tả.
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| POST | `/sso/refresh` | — | Làm mới JWT `floraos_sso` cho Unified Shell |
+| GET · POST · PUT · PATCH · DELETE | `/proxy/:path` | — | Chuyển tiếp sang engine ngoài trong Unified Shell |
+| GET · PUT | `/storage/:key` | — *(chữ ký URL)* | Đích của URL ký sẵn; `verifyStorageSignature` gác, hết hạn 15 phút |
+| GET | `/integration-tokens` | `F9` | Cấp token cho engine ngoài |
+| POST | `/integration-tokens` | `F9` | |
+| POST | `/integration-tokens/:id/rotate` | `F9` | |
+| DELETE | `/integration-tokens/:id` | `F9` | |
+| GET | `/template-overrides` | `F1` · `F2` | Hệ thống template SSOT |
+| PUT | `/template-overrides` | `F2` | |
+| DELETE | `/template-overrides/:templateKey/:fieldKey` | `F2` | |
+| GET | `/occasions` | `F1` · `F2` | Sổ dịp dùng chung |
+| POST | `/occasions` | `F2` | |
+| PATCH | `/occasions/:id` | `F2` | |
+| POST | `/content-guard/validate` | — | Từ điển từ cấm ngành hoa |
+| POST | `/organizations/current/upgrade-request` | `F2` | Xin nâng hạng workspace |
+| GET | `/products/master-index` | `L1` | Product Master Index — toàn tổ chức |
+| GET | `/products/:id/master-index` | `L1` | Một sản phẩm |
+| GET | `/assets` | `G1` | Liệt kê asset, lọc theo sản phẩm và `kind` |
+| POST | `/assets/:id/approve` | `I2` | Duyệt asset dẫn xuất |
+| GET | `/media/optimizations` | `I1` | Liệt kê lượt tối ưu M04a |
+| POST | `/jobs/batch` | **chưa gác** — xem **RS-8** | Tạo job cho một module với danh sách mã `AIC` chọn sẵn |
+| POST | `/media/variants/batch` | `I4` | |
+| POST | `/media/background-removal` | — | **ĐÃ ĐÓNG ở P24**, luôn trả 409 kèm đường thay thế |
+| GET | `/ai-capabilities` | `U1` | |
+
+## 21. Chưa có ở bản này
 
 Endpoint mang khoá nhà cung cấp riêng của tổ chức. Quyết định D2 chốt nền tảng giữ khoá và tính credit, nên nhóm endpoint đó không tồn tại. Nếu D2 đổi về sau, nhóm này thêm vào dưới `/organizations/current/providers` mà không đụng tới endpoint nào đang có.
+
+**Đã đánh dấu CHƯA XÂY trong chính các mục trên** (soát 18/09): mục 9 hàng đợi duyệt gộp · mục 16 toàn bộ M11 · bốn đường Integration ở mục 11 · `GET /crm/customers/export`, `/reminder-campaigns`, `/vouchers` ở mục 14 · `POST /orders/:id/delivery` ở mục 15 · `handoff` và `conversations/settings` ở mục 17 · `PATCH /catalog-links/:slug` và `/catalog-links/:slug/qr` ở mục 13 · `GET /ai-evaluations/…` ở mục 18. Gộp lại ở **RS-7** để anh Tony quyết cái nào còn trong kế hoạch, cái nào bỏ.

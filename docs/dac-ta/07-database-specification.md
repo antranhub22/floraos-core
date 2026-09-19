@@ -9,13 +9,29 @@ Worker Python đọc lược đồ sinh sẵn, không tự khai bảng.
 | # | Luật | Kiểm ở đâu |
 |---|---|---|
 | 1 | Mọi bảng thuộc tenant có `organization_id NOT NULL`, có index. Không ngoại lệ, kể cả bảng tra cứu và workspace trải nghiệm | Bộ test cách ly trong CI |
-| 2 | Đặt tên `snake_case` tiếng Anh. Thuật ngữ tiếng Việt chỉ ở nhãn giao diện | Review |
+| 2 | Đặt tên `snake_case` tiếng Anh. Thuật ngữ tiếng Việt chỉ ở nhãn giao diện. **Ngoại lệ (RS-5, 18/09):** `flower_taxonomy` và `flower_confusable_pairs` — tên cột tiếng Việt (`ma_loai`, `ten_chuan`, `so_bong_tren_dvt`, `muc_do_nham`…) đã chạy thật, đổi lại tốn một migration cho hai bảng tra cứu tĩnh không ai gọi qua tên cột từ ngoài; xem mục 16 | Review |
 | 3 | Asset gốc bất biến. Dẫn xuất là bản ghi mới, nối bằng `parent_asset_id` và `version` | Review |
 | 4 | Job tách ba trục `status` / `stage` / `result`. Không gộp thành một cột | Review |
 
-`users` là bảng duy nhất không có `organization_id` — một người thuộc nhiều tổ chức qua `memberships`.
+**Ngoại lệ của Luật 1 — danh sách đóng, đối chiếu 18/09.** Chín bảng không có `organization_id`, và mỗi bảng phải nêu được lý do khi review:
+
+| Bảng | Lý do |
+|---|---|
+| `users` | Một người thuộc nhiều tổ chức qua `memberships` |
+| `organizations` | Chính nó là tổ chức; khoá lọc là cột `id` |
+| `roles` *(qua)* `role_capabilities` | Danh mục vai cấp nền tảng, không phải dữ liệu tenant |
+| `job_events` | Bảng con, thuộc tổ chức qua `generation_jobs.organization_id` |
+| `video_scenes` | Bảng con, thuộc tổ chức qua `video_jobs.organization_id` |
+| `ai_capabilities` · `ai_models` | Sổ đăng ký nền AI cấp nền tảng; `tests/helpers/database.ts` cũng không truncate hai bảng này |
+| `flower_taxonomy` · `flower_confusable_pairs` | Tri thức ngành hoa, không phải dữ liệu của một cửa hàng — xem mục 16 |
+
+Bảng thứ mười tự nhận ngoại lệ là lỗi chặn ở review.
+
+*Ba câu cũ ở mục 1, mục 16 và mục 19 nói ba con số khác nhau ("duy nhất `users`" · "ngoại lệ duy nhất `flower_taxonomy`" · "hai bảng, gồm `platform_audit_logs`"), không câu nào đúng. Bảng trên thay cả ba. `platform_audit_logs` chưa tồn tại — nó là đề xuất ở `../kien-truc/DASHBOARD_VAN_HANH_NEN_TANG.md`, dải `N1`–`N8` chưa xây.*
 
 ## 2. Kiểu liệt kê
+
+> **Đối chiếu 18/09 với `prisma/schema.prisma`.** Bốn enum từng lệch giá trị (`order_status`, `production_status`, `delivery_status`, `asset_kind`) đã sửa theo lược đồ; mười một enum có trong lược đồ mà thiếu ở đây đã bổ sung; hai enum chỉ tồn tại trên giấy (`consent_state`, `catalog_link_state`) đã bỏ.
 
 ```prisma
 enum organization_type { EXPERIENCE  SINGLE  CHAIN }
@@ -25,14 +41,27 @@ enum capability_scope  { ORGANIZATION  BRANCH }
 enum job_status        { PENDING  PROCESSING  COMPLETED  FAILED  CANCELLED }
 enum approval_state    { PENDING  APPROVED  REJECTED }
 enum product_status    { DRAFT  ACTIVE  ARCHIVED }
-enum asset_kind        { ORIGINAL  ANALYZED  ENHANCED  MASTER  MARKETING  VIDEO  CATALOG  LANDING  SOCIAL }
+enum asset_kind        { ORIGINAL  ANALYZED  ENHANCED  MASTER  RATIO  MARKETING  VIDEO  CATALOG  LANDING  SOCIAL }
 enum asset_state       { PROCESSING  READY  FAILED  ARCHIVED }
 enum trial_status      { ACTIVE  EXHAUSTED  EXPIRED }
-enum order_status      { DRAFT  CONFIRMED  COMPLETED  CANCELLED }
-enum production_status { WAITING  ASSIGNED  IN_PROGRESS  DONE }
-enum delivery_status   { PENDING  DISPATCHED  DELIVERED  FAILED  RETURNED }
-enum consent_state     { GRANTED  WITHDRAWN }
-enum catalog_link_state { ACTIVE  REVOKED }
+enum order_status      { DRAFT  CONFIRMED  PROCESSING  DELIVERED  COMPLETED  CANCELLED }
+enum production_status { WAITING  ASSIGNED  ARRANGING  QUALITY_CHECK  READY }
+enum delivery_status   { PENDING  DISPATCHED  DELIVERING  DELIVERED  FAILED }
+
+// M08 hội thoại · M09 khách hàng · M10 đơn hàng
+enum chat_channel          { WEB_WIDGET  INTERNAL_DASHBOARD  STOREFRONT_CATALOG  LANDING_PAGE  FACEBOOK_MESSENGER  ZALO_OA  EMBEDDED_WIDGET  ZALO }
+enum chat_sender_type      { USER  ASSISTANT  SYSTEM }
+enum consent_channel       { ZALO_ZNS  SMS  PHONE_CALL  PROMOTION }
+enum customer_tier         { NEW  BRONZE  SILVER  GOLD  VIP }
+enum occasion_register     { FESTIVE  NEUTRAL  SOLEMN }
+enum voucher_discount_type { PERCENTAGE  FIXED_AMOUNT }
+enum stock_status          { IN_STOCK  PRE_ORDER_ONLY  OUT_OF_STOCK }
+
+// M04c video · hệ thống template · Integration
+enum video_format       { REEL_15S  TIKTOK_30S  STORY_15S  SLIDESHOW  PRODUCT_PAGE  AD_MOTION }
+enum video_stage        { DRAFT  SCRIPT_GENERATING  SCRIPT_READY  SCRIPT_APPROVED  RENDERING  RENDER_COMPLETED  APPROVED  REJECTED  FAILED }
+enum template_family    { GT  IT  CT  ST  OT }
+enum integration_client { LOCALBUDD  SOCIALFLOW }
 enum ai_mode           { API  SELF_HOST  DETERMINISTIC }
 enum ai_privacy_level  { PUBLIC  SHOP  SENSITIVE }
 enum ai_measure_state  { CHUA_DO  THU_NGHIEM  SAN_XUAT }
@@ -348,6 +377,12 @@ không có hai người ghi đồng thời trong vận hành bình thường; đ
 | M04a tối ưu ảnh | `ANALYZING` · `DETECTING` · `ISOLATING` · `ENHANCING` · `BACKGROUND` · `COMPOSING` · `VERIFYING` · `GENERATING_OUTPUTS` | `SAFE` · `GOOD` · `WARNING` · `REJECTED` |
 | M05 landing page | `INIT` · `GENERATING` · `FINALIZING` | `OK` |
 | M06 catalog | `INIT` · `GENERATING` · `FINALIZING` | `OK` |
+| M04b biến thể marketing | `ANALYZING` · `SMART_REFRAME` · `VERIFYING` · `GENERATING_OUTPUTS` | `SAFE` · `WARNING` · `REJECTED` |
+| M04c video | không dùng `stage` của job — có trục riêng, enum `video_stage` chín giá trị ở mục 20 | — |
+
+*(Hai hàng cuối bổ sung 18/09; bản trước chỉ có M01, M04a, M05, M06.)*
+
+Cổng **Subject Integrity** của M04b đo tỷ lệ điểm ảnh lõi chủ thể còn trùng khít với Master Image: `SAFE` ≥ 0,999 · `WARNING` ≥ 0,99 · dưới nữa `REJECTED`, và `REJECTED` thì worker không ghi asset nào. Ngưỡng là luật nghiệp vụ nên phía TS tính lại phán quyết từ số đo thay vì tin `result` worker gửi kèm.
 
 **`result = REJECTED` không phải job lỗi.** Cổng an toàn từ chối nghĩa là job chạy đúng và đi tới phán quyết: `status = COMPLETED`, `result = REJECTED`. Ánh xạ nó thành `FAILED` làm hỏng retry — chạy lại cho ra đúng phán quyết cũ, chỉ tốn GPU — và làm sai kế toán sử dụng. `FAILED` chỉ dành cho hỏng kỹ thuật: timeout, crash, lỗi nhà cung cấp.
 
@@ -516,19 +551,20 @@ model pricing_rules {
 
 ```prisma
 model occasions {
-  id              String   @id @default(uuid())
+  id              String            @id @default(uuid())
   organization_id String
-  code            String              // 20_10 · valentine · 8_3 · mothers_day · khai_truong · hoa_cuoi
+  code            String
   name            String
-  month           Int?                // dịp cố định ngày: 10 cho 20/10
-  day             Int?
-  is_recurring    Boolean  @default(true)
-  is_seed         Boolean  @default(false)   // dòng nạp sẵn, phân biệt với dịp tổ chức tự thêm
-  position        Int      @default(0)
-  archived_at     DateTime?
+  sort_order      Int               @default(0)
+  is_active       Boolean           @default(true)
+  /** Tông giọng khi dịp này được dùng để sinh kịch bản Zalo (nợ #104). */
+  register        occasion_register @default(FESTIVE)
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+
 
   @@unique([organization_id, code])
-  @@index([organization_id, month, day])
+  @@index([organization_id])
 }
 ```
 
@@ -552,26 +588,44 @@ Sáu dòng nạp sẵn khi tạo tổ chức, mang `is_seed = true`: 20/10 · Va
 
 ```prisma
 model product_copies {
-  id              String         @id @default(uuid())
+  id              String   @id @default(uuid())
   organization_id String
-  product_id      String
-  analysis_id     String                    // lượt phân tích đã APPROVED sinh ra bản này
+  analysis_id     String // bắt buộc: product_analyses đã APPROVED
+  product_id      String? // null khi phân tích chưa gắn sản phẩm (sẽ tạo mới khi duyệt)
 
-  provider        String
-  model           String
-  model_version   String
-  profile_version String?                   // hồ sơ phong cách đã dùng, nếu có
-
-  raw             Json                      // bản máy sinh, bất biến
-  edited          Json?                     // bản người sửa, lưu tách biệt
+  // Dự đoán gốc của máy (bất biến) — keys: suggested_name, suggested_description,
+  // suggested_tags[], suggested_occasions[], suggested_price_segment
+  raw             Json
+  // Bản người sửa trước khi duyệt (PATCH /product-copies/:id, H5)
+  edited          Json?
   approval_state  approval_state @default(PENDING)
   approved_by     String?
   approved_at     DateTime?
 
-  created_at      DateTime       @default(now())
+  // Phiên bản hồ sơ phong cách đã dùng (learning_profiles.version), để truy xuất
+  profile_version String?
 
-  @@unique([organization_id, product_id, analysis_id])
-  @@index([organization_id, approval_state])
+  // Lý do từ chối — CỘT RIÊNG, không nhét vào `edited`. `edited` là bản sửa
+  // của người theo hình dạng câu chữ bán hàng; trộn một khoá quản trị vào đó
+  // làm `resolveEffective` phải phân biệt hai loại khoá trong cùng một object.
+  reject_reason   String?
+
+  // Truy vết lượt gọi mô hình đã sinh ra bản này — PRD mục 9, nhóm "Truy vết".
+  // Không có bốn cột này thì không đối soát được chi phí, không so sánh được
+  // hai mô hình, và không biết bản nào sinh ra bởi mô hình nào khi đổi mô hình.
+  job_id          String?
+  model_key       String?
+  provider        String?
+  cost_usd        Float?
+  latency_ms      Int?
+
+  created_at      DateTime @default(now())
+
+
+  @@unique([analysis_id]) // một lượt phân tích chỉ tạo một product_copy
+  @@index([organization_id])
+  @@index([organization_id, product_id])
+  @@index([approval_state])
 }
 ```
 
@@ -585,63 +639,85 @@ Cùng khuôn `raw`/`edited` của `product_analyses`, cùng lý do: cặp *máy 
 
 ```prisma
 model customers {
-  id              String   @id @default(uuid())
-  organization_id String
-  branch_id       String?
-  full_name       String
-  phone           String?
-  email           String?
-  address         Json?
-  note            String?
-  archived_at     DateTime?
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id                String         @id @default(uuid())
+  organization_id   String
+  code              String         // KH-0001, KH-0002
+  name              String
+  phone             String
+  email             String?
+  address           String?
+  tier              customer_tier  @default(NEW)
+  notes             String?
+  tags              String[]       @default([])
+  preferred_flowers String[]       @default([])
+  preferred_colors  String[]       @default([])
+
+  total_spent       Decimal        @default(0) @db.Decimal(14, 2)
+  order_count       Int            @default(0)
+  last_order_at     DateTime?
+
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  orders            orders[]
+  occasions         customer_occasions[]
+  consents          customer_consents[]
+  vouchers          vouchers[]
+  conversations     chat_conversations[]
 
   @@unique([organization_id, phone])
-  @@index([organization_id])
+  @@unique([organization_id, code])
+  @@index([organization_id, tier])
+  @@index([organization_id, name])
 }
 
 model customer_occasions {
-  id              String   @id @default(uuid())
-  organization_id String
-  customer_id     String
-  kind            String              // sinh nhật · kỷ niệm · lễ cưới · khác
-  label           String?
-  month           Int
-  day             Int
-  year            Int?                // null khi chỉ biết ngày tháng
-  created_at      DateTime @default(now())
+  id                   String        @id @default(uuid())
+  organization_id      String
+  customer_id          String
+  name                 String        // Sinh nhật vợ, Kỷ niệm ngày cưới, Ngày của Mẹ...
+  date                 String        // MM-DD hoặc YYYY-MM-DD
+  is_recurring         Boolean       @default(true)
+  reminder_days_before Int           @default(7)
+  recipient_name       String?
+  notes                String?
+  created_at           DateTime      @default(now())
 
-  @@index([organization_id, month, day])
+
   @@index([organization_id, customer_id])
+  @@index([organization_id, date])
 }
 
 model customer_consents {
-  id              String        @id @default(uuid())
+  id              String          @id @default(uuid())
   organization_id String
   customer_id     String
-  purpose         String                    // nhac_mua · khuyen_mai
-  channel         String                    // zalo · sms · email · goi_dien
-  state           consent_state
-  source          String                    // nơi và cách khách đồng ý
-  granted_at      DateTime?
-  withdrawn_at    DateTime?
-  created_at      DateTime      @default(now())
+  channel         consent_channel
+  granted         Boolean         @default(true)
+  granted_at      DateTime        @default(now())
+  revoked_at      DateTime?
+  created_at      DateTime        @default(now())
 
-  @@index([organization_id, customer_id, purpose])
+
+  @@unique([customer_id, channel])
+  @@index([organization_id, customer_id])
 }
 
 model vouchers {
-  id              String   @id @default(uuid())
-  organization_id String
-  code            String
-  kind            String              // phan_tram · so_tien
-  value           Decimal  @db.Decimal(14, 2)
-  customer_id     String?             // null khi voucher dùng chung
-  valid_from      DateTime
-  valid_to        DateTime
-  used_at         DateTime?
-  created_by      String
+  id               String                @id @default(uuid())
+  organization_id  String
+  customer_id      String?               // null nếu áp dụng công khai
+  code             String                // FLORA10, VIP2026
+  discount_type    voucher_discount_type @default(PERCENTAGE)
+  discount_value   Decimal               @db.Decimal(14, 2)
+  min_order_vnd    Decimal               @default(0) @db.Decimal(14, 2)
+  max_discount_vnd Decimal?              @db.Decimal(14, 2)
+  expires_at       DateTime?
+  is_used          Boolean               @default(false)
+  used_at          DateTime?
+  order_id         String?
+  created_at       DateTime              @default(now())
+
 
   @@unique([organization_id, code])
   @@index([organization_id, customer_id])
@@ -734,42 +810,51 @@ model order_events {
 
 ```prisma
 model catalog_links {
-  id              String             @id @default(uuid())
+  id              String   @id @default(uuid())
   organization_id String
-  slug            String
-  label           String
-  filter          Json                          // dịp · màu · loại hoa · bộ sưu tập · khoảng giá
-  state           catalog_link_state @default(ACTIVE)
-  open_count      Int                @default(0)
-  created_by      String
-  created_at      DateTime           @default(now())
+  slug            String   @unique
+  name            String
+  description     String?
+  filters         Json?
+  is_revoked      Boolean  @default(false)
   revoked_at      DateTime?
+  revoked_by      String?
+  created_by      String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
-  @@unique([slug])
-  @@index([organization_id, state])
+
+  @@index([organization_id])
+  @@index([slug])
 }
 
-model campaign_rollups {
-  id                String   @id @default(uuid())
-  organization_id   String
-  source            String                      // SOCIALFLOW · LOCALBUDD
-  platform          String
-  external_post_id  String
-  product_id        String?
-  campaign_ref      String?
-  metric_date       DateTime                    // ngày của số liệu, không phải ngày ghi
-  reach             Int      @default(0)
-  engagement        Int      @default(0)
-  inbox             Int      @default(0)
-  clicks            Int      @default(0)
-  cost_usd          Decimal? @db.Decimal(12, 4)
-  is_legacy         Boolean  @default(false)    // dữ liệu trước khi tài khoản được gán tổ chức
-  ingested_at       DateTime @default(now())
+// ĐỔI TÊN: bảng này từng được đặc tả là `content_metrics`. Tên thật trong
+// lược đồ là `content_metrics`, và hình dạng cột cũng khác. Sửa 18/09.
+model content_metrics {
+  id              String   @id @default(uuid())
+  organization_id String
+  platform        String
+  content_id      String
+  metric_date     DateTime @db.Date
 
-  @@unique([organization_id, platform, external_post_id, metric_date])
+  reach           Int?
+  impressions     Int?
+  engagement      Int?
+  clicks          Int?
+  conversions     Int?
+  spend_usd       Float?
+
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+
+  @@unique([organization_id, platform, content_id, metric_date])
+  @@index([organization_id])
   @@index([organization_id, metric_date])
 }
 
+// CHƯA XÂY (soát 18/09) — bảng này chưa có trong `prisma/schema.prisma`.
+// M11 chưa bắt đầu; dải năng lực `S1`–`S4` chưa vào danh mục. Xem RS-7.
 model learning_profiles {
   id              String   @id @default(uuid())
   organization_id String
@@ -788,39 +873,58 @@ model learning_profiles {
 
 `catalog_links.slug` unique **toàn cục**, không theo tổ chức: một liên kết công khai phải giải được khi chưa biết tổ chức nào sở hữu nó.
 
-`campaign_rollups` là **bộ nhớ đệm dựng lại được**, không phải nguồn sự thật. Cột `source` nói dữ liệu tới từ đâu, khoá tự nhiên bốn cột cho phép ghi lại nhiều lần mà không nhân đôi, và `is_legacy` giữ mốc dữ liệu kế thừa của thương hiệu trước khi tài khoản nền tảng được gán cho tổ chức — số liệu ấy có thật nhưng không phải của tổ chức này.
+`content_metrics` là **bộ nhớ đệm dựng lại được**, không phải nguồn sự thật. Cột `source` nói dữ liệu tới từ đâu, khoá tự nhiên bốn cột cho phép ghi lại nhiều lần mà không nhân đôi, và `is_legacy` giữ mốc dữ liệu kế thừa của thương hiệu trước khi tài khoản nền tảng được gán cho tổ chức — số liệu ấy có thật nhưng không phải của tổ chức này.
 
 `learning_profiles` là chèn-chỉ theo `version`. Hồ sơ không giữ một con số kết luận mà giữ cả `evidence`: một hồ sơ không nói được căn cứ của mình thì không ai dám để nó đổi cách viết bài, và `is_sufficient = false` chặn nó khỏi được dùng trước ngưỡng dữ liệu tối thiểu.
 
 ## 14. Hội thoại — M08
 
 ```prisma
-model conversations {
-  id               String   @id @default(uuid())
-  organization_id  String
-  channel          String              // zalo · facebook · instagram · web
-  external_thread  String
-  customer_id      String?
-  assignee_id      String?             // null khi trợ lý đang phụ trách
-  last_message_at  DateTime?
-  created_at       DateTime @default(now())
+// ĐỔI TÊN 18/09: `conversations` → `chat_conversations`,
+// `conversation_messages` → `chat_messages`. Thêm `chat_channel_integrations`.
+model chat_conversations {
+  id              String        @id @default(uuid())
+  organization_id String
+  customer_id     String?
+  title           String        @default("Hội thoại tư vấn hoa")
+  channel         chat_channel  @default(WEB_WIDGET)
+  status          String        @default("ACTIVE") // ACTIVE, CLOSED
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
 
-  @@unique([organization_id, channel, external_thread])
-  @@index([organization_id, last_message_at])
+  messages        chat_messages[]
+
+  @@index([organization_id, status])
+  @@index([organization_id, customer_id])
 }
 
-model conversation_messages {
-  id              String   @id @default(uuid())
+model chat_messages {
+  id              String            @id @default(uuid())
   organization_id String
   conversation_id String
-  direction       String              // in · out
-  is_automated    Boolean  @default(false)
-  body            String
-  price_source    Json?               // quy tắc giá đã dùng, khi câu trả lời có giá
-  author_id       String?
-  created_at      DateTime @default(now())
+  sender_type     chat_sender_type
+  content         String
+  metadata        Json?             // Gợi ý hoa từ Master Index, Draft Order ID
+
+  created_at      DateTime          @default(now())
+
 
   @@index([organization_id, conversation_id, created_at])
+}
+
+model chat_channel_integrations {
+  id                       String        @id @default(uuid())
+  organization_id          String
+  channel                  chat_channel
+  is_enabled               Boolean       @default(false)
+  config                   Json          @default("{}")
+  subscription_expires_at  DateTime?
+  created_at               DateTime      @default(now())
+  updated_at               DateTime      @updatedAt
+
+
+  @@unique([organization_id, channel])
+  @@index([organization_id, is_enabled])
 }
 ```
 
@@ -932,20 +1036,49 @@ model ai_evaluations {
 ## 16. Tri thức ngành hoa
 
 ```prisma
+// ⚠ Tên cột bằng TIẾNG VIỆT — phá Luật 2 ở mục 1. Xem RS-5.
 model flower_taxonomy {
-  canonical_id      String   @id                 // ma loài, bất biến
-  name_vi           String
-  name_en           String?
-  aliases           Json                         // gồm nhãn mô hình thường trả về
-  colors            Json
-  season            Json?
-  price_segment     String?
-  visual_features   Json?
-  confusable_with   Json?                        // cặp dễ nhầm kèm dấu hiệu phân biệt
-  embedding         Unsupported("vector(1536)")?
-  updated_at        DateTime @updatedAt
+  ma_loai      String  @id // LH001…
+  nhom         String  // Hoa · Lá · Phụ kiện
+  cong_nang    String? // Hoa chính · Hoa phụ · Hoa lấp đầy…
+  ten_chuan    String
+  ten_khac     Json    // string[] — tên gọi khác, dùng để so tên máy trả về
+  nhom_hoa     String?
+  dvt_chuan    String?
+  so_bong_tren_dvt Int?
+  duong_kinh_bong_cm Float?
+  dien_tich_phu_cm2  Float?
+  ty_le_nhuy_tren_bong Float?
+  mau_nhuy     String?
+  kieu_moc     String?
+  dai_mau_tu_nhien Json?  // string[]
+  dac_diem_phan_biet String?
+  mua_vu       String?
+  trang_thai   String  @default("Đang dùng")
+
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+
+  @@index([ten_chuan])
+  @@index([nhom])
 }
 
+model flower_confusable_pairs {
+  ma_cap          String @id // CN001…
+  ma_loai_a       String
+  ma_loai_b       String
+  dau_hieu_tach_a String
+  dau_hieu_tach_b String
+  muc_do_nham     String // Cao · Trung bình · Thấp
+
+
+  @@index([ma_loai_a])
+  @@index([ma_loai_b])
+  @@index([muc_do_nham])
+}
+
+// CHƯA XÂY (soát 18/09) — chưa có trong `prisma/schema.prisma`; pgvector chưa bật.
 model knowledge_chunks {
   id                String   @id @default(uuid())
   organization_id   String
@@ -960,7 +1093,11 @@ model knowledge_chunks {
 }
 ```
 
-`flower_taxonomy` **không có `organization_id`** — đây là ngoại lệ duy nhất của Luật 1, và nó có lý do: danh mục loài là tri thức ngành, không phải dữ liệu của một cửa hàng. Mọi thứ một tổ chức tự khai — tên gọi riêng, mã nội bộ, giá theo loài — nằm ở `products.attributes` và ở `pricing_rules`, vốn đều mang `organization_id`. Bảng này chỉ đọc từ phía ứng dụng; ghi vào nó là việc cấp nền tảng.
+`flower_taxonomy` và `flower_confusable_pairs` **không có `organization_id`** — hai trong chín ngoại lệ liệt ở mục 1, và lý do là: danh mục loài là tri thức ngành, không phải dữ liệu của một cửa hàng.
+
+**Hai bảng này đặt tên cột bằng tiếng Việt** (`ma_loai`, `ten_chuan`, `so_bong_tren_dvt`, `muc_do_nham`…) — đã chạy thật trên dữ liệu thật. Bản đặc tả trước mô tả một bảng hoàn toàn khác bằng tiếng Anh (`canonical_id`/`name_vi`/`aliases`/`embedding`) — bảng đó chưa bao giờ tồn tại, đó là phần đã sửa. Phần đặt tên cột: **RS-5 (18/09, quyết định của anh Tony) chọn ghi ngoại lệ vào Luật 2** — xem mục 1 — thay vì đổi tên cột, vì hai bảng này là tra cứu tĩnh cấp nền tảng, không ai gọi qua tên cột từ bên ngoài lược đồ.
+
+Cột `embedding Unsupported("vector(1536)")` và bảng `knowledge_chunks` ở dưới **chưa có trong lược đồ**. Mọi thứ một tổ chức tự khai — tên gọi riêng, mã nội bộ, giá theo loài — nằm ở `products.attributes` và ở `pricing_rules`, vốn đều mang `organization_id`. Bảng này chỉ đọc từ phía ứng dụng; ghi vào nó là việc cấp nền tảng.
 
 `knowledge_chunks` thì **có** `organization_id`, và bộ test cách ly phủ nó như mọi bảng khác: chính sách giao hàng của một cửa hàng không được đi vào câu trả lời của cửa hàng khác.
 
@@ -969,6 +1106,7 @@ model knowledge_chunks {
 ## 17. Đặc trưng nội dung cho vòng học
 
 ```prisma
+// CHƯA XÂY (soát 18/09) — chưa có trong `prisma/schema.prisma`. M11 chưa bắt đầu.
 model content_features {
   id                String   @id @default(uuid())
   organization_id   String
@@ -1005,11 +1143,134 @@ Học phải học cả phần hình, không chỉ phần chữ: `visual_style` 
 
 ## 18. Bảng chưa thuộc phạm vi bản này
 
-`content_queue` · `posts` · `campaigns` · `social_accounts` · `video_jobs` · `post_metrics` thuộc `SocialFlow`. `pages` · `page_versions` · `layouts` · `design_directions` · `design_contracts` thuộc `LocalBudd`. Core không khai chúng.
+`content_queue` · `posts` · `campaigns` · `social_accounts` · `post_metrics` thuộc `SocialFlow`. *(`video_jobs` từng nằm trong danh sách này; M04c đã chuyển về core ở P17, nên core **có** khai `video_jobs` và `video_scenes` — xem mục 20. Sửa 18/09.)* `pages` · `page_versions` · `layouts` · `design_directions` · `design_contracts` thuộc `LocalBudd`. Core không khai chúng.
 
-Số liệu gốc của từng nền tảng ở lại `SocialFlow`; core chỉ giữ `campaign_rollups` ở mục 13 làm bộ nhớ đệm dựng lại được, và nó mang cột nguồn để không ai đọc nó như số liệu gốc.
+Số liệu gốc của từng nền tảng ở lại `SocialFlow`; core chỉ giữ `content_metrics` ở mục 13 làm bộ nhớ đệm dựng lại được, và nó mang cột nguồn để không ai đọc nó như số liệu gốc.
 
-Đối lại, `LocalBudd` bỏ `products`, `product_assets`, `media_assets`, `generation_jobs`, `projects` khỏi lược đồ của nó và đọc core qua API. Trạng thái thật của việc này ghi ở đặc tả 08 mục 2 — bốn bảng còn chặn vì Integration API chưa có đường ghi, và ba đường ghi ở đặc tả 06 mục 11 là chỗ mở khoá nó.
+Đối lại, `LocalBudd` bỏ `products`, `product_assets`, `media_assets`, `generation_jobs`, `projects` khỏi lược đồ của nó và đọc core qua API. Trạng thái thật của việc này ghi ở đặc tả 08 mục 2 — ba bảng còn chặn vì Integration API chưa có đường ghi, và ba đường ghi ở đặc tả 06 mục 11 là chỗ mở khoá nó.
+
+## 20. Bảng có trong lược đồ mà bản đặc tả trước bỏ sót
+
+> **Bổ sung 18/09.** Sáu bảng dưới đây đã chạy trong `prisma/schema.prisma` nhưng chưa từng có mục nào ở tài liệu này.
+
+### M04c video — P17
+
+```prisma
+model video_jobs {
+  id                 String          @id @default(uuid())
+  organization_id    String
+  product_id         String?
+  title              String
+  format             video_format
+  stage              video_stage     @default(DRAFT)
+
+  // Cổng duyệt 1: Kịch bản (Script / Storyboard)
+  script_approval    approval_state  @default(PENDING)
+  script_approved_at DateTime?
+  script_approved_by String?
+
+  // Cổng duyệt 2: Video kết quả (Final Render)
+  video_approval     approval_state  @default(PENDING)
+  video_approved_at  DateTime?
+  video_approved_by  String?
+
+  // Cấu hình video
+  duration_seconds   Int             @default(15)
+  aspect_ratio       String          @default("9:16")
+  music_track        String?
+  voice_code         String?
+  has_subtitle       Boolean         @default(true)
+  caption_style      String          @default("MODERN_BADGE")
+  has_watermark      Boolean         @default(false)
+
+  // Tài sản đầu ra & Hạch toán
+  final_video_url    String?
+  final_asset_id     String?
+  cost_credits       Int             @default(0)
+  error_message      String?
+
+  created_at         DateTime        @default(now())
+  updated_at         DateTime        @updatedAt
+
+  scenes             video_scenes[]
+
+  @@index([organization_id])
+  @@index([organization_id, product_id])
+  @@index([stage])
+  @@index([script_approval])
+  @@index([video_approval])
+}
+
+model video_scenes {
+  id                String       @id @default(uuid())
+  video_job_id      String
+  scene_index       Int
+  duration_seconds  Float        @default(3.0)
+  image_asset_id    String?
+  text_overlay      String?
+  voice_script      String?
+  transition_effect String?      @default("fade")
+  created_at        DateTime     @default(now())
+
+
+  @@index([video_job_id])
+  @@unique([video_job_id, scene_index])
+}
+```
+
+Hai cổng duyệt của `video_jobs` tách đúng ở tầng dữ liệu (`script_approval` và `video_approval` là hai cột riêng), nhưng hai endpoint duyệt lại gác bằng **cùng một mã `I2`** — xem **RS-1**. `video_scenes` là bảng con, thuộc tổ chức qua `video_jobs`.
+
+### Tồn kho, template, token tích hợp
+
+```prisma
+model product_inventory {
+  id                 String      @id @default(uuid())
+  organization_id    String
+  product_id         String
+  branch_id          String
+  status             stock_status @default(IN_STOCK)
+  quantity_available Int?
+  updated_at         DateTime    @updatedAt
+
+
+  @@unique([organization_id, product_id, branch_id])
+  @@index([organization_id, branch_id])
+}
+
+model template_overrides {
+  id              String          @id @default(uuid())
+  organization_id String
+  template_family template_family
+  template_key    String
+  field_key       String
+  value           String
+  updated_by      String
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+
+
+  @@unique([organization_id, template_key, field_key])
+  @@index([organization_id])
+}
+
+model integration_tokens {
+  id              String             @id @default(uuid())
+  organization_id String
+  client          integration_client
+  token_hash      String             @unique
+  created_by      String
+  created_at      DateTime           @default(now())
+  expires_at      DateTime
+  revoked_at      DateTime?
+  rotated_from_id String?
+
+
+  @@index([organization_id])
+  @@index([organization_id, client])
+}
+```
+
+`integration_tokens` giữ `token_hash @unique`, không giữ token thô — token chỉ hiện một lần lúc cấp. `rotated_from_id` nối một token với token nó thay thế, để thu hồi được cả chuỗi.
 
 ## 19. Kiểm chứng
 
@@ -1017,4 +1278,8 @@ Mỗi bảng có `organization_id` phải có một trường hợp trong bộ t
 
 Chạy bằng `npm run test:tenant`. Bắt buộc xanh trước mọi merge.
 
-Hai bảng cố ý không có `organization_id`, và cả hai đều phải nêu được lý do khi review: `flower_taxonomy` là tri thức ngành, không phải dữ liệu của một cửa hàng (mục 16); `platform_audit_logs` ghi hành động không thuộc tổ chức nào. Bảng thứ ba tự nhận ngoại lệ là lỗi chặn ở review.
+Danh sách ngoại lệ của Luật 1 nằm ở **mục 1** — chín bảng, mỗi bảng một lý do. Bảng thứ mười tự nhận ngoại lệ là lỗi chặn ở review.
+
+**Đối chiếu 18/09 — luật này đang bị phá.** 39 bảng có `organization_id`; **16 bảng chưa xuất hiện trong bất kỳ ca thử nào** của `tests/tenant/`: `catalog_links` · `chat_channel_integrations` · `chat_conversations` · `chat_messages` · `content_metrics` · `customer_consents` · `customer_occasions` · `order_assignments` · `order_events` · `order_items` · `pricing_rules` · `product_images` · `product_inventory` · `product_variants` · `template_overrides` · `vouchers`.
+
+Nặng hơn: **6 bảng không nằm trong `TENANT_TABLES`** của `tests/helpers/database.ts` nên không bị `TRUNCATE` giữa các ca — `catalog_links` · `content_metrics` · `occasions` · `product_copies` · `product_inventory` · `template_overrides`. Với sáu bảng này, một ca xanh không chứng minh được điều nó khẳng định, đúng như chú thích trong chính tệp đó cảnh báo. Xem **RS-2**.

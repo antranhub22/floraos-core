@@ -41,11 +41,11 @@ V1 §18 (10 quy tắc bảo tồn mã cũ) **bị bãi bỏ**. Thay bằng:
 
 | Nhóm | Repo | Trách nhiệm | Trạng thái |
 |---|---|---|---|
-| **0 — Core** | **`floraos-core`** | Org · Workspace · Membership · RBAC · cách ly tenant · BusinessProfile · BrandProfile · Product Master · Asset · GenerationJob · Usage · AuditLog · Customer · Order · Integration API · M01 · M01b · M02 · M03 · M04a · M09 · M10 · M11 | Đang xây |
+| **0 — Core** | **`floraos-core`** | Org · Workspace · Membership · RBAC · cách ly tenant · BusinessProfile · BrandProfile · Product Master · Asset · GenerationJob · Usage · AuditLog · Customer · Order · Integration API · M01 · M01b · M02 · M03 · M04a · **M04b** · **M04c** · **M06** · **M08** · M09 · M10 · M11 | Đang xây |
 | 1 — Legacy | `FloraOS` *(hiện tại)* | Phục vụ AVI GIFT tới ngày cắt. Đóng băng tính năng | Nghỉ hưu |
-| 2 — Storefront | `LocalBudd` | M05 Landing Page · M06 Catalog & QR · UI soạn Business Profile | Đang phát triển |
-| 3 — Marketing | `SocialFlow` | M04b Marketing Creative · M04c Video Studio · M07 Content & Social Publishing · số liệu nền tảng cho M11 | Đang phát triển |
-| 4 — Messaging | *(chưa đặt tên)* | M08 Customer Chat | Chưa bắt đầu |
+| 2 — Storefront | `LocalBudd` | M05 Landing Page · UI soạn Business Profile. M06 Catalog & QR **có bản thứ hai ở đây song song với bản ở core** — chủ sở hữu chưa chốt, xem **RS-3** | Đang phát triển |
+| 3 — Marketing | `SocialFlow` | M07 Content & Social Publishing · số liệu nền tảng cho M11. **M04b và M04c đã chuyển về core** (P16/P24 và P17) | Đang phát triển |
+| 4 — Messaging | — | M08 Customer Chat **đã dựng trong `floraos-core`** ở P23 (`src/modules/chat-assistant/`, `/api/v1/chat/*`); không tách repo thứ tư nữa | Xong |
 
 ### 2.1 Ranh giới sở hữu dữ liệu — luật cắt
 
@@ -457,12 +457,12 @@ Năm module còn lại không thuộc engine nào vì chúng không sinh nội d
 | **M02** | Product Cost & Pricing | — | `floraos-core` | **REUSE R3/R4/R5** kèm test bất biến hai phía. Quy tắc giá theo tổ chức |
 | **M03** | Product Search / KB | — | `floraos-core` | Xây lại trên Postgres; logic lọc thu hoạch từ `locTraCuu.test.ts` |
 | **M04a** | Product Image Optimization | Creative | `floraos-core` | **BUILD** theo spec 1.159 dòng. Identity Guard là cổng cứng |
-| **M04b** | Marketing Creative — xoá nền, đổi nền, mở rộng khung, retouch, watermark, biến thể | Creative | `SocialFlow` | **BUILD** phần soạn ảnh; **ADAPTER** đường đọc Master Image đã duyệt |
-| **M04c** | Video Studio — Reel, TikTok, Story, slideshow, motion quảng cáo | Creative | `SocialFlow` | **EXTEND** adapter HeyGen/Veo và `video_jobs` đã có; **BUILD** lớp dựng cảnh. Đặc tả kỹ thuật là Giai đoạn 2 của `M04_FLORAOS_PRODUCT_IMAGE_OPTIMIZER_FULL.md` |
+| **M04b** | Marketing Creative — xoá nền, đổi nền, mở rộng khung, retouch, watermark, biến thể | Creative | **`floraos-core`** *(đổi từ `SocialFlow` ở P16/P24)* | **ĐÃ XÂY** trong core: `POST /api/v1/media/variants` (`I4`/`I5`), `workers/media_ai/jobs/variant_worker.py`, cổng Subject Integrity. Bản ở SocialFlow đã khai tử 09/17 |
+| **M04c** | Video Studio — Reel, TikTok, Story, slideshow, motion quảng cáo | Creative | **`floraos-core`** *(đổi từ `SocialFlow` ở P17)* | **ĐÃ XÂY** trong core: `/api/v1/video/jobs*`, bảng `video_jobs`/`video_scenes`, `workers/media_ai/video/`. Adapter HeyGen/Veo thu hoạch từ SocialFlow sang. Cổng duyệt còn dùng chung mã `I2` — xem **RS-1** |
 | **M05** | Landing Page Generator | Marketing | `LocalBudd` | Giữ nguyên; bỏ bảng trùng, đọc core qua API |
-| **M06** | Catalog Generator & QR | Marketing | `LocalBudd` · core giữ `catalog_links` | **BUILD** |
+| **M06** | Catalog Generator & QR | Marketing | **cả `floraos-core` lẫn `LocalBudd`** — chưa chốt, xem **RS-3** | **ĐÃ XÂY HAI LẦN**: core có `/c/[slug]`, `/api/v1/public/catalog/[slug]`, `/api/v1/catalog-links*` và bảng `catalog_links`; LocalBudd có bộ tương đương và bảng `catalog_links` riêng |
 | **M07** | Content & Social Publishing | Marketing | `SocialFlow` | **EXTEND E7** adapter nền tảng và lịch đăng đã chạy; **BUILD** chiến lược nội dung ngành hoa và adapter Zalo OA |
-| **M08** | Customer Chat | — | Chưa có repo | **BUILD**, sau |
+| **M08** | Customer Chat | — | **`floraos-core`** *(đổi từ "chưa có repo" ở P23)* | **ĐÃ XÂY**: `src/modules/chat-assistant/`, `/api/v1/chat/*`, bốn tầng engine, năm kênh, mã `T1`–`T4` |
 | **M09** | Customer & Repurchase | — | `floraos-core` | **BUILD** |
 | **M10** | Orders & Operations | — | `floraos-core` | **EXTEND** — 28 mã `C1`–`C28` và luồng chào giá/điều phối của v1 là nguồn thu hoạch |
 | **M11** | Analytics & Learning | Learning | `floraos-core` · số liệu gốc ở `SocialFlow` | **EXTEND** `post_metrics`/`content_insights`; **BUILD** phép nối ROI và vòng học |
