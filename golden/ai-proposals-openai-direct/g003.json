@@ -2,19 +2,19 @@
   "palette_accounting": [
     {
       "cluster_index": 0,
-      "thuoc_ve": "Hoa",
+      "thuoc_ve": "Hoa hồng",
       "nhom": "Hoa",
       "confidence": 90
     },
     {
       "cluster_index": 1,
-      "thuoc_ve": "Lá",
+      "thuoc_ve": "Lá xanh",
       "nhom": "Lá",
       "confidence": 85
     },
     {
       "cluster_index": 2,
-      "thuoc_ve": "Phụ kiện",
+      "thuoc_ve": "Cành trang trí",
       "nhom": "Phụ kiện",
       "confidence": 80
     }
@@ -25,10 +25,10 @@
     "hoa_lap_day": "Có",
     "la_nen": "Có",
     "la_diem_nhan": "Có",
-    "vat_lieu_goi": "Không có",
+    "vat_lieu_goi": "Có",
     "day_buoc": "Có",
-    "ruy_bang": "Có",
-    "thiep_bien_chu": "Có",
+    "ruy_bang": "Không có",
+    "thiep_bien_chu": "Không có",
     "phu_kien_trang_tri": "Có"
   },
   "identity": {
@@ -37,7 +37,7 @@
     "category": "Bó hoa",
     "container": "Hộp vuông",
     "phong_cach": "Hiện đại",
-    "dip_su_dung": "Kỷ niệm, Chia buồn"
+    "dip_su_dung": "Kỷ niệm, Tiệc"
   },
   "bom": {
     "flowers": [
@@ -48,7 +48,7 @@
         "color": "Trắng",
         "quantity": 20,
         "dem_tung_vung": [],
-        "bloom_diameter_ratio": 1.5,
+        "bloom_diameter_ratio": 0.5,
         "cluster_indices": [
           0
         ],
@@ -58,7 +58,7 @@
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
         "mo_ta_mau": "Trắng tinh khiết",
-        "dau_hieu_nhan_dang": "Hồng",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       }
@@ -77,21 +77,30 @@
         "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh tươi",
-        "dau_hieu_nhan_dang": null
+        "dau_hieu_nhan_dang": "Có"
       }
     ],
     "accessories": [
       {
-        "name": "Bảng chữ",
-        "material": "Giấy",
-        "color": "Đen",
-        "quantity": 1,
-        "printed_text": "THU HỒNG- Trung Vương 81\nVô cùng thương tiếc Cô",
+        "name": "Cành trang trí",
+        "material": "Cành khô",
+        "color": "Trắng",
+        "quantity": null,
+        "printed_text": null,
         "confidence": 80,
         "ma": null
       }
     ],
-    "wrapping": [],
+    "wrapping": [
+      {
+        "layer": "Lớp ngoài",
+        "material": "Giấy gói",
+        "color": "Đen",
+        "texture": "Trơn",
+        "confidence": 80,
+        "ma": null
+      }
+    ],
     "materials_note": null
   },
   "confidence": 90,

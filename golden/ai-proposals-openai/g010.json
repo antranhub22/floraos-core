@@ -65,14 +65,16 @@
     "shape": "Vòng tròn",
     "facing": "Một mặt",
     "category": "Vòng hoa",
-    "container": "Xốp cắm"
+    "container": "Xốp cắm",
+    "phong_cach": null,
+    "dip_su_dung": "Chia buồn"
   },
   "bom": {
     "flowers": [
       {
         "nhom_hoa": "Cúc",
         "name": "Cúc trắng",
-        "shade": "Vừa",
+        "shade": "Nhạt",
         "color": "TM03 Trắng",
         "quantity": 40,
         "dem_tung_vung": [
@@ -91,15 +93,15 @@
         "ma": null,
         "dvt_dem": "Bông",
         "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng ngà",
-        "dau_hieu_nhan_dang": "Cánh nhỏ, xếp vòng tròn",
+        "mo_ta_mau": "Trắng nhạt",
+        "dau_hieu_nhan_dang": "Cánh hoa nhỏ, xếp vòng tròn",
         "so_nu": 0,
         "so_hong": 0
       },
       {
         "nhom_hoa": "Cúc",
         "name": "Cúc vàng",
-        "shade": "Vừa",
+        "shade": "Nhạt",
         "color": "TM08 Vàng",
         "quantity": 20,
         "dem_tung_vung": [
@@ -113,23 +115,24 @@
           0,
           7
         ],
-        "role": "Hoa lấp đầy",
+        "role": "Hoa phụ",
         "confidence": 90,
         "ma": null,
         "dvt_dem": "Bông",
         "mau": "TM08 Vàng",
         "mo_ta_mau": "Vàng nhạt",
-        "dau_hieu_nhan_dang": "Cánh nhỏ, xếp vòng tròn",
+        "dau_hieu_nhan_dang": "Cánh hoa nhỏ, xếp vòng tròn",
         "so_nu": 0,
         "so_hong": 0
       },
       {
         "nhom_hoa": "Cúc",
-        "name": "Cúc hồng",
-        "shade": "Vừa",
+        "name": "Cúc tím",
+        "shade": "Nhạt",
         "color": "TM02 Hồng",
-        "quantity": 15,
+        "quantity": 20,
         "dem_tung_vung": [
+          5,
           5,
           5,
           5
@@ -138,13 +141,13 @@
         "cluster_indices": [
           4
         ],
-        "role": "Hoa phụ",
+        "role": "Hoa lấp đầy",
         "confidence": 90,
         "ma": null,
         "dvt_dem": "Bông",
         "mau": "TM02 Hồng",
-        "mo_ta_mau": "Hồng nhạt",
-        "dau_hieu_nhan_dang": "Cánh nhỏ, xếp vòng tròn",
+        "mo_ta_mau": "Tím nhạt",
+        "dau_hieu_nhan_dang": "Cánh hoa nhỏ, xếp vòng tròn",
         "so_nu": 0,
         "so_hong": 0
       }
@@ -157,13 +160,13 @@
           6
         ],
         "role": "Nền",
-        "confidence": 100,
+        "confidence": 90,
         "color": "Xanh đậm",
         "ma": null,
         "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh đậm",
-        "dau_hieu_nhan_dang": "Lá to, xanh đậm"
+        "dau_hieu_nhan_dang": "Lá xanh đậm, hình bầu dục"
       }
     ],
     "accessories": [
@@ -193,7 +196,7 @@
   "san_xuat": {
     "so_tang_lop": 2
   },
-  "flower_count": 75,
+  "flower_count": 80,
   "bud_count": 0,
   "damaged_count": 0
 }

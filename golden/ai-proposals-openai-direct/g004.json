@@ -24,7 +24,7 @@
     "hoa_phu": "Có",
     "hoa_lap_day": "Có",
     "la_nen": "Có",
-    "la_diem_nhan": "Không có",
+    "la_diem_nhan": "Có",
     "vat_lieu_goi": "Có",
     "day_buoc": "Có",
     "ruy_bang": "Không có",
@@ -46,7 +46,7 @@
         "name": "Ly",
         "shade": "Nhạt",
         "color": "Vàng",
-        "quantity": 4,
+        "quantity": 3,
         "dem_tung_vung": [],
         "bloom_diameter_ratio": 1.5,
         "cluster_indices": [
@@ -69,12 +69,12 @@
         "color": "Trắng",
         "quantity": 5,
         "dem_tung_vung": [],
-        "bloom_diameter_ratio": 1.2,
+        "bloom_diameter_ratio": 1.0,
         "cluster_indices": [
           0
         ],
         "role": "Hoa phụ",
-        "confidence": 85,
+        "confidence": 90,
         "ma": null,
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
@@ -88,14 +88,14 @@
         "name": "Lan",
         "shade": "Nhạt",
         "color": "Trắng",
-        "quantity": 6,
+        "quantity": 4,
         "dem_tung_vung": [],
-        "bloom_diameter_ratio": 1.3,
+        "bloom_diameter_ratio": 1.2,
         "cluster_indices": [
           0
         ],
         "role": "Hoa phụ",
-        "confidence": 85,
+        "confidence": 90,
         "ma": null,
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
@@ -108,12 +108,12 @@
     "foliage": [
       {
         "name": "Lá xanh",
-        "quantity": 10,
+        "quantity": 6,
         "cluster_indices": [
           1
         ],
         "role": "Nền",
-        "confidence": 80,
+        "confidence": 85,
         "color": "Xanh",
         "ma": null,
         "dvt_dem": "Lá",
@@ -139,7 +139,7 @@
   "san_xuat": {
     "so_tang_lop": 1
   },
-  "flower_count": 15,
+  "flower_count": 12,
   "bud_count": 0,
   "damaged_count": 0
 }

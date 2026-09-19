@@ -14,7 +14,7 @@
     },
     {
       "cluster_index": 2,
-      "thuoc_ve": "Hoa môn",
+      "thuoc_ve": "Hoa lan",
       "nhom": "Hoa",
       "confidence": 90
     },
@@ -23,18 +23,6 @@
       "thuoc_ve": "Lá",
       "nhom": "Lá",
       "confidence": 90
-    },
-    {
-      "cluster_index": 4,
-      "thuoc_ve": "Nền ảnh",
-      "nhom": "Nền ảnh",
-      "confidence": 90
-    },
-    {
-      "cluster_index": 5,
-      "thuoc_ve": "Vật liệu gói",
-      "nhom": "Vật liệu gói",
-      "confidence": 90
     }
   ],
   "checklist": {
@@ -42,54 +30,52 @@
     "hoa_phu": "Có",
     "hoa_lap_day": "Có",
     "la_nen": "Có",
-    "la_diem_nhan": "Không có",
+    "la_diem_nhan": "Có",
     "vat_lieu_goi": "Có",
     "day_buoc": "Có",
     "ruy_bang": "Có",
     "thiep_bien_chu": "Có",
-    "phu_kien_trang_tri": "Không có"
+    "phu_kien_trang_tri": "Có"
   },
   "identity": {
-    "shape": "Vòng tròn",
+    "shape": "Tròn",
     "facing": "Một mặt",
-    "category": "Vòng hoa",
-    "container": "Không có"
+    "category": "Bó hoa",
+    "container": "Khác",
+    "phong_cach": "Cổ điển",
+    "dip_su_dung": "Chia buồn"
   },
   "bom": {
     "flowers": [
       {
         "nhom_hoa": "Cúc",
-        "name": null,
-        "shade": "Vừa",
-        "color": "TM03 Trắng",
-        "quantity": 30,
-        "dem_tung_vung": [
-          10,
-          10,
-          10
-        ],
-        "bloom_diameter_ratio": 0.1,
+        "name": "Cúc trắng",
+        "shade": "Nhạt",
+        "color": "Trắng",
+        "quantity": 20,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.5,
         "cluster_indices": [
           0
         ],
-        "role": "Hoa lấp đầy",
+        "role": "Hoa chủ đạo",
         "confidence": 90,
         "ma": null,
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng kem",
-        "dau_hieu_nhan_dang": null,
+        "mo_ta_mau": "Màu trắng tinh khiết",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       },
       {
         "nhom_hoa": "Hồng",
-        "name": null,
-        "shade": "Vừa",
-        "color": "TM03 Trắng",
+        "name": "Hồng tím",
+        "shade": "Nhạt",
+        "color": "Tím",
         "quantity": 10,
         "dem_tung_vung": [],
-        "bloom_diameter_ratio": 0.15,
+        "bloom_diameter_ratio": 0.5,
         "cluster_indices": [
           1
         ],
@@ -97,30 +83,30 @@
         "confidence": 90,
         "ma": null,
         "dvt_dem": "Cành",
-        "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng nhạt",
-        "dau_hieu_nhan_dang": null,
+        "mau": "TM07 Tím",
+        "mo_ta_mau": "Màu tím nhẹ nhàng",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       },
       {
-        "nhom_hoa": "Môn",
-        "name": null,
-        "shade": "Vừa",
-        "color": "TM03 Trắng",
+        "nhom_hoa": "Lan",
+        "name": "Lan trắng",
+        "shade": "Nhạt",
+        "color": "Trắng",
         "quantity": 5,
         "dem_tung_vung": [],
-        "bloom_diameter_ratio": 0.2,
+        "bloom_diameter_ratio": 0.5,
         "cluster_indices": [
           2
         ],
-        "role": "Hoa chủ đạo",
+        "role": "Hoa phụ",
         "confidence": 90,
         "ma": null,
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng ngà",
-        "dau_hieu_nhan_dang": null,
+        "mo_ta_mau": "Màu trắng thanh thoát",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       }
@@ -128,27 +114,34 @@
     "foliage": [
       {
         "name": "Lá xanh",
-        "quantity": null,
-        "cluster_indices": [
-          3
-        ],
+        "quantity": 15,
+        "cluster_indices": [],
         "role": "Nền",
         "confidence": 90,
-        "color": "Xanh đậm",
+        "color": "Xanh",
         "ma": null,
-        "dvt_dem": "Lá",
+        "dvt_dem": "Cành",
         "mau": "TM05 Xanh lá",
-        "mo_ta_mau": "Xanh đậm",
-        "dau_hieu_nhan_dang": null
+        "mo_ta_mau": "Màu xanh tươi mát",
+        "dau_hieu_nhan_dang": "Có"
       }
     ],
     "accessories": [
       {
-        "name": "Biển chữ",
-        "material": "Gỗ",
-        "color": "Đen",
+        "name": "Ruy băng trắng",
+        "material": "Vải",
+        "color": "Trắng",
         "quantity": 1,
-        "printed_text": "THÀNH KÍNH PHÂN ƯU",
+        "printed_text": null,
+        "confidence": 90,
+        "ma": null
+      },
+      {
+        "name": "Giấy gói",
+        "material": "Giấy",
+        "color": "Trắng",
+        "quantity": 1,
+        "printed_text": null,
         "confidence": 90,
         "ma": null
       }
@@ -158,15 +151,15 @@
         "layer": "Lớp ngoài",
         "material": "Vải",
         "color": "Trắng",
-        "texture": "Mờ",
+        "texture": "Trơn",
         "confidence": 90,
         "ma": null
       },
       {
-        "layer": "Đai buộc",
-        "material": "Vải",
+        "layer": "Lớp giữa",
+        "material": "Giấy",
         "color": "Trắng",
-        "texture": "Mờ",
+        "texture": "Trơn",
         "confidence": 90,
         "ma": null
       }
@@ -175,9 +168,9 @@
   },
   "confidence": 90,
   "san_xuat": {
-    "so_tang_lop": 3
+    "so_tang_lop": 2
   },
-  "flower_count": 45,
+  "flower_count": 35,
   "bud_count": 0,
   "damaged_count": 0
 }

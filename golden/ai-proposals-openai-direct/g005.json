@@ -58,7 +58,7 @@
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
         "mo_ta_mau": "Trắng tinh khiết",
-        "dau_hieu_nhan_dang": "Cúc",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       },
@@ -73,13 +73,13 @@
         "cluster_indices": [
           0
         ],
-        "role": "Hoa chủ đạo",
+        "role": "Hoa phụ",
         "confidence": 90,
         "ma": null,
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
         "mo_ta_mau": "Trắng tinh khiết",
-        "dau_hieu_nhan_dang": "Hồng",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       }
@@ -98,7 +98,7 @@
         "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh tươi",
-        "dau_hieu_nhan_dang": null
+        "dau_hieu_nhan_dang": "Có"
       }
     ],
     "accessories": [
@@ -106,7 +106,7 @@
         "name": "Ruy băng",
         "material": "Vải",
         "color": "Trắng",
-        "quantity": 1,
+        "quantity": null,
         "printed_text": null,
         "confidence": 80,
         "ma": null

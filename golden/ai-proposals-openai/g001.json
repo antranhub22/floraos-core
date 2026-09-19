@@ -8,7 +8,7 @@
     },
     {
       "cluster_index": 1,
-      "thuoc_ve": "Hoa",
+      "thuoc_ve": "Hoa hồng",
       "nhom": "Hoa",
       "confidence": 100
     },
@@ -32,7 +32,7 @@
     },
     {
       "cluster_index": 5,
-      "thuoc_ve": "Vật liệu gói",
+      "thuoc_ve": "Bình hoa",
       "nhom": "Vật liệu gói",
       "confidence": 100
     },
@@ -48,7 +48,7 @@
     "hoa_phu": "Có",
     "hoa_lap_day": "Có",
     "la_nen": "Có",
-    "la_diem_nhan": "Không có",
+    "la_diem_nhan": "Có",
     "vat_lieu_goi": "Có",
     "day_buoc": "Không có",
     "ruy_bang": "Không có",
@@ -58,8 +58,10 @@
   "identity": {
     "shape": "Bán cầu",
     "facing": "Một mặt",
-    "category": "Giỏ hoa",
-    "container": "Giỏ mây"
+    "category": "Bình hoa",
+    "container": "Khác",
+    "phong_cach": "Hiện đại",
+    "dip_su_dung": "Khai trương"
   },
   "bom": {
     "flowers": [
@@ -84,13 +86,13 @@
         "dvt_dem": "Bông",
         "mau": "TM03 Trắng",
         "mo_ta_mau": "Trắng kem",
-        "dau_hieu_nhan_dang": "Cánh xếp lớp, nhụy kín",
+        "dau_hieu_nhan_dang": "Cánh hoa xếp vòng, màu trắng kem",
         "so_nu": 0,
         "so_hong": 0
       },
       {
         "nhom_hoa": "Cẩm chướng",
-        "name": "Hoa cẩm chướng trắng",
+        "name": "Cẩm chướng trắng",
         "shade": "Vừa",
         "color": "TM03 Trắng",
         "quantity": 8,
@@ -108,8 +110,8 @@
         "ma": null,
         "dvt_dem": "Bông",
         "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng tinh",
-        "dau_hieu_nhan_dang": "Cánh mỏng, xếp nếp",
+        "mo_ta_mau": "Trắng",
+        "dau_hieu_nhan_dang": "Cánh hoa xếp lớp, màu trắng",
         "so_nu": 0,
         "so_hong": 0
       },
@@ -133,8 +135,8 @@
         "ma": null,
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng nhỏ",
-        "dau_hieu_nhan_dang": "Nhỏ, nhiều bông trên cành",
+        "mo_ta_mau": "Trắng",
+        "dau_hieu_nhan_dang": "Nhỏ, nhiều bông trên một cành",
         "so_nu": 0,
         "so_hong": 0
       }
@@ -156,7 +158,7 @@
         "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh đậm",
-        "dau_hieu_nhan_dang": "Lá dài, xẻ thùy"
+        "dau_hieu_nhan_dang": "Lá dài, mảnh, màu xanh đậm"
       },
       {
         "name": "Lá bạch đàn",
@@ -167,21 +169,21 @@
           3,
           4
         ],
-        "role": "Nền",
+        "role": "Điểm nhấn",
         "confidence": 85,
         "color": "Xanh bạc",
         "ma": null,
         "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh bạc",
-        "dau_hieu_nhan_dang": "Lá tròn, mọc đối"
+        "dau_hieu_nhan_dang": "Lá tròn, màu xanh bạc"
       }
     ],
     "accessories": [],
     "wrapping": [
       {
         "layer": "Lớp ngoài",
-        "material": "Giỏ mây",
+        "material": "Bình gỗ",
         "color": "Cam",
         "texture": "Dệt thô",
         "confidence": 90,

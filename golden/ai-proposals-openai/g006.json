@@ -87,7 +87,7 @@
         "dvt_dem": "Bông",
         "mau": "TM03 Trắng",
         "mo_ta_mau": "Trắng kem",
-        "dau_hieu_nhan_dang": "Cánh hoa xếp lớp, màu trắng kem",
+        "dau_hieu_nhan_dang": "Cánh hoa lớn, xếp vòng tròn, màu trắng kem",
         "so_nu": 0,
         "so_hong": 0
       },
@@ -113,7 +113,7 @@
         "dvt_dem": "Bông",
         "mau": "TM02 Hồng",
         "mo_ta_mau": "Hồng tím",
-        "dau_hieu_nhan_dang": "Cánh hoa mỏng, màu hồng tím",
+        "dau_hieu_nhan_dang": "Cánh hoa nhỏ, màu hồng tím, mọc thành chùm",
         "so_nu": 5,
         "so_hong": 0
       }
@@ -150,7 +150,7 @@
     "wrapping": [],
     "materials_note": null
   },
-  "confidence": 95,
+  "confidence": 90,
   "san_xuat": {
     "so_tang_lop": 2
   },

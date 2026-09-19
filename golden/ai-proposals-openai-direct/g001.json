@@ -2,33 +2,21 @@
   "palette_accounting": [
     {
       "cluster_index": 0,
-      "thuoc_ve": "Hoa hồng",
+      "thuoc_ve": "Hoa",
       "nhom": "Hoa",
       "confidence": 90
     },
     {
       "cluster_index": 1,
-      "thuoc_ve": "Hoa cẩm tú cầu",
-      "nhom": "Hoa",
-      "confidence": 90
+      "thuoc_ve": "Lá",
+      "nhom": "Lá",
+      "confidence": 85
     },
     {
       "cluster_index": 2,
-      "thuoc_ve": "Hoa baby",
-      "nhom": "Hoa",
-      "confidence": 90
-    },
-    {
-      "cluster_index": 3,
-      "thuoc_ve": "Lá",
-      "nhom": "Lá",
-      "confidence": 90
-    },
-    {
-      "cluster_index": 4,
-      "thuoc_ve": "Bình hoa",
-      "nhom": "Vật liệu gói",
-      "confidence": 90
+      "thuoc_ve": "Phụ kiện",
+      "nhom": "Phụ kiện",
+      "confidence": 80
     }
   ],
   "checklist": {
@@ -38,31 +26,29 @@
     "la_nen": "Có",
     "la_diem_nhan": "Có",
     "vat_lieu_goi": "Có",
-    "day_buoc": "Không có",
+    "day_buoc": "Có",
     "ruy_bang": "Không có",
     "thiep_bien_chu": "Không có",
-    "phu_kien_trang_tri": "Không có"
+    "phu_kien_trang_tri": "Có"
   },
   "identity": {
-    "shape": "Bán cầu",
+    "shape": "Tròn",
     "facing": "Một mặt",
-    "category": "Bình hoa",
-    "container": "Bình thủy tinh"
+    "category": "Bó hoa",
+    "container": "Giỏ mây",
+    "phong_cach": "Hiện đại",
+    "dip_su_dung": "Sinh nhật"
   },
   "bom": {
     "flowers": [
       {
         "nhom_hoa": "Hồng",
-        "name": null,
+        "name": "Hồng trắng",
         "shade": "Nhạt",
-        "color": "TM03 Trắng",
+        "color": "Trắng",
         "quantity": 10,
-        "dem_tung_vung": [
-          3,
-          3,
-          4
-        ],
-        "bloom_diameter_ratio": 0.2,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.5,
         "cluster_indices": [
           0
         ],
@@ -71,89 +57,126 @@
         "ma": null,
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng kem",
-        "dau_hieu_nhan_dang": "Rose",
+        "mo_ta_mau": "Trắng tinh khiết",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       },
       {
-        "nhom_hoa": "Cẩm tú cầu",
-        "name": null,
+        "nhom_hoa": "Lan",
+        "name": "Lan hồ điệp",
         "shade": "Nhạt",
-        "color": "TM03 Trắng",
-        "quantity": 1,
-        "dem_tung_vung": [],
-        "bloom_diameter_ratio": 0.5,
-        "cluster_indices": [
-          1
-        ],
-        "role": "Hoa phụ",
-        "confidence": 90,
-        "ma": null,
-        "dvt_dem": "Cành",
-        "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng xanh",
-        "dau_hieu_nhan_dang": "Hydrangea",
-        "so_nu": 0,
-        "so_hong": 0
-      },
-      {
-        "nhom_hoa": "Baby",
-        "name": null,
-        "shade": "Nhạt",
-        "color": "TM03 Trắng",
+        "color": "Trắng",
         "quantity": 5,
         "dem_tung_vung": [],
-        "bloom_diameter_ratio": 0.1,
+        "bloom_diameter_ratio": 0.4,
         "cluster_indices": [
-          2
+          0
         ],
-        "role": "Hoa lấp đầy",
-        "confidence": 90,
+        "role": "Hoa phụ",
+        "confidence": 85,
         "ma": null,
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng tinh",
-        "dau_hieu_nhan_dang": "Gypsophila",
+        "mo_ta_mau": "Trắng nhẹ nhàng",
+        "dau_hieu_nhan_dang": "Có",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Cúc",
+        "name": "Cúc họa mi",
+        "shade": "Nhạt",
+        "color": "Trắng",
+        "quantity": 3,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.3,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa phụ",
+        "confidence": 80,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng thanh thoát",
+        "dau_hieu_nhan_dang": "Có",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Cẩm chướng",
+        "name": "Cẩm chướng trắng",
+        "shade": "Nhạt",
+        "color": "Trắng",
+        "quantity": 2,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": 0.3,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa phụ",
+        "confidence": 80,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng nhẹ nhàng",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       }
     ],
     "foliage": [
       {
-        "name": "Lá",
-        "quantity": null,
+        "name": "Eucalyptus",
+        "quantity": 5,
         "cluster_indices": [
-          3
+          1
         ],
         "role": "Nền",
-        "confidence": 90,
+        "confidence": 85,
+        "color": "Xanh bạc",
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM05 Xanh lá",
+        "mo_ta_mau": "Xanh tươi mát",
+        "dau_hieu_nhan_dang": "Có"
+      },
+      {
+        "name": "Dương xỉ",
+        "quantity": 3,
+        "cluster_indices": [
+          1
+        ],
+        "role": "Nền",
+        "confidence": 80,
         "color": "Xanh đậm",
         "ma": null,
-        "dvt_dem": "Lá",
+        "dvt_dem": "Cành",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh đậm",
-        "dau_hieu_nhan_dang": "Foliage"
+        "dau_hieu_nhan_dang": "Có"
       }
     ],
-    "accessories": [],
-    "wrapping": [
+    "accessories": [
       {
-        "layer": "Lớp ngoài",
-        "material": "Thủy tinh",
-        "color": "Trong suốt",
-        "texture": "Trơn",
-        "confidence": 90,
+        "name": "Giỏ mây",
+        "material": "Mây",
+        "color": "Nâu",
+        "quantity": 1,
+        "printed_text": null,
+        "confidence": 80,
         "ma": null
       }
     ],
+    "wrapping": [],
     "materials_note": null
   },
   "confidence": 90,
   "san_xuat": {
-    "so_tang_lop": 3
+    "so_tang_lop": 1
   },
-  "flower_count": 16,
+  "flower_count": 20,
   "bud_count": 0,
   "damaged_count": 0
 }

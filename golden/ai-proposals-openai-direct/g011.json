@@ -8,49 +8,43 @@
     },
     {
       "cluster_index": 1,
-      "thuoc_ve": "Phụ kiện",
+      "thuoc_ve": "Ruy băng",
       "nhom": "Phụ kiện",
-      "confidence": 90
-    },
-    {
-      "cluster_index": 2,
-      "thuoc_ve": "Nền ảnh",
-      "nhom": "Nền ảnh",
-      "confidence": 90
+      "confidence": 85
     }
   ],
   "checklist": {
     "hoa_chu_dao": "Có",
-    "hoa_phu": "Không có",
-    "hoa_lap_day": "Có",
+    "hoa_phu": "Có",
+    "hoa_lap_day": "Không có",
     "la_nen": "Không có",
     "la_diem_nhan": "Không có",
-    "vat_lieu_goi": "Không có",
+    "vat_lieu_goi": "Có",
     "day_buoc": "Có",
-    "ruy_bang": "Không có",
+    "ruy_bang": "Có",
     "thiep_bien_chu": "Có",
     "phu_kien_trang_tri": "Có"
   },
   "identity": {
-    "shape": "Vòng tròn",
+    "shape": "Tròn",
     "facing": "Một mặt",
     "category": "Vòng hoa",
-    "container": "Không có"
+    "container": "Không có",
+    "phong_cach": "Cổ điển",
+    "dip_su_dung": "Tang lễ"
   },
   "bom": {
     "flowers": [
       {
         "nhom_hoa": "Cúc",
-        "name": null,
+        "name": "Cúc trắng",
         "shade": "Nhạt",
-        "color": "TM09 Nhiều màu sắc",
-        "quantity": 60,
+        "color": "Trắng",
+        "quantity": 10,
         "dem_tung_vung": [
-          20,
-          20,
-          20
+          10
         ],
-        "bloom_diameter_ratio": 0.1,
+        "bloom_diameter_ratio": 0.5,
         "cluster_indices": [
           0
         ],
@@ -58,9 +52,32 @@
         "confidence": 90,
         "ma": null,
         "dvt_dem": "Cành",
-        "mau": "TM09 Nhiều màu sắc",
-        "mo_ta_mau": "Trắng và hồng nhạt",
-        "dau_hieu_nhan_dang": "Chrysanthemum",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Màu trắng tinh khiết",
+        "dau_hieu_nhan_dang": "Có",
+        "so_nu": 0,
+        "so_hong": 0
+      },
+      {
+        "nhom_hoa": "Cúc",
+        "name": "Cúc hồng",
+        "shade": "Nhạt",
+        "color": "Hồng",
+        "quantity": 10,
+        "dem_tung_vung": [
+          10
+        ],
+        "bloom_diameter_ratio": 0.5,
+        "cluster_indices": [
+          0
+        ],
+        "role": "Hoa phụ",
+        "confidence": 90,
+        "ma": null,
+        "dvt_dem": "Cành",
+        "mau": "TM02 Hồng",
+        "mo_ta_mau": "Màu hồng nhẹ nhàng",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       }
@@ -68,17 +85,17 @@
     "foliage": [],
     "accessories": [
       {
-        "name": "Nơ đen",
+        "name": "Ruy băng đen",
         "material": "Vải",
         "color": "Đen",
         "quantity": 2,
         "printed_text": null,
-        "confidence": 90,
+        "confidence": 85,
         "ma": null
       },
       {
-        "name": "Băng rôn",
-        "material": "Vải",
+        "name": "Bảng chữ",
+        "material": "Gỗ",
         "color": "Đen",
         "quantity": 1,
         "printed_text": "Thành kính phân ưu!",
@@ -93,7 +110,7 @@
   "san_xuat": {
     "so_tang_lop": 1
   },
-  "flower_count": 60,
+  "flower_count": 20,
   "bud_count": 0,
   "damaged_count": 0
 }

@@ -26,13 +26,13 @@
     },
     {
       "cluster_index": 4,
-      "thuoc_ve": "Hoa baby",
+      "thuoc_ve": "Hoa hồng trắng",
       "nhom": "Hoa",
       "confidence": 100
     },
     {
       "cluster_index": 5,
-      "thuoc_ve": "Hoa baby",
+      "thuoc_ve": "Hoa hồng trắng",
       "nhom": "Hoa",
       "confidence": 100
     },
@@ -51,7 +51,7 @@
   ],
   "checklist": {
     "hoa_chu_dao": "Có",
-    "hoa_phu": "Có",
+    "hoa_phu": "Không có",
     "hoa_lap_day": "Không có",
     "la_nen": "Có",
     "la_diem_nhan": "Không có",
@@ -76,46 +76,26 @@
         "name": "Hoa hồng trắng",
         "shade": "Nhạt",
         "color": "TM03 Trắng",
-        "quantity": 20,
+        "quantity": 24,
         "dem_tung_vung": [
-          7,
-          7,
-          6
+          8,
+          8,
+          8
         ],
         "bloom_diameter_ratio": 0.15,
         "cluster_indices": [
           0,
-          2
+          2,
+          4,
+          5
         ],
         "role": "Hoa chủ đạo",
-        "confidence": 100,
+        "confidence": 90,
         "ma": null,
         "dvt_dem": "Bông",
         "mau": "TM03 Trắng",
         "mo_ta_mau": "Trắng kem",
-        "dau_hieu_nhan_dang": "Cánh hoa lớn, xếp lớp, màu trắng kem",
-        "so_nu": 0,
-        "so_hong": 0
-      },
-      {
-        "nhom_hoa": "Baby",
-        "name": "Hoa baby",
-        "shade": "Nhạt",
-        "color": "TM08 Vàng",
-        "quantity": null,
-        "dem_tung_vung": [],
-        "bloom_diameter_ratio": null,
-        "cluster_indices": [
-          4,
-          5
-        ],
-        "role": "Hoa phụ",
-        "confidence": 100,
-        "ma": null,
-        "dvt_dem": "Cành",
-        "mau": "TM08 Vàng",
-        "mo_ta_mau": "Vàng nhạt",
-        "dau_hieu_nhan_dang": "Nhỏ, nhiều bông trên một cành, màu vàng nhạt",
+        "dau_hieu_nhan_dang": "Cánh hoa xếp lớp, màu trắng kem, bông lớn",
         "so_nu": 0,
         "so_hong": 0
       }
@@ -132,10 +112,10 @@
         "confidence": 100,
         "color": "Xanh đậm",
         "ma": null,
-        "dvt_dem": "Cành",
+        "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh đậm",
-        "dau_hieu_nhan_dang": "Lá nhỏ, xanh đậm, mọc dày"
+        "dau_hieu_nhan_dang": "Lá nhỏ, xanh đậm"
       }
     ],
     "accessories": [
@@ -144,7 +124,7 @@
         "material": "Giấy",
         "color": "Đen",
         "quantity": 1,
-        "printed_text": "THU HỒNG - Trung Vuong 81 Vô cùng thương tiếc Cô",
+        "printed_text": "THU HỒNG - Trung Vuong 81\nVô cùng thương tiếc Cô",
         "confidence": 100,
         "ma": null
       }
@@ -163,9 +143,9 @@
   },
   "confidence": 90,
   "san_xuat": {
-    "so_tang_lop": 2
+    "so_tang_lop": 1
   },
-  "flower_count": 20,
+  "flower_count": 24,
   "bud_count": 0,
   "damaged_count": 0
 }

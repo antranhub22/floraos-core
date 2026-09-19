@@ -1,7 +1,7 @@
 {
   "bo_may": "local_cv",
-  "so_anh": 2,
-  "giay_moi_anh": 40.75,
+  "so_anh": 8,
+  "giay_moi_anh": 54.68,
   "usd_moi_anh": null,
-  "ghi_chu": "usd_moi_anh điền tay từ hoá đơn nhà cung cấp"
+  "ghi_chu": "Chạy cục bộ — không tiêu tiền nhà cung cấp; xem giay_moi_anh cho chi phí máy"
 }

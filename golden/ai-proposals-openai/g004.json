@@ -144,7 +144,7 @@
     ],
     "foliage": [
       {
-        "name": "Lá thông",
+        "name": "Lá dương xỉ",
         "quantity": null,
         "cluster_indices": [
           4,
@@ -154,10 +154,10 @@
         "confidence": 90,
         "color": "Xanh đậm",
         "ma": null,
-        "dvt_dem": "Cành",
+        "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh đậm",
-        "dau_hieu_nhan_dang": "Lá kim nhỏ, mọc dày"
+        "dau_hieu_nhan_dang": "Lá nhỏ, mọc dày đặc"
       }
     ],
     "accessories": [],
@@ -167,13 +167,13 @@
         "material": "Giỏ mây",
         "color": "Trắng",
         "texture": "Trơn",
-        "confidence": 100,
+        "confidence": 90,
         "ma": null
       }
     ],
     "materials_note": null
   },
-  "confidence": 90,
+  "confidence": 85,
   "san_xuat": {
     "so_tang_lop": 3
   },

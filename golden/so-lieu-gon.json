@@ -1,7 +1,11 @@
 {
   "bo_may": "openai_direct",
-  "so_anh": 4,
-  "giay_moi_anh": 5.58,
-  "usd_moi_anh": null,
-  "ghi_chu": "usd_moi_anh điền tay từ hoá đơn nhà cung cấp"
+  "so_anh": 8,
+  "giay_moi_anh": 5.8,
+  "usd_moi_anh": 0.004566,
+  "token_vao_moi_anh": 29456.0,
+  "token_ra_moi_anh": 666.8,
+  "lan_goi_moi_anh": 1.0,
+  "mo_hinh": "gpt-4o-mini",
+  "ghi_chu": "Đo từ response.usage của nhà cung cấp, nhân bảng giá ở contracts/config.json"
 }

@@ -14,7 +14,7 @@
     },
     {
       "cluster_index": 2,
-      "thuoc_ve": "Hoa hồng",
+      "thuoc_ve": "Hoa cúc",
       "nhom": "Hoa",
       "confidence": 100
     },
@@ -61,14 +61,14 @@
     "category": "Giỏ hoa",
     "container": "Giỏ mây",
     "phong_cach": "Hiện đại",
-    "dip_su_dung": "Kỷ niệm"
+    "dip_su_dung": "Khai trương"
   },
   "bom": {
     "flowers": [
       {
         "nhom_hoa": "Cúc",
-        "name": "Hoa cúc trắng",
-        "shade": "Nhạt",
+        "name": "Cúc trắng",
+        "shade": "Vừa",
         "color": "TM03 Trắng",
         "quantity": 12,
         "dem_tung_vung": [
@@ -78,23 +78,24 @@
         ],
         "bloom_diameter_ratio": 0.15,
         "cluster_indices": [
-          0
+          0,
+          2
         ],
         "role": "Hoa chủ đạo",
         "confidence": 90,
         "ma": null,
         "dvt_dem": "Bông",
         "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng tinh",
-        "dau_hieu_nhan_dang": "Cánh hoa dài, xếp đều quanh tâm, màu trắng tinh",
+        "mo_ta_mau": "Trắng kem",
+        "dau_hieu_nhan_dang": "Cánh hoa dài, xếp lớp đều",
         "so_nu": 0,
         "so_hong": 0
       },
       {
         "nhom_hoa": "Hồng",
-        "name": "Hoa hồng vàng nhạt",
-        "shade": "Nhạt",
-        "color": "TM08 Vàng",
+        "name": "Hồng trắng",
+        "shade": "Vừa",
+        "color": "TM03 Trắng",
         "quantity": 8,
         "dem_tung_vung": [
           3,
@@ -103,23 +104,22 @@
         ],
         "bloom_diameter_ratio": 0.12,
         "cluster_indices": [
-          1,
-          2
+          1
         ],
         "role": "Hoa phụ",
-        "confidence": 85,
+        "confidence": 90,
         "ma": null,
         "dvt_dem": "Bông",
-        "mau": "TM08 Vàng",
-        "mo_ta_mau": "Vàng nhạt",
-        "dau_hieu_nhan_dang": "Cánh hoa xếp lớp, màu vàng nhạt",
+        "mau": "TM03 Trắng",
+        "mo_ta_mau": "Trắng ngà",
+        "dau_hieu_nhan_dang": "Cánh hoa xếp xoắn, nhụy kín",
         "so_nu": 0,
         "so_hong": 0
       },
       {
         "nhom_hoa": "Baby",
-        "name": "Hoa baby trắng",
-        "shade": "Nhạt",
+        "name": "Baby trắng",
+        "shade": "Vừa",
         "color": "TM03 Trắng",
         "quantity": null,
         "dem_tung_vung": [],
@@ -128,19 +128,19 @@
           3
         ],
         "role": "Hoa lấp đầy",
-        "confidence": 80,
+        "confidence": 90,
         "ma": null,
-        "dvt_dem": "Cành",
+        "dvt_dem": "Bông",
         "mau": "TM03 Trắng",
-        "mo_ta_mau": "Trắng",
-        "dau_hieu_nhan_dang": "Nhỏ, nhiều bông trên một cành, màu trắng",
+        "mo_ta_mau": "Trắng tinh",
+        "dau_hieu_nhan_dang": "Bông nhỏ, nhiều nhánh",
         "so_nu": 0,
         "so_hong": 0
       }
     ],
     "foliage": [
       {
-        "name": "Lá xanh",
+        "name": "Lá dương xỉ",
         "quantity": null,
         "cluster_indices": [
           4,
@@ -149,12 +149,12 @@
         ],
         "role": "Nền",
         "confidence": 90,
-        "color": "Xanh lá",
+        "color": "Xanh lá đậm",
         "ma": null,
-        "dvt_dem": "Cành",
+        "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh đậm",
-        "dau_hieu_nhan_dang": "Lá nhỏ, xanh đậm, mọc xen kẽ"
+        "dau_hieu_nhan_dang": "Lá nhỏ, mọc dày"
       }
     ],
     "accessories": [
@@ -164,7 +164,7 @@
         "color": "Trắng",
         "quantity": 1,
         "printed_text": null,
-        "confidence": 100,
+        "confidence": 90,
         "ma": null
       }
     ],
@@ -174,13 +174,13 @@
         "material": "Vải",
         "color": "Trắng",
         "texture": "Trơn",
-        "confidence": 100,
+        "confidence": 90,
         "ma": null
       }
     ],
     "materials_note": null
   },
-  "confidence": 85,
+  "confidence": 90,
   "san_xuat": {
     "so_tang_lop": 2
   },

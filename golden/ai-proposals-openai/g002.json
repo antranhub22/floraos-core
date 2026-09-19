@@ -8,37 +8,37 @@
     },
     {
       "cluster_index": 1,
-      "thuoc_ve": "Hoa cúc vàng nhạt",
+      "thuoc_ve": "Hoa cúc vàng",
       "nhom": "Hoa",
       "confidence": 100
     },
     {
       "cluster_index": 2,
-      "thuoc_ve": "Hoa cúc vàng đậm",
+      "thuoc_ve": "Hoa cúc vàng",
       "nhom": "Hoa",
       "confidence": 100
     },
     {
       "cluster_index": 3,
-      "thuoc_ve": "Lá xanh đậm",
+      "thuoc_ve": "Lá xanh",
       "nhom": "Lá",
       "confidence": 100
     },
     {
       "cluster_index": 4,
-      "thuoc_ve": "Lá xanh nhạt",
+      "thuoc_ve": "Lá xanh",
       "nhom": "Lá",
       "confidence": 100
     },
     {
       "cluster_index": 5,
-      "thuoc_ve": "Nơ đen",
+      "thuoc_ve": "Ruy băng đen",
       "nhom": "Phụ kiện",
       "confidence": 100
     },
     {
       "cluster_index": 6,
-      "thuoc_ve": "Lá xanh đậm",
+      "thuoc_ve": "Lá xanh",
       "nhom": "Lá",
       "confidence": 100
     }
@@ -46,7 +46,7 @@
   "checklist": {
     "hoa_chu_dao": "Có",
     "hoa_phu": "Có",
-    "hoa_lap_day": "Có",
+    "hoa_lap_day": "Không có",
     "la_nen": "Có",
     "la_diem_nhan": "Không có",
     "vat_lieu_goi": "Không có",
@@ -59,14 +59,16 @@
     "shape": "Bán cầu",
     "facing": "Một mặt",
     "category": "Hộp hoa",
-    "container": "Hộp vuông"
+    "container": "Hộp vuông",
+    "phong_cach": "Hiện đại",
+    "dip_su_dung": "Khai trương"
   },
   "bom": {
     "flowers": [
       {
         "nhom_hoa": "Cúc",
         "name": "Cúc trắng",
-        "shade": "Nhạt",
+        "shade": "Vừa",
         "color": "TM03 Trắng",
         "quantity": 20,
         "dem_tung_vung": [
@@ -84,97 +86,58 @@
         "dvt_dem": "Bông",
         "mau": "TM03 Trắng",
         "mo_ta_mau": "Trắng kem",
-        "dau_hieu_nhan_dang": "Cánh hoa dài, xếp lớp dày đặc",
+        "dau_hieu_nhan_dang": "Cánh hoa dài, xếp lớp, màu trắng kem",
         "so_nu": 0,
         "so_hong": 0
       },
       {
         "nhom_hoa": "Cúc",
-        "name": "Cúc vàng nhạt",
-        "shade": "Nhạt",
+        "name": "Cúc vàng",
+        "shade": "Vừa",
         "color": "TM08 Vàng",
         "quantity": 10,
         "dem_tung_vung": [
-          4,
-          3,
-          3
+          5,
+          5
         ],
         "bloom_diameter_ratio": 0.1,
         "cluster_indices": [
-          1
+          1,
+          2
         ],
         "role": "Hoa phụ",
-        "confidence": 80,
+        "confidence": 90,
         "ma": null,
         "dvt_dem": "Bông",
         "mau": "TM08 Vàng",
         "mo_ta_mau": "Vàng nhạt",
-        "dau_hieu_nhan_dang": "Cánh hoa ngắn, xếp vòng tròn",
-        "so_nu": 0,
-        "so_hong": 0
-      },
-      {
-        "nhom_hoa": "Cúc",
-        "name": "Cúc vàng đậm",
-        "shade": "Đậm",
-        "color": "TM08 Vàng",
-        "quantity": 5,
-        "dem_tung_vung": [
-          2,
-          2,
-          1
-        ],
-        "bloom_diameter_ratio": 0.1,
-        "cluster_indices": [
-          2
-        ],
-        "role": "Hoa lấp đầy",
-        "confidence": 80,
-        "ma": null,
-        "dvt_dem": "Bông",
-        "mau": "TM08 Vàng",
-        "mo_ta_mau": "Vàng đậm",
-        "dau_hieu_nhan_dang": "Cánh hoa ngắn, xếp vòng tròn",
+        "dau_hieu_nhan_dang": "Cánh hoa dài, xếp lớp, màu vàng nhạt",
         "so_nu": 0,
         "so_hong": 0
       }
     ],
     "foliage": [
       {
-        "name": "Lá xanh đậm",
+        "name": "Lá xanh",
         "quantity": null,
         "cluster_indices": [
           3,
+          4,
           6
         ],
         "role": "Nền",
         "confidence": 90,
-        "color": "Xanh đậm",
+        "color": "Xanh lá",
         "ma": null,
         "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
         "mo_ta_mau": "Xanh đậm",
-        "dau_hieu_nhan_dang": "Lá nhỏ, mọc xen kẽ"
-      },
-      {
-        "name": "Lá xanh nhạt",
-        "quantity": null,
-        "cluster_indices": [
-          4
-        ],
-        "role": "Nền",
-        "confidence": 90,
-        "color": "Xanh nhạt",
-        "ma": null,
-        "dvt_dem": "Lá",
-        "mau": "TM05 Xanh lá",
-        "mo_ta_mau": "Xanh nhạt",
-        "dau_hieu_nhan_dang": "Lá nhỏ, mọc xen kẽ"
+        "dau_hieu_nhan_dang": "Lá nhỏ, xanh đậm, mọc xen kẽ"
       }
     ],
     "accessories": [
       {
-        "name": "Nơ đen",
+        "name": "Ruy băng đen",
         "material": "Vải",
         "color": "Đen",
         "quantity": 1,
@@ -195,11 +158,11 @@
     ],
     "materials_note": null
   },
-  "confidence": 85,
+  "confidence": 90,
   "san_xuat": {
     "so_tang_lop": 2
   },
-  "flower_count": 35,
+  "flower_count": 30,
   "bud_count": 0,
   "damaged_count": 0
 }

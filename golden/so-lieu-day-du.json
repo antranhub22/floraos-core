@@ -1,7 +1,11 @@
 {
   "bo_may": "openai_structured",
-  "so_anh": 4,
-  "giay_moi_anh": 7.7,
-  "usd_moi_anh": null,
-  "ghi_chu": "usd_moi_anh điền tay từ hoá đơn nhà cung cấp"
+  "so_anh": 7,
+  "giay_moi_anh": 7.71,
+  "usd_moi_anh": 0.02074,
+  "token_vao_moi_anh": 7521.9,
+  "token_ra_moi_anh": 824.4,
+  "lan_goi_moi_anh": 1.0,
+  "mo_hinh": "gpt-4o",
+  "ghi_chu": "Đo từ response.usage của nhà cung cấp, nhân bảng giá ở contracts/config.json"
 }

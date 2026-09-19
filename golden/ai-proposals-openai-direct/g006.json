@@ -33,17 +33,17 @@
   },
   "identity": {
     "shape": "Tròn",
-    "facing": "Hai mặt",
+    "facing": "Một mặt",
     "category": "Bó hoa",
-    "container": "Giỏ mây",
+    "container": "Khác",
     "phong_cach": "Hiện đại",
-    "dip_su_dung": "Sinh nhật"
+    "dip_su_dung": "Chúc mừng"
   },
   "bom": {
     "flowers": [
       {
         "nhom_hoa": "Hồng",
-        "name": "Hồng trắng",
+        "name": "Hoa hồng trắng",
         "shade": "Nhạt",
         "color": "Trắng",
         "quantity": 10,
@@ -58,18 +58,18 @@
         "dvt_dem": "Cành",
         "mau": "TM03 Trắng",
         "mo_ta_mau": "Trắng tinh khiết",
-        "dau_hieu_nhan_dang": "Hồng",
+        "dau_hieu_nhan_dang": "Có",
         "so_nu": 0,
         "so_hong": 0
       },
       {
         "nhom_hoa": "Lan",
-        "name": "Lan hồ điệp",
+        "name": "Hoa lan tím",
         "shade": "Nhạt",
         "color": "Tím",
         "quantity": 8,
         "dem_tung_vung": [],
-        "bloom_diameter_ratio": 0.4,
+        "bloom_diameter_ratio": 0.5,
         "cluster_indices": [
           1
         ],
@@ -79,35 +79,40 @@
         "dvt_dem": "Cành",
         "mau": "TM07 Tím",
         "mo_ta_mau": "Tím nhẹ nhàng",
-        "dau_hieu_nhan_dang": "Lan",
-        "so_nu": 2,
+        "dau_hieu_nhan_dang": "Có",
+        "so_nu": 0,
         "so_hong": 0
-      }
-    ],
-    "foliage": [
+      },
       {
+        "nhom_hoa": "Lá",
         "name": "Lá xanh",
-        "quantity": 5,
+        "shade": "Nhạt",
+        "color": "Xanh",
+        "quantity": null,
+        "dem_tung_vung": [],
+        "bloom_diameter_ratio": null,
         "cluster_indices": [
           2
         ],
-        "role": "Nền",
+        "role": "Hoa phụ",
         "confidence": 90,
-        "color": "Xanh",
         "ma": null,
         "dvt_dem": "Lá",
         "mau": "TM05 Xanh lá",
-        "mo_ta_mau": "Xanh tươi",
-        "dau_hieu_nhan_dang": "Lá xanh"
+        "mo_ta_mau": "Xanh tươi mát",
+        "dau_hieu_nhan_dang": "Có",
+        "so_nu": 0,
+        "so_hong": 0
       }
     ],
+    "foliage": [],
     "accessories": [
       {
-        "name": "Thẻ chúc mừng",
-        "material": "Giấy",
+        "name": "Giỏ hoa",
+        "material": "Gốm",
         "color": "Trắng",
         "quantity": 1,
-        "printed_text": "Chúc mừng",
+        "printed_text": null,
         "confidence": 90,
         "ma": null
       }
@@ -120,6 +125,6 @@
     "so_tang_lop": 1
   },
   "flower_count": 18,
-  "bud_count": 2,
+  "bud_count": 0,
   "damaged_count": 0
 }
