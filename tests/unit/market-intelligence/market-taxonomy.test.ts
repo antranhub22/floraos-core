@@ -13,6 +13,7 @@ import {
   NOVELTY_ADDON_KEYWORDS,
   SOCIAL_VIRAL_KEYWORDS,
   getSeasonalRecommendedKeywords,
+  getDailyRotatedKeywords,
 } from "@/modules/market-intelligence/domain/market-taxonomy";
 
 describe("Market Taxonomy & 210 Core Keywords SSOT", () => {
@@ -84,5 +85,19 @@ describe("Market Taxonomy & 210 Core Keywords SSOT", () => {
     expect(autumnKeywords).toContain("Bó hoa tốt nghiệp hướng dương");
     expect(autumnKeywords).toContain("Hoa cưới mùa thu");
     expect(autumnKeywords.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("getDailyRotatedKeywords luân phiên từ khóa theo các ngày trong tuần", () => {
+    // Thứ Hai: Dịp lễ
+    const monday = new Date("2026-09-21"); // Monday
+    const mondayKws = getDailyRotatedKeywords(monday);
+    expect(mondayKws.length).toBeGreaterThanOrEqual(10);
+    expect(mondayKws).toContain("Hoa sinh nhật đẹp");
+
+    // Thứ Ba: Loài hoa
+    const tuesday = new Date("2026-09-22"); // Tuesday
+    const tuesdayKws = getDailyRotatedKeywords(tuesday);
+    expect(tuesdayKws.length).toBeGreaterThanOrEqual(10);
+    expect(tuesdayKws).toContain("Hoa hồng nhập khẩu");
   });
 });

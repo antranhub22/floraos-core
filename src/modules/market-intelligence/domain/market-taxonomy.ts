@@ -465,3 +465,29 @@ export function getSeasonalRecommendedKeywords(targetMonth?: number): string[] {
     "Bó hoa viral TikTok",
   ];
 }
+
+/**
+ * Cơ chế 3: Quét xoay vòng theo ngày trong tuần (Daily Group Rotation)
+ * Phân bổ luân phiên 210 từ khóa qua 7 ngày để tối ưu hóa quota và chống rate limit.
+ */
+export function getDailyRotatedKeywords(targetDate?: Date): string[] {
+  const day = (targetDate ?? new Date()).getDay(); // 0: CN, 1: T2, 2: T3, 3: T4, 4: T5, 5: T6, 6: T7
+
+  switch (day) {
+    case 1: // Thứ Hai: Dịp lễ & Nhu cầu (01_OCCASION)
+      return OCCASION_KEYWORDS.slice(0, 15);
+    case 2: // Thứ Ba: Loài hoa & Nguyên liệu (04_FLOWER_MATERIAL)
+      return FLOWER_MATERIAL_KEYWORDS.slice(0, 15);
+    case 3: // Thứ Tư: Phong cách & Thẩm mỹ (05_STYLE_AESTHETIC)
+      return STYLE_AESTHETIC_KEYWORDS.slice(0, 15);
+    case 4: // Thứ Năm: Màu sắc & Giấy gói (06_COLOR + 07_WRAPPING)
+      return [...COLOR_VISUAL_KEYWORDS.slice(0, 10), ...WRAPPING_MATERIAL_KEYWORDS.slice(0, 5)];
+    case 5: // Thứ Sáu: Đột phá & Viral TikTok (08_NOVELTY + 09_VIRAL)
+      return [...NOVELTY_ADDON_KEYWORDS.slice(0, 8), ...SOCIAL_VIRAL_KEYWORDS.slice(0, 7)];
+    case 6: // Thứ Bảy: Quy cách & Dáng sản phẩm (03_PRODUCT_FORM)
+      return PRODUCT_FORM_KEYWORDS.slice(0, 15);
+    case 0: // Chủ Nhật: Mùa vụ hiện tại & Xu hướng đón đầu
+    default:
+      return getSeasonalRecommendedKeywords();
+  }
+}

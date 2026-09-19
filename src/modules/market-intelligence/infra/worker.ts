@@ -9,7 +9,10 @@ import {
   CURRENT_SCORING_MODEL_VERSION,
 } from "../domain/scoring";
 import { personalizeOpportunitiesForTenants } from "../use-cases/personalize-opportunities";
-import { getSeasonalRecommendedKeywords } from "../domain/market-taxonomy";
+import {
+  getSeasonalRecommendedKeywords,
+  getDailyRotatedKeywords,
+} from "../domain/market-taxonomy";
 
 const POLL_INTERVAL_MS = 15000; // Quét dự phòng mỗi 15s nếu không nhận được NOTIFY
 let isRunning = true;
@@ -29,7 +32,11 @@ export async function executeSingleRun(runId: string, runType: string): Promise<
     select: { error_summary: true },
   });
 
-  let keywordsToScan: string[] = getSeasonalRecommendedKeywords();
+  // Cơ chế 2 & 3: Quét xoay vòng nhóm theo ngày cho DAILY_DEEP hoặc theo mùa vụ cho INTRADAY
+  let keywordsToScan: string[] =
+    runType === "DAILY_DEEP"
+      ? getDailyRotatedKeywords()
+      : getSeasonalRecommendedKeywords();
   let targetGeo = "VN";
   let targetTimeframe = "now 7-d";
   let targetChannel = "omnichannel";
