@@ -1,15 +1,16 @@
 import { requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
-import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
+import {
+  requireIntegrationContext,
+  toTenantContext,
+} from "@/modules/integration/use-cases/resolve-integration-context"
 import { revokeCatalogLink } from "@/modules/catalog-links/use-cases/revoke-catalog-link"
 
-/**
- * `POST /catalog-links/:slug/revoke` — không đổi. `PATCH` từng nằm nhầm ở
- * tệp này đã dời về `[slug]/route.ts` (soát 18/09, nhân lúc làm RS-3).
- */
+/** `POST /integration/catalog-links/:slug/revoke` (RS-3 18/09) — xem route cha (`J2`, giống route phiên). */
 export const POST = handle<[{ params: Promise<{ slug: string }> }]>(
   async (request, context) => {
-    const { ctx } = await requireTenantContext(request)
+    const ic = await requireIntegrationContext(request)
+    const ctx = await toTenantContext(ic)
     requireCapability(ctx, "J2")
 
     const { slug } = await context.params

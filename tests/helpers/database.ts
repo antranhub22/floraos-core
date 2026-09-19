@@ -11,6 +11,17 @@ const TENANT_TABLES = [
   "chat_conversations",
   "chat_channel_integrations",
   "vouchers",
+  // Sáu bảng dưới đây có `organization_id` nhưng thiếu ở TRUNCATE cho tới
+  // RS-2 18/09 (`check-docs.mjs` bắt được) — dữ liệu thử của chúng có thể
+  // sót lại giữa các ca thử. `occasions` và `product_copies` đã có ca thử
+  // cách ly ở nơi khác; bốn bảng còn lại có ca thử mới trong
+  // `tests/tenant/scoping-gaps-18-09.test.ts`.
+  "occasions",
+  "product_copies",
+  "content_metrics",
+  "template_overrides",
+  "catalog_links",
+  "product_inventory",
   "customer_consents",
   "customer_occasions",
   "order_events",
@@ -83,7 +94,7 @@ function bat_buoc_la_database_test(): void {
 }
 
 /**
- * Dọn sạch hai mươi hai bảng nền giữa các trường hợp thử (bảy của P1, hai
+ * Dọn sạch các bảng nền giữa các trường hợp thử (bảy của P1, hai
  * bảng quyền của P2, năm bảng Asset/Job/Usage/Audit của P3, hai bảng Hồ sơ
  * của P4, năm bảng Product Master/Analysis của P5, một bảng token tích hợp
  * của P7). Bộ test cách ly phải bắt đầu từ một cơ sở dữ liệu rỗng, nếu không

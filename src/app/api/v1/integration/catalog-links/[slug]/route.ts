@@ -1,40 +1,25 @@
 import { z } from "zod"
-import { handle, jsonResponse } from "@/core/http/response"
-import { validationFailed, notFound } from "@/core/http/errors"
+import { validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
-import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
-import { getCatalogLinkBySlug } from "@/modules/catalog-links/use-cases/get-catalog-link"
+import { handle, jsonResponse } from "@/core/http/response"
+import {
+  requireIntegrationContext,
+  toTenantContext,
+} from "@/modules/integration/use-cases/resolve-integration-context"
 import { updateCatalogLink } from "@/modules/catalog-links/use-cases/update-catalog-link"
 import type { CatalogLinkFilters } from "@/modules/catalog-links/domain/catalog-link-rules"
 
-/**
- * `GET /catalog-links/:slug` — CÔNG KHAI có chủ đích (khách quét QR, không
- * đăng nhập). Soát 18/09 (RS-8) xác nhận đây không phải lỗ hổng.
- *
- * `PATCH /catalog-links/:slug` — soát 18/09 (nhân lúc làm RS-3) phát hiện
- * handler này trước đây nằm NHẦM ở `[slug]/revoke/route.ts`, nên thật ra
- * chạy ở `PATCH /catalog-links/:slug/revoke` — sai đường dẫn, không ai gọi
- * tới. Dời về đúng chỗ; `POST /catalog-links/:slug/revoke` (thu hồi) không
- * đổi.
- */
+/** `PATCH /integration/catalog-links/:slug` (RS-3 18/09) — xem route cha. */
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   filters: z.record(z.string(), z.unknown()).nullable().optional(),
 })
 
-export const GET = handle<[{ params: Promise<{ slug: string }> }]>(
-  async (request, context) => {
-    const { slug } = await context.params
-    const link = await getCatalogLinkBySlug(slug)
-    if (!link) throw notFound()
-    return jsonResponse(link)
-  }
-)
-
 export const PATCH = handle<[{ params: Promise<{ slug: string }> }]>(
   async (request, context) => {
-    const { ctx } = await requireTenantContext(request)
+    const ic = await requireIntegrationContext(request)
+    const ctx = await toTenantContext(ic)
     requireCapability(ctx, "J1")
 
     const { slug } = await context.params
