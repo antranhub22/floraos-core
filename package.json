@@ -32,7 +32,9 @@
     "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "db:studio": "prisma studio",
     "nap:loai": "tsx --env-file-if-exists=.env scripts/nap-danh-muc-loai.ts",
-    "cham:bo-anh-vang": "python3 scripts/cham-bo-anh-vang.py"
+    "cham:bo-anh-vang": "python3 scripts/cham-bo-anh-vang.py",
+    "check:template-ssot": "tsx scripts/check-template-ssot.ts",
+    "check:docs": "node scripts/check-docs.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

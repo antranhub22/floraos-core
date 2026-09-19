@@ -23,6 +23,7 @@ import {
   Tag,
   CircleUserRound,
   FlaskConical,
+  LayoutTemplate,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
@@ -69,6 +70,7 @@ const CORE_ITEMS: NavItem[] = [
 // 3. Quản Trị Hệ Thống
 const SYSTEM_ITEMS: NavItem[] = [
   { href: "/kho-du-lieu", label: "Kho Dữ liệu", icon: Folder },
+  { href: "/kho-templates", label: "Kho Templates", icon: LayoutTemplate },
   { href: "/muc-dung", label: "Mức dùng Credit", icon: WalletCards },
   { href: "/cai-dat", label: "Cài đặt", icon: Settings2 },
 ]

@@ -133,12 +133,14 @@ model organizations {
   product_variants      product_variants[]
   product_images        product_images[]
   product_analyses      product_analyses[]
+  product_inventory     product_inventory[]
   pricing_rules         pricing_rules[]
   integration_tokens    integration_tokens[]
   ai_policies           ai_policies[]
   ai_requests           ai_requests[]
   ai_evaluations        ai_evaluations[]
   occasions             occasions[]
+  template_overrides    template_overrides[]
   catalog_links         catalog_links[]
   product_copies        product_copies[]
   content_metrics       content_metrics[]
@@ -182,6 +184,7 @@ model branches {
   created_at      DateTime @default(now())
 
   organization organizations @relation(fields: [organization_id], references: [id])
+  inventory    product_inventory[]
 
   @@unique([organization_id, code])
   @@index([organization_id])
@@ -387,6 +390,12 @@ model generation_jobs {
 
   idempotency_key String? // YC-U7 — duy nhất theo (organization_id, feature)
 
+  // Gom nhiều job cùng một lượt "xuất bộ" của người dùng (vd chạy lô nhiều
+  // biến thể M04b, nợ #108) về một màn tiến độ chung — KHÔNG phải khoá
+  // nghiệp vụ (mỗi job vẫn có idempotency_key riêng, vẫn trừ credit riêng).
+  // NULL cho mọi job không đi qua đường chạy lô, không đổi hành vi cũ.
+  job_group_id String?
+
   payload  Json
   output   Json?
   error    String?
@@ -404,6 +413,7 @@ model generation_jobs {
   @@index([organization_id])
   @@index([status, created_at]) // worker quét bằng index này
   @@index([organization_id, user_id])
+  @@index([organization_id, job_group_id]) // gom màn tiến độ bộ, nợ #108
 }
 
 /**
@@ -526,8 +536,12 @@ model brand_profiles {
   font_body         String?
   logo_asset_id     String?
   tone_of_voice     String?
-  hashtags          Json? // theo nền tảng
-  cta_templates     Json?
+  hashtags          Json? // mảng thẻ hashtag của cửa hàng — hình dạng thật { default: string[] }, đọc qua extractBrandHashtags() (profile-rules.ts, nợ #103)
+  cta_templates     Json? // MỘT câu kêu gọi hành động (nợ #102, chốt 17/09) — hình dạng thật { default: string } do brand-profile-form.tsx ghi, đọc qua extractBrandCtaPhrase() (profile-rules.ts, nợ #103). KHÔNG còn chứa free_gifts/guarantees
+  default_offers    Json? // { free_gifts?: string[], guarantees?: string[] } — tách khỏi cta_templates (nợ #102, 17/09):
+                          // trước đây `SalesDefaultsForm` ghi nhầm free_gifts/guarantees vào cta_templates, xung đột
+                          // với product-copy-adapter.ts coi cta_templates là string[] câu CTA. Đọc có dự phòng dữ
+                          // liệu cũ trong cta_templates cho tổ chức đã lưu trước 17/09 — xem sales-defaults-form.tsx.
   forbidden_styles  Json?
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
@@ -547,6 +561,13 @@ enum product_status {
   DRAFT
   ACTIVE
   ARCHIVED
+}
+
+/** Trạng thái còn hàng của MẪU sản phẩm dựng sẵn tại một chi nhánh (P-Fix-3a, 17/09). */
+enum stock_status {
+  IN_STOCK
+  PRE_ORDER_ONLY
+  OUT_OF_STOCK
 }
 
 enum approval_state {
@@ -574,6 +595,7 @@ model products {
   variants     product_variants[]
   images       product_images[]
   analyses     product_analyses[]
+  inventory    product_inventory[]
 
   @@unique([organization_id, code])
   @@index([organization_id])
@@ -607,6 +629,32 @@ model product_images {
 
   @@unique([organization_id, product_id, asset_id, role])
   @@index([organization_id, product_id])
+}
+
+/**
+ * Tồn kho MẪU SẢN PHẨM (bó/giỏ dựng sẵn) theo từng chi nhánh — KHÔNG phải tồn kho nguyên
+ * liệu hoa rời (chốt với chủ sản phẩm 17/09, xem TECHNICAL_DEBT.md mục P-Fix-3a và
+ * `product-master-index.ts`, `ProductMasterIndex.stock`).
+ *
+ * `branch_id` BẮT BUỘC (không nullable) — mỗi dòng gắn với đúng một chi nhánh cụ thể, tránh
+ * hẳn cái bẫy Postgres coi mọi NULL là phân biệt (nợ #7, đã ghi trong TECHNICAL_DEBT.md) mà
+ * một `branch_id` tuỳ chọn sẽ vướng phải nếu dùng `@@unique` thông thường.
+ */
+model product_inventory {
+  id                 String      @id @default(uuid())
+  organization_id    String
+  product_id         String
+  branch_id          String
+  status             stock_status @default(IN_STOCK)
+  quantity_available Int?
+  updated_at         DateTime    @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+  product      products      @relation(fields: [product_id], references: [id])
+  branch       branches      @relation(fields: [branch_id], references: [id])
+
+  @@unique([organization_id, product_id, branch_id])
+  @@index([organization_id, branch_id])
 }
 
 /**
@@ -858,21 +906,82 @@ model ai_evaluations {
   @@index([organization_id, capability_code])
 }
 
+/**
+ * Giọng theo dịp (nợ #104, 18/09) — Tony chốt qua AskUserQuestion 17/09: xây
+ * đầy đủ ("làm đầy đủ luôn"), không phải một lát cắt nhỏ trước. Ba giá trị
+ * đóng, do TENANT tự gán cho từng dịp qua UI quản lý — hệ thống KHÔNG suy
+ * đoán "trang trọng" từ tên dịp bằng từ khoá (đúng nguyên tắc "không bịa" đã
+ * áp dụng cho `tone_of_voice`/`cta_templates`, nợ #102/#103).
+ */
+enum occasion_register {
+  FESTIVE
+  NEUTRAL
+  SOLEMN
+}
+
 /// Danh mục dịp — nạp 6 dòng mặc định khi tạo tổ chức (P19, nợ #63).
-/// `dip_su_dung` của product_copies gán theo mã trong bảng này, không phải chuỗi tự do.
+/// SỬA 18/09 (nợ #104): dòng chú thích cũ ở đây ghi "`dip_su_dung` của
+/// product_copies gán theo mã trong bảng này, không phải chuỗi tự do" — đọc
+/// thẳng mã thật (sales-pitch-template.ts, product-master-index-repository.ts,
+/// mergeOccasions()) cho thấy điều này SAI: `identity.dip_su_dung` luôn là
+/// CHUỖI TỰ DO (AI đoán hoặc Sales gõ tay), không có cột nào tham chiếu
+/// `occasions.code`. Có thể là định hướng ban đầu chưa từng cài — xoá khẳng
+/// định sai thay vì lặp lại nó.
+/// Từ nợ #104 (18/09): tenant tự thêm/sửa/tắt dịp qua UI (`OccasionRepository.create/update`),
+/// và mỗi dịp mang một `register` để suy ra tông giọng kịch bản Zalo (khớp CHÍNH XÁC
+/// theo TÊN dịp với `pitch.occasions[0]`, không phải qua `code`) — xem `occasion-rules.ts`.
 model occasions {
-  id              String   @id @default(uuid())
+  id              String            @id @default(uuid())
   organization_id String
   code            String
   name            String
-  sort_order      Int      @default(0)
-  is_active       Boolean  @default(true)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  sort_order      Int               @default(0)
+  is_active       Boolean           @default(true)
+  /** Tông giọng khi dịp này được dùng để sinh kịch bản Zalo (nợ #104). */
+  register        occasion_register @default(FESTIVE)
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
 
   organization organizations @relation(fields: [organization_id], references: [id])
 
   @@unique([organization_id, code])
+  @@index([organization_id])
+}
+
+enum template_family {
+  GT
+  IT
+  CT
+  ST
+  OT
+}
+
+/// Ghi đè template theo tenant (nợ #99, Giai đoạn 3 kiến trúc gốc —
+/// FLORAOS_TEMPLATE_ENGINE_ARCHITECTURE.md §3, cơ chế kế thừa 2 lớp: System
+/// Golden Template -> Tenant Override). BẢNG RIÊNG, không mở rộng
+/// `brand_profiles` — quyết định anh Tony 17/09, giữ nguyên sau khi cân nhắc
+/// lại 18/09 theo đề xuất kiến trúc: đúng nguyên tắc Atomic Disaggregated
+/// Fields (AGENTS.md 1.3), mỗi dòng là MỘT trường ghi đè nguyên tử, tránh lặp
+/// lại lỗi hình dạng cột Json không khoá đã gặp ở nợ #102 (`cta_templates`
+/// từng mang hai nghĩa xung đột trong cùng một cột, không ai phát hiện kịp).
+/// Phạm vi khởi điểm 18/09: domain layer (`template-override-rules.ts`) CHỈ
+/// chấp nhận đúng một field đã có nơi đọc thật — (`ST`, `sales_pitch_zalo`,
+/// `greeting_line`). Không suy đoán thêm field/template nào khác chưa được
+/// xác nhận — mở danh sách trắng đó CÙNG LÚC với khi thêm nơi đọc thật.
+model template_overrides {
+  id              String          @id @default(uuid())
+  organization_id String
+  template_family template_family
+  template_key    String
+  field_key       String
+  value           String
+  updated_by      String
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id])
+
+  @@unique([organization_id, template_key, field_key])
   @@index([organization_id])
 }
 

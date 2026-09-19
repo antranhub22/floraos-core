@@ -41,6 +41,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - name: Đối chiếu SSOT template với code thật
+        run: npm run check:template-ssot
       # Cổng bắt buộc. Không được phép bỏ qua hay đánh dấu continue-on-error.
       - name: Test cách ly tenant
         run: npm run test:tenant

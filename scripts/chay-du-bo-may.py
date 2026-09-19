@@ -204,7 +204,14 @@ def chay_mot_bo(bo: str, ds: list[str], chay_lai: bool) -> None:
 
     print(f"\n── {cfg['ten']} ({cfg['khoa']}): {len(can)} ảnh — {', '.join(can)}")
 
+    from vision.providers.chung import nap_json, tinh_cost_usd
     from vision.providers.registry import lay_provider
+
+    def _gia_token() -> dict:
+        try:
+            return nap_json("config.json").get("gia_token") or {}
+        except Exception:  # noqa: BLE001
+            return {}
 
     try:
         provider = lay_provider(cfg["khoa"])
@@ -215,7 +222,8 @@ def chay_mot_bo(bo: str, ds: list[str], chay_lai: bool) -> None:
         print(f"   KHÔNG DỰNG ĐƯỢC BỘ MÁY: {e}")
         return
 
-    so_lieu = []
+    so_lieu: list[float] = []
+    muc_dung: list[dict] = []
     for i, ma in enumerate(can, 1):
         p = duong_dan_anh(ma)
         if p is None:
@@ -248,16 +256,57 @@ def chay_mot_bo(bo: str, ds: list[str], chay_lai: bool) -> None:
         )
 
         so_lieu.append(giay)
-        print(f"OK · {kq.get('flower_count')} cành · tin {kq.get('confidence')} · {giay:.1f}s")
+
+        # Mức dùng THẬT của lượt vừa chạy, đọc từ `response.usage` của nhà
+        # cung cấp. Trước 09/17 ô `usd_moi_anh` ghi "điền tay từ hoá đơn nhà
+        # cung cấp" — hoá đơn thì gộp cả tháng, cả ba bộ máy và cả mọi năng
+        # lực khác, nên con số đó chưa bao giờ được điền.
+        md = getattr(provider, "muc_dung_lan_cuoi", None)
+        if md is not None:
+            usd = tinh_cost_usd(str(getattr(provider, "model_version", "")), md, _gia_token())
+            muc_dung.append({
+                "vao": md.input_tokens, "ra": md.output_tokens,
+                "dem": md.input_cache_tokens, "lan_goi": md.so_lan_goi,
+                "usd": usd,
+            })
+            print(
+                f"OK · {kq.get('flower_count')} cành · tin {kq.get('confidence')} · "
+                f"{giay:.1f}s · {md.so_lan_goi} lượt gọi · "
+                f"{md.input_tokens}+{md.output_tokens} token"
+                + (f" · ${usd:.5f}" if usd is not None else " · (không có bảng giá)")
+            )
+        else:
+            # Bộ chạy cục bộ: không tiêu tiền nhà cung cấp, nhưng tiêu thời
+            # gian máy — `giay_moi_anh` là con số đáng so ở đây.
+            print(f"OK · {kq.get('flower_count')} cành · tin {kq.get('confidence')} · {giay:.1f}s · máy nhà")
 
     if so_lieu:
         tb = sum(so_lieu) / len(so_lieu)
+        ra: dict = {
+            "bo_may": cfg["khoa"],
+            "so_anh": len(so_lieu),
+            "giay_moi_anh": round(tb, 2),
+        }
+
+        co_gia = [m for m in muc_dung if m["usd"] is not None]
+        if co_gia:
+            ra["usd_moi_anh"] = round(sum(m["usd"] for m in co_gia) / len(co_gia), 6)
+            ra["token_vao_moi_anh"] = round(sum(m["vao"] for m in co_gia) / len(co_gia), 1)
+            ra["token_ra_moi_anh"] = round(sum(m["ra"] for m in co_gia) / len(co_gia), 1)
+            ra["lan_goi_moi_anh"] = round(sum(m["lan_goi"] for m in co_gia) / len(co_gia), 2)
+            ra["mo_hinh"] = str(getattr(provider, "model_version", ""))
+            ra["ghi_chu"] = "Đo từ response.usage của nhà cung cấp, nhân bảng giá ở contracts/config.json"
+        else:
+            # Không có `usage` nghĩa là bộ này không gọi nhà cung cấp nào —
+            # để trống thay vì ghi 0, vì 0 USD không phải 0 đồng: một lượt
+            # cục bộ vẫn tiêu điện và tiêu thời gian máy.
+            ra["usd_moi_anh"] = None
+            ra["ghi_chu"] = "Chạy cục bộ — không tiêu tiền nhà cung cấp; xem giay_moi_anh cho chi phí máy"
+
         (GOC / "golden" / f"so-lieu-{bo}.json").write_text(
-            json.dumps({"bo_may": cfg["khoa"], "so_anh": len(so_lieu),
-                        "giay_moi_anh": round(tb, 2), "usd_moi_anh": None,
-                        "ghi_chu": "usd_moi_anh điền tay từ hoá đơn nhà cung cấp"},
-                       ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"   Trung bình {tb:.1f} giây mỗi ảnh → golden/so-lieu-{bo}.json")
+            json.dumps(ra, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        chi_phi = f" · ${ra['usd_moi_anh']:.5f}/ảnh" if ra.get("usd_moi_anh") else ""
+        print(f"   Trung bình {tb:.1f} giây mỗi ảnh{chi_phi} → golden/so-lieu-{bo}.json")
 
 
 def main() -> int:
