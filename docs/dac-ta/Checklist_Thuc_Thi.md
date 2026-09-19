@@ -499,6 +499,57 @@ cổng duyệt. Bốn ô của P16 phía dưới được chỉnh lại theo mã
 - [x] Bộ máy Vision mặc định chốt là `openai_structured`; ca "lựa chọn của A không ảnh hưởng B" sửa lại cho thật sự phân biệt được rò rỉ — nợ #83
 - [x] `test:tenant` từ **6 tệp đỏ về 0** — bốn suite trong số đó đã đỏ từ trước lượt này
 
+## P25 — Console Vận hành Nền tảng · lập kế hoạch 18/09, chưa bắt đầu
+
+Giao diện xuyên tổ chức cho người vận hành SaaS — thứ `floraos-core` hiện hoàn
+toàn không có. Kế hoạch đầy đủ: `docs/kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md`
+(thiết kế gốc: `DASHBOARD_VAN_HANH_NEN_TANG.md`). Phạm vi chốt 18/09: trọn
+G1+G2+G3, tám mã `N1`–`N8`; `N9`–`N11` để lại tuyến AI-1.
+
+**Chốt 19/09, không còn gì chặn:** D-N6 tách hẳn từ vựng năng lực nền tảng (không
+đụng `capability_scope`, `SYSTEM_ROLES`, `capability-catalog.ts`) · P25 làm TRƯỚC
+P13/P16/P18 · một người vận hành duy nhất, KHÔNG làm màn cấp/thu quyền vận hành.
+
+### P25a — G1 chỉ đọc
+
+- [ ] Ba bảng mới `platform_operators`, `platform_role_capabilities`, `platform_audit_logs` — không bảng nào có `organization_id`, ngoại lệ có chủ đích của Luật 1
+- [ ] **Anh Tony chạy tay:** `npx prisma generate && npx prisma db push` trên Terminal Mac (`device_bash` không chạy được — bẫy `binaries.prisma.sh`)
+- [ ] Khai ba bảng + ghi rõ lý do ngoại lệ Luật 1 vào `docs/dac-ta/07-database-specification.md`
+- [ ] `src/core/platform/platform-context.ts` — `PlatformContext` thuần, KHÔNG có `organizationId` để `tsc` chặn nhầm lẫn với `TenantContext`
+- [ ] `platform-capability-catalog.ts` (`N1`–`N8`) + `platform-capabilities.ts` (`requirePlatformCapability`) + test thuần
+- [ ] Khai `N1`–`N8` vào `docs/dac-ta/02-function-catalog.md`
+- [ ] `src/modules/platform/` đủ bốn thư mục `domain/ use-cases/ infra/ adapters/`
+- [ ] `resolve-platform-session.ts` — `requirePlatformContext`, tra `platform_operators` theo `user_id`, độc lập `sessions.organization_id`
+- [ ] `infra/platform-query.ts` — chỗ DUY NHẤT trong repo được truy vấn nhiều tổ chức; không repository tenant nào mọc thêm cờ bỏ lọc
+- [ ] Năm use-case chỉ đọc: `list-organizations`, `get-organization`, `summarize-usage`, `read-system-health`, `list-platform-audit`
+- [ ] Năm route `GET /api/v1/platform/{organizations,organizations/:id,usage,health,audit-logs}` + khai vào `docs/dac-ta/06-api-specification.md`
+- [ ] `scripts/gan-van-hanh-nen-tang.ts` — gán vai lần đầu, chạy tay (D-N2)
+- [ ] `src/app/(platform)/` route group riêng: layout + `/van-hanh` + bốn trang con chỉ đọc
+- [ ] `tests/platform/cach-ly-platform.test.ts` — bốn ca: người thường gọi platform → 403 · người vận hành gọi route tenant → chặn như người không có membership · thiếu năng lực từng route → 403 · **đọc xuyên tổ chức trả ĐỦ cả hai tổ chức fixture** (ca chứng minh đường đọc chạy thật, không xanh vì rỗng)
+- [ ] Lệnh `npm run test:platform` + gắn vào CI
+- [ ] Cổng: `tsc` sạch · `npm test` xanh · `test:tenant` xanh KHÔNG suy giảm · `test:platform` xanh · `check:docs` 0 lỗi cả bốn trục
+
+### P25b — G2 hành động trên một tổ chức
+
+- [ ] `domain/platform-rules.ts` — luật duyệt nâng cấp thuần (chỉ `EXPERIENCE` duyệt được, đích chỉ `SINGLE`/`CHAIN`)
+- [ ] `list-upgrade-requests` — đọc `audit_logs` `organization.upgrade_requested`, trừ những cái đã xử lý
+- [ ] `approve-upgrade` — **chỉ** đổi `organizations.type` + `workspaces.kind` + ghi `audit_logs`, một giao dịch. KHÔNG cộng credit (D-N4)
+- [ ] `reject-upgrade` — ghi `organization.upgrade_rejected` kèm lý do
+- [ ] `top-up-credit` / `refund-credit` — bọc `OrganizationRepository.topUpCredit` đã có, không viết lại luật
+- [ ] Bốn route `/platform/upgrade-requests*` + `POST /platform/organizations/:id/credit` + khai đặc tả 06
+- [ ] Trang `/van-hanh/nang-cap` + khối credit trong `/van-hanh/to-chuc/[id]`
+- [ ] Ca thử: thiếu `N3` → 403 · duyệt tổ chức không phải `EXPERIENCE` → 409 · `credit_balance` đổi đúng số **đọc lại từ CSDL**, không tin đáp ứng API
+- [ ] Bỏ được `scripts/nap-credit.ts` và `scripts/hoan-credit.ts` khỏi quy trình vận hành hằng ngày
+
+### P25c — G3 vận hành sâu
+
+- [ ] `create-organization` — gói `organizations` + `workspaces` + thành viên điều hành đầu tiên; lấy khuôn từ `bootstrap-avi-gift-organization.ts`, KHÔNG tái dùng `signUp` (hàm đó cố định `EXPERIENCE`+trial)
+- [ ] `list-org-tokens` / `revoke-org-token` — bọc use-case `integration/` đã có, gác bằng `N8` thay `F9`
+- [ ] Ba route `POST /platform/organizations` + `GET·POST /platform/organizations/:id/tokens*` + khai đặc tả 06
+- [ ] Giao diện tạo tổ chức + khối token trong `/van-hanh/to-chuc/[id]`
+- [ ] Ca thử: tổ chức vừa tạo có ĐÚNG một thành viên điều hành, KHÔNG dữ liệu tổ chức khác lọt vào
+- [ ] Lượt chạy thật: tạo tổ chức qua console → đăng nhập bằng tài khoản điều hành mới → xác nhận không thấy dữ liệu tổ chức khác
+
 ## AI-1 — Cổng AI và hai sổ đăng ký · hoàn tất 09/12 · chặn P16, P17, P18
 
 Đợt một (09/12): phần lõi phía TypeScript viết mã xong, `prisma generate` + `prisma db push` + `db:seed` ✅, `npm test` **258/258 xanh thật** (41 ca mới: 16 định tuyến, 8 cổng AI, 6 sổ đăng ký, 5 chấm điểm, 6 luật chính sách). `npx eslint` sạch. `npx tsc --noEmit` **SẠCH** (sau `prisma generate`). `npm run test:tenant` **123/123 xanh thật** — gồm 5 ca `ai-policy.test.ts` và 14 ca `vision-analyses.test.ts`.
@@ -563,7 +614,7 @@ FFmpeg trong sổ đăng ký.
 ### Đã tích hợp
 
 - [x] **#1 — Phân tích sản phẩm AI** (`src/app/(app)/tai-anh/page.tsx`): POST/PATCH/GET `/api/v1/vision/analyses`, POST reject, SSE `/api/v1/jobs/:id/events`, dùng `useSession()` cho H1/H2/H3, asset listing từ `/api/v1/assets`, Idempotency-Key header, error handling 401/403/409/502
-- [x] **#2 — AI Creative Studio** (`src/app/(app)/creative-studio/page.tsx`): POST/GET `/api/v1/media/optimizations`, POST approve (Identity Guard REJECTED → ẩn Duyệt, WARNING → confirm dialog), GET download (I3), proxy `/api/v1/proxy/api/m04b/background-removal`, dùng `useSession()` cho I1/I2/I3
+- [x] **#2 — AI Creative Studio** (`src/app/(app)/creative-studio/page.tsx`): POST/GET `/api/v1/media/optimizations` (M04a), POST approve (Identity Guard REJECTED → ẩn Duyệt, WARNING → confirm dialog), GET download (I3), POST/GET `/api/v1/media/variants` + approve + download (M04b, `I4`/`I5`, từ P24), dùng `useSession()` cho I1/I2/I3. *(Sửa 17/09: dòng này từng ghi "proxy `/api/v1/proxy/api/m04b/background-removal`" — đúng ở P13 nhưng sai từ P16/P24, khi trang được dựng lại để gọi `/api/v1/media/variants` qua worker riêng của floraos-core. Widget dashboard cũ còn gọi proxy đó đã gỡ, xem nợ #76.)*
 - [x] **#3 — AI Video Studio** (`src/app/(app)/video/page.tsx`): POST/GET `/api/v1/video/jobs`, PATCH `/api/v1/video/jobs/:id`, POST `/api/v1/video/jobs/:id/approve-script`, POST `/api/v1/video/jobs/:id/deploy`, POST `/api/v1/video/jobs/:id/approve-video`, SSE `/api/v1/video/jobs/:id/events`, dùng `useSession()` cho P1/P3/P4, Storyboard 2–15 cảnh, Camera Motion Ken Burns, auto-balance duration, xóa cảnh nổi bật, Provider cắm rút (Local Cinematic 0-credit + Standby Veo/HeyGen)
 - [x] **#6 — Catalog & Website** (`src/app/(app)/catalog/page.tsx`): GET `/api/v1/products` (thay MOCK_PRODUCTS, lọc ACTIVE), GET/POST/PATCH/POST-revoke `/api/v1/catalog-links`, 401 redirect
 - [x] **#10 — Analytics & Learning** (`src/app/(app)/so-lieu/page.tsx`): GET `/api/v1/usage/summary` (thay METRIC cứng), GET `/api/v1/ai-requests`, GET `/api/v1/audit-logs`, PUT `/api/v1/ai-policy`, dùng `useSession()` cho G8/G9/U1/U2/U3

@@ -116,17 +116,24 @@ Không nằm trong 12 pha gốc của PRD — bốn phụ thuộc chính (RBAC P
 
 ---
 
-## 8. Cần chốt
+## 8. Cần chốt — ĐÃ CHỐT 18/09/2026
 
-| # | Nội dung | Chặn |
-|---|---|---|
-| D-N1 | `capability_scope` thêm `PLATFORM` — `ALTER TYPE` trên enum Postgres đang dùng, cần xác nhận không có `migration` nào khác đang chạm cùng enum cùng lúc | G1 |
-| D-N2 | Gán vai vận hành nền tảng lần đầu qua script chạy tay (`scripts/gan-van-hanh-nen-tang.ts`, giống mô hình `nap-credit`) — không có UI tự gán trước khi có người vận hành đầu tiên | G1 |
-| D-N3 | `platform_audit_logs` độc lập, hay đổi `audit_logs.organization_id` thành nullable — bản này chọn tách bảng để không đổi ràng buộc mọi query lọc theo tổ chức đang có | G1 |
-| D-N4 | N2 (duyệt nâng cấp) có kèm hành vi tính phí ngay hay vẫn tách khỏi billing thật (PRD mục 4) | G2 |
-| D-N5 | N5 có cần hành động "khởi động lại worker" từ UI, hay chỉ đọc + cảnh báo — khởi động lại tiến trình nằm ngoài quyền của webapp theo mục 2 | G3 |
+Kế hoạch thực thi và các ô CHỐT dưới đây: `docs/kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md`.
 
----
+| # | Nội dung | Chặn | CHỐT |
+|---|---|---|---|
+| D-N1 | `capability_scope` thêm `PLATFORM` — `ALTER TYPE` trên enum Postgres đang dùng | G1 | **Không làm.** D-N6 chốt tách từ vựng, nên KHÔNG đụng enum `capability_scope` |
+| D-N2 | Gán vai vận hành nền tảng lần đầu qua script chạy tay | G1 | **Giữ nguyên** — `scripts/gan-van-hanh-nen-tang.ts`, không có UI tự gán trước khi có người vận hành đầu tiên |
+| D-N3 | `platform_audit_logs` độc lập, hay đổi `audit_logs.organization_id` thành nullable | G1 | **Tách bảng riêng.** Không đổi ràng buộc `NOT NULL` mà mọi truy vấn lọc theo tổ chức đang dựa vào |
+| D-N4 | N2 (duyệt nâng cấp) có kèm tính phí ngay hay tách khỏi billing | G2 | **Tách.** Duyệt chỉ đổi `organizations.type` + `workspaces.kind` + ghi `audit_logs`. Nạp credit là thao tác riêng ở N3 |
+| D-N5 | N5 có hành động "khởi động lại worker" hay chỉ đọc + cảnh báo | G3 | **Chỉ đọc + cảnh báo.** Không nút chạy lại job, không huỷ job, không khởi động lại tiến trình |
+| D-N6 | *(mới, 18/09)* Từ vựng năng lực nền tảng dùng chung `roles`/`role_capabilities` của tenant hay tách hẳn | G1 | **Tách hẳn (phương án A), chốt 19/09.** Từ vựng `N1`–`N8` ở `src/core/platform/`, bảng gán riêng. `SystemRoleKey`, `CAPABILITIES` (146 mã), `capability_scope`, `permission-resolver.ts` không đổi một dòng |
+
+**Phạm vi chốt 18/09:** trọn G1 + G2 + G3, tám mã `N1`–`N8`. Ba mã `N9`–`N11` để lại tuyến AI-1.
+
+**Chốt 19/09:** P25 làm TRƯỚC P13/P16/P18 · một người vận hành duy nhất, không làm màn cấp/thu quyền.
+
+**Lối vào chốt 18/09:** ngữ cảnh song song — `/van-hanh` tra `platform_operators` theo `user_id`, độc lập `sessions.organization_id`. Nhánh "`organization_id = null` → `PlatformContext`" mô tả ở mục 3 điểm 4 của tệp này KHÔNG dùng được: `log-in.ts` luôn gắn membership đầu tiên vào phiên, và `(app)/layout.tsx` đá thẳng về `/dang-nhap` khi phiên không có tổ chức. Xem kế hoạch thực thi mục 2.1.
 
 ## Phụ lục — cột dự kiến cho bản Excel
 

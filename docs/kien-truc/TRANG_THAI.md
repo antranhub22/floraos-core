@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-17 (P24 — M04b về đúng kiến trúc job: đóng endpoint không khoá cửa, cổng Subject Integrity đo được, cặp năng lực `I4`↔`I5`) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-18 (AIC-13 mở rộng khung ảnh — nợ #78/#104/#105, bốn hiện thực `ImageExpander` dựng xong, chưa nối API thật; P24 — M04b về đúng kiến trúc job: đóng endpoint không khoá cửa, cổng Subject Integrity đo được, cặp năng lực `I4`↔`I5`) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -9,6 +9,11 @@
 ---
 
 ## 1. Đang ở đâu
+
+**Sau P24 — AIC-13 mở rộng khung ảnh, nợ #78/#104/#105 (17/09–18/09). Dựng xong bốn hiện thực `ImageExpander`, CHƯA gọi được từ bất kỳ đường thật nào.**
+`ImageExpander` (`workers/media_ai/providers/base.py`) + `EXPANDER_REGISTRY` (`providers/expansion/router.py`) là cổng chọn provider mở rộng khung theo tên — khớp đúng `protectMask` đã đặc tả ở `src/core/ports/image-provider.ts` (`edit(mask, protectMask)`). Bốn hiện thực: `PadExpander` (mặc định, không sinh gì mới), `ReplicateOutpainter` (nợ #78, 17/09 — lược đồ `bria/expand-image` qua Replicate chưa xác minh, chưa có token), `IOPaintExpander` (nợ #104 — tự host trọng số mở; thử thật lần đầu trên MacBook Air M3 18/09 gặp ma sát hạ tầng thật ngay lập tức: Python mặc định của máy không tương thích bảng phụ thuộc, hết dung lượng đĩa giữa chừng khi tải model — DỪNG làm hướng thử tiếp theo, mã Giai đoạn 1 giữ nguyên trong registry), `FalAIOutpainter` (nợ #105, 18/09 — `fal-ai/bria/expand` qua fal.ai, quay lại đúng thứ tự API-trước mà `10-ai-orchestration.md` §2 khuyến nghị từ đầu; dựng xong, chưa có `FAL_KEY` nên chưa gọi thử thật). Bảo vệ sản phẩm đến từ mặt nạ dựng sẵn từ alpha (`_mat_na_iopaint`) và dán lại chính xác ảnh gốc sau khi engine trả về (`_dan_lai_chu_the`, đọc `paste_offset` mà mỗi engine tự báo) — KHÔNG phải từ mask gửi lên provider, vì cả ba provider ngoài `PadExpander` đều không có cơ chế mask mà `floraos-core` gửi được (đã xác minh riêng cho từng provider, xem `TECHNICAL_DEBT.md`).
+
+**Khoảng trống còn nguyên từ nợ #78, không phải riêng đợt này:** không route/use-case nào của `floraos-core` từng đặt `expand_provider` trong payload job — `requestVariants` (`src/modules/media/use-cases/request-variants.ts`) chỉ gửi `master_asset_id`/`preset`/`ratio`/`watermark`. Bốn hiện thực `ImageExpander` trên tồn tại trong mã và có test (88 ca `workers/tests/media_ai/`), nhưng KHÔNG hiện thực nào gọi được từ một hành động người dùng thật hôm nay — `DEFAULT_EXPANDER = "pad"` (an toàn, không tốn tiền khi không ai yêu cầu, đúng bài học nợ #80) luôn thắng vì không có đường nào truyền `expand_provider` khác. Đây là quyết định CÓ CHỦ ĐÍCH từ nợ #78 (dựng cơ chế trước, nối API sau khi có provider xác minh xong), không phải thiếu sót — nhưng nghĩa là "mở rộng khung ảnh" trong `BO_TINH_NANG_HIEN_TRANG.md` vẫn đúng khi ghi "Chưa có" từ góc nhìn người dùng cuối. Chi tiết đầy đủ (lược đồ request/response từng provider, giá, test) ở `TECHNICAL_DEBT.md` mục nợ #78/#104/#105.
 
 **P24 — M04b về đúng kiến trúc job (09/17). Nghiệm thu xong trên máy thật.**
 Đợt này không thêm tính năng cho M04b mà đưa nó ra khỏi đường chạy riêng, về đúng kiến trúc job của cả hệ thống.
@@ -120,6 +125,8 @@ Phân hệ AI Creative Studio (`src/app/(app)/creative-studio/page.tsx`) hoàn t
   - **Trình phóng to ảnh toàn hệ thống (Global Image Zoom Modal)** (`src/components/ui/global-image-zoom.tsx`): Cho phép nhân viên nhấp xem ảnh phóng to toàn màn hình ở bất kỳ vị trí nào để soi chi tiết chất lượng tách nền.
   - Tải xuống 1-chạm (Download PNG/JPEG) trực tiếp về thiết bị.
 - **Xác minh kỹ thuật**: `npx tsc --noEmit` sạch 100%, `npm test` **321/321 test cases xanh** (50 test suites), `workers/tests` **60/60 test Python xanh**, `npm run test:tenant` **123/123 test xanh tuyệt đối**.
+
+> **Đính chính 18/09 (nợ #107, phát hiện + tự sửa):** tuyên bố "100% Production & Commercial Ready" ở trên KHÔNG còn đúng. Route `POST /api/v1/media/background-removal`/`process_m04b_variants.py` mà mục này mô tả đã bị chính P24 (09/17, mục bên dưới) đóng hẳn — không đăng nhập, không RBAC, không tổ chức, không credit, `spawn` Python đọc stdout, lỗ SSRF qua `image_url`; bộ dựng canvas phía trình duyệt/ảnh mẫu Unsplash trong chuỗi lùi cũng đã gỡ. Trạng thái bảy năng lực M04b thật hôm nay (18/09): AIC-11/AIC-16 xong, AIC-12 xong (khác tech so với đặc tả), AIC-13 dựng xong nhưng chưa route nào gọi tới, AIC-17 chạy được nhưng hẹp hơn hình dung ban đầu, **AIC-14/AIC-15 chưa có mã** (nợ #106). Xem bảng đầy đủ ở `docs/dac-ta/CHECKLIST_AI_CAPABILITIES_BUILD.md` §3.4.
 
 **P14b — M01c Thẻ chào sản phẩm & Kho Dữ Liệu (`/kho-du-lieu`) hoàn tất (09/14).**
 Component `SalesPitchCard` (`src/components/sales/sales-pitch-card.tsx`) + template domain `sales-pitch-template.ts` tổng hợp dữ liệu M01a + M01b cho nhân viên tư vấn bán hàng (Sales Rep). Hỗ trợ:
@@ -261,8 +268,9 @@ bộ định tuyến tự đổi mô hình theo chi phí · lược đồ đầu
 
 Tám nợ mới (#68–#75), trong đó hai cái đáng đọc trước khi bật worker thật: **#70**
 không có chuỗi dự phòng nên một môi trường worker thiếu trọng số làm MỌI lượt
-phân tích hỏng thay vì rơi về `openai_structured` (mặc định hiện là `openai_direct`,
-nặng hơn local_cv nhưng nhanh hơn gấp ba lần và rẻ hơn 16 lần — `gpt-4o-mini`)
+phân tích hỏng thay vì rơi về một bộ khác (mặc định **hiện là `openai_structured`**
+theo nợ #83 chốt 09/17 — `registry.py:27` và `vision-engine.ts:38`; câu cũ ở đây ghi
+`openai_direct` là bản đã hết hiệu lực, sửa ở lượt rà soát 18/09)
 nợ #61); **#69** lời gọi chưa mang mức quyền riêng tư, bắt buộc phải có trước P21
 khi dữ liệu cá nhân của khách hàng cuối vào hệ thống.
 
@@ -520,12 +528,14 @@ git -c core.quotepath=false show \
 
 | Repo | Vai trò | Git |
 |---|---|---|
-| **`floraos-core`** | Core — Org/RBAC/Product/Asset/Job/Usage/Customer/Order + M01, M01b, M02, M03, M04a, M09, M10, M11 | ✓ `antranhub22/floraos-core` (riêng tư) |
+| **`floraos-core`** | Core — Org/RBAC/Product/Asset/Job/Usage/Customer/Order + M01, M01b, M02, M03, M04a, **M04b** (P16/P24), **M04c** (P17), **M06** (P19), **M08** (P23), M09, M10, M11 | ✓ `antranhub22/floraos-core` (riêng tư) |
 | `FloraOS` | v1, nghỉ hưu. Phục vụ AVI GIFT tới ngày cắt. **Nguồn thu hoạch.** | ✓ `antranhub22/floraos-v1` (riêng tư) |
-| `LocalBudd` | M05 Landing Page · M06 Catalog và QR | ✓ `antranhub22/localbudd` (riêng tư) |
-| `SocialFlow` | M04b Marketing Creative · M04c Video Studio · M07 Social Publishing · số liệu nền tảng cho M11 | ✓ có remote GitHub |
+| `LocalBudd` | M05 Landing Page · M06 Catalog và QR — **bản thứ hai**, tồn tại song song với bản ở core; chủ sở hữu chưa chốt, xem **RS-3** | ✓ `antranhub22/localbudd` (riêng tư) |
+| `SocialFlow` | M07 Social Publishing · số liệu nền tảng cho M11. **M04b khai tử tại chỗ 09/17** (`backend/m04b/routes.py` — đường tạo mới đã khoá, đường tải asset cũ giữ lại); **M04c chưa từng dựng ở đây**. Cả hai nay thuộc core | ✓ có remote GitHub |
 
 Cả bốn repo đều có bản sao ngoài máy. Nhánh chính của cả bốn là `main`.
+
+> **Bảng này đã lệch từ P16 tới 09/18 và được sửa lại theo mã thật ở lượt rà soát 18/09** (`RA_SOAT_DONG_BO_18_09.md` mục 2.1). Bốn module đã đổi chủ mà bảng không đổi theo: M04b, M04c, M06, M08. Khi một module đổi repo, sửa bảng này trong cùng lần đó — đây là bản đồ mà mọi phiên mới đọc trước tiên.
 
 Branch protection trên `main` của `floraos-core` bật khi P1 xong, với điều kiện `npm run test:tenant` phải xanh. Đây là cổng duy nhất chặn được lỗi cách ly tenant.
 
@@ -543,10 +553,14 @@ Branch protection trên `main` của `floraos-core` bật khi P1 xong, với đi
 | **D3** | Job bị Identity Guard từ chối không tính phí khách; credit hoàn lại | 09/09 |
 | **D4** | `FloraOS` v1 đóng băng tính năng từ 09/09. Không ngoại lệ. Chỉ sửa lỗi chặn vận hành tới ngày cắt | 09/09 |
 | **Quy ước đếm** | Đơn vị là cành. Nụ đếm riêng; số chuẩn là số nhìn thấy trong ảnh, số đơn hàng ghi song song; lá trang trí không đếm; bao bì đếm như hoa; hoa hỏng vẫn tính kèm số hỏng riêng. Chi tiết ở `QUY_UOC_DEM.md` | 09/09 |
+| **RS-1..11 (rà soát 18/09)** | 10/11 mục của lượt rà soát đồng bộ tài liệu↔mã đã chốt và thực thi: `P3`/`P4` tách cổng duyệt video khỏi `I2` · ca thử cách ly tự động quét mọi bảng (`check:docs` 22→0 lỗi) · Core làm chủ duy nhất `catalog_links`, `LocalBudd` bỏ bảng gọi qua Integration API · ngoại lệ tên cột tiếng Việt cho `flower_taxonomy`/`flower_confusable_pairs` · luật mặc định Vision chỉ bắt buộc số đo khi HẠ, không bắt buộc khi NÂNG · sửa `Q5`/`Q6`→`Q6`/`Q9` cho đúng đặc tả · gác quyền `product-copies` và `jobs/batch` chuyển về tầng use-case, mặc định từ chối module lạ · RS-4 (asset upload-url) hoãn có chủ đích, RS-7 (14 endpoint chưa xây) giữ nguyên có chủ đích. **RS-11 còn treo:** đổi thư mục kết nối phiên sang `~/ORGANIZED/02_PROJECTS/Active/floraos-core` — việc tay trong app Claude desktop, ngoài phạm vi sửa mã. Chi tiết từng mục ở `QUYET_DINH_RS_18_09.md` | 18/09 |
+
+| **P25 Console Vận hành** | Xây console vận hành nền tảng (giao diện xuyên tổ chức cho người vận hành SaaS): **trọn G1+G2+G3**, tám mã `N1`–`N8`; `N9`–`N11` để lại tuyến AI-1. **Lối vào: ngữ cảnh song song** — `/van-hanh` tra `platform_operators` theo `user_id`, độc lập `sessions.organization_id`, route group riêng `(platform)`, không đụng `log-in.ts` và layout `(app)`. **D-N4:** duyệt nâng cấp chỉ đổi `organizations.type`, không kèm thu phí. **D-N5:** màn sức khoẻ hệ thống chỉ đọc, không nút hành động. Kế hoạch thực thi: `KE_HOACH_CONSOLE_VAN_HANH.md` | 18/09 |
+| **D-N6 + thứ tự P25** | **Tách hẳn từ vựng năng lực nền tảng** (`N1`–`N8` ở `src/core/platform/`, bảng gán riêng): `SystemRoleKey`, `CAPABILITIES` (146 mã), `capability_scope`, `permission-resolver.ts` KHÔNG đổi một dòng, D-N1 không còn cần. **P25 làm TRƯỚC P13/P16/P18.** **Một người vận hành duy nhất** — cấp quyền bằng script chạy tay, KHÔNG làm màn cấp/thu quyền trong P25 | 19/09 |
 
 ## 5. Còn mở — chặn việc
 
-Hai quyết định chặn go-live, không chặn việc dựng lược đồ hay viết mã:
+Ba quyết định dưới đây chặn go-live, không chặn việc dựng lược đồ hay viết mã. D-N6 (chặn P25a) đã chốt 19/09 — xem mục 4.
 
 | # | Nội dung | Chặn |
 |---|---|---|
@@ -563,6 +577,8 @@ Hai quyết định chặn go-live, không chặn việc dựng lược đồ ha
 **P19 Catalog & QR + P15 Integration API write paths — HOÀN TẤT (09/12).**
 - `floraos-core`: P15 7/7 checklist items xong (core write paths). **Catalog page hoàn thiện 100%: preview thật, QR download qua proxy, filter động (occasion/color/collection/price), Landing tab ẩn cho MVP.**
 - `LocalBudd`: P19 6/7 checklist items xong (catalog UI, QR, revoke page). Còn lại: cặp `J1`↔`J2` tách năng lực.
+
+**Mới 18/09 — P25 Console Vận hành Nền tảng.** Chốt xây trọn G1+G2+G3 (`N1`–`N8`). Ba đợt P25a (chỉ đọc) → P25b (nạp/hoàn credit, duyệt nâng cấp) → P25c (tạo tổ chức, token). Kế hoạch từng tệp, cổng nghiệm thu và bộ test cách ly nền tảng ở `docs/kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md`; ô checklist ở `Checklist_Thuc_Thi.md` mục P25. **Chốt 19/09: không còn gì chặn, và P25a đứng TRƯỚC mọi mục dưới đây** — nó gỡ được năm script vận hành chạy tay và hàng đợi yêu cầu nâng cấp hiện không ai duyệt được.
 
 **Việc lớn tiếp theo (theo thứ tự ưu tiên):**
 
@@ -671,6 +687,10 @@ Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàn
 
 | Ngày | Việc |
 |---|---|
+| 09/19 | **Chốt xong bốn việc còn treo của P25.** D-N6: **tách hẳn** từ vựng năng lực nền tảng — kéo theo D-N1 không còn cần, `capability_scope`/`SYSTEM_ROLES`/`capability-catalog.ts` (146 mã)/`capability-catalog.test.ts` không đụng dòng nào; rủi ro High "vai nền tảng vô tình có quyền tenant" bị loại theo cấu trúc thay vì canh bằng test. Thứ tự: **P25 trước P13/P16/P18**. Số người vận hành: **một**, giữ script cấp quyền chạy tay, không làm màn cấp/thu quyền trong P25. Tài liệu commit riêng đợt này, chưa có mã. |
+| 09/18 | **Kế hoạch P25 — Console Vận hành Nền tảng.** Rà mã thật rồi lập kế hoạch thực thi cho thiết kế 11/09 vốn chưa từng vào lộ trình. Ba chỗ thiết kế gốc nói sai so với mã, đã sửa trong kế hoạch: (1) nhánh `sessions.organization_id = null` → `PlatformContext` **không bao giờ chạy** — `log-in.ts` luôn gắn membership đầu tiên và `(app)/layout.tsx` đá về `/dang-nhap`, nên chốt ngữ cảnh song song + route group `(platform)` riêng; (2) con số năng lực trong tài liệu đã cũ — đo lại **146 mã / 41 trần cứng** (`AGENTS.md` ghi 143/39) và **60 model** (ghi 27 bảng); (3) cổng `check:docs` bốn trục sẽ chặn mọi bảng/route mới nếu đặc tả 06/07 không sửa cùng commit. Bốn ô CHỐT điền vào `DASHBOARD_VAN_HANH_NEN_TANG.md` mục 8; phát sinh **D-N6** (tách hay dùng chung từ vựng năng lực) còn treo, chặn P25a. Chưa viết một dòng mã nào. |
+| 09/18 | **Nợ #105 — thêm `FalAIOutpainter`.** Hiện thực `ImageExpander` thứ tư (`providers/expansion/fal_outpainter.py`) — `fal-ai/bria/expand` qua fal.ai, hàng đợi REST (`queue.fal.run`, header `Authorization: Key`), lược đồ xác minh qua tài liệu chính thức fal.ai. `original_image_location` trùng khớp tự nhiên với `paste_offset` nội bộ — `variant_worker.py` KHÔNG cần sửa gì, đúng bằng chứng cổng `ImageExpander` (nợ #78) đã đủ trừu tượng để đổi provider. Đăng ký `expand_provider="fal_bria_expand"`, để trống `FAL_KEY` lùi về `PadExpander`. Giá `$0.04/lượt` xác nhận trực tiếp trang model fal.ai, thêm `gia_luot_replicate["fal-ai/bria/expand"]`. 12 ca thử mới, `workers/tests/` 88/88 xanh. Chưa có `FAL_KEY` nên chưa gọi thử thật. Xem `TECHNICAL_DEBT.md` nợ #105 |
+| 09/17–18 | **Nợ #104 — IOPaint tự host (Mức 2): dựng xong, thử thật, rồi DỪNG.** Giai đoạn 1 (17/09): `product_mask` thêm vào `ImageExpander.expand()`, `IOPaintExpander` gọi `POST /api/v1/inpaint` với `use_extender=true`, `variant_worker.py` dựng mask từ alpha có sẵn (`_mat_na_iopaint`) và dán lại chính xác ảnh gốc sau khi engine trả về (`_dan_lai_chu_the`). Chọn model 18/09: Kandinsky 2.2 (Apache-2.0, `support_outpainting=true` xác nhận đọc thẳng `iopaint/schema.py`), viết `docker/iopaint/Dockerfile` + `run_native_mps.sh` (chạy native trên Apple Silicon, Docker không pass-through Metal). **Thử thật lần đầu 18/09 trên MacBook Air M3:** Python mặc định máy (3.14) không tương thích `Pillow==9.5.0` (script tự dò Python 3.9-3.12 sau đó) → cài xong, khởi động IOPaint thành công → tải trọng số Kandinsky 2.2 giữa chừng thì hết dung lượng đĩa (`OSError: [Errno 28]`). Ba lớp ma sát hạ tầng thật này đúng loại chi phí `10-ai-orchestration.md` §2 đã cảnh báo khi khuyến nghị thứ tự API-trước — DỪNG Mức 2 làm hướng thử tiếp theo, mã giữ nguyên trong `EXPANDER_REGISTRY`, bật lại được khi có VPS GPU thật. Xem `TECHNICAL_DEBT.md` nợ #104 |
 | 09/17 | **P24 nghiệm thu xong.** `npm test` 479/479 · `test:tenant` **200/200, 25/25 tệp** · `pytest` worker 229/229 · `tsc` sạch. Lượt nghiệm thu kéo theo ba việc sửa ngoài phạm vi M04b: alias `server-only` trong `vitest.config.ts` (năm suite `tests/tenant/` tắt ở bước NẠP, bốn trong số đó đỏ từ trước — nợ #81) · `Idempotency-Key` cho `product-copies.test.ts` (nợ #82) · chốt bộ máy Vision mặc định `openai_structured` (nợ #83). `test:tenant` từ 6 tệp đỏ về 0. |
 | 09/17 | **P24 — M04b về đúng kiến trúc job.** Đóng `POST /media/background-removal` (không auth, không RBAC, không tổ chức, không credit, `spawn` Python + parse stdout, SSRF qua `image_url`). Dựng `media.variant` qua `enqueueJob`: 4 route `/media/variants*`, cặp `I4`↔`I5` (143 mã / 39 trần cứng), worker `variant_worker.py` với 4 `stage` thật, biến thể ghi thành `assets` `MARKETING`/`PENDING` cha là Master đã duyệt, watermark lấy logo thật từ `brand_profiles`. Cổng **Subject Integrity** đo tỷ lệ điểm ảnh lõi chủ thể trùng khít Master (mặt nạ co biên), ba ngưỡng 0,999 / 0,99, `REJECTED` không ghi asset; thay ba hằng số `100/99/98` gõ tay trong giao diện. Gỡ bộ dựng canvas phía trình duyệt và ảnh mẫu Unsplash trong chuỗi lùi. Test mới: `variant-rules.test.ts` 17 ca ✅ · `test_variant_worker.py` 13 ca ✅ · `media-variants.test.ts` 22 ca (chưa chạy). **Bốn lệnh nghiệm thu chưa chạy trên máy thật.** |
 | 09/14 | **P14b M01c Thẻ chào sản phẩm & Kho Dữ Liệu (`/kho-du-lieu`) — hoàn tất.** Thẻ chào sản phẩm (`SalesPitchCard`, `sales-pitch-template.ts`) tổng hợp M01a + M01b: 100% chỉnh sửa 8 khối trường trước khi chốt, nút "Chốt duyệt & Xuất bản Final" (Badge FINAL), kiến trúc 3 tab hiển thị độc lập cách ly nội dung (Tab 1: Chỉnh sửa toàn bộ thông tin, Tab 2: Thẻ chào khách A6, Tab 3: Kịch bản Zalo 1-chạm copy), bộ công cụ xuất đa định dạng (Copy ảnh vào Zalo / Clipboard binary PNG, Tải PNG Retina 2x, Tải JPEG 95%, Xuất PDF A6 qua jsPDF). Tích hợp Kho Dữ Liệu Sản Phẩm độc lập (`/kho-du-lieu`) trên Sidebar chính DesktopNav với 3 phân vùng quản lý (Ảnh gốc, Ảnh đã duyệt chờ sinh dữ liệu, Sale Pitch hoàn thành) và liên kết 2 chiều sang `/tai-anh`. Layout `/tai-anh` khôi phục full-width. Unit test `sales-pitch-template.test.ts` 3/3 xanh. |
