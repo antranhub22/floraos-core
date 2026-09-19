@@ -328,7 +328,37 @@ Nhóm `R` là phần đơn hàng của core. Luồng chào giá và bảng đi�
 
 `H4` là trường hợp riêng của `U2` cho đúng năng lực phân tích ảnh, và nó giữ nguyên — nó đã có trong mã, đã có màn hình, và đã có luật riêng về việc bày ba bộ máy kèm trạng thái đo lường. `U2` là cùng loại quyết định cho các năng lực còn lại: đổi mô hình của một năng lực đổi chất lượng mọi lượt chạy về sau của cả tổ chức, nên nó có trần cứng Điều hành và mỗi lần đổi ghi `audit_logs`.
 
-Sổ đăng ký mô hình và sổ đăng ký giấy phép **không** thuộc dải này. Chúng là dữ liệu cấp nền tảng, gác bằng dải `N` với phạm vi `PLATFORM` — một tổ chức không tự thêm mô hình vào hệ thống, vì ô giấy phép và ô lãnh thổ của một mô hình không phải quyết định của một cửa hàng hoa.
+Sổ đăng ký mô hình và sổ đăng ký giấy phép **không** thuộc dải này. Chúng là dữ liệu cấp nền tảng, gác bằng dải `N` — một tổ chức không tự thêm mô hình vào hệ thống, vì ô giấy phép và ô lãnh thổ của một mô hình không phải quyết định của một cửa hàng hoa. Ba mã `N9`–`N11` (sổ mô hình, sổ ngưỡng, chi phí theo mô hình) chưa xây — thuộc tuyến AI-1, xem mục dưới.
+
+### Vận hành nền tảng — dải N (P25)
+
+Từ vựng này **TÁCH HẲN** khỏi bảng ở mục 4 (D-N6, chốt 19/09): không nằm
+trong `capability-catalog.ts`, không dùng `capability_scope`, không có
+"trần cứng" theo `SystemRoleKey` — người vận hành nền tảng không phải một
+vai của tenant. Nguồn: `src/core/platform/platform-capability-catalog.ts`.
+Gán thẳng từng mã cho một người vận hành qua `platform_role_capabilities`,
+không qua vai. Cấp lần đầu bằng script chạy tay
+`scripts/gan-van-hanh-nen-tang.ts` (D-N2) — không có UI tự gán.
+
+| Mã | Tên đọc được | Năng lực | Mặc định | Trần cứng |
+|---|---|---|---|---|
+| `N1` | `platform.organizations.read` | Danh sách và chi tiết mọi tổ chức, xuyên tenant | — (gán thẳng) | — |
+| `N2` | `platform.upgrade_requests.manage` | Duyệt/từ chối hàng đợi `organization.upgrade_requested` | — (gán thẳng) | — |
+| `N3` | `platform.credit.manage` | Nạp/hoàn credit cho một tổ chức | — (gán thẳng) | — |
+| `N4` | `platform.usage.read` | Usage và chi phí tổng hợp toàn hệ thống | — (gán thẳng) | — |
+| `N5` | `platform.health.read` | Sức khoẻ hệ thống — đếm job theo trạng thái, job treo, kho tệp. CHỈ ĐỌC (D-N5, không có hành động khởi động lại) | — (gán thẳng) | — |
+| `N6` | `platform.audit.read` | Nhật ký xuyên tổ chức — hợp `audit_logs` và `platform_audit_logs` | — (gán thẳng) | — |
+| `N7` | `platform.organizations.create` | Tạo tổ chức mới — gói `organizations` + `workspaces` + thành viên điều hành đầu tiên | — (gán thẳng) | — |
+| `N8` | `platform.integration_tokens.manage` | Token tích hợp theo tổ chức, bọc use-case `integration/` đã có (`F9`) | — (gán thẳng) | — |
+
+Cột "Mặc định"/"Trần cứng" ghi "— (gán thẳng)" vì không có khái niệm vai ở
+đây: `platform_operators` + `platform_role_capabilities` không đi qua
+`role_capabilities`/`capability_overrides`/`permission-resolver.ts` của
+tenant — ba lớp đó không áp dụng cho dải N. Kiểm quyền qua
+`requirePlatformCapability(pctx, code)`, đối xứng với
+`requireCapability(ctx, code)` của tenant nhưng nhận `PlatformContext`
+(kiểu khác `TenantContext`, không có `organizationId`) — hai hàm không thể
+gọi nhầm nhau, `tsc` chặn ở biên dịch.
 
 ## 5. Cặp năng lực tách rời — không bao giờ gói chung
 

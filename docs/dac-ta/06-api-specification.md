@@ -604,7 +604,27 @@ Khuôn video là enum `video_format`: `REEL_15S` · `TIKTOK_30S` · `STORY_15S` 
 | POST | `/media/background-removal` | — | **ĐÃ ĐÓNG ở P24**, luôn trả 409 kèm đường thay thế |
 | GET | `/ai-capabilities` | `U1` | |
 
-## 21. Chưa có ở bản này
+## 21. Console Vận hành Nền tảng (P25a)
+
+Năm route dưới đây thuộc console vận hành nền tảng (`docs/kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md`), dùng cho người vận hành FloraOS chứ không phải thành viên một tổ chức. Đây là **ngoại lệ có chủ đích, có gác quyền** với Luật 2 ở mục 1 ("không endpoint nào trả dữ liệu xuyên tổ chức") — năm route này CỐ Ý trả dữ liệu của nhiều/mọi tổ chức cùng lúc.
+
+Khác biệt với mọi route còn lại trong tài liệu này:
+- Ngữ cảnh gác không phải `TenantContext` mà là `PlatformContext` (`requirePlatformContext`, `src/modules/platform/use-cases/resolve-platform-session.ts`) — giải từ bảng `platform_operators`, độc lập với `sessions.organization_id`.
+- Mã năng lực gác là dải `N1`–`N8` (đặc tả 02 mục "Vận hành nền tảng — dải N"), TÁCH HẲN khỏi `capability_scope`/`SYSTEM_ROLES` của tenant (D-N6, chốt 19/09) — không xuất hiện trong `role_capabilities`/`capability_overrides`.
+- Truy vấn xuyên tổ chức chỉ đi qua `src/modules/platform/infra/platform-query.ts` — điểm DUY NHẤT trong repo được phép truy vấn nhiều tổ chức cùng lúc (kế hoạch mục 4.4).
+- Chưa đăng nhập → 401 `UNAUTHENTICATED`. Đã đăng nhập nhưng không có dòng `platform_operators` đang hoạt động, hoặc thiếu đúng mã N ở cột dưới → 403 `CAPABILITY_DENIED` — giống hệt một thành viên tổ chức thiếu năng lực, không phải "chưa xác thực".
+
+P25a chỉ đọc (D-N5 áp dụng cho toàn bộ P25a, không riêng `/health`): không route nào trong nhóm này ghi dữ liệu. Duyệt yêu cầu nâng cấp, nạp/hoàn credit, tạo tổ chức (`N2`, `N3`, `N7`) thuộc P25b/P25c, chưa có ở bản này.
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/platform/organizations` | `N1` | Danh sách mọi tổ chức — tên, slug, loại, số dư credit, số thành viên |
+| GET | `/platform/organizations/:id` | `N1` | Chi tiết một tổ chức bất kỳ — không lọc theo tổ chức của người gọi |
+| GET | `/platform/usage` | `N4` | Usage & chi phí gộp theo (tổ chức, tính năng), toàn hệ thống |
+| GET | `/platform/health` | `N5` | Đếm job theo trạng thái + danh sách job treo (chỉ đọc — không đánh dấu FAILED, xem `scripts/scan-stuck-jobs.ts`) |
+| GET | `/platform/audit-logs` | `N6` | Nhật ký xuyên tổ chức — hợp `audit_logs` mọi tổ chức và `platform_audit_logs` |
+
+## 22. Chưa có ở bản này
 
 Endpoint mang khoá nhà cung cấp riêng của tổ chức. Quyết định D2 chốt nền tảng giữ khoá và tính credit, nên nhóm endpoint đó không tồn tại. Nếu D2 đổi về sau, nhóm này thêm vào dưới `/organizations/current/providers` mà không đụng tới endpoint nào đang có.
 

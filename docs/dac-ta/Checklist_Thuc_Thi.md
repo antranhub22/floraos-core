@@ -499,7 +499,7 @@ cổng duyệt. Bốn ô của P16 phía dưới được chỉnh lại theo mã
 - [x] Bộ máy Vision mặc định chốt là `openai_structured`; ca "lựa chọn của A không ảnh hưởng B" sửa lại cho thật sự phân biệt được rò rỉ — nợ #83
 - [x] `test:tenant` từ **6 tệp đỏ về 0** — bốn suite trong số đó đã đỏ từ trước lượt này
 
-## P25 — Console Vận hành Nền tảng · lập kế hoạch 18/09, chưa bắt đầu
+## P25 — Console Vận hành Nền tảng · P25a mã viết xong 19/09, chờ nghiệm thu máy thật
 
 Giao diện xuyên tổ chức cho người vận hành SaaS — thứ `floraos-core` hiện hoàn
 toàn không có. Kế hoạch đầy đủ: `docs/kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md`
@@ -512,22 +512,22 @@ P13/P16/P18 · một người vận hành duy nhất, KHÔNG làm màn cấp/thu
 
 ### P25a — G1 chỉ đọc
 
-- [ ] Ba bảng mới `platform_operators`, `platform_role_capabilities`, `platform_audit_logs` — không bảng nào có `organization_id`, ngoại lệ có chủ đích của Luật 1
+- [x] Ba bảng mới `platform_operators`, `platform_role_capabilities`, `platform_audit_logs` — không bảng nào có `organization_id`, ngoại lệ có chủ đích của Luật 1
 - [ ] **Anh Tony chạy tay:** `npx prisma generate && npx prisma db push` trên Terminal Mac (`device_bash` không chạy được — bẫy `binaries.prisma.sh`)
-- [ ] Khai ba bảng + ghi rõ lý do ngoại lệ Luật 1 vào `docs/dac-ta/07-database-specification.md`
-- [ ] `src/core/platform/platform-context.ts` — `PlatformContext` thuần, KHÔNG có `organizationId` để `tsc` chặn nhầm lẫn với `TenantContext`
-- [ ] `platform-capability-catalog.ts` (`N1`–`N8`) + `platform-capabilities.ts` (`requirePlatformCapability`) + test thuần
-- [ ] Khai `N1`–`N8` vào `docs/dac-ta/02-function-catalog.md`
-- [ ] `src/modules/platform/` đủ bốn thư mục `domain/ use-cases/ infra/ adapters/`
-- [ ] `resolve-platform-session.ts` — `requirePlatformContext`, tra `platform_operators` theo `user_id`, độc lập `sessions.organization_id`
-- [ ] `infra/platform-query.ts` — chỗ DUY NHẤT trong repo được truy vấn nhiều tổ chức; không repository tenant nào mọc thêm cờ bỏ lọc
-- [ ] Năm use-case chỉ đọc: `list-organizations`, `get-organization`, `summarize-usage`, `read-system-health`, `list-platform-audit`
-- [ ] Năm route `GET /api/v1/platform/{organizations,organizations/:id,usage,health,audit-logs}` + khai vào `docs/dac-ta/06-api-specification.md`
-- [ ] `scripts/gan-van-hanh-nen-tang.ts` — gán vai lần đầu, chạy tay (D-N2)
-- [ ] `src/app/(platform)/` route group riêng: layout + `/van-hanh` + bốn trang con chỉ đọc
-- [ ] `tests/platform/cach-ly-platform.test.ts` — bốn ca: người thường gọi platform → 403 · người vận hành gọi route tenant → chặn như người không có membership · thiếu năng lực từng route → 403 · **đọc xuyên tổ chức trả ĐỦ cả hai tổ chức fixture** (ca chứng minh đường đọc chạy thật, không xanh vì rỗng)
-- [ ] Lệnh `npm run test:platform` + gắn vào CI
-- [ ] Cổng: `tsc` sạch · `npm test` xanh · `test:tenant` xanh KHÔNG suy giảm · `test:platform` xanh · `check:docs` 0 lỗi cả bốn trục
+- [x] Khai ba bảng + ghi rõ lý do ngoại lệ Luật 1 vào `docs/dac-ta/07-database-specification.md`
+- [x] `src/core/platform/platform-context.ts` — `PlatformContext` thuần, KHÔNG có `organizationId` để `tsc` chặn nhầm lẫn với `TenantContext`
+- [x] `platform-capability-catalog.ts` (`N1`–`N8`) + `platform-capabilities.ts` (`requirePlatformCapability`) + test thuần — 13 ca, `npx vitest run src/core/platform` xanh
+- [x] Khai `N1`–`N8` vào `docs/dac-ta/02-function-catalog.md`
+- [x] `src/modules/platform/` — chỉ `infra/` + `use-cases/`, KHÔNG `domain/`/`adapters/`: luật thuần đã ở `src/core/platform/` (như `core/rbac`/`core/tenancy` của tenant), không có SDK ngoài nào cần bọc. Cùng hình dạng với `src/modules/sso/` (cũng chỉ 2/4 thư mục) — không phải thiếu sót
+- [x] `resolve-platform-session.ts` — `requirePlatformContext`, tra `platform_operators` theo `user_id`, độc lập `sessions.organization_id`. 401 khi chưa đăng nhập, 403 `CAPABILITY_DENIED` khi đã đăng nhập nhưng không phải người vận hành
+- [x] `infra/platform-query.ts` — chỗ DUY NHẤT trong repo được truy vấn nhiều tổ chức; không repository tenant nào mọc thêm cờ bỏ lọc
+- [x] Năm use-case chỉ đọc: `list-organizations`, `get-organization`, `summarize-usage`, `read-system-health`, `list-platform-audit`
+- [x] Năm route `GET /api/v1/platform/{organizations,organizations/:id,usage,health,audit-logs}` + khai vào `docs/dac-ta/06-api-specification.md` (mục 21, kèm ghi chú ngoại lệ có chủ đích với Luật 2)
+- [x] `scripts/gan-van-hanh-nen-tang.ts` — gán vai lần đầu, chạy tay (D-N2). Gắn vào `package.json` (`npm run gan-van-hanh-nen-tang -- --email=... [--capabilities=...]`)
+- [x] `src/app/(platform)/` route group riêng: layout + `/van-hanh` + bốn trang con chỉ đọc (`to-chuc`, `to-chuc/[id]`, `muc-dung`, `suc-khoe`, `nhat-ky`)
+- [x] `tests/platform/cach-ly-platform.test.ts` — viết đủ năm ca (bốn ca bắt buộc + ca 0 phân biệt 401/403): người thường gọi platform → 403 · người vận hành gọi route tenant → chặn như người không có membership (404 trên đơn hàng tổ chức khác) · thiếu năng lực từng route → 403 · **đọc xuyên tổ chức trả ĐỦ cả hai tổ chức fixture**. **CHƯA CHẠY ĐƯỢC trong sandbox (không có Postgres) — chờ anh Tony chạy trên Mac thật**
+- [x] Lệnh `npm run test:platform` + gắn vào CI (`.github/workflows/ci.yml`, bước "Test cách ly Console Vận hành Nền tảng")
+- [ ] **Cổng, CHƯA ĐỦ:** `tsc` sạch ✅ (chỉ còn lỗi "chờ prisma generate" đã lường trước) · `npm test` 538/538 ✅ · `check:docs` 0 lỗi cả bốn trục ✅ · `test:tenant` **CHƯA CHẠY** (cần Postgres + prisma generate trên Mac) · `test:platform` **CHƯA CHẠY** (cùng lý do). Không tick ô này cho tới khi cả hai lệnh đó xanh trên máy thật
 
 ### P25b — G2 hành động trên một tổ chức
 

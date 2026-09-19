@@ -13,7 +13,7 @@ Worker Python đọc lược đồ sinh sẵn, không tự khai bảng.
 | 3 | Asset gốc bất biến. Dẫn xuất là bản ghi mới, nối bằng `parent_asset_id` và `version` | Review |
 | 4 | Job tách ba trục `status` / `stage` / `result`. Không gộp thành một cột | Review |
 
-**Ngoại lệ của Luật 1 — danh sách đóng, đối chiếu 18/09.** Chín bảng không có `organization_id`, và mỗi bảng phải nêu được lý do khi review:
+**Ngoại lệ của Luật 1 — danh sách đóng, đối chiếu 18/09, cập nhật 19/09.** Mười hai bảng không có `organization_id`, và mỗi bảng phải nêu được lý do khi review:
 
 | Bảng | Lý do |
 |---|---|
@@ -24,10 +24,11 @@ Worker Python đọc lược đồ sinh sẵn, không tự khai bảng.
 | `video_scenes` | Bảng con, thuộc tổ chức qua `video_jobs.organization_id` |
 | `ai_capabilities` · `ai_models` | Sổ đăng ký nền AI cấp nền tảng; `tests/helpers/database.ts` cũng không truncate hai bảng này |
 | `flower_taxonomy` · `flower_confusable_pairs` | Tri thức ngành hoa, không phải dữ liệu của một cửa hàng — xem mục 16 |
+| `platform_operators` · `platform_role_capabilities` · `platform_audit_logs` | Console Vận hành Nền tảng (P25, 19/09) — dữ liệu của người vận hành xuyên tổ chức, không thuộc một tổ chức nào. Từ vựng năng lực `N1`–`N8` TÁCH HẲN khỏi `roles`/`role_capabilities` của tenant (D-N6) — không dùng `capability_scope`, không thêm giá trị `PLATFORM` vào enum đó. Xem `../kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md` mục 4.1 |
 
-Bảng thứ mười tự nhận ngoại lệ là lỗi chặn ở review.
+Một bảng tự nhận ngoại lệ mà không nêu được lý do ở trên là lỗi chặn ở review.
 
-*Ba câu cũ ở mục 1, mục 16 và mục 19 nói ba con số khác nhau ("duy nhất `users`" · "ngoại lệ duy nhất `flower_taxonomy`" · "hai bảng, gồm `platform_audit_logs`"), không câu nào đúng. Bảng trên thay cả ba. `platform_audit_logs` chưa tồn tại — nó là đề xuất ở `../kien-truc/DASHBOARD_VAN_HANH_NEN_TANG.md`, dải `N1`–`N8` chưa xây.*
+*Ba câu cũ ở mục 1, mục 16 và mục 19 từng nói ba con số khác nhau ("duy nhất `users`" · "ngoại lệ duy nhất `flower_taxonomy`" · "hai bảng, gồm `platform_audit_logs`"), không câu nào đúng — bảng trên thay cả ba. Cập nhật 19/09: ba bảng Console Vận hành đã XÂY (P25a), không còn là đề xuất — dòng cũ ghi "`platform_audit_logs` chưa tồn tại... dải N1–N8 chưa xây" đã hết hiệu lực.*
 
 ## 2. Kiểu liệt kê
 
@@ -1278,8 +1279,51 @@ Mỗi bảng có `organization_id` phải có một trường hợp trong bộ t
 
 Chạy bằng `npm run test:tenant`. Bắt buộc xanh trước mọi merge.
 
-Danh sách ngoại lệ của Luật 1 nằm ở **mục 1** — chín bảng, mỗi bảng một lý do. Bảng thứ mười tự nhận ngoại lệ là lỗi chặn ở review.
+Danh sách ngoại lệ của Luật 1 nằm ở **mục 1** — mười hai bảng, mỗi bảng một lý do. Bảng thứ mười ba tự nhận ngoại lệ là lỗi chặn ở review.
 
 **Đối chiếu 18/09 — luật này đang bị phá.** 39 bảng có `organization_id`; **16 bảng chưa xuất hiện trong bất kỳ ca thử nào** của `tests/tenant/`: `catalog_links` · `chat_channel_integrations` · `chat_conversations` · `chat_messages` · `content_metrics` · `customer_consents` · `customer_occasions` · `order_assignments` · `order_events` · `order_items` · `pricing_rules` · `product_images` · `product_inventory` · `product_variants` · `template_overrides` · `vouchers`.
 
 Nặng hơn: **6 bảng không nằm trong `TENANT_TABLES`** của `tests/helpers/database.ts` nên không bị `TRUNCATE` giữa các ca — `catalog_links` · `content_metrics` · `occasions` · `product_copies` · `product_inventory` · `template_overrides`. Với sáu bảng này, một ca xanh không chứng minh được điều nó khẳng định, đúng như chú thích trong chính tệp đó cảnh báo. Xem **RS-2**.
+## 21. Console Vận hành Nền tảng — P25a
+
+Ba bảng ngoại lệ của Luật 1 (mục 1) — không có `organization_id`, vì dữ liệu của người vận hành nền tảng không thuộc một tổ chức. Từ vựng năng lực `N1`–`N8` (đặc tả 02) TÁCH HẲN khỏi `capability_scope`/`role_capabilities` của tenant (D-N6, chốt 19/09) — không bảng nào dưới đây có cột tham chiếu `capability_scope`.
+
+```prisma
+model platform_operators {
+  id         String    @id @default(uuid())
+  user_id    String    @unique
+  granted_by String?
+  created_at DateTime  @default(now())
+  revoked_at DateTime?
+
+  capabilities platform_role_capabilities[]
+
+  @@index([user_id])
+}
+
+model platform_role_capabilities {
+  id              String @id @default(uuid())
+  operator_id     String
+  capability_code String // N1 … N8
+
+  @@unique([operator_id, capability_code])
+}
+
+model platform_audit_logs {
+  id          String   @id @default(uuid())
+  user_id     String
+  action      String // platform.health.read · platform.operator.grant …
+  entity_type String
+  entity_id   String
+  before      Json?
+  after       Json?
+  ip          String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+
+  @@index([created_at])
+  @@index([entity_type, entity_id])
+}
+```
+
+`platform_operators.user_id` là `@unique` — một người chỉ một dòng vận hành; gán thêm năng lực đi qua `platform_role_capabilities`, không tạo dòng `platform_operators` mới. `platform_audit_logs` tách khỏi `audit_logs` (mục 8) vì `audit_logs.organization_id` là `NOT NULL` (D-N3) — hành động không thuộc tổ chức nào không ghi được vào đó. Gán/thu quyền vận hành hiện chạy tay qua `scripts/gan-van-hanh-nen-tang.ts`, không có route. Xem `../kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md` mục 4.1 và đặc tả 06 mục 21.

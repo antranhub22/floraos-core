@@ -89,6 +89,9 @@ model users {
 
   memberships memberships[]
   sessions    sessions[]
+
+  // Console Vận hành Nền tảng (P25) — độc lập với memberships, xem mục cuối tệp
+  platform_operator platform_operators?
 }
 
 model sessions {
@@ -1492,4 +1495,67 @@ model flower_confusable_pairs {
   @@index([ma_loai_a])
   @@index([ma_loai_b])
   @@index([muc_do_nham])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Console Vận hành Nền tảng (P25, chốt 18-19/09/2026) — ba bảng KHÔNG mang
+// `organization_id`, ngoại lệ có chủ đích của Luật 1 (đặc tả 07 mục 1),
+// cùng hạng với `ai_capabilities`/`ai_models`. Xem
+// docs/kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md mục 4.1 và D-N6 (tách hẳn từ
+// vựng năng lực nền tảng khỏi `roles`/`role_capabilities` của tenant —
+// KHÔNG dùng `capability_scope`, không thêm giá trị PLATFORM vào enum đó).
+// `tests/helpers/database.ts` KHÔNG truncate ba bảng này, giống ai_models.
+
+/// Người được cấp quyền vận hành nền tảng — độc lập hoàn toàn với
+/// `memberships`. Một user có thể vừa là thành viên một tổ chức (qua
+/// memberships) vừa là người vận hành nền tảng (qua bảng này) — hai bảng
+/// không loại trừ nhau. Gán lần đầu bằng script chạy tay
+/// `scripts/gan-van-hanh-nen-tang.ts` (D-N2) — không có UI tự gán.
+model platform_operators {
+  id         String    @id @default(uuid())
+  user_id    String    @unique
+  granted_by String? // user_id của người gán, null nếu tự gán qua script lần đầu
+  created_at DateTime  @default(now())
+  revoked_at DateTime?
+
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  capabilities platform_role_capabilities[]
+
+  @@index([user_id])
+}
+
+/// Mã năng lực nền tảng (`N1`…`N8`, `src/core/platform/platform-capability-catalog.ts`)
+/// cấp cho một người vận hành. TÁCH HẲN khỏi `role_capabilities` của
+/// tenant (D-N6) — không có "vai" ở đây, mỗi người vận hành có tập mã
+/// riêng, gán thẳng.
+model platform_role_capabilities {
+  id              String @id @default(uuid())
+  operator_id     String
+  capability_code String // N1 … N8
+
+  operator platform_operators @relation(fields: [operator_id], references: [id], onDelete: Cascade)
+
+  @@unique([operator_id, capability_code])
+}
+
+/// Nhật ký cho hành động KHÔNG thuộc một tổ chức cụ thể (xem sức khoẻ hệ
+/// thống, gán/thu vai vận hành). Hành động chạm MỘT tổ chức cụ thể (nạp
+/// credit, duyệt nâng cấp) vẫn ghi vào `audit_logs` hiện có với
+/// `organization_id` của tổ chức đó — bảng này không thay thế `audit_logs`.
+/// Tách riêng vì `audit_logs.organization_id` là `NOT NULL` (D-N3).
+model platform_audit_logs {
+  id          String   @id @default(uuid())
+  user_id     String
+  action      String // platform.health.read · platform.operator.grant …
+  entity_type String
+  entity_id   String
+  before      Json?
+  after       Json?
+  ip          String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+
+  @@index([created_at])
+  @@index([entity_type, entity_id])
 }

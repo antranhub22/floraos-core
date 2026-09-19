@@ -46,6 +46,10 @@ jobs:
       # Cổng bắt buộc. Không được phép bỏ qua hay đánh dấu continue-on-error.
       - name: Test cách ly tenant
         run: npm run test:tenant
+      # Cổng bắt buộc (P25a) — bốn ca thử cách ly console vận hành nền tảng,
+      # xem tests/platform/cach-ly-platform.test.ts.
+      - name: Test cách ly Console Vận hành Nền tảng
+        run: npm run test:platform
       - run: npm run build
 
   worker:
