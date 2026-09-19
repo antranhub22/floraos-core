@@ -47,7 +47,7 @@ export function SchedulePostItemCard({
         className="h-4 w-4 rounded accent-primary cursor-pointer"
       />
       {item.media_url && (
-        <div className="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-100 dark:bg-neutral-800 border border-border shadow-2xs">
+        <div className="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0 bg-surface-alt border border-border shadow-2xs">
           <img
             src={item.media_url}
             alt={item.title}

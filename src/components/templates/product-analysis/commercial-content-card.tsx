@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Sparkles, CheckCircle2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ResultCard, type ResultField, type ResultFieldItem, type JudgmentState } from "@/components/result/result-card"
@@ -54,23 +54,28 @@ export function CommercialContentCard({
   const images = imageUrl ? [{ src: imageUrl, alt: "Ảnh sản phẩm" }] : []
 
   return (
-    <div className="w-full max-w-3xl flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+    <div className="w-full max-w-3xl flex flex-col gap-5 rounded-2xl border border-border bg-surface p-5 shadow-xs">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {onBackToLibrary && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onBackToLibrary}
-              className="flex items-center gap-1.5 text-text-muted hover:text-text"
+              className="flex items-center gap-1.5 text-text-muted hover:text-text transition-colors"
             >
               <ArrowLeft size={14} />
               Kho đã duyệt
             </Button>
           )}
-          <div>
-            <div className="text-xs text-text-muted">M01b — Dữ liệu bán hàng</div>
-            <div className="text-[17px] font-extrabold text-text">Nội dung bán hàng</div>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Sparkles size={17} strokeWidth={2} />
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold text-text-muted">M01b — Dữ liệu bán hàng</div>
+              <div className="text-[16px] font-extrabold text-text leading-tight">Nội dung bán hàng</div>
+            </div>
           </div>
         </div>
         <Badge
@@ -110,7 +115,8 @@ export function CommercialContentCard({
       />
 
       {isSaved && (
-        <div className="rounded-lg bg-success-bg px-4 py-2 text-[12.5px] font-medium text-secondary">
+        <div className="flex items-center gap-2 rounded-xl bg-success-bg px-4 py-2.5 text-[12.5px] font-medium text-secondary-text">
+          <CheckCircle2 size={14} strokeWidth={2.2} className="shrink-0" />
           Đã lưu nháp nội dung bán hàng.
         </div>
       )}

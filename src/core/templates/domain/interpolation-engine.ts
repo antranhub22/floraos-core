@@ -1,6 +1,11 @@
 /**
  * FloraOS Template Engine — Variable Interpolation Engine
  * Bộ phân tích và trộn biến an toàn cho template văn bản/kịch bản.
+ *
+ * DỰ TRỮ, KHÔNG PHẢI NỢ (nợ #99, chốt 17/09) — xem chú thích đầy đủ ở
+ * `../golden-templates.ts`. `interpolateTemplate()` là logic thuần, có test,
+ * nhưng KHÔNG được `generateZaloPitchScript()` hay bất kỳ luồng thật nào gọi
+ * tới — giữ lại làm hạ tầng dự trữ theo quyết định của anh Tony.
  */
 
 import type { InterpolationContext } from "./template-types"

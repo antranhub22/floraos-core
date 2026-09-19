@@ -38,7 +38,7 @@ export function KpiSummaryCard({
   ]
 
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M11 Business Performance</div>
@@ -53,7 +53,7 @@ export function KpiSummaryCard({
           return (
             <div
               key={idx}
-              className="flex flex-col gap-1.5 rounded-xl border border-border bg-background p-3.5"
+              className="flex flex-col gap-1.5 rounded-xl border border-border bg-surface-alt/40 p-3.5"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs text-text-muted">{m.label}</span>
@@ -64,7 +64,7 @@ export function KpiSummaryCard({
               <div className="text-lg font-black text-text">{m.value}</div>
               <div
                 className={`flex items-center gap-0.5 text-[11px] font-bold ${
-                  m.isPositive ? "text-emerald-600" : "text-rose-600"
+                  m.isPositive ? "text-success" : "text-danger"
                 }`}
               >
                 <ArrowUpRight size={12} className={m.isPositive ? "" : "rotate-90"} />

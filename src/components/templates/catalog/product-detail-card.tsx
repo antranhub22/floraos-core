@@ -35,7 +35,7 @@ export function ProductDetailCard({
   onOrderNow,
 }: ProductDetailCardProps) {
   return (
-    <Card className="overflow-hidden border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="overflow-hidden rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge tone="neutral">{code}</Badge>
@@ -47,7 +47,7 @@ export function ProductDetailCard({
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-center">
-        <div className="relative aspect-square w-36 h-36 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
+        <div className="relative aspect-square w-36 h-36 shrink-0 overflow-hidden rounded-xl border border-border bg-surface-alt">
           <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
         </div>
 
@@ -62,12 +62,12 @@ export function ProductDetailCard({
 
           <div className="flex flex-wrap gap-2 text-xs text-text-muted mt-1">
             {stemCount && (
-              <span className="flex items-center gap-1 rounded bg-muted px-2 py-0.5 font-medium">
+              <span className="flex items-center gap-1 rounded bg-surface-alt px-2 py-0.5 font-medium">
                 <Layers size={12} />
                 {stemCount} cành hoa
               </span>
             )}
-            <span className="flex items-center gap-1 rounded bg-muted px-2 py-0.5 font-medium">
+            <span className="flex items-center gap-1 rounded bg-surface-alt px-2 py-0.5 font-medium">
               <Tag size={12} />
               Bao gồm thiệp + banner
             </span>

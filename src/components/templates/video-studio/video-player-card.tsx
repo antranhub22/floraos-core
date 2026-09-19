@@ -92,7 +92,7 @@ export function VideoPlayerCard({
   }
 
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col items-center gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col items-center gap-4">
       <div className="w-full flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M05 Video Preview</div>
@@ -146,7 +146,7 @@ export function VideoPlayerCard({
 
           <div className="flex flex-col gap-2">
             <div className="text-sm font-extrabold text-white">{productName}</div>
-            <div className="text-xs font-semibold text-amber-300">{price}</div>
+            <div className="text-xs font-semibold text-accent">{price}</div>
             <div className="mt-1 flex items-center justify-center">
               <button
                 type="button"

@@ -29,7 +29,7 @@ export function EventReminderCard({
   onSendZaloCare,
 }: EventReminderCardProps) {
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M08 Retention Care</div>
@@ -45,7 +45,7 @@ export function EventReminderCard({
         {reminders.map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between rounded-xl border border-border bg-background p-3.5"
+            className="flex items-center justify-between rounded-xl border border-border bg-surface-alt/40 p-3.5"
           >
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold">

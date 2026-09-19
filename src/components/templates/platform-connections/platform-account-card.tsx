@@ -76,13 +76,13 @@ export function PlatformAccountCard({
         {/* Card Header: Icon, Name & Status Badge */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-surface-hover border border-border flex items-center justify-center text-2xl shadow-2xs flex-shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-surface-alt border border-border flex items-center justify-center text-2xl shadow-2xs flex-shrink-0">
               {platform.icon}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[15px] font-bold text-text">{platform.name}</span>
-                <span className="text-[10px] font-semibold text-text-muted bg-surface-hover px-2 py-0.5 rounded-full border border-border">
+                <span className="text-[10px] font-semibold text-text-muted bg-surface-alt px-2 py-0.5 rounded-full border border-border">
                   {platform.tag}
                 </span>
               </div>
@@ -116,7 +116,7 @@ export function PlatformAccountCard({
           {platform.features.map((feat, idx) => (
             <span
               key={idx}
-              className="text-[10.5px] text-text-muted bg-background/60 px-2 py-0.5 rounded-md border border-border/50"
+              className="text-[10.5px] text-text-muted bg-surface-alt/60 px-2 py-0.5 rounded-md border border-border/50"
             >
               • {feat}
             </span>
@@ -125,7 +125,7 @@ export function PlatformAccountCard({
 
         {/* Account Details Box if connected */}
         {account && (
-          <div className="mt-3.5 p-3 rounded-xl bg-background/80 border border-border/80 text-xs space-y-1.5">
+          <div className="mt-3.5 p-3 rounded-xl bg-surface-alt/80 border border-border/80 text-xs space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-text-muted font-medium">Tài khoản liên kết:</span>
               <span className="font-bold text-text truncate max-w-[190px]">

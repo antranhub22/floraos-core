@@ -78,7 +78,7 @@ export function ModelSelectorCard({
   onGenerate,
 }: ModelSelectorCardProps) {
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <div className="text-xs font-semibold text-text-muted">
@@ -86,7 +86,7 @@ export function ModelSelectorCard({
           </div>
           <div className="text-[16px] font-extrabold text-text flex items-center gap-2">
             <span>Lựa chọn Model sinh nội dung tiếp thị</span>
-            <ShieldCheck size={16} className="text-emerald-600" />
+            <ShieldCheck size={16} className="text-secondary-text" />
           </div>
         </div>
 
@@ -110,7 +110,7 @@ export function ModelSelectorCard({
               className={`cursor-pointer rounded-xl border p-4 transition-all flex flex-col justify-between gap-3 select-none relative ${
                 isSelected
                   ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs"
-                  : "border-border hover:border-text-muted bg-background opacity-85 hover:opacity-100"
+                  : "border-border hover:border-text-muted bg-surface opacity-85 hover:opacity-100"
               } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {/* Header của Model Card */}
@@ -118,7 +118,7 @@ export function ModelSelectorCard({
                 <div className="flex items-center gap-2 min-w-0">
                   <div
                     className={`p-2 rounded-lg flex-shrink-0 ${
-                      isSelected ? "bg-primary text-white" : "bg-muted text-text-muted"
+                      isSelected ? "bg-primary text-white" : "bg-surface-alt text-text-muted"
                     }`}
                   >
                     <Icon size={18} />
@@ -162,7 +162,7 @@ export function ModelSelectorCard({
         <div className="pt-3 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-text-muted">
             {(selectedChannelsCount ?? 0) === 0 ? (
-              <span className="text-amber-600 font-semibold flex items-center gap-1">
+              <span className="text-warning font-semibold flex items-center gap-1">
                 ⚠️ Vui lòng chọn ít nhất 1 kênh mạng xã hội ở Bước 3 để sinh bài viết.
               </span>
             ) : (

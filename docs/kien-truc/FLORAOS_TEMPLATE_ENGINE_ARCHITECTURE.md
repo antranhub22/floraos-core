@@ -77,12 +77,50 @@ Toàn bộ hệ thống FloraOS được phân thành 5 họ template tiêu chu�
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 4. PERSISTENCE & GOVERNANCE LAYER                                      │
-│    - Prisma Models: templates, template_overrides, organizations.settings│
+│    - Prisma Model: template_overrides (CÓ THẬT từ 18/09, PHẠM VI HẸP —  │
+│      xem ghi chú dưới). Model `templates` (System Golden Template       │
+│      registry) VẪN CHƯA TỒN TẠI. organizations.settings (CÓ THẬT, không │
+│      dùng cho template).                                                │
 │    - RBAC: Quyền sửa template cấp tenant (Trần cứng `dieu_hanh`)        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Ghi chú 17/09 (P-Fix-5):** rà `prisma/schema.prisma` xác nhận KHÔNG có model `templates` hay
+`template_overrides` nào tồn tại — khối trên mô tả kiến trúc DỰ KIẾN của Giai đoạn 3 (mục 7 bên
+dưới), không phải trạng thái hiện tại. Hạ mức tài liệu từ "đã có" xuống đúng thực trạng "định
+hướng, chưa triển khai" thay vì để người đọc tưởng nhầm hai bảng này đã tồn tại. Tenant
+overrides hiện KHÔNG có đường lưu trữ nào — `organizations.settings` (Json, có thật, cùng khối
+dùng cho `cho_phep_tu_duyet`/`bo_may_phan_tich`/`freshness_guarantee_days`) là ứng viên hợp lý
+nhất khi triển khai thật, nhưng chưa ai xác nhận chọn hướng đó thay vì bảng `template_overrides`
+riêng — đây là quyết định kiến trúc cần chốt trước khi viết mã Giai đoạn 3, không phải việc của
+đợt đồng bộ tài liệu này.
+
+**Cập nhật 18/09 (nợ #99/#105) — TRIỂN KHAI THẬT LẦN ĐẦU, NHƯNG PHẠM VI RẤT HẸP, KHÔNG PHẢI TOÀN
+BỘ THIẾT KẾ DƯỚI ĐÂY.** Sau khi cân nhắc lại (đã có tiền lệ lệch cột Json ở nợ #102), chốt dùng
+bảng riêng `template_overrides` (KHÔNG dùng `organizations.settings`) — ngược lại gợi ý ở đoạn
+trên, xem `TECHNICAL_DEBT.md` nợ #99 để biết toàn bộ diễn biến quyết định. Nhưng đây KHÔNG phải
+việc hiện thực hoá cơ chế 2 lớp tổng quát mô tả trong tài liệu này: (1) bảng `templates` (registry
+System Golden Template) VẪN CHƯA XÂY — "golden template" của `sales_pitch_zalo` vẫn là chuỗi tiếng
+Việt HẰNG trong mã (`generateZaloPitchScript()`, `sales-pitch-template.ts`), không phải một dòng
+dữ liệu nạp từ registry; (2) `src/core/templates/*` (`interpolation-engine.ts`, `golden-templates.ts`,
+danh mục biến `{{...}}` ở Mục 4 dưới đây) hoàn toàn KHÔNG được dùng trong đường đi thật — vẫn đánh
+dấu "DỰ TRỮ" theo quyết định của anh Tony 17/09; (3) domain layer (`template-override-rules.ts`)
+khoá cứng đúng MỘT tổ hợp field được phép ghi đè (`ST`/`sales_pitch_zalo`/`greeting_line`), không
+nhận field tự do nào khác — mở rộng CÙNG LÚC với khi có nơi đọc thật, không đoán trước. Nói cách
+khác: đây là một lát cắt thật, hẹp, viết tay riêng cho một trường hợp cụ thể — không phải cơ chế
+tổng quát "nạp bất kỳ template nào qua `interpolateTemplate()`, hợp nhất với override bất kỳ field
+nào" như khối sơ đồ trên mô tả. Toàn bộ phần dưới đây (§3.1, danh mục biến Mục 4) vẫn đúng là
+THIẾT KẾ DỰ KIẾN cho việc tổng quát hoá sau này, chưa phải hiện trạng.
+
 ### 3.1. Cơ chế Kế thừa 2 Lớp (Inheritance Resolution Flow)
+> **Trạng thái 18/09: ĐỊNH HƯỚNG cho trường hợp TỔNG QUÁT (nhiều field, nhiều họ template qua
+> `interpolateTemplate()`) — VẪN CHƯA TRIỂN KHAI.** Luồng dưới đây vẫn mô tả thiết kế dự kiến đầy
+> đủ của Giai đoạn 3. Đã có MỘT trường hợp riêng lẻ chạy thật khác với luồng này: `sales_pitch_zalo`
+> / `greeting_line` (họ ST) đọc thẳng từ bảng `template_overrides` và được `generateZaloPitchScript()`
+> chèn trực tiếp vào đầu chuỗi kết quả — không qua bước 3 (`interpolateTemplate()`), không có
+> "System Golden Template" dạng registry ở bước "Không" (vẫn là chuỗi hằng trong mã). Xem ghi chú
+> 18/09 ở trên và `TECHNICAL_DEBT.md` nợ #105 để biết chi tiết triển khai thật.
+
 1. Ứng dụng yêu cầu template `sales_pitch_zalo` cho `organization_id = "org_123"`.
 2. Hệ thống kiểm tra bảng `template_overrides` xem `org_123` có tùy chỉnh mẫu này không:
    - **Có**: Nạp template của tenant và hợp nhất với `BrandProfile` của họ.
@@ -205,8 +243,19 @@ src/
 │       │   ├── ai-credit-usage-card.tsx   # Giám sát hạn ngạch & chi tiêu token AI
 │       │   └── index.ts
 │       │
-│       └── index.ts                       # Root barrel export toàn bộ 10 chức năng
+│       ├── platform-connections/          # 11. Kết nối Nền tảng (bổ sung 17/09, P-Fix-5 —
+│       │   ├── platform-account-card.tsx  #     thư mục có thật, đúng chuẩn SSOT, nhưng chưa
+│       │   ├── connect-account-modal.tsx  #     từng được liệt kê ở bản kiến trúc 14/09)
+│       │   └── index.ts
+│       │
+│       └── index.ts                       # Root barrel export toàn bộ 11 chức năng
 ```
+
+*(Cập nhật 17/09, P-Fix-5: cây thư mục trên đã đồng bộ lại với code thật. Một số chức năng —
+đặc biệt `creative-studio/`, `content-engine/`, `social-publishing/` — đã phát triển thêm nhiều
+component so với bản 14/09 này; xem `FLORAOS_TEMPLATE_SYSTEM_SSOT.md` mục 3 để có danh sách đầy
+đủ, tài liệu SSOT là nguồn cập nhật thường xuyên hơn, tài liệu kiến trúc này giữ nguyên phạm vi
+tầng/nguyên tắc tổng thể.)*
 
 ---
 
@@ -234,9 +283,14 @@ Lộ trình thực thi được triển khai theo các giai đoạn:
 2. **Giai đoạn 2 — Xây dựng Core Variable Interpolation Engine (ĐÃ HOÀN TẤT)**
    - Hoàn thiện module `src/core/templates/domain/interpolation-engine.ts` thuần túy, không import Prisma, bảo vệ an toàn regex.
    - Viết bộ unit test 100% khóa các quy tắc trộn biến (`{{product.name}}`, `{{pricing.selling_price_vnd}}`, fallback khi thiếu biến).
-3. **Giai đoạn 3 — Lưu trữ & Tùy biến cấp Tenant (Tenant Overrides)**
-   - Lưu trữ cấu hình template overrides vào `organizations.settings` (hoặc bảng `template_overrides`).
-   - Xây dựng giao diện cài đặt xem trước template cho chủ shop.
+3. **Giai đoạn 3 — Lưu trữ & Tùy biến cấp Tenant (Tenant Overrides) — BẮT ĐẦU TRIỂN KHAI 18/09, PHẠM VI HẸP**
+   - Đã chốt lưu vào bảng riêng `template_overrides` (không dùng `organizations.settings`) — nợ #99/#105.
+   - Đã xây đúng MỘT field: `ST`/`sales_pitch_zalo`/`greeting_line`, kèm UI cài đặt cho chủ shop tự
+     nhập ở `/ho-so` (tab "Chính sách & Cam kết") — không phải "xem trước template" tổng quát, chỉ
+     một ô nhập câu chào.
+   - CÒN THIẾU để coi là hoàn tất giai đoạn này: bảng `templates` (System Golden Template registry)
+     chưa xây; cơ chế tổng quát cho nhiều field/nhiều họ template qua `interpolateTemplate()` chưa
+     làm — xem ghi chú 18/09 ở Mục 3 trên.
 4. **Giai đoạn 4 — Kết nối sâu với các Worker Backend**
    - Kết nối render template tự động khi nhận kết quả phân tích từ worker AI.
    - Đồng bộ hóa các kênh xuất bản tự động qua Integration API.

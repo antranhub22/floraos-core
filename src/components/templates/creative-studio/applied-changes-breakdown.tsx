@@ -30,7 +30,7 @@ export const AppliedChangesBreakdown: React.FC<AppliedChangesBreakdownProps> = (
     <div className="w-full rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-xs flex flex-col gap-3">
       <div className="flex items-center justify-between border-b border-border pb-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/15 text-secondary-text">
             <ListChecks size={16} strokeWidth={2.2} />
           </div>
           <div>
@@ -64,7 +64,7 @@ export const AppliedChangesBreakdown: React.FC<AppliedChangesBreakdownProps> = (
             <CheckCircle2
               size={15}
               strokeWidth={2.5}
-              className="mt-0.5 flex-shrink-0 text-emerald-600 dark:text-emerald-400"
+              className="mt-0.5 flex-shrink-0 text-secondary-text"
             />
             <span className="font-medium">{changeText}</span>
           </div>

@@ -28,7 +28,7 @@ export function StudioVariantCard({
   onSelectVariant,
 }: StudioVariantCardProps) {
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M04b Background Presets</div>
@@ -50,10 +50,10 @@ export function StudioVariantCard({
               className={`group relative cursor-pointer overflow-hidden rounded-xl border p-2 transition-all ${
                 isSelected
                   ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                  : "border-border hover:border-text-muted bg-background"
+                  : "border-border hover:border-text-muted bg-surface"
               }`}
             >
-              <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
+              <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-surface-alt">
                 <img
                   src={item.thumbnailUrl}
                   alt={item.name}

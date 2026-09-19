@@ -75,7 +75,7 @@ export function MultichannelPostCard({
   if (!currentPost) return null
 
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export function MultichannelPostCard({
           />
         </div>
       ) : (
-        <div className="flex flex-col gap-3.5 rounded-xl border border-border bg-background p-4.5">
+        <div className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface-alt/30 p-4.5">
           {/* Tiêu đề / Hook */}
           <div>
             <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider block mb-1">
@@ -315,11 +315,11 @@ export function MultichannelPostCard({
             onClick={handleCopyZaloQuick}
             className="gap-1.5 text-xs text-blue-700 border-blue-200 bg-blue-50/50 hover:bg-blue-50"
           >
-            {copiedZalo ? <Check size={14} className="text-emerald-600" /> : <MessageCircle size={14} />}
+            {copiedZalo ? <Check size={14} className="text-secondary-text" /> : <MessageCircle size={14} />}
             {copiedZalo ? "Đã chép mẫu Zalo" : "Copy nhanh Zalo"}
           </Button>
           <Button variant="secondary" size="sm" onClick={handleCopyAll} className="gap-1.5 text-xs">
-            {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+            {copied ? <Check size={14} className="text-secondary-text" /> : <Copy size={14} />}
             {copied ? "Đã sao chép" : "Sao chép toàn bài"}
           </Button>
         </div>

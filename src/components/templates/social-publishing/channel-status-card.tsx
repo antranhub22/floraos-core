@@ -26,7 +26,7 @@ export function ChannelStatusCard({
   onReconnect,
 }: ChannelStatusCardProps) {
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div>
         <div className="text-xs font-semibold text-text-muted">M07 Channel Integration</div>
         <div className="text-[16px] font-extrabold text-text">Trạng thái kết nối kênh</div>
@@ -36,12 +36,12 @@ export function ChannelStatusCard({
         {channels.map((ch) => (
           <div
             key={ch.id}
-            className="flex items-center justify-between rounded-xl border border-border bg-background p-3"
+            className="flex items-center justify-between rounded-xl border border-border bg-surface-alt/40 p-3"
           >
             <div className="flex items-center gap-2.5">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                  ch.isConnected ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                  ch.isConnected ? "bg-secondary/15 text-secondary-text" : "bg-danger-bg text-danger"
                 }`}
               >
                 {ch.isConnected ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}

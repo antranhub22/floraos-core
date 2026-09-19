@@ -41,7 +41,7 @@ export function ChatThreadCard({
   }
 
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">
@@ -65,7 +65,7 @@ export function ChatThreadCard({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2.5 max-h-80 overflow-y-auto rounded-xl border border-border bg-background p-3.5">
+      <div className="flex flex-col gap-2.5 max-h-80 overflow-y-auto rounded-xl border border-border bg-surface-alt/40 p-3.5">
         {messages.map((msg) => {
           const isUser = msg.sender === "user"
           return (
@@ -77,7 +77,7 @@ export function ChatThreadCard({
                 className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
                   isUser
                     ? "bg-primary text-white rounded-br-none"
-                    : "bg-muted text-text rounded-bl-none border border-border"
+                    : "bg-surface-alt text-text rounded-bl-none border border-border"
                 }`}
               >
                 <div className="flex items-center gap-1.5 mb-1 text-[10px] opacity-75 font-semibold">
@@ -89,7 +89,7 @@ export function ChatThreadCard({
                 {msg.suggestedProducts && msg.suggestedProducts.length > 0 && (
                   <div className="mt-2 flex flex-col gap-1 border-t border-border/40 pt-1.5">
                     {msg.suggestedProducts.map((p, idx) => (
-                      <div key={idx} className="flex items-center justify-between rounded bg-background/50 px-2 py-1 text-[11px]">
+                      <div key={idx} className="flex items-center justify-between rounded bg-surface/60 px-2 py-1 text-[11px]">
                         <span className="font-bold">{p.name}</span>
                         <span className="text-primary font-bold">{p.price}</span>
                       </div>
@@ -109,7 +109,7 @@ export function ChatThreadCard({
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Nhập tin nhắn hoặc kịch bản trả lời..."
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
+          className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <Button size="sm" onClick={handleSend} className="gap-1.5">
           <Send size={14} />

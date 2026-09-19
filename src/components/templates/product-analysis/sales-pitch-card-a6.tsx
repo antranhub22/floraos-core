@@ -61,7 +61,7 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
           {/* Status Ribbon */}
           {status === "FINALIZED" && (
             <div className="absolute right-3 top-3">
-              <Badge className="bg-emerald-600 text-white font-bold text-[11px] gap-1 shadow-md border-none">
+              <Badge className="bg-secondary-text text-white font-bold text-[11px] gap-1 shadow-md border-none">
                 <CheckCircle2 size={12} strokeWidth={2.5} />
                 FINAL
               </Badge>
@@ -168,8 +168,8 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
               </ul>
             </div>
 
-            <div className="rounded-xl bg-emerald-500/[0.04] p-2.5 border border-emerald-500/15">
-              <div className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 mb-1">
+            <div className="rounded-xl bg-secondary/[0.08] p-2.5 border border-secondary/20">
+              <div className="font-bold text-secondary-text flex items-center gap-1 mb-1">
                 <ShieldCheck size={12} /> Cam kết chất lượng
               </div>
               <ul className="space-y-0.5 text-text-muted">
@@ -182,7 +182,7 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
 
           {/* Custom note if present */}
           {activePitch.customNote && (
-            <div className="text-[11.5px] rounded-lg bg-amber-500/10 border border-amber-500/20 p-2 text-amber-900 dark:text-amber-200">
+            <div className="text-[11.5px] rounded-lg bg-warning-bg border border-warning/25 p-2 text-warning">
               <strong>Ưu đãi riêng:</strong> {activePitch.customNote}
             </div>
           )}

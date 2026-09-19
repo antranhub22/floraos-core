@@ -198,11 +198,11 @@ export function PlatformFeedPreview({
           </span>
           <div className="flex items-center gap-1.5">
             {post.is_mock_media && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-300 flex items-center gap-1">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning/30 flex items-center gap-1">
                 <span>🖼️</span> Ảnh mẫu (Mock Media)
               </span>
             )}
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-hover text-text-muted border border-border">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-alt text-text-muted border border-border">
               Giao diện mô phỏng (Mock Preview)
             </span>
           </div>

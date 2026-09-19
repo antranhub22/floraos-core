@@ -205,10 +205,10 @@ export function PostStatusReportCard({
         <div
           className={`p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all ${
             feedback.type === "success"
-              ? "bg-success-bg border-success/30 text-secondary"
+              ? "bg-success-bg border-success/30 text-success"
               : feedback.type === "error"
               ? "bg-danger-bg border-danger/30 text-danger"
-              : "bg-surface-hover border-primary/30 text-text"
+              : "bg-surface-alt border-primary/30 text-text"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export function PostStatusReportCard({
               href={feedback.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-xs flex-shrink-0 self-start sm:self-auto cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary/90 shadow-xs flex-shrink-0 self-start sm:self-auto cursor-pointer"
             >
               <ExternalLink size={12} /> Xem bài viết thực tế
             </a>
@@ -232,7 +232,7 @@ export function PostStatusReportCard({
       )}
 
       {/* Thanh tiến trình phần trăm & Trạng thái chi tiết (Progression Bar) */}
-      <div className="rounded-xl border border-border bg-background/80 p-4 space-y-3">
+      <div className="rounded-xl border border-border bg-surface-alt/50 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-text">Tiến Trình Thực Thi:</span>
@@ -249,7 +249,7 @@ export function PostStatusReportCard({
             </span>
           </div>
           {isScheduled && !isPublished && (
-            <div className="text-[11.5px] font-semibold text-text-muted flex items-center gap-1.5 bg-surface-hover px-2.5 py-1 rounded-full border border-border">
+            <div className="text-[11.5px] font-semibold text-text-muted flex items-center gap-1.5 bg-surface-alt px-2.5 py-1 rounded-full border border-border">
               <Clock size={12} className="text-primary animate-pulse" />
               <span>Khung giờ hẹn: <strong>{post.scheduledTime || "Trong ngày"}</strong></span>
             </div>
@@ -298,7 +298,7 @@ export function PostStatusReportCard({
       </div>
 
       {/* Tiến trình vòng đời phát hành (Lifecycle Stepper) */}
-      <div className="grid grid-cols-4 gap-2 bg-surface-hover/50 p-3 rounded-xl border border-border">
+      <div className="grid grid-cols-4 gap-2 bg-surface-alt/50 p-3 rounded-xl border border-border">
         <div className="flex flex-col items-center text-center">
           <div className="w-6 h-6 rounded-full bg-success-bg text-success border border-success/30 flex items-center justify-center text-xs font-bold mb-1">
             ✓
@@ -364,7 +364,7 @@ export function PostStatusReportCard({
 
       {/* Thông tin kỹ thuật & Kênh xuất bản */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-        <div className="p-3 rounded-xl border border-border bg-background flex flex-col gap-1.5">
+        <div className="p-3 rounded-xl border border-border bg-surface-alt/40 flex flex-col gap-1.5">
           <div className="text-[11px] font-semibold text-text-muted uppercase">Thông số kỹ thuật</div>
           <div className="flex justify-between">
             <span className="text-text-muted">Kênh xuất bản:</span>
@@ -382,7 +382,7 @@ export function PostStatusReportCard({
           </div>
         </div>
 
-        <div className="p-3 rounded-xl border border-border bg-background flex flex-col gap-1.5">
+        <div className="p-3 rounded-xl border border-border bg-surface-alt/40 flex flex-col gap-1.5">
           <div className="text-[11px] font-semibold text-text-muted uppercase">Nhật ký xử lý (Audit Log)</div>
           <div className="flex justify-between">
             <span className="text-text-muted">Trạng thái API:</span>
@@ -399,7 +399,7 @@ export function PostStatusReportCard({
             <span className="text-text font-medium flex items-center gap-1.5">
               <span>{post.media_url ? "Đã sẵn sàng" : "Chưa có"}</span>
               {post.is_mock_media && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-300">
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-warning-bg text-warning border border-warning/30">
                   Ảnh mẫu (Mock)
                 </span>
               )}
@@ -415,7 +415,7 @@ export function PostStatusReportCard({
             <div className="text-[12.5px] font-bold text-text flex items-center gap-2">
               <TrendingUp size={14} className="text-success" />
               <span>Báo cáo tương tác mạng xã hội</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning/30">
                 ⚠️ DỮ LIỆU MÔ PHỎNG (MOCK DATA)
               </span>
             </div>
@@ -424,37 +424,37 @@ export function PostStatusReportCard({
             </div>
           </div>
 
-          <div className="text-[11px] text-text-muted italic bg-surface-hover/50 px-3 py-1.5 rounded-lg border border-border/60">
+          <div className="text-[11px] text-text-muted italic bg-surface-alt/50 px-3 py-1.5 rounded-lg border border-border/60">
             * Lưu ý: Các chỉ số Lượt xem, Yêu thích, Bình luận dưới đây hiện đang dùng thuật toán mô phỏng (Mock Data) để kiểm thử giao diện phân tích, chưa đồng bộ trực tiếp với API thống kê thật của nền tảng.
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <div className="p-3 rounded-xl bg-surface-hover/70 border border-border text-center">
+            <div className="p-3 rounded-xl bg-surface-alt/70 border border-border text-center">
               <div className="text-text-muted flex items-center justify-center gap-1 text-[11px] mb-0.5">
                 <Eye size={12} /> Lượt xem (Reach)
               </div>
               <div className="text-[16px] font-black text-text">{metrics.reach.toLocaleString()}</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-surface-hover/70 border border-border text-center">
-              <div className="text-rose-600 flex items-center justify-center gap-1 text-[11px] mb-0.5">
+            <div className="p-3 rounded-xl bg-surface-alt/70 border border-border text-center">
+              <div className="text-primary flex items-center justify-center gap-1 text-[11px] mb-0.5">
                 <Heart size={12} /> Yêu thích
               </div>
-              <div className="text-[16px] font-black text-rose-700">{metrics.likes.toLocaleString()}</div>
+              <div className="text-[16px] font-black text-primary">{metrics.likes.toLocaleString()}</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-surface-hover/70 border border-border text-center">
-              <div className="text-blue-600 flex items-center justify-center gap-1 text-[11px] mb-0.5">
+            <div className="p-3 rounded-xl bg-surface-alt/70 border border-border text-center">
+              <div className="text-secondary-text flex items-center justify-center gap-1 text-[11px] mb-0.5">
                 <MessageCircle size={12} /> Bình luận
               </div>
-              <div className="text-[16px] font-black text-blue-700">{metrics.comments.toLocaleString()}</div>
+              <div className="text-[16px] font-black text-secondary-text">{metrics.comments.toLocaleString()}</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-surface-hover/70 border border-border text-center">
-              <div className="text-emerald-600 flex items-center justify-center gap-1 text-[11px] mb-0.5">
+            <div className="p-3 rounded-xl bg-surface-alt/70 border border-border text-center">
+              <div className="text-secondary-text flex items-center justify-center gap-1 text-[11px] mb-0.5">
                 <Share2 size={12} /> Chia sẻ
               </div>
-              <div className="text-[16px] font-black text-emerald-700">{metrics.shares.toLocaleString()}</div>
+              <div className="text-[16px] font-black text-secondary-text">{metrics.shares.toLocaleString()}</div>
             </div>
           </div>
         </div>
@@ -535,7 +535,7 @@ export function PostStatusReportCard({
             href={getChannelDirectUrl(post.channel, post.postUrl)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-xs self-end sm:self-auto"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary/90 shadow-xs self-end sm:self-auto"
           >
             <ExternalLink size={12} /> Xem bài viết trên {post.channelLabel || post.channel}
           </a>

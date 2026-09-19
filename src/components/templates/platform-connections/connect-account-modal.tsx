@@ -91,7 +91,7 @@ export function ConnectAccountModal({
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="p-1 rounded-lg hover:bg-surface-hover text-text-muted hover:text-text transition-colors"
+            className="p-1 rounded-lg hover:bg-surface-alt text-text-muted hover:text-text transition-colors"
           >
             <X size={18} />
           </button>
@@ -127,7 +127,7 @@ export function ConnectAccountModal({
                   : "taikhoan@gmail.com"
               }
               required
-              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
             />
           </div>
 
@@ -142,7 +142,7 @@ export function ConnectAccountModal({
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••••••"
               required
-              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
             />
             {initialUsername && (
               <p className="text-[11px] text-text-muted mt-1">
@@ -153,7 +153,7 @@ export function ConnectAccountModal({
 
           {/* Optional Fanpage settings for Facebook */}
           {isFacebook && (
-            <div className="p-3 rounded-xl bg-background/60 border border-border/80 space-y-2.5">
+            <div className="p-3 rounded-xl bg-surface-alt/60 border border-border/80 space-y-2.5">
               <div className="text-[11.5px] font-bold text-primary flex items-center gap-1.5">
                 <span>📘 Cấu hình Fanpage (Tùy chọn nâng cao)</span>
               </div>
@@ -185,7 +185,7 @@ export function ConnectAccountModal({
           )}
 
           {/* Security Notice */}
-          <div className="rounded-xl bg-surface-hover/70 p-3 border border-border/60 flex items-start gap-2.5 text-[11.5px] text-text-muted leading-relaxed">
+          <div className="rounded-xl bg-surface-alt/70 p-3 border border-border/60 flex items-start gap-2.5 text-[11.5px] text-text-muted leading-relaxed">
             <ShieldCheck size={16} className="text-secondary flex-shrink-0 mt-0.5" />
             <div>
               Thông tin đăng nhập được mã hóa hai chiều bằng thuật toán <strong>AES-256</strong> trên máy chủ nội bộ. Hệ thống sử dụng phiên duyệt tự động (Playwright Session) để đăng bài mà không lưu mật khẩu thô.

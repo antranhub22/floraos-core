@@ -40,7 +40,7 @@ export function AngleSelectorCard({
   ]
 
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div>
         <div className="text-xs font-semibold text-text-muted">Bước 2: Chọn góc độ tiếp cận (M07 Copywriting Angle)</div>
         <div className="text-[16px] font-extrabold text-text">Chọn góc tiếp cận bài viết</div>
@@ -57,11 +57,11 @@ export function AngleSelectorCard({
               className={`cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col gap-2 ${
                 isSelected
                   ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                  : "border-border hover:border-text-muted bg-background"
+                  : "border-border hover:border-text-muted bg-surface"
               }`}
             >
               <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${isSelected ? "bg-primary text-white" : "bg-muted text-text-muted"}`}>
+                <div className={`p-1.5 rounded-lg ${isSelected ? "bg-primary text-white" : "bg-surface-alt text-text-muted"}`}>
                   <Icon size={16} />
                 </div>
                 <div className="text-xs font-bold text-text">{item.title}</div>

@@ -25,7 +25,7 @@ export function SmartRepostTab({
       <div>
         <div className="text-[17px] font-extrabold text-text flex items-center gap-2">
           <span>Đăng lại thông minh</span>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning/30">
             ⚠️ GỢI Ý MÔ PHỎNG (MOCK ALGORITHM)
           </span>
         </div>
@@ -51,7 +51,7 @@ export function SmartRepostTab({
                 </div>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-300">
+                <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning/30">
                   Hiệu quả cao (Ước tính)
                 </span>
                 <Button

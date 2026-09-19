@@ -35,7 +35,7 @@ export function DeliveryReceiptCard({
   onDelivered,
 }: DeliveryReceiptCardProps) {
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M09 Delivery Slip</div>
@@ -44,7 +44,7 @@ export function DeliveryReceiptCard({
         <Badge tone="neutral">Khổ A6 Giao Vận</Badge>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-background p-3.5 text-xs">
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-alt/40 p-3.5 text-xs">
         <div className="flex items-center gap-2">
           <User size={14} className="text-text-muted" />
           <span className="font-bold text-text">{recipientName}</span>
@@ -60,12 +60,12 @@ export function DeliveryReceiptCard({
         </div>
       </div>
 
-      <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-3 flex flex-col gap-1">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex flex-col gap-1">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
           <MessageSquare size={13} />
           Nội dung thiệp chúc mừng:
         </div>
-        <p className="text-xs italic text-rose-900 leading-relaxed font-serif">
+        <p className="text-xs italic text-text leading-relaxed font-serif">
           "{cardMessage}"
         </p>
       </div>

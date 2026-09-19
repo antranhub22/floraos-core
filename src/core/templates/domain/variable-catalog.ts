@@ -1,6 +1,11 @@
 /**
  * FloraOS Template Engine — Variable Catalog
  * Danh mục token chuẩn hóa & Resolver trích xuất dữ liệu.
+ *
+ * DỰ TRỮ, KHÔNG PHẢI NỢ (nợ #99, chốt 17/09) — xem chú thích đầy đủ ở
+ * `../golden-templates.ts`. `buildInterpolationContext()` không được luồng
+ * thật nào gọi; `generate-product-copy.ts`/`sales-pitch-template.ts` tự xây
+ * dữ liệu tenant/sản phẩm bằng đường riêng của chúng, không qua tệp này.
  */
 
 import type { TemplateVariableMeta, InterpolationContext } from "./template-types"

@@ -35,7 +35,7 @@ export function StoryboardScriptCard({
   onRegenerate,
 }: StoryboardScriptCardProps) {
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M05 Storyboard Script</div>
@@ -57,7 +57,7 @@ export function StoryboardScriptCard({
         {scenes.map((scene) => (
           <div
             key={scene.sceneNumber}
-            className="flex items-start gap-3 rounded-lg border border-border bg-background p-3"
+            className="flex items-start gap-3 rounded-xl border border-border bg-surface-alt/40 p-3"
           >
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
               #{scene.sceneNumber}

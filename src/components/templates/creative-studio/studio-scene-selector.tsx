@@ -70,11 +70,11 @@ export function StudioSceneSelector({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-          <Palette className="h-3.5 w-3.5 text-red-600" />
+        <label className="text-xs font-semibold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+          <Palette className="h-3.5 w-3.5 text-primary" />
           Bối cảnh Studio & Phong cách (Scene Presets)
         </label>
-        <span className="text-[11px] text-slate-600">4 phong cách</span>
+        <span className="text-[11px] text-text-muted">{STUDIO_SCENE_PRESETS.length} phong cách</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -90,19 +90,19 @@ export function StudioSceneSelector({
               onClick={() => onChange(preset.id)}
               className={`group relative flex flex-col items-start p-3 rounded-xl border text-left transition-all duration-200 ${
                 isSelected
-                  ? "border-red-500 bg-red-50/40 shadow-sm ring-1 ring-red-400"
-                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                  ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                  : "border-border bg-surface hover:border-text-muted/40 hover:bg-surface-alt/50"
               } ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
             >
               <div className="flex items-center justify-between w-full mb-1.5">
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-4 h-4 rounded-full border border-slate-300 shadow-inner flex-shrink-0"
+                    className="w-4 h-4 rounded-full border border-border shadow-inner flex-shrink-0"
                     style={{ background: preset.colorPreview }}
                   />
                   <span
                     className={`text-xs font-bold ${
-                      isSelected ? "text-red-950" : "text-slate-800"
+                      isSelected ? "text-primary" : "text-text"
                     }`}
                   >
                     {preset.name}
@@ -116,7 +116,7 @@ export function StudioSceneSelector({
                 </Badge>
               </div>
 
-              <p className="text-[11.5px] leading-relaxed text-slate-500">
+              <p className="text-[11.5px] leading-relaxed text-text-muted">
                 {preset.desc}
               </p>
             </button>

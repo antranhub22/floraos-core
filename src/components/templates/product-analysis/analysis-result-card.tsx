@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { ClipboardCheck, CheckCircle2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { ResultCard, type ResultField, type ResultFieldItem, type JudgmentState } from "@/components/result/result-card"
 
@@ -53,11 +54,16 @@ export function AnalysisResultCard({
   const images = imageUrl ? [{ src: imageUrl, alt: "Ảnh sản phẩm nhận diện" }] : []
 
   return (
-    <div className="w-full max-w-3xl flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-xs text-text-muted">{stepNumber}</div>
-          <div className="text-[17px] font-extrabold text-text">{headerTitle}</div>
+    <div className="w-full max-w-3xl flex flex-col gap-5 rounded-2xl border border-border bg-surface p-5 shadow-xs">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <ClipboardCheck size={17} strokeWidth={2} />
+          </div>
+          <div>
+            <div className="text-[11px] font-semibold text-text-muted">{stepNumber}</div>
+            <div className="text-[16px] font-extrabold text-text leading-tight">{headerTitle}</div>
+          </div>
         </div>
         <Badge
           tone={
@@ -100,7 +106,8 @@ export function AnalysisResultCard({
       />
 
       {isSaved && (
-        <div className="rounded-lg bg-success-bg px-4 py-2 text-[12.5px] font-medium text-secondary">
+        <div className="flex items-center gap-2 rounded-xl bg-success-bg px-4 py-2.5 text-[12.5px] font-medium text-secondary-text">
+          <CheckCircle2 size={14} strokeWidth={2.2} className="shrink-0" />
           Đã lưu nháp — quay lại trang này để tiếp tục chỉnh sửa.
         </div>
       )}

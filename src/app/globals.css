@@ -1,30 +1,77 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/*
+ * Bộ nhận diện "Mộc Lan" — 18/09, theo yêu cầu chuyên nghiệp hoá thiết kế
+ * template. Đây là bộ token MẪU (không gắn dữ liệu tổ chức thật nào) thay
+ * cho bảng màu rừng-xanh/hồng bụi cũ, lấy cảm hứng từ hoa mộc lan: cánh hoa
+ * ngà/kem điểm hồng mận ở gốc cánh, lá xanh đậm bóng, nhuỵ/quả mùa thu ánh
+ * đồng ấm. Vì gần như toàn bộ 51 file trong `src/components/templates/*`
+ * (và phần lớn UI còn lại) đã dùng đúng token ngữ nghĩa (`bg-primary`,
+ * `text-text-muted`, `border-border`...) thay vì mã hex cứng — đổi bảng
+ * token TẠI ĐÂY là cách nâng cấp nhận diện hiệu quả nhất, ít rủi ro nhất,
+ * phủ toàn bộ hệ thống trong một lần sửa, không phải sửa tay từng file.
+ *
+ * NGOẠI LỆ CỐ Ý — KHÔNG đụng: khối "Hướng dẫn thao tác" chuẩn hoá
+ * (`FeatureGuidanceCard`, viền đỏ đứt nét) giữ NGUYÊN màu đỏ — AGENTS.md
+ * mục "Tiêu chuẩn hóa khối hướng dẫn thao tác" cấm đổi màu/cấu trúc/vị trí
+ * khối đó khi chưa có phê duyệt riêng của anh Tony, tách biệt khỏi bộ nhận
+ * diện thương hiệu vì đây là tín hiệu UX "đọc kỹ, đây là hướng dẫn" — không
+ * phải nội dung thương hiệu.
+ *
+ * Giữ nguyên font "Be Vietnam Pro" — đã hỗ trợ dấu tiếng Việt đầy đủ, đẹp và
+ * hiện đại sẵn; đổi sang một font mới (kể cả chỉ cho tiêu đề) có rủi ro thật
+ * về hiển thị dấu tiếng Việt nếu font đó không phủ đủ bộ ký tự, nên phân cấp
+ * tiêu đề/nội dung dùng độ đậm (font-weight) và cỡ chữ thay vì đổi font —
+ * đúng cách nhiều SaaS chuẩn (Stripe, Linear, Notion) vẫn dùng một họ font.
+ */
 @theme {
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
 
-  --color-primary: #174C3C;
-  --color-primary-dark: #0F332A;
-  --color-secondary: #5F9670;
+  /* Đã đối chiếu tỉ lệ tương phản WCAG thật (công thức luminance chuẩn,
+     không suy đoán bằng mắt) trước khi chốt bảng màu này:
+     primary/#FFFFFF = 9.14:1 (đạt AAA cho chữ trắng trên nút primary);
+     primary-dark/#FFFFFF = 12.70:1; secondary-text/#FFFFFF = 6.45:1 (đạt AA);
+     text/bg = 14.97:1; text-muted/bg = 4.68:1 (đạt AA, sát ngưỡng — không
+     hạ thêm); text-muted/surface = 5.03:1. */
+  --color-primary: #7A2E42;
+  --color-primary-dark: #57202F;
+  --color-secondary: #9CAF88;
   /* Chữ nhỏ/đậm trên nền trắng dùng tông này thay vì --color-secondary —
-     #5F9670 trên trắng chỉ đạt ~3.45:1, dưới ngưỡng AA 4.5:1 cho chữ nhỏ. */
-  --color-secondary-text: #3D6B4C;
-  --color-accent: #E48692;
+     #9CAF88 trên trắng chỉ đạt 2.36:1, dưới ngưỡng AA 4.5:1 cho chữ nhỏ. */
+  --color-secondary-text: #52643F;
+  /* --color-accent chỉ dùng trang trí (icon/điểm nhấn/viền), KHÔNG dùng làm
+     nền chữ trắng hay màu chữ trên nền sáng — #C89B3C chỉ đạt ~2.4-2.6:1,
+     dưới AA. Giữ đúng cách dùng của accent cũ (#E48692 trước đây cũng chỉ
+     ~2.5:1) — không phải hồi quy, là tiếp nối đúng quy ước sẵn có. */
+  --color-accent: #C89B3C;
 
-  --color-bg: #FAFAF7;
+  --color-bg: #FBF6F2;
   --color-surface: #FFFFFF;
-  --color-surface-alt: #F1F5F0;
-  --color-border: #E4E9E2;
+  --color-surface-alt: #F5ECE4;
+  --color-border: #E7DCD0;
 
-  --color-text: #1C2420;
-  --color-text-muted: #6E7A74;
+  --color-text: #2A1E22;
+  --color-text-muted: #7C6B6C;
 
+  /* Màu chức năng (cảnh báo/nguy hiểm) CỐ TÌNH không đổi theo brand — đỏ/cam
+     là tín hiệu phổ quát người dùng đã quen, đổi theo brand sẽ giảm độ an
+     toàn nhận diện lỗi/cảnh báo, không phải chỗ để thể hiện nhận diện thương
+     hiệu. */
   --color-warning: #C97A2E;
   --color-warning-bg: #FBF1E4;
   --color-danger: #C4463D;
   --color-danger-bg: #FBEBE9;
-  --color-success-bg: #EAF3EA;
+  /* --color-success (đặc, không chỉ nền) — bổ sung 18/09 khi rà các file
+     social-publishing: nhiều nơi đã dùng `text-success`/`bg-success`/
+     `border-success` (thanh tiến trình, badge trạng thái, stepper vòng đời
+     phát hành) nhưng token đặc chưa từng được khai báo trong @theme — các
+     lớp đó âm thầm không ra CSS hợp lệ từ trước tới giờ (lỗi có sẵn, không
+     phải do đổi bảng màu Mộc Lan lần này). Dùng đúng giá trị đã đối chiếu
+     WCAG AA cho `--color-secondary-text` (6.45:1 trên nền trắng) để vừa sửa
+     lỗi vừa nhất quán với tông xanh lá của bộ nhận diện. */
+  --color-success: #52643F;
+  --color-success-bg: #EAF0E6;
 }
 
 html,

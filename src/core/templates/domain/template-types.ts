@@ -1,6 +1,11 @@
 /**
  * FloraOS Template Engine — Domain Types
  * Định nghĩa cấu trúc cho hệ thống template đa tenant.
+ *
+ * DỰ TRỮ, KHÔNG PHẢI NỢ (nợ #99, chốt 17/09) — xem chú thích đầy đủ ở
+ * `../golden-templates.ts`. Chưa có nơi gọi thật nào dùng `TemplateOverride`;
+ * kiểu này mô tả trước cho một cơ chế chưa xây (bảng `template_overrides`
+ * chưa tồn tại trong `prisma/schema.prisma`).
  */
 
 export type TemplateCategory =

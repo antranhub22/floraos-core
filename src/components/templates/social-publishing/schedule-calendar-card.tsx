@@ -105,7 +105,7 @@ export function ScheduleCalendarCard({
             className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               selectedChannel === c.key
                 ? "bg-primary text-white shadow-2xs"
-                : "bg-surface-hover hover:bg-surface text-text-muted hover:text-text border border-border"
+                : "bg-surface-alt hover:bg-surface text-text-muted hover:text-text border border-border"
             }`}
           >
             {c.label}
@@ -115,7 +115,7 @@ export function ScheduleCalendarCard({
 
       {/* Danh sách bài theo dòng thời gian khung giờ */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-10 text-center border-dashed border border-border rounded-xl bg-background/50">
+        <div className="flex flex-col items-center justify-center p-10 text-center border-dashed border border-border rounded-xl bg-surface-alt/50">
           <Calendar size={28} className="text-text-muted mb-2 opacity-50" />
           <div className="text-[13.5px] font-bold text-text">Chưa có bài viết nào trong lịch xuất bản này</div>
           <div className="text-[11.5px] text-text-muted mt-1 max-w-sm">
@@ -144,7 +144,7 @@ export function ScheduleCalendarCard({
                 {/* Thời gian & Thumbnail & Nội dung */}
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
                   {/* Cột khung giờ phát */}
-                  <div className="flex flex-col items-center justify-center min-w-[72px] px-2 py-1.5 rounded-lg bg-surface-hover border border-border flex-shrink-0 text-center">
+                  <div className="flex flex-col items-center justify-center min-w-[72px] px-2 py-1.5 rounded-lg bg-surface-alt border border-border flex-shrink-0 text-center">
                     <div className="text-[12.5px] font-black text-primary flex items-center gap-1">
                       <Clock size={12} />
                       {item.scheduledTime}
@@ -159,7 +159,7 @@ export function ScheduleCalendarCard({
                     <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-border">
                       <img src={item.media_url} alt="" className="w-full h-full object-cover" />
                       {item.is_mock_media && (
-                        <span className="absolute bottom-0 inset-x-0 bg-amber-600/90 text-[8px] font-black text-white text-center leading-none py-0.5">
+                        <span className="absolute bottom-0 inset-x-0 bg-warning/90 text-[8px] font-black text-white text-center leading-none py-0.5">
                           MOCK
                         </span>
                       )}
@@ -176,7 +176,7 @@ export function ScheduleCalendarCard({
                       <span>·</span>
                       <span>ID #{item.id}</span>
                       {item.is_mock_media && (
-                        <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-300">
+                        <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-warning-bg text-warning border border-warning/30">
                           Ảnh mẫu (Mock)
                         </span>
                       )}
@@ -199,7 +199,7 @@ export function ScheduleCalendarCard({
                         }
                       }}
                       disabled={publishingId === item.id}
-                      className="text-[11px] font-bold h-7 px-2.5 bg-primary text-white gap-1 hover:bg-primary-hover shadow-2xs"
+                      className="text-[11px] font-bold h-7 px-2.5 bg-primary text-white gap-1 hover:bg-primary/90 shadow-2xs"
                       title="Phát sóng ngay bài viết này"
                     >
                       {publishingId === item.id ? (

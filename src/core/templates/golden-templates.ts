@@ -1,6 +1,21 @@
 /**
  * FloraOS Template Engine — System Golden Templates
  * Bộ mẫu chuẩn hệ sinh thái cho các kịch bản tư vấn, thẻ chào và vận hành.
+ *
+ * ═══ DỰ TRỮ, KHÔNG PHẢI NỢ (nợ #99, chốt qua AskUserQuestion 17/09) ═══
+ * Toàn bộ `src/core/templates/*` (tệp này + `domain/template-types.ts`,
+ * `domain/interpolation-engine.ts`, `domain/variable-catalog.ts`) KHÔNG có
+ * nơi gọi nào trong `src/app` — rà bằng grep xác nhận 0 call site. Đây là một
+ * engine template generic (biến `{{key}}`, "system golden" vs "tenant
+ * override") dựng trước nhưng chưa từng nối vào luồng thật:
+ * `generateZaloPitchScript()` (`products/domain/sales-pitch-template.ts`) là
+ * một hàm build chuỗi Việt HẰNG, không đi qua `interpolateTemplate()` ở đây.
+ *
+ * Anh Tony chốt 17/09: GIỮ LẠI, không gỡ — đánh dấu rõ là hạ tầng dự trữ cho
+ * nhu cầu tương lai (VD: cơ chế ghi đè template theo tenant, nợ #99, khi
+ * phạm vi ghi đè và họ template ưu tiên được chốt). KHÔNG phải nợ kỹ thuật
+ * cần trả — không xoá, không "dọn dẹp" các tệp này khi không có yêu cầu rõ
+ * ràng nối chúng vào một tính năng cụ thể.
  */
 
 import type { TemplateDefinition } from "./domain/template-types"

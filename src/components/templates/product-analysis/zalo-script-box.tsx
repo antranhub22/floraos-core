@@ -61,7 +61,7 @@ export function ZaloScriptBox({
             onClick={handleCopy}
             className={`text-xs font-bold transition-all h-8 gap-1.5 ${
               copied
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                ? "bg-secondary-text hover:bg-secondary-text/90 text-white shadow-xs"
                 : "bg-primary hover:bg-primary/90 text-white shadow-xs"
             }`}
           >

@@ -50,7 +50,7 @@ export function ScheduleQueueTab({
 
       {calendarPosts.length === 0 ? (
         <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-border bg-surface">
-          <div className="w-12 h-12 rounded-2xl bg-surface-hover text-text-muted flex items-center justify-center mb-3">
+          <div className="w-12 h-12 rounded-2xl bg-surface-alt text-text-muted flex items-center justify-center mb-3">
             <Sparkles size={24} />
           </div>
           <div className="text-[15px] font-bold text-text">Chưa có bài viết nào chờ lên lịch</div>
@@ -84,7 +84,7 @@ export function ScheduleQueueTab({
       {/* Action Footer */}
       <div className="flex flex-col gap-2.5 border-t border-border pt-4">
         {notice && (
-          <div className="rounded-xl bg-success-bg border border-success/30 px-4 py-2.5 text-[13px] font-semibold text-secondary flex items-center gap-2 animate-in fade-in">
+          <div className="rounded-xl bg-success-bg border border-success/30 px-4 py-2.5 text-[13px] font-semibold text-success flex items-center gap-2 animate-in fade-in">
             <CheckCircle2 size={16} className="text-success flex-shrink-0" />
             <span>{notice}</span>
           </div>

@@ -35,7 +35,7 @@ export function QuoteSummaryCard({
   marginPercent = 45,
 }: QuoteSummaryCardProps) {
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M02 Smart Pricing</div>
@@ -49,7 +49,7 @@ export function QuoteSummaryCard({
 
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-left text-xs">
-          <thead className="bg-muted text-text-muted font-bold">
+          <thead className="bg-surface-alt text-text-muted font-bold">
             <tr>
               <th className="p-2.5">Thành phần</th>
               <th className="p-2.5 text-center">SL</th>
@@ -59,18 +59,18 @@ export function QuoteSummaryCard({
           </thead>
           <tbody className="divide-y divide-border">
             {items.map((item, idx) => (
-              <tr key={idx} className="hover:bg-muted/30">
+              <tr key={idx} className="hover:bg-surface-alt/50">
                 <td className="p-2.5 font-medium text-text">{item.name}</td>
                 <td className="p-2.5 text-center text-text-muted">{item.quantity}</td>
                 <td className="p-2.5 text-right text-text-muted">{item.unitCost}</td>
                 <td className="p-2.5 text-right font-semibold text-text">{item.total}</td>
               </tr>
             ))}
-            <tr className="bg-muted/20">
+            <tr className="bg-surface-alt/30">
               <td colSpan={3} className="p-2.5 text-text-muted">Công thợ cắm hoa</td>
               <td className="p-2.5 text-right font-semibold text-text">{laborCost}</td>
             </tr>
-            <tr className="bg-muted/20">
+            <tr className="bg-surface-alt/30">
               <td colSpan={3} className="p-2.5 text-text-muted">Giấy gói, ruy băng & phụ liệu</td>
               <td className="p-2.5 text-right font-semibold text-text">{wrappingCost}</td>
             </tr>
@@ -81,7 +81,7 @@ export function QuoteSummaryCard({
       <div className="flex items-center justify-between border-t border-border pt-4">
         <div>
           <div className="text-xs text-text-muted">Giá vốn trực tiếp: {subtotal}</div>
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium mt-0.5">
+          <div className="flex items-center gap-1.5 text-xs text-secondary-text font-medium mt-0.5">
             <CheckCircle2 size={13} />
             Đã áp dụng công thức giá sàn & trần
           </div>

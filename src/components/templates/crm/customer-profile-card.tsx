@@ -38,7 +38,7 @@ export function CustomerProfileCard({
     tier === "diamond" ? "neutral" : tier === "gold" ? "warning" : "neutral"
 
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg">
@@ -58,7 +58,7 @@ export function CustomerProfileCard({
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-3">
+      <div className="grid grid-cols-2 gap-2 rounded-xl bg-surface-alt/50 p-3">
         <div className="flex items-center gap-2">
           <ShoppingBag size={16} className="text-text-muted" />
           <div>
@@ -74,17 +74,17 @@ export function CustomerProfileCard({
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-1.5 text-xs font-bold text-text">
-          <Heart size={13} className="text-rose-500" />
+          <Heart size={13} className="text-primary" />
           Gu sở thích:
         </div>
         <div className="flex flex-wrap gap-1.5">
           {preferredColors.map((col, idx) => (
-            <span key={idx} className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[11px] text-rose-700 font-medium">
+            <span key={idx} className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[11px] text-primary font-medium">
               Tone {col}
             </span>
           ))}
           {preferredFlowers.map((flw, idx) => (
-            <span key={idx} className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] text-amber-700 font-medium">
+            <span key={idx} className="rounded-full bg-secondary/15 border border-secondary/25 px-2 py-0.5 text-[11px] text-secondary-text font-medium">
               Hoa {flw}
             </span>
           ))}
@@ -92,7 +92,7 @@ export function CustomerProfileCard({
       </div>
 
       {notes && (
-        <div className="rounded-lg bg-yellow-50/80 border border-yellow-200/80 p-2.5 text-xs text-yellow-800 italic">
+        <div className="rounded-lg bg-warning-bg border border-warning/25 p-2.5 text-xs text-warning italic">
           Ghi chú: {notes}
         </div>
       )}

@@ -2,8 +2,8 @@
 ## (FloraOS Standardized Template System — Single Source of Truth)
 
 > **Mã tài liệu:** `FLORAOS-SSOT-TEMPLATES-V1`  
-> **Phiên bản:** 1.0 (Production Standard)  
-> **Cập nhật:** 14/09/2026  
+> **Phiên bản:** 1.1 (Production Standard — đồng bộ lại với code thật 17/09/2026, P-Fix-5)  
+> **Cập nhật:** 17/09/2026 (bản 14/09 để lại nhiều chỗ lệch với code thật — xem chi tiết trong từng mục "thêm 17/09, P-Fix-5")  
 > **Phạm vi áp dụng:** Toàn bộ mã nguồn `src/components/templates/`, `src/core/templates/` và tất cả các màn hình giao diện của FloraOS.  
 > **Mục đích:** Tài liệu duy nhất chứa toàn bộ cấu trúc, thông số kỹ thuật (Props, Token, Layout), hướng dẫn tra cứu, chỉnh sửa và nâng cấp mọi template trong toàn hệ thống.
 
@@ -24,6 +24,7 @@
    - [Chức năng 8: Đơn hàng & Lệnh Xưởng hoa (Orders & Florist M09)](#chức-năng-8-đơn-hàng--lệnh-xưởng-hoa-orders--florist-m09)
    - [Chức năng 9: Trợ lý AI Chat Đa kênh (Chat Assistant M10)](#chức-năng-9-trợ-lý-ai-chat-đa-kênh-chat-assistant-m10)
    - [Chức năng 10: Báo cáo Vận hành & Giám sát AI (Analytics & Governance M11)](#chức-năng-10-báo-cáo-vận-hành--giám-sát-ai-analytics--governance-m11)
+   - [Chức năng 11: Kết nối Nền tảng (Platform Connections)](#chức-năng-11-kết-nối-nền-tảng-platform-connections)
 4. [Hệ Thống Trộn Biến Cốt Lõi & Bảng Ánh Xạ Cơ Sở Dữ Liệu (Database Schema Mapping Matrix)](#4-hệ-thống-trộn-biến-cốt-lõi-interpolation-engine--token-catalog)
    - [4.1. Danh mục Token Biến Chuẩn](#41-danh-mục-token-biến-chuẩn-standard-token-catalog)
    - [4.2. Khung Ngữ Cảnh Dữ Liệu InterpolationContext](#42-khung-ngữ-cảnh-dữ-liệu-interpolationcontext)
@@ -67,7 +68,7 @@ Mọi Tab chức năng khi mở ra đều phải có khối hướng dẫn mở 
 
 ## 2. CẤU TRÚC THƯ MỤC TỔNG THỂ & BẢN ĐỒ 10 CHỨC NĂNG
 
-Toàn bộ hệ thống templates nằm tại `src/components/templates/`, chia theo **10 Thư mục Chức năng**:
+Toàn bộ hệ thống templates nằm tại `src/components/templates/`, chia theo **11 Thư mục Chức năng** (chức năng 11, `platform-connections/`, bổ sung 17/09 sau khi rà soát code thật phát hiện thư mục này tồn tại nhưng chưa từng được liệt kê):
 
 ```text
 src/
@@ -94,6 +95,7 @@ src/
         ├── orders/                        # 8. Đơn hàng & Xưởng hoa (M09)
         ├── chat-assistant/                # 9. Trợ lý AI Chat Đa kênh (M10)
         ├── analytics/                     # 10. Báo cáo & Giám sát AI (M11)
+        ├── platform-connections/          # 11. Kết nối Nền tảng (bổ sung 17/09, P-Fix-5)
         └── index.ts                       # Barrel export toàn bộ hệ thống
 ```
 
@@ -126,20 +128,27 @@ src/
 | `creative-guidance-card.tsx` | Guidance | Hướng dẫn tách nền xưởng hoa và ghép bối cảnh studio | Không có props |
 | `before-after-preview-card.tsx` | Preview | Thẻ so sánh trực quan ảnh gốc chụp xưởng và ảnh đã tối ưu AI | `originalImageUrl`, `enhancedImageUrl`, `aspectRatio`, `onDownload` |
 | `studio-variant-card.tsx` | Variant Selector | Thẻ chọn phối cảnh (Bàn tiệc cưới, phòng khách, cầm tay) | `variants: StudioVariantItem[]`, `selectedId`, `onSelectVariant` |
+| `studio-scene-selector.tsx` | Scene Preset Selector | Chọn 1 trong 5 phông nền dựng sẵn (Xám ấm Hàn Quốc, Trắng kem TMĐT, Mộc chân thực, Gỗ ấm Vintage, Bokeh) | `value`, `onChange`, `disabled?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `enhancer-provider-selector.tsx` | Provider Selector | Chọn nhà cung cấp tách nền/nâng cấp ảnh AI trong 5 lựa chọn (Studio Pipeline, OpenAI, Local Real-ESRGAN, Gemini, Replicate) | `value`, `onChange`, `disabled?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `optimization-mode-selector.tsx` | Mode Selector | Chuyển giữa chế độ "Tự động" và "Tuỳ chỉnh", chọn từng năng lực tối ưu cụ thể theo nhà cung cấp đang chọn | `mode`, `onModeChange`, `selectedCapabilities`, `onCapabilitiesChange`, `selectedProvider` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `applied-changes-breakdown.tsx` | Result Summary | Liệt kê các thay đổi AI đã áp dụng lên ảnh (tách nền, xoá watermark, nâng nét, cân sáng, tạo đa tỷ lệ) | `appliedChanges?`, `mode?`, `providerName?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
 
 ---
 
 ### Chức năng 3: Studio Video Ngắn (Video Studio M04c/M05)
-> **Đường dẫn thư mục:** `src/components/video-studio/` & `src/components/templates/video-studio/`  
+> **Đường dẫn thư mục:** hai lớp tách biệt, KHÔNG gộp chung — xem cột "Thư mục thật" bên dưới. `src/components/templates/video-studio/` là các Card thuần hiển thị (SSOT quản); `src/components/video-studio/` là các trang/modal điều khiển luồng nghiệp vụ (ngoài phạm vi SSOT, nhưng liệt kê ở đây để không ai đi tìm nhầm chỗ — cập nhật 17/09, P-Fix-5).  
 > **Màn hình sử dụng:** `/video`  
 > **Trạng thái hệ thống:** **Hoạt động** 🟢 (Nghiệm thu hoàn tất P17)
 
-| Thành phần / File | Loại | Mục đích & Trách nhiệm | Tính năng & Quy chuẩn cốt lõi |
-|---|---|---|---|
-| `storyboard-editor.tsx` | Storyboard Editor | Biên soạn phân cảnh chi tiết phân rã trường nguyên tử | Hỗ trợ 2–15 phân cảnh; Tự động cân bằng thời lượng theo khuôn video; Nút `🗑️ Xóa cảnh` đỏ nổi bật; Menu Camera Motion độc lập |
-| `video-player-card.tsx` | Player Mockup | Khung chiếu video dọc 9:16 kèm phụ đề bán hàng và tải MP4 | Hiển thị video thành phẩm Full HD 30fps, poster preview, nút tải MP4 và chia sẻ |
-| `video-create-modal.tsx` | Creation Modal | Hộp thoại khởi tạo dự án video marketing 1-chạm | Chọn 6 khuôn video, tỉ lệ 9:16/1:1/16:9, nhạc nền, giọng đọc TTS, 4 phong cách phụ đề |
-| `video-job-list.tsx` | Job Queue & History | Danh sách tác vụ video và bộ lọc trạng thái | Lọc theo stage (DRAFT, SCRIPT_READY, RENDERING, RENDER_COMPLETED), hiển thị huy hiệu credit |
+| File Template | Thư mục thật | Loại | Mục đích & Trách nhiệm | Tính năng & Quy chuẩn cốt lõi |
+|---|---|---|---|---|
+| `video-guidance-card.tsx` | `templates/video-studio/` | Guidance | Hướng dẫn tạo video ngắn dọc chuẩn TikTok/Reels/Shorts | Không có props (Preset tĩnh chuẩn) |
+| `storyboard-script-card.tsx` | `templates/video-studio/` | Script Card | Thẻ hiển thị kịch bản phân cảnh (số cảnh, thời lượng, lời thoại, tông nhạc) kèm nút sao chép/tạo lại | `scenes: StoryboardScene[]`, `title`, `totalDurationSeconds`, `musicTrackName`, `onCopyScript`, `onRegenerate` |
+| `video-player-card.tsx` | `templates/video-studio/` | Player Mockup | Khung chiếu video dọc 9:16 kèm phụ đề bán hàng và tải MP4 | Hiển thị video thành phẩm Full HD 30fps, poster preview, nút tải MP4 và chia sẻ |
+| `storyboard-editor.tsx` | `components/video-studio/` (ngoài SSOT) | Storyboard Editor | Biên soạn phân cảnh chi tiết phân rã trường nguyên tử | Hỗ trợ 2–15 phân cảnh; Tự động cân bằng thời lượng theo khuôn video; Nút `🗑️ Xóa cảnh` đỏ nổi bật; Menu Camera Motion độc lập |
+| `video-create-modal.tsx` | `components/video-studio/` (ngoài SSOT) | Creation Modal | Hộp thoại khởi tạo dự án video marketing 1-chạm | Chọn 6 khuôn video, tỉ lệ 9:16/1:1/16:9, nhạc nền, giọng đọc TTS, 4 phong cách phụ đề |
+| `video-job-list.tsx` | `components/video-studio/` (ngoài SSOT) | Job Queue & History | Danh sách tác vụ video và bộ lọc trạng thái | Lọc theo stage (DRAFT, SCRIPT_READY, RENDERING, RENDER_COMPLETED), hiển thị huy hiệu credit |
+| `video-rendering-progress.tsx` | `components/video-studio/` (ngoài SSOT) | Progress Tracker | Thanh tiến trình dựng video 4 bước (tải tài nguyên → lọc chuyển cảnh → mã hoá → ghép nhạc/phụ đề) kèm đếm giờ thực và nút thử lại khi lỗi | `videoJobId`, `generationJobId?`, `onCompleted`, `onFailed`, `onRetry?` |
 
 #### 🎬 Quy chuẩn Chuyển động Điện ảnh (Cinematic Motion Specifications)
 1. **Camera Motion Engine (FFmpeg Ken Burns)**:
@@ -168,6 +177,9 @@ src/
 | `content-guidance-card.tsx` | Guidance | Hướng dẫn tạo bài viết tiếp thị đa kênh & đa góc độ | Không có props |
 | `multichannel-post-card.tsx` | Post Template | Thẻ bài đăng chia tab Facebook, TikTok, Instagram, Zalo kèm sao chép | `posts: MultichannelPostItem[]`, `productName`, `onSchedulePost` |
 | `angle-selector-card.tsx` | Strategy Selector| Chọn góc tiếp cận bài viết: Cảm xúc, Kỹ thuật tay nghề hay Ưu đãi chốt đơn | `selectedAngle: "emotional" \| "technical" \| "promotional"`, `onSelectAngle` |
+| `model-selector-card.tsx` | Model Selector | Chọn mô hình AI sinh nội dung trong 3 lựa chọn (Qwen local, GPT-4o, Gemini Flash), hiển thị độ trễ & chi phí ước tính | `selectedProvider`, `onSelectProvider`, `disabled?`, `selectedChannelsCount?`, `onGenerate?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `social-post-preview.tsx` | Feed Mockup | Mô phỏng giao diện bài đăng thật trên Facebook/Instagram/TikTok/Zalo theo từng nền tảng | `post: MultichannelPostItem`, `productName?`, `productImageUrl?`, `shopName?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `linkedin-post-preview.tsx` | Feed Mockup | Mô phỏng giao diện bài đăng B2B trên LinkedIn Feed (quà tặng doanh nghiệp), dùng chung props với `social-post-preview.tsx` | `SocialPostPreviewProps` (kế thừa) *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
 
 ---
 
@@ -180,24 +192,33 @@ src/
 | `publishing-guidance-card.tsx` | Guidance | Hướng dẫn lập lịch xuất bản và các khung giờ vàng tương tác | Không có props |
 | `schedule-calendar-card.tsx` | Calendar | Thẻ lịch trình phân phối nội dung, giờ phát và trạng thái bài | `posts: ScheduledPostItem[]`, `dateLabel` |
 | `channel-status-card.tsx` | Integration | Thẻ kiểm tra trạng thái kết nối token Fanpage / Zalo OA | `channels: ConnectedChannel[]`, `onReconnect` |
+| `schedule-queue-tab.tsx` | Queue Tab | Tab duyệt hàng đợi bài chờ đăng, chọn hàng loạt, lên lịch, chuyển sang Content Engine | `calendarPosts`, `selectedIds`, `selectedPost`, `actionLoading`, `notice`, `formatTime`, `onSelectPost`, `onToggleCheck`, `onToggleSelectAll`, `onRetryPost`, `onOpenScheduleModal`, `onGoToContentEngine` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `schedule-post-item-card.tsx` | List Item | Một dòng bài trong hàng đợi lịch đăng, kèm checkbox chọn và nút thử lại | `item: PlatformFeedPost`, `isChecked`, `isActive`, `onSelect`, `onToggleCheck`, `onRetry`, `formatTime` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `platform-feed-preview.tsx` | Feed Mockup | Xem trước bài đăng thật trên nền tảng đã chọn, tự phân rã nội dung thành Headline/Body/Hashtag/CTA | `post: PlatformFeedPost \| null`, `shopName?`, `fallbackImageUrl?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `schedule-confirm-modal.tsx` | Confirm Modal | Modal xác nhận thời điểm đăng (Ngay/Giờ trưa/Giờ tối/Tuỳ chỉnh) cho các bài đã chọn | `isOpen`, `onClose`, `onConfirm`, `selectedPosts: PlatformFeedPost[]`, `isLoading?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `post-status-report-card.tsx` | Status Report | Thẻ báo cáo trạng thái một bài đã đăng/lên lịch/lỗi, kèm chỉ số tương tác và nút đăng lại/dời lịch | `post`, `onRetry?`, `onPublishNow?`, `onReschedule?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `auto-approve-panel.tsx` | Settings Toggle | Bật/tắt tự động duyệt bài trước khi xuất bản | `autoApprove: boolean`, `onToggle: () => void` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `smart-repost-tab.tsx` | Suggestion Tab | Gợi ý đăng lại các bài đã xuất bản thành công có hiệu quả cao | `posts: PlatformFeedPost[]`, `formatTime`, `onSelectForRepost` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
 
 ---
 
 ### Chức năng 6: Danh mục & Báo giá Thông minh (Catalog & Pricing M02/M03)
-> **Đường dẫn thư mục:** `src/components/templates/catalog/`  
+> **Đường dẫn thư mục:** hai lớp tách biệt (sửa 17/09, P-Fix-5 — bản trước gộp nhầm cả 6 dòng dưới vào `templates/catalog/`, thực tế 3 dòng đầu mới ở đó). `templates/catalog/` là các Card thuần hiển thị chuẩn SSOT; `src/components/catalog/` (kèm `landing-templates/` con) là trang Storefront/Landing công khai và các modal điều khiển luồng — ngoài phạm vi quản lý trực tiếp của SSOT nhưng liệt kê ở đây để không ai đi tìm nhầm chỗ.  
 > **Màn hình sử dụng:** `/catalog`
 
-| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
-|---|---|---|---|
-| `catalog-guidance-card.tsx` | Guidance | Hướng dẫn thiết lập giá động và chia sẻ link catalog trực tuyến | Không có props (Preset tĩnh chuẩn) |
-| `product-detail-card.tsx` | Catalog Card | Thẻ chi tiết sản phẩm catalog chuẩn Mobile, kèm nút tạo đơn & chia sẻ | `code`, `name`, `imageUrl`, `category`, `price`, `stemCount`, `occasions` |
-| `quote-summary-card.tsx` | Pricing BOM | Thẻ bảng tính giá cấu thành (hoa, lá, công thợ, bao bì, biên LN) | `items: CostBreakdownItem[]`, `laborCost`, `wrappingCost`, `suggestedPrice` |
-| `landing-template-hero.tsx` | Landing Hero | Banner chiến dịch nhận diện theo 4 Archetypes, đồng hồ đếm ngược FOMO và 3 huy hiệu cam kết | `headline`, `occasionId`, `archetypeId` |
-| `landing-template-products.tsx` | Landing Grid | Danh sách mẫu hoa tuyển chọn, ảnh hoa thật, huy hiệu Best Seller #1, giá ưu đãi VNĐ, CTA Zalo 1-chạm | `products: CatalogProduct[]`, `archetypeId` |
-| `landing-template-lead.tsx` | Lead Voucher | Khối bắt lead / voucher ưu đãi đặt sớm 10%, form số điện thoại Zalo và 3 cam kết vàng | `archetypeId`, `occasionTitle` |
-| `catalog-storefront.tsx` | Storefront | Giao diện E-Catalog & Landing Page công khai cho khách hàng cuối, hỗ trợ tìm kiếm, lọc dịp, responsive Mobile/Desktop | `initialData: PublicCatalogResult` |
-| `share-catalog-modal.tsx` | Social Share | Modal chia sẻ đa kênh Facebook, Zalo, sao chép caption bán hàng mẫu | `slug`, `name`, `description`, `onClose` |
-| `product-detail-modal.tsx` | Product Modal | Modal xem chi tiết sản phẩm chuẩn Mobile, cấu phần cành hoa và nút đặt nhanh Zalo | `product: PublicCatalogProduct`, `shop`, `onClose` |
+| File Template | Thư mục thật | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|---|
+| `catalog-guidance-card.tsx` | `templates/catalog/` | Guidance | Hướng dẫn thiết lập giá động và chia sẻ link catalog trực tuyến | Không có props (Preset tĩnh chuẩn) |
+| `product-detail-card.tsx` | `templates/catalog/` | Catalog Card | Thẻ chi tiết sản phẩm catalog chuẩn Mobile, kèm nút tạo đơn & chia sẻ | `code`, `name`, `imageUrl`, `category`, `price`, `stemCount`, `occasions` |
+| `quote-summary-card.tsx` | `templates/catalog/` | Pricing BOM | Thẻ bảng tính giá cấu thành (hoa, lá, công thợ, bao bì, biên LN) | `items: CostBreakdownItem[]`, `laborCost`, `wrappingCost`, `suggestedPrice` |
+| `landing-template-hero.tsx` | `components/catalog/landing-templates/` (ngoài SSOT) | Landing Hero | Banner chiến dịch nhận diện theo 4 Archetypes, đồng hồ đếm ngược FOMO và 3 huy hiệu cam kết | `headline`, `occasionId`, `archetypeId` |
+| `landing-template-products.tsx` | `components/catalog/landing-templates/` (ngoài SSOT) | Landing Grid | Danh sách mẫu hoa tuyển chọn, ảnh hoa thật, huy hiệu Best Seller #1, giá ưu đãi VNĐ, CTA Zalo 1-chạm | `products: CatalogProduct[]`, `archetypeId` |
+| `landing-template-lead.tsx` | `components/catalog/landing-templates/` (ngoài SSOT) | Lead Voucher | Khối bắt lead / voucher ưu đãi đặt sớm 10%, form số điện thoại Zalo và 3 cam kết vàng | `archetypeId`, `occasionTitle` |
+| `catalog-storefront.tsx` | `components/catalog/` (ngoài SSOT) | Storefront | Giao diện E-Catalog & Landing Page công khai cho khách hàng cuối, hỗ trợ tìm kiếm, lọc dịp, responsive Mobile/Desktop | `initialData: PublicCatalogResult` |
+| `share-catalog-modal.tsx` | `components/catalog/` (ngoài SSOT) | Social Share | Modal chia sẻ đa kênh Facebook, Zalo, sao chép caption bán hàng mẫu | `slug`, `name`, `description`, `onClose` |
+| `product-detail-modal.tsx` | `components/catalog/` (ngoài SSOT) | Product Modal | Modal xem chi tiết sản phẩm chuẩn Mobile, cấu phần cành hoa và nút đặt nhanh Zalo | `product: PublicCatalogProduct`, `shop`, `onClose` |
+
+*(`components/catalog/` còn có `catalog-link-widgets.tsx`, `catalog-management-tab.tsx`, `landing-campaign-*.tsx` — các màn quản trị/thiết lập chiến dịch phía chủ shop, không phải Card hiển thị cho khách, nằm ngoài phạm vi liệt kê chi tiết của SSOT này.)*
 
 ---
 
@@ -246,6 +267,18 @@ src/
 | `analytics-guidance-card.tsx`| Guidance | Hướng dẫn giám sát chỉ số kinh doanh và kiểm soát ngân sách AI | Không có props |
 | `kpi-summary-card.tsx` | KPI Dashboard | Thẻ tóm tắt 4 chỉ số vàng: Doanh thu, Đơn hàng, Tỷ lệ chuyển đổi, AOV | `revenue`, `orders`, `conversionRate`, `avgOrderValue`, `periodLabel` |
 | `ai-credit-usage-card.tsx` | Aegis Governance| Thẻ giám sát hạn mức tín dụng AI, cảnh báo vượt 80% hạn mức tháng | `usedTokens`, `totalTokens`, `costSpent`, `budgetLimit`, `capabilities` |
+
+---
+
+### Chức năng 11: Kết nối Nền tảng (Platform Connections)
+> **Đường dẫn thư mục:** `src/components/templates/platform-connections/`  
+> **Màn hình sử dụng:** `/ket-noi`  
+> **Ghi chú (thêm 17/09, P-Fix-5):** thư mục này tồn tại thật và đúng cấu trúc chuẩn SSOT (nằm dưới `templates/`, có `index.ts` barrel) nhưng chưa từng được liệt kê như một chức năng trong 10 chức năng gốc của tài liệu này — rà soát code thật phát hiện. Bổ sung chính thức làm chức năng thứ 11 thay vì tách module riêng, vì nó đã tuân thủ đúng mọi quy chuẩn ở Mục 1 (SRP, dưới 350 dòng, không import Prisma).
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `platform-account-card.tsx` | Connection Card | Thẻ hiển thị 1 tài khoản nền tảng (Facebook/TikTok/Zalo...) — trạng thái đăng nhập, lần đăng nhập gần nhất, nút kết nối/kiểm tra/sửa/ngắt kết nối | `platform: PlatformConfig`, `account?`, `loadingAction?`, `onConnect`, `onLogin`, `onCheck`, `onEdit?`, `onDisconnect` |
+| `connect-account-modal.tsx` | Auth Modal | Modal nhập thông tin đăng nhập/token để kết nối một nền tảng mới | `platformId`, `platformName`, `initialUsername?`, `isOpen`, `isLoading`, `onClose`, `onSave` |
 
 ---
 
@@ -420,7 +453,7 @@ Trước khi commit bất kỳ thay đổi nào liên quan đến template:
    ```bash
    npm test
    ```
-   *Bắt buộc 100% tests passed (Hiện tại: 309/309 tests).*
+   *Bắt buộc 100% tests passed. **521/521 test xanh trên 69 tệp test** (anh Tony chạy đúng lệnh `npm test` trên máy thật, 18/09, cùng đợt xác minh nợ #105 — `tests/tenant/**` không tính vào đây vì cần database riêng `_test`, chạy bằng `npm run test:tenant` riêng, xem `tests/helpers/database.ts`). Con số này đổi liên tục theo mỗi đợt thêm tính năng (17/09 từng là 485/485/67 tệp, trước đó "309/309" ngày 14/09 đã lỗi thời từ lâu) — khi đọc tài liệu này, ưu tiên chạy lại `npm test` thật thay vì tin số ghi cứng ở đây, số chỉ có giá trị tại đúng thời điểm ghi. Nợ #100 trong `TECHNICAL_DEBT.md` — đã trả.*
 
 2. **Kiểm tra TypeScript & Clean Code**:
    ```bash

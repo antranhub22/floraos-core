@@ -123,7 +123,7 @@ export function BeforeAfterPreviewCard({
   const VariantIcon = currentVariantInfo.icon
 
   return (
-    <Card className="overflow-hidden border border-border bg-card p-5 shadow-sm flex flex-col gap-4 w-full">
+    <Card className="overflow-hidden rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4 w-full">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M04a Studio Preview</div>
@@ -136,20 +136,20 @@ export function BeforeAfterPreviewCard({
       </div>
 
       {/* Thanh chọn trực quan 4 Tab so sánh bằng mắt - Luôn hiển thị đầy đủ */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-border">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 bg-surface-alt rounded-xl border border-border">
         <button
           type="button"
           onClick={() => {
             setActiveMode("studio")
             onSelectVariant?.("studio")
           }}
-          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${
+          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
             activeMode === "studio"
-              ? "bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 shadow"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/60"
+              ? "bg-surface text-primary border border-primary/25 shadow-sm"
+              : "text-text-muted hover:text-text hover:bg-surface/60"
           }`}
         >
-          <Sparkles size={13} className="text-red-500" />
+          <Sparkles size={13} className={activeMode === "studio" ? "text-primary" : "text-text-muted"} />
           ✨ P1: Studio
         </button>
         <button
@@ -158,13 +158,13 @@ export function BeforeAfterPreviewCard({
             setActiveMode("lifestyle")
             onSelectVariant?.("lifestyle")
           }}
-          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${
+          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
             activeMode === "lifestyle"
-              ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 shadow"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/60"
+              ? "bg-surface text-secondary-text border border-secondary/30 shadow-sm"
+              : "text-text-muted hover:text-text hover:bg-surface/60"
           }`}
         >
-          <Camera size={13} className="text-emerald-500" />
+          <Camera size={13} className={activeMode === "lifestyle" ? "text-secondary-text" : "text-text-muted"} />
           🌿 P2: Ảnh Mộc
         </button>
         <button
@@ -173,48 +173,48 @@ export function BeforeAfterPreviewCard({
             setActiveMode("bokeh")
             onSelectVariant?.("bokeh")
           }}
-          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${
+          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
             activeMode === "bokeh"
-              ? "bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 shadow"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/60"
+              ? "bg-surface text-warning border border-warning/30 shadow-sm"
+              : "text-text-muted hover:text-text hover:bg-surface/60"
           }`}
         >
-          <Coffee size={13} className="text-amber-500" />
+          <Coffee size={13} className={activeMode === "bokeh" ? "text-warning" : "text-text-muted"} />
           ☕ P3: Bokeh
         </button>
         <button
           type="button"
           onClick={() => setActiveMode("original")}
-          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${
+          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
             activeMode === "original"
-              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 shadow"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/60"
+              ? "bg-surface text-text border border-border shadow-sm"
+              : "text-text-muted hover:text-text hover:bg-surface/60"
           }`}
         >
-          <ImageIcon size={13} className="text-slate-500" />
+          <ImageIcon size={13} className="text-text-muted" />
           📷 Ảnh Gốc
         </button>
       </div>
 
       {/* Chú giải nhanh phương án đang xem */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 text-xs">
-        <VariantIcon className="h-4 w-4 text-red-600 flex-shrink-0" />
-        <span className="font-bold text-slate-800 dark:text-slate-200 flex-shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-alt/70 border border-border text-xs">
+        <VariantIcon className="h-4 w-4 text-primary flex-shrink-0" />
+        <span className="font-bold text-text flex-shrink-0">
           {currentVariantInfo.title}:
         </span>
-        <span className="text-slate-600 dark:text-slate-400 leading-tight">
+        <span className="text-text-muted leading-tight">
           {currentVariantInfo.desc}
         </span>
       </div>
 
       {/* Vùng hiển thị ảnh */}
-      <div className={`relative ${ratioContainerStyle} w-full mx-auto overflow-hidden rounded-xl border border-border bg-slate-900/5 flex items-center justify-center transition-all duration-300 shadow-inner`}>
+      <div className={`relative ${ratioContainerStyle} w-full mx-auto overflow-hidden rounded-xl border border-border bg-surface-alt/60 flex items-center justify-center transition-all duration-300 shadow-inner`}>
         {currentImage ? (
           <img
             key={`${activeMode}-${aspectRatio}-${currentImage}`}
             src={currentImage}
             alt={currentVariantInfo.title}
-            className={`h-full w-full ${activeMode === "original" ? "object-contain bg-slate-950/10" : "object-cover"} transition-all duration-300`}
+            className={`h-full w-full ${activeMode === "original" ? "object-contain bg-surface-alt" : "object-cover"} transition-all duration-300`}
           />
         ) : (
           <div className="flex flex-col items-center justify-center gap-2 p-6 text-center text-text-muted">

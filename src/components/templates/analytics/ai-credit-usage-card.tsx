@@ -33,7 +33,7 @@ export function AiCreditUsageCard({
   const percentUsed = Math.min(100, Math.round((usedTokens / totalTokens) * 100))
 
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M11 Aegis AI Governance</div>
@@ -45,7 +45,7 @@ export function AiCreditUsageCard({
         </Badge>
       </div>
 
-      <div className="rounded-xl bg-muted/40 p-4 flex flex-col gap-2">
+      <div className="rounded-xl bg-surface-alt/50 p-4 flex flex-col gap-2">
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold text-text">
             Đã dùng: {usedTokens.toLocaleString()} / {totalTokens.toLocaleString()} Credits
@@ -55,7 +55,7 @@ export function AiCreditUsageCard({
         <div className="h-2 w-full overflow-hidden rounded-full bg-border">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              percentUsed > 80 ? "bg-amber-500" : "bg-primary"
+              percentUsed > 80 ? "bg-warning" : "bg-primary"
             }`}
             style={{ width: `${percentUsed}%` }}
           />
@@ -72,7 +72,7 @@ export function AiCreditUsageCard({
           {capabilities.map((cap, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-between rounded-lg border border-border bg-background p-2.5 text-xs"
+              className="flex items-center justify-between rounded-lg border border-border bg-surface-alt/40 p-2.5 text-xs"
             >
               <div className="flex items-center gap-2">
                 <Cpu size={14} className="text-text-muted" />

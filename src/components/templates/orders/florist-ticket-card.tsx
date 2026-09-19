@@ -42,7 +42,7 @@ export function FloristTicketCard({
   onComplete,
 }: FloristTicketCardProps) {
   return (
-    <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-text-muted">M09 Lệnh Cắm Hoa (Xưởng)</div>
@@ -56,7 +56,7 @@ export function FloristTicketCard({
 
       <div className="flex flex-col sm:flex-row gap-4">
         {sampleImageUrl && (
-          <div className="relative aspect-square w-32 h-32 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
+          <div className="relative aspect-square w-32 h-32 shrink-0 overflow-hidden rounded-xl border border-border bg-surface-alt">
             <img src={sampleImageUrl} alt="Mẫu cắm" className="h-full w-full object-cover" />
             <div className="absolute bottom-1 left-1 rounded bg-black/60 px-1 py-0.5 text-[9px] font-bold text-white">
               Ảnh mẫu
@@ -69,7 +69,7 @@ export function FloristTicketCard({
             Thợ phụ trách: <span className="font-bold text-text">{floristName}</span> • Kiểu gói: <span className="font-bold text-text">{wrapStyle}</span>
           </div>
 
-          <div className="rounded-lg border border-border bg-background p-2.5">
+          <div className="rounded-lg border border-border bg-surface-alt/40 p-2.5">
             <div className="text-xs font-bold text-text mb-1.5">Định lượng hoa bắt buộc:</div>
             <div className="grid grid-cols-2 gap-1.5 text-xs">
               {items.map((it, idx) => (
@@ -82,7 +82,7 @@ export function FloristTicketCard({
           </div>
 
           {notes && (
-            <div className="rounded bg-rose-50 border border-rose-200 p-2 text-xs text-rose-800 font-medium">
+            <div className="rounded bg-warning-bg border border-warning/25 p-2 text-xs text-warning font-medium">
               Lưu ý khách: {notes}
             </div>
           )}

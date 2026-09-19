@@ -21,26 +21,26 @@ export function HumanTakeoverBanner({
   onDismiss,
 }: HumanTakeoverBannerProps) {
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning-bg p-4 text-warning shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/20 text-warning">
           <AlertCircle size={20} />
         </div>
         <div>
-          <div className="text-xs font-bold uppercase tracking-wider text-amber-800">
+          <div className="text-xs font-bold uppercase tracking-wider text-warning">
             Yêu cầu nhân viên can thiệp: {customerName}
           </div>
-          <div className="text-xs text-amber-900/90 mt-0.5">{reason}</div>
+          <div className="text-xs text-warning/90 mt-0.5">{reason}</div>
         </div>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
         {onDismiss && (
-          <Button variant="ghost" size="sm" onClick={onDismiss} className="text-amber-800 hover:text-amber-950 text-xs">
+          <Button variant="ghost" size="sm" onClick={onDismiss} className="text-warning hover:text-warning/70 text-xs">
             Bỏ qua
           </Button>
         )}
-        <Button size="sm" onClick={onAcceptTakeover} className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 text-xs">
+        <Button size="sm" onClick={onAcceptTakeover} className="bg-warning hover:bg-warning/90 text-white gap-1.5 text-xs">
           <UserCheck size={14} />
           Nhận xử lý ngay
         </Button>

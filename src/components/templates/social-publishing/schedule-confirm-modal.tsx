@@ -95,7 +95,7 @@ export function ScheduleConfirmModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-surface-hover text-text-muted hover:text-text transition-colors"
+            className="p-1 rounded-lg hover:bg-surface-alt text-text-muted hover:text-text transition-colors"
           >
             <X size={18} />
           </button>
@@ -112,7 +112,7 @@ export function ScheduleConfirmModal({
               {selectedPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-background"
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl border border-border bg-surface-alt/40"
                 >
                   {post.media_url && (
                     <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 border border-border">
@@ -150,7 +150,7 @@ export function ScheduleConfirmModal({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${mode === "now" ? "bg-primary text-white" : "bg-surface-hover text-text-muted"}`}>
+                  <div className={`p-2 rounded-lg ${mode === "now" ? "bg-primary text-white" : "bg-surface-alt text-text-muted"}`}>
                     <Zap size={16} />
                   </div>
                   <div>
@@ -172,7 +172,7 @@ export function ScheduleConfirmModal({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${mode === "lunch" ? "bg-primary text-white" : "bg-surface-hover text-text-muted"}`}>
+                  <div className={`p-2 rounded-lg ${mode === "lunch" ? "bg-primary text-white" : "bg-surface-alt text-text-muted"}`}>
                     <Sun size={16} />
                   </div>
                   <div>
@@ -194,7 +194,7 @@ export function ScheduleConfirmModal({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${mode === "evening" ? "bg-primary text-white" : "bg-surface-hover text-text-muted"}`}>
+                  <div className={`p-2 rounded-lg ${mode === "evening" ? "bg-primary text-white" : "bg-surface-alt text-text-muted"}`}>
                     <Moon size={16} />
                   </div>
                   <div>
@@ -216,7 +216,7 @@ export function ScheduleConfirmModal({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${mode === "custom" ? "bg-primary text-white" : "bg-surface-hover text-text-muted"}`}>
+                  <div className={`p-2 rounded-lg ${mode === "custom" ? "bg-primary text-white" : "bg-surface-alt text-text-muted"}`}>
                     <Clock size={16} />
                   </div>
                   <div>
