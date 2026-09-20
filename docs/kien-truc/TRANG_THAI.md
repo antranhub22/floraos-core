@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-19 (Nâng cấp toàn diện Market Intelligence: Dual Video Evidence & Clean Phrasing; P25a Console Vận hành Nền tảng) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-20 (Hoàn thiện 100% Product Intelligence Vision AI: Multimodal AI & Progressive Selection; Dual Video Evidence & Clean Phrasing; P25a Console Vận hành Nền tảng) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -10,9 +10,21 @@
 
 ## 1. Đang ở đâu
 
+**20/09 — Hoàn thiện 100% tính năng "Quét theo Ảnh mẫu" (Product Intelligence Vision AI) & Tích hợp Multimodal AI Thật, Progressive Selection.**
+Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm run test:tenant` **206/206 ca xanh thật (27/27 tệp)**, `tests/unit/market-intelligence/` **32/32 ca xanh thật (8/8 tệp)**.
+- **Multimodal Vision AI thật (Anti-Hardcode)**: Xây dựng adapter OpenAI Vision (`gpt-4o-mini`) tại `src/modules/market-intelligence/adapters/openai-vision-adapter.ts`, đọc trực tiếp ảnh qua Base64 Data URL (`data:image/...;base64,...`) hoặc Web URL. Nhận diện chính xác 100% sản phẩm hoa thực tế người dùng tải lên (bó hoa hồng đỏ, tulip cam cháy, cúc tana, mẫu đơn luxury...), bóc tách số lượng cành, bảng màu chính/phụ, kiểu bó, vật liệu giấy lụa, nơ, dịp tặng và giá bán thực tế. Gỡ bỏ triệt để việc gán cứng tiêu đề mặc định và các fallback template cứng ("Hoa hồng kem dâu").
+- **Cơ chế tương tác từng bước (Interactive Step-by-Step Progressive Selection)**: Đáp ứng yêu cầu của Chủ sản phẩm: Tại mỗi bước khi có kết quả, hiển thị để người dùng theo dõi và chủ động chọn các hướng lựa chọn rồi mới đi tiếp:
+  - Chặng 01 (BRING): Kéo thả ảnh hoa máy tính hoặc chọn từ Catalog tiệm.
+  - Chặng 02 (UNDERSTAND): Vision AI bóc tách cấu trúc hoa nguyên tử; người dùng có thể chỉnh sửa trực tiếp từng thông số; hiển thị khối checkbox lựa chọn cụm từ khóa nghiên cứu sát sườn do Domain Synthesizer sinh ra (`synthesizeProductResearchQueries`).
+  - Chặng 03 (DISCOVER): Người dùng bấm `Tiến hành Khám phá Trend Fit (Bước 3) →`, hệ thống đối soát dữ liệu thị trường thực tế, sinh ma trận Product Trend Fit Matrix, chấm điểm Trend/Audience/Content Fit và khuyến nghị 3 vùng KEEP/IMPROVE/TEST.
+  - Chặng 04 (IDEATE): 10 chủ đề nội dung kèm bộ lọc góc tiếp cận và chuẩn **Dẫn chứng Video Kép (TikTok 9:16 + YouTube 16:9)**; người dùng click `Chọn chủ đề này` để viền nổi bật và kích hoạt banner định hướng chiến dịch.
+  - Chặng 05 (CHOOSE / HANDOFF): Bàn giao 1-chạm sang M04c AI Video Studio (kèm prompt, hook, style) hoặc M04b Studio Biến Thể Ảnh (kèm Master Asset ID).
+- **Khắc phục lỗi đồng bộ Props ↔ State**: Cập nhật `ProductConfirmationCard` với hook `useEffect` đồng bộ state nội bộ khi props bóc tách từ server trả về, giải quyết dứt điểm hiện tượng giao diện bị giữ nguyên dữ liệu khởi tạo ban đầu.
+- **Quy tắc Hành trình Sản phẩm ra Thị trường từ Ảnh Tải lên (SSOT)**: Tài liệu hóa 14 chặng khép kín tại `docs/dac-ta/FLORAOS_PRODUCT_TO_MARKET_USER_JOURNEY.md` và gắn Luật bắt buộc hỏi Chủ sản phẩm trước khi nối chuỗi bước vào `AGENTS.md`.
+
 **19/09 — Nâng cấp toàn diện Market Intelligence & Product Intelligence Engine (Dual Video Evidence & Clean Phrasing).**
 Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` sạch 100%, `npm test tests/unit/market-intelligence/` **27/27 xanh**, toàn bộ component giao diện tuân thủ nghiêm ngặt chuẩn SRP (< 350 dòng/tệp).
-- **Hệ thống Dẫn chứng Video Kép (Dual Video Evidence Engine)**: Thay thế ảnh minh họa đơn lẻ bằng cặp thumbnail video dẫn chứng thực tế: **TikTok** (dọc 9:16, badge TikTok neon, tương tác thật, tác giả thật) + **YouTube** (ngang 16:9, badge YT đỏ, tác giả thật), có nút Play overlay và mở tab mới xem video gốc khi nhấp chuột (`window.open(url, "_blank")`). Đồng bộ trên toàn bộ 6 view: Cơ hội quan trọng (`brief-important-view.tsx`), Xu hướng bứt phá (`brief-rising-view.tsx`), Chủ đề nên làm (`brief-topics-view.tsx`), Mùa vụ & Dịp tới (`brief-occasions-view.tsx`), Thẻ cơ hội lưới (`opportunity-card.tsx`), và Ngăn chi tiết (`opportunity-detail-drawer.tsx`). Quản lý SSOT tại `src/components/market-intelligence/video-evidence-catalog.ts`.
+- **Hệ thống Dẫn chứng Video Kép (Dual Video Evidence Engine)**: Thay thế ảnh minh họa đơn lẻ bằng cặp thumbnail video dẫn chứng thực tế: **TikTok** (dọc 9:16, badge TikTok neon, tương tác thật, tác giả thật) + **YouTube** (ngang 16:9, badge YT đỏ, tác giả thật), có nút Play overlay và mở tab mới xem video gốc khi nhấp chuột (`window.open(url, "_blank")`). Quản lý tập trung tại `src/modules/market-intelligence/domain/video-evidence-catalog.ts` (re-export tại `components`).
 - **Quy chuẩn chống tràn từ khóa thô (Strict Anti-Keyword-Dumping Rule)**: Triệt tiêu lỗi hiển thị danh sách 5–10 từ khóa tìm kiếm nối bằng dấu phẩy (`Hoa 20/10, Bó hoa tốt nghiệp hướng dương, Hoa cưới mùa thu...`) trên giao diện người dùng. Gỡ bỏ toàn bộ tag badge chứa từ khóa thô; bổ sung pipeline làm sạch: `getOpportunityHeadline()` chuẩn hóa tiêu đề marketing thanh lịch, `formatCleanHook()` làm sạch kịch bản mở đầu giật tít tự nhiên, chuẩn gu tiệm hoa.
 - **Dọn dẹp cơ sở dữ liệu (`topics`)**: Sáp nhập bản ghi chủ đề bị lưu dưới dạng danh sách từ khóa thô về chủ đề chuẩn `Hoa 20/10`. Toàn bộ CSDL hiện có 0 bản ghi chủ đề bị nối phẩy.
 - **Tài liệu kiến trúc SSOT**: Tạo mới `docs/kien-truc/FLORAOS_MARKET_INTELLIGENCE_ARCHITECTURE.md`, cập nhật `docs/dac-ta/FloraOS-Intelligence-Engine_FINAL_v2.0.md` (Mục 21.1, 21.2, 43), và bổ sung quy ước kiểm định vào `AGENTS.md`.

@@ -59,23 +59,32 @@ Bất kỳ thay đổi mã nguồn nào trong phân hệ Market Intelligence b�
      - **Kịch bản (Hooks)**: Đi qua `formatCleanHook(hook)` để tạo thành câu thoại kịch bản tự nhiên, mượt mà và ấm áp chuẩn phong cách tiệm hoa cao cấp.
      - **Cơ sở dữ liệu (`topics`)**: Cơ sở dữ liệu phải được làm sạch, không lưu trữ các bản ghi chủ đề là chuỗi nối phẩy của nhiều từ khóa. Nếu phát hiện dữ liệu thô, phải tự động chuẩn hóa hoặc sáp nhập về chủ đề gốc.
 
-### 2.3. Nghiên Cứu Tập Trung 1 Lần & Cá Nhân Hóa Theo Tenant (Shared Intelligence Core)
+### 2.3. Quy Chuẩn Bóc Tách Thị Giác Cấu Trúc Hoa Thật (Multimodal Vision AI & Anti-Hardcode Rule)
+- **Vấn đề cần triệt tiêu**: Tránh tuyệt đối việc trả về dữ liệu mẫu cố định (hardcoded data) như "Hoa hồng kem dâu" cho mọi hình ảnh tải lên.
+- **Luật bất biến**:
+  1. **Multimodal Vision Thật**: Hệ thống bắt buộc phải quan sát trực tiếp dữ liệu nhị phân của bức ảnh thông qua mô hình đa phương thức (`gpt-4o-mini` qua [`openai-vision-adapter.ts`](file:///Users/tuan/Projects/floraos-core/src/modules/market-intelligence/adapters/openai-vision-adapter.ts)).
+  2. **Xử lý Ảnh Base64 Data URL**: Tại Frontend ([`product-upload-card.tsx`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/product-upload-card.tsx)), khi người dùng kéo thả file, `FileReader` lập tức chuyển đổi thành Base64 Data URL (`data:image/...;base64,...`) để truyền an toàn sang server, khắc phục giới hạn không thể fetch `blob:` URL cục bộ của trình duyệt.
+  3. **Đồng Bộ Hai Chiều Props ↔ State**: Giao diện xác nhận ([`product-confirmation-card.tsx`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/product-confirmation-card.tsx)) bắt buộc có hook phản ứng đồng bộ lại state nội bộ khi dữ liệu Vision AI trả về, bảo đảm người dùng luôn thấy đúng kết quả phân tích theo ảnh vừa tải lên.
+  4. **Tách Biệt Nguyên Tử (Atomic Disaggregation)**: Phân rã thuộc tính hoa thành các trường số lượng, đơn vị, màu sắc, phong cách, chất liệu giấy gói, nơ và giá đề xuất để người dùng có thể nhấp chuột chỉnh sửa trực tiếp từng thông số trước khi đối soát xu hướng.
+
+### 2.4. Nghiên Cứu Tập Trung 1 Lần & Cá Nhân Hóa Theo Tenant (Shared Intelligence Core)
 - Hệ thống nghiên cứu thị trường tập trung cấp nền tảng (Shared Intelligence), không để từng cửa hàng hoa phải chạy lại toàn bộ quy trình thu thập dữ liệu nặng nề.
 - Dữ liệu xu hướng chung được phân phối và **cá nhân hóa theo từng tenant** dựa trên:
   - Danh mục sản phẩm hiện có của tiệm.
   - Vị trí địa lý và phân khúc khách hàng của tiệm.
   - Lịch trình quét thị trường tự động (Scheduled Pulse) do tiệm thiết lập.
 
-### 2.4. Cách Ly Dữ Liệu Đa Tenant Tuyệt Đối (Strict Tenant Isolation)
+### 2.5. Cách Ly Dữ Liệu Đa Tenant Tuyệt Đối (Strict Tenant Isolation)
 - Cấu hình lịch quét thị trường (`TenantScheduleSettings`), tiêu chí quản trị SaaS (`SaaSAdminCriteria`) và kết quả thẩm định ảnh sản phẩm (`ProductIntelligenceAnalysis`) luôn gắn chặt với `organization_id` giải từ phiên máy chủ.
 - Kiểm tra tính cách ly đa tenant qua bộ kiểm thử tự động tại `tests/tenant/`.
 
-### 2.5. Handoff 1-Chạm Sang Quy Trình Sản Xuất (One-Click Production Handoff)
+### 2.6. Handoff 1-Chạm Sang Quy Trình Sản Xuất (One-Click Production Handoff)
 - Market Intelligence không dừng lại ở mức xem báo cáo:
   - Nút **"Sao chép"**: Copy nhanh kịch bản đã làm sạch vào clipboard để gửi Zalo hoặc dán vào bài đăng Facebook.
   - Nút **"Tạo Video"**: Deep link trực tiếp sang phân hệ AI Video Studio (`/video?prompt=...`), tự động điền kịch bản và chủ đề vào Storyboard Creator để render video marketing 9:16 chuẩn TikTok/Reels ngay tức thì.
+  - Nút **"Tạo ảnh biến thể"**: Deep link sang M04b Studio Biến Thể Ảnh (`/tai-anh?topic=...&source=...`) mang theo Asset ID ảnh gốc để sinh ảnh phông nền, watermark.
 
-### 2.6. Tuân Thủ Ranh Giới Kiến Trúc Sạch (Clean Architecture & SRP)
+### 2.7. Tuân Thủ Ranh Giới Kiến Trúc Sạch (Clean Architecture & SRP)
 - Kích thước mọi file thành phần phải nghiêm ngặt `< 350 dòng`.
 - Phân tách rõ ràng:
   - `domain/`: Định nghĩa kiểu dữ liệu thuần, ma trận vòng đời sóng (`trend-lifecycle.ts`), thuật toán chấm điểm cơ hội (`scoring.ts`), phân loại thị trường (`market-taxonomy.ts`). Cấm import Prisma hoặc React.
@@ -183,6 +192,37 @@ dẫn đầu xu hướng năm nay"        chuẩn gu & đong đầy tình cảm.
 - Cặp thumbnail video TikTok + YouTube rõ ràng, chân thực.
 ```
 
+### 5.2. Chuỗi Bóc Tách Sản Phẩm & Lựa Chọn Tiến Trình (Pipeline Handshake & Progressive Selection)
+
+Quy trình bóc tách ảnh sản phẩm hoa tươi tuân thủ triệt để nguyên lý: **"Output của bước trước là Perfect Input của bước sau"**, bảo đảm người dùng chủ động chọn lựa tại từng chặng:
+
+```
+[BƯỚC 1: BRING - Tải ảnh / Chọn Catalog]
+   │ Người dùng kéo thả ảnh hoa hoặc chọn mẫu từ Catalog tiệm
+   │ Frontend chuyển ảnh thành Base64 Data URL (data:image/...;base64,...)
+   ▼ Bấm: "Bóc tách Cấu trúc Hoa (Vision AI) →"
+[BƯỚC 2: UNDERSTAND - Kết quả Vision AI & Lựa Chọn Hướng Nghiên Cứu]
+   │ OpenAI Multimodal Vision (gpt-4o-mini) bóc tách cấu trúc nguyên tử: loài hoa, số cành, bảng màu, kiểu cắm, bao gói, nơ, dịp tặng
+   │ Người dùng có thể sửa trực tiếp từng thông số mà không làm vỡ cấu trúc dữ liệu
+   │ 🎯 KHỐI CHỌN HƯỚNG: Domain Synthesizer sinh các cụm từ khóa nghiên cứu sát sườn (primaryKeywords, flowerColorQuery...)
+   │ Người dùng tick chọn các hướng muốn AI tập trung đối soát
+   ▼ Bấm: "Tiến hành Khám phá Trend Fit (Bước 3) →"
+[BƯỚC 3: DISCOVER - Kết quả Trend Fit & Khuyến Nghị 3 Vùng]
+   │ Ma trận đối soát Product Trend Fit Matrix phân tích mức độ ăn khớp với tín hiệu thị trường
+   │ Đánh giá 3 chỉ số: Trend Fit Score, Audience Fit Score, Content Fit Score
+   │ Phân bổ khuyến nghị 3 vùng: KEEP (Điểm mạnh), IMPROVE (Cải tiến), TEST (Thử nghiệm)
+   ▼ Cuộn mượt mà xuống danh sách chủ đề
+[BƯỚC 4: IDEATE - 10 Chủ Đề Nội Dung Kèm Dẫn Chứng Video Kép]
+   │ Bộ lọc góc tiếp cận: Sản phẩm, Bí quyết, Gỡ rối quà tặng, Chạm cảm xúc, Bắt trend
+   │ 10 Thẻ chủ đề hiển thị Dẫn chứng Video Kép chuẩn repo: TikTok 9:16 + YouTube 16:9 (nhấp chuột mở video thật)
+   │ 🎯 NGƯỜI DÙNG CLICK "CHỌN CHỦ ĐỀ NÀY":
+   │ Viền nổi bật (border-2 border-rose-500) và kích hoạt Banner định hướng chiến dịch
+   ▼
+[BƯỚC 5: CHOOSE / HANDOFF - Bàn Giao 1-Chạm Sang Studio]
+   │ 🎬 "Dựng video với chủ đề này": Deep link sang M04c AI Video Studio (/video?prompt=...&hook=...&style=...)
+   │ 🖼️ "Tạo ảnh biến thể": Deep link sang M04b Studio Biến Thể Ảnh (/tai-anh?topic=...&source=...)
+```
+
 ---
 
 ## 6. Ma Trận Vòng Đời Xu Hướng & Chấm Điểm Cơ Hội
@@ -213,17 +253,17 @@ $$\text{Score} = w_s \cdot S_{\text{search}} + w_v \cdot S_{\text{viral}} + w_c 
    ```
    *Bắt buộc thoát mã 0, không có lỗi kiểu.*
 
-2. **Unit Tests Tầng Domain**:
+2. **Unit Tests Tầng Domain & Pipeline Handshake**:
    ```bash
-   npm test tests/unit/market-intelligence/
+   npx vitest run tests/unit/market-intelligence/
    ```
-   *Bao phủ 6 bộ kiểm thử: `trend-lifecycle.test.ts`, `scoring.test.ts`, `trend-fit.test.ts`, `market-taxonomy.test.ts`, `tenant-schedule-settings.test.ts`, `google-trends-adapter.test.ts` (27/27 test xanh).*
+   *Bao phủ 8 bộ kiểm thử: `product-pipeline-handshake.test.ts`, `synthesize-product-queries.test.ts`, `trend-fit.test.ts`, `trend-lifecycle.test.ts`, `scoring.test.ts`, `market-taxonomy.test.ts`, `tenant-schedule-settings.test.ts`, `google-trends-adapter.test.ts` (32/32 test xanh 100%).*
 
 3. **Tenant Isolation Verification**:
    ```bash
    npm run test:tenant
    ```
-   *Bảo đảm cách ly dữ liệu giữa các tổ chức tuyệt đối.*
+   *Bảo đảm cách ly dữ liệu giữa các tổ chức tuyệt đối (27/27 tệp, 206/206 test xanh).*
 
 4. **Kiểm Soát Giới Hạn File (SRP Limit)**:
    ```bash
