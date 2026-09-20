@@ -15,6 +15,22 @@ export interface EnhancerProviderOption {
 
 export const ENHANCER_PROVIDERS: EnhancerProviderOption[] = [
   {
+    id: "photoroom",
+    name: "Photoroom AI (Chuẩn E-commerce Quốc tế)",
+    desc: "Khóa 100% chi tiết hoa thật, tự động sinh bối cảnh studio chuyên nghiệp và đổ bóng tiếp xúc vật lý.",
+    badge: "Thương mại",
+    tone: "success",
+    icon: Sparkles,
+  },
+  {
+    id: "fal_flux",
+    name: "Fal.ai FLUX + IC-Light (Đỉnh cao Studio)",
+    desc: "Model FLUX.1 Fill kết hợp IC-Light hòa trộn ánh sáng môi trường chân thực nhất thế giới hiện nay.",
+    badge: "Cao cấp",
+    tone: "accent",
+    icon: Zap,
+  },
+  {
     id: "studio",
     name: "Studio AI Pipeline (Chuẩn E-commerce)",
     desc: "Bóc tách nền vi phẫu, xóa sạch watermark, ghép phông Studio thương mại và đổ bóng tự nhiên.",

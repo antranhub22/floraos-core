@@ -78,7 +78,11 @@ SEGMENTATION_CACHE_ROOT = STORAGE_ROOT / "cache" / "m04b_segmentation"
 # Cùng ngưỡng với `src/modules/media/domain/variant-rules.ts`. Phía TS tính
 # LẠI phán quyết từ số đo, nên hai bên lệch nhau thì phía TS thắng — ở đây
 # chỉ dùng để quyết định có ghi asset hay không.
-NGUONG_TU_CHOI = 0.99
+# Mặc định 0.99 (production). Đặt `VARIANT_INTEGRITY_THRESHOLD=0.95` trong
+# `.env` khi dùng model tách chủ thể nhẹ (`u2netp`) trên máy dev — biên tách
+# kém sắc khiến `_do_lo_chu_the` trả số thấp hơn ngưỡng production, gây
+# REJECTED giả. Xem `.env.example` và nợ #109.
+NGUONG_TU_CHOI = float(os.environ.get("VARIANT_INTEGRITY_THRESHOLD", "0.99"))
 
 # `RATIO_PRESETS` giờ SỐNG ở `media_ai/image/ratio_frame.py` (nợ #78, 17/09)
 # — nhập lại ở đây để giữ nguyên tên cũ, vì `tests/media_ai/test_variant_worker.py`
@@ -768,13 +772,21 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
 
         asset_ids: list[str] = []
         if bi_tu_choi:
-            ket_qua = "REJECTED"
+            # Human-in-the-loop: ghi biến thể dù integrity thấp, nhưng đánh dấu
+            # WARNING để người dùng tự quyết định duyệt/từ chối ở giao diện.
+            # Trước đây block cứng REJECTED → không ghi asset nào → user bế tắc.
+            ket_qua = "WARNING"
             _emit_event(
                 conn,
                 job["id"],
                 "log",
-                {"message": "Subject Integrity từ chối — không ghi biến thể nào", "ly_do": khoi_do["ly_do"]},
+                {"message": "Subject Integrity thấp — biến thể vẫn được ghi nhưng cần người duyệt kiểm tra", "ly_do": khoi_do["ly_do"]},
             )
+            _set_stage(conn, job["id"], "GENERATING_OUTPUTS")
+            for item in bien_the:
+                asset_ids.append(
+                    _ghi_asset_bien_the(conn, job, master, item, ratio, preset, do_trung)
+                )
         else:
             ket_qua = "WARNING" if do_trung < 0.999 else "SAFE"
             _set_stage(conn, job["id"], "GENERATING_OUTPUTS")

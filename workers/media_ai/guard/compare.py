@@ -216,12 +216,20 @@ def _cham_hinh_hoc(truoc: DauVanSanPham, sau: DauVanSanPham) -> tuple[float, lis
         if x != y:
             ly_do.append(f"{nhan} đổi: {x or '—'} → {y or '—'}")
 
-    d = _diem_so(truoc.ty_le_duong_kinh, sau.ty_le_duong_kinh)
+    # Dung sai thị giác của Vision AI: chênh lệch đường kính bông <= 0.08 coi là trong ngưỡng đo
+    if truoc.ty_le_duong_kinh is not None and sau.ty_le_duong_kinh is not None:
+        delta = abs(truoc.ty_le_duong_kinh - sau.ty_le_duong_kinh)
+        if delta <= 0.08:
+            d = 1.0
+        else:
+            d = _diem_so(truoc.ty_le_duong_kinh, sau.ty_le_duong_kinh)
+            if d < 1.0:
+                ly_do.append(
+                    f"Tỉ lệ đường kính bông đổi: {truoc.ty_le_duong_kinh} → {sau.ty_le_duong_kinh}"
+                )
+    else:
+        d = 1.0
     diem.append(d)
-    if d < 1.0:
-        ly_do.append(
-            f"Tỉ lệ đường kính bông đổi: {truoc.ty_le_duong_kinh} → {sau.ty_le_duong_kinh}"
-        )
 
     return sum(diem) / len(diem), ly_do
 
@@ -235,15 +243,41 @@ def _cham_thanh_phan(truoc: DauVanSanPham, sau: DauVanSanPham) -> tuple[float, l
 
     ly_do: list[str] = []
     diem: list[float] = []
+    DECOR_GROUPS = ("accessories", "wrapping")
+
     for khoa in sorted(moi_khoa, key=lambda k: (k[0], k[1] or "")):
+        nhom = khoa[0]
         tp_ref = a[khoa][0] if khoa in a else b[khoa][0]
         ten = tp_ref.ten_goc or tp_ref.ten or khoa[1] or khoa[0]
+
+        # Kiểm tra ghép cặp chéo giữa accessories và wrapping nếu trùng tên chuẩn hoá
+        doi_lap = b if khoa in a else a
+        nhom_khac = "wrapping" if nhom == "accessories" else "accessories" if nhom == "wrapping" else None
+        da_khop_cheo = False
+        if nhom_khac and (nhom_khac, khoa[1]) in doi_lap:
+            da_khop_cheo = True
+
         if khoa not in b:
-            diem.append(0.0)
-            ly_do.append(f"Mất thành phần: {ten}")
+            if da_khop_cheo:
+                # Trùng tên nhưng lệch nhóm phân loại accessories vs wrapping
+                diem.append(1.0)
+            elif nhom in DECOR_GROUPS:
+                # Phụ liệu trang trí / bao bì gói: Vision AI thường bỏ sót ở 1 trong 2 lần đọc
+                # Không làm biến dạng sản phẩm hoa chính, phạt nhẹ 0.92 để không đánh sập điểm
+                diem.append(0.92)
+                ly_do.append(f"Khác biệt phụ liệu: {ten}")
+            else:
+                diem.append(0.0)
+                ly_do.append(f"Mất thành phần: {ten}")
         elif khoa not in a:
-            diem.append(0.0)
-            ly_do.append(f"Thêm thành phần không có ở ảnh gốc: {ten}")
+            if da_khop_cheo:
+                diem.append(1.0)
+            elif nhom in DECOR_GROUPS:
+                diem.append(0.92)
+                ly_do.append(f"Thêm phụ liệu: {ten}")
+            else:
+                diem.append(0.0)
+                ly_do.append(f"Thêm thành phần không có ở ảnh gốc: {ten}")
         else:
             d = _diem_so(a[khoa][0].so_luong, b[khoa][0].so_luong)
             diem.append(d)

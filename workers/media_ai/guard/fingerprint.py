@@ -50,23 +50,17 @@ def _chuan_hoa_ten(nhom: str, s: str | None) -> str | None:
     elif nhom == "foliage":
         # Bỏ tiền tố lá/nhánh phụ: cành, nhánh
         s = re.sub(r"^(cành|nhánh)\s+", "", s).strip()
-    elif nhom == "wrapping":
-        s = re.sub(r"^(dây|cuộn|tấm|miếng)\s+", "", s).strip()
-        if s in ("giấy gói", "giấy bọc"):
-            s = "giấy"
-        else:
-            s = re.sub(r"\s+(gói|bọc|trang trí)$", "", s).strip()
-    elif nhom == "accessories":
-        # Bỏ tiền tố/hậu tố phụ liệu
-        s = re.sub(r"^(cuộn|tấm|miếng)\s+", "", s).strip()
-        s = re.sub(r"\s+(gói|bọc|trang trí|buộc|thắt)$", "", s).strip()
-        # Chuẩn hoá các loại dây buộc/dây thắt bó hoa (dây thừng, dây lưới, dây cói, dây đay, dây gai...)
-        # Trong ngành hoa, đây là phụ kiện buộc định hình bó hoa
-        tu_day = re.sub(r"^dây\s+", "", s).strip()
-        if tu_day in ("lưới", "thừng", "cói", "gai", "đay", "buộc", "quấn", "kẽm", "dù", "dây", "thừng gai", "thừng cói"):
-            s = "dây buộc"
-        elif tu_day in ("nơ", "ruy băng", "nơ ruy băng"):
+    elif nhom in ("wrapping", "accessories"):
+        # Bỏ tiền tố/hậu tố đóng gói và phụ liệu
+        s = re.sub(r"^(cuộn|tấm|miếng|dây|sợi|dải)\s+", "", s).strip()
+        s = re.sub(r"\s+(gói|bọc|trang trí|buộc|thắt|đính kèm)$", "", s).strip()
+        # Chuẩn hoá các loại nơ / ruy băng
+        if s in ("nơ", "ruy băng", "nơ ruy băng", "ruy-băng", "ribbon", "dây ruy băng", "dây nơ"):
             s = "nơ ruy băng"
+        elif s in ("lưới", "thừng", "cói", "gai", "đay", "buộc", "quấn", "kẽm", "dù", "dây", "thừng gai", "thừng cói"):
+            s = "dây buộc"
+        elif s in ("giấy gói", "giấy bọc"):
+            s = "giấy"
     return s or None
 
 

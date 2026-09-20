@@ -12,6 +12,7 @@ from typing import Any
 
 from PIL import Image
 
+import os
 from media_ai.providers.base import Segmenter
 
 
@@ -21,7 +22,11 @@ class RembgSegmenter:
     name = "rembg"
     model_version = "bria-rmbg-v1"
 
-    def __init__(self, model_name: str = "bria-rmbg") -> None:
+    def __init__(self, model_name: str | None = None) -> None:
+        if model_name is None:
+            # Ưu tiên đọc VARIANT_SEGMENTATION_MODEL từ biến môi trường (ví dụ: u2netp trong .env)
+            # để tránh treo máy hoặc chờ quá lâu khi chạy trên máy phát triển cá nhân
+            model_name = os.environ.get("VARIANT_SEGMENTATION_MODEL") or "bria-rmbg"
         self.model_name = model_name
         self.model_version = f"{model_name}-v1"
         self._session: Any = None
@@ -31,7 +36,13 @@ class RembgSegmenter:
             try:
                 import rembg
 
-                self._session = rembg.new_session(self.model_name)
+                # Ép dùng CPUExecutionProvider để tránh CoreML compiler deadlock trên macOS Apple Silicon
+                try:
+                    self._session = rembg.new_session(
+                        self.model_name, providers=["CPUExecutionProvider"]
+                    )
+                except Exception:
+                    self._session = rembg.new_session(self.model_name)
             except Exception:
                 self._session = False
         return self._session if self._session is not False else None
@@ -65,17 +76,31 @@ class RembgSegmenter:
         if session is not None:
             try:
                 import rembg
+                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
-                rgba_img = rembg.remove(pil_img, session=session)
-                if rgba_img.mode != "RGBA":
-                    rgba_img = rgba_img.convert("RGBA")
+                def _do_remove() -> Image.Image:
+                    res = rembg.remove(pil_img, session=session)
+                    if res.mode != "RGBA":
+                        res = res.convert("RGBA")
+                    return res
 
-                alpha_mask = rgba_img.split()[3]
-                return rgba_img, alpha_mask
+                timeout_s = float(os.environ.get("VARIANT_SEGMENTATION_TIMEOUT_SECONDS", "45"))
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(_do_remove)
+                    try:
+                        res = future.result(timeout=timeout_s)
+                        alpha_mask = res.split()[3]
+                        # Bảo tồn 100% pixel RGB gốc từ Master Image: chỉ lấy kênh Alpha từ rembg
+                        # không dùng RGB do rembg sinh lại vì có sai số làm trượt cổng Subject Integrity.
+                        rgba_img = pil_img.convert("RGBA")
+                        rgba_img.putalpha(alpha_mask)
+                        return rgba_img, alpha_mask
+                    except FuturesTimeoutError:
+                        pass
             except Exception:
                 pass
 
-        # Fallback an toàn nếu session lỗi hoặc chưa tải được model
+        # Fallback an toàn nếu session lỗi, quá giờ hoặc chưa tải được model
         rgba_fallback = pil_img.convert("RGBA")
         mask_fallback = Image.new("L", (w, h), 255)
         return rgba_fallback, mask_fallback
