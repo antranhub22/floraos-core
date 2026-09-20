@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
-import { CheckCircle2, Edit3, Sparkles, Plus, Trash2, Tag, Layers, Gift } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { CheckCircle2, Edit3, Sparkles, Plus, Trash2, Tag, Layers, Gift, Target, Check } from "lucide-react";
 import type {
   ProductFlowerComponent,
   ProductVisualAttributes,
   ProductPackaging,
   ProductInferredContext,
 } from "@/modules/market-intelligence/domain/product-intelligence-types";
+import { synthesizeProductResearchQueries } from "@/modules/market-intelligence/domain/synthesize-product-queries";
 
 interface ProductConfirmationCardProps {
   components: ProductFlowerComponent[];
@@ -19,6 +20,7 @@ interface ProductConfirmationCardProps {
     attributes: ProductVisualAttributes;
     packaging: ProductPackaging;
     context: ProductInferredContext;
+    selectedQueries?: string[];
   }) => void;
   isSubmitting: boolean;
 }
@@ -35,6 +37,27 @@ export function ProductConfirmationCard({
   const [attributes, setAttributes] = useState<ProductVisualAttributes>(initialAttributes);
   const [packaging, setPackaging] = useState<ProductPackaging>(initialPackaging);
   const [context, setContext] = useState<ProductInferredContext>(initialContext);
+
+  // Đồng bộ lại state khi initial props từ Vision AI thay đổi
+  useEffect(() => {
+    setComponents(initialComponents);
+    setAttributes(initialAttributes);
+    setPackaging(initialPackaging);
+    setContext(initialContext);
+  }, [initialComponents, initialAttributes, initialPackaging, initialContext]);
+
+  const synthesized = synthesizeProductResearchQueries({
+    components,
+    attributes,
+    packaging,
+    context,
+  });
+
+  const [selectedQueries, setSelectedQueries] = useState<string[]>(synthesized.primaryKeywords);
+
+  useEffect(() => {
+    setSelectedQueries(synthesized.primaryKeywords);
+  }, [components, attributes, packaging, context]);
 
   const handleUpdateComponent = (index: number, field: keyof ProductFlowerComponent, val: any) => {
     const updated = [...components];
@@ -201,20 +224,66 @@ export function ProductConfirmationCard({
         </div>
       </div>
 
+      {/* Khối Lựa Chọn Hướng Nghiên Cứu Xu Hướng */}
+      <div className="rounded-xl border border-rose-200 bg-white p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+          <span className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+            <Target size={14} className="text-rose-600" />
+            Chọn các hướng nghiên cứu bạn muốn AI đối soát thị trường:
+          </span>
+          <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+            Đã chọn {selectedQueries.length} hướng
+          </span>
+        </div>
+
+        <p className="text-[11px] text-stone-500 leading-relaxed">
+          AI tự động trích xuất các từ khóa trọng tâm từ thuộc tính hoa vừa bóc tách. Nhấp để chọn hoặc bỏ chọn hướng bạn muốn nghiên cứu.
+        </p>
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          {synthesized.primaryKeywords.map((keyword) => {
+            const isChecked = selectedQueries.includes(keyword);
+            return (
+              <button
+                key={keyword}
+                type="button"
+                onClick={() => {
+                  if (isChecked) {
+                    if (selectedQueries.length > 1) {
+                      setSelectedQueries(selectedQueries.filter((k) => k !== keyword));
+                    }
+                  } else {
+                    setSelectedQueries([...selectedQueries, keyword]);
+                  }
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition ${
+                  isChecked
+                    ? "bg-rose-50 text-rose-700 border-rose-300 shadow-xs"
+                    : "bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100"
+                }`}
+              >
+                <Check size={13} className={isChecked ? "text-rose-600" : "opacity-0"} />
+                <span>{keyword}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Action Footer */}
-      <div className="flex items-center justify-between pt-3 border-t border-rose-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-rose-100">
         <div className="text-[11px] text-stone-500">
           Độ tin cậy nhận diện: <strong className="text-emerald-700">{Math.round(context.confidence * 100)}%</strong>
         </div>
 
         <button
           type="button"
-          onClick={() => onConfirm({ components, attributes, packaging, context })}
-          disabled={isSubmitting}
-          className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-rose-700 shadow-sm transition disabled:opacity-50"
+          onClick={() => onConfirm({ components, attributes, packaging, context, selectedQueries })}
+          disabled={isSubmitting || selectedQueries.length === 0}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-rose-700 shadow-sm transition disabled:opacity-50"
         >
           <Sparkles size={15} />
-          {isSubmitting ? "Đang đối soát xu hướng thị trường..." : "Xác nhận & Đối soát Thị trường ngay"}
+          {isSubmitting ? "Đang đối soát xu hướng thị trường..." : "Tiến hành Khám phá Trend Fit (Bước 3) →"}
         </button>
       </div>
     </div>

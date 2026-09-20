@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
-import { Upload, Image as ImageIcon, Sparkles, Check, Flower2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Upload, Image as ImageIcon, Sparkles, Check, Flower2, Library, Loader2, X } from "lucide-react";
 
 interface ProductUploadCardProps {
   selectedImage: string;
-  onSelectImage: (url: string, name: string) => void;
+  selectedAssetId?: string | undefined;
+  productTitle: string;
+  onUpdateProductTitle: (title: string) => void;
+  onSelectImage: (url: string, name: string, assetId?: string | undefined) => void;
   onAnalyze: () => void;
   isAnalyzing: boolean;
 }
@@ -24,37 +27,134 @@ const DEMO_FLOWERS = [
   {
     name: "Giỏ hoa sinh nhật hoa mẫu đơn & cúc mẫu đơn",
     url: "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?auto=format&fit=crop&w=600&q=80",
-    style: "Sang trọng & Hiện đại",
+    style: "Sang trọng & Quý phái",
   },
 ];
 
+interface CatalogProductItem {
+  id: string;
+  title: string;
+  price?: number;
+  imageUrl?: string;
+}
+
 export function ProductUploadCard({
   selectedImage,
+  selectedAssetId,
+  productTitle,
+  onUpdateProductTitle,
   onSelectImage,
   onAnalyze,
   isAnalyzing,
 }: ProductUploadCardProps) {
-  const [productTitle, setProductTitle] = useState("Bó hoa hồng pastel phong cách Hàn Quốc");
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState<CatalogProductItem[]>([]);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleSelectDemo = (item: typeof DEMO_FLOWERS[0]) => {
-    setProductTitle(item.name);
+    onUpdateProductTitle(item.name);
     onSelectImage(item.url, item.name);
+  };
+
+  const handleOpenCatalog = async () => {
+    setIsCatalogModalOpen(true);
+    if (catalogProducts.length > 0) return;
+    setLoadingCatalog(true);
+    try {
+      const res = await fetch("/api/v1/products?limit=15");
+      if (res.ok) {
+        const json = await res.json();
+        const items = Array.isArray(json.data)
+          ? json.data.map((p: any) => ({
+              id: p.id,
+              title: p.title || p.name,
+              price: p.price,
+              imageUrl: p.master_asset?.url || p.image_url || "/images/sample-flower.jpg",
+            }))
+          : [];
+        setCatalogProducts(items);
+      }
+    } catch {
+      // Fallback nếu API chưa có sản phẩm
+    } finally {
+      setLoadingCatalog(false);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    // Đọc file thành Data URL để hiển thị và truyền cho AI Vision xử lý
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = (e.target?.result as string) || URL.createObjectURL(file);
+      const rawName = file.name.replace(/\.[^/.]+$/, "");
+      const title = rawName.length > 3 ? rawName : "Mẫu hoa đang nhận diện";
+      onUpdateProductTitle(title);
+
+      try {
+        setIsUploading(true);
+        const res = await fetch("/api/v1/assets/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mime_type: file.type || "image/jpeg" }),
+        });
+
+        if (res.ok) {
+          const { upload_url, asset_id, storage_key } = await res.json();
+          await fetch(upload_url, {
+            method: "PUT",
+            headers: { "Content-Type": file.type || "image/jpeg" },
+            body: file,
+          });
+
+          await fetch("/api/v1/assets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              asset_id,
+              kind: "ORIGINAL",
+              storage_key,
+              mime_type: file.type,
+              file_size: file.size,
+            }),
+          });
+
+          onSelectImage(dataUrl, title, asset_id);
+        } else {
+          onSelectImage(dataUrl, title);
+        }
+      } catch {
+        onSelectImage(dataUrl, title);
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm space-y-4">
-      <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
             <Flower2 size={18} />
           </span>
           <div>
-            <h2 className="text-sm font-bold text-stone-900">1. Tải ảnh & Nhận diện Sản phẩm hoa</h2>
+            <h2 className="text-sm font-bold text-stone-900">1. Tải ảnh & Nhận diện Sản phẩm hoa (Chặng 01 & 02)</h2>
             <p className="text-[11.5px] text-stone-500">
-              Tải lên 1–3 ảnh hoa thực tế của xưởng hoặc chọn mẫu có sẵn để AI phân tích thị giác
+              Tải ảnh thực tế của tiệm, chọn mẫu từ Catalog hoặc thử nghiệm nhanh mẫu tiêu biểu
             </p>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleOpenCatalog}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50/50 hover:bg-rose-100/70 text-rose-700 text-xs font-bold transition"
+        >
+          <Library size={14} />
+          Chọn từ Catalog tiệm
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -66,7 +166,7 @@ export function ProductUploadCard({
           <input
             type="text"
             value={productTitle}
-            onChange={(e) => setProductTitle(e.target.value)}
+            onChange={(e) => onUpdateProductTitle(e.target.value)}
             placeholder="VD: Bó hoa kem dâu 20 bông tặng sinh nhật..."
             className="h-10 w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3 text-xs text-stone-900 outline-none focus:border-rose-500 focus:bg-white transition"
           />
@@ -76,23 +176,27 @@ export function ProductUploadCard({
             <input
               type="file"
               accept="image/*"
-              className="absolute inset-0 opacity-0 cursor-pointer"
+              disabled={isUploading}
+              className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) {
-                  const url = URL.createObjectURL(file);
-                  onSelectImage(url, productTitle || file.name);
-                }
+                if (file) handleFileUpload(file);
               }}
             />
             <div className="flex flex-col items-center justify-center gap-2">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-xs text-rose-600 group-hover:scale-110 transition">
-                <Upload size={18} />
+                {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
               </span>
               <p className="text-xs font-bold text-stone-700">
-                Kéo thả ảnh hoa vào đây, hoặc <span className="text-rose-600 underline">chọn tệp từ máy</span>
+                {isUploading ? (
+                  "Đang đồng bộ hóa ảnh lên hệ thống..."
+                ) : (
+                  <>
+                    Kéo thả ảnh hoa vào đây, hoặc <span className="text-rose-600 underline">chọn tệp từ máy</span>
+                  </>
+                )}
               </p>
-              <p className="text-[11px] text-stone-400">Hỗ trợ JPG, PNG, WebP (Tối đa 3 ảnh)</p>
+              <p className="text-[11px] text-stone-400">Hỗ trợ JPG, PNG, WebP (Tối đa 10MB)</p>
             </div>
           </div>
 
@@ -134,7 +238,15 @@ export function ProductUploadCard({
 
         {/* Selected Image Preview & Trigger Button */}
         <div className="flex flex-col justify-between rounded-xl border border-stone-100 bg-stone-50/50 p-3.5 space-y-3">
-          <span className="text-xs font-bold text-stone-700">Ảnh hoa đã chọn</span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-stone-700">Ảnh hoa đã chọn</span>
+            {selectedAssetId && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Asset Đã Đăng Ký
+              </span>
+            )}
+          </div>
+
           <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-white border border-stone-200">
             {selectedImage ? (
               <img
@@ -153,14 +265,85 @@ export function ProductUploadCard({
           <button
             type="button"
             onClick={onAnalyze}
-            disabled={isAnalyzing || !selectedImage}
+            disabled={isAnalyzing || !selectedImage || isUploading}
             className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 py-2.5 px-4 text-xs font-bold text-white hover:bg-rose-700 shadow-sm transition disabled:opacity-50"
           >
-            <Sparkles size={15} />
-            {isAnalyzing ? "AI đang phân tích thị giác..." : "Bóc tách & Phân tích Sản phẩm"}
+            {isAnalyzing ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                <span>Vision AI đang bóc tách cấu trúc...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={15} />
+                <span>Bóc tách Cấu trúc Hoa (Vision AI)</span>
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Modal Chọn từ Catalog tiệm */}
+      {isCatalogModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+          <div className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-xl space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2">
+                <Library className="h-5 w-5 text-rose-600" />
+                <h3 className="text-sm font-bold text-stone-900">Chọn mẫu hoa từ Catalog của tiệm</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCatalogModalOpen(false)}
+                className="rounded-lg p-1 text-stone-400 hover:bg-stone-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {loadingCatalog ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-2 text-stone-500 text-xs">
+                  <Loader2 size={20} className="animate-spin text-rose-600" />
+                  <span>Đang tải danh sách sản phẩm tiệm...</span>
+                </div>
+              ) : catalogProducts.length === 0 ? (
+                <div className="text-center py-12 text-stone-400 text-xs">
+                  Chưa có sản phẩm nào trong Catalog. Bạn có thể kéo thả ảnh hoa mới từ máy tính.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {catalogProducts.map((p) => (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        onUpdateProductTitle(p.title);
+                        onSelectImage(p.imageUrl || "/images/sample-flower.jpg", p.title, p.id);
+                        setIsCatalogModalOpen(false);
+                      }}
+                      className="flex items-center gap-2.5 p-2 rounded-xl border border-stone-200 hover:border-rose-500 hover:bg-rose-50/40 cursor-pointer transition text-left"
+                    >
+                      <img
+                        src={p.imageUrl}
+                        alt={p.title}
+                        className="h-12 w-12 rounded-lg object-cover flex-shrink-0"
+                      />
+                      <div className="min-w-0 flex-1 text-xs">
+                        <p className="font-bold text-stone-900 truncate">{p.title}</p>
+                        {p.price && (
+                          <p className="text-[11px] font-semibold text-rose-600 mt-0.5">
+                            {p.price.toLocaleString("vi-VN")}đ
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

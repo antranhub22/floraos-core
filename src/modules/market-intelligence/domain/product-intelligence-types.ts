@@ -68,6 +68,24 @@ export interface ConcreteTopic {
   evidenceNote: string;
   referenceUrl?: string;
   platform?: "tiktok" | "youtube" | "google" | "facebook";
+  dualVideoEvidence?: {
+    youtube: {
+      thumbnailUrl: string;
+      videoUrl: string;
+      title: string;
+      author: string;
+      metrics: string;
+      alt?: string | undefined;
+    };
+    tiktok: {
+      thumbnailUrl: string;
+      videoUrl: string;
+      title: string;
+      author: string;
+      metrics: string;
+      alt?: string | undefined;
+    };
+  } | undefined;
 }
 
 export interface ProductContentReadiness {

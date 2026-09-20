@@ -7,6 +7,7 @@ import { analyzeProductIntelligence } from "@/modules/market-intelligence/use-ca
 const productIntelligenceSchema = z.object({
   product_name: z.string().optional(),
   image_url: z.string().optional(),
+  asset_id: z.string().optional(),
   components: z.array(z.any()).optional(),
   attributes: z.any().optional(),
   packaging: z.any().optional(),
@@ -23,11 +24,13 @@ export const POST = handle(async (request) => {
 
   const productName = parsed.success && parsed.data.product_name ? parsed.data.product_name : "Bó hoa tươi phong cách lãng mạn";
   const imageUrl = parsed.success && parsed.data.image_url ? parsed.data.image_url : "/images/sample-flower.jpg";
+  const assetId = parsed.success && parsed.data.asset_id ? parsed.data.asset_id : undefined;
 
   const result = await analyzeProductIntelligence({
     organizationId: ctx.organizationId,
     productName,
     imageUrl,
+    assetId,
     components: parsed.success ? parsed.data.components : undefined,
     attributes: parsed.success ? parsed.data.attributes : undefined,
     packaging: parsed.success ? parsed.data.packaging : undefined,

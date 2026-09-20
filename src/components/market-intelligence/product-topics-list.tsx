@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check, Video, FileText, ExternalLink, Sparkles, MessageSquare } from "lucide-react";
-import type { ConcreteTopic } from "@/modules/market-intelligence/domain/product-intelligence-types";
+import { Copy, Check, Video, FileText, Play, Sparkles, Target, ArrowRight } from "lucide-react";
+import type { ConcreteTopic, TopicAngleCategory } from "@/modules/market-intelligence/domain/product-intelligence-types";
+import { getTopicDualRealVideoEvidence } from "./video-evidence-catalog";
 
 interface ProductTopicsListProps {
   topics: ConcreteTopic[];
+  selectedTopicId?: string | undefined;
+  onSelectTopic?: (topic: ConcreteTopic) => void;
   onOpenVideoStudio?: (topic: ConcreteTopic) => void;
   onOpenMediaStudio?: (topic: ConcreteTopic) => void;
 }
@@ -21,16 +24,35 @@ const ANGLE_LABELS: Record<string, { label: string; colorClass: string }> = {
 
 export function ProductTopicsList({
   topics,
+  selectedTopicId: externalSelectedTopicId,
+  onSelectTopic,
   onOpenVideoStudio,
   onOpenMediaStudio,
 }: ProductTopicsListProps) {
+  const [internalSelectedTopicId, setInternalSelectedTopicId] = useState<string | null>(
+    topics[0]?.id || null
+  );
+  const selectedTopicId = externalSelectedTopicId !== undefined ? externalSelectedTopicId : internalSelectedTopicId;
+
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeAngleFilter, setActiveAngleFilter] = useState<string>("ALL");
 
   const handleCopyHook = (topic: ConcreteTopic) => {
     navigator.clipboard.writeText(`${topic.title}\n\n[Hook]: ${topic.hook}\n[CTA]: ${topic.cta}`);
     setCopiedId(topic.id);
     setTimeout(() => setCopiedId(null), 2500);
   };
+
+  const handleSelect = (topic: ConcreteTopic) => {
+    setInternalSelectedTopicId(topic.id);
+    onSelectTopic?.(topic);
+  };
+
+  const filteredTopics = activeAngleFilter === "ALL"
+    ? topics
+    : topics.filter((t) => t.angleCategory === activeAngleFilter);
+
+  const selectedTopic = topics.find((t) => t.id === selectedTopicId) || topics[0];
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm space-y-4">
@@ -41,34 +63,141 @@ export function ProductTopicsList({
           </span>
           <div>
             <h3 className="text-sm font-bold text-stone-900">
-              5. Top 10 chủ đề nội dung tiếp thị cụ thể
+              4. Khám phá 10 Chủ đề Tiếp thị & Chọn định hướng chiến dịch (Chặng 04 & 05)
             </h3>
             <p className="text-[11.5px] text-stone-500">
-              Mỗi chủ đề đều có góc tiếp cận, câu mở đầu (Hook), định dạng video/ảnh và đường dẫn chứng thực tế
+              Nhấp chọn 1 chủ đề tâm đắc nhất bên dưới để làm định hướng sản xuất video hoặc ảnh marketing
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-        {topics.map((topic, index) => {
-          const angle = ANGLE_LABELS[topic.angleCategory] || { label: topic.angleCategory, colorClass: "bg-stone-100 text-stone-700 border-stone-200" };
+      {/* Filter by Angles */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+        <button
+          type="button"
+          onClick={() => setActiveAngleFilter("ALL")}
+          className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap ${
+            activeAngleFilter === "ALL"
+              ? "bg-rose-600 text-white shadow-xs"
+              : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+          }`}
+        >
+          Tất cả ({topics.length})
+        </button>
+        {Object.entries(ANGLE_LABELS).map(([key, item]) => {
+          const count = topics.filter((t) => t.angleCategory === key).length;
+          if (count === 0) return null;
+          const isActive = activeAngleFilter === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveAngleFilter(key)}
+              className={`px-2.5 py-1 rounded-xl font-bold transition whitespace-nowrap border ${
+                isActive
+                  ? "bg-stone-900 text-white border-stone-900 shadow-xs"
+                  : "bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
+              }`}
+            >
+              {item.label} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Selected Topic Highlight Banner */}
+      {selectedTopic && (
+        <div className="rounded-xl border-2 border-rose-500 bg-rose-50/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="space-y-0.5">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold uppercase tracking-wider">
+              <Check size={11} /> Định hướng đang được chọn
+            </span>
+            <p className="text-xs sm:text-sm font-bold text-stone-900 line-clamp-1">
+              {selectedTopic.title}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {onOpenVideoStudio && (
+              <button
+                type="button"
+                onClick={() => onOpenVideoStudio(selectedTopic)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition"
+              >
+                <Video size={13} />
+                Dựng video với chủ đề này
+              </button>
+            )}
+            {onOpenMediaStudio && (
+              <button
+                type="button"
+                onClick={() => onOpenMediaStudio(selectedTopic)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 text-xs font-bold transition"
+              >
+                <FileText size={13} />
+                Tạo ảnh biến thể
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Grid of Topics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {filteredTopics.map((topic, index) => {
+          const angle = ANGLE_LABELS[topic.angleCategory] || {
+            label: topic.angleCategory,
+            colorClass: "bg-stone-100 text-stone-700 border-stone-200",
+          };
           const isCopied = copiedId === topic.id;
+          const isSelected = selectedTopicId === topic.id;
+
+          const dualEvidence = topic.dualVideoEvidence || getTopicDualRealVideoEvidence(topic.title);
+          const { tiktok, youtube } = dualEvidence;
 
           return (
             <div
               key={topic.id}
-              className="rounded-xl border border-stone-200/80 bg-stone-50/30 hover:bg-white hover:border-rose-200 hover:shadow-sm p-4 space-y-3 transition flex flex-col justify-between"
+              onClick={() => handleSelect(topic)}
+              className={`rounded-xl border p-4 space-y-3.5 transition flex flex-col justify-between cursor-pointer ${
+                isSelected
+                  ? "border-2 border-rose-500 bg-white shadow-md ring-2 ring-rose-500/10"
+                  : "border-stone-200/80 bg-stone-50/30 hover:bg-white hover:border-rose-300 hover:shadow-xs"
+              }`}
             >
-              <div className="space-y-2">
-                {/* Header Tag & Format */}
+              <div className="space-y-2.5">
+                {/* Header Tag, Format & Select Radio */}
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${angle.colorClass}`}>
-                    #{index + 1} · {angle.label}
-                  </span>
-                  <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
-                    {topic.format === "REELS_TIKTOK_9_16" ? "Video Dọc 9:16" : "Ảnh Vuông 1:1"}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${angle.colorClass}`}>
+                      #{index + 1} · {angle.label}
+                    </span>
+                    <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+                      {topic.format === "REELS_TIKTOK_9_16" ? "Video 9:16" : "Ảnh 1:1"}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelect(topic);
+                    }}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold transition ${
+                      isSelected
+                        ? "bg-rose-600 text-white"
+                        : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                    }`}
+                  >
+                    {isSelected ? (
+                      <>
+                        <Check size={11} /> Đang chọn
+                      </>
+                    ) : (
+                      "Chọn chủ đề này"
+                    )}
+                  </button>
                 </div>
 
                 {/* Title */}
@@ -76,8 +205,8 @@ export function ProductTopicsList({
                   {topic.title}
                 </h4>
 
-                {/* Hook */}
-                <div className="bg-white/80 border border-stone-200/60 rounded-lg p-2.5 text-xs text-stone-700">
+                {/* Hook Box */}
+                <div className="bg-white/90 border border-stone-200/70 rounded-lg p-2.5 text-xs text-stone-700">
                   <span className="text-[10.5px] font-bold text-rose-700 block mb-0.5">
                     Câu giật tít mở đầu (Hook):
                   </span>
@@ -86,19 +215,75 @@ export function ProductTopicsList({
                   </p>
                 </div>
 
-                {/* Evidence Note & Link */}
-                <div className="flex items-center justify-between text-[11px] text-stone-500 pt-1">
-                  <span className="line-clamp-1 italic">📊 {topic.evidenceNote}</span>
-                  {topic.referenceUrl && (
-                    <a
-                      href={topic.referenceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-rose-600 hover:text-rose-700 font-semibold shrink-0 ml-2"
+                {/* Dẫn chứng Video Kép (Dual Video Evidence) */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10.5px] font-bold text-stone-600 block">
+                    Dẫn chứng Video Kép thực tế (TikTok & YouTube):
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Thumbnail TikTok (9:16 dọc) */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(tiktok.videoUrl, "_blank");
+                      }}
+                      className="group/tt relative rounded-lg overflow-hidden border border-stone-200 bg-black cursor-pointer hover:border-cyan-400 transition flex flex-col"
                     >
-                      Mẫu thực tế <ExternalLink size={11} />
-                    </a>
-                  )}
+                      <div className="relative aspect-[9/14] w-full overflow-hidden">
+                        <img
+                          src={tiktok.thumbnailUrl}
+                          alt={tiktok.alt || tiktok.title}
+                          className="h-full w-full object-cover group-hover/tt:scale-105 transition duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/30 group-hover/tt:bg-black/10 transition flex items-center justify-center">
+                          <span className="h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center group-hover/tt:scale-110 transition">
+                            <Play size={10} fill="white" className="ml-0.5" />
+                          </span>
+                        </div>
+                        <span className="absolute top-1.5 left-1.5 inline-flex items-center px-1.5 py-0.2 rounded bg-black/80 text-[#00f2fe] text-[9px] font-extrabold tracking-wider">
+                          TikTok
+                        </span>
+                      </div>
+                      <div className="p-1.5 bg-stone-900/90 text-white text-[10px]">
+                        <p className="font-bold truncate">{tiktok.author}</p>
+                        <p className="text-[9px] text-stone-300 truncate">{tiktok.metrics}</p>
+                      </div>
+                    </div>
+
+                    {/* Thumbnail YouTube (16:9 ngang) */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(youtube.videoUrl, "_blank");
+                      }}
+                      className="group/yt relative rounded-lg overflow-hidden border border-stone-200 bg-black cursor-pointer hover:border-red-500 transition flex flex-col justify-between"
+                    >
+                      <div className="relative aspect-[16/10] w-full overflow-hidden">
+                        <img
+                          src={youtube.thumbnailUrl}
+                          alt={youtube.alt || youtube.title}
+                          className="h-full w-full object-cover group-hover/yt:scale-105 transition duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/30 group-hover/yt:bg-black/10 transition flex items-center justify-center">
+                          <span className="h-6 w-6 rounded-full bg-red-600/90 text-white flex items-center justify-center group-hover/yt:scale-110 transition">
+                            <Play size={10} fill="white" className="ml-0.5" />
+                          </span>
+                        </div>
+                        <span className="absolute top-1.5 left-1.5 inline-flex items-center px-1.5 py-0.2 rounded bg-red-600 text-white text-[9px] font-extrabold tracking-wider">
+                          YouTube
+                        </span>
+                      </div>
+                      <div className="p-1.5 bg-stone-900/90 text-white text-[10px] flex-1 flex flex-col justify-end">
+                        <p className="font-bold truncate">{youtube.author}</p>
+                        <p className="text-[9px] text-stone-300 truncate">{youtube.metrics}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Evidence Note */}
+                <div className="flex items-center justify-between text-[11px] text-stone-500 pt-0.5">
+                  <span className="line-clamp-1 italic text-[10.5px]">📊 {topic.evidenceNote}</span>
                 </div>
               </div>
 
@@ -106,7 +291,10 @@ export function ProductTopicsList({
               <div className="flex items-center justify-between pt-3 border-t border-stone-200/60 gap-2">
                 <button
                   type="button"
-                  onClick={() => handleCopyHook(topic)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyHook(topic);
+                  }}
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-[11px] font-semibold text-stone-700 transition"
                 >
                   {isCopied ? (
@@ -126,8 +314,11 @@ export function ProductTopicsList({
                   {onOpenVideoStudio && (
                     <button
                       type="button"
-                      onClick={() => onOpenVideoStudio(topic)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenVideoStudio(topic);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold shadow-xs transition"
                     >
                       <Video size={12} />
                       Dựng video
@@ -136,8 +327,11 @@ export function ProductTopicsList({
                   {onOpenMediaStudio && (
                     <button
                       type="button"
-                      onClick={() => onOpenMediaStudio(topic)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-[11px] font-bold transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenMediaStudio(topic);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-[11px] font-bold transition"
                     >
                       <FileText size={12} />
                       Tạo ảnh

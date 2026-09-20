@@ -227,6 +227,33 @@ export class MarketIntelligenceRepository {
       },
     })
   }
+
+  async findProductAnalysis(organizationId: string, assetId: string) {
+    return this.db.product_analyses.findFirst({
+      where: {
+        organization_id: organizationId,
+        asset_id: assetId,
+      },
+      orderBy: { created_at: "desc" },
+    })
+  }
+
+  async findTenantOpportunities(organizationId: string, limit = 10) {
+    return this.db.content_opportunities.findMany({
+      where: { organization_id: organizationId },
+      take: limit,
+      orderBy: { content_opportunity_score: "desc" },
+      include: { topic: true },
+    })
+  }
+
+  async findTopTopics(limit = 10) {
+    return this.db.topics.findMany({
+      take: limit,
+      orderBy: { last_seen_at: "desc" },
+      include: { scores: { take: 1, orderBy: { calculated_at: "desc" } } },
+    })
+  }
 }
 
 export const marketIntelligenceRepo = new MarketIntelligenceRepository()
