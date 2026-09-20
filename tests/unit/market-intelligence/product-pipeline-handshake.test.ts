@@ -6,18 +6,68 @@ import { analyzeProductIntelligence } from "@/modules/market-intelligence/use-ca
 describe("FloraOS Product Intelligence Pipeline Handshake (Output N -> Perfect Input N+1)", () => {
   const organizationId = "org_test_florist_01";
 
-  it("chạy mượt mà chuỗi khép kín 5 bước từ Ảnh -> Vision AI -> Query Synthesizer -> Trend Fit -> 10 Topics", async () => {
-    // BƯỚC 1 & 2: Vision AI trích xuất thuộc tính cấu trúc nguyên tử
-    const visionOutput = await analyzeProductVision({
-      organizationId,
-      productTitle: "Bó hoa tulip tone cam cháy vintage",
-      imageUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9",
-    });
+  it("analyzeProductVision ném lỗi rõ ràng khi Vision AI không khả dụng (không fallback cứng)", async () => {
+    // Khi không có DB analysis và OpenAI Vision không khả dụng,
+    // hàm PHẢI throw thay vì trả dữ liệu giả "Hoa hồng kem dâu"
+    await expect(
+      analyzeProductVision({
+        organizationId,
+        productTitle: "Bó hoa tulip tone cam cháy vintage",
+        imageUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9",
+      })
+    ).rejects.toThrow("[analyzeProductVision]");
+  });
 
-    expect(visionOutput.components.length).toBeGreaterThanOrEqual(1);
-    expect(visionOutput.components[0]?.flowerType).toContain("tulip");
-    expect(visionOutput.attributes.mainColors).toContain("Cam cháy");
-    expect(visionOutput.context.suggestedPrice).toBeGreaterThan(0);
+  it("analyzeProductVision ném lỗi cho mẫu mẫu đơn khi Vision AI không khả dụng", async () => {
+    await expect(
+      analyzeProductVision({
+        organizationId,
+        productTitle: "Giỏ hoa mẫu đơn sang trọng chúc mừng khai trương",
+        imageUrl: "/images/peony-basket.jpg",
+      })
+    ).rejects.toThrow("[analyzeProductVision]");
+  });
+
+  it("analyzeProductVision ném lỗi cho mẫu hồng đỏ khi Vision AI không khả dụng", async () => {
+    await expect(
+      analyzeProductVision({
+        organizationId,
+        productTitle: "Bó hoa hồng đỏ giấy gói trắng nơ xanh rêu",
+        imageUrl: "/images/red-roses-bouquet.jpg",
+      })
+    ).rejects.toThrow("[analyzeProductVision]");
+  });
+
+  it("pipeline chạy mượt mà khi Vision AI trả dữ liệu thật (không dựa fallback)", async () => {
+    // Giả lập dữ liệu Vision AI thật — đây là output thật từ OpenAI Vision
+    const visionOutput = {
+      productName: "Bó hoa tulip tone cam cháy vintage",
+      imageUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9",
+      components: [
+        { flowerType: "Hoa tulip Hà Lan cam", quantityEstimate: 10, unit: "cành" as const, role: "dominant" as const },
+        { flowerType: "Hoa thanh liễu trắng", quantityEstimate: 4, unit: "nhánh" as const, role: "supporting" as const },
+        { flowerType: "Lá chanh nhập khẩu", quantityEstimate: 3, unit: "cành" as const, role: "foliage" as const },
+      ],
+      attributes: {
+        mainColors: ["Cam cháy", "Vàng pastel"],
+        secondaryColors: ["Xanh lá olive"],
+        style: "Vintage Cổ điển (Tone ấm)",
+        shape: "Bó dáng dài tự nhiên",
+        sizeEstimate: "Tiêu chuẩn (M)",
+      },
+      packaging: {
+        wrappingMaterial: "Giấy xi măng Kraft vintage",
+        wrappingColor: "Nâu mộc & Cam nhạt",
+        ribbon: "Dây thừng gai mộc",
+        accessories: ["Thiệp kraft viết tay"],
+      },
+      context: {
+        likelyOccasions: ["Kỷ niệm ngày cưới", "Sinh nhật bạn thân", "Chúc mừng tốt nghiệp"],
+        likelyAudience: "Người yêu thích phong cách Vintage, Nghệ thuật",
+        suggestedPrice: 650000,
+        confidence: 0.92,
+      },
+    };
 
     // MẮC XÍCH ĐỒNG BỘ: Chuyển Vision Output thành bộ từ khóa nghiên cứu sát sườn
     const synthesized = synthesizeProductResearchQueries({
@@ -32,7 +82,7 @@ describe("FloraOS Product Intelligence Pipeline Handshake (Output N -> Perfect I
     expect(synthesized.primaryKeywords.length).toBeGreaterThanOrEqual(2);
     expect(synthesized.primaryKeywords.some((k) => k.includes("tulip"))).toBe(true);
 
-    // BƯỚC 3 & 4: Đối soát thị trường và sinh Báo cáo Product Intelligence
+    // Đối soát thị trường và sinh Báo cáo Product Intelligence
     const report = await analyzeProductIntelligence({
       organizationId,
       productName: visionOutput.productName,
@@ -48,7 +98,7 @@ describe("FloraOS Product Intelligence Pipeline Handshake (Output N -> Perfect I
     expect(report.trendFitScore).toBeGreaterThanOrEqual(50);
     expect(report.topics).toHaveLength(10);
 
-    // BƯỚC 5: Kiểm tra tiêu chuẩn Dẫn chứng Video Kép (Dual Video Evidence) trên các chủ đề
+    // Kiểm tra tiêu chuẩn Dẫn chứng Video Kép (Dual Video Evidence) trên các chủ đề
     const firstTopic = report.topics[0]!;
     expect(firstTopic.dualVideoEvidence).toBeDefined();
     expect(firstTopic.dualVideoEvidence?.tiktok).toBeDefined();
@@ -60,54 +110,26 @@ describe("FloraOS Product Intelligence Pipeline Handshake (Output N -> Perfect I
     expect(firstTopic.dualVideoEvidence?.youtube.thumbnailUrl).toBeDefined();
   });
 
-  it("xử lý an toàn khi phân tích mẫu hoa mẫu đơn cao cấp", async () => {
-    const visionOutput = await analyzeProductVision({
-      organizationId,
-      productTitle: "Giỏ hoa mẫu đơn sang trọng chúc mừng khai trương",
-      imageUrl: "/images/peony-basket.jpg",
-    });
+  it("analyzeProductIntelligence ném lỗi khi thiếu dữ liệu Vision AI bắt buộc", async () => {
+    // Thiếu components → throw
+    await expect(
+      analyzeProductIntelligence({
+        organizationId,
+        productName: "Test",
+        imageUrl: "/test.jpg",
+        components: [],
+      })
+    ).rejects.toThrow("Thiếu components");
 
-    expect(visionOutput.components[0]?.flowerType).toContain("mẫu đơn");
-    expect(visionOutput.attributes.style).toContain("Sang trọng");
-    expect(visionOutput.context.likelyOccasions).toContain("Chúc mừng khai trương");
-
-    const report = await analyzeProductIntelligence({
-      organizationId,
-      productName: visionOutput.productName,
-      imageUrl: visionOutput.imageUrl,
-      components: visionOutput.components,
-      attributes: visionOutput.attributes,
-      packaging: visionOutput.packaging,
-      context: visionOutput.context,
-    });
-
-    expect(report.overallFit).toBeDefined();
-    expect(report.topics.length).toBe(10);
-    // Topic về khai trương có dẫn chứng video liên quan
-    const grandOpeningTopic = report.topics.find((t) => t.title.toLowerCase().includes("khai trương") || t.title.toLowerCase().includes("mẫu đơn"));
-    expect(grandOpeningTopic?.dualVideoEvidence?.youtube.title).toBeDefined();
-  });
-
-  it("phân tích chính xác mẫu bó hoa hồng đỏ không bị rơi vào fallback kem dâu mặc định", async () => {
-    const visionOutput = await analyzeProductVision({
-      organizationId,
-      productTitle: "Bó hoa hồng đỏ giấy gói trắng nơ xanh rêu",
-      imageUrl: "/images/red-roses-bouquet.jpg",
-    });
-
-    expect(visionOutput.components[0]?.flowerType).toContain("hồng đỏ");
-    expect(visionOutput.attributes.mainColors).toContain("Đỏ nhung");
-    expect(visionOutput.packaging.wrappingColor).toContain("Trắng");
-    expect(visionOutput.packaging.ribbon).toContain("xanh rêu");
-
-    const synthesized = synthesizeProductResearchQueries({
-      productName: visionOutput.productName,
-      components: visionOutput.components,
-      attributes: visionOutput.attributes,
-      packaging: visionOutput.packaging,
-      context: visionOutput.context,
-    });
-
-    expect(synthesized.primaryKeywords.some((k) => k.includes("hồng đỏ"))).toBe(true);
+    // Thiếu attributes → throw
+    await expect(
+      analyzeProductIntelligence({
+        organizationId,
+        productName: "Test",
+        imageUrl: "/test.jpg",
+        components: [{ flowerType: "Hoa hồng", quantityEstimate: 10, unit: "cành", role: "dominant" }],
+        attributes: undefined,
+      })
+    ).rejects.toThrow("Thiếu attributes");
   });
 });

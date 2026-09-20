@@ -1,6 +1,15 @@
 /**
- * Danh mục & tiện ích trích xuất dẫn chứng video thật từ YouTube & TikTok cho Market Intelligence.
+ * CURATED REFERENCE CATALOG — Danh mục dẫn chứng video YouTube & TikTok cho Market Intelligence.
  * Domain Layer — Pure TypeScript, Zero dependencies.
+ *
+ * LƯU Ý: Đây là danh mục tham khảo được tuyển chọn thủ công (curated catalog):
+ * - YouTube Video IDs: THẬT (có thể xem được trên YouTube)
+ * - Thumbnail URLs: THẬT (lấy từ YouTube CDN i.ytimg.com)
+ * - Metrics (lượt xem, tim): ƯỚC TÍNH THAM KHẢO, không phải real-time API data
+ * - TikTok URLs: Dẫn đến trang tìm kiếm TikTok (không phải video cụ thể)
+ *
+ * Catalog này được sử dụng làm fallback khi SerpApi chưa trả evidence snippets thật.
+ * Theo AGENTS.md "Dẫn chứng Video Kép" — quản lý tập trung tại file này (SSOT).
  */
 
 export interface EvidenceItemLike {
@@ -51,7 +60,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "7 ngày trước • 3.8k xem",
         videoUrl: "https://www.youtube.com/watch?v=KgeeHEXbviw",
         title: "Mẫu HOA KHAI TRƯƠNG chúc mừng siêu hot",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
       tiktok: {
         thumbnailUrl: "https://i.ytimg.com/vi/F8We57dk2w4/hqdefault.jpg",
@@ -61,7 +70,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "34.2k tim",
         videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("hoa khai trương")}`,
         title: "Kệ hoa khai trương tài lộc siêu hot",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
     };
   }
@@ -76,7 +85,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "Đăng tuần này • 26.8k xem",
         videoUrl: "https://www.youtube.com/watch?v=9ASivWLdJwQ",
         title: "Cách Cắm Giỏ Hoa Cơ Bản | Hoa Tươi Tường An",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
       tiktok: {
         thumbnailUrl: "https://i.ytimg.com/vi/ynv1P2MbvCU/hqdefault.jpg",
@@ -86,7 +95,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "18.5k tim",
         videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("giỏ hoa tặng mẹ")}`,
         title: "Làm bó hoa tặng mẹ 20/10 siêu dễ",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
     };
   }
@@ -101,7 +110,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "2 tuần trước • 33.2k xem",
         videoUrl: "https://www.youtube.com/watch?v=Bvrqv7Kt-qk",
         title: "Cách Làm Bó Hoa Cưới Cầm Tay Cô Dâu",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
       tiktok: {
         thumbnailUrl: "https://i.ytimg.com/vi/CoJl-6rDG7k/hqdefault.jpg",
@@ -111,7 +120,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "42.6k tim",
         videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("hoa cưới cầm tay cô dâu")}`,
         title: "Hướng dẫn bó hoa cưới đẹp Queen Flowers",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
     };
   }
@@ -126,7 +135,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "Tháng này • 12.0k xem",
         videoUrl: "https://www.youtube.com/watch?v=uejjfAHID84",
         title: "Hướng dẫn cắm hoa tặng sinh nhật tông nữ",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
       tiktok: {
         thumbnailUrl: "https://i.ytimg.com/vi/ccGyza0qu5I/hqdefault.jpg",
@@ -136,7 +145,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "28.9k tim",
         videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("hoa sinh nhật")}`,
         title: "Mẫu giỏ hoa tặng sinh nhật đẹp & ngọt ngào",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
     };
   }
@@ -151,7 +160,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "Tháng này • 3.0k xem",
         videoUrl: "https://www.youtube.com/watch?v=WtQJpTDFiHw",
         title: "Cách giữ hoa tulip tươi lâu & thẳng",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
       tiktok: {
         thumbnailUrl: "https://i.ytimg.com/vi/osHb-fN2cPI/hqdefault.jpg",
@@ -161,7 +170,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "15.1k tim",
         videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("hoa tulip")}`,
         title: "Bó hoa tulip mix baby siêu xinh",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
     };
   }
@@ -176,7 +185,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "Tuần này • 18.4k xem",
         videoUrl: "https://www.youtube.com/watch?v=LqOfQsPjoFw",
         title: "Bó hoa kèm gấu bông thịnh hành",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
       tiktok: {
         thumbnailUrl: "https://i.ytimg.com/vi/4hieFiqMrNg/hqdefault.jpg",
@@ -186,7 +195,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "31.7k tim",
         videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("bó hoa gấu bông")}`,
         title: "Bó hoa gấu bông tốt nghiệp thịnh hành",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
     };
   }
@@ -201,7 +210,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "Tuần này • 21.5k xem",
         videoUrl: "https://www.youtube.com/watch?v=Bvrqv7Kt-qk",
         title: "BST Bó hoa hồng tình yêu lãng mạn",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
       tiktok: {
         thumbnailUrl: "https://i.ytimg.com/vi/ynv1P2MbvCU/hqdefault.jpg",
@@ -211,7 +220,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
         metrics: "94.6k tim",
         videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("bó hoa hồng")}`,
         title: "Bó hoa hồng đỏ lãng mạn triệu view",
-        isLiveEvidence: true,
+        isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
       },
     };
   }
@@ -225,7 +234,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
       metrics: "Tháng này • 12.4k xem",
       videoUrl: "https://www.youtube.com/watch?v=LqOfQsPjoFw",
       title: "Các Loại Cốt Cắm Bó Hoa Tươi & Mẫu Thực Tế",
-      isLiveEvidence: true,
+      isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
     },
     tiktok: {
       thumbnailUrl: "https://i.ytimg.com/vi/75BUCNZjCYQ/hqdefault.jpg",
@@ -235,7 +244,7 @@ export function getTopicDualRealVideoEvidence(topicName: string): { youtube: Vid
       metrics: "56.3k tim",
       videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent(topicName + " hoa tươi")}`,
       title: "Cách cắm hoa tươi lâu & mẹo giữ form",
-      isLiveEvidence: true,
+      isLiveEvidence: false, // Curated catalog — metrics là ước tính, không phải real-time
     },
   };
 }

@@ -103,10 +103,9 @@ function mapAnalysisToProductIntelligence(
   });
 
   if (components.length === 0) {
-    components.push(
-      { flowerType: "Hoa hồng kem dâu", quantityEstimate: 12, unit: "cành", role: "dominant" },
-      { flowerType: "Hoa baby trắng", quantityEstimate: 5, unit: "nhánh", role: "supporting" },
-      { flowerType: "Lá bạc Eucalyptus", quantityEstimate: 3, unit: "cành", role: "foliage" }
+    throw new Error(
+      "[analyzeProductVision] Vision data trong DB trống — không chứa thành phần hoa (flowers/foliage). " +
+      "Không thể tạo Product Intelligence report mà không có dữ liệu bóc tách thật."
     );
   }
 
@@ -147,144 +146,21 @@ function mapAnalysisToProductIntelligence(
   };
 }
 
+/**
+ * Fallback cuối cùng khi cả DB lẫn OpenAI Vision đều không trả được dữ liệu.
+ * Throw error rõ ràng — không bịa dữ liệu cứng để đảm bảo người dùng nhận biết
+ * Vision AI thất bại, tuân thủ nguyên tắc "không bịa số".
+ */
 function extractFloralAttributes(
-  imageUrl: string,
+  _imageUrl: string,
   title: string,
-  assetId?: string
-): AnalyzeProductVisionOutput {
-  const lower = title.toLowerCase();
-
-  if (lower.includes("tulip")) {
-    return {
-      productName: title,
-      imageUrl,
-      assetId,
-      components: [
-        { flowerType: "Hoa tulip Hà Lan", quantityEstimate: 10, unit: "cành", role: "dominant" },
-        { flowerType: "Hoa thanh liễu trắng", quantityEstimate: 4, unit: "nhánh", role: "supporting" },
-        { flowerType: "Lá chanh nhập khẩu", quantityEstimate: 3, unit: "cành", role: "foliage" },
-      ],
-      attributes: {
-        mainColors: ["Cam cháy", "Vàng pastel"],
-        secondaryColors: ["Xanh lá olive"],
-        style: "Vintage Cổ điển (Tone ấm)",
-        shape: "Bó dáng dài tự nhiên",
-        sizeEstimate: "Tiêu chuẩn (M)",
-      },
-      packaging: {
-        wrappingMaterial: "Giấy xi măng Kraft vintage",
-        wrappingColor: "Nâu mộc & Cam nhạt",
-        ribbon: "Dây thừng gai mộc",
-        accessories: ["Thiệp kraft viết tay"],
-      },
-      context: {
-        likelyOccasions: ["Kỷ niệm ngày cưới", "Sinh nhật bạn thân", "Chúc mừng tốt nghiệp"],
-        likelyAudience: "Người yêu thích phong cách Vintage, Nghệ thuật",
-        suggestedPrice: 650000,
-        confidence: 0.92,
-      },
-    };
-  }
-
-  if (lower.includes("mẫu đơn") || lower.includes("peony")) {
-    return {
-      productName: title,
-      imageUrl,
-      assetId,
-      components: [
-        { flowerType: "Hoa mẫu đơn hồng nhập khẩu", quantityEstimate: 5, unit: "bông", role: "dominant" },
-        { flowerType: "Cúc mẫu đơn trắng", quantityEstimate: 3, unit: "bông", role: "supporting" },
-        { flowerType: "Lá đuôi chồn", quantityEstimate: 4, unit: "cành", role: "foliage" },
-      ],
-      attributes: {
-        mainColors: ["Hồng phấn Luxury", "Trắng ngà"],
-        secondaryColors: ["Xanh ngọc"],
-        style: "Sang trọng & Quý phái (Luxury)",
-        shape: "Giỏ hoa tròn bồng bềnh",
-        sizeEstimate: "Cao cấp (L)",
-      },
-      packaging: {
-        wrappingMaterial: "Giỏ cói cao cấp phối lụa",
-        wrappingColor: "Trắng ngà & Vàng gold",
-        ribbon: "Ruy băng lụa Satin cao cấp",
-        accessories: ["Bảng chữ mica chúc mừng", "Thiệp mạ kim"],
-      },
-      context: {
-        likelyOccasions: ["Chúc mừng khai trương", "Tặng sếp / đối tác", "Sinh nhật người lớn tuổi"],
-        likelyAudience: "Khách hàng doanh nghiệp, phân khúc trung & cao cấp",
-        suggestedPrice: 1250000,
-        confidence: 0.96,
-      },
-    };
-  }
-
-  if (
-    lower.includes("đỏ") ||
-    lower.includes("red") ||
-    lower.includes("passion") ||
-    lower.includes("nhung") ||
-    lower.includes("rose") ||
-    lower.includes("hồng") && !lower.includes("pastel") && !lower.includes("kem dâu")
-  ) {
-    return {
-      productName: title.includes("đỏ") || title.includes("Red") ? title : "Bó hoa hồng đỏ Passionate Romance",
-      imageUrl,
-      assetId,
-      components: [
-        { flowerType: "Hoa hồng đỏ Ohara / Ecuador", quantityEstimate: 18, unit: "cành", role: "dominant" },
-        { flowerType: "Hoa baby trắng đệm viền", quantityEstimate: 6, unit: "nhánh", role: "supporting" },
-        { flowerType: "Lá bạc Eucalyptus nhập khẩu", quantityEstimate: 4, unit: "cành", role: "foliage" },
-      ],
-      attributes: {
-        mainColors: ["Đỏ nhung", "Trắng kem"],
-        secondaryColors: ["Xanh rêu", "Xanh lá đậm"],
-        style: "Classic Romantic & Sang trọng",
-        shape: "Bó tròn nở rộ (Round Bouquet)",
-        sizeEstimate: "Cao cấp (L)",
-      },
-      packaging: {
-        wrappingMaterial: "Giấy lụa chống nước gấp nếp đa tầng",
-        wrappingColor: "Trắng tuyết & Trắng kem",
-        ribbon: "Ruy băng voan thắt nơ màu xanh rêu",
-        accessories: ["Thiệp chúc mừng lãng mạn thiết kế"],
-      },
-      context: {
-        likelyOccasions: ["Tỏ tình lãng mạn", "Kỷ niệm ngày yêu / ngày cưới", "Valentine / 20-10", "Sinh nhật người yêu"],
-        likelyAudience: "Nam giới 20–40 tuổi mua tặng bạn gái / vợ",
-        suggestedPrice: 799000,
-        confidence: 0.96,
-      },
-    };
-  }
-
-  // Mặc định: Bó hoa hồng pastel phong cách Hàn Quốc
-  return {
-    productName: title,
-    imageUrl,
-    assetId,
-    components: [
-      { flowerType: "Hoa hồng kem dâu", quantityEstimate: 12, unit: "cành", role: "dominant" },
-      { flowerType: "Hoa baby trắng", quantityEstimate: 5, unit: "nhánh", role: "supporting" },
-      { flowerType: "Lá bạc Eucalyptus", quantityEstimate: 3, unit: "cành", role: "foliage" },
-    ],
-    attributes: {
-      mainColors: ["Pastel hồng", "Trắng kem"],
-      secondaryColors: ["Xanh bạc lá cây"],
-      style: "Romantic & Tinh tế (Hàn Quốc)",
-      shape: "Bó tròn tự nhiên",
-      sizeEstimate: "Tiêu chuẩn (M)",
-    },
-    packaging: {
-      wrappingMaterial: "Giấy lụa mờ Kraft",
-      wrappingColor: "Hồng phấn & Trắng",
-      ribbon: "Ruy băng voan trắng",
-      accessories: ["Thiệp chúc mừng thiết kế"],
-    },
-    context: {
-      likelyOccasions: ["Sinh nhật bạn gái", "Kỷ niệm ngày yêu", "Tỏ tình lãng mạn"],
-      likelyAudience: "Nữ giới 18–35 tuổi hoặc Nam giới mua tặng",
-      suggestedPrice: 599000,
-      confidence: 0.95,
-    },
-  };
+  _assetId?: string
+): never {
+  throw new Error(
+    `[analyzeProductVision] Vision AI extraction thất bại hoàn toàn cho "${title}". ` +
+    "Cả DB analysis lẫn OpenAI Vision đều không trả dữ liệu. " +
+    "Hãy kiểm tra: (1) OPENAI_API_KEY đã cấu hình, (2) imageUrl hợp lệ (không phải blob:), " +
+    "(3) hình ảnh chứa sản phẩm hoa tươi rõ ràng."
+  );
 }
+

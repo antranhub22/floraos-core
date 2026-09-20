@@ -1,4 +1,5 @@
 import { marketIntelligenceRepo } from "../infra/market-intelligence-repository";
+import { getTopicDualRealVideoEvidence } from "../domain/video-evidence-catalog";
 
 export interface ListOpportunitiesParams {
   organizationId: string;
@@ -41,170 +42,12 @@ export interface ListOpportunitiesResult {
   total: number;
 }
 
-interface VideoMetaItem {
-  videoThumb: string;
-  videoUrl: string;
-  videoTitle: string;
-  videoAuthor: string;
-  videoMetrics: string;
-}
-
-function getTopicVideoEvidence(topicName: string): { youtube: VideoMetaItem; tiktok: VideoMetaItem } {
-  const lower = topicName.toLowerCase();
-
-  if (lower.includes("khai trương") || lower.includes("đối tác") || lower.includes("doanh nghiệp")) {
-    return {
-      youtube: {
-        videoThumb: "https://i.ytimg.com/vi/KgeeHEXbviw/hqdefault.jpg",
-        videoUrl: "https://www.youtube.com/watch?v=KgeeHEXbviw",
-        videoTitle: "Mẫu HOA KHAI TRƯƠNG chúc mừng siêu hot",
-        videoAuthor: "Hoatuoi360",
-        videoMetrics: "Đăng 7 ngày trước • 3.8k lượt xem",
-      },
-      tiktok: {
-        videoThumb: "https://i.ytimg.com/vi/F8We57dk2w4/hqdefault.jpg",
-        videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("hoa khai trương")}`,
-        videoTitle: "Kệ hoa khai trương tài lộc siêu hot",
-        videoAuthor: "@hoatuoituongan",
-        videoMetrics: "34.2k tim • TikTok",
-      },
-    };
-  }
-
-  if (lower.includes("mẹ") || lower.includes("tặng mẹ")) {
-    return {
-      youtube: {
-        videoThumb: "https://i.ytimg.com/vi/9ASivWLdJwQ/hqdefault.jpg",
-        videoUrl: "https://www.youtube.com/watch?v=9ASivWLdJwQ",
-        videoTitle: "Cách Cắm Giỏ Hoa Cơ Bản | Hoa Tươi Tường An",
-        videoAuthor: "TA Floral Academy",
-        videoMetrics: "Đăng tuần này • 26.8k lượt xem",
-      },
-      tiktok: {
-        videoThumb: "https://i.ytimg.com/vi/ynv1P2MbvCU/hqdefault.jpg",
-        videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("giỏ hoa tặng mẹ")}`,
-        videoTitle: "Làm bó hoa tặng mẹ 20/10 siêu dễ",
-        videoAuthor: "@liamchannel",
-        videoMetrics: "18.5k tim • TikTok",
-      },
-    };
-  }
-
-  if (lower.includes("cưới") || lower.includes("kỷ niệm")) {
-    return {
-      youtube: {
-        videoThumb: "https://i.ytimg.com/vi/Bvrqv7Kt-qk/hqdefault.jpg",
-        videoUrl: "https://www.youtube.com/watch?v=Bvrqv7Kt-qk",
-        videoTitle: "Cách Làm Bó Hoa Cưới Cầm Tay Cô Dâu Đơn Giản",
-        videoAuthor: "Hoa tươi Long Thành",
-        videoMetrics: "Đăng 2 tuần trước • 33.2k lượt xem",
-      },
-      tiktok: {
-        videoThumb: "https://i.ytimg.com/vi/CoJl-6rDG7k/hqdefault.jpg",
-        videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("hoa cưới cầm tay cô dâu")}`,
-        videoTitle: "Hướng dẫn bó hoa cưới đẹp Queen Flowers",
-        videoAuthor: "@queenflowers",
-        videoMetrics: "42.6k tim • TikTok",
-      },
-    };
-  }
-
-  if (lower.includes("sinh nhật")) {
-    return {
-      youtube: {
-        videoThumb: "https://i.ytimg.com/vi/uejjfAHID84/hqdefault.jpg",
-        videoUrl: "https://www.youtube.com/watch?v=uejjfAHID84",
-        videoTitle: "Hướng dẫn cắm hoa tặng sinh nhật tông nữ | Hoa tươi Tường An",
-        videoAuthor: "TA Floral Academy",
-        videoMetrics: "Đăng tháng này • 12.0k lượt xem",
-      },
-      tiktok: {
-        videoThumb: "https://i.ytimg.com/vi/ccGyza0qu5I/hqdefault.jpg",
-        videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("hoa sinh nhật")}`,
-        videoTitle: "Mẫu giỏ hoa tặng sinh nhật đẹp & ngọt ngào",
-        videoAuthor: "@dienhoa360",
-        videoMetrics: "28.9k tim • TikTok",
-      },
-    };
-  }
-
-  if (lower.includes("tulip")) {
-    return {
-      youtube: {
-        videoThumb: "https://i.ytimg.com/vi/WtQJpTDFiHw/hqdefault.jpg",
-        videoUrl: "https://www.youtube.com/watch?v=WtQJpTDFiHw",
-        videoTitle: "Mách Bạn Cách Giữ Cho Hoa Thẳng - Hoa Tulip",
-        videoAuthor: "Dạy Cắm Hoa Hiện Đại",
-        videoMetrics: "Đăng tháng này • 3.0k lượt xem",
-      },
-      tiktok: {
-        videoThumb: "https://i.ytimg.com/vi/osHb-fN2cPI/hqdefault.jpg",
-        videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("hoa tulip")}`,
-        videoTitle: "Bó hoa tulip mix baby siêu xinh",
-        videoAuthor: "@hoatuoitulip",
-        videoMetrics: "15.1k tim • TikTok",
-      },
-    };
-  }
-
-  if (lower.includes("gấu bông")) {
-    return {
-      youtube: {
-        videoThumb: "https://i.ytimg.com/vi/LqOfQsPjoFw/hqdefault.jpg",
-        videoUrl: "https://www.youtube.com/watch?v=LqOfQsPjoFw",
-        videoTitle: "Cách phối bó hoa quà tặng kèm gấu bông",
-        videoAuthor: "Uflory Phụ liệu hoa",
-        videoMetrics: "Đăng tuần này • 18.4k lượt xem",
-      },
-      tiktok: {
-        videoThumb: "https://i.ytimg.com/vi/4hieFiqMrNg/hqdefault.jpg",
-        videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("bó hoa gấu bông")}`,
-        videoTitle: "Bó hoa gấu bông tốt nghiệp & sinh nhật",
-        videoAuthor: "@phulieuhocuon",
-        videoMetrics: "31.7k tim • TikTok",
-      },
-    };
-  }
-
-  if (lower.includes("hồng") || lower.includes("tình yêu")) {
-    return {
-      youtube: {
-        videoThumb: "https://i.ytimg.com/vi/Bvrqv7Kt-qk/hqdefault.jpg",
-        videoUrl: "https://www.youtube.com/watch?v=Bvrqv7Kt-qk",
-        videoTitle: "BST Hoa hồng tình yêu lãng mạn",
-        videoAuthor: "Hoa tươi Long Thành",
-        videoMetrics: "Đăng tuần này • 21.5k lượt xem",
-      },
-      tiktok: {
-        videoThumb: "https://i.ytimg.com/vi/ynv1P2MbvCU/hqdefault.jpg",
-        videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent("bó hoa hồng")}`,
-        videoTitle: "Bó hoa hồng đỏ ecuador tình yêu",
-        videoAuthor: "@tiemhoalovely",
-        videoMetrics: "94.6k tim • TikTok",
-      },
-    };
-  }
-
-  return {
-    youtube: {
-      videoThumb: "https://i.ytimg.com/vi/LqOfQsPjoFw/hqdefault.jpg",
-      videoUrl: "https://www.youtube.com/watch?v=LqOfQsPjoFw",
-      videoTitle: "Các Loại Cốt Cắm Bó Hoa Tươi & Mẫu Thực Tế | UFLORY",
-      videoAuthor: "Uflory Phụ liệu hoa",
-      videoMetrics: "Đăng tháng này • 12.4k lượt xem",
-    },
-    tiktok: {
-      videoThumb: "https://i.ytimg.com/vi/75BUCNZjCYQ/hqdefault.jpg",
-      videoUrl: `https://www.tiktok.com/search?q=${encodeURIComponent(topicName + " hoa tươi")}`,
-      videoTitle: "Cách cắm hoa tươi lâu & mẹo giữ form",
-      videoAuthor: "@hoatuoituongan",
-      videoMetrics: "56.3k tim • TikTok",
-    },
-  };
-}
-
-function resolveEvidenceReferences(angles: any, topicName: string, summary: string): EvidenceReference[] {
-  const meta = getTopicVideoEvidence(topicName);
+/**
+ * Giải quyết danh sách dẫn chứng video cho mỗi cơ hội nội dung.
+ * Dùng SSOT từ `video-evidence-catalog.ts` (Domain Layer) thay vì duplicate hardcoded data.
+ */
+function resolveEvidenceReferences(angles: any, topicName: string, _summary: string): EvidenceReference[] {
+  const catalogEvidence = getTopicDualRealVideoEvidence(topicName);
   let rawRefs: EvidenceReference[] = [];
 
   if (Array.isArray(angles) && angles[0]?.evidenceReferences && Array.isArray(angles[0].evidenceReferences)) {
@@ -214,27 +57,27 @@ function resolveEvidenceReferences(angles: any, topicName: string, summary: stri
   }
 
   if (rawRefs.length > 0) {
-    // Đảm bảo các video references luôn có thumbnail thật, loại bỏ ảnh Unsplash
+    // Đảm bảo các video references luôn có thumbnail thật từ SSOT catalog, loại bỏ ảnh Unsplash
     return rawRefs.map((ref) => {
       const isUnsplash = typeof ref.thumbnailUrl === "string" && ref.thumbnailUrl.includes("unsplash.com");
       if (ref.type === "TIKTOK_REELS" || ref.platform?.toLowerCase().includes("tiktok") || ref.url?.includes("tiktok.com")) {
         return {
           ...ref,
-          title: ref.title || meta.tiktok.videoTitle,
-          url: ref.url || meta.tiktok.videoUrl,
-          thumbnailUrl: (!ref.thumbnailUrl || isUnsplash) ? meta.tiktok.videoThumb : ref.thumbnailUrl,
-          author: ref.author || meta.tiktok.videoAuthor,
-          metrics: ref.metrics || meta.tiktok.videoMetrics,
+          title: ref.title || catalogEvidence.tiktok.title,
+          url: ref.url || catalogEvidence.tiktok.videoUrl,
+          thumbnailUrl: (!ref.thumbnailUrl || isUnsplash) ? catalogEvidence.tiktok.thumbnailUrl : ref.thumbnailUrl,
+          author: ref.author || catalogEvidence.tiktok.author,
+          metrics: ref.metrics || catalogEvidence.tiktok.metrics,
         };
       }
       if (ref.type === "YOUTUBE" || ref.platform?.toLowerCase().includes("youtube") || ref.url?.includes("youtube.com")) {
         return {
           ...ref,
-          title: ref.title || meta.youtube.videoTitle,
-          url: ref.url || meta.youtube.videoUrl,
-          thumbnailUrl: (!ref.thumbnailUrl || isUnsplash) ? meta.youtube.videoThumb : ref.thumbnailUrl,
-          author: ref.author || meta.youtube.videoAuthor,
-          metrics: ref.metrics || meta.youtube.videoMetrics,
+          title: ref.title || catalogEvidence.youtube.title,
+          url: ref.url || catalogEvidence.youtube.videoUrl,
+          thumbnailUrl: (!ref.thumbnailUrl || isUnsplash) ? catalogEvidence.youtube.thumbnailUrl : ref.thumbnailUrl,
+          author: ref.author || catalogEvidence.youtube.author,
+          metrics: ref.metrics || catalogEvidence.youtube.metrics,
         };
       }
       return ref;
@@ -246,23 +89,23 @@ function resolveEvidenceReferences(angles: any, topicName: string, summary: stri
 
   return [
     {
-      title: meta.tiktok.videoTitle,
+      title: catalogEvidence.tiktok.title,
       type: "TIKTOK_REELS",
       platform: "TikTok / Reels",
-      url: meta.tiktok.videoUrl,
-      thumbnailUrl: meta.tiktok.videoThumb,
-      author: meta.tiktok.videoAuthor,
-      metrics: meta.tiktok.videoMetrics,
+      url: catalogEvidence.tiktok.videoUrl,
+      thumbnailUrl: catalogEvidence.tiktok.thumbnailUrl,
+      author: catalogEvidence.tiktok.author,
+      metrics: catalogEvidence.tiktok.metrics,
       engagementNote: "Tham khảo mẫu video clip & cách phối hoa triệu view",
     },
     {
-      title: meta.youtube.videoTitle,
+      title: catalogEvidence.youtube.title,
       type: "YOUTUBE",
       platform: "YouTube",
-      url: meta.youtube.videoUrl,
-      thumbnailUrl: meta.youtube.videoThumb,
-      author: meta.youtube.videoAuthor,
-      metrics: meta.youtube.videoMetrics,
+      url: catalogEvidence.youtube.videoUrl,
+      thumbnailUrl: catalogEvidence.youtube.thumbnailUrl,
+      author: catalogEvidence.youtube.author,
+      metrics: catalogEvidence.youtube.metrics,
       engagementNote: "Video hướng dẫn & mẫu cắm hoa thực tế",
     },
     {

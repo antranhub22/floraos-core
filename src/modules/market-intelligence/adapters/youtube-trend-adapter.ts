@@ -153,49 +153,33 @@ export class YouTubeTrendAdapter implements TrendProvider {
           growthRate: Math.round(context.trendScore * 0.2 * 10) / 10,
           confidence: 0.6,
           capturedAt: new Date(),
-          evidenceSnippets: [
-            {
-              title: `Video hướng dẫn cắm: ${query.query}`,
-              platform: "YOUTUBE" as const,
-              url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${query.query} cắm hoa`)}`,
-              thumbnailUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=600&q=80",
-              author: "Hoa Tươi Nghệ Thuật",
-              metrics: "3.8k lượt xem",
-            },
-          ],
+          // Không trả evidenceSnippets giả — caller sẽ dùng video-evidence-catalog.ts
         },
       ];
     }
   }
 
-  async getTimeseries(topic: string, timeframe?: string, geo?: string): Promise<TrendTimeseriesPoint[]> {
-    return [
-      {
-        date: new Date(),
-        value: 65,
-        growthRate: 15,
-        velocity: 1.2,
-        acceleration: 0.1,
-        confidence: 0.85,
-      },
-    ];
+  async getTimeseries(_topic: string, _timeframe?: string, _geo?: string): Promise<TrendTimeseriesPoint[]> {
+    // YouTube SerpApi không cung cấp timeseries thật — trả rỗng để chain provider kế tiếp xử lý
+    return [];
   }
 
-  async getRelatedTopics(topic: string, geo?: string): Promise<RelatedTopicData[]> {
-    return [
-      { topicName: `Cách cắm ${topic}`, metricValue: 80, isBreakout: true },
-      { topicName: `Mẫu ${topic} đẹp nhất`, metricValue: 70 },
-    ];
+  async getRelatedTopics(_topic: string, _geo?: string): Promise<RelatedTopicData[]> {
+    // YouTube SerpApi không cung cấp related topics thật — trả rỗng để chain provider kế tiếp xử lý
+    return [];
   }
 
   async healthCheck(): Promise<ProviderHealthReport> {
     return {
       provider: "youtube_trends",
       status: this.apiKey ? "HEALTHY" : "DEGRADED",
-      latencyMs: 120,
+      latencyMs: 0,
       errorRate: 0,
       quotaStatus: this.apiKey ? "OK" : "NO_KEY",
-      message: this.apiKey ? "YouTube SerpApi kết nối tốt" : "Chưa cấu hình API key",
+      message: this.apiKey
+        ? "YouTube SerpApi sẵn sàng"
+        : "Chưa cấu hình SERPAPI_API_KEY — chỉ trả ước tính từ domain scoring",
     };
   }
 }
+

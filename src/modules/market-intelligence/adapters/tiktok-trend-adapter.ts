@@ -130,50 +130,33 @@ export class TikTokTrendAdapter implements TrendProvider {
           growthRate: Math.round(context.viralScore * 0.35 * 10) / 10,
           confidence: 0.65,
           capturedAt: new Date(),
-          evidenceSnippets: [
-            {
-              title: `Video thịnh hành TikTok: ${query.query}`,
-              platform: "TIKTOK_REELS" as const,
-              url: `https://www.tiktok.com/search?q=${encodeURIComponent(`${query.query} hoa tươi`)}`,
-              thumbnailUrl: "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80",
-              author: "@florist.trend",
-              metrics: "Viral • 12.5k views",
-              snippet: `Khám phá xu hướng cắm ${query.query} sáng tạo trên TikTok`,
-            },
-          ],
+          // Không trả evidenceSnippets giả — caller sẽ dùng video-evidence-catalog.ts
         },
       ];
     }
   }
 
-  async getTimeseries(topic: string, timeframe?: string, geo?: string): Promise<TrendTimeseriesPoint[]> {
-    return [
-      {
-        date: new Date(),
-        value: 75,
-        growthRate: 30,
-        velocity: 2.1,
-        acceleration: 0.3,
-        confidence: 0.88,
-      },
-    ];
+  async getTimeseries(_topic: string, _timeframe?: string, _geo?: string): Promise<TrendTimeseriesPoint[]> {
+    // TikTok không cung cấp timeseries API thật — trả rỗng để chain provider kế tiếp xử lý
+    return [];
   }
 
-  async getRelatedTopics(topic: string, geo?: string): Promise<RelatedTopicData[]> {
-    return [
-      { topicName: `#${topic.replace(/\s+/g, "").toLowerCase()}trend`, metricValue: 90, isBreakout: true },
-      { topicName: `#bohoa${topic.replace(/\s+/g, "").toLowerCase()}`, metricValue: 85 },
-    ];
+  async getRelatedTopics(_topic: string, _geo?: string): Promise<RelatedTopicData[]> {
+    // TikTok không cung cấp related topics API thật — trả rỗng để chain provider kế tiếp xử lý
+    return [];
   }
 
   async healthCheck(): Promise<ProviderHealthReport> {
     return {
       provider: "tiktok_trends",
-      status: "HEALTHY",
-      latencyMs: 140,
+      status: this.apiKey ? "HEALTHY" : "DEGRADED",
+      latencyMs: 0,
       errorRate: 0,
-      quotaStatus: "OK",
-      message: "TikTok Trend Engine kết nối ổn định",
+      quotaStatus: this.apiKey ? "OK" : "NO_KEY",
+      message: this.apiKey
+        ? "TikTok Trend Engine (SerpApi Google Videos) sẵn sàng"
+        : "Chưa cấu hình SERPAPI_API_KEY — chỉ trả ước tính từ domain scoring",
     };
   }
 }
+
