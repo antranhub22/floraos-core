@@ -20,6 +20,7 @@ export interface ImageEditInput {
   readonly mask?: MaskData
   readonly protectMask?: MaskData
   readonly aspectRatio?: string
+  readonly imageBytes?: Uint8Array | undefined
 }
 
 export interface ImageProvider {

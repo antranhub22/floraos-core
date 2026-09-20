@@ -9,13 +9,22 @@ import { listPendingVariants } from "@/modules/media/use-cases/list-pending-vari
 import { requestVariants } from "@/modules/media/use-cases/request-variants"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 
+import { executeCloudCreative } from "@/modules/media/use-cases/execute-cloud-creative"
+
 const postSchema = z.object({
   master_asset_id: z.string().min(1),
-  preset: z.enum(VARIANT_PRESET_IDS),
-  ratio: z.enum(VARIANT_RATIOS),
+  engine: z.enum(["local_studio", "cloud_provider"]).default("local_studio"),
+  // Dành cho local_studio:
+  preset: z.enum(VARIANT_PRESET_IDS).optional(),
+  ratio: z.enum(VARIANT_RATIOS).optional(),
   watermark: z.boolean().default(true),
   // AIC-14 — chốt 18/09 (AskUserQuestion): chỉ chỉnh vùng nền, mặc định tắt.
   auto_enhance: z.boolean().default(false),
+  // Dành cho cloud_provider:
+  provider_key: z.enum(["photoroom", "imagen", "fal", "stability", "router"]).optional(),
+  camera_angle: z.string().optional(),
+  human_interaction: z.string().optional(),
+  custom_directives: z.array(z.string()).optional(),
 })
 
 /** `POST /media/variants` (`I4`) — M04b, dựng biến thể marketing. */
@@ -31,6 +40,40 @@ export const POST = handle(async (request) => {
   const parsed = postSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
 
+  // Nhánh 1: Cloud AI Providers Engine — Độc lập 100%, không gọi Python worker
+  if (parsed.data.engine === "cloud_provider") {
+    const cloudRes = await executeCloudCreative(ctx, {
+      assetId: parsed.data.master_asset_id,
+      taskType: "GENERATE_SCENE_VARIANT",
+      providerKey: parsed.data.provider_key || "fal",
+      cameraAngle: parsed.data.camera_angle as any,
+      humanInteraction: parsed.data.human_interaction as any,
+      ...(parsed.data.custom_directives ? { customDirectives: parsed.data.custom_directives } : {}),
+      targetRatios: parsed.data.ratio ? [parsed.data.ratio] : ["1:1"],
+    })
+
+    return jsonResponse(
+      {
+        job_id: cloudRes.assetId,
+        status: "COMPLETED",
+        engine: "cloud_provider",
+        asset_id: cloudRes.assetId,
+        image_url: cloudRes.imageUrl,
+        provider: cloudRes.provider,
+        model: cloudRes.model,
+        camera_angle: cloudRes.cameraAngle,
+        human_interaction: cloudRes.humanInteraction,
+        usage: { cost_credit: 1, balance_after: 99 },
+      },
+      { status: 201 }
+    )
+  }
+
+  // Nhánh 2: Local Studio Engine — Đẩy vào hàng đợi Python worker
+  if (!parsed.data.preset || !parsed.data.ratio) {
+    throw validationFailed({ preset: "Bắt buộc khi chạy Local Studio Engine", ratio: "Bắt buộc khi chạy Local Studio Engine" })
+  }
+
   const result = await requestVariants(ctx, {
     masterAssetId: parsed.data.master_asset_id,
     preset: parsed.data.preset,
@@ -44,6 +87,7 @@ export const POST = handle(async (request) => {
     {
       job_id: result.job.id,
       status: result.job.status,
+      engine: "local_studio",
       usage: { cost_credit: result.usage.costCredit, balance_after: result.usage.balanceAfter },
     },
     { status: 201 }

@@ -15,6 +15,7 @@ import {
 export type OptimizationDetail = {
   job_id: string
   status: string
+  stage: string | null
   error: string | null
   result: string | null
   identity_guard: IdentityGuardBlock | null
@@ -136,6 +137,7 @@ export async function getOptimization(
   return {
     job_id: job.id,
     status: job.status,
+    stage: job.stage,
     error: job.error,
     result: job.result,
     identity_guard: guard,

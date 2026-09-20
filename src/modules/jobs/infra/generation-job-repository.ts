@@ -97,6 +97,34 @@ export class GenerationJobRepository {
     })
   }
 
+  /**
+   * Tạo job đã hoàn tất ngay lập tức (dùng cho các luồng Cloud AI đồng bộ hoặc hoàn tất trực tiếp).
+   */
+  createCompleted(
+    ctx: TenantContext,
+    input: CreateJobInput & { id?: string; result?: string | null; output?: unknown; completedAt?: Date }
+  ): Promise<generation_jobs> {
+    const completedAt = input.completedAt ?? new Date()
+    return this.db.generation_jobs.create({
+      data: scopedData(ctx, {
+        ...(input.id ? { id: input.id } : {}),
+        workspace_id: input.workspaceId,
+        branch_id: input.branchId,
+        user_id: input.userId,
+        product_id: input.productId,
+        feature: input.feature,
+        status: "COMPLETED" as const,
+        idempotency_key: input.idempotencyKey,
+        payload: input.payload as InputJsonValue,
+        output: (input.output ?? null) as InputJsonValue,
+        result: input.result ?? null,
+        attempts: 1,
+        started_at: completedAt,
+        completed_at: completedAt,
+      }),
+    })
+  }
+
   /** Số job của tổ chức tạo từ mốc `tu` tới nay — nguồn đếm của trần vận hành. */
   countSince(ctx: TenantContext, tu: Date): Promise<number> {
     return this.db.generation_jobs.count({
