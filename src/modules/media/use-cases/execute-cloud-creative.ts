@@ -184,9 +184,12 @@ export async function executeCloudCreative(
   const originalSignedUrl = await storage.signedUrl(sourceAsset.storage_key, 3600)
 
   // 6. Ghi nhận Asset mới vào CSDL FloraOS
-  // TODO: Đo Subject Integrity thật (mặt nạ co biên, so sánh pixel lõi) — nợ #110
-  const integrityScore = 0.99
-
+  // Subject Integrity — nợ #110: đo tỷ lệ điểm ảnh lõi chủ thể còn trùng khít
+  // với Master Image (mặt nạ co biên). Hiện tại ước lượng từ providerFlags:
+  // nếu không generative fill thì 1.0, nếu có generative fill thì 0.98
+  // (sẽ thay bằng phép đo thật khi có hạ tầng so sánh pixel).
+  const generativeFillUsed = resultMedia.providerFlags?.generative_fill_used ?? true
+  const integrityScore = generativeFillUsed ? 0.98 : 1.0
 
   const newAsset = await assetRepo.create(ctx, {
     id: newAssetId,

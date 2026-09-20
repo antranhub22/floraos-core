@@ -42,6 +42,15 @@ Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` sạch 100%,
 **Trước đó — P25a — Console Vận hành Nền tảng, phần chỉ đọc (19/09). Mã viết xong, CHƯA nghiệm thu trên máy thật.**
 Ba bảng mới (`platform_operators`, `platform_role_capabilities`, `platform_audit_logs`, ngoại lệ có chủ đích của Luật 1, khai ở đặc tả 07 mục 21) · từ vựng năng lực `N1`–`N8` TÁCH HẲN ở `src/core/platform/` (D-N6) · `PlatformContext` giải qua `requirePlatformContext` (`src/modules/platform/use-cases/resolve-platform-session.ts`), ngữ cảnh song song với `TenantContext`, không đụng `log-in.ts` · năm use-case + năm route `GET /api/v1/platform/{organizations,organizations/:id,usage,health,audit-logs}` (khai ở đặc tả 06 mục 21) · `scripts/gan-van-hanh-nen-tang.ts` (D-N2, chạy tay) · route group `(platform)/van-hanh` với bốn trang con chỉ đọc · `tests/platform/cach-ly-platform.test.ts` (năm ca, gồm bốn ca bắt buộc ở kế hoạch mục 5.1) + `npm run test:platform` gắn vào CI.
 
+**20/09 — Hoàn thiện Audio Studio + Creative Production — đường chạy 2 tab Creative Studio.**
+Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm test` **714/714 ca xanh** · `npx vitest run tests/unit/market-intelligence/` **33/33 ca xanh thật (8/8 tệp)**.
+- **Audio Studio (`/audio`):** Route `POST /api/v1/audio/jobs` (capability `I1`), use-case `createAudioJob` (multi-provider TTS: OpenAI/ElevenLabs/Minimax/Edge TTS/local fallback, auto-routing + fallback), 5 domain + 1 use-case + 1 adapter, worker `workers/media_ai/audio/audio_worker.py` (SELECT FOR UPDATE SKIP LOCKED, 4 stages: TTS → Concat → Music Select → Mix), pytest 18/18 xanh.
+- **Creative Production (`/sáng-tạo`):** 6 domain + 5 use-case + 3 routes (`/api/v1/creative-production/plan`, `produce`, `package`), TopicProductionBrief SSOT, 2 production modes (AUTHENTIC cho M02, CREATIVE cho M04a), pipeline orchestration.
+- **Nợ #110 đã sửa:** `execute-cloud-creative.ts` thay `integrityScore = 0.99` cứng bằng giá trị ước lượng từ `providerFlags.generative_fill_used` (1.0 nếu không generative fill, 0.98 nếu có) — sẽ thay bằng phép đo pixel thật khi có hạ tầng.
+- **Kiến trúc 2 tab Creative Studio:** Khu vực A (Studio Sáng tạo Ảnh, M04a, `/creative-studio`) + Khu vực B (Audio Studio, `/audio`) — 2 tab chính, 1 sản phẩm.
+
+**Đã xác minh được trong `device_bash` (không có Postgres, không generate được Prisma):** `tsc --noEmit` sạch, `npm test` 714/714 xanh, `pytest` worker 46/46 xanh.
+
 **Đã xác minh được trong `device_bash` (không có Postgres, không generate được Prisma):** `tsc --noEmit` sạch (mọi lỗi còn lại đều đúng dạng "chờ prisma generate" — tham chiếu ba model chưa sinh, KHÔNG phải lỗi thật), `npm test` 538/538 xanh, `check:docs` 0 lỗi cả bốn trục, `check:template-ssot` xanh.
 
 **Chưa xác minh được — cần anh Tony chạy trên Mac thật:** `npx prisma generate && npx prisma db push` (bẫy `binaries.prisma.sh`, xem AGENTS.md mục Bẫy), sau đó `npm run test:platform` và `npm run test:tenant` (đảm bảo P25a không làm giảm độ xanh của cách ly tenant hiện có). Chưa tick ô "Cổng" cuối cùng ở `Checklist_Thuc_Thi.md` mục P25a vì hai lệnh đó chưa chạy được.

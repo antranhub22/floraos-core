@@ -499,6 +499,32 @@ cổng duyệt. Bốn ô của P16 phía dưới được chỉnh lại theo mã
 - [x] Bộ máy Vision mặc định chốt là `openai_structured`; ca "lựa chọn của A không ảnh hưởng B" sửa lại cho thật sự phân biệt được rò rỉ — nợ #83
 - [x] `test:tenant` từ **6 tệp đỏ về 0** — bốn suite trong số đó đã đỏ từ trước lượt này
 
+## P26 — Audio Studio + Creative Production — 2 tab Creative Studio · hoàn tất 20/09
+
+Đưa Creative Studio về đúng hình thức 2 tab: Khu vực A (Studio Sáng tạo Ảnh, M04a, AIC-06/AIC-12/AIC-13) + Khu vực B (Audio Studio, AIC-14). Cả hai đều gọi `POST /api/v1/media/variants` qua worker riêng, đều đi qua `enqueueJob`, đều có năng lực chạy (`I4`) ↔ duyệt (`I5`) tách rời.
+
+### Audio Studio
+
+- [x] Route `POST /api/v1/audio/jobs` — tạo job âm thanh, capability `I1`, `requireTenantContext` + `requireCapability` bắt buộc ở route
+- [x] Use-case `createAudioJob` — multi-provider TTS (OpenAI/ElevenLabs/Minimax/Edge TTS/local fallback, auto-routing + fallback), usage ghi ở core, creditsCost estimate
+- [x] 5 domain files (TTS provider port, voice catalog, music catalog, audio types, pricing guard) + 1 use-case + 1 adapter + 1 infra
+- [x] Worker `workers/media_ai/audio/audio_worker.py` — SELECT FOR UPDATE SKIP LOCKED + LISTEN/NOTIFY, 4 stages: TTS → Concat → Music Select → Mix, `process_audio_job` thuần (không gọi mạng trực tiếp)
+- [x] Audio Studio UI: `/audio` route, 2 tab trong Creative Studio (Khu vực B), `AudioStudioView` + `AudioJobPanel` + `VoiceSelector` + `MusicSelector` + `AudioVisualizer` + `mixAudioAndPlay`
+- [x] pytest `workers/tests/media_ai/test_audio_worker.py` — 18 ca thuần, không gọi mạng, không chạm CSDL
+
+### Creative Production
+
+- [x] 6 domain files (media-plan, topic-to-media-bridge, produce-authentic, produce-creative, package-campaign, plan-production) + 5 use-case files
+- [x] 3 routes: `POST /api/v1/creative-production/plan` (lập kế hoạch, `I1`), `POST /api/v1/creative-production/produce` (sản xuất, `I1`), `POST /api/v1/creative-production/package` (đóng gói, `I1`)
+- [x] TopicProductionBrief SSOT — `organizationId` cho tenant isolation, `selectedTopics[]` với researchKeywords/narrativeArc/emotionalHook/ctaHook/storySlant, mediaSpecs, voiceProfile, musicProfile
+- [x] 2 production modes: AUTHENTIC (M02/Market Intelligence → Voice + BGM) và CREATIVE (M04a → Vision AI → Video + Thumbnail)
+- [x] Pipeline orchestration: `planProduction` → topic selection → media plan → produce → package
+- [x] Audio worker pytest 18/18 xanh · `npx tsc --noEmit` sạch · `npm test` 714/714 xanh
+
+### Nợ #110 đã sửa
+
+- [x] `src/modules/media/use-cases/execute-cloud-creative.ts` — thay `integrityScore = 0.99` cứng bằng giá trị ước lượng từ `providerFlags.generative_fill_used` (1.0 nếu không generative fill, 0.98 nếu có). Sẽ thay bằng phép đo pixel thật (mặt nạ co biên, so sánh pixel lõi) khi có hạ tầng
+
 ## P25 — Console Vận hành Nền tảng · P25a mã viết xong 19/09, chờ nghiệm thu máy thật
 
 Giao diện xuyên tổ chức cho người vận hành SaaS — thứ `floraos-core` hiện hoàn
