@@ -26,6 +26,7 @@ export const FIELD_LABELS: Record<string, string> = {
   foliage: "Lá, cành phụ",
   accessories: "Phụ kiện & Nơ",
   wrapping: "Vật liệu gói & Bao bì",
+  card_printed_text: "Nội dung chữ trên thiệp (OCR)",
   materials_note: "Ghi chú vật liệu",
   // Identity
   category: "Phân loại sản phẩm",
@@ -133,7 +134,7 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     const colorDesc = [f.mau, f.mo_ta_mau || f.color].filter(Boolean).join(" - ")
     const colorStr = colorDesc ? `• ${colorDesc}` : null
 
-    const parts = [name, `— ${qtyStr}`, roleStr, colorStr].filter(Boolean).join(" ")
+    const parts = [`🌿 ${name}`, `— ${qtyStr}`, roleStr, colorStr].filter(Boolean).join(" ")
     return {
       id: f.id ?? `foliage-${i}`,
       name: f.name ?? "",
@@ -155,7 +156,10 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     quantity?: number | null
     printed_text?: string | null
   }, i: number) => {
-    const name = a.name ?? "N/A"
+    const rawName = a.name ?? "N/A"
+    const isCard = rawName.toLowerCase().includes("thiệp") || rawName.toLowerCase().includes("biển") || Boolean(a.printed_text)
+    const icon = isCard ? "💌 " : "🎀 "
+    const name = `${icon}${rawName}`
     const qty = a.quantity ?? 1
     const unit = "cái"
     const matStr = a.material ? `(${a.material})` : null
@@ -278,6 +282,10 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
 
   const soTangLop = typeof sanXuat.so_tang_lop === "number" ? sanXuat.so_tang_lop : null
 
+  const cardPrintedText = accessoriesList.find((a: any) => a.printed_text)?.printed_text
+    ?? (typeof data.card_printed_text === "string" ? data.card_printed_text : null)
+    ?? (typeof (data.packaging as any)?.card?.printedText === "string" ? (data.packaging as any).card.printedText : null)
+
   // Identity helper
   const idVal = (k: string) => {
     const v = identity[k]
@@ -321,6 +329,15 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
       value: wrapping,
       confidence: confidenceNum,
       placeholder: "Thêm giấy gói/bao bì...",
+    },
+    {
+      key: "card_printed_text",
+      label: FIELD_LABELS.card_printed_text ?? "Nội dung chữ trên thiệp (OCR)",
+      type: "text",
+      editable: true,
+      value: cardPrintedText != null && String(cardPrintedText).trim() !== "" ? String(cardPrintedText) : "N/A",
+      confidence: null,
+      placeholder: "Nhập nội dung chữ trên thiệp chúc mừng...",
     },
     {
       key: "palette_accounting",

@@ -7,10 +7,12 @@
 import type { TrendLifecycle } from "./trend-lifecycle";
 
 export interface ProductFlowerComponent {
+  id?: string | undefined;
   flowerType: string;
   quantityEstimate: number;
   unit: string;
   role: "dominant" | "supporting" | "foliage";
+  color?: string | undefined;
 }
 
 export interface ProductVisualAttributes {
@@ -21,11 +23,37 @@ export interface ProductVisualAttributes {
   sizeEstimate: string;
 }
 
+export interface ProductCardAccessory {
+  hasCard: boolean;
+  cardType?: "Thiệp gập thiết kế" | "Tag cắm mini" | "Biển mica nghệ thuật" | "Banner dải băng chữ" | "Khác" | undefined;
+  printedText?: string | undefined; // Chữ in/viết bóc tách qua Vision OCR
+  color?: string | undefined;
+}
+
+export interface ProductRibbonAccessory {
+  ribbonColor?: string | undefined;
+  ribbonMaterial?: string | undefined;
+  bowStyle?: string | undefined;
+}
+
+export interface ProductDecorAccessory {
+  id?: string | undefined;
+  name: string;
+  quantity: number;
+  unit: string;
+  color?: string | undefined;
+  note?: string | undefined;
+}
+
 export interface ProductPackaging {
   wrappingMaterial: string;
   wrappingColor: string;
   ribbon: string;
   accessories: string[];
+  // Mở rộng nguyên tử (Atomic Disaggregated Fields)
+  card?: ProductCardAccessory | undefined;
+  ribbonDetail?: ProductRibbonAccessory | undefined;
+  otherAccessories?: ProductDecorAccessory[] | undefined;
 }
 
 export interface ProductInferredContext {

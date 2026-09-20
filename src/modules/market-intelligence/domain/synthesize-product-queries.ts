@@ -65,9 +65,15 @@ export function synthesizeProductResearchQueries(
   // 3. Dịp tặng quà (vd: "hoa tặng sinh nhật bạn gái", "hoa chúc mừng khai trương")
   const occasionQuery = `hoa tặng ${occasion}`;
 
-  // 4. Chất liệu bao gói (nếu có)
+  // 4. Chất liệu bao gói & Phụ kiện thiệp (nếu có)
   let packagingQuery: string | undefined;
-  if (input.packaging?.wrappingMaterial) {
+  if (input.packaging?.card?.printedText) {
+    const cleanCardText = cleanPhrase(input.packaging.card.printedText);
+    if (cleanCardText.length > 3 && cleanCardText.length < 40) {
+      packagingQuery = `hoa ${cleanCardText}`;
+    }
+  }
+  if (!packagingQuery && input.packaging?.wrappingMaterial) {
     const cleanMaterial = cleanPhrase(input.packaging.wrappingMaterial);
     packagingQuery = `hoa bọc ${cleanMaterial}`;
   }

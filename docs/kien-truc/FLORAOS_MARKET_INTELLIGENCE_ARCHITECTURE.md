@@ -59,13 +59,20 @@ Bất kỳ thay đổi mã nguồn nào trong phân hệ Market Intelligence b�
      - **Kịch bản (Hooks)**: Đi qua `formatCleanHook(hook)` để tạo thành câu thoại kịch bản tự nhiên, mượt mà và ấm áp chuẩn phong cách tiệm hoa cao cấp.
      - **Cơ sở dữ liệu (`topics`)**: Cơ sở dữ liệu phải được làm sạch, không lưu trữ các bản ghi chủ đề là chuỗi nối phẩy của nhiều từ khóa. Nếu phát hiện dữ liệu thô, phải tự động chuẩn hóa hoặc sáp nhập về chủ đề gốc.
 
-### 2.3. Quy Chuẩn Bóc Tách Thị Giác Cấu Trúc Hoa Thật (Multimodal Vision AI & Anti-Hardcode Rule)
-- **Vấn đề cần triệt tiêu**: Tránh tuyệt đối việc trả về dữ liệu mẫu cố định (hardcoded data) như "Hoa hồng kem dâu" cho mọi hình ảnh tải lên.
+### 2.3. Quy Chuẩn Bóc Tách Thị Giác Cấu Trúc Hoa Thật & Phụ Liệu (Multimodal Vision AI & Atomic Accessories OCR)
+- **Vấn đề cần triệt tiêu**: Tránh tuyệt đối việc trả về dữ liệu mẫu cố định (hardcoded data) như "Hoa hồng kem dâu" cho mọi hình ảnh tải lên, hoặc chỉ nhận diện hoa chính mà bỏ sót lá đệm, thiệp chúc mừng, nơ ruy băng và giấy gói.
 - **Luật bất biến**:
   1. **Multimodal Vision Thật**: Hệ thống bắt buộc phải quan sát trực tiếp dữ liệu nhị phân của bức ảnh thông qua mô hình đa phương thức (`gpt-4o-mini` qua [`openai-vision-adapter.ts`](file:///Users/tuan/Projects/floraos-core/src/modules/market-intelligence/adapters/openai-vision-adapter.ts)).
   2. **Xử lý Ảnh Base64 Data URL**: Tại Frontend ([`product-upload-card.tsx`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/product-upload-card.tsx)), khi người dùng kéo thả file, `FileReader` lập tức chuyển đổi thành Base64 Data URL (`data:image/...;base64,...`) để truyền an toàn sang server, khắc phục giới hạn không thể fetch `blob:` URL cục bộ của trình duyệt.
   3. **Đồng Bộ Hai Chiều Props ↔ State**: Giao diện xác nhận ([`product-confirmation-card.tsx`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/product-confirmation-card.tsx)) bắt buộc có hook phản ứng đồng bộ lại state nội bộ khi dữ liệu Vision AI trả về, bảo đảm người dùng luôn thấy đúng kết quả phân tích theo ảnh vừa tải lên.
-  4. **Tách Biệt Nguyên Tử (Atomic Disaggregation)**: Phân rã thuộc tính hoa thành các trường số lượng, đơn vị, màu sắc, phong cách, chất liệu giấy gói, nơ và giá đề xuất để người dùng có thể nhấp chuột chỉnh sửa trực tiếp từng thông số trước khi đối soát xu hướng.
+  4. **Tách Biệt Nguyên Tử (Atomic Disaggregated Fields) Cho Hoa & Phụ Liệu**:
+     - **Hoa chính & hoa phụ**: Tên hoa, số lượng, đơn vị, màu sắc, vai trò (`dominant`/`supporting`).
+     - **Lá & cành đệm (Foliage)**: Phân tách riêng khỏi hoa, bóc tách tên lá (Eucalyptus, lá chanh, lá đuôi chồn...), số cành, màu sắc, vai trò đệm.
+     - **Thiệp & Biển chúc mừng (Card & Banner OCR)**: AI Vision quét chữ in/viết trên thiệp/banner (`printedText`), phân loại thiệp (thiệp gập, tag mini, biển mica, banner) làm căn cứ phân loại mục đích sử dụng (sinh nhật, kỷ niệm, 20/10, khai trương...).
+     - **Nơ & Ruy băng**: Bóc tách chất liệu (satin, voan, thừng...), màu sắc, kiểu dáng thắt.
+     - **Giấy gói & Bao bì**: Bóc tách lớp gói, chất liệu giấy (Kraft, lụa mờ...), màu sắc giấy.
+     - **Phụ kiện decor**: Quản lý nguyên tử đèn led, gấu bông, topper... có nút Thêm / Sửa / Xóa từng dòng qua component [`ProductPackagingCard`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/product-packaging-card.tsx).
+  5. **Đồng bộ hóa toàn hệ thống**: Dữ liệu bóc tách được đồng bộ thống nhất giữa Chặng 02 Product Intelligence (`/thi-truong`), Tab M01a & Thẻ Chào Zalo (`/tai-anh`), và các tầng Domain Model.
 
 ### 2.4. Nghiên Cứu Tập Trung 1 Lần & Cá Nhân Hóa Theo Tenant (Shared Intelligence Core)
 - Hệ thống nghiên cứu thị trường tập trung cấp nền tảng (Shared Intelligence), không để từng cửa hàng hoa phải chạy lại toàn bộ quy trình thu thập dữ liệu nặng nề.

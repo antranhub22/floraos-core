@@ -233,13 +233,18 @@ export function buildSalesPitchData(
   const foliageItems = overrides?.foliageItems ?? defaultFoliage
 
   const rawAcc = Array.isArray(bom.accessories) ? bom.accessories : []
-  const defaultAcc: SalesPitchItem[] = rawAcc.map((acc: any, idx: number) => ({
-    id: acc.id || `acc-${idx}`,
-    name: acc.name || "Phụ kiện",
-    quantity: acc.quantity ?? 1,
-    unit: "cái",
-    color: acc.color || null,
-  }))
+  const defaultAcc: SalesPitchItem[] = rawAcc.map((acc: any, idx: number) => {
+    const rawName = acc.name || "Phụ kiện"
+    const isCard = rawName.toLowerCase().includes("thiệp") || rawName.toLowerCase().includes("biển") || Boolean(acc.printed_text)
+    const displayName = isCard && acc.printed_text ? `${rawName} (In: "${acc.printed_text}")` : rawName
+    return {
+      id: acc.id || `acc-${idx}`,
+      name: displayName,
+      quantity: acc.quantity ?? 1,
+      unit: "cái",
+      color: acc.color || null,
+    }
+  })
   const accessoryItems = overrides?.accessoryItems ?? defaultAcc
 
   // 6. Vật chứa & Giấy gói
@@ -383,7 +388,15 @@ export function generateZaloPitchScript(pitch: SalesPitchData): string {
     ? `\n🌿 Lá đệm: ${pitch.foliageItems.map((f) => `${f.name}${f.quantity ? ` (${f.quantity} ${f.unit})` : ""}`).join(", ")}`
     : ""
 
-  const accStr = pitch.accessoryItems.length > 0
+  const cardItem = pitch.accessoryItems.find(
+    (a) => a.name.toLowerCase().includes("thiệp") || a.name.toLowerCase().includes("biển") || a.name.includes('"')
+  )
+  const otherAccs = pitch.accessoryItems.filter((a) => a !== cardItem)
+
+  const cardStr = cardItem ? `\n💌 Thiệp / Biển chúc mừng: ${cardItem.name}` : ""
+  const accStr = otherAccs.length > 0
+    ? `\n🎀 Phụ kiện: ${otherAccs.map((a) => `${a.name}${a.quantity ? ` (${a.quantity} ${a.unit})` : ""}`).join(", ")}`
+    : !cardItem && pitch.accessoryItems.length > 0
     ? `\n🎀 Phụ kiện: ${pitch.accessoryItems.map((a) => `${a.name}${a.quantity ? ` (${a.quantity} ${a.unit})` : ""}`).join(", ")}`
     : ""
 
@@ -424,7 +437,7 @@ Quy cách: ${pitch.container} (${pitch.wrapping})
 "${pitch.description}"
 
 THÀNH PHẦN HOA CHÍNH:
-${flowersStr}${foliageStr}${accStr}
+${flowersStr}${foliageStr}${cardStr}${accStr}
 
 GIÁ: ${priceStr}${origPriceStr}
 
@@ -446,7 +459,7 @@ ${solemnClosingStr}`
 "${pitch.description}"
 
 🌺 THÀNH PHẦN HOA CHÍNH:
-${flowersStr}${foliageStr}${accStr}
+${flowersStr}${foliageStr}${cardStr}${accStr}
 
 💰 GIÁ ƯU ĐÃI: ${priceStr}${origPriceStr}
 

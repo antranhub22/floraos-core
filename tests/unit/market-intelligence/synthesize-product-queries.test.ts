@@ -64,4 +64,33 @@ describe("synthesizeProductResearchQueries Domain Synthesizer", () => {
     expect(queries.packagingQuery).toBeUndefined();
     expect(queries.primaryKeywords).toContain("hoa tulip cam cháy");
   });
+
+  it("tận dụng nội dung thiệp chúc mừng printedText để sinh từ khóa mục đích sử dụng", () => {
+    const input = {
+      components: [
+        { flowerType: "Hoa hồng đỏ", quantityEstimate: 15, unit: "cành", role: "dominant" as const },
+      ],
+      attributes: {
+        mainColors: ["Đỏ nhung"],
+        secondaryColors: [],
+        style: "Classic",
+        shape: "Bó tròn",
+        sizeEstimate: "M",
+      },
+      packaging: {
+        wrappingMaterial: "Giấy xi măng",
+        wrappingColor: "Nâu",
+        ribbon: "Ruy băng đỏ",
+        accessories: ["Thiệp"],
+        card: {
+          hasCard: true,
+          printedText: "Chúc mừng ngày 20 10",
+        },
+      },
+    };
+
+    const queries = synthesizeProductResearchQueries(input);
+    expect(queries.packagingQuery).toBe("hoa chúc mừng ngày 20 10");
+    expect(queries.primaryKeywords).toContain("hoa chúc mừng ngày 20 10");
+  });
 });

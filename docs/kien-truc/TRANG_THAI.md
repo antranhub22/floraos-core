@@ -10,6 +10,16 @@
 
 ## 1. Đang ở đâu
 
+**20/09 — Nâng cấp Bóc tách Phụ liệu & Thiệp Chúc Mừng OCR Đồng Bộ Toàn Hệ Thống.**
+Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm test` **575/575 ca xanh**, `npm run test:tenant` **206/206 ca xanh thật (27/27 tệp)**, `tests/unit/market-intelligence/` **33/33 ca xanh thật (8/8 tệp)**.
+- **Bóc tách nguyên tử Phụ liệu (Atomic Disaggregated Fields)**: Phân tách rõ ràng và độc lập các trường phụ liệu: hoa chính/hoa phụ, lá & cành đệm (tên lá, số cành, màu sắc, vai trò nền/viền/điểm nhấn), thiệp & biển chữ chúc mừng, nơ & ruy băng, giấy gói bao bì, phụ kiện trang trí decor.
+- **AI OCR Thiệp Chúc Mừng & Biển Chữ (`printedText`)**: Nâng cấp prompt `gpt-4o-mini` để soi quét mặt trước, chân bó và vùng nơ đọc nguyên văn nội dung chữ in hoặc viết tay (`printedText`), phân loại loại thiệp (thiệp gập thiết kế, tag mini, biển mica, banner dải băng) làm căn cứ cốt lõi xác định mục đích sử dụng.
+- **Đồng bộ hóa 100% trên toàn bộ hệ thống**:
+  - Chặng 02 Product Intelligence (`/thi-truong`): Component mới `ProductPackagingCard` kèm nút '+ Hoa' và '+ Lá đệm', nhãn vai trò `[Chính]/[Phụ]/[Lá]`, ô nhập nội dung thiệp OCR cho phép sửa 1-chạm.
+  - Tab M01a (`/tai-anh`): `mapAnalysisFromSchema` bổ sung trường sửa trực tiếp `card_printed_text` và định dạng emoji trực quan `💌 [Thiệp / Biển chữ]` kèm `In: "..."` và `🌿 [Lá phụ]`.
+  - Thẻ Chào & Kịch bản Zalo (`sales-pitch-template.ts`): Tự động tách dòng thiệp riêng biệt `💌 Thiệp / Biển chúc mừng: ... (In: "...")`.
+  - Tầng Domain: Cập nhật `ProductPackaging`, `synthesizeProductResearchQueries` và `CommercialPassport`.
+
 **20/09 — Hoàn thiện 100% tính năng "Quét theo Ảnh mẫu" (Product Intelligence Vision AI) & Tích hợp Multimodal AI Thật, Progressive Selection.**
 Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm run test:tenant` **206/206 ca xanh thật (27/27 tệp)**, `tests/unit/market-intelligence/` **32/32 ca xanh thật (8/8 tệp)**.
 - **Multimodal Vision AI thật (Anti-Hardcode)**: Xây dựng adapter OpenAI Vision (`gpt-4o-mini`) tại `src/modules/market-intelligence/adapters/openai-vision-adapter.ts`, đọc trực tiếp ảnh qua Base64 Data URL (`data:image/...;base64,...`) hoặc Web URL. Nhận diện chính xác 100% sản phẩm hoa thực tế người dùng tải lên (bó hoa hồng đỏ, tulip cam cháy, cúc tana, mẫu đơn luxury...), bóc tách số lượng cành, bảng màu chính/phụ, kiểu bó, vật liệu giấy lụa, nơ, dịp tặng và giá bán thực tế. Gỡ bỏ triệt để việc gán cứng tiêu đề mặc định và các fallback template cứng ("Hoa hồng kem dâu").

@@ -438,5 +438,25 @@ describe("sales-pitch-template (M01c - Thẻ Chào Sản Phẩm & Kịch bản Z
     const solemnScript = generateZaloPitchScript(solemn)
     expect(solemnScript.startsWith("Kính gửi quý khách,\n\n[THÔNG TIN SẢN PHẨM]")).toBe(true)
   })
+
+  it("hiển thị thiệp chúc mừng có nội dung printed_text riêng biệt trên kịch bản Zalo", () => {
+    const analysisRaw = {
+      product_name: "Bó hoa tulip cam",
+      bom: {
+        flowers: [{ name: "Hoa tulip cam", quantity: 10 }],
+        foliage: [{ name: "Lá chanh", quantity: 3 }],
+        accessories: [
+          { name: "Thiệp chúc mừng", printed_text: "Happy 20th Birthday", quantity: 1 },
+          { name: "Nơ ruy băng satin", quantity: 1 },
+        ],
+      },
+    }
+
+    const pitch = buildSalesPitchData(analysisRaw, null, undefined, null, null)
+    expect(pitch.accessoryItems[0]?.name).toContain('Thiệp chúc mừng (In: "Happy 20th Birthday")')
+    const script = generateZaloPitchScript(pitch)
+    expect(script).toContain('💌 Thiệp / Biển chúc mừng: Thiệp chúc mừng (In: "Happy 20th Birthday")')
+    expect(script).toContain("🎀 Phụ kiện: Nơ ruy băng satin (1 cái)")
+  })
 })
 

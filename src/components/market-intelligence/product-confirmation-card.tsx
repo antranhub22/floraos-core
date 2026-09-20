@@ -12,6 +12,7 @@ import type {
 import { synthesizeProductResearchQueries } from "@/modules/market-intelligence/domain/synthesize-product-queries";
 import { buildCommercialPassport } from "@/modules/market-intelligence/domain/trend-fit";
 import { CommercialPassportCard } from "./commercial-passport-card";
+import { ProductPackagingCard } from "./product-packaging-card";
 
 interface ProductConfirmationCardProps {
   productTitle?: string;
@@ -84,6 +85,13 @@ export function ProductConfirmationCard({
     ]);
   };
 
+  const handleAddFoliage = () => {
+    setComponents([
+      ...components,
+      { flowerType: "Lá bạc Eucalyptus", quantityEstimate: 3, unit: "cành", role: "foliage" },
+    ]);
+  };
+
   const handleRemoveComponent = (index: number) => {
     setComponents(components.filter((_, i) => i !== index));
   };
@@ -107,42 +115,62 @@ export function ProductConfirmationCard({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Khối 1: Danh sách loài hoa cấu thành */}
+        {/* Khối 1: Danh sách loài hoa & lá cấu thành */}
         <div className="rounded-xl border border-stone-200 bg-white p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
               <Layers size={14} className="text-rose-600" />
-              Thành phần hoa cấu tạo
+              Thành phần hoa & lá ({components.length})
             </span>
-            <button
-              type="button"
-              onClick={handleAddComponent}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700"
-            >
-              <Plus size={12} /> Thêm hoa
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleAddComponent}
+                className="inline-flex items-center gap-0.5 text-[10.5px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200"
+              >
+                <Plus size={11} /> Hoa
+              </button>
+              <button
+                type="button"
+                onClick={handleAddFoliage}
+                className="inline-flex items-center gap-0.5 text-[10.5px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200"
+              >
+                <Plus size={11} /> Lá đệm
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
             {components.map((comp, idx) => (
               <div key={idx} className="flex items-center gap-1.5 p-1.5 rounded-lg bg-stone-50 border border-stone-200 text-xs">
+                <span
+                  className={`text-[9px] font-bold px-1 py-0.2 rounded shrink-0 ${
+                    comp.role === "foliage"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : comp.role === "dominant"
+                      ? "bg-rose-100 text-rose-800"
+                      : "bg-stone-200 text-stone-700"
+                  }`}
+                >
+                  {comp.role === "foliage" ? "Lá" : comp.role === "dominant" ? "Chính" : "Phụ"}
+                </span>
                 <input
                   type="text"
                   value={comp.flowerType}
                   onChange={(e) => handleUpdateComponent(idx, "flowerType", e.target.value)}
-                  className="flex-1 bg-transparent px-1 font-medium text-stone-800 outline-none"
+                  className="flex-1 bg-transparent px-1 font-medium text-stone-800 outline-none text-[11.5px]"
                 />
                 <input
                   type="number"
                   value={comp.quantityEstimate}
                   onChange={(e) => handleUpdateComponent(idx, "quantityEstimate", parseInt(e.target.value) || 1)}
-                  className="w-12 text-center bg-white border border-stone-200 rounded px-1 text-[11px] font-bold"
+                  className="w-11 text-center bg-white border border-stone-200 rounded px-1 text-[11px] font-bold"
                 />
-                <span className="text-[10px] text-stone-400">{comp.unit}</span>
+                <span className="text-[10px] text-stone-400 shrink-0">{comp.unit}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveComponent(idx)}
-                  className="text-stone-400 hover:text-red-600 p-0.5"
+                  className="text-stone-400 hover:text-red-600 p-0.5 shrink-0"
                 >
                   <Trash2 size={12} />
                 </button>
@@ -155,7 +183,7 @@ export function ProductConfirmationCard({
         <div className="rounded-xl border border-stone-200 bg-white p-4 space-y-3">
           <span className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
             <Tag size={14} className="text-rose-600" />
-            Màu sắc & Phong cách
+            Màu sắc & Phong cách cắm
           </span>
 
           <div className="space-y-2.5 text-xs">
@@ -170,7 +198,7 @@ export function ProductConfirmationCard({
             </div>
 
             <div>
-              <label className="text-[10.5px] font-semibold text-stone-500 block mb-1">Phong cách cắm</label>
+              <label className="text-[10.5px] font-semibold text-stone-500 block mb-1">Phong cách thiết kế</label>
               <select
                 value={attributes.style}
                 onChange={(e) => setAttributes({ ...attributes, style: e.target.value })}
@@ -184,11 +212,11 @@ export function ProductConfirmationCard({
             </div>
 
             <div>
-              <label className="text-[10.5px] font-semibold text-stone-500 block mb-1">Chất liệu giấy gói & Nơ</label>
+              <label className="text-[10.5px] font-semibold text-stone-500 block mb-1">Dáng cắm & Khối</label>
               <input
                 type="text"
-                value={`${packaging.wrappingMaterial}, ${packaging.ribbon}`}
-                onChange={(e) => setPackaging({ ...packaging, wrappingMaterial: e.target.value })}
+                value={attributes.shape}
+                onChange={(e) => setAttributes({ ...attributes, shape: e.target.value })}
                 className="h-8 w-full rounded-lg border border-stone-200 bg-stone-50/50 px-2.5 text-xs text-stone-800 outline-none focus:border-rose-500"
               />
             </div>
@@ -235,6 +263,12 @@ export function ProductConfirmationCard({
           </div>
         </div>
       </div>
+
+      {/* Khối Phụ Liệu, Thiệp & Đóng Gói (Atomic Packaging & Accessories) */}
+      <ProductPackagingCard
+        packaging={packaging}
+        onChange={setPackaging}
+      />
 
       {/* Khối Hồ Sơ Thương Mại M01b (Commercial Passport) */}
       <CommercialPassportCard

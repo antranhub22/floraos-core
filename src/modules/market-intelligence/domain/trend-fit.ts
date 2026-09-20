@@ -79,16 +79,18 @@ export function buildCommercialPassport(
       recipient: context.likelyAudience || "Người yêu, bạn bè, người thân",
       buyerPersona: "Khách hàng 22-38 tuổi, tìm kiếm sự chỉn chu và tinh tế",
     },
-    flowerMeaningStory: `${dominantFlower} tượng trưng cho vẻ đẹp thanh khiết và tình cảm bền chặt, kết hợp cùng tone màu ${mainColor.toLowerCase()} mang lại cảm giác dịu dàng, ấm áp.`,
+    flowerMeaningStory: `${dominantFlower} tượng trưng cho vẻ đẹp thanh khiết và tình cảm bền chặt, kết hợp cùng tone màu ${mainColor.toLowerCase()} mang lại cảm giác dịu dàng, ấm áp.${packaging.card?.printedText ? ` Thiết kế đồng bộ hoàn hảo cùng thông điệp: "${packaging.card.printedText}".` : ""}`,
     keySellingPoints: [
       `100% ${dominantFlower} tuyển chọn form cánh dày, nở chuẩn đẹp`,
       `Tone màu ${mainColor.toLowerCase()} trang nhã, bắt mắt khi lên hình`,
-      "Tặng kèm thiệp chúc mừng thiết kế và hướng dẫn dưỡng hoa",
+      packaging.card?.printedText
+        ? `Kèm thiệp / biển chữ in thông điệp riêng: "${packaging.card.printedText}"`
+        : "Tặng kèm thiệp chúc mừng thiết kế và hướng dẫn dưỡng hoa",
     ],
     cardMessageSuggestions: {
-      romantic: "Mong mỗi ngày của em đều rạng rỡ và ngập tràn hạnh phúc như những đóa hoa này.",
-      subtle: "Gửi đến bạn những đóa hoa tươi thắm nhất cùng lời chúc an lành và niềm vui.",
-      congratulatory: "Chúc mừng ngày đặc biệt! Chúc bạn luôn thành công, rực rỡ và may mắn.",
+      romantic: packaging.card?.printedText || "Mong mỗi ngày của em đều rạng rỡ và ngập tràn hạnh phúc như những đóa hoa này.",
+      subtle: packaging.card?.printedText || "Gửi đến bạn những đóa hoa tươi thắm nhất cùng lời chúc an lành và niềm vui.",
+      congratulatory: packaging.card?.printedText || "Chúc mừng ngày đặc biệt! Chúc bạn luôn thành công, rực rỡ và may mắn.",
     },
     careInstructions: [
       "Đặt hoa nơi thoáng mát, tránh ánh nắng trực tiếp và luồng gió máy lạnh",

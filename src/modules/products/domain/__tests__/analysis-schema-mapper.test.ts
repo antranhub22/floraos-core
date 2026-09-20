@@ -158,4 +158,29 @@ describe("analysis-schema-mapper (Khóa hợp đồng Schema.json ra UI)", () =>
     const bud = fields.find((f) => f.key === "totals-bud")
     expect(bud?.value).toBe("2 nụ")
   })
+
+  it("ánh xạ chính xác phụ kiện thiệp có printed_text và trường card_printed_text", () => {
+    const raw = {
+      bom: {
+        flowers: [{ name: "Hoa hồng", quantity: 10 }],
+        foliage: [{ name: "Lá bạc", quantity: 3 }],
+        accessories: [
+          { name: "Thiệp chúc mừng", printed_text: "Mừng sinh nhật mẹ", quantity: 1 },
+          { name: "Nơ ruy băng", quantity: 1 },
+        ],
+      },
+    }
+
+    const fields = mapAnalysisFromSchema(raw)
+
+    const cardField = fields.find((f) => f.key === "card_printed_text")
+    expect(cardField?.value).toBe("Mừng sinh nhật mẹ")
+
+    const acc = fields.find((f) => f.key === "accessories")
+    const accItems = acc?.value as Array<any>
+    expect(accItems.length).toBe(2)
+    expect(accItems[0].value).toContain("💌")
+    expect(accItems[0].value).toContain('In: "Mừng sinh nhật mẹ"')
+    expect(accItems[1].value).toContain("🎀")
+  })
 })

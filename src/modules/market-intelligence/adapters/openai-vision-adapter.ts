@@ -65,6 +65,25 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
       "unit": "cành"
     }
   ],
+  "card": {
+    "has_card": true, // true nếu nhìn thấy thiệp chúc mừng, tag cắm, biển mica, dải băng chữ; ngược lại false
+    "card_type": "Thiệp gập thiết kế", // "Thiệp gập thiết kế" | "Tag cắm mini" | "Biển mica nghệ thuật" | "Banner dải băng chữ" | "Không có"
+    "printed_text": "Chúc mừng sinh nhật em yêu", // BẮT BUỘC: Đọc chính xác chữ in hoặc viết tay nhìn thấy trên thiệp/banner qua OCR thị giác. Nếu không có thiệp hoặc thiệp trắng chưa viết chữ thì để null
+    "color": "Tone màu của thiệp (ví dụ: Trắng viền ép kim, Hồng pastel...)"
+  },
+  "ribbon_detail": {
+    "material": "Chất liệu nơ ruy băng (ví dụ: Ruy băng satin lụa bóng, Ruy băng voan mờ, Dây thừngi thô vintage, Ruy băng gân ren...)",
+    "color": "Màu sắc của ruy băng (ví dụ: Đỏ ruby, Xanh rêu, Trắng kem, Hồng phấn...)",
+    "bow_style": "Kiểu dáng nơ (ví dụ: Nơ cánh bướm 2 tầng, Nơ rủ dài Hàn Quốc, Thắt nút đơn...)"
+  },
+  "other_accessories": [
+    {
+      "name": "Tên phụ kiện trang trí đi kèm nếu có (ví dụ: Đèn LED đom đóm, Gấu bông mini tốt nghiệp, Que cắm trái tim, Bóng bay jumbo mica, Vương miện mini...)",
+      "quantity": 1,
+      "unit": "cái",
+      "note": "Ghi chú màu sắc/đặc điểm"
+    }
+  ],
   "dominant_colors": ["Màu chính 1", "Màu chính 2"], // ví dụ: ["Đỏ nhung", "Trắng kem"]
   "secondary_colors": ["Màu phụ 1"], // ví dụ: ["Xanh rêu", "Xanh lá"]
   "style": "Phong cách thiết kế (ví dụ: Classic Romantic & Sang trọng, Vintage Cổ điển, Hiện đại Hàn Quốc, Tự nhiên mộc mạc...)",
@@ -72,7 +91,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
   "size": "Kích thước ước tính (ví dụ: Tiêu chuẩn (M), Cao cấp (L), Khổng lồ (XL)...)",
   "wrapping_material": "Chất liệu giấy gói (ví dụ: Giấy lụa mờ Kraft gấp nếp, Giấy xi măng, Giấy xốp chống nước...)",
   "wrapping_color": "Màu sắc giấy gói (ví dụ: Trắng kem xếp tầng, Nâu mộc, Đen huyền bí...)",
-  "ribbon": "Màu và loại nơ / ruy băng (ví dụ: Ruy băng satin xanh rêu, Dây thừng thô, Nơ voan trắng...)",
+  "ribbon": "Màu và loại nơ / ruy băng ngắn gọn (ví dụ: Ruy băng voan trắng kem, Ruy băng satin đỏ nhung...)",
   "occasions": ["Dịp tặng phù hợp 1", "Dịp tặng phù hợp 2"], // ví dụ: ["Tỏ tình lãng mạn", "Kỷ niệm tình yêu", "Sinh nhật bạn gái", "Valentine"]
   "audience": "Mô tả tệp khách hàng phù hợp nhất (ví dụ: Nam giới 20–35 tuổi tặng bạn gái / vợ)",
   "suggested_price": 650000, // Giá bán đề xuất thực tế (VND)
@@ -96,9 +115,12 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
             content: [
               {
                 type: "text",
-                text: `Hãy phân tích sản phẩm hoa trong bức ảnh này.${
+                text: `Hãy quan sát thật kỹ và bóc tách toàn diện sản phẩm hoa trong bức ảnh này.${
                   productTitle ? ` Gợi ý tiêu đề ban đầu: ${productTitle}.` : ""
-                } Bóc tách chi tiết thành phần hoa, màu sắc, phong cách, bao bì và giá đề xuất.`,
+                } Đặc biệt chú ý:
+1. Nhận diện các loại hoa chính, hoa phụ và cả LÁ PHỤ ĐỆM (foliage).
+2. Soi kỹ mặt trước, chân bó và vùng nơ xem CÓ THIỆP / BIỂN CHỮ KHÔNG, đọc chính xác nội dung chữ in/viết trên thiệp (OCR).
+3. Bóc tách chi tiết chất liệu giấy gói, màu ruy băng và phụ kiện trang trí đi kèm.`,
               },
               {
                 type: "image_url",
@@ -110,7 +132,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
             ],
           },
         ],
-        max_tokens: 1200,
+        max_tokens: 1500,
         temperature: 0.2,
       }),
       signal: AbortSignal.timeout(20000), // Timeout 20s
@@ -131,6 +153,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
     if (Array.isArray(parsed.flowers)) {
       parsed.flowers.forEach((f: any, idx: number) => {
         components.push({
+          id: `flower-${idx}`,
           flowerType: f.name || `Hoa tươi #${idx + 1}`,
           quantityEstimate: parseInt(f.count) || (idx === 0 ? 12 : 5),
           unit: f.unit || "cành",
@@ -140,8 +163,9 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
     }
 
     if (Array.isArray(parsed.foliage)) {
-      parsed.foliage.forEach((fol: any) => {
+      parsed.foliage.forEach((fol: any, idx: number) => {
         components.push({
+          id: `foliage-${idx}`,
           flowerType: fol.name || "Lá phụ trang trí",
           quantityEstimate: parseInt(fol.count) || 3,
           unit: fol.unit || "cành",
@@ -164,17 +188,82 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
       sizeEstimate: parsed.size || "Tiêu chuẩn (M)",
     };
 
+    // Phân rã nguyên tử phụ liệu (Card, Ribbon, Decor)
+    const cardData = parsed.card;
+    const hasCard = Boolean(cardData?.has_card || cardData?.printed_text);
+    const card = hasCard
+      ? {
+          hasCard: true,
+          cardType: (cardData?.card_type as any) || "Thiệp gập thiết kế",
+          printedText: cardData?.printed_text || undefined,
+          color: cardData?.color || undefined,
+        }
+      : {
+          hasCard: false,
+        };
+
+    const ribbonDetail = parsed.ribbon_detail
+      ? {
+          ribbonMaterial: parsed.ribbon_detail.material || parsed.ribbon || "Ruy băng voan",
+          ribbonColor: parsed.ribbon_detail.color || "Trắng kem",
+          bowStyle: parsed.ribbon_detail.bow_style || "Nơ cánh bướm",
+        }
+      : {
+          ribbonMaterial: parsed.ribbon || "Ruy băng voan thắt nơ",
+          ribbonColor: "Trắng kem",
+          bowStyle: "Nơ 2 lớp",
+        };
+
+    const otherAccessories = Array.isArray(parsed.other_accessories)
+      ? parsed.other_accessories.map((acc: any, i: number) => ({
+          id: `acc-${i}`,
+          name: acc.name || "Phụ kiện",
+          quantity: parseInt(acc.quantity) || 1,
+          unit: acc.unit || "cái",
+          color: acc.color,
+          note: acc.note,
+        }))
+      : [];
+
+    const accessoriesList: string[] = [];
+    if (card.hasCard) {
+      accessoriesList.push(card.printedText ? `Thiệp: "${card.printedText}"` : "Thiệp chúc mừng thiết kế");
+    }
+    if (otherAccessories.length > 0) {
+      otherAccessories.forEach((acc: any) => accessoriesList.push(`${acc.name} (${acc.quantity} ${acc.unit})`));
+    }
+    if (accessoriesList.length === 0) {
+      accessoriesList.push("Thiệp chúc mừng cao cấp");
+    }
+
     const packaging: ProductPackaging = {
       wrappingMaterial: parsed.wrapping_material || "Giấy lụa mờ cao cấp",
       wrappingColor: parsed.wrapping_color || "Trắng kem xếp tầng",
-      ribbon: parsed.ribbon || "Ruy băng voan thắt nơ",
-      accessories: ["Thiệp chúc mừng cao cấp"],
+      ribbon: parsed.ribbon || `${ribbonDetail.ribbonMaterial} màu ${ribbonDetail.ribbonColor}`,
+      accessories: accessoriesList,
+      card,
+      ribbonDetail,
+      otherAccessories: otherAccessories.length > 0 ? otherAccessories : undefined,
     };
 
+    const inferredOccasions: string[] = Array.isArray(parsed.occasions) && parsed.occasions.length > 0
+      ? parsed.occasions
+      : ["Sinh nhật bạn gái", "Kỷ niệm tình yêu", "Tỏ tình lãng mạn"];
+
+    // Nếu chữ trên thiệp có chứa từ khoá dịp cụ thể, đưa lên đầu danh sách dịp
+    if (card.printedText) {
+      const lower = card.printedText.toLowerCase();
+      if (lower.includes("sinh nhật") && !inferredOccasions.some((o) => o.toLowerCase().includes("sinh nhật"))) {
+        inferredOccasions.unshift("Sinh nhật");
+      } else if (lower.includes("kỷ niệm") && !inferredOccasions.some((o) => o.toLowerCase().includes("kỷ niệm"))) {
+        inferredOccasions.unshift("Kỷ niệm ngày cưới");
+      } else if (lower.includes("khai trương") && !inferredOccasions.some((o) => o.toLowerCase().includes("khai trương"))) {
+        inferredOccasions.unshift("Khai trương chúc mừng");
+      }
+    }
+
     const context: ProductInferredContext = {
-      likelyOccasions: Array.isArray(parsed.occasions) && parsed.occasions.length > 0
-        ? parsed.occasions
-        : ["Sinh nhật bạn gái", "Kỷ niệm tình yêu", "Tỏ tình lãng mạn"],
+      likelyOccasions: inferredOccasions,
       likelyAudience: parsed.audience || "Khách hàng mua tặng người yêu, phân khúc hiện đại",
       suggestedPrice: parseInt(parsed.suggested_price) || 699000,
       confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.95,
