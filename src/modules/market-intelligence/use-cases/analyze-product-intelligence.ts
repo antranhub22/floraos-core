@@ -13,6 +13,7 @@ import type {
   ProductPackaging,
   ProductInferredContext,
   ProductIntelligenceReport,
+  CommercialPassport,
 } from "../domain/product-intelligence-types";
 
 export interface AnalyzeProductIntelligenceParams {
@@ -24,6 +25,7 @@ export interface AnalyzeProductIntelligenceParams {
   attributes?: ProductVisualAttributes[] | ProductVisualAttributes | undefined;
   packaging?: ProductPackaging | undefined;
   context?: ProductInferredContext | undefined;
+  commercialPassport?: CommercialPassport | undefined;
 }
 
 export async function analyzeProductIntelligence(
@@ -111,6 +113,7 @@ export async function analyzeProductIntelligence(
     attributes,
     packaging,
     context,
+    commercialPassport: params.commercialPassport,
     realTrendSignals: realSignals,
   });
 

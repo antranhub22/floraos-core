@@ -12,6 +12,7 @@ const productIntelligenceSchema = z.object({
   attributes: z.any().optional(),
   packaging: z.any().optional(),
   context: z.any().optional(),
+  commercial_passport: z.any().optional(),
 });
 
 export const POST = handle(async (request) => {
@@ -35,6 +36,7 @@ export const POST = handle(async (request) => {
     attributes: parsed.success ? parsed.data.attributes : undefined,
     packaging: parsed.success ? parsed.data.packaging : undefined,
     context: parsed.success ? parsed.data.context : undefined,
+    commercialPassport: parsed.success && parsed.data.commercial_passport ? parsed.data.commercial_passport : undefined,
   });
 
   return jsonResponse(result, { status: 200 });

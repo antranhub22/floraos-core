@@ -29,6 +29,16 @@ export type SalesData = {
    */
   readonly occasionCodes: string[]
   readonly priceSegment: string
+  readonly shortHeadline?: string | undefined
+  readonly style?: string | undefined
+  readonly seoKeywords?: string[] | undefined
+  readonly targetAudience?: { recipient: string; buyer_persona: string } | undefined
+  readonly flowerMeaningStory?: string | undefined
+  readonly keySellingPoints?: string[] | undefined
+  readonly cardMessageSuggestions?: { romantic: string; subtle: string; congratulatory: string } | undefined
+  readonly careInstructions?: string[] | undefined
+  readonly priceRange?: { min_price: number; target_price: number; max_price: number } | undefined
+  readonly recommendedUpsells?: string[] | undefined
 }
 
 /** Khoá mà M01b sở hữu trong `attributes`. Mọi khoá khác thuộc bước trước. */
@@ -49,13 +59,25 @@ export function mergeSalesDataIntoAttributes(
   salesData: SalesData
 ): Record<string, unknown> {
   const next = asRecord(current)
-  next[SALES_DATA_KEY] = {
+  const salesPayload: Record<string, unknown> = {
     description: salesData.description,
     tags: salesData.tags,
     occasions: salesData.occasions,
     occasionCodes: salesData.occasionCodes,
     priceSegment: salesData.priceSegment,
   }
+  if (salesData.shortHeadline) salesPayload.shortHeadline = salesData.shortHeadline
+  if (salesData.style) salesPayload.style = salesData.style
+  if (salesData.seoKeywords) salesPayload.seoKeywords = salesData.seoKeywords
+  if (salesData.targetAudience) salesPayload.targetAudience = salesData.targetAudience
+  if (salesData.flowerMeaningStory) salesPayload.flowerMeaningStory = salesData.flowerMeaningStory
+  if (salesData.keySellingPoints) salesPayload.keySellingPoints = salesData.keySellingPoints
+  if (salesData.cardMessageSuggestions) salesPayload.cardMessageSuggestions = salesData.cardMessageSuggestions
+  if (salesData.careInstructions) salesPayload.careInstructions = salesData.careInstructions
+  if (salesData.priceRange) salesPayload.priceRange = salesData.priceRange
+  if (salesData.recommendedUpsells) salesPayload.recommendedUpsells = salesData.recommendedUpsells
+
+  next[SALES_DATA_KEY] = salesPayload
   // Khoá lọc ở mức trên cùng, đúng chỗ `ProductRepository.list` đọc.
   next.occasionCodes = salesData.occasionCodes
   return next

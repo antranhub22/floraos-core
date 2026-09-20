@@ -13,23 +13,11 @@ import {
   preservedKeys,
   type SalesData,
 } from "../domain/product-master-merge";
-
-interface ProductCopyOutput {
-  suggested_name: string;
-  suggested_description: string;
-  suggested_tags: string[];
-  suggested_occasions: string[];
-  suggested_price_segment: "budget" | "standard" | "premium" | "luxury";
-}
-
-interface ProductCopyRaw {
-  suggested_name?: string;
-  suggested_description?: string;
-  suggested_tags?: string[];
-  suggested_occasions?: string[];
-  suggested_price_segment?: string;
-  [key: string]: unknown;
-}
+import {
+  resolveEffectiveProductCopy,
+  type ProductCopyRaw,
+  type ProductCopyEffective,
+} from "../domain/product-copy-rules";
 
 export class ProductCopyRepository {
   readonly db: DbClient;
@@ -154,6 +142,16 @@ export class ProductCopyRepository {
       occasions: effective.suggested_occasions,
       occasionCodes,
       priceSegment: effective.suggested_price_segment,
+      shortHeadline: effective.short_headline,
+      style: effective.suggested_style,
+      seoKeywords: effective.seo_keywords,
+      targetAudience: effective.target_audience,
+      flowerMeaningStory: effective.flower_meaning_story,
+      keySellingPoints: effective.key_selling_points,
+      cardMessageSuggestions: effective.card_message_suggestions,
+      careInstructions: effective.care_instructions,
+      priceRange: effective.suggested_price_range,
+      recommendedUpsells: effective.recommended_upsells,
     };
 
     let product;
@@ -230,14 +228,8 @@ export class ProductCopyRepository {
     });
   }
 
-  private resolveEffective(raw: ProductCopyRaw, edited: ProductCopyRaw | null): ProductCopyOutput {
-    if (!edited) return raw as ProductCopyOutput;
-    return {
-      ...raw,
-      ...edited,
-      suggested_tags: edited.suggested_tags ?? raw.suggested_tags ?? [],
-      suggested_occasions: edited.suggested_occasions ?? raw.suggested_occasions ?? [],
-    } as ProductCopyOutput;
+  private resolveEffective(raw: ProductCopyRaw, edited: ProductCopyRaw | null): ProductCopyEffective {
+    return resolveEffectiveProductCopy(raw, edited);
   }
 
   private async generateUniqueCode(

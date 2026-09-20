@@ -16,6 +16,7 @@ import type {
   ConcreteTopic,
   ProductContentReadiness,
   ProductIntelligenceReport,
+  CommercialPassport,
 } from "./product-intelligence-types";
 
 export interface RealTrendSignalInput {
@@ -35,7 +36,76 @@ export interface EvaluateTrendFitInput {
   attributes: ProductVisualAttributes;
   packaging: ProductPackaging;
   context: ProductInferredContext;
+  commercialPassport?: CommercialPassport | undefined;
   realTrendSignals?: RealTrendSignalInput[] | undefined;
+}
+
+/**
+ * Xây dựng hoặc chuẩn hóa Commercial Passport (M01b) cho sản phẩm
+ */
+export function buildCommercialPassport(
+  productName: string,
+  components: ProductFlowerComponent[],
+  attributes: ProductVisualAttributes,
+  packaging: ProductPackaging,
+  context: ProductInferredContext,
+  provided?: CommercialPassport
+): CommercialPassport {
+  if (provided) return provided;
+
+  const dominantFlower = components.find((c) => c.role === "dominant")?.flowerType || "Hoa hồng";
+  const mainColor = attributes.mainColors[0] || "Pastel hồng";
+  const primaryStyle = attributes.style || "Romantic & Tinh tế";
+  const price = context.suggestedPrice || 599000;
+
+  return {
+    suggestedName: productName || `Bó ${dominantFlower} ${mainColor} ${primaryStyle}`,
+    shortHeadline: `${dominantFlower} ${mainColor} — Trọn Vẹn Cảm Xúc Trao Gửi`,
+    description: `Bó hoa ${dominantFlower.toLowerCase()} phối tone màu ${mainColor.toLowerCase()} tinh tế, gói theo phong cách ${primaryStyle}. Thiết kế trang nhã, hoàn hảo để gửi gắm tình cảm chân thành tới người nhận.`,
+    style: primaryStyle,
+    tags: [
+      dominantFlower.toLowerCase().replace(/\s+/g, "-"),
+      mainColor.toLowerCase().replace(/\s+/g, "-"),
+      "hoa-tuoi-thiet-ke",
+      "qua-tang-y-nghia",
+    ],
+    seoKeywords: [
+      `đặt hoa ${dominantFlower.toLowerCase()}`,
+      `hoa tươi tone ${mainColor.toLowerCase()}`,
+      `bó hoa ${primaryStyle.toLowerCase()}`,
+    ],
+    occasions: context.likelyOccasions.length > 0 ? context.likelyOccasions : ["Sinh nhật", "Kỷ niệm"],
+    targetAudience: {
+      recipient: context.likelyAudience || "Người yêu, bạn bè, người thân",
+      buyerPersona: "Khách hàng 22-38 tuổi, tìm kiếm sự chỉn chu và tinh tế",
+    },
+    flowerMeaningStory: `${dominantFlower} tượng trưng cho vẻ đẹp thanh khiết và tình cảm bền chặt, kết hợp cùng tone màu ${mainColor.toLowerCase()} mang lại cảm giác dịu dàng, ấm áp.`,
+    keySellingPoints: [
+      `100% ${dominantFlower} tuyển chọn form cánh dày, nở chuẩn đẹp`,
+      `Tone màu ${mainColor.toLowerCase()} trang nhã, bắt mắt khi lên hình`,
+      "Tặng kèm thiệp chúc mừng thiết kế và hướng dẫn dưỡng hoa",
+    ],
+    cardMessageSuggestions: {
+      romantic: "Mong mỗi ngày của em đều rạng rỡ và ngập tràn hạnh phúc như những đóa hoa này.",
+      subtle: "Gửi đến bạn những đóa hoa tươi thắm nhất cùng lời chúc an lành và niềm vui.",
+      congratulatory: "Chúc mừng ngày đặc biệt! Chúc bạn luôn thành công, rực rỡ và may mắn.",
+    },
+    careInstructions: [
+      "Đặt hoa nơi thoáng mát, tránh ánh nắng trực tiếp và luồng gió máy lạnh",
+      "Thêm một chút nước mát vào gốc mỗi ngày để giữ hoa tươi lâu",
+    ],
+    priceSegment: price > 1500000 ? "luxury" : price > 800000 ? "premium" : price > 400000 ? "standard" : "budget",
+    priceRange: {
+      minPrice: Math.round((price * 0.85) / 10000) * 10000,
+      targetPrice: price,
+      maxPrice: Math.round((price * 1.25) / 10000) * 10000,
+    },
+    recommendedUpsells: [
+      "Bình gốm sứ phong cách Bắc Âu",
+      "Thiệp sáp thơm handmade cao cấp",
+      "Hộp socola tươi thủ công",
+    ],
+  };
 }
 
 /**
@@ -289,6 +359,15 @@ export function evaluateProductTrendFit(input: EvaluateTrendFitInput): ProductIn
     videoPotential: contentFitScore >= 75,
   };
 
+  const commercialPassport = buildCommercialPassport(
+    productName,
+    components,
+    attributes,
+    packaging,
+    context,
+    input.commercialPassport
+  );
+
   return {
     id: input.id || `pi_${Date.now()}`,
     productName,
@@ -301,6 +380,7 @@ export function evaluateProductTrendFit(input: EvaluateTrendFitInput): ProductIn
     attributes,
     packaging,
     context,
+    commercialPassport,
     trendFitMatrix,
     improvements,
     topics: topicsWithEvidence,

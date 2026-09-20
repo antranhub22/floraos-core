@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Sparkles, CheckCircle2, ArrowRight, Layers, Flame, Video, AlertCircle } from "lucide-react";
 import { ProductUploadCard } from "./product-upload-card";
 import { ProductConfirmationCard } from "./product-confirmation-card";
+import { CommercialPassportCard } from "./commercial-passport-card";
 import { ProductTrendFitMatrix } from "./product-trend-fit-matrix";
 import { ProductImprovementCard } from "./product-improvement-card";
 import { ProductTopicsList } from "./product-topics-list";
@@ -16,6 +17,7 @@ import type {
   ProductInferredContext,
   ProductIntelligenceReport,
   ConcreteTopic,
+  CommercialPassport,
 } from "@/modules/market-intelligence/domain/product-intelligence-types";
 
 export function ProductIntelligenceWorkspace() {
@@ -111,6 +113,7 @@ export function ProductIntelligenceWorkspace() {
     attributes: ProductVisualAttributes;
     packaging: ProductPackaging;
     context: ProductInferredContext;
+    commercialPassport?: CommercialPassport;
   }) => {
     try {
       setIsSubmittingMatch(true);
@@ -125,6 +128,7 @@ export function ProductIntelligenceWorkspace() {
           attributes: data.attributes,
           packaging: data.packaging,
           context: data.context,
+          commercial_passport: data.commercialPassport,
         }),
       });
 
@@ -158,7 +162,7 @@ export function ProductIntelligenceWorkspace() {
           <ArrowRight size={14} className="text-stone-300 shrink-0" />
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${currentStep >= 2 ? "bg-rose-50 text-rose-700" : "text-stone-400"}`}>
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[10px]">2</span>
-            <span>02. Vision AI bóc tách (UNDERSTAND)</span>
+            <span>02. Vision AI bóc tách & Hồ sơ M01b (UNDERSTAND)</span>
           </div>
           <ArrowRight size={14} className="text-stone-300 shrink-0" />
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${currentStep >= 3 ? "bg-rose-50 text-rose-700" : "text-stone-400"}`}>
@@ -197,10 +201,11 @@ export function ProductIntelligenceWorkspace() {
         isAnalyzing={isAnalyzing}
       />
 
-      {/* 2. Màn hình xác nhận thuộc tính bóc tách */}
+      {/* 2. Màn hình xác nhận thuộc tính bóc tách & Hồ sơ thương mại */}
       {hasExtracted && (
         <div id="confirmation-step-section">
           <ProductConfirmationCard
+            productTitle={productTitle}
             components={components}
             attributes={attributes}
             packaging={packaging}
@@ -214,6 +219,11 @@ export function ProductIntelligenceWorkspace() {
       {/* 3. Báo cáo Product Intelligence khi có kết quả */}
       {report && (
         <div id="product-report-results" className="space-y-6 pt-2">
+          {/* Hồ sơ thương mại đã duyệt */}
+          {report.commercialPassport && (
+            <CommercialPassportCard passport={report.commercialPassport} readOnly />
+          )}
+
           {/* Ma trận đối soát */}
           <ProductTrendFitMatrix
             matrix={report.trendFitMatrix}

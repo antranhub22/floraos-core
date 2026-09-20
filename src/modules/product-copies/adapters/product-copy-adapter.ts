@@ -38,6 +38,17 @@ export interface ProductCopyInput {
 
 export type ProductCopyOutput = CopyOutput & {
   suggested_price_segment: "budget" | "standard" | "premium" | "luxury";
+  short_headline?: string;
+  suggested_style?: string;
+  seo_keywords?: string[];
+  secondary_occasions?: string[];
+  target_audience?: { recipient: string; buyer_persona: string };
+  flower_meaning_story?: string;
+  key_selling_points?: string[];
+  card_message_suggestions?: { romantic: string; subtle: string; congratulatory: string };
+  care_instructions?: string[];
+  suggested_price_range?: { min_price: number; target_price: number; max_price: number };
+  recommended_upsells?: string[];
 };
 
 const PHAN_KHUC = ["budget", "standard", "premium", "luxury"] as const;
@@ -100,10 +111,20 @@ RÀNG BUỘC
   số cành, số bông hay kích thước.
 - Trường nào ghi "chưa xác định" thì bỏ qua, không đoán thay.
 - suggested_name: tối đa ${TEN_TOI_DA} ký tự, tiếng Việt có dấu.
+- short_headline: tagline/slogan ngắn 1 dòng (dưới 60 ký tự) giàu cảm xúc.
 - suggested_description: ${DAI_MO_TA.min}–${DAI_MO_TA.max} ký tự.
+- suggested_style: phong cách thiết kế cắm hoa.
 - suggested_tags: ${DAI_THE.min}–${DAI_THE.max} thẻ, tiếng Việt KHÔNG dấu, viết thường, nối bằng dấu gạch ngang.
+- seo_keywords: 3-5 từ khóa tìm kiếm Google Intent.
 - suggested_occasions: chỉ chọn từ DANH MỤC DỊP CỦA CỬA HÀNG, chép đúng tên.
+- target_audience: đối tượng người nhận (recipient) và chân dung người mua (buyer_persona).
+- flower_meaning_story: câu chuyện ngắn 2-3 câu về ý nghĩa loài hoa và thông điệp.
+- key_selling_points: 3 điểm bán hàng độc nhất (USP) để nhân viên chốt sale nhanh.
+- card_message_suggestions: 3 mẫu lời chúc viết thiệp (romantic, subtle, congratulatory).
+- care_instructions: 2-3 mẹo chăm sóc hoa tươi bền lâu.
 - suggested_price_segment: đúng một trong ${PHAN_KHUC.join(" | ")}.
+- suggested_price_range: dải giá đề xuất VNĐ (min_price, target_price, max_price).
+- recommended_upsells: 2-3 sản phẩm gợi ý bán kèm.
 
 Trả về JSON đúng lược đồ đã cho, không thêm lời dẫn.`;
 }
@@ -141,16 +162,23 @@ export function createProductCopyAdapter(
           type: "object",
           properties: {
             suggested_name: { type: "string", maxLength: TEN_TOI_DA },
+            short_headline: { type: "string", maxLength: 100 },
             suggested_description: {
               type: "string",
               minLength: DAI_MO_TA.min,
               maxLength: DAI_MO_TA.max,
             },
+            suggested_style: { type: "string" },
             suggested_tags: {
               type: "array",
               items: { type: "string" },
               minItems: DAI_THE.min,
               maxItems: DAI_THE.max,
+            },
+            seo_keywords: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 8,
             },
             suggested_occasions: {
               type: "array",
@@ -159,7 +187,54 @@ export function createProductCopyAdapter(
                   ? { type: "string", enum: input.occasions.map((o) => o.name) }
                   : { type: "string" },
             },
+            secondary_occasions: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 5,
+            },
+            target_audience: {
+              type: "object",
+              properties: {
+                recipient: { type: "string" },
+                buyer_persona: { type: "string" },
+              },
+              required: ["recipient", "buyer_persona"],
+            },
+            flower_meaning_story: { type: "string" },
+            key_selling_points: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 5,
+            },
+            card_message_suggestions: {
+              type: "object",
+              properties: {
+                romantic: { type: "string" },
+                subtle: { type: "string" },
+                congratulatory: { type: "string" },
+              },
+              required: ["romantic", "subtle", "congratulatory"],
+            },
+            care_instructions: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 4,
+            },
             suggested_price_segment: { type: "string", enum: [...PHAN_KHUC] },
+            suggested_price_range: {
+              type: "object",
+              properties: {
+                min_price: { type: "number" },
+                target_price: { type: "number" },
+                max_price: { type: "number" },
+              },
+              required: ["min_price", "target_price", "max_price"],
+            },
+            recommended_upsells: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 5,
+            },
           },
           required: [
             "suggested_name",
@@ -168,9 +243,8 @@ export function createProductCopyAdapter(
             "suggested_occasions",
             "suggested_price_segment",
           ],
-          additionalProperties: false,
         },
-        maxTokens: 1000,
+        maxTokens: 1800,
       };
 
       const response: LLMResponse = await llmProvider.complete(request);

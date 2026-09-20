@@ -23,6 +23,9 @@ export type CopyOutput = {
   readonly suggested_tags: string[]
   readonly suggested_occasions: string[]
   readonly suggested_price_segment: string
+  readonly short_headline?: string
+  readonly key_selling_points?: string[]
+  readonly flower_meaning_story?: string
 }
 
 export type NgữCảnhChấm = {
@@ -114,7 +117,15 @@ export function chamFactual(out: CopyOutput, ctx: NgữCảnhChấm): number {
  * từ bị cấm, và nằm trong khuôn độ dài/số thẻ đã khai với mô hình.
  */
 export function chamBrand(out: CopyOutput, ctx: NgữCảnhChấm): number {
-  const noiDung = bo_dau(`${out.suggested_name} ${out.suggested_description} ${out.suggested_tags.join(" ")}`)
+  const phanNoiDung = [
+    out.suggested_name,
+    out.short_headline ?? "",
+    out.suggested_description,
+    out.suggested_tags.join(" "),
+    out.flower_meaning_story ?? "",
+    ...(out.key_selling_points ?? []),
+  ].join(" ")
+  const noiDung = bo_dau(phanNoiDung)
   const viPham = ctx.forbidden.filter((c) => c.trim().length > 0 && noiDung.includes(bo_dau(c)))
   if (viPham.length > 0) return 0
 
@@ -123,6 +134,7 @@ export function chamBrand(out: CopyOutput, ctx: NgữCảnhChấm): number {
     out.suggested_tags.length >= DAI_THE.min && out.suggested_tags.length <= DAI_THE.max,
     out.suggested_tags.every((t) => t === bo_dau(t)),
     ["budget", "standard", "premium", "luxury"].includes(out.suggested_price_segment),
+    out.short_headline ? out.short_headline.length <= 100 : true,
   ]
   return dungKhuon.filter(Boolean).length / dungKhuon.length
 }

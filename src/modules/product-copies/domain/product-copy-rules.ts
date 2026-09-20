@@ -9,35 +9,59 @@
  * - Phân khúc giá là nhãn bán hàng, không ghi vào `orders` hay `pricing_rules`
  */
 
+export type TargetAudience = {
+  recipient: string;
+  buyer_persona: string;
+};
+
+export type CardMessageSuggestions = {
+  romantic: string;
+  subtle: string;
+  congratulatory: string;
+};
+
+export type SuggestedPriceRange = {
+  min_price: number;
+  target_price: number;
+  max_price: number;
+};
+
 export type ProductCopyRaw = {
   /** Tên gợi ý: "Bó hồng đỏ 20 cành - Valentine" */
   suggested_name: string;
-  /** Mô tả marketing: "Bó hoa hồng đỏ tinh tế, 20 cành, ý nghĩa tình yêu..." */
+  /** Slogan / Catchphrase ngắn 1 dòng (dưới 60 ký tự) cho Banner / Story / Thumbnail */
+  short_headline?: string | undefined;
+  /** Mô tả marketing giàu cảm xúc: "Bó hoa hồng đỏ tinh tế, 20 cành, ý nghĩa tình yêu..." */
   suggested_description: string;
-  /** Phong cách thiết kế: "Tay vợt sang trọng" */
+  /** Phong cách thiết kế: "Sang trọng" | "Hàn Quốc Romantic" | "Tối giản" ... */
   suggested_style: string;
-  /** Thẻ gợi ý: ["hồng đỏ", "valentine", "tặng người yêu"] */
+  /** Thẻ gợi ý mạng xã hội: ["hồng-đỏ", "valentine", "tang-nguoi-yeu"] */
   suggested_tags: string[];
-  /** Dịp gợi ý (mã từ bảng `occasions`): ["valentine", "anniversary"] */
+  /** Từ khóa tìm kiếm Search Intent Google / SEO */
+  seo_keywords?: string[] | undefined;
+  /** Dịp gợi ý chính (mã từ bảng `occasions`): ["valentine", "anniversary"] */
   suggested_occasions: string[];
+  /** Dịp gợi ý phụ mở rộng bán chéo */
+  secondary_occasions?: string[] | undefined;
+  /** Đối tượng khách hàng mục tiêu: Người nhận & Người mua */
+  target_audience?: TargetAudience | undefined;
+  /** Ý nghĩa câu chuyện loài hoa (Storytelling bán hàng) */
+  flower_meaning_story?: string | undefined;
+  /** 3-4 điểm bán hàng nổi bật (USP) để sale/bot chốt đơn nhanh */
+  key_selling_points?: string[] | undefined;
+  /** 3 mẫu lời chúc viết thiệp tương ứng các sắc thái */
+  card_message_suggestions?: CardMessageSuggestions | undefined;
+  /** 2-3 mẹo chăm sóc giữ hoa tươi bền lâu */
+  care_instructions?: string[] | undefined;
   /** Phân khúc giá: "budget" | "standard" | "premium" | "luxury" */
   suggested_price_segment: "budget" | "standard" | "premium" | "luxury";
+  /** Dải giá bán đề xuất để cân đối biên lợi nhuận */
+  suggested_price_range?: SuggestedPriceRange | undefined;
+  /** Gợi ý sản phẩm mua kèm gia tăng AOV (bình gốm, thiệp sáp, socola...) */
+  recommended_upsells?: string[] | undefined;
 };
 
-export type ProductCopyEdited = Partial<ProductCopyRaw> & {
-  /** Ghi đè tên do người duyệt sửa */
-  suggested_name?: string;
-  /** Ghi đè mô tả */
-  suggested_description?: string;
-  /** Ghi đè phong cách */
-  suggested_style?: string;
-  /** Ghi đè thẻ */
-  suggested_tags?: string[];
-  /** Ghi đè dịp */
-  suggested_occasions?: string[];
-  /** Ghi đè phân khúc */
-  suggested_price_segment?: "budget" | "standard" | "premium" | "luxury";
-};
+export type ProductCopyEdited = Partial<ProductCopyRaw>;
 
 export type ProductCopyEffective = ProductCopyRaw & ProductCopyEdited;
 
@@ -66,6 +90,16 @@ export function resolveEffectiveProductCopy(
     suggested_tags: edited.suggested_tags ?? raw.suggested_tags,
     suggested_occasions: edited.suggested_occasions ?? raw.suggested_occasions,
     suggested_style: edited.suggested_style ?? raw.suggested_style,
+    short_headline: edited.short_headline ?? raw.short_headline,
+    seo_keywords: edited.seo_keywords ?? raw.seo_keywords,
+    secondary_occasions: edited.secondary_occasions ?? raw.secondary_occasions,
+    target_audience: edited.target_audience ?? raw.target_audience,
+    flower_meaning_story: edited.flower_meaning_story ?? raw.flower_meaning_story,
+    key_selling_points: edited.key_selling_points ?? raw.key_selling_points,
+    card_message_suggestions: edited.card_message_suggestions ?? raw.card_message_suggestions,
+    care_instructions: edited.care_instructions ?? raw.care_instructions,
+    suggested_price_range: edited.suggested_price_range ?? raw.suggested_price_range,
+    recommended_upsells: edited.recommended_upsells ?? raw.recommended_upsells,
   };
 }
 
@@ -92,11 +126,21 @@ export function validateProductCopyEdited(data: unknown): data is ProductCopyEdi
   const d = data as Record<string, unknown>;
   const allowedKeys = [
     "suggested_name",
+    "short_headline",
     "suggested_description",
     "suggested_style",
     "suggested_tags",
+    "seo_keywords",
     "suggested_occasions",
-    "suggested_price_segment"
+    "secondary_occasions",
+    "target_audience",
+    "flower_meaning_story",
+    "key_selling_points",
+    "card_message_suggestions",
+    "care_instructions",
+    "suggested_price_segment",
+    "suggested_price_range",
+    "recommended_upsells",
   ];
   return Object.keys(d).every(k => allowedKeys.includes(k));
 }
@@ -109,14 +153,54 @@ export const PRODUCT_COPY_AI_SCHEMA = {
   type: "object",
   properties: {
     suggested_name: { type: "string", minLength: 1, maxLength: 200 },
+    short_headline: { type: "string", maxLength: 100 },
     suggested_description: { type: "string", minLength: 1, maxLength: 2000 },
+    suggested_style: { type: "string" },
     suggested_tags: { type: "array", items: { type: "string" }, maxItems: 20 },
+    seo_keywords: { type: "array", items: { type: "string" }, maxItems: 10 },
     suggested_occasions: { type: "array", items: { type: "string" }, maxItems: 10 },
+    secondary_occasions: { type: "array", items: { type: "string" }, maxItems: 10 },
+    target_audience: {
+      type: "object",
+      properties: {
+        recipient: { type: "string" },
+        buyer_persona: { type: "string" },
+      },
+      required: ["recipient", "buyer_persona"],
+    },
+    flower_meaning_story: { type: "string" },
+    key_selling_points: { type: "array", items: { type: "string" }, maxItems: 5 },
+    card_message_suggestions: {
+      type: "object",
+      properties: {
+        romantic: { type: "string" },
+        subtle: { type: "string" },
+        congratulatory: { type: "string" },
+      },
+      required: ["romantic", "subtle", "congratulatory"],
+    },
+    care_instructions: { type: "array", items: { type: "string" }, maxItems: 5 },
     suggested_price_segment: { 
       type: "string", 
       enum: ["budget", "standard", "premium", "luxury"] 
     },
+    suggested_price_range: {
+      type: "object",
+      properties: {
+        min_price: { type: "number" },
+        target_price: { type: "number" },
+        max_price: { type: "number" },
+      },
+      required: ["min_price", "target_price", "max_price"],
+    },
+    recommended_upsells: { type: "array", items: { type: "string" }, maxItems: 5 },
   },
-  required: ["suggested_name", "suggested_description", "suggested_tags", "suggested_occasions", "suggested_price_segment"],
-  additionalProperties: false,
+  required: [
+    "suggested_name",
+    "suggested_description",
+    "suggested_tags",
+    "suggested_occasions",
+    "suggested_price_segment",
+  ],
+  additionalProperties: true,
 } as const;

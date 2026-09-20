@@ -97,6 +97,35 @@ export interface ProductContentReadiness {
   videoPotential: boolean;
 }
 
+export interface CommercialPassport {
+  suggestedName: string;
+  shortHeadline: string;
+  description: string;
+  style: string;
+  tags: string[];
+  seoKeywords: string[];
+  occasions: string[];
+  targetAudience: {
+    recipient: string;
+    buyerPersona: string;
+  };
+  flowerMeaningStory: string;
+  keySellingPoints: string[];
+  cardMessageSuggestions: {
+    romantic: string;
+    subtle: string;
+    congratulatory: string;
+  };
+  careInstructions: string[];
+  priceSegment: "budget" | "standard" | "premium" | "luxury";
+  priceRange: {
+    minPrice: number;
+    targetPrice: number;
+    maxPrice: number;
+  };
+  recommendedUpsells: string[];
+}
+
 export interface ProductIntelligenceReport {
   id: string;
   productName: string;
@@ -109,6 +138,7 @@ export interface ProductIntelligenceReport {
   attributes: ProductVisualAttributes;
   packaging: ProductPackaging;
   context: ProductInferredContext;
+  commercialPassport?: CommercialPassport;
   trendFitMatrix: ProductTrendFitItem[];
   improvements: ProductImprovement;
   topics: ConcreteTopic[];

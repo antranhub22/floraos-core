@@ -7,10 +7,14 @@ import type {
   ProductVisualAttributes,
   ProductPackaging,
   ProductInferredContext,
+  CommercialPassport,
 } from "@/modules/market-intelligence/domain/product-intelligence-types";
 import { synthesizeProductResearchQueries } from "@/modules/market-intelligence/domain/synthesize-product-queries";
+import { buildCommercialPassport } from "@/modules/market-intelligence/domain/trend-fit";
+import { CommercialPassportCard } from "./commercial-passport-card";
 
 interface ProductConfirmationCardProps {
+  productTitle?: string;
   components: ProductFlowerComponent[];
   attributes: ProductVisualAttributes;
   packaging: ProductPackaging;
@@ -20,12 +24,14 @@ interface ProductConfirmationCardProps {
     attributes: ProductVisualAttributes;
     packaging: ProductPackaging;
     context: ProductInferredContext;
+    commercialPassport?: CommercialPassport;
     selectedQueries?: string[];
   }) => void;
   isSubmitting: boolean;
 }
 
 export function ProductConfirmationCard({
+  productTitle,
   components: initialComponents,
   attributes: initialAttributes,
   packaging: initialPackaging,
@@ -37,6 +43,9 @@ export function ProductConfirmationCard({
   const [attributes, setAttributes] = useState<ProductVisualAttributes>(initialAttributes);
   const [packaging, setPackaging] = useState<ProductPackaging>(initialPackaging);
   const [context, setContext] = useState<ProductInferredContext>(initialContext);
+  const [commercialPassport, setCommercialPassport] = useState<CommercialPassport>(() =>
+    buildCommercialPassport(productTitle || "Bó hoa tươi", initialComponents, initialAttributes, initialPackaging, initialContext)
+  );
 
   // Đồng bộ lại state khi initial props từ Vision AI thay đổi
   useEffect(() => {
@@ -44,7 +53,10 @@ export function ProductConfirmationCard({
     setAttributes(initialAttributes);
     setPackaging(initialPackaging);
     setContext(initialContext);
-  }, [initialComponents, initialAttributes, initialPackaging, initialContext]);
+    setCommercialPassport(
+      buildCommercialPassport(productTitle || "Bó hoa tươi", initialComponents, initialAttributes, initialPackaging, initialContext)
+    );
+  }, [productTitle, initialComponents, initialAttributes, initialPackaging, initialContext]);
 
   const synthesized = synthesizeProductResearchQueries({
     components,
@@ -224,6 +236,12 @@ export function ProductConfirmationCard({
         </div>
       </div>
 
+      {/* Khối Hồ Sơ Thương Mại M01b (Commercial Passport) */}
+      <CommercialPassportCard
+        passport={commercialPassport}
+        onChange={setCommercialPassport}
+      />
+
       {/* Khối Lựa Chọn Hướng Nghiên Cứu Xu Hướng */}
       <div className="rounded-xl border border-rose-200 bg-white p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
@@ -278,7 +296,7 @@ export function ProductConfirmationCard({
 
         <button
           type="button"
-          onClick={() => onConfirm({ components, attributes, packaging, context, selectedQueries })}
+          onClick={() => onConfirm({ components, attributes, packaging, context, commercialPassport, selectedQueries })}
           disabled={isSubmitting || selectedQueries.length === 0}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-rose-700 shadow-sm transition disabled:opacity-50"
         >
