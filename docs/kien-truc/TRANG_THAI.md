@@ -21,7 +21,7 @@ Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100
   - Tầng Domain: Cập nhật `ProductPackaging`, `synthesizeProductResearchQueries` và `CommercialPassport`.
 
 **20/09 — Hoàn thiện 100% tính năng "Quét theo Ảnh mẫu" (Product Intelligence Vision AI) & Tích hợp Multimodal AI Thật, Progressive Selection.**
-Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm run test:tenant` **206/206 ca xanh thật (27/27 tệp)**, `tests/unit/market-intelligence/` **32/32 ca xanh thật (8/8 tệp)**.
+Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm run test:tenant` **206/206 ca xanh thật (27/27 tệp)**, `tests/unit/market-intelligence/` **35/35 ca xanh thật (8/8 tệp)**.
 - **Multimodal Vision AI thật (Anti-Hardcode)**: Xây dựng adapter OpenAI Vision (`gpt-4o-mini`) tại `src/modules/market-intelligence/adapters/openai-vision-adapter.ts`, đọc trực tiếp ảnh qua Base64 Data URL (`data:image/...;base64,...`) hoặc Web URL. Nhận diện chính xác 100% sản phẩm hoa thực tế người dùng tải lên (bó hoa hồng đỏ, tulip cam cháy, cúc tana, mẫu đơn luxury...), bóc tách số lượng cành, bảng màu chính/phụ, kiểu bó, vật liệu giấy lụa, nơ, dịp tặng và giá bán thực tế. Gỡ bỏ triệt để việc gán cứng tiêu đề mặc định và các fallback template cứng ("Hoa hồng kem dâu").
 - **Cơ chế tương tác từng bước (Interactive Step-by-Step Progressive Selection)**: Đáp ứng yêu cầu của Chủ sản phẩm: Tại mỗi bước khi có kết quả, hiển thị để người dùng theo dõi và chủ động chọn các hướng lựa chọn rồi mới đi tiếp:
   - Chặng 01 (BRING): Kéo thả ảnh hoa máy tính hoặc chọn từ Catalog tiệm.
