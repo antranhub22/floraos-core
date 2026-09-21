@@ -1095,6 +1095,20 @@ export default function TaiAnhPage() {
     }
   }
 
+  function handleGoCreativeStudio() {
+    const productName = (analysisData?.["product_name"] as string)
+      || (analysisData?.["identity"] as Record<string, unknown> | undefined)?.["product_name"] as string
+      || (analysisData?.["name"] as string)
+      || "Sản phẩm"
+    const params = new URLSearchParams()
+    params.set("mode", "CREATIVE")
+    params.set("source", "image")
+    if (analysisImageUrl) params.set("imageUrl", analysisImageUrl)
+    if (productName) params.set("productName", productName)
+    if (analysisId) params.set("topic", analysisId)
+    router.push(`/creative-studio?${params.toString()}` as any)
+  }
+
   async function handleSaveDraft2() {
     if (!copyId) return
     if (!editedFields || Object.keys(editedFields).length === 0) return
@@ -1472,6 +1486,23 @@ export default function TaiAnhPage() {
                 </div>
               </div>
             )}
+
+            {approvalState === "APPROVED" && (
+              <div className="w-full max-w-3xl border-t border-border pt-5">
+                <div className="flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+                  <div>
+                    <div className="text-[14px] font-bold text-emerald-800">✓ Đã duyệt — Chuyển sang Sáng tạo nội dung</div>
+                    <div className="text-[12px] text-text-muted">Đặc điểm nhận diện đã duyệt → Creative Studio (Chặng 5-14)</div>
+                  </div>
+                  <Button
+                    onClick={handleGoCreativeStudio}
+                    className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white"
+                  >
+                    <Sparkles size={14} /> Tới Creative Studio
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1511,6 +1542,9 @@ export default function TaiAnhPage() {
             <div className="flex gap-3">
               <Button variant="secondary" onClick={() => setPhase("upload")}>
                 Phân tích ảnh khác
+              </Button>
+              <Button onClick={handleGoCreativeStudio}>
+                Tới Creative Studio
               </Button>
               <Button onClick={() => router.push("/")}>Quay về Trang chủ</Button>
             </div>
