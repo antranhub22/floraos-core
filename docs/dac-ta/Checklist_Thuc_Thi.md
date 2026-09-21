@@ -501,7 +501,57 @@ cổng duyệt. Bốn ô của P16 phía dưới được chỉnh lại theo mã
 
 ## P26 — Audio Studio + Creative Production — 2 tab Creative Studio · hoàn tất 20/09
 
-Đưa Creative Studio về đúng hình thức 2 tab: Khu vực A (Studio Sáng tạo Ảnh, M04a, AIC-06/AIC-12/AIC-13) + Khu vực B (Audio Studio, AIC-14). Cả hai đều gọi `POST /api/v1/media/variants` qua worker riêng, đều đi qua `enqueueJob`, đều có năng lực chạy (`I4`) ↔ duyệt (`I5`) tách rời.
+Đưa Creative Studio về đúng hình thức 5 Khu vực (Tối ưu ảnh/video đầu vào, Viết contents, Tạo audio, Tạo biến thể ảnh, Tạo video) với cả 2 nhánh Creative/AUTHENTIC. User chọn production method (local/provider). Chặng chuyển tiếp chuẩn hóa inputs cho tất cả Khu vực.
+
+### Tài liệu chuẩn hóa (hoàn tất)
+
+- [x] **I/O Spec** — `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_IO_SPEC.md`
+- [x] **User Journey** — `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_JOURNEY.md`
+- [x] **Checklist** — `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_CHECKLIST.md`
+
+### Chặng chuyển tiếp (Chặng 4 → 5)
+
+- [x] TopicProductionBrief schema chuẩn hóa (IO Spec mục 0)
+- [x] Data sync theo topic đã chọn Chặng 04
+- [x] Validation required fields
+- [x] Video duration detect (FFprobe)
+
+### 5 Khu vực Creative Studio
+
+- [x] Tab 1: Tối ưu ảnh/video đầu vào (OptimizeWorkspace)
+- [x] Tab 2: Contents — produceCreative (CREATIVE default) / produceAuthentic (user content override, KHÔNG narrative arc)
+- [x] Tab 3: Audio — POST /api/v1/audio/jobs, multi-provider TTS, duration sync
+- [x] Tab 4: Biến thể ảnh (VariantWorkspace) — Local/Provider choice, Subject Integrity 0.95/0.90
+- [x] Tab 5: Video (M04c) — Local/Provider choice, storyboard, Ken Burns, subtitles
+
+### Creative/Authentic Split
+
+- [x] Mode CREATIVE (default) / AUTHENTIC, user chọn Chặng 5
+- [x] AUTHENTIC: user upload content → dùng nội dung đó, KHÔNG narrative arc
+- [x] AUTHENTIC video: KHÔNG tạo mới, chỉ crop gốc
+- [x] AUTHENTIC audio: TTS factual + BGM nhẹ
+
+### Production Method Choice
+
+- [x] Tab 4: Local ↔ Provider, user chọn
+- [x] Tab 5: Local ↔ Provider, user chọn
+- [x] Audit log production method choice
+
+### Manual Approval & Data Consistency
+
+- [x] Mỗi tab/bước user duyệt trước khi tiếp tục
+- [x] CreativeStudioContext SSOT, KHÔNG re-input
+
+### Đã code (commit e2a6c58)
+
+- [x] Audio + Creative Production routes, Audio worker pytest 18/18
+- [x] Nợ #110 fix: 0.99 cứng → computed từ providerFlags
+
+### Chưa code (Đợt 1)
+
+- [ ] Chặng chuyển tiếp UI, Creative Studio shell 5 tabs, Modal chọn định hướng
+- [ ] Tab 2-5 UI, production method choice UI, AUTHENTIC override logic
+
 
 ### Audio Studio
 
