@@ -63,6 +63,7 @@ Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100
 - ProductTopicsList: `onOpenVideoStudio/onOpenMediaStudio` → `onOpenCreativeStudio` (single "Sáng tạo nội dung" button)
 - ProductIntelligenceWorkspace: topic handoff route → `/creative-studio` ( thay `/video` + `/tai-anh`)
 - CreativeGuidanceCard: extended `area` prop to `area-a` through `area-e`
+- **Chặng 1-4 → Creative Studio:** `/tai-anh` now routes to `/creative-studio` at 2 entry points: (1) `result1` phase after duyệt đặc điểm — emerald banner + rose "Tới Creative Studio" button; (2) `saved` phase — "Tới Creative Studio" as primary action. Carries `imageUrl`, `productName`, `topic=analysisId` via URL params. Closes gap: user no longer needs `/thi-truong` detour.
 
 **Chưa xác minh được — cần anh Tony chạy trên Mac thật:** `npx prisma generate && npx prisma db push` (bẫy `binaries.prisma.sh`, xem AGENTS.md mục Bẫy), sau đó `npm run test:tenant` (đảm bảo P26 cách ly tenant xanh).
 
