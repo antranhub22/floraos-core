@@ -5,7 +5,7 @@ import { Wand2, Sparkles } from "lucide-react"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
 
 export interface CreativeGuidanceCardProps {
-  area?: "area-a" | "area-b"
+  area?: "area-a" | "area-b" | "area-c" | "area-d" | "area-e"
 }
 
 export function CreativeGuidanceCard({ area = "area-a" }: CreativeGuidanceCardProps) {

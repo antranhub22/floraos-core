@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check, Video, FileText, Play, Sparkles, Target, ArrowRight } from "lucide-react";
+import { Copy, Check, Video, FileText, Play, Sparkles, Target, ArrowRight, Wand2 } from "lucide-react";
 import type { ConcreteTopic, TopicAngleCategory } from "@/modules/market-intelligence/domain/product-intelligence-types";
 import { getTopicDualRealVideoEvidence } from "./video-evidence-catalog";
 
@@ -9,8 +9,7 @@ interface ProductTopicsListProps {
   topics: ConcreteTopic[];
   selectedTopicId?: string | undefined;
   onSelectTopic?: (topic: ConcreteTopic) => void;
-  onOpenVideoStudio?: (topic: ConcreteTopic) => void;
-  onOpenMediaStudio?: (topic: ConcreteTopic) => void;
+  onOpenCreativeStudio?: (topic: ConcreteTopic) => void;
 }
 
 const ANGLE_LABELS: Record<string, { label: string; colorClass: string }> = {
@@ -26,8 +25,7 @@ export function ProductTopicsList({
   topics,
   selectedTopicId: externalSelectedTopicId,
   onSelectTopic,
-  onOpenVideoStudio,
-  onOpenMediaStudio,
+  onOpenCreativeStudio,
 }: ProductTopicsListProps) {
   const [internalSelectedTopicId, setInternalSelectedTopicId] = useState<string | null>(
     topics[0]?.id || null
@@ -119,24 +117,14 @@ export function ProductTopicsList({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {onOpenVideoStudio && (
+            {onOpenCreativeStudio && (
               <button
                 type="button"
-                onClick={() => onOpenVideoStudio(selectedTopic)}
+                onClick={() => onOpenCreativeStudio(selectedTopic)}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition"
               >
-                <Video size={13} />
-                Dựng video với chủ đề này
-              </button>
-            )}
-            {onOpenMediaStudio && (
-              <button
-                type="button"
-                onClick={() => onOpenMediaStudio(selectedTopic)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 text-xs font-bold transition"
-              >
-                <FileText size={13} />
-                Tạo ảnh biến thể
+                <Wand2 size={13} />
+                Sáng tạo nội dung
               </button>
             )}
           </div>
@@ -311,30 +299,17 @@ export function ProductTopicsList({
                 </button>
 
                 <div className="flex items-center gap-1.5">
-                  {onOpenVideoStudio && (
+                  {onOpenCreativeStudio && (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onOpenVideoStudio(topic);
+                        onOpenCreativeStudio(topic);
                       }}
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold shadow-xs transition"
                     >
-                      <Video size={12} />
-                      Dựng video
-                    </button>
-                  )}
-                  {onOpenMediaStudio && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenMediaStudio(topic);
-                      }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-[11px] font-bold transition"
-                    >
-                      <FileText size={12} />
-                      Tạo ảnh
+                      <Wand2 size={12} />
+                      Sáng tạo nội dung
                     </button>
                   )}
                 </div>

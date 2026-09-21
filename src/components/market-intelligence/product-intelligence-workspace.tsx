@@ -245,14 +245,9 @@ export function ProductIntelligenceWorkspace() {
           {/* Top 10 chủ đề nội dung cụ thể kèm Dẫn chứng Video Kép */}
           <ProductTopicsList
             topics={report.topics}
-            onOpenVideoStudio={(topic) =>
+            onOpenCreativeStudio={(topic) =>
               router.push(
-                `/video?prompt=${encodeURIComponent(topic.title)}&hook=${encodeURIComponent(topic.hook)}&style=${encodeURIComponent(attributes.style)}` as any
-              )
-            }
-            onOpenMediaStudio={(topic) =>
-              router.push(
-                `/tai-anh?topic=${encodeURIComponent(topic.title)}&source=${encodeURIComponent(selectedImage)}` as any
+                `/creative-studio?topic=${encodeURIComponent(topic.id)}&mode=CREATIVE&source=image&imageUrl=${encodeURIComponent(selectedImage)}&productName=${encodeURIComponent(productTitle)}` as any
               )
             }
           />
@@ -262,12 +257,12 @@ export function ProductIntelligenceWorkspace() {
             readiness={report.readiness}
             onGoToMedia={() =>
               router.push(
-                `/tai-anh?topic=${encodeURIComponent(productTitle)}&source=${encodeURIComponent(selectedImage)}` as any
+                `/creative-studio?topic=${encodeURIComponent(report.topics[0]?.id || "")}&mode=CREATIVE&source=image&imageUrl=${encodeURIComponent(selectedImage)}&productName=${encodeURIComponent(productTitle)}` as any
               )
             }
             onGoToVideo={() =>
               router.push(
-                `/video?prompt=${encodeURIComponent(productTitle)}&style=${encodeURIComponent(attributes.style)}` as any
+                `/creative-studio?topic=${encodeURIComponent(report.topics[0]?.id || "")}&mode=CREATIVE&source=image&imageUrl=${encodeURIComponent(selectedImage)}&productName=${encodeURIComponent(productTitle)}` as any
               )
             }
           />
