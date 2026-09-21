@@ -53,7 +53,18 @@ Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100
 
 **Đã xác minh được trong `device_bash` (không có Postgres, không generate được Prisma):** `tsc --noEmit` sạch (mọi lỗi còn lại đều đúng dạng "chờ prisma generate" — tham chiếu ba model chưa sinh, KHÔNG phải lỗi thật), `npm test` 538/538 xanh, `check:docs` 0 lỗi cả bốn trục, `check:template-ssot` xanh.
 
-**Chưa xác minh được — cần anh Tony chạy trên Mac thật:** `npx prisma generate && npx prisma db push` (bẫy `binaries.prisma.sh`, xem AGENTS.md mục Bẫy), sau đó `npm run test:platform` và `npm run test:tenant` (đảm bảo P25a không làm giảm độ xanh của cách ly tenant hiện có). Chưa tick ô "Cổng" cuối cùng ở `Checklist_Thuc_Thi.md` mục P25a vì hai lệnh đó chưa chạy được.
+**21/09 — Đợt 1 Creative Studio frontend hoàn tất — 5 Khu vực (Tab) đầy đủ.**
+`npx tsc --noEmit` **sạch 100%**, `npm test` **714/714 ca xanh**.
+- **Tab 1 (area-a):** OptimizeWorkspace — M04a Tối ưu ảnh/video đầu vào (đã có từ trước)
+- **Tab 2 (area-b):** ContentsWorkspace — Mới. Mode CREATIVE/AUTHENTIC toggle, chọn topic, voice/music config, gọi `POST /api/v1/creative-production/produce`, hiển thị kết quả (topicResults, totalEstimatedCredits, mediaPlanItems)
+- **Tab 3 (area-c):** AudioWorkspace — Mới. Task type (VOICEOVER/MUSIC_SELECT/AUDIO_MIX/VOICE_CLONE), provider/quality config, voiceover scene editor, gọi `POST /api/v1/audio/jobs`
+- **Tab 4 (area-d):** VariantWorkspace — M04b Biến thể ảnh (đã có từ trước)
+- **Tab 5 (area-e):** VideoWorkspace — Mới. 6 khuôn M04c format selection, caption/watermark config, StoryboardEditor integration, gọi `POST /api/v1/video/jobs`, video job list
+- ProductTopicsList: `onOpenVideoStudio/onOpenMediaStudio` → `onOpenCreativeStudio` (single "Sáng tạo nội dung" button)
+- ProductIntelligenceWorkspace: topic handoff route → `/creative-studio` ( thay `/video` + `/tai-anh`)
+- CreativeGuidanceCard: extended `area` prop to `area-a` through `area-e`
+
+**Chưa xác minh được — cần anh Tony chạy trên Mac thật:** `npx prisma generate && npx prisma db push` (bẫy `binaries.prisma.sh`, xem AGENTS.md mục Bẫy), sau đó `npm run test:tenant` (đảm bảo P26 cách ly tenant xanh).
 
 **Trước đó — P24 (17-18/09), vẫn còn nguyên trạng dưới đây.**
 
