@@ -23,6 +23,9 @@ from __future__ import annotations
 import os
 from typing import Any
 
+import platform
+import ssl
+
 import httpx
 
 _ENDPOINT = "https://api.stability.ai/v2beta/stable-image/generate/core"
@@ -119,6 +122,13 @@ class StabilityBackgroundProvider:
                 },
             )
         except httpx.HTTPError as exc:
+            if "PROTOCOL_VERSION" in str(exc).upper():
+                raise BackgroundProviderError(
+                    "Python của worker không bắt tay TLS 1.3 được với Stability "
+                    f"({ssl.OPENSSL_VERSION}, Python {platform.python_version()}). "
+                    "Tạo lại workers/.venv bằng Python ≥ 3.11 (pyproject.toml yêu cầu) — "
+                    "xem docs/dac-ta/TECHNICAL_DEBT.md nợ #126."
+                ) from exc
             raise BackgroundProviderError(f"Lỗi mạng khi gọi Stability: {exc}") from exc
         finally:
             if self._client is None:

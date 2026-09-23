@@ -512,7 +512,31 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
                 break
 
 
+def _canh_bao_moi_truong() -> None:
+    """Cảnh báo sớm khi Python của worker sai phiên bản (24/09/2026).
+
+    `workers/.venv` từng được tạo bằng Python 3.9 của Command Line Tools
+    (LibreSSL 2.8, không có TLS 1.3) trong khi `pyproject.toml` yêu cầu ≥ 3.11:
+    mọi lượt gọi Stability hỏng với `TLSV1_ALERT_PROTOCOL_VERSION` và ảnh chỉ
+    còn phông trơn cục bộ. Không chặn worker (nhánh cục bộ vẫn chạy được) —
+    chỉ nói rõ ngay khi khởi động.
+    """
+    import platform
+    import ssl
+    import sys
+
+    if sys.version_info < (3, 11) or not getattr(ssl, "HAS_TLSv1_3", False):
+        print(
+            "[media] CẢNH BÁO: worker đang chạy Python "
+            f"{platform.python_version()} / {ssl.OPENSSL_VERSION} — "
+            "không gọi được nhà cung cấp cần TLS 1.3 (Stability). "
+            "Tạo lại workers/.venv bằng Python ≥ 3.11 (nợ #126).",
+            flush=True,
+        )
+
+
 def main() -> None:
+    _canh_bao_moi_truong()
     run_worker(os.environ["DATABASE_URL"])
 
 
