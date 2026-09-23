@@ -819,6 +819,14 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 )
             except BackgroundProviderError as exc:
                 nguon.update({"cloud_fallback": True, "cloud_fallback_reason": str(exc)[:300]})
+                # In ra terminal worker — trước 24/09 lỗi này chỉ nằm trong DB,
+                # người vận hành không thấy vì sao ảnh chỉ có phông trơn.
+                log.warning(
+                    "Stability không vẽ được hậu cảnh (job %s, HTTP %s) — lùi về phông cục bộ: %s",
+                    job["id"],
+                    exc.status_code,
+                    str(exc)[:300],
+                )
                 ghi_ai_request(
                     conn,
                     job_id=job["id"],
