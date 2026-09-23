@@ -16,9 +16,10 @@ from PIL import Image
 class EdgeDefringer:
     """Khử viền ám màu (Defringing / Color Decontamination) trên kênh Alpha."""
 
-    def __init__(self, inpaint_radius: int = 3, solid_threshold: int = 248) -> None:
+    def __init__(self, inpaint_radius: int = 3, solid_threshold: int = 248, band_px: int = 6) -> None:
         self.inpaint_radius = inpaint_radius
         self.solid_threshold = solid_threshold
+        self.band_px = band_px
 
     def defringe(self, rgba_image: Image.Image) -> Image.Image:
         """Khử sạch màu phông cũ bám ở dải viền chuyển tiếp của ảnh RGBA."""
@@ -32,8 +33,16 @@ class EdgeDefringer:
             rgb = rgba_np[:, :, :3].copy()
             alpha = rgba_np[:, :, 3].copy()
 
-            # Vùng viền chuyển tiếp cần khử màu: có độ trong suốt nhưng lớn hơn 0
-            fringe_mask = ((alpha > 0) & (alpha < self.solid_threshold)).astype(np.uint8) * 255
+            # Vùng viền chuyển tiếp cần khử màu: bán trong suốt VÀ nằm trong dải
+            # `band_px` sát phần nền đã bỏ. 24/09/2026: trước đây lấy MỌI điểm
+            # alpha < ngưỡng — với bó hoa thật, mô hình tách nền trả ~75% đầu
+            # hoa ở alpha 128–244, nên cv2.inpaint tô đè gần hết hoa thành các
+            # mảng màu nhoè (lỗi "ảnh sản phẩm bị xoá nhoà"). Viền là viền, không
+            # phải lòng bó hoa.
+            ngoai = (alpha < 16).astype(np.uint8)
+            k = 2 * self.band_px + 1
+            gan_nen = cv2.dilate(ngoai, np.ones((k, k), np.uint8)) > 0
+            fringe_mask = ((alpha > 0) & (alpha < self.solid_threshold) & gan_nen).astype(np.uint8) * 255
 
             if np.sum(fringe_mask > 0) == 0:
                 return rgba_image

@@ -414,3 +414,40 @@ def test_lo_i_alpha_254_cua_mo_hinh_tach_nen_van_duoc_dan_nguyen_khoi(monkeypatc
     _bien_the, do_trung, _ = dung_bien_the(buf.getvalue(), "luxury_hotel", "1:1", False, None, None)
     assert do_trung >= NGUONG_TU_CHOI
     assert do_trung == 1.0
+
+
+def test_than_hoa_ban_trong_suot_duoc_lam_dac_bang_diem_anh_goc(monkeypatch):
+    """Hồi quy 24/09/2026 ("ảnh sản phẩm bị xoá nhoà"): mô hình tách nền trả
+    ~75% đầu hoa ở alpha 128–244. Trước bản sửa, `EdgeDefringer` tô đè cả vùng
+    đó và khi ghép thì phông lọt qua thân hoa, còn cổng chỉ đo phần alpha ≥ 250
+    nên vẫn báo 100%. Nay thân (alpha ≥ 128) phải được dán NGUYÊN điểm ảnh gốc."""
+    from media_ai.jobs import variant_worker as vw
+
+    master = _anh_mau(240, 240)
+    a = np.zeros((240, 240), dtype=np.uint8)
+    a[30:210, 30:210] = 180  # thân "không chắc" như bria-rmbg trả về
+    a[26:30, 30:210] = 60
+    alpha = Image.fromarray(a, mode="L")
+    rgba = master.convert("RGBA")
+    rgba.putalpha(alpha)
+    monkeypatch.setattr(vw, "_doan_chu_the_tho", lambda *_a, **_k: (rgba, alpha))
+
+    buf = BytesIO()
+    master.save(buf, format="PNG")
+    bien_the, do_trung, _ = dung_bien_the(buf.getvalue(), "luxury_hotel", "1:1", False, None, None)
+    assert do_trung == 1.0
+
+    # Giữa thân hoa phải đúng điểm ảnh gốc, không bị pha màu phông.
+    rgba_dac, alpha_dac = vw._doan_chu_the(master, None, None)
+    assert np.array(alpha_dac)[120, 120] == 255
+    assert tuple(np.array(rgba_dac)[120, 120, :3]) == tuple(np.array(master)[120, 120])
+
+
+def test_cong_tu_choi_khi_loi_do_qua_nho_so_voi_san_pham():
+    """Lõi đo chỉ phủ một phần nhỏ sản phẩm = không kiểm được → không được báo đạt."""
+    master = _anh_mau(240, 240)
+    a = np.zeros((240, 240), dtype=np.uint8)
+    a[20:220, 20:220] = 200  # thân rộng, bán trong suốt
+    a[100:130, 100:130] = 255  # lõi đặc rất nhỏ
+    alpha = Image.fromarray(a, mode="L")
+    assert _do_lo_chu_the(master, master.convert("RGBA"), alpha) < NGUONG_TU_CHOI

@@ -276,6 +276,12 @@ def _do_lo_chu_the(
     tong = int(loi.sum())
     if tong == 0:
         return 0.0
+    # Lõi đo phải phủ phần lớn sản phẩm (24/09/2026): trước đây lõi chỉ là
+    # ~12% đầu hoa nên cổng báo 100% trong khi phần còn lại bị tô đè. Lõi quá
+    # nhỏ nghĩa là KHÔNG kiểm được — trả chính tỷ lệ phủ để cổng từ chối.
+    than = int((np.array(alpha.convert("L")) >= NGUONG_THAN_SAN_PHAM).sum())
+    if than > 0 and tong / than < TY_LE_PHU_LOI_TOI_THIEU:
+        return float(tong / than)
 
     a = np.array(master_rgb.convert("RGB"), dtype=np.int16)
     b = np.array(ket_qua_rgba.convert("RGB"), dtype=np.int16)
@@ -296,27 +302,54 @@ def _duong_dan_cache_chu_the(cache_dir: Path, master_asset_id: str) -> tuple[Pat
 
 # Ngưỡng "lõi đặc" — trùng ngưỡng `_co_bien` dùng để xác định lõi khi đo.
 NGUONG_LOI_DAC = 250
+# Điểm có alpha ≥ ngưỡng này là THÂN sản phẩm (mô hình tách nền chỉ "không chắc").
+NGUONG_THAN_SAN_PHAM = 128
+# Dải viền ngoài giữ alpha mềm để khử răng cưa; bên trong dải là thân đặc.
+DAI_VIEN_MEM_PX = 4
+# Lõi đo phải phủ ít nhất tỷ lệ này của thân sản phẩm, không thì cổng từ chối.
+TY_LE_PHU_LOI_TOI_THIEU = 0.6
 
 
-def _chot_loi_dac(rgba: Image.Image, alpha: Image.Image) -> tuple[Image.Image, Image.Image]:
-    """Chốt alpha của vùng lõi về 255 (24/09/2026).
+def _lam_dac_chu_the(
+    master_rgb: Image.Image, rgba: Image.Image, alpha: Image.Image
+) -> tuple[Image.Image, Image.Image]:
+    """Dựng lại chủ thể: thân sản phẩm ĐẶC và mang ĐÚNG điểm ảnh gốc (24/09/2026).
 
-    Mô hình tách nền (`bria-rmbg`) trả alpha lõi bó hoa ≈ 254 chứ không phải
-    255 — đo trên ảnh thật: 506.601 điểm ảnh alpha 254, chỉ 3.256 điểm 255.
-    Khi ghép, 1/255 màu phông lọt vào MỌI điểm lõi, lệch 1 đơn vị màu, nên cổng
-    đo "trùng khít tuyệt đối" chấm ~0,82 và TỪ CHỐI mọi biến thể thật (ca thử
-    tổng hợp dùng alpha 255 nên không bắt được).
+    Đo trên ảnh giỏ hoa thật: `bria-rmbg` trả ~75% đầu hoa ở alpha 128–244 và
+    lõi ≈ 254 (hầu như không có 255). Hệ quả trước bản sửa:
+      - `EdgeDefringer` coi mọi điểm alpha < 245 là "viền" và tô đè màu lên gần
+        hết đầu hoa → các mảng màu nhoè, mất cánh hoa;
+      - khi ghép, thân hoa bán trong suốt nên phông lọt qua → ảnh bị xoá nhoà;
+      - cổng Subject Integrity chỉ đo vùng alpha ≥ 250 (~12% đầu hoa) nên vẫn
+        báo 100% trong khi sản phẩm đã hỏng.
 
-    Alpha 250–254 ở lõi là nhiễu của mô hình tách nền, không phải độ trong
-    thật của cánh hoa. Chốt về 255 để bó hoa được dán NGUYÊN KHỐI đúng nghĩa;
-    viền mềm (< 250) giữ nguyên. Phép đo không nới: vẫn so sai khác 0.
+    Nay: điểm alpha ≥ 128 là thân sản phẩm; co vào `DAI_VIEN_MEM_PX` để lấy
+    phần trong → alpha 255 và điểm ảnh lấy NGUYÊN từ Master. Chỉ dải viền
+    ngoài giữ alpha mềm và màu đã khử viền. Lõi đo của cổng (co thêm 5px từ
+    alpha ≥ 250) vì thế phủ gần toàn bộ sản phẩm thay vì một phần nhỏ.
     """
+    from PIL import ImageFilter
+
     a = np.array(alpha.convert("L"))
-    a = np.where(a >= NGUONG_LOI_DAC, 255, a).astype(np.uint8)
-    alpha_moi = Image.fromarray(a, mode="L")
-    rgba_moi = rgba.convert("RGBA")
-    rgba_moi.putalpha(alpha_moi)
-    return rgba_moi, alpha_moi
+    than = Image.fromarray(((a >= NGUONG_THAN_SAN_PHAM) * 255).astype(np.uint8), mode="L")
+    for _ in range(DAI_VIEN_MEM_PX):
+        than = than.filter(ImageFilter.MinFilter(3))
+    trong = np.array(than) == 255
+
+    a_moi = np.where(trong | (a >= NGUONG_LOI_DAC), 255, a).astype(np.uint8)
+    goc = np.array(master_rgb.convert("RGB"))
+    if goc.shape[:2] != a.shape:
+        # Hình dạng lạ (không nên xảy ra) — giữ bản đã tách, chỉ chốt alpha.
+        arr = np.array(rgba.convert("RGBA"))
+        arr[:, :, 3] = a_moi
+        return Image.fromarray(arr, mode="RGBA"), Image.fromarray(a_moi, mode="L")
+    # Khử viền lại từ ẢNH GỐC (bỏ màu trong cache — cache cũ bị tô đè cả thân
+    # hoa), chỉ trong dải sát nền; thân đặc lấy nguyên điểm ảnh Master.
+    tho = Image.fromarray(np.dstack((goc, a_moi)), mode="RGBA")
+    arr = np.array(EdgeDefringer(inpaint_radius=3, solid_threshold=245).defringe(tho))
+    arr[trong, :3] = goc[trong]
+    arr[:, :, 3] = a_moi
+    return Image.fromarray(arr, mode="RGBA"), Image.fromarray(a_moi, mode="L")
 
 
 def _doan_chu_the(
@@ -324,9 +357,9 @@ def _doan_chu_the(
     master_asset_id: str | None,
     cache_dir: Path | None,
 ) -> tuple[Image.Image, Image.Image]:
-    """Tách chủ thể (có cache) rồi chốt lõi đặc — xem `_chot_loi_dac`."""
+    """Tách chủ thể (có cache) rồi làm đặc thân sản phẩm — xem `_lam_dac_chu_the`."""
     rgba, alpha = _doan_chu_the_tho(master_rgb, master_asset_id, cache_dir)
-    return _chot_loi_dac(rgba, alpha)
+    return _lam_dac_chu_the(master_rgb, rgba, alpha)
 
 
 def _doan_chu_the_tho(
