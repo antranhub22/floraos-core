@@ -52,8 +52,9 @@ F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH
 
 - Nguồn ảnh: Master Image đã duyệt. Nếu mới chỉ có ảnh gốc từ A: **"Skip — Dùng ảnh gốc"** (nâng thành Master, không chỉnh ảnh).
 - Bốn phân cảnh: **1 SETUP** studio trắng · **2 RISING** lifestyle (tiệc cưới / sảnh khách sạn / phòng khách theo góc tiếp cận của chủ đề) · **3 CLIMAX** bàn gỗ Bắc Âu · **4 CTA** tách nền PNG.
+- Không cần chọn bối cảnh bằng tay: bối cảnh từng cảnh đi theo kịch bản của chủ đề đã chọn ở Chặng 05. Màn cấu hình cho xem trước 4 cảnh, chọn tỉ lệ khung và bật watermark (Cảnh 1–3).
 - Chọn nguồn hậu cảnh cho Cảnh 2–3: **"Hậu cảnh Stability"** (2 credit/cảnh — AI vẽ không gian, bó hoa thật dán nguyên khối) hoặc **"Studio cục bộ"** (1 credit/cảnh). Cảnh 1 và 4 luôn cục bộ.
-- Mỗi nút sinh cảnh tạo một job thật và chờ kết quả. Thẻ cảnh hiện: ảnh thật, nguồn ("Hậu cảnh Stability" / "Studio cục bộ" / "Studio cục bộ (Stability lỗi)"), **% lõi bó hoa trùng khít đo được**. Cảnh chưa sinh ghi "Chưa sinh — chưa đo".
+- **"Sinh trọn bộ 4 phân cảnh"** (6 credit với Stability, 4 credit nếu toàn cục bộ) hoặc **"Sinh từng cảnh →"** mở bảng 4 cảnh để sinh riêng. Mỗi nút sinh cảnh tạo một job thật và chờ kết quả. Thẻ cảnh hiện: ảnh thật, nguồn ("Hậu cảnh Stability" / "Studio cục bộ" / "Studio cục bộ (Stability lỗi)"), **% lõi bó hoa trùng khít đo được**. Cảnh chưa sinh ghi "Chưa sinh — chưa đo".
 - Lõi bó hoa lệch dưới 99% → cổng từ chối, không ảnh nào được lưu, hiện lý do.
 - **"Duyệt ảnh này"** cho từng cảnh (chỉ chủ tiệm — năng lực I5).
 

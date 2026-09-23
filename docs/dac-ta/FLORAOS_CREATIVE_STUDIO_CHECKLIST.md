@@ -50,6 +50,7 @@
 - [x] Tự nạp phân cảnh chỉ của Master đang chọn (`parent_asset_id`) — `assets/route.ts`, `list-assets.ts`
 - [x] Ánh xạ Cảnh 2 theo `angleCategory` thật — `package-client.ts#sceneTwoPresetFor`
 - [x] Duyệt từng cảnh (`I5`) — `variant-workspace.tsx#handleApproveScene`
+- [x] Gỡ bộ chọn "6 bối cảnh" chọn tay + nhãn sai "10 phối cảnh (0đ)"; màn cấu hình = xem trước 4 cảnh + nguồn hậu cảnh + tỉ lệ + watermark — `variant-workspace.tsx#openSceneBoard` (24/09)
 - [ ] Đo tốc độ chính thức trên worker production (con số ~0,46s là đo CLI dev)
 
 ## 5. Khu vực E — Chặng 06d

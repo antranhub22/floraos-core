@@ -16,7 +16,6 @@ import {
   ShieldCheck,
   Download,
   RotateCcw,
-  Layers,
   Image as ImageIcon,
   Check,
   AlertTriangle,
@@ -24,20 +23,11 @@ import {
   Camera,
 } from "lucide-react"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
-import { ResultCard } from "@/components/result/result-card"
 import { FlowSteps } from "@/components/flow/flow-steps"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
-import {
-  StudioVariantCard,
-  VisualStorytellingControls,
-} from "@/components/templates/creative-studio"
-import {
-  M04B_VARIANT_PRESETS,
-  getVariantPreset,
-} from "@/modules/media/domain/variant-presets"
 import { SourcePicker } from "./source-picker"
 import { promoteToMaster, resolveApprovedMaster, sceneTwoPresetFor } from "./package-client"
 import { FLOW_M04B } from "./types"
@@ -145,36 +135,15 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     loadingMasters,
     loadingAssets,
     canApprove,
-    variantEngineMode,
-    setVariantEngineMode,
-    selectedVariantPreset,
-    setSelectedVariantPreset,
-    selectedCloudProvider,
-    setSelectedCloudProvider,
-    cameraAngle,
-    setCameraAngle,
-    humanInteraction,
-    setHumanInteraction,
-    storylineMode,
-    setStorylineMode,
     variantRatio,
     setVariantRatio,
     watermarkEnabled,
     setWatermarkEnabled,
-    goRunningB,
-    canRunVariant,
     jobPhase,
     jobStatus,
     setJobStatus,
     judgmentB,
-    generatedVariants,
     variantIntegrity,
-    selectedVariantAssetId,
-    selectVariant,
-    canDownload,
-    handleDownloadVariant,
-    fieldsB,
-    handleApproveB,
     canApproveVariantCap,
     errorMsg,
     setErrorMsg,
@@ -366,7 +335,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           engine: useCloud ? "cloud_provider" : "local_studio",
           preset: scene.presetId,
           ratio: variantRatio || "1:1",
-          watermark: false,
+          // Cảnh 4 là PNG tách nền để ghép banner — không bao giờ đóng dấu.
+          watermark: watermarkEnabled && targetIndex !== 4,
           scene_index: targetIndex,
           ...(useCloud ? { provider_key: "stability", scene_prompt: SCENE_BACKGROUND_PROMPTS[targetIndex] } : {}),
         }),
@@ -386,8 +356,15 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           "Cổng Subject Integrity từ chối: lõi bó hoa bị thay đổi — không biến thể nào được ghi vào kho."
         )
       }
-      const wantKey = targetIndex === 4 ? "transparent" : "styled"
-      const variant = detail.variants.find((v) => v.variant_key === wantKey) ?? detail.variants[0]
+      const wantKeys =
+        targetIndex === 4
+          ? ["transparent"]
+          : watermarkEnabled
+          ? ["branded", "styled"]
+          : ["styled"]
+      const variant =
+        wantKeys.map((k) => detail.variants.find((v) => v.variant_key === k)).find(Boolean) ??
+        detail.variants[0]
       if (!variant) throw new Error("Job hoàn tất nhưng không có ảnh nào được ghi.")
 
       setSceneImageMap((prev) => ({ ...prev, [targetIndex]: variant.url }))
@@ -844,25 +821,6 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           </div>
         </div>
 
-        {/* Dynamic ResultCard with Atomic Fields */}
-        <ResultCard
-          fields={fieldsB}
-          judgment={judgmentB}
-          quality={{
-            score: variantIntegrity
-              ? Math.round(variantIntegrity.subject_pixel_identity * 100)
-              : 0,
-            label: variantIntegrity
-              ? `Lõi chủ thể trùng khít ${(variantIntegrity.subject_pixel_identity * 100).toFixed(2)}% với Master Image`
-              : "Chưa có số đo Subject Integrity cho lượt này",
-            status: judgmentB === "blocked" ? "blocked" : judgmentB === "warning" ? "warning" : "safe",
-          }}
-          onApprove={handleApproveB}
-          disabled={
-            !canApproveVariantCap || judgmentB === "blocked"
-          }
-        />
-
         {/* ── CỔNG PHÊ DUYỆT CHẶNG 06c (STAGE-GATE APPROVAL) ── */}
         <div className="w-full space-y-2 pt-2">
           <StageGateApprovalBar
@@ -886,7 +844,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         {/* Bottom Navigation */}
         <div className="w-full border-t border-border pt-4 flex items-center justify-between">
           <Button variant="ghost" onClick={() => setPhase("config-b")}>
-            <RotateCcw size={15} className="mr-1.5" /> Tạo thêm biến thể khác
+            <RotateCcw size={15} className="mr-1.5" /> Đổi nguồn hậu cảnh / tỉ lệ
           </Button>
           <Button onClick={() => setPhase("saved")} className="gap-1.5">
             Xong → Lưu vào kho ảnh
@@ -950,11 +908,16 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
   // Không gán asset ORIGINAL của Khu vực A làm Master (máy chủ trả 409):
   // chưa có Master đã duyệt thì SourcePicker hiện nút "Skip — Dùng ảnh gốc".
-  const handleRunVariant = async () => {
+  // Khu vực D chạy theo kịch bản Narrative Arc (24/09/2026): bối cảnh từng cảnh
+  // do chủ đề Chặng 04–05 quyết định, không còn bộ chọn tay "6 bối cảnh" chạy
+  // một lượt riêng. Cấu hình chỉ còn nguồn hậu cảnh Cảnh 2–3, tỉ lệ, watermark.
+  const openSceneBoard = async (generateAll: boolean) => {
     const id = await ensureMaster()
-    if (!id && context?.assetId) return // lỗi hiển thị ở masterError, giữ màn cấu hình
-    await goRunningB(id ?? undefined)
+    if (!id) return // lỗi hiển thị ở masterError, giữ màn cấu hình
+    setPhase("result-b")
+    if (generateAll) await handleGenerateAllScenes()
   }
+  const sceneCreditTotal = sceneEngine === "cloud_provider" ? 6 : 4
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-3xl mx-auto">
@@ -1063,25 +1026,18 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {narrativeImageScenes.map((scene) => {
-              const isSelected = selectedVariantPreset === scene.presetId
+              const usesCloud =
+                sceneEngine === "cloud_provider" && (scene.sceneIndex === 2 || scene.sceneIndex === 3)
               return (
                 <div
                   key={scene.sceneIndex}
-                  onClick={() => {
-                    setSelectedVariantPreset(scene.presetId)
-                    setVariantEngineMode("local_studio")
-                  }}
-                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
-                    isSelected
-                      ? "border-primary bg-primary/5 shadow-xs"
-                      : "border-border bg-surface hover:border-border-hover"
-                  }`}
+                  className="p-3.5 rounded-xl border-2 border-border bg-surface"
                 >
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                       Cảnh {scene.sceneIndex} · {scene.beat}
                     </span>
-                    <Badge tone={isSelected ? "success" : "neutral"} className="text-[10px] px-1.5 py-0">
+                    <Badge tone="neutral" className="text-[10px] px-1.5 py-0">
                       {scene.tag}
                     </Badge>
                   </div>
@@ -1091,8 +1047,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   </p>
                   <div className="flex items-center justify-between pt-2 mt-2 border-t border-dashed border-border text-[10.5px]">
                     <span className="text-stone-500 font-medium">{scene.beatLabel}</span>
-                    <span className={`font-bold ${isSelected ? "text-primary" : "text-stone-400"}`}>
-                      {isSelected ? "✓ Đang chọn" : "Bấm để chọn"}
+                    <span className="font-bold text-stone-500">
+                      {usesCloud ? "Hậu cảnh Stability · 2 credit" : "Studio cục bộ · 1 credit"}
                     </span>
                   </div>
                 </div>
@@ -1102,105 +1058,45 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         </div>
       )}
 
-      {/* Engine Switcher */}
+      {/* Nguồn hậu cảnh cho Cảnh 2–3 (Cảnh 1 và 4 luôn chạy cục bộ) */}
       <div className="w-full">
-        <div className="text-xs font-bold text-text mb-2">Tùy chọn phong cách bối cảnh khác:</div>
+        <div className="text-xs font-bold text-text mb-2">Nguồn hậu cảnh cho Cảnh 2–3:</div>
         <div className="grid grid-cols-2 gap-2 p-1 bg-surface-alt rounded-xl border border-border w-full">
-          <button
-            type="button"
-            onClick={() => setVariantEngineMode("local_studio")}
-            className={`py-2.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              variantEngineMode === "local_studio"
-                ? "bg-primary text-white shadow-xs"
-                : "text-text-muted hover:text-text"
-            }`}
-          >
-            <Layers size={14} /> 10 Phối cảnh Đồ họa Nội bộ (0đ)
-          </button>
-          <button
-            type="button"
-            onClick={() => setVariantEngineMode("cloud_provider")}
-            className={`py-2.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              variantEngineMode === "cloud_provider"
-                ? "bg-primary text-white shadow-xs"
-                : "text-text-muted hover:text-text"
-            }`}
-          >
-            <Sparkles size={14} /> AI Visual Storytelling (Cloud)
-          </button>
+          {(["cloud_provider", "local_studio"] as const).map((eng) => (
+            <button
+              key={eng}
+              type="button"
+              onClick={() => setSceneEngine(eng)}
+              className={`py-2.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                sceneEngine === eng ? "bg-primary text-white shadow-xs" : "text-text-muted hover:text-text"
+              }`}
+            >
+              {eng === "cloud_provider" ? (
+                <>
+                  <Sparkles size={14} /> Hậu cảnh Stability (2 credit/cảnh)
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={14} /> Studio cục bộ (1 credit/cảnh)
+                </>
+              )}
+            </button>
+          ))}
         </div>
+        <p className="mt-1.5 text-[11px] text-text-muted leading-relaxed">
+          {sceneEngine === "cloud_provider"
+            ? "Stability chỉ vẽ không gian trống theo bối cảnh của cảnh; bó hoa thật được dán nguyên khối từ Master Image và đo Subject Integrity. Nhà cung cấp lỗi thì worker tự lùi về phông Studio cục bộ và ghi rõ trên ảnh."
+            : "Bó hoa được dán nguyên khối vào phông Studio dựng sẵn tương ứng với từng cảnh, không gọi nhà cung cấp trả phí. Worker đo Subject Integrity sau khi ghép."}
+        </p>
       </div>
-
-      {/* Nhánh 1: Local Studio */}
-      {variantEngineMode === "local_studio" && (
-        <div className="w-full flex flex-col gap-3">
-          <div className="rounded-lg bg-surface-alt p-3 border border-border text-[12px] text-text-muted flex items-start gap-2">
-            <ShieldCheck size={16} className="text-success mt-0.5 flex-shrink-0" />
-            <div>
-              <span className="font-bold text-text">Ghép bối cảnh Studio cục bộ (1 credit, không gọi nhà cung cấp trả phí):</span> Bó hoa được dán nguyên khối từ Master Image vào 6 bối cảnh dựng sẵn, có thể đóng dấu watermark thương hiệu shop. Worker ĐO lõi chủ thể sau khi ghép.
-            </div>
-          </div>
-
-          <StudioVariantCard
-            variants={M04B_VARIANT_PRESETS}
-            selectedId={selectedVariantPreset}
-            onSelectVariant={(id) => setSelectedVariantPreset(id)}
-          />
-        </div>
-      )}
-
-      {/* Nhánh 2: Cloud Provider Storytelling */}
-      {variantEngineMode === "cloud_provider" && (
-        <div className="w-full flex flex-col gap-4">
-          <div className="rounded-lg bg-primary/5 p-3 border border-primary/20 text-[12px] text-primary flex items-start gap-2">
-            <Sparkles size={16} className="text-primary mt-0.5 flex-shrink-0" />
-            <div>
-              <span className="font-bold">Hậu cảnh AI (Stability, 2 credit/lượt):</span> Stability chỉ vẽ KHÔNG GIAN hậu cảnh theo bối cảnh và tâm trạng bạn chọn; bó hoa thật được dán nguyên khối từ Master Image và đo Subject Integrity như nhánh cục bộ. Nhà cung cấp lỗi (hết credit, thiếu khoá) thì worker tự lùi về phông Studio cục bộ và ghi rõ trên ảnh.
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-surface">
-            <span className="text-xs font-bold text-text">Cloud Provider ưu tiên:</span>
-            <div className="flex gap-1.5">
-              {(["stability"] as const).map((pKey) => (
-                <button
-                  key={pKey}
-                  type="button"
-                  onClick={() => setSelectedCloudProvider(pKey)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
-                    selectedCloudProvider === pKey
-                      ? "bg-primary text-white border-primary shadow-xs"
-                      : "bg-surface-alt border-border text-text hover:border-text-muted"
-                  }`}
-                >
-                  Stability AI (hậu cảnh)
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <StudioVariantCard
-            variants={M04B_VARIANT_PRESETS}
-            selectedId={selectedVariantPreset}
-            onSelectVariant={(id) => setSelectedVariantPreset(id)}
-          />
-
-          <VisualStorytellingControls
-            cameraAngle={cameraAngle}
-            onCameraAngleChange={setCameraAngle}
-            humanInteraction={humanInteraction}
-            onHumanInteractionChange={setHumanInteraction}
-            storylineMode={storylineMode}
-            onStorylineModeChange={setStorylineMode}
-          />
-        </div>
-      )}
 
       {/* Multi-channel Controls (Ratio, Watermark, Credit Cost) */}
       <Card className="w-full p-4.5 border border-border bg-surface flex flex-col gap-4 shadow-xs">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="text-xs font-semibold text-text-muted uppercase tracking-wider">Tùy biến xuất bản đa kênh</div>
-          <Badge tone="accent" className="text-[11px] font-bold">Chi phí: 1 credit / lượt</Badge>
+          <Badge tone="accent" className="text-[11px] font-bold">
+            Trọn bộ 4 cảnh: {sceneCreditTotal} credit
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1241,7 +1137,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               />
               <div className="text-xs">
                 <span className="font-bold text-text">Đóng dấu Watermark Shop</span>
-                <span className="block text-[11px] text-text-muted">Tự động lấy logo từ Hồ sơ thương hiệu</span>
+                <span className="block text-[11px] text-text-muted">Logo/tên tiệm từ Hồ sơ thương hiệu, áp cho Cảnh 1–3 (Cảnh 4 PNG không đóng dấu)</span>
               </div>
             </label>
           </div>
@@ -1256,19 +1152,27 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         </div>
       </div>
 
-      {/* Primary Submit Button */}
-      <Button
-        className="h-[48px] w-full px-8 text-sm font-bold shadow-md shadow-primary/20"
-        onClick={() => void handleRunVariant()}
-        disabled={!hasImageSource || !canRunVariant || promotingMaster}
-      >
-        <Sparkles size={18} strokeWidth={2} className="mr-2" />
-        {promotingMaster
-          ? "Đang dùng ảnh gốc làm Master..."
-          : variantEngineMode === "local_studio"
-          ? `Tạo biến thể marketing (${getVariantPreset(selectedVariantPreset).name})`
-          : "Sinh biến thể với hậu cảnh Stability"}
-      </Button>
+      {/* Nút chính: sinh trọn bộ, hoặc mở bảng để sinh từng cảnh */}
+      <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <Button
+          className="h-[48px] sm:col-span-2 px-6 text-sm font-bold shadow-md shadow-primary/20"
+          onClick={() => void openSceneBoard(true)}
+          disabled={!hasImageSource || promotingMaster || generatingAllScenes}
+        >
+          <Sparkles size={18} strokeWidth={2} className="mr-2" />
+          {promotingMaster
+            ? "Đang dùng ảnh gốc làm Master..."
+            : `Sinh trọn bộ 4 phân cảnh (${sceneCreditTotal} credit)`}
+        </Button>
+        <Button
+          variant="outline"
+          className="h-[48px] px-4 text-sm font-bold"
+          onClick={() => void openSceneBoard(false)}
+          disabled={!hasImageSource || promotingMaster}
+        >
+          Sinh từng cảnh →
+        </Button>
+      </div>
 
       {masterError && (
         <div className="w-full rounded-xl border border-danger bg-danger-bg px-4 py-3 text-[13px] text-danger">

@@ -183,6 +183,7 @@ A (01–05) ──bàn giao URL định danh──▶ B · C · D · E (06a–06
 | 3 | CLIMAX | `wood_minimal` | `wood_warm` | Stability (mặc định) hoặc Studio cục bộ |
 | 4 | CTA | `transparent` | `transparent` | luôn cục bộ (tách nền) |
 
+- **Không có bộ chọn bối cảnh tay (24/09/2026).** Bối cảnh của từng cảnh do bảng trên quyết định (Cảnh 2 theo `angleCategory` của chủ đề Chặng 04–05). Màn cấu hình chỉ còn: nguồn hậu cảnh Cảnh 2–3 (Stability / Studio cục bộ), tỉ lệ khung, watermark (áp Cảnh 1–3, ưu tiên ảnh `branded`; Cảnh 4 không đóng dấu). Nút chính "Sinh trọn bộ 4 phân cảnh" (6 credit với Stability, 4 credit cục bộ) hoặc "Sinh từng cảnh". Luồng một-lượt cũ (`goRunningB`, 6 preset chọn tay, "10 phối cảnh 0đ") đã gỡ khỏi Khu vực D; `goRunningB` chỉ còn phục vụ nơi khác gọi hook.
 - Mỗi cảnh = một job, `scene_index` 1–4 ghi vào payload và `assets.metadata`. Màn kết quả chỉ hiện ảnh thật đã sinh cho đúng cảnh; cảnh chưa sinh ghi "Chưa sinh — chưa đo" (không mượn ảnh gốc).
 - Số toàn vẹn hiển thị là `subject_integrity.subject_pixel_identity` của job hoặc `assets.identity_score`.
 - Tự nạp phân cảnh đã sinh bằng `GET /assets?kind=MARKETING&parent_asset_id=<master>` — chỉ của Master đang chọn.
