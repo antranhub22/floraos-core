@@ -118,6 +118,21 @@ def process_audio_job(payload: Dict[str, Any], work_dir: Path) -> Dict[str, Any]
             "actualDurationSeconds": actual_duration,
         })
 
+    # 23/09/2026: có lời thoại mà không nhà cung cấp TTS nào sinh được giọng →
+    # báo lỗi RÕ (trước đây rơi xuống "Không thể phối trộn âm thanh" mơ hồ).
+    co_loi_thoai = any((sc.get("voiceScript") or "").strip() for sc in scenes)
+    if co_loi_thoai and not has_voice:
+        return {
+            "status": "FAILED",
+            "error": (
+                "Không sinh được giọng đọc: mọi nhà cung cấp TTS đều lỗi "
+                f"(đã thử bắt đầu từ '{provider_key}'). Kiểm tra OPENAI_API_KEY / kết nối mạng "
+                "của worker, hoặc cài `edge-tts` cho giọng miễn phí."
+            ),
+            "providerUsed": "none",
+            "scenes": scene_outputs,
+        }
+
     # ── Bước 2: Nối voice thành 1 track ──
     full_voice: Optional[Path] = None
     if has_voice and voice_files:

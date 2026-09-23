@@ -107,7 +107,7 @@ def pad_voice_to_duration(
             "-c:a", "libmp3lame",
             str(padded_file),
         ]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, timeout=120)
         return padded_file.is_file()
     except Exception as exc:
         print(f"⚠️ [Mixing] Pad voice lỗi: {exc}", flush=True)
@@ -124,7 +124,7 @@ def generate_silence(duration: float, out_file: Path) -> bool:
             "-c:a", "libmp3lame",
             str(out_file),
         ]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, timeout=120)
         return out_file.is_file()
     except Exception:
         return False
@@ -151,6 +151,7 @@ def concat_audio_files(files: List[Path], out_file: Path) -> bool:
                 str(out_file),
             ],
             check=True,
+            timeout=120,
         )
         shutil.rmtree(temp_dir, ignore_errors=True)
         return out_file.is_file()
@@ -195,7 +196,7 @@ def mix_audio(
                 "-c:a", "aac", "-b:a", "128k",
                 str(out_file),
             ]
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True, timeout=120)
             return out_file
 
         elif voice_file and voice_file.is_file():
@@ -210,7 +211,7 @@ def mix_audio(
                 "-c:a", "aac", "-b:a", "128k",
                 str(out_file),
             ]
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True, timeout=120)
             return out_file
 
         elif bgm_file and bgm_file.is_file():
@@ -226,7 +227,7 @@ def mix_audio(
                 "-c:a", "aac", "-b:a", "128k",
                 str(out_file),
             ]
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True, timeout=120)
             return out_file
 
         return None

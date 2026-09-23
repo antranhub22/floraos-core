@@ -269,7 +269,10 @@ def generate_speech(
         if prov == "local_fallback":
             success = func(text, out_file)
         elif prov == "edge_tts":
-            success = func(text, voice_code, out_file)
+            # Mã giọng của nhà cung cấp khác (vd. OpenAI "nova") không hợp lệ với
+            # Edge TTS — lùi về giọng nữ tiếng Việt (23/09/2026).
+            edge_voice = voice_code if "-" in (voice_code or "") else "vi-VN-HoaiMyNeural"
+            success = func(text, edge_voice, out_file)
         else:
             success = func(text, voice_code, out_file, quality)
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useContext } from "react"
+import { useState, useCallback, useContext, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Headphones, Play, Send, Loader2, CheckCircle2, AlertCircle, Music, Mic, Volume2 } from "lucide-react"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
@@ -77,8 +77,68 @@ export function AudioWorkspace() {
   // 23/09/2026: gửi Idempotency-Key (YC-U7) và CHỜ worker `audio.generate`
   // phối xong — trước đây chỉ hiện "đã xếp hàng", không có kết quả nghe được.
   const [audioJob, setAudioJob] = useState<AudioJobDetail | null>(null)
+  const [waitSeconds, setWaitSeconds] = useState(0)
+  const [polling, setPolling] = useState(false)
+  const pollToken = useRef(0)
+
+  // Theo dõi một job âm thanh tới khi xong/lỗi. Dùng chung cho lúc vừa tạo và
+  // lúc mở lại trang có `audioJobId` trên URL (nghe lại được, không phải tạo lại).
+  const pollAudioJob = useCallback(async (jobId: string, opts: { updateUrl: boolean }) => {
+    const token = ++pollToken.current
+    setPolling(true)
+    setError(null)
+    const startedAt = Date.now()
+    const deadline = startedAt + 10 * 60 * 1000
+    try {
+      while (Date.now() < deadline && token === pollToken.current) {
+        const poll = await fetch(`/api/v1/audio/jobs/${encodeURIComponent(jobId)}`)
+        if (poll.ok) {
+          const detail = (await poll.json()) as AudioJobDetail
+          if (token !== pollToken.current) return
+          setAudioJob(detail)
+          setWaitSeconds(Math.round((Date.now() - startedAt) / 1000))
+          if (detail.stage === "COMPLETED") {
+            if (opts.updateUrl) {
+              // Mang định danh (không mang dữ liệu) sang các khu vực sau — Khu vực F đọc lại qua API.
+              const params = new URLSearchParams(searchParams?.toString() || "")
+              params.set("audioJobId", jobId)
+              router.replace(`/creative-studio?${params.toString()}` as never)
+            }
+            return
+          }
+          if (detail.stage === "FAILED") {
+            setError(detail.error || "Worker không phối được âm thanh")
+            return
+          }
+        } else if (poll.status === 404) {
+          setError("Không tìm thấy job âm thanh này trong tổ chức.")
+          return
+        }
+        await new Promise((r) => setTimeout(r, 2000))
+      }
+      if (token === pollToken.current) {
+        setError("Chưa có kết quả sau 10 phút. Job vẫn nằm trong hàng đợi — bấm “Kiểm tra lại” sau khi worker media chạy.")
+      }
+    } finally {
+      if (token === pollToken.current) setPolling(false)
+    }
+  }, [router, searchParams])
+
+  // Mở lại trang (hoặc quay lại tab C) khi đã có audioJobId → nạp lại bản phối để nghe.
+  const urlAudioJobId = searchParams?.get("audioJobId") ?? null
+  useEffect(() => {
+    if (!urlAudioJobId || audioJob?.job_id === urlAudioJobId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- nạp kết quả job từ API theo định danh trên URL
+    setJobResult({ jobId: urlAudioJobId })
+    void pollAudioJob(urlAudioJobId, { updateUrl: false })
+    return () => {
+      pollToken.current++
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlAudioJobId])
+
   const handleCreate = async () => {
-    setLoading(true); setError(null); setJobResult(null); setAudioJob(null)
+    setLoading(true); setError(null); setJobResult(null); setAudioJob(null); setWaitSeconds(0)
     try {
       const duration = scenes.reduce((a, s) => a + s.targetDurationSeconds, 0)
       const res = await fetch("/api/v1/audio/jobs", {
@@ -98,27 +158,17 @@ export function AudioWorkspace() {
       if (!res.ok) { const body = (await res.json().catch(() => ({}))).error?.message ?? `Lỗi ${res.status}`; throw new Error(body) }
       const created = (await res.json()) as Record<string, unknown> & { jobId: string }
       setJobResult(created)
-
-      const deadline = Date.now() + 5 * 60 * 1000
-      while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 2000))
-        const poll = await fetch(`/api/v1/audio/jobs/${encodeURIComponent(created.jobId)}`)
-        if (!poll.ok) continue
-        const detail = (await poll.json()) as AudioJobDetail
-        setAudioJob(detail)
-        if (detail.stage === "COMPLETED") {
-          // Mang định danh (không mang dữ liệu) sang các khu vực sau — Khu vực F đọc lại qua API.
-          const params = new URLSearchParams(searchParams?.toString() || "")
-          params.set("audioJobId", created.jobId)
-          router.replace(`/creative-studio?${params.toString()}` as never)
-          return
-        }
-        if (detail.stage === "FAILED") throw new Error(detail.error || "Worker không phối được âm thanh")
-      }
-      throw new Error("Quá thời gian chờ worker âm thanh — kiểm tra `npm run worker:media` đang chạy.")
+      setLoading(false)
+      await pollAudioJob(created.jobId, { updateUrl: true })
     } catch (err) { setError(err instanceof Error ? err.message : "Lỗi") }
     finally { setLoading(false) }
   }
+
+  const currentJobId = (jobResult?.jobId as string | undefined) ?? audioJob?.job_id ?? null
+  const stage = audioJob?.stage ?? "DRAFT"
+  // Job chưa được worker nhận quá 20 giây: gần như chắc chắn worker media không
+  // chạy, hoặc đang chạy bản cũ chưa có xử lý `audio.generate` (nối 23/09/2026).
+  const queuedTooLong = polling && stage === "DRAFT" && waitSeconds >= 20
 
   return (
     <div className="flex flex-col gap-5">
@@ -200,26 +250,53 @@ export function AudioWorkspace() {
       </Card>
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-text-muted">Gọi <code className="bg-surface px-1.5 py-0.5 rounded text-xs">POST /api/v1/audio/jobs</code></p>
-        <Button onClick={handleCreate} disabled={loading || scenes.length === 0} className="gap-2">
-          {loading ? <><Loader2 size={14} className="animate-spin" /> Đang tạo...</> : <><Send size={14} /> Tạo audio job</>}
+        <Button onClick={handleCreate} disabled={loading || polling || scenes.length === 0} className="gap-2">
+          {loading ? <><Loader2 size={14} className="animate-spin" /> Đang tạo...</> : polling ? <><Loader2 size={14} className="animate-spin" /> Đang chờ kết quả...</> : <><Send size={14} /> Tạo audio job</>}
         </Button>
       </div>
       {error && <Card className="border-rose-200 bg-rose-50 p-4 flex items-center gap-3"><AlertCircle size={16} className="text-rose-600 shrink-0" /><p className="text-xs text-rose-800">{error}</p></Card>}
       {jobResult && (
         <Card className="p-5 border-emerald-200 bg-emerald-50/40">
-          <h3 className="text-sm font-bold text-emerald-800 mb-3 flex items-center gap-2"><CheckCircle2 size={15} className="text-emerald-600" />
-            {audioJob?.stage === "COMPLETED" ? "Đã phối xong âm thanh" : audioJob?.stage === "FAILED" ? "Phối âm thanh thất bại" : "Đang chờ worker phối âm thanh..."}
+          <h3 className="text-sm font-bold text-emerald-800 mb-1 flex items-center gap-2">
+            {stage === "COMPLETED" ? <CheckCircle2 size={15} className="text-emerald-600" /> : stage === "FAILED" ? <AlertCircle size={15} className="text-rose-600" /> : <Loader2 size={15} className="animate-spin text-emerald-600" />}
+            {stage === "COMPLETED"
+              ? "Đã phối xong — nghe thử bên dưới"
+              : stage === "FAILED"
+              ? "Phối âm thanh thất bại"
+              : stage === "GENERATING"
+              ? "Worker đang lồng tiếng & phối nhạc..."
+              : "Đang xếp hàng chờ worker nhận việc..."}
+            {polling && stage !== "COMPLETED" && stage !== "FAILED" && <span className="font-normal text-emerald-700">({waitSeconds}s)</span>}
           </h3>
-          {audioJob?.audio_url && (
-            <audio controls src={audioJob.audio_url} className="w-full mb-3">
-              Trình duyệt không phát được âm thanh.
-            </audio>
+          {queuedTooLong && (
+            <p className="mb-3 text-[12px] text-amber-700">
+              Chưa worker nào nhận job này. Kiểm tra terminal đang chạy <code>npm run worker:media</code> (hoặc <code>npm run dev:all</code>) — nếu nó được bật trước khi cập nhật mã, hãy tắt và chạy lại để worker nhận việc <code>audio.generate</code>. Job vẫn nằm trong hàng đợi, không cần tạo lại.
+            </p>
+          )}
+          {stage === "COMPLETED" && audioJob?.audio_url && (
+            <div className="mb-3 rounded-lg border border-emerald-200 bg-white p-3">
+              <audio controls preload="auto" src={audioJob.audio_url} className="w-full">
+                Trình duyệt không phát được âm thanh.
+              </audio>
+              <div className="mt-1.5 flex items-center justify-between text-[11px] text-text-muted">
+                <span>Thời lượng: {audioJob.total_duration_seconds ? `${Math.round(audioJob.total_duration_seconds * 10) / 10}s` : "—"}</span>
+                <a href={audioJob.audio_url} download className="font-bold text-primary hover:underline">Tải bản phối</a>
+              </div>
+            </div>
+          )}
+          {stage === "COMPLETED" && !audioJob?.audio_url && (
+            <p className="mb-3 text-[12px] text-rose-700">Job xong nhưng không có tệp âm thanh trong kho.</p>
+          )}
+          {!polling && currentJobId && stage !== "COMPLETED" && (
+            <Button size="sm" variant="outline" className="mb-3" onClick={() => void pollAudioJob(currentJobId, { updateUrl: true })}>
+              Kiểm tra lại
+            </Button>
           )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Job ID</p><p className="font-mono text-[11px] font-bold text-stone-800 truncate">{((jobResult.jobId || jobResult.job_id) as string) ?? "Đã tạo"}</p></div>
+            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Job ID</p><p className="font-mono text-[11px] font-bold text-stone-800 truncate">{currentJobId ?? "Đã tạo"}</p></div>
             <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Giọng đọc</p><p className="font-bold text-stone-800 truncate">{(jobResult.voiceDisplayName as string) || voiceId || "Mặc định"}</p></div>
             <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Nhạc nền</p><p className="font-bold text-stone-800 truncate">{(jobResult.musicTrackName as string) || (musicMood !== "none" ? musicMood : "Không có")}</p></div>
-            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Chi phí</p><p className="font-bold text-amber-600 font-mono">{((jobResult.usage as { costCredit?: number } | undefined)?.costCredit ?? 0)} credit đã trừ</p></div>
+            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Chi phí</p><p className="font-bold text-amber-600 font-mono">{jobResult.usage ? `${(jobResult.usage as { costCredit?: number }).costCredit ?? 0} credit đã trừ` : "—"}</p></div>
           </div>
         </Card>
       )}
