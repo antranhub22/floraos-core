@@ -109,6 +109,7 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 | POST | `/assets/upload-url` | `G2` | Trả URL ký sẵn; client tải thẳng lên kho |
 | POST | `/assets` | `G2` | Ghi nhận asset sau khi tải xong |
 | GET | `/assets/:id` | `G1` | |
+| GET | `/assets/:id/view-url` | `G1` | Trả URL có chữ ký xem an toàn |
 | DELETE | `/assets/:id` | `G3` | |
 
 `POST /assets/upload-url` **tự sinh `storage_key`** theo `org/<organization_id>/<product_id>/<asset_id>.<ext>`. Client không đề xuất đường dẫn; nhận đường dẫn từ client là mở đường ghi đè chéo tổ chức.
@@ -214,6 +215,7 @@ PUT /api/v1/vision/engine
 | GET | `/media/optimizations/:id` | `I1` |
 | POST | `/media/optimizations/:id/approve` | `I2` |
 | GET | `/media/optimizations/:id/download` | `I3` |
+| POST | `/media/promote-to-master` | `I2` |
 
 ```json
 {
@@ -634,9 +636,22 @@ P25a chỉ đọc (D-N5 áp dụng cho toàn bộ P25a, không riêng `/health`)
 | POST | `/market-intelligence/research-runs` | `V1` | Kích hoạt lượt chạy nghiên cứu xu hướng thị trường — hỗ trợ tham số `channel` (mặc định chuỗi Google Trends → SerpApi; `youtube`/`tiktok` gọi riêng kênh; `omnichannel` gọi song song cả 3 nguồn để đối chiếu chéo, đúng cơ chế "cross-validation" ở mục 10 đặc tả v1.0 gốc). Kênh `facebook` đã bị GỠ 19/09/2026 — Facebook không có API công khai đo được mức thảo luận theo chủ đề, adapter trước đó chỉ suy diễn qua kết quả tìm kiếm Google (không phải số đo Facebook thật), nên đã xoá khỏi hệ thống thay vì tiếp tục trình bày như một kênh nghiên cứu (xem `TECHNICAL_DEBT.md`). Kênh `shopping` (hiển thị trên UI là "Google Shopping") **CHƯA XÂY** — chủ sản phẩm quyết định 19/09/2026 GIỮ lựa chọn này trên UI nhưng chưa có adapter thật; chọn kênh này hiện rơi xuống đúng chuỗi mặc định (Google Trends → SerpApi → Cached), không phải dữ liệu Google Shopping thật (nợ kỹ thuật #116) |
 | GET | `/market-intelligence/research-runs` | `V1` | Lịch sử các lượt chạy nghiên cứu thị trường |
 | GET | `/market-intelligence/health` | `V1` | Sức khỏe và trạng thái các nhà cung cấp dữ liệu xu hướng |
-| POST | `/market-intelligence/product-intelligence` | `V1` | Product Intelligence (v2.0 mục 8–19): phân tích ảnh sản phẩm hoa (Vision AI), đối soát Trend Fit, gợi ý định vị, cải tiến (KEEP/IMPROVE/TEST) và 10 chủ đề nội dung cụ thể. Không ghi bảng riêng ở Đợt A — chạy trực tiếp, không lưu lại `product_analysis_runs` (nợ kỹ thuật, xem `TECHNICAL_DEBT.md`) |
+| POST | `/market-intelligence/product-intelligence` | `V1` | Product Intelligence (v2.0 mục 8–19): phân tích ảnh sản phẩm hoa (Vision AI), đối soát Trend Fit dựa trên tín hiệu thật từ `trend_signals` (nợ #115, đã trả 21/09/2026), cải tiến (KEEP/IMPROVE/TEST) và 10 chủ đề nội dung cụ thể. Mỗi lượt phân tích được LƯU LẠI vào `product_analysis_runs` (nợ #113, đã trả 21/09/2026). **CHƯA XÂY** (quyết định chủ sản phẩm 21/09/2026 — tạm hoãn, xem nợ #117): gợi ý định vị (Positioning, mục 15), phân tích riêng theo từng dịp dùng (Occasion Intelligence, mục 14), và bối cảnh cạnh tranh (Competitive Context, mục 16) |
+| POST | `/market-intelligence/vision-extract` | `V1` | Bóc tách đặc trưng thị giác hoa tươi qua OpenAI Multimodal Vision |
+| GET | `/product-intelligence/:id` | `V1` | Xem chi tiết kết quả phân tích Product Intelligence đã lưu theo run ID |
 
-## 23. Chưa có ở bản này
+## 23. Phân hệ Creative Production Pipeline & Audio Studio
+
+Xây dựng ở đợt nâng cấp Creative Studio 21/09/2026 theo `FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md` và `FLORAOS_CREATIVE_STUDIO_IO_SPEC.md`:
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| POST | `/creative-production/plan` | `I4` | Lập kế hoạch phân bổ nội dung & kịch bản từ Topic Brief |
+| POST | `/creative-production/produce` | `I4` | Kích hoạt chuỗi sản xuất nội dung, ảnh biến thể và kịch bản video |
+| POST | `/creative-production/package` | `I4` | Đóng gói chiến dịch Campaign Package tổng hợp đa định dạng |
+| POST | `/audio/jobs` | `I4` | Khởi tạo job sinh voiceover hoặc trộn nhạc nền cho video |
+
+## 24. Chưa có ở bản này
 
 Endpoint mang khoá nhà cung cấp riêng của tổ chức. Quyết định D2 chốt nền tảng giữ khoá và tính credit, nên nhóm endpoint đó không tồn tại. Nếu D2 đổi về sau, nhóm này thêm vào dưới `/organizations/current/providers` mà không đụng tới endpoint nào đang có.
 

@@ -11,6 +11,7 @@ import { buildSalesPitchData, type SalesPitchOverrides, type SalesPitchData, typ
 import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
 import { extractBrandCtaPhrase } from "@/modules/profiles/domain/profile-rules"
 import { FlowSteps, type FlowStep } from "@/components/flow/flow-steps"
+import { buildHandoffSearchParams } from "@/modules/creative-production/domain/build-handoff-url"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -1100,13 +1101,29 @@ export default function TaiAnhPage() {
       || (analysisData?.["identity"] as Record<string, unknown> | undefined)?.["product_name"] as string
       || (analysisData?.["name"] as string)
       || "Sản phẩm"
-    const params = new URLSearchParams()
-    params.set("mode", "CREATIVE")
-    params.set("source", "image")
-    if (analysisImageUrl) params.set("imageUrl", analysisImageUrl)
-    if (productName) params.set("productName", productName)
-    if (analysisId) params.set("topic", analysisId)
-    router.push(`/creative-studio?${params.toString()}` as any)
+    // Chặn cứng (nợ #118, 22/09/2026): ảnh chưa lưu vào kho (`assets`) thì
+    // không có gì để bàn giao an toàn sang Creative Studio — cùng luật với
+    // Chặng 05 CHOOSE ở `/thi-truong` (`CreativeHandoffModal`). KHÔNG còn
+    // truyền `imageUrl` qua query string — Creative Studio tự resolve ảnh
+    // qua `GET /api/v1/assets/:id/view-url` bằng `assetId`.
+    const assetId = (analysisData?.["asset_id"] as string) || selectedAssetIds[0]
+    if (!assetId) {
+      setErrorMsg("Ảnh chưa được lưu vào kho — vui lòng phân tích và duyệt lại ảnh trước khi sang Creative Studio.")
+      return
+    }
+    try {
+      const params = buildHandoffSearchParams({
+        runOrTopicId: analysisId || `tai-anh-${Date.now()}`,
+        mode: "CREATIVE",
+        source: "image",
+        assetId,
+        productName,
+        area: "b",
+      })
+      router.push(`/creative-studio?${params.toString()}` as any)
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Không thể chuyển sang Creative Studio.")
+    }
   }
 
   async function handleSaveDraft2() {

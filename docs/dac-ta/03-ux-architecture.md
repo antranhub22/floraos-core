@@ -4,7 +4,7 @@
 > **VAI TRÒ TÀI LIỆU — KIẾN TRÚC TRẢI NGHIỆM CẤP KHUNG (UX FRAMEWORK & PRINCIPLES)**  
 > Tệp này quy định các nguyên tắc thiết kế trải nghiệm nền tảng, luồng phân vai (Role-based Navigation) và hành vi hệ thống chung.  
 > **Đặc tả chi tiết giao diện 10 màn hình chức năng lõi và tương tác trực quan** được duy trì tại: [`docs/FloraOS-UIUX-10-chuc-nang.md`](file:///Users/tuan/Projects/floraos-core/docs/FloraOS-UIUX-10-chuc-nang.md).
-> **Nguyên tắc bố cục thông tin nền tảng (áp dụng mọi page)** — Macro trước Micro, người dùng tự chọn hướng đi, tiết lộ thông tin theo lớp — nằm ở [`../kien-truc/MACRO_TO_MICRO_STORYTELLING_UX_FRAMEWORK.md`](../kien-truc/MACRO_TO_MICRO_STORYTELLING_UX_FRAMEWORK.md).
+> **Nguyên tắc bố cục thông tin nền tảng (áp dụng mọi page)** — Macro trước Micro, người dùng tự chọn hướng đi, tiết lộ thông tin theo lớp — đã tích hợp trực tiếp vào **§18** của tài liệu này. *(File gốc đã lưu trữ tại `docs/archive/merged/MACRO_TO_MICRO_STORYTELLING_UX_FRAMEWORK.md`)*
 
 ## 1. Bốn quyết định nền
 
@@ -276,3 +276,30 @@ Thông báo lỗi nói việc người dùng làm được tiếp theo, không n
 - Mọi luồng hoàn thành được bằng một tay, không cần xoay ngang.
 
 Màn rộng thêm cột, thêm bảng, thêm thao tác hàng loạt — không thêm chức năng mà điện thoại không có.
+
+---
+
+## 18. Nguyên tắc Bố cục Macro-to-Micro Storytelling (Hợp nhất từ MACRO_TO_MICRO_STORYTELLING_UX_FRAMEWORK.md)
+
+Áp dụng cho mọi page trong webapp `floraos-core`:
+
+### 1. Triết lý Cốt lõi
+> **Cho người dùng thấy bản đồ trước $\rightarrow$ để họ tự chọn hướng đi $\rightarrow$ dẫn dắt họ đi sâu từng lớp $\rightarrow$ kết thúc bằng một hành động có ý nghĩa.**
+
+### 2. Quy trình 5 bước Tiến triển (Progressive Storytelling)
+```text
+SEE (Bản đồ / Bức tranh tổng quan)
+  ↓
+SELECT (Người dùng chọn 1 chủ đề / vấn đề cụ thể)
+  ↓
+UNDERSTAND (Dữ liệu phân tích chi tiết & bằng chứng dẫn chứng)
+  ↓
+DECIDE (Đề xuất giải pháp / Lựa chọn định hướng)
+  ↓
+ACT (Hành động 1-chạm: Đăng bài / Duyệt / Xuất dữ liệu)
+```
+
+### 3. Quy chuẩn Hiển thị
+- **Không nhồi nhét thông tin (Zero Keyword Dumping):** Cấm đổ từ khóa thô hoặc chuỗi văn bản tự do lên giao diện.
+- **Tiết lộ theo lớp (Progressive Disclosure):** Chỉ hiển thị thông số chi tiết khi người dùng nhấp chọn hoặc yêu cầu xem sâu.
+- **Khối hướng dẫn chuẩn hóa:** Sử dụng `<FeatureGuidanceCard />` viền đỏ đứt nét, nền hồng dịu `bg-red-50/70` ở đầu mỗi tab tính năng.

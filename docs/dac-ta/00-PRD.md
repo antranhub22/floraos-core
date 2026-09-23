@@ -49,7 +49,7 @@ Ba hình thái tổ chức: **Experience** (demo tạm) · **Single Shop / Brand
 Organization · Workspace · Membership · Branch · cách ly tenant · RBAC · BusinessProfile · BrandProfile · Product Master · Asset · GenerationJob · Usage · AuditLog · Customer · Order · hồ sơ phong cách · Integration API · M01 · M01b · M02 · M03 · M04a · M09 · M10 · M11.
 
 **Ngoài phạm vi core, có chủ sở hữu khác**
-M05 Landing Page và M06 Catalog thuộc `LocalBudd`. M04b Marketing Creative, M04c Video Studio và M07 Content & Social Publishing thuộc `SocialFlow`, cùng với số liệu hiệu quả gốc của từng nền tảng. M08 Customer Chat chưa có repo.
+M05 Landing Page thuộc `LocalBudd` (gọi Core qua API). M07 Content & Social Publishing thuộc `SocialFlow` (kèm số liệu hiệu quả gốc). **M04b Marketing Creative, M04c Video Studio và M08 AI Chat Assistant thuộc 100% sở hữu của `floraos-core`** (đã xây dựng hoàn tất ở P16/P24, P17 và P23; SocialFlow đã đóng route M04b cục bộ).
 
 **Không làm ở giai đoạn này**
 Thanh toán và xuất hoá đơn — kiến trúc đỡ sẵn, chưa triển khai. Migrate dần từ v1 — cắt sang hệ mới một lần. Khoá nhà cung cấp riêng của từng tổ chức. Bộ chọn chi nhánh trên giao diện.
@@ -75,12 +75,12 @@ Bốn engine đầu là cách nhóm module. Engine thứ năm là một tầng t
 | M02 | Product Cost & Pricing | — | `floraos-core` | Công thức giá + bất biến làm tròn hai phía; quy tắc giá theo phạm vi tổ chức |
 | M03 | Product Search / KB | — | `floraos-core` | Xây trên Postgres, logic lọc lấy từ bộ test có sẵn |
 | M04a | Product Image Optimization | Creative | `floraos-core` | Xây mới theo spec; Identity Guard là cổng cứng |
-| M04b | Marketing Creative | Creative | `SocialFlow` | Xoá nền, đổi nền, mở rộng khung, retouch, watermark, biến thể theo kênh |
-| M04c | Video Studio | Creative | `SocialFlow` | Mở rộng `video_jobs` và adapter nhà cung cấp đã có; xây lớp dựng cảnh |
+| M04b | Marketing Creative | Creative | `floraos-core` | Chuyển từ `SocialFlow` về Core ở P16/P24: xoá nền, đổi nền, watermark, biến thể |
+| M04c | Video Studio | Creative | `floraos-core` | Xây dựng ở P17: 6 khuôn M04c, Storyboard, TTS ducking, 2 cổng duyệt P3/P4 |
 | M05 | Landing Page Generator | Marketing | `LocalBudd` | Giữ nguyên; bỏ bảng trùng, đọc core qua API |
-| M06 | Catalog Generator & QR | Marketing | `LocalBudd` · core giữ liên kết | Xây mới |
+| M06 | Catalog Generator & QR | Marketing | `floraos-core` (SSOT) · LocalBudd gọi API | Xây mới; Core làm SSOT duy nhất cho `catalog_links` |
 | M07 | Content & Social Publishing | Marketing | `SocialFlow` | Adapter nền tảng và lịch đăng đã chạy; xây chiến lược nội dung ngành hoa và adapter Zalo OA |
-| M08 | Customer Chat | — | Chưa có | Xây sau; trả lời bằng catalog của chính cửa hàng |
+| M08 | Customer Chat & Omnichannel | — | `floraos-core` | Xây dựng ở P23: Dual-Intent Copilot + Sales Chat, 5 kênh tiếp xúc |
 | M09 | Customer & Repurchase | — | `floraos-core` | Xây mới |
 | M10 | Orders & Operations | — | `floraos-core` | Mở rộng luồng chào giá và điều phối của v1; 28 mã `C1`–`C28` đã thu hoạch |
 | M11 | Analytics & Learning | Learning | `floraos-core` · số liệu gốc ở `SocialFlow` | Mở rộng số liệu đã có; xây phép nối ROI và vòng học |

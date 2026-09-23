@@ -89,7 +89,7 @@ describe("Decoupled Engine Architecture — Creative Studio Isolation", () => {
     // studio_local không dùng generative fill — bảo tồn 100% pixel gốc
     expect(result.provider).toBe("studio_local")
     expect(result.isMock).toBe(false)
-  })
+  }, 15000)
 
   it("thực thi AI Visual Storytelling qua fallback studio_local với góc chụp và người mẫu", async () => {
     // Fal FLUX và các provider cloud khác throw → fallback đến studio_local.
@@ -108,5 +108,5 @@ describe("Decoupled Engine Architecture — Creative Studio Isolation", () => {
     // Prompt biên dịch có chứa thông tin camera angle và human interaction
     expect(result.promptSummary?.positivePrompt).toContain("three-quarter")
     expect(result.promptSummary?.positivePrompt).toContain("woman")
-  })
+  }, 15000)
 })

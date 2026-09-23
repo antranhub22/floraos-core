@@ -222,3 +222,13 @@ Ngày cắt chọn khi core đủ chức năng cho công việc hằng ngày c�
 | H18 | Danh mục loài và truy hồi tri thức trên `pgvector` | H5 |
 
 H0 đã xong. H3 và H5 nhẹ hơn ước lượng ban đầu vì `count_engine.py`, `color_engine.py` và `normalize.py` là REUSE chứ không phải EXTEND — 1.580 dòng không phải viết lại. Đối lại, bốn cổng ở `src/core/ports/` là BUILD chứ không phải REUSE như bản đồ thu hoạch ghi.
+
+---
+
+## 8. Quy chuẩn Tiếp giáp Tích hợp SocialFlow (Hợp nhất từ DOT_3_NOI_SOCIALFLOW.md)
+
+Ba quyết định chốt ngày 10/09 và quy chuẩn tiếp giáp giữa `floraos-core` và `SocialFlow`:
+
+1. **Phạm vi ranh giới:** Xác thực + Tổ chức + Brand + Usage. Core là nguồn duy nhất cho phần chung của Brand; các thuộc tính chuyên biệt của SocialFlow giữ lại cục bộ.
+2. **Kế thừa dữ liệu AVI GIFT:** 3 tài khoản social đang hoạt động và 45 bài đăng lịch sử gán cho tổ chức AVI GIFT; số liệu phân tích sau này tính vào AVI GIFT.
+3. **Chuẩn hóa Multi-tenant & Bảo vệ Route:** Mọi route tác vụ (`approve`, `reject`, `publish`, `posts/{id}`) bắt buộc kiểm tra `organization_id` phía máy chủ, cấm nhận `organization_id` tự do từ query param của client.

@@ -224,7 +224,7 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
   const [variantIntegrity, setVariantIntegrity] = useState<M04bIntegrity | null>(null)
   const [loadingMasters, setLoadingMasters] = useState(false)
   const [variantEngineMode, setVariantEngineMode] = useState<VariantEngineMode>("local_studio")
-  const [selectedCloudProvider, setSelectedCloudProvider] = useState<CloudProvider>("fal")
+  const [selectedCloudProvider, setSelectedCloudProvider] = useState<CloudProvider>("stability")
 
   // --- Visual Storytelling States ---
   const [cameraAngle, setCameraAngle] = useState<CameraAngleType>("front_view")

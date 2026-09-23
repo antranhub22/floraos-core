@@ -6,6 +6,8 @@ import { seedAiCapabilities, seedVisionModels } from "@/core/ai/infra/seed-ai-re
 const TENANT_TABLES = [
   // Phân hệ Market Intelligence — Đợt A
   "content_opportunities",
+  // Product Intelligence (Quét theo ảnh sản phẩm) — nợ #113, đã trả 21/09/2026
+  "product_analysis_runs",
   // Nền AI — AI-1. `ai_capabilities` và `ai_models` KHÔNG nằm ở đây: chúng là
   // sổ đăng ký cấp nền tảng, không phải dữ liệu thử của một tổ chức, và
   // `ensureSystemRoles` phía dưới cũng không dựng lại chúng.

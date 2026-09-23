@@ -161,20 +161,28 @@ export function FloraOSGlobalCopilot() {
 
   return (
     <>
-      {/* NÚT BONG BÓNG COPILOT NỔI Ở GÓC DƯỚI BÊN PHẢI */}
-      <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2">
+      {/* NÚT BONG BÓNG COPILOT TRÒN NHỎ GỌN — ĐẶT Ở MÉP GIỮA BÊN PHẢI (TOP-1/2) ĐỂ KHÔNG BAO GIỜ CHE NÚT BẤM Ở ĐÁY */}
+      <div className="fixed top-1/2 right-3 -translate-y-1/2 z-50 flex items-center gap-2">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="group flex items-center gap-2.5 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-4 py-3 text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105"
+            aria-label="Mở FloraOS Copilot"
+            className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rose-600 via-red-600 to-red-700 text-white shadow-lg hover:shadow-xl transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2"
           >
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
-              <Sparkles className="h-3.5 w-3.5" />
+            {/* Chấm báo trạng thái AI trực tuyến */}
+            <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
             </span>
-            <span className="text-xs font-bold tracking-wide">FloraOS Copilot</span>
-            <kbd className="hidden sm:inline-block rounded bg-black/25 px-1.5 py-0.5 text-[10px] font-mono opacity-80 group-hover:opacity-100">
-              ⌘K
-            </kbd>
+
+            {/* Icon AI Bot */}
+            <Bot className="h-5 w-5 transition-transform group-hover:rotate-6" />
+
+            {/* Tooltip bay sang trái khi hover — không chiếm chỗ cố định */}
+            <div className="pointer-events-none absolute right-full mr-2.5 hidden sm:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-stone-900/90 px-2.5 py-1 text-[11px] font-bold text-white shadow-md backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity">
+              <span>FloraOS Copilot</span>
+              <kbd className="rounded bg-white/20 px-1 py-0.2 text-[9.5px] font-mono">⌘K</kbd>
+            </div>
           </button>
         )}
       </div>

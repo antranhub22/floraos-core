@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
-  Bell,
   Home,
   Menu,
   X,
@@ -21,10 +20,12 @@ import {
   Video,
   Globe,
   Tag,
-  CircleUserRound,
-  FlaskConical,
   LayoutTemplate,
   TrendingUp,
+  Cpu,
+  BarChart3,
+  ShieldCheck,
+  Wand2,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
@@ -38,15 +39,59 @@ export type NavItem = {
   code?: string
 }
 
-// 1. Khối Nổi Bật Đặc Biệt (SSOT Knowledge Base & AI Chat Assistant)
-const FEATURED_ITEMS: NavItem[] = [
+// 1. Group 1: Hành Trình Giá Trị (Primary Outcome - Master Journey)
+const OUTCOME_ITEMS: NavItem[] = [
+  { href: "/", label: "Trang chủ", icon: Home },
+  {
+    href: "/market-intelligence",
+    label: "Nghiên cứu Thị trường",
+    icon: TrendingUp,
+    badge: "Xu hướng & Từ khóa",
+    badgeColor: "bg-red-100 text-red-700",
+  },
+  {
+    href: "/creative-studio",
+    label: "Creative Studio",
+    icon: Sparkles,
+    badge: "Khu vực A-F",
+    badgeColor: "bg-amber-100 text-amber-700",
+  },
+]
+
+// 2. Group 2: Tài Sản & Tri Thức Tiệm (Tenant Data & Identity Assets)
+const IDENTITY_ITEMS: NavItem[] = [
+  { href: "/kho-du-lieu", label: "Kho Dữ liệu", icon: Folder },
+  { href: "/kho-templates", label: "Kho Templates", icon: LayoutTemplate },
   {
     href: "/tri-thuc",
     label: "Tri thức & Nhập liệu",
     icon: BookOpen,
-    badge: "SSOT Guide",
+    badge: "SSOT",
     badgeColor: "bg-red-100 text-red-700",
   },
+  {
+    href: "/cai-dat-ai",
+    label: "Cài đặt Chính sách AI",
+    icon: Cpu,
+    code: "U1",
+  },
+]
+
+// 3. Group 3: Bộ Công Cụ Độc Lập (Independent Tool Suite - 11 Chức Năng Độc Lập)
+const TOOL_ITEMS: NavItem[] = [
+  {
+    href: "/tai-anh",
+    label: "Quét hoa Vision",
+    icon: Camera,
+    badge: "M01b",
+    badgeColor: "bg-rose-100 text-rose-700",
+  },
+  { href: "/san-pham", label: "Sản phẩm & Giá", icon: Tag },
+  { href: "/creative-studio?tab=area-d", label: "Image Engine", icon: Wand2 },
+  { href: "/video", label: "Video Studio 9:16", icon: Video },
+  { href: "/noi-dung", label: "Content Engine", icon: FileText },
+  { href: "/lich-dang", label: "Social Publishing", icon: Share2 },
+  { href: "/catalog", label: "Catalog & Website QR", icon: Globe },
   {
     href: "/hoi-thoai",
     label: "AI Chat Assistant",
@@ -54,32 +99,15 @@ const FEATURED_ITEMS: NavItem[] = [
     badge: "Đa Kênh",
     badgeColor: "bg-rose-100 text-rose-700",
   },
-]
-
-// 2. Phân Hệ Nghiệp Vụ Cốt Lõi
-const CORE_ITEMS: NavItem[] = [
-  { href: "/", label: "Trang chủ", icon: Home },
-  { href: "/san-pham", label: "Sản phẩm & Giá", icon: Tag },
-  { href: "/tai-anh", label: "Phân tích hoa Vision", icon: Camera },
-  { href: "/creative-studio", label: "Creative Studio", icon: Sparkles },
-  { href: "/video", label: "Video Studio 9:16", icon: Video },
-  {
-    href: "/market-intelligence",
-    label: "Nghiên cứu Thị trường",
-    icon: TrendingUp,
-    badge: "Mới",
-    badgeColor: "bg-rose-100 text-rose-700",
-  },
-  { href: "/catalog", label: "Catalog & Website", icon: Globe },
   { href: "/khach-hang", label: "CRM & Khách hàng", icon: Users },
   { href: "/don-hang", label: "Đơn hàng & SLA", icon: ShoppingBag },
+  { href: "/so-lieu", label: "Số liệu & Học máy", icon: BarChart3 },
 ]
 
-// 3. Quản Trị Hệ Thống
-const SYSTEM_ITEMS: NavItem[] = [
-  { href: "/kho-du-lieu", label: "Kho Dữ liệu", icon: Folder },
-  { href: "/kho-templates", label: "Kho Templates", icon: LayoutTemplate },
+// 4. Group 4: Vận Hành Tiệm & Trợ Lý (Shop Operations & Assistant)
+const OPERATION_ITEMS: NavItem[] = [
   { href: "/muc-dung", label: "Mức dùng Credit", icon: WalletCards },
+  { href: "/audit", label: "Nhật ký Kiểm toán", icon: ShieldCheck, code: "A4" },
   { href: "/cai-dat", label: "Cài đặt", icon: Settings2 },
 ]
 
@@ -142,6 +170,8 @@ export function DesktopNav() {
     )
   }
 
+  const allItems = [...OUTCOME_ITEMS, ...IDENTITY_ITEMS, ...TOOL_ITEMS, ...OPERATION_ITEMS]
+
   return (
     <aside className="hidden h-dvh w-60 flex-shrink-0 flex-col border-r border-border bg-surface md:flex">
       {/* Brand Header */}
@@ -170,27 +200,30 @@ export function DesktopNav() {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-border bg-surface py-1.5 shadow-xl">
+            <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-border bg-surface py-1.5 shadow-xl max-h-[80vh] overflow-y-auto">
               <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
                 Tất cả phân hệ
               </div>
-              {[...FEATURED_ITEMS, ...CORE_ITEMS, ...SYSTEM_ITEMS].map((item) => (
-                <button
-                  key={item.href}
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false)
-                    router.push(item.href as never)
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium transition-colors",
-                    pathname === item.href ? "bg-red-50 font-bold text-red-700" : "text-text hover:bg-surface-alt"
-                  )}
-                >
-                  <item.icon size={14} className="text-text-muted" />
-                  <span className="truncate">{item.label}</span>
-                </button>
-              ))}
+              {allItems.map((item) => {
+                if (item.code && !can(item.code)) return null
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      router.push(item.href as never)
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium transition-colors",
+                      pathname === item.href ? "bg-red-50 font-bold text-red-700" : "text-text hover:bg-surface-alt"
+                    )}
+                  >
+                    <item.icon size={14} className="text-text-muted" />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -198,32 +231,40 @@ export function DesktopNav() {
 
       {/* Main Navigation Scroll Area */}
       <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
-        {/* Khối Nổi Bật: Tri thức & AI Chat */}
+        {/* Nhóm 1: Hành Trình Giá Trị */}
         <div className="space-y-1">
           <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-            Trợ Lý & Cẩm Nang
+            Hành Trình Giá Trị
           </div>
-          {FEATURED_ITEMS.map(renderNavItem)}
+          {OUTCOME_ITEMS.map(renderNavItem)}
         </div>
 
-        {/* Khối Nghiệp Vụ Cốt Lõi */}
+        {/* Nhóm 2: Tài Sản & Tri Thức Tiệm */}
         <div className="space-y-1">
           <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-            Nghiệp Vụ Hoa Tươi
+            Tài Sản & Tri Thức
           </div>
-          {CORE_ITEMS.map(renderNavItem)}
+          {IDENTITY_ITEMS.map(renderNavItem)}
         </div>
 
-        {/* Khối Quản Trị & Hệ Thống */}
+        {/* Nhóm 3: Bộ Công Cụ Độc Lập */}
         <div className="space-y-1">
           <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-            Hệ Thống & Dữ Liệu
+            Công Cụ Độc Lập
           </div>
-          {SYSTEM_ITEMS.map(renderNavItem)}
+          {TOOL_ITEMS.map(renderNavItem)}
+        </div>
+
+        {/* Nhóm 4: Vận Hành Tiệm */}
+        <div className="space-y-1">
+          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+            Vận Hành Tiệm
+          </div>
+          {OPERATION_ITEMS.map(renderNavItem)}
         </div>
       </nav>
 
-      {/* Footer Copilot Trigger & Thông Báo */}
+      {/* Footer Copilot Trigger & Phím tắt */}
       <div className="border-t border-border p-3 space-y-2">
         <button
           type="button"
@@ -249,3 +290,4 @@ export function DesktopNav() {
     </aside>
   )
 }
+

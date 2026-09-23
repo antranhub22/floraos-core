@@ -45,7 +45,7 @@ export const POST = handle(async (request) => {
     const cloudRes = await executeCloudCreative(ctx, {
       assetId: parsed.data.master_asset_id,
       taskType: "GENERATE_SCENE_VARIANT",
-      providerKey: parsed.data.provider_key || "fal",
+      providerKey: parsed.data.provider_key || "stability",
       cameraAngle: parsed.data.camera_angle as any,
       humanInteraction: parsed.data.human_interaction as any,
       ...(parsed.data.custom_directives ? { customDirectives: parsed.data.custom_directives } : {}),

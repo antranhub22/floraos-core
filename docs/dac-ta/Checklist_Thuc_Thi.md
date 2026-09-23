@@ -395,7 +395,7 @@ SERVER-SIDE.*
 
 ## P20 — M11 phân tích hiệu quả và học
 
-- [ ] `campaign_rollups` mang cột nguồn và dựng lại được; không đọc nó như số liệu gốc (`YC-L1`)
+- [ ] `content_metrics` (tên gọi cũ: `campaign_rollups`) mang cột nguồn và dựng lại được; không đọc nó như số liệu gốc (`YC-L1`)
 - [ ] Phép nối ROI đọc `orders` của core, không suy doanh thu từ số liệu nền tảng (`YC-L2`)
 - [ ] Bảy chỉ số hiện được: reach, engagement, inbox, conversion, top post, top product, ROI campaign
 - [ ] Mỗi thay đổi của `learning_profiles` truy được về tập số liệu đã sinh ra nó (`YC-L3`)
@@ -549,8 +549,48 @@ cổng duyệt. Bốn ô của P16 phía dưới được chỉnh lại theo mã
 
 ### Chưa code (Đợt 1)
 
-- [ ] Chặng chuyển tiếp UI, Creative Studio shell 5 tabs, Modal chọn định hướng
+- [x] Chặng chuyển tiếp UI, Creative Studio shell 5 tabs, Modal chọn định hướng
 - [ ] Tab 2-5 UI, production method choice UI, AUTHENTIC override logic
+
+### Nợ #118 — sửa nút "Bắt đầu sáng tạo" (Chặng 05 CHOOSE) không phản hồi khi bấm — chốt 22/09/2026
+
+Phát sinh khi kiểm tra thực địa: bấm "Bắt đầu sáng tạo" ở `CreativeHandoffModal` không
+làm gì khi ảnh vừa tải lên từ máy. Nguyên nhân gốc: ảnh còn ở dạng Data URL base64
+(~200.000 ký tự) bị nhét vào query string của `router.push` — Node giới hạn header
+request ~16KB, App Router nhận `431` từ request RSC và bỏ lượt điều hướng trong im
+lặng (không có lỗi JS nào để bắt). Cùng lỗi cũng làm phình `product_analysis_runs`
+(xác minh trên Postgres dev thật: 5 dòng, mỗi dòng 770KB–1MB base64 trong `image_url`).
+
+- [x] `assetId` chuyển BẮT BUỘC xuyên suốt: `validate-transition.ts`, use-case
+      `analyzeProductIntelligence`, route `POST /market-intelligence/product-intelligence`
+      (zod `min(1)`) — chặn cứng ở cả ba lớp (UI, use-case, API), không chỉ ở UI
+- [x] Domain mới `build-handoff-url.ts` (+ test) — URL bàn giao Chặng 05 → Creative
+      Studio chỉ mang định danh (`topic`=report.id, `selectedTopic`, `assetId`,
+      `mode`/`source`/`area`/`productId`/`productName`), không bao giờ mang ảnh
+- [x] `GET /api/v1/assets/:id/view-url` (`G1`, use-case `getAssetViewUrl`) — ký lại
+      URL hiển thị tại thời điểm đọc, Creative Studio tự resolve ảnh bằng `assetId`
+      thay vì tin `imageUrl` truyền qua query string/sessionStorage
+- [x] `GET /api/v1/product-intelligence/:id` (`V2`) viết lại đúng chuẩn (`handle()`,
+      `context.params`, ký lại ảnh tươi) — thay cho route mồ côi cũ không ai gọi
+- [x] `product_analysis_runs`: bỏ cột `image_url` (từng lưu base64 trực tiếp), `asset_id`
+      chuyển `NOT NULL` — migration viết tay `20260922025831_...` (kèm SQL đã soát,
+      `prisma migrate dev` bị chặn bởi trôi migration history rộng hơn phạm vi việc
+      này, xem nợ mới #119) — **CHƯA áp vào `floraos` (dev)**, chờ anh Tony chạy
+- [x] `CreativeHandoffModal`/`product-intelligence-workspace.tsx`/`tai-anh/page.tsx`:
+      bỏ `sessionStorage` + query string mang ảnh, thay lỗi im lặng (`catch {}` rỗng)
+      bằng thông báo tường minh, khoá nút khi thiếu `assetId`
+- [x] Tiện thể vá `san-pham/[id]/tinh-nang/page.tsx` thiếu `"use client"` — chặn
+      `npm run build` từ commit `0280d1f` (14/09), không liên quan Chặng 05 nhưng
+      chặn tuyệt đối điều kiện "production ready"
+- [x] `npm test` 739/739 · `npm run test:tenant` 210/210 (28 tệp, gồm 1 ca mới khoá
+      luật "400 khi thiếu asset_id") · `npx tsc --noEmit` sạch · `npm run build` sạch
+- [ ] Anh Tony áp migration `20260922025831_...` lên `floraos` (dev) — lệnh cụ thể ở
+      đầu tệp `migration.sql`; sau đó lượt "lưu lịch sử phân tích" mới ghi được lại
+      (hiện tạm thất bại êm vì `try/catch`, không chặn người dùng)
+- [ ] Nợ mới #119: nhiều bảng trong `floraos` (dev) đã trôi khỏi migration history
+      (tạo qua `db push`, không qua `migrate`) — `prisma migrate dev` cho BẤT KỲ thay
+      đổi schema nào sau này đều đòi `migrate reset`. Cần baseline lại theo đúng kỹ
+      thuật đã dùng ở nợ #97 (17/09), việc riêng, không chặn nợ #118
 
 
 ### Audio Studio

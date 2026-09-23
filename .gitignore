@@ -62,3 +62,5 @@ test-results/
 
 Claude outputs/
 .venv-iopaint/
+.claude/
+.kilo/

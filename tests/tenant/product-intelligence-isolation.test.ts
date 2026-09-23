@@ -9,6 +9,10 @@ const BASE = "http://localhost/api/v1/market-intelligence/product-intelligence";
 const SAMPLE_BODY = {
   product_name: "Bó hoa hồng pastel test cách ly",
   image_url: "/images/sample-flower.jpg",
+  // Bắt buộc từ 22/09/2026 (nợ #118) — ảnh phải đã lưu vào kho. Test này không
+  // cần asset thật tồn tại (asset_id không mang khóa ngoại ở schema, resolve
+  // URL hiển thị là best-effort) — chỉ cần chuỗi không rỗng để qua được cổng.
+  asset_id: "asset-test-fixture-01",
   components: [
     { flowerType: "Hoa hồng ngoại", quantityEstimate: 12, unit: "cành", role: "dominant" },
     { flowerType: "Hoa baby trắng", quantityEstimate: 5, unit: "nhánh", role: "supporting" },
@@ -83,6 +87,22 @@ describe("cách ly tenant — Product Intelligence (product_analysis_runs, nợ 
       where: { organization_id: a.organizationId },
     });
     expect(runsForA).toHaveLength(1);
+  });
+
+  it("từ chối 400 khi thiếu asset_id — ảnh chưa lưu vào kho (chặn cứng, nợ #118)", async () => {
+    const { asset_id, ...bodyWithoutAssetId } = SAMPLE_BODY;
+    const res = await postProductIntelligence(
+      withSession(BASE, a.token, {
+        method: "POST",
+        body: JSON.stringify(bodyWithoutAssetId),
+      })
+    );
+    expect(res.status).toBe(400);
+
+    const runs = await prisma.product_analysis_runs.findMany({
+      where: { organization_id: a.organizationId },
+    });
+    expect(runs).toHaveLength(0);
   });
 
   it("mọi bản ghi trong bảng product_analysis_runs bắt buộc phải có organization_id", async () => {

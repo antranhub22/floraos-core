@@ -1336,7 +1336,7 @@ model platform_audit_logs {
 
 ## 22. Phân hệ Nghiên cứu Thị trường & Xu hướng (Market Intelligence Engine, Đợt A mở rộng)
 
-Tám bảng nghiên cứu dữ liệu thị trường là **GLOBAL** (ngoại lệ Luật 1 nêu ở mục 1), một bảng `content_opportunities` thuộc **TENANT** (`organization_id` bắt buộc).
+Tám bảng nghiên cứu dữ liệu thị trường là **GLOBAL** (ngoại lệ Luật 1 nêu ở mục 1), hai bảng thuộc **TENANT** (`organization_id` bắt buộc): `content_opportunities` (cơ hội nội dung cá nhân hóa) và `product_analysis_runs` (lịch sử phân tích Product Intelligence — nợ #113, đã trả 21/09/2026).
 
 ```prisma
 model market_sources {
@@ -1482,6 +1482,24 @@ model content_opportunities {
   @@index([organization_id, content_opportunity_score])
   @@index([organization_id])
   @@index([topic_id])
+}
+
+model product_analysis_runs {
+  id                  String   @id @default(uuid())
+  organization_id     String
+  asset_id            String?
+  product_name        String
+  image_url           String
+  trend_fit_score     Float
+  audience_fit_score  Float
+  content_fit_score   Float
+  overall_fit         String
+  report              Json
+  created_at          DateTime @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, created_at])
 }
 
 model research_runs {

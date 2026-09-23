@@ -572,3 +572,26 @@ Ba điểm cần đọc kỹ trong bảng trên:
 **`AIC-30` mang sàn `shop`, không phải `sensitive`**, và điều đó chỉ đúng vì nội dung nhắc mua sinh từ **dịp và sản phẩm**; tên, số điện thoại, địa chỉ ghép ở tầng gửi sau khi mô hình đã xong việc (`YC-K3`, `YC-K4`). Nếu có ai đưa tên khách vào prompt thì năng lực này phải đổi sàn, và đó là một thay đổi kiến trúc chứ không phải một dòng prompt.
 
 **Bốn năng lực `deterministic` không có kênh chấm và không có ngưỡng** vì không có gì để chấm — chúng không gọi mô hình. Chúng nằm trong bảng để chính sách, sổ chi phí và phép đo có cùng một hình dạng cho mọi năng lực.
+
+---
+
+## Phụ lục B: Tiến độ Xây dựng 34 AI Capabilities (Hợp nhất từ CHECKLIST_AI_CAPABILITIES_BUILD.md)
+
+Hạng mục này theo dõi chi tiết kỹ thuật chuyên sâu cho tầng AI Orchestration Engine, AI Registry, Cổng Provider và Bộ định tuyến:
+
+### 1. Trạng thái Nền tảng (Phase 0 Foundation — ĐÃ HOÀN TẤT)
+- [x] 34 AI Capabilities định nghĩa chuẩn trong `src/core/ai/domain/ai-capabilities.ts`
+- [x] 10 Provider ports tại `src/core/ports/` (Hexagonal Architecture)
+- [x] Bảng `ai_capabilities`, `ai_models` + 4 cổng giấy phép (License, Commercial Use, Territory, Allowed Use)
+- [x] Bộ định tuyến AI Router (5 ràng buộc), đánh giá chất lượng, sàn quyền riêng tư Sensitive Floor
+- [x] Cổng gateway `callCapability` + `wiring.ts`
+- [x] `ai_policies` theo tổ chức, `GET/PUT /ai-policy` (`U1`/`U2`)
+- [x] Ghi nhận `ai_requests`, chấm điểm `ai_evaluations`
+- [x] RBAC: `U1`–`U4` (119 capabilities, 34 trần cứng)
+- [x] Hạ tầng Job `generation_jobs` 3 trục, `enqueueJob`, Worker `claimNext` (`SKIP LOCKED`)
+- [x] Ghi nhận mức dùng `usage` tập trung tại điểm tạo job
+
+### 2. Giao diện Chọn Tính năng & Định mức Credit (Phase 1 — ĐÃ HOÀN TẤT)
+- [x] Thư viện Feature Catalog `src/lib/feature-catalog.ts` ánh xạ 34 AIC $\rightarrow$ RBAC $\rightarrow$ Module
+- [x] Thành phần `FeaturePicker.tsx` tích hợp trên giao diện điều phối
+- [x] Định mức Credit `credit-estimator.ts` (Phán quyết PO 23/09/2026: giai đoạn dev permissive 0 credit, đo lường chi phí thật trước khi chốt giá thương mại)

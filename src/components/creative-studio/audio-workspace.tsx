@@ -1,21 +1,49 @@
 "use client"
 
 import { useState, useCallback, useContext } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Headphones, Play, Send, Loader2, CheckCircle2, AlertCircle, Music, Mic, Volume2 } from "lucide-react"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
-import { CreativeGuidanceCard } from "@/components/templates/creative-studio/creative-guidance-card"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
 
 interface AudioScene { sceneIndex: number; voiceScript: string; targetDurationSeconds: number }
 
 export function AudioWorkspace() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const context = useContext(CreativeStudioContext)
-  const ctx = context ?? { topicId: "", productId: undefined, voiceId: undefined, musicMood: undefined }
+  const ctx = context ?? { topicId: "", productId: undefined, voiceId: undefined, musicMood: undefined, productName: "", selectedTopic: null, mode: "CREATIVE" as const }
   const [taskType, setTaskType] = useState<string>("VOICEOVER")
-  const [scenes, setScenes] = useState<AudioScene[]>(ctx.topicId ? [{ sceneIndex: 1, voiceScript: "", targetDurationSeconds: 8 }, { sceneIndex: 2, voiceScript: "", targetDurationSeconds: 8 }] : [])
+
+  const navigateToArea = (area: "b" | "c" | "d" | "e" | "f") => {
+    const params = new URLSearchParams(searchParams?.toString() || "")
+    params.set("area", area)
+    router.push(`/creative-studio?${params.toString()}` as any)
+  }
+
+  // Auto-populate scenes from selectedTopic (Chặng 4 output → Tab C input)
+  const buildInitialScenes = (): AudioScene[] => {
+    const topic = ctx.selectedTopic
+    if (!topic) {
+      return ctx.topicId
+        ? [{ sceneIndex: 1, voiceScript: "", targetDurationSeconds: 8 }, { sceneIndex: 2, voiceScript: "", targetDurationSeconds: 8 }]
+        : []
+    }
+    // Scene 1: Hook (mở đầu thu hút)
+    // Scene 2: Nội dung chính (productName + angle)
+    // Scene 3: CTA (kêu gọi hành động)
+    return [
+      { sceneIndex: 1, voiceScript: topic.hook || `Giới thiệu ${ctx.productName}`, targetDurationSeconds: 5 },
+      { sceneIndex: 2, voiceScript: `${ctx.productName} — ${topic.title}`, targetDurationSeconds: 8 },
+      { sceneIndex: 3, voiceScript: topic.cta || "Đặt hàng ngay hôm nay!", targetDurationSeconds: 4 },
+    ]
+  }
+
+  const [scenes, setScenes] = useState<AudioScene[]>(buildInitialScenes)
   const [voiceId, setVoiceId] = useState(ctx.voiceId ?? "")
   const [providerKey, setProviderKey] = useState<string>("openai")
   const [qualityTier, setQualityTier] = useState<string>("hd")
@@ -36,14 +64,23 @@ export function AudioWorkspace() {
     setScenes((prev) => prev.filter((s) => s.sceneIndex !== index).map((s, i) => ({ ...s, sceneIndex: i + 1 })))
   }, [])
 
+  const totalDuration = scenes.reduce((a, s) => a + s.targetDurationSeconds, 0)
+
   const handleCreate = useCallback(async () => {
     setLoading(true); setError(null); setJobResult(null)
     try {
+      const duration = scenes.reduce((a, s) => a + s.targetDurationSeconds, 0)
       const res = await fetch("/api/v1/audio/jobs", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          taskType, scenes: scenes.map((s) => ({ sceneIndex: s.sceneIndex, voiceScript: s.voiceScript, targetDurationSeconds: s.targetDurationSeconds })),
-          voiceId: voiceId || undefined, providerKey, qualityTier, musicMood: musicMood || undefined, topicAngleCategory: undefined,
+          taskType,
+          scenes: scenes.map((s) => ({ sceneIndex: s.sceneIndex, voiceScript: s.voiceScript, targetDurationSeconds: s.targetDurationSeconds })),
+          totalDurationSeconds: duration > 0 ? duration : 15,
+          voiceId: voiceId || undefined,
+          providerKey,
+          qualityTier,
+          musicMood: musicMood || undefined,
+          topicAngleCategory: undefined,
         }),
       })
       if (!res.ok) { const body = (await res.json()).error?.message ?? `Lỗi ${res.status}`; throw new Error(body) }
@@ -52,11 +89,8 @@ export function AudioWorkspace() {
     finally { setLoading(false) }
   }, [taskType, scenes, voiceId, providerKey, qualityTier, musicMood])
 
-  const totalDuration = scenes.reduce((a, s) => a + s.targetDurationSeconds, 0)
-
   return (
     <div className="flex flex-col gap-5">
-      <CreativeGuidanceCard area="area-c" />
       <Card className="p-5">
         <h3 className="text-sm font-bold text-text mb-3 flex items-center gap-2"><Headphones size={14} /> Loại tác vụ</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -141,14 +175,50 @@ export function AudioWorkspace() {
       </div>
       {error && <Card className="border-rose-200 bg-rose-50 p-4 flex items-center gap-3"><AlertCircle size={16} className="text-rose-600 shrink-0" /><p className="text-xs text-rose-800">{error}</p></Card>}
       {jobResult && (
-        <Card className="p-5">
-          <h3 className="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2"><CheckCircle2 size={14} /> Đã tạo audio job</h3>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-surface p-3 rounded-lg"><p className="text-[11px] text-text-muted">Job ID</p><p className="font-mono text-[11px] font-bold">{jobResult.job_id as string}</p></div>
-            <div className="bg-surface p-3 rounded-lg"><p className="text-[11px] text-text-muted">Status</p><p className="font-bold">{jobResult.status as string}</p></div>
+        <Card className="p-5 border-emerald-200 bg-emerald-50/40">
+          <h3 className="text-sm font-bold text-emerald-800 mb-3 flex items-center gap-2"><CheckCircle2 size={15} className="text-emerald-600" /> Đã xếp hàng công việc Audio thành công</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Job ID</p><p className="font-mono text-[11px] font-bold text-stone-800 truncate">{((jobResult.jobId || jobResult.job_id) as string) ?? "Đã tạo"}</p></div>
+            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Giọng đọc</p><p className="font-bold text-stone-800 truncate">{(jobResult.voiceDisplayName as string) || voiceId || "Mặc định"}</p></div>
+            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Nhạc nền</p><p className="font-bold text-stone-800 truncate">{(jobResult.musicTrackName as string) || (musicMood !== "none" ? musicMood : "Không có")}</p></div>
+            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Chi phí</p><p className="font-bold text-amber-600 font-mono">{(jobResult.creditsCost as number) ?? 1} credit</p></div>
           </div>
         </Card>
       )}
+
+      {/* ── CỔNG PHÊ DUYỆT CHẶNG 06b (STAGE-GATE APPROVAL) ── */}
+      <div className="space-y-2 pt-2">
+        <StageGateApprovalBar
+          stageCode="Chặng 06b — AUDIO & VOICEOVER"
+          title="Phê duyệt Lồng tiếng AI & Nhạc nền Cảm xúc"
+          description="Đã cấu hình lời thoại AI theo 3 phân cảnh (Mở đầu Hook - Giới thiệu hoa - Lời kêu gọi CTA) và giai điệu âm nhạc. Chủ shop phê duyệt để tiến sang Tạo Biến thể ảnh Tiếp thị (Khu vực D)."
+          isApproved={Boolean(jobResult)}
+          approveLabel="Phê duyệt Audio & Chuyển sang Tạo Biến thể ảnh (Khu vực D) →"
+          onApprove={() => navigateToArea("d")}
+          metrics={[
+            { label: "Phân cảnh", value: `${scenes.length} cảnh thoại` },
+            { label: "Thời lượng", value: `~${totalDuration}s` },
+            { label: "Âm nhạc", value: musicMood !== "none" ? musicMood : "Tự nhiên" },
+            { label: "Giọng đọc", value: voiceId || "Mặc định" },
+          ]}
+        />
+        <div className="flex justify-between items-center text-xs text-stone-500 pt-1">
+          <button
+            type="button"
+            onClick={() => navigateToArea("b")}
+            className="hover:text-stone-800 transition"
+          >
+            ← Quay lại Khu vực B (Nội dung)
+          </button>
+          <button
+            type="button"
+            onClick={() => navigateToArea("f")}
+            className="font-medium text-stone-500 hover:text-stone-800 transition underline decoration-dotted"
+          >
+            ⚡ Đi thẳng đến Đóng gói chiến dịch (Chặng 07) →
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

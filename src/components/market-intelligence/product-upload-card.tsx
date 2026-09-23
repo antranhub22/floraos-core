@@ -52,9 +52,57 @@ export function ProductUploadCard({
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleSelectDemo = (item: typeof DEMO_FLOWERS[0]) => {
+  const uploadFileAsset = async (file: File, displayUrl: string, title: string) => {
+    try {
+      setIsUploading(true);
+      const res = await fetch("/api/v1/assets/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mime_type: file.type || "image/jpeg" }),
+      });
+
+      if (res.ok) {
+        const { upload_url, asset_id, storage_key } = await res.json();
+        await fetch(upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "image/jpeg" },
+          body: file,
+        });
+
+        await fetch("/api/v1/assets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            asset_id,
+            kind: "ORIGINAL",
+            storage_key,
+            mime_type: file.type,
+            file_size: file.size,
+          }),
+        });
+
+        onSelectImage(displayUrl, title, asset_id);
+      } else {
+        onSelectImage(displayUrl, title);
+      }
+    } catch {
+      onSelectImage(displayUrl, title);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSelectDemo = async (item: typeof DEMO_FLOWERS[0]) => {
     onUpdateProductTitle(item.name);
     onSelectImage(item.url, item.name);
+    try {
+      const res = await fetch(item.url);
+      const blob = await res.blob();
+      const file = new File([blob], "demo-flower.jpg", { type: blob.type || "image/jpeg" });
+      await uploadFileAsset(file, item.url, item.name);
+    } catch {
+      // Giữ URL nếu offline hoặc CORS
+    }
   };
 
   const handleOpenCatalog = async () => {
@@ -76,58 +124,20 @@ export function ProductUploadCard({
         setCatalogProducts(items);
       }
     } catch {
-      // Fallback nếu API chưa có sản phẩm
+      // Fallback
     } finally {
       setLoadingCatalog(false);
     }
   };
 
   const handleFileUpload = async (file: File) => {
-    // Đọc file thành Data URL để hiển thị và truyền cho AI Vision xử lý
     const reader = new FileReader();
     reader.onload = async (e) => {
       const dataUrl = (e.target?.result as string) || URL.createObjectURL(file);
       const rawName = file.name.replace(/\.[^/.]+$/, "");
       const title = rawName.length > 3 ? rawName : "Mẫu hoa đang nhận diện";
       onUpdateProductTitle(title);
-
-      try {
-        setIsUploading(true);
-        const res = await fetch("/api/v1/assets/upload-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mime_type: file.type || "image/jpeg" }),
-        });
-
-        if (res.ok) {
-          const { upload_url, asset_id, storage_key } = await res.json();
-          await fetch(upload_url, {
-            method: "PUT",
-            headers: { "Content-Type": file.type || "image/jpeg" },
-            body: file,
-          });
-
-          await fetch("/api/v1/assets", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              asset_id,
-              kind: "ORIGINAL",
-              storage_key,
-              mime_type: file.type,
-              file_size: file.size,
-            }),
-          });
-
-          onSelectImage(dataUrl, title, asset_id);
-        } else {
-          onSelectImage(dataUrl, title);
-        }
-      } catch {
-        onSelectImage(dataUrl, title);
-      } finally {
-        setIsUploading(false);
-      }
+      await uploadFileAsset(file, dataUrl, title);
     };
     reader.readAsDataURL(file);
   };

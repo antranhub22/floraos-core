@@ -87,6 +87,7 @@ describe("FloraOS Product Intelligence Pipeline Handshake (Output N -> Perfect I
       organizationId,
       productName: visionOutput.productName,
       imageUrl: visionOutput.imageUrl,
+      assetId: "asset_test_tulip_01",
       components: visionOutput.components,
       attributes: visionOutput.attributes,
       packaging: visionOutput.packaging,
@@ -117,6 +118,7 @@ describe("FloraOS Product Intelligence Pipeline Handshake (Output N -> Perfect I
         organizationId,
         productName: "Test",
         imageUrl: "/test.jpg",
+        assetId: "asset_test_02",
         components: [],
       })
     ).rejects.toThrow("Thiếu components");
@@ -127,9 +129,31 @@ describe("FloraOS Product Intelligence Pipeline Handshake (Output N -> Perfect I
         organizationId,
         productName: "Test",
         imageUrl: "/test.jpg",
+        assetId: "asset_test_03",
         components: [{ flowerType: "Hoa hồng", quantityEstimate: 10, unit: "cành", role: "dominant" }],
         attributes: undefined,
       })
     ).rejects.toThrow("Thiếu attributes");
+  });
+
+  it("analyzeProductIntelligence ném lỗi khi thiếu assetId — ảnh chưa lưu vào kho (nợ #118, 22/09/2026)", async () => {
+    await expect(
+      analyzeProductIntelligence({
+        organizationId,
+        productName: "Test",
+        imageUrl: "data:image/jpeg;base64,/9j/4AAQ...",
+        assetId: "",
+        components: [{ flowerType: "Hoa hồng", quantityEstimate: 10, unit: "cành", role: "dominant" }],
+        attributes: {
+          mainColors: ["Đỏ"],
+          secondaryColors: [],
+          style: "Sang trọng",
+          shape: "Tròn",
+          sizeEstimate: "M",
+        },
+        packaging: { wrappingMaterial: "Giấy Kraft", wrappingColor: "Nâu", ribbon: "Voan", accessories: [] },
+        context: { likelyOccasions: ["Sinh nhật"], likelyAudience: "Nữ", suggestedPrice: 500000, confidence: 0.9 },
+      })
+    ).rejects.toThrow("Thiếu assetId");
   });
 });

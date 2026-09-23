@@ -132,6 +132,7 @@ src/
 | `enhancer-provider-selector.tsx` | Provider Selector | Chọn nhà cung cấp tách nền/nâng cấp ảnh AI trong 5 lựa chọn (Studio Pipeline, OpenAI, Local Real-ESRGAN, Gemini, Replicate) | `value`, `onChange`, `disabled?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
 | `optimization-mode-selector.tsx` | Mode Selector | Chuyển giữa chế độ "Tự động" và "Tuỳ chỉnh", chọn từng năng lực tối ưu cụ thể theo nhà cung cấp đang chọn | `mode`, `onModeChange`, `selectedCapabilities`, `onCapabilitiesChange`, `selectedProvider` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
 | `applied-changes-breakdown.tsx` | Result Summary | Liệt kê các thay đổi AI đã áp dụng lên ảnh (tách nền, xoá watermark, nâng nét, cân sáng, tạo đa tỷ lệ) | `appliedChanges?`, `mode?`, `providerName?` *(thêm 17/09, P-Fix-5 — thiếu trong bản gốc)* |
+| `visual-storytelling-controls.tsx` | Visual Controls | Bộ điều khiển kể chuyện thị giác (Góc chụp camera, Tương tác người mẫu/cầm hoa, Chế độ kịch bản 5 nhịp) | `cameraAngle`, `onCameraAngleChange`, `humanInteraction`, `onHumanInteractionChange`, `storylineMode`, `onStorylineModeChange`, `disabled?` |
 
 ---
 
@@ -465,3 +466,14 @@ Trước khi commit bất kỳ thay đổi nào liên quan đến template:
    - Truy cập `http://localhost:3100/tai-anh?tab=m01a`, `m01b`, `m01c`.
    - Kiểm tra khối hướng dẫn có viền đỏ đứt nét `border-dashed border-red-300`, nền hồng dịu `bg-red-50/70`, badge đỏ và tips gạch đầu dòng rõ ràng.
    - Nút hành động chuẩn hóa nằm ở góc trên bên phải.
+
+---
+
+## 7. LỊCH SỬ HOÀN THIỆN TEMPLATE SYSTEM (HỢP NHẤT TỪ KE_HOACH_HOAN_THIEN_TEMPLATE_SYSTEM.MD)
+
+Đợt hoàn thiện quy chuẩn Template System và Product Master Index ngày 17–18/09/2026 (P-Fix-0 $\rightarrow$ P-Fix-6) đã nghiệm thu hoàn tất:
+- **P-Fix-0 & P-Fix-1 (Vá dữ liệu thương mại):** Hợp nhất occasion (#92) và xử lý giá bán lẻ (#87 — không lưu giá tĩnh, giá qua `quotePrice()`).
+- **P-Fix-2 (Atomic BOM):** Khôi phục cấu trúc `FoliageBomItem[]`, `AccessoryBomItem[]`, `WrappingLayer[]` (#88), bổ sung `budCount`, `damagedCount`, `tierCount` (#90), chuẩn hóa vai trò hoa (#89).
+- **P-Fix-3 (Trường đặc thù ngành hoa):** Tồn kho theo chi nhánh (mẫu bó sẵn), độ tươi cấp tổ chức.
+- **P-Fix-4 & P-Fix-5 (Template Component Harmonization):** Chuẩn hóa 5 họ template, `<FeatureGuidanceCard />` và xuất khẩu sạch.
+- **P-Fix-6 (Chống tái lệch tài liệu ↔ code):** Cổng tự động `scripts/check-template-ssot.ts` bảo vệ CI vĩnh viễn.

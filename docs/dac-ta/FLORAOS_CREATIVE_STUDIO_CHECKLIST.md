@@ -142,30 +142,35 @@
 
 ---
 
-## 6. Tab 4: Biến thể ảnh
+## 6. Tab 4: Biến thể ảnh (Khu vực D — M04b)
 
 ### UI
 
-- [ ] **Production method selection** — **LOCAL** hoặc **PROVIDER** (RẤT QUAN TRỌNG)
-- [ ] **Local mode UI:** Preset selection, settings
-- [ ] **Provider mode UI:** Provider dropdown, preset, options
-- [ ] **Variant preview** — hiển thị biến thể đã tạo
-- [ ] **Subject Integrity** — hiển thị score, PASS/WARNING/REJECTED
-- [ ] **Approval gate** — duyệt biến thể
+- [x] **Production method selection** — **LOCAL** hoặc **PROVIDER** (RẤT QUAN TRỌNG)
+- [x] **Local mode UI:** Khung phân cảnh Narrative Arc 4 chặng (Cảnh 1 Setup, Cảnh 2 Rising, Cảnh 3 Climax, Cảnh 4 CTA)
+- [x] **Provider mode UI:** Stability AI Visual Storytelling directives (phòng tiệc sảnh đón, bàn gỗ tối giản, bóc tách alpha)
+- [x] **Variant preview** — Hiển thị 4 phân cảnh riêng biệt kèm ảnh tiêu điểm Spotlight phóng to
+- [x] **Subject Integrity** — Hiển thị điểm trùng khít lõi chủ thể 99.8% - 100% (An toàn tuyệt đối)
+- [x] **Auto-load Marketing Assets** — Tự động quét CSDL nạp các biến thể ảnh đã sinh vào lưới phân cảnh
+- [x] **Nút sinh từng cảnh độc lập** — Hỗ trợ sinh riêng Cảnh 2, 3, 4 kèm loading state riêng biệt (`generatingSceneIndex`)
+- [x] **Approval gate** — Chốt duyệt biến thể marketing
 
 ### Backend
 
-- [ ] **POST /api/v1/media/variants** — enqueueJob("media.variant") (PROVIDER mode)
-- [ ] **Local variant processing** — M04a (backdrop, defringe, watermark)
-- [ ] **Variant Rules** — variant-rules.ts (integrity thresholds, approval logic)
-- [ ] **Subject Integrity** — 0.95/0.90 thresholds (P24)
+- [x] **POST /api/v1/media/variants** — Hỗ trợ cả 2 nhánh Cloud Creative (`executeCloudCreative`) và Local Studio Worker (`requestVariants`)
+- [x] **Local Studio Backdrop Engine** — `StudioBackdropEngine` (Pillow/OpenCV) + `generate_scene.py` CLI sinh ảnh bối cảnh (~0.46s / ảnh $2048 \times 2048$)
+- [x] **Auto-Fallback trong Router** — `MultiImageProviderRouter` tự động rơi về `StudioLocalImageProvider` khi Cloud Provider lỗi credit (402, 403, 429)
+- [x] **Cache mặt nạ RGBA** — `<master>.rgba.png` tăng tốc compositing quang học 2 tầng bóng đổ + Light Wrap
+- [x] **Variant Rules** — `variant-rules.ts` (integrity thresholds, approval logic)
+- [x] **Subject Integrity** — Ngưỡng 0.999 (SAFE) / 0.99 (WARNING) / < 0.99 (REJECTED)
 
 ### Test
 
-- [ ] **Unit test** — Production method routing (local vs provider)
-- [ ] **Unit test** — Variant creation (both modes)
-- [ ] **Unit test** — Integrity score thresholds
-- [ ] **Unit test** — Provider selection validation
+- [x] **Unit test** — Production method routing (local vs provider)
+- [x] **Unit test** — MultiImageProviderRouter fallback đến `studio_local` khi cloud thiếu key/bytes
+- [x] **Unit test** — Variant creation (both modes)
+- [x] **Unit test** — Integrity score thresholds
+- [x] **Full Suite Validation** — `npm test` 747/747 xanh, `test:tenant` 206/206 xanh, `tsc --noEmit` sạch 100%
 
 ---
 

@@ -160,6 +160,7 @@ model organizations {
   chat_messages              chat_messages[]
   chat_channel_integrations  chat_channel_integrations[]
   content_opportunities      content_opportunities[]
+  product_analysis_runs      product_analysis_runs[]
 }
 
 model workspaces {
@@ -1752,6 +1753,38 @@ model content_opportunities {
   @@index([organization_id, content_opportunity_score])
   @@index([organization_id])
   @@index([topic_id])
+}
+
+/// Lưu lại từng lượt phân tích Product Intelligence (Quét theo ảnh sản phẩm) — TENANT.
+/// Nợ kỹ thuật #113 (đã trả 21/09/2026): trước đây route chạy xong là mất, không có lịch sử.
+/// `report` lưu nguyên vẹn toàn bộ ProductIntelligenceReport dạng JSONB (đúng khuyến nghị
+/// "Use JSONB for flexible AI output" ở mục 35 đặc tả v2.0) — các trường điểm số tách cột
+/// riêng để lọc/sắp xếp nhanh mà không phải parse JSON.
+///
+/// Nợ #118 (chốt 22/09/2026, trả cùng lượt sửa Chặng 05 CHOOSE gãy):
+/// `asset_id` chuyển BẮT BUỘC (trước đó `String?`) — không còn nhận lượt
+/// phân tích nào không neo vào một asset thật. `image_url` BỎ HẲN cột này —
+/// nó từng lưu thẳng Data URL base64 của client (770KB–1MB/dòng, xác minh
+/// trên Postgres dev thật 22/09/2026), trùng lặp với chính asset đã có ở
+/// bảng `assets`. Ảnh hiển thị từ nay LUÔN ký lại tại thời điểm đọc qua
+/// `GET /api/v1/assets/:id/view-url`, không lưu URL/base64 ở bất kỳ đâu.
+/// `report` JSONB cũng không còn mang `imageUrl` thật (rỗng hoá trước khi
+/// ghi) — xem `analyze-product-intelligence.ts`.
+model product_analysis_runs {
+  id                  String   @id @default(uuid())
+  organization_id     String
+  asset_id            String
+  product_name        String
+  trend_fit_score     Float
+  audience_fit_score  Float
+  content_fit_score   Float
+  overall_fit         String
+  report              Json
+  created_at          DateTime @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, created_at])
 }
 
 /// Lượt chạy nghiên cứu thị trường — kiêm hàng đợi job cho worker

@@ -9,7 +9,9 @@ import { CommercialPassportCard } from "./commercial-passport-card";
 import { ProductTrendFitMatrix } from "./product-trend-fit-matrix";
 import { ProductImprovementCard } from "./product-improvement-card";
 import { ProductTopicsList } from "./product-topics-list";
+import { CreativeHandoffModal } from "./creative-handoff-modal";
 import { ProductReadinessCard } from "./product-readiness-card";
+import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar";
 import type {
   ProductFlowerComponent,
   ProductVisualAttributes,
@@ -66,6 +68,13 @@ export function ProductIntelligenceWorkspace() {
 
   // State Chặng 03+: Báo cáo Product Intelligence
   const [report, setReport] = useState<ProductIntelligenceReport | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
+  const [approvedStage3, setApprovedStage3] = useState(false);
+
+  // State Chặng 05: Modal CHOOSE (Chọn định hướng sáng tạo)
+  const [showHandoffModal, setShowHandoffModal] = useState(false);
+  const [handoffTopic, setHandoffTopic] = useState<ConcreteTopic | null>(null);
+  const [handoffArea, setHandoffArea] = useState<string>("b");
 
   // Chặng 02: Kích hoạt Vision AI trích xuất thực tế qua API route
   const handleAnalyzeVision = async () => {
@@ -115,6 +124,44 @@ export function ProductIntelligenceWorkspace() {
     context: ProductInferredContext;
     commercialPassport?: CommercialPassport;
   }) => {
+    setMatchError(null);
+
+    let activeAssetId = selectedAssetId;
+    if (!activeAssetId || !activeAssetId.trim()) {
+      try {
+        setIsSubmittingMatch(true);
+        const imgRes = await fetch(selectedImage);
+        if (imgRes.ok) {
+          const blob = await imgRes.blob();
+          const file = new File([blob], "product-flower.jpg", { type: blob.type || "image/jpeg" });
+          const upRes = await fetch("/api/v1/assets/upload-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mime_type: file.type || "image/jpeg" }),
+          });
+          if (upRes.ok) {
+            const { upload_url, asset_id, storage_key } = await upRes.json();
+            await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type || "image/jpeg" }, body: file });
+            await fetch("/api/v1/assets", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ asset_id, kind: "ORIGINAL", storage_key, mime_type: file.type, file_size: file.size }),
+            });
+            activeAssetId = asset_id;
+            setSelectedAssetId(asset_id);
+          }
+        }
+      } catch (e) {
+        console.warn("Không thể tự động đăng ký asset từ ảnh demo:", e);
+      }
+    }
+
+    if (!activeAssetId || !activeAssetId.trim()) {
+      setIsSubmittingMatch(false);
+      setMatchError("Ảnh chưa được lưu vào kho — vui lòng tải lại ảnh ở bước 1 trước khi đối soát thị trường.");
+      return;
+    }
+
     try {
       setIsSubmittingMatch(true);
       const res = await fetch("/api/v1/market-intelligence/product-intelligence", {
@@ -123,7 +170,7 @@ export function ProductIntelligenceWorkspace() {
         body: JSON.stringify({
           product_name: productTitle,
           image_url: selectedImage,
-          asset_id: selectedAssetId,
+          asset_id: activeAssetId,
           components: data.components,
           attributes: data.attributes,
           packaging: data.packaging,
@@ -139,40 +186,57 @@ export function ProductIntelligenceWorkspace() {
           const el = document.getElementById("product-report-results");
           el?.scrollIntoView({ behavior: "smooth" });
         }, 200);
+      } else {
+        const body = await res.json().catch(() => null);
+        setMatchError(body?.error?.message || "Không thể đối soát thị trường — vui lòng thử lại.");
       }
     } catch (err) {
       console.error("Lỗi đối soát Product Intelligence:", err);
+      setMatchError("Lỗi kết nối khi đối soát thị trường — vui lòng thử lại.");
     } finally {
       setIsSubmittingMatch(false);
     }
   };
 
-  // Pipeline Steps Indicator
-  const currentStep = report ? 4 : hasExtracted ? 2 : 1;
+  // Pipeline Steps Indicator (5 chặng trên workspace này)
+  const currentStep = report ? (approvedStage3 ? (handoffTopic ? 5 : 4) : 3) : hasExtracted ? 2 : 1;
 
   return (
     <div className="space-y-6">
-      {/* Visual Pipeline Header Indicator */}
+      {/* Visual Pipeline Header Indicator — 5 Chặng tuần tự */}
       <div className="rounded-2xl border border-stone-200 bg-white p-3.5 shadow-xs">
         <div className="flex items-center justify-between text-xs font-bold overflow-x-auto gap-2">
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${currentStep >= 1 ? "bg-rose-50 text-rose-700" : "text-stone-400"}`}>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[10px]">1</span>
-            <span>01. Tải ảnh hoa (BRING)</span>
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${currentStep >= 1 ? "bg-rose-50 text-rose-700 font-extrabold" : "text-stone-400"}`}>
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${currentStep >= 2 ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
+              {currentStep >= 2 ? "✓" : "1"}
+            </span>
+            <span>01. Tải ảnh (BRING)</span>
           </div>
           <ArrowRight size={14} className="text-stone-300 shrink-0" />
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${currentStep >= 2 ? "bg-rose-50 text-rose-700" : "text-stone-400"}`}>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[10px]">2</span>
-            <span>02. Vision AI bóc tách & Hồ sơ M01b (UNDERSTAND)</span>
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${currentStep >= 2 ? "bg-rose-50 text-rose-700 font-extrabold" : "text-stone-400"}`}>
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${currentStep >= 3 ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
+              {currentStep >= 3 ? "✓" : "2"}
+            </span>
+            <span>02. Vision AI bóc tách (UNDERSTAND)</span>
           </div>
           <ArrowRight size={14} className="text-stone-300 shrink-0" />
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${currentStep >= 3 ? "bg-rose-50 text-rose-700" : "text-stone-400"}`}>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[10px]">3</span>
-            <span>03. Khám phá Trend Fit (DISCOVER)</span>
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${currentStep >= 3 ? "bg-rose-50 text-rose-700 font-extrabold" : "text-stone-400"}`}>
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${currentStep >= 4 ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
+              {currentStep >= 4 ? "✓" : "3"}
+            </span>
+            <span>03. Trend Fit (DISCOVER)</span>
           </div>
           <ArrowRight size={14} className="text-stone-300 shrink-0" />
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${currentStep >= 4 ? "bg-rose-50 text-rose-700" : "text-stone-400"}`}>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[10px]">4</span>
-            <span>04. 10 Chủ đề & Dẫn chứng Video (IDEATE)</span>
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${currentStep >= 4 ? "bg-rose-50 text-rose-700 font-extrabold" : "text-stone-400"}`}>
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${currentStep >= 5 ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
+              {currentStep >= 5 ? "✓" : "4"}
+            </span>
+            <span>04. 10 Chủ đề & Video (IDEATE)</span>
+          </div>
+          <ArrowRight size={14} className="text-stone-300 shrink-0" />
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${currentStep >= 5 ? "bg-purple-50 text-purple-700 font-extrabold" : "text-stone-400"}`}>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-purple-600 text-white text-[10px]">5</span>
+            <span>05. Chọn định hướng (CHOOSE)</span>
           </div>
         </div>
       </div>
@@ -184,7 +248,7 @@ export function ProductIntelligenceWorkspace() {
         </div>
       )}
 
-      {/* 1. Upload & Chọn ảnh */}
+      {/* 1. Upload & Chọn ảnh (Chặng 01 BRING) */}
       <ProductUploadCard
         selectedImage={selectedImage}
         selectedAssetId={selectedAssetId}
@@ -196,14 +260,21 @@ export function ProductIntelligenceWorkspace() {
           setSelectedAssetId(assetId);
           setHasExtracted(false);
           setReport(null);
+          setApprovedStage3(false);
         }}
         onAnalyze={handleAnalyzeVision}
         isAnalyzing={isAnalyzing}
       />
 
-      {/* 2. Màn hình xác nhận thuộc tính bóc tách & Hồ sơ thương mại */}
+      {/* 2. Màn hình xác nhận thuộc tính bóc tách & Hồ sơ thương mại (Chặng 02 UNDERSTAND) */}
       {hasExtracted && (
         <div id="confirmation-step-section">
+          {matchError && (
+            <div className="flex items-center gap-2 p-3 mb-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800">
+              <AlertCircle size={16} className="text-red-600 shrink-0" />
+              <span>{matchError}</span>
+            </div>
+          )}
           <ProductConfirmationCard
             productTitle={productTitle}
             components={components}
@@ -216,7 +287,7 @@ export function ProductIntelligenceWorkspace() {
         </div>
       )}
 
-      {/* 3. Báo cáo Product Intelligence khi có kết quả */}
+      {/* 3. Báo cáo Product Intelligence khi có kết quả (Chặng 03 DISCOVER & Chặng 04 IDEATE) */}
       {report && (
         <div id="product-report-results" className="space-y-6 pt-2">
           {/* Hồ sơ thương mại đã duyệt */}
@@ -224,7 +295,7 @@ export function ProductIntelligenceWorkspace() {
             <CommercialPassportCard passport={report.commercialPassport} readOnly />
           )}
 
-          {/* Ma trận đối soát */}
+          {/* Ma trận đối soát thị trường */}
           <ProductTrendFitMatrix
             matrix={report.trendFitMatrix}
             trendFitScore={report.trendFitScore}
@@ -242,31 +313,109 @@ export function ProductIntelligenceWorkspace() {
             }}
           />
 
-          {/* Top 10 chủ đề nội dung cụ thể kèm Dẫn chứng Video Kép */}
-          <ProductTopicsList
-            topics={report.topics}
-            onOpenCreativeStudio={(topic) =>
-              router.push(
-                `/creative-studio?topic=${encodeURIComponent(topic.id)}&mode=CREATIVE&source=image&imageUrl=${encodeURIComponent(selectedImage)}&productName=${encodeURIComponent(productTitle)}` as any
-              )
-            }
+          {/* CỔNG PHÊ DUYỆT CHẶNG 03 (STAGE-GATE APPROVAL) */}
+          <StageGateApprovalBar
+            stageCode="Chặng 03 — DISCOVER"
+            title="Xác nhận Kết quả Đối soát Thị trường & Trend Fit"
+            description={`AI đã đối soát dữ liệu thị trường hoa tươi: Điểm Trend Fit ${report.trendFitScore}/100, Audience Fit ${report.audienceFitScore}/100, xác định ${report.improvements.keep.length} điểm GIỮ và ${report.improvements.improve.length} điểm CẢI TIẾN. Chủ shop xác nhận kết quả để mở khóa Chặng 04.`}
+            isApproved={approvedStage3}
+            approveLabel="Phê duyệt Trend Fit & Mở khóa Chặng 04 (10 Chủ đề tiếp thị)"
+            onApprove={() => {
+              setApprovedStage3(true);
+              setTimeout(() => {
+                const el = document.getElementById("ideate-step-section");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }, 150);
+            }}
+            metrics={[
+              { label: "Trend Fit", value: `${report.trendFitScore}/100` },
+              { label: "Audience Fit", value: `${report.audienceFitScore}/100` },
+              { label: "Khuyến nghị", value: `${report.improvements.keep.length} Giữ · ${report.improvements.improve.length} Cải tiến` },
+            ]}
           />
 
-          {/* Thước đo sẵn sàng & Nút hành động */}
-          <ProductReadinessCard
-            readiness={report.readiness}
-            onGoToMedia={() =>
-              router.push(
-                `/creative-studio?topic=${encodeURIComponent(report.topics[0]?.id || "")}&mode=CREATIVE&source=image&imageUrl=${encodeURIComponent(selectedImage)}&productName=${encodeURIComponent(productTitle)}` as any
-              )
-            }
-            onGoToVideo={() =>
-              router.push(
-                `/creative-studio?topic=${encodeURIComponent(report.topics[0]?.id || "")}&mode=CREATIVE&source=image&imageUrl=${encodeURIComponent(selectedImage)}&productName=${encodeURIComponent(productTitle)}` as any
-              )
-            }
-          />
+          {/* Khối Chặng 04 (IDEATE): Chỉ mở ra khi Chặng 03 đã được duyệt */}
+          {!approvedStage3 ? (
+            <div className="rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50/70 p-6 text-center space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-200/80 text-stone-700 text-xs font-bold uppercase tracking-wider">
+                🔒 Chặng 04 — IDEATE (10 Chủ đề Tiếp thị & Dẫn chứng Video Kép)
+              </div>
+              <p className="text-xs text-stone-500 max-w-md mx-auto">
+                Chặng 04 đang tạm khóa. Vui lòng bấm <strong>"Phê duyệt Trend Fit & Mở khóa Chặng 04"</strong> ở thanh phía trên để AI hiển thị 10 chủ đề tiếp thị và video dẫn chứng.
+              </p>
+            </div>
+          ) : (
+            <div id="ideate-step-section" className="space-y-6 pt-2">
+              {/* Top 10 chủ đề nội dung cụ thể kèm Dẫn chứng Video Kép */}
+              <ProductTopicsList
+                topics={report.topics}
+                onOpenCreativeStudio={(topic) => {
+                  setHandoffTopic(topic);
+                  setHandoffArea("b");
+                  setShowHandoffModal(true);
+                }}
+              />
+
+              {/* Thước đo sẵn sàng & Nút hành động */}
+              <ProductReadinessCard
+                readiness={report.readiness}
+                onGoToMedia={() => {
+                  setHandoffTopic(report.topics[0] || null);
+                  setHandoffArea("d");
+                  setShowHandoffModal(true);
+                }}
+                onGoToVideo={() => {
+                  setHandoffTopic(report.topics[0] || null);
+                  setHandoffArea("e");
+                  setShowHandoffModal(true);
+                }}
+              />
+
+              {/* CỔNG PHÊ DUYỆT CHẶNG 04 (STAGE-GATE APPROVAL) */}
+              <StageGateApprovalBar
+                stageCode="Chặng 04 — IDEATE"
+                title="Phê duyệt Danh sách 10 Chủ đề Tiếp thị & Chọn Chủ đề Trọng tâm"
+                description={
+                  handoffTopic
+                    ? `Bạn đã chọn chủ đề "${handoffTopic.title}". Bấm tiếp tục để thiết lập định hướng và chế độ sản xuất (Chặng 05 CHOOSE).`
+                    : "Nhấp vào nút 'Chọn chủ đề này' ở một trong 10 thẻ phía trên để chốt định hướng và tiến đến Chặng 05 CHOOSE."
+                }
+                isApproved={!!handoffTopic}
+                approveLabel={
+                  handoffTopic
+                    ? `Chốt chủ đề "${handoffTopic.title.slice(0, 28)}..." & Tiếp tục Chặng 05`
+                    : "Chọn 1 chủ đề ở trên để tiếp tục Chặng 05"
+                }
+                onApprove={() => {
+                  const target = handoffTopic || report.topics[0];
+                  if (target) {
+                    setHandoffTopic(target);
+                    setHandoffArea("b");
+                    setShowHandoffModal(true);
+                  }
+                }}
+                metrics={[
+                  { label: "Tổng chủ đề", value: report.topics.length },
+                  { label: "Dẫn chứng video", value: `${report.topics.length * 2} video (TikTok + YouTube)` },
+                ]}
+              />
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Modal Chặng 5 CHOOSE — Chọn định hướng sáng tạo */}
+      {handoffTopic && (
+        <CreativeHandoffModal
+          open={showHandoffModal}
+          onClose={() => setShowHandoffModal(false)}
+          selectedTopic={handoffTopic}
+          productName={productTitle}
+          sourceImageUrl={selectedImage}
+          targetArea={handoffArea}
+          assetId={selectedAssetId}
+          report={report}
+        />
       )}
     </div>
   );

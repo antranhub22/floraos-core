@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useCallback, useContext } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Film, Sparkles, Send, Loader2, CheckCircle2, AlertCircle, Play, Clock, Coins } from "lucide-react"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
-import { CreativeGuidanceCard } from "@/components/templates/creative-studio/creative-guidance-card"
 import { StoryboardEditor } from "@/components/video-studio/storyboard-editor"
 import { VideoJobList, type VideoJobSummary } from "@/components/video-studio/video-job-list"
 import { Button } from "@/components/ui/button"
@@ -11,11 +11,21 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { VideoFormat, VIDEO_FORMAT_SPECS, CaptionStyle, CAPTION_STYLE_SPECS, VideoSceneItem } from "@/modules/video-studio/domain/video-types"
+import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
 
 export function VideoWorkspace() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const context = useContext(CreativeStudioContext)
+
+  const navigateToArea = (area: "b" | "c" | "d" | "e" | "f") => {
+    const params = new URLSearchParams(searchParams?.toString() || "")
+    params.set("area", area)
+    router.push(`/creative-studio?${params.toString()}` as any)
+  }
+
   const [format, setFormat] = useState<VideoFormat>("REEL_15S")
-  const [title, setTitle] = useState("Video giới thiệu bó hoa tươi")
+  const [title, setTitle] = useState(context?.productName ? `Video giới thiệu ${context.productName}` : "Video giới thiệu bó hoa tươi")
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>("MODERN_BADGE")
   const [hasSubtitle, setHasSubtitle] = useState(true)
   const [hasWatermark, setHasWatermark] = useState(true)
@@ -28,24 +38,57 @@ export function VideoWorkspace() {
 
   const spec = VIDEO_FORMAT_SPECS[format]
 
+  // Auto-populate storyboard from selectedTopic (Chặng 4 output → Tab E input)
   const initScenes = useCallback(() => {
     if (scenes.length > 0) return
+    const topic = context?.selectedTopic
     const target = spec.targetDurationSeconds
     const numScenes = 3
     const perSec = Math.max(1.5, Math.round((target / numScenes) * 10) / 10)
     const init: VideoSceneItem[] = []
-    for (let i = 0; i < numScenes; i++) {
+
+    if (topic) {
+      // Scene 1: Hook (mở đầu)
       init.push({
-        sceneIndex: i + 1,
-        durationSeconds: i === numScenes - 1 ? Math.max(1.0, Math.round((target - perSec * (numScenes - 1)) * 10) / 10) : perSec,
-        textOverlay: `Phân cảnh ${i + 1}`,
-        voiceScript: "Lời thoại mô tả nét đẹp của hoa",
+        sceneIndex: 1,
+        durationSeconds: perSec,
+        textOverlay: topic.hook || `Giới thiệu ${context?.productName || "sản phẩm"}`,
+        voiceScript: topic.hook || `Giới thiệu ${context?.productName || "bó hoa"}`,
         transitionEffect: "fade",
         motionEffect: "ZOOM_IN",
       })
+      // Scene 2: Nội dung chính
+      init.push({
+        sceneIndex: 2,
+        durationSeconds: perSec,
+        textOverlay: topic.title,
+        voiceScript: `${context?.productName || "Bó hoa"} — ${topic.title}`,
+        transitionEffect: "fade",
+        motionEffect: "PAN_RIGHT",
+      })
+      // Scene 3: CTA
+      init.push({
+        sceneIndex: 3,
+        durationSeconds: Math.max(1.0, Math.round((target - perSec * 2) * 10) / 10),
+        textOverlay: topic.cta || "Đặt hàng ngay!",
+        voiceScript: topic.cta || "Đặt hàng ngay hôm nay!",
+        transitionEffect: "fade",
+        motionEffect: "ZOOM_OUT",
+      })
+    } else {
+      for (let i = 0; i < numScenes; i++) {
+        init.push({
+          sceneIndex: i + 1,
+          durationSeconds: i === numScenes - 1 ? Math.max(1.0, Math.round((target - perSec * (numScenes - 1)) * 10) / 10) : perSec,
+          textOverlay: `Phân cảnh ${i + 1}`,
+          voiceScript: "Lời thoại mô tả nét đẹp của hoa",
+          transitionEffect: "fade",
+          motionEffect: "ZOOM_IN",
+        })
+      }
     }
     setScenes(init)
-  }, [scenes, spec])
+  }, [scenes, spec, context])
 
   const handleCreate = useCallback(async () => {
     setLoading(true); setError(null); setJobResult(null)
@@ -80,7 +123,6 @@ export function VideoWorkspace() {
 
   return (
     <div className="flex flex-col gap-5">
-      <CreativeGuidanceCard area="area-e" />
       <Card className="p-5">
         <h3 className="text-sm font-bold text-text mb-3 flex items-center gap-2"><Film size={14} /> Khuôn định dạng</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -161,6 +203,40 @@ export function VideoWorkspace() {
           <VideoJobList jobs={videoJobs} loading={jobsLoading} onSelectJob={() => {}} onCreateNew={() => setVideoJobs([])} />
         </Card>
       )}
+
+      {/* ── CỔNG PHÊ DUYỆT CHẶNG 06d (STAGE-GATE APPROVAL) ── */}
+      <div className="space-y-2 pt-2">
+        <StageGateApprovalBar
+          stageCode="Chặng 06d — SẢN XUẤT VIDEO MARKETING"
+          title="Phê duyệt Kịch bản Storyboard & Video Clip (M04c)"
+          description={`Đã sẵn sàng kịch bản storyboard ${scenes.length || 3} phân cảnh theo khuôn ${spec.aspectRatio}, thời lượng ước tính ~${spec.targetDurationSeconds}s. Chủ shop phê duyệt để tiến hành Đóng gói toàn bộ chiến dịch sang Chặng 07 (PACKAGE).`}
+          isApproved={Boolean(jobResult)}
+          approveLabel="Phê duyệt Video & Tiến đến Đóng gói chiến dịch (Chặng 07) →"
+          onApprove={() => navigateToArea("f")}
+          metrics={[
+            { label: "Khuôn video", value: spec.label },
+            { label: "Tỷ lệ", value: spec.aspectRatio },
+            { label: "Thời lượng", value: `~${spec.targetDurationSeconds}s` },
+            { label: "Phụ đề", value: hasSubtitle ? "Có" : "Không" },
+          ]}
+        />
+        <div className="flex justify-between items-center text-xs text-stone-500 pt-1">
+          <button
+            type="button"
+            onClick={() => navigateToArea("d")}
+            className="hover:text-stone-800 transition"
+          >
+            ← Quay lại Khu vực D (Tạo ảnh biến thể)
+          </button>
+          <button
+            type="button"
+            onClick={() => navigateToArea("f")}
+            className="font-medium text-stone-500 hover:text-stone-800 transition underline decoration-dotted"
+          >
+            ⚡ Đóng gói chiến dịch ngay (Chặng 07) →
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -101,11 +101,11 @@ export async function executeCloudCreative(
       ? "openai"
       : input.providerKey === "studio" || input.providerKey === "local" || input.providerKey === "replicate"
       ? "studio_local"
-      : "fal_flux"
+      : "stability_ai"
 
   const router = new MultiImageProviderRouter({
     defaultProvider: targetKey,
-    fallbackChain: ["fal_flux", "stability_ai", "google_imagen", "photoroom", "studio_local"],
+    fallbackChain: ["stability_ai", "fal_flux", "google_imagen", "photoroom", "studio_local"],
   })
 
   // 3. Trích xuất thông tin passport hoa (nếu có trong metadata asset)

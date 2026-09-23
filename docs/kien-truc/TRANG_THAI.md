@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-20 (Hoàn thiện 100% Product Intelligence Vision AI: Multimodal AI & Progressive Selection; Dual Video Evidence & Clean Phrasing; P25a Console Vận hành Nền tảng) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-23 (Hoàn thiện 100% Khung Phân Cảnh Narrative Arc 4 Chặng & Động cơ Local Studio Backdrop Engine M04b Creative Studio; Loại bỏ triệt để lỗi lặp 1 ảnh; Tách nền U2-Net và Cache RGBA 0.46s; `npm test` 747/747 xanh, `test:tenant` 206/206 xanh, `tsc` sạch) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -9,6 +9,18 @@
 ---
 
 ## 1. Đang ở đâu
+
+**23/09 — Hoàn thiện Khung Phân Cảnh Narrative Arc 4 Chặng & Động Cơ Local Studio Backdrop Engine (Khu vực D — M04b Creative Studio).**
+Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm test` **747/747 ca xanh (92/92 tệp)**, `npm run test:tenant` **206/206 ca xanh thật (27/27 tệp)**.
+- **Khắc phục triệt để lỗi "Trùng lặp 1 bức ảnh duy nhất"**: Trước đây khi Cloud Provider (Stability AI lỗi 402 hết credit, Fal.ai 403, Gemini 429) thất bại, fallback chain rơi về `studio_local`. `StudioLocalImageProvider` ban đầu chỉ trả về bytes ảnh gốc chưa qua xử lý, khiến 4 phân cảnh bị hiển thị 4 bức ảnh hoa thật giống hệt nhau. Nay nâng cấp kết nối trực tiếp với Python `StudioBackdropEngine` và `RembgSegmenter` qua `generate_scene.py`.
+- **Chuẩn hóa 4 Khung Phân Cảnh Narrative Arc (Chặng 04–05 → Khu vực D M04b)**:
+  - **Cảnh 1 [SETUP]**: Studio Trắng Tinh Khôi (`clean_white`) — Đổ bóng 2 tầng (Ambient Occlusion + Directional Soft Shadow), bảo toàn 100% lẵng hoa thật nguyên bản từ Chặng 01–02.
+  - **Cảnh 2 [RISING]**: Không gian Lifestyle Sang Trọng (`boutique_bokeh` / `luxury_hotel`) — Hòa phối bó hoa vào sảnh tiệc mừng khai trương / khách sạn cao cấp với hiệu ứng Bokeh quang học f/1.8.
+  - **Cảnh 3 [CLIMAX]**: Gỗ Tối Giản Nghệ Thuật Bắc Âu (`wood_warm` / `wood_minimal`) — Cận cảnh tôn vinh thiệp chúc mừng OCR và ruy băng nơ thiết kế riêng.
+  - **Cảnh 4 [CTA]**: Tách Nền Trong Suốt PNG (`transparent`) — Khử nền 100% bằng U2-Net / Rembg alpha mask, làm sạch viền defringe, sẵn sàng gắn logo tiệm hoa để xuất bản đa kênh.
+- **Bộ nhớ đệm RGBA (`.rgba.png`) & Tốc độ siêu tốc**: Lưu cache mặt nạ bóc tách lần đầu; các lượt ghép phân cảnh tiếp theo chỉ mất **~0.46s / ảnh $2048 \times 2048$**, 0 VNĐ / 0 Token API, chạy 100% offline.
+- **Client-Side Tự động đồng bộ**: `variant-workspace.tsx` tự động quét CSDL `assets` (`kind=MARKETING`) nạp ngay các phân cảnh có sẵn khi tải trang; hỗ trợ nút bấm sinh độc lập từng Cảnh 2, Cảnh 3, Cảnh 4 với trạng thái loading riêng (`generatingSceneIndex`). Cảnh 4 tích hợp cơ chế kép API Rembg + fallback client canvas cutout.
+
 
 **20/09 — Nâng cấp Bóc tách Phụ liệu & Thiệp Chúc Mừng OCR Đồng Bộ Toàn Hệ Thống.**
 Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm test` **575/575 ca xanh**, `npm run test:tenant` **206/206 ca xanh thật (27/27 tệp)**, `tests/unit/market-intelligence/` **33/33 ca xanh thật (8/8 tệp)**.

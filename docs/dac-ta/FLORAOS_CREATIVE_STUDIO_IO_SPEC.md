@@ -1,486 +1,305 @@
-# Input/Output Specification — Creative Studio Pipeline
+# Input/Output Specification — Creative Studio Pipeline (Chặng 1–14)
 
 > **Mục đích:** Chuẩn hóa chính xác inputs và outputs của tất cả các bước
-> từ Chặng 4 (IDEATE) → Chặng 14 (NEXT BEST ACTION) trong user journey
-> "Quét theo Ảnh mẫu → Sáng tạo nội dung".
+> từ **Chặng 01 (BRING — Quét theo ảnh sản phẩm tại Khu vực A)** xuyên suốt đến **Chặng 14 (NEXT BEST ACTION)**
+> trong hành trình tiếp thị và sản xuất nội dung của AI Creative Studio (`/creative-studio`).
 >
-> **Nguyên tắc:**
-> - Mỗi field đều có tên, kiểu, mô tả, bắt buộc/tùy chọn, nguồn gốc
-> - Sau này nếu cần thay đổi fields → sửa tại đây, không sửa rải rác
-> - Các bước/tabs trong Creative Studio đều đọc từ TopicProductionBrief
->   (SSOT cho data carry-forward Chặng 1-4)
+> **Nguyên tắc cốt lõi:**
+> - Mỗi field đều có tên, kiểu, mô tả, bắt buộc/tùy chọn, nguồn gốc.
+> - Khu vực A (`area-a`) khởi động từ Chặng 01 đến 05, sản sinh `TopicProductionBrief`.
+> - Các Khu vực B, C, D, E, F trong Creative Studio đều đọc từ `TopicProductionBrief`
+>   (SSOT cho data carry-forward từ Chặng 1-5 sang Chặng 6-14).
+> - `assetId` là BẮT BUỘC: ảnh luôn được resolve qua `/api/v1/assets/:id/view-url`, cấm truyền base64 qua URL.
 >
-> **Phiên bản:** 1.0 — 2026-09-21
-> **Trạng thái:** CHỜ DUYỆT TRƯỚC KHI CODE
+> **Phiên bản:** 3.0 — 2026-09-23 (Đồng bộ Creative Studio khởi động từ Chặng 01 tại Khu vực A & 6 Khu Vực Tab)
+> **Trạng thái:** ĐÃ TRIỂN KHAI & NGHIỆM THU
 
 ---
 
-## 0. Chặng chuyển tiếp — Chuyển tiếp giữa Chặng 4 và Chặng 5
+## 1. Khu Vực A — Quét Theo Ảnh Sản Phẩm (Chặng 01 → Chặng 05)
 
-### 0.1 Mục đích
+Khu vực A (`area-a`) là điểm khởi đầu khép kín của Creative Studio, người dùng thao tác trực tiếp với `<ProductIntelligenceWorkspace />`.
 
-Chặng chuyển tiếp đảm bảo rằng sau Chặng 4 (IDEATE — chọn topic),
-tất cả dữ liệu cần thiết cho 5 Khu vực Creative Studio đã được
-chuẩn bị đầy đủ, đúng chuẩn, đồng bộ về nội dung theo topic đã chọn.
+### 1.1. Chặng 01 — BRING (Tải ảnh chụp lẵng/bó hoa thật)
 
-### 0.2 Input của Chặng chuyển tiếp
-
+#### Input:
 | Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
 |---|---|---|---|---|
-| `topicId` | string | YÊU CẦU | Topic đã chọn ở Chặng 04 | Chặng 04 IDEATE |
-| `mode` | "CREATIVE" \| "AUTHENTIC" | YÊU CẦU | Loại hình sản xuất (user chọn) | Chặng 05 CHOOSE |
-| `sourceImageUrl` | string | YÊU CẦU | Ảnh sản phẩm (Data URL hoặc URL) | Chặng 01 BRING |
-| `sourceImageStorageKey` | string | TÙY CHỌN | Storage key ảnh gốc | Chặng 01 BRING |
-| `sourceVideoUrl` | string | TÙY CHỌN | Video gốc (nếu user upload) | Chặng 01 BRING |
-| `productName` | string | YÊU CẦU | Tên sản phẩm | Chặng 02 UNDERSTAND |
-| `category` | string | YÊU CẦU | Danh mục sản phẩm | Chặng 02 UNDERSTAND |
-| `style` | string | YÊU CẦU | Phong cách sản phẩm | Chặng 02 UNDERSTAND |
-| `components` | string[] | YÊU CẦU | Thành phần hoa | Chặng 02 UNDERSTAND |
-| `colors` | string[] | YÊU CẦU | Màu sắc | Chặng 02 UNDERSTAND |
-| `priceRange` | string | TÙY CHỌN | Phân khúc giá | Chặng 02 UNDERSTAND |
-| `targetAudience` | string | TÙY CHỌN | Đối tượng khách hàng | Chặng 02 UNDERSTAND |
-| `suggestedOccasions` | string[] | TÙY CHỌN | Dịp gợi ý | Chặng 02 UNDERSTAND |
-| `occasions` | string[] | YÊU CẦU | Dịp phù hợp (từ topic) | Chặng 02 + 04 |
-| `targetDurationSeconds` | number | TÙY CHỌN | Thời lượng video mục tiêu | Chặng 05 CHOOSE |
+| `file` | `File` (Image) | YÊU CẦU | File ảnh chụp hoa thật (JPG, PNG, WEBP $\le 20\text{MB}$) | Người dùng upload hoặc chọn Catalog |
+| `fileName` | `string` | YÊU CẦU | Tên file gốc | File system trình duyệt |
+| `mimeType` | `string` | YÊU CẦU | Định dạng MIME (`image/jpeg`, `image/png`, v.v.) | Trình duyệt |
 
-### 0.3 Output của Chặng chuyển tiếp (TopicProductionBrief)
+#### Output:
+| Field | Kiểu | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `assetId` | `string` (UUID) | YÊU CẦU | Định danh duy nhất của Master/Original Asset trong CSDL `assets` |
+| `storageKey` | `string` | YÊU CẦU | Đường dẫn lưu trữ: `org/<org_id>/assets/<asset_id>.<ext>` |
+| `sourceImageUrl` | `string` | YÊU CẦU | URL xem ảnh có chữ ký HMAC từ `/api/v1/assets/:id/view-url` |
+
+---
+
+### 1.2. Chặng 02 — UNDERSTAND (Vision AI Bóc Tách Nguyên Tử & OCR Thiệp)
+
+Multimodal Vision AI (`gpt-4o-mini`) phân tích ảnh, bóc tách cấu trúc nguyên tử (Atomic Disaggregated Fields):
+
+#### Input:
+| Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
+|---|---|---|---|---|
+| `assetId` | `string` | YÊU CẦU | ID ảnh đã upload | Chặng 01 BRING |
+| `imageDataUrl` | `string` | YÊU CẦU | Base64 Data URL gửi ngầm tới Vision API | Trình duyệt |
+
+#### Output (`ProductIntelligenceReport`):
+| Field | Kiểu | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `productName` | `string` | YÊU CẦU | Tên thương mại chuẩn hóa của sản phẩm hoa tươi |
+| `components` | `FlowerComponent[]` | YÊU CẦU | Mảng nguyên tử: `flowerType`, `quantity`, `unit`, `color`, `role` (chính/phụ/đệm) |
+| `foliageComponents` | `FoliageComponent[]` | TÙY CHỌN | Cành và lá đệm: `foliageType`, `quantity`, `unit`, `color`, `role` |
+| `greetingCards` | `GreetingCard[]` | TÙY CHỌN | Thiệp & biển chúc mừng OCR: `printedText` (nguyên văn), `cardType`, `occasion` |
+| `packaging` | `ProductPackaging` | TÙY CHỌN | Phụ liệu: `wrapMaterial`, `wrapColor`, `bowMaterial`, `bowColor` |
+| `commercialPassport` | `CommercialPassport` | YÊU CẦU | `priceSegment`, `priceRange`, `targetAudience`, `occasions`, `style` |
+
+---
+
+### 1.3. Chặng 03 — DISCOVER (Khám Phá Trend Fit Matrix & Điểm Thị Trường)
+
+#### Input:
+| Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
+|---|---|---|---|---|
+| `commercialPassport` | `CommercialPassport` | YÊU CẦU | Passport từ Chặng 02 | Chặng 02 UNDERSTAND |
+| `components` | `FlowerComponent[]` | YÊU CẦU | Các loại hoa chính/phụ | Chặng 02 UNDERSTAND |
+
+#### Output:
+| Field | Kiểu | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `trendScore` | `number` (0–100) | YÊU CẦU | Điểm số độ khớp xu hướng hoa tươi hiện tại |
+| `marketFit` | `object` | YÊU CẦU | Đánh giá 3 vùng: `KEEP` (Giữ nguyên), `IMPROVE` (Cải thiện), `TEST` (Thử nghiệm) |
+| `searchQueries` | `string[]` | YÊU CẦU | Các từ khóa xu hướng được tổng hợp tự động |
+
+---
+
+### 1.4. Chặng 04 — IDEATE (Sinh 10 Chủ Đề Kèm Dẫn Chứng Video Kép)
+
+#### Input:
+| Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
+|---|---|---|---|---|
+| `report` | `ProductIntelligenceReport` | YÊU CẦU | Báo cáo nhận diện từ Chặng 02 & 03 | Chặng 02–03 |
+
+#### Output (`ConcreteTopic[]`):
+Mảng 10 chủ đề nội dung, mỗi chủ đề gồm:
+| Field | Kiểu | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `id` | `string` | YÊU CẦU | Định danh topic (vd: `topic-01`) |
+| `title` | `string` | YÊU CẦU | Tiêu đề sang trọng, sạch từ khóa thô |
+| `angle` | `string` | YÊU CẦU | Góc tiếp cận (Khai trương, Tỏ tình, Tri ân, Chữa lành...) |
+| `hook` | `string` | YÊU CẦU | Câu giật tít kịch bản tự nhiên |
+| `targetAudience` | `string` | YÊU CẦU | Chân dung đối tượng khách hàng trọng tâm |
+| `videoEvidences` | `VideoEvidence[]` | YÊU CẦU | Cặp Dẫn chứng Video Kép: TikTok 9:16 + YouTube 16:9 thật |
+
+---
+
+### 1.5. Chặng 05 — CHOOSE (Chọn Chủ Đề Trọng Tâm & Mode)
+
+#### Input (User Choices tại Khu vực A):
+| Field | Kiểu | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `selectedTopicId` | `string` | YÊU CẦU | 1 trong 10 chủ đề được người dùng click chọn |
+| `mode` | `"CREATIVE" \| "AUTHENTIC"` | YÊU CẦU | `CREATIVE` (mặc định) hoặc `AUTHENTIC` |
+
+#### Output:
+Kích hoạt chuyển giao sang các Khu vực B, C, D, E, F thông qua cấu trúc SSOT `TopicProductionBrief`.
+
+---
+
+## 2. Cổng Kiểm Tra Chuyển Tiếp & Cấu Trúc Dữ Liệu Chuyển Giao
+
+### 2.1. Cổng Kiểm Tra Chuyển Tiếp (`validateTransition`)
+
+Hàm kiểm tra tính hợp lệ của dữ liệu trước khi bước vào các Khu vực sản xuất B, C, D, E, F:
+- **Nguyên tắc Invariant**: `assetId` là bắt buộc. Ảnh phải có trong kho lưu trữ.
+- **Quy tắc Validation Screen**: Chỉ kích hoạt chặn khi người dùng nhảy cóc vào các tab B–F mà thiếu dữ liệu. **Khu vực A KHÔNG BAO GIỜ bị chặn**.
+
+### 2.2. Schema Chuẩn Hóa: `TopicProductionBrief`
 
 | Field | Kiểu | Bắt buộc | Mô tả |
 |---|---|---|---|
-| `organizationId` | string | YÊU CẦU | Tổ chức (tenant isolation) |
-| `productId` | string | TÙY CHỌN | Sản phẩm ID |
-| `mode` | "CREATIVE" \| "AUTHENTIC" | YÊU CẦU | Loại hình sản xuất |
-| `productContext.sourceImageUrl` | string | YÊU CẦU | Ảnh gốc |
-| `productContext.sourceImageStorageKey` | string | TÙY CHỌN | Storage key ảnh |
-| `productContext.sourceVideoUrl` | string | TÙY CHỌN | Video gốc |
-| `productContext.sourceVideoDurationSeconds` | number | TÙY CHỌN | Thời lượng video (FFprobe) |
-| `productContext.commercialPassport` | object | YÊU CẦU | Passport thương mại (productName, category, style, components, colors, priceRange?, targetAudience?, suggestedOccasions?) |
-| `selectedTopics[].topicId` | string | YÊU CẦU | Topic ID |
-| `selectedTopics[].topicTitle` | string | YÊU CẦU | Tiêu đề topic |
-| `selectedTopics[].topicAngle` | string | YÊU CẦU | Góc tiếp cận |
-| `selectedTopics[].topicCategory` | string | YÊU CẦU | Danh mục topic |
-| `selectedTopics[].topicHook` | string | YÊU CẦU | Hook câu mở đầu |
-| `selectedTopics[].topicCta` | string | YÊU CẦU | CTA |
-| `selectedTopics[].topicEmotionalTone` | string | YÊU CẦU | Tông cảm xúc |
-| `selectedTopics[].researchKeywords` | string[] | TÙY CHỌN | Từ khóa nghiên cứu |
-| `selectedTopics[].trendScore` | number | TÙY CHỌN | Điểm xu hướng |
-| `voiceId` | string | TÙY CHỌN | Voice ID (Audio Studio catalog) |
-| `musicMood` | string | TÙY CHỌN | Mood nhạc nền |
-| `targetVideoDurationSeconds` | number | TÙY CHỌN | Thời lượng video mục tiêu |
-
-### 0.4 Quy tắc đồng bộ
-
-- **Tất cả fields trong `selectedTopics[0]`** phải đồng bộ nội dung với topic đã chọn ở Chặng 04. Nếu topic thay đổi → brief thay đổi → tất cả tabs re-render.
-- **`productContext.commercialPassport`** lấy từ Vision AI (Chặng 02) + user edit. KHÔNG tự động điền lại khi user đã chỉnh sửa.
-- **`sourceVideoDurationSeconds`** tự động detect bằng FFprobe khi user upload video. Nếu không có video → `undefined`.
-- **`mode`** do user chọn ở Chặng 5, mặc định `CREATIVE`. Không thay đổi mode giữa chừng (nếu muốn → quay lại Chặng 5).
+| `organizationId` | `string` | YÊU CẦU | Tenant isolation giải từ session máy chủ |
+| `assetId` | `string` | YÊU CẦU | ID asset hoa tươi đã upload và lưu trữ |
+| `sourceImageUrl` | `string` | YÊU CẦU | URL hiển thị ảnh giải qua API `/api/v1/assets/:id/view-url` |
+| `productName` | `string` | YÊU CẦU | Tên thương phẩm của lẵng/bó hoa |
+| `mode` | `"CREATIVE" \| "AUTHENTIC"` | YÊU CẦU | Chế độ sáng tạo nội dung |
+| `commercialPassport` | `object` | YÊU CẦU | Passport nguyên tử: `category`, `style`, `components`, `colors`, `priceRange?`, `targetAudience?` |
+| `selectedTopic` | `object` | YÊU CẦU | Topic đã chọn: `id`, `title`, `angle`, `hook`, `targetAudience`, `videoEvidences` |
+| `voiceId` | `string` | TÙY CHỌN | Voice AI chọn cho thu âm Audio |
+| `musicMood` | `string` | TÙY CHỌN | Mood nhạc nền BGM |
 
 ---
 
-## 1. Chặng 5 — CHOOSE (Chọn định hướng)
+## 3. Khu Vực B — Viết Contents (Chặng 06a)
 
-### 1.1 Input
+Khu vực B (`area-b`) điều phối sản xuất văn bản tiếp thị đa kênh.
 
+#### Input:
 | Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
 |---|---|---|---|---|
-| `topicId` | string | YÊU CẦU | Topic đã chọn | Chặng 04 |
-| `mode` | "CREATIVE" \| "AUTHENTIC" | YÊU CẦU | User chọn (CREATIVE mặc định) | User |
-| `sourceImageUrl` | string | YÊU CẦU | Ảnh sản phẩm | Chặng 01 |
-| `sourceVideoUrl` | string | TÙY CHỌN | Video gốc | Chặng 01 |
-| `productContext` | object | YÊU CẦU | Passport thương mại | Chặng 02 |
-| `topic` | object | YÊU CẦU | Topic info | Chặng 04 |
+| `brief` | `TopicProductionBrief` | YÊU CẦU | Dữ liệu chuyển giao từ Khu vực A | Chặng 05 CHOOSE |
+| `mode` | `"CREATIVE" \| "AUTHENTIC"` | YÊU CẦU | Mode sản xuất | User chọn |
+| `contentTypes` | `string[]` | YÊU CẦU | Loại nội dung: `["facebook_post", "tiktok_script", "story_copy", "zalo_quote"]` | User chọn |
+| `authenticContent` | `string` | TÙY CHỌN | Nội dung gốc do shop tự soạn (nếu mode là `AUTHENTIC`) | User nhập |
 
-### 1.2 Output
-
+#### Output:
 | Field | Kiểu | Mô tả |
 |---|---|---|
-| `topicSelection` | object | Topic + mode đã chọn |
-| `brief` | TopicProductionBrief | Đầu vào chuẩn hóa cho Creative Studio |
-| `nextStep` | string | Chặng tiếp theo (Chặng 6 — Tab 1: Tối ưu đầu vào) |
-
-### 1.3 User choices tại bước này
-
-- Chọn topic (1 trong 10 topic từ Chặng 04)
-- Chọn mode (CREATIVE mặc định hoặc AUTHENTIC)
-- Chọn đầu vào (ảnh, video, cả hai)
+| `contentBriefs` | `object[]` | Mảng nội dung chi tiết: `headline`, `hook`, `body`, `callToAction`, `hashtags` |
+| `narrativeArc` | `NarrativeArcOutput` | 4 nhịp kịch bản: `SETUP`, `RISING`, `CLIMAX`, `CTA` |
+| `estimatedCredits` | `number` | Số credits ước tính tiêu thụ |
 
 ---
 
-## 2. Chặng 6 — CREATE (Sáng tạo nội dung) — 5 Khu vực
+## 4. Khu Vực C — Tạo Audio (Chặng 06b)
 
-### 2.0 Quy tắc chung
+Khu vực C (`area-c`) thu âm kịch bản và hòa trộn nhạc nền.
 
-- **User chọn những gì sẽ sản xuất** ở mỗi Khu vực (content, audio, image, video)
-- **User chọn mode** (CREATIVE/AUTHENTIC) — nhất quán xuyên các Khu vực
-- **Mỗi Khu vực phải được duyệt** trước khi chuyển sang Khu vực tiếp theo
-- **Tất cả Khu vực đều đọc từ TopicProductionBrief** — không nhập lại
-
----
-
-### 2.1 Tab 1: Tối ưu ảnh/video đầu vào
-
-#### Input
-
+#### Input:
 | Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
 |---|---|---|---|---|
-| `sourceImageUrl` | string | YÊU CẦU | Ảnh gốc | Chặng chuyển tiếp |
-| `sourceVideoUrl` | string | TÙY CHỌN | Video gốc | Chặng chuyển tiếp |
-| `optimizeMode` | "OPTIMIZE" \| "KEEP_ORIGINAL" | YÊU CẦU | Tối ưu hay giữ nguyên (user chọn) | User |
-| `targetRatios` | string[] | YÊU CẦU | Tỷ lệ cần tối ưu (1:1, 4:5, 9:16, 16:9) | User |
-| `productContext.commercialPassport` | object | YÊU CẦU | Passport | Chặng chuyển tiếp |
+| `scriptText` | `string` | YÊU CẦU | Lời thoại kịch bản cần đọc | Khu vực B (Contents) |
+| `voiceId` | `string` | YÊU CẦU | Giọng đọc AI tiếng Việt (ấm áp, sang trọng, thanh lịch...) | Catalog Audio |
+| `musicMood` | `string` | YÊU CẦU | Thể loại BGM (`romantic`, `energetic`, `calm`, `celebration`) | Catalog Nhạc |
+| `targetDurationSeconds` | `number` | YÊU CẦU | Thời lượng mục tiêu cần cân bằng tự động | Video/Script duration |
 
-#### Output
-
+#### Output:
 | Field | Kiểu | Mô tả |
 |---|---|---|
-| `masterAsset` | object | Master Image đã tối ưu (hoặc gốc nếu keep_original) |
-| `ratioAssets` | object[] | Các bản dẫn xuất theo tỷ lệ (nếu OPTIMIZE) |
-| `masterReady` | boolean | Master đã sẵn sàng cho các Tab khác |
-
-#### User choices
-
-- Optimize hay giữ nguyên ảnh
-- Chọn tỷ lệ tối ưu (1:1, 4:5, 9:16, 16:9)
+| `audioJobId` | `string` | Định danh job xử lý audio |
+| `audioUrl` | `string` | URL file âm thanh đã ducking (MP3/WAV) |
+| `durationSeconds` | `number` | Thời lượng thực tế sau khi mix |
 
 ---
 
-### 2.2 Tab 2: Viết contents
+## 5. Khu Vực D — Tạo Biến Thể Ảnh Marketing (Chặng 06c)
 
-#### Input
+Khu vực D (`area-d`) phụ trách M04b Biến thể Marketing với 4 Khung Phân Cảnh Narrative Arc.
 
+#### Input:
 | Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
 |---|---|---|---|---|
-| `mode` | "CREATIVE" \| "AUTHENTIC" | YÊU CẦU | Mode sản xuất | Chặng 5 |
-| `topic` | object | YÊU CẦU | Topic info | Chặng chuyển tiếp |
-| `productContext` | object | YÊU CẦU | Product context | Chặng chuyển tiếp |
-| `contentTypes` | string[] | YÊU CẦU | Loại nội dung cần tạo | User chọn |
-| `authenticContent` | string | TÙY CHỌN | Content gốc do user upload (nếu AUTHENTIC) | User upload |
+| `assetId` | `string` | YÊU CẦU | ID ảnh Master đã duyệt | Khu vực A / Master Asset |
+| `productionMethod` | `"local" \| "provider"` | YÊU CẦU | `local` (Local Studio Backdrop Engine) hoặc `provider` (Cloud AI) | User chọn |
+| `scenes` | `object[]` | YÊU CẦU | 4 Phân cảnh Narrative Arc (Setup, Rising, Climax, CTA) | M04b Engine |
 
-**Lưu ý AUTHENTIC:** Nếu user upload contents (caption, script, post), hệ thống sử dụng chính contents đó, KHÔNG dùng narrative arc hay content styles.
-
-#### Output (CREATIVE mode)
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `contentBriefs` | object[] | Caption, hashtags, scripts cho từng nền tảng |
-| `narrativeArc` | NarrativeArcOutput | Cung truyện (nếu CREATIVE) |
-| `storyboard` | SceneSpec[] | Storyboard scenes |
-
-#### Output (AUTHENTIC mode)
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `contentBriefs` | object[] | Content dựa trên user upload |
-| `narrativeArc` | NarrativeArcOutput | Narrative arc (nếu user chọn tạo) |
-
-#### User choices
-
-- Chọn mode (CREATIVE mặc định hoặc AUTHENTIC)
-- Chọn loại nội dung cần tạo (caption, hashtags, post, script)
-- AUTHENTIC: upload content gốc hoặc dùng content có sẵn
-- CREATIVE: chọn content styles, narrative arc
-
----
-
-### 2.3 Tab 3: Tạo audio
-
-#### Input
-
-| Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
-|---|---|---|---|---|
-| `mode` | "CREATIVE" \| "AUTHENTIC" | YÊU CẦU | Mode | Chặng 5 |
-| `topic` | object | YÊU CẦU | Topic info | Chặng chuyển tiếp |
-| `voiceId` | string | TÙY CHỌN | Voice ID | User chọn từ catalog |
-| `musicMood` | string | TÙY CHỌN | Mood nhạc nền | User chọn |
-| `targetDurationSeconds` | number | YÊU CẦU | Thời lượng mục tiêu (sync với video) | Video duration hoặc user |
-| `qualityTier` | "standard" \| "hd" \| "premium" | YÊU CẦU | Chất lượng TTS | User chọn |
-| `providerKey` | string | TÙY CHỌN | Provider (openai, elevenlabs, edge_tts...) | User chọn hoặc default |
-
-#### Output
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `voiceSegments` | object[] | Voice từng scene |
-| `mixedAudio` | object | Voice + BGM phối trộn |
-| `audioDuration` | number | Thời lượng audio (đồng bộ video) |
-| `audioUrl` | string | URL audio |
-
-#### User choices
-
-- Chọn voice (TTS provider + voice code)
-- Chọn nhạc nền (mood/track)
-- Chọn chất lượng (standard/hd/premium)
-- Chọn provider (mặc định: auto-routing)
-
----
-
-### 2.4 Tab 4: Tạo biến thể ảnh
-
-#### Input
-
-| Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
-|---|---|---|---|---|
-| `mode` | "CREATIVE" \| "AUTHENTIC" | YÊU CẦU | Mode | Chặng 5 |
-| `masterImage` | object | YÊU CẦU | Master Image (từ Tab 1) | Tab 1 |
-| `variantRequests` | object[] | YÊU CẦU | Yêu cầu biến thể | User chọn |
-| `productionMethod` | "local" \| "provider" | YÊU CẦU | Phương thức sản xuất | User chọn |
-| `providerKey` | string | TÙY CHỌN | Provider (photoroom, fal, imagen...) | User chọn (nếu provider) |
-| `productContext.commercialPassport` | object | YÊU CẦU | Passport | Chặng chuyển tiếp |
-
-#### Output
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `variants` | object[] | Biến thể đã tạo |
-| `integrityScores` | object[] | Subject Integrity mỗi biến thể |
-| `approvedVariant` | object | Biến thể đã duyệt (nếu duyệt) |
-
-#### User choices
-
-- **Production method:** Local (P17 default, 0 credit) hoặc Provider (M04b, có credit)
-- Nếu provider: chọn provider (photoroom, fal, google_imagen, stability_ai...)
-- Chọn preset bối cảnh (Studio, Lifestyle, Romantic...)
-- Chọn số lượng biến thể
-- **Rất quan trọng:** User chủ động chọn local hay provider
-
----
-
-### 2.5 Tab 5: Tạo video
-
-#### Input
-
-| Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
-|---|---|---|---|---|
-| `mode` | "CREATIVE" \| "AUTHENTIC" | YÊU CẦU | Mode | Chặng 5 |
-| `format` | VideoFormat | YÊU CẦU | Khuôn video (REEL_15S, TIKTOK_30S...) | User chọn |
-| `aspectRatio` | string | YÊU CẦU | Tỷ lệ khung hình | User chọn |
-| `scenes` | SceneSpec[] | YÊU CẦU | Storyboard scenes | Tab 2 (nếu CREATIVE) |
-| `masterImage` | object | YÊU CẦU | Master Image | Tab 1 |
-| `voiceScript` | string[] | TÙY CHỌN | Voice script (nếu đã tạo audio Tab 3) | Tab 3 |
-| `musicTrack` | string | TÙY CHỌN | Music track | Tab 3 |
-| `productionMethod` | "local" \| "provider" | YÊU CẦU | Phương thức sản xuất | User chọn |
-| `providerKey` | string | TÙY CHỌN | Provider | User chọn (nếu provider) |
-| `captionStyle` | CaptionStyle | TÙY CHỌN | Phụ đề style | User chọn |
-| `hasSubtitle` | boolean | YÊU CẦU | Có phụ đề không | User chọn |
-| `hasWatermark` | boolean | YÊU CẦU | Có watermark không | User chọn |
-| `voiceCode` | string | TÙY CHỌN | Voice code | Tab 3 hoặc user chọn |
-
-#### Output
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `videoJobId` | string | Job ID video |
-| `storyboard` | SceneSpec[] | Storyboard đã tạo |
-| `videoUrl` | string | URL video (sau khi render) |
-| `duration` | number | Thời lượng video |
-| `approvalState` | string | Trạng thái duyệt |
-
-#### User choices
-
-- Chọn khuôn video (6 khuôn M04c)
-- Chọn tỷ lệ khung hình
-- Chọn phương thức sản xuất (local/provider) — RẤT QUAN TRỌNG
-- Chọn phụ đề style
-- Chọn camera motion (Ken Burns: zoom_in/out, pan_left/right/up, static)
-- Chọn voice (Tab 3 hoặc mới chọn)
-
----
-
-## 3. Chặng 7 — PACKAGE (Đóng gói chiến dịch)
-
-### 3.1 Input
-
-| Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
-|---|---|---|---|---|
-| `campaignName` | string | TÙY CHỌN | Tên chiến dịch | User |
-| `mode` | "CREATIVE" \| "AUTHENTIC" | YÊU CẦU | Mode | Chặng 5 |
-| `topicIds` | string[] | YÊU CẦU | Topic IDs | Chặng 4 |
-| `authenticResult` | object | TÙY CHỌN | Kết quả AUTHENTIC (Tab 2) | Tab 2 |
-| `creativeResult` | object | TÙY CHỌN | Kết quả CREATIVE (Tab 2) | Tab 2 |
-| `producedAssets` | object[] | YÊU CẦU | Tất cả assets đã sản xuất | Tabs 1-5 |
-
-### 3.2 Output
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `campaignPackage` | CampaignPackage | Gói chiến dịch hoàn chỉnh |
-| `creditsCost` | number | Tổng credit đã dùng |
-| `status` | "DRAFT" \| "PRODUCING" \| "READY" \| "PUBLISHED" | Trạng thái |
-
----
-
-## 4. Chặng 8-14 (QA, Approve, Launch, Sell, Measure, Learn, Next Best Action)
-
-### 4.1 Input chung
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `campaignPackageId` | string | Campaign Package ID |
-| `organizationId` | string | Tổ chức |
-| `mode` | "CREATIVE" \| "AUTHENTIC" | Mode |
-
-### 4.2 Chặng 8 QA
-
-| Field | Kiểu | Bắt buộc | Mô tả |
+#### Output (4 Khung Phân Cảnh Narrative Arc chuẩn hóa):
+| Cảnh | Nhịp Beat | Preset Bối Cảnh | Mô Tả Đầu Ra |
 |---|---|---|---|
-| `campaignPackageId` | string | YÊU CẦU | Package cần QA |
-| `checks` | object[] | YÊU CẦU | Các check: Brand, Product, Content, Platform |
+| **Cảnh 1** | `SETUP` | `clean_white` | Studio Trắng Tinh Khôi, đổ bóng tiếp xúc 2 tầng, giữ nguyên 100% hoa thật |
+| **Cảnh 2** | `RISING` | `boutique_bokeh` | Bối cảnh Lifestyle sảnh tiệc / khách sạn sang trọng, Bokeh f/1.8 |
+| **Cảnh 3** | `CLIMAX` | `wood_warm` | Mặt bàn gỗ sồi Bắc Âu tối giản, cận cảnh thiệp OCR và ruy băng nơ |
+| **Cảnh 4** | `CTA` | `transparent` | Tách nền PNG trong suốt bằng U2-Net / Rembg, sẵn sàng gắn logo shop |
 
-Output: PASS hoặc NEEDS_REVIEW kèm chi tiết
-
-### 4.3 Chặng 9 APPROVE
-
-| Field | Kiểu | Bắt buộc | Mô tả |
-|---|---|---|---|
-| `campaignPackageId` | string | YÊU CẦU | Package cần duyệt |
-| `approval` | "APPROVE" \| "EDIT" \| "ASK_AI" | YÊU CẦU | Hành động user chọn |
-
-### 4.4 Chặng 10 LAUNCH
-
-| Field | Kiểu | Bắt buộc | Mô tả |
-|---|---|---|---|
-| `campaignPackageId` | string | YÊU CẦU | Package cần launch |
-| `channels` | string[] | YÊU CẦU | Kênh: facebook, instagram, tiktok, zalo... |
-| `schedule` | datetime | TÙY CHỌN | Thời gian đăng (nếu schedule) |
-
-### 4.5 Chặng 11 SELL
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `campaignPackageId` | string | Campaign đã publish |
-| `contentAssets` | object[] | Content assets dùng để bán |
-
-→ Kết nối AI Sales (M08 Chat Assistant)
-
-### 4.6 Chặng 12 MEASURE
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `campaignPackageId` | string | Campaign đã publish |
-| `metrics` | object | Reach, engagement, conversion, revenue... |
-
-### 4.7 Chặng 13-14 LEARN + NEXT BEST ACTION
-
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `campaignPackageId` | string | Campaign đã measure |
-| `winningPatterns` | object[] | Pattern chiến thắng |
-| `nextBestAction` | object | Hành động tối ưu tiếp theo |
+#### Thông Số Kỹ Thuật Động Cơ Local Studio:
+- **Tốc độ:** $\approx 0.46\text{s} \text{ / ảnh } 2048 \times 2048$ (nhờ cache mặt nạ `.rgba.png`).
+- **Chi phí:** 0 VNĐ / 0 Token API, chạy offline 100%.
+- **Subject Integrity:** Đạt tỷ lệ trùng khít $\ge 99.8\%$.
 
 ---
 
-## 5. Sơ đồ data flow tổng thể
+## 6. Khu Vực E — Tạo Video Marketing (Chặng 06d)
+
+Khu vực E (`area-e`) điều phối M04c AI Video Studio.
+
+#### Input:
+| Field | Kiểu | Bắt buộc | Mô tả | Nguồn |
+|---|---|---|---|---|
+| `format` | `VideoFormat` | YÊU CẦU | 6 khuôn M04c: `REEL_15S`, `TIKTOK_30S`, `STORY_15S`, `SLIDESHOW`, `PRODUCT_PAGE`, `AD_MOTION` | User chọn |
+| `aspectRatio` | `"9:16" \| "1:1" \| "16:9"` | YÊU CẦU | Tỷ lệ khung hình video | User chọn |
+| `storyboard` | `SceneSpec[]` | YÊU CẦU | Mảng 2–15 cảnh: ảnh, thời lượng, chuyển cảnh | User/AI biên soạn |
+| `cameraMotion` | `string` | YÊU CẦU | Hiệu ứng Ken Burns: `zoom_in`, `zoom_out`, `pan_right`, `static` | User chọn |
+| `audioUrl` | `string` | TÙY CHỌN | URL file âm thanh đã thu từ Khu vực C | Khu vực C |
+| `subtitleStyle` | `string` | YÊU CẦU | Phong cách phụ đề: `modern_badge`, `bold_center`, `minimal` | User chọn |
+
+#### Output:
+| Field | Kiểu | Mô tả |
+|---|---|---|
+| `videoJobId` | `string` | Định danh job render video |
+| `videoUrl` | `string` | URL video MP4 hoàn thiện |
+| `duration` | `number` | Thời lượng video thực tế |
+
+---
+
+## 7. Khu Vực F — Gói Chiến Dịch & Phê Duyệt (Chặng 07 → Chặng 09)
+
+Khu vực F (`area-f`) là trạm kiểm soát chất lượng và chốt duyệt gói chiến dịch.
+
+### 7.1. Chặng 07 — PACKAGE (Đóng gói chiến dịch)
+- **Input:** Tổng hợp toàn bộ kết quả sản xuất từ Khu vực A, B, C, D, E.
+- **Output (`CampaignPackage`):**
+  * `packageId`: UUID định danh gói chiến dịch.
+  * `masterImage`: Ảnh Master xác thực và Commercial Passport.
+  * `copywriting`: Các bài viết đa kênh và kịch bản.
+  * `audio`: File voiceover và BGM.
+  * `marketingVariants`: 4 ảnh phân cảnh Narrative Arc.
+  * `marketingVideo`: File video hoàn chỉnh.
+  * `totalCredits`: Thống kê credit tiêu thụ.
+
+### 7.2. Chặng 08 — QA (Kiểm định chất lượng tự động)
+- **Input:** `CampaignPackage`.
+- **Output (`QAReport`):**
+  * `brandVoiceCheck`: `PASS` | `NEEDS_REVIEW`.
+  * `productAccuracyCheck`: `PASS` | `NEEDS_REVIEW` (đối soát hoa và thiệp OCR).
+  * `platformSpecsCheck`: `PASS` (tỷ lệ 9:16, 1:1, 16:9).
+
+### 7.3. Chặng 09 — APPROVE (Chủ shop duyệt chốt thủ công)
+- **Input:** Lựa chọn của chủ shop (`APPROVE_PUBLISH`, `EDIT`, `ASK_AI`).
+- **Output:** Gói chuyển trạng thái `READY_TO_LAUNCH`, kích hoạt card `<PackageDownstreamCard />`.
+
+---
+
+## 8. Phân Phối & Bán Hàng Downstream (Chặng 10 → Chặng 14)
+
+| Chặng | Tên Chặng | Input Chính | Output Chính & Tác Vụ Nghiệp Vụ |
+|---|---|---|---|
+| **Chặng 10** | **LAUNCH** | `packageId`, danh sách kênh (`facebook`, `tiktok`, `zalo`, `catalog`), lịch đăng | Xuất bản đa kênh thành công, tạo các bài post & video trực tuyến |
+| **Chặng 11** | **SELL** | Khách tương tác với bài post/video | AI Chat Sales (M08) tư vấn dựa trên Passport, báo giá, tạo đơn hàng M10 |
+| **Chặng 12** | **MEASURE** | Dữ liệu kinh doanh và chuyển đổi | Dashboard báo cáo: Reach, Engagement, Số đơn hoa chốt, Doanh thu (VNĐ) |
+| **Chặng 13** | **LEARN** | Báo cáo hiệu quả chiến dịch | Trích xuất Winning Patterns (Bối cảnh ảnh, Hook kịch bản, Khung giờ vàng) |
+| **Chặng 14** | **NEXT BEST ACTION** | Winning Patterns & Lịch sự kiện hoa tươi | Đề xuất thông minh: Tái sử dụng mẫu hoa cho dịp lễ kế tiếp, mở rộng kênh bán |
+
+---
+
+## 9. Sơ Đồ Data Flow Tổng Thể
 
 ```
-Chặng 4 IDEATE
-    │ topicId, productContext, visionAnalysis, trendReport
-    ↓
-Chặng chuyển tiếp (0)
-    │ Standardize → TopicProductionBrief
-    │ Đồng bộ tất cả fields theo topic đã chọn
-    │ Video: URL + duration (FFprobe)
-    ↓
-Chặng 5 CHOOSE (1)
-    │ User chọn: topic, mode, đầu vào (ảnh/video/cả hai)
-    │ Output: TopicProductionBrief hoàn chỉnh
-    ↓
-┌─────────────────────────────────────────────────┐
-│ Creative Studio (/creative-studio)               │
-│                                                  │
-│  Tab 1: Tối优化 ảnh/video đầu vào (2)           │
-│    Input: sourceImageUrl, sourceVideoUrl,        │
-│           optimizeMode, targetRatios             │
-│    Output: masterImage, ratioAssets              │
-│    User quyết định: optimize hay keep original   │
-│    ↓                                             │
-│  Tab 2: Contents (3)                           │
-│    Input: mode, topic, productContext,           │
-│           contentTypes, [authenticContent]       │
-│    Output: contentBriefs, narrativeArc,          │
-│            storyboard                            │
-│    User quyết định: CREATIVE/AUTHENTIC,          │
-│           loại nội dung, content styles         │
-│    ↓                                             │
-│  Tab 3: Audio (4)                              │
-│    Input: mode, topic, voiceId, musicMood,      │
-│           targetDurationSeconds, qualityTier     │
-│    Output: voiceSegments, mixedAudio             │
-│    User quyết định: voice, music, provider,     │
-│           quality                                │
-│    ↓                                             │
-│  Tab 4: Biến thể ảnh (5)                       │
-│    Input: mode, masterImage, variantRequests,   │
-│           productionMethod, providerKey          │
-│    Output: variants, integrityScores            │
-│    User quyết định: local/provider, preset,     │
-│           số lượng biến thể                     │
-│    ↓                                             │
-│  Tab 5: Video (6)                              │
-│    Input: mode, format, scenes, masterImage,    │
-│           voiceScript, musicTrack,               │
-│           productionMethod, providerKey,         │
-│           captionStyle, video options           │
-│    Output: videoJobId, videoUrl                 │
-│    User quyết định: khuôn, tỷ lệ, local/        │
-│           provider, phụ đề, camera motion       │
-│                                                  │
-│    ↓ (Tất cả Tab đã duyệt)                      │
-│  Chặng 7: Package (7)                          │
-│    Input: all assets from Tabs 1-5              │
-│    Output: CampaignPackage                      │
-│    ↓                                             │
-│  Chặng 8: QA → Chặng 9: Approve → Chặng 10:    │
-│  Launch → Chặng 11: Sell → Chặng 12: Measure → │
-│  Chặng 13-14: Learn + Next Best Action          │
-└─────────────────────────────────────────────────┘
+[Chặng 01: BRING] ──> Tải ảnh hoa thật ──> Cấp phát assetId & Storage Key
+       │
+       ▼
+[Chặng 02: UNDERSTAND] ──> Vision AI bóc tách nguyên tử hoa, lá đệm & OCR thiệp
+       │
+       ▼
+[Chặng 03: DISCOVER] ──> Quét Trend Fit Matrix & Điểm thị trường
+       │
+       ▼
+[Chặng 04: IDEATE] ──> 10 Chủ đề kèm Dẫn chứng Video Kép TikTok & YouTube
+       │
+       ▼
+[Chặng 05: CHOOSE] ──> Chọn chủ đề & Mode ──> Xuất TopicProductionBrief (SSOT)
+       │
+       ├────────────────────────────────────────┬────────────────────────────────────────┐
+       ▼                                        ▼                                        ▼
+[Khu vực B: Contents]                  [Khu vực C: Audio]                     [Khu vực D: Biến thể ảnh]
+Sinh Copy đa kênh & Kịch bản          Thu âm TTS & Phối BGM ducking          4 Phân cảnh Narrative Arc (Local Studio)
+       │                                        │                                        │
+       └────────────────────────────────────────┼────────────────────────────────────────┘
+                                                │
+                                                ▼
+                                      [Khu vực E: Video]
+                                      Biên tập Video M04c Ken Burns & Storyboard
+                                                │
+                                                ▼
+                                      [Khu vực F: Gói chiến dịch]
+                                      - Chặng 07: Tổng hợp Campaign Package
+                                      - Chặng 08: AI QA kiểm định chất lượng
+                                      - Chặng 09: Chủ shop duyệt chốt phát hành
+                                                │
+                                                ▼
+                                  [Phân phối Downstream: Chặng 10–14]
+                                  10. LAUNCH ──> 11. SELL ──> 12. MEASURE ──> 13. LEARN ──> 14. NEXT BEST ACTION
 ```
-
----
-
-## 6. Production Method Choice (Quan trọng)
-
-Tại Tab 4 (Biến thể ảnh) và Tab 5 (Video), user chủ động chọn:
-
-| Production Method | Ưu điểm | Nhược điểm | Credit |
-|---|---|---|---|
-| **Local** (M04a/M04c default) | Nhanh, miễn phí, không cần API key | Không có AI generative fill, chỉ local processing | 0 |
-| **Provider** (M04b) | AI biến hóa cao, nhiều style | Cần API key, tốn credit | 1 credit/lượt |
-
-**Quy tắc:**
-- Tab 4 (Biến thể ảnh): User chọn local hoặc provider. Nếu provider → chọn provider cụ thể (photoroom, fal, imagen...).
-- Tab 5 (Video): User chọn local (FFmpeg) hoặc provider (Veo, HeyGen...).
-- Mọi thay đổi production method → record trong audit_logs.
-
-**Năng lực:** I1 (sáng tạo nội dung đa phương tiện) — áp dụng cho cả local lẫn provider.
-
----
-
-## 7. Authentic Mode — User Content Override
-
-Khi mode = AUTHENTIC, user có thể upload original content:
-
-| Field | Mô tả |
-|---|---|
-| `authenticContent.caption` | Caption gốc do user viết |
-| `authenticContent.script` | Script gốc do user viết |
-| `authenticContent.post` | Bài post gốc do user viết |
-| `authenticContent.videoScript` | Video script gốc do user viết |
-
-**Quy tắc:**
-- Nếu user upload content gốc → dùng chính content đó. KHÔNG dùng narrative arc hay content styles.
-- Nếu user KHÔNG upload → dùng default từ topic (narrative arc nhẹ, factual tone).
-- Audio trong AUTHENTIC mode vẫn dùng TTS (voice factual) + BGM nhẹ.
-- Video trong AUTHENTIC mode: KHÔNG tạo video mới (sản phẩm thật không cần quay). Chỉ crop ảnh gốc.
-
----
-
-## 8. Video Duration Handling
-
-Khi user upload video:
-1. **FFprobe** tự động detect duration → `sourceVideoDurationSeconds`
-2. **Chặng chuyển tiếp** ghi nhận duration
-3. **Tab 3 (Audio):** voice duration + music loop = video duration (auto-pad)
-4. **Tab 5 (Video):** storyboard scenes tổng duration = video duration (auto-balance)
-5. **User có thể override** `targetVideoDurationSeconds` nếu muốn khác với video gốc
-
-**Lưu ý:** Phân tích video nội dung (object detection, scene analysis) → ĐỢT SAU. Hiện tại chỉ dùng duration để sync timing.

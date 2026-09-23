@@ -42,6 +42,18 @@ export class AssetRepository {
     return this.db.assets.findFirst({ where: scopedWhere(ctx, { id }) })
   }
 
+  /**
+   * Cùng luật cách ly tenant như `findById`, nhưng dùng ở những nơi chỉ có
+   * sẵn `organizationId` (chuỗi), không có `TenantContext` đầy đủ — vd.
+   * `analyzeProductIntelligence`, nơi request đã qua `requireTenantContext`
+   * ở route nhưng chỉ truyền `organizationId` xuống use-case. KHÔNG dùng
+   * hàm này ở nơi có `TenantContext` sẵn — dùng `findById` để không mất tác
+   * dụng kiểm `capabilities`/`branchId` nếu về sau `scopedWhere` mở rộng.
+   */
+  findByOrganizationId(organizationId: string, id: string): Promise<assets | null> {
+    return this.db.assets.findFirst({ where: { organization_id: organizationId, id } })
+  }
+
   list(
     ctx: TenantContext,
     options: {

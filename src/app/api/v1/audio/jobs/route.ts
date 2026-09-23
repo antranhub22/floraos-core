@@ -13,7 +13,7 @@ const postSchema = z.object({
     voiceScript: z.string(),
     targetDurationSeconds: z.number().positive(),
   })),
-  totalDurationSeconds: z.number().positive(),
+  totalDurationSeconds: z.number().positive().optional(),
   voiceId: z.string().optional(),
   providerKey: z.enum(["openai", "elevenlabs", "minimax", "edge_tts", "google_cloud", "local_fallback"]).optional(),
   qualityTier: z.enum(["standard", "hd", "premium"]).optional(),
@@ -35,10 +35,14 @@ export const POST = handle(async (request) => {
   const parsed = postSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
 
+  const calculatedDuration =
+    parsed.data.totalDurationSeconds ??
+    Math.max(1, parsed.data.scenes.reduce((sum, s) => sum + s.targetDurationSeconds, 0))
+
   const result = await createAudioJob(ctx, {
     taskType: parsed.data.taskType,
     scenes: parsed.data.scenes,
-    totalDurationSeconds: parsed.data.totalDurationSeconds,
+    totalDurationSeconds: calculatedDuration,
     voiceId: parsed.data.voiceId,
     providerKey: parsed.data.providerKey,
     qualityTier: parsed.data.qualityTier,

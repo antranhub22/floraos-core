@@ -1,0 +1,711 @@
+version: "1.0"
+governance:
+  constitution: "docs/00-DOCUMENTATION-CONSTITUTION.md"
+  updated_at: "2026-09-23T21:35:00+07:00"
+  total_documents: 47
+
+documents:
+  # =========================================================================
+  # LEVEL 1: MASTER STRATEGY & SYSTEM STATUS
+  # =========================================================================
+  - id: "DOC-01-V2-TARGET-ARCH"
+    path: "docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md"
+    title: "FloraOS SaaS Target Architecture V2"
+    domain: "Master Strategy"
+    layer: "Level 1"
+    purpose: "Định hướng kiến trúc tổng thể toàn hệ sinh thái, ranh giới module, lộ trình V2 (Thắng tuyệt đối mọi đặc tả khác)"
+    status: "CANONICAL"
+    authority: "Level 1"
+    canonical: true
+    ssot: true
+    owner: "Product Owner / Chief Architect"
+    dependencies: []
+    supersedes: ["FLORAOS_SAAS_TARGET_ARCHITECTURE_V1"]
+
+  - id: "DOC-01-TRANG-THAI"
+    path: "docs/kien-truc/TRANG_THAI.md"
+    title: "Trạng thái Hệ thống & Nhật ký Thực thi"
+    domain: "Master Strategy"
+    layer: "Level 1"
+    purpose: "Nguồn sự thật duy nhất về trạng thái hiện thời của các phân hệ, nhật ký nghiệm thu và nợ kỹ thuật active"
+    status: "CANONICAL"
+    authority: "Level 1"
+    canonical: true
+    ssot: true
+    owner: "Engineering Lead"
+    dependencies: ["docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md"]
+    supersedes: []
+
+  - id: "DOC-01-QUYET-DINH-RS"
+    path: "docs/kien-truc/QUYET_DINH_RS_18_09.md"
+    title: "Biên bản Phán quyết Kiến trúc RS-1 đến RS-11 (18/09)"
+    domain: "Governance"
+    layer: "Level 5"
+    purpose: "Biên bản phán quyết chính thức của PO giải quyết 11 điểm mâu thuẫn kiến trúc cốt lõi"
+    status: "CANONICAL"
+    authority: "Level 5"
+    canonical: true
+    ssot: true
+    owner: "Product Owner"
+    dependencies: ["docs/kien-truc/RA_SOAT_DONG_BO_18_09.md"]
+    supersedes: []
+
+  # =========================================================================
+  # LEVEL 2: SYSTEM PRD, FOUNDATION & INTEGRATION
+  # =========================================================================
+  - id: "DOC-02-PRD"
+    path: "docs/dac-ta/00-PRD.md"
+    title: "Product Requirements Document (PRD)"
+    domain: "Product"
+    layer: "Level 2"
+    purpose: "Định nghĩa yêu cầu sản phẩm, phạm vi 13 phân hệ và tiêu chí nghiệm thu cấp sản phẩm"
+    status: "CANONICAL"
+    authority: "Level 2"
+    canonical: true
+    ssot: true
+    owner: "Product Manager"
+    dependencies: ["docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md"]
+    supersedes: []
+
+  - id: "DOC-02-TECH-REQ"
+    path: "docs/dac-ta/01-technical-requirements.md"
+    title: "Technical Requirements (Non-Functional Specifications)"
+    domain: "Platform"
+    layer: "Level 2"
+    purpose: "Đặc tả các yêu cầu kỹ thuật phi chức năng: Tenant Isolation, Sensitive Floor, Rate Limits, Credit Guard"
+    status: "CANONICAL"
+    authority: "Level 2"
+    canonical: true
+    ssot: true
+    owner: "System Architect"
+    dependencies: ["docs/dac-ta/00-PRD.md"]
+    supersedes: []
+
+  - id: "DOC-02-UNIFIED-SHELL"
+    path: "docs/kien-truc/UNIFIED_SHELL.md"
+    title: "Unified Shell Architecture"
+    domain: "Architecture"
+    layer: "Level 2"
+    purpose: "Kiến trúc gộp giao diện 3 repo (Core, LocalBudd, SocialFlow) qua Reverse Proxy và Single Sign-On"
+    status: "CANONICAL"
+    authority: "Level 2"
+    canonical: true
+    ssot: true
+    owner: "Infrastructure Lead"
+    dependencies: ["docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md"]
+    supersedes: []
+
+  - id: "DOC-02-PRODUCT-JOURNEY"
+    path: "docs/dac-ta/FLORAOS_PRODUCT_TO_MARKET_USER_JOURNEY.md"
+    title: "FloraOS Product-to-Market User Journey (14 Chặng)"
+    domain: "Product UX"
+    layer: "Level 2"
+    purpose: "Đặc tả hành trình khép kín 14 bước từ ảnh chụp sản phẩm hoa tươi đến bán hàng và tối ưu doanh thu"
+    status: "CANONICAL"
+    authority: "Level 2"
+    canonical: true
+    ssot: true
+    owner: "Product Owner"
+    dependencies: ["docs/dac-ta/00-PRD.md"]
+    supersedes: []
+
+  - id: "DOC-02-FE-ARCH"
+    path: "docs/dac-ta/04-frontend-architecture.md"
+    title: "Frontend Architecture"
+    domain: "Frontend"
+    layer: "Level 2"
+    purpose: "Kiến trúc Frontend Next.js App Router, cấu trúc component, state management"
+    status: "CANONICAL"
+    authority: "Level 2"
+    canonical: true
+    ssot: true
+    owner: "Frontend Lead"
+    dependencies: ["docs/dac-ta/01-technical-requirements.md"]
+    supersedes: []
+
+  - id: "DOC-02-BE-ARCH"
+    path: "docs/dac-ta/05-backend-architecture.md"
+    title: "Backend Clean Architecture"
+    domain: "Backend"
+    layer: "Level 2"
+    purpose: "Kiến trúc 4 lớp Clean Architecture (domain, use-cases, infra, adapters), Hexagonal Ports"
+    status: "CANONICAL"
+    authority: "Level 2"
+    canonical: true
+    ssot: true
+    owner: "Backend Lead"
+    dependencies: ["docs/dac-ta/01-technical-requirements.md"]
+    supersedes: []
+
+  - id: "DOC-02-INTEGRATION-SPEC"
+    path: "docs/dac-ta/08-integration-specification.md"
+    title: "Integration Specification"
+    domain: "Integration"
+    layer: "Level 2"
+    purpose: "Ranh giới dữ liệu và hợp đồng giao tiếp giữa Core, LocalBudd và SocialFlow qua Token M2M"
+    status: "CANONICAL"
+    authority: "Level 2"
+    canonical: true
+    ssot: true
+    owner: "Integration Lead"
+    dependencies: ["docs/dac-ta/06-api-specification.md"]
+    supersedes: []
+
+  # =========================================================================
+  # LEVEL 3: MODULE SPECIFICATIONS, CONTRACTS & TEMPLATES
+  # =========================================================================
+  - id: "DOC-03-API-SPEC"
+    path: "docs/dac-ta/06-api-specification.md"
+    title: "REST API Specification"
+    domain: "API"
+    layer: "Level 3"
+    purpose: "Đặc tả toàn bộ REST Endpoints, capability gác cổng, request/response schema"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Backend Lead"
+    dependencies: ["docs/dac-ta/02-function-catalog.md", "docs/dac-ta/07-database-specification.md"]
+    supersedes: []
+
+  - id: "DOC-03-DB-SPEC"
+    path: "docs/dac-ta/07-database-specification.md"
+    title: "PostgreSQL Database Specification"
+    domain: "Database"
+    layer: "Level 3"
+    purpose: "Đặc tả lược đồ CSDL, 4 luật bất biến, quan hệ ERD và 12 bảng ngoại lệ không có organization_id"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Data Architect"
+    dependencies: ["docs/dac-ta/01-technical-requirements.md"]
+    supersedes: []
+
+  - id: "DOC-03-RBAC-CATALOG"
+    path: "docs/dac-ta/02-function-catalog.md"
+    title: "Function & Capability Catalog"
+    domain: "Security / RBAC"
+    layer: "Level 3"
+    purpose: "Từ vựng năng lực A–V, trần cứng bảo mật và quy tắc cắt 3 lớp RBAC"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Security Lead"
+    dependencies: ["src/core/rbac/capability-catalog.ts"]
+    supersedes: []
+
+  - id: "DOC-03-AI-ORCHESTRATION"
+    path: "docs/dac-ta/10-ai-orchestration.md"
+    title: "AI Orchestration Specification"
+    domain: "AI Platform"
+    layer: "Level 3"
+    purpose: "Đặc tả AI Gateway, 34 AI Capabilities, 5 rào chắn định tuyến mô hình và bảo vệ PII"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "AI Lead"
+    dependencies: ["docs/dac-ta/01-technical-requirements.md"]
+    supersedes: []
+
+  - id: "DOC-03-TEMPLATE-SSOT"
+    path: "docs/kien-truc/FLORAOS_TEMPLATE_SYSTEM_SSOT.md"
+    title: "Template System SSOT Specification"
+    domain: "Template System"
+    layer: "Level 3"
+    purpose: "SSOT chuẩn hóa 5 Họ Template, 11 Thư mục Chức năng và 50 UI Component"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Design System Lead"
+    dependencies: ["docs/kien-truc/FLORAOS_TEMPLATE_ENGINE_ARCHITECTURE.md"]
+    supersedes: []
+
+  - id: "DOC-03-TEMPLATE-ENGINE-ARCH"
+    path: "docs/kien-truc/FLORAOS_TEMPLATE_ENGINE_ARCHITECTURE.md"
+    title: "Template Engine Clean Architecture"
+    domain: "Template System"
+    layer: "Level 3"
+    purpose: "Kiến trúc 4 lớp của động cơ Template, cơ chế biến đổi token và Port decoupling"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Backend Lead"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-03-M04-IMAGE-OPTIMIZER-FULL"
+    path: "docs/kien-truc/M04_FLORAOS_PRODUCT_IMAGE_OPTIMIZER_FULL.md"
+    title: "M04 Product Image Optimizer Full Specification"
+    domain: "Module M04"
+    layer: "Level 3"
+    purpose: "Đặc tả toàn diện bộ tối ưu ảnh M04a, cổng bảo toàn chủ thể Identity Guard và pipeline xử lý"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Media AI Lead"
+    dependencies: ["docs/dac-ta/10-ai-orchestration.md"]
+    supersedes: []
+
+  - id: "DOC-03-M04-CREATIVE-STUDIO-ARCH"
+    path: "docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md"
+    title: "Creative Studio Architecture (Chặng 01–14)"
+    domain: "Module M04"
+    layer: "Level 3"
+    purpose: "Kiến trúc 6 khu vực Creative Studio (A: Quét theo ảnh Chặng 1-5, B: Content, C: Audio, D: Variant, E: Video, F: Package Chặng 7-9) và downstream Chặng 10-14"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Media AI Lead"
+    dependencies: ["docs/kien-truc/M04_FLORAOS_PRODUCT_IMAGE_OPTIMIZER_FULL.md"]
+    supersedes: []
+
+  - id: "DOC-03-M04-CREATIVE-IO-SPEC"
+    path: "docs/dac-ta/FLORAOS_CREATIVE_STUDIO_IO_SPEC.md"
+    title: "Creative Studio I/O Specification (Chặng 01–14)"
+    domain: "Module M04"
+    layer: "Level 3"
+    purpose: "Chuẩn hóa Schema TopicProductionBrief, dữ liệu đầu vào và đầu ra của từng bước sáng tạo từ Chặng 01 đến Chặng 14"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Media AI Lead"
+    dependencies: ["docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md"]
+    supersedes: []
+
+  - id: "DOC-03-M04-CREATIVE-JOURNEY"
+    path: "docs/dac-ta/FLORAOS_CREATIVE_STUDIO_JOURNEY.md"
+    title: "Creative Studio User Journey Specification (Chặng 01–14)"
+    domain: "Module M04"
+    layer: "Level 3"
+    purpose: "Đặc tả luồng trải nghiệm người dùng từ Chặng 01 đến Chặng 14 khởi động từ Khu vực A trong Creative Studio"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Product UX Lead"
+    dependencies: ["docs/dac-ta/FLORAOS_PRODUCT_TO_MARKET_USER_JOURNEY.md"]
+    supersedes: []
+
+  - id: "DOC-03-M07-MARKET-INTEL-ARCH"
+    path: "docs/kien-truc/FLORAOS_MARKET_INTELLIGENCE_ARCHITECTURE.md"
+    title: "Market Intelligence Engine Architecture"
+    domain: "Module M02/M07"
+    layer: "Level 3"
+    purpose: "Kiến trúc động cơ nghiên cứu thị trường, Trend Fit Matrix, dẫn chứng video kép TikTok + YouTube"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Intelligence Lead"
+    dependencies: ["docs/dac-ta/FloraOS-Intelligence-Engine_FINAL_v2.0.md"]
+    supersedes: []
+
+  - id: "DOC-03-M07-INTEL-V2"
+    path: "docs/dac-ta/FloraOS-Intelligence-Engine_FINAL_v2.0.md"
+    title: "FloraOS Intelligence Engine v2.0 Specification"
+    domain: "Module M02/M07"
+    layer: "Level 3"
+    purpose: "Đặc tả phiên bản v2.0 bóc tách nguyên tử sản phẩm hoa tươi bằng Multimodal Vision AI"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Intelligence Lead"
+    dependencies: []
+    supersedes: ["docs/dac-ta/FloraOS-Core_Market_Intelligence_Engine_FINAL.md"]
+
+  - id: "DOC-03-M08-CHAT-ASSISTANT-ARCH"
+    path: "docs/kien-truc/FLORAOS_AI_CHAT_ASSISTANT_OMNICHANNEL_ARCHITECTURE.md"
+    title: "M08 AI Chat Assistant & Omnichannel Architecture"
+    domain: "Module M08"
+    layer: "Level 3"
+    purpose: "Kiến trúc Trợ lý AI Kép (Copilot nội bộ + Chat tư vấn bán hàng), tích hợp 5 kênh tiếp xúc"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "AI Chat Lead"
+    dependencies: ["docs/dac-ta/10-ai-orchestration.md"]
+    supersedes: []
+
+  - id: "DOC-03-UX-ARCH"
+    path: "docs/dac-ta/03-ux-architecture.md"
+    title: "UX Architecture Specification"
+    domain: "UX/UI"
+    layer: "Level 3"
+    purpose: "Kiến trúc trải nghiệm cấp khung, luồng phân vai và điều hướng giao diện"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Product Design Lead"
+    dependencies: ["docs/dac-ta/00-PRD.md"]
+    supersedes: []
+
+  - id: "DOC-03-UX-MACRO-MICRO"
+    path: "docs/archive/merged/MACRO_TO_MICRO_STORYTELLING_UX_FRAMEWORK.md"
+    title: "Macro-to-Micro Storytelling UX Framework (Đã gộp vào Doc 03 §18)"
+    domain: "UX/UI"
+    layer: "Archive"
+    purpose: "Nguyên tắc bố cục thông tin phân lớp — nội dung chính đã tích hợp vào 03-ux-architecture.md §18"
+    status: "ARCHIVED"
+    authority: "Archive"
+    canonical: false
+    ssot: false
+    owner: "Product Design Lead"
+    dependencies: ["docs/dac-ta/03-ux-architecture.md"]
+    supersedes: []
+    superseded_by: "docs/dac-ta/03-ux-architecture.md"
+
+  - id: "DOC-03-UX-10-CHUC-NANG"
+    path: "docs/FloraOS-UIUX-10-chuc-nang.md"
+    title: "Đặc tả Thiết kế 10 Màn hình Giao diện Lõi"
+    domain: "UX/UI"
+    layer: "Level 3"
+    purpose: "Đặc tả chi tiết bố cục và tương tác của 10 màn hình chức năng"
+    status: "SUPPORTING"
+    authority: "Level 3"
+    canonical: false
+    ssot: false
+    owner: "Product Design Lead"
+    dependencies: ["docs/dac-ta/03-ux-architecture.md"]
+    supersedes: []
+
+  - id: "DOC-03-QUY-UOC-DEM"
+    path: "docs/kien-truc/QUY_UOC_DEM.md"
+    title: "Quy ước Đếm cành & Chuẩn bị Bộ ảnh vàng M01"
+    domain: "AI / Vision"
+    layer: "Level 3"
+    purpose: "Quy tắc kiểm định đếm cành hoa, nụ, hoa hỏng và cấu trúc bộ ảnh vàng benchmark"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Vision AI Lead"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-03-TU-DIEN-TU-CAM"
+    path: "docs/kien-truc/TU_DIEN_TU_CAM_CONTENT_NGANH_HOA.md"
+    title: "Từ điển Từ cấm & An toàn Nội dung Ngành Hoa"
+    domain: "AI / Content"
+    layer: "Level 3"
+    purpose: "Bộ quy chuẩn từ cấm, nhạy cảm chính trị, y tế và thương hiệu trong nội dung hoa tươi"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Content Policy Lead"
+    dependencies: ["docs/dac-ta/10-ai-orchestration.md"]
+    supersedes: []
+
+  # =========================================================================
+  # LEVEL 5: OPERATIONAL CHECKLISTS, ROADMAP & TECHNICAL DEBT
+  # =========================================================================
+  - id: "DOC-05-CHECKLIST-THUC-THI"
+    path: "docs/dac-ta/Checklist_Thuc_Thi.md"
+    title: "Checklist Thực thi Hệ thống (P0 đến P26)"
+    domain: "Governance"
+    layer: "Level 5"
+    purpose: "OSOT theo dõi tiến độ thi công kỹ thuật và lộ trình từng pha của toàn hệ thống"
+    status: "CANONICAL"
+    authority: "Level 5"
+    canonical: true
+    ssot: true
+    owner: "Engineering Lead"
+    dependencies: ["docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md"]
+    supersedes: []
+
+  - id: "DOC-05-TECHNICAL-DEBT"
+    path: "docs/dac-ta/TECHNICAL_DEBT.md"
+    title: "Technical Debt Registry (#1 đến #117+)"
+    domain: "Governance"
+    layer: "Level 5"
+    purpose: "Sổ đăng ký toàn bộ nợ kỹ thuật, điều kiện trả nợ và trạng thái đóng"
+    status: "CANONICAL"
+    authority: "Level 5"
+    canonical: true
+    ssot: true
+    owner: "Engineering Lead"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-05-UIUX-EXECUTION-CHECKLIST"
+    path: "docs/UIUX-Execution-Checklist.md"
+    title: "UI/UX Execution Checklist (Single Checklist)"
+    domain: "UX/UI"
+    layer: "Level 5"
+    purpose: "OSOT duy nhất theo dõi tiến độ thi công UI và tích hợp Backend API cho 10 màn hình"
+    status: "CANONICAL"
+    authority: "Level 5"
+    canonical: true
+    ssot: true
+    owner: "Frontend Lead"
+    dependencies: ["docs/FloraOS-UIUX-10-chuc-nang.md"]
+    supersedes: ["docs/UIUX-Feature-Checklist.md", "docs/UIUX-Integrate-Checklist.md"]
+
+  - id: "DOC-05-ROADMAP"
+    path: "docs/dac-ta/Roadmap.md"
+    title: "Roadmap Quick Reference"
+    domain: "Strategy"
+    layer: "Level 5"
+    purpose: "Bảng tóm tắt nhanh lộ trình và trỏ về V2 Target Architecture §15"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Product Manager"
+    dependencies: ["docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md"]
+    supersedes: []
+
+  - id: "DOC-05-CONSOLE-VAN-HANH"
+    path: "docs/kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md"
+    title: "Kế hoạch Thực thi Console Vận hành Nền tảng (P25)"
+    domain: "Operations"
+    layer: "Level 5"
+    purpose: "Kế hoạch thi công chi tiết cho phân hệ Console Vận hành Platform SaaS (P25a, P25b, P25c)"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Platform Lead"
+    dependencies: ["docs/dac-ta/Checklist_Thuc_Thi.md"]
+    supersedes: ["docs/kien-truc/DASHBOARD_VAN_HANH_NEN_TANG.md"]
+
+  - id: "DOC-05-CHECKLIST-CREATIVE-STUDIO"
+    path: "docs/dac-ta/FLORAOS_CREATIVE_STUDIO_CHECKLIST.md"
+    title: "Creative Studio Execution Checklist"
+    domain: "Module M04"
+    layer: "Level 5"
+    purpose: "Checklist kiểm thử và triển khai 5 khu vực Creative Studio"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Media AI Lead"
+    dependencies: ["docs/dac-ta/Checklist_Thuc_Thi.md"]
+    supersedes: []
+
+  - id: "DOC-05-CHECKLIST-AI-CAPABILITIES"
+    path: "docs/archive/merged/CHECKLIST_AI_CAPABILITIES_BUILD.md"
+    title: "Checklist Xây dựng 34 AI Capabilities (Đã gộp vào Doc 10 Phụ lục)"
+    domain: "AI Platform"
+    layer: "Archive"
+    purpose: "Checklist kỹ thuật thực thi 34 năng lực AI — nội dung chính đã tích hợp vào 10-ai-orchestration.md"
+    status: "ARCHIVED"
+    authority: "Archive"
+    canonical: false
+    ssot: false
+    owner: "AI Lead"
+    dependencies: ["docs/dac-ta/10-ai-orchestration.md"]
+    supersedes: []
+    superseded_by: "docs/dac-ta/10-ai-orchestration.md"
+
+  - id: "DOC-05-DOT-3-SOCIALFLOW"
+    path: "docs/archive/merged/DOT_3_NOI_SOCIALFLOW.md"
+    title: "Kế hoạch Đợt 3 Nối SocialFlow vào Core (Đã gộp vào Doc 08 §8)"
+    domain: "Integration"
+    layer: "Archive"
+    purpose: "Kế hoạch đợt 3 nối SocialFlow — nội dung chính đã tích hợp vào 08-integration-specification.md"
+    status: "ARCHIVED"
+    authority: "Archive"
+    canonical: false
+    ssot: false
+    owner: "Integration Lead"
+    dependencies: ["docs/dac-ta/08-integration-specification.md"]
+    supersedes: []
+    superseded_by: "docs/dac-ta/08-integration-specification.md"
+
+  - id: "DOC-05-KE-HOACH-TEMPLATE"
+    path: "docs/archive/merged/KE_HOACH_HOAN_THIEN_TEMPLATE_SYSTEM.md"
+    title: "Kế hoạch Hoàn thiện Template System (Đã gộp vào Template SSOT §7)"
+    domain: "Template System"
+    layer: "Archive"
+    purpose: "Kế hoạch thi công Template System — nội dung chính đã tích hợp vào FLORAOS_TEMPLATE_SYSTEM_SSOT.md"
+    status: "ARCHIVED"
+    authority: "Archive"
+    canonical: false
+    ssot: false
+    owner: "Design System Lead"
+    dependencies: ["docs/kien-truc/FLORAOS_TEMPLATE_SYSTEM_SSOT.md"]
+    supersedes: []
+    superseded_by: "docs/kien-truc/FLORAOS_TEMPLATE_SYSTEM_SSOT.md"
+
+  # =========================================================================
+  # ARCHIVED / HISTORICAL / MERGED DOCUMENTS (NON-AUTHORITATIVE)
+  # =========================================================================
+  - id: "DOC-ARC-MARKET-INTEL-V1"
+    path: "docs/archive/historical/FloraOS-Core_Market_Intelligence_Engine_FINAL.md"
+    title: "Market Intelligence Engine Spec v1.0 (Lỗi thời)"
+    domain: "Module M02/M07"
+    layer: "Archive"
+    purpose: "Bản đặc tả v1.0 cũ đã được thay thế hoàn toàn bởi v2.0"
+    status: "HISTORICAL"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-UIUX-FEATURE"
+    path: "docs/archive/merged/UIUX-Feature-Checklist.md"
+    title: "UI/UX Feature Checklist (Đã gộp)"
+    domain: "UX/UI"
+    layer: "Archive"
+    purpose: "Checklist tính năng UI rời rạc trước đây, đã hợp nhất 100% vào UIUX-Execution-Checklist.md"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-UIUX-INTEGRATE"
+    path: "docs/archive/merged/UIUX-Integrate-Checklist.md"
+    title: "UI/UX Integrate Checklist (Đã gộp)"
+    domain: "UX/UI"
+    layer: "Archive"
+    purpose: "Checklist tích hợp API rời rạc trước đây, đã hợp nhất 100% vào UIUX-Execution-Checklist.md"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-UIUX-IMPL-PLAN"
+    path: "docs/archive/historical/UIUX-Implementation-Plan.md"
+    title: "UI/UX Implementation Plan & Q1-Q26"
+    domain: "UX/UI"
+    layer: "Archive"
+    purpose: "Tài liệu giải đáp 26 câu hỏi thiết kế kiến trúc UI ban đầu"
+    status: "HISTORICAL"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-DASHBOARD-DRAFT"
+    path: "docs/archive/drafts/DASHBOARD_VAN_HANH_NEN_TANG.md"
+    title: "Bản phác thảo Dashboard Vận hành (Cũ)"
+    domain: "Operations"
+    layer: "Archive"
+    purpose: "Bản phác thảo sơ khởi, đã được cụ thể hóa bằng KE_HOACH_CONSOLE_VAN_HANH.md"
+    status: "DRAFT"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-HARVEST-MANIFEST"
+    path: "docs/archive/historical/HARVEST_MANIFEST.md"
+    title: "Bản đồ Thu hoạch Mã nguồn Cũ"
+    domain: "Strategy"
+    layer: "Archive"
+    purpose: "Bản đồ phân ngạch thu hoạch từ 3 repo cũ phục vụ giai đoạn dựng dự án"
+    status: "HISTORICAL"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-SEED-DATA"
+    path: "docs/archive/historical/09-du-lieu-mau-experience.md"
+    title: "Đặc tả Dữ liệu Mẫu Seed Demo Workspace"
+    domain: "Operations"
+    layer: "Archive"
+    purpose: "Đặc tả dữ liệu seed ban đầu cho tiệm hoa mẫu"
+    status: "HISTORICAL"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-M01-GUIDE"
+    path: "docs/archive/guides/M01_FLORAOS_VISION_CODING_AGENT_GUIDE.md"
+    title: "Hướng dẫn Agent Code M01 (Cũ)"
+    domain: "Module M01"
+    layer: "Archive"
+    purpose: "Hướng dẫn thi công M01 giai đoạn P5 sơ khởi"
+    status: "HISTORICAL"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-LOG-THU-HOACH"
+    path: "docs/archive/audit-logs/RA_SOAT_THU_HOACH.md"
+    title: "Báo cáo Rà soát Thu hoạch Mã nguồn Cũ"
+    domain: "Audit"
+    layer: "Archive"
+    purpose: "Báo cáo kiểm toán đối chiếu quá trình thu hoạch mã nguồn cũ"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-LOG-BA-REPO"
+    path: "docs/archive/audit-logs/RA_SOAT_DONG_BO_BA_REPO.md"
+    title: "Báo cáo Tiếp giáp 3 Repo (10/09)"
+    domain: "Integration"
+    layer: "Archive"
+    purpose: "Báo cáo snapshot đối chiếu mặt tiếp giáp giữa Core, LocalBudd và SocialFlow ngày 10/09"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-LOG-18-09"
+    path: "docs/archive/audit-logs/RA_SOAT_DONG_BO_18_09.md"
+    title: "Báo cáo Rà soát Đối chiếu Code và Doc (18/09)"
+    domain: "Audit"
+    layer: "Archive"
+    purpose: "Snapshot kiểm toán đối chiếu giữa mã nguồn và tài liệu ngày 18/09"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-LOG-NGHIEM-THU"
+    path: "docs/archive/audit-logs/LENH_NGHIEM_THU_09_10.md"
+    title: "Log Lệnh Nghiệm thu Tích hợp (10/09)"
+    domain: "QA / Audit"
+    layer: "Archive"
+    purpose: "Nhật ký lệnh cURL kiểm thử tích hợp đa repo ngày 10/09"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []

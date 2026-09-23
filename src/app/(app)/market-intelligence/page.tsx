@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   TrendingUp,
   RefreshCw,
@@ -61,6 +62,7 @@ const GUIDANCE_MAP: Record<FeatureKey, { badge: string; title: string; descripti
 };
 
 export default function MarketIntelligencePage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<FeatureKey>("market");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
@@ -108,7 +110,7 @@ export default function MarketIntelligencePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* 3 Tính Năng Cốt Lõi Switcher */}
+          {/* 2 Tính Năng Cốt Lõi Switcher */}
           <div className="flex items-center bg-stone-100 p-1 rounded-xl gap-1">
             <button
               type="button"
@@ -136,15 +138,12 @@ export default function MarketIntelligencePage() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("product")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                activeTab === "product"
-                  ? "bg-white text-rose-700 shadow-sm"
-                  : "text-stone-600 hover:text-stone-900"
-              }`}
+              onClick={() => router.push("/creative-studio?tab=area-a")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-stone-500 hover:text-rose-700 hover:bg-white/60 transition"
+              title="Quét theo ảnh sản phẩm hoa (Chặng 1-5) đã quy hoạch vào Khu vực A của Creative Studio"
             >
               <Camera size={13} />
-              3. Quét Theo Ảnh Mẫu
+              Quét Theo Ảnh Mẫu (Creative Studio) →
             </button>
           </div>
 

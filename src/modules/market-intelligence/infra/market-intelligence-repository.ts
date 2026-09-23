@@ -55,6 +55,22 @@ export class MarketIntelligenceRepository {
     })
   }
 
+  // Giống findCachedSignals nhưng KHÔNG giới hạn nền tảng Google — dùng cho
+  // Product Intelligence (Quét theo ảnh sản phẩm), nơi cần đối chiếu với dữ
+  // liệu thật đã thu thập từ MỌI nền tảng (Google Trends, TikTok, YouTube),
+  // không riêng chuỗi fallback của luồng Quét theo từ khóa.
+  async findCachedSignalsAnyPlatform(query: string, geo = "VN", industry = "florist") {
+    return this.db.trend_signals.findMany({
+      where: {
+        country_code: geo,
+        industry,
+        topic_raw: { contains: query, mode: "insensitive" },
+      },
+      orderBy: { captured_at: "desc" },
+      take: 5,
+    })
+  }
+
   async findCachedTimeseries(topic: string, geo = "VN") {
     const topicRecord = await this.db.topics.findFirst({
       where: { canonical_name: { contains: topic, mode: "insensitive" } },
@@ -235,6 +251,52 @@ export class MarketIntelligenceRepository {
         asset_id: assetId,
       },
       orderBy: { created_at: "desc" },
+    })
+  }
+
+  // --- Product Intelligence — lưu & đọc lịch sử phân tích (nợ #113, đã trả 21/09/2026;
+  // asset_id chuyển bắt buộc + bỏ cột image_url ở nợ #118, chốt 22/09/2026) ---
+  async createProductAnalysisRun(data: {
+    organizationId: string
+    assetId: string
+    productName: string
+    trendFitScore: number
+    audienceFitScore: number
+    contentFitScore: number
+    overallFit: string
+    report: unknown
+  }) {
+    return this.db.product_analysis_runs.create({
+      data: {
+        organization_id: data.organizationId,
+        asset_id: data.assetId,
+        product_name: data.productName,
+        trend_fit_score: data.trendFitScore,
+        audience_fit_score: data.audienceFitScore,
+        content_fit_score: data.contentFitScore,
+        overall_fit: data.overallFit,
+        report: data.report as any,
+      },
+    })
+  }
+
+  async listProductAnalysisRuns(organizationId: string, limit = 20) {
+    return this.db.product_analysis_runs.findMany({
+      where: { organization_id: organizationId },
+      orderBy: { created_at: "desc" },
+      take: limit,
+    })
+  }
+
+  async getProductAnalysisRun(organizationId: string, id: string) {
+    return this.db.product_analysis_runs.findFirst({
+      where: { organization_id: organizationId, id },
+    })
+  }
+
+  async getProductAnalysisById(organizationId: string, id: string) {
+    return this.db.product_analyses.findFirst({
+      where: { organization_id: organizationId, id },
     })
   }
 
