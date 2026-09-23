@@ -574,7 +574,7 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
                   </div>
                 </div>
                 <Button
-                  onClick={data.goRunningB}
+                  onClick={() => void data.goRunningB()}
                   className="flex items-center gap-2"
                   disabled={!masterApproved || !data.canRunVariant}
                 >

@@ -181,7 +181,7 @@ export interface UseCreativeStudioReturn {
   goRunningA: () => void
   handleApproveAApi: () => Promise<void>
   handleDownloadRatio: (ratio?: string) => Promise<void>
-  goRunningB: () => Promise<void>
+  goRunningB: (masterIdOverride?: string) => Promise<void>
   handleApproveB: () => Promise<void>
   handleDownloadVariant: (assetId: string) => Promise<void>
   selectVariant: (assetId: string) => void
@@ -621,16 +621,16 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
     setSelectedVariantAssetId(assetId)
   }
 
-  async function goRunningB() {
+  async function goRunningB(masterIdOverride?: string) {
     if (!canRunVariant) {
       setErrorMsg("Không có năng lực I4 (dựng biến thể marketing)")
       setPhase("error")
       return
     }
-    const masterId = selectedMasterId || approvedMasters[0]?.id || ""
+    const masterId = masterIdOverride || selectedMasterId || approvedMasters[0]?.id || ""
     if (!masterId) {
       setErrorMsg(
-        "Chưa có Master Image nào đã duyệt. Chạy Khu vực A rồi bấm Duyệt Master Image trước."
+        "Chưa có Master Image đã duyệt cho ảnh này. Bấm “Dùng ảnh gốc làm Master” ở mục nguồn ảnh (cần quyền I2), hoặc tối ưu ảnh ở Tải ảnh rồi duyệt Master."
       )
       setPhase("error")
       return

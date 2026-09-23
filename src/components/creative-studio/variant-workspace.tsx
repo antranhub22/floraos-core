@@ -39,7 +39,7 @@ import {
   getVariantPreset,
 } from "@/modules/media/domain/variant-presets"
 import { SourcePicker } from "./source-picker"
-import { sceneTwoPresetFor } from "./package-client"
+import { promoteToMaster, resolveApprovedMaster, sceneTwoPresetFor } from "./package-client"
 import { FLOW_M04B } from "./types"
 import type { UseCreativeStudioReturn } from "./use-creative-studio-data"
 
@@ -128,7 +128,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   // Cảnh 1 (studio trắng) và Cảnh 4 (tách nền) luôn chạy cục bộ — không cần hậu cảnh AI.
   const [sceneEngine, setSceneEngine] = useState<"cloud_provider" | "local_studio">("cloud_provider")
 
-  const navigateToArea = (area: "b" | "c" | "d" | "e" | "f") => {
+  const navigateToArea = (area: "a" | "b" | "c" | "d" | "e" | "f") => {
     const params = new URLSearchParams(searchParams?.toString() || "")
     params.set("area", area)
     router.push(`/creative-studio?${params.toString()}` as never)
@@ -180,17 +180,52 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     setErrorMsg,
   } = data
 
-  // Chỉ chọn sẵn khi asset từ Khu vực A CHÍNH LÀ một Master đã duyệt. Ảnh
-  // ORIGINAL phải qua "Skip — Dùng ảnh gốc" (promote-to-master, I2) trước —
-  // gán thẳng ORIGINAL làm Master là đi vòng qua cổng 2 và máy chủ trả 409.
+  // Master của ĐÚNG ảnh Khu vực A: chính nó nếu đã là MASTER đã duyệt, hoặc
+  // bản MASTER con tạo qua "Dùng ảnh gốc" (24/09/2026). Không lấy Master đầu
+  // tiên của cả tổ chức — đó có thể là ảnh của sản phẩm khác.
+  const [promotingMaster, setPromotingMaster] = useState(false)
+  const [masterError, setMasterError] = useState<string | null>(null)
   useEffect(() => {
     if (!context?.assetId || selectedMasterId) return
-    if (approvedMasters.some((m) => m.id === context.assetId)) {
-      setSelectedMasterId(context.assetId)
+    let cancelled = false
+    resolveApprovedMaster(context.assetId)
+      .then((id) => {
+        if (!cancelled && id) setSelectedMasterId(id)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
     }
-  }, [context?.assetId, selectedMasterId, approvedMasters, setSelectedMasterId])
+  }, [context?.assetId, selectedMasterId, setSelectedMasterId])
 
-  const activeMasterId = selectedMasterId || approvedMasters[0]?.id || ""
+  const activeMasterId = selectedMasterId || (context?.assetId ? "" : approvedMasters[0]?.id || "")
+
+  /**
+   * Bảo đảm có Master đã duyệt trước khi dựng biến thể. Ảnh từ Khu vực A còn
+   * là ORIGINAL thì nâng thành Master ("Dùng ảnh gốc", I2 — máy chủ kiểm quyền)
+   * thay vì báo lỗi bắt người dùng tự tìm nút.
+   */
+  const ensureMaster = async (): Promise<string | null> => {
+    if (activeMasterId) return activeMasterId
+    if (!context?.assetId) return null
+    setPromotingMaster(true)
+    setMasterError(null)
+    try {
+      const existing = await resolveApprovedMaster(context.assetId)
+      const id = existing ?? (await promoteToMaster(context.assetId))
+      setSelectedMasterId(id)
+      return id
+    } catch (e) {
+      setMasterError(
+        e instanceof Error
+          ? `Không nâng được ảnh gốc thành Master: ${e.message}`
+          : "Không nâng được ảnh gốc thành Master"
+      )
+      return null
+    } finally {
+      setPromotingMaster(false)
+    }
+  }
 
   // Nạp các phân cảnh ĐÃ sinh của đúng Master đang chọn (không quét cả tổ chức).
   useEffect(() => {
@@ -302,11 +337,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   const handleGenerateSingleScene = async (targetIndex: number): Promise<void> => {
     const scene = narrativeImageScenes.find((s) => s.sceneIndex === targetIndex)
     if (!scene) return
-    if (!activeMasterId) {
+    const masterForScene = await ensureMaster()
+    if (!masterForScene) {
       setSceneErrors((prev) => ({
         ...prev,
         [targetIndex]:
-          "Chưa có Master Image đã duyệt. Chọn ảnh ở mục nguồn ảnh (hoặc bấm 'Skip — Dùng ảnh gốc') trước.",
+          masterError ?? "Chưa có Master Image đã duyệt và không có ảnh gốc từ Khu vực A để dùng.",
       }))
       return
     }
@@ -323,10 +359,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "idempotency-key": `scene-${activeMasterId}-${targetIndex}-${crypto.randomUUID()}`,
+          "idempotency-key": `scene-${masterForScene}-${targetIndex}-${crypto.randomUUID()}`,
         },
         body: JSON.stringify({
-          master_asset_id: activeMasterId,
+          master_asset_id: masterForScene,
           engine: useCloud ? "cloud_provider" : "local_studio",
           preset: scene.presetId,
           ratio: variantRatio || "1:1",
@@ -914,8 +950,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
   // Không gán asset ORIGINAL của Khu vực A làm Master (máy chủ trả 409):
   // chưa có Master đã duyệt thì SourcePicker hiện nút "Skip — Dùng ảnh gốc".
-  const handleRunVariant = () => {
-    goRunningB()
+  const handleRunVariant = async () => {
+    const id = await ensureMaster()
+    if (!id && context?.assetId) return // lỗi hiển thị ở masterError, giữ màn cấu hình
+    await goRunningB(id ?? undefined)
   }
 
   return (
@@ -1221,18 +1259,31 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
       {/* Primary Submit Button */}
       <Button
         className="h-[48px] w-full px-8 text-sm font-bold shadow-md shadow-primary/20"
-        onClick={handleRunVariant}
-        disabled={!hasImageSource || !canRunVariant}
+        onClick={() => void handleRunVariant()}
+        disabled={!hasImageSource || !canRunVariant || promotingMaster}
       >
         <Sparkles size={18} strokeWidth={2} className="mr-2" />
-        {variantEngineMode === "local_studio"
+        {promotingMaster
+          ? "Đang dùng ảnh gốc làm Master..."
+          : variantEngineMode === "local_studio"
           ? `Tạo biến thể marketing (${getVariantPreset(selectedVariantPreset).name})`
           : "Sinh biến thể với hậu cảnh Stability"}
       </Button>
 
+      {masterError && (
+        <div className="w-full rounded-xl border border-danger bg-danger-bg px-4 py-3 text-[13px] text-danger">
+          {masterError}
+        </div>
+      )}
+      {!activeMasterId && context?.assetId && !masterError && (
+        <p className="w-full text-[12px] text-text-muted">
+          Ảnh từ Khu vực A chưa là Master Image — khi bấm tạo, hệ thống sẽ dùng nguyên ảnh gốc làm Master (không chỉnh ảnh, cần quyền duyệt ảnh I2).
+        </p>
+      )}
+
       <div className="w-full flex items-center justify-between pt-2">
-        <Button variant="ghost" size="sm" onClick={() => setPhase("select")}>
-          <ArrowLeft size={14} className="mr-1.5" /> Quay lại Tab Tối ưu
+        <Button variant="ghost" size="sm" onClick={() => navigateToArea("a")}>
+          <ArrowLeft size={14} className="mr-1.5" /> Quay lại Khu vực A
         </Button>
         <button
           type="button"
