@@ -46,6 +46,18 @@ import {
 
 const IDEMPOTENCY_KEY_HEADER = "idempotency-key"
 
+/** Mô tả hậu cảnh cho nhánh cloud M04b từ các lựa chọn storytelling. Chỉ mô tả
+ *  KHÔNG GIAN — worker luôn nối ràng buộc "không hoa, không người, không chữ". */
+function buildCloudScenePrompt(camera: string, human: string, storyline: string): string {
+  const parts = [
+    "Elegant softly lit interior backdrop for a flower shop product photo",
+    `camera: ${camera.replace(/_/g, " ")}`,
+    `mood: ${storyline.replace(/_/g, " ")}`,
+  ]
+  if (human && human !== "none") parts.push("lifestyle setting")
+  return parts.join(", ")
+}
+
 function apiFetch(path: string, options?: RequestInit) {
   return fetch(path, {
     ...options,
@@ -632,22 +644,26 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
     setVariantIntegrity(null)
     setSelectedVariantAssetId("")
 
-    const idempotencyKey = `var-${Date.now()}-${crypto.randomUUID()}`
+    const idempotencyKey = `var-${crypto.randomUUID()}`
     try {
       const isCloudEngine = variantEngineMode === "cloud_provider"
       const res = await apiFetch("/api/v1/media/variants", {
         method: "POST",
         headers: { [IDEMPOTENCY_KEY_HEADER]: idempotencyKey },
+        // 23/09/2026: cả hai nhánh đi qua hàng đợi job; nhánh cloud gửi mô tả
+        // HẬU CẢNH (không mô tả bó hoa) — bó hoa dán nguyên khối ở worker.
         body: JSON.stringify({
           master_asset_id: masterId,
           engine: variantEngineMode,
-          preset: isCloudEngine ? undefined : selectedVariantPreset,
+          preset: selectedVariantPreset,
           ratio: variantRatio,
-          watermark: isCloudEngine ? false : watermarkEnabled,
-          provider_key: isCloudEngine ? selectedCloudProvider : undefined,
-          camera_angle: isCloudEngine ? cameraAngle : undefined,
-          human_interaction: isCloudEngine ? humanInteraction : undefined,
-          custom_directives: isCloudEngine ? [storylineMode] : undefined,
+          watermark: watermarkEnabled,
+          ...(isCloudEngine
+            ? {
+                provider_key: "stability",
+                scene_prompt: buildCloudScenePrompt(cameraAngle, humanInteraction, storylineMode),
+              }
+            : {}),
         }),
       })
       if (!res.ok) {
@@ -660,39 +676,8 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
         setPhase("error")
         return
       }
-      const data = (await res.json()) as {
-        job_id: string
-        status?: string
-        engine?: string
-        asset_id?: string
-        image_url?: string
-        provider?: string
-      }
+      const data = (await res.json()) as { job_id: string }
       setVariantJobId(data.job_id)
-
-      if (data.engine === "cloud_provider" && data.status === "COMPLETED") {
-        setJobStatus("COMPLETED")
-        setJobPhase(null)
-        setGeneratedVariants([
-          {
-            asset_id: data.asset_id || data.job_id,
-            variant_key: "ai_storytelling",
-            title: "Biến thể AI Visual Storytelling",
-            background: "AI Cloud Generative",
-            ratio: variantRatio,
-            watermark: false,
-            generative_fill_used: true,
-            url: data.image_url || "",
-            approval_state: "pending",
-            approved_at: null,
-          },
-        ])
-        setSelectedVariantAssetId(data.asset_id || data.job_id)
-        setJudgmentB("safe")
-        setPhase("result-b")
-        return
-      }
-
       pollVariantJob(data.job_id)
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Lỗi tạo job biến thể")
@@ -711,6 +696,7 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
         status: string
         stage: string | null
         error: string | null
+        result: string | null
         source: { preset: string | null; ratio: string | null; watermark: boolean }
         subject_integrity: M04bIntegrity | null
         variants: M04bVariantItem[]
@@ -726,8 +712,12 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
         setJobPhase(null)
         setGeneratedVariants(chiTiet.variants)
         setSelectedVariantAssetId(chiTiet.variants[0]?.asset_id ?? "")
+        // COMPLETED + result=REJECTED: cổng Subject Integrity chặn, không asset
+        // nào được ghi — không phải lỗi kỹ thuật (AGENTS.md: ba trục tách rời).
         setJudgmentB(
-          chiTiet.subject_integrity?.result === "WARNING" || chiTiet.approval.requires_warning
+          chiTiet.result === "REJECTED" || chiTiet.subject_integrity?.result === "REJECTED"
+            ? "blocked"
+            : chiTiet.subject_integrity?.result === "WARNING" || chiTiet.approval.requires_warning
             ? "warning"
             : "safe"
         )
@@ -863,6 +853,7 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
   // ============================================================
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ state từ nguồn ngoài (URL/API), chủ đích
     loadAssets()
     loadApprovedMasters()
     // eslint-disable-next-line react-hooks/exhaustive-deps

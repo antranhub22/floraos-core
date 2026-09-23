@@ -104,6 +104,9 @@ export interface ConcreteTopic {
       author: string;
       metrics: string;
       alt?: string | undefined;
+      /** `false` = danh mục tham khảo tuyển chọn (metrics ƯỚC TÍNH, TikTok là
+       *  trang tìm kiếm) — giao diện PHẢI gắn nhãn, không trình bày như số thật. */
+      isLiveEvidence?: boolean | undefined;
     };
     tiktok: {
       thumbnailUrl: string;
@@ -112,6 +115,9 @@ export interface ConcreteTopic {
       author: string;
       metrics: string;
       alt?: string | undefined;
+      /** `false` = danh mục tham khảo tuyển chọn (metrics ƯỚC TÍNH, TikTok là
+       *  trang tìm kiếm) — giao diện PHẢI gắn nhãn, không trình bày như số thật. */
+      isLiveEvidence?: boolean | undefined;
     };
   } | undefined;
 }

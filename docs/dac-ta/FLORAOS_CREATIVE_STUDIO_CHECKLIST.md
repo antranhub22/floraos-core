@@ -1,349 +1,94 @@
-# Checklist — Creative Studio Pipeline (Chặng 5-14)
+# Checklist — Creative Studio (Chặng 01–14, 6 Khu vực A–F)
 
-> **Mục đích:** Kế hoạch triển khai chi tiết cho user journey
-> "Quét theo Ảnh mẫu → Sáng tạo nội dung".
->
-> **Quy tắc:** Mỗi ô [ ] chưa tích = chưa xong. Mỗi ô [x] = đã xong.
-> Không tích trước, không tích ô chỉ làm một nửa.
->
-> **Phiên bản:** 1.0 — 2026-09-21
+> **Quy tắc:** `[x]` = mã đã làm đúng điều ô nói VÀ có kiểm chứng ghi ở cột cuối dòng. `[ ]` = chưa làm hoặc chưa kiểm chứng được. Trước khi tin một ô đã tích, mở đúng tệp ô đó nói tới (AGENTS.md).
+> **Phiên bản:** 2.0 — 23/09/2026. Thay bản 1.0 (21/09, "5 tabs", đa số ô chưa tích dù mã đã có, trong khi Khu vực D tích cả ô "Subject Integrity 99.8–100%" vốn là số gõ tay).
+> **Kiểm chứng máy thật 23/09 (máy anh Tony, VM Linux):** `tsc --noEmit` sạch · `vitest` 770/770 (94 tệp) · `eslint` phạm vi Creative Studio 0 lỗi · `pytest` worker 307 ca xanh (trừ `test_audio_worker.py` cần mạng TTS) · `check:docs` khớp. **Chưa chạy:** `test:tenant` (cần Postgres) — bắt buộc trước merge.
 
 ---
 
-## 0. Chặng chuyển tiếp — Chuẩn hóa inputs
-
-- [ ] **TopicProductionBrief schema** — finalized, tất cả fields chuẩn hóa (docs/dac-ta/FLORAOS_CREATIVE_STUDIO_IO_SPEC.md)
-- [ ] **Validation logic** — kiểm tra tất cả required fields có mặt trước khi vào Creative Studio
-- [ ] **Video duration detect** — FFprobe auto-detect `sourceVideoDurationSeconds`
-- [ ] **Transition UI** — screen trên `/thi-truong` hiển thị tổng hợp data Chặng 1-4
-- [ ] **Data sync check** — đảm bảo `selectedTopics[0]` đồng bộ với topic Chặng 04
-- [ ] **Test thuần** — kiểm tra validation, sync, video detect (không cần DB)
-
----
-
-## 1. Chặng 5 — CHOOSE
-
-### UI
-
-- [ ] **Modal chọn định hướng** trên `/thi-truong` (thay 2 nút "Dựng video" + "Tạo ảnh biến thể" → 1 nút "Sáng tạo nội dung")
-- [ ] **Mode selection** — CREATIVE (mặc định) hoặc AUTHENTIC
-- [ ] **Đầu vào selection** — ảnh, video, cả hai
-- [ ] **Preview topic + product** — hiển thị topic info + ảnh/video preview
-- [ ] **URL param** — `/creative-studio?topic={id}&mode={mode}&source={type}`
-
-### Backend
-
-- [ ] **Validation middleware** — validate topic exists, mode valid, required fields present
-- [ ] **TopicProductionBrief creation** — tạo brief từ Chặng 4 data + user choices
-
-### Test
-
-- [ ] **Unit test** — Modal component (mock router, mock topic data)
-- [ ] **Unit test** — Brief creation (pure function, no DB)
-- [ ] **Integration test** — Full flow: topic selection → brief creation → Creative Studio
-
----
-
-## 2. Creative Studio Shell
-
-### UI
-
-- [ ] **Creative Studio page** (`/creative-studio`) — 5 tabs + Top-Right Action Header
-- [ ] **Tab 1: Tối ưu ảnh/video đầu vào** — placeholder/OptimizeWorkspace
-- [ ] **Tab 2: Contents** — placeholder/produceCreative/produceAuthentic
-- [ ] **Tab 3: Audio** — placeholder/Audio Studio UI
-- [ ] **Tab 4: Biến thể ảnh** — placeholder/VariantWorkspace
-- [ ] **Tab 5: Video** — placeholder/Video Studio UI
-- [ ] **Context provider** — CreativeStudioContext đọc từ URL, truyền qua các tab
-- [ ] **Tab navigation** — mỗi tab phải duyệt xong mới sang tab tiếp theo
-- [ ] **Mode state** — CREATIVE/AUTHENTIC nhất quán xuyên các tab
-
-### Backend
-
-- [ ] **Creative Studio API** — endpoint tổng hợp context (đọc từ brief)
-- [ ] **Auth check** — requireCapability("I1") cho tất cả endpoints
-
-### Test
-
-- [ ] **Unit test** — Shell layout (5 tabs, navigation)
-- [ ] **Unit test** — Context provider (read from URL, propagate to tabs)
-
----
-
-## 3. Tab 1: Tối ưu ảnh/video đầu vào
-
-### UI
-
-- [ ] **OptimizeWorkspace** kết nối CreativeStudioContext
-- [ ] **Optimize vs Keep Original** radio/buttons
-- [ ] **Ratio selection** (1:1, 4:5, 9:16, 16:9) checkboxes
-- [ ] **Preview** ảnh gốc + ảnh tối ưu
-- [ ] **Approval gate** — duyệt trước khi sang Tab 2
-
-### Backend
-
-- [ ] **POST /api/v1/media/optimizations** — gọi executeCloudCreative
-- [ ] **Identity Integrity** — đo tỷ lệ điểm ảnh lõi (nợ #110 đã fix)
-
-### Test
-
-- [ ] **Unit test** — Optimize vs Keep Original routing
-- [ ] **Unit test** — Ratio selection logic
-
----
-
-## 4. Tab 2: Contents
-
-### UI
-
-- [ ] **Mode selection** — CREATIVE (mặc định) / AUTHENTIC toggle
-- [ ] **Content types** checkbox — Caption, Hashtags, Script, Post, Story
-- [ ] **CREATIVE mode:** Prompt builder (topic angle, hook, CTA → content)
-- [ ] **AUTHENTIC mode:** Upload original content OR use existing
-- [ ] **Content preview** — hiển thị content đã tạo
-- [ ] **Approval gate** — duyệt trước khi sang Tab 3 hoặc 4
-
-### Backend
-
-- [ ] **POST /api/v1/creative-production/produce** — produceCreative (CREATIVE) / produceAuthentic (AUTHENTIC)
-- [ ] **AUTHENTIC content override** — nếu user upload content gốc → dùng nội dung đó, KHÔNG narrative arc
-
-### Test
-
-- [ ] **Unit test** — Mode toggle (CREATIVE/AUTHENTIC)
-- [ ] **Unit test** — Content type selection
-- [ ] **Unit test** — AUTHENTIC content override (use uploaded content, not narrative arc)
-- [ ] **Unit test** — produceCreative + produceAuthentic routing
-
----
-
-## 5. Tab 3: Audio
-
-### UI
-
-- [ ] **Voice selection** — dropdown từ Audio Studio catalog
-- [ ] **Provider selection** (mặc định auto-routing)
-- [ ] **Quality tier** (standard, hd, premium)
-- [ ] **Music mood** selection
-- [ ] **Duration input** (auto-sync video duration, user override optional)
-- [ ] **Preview** audio player
-- [ ] **Approval gate**
-
-### Backend
-
-- [ ] **POST /api/v1/audio/jobs** — createAudioJob (đã tạo route)
-- [ ] **Duration sync** — voice + BGM = video duration (auto-pad)
-
-### Test
-
-- [ ] **Unit test** — Voice/music/quality selection
-- [ ] **Unit test** — Duration sync (video duration → audio duration)
-- [ ] **Unit test** — Audio job creation
-
----
-
-## 6. Tab 4: Biến thể ảnh (Khu vực D — M04b)
-
-### UI
-
-- [x] **Production method selection** — **LOCAL** hoặc **PROVIDER** (RẤT QUAN TRỌNG)
-- [x] **Local mode UI:** Khung phân cảnh Narrative Arc 4 chặng (Cảnh 1 Setup, Cảnh 2 Rising, Cảnh 3 Climax, Cảnh 4 CTA)
-- [x] **Provider mode UI:** Stability AI Visual Storytelling directives (phòng tiệc sảnh đón, bàn gỗ tối giản, bóc tách alpha)
-- [x] **Variant preview** — Hiển thị 4 phân cảnh riêng biệt kèm ảnh tiêu điểm Spotlight phóng to
-- [x] **Subject Integrity** — Hiển thị điểm trùng khít lõi chủ thể 99.8% - 100% (An toàn tuyệt đối)
-- [x] **Auto-load Marketing Assets** — Tự động quét CSDL nạp các biến thể ảnh đã sinh vào lưới phân cảnh
-- [x] **Nút sinh từng cảnh độc lập** — Hỗ trợ sinh riêng Cảnh 2, 3, 4 kèm loading state riêng biệt (`generatingSceneIndex`)
-- [x] **Approval gate** — Chốt duyệt biến thể marketing
-
-### Backend
-
-- [x] **POST /api/v1/media/variants** — Hỗ trợ cả 2 nhánh Cloud Creative (`executeCloudCreative`) và Local Studio Worker (`requestVariants`)
-- [x] **Local Studio Backdrop Engine** — `StudioBackdropEngine` (Pillow/OpenCV) + `generate_scene.py` CLI sinh ảnh bối cảnh (~0.46s / ảnh $2048 \times 2048$)
-- [x] **Auto-Fallback trong Router** — `MultiImageProviderRouter` tự động rơi về `StudioLocalImageProvider` khi Cloud Provider lỗi credit (402, 403, 429)
-- [x] **Cache mặt nạ RGBA** — `<master>.rgba.png` tăng tốc compositing quang học 2 tầng bóng đổ + Light Wrap
-- [x] **Variant Rules** — `variant-rules.ts` (integrity thresholds, approval logic)
-- [x] **Subject Integrity** — Ngưỡng 0.999 (SAFE) / 0.99 (WARNING) / < 0.99 (REJECTED)
-
-### Test
-
-- [x] **Unit test** — Production method routing (local vs provider)
-- [x] **Unit test** — MultiImageProviderRouter fallback đến `studio_local` khi cloud thiếu key/bytes
-- [x] **Unit test** — Variant creation (both modes)
-- [x] **Unit test** — Integrity score thresholds
-- [x] **Full Suite Validation** — `npm test` 747/747 xanh, `test:tenant` 206/206 xanh, `tsc --noEmit` sạch 100%
-
----
-
-## 7. Tab 5: Video
-
-### UI
-
-- [ ] **Format selection** — 6 khuôn M04c (REEL_15S, TIKTOK_30S, STORY_15S, SLIDESHOW, PRODUCT_PAGE, AD_MOTION)
-- [ ] **Ratio selection**
-- [ ] **Production method** — LOCAL hoặc PROVIDER (quan trọng)
-- [ ] **Provider selection** (Veo, HeyGen)
-- [ ] **Subtitle style** (Modern Badge, Minimal, Highlight Box, Bottom Banner)
-- [ ] **Camera Motion** (Ken Burns: zoom_in/out, pan_left/right/up, static)
-- [ ] **Storyboard editor** — 2-15 scenes, auto-balance duration
-- [ ] **Voice selection** (từ Tab 3 hoặc mới chọn)
-- [ ] **Approval gate**
-
-### Backend
-
-- [ ] **POST /api/v1/video/jobs** — CreateVideoJobUseCase (M04c)
-- [ ] **Video render dispatch** — `POST /api/v1/video/jobs/[id]/render`
-- [ ] **Storyboard update** — `POST /api/v1/video/jobs/[id]/storyboard`
-
-### Test
-
-- [ ] **Unit test** — Format selection (6 khuôn)
-- [ ] **Unit test** — Production method routing (local vs provider)
-- [ ] **Unit test** — Storyboard scene balance (total duration = video duration)
-- [ ] **Unit test** — Camera Motion selection
-
----
-
-## 8. Chặng 7 — PACKAGE
-
-### UI
-
-- [ ] **Campaign Package Dashboard** — tổng hợp tất cả assets
-- [ ] **Credit display** — tổng credit đã dùng
-- [ ] **Package name input**
-- [ ] **Approval gate** — "Đóng gói chiến dịch" cần duyệt
-
-### Backend
-
-- [ ] **POST /api/v1/creative-production/package** — packageCampaign (đã tạo route)
-- [ ] **CampaignPackage creation** — tổng hợp all assets
-
-### Test
-
-- [ ] **Unit test** — Package creation from all tabs
-- [ ] **Unit test** — Credit calculation
-
----
-
-## 9. Chặng 8-9 — QA + APPROVE
-
-### UI
-
-- [ ] **QA Report** — Brand, Product, Content, Platform checks
-- [ ] **AI Improve** — gửi issues cho AI sửa
-- [ ] **Approval screen** — APPROVE & PUBLISH / EDIT / ASK AI
-
-### Backend
-
-- [ ] QA check logic (đã có hoặc cần tạo mới)
-- [ ] Approval recording (audit_logs)
-
-### Test
-
-- [ ] **Unit test** — QA checks (Brand, Product, Content, Platform)
-- [ ] **Unit test** — Approval gate (manual required)
-
----
-
-## 10. Chặng 10-14 — LAUNCH → NEXT BEST
-
-### UI
-
-- [ ] **Launch screen** — Channel selection + Schedule
-- [ ] **Sell integration** — AI Chat Assistant
-- [ ] **Measure dashboard** — Analytics
-- [ ] **Learn screen** — Winning Patterns
-- [ ] **Next Best Action** — AI recommendations
-
-### Backend
-
-- [ ] Launch logic (publish to channels)
-- [ ] Sell integration (Chat Assistant)
-- [ ] Analytics (CRM/Orders)
-
-### Test
-
-- [ ] **Unit test** — Channel selection
-- [ ] **Unit test** — Schedule logic
-
----
-
-## 11. Tính năng cross-cutting
-
-### Production Method Choice (quan trọng)
-
-- [ ] Local/Provider toggle nhất quán ở Tab 4 và Tab 5
-- [ ] Provider dropdown (photoroom, fal, imagen, gemini, veo, heygen)
-- [ ] Credit deduction khi chọn Provider
-- [ ] Audit log ghi lại production method choice
-
-### Authentic Mode
-
-- [ ] Content override — dùng uploaded content, KHÔNG narrative arc
-- [ ] Video: KHÔNG tạo video mới trong AUTHENTIC mode (chỉ crop ảnh gốc)
-- [ ] Audio: TTS factual voice + BGM nhẹ
-
-### Video Duration
-
-- [ ] FFprobe auto-detect
-- [ ] Audio sync (voice + BGM = video duration)
-- [ ] Video storyboard auto-balance (total = video duration)
-- [ ] User can override target duration
-
-### Data Consistency
-
-- [ ] CreativeStudioContext SSOT — tất cả tabs đọc từ 1 context
-- [ ] Topic sync — selectedTopics[0] đồng bộ với Chặng 04
-- [ ] No manual re-input — KHÔNG nhập lại data đã có
-
-### Manual Approval
-
-- [ ] Mỗi bước/tab yêu cầu user duyệt trước khi tiếp tục
-- [ ] Không tự động chuyển bước
-- [ ] User có thể quay lại bước trước đó
-
----
-
-## 12. Documentation
-
-- [ ] **I/O Spec** — docs/dac-ta/FLORAOS_CREATIVE_STUDIO_IO_SPEC.md
-- [ ] **User Journey** — docs/dac-ta/FLORAOS_CREATIVE_STUDIO_JOURNEY.md
-- [ ] **Architecture doc** — cập nhật FLORAOS_TEMPLATE_SYSTEM_SSOT.md nếu có template mới
-- [ ] **Checklist này** — docs/dac-ta/FLORAOS_CREATIVE_STUDIO_CHECKLIST.md
-
----
-
-## 13. Trạng thái hiện tại (2026-09-21)
-
-### Đã xong
-
-- [x] Chương 6 Creative Production (6 domain + 5 use-case + 3 routes)
-- [x] Chương 7 Audio Studio (5 domain + 1 use-case + 1 adapter + route)
-- [x] Audio worker pytest (18/18)
-- [x] Nợ #110 fix (execute-cloud-creative.ts)
-- [x] I/O Spec document
-- [x] User Journey document
-- [x] Checklist này
-
-### Chưa làm (Đợt 1)
-
-- [ ] Chặng chuyển tiếp (Transition Stage)
-- [ ] Modal Chọn định hướng trên `/thi-truong`
-- [ ] Creative Studio shell (5 tabs)
-- [ ] Tab 2 (Contents) UI
-- [ ] Tab 3 (Audio) UI
-- [ ] Video duration detect (FFprobe)
-- [ ] Mode switch (CREATIVE/AUTHENTIC)
-- [ ] Tab 4 (Biến thể ảnh) UI kết nối
-- [ ] Tab 5 (Video) UI kết nối
-- [ ] Production Method Choice UI (local/provider)
-- [ ] AUTHENTIC content override logic
-
-### Chưa làm (Đợt 2+)
-
-- [ ] Package Dashboard
-- [ ] QA screen
-- [ ] Approval screen
-- [ ] Launch screen
-- [ ] Sell integration
-- [ ] Measure dashboard
-- [ ] Learn + Next Best Action
+## 0. Bàn giao & cổng chuyển tiếp
+
+- [x] URL bàn giao chỉ mang định danh, chặn Data URL/blob — `build-handoff-url.ts` + `build-handoff-url.test.ts`
+- [x] `validateTransition` 8 trường bắt buộc — `validate-transition.test.ts`
+- [x] Trang không bịa passport dự phòng; `category` = hình dáng, không phải phân khúc giá — `page.tsx` (23/09)
+- [x] `audioJobId`/`videoJobId` mang qua URL sang Khu vực F — `audio-workspace.tsx`, `video-workspace.tsx`
+- [ ] FFprobe tự đo thời lượng video nguồn — chưa làm
+
+## 1. Khu vực A — Chặng 01–05
+
+- [x] Tải ảnh → kho → `assets` ORIGINAL, kiểm `res.ok` từng bước — `product-intelligence-workspace.tsx` (23/09)
+- [x] Vision `gpt-4o-mini` bóc tách nguyên tử, sửa được — `openai-vision-adapter.ts`
+- [x] Trend Fit từ `trend_signals`, lưu `product_analysis_runs` — nợ #113/#115 đã trả; test tenant `product-intelligence-isolation`
+- [x] 10 chủ đề + video tham khảo có nhãn "ước tính" khi không phải số thật — `product-topics-list.tsx` (23/09)
+- [ ] Video tham khảo thời gian thực (TikTok/YouTube API) — nợ #122
+- [ ] Occasion Intelligence / Positioning / Competitive Context — nợ #117 (PO tạm hoãn)
+
+## 2. Khu vực B — Chặng 06a
+
+- [x] `POST /creative-production/produce`, CREATIVE/AUTHENTIC; `organizationId` từ phiên — `produce/route.ts` (23/09)
+- [x] 4 bài đa kênh, sửa được, không còn giá/thành phần bịa — `social-post-generator.ts`, `creative-result-viewer.tsx` (23/09)
+- [x] Sửa lỗi rules-of-hooks trong `CreativeResultViewer` (tách vỏ/thân) — eslint 0 lỗi
+- [x] "Lưu bài vào gói chiến dịch" — `package-client.ts`
+- [ ] Khuôn bài còn câu cam kết dịch vụ chung chưa lấy từ hồ sơ tiệm — nợ #119
+
+## 3. Khu vực C — Chặng 06b
+
+- [x] `Idempotency-Key` bắt buộc, `usage` trả số credit đã trừ thật — `audio/jobs/route.ts`, `create-audio-job.ts`
+- [x] Worker nhận `audio.generate`, ghi bản phối lên kho — `audio_worker.py#process_audio_generation_job` + `test_audio_job_lifecycle.py`
+- [x] `GET /audio/jobs/:id` + trình nghe trên trang — `get-audio-job.ts`, `audio-workspace.tsx`
+- [ ] Chạy thật với nhà cung cấp TTS trên máy có mạng — cần anh Tony chạy `npm run worker:media` + tạo 1 job
+
+## 4. Khu vực D — Chặng 06c
+
+- [x] 4 phân cảnh, mỗi cảnh một job thật (`scene_index` trong payload/metadata) — `variant-workspace.tsx`
+- [x] Nhánh cloud qua `enqueueJob` (`media.variant.cloud`, 2 credit), cổng Master đã duyệt — `request-variants.ts` + `request-cloud-variant.test.ts`
+- [x] Worker: Stability chỉ vẽ hậu cảnh, bó hoa dán nguyên khối, integrity ĐO — `stability_background.py`, `variant_worker.py` + `test_variant_cloud.py`
+- [x] Nhà cung cấp lỗi → lùi phông cục bộ, ghi `cloud_fallback` — `test_variant_cloud.py`
+- [x] Sửa phép đo: co biên 5px > light wrap 4px; REJECTED không ghi asset — `variant_worker.py#DO_SAU_CO_BIEN`
+- [x] Gỡ `execFileSync` khỏi tiến trình web; `studio_local` không trả ảnh gốc giả — `studio-local-image-provider.ts` + test router
+- [x] Gỡ canvas cutout phía trình duyệt; bỏ số "99.9%/99.8%/100%" gõ tay — `variant-workspace.tsx`
+- [x] Tự nạp phân cảnh chỉ của Master đang chọn (`parent_asset_id`) — `assets/route.ts`, `list-assets.ts`
+- [x] Ánh xạ Cảnh 2 theo `angleCategory` thật — `package-client.ts#sceneTwoPresetFor`
+- [x] Duyệt từng cảnh (`I5`) — `variant-workspace.tsx#handleApproveScene`
+- [ ] Đo tốc độ chính thức trên worker production (con số ~0,46s là đo CLI dev)
+
+## 5. Khu vực E — Chặng 06d
+
+- [x] Storyboard dựng ngay khi mở tab; gửi đúng storyboard đang thấy (sửa lỗi gửi rỗng) — `video-workspace.tsx`, `storyboard-editor.tsx#onChange`
+- [x] Ken Burns theo cảnh lưu `video_scenes.motion_effect`, vào payload render — migration `20260923161000`, `dispatch-video-render.ts`
+- [x] Tự gắn ảnh biến thể của Khu vực D vào cảnh — `video-workspace.tsx`
+- [x] Cổng duyệt `P3`/`P4` (đặc tả sửa theo mã)
+- [ ] Nhận bản phối âm thanh từ Khu vực C — nợ #123
+
+## 6. Khu vực F — Chặng 07–09
+
+- [x] Bảng `campaign_packages` (TENANT) + migration `20260923160000` + TRUNCATE test — `schema.prisma`, `tests/helpers/database.ts`
+- [x] Tạo/sửa gói, kiểm định danh thuộc đúng tổ chức & đúng Master — `manage-campaign-package.ts`
+- [x] QA năm trục phía máy chủ — `campaign-package-rules.ts` + `campaign-package-rules.test.ts` (17 ca)
+- [x] Duyệt `J5` + `audit_logs` cùng giao dịch + chốt chặn đua — `approve-campaign-package`
+- [x] Ca thử cách ly tenant — `tests/tenant/campaign-packages.test.ts` (viết xong, **chưa chạy** — cần Postgres)
+- [ ] Năng lực riêng + trần cứng cho duyệt gói — nợ #121 (chờ PO)
+
+## 7. Chặng 10–14
+
+- [x] Kế hoạch đăng + mã bài đã đăng — `PUT /packages/:id/launch`
+- [x] Đơn/doanh thu/hội thoại/số liệu kênh THẬT, có ghi giới hạn — `get-campaign-performance.ts`
+- [x] Mẫu thắng chỉ khi ≥ 3 gói, ≥ 2 nhóm — `extractWinningPatterns`
+- [x] Đề xuất dựa trên dữ kiện thật + dịp cố định 30 ngày — `nextBestActions`
+- [x] Gỡ toàn bộ số gõ cứng ("34 đơn", "20.366.000đ", "96%") — `package-downstream-card.tsx`
+- [ ] Tự đăng bài từ Creative Studio (hiện đăng ở Lịch đăng/SocialFlow) — ngoài phạm vi, theo ranh giới module
+- [ ] Quy đơn hàng về từng bài đăng (mã theo dõi/UTM) — chưa có
+
+## 8. Cắt ngang
+
+- [x] Mọi lượt AI của Creative Studio đi qua `enqueueJob` (trừ Vision/Product Intelligence là lời gọi đồng bộ có sổ riêng)
+- [x] Header Studio không còn nút chết `onClick: () => {}` — `page.tsx`
+- [ ] Nhánh cloud M04a (`/media/optimizations`) vẫn chạy đồng bộ — nợ #120
+- [ ] `npm run lint` toàn repo xanh — nợ #124
+- [ ] `npm run test:tenant` xanh trên máy có Postgres — **bắt buộc trước merge**
+
+## 9. Tài liệu
+
+- [x] Architecture v4.0 · IO Spec v4.0 · Journey v3.0 · Checklist v2.0
+- [x] Đặc tả 06 §8/§19/§22/§23, đặc tả 07 §20/§23 — `check:docs` khớp
+- [x] Registry, TRANG_THAI, TECHNICAL_DEBT (#119–#124), AGENTS.md trạng thái

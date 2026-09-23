@@ -23,6 +23,7 @@ const patchSchema = z.object({
         "zoom_out",
         "dissolve",
       ]).optional(),
+      motionEffect: z.enum(["ZOOM_IN", "ZOOM_OUT", "PAN_UP", "PAN_RIGHT", "STATIC"]).optional(),
     })
   ).min(1, "Phải có ít nhất 1 cảnh trong kịch bản"),
 });

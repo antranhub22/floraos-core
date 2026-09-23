@@ -34,6 +34,7 @@ export class ApproveStoryboardUseCase {
         textOverlay: s.text_overlay,
         voiceScript: s.voice_script,
         transitionEffect: (s.transition_effect as VideoSceneItem["transitionEffect"]) ?? "fade",
+        motionEffect: (s.motion_effect as VideoSceneItem["motionEffect"]) ?? undefined,
       })),
     });
 

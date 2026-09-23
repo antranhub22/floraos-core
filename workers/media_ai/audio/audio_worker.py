@@ -158,3 +158,97 @@ def process_audio_job(payload: Dict[str, Any], work_dir: Path) -> Dict[str, Any]
         "providerUsed": provider_used,
         "scenes": scene_outputs,
     }
+
+
+# ─── Vòng đời một job `audio.generate` (23/09/2026) ─────────────────────────
+#
+# Trước ngày này KHÔNG worker nào nhận `audio.generate`: route TS trừ credit
+# qua `enqueueJob` rồi job đứng PENDING mãi, và `process_audio_job` chỉ trả về
+# đường dẫn tệp tạm cục bộ. Hàm dưới đây nối nó vào hàng đợi chung
+# (`media_ai/jobs/worker.py`), ghi kết quả lên kho (`shared.storage.ghi_bytes`),
+# và đặt đúng ba trục `status`/`stage`/`result`.
+
+AUDIO_FEATURE = "audio.generate"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_STORAGE_ROOT = _REPO_ROOT / "var" / "storage"
+
+_MIME_THEO_DUOI = {".m4a": "audio/mp4", ".mp3": "audio/mpeg", ".wav": "audio/wav"}
+
+
+def _su_kien(conn: Any, job_id: str, event: str, payload: Dict[str, Any]) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO job_events (id, job_id, seq, event, payload, created_at)
+            VALUES (gen_random_uuid(), %(job_id)s,
+                    COALESCE((SELECT MAX(seq) FROM job_events WHERE job_id = %(job_id)s), 0) + 1,
+                    %(event)s, %(payload)s, now())
+            """,
+            {"job_id": job_id, "event": event, "payload": json.dumps(payload)},
+        )
+    conn.commit()
+
+
+def process_audio_generation_job(conn: Any, job: Dict[str, Any]) -> None:
+    """Chạy một job `audio.generate` đã được `claim_next` nhận (status PROCESSING)."""
+    import uuid
+
+    from shared.storage import ghi_bytes
+
+    job_id = job["id"]
+    organization_id = job["organization_id"]  # chỉ từ dòng job, không từ payload
+    payload = job["payload"] if isinstance(job["payload"], dict) else json.loads(job["payload"])
+    work_dir = Path(tempfile.mkdtemp(prefix=f"audio_{job_id}_"))
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE generation_jobs SET stage = 'GENERATING' WHERE id = %s", (job_id,))
+        conn.commit()
+        _su_kien(conn, job_id, "stage", {"stage": "GENERATING"})
+
+        ket_qua = process_audio_job(payload, work_dir)
+        if ket_qua.get("status") != "COMPLETED" or not ket_qua.get("mixedAudioPath"):
+            raise RuntimeError(ket_qua.get("error") or "Không phối trộn được âm thanh")
+
+        tep = Path(ket_qua["mixedAudioPath"])
+        mime = _MIME_THEO_DUOI.get(tep.suffix.lower(), "audio/mp4")
+        storage_key = (
+            f"org/{organization_id}/{job.get('product_id') or 'unfiled'}/"
+            f"{uuid.uuid4()}_audio{tep.suffix.lower() or '.m4a'}"
+        )
+        ghi_bytes(storage_key, tep.read_bytes(), mime, _STORAGE_ROOT)
+
+        output = {
+            "audio_storage_key": storage_key,
+            "mime_type": mime,
+            "total_duration_seconds": ket_qua.get("totalDurationSeconds"),
+            "provider_used": ket_qua.get("providerUsed"),
+            "has_voice": bool(ket_qua.get("voiceOnlyPath")),
+            "scenes": ket_qua.get("scenes", []),
+        }
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE generation_jobs
+                   SET status = 'COMPLETED', result = 'SAFE', stage = NULL,
+                       completed_at = now(), output = %s
+                 WHERE id = %s
+                """,
+                (json.dumps(output), job_id),
+            )
+        conn.commit()
+        _su_kien(conn, job_id, "done", {"status": "COMPLETED", **output})
+    except Exception as exc:  # noqa: BLE001 — hỏng kỹ thuật, không phải phán quyết
+        conn.rollback()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE generation_jobs
+                   SET status = 'FAILED', error = %s, stage = NULL, attempts = attempts + 1
+                 WHERE id = %s
+                """,
+                (str(exc)[:1000], job_id),
+            )
+        conn.commit()
+        _su_kien(conn, job_id, "done", {"status": "FAILED", "error": str(exc)[:1000]})
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)

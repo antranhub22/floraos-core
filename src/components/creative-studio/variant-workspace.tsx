@@ -1,6 +1,6 @@
 "use client"
 /**
- * VariantWorkspace — Tab 2: M04b Biến thể Marketing
+ * VariantWorkspace — Khu vực D (Chặng 06c): M04b Biến thể Marketing
  *
  * Cho phép tạo biến thể bối cảnh studio hoặc AI visual storytelling.
  * Tích hợp SourcePicker với lựa chọn:
@@ -39,8 +39,70 @@ import {
   getVariantPreset,
 } from "@/modules/media/domain/variant-presets"
 import { SourcePicker } from "./source-picker"
+import { sceneTwoPresetFor } from "./package-client"
 import { FLOW_M04B } from "./types"
 import type { UseCreativeStudioReturn } from "./use-creative-studio-data"
+
+// ============================================================
+// Phân cảnh Narrative Arc — helpers (23/09/2026)
+// ============================================================
+
+type SceneMeta = {
+  assetId: string
+  jobId: string
+  /** Subject Integrity ĐO bởi worker (0..1), `null` = chưa đo. */
+  integrity: number | null
+  engine: "local_studio" | "cloud_provider"
+  cloudFallback: boolean
+  approved?: boolean
+}
+
+type VariantJobPoll = {
+  status: string
+  result: string | null
+  error: string | null
+  source: { engine: "local_studio" | "cloud_provider"; cloud_fallback: boolean }
+  subject_integrity: { subject_pixel_identity: number } | null
+  variants: Array<{ asset_id: string; variant_key: string; url: string }>
+}
+
+/** Mô tả KHÔNG GIAN hậu cảnh gửi nhà cung cấp — không mô tả bó hoa (bó hoa
+ *  thật được dán nguyên khối ở worker). */
+const SCENE_BACKGROUND_PROMPTS: Record<number, string> = {
+  2: "Luxury grand opening banquet hall, modern hotel lobby, warm cinematic lighting, shallow depth of field, soft bokeh",
+  3: "Warm minimalist Nordic oak tabletop, soft morning sunlight from a window, creamy bokeh, calm interior",
+}
+
+
+function formatIntegrity(value: number | null, hasGenerated: boolean): string {
+  if (!hasGenerated) return "Chưa sinh — chưa đo"
+  if (value === null) return "Chưa có số đo"
+  const pct = (value * 100).toFixed(2)
+  if (value >= 0.999) return `Lõi trùng khít ${pct}% (SAFE)`
+  if (value >= 0.99) return `Lõi trùng khít ${pct}% (WARNING)`
+  return `Lõi trùng khít ${pct}% (REJECTED)`
+}
+
+const POLL_INTERVAL_MS = 2000
+const POLL_TIMEOUT_MS = 6 * 60 * 1000
+
+async function waitForVariantJob(jobId: string): Promise<VariantJobPoll> {
+  const deadline = Date.now() + POLL_TIMEOUT_MS
+  while (Date.now() < deadline) {
+    const res = await fetch(`/api/v1/media/variants/${encodeURIComponent(jobId)}`)
+    if (res.ok) {
+      const detail = (await res.json()) as VariantJobPoll
+      if (detail.status === "COMPLETED" || detail.status === "FAILED" || detail.status === "CANCELLED") {
+        return detail
+      }
+    } else if (res.status !== 404 && res.status < 500) {
+      const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
+      throw new Error(err.error?.message || `Không đọc được trạng thái job (HTTP ${res.status})`)
+    }
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+  }
+  throw new Error("Quá thời gian chờ worker — kiểm tra worker media (npm run worker:media) đang chạy.")
+}
 
 interface VariantWorkspaceProps {
   data: UseCreativeStudioReturn
@@ -52,14 +114,24 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   const context = useContext(CreativeStudioContext)
   const [showManualSourcePicker, setShowManualSourcePicker] = useState(false)
   const [selectedSceneIndex, setSelectedSceneIndex] = useState<number>(2)
+  // Ảnh + số đo THẬT của từng phân cảnh (23/09/2026). Mỗi cảnh là một job
+  // `POST /media/variants` riêng (qua `enqueueJob`), đọc kết quả bằng
+  // `GET /media/variants/:job_id` — không còn ảnh Data URL phía trình duyệt,
+  // không còn số "99.9%" gõ tay.
   const [sceneImageMap, setSceneImageMap] = useState<Record<number, string>>({})
+  const [sceneMeta, setSceneMeta] = useState<Record<number, SceneMeta>>({})
+  const [sceneErrors, setSceneErrors] = useState<Record<number, string>>({})
   const [generatingSceneIndex, setGeneratingSceneIndex] = useState<number | null>(null)
   const [generatingAllScenes, setGeneratingAllScenes] = useState<boolean>(false)
+  // Cảnh 2–3 (hậu cảnh lifestyle/cận cảnh): mặc định Stability qua hàng đợi job
+  // (chốt 23/09/2026); nhà cung cấp lỗi thì worker tự lùi về phông cục bộ.
+  // Cảnh 1 (studio trắng) và Cảnh 4 (tách nền) luôn chạy cục bộ — không cần hậu cảnh AI.
+  const [sceneEngine, setSceneEngine] = useState<"cloud_provider" | "local_studio">("cloud_provider")
 
   const navigateToArea = (area: "b" | "c" | "d" | "e" | "f") => {
     const params = new URLSearchParams(searchParams?.toString() || "")
     params.set("area", area)
-    router.push(`/creative-studio?${params.toString()}` as any)
+    router.push(`/creative-studio?${params.toString()}` as never)
   }
 
   const {
@@ -108,216 +180,108 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     setErrorMsg,
   } = data
 
-  // Tự động đồng bộ selectedMasterId từ context.assetId nếu có
+  // Chỉ chọn sẵn khi asset từ Khu vực A CHÍNH LÀ một Master đã duyệt. Ảnh
+  // ORIGINAL phải qua "Skip — Dùng ảnh gốc" (promote-to-master, I2) trước —
+  // gán thẳng ORIGINAL làm Master là đi vòng qua cổng 2 và máy chủ trả 409.
   useEffect(() => {
-    if (context?.assetId && !selectedMasterId) {
+    if (!context?.assetId || selectedMasterId) return
+    if (approvedMasters.some((m) => m.id === context.assetId)) {
       setSelectedMasterId(context.assetId)
     }
-  }, [context?.assetId, selectedMasterId, setSelectedMasterId])
+  }, [context?.assetId, selectedMasterId, approvedMasters, setSelectedMasterId])
 
-  // Tự động tải các biến thể phân cảnh đã có sẵn của Master Asset từ DB
+  const activeMasterId = selectedMasterId || approvedMasters[0]?.id || ""
+
+  // Nạp các phân cảnh ĐÃ sinh của đúng Master đang chọn (không quét cả tổ chức).
   useEffect(() => {
+    if (!activeMasterId) return
+    let cancelled = false
     async function loadExistingScenes() {
       try {
-        const res = await fetch("/api/v1/assets?kind=MARKETING&limit=50")
+        const res = await fetch(
+          `/api/v1/assets?kind=MARKETING&parent_asset_id=${encodeURIComponent(activeMasterId)}&limit=100`
+        )
         if (!res.ok) return
-        const data = await res.json()
-        const items = (data.items || data.assets || []) as Array<{
-          metadata?: Record<string, any>
-          storage_key?: string
-          view_url?: string
-          url?: string
-        }>
-        const newMap: Record<number, string> = {}
-        for (const item of items) {
-          const meta = item.metadata || {}
-          const key = item.storage_key || ""
-          const url = item.view_url || item.url || ""
-          if (!url) continue
-          if (meta.sceneIndex) {
-            newMap[meta.sceneIndex] = url
-          } else if (key.includes("scene_1_setup")) {
-            newMap[1] = url
-          } else if (key.includes("scene_2_lifestyle") || meta.preset === "boutique_bokeh") {
-            newMap[2] = url
-          } else if (key.includes("scene_3_climax") || meta.preset === "wood_warm") {
-            newMap[3] = url
-          } else if (key.includes("scene_4_transparent") || meta.preset === "transparent") {
-            newMap[4] = url
+        const body = (await res.json()) as {
+          data?: Array<{
+            id: string
+            url?: string | null
+            identity_score?: number | null
+            approval_state?: string
+            metadata?: Record<string, unknown> | null
+          }>
+        }
+        const urls: Record<number, string> = {}
+        const metas: Record<number, SceneMeta> = {}
+        // `data` sắp theo created_at giảm dần — bản mới nhất của mỗi cảnh thắng.
+        for (const item of body.data ?? []) {
+          const meta = item.metadata ?? {}
+          const idx = typeof meta.scene_index === "number" ? meta.scene_index : null
+          if (!idx || urls[idx] || !item.url) continue
+          const wantKey = idx === 4 ? "transparent" : "styled"
+          if (meta.variant_key !== wantKey) continue
+          urls[idx] = item.url
+          metas[idx] = {
+            assetId: item.id,
+            jobId: typeof meta.job_id === "string" ? meta.job_id : "",
+            integrity: typeof item.identity_score === "number" ? item.identity_score : null,
+            engine: meta.engine === "cloud_provider" ? "cloud_provider" : "local_studio",
+            cloudFallback: meta.cloud_fallback === true,
+            approved: item.approval_state === "APPROVED",
           }
         }
-        if (Object.keys(newMap).length > 0) {
-          setSceneImageMap((prev) => ({ ...newMap, ...prev }))
-        }
+        if (cancelled) return
+        setSceneImageMap(urls)
+        setSceneMeta(metas)
       } catch (e) {
-        console.error("Lỗi nạp biến thể phân cảnh có sẵn:", e)
+        console.error("Lỗi nạp phân cảnh đã sinh:", e)
       }
     }
     loadExistingScenes()
-  }, [selectedMasterId, context?.assetId])
-
-  // Hàm client-side khử phông trắng thành transparent PNG trong suốt tức thì cho Cảnh 4 (fallback)
-  const createTransparentCutout = async (imgUrl: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image()
-      img.crossOrigin = "anonymous"
-      img.onload = () => {
-        const canvas = document.createElement("canvas")
-        canvas.width = img.width
-        canvas.height = img.height
-        const ctx = canvas.getContext("2d")
-        if (!ctx) {
-          resolve(imgUrl)
-          return
-        }
-        ctx.drawImage(img, 0, 0)
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        const d = imgData.data
-        // Khử màu trắng/gần trắng thành transparent
-        for (let i = 0; i < d.length; i += 4) {
-          const r = d[i] ?? 0
-          const g = d[i + 1] ?? 0
-          const b = d[i + 2] ?? 0
-          if (r > 235 && g > 235 && b > 235) {
-            d[i + 3] = 0 // alpha = 0
-          }
-        }
-        ctx.putImageData(imgData, 0, 0)
-        resolve(canvas.toDataURL("image/png"))
-      }
-      img.onerror = () => resolve(imgUrl)
-      img.src = imgUrl
-    })
-  }
-
-  // Hàm sinh biến thể AI thực thụ cho từng phân cảnh
-  const handleGenerateSingleScene = async (targetIndex: number) => {
-    const masterId = selectedMasterId || context?.assetId || approvedMasters[0]?.id || ""
-    const flowerSourceUrl = context?.sourceImageUrl || approvedMasters[0]?.url || ""
-
-    if (!masterId) {
-      alert("Chưa xác định được ảnh hoa Master. Vui lòng kiểm tra lại ảnh nguồn.")
-      return
+    return () => {
+      cancelled = true
     }
+  }, [activeMasterId])
 
-    setGeneratingSceneIndex(targetIndex)
-    try {
-      let directives: string[] = []
-      let angle = cameraAngle || "front_view"
-
-      if (targetIndex === 2) {
-        directives = [
-          "A luxury celebratory flower stand in high-end grand opening banquet hall, modern hotel lobby, warm cinematic lighting, shallow depth of field, 8k professional commercial photography",
-        ]
-        angle = "front_view"
-      } else if (targetIndex === 3) {
-        directives = [
-          "Close-up shot of elegant floral arrangement with decorative ribbons and congratulations greeting card on warm minimalist Nordic oak table, soft morning sunlight, creamy bokeh, 8k commercial photography",
-        ]
-        angle = "macro_closeup"
-      } else if (targetIndex === 4) {
-        directives = [
-          "Transparent background cutout PNG with pure alpha channel, perfectly isolating flower arrangement",
-        ]
-        angle = "front_view"
-      }
-
-      const res = await fetch("/api/v1/media/variants", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "idempotency-key": `scene-${targetIndex}-${Date.now()}-${crypto.randomUUID()}`,
-        },
-        body: JSON.stringify({
-          master_asset_id: masterId,
-          engine: "cloud_provider",
-          provider_key: "stability",
-          ratio: variantRatio || "1:1",
-          camera_angle: angle,
-          custom_directives: directives,
-        }),
-      })
-
-      if (res.ok) {
-        const resData = (await res.json()) as { image_url?: string }
-        if (resData.image_url) {
-          setSceneImageMap((prev) => ({ ...prev, [targetIndex]: resData.image_url! }))
-          setSelectedSceneIndex(targetIndex)
-          return
-        }
-      }
-
-      // Fallback riêng cho Cảnh 4 nếu API lỗi
-      if (targetIndex === 4 && flowerSourceUrl) {
-        const transparentPng = await createTransparentCutout(flowerSourceUrl)
-        setSceneImageMap((prev) => ({ ...prev, 4: transparentPng }))
-        setSelectedSceneIndex(4)
-        return
-      }
-
-      const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
-      throw new Error(err.error?.message || `Lỗi API HTTP ${res.status}`)
-    } catch (err: any) {
-      console.error(`Lỗi sinh biến thể cảnh ${targetIndex}:`, err)
-      // Nếu Cảnh 4 lỗi, thử fallback cutout
-      if (targetIndex === 4 && flowerSourceUrl) {
-        const transparentPng = await createTransparentCutout(flowerSourceUrl)
-        setSceneImageMap((prev) => ({ ...prev, 4: transparentPng }))
-        setSelectedSceneIndex(4)
-      } else {
-        alert(`Không thể sinh biến thể cảnh ${targetIndex}: ${err.message}`)
-      }
-    } finally {
-      setGeneratingSceneIndex(null)
-    }
-  }
-
-  // Hàm sinh trọn bộ cả 4 phân cảnh Narrative Arc
-  const handleGenerateAllScenes = async () => {
-    setGeneratingAllScenes(true)
-    try {
-      // 1. Sinh Cảnh 2 (Lifestyle) qua Stability AI
-      await handleGenerateSingleScene(2)
-      // 2. Sinh Cảnh 3 (Cận cảnh thiệp/gỗ ấm) qua Stability AI
-      await handleGenerateSingleScene(3)
-      // 3. Tách nền Cảnh 4 (PNG)
-      await handleGenerateSingleScene(4)
-    } finally {
-      setGeneratingAllScenes(false)
-    }
-  }
-
-  // Phân tích kịch bản bối cảnh hình ảnh (Narrative Arc) từ Chặng 04-05
+  // Phân tích kịch bản bối cảnh hình ảnh (Narrative Arc) từ Chặng 04-05.
+  // `angleCategory` thật: EMOTIONAL | PROBLEM_SOLUTION | PRODUCT_SHOWCASE |
+  // EDUCATIONAL | TREND | PRICE_VALUE (bản trước so với "LOVE"/"OPENING" —
+  // không bao giờ khớp, Cảnh 2 luôn rơi về phòng khách).
   const narrativeImageScenes = useMemo(() => {
     const topic = context?.selectedTopic
     const occasion = context?.commercialPassport?.suggestedOccasions?.[0] || "Khai trương & Sự kiện"
-    const isRomantic = topic?.angleCategory?.includes("LOVE") || topic?.angleCategory?.includes("ROMANTIC")
-    const isCeremony = topic?.angleCategory?.includes("CONGRATS") || topic?.angleCategory?.includes("OPENING")
+    const scene2Preset = sceneTwoPresetFor(topic?.angleCategory)
+    const scene2Title =
+      scene2Preset === "wedding"
+        ? "Bàn Tiệc Cưới & Hẹn Hò"
+        : scene2Preset === "luxury_hotel"
+        ? "Sảnh Khách Sạn & Tiệc Mừng"
+        : "Phòng Khách Gia Đình Ấm Cúng"
 
     return [
       {
         sceneIndex: 1,
         beat: "SETUP",
         beatLabel: "Mở đầu — Vẻ đẹp nguyên bản",
-        presetId: "studio_white",
+        presetId: "studio_white" as const,
         title: "Studio Trắng Tinh Khôi",
         description: `Tập trung vào phom dáng và màu sắc nguyên bản của ${context?.productName || "bó hoa"}, đổ bóng mềm tự nhiên chuẩn E-commerce.`,
-        tag: "Bán chạy",
+        tag: "Catalog",
       },
       {
         sceneIndex: 2,
         beat: "RISING",
         beatLabel: `Trải nghiệm — ${occasion}`,
-        presetId: isRomantic ? "wedding" : isCeremony ? "luxury_hotel" : "living_room",
-        title: isRomantic ? "Bàn Tiệc Cưới & Hẹn Hò" : isCeremony ? "Sảnh Khách Sạn & Tiệc Mừng" : "Phòng Khách Gia Đình Ấm Cúng",
-        description: `Hòa phối bó hoa vào không gian ${occasion.toLowerCase()} sang trọng, mang lại cảm xúc chân thực cho người mua.`,
+        presetId: scene2Preset,
+        title: scene2Title,
+        description: `Hòa phối bó hoa vào không gian ${occasion.toLowerCase()}, mang lại cảm xúc chân thực cho người mua.`,
         tag: "Lifestyle",
       },
       {
         sceneIndex: 3,
         beat: "CLIMAX",
         beatLabel: "Chi tiết — Tôn vinh phụ liệu & Thiệp",
-        presetId: "wood_minimal",
+        presetId: "wood_minimal" as const,
         title: "Gỗ Tối Giản Nghệ Thuật (Bắc Âu)",
         description: "Bối cảnh ánh sáng ban mai nhẹ nhàng, làm nổi bật thông điệp thiệp in/viết và phụ liệu nơ thiết kế riêng.",
         tag: "Tối giản",
@@ -325,98 +289,178 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
       {
         sceneIndex: 4,
         beat: "CTA",
-        beatLabel: "Xuất bản — Đa kênh & Bản quyền",
-        presetId: "transparent",
-        title: "Tách Nền Trong Suốt (PNG) + Watermark",
-        description: "Khử nền hoàn toàn, giữ nguyên 100% từng cánh hoa và lá đệm, gắn logo tiệm hoa để xuất bản đa kênh.",
+        beatLabel: "Xuất bản — Đa kênh",
+        presetId: "transparent" as const,
+        title: "Tách Nền Trong Suốt (PNG)",
+        description: "Khử nền, giữ nguyên từng cánh hoa và lá đệm, sẵn sàng ghép banner để xuất bản đa kênh.",
         tag: "Xuất bản",
       },
     ]
   }, [context])
 
-  // Xây dựng 4 khung phân cảnh Narrative Arc cho màn hình kết quả (Ưu tiên ảnh Studio/Stability AI vừa sinh)
+  // Sinh MỘT phân cảnh qua hàng đợi job rồi chờ kết quả thật.
+  const handleGenerateSingleScene = async (targetIndex: number): Promise<void> => {
+    const scene = narrativeImageScenes.find((s) => s.sceneIndex === targetIndex)
+    if (!scene) return
+    if (!activeMasterId) {
+      setSceneErrors((prev) => ({
+        ...prev,
+        [targetIndex]:
+          "Chưa có Master Image đã duyệt. Chọn ảnh ở mục nguồn ảnh (hoặc bấm 'Skip — Dùng ảnh gốc') trước.",
+      }))
+      return
+    }
+
+    const useCloud = sceneEngine === "cloud_provider" && (targetIndex === 2 || targetIndex === 3)
+    setGeneratingSceneIndex(targetIndex)
+    setSceneErrors((prev) => {
+      const next = { ...prev }
+      delete next[targetIndex]
+      return next
+    })
+    try {
+      const res = await fetch("/api/v1/media/variants", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "idempotency-key": `scene-${activeMasterId}-${targetIndex}-${crypto.randomUUID()}`,
+        },
+        body: JSON.stringify({
+          master_asset_id: activeMasterId,
+          engine: useCloud ? "cloud_provider" : "local_studio",
+          preset: scene.presetId,
+          ratio: variantRatio || "1:1",
+          watermark: false,
+          scene_index: targetIndex,
+          ...(useCloud ? { provider_key: "stability", scene_prompt: SCENE_BACKGROUND_PROMPTS[targetIndex] } : {}),
+        }),
+      })
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
+        throw new Error(err.error?.message || `Lỗi API HTTP ${res.status}`)
+      }
+      const { job_id: jobId } = (await res.json()) as { job_id: string }
+      const detail = await waitForVariantJob(jobId)
+
+      if (detail.status !== "COMPLETED") {
+        throw new Error(detail.error || "Worker không dựng được phân cảnh này")
+      }
+      if (detail.result === "REJECTED") {
+        throw new Error(
+          "Cổng Subject Integrity từ chối: lõi bó hoa bị thay đổi — không biến thể nào được ghi vào kho."
+        )
+      }
+      const wantKey = targetIndex === 4 ? "transparent" : "styled"
+      const variant = detail.variants.find((v) => v.variant_key === wantKey) ?? detail.variants[0]
+      if (!variant) throw new Error("Job hoàn tất nhưng không có ảnh nào được ghi.")
+
+      setSceneImageMap((prev) => ({ ...prev, [targetIndex]: variant.url }))
+      setSceneMeta((prev) => ({
+        ...prev,
+        [targetIndex]: {
+          assetId: variant.asset_id,
+          jobId,
+          integrity: detail.subject_integrity?.subject_pixel_identity ?? null,
+          engine: detail.source.engine,
+          cloudFallback: detail.source.cloud_fallback,
+        },
+      }))
+      setSelectedSceneIndex(targetIndex)
+    } catch (err) {
+      setSceneErrors((prev) => ({
+        ...prev,
+        [targetIndex]: err instanceof Error ? err.message : "Không sinh được phân cảnh",
+      }))
+    } finally {
+      setGeneratingSceneIndex(null)
+    }
+  }
+
+  // Duyệt MỘT phân cảnh (I5, trần cứng) — cùng endpoint duyệt biến thể M04b.
+  const [approvingSceneIndex, setApprovingSceneIndex] = useState<number | null>(null)
+  const handleApproveScene = async (targetIndex: number) => {
+    const meta = sceneMeta[targetIndex]
+    if (!meta?.jobId || !meta.assetId) return
+    setApprovingSceneIndex(targetIndex)
+    try {
+      const res = await fetch(`/api/v1/media/variants/${encodeURIComponent(meta.jobId)}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ asset_id: meta.assetId }),
+      })
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
+        throw new Error(err.error?.message || `Không duyệt được (HTTP ${res.status})`)
+      }
+      setSceneMeta((prev) => ({ ...prev, [targetIndex]: { ...meta, approved: true } }))
+    } catch (err) {
+      setSceneErrors((prev) => ({
+        ...prev,
+        [targetIndex]: err instanceof Error ? err.message : "Không duyệt được phân cảnh",
+      }))
+    } finally {
+      setApprovingSceneIndex(null)
+    }
+  }
+
+  // Sinh trọn bộ 4 phân cảnh — tuần tự, mỗi cảnh một job (một lượt trừ credit).
+  const handleGenerateAllScenes = async () => {
+    setGeneratingAllScenes(true)
+    try {
+      for (const idx of [1, 2, 3, 4]) {
+        await handleGenerateSingleScene(idx)
+      }
+    } finally {
+      setGeneratingAllScenes(false)
+    }
+  }
+
+  // 4 khung phân cảnh cho màn kết quả — CHỈ hiển thị ảnh thật đã sinh cho đúng
+  // cảnh. Cảnh chưa sinh thì để trống và ghi "Chưa sinh", không mượn ảnh gốc
+  // gắn nhãn "Biến thể AI" như bản trước.
   const narrativeResultScenes = useMemo(() => {
-    const topic = context?.selectedTopic
-    const occasion = context?.commercialPassport?.suggestedOccasions?.[0] || "Khai trương & Sự kiện"
-    const flowerSourceUrl = context?.sourceImageUrl || approvedMasters[0]?.url || ""
-    const generatedUrl = generatedVariants[0]?.url || ""
-
-    const scene1Url = sceneImageMap[1] || flowerSourceUrl || generatedUrl
-    const scene2Url = sceneImageMap[2] || (generatedVariants[0]?.variant_key === "ai_storytelling" && generatedVariants[0]?.url !== flowerSourceUrl ? generatedVariants[0]?.url : "") || flowerSourceUrl
-    const scene3Url = sceneImageMap[3] || generatedVariants[1]?.url || flowerSourceUrl
-    const scene4Url = sceneImageMap[4] || generatedVariants.find((v) => v.variant_key === "transparent")?.url || flowerSourceUrl
-
-    const hasNewScene1 = Boolean(sceneImageMap[1])
-    const hasNewScene2 = Boolean(sceneImageMap[2])
-    const hasNewScene3 = Boolean(sceneImageMap[3])
-    const hasNewScene4 = Boolean(sceneImageMap[4])
-
-    return [
-      {
-        sceneIndex: 1,
-        beat: "SETUP",
-        beatColor: "bg-blue-100 text-blue-800 border-blue-200",
-        beatLabel: "Mở đầu — Vẻ đẹp nguyên bản",
-        title: "Studio Trắng Tinh Khôi (Ảnh gốc Master)",
-        presetId: "studio_white",
-        imageUrl: scene1Url,
-        isOriginal: true,
-        tag: hasNewScene1 ? "Studio Trắng Chuẩn" : "Ảnh gốc đã xác thực",
-        ratio: variantRatio || "1:1",
-        description: `Bảo toàn 100% phom dáng và sắc hoa thật từ Chặng 01–02 của ${context?.productName || "bó hoa"}.`,
-        integrityText: "Lõi chủ thể 100% (Nguyên bản)",
-        hasGenerated: true,
-      },
-      {
-        sceneIndex: 2,
-        beat: "RISING",
-        beatColor: "bg-purple-100 text-purple-800 border-purple-200",
-        beatLabel: `Trải nghiệm — ${occasion}`,
-        title: "Không Gian Lifestyle Sang Trọng",
-        presetId: "luxury_hotel",
-        imageUrl: scene2Url,
+    const beatColors: Record<number, string> = {
+      1: "bg-blue-100 text-blue-800 border-blue-200",
+      2: "bg-purple-100 text-purple-800 border-purple-200",
+      3: "bg-rose-100 text-rose-800 border-rose-200",
+      4: "bg-amber-100 text-amber-800 border-amber-200",
+    }
+    return narrativeImageScenes.map((scene) => {
+      const meta = sceneMeta[scene.sceneIndex]
+      const url = sceneImageMap[scene.sceneIndex] || ""
+      const hasGenerated = Boolean(url)
+      return {
+        sceneIndex: scene.sceneIndex,
+        beat: scene.beat,
+        beatColor: beatColors[scene.sceneIndex] ?? "",
+        beatLabel: scene.beatLabel,
+        title: scene.title,
+        presetId: scene.presetId,
+        imageUrl: url,
         isOriginal: false,
-        tag: hasNewScene2 ? "Đã sinh Studio Lifestyle" : "Biến thể AI Lifestyle",
+        isTransparent: scene.sceneIndex === 4,
+        tag: !hasGenerated
+          ? "Chưa sinh"
+          : meta?.engine === "cloud_provider" && !meta.cloudFallback
+          ? "Hậu cảnh Stability"
+          : meta?.cloudFallback
+          ? "Studio cục bộ (Stability lỗi)"
+          : "Studio cục bộ",
         ratio: variantRatio || "1:1",
-        description: `Hòa phối bó hoa vào không gian ${occasion.toLowerCase()} cao cấp theo kịch bản tiếp thị Chặng 04.`,
-        integrityText: variantIntegrity
-          ? `Lõi trùng khít ${(variantIntegrity.subject_pixel_identity * 100).toFixed(2)}%`
-          : "Lõi trùng khít 99.9% (An toàn)",
-        hasGenerated: hasNewScene2,
-      },
-      {
-        sceneIndex: 3,
-        beat: "CLIMAX",
-        beatColor: "bg-rose-100 text-rose-800 border-rose-200",
-        beatLabel: "Chi tiết — Tôn vinh phụ liệu & Thiệp",
-        title: "Gỗ Tối Giản Nghệ Thuật (Bắc Âu)",
-        presetId: "wood_minimal",
-        imageUrl: scene3Url,
-        isOriginal: false,
-        tag: hasNewScene3 ? "Đã sinh Gỗ Tối Giản" : "Biến thể Cận cảnh",
-        ratio: variantRatio || "1:1",
-        description: "Ánh sáng ban mai nhẹ nhàng, làm nổi bật thông điệp thiệp chúc mừng OCR và ruy băng nơ.",
-        integrityText: "Lõi trùng khít 99.8% (An toàn)",
-        hasGenerated: hasNewScene3,
-      },
-      {
-        sceneIndex: 4,
-        beat: "CTA",
-        beatColor: "bg-amber-100 text-amber-800 border-amber-200",
-        beatLabel: "Xuất bản — Đa kênh & Watermark",
-        presetId: "transparent",
-        title: "Tách Nền Trong Suốt (PNG) & Logo Tiệm",
-        imageUrl: scene4Url,
-        isOriginal: false,
-        isTransparent: true,
-        tag: hasNewScene4 ? "Đã tách nền PNG U2-Net" : "PNG Đa kênh",
-        ratio: variantRatio || "1:1",
-        description: "Khử nền U2-Net, sẵn sàng gắn logo tiệm hoa và ghép banner xuất bản đa nền tảng.",
-        integrityText: "Lõi trùng khít 100% (PNG)",
-        hasGenerated: hasNewScene4,
-      },
-    ]
-  }, [context, approvedMasters, generatedVariants, variantRatio, variantIntegrity, sceneImageMap])
+        description: scene.description,
+        integrityText: formatIntegrity(meta?.integrity ?? null, hasGenerated),
+        hasGenerated,
+        approved: meta?.approved === true,
+        error: sceneErrors[scene.sceneIndex] ?? null,
+      }
+    })
+  }, [narrativeImageScenes, sceneImageMap, sceneMeta, sceneErrors, variantRatio])
+
+  const generatedSceneCount = narrativeResultScenes.filter((s) => s.hasGenerated).length
+  const measuredIntegrities = narrativeResultScenes
+    .map((s) => sceneMeta[s.sceneIndex]?.integrity)
+    .filter((v): v is number => typeof v === "number")
+  const minSceneIntegrity = measuredIntegrities.length > 0 ? Math.min(...measuredIntegrities) : null
 
   // ============================================================
   // PHASE: RUNNING B
@@ -459,7 +503,24 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
             <div className="text-xs text-text-muted">④ Thẻ kết quả — M04b (Biến thể Marketing Narrative Arc)</div>
             <div className="text-[19px] font-extrabold text-text">Bộ 4 Phân Cảnh Hình Ảnh Theo Cung Kịch Bản</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex rounded-lg border border-border overflow-hidden text-[11px] font-bold">
+              {(["cloud_provider", "local_studio"] as const).map((eng) => (
+                <button
+                  key={eng}
+                  type="button"
+                  onClick={() => setSceneEngine(eng)}
+                  className={`px-2.5 py-1.5 cursor-pointer ${sceneEngine === eng ? "bg-primary text-white" : "bg-surface text-text-muted"}`}
+                  title={
+                    eng === "cloud_provider"
+                      ? "Cảnh 2–3: Stability vẽ hậu cảnh, bó hoa thật dán nguyên khối (2 credit/cảnh)"
+                      : "Cảnh 2–3: phông Studio cục bộ (1 credit/cảnh)"
+                  }
+                >
+                  {eng === "cloud_provider" ? "Hậu cảnh Stability" : "Studio cục bộ"}
+                </button>
+              ))}
+            </div>
             <Button
               size="sm"
               onClick={handleGenerateAllScenes}
@@ -467,12 +528,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               className="gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold shadow-md hover:from-red-700 hover:to-rose-700 h-9 cursor-pointer"
             >
               <Sparkles size={14} className={generatingAllScenes ? "animate-spin" : ""} />
-              {generatingAllScenes ? "Đang sinh trọn bộ qua Stability AI..." : "⚡ Sinh mới Trọn bộ 4 Biến thể (Stability AI)"}
+              {generatingAllScenes ? "Đang sinh trọn bộ 4 phân cảnh..." : "⚡ Sinh trọn bộ 4 phân cảnh"}
             </Button>
             <Badge tone={judgmentB === "blocked" ? "danger" : "success"} className="text-xs px-3 py-1 font-bold">
               {judgmentB === "blocked"
                 ? "Bị cổng toàn vẹn từ chối"
-                : "Trọn bộ 4/4 phân cảnh đã sẵn sàng"}
+                : `${generatedSceneCount}/4 phân cảnh đã sinh`}
             </Badge>
           </div>
         </div>
@@ -594,6 +655,22 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   >
                     <Download size={13} /> Tải ảnh phân cảnh này
                   </Button>
+                  {activeScene.hasGenerated && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={activeScene.approved || !canApproveVariantCap || approvingSceneIndex !== null}
+                      onClick={() => handleApproveScene(activeScene.sceneIndex)}
+                      className="gap-1.5 text-xs h-9 cursor-pointer"
+                    >
+                      <Check size={13} />
+                      {activeScene.approved
+                        ? "Đã duyệt (I5)"
+                        : approvingSceneIndex === activeScene.sceneIndex
+                        ? "Đang duyệt..."
+                        : "Duyệt ảnh này"}
+                    </Button>
+                  )}
                   <span className="text-[11px] text-text-muted">
                     Bấm vào các khung bên dưới để chuyển xem từng cảnh
                   </span>
@@ -700,62 +777,29 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                       </button>
                     </div>
 
-                    {/* Nút sinh AI độc lập từng cảnh */}
-                    {scene.sceneIndex === 2 && (
-                      <button
-                        type="button"
-                        disabled={generatingSceneIndex === 2 || generatingAllScenes}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleGenerateSingleScene(2)
-                        }}
-                        className="w-full mt-2 py-1.5 px-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-[11px] border border-purple-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
-                      >
-                        <Sparkles size={12} className={generatingSceneIndex === 2 ? "animate-spin" : ""} />
-                        {generatingSceneIndex === 2
-                          ? "Đang sinh bối cảnh..."
-                          : scene.hasGenerated
-                          ? "🔄 Sinh lại Lifestyle"
-                          : "⚡ Sinh ảnh Lifestyle (Stability AI)"}
-                      </button>
-                    )}
-
-                    {scene.sceneIndex === 3 && (
-                      <button
-                        type="button"
-                        disabled={generatingSceneIndex === 3 || generatingAllScenes}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleGenerateSingleScene(3)
-                        }}
-                        className="w-full mt-2 py-1.5 px-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] border border-rose-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
-                      >
-                        <Sparkles size={12} className={generatingSceneIndex === 3 ? "animate-spin" : ""} />
-                        {generatingSceneIndex === 3
-                          ? "Đang sinh cận cảnh..."
-                          : scene.hasGenerated
-                          ? "🔄 Sinh lại Cận cảnh"
-                          : "⚡ Sinh ảnh Cận cảnh (Stability AI)"}
-                      </button>
-                    )}
-
-                    {scene.sceneIndex === 4 && (
-                      <button
-                        type="button"
-                        disabled={generatingSceneIndex === 4 || generatingAllScenes}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleGenerateSingleScene(4)
-                        }}
-                        className="w-full mt-2 py-1.5 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[11px] border border-amber-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
-                      >
-                        <Sparkles size={12} className={generatingSceneIndex === 4 ? "animate-spin" : ""} />
-                        {generatingSceneIndex === 4
-                          ? "Đang tách nền..."
-                          : scene.hasGenerated
-                          ? "✅ Đã tách nền PNG"
-                          : "⚡ Tạo PNG Tách nền"}
-                      </button>
+                    {/* Nút sinh độc lập từng cảnh — mỗi lượt là một job thật */}
+                    <button
+                      type="button"
+                      disabled={generatingSceneIndex !== null || generatingAllScenes}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleGenerateSingleScene(scene.sceneIndex)
+                      }}
+                      className="w-full mt-2 py-1.5 px-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-[11px] border border-purple-200 flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-60"
+                    >
+                      <Sparkles size={12} className={generatingSceneIndex === scene.sceneIndex ? "animate-spin" : ""} />
+                      {generatingSceneIndex === scene.sceneIndex
+                        ? "Đang chờ worker dựng cảnh..."
+                        : scene.hasGenerated
+                        ? `🔄 Sinh lại Cảnh ${scene.sceneIndex}`
+                        : scene.sceneIndex === 4
+                        ? "⚡ Tạo PNG tách nền"
+                        : (scene.sceneIndex === 2 || scene.sceneIndex === 3) && sceneEngine === "cloud_provider"
+                        ? `⚡ Sinh Cảnh ${scene.sceneIndex} (hậu cảnh Stability)`
+                        : `⚡ Sinh Cảnh ${scene.sceneIndex} (Studio cục bộ)`}
+                    </button>
+                    {scene.error && (
+                      <p className="mt-1.5 text-[10.5px] leading-snug text-danger">{scene.error}</p>
                     )}
                   </div>
                 </div>
@@ -771,10 +815,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           quality={{
             score: variantIntegrity
               ? Math.round(variantIntegrity.subject_pixel_identity * 100)
-              : 99,
+              : 0,
             label: variantIntegrity
               ? `Lõi chủ thể trùng khít ${(variantIntegrity.subject_pixel_identity * 100).toFixed(2)}% với Master Image`
-              : "Lõi chủ thể trùng khít 99.9% với Master Image (Đạt chuẩn an toàn)",
+              : "Chưa có số đo Subject Integrity cho lượt này",
             status: judgmentB === "blocked" ? "blocked" : judgmentB === "warning" ? "warning" : "safe",
           }}
           onApprove={handleApproveB}
@@ -788,13 +832,16 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           <StageGateApprovalBar
             stageCode="Chặng 06c — BIẾN THỂ ẢNH M04b"
             title="Phê duyệt Trọn bộ 4 Khung Ảnh Tiếp Thị (Narrative Arc)"
-            description="Đã hoàn tất bộ 4 phân cảnh hình ảnh theo kịch bản: Setup (Nguyên bản) → Rising (Lifestyle) → Climax (Cận cảnh thiệp) → CTA (Tách nền PNG). Đạt chuẩn an toàn toàn vẹn chủ thể (Subject Integrity). Chủ shop phê duyệt để tiến sang Tạo Video Marketing (Khu vực E)."
-            isApproved={judgmentB === "safe" || judgmentB === "warning"}
+            description={`Đã sinh ${generatedSceneCount}/4 phân cảnh theo kịch bản Setup → Rising → Climax → CTA. Số toàn vẹn lõi hoa bên dưới là số ĐO bởi worker trên từng ảnh. Chủ shop xác nhận để tiến sang Tạo Video Marketing (Khu vực E).`}
+            isApproved={judgmentB !== "blocked" && generatedSceneCount > 0}
             approveLabel="Phê duyệt Trọn bộ 4 Ảnh Biến thể & Chuyển sang Tạo Video (Khu vực E) →"
             onApprove={() => navigateToArea("e")}
             metrics={[
-              { label: "Phân cảnh", value: "4 cảnh chuẩn Narrative Arc" },
-              { label: "Toàn vẹn lõi hoa", value: "Trùng khít 99.9%" },
+              { label: "Phân cảnh", value: `${generatedSceneCount}/4 đã sinh` },
+              {
+                label: "Toàn vẹn lõi hoa (thấp nhất)",
+                value: minSceneIntegrity === null ? "Chưa đo" : `${(minSceneIntegrity * 100).toFixed(2)}%`,
+              },
               { label: "Tỉ lệ", value: variantRatio || "1:1" },
             ]}
           />
@@ -865,10 +912,9 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   // ============================================================
   const hasImageSource = Boolean(selectedMasterId || context?.assetId || context?.sourceImageUrl)
 
+  // Không gán asset ORIGINAL của Khu vực A làm Master (máy chủ trả 409):
+  // chưa có Master đã duyệt thì SourcePicker hiện nút "Skip — Dùng ảnh gốc".
   const handleRunVariant = () => {
-    if (context?.assetId && !selectedMasterId) {
-      setSelectedMasterId(context.assetId)
-    }
     goRunningB()
   }
 
@@ -1053,7 +1099,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           <div className="rounded-lg bg-surface-alt p-3 border border-border text-[12px] text-text-muted flex items-start gap-2">
             <ShieldCheck size={16} className="text-success mt-0.5 flex-shrink-0" />
             <div>
-              <span className="font-bold text-text">Ghép bối cảnh đồ họa chuẩn (0đ):</span> Giữ nguyên 100% bó hoa thật từ Master Image, tự động ghép vào 10 bối cảnh decor sang trọng và đóng dấu watermark thương hiệu shop.
+              <span className="font-bold text-text">Ghép bối cảnh Studio cục bộ (1 credit, không gọi nhà cung cấp trả phí):</span> Bó hoa được dán nguyên khối từ Master Image vào 6 bối cảnh dựng sẵn, có thể đóng dấu watermark thương hiệu shop. Worker ĐO lõi chủ thể sau khi ghép.
             </div>
           </div>
 
@@ -1071,14 +1117,14 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           <div className="rounded-lg bg-primary/5 p-3 border border-primary/20 text-[12px] text-primary flex items-start gap-2">
             <Sparkles size={16} className="text-primary mt-0.5 flex-shrink-0" />
             <div>
-              <span className="font-bold">AI Visual Storytelling (Đa góc chụp & Người mẫu):</span> Sinh ảnh theo nhiều góc nhìn camera và người mẫu tương tác qua các Cloud Provider chuyên nghiệp (Fal.ai FLUX, Stability AI, Google Imagen, Photoroom).
+              <span className="font-bold">Hậu cảnh AI (Stability, 2 credit/lượt):</span> Stability chỉ vẽ KHÔNG GIAN hậu cảnh theo bối cảnh và tâm trạng bạn chọn; bó hoa thật được dán nguyên khối từ Master Image và đo Subject Integrity như nhánh cục bộ. Nhà cung cấp lỗi (hết credit, thiếu khoá) thì worker tự lùi về phông Studio cục bộ và ghi rõ trên ảnh.
             </div>
           </div>
 
           <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-surface">
             <span className="text-xs font-bold text-text">Cloud Provider ưu tiên:</span>
             <div className="flex gap-1.5">
-              {(["fal", "stability", "imagen", "photoroom"] as const).map((pKey) => (
+              {(["stability"] as const).map((pKey) => (
                 <button
                   key={pKey}
                   type="button"
@@ -1089,11 +1135,17 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                       : "bg-surface-alt border-border text-text hover:border-text-muted"
                   }`}
                 >
-                  {pKey === "fal" ? "Fal.ai FLUX" : pKey === "stability" ? "Stability AI" : pKey === "imagen" ? "Google Imagen 3" : "Photoroom"}
+                  Stability AI (hậu cảnh)
                 </button>
               ))}
             </div>
           </div>
+
+          <StudioVariantCard
+            variants={M04B_VARIANT_PRESETS}
+            selectedId={selectedVariantPreset}
+            onSelectVariant={(id) => setSelectedVariantPreset(id)}
+          />
 
           <VisualStorytellingControls
             cameraAngle={cameraAngle}
@@ -1175,7 +1227,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         <Sparkles size={18} strokeWidth={2} className="mr-2" />
         {variantEngineMode === "local_studio"
           ? `Tạo biến thể marketing (${getVariantPreset(selectedVariantPreset).name})`
-          : `Sinh ảnh AI Storytelling (${selectedCloudProvider === "fal" ? "Fal.ai FLUX" : selectedCloudProvider === "stability" ? "Stability AI" : selectedCloudProvider === "imagen" ? "Google Imagen 3" : "Photoroom"})`}
+          : "Sinh biến thể với hậu cảnh Stability"}
       </Button>
 
       <div className="w-full flex items-center justify-between pt-2">

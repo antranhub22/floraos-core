@@ -27,6 +27,11 @@ const FEATURE_COST_CREDIT: Readonly<Record<string, number>> = {
   // Con số này là giả định tạm, cùng hạng với cả bảng — chốt giá thật cho
   // biến thể là nợ #64 (D14), chờ chủ sản phẩm.
   "media.variant": 1,
+  // Nhánh Cloud của M04b (23/09/2026): cùng pipeline local, thêm MỘT lượt gọi
+  // nhà cung cấp trả phí (Stability, sinh hậu cảnh). Đặt bằng `media.optimize`
+  // — cũng là một lượt gọi mô hình ngoài trên một ảnh. Giá tạm, cùng hạng với
+  // cả bảng — chờ chủ sản phẩm chốt ở nợ #64 (D14).
+  "media.variant.cloud": 2,
   "catalog.generate": 1,
   "landing.generate": 1,
   "video.render": 5,

@@ -45,6 +45,9 @@ export interface CreateAudioJobInput {
   readonly musicMood?: MusicMood | undefined
   /** Góc topic (để auto-select mood) */
   readonly topicAngleCategory?: string | undefined
+  /** `Idempotency-Key` của client (YC-U7). Bắt buộc: trước 23/09/2026 khoá
+   *  sinh phía máy chủ bằng Date.now()+random — bấm đúp là trừ credit hai lần. */
+  readonly idempotencyKey: string
 }
 
 export interface CreateAudioJobResult {
@@ -54,6 +57,9 @@ export interface CreateAudioJobResult {
   readonly voiceDisplayName: string
   readonly providerKey: TtsProviderKey
   readonly musicTrackName: string | null
+  /** Credit THỰC SỰ bị trừ bởi `enqueueJob` (0 khi deduped hoặc dùng thử). */
+  readonly usage: { readonly costCredit: number; readonly balanceAfter: number | null }
+  readonly deduped: boolean
 }
 
 // ============================================================
@@ -108,7 +114,7 @@ export async function createAudioJob(
   })
 
   // 7. Đưa vào hàng đợi generation_jobs
-  const idempotencyKey = `audio-${taskType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const idempotencyKey = input.idempotencyKey
 
   const enqueued = await enqueueJob(ctx, {
     feature: "audio.generate",
@@ -143,5 +149,7 @@ export async function createAudioJob(
     voiceDisplayName: voiceSpec.displayName,
     providerKey,
     musicTrackName,
+    usage: enqueued.usage,
+    deduped: enqueued.deduped,
   }
 }

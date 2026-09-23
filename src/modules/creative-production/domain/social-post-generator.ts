@@ -41,10 +41,12 @@ export function generateSocialPost(params: SocialPostParams): GeneratedSocialPos
     platform,
     mode,
     productName,
-    components = ["Hoa hồng tươi tuyển chọn", "Hoa baby trắng", "Lá bạc Eucalyptus"],
-    colors = ["Hồng pastel", "Trắng kem"],
-    style = "Hiện đại & Tinh tế",
-    price = "599.000đ",
+    // 23/09/2026: không còn điền sẵn thành phần/màu/giá bịa ("Hoa hồng kem
+    // dâu", "599.000đ") — thiếu dữ liệu thật thì dùng câu trung tính.
+    components = [],
+    colors = [],
+    style = "thiết kế riêng của tiệm",
+    price,
     topicTitle,
     hook,
     cta,
@@ -53,7 +55,12 @@ export function generateSocialPost(params: SocialPostParams): GeneratedSocialPos
 
   const flowerList = components.length > 0 ? components.join(", ") : "Hoa tươi tuyển chọn chuẩn form"
   const colorStr = colors.length > 0 ? colors.join(" & ") : "Tone màu thanh lịch"
-  const formattedPrice = typeof price === "number" ? `${price.toLocaleString("vi-VN")}đ` : price
+  const formattedPrice =
+    typeof price === "number"
+      ? `${price.toLocaleString("vi-VN")}đ`
+      : price && price.trim()
+      ? price
+      : "Liên hệ tiệm để nhận báo giá"
 
   switch (platform) {
     case "facebook": {

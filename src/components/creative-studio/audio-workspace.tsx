@@ -12,6 +12,14 @@ import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
 
 interface AudioScene { sceneIndex: number; voiceScript: string; targetDurationSeconds: number }
 
+interface AudioJobDetail {
+  job_id: string
+  stage: "DRAFT" | "GENERATING" | "COMPLETED" | "FAILED"
+  total_duration_seconds: number
+  audio_url: string | null
+  error: string | null
+}
+
 export function AudioWorkspace() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -22,7 +30,7 @@ export function AudioWorkspace() {
   const navigateToArea = (area: "b" | "c" | "d" | "e" | "f") => {
     const params = new URLSearchParams(searchParams?.toString() || "")
     params.set("area", area)
-    router.push(`/creative-studio?${params.toString()}` as any)
+    router.push(`/creative-studio?${params.toString()}` as never)
   }
 
   // Auto-populate scenes from selectedTopic (Chặng 4 output → Tab C input)
@@ -66,12 +74,16 @@ export function AudioWorkspace() {
 
   const totalDuration = scenes.reduce((a, s) => a + s.targetDurationSeconds, 0)
 
-  const handleCreate = useCallback(async () => {
-    setLoading(true); setError(null); setJobResult(null)
+  // 23/09/2026: gửi Idempotency-Key (YC-U7) và CHỜ worker `audio.generate`
+  // phối xong — trước đây chỉ hiện "đã xếp hàng", không có kết quả nghe được.
+  const [audioJob, setAudioJob] = useState<AudioJobDetail | null>(null)
+  const handleCreate = async () => {
+    setLoading(true); setError(null); setJobResult(null); setAudioJob(null)
     try {
       const duration = scenes.reduce((a, s) => a + s.targetDurationSeconds, 0)
       const res = await fetch("/api/v1/audio/jobs", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json", "idempotency-key": `audio-${crypto.randomUUID()}` },
         body: JSON.stringify({
           taskType,
           scenes: scenes.map((s) => ({ sceneIndex: s.sceneIndex, voiceScript: s.voiceScript, targetDurationSeconds: s.targetDurationSeconds })),
@@ -80,14 +92,33 @@ export function AudioWorkspace() {
           providerKey,
           qualityTier,
           musicMood: musicMood || undefined,
-          topicAngleCategory: undefined,
+          topicAngleCategory: ctx.selectedTopic?.angleCategory,
         }),
       })
-      if (!res.ok) { const body = (await res.json()).error?.message ?? `Lỗi ${res.status}`; throw new Error(body) }
-      setJobResult(await res.json())
+      if (!res.ok) { const body = (await res.json().catch(() => ({}))).error?.message ?? `Lỗi ${res.status}`; throw new Error(body) }
+      const created = (await res.json()) as Record<string, unknown> & { jobId: string }
+      setJobResult(created)
+
+      const deadline = Date.now() + 5 * 60 * 1000
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2000))
+        const poll = await fetch(`/api/v1/audio/jobs/${encodeURIComponent(created.jobId)}`)
+        if (!poll.ok) continue
+        const detail = (await poll.json()) as AudioJobDetail
+        setAudioJob(detail)
+        if (detail.stage === "COMPLETED") {
+          // Mang định danh (không mang dữ liệu) sang các khu vực sau — Khu vực F đọc lại qua API.
+          const params = new URLSearchParams(searchParams?.toString() || "")
+          params.set("audioJobId", created.jobId)
+          router.replace(`/creative-studio?${params.toString()}` as never)
+          return
+        }
+        if (detail.stage === "FAILED") throw new Error(detail.error || "Worker không phối được âm thanh")
+      }
+      throw new Error("Quá thời gian chờ worker âm thanh — kiểm tra `npm run worker:media` đang chạy.")
     } catch (err) { setError(err instanceof Error ? err.message : "Lỗi") }
     finally { setLoading(false) }
-  }, [taskType, scenes, voiceId, providerKey, qualityTier, musicMood])
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -176,12 +207,19 @@ export function AudioWorkspace() {
       {error && <Card className="border-rose-200 bg-rose-50 p-4 flex items-center gap-3"><AlertCircle size={16} className="text-rose-600 shrink-0" /><p className="text-xs text-rose-800">{error}</p></Card>}
       {jobResult && (
         <Card className="p-5 border-emerald-200 bg-emerald-50/40">
-          <h3 className="text-sm font-bold text-emerald-800 mb-3 flex items-center gap-2"><CheckCircle2 size={15} className="text-emerald-600" /> Đã xếp hàng công việc Audio thành công</h3>
+          <h3 className="text-sm font-bold text-emerald-800 mb-3 flex items-center gap-2"><CheckCircle2 size={15} className="text-emerald-600" />
+            {audioJob?.stage === "COMPLETED" ? "Đã phối xong âm thanh" : audioJob?.stage === "FAILED" ? "Phối âm thanh thất bại" : "Đang chờ worker phối âm thanh..."}
+          </h3>
+          {audioJob?.audio_url && (
+            <audio controls src={audioJob.audio_url} className="w-full mb-3">
+              Trình duyệt không phát được âm thanh.
+            </audio>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Job ID</p><p className="font-mono text-[11px] font-bold text-stone-800 truncate">{((jobResult.jobId || jobResult.job_id) as string) ?? "Đã tạo"}</p></div>
             <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Giọng đọc</p><p className="font-bold text-stone-800 truncate">{(jobResult.voiceDisplayName as string) || voiceId || "Mặc định"}</p></div>
             <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Nhạc nền</p><p className="font-bold text-stone-800 truncate">{(jobResult.musicTrackName as string) || (musicMood !== "none" ? musicMood : "Không có")}</p></div>
-            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Chi phí</p><p className="font-bold text-amber-600 font-mono">{(jobResult.creditsCost as number) ?? 1} credit</p></div>
+            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs"><p className="text-[11px] text-text-muted">Chi phí</p><p className="font-bold text-amber-600 font-mono">{((jobResult.usage as { costCredit?: number } | undefined)?.costCredit ?? 0)} credit đã trừ</p></div>
           </div>
         </Card>
       )}
@@ -191,8 +229,8 @@ export function AudioWorkspace() {
         <StageGateApprovalBar
           stageCode="Chặng 06b — AUDIO & VOICEOVER"
           title="Phê duyệt Lồng tiếng AI & Nhạc nền Cảm xúc"
-          description="Đã cấu hình lời thoại AI theo 3 phân cảnh (Mở đầu Hook - Giới thiệu hoa - Lời kêu gọi CTA) và giai điệu âm nhạc. Chủ shop phê duyệt để tiến sang Tạo Biến thể ảnh Tiếp thị (Khu vực D)."
-          isApproved={Boolean(jobResult)}
+          description={`Lời thoại ${scenes.length} phân cảnh và nhạc nền. Nghe bản phối ở trên trước khi xác nhận; chủ shop xác nhận để tiến sang Tạo Biến thể ảnh Tiếp thị (Khu vực D).`}
+          isApproved={audioJob?.stage === "COMPLETED"}
           approveLabel="Phê duyệt Audio & Chuyển sang Tạo Biến thể ảnh (Khu vực D) →"
           onApprove={() => navigateToArea("d")}
           metrics={[

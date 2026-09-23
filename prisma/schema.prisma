@@ -161,6 +161,7 @@ model organizations {
   chat_channel_integrations  chat_channel_integrations[]
   content_opportunities      content_opportunities[]
   product_analysis_runs      product_analysis_runs[]
+  campaign_packages          campaign_packages[]
 }
 
 model workspaces {
@@ -1136,6 +1137,9 @@ model video_scenes {
   text_overlay      String?
   voice_script      String?
   transition_effect String?      @default("fade")
+  /// Ken Burns (ZOOM_IN | ZOOM_OUT | PAN_UP | PAN_RIGHT | STATIC) — 23/09/2026:
+  /// trước đó lựa chọn ở Khu vực E không được lưu, worker luôn tự xoay vòng.
+  motion_effect     String?
   created_at        DateTime     @default(now())
 
   job               video_jobs   @relation(fields: [video_job_id], references: [id], onDelete: Cascade)
@@ -1819,3 +1823,41 @@ model provider_health {
   @@index([status])
 }
 
+/// Gói chiến dịch của Creative Studio (Khu vực F, Chặng 07–14) — TENANT.
+/// 23/09/2026: trước ngày này Chặng 07–09 chỉ là state phía trình duyệt (QA
+/// luôn "PASSED", duyệt không ghi gì) và Chặng 10–14 hiển thị số liệu gõ cứng.
+/// Gói chỉ giữ ĐỊNH DANH tới tài sản thật (asset biến thể, video job, audio job)
+/// + nội dung bài đăng do người dùng soạn; QA chạy phía máy chủ trên dữ liệu thật
+/// (`campaign-package-rules.ts`), duyệt ghi `audit_logs` cùng giao dịch.
+model campaign_packages {
+  id                 String    @id @default(uuid())
+  organization_id    String
+  product_id         String?
+  master_asset_id    String
+  name               String
+  mode               String                      // CREATIVE | AUTHENTIC
+  /// Ảnh chụp chủ đề đã chọn ở Chặng 05 (id, title, angleCategory, hook, cta).
+  topic              Json?
+  /// Nội dung bài đăng theo kênh: [{ channel, text, hashtags[] }].
+  content            Json?
+  variant_asset_ids  String[]  @default([])
+  video_job_id       String?
+  audio_job_id       String?
+  /// DRAFT | QA_PASSED | QA_NEEDS_REVIEW | QA_REJECTED | APPROVED
+  status             String    @default("DRAFT")
+  qa_report          Json?
+  qa_checked_at      DateTime?
+  approved_by        String?
+  approved_at        DateTime?
+  /// Kế hoạch đăng (Chặng 10): { channels[], scheduled_at, post_refs[{platform, content_id}] }.
+  launch_plan        Json?
+  created_by         String
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, created_at])
+  @@index([organization_id, master_asset_id])
+  @@index([organization_id, status])
+}

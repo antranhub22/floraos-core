@@ -745,3 +745,16 @@ FFmpeg trong sổ đăng ký.
 
 **Checklist chi tiết hợp nhất:** [`docs/UIUX-Execution-Checklist.md`](file:///Users/tuan/Projects/floraos-core/docs/UIUX-Execution-Checklist.md) (tổng hợp feature-level và API integration của toàn bộ 10 chức năng)
 
+
+## CS-23/09 — Creative Studio 14 chặng: rà soát đồng bộ & sửa production
+
+Chi tiết từng ô ở `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_CHECKLIST.md` v2.0; báo cáo rà soát ở project claude.ai `claude/ra-soat-dong-bo-creative-studio-14-chang-23-09-2026.md`.
+
+- [x] Nhánh Cloud M04b vào hàng đợi job (`media.variant.cloud`), gỡ `execFileSync` khỏi tiến trình web
+- [x] Sửa phép đo Subject Integrity (co biên 5px > light wrap 4px), REJECTED không ghi asset
+- [x] Worker `audio.generate` được nối (trước đó không tồn tại), `GET /audio/jobs/:id`
+- [x] Khu vực F + Chặng 10–14 trên dữ liệu thật — bảng `campaign_packages`, QA máy chủ, duyệt `J5` + `audit_logs`
+- [x] Khu vực E: storyboard không còn gửi rỗng, `video_scenes.motion_effect`
+- [x] Tài liệu SSOT + đặc tả 06/07 đồng bộ (`check:docs` khớp)
+- [ ] `npm run test:tenant` trên máy có Postgres — **chưa chạy**
+- [ ] Chạy thử worker với `STABILITY_API_KEY` thật

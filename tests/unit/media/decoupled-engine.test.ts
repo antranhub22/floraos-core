@@ -4,6 +4,7 @@ import { executeCloudCreative } from "@/modules/media/use-cases/execute-cloud-cr
 
 // Tạo 1x1 JPEG hợp lệ nhỏ nhất (fake nhưng có magic bytes đúng) để test
 // Bytes: FF D8 FF E0 ... (JPEG SOI + APP0 marker)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function createMinimalJpeg(): Uint8Array {
   // JPEG tối thiểu: SOI + JFIF APP0 + DQT + SOF0 + DHT + SOS + EOI
   // Dùng một ảnh 1x1 pixel JPEG thật tối giản (285 bytes)
@@ -22,7 +23,6 @@ function createMinimalJpeg(): Uint8Array {
   return bytes
 }
 
-const FAKE_JPEG = createMinimalJpeg()
 
 vi.mock("@/modules/assets/infra/asset-repository", () => {
   return {
@@ -74,39 +74,31 @@ describe("Decoupled Engine Architecture — Creative Studio Isolation", () => {
     permissions: [],
   } as unknown as TenantContext
 
-  it("thực thi Cloud Provider với fallback đến studio_local khi provider cloud thiếu key", async () => {
-    // Photoroom, Google Imagen, Fal FLUX đều throw vì thiếu API key (KHÔNG có mock).
-    // Router fallback chain kết thúc ở studio_local → thành công với ảnh gốc bảo tồn pixel.
-    const result = await executeCloudCreative(mockCtx, {
-      assetId: "mock-asset-id",
-      taskType: "OPTIMIZE_MASTER",
-      providerKey: "photoroom",
-      cameraAngle: "front_view",
-      humanInteraction: "none",
-    })
-
-    expect(result.success).toBe(true)
-    // studio_local không dùng generative fill — bảo tồn 100% pixel gốc
-    expect(result.provider).toBe("studio_local")
-    expect(result.isMock).toBe(false)
+  // 23/09/2026 — `studio_local` KHÔNG còn trả lại bytes ảnh gốc (bản trước
+  // khiến ảnh gốc bị ghi thành "ảnh đã tối ưu"/"biến thể" giống hệt nhau).
+  // Hết chuỗi nhà cung cấp cloud thì người gọi nhận LỖI, không nhận ảnh giả.
+  it("hết chuỗi nhà cung cấp cloud thì ném lỗi, không trả ảnh gốc giả làm kết quả", async () => {
+    await expect(
+      executeCloudCreative(mockCtx, {
+        assetId: "mock-asset-id",
+        taskType: "OPTIMIZE_MASTER",
+        providerKey: "photoroom",
+        cameraAngle: "front_view",
+        humanInteraction: "none",
+      })
+    ).rejects.toThrow()
   }, 15000)
 
-  it("thực thi AI Visual Storytelling qua fallback studio_local với góc chụp và người mẫu", async () => {
-    // Fal FLUX và các provider cloud khác throw → fallback đến studio_local.
-    // Prompt compiler vẫn biên dịch đầy đủ (camera angle + human interaction)
-    // ngay cả khi studio_local chỉ trả ảnh gốc.
-    const result = await executeCloudCreative(mockCtx, {
-      assetId: "mock-asset-id",
-      taskType: "GENERATE_SCENE_VARIANT",
-      providerKey: "fal",
-      cameraAngle: "three_quarter_45",
-      humanInteraction: "female_holding",
-      targetRatios: ["9:16"],
-    })
-
-    expect(result.success).toBe(true)
-    // Prompt biên dịch có chứa thông tin camera angle và human interaction
-    expect(result.promptSummary?.positivePrompt).toContain("three-quarter")
-    expect(result.promptSummary?.positivePrompt).toContain("woman")
+  it("nhánh Storytelling cũng không lùi về ảnh gốc khi mọi nhà cung cấp lỗi", async () => {
+    await expect(
+      executeCloudCreative(mockCtx, {
+        assetId: "mock-asset-id",
+        taskType: "GENERATE_SCENE_VARIANT",
+        providerKey: "fal",
+        cameraAngle: "three_quarter_45",
+        humanInteraction: "female_holding",
+        targetRatios: ["9:16"],
+      })
+    ).rejects.toThrow()
   }, 15000)
 })

@@ -107,8 +107,8 @@ export function ProductIntelligenceWorkspace() {
         const el = document.getElementById("confirmation-step-section");
         el?.scrollIntoView({ behavior: "smooth" });
       }, 200);
-    } catch (err: any) {
-      setExtractError(err?.message || "Lỗi khi chạy Vision AI bóc tách sản phẩm");
+    } catch (err: unknown) {
+      setExtractError(err instanceof Error ? err.message : "Lỗi khi chạy Vision AI bóc tách sản phẩm");
       // Cho phép tiếp tục nếu có dữ liệu sẵn
       setHasExtracted(true);
     } finally {
@@ -141,18 +141,24 @@ export function ProductIntelligenceWorkspace() {
           });
           if (upRes.ok) {
             const { upload_url, asset_id, storage_key } = await upRes.json();
-            await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type || "image/jpeg" }, body: file });
-            await fetch("/api/v1/assets", {
+            // 23/09/2026: kiểm từng bước — trước đây PUT/đăng ký lỗi vẫn gán
+            // assetId, sinh asset trỏ tới tệp không tồn tại trong kho.
+            const putRes = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type || "image/jpeg" }, body: file });
+            if (!putRes.ok) throw new Error(`Tải ảnh lên kho thất bại (HTTP ${putRes.status})`);
+            const regRes = await fetch("/api/v1/assets", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ asset_id, kind: "ORIGINAL", storage_key, mime_type: file.type, file_size: file.size }),
             });
+            if (!regRes.ok) throw new Error(`Đăng ký ảnh vào kho thất bại (HTTP ${regRes.status})`);
             activeAssetId = asset_id;
             setSelectedAssetId(asset_id);
           }
         }
       } catch (e) {
-        console.warn("Không thể tự động đăng ký asset từ ảnh demo:", e);
+        setIsSubmittingMatch(false);
+        setMatchError(e instanceof Error ? e.message : "Không lưu được ảnh vào kho — vui lòng tải lại ảnh.");
+        return;
       }
     }
 
@@ -309,7 +315,7 @@ export function ProductIntelligenceWorkspace() {
             improvements={report.improvements}
             onCreateVariation={() => {
               const theme = report.improvements.test[0] || "Dark Mood";
-              router.push(`/tai-anh?topic=${encodeURIComponent(productTitle)}&theme=${encodeURIComponent(theme)}` as any);
+              router.push(`/tai-anh?topic=${encodeURIComponent(productTitle)}&theme=${encodeURIComponent(theme)}` as never);
             }}
           />
 
@@ -341,7 +347,7 @@ export function ProductIntelligenceWorkspace() {
                 🔒 Chặng 04 — IDEATE (10 Chủ đề Tiếp thị & Dẫn chứng Video Kép)
               </div>
               <p className="text-xs text-stone-500 max-w-md mx-auto">
-                Chặng 04 đang tạm khóa. Vui lòng bấm <strong>"Phê duyệt Trend Fit & Mở khóa Chặng 04"</strong> ở thanh phía trên để AI hiển thị 10 chủ đề tiếp thị và video dẫn chứng.
+                Chặng 04 đang tạm khóa. Vui lòng bấm <strong>“Phê duyệt Trend Fit & Mở khóa Chặng 04”</strong> ở thanh phía trên để AI hiển thị 10 chủ đề tiếp thị và video dẫn chứng.
               </p>
             </div>
           ) : (

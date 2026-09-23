@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useContext } from "react"
+import { useState, useCallback, useContext, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Film, Sparkles, Send, Loader2, CheckCircle2, AlertCircle, Play, Clock, Coins } from "lucide-react"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { VideoFormat, VIDEO_FORMAT_SPECS, CaptionStyle, CAPTION_STYLE_SPECS, VideoSceneItem } from "@/modules/video-studio/domain/video-types"
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
+import { resolveApprovedMaster } from "./package-client"
 
 export function VideoWorkspace() {
   const router = useRouter()
@@ -21,7 +22,7 @@ export function VideoWorkspace() {
   const navigateToArea = (area: "b" | "c" | "d" | "e" | "f") => {
     const params = new URLSearchParams(searchParams?.toString() || "")
     params.set("area", area)
-    router.push(`/creative-studio?${params.toString()}` as any)
+    router.push(`/creative-studio?${params.toString()}` as never)
   }
 
   const [format, setFormat] = useState<VideoFormat>("REEL_15S")
@@ -30,6 +31,7 @@ export function VideoWorkspace() {
   const [hasSubtitle, setHasSubtitle] = useState(true)
   const [hasWatermark, setHasWatermark] = useState(true)
   const [scenes, setScenes] = useState<VideoSceneItem[]>([])
+  const [storyboardKey, setStoryboardKey] = useState(0)
   const [loading, setLoading] = useState(false)
   const [jobResult, setJobResult] = useState<Record<string, unknown> | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -90,27 +92,69 @@ export function VideoWorkspace() {
     setScenes(init)
   }, [scenes, spec, context])
 
+  // 23/09/2026: dựng storyboard NGAY khi mở tab / đổi khuôn (trước đây chỉ
+  // dựng bên trong handleCreate rồi gửi biến `scenes` cũ của closure → lần bấm
+  // đầu gửi storyboard RỖNG, và StoryboardEditor không bao giờ hiện trước khi tạo).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (scenes.length === 0) initScenes()
+  }, [scenes.length, initScenes])
+
+  // Gắn ảnh biến thể thật của Khu vực D (theo thứ tự phân cảnh) vào các cảnh chưa có ảnh.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const masterId = await resolveApprovedMaster(context?.assetId).catch(() => null)
+      if (!masterId || cancelled) return
+      const res = await fetch(`/api/v1/assets?kind=MARKETING&parent_asset_id=${encodeURIComponent(masterId)}&limit=100`)
+      if (!res.ok || cancelled) return
+      const body = (await res.json()) as { data?: Array<{ id: string; metadata?: Record<string, unknown> | null }> }
+      const ids = (body.data ?? [])
+        .filter((a) => a.metadata?.variant_key === "styled" || a.metadata?.variant_key === "branded")
+        .sort((a, b) => Number(a.metadata?.scene_index ?? 99) - Number(b.metadata?.scene_index ?? 99))
+        .map((a) => a.id)
+      if (ids.length === 0 || cancelled) return
+      setScenes((prev) => prev.map((sc, i) => (sc.imageAssetId ? sc : { ...sc, imageAssetId: ids[i % ids.length] })))
+      // Nạp lại StoryboardEditor với ảnh vừa gắn (editor giữ state riêng).
+      setStoryboardKey((k) => k + 1)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [context?.assetId, scenes.length])
+
   const handleCreate = useCallback(async () => {
+    if (scenes.length === 0) {
+      setError("Storyboard chưa có cảnh nào.")
+      return
+    }
     setLoading(true); setError(null); setJobResult(null)
     try {
-      initScenes()
       const res = await fetch("/api/v1/video/jobs", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productId: context?.productId ?? null, title, format, aspectRatio: spec.aspectRatio,
-          musicTrack: "Acoustic Warm Guitar", voiceCode: "vi-VN-Standard-A", hasSubtitle, captionStyle, hasWatermark,
+          hasSubtitle, captionStyle, hasWatermark,
           scenes: scenes.map((s) => ({
             sceneIndex: s.sceneIndex, durationSeconds: s.durationSeconds,
             imageAssetId: s.imageAssetId ?? null, textOverlay: s.textOverlay ?? null,
             voiceScript: s.voiceScript ?? null, transitionEffect: s.transitionEffect,
+            ...(s.motionEffect ? { motionEffect: s.motionEffect } : {}),
           })),
         }),
       })
-      if (!res.ok) { const body = (await res.json()).error?.message ?? `Lỗi ${res.status}`; throw new Error(body) }
-      setJobResult(await res.json())
+      if (!res.ok) { const body = (await res.json().catch(() => ({}))).error?.message ?? `Lỗi ${res.status}`; throw new Error(body) }
+      const created = (await res.json()) as Record<string, unknown> & { id?: string }
+      setJobResult(created)
+      if (created.id) {
+        // Mang định danh video sang Khu vực F (gói chiến dịch đọc lại qua API).
+        const params = new URLSearchParams(searchParams?.toString() || "")
+        params.set("videoJobId", created.id)
+        router.replace(`/creative-studio?${params.toString()}` as never)
+      }
     } catch (err) { setError(err instanceof Error ? err.message : "Lỗi") }
     finally { setLoading(false) }
-  }, [context, title, format, spec, hasSubtitle, captionStyle, hasWatermark, scenes, initScenes])
+  }, [context, title, format, spec, hasSubtitle, captionStyle, hasWatermark, scenes, router, searchParams])
 
   const loadJobs = useCallback(async () => {
     setJobsLoading(true)
@@ -130,7 +174,7 @@ export function VideoWorkspace() {
             const s = VIDEO_FORMAT_SPECS[fmtKey]
             const sel = format === fmtKey
             return (
-              <div key={fmtKey} onClick={() => setFormat(fmtKey)} className={`cursor-pointer rounded-xl border p-3 transition-all ${sel ? "border-primary bg-primary/5 shadow-xs" : "border-border bg-background hover:border-border-hover"}`}>
+              <div key={fmtKey} onClick={() => { setFormat(fmtKey); setScenes([]) }} className={`cursor-pointer rounded-xl border p-3 transition-all ${sel ? "border-primary bg-primary/5 shadow-xs" : "border-border bg-background hover:border-border-hover"}`}>
                 <div className="flex items-start justify-between gap-1">
                   <span className="text-xs font-bold text-text">{s.label}</span>
                   <Badge tone={sel ? "success" : "neutral"} className="text-[10px] px-1.5 py-0">{s.aspectRatio}</Badge>
@@ -174,7 +218,14 @@ export function VideoWorkspace() {
       </Card>
       {scenes.length > 0 && (
         <Card className="p-5">
-          <StoryboardEditor format={format} initialScenes={scenes} isLocked={false} onSaveScenes={async (u) => setScenes(u)} />
+          <StoryboardEditor
+            key={`${format}-${storyboardKey}`}
+            format={format}
+            initialScenes={scenes}
+            isLocked={false}
+            onSaveScenes={async (u) => setScenes(u)}
+            onChange={setScenes}
+          />
         </Card>
       )}
       <div className="flex items-center justify-between">
@@ -209,7 +260,7 @@ export function VideoWorkspace() {
         <StageGateApprovalBar
           stageCode="Chặng 06d — SẢN XUẤT VIDEO MARKETING"
           title="Phê duyệt Kịch bản Storyboard & Video Clip (M04c)"
-          description={`Đã sẵn sàng kịch bản storyboard ${scenes.length || 3} phân cảnh theo khuôn ${spec.aspectRatio}, thời lượng ước tính ~${spec.targetDurationSeconds}s. Chủ shop phê duyệt để tiến hành Đóng gói toàn bộ chiến dịch sang Chặng 07 (PACKAGE).`}
+          description={`Storyboard ${scenes.length} phân cảnh theo khuôn ${spec.aspectRatio}, ~${spec.targetDurationSeconds}s. Tạo job ở đây là BẢN NHÁP: duyệt kịch bản (P3), render và duyệt video thành phẩm (P4) thực hiện ở màn Video; Khu vực F chỉ coi video là đạt khi đã duyệt P4.`}
           isApproved={Boolean(jobResult)}
           approveLabel="Phê duyệt Video & Tiến đến Đóng gói chiến dịch (Chặng 07) →"
           onApprove={() => navigateToArea("f")}

@@ -31,6 +31,32 @@ export type { GuardResult }
 
 export const MEDIA_VARIANT_FEATURE = "media.variant"
 
+/**
+ * Nhánh Cloud của M04b (23/09/2026). Cùng worker `process_variant_job`, cùng
+ * cổng Subject Integrity — chỉ khác nguồn HẬU CẢNH: nhà cung cấp vẽ không gian
+ * trống, bó hoa vẫn dán nguyên khối từ Master Image. Tách `feature` để bảng giá
+ * tính riêng (gọi nhà cung cấp trả phí) và để hàng đợi phân biệt được.
+ *
+ * Trước ngày này nhánh Cloud chạy đồng bộ trong request HTTP (`executeCloudCreative`):
+ * không `enqueueJob`, không trừ credit, integrity gõ tay 0,98 — vi phạm
+ * luật "cấm chạy job qua HTTP" ở `AGENTS.md`.
+ */
+export const MEDIA_VARIANT_CLOUD_FEATURE = "media.variant.cloud"
+
+/** Mọi `feature` sinh biến thể marketing — dùng cho hàng chờ duyệt. */
+export const MEDIA_VARIANT_FEATURES = [MEDIA_VARIANT_FEATURE, MEDIA_VARIANT_CLOUD_FEATURE] as const
+
+/** Nhà cung cấp hậu cảnh đã có adapter ở worker (`providers/background/`). */
+export const VARIANT_CLOUD_PROVIDERS = ["stability"] as const
+export type VariantCloudProvider = (typeof VARIANT_CLOUD_PROVIDERS)[number]
+
+/** Giới hạn độ dài mô tả cảnh gửi nhà cung cấp — cùng hằng ở worker. */
+export const MAX_SCENE_PROMPT_LENGTH = 600
+
+/** Chỉ số phân cảnh Narrative Arc (1 SETUP · 2 RISING · 3 CLIMAX · 4 CTA). */
+export const NARRATIVE_SCENE_INDEXES = [1, 2, 3, 4] as const
+export type NarrativeSceneIndex = (typeof NARRATIVE_SCENE_INDEXES)[number]
+
 /** Bối cảnh không gian — SSOT của mã preset. Nhãn hiển thị ở `variant-presets.ts`. */
 export const VARIANT_PRESET_IDS = [
   "transparent",

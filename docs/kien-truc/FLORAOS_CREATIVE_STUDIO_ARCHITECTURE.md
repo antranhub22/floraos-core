@@ -1,233 +1,220 @@
 # Kiến Trúc AI Creative Studio — SSOT Architecture Document
 
-> **Module:** AI Creative Studio (Chặng 01–09: M01a, M01b, M04a, M04b, M04c, Creative Production & Packaging)
+> **Module:** AI Creative Studio — Chặng 01–14 của hành trình Product-to-Market, gói trong 6 Khu vực tab (A–F)
 > **Route:** `/creative-studio`
-> **Phiên bản:** 3.0 — Tích hợp trọn vẹn 14 Chặng Product-to-Market khởi động từ Chặng 01 (Khu vực A: Quét theo ảnh sản phẩm)
-> **Trạng thái:** ĐÃ TRIỂN KHAI & NGHIỆM THU
+> **Phiên bản:** 4.0 — 23/09/2026 — Đồng bộ lại 100% theo mã (rà soát `claude/ra-soat-dong-bo-creative-studio-14-chang-23-09-2026.md` trong project)
+> **Trạng thái:** Đã triển khai trên nhánh `fix/creative-studio-production-ready`. Nghiệm thu trên máy thật còn thiếu: `npm run test:tenant` (cần Postgres), chạy thử worker với `STABILITY_API_KEY` thật, `lint` toàn repo (xem §9).
+>
+> **Quy tắc đọc:** chi tiết thi công (tên tệp, đường dẫn, method, mã năng lực, enum) lấy mã nguồn làm chuẩn (Hiến pháp Tài liệu §2, quy tắc 2). Tài liệu này mô tả đúng những gì mã đang làm, kể cả giới hạn.
 
 ---
 
 ## 1. Tổng Quan & Vai Trò
 
-AI Creative Studio là trung tâm sáng tạo nội dung & tiếp thị trọn gói (All-in-One Studio Hub) của FloraOS. Thay vì phân tán quy trình qua nhiều màn hình rời rạc, Creative Studio bao hàm trọn vẹn hành trình tiếp thị bắt đầu từ **Chặng 01 (BRING — Quét theo ảnh sản phẩm)** đến **Chặng 09 (APPROVE — Duyệt chốt gói chiến dịch)** thông qua 6 Khu vực tab làm việc khép kín, sẵn sàng chuyển tiếp sang các chặng xuất bản và bán hàng downstream (Chặng 10–14):
+Creative Studio gom hành trình "1 sản phẩm hoa → 1 chiến dịch" vào một màn hình 6 khu vực. Khu vực A là điểm khởi đầu; B–E sản xuất; F đóng gói, kiểm định, duyệt và theo dõi hiệu quả.
 
-| Khu Vực | Tab ID | Tên Nhãn | Biểu Tượng | Chặng Journey | Thành Phần Lõi | Mô Tả Nghiệp Vụ |
+| Khu vực | Tab ID | Nhãn | Icon | Chặng | Component | Việc thật mã đang làm |
 |---|---|---|---|---|---|---|
-| **Khu vực A** | `area-a` | Quét theo ảnh sản phẩm | 📷 Camera | **Chặng 01–05** | `<ProductIntelligenceWorkspace />` | **Khởi đầu Journey**: Tải ảnh hoa thật/chọn catalog tiệm (01) → Vision AI bóc tách nguyên tử & OCR thiệp (02) → Trend Fit Matrix (03) → 10 Chủ đề kèm Dẫn chứng Video Kép TikTok/YouTube (04) → Chọn chủ đề & Mode (05). |
-| **Khu vực B** | `area-b` | Viết contents | 📄 FileText | **Chặng 06a** | `<ContentsWorkspace />` | Sáng tạo nội dung đa kênh: Facebook, kịch bản Video TikTok/Reels, Story 24h, Caption E-commerce (Mode CREATIVE / AUTHENTIC). |
-| **Khu vực C** | `area-c` | Tạo audio | 🎧 Headphones | **Chặng 06b** | `<AudioWorkspace />` | Thu âm Voiceover kịch bản qua AI TTS đa giọng điệu tiếng Việt và phối trộn nhạc nền BGM ducking tự động cân bằng thời lượng. |
-| **Khu vực D** | `area-d` | Tạo biến thể ảnh | 🪄 Wand2 | **Chặng 06c** | `<VariantWorkspace />` | Dựng 4 Khung Phân Cảnh Narrative Arc (Setup, Rising, Climax, CTA) qua Local Studio Backdrop Engine (~0.46s, 0 VNĐ, offline) hoặc Cloud AI. |
-| **Khu vực E** | `area-e` | Tạo video | 🎬 Film | **Chặng 06d** | `<VideoWorkspace />` | Biên tập Video Marketing 9:16/1:1/16:9 theo 6 khuôn M04c, Storyboard linh hoạt 2–15 cảnh, Camera Motion Ken Burns, Subtitles. |
-| **Khu vực F** | `area-f` | Gói chiến dịch | 📦 Package | **Chặng 07–09** | `<PackageWorkspace />` | Đóng gói trọn bộ Campaign Package (07) → AI kiểm định QA đa trục (08) → Chủ shop duyệt chốt phát hành (09). |
+| A | `area-a` | Quét theo ảnh sản phẩm | Camera | 01–05 | `<ProductIntelligenceWorkspace />` | Tải ảnh → `assets` (ORIGINAL) · Vision `gpt-4o-mini` bóc tách nguyên tử · Trend Fit (đối chiếu `trend_signals`) · 10 chủ đề (sinh theo luật trong `trend-fit.ts`) · chọn chủ đề + Mode → bàn giao qua URL chỉ mang định danh |
+| B | `area-b` | Viết contents | FileText | 06a | `<ContentsWorkspace />` | `POST /creative-production/produce` → cung truyện + 4 bài (Facebook, Instagram, TikTok, Zalo) sinh theo khuôn (`social-post-generator.ts`); lưu bài vào gói chiến dịch |
+| C | `area-c` | Tạo audio | Headphones | 06b | `<AudioWorkspace />` | `POST /audio/jobs` → job `audio.generate` → worker Python phối voice + nhạc nền, ghi kho → nghe lại qua `GET /audio/jobs/:id` |
+| D | `area-d` | Tạo biến thể ảnh | Wand2 | 06c | `<VariantWorkspace />` | 4 phân cảnh Narrative Arc, mỗi cảnh là một job `media.variant` (Studio cục bộ) hoặc `media.variant.cloud` (hậu cảnh Stability) — Subject Integrity ĐO bởi worker |
+| E | `area-e` | Tạo video | Film | 06d | `<VideoWorkspace />` | Tạo `video_jobs` (bản nháp) theo 6 khuôn M04c với storyboard + Ken Burns theo cảnh; duyệt P3/P4 và render ở màn Video |
+| F | `area-f` | Gói chiến dịch | Package | 07–09 (+10–14) | `<PackageWorkspace />` | Gói lưu ở `campaign_packages`; QA năm trục phía máy chủ; duyệt `J5` + `audit_logs`; kế hoạch đăng; số liệu thật Chặng 11–14 |
 
-### Downstream Handoff (Chặng 10 → 14)
-Sau khi chủ shop duyệt chốt gói chiến dịch tại Khu vực F (Chặng 09), hệ thống kích hoạt card điều hướng downstream `<PackageDownstreamCard />` đưa tài sản tiếp thị sang:
-- **Chặng 10 — LAUNCH**: Đăng tải / Lên lịch đa kênh (Facebook Fanpage, TikTok Shop, Zalo OA, E-Catalog).
-- **Chặng 11 — SELL**: AI Chat Sales tư vấn chốt đơn tự động qua M08 Omnichannel.
-- **Chặng 12 — MEASURE**: Đo lường chuyển đổi và doanh thu đơn hàng thực tế.
-- **Chặng 13 — LEARN**: Trích xuất Winning Patterns từ chiến dịch hiệu quả.
-- **Chặng 14 — NEXT BEST ACTION**: Đề xuất hành động tiếp thị tối ưu tiếp theo cho tiệm.
+### 1.1. Downstream (Chặng 10 → 14) — `<PackageDownstreamCard />`
+
+Chỉ hiện sau khi gói ở trạng thái `APPROVED`. Mọi số liệu đọc từ `GET /creative-production/packages/:id/performance`:
+
+- **10 LAUNCH** — lưu kế hoạch đăng (kênh, giờ) và **mã bài đã đăng** (`PUT /packages/:id/launch`). Việc đăng/lên lịch thật diễn ra ở **Lịch đăng** (`/lich-dang`, SocialFlow M07) — Creative Studio không tự đăng bài.
+- **11 SELL** — số hội thoại mới (`chat_conversations`) kể từ ngày duyệt (toàn tiệm).
+- **12 MEASURE** — đơn và doanh thu của **sản phẩm trong gói** kể từ ngày duyệt (`orders`/`order_items`, bỏ `DRAFT`/`CANCELLED`) + tổng `content_metrics` của các mã bài đã gắn. Chưa quy được đơn về từng bài đăng — giao diện ghi rõ.
+- **13 LEARN** — so doanh thu trung bình theo góc tiếp cận chủ đề, preset Cảnh 2, có/không video trên các gói đã duyệt của tiệm; **chỉ kết luận khi ≥ 3 gói**, và chỉ khi có ≥ 2 nhóm để so.
+- **14 NEXT BEST ACTION** — luật dựa trên dữ kiện thật (chưa gắn bài, chưa có video, 7 ngày không đơn, có hội thoại chưa chốt, góc thắng của tiệm, dịp cố định trong 30 ngày tới: 14/2, 8/3, 20/10, 20/11, 24/12).
 
 ---
 
 ## 2. Nguyên Tắc Thiết Kế Bất Biến
 
-### 2.1. Điểm Khởi Đầu Khép Kín Tại Khu Vực A
-- Người dùng chỉ cần vào `/creative-studio` là có thể tải ngay ảnh chụp thật của lẵng/bó hoa tại Khu vực A (`area-a`).
-- Không bắt buộc người dùng phải đi đường vòng qua `/tai-anh` hay `/thi-truong` để lấy dữ liệu.
-- Khi hoàn tất Chặng 05 tại Khu vực A, nút "Bắt đầu sáng tạo" tự động kết xuất `TopicProductionBrief` và chuyển tiếp mượt mà sang các Khu vực sản xuất B, C, D, E, F.
+### 2.1. Khu vực A là điểm khởi đầu, không bao giờ bị chặn
+`ValidationScreen` chỉ hiện khi vào B–F mà `validateTransition()` báo thiếu. Khu vực A không bao giờ bị chặn. Người dùng có thể bấm "tiếp tục" để bỏ qua màn cảnh báo (không chặn cứng).
 
-### 2.2. Validation Gate & Không Chặn Khu Vực A
-- Cổng kiểm tra chặng chuyển tiếp `validateTransition()` kiểm tra tính sẵn sàng của các trường dữ liệu: `topicId`, `mode`, `productName`, `assetId`, `commercialPassport`.
-- **Quy tắc tuyệt đối**: Màn hình xác thực `ValidationScreen` chỉ kích hoạt khi người dùng nhảy cóc vào Khu vực B–F mà chưa có dữ liệu. **Khu vực A KHÔNG BAO GIỜ bị chặn** vì đây chính là nơi sản sinh dữ liệu ban đầu.
+### 2.2. Cổng chuyển tiếp `validateTransition()`
+Tám trường bắt buộc: `topicId`, `mode`, `sourceImageUrl`, `productName`, `assetId`, `commercialPassport.category`, `commercialPassport.style`, `commercialPassport.components`, `commercialPassport.colors` (tệp `src/modules/creative-production/domain/validate-transition.ts`). Từ 23/09/2026 trang **không còn bịa** passport dự phòng ("Hoa tươi thiết kế", "Tone màu hài hòa") — thiếu dữ liệu thật thì cổng báo thiếu. `category` là hình dáng (`attributes.shape`), không phải phân khúc giá.
 
-### 2.3. Bất Biến Asset ID & Miễn Nhiễm Lỗi 431 (Header Too Large)
-- Bất kỳ ảnh nào tải lên đều được cấp phát `assetId` qua API `/api/v1/assets/upload-url`.
-- Cấm truyền chuỗi Base64 / Data URL qua URL Query String của router.
-- Client Creative Studio luôn giải mã URL ảnh tươi thông qua `GET /api/v1/assets/:id/view-url`.
+### 2.3. `assetId` bất biến, URL chỉ mang định danh (chống lỗi 431)
+- Ảnh tải lên: `POST /api/v1/assets/upload-url` → `PUT` lên kho → `POST /api/v1/assets` (đăng ký `ORIGINAL`). Từng bước kiểm `res.ok`; lỗi thì dừng, không gán `assetId`.
+- `buildHandoffSearchParams()` (`build-handoff-url.ts`) chỉ cho phép định danh; `isSafeHandoffQueryString()` kiểm lại. Ảnh luôn ký lại qua `GET /api/v1/assets/:id/view-url`.
+- Định danh sinh ở C/E cũng đi qua URL: `audioJobId`, `videoJobId` — Khu vực F đọc lại qua API.
 
 ### 2.4. Subject Integrity (M04b)
-- Đo tỷ lệ điểm ảnh lõi chủ thể hoa tươi còn trùng khít với Master Image (co biên mask).
-- Ngưỡng: $\ge 0.999$ (SAFE) / $\ge 0.99$ (WARNING) / $< 0.99$ (REJECTED).
-- Nếu REJECTED: Hệ thống từ chối ghi asset biến thể vào cơ sở dữ liệu để bảo vệ uy tín hình ảnh của tiệm hoa.
+- Worker đo tỷ lệ điểm ảnh LÕI chủ thể trùng khít TUYỆT ĐỐI với Master Image trên mặt nạ co biên. Độ sâu co biên = `StudioBackdropEngine.LIGHT_WRAP_DEPTH_PX + 1` = 5px (sửa 23/09/2026 — trước đó 3px < light wrap 4px nên mọi biến thể hợp lệ bị đo ~0,96).
+- Ngưỡng (`variant-rules.ts`): `≥ 0,999` SAFE · `≥ 0,99` WARNING · `< 0,99` REJECTED.
+- **REJECTED thì không ghi asset nào** (job `COMPLETED` + `result = REJECTED`). Nhánh "vẫn ghi, dán nhãn WARNING" đã gỡ 23/09/2026.
 
 ### 2.5. Tenant Isolation
-- Mọi truy vấn đọc/ghi CSDL và lưu trữ Object Storage đều giải `organization_id` trực tiếp từ phiên đăng nhập máy chủ (Server Session).
-- Tuyệt đối cấm nhận `organization_id` từ `req.body` hay URL query string.
+`organization_id` chỉ từ phiên máy chủ. `POST /creative-production/produce` không còn nhận `organizationId` trong body (23/09/2026). Bảng mới `campaign_packages` là TENANT, đi qua `scopedWhere`/`scopedData`.
 
-### 2.6. Invariant: Biến Thể Chỉ Dựng Từ MASTER (Hỗ trợ Skip)
-- Biến thể marketing (M04b) chỉ được phép sinh từ asset có `kind === "MASTER" && approval_state === "APPROVED"`.
-- Cơ chế "Skip — Dùng ảnh gốc": Tạo bản sao asset `kind = "MASTER"` từ `ORIGINAL` qua `/api/v1/media/promote-to-master` mà không làm thay đổi hay phá vỡ asset gốc.
+### 2.6. Biến thể chỉ dựng từ MASTER đã duyệt
+Cả hai nhánh M04b kiểm `kind = MASTER && approval_state = APPROVED` phía TS (`requestVariants`/`requestCloudVariant`, trả `409`) và kiểm lại ở worker. Ảnh ORIGINAL từ Khu vực A đi qua "Skip — Dùng ảnh gốc" (`POST /media/promote-to-master`, `I2`) — hàm này nay tìm đúng MASTER con của ảnh gốc để không tạo trùng.
 
----
-
-## 3. Cấu Trúc Thư Mục & Phân Hệ Thành Phần
-
-```
-src/
-├── app/(app)/creative-studio/
-│   └── page.tsx                                  # Shell điều phối 6 Khu vực tab (~510 dòng)
-│
-├── components/creative-studio/                   # UI Workspace Components
-│   ├── types.ts                                 # Shared types/interfaces
-│   ├── use-creative-studio-data.ts              # Custom hook: state + API calls M04
-│   ├── contents-workspace.tsx                   # Khu vực B: Viết nội dung đa kênh
-│   ├── audio-workspace.tsx                      # Khu vực C: Voiceover TTS & BGM ducking
-│   ├── variant-workspace.tsx                    # Khu vực D: M04b Biến thể Marketing
-│   ├── video-workspace.tsx                      # Khu vực E: M04c AI Video Studio
-│   ├── package-workspace.tsx                    # Khu vực F: Campaign Package & QA
-│   ├── package-downstream-card.tsx              # Chặng 10-14 Downstream Action Links
-│   ├── validation-screen.tsx                    # Chặn thiếu dữ liệu khi nhảy cóc sang B-F
-│   └── optimize-workspace.tsx                   # M04a Workspace tối ưu hóa nâng cao
-│
-├── components/market-intelligence/
-│   └── product-intelligence-workspace.tsx        # Khu vực A: Chặng 01-05 (Nhận diện & Trend)
-│
-├── components/templates/creative-studio/         # Template Library Components
-│   ├── before-after-preview-card.tsx
-│   ├── creative-guidance-card.tsx
-│   ├── enhancer-provider-selector.tsx
-│   ├── optimization-mode-selector.tsx
-│   ├── studio-scene-selector.tsx
-│   ├── studio-variant-card.tsx
-│   ├── visual-storytelling-controls.tsx
-│   └── applied-changes-breakdown.tsx
-│
-├── modules/creative-production/                  # Domain & Pipeline Orchestration
-│   ├── domain/
-│   │   ├── production-types.ts                  # CampaignPackage, TopicProductionBrief
-│   │   └── validate-transition.ts               # Logic kiểm tra chuyển tiếp giữa các chặng
-│   └── use-cases/
-│       ├── produce-creative-assets.ts
-│       └── package-campaign.ts
-│
-├── modules/media/                                # Media AI & Image Generation
-│   ├── adapters/
-│   │   ├── studio-local-image-provider.ts       # Kết nối Python StudioBackdropEngine CLI
-│   │   └── multi-image-provider-router.ts       # Router đa tầng Cloud -> Local Studio
-│   └── use-cases/
-│       └── execute-cloud-creative.ts
-│
-├── workers/media_ai/                             # Python Worker & Local AI Engine
-│   └── image/
-│       ├── studio_backdrop.py                   # Động cơ ghép bối cảnh Studio/Lifestyle/Wood
-│       ├── generate_scene.py                    # CLI entrypoint sinh ảnh phân cảnh (~0.46s)
-│       └── rembg_segmenter.py                   # Tách nền U2-Net/Rembg tạo mặt nạ RGBA
-```
+### 2.7. Không chạy mô hình trong request HTTP
+Mọi lượt dựng ảnh/âm thanh/video đi qua `enqueueJob` (hạn mức → trừ credit → `usage` → `generation_jobs` → `NOTIFY` trong một giao dịch, `Idempotency-Key` bắt buộc). `StudioLocalImageProvider` (TS) không còn `execFileSync` Python — luôn ném lỗi rõ ràng; Studio Backdrop Engine chỉ chạy trong worker.
 
 ---
 
-## 4. User Journey 6 Khu Vực Khép Kín
+## 3. Cấu Trúc Thư Mục
 
 ```
-[Khởi đầu] ──> Khu vực A: Quét theo ảnh sản phẩm (Chặng 01–05)
-                     │
-                     ├─ Chặng 01 (BRING): Tải ảnh hoa thật
-                     ├─ Chặng 02 (UNDERSTAND): Multimodal Vision AI bóc tách nguyên tử & OCR thiệp
-                     ├─ Chặng 03 (DISCOVER): Trend Fit Matrix & Điểm thị trường
-                     ├─ Chặng 04 (IDEATE): 10 Chủ đề kèm Dẫn chứng Video Kép TikTok & YouTube
-                     └─ Chặng 05 (CHOOSE): Chọn chủ đề & Mode (CREATIVE / AUTHENTIC)
-                                │
-                                └─── Sinh TopicProductionBrief & Điều hướng
-                                             │
-             ┌───────────────────────────────┴───────────────────────────────┐
-             ▼                                                               ▼
-  Khu vực B: Viết contents (Chặng 06a)                           Khu vực C: Tạo audio (Chặng 06b)
-  - Sinh Copy đa kênh                                            - Thu âm Voiceover kịch bản
-  - Kịch bản Video ngắn                                          - Phối nhạc nền BGM ducking
-             │                                                               │
-             └───────────────────────────────┬───────────────────────────────┘
-                                             │
-             ┌───────────────────────────────┴───────────────────────────────┐
-             ▼                                                               ▼
-  Khu vực D: Tạo biến thể ảnh (Chặng 06c)                        Khu vực E: Tạo video (Chặng 06d)
-  - 4 Khung Phân Cảnh Narrative Arc                              - 6 Khuôn video chuẩn M04c
-  - Local Studio Backdrop (~0.46s, 0đ)                           - Ken Burns Camera Motion & Subtitles
-             │                                                               │
-             └───────────────────────────────┬───────────────────────────────┘
-                                             │
-                                             ▼
-                             Khu vực F: Gói chiến dịch (Chặng 07–09)
-                             - Chặng 07 (PACKAGE): Tổng hợp Campaign Package
-                             - Chặng 08 (QA): AI kiểm tra Identity Guard & Brand Voice
-                             - Chặng 09 (APPROVE): Chủ shop duyệt chốt phát hành
-                                             │
-                                             ▼
-                      [Phân phối & Bán hàng Downstream: Chặng 10–14]
-                      - 10. LAUNCH: Xuất bản đa kênh (FB, TikTok, Zalo, Catalog)
-                      - 11. SELL: AI Chat Sales tư vấn chốt đơn M08
-                      - 12. MEASURE: Đo lường chuyển đổi doanh thu
-                      - 13. LEARN: Trích xuất Winning Patterns
-                      - 14. NEXT BEST ACTION: Đề xuất hành động tiếp thị tiếp theo
+src/app/(app)/creative-studio/page.tsx          # Shell 6 khu vực + CreativeStudioContext (~470 dòng)
+
+src/components/creative-studio/
+├── contents-workspace.tsx        # B
+├── creative-result-viewer.tsx    # B — hiển thị 4 bài, "Lưu bài vào gói chiến dịch"
+├── audio-workspace.tsx           # C — tạo job + chờ + nghe lại
+├── variant-workspace.tsx         # D — 4 phân cảnh qua job thật
+├── source-picker.tsx             # D — chọn Master / Skip dùng ảnh gốc
+├── video-workspace.tsx           # E
+├── package-workspace.tsx         # F — Chặng 07/08/09
+├── package-qa-card.tsx           # F — hiển thị báo cáo QA thật
+├── package-downstream-card.tsx   # F — Chặng 10–14
+├── package-client.ts             # F/B/E — helper gọi API gói chiến dịch
+├── validation-screen.tsx         # cổng chuyển tiếp B–F
+├── use-creative-studio-data.ts   # state + API M04a/M04b dùng chung
+├── types.ts
+├── optimize-workspace.tsx        # M04a — CHƯA gắn vào Studio (M04a chạy ở /tai-anh)
+└── asset-picker-grid.tsx         # chỉ optimize-workspace dùng
+
+src/components/market-intelligence/
+├── product-intelligence-workspace.tsx   # A — Chặng 01–05
+├── creative-handoff-modal.tsx           # A — Chặng 05 CHOOSE, bàn giao
+└── product-topics-list.tsx              # A — 10 chủ đề + video tham khảo (nhãn "ước tính" khi không phải số liệu thật)
+
+src/modules/creative-production/
+├── domain/  production-types · validate-transition · build-handoff-url · content-brief-builder ·
+│            social-post-generator · topic-to-{audio,content,media,video}-bridge ·
+│            campaign-package-rules (QA, duyệt, số đo, mẫu thắng, đề xuất)
+├── use-cases/  produce-creative · produce-authentic · plan-narrative-arc · dispatch-production-jobs ·
+│               package-campaign (ước tính, không lưu) · manage-campaign-package · get-campaign-performance
+├── infra/   campaign-package-repository (Prisma) · creative-production-repository (port in-memory cũ, chưa dùng)
+└── adapters/ narrative-ai-adapter
+
+src/modules/media/
+├── domain/variant-rules.ts                 # feature, preset, ratio, ngưỡng, cổng Master
+├── use-cases/request-variants.ts           # requestVariants · requestVariantBatch · requestCloudVariant
+├── use-cases/get-variant-job.ts            # trả thêm engine / scene_index / cloud_fallback
+├── adapters/multi-image-provider-router.ts # dùng bởi M04a cloud (execute-cloud-creative) — xem nợ #120
+└── adapters/studio-local-image-provider.ts # luôn ném lỗi (không chạy Python trong web)
+
+src/modules/audio-studio/  use-cases/create-audio-job · get-audio-job · infra/audio-job-repository
+
+workers/media_ai/
+├── jobs/worker.py              # một vòng claim: media.optimize → media.variant → media.variant.cloud → audio.generate → video.render
+├── jobs/variant_worker.py      # M04b cả hai nhánh (local + cloud)
+├── providers/background/stability_background.py   # hậu cảnh trống do Stability sinh
+├── providers/segmentation/rembg_segmenter.py
+├── image/studio_backdrop.py    # StudioBackdropEngine (composite(backdrop_image=...))
+├── audio/audio_worker.py       # process_audio_generation_job
+└── generate_scene.py           # CLI đo tốc độ cho dev — KHÔNG nằm trên đường chạy production
 ```
 
 ---
 
-## 5. API Contracts
+## 4. Luồng 6 Khu Vực
 
-### 5.1. Nhóm API Khu vực A (Quét theo ảnh sản phẩm & Bóc tách)
-- `POST /api/v1/assets/upload-url` — Xin cấp Signed URL để tải ảnh hoa thật lên kho S3/MinIO.
-- `POST /api/v1/assets/confirm-upload` — Xác nhận ảnh đã tải lên, tạo bản ghi `assets` (`kind=ORIGINAL`).
-- `POST /api/v1/product-intelligence` — Vision AI (`gpt-4o-mini`) phân tích cấu trúc, tính điểm Trend Fit và sinh 10 chủ đề kèm Dẫn chứng Video Kép.
-- `GET /api/v1/product-intelligence/:id` — Nạp báo cáo Product Intelligence bằng `runId`.
-
-### 5.2. Nhóm API Khu vực B (Nội dung) & Khu vực F (Đóng gói)
-- `POST /api/v1/creative-production/produce` — Sinh nội dung đa kênh (Post, Script, Story) theo Topic và Mode.
-- `POST /api/v1/creative-production/package` — Đóng gói tất cả tài sản thành `CampaignPackage`.
-
-### 5.3. Nhóm API Khu vực C (Audio)
-- `POST /api/v1/audio/jobs` — Tạo job TTS kịch bản và phối trộn nhạc nền ducking.
-
-### 5.4. Nhóm API Khu vực D (Biến thể ảnh M04b)
-- `POST /api/v1/media/variants` — Tạo job sinh biến thể marketing (`I4`). Hỗ trợ fallback sang `StudioLocalImageProvider` gọi `generate_scene.py`.
-- `POST /api/v1/media/variants/:id/approve` — Duyệt biến thể marketing (`I5`).
-- `POST /api/v1/media/promote-to-master` — Skip M04a: Duyệt nhanh ảnh ORIGINAL thành MASTER (`I2`).
-
-### 5.5. Nhóm API Khu vực E (Video Studio M04c)
-- `POST /api/v1/video/jobs` — Tạo job biên tập video marketing theo Storyboard và khuôn mẫu.
+```
+A (01–05) ──bàn giao URL định danh──▶ B · C · D · E (06a–06d, thứ tự tự do)
+                                         │  B lưu bài vào gói; C/E mang audioJobId/videoJobId qua URL
+                                         ▼
+                                F: 07 PACKAGE ─▶ 08 QA (máy chủ) ─▶ 09 APPROVE (J5 + audit)
+                                         ▼
+                   10 LAUNCH (kế hoạch + mã bài) ─▶ 11–12 số liệu thật ─▶ 13 mẫu thắng ─▶ 14 đề xuất
+```
 
 ---
 
-## 6. Capability Matrix (RBAC & Hard Ceiling)
+## 5. API Contracts (đầy đủ ở `06-api-specification.md` §8, §19, §22, §23)
 
-| Mã | Tên Năng Lực | Mô Tả Nghiệp Vụ | Cấp Độ Kiểm Soát |
+| Khu vực | Method · Path | Năng lực |
+|---|---|---|
+| A | `POST /assets/upload-url` · `POST /assets` · `GET /assets/:id/view-url` | `G2` · `G2` · `G1` |
+| A | `POST /market-intelligence/vision-extract` · `POST /market-intelligence/product-intelligence` | `V1` · `V1` |
+| A | `GET /product-intelligence/:id` | `V2` |
+| B | `POST /creative-production/produce` · `/plan` · `/package` (ước tính) | `I1` |
+| C | `POST /audio/jobs` (Idempotency-Key) · `GET /audio/jobs/:id` | `I1` |
+| D | `POST /media/variants` (`engine` local/cloud, Idempotency-Key) · `GET /media/variants/:id` | `I4` |
+| D | `POST /media/variants/:id/approve` · `GET /media/variants` | `I5` |
+| D | `POST /media/promote-to-master` | `I2` |
+| D | `GET /assets?kind=MARKETING&parent_asset_id=` (lọc theo Master — thêm 23/09/2026) | `G1` |
+| E | `GET·POST /video/jobs` · `PATCH /video/jobs/:id/storyboard` · `POST /video/jobs/:id/render` | `I1` |
+| E | `POST /video/jobs/:id/approve-script` · `approve-video` | `P3` · `P4` |
+| F | `POST·GET /creative-production/packages` | `I1` · `G1` |
+| F | `GET·PATCH /creative-production/packages/:id` | `G1` · `I1` |
+| F | `POST /creative-production/packages/:id/qa` | `I1` |
+| F | `POST /creative-production/packages/:id/approve` · `PUT …/launch` | `J5` |
+| F | `GET /creative-production/packages/:id/performance` | `R1` |
+
+---
+
+## 6. Năng Lực (theo `src/core/rbac/capability-catalog.ts`)
+
+| Mã | Tên trong catalog | Dùng ở Creative Studio | Trần cứng |
 |---|---|---|---|
-| `I1` | Chạy tối ưu ảnh | Tạo job M04a tối ưu hóa chất lượng | Soft Switch |
-| `I2` | Duyệt ảnh | Duyệt Master Image + Promote-to-Master (Skip) | Soft Switch |
-| `I3` | Tải ảnh | Download Master / biến thể | Mặc định mở |
-| `I4` | Chạy biến thể | Tạo job M04b sinh 4 khung phân cảnh Narrative Arc | Soft Switch |
-| `I5` | Duyệt biến thể | Duyệt biến thể marketing xuất bản (trần cứng) | **Hard Ceiling** |
-| `V1` | Tạo video | Khởi chạy job biên tập video M04c | Soft Switch |
-| `V2` | Duyệt kịch bản/video | Duyệt xuất bản video thành phẩm | **Hard Ceiling** |
+| `G1`/`G2` | `asset.read` / `asset.upload` | đọc/tải ảnh, đọc gói | — |
+| `V1` | `market_intel.research.run` | Vision + Product Intelligence (A) | — |
+| `V2` | `market_intel.opportunity.read` | đọc lại report (A) | — |
+| `I1` | `media.optimize` | produce/plan (B), audio (C), video (E), tạo/sửa/QA gói (F) — ⚠ dùng chung, xem nợ #121 | — |
+| `I2` | `media.approve` | Skip — promote ORIGINAL → MASTER | **Có** |
+| `I4` | `media.variant.run` | biến thể (D) | — |
+| `I5` | `media.variant.approve` | duyệt biến thể (D) | **Có** |
+| `P3` | `video.approve_script` | duyệt kịch bản video | — |
+| `P4` | `video.approve_final` | duyệt video thành phẩm | **Có** |
+| `J5` | `social.publish` | duyệt gói (09) + kế hoạch đăng (10) | — (chờ PO, nợ #121) |
+| `R1` | `order.read` | số liệu Chặng 11–14 | — |
 
 ---
 
-## 7. Khung Phân Cảnh Narrative Arc & Động Cơ Local Studio Backdrop Engine (23/09/2026)
+## 7. Khu vực D — 4 Phân Cảnh Narrative Arc
 
-### 7.1. Bối cảnh & Vấn đề giải quyết
-Trước ngày 23/09, tại Khu vực D (`area-d` - M04b Biến thể Marketing), khi các Cloud Provider ngoài (Stability AI, Fal.ai FLUX, Google Gemini) gặp lỗi hạn mức hoặc hết credits (402, 403, 429), chuỗi định tuyến `MultiImageProviderRouter` rơi về `studio_local`. Tuy nhiên, `StudioLocalImageProvider` ban đầu chỉ trả về mảng bytes ảnh gốc chưa qua xử lý, khiến cho cả 4 khung phân cảnh trên giao diện đều hiển thị 4 bức ảnh hoa thật giống hệt nhau, không tạo ra được bất kỳ sự khác biệt nào về bối cảnh hay nghệ thuật.
-
-### 7.2. Đặc tả 4 Khung Phân Cảnh Narrative Arc chuẩn hóa
-M04b Creative Studio chuyển giao từ Chặng 04 (IDEATE) và Chặng 05 (CHOOSE) thành chuỗi 4 khung phân cảnh hình ảnh khép kín:
-
-| Phân Cảnh | Nhịp Kịch Bản (Beat) | Preset Bối Cảnh | Mô Tả Nghiệp Vụ & Hiệu Ứng Thị Giác | Mục Đích Xuất Bản |
+| Cảnh | Beat | Preset API (`VARIANT_PRESET_IDS`) | Style nội bộ worker | Nguồn hậu cảnh |
 |---|---|---|---|---|
-| **Cảnh 1** | `SETUP` (Mở đầu) | `clean_white` (`studio_white`) | **Vẻ đẹp nguyên bản**: Đặt hoa trên phông Studio Trắng Tinh Khôi, ánh sáng softbox 45° tự nhiên, bóng đổ tiếp xúc 2 tầng (Ambient Occlusion + Directional Soft Shadow). Giữ nguyên 100% chi tiết hoa thật từ Chặng 01–02. | Catalog thương mại / Ảnh Master xác thực |
-| **Cảnh 2** | `RISING` (Trải nghiệm) | `boutique_bokeh` (`luxury_hotel` / `wedding`) | **Không gian Lifestyle Sang Trọng**: Hòa phối bó hoa vào sảnh tiệc mừng khai trương / khách sạn cao cấp với hiệu ứng vòng tròn Bokeh quang học f/1.8, ánh sáng ấm áp, tạo cảm xúc thực tế cho người mua. | Bài viết Facebook Feed / Quảng cáo Instagram |
-| **Cảnh 3** | `CLIMAX` (Chi tiết) | `wood_warm` (`wood_minimal`) | **Gỗ Tối Giản Nghệ Thuật (Bắc Âu)**: Bối cảnh mặt bàn gỗ sồi ấm áp dưới ánh ban mai nhẹ, góc cận cảnh tôn vinh thông điệp thiệp chúc mừng OCR và ruy băng nơ thiết kế riêng. | Slide chi tiết chất lượng / Zalo tư vấn chốt đơn |
-| **Cảnh 4** | `CTA` (Xuất bản) | `transparent` (`cutout`) | **Tách Nền Trong Suốt (PNG)**: Khử nền 100% bằng AI Matting (U2-Net / Rembg), làm sạch viền (Sub-pixel Feathering & Defringing), lưu trữ kênh alpha trong suốt sẵn sàng ghép banner và đóng dấu logo tiệm hoa. | Ghép banner khuyến mãi / Xuất bản đa kênh |
+| 1 | SETUP | `studio_white` | `clean_white` | luôn Studio cục bộ |
+| 2 | RISING | `wedding` (góc EMOTIONAL) · `luxury_hotel` (PRODUCT_SHOWCASE/TREND) · `living_room` (còn lại) | `boutique_bokeh` · `warm_gray` · `soft_ambient` | Stability (mặc định) hoặc Studio cục bộ — người dùng chọn |
+| 3 | CLIMAX | `wood_minimal` | `wood_warm` | Stability (mặc định) hoặc Studio cục bộ |
+| 4 | CTA | `transparent` | `transparent` | luôn cục bộ (tách nền) |
 
-### 7.3. Kiến trúc Động Cơ Local Studio Backdrop Engine
-- **Thực thi cục bộ 100%**: Sử dụng `StudioBackdropEngine` (`workers/media_ai/image/studio_backdrop.py`) và `RembgSegmenter` chạy trên Python/OpenCV/Pillow nội bộ thông qua script CLI `workers/media_ai/generate_scene.py`.
-- **Cơ chế Cache RGBA Mặt nạ (`<master>.rgba.png`)**:
-  - Khi bóc tách chủ thể lần đầu bằng U2-Net (~20s), hệ thống tự động ghi cache mặt nạ RGBA vào đĩa.
-  - Các lượt ghép phân cảnh tiếp theo (`clean_white`, `boutique_bokeh`, `wood_warm`) tái sử dụng trực tiếp mặt nạ đã lưu, rút ngắn thời gian sinh ảnh xuống chỉ còn **~0.46s / ảnh $2048 \times 2048$**.
-  - Chi phí vận hành: **0 VNĐ / 0 Token API**, hoạt động offline hoàn toàn.
-- **Tự động định tuyến Fallback thông minh (`MultiImageProviderRouter`)**:
-  - Nếu người dùng kích hoạt tạo biến thể AI qua Cloud Provider (Stability AI) mà gặp lỗi (402, 403, 429), router tự động chuyển sang `StudioLocalImageProvider`.
-  - `StudioLocalImageProvider` phân tích từ khóa trong prompt/directives để chọn đúng bối cảnh (`clean_white`, `boutique_bokeh`, `wood_warm`, `transparent`), tạo ra ảnh biến thể thực sự thay vì trả ảnh gốc thô.
-- **Client-Side Tự Động Đồng Bộ & Sinh Độc Lập**:
-  - Khi người dùng tải trang, `variant-workspace.tsx` tự động truy vấn danh mục `assets` (`kind=MARKETING`) để nạp ngay các phân cảnh đã sinh sẵn vào `sceneImageMap`.
-  - Mỗi khung phân cảnh có nút hành động riêng: "⚡ Sinh ảnh Lifestyle (Stability AI)", "⚡ Sinh ảnh Cận cảnh", "⚡ Tạo PNG Tách nền" kèm trạng thái xử lý độc lập (`generatingSceneIndex`).
+- Mỗi cảnh = một job, `scene_index` 1–4 ghi vào payload và `assets.metadata`. Màn kết quả chỉ hiện ảnh thật đã sinh cho đúng cảnh; cảnh chưa sinh ghi "Chưa sinh — chưa đo" (không mượn ảnh gốc).
+- Số toàn vẹn hiển thị là `subject_integrity.subject_pixel_identity` của job hoặc `assets.identity_score`.
+- Tự nạp phân cảnh đã sinh bằng `GET /assets?kind=MARKETING&parent_asset_id=<master>` — chỉ của Master đang chọn.
+- Duyệt từng cảnh: `POST /media/variants/:job_id/approve` (`I5`).
 
+### 7.1. Nhánh Cloud (`media.variant.cloud`)
+1. TS `requestCloudVariant` → `enqueueJob` (2 credit — giá tạm, nợ #64).
+2. Worker: `StabilityBackgroundProvider.sinh_hau_canh()` gọi `POST https://api.stability.ai/v2beta/stable-image/generate/core` với lời nhắc **chỉ mô tả không gian**, luôn nối "no flowers, no people, no text…".
+3. Tách chủ thể (rembg + defringe, cache đĩa theo `master_asset_id` tại `var/storage/cache/m04b_segmentation/`), `StudioBackdropEngine.composite(backdrop_image=…)` dán nguyên khối bó hoa, đổ bóng, light wrap.
+4. Đo Subject Integrity → quyết định ghi asset. Asset ghi `provider=stability_ai`, `metadata.engine=cloud_provider`.
+5. Nhà cung cấp lỗi (thiếu `STABILITY_API_KEY`, 402/403/429, mạng, không phải ảnh) → lùi về phông cục bộ của preset, ghi `cloud_fallback=true` + lý do vào asset, sự kiện job và `ai_requests` (`outcome=FAILED`).
 
+### 7.2. Tốc độ
+Con số "~0,46s / ảnh 2048×2048" là đo bằng CLI dev `generate_scene.py` khi đã có cache mặt nạ; chưa có phép đo chính thức trên worker production. Không dùng làm cam kết SLA.
+
+---
+
+## 8. Khu vực F — Gói chiến dịch
+
+- Bảng `campaign_packages` (đặc tả 07 §23). Trạng thái: `DRAFT → QA_PASSED | QA_NEEDS_REVIEW | QA_REJECTED → APPROVED`. Sửa gói chưa duyệt → về `DRAFT`, xoá QA cũ.
+- **QA (08)** — `evaluateCampaignQa()`: (1) toàn vẹn sản phẩm theo số đo từng ảnh; (2) cổng duyệt từng tài sản (I5, P4, audio hoàn tất); (3) chuẩn tỷ lệ theo kênh (TikTok cần 9:16); (4) nội dung — đủ bài, giới hạn ký tự (FB 63.206, IG 2.200, TikTok 2.200, Zalo 2.000), biến `{{…}}` chưa điền, ≤ 30 hashtag IG, từ điển ngành hoa + `brand_profiles.forbidden_styles` (`checkFlowerContent`); (5) thương hiệu — có logo, có ảnh đóng dấu. Phán quyết xấu nhất thắng.
+- **Duyệt (09)** — `canApprovePackage()`: chỉ sau QA; `QA_REJECTED` không duyệt được; `QA_NEEDS_REVIEW` cần xác nhận. Ghi `audit_logs` cùng giao dịch, chốt chặn đua bằng `updateMany where status = <đã đọc>`.
+- Bài đăng vào gói từ Khu vực B (nút "Lưu bài vào gói chiến dịch") hoặc soạn trực tiếp ở F.
+
+---
+
+## 9. Giới hạn & nợ còn mở (chi tiết ở `TECHNICAL_DEBT.md`)
+
+- **#119** — Khuôn bài đăng (`social-post-generator.ts`) còn câu cam kết dịch vụ chung ("giao 2 giờ", "tặng thiệp", "freeship nội thành") không lấy từ hồ sơ tiệm — chủ tiệm phải sửa trước khi đăng; QA không bắt được.
+- **#120** — Nhánh cloud của **M04a** (`POST /media/optimizations` engine cloud → `executeCloudCreative`) vẫn chạy đồng bộ trong request, integrity ước lượng 0,98/1,0, bản RATIO trỏ cùng tệp. Ngoài phạm vi Creative Studio (M04a chạy ở `/tai-anh`).
+- **#121** — Năng lực: B/C/E/F dùng chung `I1`; duyệt gói dùng `J5` (không trần cứng). Chờ PO quyết thêm mã riêng.
+- **#122** — 10 chủ đề của Chặng 04 là khuôn theo luật; "video tham khảo" là danh mục tuyển chọn (metrics ước tính, TikTok là trang tìm kiếm) — giao diện đã gắn nhãn; chưa có nguồn video thời gian thực.
+- **#123** — Video E: chưa nhận bản phối âm thanh từ Khu vực C; giọng/nhạc để worker chọn mặc định.
+- **#124** — `npm run lint` toàn repo còn 235 lỗi (src) + 31 (tests) ngoài phạm vi Creative Studio (CI đỏ ở bước lint); phạm vi Creative Studio đã 0 lỗi.
+- Chưa quy được đơn hàng về từng bài đăng (không có mã theo dõi); Chặng 11–12 tính theo sản phẩm kể từ ngày duyệt.

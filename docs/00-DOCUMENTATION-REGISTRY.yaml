@@ -257,7 +257,7 @@ documents:
     title: "Creative Studio Architecture (Chặng 01–14)"
     domain: "Module M04"
     layer: "Level 3"
-    purpose: "Kiến trúc 6 khu vực Creative Studio (A: Quét theo ảnh Chặng 1-5, B: Content, C: Audio, D: Variant, E: Video, F: Package Chặng 7-9) và downstream Chặng 10-14"
+    purpose: "Kiến trúc v4.0 (23/09/2026, đồng bộ 100% theo mã) — 6 khu vực Creative Studio (A: Chặng 01–05, B: Content, C: Audio, D: Biến thể M04b local/cloud qua hàng đợi, E: Video, F: Gói chiến dịch campaign_packages Chặng 07–09) và Chặng 10–14 trên dữ liệu thật"
     status: "CANONICAL"
     authority: "Level 3"
     canonical: true
@@ -485,7 +485,7 @@ documents:
     title: "Creative Studio Execution Checklist"
     domain: "Module M04"
     layer: "Level 5"
-    purpose: "Checklist kiểm thử và triển khai 5 khu vực Creative Studio"
+    purpose: "Checklist v2.0 (23/09/2026) — trạng thái thật của 6 khu vực Creative Studio (A–F) và Chặng 01–14, mỗi ô đã tích kèm tệp/test kiểm chứng"
     status: "SUPPORTING"
     authority: "Level 5"
     canonical: false

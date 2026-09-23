@@ -15,6 +15,7 @@ import type {
   TtsRouterConfig,
 } from "../domain/tts-provider-port"
 import type { TtsProviderKey } from "../domain/audio-types"
+import { DEFAULT_TTS_ROUTER_CONFIG } from "../domain/tts-provider-port"
 
 // ============================================================
 // TTS ROUTER — Điều phối + Fallback
@@ -311,7 +312,6 @@ export class EdgeTtsFallbackAdapter implements ITtsProvider {
 // ============================================================
 
 export function createDefaultTtsRouter(): TtsRouterAdapter {
-  const { DEFAULT_TTS_ROUTER_CONFIG } = require("../domain/tts-provider-port")
 
   const providers: ITtsProvider[] = [
     new OpenAiTtsAdapter(),

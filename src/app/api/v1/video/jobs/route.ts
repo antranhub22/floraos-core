@@ -36,6 +36,7 @@ const createSchema = z.object({
         textOverlay: z.string().nullable().optional(),
         voiceScript: z.string().nullable().optional(),
         transitionEffect: z.string().optional(),
+        motionEffect: z.enum(["ZOOM_IN", "ZOOM_OUT", "PAN_UP", "PAN_RIGHT", "STATIC"]).optional(),
       })
     )
     .optional(),

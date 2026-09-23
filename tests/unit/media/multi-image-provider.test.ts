@@ -73,28 +73,22 @@ describe("MultiImageProviderRouter & Adapters", () => {
     ).rejects.toThrow("imageBytes")
   })
 
-  it("router fallback đến studio_local khi các provider cloud đều thiếu key/bytes", { timeout: 15_000 }, async () => {
-    // Tất cả provider cloud đều throw (thiếu API key hoặc imageBytes).
-    // studio_local không cần key → luôn thành công → router fallback đến nó.
+  it("router ném lỗi khi mọi provider cloud lỗi — studio_local không trả ảnh gốc giả (23/09/2026)", { timeout: 15_000 }, async () => {
+    // studio_local chỉ chạy trong worker Python qua hàng đợi job; trong tiến
+    // trình web nó luôn ném lỗi rõ ràng thay vì trả lại imageBytes gốc.
     const FAKE_JPEG = createMinimalJpeg()
     const router = new MultiImageProviderRouter({
       defaultProvider: "photoroom",
       fallbackChain: ["photoroom", "google_imagen", "fal_flux", "studio_local"],
     })
 
-    const result = await router.edit({
-      imageRef: { assetId: "ast-04", storageKey: "org/test/flower.jpg" },
-      prompt: "A clean minimalist studio setting",
-      aspectRatio: "1:1",
-      imageBytes: FAKE_JPEG,
-    })
-
-    expect(result).toBeDefined()
-    // studio_local trả lại imageBytes gốc (bảo tồn pixel) → bytes hợp lệ
-    expect(result.bytes instanceof Uint8Array).toBe(true)
-    if (result.bytes instanceof Uint8Array) {
-      expect(result.bytes.length).toBeGreaterThan(0)
-    }
-    expect(router.lastUsedProvider).toBe("studio_local")
+    await expect(
+      router.edit({
+        imageRef: { assetId: "ast-04", storageKey: "org/test/flower.jpg" },
+        prompt: "A clean minimalist studio setting",
+        aspectRatio: "1:1",
+        imageBytes: FAKE_JPEG,
+      })
+    ).rejects.toThrow()
   })
 })

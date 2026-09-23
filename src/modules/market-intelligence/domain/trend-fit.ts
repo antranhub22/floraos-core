@@ -498,6 +498,7 @@ export function evaluateProductTrendFit(input: EvaluateTrendFitInput): ProductIn
           author: dual.youtube.author,
           metrics: dual.youtube.metrics,
           alt: dual.youtube.alt,
+          isLiveEvidence: dual.youtube.isLiveEvidence,
         },
         tiktok: {
           thumbnailUrl: dual.tiktok.thumbnailUrl,
@@ -506,6 +507,7 @@ export function evaluateProductTrendFit(input: EvaluateTrendFitInput): ProductIn
           author: dual.tiktok.author,
           metrics: dual.tiktok.metrics,
           alt: dual.tiktok.alt,
+          isLiveEvidence: dual.tiktok.isLiveEvidence,
         },
       },
     };

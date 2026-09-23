@@ -62,6 +62,8 @@ export class DispatchVideoRenderUseCase {
           textOverlay: s.text_overlay,
           voiceScript: s.voice_script,
           transitionEffect: s.transition_effect,
+          // Worker (`local_cinematic.py`) đọc `motionEffect`; vắng thì tự xoay vòng.
+          motionEffect: s.motion_effect ?? undefined,
         })),
       },
     });

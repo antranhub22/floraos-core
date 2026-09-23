@@ -3,6 +3,7 @@ import { z } from "zod"
 import { validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
+import { readIdempotencyKey } from "@/modules/jobs/domain/idempotency"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { createAudioJob } from "@/modules/audio-studio/use-cases/create-audio-job"
 
@@ -32,6 +33,11 @@ export const POST = handle(async (request) => {
   const { ctx } = await requireTenantContext(request)
   requireCapability(ctx, "I1")
 
+  const idempotencyKey = readIdempotencyKey(request)
+  if (!idempotencyKey) {
+    throw validationFailed({ "idempotency-key": "Bắt buộc trên mọi endpoint tạo job (YC-U7)" })
+  }
+
   const parsed = postSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
 
@@ -49,6 +55,7 @@ export const POST = handle(async (request) => {
     musicTrackId: parsed.data.musicTrackId,
     musicMood: parsed.data.musicMood,
     topicAngleCategory: parsed.data.topicAngleCategory,
+    idempotencyKey,
   })
 
   return jsonResponse(result, { status: 201 })

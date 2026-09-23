@@ -60,6 +60,8 @@ export class AssetRepository {
       productId?: string | undefined
       kind?: asset_kind | undefined
       approvalState?: approval_state | undefined
+      /** Lọc con trực tiếp của một asset (vd. biến thể của một Master). */
+      parentAssetId?: string | undefined
       limit: number
       cursor?: string | null
     }
@@ -67,6 +69,7 @@ export class AssetRepository {
     return this.db.assets.findMany({
       where: scopedWhere(ctx, {
         ...(options.productId ? { product_id: options.productId } : {}),
+        ...(options.parentAssetId ? { parent_asset_id: options.parentAssetId } : {}),
         ...(options.kind ? { kind: options.kind } : {}),
         ...(options.approvalState ? { approval_state: options.approvalState } : {}),
       }),

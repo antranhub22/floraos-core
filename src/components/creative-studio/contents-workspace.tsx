@@ -4,8 +4,7 @@ import React, { useState, useCallback, useContext, useEffect } from "react"
 import { Sparkles, Wand2, FileText, Send, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
-import { useSession } from "@/lib/session"
-import { CreativeResultViewer } from "./creative-result-viewer"
+import { CreativeResultViewer, type CreativeResultViewerProps } from "./creative-result-viewer"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,10 +24,18 @@ interface TopicSelector {
   selected: boolean
 }
 
+const ANGLE_LABELS: Record<string, { label: string }> = {
+  PRODUCT_SHOWCASE: { label: "Giới thiệu sản phẩm & Giá" },
+  EDUCATIONAL: { label: "Chia sẻ bí quyết & Cẩm nang" },
+  PROBLEM_SOLUTION: { label: "Gỡ rối tình huống tặng quà" },
+  EMOTIONAL: { label: "Chạm cảm xúc & Tình cảm" },
+  TREND: { label: "Bắt sóng trào lưu thịnh hành" },
+  PRICE_VALUE: { label: "Phân khúc giá & Giá trị" },
+}
+
 export function ContentsWorkspace() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const session = useSession()
   const context = useContext(CreativeStudioContext)
   const ctx = context ?? {
     topicId: "",
@@ -66,6 +73,7 @@ export function ContentsWorkspace() {
         format: t.format,
         selected: t.id === ctx.selectedTopic?.id || false,
       }))
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ state từ nguồn ngoài (URL/API), chủ đích
       setTopics(mappedTopics)
     } else if (ctx.topicId) {
       // Fallback to basic topic from URL params
@@ -85,15 +93,6 @@ export function ContentsWorkspace() {
     }
   }, [ctx.topics, ctx.selectedTopic, ctx.topicId, ctx.productName])
 
-  const ANGLE_LABELS: Record<string, { label: string }> = {
-    PRODUCT_SHOWCASE: { label: "Giới thiệu sản phẩm & Giá" },
-    EDUCATIONAL: { label: "Chia sẻ bí quyết & Cẩm nang" },
-    PROBLEM_SOLUTION: { label: "Gỡ rối tình huống tặng quà" },
-    EMOTIONAL: { label: "Chạm cảm xúc & Tình cảm" },
-    TREND: { label: "Bắt sóng trào lưu thịnh hành" },
-    PRICE_VALUE: { label: "Phân khúc giá & Giá trị" },
-  }
-
   const toggleTopic = useCallback((topicId: string) => {
     setTopics((prev) => prev.map((t) => (t.topicId === topicId ? { ...t, selected: !t.selected } : t)))
   }, [])
@@ -105,28 +104,25 @@ export function ContentsWorkspace() {
     try {
       const selected = topics.filter((t) => t.selected)
       // Build commercialPassport from report or fallback to basic info
-      const passport = ctx.report?.components && ctx.report.components.length > 0
-        ? {
-            productName: ctx.report.commercialPassport?.suggestedName || ctx.productName,
-            category: ctx.report.commercialPassport?.priceSegment || "",
-            style: ctx.report.commercialPassport?.style || ctx.report.attributes?.style || "",
-            components: ctx.report.components.map((c) => c.flowerType),
-            colors: [
-              ...(ctx.report.attributes?.mainColors || []),
-              ...(ctx.report.attributes?.secondaryColors || []),
-            ],
-            priceRange: ctx.report.commercialPassport?.priceSegment,
-            targetAudience: ctx.report.commercialPassport?.targetAudience?.buyerPersona,
-            suggestedOccasions: ctx.report.commercialPassport?.occasions,
-          }
-        : { productName: ctx.productName, category: "", style: "", components: [] as string[], colors: [] as string[] }
+      // Passport do trang Creative Studio dựng từ report thật (page.tsx) —
+      // không tự dựng lại ở đây với `category = priceSegment` như bản trước.
+      const cp = context?.commercialPassport
+      const passport = {
+        productName: ctx.report?.commercialPassport?.suggestedName || ctx.productName,
+        category: cp?.category ?? "",
+        style: cp?.style ?? "",
+        components: cp?.components ?? [],
+        colors: cp?.colors ?? [],
+        ...(cp?.priceRange ? { priceRange: cp.priceRange } : {}),
+        ...(cp?.targetAudience ? { targetAudience: cp.targetAudience } : {}),
+        ...(cp?.suggestedOccasions ? { suggestedOccasions: cp.suggestedOccasions } : {}),
+      }
 
       const res = await fetch("/api/v1/creative-production/produce", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           brief: {
-            organizationId: session.organization?.id || "",
             mode,
             productContext: {
               sourceImageUrl: ctx.sourceImageUrl,
@@ -157,14 +153,14 @@ export function ContentsWorkspace() {
     } finally {
       setLoading(false)
     }
-  }, [mode, topics, voiceId, musicMood, ctx, session.organization?.id])
+  }, [mode, topics, voiceId, musicMood, ctx])
 
   const selectedTopics = topics.filter((t) => t.selected)
 
   const navigateToArea = (area: "b" | "c" | "d" | "e" | "f") => {
     const params = new URLSearchParams(searchParams?.toString() || "")
     params.set("area", area)
-    router.push(`/creative-studio?${params.toString()}` as any)
+    router.push(`/creative-studio?${params.toString()}` as never)
   }
 
   return (
@@ -240,7 +236,7 @@ export function ContentsWorkspace() {
       {result && (
         <CreativeResultViewer
           mode={mode}
-          topicResults={((result.topicResults as any[]) ?? [])}
+          topicResults={((result.topicResults as CreativeResultViewerProps["topicResults"] | undefined) ?? [])}
           totalCredits={(result.totalEstimatedCredits as number) ?? 0}
           onGoToAudio={() => navigateToArea("c")}
           onGoToPackage={() => navigateToArea("f")}

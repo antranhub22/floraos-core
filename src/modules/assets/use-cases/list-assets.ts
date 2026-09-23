@@ -17,6 +17,7 @@ export async function listAssets(
     productId?: string | undefined
     kind?: string | undefined
     approvalState?: string | undefined
+    parentAssetId?: string | undefined
     limit?: number | undefined
     cursor?: string | null | undefined
   }
@@ -30,6 +31,7 @@ export async function listAssets(
     productId: options.productId,
     kind: options.kind as import("@/modules/assets/infra/entities").asset_kind | undefined,
     approvalState: options.approvalState as import("@/modules/assets/infra/entities").approval_state | undefined,
+    parentAssetId: options.parentAssetId,
     limit: limit + 1,
     cursor: options.cursor ?? null,
   })

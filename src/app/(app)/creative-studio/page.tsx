@@ -1,12 +1,11 @@
 "use client"
 
 import React, { useState, useMemo, useEffect, useCallback } from "react"
-import { Sparkles, ArrowLeft, ShieldCheck, Download, RotateCcw, Check, Wand2, FileText, Headphones, Film, Package, AlertTriangle, Camera } from "lucide-react"
+import { Sparkles, ArrowLeft, Wand2, FileText, Headphones, Film, Package, AlertTriangle, Camera } from "lucide-react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { TabActionHeader, type TabItem, type TabAction, type TabOverflowAction } from "@/components/ui/tab-header"
+import { TabActionHeader, type TabItem, type TabOverflowAction } from "@/components/ui/tab-header"
 import { CreativeGuidanceCard } from "@/components/templates/creative-studio/creative-guidance-card"
 import { ProductIntelligenceWorkspace } from "@/components/market-intelligence/product-intelligence-workspace"
-import { OptimizeWorkspace } from "@/components/creative-studio/optimize-workspace"
 import { VariantWorkspace } from "@/components/creative-studio/variant-workspace"
 import { ContentsWorkspace } from "@/components/creative-studio/contents-workspace"
 import { AudioWorkspace } from "@/components/creative-studio/audio-workspace"
@@ -20,7 +19,7 @@ import { validateTransition } from "@/modules/creative-production/domain/validat
 import type { ProductIntelligenceReport, ConcreteTopic } from "@/modules/market-intelligence/domain/product-intelligence-types"
 
 // ============================================================
-// CreativeStudioContext — carry-forward from Chặng 1-4
+// CreativeStudioContext — carry-forward từ Chặng 01–05 (Khu vực A)
 // ============================================================
 
 interface CreativeStudioContextType {
@@ -48,8 +47,6 @@ interface CreativeStudioContextType {
 }
 
 export const CreativeStudioContext = React.createContext<CreativeStudioContextType | null>(null)
-
-// ... rest of the file
 
 // ============================================================
 // Tab definitions
@@ -105,7 +102,7 @@ const CREATIVE_STUDIO_TABS: Record<
     label: "Khu vực F — Gói chiến dịch",
     icon: Package,
     workspace: "area-f",
-    description: "Chặng 07 — Package Dashboard",
+    description: "Chặng 07–09 — Đóng gói, QA, Duyệt (+ Chặng 10–14)",
   },
 }
 
@@ -190,21 +187,19 @@ export default function CreativeStudioPage() {
         // Extract commercialPassport from report for validation
         // Build from report components/attributes if commercialPassport missing
         const commercialPassport = {
-          category: report.commercialPassport?.priceSegment || report.attributes?.shape || "Hoa tươi thiết kế",
-          style: report.commercialPassport?.style || report.attributes?.style || "Hiện đại & Tinh tế",
-          components: report.components && report.components.length > 0
-            ? report.components.map((c) => c.flowerType)
-            : ["Hoa tươi tuyển chọn"],
+          // 23/09/2026: chỉ lấy dữ liệu THẬT của report — thiếu thì để trống cho
+          // ValidationScreen báo thiếu, không điền "Hoa tươi thiết kế"/"Tone màu hài hòa".
+          // `category` là hình dáng sản phẩm (bó/giỏ/kệ), không phải phân khúc giá.
+          category: report.attributes?.shape || report.commercialPassport?.tags?.[0] || "",
+          style: report.commercialPassport?.style || report.attributes?.style || "",
+          components: (report.components || []).map((c) => c.flowerType).filter(Boolean),
           colors: [
             ...(report.attributes?.mainColors || []),
             ...(report.attributes?.secondaryColors || []),
-          ].length > 0 ? [
-            ...(report.attributes?.mainColors || []),
-            ...(report.attributes?.secondaryColors || []),
-          ] : ["Tone màu hài hòa"],
+          ],
           priceRange: report.commercialPassport?.priceRange
-            ? `${report.commercialPassport.priceRange.minPrice} - ${report.commercialPassport.priceRange.maxPrice} VNĐ`
-            : report.commercialPassport?.priceSegment,
+            ? `${report.commercialPassport.priceRange.minPrice.toLocaleString("vi-VN")} – ${report.commercialPassport.priceRange.maxPrice.toLocaleString("vi-VN")} VNĐ`
+            : undefined,
           targetAudience: report.commercialPassport?.targetAudience?.buyerPersona,
           suggestedOccasions: report.commercialPassport?.occasions,
         }
@@ -237,14 +232,10 @@ export default function CreativeStudioPage() {
     const voiceParam = searchParams.get("voiceId")
     const musicParam = searchParams.get("musicMood")
 
+    // 23/09/2026: bỏ "passport dự phòng" bịa sẵn — nó làm cổng Validation luôn
+    // qua dù chưa có dữ liệu thật của Chặng 02.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ state từ nguồn ngoài (URL/API), chủ đích
     setContext((prev) => {
-      const fallbackPassport = prev.commercialPassport ?? (nameParam || prev.productName ? {
-        category: "Hoa tươi thiết kế",
-        style: "Hiện đại & Tinh tế",
-        components: ["Hoa tươi tuyển chọn"],
-        colors: ["Tone màu hài hòa"],
-      } : undefined)
-
       return {
         ...prev,
         ...(topicParam ? { topicId: topicParam } : {}),
@@ -255,7 +246,6 @@ export default function CreativeStudioPage() {
         ...(videoParam !== null ? { sourceVideoUrl: videoParam || undefined } : {}),
         ...(voiceParam !== null ? { voiceId: voiceParam || undefined } : {}),
         ...(musicParam !== null ? { musicMood: musicParam || undefined } : {}),
-        commercialPassport: fallbackPassport,
       }
     })
   }, [searchParams])
@@ -285,13 +275,13 @@ export default function CreativeStudioPage() {
 
   // --- Active tab ---
   const [activeTabId, setActiveTabId] = useState<string>(() => getInitialTabId())
-  const [phase, setPhase] = useState<string>("config")
   const [validationDismissed, setValidationDismissed] = useState(false)
 
   // Đồng bộ activeTabId khi URL query thay đổi (?tab=area-a hoặc ?area=b)
   useEffect(() => {
     const tabParam = searchParams.get("tab")
     if (tabParam && tabParam in CREATIVE_STUDIO_TABS) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ state từ nguồn ngoài (URL/API), chủ đích
       setActiveTabId(tabParam)
     } else {
       const area = searchParams.get("area")
@@ -325,8 +315,6 @@ export default function CreativeStudioPage() {
 
   const showValidation = activeTabId !== "area-a" && !validationResult.valid && !validationDismissed
 
-  // ... rest of the component
-
   // --- Tabs ---
   const tabs: TabItem[] = useMemo(() =>
     Object.values(CREATIVE_STUDIO_TABS).map((tab) => ({
@@ -338,68 +326,8 @@ export default function CreativeStudioPage() {
   )
 
   // --- Primary Actions ---
-  const primaryActions: TabAction[] = useMemo(() => {
-    const actions: TabAction[] = []
-
-    if (activeTabId === "area-a") {
-      actions.push({
-        id: "optimize",
-        label: "Tối ưu ảnh/video",
-        icon: Sparkles,
-        variant: "primary",
-        onClick: () => { /* OptimizeWorkspace handles internally */ },
-      })
-      actions.push({
-        id: "save-draft",
-        label: "Lưu nháp",
-        icon: Check,
-        variant: "outline",
-        onClick: () => {},
-      })
-    } else if (activeTabId === "area-b") {
-      actions.push({
-        id: "generate-content",
-        label: context.mode === "CREATIVE" ? "Tạo nội dung Creative" : "Tạo nội dung Authentic",
-        icon: Wand2,
-        variant: "primary",
-        onClick: () => {},
-      })
-    } else if (activeTabId === "area-c") {
-      actions.push({
-        id: "generate-audio",
-        label: "Tạo audio",
-        icon: Headphones,
-        variant: "primary",
-        onClick: () => {},
-      })
-    } else if (activeTabId === "area-d") {
-      actions.push({
-        id: "generate-variants",
-        label: "Tạo biến thể",
-        icon: Wand2,
-        variant: "primary",
-        onClick: () => {},
-      })
-    } else if (activeTabId === "area-e") {
-      actions.push({
-        id: "generate-video",
-        label: "Tạo video",
-        icon: Film,
-        variant: "primary",
-        onClick: () => {},
-      })
-    } else if (activeTabId === "area-f") {
-      actions.push({
-        id: "package-campaign",
-        label: "Đóng gói chiến dịch",
-        icon: Package,
-        variant: "primary",
-        onClick: () => {},
-      })
-    }
-
-    return actions
-  }, [activeTabId, context.mode])
+  // 23/09/2026: bỏ bảy nút header `onClick: () => {}` (nút chết). Mỗi Khu vực
+  // có nút hành động thật ngay trong workspace; header chỉ giữ điều hướng.
 
   // --- Overflow Actions ---
   const overflowActions: TabOverflowAction[] = useMemo(() => [
@@ -416,8 +344,6 @@ export default function CreativeStudioPage() {
   // --- Tab change handler ---
   const handleTabChange = (tabId: string) => {
     setActiveTabId(tabId)
-    if (tabId === "area-d") setPhase("config")
-    if (tabId === "area-a") setPhase("config")
   }
 
   // --- Render workspace by tab ---
@@ -448,7 +374,7 @@ export default function CreativeStudioPage() {
         <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3">
           <div>
             <div className="text-xs text-text-muted">
-              {context.mode} mode · Chặng 5-14 Sáng tạo nội dung
+              {context.mode} mode · Chặng 01–14 · Khu vực A–F
             </div>
             <div className="text-[17px] font-extrabold text-primary">AI Creative Studio</div>
           </div>
@@ -456,7 +382,7 @@ export default function CreativeStudioPage() {
             tabs={tabs}
             activeTab={activeTabId}
             onTabChange={handleTabChange}
-            primaryActions={primaryActions}
+            primaryActions={[]}
             overflowActions={overflowActions}
           />
         </div>

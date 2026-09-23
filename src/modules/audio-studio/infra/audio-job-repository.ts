@@ -79,7 +79,9 @@ export class AudioJobRepository implements IAudioJobRepository {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mapToEntity(row: any): AudioJobEntity {
     const payload = (row.payload ?? {}) as Record<string, unknown>
-    const result = (row.result ?? {}) as Record<string, unknown>
+    // Kết quả worker nằm ở `output` (JSON), không ở `result` (enum phán quyết)
+    // — sửa 23/09/2026 cùng lúc nối worker `audio.generate`.
+    const output = (row.output ?? {}) as Record<string, unknown>
 
     return {
       id: row.id,
@@ -91,13 +93,14 @@ export class AudioJobRepository implements IAudioJobRepository {
       qualityTier: (payload.qualityTier as AudioQualityTier) ?? "standard",
       musicTrackId: (payload.musicTrackId as string) ?? null,
       musicMood: (payload.musicMood as MusicMood) ?? "warm",
-      totalDurationSeconds: (payload.totalDurationSeconds as number) ?? 0,
-      mixedAudioUrl: (result.mixedAudioUrl as string) ?? null,
-      mixedAudioStorageKey: (result.mixedAudioStorageKey as string) ?? null,
-      voiceOnlyUrl: (result.voiceOnlyUrl as string) ?? null,
-      bgmOnlyUrl: (result.bgmOnlyUrl as string) ?? null,
+      totalDurationSeconds:
+        (output.total_duration_seconds as number) ?? (payload.totalDurationSeconds as number) ?? 0,
+      mixedAudioUrl: null,
+      mixedAudioStorageKey: (output.audio_storage_key as string) ?? null,
+      voiceOnlyUrl: null,
+      bgmOnlyUrl: null,
       costCredits: (payload.creditsCost as number) ?? 0,
-      errorMessage: row.error_message ?? null,
+      errorMessage: row.error ?? null,
       scenes: (payload.scenes as readonly AudioSceneInput[]) ?? [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -107,7 +110,7 @@ export class AudioJobRepository implements IAudioJobRepository {
   private stageToStatus(stage: AudioJobStage): job_status {
     switch (stage) {
       case "DRAFT": return "PENDING" as job_status
-      case "GENERATING": return "IN_PROGRESS" as job_status
+      case "GENERATING": return "PROCESSING" as job_status
       case "COMPLETED": return "COMPLETED" as job_status
       case "FAILED": return "FAILED" as job_status
     }
@@ -119,7 +122,7 @@ export class AudioJobRepository implements IAudioJobRepository {
     }
     switch (status) {
       case "PENDING": return "DRAFT"
-      case "IN_PROGRESS": return "GENERATING"
+      case "PROCESSING": return "GENERATING"
       case "COMPLETED": return "COMPLETED"
       case "FAILED": return "FAILED"
       default: return "DRAFT"

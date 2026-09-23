@@ -468,6 +468,8 @@ Một hàng cho mỗi năng lực: mức 1 chạy bằng gì, mức 2 chạy b�
 | `AIC-33` | SQL trước, LLM diễn giải sau | LLM mở | SQL + mô hình dự báo + LLM | `GET /analytics/*` | `campaign_rollups` | Người vận hành đồng ý với diễn giải |
 | `AIC-34` | LLM trên số liệu đã tổng hợp | LLM mở | Số liệu + thử nghiệm + LLM | `GET /learning-profile` | `learning_profiles` · `content_features` | Hiệu quả bài sau khi áp hồ sơ |
 
+> **AIC-17 hiện thực (23/09/2026):** hai feature job — `media.variant` (Studio Backdrop cục bộ, `cost_usd = None`) và `media.variant.cloud` (Stability `stable-image-core-v2beta` chỉ sinh HẬU CẢNH trống, bó hoa dán nguyên khối từ Master, Subject Integrity đo như nhánh local). Mỗi lượt gọi nhà cung cấp ghi một dòng `ai_requests` (`capability_code = AIC-17`, `model_key = stability_ai:stable-image-core-v2beta`, `outcome` ACCEPTED/FAILED); nhà cung cấp lỗi thì lùi về phông cục bộ, không làm hỏng job. Mô hình Stability chưa có hàng trong `ai_models` (D18 — bốn ô giấy phép) — cần đăng ký trước go-live, xem `TECHNICAL_DEBT.md` #121 ghi chú.
+
 **Biến thể ảnh sinh theo ma trận, không sinh rời rạc.** Năm mươi lượt gọi độc lập cho năm mươi ảnh là năm mươi lần trả tiền cho cùng một hiểu biết về sản phẩm. Đường đúng: `sản phẩm × nền × bố cục × tỉ lệ × chiến dịch`, sinh theo tổ hợp rồi lọc trùng — năm nền nhân ba bố cục nhân ba tỉ lệ ra bốn mươi lăm tài sản từ một Master Image.
 
 **Trang landing không do mô hình sinh HTML.** Mô hình sinh *kế hoạch trang* dạng JSON, lược đồ soát nó, rồi bộ dựng ghép từ các khối đã được phép. Một mô hình sinh HTML tự do là một mô hình có thể sinh ra trang không mở được trên điện thoại, không đúng thương hiệu, và không ai sửa nổi.

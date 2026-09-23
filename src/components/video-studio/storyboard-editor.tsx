@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Clock, Plus, Trash2, AlertTriangle, Sparkles, Check, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +22,9 @@ interface StoryboardEditorProps {
   initialScenes: VideoSceneItem[];
   isLocked?: boolean;
   onSaveScenes: (scenes: VideoSceneItem[]) => Promise<void>;
+  /** Báo mọi thay đổi cho cha (23/09/2026) — Creative Studio Khu vực E gửi
+   *  đúng storyboard đang thấy, không phải bản cũ trước khi bấm "Lưu". */
+  onChange?: ((scenes: VideoSceneItem[]) => void) | undefined;
 }
 
 export function StoryboardEditor({
@@ -29,6 +32,7 @@ export function StoryboardEditor({
   initialScenes,
   isLocked = false,
   onSaveScenes,
+  onChange,
 }: StoryboardEditorProps) {
   const [scenes, setScenes] = useState<VideoSceneItem[]>(
     initialScenes.length > 0
@@ -65,6 +69,11 @@ export function StoryboardEditor({
   );
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    onChange?.(scenes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenes]);
 
   const spec = VIDEO_FORMAT_SPECS[format];
   const validation = validateStoryboard(scenes, format);

@@ -72,6 +72,7 @@ export class VideoJobRepository {
             text_overlay: scene.textOverlay ?? null,
             voice_script: scene.voiceScript ?? null,
             transition_effect: scene.transitionEffect ?? "fade",
+            motion_effect: scene.motionEffect ?? null,
           })),
         },
       },
@@ -157,6 +158,7 @@ export class VideoJobRepository {
         text_overlay: s.textOverlay ?? null,
         voice_script: s.voiceScript ?? null,
         transition_effect: s.transitionEffect ?? "fade",
+        motion_effect: s.motionEffect ?? null,
       })),
     });
 

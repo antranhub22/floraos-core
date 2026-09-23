@@ -29,6 +29,12 @@ import { Button } from "@/components/ui/button"
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
 import {
+  resolveApprovedMaster,
+  savePostsToPackage,
+  sceneTwoPresetFor,
+  type PackagePostDto,
+} from "./package-client"
+import {
   generateAllPlatformPosts,
   type GeneratedSocialPost,
 } from "@/modules/creative-production/domain/social-post-generator"
@@ -104,13 +110,21 @@ const PLATFORM_LABELS: Record<"facebook" | "instagram" | "tiktok" | "zalo", { la
   zalo: { label: "Zalo OA Bán hàng", icon: "💬", bgActive: "bg-blue-500 text-white" },
 }
 
-export function CreativeResultViewer({
+// Tách vỏ/thân (23/09/2026): bản trước gọi `useMemo` SAU `return null` sớm —
+// vi phạm rules-of-hooks, sập "Rendered more hooks" khi kết quả xuất hiện.
+export function CreativeResultViewer(props: CreativeResultViewerProps) {
+  const currentResult = props.topicResults[0]
+  if (!currentResult) return null
+  return <CreativeResultViewerBody {...props} currentResult={currentResult} />
+}
+
+function CreativeResultViewerBody({
   mode,
-  topicResults,
   totalCredits = 0,
   onGoToAudio,
   onGoToPackage,
-}: CreativeResultViewerProps) {
+  currentResult,
+}: CreativeResultViewerProps & { currentResult: CreativeTopicResultItem }) {
   const ctx = useContext(CreativeStudioContext)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [selectedPlatform, setSelectedPlatform] = useState<"facebook" | "instagram" | "tiktok" | "zalo">("facebook")
@@ -118,37 +132,32 @@ export function CreativeResultViewer({
   const [customEdits, setCustomEdits] = useState<Record<string, string>>({})
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null)
 
-  const currentResult = topicResults[0]
-  if (!currentResult) return null
-
   const arc = currentResult.arc
   const briefs = currentResult.briefs
   const captions = briefs?.contentBrief?.captionRequests || []
-  const baseHashtags = briefs?.contentBrief?.hashtagSuggestions || [
-    "#hoatuoi",
-    "#hoasinhnhat",
-    "#quatanghoatuoi",
-    "#floristvietnam",
-  ]
+  const baseHashtags = useMemo(
+    () => briefs?.contentBrief?.hashtagSuggestions || ["#hoatuoi", "#quatanghoatuoi"],
+    [briefs]
+  )
 
   // Trích xuất thông tin sản phẩm và topic
   const productName = ctx?.productName || currentResult.topicTitle || "Bó hoa tươi thiết kế"
   const components =
     ctx?.commercialPassport?.components ||
     ctx?.report?.components?.map((c) => c.flowerType) ||
-    ["Hoa hồng kem dâu", "Hoa baby trắng", "Lá bạc Eucalyptus"]
+    []
   const colors =
     ctx?.commercialPassport?.colors ||
     ctx?.report?.attributes?.mainColors ||
-    ["Pastel hồng", "Trắng kem"]
+    []
   const style =
     ctx?.commercialPassport?.style ||
     ctx?.report?.attributes?.style ||
-    "Hiện đại & Tinh tế"
+    undefined
   const price =
     ctx?.commercialPassport?.priceRange ||
     ctx?.report?.context?.suggestedPrice ||
-    "599.000đ"
+    undefined
   const hook = captions[0]?.hook || currentResult.topicTitle
   const cta = captions[0]?.cta || "Nhắn tin cho tiệm để nhận ưu đãi ngay hôm nay!"
 
@@ -181,6 +190,51 @@ export function CreativeResultViewer({
 
   const getPostContent = (platform: "facebook" | "instagram" | "tiktok" | "zalo") => {
     return customEdits[platform] ?? generatedPosts[platform]?.fullContent ?? ""
+  }
+
+  // Lưu 4 bài vào gói chiến dịch của Master hiện tại (Khu vực F đọc lại qua API)
+  // — thay cho việc kết quả Khu vực B mất khi chuyển tab (23/09/2026).
+  const [savingToPackage, setSavingToPackage] = useState(false)
+  const [packageNotice, setPackageNotice] = useState<string | null>(null)
+  const handleSaveToPackage = async () => {
+    setSavingToPackage(true)
+    setPackageNotice(null)
+    try {
+      const masterId = await resolveApprovedMaster(ctx?.assetId)
+      if (!masterId) {
+        throw new Error(
+          "Chưa có Master Image đã duyệt cho ảnh này — vào Khu vực F bấm 'Skip — Dùng ảnh gốc làm Master' trước."
+        )
+      }
+      const posts: PackagePostDto[] = PLATFORMS.map((p) => {
+        const gen = generatedPosts[p]
+        const edited = customEdits[p]
+        if (edited !== undefined) return { channel: p, text: edited, hashtags: [] }
+        const tagLine = gen?.hashtags?.length ? `\n\n${gen.hashtags.join(" ")}` : ""
+        const text = gen ? (tagLine && gen.fullContent.endsWith(tagLine.trim()) ? gen.fullContent.slice(0, gen.fullContent.length - tagLine.length) : gen.fullContent) : ""
+        return { channel: p, text, hashtags: gen?.hashtags ?? [] }
+      })
+      const topic = ctx?.selectedTopic
+      const saved = await savePostsToPackage({
+        masterAssetId: masterId,
+        name: `${ctx?.productName || "Sản phẩm"}${topic ? ` — ${topic.title}` : ""}`.slice(0, 200),
+        mode,
+        topic: topic
+          ? {
+              id: topic.id,
+              title: topic.title,
+              angleCategory: topic.angleCategory,
+              scene2Preset: sceneTwoPresetFor(topic.angleCategory),
+            }
+          : null,
+        posts,
+      })
+      setPackageNotice(`Đã lưu ${posts.length} bài vào gói "${saved.name}" (trạng thái: nháp, cần chạy lại QA).`)
+    } catch (e) {
+      setPackageNotice(e instanceof Error ? e.message : "Không lưu được vào gói chiến dịch")
+    } finally {
+      setSavingToPackage(false)
+    }
   }
 
   const handleUpdateContent = (platform: string, newText: string) => {
@@ -287,7 +341,7 @@ export function CreativeResultViewer({
                       </button>
                     </div>
                     <p className="text-stone-800 leading-relaxed font-medium">
-                      "{scene.voiceScript}"
+                      “{scene.voiceScript}”
                     </p>
                   </div>
 
@@ -295,7 +349,7 @@ export function CreativeResultViewer({
                   <div className="flex flex-wrap items-center gap-3 text-[11px] text-stone-500 pt-0.5">
                     {scene.textOverlay && (
                       <div>
-                        Chữ video: <strong className="text-stone-800">"{scene.textOverlay}"</strong>
+                        Chữ video: <strong className="text-stone-800">“{scene.textOverlay}”</strong>
                       </div>
                     )}
                     {scene.motionEffect && (
@@ -493,7 +547,7 @@ export function CreativeResultViewer({
 
         {/* Nút sao chép toàn bộ tất cả bài viết */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-stone-100 text-xs text-stone-500">
-          <span>💡 Bạn có thể nhấp <strong>"Sao chép bài"</strong> ở từng kênh để dán trực tiếp lên Facebook Fanpage, TikTok Shop hoặc Zalo OA.</span>
+          <span>💡 Bạn có thể nhấp <strong>“Sao chép bài”</strong> ở từng kênh để dán trực tiếp lên Facebook Fanpage, TikTok Shop hoặc Zalo OA.</span>
           <button
             type="button"
             onClick={handleCopyAllHashtags}
@@ -503,6 +557,22 @@ export function CreativeResultViewer({
           </button>
         </div>
       </div>
+
+      {/* ── Lưu bài vào gói chiến dịch (Khu vực F) ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3">
+        <span className="text-[12px] text-stone-600">
+          Lưu 4 bài (kể cả phần bạn đã sửa) vào gói chiến dịch để Khu vực F chạy QA và duyệt.
+        </span>
+        <button
+          type="button"
+          onClick={handleSaveToPackage}
+          disabled={savingToPackage}
+          className="shrink-0 rounded-lg bg-stone-900 px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-60"
+        >
+          {savingToPackage ? "Đang lưu..." : "Lưu bài vào gói chiến dịch"}
+        </button>
+      </div>
+      {packageNotice && <p className="text-[12px] text-stone-700">{packageNotice}</p>}
 
       {/* ── CỔNG PHÊ DUYỆT CHẶNG 06a (STAGE-GATE APPROVAL) ── */}
       {(onGoToAudio || onGoToPackage) && (

@@ -34,9 +34,12 @@ export async function promoteOriginalToMaster(
   }
 
   // Kiểm tra đã promote chưa — tránh tạo trùng
+  // 23/09/2026: lọc đúng con của ảnh gốc này — bản trước chỉ đọc MASTER mới
+  // nhất của CẢ tổ chức (limit 1) nên thường không thấy bản đã promote, tạo trùng.
   const existingMaster = await assetRepo.list(ctx, {
-    kind: "MASTER" as any,
-    limit: 1,
+    kind: "MASTER",
+    parentAssetId: original.id,
+    limit: 5,
   })
   // Tìm master có parent_asset_id = original.id
   const alreadyPromoted = existingMaster.find(
@@ -58,7 +61,7 @@ export async function promoteOriginalToMaster(
       id: masterId,
       productId: original.product_id,
       parentAssetId: original.id,
-      kind: "MASTER" as any,
+      kind: "MASTER",
       version: 1,
       storageKey: original.storage_key,
       thumbKey: original.thumb_key ?? null,

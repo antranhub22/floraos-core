@@ -57,6 +57,7 @@ export const GET = handle(async (request) => {
     productId: url.searchParams.get("product_id") ?? undefined,
     kind: url.searchParams.get("kind") ?? undefined,
     approvalState: url.searchParams.get("approval_state") ?? undefined,
+    parentAssetId: url.searchParams.get("parent_asset_id") ?? undefined,
     limit,
     cursor: url.searchParams.get("cursor"),
   })

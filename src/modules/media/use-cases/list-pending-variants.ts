@@ -2,7 +2,7 @@ import { validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
-import { MEDIA_VARIANT_FEATURE } from "@/modules/media/domain/variant-rules"
+import { MEDIA_VARIANT_FEATURES } from "@/modules/media/domain/variant-rules"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100
@@ -38,10 +38,15 @@ export async function listPendingVariants(
   const jobRepo = new GenerationJobRepository()
   const assetRepo = new AssetRepository()
 
-  const candidates = await jobRepo.listCompletedNotRejected(ctx, {
-    feature: MEDIA_VARIANT_FEATURE,
-    limit: MAX_SCAN,
-  })
+  // Hai nhánh (local + cloud, 23/09/2026) cùng sinh asset MARKETING cần duyệt.
+  const theoNhanh = await Promise.all(
+    MEDIA_VARIANT_FEATURES.map((feature) =>
+      jobRepo.listCompletedNotRejected(ctx, { feature, limit: MAX_SCAN })
+    )
+  )
+  const candidates = theoNhanh
+    .flat()
+    .sort((a, b) => (b.completed_at?.getTime() ?? 0) - (a.completed_at?.getTime() ?? 0))
 
   const pending: PendingVariantJob[] = []
   for (const job of candidates) {

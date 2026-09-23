@@ -246,6 +246,8 @@ Tải ảnh về (`/download`) **không** phải là phê duyệt. Hai việc kh
 | POST | `/media/variants/:id/approve` | `I5` |
 | GET | `/media/variants/:id/download` | `I3` |
 
+**Hai nhánh, cùng đi qua `enqueueJob` (cập nhật 23/09/2026):** thân `POST /media/variants` mang `engine: "local_studio" | "cloud_provider"`, `preset` + `ratio` bắt buộc cho cả hai, `scene_index` (1–4, phân cảnh Narrative Arc của Khu vực D) tuỳ chọn; nhánh cloud thêm `provider_key` (hiện chỉ `stability`) và `scene_prompt` (≤ 600 ký tự, mô tả KHÔNG GIAN hậu cảnh). `local_studio` → job `media.variant` (1 credit); `cloud_provider` → job `media.variant.cloud` (2 credit, giá tạm — nợ #64). Worker Python xử lý CẢ HAI: nhánh cloud chỉ nhờ nhà cung cấp vẽ hậu cảnh trống, bó hoa dán nguyên khối từ Master Image, Subject Integrity là số ĐO; nhà cung cấp lỗi thì lùi về phông Studio cục bộ và ghi `cloud_fallback` vào asset + sự kiện job. `Idempotency-Key` bắt buộc. Đáp ứng: `{ job_id, status, engine, deduped, usage }` — kết quả đọc qua `GET /media/variants/:id` (nay trả thêm `source.engine`, `source.scene_index`, `source.cloud_fallback`). Trước 23/09 nhánh cloud chạy đồng bộ trong request (`executeCloudCreative`), không trừ credit, integrity gõ tay 0,98 — đã gỡ.
+
 `I4`/`I5` là cặp chạy/duyệt tách rời của M04b (`media.variant.run`/`media.variant.approve`), dựng ở P16/P24 khi M04b chuyển hẳn vào `floraos-core` thay vì `SocialFlow` — xem `docs/dac-ta/02-function-catalog.md` mục 4 và `src/core/rbac/capability-catalog.ts`. Biến thể chỉ dựng được từ Master Image đã qua `I2`; cổng Subject Integrity đo trên bản dựng và chặn ghi `assets` khi lệch quá ngưỡng, cùng luật với `I2`/Identity Guard ở M04a.
 
 ## 9. Hàng đợi duyệt
@@ -566,12 +568,12 @@ Năng lực phân tích ảnh giữ endpoint riêng đã có (`GET · PUT /visio
 | GET | `/video/jobs/:id` | `I1` | |
 | PATCH | `/video/jobs/:id/storyboard` | `I1` | Biên soạn phân cảnh, 2–15 cảnh |
 | POST | `/video/jobs/:id/render` | `I1` | |
-| POST | `/video/jobs/:id/approve-script` | `I2` ⚠ | Cổng 1 — duyệt kịch bản |
-| POST | `/video/jobs/:id/approve-video` | `I2` ⚠ | Cổng 2 — duyệt video thành phẩm |
+| POST | `/video/jobs/:id/approve-script` | `P3` | Cổng 1 — duyệt kịch bản (kiểm ở use-case `approve-storyboard.ts`) |
+| POST | `/video/jobs/:id/approve-video` | `P4` | Cổng 2 — duyệt video thành phẩm, trần cứng (kiểm ở use-case `approve-video-output.ts`) |
 
 **Chưa có:** `GET /video/jobs/:id/events`. TRANG_THAI mục P17 mô tả một luồng SSE ở đường này, nhưng thư mục `src/app/api/v1/video/jobs/[id]/` chỉ có `route.ts`, `storyboard`, `render`, `approve-script`, `approve-video` — **không có `events`**. Tiến trình render hiện đọc bằng cách nào thì chưa rõ; cần soát lại trước khi ghi vào đặc tả. Xem **RS-7**.
 
-⚠ **Hai cổng duyệt đang dùng chung mã `I2`**, vốn là mã duyệt Master Image của M04a. Đặc tả cũ ở nơi khác nói hai cổng này mang `P3` và `P4`; hai mã đó không tồn tại trong danh mục 143 mã. Hai cổng vì vậy không tách được, và `audit_logs` không phân biệt được ba hành động duyệt. Xem **RS-1**.
+**Soát lại 23/09/2026:** hai cổng duyệt video KHÔNG còn dùng chung `I2` — `P3` (`video.approve_script`) và `P4` (`video.approve_final`, trần cứng) đã có trong `capability-catalog.ts` và được kiểm ở use-case (route không lặp lại phép kiểm, RS-9). Mỗi cảnh của storyboard nay mang `motionEffect` tuỳ chọn (`ZOOM_IN | ZOOM_OUT | PAN_UP | PAN_RIGHT | STATIC`), lưu ở `video_scenes.motion_effect` và chuyển vào payload render; vắng thì worker tự xoay vòng như trước.
 
 Khuôn video là enum `video_format`: `REEL_15S` · `TIKTOK_30S` · `STORY_15S` · `SLIDESHOW` · `PRODUCT_PAGE` · `AD_MOTION`. Trạng thái là enum `video_stage` chín giá trị, xem đặc tả 07.
 
@@ -638,18 +640,27 @@ P25a chỉ đọc (D-N5 áp dụng cho toàn bộ P25a, không riêng `/health`)
 | GET | `/market-intelligence/health` | `V1` | Sức khỏe và trạng thái các nhà cung cấp dữ liệu xu hướng |
 | POST | `/market-intelligence/product-intelligence` | `V1` | Product Intelligence (v2.0 mục 8–19): phân tích ảnh sản phẩm hoa (Vision AI), đối soát Trend Fit dựa trên tín hiệu thật từ `trend_signals` (nợ #115, đã trả 21/09/2026), cải tiến (KEEP/IMPROVE/TEST) và 10 chủ đề nội dung cụ thể. Mỗi lượt phân tích được LƯU LẠI vào `product_analysis_runs` (nợ #113, đã trả 21/09/2026). **CHƯA XÂY** (quyết định chủ sản phẩm 21/09/2026 — tạm hoãn, xem nợ #117): gợi ý định vị (Positioning, mục 15), phân tích riêng theo từng dịp dùng (Occasion Intelligence, mục 14), và bối cảnh cạnh tranh (Competitive Context, mục 16) |
 | POST | `/market-intelligence/vision-extract` | `V1` | Bóc tách đặc trưng thị giác hoa tươi qua OpenAI Multimodal Vision |
-| GET | `/product-intelligence/:id` | `V1` | Xem chi tiết kết quả phân tích Product Intelligence đã lưu theo run ID |
+| GET | `/product-intelligence/:id` | `V2` | Xem chi tiết kết quả phân tích Product Intelligence đã lưu theo run ID (mã thật là `V2`, sửa đặc tả 23/09/2026) |
 
-## 23. Phân hệ Creative Production Pipeline & Audio Studio
+## 23. Phân hệ Creative Production Pipeline, Audio Studio & Gói chiến dịch (Creative Studio)
 
-Xây dựng ở đợt nâng cấp Creative Studio 21/09/2026 theo `FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md` và `FLORAOS_CREATIVE_STUDIO_IO_SPEC.md`:
+Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ liệu vào/ra: `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_IO_SPEC.md`. Đồng bộ lại theo mã 23/09/2026 (bản trước ghi năng lực `I4` — mã thật là `I1`).
 
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
-| POST | `/creative-production/plan` | `I4` | Lập kế hoạch phân bổ nội dung & kịch bản từ Topic Brief |
-| POST | `/creative-production/produce` | `I4` | Kích hoạt chuỗi sản xuất nội dung, ảnh biến thể và kịch bản video |
-| POST | `/creative-production/package` | `I4` | Đóng gói chiến dịch Campaign Package tổng hợp đa định dạng |
-| POST | `/audio/jobs` | `I4` | Khởi tạo job sinh voiceover hoặc trộn nhạc nền cho video |
+| POST | `/creative-production/plan` | `I1` | Lập kế hoạch cung truyện (Narrative Arc) từ Topic Brief |
+| POST | `/creative-production/produce` | `I1` | Sinh nội dung đa kênh (`produceCreative`/`produceAuthentic`). `organizationId` lấy từ phiên, KHÔNG nhận từ body |
+| POST | `/creative-production/package` | `I1` | Ước tính kế hoạch sản xuất & chi phí từ kết quả produce — tính thuần, KHÔNG lưu. Gói chiến dịch thật dùng `/creative-production/packages` |
+| POST · GET | `/creative-production/packages` | `I1` · `G1` | Chặng 07 — tạo gói (DRAFT) neo vào Master Image đã duyệt; liệt kê theo `master_asset_id` |
+| GET · PATCH | `/creative-production/packages/:id` | `G1` · `I1` | Đọc gói kèm URL ký của tài sản; sửa gói chưa duyệt (sửa là về DRAFT, xoá QA cũ) |
+| POST | `/creative-production/packages/:id/qa` | `I1` | Chặng 08 — QA năm trục chạy phía máy chủ trên dữ liệu thật |
+| POST | `/creative-production/packages/:id/approve` | `J5` | Chặng 09 — duyệt; ghi `audit_logs` cùng giao dịch; `QA_NEEDS_REVIEW` cần `acknowledge_warnings: true` |
+| PUT | `/creative-production/packages/:id/launch` | `J5` | Chặng 10 — kế hoạch đăng + mã bài đã đăng (khớp `content_metrics.content_id`) |
+| GET | `/creative-production/packages/:id/performance` | `R1` | Chặng 11–14 — đơn/doanh thu của sản phẩm kể từ ngày duyệt, hội thoại, số liệu kênh, mẫu thắng, đề xuất |
+| POST | `/audio/jobs` | `I1` | Tạo job `audio.generate` (TTS + nhạc nền + phối). `Idempotency-Key` BẮT BUỘC (từ 23/09/2026) |
+| GET | `/audio/jobs/:id` | `I1` | Trạng thái job âm thanh + URL ký có hạn của bản phối |
+
+⚠ Audio, video và Creative Production dùng chung `I1` (`media.optimize`) — sai ngữ nghĩa RBAC, chờ chủ sản phẩm quyết có thêm mã riêng hay không (đụng con số 143 mã). Xem `TECHNICAL_DEBT.md` nợ #121.
 
 ## 24. Chưa có ở bản này
 

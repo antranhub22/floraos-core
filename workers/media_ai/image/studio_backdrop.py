@@ -287,6 +287,28 @@ class StudioBackdropEngine:
         except Exception:
             return subject_rgba
 
+    # Độ sâu (px) mà light wrap được phép đổi màu viền chủ thể. Phép đo
+    # Subject Integrity của M04b (`variant_worker._co_bien`) PHẢI co mặt nạ sâu
+    # hơn con số này — trước 23/09/2026 phép đo chỉ co 3px trong khi light wrap
+    # đổi 4px, nên mọi biến thể local hợp lệ bị đo ~0,96 (< 0,99) và bị dán
+    # nhãn sai.
+    LIGHT_WRAP_DEPTH_PX = 4
+
+    @staticmethod
+    def fit_backdrop_image(image: Image.Image, width: int, height: int) -> Image.Image:
+        """Phủ kín khung `width`×`height` bằng ảnh hậu cảnh (cover-crop giữa
+        tâm), trả RGBA — không méo tỷ lệ ảnh nhà cung cấp trả về."""
+        src = image.convert("RGBA")
+        sw, sh = src.size
+        if sw == 0 or sh == 0:
+            raise ValueError("Ảnh hậu cảnh rỗng")
+        scale = max(width / sw, height / sh)
+        nw, nh = max(width, int(round(sw * scale))), max(height, int(round(sh * scale)))
+        resized = src.resize((nw, nh), Image.LANCZOS)
+        left = (nw - width) // 2
+        top = (nh - height) // 2
+        return resized.crop((left, top, left + width, top + height))
+
     def composite(
         self,
         subject_rgba: Image.Image,
@@ -294,13 +316,25 @@ class StudioBackdropEngine:
         with_shadow: bool = True,
         with_light_wrap: bool = True,
         with_arm_fadeout: bool = False,
+        backdrop_image: Image.Image | None = None,
     ) -> Image.Image:
-        """Ghép chủ thể RGBA vào phông Studio với hệ thống bóng đổ 2 tầng và Light Wrap quang học."""
+        """Ghép chủ thể RGBA vào phông Studio với hệ thống bóng đổ 2 tầng và Light Wrap quang học.
+
+        `backdrop_image` (23/09/2026 — nhánh Cloud M04b đi qua hàng đợi job):
+        hậu cảnh do nhà cung cấp sinh ra (KHÔNG chứa chủ thể). Khi có, nó
+        thay cho phông tự dựng bằng `create_backdrop`; bóng đổ, light wrap và
+        bước dán NGUYÊN KHỐI chủ thể giữ nguyên — nên phép đo Subject
+        Integrity vẫn đo trên đúng pixel gốc của Master Image.
+        """
         w, h = subject_rgba.size
-        backdrop = self.create_backdrop(w, h, style=style, with_grain=True)
 
         if style == "transparent":
             return subject_rgba
+
+        if backdrop_image is not None:
+            backdrop = self.fit_backdrop_image(backdrop_image, w, h)
+        else:
+            backdrop = self.create_backdrop(w, h, style=style, with_grain=True)
 
         # 1. Làm mềm viền quang học (Alpha Feathering)
         processed_subject = self.apply_alpha_feathering(subject_rgba, radius=1.1)
@@ -341,7 +375,7 @@ class StudioBackdropEngine:
         # 3. Áp dụng Optical Light Wrap tràn sáng phông vào viền giấy/hoa
         if with_light_wrap:
             processed_subject = self.apply_light_wrap(
-                processed_subject, backdrop, wrap_depth_px=4, wrap_intensity=0.30
+                processed_subject, backdrop, wrap_depth_px=self.LIGHT_WRAP_DEPTH_PX, wrap_intensity=0.30
             )
 
         # 4. Ghép chủ thể lên trên cùng

@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-23 (Hoàn thiện 100% Khung Phân Cảnh Narrative Arc 4 Chặng & Động cơ Local Studio Backdrop Engine M04b Creative Studio; Loại bỏ triệt để lỗi lặp 1 ảnh; Tách nền U2-Net và Cache RGBA 0.46s; `npm test` 747/747 xanh, `test:tenant` 206/206 xanh, `tsc` sạch) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-23 tối (Rà soát & đồng bộ Creative Studio 14 chặng với mã; đưa nhánh Cloud M04b vào hàng đợi job; nối dữ liệu thật Chặng 07–14; nối worker `audio.generate`) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -9,6 +9,18 @@
 ---
 
 ## 1. Đang ở đâu
+
+**23/09 (tối) — Rà soát đồng bộ & sửa Creative Studio 14 chặng (nhánh `fix/creative-studio-production-ready`).**
+Báo cáo rà soát: project claude.ai `claude/ra-soat-dong-bo-creative-studio-14-chang-23-09-2026.md` (80 điểm kiểm, 49% khớp trước khi sửa). **Đính chính mục 23/09 ngay dưới:** ba điều ở đó KHÔNG đúng với mã lúc ấy — (1) lỗi "4 ảnh giống hệt" vẫn tái hiện khi Python/venv vắng vì `StudioLocalImageProvider` trả lại bytes ảnh gốc; (2) nút sinh cảnh gọi Stability đồng bộ trong request HTTP, không trừ credit, integrity gõ tay 0,98; (3) "cơ chế kép fallback client canvas cutout" là bộ dựng canvas phía trình duyệt P24 đã cấm. Đã sửa:
+- **M04b Cloud qua hàng đợi job** — feature mới `media.variant.cloud` (2 credit, giá tạm #64); worker Python nhờ Stability vẽ HẬU CẢNH trống, bó hoa dán nguyên khối, Subject Integrity ĐO; nhà cung cấp lỗi → lùi phông cục bộ, ghi `cloud_fallback`. Gỡ `execFileSync` khỏi tiến trình web.
+- **Sửa phép đo Subject Integrity** — co biên 3px < light wrap 4px khiến mọi biến thể local hợp lệ đo ~0,96; nay co 5px. Khôi phục luật REJECTED → không ghi asset.
+- **Khu vực D** — 4 cảnh là 4 job thật (`scene_index`), chỉ hiện ảnh thật + số đo thật, tự nạp theo Master (`GET /assets?parent_asset_id=`), duyệt từng cảnh (I5).
+- **Khu vực C** — worker `audio.generate` trước đây KHÔNG tồn tại (job bị trừ credit rồi treo PENDING): nối vào vòng claim, ghi kho, `GET /audio/jobs/:id`, `Idempotency-Key` bắt buộc.
+- **Khu vực E** — sửa lỗi gửi storyboard rỗng; Ken Burns lưu `video_scenes.motion_effect` (migration `20260923161000`).
+- **Khu vực F + Chặng 10–14** — bảng mới `campaign_packages` (migration `20260923160000`), QA năm trục phía máy chủ, duyệt `J5` + `audit_logs`, kế hoạch đăng, số liệu thật (đơn/doanh thu/hội thoại/`content_metrics`), mẫu thắng khi đủ ≥ 3 gói, đề xuất theo dữ kiện. Gỡ toàn bộ số gõ cứng.
+- Tài liệu: Arch v4.0, IO Spec v4.0, Journey v3.0, Checklist v2.0, đặc tả 06/07 — `check:docs` khớp. Nợ mới #119–#124.
+
+Kiểm chứng trên máy anh Tony (VM Linux, 23/09 tối): `tsc --noEmit` sạch · `npm test` **770/770 (94 tệp)** · `eslint` phạm vi Creative Studio 0 lỗi · `pytest` worker xanh (trừ `test_audio_worker.py` cần mạng TTS) · `check:docs` khớp. **CHƯA chạy — anh Tony chạy trên Mac trước khi merge:** `npx prisma generate` · áp 2 migration (xem ghi chú trong từng `migration.sql`) · `npm run test:tenant` (có ca mới `tests/tenant/campaign-packages.test.ts`) · `npm run worker:media` rồi thử 1 cảnh "Hậu cảnh Stability" và 1 audio job.
 
 **23/09 — Hoàn thiện Khung Phân Cảnh Narrative Arc 4 Chặng & Động Cơ Local Studio Backdrop Engine (Khu vực D — M04b Creative Studio).**
 Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm test` **747/747 ca xanh (92/92 tệp)**, `npm run test:tenant` **206/206 ca xanh thật (27/27 tệp)**.

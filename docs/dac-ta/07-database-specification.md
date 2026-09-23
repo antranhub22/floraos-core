@@ -1217,6 +1217,7 @@ model video_scenes {
   text_overlay      String?
   voice_script      String?
   transition_effect String?      @default("fade")
+  motion_effect     String?      // Ken Burns theo cảnh — thêm 23/09/2026
   created_at        DateTime     @default(now())
 
 
@@ -1225,7 +1226,7 @@ model video_scenes {
 }
 ```
 
-Hai cổng duyệt của `video_jobs` tách đúng ở tầng dữ liệu (`script_approval` và `video_approval` là hai cột riêng), nhưng hai endpoint duyệt lại gác bằng **cùng một mã `I2`** — xem **RS-1**. `video_scenes` là bảng con, thuộc tổ chức qua `video_jobs`.
+Hai cổng duyệt của `video_jobs` tách đúng ở tầng dữ liệu (`script_approval` và `video_approval` là hai cột riêng), và hai endpoint duyệt gác bằng hai mã riêng `P3` (kịch bản) và `P4` (video thành phẩm, trần cứng) ở use-case — soát lại 23/09/2026, thay ghi chú "cùng mã `I2`" cũ. `video_scenes` là bảng con, thuộc tổ chức qua `video_jobs`.
 
 ### Tồn kho, template, token tích hợp
 
@@ -1532,3 +1533,41 @@ model provider_health {
   @@index([status])
 }
 ```
+
+## 23. Gói chiến dịch Creative Studio — Khu vực F (Chặng 07–14)
+
+> **Thêm 23/09/2026.** Trước ngày này Chặng 07–09 chỉ là state phía trình duyệt (QA gõ cứng "PASSED", duyệt không ghi gì). Bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly (`tests/helpers/database.ts`) và ca thử `tests/tenant/campaign-packages.test.ts`. Migration: `prisma/migrations/20260923160000_campaign_packages`.
+
+Gói chỉ giữ **định danh** tới tài sản thật — `variant_asset_ids` (asset `MARKETING` con của đúng `master_asset_id`), `video_job_id`, `audio_job_id` (`generation_jobs` feature `audio.generate`) — cộng nội dung bài đăng người dùng soạn. Use-case kiểm từng định danh thuộc đúng tổ chức và đúng Master trước khi ghi. Trạng thái: `DRAFT → QA_PASSED | QA_NEEDS_REVIEW | QA_REJECTED → APPROVED`; sửa gói chưa duyệt đưa về `DRAFT` và xoá `qa_report`. Duyệt ghi `audit_logs` (`campaign_package.approve`) trong cùng giao dịch.
+
+```prisma
+model campaign_packages {
+  id                 String    @id @default(uuid())
+  organization_id    String
+  product_id         String?
+  master_asset_id    String
+  name               String
+  mode               String
+  topic              Json?
+  content            Json?
+  variant_asset_ids  String[]  @default([])
+  video_job_id       String?
+  audio_job_id       String?
+  status             String    @default("DRAFT")
+  qa_report          Json?
+  qa_checked_at      DateTime?
+  approved_by        String?
+  approved_at        DateTime?
+  launch_plan        Json?
+  created_by         String
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  @@index([organization_id, created_at])
+  @@index([organization_id, master_asset_id])
+  @@index([organization_id, status])
+}
+```
+
+Chặng 11–13 **không** có bảng riêng: đọc `orders`/`order_items` (theo `product_id` của gói, kể từ `approved_at`), `chat_conversations`, và `content_metrics` (theo `launch_plan.postRefs`). Chưa quy được một đơn về một bài đăng cụ thể — giao diện nói rõ giới hạn này.
+

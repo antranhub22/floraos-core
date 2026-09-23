@@ -206,8 +206,15 @@ export function ProductTopicsList({
                 {/* Dẫn chứng Video Kép (Dual Video Evidence) */}
                 <div className="space-y-1.5 pt-1">
                   <span className="text-[10.5px] font-bold text-stone-600 block">
-                    Dẫn chứng Video Kép thực tế (TikTok & YouTube):
+                    {tiktok.isLiveEvidence === true && youtube.isLiveEvidence === true
+                      ? "Dẫn chứng Video Kép (TikTok & YouTube):"
+                      : "Video tham khảo (TikTok & YouTube):"}
                   </span>
+                  {(tiktok.isLiveEvidence !== true || youtube.isLiveEvidence !== true) && (
+                    <span className="text-[9.5px] text-amber-700 block">
+                      Danh mục tham khảo tuyển chọn — lượt xem/tương tác là ước tính, không phải số liệu thời gian thực.
+                    </span>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     {/* Thumbnail TikTok (9:16 dọc) */}
                     <div
@@ -218,11 +225,18 @@ export function ProductTopicsList({
                       className="group/tt relative rounded-lg overflow-hidden border border-stone-200 bg-black cursor-pointer hover:border-cyan-400 transition flex flex-col"
                     >
                       <div className="relative aspect-[9/14] w-full overflow-hidden">
-                        <img
-                          src={tiktok.thumbnailUrl}
-                          alt={tiktok.alt || tiktok.title}
-                          className="h-full w-full object-cover group-hover/tt:scale-105 transition duration-300"
-                        />
+                        {tiktok.isLiveEvidence === true ? (
+                          <img
+                            src={tiktok.thumbnailUrl}
+                            alt={tiktok.alt || tiktok.title}
+                            className="h-full w-full object-cover group-hover/tt:scale-105 transition duration-300"
+                          />
+                        ) : (
+                          // Danh mục tham khảo không có ảnh TikTok thật — không mượn ảnh YouTube.
+                          <div className="h-full w-full flex items-center justify-center bg-stone-900 text-[10px] text-stone-300 px-2 text-center">
+                            Mở kết quả tìm kiếm TikTok
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-black/30 group-hover/tt:bg-black/10 transition flex items-center justify-center">
                           <span className="h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center group-hover/tt:scale-110 transition">
                             <Play size={10} fill="white" className="ml-0.5" />
@@ -233,8 +247,19 @@ export function ProductTopicsList({
                         </span>
                       </div>
                       <div className="p-1.5 bg-stone-900/90 text-white text-[10px]">
-                        <p className="font-bold truncate">{tiktok.author}</p>
-                        <p className="text-[9px] text-stone-300 truncate">{tiktok.metrics}</p>
+                        {/* TikTok tham khảo là TRANG TÌM KIẾM, không phải một video cụ thể —
+                            không hiển thị tác giả/lượt tim như thể có thật (23/09/2026). */}
+                        {tiktok.isLiveEvidence === true ? (
+                          <>
+                            <p className="font-bold truncate">{tiktok.author}</p>
+                            <p className="text-[9px] text-stone-300 truncate">{tiktok.metrics}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-bold truncate">Tìm trên TikTok</p>
+                            <p className="text-[9px] text-stone-300 truncate">{tiktok.title}</p>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -263,7 +288,9 @@ export function ProductTopicsList({
                       </div>
                       <div className="p-1.5 bg-stone-900/90 text-white text-[10px] flex-1 flex flex-col justify-end">
                         <p className="font-bold truncate">{youtube.author}</p>
-                        <p className="text-[9px] text-stone-300 truncate">{youtube.metrics}</p>
+                        <p className="text-[9px] text-stone-300 truncate">
+                          {youtube.isLiveEvidence === true ? youtube.metrics : `${youtube.metrics} (ước tính)`}
+                        </p>
                       </div>
                     </div>
                   </div>

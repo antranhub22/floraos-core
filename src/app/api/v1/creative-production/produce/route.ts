@@ -9,7 +9,6 @@ import { produceAuthentic } from "@/modules/creative-production/use-cases/produc
 
 const postSchema = z.object({
   brief: z.object({
-    organizationId: z.string().min(1),
     mode: z.enum(["AUTHENTIC", "CREATIVE"]),
     productContext: z.object({
       sourceImageUrl: z.string(),
@@ -59,12 +58,9 @@ export const POST = handle(async (request) => {
   const parsed = postSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
 
-  const brief = parsed.data.brief
-
-  // Validate organization match
-  if (brief.organizationId !== ctx.organizationId) {
-    throw validationFailed({ organizationId: "organizationId trong body phải khớp session" })
-  }
+  // `organizationId` CHỈ từ phiên máy chủ (AGENTS.md, Arch §2.5) — không nhận
+  // từ body (23/09/2026; trước đó nhận rồi so khớp).
+  const brief = { ...parsed.data.brief, organizationId: ctx.organizationId }
 
   const result = brief.mode === "CREATIVE"
     ? produceCreative({ brief })

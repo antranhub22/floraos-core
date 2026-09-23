@@ -7,7 +7,11 @@ import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
 import {
   ALL_VARIANT_COMBINATIONS,
   isEligibleMasterForVariants,
+  MAX_SCENE_PROMPT_LENGTH,
+  MEDIA_VARIANT_CLOUD_FEATURE,
   MEDIA_VARIANT_FEATURE,
+  type NarrativeSceneIndex,
+  type VariantCloudProvider,
   variantBatchIdempotencyKey,
   type VariantCombination,
   type VariantPresetId,
@@ -26,6 +30,8 @@ export type RequestVariantsInput = {
    *  không đổi hành vi cũ khi không truyền. */
   autoEnhance?: boolean
   idempotencyKey: string
+  /** Phân cảnh Narrative Arc (Khu vực D Creative Studio) — ghi vào metadata asset. */
+  sceneIndex?: NarrativeSceneIndex | undefined
 }
 
 /**
@@ -64,6 +70,56 @@ export async function requestVariants(ctx: TenantContext, input: RequestVariants
       ratio: input.ratio,
       watermark: input.watermark,
       auto_enhance: input.autoEnhance ?? false,
+      ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
+    },
+    idempotencyKey: input.idempotencyKey,
+  })
+}
+
+export type RequestCloudVariantInput = RequestVariantsInput & {
+  provider: VariantCloudProvider
+  /** Mô tả KHÔNG GIAN hậu cảnh (không mô tả bó hoa) — worker luôn nối thêm
+   *  ràng buộc "cảnh trống", cắt còn `MAX_SCENE_PROMPT_LENGTH` ký tự. */
+  scenePrompt?: string | undefined
+}
+
+/**
+ * `POST /media/variants` với `engine: "cloud_provider"` (`I4`) — nhánh Cloud
+ * của M04b, 23/09/2026.
+ *
+ * Đi qua CHÍNH `enqueueJob` như nhánh local: kiểm hạn mức, trừ credit, ghi
+ * `usage`, `Idempotency-Key`, `NOTIFY` trong một giao dịch. Worker Python
+ * (`process_variant_job`) gọi nhà cung cấp để sinh HẬU CẢNH trống, dán nguyên
+ * khối chủ thể đã tách từ Master Image, đo Subject Integrity thật; nhà cung
+ * cấp lỗi (thiếu khoá, 402/403/429) thì lùi về phông Studio cục bộ của preset
+ * và ghi rõ `cloud_fallback` vào asset + sự kiện job.
+ *
+ * Cùng cổng Master đã duyệt như nhánh local — nhánh Cloud cũ không có cổng này.
+ */
+export async function requestCloudVariant(ctx: TenantContext, input: RequestCloudVariantInput) {
+  const master = await new AssetRepository().findById(ctx, input.masterAssetId)
+  if (!master) throw notFound()
+
+  if (!isEligibleMasterForVariants(master)) {
+    throw conflict(
+      "Biến thể marketing chỉ dựng được trên Master Image đã duyệt (cổng 2, media.approve)"
+    )
+  }
+
+  const scenePrompt = (input.scenePrompt ?? "").trim().slice(0, MAX_SCENE_PROMPT_LENGTH)
+
+  return enqueueJob(ctx, {
+    feature: MEDIA_VARIANT_CLOUD_FEATURE,
+    productId: master.product_id,
+    payload: {
+      master_asset_id: input.masterAssetId,
+      preset: input.preset,
+      ratio: input.ratio,
+      watermark: input.watermark,
+      auto_enhance: input.autoEnhance ?? false,
+      provider: input.provider,
+      ...(scenePrompt ? { scene_prompt: scenePrompt } : {}),
+      ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
     },
     idempotencyKey: input.idempotencyKey,
   })

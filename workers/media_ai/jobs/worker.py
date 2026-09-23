@@ -453,6 +453,14 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
     video_channel = notify_channel_for(video_feature)
     variant_feature = "media.variant"
     variant_channel = notify_channel_for(variant_feature)
+    # Nhánh Cloud của M04b (23/09/2026) — cùng `process_variant_job`, khác
+    # nguồn hậu cảnh. Trước đó nhánh này chạy đồng bộ trong request HTTP.
+    variant_cloud_feature = "media.variant.cloud"
+    variant_cloud_channel = notify_channel_for(variant_cloud_feature)
+    # Audio Studio (Khu vực C) — trước 23/09/2026 không worker nào nhận
+    # `audio.generate`: job bị trừ credit rồi đứng PENDING mãi.
+    audio_feature = "audio.generate"
+    audio_channel = notify_channel_for(audio_feature)
 
     cleaned_url = _clean_database_url(database_url)
     with psycopg.connect(cleaned_url, autocommit=True) as conn:
@@ -460,6 +468,8 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
             cur.execute(f"LISTEN {channel}")
             cur.execute(f"LISTEN {video_channel}")
             cur.execute(f"LISTEN {variant_channel}")
+            cur.execute(f"LISTEN {variant_cloud_channel}")
+            cur.execute(f"LISTEN {audio_channel}")
 
         while True:
             # Thứ tự ưu tiên là thứ tự người dùng chờ: M04a đứng trước M04b vì
@@ -475,6 +485,20 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
             if variant_job is not None:
                 from media_ai.jobs.variant_worker import process_variant_job
                 process_variant_job(conn, variant_job)
+                continue
+
+            # 2b. Biến thể M04b nhánh Cloud (hậu cảnh do nhà cung cấp sinh)
+            variant_cloud_job = claim_next(conn, variant_cloud_feature)
+            if variant_cloud_job is not None:
+                from media_ai.jobs.variant_worker import process_variant_job
+                process_variant_job(conn, variant_cloud_job)
+                continue
+
+            # 2c. Audio Studio — voiceover + nhạc nền (Khu vực C)
+            audio_job = claim_next(conn, audio_feature)
+            if audio_job is not None:
+                from media_ai.audio.audio_worker import process_audio_generation_job
+                process_audio_generation_job(conn, audio_job)
                 continue
 
             # 3. Xử lý tác vụ dựng video M04c

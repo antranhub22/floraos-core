@@ -20,6 +20,7 @@ import {
   type SupportedImageProviderKey,
 } from "@/modules/media/adapters"
 import { compileStudioPrompts } from "@/modules/media/domain/studio-prompt-compiler"
+import type { StorylineMode as StorylineModeArg } from "@/modules/media/domain/creative-studio-schemas"
 import type {
   CameraAngleType,
   HumanInteractionType,
@@ -129,7 +130,7 @@ export async function executeCloudCreative(
     visualStoryConfig: {
       cameraAngle: input.cameraAngle ?? "front_view",
       humanInteraction: input.humanInteraction ?? "none",
-      storylineMode: (input.customDirectives?.[0] as any) ?? "product_focus",
+      storylineMode: (input.customDirectives?.[0] as StorylineModeArg | undefined) ?? "single_shot",
     },
   })
 

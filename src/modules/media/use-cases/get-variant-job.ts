@@ -6,6 +6,8 @@ import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-rep
 import { JobEventRepository } from "@/modules/jobs/infra/job-event-repository"
 import {
   canApproveVariant,
+  MEDIA_VARIANT_CLOUD_FEATURE,
+  MEDIA_VARIANT_FEATURES,
   parseVariantIntegrityBlock,
   variantRequiresWarning,
   type VariantIntegrityBlock,
@@ -38,6 +40,12 @@ export type VariantJobDetail = {
     preset: string | null
     ratio: string | null
     watermark: boolean
+    /** `local_studio` | `cloud_provider` — theo `feature` của job (23/09/2026). */
+    engine: "local_studio" | "cloud_provider"
+    /** Phân cảnh Narrative Arc 1..4 nếu job sinh từ Khu vực D. */
+    scene_index: number | null
+    /** Nhánh cloud mà nhà cung cấp lỗi, worker đã lùi về phông cục bộ. */
+    cloud_fallback: boolean
   }
   /** Số ĐO, không phải số trang trí — xem `variant-rules.ts`. */
   subject_integrity: VariantIntegrityBlock | null
@@ -74,7 +82,8 @@ function doc<T>(nguon: unknown, khoa: string, mac_dinh: T): T {
  */
 export async function getVariantJob(ctx: TenantContext, jobId: string): Promise<VariantJobDetail> {
   const job = await new GenerationJobRepository().findById(ctx, jobId)
-  if (!job) throw notFound()
+  // Chỉ job biến thể — `:id` của một job khác (vd. video) không được đọc qua đây.
+  if (!job || !(MEDIA_VARIANT_FEATURES as readonly string[]).includes(job.feature)) throw notFound()
 
   // Quyền sở hữu job đã kiểm ở trên — `job_events` không mang
   // `organization_id`, nên thứ tự này bắt buộc, không phải tuỳ chọn.
@@ -89,6 +98,10 @@ export async function getVariantJob(ctx: TenantContext, jobId: string): Promise<
   const preset = doc<string | null>(payload, "preset", null)
   const ratio = doc<string | null>(payload, "ratio", null)
   const watermark = doc<boolean>(payload, "watermark", false)
+  const sceneIndex = doc<number | null>(payload, "scene_index", null)
+  const engine: "local_studio" | "cloud_provider" =
+    job.feature === MEDIA_VARIANT_CLOUD_FEATURE ? "cloud_provider" : "local_studio"
+  const cloudFallback = doc<boolean>(job.output, "cloud_fallback", false)
 
   let masterUrl: string | null = null
   if (masterAssetId) {
@@ -132,6 +145,9 @@ export async function getVariantJob(ctx: TenantContext, jobId: string): Promise<
       preset,
       ratio,
       watermark,
+      engine,
+      scene_index: typeof sceneIndex === "number" ? sceneIndex : null,
+      cloud_fallback: cloudFallback === true,
     },
     subject_integrity: integrity,
     variants,

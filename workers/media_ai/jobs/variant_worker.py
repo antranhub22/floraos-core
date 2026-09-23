@@ -59,6 +59,10 @@ from media_ai.image.brand_watermark import dong_dau
 from media_ai.image.defringe import EdgeDefringer
 from media_ai.image.ratio_frame import RATIO_PRESETS, dong_khung
 from media_ai.image.studio_backdrop import StudioBackdropEngine
+from media_ai.providers.background.stability_background import (
+    BackgroundProviderError,
+    resolve_background_provider,
+)
 from media_ai.providers.chung import ghi_ai_request, so_do_chi_phi_luot
 from media_ai.providers.expansion.router import resolve_expander
 from media_ai.providers.segmentation.rembg_segmenter import RembgSegmenter
@@ -66,7 +70,12 @@ from media_ai.providers.segmentation.rembg_segmenter import RembgSegmenter
 log = logging.getLogger("media_ai.jobs.variant_worker")
 
 FEATURE = "media.variant"
+# Nhánh Cloud (23/09/2026): cùng pipeline, chỉ khác nguồn HẬU CẢNH — nhà cung
+# cấp vẽ không gian trống, chủ thể vẫn dán nguyên khối từ Master Image. Tách
+# `feature` riêng để bảng giá (`pricing.ts`) tính khác nhánh local 0đ.
+CLOUD_FEATURE = "media.variant.cloud"
 PIPELINE_VERSION = "m04b-1"
+CLOUD_PIPELINE_VERSION = "m04b-cloud-1"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 STORAGE_ROOT = REPO_ROOT / "var" / "storage"
@@ -181,7 +190,14 @@ def _doc_thuong_hieu(
 # ─── Phép đo của cổng Subject Integrity ────────────────────────────────────
 
 
-def _co_bien(alpha: Image.Image, buoc: int = 3) -> np.ndarray:
+# Co mặt nạ SÂU HƠN vùng viền mà `StudioBackdropEngine` cố ý đổi (light wrap
+# `LIGHT_WRAP_DEPTH_PX` + 1px làm mềm alpha). Sửa 23/09/2026: trước đó co 3px
+# < light wrap 4px ⇒ biến thể local hợp lệ luôn đo ~0,96 và bị coi là dưới
+# ngưỡng — đó là lý do nhánh "vẫn ghi asset khi dưới ngưỡng" từng được thêm.
+DO_SAU_CO_BIEN = StudioBackdropEngine.LIGHT_WRAP_DEPTH_PX + 1
+
+
+def _co_bien(alpha: Image.Image, buoc: int = DO_SAU_CO_BIEN) -> np.ndarray:
     """Co mặt nạ vào trong `buoc` điểm ảnh, bằng min-filter lặp.
 
     Dùng `ImageFilter.MinFilter` thay vì OpenCV: bước này phải chạy được cả
@@ -423,6 +439,7 @@ def dung_bien_the(
     master_asset_id: str | None = None,
     cache_dir: Path | None = None,
     on_stage: Callable[[str], None] | None = None,
+    hau_canh_bytes: bytes | None = None,
 ) -> tuple[list[dict[str, Any]], float, Any]:
     """Dựng danh sách biến thể, đo lõi chủ thể, và trả về bộ mở-rộng-khung
     (`ImageExpander`) đã dùng cho biến thể "styled" nếu có (`AIC-13`, nợ
@@ -492,8 +509,18 @@ def dung_bien_the(
     anh_boi_canh: Image.Image | None = None
     expander_dung: Any = None
     if style != "transparent":
+        # `hau_canh_bytes` (nhánh Cloud, 23/09/2026): hậu cảnh trống do nhà
+        # cung cấp sinh — thay phông tự dựng; chủ thể vẫn dán nguyên khối.
+        anh_hau_canh = None
+        if hau_canh_bytes is not None:
+            anh_hau_canh = Image.open(BytesIO(hau_canh_bytes))
+            anh_hau_canh.load()
         anh_boi_canh = engine.composite(
-            rgba, style=style, with_shadow=True, with_light_wrap=True
+            rgba,
+            style=style,
+            with_shadow=True,
+            with_light_wrap=True,
+            backdrop_image=anh_hau_canh,
         )
 
         if auto_enhance:
@@ -598,7 +625,12 @@ def _ghi_asset_bien_the(
     ratio: str,
     preset: str,
     do_trung: float,
+    nguon: dict[str, Any] | None = None,
 ) -> str:
+    """`nguon` (23/09/2026): mô tả nguồn hậu cảnh + phân cảnh Narrative Arc —
+    `engine`, `provider`, `cloud_fallback`, `scene_index`. Vắng = nhánh local
+    như trước."""
+    nguon = nguon or {}
     data, mime, duoi = _sang_bytes(item["image"])
     asset_id = str(uuid.uuid4())
     product_id = master["product_id"]
@@ -637,12 +669,18 @@ def _ghi_asset_bien_the(
                 "height": item["image"].height,
                 "aspect_ratio": ratio,
                 "file_size": len(data),
-                "provider": "m04b_studio",
-                "model": "rembg+studio_backdrop",
-                "model_version": "bria-rmbg-v1",
-                "pipeline_version": PIPELINE_VERSION,
+                "provider": nguon.get("provider") or "m04b_studio",
+                "model": nguon.get("model") or "rembg+studio_backdrop",
+                "model_version": nguon.get("model_version") or "bria-rmbg-v1",
+                "pipeline_version": nguon.get("pipeline_version") or PIPELINE_VERSION,
                 "parameters": json.dumps(
-                    {"preset": preset, "ratio": ratio, "watermark": item["watermark"]}
+                    {
+                        "preset": preset,
+                        "ratio": ratio,
+                        "watermark": item["watermark"],
+                        "engine": nguon.get("engine", "local_studio"),
+                        "scene_prompt": nguon.get("scene_prompt"),
+                    }
                 ),
                 "identity_score": do_trung,
                 "generated_flags": json.dumps(
@@ -662,6 +700,11 @@ def _ghi_asset_bien_the(
                         "watermark": item["watermark"],
                         "source_master_asset_id": master["id"],
                         "subject_pixel_identity": do_trung,
+                        "engine": nguon.get("engine", "local_studio"),
+                        "background_provider": nguon.get("background_provider"),
+                        "cloud_fallback": bool(nguon.get("cloud_fallback", False)),
+                        "cloud_fallback_reason": nguon.get("cloud_fallback_reason"),
+                        "scene_index": nguon.get("scene_index"),
                     }
                 ),
                 "created_by": job["user_id"],
@@ -692,9 +735,69 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 f"(nhận kind={master['kind']}, approval_state={master['approval_state']})"
             )
 
-        _set_stage(conn, job["id"], "SEGMENTING")
+        scene_index = payload.get("scene_index")
+        nguon: dict[str, Any] = {"engine": "local_studio", "scene_index": scene_index}
+
         master_bytes = doc_bytes(master["storage_key"], STORAGE_ROOT)
         logo_bytes, ten_tiem = _doc_thuong_hieu(conn, organization_id)
+
+        # Nhánh Cloud (23/09/2026) — nhà cung cấp chỉ vẽ HẬU CẢNH TRỐNG; mọi
+        # lỗi (thiếu khoá, 402/403/429, mạng) lùi về phông cục bộ của chính
+        # preset này và GHI RÕ việc lùi vào asset + sự kiện job, không im lặng.
+        hau_canh_bytes: bytes | None = None
+        if job.get("feature") == CLOUD_FEATURE and preset != "transparent":
+            _set_stage(conn, job["id"], "GENERATING_BACKGROUND")
+            nguon.update({"engine": "cloud_provider", "pipeline_version": CLOUD_PIPELINE_VERSION})
+            bat_dau_cloud = time.monotonic()
+            try:
+                provider = resolve_background_provider(payload.get("provider"))
+                with Image.open(BytesIO(master_bytes)) as anh_master:
+                    rong, cao = anh_master.size
+                ket_qua_cloud = provider.sinh_hau_canh(payload.get("scene_prompt"), rong, cao)
+                hau_canh_bytes = ket_qua_cloud["image"]
+                nguon.update(
+                    {
+                        "background_provider": provider.name,
+                        "provider": provider.name,
+                        "model": "rembg+stability_background",
+                        "model_version": provider.model_version,
+                        "scene_prompt": ket_qua_cloud["prompt"],
+                    }
+                )
+                ghi_ai_request(
+                    conn,
+                    job_id=job["id"],
+                    organization_id=organization_id,
+                    capability_code="AIC-17",
+                    model_key=f"{provider.name}:{provider.model_version}",
+                    outcome="ACCEPTED",
+                    latency_ms=int((time.monotonic() - bat_dau_cloud) * 1000),
+                    image_count=1,
+                )
+            except BackgroundProviderError as exc:
+                nguon.update({"cloud_fallback": True, "cloud_fallback_reason": str(exc)[:300]})
+                ghi_ai_request(
+                    conn,
+                    job_id=job["id"],
+                    organization_id=organization_id,
+                    capability_code="AIC-17",
+                    model_key="stability_ai:stable-image-core-v2beta",
+                    outcome="FAILED",
+                    latency_ms=int((time.monotonic() - bat_dau_cloud) * 1000),
+                )
+                _emit_event(
+                    conn,
+                    job["id"],
+                    "log",
+                    {
+                        "message": "Nhà cung cấp hậu cảnh lỗi — lùi về phông Studio cục bộ",
+                        "cloud_fallback": True,
+                        "reason": str(exc)[:300],
+                        "status_code": exc.status_code,
+                    },
+                )
+
+        _set_stage(conn, job["id"], "SEGMENTING")
 
         # nợ #110 (18/09): KHÔNG ghi stage="COMPOSING" ở đây nữa — bước tách
         # chủ thể thật (nặng nhất) mới sắp chạy bên trong `dung_bien_the`.
@@ -708,6 +811,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 master_asset_id=master_asset_id,
                 cache_dir=SEGMENTATION_CACHE_ROOT,
                 on_stage=lambda stage: _set_stage(conn, job["id"], stage),
+                hau_canh_bytes=hau_canh_bytes,
             )
         except Exception:
             ghi_ai_request(
@@ -772,27 +876,24 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
 
         asset_ids: list[str] = []
         if bi_tu_choi:
-            # Human-in-the-loop: ghi biến thể dù integrity thấp, nhưng đánh dấu
-            # WARNING để người dùng tự quyết định duyệt/từ chối ở giao diện.
-            # Trước đây block cứng REJECTED → không ghi asset nào → user bế tắc.
-            ket_qua = "WARNING"
+            # Bị từ chối thì KHÔNG ghi asset (Arch §2.4, `variant-rules.ts`).
+            # 23/09/2026: gỡ nhánh "vẫn ghi asset, dán nhãn WARNING" — nhánh đó
+            # ra đời vì phép đo co biên thiếu (3px < light wrap 4px) khiến mọi
+            # biến thể hợp lệ bị đo thấp; lỗi đo đã sửa ở `DO_SAU_CO_BIEN`, nên
+            # dưới ngưỡng bây giờ nghĩa là lõi bó hoa THẬT SỰ bị đổi.
+            ket_qua = "REJECTED"
             _emit_event(
                 conn,
                 job["id"],
                 "log",
-                {"message": "Subject Integrity thấp — biến thể vẫn được ghi nhưng cần người duyệt kiểm tra", "ly_do": khoi_do["ly_do"]},
+                {"message": "Subject Integrity dưới ngưỡng — không ghi biến thể nào", "ly_do": khoi_do["ly_do"]},
             )
-            _set_stage(conn, job["id"], "GENERATING_OUTPUTS")
-            for item in bien_the:
-                asset_ids.append(
-                    _ghi_asset_bien_the(conn, job, master, item, ratio, preset, do_trung)
-                )
         else:
             ket_qua = "WARNING" if do_trung < 0.999 else "SAFE"
             _set_stage(conn, job["id"], "GENERATING_OUTPUTS")
             for item in bien_the:
                 asset_ids.append(
-                    _ghi_asset_bien_the(conn, job, master, item, ratio, preset, do_trung)
+                    _ghi_asset_bien_the(conn, job, master, item, ratio, preset, do_trung, nguon)
                 )
 
         output_payload = {
@@ -803,6 +904,10 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "watermark": watermark,
             "auto_enhance": auto_enhance,
             "subject_pixel_identity": do_trung,
+            "engine": nguon.get("engine", "local_studio"),
+            "background_provider": nguon.get("background_provider"),
+            "cloud_fallback": bool(nguon.get("cloud_fallback", False)),
+            "scene_index": scene_index,
         }
         with conn.cursor() as cur:
             cur.execute(
