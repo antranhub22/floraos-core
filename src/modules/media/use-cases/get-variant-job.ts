@@ -46,6 +46,8 @@ export type VariantJobDetail = {
     scene_index: number | null
     /** Nhánh cloud mà nhà cung cấp lỗi, worker đã lùi về phông cục bộ. */
     cloud_fallback: boolean
+    /** Lý do nhà cung cấp hậu cảnh lỗi (vd "Stability trả HTTP 402 …") — hiển thị cho người dùng. */
+    cloud_fallback_reason: string | null
   }
   /** Số ĐO, không phải số trang trí — xem `variant-rules.ts`. */
   subject_integrity: VariantIntegrityBlock | null
@@ -102,6 +104,7 @@ export async function getVariantJob(ctx: TenantContext, jobId: string): Promise<
   const engine: "local_studio" | "cloud_provider" =
     job.feature === MEDIA_VARIANT_CLOUD_FEATURE ? "cloud_provider" : "local_studio"
   const cloudFallback = doc<boolean>(job.output, "cloud_fallback", false)
+  const cloudFallbackReason = doc<string | null>(job.output, "cloud_fallback_reason", null)
 
   let masterUrl: string | null = null
   if (masterAssetId) {
@@ -148,6 +151,7 @@ export async function getVariantJob(ctx: TenantContext, jobId: string): Promise<
       engine,
       scene_index: typeof sceneIndex === "number" ? sceneIndex : null,
       cloud_fallback: cloudFallback === true,
+      cloud_fallback_reason: typeof cloudFallbackReason === "string" ? cloudFallbackReason : null,
     },
     subject_integrity: integrity,
     variants,

@@ -53,6 +53,8 @@ type SceneMeta = {
   integrity: number | null
   engine: "local_studio" | "cloud_provider"
   cloudFallback: boolean
+  /** Vì sao hậu cảnh Stability không dùng được (thiếu khoá, hết credit, …). */
+  cloudFallbackReason?: string | null
   approved?: boolean
   /** Bản PNG tách nền mà cùng job luôn ghi kèm. */
   transparentUrl?: string | null
@@ -62,7 +64,7 @@ type VariantJobPoll = {
   status: string
   result: string | null
   error: string | null
-  source: { engine: "local_studio" | "cloud_provider"; cloud_fallback: boolean }
+  source: { engine: "local_studio" | "cloud_provider"; cloud_fallback: boolean; cloud_fallback_reason?: string | null }
   subject_integrity: { subject_pixel_identity: number } | null
   variants: Array<{ asset_id: string; variant_key: string; url: string }>
 }
@@ -339,6 +341,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
             integrity: typeof item.identity_score === "number" ? item.identity_score : null,
             engine: meta.engine === "cloud_provider" ? "cloud_provider" : "local_studio",
             cloudFallback: meta.cloud_fallback === true,
+            cloudFallbackReason: typeof meta.cloud_fallback_reason === "string" ? meta.cloud_fallback_reason : null,
             approved: item.approval_state === "APPROVED",
           }
         }
@@ -428,6 +431,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           integrity: detail.subject_integrity?.subject_pixel_identity ?? null,
           engine: detail.source.engine,
           cloudFallback: detail.source.cloud_fallback,
+          cloudFallbackReason: detail.source.cloud_fallback_reason ?? null,
           transparentUrl: detail.variants.find((v) => v.variant_key === "transparent")?.url ?? null,
         },
       }))
@@ -513,6 +517,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         usesCloud: scenePlan ? sceneUsesCloud(scene, scenePlan.mode, sceneEngine) : false,
         approved: meta?.approved === true,
         error: sceneErrors[scene.sceneIndex] ?? null,
+        fallbackReason: meta?.cloudFallback ? (meta.cloudFallbackReason ?? "không rõ lý do") : null,
       }
     })
   }, [planScenes, scenePlan, sceneEngine, sceneImageMap, sceneMeta, sceneErrors, variantRatio])
@@ -682,6 +687,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   )}
                 </div>
 
+                {activeScene.fallbackReason && (
+                  <div className="rounded-xl border border-warning bg-warning-bg px-3.5 py-2.5 text-[12px] text-warning">
+                    <strong>Chưa có bối cảnh của kịch bản:</strong> Stability không vẽ được hậu cảnh nên worker lùi về phông
+                    Studio cục bộ (chỉ là nền trơn). Lý do: {activeScene.fallbackReason}
+                  </div>
+                )}
                 <div className="rounded-xl bg-surface-alt p-3.5 border border-border space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-text-muted">Kiểm định Subject Integrity:</span>
@@ -858,6 +869,11 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                         ? `⚡ Sinh Cảnh ${scene.sceneIndex} (hậu cảnh Stability)`
                         : `⚡ Sinh Cảnh ${scene.sceneIndex} (Studio cục bộ)`}
                     </button>
+                    {scene.fallbackReason && (
+                      <p className="mt-1.5 text-[10.5px] leading-snug text-warning">
+                        Stability không vẽ được hậu cảnh — đã dùng phông cục bộ: {scene.fallbackReason}
+                      </p>
+                    )}
                     {scene.error && (
                       <p className="mt-1.5 text-[10.5px] leading-snug text-danger">{scene.error}</p>
                     )}

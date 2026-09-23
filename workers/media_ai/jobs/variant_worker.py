@@ -950,6 +950,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "engine": nguon.get("engine", "local_studio"),
             "background_provider": nguon.get("background_provider"),
             "cloud_fallback": bool(nguon.get("cloud_fallback", False)),
+            "cloud_fallback_reason": nguon.get("cloud_fallback_reason"),
             "scene_index": scene_index,
             "scene_plan_id": scene_plan_id,
         }
