@@ -135,8 +135,16 @@ class StabilityBackgroundProvider:
                 client.close()
 
         if resp.status_code != 200:
+            # Câu dễ hiểu cho chủ tiệm/vận hành; chi tiết gốc giữ phía sau.
+            de_hieu = {
+                401: "Khoá STABILITY_API_KEY sai hoặc đã bị thu hồi — tạo khoá mới ở platform.stability.ai",
+                402: "Tài khoản Stability hết credit — nạp thêm ở platform.stability.ai/account/credits",
+                403: "Stability từ chối yêu cầu (kiểm duyệt nội dung hoặc tài khoản bị hạn chế)",
+                429: "Stability đang giới hạn tần suất — thử lại sau ít phút",
+            }.get(resp.status_code)
+            chi_tiet = resp.text[:160]
             raise BackgroundProviderError(
-                f"Stability trả HTTP {resp.status_code}: {resp.text[:200]}",
+                f"{de_hieu} (HTTP {resp.status_code})" if de_hieu else f"Stability trả HTTP {resp.status_code}: {chi_tiet}",
                 status_code=resp.status_code,
             )
         content_type = resp.headers.get("content-type", "")
