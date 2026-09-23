@@ -137,6 +137,21 @@ Worker (`audio.generate`) ghi bản phối lên kho: `generation_jobs.output = {
 
 ## 5. Khu vực D — Chặng 06c
 
+### 5.0. Kịch bản bối cảnh (24/09/2026)
+
+`POST /api/v1/creative-production/scene-plans` (`I1`, `Idempotency-Key` bắt buộc, feature `creative.scene_plan`, 1 credit):
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `mode` | `CREATIVE \| AUTHENTIC` | 5 hoặc 3 cảnh |
+| `asset_id?` · `product_id?` | uuid | khoá tra lại `scene-plan:<asset>:<topic>:<mode>` |
+| `product` | `{ name, category?, style?, colors[], components[], occasions[], target_audience?, price_range? }` | từ Chặng 01–03 |
+| `topic` | `{ id, title, angle_category?, hook?, cta?, format? }` | chủ đề Chặng 05 |
+
+Ra: `{ job_id, status, error, plan, deduped, usage }`. `plan = { version: 1, source: "ai"|"rule", mode, topicId, topicTitle, emotionalTone, reasoning, scenes[] }`, mỗi cảnh `{ sceneIndex, beat, title, setting, lighting, palette[], purpose, backgroundPrompt, localBackdrop, voiceScript, textOverlay, motionEffect }`. Tra không tạo job: `GET /creative-production/scene-plans?asset_id&topic_id&mode`, `GET /creative-production/scene-plans/:id`. URL Creative Studio mang `scenePlanId` (job id hoặc `rule`).
+
+### 5.1. Biến thể từng cảnh
+
 `POST /api/v1/media/variants` (`I4`, header `Idempotency-Key` bắt buộc):
 
 | Trường | Kiểu | Ghi chú |
@@ -147,15 +162,16 @@ Worker (`audio.generate`) ghi bản phối lên kho: `generation_jobs.output = {
 | `ratio` | `1:1 \| 4:5 \| 9:16 \| 16:9` | bắt buộc |
 | `watermark` | boolean | mặc định `true` |
 | `auto_enhance` | boolean | mặc định `false`, chỉ chỉnh vùng nền |
-| `scene_index` | 1–4 | phân cảnh Narrative Arc |
+| `scene_index` | 1–5 | phân cảnh theo kịch bản của chủ đề |
+| `scene_plan_id` | string ≤ 160 | job `creative.scene_plan` hoặc `rule:<topic>:<mode>` |
 | `provider_key` | `"stability"` | chỉ nhánh cloud |
-| `scene_prompt` | string ≤ 600 | chỉ nhánh cloud — mô tả KHÔNG GIAN hậu cảnh |
+| `scene_prompt` | string ≤ 600 | chỉ nhánh cloud — `backgroundPrompt` của cảnh (KHÔNG GIAN hậu cảnh) |
 
 Ra (201): `{ job_id, status, engine, deduped, usage: { cost_credit, balance_after } }`. Feature: `media.variant` (1 credit) / `media.variant.cloud` (2 credit).
 
 `GET /api/v1/media/variants/:job_id` (`I4`) → `{ job_id, status, stage, error, result, source: { master_asset_id, master_url, preset, ratio, watermark, engine, scene_index, cloud_fallback }, subject_integrity: { subject_pixel_identity, result, ly_do[] } | null, variants: { asset_id, variant_key: "transparent"|"styled"|"branded", title, background, ratio, watermark, generative_fill_used, url, approval_state, approved_at }[], approval: { can_approve, requires_warning } }`.
 
-Asset biến thể (`kind = MARKETING`, `approval_state = PENDING`, `parent_asset_id = master`): `identity_score` = số đo; `metadata` gồm `job_id, variant_key, preset, ratio, watermark, subject_pixel_identity, engine, background_provider, cloud_fallback, cloud_fallback_reason, scene_index`.
+Asset biến thể (`kind = MARKETING`, `approval_state = PENDING`, `parent_asset_id = master`): `identity_score` = số đo; `metadata` gồm `job_id, variant_key, preset, ratio, watermark, subject_pixel_identity, engine, background_provider, cloud_fallback, cloud_fallback_reason, scene_index, scene_plan_id`.
 
 Ngưỡng: SAFE ≥ 0,999 · WARNING ≥ 0,99 · REJECTED < 0,99 (không ghi asset).
 

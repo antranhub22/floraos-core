@@ -29,7 +29,16 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
 import { SourcePicker } from "./source-picker"
-import { promoteToMaster, resolveApprovedMaster, sceneTwoPresetFor } from "./package-client"
+import { promoteToMaster, resolveApprovedMaster } from "./package-client"
+import {
+  findScenePlan,
+  loadRulePlan,
+  RULE_PLAN_REF,
+  writeScenePlan,
+  type LoadedScenePlan,
+  type ScenePlanContext,
+  type ScenePlanScene,
+} from "./scene-plan-client"
 import { FLOW_M04B } from "./types"
 import type { UseCreativeStudioReturn } from "./use-creative-studio-data"
 
@@ -45,6 +54,8 @@ type SceneMeta = {
   engine: "local_studio" | "cloud_provider"
   cloudFallback: boolean
   approved?: boolean
+  /** Bản PNG tách nền mà cùng job luôn ghi kèm. */
+  transparentUrl?: string | null
 }
 
 type VariantJobPoll = {
@@ -56,14 +67,6 @@ type VariantJobPoll = {
   variants: Array<{ asset_id: string; variant_key: string; url: string }>
 }
 
-/** Mô tả KHÔNG GIAN hậu cảnh gửi nhà cung cấp — không mô tả bó hoa (bó hoa
- *  thật được dán nguyên khối ở worker). */
-const SCENE_BACKGROUND_PROMPTS: Record<number, string> = {
-  2: "Luxury grand opening banquet hall, modern hotel lobby, warm cinematic lighting, shallow depth of field, soft bokeh",
-  3: "Warm minimalist Nordic oak tabletop, soft morning sunlight from a window, creamy bokeh, calm interior",
-}
-
-
 function formatIntegrity(value: number | null, hasGenerated: boolean): string {
   if (!hasGenerated) return "Chưa sinh — chưa đo"
   if (value === null) return "Chưa có số đo"
@@ -71,6 +74,19 @@ function formatIntegrity(value: number | null, hasGenerated: boolean): string {
   if (value >= 0.999) return `Lõi trùng khít ${pct}% (SAFE)`
   if (value >= 0.99) return `Lõi trùng khít ${pct}% (WARNING)`
   return `Lõi trùng khít ${pct}% (REJECTED)`
+}
+
+const BEAT_COLORS: Record<string, string> = {
+  SETUP: "bg-blue-100 text-blue-800 border-blue-200",
+  RISING: "bg-purple-100 text-purple-800 border-purple-200",
+  CLIMAX: "bg-rose-100 text-rose-800 border-rose-200",
+  RESOLUTION: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  CTA: "bg-amber-100 text-amber-800 border-amber-200",
+}
+
+/** Cảnh dùng hậu cảnh Stability khi người dùng bật: CREATIVE và không phải phông trắng. */
+function sceneUsesCloud(scene: ScenePlanScene, mode: string, engine: string): boolean {
+  return engine === "cloud_provider" && mode === "CREATIVE" && scene.localBackdrop !== "studio_white"
 }
 
 const POLL_INTERVAL_MS = 2000
@@ -117,6 +133,15 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   // (chốt 23/09/2026); nhà cung cấp lỗi thì worker tự lùi về phông cục bộ.
   // Cảnh 1 (studio trắng) và Cảnh 4 (tách nền) luôn chạy cục bộ — không cần hậu cảnh AI.
   const [sceneEngine, setSceneEngine] = useState<"cloud_provider" | "local_studio">("cloud_provider")
+
+  // Kịch bản bối cảnh của CHỦ ĐỀ (quyết định PO 24/09/2026): số cảnh và bối
+  // cảnh từng cảnh lấy từ kịch bản AI viết qua job `creative.scene_plan`
+  // (CREATIVE 5 cảnh, AUTHENTIC 3). Thay khuôn 4 cảnh viết cứng trước đây.
+  const [loadedPlan, setLoadedPlan] = useState<LoadedScenePlan | null>(null)
+  const [planLoading, setPlanLoading] = useState(false)
+  const [planWriting, setPlanWriting] = useState(false)
+  const [planError, setPlanError] = useState<string | null>(null)
+  const [planFailedBefore, setPlanFailedBefore] = useState(false)
 
   const navigateToArea = (area: "a" | "b" | "c" | "d" | "e" | "f") => {
     const params = new URLSearchParams(searchParams?.toString() || "")
@@ -196,9 +221,86 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     }
   }
 
-  // Nạp các phân cảnh ĐÃ sinh của đúng Master đang chọn (không quét cả tổ chức).
+  const planCtx: ScenePlanContext | null = useMemo(
+    () =>
+      context
+        ? {
+            mode: context.mode,
+            productName: context.productName,
+            productId: context.productId,
+            assetId: context.assetId,
+            selectedTopic: context.selectedTopic,
+            commercialPassport: context.commercialPassport,
+          }
+        : null,
+    [context]
+  )
+  const urlPlanId = searchParams?.get("scenePlanId") ?? null
+
+  const rememberPlan = (loaded: LoadedScenePlan) => {
+    setLoadedPlan(loaded)
+    const params = new URLSearchParams(searchParams?.toString() || "")
+    params.set("scenePlanId", loaded.jobId ?? RULE_PLAN_REF)
+    router.replace(`/creative-studio?${params.toString()}` as never)
+  }
+
+  // Tra kịch bản đã có (không tạo job, không trừ credit).
   useEffect(() => {
-    if (!activeMasterId) return
+    if (!planCtx) return
+    let cancelled = false
+    setPlanLoading(true)
+    setPlanError(null)
+    findScenePlan(planCtx, urlPlanId)
+      .then(({ loaded, failedJob }) => {
+        if (cancelled) return
+        setLoadedPlan(loaded)
+        setPlanFailedBefore(failedJob)
+      })
+      .catch((e) => {
+        if (!cancelled) setPlanError(e instanceof Error ? e.message : "Không tra được kịch bản bối cảnh")
+      })
+      .finally(() => {
+        if (!cancelled) setPlanLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planCtx?.assetId, planCtx?.selectedTopic?.id, planCtx?.mode, urlPlanId])
+
+  const handleWritePlan = async (fresh: boolean) => {
+    if (!planCtx) return
+    setPlanWriting(true)
+    setPlanError(null)
+    try {
+      const loaded = await writeScenePlan(planCtx, fresh || planFailedBefore)
+      setPlanFailedBefore(false)
+      setSceneImageMap({})
+      setSceneMeta({})
+      rememberPlan(loaded)
+    } catch (e) {
+      setPlanFailedBefore(true)
+      setPlanError(e instanceof Error ? e.message : "AI chưa viết được kịch bản bối cảnh")
+    } finally {
+      setPlanWriting(false)
+    }
+  }
+
+  const handleUseRulePlan = () => {
+    if (!planCtx) return
+    setPlanError(null)
+    setSceneImageMap({})
+    setSceneMeta({})
+    rememberPlan(loadRulePlan(planCtx))
+  }
+
+  const scenePlan = loadedPlan?.plan ?? null
+  const planRef = loadedPlan?.ref ?? null
+  const planScenes: readonly ScenePlanScene[] = useMemo(() => scenePlan?.scenes ?? [], [scenePlan])
+
+  // Nạp các phân cảnh ĐÃ sinh của đúng Master + ĐÚNG kịch bản đang mở.
+  useEffect(() => {
+    if (!activeMasterId || !planRef) return
     let cancelled = false
     async function loadExistingScenes() {
       try {
@@ -217,13 +319,19 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         }
         const urls: Record<number, string> = {}
         const metas: Record<number, SceneMeta> = {}
+        const pngByJob: Record<string, string> = {}
         // `data` sắp theo created_at giảm dần — bản mới nhất của mỗi cảnh thắng.
         for (const item of body.data ?? []) {
           const meta = item.metadata ?? {}
           const idx = typeof meta.scene_index === "number" ? meta.scene_index : null
-          if (!idx || urls[idx] || !item.url) continue
-          const wantKey = idx === 4 ? "transparent" : "styled"
-          if (meta.variant_key !== wantKey) continue
+          if (!idx || !item.url || meta.scene_plan_id !== planRef) continue
+          const jobId = typeof meta.job_id === "string" ? meta.job_id : ""
+          if (meta.variant_key === "transparent") {
+            if (jobId) pngByJob[jobId] = item.url
+            continue
+          }
+          if (urls[idx]) continue
+          if (meta.variant_key !== "styled" && meta.variant_key !== "branded") continue
           urls[idx] = item.url
           metas[idx] = {
             assetId: item.id,
@@ -235,6 +343,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           }
         }
         if (cancelled) return
+        for (const m of Object.values(metas)) m.transparentUrl = pngByJob[m.jobId] ?? null
         setSceneImageMap(urls)
         setSceneMeta(metas)
       } catch (e) {
@@ -245,67 +354,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     return () => {
       cancelled = true
     }
-  }, [activeMasterId])
-
-  // Phân tích kịch bản bối cảnh hình ảnh (Narrative Arc) từ Chặng 04-05.
-  // `angleCategory` thật: EMOTIONAL | PROBLEM_SOLUTION | PRODUCT_SHOWCASE |
-  // EDUCATIONAL | TREND | PRICE_VALUE (bản trước so với "LOVE"/"OPENING" —
-  // không bao giờ khớp, Cảnh 2 luôn rơi về phòng khách).
-  const narrativeImageScenes = useMemo(() => {
-    const topic = context?.selectedTopic
-    const occasion = context?.commercialPassport?.suggestedOccasions?.[0] || "Khai trương & Sự kiện"
-    const scene2Preset = sceneTwoPresetFor(topic?.angleCategory)
-    const scene2Title =
-      scene2Preset === "wedding"
-        ? "Bàn Tiệc Cưới & Hẹn Hò"
-        : scene2Preset === "luxury_hotel"
-        ? "Sảnh Khách Sạn & Tiệc Mừng"
-        : "Phòng Khách Gia Đình Ấm Cúng"
-
-    return [
-      {
-        sceneIndex: 1,
-        beat: "SETUP",
-        beatLabel: "Mở đầu — Vẻ đẹp nguyên bản",
-        presetId: "studio_white" as const,
-        title: "Studio Trắng Tinh Khôi",
-        description: `Tập trung vào phom dáng và màu sắc nguyên bản của ${context?.productName || "bó hoa"}, đổ bóng mềm tự nhiên chuẩn E-commerce.`,
-        tag: "Catalog",
-      },
-      {
-        sceneIndex: 2,
-        beat: "RISING",
-        beatLabel: `Trải nghiệm — ${occasion}`,
-        presetId: scene2Preset,
-        title: scene2Title,
-        description: `Hòa phối bó hoa vào không gian ${occasion.toLowerCase()}, mang lại cảm xúc chân thực cho người mua.`,
-        tag: "Lifestyle",
-      },
-      {
-        sceneIndex: 3,
-        beat: "CLIMAX",
-        beatLabel: "Chi tiết — Tôn vinh phụ liệu & Thiệp",
-        presetId: "wood_minimal" as const,
-        title: "Gỗ Tối Giản Nghệ Thuật (Bắc Âu)",
-        description: "Bối cảnh ánh sáng ban mai nhẹ nhàng, làm nổi bật thông điệp thiệp in/viết và phụ liệu nơ thiết kế riêng.",
-        tag: "Tối giản",
-      },
-      {
-        sceneIndex: 4,
-        beat: "CTA",
-        beatLabel: "Xuất bản — Đa kênh",
-        presetId: "transparent" as const,
-        title: "Tách Nền Trong Suốt (PNG)",
-        description: "Khử nền, giữ nguyên từng cánh hoa và lá đệm, sẵn sàng ghép banner để xuất bản đa kênh.",
-        tag: "Xuất bản",
-      },
-    ]
-  }, [context])
+  }, [activeMasterId, planRef])
 
   // Sinh MỘT phân cảnh qua hàng đợi job rồi chờ kết quả thật.
   const handleGenerateSingleScene = async (targetIndex: number): Promise<void> => {
-    const scene = narrativeImageScenes.find((s) => s.sceneIndex === targetIndex)
-    if (!scene) return
+    const scene = planScenes.find((s) => s.sceneIndex === targetIndex)
+    if (!scene || !scenePlan || !planRef) return
     const masterForScene = await ensureMaster()
     if (!masterForScene) {
       setSceneErrors((prev) => ({
@@ -316,7 +370,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
       return
     }
 
-    const useCloud = sceneEngine === "cloud_provider" && (targetIndex === 2 || targetIndex === 3)
+    const useCloud = sceneUsesCloud(scene, scenePlan.mode, sceneEngine)
     setGeneratingSceneIndex(targetIndex)
     setSceneErrors((prev) => {
       const next = { ...prev }
@@ -333,12 +387,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         body: JSON.stringify({
           master_asset_id: masterForScene,
           engine: useCloud ? "cloud_provider" : "local_studio",
-          preset: scene.presetId,
+          preset: scene.localBackdrop,
           ratio: variantRatio || "1:1",
-          // Cảnh 4 là PNG tách nền để ghép banner — không bao giờ đóng dấu.
-          watermark: watermarkEnabled && targetIndex !== 4,
+          watermark: watermarkEnabled,
           scene_index: targetIndex,
-          ...(useCloud ? { provider_key: "stability", scene_prompt: SCENE_BACKGROUND_PROMPTS[targetIndex] } : {}),
+          scene_plan_id: planRef,
+          ...(useCloud ? { provider_key: "stability", scene_prompt: scene.backgroundPrompt } : {}),
         }),
       })
       if (!res.ok) {
@@ -356,12 +410,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           "Cổng Subject Integrity từ chối: lõi bó hoa bị thay đổi — không biến thể nào được ghi vào kho."
         )
       }
-      const wantKeys =
-        targetIndex === 4
-          ? ["transparent"]
-          : watermarkEnabled
-          ? ["branded", "styled"]
-          : ["styled"]
+      const wantKeys = watermarkEnabled ? ["branded", "styled"] : ["styled"]
       const variant =
         wantKeys.map((k) => detail.variants.find((v) => v.variant_key === k)).find(Boolean) ??
         detail.variants[0]
@@ -376,6 +425,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           integrity: detail.subject_integrity?.subject_pixel_identity ?? null,
           engine: detail.source.engine,
           cloudFallback: detail.source.cloud_fallback,
+          transparentUrl: detail.variants.find((v) => v.variant_key === "transparent")?.url ?? null,
         },
       }))
       setSelectedSceneIndex(targetIndex)
@@ -416,11 +466,11 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     }
   }
 
-  // Sinh trọn bộ 4 phân cảnh — tuần tự, mỗi cảnh một job (một lượt trừ credit).
+  // Sinh trọn bộ phân cảnh của kịch bản — tuần tự, mỗi cảnh một job (một lượt trừ credit).
   const handleGenerateAllScenes = async () => {
     setGeneratingAllScenes(true)
     try {
-      for (const idx of [1, 2, 3, 4]) {
+      for (const idx of planScenes.map((sc) => sc.sceneIndex)) {
         await handleGenerateSingleScene(idx)
       }
     } finally {
@@ -428,30 +478,25 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     }
   }
 
-  // 4 khung phân cảnh cho màn kết quả — CHỈ hiển thị ảnh thật đã sinh cho đúng
-  // cảnh. Cảnh chưa sinh thì để trống và ghi "Chưa sinh", không mượn ảnh gốc
-  // gắn nhãn "Biến thể AI" như bản trước.
+  // Khung phân cảnh cho màn kết quả — CHỈ ảnh thật đã sinh cho đúng cảnh của
+  // đúng kịch bản; cảnh chưa sinh để trống và ghi "Chưa sinh".
   const narrativeResultScenes = useMemo(() => {
-    const beatColors: Record<number, string> = {
-      1: "bg-blue-100 text-blue-800 border-blue-200",
-      2: "bg-purple-100 text-purple-800 border-purple-200",
-      3: "bg-rose-100 text-rose-800 border-rose-200",
-      4: "bg-amber-100 text-amber-800 border-amber-200",
-    }
-    return narrativeImageScenes.map((scene) => {
+    return planScenes.map((scene) => {
       const meta = sceneMeta[scene.sceneIndex]
       const url = sceneImageMap[scene.sceneIndex] || ""
       const hasGenerated = Boolean(url)
       return {
         sceneIndex: scene.sceneIndex,
         beat: scene.beat,
-        beatColor: beatColors[scene.sceneIndex] ?? "",
-        beatLabel: scene.beatLabel,
+        beatColor: BEAT_COLORS[scene.beat] ?? "",
         title: scene.title,
-        presetId: scene.presetId,
+        setting: scene.setting,
+        lighting: scene.lighting,
+        palette: scene.palette,
+        purpose: scene.purpose,
         imageUrl: url,
+        transparentUrl: meta?.transparentUrl ?? null,
         isOriginal: false,
-        isTransparent: scene.sceneIndex === 4,
         tag: !hasGenerated
           ? "Chưa sinh"
           : meta?.engine === "cloud_provider" && !meta.cloudFallback
@@ -460,15 +505,18 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           ? "Studio cục bộ (Stability lỗi)"
           : "Studio cục bộ",
         ratio: variantRatio || "1:1",
-        description: scene.description,
         integrityText: formatIntegrity(meta?.integrity ?? null, hasGenerated),
         hasGenerated,
+        usesCloud: scenePlan ? sceneUsesCloud(scene, scenePlan.mode, sceneEngine) : false,
         approved: meta?.approved === true,
         error: sceneErrors[scene.sceneIndex] ?? null,
       }
     })
-  }, [narrativeImageScenes, sceneImageMap, sceneMeta, sceneErrors, variantRatio])
+  }, [planScenes, scenePlan, sceneEngine, sceneImageMap, sceneMeta, sceneErrors, variantRatio])
 
+  const sceneCount = planScenes.length
+  const sceneCreditTotal = narrativeResultScenes.reduce((sum, sc) => sum + (sc.usesCloud ? 2 : 1), 0)
+  const cloudAvailable = scenePlan?.mode === "CREATIVE"
   const generatedSceneCount = narrativeResultScenes.filter((s) => s.hasGenerated).length
   const measuredIntegrities = narrativeResultScenes
     .map((s) => sceneMeta[s.sceneIndex]?.integrity)
@@ -505,7 +553,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   // ============================================================
   // PHASE: RESULT B
   // ============================================================
-  if (phase === "result-b") {
+  if (phase === "result-b" && scenePlan) {
     const activeScene = narrativeResultScenes.find((s) => s.sceneIndex === selectedSceneIndex) || narrativeResultScenes[0]
 
     return (
@@ -513,10 +561,11 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         {/* Header kết quả */}
         <div className="flex items-center justify-between w-full flex-wrap gap-2 border-b border-border pb-4">
           <div>
-            <div className="text-xs text-text-muted">④ Thẻ kết quả — M04b (Biến thể Marketing Narrative Arc)</div>
-            <div className="text-[19px] font-extrabold text-text">Bộ 4 Phân Cảnh Hình Ảnh Theo Cung Kịch Bản</div>
+            <div className="text-xs text-text-muted">④ Thẻ kết quả — M04b · Kịch bản bối cảnh {scenePlan?.source === "rule" ? "cơ bản" : "AI"} · {scenePlan?.mode}</div>
+            <div className="text-[19px] font-extrabold text-text">Bộ {sceneCount} phân cảnh theo chủ đề: {scenePlan?.topicTitle}</div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {cloudAvailable && (
             <div className="inline-flex rounded-lg border border-border overflow-hidden text-[11px] font-bold">
               {(["cloud_provider", "local_studio"] as const).map((eng) => (
                 <button
@@ -526,14 +575,15 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   className={`px-2.5 py-1.5 cursor-pointer ${sceneEngine === eng ? "bg-primary text-white" : "bg-surface text-text-muted"}`}
                   title={
                     eng === "cloud_provider"
-                      ? "Cảnh 2–3: Stability vẽ hậu cảnh, bó hoa thật dán nguyên khối (2 credit/cảnh)"
-                      : "Cảnh 2–3: phông Studio cục bộ (1 credit/cảnh)"
+                      ? "Cảnh có không gian riêng: Stability vẽ hậu cảnh theo kịch bản, bó hoa thật dán nguyên khối (2 credit/cảnh)"
+                      : "Mọi cảnh dùng phông Studio cục bộ gần nhất (1 credit/cảnh)"
                   }
                 >
                   {eng === "cloud_provider" ? "Hậu cảnh Stability" : "Studio cục bộ"}
                 </button>
               ))}
             </div>
+            )}
             <Button
               size="sm"
               onClick={handleGenerateAllScenes}
@@ -541,12 +591,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               className="gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold shadow-md hover:from-red-700 hover:to-rose-700 h-9 cursor-pointer"
             >
               <Sparkles size={14} className={generatingAllScenes ? "animate-spin" : ""} />
-              {generatingAllScenes ? "Đang sinh trọn bộ 4 phân cảnh..." : "⚡ Sinh trọn bộ 4 phân cảnh"}
+              {generatingAllScenes ? `Đang sinh trọn bộ ${sceneCount} phân cảnh...` : `⚡ Sinh trọn bộ ${sceneCount} phân cảnh (${sceneCreditTotal} credit)`}
             </Button>
             <Badge tone={judgmentB === "blocked" ? "danger" : "success"} className="text-xs px-3 py-1 font-bold">
               {judgmentB === "blocked"
                 ? "Bị cổng toàn vẹn từ chối"
-                : `${generatedSceneCount}/4 phân cảnh đã sinh`}
+                : `${generatedSceneCount}/${sceneCount} phân cảnh đã sinh`}
             </Badge>
           </div>
         </div>
@@ -586,14 +636,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               <div
                 className="md:col-span-5 relative aspect-square w-full rounded-xl border border-border overflow-hidden flex items-center justify-center"
                 style={
-                  activeScene.isTransparent
-                    ? {
-                        backgroundImage:
-                          "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
-                        backgroundSize: "16px 16px",
-                        backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px",
-                      }
-                    : { backgroundColor: "#f8fafc" }
+                  { backgroundColor: "#f8fafc" }
                 }
               >
                 {activeScene.imageUrl ? (
@@ -620,17 +663,20 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-bold text-primary uppercase tracking-wider">
-                      Phân cảnh đang xem ({activeScene.sceneIndex}/4)
+                      Phân cảnh đang xem ({activeScene.sceneIndex}/{sceneCount})
                     </span>
                     <span className="text-stone-300">·</span>
-                    <span className="text-xs text-text-muted">{activeScene.beatLabel}</span>
+                    <span className="text-xs text-text-muted">{activeScene.lighting}</span>
                   </div>
                   <h4 className="text-base sm:text-lg font-bold text-text mt-1">
                     {activeScene.title}
                   </h4>
                   <p className="text-xs sm:text-[13px] text-text-muted mt-2 leading-relaxed">
-                    {activeScene.description}
+                    {activeScene.setting}
                   </p>
+                  {activeScene.palette.length > 0 && (
+                    <p className="text-[11px] text-text-muted mt-1">Bảng màu: {activeScene.palette.join(" · ")}</p>
+                  )}
                 </div>
 
                 <div className="rounded-xl bg-surface-alt p-3.5 border border-border space-y-2">
@@ -648,10 +694,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-text-muted">Mục đích sử dụng:</span>
                     <span className="font-medium text-text">
-                      {activeScene.sceneIndex === 1 && "Catalog thương mại / Ảnh Master xác thực"}
-                      {activeScene.sceneIndex === 2 && "Bài viết Facebook Feed / Quảng cáo Instagram"}
-                      {activeScene.sceneIndex === 3 && "Slide chi tiết chất lượng / Zalo chốt đơn"}
-                      {activeScene.sceneIndex === 4 && "Ghép banner khuyến mãi / Xuất bản đa kênh"}
+                      {activeScene.purpose || "—"}
                     </span>
                   </div>
                 </div>
@@ -668,6 +711,17 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   >
                     <Download size={13} /> Tải ảnh phân cảnh này
                   </Button>
+                  {activeScene.transparentUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(activeScene.transparentUrl as string, "_blank")}
+                      className="gap-1.5 text-xs h-9 cursor-pointer"
+                    >
+                      <Download size={13} /> PNG tách nền
+                    </Button>
+                  )}
                   {activeScene.hasGenerated && (
                     <Button
                       type="button"
@@ -693,11 +747,11 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           </Card>
         )}
 
-        {/* Lưới 4 Khung Phân Cảnh Narrative Arc (Cảnh 1 - 2 - 3 - 4) */}
+        {/* Lưới phân cảnh theo kịch bản bối cảnh của chủ đề */}
         <div className="w-full space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-text uppercase tracking-wider">
-              Danh sách 4 Khung Phân Cảnh (Chọn cảnh để xem tiêu điểm):
+              Danh sách {sceneCount} phân cảnh (chọn cảnh để xem tiêu điểm):
             </span>
             <span className="text-[11px] text-text-muted">
               Chuẩn kịch bản Narrative Arc Chặng 04–05
@@ -707,7 +761,6 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
             {narrativeResultScenes.map((scene) => {
               const isSelected = scene.sceneIndex === selectedSceneIndex
-              const isTransparent = scene.isTransparent
               return (
                 <div
                   key={scene.sceneIndex}
@@ -722,14 +775,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   <div
                     className="relative aspect-square w-full flex items-center justify-center overflow-hidden"
                     style={
-                      isTransparent
-                        ? {
-                            backgroundImage:
-                              "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
-                            backgroundSize: "16px 16px",
-                            backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px",
-                          }
-                        : { backgroundColor: "#f8fafc" }
+                      { backgroundColor: "#f8fafc" }
                     }
                   >
                     {scene.imageUrl ? (
@@ -770,7 +816,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                       </div>
                       <h5 className="text-xs font-bold text-text line-clamp-1">{scene.title}</h5>
                       <p className="text-[11px] text-text-muted mt-1 line-clamp-2 leading-relaxed">
-                        {scene.description}
+                        {scene.setting}
                       </p>
                     </div>
 
@@ -805,9 +851,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                         ? "Đang chờ worker dựng cảnh..."
                         : scene.hasGenerated
                         ? `🔄 Sinh lại Cảnh ${scene.sceneIndex}`
-                        : scene.sceneIndex === 4
-                        ? "⚡ Tạo PNG tách nền"
-                        : (scene.sceneIndex === 2 || scene.sceneIndex === 3) && sceneEngine === "cloud_provider"
+                        : scene.usesCloud
                         ? `⚡ Sinh Cảnh ${scene.sceneIndex} (hậu cảnh Stability)`
                         : `⚡ Sinh Cảnh ${scene.sceneIndex} (Studio cục bộ)`}
                     </button>
@@ -825,13 +869,13 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         <div className="w-full space-y-2 pt-2">
           <StageGateApprovalBar
             stageCode="Chặng 06c — BIẾN THỂ ẢNH M04b"
-            title="Phê duyệt Trọn bộ 4 Khung Ảnh Tiếp Thị (Narrative Arc)"
-            description={`Đã sinh ${generatedSceneCount}/4 phân cảnh theo kịch bản Setup → Rising → Climax → CTA. Số toàn vẹn lõi hoa bên dưới là số ĐO bởi worker trên từng ảnh. Chủ shop xác nhận để tiến sang Tạo Video Marketing (Khu vực E).`}
+            title={`Phê duyệt bộ ${sceneCount} ảnh tiếp thị theo kịch bản chủ đề`}
+            description={`Đã sinh ${generatedSceneCount}/${sceneCount} phân cảnh theo kịch bản ${planScenes.map((sc) => sc.beat).join(" → ")}. Số toàn vẹn lõi hoa bên dưới là số ĐO bởi worker trên từng ảnh. Chủ shop xác nhận để tiến sang Tạo Video Marketing (Khu vực E).`}
             isApproved={judgmentB !== "blocked" && generatedSceneCount > 0}
-            approveLabel="Phê duyệt Trọn bộ 4 Ảnh Biến thể & Chuyển sang Tạo Video (Khu vực E) →"
+            approveLabel={`Phê duyệt bộ ${sceneCount} ảnh & chuyển sang Tạo Video (Khu vực E) →`}
             onApprove={() => navigateToArea("e")}
             metrics={[
-              { label: "Phân cảnh", value: `${generatedSceneCount}/4 đã sinh` },
+              { label: "Phân cảnh", value: `${generatedSceneCount}/${sceneCount} đã sinh` },
               {
                 label: "Toàn vẹn lõi hoa (thấp nhất)",
                 value: minSceneIntegrity === null ? "Chưa đo" : `${(minSceneIntegrity * 100).toFixed(2)}%`,
@@ -908,16 +952,16 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
   // Không gán asset ORIGINAL của Khu vực A làm Master (máy chủ trả 409):
   // chưa có Master đã duyệt thì SourcePicker hiện nút "Skip — Dùng ảnh gốc".
-  // Khu vực D chạy theo kịch bản Narrative Arc (24/09/2026): bối cảnh từng cảnh
-  // do chủ đề Chặng 04–05 quyết định, không còn bộ chọn tay "6 bối cảnh" chạy
-  // một lượt riêng. Cấu hình chỉ còn nguồn hậu cảnh Cảnh 2–3, tỉ lệ, watermark.
+  // Khu vực D chạy theo kịch bản bối cảnh CỦA CHỦ ĐỀ (24/09/2026): số cảnh và
+  // bối cảnh từng cảnh lấy từ kịch bản (AI hoặc cơ bản), không còn bộ chọn tay
+  // "6 bối cảnh" hay khuôn 4 cảnh cố định. Cấu hình: nguồn hậu cảnh, tỉ lệ, watermark.
   const openSceneBoard = async (generateAll: boolean) => {
+    if (!scenePlan) return
     const id = await ensureMaster()
     if (!id) return // lỗi hiển thị ở masterError, giữ màn cấu hình
     setPhase("result-b")
     if (generateAll) await handleGenerateAllScenes()
   }
-  const sceneCreditTotal = sceneEngine === "cloud_provider" ? 6 : 4
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-3xl mx-auto">
@@ -1009,93 +1053,153 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         />
       )}
 
-      {/* Kịch bản Bối cảnh Hình ảnh (Narrative Arc) từ Chặng 04-05 */}
-      {narrativeImageScenes.length > 0 && (
-        <div className="w-full space-y-2.5">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <Sparkles size={14} className="text-primary" />
-              <span className="text-xs font-bold text-text uppercase tracking-wider">
-                Kịch bản Bối cảnh Hình ảnh (Narrative Arc — Chặng 04–05)
-              </span>
-            </div>
-            <span className="text-[11px] text-text-muted">
-              Dựa trên chủ đề: <strong>{context?.selectedTopic?.title || context?.productName || "Hoa tươi"}</strong>
+      {/* Kịch bản bối cảnh của CHỦ ĐỀ (Chặng 04–05) — nguồn duy nhất của các phân cảnh */}
+      <div className="w-full space-y-2.5">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} className="text-primary" />
+            <span className="text-xs font-bold text-text uppercase tracking-wider">
+              Kịch bản bối cảnh hình ảnh theo chủ đề
             </span>
           </div>
+          <span className="text-[11px] text-text-muted">
+            Chủ đề:{" "}
+            <strong>{context?.selectedTopic?.title || "chưa chọn ở Chặng 05 — dùng tên sản phẩm"}</strong>
+            {" · "}
+            {context?.mode ?? "CREATIVE"} ({context?.mode === "AUTHENTIC" ? 3 : 5} cảnh)
+          </span>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {narrativeImageScenes.map((scene) => {
-              const usesCloud =
-                sceneEngine === "cloud_provider" && (scene.sceneIndex === 2 || scene.sceneIndex === 3)
-              return (
-                <div
-                  key={scene.sceneIndex}
-                  className="p-3.5 rounded-xl border-2 border-border bg-surface"
-                >
+        {planLoading && (
+          <div className="rounded-xl border border-border bg-surface-alt px-4 py-3 text-[12px] text-text-muted">
+            Đang tra kịch bản đã có cho chủ đề này...
+          </div>
+        )}
+
+        {!planLoading && !scenePlan && (
+          <Card className="w-full p-4 border border-primary/30 bg-primary/5 flex flex-col gap-3">
+            <div className="text-[13px] text-text">
+              <span className="font-bold">Chủ đề này chưa có kịch bản bối cảnh.</span> AI sẽ đọc chủ đề (dịp, tông
+              màu, cảm xúc, hook, CTA) và thông tin bó hoa để viết từng cảnh: không gian, ánh sáng, bảng màu, lời
+              thoại. Kịch bản được lưu lại — mở lại Khu vực C/D không tốn thêm credit.
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={() => void handleWritePlan(false)}
+                disabled={planWriting || !planCtx}
+                className="gap-1.5"
+              >
+                <Sparkles size={14} className={planWriting ? "animate-spin" : ""} />
+                {planWriting ? "AI đang viết kịch bản..." : "AI viết kịch bản bối cảnh (1 credit)"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleUseRulePlan} disabled={planWriting || !planCtx}>
+                Dùng kịch bản cơ bản (miễn phí, không AI)
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {planError && (
+          <div className="w-full rounded-xl border border-danger bg-danger-bg px-4 py-3 text-[12.5px] text-danger">
+            {planError}
+          </div>
+        )}
+
+        {scenePlan && (
+          <>
+            <div className="rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-[12px] text-text-muted flex flex-wrap items-center justify-between gap-2">
+              <span>
+                <Badge tone={scenePlan.source === "ai" ? "success" : "neutral"} className="text-[10px] mr-2">
+                  {scenePlan.source === "ai" ? "AI viết" : "Kịch bản cơ bản"}
+                </Badge>
+                {scenePlan.emotionalTone && <strong className="text-text">{scenePlan.emotionalTone}. </strong>}
+                {scenePlan.reasoning}
+              </span>
+              <button
+                type="button"
+                onClick={() => void handleWritePlan(true)}
+                disabled={planWriting}
+                className="text-[11.5px] font-bold text-primary hover:underline disabled:opacity-60 cursor-pointer"
+              >
+                {planWriting ? "Đang viết lại..." : "↻ AI viết lại kịch bản (1 credit)"}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {narrativeResultScenes.map((scene) => (
+                <div key={scene.sceneIndex} className="p-3.5 rounded-xl border-2 border-border bg-surface">
                   <div className="flex items-start justify-between gap-1 mb-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${scene.beatColor}`}>
                       Cảnh {scene.sceneIndex} · {scene.beat}
                     </span>
-                    <Badge tone="neutral" className="text-[10px] px-1.5 py-0">
-                      {scene.tag}
-                    </Badge>
+                    {scene.purpose && (
+                      <Badge tone="neutral" className="text-[10px] px-1.5 py-0 max-w-[55%] truncate">
+                        {scene.purpose}
+                      </Badge>
+                    )}
                   </div>
                   <h5 className="text-xs font-bold text-text mt-1">{scene.title}</h5>
-                  <p className="text-[11.5px] text-text-muted mt-1 line-clamp-2 leading-relaxed">
-                    {scene.description}
-                  </p>
-                  <div className="flex items-center justify-between pt-2 mt-2 border-t border-dashed border-border text-[10.5px]">
-                    <span className="text-stone-500 font-medium">{scene.beatLabel}</span>
-                    <span className="font-bold text-stone-500">
-                      {usesCloud ? "Hậu cảnh Stability · 2 credit" : "Studio cục bộ · 1 credit"}
+                  <p className="text-[11.5px] text-text-muted mt-1 leading-relaxed">{scene.setting}</p>
+                  <div className="flex items-center justify-between pt-2 mt-2 border-t border-dashed border-border text-[10.5px] gap-2">
+                    <span className="text-stone-500 font-medium truncate">
+                      {[scene.lighting, scene.palette.join(", ")].filter(Boolean).join(" · ")}
+                    </span>
+                    <span className="font-bold text-stone-500 shrink-0">
+                      {scene.usesCloud ? "Stability · 2 credit" : "Studio cục bộ · 1 credit"}
                     </span>
                   </div>
                 </div>
-              )
-            })}
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Nguồn hậu cảnh (chỉ CREATIVE — AUTHENTIC giữ phông cục bộ giản dị) */}
+      {scenePlan && cloudAvailable && (
+        <div className="w-full">
+          <div className="text-xs font-bold text-text mb-2">Nguồn hậu cảnh cho các cảnh có không gian riêng:</div>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-surface-alt rounded-xl border border-border w-full">
+            {(["cloud_provider", "local_studio"] as const).map((eng) => (
+              <button
+                key={eng}
+                type="button"
+                onClick={() => setSceneEngine(eng)}
+                className={`py-2.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  sceneEngine === eng ? "bg-primary text-white shadow-xs" : "text-text-muted hover:text-text"
+                }`}
+              >
+                {eng === "cloud_provider" ? (
+                  <>
+                    <Sparkles size={14} /> Hậu cảnh Stability theo kịch bản (2 credit/cảnh)
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={14} /> Phông Studio cục bộ gần nhất (1 credit/cảnh)
+                  </>
+                )}
+              </button>
+            ))}
           </div>
+          <p className="mt-1.5 text-[11px] text-text-muted leading-relaxed">
+            {sceneEngine === "cloud_provider"
+              ? "Stability vẽ không gian trống đúng mô tả của từng cảnh; bó hoa thật được dán nguyên khối từ Master Image và đo Subject Integrity. Cảnh phông trắng luôn chạy cục bộ. Nhà cung cấp lỗi thì worker tự lùi về phông cục bộ và ghi rõ trên ảnh."
+              : "Mỗi cảnh dùng phông Studio dựng sẵn gần nhất với bối cảnh trong kịch bản (6 phông có sẵn) — rẻ hơn nhưng không đúng từng chi tiết không gian."}
+          </p>
         </div>
       )}
-
-      {/* Nguồn hậu cảnh cho Cảnh 2–3 (Cảnh 1 và 4 luôn chạy cục bộ) */}
-      <div className="w-full">
-        <div className="text-xs font-bold text-text mb-2">Nguồn hậu cảnh cho Cảnh 2–3:</div>
-        <div className="grid grid-cols-2 gap-2 p-1 bg-surface-alt rounded-xl border border-border w-full">
-          {(["cloud_provider", "local_studio"] as const).map((eng) => (
-            <button
-              key={eng}
-              type="button"
-              onClick={() => setSceneEngine(eng)}
-              className={`py-2.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                sceneEngine === eng ? "bg-primary text-white shadow-xs" : "text-text-muted hover:text-text"
-              }`}
-            >
-              {eng === "cloud_provider" ? (
-                <>
-                  <Sparkles size={14} /> Hậu cảnh Stability (2 credit/cảnh)
-                </>
-              ) : (
-                <>
-                  <ShieldCheck size={14} /> Studio cục bộ (1 credit/cảnh)
-                </>
-              )}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1.5 text-[11px] text-text-muted leading-relaxed">
-          {sceneEngine === "cloud_provider"
-            ? "Stability chỉ vẽ không gian trống theo bối cảnh của cảnh; bó hoa thật được dán nguyên khối từ Master Image và đo Subject Integrity. Nhà cung cấp lỗi thì worker tự lùi về phông Studio cục bộ và ghi rõ trên ảnh."
-            : "Bó hoa được dán nguyên khối vào phông Studio dựng sẵn tương ứng với từng cảnh, không gọi nhà cung cấp trả phí. Worker đo Subject Integrity sau khi ghép."}
+      {scenePlan && !cloudAvailable && (
+        <p className="w-full text-[11.5px] text-text-muted">
+          Mode AUTHENTIC: giữ tinh thần ảnh thật — mọi cảnh dùng phông Studio cục bộ, không vẽ không gian mới.
         </p>
-      </div>
+      )}
 
       {/* Multi-channel Controls (Ratio, Watermark, Credit Cost) */}
       <Card className="w-full p-4.5 border border-border bg-surface flex flex-col gap-4 shadow-xs">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="text-xs font-semibold text-text-muted uppercase tracking-wider">Tùy biến xuất bản đa kênh</div>
           <Badge tone="accent" className="text-[11px] font-bold">
-            Trọn bộ 4 cảnh: {sceneCreditTotal} credit
+            {scenePlan ? `Trọn bộ ${sceneCount} cảnh: ${sceneCreditTotal} credit` : "Chưa có kịch bản"}
           </Badge>
         </div>
 
@@ -1137,7 +1241,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               />
               <div className="text-xs">
                 <span className="font-bold text-text">Đóng dấu Watermark Shop</span>
-                <span className="block text-[11px] text-text-muted">Logo/tên tiệm từ Hồ sơ thương hiệu, áp cho Cảnh 1–3 (Cảnh 4 PNG không đóng dấu)</span>
+                <span className="block text-[11px] text-text-muted">Logo/tên tiệm từ Hồ sơ thương hiệu; bản PNG tách nền không đóng dấu</span>
               </div>
             </label>
           </div>
@@ -1157,18 +1261,20 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         <Button
           className="h-[48px] sm:col-span-2 px-6 text-sm font-bold shadow-md shadow-primary/20"
           onClick={() => void openSceneBoard(true)}
-          disabled={!hasImageSource || promotingMaster || generatingAllScenes}
+          disabled={!hasImageSource || !scenePlan || promotingMaster || generatingAllScenes}
         >
           <Sparkles size={18} strokeWidth={2} className="mr-2" />
           {promotingMaster
             ? "Đang dùng ảnh gốc làm Master..."
-            : `Sinh trọn bộ 4 phân cảnh (${sceneCreditTotal} credit)`}
+            : !scenePlan
+            ? "Cần kịch bản bối cảnh trước"
+            : `Sinh trọn bộ ${sceneCount} phân cảnh (${sceneCreditTotal} credit)`}
         </Button>
         <Button
           variant="outline"
           className="h-[48px] px-4 text-sm font-bold"
           onClick={() => void openSceneBoard(false)}
-          disabled={!hasImageSource || promotingMaster}
+          disabled={!hasImageSource || !scenePlan || promotingMaster}
         >
           Sinh từng cảnh →
         </Button>

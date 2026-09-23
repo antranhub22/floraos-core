@@ -18,7 +18,7 @@ Creative Studio gom hành trình "1 sản phẩm hoa → 1 chiến dịch" vào 
 | A | `area-a` | Quét theo ảnh sản phẩm | Camera | 01–05 | `<ProductIntelligenceWorkspace />` | Tải ảnh → `assets` (ORIGINAL) · Vision `gpt-4o-mini` bóc tách nguyên tử · Trend Fit (đối chiếu `trend_signals`) · 10 chủ đề (sinh theo luật trong `trend-fit.ts`) · chọn chủ đề + Mode → bàn giao qua URL chỉ mang định danh |
 | B | `area-b` | Viết contents | FileText | 06a | `<ContentsWorkspace />` | `POST /creative-production/produce` → cung truyện + 4 bài (Facebook, Instagram, TikTok, Zalo) sinh theo khuôn (`social-post-generator.ts`); lưu bài vào gói chiến dịch |
 | C | `area-c` | Tạo audio | Headphones | 06b | `<AudioWorkspace />` | `POST /audio/jobs` → job `audio.generate` → worker Python phối voice + nhạc nền, ghi kho → nghe lại qua `GET /audio/jobs/:id` |
-| D | `area-d` | Tạo biến thể ảnh | Wand2 | 06c | `<VariantWorkspace />` | 4 phân cảnh Narrative Arc, mỗi cảnh là một job `media.variant` (Studio cục bộ) hoặc `media.variant.cloud` (hậu cảnh Stability) — Subject Integrity ĐO bởi worker |
+| D | `area-d` | Tạo biến thể ảnh | Wand2 | 06c | `<VariantWorkspace />` | Phân cảnh theo kịch bản bối cảnh của chủ đề (`creative.scene_plan`, CREATIVE 5 / AUTHENTIC 3), mỗi cảnh là một job `media.variant` (Studio cục bộ) hoặc `media.variant.cloud` (hậu cảnh Stability) — Subject Integrity ĐO bởi worker |
 | E | `area-e` | Tạo video | Film | 06d | `<VideoWorkspace />` | Tạo `video_jobs` (bản nháp) theo 6 khuôn M04c với storyboard + Ken Burns theo cảnh; duyệt P3/P4 và render ở màn Video |
 | F | `area-f` | Gói chiến dịch | Package | 07–09 (+10–14) | `<PackageWorkspace />` | Gói lưu ở `campaign_packages`; QA năm trục phía máy chủ; duyệt `J5` + `audit_logs`; kế hoạch đăng; số liệu thật Chặng 11–14 |
 
@@ -72,7 +72,8 @@ src/components/creative-studio/
 ├── contents-workspace.tsx        # B
 ├── creative-result-viewer.tsx    # B — hiển thị 4 bài, "Lưu bài vào gói chiến dịch"
 ├── audio-workspace.tsx           # C — tạo job + chờ + nghe lại
-├── variant-workspace.tsx         # D — 4 phân cảnh qua job thật
+├── variant-workspace.tsx         # D — phân cảnh theo kịch bản của chủ đề, mỗi cảnh một job thật
+├── scene-plan-client.ts          # C/D — tra/viết kịch bản bối cảnh (`/creative-production/scene-plans`)
 ├── source-picker.tsx             # D — chọn Master / Skip dùng ảnh gốc
 ├── video-workspace.tsx           # E
 ├── package-workspace.tsx         # F — Chặng 07/08/09
@@ -93,9 +94,12 @@ src/components/market-intelligence/
 src/modules/creative-production/
 ├── domain/  production-types · validate-transition · build-handoff-url · content-brief-builder ·
 │            social-post-generator · topic-to-{audio,content,media,video}-bridge ·
-│            campaign-package-rules (QA, duyệt, số đo, mẫu thắng, đề xuất)
+│            campaign-package-rules (QA, duyệt, số đo, mẫu thắng, đề xuất) ·
+│            scene-plan-rules (kịch bản bối cảnh theo chủ đề — 24/09/2026)
+├── adapters/  scene-plan-ai-adapter (AIC-18) · narrative-ai-adapter (cũ, chưa dùng)
 ├── use-cases/  produce-creative · produce-authentic · plan-narrative-arc · dispatch-production-jobs ·
-│               package-campaign (ước tính, không lưu) · manage-campaign-package · get-campaign-performance
+│               package-campaign (ước tính, không lưu) · manage-campaign-package · get-campaign-performance ·
+│               generate-scene-plan (job `creative.scene_plan`)
 ├── infra/   campaign-package-repository (Prisma) · creative-production-repository (port in-memory cũ, chưa dùng)
 └── adapters/ narrative-ai-adapter
 
@@ -142,7 +146,8 @@ A (01–05) ──bàn giao URL định danh──▶ B · C · D · E (06a–06
 | A | `GET /product-intelligence/:id` | `V2` |
 | B | `POST /creative-production/produce` · `/plan` · `/package` (ước tính) | `I1` |
 | C | `POST /audio/jobs` (Idempotency-Key) · `GET /audio/jobs/:id` | `I1` |
-| D | `POST /media/variants` (`engine` local/cloud, Idempotency-Key) · `GET /media/variants/:id` | `I4` |
+| C · D | `POST·GET /creative-production/scene-plans` · `GET /creative-production/scene-plans/:id` (kịch bản bối cảnh, 24/09/2026) | `I1` |
+| D | `POST /media/variants` (`engine` local/cloud, `scene_index` 1–5, `scene_plan_id`, Idempotency-Key) · `GET /media/variants/:id` | `I4` |
 | D | `POST /media/variants/:id/approve` · `GET /media/variants` | `I5` |
 | D | `POST /media/promote-to-master` | `I2` |
 | D | `GET /assets?kind=MARKETING&parent_asset_id=` (lọc theo Master — thêm 23/09/2026) | `G1` |
@@ -174,20 +179,28 @@ A (01–05) ──bàn giao URL định danh──▶ B · C · D · E (06a–06
 
 ---
 
-## 7. Khu vực D — 4 Phân Cảnh Narrative Arc
+## 7. Khu vực D — Phân cảnh theo kịch bản bối cảnh của chủ đề
 
-| Cảnh | Beat | Preset API (`VARIANT_PRESET_IDS`) | Style nội bộ worker | Nguồn hậu cảnh |
-|---|---|---|---|---|
-| 1 | SETUP | `studio_white` | `clean_white` | luôn Studio cục bộ |
-| 2 | RISING | `wedding` (góc EMOTIONAL) · `luxury_hotel` (PRODUCT_SHOWCASE/TREND) · `living_room` (còn lại) | `boutique_bokeh` · `warm_gray` · `soft_ambient` | Stability (mặc định) hoặc Studio cục bộ — người dùng chọn |
-| 3 | CLIMAX | `wood_minimal` | `wood_warm` | Stability (mặc định) hoặc Studio cục bộ |
-| 4 | CTA | `transparent` | `transparent` | luôn cục bộ (tách nền) |
+**Quyết định PO 24/09/2026:** bối cảnh ảnh phải đi theo kịch bản của CHỦ ĐỀ đã chọn ở Chặng 04–05, số cảnh theo kịch bản (CREATIVE 5: `SETUP → RISING → CLIMAX → RESOLUTION → CTA`; AUTHENTIC 3: `SETUP → CLIMAX → CTA`), kịch bản do AI viết qua job. Khuôn 4 cảnh viết cứng trước đó (studio trắng → một bối cảnh chọn theo `angleCategory` → bàn gỗ → PNG) đã gỡ — nó không đọc dịp hay tông màu nên chủ đề "sinh nhật tone vàng" ra "sảnh khách sạn".
 
-- **Không có bộ chọn bối cảnh tay (24/09/2026).** Bối cảnh của từng cảnh do bảng trên quyết định (Cảnh 2 theo `angleCategory` của chủ đề Chặng 04–05). Màn cấu hình chỉ còn: nguồn hậu cảnh Cảnh 2–3 (Stability / Studio cục bộ), tỉ lệ khung, watermark (áp Cảnh 1–3, ưu tiên ảnh `branded`; Cảnh 4 không đóng dấu). Nút chính "Sinh trọn bộ 4 phân cảnh" (6 credit với Stability, 4 credit cục bộ) hoặc "Sinh từng cảnh". Luồng một-lượt cũ (`goRunningB`, 6 preset chọn tay, "10 phối cảnh 0đ") đã gỡ khỏi Khu vực D; `goRunningB` chỉ còn phục vụ nơi khác gọi hook.
-- Mỗi cảnh = một job, `scene_index` 1–4 ghi vào payload và `assets.metadata`. Màn kết quả chỉ hiện ảnh thật đã sinh cho đúng cảnh; cảnh chưa sinh ghi "Chưa sinh — chưa đo" (không mượn ảnh gốc).
-- Số toàn vẹn hiển thị là `subject_integrity.subject_pixel_identity` của job hoặc `assets.identity_score`.
-- Tự nạp phân cảnh đã sinh bằng `GET /assets?kind=MARKETING&parent_asset_id=<master>` — chỉ của Master đang chọn.
-- Duyệt từng cảnh: `POST /media/variants/:job_id/approve` (`I5`).
+### 7.0. Kịch bản bối cảnh (`creative.scene_plan`)
+
+- Domain thuần: `modules/creative-production/domain/scene-plan-rules.ts` — hợp đồng `ScenePlan`/`ScenePlanScene`, lời nhắc, `normalizeAiScenePlan` (nhịp do mode quyết, sai số cảnh hoặc thiếu bối cảnh → loại cả lượt), `buildRuleScenePlan` (kịch bản cơ bản theo dịp + tông màu, không AI).
+- Use-case `generate-scene-plan.ts`: `enqueueJob` (feature `creative.scene_plan`, 1 credit, khoá `scene-plan:<asset>:<topic>:<mode>`) → `startInline` → `callCapability("video_storyboard")` (`AIC-18`, `OpenAILLMProvider`) → kịch bản ghi vào `generation_jobs.output`. Hỏng → `FAILED` + hoàn credit. Mở lại C/D tra theo khoá (`GET /creative-production/scene-plans?…`) — không tạo job, không trừ credit. "AI viết lại" dùng khoá mới; `scenePlanId` mang qua URL.
+- Mỗi cảnh: `title`, `setting` (tiếng Việt, hiển thị), `lighting`, `palette`, `purpose`, `backgroundPrompt` (tiếng Anh, CHỈ không gian — lọc từ hoa/người/chữ, ≤ 600 ký tự; worker còn nối "no flowers, no people, no text"), `localBackdrop` (1 trong 5 phông cục bộ), `voiceScript`, `textOverlay`, `motionEffect`.
+- AI lỗi: người dùng tự chọn "Dùng kịch bản cơ bản (miễn phí)" — `source: "rule"`, ref `rule:<topic>:<mode>`, giao diện ghi rõ.
+
+### 7.0.1. Sinh ảnh từng cảnh
+
+| Nguồn hậu cảnh | Khi nào | Job |
+|---|---|---|
+| Stability theo `backgroundPrompt` của cảnh | CREATIVE + người dùng bật + cảnh không phải phông trắng | `media.variant.cloud` (2 credit), `preset = localBackdrop` làm phông dự phòng |
+| Phông Studio cục bộ `localBackdrop` | AUTHENTIC, hoặc người dùng chọn cục bộ, hoặc cảnh phông trắng | `media.variant` (1 credit) |
+
+- Payload mang `scene_index` (1–5) + `scene_plan_id`; worker ghi cả hai vào `assets.metadata`. Giao diện chỉ nạp lại ảnh có `scene_plan_id` = kịch bản đang mở; Khu vực E gắn ảnh theo cùng `scenePlanId`.
+- Mỗi job luôn ghi kèm bản PNG tách nền (`variant_key = transparent`) — thay cho "Cảnh 4 PNG" cũ; watermark (nếu bật) cho bản `branded`, thẻ cảnh ưu tiên bản `branded`.
+- Màn cấu hình: xem trước các cảnh của kịch bản, nguồn hậu cảnh, tỉ lệ, watermark; "Sinh trọn bộ N phân cảnh" hoặc "Sinh từng cảnh". Không còn bộ chọn tay 6 bối cảnh.
+- Số toàn vẹn hiển thị là `subject_integrity.subject_pixel_identity` của job hoặc `assets.identity_score`. Duyệt từng cảnh: `POST /media/variants/:job_id/approve` (`I5`).
 
 ### 7.1. Nhánh Cloud (`media.variant.cloud`)
 1. TS `requestCloudVariant` → `enqueueJob` (2 credit — giá tạm, nợ #64).

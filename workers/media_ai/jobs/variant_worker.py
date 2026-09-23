@@ -705,6 +705,7 @@ def _ghi_asset_bien_the(
                         "cloud_fallback": bool(nguon.get("cloud_fallback", False)),
                         "cloud_fallback_reason": nguon.get("cloud_fallback_reason"),
                         "scene_index": nguon.get("scene_index"),
+                        "scene_plan_id": nguon.get("scene_plan_id"),
                     }
                 ),
                 "created_by": job["user_id"],
@@ -736,7 +737,14 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             )
 
         scene_index = payload.get("scene_index")
-        nguon: dict[str, Any] = {"engine": "local_studio", "scene_index": scene_index}
+        # `scene_plan_id` (24/09/2026): kịch bản bối cảnh của chủ đề mà cảnh này
+        # thuộc về — giao diện chỉ nạp lại cảnh của ĐÚNG kịch bản đang mở.
+        scene_plan_id = payload.get("scene_plan_id")
+        nguon: dict[str, Any] = {
+            "engine": "local_studio",
+            "scene_index": scene_index,
+            "scene_plan_id": scene_plan_id,
+        }
 
         master_bytes = doc_bytes(master["storage_key"], STORAGE_ROOT)
         logo_bytes, ten_tiem = _doc_thuong_hieu(conn, organization_id)
@@ -908,6 +916,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "background_provider": nguon.get("background_provider"),
             "cloud_fallback": bool(nguon.get("cloud_fallback", False)),
             "scene_index": scene_index,
+            "scene_plan_id": scene_plan_id,
         }
         with conn.cursor() as cur:
             cur.execute(

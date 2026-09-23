@@ -40,7 +40,13 @@
 
 ## 4. Khu vực D — Chặng 06c
 
-- [x] 4 phân cảnh, mỗi cảnh một job thật (`scene_index` trong payload/metadata) — `variant-workspace.tsx`
+- [x] Kịch bản bối cảnh theo CHỦ ĐỀ do AI viết qua job `creative.scene_plan` (AIC-18, 1 credit, hoàn khi hỏng), CREATIVE 5 / AUTHENTIC 3 cảnh — `scene-plan-rules.ts`, `generate-scene-plan.ts` + `scene-plan-rules.test.ts`, `generate-scene-plan.test.ts` (24/09)
+- [x] Mở lại C/D tra kịch bản theo khoá, không trừ credit; kịch bản cơ bản miễn phí khi AI lỗi — `scene-plan-client.ts`
+- [x] Mỗi cảnh một job thật, mang `scene_index` (1–5) + `scene_plan_id`; chỉ nạp lại ảnh của đúng kịch bản — `variant-workspace.tsx`, `variant_worker.py`
+- [x] Hậu cảnh Stability dùng `backgroundPrompt` của từng cảnh (bỏ 2 lời nhắc viết cứng) — `variant-workspace.tsx#handleGenerateSingleScene`
+- [x] Khu vực C lấy lời thoại từ cùng kịch bản — `audio-workspace.tsx`
+- [ ] Khu vực B/E dùng chung kịch bản (storyboard video, cung truyện bài viết) — nợ #125
+- [ ] `npm run db:seed` để hai mô hình OpenAI có `AIC-18` — cần anh Tony chạy
 - [x] Nhánh cloud qua `enqueueJob` (`media.variant.cloud`, 2 credit), cổng Master đã duyệt — `request-variants.ts` + `request-cloud-variant.test.ts`
 - [x] Worker: Stability chỉ vẽ hậu cảnh, bó hoa dán nguyên khối, integrity ĐO — `stability_background.py`, `variant_worker.py` + `test_variant_cloud.py`
 - [x] Nhà cung cấp lỗi → lùi phông cục bộ, ghi `cloud_fallback` — `test_variant_cloud.py`
@@ -48,9 +54,9 @@
 - [x] Gỡ `execFileSync` khỏi tiến trình web; `studio_local` không trả ảnh gốc giả — `studio-local-image-provider.ts` + test router
 - [x] Gỡ canvas cutout phía trình duyệt; bỏ số "99.9%/99.8%/100%" gõ tay — `variant-workspace.tsx`
 - [x] Tự nạp phân cảnh chỉ của Master đang chọn (`parent_asset_id`) — `assets/route.ts`, `list-assets.ts`
-- [x] Ánh xạ Cảnh 2 theo `angleCategory` thật — `package-client.ts#sceneTwoPresetFor`
+- [x] ~~Ánh xạ Cảnh 2 theo `angleCategory`~~ — thay bằng kịch bản bối cảnh theo chủ đề (24/09)
 - [x] Duyệt từng cảnh (`I5`) — `variant-workspace.tsx#handleApproveScene`
-- [x] Gỡ bộ chọn "6 bối cảnh" chọn tay + nhãn sai "10 phối cảnh (0đ)"; màn cấu hình = xem trước 4 cảnh + nguồn hậu cảnh + tỉ lệ + watermark — `variant-workspace.tsx#openSceneBoard` (24/09)
+- [x] Gỡ bộ chọn "6 bối cảnh" chọn tay + nhãn sai "10 phối cảnh (0đ)"; màn cấu hình = xem trước cảnh của kịch bản + nguồn hậu cảnh + tỉ lệ + watermark — `variant-workspace.tsx#openSceneBoard` (24/09)
 - [ ] Đo tốc độ chính thức trên worker production (con số ~0,46s là đo CLI dev)
 
 ## 5. Khu vực E — Chặng 06d

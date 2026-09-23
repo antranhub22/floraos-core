@@ -16,7 +16,7 @@ Chủ tiệm / quản lý / thợ hoa. Bắt đầu bằng một việc: tải �
 A  Quét theo ảnh sản phẩm   01 BRING · 02 UNDERSTAND · 03 DISCOVER · 04 IDEATE · 05 CHOOSE
 B  Viết contents            06a  4 bài Facebook / Instagram / TikTok / Zalo
 C  Tạo audio                06b  lồng tiếng + nhạc nền, nghe lại bản phối
-D  Tạo biến thể ảnh         06c  4 phân cảnh Narrative Arc, số toàn vẹn ĐO thật
+D  Tạo biến thể ảnh         06c  phân cảnh theo kịch bản bối cảnh của chủ đề (5/3 cảnh), số toàn vẹn ĐO thật
 E  Tạo video                06d  video nháp theo 6 khuôn, Ken Burns theo cảnh
 F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH · 11 SELL · 12 MEASURE · 13 LEARN · 14 NEXT
 ```
@@ -44,17 +44,16 @@ F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH
 
 ## Khu vực C — Chặng 06b
 
-- Lời thoại từng cảnh (điền sẵn từ hook/tiêu đề/CTA của chủ đề), giọng đọc, nhà cung cấp TTS, chất lượng, mood nhạc.
+- Lời thoại từng cảnh: lấy từ **kịch bản bối cảnh** của chủ đề nếu đã có (cùng kịch bản với ảnh Khu vực D, không tốn credit); chưa có thì điền sẵn từ hook/tiêu đề/CTA. Giọng đọc, nhà cung cấp TTS, chất lượng, mood nhạc.
 - **"Tạo audio job"** → trừ credit một lần (bấm đúp không trừ hai lần) → màn hình chờ worker phối → **nghe lại bản phối ngay trên trang**. Lỗi phối thì hiện lý do.
 - Xong thì mã audio job được mang sang Khu vực F để đưa vào gói.
 
 ## Khu vực D — Chặng 06c
 
-- Nguồn ảnh: Master Image đã duyệt. Nếu mới chỉ có ảnh gốc từ A: **"Skip — Dùng ảnh gốc"** (nâng thành Master, không chỉnh ảnh).
-- Bốn phân cảnh: **1 SETUP** studio trắng · **2 RISING** lifestyle (tiệc cưới / sảnh khách sạn / phòng khách theo góc tiếp cận của chủ đề) · **3 CLIMAX** bàn gỗ Bắc Âu · **4 CTA** tách nền PNG.
-- Không cần chọn bối cảnh bằng tay: bối cảnh từng cảnh đi theo kịch bản của chủ đề đã chọn ở Chặng 05. Màn cấu hình cho xem trước 4 cảnh, chọn tỉ lệ khung và bật watermark (Cảnh 1–3).
-- Chọn nguồn hậu cảnh cho Cảnh 2–3: **"Hậu cảnh Stability"** (2 credit/cảnh — AI vẽ không gian, bó hoa thật dán nguyên khối) hoặc **"Studio cục bộ"** (1 credit/cảnh). Cảnh 1 và 4 luôn cục bộ.
-- **"Sinh trọn bộ 4 phân cảnh"** (6 credit với Stability, 4 credit nếu toàn cục bộ) hoặc **"Sinh từng cảnh →"** mở bảng 4 cảnh để sinh riêng. Mỗi nút sinh cảnh tạo một job thật và chờ kết quả. Thẻ cảnh hiện: ảnh thật, nguồn ("Hậu cảnh Stability" / "Studio cục bộ" / "Studio cục bộ (Stability lỗi)"), **% lõi bó hoa trùng khít đo được**. Cảnh chưa sinh ghi "Chưa sinh — chưa đo".
+- Nguồn ảnh: Master Image đã duyệt. Nếu mới chỉ có ảnh gốc từ A thì hệ thống tự dùng ảnh gốc làm Master (không chỉnh ảnh, cần quyền I2).
+- **Kịch bản bối cảnh theo chủ đề.** Lần đầu mở, bấm **"AI viết kịch bản bối cảnh (1 credit)"**: AI đọc chủ đề đã chọn ở Chặng 05 (dịp, tông màu, cảm xúc, hook, CTA) và thông tin bó hoa, viết từng cảnh — không gian, ánh sáng, bảng màu, mục đích dùng, lời thoại. CREATIVE 5 cảnh (Mở đầu → Phát triển → Cao trào → Kết → Kêu gọi), AUTHENTIC 3 cảnh. Kịch bản được lưu: mở lại C/D không tốn thêm credit; "↻ AI viết lại kịch bản" tốn 1 credit. AI lỗi thì hoàn credit và có thể chọn **"Dùng kịch bản cơ bản (miễn phí)"**.
+- Không cần chọn bối cảnh bằng tay. Màn cấu hình cho xem trước các cảnh, chọn nguồn hậu cảnh (CREATIVE): **"Hậu cảnh Stability theo kịch bản"** (2 credit/cảnh — AI vẽ đúng không gian của cảnh, bó hoa thật dán nguyên khối) hoặc **"Phông Studio cục bộ gần nhất"** (1 credit/cảnh); cảnh phông trắng và mode AUTHENTIC luôn cục bộ. Chọn tỉ lệ khung và watermark.
+- **"Sinh trọn bộ N phân cảnh"** (tổng credit hiện trên nút) hoặc **"Sinh từng cảnh →"**. Mỗi cảnh là một job thật; thẻ cảnh hiện ảnh thật, nguồn ("Hậu cảnh Stability" / "Studio cục bộ" / "Studio cục bộ (Stability lỗi)"), **% lõi bó hoa trùng khít đo được**, nút tải ảnh và **PNG tách nền** (mỗi cảnh đều có). Cảnh chưa sinh ghi "Chưa sinh — chưa đo".
 - Lõi bó hoa lệch dưới 99% → cổng từ chối, không ảnh nào được lưu, hiện lý do.
 - **"Duyệt ảnh này"** cho từng cảnh (chỉ chủ tiệm — năng lực I5).
 
@@ -86,7 +85,7 @@ F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH
 | A | ảnh, sửa thông số, chủ đề, Mode | — |
 | B | chủ đề, nội dung từng kênh | — |
 | C | lời thoại, giọng, nhạc | — |
-| D | nguồn hậu cảnh, cảnh cần sinh | Duyệt ảnh: `I5` (chủ tiệm) · Skip ảnh gốc: `I2` (chủ tiệm) |
+| D | kịch bản bối cảnh (AI/cơ bản), nguồn hậu cảnh, cảnh cần sinh | Duyệt ảnh: `I5` (chủ tiệm) · Skip ảnh gốc: `I2` (chủ tiệm) |
 | E | khuôn, storyboard, Ken Burns | Kịch bản `P3` · Video `P4` (chủ tiệm) |
 | F | tài sản, bài đăng | Duyệt gói + kế hoạch đăng: `J5` |
 

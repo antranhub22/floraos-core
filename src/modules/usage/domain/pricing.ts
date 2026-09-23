@@ -32,6 +32,9 @@ const FEATURE_COST_CREDIT: Readonly<Record<string, number>> = {
   // — cũng là một lượt gọi mô hình ngoài trên một ảnh. Giá tạm, cùng hạng với
   // cả bảng — chờ chủ sản phẩm chốt ở nợ #64 (D14).
   "media.variant.cloud": 2,
+  // Kịch bản bối cảnh theo chủ đề (24/09/2026): MỘT lượt gọi LLM văn bản,
+  // cùng hạng với `product.copy.generate`. Giá tạm — chờ chủ sản phẩm (nợ #64).
+  "creative.scene_plan": 1,
   "catalog.generate": 1,
   "landing.generate": 1,
   "video.render": 5,

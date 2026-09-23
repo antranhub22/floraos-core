@@ -10,6 +10,7 @@ import {
   VARIANT_CLOUD_PROVIDERS,
   VARIANT_PRESET_IDS,
   VARIANT_RATIOS,
+  type NarrativeSceneIndex,
 } from "@/modules/media/domain/variant-rules"
 import { listPendingVariants } from "@/modules/media/use-cases/list-pending-variants"
 import { requestCloudVariant, requestVariants } from "@/modules/media/use-cases/request-variants"
@@ -23,12 +24,14 @@ const postSchema = z.object({
   watermark: z.boolean().default(true),
   // AIC-14 — chốt 18/09 (AskUserQuestion): chỉ chỉnh vùng nền, mặc định tắt.
   auto_enhance: z.boolean().default(false),
-  // Phân cảnh Narrative Arc của Khu vực D (1 SETUP · 2 RISING · 3 CLIMAX · 4 CTA).
+  // Phân cảnh theo kịch bản bối cảnh của chủ đề (CREATIVE 5 cảnh, AUTHENTIC 3).
   scene_index: z
     .number()
     .int()
-    .refine((v) => (NARRATIVE_SCENE_INDEXES as readonly number[]).includes(v), "scene_index 1..4")
+    .refine((v) => (NARRATIVE_SCENE_INDEXES as readonly number[]).includes(v), "scene_index 1..5")
     .optional(),
+  // Job `creative.scene_plan` mà cảnh này thuộc về — ghi vào metadata asset.
+  scene_plan_id: z.string().trim().min(1).max(160).optional(),
   // Chỉ nhánh cloud_provider:
   provider_key: z.enum(VARIANT_CLOUD_PROVIDERS).default("stability"),
   scene_prompt: z.string().max(MAX_SCENE_PROMPT_LENGTH).optional(),
@@ -61,7 +64,8 @@ export const POST = handle(async (request) => {
     watermark: data.watermark,
     autoEnhance: data.auto_enhance,
     idempotencyKey,
-    sceneIndex: data.scene_index as 1 | 2 | 3 | 4 | undefined,
+    sceneIndex: data.scene_index as NarrativeSceneIndex | undefined,
+    scenePlanId: data.scene_plan_id,
   }
 
   const result =

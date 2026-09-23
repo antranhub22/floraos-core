@@ -154,7 +154,7 @@ export class GenerationJobRepository {
   async finishInline(
     ctx: TenantContext,
     id: string,
-    input: { ok: boolean; error?: string | null; now: Date }
+    input: { ok: boolean; error?: string | null; now: Date; output?: unknown }
   ): Promise<void> {
     await this.db.generation_jobs.updateMany({
       where: scopedWhere(ctx, { id }),
@@ -162,6 +162,9 @@ export class GenerationJobRepository {
         status: input.ok ? "COMPLETED" : "FAILED",
         error: input.ok ? null : (input.error ?? "Lỗi không xác định"),
         completed_at: input.now,
+        // Job chạy tại chỗ có kết quả nhỏ (vd kịch bản bối cảnh) ghi thẳng vào
+        // `output` để lần mở sau tra lại theo khoá idempotency, không gọi lại mô hình.
+        ...(input.output !== undefined ? { output: input.output as InputJsonValue } : {}),
       },
     })
   }

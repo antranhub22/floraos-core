@@ -32,6 +32,8 @@ export type RequestVariantsInput = {
   idempotencyKey: string
   /** Phân cảnh Narrative Arc (Khu vực D Creative Studio) — ghi vào metadata asset. */
   sceneIndex?: NarrativeSceneIndex | undefined
+  /** Kịch bản bối cảnh (`creative.scene_plan` job id) mà cảnh này thuộc về. */
+  scenePlanId?: string | undefined
 }
 
 /**
@@ -71,6 +73,7 @@ export async function requestVariants(ctx: TenantContext, input: RequestVariants
       watermark: input.watermark,
       auto_enhance: input.autoEnhance ?? false,
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
+      ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),
     },
     idempotencyKey: input.idempotencyKey,
   })
@@ -120,6 +123,7 @@ export async function requestCloudVariant(ctx: TenantContext, input: RequestClou
       provider: input.provider,
       ...(scenePrompt ? { scene_prompt: scenePrompt } : {}),
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
+      ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),
     },
     idempotencyKey: input.idempotencyKey,
   })

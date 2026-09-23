@@ -49,6 +49,10 @@ export async function seedAiCapabilities(): Promise<number> {
  *
  * Bốn ô giấy phép điền theo giấy phép công bố của từng thành phần. Ô nào chưa
  * soát được thì để rỗng và mô hình không bật — D18 không có ngoại lệ.
+ *
+ * 24/09/2026: hai mô hình OpenAI phục vụ thêm `AIC-18 video_storyboard` — kịch
+ * bản bối cảnh theo chủ đề của Creative Studio (`creative.scene_plan`), một lượt
+ * LLM văn bản. Chạy lại seed để cột `capabilities` của DB có mã này.
  */
 export async function seedVisionModels(): Promise<number> {
   const models = [
@@ -57,7 +61,7 @@ export async function seedVisionModels(): Promise<number> {
       display_name: "Đầy đủ",
       provider: "openai",
       mode: "API" as const,
-      capabilities: ["AIC-01", "AIC-02", "AIC-03", "AIC-04", "AIC-10"],
+      capabilities: ["AIC-01", "AIC-02", "AIC-03", "AIC-04", "AIC-10", "AIC-18"],
       license: "Điều khoản thương mại của nhà cung cấp",
       commercial_use: true,
       territory: "Toàn cầu theo điều khoản nhà cung cấp",
@@ -73,7 +77,7 @@ export async function seedVisionModels(): Promise<number> {
       display_name: "Gọn",
       provider: "openai",
       mode: "API" as const,
-      capabilities: ["AIC-01", "AIC-02", "AIC-04"],
+      capabilities: ["AIC-01", "AIC-02", "AIC-04", "AIC-18"],
       license: "Điều khoản thương mại của nhà cung cấp",
       commercial_use: true,
       territory: "Toàn cầu theo điều khoản nhà cung cấp",

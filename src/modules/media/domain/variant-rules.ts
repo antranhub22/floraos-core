@@ -53,8 +53,11 @@ export type VariantCloudProvider = (typeof VARIANT_CLOUD_PROVIDERS)[number]
 /** Giới hạn độ dài mô tả cảnh gửi nhà cung cấp — cùng hằng ở worker. */
 export const MAX_SCENE_PROMPT_LENGTH = 600
 
-/** Chỉ số phân cảnh Narrative Arc (1 SETUP · 2 RISING · 3 CLIMAX · 4 CTA). */
-export const NARRATIVE_SCENE_INDEXES = [1, 2, 3, 4] as const
+/**
+ * Chỉ số phân cảnh theo kịch bản bối cảnh của chủ đề (`creative.scene_plan`):
+ * CREATIVE 5 cảnh, AUTHENTIC 3 cảnh (quyết định PO 24/09/2026 — bỏ khuôn 4 cảnh cố định).
+ */
+export const NARRATIVE_SCENE_INDEXES = [1, 2, 3, 4, 5] as const
 export type NarrativeSceneIndex = (typeof NARRATIVE_SCENE_INDEXES)[number]
 
 /** Bối cảnh không gian — SSOT của mã preset. Nhãn hiển thị ở `variant-presets.ts`. */

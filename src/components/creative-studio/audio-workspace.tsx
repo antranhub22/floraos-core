@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
+import { findScenePlan, type ScenePlan } from "./scene-plan-client"
 
 interface AudioScene { sceneIndex: number; voiceScript: string; targetDurationSeconds: number }
 
@@ -52,6 +53,49 @@ export function AudioWorkspace() {
   }
 
   const [scenes, setScenes] = useState<AudioScene[]>(buildInitialScenes)
+  const [scenesEdited, setScenesEdited] = useState(false)
+
+  // Lời thoại theo KỊCH BẢN BỐI CẢNH của chủ đề (cùng kịch bản với Khu vực D,
+  // 24/09/2026) — chỉ TRA kịch bản đã có, không tạo job, không trừ credit.
+  const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
+  const urlPlanId = searchParams?.get("scenePlanId") ?? null
+  useEffect(() => {
+    if (!context) return
+    let cancelled = false
+    findScenePlan(
+      {
+        mode: context.mode,
+        productName: context.productName,
+        productId: context.productId,
+        assetId: context.assetId,
+        selectedTopic: context.selectedTopic,
+        commercialPassport: context.commercialPassport,
+      },
+      urlPlanId
+    )
+      .then(({ loaded }) => {
+        if (!cancelled) setScenePlan(loaded?.plan ?? null)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context?.assetId, context?.selectedTopic?.id, context?.mode, urlPlanId])
+
+  const scenesFromPlan = (plan: ScenePlan): AudioScene[] =>
+    plan.scenes.map((sc) => ({
+      sceneIndex: sc.sceneIndex,
+      voiceScript: sc.voiceScript || sc.textOverlay || sc.title,
+      targetDurationSeconds: sc.beat === "CTA" ? 4 : sc.beat === "CLIMAX" ? 7 : 5,
+    }))
+
+  useEffect(() => {
+    if (!scenePlan || scenesEdited) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- nạp lời thoại từ kịch bản đã tra được
+    setScenes(scenesFromPlan(scenePlan))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenePlan])
   const [voiceId, setVoiceId] = useState(ctx.voiceId ?? "")
   const [providerKey, setProviderKey] = useState<string>("openai")
   const [qualityTier, setQualityTier] = useState<string>("hd")
@@ -61,14 +105,17 @@ export function AudioWorkspace() {
   const [error, setError] = useState<string | null>(null)
 
   const updateScene = useCallback((index: number, field: keyof AudioScene, value: string | number) => {
+    setScenesEdited(true)
     setScenes((prev) => prev.map((s) => (s.sceneIndex === index ? { ...s, [field]: value } : s)))
   }, [])
 
   const addScene = useCallback(() => {
+    setScenesEdited(true)
     setScenes((prev) => [...prev, { sceneIndex: prev.length + 1, voiceScript: "", targetDurationSeconds: 5 }])
   }, [])
 
   const removeScene = useCallback((index: number) => {
+    setScenesEdited(true)
     setScenes((prev) => prev.filter((s) => s.sceneIndex !== index).map((s, i) => ({ ...s, sceneIndex: i + 1 })))
   }, [])
 
@@ -225,6 +272,30 @@ export function AudioWorkspace() {
           <h3 className="text-sm font-bold text-text flex items-center gap-2"><Mic size={14} /> Voiceover ({scenes.length} cảnh)</h3>
           <Button variant="secondary" size="sm" onClick={addScene} className="gap-1.5"><Mic size={12} /> Thêm</Button>
         </div>
+        {scenePlan ? (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-alt px-3 py-2 text-[12px] text-text-muted">
+            <span>
+              Lời thoại theo kịch bản bối cảnh của chủ đề ({scenePlan.scenes.length} cảnh, cùng kịch bản với ảnh ở Khu vực D
+              {scenePlan.source === "rule" ? " — kịch bản cơ bản" : ""}).
+            </span>
+            {scenesEdited && (
+              <button
+                type="button"
+                onClick={() => {
+                  setScenes(scenesFromPlan(scenePlan))
+                  setScenesEdited(false)
+                }}
+                className="font-bold text-primary hover:underline cursor-pointer"
+              >
+                Dùng lại lời thoại của kịch bản
+              </button>
+            )}
+          </div>
+        ) : (
+          <p className="mb-3 text-[12px] text-text-muted">
+            Chưa có kịch bản bối cảnh cho chủ đề này — lời thoại đang điền từ hook/tiêu đề/CTA. Viết kịch bản ở Khu vực D để ảnh và giọng đọc kể cùng một câu chuyện.
+          </p>
+        )}
         <div className="flex flex-col gap-3">
           {scenes.map((scene) => (
             <div key={scene.sceneIndex} className="bg-surface p-3 rounded-xl border border-border">

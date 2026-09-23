@@ -109,8 +109,21 @@ export function VideoWorkspace() {
       const res = await fetch(`/api/v1/assets?kind=MARKETING&parent_asset_id=${encodeURIComponent(masterId)}&limit=100`)
       if (!res.ok || cancelled) return
       const body = (await res.json()) as { data?: Array<{ id: string; metadata?: Record<string, unknown> | null }> }
+      // Chỉ ảnh của ĐÚNG kịch bản bối cảnh đang mở (URL `scenePlanId`, 24/09/2026),
+      // mỗi phân cảnh lấy bản mới nhất (`data` sắp created_at giảm dần).
+      const planId = searchParams?.get("scenePlanId") ?? null
+      const samePlan = (v: unknown) =>
+        !planId ? true : planId === "rule" ? typeof v === "string" && v.startsWith("rule:") : v === planId
+      const seen = new Set<unknown>()
       const ids = (body.data ?? [])
         .filter((a) => a.metadata?.variant_key === "styled" || a.metadata?.variant_key === "branded")
+        .filter((a) => samePlan(a.metadata?.scene_plan_id))
+        .filter((a) => {
+          const idx = a.metadata?.scene_index ?? a.id
+          if (seen.has(idx)) return false
+          seen.add(idx)
+          return true
+        })
         .sort((a, b) => Number(a.metadata?.scene_index ?? 99) - Number(b.metadata?.scene_index ?? 99))
         .map((a) => a.id)
       if (ids.length === 0 || cancelled) return
@@ -121,7 +134,7 @@ export function VideoWorkspace() {
     return () => {
       cancelled = true
     }
-  }, [context?.assetId, scenes.length])
+  }, [context?.assetId, scenes.length, searchParams])
 
   const handleCreate = useCallback(async () => {
     if (scenes.length === 0) {
