@@ -53,6 +53,7 @@
 - [x] Worker: Stability chỉ vẽ hậu cảnh, bó hoa dán nguyên khối, integrity ĐO — `stability_background.py`, `variant_worker.py` + `test_variant_cloud.py`
 - [x] Nhà cung cấp lỗi → lùi phông cục bộ, ghi `cloud_fallback` — `test_variant_cloud.py`
 - [x] Sửa phép đo: co biên 5px > light wrap 4px; REJECTED không ghi asset — `variant_worker.py#DO_SAU_CO_BIEN`
+- [x] Chốt alpha lõi ≥ 250 về 255 sau khi tách nền (bria-rmbg trả lõi ≈ 254 → mọi ảnh thật bị đo ~0,82 và từ chối); đo lại ảnh thật: 1,00 — `variant_worker.py#_chot_loi_dac` + ca hồi quy (24/09)
 - [x] Gỡ `execFileSync` khỏi tiến trình web; `studio_local` không trả ảnh gốc giả — `studio-local-image-provider.ts` + test router
 - [x] Gỡ canvas cutout phía trình duyệt; bỏ số "99.9%/99.8%/100%" gõ tay — `variant-workspace.tsx`
 - [x] Tự nạp phân cảnh chỉ của Master đang chọn (`parent_asset_id`) — `assets/route.ts`, `list-assets.ts`
