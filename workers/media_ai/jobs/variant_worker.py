@@ -294,7 +294,42 @@ def _duong_dan_cache_chu_the(cache_dir: Path, master_asset_id: str) -> tuple[Pat
     return cache_dir / f"{an_toan}_rgba.png", cache_dir / f"{an_toan}_alpha.png"
 
 
+# Ngưỡng "lõi đặc" — trùng ngưỡng `_co_bien` dùng để xác định lõi khi đo.
+NGUONG_LOI_DAC = 250
+
+
+def _chot_loi_dac(rgba: Image.Image, alpha: Image.Image) -> tuple[Image.Image, Image.Image]:
+    """Chốt alpha của vùng lõi về 255 (24/09/2026).
+
+    Mô hình tách nền (`bria-rmbg`) trả alpha lõi bó hoa ≈ 254 chứ không phải
+    255 — đo trên ảnh thật: 506.601 điểm ảnh alpha 254, chỉ 3.256 điểm 255.
+    Khi ghép, 1/255 màu phông lọt vào MỌI điểm lõi, lệch 1 đơn vị màu, nên cổng
+    đo "trùng khít tuyệt đối" chấm ~0,82 và TỪ CHỐI mọi biến thể thật (ca thử
+    tổng hợp dùng alpha 255 nên không bắt được).
+
+    Alpha 250–254 ở lõi là nhiễu của mô hình tách nền, không phải độ trong
+    thật của cánh hoa. Chốt về 255 để bó hoa được dán NGUYÊN KHỐI đúng nghĩa;
+    viền mềm (< 250) giữ nguyên. Phép đo không nới: vẫn so sai khác 0.
+    """
+    a = np.array(alpha.convert("L"))
+    a = np.where(a >= NGUONG_LOI_DAC, 255, a).astype(np.uint8)
+    alpha_moi = Image.fromarray(a, mode="L")
+    rgba_moi = rgba.convert("RGBA")
+    rgba_moi.putalpha(alpha_moi)
+    return rgba_moi, alpha_moi
+
+
 def _doan_chu_the(
+    master_rgb: Image.Image,
+    master_asset_id: str | None,
+    cache_dir: Path | None,
+) -> tuple[Image.Image, Image.Image]:
+    """Tách chủ thể (có cache) rồi chốt lõi đặc — xem `_chot_loi_dac`."""
+    rgba, alpha = _doan_chu_the_tho(master_rgb, master_asset_id, cache_dir)
+    return _chot_loi_dac(rgba, alpha)
+
+
+def _doan_chu_the_tho(
     master_rgb: Image.Image,
     master_asset_id: str | None,
     cache_dir: Path | None,

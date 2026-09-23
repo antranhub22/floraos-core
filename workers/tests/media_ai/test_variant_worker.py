@@ -391,3 +391,26 @@ class TestDoanChuTheTimeout:
         rgba, alpha = _doan_chu_the(master, None, None)
 
         assert rgba.size == master.size
+
+
+def test_lo_i_alpha_254_cua_mo_hinh_tach_nen_van_duoc_dan_nguyen_khoi(monkeypatch):
+    """Hồi quy 24/09/2026: `bria-rmbg` trả alpha lõi ≈ 254 (ảnh thật: 506.601
+    điểm 254, 3.256 điểm 255). Trước khi chốt lõi đặc, 1/255 màu phông lọt vào
+    mọi điểm lõi và cổng chấm ~0,82 → TỪ CHỐI mọi biến thể thật. Mẫu thử cũ
+    dùng alpha 255 nên không bắt được."""
+    from media_ai.jobs import variant_worker as vw
+
+    master = _anh_mau(240, 240)
+    a = np.zeros((240, 240), dtype=np.uint8)
+    a[40:200, 40:200] = 254  # lõi "gần đặc" như mô hình thật trả về
+    a[36:40, 40:200] = 120  # viền mềm
+    alpha = Image.fromarray(a, mode="L")
+    rgba = master.convert("RGBA")
+    rgba.putalpha(alpha)
+    monkeypatch.setattr(vw, "_doan_chu_the_tho", lambda *_a, **_k: (rgba, alpha))
+
+    buf = BytesIO()
+    master.save(buf, format="PNG")
+    _bien_the, do_trung, _ = dung_bien_the(buf.getvalue(), "luxury_hotel", "1:1", False, None, None)
+    assert do_trung >= NGUONG_TU_CHOI
+    assert do_trung == 1.0

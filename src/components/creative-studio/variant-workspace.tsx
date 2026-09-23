@@ -406,8 +406,11 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         throw new Error(detail.error || "Worker không dựng được phân cảnh này")
       }
       if (detail.result === "REJECTED") {
+        const measured = detail.subject_integrity?.subject_pixel_identity
         throw new Error(
-          "Cổng Subject Integrity từ chối: lõi bó hoa bị thay đổi — không biến thể nào được ghi vào kho."
+          `Cổng Subject Integrity từ chối${
+            typeof measured === "number" ? ` (lõi trùng khít ${(measured * 100).toFixed(2)}%, cần ≥ 99%)` : ""
+          }: lõi bó hoa bị thay đổi — không biến thể nào được ghi vào kho.`
         )
       }
       const wantKeys = watermarkEnabled ? ["branded", "styled"] : ["styled"]
