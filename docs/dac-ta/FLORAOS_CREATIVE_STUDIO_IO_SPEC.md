@@ -148,7 +148,7 @@ Worker (`audio.generate`) ghi bản phối lên kho: `generation_jobs.output = {
 | `product` | `{ name, category?, style?, colors[], components[], occasions[], target_audience?, price_range? }` | từ Chặng 01–03 |
 | `topic` | `{ id, title, angle_category?, hook?, cta?, format? }` | chủ đề Chặng 05 |
 
-Ra: `{ job_id, status, error, plan, deduped, usage }`. `plan = { version: 1, source: "ai"|"rule", mode, topicId, topicTitle, emotionalTone, reasoning, scenes[] }`, mỗi cảnh `{ sceneIndex, beat, title, setting, lighting, palette[], purpose, backgroundPrompt, localBackdrop, voiceScript, textOverlay, motionEffect }`. Tra không tạo job: `GET /creative-production/scene-plans?asset_id&topic_id&mode`, `GET /creative-production/scene-plans/:id`. URL Creative Studio mang `scenePlanId` (job id hoặc `rule`).
+Ra: `{ job_id, status, error, plan, deduped, usage }`. `plan = { version: 1, source: "ai"|"rule", mode, topicId, topicTitle, emotionalTone, reasoning, scenes[] }`, mỗi cảnh `{ sceneIndex, beat, title, setting, lighting, palette[], purpose, backgroundPrompt, localBackdrop, voiceScript, textOverlay, motionEffect }`. Tra không tạo job: `GET /creative-production/scene-plans?asset_id&topic_id&mode`, `GET /creative-production/scene-plans/:id`. Sinh ở Chặng 05 khi bấm "Bắt đầu sáng tạo" (`creative-handoff-modal.tsx`); URL Creative Studio mang `scenePlanId` (job id hoặc `rule`), B/C/D/E chỉ tra.
 
 ### 5.1. Biến thể từng cảnh
 

@@ -11,7 +11,10 @@ import {
   type ScenePlanMode,
   type ScenePlanScene,
 } from "@/modules/creative-production/domain/scene-plan-rules"
-import type { ConcreteTopic } from "@/modules/market-intelligence/domain/product-intelligence-types"
+import type {
+  ConcreteTopic,
+  ProductIntelligenceReport,
+} from "@/modules/market-intelligence/domain/product-intelligence-types"
 
 export type { ScenePlan, ScenePlanScene }
 
@@ -33,6 +36,25 @@ export interface ScenePlanContext {
     targetAudience?: string | undefined
     suggestedOccasions?: string[] | undefined
   } | undefined
+}
+
+/**
+ * Passport dựng từ report Chặng 01–03 — cùng cách `creative-studio/page.tsx`
+ * dựng, để kịch bản viết ở Chặng 05 và tra lại ở Khu vực C/D có cùng đầu vào.
+ */
+export function passportFromReport(report: ProductIntelligenceReport | null | undefined): ScenePlanContext["commercialPassport"] {
+  if (!report) return undefined
+  return {
+    category: report.attributes?.shape || report.commercialPassport?.tags?.[0] || "",
+    style: report.commercialPassport?.style || report.attributes?.style || "",
+    components: (report.components || []).map((c) => c.flowerType).filter(Boolean),
+    colors: [...(report.attributes?.mainColors || []), ...(report.attributes?.secondaryColors || [])],
+    priceRange: report.commercialPassport?.priceRange
+      ? `${report.commercialPassport.priceRange.minPrice.toLocaleString("vi-VN")} – ${report.commercialPassport.priceRange.maxPrice.toLocaleString("vi-VN")} VNĐ`
+      : undefined,
+    targetAudience: report.commercialPassport?.targetAudience?.buyerPersona,
+    suggestedOccasions: report.commercialPassport?.occasions,
+  }
 }
 
 export type LoadedScenePlan = {

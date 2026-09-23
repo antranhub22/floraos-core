@@ -322,6 +322,13 @@ function CreativeResultViewerBody({
                     </span>
                   </div>
 
+                  {scene.sceneDescription && (
+                    <div className="text-[11.5px] text-stone-600 leading-relaxed">
+                      <span className="font-semibold text-stone-800">Bối cảnh: </span>
+                      {scene.sceneDescription}
+                    </div>
+                  )}
+
                   {/* Lời thoại lồng tiếng */}
                   <div className="rounded-lg bg-white p-2.5 border border-stone-100 text-xs space-y-1">
                     <div className="flex items-center justify-between text-stone-500 text-[10.5px] font-semibold">

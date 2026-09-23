@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import type { ConcreteTopic } from "@/modules/market-intelligence/domain/product-intelligence-types"
+import { findScenePlan, type ScenePlan } from "./scene-plan-client"
 
 interface TopicSelector {
   topicId: string
@@ -58,6 +59,35 @@ export function ContentsWorkspace() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Kịch bản bối cảnh sinh ở Chặng 05 (24/09/2026) — cung truyện của chủ đề
+  // đã chọn hiển thị theo ĐÚNG kịch bản này (cùng kịch bản với ảnh D, lời
+  // thoại C), thay cho cung truyện theo luật của `produce`. Chỉ tra, không trừ credit.
+  const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
+  const urlPlanId = searchParams?.get("scenePlanId") ?? null
+  useEffect(() => {
+    if (!context) return
+    let cancelled = false
+    findScenePlan(
+      {
+        mode: context.mode,
+        productName: context.productName,
+        productId: context.productId,
+        assetId: context.assetId,
+        selectedTopic: context.selectedTopic,
+        commercialPassport: context.commercialPassport,
+      },
+      urlPlanId
+    )
+      .then(({ loaded }) => {
+        if (!cancelled) setScenePlan(loaded?.plan ?? null)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context?.assetId, context?.selectedTopic?.id, context?.mode, urlPlanId])
 
   // Initialize topics from context when report is loaded
   useEffect(() => {
@@ -236,12 +266,45 @@ export function ContentsWorkspace() {
       {result && (
         <CreativeResultViewer
           mode={mode}
-          topicResults={((result.topicResults as CreativeResultViewerProps["topicResults"] | undefined) ?? [])}
+          topicResults={withScenePlan(
+            (result.topicResults as CreativeResultViewerProps["topicResults"] | undefined) ?? [],
+            scenePlan
+          )}
           totalCredits={(result.totalEstimatedCredits as number) ?? 0}
           onGoToAudio={() => navigateToArea("c")}
           onGoToPackage={() => navigateToArea("f")}
         />
       )}
     </div>
+  )
+}
+
+/** Thay cung truyện theo luật của chủ đề trùng bằng kịch bản bối cảnh đã lưu. */
+function withScenePlan(
+  items: CreativeResultViewerProps["topicResults"],
+  plan: ScenePlan | null
+): CreativeResultViewerProps["topicResults"] {
+  if (!plan) return items
+  return items.map((item) =>
+    item.topicId !== plan.topicId
+      ? item
+      : {
+          ...item,
+          arc: {
+            emotionalTone: plan.emotionalTone,
+            narrativeReasoning: `${plan.source === "ai" ? "Kịch bản AI" : "Kịch bản cơ bản"} từ Chặng 05 — ${plan.reasoning}`,
+            ...(item.arc?.totalDurationSeconds !== undefined ? { totalDurationSeconds: item.arc.totalDurationSeconds } : {}),
+            scenes: plan.scenes.map((sc, i) => ({
+              sceneIndex: sc.sceneIndex,
+              beat: sc.beat,
+              beatTitle: sc.title,
+              sceneDescription: [sc.setting, sc.lighting].filter(Boolean).join(" · "),
+              voiceScript: sc.voiceScript,
+              textOverlay: sc.textOverlay,
+              durationSeconds: item.arc?.scenes[i]?.durationSeconds ?? (sc.beat === "CTA" ? 4 : 6),
+              motionEffect: sc.motionEffect,
+            })),
+          },
+        }
   )
 }

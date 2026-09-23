@@ -1079,9 +1079,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         {!planLoading && !scenePlan && (
           <Card className="w-full p-4 border border-primary/30 bg-primary/5 flex flex-col gap-3">
             <div className="text-[13px] text-text">
-              <span className="font-bold">Chủ đề này chưa có kịch bản bối cảnh.</span> AI sẽ đọc chủ đề (dịp, tông
-              màu, cảm xúc, hook, CTA) và thông tin bó hoa để viết từng cảnh: không gian, ánh sáng, bảng màu, lời
-              thoại. Kịch bản được lưu lại — mở lại Khu vực C/D không tốn thêm credit.
+              <span className="font-bold">Chưa tìm thấy kịch bản bối cảnh của chủ đề này.</span> Kịch bản được AI
+              viết khi bấm &quot;Bắt đầu sáng tạo&quot; ở Chặng 05; phiên này mở Creative Studio mà chưa qua bước đó
+              (hoặc lượt viết đã lỗi). Viết ngay tại đây — AI đọc chủ đề (dịp, tông màu, cảm xúc, hook, CTA) và thông
+              tin bó hoa để viết từng cảnh. Kịch bản được lưu, dùng chung cho Khu vực B, C, D, E.
             </div>
             <div className="flex flex-wrap gap-2">
               <Button

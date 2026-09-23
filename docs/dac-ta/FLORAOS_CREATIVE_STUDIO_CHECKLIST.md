@@ -45,7 +45,9 @@
 - [x] Mỗi cảnh một job thật, mang `scene_index` (1–5) + `scene_plan_id`; chỉ nạp lại ảnh của đúng kịch bản — `variant-workspace.tsx`, `variant_worker.py`
 - [x] Hậu cảnh Stability dùng `backgroundPrompt` của từng cảnh (bỏ 2 lời nhắc viết cứng) — `variant-workspace.tsx#handleGenerateSingleScene`
 - [x] Khu vực C lấy lời thoại từ cùng kịch bản — `audio-workspace.tsx`
-- [ ] Khu vực B/E dùng chung kịch bản (storyboard video, cung truyện bài viết) — nợ #125
+- [x] Kịch bản sinh ở Chặng 05 khi "Bắt đầu sáng tạo", `scenePlanId` trên URL — `creative-handoff-modal.tsx` (24/09)
+- [x] Khu vực B hiển thị cung truyện theo đúng kịch bản (kèm dòng "Bối cảnh") — `contents-workspace.tsx#withScenePlan`
+- [ ] Storyboard video E đúng số cảnh/lời thoại của kịch bản; bài viết B sinh từ kịch bản — nợ #125
 - [ ] `npm run db:seed` để hai mô hình OpenAI có `AIC-18` — cần anh Tony chạy
 - [x] Nhánh cloud qua `enqueueJob` (`media.variant.cloud`, 2 credit), cổng Master đã duyệt — `request-variants.ts` + `request-cloud-variant.test.ts`
 - [x] Worker: Stability chỉ vẽ hậu cảnh, bó hoa dán nguyên khối, integrity ĐO — `stability_background.py`, `variant_worker.py` + `test_variant_cloud.py`

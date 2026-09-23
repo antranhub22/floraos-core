@@ -37,6 +37,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buildHandoffSearchParams } from "@/modules/creative-production/domain/build-handoff-url";
+import {
+  passportFromReport,
+  RULE_PLAN_REF,
+  writeScenePlan,
+} from "@/components/creative-studio/scene-plan-client";
 import type {
   ConcreteTopic,
   ProductIntelligenceReport,
@@ -192,6 +197,7 @@ export function CreativeHandoffModal({
     if (initialTargetArea) {
       const a = initialTargetArea.toLowerCase();
       if (a === "d" || a === "e" || a === "f" || a === "b") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ khu vực đích khi prop đổi
         setSelectedArea(a as CreativeTargetArea);
       }
     }
@@ -237,10 +243,15 @@ export function CreativeHandoffModal({
   // bàn giao an toàn — nút bên dưới bị khoá kèm lý do rõ ràng.
   const canStart = Boolean(assetId && assetId.trim());
 
-  const handleStart = () => {
-    setHandoffError(null);
-    try {
-      const params = buildHandoffSearchParams({
+  // 24/09/2026 (PO): kịch bản bối cảnh (Narrative Arc hình ảnh) sinh NGAY khi
+  // chốt chủ đề ở Chặng 05 — Khu vực B/C/D/E đọc lại đúng kịch bản này qua
+  // `scenePlanId`, không bắt người dùng viết lại ở từng khu vực. Khoá cố định
+  // theo ảnh + chủ đề + mode: chọn lại cùng chủ đề không trừ credit lần hai.
+  const [writingPlan, setWritingPlan] = useState(false);
+  const [planFailed, setPlanFailed] = useState(false);
+
+  const goToStudio = (scenePlanId: string | null) => {
+    const params = buildHandoffSearchParams({
         // report.id (đã được analyzeProductIntelligence ghi đè thành id thật
         // của product_analysis_runs khi lưu thành công) đóng vai "run id".
         // Không có report thì dùng chính selectedTopic.id (tương thích lối
@@ -254,13 +265,44 @@ export function CreativeHandoffModal({
         productId,
         area: selectedArea,
       });
-      router.push(`/creative-studio?${params.toString()}` as any);
-    } catch (err) {
-      setHandoffError(
-        err instanceof Error
-          ? err.message
-          : "Không thể chuyển sang Creative Studio — vui lòng thử lại."
+    if (scenePlanId) params.set("scenePlanId", scenePlanId);
+    router.push(`/creative-studio?${params.toString()}` as never);
+  };
+
+  const handleStart = async () => {
+    setHandoffError(null);
+    setWritingPlan(true);
+    try {
+      const loaded = await writeScenePlan(
+        {
+          mode,
+          productName,
+          productId,
+          assetId,
+          selectedTopic,
+          commercialPassport: passportFromReport(report),
+        },
+        planFailed
       );
+      goToStudio(loaded.jobId);
+    } catch (err) {
+      setPlanFailed(true);
+      setHandoffError(
+        `AI chưa viết được kịch bản bối cảnh: ${
+          err instanceof Error ? err.message : "lỗi không xác định"
+        }. Bấm lại để thử lần nữa, hoặc tiếp tục với kịch bản cơ bản (miễn phí).`
+      );
+    } finally {
+      setWritingPlan(false);
+    }
+  };
+
+  const handleStartWithRulePlan = () => {
+    setHandoffError(null);
+    try {
+      goToStudio(RULE_PLAN_REF);
+    } catch (err) {
+      setHandoffError(err instanceof Error ? err.message : "Không thể chuyển sang Creative Studio — vui lòng thử lại.");
     }
   };
 
@@ -529,12 +571,23 @@ export function CreativeHandoffModal({
             >
               Hủy
             </button>
+            {planFailed && (
+              <button
+                type="button"
+                onClick={handleStartWithRulePlan}
+                disabled={!canStart || writingPlan}
+                className="px-3 py-1.5 rounded-lg border border-stone-200 text-xs font-semibold text-stone-700 hover:bg-white transition disabled:opacity-50"
+              >
+                Dùng kịch bản cơ bản
+              </button>
+            )}
             <Button
-              onClick={handleStart}
-              disabled={!canStart}
+              onClick={() => void handleStart()}
+              disabled={!canStart || writingPlan}
+              title="AI viết kịch bản bối cảnh cho chủ đề này (1 credit, chỉ tính lần đầu) rồi mở Creative Studio"
               className="gap-1.5 bg-primary hover:bg-primary-dark text-white text-xs font-bold px-4 py-2 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Bắt đầu sáng tạo
+              {writingPlan ? "AI đang viết kịch bản bối cảnh..." : "Bắt đầu sáng tạo · kịch bản AI (1 credit)"}
               <ArrowRight size={14} />
             </Button>
           </div>
