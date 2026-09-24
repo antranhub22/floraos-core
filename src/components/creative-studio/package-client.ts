@@ -31,6 +31,8 @@ export interface CampaignPackageDto {
   posts: PackagePostDto[]
   variant_asset_ids: string[]
   video_job_id: string | null
+  /** Mọi video của gói — mỗi khung trong phạm vi một video (24/09/2026). */
+  video_job_ids?: string[]
   audio_job_id: string | null
   variants: Array<{
     asset_id: string
@@ -51,6 +53,8 @@ export interface CampaignPackageDto {
     final_video_url: string | null
     view_url?: string | null
   } | null
+  /** Mọi video của gói (theo `video_job_ids`). */
+  videos?: Array<NonNullable<CampaignPackageDto["video"]>>
   audio: { job_id: string; stage: string; audio_url: string | null } | null
   qa_report: { verdict: "PASS" | "NEEDS_REVIEW" | "REJECTED"; checks: QaCheckDto[]; checkedAt: string } | null
   qa_checked_at: string | null

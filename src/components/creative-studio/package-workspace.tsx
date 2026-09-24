@@ -102,7 +102,9 @@ export function PackageWorkspace() {
 
   // Bản nháp chỉnh sửa (Chặng 07) — lưu bằng PATCH.
   const [selectedVariants, setSelectedVariants] = useState<string[]>([])
-  const [videoJobId, setVideoJobId] = useState<string | null>(null)
+  // Mỗi khung trong phạm vi sản xuất một video (PO 24/09/2026) — phần tử đầu là video chính.
+  const [videoJobIds, setVideoJobIds] = useState<string[]>([])
+  const videoJobId = videoJobIds[0] ?? null
   const [audioJobId, setAudioJobId] = useState<string | null>(null)
   const [posts, setPosts] = useState<Record<PackageChannel, { on: boolean; text: string; tags: string }>>({
     facebook: { on: false, text: "", tags: "" },
@@ -114,7 +116,7 @@ export function PackageWorkspace() {
   const loadDraftFrom = useCallback((p: CampaignPackageDto) => {
     setPkg(p)
     setSelectedVariants(p.variant_asset_ids)
-    setVideoJobId(p.video_job_id)
+    setVideoJobIds(p.video_job_ids?.length ? p.video_job_ids : p.video_job_id ? [p.video_job_id] : [])
     setAudioJobId(p.audio_job_id)
     setPosts((prev) => {
       const next = { ...prev }
@@ -122,7 +124,7 @@ export function PackageWorkspace() {
       for (const post of p.posts) next[post.channel] = { on: true, text: post.text, tags: post.hashtags.join(" ") }
       return next
     })
-  }, [setPkg, setSelectedVariants, setVideoJobId, setAudioJobId, setPosts])
+  }, [setPkg, setSelectedVariants, setVideoJobIds, setAudioJobId, setPosts])
 
   // 1. Master đã duyệt + gói mới nhất của Master.
   useEffect(() => {
@@ -237,9 +239,32 @@ export function PackageWorkspace() {
   // Định danh mang từ Khu vực C/E qua URL — gợi ý sẵn khi gói chưa có.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ state từ nguồn ngoài (URL/API), chủ đích
-    if (urlVideoJobId && !videoJobId && pkg?.status !== "APPROVED") setVideoJobId(urlVideoJobId)
+    if (urlVideoJobId && !videoJobId && pkg?.status !== "APPROVED") setVideoJobIds([urlVideoJobId])
     if (urlAudioJobId && !audioJobId && pkg?.status !== "APPROVED") setAudioJobId(urlAudioJobId)
   }, [urlVideoJobId, urlAudioJobId, videoJobId, audioJobId, pkg?.status])
+
+  // ── Nhiều khung (PO 24/09/2026): mỗi khung một bộ ảnh + một video ─────────
+  const planRatios: string[] = scenePlan?.publishing?.ratios?.length
+    ? [...scenePlan.publishing.ratios]
+    : scenePlan?.publishing?.aspectRatio
+    ? [scenePlan.publishing.aspectRatio]
+    : []
+  const multiRatio = planRatios.length > 1
+  const [videoRatioTab, setVideoRatioTab] = useState<string | null>(null)
+  const activeRatio = videoRatioTab && planRatios.includes(videoRatioTab) ? videoRatioTab : (planRatios[0] ?? null)
+  const ratioOfVideo = (id: string) =>
+    videoJobs.find((v) => v.id === id)?.aspect_ratio ?? pkg?.videos?.find((v) => v.id === id)?.aspect_ratio ?? null
+  const activeVideoId = multiRatio
+    ? (videoJobIds.find((id) => ratioOfVideo(id) === activeRatio) ?? null)
+    : videoJobId
+  /** Đặt video cho khung đang xem (một khung) hoặc video duy nhất (gói một khung). */
+  const withVideoFor = (ids: string[], id: string | null, ratio: string | null): string[] => {
+    if (!multiRatio) return id ? [id] : []
+    const r = id ? (ratioOfVideo(id) ?? ratio) : ratio
+    const rest = ids.filter((x) => ratioOfVideo(x) !== r && x !== id)
+    return id ? [...rest, id] : rest
+  }
+  const setActiveVideo = (id: string | null) => setVideoJobIds((prev) => withVideoFor(prev, id, activeRatio))
 
   const run = async (label: string, fn: () => Promise<void>) => {
     setBusy(label)
@@ -265,28 +290,40 @@ export function PackageWorkspace() {
   const producedScenes = (() => {
     const samePlan = (v: unknown) =>
       !urlPlanId ? true : urlPlanId === "rule" ? typeof v === "string" && v.startsWith("rule:") : v === urlPlanId
-    const seen = new Set<number>()
+    // Mỗi khung trong phạm vi một bộ ảnh (24/09/2026): bản mới nhất mỗi cảnh × mỗi khung.
+    const seen = new Set<string>()
+    const primary = scenePlan?.publishing?.aspectRatio ?? null
     return marketing
       .filter((a) => {
         const m = a.metadata ?? {}
         if (m.variant_key !== "styled" && m.variant_key !== "branded") return false
         if (!samePlan(m.scene_plan_id)) return false
         const idx = typeof m.scene_index === "number" ? m.scene_index : null
-        if (idx === null || seen.has(idx)) return false
-        seen.add(idx)
+        const ratio = typeof m.ratio === "string" ? m.ratio : primary
+        if (planRatios.length > 0 && ratio && !planRatios.includes(ratio)) return false
+        const key = `${ratio}:${idx}`
+        if (idx === null || seen.has(key)) return false
+        seen.add(key)
         return true
       })
       .sort((a, b) => Number(a.metadata?.scene_index ?? 0) - Number(b.metadata?.scene_index ?? 0))
   })()
 
   // Video: job trên URL; không có thì video mới nhất đã duyệt P4, rồi mới đến bản đã render.
-  const suggestedVideo = ((): VideoJobSummary | null => {
-    if (urlVideoJobId) return videoJobs.find((v) => v.id === urlVideoJobId) ?? { id: urlVideoJobId, title: "", stage: "?", video_approval: "?", aspect_ratio: "" }
-    return (
-      videoJobs.find((v) => v.video_approval === "APPROVED") ??
-      videoJobs.find((v) => v.stage === "RENDER_COMPLETED") ??
-      null
-    )
+  // Nhiều khung: chọn như vậy cho TỪNG khung trong phạm vi.
+  const pickVideo = (pool: VideoJobSummary[]): VideoJobSummary | null =>
+    pool.find((v) => v.video_approval === "APPROVED") ?? pool.find((v) => v.stage === "RENDER_COMPLETED") ?? null
+  const suggestedVideos = ((): VideoJobSummary[] => {
+    const fromUrl = urlVideoJobId
+      ? (videoJobs.find((v) => v.id === urlVideoJobId) ?? { id: urlVideoJobId, title: "", stage: "?", video_approval: "?", aspect_ratio: "" })
+      : null
+    if (!multiRatio) {
+      const one = fromUrl ?? pickVideo(videoJobs)
+      return one ? [one] : []
+    }
+    return planRatios
+      .map((r) => (fromUrl && fromUrl.aspect_ratio === r ? fromUrl : pickVideo(videoJobs.filter((v) => v.aspect_ratio === r))))
+      .filter((v): v is VideoJobSummary => v !== null)
   })()
 
   const handleCreate = () =>
@@ -315,7 +352,7 @@ export function PackageWorkspace() {
             : {}),
           ...(producedScenes.length > 0 ? { variant_asset_ids: producedScenes.map((a) => a.id) } : {}),
           ...(bDraft && bDraft.posts.length > 0 ? { posts: bDraft.posts } : {}),
-          ...(suggestedVideo ? { video_job_id: suggestedVideo.id } : {}),
+          ...(suggestedVideos.length > 0 ? { video_job_ids: suggestedVideos.map((v) => v.id) } : {}),
           ...(urlAudioJobId ? { audio_job_id: urlAudioJobId } : {}),
         }),
       })
@@ -341,7 +378,7 @@ export function PackageWorkspace() {
           body: JSON.stringify({
             posts: draftPosts,
             variant_asset_ids: selectedVariants,
-            video_job_id: videoJobId,
+            video_job_ids: videoJobIds,
             audio_job_id: audioJobId,
           }),
         })
@@ -350,14 +387,14 @@ export function PackageWorkspace() {
 
   // ── Sửa tại chỗ (24/09/2026): kết quả mới tự thay vào gói và LƯU ngay ────
   // Đọc giá trị MỚI NHẤT qua ref — việc chạy ngầm kết thúc sau nhiều lần render.
-  const latestDraft = useRef({ selectedVariants, videoJobId, audioJobId, draftPosts, pkgId: pkg?.id ?? null })
+  const latestDraft = useRef({ selectedVariants, videoJobIds, audioJobId, draftPosts, pkgId: pkg?.id ?? null })
   useEffect(() => {
-    latestDraft.current = { selectedVariants, videoJobId, audioJobId, draftPosts, pkgId: pkg?.id ?? null }
-  }, [selectedVariants, videoJobId, audioJobId, draftPosts, pkg?.id])
+    latestDraft.current = { selectedVariants, videoJobIds, audioJobId, draftPosts, pkgId: pkg?.id ?? null }
+  }, [selectedVariants, videoJobIds, audioJobId, draftPosts, pkg?.id])
 
   const saveNow = async (o: {
     variantIds?: string[]
-    videoJobId?: string | null
+    videoJobIds?: string[]
     audioJobId?: string | null
     posts?: PackagePostDto[]
   }) => {
@@ -369,7 +406,7 @@ export function PackageWorkspace() {
         body: JSON.stringify({
           posts: o.posts ?? cur.draftPosts,
           variant_asset_ids: o.variantIds ?? cur.selectedVariants,
-          video_job_id: o.videoJobId !== undefined ? o.videoJobId : cur.videoJobId,
+          video_job_ids: o.videoJobIds ?? cur.videoJobIds,
           audio_job_id: o.audioJobId !== undefined ? o.audioJobId : cur.audioJobId,
         }),
       })
@@ -390,7 +427,8 @@ export function PackageWorkspace() {
       const next = [...latestDraft.current.selectedVariants.filter((id) => !sameScene.has(id)), assetId]
       await saveNow({ variantIds: next })
     }
-    if (change.videoJobId) await saveNow({ videoJobId: change.videoJobId })
+    // Video mới thay đúng video CÙNG khung trong gói.
+    if (change.videoJobId) await saveNow({ videoJobIds: withVideoFor(latestDraft.current.videoJobIds, change.videoJobId, activeRatio) })
     if (change.audioJobId) await saveNow({ audioJobId: change.audioJobId })
   }
 
@@ -481,7 +519,7 @@ export function PackageWorkspace() {
     !approved &&
     (JSON.stringify(draftPosts) !== JSON.stringify(pkg.posts) ||
       JSON.stringify([...selectedVariants].sort()) !== JSON.stringify([...pkg.variant_asset_ids].sort()) ||
-      videoJobId !== pkg.video_job_id ||
+      JSON.stringify(videoJobIds) !== JSON.stringify(pkg.video_job_ids?.length ? pkg.video_job_ids : pkg.video_job_id ? [pkg.video_job_id] : []) ||
       audioJobId !== pkg.audio_job_id)
 
   // ── Trạng thái tải / thiếu Master ─────────────────────────────────────────
@@ -528,7 +566,8 @@ export function PackageWorkspace() {
 
         <div className="rounded-xl border border-border bg-surface-alt p-3.5 space-y-3">
           <div className="text-[12px] font-bold text-text">
-            Ảnh biến thể theo kịch bản (Khu vực D): {producedScenes.length} cảnh
+            Ảnh biến thể theo kịch bản (Khu vực D): {producedScenes.length} ảnh
+            {multiRatio ? ` · ${planRatios.length} khung (${planRatios.join(", ")})` : ""}
           </div>
           {producedScenes.length > 0 ? (
             <div className="grid grid-cols-5 gap-2">
@@ -537,6 +576,7 @@ export function PackageWorkspace() {
                   {a.url && <img src={a.url} alt="" className="h-full w-full object-cover" />}
                   <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] font-bold text-white">
                     Cảnh {String(a.metadata?.scene_index ?? "")}
+                    {multiRatio && typeof a.metadata?.ratio === "string" ? ` · ${a.metadata.ratio}` : ""}
                   </span>
                   {a.approval_state !== "APPROVED" && (
                     <span className="absolute bottom-1 left-1 rounded bg-warning-bg px-1 text-[9.5px] text-warning">chưa duyệt</span>
@@ -549,9 +589,16 @@ export function PackageWorkspace() {
           )}
           <div className="text-[12px] text-text">
             <span className="font-bold">Video (Khu vực E):</span>{" "}
-            {suggestedVideo
-              ? `job ${suggestedVideo.id.slice(0, 8)} · ${suggestedVideo.video_approval === "APPROVED" ? "đã duyệt P4" : suggestedVideo.stage === "RENDER_COMPLETED" ? "đã render, chưa duyệt P4" : suggestedVideo.stage}`
+            {suggestedVideos.length > 0
+              ? suggestedVideos
+                  .map((v) => `${multiRatio ? `${v.aspect_ratio} · ` : ""}job ${v.id.slice(0, 8)} · ${v.video_approval === "APPROVED" ? "đã duyệt P4" : v.stage === "RENDER_COMPLETED" ? "đã render, chưa duyệt P4" : v.stage}`)
+                  .join(" | ")
               : "chưa có video đã render"}
+            {multiRatio && suggestedVideos.length < planRatios.length && (
+              <span className="ml-1 text-warning">
+                — thiếu video khung {planRatios.filter((r) => !suggestedVideos.some((v) => v.aspect_ratio === r)).join(", ")}
+              </span>
+            )}
           </div>
           <div className="text-[12px] text-text">
             <span className="font-bold">Âm thanh (Khu vực C):</span>{" "}
@@ -617,6 +664,29 @@ export function PackageWorkspace() {
           )}
         </div>
 
+        {multiRatio && (
+          <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Video theo khung">
+            <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-text-muted">Video theo khung:</span>
+            {planRatios.map((r) => {
+              const has = videoJobIds.some((id) => ratioOfVideo(id) === r)
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  role="tab"
+                  aria-selected={r === activeRatio}
+                  onClick={() => setVideoRatioTab(r)}
+                  className={`rounded-lg border px-3 py-1.5 text-[11.5px] font-bold cursor-pointer ${
+                    r === activeRatio ? "border-primary bg-primary text-white" : "border-border bg-surface text-text-muted"
+                  }`}
+                >
+                  {r} · {has ? "có video" : "chưa có"}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
         <PackageReviewSection
           pkg={pkg}
           approved={approved}
@@ -625,9 +695,9 @@ export function PackageWorkspace() {
           marketing={marketing}
           selectedVariants={selectedVariants}
           setSelectedVariants={setSelectedVariants}
-          videoJobs={videoJobs}
-          videoJobId={videoJobId}
-          setVideoJobId={setVideoJobId}
+          videoJobs={multiRatio ? videoJobs.filter((v) => v.aspect_ratio === activeRatio) : videoJobs}
+          videoJobId={activeVideoId}
+          setVideoJobId={setActiveVideo}
           audioJobId={audioJobId}
           setAudioJobId={setAudioJobId}
           urlVideoJobId={urlVideoJobId}
