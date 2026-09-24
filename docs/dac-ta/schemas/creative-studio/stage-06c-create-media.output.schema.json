@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "stage-06c-create-media.output.schema.json",
+  "title": "Chặng 06c — CREATE · Khu vực D: Ảnh biến thể theo cảnh — Đầu ra",
+  "description": "Mỗi cảnh một job; qua cổng Subject Integrity. Kết quả là assets MARKETING (PENDING) có cha là Master — đọc qua GET /media/variants/:id.",
+  "x-floraos": {
+    "stageId": "06c",
+    "stage": 6,
+    "code": "CREATE_MEDIA",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/media/variants",
+      "capability": "I4",
+      "idempotencyKey": true
+    },
+    "source": "src/modules/creative-production/contracts/stage-06c-create-media.ts",
+    "direction": "output",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:creative`."
+  },
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "PROCESSING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELLED"
+      ],
+      "description": "Trạng thái generation_jobs lúc nhận"
+    },
+    "engine": {
+      "type": "string",
+      "enum": [
+        "local_studio",
+        "cloud_provider"
+      ]
+    },
+    "deduped": {
+      "type": "boolean"
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "cost_credit": {
+          "type": "number"
+        },
+        "balance_after": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "cost_credit",
+        "balance_after"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "job_id",
+    "status",
+    "engine",
+    "deduped",
+    "usage"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "job_id": "e5f6a7b8-c9d0-4e1f-8a2b-3c4d5e6f7a8c",
+      "status": "PENDING",
+      "engine": "cloud_provider",
+      "deduped": false,
+      "usage": {
+        "cost_credit": 2,
+        "balance_after": 245
+      }
+    }
+  ]
+}

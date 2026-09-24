@@ -1,38 +1,13 @@
-import { z } from "zod"
-
 import { validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
 import { readIdempotencyKey } from "@/modules/jobs/domain/idempotency"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
-import { MAX_VOICE_SCRIPT_LENGTH } from "@/modules/audio-studio/domain/audio-task-rules"
+import { audioJobBodySchema } from "@/modules/creative-production/contracts/stage-06b-audio"
 import { createAudioJob } from "@/modules/audio-studio/use-cases/create-audio-job"
 
-const postSchema = z.object({
-  taskType: z.enum(["VOICEOVER", "MUSIC_SELECT", "AUDIO_MIX", "VOICE_CLONE"]).optional(),
-  scenes: z
-    .array(
-      z.object({
-        sceneIndex: z.number().int().min(0).max(20),
-        voiceScript: z.string().max(MAX_VOICE_SCRIPT_LENGTH),
-        targetDurationSeconds: z.number().positive().max(60),
-      })
-    )
-    .max(12),
-  totalDurationSeconds: z.number().positive().max(300).optional(),
-  voiceId: z.string().max(80).optional(),
-  voiceCloneId: z.string().uuid().optional(),
-  // `google_cloud` (worker chưa có) và `local_fallback` (macOS `say`) bị loại
-  // khỏi bản thương mại từ 24/09/2026 — use-case trả 422 nếu nhận.
-  providerKey: z.enum(["openai", "elevenlabs", "minimax", "edge_tts", "google_cloud", "local_fallback"]).optional(),
-  qualityTier: z.enum(["standard", "hd", "premium"]).optional(),
-  musicTrackId: z.string().max(80).optional(),
-  musicMood: z.enum(["romantic", "upbeat", "chill", "warm", "luxury", "none"]).optional(),
-  topicAngleCategory: z.string().max(60).optional(),
-  /** Kịch bản sản xuất tổng (Chặng 05) mà bản âm thanh này thực thi — Đợt 2, 24/09/2026. */
-  scenePlanId: z.string().max(160).optional(),
-  scenePlanRevision: z.number().int().min(1).optional(),
-})
+/** Hợp đồng Chặng 06b — nguồn chuẩn ở `contracts/stage-06b-audio.ts`. */
+const postSchema = audioJobBodySchema
 
 /**
  * `POST /api/v1/audio/jobs` (`I1`) — tạo job `audio.generate`.

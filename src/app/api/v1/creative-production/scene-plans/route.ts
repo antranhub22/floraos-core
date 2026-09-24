@@ -10,36 +10,10 @@ import {
   generateScenePlan,
 } from "@/modules/creative-production/use-cases/generate-scene-plan"
 import { scenePlanKey } from "@/modules/creative-production/domain/scene-plan-rules"
-import { PUBLISH_PLATFORMS } from "@/modules/creative-production/domain/publishing-rules"
+import { scenePlanBodySchema } from "@/modules/creative-production/contracts/stage-05-choose"
 
-const str = (max: number) => z.string().trim().max(max)
-const list = z.array(str(60)).max(12)
-
-const postSchema = z.object({
-  mode: z.enum(["CREATIVE", "AUTHENTIC"]),
-  asset_id: z.string().uuid().optional(),
-  product_id: z.string().uuid().optional(),
-  product: z.object({
-    name: str(160).min(1),
-    category: str(80).optional(),
-    style: str(120).optional(),
-    colors: list.default([]),
-    components: list.default([]),
-    occasions: list.default([]),
-    target_audience: str(200).optional(),
-    price_range: str(80).optional(),
-  }),
-  /** v2 — nền tảng đăng (quyết định tỉ lệ + khuôn video); bỏ trống = TikTok + Reels (9:16). */
-  platforms: z.array(z.enum(PUBLISH_PLATFORMS)).max(8).optional(),
-  topic: z.object({
-    id: str(120).min(1),
-    title: str(200).min(1),
-    angle_category: str(40).optional(),
-    hook: str(300).optional(),
-    cta: str(200).optional(),
-    format: str(40).optional(),
-  }),
-})
+/** Hợp đồng Chặng 05 — nguồn chuẩn ở `contracts/stage-05-choose.ts`. */
+const postSchema = scenePlanBodySchema
 
 /**
  * `POST /api/v1/creative-production/scene-plans` — AI viết kịch bản bối cảnh

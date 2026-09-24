@@ -1,22 +1,12 @@
-import { z } from "zod";
 import { handle, jsonResponse } from "@/core/http/response";
 import { validationFailed } from "@/core/http/errors";
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session";
 import { requireCapability } from "@/core/rbac/capabilities";
 import { analyzeProductIntelligence } from "@/modules/market-intelligence/use-cases/analyze-product-intelligence";
+import { productIntelligenceBodySchema } from "@/modules/creative-production/contracts/stage-03-discover";
 
-const productIntelligenceSchema = z.object({
-  product_name: z.string().optional(),
-  image_url: z.string().optional(),
-  // BẮT BUỘC từ 22/09/2026 (nợ #118) — ảnh phải đã lưu vào kho trước khi
-  // đối soát; xem `analyzeProductIntelligence` và `validate-transition.ts`.
-  asset_id: z.string().min(1, "Thiếu asset_id — ảnh chưa được lưu vào kho ảnh"),
-  components: z.array(z.any()).optional(),
-  attributes: z.any().optional(),
-  packaging: z.any().optional(),
-  context: z.any().optional(),
-  commercial_passport: z.any().optional(),
-});
+/** Hợp đồng Chặng 03 — nguồn chuẩn ở `contracts/stage-03-discover.ts` (asset_id BẮT BUỘC, nợ #118). */
+const productIntelligenceSchema = productIntelligenceBodySchema;
 
 export const POST = handle(async (request) => {
   const { ctx } = await requireTenantContext(request);

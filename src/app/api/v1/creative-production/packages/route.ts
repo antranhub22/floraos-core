@@ -1,5 +1,3 @@
-import { z } from "zod"
-
 import { validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
@@ -8,18 +6,10 @@ import {
   createCampaignPackage,
   listCampaignPackages,
 } from "@/modules/creative-production/use-cases/manage-campaign-package"
-import { packagePostsSchema, topicSnapshotSchema } from "./schemas"
+import { createPackageBodySchema } from "@/modules/creative-production/contracts/stage-07-package"
 
-const postSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  mode: z.enum(["CREATIVE", "AUTHENTIC"]),
-  master_asset_id: z.string().min(1),
-  topic: topicSnapshotSchema.optional(),
-  posts: packagePostsSchema.optional(),
-  variant_asset_ids: z.array(z.string().min(1)).max(40).optional(),
-  video_job_id: z.string().min(1).nullish(),
-  audio_job_id: z.string().min(1).nullish(),
-})
+/** Hợp đồng Chặng 07 — nguồn chuẩn ở `contracts/stage-07-package.ts`. */
+const postSchema = createPackageBodySchema
 
 /**
  * `POST /api/v1/creative-production/packages` (`I1`) — Chặng 07: tạo gói chiến

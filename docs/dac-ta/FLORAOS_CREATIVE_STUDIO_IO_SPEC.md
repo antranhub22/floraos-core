@@ -1,8 +1,44 @@
 # Input/Output Specification — Creative Studio (Chặng 01–14)
 
 > **Mục đích:** Chuẩn hoá đầu vào/đầu ra THẬT của từng chặng trong `/creative-studio`, đúng tên trường và kiểu như mã nguồn.
-> **Phiên bản:** 4.2 — 24/09/2026 (tối). Viết lại §4 Khu vực C: bốn loại tác vụ thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
+> **Phiên bản:** 4.3 — 24/09/2026 (khuya). Thêm §0: hợp đồng input/output 14 chặng bằng zod + JSON Schema sinh tự động. Bản 4.2 — 24/09/2026 (tối). Viết lại §4 Khu vực C: bốn loại tác vụ thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
 > **Nguồn sự thật:** `src/modules/market-intelligence/domain/product-intelligence-types.ts`, `src/modules/creative-production/domain/{production-types,validate-transition,build-handoff-url,campaign-package-rules}.ts`, `src/modules/media/domain/variant-rules.ts`, `src/modules/audio-studio/domain/audio-types.ts`, `src/modules/video-studio/domain/video-types.ts`, các `route.ts` tương ứng. Lệch với tài liệu này thì mã thắng (Hiến pháp §2 quy tắc 2) — và tài liệu phải sửa trong cùng commit.
+
+
+> **Hợp đồng máy đọc được:** `src/modules/creative-production/contracts/` (zod — **nguồn chuẩn**) → `docs/dac-ta/schemas/creative-studio/*.schema.json` (sinh tự động). Xem §0.
+
+---
+
+## 0. Hợp đồng input/output chuẩn (zod + JSON Schema, 24/09/2026)
+
+Quyết định PO (24/09/2026): mỗi chặng 01–14 có **một schema đầu vào và một schema đầu ra** làm mẫu chuẩn; muốn đổi input/output của chặng nào thì sửa **zod** của chặng đó. Tệp JSON Schema chỉ để đọc/chia sẻ — không sửa tay.
+
+| Chặng | Tệp nguồn (zod) | Lời gọi chính | Năng lực |
+|---|---|---|---|
+| 01 BRING | `stage-01-bring.ts` | `POST /assets` | G2 |
+| 02 UNDERSTAND | `stage-02-understand.ts` | `POST /market-intelligence/vision-extract` | V1 |
+| 03 DISCOVER | `stage-03-discover.ts` | `POST /market-intelligence/product-intelligence` | V1 |
+| 04 IDEATE | `stage-04-ideate.ts` | `GET /product-intelligence/:id` | V2 |
+| 05 CHOOSE | `stage-05-choose.ts` (+ hợp đồng phụ `handoff`: query `/creative-studio`) | `POST /creative-production/scene-plans` | I1 |
+| 06a CREATE · B | `stage-06a-content.ts` | `PUT /creative-production/content-drafts` | I1 |
+| 06b CREATE · C | `stage-06b-audio.ts` | `POST /audio/jobs` | I1 |
+| 06c CREATE · D | `stage-06c-media.ts` | `POST /media/variants` | I4 |
+| 06d CREATE · E | `stage-06d-video.ts` | `POST /video/jobs` | I1 |
+| 07 PACKAGE | `stage-07-package.ts` | `POST /creative-production/packages` | I1 |
+| 08 QA | `stage-08-qa.ts` | `POST /creative-production/packages/:id/qa` | I1 |
+| 09 APPROVE | `stage-09-approve.ts` | `POST /creative-production/packages/:id/approve` | J5 |
+| 10 LAUNCH | `stage-10-launch.ts` | `PUT /creative-production/packages/:id/launch` | J5 |
+| 11–14 SELL · MEASURE · LEARN · NEXT BEST ACTION | `stage-11-sell.ts` … `stage-14-next-best-action.ts` (lát cắt của cùng một đầu ra) | `GET /creative-production/packages/:id/performance` | R1 |
+
+Khối dùng chung: `common.ts`, `product-intelligence.ts` (02–04), `scene-plan.ts` (ScenePlan v2), `campaign-package.ts` (07–14). Mỗi tệp JSON có `examples` (một mẫu đầy đủ để điền) và `x-floraos` (chặng, endpoint, tệp nguồn); `index.json` liệt kê cả bộ.
+
+**Đổi input/output của một chặng:**
+1. Sửa zod trong `contracts/stage-XX-*.ts` (hoặc khối dùng chung). Route nhập chính schema này nên máy chủ đổi theo ngay.
+2. `npm run typecheck` — `contracts/conformance.ts` khoá zod với kiểu domain/use-case; đỏ nghĩa là mã và hợp đồng lệch, sửa bên còn lại.
+3. `npm run gen:schemas:creative` để sinh lại JSON; commit cùng lần với thay đổi zod và mục tương ứng của tài liệu này.
+4. `npm test` — `stage-contracts.test.ts` chặn khi: thiếu chặng, ví dụ sai schema, tệp JSON cũ, hoặc route không dùng hợp đồng. `npm run check:schemas:creative` kiểm riêng phần JSON.
+
+Giới hạn đã biết: `refine` (vd. "mỗi kênh một bài", `scene_index` 1..5) không biểu diễn được trong JSON Schema — máy chủ vẫn kiểm; bản ghi `assets`/`video_jobs` dùng `looseObject` (cột phụ của bảng đi qua nguyên vẹn).
 
 ---
 

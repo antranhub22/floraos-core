@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { videoJobBodySchema } from "@/modules/creative-production/contracts/stage-06d-video";
 import { validationFailed } from "@/core/http/errors";
 import { requireCapability } from "@/core/rbac/capabilities";
 import { handle, jsonResponse } from "@/core/http/response";
@@ -8,39 +8,8 @@ import { ListVideoJobsUseCase } from "@/modules/video-studio/use-cases/list-vide
 import { video_format, video_stage } from "@/modules/video-studio/infra/entities";
 import { VideoSceneItem } from "@/modules/video-studio/domain/video-types";
 
-const createSchema = z.object({
-  productId: z.string().nullable().optional(),
-  title: z.string().min(1, "Tiêu đề không được để trống"),
-  format: z.enum([
-    "REEL_15S",
-    "TIKTOK_30S",
-    "STORY_15S",
-    "SLIDESHOW",
-    "PRODUCT_PAGE",
-    "AD_MOTION",
-  ]),
-  aspectRatio: z.string().optional(),
-  musicTrack: z.string().nullable().optional(),
-  voiceCode: z.string().nullable().optional(),
-  hasSubtitle: z.boolean().optional(),
-  captionStyle: z
-    .enum(["MODERN_BADGE", "MINIMAL_ELEGANT", "HIGHLIGHT_BOX", "BOTTOM_BANNER", "NONE"])
-    .optional(),
-  hasWatermark: z.boolean().optional(),
-  scenes: z
-    .array(
-      z.object({
-        sceneIndex: z.number().optional(),
-        durationSeconds: z.number().min(0.5).max(15),
-        imageAssetId: z.string().nullable().optional(),
-        textOverlay: z.string().nullable().optional(),
-        voiceScript: z.string().nullable().optional(),
-        transitionEffect: z.string().optional(),
-        motionEffect: z.enum(["ZOOM_IN", "ZOOM_OUT", "PAN_UP", "PAN_RIGHT", "STATIC"]).optional(),
-      })
-    )
-    .optional(),
-});
+/** Hợp đồng Chặng 06d — nguồn chuẩn ở `contracts/stage-06d-video.ts`. */
+const createSchema = videoJobBodySchema;
 
 export const GET = handle(async (request) => {
   const { ctx } = await requireTenantContext(request);

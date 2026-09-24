@@ -38,6 +38,8 @@
     "nap:loai": "tsx --env-file-if-exists=.env scripts/nap-danh-muc-loai.ts",
     "cham:bo-anh-vang": "python3 scripts/cham-bo-anh-vang.py",
     "check:template-ssot": "tsx scripts/check-template-ssot.ts",
+    "gen:schemas:creative": "tsx scripts/gen-creative-studio-schemas.ts",
+    "check:schemas:creative": "tsx scripts/gen-creative-studio-schemas.ts --check",
     "check:docs": "node scripts/check-docs.mjs"
   },
   "dependencies": {

@@ -1,46 +1,13 @@
-import { z } from "zod"
-
 import { validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
 import { registerAsset } from "@/modules/assets/use-cases/register-asset"
 import { listAssets } from "@/modules/assets/use-cases/list-assets"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
+import { registerAssetBodySchema } from "@/modules/creative-production/contracts/stage-01-bring"
 
-const ASSET_KINDS = [
-  "ORIGINAL",
-  "ANALYZED",
-  "ENHANCED",
-  "MASTER",
-  "MARKETING",
-  "CATALOG",
-  "LANDING",
-  "SOCIAL",
-] as const
-
-const schema = z.object({
-  asset_id: z.string().min(1),
-  product_id: z.string().nullish(),
-  parent_asset_id: z.string().nullish(),
-  kind: z.enum(ASSET_KINDS),
-  storage_key: z.string().min(1),
-  mime_type: z.string().min(1),
-  width: z.number().int().positive().nullish(),
-  height: z.number().int().positive().nullish(),
-  aspect_ratio: z.string().nullish(),
-  file_size: z.number().int().positive().nullish(),
-  provider: z.string().nullish(),
-  model: z.string().nullish(),
-  model_version: z.string().nullish(),
-  pipeline_version: z.string().nullish(),
-  parameters: z.record(z.string(), z.unknown()).nullish(),
-  prompt: z.string().nullish(),
-  output_sha256: z.string().nullish(),
-  quality_score: z.number().nullish(),
-  identity_score: z.number().nullish(),
-  generated_flags: z.record(z.string(), z.unknown()).nullish(),
-  cost_usd: z.number().nullish(),
-})
+/** Hợp đồng Chặng 01 — nguồn chuẩn ở `contracts/stage-01-bring.ts`. */
+const schema = registerAssetBodySchema
 
 export const GET = handle(async (request) => {
   const { ctx } = await requireTenantContext(request)

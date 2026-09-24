@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "stage-06c-create-media.input.schema.json",
+  "title": "Chặng 06c — CREATE · Khu vực D: Ảnh biến thể theo cảnh — Đầu vào",
+  "description": "Mỗi cảnh một job; qua cổng Subject Integrity. Kết quả là assets MARKETING (PENDING) có cha là Master — đọc qua GET /media/variants/:id.",
+  "x-floraos": {
+    "stageId": "06c",
+    "stage": 6,
+    "code": "CREATE_MEDIA",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/media/variants",
+      "capability": "I4",
+      "idempotencyKey": true
+    },
+    "source": "src/modules/creative-production/contracts/stage-06c-create-media.ts",
+    "direction": "input",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:creative`."
+  },
+  "type": "object",
+  "properties": {
+    "master_asset_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Master Image đã duyệt"
+    },
+    "engine": {
+      "default": "local_studio",
+      "type": "string",
+      "enum": [
+        "local_studio",
+        "cloud_provider"
+      ]
+    },
+    "preset": {
+      "type": "string",
+      "enum": [
+        "transparent",
+        "studio_white",
+        "wedding",
+        "living_room",
+        "wood_minimal",
+        "luxury_hotel"
+      ]
+    },
+    "ratio": {
+      "type": "string",
+      "enum": [
+        "1:1",
+        "4:5",
+        "9:16",
+        "16:9"
+      ]
+    },
+    "watermark": {
+      "default": true,
+      "type": "boolean"
+    },
+    "auto_enhance": {
+      "default": false,
+      "description": "AIC-14 — chỉ chỉnh vùng nền",
+      "type": "boolean"
+    },
+    "scene_index": {
+      "description": "Cảnh 1..5 của kịch bản (CREATIVE 5, AUTHENTIC 3)",
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "scene_plan_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "scene_plan_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100000
+    },
+    "provider_key": {
+      "default": "stability",
+      "description": "Chỉ nhánh cloud_provider",
+      "type": "string",
+      "enum": [
+        "stability"
+      ]
+    },
+    "scene_prompt": {
+      "description": "Chỉ nhánh cloud_provider — backgroundPrompt của cảnh",
+      "type": "string",
+      "maxLength": 600
+    }
+  },
+  "required": [
+    "master_asset_id",
+    "preset",
+    "ratio"
+  ],
+  "examples": [
+    {
+      "master_asset_id": "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b",
+      "engine": "cloud_provider",
+      "preset": "wedding",
+      "ratio": "9:16",
+      "scene_index": 2,
+      "scene_plan_id": "b1a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "scene_plan_revision": 1,
+      "scene_prompt": "warm bokeh restaurant table at dusk, soft candle light, empty space in the center"
+    }
+  ]
+}

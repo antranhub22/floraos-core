@@ -1,12 +1,12 @@
-import { z } from "zod"
-
 import { validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { approveCampaignPackage } from "@/modules/creative-production/use-cases/manage-campaign-package"
+import { approveBodySchema } from "@/modules/creative-production/contracts/stage-09-approve"
 
-const schema = z.object({ acknowledge_warnings: z.boolean().default(false) })
+/** Hợp đồng Chặng 09 — nguồn chuẩn ở `contracts/stage-09-approve.ts`. */
+const schema = approveBodySchema
 
 /**
  * `POST /api/v1/creative-production/packages/:id/approve` (`J5` social.publish) —

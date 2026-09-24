@@ -271,13 +271,27 @@ documents:
     title: "Creative Studio I/O Specification (Chặng 01–14)"
     domain: "Module M04"
     layer: "Level 3"
-    purpose: "IO Spec v4.2 (24/09/2026, §4 Khu vực C viết lại: audio jobs, music-tracks, voice-clones) — dữ liệu vào/ra thật của từng chặng 01–14: TopicProductionBrief, kịch bản bối cảnh scene-plans, content-drafts, biến thể, video, gói chiến dịch và sửa tại chỗ Chặng 07 (scene-revisions, content-rewrites)"
+    purpose: "IO Spec v4.3 (24/09/2026 khuya, §0 hợp đồng zod + JSON Schema 14 chặng; v4.2 §4 Khu vực C viết lại: audio jobs, music-tracks, voice-clones) — dữ liệu vào/ra thật của từng chặng 01–14: TopicProductionBrief, kịch bản bối cảnh scene-plans, content-drafts, biến thể, video, gói chiến dịch và sửa tại chỗ Chặng 07 (scene-revisions, content-rewrites)"
     status: "CANONICAL"
     authority: "Level 3"
     canonical: true
     ssot: true
     owner: "Media AI Lead"
     dependencies: ["docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md"]
+    supersedes: []
+
+  - id: "DOC-03-M04-CREATIVE-STAGE-SCHEMAS"
+    path: "docs/dac-ta/schemas/creative-studio/index.json"
+    title: "Creative Studio — JSON Schema input/output 14 chặng (sinh tự động)"
+    domain: "Module M04"
+    layer: "Level 3"
+    purpose: "36 tệp JSON Schema 2020-12 (17 cặp input/output + query bàn giao Chặng 05 + index.json) SINH từ zod ở src/modules/creative-production/contracts/ bằng npm run gen:schemas:creative — không sửa tay; test stage-contracts.test.ts chặn khi lệch"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: false
+    owner: "Media AI Lead"
+    dependencies: ["docs/dac-ta/FLORAOS_CREATIVE_STUDIO_IO_SPEC.md"]
     supersedes: []
 
   - id: "DOC-03-M04-CREATIVE-JOURNEY"

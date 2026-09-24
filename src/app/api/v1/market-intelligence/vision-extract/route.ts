@@ -1,14 +1,11 @@
-import { z } from "zod";
 import { handle, jsonResponse } from "@/core/http/response";
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session";
 import { requireCapability } from "@/core/rbac/capabilities";
 import { analyzeProductVision } from "@/modules/market-intelligence/use-cases/analyze-product-vision";
+import { visionExtractBodySchema } from "@/modules/creative-production/contracts/stage-02-understand";
 
-const visionExtractSchema = z.object({
-  image_url: z.string().optional(),
-  asset_id: z.string().optional(),
-  product_title: z.string().optional(),
-});
+/** Hợp đồng Chặng 02 — nguồn chuẩn ở `contracts/stage-02-understand.ts`. */
+const visionExtractSchema = visionExtractBodySchema;
 
 /**
  * POST /api/v1/market-intelligence/vision-extract
