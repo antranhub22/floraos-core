@@ -1596,6 +1596,10 @@ model content_drafts {
 }
 ```
 
+## 24b. `video_jobs` — cột Đợt 4 (24/09/2026)
+
+Migration `20260924150000_video_jobs_plan_audio` thêm 4 cột null được: `scene_plan_id` (kịch bản sản xuất tổng), `scene_plan_revision`, `audio_job_id` (job `audio.generate` Khu vực C), `audio_storage_key`. Có `audio_storage_key` (và khoá thuộc `org/<organization_id>/`) thì `video.render` dùng nguyên bản phối C, không đọc lại TTS, không phủ thêm nhạc.
+
 ## 25. Thư viện âm thanh Khu vực C — `voice_clones`, `music_tracks`
 
 > **Thêm 24/09/2026** (rà soát Khu vực C, quyết định PO: Voice Clone xây thật với ElevenLabs; nhạc nền = thư viện có giấy phép + tiệm tự tải). Hai bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly và ca thử `tests/tenant/audio-library.test.ts`. Migration: `prisma/migrations/20260924120000_audio_voice_clones_music_tracks`.

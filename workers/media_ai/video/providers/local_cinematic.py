@@ -118,23 +118,40 @@ class LocalCinematicProvider(BaseVideoProvider):
         if not image_paths:
             raise VideoProviderError("Không tìm thấy hình ảnh nào để dựng video.")
 
-        # 2. Tổng hợp âm thanh (TTS + Nhạc nền)
+        # 2. Âm thanh
         audio_path: Optional[Path] = None
         if progress_callback:
             progress_callback("STAGE", {"stage": "AUDIO_SYNTHESIS", "progress": 40})
 
-        try:
-            audio_out_file = out_dir / f"{video_job_id}_audio.aac"
-            audio_path = build_audio_track(
-                scenes=scenes,
-                music_track=music_track,
-                voice_code=voice_code,
-                total_duration=duration_seconds,
-                out_audio_file=audio_out_file,
-            )
-        except Exception as a_err:
-            print(f"⚠️ [LocalCinematic] Lỗi tổng hợp âm thanh: {a_err}", flush=True)
-            audio_path = None
+        # Đợt 4 (24/09/2026, PO): video lắp từ kịch bản sản xuất tổng dùng
+        # NGUYÊN bản phối Khu vực C (giọng + nhạc đã duyệt) — không đọc lại TTS.
+        # Thời lượng cảnh đã khớp thời lượng thật của bản phối.
+        audio_key = payload.get("audioStorageKey")
+        if audio_key:
+            if not str(audio_key).startswith(f"org/{org_id}/"):
+                raise VideoProviderError("Bản âm thanh không thuộc tổ chức của job — dừng render.")
+            from shared.storage import doc_bytes
+
+            try:
+                data = doc_bytes(str(audio_key), STORAGE_ROOT)
+            except Exception as a_err:  # noqa: BLE001
+                raise VideoProviderError(f"Không đọc được bản phối Khu vực C: {a_err}") from a_err
+            audio_path = out_dir / f"{video_job_id}_c_mix{Path(str(audio_key)).suffix or '.m4a'}"
+            audio_path.write_bytes(data)
+
+        if audio_path is None:
+            try:
+                audio_out_file = out_dir / f"{video_job_id}_audio.aac"
+                audio_path = build_audio_track(
+                    scenes=scenes,
+                    music_track=music_track,
+                    voice_code=voice_code,
+                    total_duration=duration_seconds,
+                    out_audio_file=audio_out_file,
+                )
+            except Exception as a_err:
+                print(f"⚠️ [LocalCinematic] Lỗi tổng hợp âm thanh: {a_err}", flush=True)
+                audio_path = None
 
         # 3. Kết xuất phụ đề lên từng phân cảnh
         captioned_paths: List[Path] = []

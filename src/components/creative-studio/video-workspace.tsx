@@ -14,7 +14,8 @@ import { VideoFormat, VIDEO_FORMAT_SPECS, CaptionStyle, CAPTION_STYLE_SPECS, Vid
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
 import { resolveSceneImages } from "./scene-images-client"
 import { buildStoryboardFromPlan, buildStoryboardFromTopic, type SceneImage } from "./video-storyboard-builder"
-import { findScenePlan, type ScenePlan } from "./scene-plan-client"
+import { findScenePlan, type LoadedScenePlan, type ScenePlan } from "./scene-plan-client"
+import { PlanVideoAssembly } from "./plan-video-assembly"
 import { VideoJobLifecycle, type VideoJobDetail } from "./video-job-lifecycle"
 import { costCreditForFeature } from "@/modules/usage/domain/pricing"
 
@@ -71,6 +72,7 @@ export function VideoWorkspace() {
   // dùng Master Image của sản phẩm. Không còn khuôn 3 cảnh viết cứng hay ảnh
   // mẫu Unsplash — những ảnh đó không phải sản phẩm của tiệm.
   const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
+  const [loadedPlan, setLoadedPlan] = useState<LoadedScenePlan | null>(null)
   const [buildingStoryboard, setBuildingStoryboard] = useState(false)
   const [storyboardNote, setStoryboardNote] = useState<string | null>(null)
   const urlPlanId = searchParams?.get("scenePlanId") ?? null
@@ -101,6 +103,7 @@ export function VideoWorkspace() {
         if (loaded) {
           const built = buildStoryboardFromPlan(loaded.plan, spec.targetDurationSeconds, byScene, master)
           setScenePlan(loaded.plan)
+          setLoadedPlan(loaded)
           setScenes(built.scenes)
           const notes: string[] = []
           if (built.missingImages > 0) {
@@ -211,6 +214,31 @@ export function VideoWorkspace() {
 
   return (
     <div className="flex flex-col gap-5">
+      {loadedPlan && context && (
+        <PlanVideoAssembly
+          loaded={loadedPlan}
+          assetId={context.assetId}
+          audioJobId={searchParams?.get("audioJobId") ?? null}
+          title={title}
+          onGoArea={(area, focusScene) => {
+            const params = new URLSearchParams(searchParams?.toString() || "")
+            params.set("area", area)
+            if (focusScene) params.set("focusScene", String(focusScene))
+            router.push(`/creative-studio?${params.toString()}` as never)
+          }}
+          onCreated={(id) => {
+            setActiveVideoJobId(id)
+            const params = new URLSearchParams(searchParams?.toString() || "")
+            params.set("videoJobId", id)
+            router.replace(`/creative-studio?${params.toString()}` as never)
+          }}
+        />
+      )}
+      {loadedPlan && (
+        <p className="-mt-2 text-[11px] text-text-muted">
+          Hoặc chỉnh storyboard tay bên dưới (nâng cao) — video tạo theo cách này tự đọc lại lời thoại, không dùng bản phối Khu vực C.
+        </p>
+      )}
       <Card className="p-5">
         <h3 className="text-sm font-bold text-text mb-3 flex items-center gap-2"><Film size={14} /> Khuôn định dạng</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

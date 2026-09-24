@@ -136,3 +136,52 @@ def test_build_ffmpeg_command_with_motions():
         assert "zoompan" in cmd_str
         assert "xfade=transition=fade" in cmd_str
         assert str(out) in cmd_str
+
+
+def test_dot4_dung_nguyen_ban_phoi_khu_vuc_c(monkeypatch, tmp_path):
+    """Đợt 4 (24/09/2026): có `audioStorageKey` thì KHÔNG tự đọc lại TTS / phủ nhạc."""
+    from media_ai.video.providers import local_cinematic as lc
+    import shared.storage as storage
+
+    img = tmp_path / "a.jpg"
+    img.write_bytes(b"x")
+    monkeypatch.setattr(lc.LocalCinematicProvider, "is_available", lambda self: True)
+    monkeypatch.setattr(lc.LocalCinematicProvider, "_resolve_image", lambda self, ref, org, d, i: img)
+    monkeypatch.setattr(lc, "render_caption_to_file", lambda src, text, out, style_name=None: out.write_bytes(b"c"))
+    monkeypatch.setattr(storage, "doc_bytes", lambda key, root: b"MIX")
+    goi_tts = {"n": 0}
+    monkeypatch.setattr(lc, "build_audio_track", lambda **k: goi_tts.update(n=1))
+    nhan: dict = {}
+
+    def fake_render(**kwargs):
+        nhan["audio"] = kwargs["audio_path"].read_bytes()
+        nhan["durations"] = kwargs["scene_durations"]
+        kwargs["out_path"].write_bytes(b"mp4")
+
+    monkeypatch.setattr(lc, "render_slideshow", fake_render)
+    payload = {
+        "videoJobId": "v1",
+        "audioStorageKey": "org/org-1/unfiled/x_audio.m4a",
+        "scenes": [
+            {"imageAssetId": "k1", "durationSeconds": 5.2, "textOverlay": "A"},
+            {"imageAssetId": "k2", "durationSeconds": 6.1, "textOverlay": "B"},
+        ],
+    }
+    lc.LocalCinematicProvider().render_video("j1", "org-1", payload, tmp_path / "out.mp4")
+    assert goi_tts["n"] == 0
+    assert nhan["audio"] == b"MIX"
+    assert nhan["durations"] == [5.2, 6.1]
+
+
+def test_dot4_ban_phoi_to_chuc_khac_bi_chan(monkeypatch, tmp_path):
+    from media_ai.video.providers import local_cinematic as lc
+    import pytest
+
+    img = tmp_path / "a.jpg"
+    img.write_bytes(b"x")
+    monkeypatch.setattr(lc.LocalCinematicProvider, "is_available", lambda self: True)
+    monkeypatch.setattr(lc.LocalCinematicProvider, "_resolve_image", lambda self, ref, org, d, i: img)
+    with pytest.raises(Exception, match="không thuộc tổ chức"):
+        lc.LocalCinematicProvider().render_video(
+            "j1", "org-1", {"audioStorageKey": "org/org-2/x.m4a", "scenes": [{"imageAssetId": "k"}]}, tmp_path / "o.mp4"
+        )

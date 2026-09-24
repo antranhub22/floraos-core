@@ -91,8 +91,12 @@ export class DispatchVideoRenderUseCase {
         format: job.format,
         durationSeconds: job.duration_seconds,
         aspectRatio: job.aspect_ratio,
-        musicTrack: job.music_track,
-        voiceCode: job.voice_code,
+        // Đợt 4: có bản phối Khu vực C thì worker dùng NGUYÊN bản đó — không đọc
+        // lại TTS, không phủ thêm nhạc (quyết định PO 24/09/2026).
+        ...(job.audio_storage_key && job.audio_storage_key.startsWith(`org/${ctx.organizationId}/`)
+          ? { audioStorageKey: job.audio_storage_key, musicTrack: null, voiceCode: null }
+          : { musicTrack: job.music_track, voiceCode: job.voice_code }),
+        captionStyle: job.caption_style,
         hasSubtitle: job.has_subtitle,
         hasWatermark: job.has_watermark,
         scenes: job.scenes.map((s: video_scenes) => ({

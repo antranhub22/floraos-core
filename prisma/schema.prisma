@@ -1112,6 +1112,13 @@ model video_jobs {
   caption_style      String          @default("MODERN_BADGE")
   has_watermark      Boolean         @default(false)
 
+  // Đợt 4 (24/09/2026): video lắp từ KỊCH BẢN SẢN XUẤT TỔNG + bản phối Khu vực C.
+  // Có `audio_storage_key` thì worker dùng nguyên bản phối, không đọc lại TTS.
+  scene_plan_id       String?
+  scene_plan_revision Int?
+  audio_job_id        String?
+  audio_storage_key   String?
+
   // Tài sản đầu ra & Hạch toán
   final_video_url    String?
   final_asset_id     String?

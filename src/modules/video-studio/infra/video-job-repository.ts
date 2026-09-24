@@ -179,6 +179,23 @@ export class VideoJobRepository {
     });
   }
 
+  /** Đợt 4 (24/09/2026): gắn kịch bản sản xuất tổng + bản phối Khu vực C vào job. */
+  async attachPlanAudio(
+    ctx: TenantContext,
+    jobId: string,
+    input: { scenePlanId: string; scenePlanRevision: number; audioJobId: string | null; audioStorageKey: string | null }
+  ): Promise<void> {
+    await this.db.video_jobs.updateMany({
+      where: scopedWhere(ctx, { id: jobId }),
+      data: {
+        scene_plan_id: input.scenePlanId,
+        scene_plan_revision: input.scenePlanRevision,
+        audio_job_id: input.audioJobId,
+        audio_storage_key: input.audioStorageKey,
+      },
+    });
+  }
+
   /**
    * Gắn ảnh cho những cảnh CÒN TRỐNG ảnh — không đổi chữ/lời/giai đoạn duyệt
    * (24/09/2026: render lấp ảnh Khu vực D / Master thay vì báo lỗi).
