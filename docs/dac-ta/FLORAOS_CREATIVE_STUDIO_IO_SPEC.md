@@ -1,7 +1,7 @@
 # Input/Output Specification — Creative Studio (Chặng 01–14)
 
 > **Mục đích:** Chuẩn hoá đầu vào/đầu ra THẬT của từng chặng trong `/creative-studio`, đúng tên trường và kiểu như mã nguồn.
-> **Phiên bản:** 4.4 — 24/09/2026 (khuya). §5.0c phạm vi sản xuất (nền tảng + loại kết quả chọn cuối Chặng 04), mỗi khung một bộ ảnh + một video, gói nhiều video, QA `scope_coverage`. Bản 4.3 — 24/09/2026 (khuya). Thêm §0: hợp đồng input/output 14 chặng bằng zod + JSON Schema sinh tự động. Bản 4.2 — 24/09/2026 (tối). Viết lại §4 Khu vực C: bốn loại tác vụ thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
+> **Phiên bản:** 4.5 — 25/09/2026. §5.1 chỉ đạo khung hình biến thể (Đợt 1 nâng cấp chất lượng ảnh): `fill_mode` (mặc định `full_frame`), `composition`, `lighting`, `palette`, `seed`. Bản 4.4 — 24/09/2026 (khuya). §5.0c phạm vi sản xuất (nền tảng + loại kết quả chọn cuối Chặng 04), mỗi khung một bộ ảnh + một video, gói nhiều video, QA `scope_coverage`. Bản 4.3 — 24/09/2026 (khuya). Thêm §0: hợp đồng input/output 14 chặng bằng zod + JSON Schema sinh tự động. Bản 4.2 — 24/09/2026 (tối). Viết lại §4 Khu vực C: bốn loại tác vụ thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
 > **Nguồn sự thật:** `src/modules/market-intelligence/domain/product-intelligence-types.ts`, `src/modules/creative-production/domain/{production-types,validate-transition,build-handoff-url,campaign-package-rules}.ts`, `src/modules/media/domain/variant-rules.ts`, `src/modules/audio-studio/domain/audio-types.ts`, `src/modules/video-studio/domain/video-types.ts`, các `route.ts` tương ứng. Lệch với tài liệu này thì mã thắng (Hiến pháp §2 quy tắc 2) — và tài liệu phải sửa trong cùng commit.
 
 
@@ -265,12 +265,21 @@ Mang qua: thân `POST /scene-plans` và `PATCH /scene-plans/:id` nhận `platfor
 | `scene_plan_revision` | int ≥ 1 | phiên bản kịch bản lúc sinh ảnh (Đợt 3, 24/09) — ghi vào `metadata.scene_plan_revision`; giao diện chọn khung theo `publishing.aspectRatio` |
 | `provider_key` | `"stability"` | chỉ nhánh cloud |
 | `scene_prompt` | string ≤ 600 | chỉ nhánh cloud — `backgroundPrompt` của cảnh (KHÔNG GIAN hậu cảnh) |
+| `fill_mode` | `"full_frame" \| "pad"` | **mặc định `full_frame`** (PO 24/09): khung làm việc dựng ĐÚNG tỉ lệ đích, hậu cảnh phủ kín khung. `pad` = cách cũ (ghép theo kích thước Master rồi đệm màu trơn) |
+| `composition.shot` | `close \| medium \| wide` | bó hoa cao 84% / 68% / 50% khung; trần phóng ×2 (vượt thì nới khung). Thiếu → `shot` của cảnh, không có → `medium` |
+| `composition.placement` | `center \| left_third \| right_third` | mặc định `center` |
+| `lighting.direction` | `left \| right \| above \| front` | hướng bóng đổ + cụm ánh sáng trong prompt. Thiếu → suy từ `lighting` (tiếng Việt) của cảnh, không nhận ra → `left` (hướng bóng cũ) |
+| `lighting.mood` | string ≤ 120 | tiếng Anh, ghép vào prompt; chữ Việt bị bỏ và ghi `provider_ignored` |
+| `palette` | string[] ≤ 5 | thiếu → `palette` của cảnh; màu tiếng Việt thông dụng tự dịch, màu không dịch được ghi `provider_ignored` |
+| `seed` | int 0–4 294 967 294 | chỉ nhà cung cấp có seed (Stability). Thiếu → tự bốc và GHI vào asset để tái tạo |
+
+Chỉ đạo khung hình là **ý định FloraOS**, không phải tham số nhà cung cấp: `src/modules/media/domain/variant-direction-rules.ts` gộp (người gọi → cảnh của kịch bản → mặc định) và ghi `direction_from_plan` vào payload; worker dịch qua khung adapter `workers/media_ai/providers/background/` (`base.py`: `BackgroundRequest`, bảng năng lực `NangLuc`, `dung_prompt_hau_canh`; adapter `stability_background.py`, `local_studio.py`). Ý định nhà cung cấp không làm được KHÔNG bị âm thầm bỏ — ghi `provider_ignored`.
 
 Ra (201): `{ job_id, status, engine, deduped, usage: { cost_credit, balance_after } }`. Feature: `media.variant` (1 credit) / `media.variant.cloud` (2 credit).
 
 `GET /api/v1/media/variants/:job_id` (`I4`) → `{ job_id, status, stage, error, result, source: { master_asset_id, master_url, preset, ratio, watermark, engine, scene_index, cloud_fallback }, subject_integrity: { subject_pixel_identity, result, ly_do[] } | null, variants: { asset_id, variant_key: "transparent"|"styled"|"branded", title, background, ratio, watermark, generative_fill_used, url, approval_state, approved_at }[], approval: { can_approve, requires_warning } }`.
 
-Asset biến thể (`kind = MARKETING`, `approval_state = PENDING`, `parent_asset_id = master`): `identity_score` = số đo; `metadata` gồm `job_id, variant_key, preset, ratio, watermark, subject_pixel_identity, engine, background_provider, cloud_fallback, cloud_fallback_reason, scene_index, scene_plan_id`.
+Asset biến thể (`kind = MARKETING`, `approval_state = PENDING`, `parent_asset_id = master`): `identity_score` = số đo; `metadata` gồm `job_id, variant_key, preset, ratio, watermark, subject_pixel_identity, engine, background_provider, cloud_fallback, cloud_fallback_reason, scene_index, scene_plan_id, scene_plan_revision` và từ 25/09 `fill_mode, composition, light_direction, subject_box` (x, y, rộng, cao trong khung xuất), `seed, scene_prompt` (prompt cuối gửi nhà cung cấp), `provider_ignored`. `pipeline_version` = `m04b-2` / `m04b-cloud-2`.
 
 Ngưỡng: SAFE ≥ 0,999 · WARNING ≥ 0,99 · REJECTED < 0,99 (không ghi asset).
 

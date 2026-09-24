@@ -4,6 +4,14 @@ import { conflict, notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
+import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
+import { SCENE_PLAN_FEATURE, parseStoredScenePlan } from "@/modules/creative-production/domain/scene-plan-rules"
+import {
+  resolveVariantDirection,
+  variantDirectionPayload,
+  type PlanSceneHint,
+  type VariantDirectionInput,
+} from "@/modules/media/domain/variant-direction-rules"
 import {
   ALL_VARIANT_COMBINATIONS,
   isEligibleMasterForVariants,
@@ -36,6 +44,34 @@ export type RequestVariantsInput = {
   scenePlanId?: string | undefined
   /** Phiên bản kịch bản sản xuất tổng lúc sinh ảnh (Đợt 3, 24/09/2026). */
   scenePlanRevision?: number | undefined
+  /** Chỉ đạo khung hình (Đợt 1 nâng cấp chất lượng, 24/09/2026) — thiếu thì lấy từ kịch bản. */
+  direction?: VariantDirectionInput | undefined
+}
+
+/**
+ * Gợi ý của ĐÚNG cảnh trong kịch bản sản xuất tổng (`shot`, `lighting`,
+ * `palette`). Chỉ là gợi ý: không đọc được (kịch bản cơ bản không có job, job
+ * chưa xong, id lạ) thì trả `null` — không bao giờ chặn việc tạo ảnh.
+ */
+async function sceneHintFor(
+  ctx: TenantContext,
+  scenePlanId: string | undefined,
+  sceneIndex: number | undefined
+): Promise<PlanSceneHint | null> {
+  if (!scenePlanId || !sceneIndex || !/^[0-9a-f-]{36}$/i.test(scenePlanId)) return null
+  try {
+    const job = await new GenerationJobRepository().findById(ctx, scenePlanId)
+    if (!job || job.feature !== SCENE_PLAN_FEATURE || job.status !== "COMPLETED") return null
+    const scene = parseStoredScenePlan(job.output)?.scenes.find((s) => s.sceneIndex === sceneIndex)
+    return scene ? { shot: scene.shot, lighting: scene.lighting, palette: scene.palette } : null
+  } catch {
+    return null
+  }
+}
+
+async function directionPayload(ctx: TenantContext, input: RequestVariantsInput) {
+  const hint = await sceneHintFor(ctx, input.scenePlanId, input.sceneIndex)
+  return variantDirectionPayload(resolveVariantDirection(input.direction ?? {}, hint))
 }
 
 /**
@@ -77,6 +113,7 @@ export async function requestVariants(ctx: TenantContext, input: RequestVariants
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
       ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),
       ...(input.scenePlanRevision ? { scene_plan_revision: input.scenePlanRevision } : {}),
+      ...(await directionPayload(ctx, input)),
     },
     idempotencyKey: input.idempotencyKey,
   })
@@ -128,6 +165,7 @@ export async function requestCloudVariant(ctx: TenantContext, input: RequestClou
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
       ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),
       ...(input.scenePlanRevision ? { scene_plan_revision: input.scenePlanRevision } : {}),
+      ...(await directionPayload(ctx, input)),
     },
     idempotencyKey: input.idempotencyKey,
   })

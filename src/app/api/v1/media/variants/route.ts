@@ -41,6 +41,14 @@ export const POST = handle(async (request) => {
     sceneIndex: data.scene_index as NarrativeSceneIndex | undefined,
     scenePlanId: data.scene_plan_id,
     scenePlanRevision: data.scene_plan_revision,
+    // Chỉ đạo khung hình (Đợt 1 nâng cấp chất lượng, 24/09/2026) — thiếu thì use-case lấy từ kịch bản.
+    direction: {
+      fillMode: data.fill_mode,
+      composition: data.composition,
+      lighting: data.lighting,
+      palette: data.palette,
+      seed: data.seed,
+    },
   }
 
   const result =

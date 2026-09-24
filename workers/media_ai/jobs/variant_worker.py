@@ -56,9 +56,11 @@ from psycopg.rows import dict_row
 from shared.storage import doc_bytes, ghi_bytes
 from media_ai.image.auto_retouch import tu_dong_can_bang_sang
 from media_ai.image.brand_watermark import dong_dau
+from media_ai.image.composition import tinh_bo_cuc
 from media_ai.image.defringe import EdgeDefringer
 from media_ai.image.ratio_frame import RATIO_PRESETS, dong_khung
 from media_ai.image.studio_backdrop import StudioBackdropEngine
+from media_ai.providers.background.base import HUONG_SANG, BackgroundRequest
 from media_ai.providers.background.stability_background import (
     BackgroundProviderError,
     resolve_background_provider,
@@ -74,11 +76,16 @@ FEATURE = "media.variant"
 # cấp vẽ không gian trống, chủ thể vẫn dán nguyên khối từ Master Image. Tách
 # `feature` riêng để bảng giá (`pricing.ts`) tính khác nhánh local 0đ.
 CLOUD_FEATURE = "media.variant.cloud"
-PIPELINE_VERSION = "m04b-1"
-CLOUD_PIPELINE_VERSION = "m04b-cloud-1"
+# m04b-2 / m04b-cloud-2 (24/09/2026): khung đúng tỉ lệ đích + bố cục + bóng theo
+# hướng sáng (`fill_mode=full_frame`). Job `fill_mode=pad` vẫn ra ảnh như bản 1.
+PIPELINE_VERSION = "m04b-2"
+CLOUD_PIPELINE_VERSION = "m04b-cloud-2"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 STORAGE_ROOT = REPO_ROOT / "var" / "storage"
+
+# Ngưỡng alpha tính hộp BỐ CỤC của bó hoa (khung full_frame, 24/09/2026).
+NGUONG_HOP_BO_CUC = 32
 
 # Cache tách chủ thể cho một lượt chạy lô nhiều biến thể (nợ #108, AIC-17 mở
 # rộng "30 mẫu khác nhau từ ảnh gốc"). Xem docstring `_doan_chu_the`.
@@ -508,6 +515,10 @@ def dung_bien_the(
     cache_dir: Path | None = None,
     on_stage: Callable[[str], None] | None = None,
     hau_canh_bytes: bytes | None = None,
+    fill_mode: str = "full_frame",
+    composition: dict[str, Any] | None = None,
+    lighting: dict[str, Any] | None = None,
+    nguon_hau_canh: Callable[[str, int, int], Image.Image | None] | None = None,
 ) -> tuple[list[dict[str, Any]], float, Any]:
     """Dựng danh sách biến thể, đo lõi chủ thể, và trả về bộ mở-rộng-khung
     (`ImageExpander`) đã dùng cho biến thể "styled" nếu có (`AIC-13`, nợ
@@ -539,6 +550,17 @@ def dung_bien_the(
     tách chủ thể được cache theo đĩa để một lượt chạy lô nhiều tổ hợp
     preset×ratio trên CÙNG Master Image không tách lại 24 lần — xem
     `_doan_chu_the`. Mặc định `None` giữ nguyên hành vi cũ (luôn tách mới).
+
+    `fill_mode` (Đợt 1 nâng cấp chất lượng, 24/09/2026 — PO chốt làm mặc định):
+    `"full_frame"` dựng khung làm việc ĐÚNG tỉ lệ đích, đặt bó hoa theo
+    `composition` (`shot` close/medium/wide, `placement` center/left_third/
+    right_third) ở ĐÚNG độ phân giải gốc, ghép lên hậu cảnh cùng kích thước —
+    không còn dải màu đệm. `"pad"` là hành vi cũ (ghép ở kích thước Master rồi
+    đệm), giữ để tương thích. `lighting.direction` (left/right/above/front)
+    quyết định hướng bóng đổ. `nguon_hau_canh(ratio, rong, cao)` trả hậu cảnh
+    cho khung làm việc (nhánh Cloud) hoặc `None` để dùng phông cục bộ — gọi SAU
+    khi đã biết kích thước khung, nên nhà cung cấp vẽ đúng tỉ lệ đích.
+    Mỗi mục "styled" trả thêm `subject_box` (x, y, rộng, cao trong khung cuối).
 
     `on_stage` (nợ #110, 18/09): callback tuỳ chọn gọi ĐÚNG lúc chuyển từ
     bước tách chủ thể sang bước ghép bối cảnh — trước đây `process_variant_job`
@@ -576,7 +598,77 @@ def dung_bien_the(
     #    dựng hai bản giống hệt nhau chỉ để đủ số lượng là làm phiền người xem.
     anh_boi_canh: Image.Image | None = None
     expander_dung: Any = None
-    if style != "transparent":
+    de_do_can_chinh: Image.Image | None = None
+    huong_sang = str((lighting or {}).get("direction") or "left")
+    if huong_sang not in HUONG_SANG:
+        huong_sang = "left"
+    if style != "transparent" and fill_mode != "pad":
+        # ── Khung đúng tỉ lệ đích (Đợt 1) ─────────────────────────────────
+        # Hộp bố cục theo THÂN RÕ của bó hoa (alpha > NGUONG_HOP_BO_CUC): mô
+        # hình tách nền để lại quầng mờ lác đác (đo 24/09: alpha>0 cao 787px,
+        # alpha>32 cao 459px trên cùng một ảnh) — tính cả quầng thì bó hoa bị
+        # hiểu sai kích thước và đặt lệch. Ảnh tách nền vẫn dán NGUYÊN VẸN.
+        hop = (
+            alpha.point(lambda p: 255 if p > NGUONG_HOP_BO_CUC else 0).getbbox()
+            or alpha.point(lambda p: 255 if p > 0 else 0).getbbox()
+            or (0, 0, rgba.width, rgba.height)
+        )
+        bx, by, bx2, by2 = hop
+        rong_ct, cao_ct = bx2 - bx, by2 - by
+        bc = tinh_bo_cuc(
+            rong_ct, cao_ct, ratio,
+            shot=(composition or {}).get("shot"),
+            placement=(composition or {}).get("placement"),
+            cao_xuat=RATIO_PRESETS.get(ratio, RATIO_PRESETS["1:1"])[1],
+        )
+        khung_lam_viec = Image.new("RGBA", (bc.rong, bc.cao), (0, 0, 0, 0))
+        # Dán TOÀN BỘ ảnh tách nền với độ lệch sao cho hộp bố cục rơi đúng
+        # (bc.x, bc.y); paste KHÔNG mặt nạ = sao chép nguyên giá trị RGBA.
+        # Phần quầng mờ lọt ra ngoài khung bị cắt — không đụng lõi bó hoa.
+        khung_lam_viec.paste(rgba, (bc.x - bx, bc.y - by))
+
+        anh_hau_canh = nguon_hau_canh(ratio, bc.rong, bc.cao) if nguon_hau_canh is not None else None
+        if anh_hau_canh is None and hau_canh_bytes is not None:
+            anh_hau_canh = Image.open(BytesIO(hau_canh_bytes))
+            anh_hau_canh.load()
+        anh_boi_canh = engine.composite(
+            khung_lam_viec,
+            style=style,
+            with_shadow=True,
+            with_light_wrap=True,
+            backdrop_image=anh_hau_canh,
+            light_direction=huong_sang,
+        )
+        if auto_enhance:
+            anh_boi_canh = _ap_dung_auto_enhance(anh_boi_canh, khung_lam_viec)
+        if expand_provider and expand_provider.strip().lower() != "pad":
+            log.info("fill_mode=full_frame: bỏ qua expand_provider=%s (khung đã đúng tỉ lệ, không cần mở rộng)", expand_provider)
+
+        # Đo Subject Integrity trên vùng căn đúng toạ độ Master — bó hoa ở
+        # (bc.x, bc.y) trong khung làm việc tương ứng (bx, by) ở ảnh gốc.
+        lech_x, lech_y = bc.x - bx, bc.y - by
+        de_do_can_chinh = anh_boi_canh.crop(
+            (lech_x, lech_y, lech_x + master_rgb.width, lech_y + master_rgb.height)
+        )
+
+        anh_styled = _dong_khung(anh_boi_canh, ratio)  # cùng tỉ lệ → chỉ co giãn, không đệm
+        he_so = anh_styled.height / bc.cao
+        bien_the.append(
+            {
+                "key": "styled",
+                "title": NHAN_PRESET.get(preset, "Bối cảnh studio"),
+                "background": NHAN_PRESET.get(preset, "Bối cảnh studio"),
+                "image": anh_styled,
+                "watermark": False,
+                "generative_fill_used": True,
+                "subject_box": (
+                    round(bc.x * he_so), round(bc.y * he_so), round(rong_ct * he_so), round(cao_ct * he_so)
+                ),
+                "composition": {"shot": bc.shot, "placement": bc.placement, "fill_mode": "full_frame"},
+                "light_direction": huong_sang,
+            }
+        )
+    elif style != "transparent":
         # `hau_canh_bytes` (nhánh Cloud, 23/09/2026): hậu cảnh trống do nhà
         # cung cấp sinh — thay phông tự dựng; chủ thể vẫn dán nguyên khối.
         anh_hau_canh = None
@@ -676,7 +768,10 @@ def dung_bien_the(
     # Đo trên bản bối cảnh nếu có (nó đi qua NHIỀU bước xử lý nhất), ngược
     # lại đo trên bản tách nền. Đo bản dễ nhất rồi báo cáo cho cả lượt là
     # cách một cổng an toàn trở thành hình thức.
-    de_do = anh_boi_canh if anh_boi_canh is not None else rgba
+    if de_do_can_chinh is not None:
+        de_do = de_do_can_chinh
+    else:
+        de_do = anh_boi_canh if anh_boi_canh is not None else rgba
     do_trung = _do_lo_chu_the(master_rgb, de_do, alpha)
 
     return bien_the, do_trung, expander_dung
@@ -748,6 +843,8 @@ def _ghi_asset_bien_the(
                         "watermark": item["watermark"],
                         "engine": nguon.get("engine", "local_studio"),
                         "scene_prompt": nguon.get("scene_prompt"),
+                        "seed": nguon.get("seed"),
+                        "fill_mode": nguon.get("fill_mode", "pad"),
                     }
                 ),
                 "identity_score": do_trung,
@@ -775,6 +872,14 @@ def _ghi_asset_bien_the(
                         "scene_index": nguon.get("scene_index"),
                         "scene_plan_id": nguon.get("scene_plan_id"),
                         "scene_plan_revision": nguon.get("scene_plan_revision"),
+                        # Đợt 1 (24/09/2026): đủ để tái tạo và để QA đối chiếu.
+                        "fill_mode": nguon.get("fill_mode", "pad"),
+                        "composition": item.get("composition") or nguon.get("composition"),
+                        "light_direction": item.get("light_direction"),
+                        "subject_box": list(item["subject_box"]) if item.get("subject_box") else None,
+                        "seed": nguon.get("seed"),
+                        "scene_prompt": nguon.get("scene_prompt"),
+                        "provider_ignored": nguon.get("provider_ignored") or [],
                     }
                 ),
                 "created_by": job["user_id"],
@@ -825,10 +930,66 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
         # Nhánh Cloud (23/09/2026) — nhà cung cấp chỉ vẽ HẬU CẢNH TRỐNG; mọi
         # lỗi (thiếu khoá, 402/403/429, mạng) lùi về phông cục bộ của chính
         # preset này và GHI RÕ việc lùi vào asset + sự kiện job, không im lặng.
+        # Đợt 1 nâng cấp chất lượng (24/09/2026): ý định bố cục / ánh sáng / bảng
+        # màu / seed. Phía TS tự điền từ kịch bản Chặng 05 khi giao diện không gửi.
+        fill_mode = payload.get("fill_mode") or "full_frame"
+        composition = payload.get("composition") if isinstance(payload.get("composition"), dict) else {}
+        lighting = payload.get("lighting") if isinstance(payload.get("lighting"), dict) else {}
+        palette = tuple(str(m) for m in (payload.get("palette") or []) if isinstance(m, str))
+        seed = payload.get("seed") if isinstance(payload.get("seed"), int) else None
+        nguon.update({"fill_mode": fill_mode, "composition": composition, "lighting": lighting})
+
+        # Nhánh Cloud (23/09/2026) — nhà cung cấp chỉ vẽ HẬU CẢNH TRỐNG; mọi
+        # lỗi (thiếu khoá, 402/403/429, mạng) lùi về phông cục bộ của chính
+        # preset này và GHI RÕ việc lùi vào asset + sự kiện job, không im lặng.
         hau_canh_bytes: bytes | None = None
-        if job.get("feature") == CLOUD_FEATURE and preset != "transparent":
-            _set_stage(conn, job["id"], "GENERATING_BACKGROUND")
+        nguon_hau_canh: Callable[[str, int, int], Image.Image | None] | None = None
+        la_cloud = job.get("feature") == CLOUD_FEATURE and preset != "transparent"
+        if la_cloud:
             nguon.update({"engine": "cloud_provider", "pipeline_version": CLOUD_PIPELINE_VERSION})
+
+        def _lui_ve_cuc_bo(exc: BackgroundProviderError, bat_dau: float) -> None:
+            nguon.update({"cloud_fallback": True, "cloud_fallback_reason": str(exc)[:300]})
+            # In ra terminal worker — trước 24/09 lỗi này chỉ nằm trong DB,
+            # người vận hành không thấy vì sao ảnh chỉ có phông trơn.
+            log.warning(
+                "Nhà cung cấp không vẽ được hậu cảnh (job %s, HTTP %s) — lùi về phông cục bộ: %s",
+                job["id"], exc.status_code, str(exc)[:300],
+            )
+            ghi_ai_request(
+                conn, job_id=job["id"], organization_id=organization_id, capability_code="AIC-17",
+                model_key="stability_ai:stable-image-core-v2beta", outcome="FAILED",
+                latency_ms=int((time.monotonic() - bat_dau) * 1000),
+            )
+            _emit_event(
+                conn, job["id"], "log",
+                {
+                    "message": "Nhà cung cấp hậu cảnh lỗi — lùi về phông Studio cục bộ",
+                    "cloud_fallback": True, "reason": str(exc)[:300], "status_code": exc.status_code,
+                },
+            )
+
+        def _ghi_nguon_cloud(provider: Any, bat_dau: float, prompt: str | None, seed_dung: int | None, bo_qua: list[str]) -> None:
+            nguon.update(
+                {
+                    "background_provider": provider.name,
+                    "provider": provider.name,
+                    "model": f"rembg+{provider.name}_background",
+                    "model_version": provider.model_version,
+                    "scene_prompt": prompt,
+                    "seed": seed_dung,
+                    "provider_ignored": bo_qua,
+                }
+            )
+            ghi_ai_request(
+                conn, job_id=job["id"], organization_id=organization_id, capability_code="AIC-17",
+                model_key=f"{provider.name}:{provider.model_version}", outcome="ACCEPTED",
+                latency_ms=int((time.monotonic() - bat_dau) * 1000), image_count=1,
+            )
+
+        if la_cloud and fill_mode == "pad":
+            # Hành vi cũ: hậu cảnh theo tỉ lệ ảnh Master, ghép rồi đệm.
+            _set_stage(conn, job["id"], "GENERATING_BACKGROUND")
             bat_dau_cloud = time.monotonic()
             try:
                 provider = resolve_background_provider(payload.get("provider"))
@@ -836,55 +997,35 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                     rong, cao = anh_master.size
                 ket_qua_cloud = provider.sinh_hau_canh(payload.get("scene_prompt"), rong, cao)
                 hau_canh_bytes = ket_qua_cloud["image"]
-                nguon.update(
-                    {
-                        "background_provider": provider.name,
-                        "provider": provider.name,
-                        "model": "rembg+stability_background",
-                        "model_version": provider.model_version,
-                        "scene_prompt": ket_qua_cloud["prompt"],
-                    }
-                )
-                ghi_ai_request(
-                    conn,
-                    job_id=job["id"],
-                    organization_id=organization_id,
-                    capability_code="AIC-17",
-                    model_key=f"{provider.name}:{provider.model_version}",
-                    outcome="ACCEPTED",
-                    latency_ms=int((time.monotonic() - bat_dau_cloud) * 1000),
-                    image_count=1,
-                )
+                _ghi_nguon_cloud(provider, bat_dau_cloud, ket_qua_cloud["prompt"], None, [])
             except BackgroundProviderError as exc:
-                nguon.update({"cloud_fallback": True, "cloud_fallback_reason": str(exc)[:300]})
-                # In ra terminal worker — trước 24/09 lỗi này chỉ nằm trong DB,
-                # người vận hành không thấy vì sao ảnh chỉ có phông trơn.
-                log.warning(
-                    "Stability không vẽ được hậu cảnh (job %s, HTTP %s) — lùi về phông cục bộ: %s",
-                    job["id"],
-                    exc.status_code,
-                    str(exc)[:300],
-                )
-                ghi_ai_request(
-                    conn,
-                    job_id=job["id"],
-                    organization_id=organization_id,
-                    capability_code="AIC-17",
-                    model_key="stability_ai:stable-image-core-v2beta",
-                    outcome="FAILED",
-                    latency_ms=int((time.monotonic() - bat_dau_cloud) * 1000),
-                )
-                _emit_event(
-                    conn,
-                    job["id"],
-                    "log",
-                    {
-                        "message": "Nhà cung cấp hậu cảnh lỗi — lùi về phông Studio cục bộ",
-                        "cloud_fallback": True,
-                        "reason": str(exc)[:300],
-                        "status_code": exc.status_code,
-                    },
-                )
+                _lui_ve_cuc_bo(exc, bat_dau_cloud)
+        elif la_cloud:
+            # Khung đúng tỉ lệ đích: gọi nhà cung cấp SAU khi `dung_bien_the` biết
+            # kích thước khung làm việc — hậu cảnh vẽ đúng khung, không phải đệm.
+            def _hau_canh_cloud(ratio_khung: str, rong: int, cao: int) -> Image.Image | None:
+                _set_stage(conn, job["id"], "GENERATING_BACKGROUND")
+                bat_dau = time.monotonic()
+                try:
+                    provider = resolve_background_provider(payload.get("provider"))
+                    kq = provider.generate(
+                        BackgroundRequest(
+                            ratio=ratio_khung, rong=rong, cao=cao,
+                            scene_prompt=payload.get("scene_prompt"),
+                            lighting_direction=lighting.get("direction"),
+                            lighting_mood=lighting.get("mood"),
+                            palette=palette,
+                            shot=composition.get("shot"),
+                            seed=seed,
+                        )
+                    )
+                except BackgroundProviderError as exc:
+                    _lui_ve_cuc_bo(exc, bat_dau)
+                    return None
+                _ghi_nguon_cloud(provider, bat_dau, kq.prompt, kq.seed, kq.bo_qua)
+                return kq.anh
+
+            nguon_hau_canh = _hau_canh_cloud
 
         _set_stage(conn, job["id"], "SEGMENTING")
 
@@ -901,6 +1042,10 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 cache_dir=SEGMENTATION_CACHE_ROOT,
                 on_stage=lambda stage: _set_stage(conn, job["id"], stage),
                 hau_canh_bytes=hau_canh_bytes,
+                fill_mode=fill_mode,
+                composition=composition,
+                lighting=lighting,
+                nguon_hau_canh=nguon_hau_canh,
             )
         except Exception:
             ghi_ai_request(
@@ -1000,6 +1145,12 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "scene_index": scene_index,
             "scene_plan_id": scene_plan_id,
             "scene_plan_revision": scene_plan_revision,
+            "fill_mode": fill_mode,
+            "composition": next((b.get("composition") for b in bien_the if b.get("composition")), None),
+            "light_direction": next((b.get("light_direction") for b in bien_the if b.get("light_direction")), None),
+            "seed": nguon.get("seed"),
+            "scene_prompt": nguon.get("scene_prompt"),
+            "provider_ignored": nguon.get("provider_ignored") or [],
         }
         with conn.cursor() as cur:
             cur.execute(

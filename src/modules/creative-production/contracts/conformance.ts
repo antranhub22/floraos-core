@@ -13,7 +13,8 @@ import type { z } from "zod"
 import type { AnalyzeProductVisionOutput } from "@/modules/market-intelligence/use-cases/analyze-product-vision"
 import type { ProductIntelligenceReport } from "@/modules/market-intelligence/domain/product-intelligence-types"
 import type { CreateAudioJobResult } from "@/modules/audio-studio/use-cases/create-audio-job"
-import type { ScenePlan, ScenePlanTransition, LocalBackdrop } from "../domain/scene-plan-rules"
+import type { ScenePlan, ScenePlanShot, ScenePlanTransition, LocalBackdrop } from "../domain/scene-plan-rules"
+import type { VariantShot } from "@/modules/media/domain/variant-direction-rules"
 import type { PublishVideoFormat } from "../domain/publishing-rules"
 import type { HandoffUrlInput } from "../domain/build-handoff-url"
 import type {
@@ -65,7 +66,8 @@ export type CreativeStudioContractConformance = [
   Expect<Same<HandoffUrlInput["mode"], Out<typeof handoffQuerySchema>["mode"]>>,
   Expect<Same<HandoffUrlInput["area"], Out<typeof handoffQuerySchema>["area"]>>,
   Expect<Same<HandoffUrlInput["source"], Out<typeof handoffQuerySchema>["source"]>>,
-  // Chặng 06
+  // Chặng 06 — cỡ cảnh của ảnh biến thể = cỡ cảnh của kịch bản (Đợt 1, 24/09/2026)
+  Expect<Same<VariantShot, ScenePlanShot>>,
   Expect<Fits<ContentDraftDto, Out<typeof contentDraftSchema>>>,
   Expect<Fits<CreateAudioJobResult, Out<typeof audioJobResultSchema>>>,
   Expect<Covers<Out<typeof audioJobResultSchema>, CreateAudioJobResult>>,

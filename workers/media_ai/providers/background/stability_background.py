@@ -26,7 +26,20 @@ from typing import Any
 import platform
 import ssl
 
+import random
+from io import BytesIO
+
 import httpx
+from PIL import Image
+
+from media_ai.providers.background.base import (
+    NEGATIVE_MAC_DINH,
+    RANG_BUOC_CANH_TRONG,
+    BackgroundRequest,
+    BackgroundResult,
+    NangLuc,
+    dung_prompt_hau_canh,
+)
 
 _ENDPOINT = "https://api.stability.ai/v2beta/stable-image/generate/core"
 
@@ -43,14 +56,9 @@ _TY_LE_HO_TRO: dict[str, float] = {
     "9:21": 9 / 21,
 }
 
-# Luôn nối vào lời nhắc: nhà cung cấp chỉ được vẽ không gian trống. Nếu mô hình
-# vẫn vẽ lẫn hoa vào hậu cảnh thì bó hoa thật dán đè lên vẫn nguyên vẹn — đây là
-# lớp giảm nhiễu thị giác, không phải lớp bảo vệ sản phẩm.
-_RANG_BUOC_CANH_TRONG = (
-    "empty scene, no flowers, no bouquet, no vase, no people, no hands, no text, "
-    "no logo, space in the center foreground for a product, photorealistic"
-)
-_NEGATIVE = "flowers, bouquet, vase, person, hand, text, watermark, logo, blurry, distorted"
+# Ràng buộc "cảnh trống" + negative dùng chung khung adapter (`base.py`).
+_RANG_BUOC_CANH_TRONG = RANG_BUOC_CANH_TRONG
+_NEGATIVE = NEGATIVE_MAC_DINH
 
 _DO_DAI_PROMPT_TOI_DA = 600
 
@@ -86,6 +94,9 @@ def lam_sach_prompt(scene_prompt: str | None) -> str:
 class StabilityBackgroundProvider:
     name = "stability_ai"
     model_version = "stable-image-core-v2beta"
+    # Bảng năng lực (Đợt 1, 24/09/2026). Seed 0..4294967294 theo API v2beta.
+    nang_luc = NangLuc(seed=True, negative_prompt=True, ratios=frozenset(_TY_LE_HO_TRO))
+    SEED_TOI_DA = 4_294_967_294
 
     def __init__(
         self,
@@ -103,23 +114,47 @@ class StabilityBackgroundProvider:
         Ném `BackgroundProviderError` cho MỌI lỗi — kể cả thiếu khoá — để
         worker có đúng một nhánh lùi về phông cục bộ.
         """
-        if not self._api_key:
-            raise BackgroundProviderError("Thiếu STABILITY_API_KEY")
-
         prompt = lam_sach_prompt(scene_prompt)
         ty_le = chon_ty_le(width, height)
+        return {"image": self._goi(prompt, ty_le, None), "prompt": prompt, "aspect_ratio": ty_le}
+
+    def generate(self, req: BackgroundRequest) -> BackgroundResult:
+        """Adapter theo khung chung: ý định FloraOS → tham số Stability Core.
+
+        - khung: `aspect_ratio` = ĐÚNG tỉ lệ đích (không còn theo ảnh Master);
+        - ánh sáng / cỡ cảnh / bảng màu: ghép vào `prompt` (`dung_prompt_hau_canh`);
+        - seed: luôn gửi và luôn trả về — không truyền thì tự bốc, để tái tạo được.
+        """
+        prompt, bo_qua = dung_prompt_hau_canh(req)
+        ty_le = req.ratio if req.ratio in _TY_LE_HO_TRO else chon_ty_le(req.rong, req.cao)
+        seed = req.seed if req.seed is not None else random.randint(0, self.SEED_TOI_DA)
+        seed = max(0, min(int(seed), self.SEED_TOI_DA))
+        du_lieu = self._goi(prompt, ty_le, seed)
+        try:
+            anh = Image.open(BytesIO(du_lieu))
+            anh.load()
+        except Exception as exc:  # noqa: BLE001 — ảnh hỏng là lỗi nhà cung cấp, lùi về phông cục bộ
+            raise BackgroundProviderError(f"Stability trả ảnh không đọc được: {exc}") from exc
+        return BackgroundResult(anh=anh, prompt=prompt, seed=seed, aspect_ratio=ty_le, bo_qua=bo_qua)
+
+    def _goi(self, prompt: str, ty_le: str, seed: int | None) -> bytes:
+        if not self._api_key:
+            raise BackgroundProviderError("Thiếu STABILITY_API_KEY")
+        du_lieu_form: dict[str, Any] = {
+            "prompt": prompt,
+            "negative_prompt": _NEGATIVE,
+            "aspect_ratio": ty_le,
+            "output_format": "png",
+        }
+        if seed is not None:
+            du_lieu_form["seed"] = str(seed)
         client = self._client if self._client is not None else httpx.Client(timeout=self._timeout_s)
         try:
             resp = client.post(
                 _ENDPOINT,
                 headers={"Authorization": f"Bearer {self._api_key}", "Accept": "image/*"},
                 files={"none": ("", b"")},
-                data={
-                    "prompt": prompt,
-                    "negative_prompt": _NEGATIVE,
-                    "aspect_ratio": ty_le,
-                    "output_format": "png",
-                },
+                data=du_lieu_form,
             )
         except httpx.HTTPError as exc:
             if "PROTOCOL_VERSION" in str(exc).upper():
@@ -152,7 +187,7 @@ class StabilityBackgroundProvider:
             raise BackgroundProviderError(
                 f"Stability trả dữ liệu không phải ảnh ({content_type}, {len(resp.content)} bytes)"
             )
-        return {"image": resp.content, "prompt": prompt, "aspect_ratio": ty_le}
+        return resp.content
 
 
 def resolve_background_provider(provider_key: str | None) -> StabilityBackgroundProvider:

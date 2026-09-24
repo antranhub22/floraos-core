@@ -236,6 +236,9 @@ class TestDungBienTheVoiExpander:
             logo_bytes=None,
             ten_tiem=None,
             expand_provider="gia_lap",
+            # Mở rộng khung chỉ có nghĩa ở chế độ đệm cũ; `full_frame` (mặc định
+            # từ 24/09/2026) dựng khung đúng tỉ lệ nên không cần expander.
+            fill_mode="pad",
         )
 
         styled = next(b for b in bien_the if b["key"] == "styled")

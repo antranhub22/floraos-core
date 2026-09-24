@@ -309,6 +309,14 @@ class StudioBackdropEngine:
         top = (nh - height) // 2
         return resized.crop((left, top, left + width, top + height))
 
+    # Hệ số (x, y) nhân vào độ lệch bóng mặc định theo hướng nguồn sáng.
+    SHADOW_OFFSET_BY_LIGHT: dict[str, tuple[float, float]] = {
+        "left": (1.0, 1.0),     # sáng trái → bóng lệch phải-xuống (hành vi cũ)
+        "right": (-1.0, 1.0),   # sáng phải → bóng lệch trái-xuống
+        "above": (0.15, 0.7),   # sáng trên → bóng gần như ngay dưới chân
+        "front": (0.1, 0.45),   # sáng trước mặt → bóng ngắn, sát gốc
+    }
+
     def composite(
         self,
         subject_rgba: Image.Image,
@@ -317,6 +325,7 @@ class StudioBackdropEngine:
         with_light_wrap: bool = True,
         with_arm_fadeout: bool = False,
         backdrop_image: Image.Image | None = None,
+        light_direction: str = "left",
     ) -> Image.Image:
         """Ghép chủ thể RGBA vào phông Studio với hệ thống bóng đổ 2 tầng và Light Wrap quang học.
 
@@ -358,11 +367,14 @@ class StudioBackdropEngine:
                 shadow_color=palette.get("ao_color", (32, 28, 24)),
             )
 
-            # Tầng 2: Directional Soft Shadow (Đổ bóng mềm theo nguồn sáng Top-Left sang góc dưới-phải)
+            # Tầng 2: Directional Soft Shadow — đổ NGƯỢC hướng sáng (Đợt 1,
+            # 24/09/2026: trước đây luôn sáng trên-trái, bóng dưới-phải, bất kể
+            # hậu cảnh sáng từ đâu). "left" giữ nguyên hành vi cũ.
+            dx, dy = self.SHADOW_OFFSET_BY_LIGHT.get(light_direction, self.SHADOW_OFFSET_BY_LIGHT["left"])
             dir_shadow = self.create_contact_shadow(
                 alpha_mask,
-                offset_y=max(14, int(h * 0.022)),
-                offset_x=max(10, int(w * 0.016)),
+                offset_y=int(round(max(14, int(h * 0.022)) * dy)),
+                offset_x=int(round(max(10, int(w * 0.016)) * dx)),
                 blur_radius=max(28, int(h * 0.040)),
                 opacity=0.09,
                 shadow_color=palette["shadow_color"],
