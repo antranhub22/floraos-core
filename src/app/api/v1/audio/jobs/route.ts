@@ -29,6 +29,9 @@ const postSchema = z.object({
   musicTrackId: z.string().max(80).optional(),
   musicMood: z.enum(["romantic", "upbeat", "chill", "warm", "luxury", "none"]).optional(),
   topicAngleCategory: z.string().max(60).optional(),
+  /** Kịch bản sản xuất tổng (Chặng 05) mà bản âm thanh này thực thi — Đợt 2, 24/09/2026. */
+  scenePlanId: z.string().max(160).optional(),
+  scenePlanRevision: z.number().int().min(1).optional(),
 })
 
 /**
@@ -63,6 +66,8 @@ export const POST = handle(async (request) => {
     musicTrackId: d.musicTrackId,
     musicMood: d.musicMood,
     topicAngleCategory: d.topicAngleCategory,
+    scenePlanId: d.scenePlanId,
+    scenePlanRevision: d.scenePlanRevision,
     idempotencyKey,
   })
 

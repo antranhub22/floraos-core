@@ -91,6 +91,7 @@ export function AudioWorkspace() {
 
   // Lời thoại theo KỊCH BẢN BỐI CẢNH của chủ đề (cùng kịch bản với Khu vực D) — chỉ tra.
   const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
+  const [scenePlanRef, setScenePlanRef] = useState<string | null>(null)
   const urlPlanId = searchParams?.get("scenePlanId") ?? null
   useEffect(() => {
     if (!context) return
@@ -107,7 +108,10 @@ export function AudioWorkspace() {
       urlPlanId
     )
       .then(({ loaded }) => {
-        if (!cancelled) setScenePlan(loaded?.plan ?? null)
+        if (!cancelled) {
+          setScenePlan(loaded?.plan ?? null)
+          setScenePlanRef(loaded?.ref ?? null)
+        }
       })
       .catch(() => undefined)
     return () => {
@@ -119,33 +123,45 @@ export function AudioWorkspace() {
   const scenesFromPlan = (plan: ScenePlan): AudioScene[] =>
     plan.scenes.map((sc) => {
       const script = sc.voiceScript || sc.textOverlay || sc.title
-      const base = sc.beat === "CTA" ? 4 : sc.beat === "CLIMAX" ? 7 : 5
-      // Đủ thời gian đọc tự nhiên (worker không còn tua nhanh giọng).
-      return { sceneIndex: sc.sceneIndex, voiceScript: script, targetDurationSeconds: Math.max(base, Math.ceil(estimateSpeechSeconds(script) + 0.5)) }
+      // v2: thời lượng cảnh do KỊCH BẢN SẢN XUẤT TỔNG quyết định (cùng số video E dùng).
+      const base = sc.durationSeconds ?? (sc.beat === "CTA" ? 4 : sc.beat === "CLIMAX" ? 7 : 5)
+      return { sceneIndex: sc.sceneIndex, voiceScript: script, targetDurationSeconds: Math.max(base, Math.round((estimateSpeechSeconds(script) + 0.3) * 10) / 10) }
     })
 
-  useEffect(() => {
-    if (!scenePlan || scenesEdited) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- nạp lời thoại từ kịch bản đã tra được
-    setScenes(scenesFromPlan(scenePlan))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenePlan])
 
   const [voiceId, setVoiceId] = useState(ctx.voiceId ?? "flora-nu-truyen-cam")
   const [providerKey, setProviderKey] = useState<TtsProviderKey>("openai")
   const [qualityTier, setQualityTier] = useState<AudioQualityTier>("hd")
   const [musicTrackId, setMusicTrackId] = useState<string | null>(null)
+  const [userPickedMusic, setUserPickedMusic] = useState(false)
   const [musicLicenseOk, setMusicLicenseOk] = useState<boolean | null>(null)
   const [voiceCloneId, setVoiceCloneId] = useState<string | null>(null)
   const [musicDuration, setMusicDuration] = useState(15)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const preferredMood =
-    ctx.musicMood && ctx.musicMood !== "none"
+    scenePlan?.audio && scenePlan.audio.musicMood !== "none"
+      ? scenePlan.audio.musicMood
+      : ctx.musicMood && ctx.musicMood !== "none"
       ? ctx.musicMood
       : ctx.selectedTopic?.angleCategory
         ? suggestMoodForTopicAngle(ctx.selectedTopic.angleCategory)
         : undefined
+
+  useEffect(() => {
+    if (!scenePlan) return
+    // Đợt 2 (24/09/2026): giọng, chất lượng, nhạc lấy từ kịch bản sản xuất tổng.
+    /* eslint-disable react-hooks/set-state-in-effect -- nạp cấu hình từ kịch bản đã tra được */
+    if (!scenesEdited) setScenes(scenesFromPlan(scenePlan))
+    if (scenePlan.audio) {
+      setVoiceId(scenePlan.audio.voiceId)
+      setQualityTier(scenePlan.audio.qualityTier)
+      if (scenePlan.audio.musicMood === "none") setTaskType("VOICEOVER")
+      if (!userPickedMusic) setMusicTrackId(null)
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenePlan])
 
   const updateScene = useCallback((index: number, field: keyof AudioScene, value: string | number) => {
     setScenesEdited(true)
@@ -247,6 +263,8 @@ export function AudioWorkspace() {
           qualityTier,
           musicTrackId: effectiveMusic ?? undefined,
           musicMood: effectiveMusic ? undefined : "none",
+          // Liên kết với kịch bản sản xuất tổng — video E dùng đúng bản phối này (Đợt 4).
+          ...(scenePlanRef ? { scenePlanId: scenePlanRef, scenePlanRevision: scenePlan?.revision ?? 1 } : {}),
         }),
       })
       if (!res.ok) throw new Error(await readAudioApiError(res))
@@ -337,10 +355,12 @@ export function AudioWorkspace() {
 
       {spec.music !== "none" && (
         <MusicLibraryPanel
+          key={`music-${preferredMood ?? "any"}`}
           value={musicTrackId}
           required={spec.music === "required"}
           preferredMood={preferredMood}
-          onChange={(id, t) => {
+          onChange={(id, t, byUser) => {
+            if (byUser) setUserPickedMusic(true)
             setMusicTrackId(id)
             setMusicLicenseOk(t ? t.license_verified : null)
           }}

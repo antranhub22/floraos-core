@@ -64,6 +64,8 @@ interface CaptionRequest {
 interface CreativeTopicResultItem {
   topicId: string
   topicTitle: string
+  /** Bài đăng do KỊCH BẢN SẢN XUẤT TỔNG (Chặng 05, v2) viết — ưu tiên hơn khuôn dự phòng. */
+  planPosts?: Array<{ channel: "facebook" | "instagram" | "tiktok" | "zalo"; text: string; hashtags: readonly string[] }>
   arc?: {
     emotionalTone?: string
     narrativeReasoning?: string
@@ -164,8 +166,11 @@ function CreativeResultViewerBody({
   const cta = captions[0]?.cta || "Nhắn tin cho tiệm để nhận ưu đãi ngay hôm nay!"
 
   // Sinh trọn bộ 4 bài viết hoàn chỉnh đa kênh
+  // Đợt 2 (24/09/2026): kênh nào kịch bản Chặng 05 đã viết bài thì dùng bài đó
+  // (cùng câu chuyện với ảnh/âm thanh/video); kênh còn lại dùng khuôn dự phòng.
+  const planPosts = currentResult.planPosts
   const generatedPosts = useMemo(() => {
-    return generateAllPlatformPosts({
+    const base = generateAllPlatformPosts({
       mode,
       productName,
       components,
@@ -177,7 +182,15 @@ function CreativeResultViewerBody({
       cta,
       hashtags: baseHashtags,
     })
-  }, [mode, productName, components, colors, style, price, currentResult.topicTitle, hook, cta, baseHashtags])
+    for (const p of planPosts ?? []) {
+      const gen = base[p.channel]
+      if (!gen) continue
+      const tags = [...p.hashtags]
+      const fullContent = tags.length ? `${p.text}\n\n${tags.join(" ")}` : p.text
+      base[p.channel] = { ...gen, fullContent, hashtags: tags, characterCount: fullContent.length }
+    }
+    return base
+  }, [mode, productName, components, colors, style, price, currentResult.topicTitle, hook, cta, baseHashtags, planPosts])
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text)
@@ -585,6 +598,13 @@ function CreativeResultViewerBody({
           </button>
         </div>
       </div>
+
+      {planPosts && planPosts.length > 0 && (
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[12px] text-emerald-800">
+          Bài {planPosts.map((p) => PLATFORM_LABELS[p.channel]?.label ?? p.channel).join(", ")} lấy từ kịch bản sản xuất Chặng 05
+          (cùng câu chuyện với ảnh, âm thanh, video). Kênh khác dùng khuôn dự phòng — hãy đọc lại trước khi đăng.
+        </p>
+      )}
 
       {/* ── Lưu bài vào gói chiến dịch (Khu vực F) ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3">

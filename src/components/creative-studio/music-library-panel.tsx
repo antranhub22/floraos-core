@@ -39,7 +39,7 @@ export function MusicLibraryPanel({
   preferredMood,
 }: {
   value: string | null
-  onChange: (trackId: string | null, track: MusicTrackItem | null) => void
+  onChange: (trackId: string | null, track: MusicTrackItem | null, byUser?: boolean) => void
   required: boolean
   preferredMood?: string | undefined
 }) {
@@ -107,7 +107,7 @@ export function MusicLibraryPanel({
       <div className="flex flex-col gap-2">
         {!required && (
           <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px]">
-            <input type="radio" checked={value === null} onChange={() => onChange(null, null)} />
+            <input type="radio" checked={value === null} onChange={() => onChange(null, null, true)} />
             Không dùng nhạc nền
           </label>
         )}
@@ -118,7 +118,7 @@ export function MusicLibraryPanel({
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-text">
-                <input type="radio" checked={value === t.track_id} onChange={() => onChange(t.track_id, t)} />
+                <input type="radio" checked={value === t.track_id} onChange={() => onChange(t.track_id, t, true)} />
                 {t.title}
                 <span className="font-normal text-text-muted">
                   · {MOOD_LABEL[t.mood] ?? t.mood}
@@ -174,7 +174,7 @@ export function MusicLibraryPanel({
             onDone={(t) => {
               setShowUpload(false)
               setReloadKey((k) => k + 1)
-              onChange(t.track_id, t)
+              onChange(t.track_id, t, true)
             }}
           />
         )}

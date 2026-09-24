@@ -66,6 +66,8 @@ export async function getAudioJob(ctx: TenantContext, jobId: string) {
     voice_only_url: voiceOnlyUrl,
     voice_only_storage_key: voiceOnlyKey,
     credits_cost: (payload.creditsCost as number | undefined) ?? 0,
+    scene_plan_id: (payload.scenePlanId as string | null | undefined) ?? null,
+    scene_plan_revision: (payload.scenePlanRevision as number | null | undefined) ?? null,
     refunded,
     error: job.errorMessage,
     created_at: job.createdAt,

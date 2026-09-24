@@ -47,6 +47,9 @@ export interface CreateAudioJobInput {
   /** Mood — chỉ dùng để tự chọn bài khi không truyền `musicTrackId`. */
   readonly musicMood?: MusicMood | undefined
   readonly topicAngleCategory?: string | undefined
+  /** Kịch bản sản xuất tổng mà bản âm thanh thực thi (job id hoặc `rule:…`) + phiên bản. */
+  readonly scenePlanId?: string | undefined
+  readonly scenePlanRevision?: number | undefined
   /** `Idempotency-Key` của client (YC-U7). */
   readonly idempotencyKey: string
 }
@@ -164,6 +167,8 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
       bgmDuckingVolume: 0.22,
       bgmNormalVolume: 0.65,
       creditsCost,
+      scenePlanId: input.scenePlanId ?? null,
+      scenePlanRevision: input.scenePlanRevision ?? null,
     },
   })
 

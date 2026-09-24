@@ -290,10 +290,11 @@ function withScenePlan(
       ? item
       : {
           ...item,
+          planPosts: plan.content.posts.map((p) => ({ channel: p.channel, text: p.text, hashtags: p.hashtags })),
           arc: {
             emotionalTone: plan.emotionalTone,
             narrativeReasoning: `${plan.source === "ai" ? "Kịch bản AI" : "Kịch bản cơ bản"} từ Chặng 05 — ${plan.reasoning}`,
-            ...(item.arc?.totalDurationSeconds !== undefined ? { totalDurationSeconds: item.arc.totalDurationSeconds } : {}),
+            totalDurationSeconds: plan.video.totalDurationSeconds,
             scenes: plan.scenes.map((sc, i) => ({
               sceneIndex: sc.sceneIndex,
               beat: sc.beat,
@@ -301,7 +302,8 @@ function withScenePlan(
               sceneDescription: [sc.setting, sc.lighting].filter(Boolean).join(" · "),
               voiceScript: sc.voiceScript,
               textOverlay: sc.textOverlay,
-              durationSeconds: item.arc?.scenes[i]?.durationSeconds ?? (sc.beat === "CTA" ? 4 : 6),
+              // Thời lượng theo kịch bản sản xuất tổng (v2) — cùng số C/E dùng.
+              durationSeconds: sc.durationSeconds ?? item.arc?.scenes[i]?.durationSeconds ?? 5,
               motionEffect: sc.motionEffect,
             })),
           },

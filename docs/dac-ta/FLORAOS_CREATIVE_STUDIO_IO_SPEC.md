@@ -143,6 +143,7 @@ Bảng giá (`audio-pricing-guard.ts`, quyết định PO 24/09 "theo bảng ư�
 | `musicTrackId?` | `trackId` hệ thống hoặc `org:<uuid>` (bài tiệm tải, kiểm thuộc tổ chức) |
 | `musicMood?` | chỉ để tự chọn bài khi không có `musicTrackId`; `none` = không nhạc. Mood không có bài → không tự thay bài khác |
 | `topicAngleCategory?` | gợi ý mood |
+| `scenePlanId?`, `scenePlanRevision?` | kịch bản sản xuất tổng mà bản âm thanh thực thi (Đợt 2, 24/09) — `GET` trả `scene_plan_id`, `scene_plan_revision`; video E dùng đúng bản này |
 
 Ra (201): `{ jobId, generationJobId, taskType, creditsCost, voiceDisplayName, providerKey, musicTrackName, musicLicenseVerified, usage: { costCredit, balanceAfter }, deduped }`.
 
