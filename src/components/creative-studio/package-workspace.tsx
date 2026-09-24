@@ -78,6 +78,7 @@ export function PackageWorkspace() {
   const searchParams = useSearchParams()
   const urlVideoJobId = searchParams?.get("videoJobId") ?? null
   const urlAudioJobId = searchParams?.get("audioJobId") ?? null
+  const urlPlanId = searchParams?.get("scenePlanId") ?? null
 
   const [masterId, setMasterId] = useState<string | null>(null)
   const [resolving, setResolving] = useState(true)
@@ -110,7 +111,7 @@ export function PackageWorkspace() {
       for (const post of p.posts) next[post.channel] = { on: true, text: post.text, tags: post.hashtags.join(" ") }
       return next
     })
-  }, [])
+  }, [setPkg, setSelectedVariants, setVideoJobId, setAudioJobId, setPosts])
 
   // 1. Master đã duyệt + gói mới nhất của Master.
   useEffect(() => {
@@ -180,6 +181,36 @@ export function PackageWorkspace() {
       setMasterId(await promoteToMaster(ctx.assetId))
     })
 
+  // Tài sản THẬT đã sản xuất ở B–E cho Master này (24/09/2026) — trước đây
+  // màn Chặng 07 trống trơn tới khi bấm tạo, rồi người dùng tự tìm lại từng thứ.
+  // Ảnh: bản mới nhất mỗi cảnh của ĐÚNG kịch bản đang mở (URL `scenePlanId`).
+  const producedScenes = (() => {
+    const samePlan = (v: unknown) =>
+      !urlPlanId ? true : urlPlanId === "rule" ? typeof v === "string" && v.startsWith("rule:") : v === urlPlanId
+    const seen = new Set<number>()
+    return marketing
+      .filter((a) => {
+        const m = a.metadata ?? {}
+        if (m.variant_key !== "styled" && m.variant_key !== "branded") return false
+        if (!samePlan(m.scene_plan_id)) return false
+        const idx = typeof m.scene_index === "number" ? m.scene_index : null
+        if (idx === null || seen.has(idx)) return false
+        seen.add(idx)
+        return true
+      })
+      .sort((a, b) => Number(a.metadata?.scene_index ?? 0) - Number(b.metadata?.scene_index ?? 0))
+  })()
+
+  // Video: job trên URL; không có thì video mới nhất đã duyệt P4, rồi mới đến bản đã render.
+  const suggestedVideo = ((): VideoJobSummary | null => {
+    if (urlVideoJobId) return videoJobs.find((v) => v.id === urlVideoJobId) ?? { id: urlVideoJobId, title: "", stage: "?", video_approval: "?", aspect_ratio: "" }
+    return (
+      videoJobs.find((v) => v.video_approval === "APPROVED") ??
+      videoJobs.find((v) => v.stage === "RENDER_COMPLETED") ??
+      null
+    )
+  })()
+
   const handleCreate = () =>
     run("create", async () => {
       if (!masterId) return
@@ -202,7 +233,8 @@ export function PackageWorkspace() {
                 },
               }
             : {}),
-          ...(urlVideoJobId ? { video_job_id: urlVideoJobId } : {}),
+          ...(producedScenes.length > 0 ? { variant_asset_ids: producedScenes.map((a) => a.id) } : {}),
+          ...(suggestedVideo ? { video_job_id: suggestedVideo.id } : {}),
           ...(urlAudioJobId ? { audio_job_id: urlAudioJobId } : {}),
         }),
       })
@@ -299,12 +331,49 @@ export function PackageWorkspace() {
           <h3 className="text-[15px] font-bold text-text">Chặng 07 — Tạo gói chiến dịch</h3>
         </div>
         <p className="text-[13px] text-text-muted">
-          Chưa có gói nào cho Master Image này. Tạo gói nháp rồi chọn ảnh biến thể, video, âm thanh và bài đăng thật
-          đã sản xuất ở Khu vực B–E.
+          Chưa có gói nào cho Master Image này. Dưới đây là những gì đã sản xuất ở Khu vực B–E — bấm tạo gói để đưa
+          sẵn vào, sau đó chỉnh, chạy QA và duyệt.
         </p>
+
+        <div className="rounded-xl border border-border bg-surface-alt p-3.5 space-y-3">
+          <div className="text-[12px] font-bold text-text">
+            Ảnh biến thể theo kịch bản (Khu vực D): {producedScenes.length} cảnh
+          </div>
+          {producedScenes.length > 0 ? (
+            <div className="grid grid-cols-5 gap-2">
+              {producedScenes.map((a) => (
+                <div key={a.id} className="relative aspect-square overflow-hidden rounded-lg border border-border bg-white">
+                  {a.url && <img src={a.url} alt="" className="h-full w-full object-cover" />}
+                  <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] font-bold text-white">
+                    Cảnh {String(a.metadata?.scene_index ?? "")}
+                  </span>
+                  {a.approval_state !== "APPROVED" && (
+                    <span className="absolute bottom-1 left-1 rounded bg-warning-bg px-1 text-[9.5px] text-warning">chưa duyệt</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[12px] text-text-muted">Chưa có ảnh — sinh ảnh ở Khu vực D.</p>
+          )}
+          <div className="text-[12px] text-text">
+            <span className="font-bold">Video (Khu vực E):</span>{" "}
+            {suggestedVideo
+              ? `job ${suggestedVideo.id.slice(0, 8)} · ${suggestedVideo.video_approval === "APPROVED" ? "đã duyệt P4" : suggestedVideo.stage === "RENDER_COMPLETED" ? "đã render, chưa duyệt P4" : suggestedVideo.stage}`
+              : "chưa có video đã render"}
+          </div>
+          <div className="text-[12px] text-text">
+            <span className="font-bold">Âm thanh (Khu vực C):</span>{" "}
+            {urlAudioJobId ? `job ${urlAudioJobId.slice(0, 8)}` : "chưa có"}
+          </div>
+          <div className="text-[12px] text-text-muted">
+            Bài đăng (Khu vực B): thêm sau khi tạo gói — bấm &quot;Lưu bài vào gói chiến dịch&quot; ở Khu vực B hoặc soạn trực tiếp tại đây.
+          </div>
+        </div>
+
         <Button onClick={handleCreate} disabled={busy !== null} className="gap-2">
           {busy === "create" ? <Loader2 size={14} className="animate-spin" /> : <Package size={14} />}
-          Tạo gói chiến dịch
+          Tạo gói chiến dịch với các tài sản trên
         </Button>
         {error && <p className="text-[12.5px] text-danger">{error}</p>}
       </Card>
