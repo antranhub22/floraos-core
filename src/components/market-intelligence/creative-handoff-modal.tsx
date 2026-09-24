@@ -38,9 +38,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { buildHandoffSearchParams } from "@/modules/creative-production/domain/build-handoff-url";
 import {
+  DEFAULT_PLATFORMS,
+  PLATFORM_SPECS,
+  PUBLISH_PLATFORMS,
+  resolvePublishing,
+  type PublishPlatform,
+} from "@/modules/creative-production/domain/publishing-rules";
+import { ProductionPlanPreview } from "@/components/creative-studio/production-plan-preview";
+import {
   passportFromReport,
   RULE_PLAN_REF,
   writeScenePlan,
+  patchScenePlan,
+  type LoadedScenePlan,
 } from "@/components/creative-studio/scene-plan-client";
 import type {
   ConcreteTopic,
@@ -249,6 +259,11 @@ export function CreativeHandoffModal({
   // theo ảnh + chủ đề + mode: chọn lại cùng chủ đề không trừ credit lần hai.
   const [writingPlan, setWritingPlan] = useState(false);
   const [planFailed, setPlanFailed] = useState(false);
+  // v2 (24/09/2026, PO): chọn NỀN TẢNG ĐĂNG → khung hình + khuôn video của cả
+  // bộ tài sản; kịch bản sản xuất tổng hiện để xem/sửa TRƯỚC khi vào Studio.
+  const [platforms, setPlatforms] = useState<PublishPlatform[]>([...DEFAULT_PLATFORMS]);
+  const publishing = resolvePublishing(platforms);
+  const [preview, setPreview] = useState<LoadedScenePlan | null>(null);
 
   const goToStudio = (scenePlanId: string | null) => {
     const params = buildHandoffSearchParams({
@@ -269,11 +284,11 @@ export function CreativeHandoffModal({
     router.push(`/creative-studio?${params.toString()}` as never);
   };
 
-  const handleStart = async () => {
+  const handleStart = async (fresh = false) => {
     setHandoffError(null);
     setWritingPlan(true);
     try {
-      const loaded = await writeScenePlan(
+      let loaded = await writeScenePlan(
         {
           mode,
           productName,
@@ -281,10 +296,17 @@ export function CreativeHandoffModal({
           assetId,
           selectedTopic,
           commercialPassport: passportFromReport(report),
+          platforms,
         },
-        planFailed
+        planFailed || fresh
       );
-      goToStudio(loaded.jobId);
+      // Cùng chủ đề đã có kịch bản (khoá cố định, không trừ credit lần hai)
+      // nhưng người dùng đổi nền tảng → sửa nền tảng trên kịch bản cũ (miễn phí).
+      const same =
+        loaded.plan.publishing.platforms.length === platforms.length &&
+        platforms.every((p) => loaded.plan.publishing.platforms.includes(p));
+      if (!same && loaded.jobId) loaded = await patchScenePlan(loaded.jobId, { platforms });
+      setPreview(loaded);
     } catch (err) {
       setPlanFailed(true);
       setHandoffError(
@@ -348,6 +370,10 @@ export function CreativeHandoffModal({
 
         {/* ── Modal Body (Scrollable) ── */}
         <div className="px-6 py-4 flex flex-col gap-4 overflow-y-auto no-scrollbar">
+          {preview ? (
+            <ProductionPlanPreview loaded={preview} onChange={setPreview} />
+          ) : (
+          <>
           {/* 1. Thẻ Chủ Đề Đã Chọn */}
           <div className="rounded-xl border border-rose-200/80 bg-rose-50/40 p-4 space-y-2.5">
             <div className="flex items-center justify-between">
@@ -479,6 +505,38 @@ export function CreativeHandoffModal({
             </div>
           </div>
 
+          {/* 3b. Nền tảng đăng — quyết định khung hình + khuôn video (v2, 24/09/2026) */}
+          <div>
+            <label className="text-[11.5px] font-bold uppercase tracking-wider text-stone-700 block mb-2">
+              Nền tảng sẽ đăng
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {PUBLISH_PLATFORMS.map((p) => {
+                const on = platforms.includes(p);
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() =>
+                      setPlatforms((prev) => (on ? (prev.length > 1 ? prev.filter((x) => x !== p) : prev) : [...prev, p]))
+                    }
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                      on ? "border-primary bg-rose-50 text-primary" : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                    }`}
+                  >
+                    {PLATFORM_SPECS[p].label} · {PLATFORM_SPECS[p].ratio}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] text-stone-500">
+              Ảnh + video sinh khung <b>{publishing.aspectRatio}</b>, video khoảng {publishing.targetSeconds}s; bài đăng cho{" "}
+              {publishing.postChannels.join(", ")}.
+              {publishing.otherRatios.length > 0 &&
+                ` Chưa sinh khung khác (${publishing.otherRatios.map((o) => `${PLATFORM_SPECS[o.platform].label} ${o.ratio}`).join(", ")}) — mặc định 9:16.`}
+            </p>
+          </div>
+
           {/* 4. Chọn Phân Hệ Đích Đến (Direct Jump) */}
           <div>
             <label className="text-[11.5px] font-bold uppercase tracking-wider text-stone-700 block mb-2">
@@ -541,6 +599,8 @@ export function CreativeHandoffModal({
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
 
         {/* ── Footer ── */}
@@ -571,7 +631,34 @@ export function CreativeHandoffModal({
             >
               Hủy
             </button>
-            {planFailed && (
+            {preview ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setPreview(null)}
+                  className="px-3 py-1.5 rounded-lg border border-stone-200 text-xs font-semibold text-stone-700 hover:bg-white transition"
+                >
+                  ← Chỉnh lựa chọn
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleStart(true)}
+                  disabled={writingPlan}
+                  className="px-3 py-1.5 rounded-lg border border-stone-200 text-xs font-semibold text-stone-700 hover:bg-white transition disabled:opacity-50"
+                >
+                  {writingPlan ? "Đang viết lại..." : "↻ AI viết lại (1 credit)"}
+                </button>
+                <Button
+                  onClick={() => goToStudio(preview.jobId ?? RULE_PLAN_REF)}
+                  className="gap-1.5 bg-primary hover:bg-primary-dark text-white text-xs font-bold px-4 py-2 shadow-xs"
+                >
+                  Dùng kịch bản này · vào Creative Studio
+                  <ArrowRight size={14} />
+                </Button>
+              </>
+            ) : (
+              <>
+                        {planFailed && (
               <button
                 type="button"
                 onClick={handleStartWithRulePlan}
@@ -587,9 +674,11 @@ export function CreativeHandoffModal({
               title="AI viết kịch bản bối cảnh cho chủ đề này (1 credit, chỉ tính lần đầu) rồi mở Creative Studio"
               className="gap-1.5 bg-primary hover:bg-primary-dark text-white text-xs font-bold px-4 py-2 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {writingPlan ? "AI đang viết kịch bản bối cảnh..." : "Bắt đầu sáng tạo · kịch bản AI (1 credit)"}
+              {writingPlan ? "AI đang viết kịch bản sản xuất..." : "Lên kịch bản sản xuất · AI (1 credit)"}
               <ArrowRight size={14} />
             </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

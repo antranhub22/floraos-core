@@ -16,13 +16,32 @@ import {
   MAX_SCENE_PROMPT_LENGTH,
   type VariantPresetId,
 } from "@/modules/media/domain/variant-rules"
+import { checkFlowerContent } from "@/core/ai/domain/flower-content-guard"
+import { estimateSpeechSeconds } from "@/modules/audio-studio/domain/audio-task-rules"
+import { VOICE_CATALOG, suggestVoiceForMode } from "@/modules/audio-studio/domain/voice-catalog"
+import { suggestMoodForTopicAngle } from "@/modules/audio-studio/domain/music-catalog"
+import { CHANNEL_TEXT_LIMITS, INSTAGRAM_MAX_HASHTAGS } from "./campaign-package-rules"
+import {
+  PLATFORM_SPECS,
+  resolvePublishing,
+  type PublishPlatform,
+  type PublishPostChannel,
+  type PublishRatio,
+  type PublishVideoFormat,
+} from "./publishing-rules"
 
 // ============================================================
 // HỢP ĐỒNG
 // ============================================================
 
 export const SCENE_PLAN_FEATURE = "creative.scene_plan" as const
-export const SCENE_PLAN_VERSION = 1 as const
+/**
+ * v2 (24/09/2026, quyết định PO): kịch bản bối cảnh thành KỊCH BẢN SẢN XUẤT
+ * TỔNG — thêm nền tảng đăng + tỉ lệ, khuôn video + thời lượng từng cảnh, âm
+ * thanh (giọng, nhạc, nhịp), chuyển cảnh, bài đăng từng kênh, `revision`. Bản
+ * v1 đã lưu được nâng cấp mềm khi đọc (`upgradeScenePlan`).
+ */
+export const SCENE_PLAN_VERSION = 2 as const
 
 export type ScenePlanMode = "CREATIVE" | "AUTHENTIC"
 export type ScenePlanBeat = "SETUP" | "RISING" | "CLIMAX" | "RESOLUTION" | "CTA"
@@ -54,6 +73,30 @@ const LOCAL_BACKDROP_IDS = Object.keys(LOCAL_BACKDROPS) as LocalBackdrop[]
 
 const MOTIONS: readonly ScenePlanMotion[] = ["zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "static"]
 
+export type ScenePlanTransition = "fade" | "slide_left" | "slide_right" | "zoom_in" | "zoom_out" | "dissolve"
+export type ScenePlanShot = "close" | "medium" | "wide"
+export type ScenePlanMusicCue = "soft" | "build" | "peak" | "resolve"
+export type ScenePlanCaptionStyle = "MODERN_BADGE" | "MINIMAL_ELEGANT" | "HIGHLIGHT_BOX" | "BOTTOM_BANNER" | "NONE"
+export type ScenePlanMusicMood = "romantic" | "upbeat" | "chill" | "warm" | "luxury" | "none"
+export type ScenePlanPacing = "slow" | "medium" | "fast"
+
+export const TRANSITIONS: readonly ScenePlanTransition[] = ["fade", "slide_left", "slide_right", "zoom_in", "zoom_out", "dissolve"]
+const SHOTS: readonly ScenePlanShot[] = ["close", "medium", "wide"]
+const MUSIC_CUES: readonly ScenePlanMusicCue[] = ["soft", "build", "peak", "resolve"]
+const CAPTION_STYLES: readonly ScenePlanCaptionStyle[] = ["MODERN_BADGE", "MINIMAL_ELEGANT", "HIGHLIGHT_BOX", "BOTTOM_BANNER", "NONE"]
+const MUSIC_MOODS: readonly ScenePlanMusicMood[] = ["romantic", "upbeat", "chill", "warm", "luxury", "none"]
+const PACINGS: readonly ScenePlanPacing[] = ["slow", "medium", "fast"]
+
+/** Giới hạn thời lượng một cảnh (khớp `video_scenes`: 0,5–15s; tối thiểu 1,5s để kịp nhìn). */
+export const MIN_SCENE_SECONDS = 1.5
+export const MAX_SCENE_SECONDS = 15
+
+/** Trọng số thời lượng theo nhịp: cao trào dài hơn, kêu gọi ngắn gọn. */
+const BEAT_WEIGHT: Readonly<Record<ScenePlanBeat, number>> = { SETUP: 1, RISING: 1, CLIMAX: 1.4, RESOLUTION: 1, CTA: 0.8 }
+const BEAT_SHOT: Readonly<Record<ScenePlanBeat, ScenePlanShot>> = { SETUP: "medium", RISING: "wide", CLIMAX: "close", RESOLUTION: "wide", CTA: "medium" }
+const BEAT_CUE: Readonly<Record<ScenePlanBeat, ScenePlanMusicCue>> = { SETUP: "soft", RISING: "build", CLIMAX: "peak", RESOLUTION: "resolve", CTA: "resolve" }
+const BEAT_TRANSITION: Readonly<Record<ScenePlanBeat, ScenePlanTransition>> = { SETUP: "fade", RISING: "slide_left", CLIMAX: "zoom_in", RESOLUTION: "dissolve", CTA: "fade" }
+
 export interface ScenePlanTopic {
   readonly id: string
   readonly title: string
@@ -74,6 +117,8 @@ export interface ScenePlanInput {
   readonly targetAudience?: string | undefined
   readonly priceRange?: string | undefined
   readonly topic: ScenePlanTopic
+  /** Nền tảng đăng người dùng chọn ở Chặng 05 (v2) — quyết định tỉ lệ + khuôn video. */
+  readonly platforms?: readonly unknown[] | undefined
 }
 
 export interface ScenePlanScene {
@@ -94,6 +139,54 @@ export interface ScenePlanScene {
   readonly voiceScript: string
   readonly textOverlay: string
   readonly motionEffect: ScenePlanMotion
+  /** v2 — thời lượng cảnh (giây), tổng khớp khuôn video, đủ thời gian đọc trọn lời thoại. */
+  readonly durationSeconds: number
+  /** v2 — chuyển cảnh SANG cảnh này. */
+  readonly transition: ScenePlanTransition
+  /** v2 — cỡ cảnh gợi ý (cận/trung/toàn). */
+  readonly shot: ScenePlanShot
+  /** v2 — nhạc nền ở cảnh này. */
+  readonly musicCue: ScenePlanMusicCue
+}
+
+export interface ScenePlanPost {
+  readonly channel: PublishPostChannel
+  readonly text: string
+  readonly hashtags: readonly string[]
+}
+
+export interface ScenePlanPublishing {
+  readonly platforms: readonly PublishPlatform[]
+  readonly aspectRatio: PublishRatio
+  /** Nền tảng khác tỉ lệ chính — cấu hình sẵn, CHƯA sinh (PO 24/09: mặc định 9:16). */
+  readonly otherRatios: readonly { platform: PublishPlatform; ratio: PublishRatio }[]
+}
+
+export interface ScenePlanVideo {
+  readonly format: PublishVideoFormat
+  readonly totalDurationSeconds: number
+  readonly captionStyle: ScenePlanCaptionStyle
+  readonly hasSubtitle: boolean
+  readonly hasWatermark: boolean
+  /** Cảnh làm ảnh bìa video. */
+  readonly coverSceneIndex: number
+  /** Chữ màn kết (CTA). */
+  readonly endCardText: string
+}
+
+export interface ScenePlanAudio {
+  /** Mã giọng của `voice-catalog.ts`. */
+  readonly voiceId: string
+  readonly qualityTier: "standard" | "hd" | "premium"
+  readonly musicMood: ScenePlanMusicMood
+  readonly pacing: ScenePlanPacing
+}
+
+export interface ScenePlanContent {
+  /** Bài đăng cho các kênh của nền tảng đã chọn (rỗng = Khu vực B dùng khuôn dự phòng). */
+  readonly posts: readonly ScenePlanPost[]
+  /** Chú thích khi đăng chính video. */
+  readonly videoCaption: { readonly text: string; readonly hashtags: readonly string[] }
 }
 
 export interface ScenePlan {
@@ -106,6 +199,13 @@ export interface ScenePlan {
   readonly emotionalTone: string
   readonly reasoning: string
   readonly scenes: readonly ScenePlanScene[]
+  /** v2 — tăng mỗi lần kịch bản được sửa (PATCH, sửa cảnh ở Chặng 07). Tài sản mang số này. */
+  readonly revision: number
+  readonly story: { readonly hook: string; readonly cta: string; readonly logline: string }
+  readonly publishing: ScenePlanPublishing
+  readonly video: ScenePlanVideo
+  readonly audio: ScenePlanAudio
+  readonly content: ScenePlanContent
 }
 
 // ============================================================
@@ -146,6 +246,153 @@ export function sceneCountFor(mode: ScenePlanMode): number {
   return SCENE_BEATS_BY_MODE[mode].length
 }
 
+const round1 = (n: number) => Math.round(n * 10) / 10
+
+/** Số giây tối thiểu để đọc trọn lời thoại của một cảnh (không tua nhanh). */
+export function sceneSpeechNeed(voiceScript: string): number {
+  return Math.min(MAX_SCENE_SECONDS, Math.max(MIN_SCENE_SECONDS, round1(estimateSpeechSeconds(voiceScript) + 0.3)))
+}
+
+/**
+ * Cân thời lượng từng cảnh (24/09/2026). Đề xuất của AI (hoặc trọng số theo
+ * nhịp) được co giãn về `targetSeconds`; cảnh nào ngắn hơn số giây đọc trọn
+ * lời thì được nới, phần dư lấy bớt ở cảnh còn thừa. Không đủ chỗ thì tổng
+ * vượt mục tiêu (lời thoại quan trọng hơn con số khuôn).
+ */
+export function balanceSceneDurations(
+  scenes: readonly { beat: ScenePlanBeat; voiceScript: string; durationSeconds?: number | undefined }[],
+  targetSeconds: number
+): number[] {
+  if (scenes.length === 0) return []
+  const need = scenes.map((sc) => sceneSpeechNeed(sc.voiceScript))
+  const aiOk = scenes.every((sc) => typeof sc.durationSeconds === "number" && sc.durationSeconds > 0)
+  const raw = scenes.map((sc) => (aiOk ? (sc.durationSeconds as number) : BEAT_WEIGHT[sc.beat]))
+  const sumRaw = raw.reduce((a, b) => a + b, 0) || 1
+  const d = raw.map((r, i) => Math.min(MAX_SCENE_SECONDS, Math.max(need[i]!, (r * targetSeconds) / sumRaw)))
+  const total = d.reduce((a, b) => a + b, 0)
+  if (total > targetSeconds) {
+    const excess = total - targetSeconds
+    const slack = d.map((x, i) => x - need[i]!)
+    const sumSlack = slack.reduce((a, b) => a + b, 0)
+    for (let i = 0; i < d.length; i++) {
+      d[i] = sumSlack >= excess && sumSlack > 0 ? d[i]! - (slack[i]! * excess) / sumSlack : need[i]!
+    }
+  }
+  return d.map((x) => round1(Math.min(MAX_SCENE_SECONDS, Math.max(MIN_SCENE_SECONDS, x))))
+}
+
+function normHashtags(value: unknown, max: number): string[] {
+  return (Array.isArray(value) ? value : [])
+    .map((h) => (typeof h === "string" ? h.trim().replace(/\s+/g, "") : ""))
+    .filter((h) => h.length > 1)
+    .map((h) => (h.startsWith("#") ? h : `#${h}`))
+    .slice(0, max)
+}
+
+/** Bài đăng hợp lệ cho một kênh: đủ dài, trong giới hạn kênh, không dính từ cấm cứng. */
+export function normalizeScenePlanPost(raw: unknown, channel: PublishPostChannel): ScenePlanPost | null {
+  const o = raw as { text?: unknown; hashtags?: unknown } | null
+  const body = typeof o?.text === "string" ? o.text.trim() : ""
+  if (body.length < 10) return null
+  if (!checkFlowerContent(body).isValid) return null
+  return {
+    channel,
+    text: body.slice(0, CHANNEL_TEXT_LIMITS[channel]),
+    hashtags: normHashtags(o?.hashtags, channel === "instagram" ? INSTAGRAM_MAX_HASHTAGS : 15),
+  }
+}
+
+function pick<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(value as T) ? (value as T) : fallback
+}
+
+/**
+ * Hoàn thiện phần v2 của một kịch bản (dùng chung cho AI, luật và bản v1 cũ).
+ * `raw` là phần mô hình trả (có thể thiếu) — thiếu trường nào lấy mặc định
+ * theo nhịp/mode/chủ đề, không bịa nội dung (bài đăng thiếu thì để rỗng).
+ */
+export function completeScenePlanV2(
+  base: {
+    mode: ScenePlanMode
+    topic: ScenePlanTopic
+    scenes: readonly Omit<ScenePlanScene, "durationSeconds" | "transition" | "shot" | "musicCue">[]
+    platforms?: readonly unknown[] | undefined
+    revision?: number | undefined
+  },
+  raw: {
+    scenes?: readonly Record<string, unknown>[] | undefined
+    audio?: Record<string, unknown> | undefined
+    video?: Record<string, unknown> | undefined
+    story?: Record<string, unknown> | undefined
+    posts?: unknown
+    videoCaption?: Record<string, unknown> | undefined
+  } = {}
+): Pick<ScenePlan, "scenes" | "revision" | "story" | "publishing" | "video" | "audio" | "content"> {
+  const pub = resolvePublishing(base.platforms)
+  const rawScenes = raw.scenes ?? []
+  const durations = balanceSceneDurations(
+    base.scenes.map((sc, i) => ({
+      beat: sc.beat,
+      voiceScript: sc.voiceScript,
+      durationSeconds: typeof rawScenes[i]?.duration_seconds === "number" ? (rawScenes[i]!.duration_seconds as number) : undefined,
+    })),
+    pub.targetSeconds
+  )
+  const scenes: ScenePlanScene[] = base.scenes.map((sc, i) => ({
+    ...sc,
+    durationSeconds: durations[i]!,
+    transition: pick(rawScenes[i]?.transition, TRANSITIONS, BEAT_TRANSITION[sc.beat]),
+    shot: pick(rawScenes[i]?.shot, SHOTS, BEAT_SHOT[sc.beat]),
+    musicCue: pick(rawScenes[i]?.music_cue, MUSIC_CUES, BEAT_CUE[sc.beat]),
+  }))
+  const cta = text(raw.story?.cta, 200) || base.topic.cta || "Nhắn tin cho tiệm để đặt hoa"
+  const voiceIds = VOICE_CATALOG.map((v) => v.voiceId)
+  const defaultVoice = suggestVoiceForMode(base.mode).voiceId
+  const defaultMood = base.topic.angleCategory ? suggestMoodForTopicAngle(base.topic.angleCategory) : "warm"
+
+  const postsRaw = Array.isArray(raw.posts) ? (raw.posts as Record<string, unknown>[]) : []
+  const posts: ScenePlanPost[] = []
+  for (const ch of pub.postChannels) {
+    const found = postsRaw.find((p) => p && p.channel === ch)
+    const post = found ? normalizeScenePlanPost(found, ch) : null
+    if (post) posts.push(post)
+  }
+  const vcText = text(raw.videoCaption?.text, 2200)
+
+  return {
+    scenes,
+    revision: Math.max(1, Math.floor(base.revision ?? 1)),
+    story: {
+      hook: text(raw.story?.hook, 300) || base.topic.hook || "",
+      cta,
+      logline: text(raw.story?.logline, 300),
+    },
+    publishing: { platforms: pub.platforms, aspectRatio: pub.aspectRatio, otherRatios: pub.otherRatios },
+    video: {
+      format: pub.videoFormat,
+      totalDurationSeconds: round1(durations.reduce((a, b) => a + b, 0)),
+      captionStyle: pick(raw.video?.caption_style, CAPTION_STYLES, "MODERN_BADGE"),
+      hasSubtitle: raw.video?.has_subtitle === false ? false : true,
+      hasWatermark: raw.video?.has_watermark === false ? false : true,
+      coverSceneIndex: Math.min(
+        scenes.length,
+        Math.max(1, typeof raw.video?.cover_scene_index === "number" ? Math.round(raw.video.cover_scene_index as number) : 1)
+      ),
+      endCardText: text(raw.video?.end_card_text, 60) || text(cta, 60),
+    },
+    audio: {
+      voiceId: pick(raw.audio?.voice_id, voiceIds, defaultVoice),
+      qualityTier: pick(raw.audio?.quality_tier, ["standard", "hd", "premium"] as const, "hd"),
+      musicMood: pick(raw.audio?.music_mood, MUSIC_MOODS, defaultMood),
+      pacing: pick(raw.audio?.pacing, PACINGS, base.mode === "AUTHENTIC" ? "slow" : "medium"),
+    },
+    content: {
+      posts,
+      videoCaption: { text: vcText, hashtags: normHashtags(raw.videoCaption?.hashtags, 15) },
+    },
+  }
+}
+
 /**
  * Khoá idempotency cho kịch bản của MỘT chủ đề trên MỘT ảnh — mở lại Khu vực D
  * hay Khu vực C tra lại đúng kịch bản cũ, không trừ credit lần hai.
@@ -165,6 +412,7 @@ function dong(nhan: string, giaTri: string | readonly string[] | undefined | nul
 
 export function buildScenePlanPrompt(input: ScenePlanInput): string {
   const beats = SCENE_BEATS_BY_MODE[input.mode]
+  const pub = resolvePublishing(input.platforms)
   const phong = LOCAL_BACKDROP_IDS.map((id) => `  - ${id}: ${LOCAL_BACKDROPS[id]}`).join("\n")
   const modeRule =
     input.mode === "AUTHENTIC"
@@ -202,7 +450,17 @@ ${phong}
 - motion_effect: một trong ${MOTIONS.join(" | ")}.
 - Không bịa giá, khuyến mãi hay cam kết dịch vụ.
 
-Trả về JSON: { "emotional_tone": string, "reasoning": string, "scenes": [ { "beat", "title", "setting", "lighting", "palette": string[], "purpose", "background_prompt", "local_backdrop", "voice_script", "text_overlay", "motion_effect" } ] }. Không thêm lời dẫn.`
+KẾ HOẠCH SẢN XUẤT (ảnh, âm thanh, video, bài đăng dùng CHUNG kịch bản này)
+- Nền tảng đăng: ${pub.platforms.map((p) => PLATFORM_SPECS[p].label).join(", ")} → khung ${pub.aspectRatio}, video khoảng ${pub.targetSeconds} giây.
+- duration_seconds từng cảnh: tổng ≈ ${pub.targetSeconds}s; cảnh cao trào dài hơn; mỗi cảnh đủ để đọc trọn voice_script (~14 ký tự/giây).
+- transition: ${TRANSITIONS.join(" | ")}; shot: ${SHOTS.join(" | ")}; music_cue: ${MUSIC_CUES.join(" | ")}.
+- audio.voice_id — chọn MỘT giọng hợp chủ đề: ${VOICE_CATALOG.map((v) => `${v.voiceId} (${v.displayName})`).join("; ")}. audio.music_mood: ${MUSIC_MOODS.join(" | ")}. audio.pacing: ${PACINGS.join(" | ")}.
+- video.caption_style: ${CAPTION_STYLES.join(" | ")}; video.end_card_text ≤ 60 ký tự.
+- posts: MỘT bài cho mỗi kênh ${pub.postChannels.join(", ")} (text tiếng Việt, đúng giọng kênh, kể cùng câu chuyện với các cảnh; hashtags). Không ghi giá nếu chưa có khoảng giá.
+- video_caption: chú thích khi đăng video (ngắn, có CTA) + hashtags.
+- story: hook, cta, logline (một câu tóm câu chuyện).
+
+Trả về JSON: { "emotional_tone": string, "reasoning": string, "story": { "hook", "cta", "logline" }, "scenes": [ { "beat", "title", "setting", "lighting", "palette": string[], "purpose", "background_prompt", "local_backdrop", "voice_script", "text_overlay", "motion_effect", "duration_seconds", "transition", "shot", "music_cue" } ], "audio": { "voice_id", "music_mood", "pacing" }, "video": { "caption_style", "end_card_text", "cover_scene_index" }, "posts": [ { "channel", "text", "hashtags": string[] } ], "video_caption": { "text", "hashtags": string[] } }. Không thêm lời dẫn.`
 }
 
 /** JSON schema gửi kèm lời gọi mô hình. */
@@ -231,9 +489,49 @@ export function scenePlanJsonSchema(mode: ScenePlanMode): Record<string, unknown
             voice_script: { type: "string" },
             text_overlay: { type: "string" },
             motion_effect: { type: "string", enum: [...MOTIONS] },
+            duration_seconds: { type: "number" },
+            transition: { type: "string", enum: [...TRANSITIONS] },
+            shot: { type: "string", enum: [...SHOTS] },
+            music_cue: { type: "string", enum: [...MUSIC_CUES] },
           },
-          required: ["beat", "title", "setting", "background_prompt", "local_backdrop"],
+          required: ["beat", "title", "setting", "background_prompt", "local_backdrop", "voice_script", "duration_seconds"],
         },
+      },
+      story: {
+        type: "object",
+        properties: { hook: { type: "string" }, cta: { type: "string" }, logline: { type: "string" } },
+      },
+      audio: {
+        type: "object",
+        properties: {
+          voice_id: { type: "string", enum: VOICE_CATALOG.map((v) => v.voiceId) },
+          music_mood: { type: "string", enum: [...MUSIC_MOODS] },
+          pacing: { type: "string", enum: [...PACINGS] },
+        },
+      },
+      video: {
+        type: "object",
+        properties: {
+          caption_style: { type: "string", enum: [...CAPTION_STYLES] },
+          end_card_text: { type: "string" },
+          cover_scene_index: { type: "number" },
+        },
+      },
+      posts: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            channel: { type: "string", enum: ["facebook", "instagram", "tiktok", "zalo"] },
+            text: { type: "string" },
+            hashtags: { type: "array", items: { type: "string" } },
+          },
+          required: ["channel", "text"],
+        },
+      },
+      video_caption: {
+        type: "object",
+        properties: { text: { type: "string" }, hashtags: { type: "array", items: { type: "string" } } },
       },
     },
     required: ["scenes"],
@@ -252,7 +550,16 @@ export type NormalizeResult = { ok: true; plan: ScenePlan } | { ok: false; reaso
  * cổng AI ghi thất bại và hoàn credit.
  */
 export function normalizeAiScenePlan(raw: unknown, input: ScenePlanInput): NormalizeResult {
-  const o = raw as { emotional_tone?: unknown; reasoning?: unknown; scenes?: unknown } | null
+  const o = raw as {
+    emotional_tone?: unknown
+    reasoning?: unknown
+    scenes?: unknown
+    story?: unknown
+    audio?: unknown
+    video?: unknown
+    posts?: unknown
+    video_caption?: unknown
+  } | null
   if (!o || typeof o !== "object") return { ok: false, reason: "Đầu ra không phải object" }
   if (!Array.isArray(o.scenes)) return { ok: false, reason: "Thiếu danh sách scenes" }
 
@@ -261,7 +568,7 @@ export function normalizeAiScenePlan(raw: unknown, input: ScenePlanInput): Norma
     return { ok: false, reason: `Cần đúng ${beats.length} cảnh, mô hình trả ${o.scenes.length}` }
   }
 
-  const scenes: ScenePlanScene[] = []
+  const scenes: Omit<ScenePlanScene, "durationSeconds" | "transition" | "shot" | "musicCue">[] = []
   for (let i = 0; i < beats.length; i++) {
     const s = o.scenes[i] as Record<string, unknown> | null
     if (!s || typeof s !== "object") return { ok: false, reason: `Cảnh ${i + 1} không hợp lệ` }
@@ -291,6 +598,18 @@ export function normalizeAiScenePlan(raw: unknown, input: ScenePlanInput): Norma
     })
   }
 
+  const obj = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined)
+  const v2 = completeScenePlanV2(
+    { mode: input.mode, topic: input.topic, scenes, platforms: input.platforms },
+    {
+      scenes: o.scenes as Record<string, unknown>[],
+      story: obj(o.story),
+      audio: obj(o.audio),
+      video: obj(o.video),
+      posts: o.posts,
+      videoCaption: obj(o.video_caption),
+    }
+  )
   return {
     ok: true,
     plan: {
@@ -301,20 +620,41 @@ export function normalizeAiScenePlan(raw: unknown, input: ScenePlanInput): Norma
       topicTitle: input.topic.title,
       emotionalTone: text(o.emotional_tone, 120),
       reasoning: text(o.reasoning, 600),
-      scenes,
+      ...v2,
     },
   }
 }
 
 /** Đọc lại kịch bản đã lưu trong `generation_jobs.output` — trả null nếu hình dạng lạ. */
 export function parseStoredScenePlan(value: unknown): ScenePlan | null {
-  const p = value as Partial<ScenePlan> | null
-  if (!p || typeof p !== "object" || p.version !== SCENE_PLAN_VERSION) return null
+  const p = value as (Omit<Partial<ScenePlan>, "version"> & { version?: number }) | null
+  if (!p || typeof p !== "object" || (p.version !== 1 && p.version !== SCENE_PLAN_VERSION)) return null
   if (!Array.isArray(p.scenes) || p.scenes.length === 0 || p.scenes.length > MAX_SCENE_PLAN_SCENES) {
     return null
   }
   if (p.mode !== "CREATIVE" && p.mode !== "AUTHENTIC") return null
-  return p as ScenePlan
+  return p.version === 1 ? upgradeScenePlan(p as unknown as ScenePlanV1) : (p as ScenePlan)
+}
+
+/** Hình dạng bản v1 (trước 24/09/2026 tối). */
+export type ScenePlanV1 = Omit<ScenePlan, "version" | "scenes" | "revision" | "story" | "publishing" | "video" | "audio" | "content"> & {
+  version: 1
+  scenes: Omit<ScenePlanScene, "durationSeconds" | "transition" | "shot" | "musicCue">[]
+}
+
+/** Nâng bản v1 đã lưu lên v2 khi đọc: nền tảng mặc định (9:16), thời lượng cân theo lời thoại, âm thanh theo mode/chủ đề, chưa có bài đăng. */
+export function upgradeScenePlan(p: ScenePlanV1): ScenePlan {
+  const topic: ScenePlanTopic = { id: p.topicId, title: p.topicTitle }
+  return {
+    version: SCENE_PLAN_VERSION,
+    source: p.source,
+    mode: p.mode,
+    topicId: p.topicId,
+    topicTitle: p.topicTitle,
+    emotionalTone: p.emotionalTone,
+    reasoning: p.reasoning,
+    ...completeScenePlanV2({ mode: p.mode, topic, scenes: p.scenes }),
+  }
 }
 
 // ============================================================
@@ -425,7 +765,7 @@ export function buildRuleScenePlan(input: ScenePlanInput): ScenePlan {
   const alt = occasion.spaces[1] ?? main
   const cta = input.topic.cta || "Nhắn tin cho tiệm để đặt hoa"
 
-  const byBeat: Record<ScenePlanBeat, Omit<ScenePlanScene, "sceneIndex" | "beat">> = {
+  const byBeat: Record<ScenePlanBeat, Omit<ScenePlanScene, "sceneIndex" | "beat" | "durationSeconds" | "transition" | "shot" | "musicCue">> = {
     SETUP: {
       title: "Giới thiệu sản phẩm",
       setting: "Phông studio sáng, đổ bóng mềm, tông màu hoà với bó hoa",
@@ -497,6 +837,11 @@ export function buildRuleScenePlan(input: ScenePlanInput): ScenePlan {
     topicTitle: input.topic.title,
     emotionalTone: occasion.name,
     reasoning: `Kịch bản cơ bản (không dùng AI): dịp "${occasion.name}", tông màu ${palette.vi.join(", ") || "theo bó hoa"}.`,
-    scenes: beats.map((beat, i) => ({ sceneIndex: i + 1, beat, ...byBeat[beat] })),
+    ...completeScenePlanV2({
+      mode: input.mode,
+      topic: input.topic,
+      platforms: input.platforms,
+      scenes: beats.map((beat, i) => ({ sceneIndex: i + 1, beat, ...byBeat[beat] })),
+    }),
   }
 }

@@ -10,6 +10,7 @@ import {
   generateScenePlan,
 } from "@/modules/creative-production/use-cases/generate-scene-plan"
 import { scenePlanKey } from "@/modules/creative-production/domain/scene-plan-rules"
+import { PUBLISH_PLATFORMS } from "@/modules/creative-production/domain/publishing-rules"
 
 const str = (max: number) => z.string().trim().max(max)
 const list = z.array(str(60)).max(12)
@@ -28,6 +29,8 @@ const postSchema = z.object({
     target_audience: str(200).optional(),
     price_range: str(80).optional(),
   }),
+  /** v2 — nền tảng đăng (quyết định tỉ lệ + khuôn video); bỏ trống = TikTok + Reels (9:16). */
+  platforms: z.array(z.enum(PUBLISH_PLATFORMS)).max(8).optional(),
   topic: z.object({
     id: str(120).min(1),
     title: str(200).min(1),
@@ -67,6 +70,7 @@ export const POST = handle(async (request) => {
       occasions: d.product.occasions,
       targetAudience: d.product.target_audience,
       priceRange: d.product.price_range,
+      platforms: d.platforms,
       topic: {
         id: d.topic.id,
         title: d.topic.title,

@@ -1,4 +1,5 @@
 import { AppError } from "@/core/http/errors"
+import { applyScenePlanEdit } from "../domain/scene-plan-edit"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { callCapability, type AdapterOutcome } from "@/core/ai/gateway"
 import { aiGatewayDeps } from "@/core/ai/wiring"
@@ -127,10 +128,9 @@ export async function reviseScene(
 
   // Ghi cảnh đã sửa vào kịch bản đang dùng — C/D/E đọc lại đúng bản mới.
   if (plan && input.scenePlanId) {
-    const updated: ScenePlan = {
-      ...plan,
-      scenes: plan.scenes.map((s) => (s.sceneIndex === input.sceneIndex ? r.output : s)),
-    }
+    // v2: qua `applyScenePlanEdit` — cân lại thời lượng nếu lời thoại đổi, tăng `revision`.
+    const edited = applyScenePlanEdit(plan, { replaceScene: r.output })
+    const updated: ScenePlan = edited.ok ? edited.plan : { ...plan, revision: plan.revision + 1 }
     await jobs.replaceOutput(ctx, input.scenePlanId, SCENE_PLAN_FEATURE, updated)
   }
   return { jobId: r.jobId, scene: r.output, usage: r.usage }

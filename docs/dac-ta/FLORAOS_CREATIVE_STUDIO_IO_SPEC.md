@@ -179,6 +179,22 @@ Worker: TTS từng cảnh → **khớp cảnh** (`fit_voice_to_scene`: nhanh t�
 
 Ra: `{ job_id, status, error, plan, deduped, usage }`. `plan = { version: 1, source: "ai"|"rule", mode, topicId, topicTitle, emotionalTone, reasoning, scenes[] }`, mỗi cảnh `{ sceneIndex, beat, title, setting, lighting, palette[], purpose, backgroundPrompt, localBackdrop, voiceScript, textOverlay, motionEffect }`. Tra không tạo job: `GET /creative-production/scene-plans?asset_id&topic_id&mode`, `GET /creative-production/scene-plans/:id`. Sinh ở Chặng 05 khi bấm "Bắt đầu sáng tạo" (`creative-handoff-modal.tsx`); URL Creative Studio mang `scenePlanId` (job id hoặc `rule`), B/C/D/E chỉ tra.
 
+### 5.0b. Kịch bản sản xuất tổng — v2 (24/09/2026, quyết định PO)
+
+Chặng 05 lên TOÀN BỘ kế hoạch sản xuất; B/C/D/E chỉ thực thi. `plan` (version 2) thêm vào v1:
+
+| Phần | Trường |
+|---|---|
+| `revision` | số nguyên ≥ 1, tăng mỗi lần sửa (`PATCH`, "Sửa cảnh" ở Chặng 07) |
+| `story` | `hook`, `cta`, `logline` |
+| `publishing` | `platforms[]`, `aspectRatio` (`9:16\|4:5\|1:1\|16:9`), `otherRatios[]` (nền tảng khác khung — cấu hình sẵn, chưa sinh) |
+| `video` | `format` (theo nền tảng), `totalDurationSeconds`, `captionStyle`, `hasSubtitle`, `hasWatermark`, `coverSceneIndex`, `endCardText` |
+| `audio` | `voiceId` (6 giọng `voice-catalog.ts`), `qualityTier`, `musicMood`, `pacing` |
+| `content` | `posts[{ channel, text, hashtags }]` cho kênh của nền tảng đã chọn (qua giới hạn kênh + từ cấm; rỗng = B dùng khuôn dự phòng), `videoCaption{ text, hashtags }` |
+| `scenes[]` thêm | `durationSeconds` (tổng ≈ mục tiêu nền tảng, cao trào dài hơn, ≥ số giây đọc trọn lời ~14 ký tự/giây, 1,5–15s), `transition`, `shot` (`close\|medium\|wide`), `musicCue` |
+
+Bảng nền tảng (`publishing-rules.ts`): TikTok 9:16 `TIKTOK_30S` ~20s · Instagram/Facebook Reels 9:16 `REEL_15S` 15s · YouTube Shorts 9:16 · Zalo Video 9:16 `STORY_15S` · YouTube 16:9 `SLIDESHOW` · Facebook/Instagram Feed 4:5 `SLIDESHOW`. Một tỉ lệ → dùng tỉ lệ đó; trộn tỉ lệ → 9:16 (mặc định hiện tại), các khung khác ghi ở `otherRatios`. Worker video dựng được 9:16, 16:9, 1:1, 4:5.
+
 ### 5.1. Biến thể từng cảnh
 
 `POST /api/v1/media/variants` (`I4`, header `Idempotency-Key` bắt buộc):

@@ -28,7 +28,7 @@ export function createScenePlanAdapter(
         prompt: buildScenePlanPrompt(input),
         model: model.key,
         jsonSchema: scenePlanJsonSchema(input.mode),
-        maxTokens: 2200,
+        maxTokens: 5000, // v2 (24/09/2026): thêm âm thanh, video, bài đăng từng kênh
       }
       const response: LLMResponse = await llmProvider.complete(request)
 

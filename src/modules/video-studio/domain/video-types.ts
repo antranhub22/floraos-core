@@ -30,7 +30,7 @@ export interface VideoFormatSpec {
   targetDurationSeconds: number;
   minDurationSeconds: number;
   maxDurationSeconds: number;
-  aspectRatio: "9:16" | "1:1" | "16:9";
+  aspectRatio: "9:16" | "1:1" | "16:9" | "4:5";
   minScenes: number;
   maxScenes: number;
   aiCapability: string;

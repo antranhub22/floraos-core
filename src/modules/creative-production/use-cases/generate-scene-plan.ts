@@ -9,6 +9,7 @@ import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
 import { refundJob } from "@/modules/usage/use-cases/refund-job"
 
 import { createScenePlanAdapter } from "../adapters/scene-plan-ai-adapter"
+import { applyScenePlanEdit, type ScenePlanEdit } from "../domain/scene-plan-edit"
 import {
   parseStoredScenePlan,
   SCENE_PLAN_FEATURE,
@@ -65,6 +66,7 @@ export async function generateScenePlan(
       topic_title: input.brief.topic.title,
       mode: input.brief.mode,
       asset_id: input.assetId ?? null,
+      platforms: input.brief.platforms ?? null,
     },
     productId: input.productId ?? null,
     idempotencyKey: input.idempotencyKey,
@@ -128,4 +130,23 @@ export async function findScenePlanByKey(
   requireCapability(ctx, "I1")
   const job = await new GenerationJobRepository().findByIdempotencyKey(ctx, SCENE_PLAN_FEATURE, idempotencyKey)
   return job ? view(job) : null
+}
+
+/**
+ * `PATCH /scene-plans/:id` (v2, 24/09/2026) — sửa kịch bản sản xuất tổng tại
+ * chỗ (nền tảng đăng, thời lượng / lời thoại / phụ đề / chuyển cảnh từng cảnh,
+ * âm thanh, video, bài đăng). Miễn phí; tăng `revision`.
+ */
+export async function updateScenePlan(ctx: TenantContext, jobId: string, edit: ScenePlanEdit): Promise<ScenePlanJobView> {
+  requireCapability(ctx, "I1")
+  const jobs = new GenerationJobRepository()
+  const job = await jobs.findById(ctx, jobId)
+  if (!job || job.feature !== SCENE_PLAN_FEATURE) throw new AppError("NOT_FOUND", "Không có kịch bản này")
+  const plan = job.status === "COMPLETED" ? parseStoredScenePlan(job.output) : null
+  if (!plan) throw new AppError("CONFLICT", "Kịch bản chưa sẵn sàng để sửa")
+  const r = applyScenePlanEdit(plan, edit)
+  if (!r.ok) throw new AppError("VALIDATION_FAILED", r.reason)
+  const saved = await jobs.replaceOutput(ctx, jobId, SCENE_PLAN_FEATURE, r.plan)
+  if (!saved) throw new AppError("CONFLICT", "Không ghi được kịch bản")
+  return { jobId, status: "COMPLETED", error: null, plan: r.plan }
 }

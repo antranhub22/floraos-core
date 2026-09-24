@@ -16,6 +16,7 @@ FRAME_RESOLUTIONS: Dict[str, Tuple[int, int]] = {
     "9:16": (1080, 1920),
     "16:9": (1920, 1080),
     "1:1": (1080, 1080),
+    "4:5": (1080, 1350),  # 24/09/2026 — bài feed Facebook/Instagram (cấu hình sẵn theo nền tảng)
 }
 
 FPS = 30

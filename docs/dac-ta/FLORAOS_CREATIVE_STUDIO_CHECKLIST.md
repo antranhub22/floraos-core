@@ -61,6 +61,8 @@
 - [x] Hậu cảnh Stability dùng `backgroundPrompt` của từng cảnh (bỏ 2 lời nhắc viết cứng) — `variant-workspace.tsx#handleGenerateSingleScene`
 - [x] Khu vực C lấy lời thoại từ cùng kịch bản — `audio-workspace.tsx`
 - [x] Kịch bản sinh ở Chặng 05 khi "Bắt đầu sáng tạo", `scenePlanId` trên URL — `creative-handoff-modal.tsx` (24/09)
+- [x] **Đợt 1 — Kịch bản sản xuất tổng v2** (PO 24/09): nền tảng đăng → khung hình + khuôn video (`publishing-rules.ts`, cấu hình sẵn 9:16/4:5/1:1/16:9, mặc định 9:16), thời lượng từng cảnh cân theo lời thoại, chuyển cảnh/cỡ cảnh, âm thanh, video, bài đăng từng kênh, `revision`; bản v1 nâng lên khi đọc; `PATCH /scene-plans/:id`; Chặng 05 chọn nền tảng + xem trước/sửa kịch bản — `scene-plan-rules.ts`, `scene-plan-edit.ts`, `production-plan-preview.tsx` + `production-blueprint.test.ts` (16 ca)
+- [ ] Đợt 2 — B/C thực thi theo kịch bản · Đợt 3 — D theo khung + revision · Đợt 4 — E dựng video từ ảnh D + bản phối C, chặn khi thiếu · Đợt 5 — đồng bộ khi sửa ở Chặng 07 + QA đồng nhất
 - [x] Khu vực B hiển thị cung truyện theo đúng kịch bản (kèm dòng "Bối cảnh") — `contents-workspace.tsx#withScenePlan`
 - [x] Storyboard video E đúng số cảnh/phụ đề/lời thoại/chuyển động của kịch bản, ảnh biến thể cùng cảnh ở D (thiếu thì Master) — `video-storyboard-builder.ts` + `video-storyboard-builder.test.ts` (24/09)
 - [x] Sửa "Cảnh #1…#5 chưa có ảnh sản phẩm": E tìm Master như D (nâng ảnh gốc nếu cần), nhận ảnh D của kịch bản đã viết lại, nút "Lấy ảnh mới nhất từ Khu vực D"; render lấp cảnh trống ảnh (ảnh storyboard gửi kèm → ảnh D → Master) — `scene-images-client.ts`, `dispatch-video-render.ts#findFillImages` + ca mới trong `tests/tenant/video-studio.test.ts` (24/09 tối)
