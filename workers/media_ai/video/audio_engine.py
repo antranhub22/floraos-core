@@ -110,14 +110,21 @@ def build_audio_track(
                     if not success:
                         success = generate_speech_fallback(script, scene_voice)
 
-                    if success and scene_voice.is_file():
-                        pad_voice_to_duration(scene_voice, padded_voice, scene_dur)
+                    # 24/09/2026: thứ tự tham số đúng chữ ký `mixing_engine`
+                    # (voice, target_duration, padded). Trước đây truyền đảo
+                    # (padded, duration) → pad hỏng mọi cảnh, nối giọng hỏng,
+                    # video chỉ còn nhạc nền dù TTS đã đọc xong.
+                    if (
+                        success
+                        and scene_voice.is_file()
+                        and pad_voice_to_duration(scene_voice, scene_dur, padded_voice)
+                    ):
                         voice_files.append(padded_voice)
                         has_voice = True
                         continue
 
-                # Phân cảnh không có lời thoại -> chèn đoạn im lặng đúng độ dài
-                generate_silence(padded_voice, scene_dur)
+                # Phân cảnh không có lời thoại (hoặc đọc/pad hỏng) -> im lặng đúng độ dài
+                generate_silence(scene_dur, padded_voice)
                 voice_files.append(padded_voice)
 
         if voice_code and voice_code != "none" and not has_voice:
