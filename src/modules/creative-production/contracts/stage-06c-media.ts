@@ -21,10 +21,12 @@ export const mediaVariantBodySchema = z.object({
   ratio: z.enum(VARIANT_RATIOS),
   watermark: z.boolean().default(true),
   auto_enhance: z.boolean().default(false).describe("AIC-14 — chỉ chỉnh vùng nền"),
+  // min/max thay cho refine để JSON Schema hiện đúng khoảng 1..5 (refine không biểu diễn được).
   scene_index: z
     .number()
     .int()
-    .refine((v) => (NARRATIVE_SCENE_INDEXES as readonly number[]).includes(v), "scene_index 1..5")
+    .min(Math.min(...NARRATIVE_SCENE_INDEXES), "scene_index 1..5")
+    .max(Math.max(...NARRATIVE_SCENE_INDEXES), "scene_index 1..5")
     .optional()
     .describe("Cảnh 1..5 của kịch bản (CREATIVE 5, AUTHENTIC 3)"),
   scene_plan_id: z.string().trim().min(1).max(160).optional(),
