@@ -32,8 +32,8 @@ export function VideoPlayerCard({
   const [isMuted, setIsMuted] = useState(false)
   const videoRef = React.useRef<HTMLVideoElement>(null)
 
-  const defaultPoster = "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&auto=format&fit=crop&q=80"
-  const effectivePoster = posterUrl || defaultPoster
+  // 24/09/2026: bỏ ảnh bìa mẫu Unsplash — không có ảnh sản phẩm thì để nền trống.
+  const effectivePoster = posterUrl || undefined
 
   // Tự động chuẩn hóa đường dẫn nội bộ nếu gặp domain giả lập cũ
   const normalizedVideoUrl = React.useMemo(() => {
@@ -116,13 +116,15 @@ export function VideoPlayerCard({
             onClick={handleTogglePlay}
             loop
           />
-        ) : (
+        ) : effectivePoster ? (
           <img
             src={effectivePoster}
             alt={productName}
             className="h-full w-full object-cover cursor-pointer"
             onClick={handleTogglePlay}
           />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[12px] text-white/70">Chưa có video</div>
         )}
 
         <div

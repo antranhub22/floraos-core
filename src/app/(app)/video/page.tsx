@@ -24,6 +24,8 @@ import { VideoFormat, VideoSceneItem, CaptionStyle } from "@/modules/video-studi
 
 interface VideoJobDetail extends VideoJobSummary {
   aspect_ratio: string;
+  /** URL ký có hạn để phát video (24/09/2026) — `final_video_url` thô không mở được. */
+  final_video_view_url?: string | null;
   scenes: Array<{
     scene_index: number;
     duration_seconds: number;
@@ -96,6 +98,14 @@ export default function VideoStudioPage() {
     }
   }, []);
 
+  // Đang render: đọc lại mỗi 3 giây tới khi xong/lỗi (24/09/2026 — trước đây
+  // phải tự bấm lại mới thấy kết quả).
+  useEffect(() => {
+    if (!activeJobId || activeJob?.stage !== "RENDERING") return;
+    const t = window.setTimeout(() => void fetchJobDetail(activeJobId), 3000);
+    return () => window.clearTimeout(t);
+  }, [activeJobId, activeJob, fetchJobDetail]);
+
   // Xử lý tạo job mới
   const handleCreateJob = async (data: {
     title: string;
@@ -154,6 +164,7 @@ export default function VideoStudioPage() {
       }
       const approved = await res.json();
       setActiveJob(approved);
+      void fetchJobDetail(approved.id);
       await fetchJobs();
     } finally {
       setActionLoading(false);
@@ -177,6 +188,7 @@ export default function VideoStudioPage() {
       }
       const data = await res.json();
       setActiveJob(data.videoJob);
+      void fetchJobDetail(data.videoJob.id);
       setGenerationJobId(data.generationJobId);
       await fetchJobs();
     } finally {
@@ -201,6 +213,7 @@ export default function VideoStudioPage() {
       }
       const approved = await res.json();
       setActiveJob(approved);
+      void fetchJobDetail(approved.id);
       await fetchJobs();
     } finally {
       setActionLoading(false);
@@ -392,24 +405,30 @@ export default function VideoStudioPage() {
             <div className="flex flex-col gap-4">
               <VideoPlayerCard
                 title={activeJob.title}
-                videoUrl={activeJob.final_video_url || undefined}
+                videoUrl={activeJob.final_video_view_url || undefined}
                 posterUrl={
                   activeJob.scenes?.[0]?.imageUrl ||
                   activeJob.scenes?.[0]?.image_url ||
                   (activeJob.scenes?.[0]?.image_asset_id?.startsWith("http") ? activeJob.scenes?.[0]?.image_asset_id : undefined) ||
-                  "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&auto=format&fit=crop&q=80"
+                  undefined
                 }
                 productName={activeJob.title}
                 price={activeJob.cost_credits ? `${activeJob.cost_credits} credits` : "0 credit"}
                 onDownload={() => {
-                  if (activeJob.final_video_url) {
-                    window.open(activeJob.final_video_url, "_blank");
+                  if (activeJob.final_video_view_url) {
+                    window.open(activeJob.final_video_view_url, "_blank");
                   } else {
                     alert("Video đang chờ render, vui lòng quay lại sau.");
                   }
                 }}
                 onShare={() => {
-                  alert("Đã sao chép liên kết video để chia sẻ mạng xã hội.");
+                  // Trước đây báo "đã sao chép" mà không sao chép gì.
+                  if (activeJob.final_video_view_url) {
+                    void navigator.clipboard.writeText(new URL(activeJob.final_video_view_url, window.location.origin).toString());
+                    alert("Đã sao chép liên kết video (có hạn 1 giờ).");
+                  } else {
+                    alert("Video chưa render xong — chưa có liên kết để chia sẻ.");
+                  }
                 }}
               />
 
