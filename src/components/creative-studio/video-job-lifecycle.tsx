@@ -53,15 +53,21 @@ export function VideoJobLifecycle({
   const [busy, setBusy] = useState<null | "script" | "render" | "video">(null)
   const [error, setError] = useState<string | null>(null)
   const pollRef = useRef<number | null>(null)
+  // Giữ callback mới nhất trong ref — cha thường truyền hàm inline, để nó trong
+  // deps của `load` sẽ nạp lại vô hạn.
+  const onChangeRef = useRef(onChange)
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/v1/video/jobs/${encodeURIComponent(jobId)}`)
     if (!res.ok) throw new Error(await readError(res))
     const j = (await res.json()) as VideoJobDetail
     setJob(j)
-    onChange?.(j)
+    onChangeRef.current?.(j)
     return j
-  }, [jobId, onChange])
+  }, [jobId])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- nạp trạng thái job từ API

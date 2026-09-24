@@ -15,7 +15,14 @@ import { Check, CheckCircle2, Film, Headphones, ImageIcon, Loader2, RefreshCw, S
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { CampaignPackageDto } from "./package-client"
-import type { ScenePlan } from "./scene-plan-client"
+import type { ScenePlan, ScenePlanScene } from "./scene-plan-client"
+import {
+  AudioRevisePanel,
+  reviseSceneAndRender,
+  sceneReviseCredit,
+  VideoRevisePanel,
+  type EditableVideoScene,
+} from "./package-revise-panels"
 
 export interface ReviewAsset {
   id: string
@@ -37,12 +44,27 @@ export interface ReviewVideoJob {
 
 type VideoDetail = {
   id: string
+  title: string
+  format: string
+  aspect_ratio: string
+  has_subtitle?: boolean
+  caption_style?: string
+  has_watermark?: boolean
+  voice_code?: string | null
+  product_id?: string | null
   stage: string
   video_approval: string
   script_approval?: string
   final_video_view_url?: string | null
   error_message?: string | null
-  scenes?: Array<{ scene_index: number; duration_seconds: number; text_overlay: string | null; voice_script: string | null }>
+  scenes?: Array<{
+    scene_index: number
+    duration_seconds: number
+    text_overlay: string | null
+    voice_script: string | null
+    image_asset_id: string | null
+    motion_effect: string | null
+  }>
 }
 type AudioDetail = { job_id: string; stage: string; audio_url: string | null; error: string | null }
 
@@ -115,12 +137,57 @@ export function PackageReviewSection(props: {
   onAssetsChanged: () => void
   onPackageRefresh: () => Promise<void>
   onRework: Rework
+  /** Sửa tại chỗ (24/09/2026). */
+  masterAssetId: string
+  productName: string
+  colors: string[]
+  topicTitle: string
+  angleCategory?: string | undefined
+  mode: "CREATIVE" | "AUTHENTIC"
+  onSceneRevised: (scene: ScenePlanScene) => void
+  onApply: (change: { replaceScene?: { index: number; assetId: string }; videoJobId?: string; audioJobId?: string }) => Promise<void>
 }) {
   const {
     approved, scenePlan, planRef, marketing, selectedVariants, setSelectedVariants,
     videoJobs, videoJobId, setVideoJobId, audioJobId, setAudioJobId, urlVideoJobId, urlAudioJobId,
     onAssetsChanged, onPackageRefresh, onRework,
+    masterAssetId, productName, colors, topicTitle, angleCategory, mode, onSceneRevised, onApply,
   } = props
+  const [instructions, setInstructions] = useState<Record<number, string>>({})
+  const [sceneStage, setSceneStage] = useState<Record<number, string | null>>({})
+  const [sceneError, setSceneError] = useState<Record<number, string | null>>({})
+
+  const runSceneRevise = async (idx: number, current: ScenePlanScene, ratio: string) => {
+    const instruction = (instructions[idx] ?? "").trim()
+    if (instruction.length < 3) {
+      setSceneError((p) => ({ ...p, [idx]: "Gõ yêu cầu sửa (ít nhất vài chữ)" }))
+      return
+    }
+    setSceneError((p) => ({ ...p, [idx]: null }))
+    try {
+      const r = await reviseSceneAndRender({
+        instruction,
+        scenePlanRef: planRef,
+        scene: current,
+        mode: scenePlan?.mode ?? mode,
+        topicTitle: scenePlan?.topicTitle ?? topicTitle,
+        productName,
+        colors,
+        masterAssetId,
+        ratio,
+        onStage: (st) => setSceneStage((p) => ({ ...p, [idx]: st })),
+      })
+      onSceneRevised(r.scene)
+      setSceneStage((p) => ({ ...p, [idx]: "Đang thay ảnh mới vào gói..." }))
+      await onApply({ replaceScene: { index: idx, assetId: r.assetId } })
+      onAssetsChanged()
+      setInstructions((p) => ({ ...p, [idx]: "" }))
+    } catch (e) {
+      setSceneError((p) => ({ ...p, [idx]: e instanceof Error ? e.message : "Không sửa được cảnh" }))
+    } finally {
+      setSceneStage((p) => ({ ...p, [idx]: null }))
+    }
+  }
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
@@ -167,10 +234,10 @@ export function PackageReviewSection(props: {
   }
 
   const scenes =
-    scenePlan?.scenes.map((s) => ({ index: s.sceneIndex, beat: s.beat, title: s.title, setting: s.setting })) ??
+    scenePlan?.scenes.map((s) => ({ index: s.sceneIndex, beat: s.beat, title: s.title, setting: s.setting, plan: s as ScenePlanScene | null })) ??
     [...new Set([...latestByScene.keys(), ...selectedByScene.keys()])]
       .sort((a, b) => a - b)
-      .map((i) => ({ index: i, beat: "", title: `Cảnh ${i}`, setting: "" }))
+      .map((i) => ({ index: i, beat: "", title: `Cảnh ${i}`, setting: "", plan: null as ScenePlanScene | null }))
 
   const swapIn = (idx: number, next: ReviewAsset) =>
     setSelectedVariants((prev) => {
@@ -277,8 +344,31 @@ export function PackageReviewSection(props: {
                         className="h-7 text-[11px] gap-1"
                         onClick={() => onRework("d", { focusScene: String(sc.index) })}
                       >
-                        <Wand2 size={11} /> Sinh lại cảnh {sc.index}
+                        <Wand2 size={11} /> Mở Khu vực D
                       </Button>
+                    </div>
+                  )}
+                  {!approved && sc.plan && (
+                    <div className="space-y-1.5 pt-1.5 border-t border-dashed border-border">
+                      <textarea
+                        rows={2}
+                        value={instructions[sc.index] ?? ""}
+                        disabled={!!sceneStage[sc.index]}
+                        onChange={(e) => setInstructions((p) => ({ ...p, [sc.index]: e.target.value }))}
+                        placeholder="Yêu cầu sửa cảnh, vd: đổi sang quầy lễ tân tông vàng ấm, thêm ánh nắng chiều"
+                        className="w-full rounded border border-border px-2 py-1 text-[11.5px]"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-7 text-[11px] gap-1"
+                        disabled={!!sceneStage[sc.index]}
+                        onClick={() => void runSceneRevise(sc.index, sc.plan as ScenePlanScene, shown?.aspect_ratio || "1:1")}
+                      >
+                        {sceneStage[sc.index] ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
+                        Sửa cảnh ({sceneReviseCredit(sc.plan, scenePlan?.mode ?? mode)} credit)
+                      </Button>
+                      {sceneStage[sc.index] && <div className="text-[11px] text-primary">{sceneStage[sc.index]}</div>}
+                      {sceneError[sc.index] && <div className="text-[11px] text-danger">{sceneError[sc.index]}</div>}
                     </div>
                   )}
                 </div>
@@ -389,9 +479,31 @@ export function PackageReviewSection(props: {
                     ))}
                 </ol>
               )}
-              <p className="text-[11px] text-text-muted">
-                Sửa phụ đề, lời thoại, giọng đọc, ảnh cảnh hay thời lượng cần render lại (tốn credit) — bấm &quot;Sửa storyboard / render lại&quot;, xong quay về đây sẽ có đề xuất dùng video mới.
-              </p>
+              {!approved && (
+                <VideoRevisePanel
+                  key={video.id}
+                  base={video}
+                  initialScenes={[...(video.scenes ?? [])]
+                    .sort((x, y) => x.scene_index - y.scene_index)
+                    .map(
+                      (sc): EditableVideoScene => ({
+                        sceneIndex: sc.scene_index,
+                        durationSeconds: sc.duration_seconds,
+                        textOverlay: sc.text_overlay ?? "",
+                        voiceScript: sc.voice_script ?? "",
+                        motionEffect: sc.motion_effect ?? "ZOOM_IN",
+                        imageAssetId: sc.image_asset_id && !sc.image_asset_id.includes("/") ? sc.image_asset_id : null,
+                      })
+                    )}
+                  imageChoices={styled.map((a) => ({
+                    assetId: a.id,
+                    label: `Cảnh ${String(a.metadata?.scene_index ?? "?")} · ${a.id.slice(0, 6)}${selectedVariants.includes(a.id) ? " (trong gói)" : ""}`,
+                  }))}
+                  onReady={(id) => {
+                    if (id !== videoJobId) void onApply({ videoJobId: id })
+                  }}
+                />
+              )}
             </div>
           </div>
         )}
@@ -451,9 +563,11 @@ export function PackageReviewSection(props: {
                 Bỏ khỏi gói
               </Button>
             )}
-            <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => onRework("c", audioJobId ? { audioJobId } : {})}>
-              <RefreshCw size={11} /> Phối lại ở Khu vực C
-            </Button>
+            <AudioRevisePanel
+              initialLines={(scenePlan?.scenes ?? []).map((s) => ({ sceneIndex: s.sceneIndex, voiceScript: s.voiceScript }))}
+              angleCategory={angleCategory}
+              onDone={(id) => void onApply({ audioJobId: id })}
+            />
           </div>
         )}
       </section>

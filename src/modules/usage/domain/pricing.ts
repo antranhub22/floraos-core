@@ -35,6 +35,10 @@ const FEATURE_COST_CREDIT: Readonly<Record<string, number>> = {
   // Kịch bản bối cảnh theo chủ đề (24/09/2026): MỘT lượt gọi LLM văn bản,
   // cùng hạng với `product.copy.generate`. Giá tạm — chờ chủ sản phẩm (nợ #64).
   "creative.scene_plan": 1,
+  // Sửa tại chỗ ở Chặng 07 (24/09/2026): mỗi lượt là MỘT lời gọi LLM văn bản.
+  // Giá tạm — chờ chủ sản phẩm (nợ #64).
+  "creative.scene_revise": 1,
+  "creative.content_rewrite": 1,
   "catalog.generate": 1,
   "landing.generate": 1,
   "video.render": 5,

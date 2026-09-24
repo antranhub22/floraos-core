@@ -12,7 +12,7 @@
  *   10–14 — `<PackageDownstreamCard />` đọc số liệu thật (`/performance`).
  */
 
-import React, { useCallback, useContext, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AlertTriangle, CheckCircle2, Loader2, Package, RefreshCw, Save, ShieldCheck } from "lucide-react"
 
@@ -346,6 +346,110 @@ export function PackageWorkspace() {
       )
     })
 
+  // ── Sửa tại chỗ (24/09/2026): kết quả mới tự thay vào gói và LƯU ngay ────
+  // Đọc giá trị MỚI NHẤT qua ref — việc chạy ngầm kết thúc sau nhiều lần render.
+  const latestDraft = useRef({ selectedVariants, videoJobId, audioJobId, draftPosts, pkgId: pkg?.id ?? null })
+  useEffect(() => {
+    latestDraft.current = { selectedVariants, videoJobId, audioJobId, draftPosts, pkgId: pkg?.id ?? null }
+  }, [selectedVariants, videoJobId, audioJobId, draftPosts, pkg?.id])
+
+  const saveNow = async (o: {
+    variantIds?: string[]
+    videoJobId?: string | null
+    audioJobId?: string | null
+    posts?: PackagePostDto[]
+  }) => {
+    const cur = latestDraft.current
+    if (!cur.pkgId) return
+    loadDraftFrom(
+      await apiJson<CampaignPackageDto>(`/api/v1/creative-production/packages/${cur.pkgId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          posts: o.posts ?? cur.draftPosts,
+          variant_asset_ids: o.variantIds ?? cur.selectedVariants,
+          video_job_id: o.videoJobId !== undefined ? o.videoJobId : cur.videoJobId,
+          audio_job_id: o.audioJobId !== undefined ? o.audioJobId : cur.audioJobId,
+        }),
+      })
+    )
+  }
+
+  const applyRevision = async (change: {
+    replaceScene?: { index: number; assetId: string }
+    videoJobId?: string
+    audioJobId?: string
+  }) => {
+    if (change.replaceScene) {
+      const { index, assetId } = change.replaceScene
+      // Bỏ ảnh CÙNG cảnh đang trong gói (theo metadata), thêm ảnh mới.
+      const sameScene = new Set(
+        marketing.filter((a) => a.metadata?.scene_index === index).map((a) => a.id)
+      )
+      const next = [...latestDraft.current.selectedVariants.filter((id) => !sameScene.has(id)), assetId]
+      await saveNow({ variantIds: next })
+    }
+    if (change.videoJobId) await saveNow({ videoJobId: change.videoJobId })
+    if (change.audioJobId) await saveNow({ audioJobId: change.audioJobId })
+  }
+
+  const onSceneRevised = (scene: ScenePlan["scenes"][number]) =>
+    setScenePlan((prev) =>
+      prev ? { ...prev, scenes: prev.scenes.map((s) => (s.sceneIndex === scene.sceneIndex ? scene : s)) } : prev
+    )
+
+  // AI viết lại MỘT bài theo yêu cầu (1 credit) — kết quả vào ô soạn và lưu gói.
+  const [rewriteText, setRewriteText] = useState<Record<string, string>>({})
+  const [rewriteBusy, setRewriteBusy] = useState<string | null>(null)
+  const [rewriteMsg, setRewriteMsg] = useState<Record<string, string | null>>({})
+  const rewritePost = async (channel: PackageChannel) => {
+    const instruction = (rewriteText[channel] ?? "").trim()
+    if (instruction.length < 3) {
+      setRewriteMsg((p) => ({ ...p, [channel]: "Gõ yêu cầu viết lại (ít nhất vài chữ)" }))
+      return
+    }
+    setRewriteBusy(channel)
+    setRewriteMsg((p) => ({ ...p, [channel]: null }))
+    try {
+      const cur = posts[channel]
+      const res = await fetch("/api/v1/creative-production/content-rewrites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "idempotency-key": `rewrite-${crypto.randomUUID()}` },
+        body: JSON.stringify({
+          channel,
+          text: cur.text,
+          hashtags: parseHashtags(cur.tags),
+          instruction,
+          product_name: ctx?.productName ?? "",
+          topic_title: ctx?.selectedTopic?.title ?? pkg?.topic?.title ?? "",
+          ...(ctx?.commercialPassport?.priceRange ? { price_range: ctx.commercialPassport.priceRange } : {}),
+        }),
+      })
+      if (!res.ok) {
+        const b = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
+        throw new Error(b.error?.message || `HTTP ${res.status}`)
+      }
+      const r = (await res.json()) as { text: string; hashtags: string[]; warnings: string[] }
+      const nextPosts = { ...posts, [channel]: { on: true, text: r.text, tags: r.hashtags.join(" ") } }
+      setPosts(nextPosts)
+      await saveNow({
+        posts: CHANNELS.filter((c) => nextPosts[c.id].on).map((c) => ({
+          channel: c.id,
+          text: nextPosts[c.id].text,
+          hashtags: parseHashtags(nextPosts[c.id].tags),
+        })),
+      })
+      setRewriteText((p) => ({ ...p, [channel]: "" }))
+      setRewriteMsg((p) => ({
+        ...p,
+        [channel]: r.warnings.length ? `Đã viết lại. Lưu ý từ cần cân nhắc: ${r.warnings.join(", ")}` : "Đã viết lại và lưu vào gói.",
+      }))
+    } catch (e) {
+      setRewriteMsg((p) => ({ ...p, [channel]: e instanceof Error ? e.message : "Không viết lại được" }))
+    } finally {
+      setRewriteBusy(null)
+    }
+  }
+
   const handleQa = () =>
     run("qa", async () => {
       if (!pkg) return
@@ -523,6 +627,14 @@ export function PackageWorkspace() {
           onAssetsChanged={() => setAssetsNonce((n) => n + 1)}
           onPackageRefresh={refreshPackage}
           onRework={goRework}
+          masterAssetId={masterId}
+          productName={ctx?.productName ?? ""}
+          colors={ctx?.commercialPassport?.colors ?? []}
+          topicTitle={ctx?.selectedTopic?.title ?? pkg.topic?.title ?? ""}
+          angleCategory={ctx?.selectedTopic?.angleCategory}
+          mode={(ctx?.mode ?? "CREATIVE") as "CREATIVE" | "AUTHENTIC"}
+          onSceneRevised={onSceneRevised}
+          onApply={applyRevision}
         />
 
         <section className="space-y-3">
@@ -578,6 +690,29 @@ export function PackageWorkspace() {
                       placeholder="#hashtag cách nhau bằng dấu cách"
                     />
                     <div className="text-[10.5px] text-text-muted">{p.text.length} ký tự</div>
+                    {!approved && (
+                      <div className="flex flex-col gap-1.5 rounded border border-dashed border-border p-2">
+                        <div className="flex gap-2">
+                          <input
+                            value={rewriteText[c.id] ?? ""}
+                            disabled={rewriteBusy !== null}
+                            onChange={(e) => setRewriteText((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                            placeholder="Yêu cầu AI viết lại, vd: vui hơn, ngắn gọn, nhấn mạnh giao nhanh trong ngày"
+                            className="flex-1 rounded border border-border px-2 py-1 text-xs"
+                          />
+                          <Button
+                            size="sm"
+                            className="h-7 text-[11px] gap-1 shrink-0"
+                            disabled={rewriteBusy !== null}
+                            onClick={() => void rewritePost(c.id)}
+                          >
+                            {rewriteBusy === c.id ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                            AI viết lại (1 credit)
+                          </Button>
+                        </div>
+                        {rewriteMsg[c.id] && <div className="text-[11px] text-text-muted">{rewriteMsg[c.id]}</div>}
+                      </div>
+                    )}
                   </>
                 )}
               </div>

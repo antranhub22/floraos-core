@@ -29,6 +29,8 @@
 - [x] 4 bài đa kênh, sửa được, không còn giá/thành phần bịa — `social-post-generator.ts`, `creative-result-viewer.tsx` (23/09)
 - [x] Sửa lỗi rules-of-hooks trong `CreativeResultViewer` (tách vỏ/thân) — eslint 0 lỗi
 - [x] "Lưu bài vào gói chiến dịch" — `package-client.ts`
+- [x] Sửa tại chỗ ở Chặng 07 (ảnh/bài/âm thanh/video), chạy ngầm, tự thay vào gói + lưu — `package-revise-panels.tsx`, `package-review-section.tsx`, `revise-assets.ts`, `revision-rules.ts` + `revision-rules.test.ts` (24/09)
+- [ ] `npm run db:seed` để hai mô hình OpenAI có `AIC-23` (AI viết lại bài)
 - [x] Bài B tự lưu (`content_drafts`, migration `20260924090000`), Chặng 07 đưa sẵn / đề xuất thay — `creative-result-viewer.tsx`, `package-workspace.tsx`, `tests/tenant/content-drafts.test.ts` (viết xong, chưa chạy — cần Postgres) (24/09)
 - [ ] Khuôn bài còn câu cam kết dịch vụ chung chưa lấy từ hồ sơ tiệm — nợ #119
 

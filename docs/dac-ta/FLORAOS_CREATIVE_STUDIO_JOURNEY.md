@@ -67,6 +67,11 @@ F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH
 
 - Nếu chưa có Master đã duyệt → nút "Skip — Dùng ảnh gốc làm Master".
 - **07 PACKAGE** — màn đầu hiện sẵn những gì đã sản xuất: ảnh biến thể mới nhất mỗi cảnh của kịch bản đang mở (kèm "chưa duyệt" nếu chưa duyệt I5), video (job trên URL, không có thì video đã duyệt P4 / đã render mới nhất), âm thanh Khu vực C. **"Tạo gói chiến dịch với các tài sản trên"** đưa sẵn chúng vào gói (tên = sản phẩm + chủ đề); sau đó chỉnh: ảnh biến thể của Master này (thấy % toàn vẹn và trạng thái duyệt từng ảnh), video, âm thanh, bài đăng theo kênh (sửa được). **"Lưu gói"**. Mọi thay đổi đưa gói về Nháp.
+- **Sửa tại chỗ (quyết định PO 24/09/2026)** — người dùng ở nguyên Chặng 07, gõ yêu cầu và bấm Sửa; hệ thống gọi đúng backend của khu vực gốc, chạy ngầm, có kết quả thì hiện ngay và **tự thay vào gói + lưu** (gói về Nháp để QA lại):
+  - **Ảnh từng cảnh** — ô "Yêu cầu sửa cảnh" → *Sửa cảnh* (1 credit AI viết lại cảnh + 2 credit Stability / 1 credit cục bộ): AI sửa bối cảnh cảnh đó (ghi vào kịch bản dùng chung), rồi sinh ảnh mới qua cổng Subject Integrity.
+  - **Bài đăng** — sửa chữ trực tiếp (miễn phí) **hoặc** ô yêu cầu → *AI viết lại (1 credit)*; từ cấm ngành hoa/thương hiệu bị chặn.
+  - **Âm thanh** — *Sửa âm thanh*: sửa lời thoại từng cảnh + nhạc nền → *Sửa & phối lại* (credit `audio.generate`).
+  - **Video** — *Sửa video*: sửa thời lượng, chuyển động, ảnh, phụ đề, lời thoại từng cảnh + giọng đọc → *Tạo bản sửa* → **Duyệt kịch bản (P3)** (giữ riêng theo PO) → *Render* (5 credit) → video mới phát ngay và tự thay vào gói; P4 duyệt tại chỗ.
 - **Xem lại & làm lại (24/09/2026)** — sau khi tạo gói, Chặng 07 hiện đủ mọi tài sản để review:
   - **Ảnh theo cảnh** của kịch bản (tên cảnh, bối cảnh, % lõi bó hoa, trạng thái duyệt): *Duyệt ảnh* (I5) ngay tại đây; *Bỏ khỏi gói* / *Đưa vào gói* / *Chọn ảnh khác từ kho*; *Sinh lại cảnh N* mở Khu vực D đúng cảnh đó.
   - **Video**: phát ngay; *Duyệt video (P4)* tại chỗ; đổi video khác; *Sửa storyboard / render lại* mở Khu vực E đúng job.

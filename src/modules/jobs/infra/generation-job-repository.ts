@@ -170,6 +170,19 @@ export class GenerationJobRepository {
   }
 
   /**
+   * Ghi đè `output` của một job đã xong (24/09/2026) — dùng khi sửa MỘT cảnh
+   * của kịch bản bối cảnh (`creative.scene_plan`): kịch bản đang dùng là bản
+   * mới nhất; lịch sử sửa nằm ở job `creative.scene_revise` riêng.
+   */
+  async replaceOutput(ctx: TenantContext, id: string, feature: string, output: unknown): Promise<boolean> {
+    const r = await this.db.generation_jobs.updateMany({
+      where: scopedWhere(ctx, { id, feature, status: "COMPLETED" as const }),
+      data: { output: output as InputJsonValue },
+    })
+    return r.count === 1
+  }
+
+  /**
    * `GET /jobs` (`G4` chỉ thấy job của mình, `G5` toàn tổ chức — đặc tả 06
    * mục 7). `onlyMine` khi ngữ cảnh có `G4` mà không có `G5`; route quyết định
    * giá trị này, repository chỉ lọc theo nó.
