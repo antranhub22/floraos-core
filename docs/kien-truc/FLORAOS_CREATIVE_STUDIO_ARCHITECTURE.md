@@ -2,7 +2,7 @@
 
 > **Module:** AI Creative Studio — Chặng 01–14 của hành trình Product-to-Market, gói trong 6 Khu vực tab (A–F)
 > **Route:** `/creative-studio`
-> **Phiên bản:** 4.3 — 24/09/2026 (đêm) — **Kịch bản sản xuất tổng** (Đợt 1–5, quyết định PO): Chặng 05 lên toàn bộ kế hoạch (nền tảng → khung, thời lượng, âm thanh, video, bài đăng, `revision`); B/C/D thực thi; E dựng video từ ảnh D + nguyên bản phối C (`POST /creative-production/video-assembly`); sửa ở Chặng 07 đồng bộ sang video; QA trục đồng nhất. Chi tiết: IO Spec §5.0b, §6, §7. Bản 4.2 — 24/09/2026 (tối) — Khu vực C: bốn tác vụ âm thanh thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026 — Nâng cấp sau chạy thật trên máy anh Tony: kịch bản bối cảnh theo chủ đề sinh ở Chặng 05 dùng chung B/C/D/E; sửa chất lượng ảnh worker (lõi đặc, cổng phủ ≥ 60%); Khu vực E theo kịch bản + giọng đọc + phát video; Chặng 07 xem lại và **sửa tại chỗ** mọi kết quả. (Bản 4.0 — 23/09/2026: đồng bộ 100% theo mã.)
+> **Phiên bản:** 4.4 — 24/09/2026 (khuya) — **Phạm vi sản xuất**: chủ tiệm chọn nền tảng + loại kết quả (content/audio/hình ảnh/video) cuối Chặng 04, chỉ sản xuất phần đã chọn; mỗi khung một bộ ảnh + một video; gói nhiều video; QA `scope_coverage` (§7.3, §8). Bản 4.3 — 24/09/2026 (đêm) — **Kịch bản sản xuất tổng** (Đợt 1–5, quyết định PO): Chặng 05 lên toàn bộ kế hoạch (nền tảng → khung, thời lượng, âm thanh, video, bài đăng, `revision`); B/C/D thực thi; E dựng video từ ảnh D + nguyên bản phối C (`POST /creative-production/video-assembly`); sửa ở Chặng 07 đồng bộ sang video; QA trục đồng nhất. Chi tiết: IO Spec §5.0b, §6, §7. Bản 4.2 — 24/09/2026 (tối) — Khu vực C: bốn tác vụ âm thanh thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026 — Nâng cấp sau chạy thật trên máy anh Tony: kịch bản bối cảnh theo chủ đề sinh ở Chặng 05 dùng chung B/C/D/E; sửa chất lượng ảnh worker (lõi đặc, cổng phủ ≥ 60%); Khu vực E theo kịch bản + giọng đọc + phát video; Chặng 07 xem lại và **sửa tại chỗ** mọi kết quả. (Bản 4.0 — 23/09/2026: đồng bộ 100% theo mã.)
 > **Trạng thái:** Đã triển khai trên nhánh `fix/creative-studio-production-ready`. Nghiệm thu trên máy thật còn thiếu: `npm run test:tenant` (cần Postgres), chạy thử worker với `STABILITY_API_KEY` thật, `lint` toàn repo (xem §9).
 >
 > **Quy tắc đọc:** chi tiết thi công (tên tệp, đường dẫn, method, mã năng lực, enum) lấy mã nguồn làm chuẩn (Hiến pháp Tài liệu §2, quy tắc 2). Tài liệu này mô tả đúng những gì mã đang làm, kể cả giới hạn.
@@ -232,6 +232,13 @@ A (01–05) ──05: AI viết kịch bản bối cảnh (scenePlanId)──▶
 4. Đo Subject Integrity → quyết định ghi asset. Asset ghi `provider=stability_ai`, `metadata.engine=cloud_provider`.
 5. Nhà cung cấp lỗi (thiếu `STABILITY_API_KEY`, 402/403/429, mạng, không phải ảnh) → lùi về phông cục bộ của preset, ghi `cloud_fallback=true` + lý do vào asset, sự kiện job và `ai_requests` (`outcome=FAILED`).
 
+### 7.3. Phạm vi sản xuất (PO 24/09/2026 tối)
+
+- Chọn ở cuối Chặng 04 (`production-scope-picker.tsx`, state ở `product-intelligence-workspace.tsx`), sửa tiếp ở đầu Chặng 05 (modal, điều khiển từ ngoài). Mặc định mỗi lần mở: TikTok + Reels 9:16, đủ 4 loại; "Tất cả" = `"all"`.
+- Luật thuần ở `publishing-rules.ts#resolvePublishing`: `produce = outputs ∪ derivedOutputs` (video ⇒ ảnh + âm thanh); `ratios` = mọi khung của nền tảng đã chọn; `videoVariants` = một video mỗi khung (khuôn ngắn nhất của các nền tảng cùng khung); `postChannels` chỉ khi có content. Kịch bản lưu phạm vi trong `publishing`; kịch bản cũ được suy phạm vi khi đọc.
+- Mang qua URL `/creative-studio?platforms=&outputs=` (`build-handoff-url.ts`). Tab khu vực ghi "ngoài phạm vi" / "cần cho video" (`areaScopeStatus`).
+- D: tab theo khung, sinh từng khung hoặc "Sinh đủ N khung" (credit × số khung); ảnh ghi `metadata.ratio`, ảnh cũ không có khung tính là khung chính. C: một bản phối dùng chung. E: `video-assembly` nhận `ratio`, kịch bản nhiều khung thì không mượn ảnh khung khác.
+
 ### 7.2. Tốc độ
 Con số "~0,46s / ảnh 2048×2048" là đo bằng CLI dev `generate_scene.py` khi đã có cache mặt nạ; chưa có phép đo chính thức trên worker production. Không dùng làm cam kết SLA.
 
@@ -241,6 +248,7 @@ Con số "~0,46s / ảnh 2048×2048" là đo bằng CLI dev `generate_scene.py` 
 
 - Bảng `campaign_packages` (đặc tả 07 §23). Trạng thái: `DRAFT → QA_PASSED | QA_NEEDS_REVIEW | QA_REJECTED → APPROVED`. Sửa gói chưa duyệt → về `DRAFT`, xoá QA cũ.
 - **QA (08)** — `evaluateCampaignQa()`: (1) toàn vẹn sản phẩm theo số đo từng ảnh; (2) cổng duyệt từng tài sản (I5, P4, audio hoàn tất); (3) chuẩn tỷ lệ theo kênh (TikTok cần 9:16); (4) nội dung — đủ bài, giới hạn ký tự (FB 63.206, IG 2.200, TikTok 2.200, Zalo 2.000), biến `{{…}}` chưa điền, ≤ 30 hashtag IG, từ điển ngành hoa + `brand_profiles.forbidden_styles` (`checkFlowerContent`); (5) thương hiệu — có logo, có ảnh đóng dấu. Phán quyết xấu nhất thắng.
+- **Nhiều video (24/09/2026 khuya)** — `campaign_packages.video_job_ids[]` (mỗi khung một video, `video_job_id` = video chính). Chặng 07 có tab "Video theo khung"; tạo gói đề xuất ảnh mỗi cảnh × mỗi khung và một video mỗi khung. QA duyệt/đồng nhất từng video; trục **`scope_coverage`** "Đủ phạm vi đã chọn" đọc phạm vi của kịch bản: thiếu bài theo kênh, âm thanh, ảnh hoặc video của một khung → `REJECTED`; loại không chọn thì không đòi.
 - **Duyệt (09)** — `canApprovePackage()`: chỉ sau QA; `QA_REJECTED` không duyệt được; `QA_NEEDS_REVIEW` cần xác nhận. Ghi `audit_logs` cùng giao dịch, chốt chặn đua bằng `updateMany where status = <đã đọc>`.
 - Bài đăng: bài B tự lưu (`content_drafts`) được đưa sẵn vào gói khi tạo; sau đó đề xuất "Dùng bài của Khu vực B" khi bài tự lưu khác bài trong gói. Vẫn soạn trực tiếp ở F được.
 

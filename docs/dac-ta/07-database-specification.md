@@ -1538,7 +1538,7 @@ model provider_health {
 
 > **Thêm 23/09/2026.** Trước ngày này Chặng 07–09 chỉ là state phía trình duyệt (QA gõ cứng "PASSED", duyệt không ghi gì). Bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly (`tests/helpers/database.ts`) và ca thử `tests/tenant/campaign-packages.test.ts`. Migration: `prisma/migrations/20260923160000_campaign_packages`.
 
-Gói chỉ giữ **định danh** tới tài sản thật — `variant_asset_ids` (asset `MARKETING` con của đúng `master_asset_id`), `video_job_id`, `audio_job_id` (`generation_jobs` feature `audio.generate`) — cộng nội dung bài đăng người dùng soạn. Use-case kiểm từng định danh thuộc đúng tổ chức và đúng Master trước khi ghi. Trạng thái: `DRAFT → QA_PASSED | QA_NEEDS_REVIEW | QA_REJECTED → APPROVED`; sửa gói chưa duyệt đưa về `DRAFT` và xoá `qa_report`. Duyệt ghi `audit_logs` (`campaign_package.approve`) trong cùng giao dịch.
+Gói chỉ giữ **định danh** tới tài sản thật — `variant_asset_ids` (asset `MARKETING` con của đúng `master_asset_id`), `video_job_ids` (mỗi khung một video — migration `20260924180000_campaign_packages_video_job_ids` điền từ `video_job_id`, cột này giữ làm video chính), `audio_job_id` (`generation_jobs` feature `audio.generate`) — cộng nội dung bài đăng người dùng soạn. Use-case kiểm từng định danh thuộc đúng tổ chức và đúng Master trước khi ghi. Trạng thái: `DRAFT → QA_PASSED | QA_NEEDS_REVIEW | QA_REJECTED → APPROVED`; sửa gói chưa duyệt đưa về `DRAFT` và xoá `qa_report`. Duyệt ghi `audit_logs` (`campaign_package.approve`) trong cùng giao dịch.
 
 ```prisma
 model campaign_packages {
@@ -1551,7 +1551,8 @@ model campaign_packages {
   topic              Json?
   content            Json?
   variant_asset_ids  String[]  @default([])
-  video_job_id       String?
+  video_job_id       String?   // video chính = video_job_ids[0]
+  video_job_ids      String[]  @default([])  // 24/09/2026: mỗi khung trong phạm vi một video
   audio_job_id       String?
   status             String    @default("DRAFT")
   qa_report          Json?

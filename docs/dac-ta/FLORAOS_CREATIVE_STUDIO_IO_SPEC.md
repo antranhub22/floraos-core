@@ -1,7 +1,7 @@
 # Input/Output Specification — Creative Studio (Chặng 01–14)
 
 > **Mục đích:** Chuẩn hoá đầu vào/đầu ra THẬT của từng chặng trong `/creative-studio`, đúng tên trường và kiểu như mã nguồn.
-> **Phiên bản:** 4.3 — 24/09/2026 (khuya). Thêm §0: hợp đồng input/output 14 chặng bằng zod + JSON Schema sinh tự động. Bản 4.2 — 24/09/2026 (tối). Viết lại §4 Khu vực C: bốn loại tác vụ thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
+> **Phiên bản:** 4.4 — 24/09/2026 (khuya). §5.0c phạm vi sản xuất (nền tảng + loại kết quả chọn cuối Chặng 04), mỗi khung một bộ ảnh + một video, gói nhiều video, QA `scope_coverage`. Bản 4.3 — 24/09/2026 (khuya). Thêm §0: hợp đồng input/output 14 chặng bằng zod + JSON Schema sinh tự động. Bản 4.2 — 24/09/2026 (tối). Viết lại §4 Khu vực C: bốn loại tác vụ thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
 > **Nguồn sự thật:** `src/modules/market-intelligence/domain/product-intelligence-types.ts`, `src/modules/creative-production/domain/{production-types,validate-transition,build-handoff-url,campaign-package-rules}.ts`, `src/modules/media/domain/variant-rules.ts`, `src/modules/audio-studio/domain/audio-types.ts`, `src/modules/video-studio/domain/video-types.ts`, các `route.ts` tương ứng. Lệch với tài liệu này thì mã thắng (Hiến pháp §2 quy tắc 2) — và tài liệu phải sửa trong cùng commit.
 
 
@@ -224,13 +224,27 @@ Chặng 05 lên TOÀN BỘ kế hoạch sản xuất; B/C/D/E chỉ thực thi. 
 |---|---|
 | `revision` | số nguyên ≥ 1, tăng mỗi lần sửa (`PATCH`, "Sửa cảnh" ở Chặng 07) |
 | `story` | `hook`, `cta`, `logline` |
-| `publishing` | `platforms[]`, `aspectRatio` (`9:16\|4:5\|1:1\|16:9`), `otherRatios[]` (nền tảng khác khung — cấu hình sẵn, chưa sinh) |
+| `publishing` | phạm vi sản xuất (§5.0c): `platforms[]`, `allPlatforms`, `outputs[]`, `allOutputs`, `derivedOutputs[]`, `produce[]`, `ratios[]`, `videoVariants[{ ratio, videoFormat, targetSeconds, platforms[] }]`, `aspectRatio` (khung chính), `otherRatios[]` (giữ tương thích, luôn rỗng) |
 | `video` | `format` (theo nền tảng), `totalDurationSeconds`, `captionStyle`, `hasSubtitle`, `hasWatermark`, `coverSceneIndex`, `endCardText` |
 | `audio` | `voiceId` (6 giọng `voice-catalog.ts`), `qualityTier`, `musicMood`, `pacing` |
 | `content` | `posts[{ channel, text, hashtags }]` cho kênh của nền tảng đã chọn (qua giới hạn kênh + từ cấm; rỗng = B dùng khuôn dự phòng), `videoCaption{ text, hashtags }` |
 | `scenes[]` thêm | `durationSeconds` (tổng ≈ mục tiêu nền tảng, cao trào dài hơn, ≥ số giây đọc trọn lời ~14 ký tự/giây, 1,5–15s), `transition`, `shot` (`close\|medium\|wide`), `musicCue` |
 
-Bảng nền tảng (`publishing-rules.ts`): TikTok 9:16 `TIKTOK_30S` ~20s · Instagram/Facebook Reels 9:16 `REEL_15S` 15s · YouTube Shorts 9:16 · Zalo Video 9:16 `STORY_15S` · YouTube 16:9 `SLIDESHOW` · Facebook/Instagram Feed 4:5 `SLIDESHOW`. Một tỉ lệ → dùng tỉ lệ đó; trộn tỉ lệ → 9:16 (mặc định hiện tại), các khung khác ghi ở `otherRatios`. Worker video dựng được 9:16, 16:9, 1:1, 4:5.
+Bảng nền tảng (`publishing-rules.ts`): TikTok 9:16 `TIKTOK_30S` ~20s · Instagram/Facebook Reels 9:16 `REEL_15S` 15s · YouTube Shorts 9:16 · Zalo Video 9:16 `STORY_15S` · YouTube 16:9 `SLIDESHOW` · Facebook/Instagram Feed 4:5 `SLIDESHOW`. Trộn tỉ lệ → sinh ĐỦ mọi khung (mỗi khung một bộ ảnh + một video); khung chính là 9:16 nếu có. Worker video dựng được 9:16, 16:9, 1:1, 4:5.
+
+### 5.0c. Phạm vi sản xuất (PO 24/09/2026 tối)
+
+Chủ tiệm chọn **nền tảng đăng** và **loại kết quả** (`content | audio | image | video`) ở cuối Chặng 04 (`ProductionScopePicker` trên `product-intelligence-workspace.tsx`), sửa tiếp được ở đầu Chặng 05 (modal). Hệ thống chỉ sản xuất đúng phần đã chọn.
+
+| Luật (`resolvePublishing`) | Kết quả |
+|---|---|
+| Không truyền | TikTok + Reels (9:16), đủ 4 loại — mặc định mỗi lần mở |
+| `"all"` hoặc mảng rỗng | mọi nền tảng / mọi loại |
+| Nhiều khung | mỗi khung một bộ ảnh (D) + một video (E) — credit ảnh/video × số khung; âm thanh C dùng chung |
+| Chọn `video` | tự thêm `image` + `audio` (`derivedOutputs`) |
+| Bài đăng | chỉ khi có `content`, cho kênh của nền tảng đã chọn (`postChannels`) |
+
+Mang qua: thân `POST /scene-plans` và `PATCH /scene-plans/:id` nhận `platforms: "all" | PublishPlatform[]`, `outputs: "all" | ProductionOutput[]`; query bàn giao `/creative-studio` mang `platforms`, `outputs` (`a,b,c` hoặc `all`, `encodeScopeParam`/`decodeScopeParam`). Cùng ảnh + chủ đề + mode đã có kịch bản mà phạm vi khác → `writeScenePlan` sửa phạm vi tại chỗ (miễn phí). Tab Khu vực B–E ghi "ngoài phạm vi" / "cần cho video" (`areaScopeStatus`). Khu vực D có tab theo khung; `POST /creative-production/video-assembly` nhận `ratio` (mỗi khung một video, khuôn theo `videoVariants`; nhiều khung thì không mượn ảnh khung khác, thiếu thì chặn "chưa có ảnh khung X").
 
 **Phụ đề = lời thoại (PO 24/09/2026 tối):** `scenes[].textOverlay` luôn bằng `voiceScript` (chuẩn hoá khi sinh, khi đọc bản cũ, khi sửa, khi "Sửa cảnh"); `normalizeScenes` của video cũng ép `textOverlay = voiceScript`. Không còn ô phụ đề riêng ở xem trước Chặng 05, storyboard E, "Sửa video" Chặng 07. Worker chia lời thoại thành đoạn ≤ 60 ký tự (`split_subtitle_chunks`), mỗi đoạn là một lớp RGBA ghép theo thời gian (`subtitle_timeline`: cảnh bắt đầu ở tổng thời lượng các cảnh trước, đoạn chia theo số ký tự) — không in chết vào ảnh; chuyển cảnh bù phần chồng xfade để mốc cảnh trùng mốc âm thanh.
 
@@ -292,15 +306,15 @@ Storyboard từ kịch bản (24/09/2026, `video-storyboard-builder.ts`): mỗi 
 
 | Chặng | Gọi | Vào | Ra / hiệu ứng |
 |---|---|---|---|
-| 07 | `POST /creative-production/packages` (`I1`) | `{ name, mode, master_asset_id, topic?: { id, title, angleCategory?, hook?, cta?, scene2Preset? }, posts?, variant_asset_ids?, video_job_id?, audio_job_id? }` | gói `DRAFT` |
+| 07 | `POST /creative-production/packages` (`I1`) | `{ name, mode, master_asset_id, topic?: { id, title, angleCategory?, hook?, cta?, scene2Preset? }, posts?, variant_asset_ids?, video_job_id?, video_job_ids?, audio_job_id? }` | gói `DRAFT` |
 | 07 | `PATCH /creative-production/packages/:id` (`I1`) | các trường trên (trừ master/mode/topic) | về `DRAFT`, xoá QA |
 | — | `GET /creative-production/packages/:id` (`G1`) | — | `CampaignPackageView` (dưới) |
 | 08 | `POST /creative-production/packages/:id/qa` (`I1`) | — | `qa_report` + `status` |
 | 09 | `POST /creative-production/packages/:id/approve` (`J5`) | `{ acknowledge_warnings?: boolean }` | `APPROVED`, `audit_logs` |
 
-`CampaignPackageView`: `{ id, name, mode, status, master_asset_id, product_id, topic, posts, variant_asset_ids, video_job_id, audio_job_id, variants: { asset_id, url, aspect_ratio, identity_score, approval_state, scene_index, watermark }[], video: { id, title, stage, video_approval, script_approval, aspect_ratio, final_video_url, view_url (ký có hạn) } | null, audio: { job_id, stage, audio_url } | null, qa_report, qa_checked_at, approved_by, approved_at, launch_plan, created_at, updated_at }`.
+`CampaignPackageView`: `{ id, name, mode, status, master_asset_id, product_id, topic, posts, variant_asset_ids, video_job_id (video chính = video_job_ids[0]), video_job_ids[], audio_job_id, variants: { asset_id, url, aspect_ratio, identity_score, approval_state, scene_index, watermark }[], video: { id, title, stage, video_approval, script_approval, aspect_ratio, final_video_url, view_url (ký có hạn) } | null, videos: cùng dạng[] (mỗi khung một video), audio: { job_id, stage, audio_url } | null, qa_report, qa_checked_at, approved_by, approved_at, launch_plan, created_at, updated_at }`.
 
-`QaReport`: `{ verdict: "PASS"|"NEEDS_REVIEW"|"REJECTED", checks: { id: product_integrity|approvals|platform_specs|content|brand|plan_consistency, title, verdict, reasons[] }[], checkedAt }`. `plan_consistency` (Đợt 5, 24/09/2026) chỉ có khi `topic.scenePlanId` được gắn (gói tạo từ 24/09): ảnh (`metadata.scene_plan_id/revision`), âm thanh (`payload.scenePlanId/Revision`), video (`video_jobs.scene_plan_id/revision`, `audio_storage_key`) phải cùng kịch bản và không cũ hơn phiên bản hiện hành. `topic` nhận thêm `scenePlanId?`, `scenePlanRevision?`. `POST /scene-revisions` trả thêm `scene_plan_revision`. Luật chi tiết: Arch §8.
+`QaReport`: `{ verdict: "PASS"|"NEEDS_REVIEW"|"REJECTED", checks: { id: product_integrity|approvals|platform_specs|content|brand|plan_consistency|scope_coverage, title, verdict, reasons[] }[], checkedAt }`. `scope_coverage` (24/09/2026 khuya) chỉ có khi kịch bản gắn gói có phạm vi: thiếu bài theo kênh, âm thanh, ảnh hoặc video của một khung trong phạm vi → `REJECTED`; loại không chọn thì không đòi (và trục ảnh/nội dung thôi đòi "chưa có ảnh/bài" khi loại đó ngoài phạm vi). `plan_consistency` (Đợt 5, 24/09/2026) chỉ có khi `topic.scenePlanId` được gắn (gói tạo từ 24/09): ảnh (`metadata.scene_plan_id/revision`), âm thanh (`payload.scenePlanId/Revision`), video (`video_jobs.scene_plan_id/revision`, `audio_storage_key`) phải cùng kịch bản và không cũ hơn phiên bản hiện hành. `topic` nhận thêm `scenePlanId?`, `scenePlanRevision?`. `POST /scene-revisions` trả thêm `scene_plan_revision`. Luật chi tiết: Arch §8.
 
 ### 7.1. Sửa tại chỗ ở Chặng 07 (24/09/2026)
 

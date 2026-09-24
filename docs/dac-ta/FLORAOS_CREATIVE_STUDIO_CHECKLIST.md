@@ -88,6 +88,7 @@
 - [x] Duyệt từng cảnh (`I5`) — `variant-workspace.tsx#handleApproveScene`
 - [x] Gỡ bộ chọn "6 bối cảnh" chọn tay + nhãn sai "10 phối cảnh (0đ)"; màn cấu hình = xem trước cảnh của kịch bản + nguồn hậu cảnh + tỉ lệ + watermark — `variant-workspace.tsx#openSceneBoard` (24/09)
 - [ ] Đo tốc độ chính thức trên worker production (con số ~0,46s là đo CLI dev)
+- [x] Mỗi khung trong phạm vi sản xuất một bộ ảnh: tab khung, "Sinh đủ N khung", `?focusRatio` — `variant-workspace.tsx` (24/09 khuya)
 
 ## 5. Khu vực E — Chặng 06d
 
@@ -96,6 +97,7 @@
 - [x] Tự gắn ảnh biến thể của Khu vực D vào cảnh — `video-workspace.tsx`
 - [x] Cổng duyệt `P3`/`P4` (đặc tả sửa theo mã)
 - [ ] Nhận bản phối âm thanh từ Khu vực C — nợ #123
+- [x] Mỗi khung một video: `video-assembly` nhận `ratio`, tab "Video 9:16 / 16:9…" — `video-assembly-rules.ts`, `plan-video-assembly.tsx` (24/09 khuya)
 
 ## 6. Khu vực F — Chặng 07–09
 
@@ -106,6 +108,8 @@
 - [x] Duyệt `J5` + `audit_logs` cùng giao dịch + chốt chặn đua — `approve-campaign-package`
 - [x] Ca thử cách ly tenant — `tests/tenant/campaign-packages.test.ts` (viết xong, **chưa chạy** — cần Postgres)
 - [ ] Năng lực riêng + trần cứng cho duyệt gói — nợ #121 (chờ PO)
+- [x] Gói nhiều video (`video_job_ids`, migration `20260924180000`), tab "Video theo khung" ở Chặng 07, QA `scope_coverage` "Đủ phạm vi đã chọn" — `scope-coverage-qa.test.ts` (24/09 khuya)
+- [ ] Chạy `test:tenant` với cột `video_job_ids` (cần `prisma migrate deploy` trên máy anh Tony)
 
 ## 7. Chặng 10–14
 
@@ -130,3 +134,4 @@
 - [x] Architecture v4.0 · IO Spec v4.0 · Journey v3.0 · Checklist v2.0
 - [x] Đặc tả 06 §8/§19/§22/§23, đặc tả 07 §20/§23 — `check:docs` khớp
 - [x] Registry, TRANG_THAI, TECHNICAL_DEBT (#119–#124), AGENTS.md trạng thái
+- [x] Phạm vi sản xuất (24/09 khuya): Architecture v4.4 §7.3/§8 · IO Spec v4.4 §5.0c · đặc tả 06/07 · TECHNICAL_DEBT #129
