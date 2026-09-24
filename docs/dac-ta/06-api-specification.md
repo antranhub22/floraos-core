@@ -660,6 +660,7 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | POST | `/creative-production/scene-plans` | `I1` | 24/09/2026 — AI viết kịch bản bối cảnh cho MỘT chủ đề (feature `creative.scene_plan`, 1 credit, `AIC-18` qua cổng AI, chạy tại chỗ như `product.copy.generate`). `Idempotency-Key` BẮT BUỘC; trùng khoá trả kịch bản cũ không trừ credit. Thân: `mode`, `asset_id?`, `product_id?`, `product{name, category?, style?, colors[], components[], occasions[], target_audience?, price_range?}`, `topic{id, title, angle_category?, hook?, cta?, format?}`. Đáp ứng `{ job_id, status, error, plan, deduped, usage }`. AI hỏng → job `FAILED`, hoàn credit, 500 kèm lý do |
 | GET | `/creative-production/scene-plans` | `I1` | Query `asset_id`, `topic_id`, `mode`. Tra kịch bản đã có theo khoá `scene-plan:<asset>:<topic>:<mode>` — KHÔNG tạo job, không trừ credit; chưa có thì `plan: null` |
 | GET | `/creative-production/scene-plans/:id` | `I1` | Đọc kịch bản theo job id (chỉ feature `creative.scene_plan` của đúng tổ chức) |
+| GET · PUT | `/creative-production/content-drafts` | `I1` | 24/09/2026 — bài Khu vực B tự lưu theo `asset_id` + `topic_id` + `mode` (GET qua query, PUT qua body kèm `posts`, `topic_title?`); Chặng 07 đưa sẵn vào gói. Ảnh phải thuộc đúng tổ chức |
 | POST | `/audio/jobs` | `I1` | Tạo job `audio.generate` (TTS + nhạc nền + phối). `Idempotency-Key` BẮT BUỘC (từ 23/09/2026) |
 | GET | `/audio/jobs/:id` | `I1` | Trạng thái job âm thanh + URL ký có hạn của bản phối |
 

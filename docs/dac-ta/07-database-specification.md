@@ -1571,3 +1571,27 @@ model campaign_packages {
 
 Chặng 11–13 **không** có bảng riêng: đọc `orders`/`order_items` (theo `product_id` của gói, kể từ `approved_at`), `chat_conversations`, và `content_metrics` (theo `launch_plan.postRefs`). Chưa quy được một đơn về một bài đăng cụ thể — giao diện nói rõ giới hạn này.
 
+## 24. Bài Khu vực B tự lưu — `content_drafts`
+
+> **Thêm 24/09/2026.** Trước ngày này bài viết Khu vực B chỉ vào gói chiến dịch khi người dùng bấm "Lưu bài vào gói"; chuyển tab là mất. Bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly và ca thử `tests/tenant/content-drafts.test.ts`. Migration: `prisma/migrations/20260924090000_content_drafts`.
+
+Khoá `(organization_id, asset_id, topic_id, mode)` — cùng khoá với kịch bản bối cảnh (`creative.scene_plan`). Khu vực B tự lưu 1,2 giây sau lần sửa cuối (`PUT`), Chặng 07 đưa sẵn `posts` vào gói khi tạo và đề xuất "Dùng bài của Khu vực B" khi bài tự lưu khác bài trong gói. Use-case kiểm `asset_id` thuộc đúng tổ chức của phiên.
+
+```prisma
+model content_drafts {
+  id              String   @id @default(uuid())
+  organization_id String
+  asset_id        String
+  topic_id        String
+  mode            String
+  topic_title     String?
+  posts           Json
+  created_by      String
+  updated_by      String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@unique([organization_id, asset_id, topic_id, mode])
+  @@index([organization_id, updated_at])
+}
+```

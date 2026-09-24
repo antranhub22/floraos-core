@@ -10,6 +10,8 @@ const TENANT_TABLES = [
   "product_analysis_runs",
   // Gói chiến dịch Creative Studio (Khu vực F, Chặng 07–14) — 23/09/2026
   "campaign_packages",
+  // Bài Khu vực B tự lưu — 24/09/2026
+  "content_drafts",
   // Nền AI — AI-1. `ai_capabilities` và `ai_models` KHÔNG nằm ở đây: chúng là
   // sổ đăng ký cấp nền tảng, không phải dữ liệu thử của một tổ chức, và
   // `ensureSystemRoles` phía dưới cũng không dựng lại chúng.

@@ -28,6 +28,9 @@ import {
   promoteToMaster,
   resolveApprovedMaster,
   sceneTwoPresetFor,
+  contentDraftKey,
+  getContentDraft,
+  type ContentDraftDto,
   type CampaignPackageDto,
   type PackageChannel,
   type PackagePostDto,
@@ -94,6 +97,8 @@ export function PackageWorkspace() {
   const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
   const [planRef, setPlanRef] = useState<string | null>(null)
   const [assetsNonce, setAssetsNonce] = useState(0)
+  // Bài Khu vực B đã tự lưu (24/09/2026) — đưa sẵn vào gói / đề xuất thay.
+  const [bDraft, setBDraft] = useState<ContentDraftDto | null>(null)
 
   // Bản nháp chỉnh sửa (Chặng 07) — lưu bằng PATCH.
   const [selectedVariants, setSelectedVariants] = useState<string[]>([])
@@ -170,6 +175,31 @@ export function PackageWorkspace() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx?.assetId, ctx?.selectedTopic?.id, ctx?.mode, urlPlanId])
+
+  useEffect(() => {
+    const key = ctx ? contentDraftKey({ assetId: ctx.assetId, selectedTopic: ctx.selectedTopic, mode: ctx.mode }) : null
+    if (!key) return
+    let cancelled = false
+    getContentDraft(key)
+      .then((d) => {
+        if (!cancelled) setBDraft(d)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx?.assetId, ctx?.selectedTopic?.id, ctx?.mode])
+
+  const applyBDraft = () => {
+    if (!bDraft) return
+    setPosts(() => {
+      const next = {} as Record<PackageChannel, { on: boolean; text: string; tags: string }>
+      for (const c of CHANNELS) next[c.id] = { on: false, text: "", tags: "" }
+      for (const post of bDraft.posts) next[post.channel] = { on: true, text: post.text, tags: post.hashtags.join(" ") }
+      return next
+    })
+  }
 
   // Làm lại ở khu vực gốc (tốn credit) — mang `returnTo=f` để quay về gói.
   const goRework = (area: "b" | "c" | "d" | "e", extra: Record<string, string> = {}) => {
@@ -282,6 +312,7 @@ export function PackageWorkspace() {
               }
             : {}),
           ...(producedScenes.length > 0 ? { variant_asset_ids: producedScenes.map((a) => a.id) } : {}),
+          ...(bDraft && bDraft.posts.length > 0 ? { posts: bDraft.posts } : {}),
           ...(suggestedVideo ? { video_job_id: suggestedVideo.id } : {}),
           ...(urlAudioJobId ? { audio_job_id: urlAudioJobId } : {}),
         }),
@@ -414,8 +445,11 @@ export function PackageWorkspace() {
             <span className="font-bold">Âm thanh (Khu vực C):</span>{" "}
             {urlAudioJobId ? `job ${urlAudioJobId.slice(0, 8)}` : "chưa có"}
           </div>
-          <div className="text-[12px] text-text-muted">
-            Bài đăng (Khu vực B): thêm sau khi tạo gói — bấm &quot;Lưu bài vào gói chiến dịch&quot; ở Khu vực B hoặc soạn trực tiếp tại đây.
+          <div className="text-[12px] text-text">
+            <span className="font-bold">Bài đăng (Khu vực B):</span>{" "}
+            {bDraft && bDraft.posts.length > 0
+              ? `${bDraft.posts.length} kênh (${bDraft.posts.map((p) => p.channel).join(", ")}) · tự lưu lúc ${new Date(bDraft.updated_at).toLocaleString("vi-VN")}`
+              : "chưa có — viết ở Khu vực B (tự lưu) hoặc soạn trực tiếp sau khi tạo gói"}
           </div>
         </div>
 
@@ -495,6 +529,19 @@ export function PackageWorkspace() {
               </Button>
             )}
           </div>
+          {!approved &&
+            bDraft &&
+            bDraft.posts.length > 0 &&
+            JSON.stringify(bDraft.posts) !== JSON.stringify(draftPosts) && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-[12px]">
+                <span>
+                  Có bài từ Khu vực B tự lưu lúc {new Date(bDraft.updated_at).toLocaleString("vi-VN")} khác với bài trong gói.
+                </span>
+                <button type="button" className="font-bold text-primary hover:underline" onClick={applyBDraft}>
+                  ↻ Dùng bài của Khu vực B
+                </button>
+              </div>
+            )}
           {CHANNELS.map((c) => {
             const p = posts[c.id]
             return (

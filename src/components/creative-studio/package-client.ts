@@ -146,3 +146,44 @@ export function sceneTwoPresetFor(angle: string | undefined): "wedding" | "luxur
   if (angle === "PRODUCT_SHOWCASE" || angle === "TREND") return "luxury_hotel"
   return "living_room"
 }
+
+// ── Bài Khu vực B tự lưu (24/09/2026) ──────────────────────────────────────
+
+export interface ContentDraftDto {
+  asset_id: string
+  topic_id: string
+  mode: string
+  topic_title: string | null
+  posts: PackagePostDto[]
+  updated_at: string
+}
+
+/** Khoá bản nháp — cùng quy ước với kịch bản bối cảnh (chưa chọn chủ đề = "no-topic"). */
+export function contentDraftKey(ctx: {
+  assetId?: string | undefined
+  selectedTopic?: { id: string } | null | undefined
+  mode: "CREATIVE" | "AUTHENTIC"
+}): { asset_id: string; topic_id: string; mode: "CREATIVE" | "AUTHENTIC" } | null {
+  if (!ctx.assetId) return null
+  return { asset_id: ctx.assetId, topic_id: ctx.selectedTopic?.id ?? "no-topic", mode: ctx.mode }
+}
+
+export async function getContentDraft(
+  key: { asset_id: string; topic_id: string; mode: string }
+): Promise<ContentDraftDto | null> {
+  const q = new URLSearchParams(key)
+  const body = await apiJson<{ draft: ContentDraftDto | null }>(`/api/v1/creative-production/content-drafts?${q.toString()}`)
+  return body.draft
+}
+
+export async function saveContentDraft(
+  key: { asset_id: string; topic_id: string; mode: string },
+  posts: PackagePostDto[],
+  topicTitle: string | null
+): Promise<ContentDraftDto> {
+  const body = await apiJson<{ draft: ContentDraftDto }>("/api/v1/creative-production/content-drafts", {
+    method: "PUT",
+    body: JSON.stringify({ ...key, topic_title: topicTitle, posts }),
+  })
+  return body.draft
+}

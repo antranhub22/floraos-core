@@ -162,6 +162,7 @@ model organizations {
   content_opportunities      content_opportunities[]
   product_analysis_runs      product_analysis_runs[]
   campaign_packages          campaign_packages[]
+  content_drafts             content_drafts[]
 }
 
 model workspaces {
@@ -1860,4 +1861,28 @@ model campaign_packages {
   @@index([organization_id, created_at])
   @@index([organization_id, master_asset_id])
   @@index([organization_id, status])
+}
+
+/// Bài đăng Khu vực B (Chặng 06a) TỰ LƯU theo ảnh + chủ đề + mode (24/09/2026) —
+/// để Chặng 07 đưa sẵn vào gói chiến dịch mà người dùng không phải bấm lưu.
+/// TENANT: `organization_id` bắt buộc, mọi truy vấn qua `scopedWhere`/`scopedData`.
+model content_drafts {
+  id              String   @id @default(uuid())
+  organization_id String
+  /// Ảnh sản phẩm Khu vực A (`assets.id`) — cùng khoá với kịch bản bối cảnh.
+  asset_id        String
+  topic_id        String
+  mode            String                        // CREATIVE | AUTHENTIC
+  topic_title     String?
+  /// [{ channel, text, hashtags[] }] — cùng hình dạng `campaign_packages.content`.
+  posts           Json
+  created_by      String
+  updated_by      String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@unique([organization_id, asset_id, topic_id, mode])
+  @@index([organization_id, updated_at])
 }

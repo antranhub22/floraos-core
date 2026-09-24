@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useContext, useMemo } from "react"
+import React, { useState, useContext, useMemo, useEffect } from "react"
 import {
   Sparkles,
   Copy,
@@ -31,6 +31,8 @@ import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
 import {
   resolveApprovedMaster,
   savePostsToPackage,
+  contentDraftKey,
+  saveContentDraft,
   sceneTwoPresetFor,
   type PackagePostDto,
 } from "./package-client"
@@ -192,6 +194,32 @@ function CreativeResultViewerBody({
     return customEdits[platform] ?? generatedPosts[platform]?.fullContent ?? ""
   }
 
+  const buildPosts = (): PackagePostDto[] =>
+    PLATFORMS.map((p) => {
+      const gen = generatedPosts[p]
+      const edited = customEdits[p]
+      if (edited !== undefined) return { channel: p, text: edited, hashtags: [] }
+      const tagLine = gen?.hashtags?.length ? `\n\n${gen.hashtags.join(" ")}` : ""
+      const text = gen ? (tagLine && gen.fullContent.endsWith(tagLine.trim()) ? gen.fullContent.slice(0, gen.fullContent.length - tagLine.length) : gen.fullContent) : ""
+      return { channel: p, text, hashtags: gen?.hashtags ?? [] }
+    })
+
+  // TỰ LƯU bài (kể cả phần sửa) theo ảnh + chủ đề + mode (24/09/2026) — Chặng 07
+  // đưa sẵn vào gói mà không cần bấm "Lưu bài vào gói". Chờ 1,2 giây sau lần sửa cuối.
+  const [autoSaved, setAutoSaved] = useState<{ at: string | null; error: string | null }>({ at: null, error: null })
+  const draftKey = ctx ? contentDraftKey({ assetId: ctx.assetId, selectedTopic: ctx.selectedTopic, mode: ctx.mode }) : null
+  const draftKeyStr = draftKey ? `${draftKey.asset_id}|${draftKey.topic_id}|${draftKey.mode}` : null
+  useEffect(() => {
+    if (!draftKey) return
+    const t = window.setTimeout(() => {
+      saveContentDraft(draftKey, buildPosts(), ctx?.selectedTopic?.title ?? currentResult.topicTitle ?? null)
+        .then((d) => setAutoSaved({ at: d.updated_at, error: null }))
+        .catch((e) => setAutoSaved({ at: null, error: e instanceof Error ? e.message : "Không tự lưu được" }))
+    }, 1200)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKeyStr, generatedPosts, customEdits])
+
   // Lưu 4 bài vào gói chiến dịch của Master hiện tại (Khu vực F đọc lại qua API)
   // — thay cho việc kết quả Khu vực B mất khi chuyển tab (23/09/2026).
   const [savingToPackage, setSavingToPackage] = useState(false)
@@ -206,14 +234,7 @@ function CreativeResultViewerBody({
           "Chưa có Master Image đã duyệt cho ảnh này — vào Khu vực F bấm 'Skip — Dùng ảnh gốc làm Master' trước."
         )
       }
-      const posts: PackagePostDto[] = PLATFORMS.map((p) => {
-        const gen = generatedPosts[p]
-        const edited = customEdits[p]
-        if (edited !== undefined) return { channel: p, text: edited, hashtags: [] }
-        const tagLine = gen?.hashtags?.length ? `\n\n${gen.hashtags.join(" ")}` : ""
-        const text = gen ? (tagLine && gen.fullContent.endsWith(tagLine.trim()) ? gen.fullContent.slice(0, gen.fullContent.length - tagLine.length) : gen.fullContent) : ""
-        return { channel: p, text, hashtags: gen?.hashtags ?? [] }
-      })
+      const posts = buildPosts()
       const topic = ctx?.selectedTopic
       const saved = await savePostsToPackage({
         masterAssetId: masterId,
@@ -580,6 +601,13 @@ function CreativeResultViewerBody({
         </button>
       </div>
       {packageNotice && <p className="text-[12px] text-stone-700">{packageNotice}</p>}
+      <p className={`text-[11.5px] ${autoSaved.error ? "text-rose-700" : "text-stone-500"}`}>
+        {autoSaved.error
+          ? `Chưa tự lưu được: ${autoSaved.error}`
+          : autoSaved.at
+          ? `Đã tự lưu 4 bài lúc ${new Date(autoSaved.at).toLocaleTimeString("vi-VN")} — Chặng 07 sẽ đưa sẵn vào gói chiến dịch.`
+          : "Bài viết sẽ tự lưu để Chặng 07 đưa sẵn vào gói chiến dịch."}
+      </p>
 
       {/* ── CỔNG PHÊ DUYỆT CHẶNG 06a (STAGE-GATE APPROVAL) ── */}
       {(onGoToAudio || onGoToPackage) && (

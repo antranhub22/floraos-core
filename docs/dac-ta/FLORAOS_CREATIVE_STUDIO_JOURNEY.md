@@ -40,6 +40,7 @@ F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH
 - Chọn một hoặc vài chủ đề, Mode, giọng/mood gợi ý → **"Tạo nội dung"** (`POST /creative-production/produce`).
 - Kết quả: cung truyện 3–5 nhịp và 4 bài đăng theo kênh, sửa trực tiếp được. Thiếu giá thật thì bài ghi "Liên hệ tiệm để nhận báo giá".
 - ⚠ Bài mẫu có vài câu cam kết dịch vụ chung (giao nhanh, tặng thiệp…) — chủ tiệm cần sửa cho đúng dịch vụ của tiệm trước khi đăng.
+- **Tự lưu** — 4 bài (kể cả phần đã sửa) tự lưu 1,2 giây sau lần sửa cuối, gắn với ảnh + chủ đề + mode; dòng trạng thái ghi "Đã tự lưu lúc …". Chặng 07 đưa sẵn bài vào gói khi tạo, và đề xuất "Dùng bài của Khu vực B" nếu bài tự lưu khác bài trong gói.
 - **"Lưu bài vào gói chiến dịch"** — lưu 4 bài (kể cả phần đã sửa) vào gói của Master Image hiện tại. Cần Master đã duyệt (xem Khu vực F).
 
 ## Khu vực C — Chặng 06b
