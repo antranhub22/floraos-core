@@ -18,6 +18,7 @@ import type { CampaignPackageDto } from "./package-client"
 import type { ScenePlan, ScenePlanScene } from "./scene-plan-client"
 import {
   AudioRevisePanel,
+  propagateSceneToVideo,
   reviseSceneAndRender,
   sceneReviseCredit,
   VideoRevisePanel,
@@ -144,7 +145,7 @@ export function PackageReviewSection(props: {
   topicTitle: string
   angleCategory?: string | undefined
   mode: "CREATIVE" | "AUTHENTIC"
-  onSceneRevised: (scene: ScenePlanScene) => void
+  onSceneRevised: (scene: ScenePlanScene, revision?: number | null) => void
   onApply: (change: { replaceScene?: { index: number; assetId: string }; videoJobId?: string; audioJobId?: string }) => Promise<void>
 }) {
   const {
@@ -156,6 +157,7 @@ export function PackageReviewSection(props: {
   const [instructions, setInstructions] = useState<Record<number, string>>({})
   const [sceneStage, setSceneStage] = useState<Record<number, string | null>>({})
   const [sceneError, setSceneError] = useState<Record<number, string | null>>({})
+  const [sceneNote, setSceneNote] = useState<Record<number, string | null>>({})
 
   const runSceneRevise = async (idx: number, current: ScenePlanScene, ratio: string) => {
     const instruction = (instructions[idx] ?? "").trim()
@@ -177,9 +179,19 @@ export function PackageReviewSection(props: {
         ratio,
         onStage: (st) => setSceneStage((p) => ({ ...p, [idx]: st })),
       })
-      onSceneRevised(r.scene)
+      onSceneRevised(r.scene, r.revision)
       setSceneStage((p) => ({ ...p, [idx]: "Đang thay ảnh mới vào gói..." }))
       await onApply({ replaceScene: { index: idx, assetId: r.assetId } })
+      // Đợt 5: đồng bộ sang video của gói (ảnh + phụ đề cảnh này).
+      setSceneStage((p) => ({ ...p, [idx]: "Đang cập nhật cảnh vào video..." }))
+      const note = await propagateSceneToVideo({
+        videoJobId,
+        sceneIndex: current.sceneIndex,
+        assetId: r.assetId,
+        scene: r.scene,
+        voiceChanged: r.scene.voiceScript !== current.voiceScript,
+      }).catch(() => null)
+      setSceneNote((p) => ({ ...p, [idx]: note }))
       onAssetsChanged()
       setInstructions((p) => ({ ...p, [idx]: "" }))
     } catch (e) {
@@ -369,6 +381,7 @@ export function PackageReviewSection(props: {
                       </Button>
                       {sceneStage[sc.index] && <div className="text-[11px] text-primary">{sceneStage[sc.index]}</div>}
                       {sceneError[sc.index] && <div className="text-[11px] text-danger">{sceneError[sc.index]}</div>}
+                      {sceneNote[sc.index] && <div className="text-[11px] text-primary">{sceneNote[sc.index]}</div>}
                     </div>
                   )}
                 </div>

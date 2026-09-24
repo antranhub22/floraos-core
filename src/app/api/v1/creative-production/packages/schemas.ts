@@ -21,6 +21,9 @@ export const topicSnapshotSchema = z.object({
   hook: z.string().max(1000).optional(),
   cta: z.string().max(1000).optional(),
   scene2Preset: z.string().max(50).optional(),
+  /** Kịch bản sản xuất tổng (Chặng 05) của gói — QA trục "đồng nhất kịch bản" (Đợt 5, 24/09/2026). */
+  scenePlanId: z.string().max(160).optional(),
+  scenePlanRevision: z.number().int().min(1).optional(),
 })
 
 export const launchPlanSchema = z.object({

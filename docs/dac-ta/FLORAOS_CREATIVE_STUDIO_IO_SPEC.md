@@ -262,7 +262,7 @@ Storyboard từ kịch bản (24/09/2026, `video-storyboard-builder.ts`): mỗi 
 
 `CampaignPackageView`: `{ id, name, mode, status, master_asset_id, product_id, topic, posts, variant_asset_ids, video_job_id, audio_job_id, variants: { asset_id, url, aspect_ratio, identity_score, approval_state, scene_index, watermark }[], video: { id, title, stage, video_approval, script_approval, aspect_ratio, final_video_url, view_url (ký có hạn) } | null, audio: { job_id, stage, audio_url } | null, qa_report, qa_checked_at, approved_by, approved_at, launch_plan, created_at, updated_at }`.
 
-`QaReport`: `{ verdict: "PASS"|"NEEDS_REVIEW"|"REJECTED", checks: { id: product_integrity|approvals|platform_specs|content|brand, title, verdict, reasons[] }[], checkedAt }`. Luật chi tiết: Arch §8.
+`QaReport`: `{ verdict: "PASS"|"NEEDS_REVIEW"|"REJECTED", checks: { id: product_integrity|approvals|platform_specs|content|brand|plan_consistency, title, verdict, reasons[] }[], checkedAt }`. `plan_consistency` (Đợt 5, 24/09/2026) chỉ có khi `topic.scenePlanId` được gắn (gói tạo từ 24/09): ảnh (`metadata.scene_plan_id/revision`), âm thanh (`payload.scenePlanId/Revision`), video (`video_jobs.scene_plan_id/revision`, `audio_storage_key`) phải cùng kịch bản và không cũ hơn phiên bản hiện hành. `topic` nhận thêm `scenePlanId?`, `scenePlanRevision?`. `POST /scene-revisions` trả thêm `scene_plan_revision`. Luật chi tiết: Arch §8.
 
 ### 7.1. Sửa tại chỗ ở Chặng 07 (24/09/2026)
 

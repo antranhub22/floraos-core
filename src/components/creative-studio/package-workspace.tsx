@@ -308,6 +308,8 @@ export function PackageWorkspace() {
                   hook: topic.hook,
                   cta: topic.cta,
                   scene2Preset: sceneTwoPresetFor(topic.angleCategory),
+                  // Đợt 5: gói gắn kịch bản sản xuất tổng → QA trục "đồng nhất kịch bản".
+                  ...(planRef ? { scenePlanId: planRef, scenePlanRevision: scenePlan?.revision ?? 1 } : {}),
                 },
               }
             : {}),
@@ -392,9 +394,15 @@ export function PackageWorkspace() {
     if (change.audioJobId) await saveNow({ audioJobId: change.audioJobId })
   }
 
-  const onSceneRevised = (scene: ScenePlan["scenes"][number]) =>
+  const onSceneRevised = (scene: ScenePlan["scenes"][number], revision?: number | null) =>
     setScenePlan((prev) =>
-      prev ? { ...prev, scenes: prev.scenes.map((s) => (s.sceneIndex === scene.sceneIndex ? scene : s)) } : prev
+      prev
+        ? {
+            ...prev,
+            ...(revision ? { revision } : {}),
+            scenes: prev.scenes.map((s) => (s.sceneIndex === scene.sceneIndex ? scene : s)),
+          }
+        : prev
     )
 
   // AI viết lại MỘT bài theo yêu cầu (1 credit) — kết quả vào ô soạn và lưu gói.

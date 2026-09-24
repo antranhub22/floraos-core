@@ -69,10 +69,10 @@ export async function reviseSceneAndRender(input: {
   masterAssetId: string
   ratio: string
   onStage: (s: string) => void
-}): Promise<{ scene: ScenePlanScene; assetId: string }> {
+}): Promise<{ scene: ScenePlanScene; assetId: string; revision: number | null }> {
   const planId = input.scenePlanRef && !input.scenePlanRef.startsWith("rule:") ? input.scenePlanRef : null
   input.onStage("AI đang viết lại cảnh...")
-  const revised = await postJson<{ scene: ScenePlanScene }>(
+  const revised = await postJson<{ scene: ScenePlanScene; scene_plan_revision?: number | null }>(
     "/api/v1/creative-production/scene-revisions",
     {
       instruction: input.instruction,
@@ -99,6 +99,7 @@ export async function reviseSceneAndRender(input: {
       watermark: true,
       scene_index: sc.sceneIndex,
       ...(input.scenePlanRef ? { scene_plan_id: input.scenePlanRef } : {}),
+      ...(revised.scene_plan_revision ? { scene_plan_revision: revised.scene_plan_revision } : {}),
       ...(cloud ? { provider_key: "stability", scene_prompt: sc.backgroundPrompt } : {}),
     },
     `scene-${input.masterAssetId}-${sc.sceneIndex}-${crypto.randomUUID()}`
@@ -120,7 +121,7 @@ export async function reviseSceneAndRender(input: {
     const v =
       d.variants.find((x) => x.variant_key === "branded") ?? d.variants.find((x) => x.variant_key === "styled")
     if (!v) throw new Error("Job xong nhưng không có ảnh")
-    return { scene: sc, assetId: v.asset_id }
+    return { scene: sc, assetId: v.asset_id, revision: revised.scene_plan_revision ?? null }
   }
   throw new Error("Quá thời gian chờ worker — kiểm tra npm run worker:media")
 }
@@ -454,4 +455,56 @@ export function VideoRevisePanel(props: {
       )}
     </div>
   )
+}
+
+/**
+ * Đợt 5 (24/09/2026): sửa cảnh ở Chặng 07 xong thì cập nhật NGAY cảnh đó trong
+ * storyboard của video trong gói (ảnh mới + phụ đề mới). Storyboard đổi → video
+ * về "kịch bản sẵn sàng", cần duyệt P3 + render lại. Trả lời nhắn cho người dùng.
+ */
+export async function propagateSceneToVideo(input: {
+  videoJobId: string | null
+  sceneIndex: number
+  assetId: string
+  scene: ScenePlanScene
+  voiceChanged: boolean
+}): Promise<string | null> {
+  if (!input.videoJobId) return null
+  const res = await fetch(`/api/v1/video/jobs/${encodeURIComponent(input.videoJobId)}`)
+  if (!res.ok) return null
+  const job = (await res.json()) as {
+    stage: string
+    audio_storage_key?: string | null
+    scenes?: Array<{
+      scene_index: number
+      duration_seconds: number
+      image_asset_id: string | null
+      text_overlay: string | null
+      voice_script: string | null
+      transition_effect: string | null
+      motion_effect: string | null
+    }>
+  }
+  if (job.stage === "RENDERING") return "Video đang render — cảnh mới sẽ cần render lại sau khi xong."
+  const scenes = [...(job.scenes ?? [])].sort((a, b) => a.scene_index - b.scene_index)
+  if (!scenes.some((s) => s.scene_index === input.sceneIndex)) return null
+  const patch = await fetch(`/api/v1/video/jobs/${encodeURIComponent(input.videoJobId)}/storyboard`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      scenes: scenes.map((s) => ({
+        sceneIndex: s.scene_index,
+        durationSeconds: s.duration_seconds,
+        imageAssetId: s.scene_index === input.sceneIndex ? input.assetId : s.image_asset_id,
+        textOverlay: s.scene_index === input.sceneIndex ? input.scene.textOverlay || input.scene.title : s.text_overlay,
+        voiceScript: s.scene_index === input.sceneIndex ? input.scene.voiceScript : s.voice_script,
+        ...(s.transition_effect ? { transitionEffect: s.transition_effect } : {}),
+        ...(s.motion_effect ? { motionEffect: s.motion_effect } : {}),
+      })),
+    }),
+  })
+  if (!patch.ok) return "Không cập nhật được cảnh vào video — mở \"Sửa video\" để gắn ảnh mới."
+  return input.voiceChanged && job.audio_storage_key
+    ? `Đã thay cảnh ${input.sceneIndex} trong video. Lời thoại đổi nên bản âm thanh cũ không còn khớp — "Sửa âm thanh" rồi dựng lại video ở Khu vực E.`
+    : `Đã thay ảnh + phụ đề cảnh ${input.sceneIndex} trong video — duyệt kịch bản (P3) và render lại để có video mới.`
 }

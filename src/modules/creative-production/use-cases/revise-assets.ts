@@ -95,7 +95,7 @@ export async function reviseScene(
     productName: string
     colors: readonly string[]
   }
-): Promise<{ jobId: string; scene: ScenePlanScene; usage: Usage }> {
+): Promise<{ jobId: string; scene: ScenePlanScene; usage: Usage; revision: number | null }> {
   requireCapability(ctx, "I1")
 
   let plan: ScenePlan | null = null
@@ -132,8 +132,10 @@ export async function reviseScene(
     const edited = applyScenePlanEdit(plan, { replaceScene: r.output })
     const updated: ScenePlan = edited.ok ? edited.plan : { ...plan, revision: plan.revision + 1 }
     await jobs.replaceOutput(ctx, input.scenePlanId, SCENE_PLAN_FEATURE, updated)
+    const saved = updated.scenes.find((s) => s.sceneIndex === input.sceneIndex) ?? r.output
+    return { jobId: r.jobId, scene: saved, usage: r.usage, revision: updated.revision }
   }
-  return { jobId: r.jobId, scene: r.output, usage: r.usage }
+  return { jobId: r.jobId, scene: r.output, usage: r.usage, revision: null as number | null }
 }
 
 // ── (2) AI viết lại MỘT bài đăng ──────────────────────────────────────────

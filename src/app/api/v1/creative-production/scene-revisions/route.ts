@@ -64,6 +64,8 @@ export const POST = handle(async (request) => {
   return jsonResponse({
     job_id: r.jobId,
     scene: r.scene,
+    /** Phiên bản kịch bản sau khi sửa (Đợt 5) — ảnh sinh lại mang số này. */
+    scene_plan_revision: r.revision,
     usage: { cost_credit: r.usage.costCredit, balance_after: r.usage.balanceAfter },
   })
 })

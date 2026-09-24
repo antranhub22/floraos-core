@@ -70,7 +70,7 @@ export const PACKAGE_IDENTITY_WARNING = 0.99
 export type QaVerdict = "PASS" | "NEEDS_REVIEW" | "REJECTED"
 
 export interface QaCheck {
-  readonly id: "product_integrity" | "approvals" | "platform_specs" | "content" | "brand"
+  readonly id: "product_integrity" | "approvals" | "platform_specs" | "content" | "brand" | "plan_consistency"
   readonly title: string
   readonly verdict: QaVerdict
   readonly reasons: readonly string[]
@@ -88,15 +88,29 @@ export interface QaVariantInput {
   readonly identityScore: number | null
   readonly aspectRatio: string | null
   readonly watermark: boolean
+  /** Kịch bản + phiên bản lúc sinh ảnh (metadata Khu vực D). */
+  readonly scenePlanId?: string | null | undefined
+  readonly scenePlanRevision?: number | null | undefined
+}
+
+/** Tài sản đối chiếu kịch bản sản xuất tổng (Đợt 5, 24/09/2026). */
+export interface QaPlanLink {
+  readonly scenePlanId: string | null
+  readonly scenePlanRevision: number | null
 }
 
 export interface QaInput {
   readonly posts: readonly PackagePost[]
   readonly variants: readonly QaVariantInput[]
   /** `null` = gói không kèm video. */
-  readonly video: { readonly stage: string; readonly approval: string; readonly aspectRatio: string } | null
+  readonly video: ({ readonly stage: string; readonly approval: string; readonly aspectRatio: string } & Partial<QaPlanLink> & {
+    /** Video dùng nguyên bản phối Khu vực C (Đợt 4). */
+    readonly usesPlanAudio?: boolean | undefined
+  }) | null
   /** `null` = gói không kèm audio. */
-  readonly audio: { readonly stage: string } | null
+  readonly audio: ({ readonly stage: string } & Partial<QaPlanLink>) | null
+  /** Kịch bản sản xuất tổng của gói (bản hiện hành). `null` = gói cũ, bỏ qua trục đồng nhất. */
+  readonly plan?: { readonly scenePlanId: string; readonly revision: number } | null | undefined
   readonly brand: { readonly hasLogo: boolean; readonly forbiddenStyles: string | null }
   readonly now: Date
 }
@@ -228,12 +242,40 @@ export function evaluateCampaignQa(input: QaInput): QaReport {
     brand.push({ v: "NEEDS_REVIEW", msg: "Chưa ảnh nào đóng dấu thương hiệu." })
   }
 
+  // 6. Đồng nhất kịch bản (Đợt 5, quyết định PO 24/09/2026): mọi tài sản phải
+  // sinh từ CÙNG kịch bản sản xuất tổng, đúng phiên bản hiện hành.
+  const consistency: { v: QaVerdict; msg: string }[] = []
+  const plan = input.plan ?? null
+  if (plan) {
+    const cu = (label: string, link: Partial<QaPlanLink>) => {
+      if (link.scenePlanId && link.scenePlanId !== plan.scenePlanId) {
+        consistency.push({ v: "NEEDS_REVIEW", msg: `${label} thuộc kịch bản khác của gói.` })
+      } else if (!link.scenePlanId) {
+        consistency.push({ v: "NEEDS_REVIEW", msg: `${label} không gắn kịch bản sản xuất (tạo ngoài Chặng 05).` })
+      } else if (link.scenePlanRevision != null && link.scenePlanRevision < plan.revision) {
+        consistency.push({
+          v: "NEEDS_REVIEW",
+          msg: `${label} làm theo kịch bản phiên bản ${link.scenePlanRevision}, kịch bản hiện là ${plan.revision}.`,
+        })
+      }
+    }
+    for (const v of input.variants) cu(`Ảnh ${v.assetId.slice(0, 8)}`, { scenePlanId: v.scenePlanId ?? null, scenePlanRevision: v.scenePlanRevision ?? null })
+    if (input.audio) cu("Bản âm thanh", input.audio)
+    if (input.video) {
+      cu("Video", input.video)
+      if (input.video.usesPlanAudio === false) {
+        consistency.push({ v: "NEEDS_REVIEW", msg: "Video tự đọc lại lời thoại, không dùng bản phối Khu vực C — dựng lại bằng \"Dựng video từ bộ tài sản\"." })
+      }
+    }
+  }
+
   const checks: QaCheck[] = [
     check("product_integrity", "Toàn vẹn sản phẩm (Subject Integrity đo thật)", integrity),
     check("approvals", "Cổng duyệt từng tài sản (I5 · P4)", approvals),
     check("platform_specs", "Chuẩn tỷ lệ theo kênh", specs),
     check("content", "Nội dung & từ điển ngành hoa", content),
     check("brand", "Nhận diện thương hiệu", brand),
+    ...(plan ? [check("plan_consistency", "Đồng nhất kịch bản sản xuất (Chặng 05)", consistency)] : []),
   ]
 
   return {

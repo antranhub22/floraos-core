@@ -12,6 +12,8 @@
  * tổ chức và đúng Master trước khi ghi.
  */
 
+import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
+import { SCENE_PLAN_FEATURE, parseStoredScenePlan } from "../domain/scene-plan-rules"
 import { conflict, notFound, validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
@@ -48,6 +50,9 @@ export interface CampaignTopicSnapshot {
   readonly cta?: string | undefined
   /** Preset Cảnh 2 (Khu vực D) — một chiều so sánh của Chặng 13. */
   readonly scene2Preset?: string | undefined
+  /** Kịch bản sản xuất tổng của gói + phiên bản lúc tạo gói (Đợt 5). */
+  readonly scenePlanId?: string | undefined
+  readonly scenePlanRevision?: number | undefined
 }
 
 export interface CreateCampaignPackageInput {
@@ -289,6 +294,8 @@ export async function runCampaignQa(ctx: TenantContext, id: string, now: Date = 
       identityScore: typeof a.identity_score === "number" ? a.identity_score : null,
       aspectRatio: a.aspect_ratio,
       watermark: meta.watermark === true,
+      scenePlanId: typeof meta.scene_plan_id === "string" ? meta.scene_plan_id : null,
+      scenePlanRevision: typeof meta.scene_plan_revision === "number" ? meta.scene_plan_revision : null,
     })
   }
 
@@ -309,9 +316,17 @@ export async function runCampaignQa(ctx: TenantContext, id: string, now: Date = 
     posts: postsOf(row),
     variants,
     video: videoRow
-      ? { stage: videoRow.stage, approval: videoRow.video_approval, aspectRatio: videoRow.aspect_ratio }
+      ? {
+          stage: videoRow.stage,
+          approval: videoRow.video_approval,
+          aspectRatio: videoRow.aspect_ratio,
+          scenePlanId: videoRow.scene_plan_id,
+          scenePlanRevision: videoRow.scene_plan_revision,
+          usesPlanAudio: Boolean(videoRow.audio_storage_key),
+        }
       : null,
-    audio: audioRow ? { stage: audioRow.stage } : null,
+    audio: audioRow ? { stage: audioRow.stage, ...(await audioPlanLink(ctx, audioRow.id)) } : null,
+    plan: await currentPlanOf(ctx, row),
     brand: { hasLogo: Boolean(brand?.logo_asset_id), forbiddenStyles },
     now,
   })
@@ -369,4 +384,31 @@ export async function saveLaunchPlan(ctx: TenantContext, id: string, plan: Launc
   const saved = await repo.saveLaunchPlan(ctx, id, plan)
   if (!saved) throw conflict("Không lưu được kế hoạch đăng.")
   return getCampaignPackage(ctx, id)
+}
+
+// ─── Đợt 5 (24/09/2026): đồng nhất kịch bản sản xuất tổng ────────────────────
+
+async function audioPlanLink(ctx: TenantContext, audioJobId: string) {
+  const j = await new GenerationJobRepository().findById(ctx, audioJobId)
+  const p = (j?.payload ?? {}) as Record<string, unknown>
+  return {
+    scenePlanId: typeof p.scenePlanId === "string" ? p.scenePlanId : null,
+    scenePlanRevision: typeof p.scenePlanRevision === "number" ? p.scenePlanRevision : null,
+  }
+}
+
+/** Kịch bản hiện hành của gói: đọc phiên bản mới nhất từ job kịch bản; kịch bản cơ bản dùng số lưu trong gói. */
+async function currentPlanOf(
+  ctx: TenantContext,
+  row: campaign_packages
+): Promise<{ scenePlanId: string; revision: number } | null> {
+  const topic = (row.topic ?? null) as CampaignTopicSnapshot | null
+  const id = topic?.scenePlanId
+  if (!id) return null
+  if (/^[0-9a-f-]{36}$/i.test(id)) {
+    const j = await new GenerationJobRepository().findById(ctx, id)
+    const plan = j && j.feature === SCENE_PLAN_FEATURE && j.status === "COMPLETED" ? parseStoredScenePlan(j.output) : null
+    if (plan) return { scenePlanId: id, revision: plan.revision }
+  }
+  return { scenePlanId: id, revision: topic?.scenePlanRevision ?? 1 }
 }
