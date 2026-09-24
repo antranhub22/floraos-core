@@ -2,7 +2,7 @@
 
 > **Module:** AI Creative Studio — Chặng 01–14 của hành trình Product-to-Market, gói trong 6 Khu vực tab (A–F)
 > **Route:** `/creative-studio`
-> **Phiên bản:** 4.1 — 24/09/2026 — Nâng cấp sau chạy thật trên máy anh Tony: kịch bản bối cảnh theo chủ đề sinh ở Chặng 05 dùng chung B/C/D/E; sửa chất lượng ảnh worker (lõi đặc, cổng phủ ≥ 60%); Khu vực E theo kịch bản + giọng đọc + phát video; Chặng 07 xem lại và **sửa tại chỗ** mọi kết quả. (Bản 4.0 — 23/09/2026: đồng bộ 100% theo mã.)
+> **Phiên bản:** 4.2 — 24/09/2026 (tối) — Khu vực C: bốn tác vụ âm thanh thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026 — Nâng cấp sau chạy thật trên máy anh Tony: kịch bản bối cảnh theo chủ đề sinh ở Chặng 05 dùng chung B/C/D/E; sửa chất lượng ảnh worker (lõi đặc, cổng phủ ≥ 60%); Khu vực E theo kịch bản + giọng đọc + phát video; Chặng 07 xem lại và **sửa tại chỗ** mọi kết quả. (Bản 4.0 — 23/09/2026: đồng bộ 100% theo mã.)
 > **Trạng thái:** Đã triển khai trên nhánh `fix/creative-studio-production-ready`. Nghiệm thu trên máy thật còn thiếu: `npm run test:tenant` (cần Postgres), chạy thử worker với `STABILITY_API_KEY` thật, `lint` toàn repo (xem §9).
 >
 > **Quy tắc đọc:** chi tiết thi công (tên tệp, đường dẫn, method, mã năng lực, enum) lấy mã nguồn làm chuẩn (Hiến pháp Tài liệu §2, quy tắc 2). Tài liệu này mô tả đúng những gì mã đang làm, kể cả giới hạn.
@@ -17,7 +17,7 @@ Creative Studio gom hành trình "1 sản phẩm hoa → 1 chiến dịch" vào 
 |---|---|---|---|---|---|---|
 | A | `area-a` | Quét theo ảnh sản phẩm | Camera | 01–05 | `<ProductIntelligenceWorkspace />` | Tải ảnh → `assets` (ORIGINAL) · Vision `gpt-4o-mini` bóc tách nguyên tử · Trend Fit (đối chiếu `trend_signals`) · 10 chủ đề (sinh theo luật trong `trend-fit.ts`) · chọn chủ đề + Mode → bàn giao qua URL chỉ mang định danh |
 | B | `area-b` | Viết contents | FileText | 06a | `<ContentsWorkspace />` | `POST /creative-production/produce` → 4 bài (Facebook, Instagram, TikTok, Zalo) sinh theo khuôn (`social-post-generator.ts`); cung truyện HIỂN THỊ theo kịch bản bối cảnh của chủ đề (`withScenePlan`); 4 bài **tự lưu** vào `content_drafts` (1,2 giây sau lần sửa cuối) |
-| C | `area-c` | Tạo audio | Headphones | 06b | `<AudioWorkspace />` | `POST /audio/jobs` → job `audio.generate` → worker Python phối voice + nhạc nền, ghi kho → nghe lại qua `GET /audio/jobs/:id`; lời thoại điền sẵn từ kịch bản bối cảnh |
+| C | `area-c` | Tạo audio | Headphones | 06b | `<AudioWorkspace />` | Bốn tác vụ thật (Voiceover / Music Select / Audio Mix / Voice Clone, `audio-task-rules.ts`) → job `audio.generate` (credit theo bảng giá) → worker TTS + khớp cảnh + sidechain + -14 LUFS, ghi kho → nghe lại qua `GET /audio/jobs/:id`; thư viện nhạc có giấy phép (`music_tracks`) và giọng nhân bản ElevenLabs (`voice_clones`, job `audio.voice_clone`) |
 | D | `area-d` | Tạo biến thể ảnh | Wand2 | 06c | `<VariantWorkspace />` | Phân cảnh theo kịch bản bối cảnh của chủ đề (`creative.scene_plan`, CREATIVE 5 / AUTHENTIC 3), mỗi cảnh là một job `media.variant` (Studio cục bộ) hoặc `media.variant.cloud` (hậu cảnh Stability) — Subject Integrity ĐO bởi worker |
 | E | `area-e` | Tạo video | Film | 06d | `<VideoWorkspace />` | Storyboard dựng từ kịch bản bối cảnh (số cảnh, phụ đề, lời thoại, chuyển động) + ảnh biến thể cùng cảnh của D (thiếu thì Master); chọn giọng đọc; "Tạo video" lập bản nháp rồi khung `VideoJobLifecycle` làm P3 → render → phát/tải → P4 ngay trong E |
 | F | `area-f` | Gói chiến dịch | Package | 07–09 (+10–14) | `<PackageWorkspace />` | Gói lưu ở `campaign_packages`; Chặng 07 hiện đủ tài sản (ảnh theo cảnh, video phát được, âm thanh nghe được, bài đăng) và **sửa tại chỗ** mọi loại, chạy ngầm, tự thay vào gói; QA năm trục phía máy chủ; duyệt `J5` + `audit_logs`; kế hoạch đăng; số liệu thật Chặng 11–14 |
@@ -77,7 +77,10 @@ src/app/(app)/creative-studio/page.tsx          # Shell 6 khu vực + CreativeSt
 src/components/creative-studio/
 ├── contents-workspace.tsx        # B
 ├── creative-result-viewer.tsx    # B — 4 bài, cung truyện theo kịch bản, tự lưu `content_drafts`, "Lưu bài vào gói"
-├── audio-workspace.tsx           # C — tạo job + chờ + nghe lại
+├── audio-workspace.tsx           # C — 4 tác vụ, chọn giọng, lời thoại, tạo job + chờ + nghe lại
+├── music-library-panel.tsx       # C — thư viện nhạc: nghe thử, giấy phép, tiệm tự tải
+├── voice-clone-panel.tsx         # C — giọng nhân bản (tải mẫu + cam kết, trạng thái, xoá)
+├── audio-library-client.ts       # C — gọi API music-tracks / voice-clones
 ├── variant-workspace.tsx         # D — phân cảnh theo kịch bản của chủ đề, mỗi cảnh một job thật
 ├── scene-plan-client.ts          # C/D — tra/viết kịch bản bối cảnh (`/creative-production/scene-plans`)
 ├── source-picker.tsx             # D — chọn Master / Skip dùng ảnh gốc
@@ -119,11 +122,12 @@ src/modules/media/
 ├── adapters/multi-image-provider-router.ts # dùng bởi M04a cloud (execute-cloud-creative) — xem nợ #120
 └── adapters/studio-local-image-provider.ts # luôn ném lỗi (không chạy Python trong web)
 
-src/modules/audio-studio/  use-cases/create-audio-job · get-audio-job · infra/audio-job-repository
+src/modules/audio-studio/  domain/audio-task-rules (4 tác vụ, giá, cam kết) · use-cases/create-audio-job · get-audio-job ·
+                           music-tracks · voice-clones · infra/{audio-job,music-track,voice-clone}-repository
 src/modules/video-studio/  use-cases/get-video-job (`videoViewUrl` — URL ký có hạn) · dispatch-video-render (mã asset → `storage_key`, chặn cảnh thiếu ảnh)
 
 workers/media_ai/
-├── jobs/worker.py              # một vòng claim: media.optimize → media.variant → media.variant.cloud → audio.generate → video.render
+├── jobs/worker.py              # một vòng claim: media.optimize → media.variant → media.variant.cloud → audio.generate → audio.voice_clone → video.render
 ├── jobs/variant_worker.py      # M04b cả hai nhánh (local + cloud)
 ├── providers/background/stability_background.py   # hậu cảnh trống do Stability sinh
 ├── providers/segmentation/rembg_segmenter.py
@@ -131,7 +135,9 @@ workers/media_ai/
 ├── image/defringe.py           # EdgeDefringer — chỉ khử viền trong dải 6px sát nền
 ├── video/audio_engine.py       # giọng đọc từng cảnh + nhạc nền (sửa thứ tự tham số pad/silence 24/09)
 ├── video/providers/local_cinematic.py  # Ken Burns ffmpeg — không còn ảnh mẫu dự phòng
-├── audio/audio_worker.py       # process_audio_generation_job
+├── audio/audio_worker.py       # process_audio_generation_job — rẽ nhánh theo taskType
+├── audio/voice_clone_worker.py # audio.voice_clone — ElevenLabs Instant Voice Clone
+├── audio/mixing_engine.py      # fit_voice_to_scene · mix_audio (sidechain, -14 LUFS) · measure_loudness
 └── generate_scene.py           # CLI đo tốc độ cho dev — KHÔNG nằm trên đường chạy production
 ```
 
@@ -158,7 +164,7 @@ A (01–05) ──05: AI viết kịch bản bối cảnh (scenePlanId)──▶
 | A | `POST /market-intelligence/vision-extract` · `POST /market-intelligence/product-intelligence` | `V1` · `V1` |
 | A | `GET /product-intelligence/:id` | `V2` |
 | B | `POST /creative-production/produce` · `/plan` · `/package` (ước tính) | `I1` |
-| C | `POST /audio/jobs` (Idempotency-Key) · `GET /audio/jobs/:id` | `I1` |
+| C | `POST /audio/jobs` (Idempotency-Key) · `GET /audio/jobs/:id` · `GET·POST /audio/music-tracks` · `DELETE /audio/music-tracks/:id` · `GET /audio/music-tracks/system/:trackId` · `GET·POST /audio/voice-clones` · `GET·DELETE /audio/voice-clones/:id` | `I1` |
 | C · D | `POST·GET /creative-production/scene-plans` · `GET /creative-production/scene-plans/:id` (kịch bản bối cảnh, 24/09/2026) | `I1` |
 | B · F | `GET·PUT /creative-production/content-drafts` (bài B tự lưu) | `I1` |
 | F | `POST /creative-production/scene-revisions` (AI sửa một cảnh, 1 credit) · `POST /creative-production/content-rewrites` (AI viết lại một bài, 1 credit) | `I1` |
@@ -262,6 +268,7 @@ Nút "Mở Khu vực B/C/D/E" vẫn còn (mang `returnTo=f`), về gói thì đ�
 - **#123** — Video E đọc lại lời thoại bằng giọng chọn ở E (khớp từng cảnh), chưa dùng bản phối đã tạo ở Khu vực C.
 - **#125** — Bài đăng B vẫn sinh theo khuôn `social-post-generator.ts` (phía máy chủ `produce` dùng `planNarrativeArc` theo luật); chỉ phần hiển thị cung truyện theo kịch bản bối cảnh.
 - **#126** — `workers/.venv` phải là Python ≥ 3.11 (Python 3.9 của Command Line Tools dùng LibreSSL, không TLS 1.3 → Stability từ chối bắt tay). Worker cảnh báo khi khởi động.
+- **#128** — 4 bài nhạc hệ thống (từ P17) chưa có hồ sơ nguồn/giấy phép: giao diện gắn nhãn "Chưa xác minh bản quyền", cần thay bằng bài có giấy phép thương mại (quy trình thêm bài ở đầu `music-catalog.ts`). Giá `audio.voice_clone` = 5 credit là tạm (#64). Voice Clone dùng chung `I1` (#121).
 - Hậu cảnh Stability lỗi (hết credit, mạng) → worker lùi về phông cục bộ nhưng job `media.variant.cloud` vẫn trừ 2 credit — chờ PO quyết hoàn chênh lệch (nợ #127).
 - **#124** — `npm run lint` toàn repo còn 235 lỗi (src) + 31 (tests) ngoài phạm vi Creative Studio (CI đỏ ở bước lint); phạm vi Creative Studio đã 0 lỗi.
 - Chưa quy được đơn hàng về từng bài đăng (không có mã theo dõi); Chặng 11–12 tính theo sản phẩm kể từ ngày duyệt.

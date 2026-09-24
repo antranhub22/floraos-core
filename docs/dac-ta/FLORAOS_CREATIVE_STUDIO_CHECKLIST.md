@@ -1,8 +1,9 @@
 # Checklist — Creative Studio (Chặng 01–14, 6 Khu vực A–F)
 
 > **Quy tắc:** `[x]` = mã đã làm đúng điều ô nói VÀ có kiểm chứng ghi ở cột cuối dòng. `[ ]` = chưa làm hoặc chưa kiểm chứng được. Trước khi tin một ô đã tích, mở đúng tệp ô đó nói tới (AGENTS.md).
-> **Phiên bản:** 2.1 — 24/09/2026 (kịch bản bối cảnh Chặng 05, chất lượng ảnh D, E theo kịch bản + giọng đọc, Chặng 07 sửa tại chỗ). Bản 2.0 — 23/09/2026. Thay bản 1.0 (21/09, "5 tabs", đa số ô chưa tích dù mã đã có, trong khi Khu vực D tích cả ô "Subject Integrity 99.8–100%" vốn là số gõ tay).
+> **Phiên bản:** 2.2 — 24/09/2026 (tối): Khu vực C hoàn thiện 4 tác vụ. Bản 2.1 — 24/09/2026 (kịch bản bối cảnh Chặng 05, chất lượng ảnh D, E theo kịch bản + giọng đọc, Chặng 07 sửa tại chỗ). Bản 2.0 — 23/09/2026. Thay bản 1.0 (21/09, "5 tabs", đa số ô chưa tích dù mã đã có, trong khi Khu vực D tích cả ô "Subject Integrity 99.8–100%" vốn là số gõ tay).
 > **Kiểm chứng máy thật 23/09 (máy anh Tony, VM Linux):** `tsc --noEmit` sạch · `vitest` 770/770 (94 tệp) · `eslint` phạm vi Creative Studio 0 lỗi · `pytest` worker 307 ca xanh (trừ `test_audio_worker.py` cần mạng TTS) · `check:docs` khớp. **Chưa chạy:** `test:tenant` (cần Postgres) — bắt buộc trước merge.
+> **Kiểm chứng 24/09 (tối, sau Khu vực C):** `tsc` sạch · `vitest` **824/824** (101 tệp) · `pytest` worker xanh (gồm 14 ca `test_audio_worker.py` offline + 10 ca `test_voice_clone_worker.py`) · `check:docs` khớp. Máy dev cần `prisma migrate deploy` (`20260924120000_audio_voice_clones_music_tracks`) + `ELEVENLABS_API_KEY`.
 > **Kiểm chứng 24/09:** `tsc --noEmit` sạch · `vitest` **792/792** · `eslint` phạm vi 0 lỗi · `pytest` media_ai + video xanh · `check:docs` + `check:template-ssot` khớp. **Chưa chạy:** `test:tenant` (có ca mới `content-drafts.test.ts`), gọi AI/Stability thật. Trên máy dev cần `prisma migrate deploy` (`20260924090000_content_drafts`) + `db:seed` (AIC-18, AIC-23).
 
 ---
@@ -40,7 +41,17 @@
 - [x] `Idempotency-Key` bắt buộc, `usage` trả số credit đã trừ thật — `audio/jobs/route.ts`, `create-audio-job.ts`
 - [x] Worker nhận `audio.generate`, ghi bản phối lên kho — `audio_worker.py#process_audio_generation_job` + `test_audio_job_lifecycle.py`
 - [x] `GET /audio/jobs/:id` + trình nghe trên trang — `get-audio-job.ts`, `audio-workspace.tsx`
-- [ ] Chạy thật với nhà cung cấp TTS trên máy có mạng — cần anh Tony chạy `npm run worker:media` + tạo 1 job
+- [x] Bốn loại tác vụ ra kết quả khác nhau thật (VOICEOVER chỉ giọng · MUSIC_SELECT chỉ nhạc, không TTS · AUDIO_MIX · VOICE_CLONE strict) — `audio-task-rules.ts`, `audio_worker.py#process_audio_job` + `test_audio_worker.py` (14 ca) (24/09)
+- [x] Credit trừ đúng bảng ước tính (`enqueueJob({ costCredit })`; Music Select/Edge = 0); job lỗi tự hoàn khi đọc — `create-audio-job.ts`, `get-audio-job.ts` + `audio-task-rules.test.ts` (24/09)
+- [x] Chọn 6 giọng trên giao diện; lùi nhà cung cấp giữ cùng giọng (`providerVoiceMap`) và báo rõ; bỏ macOS `say` khỏi chuỗi lùi; ElevenLabs đổi tên giọng → `voice_id` — `tts_engine.py` + `test_voice_clone_worker.py` (24/09)
+- [x] Giọng dài hơn cảnh: kéo dài cảnh (tối đa nhanh 1,1×) thay vì tua 2× rồi cắt — `mixing_engine.py#fit_voice_to_scene` (24/09)
+- [x] Phối: sidechain ducking thật (đo: nhạc hạ ~11 dB khi có giọng), `amix normalize=0`, -14 LUFS; xuất thêm bản chỉ-giọng — `mixing_engine.py#mix_audio` (24/09)
+- [x] Thư viện nhạc: nghe thử, nhãn giấy phép, tiệm tự tải có khai nguồn + cam kết; mã bài lạ không còn âm thầm thành guitar — `music-tracks.ts`, `music-library-panel.tsx`, bảng `music_tracks` (24/09)
+- [x] Voice Clone ElevenLabs IVC: tải mẫu + cam kết → job `audio.voice_clone` → READY; xoá gỡ cả trên ElevenLabs — `voice-clones.ts`, `voice_clone_worker.py`, `voice-clone-panel.tsx`, bảng `voice_clones` (24/09)
+- [x] Chặng 07 "Sửa âm thanh" giữ giọng/nhà cung cấp/bài nhạc của bản cũ (trước luôn VOICEOVER + OpenAI) — `package-revise-panels.tsx#AudioRevisePanel` (24/09)
+- [ ] `tests/tenant/audio-library.test.ts` (viết xong, chưa chạy — cần Postgres)
+- [ ] Chạy thật với OpenAI/ElevenLabs trên máy anh Tony (cần `ELEVENLABS_API_KEY` gói có Instant Voice Clone)
+- [ ] 4 bài nhạc hệ thống chưa có hồ sơ giấy phép (nợ #128) — cần thay bằng bài có giấy phép thương mại
 
 ## 4. Khu vực D — Chặng 06c
 

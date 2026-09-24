@@ -12,6 +12,8 @@ import { Loader2, Mic, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { costCreditForFeature } from "@/modules/usage/domain/pricing"
 import type { ScenePlanScene } from "@/modules/creative-production/domain/scene-plan-rules"
+import type { AudioQualityTier, AudioTaskType, TtsProviderKey } from "@/modules/audio-studio/domain/audio-types"
+import { audioJobCreditCost, estimateSpeechSeconds } from "@/modules/audio-studio/domain/audio-task-rules"
 import { VideoJobLifecycle, type VideoJobDetail } from "./video-job-lifecycle"
 
 async function readError(res: Response): Promise<string> {
@@ -128,6 +130,7 @@ export async function reviseSceneAndRender(input: {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MOODS = [
+  { id: "keep", label: "Giữ nhạc của bản cũ" },
   { id: "none", label: "Không nhạc" },
   { id: "romantic", label: "Lãng mạn" },
   { id: "upbeat", label: "Tươi vui" },
@@ -136,35 +139,75 @@ const MOODS = [
   { id: "luxury", label: "Sang trọng" },
 ]
 
+interface OriginalAudioJob {
+  task_type: AudioTaskType
+  voice_id: string | null
+  voice_clone_id: string | null
+  provider_key: string | null
+  quality_tier: string | null
+  music_track_id: string | null
+}
+
+/**
+ * Sửa âm thanh tại Chặng 07. 24/09/2026 (rà soát Khu vực C): giữ nguyên giọng
+ * (kể cả giọng nhân bản), nhà cung cấp, chất lượng và bài nhạc của bản đang
+ * trong gói — trước đây luôn gửi VOICEOVER + OpenAI + giọng mặc định.
+ */
 export function AudioRevisePanel(props: {
   initialLines: Array<{ sceneIndex: number; voiceScript: string }>
   angleCategory?: string | undefined
+  /** Job âm thanh đang trong gói — đọc lại cấu hình để phối lại đúng. */
+  audioJobId?: string | null | undefined
   onDone: (audioJobId: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [lines, setLines] = useState(props.initialLines)
-  const [mood, setMood] = useState("warm")
+  const [mood, setMood] = useState("keep")
+  const [original, setOriginal] = useState<OriginalAudioJob | null>(null)
   const [stage, setStage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const credit = costCreditForFeature("audio.generate")
+
+  const openPanel = async () => {
+    setOpen(true)
+    if (!props.audioJobId || original) return
+    const res = await fetch(`/api/v1/audio/jobs/${encodeURIComponent(props.audioJobId)}`).catch(() => null)
+    if (res?.ok) setOriginal((await res.json()) as OriginalAudioJob)
+  }
+
+  const scenes = lines
+    .filter((l) => l.voiceScript.trim())
+    .map((l) => ({
+      sceneIndex: l.sceneIndex,
+      voiceScript: l.voiceScript.trim(),
+      targetDurationSeconds: Math.max(3, Math.ceil(estimateSpeechSeconds(l.voiceScript) + 0.5)),
+    }))
+  const isClone = original?.task_type === "VOICE_CLONE" && Boolean(original.voice_clone_id)
+  const keepMusic = mood === "keep" ? original?.music_track_id ?? null : null
+  const hasMusic = mood === "keep" ? Boolean(keepMusic) : mood !== "none"
+  const taskType: AudioTaskType = isClone ? "VOICE_CLONE" : hasMusic ? "AUDIO_MIX" : "VOICEOVER"
+  const providerKey = ((original?.provider_key as TtsProviderKey | null) ?? "openai") as TtsProviderKey
+  const qualityTier = ((original?.quality_tier as AudioQualityTier | null) ?? "hd") as AudioQualityTier
+  const credit = audioJobCreditCost({ taskType, providerKey, qualityTier, scenes })
 
   const run = async () => {
     setError(null)
     setStage("Đang gửi yêu cầu phối...")
     try {
-      const scenes = lines
-        .filter((l) => l.voiceScript.trim())
-        .map((l) => ({ sceneIndex: l.sceneIndex, voiceScript: l.voiceScript.trim(), targetDurationSeconds: 5 }))
       if (scenes.length === 0) throw new Error("Cần ít nhất một câu lời thoại")
       const created = await postJson<{ jobId: string }>(
         "/api/v1/audio/jobs",
         {
-          taskType: "VOICEOVER",
+          taskType,
           scenes,
-          totalDurationSeconds: scenes.length * 5,
-          providerKey: "openai",
-          qualityTier: "hd",
-          musicMood: mood,
+          voiceId: isClone ? undefined : original?.voice_id ?? undefined,
+          voiceCloneId: isClone ? original?.voice_clone_id ?? undefined : undefined,
+          providerKey: isClone ? undefined : providerKey,
+          qualityTier,
+          ...(mood === "keep"
+            ? keepMusic
+              ? { musicTrackId: keepMusic }
+              : { musicMood: "none" }
+            : { musicMood: mood }),
           topicAngleCategory: props.angleCategory,
         },
         `audio-${crypto.randomUUID()}`
@@ -175,8 +218,8 @@ export function AudioRevisePanel(props: {
         await sleep(3000)
         const res = await fetch(`/api/v1/audio/jobs/${encodeURIComponent(created.jobId)}`)
         if (!res.ok) continue
-        const j = (await res.json()) as { stage: string; audio_url: string | null; error: string | null }
-        if (j.stage === "FAILED") throw new Error(j.error || "Phối âm thanh lỗi")
+        const j = (await res.json()) as { stage: string; audio_url: string | null; error: string | null; refunded?: boolean }
+        if (j.stage === "FAILED") throw new Error((j.error || "Phối âm thanh lỗi") + (j.refunded ? " — đã hoàn credit" : ""))
         if (j.stage === "COMPLETED" && j.audio_url) {
           setStage(null)
           setOpen(false)
@@ -193,14 +236,17 @@ export function AudioRevisePanel(props: {
 
   if (!open) {
     return (
-      <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => setOpen(true)}>
+      <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => void openPanel()}>
         <Mic size={11} /> Sửa âm thanh
       </Button>
     )
   }
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 text-[12px]">
-      <div className="font-bold text-text">Sửa lời thoại / nhạc rồi phối lại ({credit} credit)</div>
+      <div className="font-bold text-text">
+        Sửa lời thoại / nhạc rồi phối lại ({credit === 0 ? "miễn phí" : `${credit} credit`}
+        {isClone ? " · giọng nhân bản" : ""})
+      </div>
       {lines.map((l, i) => (
         <div key={l.sceneIndex} className="flex gap-2 items-start">
           <span className="w-14 shrink-0 pt-1.5 text-text-muted">Cảnh {l.sceneIndex}</span>

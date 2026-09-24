@@ -1,7 +1,7 @@
 # User Journey — Creative Studio (Chặng 01–14)
 
 > **Mục đích:** Mô tả đúng những gì người dùng làm và thấy trong `/creative-studio`, từ lúc tải ảnh bó hoa đến lúc xem hiệu quả bán hàng.
-> **Phiên bản:** 3.1 — 24/09/2026. Kịch bản bối cảnh sinh ở Chặng 05 dùng chung B/C/D/E; E theo kịch bản + giọng đọc + phát video; B tự lưu bài; Chặng 07 xem lại và sửa tại chỗ mọi tài sản. (Bản 3.0 — 23/09/2026: đồng bộ lại theo mã (bản 2.0 mô tả Khu vực F và Chặng 10–14 như đã chạy thật trong khi mã là giao diện dựng sẵn với số liệu gõ cứng).
+> **Phiên bản:** 3.2 — 24/09/2026 (tối): Khu vực C bốn tác vụ thật, thư viện nhạc có giấy phép, Voice Clone. Bản 3.1 — 24/09/2026. Kịch bản bối cảnh sinh ở Chặng 05 dùng chung B/C/D/E; E theo kịch bản + giọng đọc + phát video; B tự lưu bài; Chặng 07 xem lại và sửa tại chỗ mọi tài sản. (Bản 3.0 — 23/09/2026: đồng bộ lại theo mã (bản 2.0 mô tả Khu vực F và Chặng 10–14 như đã chạy thật trong khi mã là giao diện dựng sẵn với số liệu gõ cứng).
 > **Tài liệu liên quan:** kiến trúc `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md` · dữ liệu vào/ra `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_IO_SPEC.md` · hành trình 14 chặng gốc `docs/dac-ta/FLORAOS_PRODUCT_TO_MARKET_USER_JOURNEY.md`.
 
 ---
@@ -45,8 +45,16 @@ F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH
 
 ## Khu vực C — Chặng 06b
 
-- Lời thoại từng cảnh: lấy từ **kịch bản bối cảnh** của chủ đề nếu đã có (cùng kịch bản với ảnh Khu vực D, không tốn credit); chưa có thì điền sẵn từ hook/tiêu đề/CTA. Giọng đọc, nhà cung cấp TTS, chất lượng, mood nhạc.
-- **"Tạo audio job"** → trừ credit một lần (bấm đúp không trừ hai lần) → màn hình chờ worker phối → **nghe lại bản phối ngay trên trang**. Lỗi phối thì hiện lý do.
+- **Chọn loại tác vụ** (mỗi thẻ ghi rõ ra gì — 24/09/2026):
+  - **Voiceover** — chỉ giọng đọc, không nhạc.
+  - **Music Select** — chỉ nhạc nền, chọn thời lượng; miễn phí, không đọc lời.
+  - **Audio Mix** — giọng + nhạc; nhạc tự hạ khi có giọng và lên lại khi ngừng.
+  - **Voice Clone** — đọc bằng giọng nhân bản của chủ tiệm (ElevenLabs), nhạc tuỳ chọn.
+- **Giọng đọc** — 6 giọng (3 nữ, 3 nam, có mô tả); nhà cung cấp OpenAI / ElevenLabs / MiniMax / Edge (miễn phí); chất lượng. Nhà cung cấp lỗi thì hệ thống đọc bằng nhà cung cấp khác với **cùng giọng** và ghi rõ trên kết quả.
+- **Giọng nhân bản** — "Nhân bản giọng mới": tải tệp 1–3 phút nói rõ (tối thiểu 20 giây), tick câu cam kết quyền dùng giọng → 5 credit → "Đang nhân bản…" tự chuyển "Sẵn sàng" (lỗi thì hiện lý do và hoàn credit). Xoá giọng là gỡ luôn trên ElevenLabs.
+- **Nhạc nền** — thư viện lọc theo mood, **nghe thử** từng bài, thấy nguồn và nhãn giấy phép ("Chưa xác minh bản quyền" với bài chưa có hồ sơ). **"Tải nhạc của tiệm"**: tệp + tên + mood + loại giấy phép + nguồn + tick cam kết.
+- **Lời thoại** từng cảnh: lấy từ **kịch bản bối cảnh** của chủ đề nếu có (không tốn credit), chưa có thì từ hook/tiêu đề/CTA. Mỗi ô đếm ký tự và ước lượng giây đọc; câu dài hơn thời lượng thì cảnh **tự kéo dài** để đọc trọn câu (không còn tua nhanh / cắt chữ).
+- Nút tạo ghi đúng số credit sẽ trừ ("miễn phí" với Music Select / Edge) → chờ worker → **nghe lại ngay trên trang**, tải bản chính và bản chỉ-giọng; thấy độ to (LUFS), cảnh nào được kéo dài. Lỗi thì hiện lý do và **tự hoàn credit**.
 - Xong thì mã audio job được mang sang Khu vực F để đưa vào gói.
 
 ## Khu vực D — Chặng 06c

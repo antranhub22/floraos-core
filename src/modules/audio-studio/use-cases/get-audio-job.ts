@@ -54,8 +54,7 @@ export async function getAudioJob(ctx: TenantContext, jobId: string) {
     provider_fallback: Boolean(providerKey && providerUsed && providerUsed !== "none" && providerUsed !== providerKey),
     quality_tier: (payload.qualityTier as string | null | undefined) ?? null,
     music_track_id:
-      (payload.musicTrackId as string | null | undefined) ??
-      (payload.musicStorageKey ? "org" : null),
+      (payload.musicTrackRef as string | null | undefined) ?? (payload.musicTrackId as string | null | undefined) ?? null,
     music_track_name: (payload.musicTrackName as string | null | undefined) ?? null,
     music_mood: job.musicMood,
     has_voice: Boolean(output.has_voice),

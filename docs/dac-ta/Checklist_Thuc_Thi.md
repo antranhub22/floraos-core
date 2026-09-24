@@ -770,3 +770,14 @@ Chi tiết ở `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_CHECKLIST.md` v2.1, Arch v4.
 - [x] Chặng 07 xem lại đủ tài sản và sửa tại chỗ: ảnh (`scene-revisions` + biến thể mới), bài (sửa tay / `content-rewrites`, AIC-23), âm thanh (phối lại), video (bản sửa → P3 → render → P4); tự thay vào gói + lưu
 - [ ] `npm run test:tenant` (gồm `content-drafts.test.ts`) trên máy có Postgres — **chưa chạy**
 - [ ] Chạy thật `db:seed` + AI viết kịch bản / sửa cảnh / viết lại bài trên máy dev
+
+## CS-24/09b — Khu vực C (Audio): rà soát & hoàn thiện 4 tác vụ
+
+Báo cáo rà soát: project claude.ai `claude/ra-soat-khu-vuc-c-audio-24-09-2026.md`. Quyết định PO: Voice Clone xây thật (ElevenLabs), nhạc = thư viện có giấy phép + tiệm tự tải, credit theo bảng ước tính.
+
+- [x] Bốn tác vụ khác nhau thật (worker rẽ nhánh theo `taskType`), credit trừ đúng bảng, job lỗi tự hoàn
+- [x] Chọn giọng, lùi nhà cung cấp giữ cùng giọng, ElevenLabs `voice_id`, bỏ macOS `say`, khớp cảnh không tua nhanh
+- [x] Sidechain ducking + -14 LUFS + bản chỉ-giọng
+- [x] Thư viện nhạc có giấy phép (`music_tracks`) + Voice Clone (`voice_clones`, job `audio.voice_clone`), migration `20260924120000`
+- [x] Chặng 07 phối lại giữ giọng/nhạc cũ
+- [ ] `test:tenant` (`audio-library.test.ts`) · chạy thật với `ELEVENLABS_API_KEY` · thay 4 bài nhạc chưa có giấy phép (#128)

@@ -663,8 +663,16 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | GET · PUT | `/creative-production/content-drafts` | `I1` | 24/09/2026 — bài Khu vực B tự lưu theo `asset_id` + `topic_id` + `mode` (GET qua query, PUT qua body kèm `posts`, `topic_title?`); Chặng 07 đưa sẵn vào gói. Ảnh phải thuộc đúng tổ chức |
 | POST | `/creative-production/scene-revisions` | `I1` | 24/09/2026 — Chặng 07 "Sửa cảnh": AI sửa MỘT cảnh của kịch bản bối cảnh theo `instruction` (feature `creative.scene_revise`, 1 credit, `AIC-18`, `Idempotency-Key` bắt buộc); có `scene_plan_id` thì đọc cảnh từ kho và ghi kịch bản đã sửa. Sinh lại ảnh là job `POST /media/variants` riêng |
 | POST | `/creative-production/content-rewrites` | `I1` | 24/09/2026 — Chặng 07 "AI viết lại" MỘT bài theo `instruction` (feature `creative.content_rewrite`, 1 credit, `AIC-23`, `Idempotency-Key` bắt buộc); từ cấm ngành hoa/thương hiệu vi phạm cứng → loại lượt, hoàn credit |
-| POST | `/audio/jobs` | `I1` | Tạo job `audio.generate` (TTS + nhạc nền + phối). `Idempotency-Key` BẮT BUỘC (từ 23/09/2026) |
-| GET | `/audio/jobs/:id` | `I1` | Trạng thái job âm thanh + URL ký có hạn của bản phối |
+| POST | `/audio/jobs` | `I1` | Tạo job `audio.generate`. `Idempotency-Key` BẮT BUỘC (từ 23/09/2026). Từ 24/09/2026 bốn `taskType` ra kết quả khác nhau thật: `VOICEOVER` chỉ giọng · `MUSIC_SELECT` chỉ nhạc (0 credit, không TTS) · `AUDIO_MIX` giọng + nhạc (sidechain ducking, -14 LUFS) · `VOICE_CLONE` giọng nhân bản READY (`voiceCloneId`, ElevenLabs, không lùi nhà cung cấp). `musicTrackId` = `trackId` hệ thống hoặc `org:<uuid>`. Credit trừ = bảng `audio-pricing-guard.ts` qua `enqueueJob({ costCredit })`. `providerKey` `google_cloud`/`local_fallback` → 422 |
+| GET | `/audio/jobs/:id` | `I1` | Trạng thái + URL ký có hạn của bản phối và bản chỉ-giọng; `provider_used`/`provider_fallback` (nhà cung cấp thật đã đọc), `loudness_lufs`, thời lượng thật từng cảnh, `refunded`. Job `FAILED` tự hoàn credit ở lần đọc này (24/09/2026) |
+| GET | `/audio/music-tracks` | `I1` | 24/09/2026 — thư viện nhạc: bài tiệm tải (`music_tracks`, mã `org:<uuid>`) + bài hệ thống (`music-catalog.ts`), kèm `license_type`, `license_source`, `license_verified`, `preview_url` |
+| POST | `/audio/music-tracks` | `I1` | Multipart: `file` (MP3/WAV/M4A ≤ 20MB, nhận diện bằng byte đầu), `title`, `mood`, `license_type` (`owned\|royalty_free\|licensed\|creative_commons`), `license_source`, `license_note?`, `attest=true` (bắt buộc) |
+| DELETE | `/audio/music-tracks/:id` | `I1` | Gỡ bài tiệm đã tải (đánh dấu `deleted_at`); bài tổ chức khác → 404 |
+| GET | `/audio/music-tracks/system/:trackId` | `I1` | Phát tệp bài hệ thống để nghe thử |
+| GET | `/audio/voice-clones` | `I1` | 24/09/2026 — giọng nhân bản của tổ chức (`voice_clones`); giọng `FAILED` tự hoàn credit ở lần đọc này |
+| POST | `/audio/voice-clones` | `I1` | Multipart: `name`, `sample` (MP3/WAV/M4A 50KB–10MB, worker đòi ≥ 20 giây), `consent=true` (lưu nguyên văn câu cam kết). Tạo job `audio.voice_clone` (5 credit, giá tạm #64) → worker gửi ElevenLabs Instant Voice Clone. `Idempotency-Key` bắt buộc |
+| GET | `/audio/voice-clones/:id` | `I1` | Trạng thái + URL ký nghe lại mẫu |
+| DELETE | `/audio/voice-clones/:id` | `I1` | Gỡ giọng trên ElevenLabs rồi đánh dấu `DELETED` |
 
 ⚠ Audio, video và Creative Production dùng chung `I1` (`media.optimize`) — sai ngữ nghĩa RBAC, chờ chủ sản phẩm quyết có thêm mã riêng hay không (đụng con số 143 mã). Xem `TECHNICAL_DEBT.md` nợ #121.
 

@@ -257,7 +257,7 @@ documents:
     title: "Creative Studio Architecture (Chặng 01–14)"
     domain: "Module M04"
     layer: "Level 3"
-    purpose: "Kiến trúc v4.1 (24/09/2026: kịch bản bối cảnh Chặng 05 dùng chung B/C/D/E, E theo kịch bản + giọng đọc, Chặng 07 sửa tại chỗ; v4.0 23/09 đồng bộ theo mã) — 6 khu vực Creative Studio (A: Chặng 01–05, B: Content, C: Audio, D: Biến thể M04b local/cloud qua hàng đợi, E: Video, F: Gói chiến dịch campaign_packages Chặng 07–09) và Chặng 10–14 trên dữ liệu thật"
+    purpose: "Kiến trúc v4.2 (24/09/2026 tối: Khu vực C bốn tác vụ âm thanh thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs; 24/09: kịch bản bối cảnh Chặng 05 dùng chung B/C/D/E, E theo kịch bản + giọng đọc, Chặng 07 sửa tại chỗ; v4.0 23/09 đồng bộ theo mã) — 6 khu vực Creative Studio (A: Chặng 01–05, B: Content, C: Audio, D: Biến thể M04b local/cloud qua hàng đợi, E: Video, F: Gói chiến dịch campaign_packages Chặng 07–09) và Chặng 10–14 trên dữ liệu thật"
     status: "CANONICAL"
     authority: "Level 3"
     canonical: true
@@ -271,7 +271,7 @@ documents:
     title: "Creative Studio I/O Specification (Chặng 01–14)"
     domain: "Module M04"
     layer: "Level 3"
-    purpose: "IO Spec v4.1 (24/09/2026) — dữ liệu vào/ra thật của từng chặng 01–14: TopicProductionBrief, kịch bản bối cảnh scene-plans, content-drafts, biến thể, video, gói chiến dịch và sửa tại chỗ Chặng 07 (scene-revisions, content-rewrites)"
+    purpose: "IO Spec v4.2 (24/09/2026, §4 Khu vực C viết lại: audio jobs, music-tracks, voice-clones) — dữ liệu vào/ra thật của từng chặng 01–14: TopicProductionBrief, kịch bản bối cảnh scene-plans, content-drafts, biến thể, video, gói chiến dịch và sửa tại chỗ Chặng 07 (scene-revisions, content-rewrites)"
     status: "CANONICAL"
     authority: "Level 3"
     canonical: true
@@ -285,7 +285,7 @@ documents:
     title: "Creative Studio User Journey Specification (Chặng 01–14)"
     domain: "Module M04"
     layer: "Level 3"
-    purpose: "Journey v3.1 (24/09/2026) — luồng trải nghiệm Chặng 01–14 khởi động từ Khu vực A, gồm kịch bản bối cảnh Chặng 05 và xem lại + sửa tại chỗ ở Chặng 07"
+    purpose: "Journey v3.2 (24/09/2026) — luồng trải nghiệm Chặng 01–14 khởi động từ Khu vực A, gồm kịch bản bối cảnh Chặng 05 và xem lại + sửa tại chỗ ở Chặng 07"
     status: "CANONICAL"
     authority: "Level 3"
     canonical: true
@@ -485,7 +485,7 @@ documents:
     title: "Creative Studio Execution Checklist"
     domain: "Module M04"
     layer: "Level 5"
-    purpose: "Checklist v2.1 (24/09/2026) — trạng thái thật của 6 khu vực Creative Studio (A–F) và Chặng 01–14, mỗi ô đã tích kèm tệp/test kiểm chứng"
+    purpose: "Checklist v2.2 (24/09/2026) — trạng thái thật của 6 khu vực Creative Studio (A–F) và Chặng 01–14, mỗi ô đã tích kèm tệp/test kiểm chứng"
     status: "SUPPORTING"
     authority: "Level 5"
     canonical: false

@@ -1,7 +1,7 @@
 # Input/Output Specification — Creative Studio (Chặng 01–14)
 
 > **Mục đích:** Chuẩn hoá đầu vào/đầu ra THẬT của từng chặng trong `/creative-studio`, đúng tên trường và kiểu như mã nguồn.
-> **Phiên bản:** 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
+> **Phiên bản:** 4.2 — 24/09/2026 (tối). Viết lại §4 Khu vực C: bốn loại tác vụ thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
 > **Nguồn sự thật:** `src/modules/market-intelligence/domain/product-intelligence-types.ts`, `src/modules/creative-production/domain/{production-types,validate-transition,build-handoff-url,campaign-package-rules}.ts`, `src/modules/media/domain/variant-rules.ts`, `src/modules/audio-studio/domain/audio-types.ts`, `src/modules/video-studio/domain/video-types.ts`, các `route.ts` tương ứng. Lệch với tài liệu này thì mã thắng (Hiến pháp §2 quy tắc 2) — và tài liệu phải sửa trong cùng commit.
 
 ---
@@ -116,24 +116,51 @@ Brief không mang `assetId` — ảnh được neo ở gói chiến dịch (Ch�
 
 ## 4. Khu vực C — Chặng 06b
 
-`POST /api/v1/audio/jobs` (`I1`, header `Idempotency-Key` bắt buộc):
+> **Viết lại 24/09/2026** sau rà soát (project claude.ai `claude/ra-soat-khu-vuc-c-audio-24-09-2026.md`): trước ngày này worker không đọc `taskType` — bốn nút cùng ra một bản TTS + nhạc, Voice Clone không nhân bản gì mà vẫn trừ credit, credit bị tính mặc định 1 bất kể bảng ước tính. Luật của bốn loại nằm ở `src/modules/audio-studio/domain/audio-task-rules.ts`.
 
-| Trường | Kiểu |
+### 4.1. Bốn loại tác vụ
+
+| `taskType` | Giọng | Nhạc | Kết quả (`output`) | Credit |
+|---|---|---|---|---|
+| `VOICEOVER` | bắt buộc ≥ 1 cảnh có lời | không | `voice_only` | theo bảng nhà cung cấp × chất lượng × số cảnh có lời |
+| `MUSIC_SELECT` | không (không gọi TTS) | bắt buộc | `music_only` — cắt/lặp đủ `totalDurationSeconds`, fade | 0 |
+| `AUDIO_MIX` | bắt buộc | bắt buộc | `voice_and_music` — sidechain ducking, `amix normalize=0` | như VOICEOVER |
+| `VOICE_CLONE` | bắt buộc, giọng nhân bản `READY` | tuỳ chọn | `voice_and_music` | ElevenLabs (standard 2/cảnh, premium 3/cảnh) |
+
+Bảng giá (`audio-pricing-guard.ts`, quyết định PO 24/09 "theo bảng ước tính"): OpenAI standard 1/cảnh (trần 10), HD 2/cảnh (trần 20); ElevenLabs 2–3/cảnh; MiniMax 1–2; Edge TTS 0. Số này truyền vào `enqueueJob({ costCredit })` — trừ đúng số hiển thị trên nút. Mọi bản ra đều AAC 192k stereo 44,1kHz, chuẩn độ to **-14 LUFS / -1,5 dBTP** (`loudnorm`).
+
+### 4.2. `POST /api/v1/audio/jobs` (`I1`, `Idempotency-Key` bắt buộc)
+
+| Trường | Kiểu / luật |
 |---|---|
-| `taskType?` | `"VOICEOVER" \| "MUSIC_SELECT" \| "AUDIO_MIX" \| "VOICE_CLONE"` |
-| `scenes` | `{ sceneIndex, voiceScript, targetDurationSeconds }[]` |
-| `totalDurationSeconds?` | mặc định = tổng cảnh |
-| `voiceId?` | mặc định `flora-nu-truyen-cam` |
-| `providerKey?` | `openai \| elevenlabs \| minimax \| edge_tts \| google_cloud \| local_fallback` |
+| `taskType?` | bỏ trống: có nhạc → `AUDIO_MIX`, không → `VOICEOVER` |
+| `scenes` | ≤ 12 × `{ sceneIndex, voiceScript (≤ 600 ký tự), targetDurationSeconds (≤ 60) }`; bỏ qua với `MUSIC_SELECT` |
+| `totalDurationSeconds?` | ≤ 300; mặc định = tổng cảnh |
+| `voiceId?` | 6 giọng của `voice-catalog.ts`; mặc định `flora-nu-truyen-cam` |
+| `voiceCloneId?` | uuid giọng `READY` của tổ chức — bắt buộc với `VOICE_CLONE` (khác tổ chức → 404, chưa sẵn sàng → 409) |
+| `providerKey?` | `openai \| elevenlabs \| minimax \| edge_tts`; `google_cloud`/`local_fallback` → 422 |
 | `qualityTier?` | `standard \| hd \| premium` |
-| `musicTrackId?`, `musicMood?` | `romantic \| upbeat \| chill \| warm \| luxury \| none` |
-| `topicAngleCategory?` | gợi ý mood khi không chọn |
+| `musicTrackId?` | `trackId` hệ thống hoặc `org:<uuid>` (bài tiệm tải, kiểm thuộc tổ chức) |
+| `musicMood?` | chỉ để tự chọn bài khi không có `musicTrackId`; `none` = không nhạc. Mood không có bài → không tự thay bài khác |
+| `topicAngleCategory?` | gợi ý mood |
 
-Ra (201): `{ jobId, generationJobId, creditsCost (ước tính), voiceDisplayName, providerKey, musicTrackName, usage: { costCredit (đã trừ thật), balanceAfter }, deduped }`.
+Ra (201): `{ jobId, generationJobId, taskType, creditsCost, voiceDisplayName, providerKey, musicTrackName, musicLicenseVerified, usage: { costCredit, balanceAfter }, deduped }`.
 
-Worker (`audio.generate`) ghi bản phối lên kho: `generation_jobs.output = { audio_storage_key, mime_type, total_duration_seconds, provider_used, has_voice, scenes }`.
+Payload worker thêm: `output`, `providerVoiceMap` (mã CÙNG một giọng ở mọi nhà cung cấp — lùi nhà cung cấp vẫn đúng giọng nam/nữ), `strictProvider` (giọng nhân bản: không lùi), `musicTrackId` | `musicStorageKey`, `musicTrackRef`, `musicTrackName`.
 
-`GET /api/v1/audio/jobs/:id` (`I1`) → `{ job_id, stage: DRAFT|GENERATING|COMPLETED|FAILED, task_type, voice_id, music_mood, total_duration_seconds, audio_url (ký 1 giờ), audio_storage_key, error, created_at }`.
+Worker: TTS từng cảnh → **khớp cảnh** (`fit_voice_to_scene`: nhanh tối đa 1,1×, dài hơn thì kéo dài cảnh — trước đây tua tới 2× rồi cắt đuôi) → nối → phối. Một cảnh có lời mà không đọc được → cả job `FAILED`. Chuỗi lùi tự động: `openai → elevenlabs → minimax → edge_tts` (không còn `say` của macOS). ElevenLabs: tên giọng được đổi sang `voice_id` qua `GET /v1/voices`.
+
+`generation_jobs.output = { audio_storage_key, voice_only_storage_key, mime_type, task_type, output, total_duration_seconds, loudness_lufs, provider_used, has_voice, has_music, scenes: [{ sceneIndex, targetDurationSeconds, actualDurationSeconds, extended, providerUsed }] }`.
+
+`GET /api/v1/audio/jobs/:id` (`I1`) → `{ job_id, stage, task_type, voice_id, voice_display_name, voice_clone_id, provider_key, provider_used, provider_fallback, quality_tier, music_track_id, music_track_name, music_mood, has_voice, total_duration_seconds, loudness_lufs, scenes, audio_url, audio_storage_key, voice_only_url, voice_only_storage_key, credits_cost, refunded, error, created_at }`. `FAILED` → hoàn credit ngay ở lần đọc này (idempotent).
+
+### 4.3. Thư viện nhạc
+
+`GET /audio/music-tracks` → `{ tracks: [{ track_id, title, mood, duration_seconds, source: "system"|"org", license_type, license_source, license_verified, preview_url }] }`. Hệ thống: `music-catalog.ts` (4 bài từ P17 đang `licenseVerified: false` — chưa có hồ sơ nguồn, nợ #128). Tiệm tải: `POST /audio/music-tracks` multipart `{ file, title, mood, license_type, license_source, license_note?, attest=true }` → bảng `music_tracks` (đặc tả 07 §25); `DELETE /audio/music-tracks/:id`; nghe thử bài hệ thống `GET /audio/music-tracks/system/:trackId`.
+
+### 4.4. Giọng nhân bản (Voice Clone)
+
+`POST /audio/voice-clones` multipart `{ name, sample, consent=true }` (`Idempotency-Key`) → lưu mẫu `org/<org>/audio/voice-samples/<id>.<ext>` + dòng `voice_clones` (`PENDING`, lưu nguyên văn cam kết) → job `audio.voice_clone` (5 credit, giá tạm #64). Worker: mẫu ≥ 20 giây, ≤ 10 phút → ElevenLabs `POST /v1/voices/add` → `READY` + `provider_voice_id`; lỗi → `FAILED` + lý do (401 khoá, 402/429 hạn mức, 403 gói không có IVC). `GET /audio/voice-clones` (tự hoàn credit giọng `FAILED`), `GET /audio/voice-clones/:id` (kèm URL nghe mẫu), `DELETE /audio/voice-clones/:id` (gỡ trên ElevenLabs + `DELETED`). Cần `ELEVENLABS_API_KEY` ở web (xoá) và worker (nhân bản, đọc).
 
 ---
 

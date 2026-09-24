@@ -566,6 +566,7 @@ export function PackageReviewSection(props: {
             <AudioRevisePanel
               initialLines={(scenePlan?.scenes ?? []).map((s) => ({ sceneIndex: s.sceneIndex, voiceScript: s.voiceScript }))}
               angleCategory={angleCategory}
+              audioJobId={audioJobId}
               onDone={(id) => void onApply({ audioJobId: id })}
             />
           </div>

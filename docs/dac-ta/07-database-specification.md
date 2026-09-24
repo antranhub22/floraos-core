@@ -1595,3 +1595,57 @@ model content_drafts {
   @@index([organization_id, updated_at])
 }
 ```
+
+## 25. Thư viện âm thanh Khu vực C — `voice_clones`, `music_tracks`
+
+> **Thêm 24/09/2026** (rà soát Khu vực C, quyết định PO: Voice Clone xây thật với ElevenLabs; nhạc nền = thư viện có giấy phép + tiệm tự tải). Hai bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly và ca thử `tests/tenant/audio-library.test.ts`. Migration: `prisma/migrations/20260924120000_audio_voice_clones_music_tracks`.
+
+`voice_clones`: giọng nhân bản của chủ tiệm. Mẫu giọng lưu ở kho `org/<org>/audio/voice-samples/<id>.<ext>`; `consent_text` lưu NGUYÊN VĂN câu cam kết người dùng đã tick (`VOICE_CLONE_CONSENT_TEXT`), kèm `consented_by`/`consented_at`. Worker `audio.voice_clone` ghi `status` (`PENDING → READY | FAILED`), `provider_voice_id`, `error` bằng SQL lọc theo `organization_id` của dòng job. Xoá = gỡ trên ElevenLabs + `status = DELETED`, `deleted_at`.
+
+```prisma
+model voice_clones {
+  id                 String    @id @default(uuid())
+  organization_id    String
+  name               String
+  provider           String    @default("elevenlabs")
+  provider_voice_id  String?
+  status             String    @default("PENDING")   // PENDING | READY | FAILED | DELETED
+  sample_storage_key String
+  sample_mime_type   String
+  sample_bytes       Int
+  consent_text       String
+  consented_by       String
+  consented_at       DateTime
+  job_id             String?
+  error              String?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+  deleted_at         DateTime?
+
+  @@index([organization_id, status])
+}
+```
+
+`music_tracks`: nhạc nền tiệm tự tải. Bắt buộc `license_type` + `license_source` và cam kết (`attested_by`/`attested_at`). Thư viện HỆ THỐNG không nằm ở bảng này mà ở `src/modules/audio-studio/domain/music-catalog.ts` (trường `licenseSource`, `licenseVerified`). Job `audio.generate` nhận bài tiệm qua `payload.musicStorageKey` (use-case kiểm thuộc tổ chức; worker kiểm lại tiền tố `org/<organization_id>/`).
+
+```prisma
+model music_tracks {
+  id               String    @id @default(uuid())
+  organization_id  String
+  title            String
+  mood             String      // romantic | upbeat | chill | warm | luxury
+  storage_key      String
+  mime_type        String
+  file_bytes       Int
+  duration_seconds Float?
+  license_type     String      // owned | royalty_free | licensed | creative_commons
+  license_source   String
+  license_note     String?
+  attested_by      String
+  attested_at      DateTime
+  created_at       DateTime  @default(now())
+  deleted_at       DateTime?
+
+  @@index([organization_id, mood])
+}
+```

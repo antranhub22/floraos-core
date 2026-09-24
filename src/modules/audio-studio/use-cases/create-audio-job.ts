@@ -155,6 +155,8 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
       strictProvider,
       qualityTier,
       musicTrackId: music?.musicTrackId ?? null,
+      // Mã bài người dùng chọn (kể cả `org:<uuid>`) — để Chặng 07 phối lại đúng bài.
+      musicTrackRef: musicTrackId ?? null,
       musicStorageKey: music?.musicStorageKey ?? null,
       musicTrackName: music?.title ?? null,
       musicMood: music?.mood ?? "none",
