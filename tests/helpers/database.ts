@@ -1,4 +1,5 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
+import { Prisma } from "@/generated/prisma/client"
 import { env } from "@/lib/env"
 import { ensureSystemRoles } from "@/modules/organization/use-cases/ensure-system-roles"
 import { seedAiCapabilities, seedVisionModels } from "@/core/ai/infra/seed-ai-registry"
@@ -104,6 +105,46 @@ function bat_buoc_la_database_test(): void {
 }
 
 /**
+ * Cột có trong `prisma/schema.prisma` mà database test chưa có — so TỪNG cột
+ * của MỌI model (danh sách lấy từ Prisma Client đã sinh), không chỉ tên bảng.
+ * Thuần: nhận danh sách cột thật để thử được không cần Postgres.
+ */
+export function missingSchemaColumns(existing: ReadonlySet<string>): string[] {
+  const ns = Prisma as unknown as Record<string, unknown>
+  const missing: string[] = []
+  for (const model of Object.values(Prisma.ModelName) as string[]) {
+    const fields = ns[`${model.charAt(0).toUpperCase()}${model.slice(1)}ScalarFieldEnum`]
+    if (!fields || typeof fields !== "object") continue
+    for (const column of Object.values(fields as Record<string, string>)) {
+      if (!existing.has(`${model}.${column}`)) missing.push(`${model}.${column}`)
+    }
+  }
+  return missing
+}
+
+let schemaChecked = false
+
+/**
+ * Database test cũ hơn lược đồ → dừng ngay với lời chỉ cách sửa. Trước đây
+ * thiếu CỘT (vd. `campaign_packages.video_job_ids`, 24/09/2026) không bị bắt:
+ * route trả 500 và ca thử chỉ báo "expected 500 to be 201".
+ */
+async function assertSchemaUpToDate(): Promise<void> {
+  if (schemaChecked) return
+  const rows = await prisma.$queryRawUnsafe<Array<{ t: string; c: string }>>(
+    "SELECT table_name AS t, column_name AS c FROM information_schema.columns WHERE table_schema = current_schema()"
+  )
+  const missing = missingSchemaColumns(new Set(rows.map((r) => `${r.t}.${r.c}`)))
+  if (missing.length > 0) {
+    throw new Error(
+      `Database test cũ hơn prisma/schema.prisma — thiếu ${missing.length} cột: ${missing.slice(0, 12).join(", ")}` +
+        `${missing.length > 12 ? ", …" : ""}. Chạy \`npm run db:test:setup\` rồi chạy lại \`npm run test:tenant\`.`
+    )
+  }
+  schemaChecked = true
+}
+
+/**
  * Dọn sạch các bảng nền giữa các trường hợp thử (bảy của P1, hai
  * bảng quyền của P2, năm bảng Asset/Job/Usage/Audit của P3, hai bảng Hồ sơ
  * của P4, năm bảng Product Master/Analysis của P5, một bảng token tích hợp
@@ -112,6 +153,7 @@ function bat_buoc_la_database_test(): void {
  */
 export async function resetDatabase(): Promise<void> {
   bat_buoc_la_database_test()
+  await assertSchemaUpToDate()
   try {
     await prisma.$executeRawUnsafe(
       `TRUNCATE TABLE ${TENANT_TABLES.join(", ")} RESTART IDENTITY CASCADE`

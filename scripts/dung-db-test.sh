@@ -45,6 +45,8 @@ DATABASE_URL="$URL_TEST" npx prisma db push --accept-data-loss
 # Nghiệm thu tại chỗ: một bảng có thật thì mới coi là xong. Không tin mã thoát
 # của lệnh trên một mình — chính cờ sai ở trên đã từng "thành công" mà không
 # tạo bảng nào.
+# Cột mới nhất (24/09/2026 khuya): `campaign_packages.video_job_ids` — DB test cũ
+# thiếu cột thì route gói trả 500. `tests/helpers/database.ts` còn so đủ mọi cột.
 # Kiểm cả bảng MỚI NHẤT, không chỉ bảng cũ: DB test dựng trước migration
 # `campaign_packages` (23/09) vẫn qua được kiểm `integration_tokens` (24/09/2026).
 if ! docker compose exec -T db psql -U floraos -d "$TEN_DB" -tAc \
