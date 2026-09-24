@@ -461,6 +461,9 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
     # `audio.generate`: job bị trừ credit rồi đứng PENDING mãi.
     audio_feature = "audio.generate"
     audio_channel = notify_channel_for(audio_feature)
+    # Nhân bản giọng chủ tiệm (ElevenLabs IVC, 24/09/2026).
+    voice_clone_feature = "audio.voice_clone"
+    voice_clone_channel = notify_channel_for(voice_clone_feature)
 
     cleaned_url = _clean_database_url(database_url)
     with psycopg.connect(cleaned_url, autocommit=True) as conn:
@@ -470,6 +473,7 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
             cur.execute(f"LISTEN {variant_channel}")
             cur.execute(f"LISTEN {variant_cloud_channel}")
             cur.execute(f"LISTEN {audio_channel}")
+            cur.execute(f"LISTEN {voice_clone_channel}")
 
         while True:
             # Thứ tự ưu tiên là thứ tự người dùng chờ: M04a đứng trước M04b vì
@@ -499,6 +503,13 @@ def run_worker(database_url: str, poll_interval_seconds: float = 5.0) -> None:
             if audio_job is not None:
                 from media_ai.audio.audio_worker import process_audio_generation_job
                 process_audio_generation_job(conn, audio_job)
+                continue
+
+            # 2d. Nhân bản giọng (Khu vực C — Voice Clone)
+            voice_clone_job = claim_next(conn, voice_clone_feature)
+            if voice_clone_job is not None:
+                from media_ai.audio.voice_clone_worker import process_voice_clone_job
+                process_voice_clone_job(conn, voice_clone_job)
                 continue
 
             # 3. Xử lý tác vụ dựng video M04c

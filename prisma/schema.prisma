@@ -163,6 +163,8 @@ model organizations {
   product_analysis_runs      product_analysis_runs[]
   campaign_packages          campaign_packages[]
   content_drafts             content_drafts[]
+  voice_clones               voice_clones[]
+  music_tracks               music_tracks[]
 }
 
 model workspaces {
@@ -1885,4 +1887,60 @@ model content_drafts {
 
   @@unique([organization_id, asset_id, topic_id, mode])
   @@index([organization_id, updated_at])
+}
+
+/// Giọng nhân bản của chủ tiệm (Khu vực C — Voice Clone, 24/09/2026). TENANT.
+/// Mẫu giọng lưu ở kho (`sample_storage_key`); worker `audio.voice_clone` gửi
+/// mẫu lên ElevenLabs Instant Voice Clone và ghi `provider_voice_id`.
+model voice_clones {
+  id                 String    @id @default(uuid())
+  organization_id    String
+  name               String
+  provider           String    @default("elevenlabs")
+  provider_voice_id  String?
+  /// PENDING | READY | FAILED | DELETED
+  status             String    @default("PENDING")
+  sample_storage_key String
+  sample_mime_type   String
+  sample_bytes       Int
+  /// Câu cam kết người dùng đã tick (lưu nguyên văn để đối soát).
+  consent_text       String
+  consented_by       String
+  consented_at       DateTime
+  job_id             String?
+  error              String?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+  deleted_at         DateTime?
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, status])
+}
+
+/// Nhạc nền do tiệm tự tải (Khu vực C — Music Select, 24/09/2026). TENANT.
+/// Thư viện hệ thống nằm ở `music-catalog.ts` (có trường giấy phép), không ở bảng này.
+model music_tracks {
+  id               String    @id @default(uuid())
+  organization_id  String
+  title            String
+  /// romantic | upbeat | chill | warm | luxury
+  mood             String
+  storage_key      String
+  mime_type        String
+  file_bytes       Int
+  duration_seconds Float?
+  /// owned | royalty_free | licensed | creative_commons
+  license_type     String
+  /// Nơi mua / đường dẫn giấy phép / tác giả — bắt buộc.
+  license_source   String
+  license_note     String?
+  attested_by      String
+  attested_at      DateTime
+  created_at       DateTime  @default(now())
+  deleted_at       DateTime?
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, mood])
 }

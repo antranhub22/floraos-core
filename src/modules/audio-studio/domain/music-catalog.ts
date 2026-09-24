@@ -1,8 +1,15 @@
 /**
  * Music Catalog — SSOT danh mục nhạc nền cho Audio Studio.
  *
- * Quản lý tập trung các track nhạc nền bản quyền miễn phí,
- * phân loại theo mood và gợi ý tự động theo ProductionMode + Topic.
+ * Thư viện nhạc HỆ THỐNG, phân loại theo mood. Nhạc tiệm tự tải nằm ở bảng
+ * `music_tracks` (24/09/2026).
+ *
+ * THÊM BÀI CÓ GIẤY PHÉP (quyết định PO 24/09/2026): chép tệp vào
+ * `workers/media_ai/video/assets/music/`, thêm một dòng ở đây với
+ * `licenseSource` (nơi mua + mã giấy phép/đường dẫn) và `licenseVerified: true`,
+ * rồi thêm `trackId → tên tệp` vào `TRACK_ID_TO_FILENAME` của
+ * `workers/media_ai/audio/mixing_engine.py`. Bài `licenseVerified: false` vẫn
+ * nghe thử được nhưng giao diện ghi rõ "chưa xác minh bản quyền".
  *
  * Thuần TypeScript — Zero external dependencies.
  */
@@ -18,36 +25,48 @@ export const MUSIC_CATALOG: readonly MusicTrackSpec[] = [
     trackId: "acoustic-warm-guitar",
     displayName: "Acoustic Warm Guitar",
     mood: "warm",
-    durationSeconds: 120,
+    durationSeconds: 60,
     filename: "acoustic_warm_guitar.mp3",
     license: "royalty_free",
+    // Tệp có từ P17; repo không có hồ sơ nguồn/giấy phép (rà soát 24/09/2026).
+    licenseSource: "Chưa có hồ sơ nguồn (tệp từ P17)",
+    licenseVerified: false,
     suitableFor: ["AUTHENTIC", "CREATIVE"],
   },
   {
     trackId: "upbeat-cheerful-pop",
     displayName: "Upbeat Cheerful Pop",
     mood: "upbeat",
-    durationSeconds: 120,
+    durationSeconds: 60,
     filename: "upbeat_cheerful_pop.mp3",
     license: "royalty_free",
+    // Tệp có từ P17; repo không có hồ sơ nguồn/giấy phép (rà soát 24/09/2026).
+    licenseSource: "Chưa có hồ sơ nguồn (tệp từ P17)",
+    licenseVerified: false,
     suitableFor: ["CREATIVE"],
   },
   {
     trackId: "lo-fi-chill-beats",
     displayName: "Lo-Fi Chill Beats",
     mood: "chill",
-    durationSeconds: 120,
+    durationSeconds: 60,
     filename: "lo_fi_chill_beats.mp3",
     license: "royalty_free",
+    // Tệp có từ P17; repo không có hồ sơ nguồn/giấy phép (rà soát 24/09/2026).
+    licenseSource: "Chưa có hồ sơ nguồn (tệp từ P17)",
+    licenseVerified: false,
     suitableFor: ["AUTHENTIC", "CREATIVE"],
   },
   {
     trackId: "romantic-piano-melody",
     displayName: "Romantic Piano Melody",
     mood: "romantic",
-    durationSeconds: 120,
+    durationSeconds: 60,
     filename: "romantic_piano_melody.mp3",
     license: "royalty_free",
+    // Tệp có từ P17; repo không có hồ sơ nguồn/giấy phép (rà soát 24/09/2026).
+    licenseSource: "Chưa có hồ sơ nguồn (tệp từ P17)",
+    licenseVerified: false,
     suitableFor: ["AUTHENTIC", "CREATIVE"],
   },
 ] as const
@@ -81,13 +100,14 @@ export function filterTracksForMode(
 }
 
 /**
- * Gợi ý nhạc nền theo mood.
- * Trả track đầu tiên phù hợp, hoặc Acoustic Guitar làm mặc định.
+ * Gợi ý nhạc nền theo mood: ưu tiên bài đã xác minh giấy phép. Mood không có
+ * bài nào thì trả `undefined` (24/09/2026 — trước đây âm thầm trả guitar, nên
+ * chọn "Luxury" vẫn ra Acoustic Guitar).
  */
 export function suggestMusicTrack(mood: MusicMood): MusicTrackSpec | undefined {
   if (mood === "none") return undefined
   const matches = filterTracksByMood(mood)
-  return matches[0] ?? MUSIC_CATALOG[0]
+  return matches.find((t) => t.licenseVerified) ?? matches[0]
 }
 
 /**

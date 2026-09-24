@@ -4,60 +4,63 @@
  * Tuân thủ kiến trúc job: enqueueJob("audio.generate") → Worker Python
  * lấy việc bằng SELECT FOR UPDATE SKIP LOCKED + LISTEN/NOTIFY.
  *
- * Usage ghi ở phía core TẠI ĐIỂM TẠO JOB, không ghi ở worker.
+ * 24/09/2026 — bốn loại tác vụ khác nhau THẬT (`audio-task-rules.ts`):
+ * VOICEOVER chỉ giọng, MUSIC_SELECT chỉ nhạc (0 credit), AUDIO_MIX giọng +
+ * nhạc, VOICE_CLONE đọc bằng giọng nhân bản READY của tiệm (ElevenLabs, không
+ * lùi sang nhà cung cấp khác). Credit trừ = đúng bảng `audio-pricing-guard.ts`
+ * (trước đây mọi lượt bị tính mặc định 1 credit dù màn hình ước tính khác).
  */
 
-import { type TenantContext } from "@/core/tenancy"
+import { validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
+import { type TenantContext } from "@/core/tenancy"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
-import type {
-  AudioJobInput,
-  AudioTaskType,
-  TtsProviderKey,
-  AudioQualityTier,
-  AudioSceneInput,
-  MusicMood,
-} from "../domain/audio-types"
-import { calculateAudioCreditCost } from "../domain/audio-pricing-guard"
+import type { AudioQualityTier, AudioSceneInput, AudioTaskType, MusicMood, TtsProviderKey } from "../domain/audio-types"
+import {
+  AUDIO_TASK_SPECS,
+  SELECTABLE_TTS_PROVIDERS,
+  VOICE_CLONE_PROVIDER,
+  audioJobCreditCost,
+  validateAudioTask,
+} from "../domain/audio-task-rules"
 import { getVoiceSpec, resolveProviderVoiceCode } from "../domain/voice-catalog"
-import { suggestMusicTrack, getMusicTrack, suggestMoodForTopicAngle } from "../domain/music-catalog"
+import { suggestMusicTrack, suggestMoodForTopicAngle } from "../domain/music-catalog"
+import { resolveMusicForJob } from "./music-tracks"
+import { requireReadyVoiceClone } from "./voice-clones"
 
 // ============================================================
 // INPUT / OUTPUT
 // ============================================================
 
 export interface CreateAudioJobInput {
-  /** Loại công việc */
+  /** Loại công việc. Bỏ trống: có nhạc → AUDIO_MIX, không nhạc → VOICEOVER. */
   readonly taskType?: AudioTaskType | undefined
-  /** Danh sách cảnh cần sinh voice */
   readonly scenes: readonly AudioSceneInput[]
-  /** Tổng thời lượng mục tiêu (giây) */
   readonly totalDurationSeconds: number
-  /** Voice ID từ SSOT catalog */
   readonly voiceId?: string | undefined
-  /** Provider TTS (để tự chọn thì bỏ qua) */
+  /** Giọng nhân bản (`voice_clones.id`) — bắt buộc với VOICE_CLONE. */
+  readonly voiceCloneId?: string | undefined
   readonly providerKey?: TtsProviderKey | undefined
-  /** Chất lượng */
   readonly qualityTier?: AudioQualityTier | undefined
-  /** Track nhạc nền cụ thể */
+  /** Mã bài: `trackId` hệ thống hoặc `org:<uuid>` tiệm tự tải. */
   readonly musicTrackId?: string | undefined
-  /** Mood nhạc nền (auto-select track) */
+  /** Mood — chỉ dùng để tự chọn bài khi không truyền `musicTrackId`. */
   readonly musicMood?: MusicMood | undefined
-  /** Góc topic (để auto-select mood) */
   readonly topicAngleCategory?: string | undefined
-  /** `Idempotency-Key` của client (YC-U7). Bắt buộc: trước 23/09/2026 khoá
-   *  sinh phía máy chủ bằng Date.now()+random — bấm đúp là trừ credit hai lần. */
+  /** `Idempotency-Key` của client (YC-U7). */
   readonly idempotencyKey: string
 }
 
 export interface CreateAudioJobResult {
   readonly jobId: string
   readonly generationJobId: string
+  readonly taskType: AudioTaskType
+  /** Credit của lượt này theo bảng giá (= số bị trừ nếu không deduped/dùng thử). */
   readonly creditsCost: number
-  readonly voiceDisplayName: string
-  readonly providerKey: TtsProviderKey
+  readonly voiceDisplayName: string | null
+  readonly providerKey: TtsProviderKey | null
   readonly musicTrackName: string | null
-  /** Credit THỰC SỰ bị trừ bởi `enqueueJob` (0 khi deduped hoặc dùng thử). */
+  readonly musicLicenseVerified: boolean | null
   readonly usage: { readonly costCredit: number; readonly balanceAfter: number | null }
   readonly deduped: boolean
 }
@@ -66,89 +69,111 @@ export interface CreateAudioJobResult {
 // USE-CASE
 // ============================================================
 
-export async function createAudioJob(
-  ctx: TenantContext,
-  input: CreateAudioJobInput
-): Promise<CreateAudioJobResult> {
-  // 1. Kiểm tra quyền sáng tạo nội dung đa phương tiện
+export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobInput): Promise<CreateAudioJobResult> {
   requireCapability(ctx, "I1")
 
-  // 2. Giải quyết voice spec
-  const voiceId = input.voiceId ?? "flora-nu-truyen-cam"
-  const voiceSpec = getVoiceSpec(voiceId)
+  // 1. Nhạc: bài chỉ định, hoặc tự chọn theo mood (mood "none" = không nhạc).
+  let musicMood: MusicMood | undefined = input.musicMood
+  if (!musicMood && input.topicAngleCategory) musicMood = suggestMoodForTopicAngle(input.topicAngleCategory)
+  let musicTrackId: string | undefined = input.musicTrackId
+  if (!musicTrackId && musicMood && musicMood !== "none") musicTrackId = suggestMusicTrack(musicMood)?.trackId
 
-  // 3. Giải quyết provider
-  const providerKey = input.providerKey ?? voiceSpec.defaultProvider
-  const providerVoiceCode = resolveProviderVoiceCode(voiceId, providerKey)
+  // 2. Loại tác vụ.
+  const taskType: AudioTaskType = input.taskType ?? (musicTrackId ? "AUDIO_MIX" : "VOICEOVER")
+  const spec = AUDIO_TASK_SPECS[taskType]
+  if (spec.music === "none") musicTrackId = undefined
 
-  // 4. Giải quyết quality tier
-  const qualityTier = input.qualityTier ?? "standard"
-
-  // 5. Giải quyết nhạc nền
-  let musicMood: MusicMood = input.musicMood ?? "warm"
-  if (!input.musicMood && input.topicAngleCategory) {
-    musicMood = suggestMoodForTopicAngle(input.topicAngleCategory)
-  }
-
-  let musicTrackId = input.musicTrackId ?? undefined
-  let musicTrackName: string | null = null
-
-  if (musicTrackId) {
-    const track = getMusicTrack(musicTrackId)
-    musicTrackName = track?.displayName ?? null
-  } else if (musicMood !== "none") {
-    const suggested = suggestMusicTrack(musicMood)
-    if (suggested) {
-      musicTrackId = suggested.trackId
-      musicTrackName = suggested.displayName
-    }
-  }
-
-  // 6. Tính credit
-  const taskType = input.taskType ?? "AUDIO_MIX"
-  const creditEstimate = calculateAudioCreditCost({
+  const errors = validateAudioTask({
     taskType,
-    provider: providerKey,
-    qualityTier,
-    sceneCount: input.scenes.length,
+    scenes: input.scenes,
+    musicTrackId,
+    voiceCloneId: input.voiceCloneId,
   })
+  if (Object.keys(errors).length > 0) throw validationFailed(errors)
 
-  // 7. Đưa vào hàng đợi generation_jobs
-  const idempotencyKey = input.idempotencyKey
+  const music = musicTrackId ? await resolveMusicForJob(ctx, musicTrackId) : null
+
+  // 3. Giọng + nhà cung cấp.
+  const qualityTier = input.qualityTier ?? "standard"
+  let voiceId: string | null = null
+  let voiceDisplayName: string | null = null
+  let providerKey: TtsProviderKey | null = null
+  let providerVoiceCode: string | null = null
+  let providerVoiceMap: Readonly<Partial<Record<TtsProviderKey, string>>> | null = null
+  let strictProvider = false
+
+  if (taskType === "VOICE_CLONE") {
+    const clone = await requireReadyVoiceClone(ctx, input.voiceCloneId as string)
+    voiceId = `clone:${clone.id}`
+    voiceDisplayName = clone.name
+    providerKey = VOICE_CLONE_PROVIDER
+    providerVoiceCode = clone.provider_voice_id
+    // Giọng nhân bản không được âm thầm thay bằng giọng khác.
+    strictProvider = true
+  } else if (spec.needsVoice) {
+    const voiceSpec = getVoiceSpec(input.voiceId ?? "flora-nu-truyen-cam")
+    voiceId = voiceSpec.voiceId
+    voiceDisplayName = voiceSpec.displayName
+    providerKey = input.providerKey ?? voiceSpec.defaultProvider
+    if (!SELECTABLE_TTS_PROVIDERS.includes(providerKey)) {
+      throw validationFailed({ providerKey: `Nhà cung cấp ${providerKey} không dùng được trong bản thương mại` })
+    }
+    providerVoiceCode = resolveProviderVoiceCode(voiceSpec.voiceId, providerKey)
+    // Cùng một giọng ở mọi nhà cung cấp — worker lùi thì vẫn đúng giới tính/phong cách.
+    providerVoiceMap = voiceSpec.providerVoiceMap
+  }
+
+  const creditsCost = audioJobCreditCost({
+    taskType,
+    providerKey: providerKey ?? "openai",
+    qualityTier,
+    scenes: input.scenes,
+  })
 
   const enqueued = await enqueueJob(ctx, {
     feature: "audio.generate",
-    idempotencyKey,
+    idempotencyKey: input.idempotencyKey,
     productId: null,
+    costCredit: creditsCost,
     payload: {
       taskType,
-      scenes: input.scenes.map((s) => ({
-        sceneIndex: s.sceneIndex,
-        voiceScript: s.voiceScript,
-        targetDurationSeconds: s.targetDurationSeconds,
-      })),
+      output: spec.output,
+      scenes: spec.needsVoice
+        ? input.scenes.map((s) => ({
+            sceneIndex: s.sceneIndex,
+            voiceScript: s.voiceScript,
+            targetDurationSeconds: s.targetDurationSeconds,
+          }))
+        : [],
       totalDurationSeconds: input.totalDurationSeconds,
       voiceId,
-      voiceDisplayName: voiceSpec.displayName,
+      voiceDisplayName,
+      voiceCloneId: taskType === "VOICE_CLONE" ? input.voiceCloneId : null,
       providerKey,
       providerVoiceCode,
+      providerVoiceMap,
+      strictProvider,
       qualityTier,
-      musicTrackId: musicTrackId ?? null,
-      musicMood,
+      musicTrackId: music?.musicTrackId ?? null,
+      musicStorageKey: music?.musicStorageKey ?? null,
+      musicTrackName: music?.title ?? null,
+      musicMood: music?.mood ?? "none",
       voiceVolume: 1.0,
       bgmDuckingVolume: 0.22,
       bgmNormalVolume: 0.65,
-      creditsCost: creditEstimate.totalCredits,
+      creditsCost,
     },
   })
 
   return {
     jobId: enqueued.job.id,
     generationJobId: enqueued.job.id,
-    creditsCost: creditEstimate.totalCredits,
-    voiceDisplayName: voiceSpec.displayName,
+    taskType,
+    creditsCost,
+    voiceDisplayName,
     providerKey,
-    musicTrackName,
+    musicTrackName: music?.title ?? null,
+    musicLicenseVerified: music ? music.licenseVerified : null,
     usage: enqueued.usage,
     deduped: enqueued.deduped,
   }

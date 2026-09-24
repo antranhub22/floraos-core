@@ -26,33 +26,124 @@ from typing import Any, Dict, List, Optional
 from .tts_engine import generate_speech
 from .mixing_engine import (
     resolve_music_file,
-    pad_voice_to_duration,
+    fit_voice_to_scene,
     generate_silence,
     concat_audio_files,
     mix_audio,
     get_audio_duration,
+    measure_loudness,
 )
 
+# Bốn loại tác vụ (24/09/2026, khớp `audio-task-rules.ts`). Trước ngày này hàm
+# dưới KHÔNG đọc `taskType`: cả bốn nút cùng ra một bản TTS + nhạc.
+TASK_OUTPUT = {
+    "VOICEOVER": "voice_only",
+    "MUSIC_SELECT": "music_only",
+    "AUDIO_MIX": "voice_and_music",
+    "VOICE_CLONE": "voice_and_music",
+}
 
-def process_audio_job(payload: Dict[str, Any], work_dir: Path) -> Dict[str, Any]:
-    """
-    Xử lý 1 audio job.
 
-    Args:
-        payload: Dữ liệu job từ generation_jobs.payload
-        work_dir: Thư mục tạm để lưu file trung gian
-
-    Returns:
-        Dict kết quả để ghi vào generation_jobs.output
-    """
-    task_type = payload.get("taskType", "AUDIO_MIX")
-    scenes = payload.get("scenes", [])
-    total_duration = float(payload.get("totalDurationSeconds", 30))
-    voice_id = payload.get("voiceId", "flora-nu-truyen-cam")
-    provider_key = payload.get("providerKey", "openai")
-    provider_voice_code = payload.get("providerVoiceCode", "nova")
+def _sinh_giong_cac_canh(payload: Dict[str, Any], voice_dir: Path) -> Dict[str, Any]:
+    """TTS từng cảnh → khớp thời lượng (kéo dài cảnh thay vì tua nhanh)."""
+    scenes = payload.get("scenes", []) or []
+    provider_key = payload.get("providerKey") or "openai"
+    provider_voice_code = payload.get("providerVoiceCode") or "nova"
     quality_tier = payload.get("qualityTier", "standard")
-    music_track_id = payload.get("musicTrackId")
+    voice_map = payload.get("providerVoiceMap") or None
+    strict = bool(payload.get("strictProvider"))
+
+    voice_files: List[Path] = []
+    scene_outputs: List[Dict[str, Any]] = []
+    providers_used: List[str] = []
+    has_voice = False
+
+    for idx, scene in enumerate(scenes):
+        script = (scene.get("voiceScript") or "").strip()
+        target = float(scene.get("targetDurationSeconds", 5) or 5)
+        scene_voice = voice_dir / f"scene_{idx}.mp3"
+        fitted = voice_dir / f"scene_{idx}_fit.mp3"
+        scene_index = scene.get("sceneIndex", idx + 1)
+
+        if script:
+            success, used = generate_speech(
+                text=script,
+                voice_code=provider_voice_code,
+                out_file=scene_voice,
+                provider=provider_key,
+                quality=quality_tier,
+                voice_map=voice_map,
+                strict=strict,
+            )
+            if success and scene_voice.is_file():
+                dur = fit_voice_to_scene(scene_voice, target, fitted)
+                if dur > 0:
+                    voice_files.append(fitted)
+                    providers_used.append(used)
+                    has_voice = True
+                    scene_outputs.append({
+                        "sceneIndex": scene_index,
+                        "targetDurationSeconds": target,
+                        "actualDurationSeconds": dur,
+                        "extended": dur > target + 0.05,
+                        "providerUsed": used,
+                    })
+                    continue
+            # Có lời mà không đọc được: dừng cả job — một bản thiếu câu giữa
+            # chừng không bán được, và credit sẽ được hoàn.
+            return {
+                "status": "FAILED",
+                "error": (
+                    f"Không sinh được giọng đọc cho cảnh {scene_index}"
+                    + (
+                        " bằng giọng nhân bản (ElevenLabs). Kiểm tra ELEVENLABS_API_KEY và giọng còn tồn tại."
+                        if strict
+                        else f": mọi nhà cung cấp TTS đều lỗi (bắt đầu từ '{provider_key}'). "
+                        "Kiểm tra OPENAI_API_KEY / ELEVENLABS_API_KEY / mạng của worker, hoặc cài `edge-tts`."
+                    )
+                ),
+            }
+
+        generate_silence(target, fitted)
+        voice_files.append(fitted)
+        scene_outputs.append({
+            "sceneIndex": scene_index,
+            "targetDurationSeconds": target,
+            "actualDurationSeconds": target,
+            "extended": False,
+            "providerUsed": None,
+        })
+
+    return {
+        "status": "OK",
+        "voice_files": voice_files,
+        "scenes": scene_outputs,
+        "has_voice": has_voice,
+        "providers_used": providers_used,
+    }
+
+
+def process_audio_job(
+    payload: Dict[str, Any],
+    work_dir: Path,
+    music_bytes: Optional[bytes] = None,
+) -> Dict[str, Any]:
+    """
+    Xử lý 1 audio job theo `taskType`:
+
+    - VOICEOVER: chỉ giọng đọc (không nhạc).
+    - MUSIC_SELECT: chỉ nhạc, cắt/loop đủ `totalDurationSeconds`, không TTS.
+    - AUDIO_MIX: giọng + nhạc (sidechain ducking, -14 LUFS).
+    - VOICE_CLONE: như AUDIO_MIX nhưng giọng nhân bản, không lùi nhà cung cấp.
+
+    `music_bytes`: tệp nhạc tiệm tự tải (đọc từ kho ở vòng đời job).
+    """
+    task_type = payload.get("taskType") or "AUDIO_MIX"
+    output_kind = TASK_OUTPUT.get(task_type)
+    if output_kind is None:
+        return {"status": "FAILED", "error": f"Loại tác vụ không hỗ trợ: {task_type}"}
+
+    total_duration = float(payload.get("totalDurationSeconds", 30) or 30)
     voice_volume = float(payload.get("voiceVolume", 1.0))
     bgm_ducking = float(payload.get("bgmDuckingVolume", 0.22))
     bgm_normal = float(payload.get("bgmNormalVolume", 0.65))
@@ -61,116 +152,75 @@ def process_audio_job(payload: Dict[str, Any], work_dir: Path) -> Dict[str, Any]
     voice_dir = work_dir / "voices"
     voice_dir.mkdir(exist_ok=True)
 
-    # ── Bước 1: Sinh voice từng scene ──
-    voice_files: List[Path] = []
-    scene_outputs: List[Dict[str, Any]] = []
-    has_voice = False
-    provider_used = provider_key
+    # ── Nhạc nền ──
+    bgm_file: Optional[Path] = None
+    wants_music = output_kind in ("music_only", "voice_and_music")
+    if wants_music:
+        if music_bytes:
+            bgm_file = work_dir / "bgm_upload"
+            bgm_file.write_bytes(music_bytes)
+        else:
+            track_id = payload.get("musicTrackId")
+            bgm_file = resolve_music_file(track_id) if track_id else None
+            if track_id and bgm_file is None:
+                return {"status": "FAILED", "error": f"Không tìm thấy tệp nhạc của bài '{track_id}' trên worker"}
+        if bgm_file is None and (output_kind == "music_only" or task_type == "AUDIO_MIX"):
+            return {"status": "FAILED", "error": "Tác vụ này cần một bài nhạc nền"}
 
-    n_scenes = max(1, len(scenes))
-    total_weights = sum(
-        float(sc.get("targetDurationSeconds", 1)) for sc in scenes
-    ) or float(n_scenes)
-
-    for idx, scene in enumerate(scenes):
-        script = (scene.get("voiceScript") or "").strip()
-        weight = float(scene.get("targetDurationSeconds", 1))
-        scene_dur = round((weight / total_weights) * total_duration, 2)
-
-        scene_voice = voice_dir / f"scene_{idx}.mp3"
-        padded_voice = voice_dir / f"scene_{idx}_padded.mp3"
-
-        actual_duration = 0.0
-
-        if script:
-            success, used_provider = generate_speech(
-                text=script,
-                voice_code=provider_voice_code,
-                out_file=scene_voice,
-                provider=provider_key,
-                quality=quality_tier,
-            )
-
-            if success and scene_voice.is_file():
-                provider_used = used_provider
-                pad_voice_to_duration(scene_voice, scene_dur, padded_voice)
-                voice_files.append(padded_voice)
-                has_voice = True
-                actual_duration = get_audio_duration(padded_voice)
-
-                scene_outputs.append({
-                    "sceneIndex": scene.get("sceneIndex", idx + 1),
-                    "voiceUrl": None,  # Sẽ điền sau khi upload
-                    "voiceStorageKey": None,
-                    "actualDurationSeconds": actual_duration,
-                })
-                continue
-
-        # Scene không có script → im lặng
-        generate_silence(scene_dur, padded_voice)
-        voice_files.append(padded_voice)
-        actual_duration = scene_dur
-
-        scene_outputs.append({
-            "sceneIndex": scene.get("sceneIndex", idx + 1),
-            "voiceUrl": None,
-            "voiceStorageKey": None,
-            "actualDurationSeconds": actual_duration,
-        })
-
-    # 23/09/2026: có lời thoại mà không nhà cung cấp TTS nào sinh được giọng →
-    # báo lỗi RÕ (trước đây rơi xuống "Không thể phối trộn âm thanh" mơ hồ).
-    co_loi_thoai = any((sc.get("voiceScript") or "").strip() for sc in scenes)
-    if co_loi_thoai and not has_voice:
-        return {
-            "status": "FAILED",
-            "error": (
-                "Không sinh được giọng đọc: mọi nhà cung cấp TTS đều lỗi "
-                f"(đã thử bắt đầu từ '{provider_key}'). Kiểm tra OPENAI_API_KEY / kết nối mạng "
-                "của worker, hoặc cài `edge-tts` cho giọng miễn phí."
-            ),
-            "providerUsed": "none",
-            "scenes": scene_outputs,
-        }
-
-    # ── Bước 2: Nối voice thành 1 track ──
+    # ── Giọng đọc ──
     full_voice: Optional[Path] = None
-    if has_voice and voice_files:
+    scene_outputs: List[Dict[str, Any]] = []
+    providers_used: List[str] = []
+    has_voice = False
+    if output_kind != "music_only":
+        voice = _sinh_giong_cac_canh(payload, voice_dir)
+        if voice["status"] != "OK":
+            return {"status": "FAILED", "error": voice["error"], "providerUsed": "none"}
+        scene_outputs = voice["scenes"]
+        providers_used = voice["providers_used"]
+        has_voice = voice["has_voice"]
+        if not has_voice:
+            return {"status": "FAILED", "error": "Không có lời thoại nào để đọc"}
         full_voice = work_dir / "full_voice.mp3"
-        concat_audio_files(voice_files, full_voice)
-        if not (full_voice.is_file() and full_voice.stat().st_size > 0):
-            full_voice = None
+        if not concat_audio_files(voice["voice_files"], full_voice) or full_voice.stat().st_size == 0:
+            return {"status": "FAILED", "error": "Không nối được giọng các cảnh"}
+        # Cảnh được kéo dài → tổng thời lượng theo giọng thật.
+        total_duration = max(sum(float(s["actualDurationSeconds"]) for s in scene_outputs), 1.0)
 
-    # ── Bước 3: Chọn nhạc nền ──
-    bgm_file = resolve_music_file(music_track_id)
-
-    # ── Bước 4: Phối trộn ──
+    # ── Phối ──
     mixed_audio = work_dir / "mixed_audio.m4a"
     result_file = mix_audio(
         voice_file=full_voice,
-        bgm_file=bgm_file,
+        bgm_file=bgm_file if wants_music else None,
         total_duration=total_duration,
         out_file=mixed_audio,
         voice_volume=voice_volume,
         bgm_ducking_volume=bgm_ducking,
         bgm_normal_volume=bgm_normal,
     )
+    if not (result_file and result_file.is_file()):
+        return {"status": "FAILED", "error": "Không thể phối trộn âm thanh", "scenes": scene_outputs}
 
-    if result_file and result_file.is_file():
-        final_duration = get_audio_duration(result_file)
-        return {
-            "status": "COMPLETED",
-            "mixedAudioPath": str(result_file),
-            "voiceOnlyPath": str(full_voice) if full_voice else None,
-            "totalDurationSeconds": final_duration,
-            "providerUsed": provider_used,
-            "scenes": scene_outputs,
-        }
+    voice_only: Optional[Path] = None
+    if full_voice is not None and wants_music and bgm_file is not None:
+        # Bản chỉ-giọng cho người dựng video / phối lại (đã chuẩn hoá độ to).
+        voice_only = mix_audio(full_voice, None, total_duration, work_dir / "voice_only.m4a", voice_volume)
+
+    provider_used = providers_used[0] if providers_used else None
+    if providers_used and len(set(providers_used)) > 1:
+        provider_used = ",".join(sorted(set(providers_used)))
 
     return {
-        "status": "FAILED",
-        "error": "Không thể phối trộn âm thanh",
+        "status": "COMPLETED",
+        "taskType": task_type,
+        "output": output_kind,
+        "mixedAudioPath": str(result_file),
+        "voiceOnlyPath": str(voice_only) if voice_only else None,
+        "totalDurationSeconds": get_audio_duration(result_file),
+        "loudnessLufs": measure_loudness(result_file),
         "providerUsed": provider_used,
+        "hasVoice": has_voice,
+        "hasMusic": bool(wants_music and bgm_file is not None),
         "scenes": scene_outputs,
     }
 
@@ -220,7 +270,17 @@ def process_audio_generation_job(conn: Any, job: Dict[str, Any]) -> None:
         conn.commit()
         _su_kien(conn, job_id, "stage", {"stage": "GENERATING"})
 
-        ket_qua = process_audio_job(payload, work_dir)
+        music_bytes = None
+        music_key = payload.get("musicStorageKey")
+        if music_key:
+            # Bài tiệm tự tải: khoá phải nằm trong kho của CHÍNH tổ chức của job.
+            if not str(music_key).startswith(f"org/{organization_id}/"):
+                raise RuntimeError("Tệp nhạc không thuộc tổ chức của job")
+            from shared.storage import doc_bytes
+
+            music_bytes = doc_bytes(music_key, _STORAGE_ROOT)
+
+        ket_qua = process_audio_job(payload, work_dir, music_bytes=music_bytes)
         if ket_qua.get("status") != "COMPLETED" or not ket_qua.get("mixedAudioPath"):
             raise RuntimeError(ket_qua.get("error") or "Không phối trộn được âm thanh")
 
@@ -232,12 +292,24 @@ def process_audio_generation_job(conn: Any, job: Dict[str, Any]) -> None:
         )
         ghi_bytes(storage_key, tep.read_bytes(), mime, _STORAGE_ROOT)
 
+        voice_only_key = None
+        if ket_qua.get("voiceOnlyPath"):
+            vo = Path(ket_qua["voiceOnlyPath"])
+            voice_only_key = storage_key.rsplit("_audio", 1)[0] + "_voice" + (vo.suffix.lower() or ".m4a")
+            ghi_bytes(voice_only_key, vo.read_bytes(), _MIME_THEO_DUOI.get(vo.suffix.lower(), "audio/mp4"), _STORAGE_ROOT)
+
         output = {
             "audio_storage_key": storage_key,
+            "voice_only_storage_key": voice_only_key,
             "mime_type": mime,
+            "task_type": ket_qua.get("taskType"),
+            "output": ket_qua.get("output"),
             "total_duration_seconds": ket_qua.get("totalDurationSeconds"),
+            "loudness_lufs": ket_qua.get("loudnessLufs"),
             "provider_used": ket_qua.get("providerUsed"),
-            "has_voice": bool(ket_qua.get("voiceOnlyPath")),
+            # 24/09/2026: trước đây suy từ `voiceOnlyPath` — luôn True kể cả bản chỉ nhạc.
+            "has_voice": bool(ket_qua.get("hasVoice")),
+            "has_music": bool(ket_qua.get("hasMusic")),
             "scenes": ket_qua.get("scenes", []),
         }
         with conn.cursor() as cur:

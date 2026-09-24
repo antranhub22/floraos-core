@@ -1,6 +1,6 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-23 tối (Rà soát & đồng bộ Creative Studio 14 chặng với mã; đưa nhánh Cloud M04b vào hàng đợi job; nối dữ liệu thật Chặng 07–14; nối worker `audio.generate`) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
+**Cập nhật:** 2026-09-24 trưa (Nâng cấp Xem Video Trực Tiếp Tại Chỗ Bảng Vàng Xu Hướng & Cập Nhật Dữ Liệu Thời Gian Thực Market Intelligence) · **Dự án:** FloraOS SaaS — nền tảng đa tenant cho cửa hàng hoa
 
 > Tệp này tồn tại để **bất kỳ phiên làm việc nào — tài khoản Claude khác, Cursor, Copilot, hay người thật — tiếp tục được từ đúng chỗ đang dừng.** Bộ nhớ và lịch sử hội thoại không chuyển được giữa các tài khoản; repo thì chuyển được. Nên trạng thái sống ở đây, không sống trong một phiên chat.
 >
@@ -9,6 +9,18 @@
 ---
 
 ## 1. Đang ở đâu
+
+**24/09 (trưa) — Hoàn thiện Xem Video Trực Tiếp Tại Chỗ Bảng Vàng Xu Hướng & Cập Nhật Dữ Liệu Thời Gian Thực Market Intelligence.** Mã viết xong, nghiệm thu trên máy thật: `npx tsc --noEmit` **sạch 100%**, `npm test` **806/806 ca xanh (100/100 tệp)**, `tests/unit/market-intelligence/` **50/50 ca xanh thật (10/10 tệp)**.
+- **Trình phát video trực tiếp tại chỗ (In-Place Video Preview Modal)**: Bổ sung component [`VideoPreviewModal`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/video-preview-modal.tsx) (182 dòng, chuẩn SRP $\le 350$ dòng) nhúng iframe YouTube HD (`autoplay=1`, `youtube-nocookie.com`, không chuyển trang, không mở tab mới làm đứt đoạn luồng sử dụng).
+- **Phân tách luồng tương tác trên Bảng Vàng Quán Quân (`TopChampionsBlock`)**:
+  - Nhấp vào hình ảnh thumbnail (nút Play, nhãn điểm số, thẻ chu kỳ): Gọi `e.stopPropagation()` và mở ngay Video Preview Modal phát video trực tiếp. Nút Play ở trung tâm thumbnail có hiệu ứng hover zoom mượt mà, tooltip rõ ràng.
+  - Nhấp vào "Chi tiết →" hoặc phần thân thẻ: Giữ nguyên 100% hành vi mở Drawer xem kịch bản, micro story và hook chi tiết.
+- **Cập nhật dữ liệu thời sự thời gian thực & làm sạch video cũ**:
+  - Cập nhật SerpApi Key thời gian thực mới, kích hoạt lượt chạy `DAILY_DEEP` nạp 70 cơ hội tươi mới vào CSDL.
+  - Loại bỏ hoàn toàn video cũ năm trước (4 năm `KgeeHEXbviw`, 7 năm `uejjfAHID84`) khỏi [`video-catalog-presets.ts`](file:///Users/tuan/Projects/floraos-core/src/modules/market-intelligence/domain/video-catalog-presets.ts), cập nhật các video thật tuần hiện tại (`sE9qFNfInw8`, `8fR6IEYH880`, `0oDJt8dzHrE`, `XCGy6RSa_gg`, `-Y4zNZW2_Cg`).
+  - Backfill toàn bộ 4.318 bản ghi cũ trong CSDL sang danh mục video mới tuần này.
+  - Bổ sung bộ lọc loại bỏ video spam, tóm tắt phim/truyện khỏi adapter YouTube.
+- **Tài liệu & Unit test**: Bổ sung `tests/unit/market-intelligence/video-preview-modal.test.ts` (5 ca xanh); cập nhật `FLORAOS_MARKET_INTELLIGENCE_ARCHITECTURE.md` (mục 2.1, 3, 4.2, 4.3).
 
 **24/09 (chiều–tối) — Creative Studio chạy thật trên máy anh Tony, sửa theo phản hồi.** (1) Kịch bản bối cảnh sinh ở Chặng 05, dùng chung B/C/D/E. (2) Worker: alpha lõi 254 làm cổng Subject Integrity từ chối mọi ảnh thật; defringer tô đè cả đầu hoa ("xoá nhoà") mà cổng vẫn báo 100% — sửa làm đặc thân sản phẩm + cổng yêu cầu lõi đo phủ ≥ 60%. (3) `workers/.venv` Python 3.9/LibreSSL không bắt tay TLS 1.3 với Stability — tạo lại bằng 3.11 (nợ #126); lý do lỗi nhà cung cấp hiện trên thẻ cảnh. (4) Khu vực E: storyboard theo kịch bản, bỏ ảnh mẫu Unsplash/ảnh mẫu dự phòng của worker, render đổi mã asset → `storage_key`, video phát được (URL ký), có giọng đọc (E không gửi `voiceCode`; `audio_engine` gọi pad/silence sai thứ tự tham số). (5) Chặng 07: xem lại đủ tài sản, bài B tự lưu (`content_drafts`), **sửa tại chỗ** ảnh/bài/âm thanh/video chạy ngầm và tự thay vào gói (`creative.scene_revise`, `creative.content_rewrite`). (6) Trang `/video`: phát được video, bỏ ảnh mẫu, "chia sẻ" thật. **Anh Tony cần:** `npx prisma migrate deploy` (thêm `20260924090000_content_drafts`), `npx prisma generate`, `npm run db:seed` (AIC-18, AIC-23), khởi động lại `dev:all`.
 

@@ -12,6 +12,8 @@ const TENANT_TABLES = [
   "campaign_packages",
   // Bài Khu vực B tự lưu — 24/09/2026
   "content_drafts",
+  "voice_clones",
+  "music_tracks",
   // Nền AI — AI-1. `ai_capabilities` và `ai_models` KHÔNG nằm ở đây: chúng là
   // sổ đăng ký cấp nền tảng, không phải dữ liệu thử của một tổ chức, và
   // `ensureSystemRoles` phía dưới cũng không dựng lại chúng.

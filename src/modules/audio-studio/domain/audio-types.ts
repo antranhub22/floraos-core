@@ -18,7 +18,7 @@ export type AudioTaskType =
   | "VOICEOVER"          // Sinh giọng đọc (TTS) từ script
   | "MUSIC_SELECT"       // Chọn nhạc nền theo mood
   | "AUDIO_MIX"          // Phối trộn voice + BGM + ducking
-  | "VOICE_CLONE"        // Clone giọng chủ shop (tương lai)
+  | "VOICE_CLONE"        // Đọc bằng giọng nhân bản của chủ tiệm (ElevenLabs IVC, 24/09/2026)
 
 /** Nhà cung cấp TTS */
 export type TtsProviderKey =
@@ -27,7 +27,7 @@ export type TtsProviderKey =
   | "minimax"            // MiniMax TTS
   | "edge_tts"           // Microsoft Edge TTS (miễn phí)
   | "google_cloud"       // Google Cloud Text-to-Speech
-  | "local_fallback"     // macOS say / chime fallback (0 credit)
+  | "local_fallback"     // macOS `say` — CHỈ thử nghiệm, không nằm trong chuỗi lùi tự động (24/09/2026)
 
 /** Trạng thái job âm thanh */
 export type AudioJobStage =
@@ -90,7 +90,12 @@ export interface MusicTrackSpec {
   /** Tên file trong assets/music/ */
   readonly filename: string
   /** Bản quyền */
-  readonly license: "royalty_free" | "creative_commons" | "original"
+  readonly license: "royalty_free" | "creative_commons" | "original" | "licensed"
+  /** Nguồn / nơi mua / đường dẫn giấy phép (24/09/2026). Bản thương mại chỉ
+   *  phát bài có hồ sơ nguồn; thiếu thì `licenseVerified = false`. */
+  readonly licenseSource: string
+  /** Đã có giấy phép thương mại được kiểm tra (người vận hành xác nhận). */
+  readonly licenseVerified: boolean
   /** Phù hợp với ProductionMode */
   readonly suitableFor: ("AUTHENTIC" | "CREATIVE")[]
 }

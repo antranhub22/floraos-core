@@ -53,33 +53,23 @@ def get_audio_duration(file_path: Path) -> float:
 
 
 def resolve_music_file(track_id: Optional[str]) -> Optional[Path]:
-    """Tìm file nhạc nền từ trackId hoặc tên cũ."""
+    """Tìm tệp nhạc hệ thống theo trackId (hoặc tên cũ của video worker).
+
+    24/09/2026: mã lạ / tệp thiếu → `None` (worker báo lỗi rõ). Trước đây âm
+    thầm trả Acoustic Guitar, nên chọn bài nào không có cũng ra guitar.
+    """
     if not track_id:
         return None
-
-    # Thử trackId mới (kebab-case)
-    filename = TRACK_ID_TO_FILENAME.get(track_id)
-
-    # Thử tên cũ (backward-compatible)
-    if not filename:
-        filename = LEGACY_NAME_TO_FILENAME.get(track_id)
-
-    # Thử fuzzy match
+    filename = TRACK_ID_TO_FILENAME.get(track_id) or LEGACY_NAME_TO_FILENAME.get(track_id)
     if not filename:
         for k, v in LEGACY_NAME_TO_FILENAME.items():
             if k.lower() in track_id.lower():
                 filename = v
                 break
-
     if not filename:
-        filename = "acoustic_warm_guitar.mp3"
-
+        return None
     p = MUSIC_DIR / filename
-    if p.is_file():
-        return p
-
-    fallback_p = MUSIC_DIR / "acoustic_warm_guitar.mp3"
-    return fallback_p if fallback_p.is_file() else None
+    return p if p.is_file() else None
 
 
 def pad_voice_to_duration(
@@ -160,6 +150,37 @@ def concat_audio_files(files: List[Path], out_file: Path) -> bool:
         return False
 
 
+# Chuẩn độ to cho video mạng xã hội (TikTok/Reels/YouTube chuẩn hoá quanh
+# -14 LUFS; trần đỉnh -1.5 dBTP để không vỡ tiếng sau khi nền tảng nén lại).
+TARGET_LUFS = -14.0
+TARGET_TRUE_PEAK = -1.5
+
+
+def _loudnorm() -> str:
+    return f"loudnorm=I={TARGET_LUFS}:TP={TARGET_TRUE_PEAK}:LRA=11,aresample=44100"
+
+
+def measure_loudness(file_path: Path) -> Optional[float]:
+    """Đo độ to tích hợp (LUFS) của tệp — ghi vào output để kiểm chứng."""
+    try:
+        res = subprocess.run(
+            [
+                "ffmpeg", "-hide_banner", "-nostats", "-i", str(file_path),
+                "-af", "loudnorm=print_format=json", "-f", "null", "-",
+            ],
+            capture_output=True, text=True, timeout=60,
+        )
+        import json as _json
+        import re as _re
+
+        m = _re.search(r"\{[^{}]*\"input_i\"[^{}]*\}", res.stderr, _re.S)
+        if not m:
+            return None
+        return round(float(_json.loads(m.group(0))["input_i"]), 1)
+    except Exception:
+        return None
+
+
 def mix_audio(
     voice_file: Optional[Path],
     bgm_file: Optional[Path],
@@ -170,68 +191,102 @@ def mix_audio(
     bgm_normal_volume: float = 0.65,
 ) -> Optional[Path]:
     """
-    Phối trộn voice + nhạc nền với ducking.
-    - Khi có voice: BGM giảm xuống bgm_ducking_volume
-    - Khi không voice: BGM ở bgm_normal_volume
-    - Fade out 1 giây cuối
+    Phối voice + nhạc nền, xuất AAC stereo 44.1kHz đã chuẩn hoá độ to.
+
+    24/09/2026 (rà soát Khu vực C):
+    - Ducking THẬT bằng `sidechaincompress`: nhạc chỉ hạ khi có giọng, nâng lại
+      khi ngừng (trước đây nhạc bị hạ cố định 22% suốt bản).
+    - `amix ... normalize=0`: `amix` mặc định chia đôi mọi đầu vào, làm giọng
+      nhỏ đi một nửa.
+    - `loudnorm` về -14 LUFS / -1.5 dBTP; fade in 0.3s nhạc, fade out 1s cuối.
+    `bgm_ducking_volume` giữ trong chữ ký để tương thích; mức hạ do bộ nén quyết định.
     """
+    del bgm_ducking_volume
     try:
         out_file.parent.mkdir(parents=True, exist_ok=True)
-        fade_out_start = max(0.5, total_duration - 1.0)
+        t = max(0.5, float(total_duration))
+        fade_out_start = max(0.0, t - 1.0)
+        fmt = "aformat=sample_rates=44100:channel_layouts=stereo"
+        has_voice = bool(voice_file and voice_file.is_file())
+        has_bgm = bool(bgm_file and bgm_file.is_file())
 
-        if voice_file and voice_file.is_file() and bgm_file and bgm_file.is_file():
-            # Voice + BGM: ducking
+        if has_voice and has_bgm:
             filter_str = (
-                f"[0:a]volume={voice_volume},apad,atrim=0:{total_duration}[v];"
-                f"[1:a]aloop=loop=-1:size=2e+09,atrim=0:{total_duration},volume={bgm_ducking_volume}[m];"
-                f"[v][m]amix=inputs=2:duration=longest,"
-                f"afade=t=out:st={fade_out_start:.2f}:d=1.0[out]"
+                f"[0:a]{fmt},volume={voice_volume},apad,atrim=0:{t:.2f},asplit=2[v][vsc];"
+                f"[1:a]{fmt},aloop=loop=-1:size=2e+09,atrim=0:{t:.2f},volume={bgm_normal_volume},"
+                f"afade=t=in:d=0.3[m];"
+                f"[m][vsc]sidechaincompress=threshold=0.02:ratio=10:attack=15:release=350:makeup=1[md];"
+                f"[v][md]amix=inputs=2:duration=first:normalize=0,"
+                f"afade=t=out:st={fade_out_start:.2f}:d=1.0,{_loudnorm()}[out]"
             )
             cmd = [
                 "ffmpeg", "-y", "-loglevel", "error",
-                "-i", str(voice_file),
-                "-i", str(bgm_file),
-                "-filter_complex", filter_str,
-                "-map", "[out]",
-                "-c:a", "aac", "-b:a", "128k",
+                "-i", str(voice_file), "-i", str(bgm_file),
+                "-filter_complex", filter_str, "-map", "[out]",
+                "-t", f"{t:.2f}", "-c:a", "aac", "-b:a", "192k",
                 str(out_file),
             ]
-            subprocess.run(cmd, check=True, timeout=120)
-            return out_file
-
-        elif voice_file and voice_file.is_file():
-            # Chỉ voice
+        elif has_voice:
             cmd = [
                 "ffmpeg", "-y", "-loglevel", "error",
                 "-i", str(voice_file),
                 "-af", (
-                    f"apad,atrim=0:{total_duration},"
-                    f"afade=t=out:st={fade_out_start:.2f}:d=1.0"
+                    f"{fmt},volume={voice_volume},apad,atrim=0:{t:.2f},"
+                    f"afade=t=out:st={fade_out_start:.2f}:d=1.0,{_loudnorm()}"
                 ),
-                "-c:a", "aac", "-b:a", "128k",
+                "-t", f"{t:.2f}", "-c:a", "aac", "-b:a", "192k",
                 str(out_file),
             ]
-            subprocess.run(cmd, check=True, timeout=120)
-            return out_file
-
-        elif bgm_file and bgm_file.is_file():
-            # Chỉ BGM
+        elif has_bgm:
             cmd = [
                 "ffmpeg", "-y", "-loglevel", "error",
                 "-i", str(bgm_file),
                 "-af", (
-                    f"aloop=loop=-1:size=2e+09,atrim=0:{total_duration},"
-                    f"volume={bgm_normal_volume},"
-                    f"afade=t=out:st={fade_out_start:.2f}:d=1.0"
+                    f"{fmt},aloop=loop=-1:size=2e+09,atrim=0:{t:.2f},"
+                    f"volume={bgm_normal_volume},afade=t=in:d=0.3,"
+                    f"afade=t=out:st={fade_out_start:.2f}:d=1.0,{_loudnorm()}"
                 ),
-                "-c:a", "aac", "-b:a", "128k",
+                "-t", f"{t:.2f}", "-c:a", "aac", "-b:a", "192k",
                 str(out_file),
             ]
-            subprocess.run(cmd, check=True, timeout=120)
-            return out_file
+        else:
+            return None
 
-        return None
+        subprocess.run(cmd, check=True, timeout=180)
+        return out_file if out_file.is_file() and out_file.stat().st_size > 0 else None
 
     except Exception as exc:
         print(f"❌ [Mixing] Phối trộn thất bại: {exc}", flush=True)
         return None
+
+
+def fit_voice_to_scene(voice_file: Path, target_duration: float, out_file: Path) -> float:
+    """
+    Khớp giọng một cảnh vào thời lượng cảnh cho Audio Studio (24/09/2026).
+
+    Trước đây giọng dài hơn cảnh bị tăng tốc tới 2× rồi cắt đuôi (nghe như tua
+    nhanh, mất chữ cuối). Nay: cho phép nhanh tối đa 1.1× (tai không nhận ra);
+    còn dài hơn thì KÉO DÀI cảnh bằng độ dài giọng + 0.3s nghỉ. Trả thời lượng
+    thật của cảnh (giây); 0 nếu lỗi.
+    """
+    actual = get_audio_duration(voice_file)
+    if actual <= 0:
+        return 0.0
+    target = max(0.5, float(target_duration))
+    tempo = 1.0
+    if actual > target - 0.2:
+        needed = actual / max(0.5, target - 0.25)
+        tempo = min(1.1, needed)
+    spoken = actual / tempo
+    final = max(target, round(spoken + 0.3, 2))
+    af = (f"atempo={tempo:.3f}," if tempo > 1.001 else "") + f"apad,atrim=0:{final:.2f}"
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", str(voice_file), "-af", af,
+             "-ar", "44100", "-c:a", "libmp3lame", "-b:a", "192k", str(out_file)],
+            check=True, timeout=120,
+        )
+        return final if out_file.is_file() else 0.0
+    except Exception as exc:
+        print(f"⚠️ [Mixing] Khớp giọng lỗi: {exc}", flush=True)
+        return 0.0

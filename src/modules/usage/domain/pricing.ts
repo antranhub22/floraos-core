@@ -42,6 +42,12 @@ const FEATURE_COST_CREDIT: Readonly<Record<string, number>> = {
   "catalog.generate": 1,
   "landing.generate": 1,
   "video.render": 5,
+  // Audio Studio (24/09/2026): giá THẬT của từng lượt `audio.generate` tính
+  // theo cảnh × nhà cung cấp × chất lượng (`audio-pricing-guard.ts`) và truyền
+  // vào `enqueueJob({ costCredit })`; số ở đây chỉ là mức sàn khi không truyền.
+  "audio.generate": 1,
+  // Nhân bản giọng (ElevenLabs Instant Voice Clone) — giá tạm, nợ #64.
+  "audio.voice_clone": 5,
   "chat.channel.messenger_monthly": 50,
   "chat.channel.zalo_monthly": 70,
   "chat.channel.embed_monthly": 30,

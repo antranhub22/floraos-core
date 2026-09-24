@@ -19,7 +19,7 @@ MUSIC_DIR = Path(__file__).resolve().parents[1] / "video" / "assets" / "music"
 TRACK_ID_TO_FILE = {
     "acoustic-warm-guitar": "acoustic_warm_guitar.mp3",
     "upbeat-cheerful-pop": "upbeat_cheerful_pop.mp3",
-    "lofi-chill-beats": "lo_fi_chill_beats.mp3",
+    "lo-fi-chill-beats": "lo_fi_chill_beats.mp3",  # 24/09/2026: trùng mã TS (trước là "lofi-…" nên mood chill ra guitar)
     "romantic-piano-melody": "romantic_piano_melody.mp3",
 }
 

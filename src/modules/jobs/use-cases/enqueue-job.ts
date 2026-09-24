@@ -22,6 +22,10 @@ export type EnqueueJobInput = {
   /** Gom nhiều job cùng một lượt chạy lô (vd 30 biến thể, nợ #108) về một
    *  màn tiến độ chung — KHÔNG phải khoá nghiệp vụ, không đổi hạn mức/credit. */
   jobGroupId?: string | null | undefined
+  /** Credit của RIÊNG lượt này khi giá phụ thuộc tham số (Audio Studio,
+   *  24/09/2026: số cảnh × nhà cung cấp × chất lượng). Không truyền = giá
+   *  theo feature (`pricing.ts`). Số nguyên ≥ 0; 0 vẫn tiêu một lượt dùng thử. */
+  costCredit?: number | undefined
 }
 
 export type EnqueueJobResult = {
@@ -83,7 +87,10 @@ export async function enqueueJob(
     })
   }
 
-  const cost = costCreditForFeature(input.feature)
+  if (input.costCredit !== undefined && (!Number.isInteger(input.costCredit) || input.costCredit < 0)) {
+    throw validationFailed({ cost_credit: "Phải là số nguyên ≥ 0" })
+  }
+  const cost = input.costCredit ?? costCreditForFeature(input.feature)
 
   async function runTransaction(): Promise<EnqueueJobResult> {
     return runInTransaction(async (tx) => {

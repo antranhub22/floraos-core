@@ -104,13 +104,49 @@ export class YouTubeTrendAdapter implements TrendProvider {
         ];
       }
 
-      // Tính tổng hợp chỉ số quan tâm video từ top video
-      const topVideos = videoResults.slice(0, 5);
+      // Lọc nghiêm ngặt: chỉ lấy video thực sự về hoa, loại trừ 100% video review/phim/truyện/nhạc
+      const relevantVideos = videoResults.filter((v: any) => {
+        const t = (v.title || "").toLowerCase();
+        const d = (v.description || "").toLowerCase();
+        const c = (typeof v.channel === "string" ? v.channel : v.channel?.name || "").toLowerCase();
+
+        const isSpam =
+          t.includes("tập ") ||
+          t.includes("phim") ||
+          t.includes("review") ||
+          t.includes("truyện") ||
+          t.includes("tiểu thuyết") ||
+          t.includes("hào môn") ||
+          t.includes("tổng tài") ||
+          t.includes("remix") ||
+          t.includes("nhạc trẻ");
+        if (isSpam) return false;
+
+        return (
+          t.includes("bó hoa") ||
+          t.includes("cắm hoa") ||
+          t.includes("lẵng hoa") ||
+          t.includes("giỏ hoa") ||
+          t.includes("kệ hoa") ||
+          t.includes("hoa tươi") ||
+          t.includes("hoa cưới") ||
+          t.includes("hoa tốt nghiệp") ||
+          t.includes("hoa khai trương") ||
+          t.includes("florist") ||
+          c.includes("hoa tươi") ||
+          c.includes("tiệm hoa") ||
+          c.includes("florist") ||
+          d.includes("cắm hoa")
+        );
+      });
+
+      const candidateList = relevantVideos.length > 0 ? relevantVideos : videoResults;
+      const topVideos = candidateList.slice(0, 5);
       const totalViews = topVideos.reduce((acc, v) => acc + (typeof v.views === "number" ? v.views : 2000), 0);
       const avgViews = Math.round(totalViews / topVideos.length);
       const metricVal = Math.min(100, Math.max(30, Math.round(Math.log10(avgViews + 10) * 20)));
 
-      const evidenceSnippets = videoResults.slice(0, 3).map((v: any) => {
+      const evidenceSnippets = relevantVideos.slice(0, 3).map((v: any) => {
         const thumb = typeof v.thumbnail === "string" ? v.thumbnail : v.thumbnail?.static || v.thumbnail?.rich || undefined;
         const channelName = typeof v.channel === "string" ? v.channel : v.channel?.name || "Kênh Hoa Tươi";
         const viewStr = typeof v.views === "number" ? `${v.views.toLocaleString("vi-VN")} lượt xem` : "Xem nhiều";
@@ -118,7 +154,7 @@ export class YouTubeTrendAdapter implements TrendProvider {
         return {
           title: v.title || `Video hướng dẫn: ${query.query}`,
           platform: "YOUTUBE" as const,
-          url: v.link || `https://www.youtube.com/results?search_query=${encodeURIComponent(`${query.query} hoa tươi`)}&sp=CAISAhAC`,
+          url: v.link || `https://www.youtube.com/results?search_query=${encodeURIComponent(`${query.query} cắm hoa`)}&sp=CAISAhAC`,
           thumbnailUrl: thumb,
           author: channelName,
           metrics: `${dateStr}${viewStr}`,

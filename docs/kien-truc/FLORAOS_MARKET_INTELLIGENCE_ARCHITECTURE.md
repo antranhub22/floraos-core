@@ -42,12 +42,17 @@ Hệ thống cung cấp hai chế độ tiếp cận tương hỗ:
 
 Bất kỳ thay đổi mã nguồn nào trong phân hệ Market Intelligence bắt buộc phải tuân thủ 6 nguyên tắc cốt lõi:
 
-### 2.1. Chuẩn Dẫn Chứng Video Kép Thực Tế (Dual-Platform Real Video Evidence)
+### 2.1. Chuẩn Dẫn Chứng Video Kép & Xem Video Trực Tiếp Tại Chỗ (Dual-Platform Video Evidence & In-Place Video Player)
 - **Quy tắc bắt buộc**: Mỗi cơ hội hoặc xu hướng hiển thị trên giao diện không được dùng ảnh minh họa chung chung không nguồn gốc. Thay vào đó, bắt buộc phải hiển thị **cặp thumbnail dẫn chứng video thực tế từ 2 nền tảng**:
   1. **TikTok**: Video định dạng dọc (9:16), có nhãn nền tảng `TikTok` đen neon, nút Play overlay, tên kênh người sáng tạo thực tế (vd: `@hoatuoituongan`, `@queenflowers`, `@tiemhoanangxuan`...), và số liệu tương tác thật (`42.6k tim`, `28.4k tim`...).
   2. **YouTube**: Video định dạng ngang (16:9), có nhãn nền tảng `YT` đỏ, nút Play overlay, và tên kênh YouTube tương ứng.
-- **Tương tác trực tiếp**: Cả hai thumbnail đều là các phần tử tương tác độc lập (`cursor-pointer`). Khi người dùng nhấp chuột, hệ thống kích hoạt `e.stopPropagation()` và mở trực tiếp video nguồn trên tab mới (`window.open(url, "_blank")`), bảo đảm tính xác thực 100% của xu hướng.
-- **Triển khai SSOT**: Quản lý tập trung tại [`video-evidence-catalog.ts`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/video-evidence-catalog.ts) và trích xuất qua `getDualOpportunityEvidencePreview(item)`.
+- **Tương tác trực tiếp & Trình phát Video tại chỗ (In-Place Video Preview)**:
+  - Cả hai thumbnail đều là các phần tử tương tác độc lập (`cursor-pointer`), bắt sự kiện riêng biệt (`e.stopPropagation()`).
+  - **Bảng Vàng Quán Quân Chu Kỳ (`TopChampionsBlock`)**: Khi người dùng nhấp chuột vào hình ảnh/video thumbnail, hệ thống **hiển thị và phát luôn video trực tiếp tại chỗ** thông qua component chuyên dụng [`VideoPreviewModal`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/video-preview-modal.tsx) (nhúng iframe YouTube HD, `autoplay=1`, không tải lại trang, không chuyển tab ngoài gây đứt đoạn trải nghiệm).
+  - Modal hỗ trợ phím `Escape`, nút `X`, hoặc click ra vùng tối ngoài backdrop để đóng; đồng thời cung cấp link mở rộng sang YouTube/TikTok nếu cần.
+  - Khi nhấp vào vùng nội dung hoặc nút **"Chi tiết →"**, hệ thống giữ nguyên hành vi mở Drawer kịch bản & câu chuyện thị trường.
+- **Triển khai SSOT**: Quản lý tập trung tại [`video-evidence-catalog.ts`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/video-evidence-catalog.ts), các mẫu video tuần mới nhất tại [`video-catalog-presets.ts`](file:///Users/tuan/Projects/floraos-core/src/modules/market-intelligence/domain/video-catalog-presets.ts), và trích xuất qua `getDualOpportunityEvidencePreview(item)`.
+
 
 ### 2.2. Quy Tắc Nghiêm Ngặt Chống Tràn Từ Khóa Thô (Strict Anti-Keyword-Dumping Rule)
 - **Vấn đề cần triệt tiêu**: Trong quá trình thu thập tín hiệu tìm kiếm (Google Trends, TikTok Search), chuỗi từ khóa đầu vào thường gồm 5–10 cụm từ nối nhau bằng dấu phẩy (vd: `Hoa 20/10, Bó hoa tốt nghiệp hướng dương, Hoa cưới mùa thu, Hoa cưới tone cam cháy...`).
@@ -108,6 +113,8 @@ src/
 ├── modules/market-intelligence/
 │   ├── domain/                               # Tầng nghiệp vụ thuần TypeScript (0 DB, 0 React)
 │   │   ├── trend-lifecycle.ts                # Chu kỳ sóng (EMERGING, SURGING, PEAK, EVERGREEN)
+│   │   ├── trend-timeframe.ts                # Phân bổ khung thời gian & logic Quán quân chu kỳ (WEEK, MONTH, QUARTER, HALF_YEAR, YEAR)
+│   │   ├── video-catalog-presets.ts          # Mẫu video dẫn chứng thời sự tuần mới nhất & thuật toán deterministic hash
 │   │   ├── scoring.ts                        # Công thức tính điểm cơ hội (Opportunity Score 0-100)
 │   │   ├── market-taxonomy.ts                # Bảng danh mục ngành hoa, dịp lễ, phong cách, tone màu
 │   │   ├── tenant-schedule-settings.ts       # Cấu hình chu kỳ quét Pulse theo tenant
@@ -116,6 +123,8 @@ src/
 │   └── infra/                                # Tầng hạ tầng, adapters và repository
 │
 ├── components/market-intelligence/            # Tầng giao diện người dùng chuyên biệt
+│   ├── top-champions-block.tsx               # Bảng Vàng Xu Hướng: Quán Quân Chu Kỳ (Click thumbnail xem video, click chi tiết mở drawer)
+│   ├── video-preview-modal.tsx               # Trình phát video trực tiếp tại chỗ (YouTube embed HD, autoplay, responsive modal)
 │   ├── brief-important-view.tsx              # Tab 1: Cơ hội quan trọng (Dual Video Evidence + Clean Badges)
 │   ├── brief-rising-view.tsx                 # Tab 2: Xu hướng bứt phá (Dual Video Evidence + Momentum)
 │   ├── brief-topics-view.tsx                 # Tab 3: Chủ đề nên làm (Thư viện kịch bản + Clean Hooks)
@@ -163,13 +172,23 @@ export interface OpportunityEvidencePreview {
 }
 ```
 
-### 4.2. Từ Điển Dẫn Chứng Chuẩn SSOT (`video-evidence-catalog.ts`)
-- Lưu trữ bộ sưu tập dẫn chứng video hoa tươi thực tế đã được xác minh:
-  - **Chủ đề Ngày 20/10 / Phụ Nữ Việt Nam**: Kênh `@hoatuoituongan`, `@queenflowers` (TikTok) và các video workshop cắm hoa 20/10 (YouTube).
-  - **Chủ đề Hoa Cưới Tone Cam Cháy / Mùa Thu**: Kênh `@tiemhoanangxuan` (TikTok) và hướng dẫn phối hoa tone ấm (YouTube).
-  - **Chủ đề Bó Hoa Tốt Nghiệp Hướng Dương**: Video trao hoa lễ tốt nghiệp triệu view (TikTok) và video bó hoa hướng dương xòe tròn (YouTube).
-  - **Chủ đề Hoa Tulip Pastel Hàn Quốc**: Video unbox hoa nhập khẩu và phối giấy gói mờ pastel.
+### 4.2. Từ Điển Dẫn Chứng Chuẩn SSOT (`video-evidence-catalog.ts` & `video-catalog-presets.ts`)
+- Lưu trữ bộ sưu tập dẫn chứng video hoa tươi thực tế đã được xác minh (luôn cập nhật thời gian thực trong tuần, loại bỏ video cũ năm trước):
+  - **Chủ đề Ngày 20/10 / Phụ Nữ Việt Nam**: Kênh `@liamchannel` (TikTok) và video mẫu cắm giỏ hoa tặng mẹ ý nghĩa tuần này (YouTube).
+  - **Chủ đề Hoa Cưới Tone Cam Cháy / Mùa Thu**: Kênh `@queenflowers` (TikTok) và hướng dẫn mẫu hoa cưới cầm tay cô dâu tone màu hot trend (YouTube).
+  - **Chủ đề Bó Hoa Tốt Nghiệp Hướng Dương**: Video trao hoa lễ tốt nghiệp (TikTok) và video thiết kế bó hoa hướng dương chúc mừng tân cử nhân (YouTube).
+  - **Chủ đề Khai Trương / Tài Lộc Doanh Nghiệp**: Kênh `@hoatuoituongan` (TikTok) và bí quyết cắm kệ hoa tươi khai trương rực rỡ (YouTube).
   - **Chủ đề Giỏ Hoa Tặng Mẹ / Sinh Nhật**: Video giỏ hoa cúc mẫu đơn và hoa hồng kem pastel.
+
+### 4.3. Trình Phát Video Trực Tiếp Tại Chỗ (`VideoPreviewModal`)
+- **Tệp nguồn**: [`src/components/market-intelligence/video-preview-modal.tsx`](file:///Users/tuan/Projects/floraos-core/src/components/market-intelligence/video-preview-modal.tsx) (182 dòng, SRP chuẩn mực).
+- **Trích xuất Video ID đa năng (`extractYouTubeVideoId`)**:
+  - Tự động nhận diện và trích xuất YouTube Video ID từ mọi định dạng: `watch?v=`, `youtu.be/`, `embed/`, `shorts/`, hoặc cả đường dẫn CDN thumbnail `i.ytimg.com/vi/ID/...`.
+- **Trải nghiệm phát video**:
+  - Nhúng trình phát YouTube bảo mật không cookie `youtube-nocookie.com/embed/{id}?autoplay=1&rel=0` tỷ lệ 16:9, hình ảnh và âm thanh chất lượng cao.
+  - Tự động phát ngay lập tức khi mở (`autoplay=1`).
+  - Hỗ trợ đóng nhanh: Phím `Escape`, nút `X`, hoặc click ra vùng tối ngoài backdrop.
+  - Cung cấp liên kết dự phòng trực tiếp sang YouTube hoặc TikTok nếu người dùng muốn mở ứng dụng ngoài.
 
 ---
 

@@ -55,10 +55,11 @@ def test_thanh_cong_ghi_kho_va_completed(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(
         audio_worker,
         "process_audio_job",
-        lambda payload, work_dir: {
+        lambda payload, work_dir, music_bytes=None: {
             "status": "COMPLETED",
             "mixedAudioPath": str(tep),
-            "voiceOnlyPath": "x",
+            "voiceOnlyPath": None,
+            "hasVoice": True,
             "totalDurationSeconds": 3.0,
             "providerUsed": "edge_tts",
             "scenes": [],
@@ -88,7 +89,7 @@ def test_loi_phoi_tron_thanh_failed_co_ly_do(monkeypatch):
     monkeypatch.setattr(
         audio_worker,
         "process_audio_job",
-        lambda payload, work_dir: {"status": "FAILED", "error": "Không thể phối trộn âm thanh"},
+        lambda payload, work_dir, music_bytes=None: {"status": "FAILED", "error": "Không thể phối trộn âm thanh"},
     )
     conn = _Conn()
     audio_worker.process_audio_generation_job(conn, _job())
