@@ -68,7 +68,8 @@ export class VideoJobRepository {
           create: input.scenes.map((scene, idx) => ({
             scene_index: scene.sceneIndex ?? idx + 1,
             duration_seconds: scene.durationSeconds || 3.0,
-            image_asset_id: scene.imageUrl || scene.imageAssetId || null,
+            // Mã asset trước (ảnh ký có hạn không phải định danh bền) — 24/09/2026.
+            image_asset_id: scene.imageAssetId || scene.imageUrl || null,
             text_overlay: scene.textOverlay ?? null,
             voice_script: scene.voiceScript ?? null,
             transition_effect: scene.transitionEffect ?? "fade",
@@ -154,7 +155,7 @@ export class VideoJobRepository {
         video_job_id: jobId,
         scene_index: idx + 1,
         duration_seconds: s.durationSeconds || 3.0,
-        image_asset_id: s.imageUrl || s.imageAssetId || null,
+        image_asset_id: s.imageAssetId || s.imageUrl || null,
         text_overlay: s.textOverlay ?? null,
         voice_script: s.voiceScript ?? null,
         transition_effect: s.transitionEffect ?? "fade",

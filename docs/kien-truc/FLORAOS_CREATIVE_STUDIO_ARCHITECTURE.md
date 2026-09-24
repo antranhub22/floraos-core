@@ -198,6 +198,7 @@ A (01–05) ──bàn giao URL định danh──▶ B · C · D · E (06a–06
 | Stability theo `backgroundPrompt` của cảnh | CREATIVE + người dùng bật + cảnh không phải phông trắng | `media.variant.cloud` (2 credit), `preset = localBackdrop` làm phông dự phòng |
 | Phông Studio cục bộ `localBackdrop` | AUTHENTIC, hoặc người dùng chọn cục bộ, hoặc cảnh phông trắng | `media.variant` (1 credit) |
 
+- **Khu vực E (24/09/2026):** `video-workspace.tsx` dựng storyboard bằng `video-storyboard-builder.ts#buildStoryboardFromPlan` — số cảnh/phụ đề/lời thoại/chuyển động theo kịch bản, ảnh = biến thể cùng `scene_plan_id` + `scene_index`, thiếu thì Master. Bỏ ảnh mẫu Unsplash ở `storyboard-editor.tsx` và `create-video-job.ts`; repository lưu mã asset trước URL; `dispatch-video-render.ts` đổi mã asset → `storage_key` của đúng tổ chức và chặn render khi cảnh thiếu ảnh; worker `local_cinematic.py` bỏ "ảnh mẫu dự phòng" và từ chối dựng khi không đọc được ảnh một cảnh.
 - Payload mang `scene_index` (1–5) + `scene_plan_id`; worker ghi cả hai vào `assets.metadata`. Giao diện chỉ nạp lại ảnh có `scene_plan_id` = kịch bản đang mở; Khu vực E gắn ảnh theo cùng `scenePlanId`.
 - Mỗi job luôn ghi kèm bản PNG tách nền (`variant_key = transparent`) — thay cho "Cảnh 4 PNG" cũ; watermark (nếu bật) cho bản `branded`, thẻ cảnh ưu tiên bản `branded`.
 - Màn cấu hình: xem trước các cảnh của kịch bản, nguồn hậu cảnh, tỉ lệ, watermark; "Sinh trọn bộ N phân cảnh" hoặc "Sinh từng cảnh". Không còn bộ chọn tay 6 bối cảnh.

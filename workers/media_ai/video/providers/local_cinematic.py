@@ -102,6 +102,10 @@ class LocalCinematicProvider(BaseVideoProvider):
             asset_ref = sc.get("imageAssetId") or sc.get("imageUrl")
             if asset_ref:
                 resolved = self._resolve_image(str(asset_ref), org_id, out_dir, idx)
+                if not resolved:
+                    raise VideoProviderError(
+                        f"Không đọc được ảnh của cảnh #{idx + 1} ({asset_ref}) — không dựng video thiếu cảnh."
+                    )
                 if resolved:
                     image_paths.append(resolved)
                     motion = sc.get("motionEffect") or sc.get("motion_effect") or "ZOOM_IN"
@@ -109,20 +113,8 @@ class LocalCinematicProvider(BaseVideoProvider):
                     dur = float(sc.get("durationSeconds") or sc.get("duration_seconds") or 3.0)
                     scene_durations.append(dur)
 
-        # Fallback ảnh mẫu nếu chưa có ảnh
-        if not image_paths:
-            sample_candidates = [
-                STORAGE_ROOT / "test_final_tulips_hd.jpg",
-                STORAGE_ROOT / "test_gerbera_fixed_studio_hd.jpg",
-                STORAGE_ROOT / "final_masterpiece_tulip.jpg",
-                STORAGE_ROOT / "flawless_tulips.jpg",
-            ]
-            for candidate in sample_candidates:
-                if candidate.is_file():
-                    image_paths.append(candidate)
-                    scene_motions.append("ZOOM_IN")
-                    scene_durations.append(3.5)
-
+        # 24/09/2026: bỏ "ảnh mẫu dự phòng" (tulip/gerbera trong kho) — video
+        # quảng bá sản phẩm của tiệm không được dựng bằng ảnh hoa khác.
         if not image_paths:
             raise VideoProviderError("Không tìm thấy hình ảnh nào để dựng video.")
 

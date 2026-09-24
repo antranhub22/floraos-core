@@ -47,7 +47,9 @@
 - [x] Khu vực C lấy lời thoại từ cùng kịch bản — `audio-workspace.tsx`
 - [x] Kịch bản sinh ở Chặng 05 khi "Bắt đầu sáng tạo", `scenePlanId` trên URL — `creative-handoff-modal.tsx` (24/09)
 - [x] Khu vực B hiển thị cung truyện theo đúng kịch bản (kèm dòng "Bối cảnh") — `contents-workspace.tsx#withScenePlan`
-- [ ] Storyboard video E đúng số cảnh/lời thoại của kịch bản; bài viết B sinh từ kịch bản — nợ #125
+- [x] Storyboard video E đúng số cảnh/phụ đề/lời thoại/chuyển động của kịch bản, ảnh biến thể cùng cảnh ở D (thiếu thì Master) — `video-storyboard-builder.ts` + `video-storyboard-builder.test.ts` (24/09)
+- [x] Gỡ ảnh mẫu Unsplash khỏi storyboard/`create-video-job`; render đổi mã asset → `storage_key`, chặn cảnh thiếu ảnh; worker bỏ ảnh mẫu dự phòng (24/09)
+- [ ] Bài viết B sinh phía máy chủ từ kịch bản — nợ #125
 - [ ] `npm run db:seed` để hai mô hình OpenAI có `AIC-18` — cần anh Tony chạy
 - [x] Nhánh cloud qua `enqueueJob` (`media.variant.cloud`, 2 credit), cổng Master đã duyệt — `request-variants.ts` + `request-cloud-variant.test.ts`
 - [x] Worker: Stability chỉ vẽ hậu cảnh, bó hoa dán nguyên khối, integrity ĐO — `stability_background.py`, `variant_worker.py` + `test_variant_cloud.py`

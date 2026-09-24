@@ -108,9 +108,9 @@ describe("Video Studio Tenant Isolation & Approval Lifecycle", () => {
     const updated = await updateUseCase.execute(tenantA.ctx, {
       jobId: job.id,
       scenes: [
-        { sceneIndex: 1, durationSeconds: 4, textOverlay: "Mở đầu hoa tươi" },
-        { sceneIndex: 2, durationSeconds: 4, textOverlay: "Chi tiết cánh hoa" },
-        { sceneIndex: 3, durationSeconds: 4, textOverlay: "Đặt ngay hôm nay" },
+        { sceneIndex: 1, durationSeconds: 4, textOverlay: "Mở đầu hoa tươi", imageAssetId: "org/test/scene-1.png" },
+        { sceneIndex: 2, durationSeconds: 4, textOverlay: "Chi tiết cánh hoa", imageAssetId: "org/test/scene-2.png" },
+        { sceneIndex: 3, durationSeconds: 4, textOverlay: "Đặt ngay hôm nay", imageAssetId: "org/test/scene-3.png" },
       ],
     });
     expect(updated.stage).toBe("SCRIPT_READY");

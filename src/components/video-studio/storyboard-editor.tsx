@@ -8,12 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { VideoSceneItem, VideoFormat, VIDEO_FORMAT_SPECS, VideoMotionEffect, VIDEO_MOTION_SPECS } from "@/modules/video-studio/domain/video-types";
 import { validateStoryboard } from "@/modules/video-studio/domain/video-storyboard";
 
-const DEFAULT_FLOWER_IMAGES = [
-  "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=800&auto=format&fit=crop&q=80",
-];
 
 const DEFAULT_MOTIONS: VideoMotionEffect[] = ["ZOOM_IN", "PAN_RIGHT", "ZOOM_OUT", "PAN_UP"];
 
@@ -41,7 +35,6 @@ export function StoryboardEditor({
           {
             sceneIndex: 1,
             durationSeconds: 3.5,
-            imageUrl: DEFAULT_FLOWER_IMAGES[0],
             textOverlay: "Hoa tươi ngát hương đón ngày mới",
             voiceScript: "Mỗi đóa hoa được chọn lựa thủ công từ sáng sớm",
             transitionEffect: "fade",
@@ -50,7 +43,6 @@ export function StoryboardEditor({
           {
             sceneIndex: 2,
             durationSeconds: 3.5,
-            imageUrl: DEFAULT_FLOWER_IMAGES[1],
             textOverlay: "Nghệ thuật cắm hoa tỉ mỉ",
             voiceScript: "Thiết kế sang trọng phù hợp mọi dịp kỷ niệm",
             transitionEffect: "slide_left",
@@ -59,9 +51,8 @@ export function StoryboardEditor({
           {
             sceneIndex: 3,
             durationSeconds: 4.0,
-            imageUrl: DEFAULT_FLOWER_IMAGES[2],
-            textOverlay: "Giao tận tay trong 2 giờ",
-            voiceScript: "Đặt ngay hôm nay để nhận thiệp chúc mừng ý nghĩa",
+            textOverlay: "Nhắn tiệm để đặt hoa",
+            voiceScript: "Nhắn tiệm để đặt hoa hôm nay",
             transitionEffect: "fade",
             motionEffect: "ZOOM_OUT",
           },
@@ -212,45 +203,27 @@ export function StoryboardEditor({
               </div>
             </div>
 
-            {/* Khối Ảnh phân cảnh (Master Image Preview & Selector) */}
+            {/* Ảnh phân cảnh — ảnh THẬT của sản phẩm (biến thể Khu vực D hoặc Master
+                Image), gắn theo mã asset. 24/09/2026: bỏ ảnh mẫu Unsplash và ô
+                "Chọn mẫu hoa" — ảnh đó không phải sản phẩm của tiệm mà vẫn được
+                đưa vào video. */}
             <div className="flex items-center gap-3 bg-surface-alt/60 p-2.5 rounded-lg border border-border">
-              <div className="relative aspect-[9/16] w-12 shrink-0 rounded-md overflow-hidden bg-black/10 border border-border shadow-xs">
-                <img
-                  src={scene.imageUrl || DEFAULT_FLOWER_IMAGES[idx % DEFAULT_FLOWER_IMAGES.length]}
-                  alt={`Phân cảnh ${idx + 1}`}
-                  className="h-full w-full object-cover"
-                />
+              <div className="relative aspect-[9/16] w-12 shrink-0 rounded-md overflow-hidden bg-black/5 border border-border shadow-xs flex items-center justify-center">
+                {scene.imageUrl ? (
+                  <img src={scene.imageUrl} alt={`Phân cảnh ${idx + 1}`} className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon size={16} className="text-text-muted" />
+                )}
               </div>
-              <div className="flex-1 flex flex-col gap-1 min-w-0">
+              <div className="flex-1 flex flex-col gap-0.5 min-w-0">
                 <label className="text-[11px] font-bold text-text flex items-center gap-1.5">
-                  <ImageIcon size={13} className="text-primary" /> Hình ảnh phân cảnh (Master Image)
+                  <ImageIcon size={13} className="text-primary" /> Hình ảnh phân cảnh
                 </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    disabled={isLocked}
-                    value={scene.imageUrl || ""}
-                    onChange={(e) => handleUpdateScene(idx, "imageUrl", e.target.value)}
-                    placeholder="Nhập liên kết ảnh hoặc chọn ảnh mẫu hoa bên cạnh..."
-                    className="flex-1 rounded border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none disabled:bg-muted font-mono text-[11px]"
-                  />
-                  {!isLocked && (
-                    <select
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          handleUpdateScene(idx, "imageUrl", e.target.value);
-                        }
-                      }}
-                      className="rounded border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none shrink-0"
-                    >
-                      <option value="">Chọn mẫu hoa</option>
-                      <option value="https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&auto=format&fit=crop&q=80">🌹 Bó hồng đỏ lãng mạn</option>
-                      <option value="https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?w=800&auto=format&fit=crop&q=80">🌷 Bó tulip pastel nhẹ nhàng</option>
-                      <option value="https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&auto=format&fit=crop&q=80">🌻 Giỏ hướng dương rạng rỡ</option>
-                      <option value="https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=800&auto=format&fit=crop&q=80">🤍 Bó baby trắng tinh khôi</option>
-                    </select>
-                  )}
-                </div>
+                <span className="text-[11px] text-text-muted truncate">
+                  {scene.imageAssetId
+                    ? `Ảnh sản phẩm trong kho · asset ${String(scene.imageAssetId).slice(0, 8)}`
+                    : "Chưa có ảnh — sinh ảnh cảnh này ở Khu vực D (biến thể theo kịch bản)"}
+                </span>
               </div>
             </div>
 

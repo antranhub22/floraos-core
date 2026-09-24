@@ -50,13 +50,8 @@ export class CreateVideoJobUseCase {
     });
 
     const isLongFormat = durationSeconds >= 25;
-    const defaultFlowerImages = [
-      "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?w=800&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=800&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&auto=format&fit=crop&q=80",
-    ];
+    // 24/09/2026: bỏ ảnh mẫu Unsplash — cảnh mặc định KHÔNG có ảnh; người dùng
+    // gắn ảnh sản phẩm thật (Khu vực D / Master Image) trước khi render.
 
     const perSceneDuration = Math.round((durationSeconds / 3) * 10) / 10;
     const defaultScenes: VideoSceneItem[] = isLongFormat
@@ -64,8 +59,7 @@ export class CreateVideoJobUseCase {
           {
             sceneIndex: 1,
             durationSeconds: 6,
-            imageUrl: defaultFlowerImages[0],
-            imageAssetId: defaultFlowerImages[0],
+            imageAssetId: null,
             textOverlay: "Mỗi đóa hoa được chọn lựa thủ công từ sáng sớm",
             voiceScript: "Mỗi đóa hoa được chọn lựa thủ công từ sáng sớm",
             transitionEffect: "fade",
@@ -74,8 +68,7 @@ export class CreateVideoJobUseCase {
           {
             sceneIndex: 2,
             durationSeconds: 6,
-            imageUrl: defaultFlowerImages[1],
-            imageAssetId: defaultFlowerImages[1],
+            imageAssetId: null,
             textOverlay: "Từng cành hoa tươi qua bàn tay nghệ nhân",
             voiceScript: "Từng cành hoa tươi qua bàn tay nghệ nhân",
             transitionEffect: "slide_left",
@@ -84,8 +77,7 @@ export class CreateVideoJobUseCase {
           {
             sceneIndex: 3,
             durationSeconds: 6,
-            imageUrl: defaultFlowerImages[2],
-            imageAssetId: defaultFlowerImages[2],
+            imageAssetId: null,
             textOverlay: "Thiết kế sang trọng phù hợp mọi dịp kỷ niệm",
             voiceScript: "Thiết kế sang trọng phù hợp mọi dịp kỷ niệm",
             transitionEffect: "fade",
@@ -94,8 +86,7 @@ export class CreateVideoJobUseCase {
           {
             sceneIndex: 4,
             durationSeconds: 6,
-            imageUrl: defaultFlowerImages[3],
-            imageAssetId: defaultFlowerImages[3],
+            imageAssetId: null,
             textOverlay: "Tặng kèm thiệp viết tay và phụ kiện cao cấp",
             voiceScript: "Tặng kèm thiệp viết tay và phụ kiện cao cấp",
             transitionEffect: "slide_left",
@@ -104,8 +95,7 @@ export class CreateVideoJobUseCase {
           {
             sceneIndex: 5,
             durationSeconds: 6,
-            imageUrl: defaultFlowerImages[4],
-            imageAssetId: defaultFlowerImages[4],
+            imageAssetId: null,
             textOverlay: "Giao tận tay trong 2 giờ kèm thiệp chúc mừng",
             voiceScript: "Giao tận tay trong 2 giờ kèm thiệp chúc mừng",
             transitionEffect: "fade",
@@ -116,8 +106,7 @@ export class CreateVideoJobUseCase {
           {
             sceneIndex: 1,
             durationSeconds: perSceneDuration,
-            imageUrl: defaultFlowerImages[0],
-            imageAssetId: defaultFlowerImages[0],
+            imageAssetId: null,
             textOverlay: "Mỗi đóa hoa được chọn lựa thủ công từ sáng sớm",
             voiceScript: "Mỗi đóa hoa được chọn lựa thủ công từ sáng sớm",
             transitionEffect: "fade",
@@ -126,8 +115,7 @@ export class CreateVideoJobUseCase {
           {
             sceneIndex: 2,
             durationSeconds: perSceneDuration,
-            imageUrl: defaultFlowerImages[1],
-            imageAssetId: defaultFlowerImages[1],
+            imageAssetId: null,
             textOverlay: "Thiết kế sang trọng phù hợp mọi dịp kỷ niệm",
             voiceScript: "Thiết kế sang trọng phù hợp mọi dịp kỷ niệm",
             transitionEffect: "slide_left",
@@ -136,8 +124,7 @@ export class CreateVideoJobUseCase {
           {
             sceneIndex: 3,
             durationSeconds: Math.max(2, durationSeconds - (perSceneDuration * 2)),
-            imageUrl: defaultFlowerImages[2],
-            imageAssetId: defaultFlowerImages[2],
+            imageAssetId: null,
             textOverlay: "Giao tận tay trong 2 giờ kèm thiệp chúc mừng",
             voiceScript: "Giao tận tay trong 2 giờ kèm thiệp chúc mừng",
             transitionEffect: "fade",

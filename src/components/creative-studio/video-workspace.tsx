@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { VideoFormat, VIDEO_FORMAT_SPECS, CaptionStyle, CAPTION_STYLE_SPECS, VideoSceneItem } from "@/modules/video-studio/domain/video-types"
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
 import { resolveApprovedMaster } from "./package-client"
+import { buildStoryboardFromPlan, buildStoryboardFromTopic, type SceneImage } from "./video-storyboard-builder"
+import { findScenePlan, type ScenePlan } from "./scene-plan-client"
 
 export function VideoWorkspace() {
   const router = useRouter()
@@ -40,101 +42,90 @@ export function VideoWorkspace() {
 
   const spec = VIDEO_FORMAT_SPECS[format]
 
-  // Auto-populate storyboard from selectedTopic (Chặng 4 output → Tab E input)
-  const initScenes = useCallback(() => {
-    if (scenes.length > 0) return
-    const topic = context?.selectedTopic
-    const target = spec.targetDurationSeconds
-    const numScenes = 3
-    const perSec = Math.max(1.5, Math.round((target / numScenes) * 10) / 10)
-    const init: VideoSceneItem[] = []
+  // Storyboard theo KỊCH BẢN BỐI CẢNH của chủ đề (24/09/2026): số cảnh, lời
+  // thoại, phụ đề, chuyển động lấy từ kịch bản Chặng 05; ảnh từng cảnh là ảnh
+  // biến thể CÙNG kịch bản ở Khu vực D (đúng `scene_index`), cảnh chưa có ảnh
+  // dùng Master Image của sản phẩm. Không còn khuôn 3 cảnh viết cứng hay ảnh
+  // mẫu Unsplash — những ảnh đó không phải sản phẩm của tiệm.
+  const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
+  const [buildingStoryboard, setBuildingStoryboard] = useState(false)
+  const [storyboardNote, setStoryboardNote] = useState<string | null>(null)
+  const urlPlanId = searchParams?.get("scenePlanId") ?? null
 
-    if (topic) {
-      // Scene 1: Hook (mở đầu)
-      init.push({
-        sceneIndex: 1,
-        durationSeconds: perSec,
-        textOverlay: topic.hook || `Giới thiệu ${context?.productName || "sản phẩm"}`,
-        voiceScript: topic.hook || `Giới thiệu ${context?.productName || "bó hoa"}`,
-        transitionEffect: "fade",
-        motionEffect: "ZOOM_IN",
-      })
-      // Scene 2: Nội dung chính
-      init.push({
-        sceneIndex: 2,
-        durationSeconds: perSec,
-        textOverlay: topic.title,
-        voiceScript: `${context?.productName || "Bó hoa"} — ${topic.title}`,
-        transitionEffect: "fade",
-        motionEffect: "PAN_RIGHT",
-      })
-      // Scene 3: CTA
-      init.push({
-        sceneIndex: 3,
-        durationSeconds: Math.max(1.0, Math.round((target - perSec * 2) * 10) / 10),
-        textOverlay: topic.cta || "Đặt hàng ngay!",
-        voiceScript: topic.cta || "Đặt hàng ngay hôm nay!",
-        transitionEffect: "fade",
-        motionEffect: "ZOOM_OUT",
-      })
-    } else {
-      for (let i = 0; i < numScenes; i++) {
-        init.push({
-          sceneIndex: i + 1,
-          durationSeconds: i === numScenes - 1 ? Math.max(1.0, Math.round((target - perSec * (numScenes - 1)) * 10) / 10) : perSec,
-          textOverlay: `Phân cảnh ${i + 1}`,
-          voiceScript: "Lời thoại mô tả nét đẹp của hoa",
-          transitionEffect: "fade",
-          motionEffect: "ZOOM_IN",
-        })
-      }
-    }
-    setScenes(init)
-  }, [scenes, spec, context])
-
-  // 23/09/2026: dựng storyboard NGAY khi mở tab / đổi khuôn (trước đây chỉ
-  // dựng bên trong handleCreate rồi gửi biến `scenes` cũ của closure → lần bấm
-  // đầu gửi storyboard RỖNG, và StoryboardEditor không bao giờ hiện trước khi tạo).
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (scenes.length === 0) initScenes()
-  }, [scenes.length, initScenes])
-
-  // Gắn ảnh biến thể thật của Khu vực D (theo thứ tự phân cảnh) vào các cảnh chưa có ảnh.
-  useEffect(() => {
+    if (scenes.length > 0 || !context) return
     let cancelled = false
     ;(async () => {
-      const masterId = await resolveApprovedMaster(context?.assetId).catch(() => null)
-      if (!masterId || cancelled) return
-      const res = await fetch(`/api/v1/assets?kind=MARKETING&parent_asset_id=${encodeURIComponent(masterId)}&limit=100`)
-      if (!res.ok || cancelled) return
-      const body = (await res.json()) as { data?: Array<{ id: string; metadata?: Record<string, unknown> | null }> }
-      // Chỉ ảnh của ĐÚNG kịch bản bối cảnh đang mở (URL `scenePlanId`, 24/09/2026),
-      // mỗi phân cảnh lấy bản mới nhất (`data` sắp created_at giảm dần).
-      const planId = searchParams?.get("scenePlanId") ?? null
-      const samePlan = (v: unknown) =>
-        !planId ? true : planId === "rule" ? typeof v === "string" && v.startsWith("rule:") : v === planId
-      const seen = new Set<unknown>()
-      const ids = (body.data ?? [])
-        .filter((a) => a.metadata?.variant_key === "styled" || a.metadata?.variant_key === "branded")
-        .filter((a) => samePlan(a.metadata?.scene_plan_id))
-        .filter((a) => {
-          const idx = a.metadata?.scene_index ?? a.id
-          if (seen.has(idx)) return false
-          seen.add(idx)
-          return true
-        })
-        .sort((a, b) => Number(a.metadata?.scene_index ?? 99) - Number(b.metadata?.scene_index ?? 99))
-        .map((a) => a.id)
-      if (ids.length === 0 || cancelled) return
-      setScenes((prev) => prev.map((sc, i) => (sc.imageAssetId ? sc : { ...sc, imageAssetId: ids[i % ids.length] })))
-      // Nạp lại StoryboardEditor với ảnh vừa gắn (editor giữ state riêng).
-      setStoryboardKey((k) => k + 1)
+      setBuildingStoryboard(true)
+      try {
+        const [{ loaded }, masterId] = await Promise.all([
+          findScenePlan(
+            {
+              mode: context.mode,
+              productName: context.productName,
+              productId: context.productId,
+              assetId: context.assetId,
+              selectedTopic: context.selectedTopic,
+              commercialPassport: context.commercialPassport,
+            },
+            urlPlanId
+          ).catch(() => ({ loaded: null })),
+          resolveApprovedMaster(context.assetId).catch(() => null),
+        ])
+
+        // Ảnh Master (sản phẩm thật) — dùng cho cảnh chưa có ảnh biến thể.
+        let master: SceneImage | null = null
+        if (masterId) {
+          const r = await fetch(`/api/v1/assets/${encodeURIComponent(masterId)}/view-url`)
+          if (r.ok) master = { assetId: masterId, url: ((await r.json()) as { url: string }).url }
+        }
+
+        // Ảnh biến thể của ĐÚNG kịch bản, bản mới nhất mỗi cảnh.
+        const byScene: Record<number, SceneImage> = {}
+        if (masterId && loaded) {
+          const r = await fetch(
+            `/api/v1/assets?kind=MARKETING&parent_asset_id=${encodeURIComponent(masterId)}&limit=100`
+          )
+          if (r.ok) {
+            const body = (await r.json()) as {
+              data?: Array<{ id: string; url?: string | null; metadata?: Record<string, unknown> | null }>
+            }
+            for (const a of body.data ?? []) {
+              const m = a.metadata ?? {}
+              const idx = typeof m.scene_index === "number" ? m.scene_index : null
+              if (!idx || byScene[idx] || m.scene_plan_id !== loaded.ref || !a.url) continue
+              if (m.variant_key !== "styled" && m.variant_key !== "branded") continue
+              byScene[idx] = { assetId: a.id, url: a.url }
+            }
+          }
+        }
+        if (cancelled) return
+
+        if (loaded) {
+          const built = buildStoryboardFromPlan(loaded.plan, spec.targetDurationSeconds, byScene, master)
+          setScenePlan(loaded.plan)
+          setScenes(built.scenes)
+          setStoryboardNote(
+            built.missingImages > 0
+              ? `${built.missingImages}/${built.scenes.length} cảnh chưa có ảnh biến thể ở Khu vực D — tạm dùng Master Image của sản phẩm.`
+              : null
+          )
+        } else {
+          setScenes(buildStoryboardFromTopic(context.selectedTopic, context.productName, spec.targetDurationSeconds, master))
+          setStoryboardNote(
+            "Chưa có kịch bản bối cảnh cho chủ đề này — storyboard tạm dựng từ hook/tiêu đề/CTA. Bấm \"Bắt đầu sáng tạo\" ở Chặng 05 (hoặc viết kịch bản ở Khu vực D) để video kể đúng câu chuyện."
+          )
+        }
+        setStoryboardKey((k) => k + 1)
+      } finally {
+        if (!cancelled) setBuildingStoryboard(false)
+      }
     })()
     return () => {
       cancelled = true
     }
-  }, [context?.assetId, scenes.length, searchParams])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenes.length, format, context?.assetId, context?.selectedTopic?.id, context?.mode, urlPlanId])
 
   const handleCreate = useCallback(async () => {
     if (scenes.length === 0) {
@@ -229,6 +220,21 @@ export function VideoWorkspace() {
           </div>
         </div>
       </Card>
+      {(buildingStoryboard || storyboardNote || scenePlan) && (
+        <Card className="p-4 text-[12px] text-text-muted flex flex-col gap-1">
+          {buildingStoryboard && <span>Đang dựng storyboard từ kịch bản bối cảnh và ảnh Khu vực D...</span>}
+          {scenePlan && (
+            <span>
+              <Badge tone={scenePlan.source === "ai" ? "success" : "neutral"} className="text-[10px] mr-2">
+                {scenePlan.source === "ai" ? "Kịch bản AI" : "Kịch bản cơ bản"}
+              </Badge>
+              Storyboard theo kịch bản bối cảnh của chủ đề <strong className="text-text">{scenePlan.topicTitle}</strong> —{" "}
+              {scenePlan.scenes.map((sc) => sc.beat).join(" → ")}.
+            </span>
+          )}
+          {storyboardNote && <span className="text-warning">{storyboardNote}</span>}
+        </Card>
+      )}
       {scenes.length > 0 && (
         <Card className="p-5">
           <StoryboardEditor
