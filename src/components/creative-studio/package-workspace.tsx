@@ -450,6 +450,11 @@ export function PackageWorkspace() {
             {bDraft && bDraft.posts.length > 0
               ? `${bDraft.posts.length} kênh (${bDraft.posts.map((p) => p.channel).join(", ")}) · tự lưu lúc ${new Date(bDraft.updated_at).toLocaleString("vi-VN")}`
               : "chưa có — viết ở Khu vực B (tự lưu) hoặc soạn trực tiếp sau khi tạo gói"}
+            {!(bDraft && bDraft.posts.length > 0) && (
+              <button type="button" className="ml-2 font-bold text-primary hover:underline" onClick={() => goRework("b")}>
+                Mở Khu vực B →
+              </button>
+            )}
           </div>
         </div>
 
