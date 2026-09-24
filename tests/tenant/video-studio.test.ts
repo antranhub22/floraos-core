@@ -9,6 +9,8 @@ import { ApproveStoryboardUseCase } from "@/modules/video-studio/use-cases/appro
 import { DispatchVideoRenderUseCase } from "@/modules/video-studio/use-cases/dispatch-video-render";
 import { ApproveVideoOutputUseCase } from "@/modules/video-studio/use-cases/approve-video-output";
 import { VideoJobRepository } from "@/modules/video-studio/infra/video-job-repository";
+import { AssetRepository } from "@/modules/assets/infra/asset-repository";
+import { randomUUID } from "node:crypto";
 
 describe("Video Studio Tenant Isolation & Approval Lifecycle", () => {
   let tenantA: Tenant;
@@ -86,6 +88,52 @@ describe("Video Studio Tenant Isolation & Approval Lifecycle", () => {
         scenes: [{ sceneIndex: 1, durationSeconds: 3.5, textOverlay: "Hacked" }],
       })
     ).rejects.toThrow("Không tìm thấy");
+  });
+
+  it("render lấp cảnh trống ảnh bằng ảnh storyboard gửi kèm — chỉ nhận ảnh của đúng tổ chức (24/09/2026)", async () => {
+    const assets = new AssetRepository();
+    const seed = async (t: Tenant) => {
+      const id = randomUUID();
+      await assets.create(t.ctx, {
+        id,
+        productId: null,
+        parentAssetId: null,
+        kind: "ORIGINAL",
+        version: 1,
+        storageKey: `org/${t.ctx.organizationId}/unfiled/${id}.png`,
+        mimeType: "image/png",
+        createdBy: t.ctx.userId,
+      });
+      return id;
+    };
+    const mine = await seed(tenantA);
+    const theirs = await seed(tenantB);
+
+    const job = await new CreateVideoJobUseCase().execute(tenantA.ctx, { title: "Lấp ảnh", format: "REEL_15S" });
+    await new UpdateStoryboardUseCase().execute(tenantA.ctx, {
+      jobId: job.id,
+      scenes: [
+        { sceneIndex: 1, durationSeconds: 5, textOverlay: "A" },
+        { sceneIndex: 2, durationSeconds: 5, textOverlay: "B" },
+      ],
+    });
+    await new ApproveStoryboardUseCase().execute(tenantA.ctx, job.id);
+    const dispatch = new DispatchVideoRenderUseCase();
+
+    // Ảnh của tổ chức khác không được dùng → cảnh 2 vẫn trống → chặn.
+    await expect(
+      dispatch.execute(tenantA.ctx, job.id, {
+        sceneImages: [
+          { sceneIndex: 1, assetId: mine },
+          { sceneIndex: 2, assetId: theirs },
+        ],
+      })
+    ).rejects.toThrow("#2");
+
+    const ok = await dispatch.execute(tenantA.ctx, job.id, { sceneImages: [{ sceneIndex: 2, assetId: mine }] });
+    expect(ok.videoJob.stage).toBe("RENDERING");
+    const after = await repo.findById(tenantA.ctx, job.id);
+    expect(after?.scenes.every((s) => s.image_asset_id === mine)).toBe(true);
   });
 
   it("enforces two-stage approval gate lifecycle", async () => {

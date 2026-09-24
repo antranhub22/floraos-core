@@ -567,7 +567,7 @@ Năng lực phân tích ảnh giữ endpoint riêng đã có (`GET · PUT /visio
 | GET · POST | `/video/jobs` | `I1` | Tạo và liệt kê job video |
 | GET | `/video/jobs/:id` | `I1` | Kèm `final_video_view_url` — URL ký có hạn để phát video đã render (24/09/2026); `final_video_url` thô không mở được vì thiếu chữ ký |
 | PATCH | `/video/jobs/:id/storyboard` | `I1` | Biên soạn phân cảnh, 2–15 cảnh |
-| POST | `/video/jobs/:id/render` | `I1` | |
+| POST | `/video/jobs/:id/render` | `I1` | Thân tuỳ chọn (24/09/2026) 24/09/2026 — `{ scene_images?: [{ scene_index, asset_id }] }` lấp cảnh còn trống ảnh (chỉ asset của đúng tổ chức); không gửi thì máy chủ tự lấp bằng ảnh Khu vực D mới nhất cùng số cảnh / Master của sản phẩm. Vẫn trống → 422 |
 | POST | `/video/jobs/:id/approve-script` | `P3` | Cổng 1 — duyệt kịch bản (kiểm ở use-case `approve-storyboard.ts`) |
 | POST | `/video/jobs/:id/approve-video` | `P4` | Cổng 2 — duyệt video thành phẩm, trần cứng (kiểm ở use-case `approve-video-output.ts`) |
 

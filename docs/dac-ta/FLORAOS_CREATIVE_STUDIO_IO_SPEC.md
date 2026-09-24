@@ -224,7 +224,7 @@ Tạo ra `video_jobs` ở `DRAFT`. Tiếp theo: `PATCH …/storyboard` (`I1`), `
 
 `GET /api/v1/video/jobs/:id` (`I1`) trả job kèm `final_video_view_url` — URL ký có hạn (`/api/v1/storage/<key>?exp&sig`), chỉ ký khoá thuộc `videos/<organizationId>/`; `null` khi chưa render xong. Giao diện (`video-job-lifecycle.tsx`) đọc 3 giây/lần cho tới khi xong.
 
-Storyboard từ kịch bản (24/09/2026, `video-storyboard-builder.ts`): mỗi cảnh của kịch bản → một `scenes[]` với `textOverlay`, `voiceScript`, `motionEffect` của cảnh; `imageAssetId` = ảnh biến thể cùng `scene_index` ở D, thiếu thì Master. `voiceCode` gửi theo giọng chọn ở "Cấu hình cơ bản" (không gửi thì worker bỏ lồng tiếng). Render đổi mã asset → `storage_key`; cảnh không có ảnh → `400`.
+Storyboard từ kịch bản (24/09/2026, `video-storyboard-builder.ts`): mỗi cảnh của kịch bản → một `scenes[]` với `textOverlay`, `voiceScript`, `motionEffect` của cảnh; `imageAssetId` = ảnh biến thể cùng `scene_index` ở D, thiếu thì Master. Ảnh từng cảnh (`scene-images-client.ts`, sửa 24/09 tối): Master đã duyệt → chưa có thì nâng ảnh gốc thành Master như D → không được thì ảnh gốc; biến thể ưu tiên đúng kịch bản, không có thì bản mới nhất cùng số cảnh (kịch bản đã viết lại); nút "↻ Lấy ảnh mới nhất từ Khu vực D". `POST /video/jobs/:id/render` nhận thân tuỳ chọn `{ scene_images: [{ scene_index, asset_id }] }` để lấp cảnh còn trống ảnh (chỉ asset của đúng tổ chức, loại MASTER/MARKETING/ORIGINAL/ENHANCED); không có thì máy chủ lấy ảnh D mới nhất cùng số cảnh của Master sản phẩm, rồi Master. `voiceCode` gửi theo giọng chọn ở "Cấu hình cơ bản" (không gửi thì worker bỏ lồng tiếng). Render đổi mã asset → `storage_key`; cảnh không có ảnh → `400`.
 
 ---
 

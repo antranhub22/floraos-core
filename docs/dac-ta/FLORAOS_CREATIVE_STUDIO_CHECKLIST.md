@@ -63,6 +63,7 @@
 - [x] Kịch bản sinh ở Chặng 05 khi "Bắt đầu sáng tạo", `scenePlanId` trên URL — `creative-handoff-modal.tsx` (24/09)
 - [x] Khu vực B hiển thị cung truyện theo đúng kịch bản (kèm dòng "Bối cảnh") — `contents-workspace.tsx#withScenePlan`
 - [x] Storyboard video E đúng số cảnh/phụ đề/lời thoại/chuyển động của kịch bản, ảnh biến thể cùng cảnh ở D (thiếu thì Master) — `video-storyboard-builder.ts` + `video-storyboard-builder.test.ts` (24/09)
+- [x] Sửa "Cảnh #1…#5 chưa có ảnh sản phẩm": E tìm Master như D (nâng ảnh gốc nếu cần), nhận ảnh D của kịch bản đã viết lại, nút "Lấy ảnh mới nhất từ Khu vực D"; render lấp cảnh trống ảnh (ảnh storyboard gửi kèm → ảnh D → Master) — `scene-images-client.ts`, `dispatch-video-render.ts#findFillImages` + ca mới trong `tests/tenant/video-studio.test.ts` (24/09 tối)
 - [x] Gỡ ảnh mẫu Unsplash khỏi storyboard/`create-video-job`; render đổi mã asset → `storage_key`, chặn cảnh thiếu ảnh; worker bỏ ảnh mẫu dự phòng (24/09)
 - [x] Khu vực E làm đủ P3 → render → xem video → P4 tại chỗ; `GET /video/jobs/:id` trả `final_video_view_url` ký có hạn (trước đó URL không ký, không phát được); thanh 06d chỉ "đã duyệt" khi P4; credit hiển thị = credit render thật — `video-job-lifecycle.tsx`, `get-video-job.ts#videoViewUrl` (24/09)
 - [x] Video có giọng đọc: E gửi `voiceCode` (trước đây không gửi nên worker bỏ bước lồng tiếng, video chỉ có nhạc); chọn giọng trong "Cấu hình cơ bản", đọc lời thoại từng cảnh khớp thời lượng; worker cảnh báo khi TTS hỏng — `video-workspace.tsx`, `audio_engine.py` (24/09)

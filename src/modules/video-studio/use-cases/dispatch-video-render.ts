@@ -22,7 +22,8 @@ export class DispatchVideoRenderUseCase {
 
   async execute(
     ctx: TenantContext,
-    jobId: string
+    jobId: string,
+    options: { sceneImages?: ReadonlyArray<{ sceneIndex: number; assetId: string }> } = {}
   ): Promise<DispatchRenderResult> {
     requireCapability(ctx, "I1");
 
@@ -45,6 +46,20 @@ export class DispatchVideoRenderUseCase {
     // (24/09/2026). Trước đây worker không tìm được ảnh theo mã asset và lặng lẽ
     // dựng video bằng ảnh mẫu có sẵn trong kho.
     const assetRepo = new AssetRepository();
+
+    // Cảnh còn trống ảnh (job tạo trước khi Khu vực D sinh ảnh, hoặc storyboard
+    // dựng lúc chưa tìm được Master): lấp bằng ảnh storyboard gửi kèm, không có
+    // thì ảnh Khu vực D mới nhất cùng số cảnh của Master sản phẩm, rồi Master.
+    const trong = (job.scenes as video_scenes[]).filter((s) => !s.image_asset_id);
+    if (trong.length > 0) {
+      const fill = await this.findFillImages(ctx, job.product_id, trong.map((s) => s.scene_index), options.sceneImages ?? [], assetRepo);
+      if (fill.size > 0) {
+        await this.repo.fillMissingSceneImages(ctx, jobId, fill);
+        const reloaded = await this.repo.findById(ctx, jobId);
+        if (reloaded) job.scenes = reloaded.scenes;
+      }
+    }
+
     const resolvedImages = new Map<string, string>();
     for (const s of job.scenes as video_scenes[]) {
       const ref = s.image_asset_id;
@@ -57,7 +72,7 @@ export class DispatchVideoRenderUseCase {
     if (missing.length > 0) {
       throw new AppError(
         "UNPROCESSABLE_ENTITY",
-        `Cảnh ${missing.map((s) => `#${s.scene_index}`).join(", ")} chưa có ảnh sản phẩm — gắn ảnh trước khi render`
+        `Cảnh ${missing.map((s) => `#${s.scene_index}`).join(", ")} chưa có ảnh sản phẩm và không tìm được ảnh Khu vực D / Master Image của sản phẩm — sinh ảnh ở Khu vực D rồi bấm "Lấy ảnh mới nhất từ Khu vực D"`
       );
     }
 
@@ -102,5 +117,36 @@ export class DispatchVideoRenderUseCase {
       videoJob: updatedJob,
       generationJobId: enqueued.job.id,
     };
+  }
+
+  /** sceneIndex → assetId cho các cảnh trống ảnh. Chỉ nhận asset của ĐÚNG tổ chức. */
+  private async findFillImages(
+    ctx: TenantContext,
+    productId: string | null,
+    sceneIndexes: number[],
+    provided: ReadonlyArray<{ sceneIndex: number; assetId: string }>,
+    assetRepo: AssetRepository
+  ): Promise<Map<number, string>> {
+    const out = new Map<number, string>();
+    const USABLE = new Set(["MASTER", "MARKETING", "ORIGINAL", "ENHANCED"]);
+    for (const p of provided) {
+      if (!sceneIndexes.includes(p.sceneIndex) || out.has(p.sceneIndex)) continue;
+      const a = await assetRepo.findById(ctx, p.assetId);
+      if (a && USABLE.has(a.kind) && a.approval_state !== "REJECTED") out.set(p.sceneIndex, a.id);
+    }
+    const conLai = sceneIndexes.filter((i) => !out.has(i));
+    if (conLai.length === 0 || !productId) return out;
+
+    const [master] = await assetRepo.list(ctx, { productId, kind: "MASTER", approvalState: "APPROVED", limit: 1 });
+    if (!master) return out;
+    const variants = await assetRepo.list(ctx, { parentAssetId: master.id, kind: "MARKETING", limit: 200 });
+    for (const idx of conLai) {
+      const v = variants.find((a) => {
+        const m = (a.metadata ?? {}) as Record<string, unknown>;
+        return m.scene_index === idx && (m.variant_key === "styled" || m.variant_key === "branded") && a.approval_state !== "REJECTED";
+      });
+      out.set(idx, v?.id ?? master.id);
+    }
+    return out;
   }
 }

@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { VideoFormat, VIDEO_FORMAT_SPECS, CaptionStyle, CAPTION_STYLE_SPECS, VideoSceneItem } from "@/modules/video-studio/domain/video-types"
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
-import { resolveApprovedMaster } from "./package-client"
+import { resolveSceneImages } from "./scene-images-client"
 import { buildStoryboardFromPlan, buildStoryboardFromTopic, type SceneImage } from "./video-storyboard-builder"
 import { findScenePlan, type ScenePlan } from "./scene-plan-client"
 import { VideoJobLifecycle, type VideoJobDetail } from "./video-job-lifecycle"
@@ -81,58 +81,39 @@ export function VideoWorkspace() {
     ;(async () => {
       setBuildingStoryboard(true)
       try {
-        const [{ loaded }, masterId] = await Promise.all([
-          findScenePlan(
-            {
-              mode: context.mode,
-              productName: context.productName,
-              productId: context.productId,
-              assetId: context.assetId,
-              selectedTopic: context.selectedTopic,
-              commercialPassport: context.commercialPassport,
-            },
-            urlPlanId
-          ).catch(() => ({ loaded: null })),
-          resolveApprovedMaster(context.assetId).catch(() => null),
-        ])
-
-        // Ảnh Master (sản phẩm thật) — dùng cho cảnh chưa có ảnh biến thể.
-        let master: SceneImage | null = null
-        if (masterId) {
-          const r = await fetch(`/api/v1/assets/${encodeURIComponent(masterId)}/view-url`)
-          if (r.ok) master = { assetId: masterId, url: ((await r.json()) as { url: string }).url }
-        }
-
-        // Ảnh biến thể của ĐÚNG kịch bản, bản mới nhất mỗi cảnh.
-        const byScene: Record<number, SceneImage> = {}
-        if (masterId && loaded) {
-          const r = await fetch(
-            `/api/v1/assets?kind=MARKETING&parent_asset_id=${encodeURIComponent(masterId)}&limit=100`
-          )
-          if (r.ok) {
-            const body = (await r.json()) as {
-              data?: Array<{ id: string; url?: string | null; metadata?: Record<string, unknown> | null }>
-            }
-            for (const a of body.data ?? []) {
-              const m = a.metadata ?? {}
-              const idx = typeof m.scene_index === "number" ? m.scene_index : null
-              if (!idx || byScene[idx] || m.scene_plan_id !== loaded.ref || !a.url) continue
-              if (m.variant_key !== "styled" && m.variant_key !== "branded") continue
-              byScene[idx] = { assetId: a.id, url: a.url }
-            }
-          }
-        }
+        const { loaded } = await findScenePlan(
+          {
+            mode: context.mode,
+            productName: context.productName,
+            productId: context.productId,
+            assetId: context.assetId,
+            selectedTopic: context.selectedTopic,
+            commercialPassport: context.commercialPassport,
+          },
+          urlPlanId
+        ).catch(() => ({ loaded: null }))
+        // Ảnh THẬT của từng cảnh từ Khu vực D (xem `scene-images-client.ts`).
+        const images = await resolveSceneImages(context.assetId, loaded?.ref ?? null)
+        const master = images.master
+        const byScene = images.byScene
         if (cancelled) return
 
         if (loaded) {
           const built = buildStoryboardFromPlan(loaded.plan, spec.targetDurationSeconds, byScene, master)
           setScenePlan(loaded.plan)
           setScenes(built.scenes)
-          setStoryboardNote(
-            built.missingImages > 0
-              ? `${built.missingImages}/${built.scenes.length} cảnh chưa có ảnh biến thể ở Khu vực D — tạm dùng Master Image của sản phẩm.`
-              : null
-          )
+          const notes: string[] = []
+          if (built.missingImages > 0) {
+            notes.push(
+              master
+                ? `${built.missingImages}/${built.scenes.length} cảnh chưa có ảnh biến thể ở Khu vực D — tạm dùng ${images.masterIsOriginal ? "ảnh gốc" : "Master Image"} của sản phẩm.`
+                : `${built.missingImages}/${built.scenes.length} cảnh chưa có ảnh — không đọc được ảnh sản phẩm. Mở Khu vực D để sinh ảnh rồi bấm "Lấy ảnh mới nhất từ Khu vực D".`
+            )
+          }
+          if (images.fromOtherPlan.length > 0) {
+            notes.push(`Cảnh ${images.fromOtherPlan.map((i) => `#${i}`).join(", ")} dùng ảnh D của lần viết kịch bản trước (kịch bản đã được viết lại sau khi sinh ảnh).`)
+          }
+          setStoryboardNote(notes.length ? notes.join(" ") : null)
         } else {
           setScenes(buildStoryboardFromTopic(context.selectedTopic, context.productName, spec.targetDurationSeconds, master))
           setStoryboardNote(
@@ -149,6 +130,41 @@ export function VideoWorkspace() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenes.length, format, context?.assetId, context?.selectedTopic?.id, context?.mode, urlPlanId])
+
+  // Lấy lại ảnh MỚI NHẤT của Khu vực D cho từng cảnh — giữ nguyên chữ, lời
+  // thoại, chuyển động người dùng đã sửa (24/09/2026).
+  const [refreshingImages, setRefreshingImages] = useState(false)
+  const refreshImagesFromD = useCallback(async () => {
+    if (!context) return
+    setRefreshingImages(true)
+    try {
+      const { loaded } = await findScenePlan(
+        {
+          mode: context.mode,
+          productName: context.productName,
+          productId: context.productId,
+          assetId: context.assetId,
+          selectedTopic: context.selectedTopic,
+          commercialPassport: context.commercialPassport,
+        },
+        urlPlanId
+      ).catch(() => ({ loaded: null }))
+      const images = await resolveSceneImages(context.assetId, loaded?.ref ?? null)
+      let filled = 0
+      setScenes((prev) =>
+        prev.map((s, i) => {
+          const img = images.byScene[s.sceneIndex ?? i + 1] ?? images.master
+          if (!img) return s
+          filled++
+          return { ...s, imageAssetId: img.assetId, imageUrl: img.url }
+        })
+      )
+      setStoryboardKey((k) => k + 1)
+      setStoryboardNote(filled > 0 ? null : "Chưa có ảnh nào ở Khu vực D cho sản phẩm này — sinh ảnh ở Khu vực D trước.")
+    } finally {
+      setRefreshingImages(false)
+    }
+  }, [context, urlPlanId])
 
   const handleCreate = useCallback(async () => {
     if (scenes.length === 0) {
@@ -254,7 +270,7 @@ export function VideoWorkspace() {
           </div>
         </div>
       </Card>
-      {(buildingStoryboard || storyboardNote || scenePlan) && (
+      {(buildingStoryboard || storyboardNote || scenePlan || scenes.length > 0) && (
         <Card className="p-4 text-[12px] text-text-muted flex flex-col gap-1">
           {buildingStoryboard && <span>Đang dựng storyboard từ kịch bản bối cảnh và ảnh Khu vực D...</span>}
           {scenePlan && (
@@ -267,6 +283,13 @@ export function VideoWorkspace() {
             </span>
           )}
           {storyboardNote && <span className="text-warning">{storyboardNote}</span>}
+          {scenes.length > 0 && (
+            <span>
+              <button type="button" disabled={refreshingImages} onClick={() => void refreshImagesFromD()} className="font-bold text-primary hover:underline cursor-pointer">
+                {refreshingImages ? "Đang lấy ảnh..." : "↻ Lấy ảnh mới nhất từ Khu vực D"}
+              </button>
+            </span>
+          )}
         </Card>
       )}
       {scenes.length > 0 && (
@@ -292,7 +315,13 @@ export function VideoWorkspace() {
       </div>
       {error && <Card className="border-rose-200 bg-rose-50 p-4 flex items-center gap-3"><AlertCircle size={16} className="text-rose-600 shrink-0" /><p className="text-xs text-rose-800">{error}</p></Card>}
       {activeVideoJobId && (
-        <VideoJobLifecycle key={activeVideoJobId} jobId={activeVideoJobId} renderCredit={RENDER_CREDIT} onChange={setVideoJob} />
+        <VideoJobLifecycle
+          key={activeVideoJobId}
+          jobId={activeVideoJobId}
+          renderCredit={RENDER_CREDIT}
+          onChange={setVideoJob}
+          sceneImages={scenes.flatMap((s, i) => (s.imageAssetId ? [{ scene_index: s.sceneIndex ?? i + 1, asset_id: s.imageAssetId }] : []))}
+        />
       )}
       {videoJobs.length > 0 && (
         <Card className="p-5">

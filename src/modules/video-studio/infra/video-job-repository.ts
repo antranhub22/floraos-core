@@ -180,6 +180,21 @@ export class VideoJobRepository {
   }
 
   /**
+   * Gắn ảnh cho những cảnh CÒN TRỐNG ảnh — không đổi chữ/lời/giai đoạn duyệt
+   * (24/09/2026: render lấp ảnh Khu vực D / Master thay vì báo lỗi).
+   */
+  async fillMissingSceneImages(ctx: TenantContext, jobId: string, images: ReadonlyMap<number, string>): Promise<void> {
+    const job = await this.findById(ctx, jobId);
+    if (!job) return;
+    for (const [sceneIndex, assetId] of images) {
+      await this.db.video_scenes.updateMany({
+        where: { video_job_id: job.id, scene_index: sceneIndex, image_asset_id: null },
+        data: { image_asset_id: assetId },
+      });
+    }
+  }
+
+  /**
    * Phê duyệt Kịch bản (Cổng 1).
    */
   async approveScript(

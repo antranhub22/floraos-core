@@ -44,10 +44,14 @@ export function VideoJobLifecycle({
   jobId,
   renderCredit,
   onChange,
+  sceneImages,
 }: {
   jobId: string
   renderCredit: number
   onChange?: (job: VideoJobDetail) => void
+  /** Ảnh hiện có trên storyboard (thường là ảnh Khu vực D) — máy chủ dùng để
+   *  lấp cảnh của job còn trống ảnh khi render (24/09/2026). */
+  sceneImages?: Array<{ scene_index: number; asset_id: string }> | undefined
 }) {
   const [job, setJob] = useState<VideoJobDetail | null>(null)
   const [busy, setBusy] = useState<null | "script" | "render" | "video">(null)
@@ -93,7 +97,12 @@ export function VideoJobLifecycle({
     setError(null)
     try {
       const path = kind === "script" ? "approve-script" : kind === "render" ? "render" : "approve-video"
-      const res = await fetch(`/api/v1/video/jobs/${encodeURIComponent(jobId)}/${path}`, { method: "POST" })
+      const res = await fetch(`/api/v1/video/jobs/${encodeURIComponent(jobId)}/${path}`, {
+        method: "POST",
+        ...(kind === "render" && sceneImages?.length
+          ? { headers: { "content-type": "application/json" }, body: JSON.stringify({ scene_images: sceneImages }) }
+          : {}),
+      })
       if (!res.ok) throw new Error(await readError(res))
       await load()
     } catch (e) {
