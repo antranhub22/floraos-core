@@ -45,8 +45,11 @@ DATABASE_URL="$URL_TEST" npx prisma db push --accept-data-loss
 # Nghiệm thu tại chỗ: một bảng có thật thì mới coi là xong. Không tin mã thoát
 # của lệnh trên một mình — chính cờ sai ở trên đã từng "thành công" mà không
 # tạo bảng nào.
+# Kiểm cả bảng MỚI NHẤT, không chỉ bảng cũ: DB test dựng trước migration
+# `campaign_packages` (23/09) vẫn qua được kiểm `integration_tokens` (24/09/2026).
 if ! docker compose exec -T db psql -U floraos -d "$TEN_DB" -tAc \
-       "SELECT to_regclass('public.integration_tokens')" | grep -q integration_tokens; then
+       "SELECT to_regclass('public.integration_tokens'), to_regclass('public.campaign_packages'), to_regclass('public.voice_clones')" \
+     | grep -q "integration_tokens|campaign_packages|voice_clones"; then
   echo "" >&2
   echo "ĐẨY LƯỢC ĐỒ HỎNG: database $TEN_DB vẫn chưa có bảng. Xem lỗi phía trên." >&2
   exit 1

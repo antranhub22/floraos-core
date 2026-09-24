@@ -112,9 +112,23 @@ function bat_buoc_la_database_test(): void {
  */
 export async function resetDatabase(): Promise<void> {
   bat_buoc_la_database_test()
-  await prisma.$executeRawUnsafe(
-    `TRUNCATE TABLE ${TENANT_TABLES.join(", ")} RESTART IDENTITY CASCADE`
-  )
+  try {
+    await prisma.$executeRawUnsafe(
+      `TRUNCATE TABLE ${TENANT_TABLES.join(", ")} RESTART IDENTITY CASCADE`
+    )
+  } catch (e) {
+    // 42P01 = bảng chưa có: database test dựng trước một migration mới (vd.
+    // `campaign_packages` 23/09) — 221 ca đỏ cùng lúc mà không nói vì sao
+    // (máy anh Tony, 24/09/2026). Nói thẳng cách sửa.
+    if (String((e as { message?: unknown })?.message ?? e).includes("42P01")) {
+      throw new Error(
+        "Database test thiếu bảng — lược đồ cũ hơn prisma/schema.prisma (có migration mới). " +
+          "Chạy `npm run db:test:setup` rồi chạy lại `npm run test:tenant`.\n" +
+          String((e as { message?: unknown })?.message ?? e)
+      )
+    }
+    throw e
+  }
   // Vai hệ thống là danh mục cài đặt, không phải dữ liệu thử: nạp lại đúng
   // như `npm run db:seed` làm sau khi đẩy lược đồ.
   await ensureSystemRoles()
