@@ -99,3 +99,35 @@ def test_render_caption_to_file():
         )
         assert res.is_file()
         assert res.stat().st_size > 0
+
+
+# ── Phụ đề = lời thoại, chia đoạn theo thời gian (PO 24/09/2026) ──
+
+
+def test_chia_doan_ghep_lai_dung_nguyen_van():
+    from media_ai.video.caption_engine import split_subtitle_chunks
+
+    loi = "Bó hoa hồng vàng rực rỡ gửi trọn yêu thương. Chúc mừng sinh nhật người thương, mong mọi điều tốt đẹp nhất sẽ đến!"
+    chunks = split_subtitle_chunks(loi, 60)
+    assert all(len(c) <= 60 for c in chunks)
+    assert " ".join(chunks) == loi
+
+
+def test_moc_phu_de_khop_thoi_luong_tung_canh():
+    from media_ai.video.caption_engine import subtitle_timeline
+
+    tl = subtitle_timeline(["Xin chào quý khách.", "Đặt hoa ngay hôm nay nhé!"], [3.0, 4.0])
+    assert tl[0][1] == 0.0
+    # Cảnh 2 bắt đầu đúng giây thứ 3, kết thúc ở giây thứ 7.
+    canh2 = [t for t in tl if t[1] >= 3.0 - 1e-6]
+    assert abs(canh2[0][1] - 3.0) < 1e-6
+    assert abs(tl[-1][2] - 7.0) < 1e-3
+    assert "".join(t[0] for t in tl).replace(" ", "") == "Xinchàoquýkhách.Đặthoangayhômnaynhé!"
+
+
+def test_lop_phu_de_rgba_dung_khung():
+    from media_ai.video.caption_engine import render_caption_overlay
+
+    layer = render_caption_overlay((1080, 1920), "Chúc mừng sinh nhật", "MODERN_BADGE")
+    assert layer is not None and layer.mode == "RGBA" and layer.size == (1080, 1920)
+    assert render_caption_overlay((1080, 1920), "  ", "MODERN_BADGE") is None

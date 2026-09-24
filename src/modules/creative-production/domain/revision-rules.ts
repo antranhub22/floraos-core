@@ -117,7 +117,8 @@ export function normalizeRevisedScene(raw: unknown, current: ScenePlanScene): Re
       backgroundPrompt,
       localBackdrop: isLocalBackdrop(o.local_backdrop) ? o.local_backdrop : inferLocalBackdrop(setting),
       voiceScript: text(o.voice_script, 300) || current.voiceScript,
-      textOverlay: text(o.text_overlay, 60) || current.textOverlay,
+      // Phụ đề = lời thoại (PO 24/09/2026).
+      textOverlay: text(o.voice_script, 300) || current.voiceScript,
       motionEffect: MOTIONS.includes(o.motion_effect as ScenePlanMotion)
         ? (o.motion_effect as ScenePlanMotion)
         : current.motionEffect,

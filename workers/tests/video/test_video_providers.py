@@ -185,3 +185,24 @@ def test_dot4_ban_phoi_to_chuc_khac_bi_chan(monkeypatch, tmp_path):
         lc.LocalCinematicProvider().render_video(
             "j1", "org-1", {"audioStorageKey": "org/org-2/x.m4a", "scenes": [{"imageAssetId": "k"}]}, tmp_path / "o.mp4"
         )
+
+
+def test_moc_chuyen_canh_khop_tieng_va_phu_de_theo_thoi_gian(tmp_path):
+    """24/09/2026: bù chồng xfade + lớp phụ đề ghép theo thời gian."""
+    from media_ai.video.slideshow_engine import build_ffmpeg_command
+
+    imgs = [tmp_path / f"{i}.jpg" for i in range(3)]
+    for p in imgs:
+        p.write_bytes(b"x")
+    audio = tmp_path / "a.m4a"
+    audio.write_bytes(b"x")
+    subs = [(tmp_path / "s0.png", 0.0, 2.0), (tmp_path / "s1.png", 2.0, 5.0)]
+    cmd = build_ffmpeg_command(
+        imgs, tmp_path / "o.mp4", audio_path=audio, scene_durations=[2.0, 3.0, 4.0], subtitle_overlays=subs
+    )
+    fc = cmd[cmd.index("-filter_complex") + 1]
+    # Cảnh 2 bắt đầu đúng 2.0s, cảnh 3 đúng 5.0s (tổng các cảnh trước).
+    assert "offset=2.000" in fc and "offset=5.000" in fc
+    assert "overlay=0:0:enable='between(t,2.000,5.000)'" in fc
+    # Âm thanh là đầu vào sau 3 ảnh + 2 lớp phụ đề.
+    assert cmd[cmd.index("-map", cmd.index("-map") + 1) + 1] == "5:a"

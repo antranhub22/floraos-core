@@ -77,7 +77,7 @@ export function applyScenePlanEdit(plan: ScenePlan, edit: ScenePlanEdit): SceneP
         if (v !== next.voiceScript) voiceChanged = true
         next = { ...next, voiceScript: v }
       }
-      if (e.textOverlay !== undefined) next = { ...next, textOverlay: clean(e.textOverlay, 60) }
+      // Phụ đề = lời thoại (PO 24/09): bỏ qua sửa phụ đề riêng.
       if (e.transition !== undefined && TRANSITIONS.includes(e.transition as ScenePlanTransition)) {
         next = { ...next, transition: e.transition as ScenePlanTransition }
       }
@@ -88,7 +88,7 @@ export function applyScenePlanEdit(plan: ScenePlan, edit: ScenePlanEdit): SceneP
         userDuration.set(s.sceneIndex, round1(Math.min(MAX_SCENE_SECONDS, Math.max(MIN_SCENE_SECONDS, e.durationSeconds))))
       }
     }
-    return next
+    return { ...next, textOverlay: next.voiceScript }
   })
 
   // Thời lượng: người dùng nhập thì giữ đúng số đó; đổi lời thoại / nền tảng

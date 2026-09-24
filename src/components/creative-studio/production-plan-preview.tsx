@@ -64,7 +64,7 @@ export function ProductionPlanPreview({
   const [error, setError] = useState<string | null>(null)
   const dirty = plan.scenes.some((s) => {
     const d = drafts[s.sceneIndex]
-    return d && (d.duration !== s.durationSeconds || d.voice !== s.voiceScript || d.overlay !== s.textOverlay)
+    return d && (d.duration !== s.durationSeconds || d.voice !== s.voiceScript)
   })
   const canEdit = editable && Boolean(loaded.jobId)
   const voice = VOICE_CATALOG.find((v) => v.voiceId === plan.audio.voiceId)
@@ -79,7 +79,7 @@ export function ProductionPlanPreview({
         scenes: plan.scenes
           .filter((s) => {
             const d = drafts[s.sceneIndex]
-            return d && (d.duration !== s.durationSeconds || d.voice !== s.voiceScript || d.overlay !== s.textOverlay)
+            return d && (d.duration !== s.durationSeconds || d.voice !== s.voiceScript)
           })
           .map((s) => {
             const d = drafts[s.sceneIndex]!
@@ -87,7 +87,6 @@ export function ProductionPlanPreview({
               scene_index: s.sceneIndex,
               ...(d.duration !== s.durationSeconds ? { duration_seconds: d.duration } : {}),
               ...(d.voice !== s.voiceScript ? { voice_script: d.voice } : {}),
-              ...(d.overlay !== s.textOverlay ? { text_overlay: d.overlay } : {}),
             }
           }),
       })
@@ -172,19 +171,12 @@ export function ProductionPlanPreview({
                 <p className="text-stone-500">Bối cảnh: {s.setting}</p>
                 {canEdit ? (
                   <>
-                    <input
-                      value={d.overlay}
-                      maxLength={60}
-                      onChange={(e) => setDrafts((prev) => ({ ...prev, [s.sceneIndex]: { ...d, overlay: e.target.value } }))}
-                      placeholder="Phụ đề trên video"
-                      className="mt-1 w-full rounded border border-stone-200 px-2 py-1"
-                    />
                     <textarea
                       rows={2}
                       value={d.voice}
                       maxLength={300}
                       onChange={(e) => setDrafts((prev) => ({ ...prev, [s.sceneIndex]: { ...d, voice: e.target.value } }))}
-                      placeholder="Lời thoại"
+                      placeholder="Lời thoại (cũng là phụ đề trên video)"
                       className="mt-1 w-full rounded border border-stone-200 px-2 py-1"
                     />
                     {need > d.duration && (
@@ -193,8 +185,7 @@ export function ProductionPlanPreview({
                   </>
                 ) : (
                   <>
-                    {s.textOverlay && <p>Phụ đề: {s.textOverlay}</p>}
-                    <p className="italic">“{s.voiceScript}”</p>
+                    <p className="italic">“{s.voiceScript}” <span className="not-italic text-stone-400">(lời thoại = phụ đề)</span></p>
                   </>
                 )}
               </div>

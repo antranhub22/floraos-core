@@ -119,9 +119,18 @@ const DEFAULT_MOTIONS: VideoMotionEffect[] = [
  * Chuẩn hóa danh sách cảnh: đánh lại chỉ số index tuần tự từ 1 đến N.
  * Tự động gán hiệu ứng chuyển động máy quay điện ảnh luân phiên nếu chưa có.
  */
+/**
+ * Phụ đề LUÔN là lời thoại (quyết định PO 24/09/2026): chữ trên video chính là
+ * câu được đọc. Cảnh không có lời thoại thì không có phụ đề.
+ */
+export function subtitleOf(scene: { voiceScript?: string | null | undefined }): string {
+  return (scene.voiceScript ?? "").trim()
+}
+
 export function normalizeScenes(scenes: VideoSceneItem[]): VideoSceneItem[] {
   return scenes.map((scene, idx) => ({
     ...scene,
+    textOverlay: subtitleOf(scene),
     sceneIndex: idx + 1,
     durationSeconds: Math.max(1.0, Math.round((scene.durationSeconds || 3.0) * 10) / 10),
     transitionEffect: scene.transitionEffect ?? "fade",

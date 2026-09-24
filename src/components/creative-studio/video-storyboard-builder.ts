@@ -45,8 +45,9 @@ export function buildStoryboardFromPlan(
       durationSeconds: durations[i]!,
       imageAssetId: chosen?.assetId ?? null,
       imageUrl: chosen?.url ?? null,
-      textOverlay: sc.textOverlay || sc.title,
-      voiceScript: sc.voiceScript || sc.textOverlay || sc.title,
+      // Phụ đề = lời thoại (PO 24/09/2026).
+      textOverlay: sc.voiceScript || sc.title,
+      voiceScript: sc.voiceScript || sc.title,
       transitionEffect: "fade" as const,
       motionEffect: MOTION[sc.motionEffect] ?? "ZOOM_IN",
     }
@@ -74,12 +75,12 @@ export function buildStoryboardFromTopic(
         ["Nhắn tiệm để đặt hoa", "Nhắn tiệm để đặt hoa", "ZOOM_OUT"],
       ]
   const durations = distributeDurations(targetSeconds, texts.length)
-  return texts.map(([textOverlay, voiceScript, motionEffect], i) => ({
+  return texts.map(([, voiceScript, motionEffect], i) => ({
     sceneIndex: i + 1,
     durationSeconds: durations[i]!,
     imageAssetId: master?.assetId ?? null,
     imageUrl: master?.url ?? null,
-    textOverlay,
+    textOverlay: voiceScript,
     voiceScript,
     transitionEffect: "fade" as const,
     motionEffect,

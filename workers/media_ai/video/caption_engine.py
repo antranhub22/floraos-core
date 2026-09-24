@@ -220,20 +220,21 @@ def fit_text_to_bounds(
     return lines, font, min_size
 
 
-def render_caption_on_image(
-    image: Image.Image,
+def render_caption_overlay(
+    size: Tuple[int, int],
     text: str,
     style_name: str = "MODERN_BADGE",
-) -> Image.Image:
+) -> Optional[Image.Image]:
     """
-    Vẽ phụ đề theo phong cách chỉ định lên một đối tượng ảnh PIL.
+    Lớp phụ đề RGBA trong suốt đúng kích thước khung video (24/09/2026) — ghép
+    lên video theo thời gian (không in chết vào ảnh, không bị Ken Burns phóng to).
     """
     style = get_caption_style(style_name)
     if not style or not text or not text.strip():
-        return image
+        return None
 
     clean_text = text.strip()
-    w, h = image.size
+    w, h = size
 
     # Khởi tạo overlay RGBA cho các chi tiết bán trong suốt
     overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -243,7 +244,7 @@ def render_caption_on_image(
     max_text_width = int(w * 0.82)
     lines, font, font_size = fit_text_to_bounds(clean_text, base_font_size, max_text_width, draw, max_lines=3)
     if not lines:
-        return image
+        return None
 
     line_spacing = int(font_size * 0.25)
     line_bboxes = [draw.textbbox((0, 0), line, font=font) for line in lines]
@@ -294,10 +295,79 @@ def render_caption_on_image(
         draw.text((line_x, current_y), line, font=font, fill=style.text_color)
         current_y += line_heights[i] + line_spacing
 
-    # Ghép overlay RGBA vào ảnh gốc (RGB)
+    return overlay
+
+
+def render_caption_on_image(
+    image: Image.Image,
+    text: str,
+    style_name: str = "MODERN_BADGE",
+) -> Image.Image:
+    """Vẽ phụ đề theo phong cách chỉ định lên một đối tượng ảnh PIL."""
+    overlay = render_caption_overlay(image.size, text, style_name)
+    if overlay is None:
+        return image
     base_rgba = image.convert("RGBA")
     combined = Image.alpha_composite(base_rgba, overlay)
     return combined.convert("RGB")
+
+
+SUBTITLE_MAX_CHARS = 60
+
+
+def split_subtitle_chunks(text: str, max_chars: int = SUBTITLE_MAX_CHARS) -> List[str]:
+    """
+    Chia lời thoại thành các đoạn phụ đề ngắn (≤ ~2 dòng) theo dấu câu rồi theo
+    từ — ghép lại đúng nguyên văn lời thoại (PO 24/09/2026: phụ đề = lời thoại).
+    """
+    import re as _re
+
+    clean = " ".join((text or "").split())
+    if not clean:
+        return []
+    parts = [p.strip() for p in _re.split(r"(?<=[.!?…,;:])\s+", clean) if p.strip()]
+    chunks: List[str] = []
+    for part in parts:
+        if chunks and len(chunks[-1]) + 1 + len(part) <= max_chars:
+            chunks[-1] = f"{chunks[-1]} {part}"
+            continue
+        if len(part) <= max_chars:
+            chunks.append(part)
+            continue
+        cur: List[str] = []
+        for word in part.split(" "):
+            if cur and len(" ".join(cur + [word])) > max_chars:
+                chunks.append(" ".join(cur))
+                cur = [word]
+            else:
+                cur.append(word)
+        if cur:
+            chunks.append(" ".join(cur))
+    return chunks
+
+
+def subtitle_timeline(
+    scene_texts: List[str], scene_durations: List[float], max_chars: int = SUBTITLE_MAX_CHARS
+) -> List[Tuple[str, float, float]]:
+    """
+    Mốc (đoạn, bắt đầu, kết thúc) theo thời gian video: mỗi cảnh bắt đầu ở tổng
+    thời lượng các cảnh trước; trong cảnh, mỗi đoạn chiếm phần thời gian tỉ lệ
+    số ký tự — khớp nhịp đọc.
+    """
+    out: List[Tuple[str, float, float]] = []
+    start = 0.0
+    for text, dur in zip(scene_texts, scene_durations):
+        chunks = split_subtitle_chunks(text, max_chars)
+        total = sum(len(c) for c in chunks) or 1
+        t = start
+        for c in chunks:
+            span = float(dur) * len(c) / total
+            out.append((c, round(t, 3), round(t + span, 3)))
+            t += span
+        start += float(dur)
+    return out
+
+
 
 
 def render_caption_to_file(

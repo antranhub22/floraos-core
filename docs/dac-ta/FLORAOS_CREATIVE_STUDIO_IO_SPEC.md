@@ -196,6 +196,8 @@ Chặng 05 lên TOÀN BỘ kế hoạch sản xuất; B/C/D/E chỉ thực thi. 
 
 Bảng nền tảng (`publishing-rules.ts`): TikTok 9:16 `TIKTOK_30S` ~20s · Instagram/Facebook Reels 9:16 `REEL_15S` 15s · YouTube Shorts 9:16 · Zalo Video 9:16 `STORY_15S` · YouTube 16:9 `SLIDESHOW` · Facebook/Instagram Feed 4:5 `SLIDESHOW`. Một tỉ lệ → dùng tỉ lệ đó; trộn tỉ lệ → 9:16 (mặc định hiện tại), các khung khác ghi ở `otherRatios`. Worker video dựng được 9:16, 16:9, 1:1, 4:5.
 
+**Phụ đề = lời thoại (PO 24/09/2026 tối):** `scenes[].textOverlay` luôn bằng `voiceScript` (chuẩn hoá khi sinh, khi đọc bản cũ, khi sửa, khi "Sửa cảnh"); `normalizeScenes` của video cũng ép `textOverlay = voiceScript`. Không còn ô phụ đề riêng ở xem trước Chặng 05, storyboard E, "Sửa video" Chặng 07. Worker chia lời thoại thành đoạn ≤ 60 ký tự (`split_subtitle_chunks`), mỗi đoạn là một lớp RGBA ghép theo thời gian (`subtitle_timeline`: cảnh bắt đầu ở tổng thời lượng các cảnh trước, đoạn chia theo số ký tự) — không in chết vào ảnh; chuyển cảnh bù phần chồng xfade để mốc cảnh trùng mốc âm thanh.
+
 ### 5.1. Biến thể từng cảnh
 
 `POST /api/v1/media/variants` (`I4`, header `Idempotency-Key` bắt buộc):

@@ -78,6 +78,8 @@ export function StoryboardEditor({
     setSavedSuccess(false);
     const updated = [...scenes];
     updated[index] = { ...updated[index]!, [field]: value };
+    // Phụ đề = lời thoại (PO 24/09/2026).
+    updated[index] = { ...updated[index]!, textOverlay: updated[index]!.voiceScript ?? "" };
     setScenes(updated);
   };
 
@@ -228,19 +230,14 @@ export function StoryboardEditor({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {/* Trường Chữ hiển thị / Phụ đề */}
+              {/* Phụ đề = lời thoại (PO 24/09/2026) — không nhập riêng */}
               <div>
                 <label className="text-[11px] font-semibold text-text-muted block mb-1">
-                  Phụ đề hiển thị (Caption)
+                  Phụ đề
                 </label>
-                <input
-                  type="text"
-                  disabled={isLocked}
-                  value={scene.textOverlay || ""}
-                  onChange={(e) => handleUpdateScene(idx, "textOverlay", e.target.value)}
-                  placeholder="Nhập chữ phụ đề ngắn..."
-                  className="w-full rounded-md border border-border px-3 py-1.5 text-xs focus:border-primary focus:outline-none disabled:bg-muted font-medium"
-                />
+                <p className="rounded-md border border-dashed border-border px-3 py-1.5 text-[11px] text-text-muted">
+                  Luôn giống lời thoại bên dưới — sửa lời thoại là sửa phụ đề.
+                </p>
               </div>
 
               {/* Chuyển động máy quay điện ảnh */}

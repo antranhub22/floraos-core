@@ -141,10 +141,13 @@ describe("kịch bản v2", () => {
 describe("applyScenePlanEdit", () => {
   const base = buildRuleScenePlan(INPUT)
 
-  test("mỗi lần sửa tăng revision", () => {
-    const r = applyScenePlanEdit(base, { scenes: [{ sceneIndex: 1, textOverlay: "Mới" }] })
+  test("mỗi lần sửa tăng revision; phụ đề luôn = lời thoại (PO 24/09)", () => {
+    const r = applyScenePlanEdit(base, { scenes: [{ sceneIndex: 1, voiceScript: "Lời mới", textOverlay: "Phụ đề khác" }] })
     expect(r.ok && r.plan.revision).toBe(base.revision + 1)
-    expect(r.ok && r.plan.scenes[0]!.textOverlay).toBe("Mới")
+    expect(r.ok && r.plan.scenes[0]!.textOverlay).toBe("Lời mới")
+  })
+  test("kịch bản nào cũng có phụ đề = lời thoại", () => {
+    expect(base.scenes.every((s) => s.textOverlay === s.voiceScript)).toBe(true)
   })
   test("thời lượng người dùng nhập được giữ, tổng tính lại", () => {
     const r = applyScenePlanEdit(base, { scenes: [{ sceneIndex: 3, durationSeconds: 6 }] })

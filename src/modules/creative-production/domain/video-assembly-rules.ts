@@ -155,7 +155,8 @@ export function assembleVideo(input: {
       // Thời lượng THẬT của âm thanh C để hình khớp tiếng từng cảnh.
       durationSeconds: Math.round(Math.min(15, Math.max(0.5, actual ?? sc.durationSeconds)) * 10) / 10,
       imageAssetId: best.assetId,
-      textOverlay: sc.textOverlay || sc.title,
+      // Phụ đề = lời thoại (PO 24/09/2026).
+      textOverlay: sc.voiceScript,
       voiceScript: sc.voiceScript,
       transitionEffect: sc.transition,
       motionEffect: MOTION[sc.motionEffect] ?? "ZOOM_IN",

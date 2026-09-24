@@ -349,7 +349,7 @@ export function VideoRevisePanel(props: {
           sceneIndex: i + 1,
           durationSeconds: s.durationSeconds,
           imageAssetId: s.imageAssetId,
-          textOverlay: s.textOverlay || null,
+          textOverlay: s.voiceScript || null,
           voiceScript: s.voiceScript || null,
           transitionEffect: "fade",
           motionEffect: s.motionEffect,
@@ -416,16 +416,10 @@ export function VideoRevisePanel(props: {
                   ))}
                 </select>
               </div>
-              <input
-                value={s.textOverlay}
-                placeholder="Phụ đề"
-                onChange={(e) => setScenes((p) => p.map((x, k) => (k === i ? { ...x, textOverlay: e.target.value } : x)))}
-                className="w-full rounded border border-border px-2 py-1 text-xs"
-              />
               <textarea
                 rows={2}
                 value={s.voiceScript}
-                placeholder="Lời thoại"
+                placeholder="Lời thoại (cũng là phụ đề)"
                 onChange={(e) => setScenes((p) => p.map((x, k) => (k === i ? { ...x, voiceScript: e.target.value } : x)))}
                 className="w-full rounded border border-border px-2 py-1 text-xs"
               />
@@ -496,7 +490,7 @@ export async function propagateSceneToVideo(input: {
         sceneIndex: s.scene_index,
         durationSeconds: s.duration_seconds,
         imageAssetId: s.scene_index === input.sceneIndex ? input.assetId : s.image_asset_id,
-        textOverlay: s.scene_index === input.sceneIndex ? input.scene.textOverlay || input.scene.title : s.text_overlay,
+        textOverlay: s.scene_index === input.sceneIndex ? input.scene.voiceScript : s.voice_script,
         voiceScript: s.scene_index === input.sceneIndex ? input.scene.voiceScript : s.voice_script,
         ...(s.transition_effect ? { transitionEffect: s.transition_effect } : {}),
         ...(s.motion_effect ? { motionEffect: s.motion_effect } : {}),

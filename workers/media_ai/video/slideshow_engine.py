@@ -93,6 +93,7 @@ def build_ffmpeg_command(
     audio_path: Optional[Path] = None,
     motions: Optional[List[str]] = None,
     scene_durations: Optional[List[float]] = None,
+    subtitle_overlays: Optional[List[Tuple[Path, float, float]]] = None,
 ) -> List[str]:
     """
     Tạo câu lệnh ffmpeg hoàn chỉnh với Cinematic Ken Burns và xfade chuyển cảnh mượt mà.
@@ -107,7 +108,13 @@ def build_ffmpeg_command(
     # Tính thời lượng từng slide
     durations: List[float] = []
     if scene_durations and len(scene_durations) == n:
-        durations = [max(MIN_SLIDE_SECONDS + TRANSITION_DURATION, float(sd)) for sd in scene_durations]
+        # 24/09/2026: bù phần chồng xfade — mỗi slide (trừ slide cuối) dài thêm
+        # đúng TRANSITION_DURATION để mốc chuyển cảnh trùng mốc tổng thời lượng
+        # các cảnh trước ⇒ hình khớp tiếng (bản phối C) và phụ đề từng cảnh.
+        durations = [
+            max(MIN_SLIDE_SECONDS, float(sd)) + (TRANSITION_DURATION if i < n - 1 else 0.0)
+            for i, sd in enumerate(scene_durations)
+        ]
     else:
         avg_slide = max(MIN_SLIDE_SECONDS + TRANSITION_DURATION, (total_duration + overlap) / n)
         durations = [avg_slide] * n
@@ -124,6 +131,10 @@ def build_ffmpeg_command(
     args = ["ffmpeg", "-y", "-loglevel", "error"]
     for img in image_paths:
         args.extend(["-i", str(img)])
+
+    overlays = subtitle_overlays or []
+    for png, _s, _e in overlays:
+        args.extend(["-i", str(png)])
 
     if audio_path and audio_path.is_file():
         args.extend(["-i", str(audio_path)])
@@ -148,12 +159,20 @@ def build_ffmpeg_command(
             prev = out_label
         final_video_label = "[v_out]"
 
+    # Phụ đề = lời thoại, hiện từng đoạn đúng lúc được đọc (lớp RGBA ghép theo thời gian).
+    for k, (_png, start, end) in enumerate(overlays):
+        out_label = f"[sub{k}]"
+        chains.append(
+            f"{final_video_label}[{n + k}:v]overlay=0:0:enable='between(t,{start:.3f},{end:.3f})'{out_label}"
+        )
+        final_video_label = out_label
+
     filter_complex = ";".join(chains)
     args.extend(["-filter_complex", filter_complex, "-map", final_video_label])
 
     if audio_path and audio_path.is_file():
         args.extend([
-            "-map", f"{n}:a",
+            "-map", f"{n + len(overlays)}:a",
             "-c:a", "aac",
             "-b:a", "128k",
             "-shortest",
@@ -177,6 +196,7 @@ def render_slideshow(
     audio_path: Optional[Path] = None,
     motions: Optional[List[str]] = None,
     scene_durations: Optional[List[float]] = None,
+    subtitle_overlays: Optional[List[Tuple[Path, float, float]]] = None,
 ) -> Path:
     """
     Thực thi render video slideshow Cinematic Motion từ danh sách đường dẫn ảnh.
@@ -197,6 +217,7 @@ def render_slideshow(
         audio_path=audio_path,
         motions=motions,
         scene_durations=scene_durations,
+        subtitle_overlays=subtitle_overlays,
     )
 
     result = subprocess.run(

@@ -11,16 +11,17 @@ import shutil
 import tempfile
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from media_ai.video.providers.base import BaseVideoProvider, VideoProviderError
 from media_ai.video.slideshow_engine import (
     render_slideshow,
     is_ffmpeg_available,
     SlideshowError,
+    FRAME_RESOLUTIONS,
 )
 from media_ai.video.audio_engine import build_audio_track
-from media_ai.video.caption_engine import render_caption_to_file
+from media_ai.video.caption_engine import render_caption_overlay, render_caption_to_file, subtitle_timeline
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 STORAGE_ROOT = REPO_ROOT / "var" / "storage"
@@ -153,31 +154,29 @@ class LocalCinematicProvider(BaseVideoProvider):
                 print(f"⚠️ [LocalCinematic] Lỗi tổng hợp âm thanh: {a_err}", flush=True)
                 audio_path = None
 
-        # 3. Kết xuất phụ đề lên từng phân cảnh
-        captioned_paths: List[Path] = []
+        # 3. Phụ đề = LỜI THOẠI (PO 24/09/2026): chia lời thoại từng cảnh thành
+        # đoạn ngắn, mỗi đoạn là một lớp RGBA hiện đúng lúc được đọc — không in
+        # chết cả câu dài vào ảnh (trước đây còn bị Ken Burns phóng to theo).
+        captioned_paths: List[Path] = list(image_paths)
         temp_caption_files: List[Path] = []
-        if caption_style != "NONE":
+        subtitle_overlays: List[Tuple[Path, float, float]] = []
+        has_subtitle = payload.get("hasSubtitle", payload.get("has_subtitle", True)) is not False
+        if has_subtitle and caption_style.upper() != "NONE":
             if progress_callback:
                 progress_callback("STAGE", {"stage": "CAPTION_RENDERING", "progress": 55})
-
-        for idx, img_p in enumerate(image_paths):
-            sc_text = ""
-            if idx < len(scenes):
-                sc_voice = str(scenes[idx].get("voiceScript") or scenes[idx].get("voice_script") or "").strip()
-                sc_overlay = str(scenes[idx].get("textOverlay") or scenes[idx].get("text_overlay") or "").strip()
-                sc_text = sc_voice if sc_voice else sc_overlay
-
-            if sc_text and caption_style != "NONE":
-                cap_out = out_dir / f"cap_{video_job_id}_{idx}.jpg"
-                try:
-                    render_caption_to_file(img_p, sc_text, cap_out, style_name=caption_style)
-                    captioned_paths.append(cap_out)
-                    temp_caption_files.append(cap_out)
-                except Exception as c_err:
-                    print(f"⚠️ [LocalCinematic] Lỗi vẽ phụ đề cảnh {idx}: {c_err}", flush=True)
-                    captioned_paths.append(img_p)
-            else:
-                captioned_paths.append(img_p)
+            texts = [
+                str((scenes[i] if i < len(scenes) else {}).get("voiceScript") or (scenes[i] if i < len(scenes) else {}).get("voice_script") or "").strip()
+                for i in range(len(image_paths))
+            ]
+            frame = FRAME_RESOLUTIONS.get(aspect_ratio, FRAME_RESOLUTIONS["9:16"])
+            for k, (chunk, start, end) in enumerate(subtitle_timeline(texts, scene_durations)):
+                layer = render_caption_overlay(frame, chunk, caption_style)
+                if layer is None:
+                    continue
+                png = out_dir / f"sub_{video_job_id}_{k}.png"
+                layer.save(png, format="PNG")
+                temp_caption_files.append(png)
+                subtitle_overlays.append((png, start, end))
 
         # 4. Render FFmpeg Cinematic Ken Burns
         if progress_callback:
@@ -192,6 +191,7 @@ class LocalCinematicProvider(BaseVideoProvider):
                 audio_path=audio_path,
                 motions=scene_motions,
                 scene_durations=scene_durations,
+                subtitle_overlays=subtitle_overlays,
             )
         finally:
             # Dọn dẹp tệp tạm

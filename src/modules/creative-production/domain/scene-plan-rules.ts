@@ -137,6 +137,7 @@ export interface ScenePlanScene {
   /** Phông cục bộ gần nhất — dùng khi chạy Studio cục bộ hoặc khi Stability lỗi. */
   readonly localBackdrop: LocalBackdrop
   readonly voiceScript: string
+  /** Phụ đề = LỜI THOẠI (PO 24/09/2026) — luôn bằng `voiceScript`, giữ trường để tương thích. */
   readonly textOverlay: string
   readonly motionEffect: ScenePlanMotion
   /** v2 — thời lượng cảnh (giây), tổng khớp khuôn video, đủ thời gian đọc trọn lời thoại. */
@@ -340,6 +341,7 @@ export function completeScenePlanV2(
   )
   const scenes: ScenePlanScene[] = base.scenes.map((sc, i) => ({
     ...sc,
+    textOverlay: sc.voiceScript,
     durationSeconds: durations[i]!,
     transition: pick(rawScenes[i]?.transition, TRANSITIONS, BEAT_TRANSITION[sc.beat]),
     shot: pick(rawScenes[i]?.shot, SHOTS, BEAT_SHOT[sc.beat]),
@@ -443,7 +445,7 @@ YÊU CẦU
 - ${modeRule}
 - Bối cảnh phải khớp DỊP và TÔNG MÀU nêu trong tiêu đề chủ đề (ví dụ chủ đề sinh nhật tone vàng thì không gian sinh nhật, bảng màu hài hoà với vàng). Không dùng bối cảnh không liên quan đến dịp.
 - Bó hoa thật sẽ được dán nguyên khối vào ảnh: KHÔNG mô tả hoa, người, bàn tay, chữ hay logo trong bối cảnh; chỉ mô tả không gian, bề mặt đặt bó hoa, ánh sáng, màu.
-- setting, title, lighting, purpose, voiceScript, textOverlay: tiếng Việt có dấu. voiceScript 1–2 câu tự nhiên; textOverlay tối đa 60 ký tự.
+- setting, title, lighting, purpose, voice_script: tiếng Việt có dấu. voice_script 1–2 câu ngắn, tự nhiên — CHÍNH câu này hiện làm phụ đề trên video (không có phụ đề riêng); text_overlay để trống.
 - background_prompt: tiếng Anh, 1–3 câu, chỉ tả không gian trống (surface, room, light, colour palette, depth of field), dạng ảnh chụp sản phẩm chân thực.
 - local_backdrop: chọn MỘT phông cục bộ gần nhất với cảnh:
 ${phong}
@@ -633,7 +635,15 @@ export function parseStoredScenePlan(value: unknown): ScenePlan | null {
     return null
   }
   if (p.mode !== "CREATIVE" && p.mode !== "AUTHENTIC") return null
-  return p.version === 1 ? upgradeScenePlan(p as unknown as ScenePlanV1) : (p as ScenePlan)
+  const plan = p.version === 1 ? upgradeScenePlan(p as unknown as ScenePlanV1) : (p as ScenePlan)
+  return withSubtitleEqualsVoice(plan)
+}
+
+/** Phụ đề = lời thoại cho mọi cảnh (áp cả cho kịch bản lưu trước 24/09 tối). */
+export function withSubtitleEqualsVoice(plan: ScenePlan): ScenePlan {
+  return plan.scenes.every((s) => s.textOverlay === s.voiceScript)
+    ? plan
+    : { ...plan, scenes: plan.scenes.map((s) => ({ ...s, textOverlay: s.voiceScript })) }
 }
 
 /** Hình dạng bản v1 (trước 24/09/2026 tối). */
