@@ -14,6 +14,7 @@ import {
   TRANSITIONS,
   balanceSceneDurations,
   normalizeScenePlanPost,
+  publishingOf,
   type ScenePlan,
   type ScenePlanAudio,
   type ScenePlanMotion,
@@ -35,7 +36,9 @@ export interface ScenePlanSceneEdit {
 }
 
 export interface ScenePlanEdit {
-  readonly platforms?: readonly unknown[] | undefined
+  readonly platforms?: readonly unknown[] | "all" | undefined
+  /** Loại kết quả (content/audio/image/video) — `"all"` = cả 4. */
+  readonly outputs?: readonly unknown[] | "all" | undefined
   readonly scenes?: readonly ScenePlanSceneEdit[] | undefined
   /** Thay nguyên MỘT cảnh (kết quả "Sửa cảnh" bằng AI). */
   readonly replaceScene?: ScenePlanScene | undefined
@@ -59,8 +62,11 @@ export function applyScenePlanEdit(plan: ScenePlan, edit: ScenePlanEdit): SceneP
   }
 
   // Nền tảng → tỉ lệ + khuôn + thời lượng mục tiêu.
-  const platformsChanged = edit.platforms !== undefined
-  const pub = resolvePublishing(platformsChanged ? edit.platforms : plan.publishing.platforms)
+  const platformsChanged = edit.platforms !== undefined || edit.outputs !== undefined
+  const pub = resolvePublishing(
+    edit.platforms !== undefined ? edit.platforms : plan.publishing.allPlatforms ? "all" : plan.publishing.platforms,
+    edit.outputs !== undefined ? edit.outputs : plan.publishing.allOutputs ? "all" : plan.publishing.outputs
+  )
 
   let voiceChanged = false
   const userDuration = new Map<number, number>()
@@ -125,7 +131,7 @@ export function applyScenePlanEdit(plan: ScenePlan, edit: ScenePlanEdit): SceneP
       scenes,
       revision: plan.revision + 1,
       publishing: platformsChanged
-        ? { platforms: pub.platforms, aspectRatio: pub.aspectRatio, otherRatios: pub.otherRatios }
+        ? publishingOf(pub)
         : plan.publishing,
       video: {
         ...plan.video,

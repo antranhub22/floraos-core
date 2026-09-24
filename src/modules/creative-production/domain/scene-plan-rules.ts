@@ -24,8 +24,10 @@ import { CHANNEL_TEXT_LIMITS, INSTAGRAM_MAX_HASHTAGS } from "./campaign-package-
 import {
   PLATFORM_SPECS,
   resolvePublishing,
+  type ProductionOutput,
   type PublishPlatform,
   type PublishPostChannel,
+  type VideoVariantPlan,
   type PublishRatio,
   type PublishVideoFormat,
 } from "./publishing-rules"
@@ -117,8 +119,10 @@ export interface ScenePlanInput {
   readonly targetAudience?: string | undefined
   readonly priceRange?: string | undefined
   readonly topic: ScenePlanTopic
-  /** Nền tảng đăng người dùng chọn ở Chặng 05 (v2) — quyết định tỉ lệ + khuôn video. */
-  readonly platforms?: readonly unknown[] | undefined
+  /** Nền tảng đăng người dùng chọn ở Chặng 04/05 — quyết định khung + khuôn video. `"all"` = tất cả. */
+  readonly platforms?: readonly unknown[] | "all" | undefined
+  /** Loại kết quả cần sản xuất (content/audio/image/video). `"all"` hoặc bỏ trống = cả 4. */
+  readonly outputs?: readonly unknown[] | "all" | undefined
 }
 
 export interface ScenePlanScene {
@@ -158,6 +162,17 @@ export interface ScenePlanPost {
 
 export interface ScenePlanPublishing {
   readonly platforms: readonly PublishPlatform[]
+  /** PHẠM VI SẢN XUẤT (PO 24/09/2026 tối). */
+  readonly allPlatforms: boolean
+  readonly outputs: readonly ProductionOutput[]
+  readonly allOutputs: boolean
+  readonly derivedOutputs: readonly ProductionOutput[]
+  /** Loại kết quả sẽ sản xuất = chọn + phụ thuộc. */
+  readonly produce: readonly ProductionOutput[]
+  /** Mọi khung cần sinh; `aspectRatio` là khung chính. */
+  readonly ratios: readonly PublishRatio[]
+  /** Một video mỗi khung. */
+  readonly videoVariants: readonly VideoVariantPlan[]
   readonly aspectRatio: PublishRatio
   /** Nền tảng khác tỉ lệ chính — cấu hình sẵn, CHƯA sinh (PO 24/09: mặc định 9:16). */
   readonly otherRatios: readonly { platform: PublishPlatform; ratio: PublishRatio }[]
@@ -290,6 +305,22 @@ function normHashtags(value: unknown, max: number): string[] {
     .slice(0, max)
 }
 
+/** Phần `publishing` lưu trong kịch bản từ phương án đăng. */
+export function publishingOf(pub: ReturnType<typeof resolvePublishing>): ScenePlanPublishing {
+  return {
+    platforms: pub.platforms,
+    allPlatforms: pub.allPlatforms,
+    outputs: pub.outputs,
+    allOutputs: pub.allOutputs,
+    derivedOutputs: pub.derivedOutputs,
+    produce: pub.produce,
+    ratios: pub.ratios,
+    videoVariants: pub.videoVariants,
+    aspectRatio: pub.aspectRatio,
+    otherRatios: pub.otherRatios,
+  }
+}
+
 /** Bài đăng hợp lệ cho một kênh: đủ dài, trong giới hạn kênh, không dính từ cấm cứng. */
 export function normalizeScenePlanPost(raw: unknown, channel: PublishPostChannel): ScenePlanPost | null {
   const o = raw as { text?: unknown; hashtags?: unknown } | null
@@ -317,7 +348,8 @@ export function completeScenePlanV2(
     mode: ScenePlanMode
     topic: ScenePlanTopic
     scenes: readonly Omit<ScenePlanScene, "durationSeconds" | "transition" | "shot" | "musicCue">[]
-    platforms?: readonly unknown[] | undefined
+    platforms?: readonly unknown[] | "all" | undefined
+    outputs?: readonly unknown[] | "all" | undefined
     revision?: number | undefined
   },
   raw: {
@@ -329,7 +361,7 @@ export function completeScenePlanV2(
     videoCaption?: Record<string, unknown> | undefined
   } = {}
 ): Pick<ScenePlan, "scenes" | "revision" | "story" | "publishing" | "video" | "audio" | "content"> {
-  const pub = resolvePublishing(base.platforms)
+  const pub = resolvePublishing(base.platforms, base.outputs)
   const rawScenes = raw.scenes ?? []
   const durations = balanceSceneDurations(
     base.scenes.map((sc, i) => ({
@@ -369,7 +401,7 @@ export function completeScenePlanV2(
       cta,
       logline: text(raw.story?.logline, 300),
     },
-    publishing: { platforms: pub.platforms, aspectRatio: pub.aspectRatio, otherRatios: pub.otherRatios },
+    publishing: publishingOf(pub),
     video: {
       format: pub.videoFormat,
       totalDurationSeconds: round1(durations.reduce((a, b) => a + b, 0)),
@@ -414,7 +446,7 @@ function dong(nhan: string, giaTri: string | readonly string[] | undefined | nul
 
 export function buildScenePlanPrompt(input: ScenePlanInput): string {
   const beats = SCENE_BEATS_BY_MODE[input.mode]
-  const pub = resolvePublishing(input.platforms)
+  const pub = resolvePublishing(input.platforms, input.outputs)
   const phong = LOCAL_BACKDROP_IDS.map((id) => `  - ${id}: ${LOCAL_BACKDROPS[id]}`).join("\n")
   const modeRule =
     input.mode === "AUTHENTIC"
@@ -458,7 +490,7 @@ KẾ HOẠCH SẢN XUẤT (ảnh, âm thanh, video, bài đăng dùng CHUNG kị
 - transition: ${TRANSITIONS.join(" | ")}; shot: ${SHOTS.join(" | ")}; music_cue: ${MUSIC_CUES.join(" | ")}.
 - audio.voice_id — chọn MỘT giọng hợp chủ đề: ${VOICE_CATALOG.map((v) => `${v.voiceId} (${v.displayName})`).join("; ")}. audio.music_mood: ${MUSIC_MOODS.join(" | ")}. audio.pacing: ${PACINGS.join(" | ")}.
 - video.caption_style: ${CAPTION_STYLES.join(" | ")}; video.end_card_text ≤ 60 ký tự.
-- posts: MỘT bài cho mỗi kênh ${pub.postChannels.join(", ")} (text tiếng Việt, đúng giọng kênh, kể cùng câu chuyện với các cảnh; hashtags). Không ghi giá nếu chưa có khoảng giá.
+- ${pub.postChannels.length > 0 ? `posts: MỘT bài cho mỗi kênh ${pub.postChannels.join(", ")} (text tiếng Việt, đúng giọng kênh, kể cùng câu chuyện với các cảnh; hashtags). Không ghi giá nếu chưa có khoảng giá.` : "posts: [] (người dùng không chọn sản xuất bài đăng)."}
 - video_caption: chú thích khi đăng video (ngắn, có CTA) + hashtags.
 - story: hook, cta, logline (một câu tóm câu chuyện).
 
@@ -602,7 +634,7 @@ export function normalizeAiScenePlan(raw: unknown, input: ScenePlanInput): Norma
 
   const obj = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined)
   const v2 = completeScenePlanV2(
-    { mode: input.mode, topic: input.topic, scenes, platforms: input.platforms },
+    { mode: input.mode, topic: input.topic, scenes, platforms: input.platforms, outputs: input.outputs },
     {
       scenes: o.scenes as Record<string, unknown>[],
       story: obj(o.story),
@@ -635,7 +667,11 @@ export function parseStoredScenePlan(value: unknown): ScenePlan | null {
     return null
   }
   if (p.mode !== "CREATIVE" && p.mode !== "AUTHENTIC") return null
-  const plan = p.version === 1 ? upgradeScenePlan(p as unknown as ScenePlanV1) : (p as ScenePlan)
+  let plan = p.version === 1 ? upgradeScenePlan(p as unknown as ScenePlanV1) : (p as ScenePlan)
+  // Kịch bản lưu trước "phạm vi sản xuất" (24/09 tối): suy phạm vi từ nền tảng đã lưu, đủ 4 loại kết quả.
+  if (!Array.isArray((plan.publishing as Partial<ScenePlanPublishing> | undefined)?.ratios)) {
+    plan = { ...plan, publishing: publishingOf(resolvePublishing(plan.publishing?.platforms ?? null, "all")) }
+  }
   return withSubtitleEqualsVoice(plan)
 }
 
@@ -851,6 +887,7 @@ export function buildRuleScenePlan(input: ScenePlanInput): ScenePlan {
       mode: input.mode,
       topic: input.topic,
       platforms: input.platforms,
+      outputs: input.outputs,
       scenes: beats.map((beat, i) => ({ sceneIndex: i + 1, beat, ...byBeat[beat] })),
     }),
   }

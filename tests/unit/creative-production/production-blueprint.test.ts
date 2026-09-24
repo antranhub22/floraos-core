@@ -50,10 +50,33 @@ describe("resolvePublishing — tỉ lệ theo nền tảng", () => {
   test("chỉ feed → 4:5", () => {
     expect(resolvePublishing(["facebook_feed", "instagram_feed"]).aspectRatio).toBe("4:5")
   })
-  test("trộn nhiều tỉ lệ → 9:16, ghi lại khung chưa sinh", () => {
+  test("trộn nhiều khung → sinh ĐỦ các khung, mỗi khung một video (PO 24/09 tối)", () => {
     const p = resolvePublishing(["tiktok", "youtube"])
     expect(p.aspectRatio).toBe("9:16")
-    expect(p.otherRatios).toEqual([{ platform: "youtube", ratio: "16:9" }])
+    expect(p.ratios).toEqual(["9:16", "16:9"])
+    expect(p.videoVariants.map((v) => v.ratio)).toEqual(["9:16", "16:9"])
+  })
+  test('"Tất cả" và danh sách rỗng = mọi nền tảng, mọi loại kết quả', () => {
+    const a = resolvePublishing("all", "all")
+    expect(a.allPlatforms && a.allOutputs).toBe(true)
+    expect(a.ratios).toEqual(["9:16", "4:5", "16:9"])
+    expect(resolvePublishing([], []).allPlatforms).toBe(true)
+  })
+  test("mặc định (không truyền) = TikTok + Reels 9:16, đủ 4 loại", () => {
+    const d = resolvePublishing(undefined, undefined)
+    expect(d.platforms).toEqual(["tiktok", "instagram_reels", "facebook_reels"])
+    expect(d.produce).toEqual(["content", "audio", "image", "video"])
+  })
+  test("chọn video mà không chọn ảnh/âm thanh → tự thêm phụ thuộc; không content → không bài đăng", () => {
+    const p = resolvePublishing(["tiktok"], ["video"])
+    expect(p.derivedOutputs).toEqual(["image", "audio"])
+    expect(p.produce).toEqual(["audio", "image", "video"])
+    expect(p.postChannels).toEqual([])
+  })
+  test("chỉ chọn content → không video, không khung video", () => {
+    const p = resolvePublishing(["facebook_feed"], ["content"])
+    expect(p.videoVariants).toEqual([])
+    expect(p.postChannels).toEqual(["facebook"])
   })
   test("bỏ mã lạ", () => {
     expect(resolvePublishing(["myspace", "tiktok"]).platforms).toEqual(["tiktok"])

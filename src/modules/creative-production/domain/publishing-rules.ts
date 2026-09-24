@@ -52,52 +52,120 @@ export const PLATFORM_SPECS: Readonly<Record<PublishPlatform, PlatformSpec>> = {
   instagram_feed: { platform: "instagram_feed", label: "Instagram Feed", ratio: "4:5", videoFormat: "SLIDESHOW", targetSeconds: 15, postChannel: "instagram" },
 }
 
-/** Mặc định hiện tại (PO 24/09): video dọc 9:16 cho TikTok + Reels. */
+/** Mặc định mỗi lần mở (PO 24/09/2026): TikTok + Reels, khung 9:16. */
 export const DEFAULT_PLATFORMS: readonly PublishPlatform[] = ["tiktok", "instagram_reels", "facebook_reels"]
 export const DEFAULT_RATIO: PublishRatio = "9:16"
+
+/** Loại kết quả sản xuất (PO 24/09/2026 tối). */
+export const PRODUCTION_OUTPUTS = ["content", "audio", "image", "video"] as const
+export type ProductionOutput = (typeof PRODUCTION_OUTPUTS)[number]
+
+/** Giá trị đặc biệt "Tất cả" — gửi từ giao diện khi người dùng bấm "Tất cả". */
+export const ALL = "all" as const
 
 export function isPublishPlatform(v: unknown): v is PublishPlatform {
   return typeof v === "string" && (PUBLISH_PLATFORMS as readonly string[]).includes(v)
 }
 
+export function isProductionOutput(v: unknown): v is ProductionOutput {
+  return typeof v === "string" && (PRODUCTION_OUTPUTS as readonly string[]).includes(v)
+}
+
+export interface VideoVariantPlan {
+  readonly ratio: PublishRatio
+  readonly videoFormat: PublishVideoFormat
+  readonly targetSeconds: number
+  readonly platforms: readonly PublishPlatform[]
+}
+
 export interface PublishingPlan {
   readonly platforms: readonly PublishPlatform[]
-  /** Tỉ lệ khung SINH ẢNH + VIDEO. */
+  readonly allPlatforms: boolean
+  /** Loại kết quả NGƯỜI DÙNG chọn. */
+  readonly outputs: readonly ProductionOutput[]
+  readonly allOutputs: boolean
+  /** Loại kết quả hệ thống tự thêm vì phụ thuộc (video ⇒ ảnh + âm thanh). */
+  readonly derivedOutputs: readonly ProductionOutput[]
+  /** Loại kết quả SẼ SẢN XUẤT = chọn + phụ thuộc. */
+  readonly produce: readonly ProductionOutput[]
+  /** Mọi khung cần sinh (ảnh + video) — mỗi khung một bộ ảnh, một video. */
+  readonly ratios: readonly PublishRatio[]
+  /** Khung chính (9:16 nếu có) — thời lượng kịch bản theo video của khung này. */
   readonly aspectRatio: PublishRatio
+  /** Một video mỗi khung (khi có "video"). */
+  readonly videoVariants: readonly VideoVariantPlan[]
   readonly videoFormat: PublishVideoFormat
-  /** Thời lượng video mục tiêu (giây). */
   readonly targetSeconds: number
-  /** Kênh bài đăng cần viết (theo nền tảng đã chọn, không trùng). */
+  /** Kênh bài đăng (khi có "content"). */
   readonly postChannels: readonly PublishPostChannel[]
-  /** Nền tảng đã chọn nhưng khác tỉ lệ chính — chưa sinh (cấu hình sẵn cho sau này). */
+  /** Giữ cho tương thích — từ 24/09 tối mọi khung đều sinh nên luôn rỗng. */
   readonly otherRatios: readonly { platform: PublishPlatform; ratio: PublishRatio }[]
 }
 
+function pickList<T extends string>(
+  input: readonly unknown[] | typeof ALL | null | undefined,
+  guard: (v: unknown) => v is T,
+  all: readonly T[],
+  whenMissing: readonly T[]
+): { list: T[]; isAll: boolean } {
+  if (input === ALL) return { list: [...all], isAll: true }
+  if (input == null) return { list: [...whenMissing], isAll: whenMissing.length === all.length }
+  if (Array.isArray(input) && input.includes(ALL)) return { list: [...all], isAll: true }
+  const picked = Array.from(new Set((input as readonly unknown[]).filter(guard)))
+  // Danh sách rỗng = "Tất cả" (quy tắc của API; giao diện luôn gửi ít nhất một mục hoặc "all").
+  if (picked.length === 0) return { list: [...all], isAll: true }
+  return { list: picked, isAll: picked.length === all.length }
+}
+
 /**
- * Suy phương án đăng từ nền tảng đã chọn: cùng một tỉ lệ thì dùng tỉ lệ đó;
- * nhiều tỉ lệ thì ưu tiên 9:16 (mặc định hiện tại), không có 9:16 thì tỉ lệ
- * của nền tảng đầu tiên. Thời lượng = ngắn nhất trong các nền tảng cùng tỉ lệ
- * (một video dùng được cho mọi nền tảng đó).
+ * Phạm vi sản xuất từ lựa chọn của người dùng (PO 24/09/2026 tối):
+ * - chọn gì sản xuất theo đó; mặc định (không truyền) TikTok + Reels 9:16, đủ 4 loại;
+ * - "Tất cả" (`"all"`, hoặc danh sách rỗng) = mọi nền tảng / mọi loại kết quả;
+ * - nhiều nền tảng khác khung ⇒ sinh ĐỦ các khung (mỗi khung một bộ ảnh + một video);
+ * - video phụ thuộc ảnh + âm thanh ⇒ tự thêm.
  */
-export function resolvePublishing(input: readonly unknown[] | null | undefined): PublishingPlan {
-  const picked = Array.from(new Set((input ?? []).filter(isPublishPlatform)))
-  const platforms = picked.length > 0 ? picked : [...DEFAULT_PLATFORMS]
-  const ratios = Array.from(new Set(platforms.map((p) => PLATFORM_SPECS[p].ratio)))
-  const aspectRatio: PublishRatio =
-    ratios.length === 1 ? ratios[0]! : ratios.includes(DEFAULT_RATIO) ? DEFAULT_RATIO : PLATFORM_SPECS[platforms[0]!].ratio
-  const main = platforms.filter((p) => PLATFORM_SPECS[p].ratio === aspectRatio).map((p) => PLATFORM_SPECS[p])
-  const shortest = main.reduce((a, b) => (b.targetSeconds < a.targetSeconds ? b : a))
-  const postChannels = Array.from(
-    new Set(platforms.map((p) => PLATFORM_SPECS[p].postChannel).filter((c): c is PublishPostChannel => c !== null))
-  )
+export function resolvePublishing(
+  platformsInput: readonly unknown[] | typeof ALL | null | undefined,
+  outputsInput?: readonly unknown[] | typeof ALL | null | undefined
+): PublishingPlan {
+  const p = pickList(platformsInput, isPublishPlatform, PUBLISH_PLATFORMS, DEFAULT_PLATFORMS)
+  const o = pickList(outputsInput, isProductionOutput, PRODUCTION_OUTPUTS, PRODUCTION_OUTPUTS)
+  const platforms = p.list
+  const outputs = o.list
+  const derived: ProductionOutput[] = []
+  if (outputs.includes("video")) {
+    if (!outputs.includes("image")) derived.push("image")
+    if (!outputs.includes("audio")) derived.push("audio")
+  }
+  const produce = PRODUCTION_OUTPUTS.filter((x) => outputs.includes(x) || derived.includes(x))
+
+  const ratios = PUBLISH_RATIOS.filter((r) => platforms.some((pl) => PLATFORM_SPECS[pl].ratio === r))
+  const aspectRatio: PublishRatio = ratios.includes(DEFAULT_RATIO) ? DEFAULT_RATIO : ratios[0]!
+  const videoVariants: VideoVariantPlan[] = produce.includes("video")
+    ? ratios.map((ratio) => {
+        const specs = platforms.filter((pl) => PLATFORM_SPECS[pl].ratio === ratio).map((pl) => PLATFORM_SPECS[pl])
+        const shortest = specs.reduce((a, b) => (b.targetSeconds < a.targetSeconds ? b : a))
+        return { ratio, videoFormat: shortest.videoFormat, targetSeconds: shortest.targetSeconds, platforms: specs.map((x) => x.platform) }
+      })
+    : []
+  const primarySpecs = platforms.filter((pl) => PLATFORM_SPECS[pl].ratio === aspectRatio).map((pl) => PLATFORM_SPECS[pl])
+  const primary = primarySpecs.reduce((a, b) => (b.targetSeconds < a.targetSeconds ? b : a))
+  const postChannels = produce.includes("content")
+    ? Array.from(new Set(platforms.map((pl) => PLATFORM_SPECS[pl].postChannel).filter((c): c is PublishPostChannel => c !== null)))
+    : []
   return {
     platforms,
+    allPlatforms: p.isAll,
+    outputs,
+    allOutputs: o.isAll,
+    derivedOutputs: derived,
+    produce,
+    ratios,
     aspectRatio,
-    videoFormat: shortest.videoFormat,
-    targetSeconds: shortest.targetSeconds,
-    postChannels: postChannels.length > 0 ? postChannels : ["facebook"],
-    otherRatios: platforms
-      .filter((p) => PLATFORM_SPECS[p].ratio !== aspectRatio)
-      .map((p) => ({ platform: p, ratio: PLATFORM_SPECS[p].ratio })),
+    videoVariants,
+    videoFormat: primary.videoFormat,
+    targetSeconds: primary.targetSeconds,
+    postChannels,
+    otherRatios: [],
   }
 }
