@@ -32,6 +32,8 @@ export interface CreateCampaignPackageRow {
   readonly content: unknown
   readonly variantAssetIds: readonly string[]
   readonly videoJobId: string | null
+  /** Mọi video của gói (mỗi khung một video); phần tử đầu = `videoJobId`. */
+  readonly videoJobIds: readonly string[]
   readonly audioJobId: string | null
 }
 
@@ -40,6 +42,7 @@ export interface UpdateCampaignPackageRow {
   readonly content?: unknown
   readonly variantAssetIds?: readonly string[] | undefined
   readonly videoJobId?: string | null | undefined
+  readonly videoJobIds?: readonly string[] | undefined
   readonly audioJobId?: string | null | undefined
 }
 
@@ -61,6 +64,7 @@ export class CampaignPackageRepository {
         content: json(row.content),
         variant_asset_ids: [...row.variantAssetIds],
         video_job_id: row.videoJobId,
+        video_job_ids: [...row.videoJobIds],
         audio_job_id: row.audioJobId,
         status: "DRAFT",
         created_by: ctx.userId,
@@ -99,6 +103,7 @@ export class CampaignPackageRepository {
         ...(row.content !== undefined ? { content: json(row.content) } : {}),
         ...(row.variantAssetIds !== undefined ? { variant_asset_ids: [...row.variantAssetIds] } : {}),
         ...(row.videoJobId !== undefined ? { video_job_id: row.videoJobId } : {}),
+        ...(row.videoJobIds !== undefined ? { video_job_ids: [...row.videoJobIds] } : {}),
         ...(row.audioJobId !== undefined ? { audio_job_id: row.audioJobId } : {}),
         status: "DRAFT",
         qa_report: json(null),

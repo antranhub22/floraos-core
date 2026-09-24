@@ -14,7 +14,8 @@ export const createPackageBodySchema = z.object({
   topic: topicSnapshotSchema.optional(),
   posts: packagePostsSchema.optional(),
   variant_asset_ids: z.array(z.string().min(1)).max(40).optional().describe("Biến thể MARKETING của đúng Master"),
-  video_job_id: z.string().min(1).nullish(),
+  video_job_id: z.string().min(1).nullish().describe("Video chính (API cũ) — gộp vào video_job_ids"),
+  video_job_ids: z.array(z.string().min(1)).max(8).optional().describe("Mỗi khung hình trong phạm vi một video"),
   audio_job_id: z.string().min(1).nullish(),
 })
 

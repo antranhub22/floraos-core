@@ -17,6 +17,8 @@ const patchSchema = z.object({
   posts: packagePostsSchema.optional(),
   variant_asset_ids: z.array(z.string().min(1)).max(40).optional(),
   video_job_id: z.string().min(1).nullable().optional(),
+  /** Mọi video của gói (mỗi khung một video) — thay trọn danh sách. */
+  video_job_ids: z.array(z.string().min(1)).max(8).optional(),
   audio_job_id: z.string().min(1).nullable().optional(),
 })
 
@@ -45,6 +47,7 @@ export const PATCH = handle(async (request, context: Ctx) => {
       posts: d.posts,
       variantAssetIds: d.variant_asset_ids,
       videoJobId: d.video_job_id,
+      videoJobIds: d.video_job_ids,
       audioJobId: d.audio_job_id,
     })
   )

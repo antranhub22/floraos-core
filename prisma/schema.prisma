@@ -1851,7 +1851,10 @@ model campaign_packages {
   /// Nội dung bài đăng theo kênh: [{ channel, text, hashtags[] }].
   content            Json?
   variant_asset_ids  String[]  @default([])
+  /// Video chính (= phần tử đầu của `video_job_ids`, giữ để tương thích).
   video_job_id       String?
+  /// Mọi video của gói — mỗi khung hình trong phạm vi sản xuất một video (24/09/2026).
+  video_job_ids      String[]  @default([])
   audio_job_id       String?
   /// DRAFT | QA_PASSED | QA_NEEDS_REVIEW | QA_REJECTED | APPROVED
   status             String    @default("DRAFT")

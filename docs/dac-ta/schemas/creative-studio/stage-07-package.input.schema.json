@@ -126,6 +126,7 @@
       }
     },
     "video_job_id": {
+      "description": "Video chính (API cũ) — gộp vào video_job_ids",
       "anyOf": [
         {
           "type": "string",
@@ -135,6 +136,15 @@
           "type": "null"
         }
       ]
+    },
+    "video_job_ids": {
+      "description": "Mỗi khung hình trong phạm vi một video",
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "audio_job_id": {
       "anyOf": [

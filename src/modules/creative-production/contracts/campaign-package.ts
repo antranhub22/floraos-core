@@ -23,7 +23,7 @@ export const qaReportSchema = z.object({
   verdict: qaVerdictSchema,
   checks: z.array(
     z.object({
-      id: z.enum(["product_integrity", "approvals", "platform_specs", "content", "brand", "plan_consistency"]),
+      id: z.enum(["product_integrity", "approvals", "platform_specs", "content", "brand", "plan_consistency", "scope_coverage"]),
       title: z.string(),
       verdict: qaVerdictSchema,
       reasons: z.array(z.string()),
@@ -48,6 +48,17 @@ export const launchPlanBodySchema = z.object({
     .default([]),
 })
 
+const packageVideoSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  stage: z.string(),
+  video_approval: approvalStateSchema,
+  aspect_ratio: z.string(),
+  final_video_url: z.string().nullable(),
+  script_approval: approvalStateSchema,
+  view_url: z.string().nullable().describe("URL ký có hạn để phát video"),
+})
+
 /** `CampaignPackageView` — đầu ra chung của Chặng 07, 08, 09, 10. */
 export const campaignPackageViewSchema = z.object({
   id: z.string(),
@@ -59,7 +70,8 @@ export const campaignPackageViewSchema = z.object({
   topic: topicSnapshotSchema.nullable(),
   posts: z.array(packagePostSchema),
   variant_asset_ids: z.array(z.string()),
-  video_job_id: z.string().nullable(),
+  video_job_id: z.string().nullable().describe("Video chính (= video_job_ids[0])"),
+  video_job_ids: z.array(z.string()).describe("Mọi video của gói — mỗi khung hình trong phạm vi một video"),
   audio_job_id: z.string().nullable(),
   variants: z.array(
     z.object({
@@ -72,18 +84,8 @@ export const campaignPackageViewSchema = z.object({
       watermark: z.boolean(),
     })
   ),
-  video: z
-    .object({
-      id: z.string(),
-      title: z.string(),
-      stage: z.string(),
-      video_approval: approvalStateSchema,
-      aspect_ratio: z.string(),
-      final_video_url: z.string().nullable(),
-      script_approval: approvalStateSchema,
-      view_url: z.string().nullable().describe("URL ký có hạn để phát video"),
-    })
-    .nullable(),
+  video: packageVideoSchema.nullable().describe("Video chính (= videos[0])"),
+  videos: z.array(packageVideoSchema).describe("Mọi video của gói, theo thứ tự video_job_ids"),
   audio: z.object({ job_id: z.string(), stage: z.string(), audio_url: z.string().nullable() }).nullable(),
   qa_report: qaReportSchema.nullable(),
   qa_checked_at: isoDateTimeSchema.nullable(),

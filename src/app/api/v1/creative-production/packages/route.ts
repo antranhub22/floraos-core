@@ -29,6 +29,7 @@ export const POST = handle(async (request) => {
     posts: d.posts,
     variantAssetIds: d.variant_asset_ids,
     videoJobId: d.video_job_id ?? null,
+    videoJobIds: d.video_job_ids,
     audioJobId: d.audio_job_id ?? null,
   })
   return jsonResponse(result, { status: 201 })

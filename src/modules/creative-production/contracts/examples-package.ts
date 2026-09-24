@@ -53,6 +53,7 @@ const baseView = {
   posts,
   variant_asset_ids: [variantId],
   video_job_id: null,
+  video_job_ids: [] as string[],
   audio_job_id: null,
   variants: [
     {
@@ -66,6 +67,7 @@ const baseView = {
     },
   ],
   video: null,
+  videos: [],
   audio: null,
   approved_by: null,
   approved_at: null,

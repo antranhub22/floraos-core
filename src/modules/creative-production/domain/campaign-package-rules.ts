@@ -70,7 +70,7 @@ export const PACKAGE_IDENTITY_WARNING = 0.99
 export type QaVerdict = "PASS" | "NEEDS_REVIEW" | "REJECTED"
 
 export interface QaCheck {
-  readonly id: "product_integrity" | "approvals" | "platform_specs" | "content" | "brand" | "plan_consistency"
+  readonly id: "product_integrity" | "approvals" | "platform_specs" | "content" | "brand" | "plan_consistency" | "scope_coverage"
   readonly title: string
   readonly verdict: QaVerdict
   readonly reasons: readonly string[]
@@ -99,18 +99,32 @@ export interface QaPlanLink {
   readonly scenePlanRevision: number | null
 }
 
+export type QaVideoInput = { readonly stage: string; readonly approval: string; readonly aspectRatio: string } & Partial<QaPlanLink> & {
+  /** Video dùng nguyên bản phối Khu vực C (Đợt 4). */
+  readonly usesPlanAudio?: boolean | undefined
+}
+
+/** Phạm vi sản xuất đã chọn ở Chặng 04/05 (PO 24/09/2026). */
+export interface QaScope {
+  /** Loại kết quả phải có (đã gồm loại tự thêm vì video cần). */
+  readonly produce: readonly ("content" | "audio" | "image" | "video")[]
+  /** Mỗi khung một bộ ảnh + một video. */
+  readonly ratios: readonly string[]
+  /** Kênh phải có bài đăng (khi có content). */
+  readonly postChannels: readonly string[]
+}
+
 export interface QaInput {
   readonly posts: readonly PackagePost[]
   readonly variants: readonly QaVariantInput[]
-  /** `null` = gói không kèm video. */
-  readonly video: ({ readonly stage: string; readonly approval: string; readonly aspectRatio: string } & Partial<QaPlanLink> & {
-    /** Video dùng nguyên bản phối Khu vực C (Đợt 4). */
-    readonly usesPlanAudio?: boolean | undefined
-  }) | null
+  /** `null` = gói không kèm video. Gói nhiều video dùng `videos`. */
+  readonly video: QaVideoInput | null
+  /** Mọi video của gói (mỗi khung một video) — có thì thay cho `video`. */
+  readonly videos?: readonly QaVideoInput[] | undefined
   /** `null` = gói không kèm audio. */
   readonly audio: ({ readonly stage: string } & Partial<QaPlanLink>) | null
   /** Kịch bản sản xuất tổng của gói (bản hiện hành). `null` = gói cũ, bỏ qua trục đồng nhất. */
-  readonly plan?: { readonly scenePlanId: string; readonly revision: number } | null | undefined
+  readonly plan?: { readonly scenePlanId: string; readonly revision: number; readonly scope?: QaScope | undefined } | null | undefined
   readonly brand: { readonly hasLogo: boolean; readonly forbiddenStyles: string | null }
   readonly now: Date
 }
@@ -131,9 +145,14 @@ function check(id: QaCheck["id"], title: string, reasons: { v: QaVerdict; msg: s
 }
 
 export function evaluateCampaignQa(input: QaInput): QaReport {
+  const videos: readonly QaVideoInput[] = input.videos ?? (input.video ? [input.video] : [])
+  const scope = input.plan?.scope ?? null
+  // Có phạm vi: chỉ đòi loại kết quả đã chọn. Gói cũ (không phạm vi): đòi đủ như trước.
+  const wants = (o: QaScope["produce"][number]) => !scope || scope.produce.includes(o)
+  const many = videos.length > 1
   // 1. Toàn vẹn sản phẩm — số ĐO của worker, không phải hằng.
   const integrity: { v: QaVerdict; msg: string }[] = []
-  if (input.variants.length === 0) {
+  if (input.variants.length === 0 && wants("image")) {
     integrity.push({ v: "REJECTED", msg: "Gói chưa có ảnh biến thể nào (Khu vực D)." })
   }
   for (const v of input.variants) {
@@ -162,11 +181,12 @@ export function evaluateCampaignQa(input: QaInput): QaReport {
       msg: `${chuaDuyet.length} ảnh biến thể chưa được duyệt (I5).`,
     })
   }
-  if (input.video) {
-    if (input.video.stage === "FAILED" || input.video.stage === "REJECTED") {
-      approvals.push({ v: "REJECTED", msg: `Video ở trạng thái ${input.video.stage}.` })
-    } else if (input.video.approval !== "APPROVED") {
-      approvals.push({ v: "NEEDS_REVIEW", msg: "Video thành phẩm chưa được duyệt (P4)." })
+  for (const video of videos) {
+    const label = many ? `Video ${video.aspectRatio}` : "Video"
+    if (video.stage === "FAILED" || video.stage === "REJECTED") {
+      approvals.push({ v: "REJECTED", msg: `${label} ở trạng thái ${video.stage}.` })
+    } else if (video.approval !== "APPROVED") {
+      approvals.push({ v: "NEEDS_REVIEW", msg: `${label} thành phẩm chưa được duyệt (P4).` })
     }
   }
   if (input.audio) {
@@ -182,10 +202,10 @@ export function evaluateCampaignQa(input: QaInput): QaReport {
   const ratios = new Set<string>(
     input.variants.map((v) => v.aspectRatio).filter((r): r is string => Boolean(r))
   )
-  const videoRatio = input.video && input.video.stage !== "FAILED" ? input.video.aspectRatio : null
+  const videoRatios = videos.filter((v) => v.stage !== "FAILED").map((v) => v.aspectRatio)
   for (const post of input.posts) {
     const allowed = CHANNEL_RATIOS[post.channel]
-    const coVideo = videoRatio !== null && allowed.includes(videoRatio)
+    const coVideo = videoRatios.some((r) => allowed.includes(r))
     const coAnh = allowed.some((r) => ratios.has(r))
     if (post.channel === "tiktok" && !coVideo && !coAnh) {
       specs.push({ v: "NEEDS_REVIEW", msg: "TikTok cần video hoặc ảnh 9:16 — gói chưa có." })
@@ -199,7 +219,7 @@ export function evaluateCampaignQa(input: QaInput): QaReport {
 
   // 4. Nội dung — đủ bài, trong giới hạn, không vi phạm từ điển ngành hoa.
   const content: { v: QaVerdict; msg: string }[] = []
-  if (input.posts.length === 0) {
+  if (input.posts.length === 0 && wants("content")) {
     content.push({ v: "REJECTED", msg: "Gói chưa có bài đăng nào (Khu vực B)." })
   }
   for (const post of input.posts) {
@@ -261,11 +281,36 @@ export function evaluateCampaignQa(input: QaInput): QaReport {
     }
     for (const v of input.variants) cu(`Ảnh ${v.assetId.slice(0, 8)}`, { scenePlanId: v.scenePlanId ?? null, scenePlanRevision: v.scenePlanRevision ?? null })
     if (input.audio) cu("Bản âm thanh", input.audio)
-    if (input.video) {
-      cu("Video", input.video)
-      if (input.video.usesPlanAudio === false) {
-        consistency.push({ v: "NEEDS_REVIEW", msg: "Video tự đọc lại lời thoại, không dùng bản phối Khu vực C — dựng lại bằng \"Dựng video từ bộ tài sản\"." })
+    for (const video of videos) {
+      const label = many ? `Video ${video.aspectRatio}` : "Video"
+      cu(label, video)
+      if (video.usesPlanAudio === false) {
+        consistency.push({ v: "NEEDS_REVIEW", msg: `${label} tự đọc lại lời thoại, không dùng bản phối Khu vực C — dựng lại bằng "Dựng video từ bộ tài sản".` })
       }
+    }
+  }
+
+  // 7. Đủ phạm vi đã chọn (PO 24/09/2026): mỗi loại kết quả đã chọn phải có,
+  // mỗi khung một bộ ảnh + một video, mỗi kênh một bài.
+  const coverage: { v: QaVerdict; msg: string }[] = []
+  if (scope) {
+    if (scope.produce.includes("content")) {
+      const have = new Set(input.posts.map((p) => p.channel as string))
+      const missing = scope.postChannels.filter((c) => !have.has(c))
+      if (missing.length > 0) coverage.push({ v: "REJECTED", msg: `Thiếu bài đăng cho ${missing.join(", ")} (Khu vực B).` })
+    }
+    if (scope.produce.includes("audio") && !input.audio) {
+      coverage.push({ v: "REJECTED", msg: "Thiếu bản âm thanh (Khu vực C)." })
+    }
+    if (scope.produce.includes("image")) {
+      const have = new Set(input.variants.map((v) => v.aspectRatio).filter(Boolean))
+      const missing = scope.ratios.filter((r) => !have.has(r))
+      if (missing.length > 0) coverage.push({ v: "REJECTED", msg: `Thiếu ảnh khung ${missing.join(", ")} (Khu vực D).` })
+    }
+    if (scope.produce.includes("video")) {
+      const have = new Set(videos.map((v) => v.aspectRatio))
+      const missing = scope.ratios.filter((r) => !have.has(r))
+      if (missing.length > 0) coverage.push({ v: "REJECTED", msg: `Thiếu video khung ${missing.join(", ")} (Khu vực E).` })
     }
   }
 
@@ -276,6 +321,7 @@ export function evaluateCampaignQa(input: QaInput): QaReport {
     check("content", "Nội dung & từ điển ngành hoa", content),
     check("brand", "Nhận diện thương hiệu", brand),
     ...(plan ? [check("plan_consistency", "Đồng nhất kịch bản sản xuất (Chặng 05)", consistency)] : []),
+    ...(scope ? [check("scope_coverage", "Đủ phạm vi đã chọn (nền tảng + loại kết quả)", coverage)] : []),
   ]
 
   return {

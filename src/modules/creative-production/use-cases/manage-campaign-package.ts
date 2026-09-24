@@ -14,6 +14,7 @@
 
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { SCENE_PLAN_FEATURE, parseStoredScenePlan } from "../domain/scene-plan-rules"
+import { resolvePublishing } from "../domain/publishing-rules"
 import { conflict, notFound, validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
@@ -34,6 +35,7 @@ import {
   type LaunchPlan,
   type PackagePost,
   type QaReport,
+  type QaScope,
 } from "../domain/campaign-package-rules"
 import {
   CampaignPackageRepository,
@@ -63,6 +65,8 @@ export interface CreateCampaignPackageInput {
   readonly posts?: readonly PackagePost[] | undefined
   readonly variantAssetIds?: readonly string[] | undefined
   readonly videoJobId?: string | null | undefined
+  /** Mọi video của gói (mỗi khung một video, 24/09/2026). */
+  readonly videoJobIds?: readonly string[] | undefined
   readonly audioJobId?: string | null | undefined
 }
 
@@ -71,7 +75,21 @@ export interface UpdateCampaignPackageInput {
   readonly posts?: readonly PackagePost[] | undefined
   readonly variantAssetIds?: readonly string[] | undefined
   readonly videoJobId?: string | null | undefined
+  readonly videoJobIds?: readonly string[] | undefined
   readonly audioJobId?: string | null | undefined
+}
+
+/**
+ * Hợp `video_job_id` (video chính, API cũ) + `video_job_ids` thành một danh sách
+ * không trùng; phần tử đầu là video chính. `undefined` = không đổi.
+ */
+export function mergeVideoIds(
+  primary: string | null | undefined,
+  list: readonly string[] | undefined
+): { videoJobId: string | null; videoJobIds: string[] } | undefined {
+  if (primary === undefined && list === undefined) return undefined
+  const ids = Array.from(new Set([...(primary ? [primary] : []), ...(list ?? [])]))
+  return { videoJobId: ids[0] ?? null, videoJobIds: ids }
 }
 
 // ─── Kiểm định danh ──────────────────────────────────────────────────────────
@@ -99,10 +117,12 @@ async function assertVariants(ctx: TenantContext, masterAssetId: string, ids: re
   return unique
 }
 
-async function assertVideo(ctx: TenantContext, id: string | null | undefined) {
-  if (!id) return
-  if (!(await new VideoJobRepository().findById(ctx, id))) {
-    throw validationFailed({ video_job_id: "Video job không tồn tại trong tổ chức." })
+async function assertVideos(ctx: TenantContext, ids: readonly string[] | undefined) {
+  const repo = new VideoJobRepository()
+  for (const id of ids ?? []) {
+    if (!(await repo.findById(ctx, id))) {
+      throw validationFailed({ video_job_id: `Video job ${id} không tồn tại trong tổ chức.` })
+    }
   }
 }
 
@@ -118,7 +138,8 @@ async function assertAudio(ctx: TenantContext, id: string | null | undefined) {
 export async function createCampaignPackage(ctx: TenantContext, input: CreateCampaignPackageInput) {
   const master = await assertMaster(ctx, input.masterAssetId)
   const variantIds = await assertVariants(ctx, master.id, input.variantAssetIds ?? [])
-  await assertVideo(ctx, input.videoJobId)
+  const vids = mergeVideoIds(input.videoJobId ?? null, input.videoJobIds ?? []) ?? { videoJobId: null, videoJobIds: [] }
+  await assertVideos(ctx, vids.videoJobIds)
   await assertAudio(ctx, input.audioJobId)
 
   const row = await new CampaignPackageRepository().create(ctx, {
@@ -129,7 +150,8 @@ export async function createCampaignPackage(ctx: TenantContext, input: CreateCam
     topic: input.topic ?? null,
     content: { posts: input.posts ?? [] },
     variantAssetIds: variantIds,
-    videoJobId: input.videoJobId ?? null,
+    videoJobId: vids.videoJobId,
+    videoJobIds: vids.videoJobIds,
     audioJobId: input.audioJobId ?? null,
   })
   return getCampaignPackage(ctx, row.id)
@@ -150,14 +172,16 @@ export async function updateCampaignPackage(
     input.variantAssetIds !== undefined
       ? await assertVariants(ctx, current.master_asset_id, input.variantAssetIds)
       : undefined
-  await assertVideo(ctx, input.videoJobId)
+  const vids = mergeVideoIds(input.videoJobId, input.videoJobIds)
+  await assertVideos(ctx, vids?.videoJobIds)
   await assertAudio(ctx, input.audioJobId)
 
   const updated = await repo.updateDraft(ctx, id, {
     name: input.name?.trim(),
     content: input.posts !== undefined ? { posts: input.posts } : undefined,
     variantAssetIds: variantIds,
-    videoJobId: input.videoJobId,
+    videoJobId: vids?.videoJobId,
+    videoJobIds: vids?.videoJobIds,
     audioJobId: input.audioJobId,
   })
   if (!updated) throw conflict("Gói vừa được duyệt ở nơi khác — tải lại để xem.")
@@ -169,6 +193,13 @@ export async function updateCampaignPackage(
 export function postsOf(row: Pick<campaign_packages, "content">): PackagePost[] {
   const content = row.content as { posts?: PackagePost[] } | null
   return Array.isArray(content?.posts) ? content!.posts : []
+}
+
+/** Mọi video của gói — gói cũ chỉ có `video_job_id`. */
+export function videoIdsOf(row: Pick<campaign_packages, "video_job_id" | "video_job_ids">): string[] {
+  const list = row.video_job_ids ?? []
+  if (list.length > 0) return [...list]
+  return row.video_job_id ? [row.video_job_id] : []
 }
 
 export function launchPlanOf(row: Pick<campaign_packages, "launch_plan">): LaunchPlan | null {
@@ -198,23 +229,24 @@ export async function getCampaignPackage(ctx: TenantContext, id: string) {
     })
   }
 
-  let video = null
-  if (row.video_job_id) {
-    const v = await new VideoJobRepository().findById(ctx, row.video_job_id)
-    if (v) {
-      video = {
-        id: v.id,
-        title: v.title,
-        stage: v.stage,
-        video_approval: v.video_approval,
-        aspect_ratio: v.aspect_ratio,
-        final_video_url: v.final_video_url,
-        script_approval: v.script_approval,
-        // URL ký có hạn để phát video ngay ở Chặng 07 (24/09/2026).
-        view_url: await videoViewUrl(ctx, v.final_video_url),
-      }
-    }
+  const videoRepo = new VideoJobRepository()
+  const videos = []
+  for (const vid of videoIdsOf(row)) {
+    const v = await videoRepo.findById(ctx, vid)
+    if (!v) continue
+    videos.push({
+      id: v.id,
+      title: v.title,
+      stage: v.stage,
+      video_approval: v.video_approval,
+      aspect_ratio: v.aspect_ratio,
+      final_video_url: v.final_video_url,
+      script_approval: v.script_approval,
+      // URL ký có hạn để phát video ngay ở Chặng 07 (24/09/2026).
+      view_url: await videoViewUrl(ctx, v.final_video_url),
+    })
   }
+  const video = videos[0] ?? null
 
   let audio = null
   if (row.audio_job_id) {
@@ -241,9 +273,11 @@ export async function getCampaignPackage(ctx: TenantContext, id: string) {
     posts: postsOf(row),
     variant_asset_ids: row.variant_asset_ids,
     video_job_id: row.video_job_id,
+    video_job_ids: videoIdsOf(row),
     audio_job_id: row.audio_job_id,
     variants,
     video,
+    videos,
     audio,
     qa_report: row.qa_report as QaReport | null,
     qa_checked_at: row.qa_checked_at?.toISOString() ?? null,
@@ -292,14 +326,19 @@ export async function runCampaignQa(ctx: TenantContext, id: string, now: Date = 
       assetId: a.id,
       approvalState: a.approval_state,
       identityScore: typeof a.identity_score === "number" ? a.identity_score : null,
-      aspectRatio: a.aspect_ratio,
+      aspectRatio: typeof meta.ratio === "string" ? meta.ratio : a.aspect_ratio,
       watermark: meta.watermark === true,
       scenePlanId: typeof meta.scene_plan_id === "string" ? meta.scene_plan_id : null,
       scenePlanRevision: typeof meta.scene_plan_revision === "number" ? meta.scene_plan_revision : null,
     })
   }
 
-  const videoRow = row.video_job_id ? await new VideoJobRepository().findById(ctx, row.video_job_id) : null
+  const videoRepo = new VideoJobRepository()
+  const videoRows = []
+  for (const vid of videoIdsOf(row)) {
+    const v = await videoRepo.findById(ctx, vid)
+    if (v) videoRows.push(v)
+  }
   const audioRow = row.audio_job_id ? await new AudioJobRepository().findById(ctx, row.audio_job_id) : null
   const brand = await new BrandProfileRepository().current(ctx)
   const forbidden = brand?.forbidden_styles
@@ -315,16 +354,15 @@ export async function runCampaignQa(ctx: TenantContext, id: string, now: Date = 
   const report = evaluateCampaignQa({
     posts: postsOf(row),
     variants,
-    video: videoRow
-      ? {
-          stage: videoRow.stage,
-          approval: videoRow.video_approval,
-          aspectRatio: videoRow.aspect_ratio,
-          scenePlanId: videoRow.scene_plan_id,
-          scenePlanRevision: videoRow.scene_plan_revision,
-          usesPlanAudio: Boolean(videoRow.audio_storage_key),
-        }
-      : null,
+    video: null,
+    videos: videoRows.map((v) => ({
+      stage: v.stage,
+      approval: v.video_approval,
+      aspectRatio: v.aspect_ratio,
+      scenePlanId: v.scene_plan_id,
+      scenePlanRevision: v.scene_plan_revision,
+      usesPlanAudio: Boolean(v.audio_storage_key),
+    })),
     audio: audioRow ? { stage: audioRow.stage, ...(await audioPlanLink(ctx, audioRow.id)) } : null,
     plan: await currentPlanOf(ctx, row),
     brand: { hasLogo: Boolean(brand?.logo_asset_id), forbiddenStyles },
@@ -401,14 +439,25 @@ async function audioPlanLink(ctx: TenantContext, audioJobId: string) {
 async function currentPlanOf(
   ctx: TenantContext,
   row: campaign_packages
-): Promise<{ scenePlanId: string; revision: number } | null> {
+): Promise<{ scenePlanId: string; revision: number; scope?: QaScope | undefined } | null> {
   const topic = (row.topic ?? null) as CampaignTopicSnapshot | null
   const id = topic?.scenePlanId
   if (!id) return null
   if (/^[0-9a-f-]{36}$/i.test(id)) {
     const j = await new GenerationJobRepository().findById(ctx, id)
     const plan = j && j.feature === SCENE_PLAN_FEATURE && j.status === "COMPLETED" ? parseStoredScenePlan(j.output) : null
-    if (plan) return { scenePlanId: id, revision: plan.revision }
+    if (plan) {
+      const pub = resolvePublishing(
+        plan.publishing.allPlatforms ? "all" : plan.publishing.platforms,
+        plan.publishing.allOutputs ? "all" : plan.publishing.outputs
+      )
+      return {
+        scenePlanId: id,
+        revision: plan.revision,
+        // Phạm vi sản xuất của kịch bản → trục QA "Đủ phạm vi đã chọn".
+        scope: { produce: pub.produce, ratios: pub.ratios, postChannels: pub.postChannels },
+      }
+    }
   }
   return { scenePlanId: id, revision: topic?.scenePlanRevision ?? 1 }
 }
