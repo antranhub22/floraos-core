@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest"
 import type { TenantContext } from "@/core/tenancy"
 import { executeCloudCreative } from "@/modules/media/use-cases/execute-cloud-creative"
 
@@ -73,6 +73,27 @@ describe("Decoupled Engine Architecture — Creative Studio Isolation", () => {
     role: "owner",
     permissions: [],
   } as unknown as TenantContext
+
+  // Test đơn vị KHÔNG được gọi nhà cung cấp thật: `tests/setup.ts` nạp `.env`
+  // của máy dev, có khoá thật thì Stability trả ảnh thật (tốn credit) và ca
+  // "mọi nhà cung cấp lỗi" không còn đúng (sự cố 24/09/2026 trên máy anh Tony).
+  // Xoá khoá + chặn mạng để chuỗi nhà cung cấp lỗi một cách tất định.
+  const PROVIDER_KEYS = [
+    "STABILITY_API_KEY",
+    "FAL_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_VERTEX_API_KEY",
+    "OPENAI_API_KEY",
+    "PHOTOROOM_API_KEY",
+  ]
+  beforeEach(() => {
+    for (const k of PROVIDER_KEYS) vi.stubEnv(k, "")
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Mạng bị chặn trong test đơn vị")))
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
 
   // 23/09/2026 — `studio_local` KHÔNG còn trả lại bytes ảnh gốc (bản trước
   // khiến ảnh gốc bị ghi thành "ảnh đã tối ưu"/"biến thể" giống hệt nhau).
