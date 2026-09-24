@@ -10,7 +10,7 @@
  * thay vào gói.
  */
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Check, CheckCircle2, Film, Headphones, ImageIcon, Loader2, RefreshCw, ShieldCheck, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +33,52 @@ export interface ReviewVideoJob {
   stage: string
   video_approval: string
   aspect_ratio: string
+}
+
+type VideoDetail = {
+  id: string
+  stage: string
+  video_approval: string
+  script_approval?: string
+  final_video_view_url?: string | null
+  error_message?: string | null
+  scenes?: Array<{ scene_index: number; duration_seconds: number; text_overlay: string | null; voice_script: string | null }>
+}
+type AudioDetail = { job_id: string; stage: string; audio_url: string | null; error: string | null }
+
+/**
+ * Đọc thẳng video/âm thanh ĐANG CHỌN (chưa cần lưu gói) từ cùng API mà Khu vực
+ * E/C dùng để phát — 24/09/2026: trước đây Chặng 07 chỉ đọc `pkg.video`/`pkg.audio`
+ * nên hiện "chưa render xong"/"chưa sẵn sàng" dù video đã duyệt P4.
+ */
+function useJobDetail<T>(path: string | null, nonce: number): { data: T | null; error: string | null } {
+  const [state, setState] = useState<{ data: T | null; error: string | null }>({ data: null, error: null })
+  useEffect(() => {
+    if (!path) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- bỏ chọn thì xoá dữ liệu cũ
+      setState({ data: null, error: null })
+      return
+    }
+    let cancelled = false
+    fetch(path)
+      .then(async (r) => {
+        if (!r.ok) {
+          const b = (await r.json().catch(() => ({}))) as { error?: { message?: string } }
+          throw new Error(b.error?.message || `HTTP ${r.status}`)
+        }
+        return (await r.json()) as T
+      })
+      .then((data) => {
+        if (!cancelled) setState({ data, error: null })
+      })
+      .catch((e) => {
+        if (!cancelled) setState({ data: null, error: e instanceof Error ? e.message : "Không đọc được" })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [path, nonce])
+  return state
 }
 
 type Rework = (area: "b" | "c" | "d" | "e", extra?: Record<string, string>) => void
@@ -71,13 +117,22 @@ export function PackageReviewSection(props: {
   onRework: Rework
 }) {
   const {
-    pkg, approved, scenePlan, planRef, marketing, selectedVariants, setSelectedVariants,
+    approved, scenePlan, planRef, marketing, selectedVariants, setSelectedVariants,
     videoJobs, videoJobId, setVideoJobId, audioJobId, setAudioJobId, urlVideoJobId, urlAudioJobId,
     onAssetsChanged, onPackageRefresh, onRework,
   } = props
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
+  const [jobNonce, setJobNonce] = useState(0)
+  const videoDetail = useJobDetail<VideoDetail>(
+    videoJobId ? `/api/v1/video/jobs/${encodeURIComponent(videoJobId)}` : null,
+    jobNonce
+  )
+  const audioDetail = useJobDetail<AudioDetail>(
+    audioJobId ? `/api/v1/audio/jobs/${encodeURIComponent(audioJobId)}` : null,
+    jobNonce
+  )
 
   const act = async (key: string, fn: () => Promise<void>) => {
     setBusy(key)
@@ -131,7 +186,7 @@ export function PackageReviewSection(props: {
       onAssetsChanged()
     })
 
-  const video = pkg.video && pkg.video.id === videoJobId ? pkg.video : null
+  const video = videoDetail.data
   const newerVideo = urlVideoJobId && urlVideoJobId !== videoJobId ? urlVideoJobId : null
   const newerAudio = urlAudioJobId && urlAudioJobId !== audioJobId ? urlAudioJobId : null
 
@@ -261,35 +316,83 @@ export function PackageReviewSection(props: {
             ↻ Có video mới từ Khu vực E (job {newerVideo.slice(0, 8)}) — dùng video này
           </button>
         )}
-        {video?.view_url ? (
-          <video src={video.view_url} controls playsInline className="max-h-[420px] mx-auto rounded-xl border border-border bg-black" />
-        ) : videoJobId ? (
-          <p className="text-[12px] text-text-muted">
-            {pkg.video && pkg.video.id !== videoJobId ? "Lưu gói để xem video vừa chọn." : "Video chưa render xong — render ở Khu vực E."}
-          </p>
-        ) : (
-          <p className="text-[12px] text-text-muted">Chưa kèm video.</p>
+        {videoJobId && !video && !videoDetail.error && (
+          <p className="text-[12px] text-text-muted flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Đang đọc video...</p>
         )}
+        {videoDetail.error && <p className="text-[12px] text-danger">Không đọc được video: {videoDetail.error}</p>}
+        {!videoJobId && <p className="text-[12px] text-text-muted">Chưa kèm video.</p>}
         {video && (
-          <div className="flex flex-wrap items-center gap-2 text-[12px]">
-            <Badge tone={video.video_approval === "APPROVED" ? "success" : "neutral"} className="text-[10.5px]">
-              {video.video_approval === "APPROVED" ? "Đã duyệt P4" : video.stage === "RENDER_COMPLETED" ? "Đã render — chưa duyệt P4" : video.stage}
-            </Badge>
-            {!approved && video.stage === "RENDER_COMPLETED" && video.video_approval !== "APPROVED" && (
-              <Button
-                size="sm"
-                className="h-7 text-[11px] gap-1"
-                disabled={busy !== null}
-                onClick={() =>
-                  void act("video", async () => {
-                    await post(`/api/v1/video/jobs/${encodeURIComponent(video.id)}/approve-video`)
-                    await onPackageRefresh()
-                  })
-                }
-              >
-                {busy === "video" ? <Loader2 size={11} className="animate-spin" /> : <ShieldCheck size={11} />} Duyệt video (P4)
-              </Button>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="md:col-span-2">
+              {video.final_video_view_url ? (
+                <video
+                  key={video.final_video_view_url}
+                  src={video.final_video_view_url}
+                  controls
+                  playsInline
+                  className="w-full max-h-[460px] rounded-xl border border-border bg-black"
+                />
+              ) : (
+                <div className="rounded-xl border border-dashed border-border p-6 text-center text-[12px] text-text-muted">
+                  {video.stage === "RENDERING"
+                    ? "Đang render..."
+                    : video.stage === "FAILED"
+                    ? `Render lỗi${video.error_message ? `: ${video.error_message}` : ""}`
+                    : "Chưa render — duyệt kịch bản và render ở Khu vực E."}
+                </div>
+              )}
+              {video.final_video_view_url && (
+                <a href={video.final_video_view_url} download className="mt-1 block text-center text-[11.5px] font-bold text-primary hover:underline">
+                  Tải video
+                </a>
+              )}
+            </div>
+            <div className="md:col-span-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                <Badge tone={video.video_approval === "APPROVED" ? "success" : "neutral"} className="text-[10.5px]">
+                  {video.video_approval === "APPROVED"
+                    ? "Đã duyệt P4"
+                    : video.stage === "RENDER_COMPLETED"
+                    ? "Đã render — chưa duyệt P4"
+                    : video.stage}
+                </Badge>
+                {!approved && video.stage === "RENDER_COMPLETED" && video.video_approval !== "APPROVED" && (
+                  <Button
+                    size="sm"
+                    className="h-7 text-[11px] gap-1"
+                    disabled={busy !== null}
+                    onClick={() =>
+                      void act("video", async () => {
+                        await post(`/api/v1/video/jobs/${encodeURIComponent(video.id)}/approve-video`)
+                        setJobNonce((n) => n + 1)
+                        await onPackageRefresh()
+                      })
+                    }
+                  >
+                    {busy === "video" ? <Loader2 size={11} className="animate-spin" /> : <ShieldCheck size={11} />} Duyệt video (P4)
+                  </Button>
+                )}
+              </div>
+              {/* Storyboard của video — để đối chiếu phụ đề / lời thoại từng cảnh */}
+              {video.scenes && video.scenes.length > 0 && (
+                <ol className="space-y-1.5 text-[11.5px]">
+                  {[...video.scenes]
+                    .sort((x, y) => x.scene_index - y.scene_index)
+                    .map((sc) => (
+                      <li key={sc.scene_index} className="rounded-lg border border-border p-2">
+                        <div className="font-bold text-text">
+                          Cảnh {sc.scene_index} · {sc.duration_seconds}s
+                        </div>
+                        {sc.text_overlay && <div className="text-text">Phụ đề: {sc.text_overlay}</div>}
+                        {sc.voice_script && <div className="text-text-muted">Lời thoại: {sc.voice_script}</div>}
+                      </li>
+                    ))}
+                </ol>
+              )}
+              <p className="text-[11px] text-text-muted">
+                Sửa phụ đề, lời thoại, giọng đọc, ảnh cảnh hay thời lượng cần render lại (tốn credit) — bấm &quot;Sửa storyboard / render lại&quot;, xong quay về đây sẽ có đề xuất dùng video mới.
+              </p>
+            </div>
           </div>
         )}
         {!approved && (
@@ -326,11 +429,17 @@ export function PackageReviewSection(props: {
             ↻ Có bản phối mới từ Khu vực C (job {newerAudio.slice(0, 8)}) — dùng bản này
           </button>
         )}
-        {pkg.audio?.audio_url && pkg.audio.job_id === audioJobId ? (
-          <audio controls src={pkg.audio.audio_url} className="w-full" />
+        {audioDetail.data?.audio_url ? (
+          <audio controls src={audioDetail.data.audio_url} className="w-full" />
         ) : audioJobId ? (
           <p className="text-[12px] text-text-muted">
-            {pkg.audio && pkg.audio.job_id !== audioJobId ? "Lưu gói để nghe bản phối vừa chọn." : "Bản phối chưa sẵn sàng."}
+            {audioDetail.error
+              ? `Không đọc được bản phối: ${audioDetail.error}`
+              : audioDetail.data
+              ? audioDetail.data.stage === "FAILED"
+                ? `Phối lỗi${audioDetail.data.error ? `: ${audioDetail.data.error}` : ""}`
+                : "Bản phối chưa xong."
+              : "Đang đọc bản phối..."}
           </p>
         ) : (
           <p className="text-[12px] text-text-muted">Chưa kèm âm thanh.</p>
