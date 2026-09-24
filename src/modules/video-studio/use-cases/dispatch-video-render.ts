@@ -1,4 +1,5 @@
 import { type TenantContext } from "@/core/tenancy";
+import { AppError } from "@/core/http/errors";
 import { requireCapability } from "@/core/rbac/capabilities";
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job";
 import {
@@ -27,7 +28,7 @@ export class DispatchVideoRenderUseCase {
 
     const job = await this.repo.findById(ctx, jobId);
     if (!job) {
-      throw new Error(`Không tìm thấy tác vụ video với mã: ${jobId}`);
+      throw new AppError("NOT_FOUND", `Không tìm thấy tác vụ video với mã: ${jobId}`);
     }
 
     const check = canStartRender({
@@ -36,7 +37,7 @@ export class DispatchVideoRenderUseCase {
     });
 
     if (!check.allowed) {
-      throw new Error(check.reason || "Kịch bản chưa sẵn sàng để render");
+      throw new AppError("UNPROCESSABLE_ENTITY", check.reason || "Kịch bản chưa sẵn sàng để render");
     }
 
     // Ảnh cảnh lưu bằng MÃ ASSET (Khu vực D / Master Image); worker chỉ đọc
@@ -49,12 +50,13 @@ export class DispatchVideoRenderUseCase {
       const ref = s.image_asset_id;
       if (!ref || !UUID_RE.test(ref) || resolvedImages.has(ref)) continue;
       const asset = await assetRepo.findById(ctx, ref);
-      if (!asset) throw new Error(`Ảnh của cảnh #${s.scene_index} không còn trong kho (asset ${ref})`);
+      if (!asset) throw new AppError("UNPROCESSABLE_ENTITY", `Ảnh của cảnh #${s.scene_index} không còn trong kho (asset ${ref})`);
       resolvedImages.set(ref, asset.storage_key);
     }
     const missing = (job.scenes as video_scenes[]).filter((s) => !s.image_asset_id);
     if (missing.length > 0) {
-      throw new Error(
+      throw new AppError(
+        "UNPROCESSABLE_ENTITY",
         `Cảnh ${missing.map((s) => `#${s.scene_index}`).join(", ")} chưa có ảnh sản phẩm — gắn ảnh trước khi render`
       );
     }

@@ -60,7 +60,7 @@ F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH
 ## Khu vực E — Chặng 06d
 
 - Chọn 1 trong 6 khuôn (Reel 15s, TikTok 30s, Story 15s, Slideshow, Trang sản phẩm, Ad Motion); storyboard hiện ngay **theo kịch bản bối cảnh của chủ đề** (đúng số cảnh, phụ đề, lời thoại, chuyển động của kịch bản Chặng 05), ảnh mỗi cảnh là ảnh biến thể **cùng cảnh** ở Khu vực D — cảnh chưa sinh ảnh tạm dùng Master Image và có ghi chú; không còn ảnh mẫu. Thời lượng chia theo khuôn. Mỗi cảnh chỉnh được Ken Burns (zoom in/out, pan lên/phải, tĩnh), phụ đề, watermark.
-- **"Tạo video"** tạo **bản nháp**. Duyệt kịch bản (P3), render và duyệt video thành phẩm (P4, chỉ chủ tiệm) ở màn **Video**. Khu vực F chỉ coi video là đạt khi đã duyệt P4.
+- **"Tạo video"** tạo **bản nháp**; ngay bên dưới là khung video job 3 bước: **Duyệt kịch bản (P3)** → **Render video** (5 credit, trừ lúc bấm; worker dựng xong thì **phát và tải video ngay trên trang**) → **Duyệt video (P4)**, chỉ chủ tiệm. Thanh phê duyệt Chặng 06d chỉ báo "đã duyệt" khi video đã qua P4; Khu vực F cũng vậy. Mở lại trang thì khung đọc lại job theo `videoJobId` trên URL.
 
 ## Khu vực F — Chặng 07 → 09
 

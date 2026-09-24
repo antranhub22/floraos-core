@@ -15,6 +15,11 @@ import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
 import { resolveApprovedMaster } from "./package-client"
 import { buildStoryboardFromPlan, buildStoryboardFromTopic, type SceneImage } from "./video-storyboard-builder"
 import { findScenePlan, type ScenePlan } from "./scene-plan-client"
+import { VideoJobLifecycle, type VideoJobDetail } from "./video-job-lifecycle"
+import { costCreditForFeature } from "@/modules/usage/domain/pricing"
+
+/** Credit THẬT trừ khi render (`enqueueJob` feature `video.render`) — không phải `defaultCreditCost` của khuôn. */
+const RENDER_CREDIT = costCreditForFeature("video.render")
 
 export function VideoWorkspace() {
   const router = useRouter()
@@ -35,7 +40,10 @@ export function VideoWorkspace() {
   const [scenes, setScenes] = useState<VideoSceneItem[]>([])
   const [storyboardKey, setStoryboardKey] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [jobResult, setJobResult] = useState<Record<string, unknown> | null>(null)
+
+  // Video job đang theo dõi — tạo ở đây hoặc mở lại từ URL `videoJobId`.
+  const [activeVideoJobId, setActiveVideoJobId] = useState<string | null>(searchParams?.get("videoJobId") ?? null)
+  const [videoJob, setVideoJob] = useState<VideoJobDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [jobsLoading, setJobsLoading] = useState(false)
   const [videoJobs, setVideoJobs] = useState<VideoJobSummary[]>([])
@@ -132,7 +140,7 @@ export function VideoWorkspace() {
       setError("Storyboard chưa có cảnh nào.")
       return
     }
-    setLoading(true); setError(null); setJobResult(null)
+    setLoading(true); setError(null)
     try {
       const res = await fetch("/api/v1/video/jobs", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -149,8 +157,8 @@ export function VideoWorkspace() {
       })
       if (!res.ok) { const body = (await res.json().catch(() => ({}))).error?.message ?? `Lỗi ${res.status}`; throw new Error(body) }
       const created = (await res.json()) as Record<string, unknown> & { id?: string }
-      setJobResult(created)
       if (created.id) {
+        setActiveVideoJobId(created.id)
         // Mang định danh video sang Khu vực F (gói chiến dịch đọc lại qua API).
         const params = new URLSearchParams(searchParams?.toString() || "")
         params.set("videoJobId", created.id)
@@ -185,7 +193,7 @@ export function VideoWorkspace() {
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-text-muted mt-1">
                   <span className="flex items-center gap-1"><Clock size={11} /> ~{s.targetDurationSeconds}s</span>
-                  <span className="font-semibold text-amber-600 flex items-center gap-0.5"><Coins size={11} /> {s.defaultCreditCost} cr</span>
+                  <span className="font-semibold text-amber-600 flex items-center gap-0.5" title="Credit trừ khi bấm Render"><Coins size={11} /> {RENDER_CREDIT} cr</span>
                 </div>
               </div>
             )
@@ -257,15 +265,8 @@ export function VideoWorkspace() {
         </div>
       </div>
       {error && <Card className="border-rose-200 bg-rose-50 p-4 flex items-center gap-3"><AlertCircle size={16} className="text-rose-600 shrink-0" /><p className="text-xs text-rose-800">{error}</p></Card>}
-      {jobResult && (
-        <Card className="p-5">
-          <h3 className="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2"><CheckCircle2 size={14} /> Đã tạo video job</h3>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-surface p-3 rounded-lg"><p className="text-[11px] text-text-muted">Job ID</p><p className="font-mono text-[11px] font-bold">{jobResult.id as string}</p></div>
-            <div className="bg-surface p-3 rounded-lg"><p className="text-[11px] text-text-muted">Stage</p><p className="font-bold">{jobResult.stage as string ?? "DRAFT"}</p></div>
-            <div className="bg-surface p-3 rounded-lg"><p className="text-[11px] text-text-muted">Credit</p><p className="font-bold text-amber-600">{spec.defaultCreditCost}</p></div>
-          </div>
-        </Card>
+      {activeVideoJobId && (
+        <VideoJobLifecycle key={activeVideoJobId} jobId={activeVideoJobId} renderCredit={RENDER_CREDIT} onChange={setVideoJob} />
       )}
       {videoJobs.length > 0 && (
         <Card className="p-5">
@@ -279,8 +280,8 @@ export function VideoWorkspace() {
         <StageGateApprovalBar
           stageCode="Chặng 06d — SẢN XUẤT VIDEO MARKETING"
           title="Phê duyệt Kịch bản Storyboard & Video Clip (M04c)"
-          description={`Storyboard ${scenes.length} phân cảnh theo khuôn ${spec.aspectRatio}, ~${spec.targetDurationSeconds}s. Tạo job ở đây là BẢN NHÁP: duyệt kịch bản (P3), render và duyệt video thành phẩm (P4) thực hiện ở màn Video; Khu vực F chỉ coi video là đạt khi đã duyệt P4.`}
-          isApproved={Boolean(jobResult)}
+          description={`Storyboard ${scenes.length} phân cảnh theo khuôn ${spec.aspectRatio}, ~${spec.targetDurationSeconds}s. "Tạo video" lập BẢN NHÁP; duyệt kịch bản (P3), render (${RENDER_CREDIT} credit) và duyệt video thành phẩm (P4) ngay trong khung video job ở trên. Chỉ khi video đã duyệt P4 mới được coi là đạt.`}
+          isApproved={videoJob?.video_approval === "APPROVED"}
           approveLabel="Phê duyệt Video & Tiến đến Đóng gói chiến dịch (Chặng 07) →"
           onApprove={() => navigateToArea("f")}
           metrics={[

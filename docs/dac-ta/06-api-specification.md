@@ -565,7 +565,7 @@ Năng lực phân tích ảnh giữ endpoint riêng đã có (`GET · PUT /visio
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
 | GET · POST | `/video/jobs` | `I1` | Tạo và liệt kê job video |
-| GET | `/video/jobs/:id` | `I1` | |
+| GET | `/video/jobs/:id` | `I1` | Kèm `final_video_view_url` — URL ký có hạn để phát video đã render (24/09/2026); `final_video_url` thô không mở được vì thiếu chữ ký |
 | PATCH | `/video/jobs/:id/storyboard` | `I1` | Biên soạn phân cảnh, 2–15 cảnh |
 | POST | `/video/jobs/:id/render` | `I1` | |
 | POST | `/video/jobs/:id/approve-script` | `P3` | Cổng 1 — duyệt kịch bản (kiểm ở use-case `approve-storyboard.ts`) |
