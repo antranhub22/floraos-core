@@ -79,6 +79,7 @@
 
 - [x] Bảng `campaign_packages` (TENANT) + migration `20260923160000` + TRUNCATE test — `schema.prisma`, `tests/helpers/database.ts`
 - [x] Tạo/sửa gói, kiểm định danh thuộc đúng tổ chức & đúng Master — `manage-campaign-package.ts`
+- [x] Chặng 07 xem lại đủ tài sản: ảnh theo cảnh (duyệt I5 tại chỗ), video phát được (`video.view_url` ký có hạn, duyệt P4 tại chỗ), âm thanh nghe được, bài đăng sửa được; làm lại dẫn về khu vực gốc kèm `returnTo=f` / `focusScene` / `videoJobId` / `audioJobId`, về gói thì đề xuất tài sản mới — `package-review-section.tsx`, `page.tsx` (24/09)
 - [x] QA năm trục phía máy chủ — `campaign-package-rules.ts` + `campaign-package-rules.test.ts` (17 ca)
 - [x] Duyệt `J5` + `audit_logs` cùng giao dịch + chốt chặn đua — `approve-campaign-package`
 - [x] Ca thử cách ly tenant — `tests/tenant/campaign-packages.test.ts` (viết xong, **chưa chạy** — cần Postgres)

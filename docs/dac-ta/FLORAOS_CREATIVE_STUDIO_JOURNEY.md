@@ -66,6 +66,12 @@ F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH
 
 - Nếu chưa có Master đã duyệt → nút "Skip — Dùng ảnh gốc làm Master".
 - **07 PACKAGE** — màn đầu hiện sẵn những gì đã sản xuất: ảnh biến thể mới nhất mỗi cảnh của kịch bản đang mở (kèm "chưa duyệt" nếu chưa duyệt I5), video (job trên URL, không có thì video đã duyệt P4 / đã render mới nhất), âm thanh Khu vực C. **"Tạo gói chiến dịch với các tài sản trên"** đưa sẵn chúng vào gói (tên = sản phẩm + chủ đề); sau đó chỉnh: ảnh biến thể của Master này (thấy % toàn vẹn và trạng thái duyệt từng ảnh), video, âm thanh, bài đăng theo kênh (sửa được). **"Lưu gói"**. Mọi thay đổi đưa gói về Nháp.
+- **Xem lại & làm lại (24/09/2026)** — sau khi tạo gói, Chặng 07 hiện đủ mọi tài sản để review:
+  - **Ảnh theo cảnh** của kịch bản (tên cảnh, bối cảnh, % lõi bó hoa, trạng thái duyệt): *Duyệt ảnh* (I5) ngay tại đây; *Bỏ khỏi gói* / *Đưa vào gói* / *Chọn ảnh khác từ kho*; *Sinh lại cảnh N* mở Khu vực D đúng cảnh đó.
+  - **Video**: phát ngay; *Duyệt video (P4)* tại chỗ; đổi video khác; *Sửa storyboard / render lại* mở Khu vực E đúng job.
+  - **Âm thanh**: nghe bản phối; *Phối lại ở Khu vực C*.
+  - **Bài đăng**: sửa chữ/hashtag, bật tắt kênh; *Viết lại ở Khu vực B*.
+  - Sửa tại chỗ không tốn credit; **làm lại (tốn credit) luôn ở khu vực gốc** — mỗi tài sản chỉ có một nơi sản xuất. Trong lúc làm lại có thanh "← Quay lại gói (Chặng 07)"; về gói thì tài sản mới được đề xuất (*Có ảnh mới hơn cho cảnh này — dùng ảnh mới*, *Có video mới…*, *Có bản phối mới…*). Mọi thay đổi đưa gói về Nháp để QA chạy lại.
 - **08 QA** — **"Chạy QA"** chạy trên máy chủ, năm trục: toàn vẹn sản phẩm · đã duyệt từng tài sản · đúng tỷ lệ theo kênh · nội dung (độ dài, biến chưa điền, hashtag Instagram, từ cấm ngành hoa / của thương hiệu) · thương hiệu (logo, ảnh đóng dấu). Kết luận: Đạt / Cần xem lại / Từ chối, kèm lý do cụ thể.
 - **09 APPROVE** — chỉ duyệt được khi QA Đạt, hoặc Cần xem lại và đã tick "Tôi đã xem các cảnh báo". QA Từ chối thì phải sửa rồi chạy lại. Duyệt được ghi nhật ký kiểm toán. Gói đã duyệt không sửa được.
 

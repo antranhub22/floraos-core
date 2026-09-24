@@ -41,7 +41,16 @@ export interface CampaignPackageDto {
     scene_index: number | null
     watermark: boolean
   }>
-  video: { id: string; title: string; stage: string; video_approval: string; aspect_ratio: string; final_video_url: string | null } | null
+  video: {
+    id: string
+    title: string
+    stage: string
+    video_approval: string
+    script_approval?: string
+    aspect_ratio: string
+    final_video_url: string | null
+    view_url?: string | null
+  } | null
   audio: { job_id: string; stage: string; audio_url: string | null } | null
   qa_report: { verdict: "PASS" | "NEEDS_REVIEW" | "REJECTED"; checks: QaCheckDto[]; checkedAt: string } | null
   qa_checked_at: string | null

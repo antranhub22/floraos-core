@@ -346,6 +346,16 @@ export default function CreativeStudioPage() {
     setActiveTabId(tabId)
   }
 
+  // Đang làm lại một tài sản cho gói chiến dịch (Chặng 07 → khu vực gốc, 24/09/2026).
+  const returnToPackage = searchParams.get("returnTo") === "f" && activeTabId !== "area-f"
+  const backToPackage = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("area", "f")
+    params.delete("returnTo")
+    params.delete("focusScene")
+    router.push(`/creative-studio?${params.toString()}` as never)
+  }
+
   // --- Render workspace by tab ---
   const renderWorkspace = () => {
     switch (activeTabId) {
@@ -425,6 +435,20 @@ export default function CreativeStudioPage() {
               )}
 
               {/* Workspace */}
+              {returnToPackage && (
+                <div className="sticky top-0 z-20 mb-4 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-[12.5px]">
+                  <span className="text-text">
+                    Đang làm lại tài sản cho <strong>gói chiến dịch</strong>. Xong thì quay lại — tài sản mới sẽ được đề xuất thay vào gói.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={backToPackage}
+                    className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-bold text-white cursor-pointer"
+                  >
+                    ← Quay lại gói (Chặng 07)
+                  </button>
+                </div>
+              )}
               {renderWorkspace()}
             </>
           )}

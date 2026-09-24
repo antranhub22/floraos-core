@@ -13,7 +13,7 @@
  */
 
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { AlertTriangle, CheckCircle2, Loader2, Package, RefreshCw, Save, ShieldCheck } from "lucide-react"
 
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
@@ -32,6 +32,8 @@ import {
   type PackageChannel,
   type PackagePostDto,
 } from "./package-client"
+import { PackageReviewSection } from "./package-review-section"
+import { findScenePlan, type ScenePlan } from "./scene-plan-client"
 
 const CHANNELS: { id: PackageChannel; label: string }[] = [
   { id: "facebook", label: "Facebook" },
@@ -76,6 +78,7 @@ function parseHashtags(raw: string): string[] {
 export function PackageWorkspace() {
   const ctx = useContext(CreativeStudioContext)
   const searchParams = useSearchParams()
+  const router = useRouter()
   const urlVideoJobId = searchParams?.get("videoJobId") ?? null
   const urlAudioJobId = searchParams?.get("audioJobId") ?? null
   const urlPlanId = searchParams?.get("scenePlanId") ?? null
@@ -88,6 +91,9 @@ export function PackageWorkspace() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [acknowledge, setAcknowledge] = useState(false)
+  const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
+  const [planRef, setPlanRef] = useState<string | null>(null)
+  const [assetsNonce, setAssetsNonce] = useState(0)
 
   // Bản nháp chỉnh sửa (Chặng 07) — lưu bằng PATCH.
   const [selectedVariants, setSelectedVariants] = useState<string[]>([])
@@ -138,6 +144,48 @@ export function PackageWorkspace() {
     }
   }, [ctx?.assetId, loadDraftFrom])
 
+  // Kịch bản bối cảnh của chủ đề — đặt tên/bối cảnh cho từng cảnh ảnh.
+  useEffect(() => {
+    if (!ctx) return
+    let cancelled = false
+    findScenePlan(
+      {
+        mode: ctx.mode,
+        productName: ctx.productName,
+        productId: ctx.productId,
+        assetId: ctx.assetId,
+        selectedTopic: ctx.selectedTopic,
+        commercialPassport: ctx.commercialPassport,
+      },
+      urlPlanId
+    )
+      .then(({ loaded }) => {
+        if (cancelled) return
+        setScenePlan(loaded?.plan ?? null)
+        setPlanRef(loaded?.ref ?? null)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx?.assetId, ctx?.selectedTopic?.id, ctx?.mode, urlPlanId])
+
+  // Làm lại ở khu vực gốc (tốn credit) — mang `returnTo=f` để quay về gói.
+  const goRework = (area: "b" | "c" | "d" | "e", extra: Record<string, string> = {}) => {
+    const params = new URLSearchParams(searchParams?.toString() || "")
+    params.set("area", area)
+    params.set("returnTo", "f")
+    for (const [k, v] of Object.entries(extra)) params.set(k, v)
+    router.push(`/creative-studio?${params.toString()}` as never)
+  }
+
+  const refreshPackage = async () => {
+    if (!pkg) return
+    // Chỉ làm mới dữ liệu hiển thị (video/âm thanh/QA) — giữ nguyên bản nháp đang sửa.
+    setPkg(await apiJson<CampaignPackageDto>(`/api/v1/creative-production/packages/${pkg.id}`))
+  }
+
   // 2. Tài sản thật để chọn vào gói.
   useEffect(() => {
     if (!masterId) return
@@ -145,7 +193,7 @@ export function PackageWorkspace() {
       .then((r) => (r.ok ? r.json() : { data: [] }))
       .then((b: { data?: MarketingAsset[] }) => setMarketing(b.data ?? []))
       .catch(() => setMarketing([]))
-  }, [masterId])
+  }, [masterId, assetsNonce])
 
   useEffect(() => {
     const productId = pkg?.product_id ?? ctx?.productId
@@ -418,75 +466,35 @@ export function PackageWorkspace() {
           )}
         </div>
 
-        <section className="space-y-2">
-          <div className="text-[12px] font-bold text-text">Ảnh biến thể của Master này (Khu vực D)</div>
-          {marketing.length === 0 ? (
-            <p className="text-[12px] text-text-muted">Chưa có biến thể nào — sinh ở Khu vực D.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {marketing.map((a) => {
-                const on = selectedVariants.includes(a.id)
-                const score = typeof a.identity_score === "number" ? `${(a.identity_score * 100).toFixed(2)}%` : "chưa đo"
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    disabled={approved}
-                    onClick={() =>
-                      setSelectedVariants((prev) => (on ? prev.filter((x) => x !== a.id) : [...prev, a.id]))
-                    }
-                    className={`rounded-lg border-2 overflow-hidden text-left ${on ? "border-primary" : "border-border"} disabled:cursor-default`}
-                  >
-                    {a.url ? <img src={a.url} alt="" className="aspect-square w-full object-contain bg-stone-50" /> : null}
-                    <div className="p-1.5 text-[10.5px] leading-tight">
-                      <div className="font-bold">{a.aspect_ratio ?? "?"} · {score}</div>
-                      <div className={a.approval_state === "APPROVED" ? "text-success" : "text-text-muted"}>
-                        {a.approval_state === "APPROVED" ? "Đã duyệt (I5)" : "Chưa duyệt"}
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </section>
-
-        <section className="space-y-2">
-          <div className="text-[12px] font-bold text-text">Video (Khu vực E)</div>
-          <select
-            value={videoJobId ?? ""}
-            disabled={approved}
-            onChange={(e) => setVideoJobId(e.target.value || null)}
-            className="w-full rounded-lg border border-border px-3 py-2 text-xs"
-          >
-            <option value="">— Không kèm video —</option>
-            {videoJobs.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.title} · {v.aspect_ratio} · {v.stage} · duyệt: {v.video_approval}
-              </option>
-            ))}
-          </select>
-        </section>
-
-        <section className="space-y-2">
-          <div className="text-[12px] font-bold text-text">Âm thanh (Khu vực C)</div>
-          {audioJobId ? (
-            <div className="flex items-center justify-between gap-2 text-[12px]">
-              <span className="font-mono">Audio job #{audioJobId.slice(0, 8)} {pkg.audio?.stage ? `· ${pkg.audio.stage}` : ""}</span>
-              {!approved && (
-                <button type="button" className="text-danger underline" onClick={() => setAudioJobId(null)}>
-                  Bỏ khỏi gói
-                </button>
-              )}
-            </div>
-          ) : (
-            <p className="text-[12px] text-text-muted">Chưa kèm âm thanh — phối ở Khu vực C.</p>
-          )}
-          {pkg.audio?.audio_url && <audio controls src={pkg.audio.audio_url} className="w-full" />}
-        </section>
+        <PackageReviewSection
+          pkg={pkg}
+          approved={approved}
+          scenePlan={scenePlan}
+          planRef={planRef}
+          marketing={marketing}
+          selectedVariants={selectedVariants}
+          setSelectedVariants={setSelectedVariants}
+          videoJobs={videoJobs}
+          videoJobId={videoJobId}
+          setVideoJobId={setVideoJobId}
+          audioJobId={audioJobId}
+          setAudioJobId={setAudioJobId}
+          urlVideoJobId={urlVideoJobId}
+          urlAudioJobId={urlAudioJobId}
+          onAssetsChanged={() => setAssetsNonce((n) => n + 1)}
+          onPackageRefresh={refreshPackage}
+          onRework={goRework}
+        />
 
         <section className="space-y-3">
-          <div className="text-[12px] font-bold text-text">Bài đăng theo kênh (lưu từ Khu vực B hoặc soạn tại đây)</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[12px] font-bold text-text">Bài đăng theo kênh (lưu từ Khu vực B hoặc soạn tại đây)</div>
+            {!approved && (
+              <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => goRework("b")}>
+                <RefreshCw size={11} /> Viết lại ở Khu vực B
+              </Button>
+            )}
+          </div>
           {CHANNELS.map((c) => {
             const p = posts[c.id]
             return (

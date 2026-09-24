@@ -21,6 +21,7 @@ import { AudioJobRepository } from "@/modules/audio-studio/infra/audio-job-repos
 import { runInTransaction } from "@/modules/jobs/infra/transaction"
 import { BrandProfileRepository } from "@/modules/profiles/infra/brand-profile-repository"
 import { VideoJobRepository } from "@/modules/video-studio/infra/video-job-repository"
+import { videoViewUrl } from "@/modules/video-studio/use-cases/get-video-job"
 
 import {
   canApprovePackage,
@@ -203,6 +204,9 @@ export async function getCampaignPackage(ctx: TenantContext, id: string) {
         video_approval: v.video_approval,
         aspect_ratio: v.aspect_ratio,
         final_video_url: v.final_video_url,
+        script_approval: v.script_approval,
+        // URL ký có hạn để phát video ngay ở Chặng 07 (24/09/2026).
+        view_url: await videoViewUrl(ctx, v.final_video_url),
       }
     }
   }

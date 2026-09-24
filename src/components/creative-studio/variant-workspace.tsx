@@ -297,6 +297,17 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   }
 
   const scenePlan = loadedPlan?.plan ?? null
+
+  // Mở từ Chặng 07 "Sinh lại cảnh N" (`focusScene`, 24/09/2026): vào thẳng bảng
+  // phân cảnh, chọn đúng cảnh cần làm lại.
+  const focusScene = Number(searchParams?.get("focusScene") ?? "") || null
+  useEffect(() => {
+    if (!focusScene || !scenePlan) return
+    if (!scenePlan.scenes.some((sc) => sc.sceneIndex === focusScene)) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mở đúng cảnh theo URL
+    setSelectedSceneIndex(focusScene)
+    setPhase("result-b")
+  }, [focusScene, scenePlan, setPhase])
   const planRef = loadedPlan?.ref ?? null
   const planScenes: readonly ScenePlanScene[] = useMemo(() => scenePlan?.scenes ?? [], [scenePlan])
 
