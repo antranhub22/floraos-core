@@ -34,6 +34,8 @@ export type RequestVariantsInput = {
   sceneIndex?: NarrativeSceneIndex | undefined
   /** Kịch bản bối cảnh (`creative.scene_plan` job id) mà cảnh này thuộc về. */
   scenePlanId?: string | undefined
+  /** Phiên bản kịch bản sản xuất tổng lúc sinh ảnh (Đợt 3, 24/09/2026). */
+  scenePlanRevision?: number | undefined
 }
 
 /**
@@ -74,6 +76,7 @@ export async function requestVariants(ctx: TenantContext, input: RequestVariants
       auto_enhance: input.autoEnhance ?? false,
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
       ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),
+      ...(input.scenePlanRevision ? { scene_plan_revision: input.scenePlanRevision } : {}),
     },
     idempotencyKey: input.idempotencyKey,
   })
@@ -124,6 +127,7 @@ export async function requestCloudVariant(ctx: TenantContext, input: RequestClou
       ...(scenePrompt ? { scene_prompt: scenePrompt } : {}),
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
       ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),
+      ...(input.scenePlanRevision ? { scene_plan_revision: input.scenePlanRevision } : {}),
     },
     idempotencyKey: input.idempotencyKey,
   })

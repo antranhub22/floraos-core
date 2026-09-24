@@ -32,6 +32,7 @@ const postSchema = z.object({
     .optional(),
   // Job `creative.scene_plan` mà cảnh này thuộc về — ghi vào metadata asset.
   scene_plan_id: z.string().trim().min(1).max(160).optional(),
+  scene_plan_revision: z.number().int().min(1).max(100000).optional(),
   // Chỉ nhánh cloud_provider:
   provider_key: z.enum(VARIANT_CLOUD_PROVIDERS).default("stability"),
   scene_prompt: z.string().max(MAX_SCENE_PROMPT_LENGTH).optional(),
@@ -66,6 +67,7 @@ export const POST = handle(async (request) => {
     idempotencyKey,
     sceneIndex: data.scene_index as NarrativeSceneIndex | undefined,
     scenePlanId: data.scene_plan_id,
+    scenePlanRevision: data.scene_plan_revision,
   }
 
   const result =

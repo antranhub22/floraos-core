@@ -58,6 +58,10 @@ type SceneMeta = {
   approved?: boolean
   /** Bản PNG tách nền mà cùng job luôn ghi kèm. */
   transparentUrl?: string | null
+  /** Phiên bản kịch bản lúc sinh ảnh (Đợt 3) — nhỏ hơn bản hiện tại = ảnh lỗi thời. */
+  planRevision?: number | null
+  /** Tỉ lệ khung ảnh đã sinh. */
+  ratio?: string | null
 }
 
 type VariantJobPoll = {
@@ -309,6 +313,15 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     setPhase("result-b")
   }, [focusScene, scenePlan, setPhase])
   const planRef = loadedPlan?.ref ?? null
+
+  // Đợt 3 (24/09/2026): khung ảnh theo NỀN TẢNG ĐĂNG của kịch bản sản xuất tổng
+  // (mặc định 9:16) — trước đây mặc định 1:1 nên video dọc bị cắt / có viền.
+  const planRatio = scenePlan?.publishing?.aspectRatio ?? null
+  useEffect(() => {
+    if (!planRatio) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- đặt khung theo kịch bản đã tra được
+    setVariantRatio(planRatio)
+  }, [planRatio, setVariantRatio])
   const planScenes: readonly ScenePlanScene[] = useMemo(() => scenePlan?.scenes ?? [], [scenePlan])
 
   // Nạp các phân cảnh ĐÃ sinh của đúng Master + ĐÚNG kịch bản đang mở.
@@ -354,6 +367,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
             cloudFallback: meta.cloud_fallback === true,
             cloudFallbackReason: typeof meta.cloud_fallback_reason === "string" ? meta.cloud_fallback_reason : null,
             approved: item.approval_state === "APPROVED",
+            planRevision: typeof meta.scene_plan_revision === "number" ? meta.scene_plan_revision : null,
+            ratio: typeof meta.ratio === "string" ? meta.ratio : null,
           }
         }
         if (cancelled) return
@@ -406,6 +421,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           watermark: watermarkEnabled,
           scene_index: targetIndex,
           scene_plan_id: planRef,
+          scene_plan_revision: scenePlan?.revision ?? 1,
           ...(useCloud ? { provider_key: "stability", scene_prompt: scene.backgroundPrompt } : {}),
         }),
       })
@@ -517,6 +533,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         isOriginal: false,
         tag: !hasGenerated
           ? "Chưa sinh"
+          : scenePlan && meta?.planRevision != null && meta.planRevision < scenePlan.revision
+          ? "Kịch bản đã sửa — nên sinh lại"
+          : planRatio && meta?.ratio && meta.ratio !== planRatio
+          ? `Khung ${meta.ratio} ≠ ${planRatio} — nên sinh lại`
           : meta?.engine === "cloud_provider" && !meta.cloudFallback
           ? "Hậu cảnh Stability"
           : meta?.cloudFallback

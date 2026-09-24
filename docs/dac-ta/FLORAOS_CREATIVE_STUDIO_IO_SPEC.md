@@ -210,6 +210,7 @@ Bảng nền tảng (`publishing-rules.ts`): TikTok 9:16 `TIKTOK_30S` ~20s · In
 | `auto_enhance` | boolean | mặc định `false`, chỉ chỉnh vùng nền |
 | `scene_index` | 1–5 | phân cảnh theo kịch bản của chủ đề |
 | `scene_plan_id` | string ≤ 160 | job `creative.scene_plan` hoặc `rule:<topic>:<mode>` |
+| `scene_plan_revision` | int ≥ 1 | phiên bản kịch bản lúc sinh ảnh (Đợt 3, 24/09) — ghi vào `metadata.scene_plan_revision`; giao diện chọn khung theo `publishing.aspectRatio` |
 | `provider_key` | `"stability"` | chỉ nhánh cloud |
 | `scene_prompt` | string ≤ 600 | chỉ nhánh cloud — `backgroundPrompt` của cảnh (KHÔNG GIAN hậu cảnh) |
 

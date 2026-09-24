@@ -774,6 +774,7 @@ def _ghi_asset_bien_the(
                         "cloud_fallback_reason": nguon.get("cloud_fallback_reason"),
                         "scene_index": nguon.get("scene_index"),
                         "scene_plan_id": nguon.get("scene_plan_id"),
+                        "scene_plan_revision": nguon.get("scene_plan_revision"),
                     }
                 ),
                 "created_by": job["user_id"],
@@ -808,10 +809,14 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
         # `scene_plan_id` (24/09/2026): kịch bản bối cảnh của chủ đề mà cảnh này
         # thuộc về — giao diện chỉ nạp lại cảnh của ĐÚNG kịch bản đang mở.
         scene_plan_id = payload.get("scene_plan_id")
+        # `scene_plan_revision` (Đợt 3, 24/09/2026): phiên bản kịch bản lúc sinh
+        # ảnh — kịch bản sửa sau đó thì ảnh này được đánh dấu "lỗi thời".
+        scene_plan_revision = payload.get("scene_plan_revision")
         nguon: dict[str, Any] = {
             "engine": "local_studio",
             "scene_index": scene_index,
             "scene_plan_id": scene_plan_id,
+            "scene_plan_revision": scene_plan_revision,
         }
 
         master_bytes = doc_bytes(master["storage_key"], STORAGE_ROOT)
@@ -994,6 +999,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "cloud_fallback_reason": nguon.get("cloud_fallback_reason"),
             "scene_index": scene_index,
             "scene_plan_id": scene_plan_id,
+            "scene_plan_revision": scene_plan_revision,
         }
         with conn.cursor() as cur:
             cur.execute(
