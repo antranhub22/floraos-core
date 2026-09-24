@@ -65,3 +65,6 @@ Claude outputs/
 .venv-iopaint/
 .claude/
 .kilo/
+
+# Kết quả đo chất lượng ảnh biến thể (scripts/cham-bien-the.py) — ảnh sinh ra, không commit
+var/cham-bien-the/
