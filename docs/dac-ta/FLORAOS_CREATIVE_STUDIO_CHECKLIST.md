@@ -1,8 +1,9 @@
 # Checklist — Creative Studio (Chặng 01–14, 6 Khu vực A–F)
 
 > **Quy tắc:** `[x]` = mã đã làm đúng điều ô nói VÀ có kiểm chứng ghi ở cột cuối dòng. `[ ]` = chưa làm hoặc chưa kiểm chứng được. Trước khi tin một ô đã tích, mở đúng tệp ô đó nói tới (AGENTS.md).
-> **Phiên bản:** 2.0 — 23/09/2026. Thay bản 1.0 (21/09, "5 tabs", đa số ô chưa tích dù mã đã có, trong khi Khu vực D tích cả ô "Subject Integrity 99.8–100%" vốn là số gõ tay).
+> **Phiên bản:** 2.1 — 24/09/2026 (kịch bản bối cảnh Chặng 05, chất lượng ảnh D, E theo kịch bản + giọng đọc, Chặng 07 sửa tại chỗ). Bản 2.0 — 23/09/2026. Thay bản 1.0 (21/09, "5 tabs", đa số ô chưa tích dù mã đã có, trong khi Khu vực D tích cả ô "Subject Integrity 99.8–100%" vốn là số gõ tay).
 > **Kiểm chứng máy thật 23/09 (máy anh Tony, VM Linux):** `tsc --noEmit` sạch · `vitest` 770/770 (94 tệp) · `eslint` phạm vi Creative Studio 0 lỗi · `pytest` worker 307 ca xanh (trừ `test_audio_worker.py` cần mạng TTS) · `check:docs` khớp. **Chưa chạy:** `test:tenant` (cần Postgres) — bắt buộc trước merge.
+> **Kiểm chứng 24/09:** `tsc --noEmit` sạch · `vitest` **792/792** · `eslint` phạm vi 0 lỗi · `pytest` media_ai + video xanh · `check:docs` + `check:template-ssot` khớp. **Chưa chạy:** `test:tenant` (có ca mới `content-drafts.test.ts`), gọi AI/Stability thật. Trên máy dev cần `prisma migrate deploy` (`20260924090000_content_drafts`) + `db:seed` (AIC-18, AIC-23).
 
 ---
 

@@ -1,7 +1,7 @@
 # User Journey — Creative Studio (Chặng 01–14)
 
 > **Mục đích:** Mô tả đúng những gì người dùng làm và thấy trong `/creative-studio`, từ lúc tải ảnh bó hoa đến lúc xem hiệu quả bán hàng.
-> **Phiên bản:** 3.0 — 23/09/2026. Đồng bộ lại theo mã (bản 2.0 mô tả Khu vực F và Chặng 10–14 như đã chạy thật trong khi mã là giao diện dựng sẵn với số liệu gõ cứng).
+> **Phiên bản:** 3.1 — 24/09/2026. Kịch bản bối cảnh sinh ở Chặng 05 dùng chung B/C/D/E; E theo kịch bản + giọng đọc + phát video; B tự lưu bài; Chặng 07 xem lại và sửa tại chỗ mọi tài sản. (Bản 3.0 — 23/09/2026: đồng bộ lại theo mã (bản 2.0 mô tả Khu vực F và Chặng 10–14 như đã chạy thật trong khi mã là giao diện dựng sẵn với số liệu gõ cứng).
 > **Tài liệu liên quan:** kiến trúc `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md` · dữ liệu vào/ra `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_IO_SPEC.md` · hành trình 14 chặng gốc `docs/dac-ta/FLORAOS_PRODUCT_TO_MARKET_USER_JOURNEY.md`.
 
 ---
@@ -77,7 +77,7 @@ F  Gói chiến dịch           07 PACKAGE · 08 QA · 09 APPROVE → 10 LAUNCH
   - **Video**: phát ngay; *Duyệt video (P4)* tại chỗ; đổi video khác; *Sửa storyboard / render lại* mở Khu vực E đúng job.
   - **Âm thanh**: nghe bản phối; *Phối lại ở Khu vực C*.
   - **Bài đăng**: sửa chữ/hashtag, bật tắt kênh; *Viết lại ở Khu vực B*.
-  - Sửa tại chỗ không tốn credit; **làm lại (tốn credit) luôn ở khu vực gốc** — mỗi tài sản chỉ có một nơi sản xuất. Trong lúc làm lại có thanh "← Quay lại gói (Chặng 07)"; về gói thì tài sản mới được đề xuất (*Có ảnh mới hơn cho cảnh này — dùng ảnh mới*, *Có video mới…*, *Có bản phối mới…*). Mọi thay đổi đưa gói về Nháp để QA chạy lại.
+  - Sửa tay (chữ bài đăng, bật/tắt, đổi tài sản) không tốn credit; sửa bằng AI tại chỗ (mục trên) tốn credit như ở khu vực gốc vì gọi cùng backend. Muốn chỉnh sâu hơn thì *làm lại ở khu vực gốc*. Trong lúc làm lại có thanh "← Quay lại gói (Chặng 07)"; về gói thì tài sản mới được đề xuất (*Có ảnh mới hơn cho cảnh này — dùng ảnh mới*, *Có video mới…*, *Có bản phối mới…*). Mọi thay đổi đưa gói về Nháp để QA chạy lại.
 - **08 QA** — **"Chạy QA"** chạy trên máy chủ, năm trục: toàn vẹn sản phẩm · đã duyệt từng tài sản · đúng tỷ lệ theo kênh · nội dung (độ dài, biến chưa điền, hashtag Instagram, từ cấm ngành hoa / của thương hiệu) · thương hiệu (logo, ảnh đóng dấu). Kết luận: Đạt / Cần xem lại / Từ chối, kèm lý do cụ thể.
 - **09 APPROVE** — chỉ duyệt được khi QA Đạt, hoặc Cần xem lại và đã tick "Tôi đã xem các cảnh báo". QA Từ chối thì phải sửa rồi chạy lại. Duyệt được ghi nhật ký kiểm toán. Gói đã duyệt không sửa được.
 

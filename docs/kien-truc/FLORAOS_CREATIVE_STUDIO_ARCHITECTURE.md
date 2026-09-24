@@ -2,7 +2,7 @@
 
 > **Module:** AI Creative Studio — Chặng 01–14 của hành trình Product-to-Market, gói trong 6 Khu vực tab (A–F)
 > **Route:** `/creative-studio`
-> **Phiên bản:** 4.0 — 23/09/2026 — Đồng bộ lại 100% theo mã (rà soát `claude/ra-soat-dong-bo-creative-studio-14-chang-23-09-2026.md` trong project)
+> **Phiên bản:** 4.1 — 24/09/2026 — Nâng cấp sau chạy thật trên máy anh Tony: kịch bản bối cảnh theo chủ đề sinh ở Chặng 05 dùng chung B/C/D/E; sửa chất lượng ảnh worker (lõi đặc, cổng phủ ≥ 60%); Khu vực E theo kịch bản + giọng đọc + phát video; Chặng 07 xem lại và **sửa tại chỗ** mọi kết quả. (Bản 4.0 — 23/09/2026: đồng bộ 100% theo mã.)
 > **Trạng thái:** Đã triển khai trên nhánh `fix/creative-studio-production-ready`. Nghiệm thu trên máy thật còn thiếu: `npm run test:tenant` (cần Postgres), chạy thử worker với `STABILITY_API_KEY` thật, `lint` toàn repo (xem §9).
 >
 > **Quy tắc đọc:** chi tiết thi công (tên tệp, đường dẫn, method, mã năng lực, enum) lấy mã nguồn làm chuẩn (Hiến pháp Tài liệu §2, quy tắc 2). Tài liệu này mô tả đúng những gì mã đang làm, kể cả giới hạn.
@@ -16,11 +16,11 @@ Creative Studio gom hành trình "1 sản phẩm hoa → 1 chiến dịch" vào 
 | Khu vực | Tab ID | Nhãn | Icon | Chặng | Component | Việc thật mã đang làm |
 |---|---|---|---|---|---|---|
 | A | `area-a` | Quét theo ảnh sản phẩm | Camera | 01–05 | `<ProductIntelligenceWorkspace />` | Tải ảnh → `assets` (ORIGINAL) · Vision `gpt-4o-mini` bóc tách nguyên tử · Trend Fit (đối chiếu `trend_signals`) · 10 chủ đề (sinh theo luật trong `trend-fit.ts`) · chọn chủ đề + Mode → bàn giao qua URL chỉ mang định danh |
-| B | `area-b` | Viết contents | FileText | 06a | `<ContentsWorkspace />` | `POST /creative-production/produce` → cung truyện + 4 bài (Facebook, Instagram, TikTok, Zalo) sinh theo khuôn (`social-post-generator.ts`); lưu bài vào gói chiến dịch |
-| C | `area-c` | Tạo audio | Headphones | 06b | `<AudioWorkspace />` | `POST /audio/jobs` → job `audio.generate` → worker Python phối voice + nhạc nền, ghi kho → nghe lại qua `GET /audio/jobs/:id` |
+| B | `area-b` | Viết contents | FileText | 06a | `<ContentsWorkspace />` | `POST /creative-production/produce` → 4 bài (Facebook, Instagram, TikTok, Zalo) sinh theo khuôn (`social-post-generator.ts`); cung truyện HIỂN THỊ theo kịch bản bối cảnh của chủ đề (`withScenePlan`); 4 bài **tự lưu** vào `content_drafts` (1,2 giây sau lần sửa cuối) |
+| C | `area-c` | Tạo audio | Headphones | 06b | `<AudioWorkspace />` | `POST /audio/jobs` → job `audio.generate` → worker Python phối voice + nhạc nền, ghi kho → nghe lại qua `GET /audio/jobs/:id`; lời thoại điền sẵn từ kịch bản bối cảnh |
 | D | `area-d` | Tạo biến thể ảnh | Wand2 | 06c | `<VariantWorkspace />` | Phân cảnh theo kịch bản bối cảnh của chủ đề (`creative.scene_plan`, CREATIVE 5 / AUTHENTIC 3), mỗi cảnh là một job `media.variant` (Studio cục bộ) hoặc `media.variant.cloud` (hậu cảnh Stability) — Subject Integrity ĐO bởi worker |
-| E | `area-e` | Tạo video | Film | 06d | `<VideoWorkspace />` | Tạo `video_jobs` (bản nháp) theo 6 khuôn M04c với storyboard + Ken Burns theo cảnh; duyệt P3/P4 và render ở màn Video |
-| F | `area-f` | Gói chiến dịch | Package | 07–09 (+10–14) | `<PackageWorkspace />` | Gói lưu ở `campaign_packages`; QA năm trục phía máy chủ; duyệt `J5` + `audit_logs`; kế hoạch đăng; số liệu thật Chặng 11–14 |
+| E | `area-e` | Tạo video | Film | 06d | `<VideoWorkspace />` | Storyboard dựng từ kịch bản bối cảnh (số cảnh, phụ đề, lời thoại, chuyển động) + ảnh biến thể cùng cảnh của D (thiếu thì Master); chọn giọng đọc; "Tạo video" lập bản nháp rồi khung `VideoJobLifecycle` làm P3 → render → phát/tải → P4 ngay trong E |
+| F | `area-f` | Gói chiến dịch | Package | 07–09 (+10–14) | `<PackageWorkspace />` | Gói lưu ở `campaign_packages`; Chặng 07 hiện đủ tài sản (ảnh theo cảnh, video phát được, âm thanh nghe được, bài đăng) và **sửa tại chỗ** mọi loại, chạy ngầm, tự thay vào gói; QA năm trục phía máy chủ; duyệt `J5` + `audit_logs`; kế hoạch đăng; số liệu thật Chặng 11–14 |
 
 ### 1.1. Downstream (Chặng 10 → 14) — `<PackageDownstreamCard />`
 
@@ -46,20 +46,26 @@ Tám trường bắt buộc: `topicId`, `mode`, `sourceImageUrl`, `productName`,
 - Ảnh tải lên: `POST /api/v1/assets/upload-url` → `PUT` lên kho → `POST /api/v1/assets` (đăng ký `ORIGINAL`). Từng bước kiểm `res.ok`; lỗi thì dừng, không gán `assetId`.
 - `buildHandoffSearchParams()` (`build-handoff-url.ts`) chỉ cho phép định danh; `isSafeHandoffQueryString()` kiểm lại. Ảnh luôn ký lại qua `GET /api/v1/assets/:id/view-url`.
 - Định danh sinh ở C/E cũng đi qua URL: `audioJobId`, `videoJobId` — Khu vực F đọc lại qua API.
+- `scenePlanId` (job `creative.scene_plan`, hoặc `rule` với kịch bản cơ bản) do Chặng 05 đặt lên URL; B/C/D/E/F chỉ TRA kịch bản, không tự tạo (trừ nút viết ở D cho lối vào không qua Chặng 05).
+- Làm lại ở khu vực gốc từ Chặng 07 mang `returnTo=f` (+ `focusScene`, `videoJobId`, `audioJobId`); trang hiện thanh "← Quay lại gói (Chặng 07)".
 
 ### 2.4. Subject Integrity (M04b)
 - Worker đo tỷ lệ điểm ảnh LÕI chủ thể trùng khít TUYỆT ĐỐI với Master Image trên mặt nạ co biên. Độ sâu co biên = `StudioBackdropEngine.LIGHT_WRAP_DEPTH_PX + 1` = 5px (sửa 23/09/2026 — trước đó 3px < light wrap 4px nên mọi biến thể hợp lệ bị đo ~0,96).
 - Ngưỡng (`variant-rules.ts`): `≥ 0,999` SAFE · `≥ 0,99` WARNING · `< 0,99` REJECTED.
+- **Thân sản phẩm đặc (24/09/2026):** sau khi tách nền, `_lam_dac_chu_the` coi alpha ≥ 128 là thân sản phẩm, co vào 4px → alpha 255 và điểm ảnh lấy NGUYÊN từ Master; chỉ dải viền ngoài giữ alpha mềm. `EdgeDefringer` chỉ khử màu trong dải 6px sát nền. Lý do: `bria-rmbg` trả ~75% đầu hoa ở alpha 128–244 và lõi ≈ 254 — trước đó defringer tô đè cả đầu hoa ("xoá nhoà"), phông lọt qua thân, và mọi ảnh thật bị đo ~0,82.
+- **Cổng không được mù:** lõi đo phải phủ ≥ 60% thân sản phẩm (`TY_LE_PHU_LOI_TOI_THIEU`), không đủ thì trả chính tỷ lệ phủ → REJECTED. Ảnh giỏ hoa thật sau sửa: phủ 93%, integrity 1,00.
 - **REJECTED thì không ghi asset nào** (job `COMPLETED` + `result = REJECTED`). Nhánh "vẫn ghi, dán nhãn WARNING" đã gỡ 23/09/2026.
 
 ### 2.5. Tenant Isolation
-`organization_id` chỉ từ phiên máy chủ. `POST /creative-production/produce` không còn nhận `organizationId` trong body (23/09/2026). Bảng mới `campaign_packages` là TENANT, đi qua `scopedWhere`/`scopedData`.
+`organization_id` chỉ từ phiên máy chủ. `POST /creative-production/produce` không còn nhận `organizationId` trong body (23/09/2026). Bảng mới `campaign_packages` và `content_drafts` (24/09) là TENANT, đi qua `scopedWhere`/`scopedData`. Ảnh ký URL chỉ trong khoá của đúng tổ chức (`videoViewUrl` chỉ ký `videos/<tổ chức của phiên>/`).
 
 ### 2.6. Biến thể chỉ dựng từ MASTER đã duyệt
 Cả hai nhánh M04b kiểm `kind = MASTER && approval_state = APPROVED` phía TS (`requestVariants`/`requestCloudVariant`, trả `409`) và kiểm lại ở worker. Ảnh ORIGINAL từ Khu vực A đi qua "Skip — Dùng ảnh gốc" (`POST /media/promote-to-master`, `I2`) — hàm này nay tìm đúng MASTER con của ảnh gốc để không tạo trùng.
 
 ### 2.7. Không chạy mô hình trong request HTTP
 Mọi lượt dựng ảnh/âm thanh/video đi qua `enqueueJob` (hạn mức → trừ credit → `usage` → `generation_jobs` → `NOTIFY` trong một giao dịch, `Idempotency-Key` bắt buộc). `StudioLocalImageProvider` (TS) không còn `execFileSync` Python — luôn ném lỗi rõ ràng; Studio Backdrop Engine chỉ chạy trong worker.
+
+Lượt LLM văn bản ngắn (người dùng đứng chờ vài giây) chạy **tại chỗ nhưng vẫn có sổ**: `enqueueJob` → `startInline` → `callCapability` qua cổng AI → `finishInline(output)`; hỏng thì `FAILED` + `refundJob`. Gồm `creative.scene_plan`, `creative.scene_revise` (AIC-18) và `creative.content_rewrite` (AIC-23) — cùng khuôn `product.copy.generate`.
 
 ---
 
@@ -70,13 +76,17 @@ src/app/(app)/creative-studio/page.tsx          # Shell 6 khu vực + CreativeSt
 
 src/components/creative-studio/
 ├── contents-workspace.tsx        # B
-├── creative-result-viewer.tsx    # B — hiển thị 4 bài, "Lưu bài vào gói chiến dịch"
+├── creative-result-viewer.tsx    # B — 4 bài, cung truyện theo kịch bản, tự lưu `content_drafts`, "Lưu bài vào gói"
 ├── audio-workspace.tsx           # C — tạo job + chờ + nghe lại
 ├── variant-workspace.tsx         # D — phân cảnh theo kịch bản của chủ đề, mỗi cảnh một job thật
 ├── scene-plan-client.ts          # C/D — tra/viết kịch bản bối cảnh (`/creative-production/scene-plans`)
 ├── source-picker.tsx             # D — chọn Master / Skip dùng ảnh gốc
-├── video-workspace.tsx           # E
-├── package-workspace.tsx         # F — Chặng 07/08/09
+├── video-workspace.tsx           # E — storyboard theo kịch bản, chọn giọng, khung job
+├── video-storyboard-builder.ts   # E — dựng storyboard từ kịch bản + ảnh D (thuần, có test)
+├── video-job-lifecycle.tsx       # E/F — P3 → render (hỏi lại 3 giây) → phát/tải → P4
+├── package-workspace.tsx         # F — Chặng 07/08/09, tự lưu khi sửa tại chỗ, AI viết lại bài
+├── package-review-section.tsx    # F — ảnh theo cảnh / video / âm thanh: xem, duyệt, sửa tại chỗ
+├── package-revise-panels.tsx     # F — sửa cảnh + sinh lại ảnh, phối lại âm thanh, sửa video → P3 → render
 ├── package-qa-card.tsx           # F — hiển thị báo cáo QA thật
 ├── package-downstream-card.tsx   # F — Chặng 10–14
 ├── package-client.ts             # F/B/E — helper gọi API gói chiến dịch
@@ -95,13 +105,12 @@ src/modules/creative-production/
 ├── domain/  production-types · validate-transition · build-handoff-url · content-brief-builder ·
 │            social-post-generator · topic-to-{audio,content,media,video}-bridge ·
 │            campaign-package-rules (QA, duyệt, số đo, mẫu thắng, đề xuất) ·
-│            scene-plan-rules (kịch bản bối cảnh theo chủ đề — 24/09/2026)
-├── adapters/  scene-plan-ai-adapter (AIC-18) · narrative-ai-adapter (cũ, chưa dùng)
+│            scene-plan-rules (kịch bản bối cảnh theo chủ đề) · revision-rules (sửa cảnh / viết lại bài) — 24/09/2026
+├── adapters/  scene-plan-ai-adapter (AIC-18) · revision-ai-adapter (AIC-18, AIC-23) · narrative-ai-adapter (cũ, chưa dùng)
 ├── use-cases/  produce-creative · produce-authentic · plan-narrative-arc · dispatch-production-jobs ·
 │               package-campaign (ước tính, không lưu) · manage-campaign-package · get-campaign-performance ·
-│               generate-scene-plan (job `creative.scene_plan`)
-├── infra/   campaign-package-repository (Prisma) · creative-production-repository (port in-memory cũ, chưa dùng)
-└── adapters/ narrative-ai-adapter
+│               generate-scene-plan (job `creative.scene_plan`) · revise-assets (scene_revise, content_rewrite) · content-draft
+└── infra/   campaign-package-repository · content-draft-repository (Prisma) · creative-production-repository (port in-memory cũ, chưa dùng)
 
 src/modules/media/
 ├── domain/variant-rules.ts                 # feature, preset, ratio, ngưỡng, cổng Master
@@ -111,6 +120,7 @@ src/modules/media/
 └── adapters/studio-local-image-provider.ts # luôn ném lỗi (không chạy Python trong web)
 
 src/modules/audio-studio/  use-cases/create-audio-job · get-audio-job · infra/audio-job-repository
+src/modules/video-studio/  use-cases/get-video-job (`videoViewUrl` — URL ký có hạn) · dispatch-video-render (mã asset → `storage_key`, chặn cảnh thiếu ảnh)
 
 workers/media_ai/
 ├── jobs/worker.py              # một vòng claim: media.optimize → media.variant → media.variant.cloud → audio.generate → video.render
@@ -118,6 +128,9 @@ workers/media_ai/
 ├── providers/background/stability_background.py   # hậu cảnh trống do Stability sinh
 ├── providers/segmentation/rembg_segmenter.py
 ├── image/studio_backdrop.py    # StudioBackdropEngine (composite(backdrop_image=...))
+├── image/defringe.py           # EdgeDefringer — chỉ khử viền trong dải 6px sát nền
+├── video/audio_engine.py       # giọng đọc từng cảnh + nhạc nền (sửa thứ tự tham số pad/silence 24/09)
+├── video/providers/local_cinematic.py  # Ken Burns ffmpeg — không còn ảnh mẫu dự phòng
 ├── audio/audio_worker.py       # process_audio_generation_job
 └── generate_scene.py           # CLI đo tốc độ cho dev — KHÔNG nằm trên đường chạy production
 ```
@@ -127,10 +140,10 @@ workers/media_ai/
 ## 4. Luồng 6 Khu Vực
 
 ```
-A (01–05) ──bàn giao URL định danh──▶ B · C · D · E (06a–06d, thứ tự tự do)
-                                         │  B lưu bài vào gói; C/E mang audioJobId/videoJobId qua URL
+A (01–05) ──05: AI viết kịch bản bối cảnh (scenePlanId)──▶ B · C · D · E (06a–06d, thứ tự tự do, cùng một kịch bản)
+                                         │  B tự lưu bài; C/E mang audioJobId/videoJobId qua URL
                                          ▼
-                                F: 07 PACKAGE ─▶ 08 QA (máy chủ) ─▶ 09 APPROVE (J5 + audit)
+                                F: 07 PACKAGE (xem + sửa tại chỗ, chạy ngầm) ─▶ 08 QA (máy chủ) ─▶ 09 APPROVE (J5 + audit)
                                          ▼
                    10 LAUNCH (kế hoạch + mã bài) ─▶ 11–12 số liệu thật ─▶ 13 mẫu thắng ─▶ 14 đề xuất
 ```
@@ -147,11 +160,13 @@ A (01–05) ──bàn giao URL định danh──▶ B · C · D · E (06a–06
 | B | `POST /creative-production/produce` · `/plan` · `/package` (ước tính) | `I1` |
 | C | `POST /audio/jobs` (Idempotency-Key) · `GET /audio/jobs/:id` | `I1` |
 | C · D | `POST·GET /creative-production/scene-plans` · `GET /creative-production/scene-plans/:id` (kịch bản bối cảnh, 24/09/2026) | `I1` |
+| B · F | `GET·PUT /creative-production/content-drafts` (bài B tự lưu) | `I1` |
+| F | `POST /creative-production/scene-revisions` (AI sửa một cảnh, 1 credit) · `POST /creative-production/content-rewrites` (AI viết lại một bài, 1 credit) | `I1` |
 | D | `POST /media/variants` (`engine` local/cloud, `scene_index` 1–5, `scene_plan_id`, Idempotency-Key) · `GET /media/variants/:id` | `I4` |
 | D | `POST /media/variants/:id/approve` · `GET /media/variants` | `I5` |
 | D | `POST /media/promote-to-master` | `I2` |
 | D | `GET /assets?kind=MARKETING&parent_asset_id=` (lọc theo Master — thêm 23/09/2026) | `G1` |
-| E | `GET·POST /video/jobs` · `PATCH /video/jobs/:id/storyboard` · `POST /video/jobs/:id/render` | `I1` |
+| E | `GET·POST /video/jobs` (`GET /:id` kèm `final_video_view_url`) · `PATCH /video/jobs/:id/storyboard` · `POST /video/jobs/:id/render` | `I1` |
 | E | `POST /video/jobs/:id/approve-script` · `approve-video` | `P3` · `P4` |
 | F | `POST·GET /creative-production/packages` | `I1` · `G1` |
 | F | `GET·PATCH /creative-production/packages/:id` | `G1` · `I1` |
@@ -221,7 +236,20 @@ Con số "~0,46s / ảnh 2048×2048" là đo bằng CLI dev `generate_scene.py` 
 - Bảng `campaign_packages` (đặc tả 07 §23). Trạng thái: `DRAFT → QA_PASSED | QA_NEEDS_REVIEW | QA_REJECTED → APPROVED`. Sửa gói chưa duyệt → về `DRAFT`, xoá QA cũ.
 - **QA (08)** — `evaluateCampaignQa()`: (1) toàn vẹn sản phẩm theo số đo từng ảnh; (2) cổng duyệt từng tài sản (I5, P4, audio hoàn tất); (3) chuẩn tỷ lệ theo kênh (TikTok cần 9:16); (4) nội dung — đủ bài, giới hạn ký tự (FB 63.206, IG 2.200, TikTok 2.200, Zalo 2.000), biến `{{…}}` chưa điền, ≤ 30 hashtag IG, từ điển ngành hoa + `brand_profiles.forbidden_styles` (`checkFlowerContent`); (5) thương hiệu — có logo, có ảnh đóng dấu. Phán quyết xấu nhất thắng.
 - **Duyệt (09)** — `canApprovePackage()`: chỉ sau QA; `QA_REJECTED` không duyệt được; `QA_NEEDS_REVIEW` cần xác nhận. Ghi `audit_logs` cùng giao dịch, chốt chặn đua bằng `updateMany where status = <đã đọc>`.
-- Bài đăng vào gói từ Khu vực B (nút "Lưu bài vào gói chiến dịch") hoặc soạn trực tiếp ở F.
+- Bài đăng: bài B tự lưu (`content_drafts`) được đưa sẵn vào gói khi tạo; sau đó đề xuất "Dùng bài của Khu vực B" khi bài tự lưu khác bài trong gói. Vẫn soạn trực tiếp ở F được.
+
+### 8.1. Xem lại & sửa tại chỗ ở Chặng 07 (quyết định PO 24/09/2026)
+
+Người dùng ở nguyên Chặng 07: gõ yêu cầu → bấm Sửa → hệ thống gọi ĐÚNG backend của khu vực gốc (cùng cổng integrity, trừ credit, nhật ký) và chạy ngầm; có kết quả thì hiện ngay, **tự thay vào gói và lưu** (`PATCH`, gói về `DRAFT`). Tài sản đang chọn đọc thẳng qua `GET /video/jobs/:id` và `GET /audio/jobs/:id` (không phụ thuộc bản chụp trong gói).
+
+| Tài sản | Xem / duyệt tại chỗ | Sửa tại chỗ | Backend | Credit |
+|---|---|---|---|---|
+| Ảnh từng cảnh | ảnh, bối cảnh, % lõi, *Duyệt ảnh* (I5) | ô yêu cầu → *Sửa cảnh*: AI sửa cảnh (ghi vào kịch bản dùng chung) → sinh ảnh mới | `scene-revisions` → `media/variants` | 1 + 2 (Stability) hoặc 1 + 1 (cục bộ) |
+| Bài đăng | 4 kênh | sửa tay (miễn phí) hoặc *AI viết lại* theo yêu cầu, chặn từ cấm | `content-rewrites` | 1 |
+| Âm thanh | trình nghe | *Sửa âm thanh*: lời thoại từng cảnh + nhạc → phối lại | `audio/jobs` | `audio.generate` |
+| Video | trình phát, storyboard từng cảnh, *Duyệt video* (P4) | *Sửa video*: thời lượng, chuyển động, ảnh, phụ đề, lời thoại, giọng → bản sửa → **P3 riêng** (theo PO) → render | `video/jobs` + `approve-script` + `render` | 5 |
+
+Nút "Mở Khu vực B/C/D/E" vẫn còn (mang `returnTo=f`), về gói thì đề xuất tài sản mới ("Có ảnh mới hơn cho cảnh này", "Có video mới…", "Có bản phối mới…").
 
 ---
 
@@ -231,6 +259,9 @@ Con số "~0,46s / ảnh 2048×2048" là đo bằng CLI dev `generate_scene.py` 
 - **#120** — Nhánh cloud của **M04a** (`POST /media/optimizations` engine cloud → `executeCloudCreative`) vẫn chạy đồng bộ trong request, integrity ước lượng 0,98/1,0, bản RATIO trỏ cùng tệp. Ngoài phạm vi Creative Studio (M04a chạy ở `/tai-anh`).
 - **#121** — Năng lực: B/C/E/F dùng chung `I1`; duyệt gói dùng `J5` (không trần cứng). Chờ PO quyết thêm mã riêng.
 - **#122** — 10 chủ đề của Chặng 04 là khuôn theo luật; "video tham khảo" là danh mục tuyển chọn (metrics ước tính, TikTok là trang tìm kiếm) — giao diện đã gắn nhãn; chưa có nguồn video thời gian thực.
-- **#123** — Video E: chưa nhận bản phối âm thanh từ Khu vực C; giọng/nhạc để worker chọn mặc định.
+- **#123** — Video E đọc lại lời thoại bằng giọng chọn ở E (khớp từng cảnh), chưa dùng bản phối đã tạo ở Khu vực C.
+- **#125** — Bài đăng B vẫn sinh theo khuôn `social-post-generator.ts` (phía máy chủ `produce` dùng `planNarrativeArc` theo luật); chỉ phần hiển thị cung truyện theo kịch bản bối cảnh.
+- **#126** — `workers/.venv` phải là Python ≥ 3.11 (Python 3.9 của Command Line Tools dùng LibreSSL, không TLS 1.3 → Stability từ chối bắt tay). Worker cảnh báo khi khởi động.
+- Hậu cảnh Stability lỗi (hết credit, mạng) → worker lùi về phông cục bộ nhưng job `media.variant.cloud` vẫn trừ 2 credit — chờ PO quyết hoàn chênh lệch (nợ #127).
 - **#124** — `npm run lint` toàn repo còn 235 lỗi (src) + 31 (tests) ngoài phạm vi Creative Studio (CI đỏ ở bước lint); phạm vi Creative Studio đã 0 lỗi.
 - Chưa quy được đơn hàng về từng bài đăng (không có mã theo dõi); Chặng 11–12 tính theo sản phẩm kể từ ngày duyệt.

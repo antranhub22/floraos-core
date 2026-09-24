@@ -758,3 +758,15 @@ Chi tiết từng ô ở `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_CHECKLIST.md` v2.0
 - [x] Tài liệu SSOT + đặc tả 06/07 đồng bộ (`check:docs` khớp)
 - [ ] `npm run test:tenant` trên máy có Postgres — **chưa chạy**
 - [ ] Chạy thử worker với `STABILITY_API_KEY` thật
+
+## CS-24/09 — Creative Studio: nâng cấp sau chạy thật trên máy anh Tony
+
+Chi tiết ở `docs/dac-ta/FLORAOS_CREATIVE_STUDIO_CHECKLIST.md` v2.1, Arch v4.1 §2 / §8.1, IO Spec v4.1 §5.0 / §7.1.
+
+- [x] Kịch bản bối cảnh theo chủ đề (`creative.scene_plan`, AIC-18, 1 credit) sinh ở Chặng 05, dùng chung B/C/D/E; CREATIVE 5 / AUTHENTIC 3 cảnh; gỡ bộ chọn bối cảnh tay ở D
+- [x] Chất lượng ảnh D: chốt lõi alpha, thân sản phẩm đặc lấy điểm ảnh Master, khử viền chỉ dải 6px, cổng phủ lõi ≥ 60%; lý do lùi Stability hiện trên thẻ cảnh
+- [x] Khu vực E: storyboard theo kịch bản + ảnh D cùng cảnh, gỡ ảnh mẫu Unsplash, gửi `voiceCode` (sửa lỗi video chỉ có nhạc + lỗi đảo tham số `audio_engine.py`), phát video qua `final_video_view_url`, P3 → render → P4 thật
+- [x] Bài B tự lưu (`content_drafts`, migration `20260924090000_content_drafts`), Chặng 07 đưa sẵn vào gói
+- [x] Chặng 07 xem lại đủ tài sản và sửa tại chỗ: ảnh (`scene-revisions` + biến thể mới), bài (sửa tay / `content-rewrites`, AIC-23), âm thanh (phối lại), video (bản sửa → P3 → render → P4); tự thay vào gói + lưu
+- [ ] `npm run test:tenant` (gồm `content-drafts.test.ts`) trên máy có Postgres — **chưa chạy**
+- [ ] Chạy thật `db:seed` + AI viết kịch bản / sửa cảnh / viết lại bài trên máy dev

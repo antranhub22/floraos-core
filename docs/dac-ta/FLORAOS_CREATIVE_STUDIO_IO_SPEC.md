@@ -1,7 +1,7 @@
 # Input/Output Specification — Creative Studio (Chặng 01–14)
 
 > **Mục đích:** Chuẩn hoá đầu vào/đầu ra THẬT của từng chặng trong `/creative-studio`, đúng tên trường và kiểu như mã nguồn.
-> **Phiên bản:** 4.0 — 23/09/2026. Viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
+> **Phiên bản:** 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
 > **Nguồn sự thật:** `src/modules/market-intelligence/domain/product-intelligence-types.ts`, `src/modules/creative-production/domain/{production-types,validate-transition,build-handoff-url,campaign-package-rules}.ts`, `src/modules/media/domain/variant-rules.ts`, `src/modules/audio-studio/domain/audio-types.ts`, `src/modules/video-studio/domain/video-types.ts`, các `route.ts` tương ứng. Lệch với tài liệu này thì mã thắng (Hiến pháp §2 quy tắc 2) — và tài liệu phải sửa trong cùng commit.
 
 ---
@@ -110,6 +110,8 @@ Brief không mang `assetId` — ảnh được neo ở gói chiến dịch (Ch�
 
 4 bài đăng (Facebook, Instagram, TikTok, Zalo) sinh phía trình duyệt bằng `generateAllPlatformPosts()`; thiếu giá thật thì ghi "Liên hệ tiệm để nhận báo giá" (không còn giá bịa). Nút "Lưu bài vào gói chiến dịch" → `PackagePost[]` vào gói (§7).
 
+**Tự lưu (24/09/2026)** — `PUT /api/v1/creative-production/content-drafts` (`I1`) `{ asset_id (uuid, thuộc tổ chức), topic_id, mode, topic_title?, posts: PackagePost[] }` → `{ draft }`, ghi đè bản cũ cùng khoá (bảng `content_drafts`, duy nhất theo tổ chức + ảnh + chủ đề + mode); trình duyệt gọi 1,2 giây sau lần sửa cuối. `GET …/content-drafts?asset_id&topic_id&mode` → `{ draft | null }`; Chặng 07 đọc để đưa sẵn bài vào gói.
+
 ---
 
 ## 4. Khu vực C — Chặng 06b
@@ -193,6 +195,10 @@ Ngưỡng: SAFE ≥ 0,999 · WARNING ≥ 0,99 · REJECTED < 0,99 (không ghi ass
 
 Tạo ra `video_jobs` ở `DRAFT`. Tiếp theo: `PATCH …/storyboard` (`I1`), `POST …/approve-script` (`P3`), `POST …/render` (`I1`, job `video.render` 5 credit), `POST …/approve-video` (`P4`). `video_stage`: `DRAFT, SCRIPT_GENERATING, SCRIPT_READY, SCRIPT_APPROVED, RENDERING, RENDER_COMPLETED, APPROVED, REJECTED, FAILED`.
 
+`GET /api/v1/video/jobs/:id` (`I1`) trả job kèm `final_video_view_url` — URL ký có hạn (`/api/v1/storage/<key>?exp&sig`), chỉ ký khoá thuộc `videos/<organizationId>/`; `null` khi chưa render xong. Giao diện (`video-job-lifecycle.tsx`) đọc 3 giây/lần cho tới khi xong.
+
+Storyboard từ kịch bản (24/09/2026, `video-storyboard-builder.ts`): mỗi cảnh của kịch bản → một `scenes[]` với `textOverlay`, `voiceScript`, `motionEffect` của cảnh; `imageAssetId` = ảnh biến thể cùng `scene_index` ở D, thiếu thì Master. `voiceCode` gửi theo giọng chọn ở "Cấu hình cơ bản" (không gửi thì worker bỏ lồng tiếng). Render đổi mã asset → `storage_key`; cảnh không có ảnh → `400`.
+
 ---
 
 ## 7. Khu vực F — Chặng 07 → 09
@@ -207,9 +213,20 @@ Tạo ra `video_jobs` ở `DRAFT`. Tiếp theo: `PATCH …/storyboard` (`I1`), `
 | 08 | `POST /creative-production/packages/:id/qa` (`I1`) | — | `qa_report` + `status` |
 | 09 | `POST /creative-production/packages/:id/approve` (`J5`) | `{ acknowledge_warnings?: boolean }` | `APPROVED`, `audit_logs` |
 
-`CampaignPackageView`: `{ id, name, mode, status, master_asset_id, product_id, topic, posts, variant_asset_ids, video_job_id, audio_job_id, variants: { asset_id, url, aspect_ratio, identity_score, approval_state, scene_index, watermark }[], video: { id, title, stage, video_approval, aspect_ratio, final_video_url } | null, audio: { job_id, stage, audio_url } | null, qa_report, qa_checked_at, approved_by, approved_at, launch_plan, created_at, updated_at }`.
+`CampaignPackageView`: `{ id, name, mode, status, master_asset_id, product_id, topic, posts, variant_asset_ids, video_job_id, audio_job_id, variants: { asset_id, url, aspect_ratio, identity_score, approval_state, scene_index, watermark }[], video: { id, title, stage, video_approval, script_approval, aspect_ratio, final_video_url, view_url (ký có hạn) } | null, audio: { job_id, stage, audio_url } | null, qa_report, qa_checked_at, approved_by, approved_at, launch_plan, created_at, updated_at }`.
 
 `QaReport`: `{ verdict: "PASS"|"NEEDS_REVIEW"|"REJECTED", checks: { id: product_integrity|approvals|platform_specs|content|brand, title, verdict, reasons[] }[], checkedAt }`. Luật chi tiết: Arch §8.
+
+### 7.1. Sửa tại chỗ ở Chặng 07 (24/09/2026)
+
+Kết quả sửa tự thay vào gói và lưu qua `PATCH …/packages/:id` (gói về `DRAFT`, xoá QA). Hai route AI mới chạy tại chỗ (`enqueueJob` → `startInline` → cổng AI → `finishInline`; hỏng → `FAILED` + hoàn credit), `I1`, `Idempotency-Key` bắt buộc:
+
+| Route | Vào | Ra | Feature |
+|---|---|---|---|
+| `POST /creative-production/scene-revisions` | `{ instruction (3–MAX), scene_index 1–5, mode, scene_plan_id? (uuid), scene? (cảnh đầy đủ, dùng khi không có plan trong kho), topic_title?, product_name?, colors?[] }` | `{ job_id, scene, usage }` — có `scene_plan_id` thì ghi kịch bản đã sửa vào job gốc (`replaceOutput`) | `creative.scene_revise` 1 credit, `AIC-18` |
+| `POST /creative-production/content-rewrites` | `{ channel, text, hashtags[], instruction, product_name?, topic_title?, price_range? }` | `{ job_id, text, hashtags, warnings[], usage }` — giới hạn độ dài theo kênh; từ cấm ngành hoa / thương hiệu → loại lượt, hoàn credit | `creative.content_rewrite` 1 credit, `AIC-23` |
+
+Ảnh cảnh sau khi sửa: `POST /media/variants` với `scene_prompt` = `backgroundPrompt` mới (qua cổng Subject Integrity). Âm thanh: `POST /audio/jobs` mới. Video: `POST /video/jobs` mới → P3 (giữ riêng theo PO) → render → P4. Tất cả dùng lại backend của khu vực gốc.
 
 ---
 
