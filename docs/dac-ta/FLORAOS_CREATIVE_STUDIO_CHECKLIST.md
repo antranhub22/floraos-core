@@ -50,6 +50,7 @@
 - [x] Storyboard video E đúng số cảnh/phụ đề/lời thoại/chuyển động của kịch bản, ảnh biến thể cùng cảnh ở D (thiếu thì Master) — `video-storyboard-builder.ts` + `video-storyboard-builder.test.ts` (24/09)
 - [x] Gỡ ảnh mẫu Unsplash khỏi storyboard/`create-video-job`; render đổi mã asset → `storage_key`, chặn cảnh thiếu ảnh; worker bỏ ảnh mẫu dự phòng (24/09)
 - [x] Khu vực E làm đủ P3 → render → xem video → P4 tại chỗ; `GET /video/jobs/:id` trả `final_video_view_url` ký có hạn (trước đó URL không ký, không phát được); thanh 06d chỉ "đã duyệt" khi P4; credit hiển thị = credit render thật — `video-job-lifecycle.tsx`, `get-video-job.ts#videoViewUrl` (24/09)
+- [x] Video có giọng đọc: E gửi `voiceCode` (trước đây không gửi nên worker bỏ bước lồng tiếng, video chỉ có nhạc); chọn giọng trong "Cấu hình cơ bản", đọc lời thoại từng cảnh khớp thời lượng; worker cảnh báo khi TTS hỏng — `video-workspace.tsx`, `audio_engine.py` (24/09)
 - [ ] Bài viết B sinh phía máy chủ từ kịch bản — nợ #125
 - [ ] `npm run db:seed` để hai mô hình OpenAI có `AIC-18` — cần anh Tony chạy
 - [x] Nhánh cloud qua `enqueueJob` (`media.variant.cloud`, 2 credit), cổng Master đã duyệt — `request-variants.ts` + `request-cloud-variant.test.ts`

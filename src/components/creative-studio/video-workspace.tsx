@@ -21,6 +21,18 @@ import { costCreditForFeature } from "@/modules/usage/domain/pricing"
 /** Credit THẬT trừ khi render (`enqueueJob` feature `video.render`) — không phải `defaultCreditCost` của khuôn. */
 const RENDER_CREDIT = costCreditForFeature("video.render")
 
+/**
+ * Giọng đọc cho video (24/09/2026). Trước đây Khu vực E KHÔNG gửi `voiceCode`
+ * nên worker bỏ qua bước lồng tiếng — video chỉ có nhạc nền. Mã khớp
+ * `VOICE_MAPPING` của `workers/media_ai/video/audio_engine.py`.
+ */
+const VIDEO_VOICES: Array<{ code: string; label: string }> = [
+  { code: "vi-VN-Standard-A", label: "Nữ truyền cảm" },
+  { code: "vi-VN-Standard-C", label: "Nữ trẻ trung" },
+  { code: "vi-VN-Standard-B", label: "Nam ấm áp" },
+  { code: "none", label: "Không lồng tiếng (chỉ nhạc)" },
+]
+
 export function VideoWorkspace() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -37,6 +49,9 @@ export function VideoWorkspace() {
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>("MODERN_BADGE")
   const [hasSubtitle, setHasSubtitle] = useState(true)
   const [hasWatermark, setHasWatermark] = useState(true)
+  const [voiceCode, setVoiceCode] = useState<string>(
+    VIDEO_VOICES.some((v) => v.code === context?.voiceId) ? (context?.voiceId as string) : "vi-VN-Standard-A"
+  )
   const [scenes, setScenes] = useState<VideoSceneItem[]>([])
   const [storyboardKey, setStoryboardKey] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -147,6 +162,7 @@ export function VideoWorkspace() {
         body: JSON.stringify({
           productId: context?.productId ?? null, title, format, aspectRatio: spec.aspectRatio,
           hasSubtitle, captionStyle, hasWatermark,
+          voiceCode: voiceCode === "none" ? null : voiceCode,
           scenes: scenes.map((s) => ({
             sceneIndex: s.sceneIndex, durationSeconds: s.durationSeconds,
             imageAssetId: s.imageAssetId ?? null, textOverlay: s.textOverlay ?? null,
@@ -166,7 +182,7 @@ export function VideoWorkspace() {
       }
     } catch (err) { setError(err instanceof Error ? err.message : "Lỗi") }
     finally { setLoading(false) }
-  }, [context, title, format, spec, hasSubtitle, captionStyle, hasWatermark, scenes, router, searchParams])
+  }, [context, title, format, spec, hasSubtitle, captionStyle, hasWatermark, voiceCode, scenes, router, searchParams])
 
   const loadJobs = useCallback(async () => {
     setJobsLoading(true)
@@ -206,6 +222,16 @@ export function VideoWorkspace() {
           <div>
             <label className="text-[11px] font-semibold text-text-muted block mb-1">Tiêu đề</label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-lg border border-border px-3 py-2 text-xs focus:border-primary focus:outline-none" />
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-text-muted block mb-1">Giọng đọc lồng tiếng</label>
+            <Select value={voiceCode} onValueChange={(v: string) => setVoiceCode(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {VIDEO_VOICES.map((v) => <SelectItem key={v.code} value={v.code}>{v.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[11px] text-text-muted">Đọc đúng lời thoại từng cảnh của storyboard (cùng kịch bản với Khu vực C), khớp thời lượng từng cảnh; nhạc nền tự hạ âm lượng khi có giọng.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>

@@ -120,6 +120,14 @@ def build_audio_track(
                 generate_silence(padded_voice, scene_dur)
                 voice_files.append(padded_voice)
 
+        if voice_code and voice_code != "none" and not has_voice:
+            # 24/09/2026: trước đây im lặng — video ra chỉ có nhạc mà không ai biết vì sao.
+            print(
+                "⚠️ [AudioEngine] Đã chọn giọng đọc nhưng KHÔNG sinh được lời thoại nào "
+                "(kiểm tra OPENAI_API_KEY / mạng / lời thoại trống) — video chỉ có nhạc nền.",
+                flush=True,
+            )
+
         full_voice: Optional[Path] = None
         if has_voice and voice_files:
             full_voice = temp_dir / "full_voice.mp3"
