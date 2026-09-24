@@ -1,5 +1,6 @@
 import type { VideoEvidenceSnippet } from "@/core/ports/trend-provider";
 import { marketIntelligenceRepo } from "../infra/market-intelligence-repository";
+import { getTopicDualRealVideoEvidence } from "../domain/video-evidence-catalog";
 import {
   calculateCommercialScore,
   calculateContentOpportunityScore,
@@ -78,29 +79,30 @@ export async function personalizeOpportunitiesForTenants(
           : topic.canonical_name;
       const encodedSocial = encodeURIComponent(socialSearchTerm);
 
+      const catalogEvidence = getTopicDualRealVideoEvidence(topic.canonical_name);
       const snippets = topicEvidenceMap?.[topic.id] || [];
       const tiktokSnippet = snippets.find((s) => s.platform === "TIKTOK_REELS");
       const ytSnippet = snippets.find((s) => s.platform === "YOUTUBE");
 
       const evidence = [
         {
-          title: tiktokSnippet?.title ?? `Video thịnh hành: ${topic.canonical_name}`,
+          title: tiktokSnippet?.title ?? catalogEvidence.tiktok.title,
           type: "TIKTOK_REELS",
           platform: "TikTok / Reels",
-          url: tiktokSnippet?.url ?? `https://www.tiktok.com/search?q=${encodedSocial}`,
-          thumbnailUrl: tiktokSnippet?.thumbnailUrl,
-          author: tiktokSnippet?.author ?? "@florist.trend",
-          metrics: tiktokSnippet?.metrics ?? "324 likes • Triệu view",
+          url: tiktokSnippet?.url ?? catalogEvidence.tiktok.videoUrl,
+          thumbnailUrl: tiktokSnippet?.thumbnailUrl ?? catalogEvidence.tiktok.thumbnailUrl,
+          author: tiktokSnippet?.author ?? catalogEvidence.tiktok.author,
+          metrics: tiktokSnippet?.metrics ?? catalogEvidence.tiktok.metrics,
           engagementNote: tiktokSnippet?.snippet ?? "Tham khảo mẫu video clip & cách phối hoa triệu view",
         },
         {
-          title: ytSnippet?.title ?? `Video review cắm hoa: ${topic.canonical_name}`,
+          title: ytSnippet?.title ?? catalogEvidence.youtube.title,
           type: "YOUTUBE",
           platform: "YouTube",
-          url: ytSnippet?.url ?? `https://www.youtube.com/results?search_query=${encodedTopic}+cam+hoa`,
-          thumbnailUrl: ytSnippet?.thumbnailUrl,
-          author: ytSnippet?.author ?? "Kênh Hoa Tươi Nghệ Thuật",
-          metrics: ytSnippet?.metrics ?? "3.8k lượt xem",
+          url: ytSnippet?.url ?? catalogEvidence.youtube.videoUrl,
+          thumbnailUrl: ytSnippet?.thumbnailUrl ?? catalogEvidence.youtube.thumbnailUrl,
+          author: ytSnippet?.author ?? catalogEvidence.youtube.author,
+          metrics: ytSnippet?.metrics ?? catalogEvidence.youtube.metrics,
           engagementNote: ytSnippet?.snippet ?? "Video hướng dẫn & mẫu cắm hoa thực tế",
         },
         {

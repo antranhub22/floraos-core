@@ -1,11 +1,16 @@
 import { marketIntelligenceRepo } from "../infra/market-intelligence-repository";
 import { getTopicDualRealVideoEvidence } from "../domain/video-evidence-catalog";
+import {
+  type MarketTimeframeKey,
+  TIMEFRAME_CONFIGS,
+} from "../domain/trend-timeframe";
 
 export interface ListOpportunitiesParams {
   organizationId: string;
   limit?: number | undefined;
   cursor?: string | undefined;
   minScore?: number | undefined;
+  timeframe?: MarketTimeframeKey | undefined;
 }
 
 export interface EvidenceReference {
@@ -57,27 +62,38 @@ function resolveEvidenceReferences(angles: any, topicName: string, _summary: str
   }
 
   if (rawRefs.length > 0) {
-    // Đảm bảo các video references luôn có thumbnail thật từ SSOT catalog, loại bỏ ảnh Unsplash
+    // Đảm bảo các video references luôn có thumbnail thật từ SSOT catalog, loại bỏ ảnh Unsplash và placeholder mock
     return rawRefs.map((ref) => {
       const isUnsplash = typeof ref.thumbnailUrl === "string" && ref.thumbnailUrl.includes("unsplash.com");
+      const isGenericMockAuthor =
+        ref.author === "@florist.trend" ||
+        ref.author === "Kênh Hoa Tươi Nghệ Thuật" ||
+        !ref.author;
+      const isGenericMockMetrics =
+        !ref.metrics ||
+        ref.metrics.includes("324 likes") ||
+        ref.metrics.includes("3.8k lượt xem");
+
       if (ref.type === "TIKTOK_REELS" || ref.platform?.toLowerCase().includes("tiktok") || ref.url?.includes("tiktok.com")) {
+        const isSearchUrl = !ref.url || ref.url.includes("/search?") || ref.url.includes("search_query");
         return {
           ...ref,
           title: ref.title || catalogEvidence.tiktok.title,
-          url: ref.url || catalogEvidence.tiktok.videoUrl,
+          url: isSearchUrl ? catalogEvidence.tiktok.videoUrl : ref.url,
           thumbnailUrl: (!ref.thumbnailUrl || isUnsplash) ? catalogEvidence.tiktok.thumbnailUrl : ref.thumbnailUrl,
-          author: ref.author || catalogEvidence.tiktok.author,
-          metrics: ref.metrics || catalogEvidence.tiktok.metrics,
+          author: isGenericMockAuthor ? catalogEvidence.tiktok.author : ref.author,
+          metrics: isGenericMockMetrics ? catalogEvidence.tiktok.metrics : ref.metrics,
         };
       }
       if (ref.type === "YOUTUBE" || ref.platform?.toLowerCase().includes("youtube") || ref.url?.includes("youtube.com")) {
+        const isSearchUrl = !ref.url || ref.url.includes("results?search_query") || ref.url.includes("/results") || ref.url.includes("/search?");
         return {
           ...ref,
           title: ref.title || catalogEvidence.youtube.title,
-          url: ref.url || catalogEvidence.youtube.videoUrl,
+          url: isSearchUrl ? catalogEvidence.youtube.videoUrl : ref.url,
           thumbnailUrl: (!ref.thumbnailUrl || isUnsplash) ? catalogEvidence.youtube.thumbnailUrl : ref.thumbnailUrl,
-          author: ref.author || catalogEvidence.youtube.author,
-          metrics: ref.metrics || catalogEvidence.youtube.metrics,
+          author: isGenericMockAuthor ? catalogEvidence.youtube.author : ref.author,
+          metrics: isGenericMockMetrics ? catalogEvidence.youtube.metrics : ref.metrics,
         };
       }
       return ref;
@@ -135,12 +151,21 @@ export async function listTenantOpportunities(
   const limit = Math.min(Math.max(params.limit ?? 20, 1), 100);
   const minScore = params.minScore ?? 0;
 
+  let createdAfter: Date | undefined;
+  if (params.timeframe && params.timeframe !== "ALL") {
+    const durationMs = TIMEFRAME_CONFIGS[params.timeframe]?.durationMs;
+    if (durationMs) {
+      createdAfter = new Date(Date.now() - durationMs);
+    }
+  }
+
   const [total, records] = await Promise.all([
-    marketIntelligenceRepo.countOpportunities(params.organizationId, minScore),
+    marketIntelligenceRepo.countOpportunities(params.organizationId, minScore, createdAfter),
     marketIntelligenceRepo.listOpportunitiesWithTopic(params.organizationId, {
       minScore,
       limit,
       cursor: params.cursor,
+      createdAfter,
     }),
   ]);
 

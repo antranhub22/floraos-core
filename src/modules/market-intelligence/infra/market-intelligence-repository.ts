@@ -133,31 +133,41 @@ export class MarketIntelligenceRepository {
   }
 
   // --- Content Opportunities ---
-  async countOpportunities(organizationId: string, minScore = 0) {
-    return this.db.content_opportunities.count({
+  async countOpportunities(organizationId: string, minScore = 0, createdAfter?: Date | undefined) {
+    const groups = await this.db.content_opportunities.groupBy({
+      by: ["topic_id"],
       where: {
         organization_id: organizationId,
         content_opportunity_score: { gte: minScore },
+        ...(createdAfter ? { created_at: { gte: createdAfter } } : {}),
       },
     })
+    return groups.length
   }
 
   async listOpportunitiesWithTopic(
     organizationId: string,
-    options: { minScore?: number | undefined; limit: number; cursor?: string | undefined }
+    options: {
+      minScore?: number | undefined;
+      limit: number;
+      cursor?: string | undefined;
+      createdAfter?: Date | undefined;
+    }
   ) {
     const where = {
       organization_id: organizationId,
       content_opportunity_score: { gte: options.minScore ?? 0 },
+      ...(options.createdAfter ? { created_at: { gte: options.createdAfter } } : {}),
     }
     return this.db.content_opportunities.findMany({
       where,
+      distinct: ["topic_id"],
       include: {
         topic: { select: { canonical_name: true } },
       },
       orderBy: [
-        { created_at: "desc" },
         { content_opportunity_score: "desc" },
+        { created_at: "desc" },
       ],
       take: options.limit + 1,
       ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
@@ -210,38 +220,51 @@ export class MarketIntelligenceRepository {
     })
   }
 
-  async createContentOpportunity(data: {
-    organizationId: string
-    topicId: string
-    audience: string | null
-    opportunitySummary: string
-    contentAngles: any
-    recommendedFormats: any
-    recommendedHooks: any
-    trendScore: number
-    viralScore: number
-    commercialScore: number
-    contentOpportunityScore: number
-    confidence: number
-    expiresAt: Date
+  async upsertContentOpportunity(data: {
+    organizationId: string;
+    topicId: string;
+    audience: string | null;
+    opportunitySummary: string;
+    contentAngles: any;
+    recommendedFormats: any;
+    recommendedHooks: any;
+    trendScore: number;
+    viralScore: number;
+    commercialScore: number;
+    contentOpportunityScore: number;
+    confidence: number;
+    expiresAt: Date;
   }) {
-    return this.db.content_opportunities.create({
-      data: {
-        organization_id: data.organizationId,
-        topic_id: data.topicId,
-        audience: data.audience,
-        opportunity_summary: data.opportunitySummary,
-        content_angles: data.contentAngles,
-        recommended_formats: data.recommendedFormats,
-        recommended_hooks: data.recommendedHooks,
-        trend_score: data.trendScore,
-        viral_score: data.viralScore,
-        commercial_score: data.commercialScore,
-        content_opportunity_score: data.contentOpportunityScore,
-        confidence: data.confidence,
-        expires_at: data.expiresAt,
-      },
+    const existing = await this.db.content_opportunities.findFirst({
+      where: { organization_id: data.organizationId, topic_id: data.topicId },
+      select: { id: true },
     })
+
+    const payload = {
+      audience: data.audience,
+      opportunity_summary: data.opportunitySummary,
+      content_angles: data.contentAngles,
+      recommended_formats: data.recommendedFormats,
+      recommended_hooks: data.recommendedHooks,
+      trend_score: data.trendScore,
+      viral_score: data.viralScore,
+      commercial_score: data.commercialScore,
+      content_opportunity_score: data.contentOpportunityScore,
+      confidence: data.confidence,
+      expires_at: data.expiresAt,
+    }
+
+    if (existing) {
+      return this.db.content_opportunities.update({ where: { id: existing.id }, data: payload })
+    }
+
+    return this.db.content_opportunities.create({
+      data: { organization_id: data.organizationId, topic_id: data.topicId, ...payload },
+    })
+  }
+
+  async createContentOpportunity(data: Parameters<MarketIntelligenceRepository["upsertContentOpportunity"]>[0]) {
+    return this.upsertContentOpportunity(data)
   }
 
   async findProductAnalysis(organizationId: string, assetId: string) {
@@ -303,6 +326,7 @@ export class MarketIntelligenceRepository {
   async findTenantOpportunities(organizationId: string, limit = 10) {
     return this.db.content_opportunities.findMany({
       where: { organization_id: organizationId },
+      distinct: ["topic_id"],
       take: limit,
       orderBy: { content_opportunity_score: "desc" },
       include: { topic: true },

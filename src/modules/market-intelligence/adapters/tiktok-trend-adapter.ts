@@ -70,7 +70,7 @@ export class TikTokTrendAdapter implements TrendProvider {
       const params = new URLSearchParams({
         engine: "google_videos",
         q: searchQuery,
-        tbs: "qdr:m", // CHỈ LẤY VIDEO ĐĂNG TRONG 30 NGÀY QUA (Recency Filter)
+        tbs: "qdr:w", // CHỈ LẤY VIDEO ĐĂNG TRONG 7 NGÀY QUA (Recency Filter — Cập nhật nhất)
         gl: geo === "VN" ? "vn" : "us",
         hl: "vi",
         api_key: this.apiKey,

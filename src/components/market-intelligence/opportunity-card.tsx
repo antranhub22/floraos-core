@@ -3,6 +3,7 @@
 import React from "react";
 import { Tag, ExternalLink, Video, Image as ImageIcon, TrendingUp, Play } from "lucide-react";
 import { determineTrendLifecycle, LIFECYCLE_SPECS } from "@/modules/market-intelligence/domain/trend-lifecycle";
+import { getOpportunityTimeframeMeta } from "@/modules/market-intelligence/domain/trend-timeframe";
 import { getDualOpportunityEvidencePreview, getOpportunityHeadline } from "./opportunity-illustration";
 
 export interface EvidenceReference {
@@ -52,6 +53,7 @@ export function OpportunityCard({ item, onSelect }: OpportunityCardProps) {
   const dualEvidence = getDualOpportunityEvidencePreview(item);
   const evidence = dualEvidence.primary;
   const headline = getOpportunityHeadline(item);
+  const timeframeMeta = getOpportunityTimeframeMeta(item.createdAt);
 
   return (
     <div
@@ -68,13 +70,18 @@ export function OpportunityCard({ item, onSelect }: OpportunityCardProps) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30" />
 
-        {/* Top badges: Lifecycle + Platforms */}
+        {/* Top badges: Lifecycle + Timeframe + Platforms */}
         <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5 z-10">
           <span
             className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-xs ${spec.bgClass} ${spec.colorClass} ${spec.borderClass}`}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
             {spec.shortLabel}
+          </span>
+          <span
+            className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border shadow-xs ${timeframeMeta.badgeClass}`}
+          >
+            {timeframeMeta.label}
           </span>
           {/* Cả 2 nút dẫn chứng: TikTok & YouTube */}
           <a

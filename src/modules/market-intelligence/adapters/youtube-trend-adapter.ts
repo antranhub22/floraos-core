@@ -70,7 +70,7 @@ export class YouTubeTrendAdapter implements TrendProvider {
       const params = new URLSearchParams({
         engine: "youtube",
         search_query: searchQuery,
-        sp: "EgIIAw%253D%253D", // CHỈ LẤY VIDEO ĐĂNG TRONG THÁNG NÀY (Recency Filter)
+        sp: "EgIIAg%253D%253D", // CHỈ LẤY VIDEO ĐĂNG TRONG TUẦN NÀY (Recency Filter 7 ngày qua — Mới nhất)
         gl: geo === "VN" ? "vn" : "us",
         hl: "vi",
         api_key: this.apiKey,
@@ -114,11 +114,11 @@ export class YouTubeTrendAdapter implements TrendProvider {
         const thumb = typeof v.thumbnail === "string" ? v.thumbnail : v.thumbnail?.static || v.thumbnail?.rich || undefined;
         const channelName = typeof v.channel === "string" ? v.channel : v.channel?.name || "Kênh Hoa Tươi";
         const viewStr = typeof v.views === "number" ? `${v.views.toLocaleString("vi-VN")} lượt xem` : "Xem nhiều";
-        const dateStr = v.published_date ? `Đăng ${v.published_date} • ` : "Đăng tháng này • ";
+        const dateStr = v.published_date ? `Đăng ${v.published_date} • ` : "Đăng tuần này • ";
         return {
           title: v.title || `Video hướng dẫn: ${query.query}`,
           platform: "YOUTUBE" as const,
-          url: v.link || `https://www.youtube.com/results?search_query=${encodeURIComponent(`${query.query} hoa tươi`)}`,
+          url: v.link || `https://www.youtube.com/results?search_query=${encodeURIComponent(`${query.query} hoa tươi`)}&sp=CAISAhAC`,
           thumbnailUrl: thumb,
           author: channelName,
           metrics: `${dateStr}${viewStr}`,

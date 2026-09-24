@@ -19,9 +19,10 @@ export const GEO_OPTIONS = [
 ] as const;
 
 export const TIMEFRAME_OPTIONS = [
+  { value: "now 1-d", label: "24 giờ qua — trong ngày" },
   { value: "now 7-d", label: "7 ngày qua — mới nhất" },
   { value: "today 1-m", label: "30 ngày qua — xu hướng" },
-  { value: "today 3-m", label: "90 ngày qua — theo mùa" },
+  { value: "today 3-m", label: "90 ngày qua — 3 tháng" },
 ] as const;
 
 export const CHANNEL_OPTIONS = [

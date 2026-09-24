@@ -16,12 +16,14 @@ export const GET = handle(async (request) => {
   const minScore = url.searchParams.get("min_score")
     ? parseFloat(url.searchParams.get("min_score")!)
     : undefined;
+  const timeframe = (url.searchParams.get("timeframe") as any) ?? undefined;
 
   const result = await listTenantOpportunities({
     organizationId: ctx.organizationId,
     limit,
     cursor,
     minScore,
+    timeframe,
   });
 
   return jsonResponse(result);

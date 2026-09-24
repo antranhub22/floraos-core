@@ -35,10 +35,15 @@ export function useMarketIntelligenceData() {
     }
   };
 
-  const fetchOpportunities = async () => {
+  const fetchOpportunities = async (timeframe?: string) => {
     try {
       setLoading(true);
-      const res = await fetch("/api/v1/market-intelligence/opportunities");
+      const url = new URL("/api/v1/market-intelligence/opportunities", window.location.origin);
+      url.searchParams.set("limit", "100");
+      if (timeframe && timeframe !== "ALL") {
+        url.searchParams.set("timeframe", timeframe);
+      }
+      const res = await fetch(url.toString());
       if (res.ok) {
         const data = await res.json();
         setOpportunities(data.items ?? []);

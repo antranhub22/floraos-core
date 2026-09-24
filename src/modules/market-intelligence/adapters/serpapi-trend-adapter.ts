@@ -47,7 +47,7 @@ export class SerpApiTrendAdapter implements TrendProvider {
     }
 
     const geo = query.geo ?? "VN";
-    const timeframe = query.timeframe ?? "today 1-m";
+    const timeframe = query.timeframe ?? "now 7-d";
     const industry = query.industry ?? "florist";
 
     const params = new URLSearchParams({
