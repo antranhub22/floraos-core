@@ -10,8 +10,7 @@
 
 import { AppError, notFound } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
-import { scopedWhere, type TenantContext } from "@/core/tenancy"
-import { prisma } from "@/core/tenancy/infra/prisma"
+import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { VideoJobRepository } from "@/modules/video-studio/infra/video-job-repository"
@@ -103,14 +102,12 @@ export async function assembleVideoFromPlan(ctx: TenantContext, input: AssembleV
     const j = await new GenerationJobRepository().findById(ctx, input.audioJobId)
     if (j && j.feature === "audio.generate") audioJob = j
   } else {
-    audioJob = await prisma.generation_jobs.findFirst({
-      where: scopedWhere(ctx, {
-        feature: "audio.generate",
-        status: "COMPLETED" as const,
-        payload: { path: ["scenePlanId"], equals: input.scenePlanId },
-      }),
-      orderBy: { created_at: "desc" },
-    })
+    audioJob = await new GenerationJobRepository().findLatestCompletedByPayload(
+      ctx,
+      "audio.generate",
+      "scenePlanId",
+      input.scenePlanId
+    )
   }
   const audio = audioJob ? toAudio(audioJob) : null
 

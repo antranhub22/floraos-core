@@ -40,6 +40,23 @@ export class GenerationJobRepository {
     })
   }
 
+  /** Job COMPLETED mới nhất của `feature` có `payload.<key> = value` (vd. bản phối C của một kịch bản). */
+  findLatestCompletedByPayload(
+    ctx: TenantContext,
+    feature: string,
+    key: string,
+    value: string
+  ): Promise<generation_jobs | null> {
+    return this.db.generation_jobs.findFirst({
+      where: scopedWhere(ctx, {
+        feature,
+        status: "COMPLETED" as const,
+        payload: { path: [key], equals: value },
+      }),
+      orderBy: { created_at: "desc" },
+    })
+  }
+
   create(ctx: TenantContext, input: CreateJobInput): Promise<generation_jobs> {
     return this.db.generation_jobs.create({
       data: scopedData(ctx, {

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 
-import { afterAll, beforeEach, describe, expect, it } from "vitest"
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   GET as getProductCopyRoute,
@@ -17,6 +17,51 @@ import { ProductAnalysisRepository } from "@/modules/products/infra/product-anal
 import { ProductCopyRepository } from "@/modules/product-copies/infra/product-copy-repository"
 
 import { disconnectDatabase, prisma, resetDatabase } from "../helpers/database"
+
+/**
+ * Câu trả lời OpenAI giả (24/09/2026). `tests/setup.ts` chặn mạng thật — trước
+ * đó ca "generate hợp lệ" gọi OpenAI THẬT bằng khoá trong `.env` (tốn tiền, kết
+ * quả phụ thuộc mạng). Chỉ giả đúng một điểm: HTTP của nhà cung cấp; cổng AI,
+ * adapter, job, bản ghi và cách ly tenant vẫn chạy thật.
+ */
+const FAKE_COPY = {
+  suggested_name: "Bó hồng đỏ Kỷ Niệm",
+  short_headline: "12 bông hồng cho 12 tháng yêu nhau",
+  suggested_description:
+    "Bó hoa gồm mười hai bông hồng đỏ tươi được tuyển chọn trong ngày, điểm baby trắng và lá bạc, gói giấy Hàn Quốc tông đen sang trọng. " +
+    "Phù hợp tặng người thương vào ngày kỷ niệm, sinh nhật hay lời xin lỗi chân thành. Tiệm giao nhanh trong nội thành và kèm thiệp viết tay miễn phí.",
+  suggested_style: "Lãng mạn",
+  suggested_tags: ["hoa hồng", "kỷ niệm", "quà tặng người yêu"],
+  seo_keywords: ["bó hoa hồng đỏ"],
+  suggested_occasions: ["Sinh nhật"],
+  secondary_occasions: [],
+  target_audience: { recipient: "Người yêu", buyer_persona: "Nam 25–35" },
+  flower_meaning_story: "Hồng đỏ là lời yêu thương nồng nàn.",
+  key_selling_points: ["Hoa tươi trong ngày"],
+  card_message_suggestions: { romantic: "Yêu em", subtle: "Nhớ em", congratulatory: "Chúc mừng" },
+  care_instructions: ["Thay nước mỗi ngày"],
+  suggested_price_segment: "standard",
+  suggested_price_range: { min_price: 450000, target_price: 550000, max_price: 650000 },
+  recommended_upsells: ["Thiệp"],
+}
+
+function fakeOpenAiFetch() {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+    if (!url.includes("api.openai.com/v1/chat/completions")) {
+      throw new Error(`[product-copies.test] Mạng thật bị chặn: ${url}`)
+    }
+    return new Response(
+      JSON.stringify({
+        model: "gpt-4o-mini-2024-07-18",
+        choices: [{ message: { role: "assistant", content: JSON.stringify(FAKE_COPY) } }],
+        usage: { prompt_tokens: 900, completion_tokens: 600, total_tokens: 1500 },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    )
+  })
+}
+
 import { createTenant, readJson, withSession, type Tenant } from "../helpers/fixtures"
 
 const BASE = "http://localhost/api/v1"
@@ -93,6 +138,11 @@ describe("cách ly tenant — M01b dữ liệu bán hàng sản phẩm (P14)", (
     await resetDatabase()
     a = await createTenant("alpha")
     b = await createTenant("beta")
+    vi.stubGlobal("fetch", fakeOpenAiFetch())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   afterAll(async () => {

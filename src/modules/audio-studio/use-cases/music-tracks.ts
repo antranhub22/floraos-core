@@ -13,7 +13,7 @@ import { randomUUID } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 
-import { notFound, validationFailed } from "@/core/http/errors"
+import { notFound, unprocessable, validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import type { TenantContext } from "@/core/tenancy"
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
@@ -94,12 +94,15 @@ export async function uploadMusicTrack(
   if (title.length < 2 || title.length > 120) errors.title = "Tên bài 2–120 ký tự"
   if (!(UPLOAD_MUSIC_MOODS as readonly string[]).includes(input.mood)) errors.mood = "Mood không hợp lệ"
   if (!(MUSIC_LICENSE_TYPES as readonly string[]).includes(input.licenseType)) errors.license_type = "Loại giấy phép không hợp lệ"
-  if (input.licenseSource.trim().length < 3) errors.license_source = "Ghi nguồn / nơi mua / đường dẫn giấy phép"
-  if (!input.attest) errors.attest = "Phải xác nhận tiệm có quyền dùng bài này cho quảng cáo"
   if (input.file.byteLength === 0 || input.file.byteLength > MUSIC_UPLOAD_MAX_BYTES) errors.file = "Tệp tối đa 20MB"
   const ext = sniffAudioExtension(input.file)
   if (!ext) errors.file = "Chỉ nhận MP3, WAV hoặc M4A"
   if (Object.keys(errors).length > 0 || !ext) throw validationFailed(errors)
+  // Luật giấy phép (đúng dạng nhưng chưa đủ cam kết) → 422, tách khỏi lỗi dạng 400.
+  const license: Record<string, string> = {}
+  if (input.licenseSource.trim().length < 3) license.license_source = "Ghi nguồn / nơi mua / đường dẫn giấy phép"
+  if (!input.attest) license.attest = "Phải xác nhận tiệm có quyền dùng bài này cho quảng cáo"
+  if (Object.keys(license).length > 0) throw unprocessable("Thiếu cam kết giấy phép bài nhạc", license)
 
   const id = randomUUID()
   const storageKey = `org/${ctx.organizationId}/audio/music/${id}.${ext}`
@@ -145,10 +148,10 @@ export async function resolveMusicForJob(
 ): Promise<{ musicTrackId: string | null; musicStorageKey: string | null; title: string; mood: string; licenseVerified: boolean }> {
   if (isOrgTrackId(trackId)) {
     const row = await new MusicTrackRepository().findById(ctx, orgTrackUuid(trackId))
-    if (!row) throw validationFailed({ musicTrackId: "Không tìm thấy bài nhạc này trong thư viện của tiệm" })
+    if (!row) throw unprocessable("Bài nhạc không thuộc thư viện của tiệm", { musicTrackId: "Không tìm thấy bài nhạc này trong thư viện của tiệm" })
     return { musicTrackId: null, musicStorageKey: row.storage_key, title: row.title, mood: row.mood, licenseVerified: true }
   }
   const t = getMusicTrack(trackId)
-  if (!t) throw validationFailed({ musicTrackId: "Mã bài nhạc không có trong thư viện" })
+  if (!t) throw unprocessable("Mã bài nhạc lạ", { musicTrackId: "Mã bài nhạc không có trong thư viện" })
   return { musicTrackId: t.trackId, musicStorageKey: null, title: t.displayName, mood: t.mood, licenseVerified: t.licenseVerified }
 }

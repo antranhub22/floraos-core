@@ -59,6 +59,15 @@ export function validationFailed(details?: Record<string, unknown>): AppError {
   return new AppError("VALIDATION_FAILED", "Dữ liệu gửi lên không hợp lệ", details)
 }
 
+/**
+ * 422 — dữ liệu đúng dạng nhưng vi phạm luật nghiệp vụ (vd. bài nhạc không
+ * thuộc tiệm, thiếu cam kết giấy phép). Sai dạng/thiếu trường vẫn là 400
+ * `validationFailed`.
+ */
+export function unprocessable(message: string, details?: Record<string, unknown>): AppError {
+  return new AppError("UNPROCESSABLE_ENTITY", message, details)
+}
+
 export function conflict(message: string): AppError {
   return new AppError("CONFLICT", message)
 }

@@ -11,7 +11,7 @@
  * (trước đây mọi lượt bị tính mặc định 1 credit dù màn hình ước tính khác).
  */
 
-import { validationFailed } from "@/core/http/errors"
+import { unprocessable, validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { type TenantContext } from "@/core/tenancy"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
@@ -119,7 +119,7 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
     voiceDisplayName = voiceSpec.displayName
     providerKey = input.providerKey ?? voiceSpec.defaultProvider
     if (!SELECTABLE_TTS_PROVIDERS.includes(providerKey)) {
-      throw validationFailed({ providerKey: `Nhà cung cấp ${providerKey} không dùng được trong bản thương mại` })
+      throw unprocessable("Nhà cung cấp không dùng được trong bản thương mại", { providerKey: `Nhà cung cấp ${providerKey} không dùng được trong bản thương mại` })
     }
     providerVoiceCode = resolveProviderVoiceCode(voiceSpec.voiceId, providerKey)
     // Cùng một giọng ở mọi nhà cung cấp — worker lùi thì vẫn đúng giới tính/phong cách.
