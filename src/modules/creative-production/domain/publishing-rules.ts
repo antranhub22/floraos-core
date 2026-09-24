@@ -169,3 +169,24 @@ export function resolvePublishing(
     otherRatios: [],
   }
 }
+
+/** Khu vực sản xuất ↔ loại kết quả (B viết content, C audio, D ảnh, E video). */
+export const AREA_OUTPUT: Readonly<Record<"area-b" | "area-c" | "area-d" | "area-e", ProductionOutput>> = {
+  "area-b": "content",
+  "area-c": "audio",
+  "area-d": "image",
+  "area-e": "video",
+}
+
+/**
+ * Khu vực có nằm trong phạm vi sản xuất không:
+ * `in` = người dùng chọn; `derived` = tự thêm vì video cần; `out` = ngoài phạm vi.
+ * Khu vực A/F (không sản xuất một loại riêng) luôn `in`.
+ */
+export function areaScopeStatus(pub: PublishingPlan, area: string): "in" | "derived" | "out" {
+  const output = (AREA_OUTPUT as Record<string, ProductionOutput | undefined>)[area]
+  if (!output) return "in"
+  if (pub.outputs.includes(output)) return "in"
+  if (pub.derivedOutputs.includes(output)) return "derived"
+  return "out"
+}

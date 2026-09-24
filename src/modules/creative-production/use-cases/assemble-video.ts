@@ -29,13 +29,15 @@ export interface AssembleVideoInput {
   readonly audioJobId?: string | null | undefined
   readonly title?: string | undefined
   readonly dryRun?: boolean | undefined
+  /** Khung của video (mỗi khung một video) — bỏ trống = khung chính. */
+  readonly ratio?: string | null | undefined
 }
 
 export interface AssembleVideoOutput {
   readonly assembly: AssemblyResult
   readonly audioJobId: string | null
   readonly videoJobId: string | null
-  readonly plan: { readonly revision: number; readonly aspectRatio: string; readonly sceneCount: number }
+  readonly plan: { readonly revision: number; readonly aspectRatio: string; readonly sceneCount: number; readonly ratios: readonly string[] }
 }
 
 async function loadPlan(ctx: TenantContext, scenePlanId: string, provided: unknown): Promise<ScenePlan> {
@@ -111,18 +113,23 @@ export async function assembleVideoFromPlan(ctx: TenantContext, input: AssembleV
   }
   const audio = audioJob ? toAudio(audioJob) : null
 
-  const assembly = assembleVideo({ plan, planRef: input.scenePlanId, variants, audio })
+  const assembly = assembleVideo({ plan, planRef: input.scenePlanId, variants, audio, ratio: input.ratio })
   const out = {
     assembly,
     audioJobId: audio?.jobId ?? null,
-    plan: { revision: plan.revision, aspectRatio: plan.publishing.aspectRatio, sceneCount: plan.scenes.length },
+    plan: {
+      revision: plan.revision,
+      aspectRatio: plan.publishing.aspectRatio,
+      sceneCount: plan.scenes.length,
+      ratios: plan.publishing.ratios?.length ? plan.publishing.ratios : [plan.publishing.aspectRatio],
+    },
   }
   if (input.dryRun || !assembly.ready) return { ...out, videoJobId: null }
 
   const repo = new VideoJobRepository()
   const job = await repo.create(ctx, {
     productId: master.product_id,
-    title: (input.title?.trim() || `${plan.topicTitle} — video`).slice(0, 200),
+    title: (input.title?.trim() || `${plan.topicTitle} — video ${assembly.aspectRatio}`).slice(0, 200),
     format: assembly.format as VideoFormat,
     durationSeconds: Math.max(1, Math.round(assembly.totalDurationSeconds)),
     aspectRatio: assembly.aspectRatio,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 
-import { resolvePublishing } from "@/modules/creative-production/domain/publishing-rules"
+import { areaScopeStatus, resolvePublishing } from "@/modules/creative-production/domain/publishing-rules"
 import {
   balanceSceneDurations,
   buildRuleScenePlan,
@@ -195,5 +195,23 @@ describe("applyScenePlanEdit", () => {
     const r = applyScenePlanEdit(base, { replaceScene: replaced })
     expect(r.ok && r.plan.scenes[1]!.beat).toBe(base.scenes[1]!.beat)
     expect(r.ok && r.plan.scenes[1]!.setting).toBe("Không gian mới")
+  })
+})
+
+describe("areaScopeStatus — khu vực theo phạm vi", () => {
+  test("chọn video + content: C/D là 'cần cho video', không phải ngoài phạm vi", () => {
+    const pub = resolvePublishing(undefined, ["content", "video"])
+    expect(areaScopeStatus(pub, "area-b")).toBe("in")
+    expect(areaScopeStatus(pub, "area-c")).toBe("derived")
+    expect(areaScopeStatus(pub, "area-d")).toBe("derived")
+    expect(areaScopeStatus(pub, "area-e")).toBe("in")
+    expect(areaScopeStatus(pub, "area-f")).toBe("in")
+  })
+  test("chỉ ảnh: B/C/E ngoài phạm vi", () => {
+    const pub = resolvePublishing(undefined, ["image"])
+    expect(areaScopeStatus(pub, "area-b")).toBe("out")
+    expect(areaScopeStatus(pub, "area-c")).toBe("out")
+    expect(areaScopeStatus(pub, "area-d")).toBe("in")
+    expect(areaScopeStatus(pub, "area-e")).toBe("out")
   })
 })

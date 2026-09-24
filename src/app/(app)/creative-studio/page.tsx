@@ -1,6 +1,7 @@
 "use client"
 
 import { decodeScopeParam } from "@/modules/creative-production/domain/build-handoff-url"
+import { areaScopeStatus, resolvePublishing } from "@/modules/creative-production/domain/publishing-rules"
 import React, { useState, useMemo, useEffect, useCallback } from "react"
 import { Sparkles, ArrowLeft, Wand2, FileText, Headphones, Film, Package, AlertTriangle, Camera } from "lucide-react"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -326,13 +327,19 @@ export default function CreativeStudioPage() {
   const showValidation = activeTabId !== "area-a" && !validationResult.valid && !validationDismissed
 
   // --- Tabs ---
+  // Phạm vi sản xuất (PO 24/09/2026): chỉ sản xuất những gì đã chọn cuối Chặng 04.
+  const scope = useMemo(() => resolvePublishing(context.platforms ?? null, context.outputs ?? null), [context.platforms, context.outputs])
+  const activeScope = areaScopeStatus(scope, activeTabId)
   const tabs: TabItem[] = useMemo(() =>
-    Object.values(CREATIVE_STUDIO_TABS).map((tab) => ({
-      id: tab.id,
-      label: tab.label,
-      icon: tab.icon,
-    })),
-    []
+    Object.values(CREATIVE_STUDIO_TABS).map((tab) => {
+      const st = areaScopeStatus(scope, tab.id)
+      return {
+        id: tab.id,
+        label: st === "out" ? `${tab.label} · ngoài phạm vi` : st === "derived" ? `${tab.label} · cần cho video` : tab.label,
+        icon: tab.icon,
+      }
+    }),
+    [scope]
   )
 
   // --- Primary Actions ---
@@ -441,6 +448,19 @@ export default function CreativeStudioPage() {
                     <div><span className="text-stone-500">Product:</span> <span className="font-medium">{context.productName || "—"}</span></div>
                     <div><span className="text-stone-500">Source:</span> <span className="font-medium">{context.sourceImageUrl ? "Image" : context.sourceVideoUrl ? "Video" : "—"}</span></div>
                   </div>
+                </div>
+              )}
+
+              {activeScope !== "in" && (
+                <div
+                  className={`w-full max-w-3xl mx-auto rounded-xl border p-3 text-[12.5px] ${
+                    activeScope === "out" ? "border-stone-300 bg-stone-50 text-stone-700" : "border-amber-200 bg-amber-50/80 text-amber-800"
+                  }`}
+                >
+                  {activeScope === "out"
+                    ? "Khu vực này nằm ngoài phạm vi sản xuất bạn chọn ở Chặng 04 — gói chiến dịch sẽ không đòi kết quả ở đây. Bạn vẫn có thể làm thêm nếu muốn."
+                    : "Bạn không chọn riêng loại kết quả này, nhưng video cần nó — hệ thống sẽ sản xuất để dựng video."}
+                  {" "}Phạm vi: {scope.produce.join(", ")} · khung {scope.ratios.join(", ")}.
                 </div>
               )}
 

@@ -8,7 +8,7 @@
  *   2. Skip — Dùng nguyên ảnh gốc (duyệt nhanh 1-chạm tạo Master)
  */
 
-import { useState, useEffect, useContext, useMemo } from "react"
+import { useState, useEffect, useContext, useMemo, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   Sparkles,
@@ -23,6 +23,7 @@ import {
   Camera,
 } from "lucide-react"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
+import type { PublishRatio } from "@/modules/creative-production/domain/publishing-rules"
 import { FlowSteps } from "@/components/flow/flow-steps"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -318,17 +319,36 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
   // Đợt 3 (24/09/2026): khung ảnh theo NỀN TẢNG ĐĂNG của kịch bản sản xuất tổng
   // (mặc định 9:16) — trước đây mặc định 1:1 nên video dọc bị cắt / có viền.
+  // PO 24/09/2026 tối: mỗi khung trong phạm vi sản xuất một bộ ảnh riêng —
+  // bảng phân cảnh có tab theo khung; `variantRatio` là khung đang xem/sinh.
   const planRatio = scenePlan?.publishing?.aspectRatio ?? null
+  const planRatiosKey = (scenePlan?.publishing?.ratios?.length ? scenePlan.publishing.ratios : planRatio ? [planRatio] : []).join(",")
+  const planRatios: PublishRatio[] = useMemo(
+    () => (planRatiosKey ? (planRatiosKey.split(",") as PublishRatio[]) : []),
+    [planRatiosKey]
+  )
+  const focusRatio = searchParams?.get("focusRatio") ?? null
   useEffect(() => {
-    if (!planRatio) return
+    if (planRatios.length === 0) return
+    const want = planRatios.find((r) => r === focusRatio) ?? planRatios[0]!
     // eslint-disable-next-line react-hooks/set-state-in-effect -- đặt khung theo kịch bản đã tra được
-    setVariantRatio(planRatio)
-  }, [planRatio, setVariantRatio])
+    setVariantRatio(want)
+    // Chỉ đặt lại khi kịch bản / URL đổi, không ghi đè khi người dùng tự chuyển tab khung.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planRatiosKey, focusRatio])
+  const activeRatioRef = useRef(variantRatio)
+  useEffect(() => {
+    activeRatioRef.current = variantRatio
+  }, [variantRatio])
+  // Số cảnh đã sinh theo từng khung (tab khung hiện "3/5").
+  const [ratioCounts, setRatioCounts] = useState<Record<string, number>>({})
+  const [scenesReload, setScenesReload] = useState(0)
+  const viewRatio = variantRatio || planRatio || ""
   const planScenes: readonly ScenePlanScene[] = useMemo(() => scenePlan?.scenes ?? [], [scenePlan])
 
   // Nạp các phân cảnh ĐÃ sinh của đúng Master + ĐÚNG kịch bản đang mở.
   useEffect(() => {
-    if (!activeMasterId || !planRef) return
+    if (!activeMasterId || !planRef || !viewRatio) return
     let cancelled = false
     async function loadExistingScenes() {
       try {
@@ -348,6 +368,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         const urls: Record<number, string> = {}
         const metas: Record<number, SceneMeta> = {}
         const pngByJob: Record<string, string> = {}
+        const seenByRatio: Record<string, Set<number>> = {}
+        const primary = planRatio ?? "9:16"
         // `data` sắp theo created_at giảm dần — bản mới nhất của mỗi cảnh thắng.
         for (const item of body.data ?? []) {
           const meta = item.metadata ?? {}
@@ -358,8 +380,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
             if (jobId) pngByJob[jobId] = item.url
             continue
           }
-          if (urls[idx]) continue
           if (meta.variant_key !== "styled" && meta.variant_key !== "branded") continue
+          // Ảnh cũ chưa ghi khung tính là khung chính của kịch bản.
+          const itemRatio = typeof meta.ratio === "string" ? meta.ratio : primary
+          ;(seenByRatio[itemRatio] ??= new Set()).add(idx)
+          if (itemRatio !== viewRatio) continue
+          if (urls[idx]) continue
           urls[idx] = item.url
           metas[idx] = {
             assetId: item.id,
@@ -377,6 +403,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         for (const m of Object.values(metas)) m.transparentUrl = pngByJob[m.jobId] ?? null
         setSceneImageMap(urls)
         setSceneMeta(metas)
+        setRatioCounts(Object.fromEntries(Object.entries(seenByRatio).map(([r, set]) => [r, set.size])))
       } catch (e) {
         console.error("Lỗi nạp phân cảnh đã sinh:", e)
       }
@@ -385,10 +412,13 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     return () => {
       cancelled = true
     }
-  }, [activeMasterId, planRef])
+  }, [activeMasterId, planRef, viewRatio, planRatio, scenesReload])
 
   // Sinh MỘT phân cảnh qua hàng đợi job rồi chờ kết quả thật.
-  const handleGenerateSingleScene = async (targetIndex: number): Promise<void> => {
+  const handleGenerateSingleScene = async (targetIndex: number, ratioArg?: string): Promise<void> => {
+    const ratio = ratioArg || variantRatio || "1:1"
+    // Sinh cho khung đang xem thì cập nhật bảng ngay; khung khác chỉ tăng bộ đếm.
+    const isActive = () => ratio === activeRatioRef.current
     const scene = planScenes.find((s) => s.sceneIndex === targetIndex)
     if (!scene || !scenePlan || !planRef) return
     const masterForScene = await ensureMaster()
@@ -419,7 +449,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           master_asset_id: masterForScene,
           engine: useCloud ? "cloud_provider" : "local_studio",
           preset: scene.localBackdrop,
-          ratio: variantRatio || "1:1",
+          ratio,
           watermark: watermarkEnabled,
           scene_index: targetIndex,
           scene_plan_id: planRef,
@@ -451,6 +481,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         detail.variants[0]
       if (!variant) throw new Error("Job hoàn tất nhưng không có ảnh nào được ghi.")
 
+      if (!isActive()) {
+        setScenesReload((n) => n + 1)
+        return
+      }
       setSceneImageMap((prev) => ({ ...prev, [targetIndex]: variant.url }))
       setSceneMeta((prev) => ({
         ...prev,
@@ -462,6 +496,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           cloudFallback: detail.source.cloud_fallback,
           cloudFallbackReason: detail.source.cloud_fallback_reason ?? null,
           transparentUrl: detail.variants.find((v) => v.variant_key === "transparent")?.url ?? null,
+          planRevision: scenePlan?.revision ?? null,
+          ratio,
         },
       }))
       setSelectedSceneIndex(targetIndex)
@@ -514,6 +550,21 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     }
   }
 
+  // Sinh đủ mọi khung trong phạm vi (mỗi khung × mỗi cảnh một job) — PO 24/09/2026.
+  const handleGenerateAllRatios = async () => {
+    setGeneratingAllScenes(true)
+    try {
+      for (const r of planRatios) {
+        for (const idx of planScenes.map((sc) => sc.sceneIndex)) {
+          await handleGenerateSingleScene(idx, r)
+        }
+      }
+    } finally {
+      setGeneratingAllScenes(false)
+      setScenesReload((n) => n + 1)
+    }
+  }
+
   // Khung phân cảnh cho màn kết quả — CHỈ ảnh thật đã sinh cho đúng cảnh của
   // đúng kịch bản; cảnh chưa sinh để trống và ghi "Chưa sinh".
   const narrativeResultScenes = useMemo(() => {
@@ -537,8 +588,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           ? "Chưa sinh"
           : scenePlan && meta?.planRevision != null && meta.planRevision < scenePlan.revision
           ? "Kịch bản đã sửa — nên sinh lại"
-          : planRatio && meta?.ratio && meta.ratio !== planRatio
-          ? `Khung ${meta.ratio} ≠ ${planRatio} — nên sinh lại`
+          : viewRatio && meta?.ratio && meta.ratio !== viewRatio
+          ? `Khung ${meta.ratio} ≠ ${viewRatio} — nên sinh lại`
           : meta?.engine === "cloud_provider" && !meta.cloudFallback
           ? "Hậu cảnh Stability"
           : meta?.cloudFallback
@@ -553,7 +604,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         fallbackReason: meta?.cloudFallback ? (meta.cloudFallbackReason ?? "không rõ lý do") : null,
       }
     })
-  }, [planScenes, scenePlan, sceneEngine, sceneImageMap, sceneMeta, sceneErrors, variantRatio])
+  }, [planScenes, scenePlan, sceneEngine, sceneImageMap, sceneMeta, sceneErrors, variantRatio, viewRatio])
 
   const sceneCount = planScenes.length
   const sceneCreditTotal = narrativeResultScenes.reduce((sum, sc) => sum + (sc.usesCloud ? 2 : 1), 0)
@@ -599,6 +650,28 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
     return (
       <div className="flex flex-col items-center gap-6 w-full max-w-5xl mx-auto">
+        {planRatios.length > 1 && (
+          <div className="flex w-full flex-wrap items-center gap-1.5" role="tablist" aria-label="Khung ảnh">
+            <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-text-muted">Khung theo nền tảng:</span>
+            {planRatios.map((r) => {
+              const done = r === viewRatio ? generatedSceneCount : (ratioCounts[r] ?? 0)
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  role="tab"
+                  aria-selected={r === viewRatio}
+                  onClick={() => setVariantRatio(r)}
+                  className={`rounded-lg border px-3 py-1.5 text-[11.5px] font-bold cursor-pointer ${
+                    r === viewRatio ? "border-primary bg-primary text-white" : "border-border bg-surface text-text-muted"
+                  }`}
+                >
+                  {r} · {done}/{sceneCount}
+                </button>
+              )
+            })}
+          </div>
+        )}
         {/* Header kết quả */}
         <div className="flex items-center justify-between w-full flex-wrap gap-2 border-b border-border pb-4">
           <div>
@@ -632,8 +705,22 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               className="gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold shadow-md hover:from-red-700 hover:to-rose-700 h-9 cursor-pointer"
             >
               <Sparkles size={14} className={generatingAllScenes ? "animate-spin" : ""} />
-              {generatingAllScenes ? `Đang sinh trọn bộ ${sceneCount} phân cảnh...` : `⚡ Sinh trọn bộ ${sceneCount} phân cảnh (${sceneCreditTotal} credit)`}
+              {generatingAllScenes
+                ? `Đang sinh phân cảnh...`
+                : `⚡ Sinh trọn bộ ${sceneCount} phân cảnh${planRatios.length > 1 ? ` khung ${viewRatio}` : ""} (${sceneCreditTotal} credit)`}
             </Button>
+            {planRatios.length > 1 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleGenerateAllRatios}
+                disabled={generatingAllScenes || generatingSceneIndex !== null}
+                className="h-9 gap-1.5 font-bold cursor-pointer"
+                title="Mỗi khung trong phạm vi sản xuất một bộ ảnh riêng (một video riêng ở Khu vực E)"
+              >
+                Sinh đủ {planRatios.length} khung ({sceneCreditTotal * planRatios.length} credit)
+              </Button>
+            )}
             <Badge tone={judgmentB === "blocked" ? "danger" : "success"} className="text-xs px-3 py-1 font-bold">
               {judgmentB === "blocked"
                 ? "Bị cổng toàn vẹn từ chối"

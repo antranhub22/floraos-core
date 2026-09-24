@@ -76,4 +76,26 @@ describe("assembleVideo", () => {
     expect(pickFormatForDuration("REEL_15S", 26)).toBe("TIKTOK_30S")
     expect(pickFormatForDuration("REEL_15S", 90)).toBeNull()
   })
+  test("nhiều khung: mỗi khung một video, không mượn ảnh khung khác", () => {
+    const multi = buildRuleScenePlan({
+      mode: "AUTHENTIC",
+      productName: "Bó hoa",
+      colors: [],
+      components: [],
+      occasions: [],
+      topic: { id: "t1", title: "Sinh nhật" },
+      platforms: ["tiktok", "youtube"],
+    })
+    expect(multi.publishing.ratios).toEqual(["9:16", "16:9"])
+    const r916 = assembleVideo({ plan: multi, planRef: REF, variants: all, audio: audio(), ratio: "9:16" })
+    expect(r916.ready).toBe(true)
+    const r169 = assembleVideo({ plan: multi, planRef: REF, variants: all, audio: audio(), ratio: "16:9" })
+    expect(r169.ready).toBe(false)
+    expect(r169.problems.filter((p) => p.kind === "missing_image")).toHaveLength(3)
+    const wide = [v(1, { ratio: "16:9" }), v(2, { ratio: "16:9" }), v(3, { ratio: "16:9" })]
+    const ok = assembleVideo({ plan: multi, planRef: REF, variants: [...all, ...wide], audio: audio(), ratio: "16:9" })
+    expect(ok.ready).toBe(true)
+    expect(ok.aspectRatio).toBe("16:9")
+    expect(assembleVideo({ plan: multi, planRef: REF, variants: all, audio: audio(), ratio: "1:1" }).problems.map((p) => p.kind)).toContain("ratio_out_of_scope")
+  })
 })

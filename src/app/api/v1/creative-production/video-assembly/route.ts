@@ -5,6 +5,7 @@ import { requireCapability } from "@/core/rbac/capabilities"
 import { handle, jsonResponse } from "@/core/http/response"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { assembleVideoFromPlan } from "@/modules/creative-production/use-cases/assemble-video"
+import { PUBLISH_RATIOS } from "@/modules/creative-production/domain/publishing-rules"
 
 const bodySchema = z.object({
   scene_plan_id: z.string().trim().min(1).max(160),
@@ -14,6 +15,8 @@ const bodySchema = z.object({
   audio_job_id: z.string().uuid().optional(),
   title: z.string().max(200).optional(),
   dry_run: z.boolean().optional(),
+  /** Khung của video — mỗi khung trong phạm vi một video (PO 24/09/2026). */
+  ratio: z.enum(PUBLISH_RATIOS).optional(),
 })
 
 /**
@@ -37,6 +40,7 @@ export const POST = handle(async (request) => {
     audioJobId: d.audio_job_id ?? null,
     title: d.title,
     dryRun: d.dry_run ?? false,
+    ratio: d.ratio ?? null,
   })
   return jsonResponse({
     ready: r.assembly.ready,

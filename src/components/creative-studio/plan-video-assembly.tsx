@@ -49,9 +49,15 @@ export function PlanVideoAssembly({
   assetId: string | undefined
   audioJobId: string | null
   title: string
-  onGoArea: (area: "c" | "d", focusScene?: number) => void
+  onGoArea: (area: "c" | "d", focusScene?: number, focusRatio?: string) => void
   onCreated: (videoJobId: string) => void
 }) {
+  // PO 24/09/2026: mỗi khung trong phạm vi một video riêng (ảnh D của đúng khung).
+  const pub = loaded.plan.publishing
+  const ratios: readonly string[] = pub.ratios?.length ? pub.ratios : [pub.aspectRatio]
+  const [pickedRatio, setRatio] = useState<string>(ratios[0] ?? pub.aspectRatio)
+  const ratio = ratios.includes(pickedRatio) ? pickedRatio : (ratios[0] ?? pub.aspectRatio)
+  const variantOf = (r: string) => pub.videoVariants?.find((x) => x.ratio === r)
   const [report, setReport] = useState<AssemblyResponse | null>(null)
   const [busy, setBusy] = useState<null | "check" | "build">(null)
   const [error, setError] = useState<string | null>(null)
@@ -78,12 +84,13 @@ export function PlanVideoAssembly({
           ...(audioJobId ? { audio_job_id: audioJobId } : {}),
           title: titleRef.current,
           dry_run: dryRun,
+          ratio,
         }),
       })
       if (!res.ok) throw new Error(await readError(res))
       return (await res.json()) as AssemblyResponse
     },
-    [assetId, audioJobId, loaded]
+    [assetId, audioJobId, loaded, ratio]
   )
 
   const check = useCallback(async () => {
@@ -124,9 +131,31 @@ export function PlanVideoAssembly({
           <Clapperboard size={14} /> Dựng video từ bộ tài sản của kịch bản
         </h3>
         <Badge tone="neutral" className="text-[10px]">
-          Kịch bản phiên bản {loaded.plan.revision} · khung {loaded.plan.publishing.aspectRatio}
+          Kịch bản phiên bản {loaded.plan.revision} · {ratios.length} khung
         </Badge>
       </div>
+      {ratios.length > 1 && (
+        <div className="mb-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Khung video">
+          {ratios.map((r) => {
+            const v = variantOf(r)
+            return (
+              <button
+                key={r}
+                type="button"
+                role="tab"
+                aria-selected={r === ratio}
+                onClick={() => setRatio(r)}
+                className={`rounded-lg border px-3 py-1.5 text-[11.5px] font-bold cursor-pointer ${
+                  r === ratio ? "border-primary bg-primary text-white" : "border-border bg-surface text-text-muted"
+                }`}
+              >
+                Video {r}
+                {v ? ` · ~${v.targetSeconds}s` : ""}
+              </button>
+            )
+          })}
+        </div>
+      )}
       <p className="mb-3 text-[12px] text-text-muted">
         Ảnh từng cảnh lấy từ Khu vực D, âm thanh dùng <b>nguyên bản phối Khu vực C</b> (không đọc lại), phụ đề, chuyển cảnh,
         thời lượng và khuôn theo kịch bản Chặng 05. Thiếu tài sản nào thì chưa dựng được.
@@ -146,10 +175,10 @@ export function PlanVideoAssembly({
                   <AlertTriangle size={13} /> {p.message}
                 </span>
                 {p.kind === "missing_image" ? (
-                  <button type="button" onClick={() => onGoArea("d", p.sceneIndex)} className="font-bold underline cursor-pointer">
-                    Sinh cảnh {p.sceneIndex} ở Khu vực D →
+                  <button type="button" onClick={() => onGoArea("d", p.sceneIndex, ratio)} className="font-bold underline cursor-pointer">
+                    Sinh cảnh {p.sceneIndex} khung {ratio} ở Khu vực D →
                   </button>
-                ) : p.kind !== "duration" ? (
+                ) : p.kind !== "duration" && p.kind !== "ratio_out_of_scope" ? (
                   <button type="button" onClick={() => onGoArea("c")} className="font-bold underline cursor-pointer">
                     Mở Khu vực C →
                   </button>
@@ -169,7 +198,7 @@ export function PlanVideoAssembly({
           {busy === "check" ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} Kiểm tra lại
         </Button>
         <Button size="sm" className="gap-1.5" disabled={busy !== null || !report?.ready} onClick={() => void build()}>
-          {busy === "build" ? <Loader2 size={13} className="animate-spin" /> : <Clapperboard size={13} />} Dựng video từ bộ tài sản
+          {busy === "build" ? <Loader2 size={13} className="animate-spin" /> : <Clapperboard size={13} />} Dựng video {ratio}
         </Button>
         <span className="text-[11px] text-text-muted">Tạo bản nháp miễn phí → duyệt kịch bản (P3) → render 5 credit → duyệt video (P4).</span>
       </div>

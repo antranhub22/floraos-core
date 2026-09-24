@@ -224,10 +224,11 @@ export function VideoWorkspace() {
           assetId={context.assetId}
           audioJobId={searchParams?.get("audioJobId") ?? null}
           title={title}
-          onGoArea={(area, focusScene) => {
+          onGoArea={(area, focusScene, focusRatio) => {
             const params = new URLSearchParams(searchParams?.toString() || "")
             params.set("area", area)
             if (focusScene) params.set("focusScene", String(focusScene))
+            if (focusRatio) params.set("focusRatio", focusRatio)
             router.push(`/creative-studio?${params.toString()}` as never)
           }}
           onCreated={(id) => {

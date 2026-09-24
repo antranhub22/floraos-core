@@ -42,6 +42,7 @@ export type AssemblyProblem =
   | { kind: "audio_other_plan"; message: string }
   | { kind: "no_voice"; message: string }
   | { kind: "duration"; message: string }
+  | { kind: "ratio_out_of_scope"; message: string }
 
 export interface AssembledScene {
   readonly sceneIndex: number
@@ -99,10 +100,22 @@ export function assembleVideo(input: {
   planRef: string
   variants: readonly AssemblyVariant[]
   audio: AssemblyAudio | null
+  /** Khung của video này (PO 24/09/2026: mỗi khung một video). Bỏ trống = khung chính. */
+  ratio?: string | null | undefined
 }): AssemblyResult {
   const { plan, planRef } = input
   const problems: AssemblyProblem[] = []
   const warnings: string[] = []
+  const pub = plan.publishing
+  const ratio = input.ratio || pub.aspectRatio
+  const ratios: readonly string[] = pub.ratios?.length ? pub.ratios : [pub.aspectRatio]
+  if (!ratios.includes(ratio)) {
+    problems.push({ kind: "ratio_out_of_scope", message: `Khung ${ratio} không nằm trong phạm vi sản xuất (${ratios.join(", ")}) — đổi phạm vi ở Chặng 05 nếu cần.` })
+  }
+  const variantSpec = pub.videoVariants?.find((x) => x.ratio === ratio)
+  const preferredFormat = variantSpec?.videoFormat ?? plan.video.format
+  // Nhiều khung: mỗi khung một bộ ảnh riêng — không mượn ảnh khung khác.
+  const strictRatio = ratios.length > 1
 
   // 1. Âm thanh Khu vực C — bắt buộc (video dùng nguyên bản phối).
   const a = input.audio
@@ -134,17 +147,25 @@ export function assembleVideo(input: {
           v.approvalState !== "REJECTED"
       )
       .sort((x, y) => y.createdAt.getTime() - x.createdAt.getTime())
-    // Ưu tiên ảnh đúng khung + phiên bản mới nhất.
+    // Ưu tiên ảnh đúng khung + phiên bản mới nhất. Ảnh cũ chưa ghi khung
+    // được tính là khung chính.
+    const sameRatio = (x: AssemblyVariant) => x.ratio === ratio || (x.ratio == null && ratio === pub.aspectRatio)
     const best =
-      candidates.find((v) => v.ratio === plan.publishing.aspectRatio && (v.scenePlanRevision ?? 1) >= plan.revision) ??
-      candidates.find((v) => v.ratio === plan.publishing.aspectRatio) ??
-      candidates[0]
+      candidates.find((x) => sameRatio(x) && (x.scenePlanRevision ?? 1) >= plan.revision) ??
+      candidates.find(sameRatio) ??
+      (strictRatio ? undefined : candidates[0])
     if (!best) {
-      problems.push({ kind: "missing_image", sceneIndex: sc.sceneIndex, message: `Cảnh ${sc.sceneIndex} (${sc.title}) chưa có ảnh ở Khu vực D.` })
+      problems.push({
+        kind: "missing_image",
+        sceneIndex: sc.sceneIndex,
+        message: strictRatio
+          ? `Cảnh ${sc.sceneIndex} (${sc.title}) chưa có ảnh khung ${ratio} ở Khu vực D.`
+          : `Cảnh ${sc.sceneIndex} (${sc.title}) chưa có ảnh ở Khu vực D.`,
+      })
       continue
     }
-    if (best.ratio && best.ratio !== plan.publishing.aspectRatio) {
-      warnings.push(`Ảnh cảnh ${sc.sceneIndex} khung ${best.ratio}, kịch bản cần ${plan.publishing.aspectRatio} — video sẽ có viền; nên sinh lại ở Khu vực D.`)
+    if (best.ratio && best.ratio !== ratio) {
+      warnings.push(`Ảnh cảnh ${sc.sceneIndex} khung ${best.ratio}, video cần ${ratio} — video sẽ có viền; nên sinh lại ở Khu vực D.`)
     }
     if (best.scenePlanRevision != null && best.scenePlanRevision < plan.revision) {
       warnings.push(`Ảnh cảnh ${sc.sceneIndex} sinh theo kịch bản phiên bản ${best.scenePlanRevision} (hiện ${plan.revision}).`)
@@ -164,12 +185,12 @@ export function assembleVideo(input: {
   }
 
   const total = Math.round(scenes.reduce((s, x) => s + x.durationSeconds, 0) * 10) / 10
-  let format: PublishVideoFormat = plan.video.format
+  let format: PublishVideoFormat = preferredFormat
   if (scenes.length === plan.scenes.length) {
-    const picked = pickFormatForDuration(plan.video.format, total)
+    const picked = pickFormatForDuration(preferredFormat, total)
     if (!picked) problems.push({ kind: "duration", message: `Tổng ${total}s nằm ngoài mọi khuôn video (6–60s) — rút gọn lời thoại ở kịch bản.` })
     else {
-      if (picked !== plan.video.format) warnings.push(`Âm thanh dài ${total}s nên dùng khuôn ${picked} thay cho ${plan.video.format}.`)
+      if (picked !== preferredFormat) warnings.push(`Âm thanh dài ${total}s nên dùng khuôn ${picked} thay cho ${preferredFormat}.`)
       format = picked
     }
   }
@@ -180,7 +201,7 @@ export function assembleVideo(input: {
     warnings,
     scenes,
     format,
-    aspectRatio: plan.publishing.aspectRatio,
+    aspectRatio: ratio,
     totalDurationSeconds: total,
     audioStorageKey: a?.storageKey ?? null,
   }
