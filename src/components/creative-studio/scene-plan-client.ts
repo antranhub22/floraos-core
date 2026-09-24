@@ -11,6 +11,7 @@ import {
   type ScenePlanMode,
   type ScenePlanScene,
 } from "@/modules/creative-production/domain/scene-plan-rules"
+import { resolvePublishing } from "@/modules/creative-production/domain/publishing-rules"
 import type {
   ConcreteTopic,
   ProductIntelligenceReport,
@@ -36,8 +37,29 @@ export interface ScenePlanContext {
     targetAudience?: string | undefined
     suggestedOccasions?: string[] | undefined
   } | undefined
-  /** Nền tảng đăng chọn ở Chặng 05 (v2) — bỏ trống = TikTok + Reels (9:16). */
-  platforms?: readonly string[] | undefined
+  /** Nền tảng đăng chọn cuối Chặng 04 / đầu Chặng 05 — bỏ trống = TikTok + Reels (9:16), `"all"` = tất cả. */
+  platforms?: readonly string[] | "all" | undefined
+  /** Loại kết quả sản xuất — bỏ trống hoặc `"all"` = content + audio + image + video. */
+  outputs?: readonly string[] | "all" | undefined
+}
+
+/** Phạm vi thân request: bỏ trường khi không chọn, giữ `"all"` nguyên văn. */
+function scopeBody(ctx: ScenePlanContext): { platforms?: string[] | "all"; outputs?: string[] | "all" } {
+  const out: { platforms?: string[] | "all"; outputs?: string[] | "all" } = {}
+  if (ctx.platforms === "all") out.platforms = "all"
+  else if (ctx.platforms?.length) out.platforms = [...ctx.platforms]
+  if (ctx.outputs === "all") out.outputs = "all"
+  else if (ctx.outputs?.length) out.outputs = [...ctx.outputs]
+  return out
+}
+
+/** Kịch bản đã lưu có đúng phạm vi đang chọn không (so theo kết quả đã phân giải). */
+export function planMatchesScope(plan: ScenePlan, ctx: ScenePlanContext): boolean {
+  const want = resolvePublishing(ctx.platforms ?? null, ctx.outputs ?? null)
+  const have = plan.publishing
+  if (!have) return false
+  const same = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x) => b.includes(x))
+  return same(want.platforms, have.platforms ?? []) && same(want.outputs, have.outputs ?? [])
 }
 
 /**
@@ -89,6 +111,7 @@ export function scenePlanInputOf(ctx: ScenePlanContext): ScenePlanInput {
     priceRange: p?.priceRange,
     topic: topicOf(ctx),
     platforms: ctx.platforms,
+    outputs: ctx.outputs,
   }
 }
 
@@ -163,7 +186,7 @@ export async function writeScenePlan(ctx: ScenePlanContext, fresh: boolean): Pro
         ...(input.targetAudience ? { target_audience: input.targetAudience } : {}),
         ...(input.priceRange ? { price_range: input.priceRange } : {}),
       },
-      ...(ctx.platforms?.length ? { platforms: ctx.platforms } : {}),
+      ...scopeBody(ctx),
       topic: {
         id: input.topic.id,
         title: input.topic.title,
@@ -178,12 +201,18 @@ export async function writeScenePlan(ctx: ScenePlanContext, fresh: boolean): Pro
   const body = (await res.json()) as PlanResponse
   if (body.status === "FAILED") throw new Error(body.error || "Lượt viết kịch bản trước đã hỏng — bấm viết lại.")
   if (!body.plan || !body.job_id) throw new Error("Kịch bản đang được viết ở một phiên khác — thử lại sau vài giây.")
+  // Trùng khoá trả kịch bản cũ — nếu user vừa đổi phạm vi thì sửa tại chỗ (miễn phí).
+  if (!planMatchesScope(body.plan, ctx)) {
+    const scope = scopeBody(ctx)
+    return patchScenePlan(body.job_id, { platforms: scope.platforms ?? ["tiktok", "instagram_reels"], outputs: scope.outputs ?? "all" })
+  }
   return { plan: body.plan, ref: body.job_id, jobId: body.job_id }
 }
 
 /** Thân `PATCH /scene-plans/:id` (v2) — dạng snake_case như API. */
 export interface ScenePlanPatch {
-  platforms?: string[]
+  platforms?: string[] | "all"
+  outputs?: string[] | "all"
   scenes?: Array<{ scene_index: number; duration_seconds?: number; voice_script?: string; text_overlay?: string; transition?: string; motion_effect?: string }>
   audio?: { voice_id?: string; music_mood?: string; pacing?: string; quality_tier?: string }
   video?: { caption_style?: string; has_subtitle?: boolean; has_watermark?: boolean; end_card_text?: string; cover_scene_index?: number }

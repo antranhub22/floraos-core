@@ -8,7 +8,7 @@ import { z } from "zod"
 
 import { buildRuleScenePlan } from "../domain/scene-plan-rules"
 import { MAX_HANDOFF_QUERY_LENGTH } from "../domain/build-handoff-url"
-import { PUBLISH_PLATFORMS } from "../domain/publishing-rules"
+import { PRODUCTION_OUTPUTS, PUBLISH_PLATFORMS } from "../domain/publishing-rules"
 import { defineStage } from "./define-stage"
 import { productionModeSchema } from "./common"
 import { scenePlanCreateResultSchema } from "./scene-plan"
@@ -17,6 +17,11 @@ import { EXAMPLE_ASSET_ID, EXAMPLE_JOB_ID, EXAMPLE_PRODUCT_ID, EXAMPLE_RUN_ID, e
 
 const str = (max: number) => z.string().trim().max(max)
 const list = z.array(str(60)).max(12)
+
+/** Phạm vi nền tảng (PO 24/09/2026): `"all"` = tất cả, mảng rỗng cũng là tất cả. */
+export const publishPlatformsScopeSchema = z.union([z.literal("all"), z.array(z.enum(PUBLISH_PLATFORMS)).max(8)])
+/** Phạm vi loại kết quả: `"all"` = content + audio + image + video. */
+export const productionOutputsScopeSchema = z.union([z.literal("all"), z.array(z.enum(PRODUCTION_OUTPUTS)).max(4)])
 
 /** Thân `POST /creative-production/scene-plans` (header `Idempotency-Key` bắt buộc). */
 export const scenePlanBodySchema = z.object({
@@ -33,11 +38,12 @@ export const scenePlanBodySchema = z.object({
     target_audience: str(200).optional(),
     price_range: str(80).optional(),
   }),
-  platforms: z
-    .array(z.enum(PUBLISH_PLATFORMS))
-    .max(8)
+  platforms: publishPlatformsScopeSchema
     .optional()
-    .describe("Nền tảng đăng — quyết định tỉ lệ + khuôn video; bỏ trống = TikTok + Reels (9:16)"),
+    .describe("Nền tảng đăng — quyết định tỉ lệ + khuôn video; bỏ trống = TikTok + Reels (9:16); \"all\" = mọi nền tảng"),
+  outputs: productionOutputsScopeSchema
+    .optional()
+    .describe("Loại kết quả sản xuất (content/audio/image/video); bỏ trống hoặc \"all\" = cả 4; video kéo theo image + audio"),
   topic: z.object({
     id: str(120).min(1),
     title: str(200).min(1),
@@ -64,6 +70,16 @@ export const handoffQuerySchema = z
     productId: z.string().optional(),
     audioJobId: z.string().optional().describe("Ghi thêm bởi Khu vực C"),
     videoJobId: z.string().optional().describe("Ghi thêm bởi Khu vực E"),
+    platforms: z
+      .string()
+      .max(200)
+      .optional()
+      .describe("Phạm vi nền tảng chọn cuối Chặng 04: danh sách cách nhau dấu phẩy hoặc \"all\"; bỏ trống = TikTok + Reels"),
+    outputs: z
+      .string()
+      .max(60)
+      .optional()
+      .describe("Loại kết quả: content,audio,image,video hoặc \"all\"; bỏ trống = tất cả"),
   })
   .describe(`Query string của /creative-studio; tổng độ dài ≤ ${MAX_HANDOFF_QUERY_LENGTH} ký tự`)
 
@@ -96,6 +112,7 @@ export const stage05Choose = defineStage({
       product_id: EXAMPLE_PRODUCT_ID,
       product: { name: "Bó hồng đỏ 12 bông", colors: ["đỏ", "trắng"], components: ["Hoa hồng đỏ", "Baby trắng"], occasions: ["Sinh nhật"] },
       platforms: ["tiktok", "instagram_reels"],
+      outputs: "all",
       topic: { id: exampleTopic.id, title: exampleTopic.title, angle_category: "EMOTIONAL", hook: exampleTopic.hook, cta: exampleTopic.cta },
     },
     output: {
@@ -118,6 +135,8 @@ export const stage05Choose = defineStage({
         assetId: EXAMPLE_ASSET_ID,
         area: "a",
         productName: "Bó hồng đỏ 12 bông",
+        platforms: "tiktok,instagram_reels",
+        outputs: "all",
       },
     },
   },

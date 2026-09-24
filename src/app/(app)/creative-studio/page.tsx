@@ -1,5 +1,6 @@
 "use client"
 
+import { decodeScopeParam } from "@/modules/creative-production/domain/build-handoff-url"
 import React, { useState, useMemo, useEffect, useCallback } from "react"
 import { Sparkles, ArrowLeft, Wand2, FileText, Headphones, Film, Package, AlertTriangle, Camera } from "lucide-react"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -32,6 +33,9 @@ interface CreativeStudioContextType {
   assetId: string | undefined
   voiceId: string | undefined
   musicMood: string | undefined
+  /** Phạm vi sản xuất chọn cuối Chặng 04 (`?platforms=`/`?outputs=`) — bỏ trống = mặc định. */
+  platforms: string[] | "all" | undefined
+  outputs: string[] | "all" | undefined
   report: ProductIntelligenceReport | null
   topics: ConcreteTopic[]
   selectedTopic: ConcreteTopic | null
@@ -130,6 +134,8 @@ export default function CreativeStudioPage() {
     assetId: searchParams.get("assetId") || undefined,
     voiceId: searchParams.get("voiceId") || undefined,
     musicMood: searchParams.get("musicMood") || undefined,
+    platforms: decodeScopeParam(searchParams.get("platforms")),
+    outputs: decodeScopeParam(searchParams.get("outputs")),
     report: null,
     topics: [],
     selectedTopic: null,
@@ -231,6 +237,8 @@ export default function CreativeStudioPage() {
     const videoParam = searchParams.get("videoUrl")
     const voiceParam = searchParams.get("voiceId")
     const musicParam = searchParams.get("musicMood")
+    const platformsParam = searchParams.get("platforms")
+    const outputsParam = searchParams.get("outputs")
 
     // 23/09/2026: bỏ "passport dự phòng" bịa sẵn — nó làm cổng Validation luôn
     // qua dù chưa có dữ liệu thật của Chặng 02.
@@ -246,6 +254,8 @@ export default function CreativeStudioPage() {
         ...(videoParam !== null ? { sourceVideoUrl: videoParam || undefined } : {}),
         ...(voiceParam !== null ? { voiceId: voiceParam || undefined } : {}),
         ...(musicParam !== null ? { musicMood: musicParam || undefined } : {}),
+        ...(platformsParam !== null ? { platforms: decodeScopeParam(platformsParam) } : {}),
+        ...(outputsParam !== null ? { outputs: decodeScopeParam(outputsParam) } : {}),
       }
     })
   }, [searchParams])

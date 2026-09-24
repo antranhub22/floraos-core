@@ -38,18 +38,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { buildHandoffSearchParams } from "@/modules/creative-production/domain/build-handoff-url";
 import {
-  DEFAULT_PLATFORMS,
-  PLATFORM_SPECS,
-  PUBLISH_PLATFORMS,
-  resolvePublishing,
-  type PublishPlatform,
-} from "@/modules/creative-production/domain/publishing-rules";
+  DEFAULT_PRODUCTION_SCOPE,
+  ProductionScopePicker,
+  type ProductionScope,
+} from "@/components/creative-studio/production-scope-picker";
 import { ProductionPlanPreview } from "@/components/creative-studio/production-plan-preview";
 import {
   passportFromReport,
   RULE_PLAN_REF,
   writeScenePlan,
-  patchScenePlan,
   type LoadedScenePlan,
 } from "@/components/creative-studio/scene-plan-client";
 import type {
@@ -85,6 +82,10 @@ export interface CreativeHandoffModalProps {
   sourceVideoUrl?: string | undefined;
   /** Report đầy đủ (Chặng 02-04) — serialize vào sessionStorage */
   report?: ProductIntelligenceReport | null | undefined;
+  /** Phạm vi sản xuất đã chọn cuối Chặng 04 — sửa tiếp được ở đây (kèm `onScopeChange` = điều khiển từ ngoài). */
+  initialScope?: ProductionScope | undefined;
+  /** Báo phạm vi mới về Chặng 04 (giữ đồng bộ hai nơi). */
+  onScopeChange?: ((scope: ProductionScope) => void) | undefined;
 }
 
 // Bảng ánh xạ nhãn góc tiếp cận sang tiếng Việt thanh lịch (Anti-Keyword-Dumping)
@@ -190,6 +191,8 @@ export function CreativeHandoffModal({
   productId,
   sourceVideoUrl,
   report,
+  initialScope,
+  onScopeChange,
 }: CreativeHandoffModalProps) {
   const router = useRouter();
   const [mode, setMode] = useState<ProductionMode>("CREATIVE");
@@ -261,8 +264,15 @@ export function CreativeHandoffModal({
   const [planFailed, setPlanFailed] = useState(false);
   // v2 (24/09/2026, PO): chọn NỀN TẢNG ĐĂNG → khung hình + khuôn video của cả
   // bộ tài sản; kịch bản sản xuất tổng hiện để xem/sửa TRƯỚC khi vào Studio.
-  const [platforms, setPlatforms] = useState<PublishPlatform[]>([...DEFAULT_PLATFORMS]);
-  const publishing = resolvePublishing(platforms);
+  // PO 24/09/2026 tối: phạm vi (nền tảng + loại kết quả) chọn cuối Chặng 04,
+  // sửa tiếp được ở đầu Chặng 05; chỉ sản xuất đúng những gì đã chọn.
+  // Có `onScopeChange` = Chặng 04 giữ state (điều khiển từ ngoài); không có thì modal tự giữ.
+  const [scopeState, setScopeState] = useState<ProductionScope>(initialScope ?? DEFAULT_PRODUCTION_SCOPE);
+  const scope = onScopeChange && initialScope ? initialScope : scopeState;
+  const setScope = (next: ProductionScope) => {
+    if (onScopeChange) onScopeChange(next);
+    else setScopeState(next);
+  };
   const [preview, setPreview] = useState<LoadedScenePlan | null>(null);
 
   const goToStudio = (scenePlanId: string | null) => {
@@ -279,6 +289,8 @@ export function CreativeHandoffModal({
         productName,
         productId,
         area: selectedArea,
+        platforms: scope.platforms,
+        outputs: scope.outputs,
       });
     if (scenePlanId) params.set("scenePlanId", scenePlanId);
     router.push(`/creative-studio?${params.toString()}` as never);
@@ -288,7 +300,9 @@ export function CreativeHandoffModal({
     setHandoffError(null);
     setWritingPlan(true);
     try {
-      let loaded = await writeScenePlan(
+      // Trùng khoá (cùng ảnh + chủ đề + mode) trả kịch bản cũ; nếu phạm vi
+      // khác thì `writeScenePlan` tự sửa phạm vi tại chỗ (miễn phí).
+      const loaded = await writeScenePlan(
         {
           mode,
           productName,
@@ -296,16 +310,11 @@ export function CreativeHandoffModal({
           assetId,
           selectedTopic,
           commercialPassport: passportFromReport(report),
-          platforms,
+          platforms: scope.platforms,
+          outputs: scope.outputs,
         },
         planFailed || fresh
       );
-      // Cùng chủ đề đã có kịch bản (khoá cố định, không trừ credit lần hai)
-      // nhưng người dùng đổi nền tảng → sửa nền tảng trên kịch bản cũ (miễn phí).
-      const same =
-        loaded.plan.publishing.platforms.length === platforms.length &&
-        platforms.every((p) => loaded.plan.publishing.platforms.includes(p));
-      if (!same && loaded.jobId) loaded = await patchScenePlan(loaded.jobId, { platforms });
       setPreview(loaded);
     } catch (err) {
       setPlanFailed(true);
@@ -505,36 +514,12 @@ export function CreativeHandoffModal({
             </div>
           </div>
 
-          {/* 3b. Nền tảng đăng — quyết định khung hình + khuôn video (v2, 24/09/2026) */}
+          {/* 3b. Phạm vi sản xuất — nền tảng + loại kết quả (PO 24/09/2026) */}
           <div>
             <label className="text-[11.5px] font-bold uppercase tracking-wider text-stone-700 block mb-2">
-              Nền tảng sẽ đăng
+              Phạm vi sản xuất
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              {PUBLISH_PLATFORMS.map((p) => {
-                const on = platforms.includes(p);
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() =>
-                      setPlatforms((prev) => (on ? (prev.length > 1 ? prev.filter((x) => x !== p) : prev) : [...prev, p]))
-                    }
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-                      on ? "border-primary bg-rose-50 text-primary" : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-                    }`}
-                  >
-                    {PLATFORM_SPECS[p].label} · {PLATFORM_SPECS[p].ratio}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-1.5 text-[11px] text-stone-500">
-              Ảnh + video sinh khung <b>{publishing.aspectRatio}</b>, video khoảng {publishing.targetSeconds}s; bài đăng cho{" "}
-              {publishing.postChannels.join(", ")}.
-              {publishing.otherRatios.length > 0 &&
-                ` Chưa sinh khung khác (${publishing.otherRatios.map((o) => `${PLATFORM_SPECS[o.platform].label} ${o.ratio}`).join(", ")}) — mặc định 9:16.`}
-            </p>
+            <ProductionScopePicker value={scope} onChange={setScope} compact />
           </div>
 
           {/* 4. Chọn Phân Hệ Đích Đến (Direct Jump) */}

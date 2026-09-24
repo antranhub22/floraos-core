@@ -76,6 +76,8 @@ export function ContentsWorkspace() {
         assetId: context.assetId,
         selectedTopic: context.selectedTopic,
         commercialPassport: context.commercialPassport,
+        platforms: context.platforms,
+        outputs: context.outputs,
       },
       urlPlanId
     )

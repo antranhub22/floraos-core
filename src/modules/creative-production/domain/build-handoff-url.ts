@@ -34,6 +34,24 @@ export interface HandoffUrlInput {
   /** Chủ đề cụ thể user đã chọn trong report (Chặng 04) — khác với `runOrTopicId`
    *  khi đó đang mang report.id (lượt phân tích), không phải id của một topic. */
   readonly selectedTopicId?: string | undefined
+  /** Phạm vi sản xuất chọn cuối Chặng 04 — `"all"` hoặc danh sách; bỏ trống = mặc định. */
+  readonly platforms?: readonly string[] | "all" | undefined
+  readonly outputs?: readonly string[] | "all" | undefined
+}
+
+/** Ghi phạm vi thành chuỗi query: `"all"` hoặc `a,b,c`. */
+export function encodeScopeParam(v: readonly string[] | "all" | undefined): string | null {
+  if (v === "all") return "all"
+  if (!v || v.length === 0) return null
+  return v.join(",")
+}
+
+/** Đọc lại phạm vi từ query: `null` → không chọn (mặc định), `"all"`, hoặc danh sách. */
+export function decodeScopeParam(raw: string | null | undefined): string[] | "all" | undefined {
+  if (!raw) return undefined
+  if (raw.trim() === "all") return "all"
+  const list = raw.split(",").map((x) => x.trim()).filter(Boolean)
+  return list.length ? list : undefined
 }
 
 /** Tổng độ dài query string tối đa cho phép — cách xa hạn header ~16KB của Node,
@@ -71,6 +89,10 @@ export function buildHandoffSearchParams(input: HandoffUrlInput): URLSearchParam
   if (input.productName) params.set("productName", input.productName)
   if (input.productId) params.set("productId", input.productId)
   if (input.selectedTopicId) params.set("selectedTopic", input.selectedTopicId)
+  const platforms = encodeScopeParam(input.platforms)
+  if (platforms) params.set("platforms", platforms)
+  const outputs = encodeScopeParam(input.outputs)
+  if (outputs) params.set("outputs", outputs)
 
   return params
 }

@@ -4,7 +4,7 @@ import { requireTenantContext } from "@/modules/organization/use-cases/resolve-s
 import { z } from "zod"
 import { validationFailed } from "@/core/http/errors"
 import { getScenePlan, updateScenePlan } from "@/modules/creative-production/use-cases/generate-scene-plan"
-import { PUBLISH_PLATFORMS } from "@/modules/creative-production/domain/publishing-rules"
+import { productionOutputsScopeSchema, publishPlatformsScopeSchema } from "@/modules/creative-production/contracts/stage-05-choose"
 import { VOICE_CATALOG } from "@/modules/audio-studio/domain/voice-catalog"
 
 /** `GET /api/v1/creative-production/scene-plans/:id` (`I1`). */
@@ -26,7 +26,8 @@ const sceneEdit = z.object({
 })
 
 const patchSchema = z.object({
-  platforms: z.array(z.enum(PUBLISH_PLATFORMS)).min(1).max(8).optional(),
+  platforms: publishPlatformsScopeSchema.optional(),
+  outputs: productionOutputsScopeSchema.optional(),
   scenes: z.array(sceneEdit).max(5).optional(),
   audio: z
     .object({
@@ -67,6 +68,7 @@ export const PATCH = handle(async (request, { params }: { params: Promise<{ id: 
   }
   const found = await updateScenePlan(ctx, id, {
     platforms: d.platforms,
+    outputs: d.outputs,
     scenes: d.scenes?.map((s) => ({
       sceneIndex: s.scene_index,
       durationSeconds: s.duration_seconds,

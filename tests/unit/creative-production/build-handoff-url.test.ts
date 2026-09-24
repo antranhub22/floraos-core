@@ -9,6 +9,8 @@
 import { describe, it, expect } from "vitest"
 import {
   buildHandoffSearchParams,
+  decodeScopeParam,
+  encodeScopeParam,
   isSafeHandoffQueryString,
   MissingAssetIdError,
   MAX_HANDOFF_QUERY_LENGTH,
@@ -93,5 +95,25 @@ describe("isSafeHandoffQueryString", () => {
   it("rejects strings longer than MAX_HANDOFF_QUERY_LENGTH", () => {
     const long = "a=" + "x".repeat(MAX_HANDOFF_QUERY_LENGTH)
     expect(isSafeHandoffQueryString(long)).toBe(false)
+  })
+})
+
+describe("phạm vi sản xuất trên URL bàn giao (PO 24/09/2026)", () => {
+  const base = { runOrTopicId: "run-1", mode: "CREATIVE", source: "image", assetId: "a-1", productName: "Bó hoa", area: "b" } as const
+
+  it("không chọn → không ghi tham số (Creative Studio dùng mặc định TikTok + Reels)", () => {
+    const p = buildHandoffSearchParams(base)
+    expect(p.has("platforms")).toBe(false)
+    expect(p.has("outputs")).toBe(false)
+  })
+
+  it("ghi danh sách và 'all', đọc lại đúng", () => {
+    const p = buildHandoffSearchParams({ ...base, platforms: ["tiktok", "youtube"], outputs: "all" })
+    expect(p.get("platforms")).toBe("tiktok,youtube")
+    expect(p.get("outputs")).toBe("all")
+    expect(decodeScopeParam(p.get("platforms"))).toEqual(["tiktok", "youtube"])
+    expect(decodeScopeParam(p.get("outputs"))).toBe("all")
+    expect(decodeScopeParam(null)).toBeUndefined()
+    expect(encodeScopeParam([])).toBeNull()
   })
 })

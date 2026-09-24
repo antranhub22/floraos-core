@@ -67,6 +67,7 @@ export async function generateScenePlan(
       mode: input.brief.mode,
       asset_id: input.assetId ?? null,
       platforms: input.brief.platforms ?? null,
+      outputs: input.brief.outputs ?? null,
     },
     productId: input.productId ?? null,
     idempotencyKey: input.idempotencyKey,

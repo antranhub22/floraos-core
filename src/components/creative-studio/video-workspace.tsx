@@ -91,6 +91,8 @@ export function VideoWorkspace() {
             assetId: context.assetId,
             selectedTopic: context.selectedTopic,
             commercialPassport: context.commercialPassport,
+            platforms: context.platforms,
+            outputs: context.outputs,
           },
           urlPlanId
         ).catch(() => ({ loaded: null }))
@@ -149,6 +151,8 @@ export function VideoWorkspace() {
           assetId: context.assetId,
           selectedTopic: context.selectedTopic,
           commercialPassport: context.commercialPassport,
+          platforms: context.platforms,
+          outputs: context.outputs,
         },
         urlPlanId
       ).catch(() => ({ loaded: null }))

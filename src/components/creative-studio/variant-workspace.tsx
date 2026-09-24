@@ -237,6 +237,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
             assetId: context.assetId,
             selectedTopic: context.selectedTopic,
             commercialPassport: context.commercialPassport,
+            platforms: context.platforms,
+            outputs: context.outputs,
           }
         : null,
     [context]

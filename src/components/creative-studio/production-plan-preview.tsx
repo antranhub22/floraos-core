@@ -18,6 +18,7 @@ import { PLATFORM_SPECS } from "@/modules/creative-production/domain/publishing-
 import { VOICE_CATALOG } from "@/modules/audio-studio/domain/voice-catalog"
 import { estimateSpeechSeconds } from "@/modules/audio-studio/domain/audio-task-rules"
 import { patchScenePlan, type LoadedScenePlan } from "./scene-plan-client"
+import { OUTPUT_LABELS } from "./production-scope-picker"
 
 const BEAT_LABEL: Record<string, string> = {
   SETUP: "Mở đầu",
@@ -117,17 +118,25 @@ export function ProductionPlanPreview({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="rounded-lg border border-stone-200 bg-white p-3">
           <p className="mb-1 flex items-center gap-1.5 font-bold text-stone-800"><Film size={13} /> Video</p>
-          <p>Đăng: {plan.publishing.platforms.map((p) => PLATFORM_SPECS[p]?.label ?? p).join(", ")}</p>
           <p>
-            Khung <b>{plan.publishing.aspectRatio}</b> · {plan.scenes.length} cảnh · ~{Math.round(total)}s · phụ đề{" "}
-            {plan.video.hasSubtitle ? "có" : "không"}
+            Đăng: {plan.publishing.allPlatforms ? "Tất cả nền tảng" : plan.publishing.platforms.map((p) => PLATFORM_SPECS[p]?.label ?? p).join(", ")}
           </p>
-          <p>Màn kết: {plan.video.endCardText || "—"}</p>
-          {plan.publishing.otherRatios.length > 0 && (
-            <p className="mt-1 text-amber-700">
-              Chưa sinh khung khác: {plan.publishing.otherRatios.map((o) => `${PLATFORM_SPECS[o.platform]?.label ?? o.platform} (${o.ratio})`).join(", ")}
+          <p>
+            Sản xuất: {plan.publishing.produce.map((o) => OUTPUT_LABELS[o]).join(", ")}
+            {plan.publishing.derivedOutputs.length > 0 &&
+              ` (tự thêm ${plan.publishing.derivedOutputs.map((o) => OUTPUT_LABELS[o].toLowerCase()).join(" + ")} vì video cần)`}
+          </p>
+          <p>
+            Khung <b>{plan.publishing.ratios.join(", ")}</b> · {plan.scenes.length} cảnh · ~{Math.round(total)}s · phụ đề{" "}
+            {plan.video.hasSubtitle ? "có (= lời thoại)" : "không"}
+          </p>
+          {plan.publishing.produce.includes("video") && plan.publishing.videoVariants.length > 1 && (
+            <p>
+              {plan.publishing.videoVariants.length} video:{" "}
+              {plan.publishing.videoVariants.map((v) => `${v.ratio} ~${v.targetSeconds}s`).join(", ")}
             </p>
           )}
+          <p>Màn kết: {plan.video.endCardText || "—"}</p>
         </div>
         <div className="rounded-lg border border-stone-200 bg-white p-3">
           <p className="mb-1 flex items-center gap-1.5 font-bold text-stone-800"><Music size={13} /> Âm thanh</p>

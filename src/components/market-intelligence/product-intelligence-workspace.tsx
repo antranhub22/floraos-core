@@ -12,6 +12,11 @@ import { ProductTopicsList } from "./product-topics-list";
 import { CreativeHandoffModal } from "./creative-handoff-modal";
 import { ProductReadinessCard } from "./product-readiness-card";
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar";
+import {
+  DEFAULT_PRODUCTION_SCOPE,
+  ProductionScopePicker,
+  type ProductionScope,
+} from "@/components/creative-studio/production-scope-picker";
 import type {
   ProductFlowerComponent,
   ProductVisualAttributes,
@@ -30,6 +35,9 @@ export function ProductIntelligenceWorkspace() {
     "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=600&q=80"
   );
   const [selectedAssetId, setSelectedAssetId] = useState<string | undefined>();
+  // Phạm vi sản xuất (PO 24/09/2026): chọn cuối Chặng 04, sửa tiếp ở đầu Chặng 05.
+  // Mặc định mỗi lần mở: TikTok + Reels 9:16, đủ 4 loại kết quả.
+  const [productionScope, setProductionScope] = useState<ProductionScope>(DEFAULT_PRODUCTION_SCOPE);
   const [productTitle, setProductTitle] = useState("Bó hoa hồng pastel phong cách Hàn Quốc");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
@@ -377,6 +385,9 @@ export function ProductIntelligenceWorkspace() {
                 }}
               />
 
+              {/* Phạm vi sản xuất — nền tảng đăng + loại kết quả (cuối Chặng 04) */}
+              <ProductionScopePicker value={productionScope} onChange={setProductionScope} />
+
               {/* CỔNG PHÊ DUYỆT CHẶNG 04 (STAGE-GATE APPROVAL) */}
               <StageGateApprovalBar
                 stageCode="Chặng 04 — IDEATE"
@@ -421,6 +432,8 @@ export function ProductIntelligenceWorkspace() {
           targetArea={handoffArea}
           assetId={selectedAssetId}
           report={report}
+          initialScope={productionScope}
+          onScopeChange={setProductionScope}
         />
       )}
     </div>

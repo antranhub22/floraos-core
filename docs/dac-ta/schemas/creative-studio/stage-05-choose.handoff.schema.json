@@ -73,6 +73,16 @@
     "videoJobId": {
       "description": "Ghi thêm bởi Khu vực E",
       "type": "string"
+    },
+    "platforms": {
+      "description": "Phạm vi nền tảng chọn cuối Chặng 04: danh sách cách nhau dấu phẩy hoặc \"all\"; bỏ trống = TikTok + Reels",
+      "type": "string",
+      "maxLength": 200
+    },
+    "outputs": {
+      "description": "Loại kết quả: content,audio,image,video hoặc \"all\"; bỏ trống = tất cả",
+      "type": "string",
+      "maxLength": 60
     }
   },
   "required": [
@@ -90,7 +100,9 @@
       "source": "image",
       "assetId": "3f1c9a52-7d7e-4b8e-9d7a-1a2b3c4d5e6f",
       "area": "a",
-      "productName": "Bó hồng đỏ 12 bông"
+      "productName": "Bó hồng đỏ 12 bông",
+      "platforms": "tiktok,instagram_reels",
+      "outputs": "all"
     }
   ]
 }

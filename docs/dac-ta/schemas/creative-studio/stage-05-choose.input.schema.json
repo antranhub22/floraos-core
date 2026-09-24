@@ -94,22 +94,52 @@
       ]
     },
     "platforms": {
-      "description": "Nền tảng đăng — quyết định tỉ lệ + khuôn video; bỏ trống = TikTok + Reels (9:16)",
-      "maxItems": 8,
-      "type": "array",
-      "items": {
-        "type": "string",
-        "enum": [
-          "tiktok",
-          "instagram_reels",
-          "facebook_reels",
-          "youtube_shorts",
-          "zalo_video",
-          "youtube",
-          "facebook_feed",
-          "instagram_feed"
-        ]
-      }
+      "description": "Nền tảng đăng — quyết định tỉ lệ + khuôn video; bỏ trống = TikTok + Reels (9:16); \"all\" = mọi nền tảng",
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "all"
+        },
+        {
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "tiktok",
+              "instagram_reels",
+              "facebook_reels",
+              "youtube_shorts",
+              "zalo_video",
+              "youtube",
+              "facebook_feed",
+              "instagram_feed"
+            ]
+          }
+        }
+      ]
+    },
+    "outputs": {
+      "description": "Loại kết quả sản xuất (content/audio/image/video); bỏ trống hoặc \"all\" = cả 4; video kéo theo image + audio",
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "all"
+        },
+        {
+          "maxItems": 4,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "content",
+              "audio",
+              "image",
+              "video"
+            ]
+          }
+        }
+      ]
     },
     "topic": {
       "type": "object",
@@ -175,6 +205,7 @@
         "tiktok",
         "instagram_reels"
       ],
+      "outputs": "all",
       "topic": {
         "id": "topic-emotional-01",
         "title": "12 bông hồng cho 12 tháng yêu nhau",

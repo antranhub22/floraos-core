@@ -45,6 +45,7 @@ export const POST = handle(async (request) => {
       targetAudience: d.product.target_audience,
       priceRange: d.product.price_range,
       platforms: d.platforms,
+      outputs: d.outputs,
       topic: {
         id: d.topic.id,
         title: d.topic.title,
