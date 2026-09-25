@@ -162,7 +162,8 @@ export async function findScenePlan(
  * AI viết kịch bản (1 credit). Lần đầu dùng khoá cố định của ảnh + chủ đề để
  * mở lại không trừ tiền; "Viết lại" hoặc sau một lượt hỏng thì khoá mới.
  */
-export async function writeScenePlan(ctx: ScenePlanContext, fresh: boolean): Promise<LoadedScenePlan> {
+/** `contentProvider`: bên viết cho lượt này (PO 25/09/2026); bỏ trống = thứ tự ưu tiên của tiệm. */
+export async function writeScenePlan(ctx: ScenePlanContext, fresh: boolean, contentProvider?: string): Promise<LoadedScenePlan> {
   const input = scenePlanInputOf(ctx)
   const base = ctx.assetId
     ? scenePlanKey({ assetId: ctx.assetId, topicId: input.topic.id, mode: ctx.mode })
@@ -174,6 +175,7 @@ export async function writeScenePlan(ctx: ScenePlanContext, fresh: boolean): Pro
     headers: { "Content-Type": "application/json", "idempotency-key": key },
     body: JSON.stringify({
       mode: ctx.mode,
+      ...(contentProvider ? { content_provider: contentProvider } : {}),
       ...(ctx.assetId ? { asset_id: ctx.assetId } : {}),
       ...(ctx.productId ? { product_id: ctx.productId } : {}),
       product: {

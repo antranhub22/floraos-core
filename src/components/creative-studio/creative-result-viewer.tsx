@@ -28,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { StageGateApprovalBar } from "@/components/ui/stage-gate-approval-bar"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
+import { ProviderSelect } from "./provider-select"
 import {
   resolveApprovedMaster,
   savePostsToPackage,
@@ -180,6 +181,7 @@ function CreativeResultViewerBody({
     Array<{ channel: "facebook" | "instagram" | "tiktok" | "zalo"; text: string; hashtags: readonly string[] }> | null
   >(null)
   const [ceStatus, setCeStatus] = useState<"idle" | "writing" | "error">("idle")
+  const [ceProvider, setCeProvider] = useState<string>("")
   const [ceError, setCeError] = useState<string | null>(null)
 
   // Tra bản đã có — chỉ ĐỌC, không tạo job, không trừ credit — nên chạy tự
@@ -218,6 +220,7 @@ function CreativeResultViewerBody({
           asset_id: ctx?.assetId ?? null,
           product_id: ctx?.productId ?? null,
           channels: PLATFORMS,
+          ...(ceProvider ? { content_provider: ceProvider } : {}),
         }),
       })
       const body = await res.json().catch(() => null)
@@ -685,6 +688,9 @@ function CreativeResultViewerBody({
               ? "Đã có bài do Content Engine viết cho kịch bản này. Bấm để viết lại (tốn credit riêng, cộng dồn với kịch bản)."
               : "Nhờ Content Engine viết bài đa kênh theo đúng câu chuyện Chặng 05 (tốn credit riêng)."}
             {ceError && <span className="block text-rose-600 mt-1">{ceError}</span>}
+          </div>
+          <div className="w-full sm:w-60 shrink-0">
+            <ProviderSelect kind="content" value={ceProvider} onChange={setCeProvider} label="AI viết bài" disabled={ceStatus === "writing"} />
           </div>
           <button
             type="button"

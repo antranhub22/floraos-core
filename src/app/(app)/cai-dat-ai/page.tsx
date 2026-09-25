@@ -19,6 +19,7 @@ import { useSession } from "@/lib/session"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { ProviderOrderSettings } from "@/components/creative-studio/provider-order-settings"
 
 interface AllowedModel {
   key: string
@@ -158,6 +159,17 @@ export default function AiSettingsPage() {
           <span>{successMsg}</span>
         </div>
       )}
+
+      {/* Nhà cung cấp Creative Studio — PO 25/09/2026: nhà cung cấp trước, cục bộ là dự phòng */}
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-extrabold text-text">Nhà cung cấp AI cho Creative Studio</h2>
+          <p className="text-xs text-text-muted">
+            Thứ tự ưu tiên của tiệm cho nội dung, ảnh, video, giọng đọc và nhạc nền. Bên đầu tiên được thử trước; mỗi lượt tạo vẫn chọn được bên khác.
+          </p>
+        </div>
+        <ProviderOrderSettings canEdit={canEdit} />
+      </section>
 
       {/* Header hành động */}
       <div className="flex items-center justify-between">
