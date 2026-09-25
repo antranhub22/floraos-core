@@ -23,6 +23,7 @@ import {
 import { determineTrendLifecycle, LIFECYCLE_SPECS } from "@/modules/market-intelligence/domain/trend-lifecycle";
 import type { OpportunityItem, EvidenceReference } from "./opportunity-card";
 import { getOpportunityIllustration } from "./opportunity-illustration";
+import type { Route } from "next"
 
 function FacebookIcon({ className }: { className?: string }) {
   return (
@@ -73,11 +74,11 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
 
   const handleGoToVideo = () => {
     const promptText = `${item.topicName}: ${hooks[0] || item.opportunitySummary}`;
-    router.push(`/video?prompt=${encodeURIComponent(promptText)}` as any);
+    router.push(`/video?prompt=${encodeURIComponent(promptText)}` as Route);
   };
 
   const handleGoToMedia = () => {
-    router.push(`/tai-anh?topic=${encodeURIComponent(item.topicName)}` as any);
+    router.push(`/tai-anh?topic=${encodeURIComponent(item.topicName)}` as Route);
   };
 
   return (
@@ -181,7 +182,7 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
                 <span className="font-bold text-stone-900 min-w-[110px]">Tệp khách mua:</span>
                 <span className="text-stone-600">{item.audience || "Khách hàng trẻ 18–35 tuổi, người mua tặng quà kỷ niệm"}</span>
               </div>
-              {item.recommendedFormats && (
+              {Boolean(item.recommendedFormats) && (
                 <div className="flex items-start gap-2">
                   <span className="font-bold text-stone-900 min-w-[110px]">Định dạng đề xuất:</span>
                   <span className="text-stone-600">

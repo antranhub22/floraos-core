@@ -3,6 +3,7 @@
  * Quản lý lưu trữ cấu hình kênh tích hợp, cách ly theo TenantContext.
  */
 
+import type { Prisma, chat_channel_integrations } from "@/generated/prisma/client"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy"
 import type {
@@ -10,6 +11,11 @@ import type {
   SupportedChatChannel,
   ChannelConfig,
 } from "../domain/channel-integration-types"
+
+/** Đối tượng thuần (cấu hình kênh, metadata tin nhắn) → giá trị cột Json của Prisma. */
+function toJson(value: object): Prisma.InputJsonObject {
+  return value as Prisma.InputJsonObject
+}
 
 export class ChatChannelRepository {
   async findByChannel(
@@ -20,7 +26,7 @@ export class ChatChannelRepository {
       where: {
         organization_id_channel: {
           organization_id: ctx.organizationId,
-          channel: channel as any,
+          channel,
         },
       },
     })
@@ -53,19 +59,19 @@ export class ChatChannelRepository {
       where: {
         organization_id_channel: {
           organization_id: ctx.organizationId,
-          channel: input.channel as any,
+          channel: input.channel,
         },
       },
       create: {
         organization_id: ctx.organizationId,
-        channel: input.channel as any,
+        channel: input.channel,
         is_enabled: input.isEnabled,
-        config: input.config as any,
+        config: toJson(input.config),
         subscription_expires_at: input.subscriptionExpiresAt ?? null,
       },
       update: {
         is_enabled: input.isEnabled,
-        config: input.config as any,
+        config: toJson(input.config),
         ...(input.subscriptionExpiresAt !== undefined
           ? { subscription_expires_at: input.subscriptionExpiresAt }
           : {}),
@@ -85,7 +91,7 @@ export class ChatChannelRepository {
     })
 
     const found = rows.find((r) => {
-      const cfg = (r.config as any) || {}
+      const cfg = (r.config as ChannelConfig | null) ?? {}
       return cfg.fbPageId === fbPageId
     })
 
@@ -102,7 +108,7 @@ export class ChatChannelRepository {
     })
 
     const found = rows.find((r) => {
-      const cfg = (r.config as any) || {}
+      const cfg = (r.config as ChannelConfig | null) ?? {}
       return cfg.zaloOaId === zaloOaId
     })
 
@@ -117,7 +123,7 @@ export class ChatChannelRepository {
       where: {
         organization_id_channel: {
           organization_id: organizationId,
-          channel: channel as any,
+          channel,
         },
       },
     })
@@ -168,7 +174,7 @@ export class ChatChannelRepository {
     let conversation = await prisma.chat_conversations.findFirst({
       where: {
         organization_id: organizationId,
-        channel: channel as any,
+        channel,
         title: `Khách: ${externalSenderId}`,
         status: "ACTIVE",
       },
@@ -178,7 +184,7 @@ export class ChatChannelRepository {
       conversation = await prisma.chat_conversations.create({
         data: {
           organization_id: organizationId,
-          channel: channel as any,
+          channel,
           title: `Khách: ${externalSenderId}`,
           status: "ACTIVE",
         },
@@ -201,12 +207,12 @@ export class ChatChannelRepository {
         conversation_id: conversationId,
         sender_type: senderType,
         content,
-        metadata: (metadata as any) ?? undefined,
+        ...(metadata ? { metadata: toJson(metadata) } : {}),
       },
     })
   }
 
-  private mapToDomain(row: any): ChatChannelIntegration {
+  private mapToDomain(row: chat_channel_integrations): ChatChannelIntegration {
     return {
       id: row.id,
       organizationId: row.organization_id,

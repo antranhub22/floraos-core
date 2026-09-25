@@ -54,7 +54,7 @@ describe("cách ly tenant — bổ sung RS-2 (order_assignments, customer_consen
         })
       )
     )
-    const orderId = (created as any).order.id as string
+    const orderId = (created as { order: { id: string } }).order.id
 
     const resAssignB = await assignFloristRoute(
       withSession(`${BASE}/orders/${orderId}/assign`, b.token, {
@@ -76,7 +76,7 @@ describe("cách ly tenant — bổ sung RS-2 (order_assignments, customer_consen
       { params: Promise.resolve({ id: orderId }) }
     )
     expect(resAssignA.status).toBe(200)
-    const assignedOrder = (await readJson(resAssignA)) as any
+    const assignedOrder = (await readJson(resAssignA)) as { order: { productionStatus: string } }
     expect(assignedOrder.order.productionStatus).toBe("ASSIGNED")
 
     const assignmentsAfterA = await prisma.order_assignments.findMany({ where: { order_id: orderId } })
@@ -93,7 +93,7 @@ describe("cách ly tenant — bổ sung RS-2 (order_assignments, customer_consen
         })
       )
     )
-    const customerId = (created as any).customer.id as string
+    const customerId = (created as { customer: { id: string } }).customer.id
 
     const resConsentB = await postConsent(
       withSession(`${BASE}/crm/customers/${customerId}/consent`, b.token, {
@@ -139,7 +139,7 @@ describe("cách ly tenant — bổ sung RS-2 (order_assignments, customer_consen
     const resListB = await getTemplateOverrides(
       withSession(`${BASE}/template-overrides?templateKey=loi-chuc-sinh-nhat`, b.token)
     )
-    const listB = (await readJson(resListB)) as any
+    const listB = (await readJson(resListB)) as { data: unknown[] }
     expect(listB.data).toEqual([])
 
     // B tự ghi đè CÙNG khoá — không được đụng vào dòng của A.
@@ -194,7 +194,7 @@ describe("cách ly tenant — bổ sung RS-2 (order_assignments, customer_consen
           body: JSON.stringify({ client: "SOCIALFLOW" }),
         })
       )
-    )) as any).token as string
+    )) as { token: string }).token
     const tokenB = ((await readJson(
       await issueToken(
         withSession(`${BASE}/integration-tokens`, b.token, {
@@ -202,7 +202,7 @@ describe("cách ly tenant — bổ sung RS-2 (order_assignments, customer_consen
           body: JSON.stringify({ client: "SOCIALFLOW" }),
         })
       )
-    )) as any).token as string
+    )) as { token: string }).token
 
     const body = JSON.stringify({
       platform: "facebook",

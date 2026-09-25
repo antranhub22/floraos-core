@@ -8,6 +8,12 @@ import { GET as getOrderPrint } from "@/app/api/v1/orders/[id]/print/route"
 
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, readJson, withSession, type Tenant } from "../helpers/fixtures"
+import type { OrderRecord } from "@/modules/orders/domain/order-types"
+
+type OrderListBody = {
+  total: number
+  orders: OrderRecord[]
+}
 
 const BASE = "http://localhost/api/v1"
 
@@ -42,7 +48,7 @@ describe("cách ly tenant — đơn hàng và vận hành M10 (P22)", () => {
       })
     )
     expect(resCreate.status).toBe(201)
-    const { order } = (await readJson(resCreate)) as any
+    const { order } = (await readJson(resCreate)) as { order: OrderRecord }
     const id = order.id as string
 
     // Tổ chức A đọc lại được
@@ -50,7 +56,7 @@ describe("cách ly tenant — đơn hàng và vận hành M10 (P22)", () => {
       params: Promise.resolve({ id }),
     })
     expect(ownRead.status).toBe(200)
-    const ownData = (await readJson(ownRead)) as any
+    const ownData = (await readJson(ownRead)) as { order: OrderRecord; sla?: unknown }
     expect(ownData.order.cardMessage).toBe("Chúc mừng sinh nhật em yêu!")
     expect(ownData.sla).toBeDefined()
 
@@ -70,7 +76,7 @@ describe("cách ly tenant — đơn hàng và vận hành M10 (P22)", () => {
         }),
       })
     )
-    const { order } = (await readJson(resCreate)) as any
+    const { order } = (await readJson(resCreate)) as { order: OrderRecord }
     const id = order.id as string
 
     // Tổ chức B cố cập nhật -> 404
@@ -87,7 +93,7 @@ describe("cách ly tenant — đơn hàng và vận hành M10 (P22)", () => {
     const checkA = await getOrderById(withSession(`${BASE}/orders/${id}`, a.token), {
       params: Promise.resolve({ id }),
     })
-    const dataA = (await readJson(checkA)) as any
+    const dataA = (await readJson(checkA)) as { order: OrderRecord }
     expect(dataA.order.status).toBe("DRAFT")
   })
 
@@ -100,7 +106,7 @@ describe("cách ly tenant — đơn hàng và vận hành M10 (P22)", () => {
         }),
       })
     )
-    const { order } = (await readJson(resCreate)) as any
+    const { order } = (await readJson(resCreate)) as { order: OrderRecord }
     const id = order.id as string
 
     // B cố hủy -> 404
@@ -122,7 +128,7 @@ describe("cách ly tenant — đơn hàng và vận hành M10 (P22)", () => {
       { params: Promise.resolve({ id }) }
     )
     expect(resCancelA.status).toBe(200)
-    const dataCancel = (await readJson(resCancelA)) as any
+    const dataCancel = (await readJson(resCancelA)) as { order: OrderRecord }
     expect(dataCancel.order.status).toBe("CANCELLED")
   })
 
@@ -145,13 +151,13 @@ describe("cách ly tenant — đơn hàng và vận hành M10 (P22)", () => {
       })
     )
 
-    const listA = (await readJson(await listOrders(withSession(`${BASE}/orders`, a.token)))) as any
+    const listA = (await readJson(await listOrders(withSession(`${BASE}/orders`, a.token)))) as OrderListBody
     expect(listA.total).toBe(1)
-    expect(listA.orders[0].items[0].description).toBe("Đơn Org A")
+    expect(listA.orders[0]?.items?.[0]?.description).toBe("Đơn Org A")
 
-    const listB = (await readJson(await listOrders(withSession(`${BASE}/orders`, b.token)))) as any
+    const listB = (await readJson(await listOrders(withSession(`${BASE}/orders`, b.token)))) as OrderListBody
     expect(listB.total).toBe(1)
-    expect(listB.orders[0].items[0].description).toBe("Đơn Org B")
+    expect(listB.orders[0]?.items?.[0]?.description).toBe("Đơn Org B")
   })
 
   it("GET /orders/:id/events và /print không thể đọc chéo giữa hai tổ chức", async () => {
@@ -164,7 +170,7 @@ describe("cách ly tenant — đơn hàng và vận hành M10 (P22)", () => {
         }),
       })
     )
-    const { order } = (await readJson(resCreate)) as any
+    const { order } = (await readJson(resCreate)) as { order: OrderRecord }
     const id = order.id as string
 
     // Events

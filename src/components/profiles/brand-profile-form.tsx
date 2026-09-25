@@ -86,6 +86,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
 
   useEffect(() => {
     if (initialData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ lại form khi dữ liệu ban đầu (props) đổi, chủ đích
       setColors({
         primary_color: initialData.primary_color || "#e11d48",
         secondary_color: initialData.secondary_color || "#fda4af",
@@ -101,19 +102,19 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
       if (initialData.hashtags) {
         const tags = Array.isArray(initialData.hashtags)
           ? initialData.hashtags
-          : (initialData.hashtags as any)?.default || []
+          : (initialData.hashtags as { default?: string[] } | null)?.default || []
         if (Array.isArray(tags) && tags.length > 0) {
           setHashtagsText(tags.join(", "))
         }
       }
 
       if (initialData.cta_templates) {
-        const cta = (initialData.cta_templates as any)?.default || ""
+        const cta = (initialData.cta_templates as { default?: string } | null)?.default || ""
         if (cta) setCtaText(cta)
       }
 
       if (initialData.forbidden_styles) {
-        const banned = (initialData.forbidden_styles as any)?.banned_words || []
+        const banned = (initialData.forbidden_styles as { banned_words?: string[] } | null)?.banned_words || []
         if (Array.isArray(banned) && banned.length > 0) {
           setForbiddenWords(banned.join(", "))
         }

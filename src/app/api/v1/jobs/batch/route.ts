@@ -21,7 +21,7 @@ import { handle } from "@/core/http/response";
 import { AppError } from "@/core/http/errors";
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job";
 import { resolveSession, requireTenantContext } from "@/modules/organization/use-cases/resolve-session";
-import { getJobFeatureForModule } from "@/lib/feature-catalog";
+import { getJobFeatureForModule, type ModuleKey } from "@/lib/feature-catalog";
 
 const MODULE_RUN_CAPABILITY: Record<string, string> = {
   M01: "H1",
@@ -58,7 +58,7 @@ async function batchJobHandler(request: Request) {
   }
 
   // Validate module -> feature mapping matches
-  const expectedFeature = getJobFeatureForModule(module as any);
+  const expectedFeature = getJobFeatureForModule(module as ModuleKey);
   if (feature !== expectedFeature) {
     throw new AppError("VALIDATION_FAILED", `Feature không khớp module: kỳ vọng ${expectedFeature}, nhận ${feature}`);
   }
@@ -78,7 +78,7 @@ async function batchJobHandler(request: Request) {
   }
 
   // Build payload for job
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     productId,
     capabilities, // AIC codes for worker to process
   };

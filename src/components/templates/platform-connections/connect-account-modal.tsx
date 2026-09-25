@@ -37,6 +37,7 @@ export function ConnectAccountModal({
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- đặt lại form mỗi lần mở modal, chủ đích
       setUsername(initialUsername)
       setPassword("")
       setValidationError(null)

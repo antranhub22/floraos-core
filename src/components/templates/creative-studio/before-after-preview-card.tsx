@@ -58,6 +58,7 @@ export function BeforeAfterPreviewCard({
 
   useEffect(() => {
     if (isRejected) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- chuyển chế độ xem theo phán quyết cổng kiểm, chủ đích
       setActiveMode("original")
     } else if (hasVariants) {
       setActiveMode("studio")
@@ -221,7 +222,7 @@ export function BeforeAfterPreviewCard({
             {isRejected ? (
               <>
                 <Sparkles size={32} className="text-danger opacity-60" />
-                <span className="text-xs font-bold text-danger">Ảnh AI bị từ chối — Chuyển sang xem "Ảnh gốc"</span>
+                <span className="text-xs font-bold text-danger">Ảnh AI bị từ chối — Chuyển sang xem &quot;Ảnh gốc&quot;</span>
               </>
             ) : (
               <>

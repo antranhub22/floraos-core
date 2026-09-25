@@ -33,7 +33,7 @@ describe("cách ly tenant — AI Chat Assistant M08 (P23)", () => {
       })
     )
     expect(resCreate.status).toBe(201)
-    const { conversation } = (await readJson(resCreate)) as any
+    const { conversation } = (await readJson(resCreate)) as { conversation: { id: string } }
     const id = conversation.id as string
 
     // Tổ chức A đọc được tin nhắn (ban đầu rỗng)
@@ -41,7 +41,7 @@ describe("cách ly tenant — AI Chat Assistant M08 (P23)", () => {
       params: Promise.resolve({ id }),
     })
     expect(ownRead.status).toBe(200)
-    const ownData = (await readJson(ownRead)) as any
+    const ownData = (await readJson(ownRead)) as { messages?: unknown[] }
     expect(ownData.messages).toBeDefined()
 
     // Tổ chức B cố đọc -> 404
@@ -58,7 +58,7 @@ describe("cách ly tenant — AI Chat Assistant M08 (P23)", () => {
         body: JSON.stringify({ title: "Hội thoại A" }),
       })
     )
-    const { conversation } = (await readJson(resCreate)) as any
+    const { conversation } = (await readJson(resCreate)) as { conversation: { id: string } }
     const id = conversation.id as string
 
     // Tổ chức B cố gửi tin -> 404
@@ -93,12 +93,12 @@ describe("cách ly tenant — AI Chat Assistant M08 (P23)", () => {
     )
 
     const resListA = await listConversations(withSession(`${BASE}/conversations`, a.token))
-    const dataA = (await readJson(resListA)) as any
+    const dataA = (await readJson(resListA)) as { items: Array<{ title: string }> }
     expect(dataA.items.length).toBe(2)
 
     const resListB = await listConversations(withSession(`${BASE}/conversations`, b.token))
-    const dataB = (await readJson(resListB)) as any
+    const dataB = (await readJson(resListB)) as { items: Array<{ title: string }> }
     expect(dataB.items.length).toBe(1)
-    expect(dataB.items[0].title).toBe("Hội thoại B1")
+    expect(dataB.items[0]?.title).toBe("Hội thoại B1")
   })
 })

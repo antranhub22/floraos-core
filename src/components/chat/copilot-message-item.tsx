@@ -3,13 +3,14 @@
 import React from "react"
 import { Bot, BookOpen, ExternalLink, Flower2, ShoppingBag, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { ChatMessageMetadata } from "@/modules/chat-assistant/domain/chat-types"
 
 interface CopilotMessageItemProps {
   message: {
     id: string
     senderType: string
     content: string
-    metadata?: any
+    metadata?: ChatMessageMetadata | undefined
   }
   creatingOrderFor: string | null
   onQuickCreateOrder: (productId: string) => void
@@ -24,7 +25,7 @@ export function CopilotMessageItem({
 }: CopilotMessageItemProps) {
   const isUser = message.senderType === "USER"
   const isSystem = message.senderType === "SYSTEM"
-  const meta = message.metadata || {}
+  const meta: ChatMessageMetadata = message.metadata || {}
   const suggestedFlowers = meta.suggestedFlowers || []
   const targetRoute = meta.targetRoute
   const actionLabel = meta.actionLabel
@@ -74,7 +75,7 @@ export function CopilotMessageItem({
         {/* THẺ MẪU HOA GỢI Ý TỪ MASTER INDEX */}
         {suggestedFlowers.length > 0 && (
           <div className="space-y-2 pt-1">
-            {suggestedFlowers.map((f: any) => (
+            {suggestedFlowers.map((f) => (
               <div
                 key={f.productId}
                 className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50/60 p-2 shadow-2xs"

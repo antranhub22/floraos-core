@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { mapAnalysisFromSchema, VISION_SCHEMA } from "../analysis-schema-mapper"
+import type { ResultFieldItem } from "@/components/result/result-card"
 
 describe("analysis-schema-mapper (Khóa hợp đồng Schema.json ra UI)", () => {
   it("khẳng định Schema.json có đủ 6 khối cấp một bắt buộc", () => {
@@ -139,18 +140,18 @@ describe("analysis-schema-mapper (Khóa hợp đồng Schema.json ra UI)", () =>
     expect(cat?.value).toBe("Bó hoa")
 
     const flow = fields.find((f) => f.key === "flowers")
-    const flowerItems = flow?.value as Array<any>
+    const flowerItems = flow?.value as ResultFieldItem[]
     expect(flowerItems.length).toBe(1)
-    expect(flowerItems[0].name).toBe("Hoa tuylip")
-    expect(flowerItems[0].unit).toBe("Bông")
-    expect(flowerItems[0].quantity).toBe(10)
-    expect(flowerItems[0].role).toBe("Hoa chủ đạo")
+    expect(flowerItems[0]?.name).toBe("Hoa tuylip")
+    expect(flowerItems[0]?.unit).toBe("Bông")
+    expect(flowerItems[0]?.quantity).toBe(10)
+    expect(flowerItems[0]?.role).toBe("Hoa chủ đạo")
 
     const fol = fields.find((f) => f.key === "foliage")
-    const folItems = fol?.value as Array<any>
-    expect(folItems[0].name).toBe("Lá bạc")
-    expect(folItems[0].unit).toBe("Cành")
-    expect(folItems[0].quantity).toBe(5)
+    const folItems = fol?.value as ResultFieldItem[]
+    expect(folItems[0]?.name).toBe("Lá bạc")
+    expect(folItems[0]?.unit).toBe("Cành")
+    expect(folItems[0]?.quantity).toBe(5)
 
     const totals = fields.find((f) => f.key === "totals")
     expect(totals?.value).toBe("10 cành")
@@ -177,10 +178,10 @@ describe("analysis-schema-mapper (Khóa hợp đồng Schema.json ra UI)", () =>
     expect(cardField?.value).toBe("Mừng sinh nhật mẹ")
 
     const acc = fields.find((f) => f.key === "accessories")
-    const accItems = acc?.value as Array<any>
+    const accItems = acc?.value as ResultFieldItem[]
     expect(accItems.length).toBe(2)
-    expect(accItems[0].value).toContain("💌")
-    expect(accItems[0].value).toContain('In: "Mừng sinh nhật mẹ"')
-    expect(accItems[1].value).toContain("🎀")
+    expect(accItems[0]?.value).toContain("💌")
+    expect(accItems[0]?.value).toContain('In: "Mừng sinh nhật mẹ"')
+    expect(accItems[1]?.value).toContain("🎀")
   })
 })

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react"
 import { X, Plus, Trash2, Loader2, Sparkles, Flower2, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { errorText } from "@/lib/error-text"
+import type { ProductMasterIndex } from "@/modules/products/domain/product-master-index"
 
 interface CreateOrderModalProps {
   isOpen: boolean
@@ -21,7 +23,7 @@ interface ItemRow {
   description: string
   quantity: number
   unitPriceVnd: number
-  sampleImageUrl?: string
+  sampleImageUrl?: string | undefined
   bomSummary?: string
   /** BOM có cấu trúc thật lấy từ Master Index — để phiếu cắm hoa (florist ticket) đọc được
    * đúng từng loại hoa/số lượng/màu thay vì phải bịa lại từ mô tả chữ tự do. */
@@ -32,7 +34,7 @@ interface ItemRow {
 
 export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModalProps) {
   const [loading, setLoading] = useState(false)
-  const [masterProducts, setMasterProducts] = useState<any[]>([])
+  const [masterProducts, setMasterProducts] = useState<ProductMasterIndex[]>([])
   const [selectedProductId, setSelectedProductId] = useState<string>("")
   
   const [recipientName, setRecipientName] = useState("")
@@ -67,7 +69,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     if (!product) return
 
     const flowerSummary = product.bom.flowers
-      .map((f: any) => `${f.flowerName} (${f.quantity} ${f.unit})`)
+      .map((f) => `${f.flowerName} (${f.quantity} ${f.unit})`)
       .join(", ")
 
     // Tự động điền vào dòng sản phẩm đầu tiên hoặc thêm mới
@@ -78,7 +80,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       {
         description: `${product.name} [${product.code}]`,
         quantity: 1,
-        unitPriceVnd: product.pricing.quotePriceVnd,
+        unitPriceVnd: product.pricing.quotePriceVnd ?? 0,
         sampleImageUrl: product.masterImageUrl,
         bomSummary: flowerSummary,
         bomFlowers: product.bom.flowers,
@@ -168,8 +170,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
       onSuccess()
       onClose()
-    } catch (err: any) {
-      setError(err.message || "Đã xảy ra lỗi khi tạo đơn hàng.")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Đã xảy ra lỗi khi tạo đơn hàng.")
     } finally {
       setLoading(false)
     }

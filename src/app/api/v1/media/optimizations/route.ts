@@ -13,7 +13,7 @@ const postSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
 })
 
-import { executeCloudCreative } from "@/modules/media/use-cases/execute-cloud-creative"
+import { executeCloudCreative, type ExecuteCloudCreativeInput } from "@/modules/media/use-cases/execute-cloud-creative"
 
 /** `POST /media/optimizations` (`I1`, đặc tả 06 mục 8). */
 export const POST = handle(async (request) => {
@@ -35,9 +35,9 @@ export const POST = handle(async (request) => {
     const cloudRes = await executeCloudCreative(ctx, {
       assetId: parsed.data.asset_id,
       taskType: "OPTIMIZE_MASTER",
-      providerKey: (parsed.data.config?.enhancer_provider as any) || "photoroom",
-      cameraAngle: parsed.data.config?.camera_angle as any,
-      humanInteraction: parsed.data.config?.human_interaction as any,
+      providerKey: (parsed.data.config?.enhancer_provider as ExecuteCloudCreativeInput["providerKey"]) || "photoroom",
+      cameraAngle: parsed.data.config?.camera_angle as ExecuteCloudCreativeInput["cameraAngle"],
+      humanInteraction: parsed.data.config?.human_interaction as ExecuteCloudCreativeInput["humanInteraction"],
     })
 
     return jsonResponse(

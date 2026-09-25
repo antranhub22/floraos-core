@@ -30,9 +30,9 @@ export interface OpportunityItem {
   topicName: string;
   audience: string | null;
   opportunitySummary: string;
-  contentAngles: any;
-  recommendedFormats: any;
-  recommendedHooks: any;
+  contentAngles: unknown;
+  recommendedFormats: unknown;
+  recommendedHooks: unknown;
   evidenceReferences?: EvidenceReference[];
   trendScore: number;
   viralScore: number;

@@ -7,40 +7,28 @@ import type {
   ProviderHealthReport,
 } from "@/core/ports/trend-provider";
 import { estimateTopicContextMetrics } from "../domain/scoring";
+import { readDotenvKey } from "./read-dotenv-key";
 
 /**
  * Adapter TikTok Trend.
  * Khai thác độ nóng, tốc độ lan tỏa (Viral Velocity) và các hashtag thịnh hành về hoa tươi trên TikTok.
  */
+/** Một kết quả video (engine `google_videos`) của SerpApi — chỉ các trường adapter đọc. */
+interface SerpVideoResult {
+  title?: string;
+  link?: string;
+  snippet?: string;
+  thumbnail?: string;
+  rich_snippet?: { top?: { detected_extensions?: { thumbnail?: string; date?: string } } };
+}
+
 export class TikTokTrendAdapter implements TrendProvider {
   readonly name = "tiktok_trends";
   private readonly apiKey: string | undefined;
   private readonly baseUrl: string;
 
   constructor(options?: { apiKey?: string; baseUrl?: string }) {
-    let key =
-      options?.apiKey ??
-      (typeof process !== "undefined" ? process.env.SERPAPI_API_KEY : undefined);
-
-    if (!key && typeof window === "undefined") {
-      try {
-        const fs = require("fs");
-        const path = require("path");
-        const envPath = path.resolve(process.cwd(), ".env");
-        if (fs.existsSync(envPath)) {
-          const content = fs.readFileSync(envPath, "utf-8");
-          const match = content.match(/^SERPAPI_API_KEY=(.+)$/m);
-          if (match && match[1]) {
-            key = match[1].trim().replace(/^["']|["']$/g, "");
-            if (typeof process !== "undefined") {
-              process.env.SERPAPI_API_KEY = key;
-            }
-          }
-        }
-      } catch {}
-    }
-
-    this.apiKey = key;
+    this.apiKey = options?.apiKey ?? readDotenvKey("SERPAPI_API_KEY");
     this.baseUrl = options?.baseUrl ?? "https://serpapi.com/search.json";
   }
 
@@ -80,11 +68,11 @@ export class TikTokTrendAdapter implements TrendProvider {
       if (!res.ok) throw new Error(`TikTok index search error: ${res.status}`);
 
       const data = await res.json();
-      const videoResults = data?.video_results ?? data?.organic_results ?? [];
+      const videoResults: SerpVideoResult[] = data?.video_results ?? data?.organic_results ?? [];
       const resultCount = videoResults.length;
       const viralScore = Math.min(95, Math.max(45, 50 + resultCount * 4.5));
 
-      const evidenceSnippets = videoResults.slice(0, 3).map((item: any, idx: number) => {
+      const evidenceSnippets = videoResults.slice(0, 3).map((item: SerpVideoResult, idx: number) => {
         let author = "TikTok Florist";
         const urlMatch = item.link?.match(/tiktok\.com\/@([^/?#]+)/);
         if (urlMatch && urlMatch[1]) {

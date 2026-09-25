@@ -17,10 +17,18 @@ import {
 } from "lucide-react";
 import type { RunItem } from "./research-runs-table";
 
+/** Cấu hình lịch quét xu hướng định kỳ của tiệm, gửi lên khi bấm lưu. */
+export interface TenantPulseScheduleConfig {
+  enabled: boolean;
+  dailyExecutionTime: string;
+  trackedTopics: string[];
+  notifyChannels: Array<"IN_APP_COPILOT" | "EMAIL">;
+}
+
 interface ScheduledPulsePanelProps {
   runs: RunItem[];
   isSaaSAdmin: boolean;
-  onSaveTenantSchedule?: (config: any) => Promise<void>;
+  onSaveTenantSchedule?: (config: TenantPulseScheduleConfig) => Promise<void>;
 }
 
 export function ScheduledPulsePanel({
@@ -62,7 +70,7 @@ export function ScheduledPulsePanel({
         notifyChannels: [
           notifyCopilot ? "IN_APP_COPILOT" : null,
           notifyEmail ? "EMAIL" : null,
-        ].filter(Boolean),
+        ].filter((c): c is "IN_APP_COPILOT" | "EMAIL" => c !== null),
       });
     }
     setIsSaved(true);

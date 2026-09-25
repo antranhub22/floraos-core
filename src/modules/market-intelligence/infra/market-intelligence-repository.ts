@@ -1,5 +1,6 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type {
+  Prisma,
   provider_health_status,
   research_run_type,
 } from "@/generated/prisma/client"
@@ -225,9 +226,9 @@ export class MarketIntelligenceRepository {
     topicId: string;
     audience: string | null;
     opportunitySummary: string;
-    contentAngles: any;
-    recommendedFormats: any;
-    recommendedHooks: any;
+    contentAngles: Prisma.InputJsonValue;
+    recommendedFormats: Prisma.InputJsonValue;
+    recommendedHooks: Prisma.InputJsonValue;
     trendScore: number;
     viralScore: number;
     commercialScore: number;
@@ -298,7 +299,7 @@ export class MarketIntelligenceRepository {
         audience_fit_score: data.audienceFitScore,
         content_fit_score: data.contentFitScore,
         overall_fit: data.overallFit,
-        report: data.report as any,
+        report: data.report as Prisma.InputJsonValue,
       },
     })
   }

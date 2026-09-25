@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { X, UserPlus, Loader2, Sparkles, Phone, MapPin, Tag, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { errorText } from "@/lib/error-text"
 
 interface CreateCustomerModalProps {
   isOpen: boolean
@@ -58,8 +59,8 @@ export function CreateCustomerModal({ isOpen, onClose, onSuccess }: CreateCustom
 
       onSuccess()
       onClose()
-    } catch (err: any) {
-      setError(err.message || "Đã xảy ra lỗi khi tạo khách hàng.")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Đã xảy ra lỗi khi tạo khách hàng.")
     } finally {
       setLoading(false)
     }

@@ -1,5 +1,9 @@
-const fs = require('fs');
-const { Client } = require('pg');
+// Xem 5 migration Prisma gần nhất trên DATABASE_URL của .env (công cụ gỡ lỗi).
+// Chạy: node scripts/xem-prisma-migrations.mjs
+import fs from 'node:fs';
+import pg from 'pg';
+
+const { Client } = pg;
 
 function loadEnvVar(name) {
   const txt = fs.readFileSync('.env', 'utf8');

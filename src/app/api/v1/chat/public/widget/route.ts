@@ -39,9 +39,10 @@ export async function POST(req: NextRequest) {
         "Access-Control-Allow-Methods": "POST, OPTIONS",
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Public Chat Widget error:", error)
-    return NextResponse.json({ error: error.message || "Lỗi xử lý tin nhắn" }, { status: 500 })
+    const message = error instanceof Error ? error.message : ""
+    return NextResponse.json({ error: message || "Lỗi xử lý tin nhắn" }, { status: 500 })
   }
 }
 

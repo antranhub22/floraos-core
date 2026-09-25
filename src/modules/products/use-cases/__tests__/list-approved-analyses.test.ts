@@ -46,7 +46,7 @@ describe("listApprovedAnalyses", () => {
     ])
     vi.mocked(ProductAnalysisRepository).mockImplementation(() => ({
       listApproved: mockListApproved,
-    } as any))
+    } as unknown as ProductAnalysisRepository))
 
     const res = await listApprovedAnalyses(ctx, { limit: 2 })
     expect(mockListApproved).toHaveBeenCalledWith(ctx, { limit: 3, cursor: null })
@@ -60,7 +60,7 @@ describe("listApprovedAnalyses", () => {
     ])
     vi.mocked(ProductAnalysisRepository).mockImplementation(() => ({
       listApproved: mockListApproved,
-    } as any))
+    } as unknown as ProductAnalysisRepository))
 
     const res = await listApprovedAnalyses(ctx, { limit: 2 })
     expect(res.data).toHaveLength(1)

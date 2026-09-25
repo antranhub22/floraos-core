@@ -3,6 +3,9 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { GET as listChannels, POST as configureChannel } from "@/app/api/v1/chat/channels/route"
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, readJson, withSession, type Tenant } from "../helpers/fixtures"
+import type { ChatChannelIntegration } from "@/modules/chat-assistant/domain/channel-integration-types"
+
+type ChannelView = Pick<ChatChannelIntegration, "channel" | "isEnabled" | "config">
 import { OrganizationRepository } from "@/modules/organization/infra/organization-repository"
 
 const BASE = "http://localhost/api/v1/chat/channels"
@@ -57,13 +60,13 @@ describe("cách ly tenant — Tích hợp Đa Kênh Chat & Định giá M08 (P23
     // Tổ chức B đọc danh sách kênh của mình
     const resB = await listChannels(withSession(BASE, b.token))
     expect(resB.status).toBe(200)
-    const dataB = (await readJson(resB)) as any
-    const catalogB = dataB.channels.find((c: any) => c.channel === "STOREFRONT_CATALOG")
+    const dataB = (await readJson(resB)) as { channels: ChannelView[] }
+    const catalogB = dataB.channels.find((c) => c.channel === "STOREFRONT_CATALOG")
 
     expect(catalogB).toBeDefined()
-    expect(catalogB.isEnabled).toBe(false)
-    expect(catalogB.config?.welcomeMessage).toBeUndefined()
-    expect(catalogB.config?.botName).toBeUndefined()
+    expect(catalogB?.isEnabled).toBe(false)
+    expect(catalogB?.config?.welcomeMessage).toBeUndefined()
+    expect(catalogB?.config?.botName).toBeUndefined()
   })
 
   it("trừ credit kích hoạt kênh chỉ trừ của tổ chức thao tác, không ảnh hưởng tổ chức khác", async () => {

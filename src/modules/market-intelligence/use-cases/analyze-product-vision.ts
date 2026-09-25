@@ -39,7 +39,7 @@ export async function analyzeProductVision(
     const existingAnalysis = await marketIntelligenceRepo.findProductAnalysis(organizationId, assetId);
 
     if (existingAnalysis) {
-      const data = (existingAnalysis.edited || existingAnalysis.raw) as Record<string, any>;
+      const data = (existingAnalysis.edited || existingAnalysis.raw) as RawVisionAnalysis;
       return mapAnalysisToProductIntelligence(data, imageUrl || "/images/sample-flower.jpg", assetId, productTitle);
     }
   }
@@ -72,8 +72,33 @@ export async function analyzeProductVision(
   return extractFloralAttributes(imageUrl || "", productTitle || "Bó hoa tươi nghệ thuật", assetId);
 }
 
+/** Một dòng hoa/lá trong kết quả M01 đã lưu (JSON, chưa kiểm dạng). */
+interface RawVisionRow {
+  name?: string;
+  loai_hoa?: string;
+  loai_la?: string;
+  count?: string | number;
+  so_luong?: string | number;
+}
+
+/** Các trường của kết quả M01 (`product_analyses.edited ?? raw`) mà hàm ánh xạ đọc. */
+interface RawVisionAnalysis {
+  flowers?: RawVisionRow[];
+  foliage?: RawVisionRow[];
+  palette_accounting?: { dominant_colors?: string[] };
+  phong_cach?: string;
+  shape?: string;
+  size?: string;
+  wrapping?: { material?: string; color?: string };
+  accessories?: { ribbon?: string; card?: unknown };
+  dip_su_dung?: string[];
+  suggested_price?: string | number;
+  confidence?: number;
+  product_name?: string;
+}
+
 function mapAnalysisToProductIntelligence(
-  raw: Record<string, any>,
+  raw: RawVisionAnalysis,
   imageUrl: string,
   assetId?: string,
   productTitle?: string
@@ -84,19 +109,19 @@ function mapAnalysisToProductIntelligence(
 
   const components: ProductFlowerComponent[] = [];
 
-  rawFlowers.forEach((f: any, idx: number) => {
+  rawFlowers.forEach((f: RawVisionRow, idx: number) => {
     components.push({
       flowerType: f.name || f.loai_hoa || `Hoa tươi #${idx + 1}`,
-      quantityEstimate: parseInt(f.count || f.so_luong) || (idx === 0 ? 10 : 5),
+      quantityEstimate: parseInt(String(f.count || f.so_luong)) || (idx === 0 ? 10 : 5),
       unit: "cành",
       role: idx === 0 ? "dominant" : "supporting",
     });
   });
 
-  rawFoliage.forEach((fol: any) => {
+  rawFoliage.forEach((fol: RawVisionRow) => {
     components.push({
       flowerType: fol.name || fol.loai_la || "Lá phụ trang trí",
-      quantityEstimate: parseInt(fol.count || fol.so_luong) || 3,
+      quantityEstimate: parseInt(String(fol.count || fol.so_luong)) || 3,
       unit: "cành",
       role: "foliage",
     });
@@ -131,7 +156,7 @@ function mapAnalysisToProductIntelligence(
   const context: ProductInferredContext = {
     likelyOccasions: occasions,
     likelyAudience: "Nữ giới 20–35 tuổi hoặc Nam giới mua tặng",
-    suggestedPrice: parseInt(raw.suggested_price) || 599000,
+    suggestedPrice: parseInt(String(raw.suggested_price)) || 599000,
     confidence: typeof raw.confidence === "number" ? raw.confidence : 0.94,
   };
 

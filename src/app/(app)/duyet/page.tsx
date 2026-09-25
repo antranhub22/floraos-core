@@ -11,6 +11,7 @@ import {
   type TabAction,
   type TabOverflowAction,
 } from "@/components/ui/tab-header"
+import type { Route } from "next"
 
 type PendingAnalysis = {
   id: string
@@ -266,7 +267,7 @@ export default function DuyetPage() {
               id: "goto-kho",
               label: "Chuyển tới Kho Dữ Liệu",
               icon: Folder,
-              onClick: () => router.push("/tai-anh?tab=storage" as any),
+              onClick: () => router.push("/tai-anh?tab=storage" as Route),
             },
             {
               id: "goto-tai-anh",

@@ -72,7 +72,7 @@ export async function executeSingleRun(runId: string, runType: string): Promise<
   }
 
   const providerChain = new TrendProviderChain();
-  let sourcesAttempted = 3; // Google, TikTok, YouTube
+  const sourcesAttempted = 3; // Google, TikTok, YouTube
   let sourcesSucceeded = 0;
   let sourcesFailed = 0;
   let recordsCollected = 0;
@@ -280,14 +280,14 @@ export async function executeSingleRun(runId: string, runType: string): Promise<
     console.log(
       `[MI-Worker] Run ${runId} hoàn tất thành công. Thu thập: ${recordsCollected} bản ghi, ${createdTopicIds.length} chủ đề, ${opportunitiesCreated} cơ hội nội dung.`
     );
-  } catch (globalErr: any) {
+  } catch (globalErr: unknown) {
     console.error(`[MI-Worker] Run ${runId} thất bại hoàn toàn:`, globalErr);
     await prisma.research_runs.update({
       where: { id: runId },
       data: {
         status: "FAILED",
         completed_at: new Date(),
-        error_summary: globalErr?.message ?? "Lỗi không xác định trong worker",
+        error_summary: (globalErr instanceof Error ? globalErr.message : null) ?? "Lỗi không xác định trong worker",
       },
     });
   }

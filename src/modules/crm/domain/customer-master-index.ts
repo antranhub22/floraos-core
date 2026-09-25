@@ -114,6 +114,8 @@ export function projectOccasionReminder(
   }
 }
 
+export type OccasionReminder = ReturnType<typeof projectOccasionReminder>
+
 /**
  * 3. PROJECTION CHO CHIẾN DỊCH QUẢNG BÁ / TIẾP THỊ (Marketing Audience)
  * Chỉ trích xuất khách hàng ĐÃ ĐỒNG Ý nhận tin (Consent = true).

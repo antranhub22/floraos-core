@@ -5,6 +5,33 @@ import { X, Clock, Printer, Ban, CheckCircle, Truck, Flower2, AlertCircle, Loade
 import { Button } from "@/components/ui/button"
 import { FloristTicketCard } from "@/components/templates/orders/florist-ticket-card"
 import { DeliveryReceiptCard } from "@/components/templates/orders/delivery-receipt-card"
+import type { OrderItemRecord, OrderRecord, OrderSlaCalculation } from "@/modules/orders/domain/order-types"
+
+/**
+ * Đơn hàng như modal này đọc. Ba trục trạng thái để `string` CÓ CHỦ ĐÍCH: các nút
+ * hành động bên dưới so với những giá trị KHÔNG có trong domain/API
+ * (`IN_PRODUCTION`, `COMPLETED` cho sản xuất, `NOT_STARTED`, `SHIPPING`) — nợ #150,
+ * chờ chủ sản phẩm chốt luồng trạng thái đúng (trùng phạm vi Chức năng 12).
+ */
+type OrderDetailView = Omit<OrderRecord, "status" | "productionStatus" | "deliveryStatus"> & {
+  status: string
+  productionStatus: string
+  deliveryStatus: string
+}
+
+/** Thân `GET /api/v1/orders/:id` (use-case `getOrder`). */
+interface OrderDetailBody {
+  order: OrderDetailView
+  sla: OrderSlaCalculation
+}
+
+/** Một dòng BOM hoa trong `order_items.metadata.flowers` (ghi từ Master Index lúc tạo đơn). */
+interface OrderItemFlower {
+  flowerName?: string
+  quantity?: number | string
+  unit?: string
+  color?: string
+}
 
 interface OrderDetailModalProps {
   orderId: string | null
@@ -14,7 +41,7 @@ interface OrderDetailModalProps {
 
 export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailModalProps) {
   const [loading, setLoading] = useState(false)
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<OrderDetailBody | null>(null)
   const [activeTab, setActiveTab] = useState<"overview" | "florist" | "delivery">("overview")
   const [cancelModal, setCancelModal] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
@@ -22,6 +49,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
 
   React.useEffect(() => {
     if (!orderId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     setLoading(true)
     fetch(`/api/v1/orders/${orderId}`)
       .then((r) => r.json())
@@ -90,14 +118,14 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
   // trước khi có tính năng này), KHÔNG bịa lại đơn vị/màu như "bình/bó"/"Theo thiết kế" —
   // hiện đúng những gì đã biết (tên/số lượng từ dòng đơn hàng) và ghi rõ chưa có BOM chi
   // tiết, để thợ tự đọc phần ghi chú thay vì tin vào dữ liệu giả.
-  const items: any[] = order?.items ?? []
-  const firstItemWithImage = items.find((it) => it?.metadata?.sampleImageUrl)
-  const sampleImg = firstItemWithImage?.metadata?.sampleImageUrl ?? undefined
+  const items: OrderItemRecord[] = order?.items ?? []
+  const firstItemWithImage = items.find((it) => typeof it?.metadata?.sampleImageUrl === "string")
+  const sampleImg = (firstItemWithImage?.metadata?.sampleImageUrl as string | undefined) ?? undefined
 
   const floristItems = items.flatMap((it) => {
     const structuredFlowers = Array.isArray(it?.metadata?.flowers) ? it.metadata.flowers : null
     if (structuredFlowers && structuredFlowers.length > 0) {
-      return structuredFlowers.map((f: any) => ({
+      return structuredFlowers.map((f: OrderItemFlower) => ({
         flowerName: f.flowerName ?? "Hoa (chưa rõ tên)",
         quantity: Number(f.quantity ?? 1),
         unit: f.unit ?? "chưa rõ đơn vị",
@@ -237,7 +265,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                 <div>
                   <div className="mb-2 font-bold text-text-main">Mẫu hoa đặt cắm</div>
                   <div className="divide-y divide-border rounded-lg border border-border">
-                    {order.items?.map((it: any) => (
+                    {order.items?.map((it) => (
                       <div key={it.id} className="flex items-center justify-between p-3 text-xs">
                         <div>
                           <div className="font-semibold text-foreground">{it.description}</div>
@@ -267,7 +295,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                 <div>
                   <div className="mb-2 font-bold text-text-main">Chuỗi sự kiện đo SLA (Event Sourcing)</div>
                   <div className="space-y-2 max-h-36 overflow-y-auto rounded-lg border border-border p-3 text-xs">
-                    {order.events?.map((ev: any) => (
+                    {order.events?.map((ev) => (
                       <div key={ev.id} className="flex items-center justify-between border-b border-border/50 pb-1.5 last:border-none">
                         <span className="font-mono text-text-muted">
                           {new Date(ev.createdAt).toLocaleTimeString("vi-VN")} — [{ev.axis.toUpperCase()}]
@@ -292,10 +320,11 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                   productName={productNameText}
                   sampleImageUrl={sampleImg}
                   deadlineTime={`${order.deliveryWindow?.date} (${order.deliveryWindow?.timeSlot})`}
-                  floristName={order.assignments?.[0]?.floristId ?? "Thợ cắm hoa xưởng"}
+                  // `order_assignments` chỉ có `assigneeId` (id người dùng), không có tên — nợ #150.
+                  floristName="Thợ cắm hoa xưởng"
                   items={floristItems}
                   wrapStyle={wrapStyleText}
-                  notes={order.internalNote}
+                  notes={order.internalNote ?? undefined}
                   onPrint={handlePrint}
                   onComplete={() => handleUpdateStatus({ productionStatus: "COMPLETED" })}
                 />

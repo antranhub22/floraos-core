@@ -19,6 +19,8 @@ import { ProductDetailModal, formatVnd, getZaloUrl } from "./product-detail-moda
 import { ShareCatalogModal } from "./share-catalog-modal"
 import { LandingTemplateHero, LandingTemplateLead } from "./landing-templates"
 
+const EMPTY_PRODUCTS: PublicCatalogProduct[] = []
+
 export interface CatalogStorefrontProps {
   initialData: PublicCatalogResult
 }
@@ -28,6 +30,24 @@ export function CatalogStorefront({ initialData }: CatalogStorefrontProps) {
   const [selectedOccasion, setSelectedOccasion] = useState<string>("all")
   const [selectedProduct, setSelectedProduct] = useState<PublicCatalogProduct | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
+
+  // ── Computed ────────────────────────────────────────────────────────
+  // Hook phải gọi TRƯỚC mọi `return` sớm (rules-of-hooks) — trạng thái
+  // REVOKED/NOT_FOUND không có `products`, nên dùng mảng rỗng.
+  const products = initialData.status === "ACTIVE" ? initialData.products : EMPTY_PRODUCTS
+  const allOccasions = useMemo(() => {
+    const occs = new Set<string>()
+    for (const p of products) for (const occ of p.occasions) if (occ) occs.add(occ)
+    return Array.from(occs)
+  }, [products])
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchSearch = searchQuery.trim() === "" || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.code.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchOccasion = selectedOccasion === "all" || p.occasions.includes(selectedOccasion)
+      return matchSearch && matchOccasion
+    })
+  }, [products, searchQuery, selectedOccasion])
 
   // ── REVOKED / NOT_FOUND states ──────────────────────────────────────
   if (initialData.status === "REVOKED") {
@@ -57,22 +77,7 @@ export function CatalogStorefront({ initialData }: CatalogStorefrontProps) {
     )
   }
 
-  const { catalog, shop, products } = initialData
-
-  // ── Computed ────────────────────────────────────────────────────────
-  const allOccasions = useMemo(() => {
-    const occs = new Set<string>()
-    for (const p of products) for (const occ of p.occasions) if (occ) occs.add(occ)
-    return Array.from(occs)
-  }, [products])
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchSearch = searchQuery.trim() === "" || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.code.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchOccasion = selectedOccasion === "all" || p.occasions.includes(selectedOccasion)
-      return matchSearch && matchOccasion
-    })
-  }, [products, searchQuery, selectedOccasion])
+  const { catalog, shop } = initialData
 
   // ── Render ──────────────────────────────────────────────────────────
   return (

@@ -19,9 +19,26 @@ import {
   SmartRepostTab,
 } from "@/components/templates/social-publishing"
 
+type LichDangTab = "board" | "queue" | "repost" | "auto"
+
+/** Một bài viết SocialFlow trả qua proxy `/api/v1/proxy/api/m07/posts` — chỉ các trường trang này đọc. */
+interface SocialFlowPostRow {
+  id: number | string
+  title?: string | null
+  content?: string | null
+  platform?: string | null
+  channel_label?: string | null
+  status?: string | null
+  scheduled_time: string | null
+  created_at: string
+  media_paths?: string | string[] | null
+  post_url?: string | null
+  error_message?: string | null
+}
+
 export default function SocialPublishingPage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<"board" | "queue" | "repost" | "auto">("board")
+  const [activeTab, setActiveTab] = useState<LichDangTab>("board")
   const [autoApprove, setAutoApprove] = useState(false)
   const [posts, setPosts] = useState<PlatformFeedPost[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,7 +57,7 @@ export default function SocialPublishingPage() {
     try {
       const res = await fetch("/api/v1/proxy/api/m07/posts?client=SOCIALFLOW")
       if (res.ok) {
-        const data: any[] = await res.json()
+        const data: SocialFlowPostRow[] = await res.json()
         const FLOWER_SAMPLES = [
           "/images/sample-flower.jpg",
           "/images/flowers/g040.jpg",
@@ -68,7 +85,7 @@ export default function SocialPublishingPage() {
                 resolvedMedia = parsed
               }
             } catch {
-              resolvedMedia = item.media_paths
+              resolvedMedia = typeof item.media_paths === "string" ? item.media_paths : null
             }
           }
 
@@ -139,6 +156,7 @@ export default function SocialPublishingPage() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     fetchPosts()
   }, [fetchPosts])
 
@@ -315,7 +333,7 @@ export default function SocialPublishingPage() {
       channelLabel: p.channel_label,
       scheduledTime: slot.time,
       dateStr: slot.date,
-      status: p.status as any,
+      status: p.status as ScheduledPostItem["status"],
       media_url: p.media_url ?? null,
       is_mock_media: p.is_mock_media,
     }
@@ -353,17 +371,19 @@ export default function SocialPublishingPage() {
       <div className="flex flex-1 flex-col overflow-y-auto p-6 max-w-4xl mx-auto w-full gap-5">
         {/* Tab Navigation */}
         <div className="flex items-center gap-2 border-b border-border pb-3">
-          {[
-            { key: "board", label: "Lịch Đăng Tổng Hợp (Khung Giờ)" },
-            { key: "queue", label: "Hàng Đợi & Lên Lịch" },
-            { key: "repost", label: "Đăng Lại Thông Minh" },
-            { key: "auto", label: "Tự Duyệt" },
-          ].map((tab) => (
+          {(
+            [
+              { key: "board", label: "Lịch Đăng Tổng Hợp (Khung Giờ)" },
+              { key: "queue", label: "Hàng Đợi & Lên Lịch" },
+              { key: "repost", label: "Đăng Lại Thông Minh" },
+              { key: "auto", label: "Tự Duyệt" },
+            ] satisfies Array<{ key: LichDangTab; label: string }>
+          ).map((tab) => (
             <Button
               key={tab.key}
               size="sm"
               variant={activeTab === tab.key ? "primary" : "ghost"}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => setActiveTab(tab.key)}
               className="text-xs font-bold"
             >
               {tab.label}

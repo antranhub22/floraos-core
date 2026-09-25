@@ -146,7 +146,7 @@ export const GET = handle(async (request, context: { params: Promise<{ id: strin
   requireCapability(ctx, "V2")
 
   const { id } = await context.params
-  let run = await marketIntelligenceRepo.getProductAnalysisRun(ctx.organizationId, id)
+  const run = await marketIntelligenceRepo.getProductAnalysisRun(ctx.organizationId, id)
 
   // Fallback: id có thể là product_analyses.id (luồng /tai-anh)
   // — tìm kiếm trong product_analyses và dựng report từ raw data

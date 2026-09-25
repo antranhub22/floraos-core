@@ -60,7 +60,7 @@ describe("cách ly tenant — Product Intelligence (product_analysis_runs, nợ 
       })
     );
     expect(res.status).toBe(200);
-    const body = (await readJson(res)) as any;
+    const body = (await readJson(res)) as { productName?: string };
     expect(body.productName).toBe(SAMPLE_BODY.product_name);
 
     const runs = await prisma.product_analysis_runs.findMany({

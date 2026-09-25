@@ -12,12 +12,24 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CopilotMessageItem } from "@/components/chat/copilot-message-item"
+import { errorText } from "@/lib/error-text"
+import type { Route } from "next"
+import type { ChatMessageMetadata } from "@/modules/chat-assistant/domain/chat-types"
+
+/** Tin nhắn hiển thị trong Copilot — bản ghi `chat_messages` từ API hoặc tin tạm (optimistic). */
+interface CopilotMessage {
+  id: string
+  senderType: string
+  content: string
+  createdAt?: string
+  metadata?: ChatMessageMetadata | undefined
+}
 
 export function FloraOSGlobalCopilot() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<CopilotMessage[]>([])
   const [inputQuery, setInputQuery] = useState("")
   const [sending, setSending] = useState(false)
   const [creatingOrderFor, setCreatingOrderFor] = useState<string | null>(null)
@@ -84,7 +96,7 @@ export function FloraOSGlobalCopilot() {
     setSending(true)
 
     // 1. Hiển thị tin nhắn người dùng ngay lập tức (Optimistic UI)
-    const tempUserMsg = {
+    const tempUserMsg: CopilotMessage = {
       id: `temp-user-${Date.now()}`,
       senderType: "USER",
       content: text,
@@ -126,12 +138,12 @@ export function FloraOSGlobalCopilot() {
       } else {
         throw new Error(data.error?.message || "Lỗi nhận phản hồi AI")
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Lỗi gửi tin nhắn Copilot:", err)
-      const errorAssistantMsg = {
+      const errorAssistantMsg: CopilotMessage = {
         id: `err-${Date.now()}`,
         senderType: "ASSISTANT",
-        content: `Dạ, hệ thống đang cập nhật kết nối: ${err?.message || "Vui lòng thử lại trong giây lát"}. Anh/chị thử bấm lại nhé ạ!`,
+        content: `Dạ, hệ thống đang cập nhật kết nối: ${errorText(err) || "Vui lòng thử lại trong giây lát"}. Anh/chị thử bấm lại nhé ạ!`,
         createdAt: new Date().toISOString(),
       }
       setMessages((prev) => [...prev, errorAssistantMsg])
@@ -254,7 +266,7 @@ export function FloraOSGlobalCopilot() {
                     creatingOrderFor={creatingOrderFor}
                     onQuickCreateOrder={handleQuickCreateOrder}
                     onNavigate={(route) => {
-                      router.push(route as any)
+                      router.push(route as Route)
                       setIsOpen(false)
                     }}
                   />

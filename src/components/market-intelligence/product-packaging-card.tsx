@@ -75,7 +75,7 @@ export function ProductPackagingCard({ packaging, onChange }: ProductPackagingCa
     });
   };
 
-  const handleUpdateDecor = (idx: number, field: keyof ProductDecorAccessory, val: any) => {
+  const handleUpdateDecor = <K extends keyof ProductDecorAccessory>(idx: number, field: K, val: ProductDecorAccessory[K]) => {
     const updated = [...otherAccessories];
     updated[idx] = { ...updated[idx]!, [field]: val };
     onChange({
@@ -130,7 +130,7 @@ export function ProductPackagingCard({ packaging, onChange }: ProductPackagingCa
                 <span className="text-[10px] font-medium text-stone-500 block mb-0.5">Phân loại thiệp</span>
                 <select
                   value={card.cardType || "Thiệp gập thiết kế"}
-                  onChange={(e) => handleUpdateCard({ cardType: e.target.value as any })}
+                  onChange={(e) => handleUpdateCard({ cardType: e.target.value as ProductCardAccessory["cardType"] })}
                   className="h-7 w-full rounded border border-amber-200 bg-white px-1.5 text-[11.5px] text-stone-800 outline-none"
                 >
                   <option value="Thiệp gập thiết kế">Thiệp gập thiết kế</option>
@@ -263,7 +263,7 @@ export function ProductPackagingCard({ packaging, onChange }: ProductPackagingCa
           </div>
         ) : (
           <div className="text-[10.5px] text-stone-400 italic p-2 rounded bg-stone-50/50 text-center border border-dashed border-stone-200">
-            Không có phụ kiện phụ đặc biệt (Bấm "Thêm phụ kiện" nếu có đèn led, gấu bông, topper...)
+            Không có phụ kiện phụ đặc biệt (Bấm &quot;Thêm phụ kiện&quot; nếu có đèn led, gấu bông, topper...)
           </div>
         )}
       </div>

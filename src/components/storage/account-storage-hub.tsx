@@ -45,6 +45,25 @@ import {
 
 export type StorageTab = "raw" | "approved" | "finalized"
 
+/** Một dòng `GET /api/v1/assets` — chỉ các trường kho ảnh đọc. */
+interface AssetApiRow {
+  id: string
+  name?: string | null
+  filename?: string | null
+  storage_key?: string
+  mime_type?: string
+  file_size?: number
+  created_at?: string
+  image_url?: string | null
+}
+
+/** Một dòng hoa trong `bom.flowers` của kết quả phân tích (JSON, chưa kiểm dạng). */
+interface BomFlowerRow {
+  name?: string
+  quantity?: number | string
+  count?: number | string
+}
+
 export interface RawAssetItem {
   id: string
   name: string
@@ -123,6 +142,7 @@ export function AccountStorageHub({
 
   useEffect(() => {
     if (finalizedPitches.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- lấy từ props, không có thì từ localStorage, chủ đích
       setInternalFinalizedPitches(finalizedPitches)
       return
     }
@@ -188,7 +208,7 @@ export function AccountStorageHub({
         headers: { "Content-Type": "application/json" },
       })
       if (!res.ok) throw new Error(`Lỗi tải ảnh gốc (${res.status})`)
-      const json = (await res.json()) as { data?: any[] }
+      const json = (await res.json()) as { data?: AssetApiRow[] }
       const items: RawAssetItem[] = (json.data ?? []).map((a) => ({
         id: a.id,
         name: a.name ?? a.filename ?? a.storage_key ?? a.id,
@@ -225,6 +245,7 @@ export function AccountStorageHub({
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     fetchRawAssets()
     fetchApprovedAnalyses()
   }, [])
@@ -547,7 +568,7 @@ export function AccountStorageHub({
                   ? effective.flower_count
                   : typeof effective.total_stems === "number"
                   ? effective.total_stems
-                  : flowers.reduce((sum: number, f: any) => sum + (Number(f.quantity ?? f.count) || 0), 0)
+                  : flowers.reduce((sum: number, f: BomFlowerRow) => sum + (Number(f.quantity ?? f.count) || 0), 0)
 
               const displayName =
                 item.product?.name ||
@@ -599,7 +620,7 @@ export function AccountStorageHub({
 
                         {flowers.length > 0 && (
                           <div className="mt-1 text-[11.5px] text-text-muted truncate">
-                            {flowers.map((f: any) => `${f.name || "Hoa"}${f.quantity ? ` (${f.quantity})` : ""}`).join(", ")}
+                            {flowers.map((f: BomFlowerRow) => `${f.name || "Hoa"}${f.quantity ? ` (${f.quantity})` : ""}`).join(", ")}
                           </div>
                         )}
                       </div>

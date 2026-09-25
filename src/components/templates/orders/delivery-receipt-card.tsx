@@ -66,7 +66,7 @@ export function DeliveryReceiptCard({
           Nội dung thiệp chúc mừng:
         </div>
         <p className="text-xs italic text-text leading-relaxed font-serif">
-          "{cardMessage}"
+          &quot;{cardMessage}&quot;
         </p>
       </div>
 

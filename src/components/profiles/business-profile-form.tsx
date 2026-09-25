@@ -29,6 +29,7 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
 
   useEffect(() => {
     if (initialData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ lại form khi dữ liệu ban đầu (props) đổi, chủ đích
       setDisplayName(initialData.display_name || "")
       setLegalName(initialData.legal_name || "")
       setPhone(initialData.phone || "")
@@ -38,11 +39,11 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
       setTaxCode(initialData.tax_code || "")
       setDescription(initialData.description || "")
 
-      const hours = initialData.operating_hours as any
+      const hours = initialData.operating_hours as { open?: string; close?: string } | null
       if (hours?.open) setOpenTime(hours.open)
       if (hours?.close) setCloseTime(hours.close)
 
-      const socials = initialData.social_links as any
+      const socials = initialData.social_links as { facebook?: string; zalo?: string; instagram?: string } | null
       if (socials?.facebook) setFacebookUrl(socials.facebook)
       if (socials?.zalo) setZaloUrl(socials.zalo)
       if (socials?.instagram) setInstagramUrl(socials.instagram)

@@ -18,6 +18,7 @@ import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { KNOWLEDGE_MODULES } from "@/components/knowledge-base/knowledge-data"
 import { KnowledgeModuleCard } from "@/components/knowledge-base/knowledge-module-card"
 import { OnboardingProgressBar } from "@/components/knowledge-base/onboarding-progress-bar"
+import type { Route } from "next"
 
 export default function KnowledgeBasePage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -69,7 +70,7 @@ export default function KnowledgeBasePage() {
 
         {/* Top-Right Action Toolbar */}
         <div className="flex items-center gap-3">
-          <Link href={"/hoi-thoai/kenh-tich-hop" as any}>
+          <Link href={"/hoi-thoai/kenh-tich-hop" as Route}>
             <Button
               variant="outline"
               size="sm"
@@ -159,7 +160,7 @@ export default function KnowledgeBasePage() {
               <HelpCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
               <div className="text-sm font-bold text-foreground">Không tìm thấy hướng dẫn phù hợp</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Thử thay đổi từ khóa tìm kiếm hoặc chọn bộ lọc 'Tất cả'
+                Thử thay đổi từ khóa tìm kiếm hoặc chọn bộ lọc &apos;Tất cả&apos;
               </p>
             </div>
           ) : (

@@ -9,6 +9,25 @@
  *    trước khi chốt duyệt xuất bản final (status: DRAFT | FINALIZED).
  */
 
+/**
+ * Một dòng BOM thô trong kết quả phân tích (JSON do mô hình trả — chưa kiểm
+ * dạng; mọi trường đều có thể vắng). Chỉ liệt kê các trường mẫu này đọc.
+ */
+interface RawBomItem {
+  id?: string
+  name?: string
+  nhom_hoa?: string
+  quantity?: number | null
+  count?: number | null
+  dvt_dem?: string
+  mo_ta_mau?: string
+  mau?: string
+  color?: string
+  role?: string
+  printed_text?: string
+  material?: string
+}
+
 export interface SalesPitchItem {
   id?: string | undefined
   name: string
@@ -210,7 +229,7 @@ export function buildSalesPitchData(
 
   // 4. Hoa chính
   const rawFlowers = Array.isArray(bom.flowers) ? bom.flowers : []
-  const defaultMainFlowers: SalesPitchItem[] = rawFlowers.map((f: any, idx: number) => ({
+  const defaultMainFlowers: SalesPitchItem[] = rawFlowers.map((f: RawBomItem, idx: number) => ({
     id: f.id || `flower-${idx}`,
     name: f.name || f.nhom_hoa || "Hoa tươi",
     quantity: f.quantity ?? f.count ?? null,
@@ -222,7 +241,7 @@ export function buildSalesPitchData(
 
   // 5. Lá & Phụ kiện
   const rawFoliage = Array.isArray(bom.foliage) ? bom.foliage : []
-  const defaultFoliage: SalesPitchItem[] = rawFoliage.map((f: any, idx: number) => ({
+  const defaultFoliage: SalesPitchItem[] = rawFoliage.map((f: RawBomItem, idx: number) => ({
     id: f.id || `foliage-${idx}`,
     name: f.name || "Lá phụ",
     quantity: f.quantity ?? f.count ?? null,
@@ -233,7 +252,7 @@ export function buildSalesPitchData(
   const foliageItems = overrides?.foliageItems ?? defaultFoliage
 
   const rawAcc = Array.isArray(bom.accessories) ? bom.accessories : []
-  const defaultAcc: SalesPitchItem[] = rawAcc.map((acc: any, idx: number) => {
+  const defaultAcc: SalesPitchItem[] = rawAcc.map((acc: RawBomItem, idx: number) => {
     const rawName = acc.name || "Phụ kiện"
     const isCard = rawName.toLowerCase().includes("thiệp") || rawName.toLowerCase().includes("biển") || Boolean(acc.printed_text)
     const displayName = isCard && acc.printed_text ? `${rawName} (In: "${acc.printed_text}")` : rawName
@@ -253,7 +272,7 @@ export function buildSalesPitchData(
 
   const rawWrapping = Array.isArray(bom.wrapping) ? bom.wrapping : []
   const defaultWrapping = rawWrapping.length > 0
-    ? rawWrapping.map((w: any) => w.material || w.name || "Giấy gói").filter(Boolean).join(", ")
+    ? rawWrapping.map((w: RawBomItem) => w.material || w.name || "Giấy gói").filter(Boolean).join(", ")
     : "Giấy gói phong cách Hàn Quốc cao cấp"
   const wrapping = overrides?.wrapping ?? defaultWrapping
 

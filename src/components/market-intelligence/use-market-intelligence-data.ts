@@ -5,6 +5,7 @@ import type { OpportunityItem } from "./opportunity-card";
 import type { RunItem } from "./research-runs-table";
 import type { ResearchStatusInfo } from "./research-status-banner";
 import type { CustomResearchParams } from "./custom-research-modal";
+import { errorText } from "@/lib/error-text"
 
 export function useMarketIntelligenceData() {
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
@@ -79,6 +80,7 @@ export function useMarketIntelligenceData() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     checkUserRole();
     fetchOpportunities();
     fetchRuns();
@@ -179,10 +181,10 @@ export function useMarketIntelligenceData() {
           await fetchOpportunities();
         }
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setResearchStatus({
         state: "error",
-        message: `Lỗi kết nối máy chủ: ${err.message}`,
+        message: `Lỗi kết nối máy chủ: ${errorText(err)}`,
       });
       setTriggering(false);
     }

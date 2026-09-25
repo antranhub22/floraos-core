@@ -6,6 +6,20 @@ import type {
   RelatedTopicData,
   ProviderHealthReport,
 } from "@/core/ports/trend-provider";
+import { readDotenvKey } from "./read-dotenv-key";
+
+/** Một điểm trong `interest_over_time.timeline_data` của SerpApi Google Trends. */
+interface SerpTimelinePoint {
+  date: string;
+  values?: Array<{ extracted_value?: number }>;
+}
+
+/** Một dòng trong `related_queries.rising` của SerpApi Google Trends. */
+interface SerpRisingQuery {
+  query: string;
+  value?: string | number;
+  extracted_value?: number;
+}
 
 export class SerpApiTrendAdapter implements TrendProvider {
   readonly name = "serpapi";
@@ -13,31 +27,7 @@ export class SerpApiTrendAdapter implements TrendProvider {
   private readonly baseUrl: string;
 
   constructor(options?: { apiKey?: string; baseUrl?: string }) {
-    let key =
-      options?.apiKey ??
-      (typeof process !== "undefined" ? process.env.SERPAPI_API_KEY : undefined);
-
-    if (!key && typeof window === "undefined") {
-      try {
-        const fs = require("fs");
-        const path = require("path");
-        const envPath = path.resolve(process.cwd(), ".env");
-        if (fs.existsSync(envPath)) {
-          const content = fs.readFileSync(envPath, "utf-8");
-          const match = content.match(/^SERPAPI_API_KEY=(.+)$/m);
-          if (match && match[1]) {
-            key = match[1].trim().replace(/^["']|["']$/g, "");
-            if (typeof process !== "undefined") {
-              process.env.SERPAPI_API_KEY = key;
-            }
-          }
-        }
-      } catch {
-        // Bỏ qua lỗi đọc file
-      }
-    }
-
-    this.apiKey = key;
+    this.apiKey = options?.apiKey ?? readDotenvKey("SERPAPI_API_KEY");
     this.baseUrl = options?.baseUrl ?? "https://serpapi.com/search.json";
   }
 
@@ -132,7 +122,7 @@ export class SerpApiTrendAdapter implements TrendProvider {
       const data = await res.json();
       const timeline = data?.interest_over_time?.timeline_data ?? [];
 
-      return timeline.map((item: any) => ({
+      return timeline.map((item: SerpTimelinePoint) => ({
         date: new Date(item.date),
         value: Number(item?.values?.[0]?.extracted_value ?? 0),
         growthRate: null,
@@ -170,7 +160,7 @@ export class SerpApiTrendAdapter implements TrendProvider {
       const data = await res.json();
       const queries = data?.related_queries?.rising ?? [];
 
-      return queries.map((q: any) => ({
+      return queries.map((q: SerpRisingQuery) => ({
         topicName: q.query,
         topicType: "rising_query",
         metricValue: Number(q.extracted_value ?? 50),

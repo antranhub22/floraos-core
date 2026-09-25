@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { CreateCustomerModal } from "@/components/crm/create-customer-modal"
 import { CustomerDetailModal } from "@/components/crm/customer-detail-modal"
+import type { CustomerMasterIndex, OccasionReminder } from "@/modules/crm/domain/customer-master-index"
 
 export default function CRMPage() {
-  const [customers, setCustomers] = useState<any[]>([])
+  const [customers, setCustomers] = useState<CustomerMasterIndex[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [tierFilter, setTierFilter] = useState<string>("")
@@ -19,7 +20,7 @@ export default function CRMPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
 
   // Reminders drawer
-  const [reminders, setReminders] = useState<any[]>([])
+  const [reminders, setReminders] = useState<OccasionReminder[]>([])
   const [showReminders, setShowReminders] = useState(false)
   const [scanningReminders, setScanningReminders] = useState(false)
 
@@ -39,6 +40,7 @@ export default function CRMPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     loadCustomers()
   }, [tierFilter])
 
@@ -237,7 +239,7 @@ export default function CRMPage() {
                     <td className="px-4 py-3">
                       {c.occasions?.length > 0 ? (
                         <span className="inline-flex items-center gap-1 text-primary font-medium">
-                          <Calendar className="h-3 w-3" /> {c.occasions[0].name} ({c.occasions[0].date})
+                          <Calendar className="h-3 w-3" /> {c.occasions[0]?.name} ({c.occasions[0]?.date})
                         </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>

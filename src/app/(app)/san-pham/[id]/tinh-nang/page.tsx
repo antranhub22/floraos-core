@@ -12,6 +12,7 @@ import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import type { Route } from "next"
 
 interface ProductData {
   id: string;
@@ -117,7 +118,7 @@ const handleMonitorJobs = () => {
     if (jobsCreated && jobsCreated.length > 0) {
       const jobId = jobsCreated[0]!.jobId;
       // Navigate to jobs list with filter
-      router.push(("/job?job_id=" + jobId) as any);
+      router.push(("/job?job_id=" + jobId) as Route);
     }
   };
 
@@ -144,7 +145,7 @@ const handleMonitorJobs = () => {
           <Button variant="secondary" onClick={handleRetry}>
             <RefreshCw size={15} strokeWidth={2} /> Thử lại
           </Button>
-          <Button variant="ghost" onClick={() => router.push((returnTo ?? "/san-pham") as any)}>
+          <Button variant="ghost" onClick={() => router.push((returnTo ?? "/san-pham") as Route)}>
             <ArrowLeft size={15} strokeWidth={2} /> Quay lại
           </Button>
         </div>
@@ -195,7 +196,7 @@ const handleMonitorJobs = () => {
       {/* Top Bar */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push((returnTo ?? "/san-pham") as any)}>
+          <Button variant="ghost" size="icon" onClick={() => router.push((returnTo ?? "/san-pham") as Route)}>
             <ArrowLeft size={20} strokeWidth={2} />
           </Button>
           <div>
@@ -257,7 +258,7 @@ const handleMonitorJobs = () => {
             title="Cần phân tích ảnh trước"
             description="Sản phẩm này chưa có kết quả phân tích ảnh được duyệt. Hãy chạy Phân tích ảnh (M01) và duyệt kết quả trước khi sử dụng các tính năng AI khác."
             actionLabel="Đi đến Phân tích ảnh"
-            onAction={() => router.push(("/tai-anh?product_id=" + productId + "&return=" + encodeURIComponent(window.location.pathname)) as any)}
+            onAction={() => router.push(("/tai-anh?product_id=" + productId + "&return=" + encodeURIComponent(window.location.pathname)) as Route)}
           />
         )}
       </div>

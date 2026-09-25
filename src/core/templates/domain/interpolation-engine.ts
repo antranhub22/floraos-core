@@ -17,12 +17,13 @@ export function resolveVariablePath(context: InterpolationContext, key: string):
   const normalizedKey = key.trim()
   const parts = normalizedKey.split(".")
 
-  let current: any = context
+  let current: unknown = context
   for (const part of parts) {
     if (current === undefined || current === null) return undefined
     // Hỗ trợ cả camelCase và snake_case
     const camelPart = part.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
-    current = current[part] ?? current[camelPart]
+    const node = current as Record<string, unknown>
+    current = node[part] ?? node[camelPart]
   }
 
   if (current === undefined || current === null) return undefined

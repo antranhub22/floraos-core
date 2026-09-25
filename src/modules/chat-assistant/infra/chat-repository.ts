@@ -3,6 +3,7 @@
  * Phân lập hoàn toàn theo organization_id (Tenant Isolation).
  */
 
+import type { Prisma, chat_conversations, chat_messages } from "@/generated/prisma/client"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy/tenant-context"
 import type { ChatConversation, ChatMessage, ChatChannel, ChatSenderType } from "../domain/chat-types"
@@ -61,7 +62,7 @@ export class ChatRepository {
           conversation_id: conversationId,
           sender_type: senderType,
           content,
-          metadata: (metadata as any) ?? null,
+          ...(metadata ? { metadata: metadata as Prisma.InputJsonObject } : {}),
         },
       }),
       prisma.chat_conversations.update({
@@ -86,7 +87,7 @@ export class ChatRepository {
     return rows.map((r) => this.mapMessage(r))
   }
 
-  private mapConversation(row: any): ChatConversation {
+  private mapConversation(row: chat_conversations): ChatConversation {
     return {
       id: row.id,
       organizationId: row.organization_id,
@@ -99,14 +100,14 @@ export class ChatRepository {
     }
   }
 
-  private mapMessage(row: any): ChatMessage {
+  private mapMessage(row: chat_messages): ChatMessage {
     return {
       id: row.id,
       organizationId: row.organization_id,
       conversationId: row.conversation_id,
       senderType: row.sender_type as ChatSenderType,
       content: row.content,
-      metadata: (row.metadata as any) ?? undefined,
+      metadata: (row.metadata as ChatMessage["metadata"]) ?? undefined,
       createdAt: row.created_at.toISOString(),
     }
   }

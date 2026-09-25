@@ -4,16 +4,30 @@
  */
 
 import { prisma } from "@/core/tenancy/infra/prisma"
-import type { Prisma } from "@/generated/prisma/client"
+import type {
+  Prisma,
+  order_assignments,
+  order_events,
+  order_items,
+  orders,
+} from "@/generated/prisma/client"
 import type {
   CreateOrderInput,
   UpdateOrderInput,
   OrderFilter,
   OrderRecord,
   OrderItemRecord,
+  OrderEventRecord,
 } from "../domain/order-types"
 
-function mapPrismaOrder(row: any): OrderRecord {
+/** Hàng `orders` kèm các quan hệ mà truy vấn nào `include` thì có. */
+type OrderRow = orders & {
+  items?: order_items[]
+  assignments?: order_assignments[]
+  events?: order_events[]
+}
+
+function mapPrismaOrder(row: OrderRow): OrderRecord {
   return {
     id: row.id,
     organizationId: row.organization_id,
@@ -28,12 +42,12 @@ function mapPrismaOrder(row: any): OrderRecord {
     voucherId: row.voucher_id,
     cardMessage: row.card_message,
     internalNote: row.internal_note,
-    deliveryWindow: row.delivery_window as any,
-    deliveryAddress: row.delivery_address as any,
+    deliveryWindow: row.delivery_window as OrderRecord["deliveryWindow"],
+    deliveryAddress: row.delivery_address as OrderRecord["deliveryAddress"],
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    items: row.items?.map((it: any): OrderItemRecord => ({
+    items: row.items?.map((it): OrderItemRecord => ({
       id: it.id,
       organizationId: it.organization_id,
       orderId: it.order_id,
@@ -44,21 +58,21 @@ function mapPrismaOrder(row: any): OrderRecord {
       unitPriceVnd: Number(it.unit_price_vnd),
       metadata: it.metadata as Record<string, unknown> | null,
     })),
-    assignments: row.assignments?.map((as: any) => ({
+    assignments: row.assignments?.map((as) => ({
       id: as.id,
       organizationId: as.organization_id,
       orderId: as.order_id,
       assigneeId: as.assignee_id,
       assignedBy: as.assigned_by,
-      difficulty: as.difficulty,
+      difficulty: as.difficulty ?? undefined,
       assignedAt: as.assigned_at,
       releasedAt: as.released_at,
     })),
-    events: row.events?.map((ev: any) => ({
+    events: row.events?.map((ev) => ({
       id: ev.id,
       organizationId: ev.organization_id,
       orderId: ev.order_id,
-      axis: ev.axis,
+      axis: ev.axis as OrderEventRecord["axis"],
       fromValue: ev.from_value,
       toValue: ev.to_value,
       actorId: ev.actor_id,

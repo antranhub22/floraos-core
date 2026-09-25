@@ -310,7 +310,7 @@ export function SalesPitchCard({
   }
 
   // Helpers for editing flower items
-  const updateFlower = (index: number, field: keyof SalesPitchItem, value: any) => {
+  const updateFlower = <K extends keyof SalesPitchItem>(index: number, field: K, value: SalesPitchItem[K]) => {
     setMainFlowers((prev) => {
       const copy = [...prev]
       const current = copy[index]
@@ -333,7 +333,7 @@ export function SalesPitchCard({
   }
 
   // Helpers for editing foliage
-  const updateFoliage = (index: number, field: keyof SalesPitchItem, value: any) => {
+  const updateFoliage = <K extends keyof SalesPitchItem>(index: number, field: K, value: SalesPitchItem[K]) => {
     setFoliageItems((prev) => {
       const copy = [...prev]
       const current = copy[index]
@@ -546,6 +546,7 @@ export function SalesPitchCard({
     { id: "script", label: "Kịch bản tư vấn Zalo", icon: MessageSquareText, badge: "1-Chạm", badgeTone: "success" },
   ]
 
+  // eslint-disable-next-line react-hooks/refs -- chỉ dựng danh sách nút; cardRef được đọc trong onClick (xuất ảnh), không đọc lúc render
   const currentTabActions = getTabActions()
 
   return (

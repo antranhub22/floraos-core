@@ -13,10 +13,33 @@ import {
   ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { SuggestedFlowerCard } from "@/modules/chat-assistant/domain/chat-types"
+
+interface WidgetMessage {
+  id: string
+  senderType: "USER" | "ASSISTANT"
+  content: string
+  suggestedFlowers?: SuggestedFlowerCard[]
+}
 
 interface PublicStorefrontChatWidgetProps {
   shopSlug: string
   shopName?: string | undefined
+}
+
+// Visitor ID duy nhất theo phiên trình duyệt (sessionStorage). Đọc lúc gửi tin
+// thay vì giữ trong state — không cần effect đồng bộ state khi mount.
+function getVisitorId(): string {
+  let vid = sessionStorage.getItem("floraos_visitor_id")
+  if (!vid) {
+    vid = `guest_${Math.random().toString(36).substring(2, 9)}`
+    sessionStorage.setItem("floraos_visitor_id", vid)
+  }
+  return vid
+}
+
+function newMessageId(prefix: "usr" | "bot"): string {
+  return `${prefix}_${Date.now()}`
 }
 
 export function PublicStorefrontChatWidget({
@@ -24,22 +47,11 @@ export function PublicStorefrontChatWidget({
   shopName = "Tiệm Hoa",
 }: PublicStorefrontChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [visitorId, setVisitorId] = useState("")
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<WidgetMessage[]>([])
   const [inputQuery, setInputQuery] = useState("")
   const [sending, setSending] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Khởi tạo visitor ID duy nhất lưu ở sessionStorage
-  useEffect(() => {
-    let vid = sessionStorage.getItem("floraos_visitor_id")
-    if (!vid) {
-      vid = `guest_${Math.random().toString(36).substring(2, 9)}`
-      sessionStorage.setItem("floraos_visitor_id", vid)
-    }
-    setVisitorId(vid)
-  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -53,8 +65,8 @@ export function PublicStorefrontChatWidget({
     setSending(true)
 
     // Tin nhắn tạm thời của khách
-    const userMsg = {
-      id: `usr_${Date.now()}`,
+    const userMsg: WidgetMessage = {
+      id: newMessageId("usr"),
       senderType: "USER",
       content: text,
     }
@@ -66,15 +78,15 @@ export function PublicStorefrontChatWidget({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slug: shopSlug,
-          visitorId,
+          visitorId: getVisitorId(),
           message: text,
         }),
       })
 
       if (res.ok) {
         const data = await res.json()
-        const botMsg = {
-          id: `bot_${Date.now()}`,
+        const botMsg: WidgetMessage = {
+          id: newMessageId("bot"),
           senderType: "ASSISTANT",
           content: data.replyText,
           suggestedFlowers: data.suggestedFlowers || [],
@@ -189,7 +201,7 @@ export function PublicStorefrontChatWidget({
                       {/* Thẻ hoa gợi ý từ Master Index */}
                       {flowers.length > 0 && (
                         <div className="space-y-2 pt-1">
-                          {flowers.map((f: any) => (
+                          {flowers.map((f) => (
                             <div
                               key={f.productId}
                               className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50/70 p-2 shadow-2xs"

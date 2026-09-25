@@ -16,14 +16,17 @@ import { Badge } from "@/components/ui/badge"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { ChannelIntegrationCard } from "@/components/chat/channel-integration-card"
 import { ChannelConfigModal } from "@/components/chat/channel-config-modal"
+import type { Route } from "next"
+import type { ChannelStatusItem } from "@/modules/chat-assistant/use-cases/list-chat-channels"
+import type { ChannelConfig } from "@/modules/chat-assistant/domain/channel-integration-types"
 
 export default function ChatChannelsIntegrationPage() {
-  const [channels, setChannels] = useState<any[]>([])
+  const [channels, setChannels] = useState<ChannelStatusItem[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingChannel, setUpdatingChannel] = useState<string | null>(null)
   const [copiedScript, setCopiedScript] = useState(false)
-  const [configModalChannel, setConfigModalChannel] = useState<any | null>(null)
-  const [modalConfigForm, setModalConfigForm] = useState<any>({})
+  const [configModalChannel, setConfigModalChannel] = useState<ChannelStatusItem | null>(null)
+  const [modalConfigForm, setModalConfigForm] = useState<ChannelConfig>({})
   const [saveError, setSaveError] = useState<string | null>(null)
 
   function loadChannels() {
@@ -38,10 +41,11 @@ export default function ChatChannelsIntegrationPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     loadChannels()
   }, [])
 
-  async function handleToggleChannel(channelItem: any) {
+  async function handleToggleChannel(channelItem: ChannelStatusItem) {
     const nextState = !channelItem.isEnabled
     setUpdatingChannel(channelItem.channel)
     setSaveError(null)
@@ -113,7 +117,7 @@ export default function ChatChannelsIntegrationPage() {
       {/* 1. TOP-RIGHT ACTION HEADER CHUẨN SSOT */}
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
         <div className="flex items-center gap-3">
-          <Link href={"/hoi-thoai" as any}>
+          <Link href={"/hoi-thoai" as Route}>
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs font-semibold">
               <ArrowLeft className="h-4 w-4" />
               Quay lại Hội thoại
@@ -210,7 +214,7 @@ export default function ChatChannelsIntegrationPage() {
           </div>
 
           <div className="rounded-xl bg-slate-900 p-3 font-mono text-[11px] text-green-400 overflow-x-auto select-all">
-            &lt;script src="https://floraos.vn/sdk/floraos-chat.js" data-shop-slug="tiem-hoa-moc-lan" defer&gt;&lt;/script&gt;
+            &lt;script src=&quot;https://floraos.vn/sdk/floraos-chat.js&quot; data-shop-slug=&quot;tiem-hoa-moc-lan&quot; defer&gt;&lt;/script&gt;
           </div>
         </div>
       </div>

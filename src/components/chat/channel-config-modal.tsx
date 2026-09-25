@@ -3,11 +3,13 @@
 import React from "react"
 import { Settings, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { ChannelStatusItem } from "@/modules/chat-assistant/use-cases/list-chat-channels"
+import type { ChannelConfig } from "@/modules/chat-assistant/domain/channel-integration-types"
 
 interface ChannelConfigModalProps {
-  channelItem: any
-  configForm: any
-  onChangeForm: (newForm: any) => void
+  channelItem: ChannelStatusItem | null
+  configForm: ChannelConfig
+  onChangeForm: (newForm: ChannelConfig) => void
   onClose: () => void
   onSubmit: (e: React.FormEvent) => void
   saveError: string | null

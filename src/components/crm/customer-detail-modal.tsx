@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react"
 import { X, Calendar, Gift, Shield, Heart, Plus, Loader2, Sparkles, Check, Phone, MapPin, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import type { CustomerMasterIndex } from "@/modules/crm/domain/customer-master-index"
 
 interface CustomerDetailModalProps {
   customerId: string | null
@@ -13,7 +14,7 @@ interface CustomerDetailModalProps {
 
 export function CustomerDetailModal({ customerId, onClose, onUpdated }: CustomerDetailModalProps) {
   const [loading, setLoading] = useState(false)
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<CustomerMasterIndex | null>(null)
   const [activeTab, setActiveTab] = useState<"profile" | "occasions" | "privacy">("profile")
 
   // Form thêm dịp kỷ niệm
@@ -25,6 +26,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
 
   useEffect(() => {
     if (!customerId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     setLoading(true)
     fetch(`/api/v1/crm/customers/${customerId}`)
       .then((r) => r.json())
@@ -253,7 +255,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                       Chưa có ngày kỷ niệm nào được lưu.
                     </div>
                   ) : (
-                    data.occasions.map((o: any) => (
+                    data.occasions.map((o) => (
                       <div key={o.id} className="flex items-center justify-between rounded-lg border border-border p-3 text-xs">
                         <div className="flex items-center gap-2.5">
                           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-700">
@@ -285,7 +287,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                     { channel: "PROMOTION", label: "Ưu đãi sinh nhật & Khuyến mãi theo mùa" },
                     { channel: "PHONE_CALL", label: "Cuộc gọi chăm sóc khách hàng" },
                   ].map((c) => {
-                    const isGranted = data.consents.find((it: any) => it.channel === c.channel)?.granted ?? false
+                    const isGranted = data.consents.find((it) => it.channel === c.channel)?.granted ?? false
                     return (
                       <div key={c.channel} className="flex items-center justify-between p-3.5 text-xs">
                         <div>

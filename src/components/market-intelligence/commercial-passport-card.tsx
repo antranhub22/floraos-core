@@ -15,7 +15,7 @@ export function CommercialPassportCard({
   onChange,
   readOnly = false,
 }: CommercialPassportCardProps) {
-  const handleUpdate = (field: keyof CommercialPassport, value: any) => {
+  const handleUpdate = <K extends keyof CommercialPassport>(field: K, value: CommercialPassport[K]) => {
     if (onChange && !readOnly) {
       onChange({
         ...passport,
@@ -91,7 +91,7 @@ export function CommercialPassportCard({
         </label>
         {readOnly ? (
           <p className="p-2.5 rounded-lg bg-rose-50/40 border border-rose-100 text-stone-700 leading-relaxed italic">
-            "{passport.flowerMeaningStory}"
+            &quot;{passport.flowerMeaningStory}&quot;
           </p>
         ) : (
           <textarea

@@ -18,6 +18,7 @@ import {
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { errorText } from "@/lib/error-text"
 
 export interface PostStatusReportProps {
   post: {
@@ -145,10 +146,10 @@ export function PostStatusReportCard({
           })
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setFeedback({
         type: "error",
-        message: err?.message || "Có lỗi xảy ra khi thực hiện phát sóng.",
+        message: errorText(err) || "Có lỗi xảy ra khi thực hiện phát sóng.",
       })
     } finally {
       setPublishing(false)

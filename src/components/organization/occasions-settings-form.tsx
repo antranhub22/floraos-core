@@ -14,6 +14,7 @@
 import React, { useEffect, useState } from "react"
 import { CalendarHeart, Plus, Check, AlertCircle, CheckCircle2, Power } from "lucide-react"
 import { OCCASION_REGISTER_LABELS, type OccasionRegisterValue } from "@/modules/organization/domain/occasion-rules"
+import { errorText } from "@/lib/error-text"
 
 interface OccasionRow {
   id: string
@@ -49,14 +50,15 @@ export function OccasionsSettingsForm() {
       if (!res.ok) throw new Error(`Không tải được danh mục dịp (${res.status})`)
       const json = await res.json()
       setOccasions(json.data ?? [])
-    } catch (err: any) {
-      setError(err?.message || "Lỗi tải danh mục dịp")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Lỗi tải danh mục dịp")
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     load()
   }, [])
 
@@ -82,8 +84,8 @@ export function OccasionsSettingsForm() {
       setNewRegister("FESTIVE")
       setSuccessMessage("Đã thêm dịp mới thành công!")
       await load()
-    } catch (err: any) {
-      setError(err?.message || "Lỗi khi thêm dịp")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Lỗi khi thêm dịp")
     } finally {
       setSaving(false)
     }
@@ -104,8 +106,8 @@ export function OccasionsSettingsForm() {
         throw new Error(errJson?.error?.message || `Cập nhật dịp thất bại (${res.status})`)
       }
       await load()
-    } catch (err: any) {
-      setError(err?.message || "Lỗi khi cập nhật dịp")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Lỗi khi cập nhật dịp")
     } finally {
       setSaving(false)
     }

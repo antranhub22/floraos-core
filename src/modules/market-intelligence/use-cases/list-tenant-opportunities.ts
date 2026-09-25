@@ -31,9 +31,9 @@ export interface ListOpportunitiesResult {
     topicName: string;
     audience: string | null;
     opportunitySummary: string;
-    contentAngles: any;
-    recommendedFormats: any;
-    recommendedHooks: any;
+    contentAngles: unknown;
+    recommendedFormats: unknown;
+    recommendedHooks: unknown;
     evidenceReferences: EvidenceReference[];
     trendScore: number;
     viralScore: number;
@@ -51,14 +51,14 @@ export interface ListOpportunitiesResult {
  * Giải quyết danh sách dẫn chứng video cho mỗi cơ hội nội dung.
  * Dùng SSOT từ `video-evidence-catalog.ts` (Domain Layer) thay vì duplicate hardcoded data.
  */
-function resolveEvidenceReferences(angles: any, topicName: string, _summary: string): EvidenceReference[] {
+function resolveEvidenceReferences(angles: unknown, topicName: string, _summary: string): EvidenceReference[] {
   const catalogEvidence = getTopicDualRealVideoEvidence(topicName);
   let rawRefs: EvidenceReference[] = [];
 
-  if (Array.isArray(angles) && angles[0]?.evidenceReferences && Array.isArray(angles[0].evidenceReferences)) {
-    rawRefs = angles[0].evidenceReferences;
-  } else if (angles && typeof angles === "object" && !Array.isArray(angles) && Array.isArray(angles.evidenceReferences)) {
-    rawRefs = angles.evidenceReferences;
+  // `content_angles` là cột Json: dạng mảng góc tiếp cận (dẫn chứng ở phần tử đầu) hoặc một đối tượng.
+  const holder = (Array.isArray(angles) ? angles[0] : angles) as { evidenceReferences?: unknown } | null | undefined;
+  if (holder && typeof holder === "object" && Array.isArray(holder.evidenceReferences)) {
+    rawRefs = holder.evidenceReferences as EvidenceReference[];
   }
 
   if (rawRefs.length > 0) {

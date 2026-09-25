@@ -10,7 +10,19 @@ import type {
   ProductVisualAttributes,
   ProductPackaging,
   ProductInferredContext,
+  ProductCardAccessory,
 } from "../domain/product-intelligence-types";
+
+/** Một dòng hoa / lá / phụ kiện trong JSON mô hình Vision trả về (chưa kiểm dạng). */
+interface VisionBomItem {
+  name?: string;
+  count?: string | number;
+  quantity?: string | number;
+  unit?: string;
+  role?: string;
+  color?: string;
+  note?: string;
+}
 
 export interface VisionExtractionResult {
   productName: string;
@@ -151,11 +163,11 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
 
     const components: ProductFlowerComponent[] = [];
     if (Array.isArray(parsed.flowers)) {
-      parsed.flowers.forEach((f: any, idx: number) => {
+      parsed.flowers.forEach((f: VisionBomItem, idx: number) => {
         components.push({
           id: `flower-${idx}`,
           flowerType: f.name || `Hoa tươi #${idx + 1}`,
-          quantityEstimate: parseInt(f.count) || (idx === 0 ? 12 : 5),
+          quantityEstimate: parseInt(String(f.count)) || (idx === 0 ? 12 : 5),
           unit: f.unit || "cành",
           role: f.role === "supporting" ? "supporting" : "dominant",
         });
@@ -163,11 +175,11 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
     }
 
     if (Array.isArray(parsed.foliage)) {
-      parsed.foliage.forEach((fol: any, idx: number) => {
+      parsed.foliage.forEach((fol: VisionBomItem, idx: number) => {
         components.push({
           id: `foliage-${idx}`,
           flowerType: fol.name || "Lá phụ trang trí",
-          quantityEstimate: parseInt(fol.count) || 3,
+          quantityEstimate: parseInt(String(fol.count)) || 3,
           unit: fol.unit || "cành",
           role: "foliage",
         });
@@ -194,7 +206,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
     const card = hasCard
       ? {
           hasCard: true,
-          cardType: (cardData?.card_type as any) || "Thiệp gập thiết kế",
+          cardType: (cardData?.card_type as ProductCardAccessory["cardType"]) || "Thiệp gập thiết kế",
           printedText: cardData?.printed_text || undefined,
           color: cardData?.color || undefined,
         }
@@ -215,10 +227,10 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
         };
 
     const otherAccessories = Array.isArray(parsed.other_accessories)
-      ? parsed.other_accessories.map((acc: any, i: number) => ({
+      ? parsed.other_accessories.map((acc: VisionBomItem, i: number) => ({
           id: `acc-${i}`,
           name: acc.name || "Phụ kiện",
-          quantity: parseInt(acc.quantity) || 1,
+          quantity: parseInt(String(acc.quantity)) || 1,
           unit: acc.unit || "cái",
           color: acc.color,
           note: acc.note,
@@ -230,7 +242,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
       accessoriesList.push(card.printedText ? `Thiệp: "${card.printedText}"` : "Thiệp chúc mừng thiết kế");
     }
     if (otherAccessories.length > 0) {
-      otherAccessories.forEach((acc: any) => accessoriesList.push(`${acc.name} (${acc.quantity} ${acc.unit})`));
+      otherAccessories.forEach((acc: { name: string; quantity: number; unit: string }) => accessoriesList.push(`${acc.name} (${acc.quantity} ${acc.unit})`));
     }
     if (accessoriesList.length === 0) {
       accessoriesList.push("Thiệp chúc mừng cao cấp");

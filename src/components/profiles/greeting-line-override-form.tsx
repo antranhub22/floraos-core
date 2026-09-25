@@ -22,6 +22,7 @@
 
 import React, { useEffect, useState } from "react"
 import { MessageSquareText, Check, X, AlertCircle, CheckCircle2 } from "lucide-react"
+import { errorText } from "@/lib/error-text"
 
 const TEMPLATE_FAMILY = "ST"
 const TEMPLATE_KEY = "sales_pitch_zalo"
@@ -47,14 +48,15 @@ export function GreetingLineOverrideForm() {
       const row = rows.find((r) => r.field_key === FIELD_KEY)
       setValue(row?.value ?? "")
       setHasOverride(Boolean(row))
-    } catch (err: any) {
-      setError(err?.message || "Lỗi tải câu chào tuỳ chỉnh")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Lỗi tải câu chào tuỳ chỉnh")
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     load()
   }, [])
 
@@ -84,8 +86,8 @@ export function GreetingLineOverrideForm() {
       setValue(trimmed)
       setHasOverride(true)
       setSuccessMessage("Đã lưu câu chào tuỳ chỉnh!")
-    } catch (err: any) {
-      setError(err?.message || "Lỗi khi lưu câu chào")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Lỗi khi lưu câu chào")
     } finally {
       setSaving(false)
     }
@@ -106,8 +108,8 @@ export function GreetingLineOverrideForm() {
       setValue("")
       setHasOverride(false)
       setSuccessMessage("Đã xoá — kịch bản Zalo trở về mặc định hệ thống (không có dòng chào riêng).")
-    } catch (err: any) {
-      setError(err?.message || "Lỗi khi xoá câu chào")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Lỗi khi xoá câu chào")
     } finally {
       setSaving(false)
     }

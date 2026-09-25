@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { ModuleKnowledgeSpec } from "./knowledge-data"
+import type { Route } from "next"
 
 interface KnowledgeModuleCardProps {
   module: ModuleKnowledgeSpec
@@ -126,7 +127,7 @@ export function KnowledgeModuleCard({ module, onAskCopilot }: KnowledgeModuleCar
           <span>Hỏi FloraOS Copilot về phân hệ này</span>
         </button>
 
-        <Link href={module.routePath as any}>
+        <Link href={module.routePath as Route}>
           <Button
             size="sm"
             className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs gap-1.5 shadow-sm"

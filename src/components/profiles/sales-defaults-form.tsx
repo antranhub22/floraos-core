@@ -28,6 +28,7 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
 
     const giftsSource = offers?.free_gifts ?? legacyCta?.free_gifts
     if (Array.isArray(giftsSource) && giftsSource.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ lại form khi dữ liệu ban đầu (props) đổi, chủ đích
       setGifts(giftsSource)
     }
     const guaranteesSource = offers?.guarantees ?? legacyCta?.guarantees

@@ -26,6 +26,7 @@ import {
   AnalysisResultCard,
   CommercialContentCard,
 } from "@/components/templates/product-analysis"
+import type { Route } from "next"
 
 // ============================================================
 // API HELPERS
@@ -54,7 +55,7 @@ async function apiFetchWithAuth(path: string, options?: RequestInit) {
       const body = (await res.json()) as { error?: { message?: string } }
       message = body.error?.message ?? message
     } catch { /* ignore */ }
-    return { ok: false, status: res.status as any, data: null, message }
+    return { ok: false, status: res.status, data: null, message }
   }
   const data = await res.json()
   return { ok: true, status: 200 as const, data }
@@ -158,6 +159,14 @@ type Phase =
   | "saved"
   | "error"
 
+/** Một dòng thô trong `bom.flowers/foliage/accessories` của kết quả phân tích (JSON). */
+type BomRow = Record<string, unknown>
+
+// Khoá idempotency cho một lượt tạo phân tích — gọi trong handler, không trong render.
+function newAnalysisIdempotencyKey(): string {
+  return `analysis-${Date.now()}-${crypto.randomUUID()}`
+}
+
 export default function TaiAnhPage() {
   const router = useRouter()
   const session = useSession()
@@ -172,6 +181,7 @@ export default function TaiAnhPage() {
       const orgKey = session.organization?.id ?? "default"
       const saved = localStorage.getItem(`floraos_finalized_pitches_${orgKey}`)
       if (saved) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ state từ nguồn chỉ có ở trình duyệt (localStorage/URL), chủ đích
         setFinalizedPitches(JSON.parse(saved))
       }
     } catch { /* ignore */ }
@@ -311,6 +321,7 @@ export default function TaiAnhPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     loadApprovedAnalysesList()
   }, [])
 
@@ -675,7 +686,7 @@ export default function TaiAnhPage() {
   }
 
   async function createAnalysisJob() {
-    const idempotencyKey = `analysis-${Date.now()}-${crypto.randomUUID()}`
+    const idempotencyKey = newAnalysisIdempotencyKey()
     try {
       let finalAssetIds = [...selectedAssetIds]
       if (localPhotos.length > 0) {
@@ -763,6 +774,7 @@ export default function TaiAnhPage() {
     const pitchIdParam = params.get("pitch_id")
 
     if (tabParam === "m01b" || tabParam === "m01c" || tabParam === "m01a" || tabParam === "storage") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ state từ nguồn chỉ có ở trình duyệt (localStorage/URL), chủ đích
       setActiveTab(tabParam)
     }
 
@@ -804,7 +816,7 @@ export default function TaiAnhPage() {
 
       if (key === "flowers") {
         const flowers = Array.isArray(bom.flowers) ? [...bom.flowers] : []
-        const idx = flowers.findIndex((f: any, i: number) => (f.id ? f.id === itemId : `flower-${i}` === itemId))
+        const idx = flowers.findIndex((f: BomRow, i: number) => (f.id ? f.id === itemId : `flower-${i}` === itemId))
         if (idx >= 0) {
           flowers[idx] = {
             ...flowers[idx],
@@ -815,7 +827,7 @@ export default function TaiAnhPage() {
           }
         }
         bom.flowers = flowers
-        const newTotal = flowers.reduce((sum: number, f: any) => sum + (Number(f.quantity ?? f.count) || 0), 0)
+        const newTotal = flowers.reduce((sum: number, f: BomRow) => sum + (Number(f.quantity ?? f.count) || 0), 0)
         return {
           ...prev,
           bom,
@@ -826,7 +838,7 @@ export default function TaiAnhPage() {
 
       if (key === "foliage") {
         const foliage = Array.isArray(bom.foliage) ? [...bom.foliage] : []
-        const idx = foliage.findIndex((f: any, i: number) => (f.id ? f.id === itemId : `foliage-${i}` === itemId))
+        const idx = foliage.findIndex((f: BomRow, i: number) => (f.id ? f.id === itemId : `foliage-${i}` === itemId))
         if (idx >= 0) {
           foliage[idx] = {
             ...foliage[idx],
@@ -842,7 +854,7 @@ export default function TaiAnhPage() {
 
       if (key === "accessories") {
         const accessories = Array.isArray(bom.accessories) ? [...bom.accessories] : []
-        const idx = accessories.findIndex((a: any, i: number) => (a.id ? a.id === itemId : `accessory-${i}` === itemId))
+        const idx = accessories.findIndex((a: BomRow, i: number) => (a.id ? a.id === itemId : `accessory-${i}` === itemId))
         if (idx >= 0) {
           accessories[idx] = {
             ...accessories[idx],
@@ -906,7 +918,7 @@ export default function TaiAnhPage() {
           role: "hoa phụ",
         })
         bom.flowers = flowers
-        const newTotal = flowers.reduce((sum: number, f: any) => sum + (Number(f.quantity ?? f.count) || 0), 0)
+        const newTotal = flowers.reduce((sum: number, f: BomRow) => sum + (Number(f.quantity ?? f.count) || 0), 0)
         return { ...prev, bom, flower_count: newTotal, total_stems: newTotal }
       }
 
@@ -964,16 +976,16 @@ export default function TaiAnhPage() {
 
       if (key === "flowers") {
         const flowers = (Array.isArray(bom.flowers) ? bom.flowers : []).filter(
-          (f: any, i: number) => (f.id ? f.id !== itemId : `flower-${i}` !== itemId)
+          (f: BomRow, i: number) => (f.id ? f.id !== itemId : `flower-${i}` !== itemId)
         )
         bom.flowers = flowers
-        const newTotal = flowers.reduce((sum: number, f: any) => sum + (Number(f.quantity ?? f.count) || 0), 0)
+        const newTotal = flowers.reduce((sum: number, f: BomRow) => sum + (Number(f.quantity ?? f.count) || 0), 0)
         return { ...prev, bom, flower_count: newTotal, total_stems: newTotal }
       }
 
       if (key === "foliage") {
         const foliage = (Array.isArray(bom.foliage) ? bom.foliage : []).filter(
-          (f: any, i: number) => (f.id ? f.id !== itemId : `foliage-${i}` !== itemId)
+          (f: BomRow, i: number) => (f.id ? f.id !== itemId : `foliage-${i}` !== itemId)
         )
         bom.foliage = foliage
         return { ...prev, bom }
@@ -981,7 +993,7 @@ export default function TaiAnhPage() {
 
       if (key === "accessories") {
         const accessories = (Array.isArray(bom.accessories) ? bom.accessories : []).filter(
-          (a: any, i: number) => (a.id ? a.id !== itemId : `accessory-${i}` !== itemId)
+          (a: BomRow, i: number) => (a.id ? a.id !== itemId : `accessory-${i}` !== itemId)
         )
         bom.accessories = accessories
         return { ...prev, bom }
@@ -989,7 +1001,7 @@ export default function TaiAnhPage() {
 
       if (key === "wrapping") {
         const wrapping = (Array.isArray(bom.wrapping) ? bom.wrapping : []).filter(
-          (_: any, i: number) => `wrapping-${i}` !== itemId
+          (_: unknown, i: number) => `wrapping-${i}` !== itemId
         )
         bom.wrapping = wrapping
         return { ...prev, bom }
@@ -1120,7 +1132,7 @@ export default function TaiAnhPage() {
         productName,
         area: "b",
       })
-      router.push(`/creative-studio?${params.toString()}` as any)
+      router.push(`/creative-studio?${params.toString()}` as Route)
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Không thể chuyển sang Creative Studio.")
     }

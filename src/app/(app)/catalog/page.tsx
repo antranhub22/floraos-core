@@ -35,7 +35,7 @@ export default function CatalogWebsitePage() {
       const rawProducts: CatalogProduct[] = prodJson.data || []
 
       // Ghép ảnh và thông tin từ phân tích Vision đã duyệt
-      let analysisMap = new Map<string, { imageUrl?: string | null; price?: number | null }>()
+      const analysisMap = new Map<string, { imageUrl?: string | null; price?: number | null }>()
       if (analysisRes && analysisRes.ok) {
         const analysisJson = await analysisRes.json().catch(() => ({}))
         const analyses = Array.isArray(analysisJson.data) ? analysisJson.data : []

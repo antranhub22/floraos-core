@@ -144,8 +144,9 @@ export async function getPublicCatalog(slug: string): Promise<PublicCatalogResul
       occasions.push(...(attr.occasions as string[]))
     } else if (typeof catalogAttr.occasion === "string" && catalogAttr.occasion) {
       occasions.push(catalogAttr.occasion)
-    } else if (typeof (analysisRaw.identity as any)?.dip_su_dung === "string") {
-      occasions.push((analysisRaw.identity as any).dip_su_dung)
+    } else {
+      const dipSuDung = (analysisRaw.identity as { dip_su_dung?: unknown } | null | undefined)?.dip_su_dung
+      if (typeof dipSuDung === "string") occasions.push(dipSuDung)
     }
 
     // 4. Resolve description
@@ -169,7 +170,10 @@ export async function getPublicCatalog(slug: string): Promise<PublicCatalogResul
     } else if (typeof analysisBom.flower_count === "number") {
       stemCount = analysisBom.flower_count
     } else if (Array.isArray(analysisBom.flowers)) {
-      const count = (analysisBom.flowers as any[]).reduce((sum, f) => sum + (Number(f.quantity) || 0), 0)
+      const count = (analysisBom.flowers as Array<{ quantity?: unknown } | null>).reduce(
+        (sum, f) => sum + (Number(f?.quantity) || 0),
+        0,
+      )
       if (count > 0) stemCount = count
     }
 

@@ -3,10 +3,24 @@
  * Phân lập hoàn toàn theo organization_id (Tenant Isolation).
  */
 
+import type {
+  Prisma,
+  customer_consents,
+  customer_occasions,
+  customers,
+  vouchers,
+} from "@/generated/prisma/client"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy/tenant-context"
 import type { CustomerMasterIndex, CustomerTier } from "../domain/customer-master-index"
 import { deriveCustomerTier } from "../domain/crm-rules"
+
+/** Hàng `customers` kèm các quan hệ mà truy vấn nào `include` thì có. */
+type CustomerRow = customers & {
+  occasions?: customer_occasions[]
+  consents?: customer_consents[]
+  vouchers?: vouchers[]
+}
 
 export interface CreateCustomerInput {
   name: string
@@ -132,7 +146,7 @@ export class CustomerRepository {
     filters?: { tier?: CustomerTier | undefined; search?: string | undefined },
     pagination?: { limit?: number | undefined; offset?: number | undefined }
   ): Promise<{ items: CustomerMasterIndex[]; total: number }> {
-    const where: any = {
+    const where: Prisma.customersWhereInput = {
       organization_id: ctx.organizationId,
       ...(filters?.tier ? { tier: filters.tier } : {}),
       ...(filters?.search
@@ -250,7 +264,7 @@ export class CustomerRepository {
     })
   }
 
-  private mapToMasterIndex(row: any): CustomerMasterIndex {
+  private mapToMasterIndex(row: CustomerRow): CustomerMasterIndex {
     const totalSpentVnd = Number(row.total_spent)
     const orderCount = Number(row.order_count)
     const aovVnd = orderCount > 0 ? Math.round(totalSpentVnd / orderCount) : 0
@@ -276,7 +290,7 @@ export class CustomerRepository {
         preferredFlowers: row.preferred_flowers ?? [],
         preferredColors: row.preferred_colors ?? [],
       },
-      occasions: (row.occasions ?? []).map((o: any) => ({
+      occasions: (row.occasions ?? []).map((o) => ({
         id: o.id,
         name: o.name,
         date: o.date,
@@ -285,12 +299,12 @@ export class CustomerRepository {
         recipientName: o.recipient_name ?? undefined,
         notes: o.notes ?? undefined,
       })),
-      consents: (row.consents ?? []).map((c: any) => ({
+      consents: (row.consents ?? []).map((c) => ({
         channel: c.channel,
         granted: c.granted,
         grantedAt: c.granted_at.toISOString(),
       })),
-      availableVouchers: (row.vouchers ?? []).map((v: any) => ({
+      availableVouchers: (row.vouchers ?? []).map((v) => ({
         code: v.code,
         discountType: v.discount_type,
         discountValue: Number(v.discount_value),

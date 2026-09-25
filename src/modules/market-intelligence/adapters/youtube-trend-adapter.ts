@@ -7,40 +7,30 @@ import type {
   ProviderHealthReport,
 } from "@/core/ports/trend-provider";
 import { estimateTopicContextMetrics } from "../domain/scoring";
+import { readDotenvKey } from "./read-dotenv-key";
 
 /**
  * Adapter YouTube Trend qua SerpApi YouTube Engine.
  * Thu thập dữ liệu video xu hướng cắm hoa, số lượt xem và tốc độ tăng trưởng.
  */
+/** Một kết quả video (engine `youtube`) của SerpApi — chỉ các trường adapter đọc. */
+interface YouTubeVideoResult {
+  title?: string;
+  link?: string;
+  description?: string;
+  views?: number;
+  published_date?: string;
+  channel?: string | { name?: string };
+  thumbnail?: string | { static?: string; rich?: string };
+}
+
 export class YouTubeTrendAdapter implements TrendProvider {
   readonly name = "youtube_trends";
   private readonly apiKey: string | undefined;
   private readonly baseUrl: string;
 
   constructor(options?: { apiKey?: string; baseUrl?: string }) {
-    let key =
-      options?.apiKey ??
-      (typeof process !== "undefined" ? process.env.SERPAPI_API_KEY : undefined);
-
-    if (!key && typeof window === "undefined") {
-      try {
-        const fs = require("fs");
-        const path = require("path");
-        const envPath = path.resolve(process.cwd(), ".env");
-        if (fs.existsSync(envPath)) {
-          const content = fs.readFileSync(envPath, "utf-8");
-          const match = content.match(/^SERPAPI_API_KEY=(.+)$/m);
-          if (match && match[1]) {
-            key = match[1].trim().replace(/^["']|["']$/g, "");
-            if (typeof process !== "undefined") {
-              process.env.SERPAPI_API_KEY = key;
-            }
-          }
-        }
-      } catch {}
-    }
-
-    this.apiKey = key;
+    this.apiKey = options?.apiKey ?? readDotenvKey("SERPAPI_API_KEY");
     this.baseUrl = options?.baseUrl ?? "https://serpapi.com/search.json";
   }
 
@@ -82,11 +72,7 @@ export class YouTubeTrendAdapter implements TrendProvider {
       }
 
       const data = await res.json();
-      const videoResults: Array<{
-        title?: string;
-        views?: number;
-        published_date?: string;
-      }> = data?.video_results ?? [];
+      const videoResults: YouTubeVideoResult[] = data?.video_results ?? [];
 
       if (videoResults.length === 0) {
         return [
@@ -105,7 +91,7 @@ export class YouTubeTrendAdapter implements TrendProvider {
       }
 
       // Lọc nghiêm ngặt: chỉ lấy video thực sự về hoa, loại trừ 100% video review/phim/truyện/nhạc
-      const relevantVideos = videoResults.filter((v: any) => {
+      const relevantVideos = videoResults.filter((v) => {
         const t = (v.title || "").toLowerCase();
         const d = (v.description || "").toLowerCase();
         const c = (typeof v.channel === "string" ? v.channel : v.channel?.name || "").toLowerCase();
@@ -146,7 +132,7 @@ export class YouTubeTrendAdapter implements TrendProvider {
       const avgViews = Math.round(totalViews / topVideos.length);
       const metricVal = Math.min(100, Math.max(30, Math.round(Math.log10(avgViews + 10) * 20)));
 
-      const evidenceSnippets = relevantVideos.slice(0, 3).map((v: any) => {
+      const evidenceSnippets = relevantVideos.slice(0, 3).map((v) => {
         const thumb = typeof v.thumbnail === "string" ? v.thumbnail : v.thumbnail?.static || v.thumbnail?.rich || undefined;
         const channelName = typeof v.channel === "string" ? v.channel : v.channel?.name || "Kênh Hoa Tươi";
         const viewStr = typeof v.views === "number" ? `${v.views.toLocaleString("vi-VN")} lượt xem` : "Xem nhiều";

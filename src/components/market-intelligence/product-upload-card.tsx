@@ -38,6 +38,16 @@ interface CatalogProductItem {
   imageUrl?: string;
 }
 
+/** Một dòng `GET /api/v1/products` — chỉ các trường thẻ chọn từ catalog đọc. */
+interface ProductApiRow {
+  id: string;
+  title?: string;
+  name?: string;
+  price?: number | null;
+  image_url?: string | null;
+  master_asset?: { url?: string } | null;
+}
+
 export function ProductUploadCard({
   selectedImage,
   selectedAssetId,
@@ -114,10 +124,10 @@ export function ProductUploadCard({
       if (res.ok) {
         const json = await res.json();
         const items = Array.isArray(json.data)
-          ? json.data.map((p: any) => ({
+          ? (json.data as ProductApiRow[]).map((p) => ({
               id: p.id,
-              title: p.title || p.name,
-              price: p.price,
+              title: p.title || p.name || "",
+              ...(typeof p.price === "number" ? { price: p.price } : {}),
               imageUrl: p.master_asset?.url || p.image_url || "/images/sample-flower.jpg",
             }))
           : [];

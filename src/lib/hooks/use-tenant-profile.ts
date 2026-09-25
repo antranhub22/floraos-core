@@ -5,6 +5,7 @@ import type { BusinessProfileDetail } from "@/modules/profiles/use-cases/get-bus
 import type { BrandProfileDetail } from "@/modules/profiles/use-cases/get-brand-profile"
 import type { UpsertBusinessProfileInput } from "@/modules/profiles/infra/business-profile-repository"
 import type { UpsertBrandProfileInput } from "@/modules/profiles/infra/brand-profile-repository"
+import { errorText } from "@/lib/error-text"
 
 export interface TenantProfileState {
   business: BusinessProfileDetail | null
@@ -47,14 +48,15 @@ export function useTenantProfile(): TenantProfileState {
 
       setBusiness(bizData)
       setBrand(brandData)
-    } catch (err: any) {
-      setError(err?.message || "Lỗi tải thông tin hồ sơ")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Lỗi tải thông tin hồ sơ")
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     reload()
   }, [reload])
 
@@ -78,8 +80,8 @@ export function useTenantProfile(): TenantProfileState {
       setBusiness(updated)
       setSuccessMessage("Đã lưu thông tin hồ sơ kinh doanh thành công!")
       return true
-    } catch (err: any) {
-      setError(err?.message || "Lỗi khi lưu hồ sơ kinh doanh")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Lỗi khi lưu hồ sơ kinh doanh")
       return false
     } finally {
       setSaving(false)
@@ -106,8 +108,8 @@ export function useTenantProfile(): TenantProfileState {
       setBrand(updated)
       setSuccessMessage("Đã lưu nhận diện thương hiệu thành công!")
       return true
-    } catch (err: any) {
-      setError(err?.message || "Lỗi khi lưu nhận diện thương hiệu")
+    } catch (err: unknown) {
+      setError(errorText(err) || "Lỗi khi lưu nhận diện thương hiệu")
       return false
     } finally {
       setSaving(false)

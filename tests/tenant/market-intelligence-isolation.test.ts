@@ -59,15 +59,15 @@ describe("cách ly tenant — Market Intelligence Engine (content_opportunities)
     // Tenant A gọi GET -> nhận được 1 cơ hội của A
     const resA = await getOpportunities(withSession(BASE, a.token));
     expect(resA.status).toBe(200);
-    const dataA = (await readJson(resA)) as any;
+    const dataA = (await readJson(resA)) as { items: Array<{ topicName: string; organizationId: string }> };
     expect(dataA.items).toHaveLength(1);
-    expect(dataA.items[0].topicName).toBe("hoa tulip pastel");
-    expect(dataA.items[0].organizationId).toBe(a.organizationId);
+    expect(dataA.items[0]?.topicName).toBe("hoa tulip pastel");
+    expect(dataA.items[0]?.organizationId).toBe(a.organizationId);
 
     // Tenant B gọi GET -> không thấy bất kỳ cơ hội nào của Tenant A
     const resB = await getOpportunities(withSession(BASE, b.token));
     expect(resB.status).toBe(200);
-    const dataB = (await readJson(resB)) as any;
+    const dataB = (await readJson(resB)) as { items: unknown[] };
     expect(dataB.items).toHaveLength(0);
   });
 

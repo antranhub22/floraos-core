@@ -824,3 +824,14 @@ Rà soát 25/09 (chiều): bản `a52cabe` trông "hoàn thành" nhưng thực c
 - [ ] Gợi ý đối tác bằng AI (khoảng cách, lịch sử) — nợ #141
 - [ ] Thông báo Zalo ZNS/CRM khi giao xong — `connectors/` vẫn là mã tạm (nợ #142)
 
+## REL-25/09 — Gộp chuỗi Creative Studio vào `main` (25/09/2026)
+
+Chuỗi `feature/creative-production-pipeline` → `fix/creative-studio-production-ready` → `feat/content-engine-p27` → `claude/content-engine-readiness-check-6xbaxa` (142 commit, gồm M01, Media, Market Intelligence, Điều phối, Content Engine) chưa từng chạy CI. Nhánh `release/creative-studio-to-main` dọn các cổng đỏ rồi fast-forward `main`.
+
+- [x] `ci.yml` thêm `SSO_SESSION_SECRET` (thiếu thì `db:seed` chết) và `OPENAI_API_KEY` giả (2 ca `product-copies` đỏ 500)
+- [x] Worker: ca `test_paste_offset_duoc_dung_de_dan_lai_chu_the` cố định mặt nạ chủ thể (đỏ từ `e96d8b8` khi mặc định tách nền đổi sang `isnet-general-use`); kiểm đột biến xác nhận ca vẫn bắt được paste-back hỏng
+- [x] Lint 265 lỗi → 0: 205 `no-explicit-any` thay bằng kiểu thật (payload Prisma, `unknown` + thu hẹp, `Route` của typed routes, interface cho JSON ngoài); `rules-of-hooks` ở `catalog-storefront` (hook sau `return` sớm); `no-require-imports` (gom `readDotenvKey`, dời `scripts_check_migrations.js` → `scripts/xem-prisma-migrations.mjs`); `purity`; 24 `set-state-in-effect` đánh dấu có lý do (nợ #149)
+- [x] Gõ kiểu làm lộ lỗi thật: modal đơn hàng so trạng thái không tồn tại (nợ #150, giữ nguyên hành vi chờ PO); `create-order-modal` nhận `quotePriceVnd = null` → `?? 0` đúng chú thích
+- [x] Cổng CI xanh trên Postgres 16: typecheck · lint · `npm test` 1151/1151 · `check:template-ssot` · schemas creative/coordinator/content-engine · `test:tenant` 244/244 · `test:platform` 5/5 · `build` · worker pytest
+- [ ] Anh Tony chạy lại trên máy thật sau khi kéo `main`: `npx prisma migrate deploy` · `npx prisma generate` · `npm run test:tenant`
+

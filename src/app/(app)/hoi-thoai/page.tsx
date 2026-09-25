@@ -21,11 +21,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
+import type { Route } from "next"
+import type { ChatConversation, ChatMessage } from "@/modules/chat-assistant/domain/chat-types"
 
 export default function ChatAssistantPage() {
-  const [conversations, setConversations] = useState<any[]>([])
+  const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputQuery, setInputQuery] = useState("")
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
@@ -55,6 +57,7 @@ export default function ChatAssistantPage() {
   // 2. Tải tin nhắn của hội thoại đã chọn
   useEffect(() => {
     if (!selectedConvId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     setLoading(true)
     fetch(`/api/v1/chat/conversations/${selectedConvId}/messages`)
       .then((r) => r.json())
@@ -155,7 +158,7 @@ export default function ChatAssistantPage() {
 
         {/* Top-Right Action Header */}
         <div className="flex items-center gap-3">
-          <Link href={"/hoi-thoai/kenh-tich-hop" as any}>
+          <Link href={"/hoi-thoai/kenh-tich-hop" as Route}>
             <Button
               variant="outline"
               size="sm"
@@ -223,7 +226,7 @@ export default function ChatAssistantPage() {
             <div className="flex-1 overflow-y-auto divide-y divide-border">
               {conversations.length === 0 ? (
                 <div className="p-6 text-center text-xs text-muted-foreground">
-                  Chưa có hội thoại nào. Bấm "+ Mới" để bắt đầu!
+                  Chưa có hội thoại nào. Bấm &quot;+ Mới&quot; để bắt đầu!
                 </div>
               ) : (
                 conversations.map((c) => (
@@ -323,7 +326,7 @@ export default function ChatAssistantPage() {
                               Mẫu hoa đề xuất từ Master Catalog ({suggestedFlowers.length} mẫu):
                             </div>
                             <div className="grid grid-cols-1 gap-2.5">
-                              {suggestedFlowers.map((f: any) => (
+                              {suggestedFlowers.map((f) => (
                                 <div
                                   key={f.productId}
                                   className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50/40 p-2.5 shadow-xs"

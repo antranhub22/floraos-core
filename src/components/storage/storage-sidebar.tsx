@@ -90,7 +90,7 @@ export function StorageSidebar({
       const flowerCount =
         typeof effective.flower_count === "number"
           ? effective.flower_count
-          : flowers.reduce((s: number, f: any) => s + (Number(f.quantity ?? f.count) || 0), 0)
+          : flowers.reduce((s: number, f: { quantity?: number | string; count?: number | string }) => s + (Number(f.quantity ?? f.count) || 0), 0)
 
       const title =
         a.product?.name || (effective.product_name as string) || (identity.category as string) || "Bó hoa thiết kế"

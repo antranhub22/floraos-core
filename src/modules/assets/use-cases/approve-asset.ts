@@ -29,7 +29,7 @@ export async function approveAsset(ctx: TenantContext, assetId: string) {
     return { ...asset, url, image_url: url }
   }
 
-  let approvedAsset = await runInTransaction(async (tx) => {
+  const approvedAsset = await runInTransaction(async (tx) => {
     const updated = await new AssetRepository(tx).approve(ctx, assetId, {
       approvedBy: ctx.userId,
       approvedAt: new Date(),

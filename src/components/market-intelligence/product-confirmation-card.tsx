@@ -50,6 +50,7 @@ export function ProductConfirmationCard({
 
   // Đồng bộ lại state khi initial props từ Vision AI thay đổi
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ lại khi kết quả Vision AI (props) đổi, chủ đích
     setComponents(initialComponents);
     setAttributes(initialAttributes);
     setPackaging(initialPackaging);
@@ -69,10 +70,15 @@ export function ProductConfirmationCard({
   const [selectedQueries, setSelectedQueries] = useState<string[]>(synthesized.primaryKeywords);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- gợi ý lại từ khoá khi thành phần sản phẩm đổi, chủ đích
     setSelectedQueries(synthesized.primaryKeywords);
   }, [components, attributes, packaging, context]);
 
-  const handleUpdateComponent = (index: number, field: keyof ProductFlowerComponent, val: any) => {
+  const handleUpdateComponent = <K extends keyof ProductFlowerComponent>(
+    index: number,
+    field: K,
+    val: ProductFlowerComponent[K],
+  ) => {
     const updated = [...components];
     updated[index] = { ...updated[index]!, [field]: val };
     setComponents(updated);

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Lightbulb, Copy, Check, Video, Play, Sparkles, ArrowRight } from "lucide-react";
 import type { OpportunityItem } from "./opportunity-card";
 import { getDualOpportunityEvidencePreview } from "./opportunity-illustration";
+import type { Route } from "next"
 
 interface BriefTopicsViewProps {
   opportunities: OpportunityItem[];
@@ -47,7 +48,7 @@ export function BriefTopicsView({
   const handleCreateVideo = (topicName: string, hook: string) => {
     const cleanTopic = topicName.includes(",") ? topicName.split(",")[0]?.trim() || topicName : topicName;
     const prompt = `${cleanTopic} - ${hook}`;
-    router.push(`/video?prompt=${encodeURIComponent(prompt)}` as any);
+    router.push(`/video?prompt=${encodeURIComponent(prompt)}` as Route);
   };
 
   // Trích xuất toàn bộ hooks từ danh sách cơ hội

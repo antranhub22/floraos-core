@@ -6,6 +6,7 @@ import { POST as addOccasion } from "@/app/api/v1/crm/customers/[id]/occasions/r
 
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, readJson, withSession, type Tenant } from "../helpers/fixtures"
+import type { CustomerMasterIndex } from "@/modules/crm/domain/customer-master-index"
 
 const BASE = "http://localhost/api/v1/crm"
 
@@ -36,7 +37,7 @@ describe("cách ly tenant — CRM & Khách hàng ngành hoa M09 (P21)", () => {
       })
     )
     expect(resCreate.status).toBe(201)
-    const { customer } = (await readJson(resCreate)) as any
+    const { customer } = (await readJson(resCreate)) as { customer: { id: string } }
     const id = customer.id as string
 
     // Tổ chức A đọc lại được
@@ -44,7 +45,7 @@ describe("cách ly tenant — CRM & Khách hàng ngành hoa M09 (P21)", () => {
       params: Promise.resolve({ id }),
     })
     expect(ownRead.status).toBe(200)
-    const ownData = (await readJson(ownRead)) as any
+    const ownData = (await readJson(ownRead)) as { customer: CustomerMasterIndex }
     expect(ownData.customer.name).toBe("Chị Ngọc Anh")
     expect(ownData.customer.preferences.preferredFlowers).toContain("Hồng Ecuador")
 
@@ -65,7 +66,7 @@ describe("cách ly tenant — CRM & Khách hàng ngành hoa M09 (P21)", () => {
         }),
       })
     )
-    const { customer } = (await readJson(resCreate)) as any
+    const { customer } = (await readJson(resCreate)) as { customer: { id: string } }
     const id = customer.id as string
 
     // Tổ chức B cố sửa -> 404
@@ -109,13 +110,13 @@ describe("cách ly tenant — CRM & Khách hàng ngành hoa M09 (P21)", () => {
     )
 
     const resListA = await listCustomers(withSession(`${BASE}/customers`, a.token))
-    const dataA = (await readJson(resListA)) as any
+    const dataA = (await readJson(resListA)) as { items: CustomerMasterIndex[] }
     expect(dataA.items.length).toBe(2)
 
     const resListB = await listCustomers(withSession(`${BASE}/customers`, b.token))
-    const dataB = (await readJson(resListB)) as any
+    const dataB = (await readJson(resListB)) as { items: CustomerMasterIndex[] }
     expect(dataB.items.length).toBe(1)
-    expect(dataB.items[0].name).toBe("Khách B1")
+    expect(dataB.items[0]?.name).toBe("Khách B1")
   })
 
   it("thêm ngày kỷ niệm qua POST /crm/customers/:id/occasions không rò rỉ sang tổ chức khác", async () => {
@@ -125,7 +126,7 @@ describe("cách ly tenant — CRM & Khách hàng ngành hoa M09 (P21)", () => {
         body: JSON.stringify({ name: "Khách Thân Thiết", phone: "0909555666" }),
       })
     )
-    const { customer } = (await readJson(resCreate)) as any
+    const { customer } = (await readJson(resCreate)) as { customer: { id: string } }
     const id = customer.id as string
 
     // Tổ chức B cố thêm dịp -> 404

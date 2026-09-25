@@ -9,6 +9,9 @@
 import schemaContract from "../../../../workers/vision/contracts/Schema.json"
 import type { ResultField, ResultFieldItem } from "@/components/result/result-card"
 
+/** Một dòng thô trong BOM của kết quả phân tích (JSON do mô hình trả, chưa kiểm dạng). */
+type RawRow = Record<string, unknown>
+
 export interface SchemaMetadata {
   name: string
   strict: boolean
@@ -261,7 +264,7 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     : typeof data.total_stems === "number"
       ? data.total_stems
       : Array.isArray(bom.flowers) && bom.flowers.length > 0
-        ? bom.flowers.reduce((sum: number, f: any) => sum + (Number(f.quantity ?? f.count) || 0), 0)
+        ? bom.flowers.reduce((sum: number, f: RawRow) => sum + (Number(f.quantity ?? f.count) || 0), 0)
         : null
 
   const budCount = typeof data.bud_count === "number"
@@ -269,7 +272,7 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     : typeof data.total_buds === "number"
       ? data.total_buds
       : Array.isArray(bom.flowers) && bom.flowers.length > 0
-        ? bom.flowers.reduce((sum: number, f: any) => sum + (Number(f.so_nu) || 0), 0)
+        ? bom.flowers.reduce((sum: number, f: RawRow) => sum + (Number(f.so_nu) || 0), 0)
         : null
 
   const damagedCount = typeof data.damaged_count === "number"
@@ -277,14 +280,16 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     : typeof data.total_damaged === "number"
       ? data.total_damaged
       : Array.isArray(bom.flowers) && bom.flowers.length > 0
-        ? bom.flowers.reduce((sum: number, f: any) => sum + (Number(f.so_hong) || 0), 0)
+        ? bom.flowers.reduce((sum: number, f: RawRow) => sum + (Number(f.so_hong) || 0), 0)
         : null
 
   const soTangLop = typeof sanXuat.so_tang_lop === "number" ? sanXuat.so_tang_lop : null
 
-  const cardPrintedText = accessoriesList.find((a: any) => a.printed_text)?.printed_text
+  const accPrintedText = (accessoriesList as RawRow[]).find((a) => a?.printed_text)?.printed_text
+  const packagingPrintedText = (data.packaging as { card?: { printedText?: unknown } } | null | undefined)?.card?.printedText
+  const cardPrintedText: unknown = accPrintedText
     ?? (typeof data.card_printed_text === "string" ? data.card_printed_text : null)
-    ?? (typeof (data.packaging as any)?.card?.printedText === "string" ? (data.packaging as any).card.printedText : null)
+    ?? (typeof packagingPrintedText === "string" ? packagingPrintedText : null)
 
   // Identity helper
   const idVal = (k: string) => {

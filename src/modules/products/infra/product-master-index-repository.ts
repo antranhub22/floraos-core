@@ -14,6 +14,7 @@
  * liệu cụ thể trông như thật — cùng nguyên tắc đã áp dụng cho Thẻ chào A6 (Giai đoạn 0).
  */
 
+import type { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy/tenant-context"
 import type {
@@ -122,25 +123,32 @@ function asRowArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : []
 }
 
+/**
+ * Quan hệ nạp kèm cho Master Index — dùng chung cho `getById` và `list`.
+ * - `images`: mọi ảnh (MAIN/GALLERY/CATALOG/SOCIAL) — trước bản sửa P-Fix-3b (17/09) chỉ lấy
+ *   MAIN, ba vai trò còn lại của `product_images` bị bỏ qua dù đã có sẵn trong schema.
+ * - `inventory`: tồn kho theo chi nhánh (P-Fix-3a, migration chạy 17/09) — lấy MỌI dòng của
+ *   sản phẩm rồi lọc đúng chi nhánh (`products.branch_id`) trong `mapToMasterIndex`, vì
+ *   `include` không lọc được theo cột của chính bản ghi cha trong cùng một truy vấn.
+ */
+const MASTER_INDEX_INCLUDE = {
+  images: true,
+  variants: true,
+  inventory: true,
+  analyses: {
+    where: { approval_state: "APPROVED" },
+    orderBy: { created_at: "desc" },
+    take: 1,
+  },
+} as const satisfies Prisma.productsInclude
+
+type MasterIndexRow = Prisma.productsGetPayload<{ include: typeof MASTER_INDEX_INCLUDE }>
+
 export class ProductMasterIndexRepository {
   async getById(ctx: TenantContext, productId: string): Promise<ProductMasterIndex | null> {
     const row = await prisma.products.findFirst({
       where: { id: productId, organization_id: ctx.organizationId },
-      include: {
-        // Mọi ảnh (MAIN/GALLERY/CATALOG/SOCIAL) — trước bản sửa P-Fix-3b (17/09) chỉ lấy MAIN,
-        // ba vai trò còn lại của `product_images` bị bỏ qua hoàn toàn dù đã có sẵn trong schema.
-        images: true,
-        variants: true,
-        // Tồn kho theo chi nhánh (P-Fix-3a, migration chạy 17/09) — lấy MỌI dòng của sản phẩm
-        // rồi lọc đúng chi nhánh của sản phẩm (`products.branch_id`) trong `mapToMasterIndex`,
-        // vì `include` không lọc được theo cột của chính bản ghi cha trong cùng một truy vấn.
-        inventory: true,
-        analyses: {
-          where: { approval_state: "APPROVED" },
-          orderBy: { created_at: "desc" },
-          take: 1,
-        },
-      },
+      include: MASTER_INDEX_INCLUDE,
     })
 
     if (!row) return null
@@ -150,16 +158,7 @@ export class ProductMasterIndexRepository {
   async list(ctx: TenantContext, limit = 50): Promise<ProductMasterIndex[]> {
     const rows = await prisma.products.findMany({
       where: { organization_id: ctx.organizationId },
-      include: {
-        images: true,
-        variants: true,
-        inventory: true,
-        analyses: {
-          where: { approval_state: "APPROVED" },
-          orderBy: { created_at: "desc" },
-          take: 1,
-        },
-      },
+      include: MASTER_INDEX_INCLUDE,
       orderBy: { updated_at: "desc" },
       take: limit,
     })
@@ -167,7 +166,7 @@ export class ProductMasterIndexRepository {
     return Promise.all(rows.map((row) => this.mapToMasterIndex(ctx, row)))
   }
 
-  private async mapToMasterIndex(ctx: TenantContext, row: any): Promise<ProductMasterIndex> {
+  private async mapToMasterIndex(ctx: TenantContext, row: MasterIndexRow): Promise<ProductMasterIndex> {
     const attrs = (row.attributes as Record<string, unknown>) ?? {}
     const analysis = row.analyses?.[0]
     const analysisData = ((analysis?.edited ?? analysis?.raw) as Record<string, unknown>) ?? {}

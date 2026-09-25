@@ -133,7 +133,7 @@ interface HeadlineLike {
 export function getOpportunityHeadline(item: HeadlineLike): string {
   const hooks = Array.isArray(item.recommendedHooks) ? item.recommendedHooks : [];
   const firstHook = hooks.find((h): h is string => typeof h === "string" && h.trim().length > 0);
-  let text = firstHook?.trim() || item.opportunitySummary || "";
+  const text = firstHook?.trim() || item.opportunitySummary || "";
 
   // Xử lý mẫu câu lặp cũ "Bật mí bí quyết chọn ... không phải ai cũng biết"
   if (text.startsWith("Bật mí bí quyết chọn ") && text.endsWith(" không phải ai cũng biết")) {
