@@ -63,7 +63,7 @@ Tám trường bắt buộc: `topicId`, `mode`, `sourceImageUrl`, `productName`,
 Cả hai nhánh M04b kiểm `kind = MASTER && approval_state = APPROVED` phía TS (`requestVariants`/`requestCloudVariant`, trả `409`) và kiểm lại ở worker. Ảnh ORIGINAL từ Khu vực A đi qua "Skip — Dùng ảnh gốc" (`POST /media/promote-to-master`, `I2`) — hàm này nay tìm đúng MASTER con của ảnh gốc để không tạo trùng.
 
 ### 2.7. Không chạy mô hình trong request HTTP
-Mọi lượt dựng ảnh/âm thanh/video đi qua `enqueueJob` (hạn mức → trừ credit → `usage` → `generation_jobs` → `NOTIFY` trong một giao dịch, `Idempotency-Key` bắt buộc). `StudioLocalImageProvider` (TS) không còn `execFileSync` Python — luôn ném lỗi rõ ràng; Studio Backdrop Engine chỉ chạy trong worker.
+Mọi lượt dựng ảnh/âm thanh/video đi qua `enqueueJob` (hạn mức → trừ credit → `usage` → `generation_jobs` → `NOTIFY` trong một giao dịch, `Idempotency-Key` bắt buộc). Phía TS không còn adapter nhà cung cấp ảnh nào (gỡ 25/09, nợ #152): nhà cung cấp ảnh và Studio Backdrop Engine chỉ chạy trong worker Python (`workers/media_ai/providers/`).
 
 Lượt LLM văn bản ngắn (người dùng đứng chờ vài giây) chạy **tại chỗ nhưng vẫn có sổ**: `enqueueJob` → `startInline` → `callCapability` qua cổng AI → `finishInline(output)`; hỏng thì `FAILED` + `refundJob`. Gồm `creative.scene_plan`, `creative.scene_revise` (AIC-18) và `creative.content_rewrite` (AIC-23) — cùng khuôn `product.copy.generate`.
 
@@ -119,8 +119,7 @@ src/modules/media/
 ├── domain/variant-rules.ts                 # feature, preset, ratio, ngưỡng, cổng Master
 ├── use-cases/request-variants.ts           # requestVariants · requestVariantBatch · requestCloudVariant
 ├── use-cases/get-variant-job.ts            # trả thêm engine / scene_index / cloud_fallback
-├── adapters/multi-image-provider-router.ts # dùng bởi M04a cloud (execute-cloud-creative) — xem nợ #120
-└── adapters/studio-local-image-provider.ts # luôn ném lỗi (không chạy Python trong web)
+└── adapters/README.md                      # trống — adapter ảnh TS đã gỡ (nợ #152), nhà cung cấp ảnh chỉ ở worker Python
 
 src/modules/audio-studio/  domain/audio-task-rules (4 tác vụ, giá, cam kết) · use-cases/create-audio-job · get-audio-job ·
                            music-tracks · voice-clones · infra/{audio-job,music-track,voice-clone}-repository

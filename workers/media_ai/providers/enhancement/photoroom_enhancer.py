@@ -12,7 +12,7 @@ Năng lực Photoroom KHÔNG có (xoá watermark, chèn chữ) ghi vào `bo_qua`
 
 Lược đồ tham số theo tài liệu API Photoroom v2/edit; CHƯA gọi thật được từ máy
 agent (không có khoá) — xác nhận trên máy thật trước khi bật cho khách (nợ #138).
-Thay adapter TS cũ (`photoroom-image-provider.ts`) vốn gửi `storage_key` nội bộ
+Thay adapter TS cũ (`photoroom-image-provider.ts`, đã gỡ 25/09 — nợ #152) vốn gửi `storage_key` nội bộ
 làm `image_url` dạng JSON tới `/v1/segment` — chưa từng chạy đúng.
 """
 
