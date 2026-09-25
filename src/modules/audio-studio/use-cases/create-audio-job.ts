@@ -14,13 +14,14 @@
 import { unprocessable, validationFailed } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { type TenantContext } from "@/core/tenancy"
+import { providerOrderFor } from "@/modules/creative-production/use-cases/provider-preferences"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
 import type { AudioQualityTier, AudioSceneInput, AudioTaskType, MusicMood, TtsProviderKey } from "../domain/audio-types"
 import {
   AUDIO_TASK_SPECS,
   SELECTABLE_TTS_PROVIDERS,
   VOICE_CLONE_PROVIDER,
-  audioJobCreditCost,
+  audioCostPlan,
   validateAudioTask,
 } from "../domain/audio-task-rules"
 import { getVoiceSpec, resolveProviderVoiceCode } from "../domain/voice-catalog"
@@ -47,6 +48,12 @@ export interface CreateAudioJobInput {
   /** Mood — chỉ dùng để tự chọn bài khi không truyền `musicTrackId`. */
   readonly musicMood?: MusicMood | undefined
   readonly topicAngleCategory?: string | undefined
+  /**
+   * Nhạc nền (PO 25/09/2026 — nhà cung cấp trước): bỏ trống = theo thứ tự tiệm
+   * (nhạc AI sinh theo tâm trạng, bài `musicTrackId` là đường lùi);
+   * `library` = chỉ dùng bài thư viện / bài tiệm tải (0 credit).
+   */
+  readonly musicProvider?: string | undefined
   /** Kịch bản sản xuất tổng mà bản âm thanh thực thi (job id hoặc `rule:…`) + phiên bản. */
   readonly scenePlanId?: string | undefined
   readonly scenePlanRevision?: number | undefined
@@ -62,6 +69,8 @@ export interface CreateAudioJobResult {
   readonly creditsCost: number
   readonly voiceDisplayName: string | null
   readonly providerKey: TtsProviderKey | null
+  /** Nhà cung cấp sinh nhạc đứng đầu lượt này; `null` = chỉ bài thư viện. */
+  readonly musicProvider: string | null
   readonly musicTrackName: string | null
   readonly musicLicenseVerified: boolean | null
   readonly usage: { readonly costCredit: number; readonly balanceAfter: number | null }
@@ -85,6 +94,11 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
   const taskType: AudioTaskType = input.taskType ?? (musicTrackId ? "AUDIO_MIX" : "VOICEOVER")
   const spec = AUDIO_TASK_SPECS[taskType]
   if (spec.music === "none") musicTrackId = undefined
+  // Nhạc AI cần một bài dự phòng: tác vụ bắt buộc nhạc mà chưa chọn bài thì lấy theo tâm trạng.
+  const wantsAiMusic = spec.music !== "none" && input.musicProvider !== "library"
+  if (wantsAiMusic && spec.music === "required" && !musicTrackId) {
+    musicTrackId = suggestMusicTrack(musicMood && musicMood !== "none" ? musicMood : "romantic")?.trackId
+  }
 
   const errors = validateAudioTask({
     taskType,
@@ -104,6 +118,7 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
   let providerVoiceCode: string | null = null
   let providerVoiceMap: Readonly<Partial<Record<TtsProviderKey, string>>> | null = null
   let strictProvider = false
+  let providerOrder: TtsProviderKey[] = []
 
   if (taskType === "VOICE_CLONE") {
     const clone = await requireReadyVoiceClone(ctx, input.voiceCloneId as string)
@@ -117,7 +132,11 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
     const voiceSpec = getVoiceSpec(input.voiceId ?? "flora-nu-truyen-cam")
     voiceId = voiceSpec.voiceId
     voiceDisplayName = voiceSpec.displayName
-    providerKey = input.providerKey ?? voiceSpec.defaultProvider
+    // Nhà cung cấp trước (PO 25/09/2026): bên chọn cho lượt → thứ tự tiệm → mặc định.
+    providerOrder = (await providerOrderFor(ctx, "voice", input.providerKey)).filter((p): p is TtsProviderKey =>
+      SELECTABLE_TTS_PROVIDERS.includes(p as TtsProviderKey)
+    )
+    providerKey = input.providerKey ?? providerOrder[0] ?? voiceSpec.defaultProvider
     if (!SELECTABLE_TTS_PROVIDERS.includes(providerKey)) {
       throw unprocessable("Nhà cung cấp không dùng được trong bản thương mại", { providerKey: `Nhà cung cấp ${providerKey} không dùng được trong bản thương mại` })
     }
@@ -126,12 +145,16 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
     providerVoiceMap = voiceSpec.providerVoiceMap
   }
 
-  const creditsCost = audioJobCreditCost({
+  const musicProviderOrder = music && wantsAiMusic ? await providerOrderFor(ctx, "music", input.musicProvider) : []
+  const costPlan = audioCostPlan({
     taskType,
-    providerKey: providerKey ?? "openai",
+    providerKey,
     qualityTier,
     scenes: input.scenes,
+    musicProvider: musicProviderOrder[0] ?? null,
+    musicSeconds: input.totalDurationSeconds,
   })
+  const creditsCost = costPlan.voiceCredit + costPlan.musicCredit
 
   const enqueued = await enqueueJob(ctx, {
     feature: "audio.generate",
@@ -153,6 +176,7 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
       voiceDisplayName,
       voiceCloneId: taskType === "VOICE_CLONE" ? input.voiceCloneId : null,
       providerKey,
+      providerOrder,
       providerVoiceCode,
       providerVoiceMap,
       strictProvider,
@@ -163,6 +187,9 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
       musicStorageKey: music?.musicStorageKey ?? null,
       musicTrackName: music?.title ?? null,
       musicMood: music?.mood ?? "none",
+      musicProviderOrder,
+      musicPromptHint: input.topicAngleCategory ?? null,
+      cost_plan: costPlan,
       voiceVolume: 1.0,
       bgmDuckingVolume: 0.22,
       bgmNormalVolume: 0.65,
@@ -179,6 +206,7 @@ export async function createAudioJob(ctx: TenantContext, input: CreateAudioJobIn
     creditsCost,
     voiceDisplayName,
     providerKey,
+    musicProvider: musicProviderOrder[0] ?? null,
     musicTrackName: music?.title ?? null,
     musicLicenseVerified: music ? music.licenseVerified : null,
     usage: enqueued.usage,

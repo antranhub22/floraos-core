@@ -3,6 +3,8 @@
 import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Sparkles, Cpu, Cloud, Zap } from "lucide-react"
+import { optimizationPriceKey } from "@/modules/media/domain/optimization-rules"
+import { costCreditForFeature } from "@/modules/usage/domain/pricing"
 
 export interface EnhancerProviderOption {
   id: string
@@ -13,28 +15,50 @@ export interface EnhancerProviderOption {
   icon: React.ElementType
 }
 
+/**
+ * Chỉ những bộ máy worker `media.optimize` thật sự có — khớp
+ * `OPTIMIZE_ENHANCER_PROVIDERS` (`src/modules/media/domain/optimization-rules.ts`),
+ * route từ chối mã khác. Gemini/Replicate gỡ 25/09/2026: ở worker còn là stub
+ * luôn lùi PIL. Nhà cung cấp lỗi thì worker lùi về Studio và ghi lý do.
+ */
 export const ENHANCER_PROVIDERS: EnhancerProviderOption[] = [
+  {
+    id: "auto",
+    name: "Theo thứ tự ưu tiên của tiệm",
+    desc: "Thử lần lượt các nhà cung cấp theo thứ tự trong Cài đặt → Nhà cung cấp AI; bên lỗi thì chuyển bên kế tiếp, hết bên mới dùng Studio cục bộ và hoàn phần chênh.",
+    badge: "Khuyên dùng",
+    tone: "success",
+    icon: Sparkles,
+  },
   {
     id: "photoroom",
     name: "Photoroom AI (Chuẩn E-commerce Quốc tế)",
-    desc: "Khóa 100% chi tiết hoa thật, tự động sinh bối cảnh studio chuyên nghiệp và đổ bóng tiếp xúc vật lý.",
+    desc: "Photoroom tách nền, đặt lên phông studio trắng, đổ bóng và chỉnh sáng AI, tăng nét. Không xoá watermark — cần xoá thì dùng Studio AI Pipeline.",
     badge: "Thương mại",
     tone: "success",
     icon: Sparkles,
   },
   {
     id: "fal_flux",
-    name: "Fal.ai FLUX + IC-Light (Đỉnh cao Studio)",
-    desc: "Model FLUX.1 Fill kết hợp IC-Light hòa trộn ánh sáng môi trường chân thực nhất thế giới hiện nay.",
+    name: "Fal.ai Product Shot (Studio cao cấp)",
+    desc: "fal.ai tách nền (BiRefNet), dựng phông studio và hoà sáng (BRIA Product Shot), tăng nét 2x (Real-ESRGAN). Không xoá watermark.",
     badge: "Cao cấp",
     tone: "accent",
     icon: Zap,
   },
   {
+    id: "imagen",
+    name: "Google Gemini Image",
+    desc: "Gemini dựng phông studio và chỉnh sáng theo mô tả; bó hoa được FloraOS đo lại. Không xoá watermark.",
+    badge: "Cloud AI",
+    tone: "accent",
+    icon: Cloud,
+  },
+  {
     id: "studio",
-    name: "Studio AI Pipeline (Chuẩn E-commerce)",
-    desc: "Bóc tách nền vi phẫu, xóa sạch watermark, ghép phông Studio thương mại và đổ bóng tự nhiên.",
-    badge: "Khuyên dùng / 0đ",
+    name: "Studio cục bộ (dự phòng)",
+    desc: "Chạy trên máy chủ FloraOS: tách nền, xoá watermark, ghép phông Studio. Chất lượng thấp hơn nhà cung cấp — dùng khi cần xoá watermark hoặc tiết kiệm.",
+    badge: "Dự phòng",
     tone: "accent",
     icon: Sparkles,
   },
@@ -49,26 +73,10 @@ export const ENHANCER_PROVIDERS: EnhancerProviderOption[] = [
   {
     id: "local",
     name: "Real-ESRGAN / PIL Lanczos (Local)",
-    desc: "Xử lý trực tiếp trên máy chủ cục bộ, siêu tốc độ, không tốn credit API và không cần internet.",
+    desc: "Xử lý trực tiếp trên máy chủ cục bộ, không gọi nhà cung cấp bên ngoài và không cần internet.",
     badge: "Nội bộ 0đ",
     tone: "neutral",
     icon: Cpu,
-  },
-  {
-    id: "gemini",
-    name: "Google Gemini Imagen (Cloud)",
-    desc: "Công nghệ AI tạo hình từ Google Cloud, tối ưu màu sắc rực rỡ và cân bằng dải tương phản rộng.",
-    badge: "Cloud AI",
-    tone: "success",
-    icon: Cloud,
-  },
-  {
-    id: "replicate",
-    name: "Replicate Real-ESRGAN (Cloud GPU)",
-    desc: "Cụm máy chủ GPU chuyên dụng trên đám mây, siêu phân giải độ nét cao phù hợp ảnh chụp mờ nhòe.",
-    badge: "Cloud GPU",
-    tone: "warning",
-    icon: Zap,
   },
 ]
 
@@ -91,7 +99,7 @@ export function EnhancerProviderSelector({
           <span>Phương thức & Nhà cung cấp AI (Provider)</span>
         </div>
         <span className="text-[11px] text-text-muted">
-          Mặc định: <strong className="text-primary font-semibold">OpenAI Image AI</strong>
+          Mặc định: <strong className="text-primary font-semibold">Theo thứ tự ưu tiên của tiệm</strong>
         </span>
       </div>
 
@@ -132,6 +140,11 @@ export function EnhancerProviderSelector({
 
               <div className="text-[11px] leading-relaxed text-text-muted mt-2 pl-5.5">
                 {provider.desc}
+              </div>
+              <div className="text-[11px] font-semibold text-text mt-1 pl-5.5">
+                {costCreditForFeature(optimizationPriceKey({ enhancer_provider: provider.id }))} credit/lượt
+                {optimizationPriceKey({ enhancer_provider: provider.id }) === "media.optimize.cloud" &&
+                  " · nhà cung cấp lỗi thì hoàn phần chênh"}
               </div>
             </label>
           )

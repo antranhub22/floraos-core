@@ -27,18 +27,23 @@ import type {
   CommercialPassport,
 } from "@/modules/market-intelligence/domain/product-intelligence-types";
 
+const EMPTY_ATTRIBUTES: ProductVisualAttributes = { mainColors: [], secondaryColors: [], style: "", shape: "", sizeEstimate: "" };
+const EMPTY_PACKAGING: ProductPackaging = { wrappingMaterial: "", wrappingColor: "", ribbon: "", accessories: [] };
+const EMPTY_CONTEXT: ProductInferredContext = { likelyOccasions: [], likelyAudience: "", suggestedPrice: 0, confidence: 0 };
+
 export function ProductIntelligenceWorkspace() {
   const router = useRouter();
 
   // State Chặng 01: Ảnh & Tên
-  const [selectedImage, setSelectedImage] = useState(
-    "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=600&q=80"
-  );
+  // Không chọn sẵn ảnh/dữ liệu mẫu (25/09/2026): bấm "Bóc tách" là một lượt Vision
+  // AI thu credit, và các giá trị bịa sẵn ("Hoa hồng kem dâu 12 cành", giá
+  // 599.000đ, 94%) đi thẳng vào Chặng 03–05 như thể là số đo.
+  const [selectedImage, setSelectedImage] = useState("");
   const [selectedAssetId, setSelectedAssetId] = useState<string | undefined>();
   // Phạm vi sản xuất (PO 24/09/2026): chọn cuối Chặng 04, sửa tiếp ở đầu Chặng 05.
   // Mặc định mỗi lần mở: TikTok + Reels 9:16, đủ 4 loại kết quả.
   const [productionScope, setProductionScope] = useState<ProductionScope>(DEFAULT_PRODUCTION_SCOPE);
-  const [productTitle, setProductTitle] = useState("Bó hoa hồng pastel phong cách Hàn Quốc");
+  const [productTitle, setProductTitle] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
 
@@ -46,33 +51,10 @@ export function ProductIntelligenceWorkspace() {
   const [hasExtracted, setHasExtracted] = useState(false);
   const [isSubmittingMatch, setIsSubmittingMatch] = useState(false);
 
-  const [components, setComponents] = useState<ProductFlowerComponent[]>([
-    { flowerType: "Hoa hồng kem dâu", quantityEstimate: 12, unit: "cành", role: "dominant" },
-    { flowerType: "Hoa baby trắng", quantityEstimate: 5, unit: "nhánh", role: "supporting" },
-    { flowerType: "Lá bạc Eucalyptus", quantityEstimate: 3, unit: "cành", role: "foliage" },
-  ]);
-
-  const [attributes, setAttributes] = useState<ProductVisualAttributes>({
-    mainColors: ["Pastel hồng", "Trắng kem"],
-    secondaryColors: ["Xanh bạc lá cây"],
-    style: "Romantic & Tinh tế",
-    shape: "Bó tròn tự nhiên",
-    sizeEstimate: "Tiêu chuẩn (M)",
-  });
-
-  const [packaging, setPackaging] = useState<ProductPackaging>({
-    wrappingMaterial: "Giấy lụa mờ Kraft",
-    wrappingColor: "Hồng phấn & Trắng",
-    ribbon: "Ruy băng voan trắng",
-    accessories: ["Thiệp chúc mừng thiết kế"],
-  });
-
-  const [context, setContext] = useState<ProductInferredContext>({
-    likelyOccasions: ["Sinh nhật bạn gái", "Kỷ niệm ngày cưới", "Chúc mừng"],
-    likelyAudience: "Nữ giới 20–35 tuổi hoặc Nam giới mua tặng",
-    suggestedPrice: 599000,
-    confidence: 0.94,
-  });
+  const [components, setComponents] = useState<ProductFlowerComponent[]>([]);
+  const [attributes, setAttributes] = useState<ProductVisualAttributes>(EMPTY_ATTRIBUTES);
+  const [packaging, setPackaging] = useState<ProductPackaging>(EMPTY_PACKAGING);
+  const [context, setContext] = useState<ProductInferredContext>(EMPTY_CONTEXT);
 
   // State Chặng 03+: Báo cáo Product Intelligence
   const [report, setReport] = useState<ProductIntelligenceReport | null>(null);
@@ -100,7 +82,8 @@ export function ProductIntelligenceWorkspace() {
       });
 
       if (!res.ok) {
-        throw new Error("Không thể bóc tách ảnh bằng Vision AI");
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error?.message || "Không thể bóc tách ảnh bằng Vision AI");
       }
 
       const data = await res.json();
@@ -117,7 +100,12 @@ export function ProductIntelligenceWorkspace() {
       }, 200);
     } catch (err: unknown) {
       setExtractError(err instanceof Error ? err.message : "Lỗi khi chạy Vision AI bóc tách sản phẩm");
-      // Cho phép tiếp tục nếu có dữ liệu sẵn
+      // Đường nhập tay (thiết kế PO): mở form với các ô TRỐNG để chủ tiệm tự điền
+      // — không đi tiếp bằng dữ liệu bịa của lượt trước hay giá trị mặc định.
+      setComponents([]);
+      setAttributes(EMPTY_ATTRIBUTES);
+      setPackaging(EMPTY_PACKAGING);
+      setContext(EMPTY_CONTEXT);
       setHasExtracted(true);
     } finally {
       setIsAnalyzing(false);

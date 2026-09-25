@@ -1,10 +1,13 @@
 /**
- * OpenAI Vision Adapter cho phân hệ Market Intelligence.
- * Sử dụng mô hình gpt-4o-mini đa phương thức (multimodal) để bóc tách cấu trúc hoa thực tế từ ảnh
- * (Data URL base64 hoặc Web URL).
+ * Chặng 02 — lời nhắc + bộ đọc JSON cho bước bóc tách ảnh sản phẩm hoa.
+ *
+ * 25/09/2026 (nợ #155): KHÔNG còn gọi thẳng API nhà cung cấp ở đây. Lời gọi đi
+ * qua cổng AI (`callCapability`, `product-vision-ai-adapter.ts`) với nhiều nhà
+ * cung cấp tương đương (OpenAI / Claude / Gemini) theo thứ tự ưu tiên của tiệm.
+ * Tệp này chỉ giữ phần THUẦN: lời nhắc hệ thống, lời dặn cho ảnh, và ánh xạ
+ * JSON mô hình trả về sang kiểu miền.
  */
 
-import { env } from "@/lib/env";
 import type {
   ProductFlowerComponent,
   ProductVisualAttributes,
@@ -32,33 +35,7 @@ export interface VisionExtractionResult {
   context: ProductInferredContext;
 }
 
-export async function extractProductVisionWithAI(params: {
-  imageUrl: string;
-  productTitle?: string | undefined;
-}): Promise<VisionExtractionResult | null> {
-  const apiKey = env.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
-
-  const { imageUrl, productTitle } = params;
-
-  // Chỉ gửi sang OpenAI nếu URL là Data URL base64 hoặc URL công khai http/https
-  const isEligibleUrl =
-    imageUrl.startsWith("data:image/") ||
-    imageUrl.startsWith("https://") ||
-    imageUrl.startsWith("http://");
-
-  if (!isEligibleUrl || imageUrl.startsWith("blob:")) {
-    return null;
-  }
-
-  // Trong môi trường test tự động, không gọi mạng bên ngoài trừ khi có LIVE_AI_TEST
-  if (process.env.NODE_ENV === "test" && !process.env.LIVE_AI_TEST) {
-    return null;
-  }
-
-  const systemPrompt = `Bạn là chuyên gia thẩm định thị giác hoa nghệ thuật cao cấp của FloraOS.
+export const PRODUCT_VISION_SYSTEM_PROMPT = `Bạn là chuyên gia thẩm định thị giác hoa nghệ thuật cao cấp của FloraOS.
 Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa tươi được cung cấp, nhận diện chính xác từng chi tiết và xuất ra định dạng JSON thuần túy (không markdown, không giải thích ngoài JSON) theo đúng cấu trúc sau:
 {
   "product_name": "Tên thương mại cuốn hút cho sản phẩm (ví dụ: Bó hoa hồng đỏ Passionate Love, Bó hoa tulip cam cháy vintage...)",
@@ -107,58 +84,21 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
   "occasions": ["Dịp tặng phù hợp 1", "Dịp tặng phù hợp 2"], // ví dụ: ["Tỏ tình lãng mạn", "Kỷ niệm tình yêu", "Sinh nhật bạn gái", "Valentine"]
   "audience": "Mô tả tệp khách hàng phù hợp nhất (ví dụ: Nam giới 20–35 tuổi tặng bạn gái / vợ)",
   "suggested_price": 650000, // Giá bán đề xuất thực tế (VND)
-  "confidence": 0.95 // Độ tin cậy (0.85 - 0.98)
+  "confidence": 0.9 // Độ tin cậy mô hình tự đánh giá (0–1), KHÔNG làm tròn lên
 }`;
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Hãy quan sát thật kỹ và bóc tách toàn diện sản phẩm hoa trong bức ảnh này.${
-                  productTitle ? ` Gợi ý tiêu đề ban đầu: ${productTitle}.` : ""
-                } Đặc biệt chú ý:
+export function productVisionUserText(productTitle?: string | undefined): string {
+  return `Hãy quan sát thật kỹ và bóc tách toàn diện sản phẩm hoa trong bức ảnh này.${
+    productTitle ? ` Gợi ý tiêu đề ban đầu: ${productTitle}.` : ""
+  } Đặc biệt chú ý:
 1. Nhận diện các loại hoa chính, hoa phụ và cả LÁ PHỤ ĐỆM (foliage).
 2. Soi kỹ mặt trước, chân bó và vùng nơ xem CÓ THIỆP / BIỂN CHỮ KHÔNG, đọc chính xác nội dung chữ in/viết trên thiệp (OCR).
-3. Bóc tách chi tiết chất liệu giấy gói, màu ruy băng và phụ kiện trang trí đi kèm.`,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl,
-                  detail: "high",
-                },
-              },
-            ],
-          },
-        ],
-        max_tokens: 1500,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(20000), // Timeout 20s
-    });
+3. Bóc tách chi tiết chất liệu giấy gói, màu ruy băng và phụ kiện trang trí đi kèm.`;
+}
 
-    if (!response.ok) {
-      console.warn("OpenAI Vision API response error:", response.status, await response.text());
-      return null;
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) return null;
-
+/** Đọc JSON mô hình trả về → kiểu miền. Không đọc được / không có thành phần hoa → `null`. */
+export function parseProductVisionJson(content: string, productTitle?: string | undefined): VisionExtractionResult | null {
+  try {
     const parsed = JSON.parse(content);
 
     const components: ProductFlowerComponent[] = [];
@@ -167,7 +107,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
         components.push({
           id: `flower-${idx}`,
           flowerType: f.name || `Hoa tươi #${idx + 1}`,
-          quantityEstimate: parseInt(String(f.count)) || (idx === 0 ? 12 : 5),
+          quantityEstimate: parseInt(String(f.count)) || 0,
           unit: f.unit || "cành",
           role: f.role === "supporting" ? "supporting" : "dominant",
         });
@@ -179,7 +119,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
         components.push({
           id: `foliage-${idx}`,
           flowerType: fol.name || "Lá phụ trang trí",
-          quantityEstimate: parseInt(String(fol.count)) || 3,
+          quantityEstimate: parseInt(String(fol.count)) || 0,
           unit: fol.unit || "cành",
           role: "foliage",
         });
@@ -193,11 +133,11 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
     const attributes: ProductVisualAttributes = {
       mainColors: Array.isArray(parsed.dominant_colors) && parsed.dominant_colors.length > 0
         ? parsed.dominant_colors
-        : ["Đỏ nhung", "Trắng"],
-      secondaryColors: Array.isArray(parsed.secondary_colors) ? parsed.secondary_colors : ["Xanh rêu"],
-      style: parsed.style || "Classic Romantic & Tinh tế",
-      shape: parsed.shape || "Bó tròn nở rộ",
-      sizeEstimate: parsed.size || "Tiêu chuẩn (M)",
+        : [],
+      secondaryColors: Array.isArray(parsed.secondary_colors) ? parsed.secondary_colors : [],
+      style: parsed.style || "",
+      shape: parsed.shape || "",
+      sizeEstimate: parsed.size || "",
     };
 
     // Phân rã nguyên tử phụ liệu (Card, Ribbon, Decor)
@@ -216,14 +156,14 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
 
     const ribbonDetail = parsed.ribbon_detail
       ? {
-          ribbonMaterial: parsed.ribbon_detail.material || parsed.ribbon || "Ruy băng voan",
-          ribbonColor: parsed.ribbon_detail.color || "Trắng kem",
-          bowStyle: parsed.ribbon_detail.bow_style || "Nơ cánh bướm",
+          ribbonMaterial: parsed.ribbon_detail.material || parsed.ribbon || "",
+          ribbonColor: parsed.ribbon_detail.color || "",
+          bowStyle: parsed.ribbon_detail.bow_style || "",
         }
       : {
-          ribbonMaterial: parsed.ribbon || "Ruy băng voan thắt nơ",
-          ribbonColor: "Trắng kem",
-          bowStyle: "Nơ 2 lớp",
+          ribbonMaterial: parsed.ribbon || "",
+          ribbonColor: "",
+          bowStyle: "",
         };
 
     const otherAccessories = Array.isArray(parsed.other_accessories)
@@ -244,14 +184,11 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
     if (otherAccessories.length > 0) {
       otherAccessories.forEach((acc: { name: string; quantity: number; unit: string }) => accessoriesList.push(`${acc.name} (${acc.quantity} ${acc.unit})`));
     }
-    if (accessoriesList.length === 0) {
-      accessoriesList.push("Thiệp chúc mừng cao cấp");
-    }
 
     const packaging: ProductPackaging = {
-      wrappingMaterial: parsed.wrapping_material || "Giấy lụa mờ cao cấp",
-      wrappingColor: parsed.wrapping_color || "Trắng kem xếp tầng",
-      ribbon: parsed.ribbon || `${ribbonDetail.ribbonMaterial} màu ${ribbonDetail.ribbonColor}`,
+      wrappingMaterial: parsed.wrapping_material || "",
+      wrappingColor: parsed.wrapping_color || "",
+      ribbon: parsed.ribbon || [ribbonDetail.ribbonMaterial, ribbonDetail.ribbonColor].filter(Boolean).join(" màu "),
       accessories: accessoriesList,
       card,
       ribbonDetail,
@@ -260,7 +197,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
 
     const inferredOccasions: string[] = Array.isArray(parsed.occasions) && parsed.occasions.length > 0
       ? parsed.occasions
-      : ["Sinh nhật bạn gái", "Kỷ niệm tình yêu", "Tỏ tình lãng mạn"];
+      : [];
 
     // Nếu chữ trên thiệp có chứa từ khoá dịp cụ thể, đưa lên đầu danh sách dịp
     if (card.printedText) {
@@ -276,9 +213,10 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
 
     const context: ProductInferredContext = {
       likelyOccasions: inferredOccasions,
-      likelyAudience: parsed.audience || "Khách hàng mua tặng người yêu, phân khúc hiện đại",
-      suggestedPrice: parseInt(parsed.suggested_price) || 699000,
-      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.95,
+      likelyAudience: parsed.audience || "",
+      // 0 = mô hình không đề xuất — giao diện để trống cho chủ tiệm tự nhập, không bịa giá.
+      suggestedPrice: parseInt(parsed.suggested_price) || 0,
+      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
     };
 
     return {
@@ -288,8 +226,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
       packaging,
       context,
     };
-  } catch (error) {
-    console.error("Lỗi khi thực hiện OpenAI Vision analysis:", error);
+  } catch {
     return null;
   }
 }

@@ -193,3 +193,35 @@ describe("bộ định tuyến — năm ràng buộc của D17", () => {
     if (decision.kind === "chon") expect(decision.model.key).toBe("cao_re")
   })
 })
+
+describe("thứ tự ưu tiên nhà cung cấp của tổ chức (PO 25/09/2026)", () => {
+  const ds = [
+    model("gpt", { provider: "openai", qualityClass: "cao" }),
+    model("claude", { provider: "anthropic", qualityClass: "cao", measureState: "THU_NGHIEM" }),
+    model("gemini", { provider: "google", qualityClass: "cao", measureState: "THU_NGHIEM" }),
+    model("claude_nho", { provider: "anthropic", qualityClass: "trung_binh", measureState: "THU_NGHIEM" }),
+    model("la_chua_chon", { provider: "khac", qualityClass: "cao", measureState: "THU_NGHIEM" }),
+  ]
+
+  it("chọn đúng bên đứng đầu thứ tự, kể cả khi chưa đo (tổ chức tự chọn)", () => {
+    const d = selectModel(ds, openPolicy, { capability: vision, preferredModelKeys: ["claude", "gpt"] })
+    expect(d.kind === "chon" && d.model.key).toBe("claude")
+  })
+
+  it("mô hình chưa đo KHÔNG có trong thứ tự thì vẫn không được chọn tự động", () => {
+    const d = selectModel([ds[4]!], openPolicy, { capability: vision, preferredModelKeys: ["claude"] })
+    expect(d.kind).toBe("tu_choi")
+  })
+
+  it("dự phòng đi theo thứ tự của tổ chức, kể cả xuống lớp đã xếp", () => {
+    const req = { capability: vision, preferredModelKeys: ["claude", "gemini", "claude_nho"] }
+    expect(nextFallback(ds[1]!, ds, openPolicy, req)?.key).toBe("gemini")
+    expect(nextFallback(ds[2]!, ds, openPolicy, req, ["claude"])?.key).toBe("claude_nho")
+    expect(nextFallback(ds[3]!, ds, openPolicy, req, ["claude", "gemini"])).toBeNull()
+  })
+
+  it("thứ tự không vượt trần của tổ chức", () => {
+    const d = selectModel(ds, { allowedModels: ["gpt"] }, { capability: vision, preferredModelKeys: ["claude", "gpt"] })
+    expect(d.kind === "chon" && d.model.key).toBe("gpt")
+  })
+})

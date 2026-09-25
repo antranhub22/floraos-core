@@ -41,6 +41,7 @@ export const POST = handle(async (request) => {
     musicTrackId: d.musicTrackId,
     musicMood: d.musicMood,
     topicAngleCategory: d.topicAngleCategory,
+    musicProvider: d.musicProvider,
     scenePlanId: d.scenePlanId,
     scenePlanRevision: d.scenePlanRevision,
     idempotencyKey,

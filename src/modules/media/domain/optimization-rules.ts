@@ -15,6 +15,44 @@
  * Tệp này không import hạ tầng.
  */
 
+/**
+ * Bộ máy tối ưu ảnh worker `media.optimize` thật sự có
+ * (`workers/media_ai/providers/enhancement/router.py#ENHANCER_REGISTRY`) — cả
+ * nhánh cục bộ lẫn nhánh nhà cung cấp đều đi qua hàng đợi (25/09/2026, trả nợ
+ * #120). Mã lạ bị từ chối ở route thay vì để worker âm thầm lùi về Studio.
+ * `gemini`/`replicate` không có ở đây: hai bộ máy đó ở worker còn là stub luôn
+ * lùi PIL — nhận chúng là bán một lựa chọn không tồn tại.
+ */
+export const OPTIMIZE_ENHANCER_PROVIDERS = ["auto", "studio", "local", "openai", "photoroom", "fal_flux", "fal", "imagen"] as const
+export type OptimizeEnhancerProvider = (typeof OPTIMIZE_ENHANCER_PROVIDERS)[number]
+
+export function isOptimizeEnhancerProvider(value: unknown): value is OptimizeEnhancerProvider {
+  return typeof value === "string" && (OPTIMIZE_ENHANCER_PROVIDERS as readonly string[]).includes(value)
+}
+
+/** Bộ máy gọi nhà cung cấp trả phí — thu giá `media.optimize.cloud` (bảng giá v1, 25/09/2026). */
+export const OPTIMIZE_CLOUD_PROVIDERS = ["openai", "photoroom", "fal_flux", "fal", "imagen"] as const satisfies readonly OptimizeEnhancerProvider[]
+
+/**
+ * PO 25/09/2026 — nhà cung cấp TRƯỚC: mọi lượt tối ưu chạy chuỗi nhà cung cấp
+ * (`provider_order`) trừ khi người dùng chọn ĐÍCH DANH bộ máy cục bộ.
+ * `"auto"` / vắng = theo thứ tự ưu tiên của tiệm.
+ */
+export function isExplicitLocalEngine(provider: unknown): boolean {
+  return provider === "studio" || provider === "local"
+}
+
+/** Khoá giá của một lượt tối ưu: theo BỘ MÁY được chọn, không theo cờ `engine`. */
+export function optimizationPriceKey(config: Record<string, unknown> | undefined): "media.optimize" | "media.optimize.cloud" {
+  const order = config?.provider_order
+  if (Array.isArray(order) && order.length > 0) return "media.optimize.cloud"
+  const provider = config?.enhancer_provider
+  if (provider === "auto") return "media.optimize.cloud"
+  return typeof provider === "string" && (OPTIMIZE_CLOUD_PROVIDERS as readonly string[]).includes(provider)
+    ? "media.optimize.cloud"
+    : "media.optimize"
+}
+
 export const GUARD_RESULTS = ["SAFE", "GOOD", "WARNING", "REJECTED"] as const
 export type GuardResult = (typeof GUARD_RESULTS)[number]
 

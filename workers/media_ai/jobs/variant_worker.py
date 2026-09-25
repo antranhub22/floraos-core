@@ -1204,7 +1204,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
         # ── Luồng nhà cung cấp trọn gói (PO 25/09/2026) ─────────────────────
         ket_qua_ncc = None
         if la_cloud and compose_mode == "relight" and fill_mode != "pad":
-            nha_cung_cap = thu_tu_nha_cung_cap(payload.get("provider"))
+            nha_cung_cap = thu_tu_nha_cung_cap(payload.get("provider"), payload.get("provider_order"))
             bat_dau_ncc = time.monotonic()
             try:
                 ket_qua_ncc = dung_bien_the_nha_cung_cap(

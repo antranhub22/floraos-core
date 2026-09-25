@@ -119,7 +119,7 @@ def _output(conn: _Conn) -> dict:
 
 
 def test_dam_may_mac_dinh_la_nha_cung_cap_tron_goi(moi_truong, monkeypatch):
-    monkeypatch.setattr(vw, "thu_tu_nha_cung_cap", lambda _p=None: [_Ncc(moi_truong["alpha"])])
+    monkeypatch.setattr(vw, "thu_tu_nha_cung_cap", lambda *_a, **_k: [_Ncc(moi_truong["alpha"])])
     conn = _Conn()
     vw.process_variant_job(conn, _job(vw.CLOUD_FEATURE, scene_prompt="table"))
     out = _output(conn)
@@ -132,7 +132,7 @@ def test_dam_may_mac_dinh_la_nha_cung_cap_tron_goi(moi_truong, monkeypatch):
 
 
 def test_moi_nha_cung_cap_loi_thi_lui_cuc_bo(moi_truong, monkeypatch):
-    monkeypatch.setattr(vw, "thu_tu_nha_cung_cap", lambda _p=None: [_Ncc(moi_truong["alpha"], loi=True)])
+    monkeypatch.setattr(vw, "thu_tu_nha_cung_cap", lambda *_a, **_k: [_Ncc(moi_truong["alpha"], loi=True)])
     conn = _Conn()
     vw.process_variant_job(conn, _job(vw.CLOUD_FEATURE))
     out = _output(conn)
@@ -143,7 +143,7 @@ def test_moi_nha_cung_cap_loi_thi_lui_cuc_bo(moi_truong, monkeypatch):
 
 def test_cuc_bo_xin_relight_thi_noi_that_va_chay_paste(moi_truong, monkeypatch):
     goi: list = []
-    monkeypatch.setattr(vw, "thu_tu_nha_cung_cap", lambda _p=None: goi.append(1) or [])
+    monkeypatch.setattr(vw, "thu_tu_nha_cung_cap", lambda *_a, **_k: goi.append(1) or [])
     conn = _Conn()
     vw.process_variant_job(conn, _job(vw.FEATURE, compose_mode="relight"))
     out = _output(conn)
@@ -154,7 +154,7 @@ def test_cuc_bo_xin_relight_thi_noi_that_va_chay_paste(moi_truong, monkeypatch):
 
 def test_dam_may_paste_van_la_luong_hau_canh_giu_tung_diem_anh(moi_truong, monkeypatch):
     goi: list = []
-    monkeypatch.setattr(vw, "thu_tu_nha_cung_cap", lambda _p=None: goi.append(1) or [])
+    monkeypatch.setattr(vw, "thu_tu_nha_cung_cap", lambda *_a, **_k: goi.append(1) or [])
     monkeypatch.setenv("STABILITY_API_KEY", "")
     conn = _Conn()
     vw.process_variant_job(conn, _job(vw.CLOUD_FEATURE, compose_mode="paste"))

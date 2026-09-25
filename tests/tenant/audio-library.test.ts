@@ -7,6 +7,9 @@ import { GET as listTracks, POST as uploadTrack } from "@/app/api/v1/audio/music
 import { GET as getClone } from "@/app/api/v1/audio/voice-clones/[id]/route"
 import { GET as listClones } from "@/app/api/v1/audio/voice-clones/route"
 
+import { createAudioJob } from "@/modules/audio-studio/use-cases/create-audio-job"
+import { getAudioJob } from "@/modules/audio-studio/use-cases/get-audio-job"
+
 import { disconnectDatabase, prisma, resetDatabase } from "../helpers/database"
 import { createTenant, readJson, type Tenant } from "../helpers/fixtures"
 
@@ -126,5 +129,61 @@ describe("cách ly tenant — thư viện âm thanh Khu vực C", () => {
       })
     )
     expect(job.status).toBe(404)
+  })
+
+  it("nhà cung cấp trước: giọng + nhạc AI theo thứ tự tiệm, nhạc lùi thư viện thì hoàn phần nhạc lúc đọc (25/09/2026)", async () => {
+    const ws = await prisma.workspaces.create({ data: { organization_id: a.organizationId, name: "Sản xuất", kind: "PRODUCTION" } })
+    await prisma.organizations.update({
+      where: { id: a.organizationId },
+      data: { credit_balance: 100, settings: { creative_providers: { voice: ["openai", "elevenlabs"] } } },
+    })
+    const ctx = { ...a.ctx, workspaceId: ws.id, capabilities: new Set([...a.ctx.capabilities, "I1"]) }
+    const r = await createAudioJob(ctx, {
+      taskType: "AUDIO_MIX",
+      scenes: [
+        { sceneIndex: 1, voiceScript: "Xin chào quý khách", targetDurationSeconds: 4 },
+        { sceneIndex: 2, voiceScript: "Đặt hoa ngay hôm nay", targetDurationSeconds: 4 },
+      ],
+      totalDurationSeconds: 8,
+      musicMood: "romantic",
+      idempotencyKey: randomUUID(),
+    })
+    const gen = await prisma.generation_jobs.findUniqueOrThrow({ where: { id: r.jobId } })
+    const payload = gen.payload as { providerKey: string; providerOrder: string[]; musicProviderOrder: string[]; musicTrackId: string | null }
+    expect(payload.providerKey).toBe("openai") // thứ tự của tiệm đứng trước mặc định
+    expect(payload.providerOrder.slice(0, 2)).toEqual(["openai", "elevenlabs"])
+    expect(payload.musicProviderOrder).toEqual(["elevenlabs_music"])
+    expect(payload.musicTrackId).toBeTruthy() // bài dự phòng
+    expect(r.musicProvider).toBe("elevenlabs_music")
+    expect(r.creditsCost).toBe(2 + 2) // giọng openai 1/cảnh × 2 + nhạc AI 2/30s
+    expect((await prisma.organizations.findUniqueOrThrow({ where: { id: a.organizationId } })).credit_balance).toBe(96)
+
+    // Worker: nhà cung cấp nhạc lỗi → bài thư viện.
+    await prisma.generation_jobs.update({
+      where: { id: gen.id },
+      data: {
+        status: "COMPLETED",
+        output: { provider_used: "openai", music_provider_used: null, music_fallback: true, music_fallback_reason: "HTTP 402" },
+      },
+    })
+    const v = await getAudioJob(ctx, gen.id)
+    await getAudioJob(ctx, gen.id)
+    expect(v.music_fallback).toBe(true)
+    expect((await prisma.organizations.findUniqueOrThrow({ where: { id: a.organizationId } })).credit_balance).toBe(98)
+    await expect(getAudioJob({ ...b.ctx, capabilities: new Set([...b.ctx.capabilities, "I1"]) }, gen.id)).rejects.toThrow()
+  })
+
+  it("musicProvider=library: không sinh nhạc, không tính phần nhạc", async () => {
+    const r = await createAudioJob({ ...a.ctx, capabilities: new Set([...a.ctx.capabilities, "I1"]) }, {
+      taskType: "MUSIC_SELECT",
+      scenes: [],
+      totalDurationSeconds: 20,
+      musicTrackId: "acoustic-warm-guitar",
+      musicProvider: "library",
+      idempotencyKey: randomUUID(),
+    })
+    const gen = await prisma.generation_jobs.findUniqueOrThrow({ where: { id: r.jobId } })
+    expect((gen.payload as { musicProviderOrder: string[] }).musicProviderOrder).toEqual([])
+    expect(r.creditsCost).toBe(0)
   })
 })

@@ -14,7 +14,6 @@ import {
   AUDIO_TASK_SPECS,
   AUDIO_TASK_TYPES,
   MAX_VOICE_SCRIPT_LENGTH,
-  SELECTABLE_TTS_PROVIDERS,
   audioJobCreditCost,
   estimateSpeechSeconds,
   validateAudioTask,
@@ -25,6 +24,7 @@ import { findScenePlan, type ScenePlan } from "./scene-plan-client"
 import { MusicLibraryPanel } from "./music-library-panel"
 import { VoiceClonePanel } from "./voice-clone-panel"
 import { readAudioApiError } from "./audio-library-client"
+import { ProviderSelect, useProviderKind } from "./provider-select"
 
 interface AudioScene { sceneIndex: number; voiceScript: string; targetDurationSeconds: number }
 
@@ -37,6 +37,9 @@ interface AudioJobDetail {
   provider_used: string | null
   provider_fallback: boolean
   music_track_name: string | null
+  music_provider_used?: string | null
+  music_fallback?: boolean
+  music_fallback_reason?: string | null
   has_voice: boolean
   total_duration_seconds: number
   loudness_lufs: number | null
@@ -132,7 +135,13 @@ export function AudioWorkspace() {
 
 
   const [voiceId, setVoiceId] = useState(ctx.voiceId ?? "flora-nu-truyen-cam")
-  const [providerKey, setProviderKey] = useState<TtsProviderKey>("openai")
+  // "" = theo thứ tự nhà cung cấp của tiệm (PO 25/09/2026 — nhà cung cấp trước).
+  const [providerKey, setProviderKey] = useState<TtsProviderKey | "">("")
+  const voiceKind = useProviderKind("voice")
+  const effectiveProvider = (providerKey || voiceKind?.order[0] || "openai") as TtsProviderKey
+  // Nhạc nền: "" = nhạc AI theo thứ tự tiệm (bài thư viện là dự phòng); "library" = chỉ bài thư viện.
+  const [musicProvider, setMusicProvider] = useState<string>("")
+  const musicKind = useProviderKind("music")
   const [qualityTier, setQualityTier] = useState<AudioQualityTier>("hd")
   const [musicTrackId, setMusicTrackId] = useState<string | null>(null)
   const [userPickedMusic, setUserPickedMusic] = useState(false)
@@ -184,7 +193,15 @@ export function AudioWorkspace() {
     ? scenes.reduce((a, s) => a + Math.max(s.targetDurationSeconds, estimateSpeechSeconds(s.voiceScript) + 0.3), 0)
     : musicDuration
   const effectiveMusic = spec.music === "none" ? null : musicTrackId
-  const credit = audioJobCreditCost({ taskType, providerKey, qualityTier, scenes })
+  const musicAiProvider = spec.music === "none" || !effectiveMusic || musicProvider === "library" ? null : musicProvider || musicKind?.order[0] || null
+  const credit = audioJobCreditCost({
+    taskType,
+    providerKey: effectiveProvider,
+    qualityTier,
+    scenes,
+    musicProvider: musicAiProvider,
+    musicSeconds: totalDuration,
+  })
   const validation = validateAudioTask({ taskType, scenes, musicTrackId: effectiveMusic, voiceCloneId })
   const firstProblem = Object.values(validation)[0] ?? null
 
@@ -261,7 +278,8 @@ export function AudioWorkspace() {
           totalDurationSeconds: Math.max(1, Math.round(totalDuration)),
           voiceId: taskType === "VOICE_CLONE" ? undefined : voiceId,
           voiceCloneId: taskType === "VOICE_CLONE" ? voiceCloneId ?? undefined : undefined,
-          providerKey: taskType === "VOICE_CLONE" ? undefined : providerKey,
+          providerKey: taskType === "VOICE_CLONE" || !providerKey ? undefined : providerKey,
+          ...(effectiveMusic && musicProvider ? { musicProvider } : {}),
           qualityTier,
           musicTrackId: effectiveMusic ?? undefined,
           musicMood: effectiveMusic ? undefined : "none",
@@ -312,15 +330,7 @@ export function AudioWorkspace() {
             ))}
           </div>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-[11px] font-semibold text-text-muted block mb-1">Nhà cung cấp</label>
-              <Select value={providerKey} onValueChange={(v) => setProviderKey(v as TtsProviderKey)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SELECTABLE_TTS_PROVIDERS.map((p) => <SelectItem key={p} value={p}>{PROVIDER_LABEL[p] ?? p}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            <ProviderSelect kind="voice" value={providerKey} onChange={(v) => setProviderKey(v as TtsProviderKey | "")} label="Nhà cung cấp giọng đọc" />
             <div>
               <label className="text-[11px] font-semibold text-text-muted block mb-1">Chất lượng</label>
               <Select value={qualityTier} onValueChange={(v) => setQualityTier(v as AudioQualityTier)}>
@@ -367,6 +377,26 @@ export function AudioWorkspace() {
             setMusicLicenseOk(t ? t.license_verified : null)
           }}
         />
+      )}
+
+      {spec.music !== "none" && effectiveMusic && (
+        <Card className="p-5">
+          <h3 className="text-sm font-bold text-text mb-3 flex items-center gap-2"><Music size={14} /> Nhạc nền do AI sinh</h3>
+          <ProviderSelect
+            kind="music"
+            value={musicProvider === "library" ? "" : musicProvider}
+            onChange={setMusicProvider}
+            label="Nhà cung cấp nhạc nền"
+            disabled={musicProvider === "library"}
+          />
+          <label className="mt-2 flex items-center gap-2 text-[11.5px] text-text-muted">
+            <input type="checkbox" checked={musicProvider === "library"} onChange={(e) => setMusicProvider(e.target.checked ? "library" : "")} />
+            Chỉ dùng bài đã chọn trong thư viện (miễn phí, không sinh nhạc mới)
+          </label>
+          {musicProvider !== "library" && (
+            <p className="mt-1 text-[11px] text-text-muted">Nhạc không lời sinh theo tâm trạng, đủ thời lượng thật của bản đọc. Bài đang chọn ở thư viện là bài dự phòng khi nhà cung cấp lỗi (hoàn phần credit nhạc).</p>
+          )}
+        </Card>
       )}
 
       {taskType === "MUSIC_SELECT" && (
@@ -462,6 +492,11 @@ export function AudioWorkspace() {
               {PROVIDER_LABEL[audioJob.provider_key ?? ""] ?? audioJob.provider_key} lỗi — giọng đã được đọc bằng {PROVIDER_LABEL[audioJob.provider_used ?? ""] ?? audioJob.provider_used} (cùng giọng trong danh mục).
             </p>
           )}
+          {stage === "COMPLETED" && audioJob?.music_fallback && (
+            <p className="mb-2 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[12px] text-amber-800">
+              Không sinh được nhạc AI ({audioJob.music_fallback_reason ?? "nhà cung cấp lỗi"}) — đã dùng bài dự phòng {audioJob.music_track_name ?? ""}; phần credit nhạc được hoàn.
+            </p>
+          )}
           {stage === "COMPLETED" && audioJob?.audio_url && (
             <div className="mb-3 rounded-lg border border-emerald-200 bg-white p-3">
               <audio controls preload="auto" src={audioJob.audio_url} className="w-full">Trình duyệt không phát được âm thanh.</audio>
@@ -487,7 +522,7 @@ export function AudioWorkspace() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <div className="bg-white p-3 rounded-lg border border-emerald-100"><p className="text-[11px] text-text-muted">Tác vụ</p><p className="font-bold text-stone-800 truncate">{AUDIO_TASK_SPECS[audioJob?.task_type ?? taskType].label}</p></div>
             <div className="bg-white p-3 rounded-lg border border-emerald-100"><p className="text-[11px] text-text-muted">Giọng đọc</p><p className="font-bold text-stone-800 truncate">{audioJob?.voice_display_name ?? (spec.needsVoice ? "—" : "Không có")}</p></div>
-            <div className="bg-white p-3 rounded-lg border border-emerald-100"><p className="text-[11px] text-text-muted">Nhạc nền</p><p className="font-bold text-stone-800 truncate">{audioJob?.music_track_name ?? "Không có"}</p></div>
+            <div className="bg-white p-3 rounded-lg border border-emerald-100"><p className="text-[11px] text-text-muted">Nhạc nền</p><p className="font-bold text-stone-800 truncate">{audioJob?.music_provider_used ? "Nhạc AI (ElevenLabs Music)" : audioJob?.music_track_name ?? "Không có"}</p></div>
             <div className="bg-white p-3 rounded-lg border border-emerald-100"><p className="text-[11px] text-text-muted">Chi phí</p><p className="font-bold text-amber-600 font-mono">{audioJob ? (audioJob.refunded ? "đã hoàn" : `${audioJob.credits_cost} credit`) : "—"}</p></div>
           </div>
         </Card>

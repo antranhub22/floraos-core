@@ -14,7 +14,7 @@ export type RecordUsageInput = {
   quantity?: number
   costCredit: number
   costUsd?: number | null
-  status: "ENQUEUED" | "COMPLETED" | "REFUNDED"
+  status: "ENQUEUED" | "COMPLETED" | "REFUNDED" | "PARTIAL_REFUND"
   metadata?: Record<string, unknown> | null
 }
 

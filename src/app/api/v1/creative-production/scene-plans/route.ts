@@ -34,6 +34,7 @@ export const POST = handle(async (request) => {
     idempotencyKey,
     productId: d.product_id ?? null,
     assetId: d.asset_id ?? null,
+    contentProvider: d.content_provider ?? null,
     brief: {
       mode: d.mode,
       productName: d.product.name,

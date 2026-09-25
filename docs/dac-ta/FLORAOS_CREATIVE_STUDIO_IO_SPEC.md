@@ -1,7 +1,7 @@
 # Input/Output Specification — Creative Studio (Chặng 01–14)
 
 > **Mục đích:** Chuẩn hoá đầu vào/đầu ra THẬT của từng chặng trong `/creative-studio`, đúng tên trường và kiểu như mã nguồn.
-> **Phiên bản:** 4.6 — 25/09/2026. §5.1 thêm `style`, `variant_count` (Đợt 2 nâng cấp chất lượng ảnh — nhiều phương án một cảnh, cùng `job_group_id`); đầu ra thêm `job_group_id`, `candidates[]`. Bản 4.5 — 25/09/2026. §5.1 chỉ đạo khung hình biến thể (Đợt 1 nâng cấp chất lượng ảnh): `fill_mode` (mặc định `full_frame`), `composition`, `lighting`, `palette`, `seed`. Bản 4.4 — 24/09/2026 (khuya). §5.0c phạm vi sản xuất (nền tảng + loại kết quả chọn cuối Chặng 04), mỗi khung một bộ ảnh + một video, gói nhiều video, QA `scope_coverage`. Bản 4.3 — 24/09/2026 (khuya). Thêm §0: hợp đồng input/output 14 chặng bằng zod + JSON Schema sinh tự động. Bản 4.2 — 24/09/2026 (tối). Viết lại §4 Khu vực C: bốn loại tác vụ thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
+> **Phiên bản:** 4.7 — 25/09/2026. §4 nhà cung cấp trước (PO): giọng theo thứ tự tiệm (`providerOrder`), nhạc nền AI ElevenLabs Music (`musicProvider`, bài thư viện là dự phòng), hoàn chênh lúc đọc. Bản 4.6 — 25/09/2026. §5.1 thêm `style`, `variant_count` (Đợt 2 nâng cấp chất lượng ảnh — nhiều phương án một cảnh, cùng `job_group_id`); đầu ra thêm `job_group_id`, `candidates[]`. Bản 4.5 — 25/09/2026. §5.1 chỉ đạo khung hình biến thể (Đợt 1 nâng cấp chất lượng ảnh): `fill_mode` (mặc định `full_frame`), `composition`, `lighting`, `palette`, `seed`. Bản 4.4 — 24/09/2026 (khuya). §5.0c phạm vi sản xuất (nền tảng + loại kết quả chọn cuối Chặng 04), mỗi khung một bộ ảnh + một video, gói nhiều video, QA `scope_coverage`. Bản 4.3 — 24/09/2026 (khuya). Thêm §0: hợp đồng input/output 14 chặng bằng zod + JSON Schema sinh tự động. Bản 4.2 — 24/09/2026 (tối). Viết lại §4 Khu vực C: bốn loại tác vụ thật, thư viện nhạc có giấy phép, Voice Clone ElevenLabs. Bản 4.1 — 24/09/2026. Bổ sung: kịch bản bối cảnh sinh ở Chặng 05 (§5.0), bài B tự lưu `content-drafts` (§3), `final_video_view_url` (§6), sửa tại chỗ ở Chặng 07 — `scene-revisions` / `content-rewrites` (§7.1), DTO video của gói. (Bản 4.0 — 23/09/2026: viết lại toàn bộ: bản 3.0 mô tả một schema không tồn tại trong mã (vd. `foliageComponents`, `greetingCards`, `trendScore`, `videoEvidences`, `TopicProductionBrief` phẳng).
 > **Nguồn sự thật:** `src/modules/market-intelligence/domain/product-intelligence-types.ts`, `src/modules/creative-production/domain/{production-types,validate-transition,build-handoff-url,campaign-package-rules}.ts`, `src/modules/media/domain/variant-rules.ts`, `src/modules/audio-studio/domain/audio-types.ts`, `src/modules/video-studio/domain/video-types.ts`, các `route.ts` tương ứng. Lệch với tài liệu này thì mã thắng (Hiến pháp §2 quy tắc 2) — và tài liệu phải sửa trong cùng commit.
 
 
@@ -16,7 +16,7 @@ Quyết định PO (24/09/2026): mỗi chặng 01–14 có **một schema đầu
 | Chặng | Tệp nguồn (zod) | Lời gọi chính | Năng lực |
 |---|---|---|---|
 | 01 BRING | `stage-01-bring.ts` | `POST /assets` | G2 |
-| 02 UNDERSTAND | `stage-02-understand.ts` | `POST /market-intelligence/vision-extract` | V1 |
+| 02 UNDERSTAND | `stage-02-understand.ts` | `POST /market-intelligence/vision-extract` (asset_id bắt buộc, 1 credit — 25/09/2026) | V1 |
 | 03 DISCOVER | `stage-03-discover.ts` | `POST /market-intelligence/product-intelligence` | V1 |
 | 04 IDEATE | `stage-04-ideate.ts` | `GET /product-intelligence/:id` | V2 |
 | 05 CHOOSE | `stage-05-choose.ts` (+ hợp đồng phụ `handoff`: query `/creative-studio`) | `POST /creative-production/scene-plans` | I1 |
@@ -57,7 +57,7 @@ Giới hạn đã biết: `refine` (vd. "mỗi kênh một bài", `scene_index` 
 
 ### 1.2. Chặng 02 — UNDERSTAND
 
-`POST /api/v1/market-intelligence/vision-extract` (`V1`), thân `{ image_url, asset_id, product_title }`, mô hình `gpt-4o-mini`. Trả các khối dưới (người dùng sửa được từng trường nguyên tử):
+`POST /api/v1/market-intelligence/vision-extract` (`V1`), thân `{ asset_id, product_title? }` (`asset_id` BẮT BUỘC từ 25/09/2026; `image_url` bị bỏ qua — máy chủ đọc ảnh từ kho của đúng tổ chức), mô hình `gpt-4o-mini`. Thu `product.vision_extract` = 1 credit qua `enqueueJob` khi mô hình thật sự đọc ảnh (khoá `vision-extract:<asset_id>` — cùng ảnh bấm lại không thu lần hai; hỏng thì job FAILED + hoàn credit); ảnh đã có kết quả M01 thì dùng lại miễn phí. Đáp ứng thêm `source` (`vision_ai` | `m01`) và `usage`. Trường mô hình không trả để TRỐNG / 0 — không điền giá trị mặc định. Trả các khối dưới (người dùng sửa được từng trường nguyên tử):
 
 `ProductFlowerComponent`: `{ id?, flowerType: string, quantityEstimate: number, unit: string, role: "dominant" | "supporting" | "foliage", color? }` — lá/cành đệm là `role: "foliage"`, không có mảng riêng.
 
@@ -174,22 +174,23 @@ Bảng giá (`audio-pricing-guard.ts`, quyết định PO 24/09 "theo bảng ư�
 | `totalDurationSeconds?` | ≤ 300; mặc định = tổng cảnh |
 | `voiceId?` | 6 giọng của `voice-catalog.ts`; mặc định `flora-nu-truyen-cam` |
 | `voiceCloneId?` | uuid giọng `READY` của tổ chức — bắt buộc với `VOICE_CLONE` (khác tổ chức → 404, chưa sẵn sàng → 409) |
-| `providerKey?` | `openai \| elevenlabs \| minimax \| edge_tts`; `google_cloud`/`local_fallback` → 422 |
+| `providerKey?` | `openai \| elevenlabs \| minimax \| edge_tts`; `google_cloud`/`local_fallback` → 422. Bỏ trống (25/09/2026) = bên đầu trong thứ tự tiệm (`creative_providers.voice`, mặc định `elevenlabs → openai → minimax → edge_tts`) |
 | `qualityTier?` | `standard \| hd \| premium` |
 | `musicTrackId?` | `trackId` hệ thống hoặc `org:<uuid>` (bài tiệm tải, kiểm thuộc tổ chức) |
 | `musicMood?` | chỉ để tự chọn bài khi không có `musicTrackId`; `none` = không nhạc. Mood không có bài → không tự thay bài khác |
-| `topicAngleCategory?` | gợi ý mood |
+| `topicAngleCategory?` | gợi ý mood (và gợi ý cho lời nhắc sinh nhạc) |
+| `musicProvider?` | 25/09/2026: `elevenlabs_music \| library`. Bỏ trống = nhạc AI theo thứ tự tiệm (`creative_providers.music`), bài `musicTrackId` (tự chọn theo mood nếu vắng) là DỰ PHÒNG; `library` = chỉ bài thư viện (0 credit phần nhạc). Giá nhạc AI: 2 credit / 30 giây (`MUSIC_GENERATION_CREDIT_PER_30S`, bảng giá v1) |
 | `scenePlanId?`, `scenePlanRevision?` | kịch bản sản xuất tổng mà bản âm thanh thực thi (Đợt 2, 24/09) — `GET` trả `scene_plan_id`, `scene_plan_revision`; video E dùng đúng bản này |
 
-Ra (201): `{ jobId, generationJobId, taskType, creditsCost, voiceDisplayName, providerKey, musicTrackName, musicLicenseVerified, usage: { costCredit, balanceAfter }, deduped }`.
+Ra (201): `{ jobId, generationJobId, taskType, creditsCost, voiceDisplayName, providerKey, musicProvider, musicTrackName, musicLicenseVerified, usage: { costCredit, balanceAfter }, deduped }`.
 
-Payload worker thêm: `output`, `providerVoiceMap` (mã CÙNG một giọng ở mọi nhà cung cấp — lùi nhà cung cấp vẫn đúng giọng nam/nữ), `strictProvider` (giọng nhân bản: không lùi), `musicTrackId` | `musicStorageKey`, `musicTrackRef`, `musicTrackName`.
+Payload worker thêm: `output`, `providerVoiceMap` (mã CÙNG một giọng ở mọi nhà cung cấp — lùi nhà cung cấp vẫn đúng giọng nam/nữ), `strictProvider` (giọng nhân bản: không lùi), `musicTrackId` | `musicStorageKey`, `musicTrackRef`, `musicTrackName`; từ 25/09/2026 `providerOrder` (thứ tự lùi TTS của tiệm), `musicProviderOrder`, `musicPromptHint`, `cost_plan` (phần giọng / phần nhạc — hoàn chênh lúc đọc).
 
-Worker: TTS từng cảnh → **khớp cảnh** (`fit_voice_to_scene`: nhanh tối đa 1,1×, dài hơn thì kéo dài cảnh — trước đây tua tới 2× rồi cắt đuôi) → nối → phối. Một cảnh có lời mà không đọc được → cả job `FAILED`. Chuỗi lùi tự động: `openai → elevenlabs → minimax → edge_tts` (không còn `say` của macOS). ElevenLabs: tên giọng được đổi sang `voice_id` qua `GET /v1/voices`.
+Worker: TTS từng cảnh → **khớp cảnh** (`fit_voice_to_scene`: nhanh tối đa 1,1×, dài hơn thì kéo dài cảnh — trước đây tua tới 2× rồi cắt đuôi) → nối → phối. Một cảnh có lời mà không đọc được → cả job `FAILED`. Chuỗi lùi: bên đã chọn → `providerOrder` của tiệm → `openai → elevenlabs → minimax → edge_tts` (không còn `say` của macOS). Nhạc AI sinh SAU giọng đọc (đúng thời lượng thật, nhạc không lời); mọi bên lỗi → bài dự phòng, ghi `music_fallback_reason`. ElevenLabs: tên giọng được đổi sang `voice_id` qua `GET /v1/voices`.
 
-`generation_jobs.output = { audio_storage_key, voice_only_storage_key, mime_type, task_type, output, total_duration_seconds, loudness_lufs, provider_used, has_voice, has_music, scenes: [{ sceneIndex, targetDurationSeconds, actualDurationSeconds, extended, providerUsed }] }`.
+`generation_jobs.output = { audio_storage_key, voice_only_storage_key, mime_type, task_type, output, total_duration_seconds, loudness_lufs, provider_used, has_voice, has_music, music_provider_used, music_fallback, music_fallback_reason, scenes: [{ sceneIndex, targetDurationSeconds, actualDurationSeconds, extended, providerUsed }] }`.
 
-`GET /api/v1/audio/jobs/:id` (`I1`) → `{ job_id, stage, task_type, voice_id, voice_display_name, voice_clone_id, provider_key, provider_used, provider_fallback, quality_tier, music_track_id, music_track_name, music_mood, has_voice, total_duration_seconds, loudness_lufs, scenes, audio_url, audio_storage_key, voice_only_url, voice_only_storage_key, credits_cost, refunded, error, created_at }`. `FAILED` → hoàn credit ngay ở lần đọc này (idempotent).
+`GET /api/v1/audio/jobs/:id` (`I1`) → `{ job_id, stage, task_type, voice_id, voice_display_name, voice_clone_id, provider_key, provider_used, provider_fallback, quality_tier, music_track_id, music_track_name, music_mood, music_provider, music_provider_used, music_fallback, music_fallback_reason, has_voice, total_duration_seconds, loudness_lufs, scenes, audio_url, audio_storage_key, voice_only_url, voice_only_storage_key, credits_cost, refunded, error, created_at }`. `FAILED` → hoàn credit ngay ở lần đọc này (idempotent). `COMPLETED` mà nhạc lùi thư viện / giọng lùi sang bên rẻ hơn → hoàn chênh (`audioJobRefund`, dòng `PARTIAL_REFUND`, idempotent).
 
 ### 4.3. Thư viện nhạc
 
@@ -255,7 +256,7 @@ Mang qua: thân `POST /scene-plans` và `PATCH /scene-plans/:id` nhận `platfor
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
 | `master_asset_id` | string | Master `APPROVED` — ngược lại `409` |
-| `engine` | `"local_studio" \| "cloud_provider"` | mặc định `local_studio` |
+| `engine` | `"local_studio" \| "cloud_provider"` | mặc định `cloud_provider` từ 25/09/2026 (PO: nhà cung cấp trước, cả CREATIVE lẫn AUTHENTIC — AUTHENTIC chỉ dựng nền + ánh sáng); `local_studio` chỉ khi chọn đích danh. `provider_key` ∈ `fal \| stability \| imagen` thử trước, còn lại theo thứ tự ưu tiên của tiệm (`payload.provider_order`) |
 | `preset` | `transparent \| studio_white \| wedding \| living_room \| wood_minimal \| luxury_hotel` | bắt buộc |
 | `ratio` | `1:1 \| 4:5 \| 9:16 \| 16:9` | bắt buộc |
 | `watermark` | boolean | mặc định `true` |

@@ -232,3 +232,80 @@ def render_slideshow(
         raise SlideshowError(f"FFmpeg thất bại: {err or 'không có phản hồi'}")
 
     return out_path
+
+
+def build_clip_sequence_command(
+    clip_paths: List[Path],
+    out_path: Path,
+    aspect_ratio: str,
+    scene_durations: List[float],
+    audio_path: Optional[Path] = None,
+    subtitle_overlays: Optional[List[Tuple[Path, float, float]]] = None,
+) -> List[str]:
+    """Ghép CLIP của nhà cung cấp (25/09/2026) — cùng khuôn thời gian với
+    `build_ffmpeg_command` để hình khớp bản phối Khu vực C và phụ đề: mỗi clip
+    cắt khung đúng tỷ lệ đích, kéo/cắt cho bằng thời lượng cảnh (+ phần chồng
+    xfade), bỏ tiếng gốc của clip (dùng bản phối C)."""
+    w, h = FRAME_RESOLUTIONS.get(aspect_ratio, FRAME_RESOLUTIONS["9:16"])
+    n = len(clip_paths)
+    if n == 0 or len(scene_durations) != n:
+        raise SlideshowError("Số clip phải bằng số cảnh")
+    durations = [
+        max(MIN_SLIDE_SECONDS, float(sd)) + (TRANSITION_DURATION if i < n - 1 else 0.0)
+        for i, sd in enumerate(scene_durations)
+    ]
+    args = ["ffmpeg", "-y", "-loglevel", "error"]
+    for c in clip_paths:
+        args.extend(["-i", str(c)])
+    overlays = subtitle_overlays or []
+    for png, _s, _e in overlays:
+        args.extend(["-i", str(png)])
+    if audio_path and audio_path.is_file():
+        args.extend(["-i", str(audio_path)])
+
+    chains = []
+    for i in range(n):
+        d = durations[i]
+        chains.append(
+            f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},fps={FPS},setsar=1,"
+            f"tpad=stop_mode=clone:stop_duration={d:.3f},trim=duration={d:.3f},setpts=PTS-STARTPTS,format=yuv420p[v{i}]"
+        )
+    if n == 1:
+        label = "[v0]"
+    else:
+        prev = "[v0]"
+        offset = 0.0
+        for i in range(1, n):
+            offset += durations[i - 1] - TRANSITION_DURATION
+            out_label = "[v_out]" if i == n - 1 else f"[x{i}]"
+            chains.append(f"{prev}[v{i}]xfade=transition=fade:duration={TRANSITION_DURATION}:offset={offset:.3f}{out_label}")
+            prev = out_label
+        label = "[v_out]"
+    for k, (_png, start, end) in enumerate(overlays):
+        out_label = f"[sub{k}]"
+        chains.append(f"{label}[{n + k}:v]overlay=0:0:enable='between(t,{start:.3f},{end:.3f})'{out_label}")
+        label = out_label
+
+    args.extend(["-filter_complex", ";".join(chains), "-map", label])
+    if audio_path and audio_path.is_file():
+        args.extend(["-map", f"{n + len(overlays)}:a", "-c:a", "aac", "-b:a", "128k", "-shortest"])
+    args.extend(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out_path)])
+    return args
+
+
+def render_clip_sequence(
+    clip_paths: List[Path],
+    out_path: Path,
+    aspect_ratio: str,
+    scene_durations: List[float],
+    audio_path: Optional[Path] = None,
+    subtitle_overlays: Optional[List[Tuple[Path, float, float]]] = None,
+) -> Path:
+    if not is_ffmpeg_available():
+        raise SlideshowError("ffmpeg chưa được cài đặt trên hệ thống.")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    cmd = build_clip_sequence_command(clip_paths, out_path, aspect_ratio, scene_durations, audio_path, subtitle_overlays)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=RENDER_TIMEOUT_SECONDS * 2)
+    if result.returncode != 0 or not out_path.is_file():
+        raise SlideshowError(f"FFmpeg ghép clip thất bại: {(result.stderr or '').strip() or 'không có phản hồi'}")
+    return out_path

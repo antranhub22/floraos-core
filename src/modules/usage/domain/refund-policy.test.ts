@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { duocHoanCredit, lyDoHoanCredit } from "./refund-policy"
+import { duocHoanCredit, lyDoHoanCredit, soCreditHoanMotPhan } from "./refund-policy"
 
 describe("lyDoHoanCredit", () => {
   it("job bị Identity Guard từ chối — quyết định D3", () => {
@@ -31,3 +31,32 @@ describe("lyDoHoanCredit", () => {
     expect(duocHoanCredit({ status: "PROCESSING", result: null })).toBe(false)
   })
 })
+
+describe("hoàn một phần (25/09/2026)", () => {
+  const enq = (credit: number) => ({ status: "ENQUEUED", cost_credit: credit, metadata: { funded_by: "credit" } })
+
+  it("hoàn đúng số xin khi còn đủ credit", () => {
+    expect(soCreditHoanMotPhan([enq(2)], "cloud-lui-cuc-bo", 1)).toBe(1)
+  })
+
+  it("không hoàn quá phần còn lại của job", () => {
+    expect(soCreditHoanMotPhan([enq(1)], "cloud-lui-cuc-bo", 3)).toBe(1)
+  })
+
+  it("idempotent theo lý do — lý do khác vẫn hoàn được phần còn lại", () => {
+    const dong = [enq(3), { status: "PARTIAL_REFUND", cost_credit: -2, metadata: { reason: "goi-noi-dung-hong" } }]
+    expect(soCreditHoanMotPhan(dong, "goi-noi-dung-hong", 2)).toBe(0)
+    expect(soCreditHoanMotPhan(dong, "cloud-lui-cuc-bo", 5)).toBe(1)
+  })
+
+  it("đã hoàn toàn phần hoặc đi đường dùng thử (0 credit) thì không hoàn gì", () => {
+    expect(soCreditHoanMotPhan([enq(2), { status: "REFUNDED", cost_credit: 0, metadata: null }], "cloud-lui-cuc-bo", 1)).toBe(0)
+    expect(soCreditHoanMotPhan([enq(0)], "cloud-lui-cuc-bo", 1)).toBe(0)
+  })
+
+  it("số xin không hợp lệ thì 0", () => {
+    expect(soCreditHoanMotPhan([enq(2)], "cloud-lui-cuc-bo", 0)).toBe(0)
+    expect(soCreditHoanMotPhan([enq(2)], "cloud-lui-cuc-bo", 1.5)).toBe(0)
+  })
+})
+

@@ -1,6 +1,10 @@
 export interface LLMRequest {
   organizationId: string;
   prompt: string;
+  /** Lời nhắc hệ thống riêng của năng lực; vắng thì adapter dùng lời nhắc viết nội dung mặc định. */
+  system?: string;
+  /** Ảnh đi kèm (base64, không tiền tố `data:`) — mọi adapter nội dung đều nhận ảnh (25/09/2026). */
+  images?: ReadonlyArray<{ mimeType: string; base64: string }>;
   jsonSchema?: unknown;
   maxTokens?: number;
   /**

@@ -1,9 +1,11 @@
 import type { LLMProvider, LLMRequest, LLMResponse } from "@/core/ports/llm-provider";
 import { env } from "@/lib/env";
 
+type OpenAIContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string; detail: "high" } }
+
 interface OpenAIMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | OpenAIContentPart[];
 }
 
 interface OpenAIRequest {
@@ -71,9 +73,22 @@ export class OpenAILLMProvider implements LLMProvider {
   }
 
   async complete(request: LLMRequest): Promise<LLMResponse> {
+    const images = request.images ?? [];
     const messages: OpenAIMessage[] = [
-      { role: "system", content: "Bạn là chuyên viên viết nội dung bán hàng cho cửa hàng hoa. Luôn trả về JSON hợp lệ theo schema được cung cấp." },
-      { role: "user", content: request.prompt },
+      { role: "system", content: request.system ?? "Bạn là chuyên viên viết nội dung bán hàng cho cửa hàng hoa. Luôn trả về JSON hợp lệ theo schema được cung cấp." },
+      {
+        role: "user",
+        content:
+          images.length === 0
+            ? request.prompt
+            : [
+                { type: "text", text: request.prompt },
+                ...images.map((img): OpenAIContentPart => ({
+                  type: "image_url",
+                  image_url: { url: `data:${img.mimeType};base64,${img.base64}`, detail: "high" },
+                })),
+              ],
+      },
     ];
 
     const maMoHinh =

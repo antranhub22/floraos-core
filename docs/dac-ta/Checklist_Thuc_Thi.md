@@ -835,3 +835,16 @@ Chuỗi `feature/creative-production-pipeline` → `fix/creative-studio-producti
 - [x] Cổng CI xanh trên Postgres 16: typecheck · lint · `npm test` 1151/1151 · `check:template-ssot` · schemas creative/coordinator/content-engine · `test:tenant` 244/244 · `test:platform` 5/5 · `build` · worker pytest
 - [ ] Anh Tony chạy lại trên máy thật sau khi kéo `main`: `npx prisma migrate deploy` · `npx prisma generate` · `npm run test:tenant`
 
+## PRV-25/09 — Creative Studio: nhà cung cấp trước, cục bộ là đường lùi (25/09/2026)
+
+Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc, ảnh, video) ưu tiên nhà cung cấp trả phí; nhiều nhà cung cấp tương đương mỗi loại; tiệm đặt thứ tự trong Cài đặt + mỗi lượt đổi được bên; cục bộ chỉ chạy khi mọi bên lỗi và ghi rõ lý do. AUTHENTIC dùng nhà cung cấp cho nền + ánh sáng, không vẽ lại bó hoa.
+
+- [x] Danh mục nhà cung cấp một nguồn (`creative-production/domain/provider-catalog.ts`) + `GET·PUT /api/v1/creative-production/providers` (thứ tự tiệm ở `organizations.settings.creative_providers`)
+- [x] Nội dung: Claude (Opus 5 / Sonnet 5) + Gemini (2.5 Pro / Flash) sau cổng AI, `preferredModelKeys` theo thứ tự tiệm, lùi sang bên kế tiếp; Chặng 02 qua cổng (#155); Critic AIC-24 chạy thật (#158)
+- [x] Ảnh A: mặc định chuỗi nhà cung cấp (Photoroom → fal → Gemini Image → OpenAI), lùi Studio cục bộ có lý do
+- [x] Ảnh D: mọi chế độ đi nhà cung cấp (fal → Stability → Gemini Image), AUTHENTIC chỉ nền + sáng, phép đo `perceptual`
+- [x] Video: clip từng cảnh qua Veo / Kling / Runway / Luma, ghép ở FloraOS; lùi Ken Burns cục bộ + hoàn phần clip lúc đọc; chọn bên ở Khu vực E (nợ #160)
+- [x] Nhạc nền: ElevenLabs Music sinh nhạc không lời theo tâm trạng (sau giọng đọc, đúng thời lượng), bài thư viện là dự phòng + hoàn phần nhạc; giọng đọc theo thứ tự tiệm (nợ #161)
+- [x] Giao diện Cài đặt thứ tự nhà cung cấp của tiệm (`/cai-dat-ai`, `provider-order-settings.tsx`, ghi cần `U2`) + chọn bên từng lượt cho nội dung (Chặng 05, Content Engine), giọng đọc, nhạc, ảnh, video — kiểm bằng Chromium thật
+- [ ] Chạy thật với khoá của từng nhà cung cấp (nợ #153, #159, #160)
+

@@ -18,6 +18,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from "react";
+import { ProviderSelect } from "@/components/creative-studio/provider-select";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -251,6 +252,8 @@ export function CreativeHandoffModal({
   // `GET /api/v1/product-intelligence/:id`) và `assetId` (để tự ký lại URL
   // ảnh qua `GET /api/v1/assets/:id/view-url`). Xem `build-handoff-url.ts`.
   const [handoffError, setHandoffError] = useState<string | null>(null);
+  // Bên viết kịch bản cho lượt này — "" = theo thứ tự nhà cung cấp của tiệm.
+  const [contentProvider, setContentProvider] = useState<string>("");
 
   // Chặn cứng: không có assetId (ảnh chưa lưu vào kho) thì không có gì để
   // bàn giao an toàn — nút bên dưới bị khoá kèm lý do rõ ràng.
@@ -313,7 +316,8 @@ export function CreativeHandoffModal({
           platforms: scope.platforms,
           outputs: scope.outputs,
         },
-        planFailed || fresh
+        planFailed || fresh,
+        contentProvider || undefined
       );
       setPreview(loaded);
     } catch (err) {
@@ -643,6 +647,9 @@ export function CreativeHandoffModal({
               </>
             ) : (
               <>
+            <div className="w-full sm:w-64">
+              <ProviderSelect kind="content" value={contentProvider} onChange={setContentProvider} label="AI viết kịch bản" disabled={writingPlan} />
+            </div>
                         {planFailed && (
               <button
                 type="button"

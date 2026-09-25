@@ -61,42 +61,58 @@ export function ProductUploadCard({
   const [catalogProducts, setCatalogProducts] = useState<CatalogProductItem[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // 25/09/2026: kiểm TỪNG bước (xin URL → PUT kho → đăng ký asset). Bản trước
+  // nuốt mọi lỗi và vẫn chọn ảnh — Chặng 02 rồi chạy trên một asset trỏ tới tệp
+  // không tồn tại. Chặng 02 nay đọc ảnh từ kho theo asset_id, nên không có
+  // asset hợp lệ thì không cho chọn.
   const uploadFileAsset = async (file: File, displayUrl: string, title: string) => {
+    setIsUploading(true);
+    setUploadError(null);
     try {
-      setIsUploading(true);
+      const mime = file.type || "image/jpeg";
       const res = await fetch("/api/v1/assets/upload-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mime_type: file.type || "image/jpeg" }),
+        body: JSON.stringify({ mime_type: mime }),
       });
+      if (!res.ok) throw new Error(`Không xin được chỗ lưu ảnh (HTTP ${res.status})`);
+      const { upload_url, asset_id, storage_key } = await res.json();
+      const put = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": mime }, body: file });
+      if (!put.ok) throw new Error(`Tải ảnh lên kho thất bại (HTTP ${put.status})`);
+      const reg = await fetch("/api/v1/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ asset_id, kind: "ORIGINAL", storage_key, mime_type: mime, file_size: file.size }),
+      });
+      if (!reg.ok) throw new Error(`Đăng ký ảnh vào kho thất bại (HTTP ${reg.status})`);
+      onSelectImage(displayUrl, title, asset_id);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Không lưu được ảnh vào kho — thử lại.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
-      if (res.ok) {
-        const { upload_url, asset_id, storage_key } = await res.json();
-        await fetch(upload_url, {
-          method: "PUT",
-          headers: { "Content-Type": file.type || "image/jpeg" },
-          body: file,
-        });
-
-        await fetch("/api/v1/assets", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            asset_id,
-            kind: "ORIGINAL",
-            storage_key,
-            mime_type: file.type,
-            file_size: file.size,
-          }),
-        });
-
-        onSelectImage(displayUrl, title, asset_id);
-      } else {
-        onSelectImage(displayUrl, title);
-      }
-    } catch {
-      onSelectImage(displayUrl, title);
+  /** Sản phẩm Catalog → ảnh Master đã duyệt (hoặc ảnh gốc mới nhất) trong kho của đúng sản phẩm. */
+  const handleSelectCatalogProduct = async (p: CatalogProductItem) => {
+    setIsCatalogModalOpen(false);
+    setUploadError(null);
+    setIsUploading(true);
+    try {
+      const tim = async (q: string) => {
+        const r = await fetch(`/api/v1/assets?product_id=${encodeURIComponent(p.id)}&limit=1&${q}`);
+        if (!r.ok) return null;
+        const j = (await r.json()) as { data?: { id: string; url: string | null }[] };
+        return j.data?.[0] ?? null;
+      };
+      const anh = (await tim("kind=MASTER&approval_state=APPROVED")) ?? (await tim("kind=ORIGINAL"));
+      if (!anh || !anh.url) throw new Error(`"${p.title}" chưa có ảnh trong kho — hãy tải ảnh của mẫu này lên.`);
+      onUpdateProductTitle(p.title);
+      onSelectImage(anh.url, p.title, anh.id);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Không lấy được ảnh của sản phẩm.");
     } finally {
       setIsUploading(false);
     }
@@ -104,14 +120,14 @@ export function ProductUploadCard({
 
   const handleSelectDemo = async (item: typeof DEMO_FLOWERS[0]) => {
     onUpdateProductTitle(item.name);
-    onSelectImage(item.url, item.name);
     try {
       const res = await fetch(item.url);
+      if (!res.ok) throw new Error(`Không tải được ảnh mẫu (HTTP ${res.status})`);
       const blob = await res.blob();
       const file = new File([blob], "demo-flower.jpg", { type: blob.type || "image/jpeg" });
       await uploadFileAsset(file, item.url, item.name);
-    } catch {
-      // Giữ URL nếu offline hoặc CORS
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Không tải được ảnh mẫu — hãy tải ảnh của tiệm.");
     }
   };
 
@@ -128,7 +144,7 @@ export function ProductUploadCard({
               id: p.id,
               title: p.title || p.name || "",
               ...(typeof p.price === "number" ? { price: p.price } : {}),
-              imageUrl: p.master_asset?.url || p.image_url || "/images/sample-flower.jpg",
+              ...(p.master_asset?.url || p.image_url ? { imageUrl: (p.master_asset?.url || p.image_url) as string } : {}),
             }))
           : [];
         setCatalogProducts(items);
@@ -282,10 +298,13 @@ export function ProductUploadCard({
             )}
           </div>
 
+          {uploadError && (
+            <p role="alert" className="text-[11px] leading-snug text-red-700">{uploadError}</p>
+          )}
           <button
             type="button"
             onClick={onAnalyze}
-            disabled={isAnalyzing || !selectedImage || isUploading}
+            disabled={isAnalyzing || !selectedImage || !selectedAssetId || isUploading}
             className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 py-2.5 px-4 text-xs font-bold text-white hover:bg-rose-700 shadow-sm transition disabled:opacity-50"
           >
             {isAnalyzing ? (
@@ -296,7 +315,7 @@ export function ProductUploadCard({
             ) : (
               <>
                 <Sparkles size={15} />
-                <span>Bóc tách Cấu trúc Hoa (Vision AI)</span>
+                <span>Bóc tách Cấu trúc Hoa (Vision AI · 1 credit)</span>
               </>
             )}
           </button>
@@ -336,18 +355,16 @@ export function ProductUploadCard({
                   {catalogProducts.map((p) => (
                     <div
                       key={p.id}
-                      onClick={() => {
-                        onUpdateProductTitle(p.title);
-                        onSelectImage(p.imageUrl || "/images/sample-flower.jpg", p.title, p.id);
-                        setIsCatalogModalOpen(false);
-                      }}
+                      onClick={() => void handleSelectCatalogProduct(p)}
                       className="flex items-center gap-2.5 p-2 rounded-xl border border-stone-200 hover:border-rose-500 hover:bg-rose-50/40 cursor-pointer transition text-left"
                     >
-                      <img
-                        src={p.imageUrl}
-                        alt={p.title}
-                        className="h-12 w-12 rounded-lg object-cover flex-shrink-0"
-                      />
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt={p.title} className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-stone-100 text-stone-400 flex-shrink-0">
+                          <ImageIcon size={18} />
+                        </span>
+                      )}
                       <div className="min-w-0 flex-1 text-xs">
                         <p className="font-bold text-stone-900 truncate">{p.title}</p>
                         {p.price && (

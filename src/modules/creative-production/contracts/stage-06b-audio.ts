@@ -32,6 +32,10 @@ export const audioJobBodySchema = z.object({
   musicTrackId: z.string().max(80).optional(),
   musicMood: musicMoodSchema.optional(),
   topicAngleCategory: z.string().max(60).optional(),
+  musicProvider: z
+    .enum(["elevenlabs_music", "library"])
+    .optional()
+    .describe("Bỏ trống = nhạc AI theo thứ tự tiệm (bài musicTrackId là dự phòng); library = chỉ bài thư viện (0 credit)"),
   scenePlanId: z.string().max(160).optional().describe("Kịch bản sản xuất tổng (Chặng 05) mà bản âm thanh thực thi"),
   scenePlanRevision: z.number().int().min(1).optional(),
 })
@@ -43,6 +47,7 @@ export const audioJobResultSchema = z.object({
   creditsCost: z.number().describe("Credit theo bảng giá (= số bị trừ nếu không deduped/dùng thử)"),
   voiceDisplayName: z.string().nullable(),
   providerKey: ttsProviderKeySchema.nullable(),
+  musicProvider: z.string().nullable().describe("Nhà cung cấp sinh nhạc đứng đầu lượt; null = chỉ bài thư viện"),
   musicTrackName: z.string().nullable(),
   musicLicenseVerified: z.boolean().nullable(),
   usage: z.object({ costCredit: z.number(), balanceAfter: z.number().nullable() }),
@@ -56,7 +61,7 @@ export const stage06bAudio = defineStage({
   slug: "create-audio",
   title: "Chặng 06b — CREATE · Khu vực C: Giọng đọc & nhạc nền",
   summary:
-    "Bốn tác vụ thật: VOICEOVER, MUSIC_SELECT (0 credit), AUDIO_MIX, VOICE_CLONE. Kết quả cuối (audio_storage_key) đọc từ job khi COMPLETED.",
+    "Bốn tác vụ thật: VOICEOVER, MUSIC_SELECT, AUDIO_MIX, VOICE_CLONE. Nhà cung cấp trước (25/09/2026): giọng theo thứ tự tiệm, nhạc nền AI (ElevenLabs Music) với bài thư viện làm dự phòng; musicProvider=library = 0 credit phần nhạc. Kết quả cuối (audio_storage_key) đọc từ job khi COMPLETED.",
   endpoint: { method: "POST", path: "/api/v1/audio/jobs", capability: "I1", idempotencyKey: true },
   input: audioJobBodySchema,
   output: audioJobResultSchema,
@@ -79,6 +84,7 @@ export const stage06bAudio = defineStage({
       creditsCost: 2,
       voiceDisplayName: "Flora Nữ Truyền Cảm",
       providerKey: "edge_tts",
+      musicProvider: null,
       musicTrackName: "Warm Strings",
       musicLicenseVerified: true,
       usage: { costCredit: 2, balanceAfter: 247 },

@@ -2,6 +2,9 @@ import { notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
+import { isExplicitLocalEngine, optimizationPriceKey } from "@/modules/media/domain/optimization-rules"
+import { providerOrderFor } from "@/modules/creative-production/use-cases/provider-preferences"
+import { costCreditForFeature } from "@/modules/usage/domain/pricing"
 
 export const MEDIA_OPTIMIZE_FEATURE = "media.optimize"
 
@@ -27,10 +30,24 @@ export async function requestOptimization(
   const asset = await new AssetRepository().findById(ctx, input.assetId)
   if (!asset) throw notFound()
 
+  // PO 25/09/2026: nhà cung cấp trước. Trừ khi người dùng chọn đích danh bộ máy
+  // cục bộ, gửi worker thứ tự thử (bên chọn cho lượt → thứ tự tiệm → mặc định);
+  // worker lùi Studio cục bộ khi mọi bên lỗi và core hoàn phần chênh.
+  const cfg = { ...(input.config ?? {}) }
+  if (isExplicitLocalEngine(cfg.enhancer_provider)) {
+    cfg.engine = "local_studio"
+    delete cfg.provider_order
+  } else {
+    const requested = typeof cfg.enhancer_provider === "string" && cfg.enhancer_provider !== "auto" ? cfg.enhancer_provider : null
+    cfg.provider_order = await providerOrderFor(ctx, "image_optimize", requested)
+    cfg.engine = "cloud_provider"
+  }
+
   return enqueueJob(ctx, {
     feature: MEDIA_OPTIMIZE_FEATURE,
     productId: asset.product_id,
-    payload: { asset_id: input.assetId, config: input.config ?? {} },
+    payload: { asset_id: input.assetId, config: cfg },
     idempotencyKey: input.idempotencyKey,
+    costCredit: costCreditForFeature(optimizationPriceKey(cfg)),
   })
 }

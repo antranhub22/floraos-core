@@ -331,7 +331,8 @@ export function ProductConfirmationCard({
       {/* Action Footer */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-rose-100">
         <div className="text-[11px] text-stone-500">
-          Độ tin cậy nhận diện: <strong className="text-emerald-700">{Math.round(context.confidence * 100)}%</strong>
+          {/* Mô hình TỰ báo độ tin cậy — không phải số đo; chỉ nói nguồn dữ liệu (AGENTS.md: số hiển thị phải là số đo). */}
+          Nguồn: <strong className="text-emerald-700">{components.length > 0 && context.confidence > 0 ? "Vision AI — kiểm lại từng dòng trước khi đối soát" : "Nhập tay"}</strong>
         </div>
 
         <button

@@ -14,6 +14,8 @@ import { CheckCircle2, Clapperboard, Download, Loader2, RotateCcw, ShieldCheck }
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { videoRenderCredit } from "@/modules/usage/domain/pricing"
+import { ProviderSelect, useProviderKind } from "./provider-select"
 
 export type VideoJobDetail = {
   id: string
@@ -22,6 +24,7 @@ export type VideoJobDetail = {
   video_approval: string
   error_message?: string | null
   final_video_view_url?: string | null
+  scenes?: unknown[]
 }
 
 const STAGE_LABEL: Record<string, string> = {
@@ -55,6 +58,9 @@ export function VideoJobLifecycle({
 }) {
   const [job, setJob] = useState<VideoJobDetail | null>(null)
   const [busy, setBusy] = useState<null | "script" | "render" | "video">(null)
+  // PO 25/09/2026: nhà cung cấp trước. Rỗng = theo thứ tự ưu tiên của tiệm; "local_cinematic" = Ken Burns cục bộ đích danh.
+  const [videoProvider, setVideoProvider] = useState<string>("")
+  const videoKind = useProviderKind("video")
   const [error, setError] = useState<string | null>(null)
   const pollRef = useRef<number | null>(null)
   // Giữ callback mới nhất trong ref — cha thường truyền hàm inline, để nó trong
@@ -99,8 +105,14 @@ export function VideoJobLifecycle({
       const path = kind === "script" ? "approve-script" : kind === "render" ? "render" : "approve-video"
       const res = await fetch(`/api/v1/video/jobs/${encodeURIComponent(jobId)}/${path}`, {
         method: "POST",
-        ...(kind === "render" && sceneImages?.length
-          ? { headers: { "content-type": "application/json" }, body: JSON.stringify({ scene_images: sceneImages }) }
+        ...(kind === "render"
+          ? {
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                ...(sceneImages?.length ? { scene_images: sceneImages } : {}),
+                ...(videoProvider ? { video_provider: videoProvider } : {}),
+              }),
+            }
           : {}),
       })
       if (!res.ok) throw new Error(await readError(res))
@@ -123,6 +135,8 @@ export function VideoJobLifecycle({
   const scriptOk = job.script_approval === "APPROVED"
   const rendered = job.stage === "RENDER_COMPLETED" || job.stage === "APPROVED"
   const canRender = scriptOk && (job.stage === "SCRIPT_APPROVED" || job.stage === "FAILED")
+  const benDauTien = videoProvider === "local_cinematic" ? null : videoProvider || videoKind?.order[0] || null
+  const creditRender = job.scenes?.length ? videoRenderCredit(benDauTien, job.scenes.length) : renderCredit
 
   return (
     <Card className="p-5 flex flex-col gap-4">
@@ -146,7 +160,7 @@ export function VideoJobLifecycle({
           )}
         </li>
         <li className={`rounded-lg border p-3 ${rendered ? "border-success bg-success-bg" : "border-border"}`}>
-          <div className="font-bold text-text">2. Render video ({renderCredit} credit)</div>
+          <div className="font-bold text-text">2. Render video ({creditRender} credit)</div>
           <div className="text-text-muted mt-0.5">
             {job.stage === "RENDERING"
               ? "Worker đang dựng video..."
@@ -157,6 +171,19 @@ export function VideoJobLifecycle({
               : "Chạy sau khi duyệt kịch bản"}
           </div>
           {job.stage === "RENDERING" && <Loader2 size={14} className="animate-spin mt-2 text-primary" />}
+          {canRender && (
+            <div className="mt-2 space-y-1.5">
+              <ProviderSelect kind="video" value={videoProvider === "local_cinematic" ? "" : videoProvider} onChange={setVideoProvider} label="Nhà cung cấp dựng clip" disabled={videoProvider === "local_cinematic"} />
+              <label className="flex items-center gap-1.5 text-[11px] text-text-muted">
+                <input
+                  type="checkbox"
+                  checked={videoProvider === "local_cinematic"}
+                  onChange={(e) => setVideoProvider(e.target.checked ? "local_cinematic" : "")}
+                />
+                Dùng Ken Burns cục bộ (dự phòng, chỉ tính phí ghép)
+              </label>
+            </div>
+          )}
           {canRender && (
             <Button size="sm" className="mt-2 gap-1" disabled={busy !== null} onClick={() => void act("render")}>
               {job.stage === "FAILED" ? <RotateCcw size={12} /> : null}

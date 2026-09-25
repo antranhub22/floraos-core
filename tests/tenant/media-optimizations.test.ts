@@ -145,6 +145,58 @@ describe("cách ly tenant — M04a tối ưu ảnh và hai cổng (P9)", () => {
       )
       expect(response.status).toBe(400)
     })
+
+    // Nợ #120 (trả 25/09/2026): nhánh nhà cung cấp từng gọi API trả phí đồng
+    // bộ, không trừ credit, bỏ qua Idempotency-Key, trả `balance_after: 99` giả.
+    it("nhánh nhà cung cấp vào hàng đợi, trừ credit thật, trùng khoá không trừ lần hai", async () => {
+      const assetId = await seedAsset(a.ctx, null)
+      const wsTruoc = await prisma.workspaces.findUnique({ where: { id: a.ctx.workspaceId } })
+      const key = randomUUID()
+      const goi = () =>
+        createOptimizationRoute(
+          withSession(`${BASE}/media/optimizations`, a.token, {
+            method: "POST",
+            headers: { "idempotency-key": key },
+            body: JSON.stringify({ asset_id: assetId, config: { engine: "cloud_provider", enhancer_provider: "photoroom" } }),
+          })
+        )
+
+      const lan1 = await goi()
+      expect(lan1.status).toBe(201)
+      const body = await readJson(lan1)
+      expect(body.engine).toBe("cloud_provider")
+      expect(body.status).toBe("PENDING")
+
+      // Lượt trùng khoá trả lại job cũ, không tính tiền lần hai.
+      expect((await readJson(await goi())).job_id).toBe(body.job_id)
+      // Tổ chức thử (workspace EXPERIENCE) trả bằng lượt dùng thử thay credit —
+      // cùng một giao dịch `enqueueJob`; điều cần khoá là lượt này VÀO SỔ, đúng một lần.
+      const wsSau = await prisma.workspaces.findUnique({ where: { id: a.ctx.workspaceId } })
+      expect(wsSau?.trial_count).toBe((wsTruoc?.trial_count ?? 0) + 1)
+      expect(await prisma.usage.count({ where: { organization_id: a.organizationId, job_id: body.job_id as string } })).toBe(1)
+      const jobs = await prisma.generation_jobs.findMany({ where: { organization_id: a.organizationId } })
+      expect(jobs).toHaveLength(1)
+      expect(jobs[0]?.feature).toBe(MEDIA_OPTIMIZE_FEATURE)
+      expect((jobs[0]?.payload as { config: Record<string, unknown> }).config.enhancer_provider).toBe("photoroom")
+      // Không còn asset nào được ghi ngay trong request — worker ghi sau khi đo guard.
+      expect(await prisma.assets.count({ where: { organization_id: a.organizationId, kind: "MASTER" } })).toBe(0)
+    })
+
+    it("nhà cung cấp worker không có bị từ chối 400 trước khi trừ credit", async () => {
+      const assetId = await seedAsset(a.ctx, null)
+      const truoc = await prisma.organizations.findUnique({ where: { id: a.organizationId } })
+      const response = await createOptimizationRoute(
+        withSession(`${BASE}/media/optimizations`, a.token, {
+          method: "POST",
+          headers: { "idempotency-key": randomUUID() },
+          body: JSON.stringify({ asset_id: assetId, config: { engine: "cloud_provider", enhancer_provider: "gemini" } }),
+        })
+      )
+      expect(response.status).toBe(400)
+      const sau = await prisma.organizations.findUnique({ where: { id: a.organizationId } })
+      expect(sau?.credit_balance).toBe(truoc?.credit_balance)
+      expect(await prisma.generation_jobs.count({ where: { organization_id: a.organizationId } })).toBe(0)
+    })
   })
 
   describe("đọc kết quả", () => {
