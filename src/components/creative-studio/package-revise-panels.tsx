@@ -150,6 +150,7 @@ interface OriginalAudioJob {
   provider_key: string | null
   quality_tier: string | null
   music_track_id: string | null
+  music_provider_used?: string | null
 }
 
 /**
@@ -191,7 +192,16 @@ export function AudioRevisePanel(props: {
   const taskType: AudioTaskType = isClone ? "VOICE_CLONE" : hasMusic ? "AUDIO_MIX" : "VOICEOVER"
   const providerKey = ((original?.provider_key as TtsProviderKey | null) ?? "openai") as TtsProviderKey
   const qualityTier = ((original?.quality_tier as AudioQualityTier | null) ?? "hd") as AudioQualityTier
-  const credit = audioJobCreditCost({ taskType, providerKey, qualityTier, scenes })
+  // Nhạc: giữ bài thư viện của bản cũ thì không sinh lại (0 credit); bản cũ là nhạc AI hoặc đổi tâm trạng → sinh mới.
+  const musicLibraryOnly = mood === "keep" && Boolean(keepMusic) && !original?.music_provider_used
+  const credit = audioJobCreditCost({
+    taskType,
+    providerKey,
+    qualityTier,
+    scenes,
+    musicProvider: hasMusic && !musicLibraryOnly ? "elevenlabs_music" : null,
+    musicSeconds: scenes.reduce((a, s) => a + s.targetDurationSeconds, 0),
+  })
 
   const run = async () => {
     setError(null)
@@ -212,6 +222,7 @@ export function AudioRevisePanel(props: {
               ? { musicTrackId: keepMusic }
               : { musicMood: "none" }
             : { musicMood: mood }),
+          ...(musicLibraryOnly ? { musicProvider: "library" } : {}),
           topicAngleCategory: props.angleCategory,
         },
         `audio-${crypto.randomUUID()}`

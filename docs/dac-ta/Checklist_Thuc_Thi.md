@@ -844,7 +844,7 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] Ảnh A: mặc định chuỗi nhà cung cấp (Photoroom → fal → Gemini Image → OpenAI), lùi Studio cục bộ có lý do
 - [x] Ảnh D: mọi chế độ đi nhà cung cấp (fal → Stability → Gemini Image), AUTHENTIC chỉ nền + sáng, phép đo `perceptual`
 - [x] Video: clip từng cảnh qua Veo / Kling / Runway / Luma, ghép ở FloraOS; lùi Ken Burns cục bộ + hoàn phần clip lúc đọc; chọn bên ở Khu vực E (nợ #160)
-- [ ] Nhạc nền: ElevenLabs Music sinh nhạc, lùi thư viện
+- [x] Nhạc nền: ElevenLabs Music sinh nhạc không lời theo tâm trạng (sau giọng đọc, đúng thời lượng), bài thư viện là dự phòng + hoàn phần nhạc; giọng đọc theo thứ tự tiệm (nợ #161)
 - [ ] Giao diện Cài đặt thứ tự nhà cung cấp của tiệm + chọn bên từng lượt cho nội dung / giọng đọc
 - [ ] Chạy thật với khoá của từng nhà cung cấp (nợ #153, #159, #160)
 

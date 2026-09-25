@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .tts_engine import generate_speech
+from .music_providers import mo_ta_nhac, sinh_nhac_theo_thu_tu
 from .mixing_engine import (
     resolve_music_file,
     fit_voice_to_scene,
@@ -52,6 +53,7 @@ def _sinh_giong_cac_canh(payload: Dict[str, Any], voice_dir: Path) -> Dict[str, 
     quality_tier = payload.get("qualityTier", "standard")
     voice_map = payload.get("providerVoiceMap") or None
     strict = bool(payload.get("strictProvider"))
+    chain_order = [p for p in (payload.get("providerOrder") or []) if isinstance(p, str)]
 
     voice_files: List[Path] = []
     scene_outputs: List[Dict[str, Any]] = []
@@ -74,6 +76,7 @@ def _sinh_giong_cac_canh(payload: Dict[str, Any], voice_dir: Path) -> Dict[str, 
                 quality=quality_tier,
                 voice_map=voice_map,
                 strict=strict,
+                chain_order=chain_order,
             )
             if success and scene_voice.is_file():
                 dur = fit_voice_to_scene(scene_voice, target, fitted)
@@ -187,6 +190,25 @@ def process_audio_job(
         # Cảnh được kéo dài → tổng thời lượng theo giọng thật.
         total_duration = max(sum(float(s["actualDurationSeconds"]) for s in scene_outputs), 1.0)
 
+    # ── Nhạc nền do nhà cung cấp sinh (PO 25/09/2026) ──
+    # Sinh SAU giọng đọc để đúng thời lượng thật. Bài thư viện / bài tiệm tải
+    # ở trên là đường lùi: mọi bên lỗi thì dùng nó và ghi rõ lý do.
+    music_order = [p for p in (payload.get("musicProviderOrder") or []) if isinstance(p, str)]
+    music_provider_used: Optional[str] = None
+    music_fallback_reason: Optional[str] = None
+    if wants_music and music_order:
+        sinh, music_provider_used, ly_do = sinh_nhac_theo_thu_tu(
+            music_order,
+            mo_ta_nhac(payload.get("musicMood"), payload.get("musicPromptHint")),
+            total_duration + 1.0,
+            work_dir,
+        )
+        if sinh is not None:
+            bgm_file = sinh
+        else:
+            # Tác vụ bắt buộc nhạc đã có bài dự phòng (kiểm ở trên); nhạc tuỳ chọn thì bỏ nhạc.
+            music_fallback_reason = "; ".join(ly_do) or "không nhà cung cấp nào sinh được nhạc"
+
     # ── Phối ──
     mixed_audio = work_dir / "mixed_audio.m4a"
     result_file = mix_audio(
@@ -221,6 +243,9 @@ def process_audio_job(
         "providerUsed": provider_used,
         "hasVoice": has_voice,
         "hasMusic": bool(wants_music and bgm_file is not None),
+        "musicProviderUsed": music_provider_used,
+        "musicFallback": music_fallback_reason is not None,
+        "musicFallbackReason": music_fallback_reason,
         "scenes": scene_outputs,
     }
 
@@ -310,6 +335,9 @@ def process_audio_generation_job(conn: Any, job: Dict[str, Any]) -> None:
             # 24/09/2026: trước đây suy từ `voiceOnlyPath` — luôn True kể cả bản chỉ nhạc.
             "has_voice": bool(ket_qua.get("hasVoice")),
             "has_music": bool(ket_qua.get("hasMusic")),
+            "music_provider_used": ket_qua.get("musicProviderUsed"),
+            "music_fallback": bool(ket_qua.get("musicFallback")),
+            "music_fallback_reason": ket_qua.get("musicFallbackReason"),
             "scenes": ket_qua.get("scenes", []),
         }
         with conn.cursor() as cur:

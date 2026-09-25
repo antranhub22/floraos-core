@@ -33,8 +33,8 @@ def _sine(out: Path, seconds: float, freq: int = 440) -> None:
 def fake_tts(monkeypatch):
     calls: List[Dict[str, Any]] = []
 
-    def _gen(text, voice_code, out_file, provider="openai", quality="standard", voice_map=None, strict=False):
-        calls.append({"text": text, "voice_code": voice_code, "provider": provider, "strict": strict, "voice_map": voice_map})
+    def _gen(text, voice_code, out_file, provider="openai", quality="standard", voice_map=None, strict=False, chain_order=None):
+        calls.append({"chain_order": chain_order, "text": text, "voice_code": voice_code, "provider": provider, "strict": strict, "voice_map": voice_map})
         # ~ 14 ký tự/giây như giọng thật
         _sine(Path(out_file), max(0.6, len(text) / 14))
         return True, provider
@@ -173,3 +173,101 @@ def test_measure_loudness_doc_duoc_so(tmp_path):
     _sine(f, 2)
     assert isinstance(measure_loudness(f), float)
     assert get_audio_duration(f) > 1.5
+
+
+# ─── Nhà cung cấp trước (PO 25/09/2026) ─────────────────────────────────────
+
+def test_giong_doc_theo_thu_tu_nha_cung_cap_cua_tiem(fake_tts, tmp_path):
+    r = process_audio_job(payload("VOICEOVER", providerKey="elevenlabs", providerOrder=["elevenlabs", "openai"]), tmp_path)
+    assert r["status"] == "COMPLETED", r
+    assert all(c["chain_order"] == ["elevenlabs", "openai"] for c in fake_tts)
+
+
+def test_tts_lui_theo_dung_thu_tu_tiem(monkeypatch, tmp_path):
+    from media_ai.audio import tts_engine
+
+    thu: List[str] = []
+
+    def _hong(*_a, **_k):
+        return False
+
+    def _ghi(name):
+        def _f(*a, **_k):
+            thu.append(name)
+            return name == "minimax"
+        return _f
+
+    monkeypatch.setattr(tts_engine, "PROVIDER_FUNCTIONS", {"openai": _ghi("openai"), "elevenlabs": _ghi("elevenlabs"), "minimax": _ghi("minimax"), "edge_tts": _ghi("edge_tts")})
+    ok, used = tts_engine.generate_speech("xin chào", "nova", tmp_path / "a.mp3", provider="elevenlabs", chain_order=["elevenlabs", "minimax", "openai"])
+    assert ok and used == "minimax"
+    assert thu == ["elevenlabs", "minimax"]  # không nhảy sang openai của chuỗi mặc định trước
+
+
+def test_nhac_nen_do_nha_cung_cap_sinh(fake_tts, tmp_path, monkeypatch):
+    from media_ai.audio import music_providers
+
+    goi: List[Dict[str, Any]] = []
+
+    def _sinh(prompt, seconds, out_file, post=None):
+        goi.append({"prompt": prompt, "seconds": seconds})
+        _sine(Path(out_file), seconds, freq=220)
+
+    monkeypatch.setitem(music_providers.MUSIC_PROVIDERS, "elevenlabs_music", _sinh)
+    r = process_audio_job(
+        payload("AUDIO_MIX", musicTrackId="acoustic-warm-guitar", musicMood="romantic", musicProviderOrder=["elevenlabs_music"]),
+        tmp_path,
+    )
+    assert r["status"] == "COMPLETED", r
+    assert r["musicProviderUsed"] == "elevenlabs_music" and r["musicFallback"] is False
+    assert len(goi) == 1 and "romantic" in goi[0]["prompt"] and "No vocals" in goi[0]["prompt"]
+    # Sinh sau giọng đọc: đủ thời lượng thật.
+    assert goi[0]["seconds"] >= r["totalDurationSeconds"]
+
+
+def test_nha_cung_cap_nhac_loi_thi_lui_bai_thu_vien_va_ghi_ly_do(fake_tts, tmp_path, monkeypatch):
+    from media_ai.audio import music_providers
+
+    def _hong(prompt, seconds, out_file, post=None):
+        raise music_providers.NhaCungCapNhacLoi("elevenlabs_music: HTTP 402 quota")
+
+    monkeypatch.setitem(music_providers.MUSIC_PROVIDERS, "elevenlabs_music", _hong)
+    r = process_audio_job(
+        payload("MUSIC_SELECT", scenes=[], musicTrackId="acoustic-warm-guitar", musicProviderOrder=["elevenlabs_music"], totalDurationSeconds=8.0),
+        tmp_path,
+    )
+    assert r["status"] == "COMPLETED", r
+    assert r["hasMusic"] is True and r["musicProviderUsed"] is None
+    assert r["musicFallback"] is True and "402" in r["musicFallbackReason"]
+
+
+def test_elevenlabs_music_gui_dung_hop_dong(monkeypatch, tmp_path):
+    from media_ai.audio import music_providers
+
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "k-test")
+    seen: Dict[str, Any] = {}
+
+    class _R:
+        status_code = 200
+        content = b"\xff\xfb" + b"0" * 5000
+        text = ""
+
+    def _post(url, **kw):
+        seen.update(url=url, **kw)
+        return _R()
+
+    out = tmp_path / "m.mp3"
+    music_providers.sinh_nhac_elevenlabs("calm", 4.0, out, post=_post)
+    assert seen["url"] == "https://api.elevenlabs.io/v1/music"
+    assert seen["headers"]["xi-api-key"] == "k-test"
+    assert seen["json"]["music_length_ms"] == 10_000  # kẹp về tối thiểu của API
+    assert seen["json"]["force_instrumental"] is True
+    assert out.read_bytes() == _R.content
+
+
+def test_elevenlabs_music_thieu_khoa_la_loi_nha_cung_cap(monkeypatch, tmp_path):
+    from media_ai.audio import music_providers
+
+    monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+    monkeypatch.setattr(music_providers, "_ensure_api_key", lambda _k: None)
+    with pytest.raises(music_providers.NhaCungCapNhacLoi):
+        music_providers.sinh_nhac_elevenlabs("calm", 20, tmp_path / "m.mp3", post=lambda *a, **k: None)

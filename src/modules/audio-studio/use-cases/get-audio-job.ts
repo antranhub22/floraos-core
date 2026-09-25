@@ -5,6 +5,8 @@ import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-f
 import { AudioJobRepository } from "@/modules/audio-studio/infra/audio-job-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { refundJob } from "@/modules/usage/use-cases/refund-job"
+import { refundPartial } from "@/modules/usage/use-cases/refund-partial"
+import { audioJobRefund, type AudioCostPlan } from "@/modules/audio-studio/domain/audio-task-rules"
 
 const AUDIO_URL_EXPIRES_IN = 3600
 
@@ -32,6 +34,14 @@ export async function getAudioJob(ctx: TenantContext, jobId: string) {
       return null
     })
     refunded = Boolean(r && (r.refunded || r.reason === "da-hoan-truoc-do"))
+  } else if (raw?.status === "COMPLETED") {
+    // 25/09/2026: nhạc lùi về thư viện / giọng lùi sang bên rẻ hơn → hoàn chênh (idempotent).
+    const hoan = audioJobRefund(payload.cost_plan as AudioCostPlan | undefined, output)
+    if (hoan > 0) {
+      await refundPartial(ctx, jobId, "cloud-lui-cuc-bo", hoan).catch((err: unknown) => {
+        log.warn("audio_job.partial_refund_failed", { job_id: jobId, error: String(err) })
+      })
+    }
   }
 
   const storage = getStorageProvider()
@@ -57,6 +67,10 @@ export async function getAudioJob(ctx: TenantContext, jobId: string) {
       (payload.musicTrackRef as string | null | undefined) ?? (payload.musicTrackId as string | null | undefined) ?? null,
     music_track_name: (payload.musicTrackName as string | null | undefined) ?? null,
     music_mood: job.musicMood,
+    music_provider: ((payload.musicProviderOrder as string[] | undefined) ?? [])[0] ?? null,
+    music_provider_used: (output.music_provider_used as string | null | undefined) ?? null,
+    music_fallback: Boolean(output.music_fallback),
+    music_fallback_reason: (output.music_fallback_reason as string | null | undefined) ?? null,
     has_voice: Boolean(output.has_voice),
     total_duration_seconds: job.totalDurationSeconds,
     loudness_lufs: (output.loudness_lufs as number | null | undefined) ?? null,
