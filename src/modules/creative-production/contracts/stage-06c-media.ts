@@ -44,7 +44,10 @@ export const mediaVariantBodySchema = z.object({
     .describe("Cảnh 1..5 của kịch bản (CREATIVE 5, AUTHENTIC 3)"),
   scene_plan_id: z.string().trim().min(1).max(160).optional(),
   scene_plan_revision: z.number().int().min(1).max(100000).optional(),
-  provider_key: z.enum(VARIANT_CLOUD_PROVIDERS).default("stability").describe("Chỉ nhánh cloud_provider"),
+  provider_key: z
+    .enum(VARIANT_CLOUD_PROVIDERS)
+    .optional()
+    .describe("Chỉ nhánh cloud_provider — nhà cung cấp thử TRƯỚC; bỏ trống = theo VARIANT_PROVIDER_ORDER (các bên vai trò tương đương, bên lỗi thì thử bên kế tiếp)"),
   scene_prompt: z.string().max(MAX_SCENE_PROMPT_LENGTH).optional().describe("Chỉ nhánh cloud_provider — backgroundPrompt của cảnh"),
   // ── Chỉ đạo khung hình (Đợt 1 nâng cấp chất lượng ảnh, 24/09/2026) ──
   // Ý định của FloraOS, KHÔNG phải tên tham số của nhà cung cấp — adapter worker
@@ -100,8 +103,10 @@ export const mediaVariantBodySchema = z.object({
     .describe("2x = khung xuất gấp đôi (9:16 → 2160×3840), tăng nét HẬU CẢNH; bó hoa không qua mô hình siêu phân giải"),
   compose_mode: z
     .enum(COMPOSE_MODES)
-    .default("paste")
-    .describe("harmonize = màu bóng theo hậu cảnh + khớp độ nét hậu cảnh + light wrap trong dải viền; không đụng lõi bó hoa"),
+    .optional()
+    .describe(
+      "Bỏ trống = theo engine: cloud_provider → relight (NHÀ CUNG CẤP LÀM TRỌN GÓI: tách nền, dựng cảnh, chỉnh sáng, tăng nét; cổng đo hình dáng + cấu trúc + màu), local_studio → paste. paste = tự dán nguyên khối bó hoa (giữ từng điểm ảnh); harmonize = paste + hoà bóng/độ nét cục bộ"
+    ),
 })
 
 export const mediaVariantCandidateSchema = z.object({
@@ -155,11 +160,11 @@ export const stage06cMedia = defineStage({
       status: "PENDING",
       engine: "cloud_provider",
       deduped: false,
-      usage: { cost_credit: 4, balance_after: 243 },
+      usage: { cost_credit: 8, balance_after: 239 },
       job_group_id: "0b1c2d3e-4f50-4617-8829-3a4b5c6d7e8f",
       candidates: [
-        { index: 1, job_id: "e5f6a7b8-c9d0-4e1f-8a2b-3c4d5e6f7a8c", status: "PENDING", deduped: false, cost_credit: 2 },
-        { index: 2, job_id: "f6a7b8c9-d0e1-4f2a-8b3c-4d5e6f7a8b9d", status: "PENDING", deduped: false, cost_credit: 2 },
+        { index: 1, job_id: "e5f6a7b8-c9d0-4e1f-8a2b-3c4d5e6f7a8c", status: "PENDING", deduped: false, cost_credit: 4 },
+        { index: 2, job_id: "f6a7b8c9-d0e1-4f2a-8b3c-4d5e6f7a8b9d", status: "PENDING", deduped: false, cost_credit: 4 },
       ],
     },
   },

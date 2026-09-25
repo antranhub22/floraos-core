@@ -55,7 +55,7 @@ import {
   type ScenePlanContext,
   type ScenePlanScene,
 } from "./scene-plan-client"
-import { FLOW_M04B } from "./types"
+import { FLOW_M04B, describeIntegrity, type M04bIntegrity } from "./types"
 import type { UseCreativeStudioReturn } from "./use-creative-studio-data"
 
 // ============================================================
@@ -82,6 +82,10 @@ type SceneMeta = {
   direction?: VariantDirection | null
   /** Chấm kỹ thuật tự động 0..100 (Đợt 3) — heuristic, không thay mắt người. */
   aestheticScore?: number | null
+  /** 25/09/2026: nhà cung cấp làm trọn gói (đã chỉnh sáng cả bó hoa) → đo perceptual. */
+  aiRelit?: boolean
+  integrityResult?: string | null
+  integrityDetail?: string | null
 }
 
 /** Một phương án của cảnh (Đợt 2, 25/09/2026) — mỗi phương án là một job. */
@@ -116,13 +120,14 @@ type VariantJobPoll = {
     cloud_fallback_reason?: string | null
     direction?: Record<string, unknown> | null
   }
-  subject_integrity: { subject_pixel_identity: number } | null
-  quality_report?: { aesthetic: { score: number } | null } | null
+  subject_integrity: M04bIntegrity | null
+  quality_report?: { aesthetic: { score: number } | null; ai_relit?: boolean; flow?: string } | null
   variants: Array<{ asset_id: string; variant_key: string; url: string }>
 }
 
-function formatIntegrity(value: number | null, hasGenerated: boolean): string {
+function formatIntegrity(value: number | null, hasGenerated: boolean, detail?: string | null): string {
   if (!hasGenerated) return "Chưa sinh — chưa đo"
+  if (detail) return detail
   if (value === null) return "Chưa có số đo"
   const pct = (value * 100).toFixed(2)
   if (value >= 0.999) return `Lõi trùng khít ${pct}% (SAFE)`
@@ -138,7 +143,7 @@ const BEAT_COLORS: Record<string, string> = {
   CTA: "bg-amber-100 text-amber-800 border-amber-200",
 }
 
-/** Cảnh dùng hậu cảnh Stability khi người dùng bật: CREATIVE và không phải phông trắng. */
+/** Cảnh dùng nhà cung cấp AI khi người dùng bật: CREATIVE và không phải phông trắng. */
 function sceneUsesCloud(scene: ScenePlanScene, mode: string, engine: string): boolean {
   return engine === "cloud_provider" && mode === "CREATIVE" && scene.localBackdrop !== "studio_white"
 }
@@ -190,11 +195,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   // Cảnh 1 (studio trắng) và Cảnh 4 (tách nền) luôn chạy cục bộ — không cần hậu cảnh AI.
   const [sceneEngine, setSceneEngine] = useState<"cloud_provider" | "local_studio">("cloud_provider")
   // Tuỳ chọn dựng ảnh (Đợt 3, 25/09/2026) — áp cho các lượt sinh tiếp theo; giá hiện trên nút.
+  // `composeMode` bỏ trống = theo engine (đám mây: nhà cung cấp làm trọn gói; cục bộ: dán nguyên khối).
   const [renderOpts, setRenderOpts] = useState<VariantRenderOptions>({
     quality: "standard",
     upscale: "none",
-    composeMode: "paste",
   })
+  const giuNguyenDiemAnh = renderOpts.composeMode === "paste" || renderOpts.composeMode === "harmonize"
 
   // Kịch bản bối cảnh của CHỦ ĐỀ (quyết định PO 24/09/2026): số cảnh và bối
   // cảnh từng cảnh lấy từ kịch bản AI viết qua job `creative.scene_plan`
@@ -461,6 +467,11 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               meta.aesthetic && typeof meta.aesthetic === "object" && typeof (meta.aesthetic as { score?: unknown }).score === "number"
                 ? ((meta.aesthetic as { score: number }).score)
                 : null,
+            aiRelit: meta.ai_relit === true,
+            integrityDetail:
+              meta.integrity_method === "perceptual" && typeof item.identity_score === "number"
+                ? `Giữ nguyên bó hoa (đo hình dáng + cấu trúc + màu) · cấu trúc ${(item.identity_score * 100).toFixed(1)}% · đã chỉnh sáng bằng AI`
+                : null,
           }
           const list = (candidates[idx] ??= [])
           if (list.length < MAX_CANDIDATES_SHOWN) list.push(candidate)
@@ -529,12 +540,17 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           scene_index: targetIndex,
           scene_plan_id: planRef,
           scene_plan_revision: scenePlan?.revision ?? 1,
-          ...(useCloud ? { provider_key: "stability", scene_prompt: scene.backgroundPrompt } : {}),
+          // Không chỉ định nhà cung cấp — các bên vai trò tương đương, worker thử theo thứ tự cấu hình.
+          ...(useCloud ? { scene_prompt: scene.backgroundPrompt } : {}),
           // Đợt 2 (25/09/2026): chỉ đạo tường minh (Sinh lại giống / Thử hướng khác)
           // và số phương án. Không có thì máy chủ lấy từ kịch bản như Đợt 1.
           ...(opts?.direction ? directionRequestFields(opts.direction) : {}),
           ...(opts?.count && opts.count > 1 ? { variant_count: opts.count } : {}),
-          ...renderOptionsPayload(useCloud ? renderOpts : { ...renderOpts, quality: "standard" }),
+          ...renderOptionsPayload(
+            useCloud
+              ? renderOpts
+              : { ...renderOpts, quality: "standard", composeMode: renderOpts.composeMode === "harmonize" ? "harmonize" : undefined }
+          ),
         }),
       })
       if (!res.ok) {
@@ -560,11 +576,9 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           return
         }
         if (detail.result === "REJECTED") {
-          const measured = detail.subject_integrity?.subject_pixel_identity
+          const si = detail.subject_integrity
           failures.push(
-            `Cổng Subject Integrity từ chối${
-              typeof measured === "number" ? ` (lõi trùng khít ${(measured * 100).toFixed(2)}%, cần ≥ 99%)` : ""
-            }: lõi bó hoa bị thay đổi — không biến thể nào được ghi vào kho.`
+            `Cổng Subject Integrity từ chối${si ? ` (${describeIntegrity(si)})` : ""}: bó hoa bị thay đổi — không biến thể nào được ghi vào kho.`
           )
           return
         }
@@ -589,6 +603,9 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           ratio,
           direction: detail.source.direction ? directionFromRecord(detail.source.direction) : null,
           aestheticScore: detail.quality_report?.aesthetic?.score ?? null,
+          aiRelit: detail.subject_integrity?.ai_relit === true || detail.quality_report?.ai_relit === true,
+          integrityResult: detail.subject_integrity?.result ?? null,
+          integrityDetail: detail.subject_integrity ? describeIntegrity(detail.subject_integrity) : null,
         })
       })
       if (made.length === 0) throw new Error(failures[0] ?? "Không sinh được phân cảnh")
@@ -713,12 +730,14 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           : viewRatio && meta?.ratio && meta.ratio !== viewRatio
           ? `Khung ${meta.ratio} ≠ ${viewRatio} — nên sinh lại`
           : meta?.engine === "cloud_provider" && !meta.cloudFallback
-          ? "Hậu cảnh Stability"
+          ? meta.aiRelit
+            ? "Nhà cung cấp AI · đã chỉnh sáng bằng AI"
+            : "Hậu cảnh nhà cung cấp AI"
           : meta?.cloudFallback
-          ? "Studio cục bộ (Stability lỗi)"
+          ? "Studio cục bộ (nhà cung cấp lỗi)"
           : "Studio cục bộ",
         ratio: variantRatio || "1:1",
-        integrityText: formatIntegrity(meta?.integrity ?? null, hasGenerated),
+        integrityText: formatIntegrity(meta?.integrity ?? null, hasGenerated, meta?.integrityDetail),
         hasGenerated,
         usesCloud: scenePlan ? sceneUsesCloud(scene, scenePlan.mode, sceneEngine) : false,
         approved: meta?.approved === true,
@@ -814,11 +833,11 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   className={`px-2.5 py-1.5 cursor-pointer ${sceneEngine === eng ? "bg-primary text-white" : "bg-surface text-text-muted"}`}
                   title={
                     eng === "cloud_provider"
-                      ? "Cảnh có không gian riêng: Stability vẽ hậu cảnh theo kịch bản, bó hoa thật dán nguyên khối (2 credit/cảnh)"
-                      : "Mọi cảnh dùng phông Studio cục bộ gần nhất (1 credit/cảnh)"
+                      ? `Cảnh có không gian riêng: nhà cung cấp AI tách nền, dựng cảnh và chỉnh sáng theo kịch bản (${variantUnitCostCredit("cloud_provider", renderOpts)} credit/cảnh)`
+                      : `Mọi cảnh dùng phông Studio cục bộ gần nhất (${variantUnitCostCredit("local_studio", renderOpts)} credit/cảnh)`
                   }
                 >
-                  {eng === "cloud_provider" ? "Hậu cảnh Stability" : "Studio cục bộ"}
+                  {eng === "cloud_provider" ? "Nhà cung cấp AI" : "Studio cục bộ"}
                 </button>
               ))}
             </div>
@@ -934,8 +953,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
                 {activeScene.fallbackReason && (
                   <div className="rounded-xl border border-warning bg-warning-bg px-3.5 py-2.5 text-[12px] text-warning">
-                    <strong>Chưa có bối cảnh của kịch bản:</strong> Stability không vẽ được hậu cảnh nên worker lùi về phông
-                    Studio cục bộ (chỉ là nền trơn). Lý do: {activeScene.fallbackReason}
+                    <strong>Chưa có bối cảnh của kịch bản:</strong> các nhà cung cấp AI đều không dựng được cảnh nên worker lùi
+                    về phông Studio cục bộ (chỉ là nền trơn). Lý do: {activeScene.fallbackReason}
                   </div>
                 )}
                 <div className="rounded-xl bg-surface-alt p-3.5 border border-border space-y-2">
@@ -1049,16 +1068,38 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                       <div className="flex flex-wrap items-center gap-3 text-[11px] text-text-muted">
                         <span className="font-bold text-text">Chất lượng lượt sau:</span>
                         {engine === "cloud_provider" && (
+                          <label
+                            className="flex items-center gap-1 cursor-pointer"
+                            title="Mặc định nhà cung cấp AI ghép và chỉnh sáng cả bó hoa (hài hoà nhất). Bật ô này để giữ nguyên từng điểm ảnh bó hoa — nhà cung cấp chỉ vẽ hậu cảnh."
+                          >
+                            <input
+                              type="checkbox"
+                              checked={giuNguyenDiemAnh}
+                              onChange={(e) =>
+                                setRenderOpts((o) => ({ ...o, composeMode: e.target.checked ? "paste" : undefined, quality: "standard" }))
+                              }
+                            />
+                            Giữ nguyên từng điểm ảnh bó hoa (không chỉnh sáng)
+                          </label>
+                        )}
+                        {engine === "cloud_provider" && giuNguyenDiemAnh && (
                           <label className="flex items-center gap-1 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={renderOpts.quality === "high"}
                               onChange={(e) => setRenderOpts((o) => ({ ...o, quality: e.target.checked ? "high" : "standard" }))}
                             />
-                            Cao (Stability Ultra, +{variantUnitCostCredit("cloud_provider", { quality: "high" }) - variantUnitCostCredit("cloud_provider")} credit)
+                            Cao (Stability Ultra, +{variantUnitCostCredit("cloud_provider", { quality: "high", composeMode: "paste" }) - variantUnitCostCredit("cloud_provider", { composeMode: "paste" })} credit)
                           </label>
                         )}
-                        <label className="flex items-center gap-1 cursor-pointer" title="Khung xuất gấp đôi; chỉ tăng nét hậu cảnh, bó hoa giữ nguyên điểm ảnh">
+                        <label
+                          className="flex items-center gap-1 cursor-pointer"
+                          title={
+                            engine === "cloud_provider" && !giuNguyenDiemAnh
+                              ? `Khung xuất gấp đôi; nhà cung cấp tăng nét cả ảnh bằng mô hình của họ (+${variantUnitCostCredit("cloud_provider", { upscale: "2x" }) - variantUnitCostCredit("cloud_provider")} credit)`
+                              : "Khung xuất gấp đôi; chỉ tăng nét hậu cảnh, bó hoa giữ nguyên điểm ảnh"
+                          }
+                        >
                           <input
                             type="checkbox"
                             checked={renderOpts.upscale === "2x"}
@@ -1066,19 +1107,21 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                           />
                           Xuất 2× độ phân giải
                         </label>
-                        <label className="flex items-center gap-1 cursor-pointer" title="Màu bóng theo hậu cảnh, khớp độ nét hậu cảnh — không đụng bó hoa">
-                          <input
-                            type="checkbox"
-                            checked={renderOpts.composeMode === "harmonize"}
-                            onChange={(e) => setRenderOpts((o) => ({ ...o, composeMode: e.target.checked ? "harmonize" : "paste" }))}
-                          />
-                          Hoà hợp bóng &amp; nền
-                        </label>
+                        {(engine === "local_studio" || giuNguyenDiemAnh) && (
+                          <label className="flex items-center gap-1 cursor-pointer" title="Màu bóng theo hậu cảnh, khớp độ nét hậu cảnh — không đụng bó hoa (xử lý cục bộ)">
+                            <input
+                              type="checkbox"
+                              checked={renderOpts.composeMode === "harmonize"}
+                              onChange={(e) => setRenderOpts((o) => ({ ...o, composeMode: e.target.checked ? "harmonize" : "paste" }))}
+                            />
+                            Hoà hợp bóng &amp; nền
+                          </label>
+                        )}
                       </div>
                       {engine === "local_studio" && (
                         <p className="text-[11px] text-text-muted">
                           Phông Studio cục bộ chỉ đổi vùng sáng, bố cục bokeh và vị trí bó hoa — muốn hậu cảnh khác hẳn
-                          nhau, bật hậu cảnh Stability cho cảnh này.
+                          nhau, dùng nhà cung cấp AI cho cảnh này.
                         </p>
                       )}
                     </div>
@@ -1238,12 +1281,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                         : scene.hasGenerated
                         ? `🔄 Sinh lại Cảnh ${scene.sceneIndex}`
                         : scene.usesCloud
-                        ? `⚡ Sinh Cảnh ${scene.sceneIndex} (hậu cảnh Stability)`
+                        ? `⚡ Sinh Cảnh ${scene.sceneIndex} (nhà cung cấp AI)`
                         : `⚡ Sinh Cảnh ${scene.sceneIndex} (Studio cục bộ)`}
                     </button>
                     {scene.fallbackReason && (
                       <p className="mt-1.5 text-[10.5px] leading-snug text-warning">
-                        Stability không vẽ được hậu cảnh — đã dùng phông cục bộ: {scene.fallbackReason}
+                        Nhà cung cấp AI không dựng được cảnh — đã dùng phông cục bộ: {scene.fallbackReason}
                       </p>
                     )}
                     {scene.error && (
@@ -1537,7 +1580,9 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                       {[scene.lighting, scene.palette.join(", ")].filter(Boolean).join(" · ")}
                     </span>
                     <span className="font-bold text-stone-500 shrink-0">
-                      {scene.usesCloud ? "Stability · 2 credit" : "Studio cục bộ · 1 credit"}
+                      {scene.usesCloud
+                        ? `Nhà cung cấp AI · ${variantUnitCostCredit("cloud_provider", renderOpts)} credit`
+                        : `Studio cục bộ · ${variantUnitCostCredit("local_studio", renderOpts)} credit`}
                     </span>
                   </div>
                 </div>
@@ -1563,11 +1608,11 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               >
                 {eng === "cloud_provider" ? (
                   <>
-                    <Sparkles size={14} /> Hậu cảnh Stability theo kịch bản (2 credit/cảnh)
+                    <Sparkles size={14} /> Nhà cung cấp AI dựng cảnh theo kịch bản ({variantUnitCostCredit("cloud_provider", renderOpts)} credit/cảnh)
                   </>
                 ) : (
                   <>
-                    <ShieldCheck size={14} /> Phông Studio cục bộ gần nhất (1 credit/cảnh)
+                    <ShieldCheck size={14} /> Phông Studio cục bộ gần nhất ({variantUnitCostCredit("local_studio", renderOpts)} credit/cảnh)
                   </>
                 )}
               </button>

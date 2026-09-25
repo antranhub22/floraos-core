@@ -133,8 +133,8 @@
       "engine": "cloud_provider",
       "deduped": false,
       "usage": {
-        "cost_credit": 4,
-        "balance_after": 243
+        "cost_credit": 8,
+        "balance_after": 239
       },
       "job_group_id": "0b1c2d3e-4f50-4617-8829-3a4b5c6d7e8f",
       "candidates": [
@@ -143,14 +143,14 @@
           "job_id": "e5f6a7b8-c9d0-4e1f-8a2b-3c4d5e6f7a8c",
           "status": "PENDING",
           "deduped": false,
-          "cost_credit": 2
+          "cost_credit": 4
         },
         {
           "index": 2,
           "job_id": "f6a7b8c9-d0e1-4f2a-8b3c-4d5e6f7a8b9d",
           "status": "PENDING",
           "deduped": false,
-          "cost_credit": 2
+          "cost_credit": 4
         }
       ]
     }

@@ -68,13 +68,34 @@ export interface VariantRenderOptions {
  */
 export const HIGH_QUALITY_SURCHARGE = 2
 export const UPSCALE_SURCHARGE = 0
+/**
+ * Luồng NHÀ CUNG CẤP TRỌN GÓI (PO 25/09/2026, giá tạm — PO sẽ đổi một lượt):
+ *  - `relight` (tách nền + dựng cảnh + chỉnh sáng + tách nền lần hai để đo, đều
+ *    gọi nhà cung cấp): +2 so với đám mây chuẩn → 4 credit/phương án;
+ *  - `quality=high` KHÔNG cộng thêm ở luồng này (Stability Relight không có bậc;
+ *    BRIA chỉ tắt chế độ nhanh);
+ *  - `upscale=2x`: +1 — tăng nét bằng mô hình của nhà cung cấp (Stability
+ *    upscale fast / fal Real-ESRGAN). Luồng cục bộ vẫn +0 (LANCZOS).
+ */
+export const RELIGHT_SURCHARGE = 2
+export const PROVIDER_UPSCALE_SURCHARGE = 1
+
+/** Cách ghép THẬT sẽ chạy: đám mây mặc định `relight`, cục bộ không làm được `relight`. */
+export function resolveComposeMode(engine: VariantEngine, requested?: ComposeMode): ComposeMode {
+  if (engine === "cloud_provider") return requested ?? "relight"
+  return requested === "harmonize" ? "harmonize" : "paste"
+}
 
 /** Credit của MỘT phương án — ĐÚNG số `enqueueJob` trừ (truyền qua `costCredit`). */
 export function variantUnitCostCredit(engine: VariantEngine, opts: VariantRenderOptions = {}): number {
   const base = costCreditForFeature(engine === "cloud_provider" ? MEDIA_VARIANT_CLOUD_FEATURE : MEDIA_VARIANT_FEATURE)
-  const high = engine === "cloud_provider" && opts.quality === "high" ? HIGH_QUALITY_SURCHARGE : 0
-  const up = opts.upscale === "2x" ? UPSCALE_SURCHARGE : 0
-  return base + high + up
+  if (engine !== "cloud_provider") return base + (opts.upscale === "2x" ? UPSCALE_SURCHARGE : 0)
+  const mode = resolveComposeMode(engine, opts.composeMode)
+  if (mode === "relight") {
+    return base + RELIGHT_SURCHARGE + (opts.upscale === "2x" ? PROVIDER_UPSCALE_SURCHARGE : 0)
+  }
+  const high = opts.quality === "high" ? HIGH_QUALITY_SURCHARGE : 0
+  return base + high + (opts.upscale === "2x" ? UPSCALE_SURCHARGE : 0)
 }
 
 /** Credit cả lượt bấm — hiện TRƯỚC khi bấm (Đợt 2). */
@@ -82,12 +103,13 @@ export function variantTotalCostCredit(engine: VariantEngine, count: number, opt
   return variantUnitCostCredit(engine, opts) * clampVariantCount(count)
 }
 
-/** Trường tuỳ chọn dựng ảnh trong payload job / thân POST (snake_case). */
+/** Trường tuỳ chọn dựng ảnh trong thân POST (snake_case) — chỉ gửi khi khác mặc định;
+ *  `compose_mode` chỉ gửi khi người dùng chọn tường minh (mặc định do máy chủ quyết theo engine). */
 export function renderOptionsPayload(opts: VariantRenderOptions): Record<string, unknown> {
   return {
     ...(opts.quality && opts.quality !== "standard" ? { quality: opts.quality } : {}),
     ...(opts.upscale && opts.upscale !== "none" ? { upscale: opts.upscale } : {}),
-    ...(opts.composeMode && opts.composeMode !== "paste" ? { compose_mode: opts.composeMode } : {}),
+    ...(opts.composeMode ? { compose_mode: opts.composeMode } : {}),
   }
 }
 

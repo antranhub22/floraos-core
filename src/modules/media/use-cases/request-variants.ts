@@ -18,6 +18,7 @@ import {
   candidateIdempotencyKey,
   clampVariantCount,
   renderOptionsPayload,
+  resolveComposeMode,
   variantUnitCostCredit,
   type VariantEngine,
   type VariantRenderOptions,
@@ -128,7 +129,12 @@ async function enqueueCandidates(
     render?: VariantRenderOptions | undefined
   }
 ): Promise<RequestVariantCandidatesResult> {
-  const render = args.render ?? {}
+  // Cách ghép THẬT (đám mây mặc định `relight` = nhà cung cấp trọn gói) — gửi tường
+  // minh cho worker để giá và luồng chạy luôn khớp nhau.
+  const render: VariantRenderOptions = {
+    ...(args.render ?? {}),
+    composeMode: resolveComposeMode(args.engine, args.render?.composeMode),
+  }
   // Giá theo tham số (Đợt 3): cùng hàm giao diện dùng để hiện credit trước khi bấm.
   const costCredit = variantUnitCostCredit(args.engine, render)
   const count = clampVariantCount(args.variantCount)
@@ -211,7 +217,8 @@ export async function requestVariants(ctx: TenantContext, input: RequestVariants
 }
 
 export type RequestCloudVariantInput = RequestVariantsInput & {
-  provider: VariantCloudProvider
+  /** Bỏ trống = worker thử các nhà cung cấp tương đương theo `VARIANT_PROVIDER_ORDER`. */
+  provider?: VariantCloudProvider | undefined
   /** Mô tả KHÔNG GIAN hậu cảnh (không mô tả bó hoa) — worker luôn nối thêm
    *  ràng buộc "cảnh trống", cắt còn `MAX_SCENE_PROMPT_LENGTH` ký tự. */
   scenePrompt?: string | undefined
@@ -252,7 +259,7 @@ export async function requestCloudVariant(ctx: TenantContext, input: RequestClou
       ratio: input.ratio,
       watermark: input.watermark,
       auto_enhance: input.autoEnhance ?? false,
-      provider: input.provider,
+      ...(input.provider ? { provider: input.provider } : {}),
       ...(scenePrompt ? { scene_prompt: scenePrompt } : {}),
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
       ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),

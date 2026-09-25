@@ -160,8 +160,9 @@ describe("directionFromRecord — đọc lại chỉ đạo worker đã dùng", 
 describe("credit hiện trước khi bấm = credit bị trừ", () => {
   it("đơn giá theo đúng bảng giá enqueueJob", () => {
     expect(variantUnitCostCredit("local_studio")).toBe(costCreditForFeature("media.variant"))
-    expect(variantUnitCostCredit("cloud_provider")).toBe(costCreditForFeature("media.variant.cloud"))
-    expect(variantTotalCostCredit("cloud_provider", 3)).toBe(3 * costCreditForFeature("media.variant.cloud"))
+    // Đám mây chỉ-hậu-cảnh (`paste`) = giá feature; mặc định đám mây (trọn gói) xem variant-render-options.test.ts.
+    expect(variantUnitCostCredit("cloud_provider", { composeMode: "paste" })).toBe(costCreditForFeature("media.variant.cloud"))
+    expect(variantTotalCostCredit("cloud_provider", 3, { composeMode: "paste" })).toBe(3 * costCreditForFeature("media.variant.cloud"))
   })
 
   it("khoá idempotency: phương án 1 giữ khoá gốc", () => {

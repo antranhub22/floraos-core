@@ -78,10 +78,10 @@
       "maximum": 100000
     },
     "provider_key": {
-      "default": "stability",
-      "description": "Chỉ nhánh cloud_provider",
+      "description": "Chỉ nhánh cloud_provider — nhà cung cấp thử TRƯỚC; bỏ trống = theo VARIANT_PROVIDER_ORDER (các bên vai trò tương đương, bên lỗi thì thử bên kế tiếp)",
       "type": "string",
       "enum": [
+        "fal",
         "stability"
       ]
     },
@@ -194,12 +194,12 @@
       ]
     },
     "compose_mode": {
-      "default": "paste",
-      "description": "harmonize = màu bóng theo hậu cảnh + khớp độ nét hậu cảnh + light wrap trong dải viền; không đụng lõi bó hoa",
+      "description": "Bỏ trống = theo engine: cloud_provider → relight (NHÀ CUNG CẤP LÀM TRỌN GÓI: tách nền, dựng cảnh, chỉnh sáng, tăng nét; cổng đo hình dáng + cấu trúc + màu), local_studio → paste. paste = tự dán nguyên khối bó hoa (giữ từng điểm ảnh); harmonize = paste + hoà bóng/độ nét cục bộ",
       "type": "string",
       "enum": [
         "paste",
-        "harmonize"
+        "harmonize",
+        "relight"
       ]
     }
   },

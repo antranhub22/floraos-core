@@ -60,7 +60,7 @@ export const POST = handle(async (request) => {
     data.engine === "cloud_provider"
       ? await requestCloudVariant(ctx, {
           ...common,
-          provider: data.provider_key,
+          ...(data.provider_key ? { provider: data.provider_key } : {}),
           scenePrompt: data.scene_prompt,
         })
       : await requestVariants(ctx, common)

@@ -38,7 +38,7 @@ PHONG_CACH = ("natural", "cinematic", "film", "vivid")
 # Bậc chất lượng / tăng nét / cách ghép (Đợt 3) — khớp `variant-direction-rules.ts`.
 CHAT_LUONG = ("standard", "high")
 TANG_NET = ("none", "2x")
-CACH_GHEP = ("paste", "harmonize")
+CACH_GHEP = ("paste", "harmonize", "relight")
 
 _CUM_HUONG_SANG = {
     "left": "soft key light coming from the left",

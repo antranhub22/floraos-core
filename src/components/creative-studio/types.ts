@@ -81,6 +81,22 @@ export interface M04bIntegrity {
   source_master_asset_id: string
   result: "SAFE" | "GOOD" | "WARNING" | "REJECTED"
   ly_do: string[]
+  /** 25/09/2026: `perceptual` = luồng nhà cung cấp trọn gói (đo hình dáng + cấu trúc + màu). */
+  method?: "pixel_exact" | "perceptual"
+  perceptual?: { structure_ssim: number | null; color_delta_e: number | null; shape_iou: number | null }
+  ai_relit?: boolean
+}
+
+/** Mô tả số đo của cổng cho người dùng — theo cách đo. */
+export function describeIntegrity(t: Pick<M04bIntegrity, "subject_pixel_identity" | "result" | "method" | "perceptual" | "ai_relit">): string {
+  if (t.method === "perceptual") {
+    const p = t.perceptual
+    const iou = typeof p?.shape_iou === "number" ? `hình dáng ${(p.shape_iou * 100).toFixed(1)}%` : "hình dáng —"
+    const ssim = typeof p?.structure_ssim === "number" ? `cấu trúc ${(p.structure_ssim * 100).toFixed(1)}%` : "cấu trúc —"
+    const de = typeof p?.color_delta_e === "number" ? `lệch màu ΔE ${p.color_delta_e.toFixed(1)}` : "lệch màu —"
+    return `Giữ nguyên bó hoa: ${iou} · ${ssim} · ${de} (${t.result})${t.ai_relit ? " · đã chỉnh sáng bằng AI" : ""}`
+  }
+  return `Lõi trùng khít ${(t.subject_pixel_identity * 100).toFixed(2)}% (${t.result})`
 }
 
 export type JobStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "CANCELLED" | null
@@ -202,9 +218,7 @@ export function buildFieldsB(
 ): ResultField[] {
   if (!source) return FIELDS_M04B_DEFAULT
   const preset = source.preset ? getVariantPreset(source.preset).name : "—"
-  const doTrung = toanVen
-    ? `${(toanVen.subject_pixel_identity * 100).toFixed(2)}% (${toanVen.result})`
-    : "Chưa có số đo"
+  const doTrung = toanVen ? describeIntegrity(toanVen) : "Chưa có số đo"
   return [
     { key: "background", label: "Bối cảnh đã dùng", type: "readonly", editable: false, value: preset },
     { key: "ratio", label: "Tỉ lệ khung", type: "readonly", editable: false, value: source.ratio ?? "—" },

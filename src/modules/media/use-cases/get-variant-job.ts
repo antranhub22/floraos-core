@@ -66,6 +66,13 @@ export type VariantJobDetail = {
     quality: string
     upscale: string
     compose_mode: string
+    /** `provider_scene` = nhà cung cấp làm trọn gói; `provider_background` = chỉ xin hậu cảnh;
+     *  `local` / `local_fallback` = luồng cục bộ (lùi khi mọi nhà cung cấp lỗi). */
+    flow: string
+    /** Bó hoa đã được nhà cung cấp chỉnh sáng — nhãn "đã chỉnh sáng bằng AI". */
+    ai_relit: boolean
+    integrity_method: string
+    provider_steps: Record<string, unknown> | null
   } | null
   variants: VariantItem[]
   approval: {
@@ -198,6 +205,10 @@ export async function getVariantJob(ctx: TenantContext, jobId: string): Promise<
             quality: doc(job.output, "quality", "standard"),
             upscale: doc(job.output, "upscale", "none"),
             compose_mode: doc(job.output, "compose_mode", "paste"),
+            flow: doc(job.output, "flow", "local"),
+            ai_relit: doc<unknown>(job.output, "ai_relit", false) === true,
+            integrity_method: doc(job.output, "integrity_method", "pixel_exact"),
+            provider_steps: doc(job.output, "provider_steps", null),
           }
         : null,
     variants,

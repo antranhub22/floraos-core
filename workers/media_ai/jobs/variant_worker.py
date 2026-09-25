@@ -77,6 +77,8 @@ from media_ai.providers.background.stability_background import (
 )
 from media_ai.providers.chung import ghi_ai_request, so_do_chi_phi_luot
 from media_ai.providers.expansion.router import resolve_expander
+from media_ai.jobs.variant_nha_cung_cap import TatCaNhaCungCapLoi, dung_bien_the_nha_cung_cap
+from media_ai.providers.scene.registry import thu_tu_nha_cung_cap
 from media_ai.providers.segmentation.mo_hinh import giay_phep, mo_hinh_tach_nen
 from media_ai.providers.segmentation.rembg_segmenter import RembgSegmenter
 from media_ai.providers.upscale.nen import tang_net_nen
@@ -985,6 +987,13 @@ def _ghi_asset_bien_the(
                         "edge_fade": item.get("edge_fade"),
                         "segmentation": nguon.get("segmentation"),
                         "aesthetic": item.get("aesthetic"),
+                        # Luồng nhà cung cấp trọn gói (25/09/2026): ảnh đã được nhà
+                        # cung cấp chỉnh sáng cả bó hoa → nhãn "đã chỉnh sáng bằng AI".
+                        "flow": nguon.get("flow") or ("local" if nguon.get("engine") != "cloud_provider" else "provider_background"),
+                        "ai_relit": bool(nguon.get("ai_relit")),
+                        "integrity_method": "perceptual" if nguon.get("ai_relit") else "pixel_exact",
+                        "provider_steps": nguon.get("provider_steps"),
+                        "provider_params": nguon.get("provider_params"),
                     }
                 ),
                 "created_by": job["user_id"],
@@ -1047,7 +1056,18 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
         # Đợt 3 (25/09/2026): chất lượng / tăng nét / cách ghép — giá trị lạ lùi về mặc định.
         quality = payload.get("quality") if payload.get("quality") in CHAT_LUONG else "standard"
         upscale = payload.get("upscale") if payload.get("upscale") in TANG_NET else "none"
-        compose_mode = payload.get("compose_mode") if payload.get("compose_mode") in CACH_GHEP else "paste"
+        # Luồng (PO 25/09/2026): đám mây mặc định `relight` = NHÀ CUNG CẤP LÀM TRỌN GÓI
+        # (`jobs/variant_nha_cung_cap.py`); cục bộ mặc định `paste`. `paste`/`harmonize`
+        # trên đám mây = chỉ xin hậu cảnh rồi tự ghép (giữ từng điểm ảnh bó hoa).
+        la_cloud_feature = job.get("feature") == CLOUD_FEATURE and preset != "transparent"
+        compose_mode = (
+            payload.get("compose_mode") if payload.get("compose_mode") in CACH_GHEP
+            else ("relight" if la_cloud_feature else "paste")
+        )
+        bo_qua_luong: list[str] = []
+        if compose_mode == "relight" and not la_cloud_feature:
+            bo_qua_luong.append("compose_mode:relight")  # chỉnh sáng cần nhà cung cấp
+            compose_mode = "paste"
         mo_hinh_tach = mo_hinh_tach_nen()
         gp = giay_phep(mo_hinh_tach)
         nguon.update(
@@ -1085,7 +1105,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 bo_qua_cuc_bo.append("quality")  # phông cục bộ không có bậc cao hơn
             if palette or lighting.get("mood"):
                 bo_qua_cuc_bo.append("prompt")
-            nguon["provider_ignored"] = bo_qua_cuc_bo
+            nguon["provider_ignored"] = bo_qua_cuc_bo + bo_qua_luong
 
         # Nhánh Cloud (23/09/2026) — nhà cung cấp chỉ vẽ HẬU CẢNH TRỐNG; mọi
         # lỗi (thiếu khoá, 402/403/429, mạng) lùi về phông cục bộ của chính
@@ -1152,7 +1172,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 _ghi_nguon_cloud(provider, bat_dau_cloud, ket_qua_cloud["prompt"], None, [])
             except BackgroundProviderError as exc:
                 _lui_ve_cuc_bo(exc, bat_dau_cloud)
-        elif la_cloud:
+        elif la_cloud and compose_mode != "relight":
             # Khung đúng tỉ lệ đích: gọi nhà cung cấp SAU khi `dung_bien_the` biết
             # kích thước khung làm việc — hậu cảnh vẽ đúng khung, không phải đệm.
             def _hau_canh_cloud(ratio_khung: str, rong: int, cao: int) -> Image.Image | None:
@@ -1181,52 +1201,109 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
 
             nguon_hau_canh = _hau_canh_cloud
 
-        _set_stage(conn, job["id"], "SEGMENTING")
+        # ── Luồng nhà cung cấp trọn gói (PO 25/09/2026) ─────────────────────
+        ket_qua_ncc = None
+        if la_cloud and compose_mode == "relight" and fill_mode != "pad":
+            nha_cung_cap = thu_tu_nha_cung_cap(payload.get("provider"))
+            bat_dau_ncc = time.monotonic()
+            try:
+                ket_qua_ncc = dung_bien_the_nha_cung_cap(
+                    master_bytes, preset, ratio, watermark, logo_bytes, ten_tiem, nha_cung_cap,
+                    y_dinh={
+                        "scene_prompt": payload.get("scene_prompt"), "composition": composition,
+                        "lighting": lighting, "palette": list(palette), "seed": seed, "style": style,
+                        "quality": quality, "upscale": upscale,
+                    },
+                    master_asset_id=master_asset_id, cache_dir=SEGMENTATION_CACHE_ROOT,
+                    on_stage=lambda stage: _set_stage(conn, job["id"], stage),
+                    nhan_preset=NHAN_PRESET.get(preset, "Bối cảnh do nhà cung cấp dựng"),
+                )
+            except TatCaNhaCungCapLoi as exc:
+                ly_do = str(exc)[:300]
+                nguon.update({"cloud_fallback": True, "cloud_fallback_reason": ly_do, "flow": "local_fallback"})
+                log.warning("Mọi nhà cung cấp đều lỗi (job %s) — lùi về luồng cục bộ: %s", job["id"], ly_do)
+                ghi_ai_request(
+                    conn, job_id=job["id"], organization_id=organization_id, capability_code="AIC-17",
+                    model_key="provider_scene", outcome="FAILED",
+                    latency_ms=int((time.monotonic() - bat_dau_ncc) * 1000),
+                )
+                _emit_event(conn, job["id"], "log", {
+                    "message": "Nhà cung cấp không dựng được cảnh — lùi về luồng cục bộ (phông Studio)",
+                    "cloud_fallback": True, "reason": ly_do,
+                })
+                seed_phong = seed if seed is not None else random.randint(0, 4_294_967_294)
+                nguon["seed"] = seed_phong
+            else:
+                nguon.update(ket_qua_ncc.nguon)
+                nguon.update({
+                    "flow": "provider_scene", "background_provider": ket_qua_ncc.nguon["provider"],
+                    "model": f"{ket_qua_ncc.nguon['provider']}:scene",
+                    "segmentation": {"model": f"{ket_qua_ncc.nguon['provider']}:provider", "license": "provider-api", "commercial_use": True},
+                })
+                if ket_qua_ncc.loi_ben_truoc:
+                    _emit_event(conn, job["id"], "log", {
+                        "message": "Nhà cung cấp trước lỗi — đã dùng nhà cung cấp kế tiếp",
+                        "errors": ket_qua_ncc.loi_ben_truoc,
+                    })
+                ghi_ai_request(
+                    conn, job_id=job["id"], organization_id=organization_id, capability_code="AIC-17",
+                    model_key=f"{ket_qua_ncc.nguon['provider']}:{ket_qua_ncc.nguon['model_version']}",
+                    outcome="ACCEPTED", latency_ms=int((time.monotonic() - bat_dau_ncc) * 1000),
+                    image_count=len(ket_qua_ncc.bien_the),
+                )
+
+        if ket_qua_ncc is None:
+            _set_stage(conn, job["id"], "SEGMENTING")
 
         # nợ #110 (18/09): KHÔNG ghi stage="COMPOSING" ở đây nữa — bước tách
         # chủ thể thật (nặng nhất) mới sắp chạy bên trong `dung_bien_the`.
         # Truyền `on_stage` để chính nó ghi "COMPOSING" đúng lúc chuyển việc.
-        bat_dau_bien_the = time.monotonic()
-        try:
-            bien_the, do_trung, expander_dung = dung_bien_the(
-                master_bytes, preset, ratio, watermark, logo_bytes, ten_tiem,
-                expand_provider=payload.get("expand_provider"),
-                auto_enhance=auto_enhance,
-                master_asset_id=master_asset_id,
-                cache_dir=SEGMENTATION_CACHE_ROOT,
-                on_stage=lambda stage: _set_stage(conn, job["id"], stage),
-                hau_canh_bytes=hau_canh_bytes,
-                fill_mode=fill_mode,
-                composition=composition,
-                lighting=lighting,
-                nguon_hau_canh=nguon_hau_canh,
-                seed_phong=seed_phong,
-                upscale=upscale,
-                compose_mode=compose_mode,
-            )
-        except Exception:
+        if ket_qua_ncc is not None:
+            bien_the = ket_qua_ncc.bien_the
+            do_trung = float(ket_qua_ncc.khoi_do.get("structure_ssim") or 0.0)
+            expander_dung = None
+        else:
+            bat_dau_bien_the = time.monotonic()
+            try:
+                bien_the, do_trung, expander_dung = dung_bien_the(
+                    master_bytes, preset, ratio, watermark, logo_bytes, ten_tiem,
+                    expand_provider=payload.get("expand_provider"),
+                    auto_enhance=auto_enhance,
+                    master_asset_id=master_asset_id,
+                    cache_dir=SEGMENTATION_CACHE_ROOT,
+                    on_stage=lambda stage: _set_stage(conn, job["id"], stage),
+                    hau_canh_bytes=hau_canh_bytes,
+                    fill_mode=fill_mode,
+                    composition=composition,
+                    lighting=lighting,
+                    nguon_hau_canh=nguon_hau_canh,
+                    seed_phong=seed_phong,
+                    upscale=upscale,
+                    compose_mode=compose_mode,
+                )
+            except Exception:
+                ghi_ai_request(
+                    conn,
+                    job_id=job["id"],
+                    organization_id=organization_id,
+                    capability_code="AIC-17",
+                    model_key="rembg+studio_backdrop",
+                    outcome="FAILED",
+                    latency_ms=int((time.monotonic() - bat_dau_bien_the) * 1000),
+                )
+                raise
+            # 100% cục bộ, không tiêu tiền nhà cung cấp nào (xem docstring đầu
+            # file) — `cost_usd`/token để None, không ghi 0.
             ghi_ai_request(
                 conn,
                 job_id=job["id"],
                 organization_id=organization_id,
                 capability_code="AIC-17",
                 model_key="rembg+studio_backdrop",
-                outcome="FAILED",
+                outcome="ACCEPTED",
                 latency_ms=int((time.monotonic() - bat_dau_bien_the) * 1000),
+                image_count=len(bien_the),
             )
-            raise
-        # 100% cục bộ, không tiêu tiền nhà cung cấp nào (xem docstring đầu
-        # file) — `cost_usd`/token để None, không ghi 0.
-        ghi_ai_request(
-            conn,
-            job_id=job["id"],
-            organization_id=organization_id,
-            capability_code="AIC-17",
-            model_key="rembg+studio_backdrop",
-            outcome="ACCEPTED",
-            latency_ms=int((time.monotonic() - bat_dau_bien_the) * 1000),
-            image_count=len(bien_the),
-        )
 
         if expander_dung is not None:
             # AIC-13 — mở rộng khung bằng model sinh nội dung (nợ #78,
@@ -1249,20 +1326,38 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             )
 
         _set_stage(conn, job["id"], "VERIFYING")
-        bi_tu_choi = do_trung < NGUONG_TU_CHOI
-        khoi_do = {
-            "subject_pixel_identity": do_trung,
-            "generative_fill_used": any(b["generative_fill_used"] for b in bien_the),
-            "source_master_asset_id": master["id"],
-            "ly_do": (
-                []
-                if not bi_tu_choi
-                else [
-                    "Lõi chủ thể đã bị thay đổi trong lúc ghép bối cảnh — "
-                    f"chỉ còn {do_trung:.4f} trùng khít với Master Image"
-                ]
-            ),
-        }
+        if ket_qua_ncc is not None:
+            # Luồng nhà cung cấp: đo HÌNH DÁNG + CẤU TRÚC + MÀU (`image/do_giu_nguyen.py`) —
+            # bó hoa được nhà cung cấp chỉnh sáng nên so từng điểm ảnh không áp dụng.
+            kd = ket_qua_ncc.khoi_do
+            bi_tu_choi = kd["result"] == "REJECTED"
+            khoi_do = {
+                "method": "perceptual",
+                "subject_pixel_identity": do_trung,
+                "structure_ssim": kd.get("structure_ssim"),
+                "color_delta_e": kd.get("color_delta_e"),
+                "shape_iou": kd.get("shape_iou"),
+                "ai_relit": True,
+                "generative_fill_used": True,
+                "source_master_asset_id": master["id"],
+                "ly_do": kd.get("ly_do") or [],
+            }
+        else:
+            bi_tu_choi = do_trung < NGUONG_TU_CHOI
+            khoi_do = {
+                "method": "pixel_exact",
+                "subject_pixel_identity": do_trung,
+                "generative_fill_used": any(b["generative_fill_used"] for b in bien_the),
+                "source_master_asset_id": master["id"],
+                "ly_do": (
+                    []
+                    if not bi_tu_choi
+                    else [
+                        "Lõi chủ thể đã bị thay đổi trong lúc ghép bối cảnh — "
+                        f"chỉ còn {do_trung:.4f} trùng khít với Master Image"
+                    ]
+                ),
+            }
         _emit_event(conn, job["id"], "variant_integrity", khoi_do)
 
         asset_ids: list[str] = []
@@ -1280,7 +1375,10 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 {"message": "Subject Integrity dưới ngưỡng — không ghi biến thể nào", "ly_do": khoi_do["ly_do"]},
             )
         else:
-            ket_qua = "WARNING" if do_trung < 0.999 else "SAFE"
+            if ket_qua_ncc is not None:
+                ket_qua = ket_qua_ncc.khoi_do["result"]
+            else:
+                ket_qua = "WARNING" if do_trung < 0.999 else "SAFE"
             _set_stage(conn, job["id"], "GENERATING_OUTPUTS")
             for item in bien_the:
                 asset_ids.append(
@@ -1318,6 +1416,11 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "aesthetic": next((b.get("aesthetic") for b in bien_the if b.get("aesthetic")), None),
             "edge_fade": next((b.get("edge_fade") for b in bien_the if b.get("edge_fade")), None),
             "segmentation": nguon.get("segmentation"),
+            # Luồng nhà cung cấp trọn gói (25/09/2026)
+            "flow": nguon.get("flow") or ("provider_background" if la_cloud else "local"),
+            "ai_relit": bool(nguon.get("ai_relit")),
+            "integrity_method": khoi_do["method"],
+            "provider_steps": nguon.get("provider_steps"),
         }
         with conn.cursor() as cur:
             cur.execute(

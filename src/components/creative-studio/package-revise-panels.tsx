@@ -15,6 +15,8 @@ import type { ScenePlanScene } from "@/modules/creative-production/domain/scene-
 import type { AudioQualityTier, AudioTaskType, TtsProviderKey } from "@/modules/audio-studio/domain/audio-types"
 import { audioJobCreditCost, estimateSpeechSeconds } from "@/modules/audio-studio/domain/audio-task-rules"
 import { VideoJobLifecycle, type VideoJobDetail } from "./video-job-lifecycle"
+import { describeIntegrity, type M04bIntegrity } from "./types"
+import { variantUnitCostCredit } from "@/modules/media/domain/variant-candidates"
 
 async function readError(res: Response): Promise<string> {
   const b = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
@@ -44,13 +46,14 @@ type VariantPoll = {
   status: string
   result: string | null
   error: string | null
-  subject_integrity: { subject_pixel_identity: number } | null
+  subject_integrity: M04bIntegrity | null
   variants: Array<{ asset_id: string; variant_key: string }>
 }
 
 export function sceneReviseCredit(scene: ScenePlanScene | null, mode: string): number {
   const cloud = mode === "CREATIVE" && scene?.localBackdrop !== "studio_white"
-  return costCreditForFeature("creative.scene_revise") + costCreditForFeature(cloud ? "media.variant.cloud" : "media.variant")
+  // Ảnh cảnh: đúng giá `enqueueJob` trừ — đám mây mặc định là nhà cung cấp trọn gói (25/09/2026).
+  return costCreditForFeature("creative.scene_revise") + variantUnitCostCredit(cloud ? "cloud_provider" : "local_studio")
 }
 
 /**
@@ -100,7 +103,7 @@ export async function reviseSceneAndRender(input: {
       scene_index: sc.sceneIndex,
       ...(input.scenePlanRef ? { scene_plan_id: input.scenePlanRef } : {}),
       ...(revised.scene_plan_revision ? { scene_plan_revision: revised.scene_plan_revision } : {}),
-      ...(cloud ? { provider_key: "stability", scene_prompt: sc.backgroundPrompt } : {}),
+      ...(cloud ? { scene_prompt: sc.backgroundPrompt } : {}),
     },
     `scene-${input.masterAssetId}-${sc.sceneIndex}-${crypto.randomUUID()}`
   )
@@ -113,9 +116,9 @@ export async function reviseSceneAndRender(input: {
     if (d.status === "FAILED" || d.status === "CANCELLED") throw new Error(d.error || "Worker không dựng được ảnh")
     if (d.status !== "COMPLETED") continue
     if (d.result === "REJECTED") {
-      const m = d.subject_integrity?.subject_pixel_identity
+      const si = d.subject_integrity
       throw new Error(
-        `Cổng Subject Integrity từ chối${typeof m === "number" ? ` (${(m * 100).toFixed(2)}%)` : ""} — không ghi ảnh`
+        `Cổng Subject Integrity từ chối${si ? ` (${describeIntegrity(si)})` : ""} — không ghi ảnh`
       )
     }
     const v =

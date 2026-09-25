@@ -46,8 +46,13 @@ export const MEDIA_VARIANT_CLOUD_FEATURE = "media.variant.cloud"
 /** Mọi `feature` sinh biến thể marketing — dùng cho hàng chờ duyệt. */
 export const MEDIA_VARIANT_FEATURES = [MEDIA_VARIANT_FEATURE, MEDIA_VARIANT_CLOUD_FEATURE] as const
 
-/** Nhà cung cấp hậu cảnh đã có adapter ở worker (`providers/background/`). */
-export const VARIANT_CLOUD_PROVIDERS = ["stability"] as const
+/**
+ * Nhà cung cấp đám mây đã có adapter ở worker — VAI TRÒ TƯƠNG ĐƯƠNG (PO 25/09/2026):
+ * luồng trọn gói `providers/scene/registry.py`, luồng chỉ-hậu-cảnh `providers/background/`.
+ * Thêm nhà cung cấp mới = thêm adapter ở worker + một phần tử ở đây.
+ * Người gọi không chọn thì worker thử theo `VARIANT_PROVIDER_ORDER`.
+ */
+export const VARIANT_CLOUD_PROVIDERS = ["fal", "stability"] as const
 export type VariantCloudProvider = (typeof VARIANT_CLOUD_PROVIDERS)[number]
 
 /** Giới hạn độ dài mô tả cảnh gửi nhà cung cấp — cùng hằng ở worker. */
@@ -161,12 +166,61 @@ export function variantRequiresWarning(result: GuardResult): boolean {
   return result === "WARNING"
 }
 
+/**
+ * Cách đo của cổng (PO 25/09/2026):
+ *  - `pixel_exact`: luồng cục bộ / đám mây chỉ-hậu-cảnh — FloraOS tự dán nguyên
+ *    khối bó hoa, lõi phải trùng khít từng điểm ảnh (ngưỡng 0,999 / 0,99);
+ *  - `perceptual`: luồng NHÀ CUNG CẤP TRỌN GÓI — nhà cung cấp chỉnh sáng cả bó
+ *    hoa, nên đo HÌNH DÁNG (IoU mặt nạ) + CẤU TRÚC (SSIM) + MÀU (ΔE). Không nhà
+ *    cung cấp nào trả phép đo này (soát 25/09) — cổng vẫn là của FloraOS.
+ */
+export type IntegrityMethod = "pixel_exact" | "perceptual"
+
+/**
+ * Ngưỡng đo perceptual — `[SAFE, WARNING]`. Bản gốc; worker giữ BẢN SAO ở
+ * `workers/media_ai/image/do_giu_nguyen.py#NGUONG` (test khoá hai bên). CHƯA hiệu
+ * chỉnh bằng ảnh thật của nhà cung cấp — đặt thận trọng (nợ #138).
+ */
+export const PERCEPTUAL_THRESHOLDS = {
+  structure_ssim: [0.9, 0.8],
+  color_delta_e: [8.0, 15.0],
+  shape_iou: [0.95, 0.9],
+} as const
+
+export type PerceptualMetrics = {
+  structure_ssim: number | null
+  color_delta_e: number | null
+  shape_iou: number | null
+}
+
+/** Số đo xấu nhất quyết định; thiếu số đo nào = không kiểm được = REJECTED. */
+export function perceptualIntegrityResult(m: PerceptualMetrics): GuardResult {
+  let ket: GuardResult = "SAFE"
+  for (const key of Object.keys(PERCEPTUAL_THRESHOLDS) as (keyof PerceptualMetrics)[]) {
+    const v = m[key]
+    if (typeof v !== "number" || !Number.isFinite(v)) return "REJECTED"
+    const [safe, warn] = PERCEPTUAL_THRESHOLDS[key]
+    const higherIsBetter = key !== "color_delta_e"
+    const okSafe = higherIsBetter ? v >= safe : v <= safe
+    const okWarn = higherIsBetter ? v >= warn : v <= warn
+    if (!okWarn) return "REJECTED"
+    if (!okSafe) ket = "WARNING"
+  }
+  return ket
+}
+
 export type VariantIntegrityBlock = {
+  /** `pixel_exact`: tỉ lệ lõi trùng khít. `perceptual`: SSIM cấu trúc (để hiển thị). */
   subject_pixel_identity: number
   generative_fill_used: boolean
   source_master_asset_id: string
   result: GuardResult
   ly_do: string[]
+  method: IntegrityMethod
+  /** Chỉ có ở `perceptual`. */
+  perceptual?: PerceptualMetrics
+  /** Nhà cung cấp đã chỉnh sáng cả bó hoa → giao diện gắn nhãn "đã chỉnh sáng bằng AI". */
+  ai_relit: boolean
 }
 
 /**
@@ -187,11 +241,32 @@ export function parseVariantIntegrityBlock(payload: unknown): VariantIntegrityBl
   const masterId = p.source_master_asset_id
   if (typeof masterId !== "string" || masterId.length === 0) return null
 
+  const lyDo = Array.isArray(p.ly_do) ? p.ly_do.filter((x): x is string => typeof x === "string") : []
+  if (p.method === "perceptual") {
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null)
+    const perceptual: PerceptualMetrics = {
+      structure_ssim: num(p.structure_ssim),
+      color_delta_e: num(p.color_delta_e),
+      shape_iou: num(p.shape_iou),
+    }
+    return {
+      subject_pixel_identity: identity,
+      generative_fill_used: p.generative_fill_used === true,
+      source_master_asset_id: masterId,
+      result: perceptualIntegrityResult(perceptual),
+      ly_do: lyDo,
+      method: "perceptual",
+      perceptual,
+      ai_relit: p.ai_relit === true,
+    }
+  }
   return {
     subject_pixel_identity: identity,
     generative_fill_used: p.generative_fill_used === true,
     source_master_asset_id: masterId,
     result: variantIntegrityResult(identity),
-    ly_do: Array.isArray(p.ly_do) ? p.ly_do.filter((x): x is string => typeof x === "string") : [],
+    ly_do: lyDo,
+    method: "pixel_exact",
+    ai_relit: false,
   }
 }
