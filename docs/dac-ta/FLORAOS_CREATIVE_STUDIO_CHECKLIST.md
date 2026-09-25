@@ -126,8 +126,10 @@
 - [x] Mọi lượt AI của Creative Studio đi qua `enqueueJob` (trừ Vision/Product Intelligence là lời gọi đồng bộ có sổ riêng)
 - [x] Header Studio không còn nút chết `onClick: () => {}` — `page.tsx`
 - [ ] Nhánh cloud M04a (`/media/optimizations`) vẫn chạy đồng bộ — nợ #120
-- [ ] `npm run lint` toàn repo xanh — nợ #124
-- [ ] `npm run test:tenant` xanh trên máy có Postgres — **bắt buộc trước merge**
+- [x] `npm run lint` toàn repo xanh — nợ #124 (0 lỗi, commit `0a26672`; đo lại 25/09/2026)
+- [x] `npm run test:tenant` xanh trên máy có Postgres — **244/244, 34/34 tệp** (Postgres 16, 25/09/2026); `test:platform` 5/5
+- [x] CI thật chạy được cổng `test:tenant`: dựng `floraos_test` trong job web; job worker cài `ffmpeg` (CI run 4 trên `main` đỏ vì hai thiếu này — 25/09/2026)
+- [x] Theo dõi job Khu vực A/B có hạn 10 phút, thử lại lỗi mạng/5xx, dừng ở 401/403/404, xử lý `CANCELLED`, dừng khi rời trang — `job-polling.ts` + `tests/unit/creative-studio/job-polling.test.ts` (trước: vòng tối ưu ảnh NGỪNG poll khi gặp một lỗi mạng → UI kẹt "đang chạy"; vòng biến thể poll vô hạn)
 
 ## 9. Tài liệu
 

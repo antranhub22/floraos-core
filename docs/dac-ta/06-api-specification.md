@@ -697,6 +697,10 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | POST | `/audio/voice-clones` | `I1` | Multipart: `name`, `sample` (MP3/WAV/M4A 50KB–10MB, worker đòi ≥ 20 giây), `consent=true` (lưu nguyên văn câu cam kết). Tạo job `audio.voice_clone` (5 credit, giá tạm #64) → worker gửi ElevenLabs Instant Voice Clone. `Idempotency-Key` bắt buộc |
 | GET | `/audio/voice-clones/:id` | `I1` | Trạng thái + URL ký nghe lại mẫu |
 | DELETE | `/audio/voice-clones/:id` | `I1` | Gỡ giọng trên ElevenLabs rồi đánh dấu `DELETED` |
+| POST | `/content-engine/generations` | `I1` | 25/09/2026 (P27) — chuỗi agent Strategist→Writer→Critic→Rewriter viết bài đa kênh, chạy tại chỗ (feature `content.generate`). `Idempotency-Key` BẮT BUỘC; trùng khoá trả bản ghi cũ, không trừ credit lần hai (lượt đầu còn chạy → 202 + `job_id`). Thân: `asset_id?`, `product_id?`, `analysis_run_id?`, `topic_id?`, `scene_plan_id?`, `channels`. Đáp ứng `{ job_id, generation_id, status, posts, overall_score, needs_review, deduped, usage }`. Ghi `content_generations` `DRAFT` |
+| GET | `/content-engine/generations` | `I1` | Query `asset_id?`, `topic_id?`, `scene_plan_id?`, `mode?` — bản mới nhất khớp bộ lọc, KHÔNG tạo job, không trừ credit; chưa có thì `generation: null` |
+| GET | `/content-engine/generations/:id` | `I1` | Đọc một lượt sinh (brief, strategy, posts, điểm rubric, phiên bản prompt); tổ chức khác → 404 |
+| POST | `/content-engine/generations/:id/approve` | `J5` | Duyệt tách khỏi sinh: `posts?` (bài đã sửa) → `approved_posts`, `status = APPROVED`, ghi `audit_logs` cùng giao dịch |
 
 ⚠ Audio, video và Creative Production dùng chung `I1` (`media.optimize`) — sai ngữ nghĩa RBAC, chờ chủ sản phẩm quyết có thêm mã riêng hay không (đụng con số 143 mã). Xem `TECHNICAL_DEBT.md` nợ #121.
 
