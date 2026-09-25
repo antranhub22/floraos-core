@@ -57,6 +57,16 @@ export type VariantJobDetail = {
   }
   /** Số ĐO, không phải số trang trí — xem `variant-rules.ts`. */
   subject_integrity: VariantIntegrityBlock | null
+  /** Đợt 3 (25/09/2026): chấm kỹ thuật tự động (heuristic, 0..100), làm mờ mép
+   *  cắt, mô hình tách nền + giấy phép, tuỳ chọn dựng đã dùng. `null` khi job chưa xong. */
+  quality_report: {
+    aesthetic: { score: number; components: Record<string, number>; version: string } | null
+    edge_fade: Record<string, unknown> | null
+    segmentation: Record<string, unknown> | null
+    quality: string
+    upscale: string
+    compose_mode: string
+  } | null
   variants: VariantItem[]
   approval: {
     can_approve: boolean
@@ -179,6 +189,17 @@ export async function getVariantJob(ctx: TenantContext, jobId: string): Promise<
       direction: job.status === "COMPLETED" ? directionOf(job.output, payload) : null,
     },
     subject_integrity: integrity,
+    quality_report:
+      job.status === "COMPLETED"
+        ? {
+            aesthetic: doc(job.output, "aesthetic", null),
+            edge_fade: doc(job.output, "edge_fade", null),
+            segmentation: doc(job.output, "segmentation", null),
+            quality: doc(job.output, "quality", "standard"),
+            upscale: doc(job.output, "upscale", "none"),
+            compose_mode: doc(job.output, "compose_mode", "paste"),
+          }
+        : null,
     variants,
     approval: {
       can_approve: variants.length > 0 && ketQua !== null && canApproveVariant(ketQua),

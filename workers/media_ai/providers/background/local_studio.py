@@ -31,6 +31,8 @@ class LocalStudioBackground:
             bo_qua.append("prompt")
         if req.style:
             bo_qua.append("style")
+        if req.quality != "standard":
+            bo_qua.append("quality")
         anh = self._engine.create_backdrop(  # type: ignore[arg-type]
             req.rong, req.cao, style=self._style, with_grain=True,
             light_direction=req.lighting_direction or "left", seed=req.seed,

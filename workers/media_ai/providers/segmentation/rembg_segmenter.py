@@ -20,13 +20,17 @@ class RembgSegmenter:
     """Hiện thực cổng `Segmenter` sử dụng thư viện rembg chạy cục bộ."""
 
     name = "rembg"
-    model_version = "bria-rmbg-v1"
+    model_version = "isnet-general-use-v1"
 
     def __init__(self, model_name: str | None = None) -> None:
         if model_name is None:
             # Ưu tiên đọc VARIANT_SEGMENTATION_MODEL từ biến môi trường (ví dụ: u2netp trong .env)
             # để tránh treo máy hoặc chờ quá lâu khi chạy trên máy phát triển cá nhân
-            model_name = os.environ.get("VARIANT_SEGMENTATION_MODEL") or "bria-rmbg"
+            # Mặc định theo bảng giấy phép (Đợt 3, 25/09/2026): `bria-rmbg` cũ là
+            # phi thương mại — xem `providers/segmentation/mo_hinh.py`.
+            from media_ai.providers.segmentation.mo_hinh import mo_hinh_tach_nen
+
+            model_name = mo_hinh_tach_nen()
         self.model_name = model_name
         self.model_version = f"{model_name}-v1"
         self._session: Any = None

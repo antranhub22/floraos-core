@@ -35,6 +35,11 @@ HUONG_SANG = ("left", "right", "above", "front")
 # `src/modules/media/domain/variant-direction-rules.ts` (test TS đọc hằng này).
 PHONG_CACH = ("natural", "cinematic", "film", "vivid")
 
+# Bậc chất lượng / tăng nét / cách ghép (Đợt 3) — khớp `variant-direction-rules.ts`.
+CHAT_LUONG = ("standard", "high")
+TANG_NET = ("none", "2x")
+CACH_GHEP = ("paste", "harmonize")
+
 _CUM_HUONG_SANG = {
     "left": "soft key light coming from the left",
     "right": "soft key light coming from the right",
@@ -78,6 +83,9 @@ class BackgroundRequest:
     # `style_preset` của nhà cung cấp nào. Adapter tự dịch (Stability:
     # `STYLE_SANG_PRESET`); không hỗ trợ hoặc giá trị lạ thì ghi `bo_qua`.
     style: str | None = None
+    # `quality` (Đợt 3, 25/09/2026): "standard" | "high" — ý định FloraOS.
+    # Stability: high = Stable Image Ultra. Bên không có bậc cao hơn ghi `bo_qua`.
+    quality: str = "standard"
 
 
 @dataclass(frozen=True)
@@ -89,6 +97,7 @@ class NangLuc:
     ratios: frozenset[str]
     prompt: bool = True
     style: bool = False
+    quality: bool = False
 
 
 @dataclass
@@ -98,6 +107,7 @@ class BackgroundResult:
     seed: int | None
     aspect_ratio: str
     bo_qua: list[str] = field(default_factory=list)  # ý định nhà cung cấp không làm được
+    model_version: str | None = None  # model THẬT đã gọi (vd Core hay Ultra)
 
 
 class BackgroundProvider(Protocol):

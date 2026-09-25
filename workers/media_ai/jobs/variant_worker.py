@@ -57,18 +57,29 @@ from psycopg.rows import dict_row
 from shared.storage import doc_bytes, ghi_bytes
 from media_ai.image.auto_retouch import tu_dong_can_bang_sang
 from media_ai.image.brand_watermark import dong_dau
+from media_ai.image.cham_tham_my import cham_ky_thuat
 from media_ai.image.composition import tinh_bo_cuc
+from media_ai.image.mo_mep_cat import lam_mo_mep_cat
 from media_ai.image.defringe import EdgeDefringer
-from media_ai.image.ratio_frame import RATIO_PRESETS, dong_khung
+from media_ai.image.ratio_frame import RATIO_PRESETS, dong_khung, kich_thuoc_xuat
 from media_ai.image.studio_backdrop import StudioBackdropEngine
-from media_ai.providers.background.base import HUONG_SANG, PHONG_CACH, BackgroundRequest
+from media_ai.providers.background.base import (
+    CACH_GHEP,
+    CHAT_LUONG,
+    HUONG_SANG,
+    PHONG_CACH,
+    TANG_NET,
+    BackgroundRequest,
+)
 from media_ai.providers.background.stability_background import (
     BackgroundProviderError,
     resolve_background_provider,
 )
 from media_ai.providers.chung import ghi_ai_request, so_do_chi_phi_luot
 from media_ai.providers.expansion.router import resolve_expander
+from media_ai.providers.segmentation.mo_hinh import giay_phep, mo_hinh_tach_nen
 from media_ai.providers.segmentation.rembg_segmenter import RembgSegmenter
+from media_ai.providers.upscale.nen import tang_net_nen
 
 log = logging.getLogger("media_ai.jobs.variant_worker")
 
@@ -287,7 +298,19 @@ def _do_lo_chu_the(
     # Lõi đo phải phủ phần lớn sản phẩm (24/09/2026): trước đây lõi chỉ là
     # ~12% đầu hoa nên cổng báo 100% trong khi phần còn lại bị tô đè. Lõi quá
     # nhỏ nghĩa là KHÔNG kiểm được — trả chính tỷ lệ phủ để cổng từ chối.
-    than = int((np.array(alpha.convert("L")) >= NGUONG_THAN_SAN_PHAM).sum())
+    #
+    # Mẫu số là phần thân ĐO ĐƯỢC (Đợt 3, 25/09/2026): thân (alpha ≥ 128) co
+    # vào đúng độ sâu mà lõi đo không bao giờ phủ tới (dải viền mềm
+    # `DAI_VIEN_MEM_PX` + co biên `DO_SAU_CO_BIEN`). Trước đó mẫu số là toàn bộ
+    # thân, nên sản phẩm nhiều chi tiết mảnh (cành bạch đàn, baby, cuống — hẹp
+    # hơn ~18 px) bị tính là "không kiểm được": giỏ GHCB0001 tách bằng
+    # isnet-general-use đo 0,517 dù lõi trùng khít 100% và lõi phủ HẾT phần
+    # thân đo được. Ca 24/09 (thân bán trong suốt, lõi ~12%) vẫn bị bắt: thân
+    # co vào vẫn lớn, lõi vẫn nhỏ.
+    than_anh = Image.fromarray(
+        ((np.array(alpha.convert("L")) >= NGUONG_THAN_SAN_PHAM) * 255).astype(np.uint8), mode="L"
+    )
+    than = int((_co_bien(than_anh, DAI_VIEN_MEM_PX + DO_SAU_CO_BIEN)).sum())
     if than > 0 and tong / than < TY_LE_PHU_LOI_TOI_THIEU:
         return float(tong / than)
 
@@ -303,9 +326,14 @@ def _do_lo_chu_the(
 # ─── Tách chủ thể (dùng chung cho cả lô, nợ #108) ──────────────────────────
 
 
-def _duong_dan_cache_chu_the(cache_dir: Path, master_asset_id: str) -> tuple[Path, Path]:
+def _duong_dan_cache_chu_the(
+    cache_dir: Path, master_asset_id: str, model: str | None = None
+) -> tuple[Path, Path]:
+    """Khoá cache gồm cả TÊN MÔ HÌNH tách nền (Đợt 3, 25/09/2026): đổi mô hình
+    mặc định thì mặt nạ cũ của mô hình khác không được dùng lại."""
     an_toan = "".join(k if k.isalnum() or k in "-_" else "_" for k in master_asset_id)
-    return cache_dir / f"{an_toan}_rgba.png", cache_dir / f"{an_toan}_alpha.png"
+    duoi = "" if not model else "_" + "".join(k if k.isalnum() or k in "-_" else "_" for k in model)
+    return cache_dir / f"{an_toan}{duoi}_rgba.png", cache_dir / f"{an_toan}{duoi}_alpha.png"
 
 
 # Ngưỡng "lõi đặc" — trùng ngưỡng `_co_bien` dùng để xác định lõi khi đo.
@@ -394,8 +422,11 @@ def _doan_chu_the_tho(
     (`test_variant_worker.py`) gọi `dung_bien_the` không kèm hai tham số
     này.
     """
+    # Mặc định theo bảng giấy phép (Đợt 3, 25/09/2026) — `bria-rmbg` cũ là phi
+    # thương mại, xem `providers/segmentation/mo_hinh.py`. `.env` vẫn đè được.
+    model_ten = mo_hinh_tach_nen()
     if master_asset_id and cache_dir is not None:
-        duong_rgba, duong_alpha = _duong_dan_cache_chu_the(cache_dir, master_asset_id)
+        duong_rgba, duong_alpha = _duong_dan_cache_chu_the(cache_dir, master_asset_id, model_ten)
         if duong_rgba.exists() and duong_alpha.exists():
             rgba = Image.open(duong_rgba)
             rgba.load()
@@ -407,7 +438,7 @@ def _doan_chu_the_tho(
     # triển cục bộ để không phải chờ `bria-rmbg` (~1GB, chính xác hơn nhưng
     # chậm hơn nhiều trên CPU) mỗi lần đổi ảnh gốc. Mặc định GIỮ NGUYÊN
     # `bria-rmbg` — không đổi hành vi/chất lượng khi không đặt biến môi trường.
-    model_ten = os.environ.get("VARIANT_SEGMENTATION_MODEL", "bria-rmbg")
+
 
     def _tach_va_khu_vien() -> tuple[Image.Image, Image.Image]:
         rgba_kq, alpha_kq = RembgSegmenter(model_name=model_ten).extract_subject(master_rgb)
@@ -441,7 +472,7 @@ def _doan_chu_the_tho(
 
     if master_asset_id and cache_dir is not None:
         cache_dir.mkdir(parents=True, exist_ok=True)
-        duong_rgba, duong_alpha = _duong_dan_cache_chu_the(cache_dir, master_asset_id)
+        duong_rgba, duong_alpha = _duong_dan_cache_chu_the(cache_dir, master_asset_id, model_ten)
         rgba.save(duong_rgba, format="PNG")
         alpha.save(duong_alpha, format="PNG")
 
@@ -521,6 +552,9 @@ def dung_bien_the(
     lighting: dict[str, Any] | None = None,
     nguon_hau_canh: Callable[[str, int, int], Image.Image | None] | None = None,
     seed_phong: int | None = None,
+    upscale: str = "none",
+    compose_mode: str = "paste",
+    mo_mep_cat: bool = True,
 ) -> tuple[list[dict[str, Any]], float, Any]:
     """Dựng danh sách biến thể, đo lõi chủ thể, và trả về bộ mở-rộng-khung
     (`ImageExpander`) đã dùng cho biến thể "styled" nếu có (`AIC-13`, nợ
@@ -568,6 +602,17 @@ def dung_bien_the(
     bokeh) — phương án cục bộ khác nhau thật và tái tạo được. Không dùng khi
     hậu cảnh do nhà cung cấp sinh (seed đó thuộc nhà cung cấp).
 
+    Đợt 3 (25/09/2026), chỉ ở `full_frame`:
+      - `upscale="2x"`: khung xuất gấp đôi (9:16 → 2160×3840); HẬU CẢNH nhỏ hơn
+        khung được tăng nét (`providers/upscale/nen.py`) — bó hoa KHÔNG qua mô
+        hình siêu phân giải, chỉ nội suy như trước;
+      - `compose_mode="harmonize"`: màu bóng theo hậu cảnh, khớp độ nét hậu
+        cảnh, light wrap mạnh hơn trong dải viền — `image/hoa_hop.py`;
+      - `mo_mep_cat` (mặc định bật): phần hẹp của chủ thể bị mép ảnh gốc cắt
+        ngang (cẳng tay, cuống) mờ dần thay vì cắt thẳng — `image/mo_mep_cat.py`.
+        Bản "transparent" giữ nguyên tách nền gốc.
+    Mục "styled" trả thêm `aesthetic` (chấm kỹ thuật, `image/cham_tham_my.py`).
+
     `on_stage` (nợ #110, 18/09): callback tuỳ chọn gọi ĐÚNG lúc chuyển từ
     bước tách chủ thể sang bước ghép bối cảnh — trước đây `process_variant_job`
     tự ghi `stage="COMPOSING"` vào DB TRƯỚC KHI gọi hàm này, nên nhãn hiển thị
@@ -608,15 +653,29 @@ def dung_bien_the(
     huong_sang = str((lighting or {}).get("direction") or "left")
     if huong_sang not in HUONG_SANG:
         huong_sang = "left"
+    alpha_do = alpha  # alpha dùng để ĐO Subject Integrity (đổi khi làm mờ mép cắt)
     if style != "transparent" and fill_mode != "pad":
+        he_so_xuat = 2 if upscale == "2x" else 1
+        rgba_ghep, alpha_ghep, mo_mep = rgba, alpha, None
+        if mo_mep_cat:
+            rgba_ghep, alpha_ghep, mo_mep = lam_mo_mep_cat(rgba, alpha)
+            if not mo_mep.mep:
+                mo_mep = None
+            else:
+                # Đo trên alpha đã làm mờ, bỏ hẳn vùng cẳng tay cố ý làm mờ khỏi
+                # phép đo (không phải sản phẩm) — phần còn lại vẫn phải trùng khít.
+                a_do = np.array(alpha_ghep)
+                if mo_mep.vung_mo is not None:
+                    a_do[mo_mep.vung_mo] = 0
+                alpha_do = Image.fromarray(a_do, mode="L")
         # ── Khung đúng tỉ lệ đích (Đợt 1) ─────────────────────────────────
         # Hộp bố cục theo THÂN RÕ của bó hoa (alpha > NGUONG_HOP_BO_CUC): mô
         # hình tách nền để lại quầng mờ lác đác (đo 24/09: alpha>0 cao 787px,
         # alpha>32 cao 459px trên cùng một ảnh) — tính cả quầng thì bó hoa bị
         # hiểu sai kích thước và đặt lệch. Ảnh tách nền vẫn dán NGUYÊN VẸN.
         hop = (
-            alpha.point(lambda p: 255 if p > NGUONG_HOP_BO_CUC else 0).getbbox()
-            or alpha.point(lambda p: 255 if p > 0 else 0).getbbox()
+            alpha_ghep.point(lambda p: 255 if p > NGUONG_HOP_BO_CUC else 0).getbbox()
+            or alpha_ghep.point(lambda p: 255 if p > 0 else 0).getbbox()
             or (0, 0, rgba.width, rgba.height)
         )
         bx, by, bx2, by2 = hop
@@ -625,18 +684,25 @@ def dung_bien_the(
             rong_ct, cao_ct, ratio,
             shot=(composition or {}).get("shot"),
             placement=(composition or {}).get("placement"),
-            cao_xuat=RATIO_PRESETS.get(ratio, RATIO_PRESETS["1:1"])[1],
+            cao_xuat=kich_thuoc_xuat(ratio, he_so_xuat)[1],
         )
         khung_lam_viec = Image.new("RGBA", (bc.rong, bc.cao), (0, 0, 0, 0))
         # Dán TOÀN BỘ ảnh tách nền với độ lệch sao cho hộp bố cục rơi đúng
         # (bc.x, bc.y); paste KHÔNG mặt nạ = sao chép nguyên giá trị RGBA.
         # Phần quầng mờ lọt ra ngoài khung bị cắt — không đụng lõi bó hoa.
-        khung_lam_viec.paste(rgba, (bc.x - bx, bc.y - by))
+        khung_lam_viec.paste(rgba_ghep, (bc.x - bx, bc.y - by))
 
         anh_hau_canh = nguon_hau_canh(ratio, bc.rong, bc.cao) if nguon_hau_canh is not None else None
         if anh_hau_canh is None and hau_canh_bytes is not None:
             anh_hau_canh = Image.open(BytesIO(hau_canh_bytes))
             anh_hau_canh.load()
+        thong_tin_tang_net: dict[str, Any] | None = None
+        if upscale == "2x":
+            thong_tin_tang_net = {"factor": 2, "subject_engine": "lanczos", "background_engine": None}
+            if anh_hau_canh is not None and (anh_hau_canh.width < bc.rong or anh_hau_canh.height < bc.cao):
+                anh_hau_canh, cach = tang_net_nen(anh_hau_canh, 2)
+                thong_tin_tang_net["background_engine"] = cach
+        hoa_hop = compose_mode == "harmonize"
         anh_boi_canh = engine.composite(
             khung_lam_viec,
             style=style,
@@ -645,6 +711,7 @@ def dung_bien_the(
             backdrop_image=anh_hau_canh,
             light_direction=huong_sang,
             seed=seed_phong if anh_hau_canh is None else None,
+            harmonize=hoa_hop,
         )
         if auto_enhance:
             anh_boi_canh = _ap_dung_auto_enhance(anh_boi_canh, khung_lam_viec)
@@ -658,8 +725,13 @@ def dung_bien_the(
             (lech_x, lech_y, lech_x + master_rgb.width, lech_y + master_rgb.height)
         )
 
-        anh_styled = _dong_khung(anh_boi_canh, ratio)  # cùng tỉ lệ → chỉ co giãn, không đệm
+        anh_styled = dong_khung(anh_boi_canh, ratio, he_so_xuat)  # cùng tỉ lệ → chỉ co giãn, không đệm
         he_so = anh_styled.height / bc.cao
+        try:
+            tham_my = cham_ky_thuat(anh_styled, khung_lam_viec.split()[3])
+        except Exception:  # noqa: BLE001 — chấm là phụ, không bao giờ làm hỏng job
+            log.warning("Chấm kỹ thuật lỗi — bỏ qua", exc_info=True)
+            tham_my = None
         bien_the.append(
             {
                 "key": "styled",
@@ -673,6 +745,13 @@ def dung_bien_the(
                 ),
                 "composition": {"shot": bc.shot, "placement": bc.placement, "fill_mode": "full_frame"},
                 "light_direction": huong_sang,
+                "aesthetic": tham_my,
+                "upscale": thong_tin_tang_net,
+                "compose_mode": "harmonize" if hoa_hop else "paste",
+                "harmonize": getattr(engine, "lan_cuoi_hoa_hop", None) if hoa_hop else None,
+                "edge_fade": (
+                    {"edges": mo_mep.mep, "skin": mo_mep.co_da_nguoi, "band_px": mo_mep.dai_mo_px} if mo_mep else None
+                ),
             }
         )
     elif style != "transparent":
@@ -766,7 +845,7 @@ def dung_bien_the(
                 "key": "branded",
                 "title": "Bản đóng dấu thương hiệu",
                 "background": NHAN_PRESET.get(preset, "Bối cảnh studio"),
-                "image": _dong_khung(da_dong, ratio),
+                "image": dong_khung(da_dong, ratio, 2 if (upscale == "2x" and fill_mode != "pad") else 1),
                 "watermark": True,
                 "generative_fill_used": anh_boi_canh is not None,
             }
@@ -779,7 +858,7 @@ def dung_bien_the(
         de_do = de_do_can_chinh
     else:
         de_do = anh_boi_canh if anh_boi_canh is not None else rgba
-    do_trung = _do_lo_chu_the(master_rgb, de_do, alpha)
+    do_trung = _do_lo_chu_the(master_rgb, de_do, alpha_do)
 
     return bien_the, do_trung, expander_dung
 
@@ -841,7 +920,7 @@ def _ghi_asset_bien_the(
                 "file_size": len(data),
                 "provider": nguon.get("provider") or "m04b_studio",
                 "model": nguon.get("model") or "rembg+studio_backdrop",
-                "model_version": nguon.get("model_version") or "bria-rmbg-v1",
+                "model_version": nguon.get("model_version") or f"{(nguon.get('segmentation') or {}).get('model') or mo_hinh_tach_nen()}-v1",
                 "pipeline_version": nguon.get("pipeline_version") or PIPELINE_VERSION,
                 "parameters": json.dumps(
                     {
@@ -853,6 +932,9 @@ def _ghi_asset_bien_the(
                         "seed": nguon.get("seed"),
                         "fill_mode": nguon.get("fill_mode", "pad"),
                         "style": nguon.get("style"),
+                        "quality": nguon.get("quality", "standard"),
+                        "upscale": nguon.get("upscale_requested", "none"),
+                        "compose_mode": nguon.get("compose_mode", "paste"),
                     }
                 ),
                 "identity_score": do_trung,
@@ -894,6 +976,15 @@ def _ghi_asset_bien_the(
                         "candidate_index": nguon.get("candidate_index"),
                         "candidate_count": nguon.get("candidate_count"),
                         "job_group_id": nguon.get("job_group_id"),
+                        # Đợt 3 (25/09/2026): chất lượng, tăng nét, cách ghép, làm mờ
+                        # mép cắt, mô hình tách nền + giấy phép, chấm kỹ thuật.
+                        "quality": nguon.get("quality", "standard"),
+                        "upscale": item.get("upscale"),
+                        "compose_mode": item.get("compose_mode") or nguon.get("compose_mode", "paste"),
+                        "harmonize": item.get("harmonize"),
+                        "edge_fade": item.get("edge_fade"),
+                        "segmentation": nguon.get("segmentation"),
+                        "aesthetic": item.get("aesthetic"),
                     }
                 ),
                 "created_by": job["user_id"],
@@ -953,6 +1044,12 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
         seed = payload.get("seed") if isinstance(payload.get("seed"), int) else None
         # Đợt 2 (25/09/2026): phong cách (ý định FloraOS) + vị trí trong nhóm phương án.
         style = payload.get("style") if payload.get("style") in PHONG_CACH else None
+        # Đợt 3 (25/09/2026): chất lượng / tăng nét / cách ghép — giá trị lạ lùi về mặc định.
+        quality = payload.get("quality") if payload.get("quality") in CHAT_LUONG else "standard"
+        upscale = payload.get("upscale") if payload.get("upscale") in TANG_NET else "none"
+        compose_mode = payload.get("compose_mode") if payload.get("compose_mode") in CACH_GHEP else "paste"
+        mo_hinh_tach = mo_hinh_tach_nen()
+        gp = giay_phep(mo_hinh_tach)
         nguon.update(
             {
                 "fill_mode": fill_mode, "composition": composition, "lighting": lighting,
@@ -960,8 +1057,22 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 "candidate_index": payload.get("candidate_index"),
                 "candidate_count": payload.get("candidate_count"),
                 "job_group_id": job.get("job_group_id"),
+                "quality": quality,
+                "upscale_requested": upscale,
+                "compose_mode": compose_mode,
+                "segmentation": {
+                    "model": mo_hinh_tach,
+                    "license": gp.license if gp else None,
+                    "commercial_use": gp.commercial_use if gp else None,
+                },
             }
         )
+        if gp is None or not gp.commercial_use:
+            # D18: không chặn job (máy dev), nhưng nói to — production không được chạy thế này.
+            log.warning(
+                "Mô hình tách nền %s %s — không dùng cho production thu phí (D18)",
+                mo_hinh_tach, "chưa có trong bảng giấy phép" if gp is None else f"giấy phép {gp.license}",
+            )
         seed_phong: int | None = None
         if job.get("feature") != CLOUD_FEATURE or preset == "transparent":
             # Phông cục bộ: seed đổi vùng sáng + bố cục bokeh (Đợt 2) — không
@@ -970,6 +1081,8 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             seed_phong = seed if seed is not None else random.randint(0, 4_294_967_294)
             nguon["seed"] = seed_phong
             bo_qua_cuc_bo = ["style"] if style is not None else []
+            if quality != "standard":
+                bo_qua_cuc_bo.append("quality")  # phông cục bộ không có bậc cao hơn
             if palette or lighting.get("mood"):
                 bo_qua_cuc_bo.append("prompt")
             nguon["provider_ignored"] = bo_qua_cuc_bo
@@ -1004,13 +1117,17 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 },
             )
 
-        def _ghi_nguon_cloud(provider: Any, bat_dau: float, prompt: str | None, seed_dung: int | None, bo_qua: list[str]) -> None:
+        def _ghi_nguon_cloud(
+            provider: Any, bat_dau: float, prompt: str | None, seed_dung: int | None, bo_qua: list[str],
+            model_version: str | None = None,
+        ) -> None:
+            model_version = model_version or provider.model_version
             nguon.update(
                 {
                     "background_provider": provider.name,
                     "provider": provider.name,
                     "model": f"rembg+{provider.name}_background",
-                    "model_version": provider.model_version,
+                    "model_version": model_version,
                     "scene_prompt": prompt,
                     "seed": seed_dung,
                     "provider_ignored": bo_qua,
@@ -1018,7 +1135,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             )
             ghi_ai_request(
                 conn, job_id=job["id"], organization_id=organization_id, capability_code="AIC-17",
-                model_key=f"{provider.name}:{provider.model_version}", outcome="ACCEPTED",
+                model_key=f"{provider.name}:{model_version}", outcome="ACCEPTED",
                 latency_ms=int((time.monotonic() - bat_dau) * 1000), image_count=1,
             )
 
@@ -1053,12 +1170,13 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                             shot=composition.get("shot"),
                             seed=seed,
                             style=style,
+                            quality=quality,
                         )
                     )
                 except BackgroundProviderError as exc:
                     _lui_ve_cuc_bo(exc, bat_dau)
                     return None
-                _ghi_nguon_cloud(provider, bat_dau, kq.prompt, kq.seed, kq.bo_qua)
+                _ghi_nguon_cloud(provider, bat_dau, kq.prompt, kq.seed, kq.bo_qua, kq.model_version)
                 return kq.anh
 
             nguon_hau_canh = _hau_canh_cloud
@@ -1083,6 +1201,8 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 lighting=lighting,
                 nguon_hau_canh=nguon_hau_canh,
                 seed_phong=seed_phong,
+                upscale=upscale,
+                compose_mode=compose_mode,
             )
         except Exception:
             ghi_ai_request(
@@ -1192,6 +1312,12 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "palette": nguon.get("palette") or [],
             "candidate_index": nguon.get("candidate_index"),
             "job_group_id": nguon.get("job_group_id"),
+            "quality": nguon.get("quality", "standard"),
+            "upscale": nguon.get("upscale_requested", "none"),
+            "compose_mode": nguon.get("compose_mode", "paste"),
+            "aesthetic": next((b.get("aesthetic") for b in bien_the if b.get("aesthetic")), None),
+            "edge_fade": next((b.get("edge_fade") for b in bien_the if b.get("edge_fade")), None),
+            "segmentation": nguon.get("segmentation"),
         }
         with conn.cursor() as cur:
             cur.execute(

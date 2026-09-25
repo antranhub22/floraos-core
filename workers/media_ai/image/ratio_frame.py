@@ -19,14 +19,20 @@ RATIO_PRESETS: dict[str, tuple[int, int]] = {
 }
 
 
-def dong_khung(anh: Image.Image, ratio: str) -> Image.Image:
+def kich_thuoc_xuat(ratio: str, he_so: int = 1) -> tuple[int, int]:
+    """Khung xuất; `he_so=2` khi `upscale=2x` (Đợt 3, 25/09/2026) — vd 9:16 → 2160×3840."""
+    rong, cao = RATIO_PRESETS.get(ratio, RATIO_PRESETS["1:1"])
+    return rong * he_so, cao * he_so
+
+
+def dong_khung(anh: Image.Image, ratio: str, he_so: int = 1) -> Image.Image:
     """Đưa về đúng tỷ lệ bằng cách ĐỆM, không cắt.
 
     Cắt là cách nhanh nhất để mất mấy bông ngoài rìa hoặc cụt cuống — mà bảo
     toàn trọn bó hoa chính là điều M04b hứa. Ảnh RGBA đệm trong suốt; ảnh
     nền đặc đệm bằng màu góc trên trái, tức chính màu phông vừa ghép.
     """
-    rong_dich, cao_dich = RATIO_PRESETS.get(ratio, RATIO_PRESETS["1:1"])
+    rong_dich, cao_dich = kich_thuoc_xuat(ratio, he_so)
     ty_le = min(rong_dich / anh.width, cao_dich / anh.height)
     moi = (max(1, int(anh.width * ty_le)), max(1, int(anh.height * ty_le)))
     vua = anh.resize(moi, Image.LANCZOS)

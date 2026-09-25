@@ -17,6 +17,9 @@ import {
   VARIANT_PLACEMENTS,
   VARIANT_SHOTS,
   VARIANT_STYLES,
+  VARIANT_QUALITIES,
+  VARIANT_UPSCALES,
+  COMPOSE_MODES,
 } from "@/modules/media/domain/variant-direction-rules"
 import { DEFAULT_VARIANT_COUNT, MAX_VARIANT_COUNT, MIN_VARIANT_COUNT } from "@/modules/media/domain/variant-candidates"
 import { defineStage } from "./define-stage"
@@ -86,6 +89,19 @@ export const mediaVariantBodySchema = z.object({
     .max(MAX_VARIANT_COUNT)
     .default(DEFAULT_VARIANT_COUNT)
     .describe("Số phương án cho cảnh — n job con cùng job_group_id, credit nhân n. Mặc định 1 (PO chốt 24/09)"),
+  // ── Chất lượng cao (Đợt 3, 25/09/2026) ──
+  quality: z
+    .enum(VARIANT_QUALITIES)
+    .default("standard")
+    .describe("high = Stability Ultra (chỉ đám mây, +2 credit/phương án — giá tạm); phông cục bộ ghi provider_ignored"),
+  upscale: z
+    .enum(VARIANT_UPSCALES)
+    .default("none")
+    .describe("2x = khung xuất gấp đôi (9:16 → 2160×3840), tăng nét HẬU CẢNH; bó hoa không qua mô hình siêu phân giải"),
+  compose_mode: z
+    .enum(COMPOSE_MODES)
+    .default("paste")
+    .describe("harmonize = màu bóng theo hậu cảnh + khớp độ nét hậu cảnh + light wrap trong dải viền; không đụng lõi bó hoa"),
 })
 
 export const mediaVariantCandidateSchema = z.object({

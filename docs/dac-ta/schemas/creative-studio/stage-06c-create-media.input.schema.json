@@ -174,6 +174,33 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 4
+    },
+    "quality": {
+      "default": "standard",
+      "description": "high = Stability Ultra (chỉ đám mây, +2 credit/phương án — giá tạm); phông cục bộ ghi provider_ignored",
+      "type": "string",
+      "enum": [
+        "standard",
+        "high"
+      ]
+    },
+    "upscale": {
+      "default": "none",
+      "description": "2x = khung xuất gấp đôi (9:16 → 2160×3840), tăng nét HẬU CẢNH; bó hoa không qua mô hình siêu phân giải",
+      "type": "string",
+      "enum": [
+        "none",
+        "2x"
+      ]
+    },
+    "compose_mode": {
+      "default": "paste",
+      "description": "harmonize = màu bóng theo hậu cảnh + khớp độ nét hậu cảnh + light wrap trong dải viền; không đụng lõi bó hoa",
+      "type": "string",
+      "enum": [
+        "paste",
+        "harmonize"
+      ]
     }
   },
   "required": [

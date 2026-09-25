@@ -41,6 +41,20 @@ export const MAX_PALETTE_COLORS = 5
 export const VARIANT_STYLES = ["natural", "cinematic", "film", "vivid"] as const
 export type VariantStyle = (typeof VARIANT_STYLES)[number]
 
+/**
+ * Tuỳ chọn dựng ảnh (Đợt 3, 25/09/2026) — ý định FloraOS, khớp `CHAT_LUONG` /
+ * `TANG_NET` / `CACH_GHEP` ở `workers/media_ai/providers/background/base.py`.
+ *   quality      standard | high (đám mây: Stability Ultra; cục bộ: provider_ignored)
+ *   upscale      none | 2x (khung xuất ×2; tăng nét HẬU CẢNH — bó hoa không qua mô hình siêu phân giải)
+ *   compose_mode paste | harmonize (màu bóng theo hậu cảnh, khớp độ nét, light wrap trong dải viền)
+ */
+export const VARIANT_QUALITIES = ["standard", "high"] as const
+export type VariantQuality = (typeof VARIANT_QUALITIES)[number]
+export const VARIANT_UPSCALES = ["none", "2x"] as const
+export type VariantUpscale = (typeof VARIANT_UPSCALES)[number]
+export const COMPOSE_MODES = ["paste", "harmonize"] as const
+export type ComposeMode = (typeof COMPOSE_MODES)[number]
+
 export const VARIANT_STYLE_LABELS: Readonly<Record<VariantStyle, string>> = {
   natural: "Chụp thật",
   cinematic: "Điện ảnh",

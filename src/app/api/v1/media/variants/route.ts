@@ -52,6 +52,8 @@ export const POST = handle(async (request) => {
     },
     // Đợt 2 (25/09/2026): n phương án = n job con cùng job_group_id.
     variantCount: data.variant_count,
+    // Đợt 3 (25/09/2026): chất lượng / tăng nét / cách ghép — quyết định cả giá.
+    render: { quality: data.quality, upscale: data.upscale, composeMode: data.compose_mode },
   }
 
   const result =

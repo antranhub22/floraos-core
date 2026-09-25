@@ -180,6 +180,13 @@ def chay(args: argparse.Namespace) -> None:
                         kw["fill_mode"] = args.fill_mode
                     if "seed_phong" in ky and not args.cloud and args.phuong_an > 1:
                         kw["seed_phong"] = d["seed"]
+                    # Đợt 3 (25/09/2026)
+                    if "upscale" in ky:
+                        kw["upscale"] = args.upscale
+                    if "compose_mode" in ky:
+                        kw["compose_mode"] = args.compose
+                    if "mo_mep_cat" in ky:
+                        kw["mo_mep_cat"] = not args.khong_mo_mep
                     hau_canh = None
                     if hau_canh_provider is not None:
                         if "nguon_hau_canh" in ky and args.fill_mode == "full_frame":
@@ -189,7 +196,8 @@ def chay(args: argparse.Namespace) -> None:
                                 return hau_canh_provider.generate(
                                     BackgroundRequest(ratio=r, rong=rong, cao=cao, scene_prompt=_c["scene_prompt"],
                                                       lighting_direction=_d["lighting"], shot=_d["shot"],
-                                                      seed=_d["seed"], style=args.style)
+                                                      seed=_d["seed"], style=args.style,
+                                                      **({"quality": args.quality} if args.quality != "standard" else {}))
                                 ).anh
 
                             kw["nguon_hau_canh"] = _nguon
@@ -221,7 +229,7 @@ def chay(args: argparse.Namespace) -> None:
                             "canh": c["preset"],
                             "ratio": ratio,
                             "phuong_an": so_pa,
-                            "chi_dao": f"{d['shot']}/{d['placement']}/{d['lighting']}" + (f"/seed{d['seed']}" if d["seed"] is not None else ""),
+                            "chi_dao": f"{d['shot']}/{d['placement']}/{d['lighting']}" + (f"/seed{d['seed']}" if args.cloud or args.phuong_an > 1 else ""),
                             "tep": ten,
                             "khung": f"{anh.width}x{anh.height}",
                             "dai_dem": dai_dem(anh),
@@ -229,6 +237,8 @@ def chay(args: argparse.Namespace) -> None:
                             "phong_to": round(chu_the_px / max(1, cao_goc), 2),
                             "do_trung": round(float(do_trung), 4),
                             "thoi_gian_s": giay,
+                            "tham_my": (styled.get("aesthetic") or {}).get("score", ""),
+                            "mo_mep": "|".join((styled.get("edge_fade") or {}).get("edges", [])),
                             "diem_po_1_5": "",
                         }
                     )
@@ -252,12 +262,19 @@ def chay(args: argparse.Namespace) -> None:
         f"phóng to TB ×{tb('phong_to')} · do_trung TB {tb('do_trung')} (min {min(float(d['do_trung']) for d in dong)}) · "
         f"{tb('thoi_gian_s')}s/ảnh"
     )
+    diem_tm = [float(d["tham_my"]) for d in dong if d["tham_my"] != ""]
+    if diem_tm:
+        tom_tat += f" · chấm kỹ thuật TB {sum(diem_tm) / len(diem_tm):.1f}/100"
+    so_mo = sum(1 for d in dong if d["mo_mep"])
+    if so_mo:
+        tom_tat += f" · làm mờ mép cắt {so_mo}/{len(dong)} ảnh"
     if khac_nhau:
         tom_tat += f" · độ khác nhau giữa phương án TB {sum(khac_nhau) / len(khac_nhau):.3f} (min {min(khac_nhau):.3f})"
     the = "".join(
         f"<figure><img src='{html.escape(d['tep'])}' loading='lazy'><figcaption>{html.escape(d['anh'])} · {d['canh']} · {d['ratio']}"
         f" · PA{d['phuong_an']} {html.escape(d['chi_dao'])}"
-        f"<br>dải đệm {d['dai_dem'] * 100:.1f}% · phóng ×{d['phong_to']} · trùng {d['do_trung']}<br>Điểm PO: ___ / 5</figcaption></figure>"
+        f"<br>dải đệm {d['dai_dem'] * 100:.1f}% · phóng ×{d['phong_to']} · trùng {d['do_trung']} · kỹ thuật {d['tham_my']}"
+        f"<br>Điểm PO: ___ / 5</figcaption></figure>"
         for d in dong
     )
     (ra / "index.html").write_text(
@@ -281,4 +298,8 @@ if __name__ == "__main__":
     p.add_argument("--phuong-an", type=int, default=1, help="Số phương án mỗi cảnh (Đợt 2) — tính thêm độ khác nhau")
     p.add_argument("--style", default=None, choices=["natural", "cinematic", "film", "vivid"], help="Phong cách (chỉ nhánh --cloud)")
     p.add_argument("--seed", type=int, default=1000, help="Seed gốc cho --cloud --phuong-an (tái tạo được)")
+    p.add_argument("--quality", default="standard", choices=["standard", "high"], help="Đợt 3 — high = Stability Ultra (chỉ --cloud)")
+    p.add_argument("--upscale", default="none", choices=["none", "2x"], help="Đợt 3 — khung xuất ×2, tăng nét hậu cảnh")
+    p.add_argument("--compose", default="paste", choices=["paste", "harmonize"], help="Đợt 3 — cách ghép")
+    p.add_argument("--khong-mo-mep", action="store_true", help="Tắt làm mờ mép cắt (so với trước Đợt 3)")
     chay(p.parse_args())

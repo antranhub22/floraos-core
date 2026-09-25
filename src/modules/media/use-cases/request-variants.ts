@@ -17,7 +17,10 @@ import {
   candidateDirections,
   candidateIdempotencyKey,
   clampVariantCount,
+  renderOptionsPayload,
+  variantUnitCostCredit,
   type VariantEngine,
+  type VariantRenderOptions,
 } from "@/modules/media/domain/variant-candidates"
 import type { EnqueueJobResult } from "@/modules/jobs/use-cases/enqueue-job"
 import {
@@ -56,6 +59,8 @@ export type RequestVariantsInput = {
   direction?: VariantDirectionInput | undefined
   /** Số phương án (Đợt 2, 25/09/2026) — 1..4, mặc định 1 (PO chốt 24/09). */
   variantCount?: number | undefined
+  /** Chất lượng / tăng nét / cách ghép (Đợt 3, 25/09/2026) — quyết định cả giá. */
+  render?: VariantRenderOptions | undefined
 }
 
 /**
@@ -120,8 +125,12 @@ async function enqueueCandidates(
     direction: VariantDirection
     variantCount: number | undefined
     idempotencyKey: string
+    render?: VariantRenderOptions | undefined
   }
 ): Promise<RequestVariantCandidatesResult> {
+  const render = args.render ?? {}
+  // Giá theo tham số (Đợt 3): cùng hàm giao diện dùng để hiện credit trước khi bấm.
+  const costCredit = variantUnitCostCredit(args.engine, render)
   const count = clampVariantCount(args.variantCount)
   const directions = candidateDirections(args.direction, count, args.engine)
   const jobGroupId = count > 1 ? candidateGroupId(ctx.organizationId, args.idempotencyKey) : null
@@ -133,8 +142,10 @@ async function enqueueCandidates(
       payload: {
         ...args.basePayload,
         ...variantDirectionPayload(d),
+        ...renderOptionsPayload(render),
         ...(count > 1 ? { candidate_index: index + 1, candidate_count: count } : {}),
       },
+      costCredit,
       idempotencyKey: candidateIdempotencyKey(args.idempotencyKey, index),
       ...(jobGroupId ? { jobGroupId } : {}),
     })
@@ -195,6 +206,7 @@ export async function requestVariants(ctx: TenantContext, input: RequestVariants
     direction: await resolveDirection(ctx, input),
     variantCount: input.variantCount,
     idempotencyKey: input.idempotencyKey,
+    render: input.render,
   })
 }
 
@@ -249,6 +261,7 @@ export async function requestCloudVariant(ctx: TenantContext, input: RequestClou
     direction: await resolveDirection(ctx, input),
     variantCount: input.variantCount,
     idempotencyKey: input.idempotencyKey,
+    render: input.render,
   })
 }
 

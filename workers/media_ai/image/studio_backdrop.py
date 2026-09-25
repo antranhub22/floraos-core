@@ -384,6 +384,7 @@ class StudioBackdropEngine:
         backdrop_image: Image.Image | None = None,
         light_direction: str = "left",
         seed: int | None = None,
+        harmonize: bool = False,
     ) -> Image.Image:
         """Ghép chủ thể RGBA vào phông Studio với hệ thống bóng đổ 2 tầng và Light Wrap quang học.
 
@@ -392,6 +393,11 @@ class StudioBackdropEngine:
         thay cho phông tự dựng bằng `create_backdrop`; bóng đổ, light wrap và
         bước dán NGUYÊN KHỐI chủ thể giữ nguyên — nên phép đo Subject
         Integrity vẫn đo trên đúng pixel gốc của Master Image.
+
+        `harmonize` (Đợt 3, 25/09/2026 — `compose_mode=harmonize`): màu bóng lấy
+        từ hậu cảnh, hậu cảnh làm mờ nhẹ khi sắc hơn chủ thể, light wrap mạnh
+        hơn trong đúng dải viền 4 px. Không đụng lõi — xem `image/hoa_hop.py`.
+        Thông tin đã làm ghi vào `self.lan_cuoi_hoa_hop`.
         """
         w, h = subject_rgba.size
 
@@ -403,6 +409,13 @@ class StudioBackdropEngine:
         else:
             backdrop = self.create_backdrop(w, h, style=style, with_grain=True, light_direction=light_direction, seed=seed)
 
+        self.lan_cuoi_hoa_hop: dict | None = None
+        if harmonize:
+            from media_ai.image.hoa_hop import khop_do_net_nen
+
+            backdrop, ban_kinh_mo = khop_do_net_nen(backdrop, subject_rgba)
+            self.lan_cuoi_hoa_hop = {"background_blur_px": ban_kinh_mo}
+
         # 1. Làm mềm viền quang học (Alpha Feathering)
         processed_subject = self.apply_alpha_feathering(subject_rgba, radius=1.1)
 
@@ -413,7 +426,15 @@ class StudioBackdropEngine:
         alpha_mask = processed_subject.split()[3]
 
         if with_shadow:
-            palette = self.STYLE_PALETTES.get(style, self.STYLE_PALETTES["warm_gray"])
+            palette = dict(self.STYLE_PALETTES.get(style, self.STYLE_PALETTES["warm_gray"]))
+            if harmonize:
+                from media_ai.image.hoa_hop import mau_bong_tu_nen
+
+                mau = mau_bong_tu_nen(backdrop, alpha_mask, palette["shadow_color"])
+                palette["shadow_color"] = mau
+                palette["ao_color"] = tuple(int(c * 0.7) for c in mau)
+                if self.lan_cuoi_hoa_hop is not None:
+                    self.lan_cuoi_hoa_hop["shadow_color"] = list(mau)
 
             # Tầng 1: Contact Ambient Occlusion (Khối tiếp xúc gốc chân giấy và tay)
             ao_shadow = self.create_contact_shadow(
@@ -445,7 +466,8 @@ class StudioBackdropEngine:
         # 3. Áp dụng Optical Light Wrap tràn sáng phông vào viền giấy/hoa
         if with_light_wrap:
             processed_subject = self.apply_light_wrap(
-                processed_subject, backdrop, wrap_depth_px=self.LIGHT_WRAP_DEPTH_PX, wrap_intensity=0.30
+                processed_subject, backdrop, wrap_depth_px=self.LIGHT_WRAP_DEPTH_PX,
+                wrap_intensity=0.42 if harmonize else 0.30,
             )
 
         # 4. Ghép chủ thể lên trên cùng

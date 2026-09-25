@@ -42,6 +42,12 @@ from media_ai.providers.background.base import (
 )
 
 _ENDPOINT = "https://api.stability.ai/v2beta/stable-image/generate/core"
+# `quality=high` (Đợt 3, 25/09/2026): Stable Image Ultra — cùng dạng multipart
+# (prompt, negative_prompt, aspect_ratio, seed, output_format). Giá tham khảo:
+# Core 3 credit Stability/ảnh, Ultra 8 (bảng giá bên thứ ba, 06/2026 — trang
+# chính thức không tải được nội dung tự động; đối chiếu lại khi đo thật).
+_ENDPOINT_ULTRA = "https://api.stability.ai/v2beta/stable-image/generate/ultra"
+MODEL_ULTRA = "stable-image-ultra-v2beta"
 
 # Tỷ lệ Stability Core chấp nhận — chọn tỷ lệ gần nhất với khung cần phủ.
 _TY_LE_HO_TRO: dict[str, float] = {
@@ -114,7 +120,7 @@ class StabilityBackgroundProvider:
     name = "stability_ai"
     model_version = "stable-image-core-v2beta"
     # Bảng năng lực (Đợt 1, 24/09/2026). Seed 0..4294967294 theo API v2beta.
-    nang_luc = NangLuc(seed=True, negative_prompt=True, ratios=frozenset(_TY_LE_HO_TRO), style=True)
+    nang_luc = NangLuc(seed=True, negative_prompt=True, ratios=frozenset(_TY_LE_HO_TRO), style=True, quality=True)
     SEED_TOI_DA = 4_294_967_294
 
     def __init__(
@@ -161,15 +167,26 @@ class StabilityBackgroundProvider:
         seed = max(0, min(int(seed), self.SEED_TOI_DA))
         style_preset, bo_qua_style = self._style_preset(req.style)
         bo_qua = bo_qua + bo_qua_style
-        du_lieu = self._goi(prompt, ty_le, seed, style_preset=style_preset)
+        ultra = req.quality == "high"
+        if ultra and style_preset is not None:
+            # Chưa đối chiếu được tài liệu chính thức rằng Ultra nhận
+            # `style_preset` — không gửi, nói thật.
+            style_preset = None
+            bo_qua.append("style")
+        du_lieu = self._goi(prompt, ty_le, seed, style_preset=style_preset, ultra=ultra)
         try:
             anh = Image.open(BytesIO(du_lieu))
             anh.load()
         except Exception as exc:  # noqa: BLE001 — ảnh hỏng là lỗi nhà cung cấp, lùi về phông cục bộ
             raise BackgroundProviderError(f"Stability trả ảnh không đọc được: {exc}") from exc
-        return BackgroundResult(anh=anh, prompt=prompt, seed=seed, aspect_ratio=ty_le, bo_qua=bo_qua)
+        return BackgroundResult(
+            anh=anh, prompt=prompt, seed=seed, aspect_ratio=ty_le, bo_qua=bo_qua,
+            model_version=MODEL_ULTRA if ultra else self.model_version,
+        )
 
-    def _goi(self, prompt: str, ty_le: str, seed: int | None, style_preset: str | None = None) -> bytes:
+    def _goi(
+        self, prompt: str, ty_le: str, seed: int | None, style_preset: str | None = None, ultra: bool = False
+    ) -> bytes:
         if not self._api_key:
             raise BackgroundProviderError("Thiếu STABILITY_API_KEY")
         du_lieu_form: dict[str, Any] = {
@@ -185,7 +202,7 @@ class StabilityBackgroundProvider:
         client = self._client if self._client is not None else httpx.Client(timeout=self._timeout_s)
         try:
             resp = client.post(
-                _ENDPOINT,
+                _ENDPOINT_ULTRA if ultra else _ENDPOINT,
                 headers={"Authorization": f"Bearer {self._api_key}", "Accept": "image/*"},
                 files={"none": ("", b"")},
                 data=du_lieu_form,

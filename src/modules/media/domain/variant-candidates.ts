@@ -24,14 +24,17 @@
 import { costCreditForFeature } from "@/modules/usage/domain/pricing"
 
 import {
+  type ComposeMode,
   MAX_VARIANT_SEED,
   VARIANT_PLACEMENTS,
   VARIANT_SHOTS,
   VARIANT_STYLES,
   type LightDirection,
   type VariantDirection,
+  type VariantQuality,
   type VariantShot,
   type VariantStyle,
+  type VariantUpscale,
 } from "./variant-direction-rules"
 import { MEDIA_VARIANT_CLOUD_FEATURE, MEDIA_VARIANT_FEATURE } from "./variant-rules"
 
@@ -46,14 +49,46 @@ export function clampVariantCount(n: number | undefined): number {
   return Math.max(MIN_VARIANT_COUNT, Math.min(MAX_VARIANT_COUNT, Math.trunc(n)))
 }
 
-/** Credit của MỘT phương án — cùng bảng giá `enqueueJob` dùng để trừ. */
-export function variantUnitCostCredit(engine: VariantEngine): number {
-  return costCreditForFeature(engine === "cloud_provider" ? MEDIA_VARIANT_CLOUD_FEATURE : MEDIA_VARIANT_FEATURE)
+/** Tuỳ chọn dựng ảnh (Đợt 3) — ảnh hưởng giá. */
+export interface VariantRenderOptions {
+  readonly quality?: VariantQuality | undefined
+  readonly upscale?: VariantUpscale | undefined
+  readonly composeMode?: ComposeMode | undefined
+}
+
+/**
+ * Phụ phí Đợt 3 (giá TẠM — chờ PO chốt ở nợ #64 sau khi đo nhánh Stability):
+ *  - `quality=high` (Stability Ultra, 8 credit Stability/ảnh so với Core 3 —
+ *    bảng giá bên thứ ba 06/2026): Core đang tính +1 so với cục bộ, Ultra đắt
+ *    gấp ~2,7 lần Core → +3 so với cục bộ, tức +2 so với đám mây chuẩn.
+ *    Chỉ áp cho đám mây — phông cục bộ không có bậc cao hơn (provider_ignored).
+ *  - `upscale=2x`: 0 — worker chưa có Real-ESRGAN thật, đang lùi về
+ *    LANCZOS + unsharp (không tốn gì thêm). Kế hoạch đề xuất +1 khi có mô hình thật.
+ *  - `harmonize`: 0 — xử lý ảnh cục bộ, không gọi nhà cung cấp.
+ */
+export const HIGH_QUALITY_SURCHARGE = 2
+export const UPSCALE_SURCHARGE = 0
+
+/** Credit của MỘT phương án — ĐÚNG số `enqueueJob` trừ (truyền qua `costCredit`). */
+export function variantUnitCostCredit(engine: VariantEngine, opts: VariantRenderOptions = {}): number {
+  const base = costCreditForFeature(engine === "cloud_provider" ? MEDIA_VARIANT_CLOUD_FEATURE : MEDIA_VARIANT_FEATURE)
+  const high = engine === "cloud_provider" && opts.quality === "high" ? HIGH_QUALITY_SURCHARGE : 0
+  const up = opts.upscale === "2x" ? UPSCALE_SURCHARGE : 0
+  return base + high + up
 }
 
 /** Credit cả lượt bấm — hiện TRƯỚC khi bấm (Đợt 2). */
-export function variantTotalCostCredit(engine: VariantEngine, count: number): number {
-  return variantUnitCostCredit(engine) * clampVariantCount(count)
+export function variantTotalCostCredit(engine: VariantEngine, count: number, opts: VariantRenderOptions = {}): number {
+  return variantUnitCostCredit(engine, opts) * clampVariantCount(count)
+}
+
+/** Trường tuỳ chọn dựng ảnh trong payload job / thân POST (snake_case). */
+export function renderOptionsPayload(opts: VariantRenderOptions): Record<string, unknown> {
+  return {
+    ...(opts.quality && opts.quality !== "standard" ? { quality: opts.quality } : {}),
+    ...(opts.upscale && opts.upscale !== "none" ? { upscale: opts.upscale } : {}),
+    ...(opts.composeMode && opts.composeMode !== "paste" ? { compose_mode: opts.composeMode } : {}),
+  }
 }
 
 /** Khoá idempotency của phương án thứ `index` (0-based). Phương án đầu giữ nguyên

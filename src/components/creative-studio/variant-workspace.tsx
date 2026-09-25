@@ -28,10 +28,12 @@ import {
   alternateDirection,
   directionFromRecord,
   directionRequestFields,
+  renderOptionsPayload,
   SIMILAR_CANDIDATE_COUNT,
   similarDirection,
   variantTotalCostCredit,
   variantUnitCostCredit,
+  type VariantRenderOptions,
 } from "@/modules/media/domain/variant-candidates"
 import {
   VARIANT_STYLE_LABELS,
@@ -78,6 +80,8 @@ type SceneMeta = {
   ratio?: string | null
   /** Chỉ đạo worker ĐÃ dùng (Đợt 2) — cho "Sinh lại giống thế này". */
   direction?: VariantDirection | null
+  /** Chấm kỹ thuật tự động 0..100 (Đợt 3) — heuristic, không thay mắt người. */
+  aestheticScore?: number | null
 }
 
 /** Một phương án của cảnh (Đợt 2, 25/09/2026) — mỗi phương án là một job. */
@@ -113,6 +117,7 @@ type VariantJobPoll = {
     direction?: Record<string, unknown> | null
   }
   subject_integrity: { subject_pixel_identity: number } | null
+  quality_report?: { aesthetic: { score: number } | null } | null
   variants: Array<{ asset_id: string; variant_key: string; url: string }>
 }
 
@@ -184,6 +189,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   // (chốt 23/09/2026); nhà cung cấp lỗi thì worker tự lùi về phông cục bộ.
   // Cảnh 1 (studio trắng) và Cảnh 4 (tách nền) luôn chạy cục bộ — không cần hậu cảnh AI.
   const [sceneEngine, setSceneEngine] = useState<"cloud_provider" | "local_studio">("cloud_provider")
+  // Tuỳ chọn dựng ảnh (Đợt 3, 25/09/2026) — áp cho các lượt sinh tiếp theo; giá hiện trên nút.
+  const [renderOpts, setRenderOpts] = useState<VariantRenderOptions>({
+    quality: "standard",
+    upscale: "none",
+    composeMode: "paste",
+  })
 
   // Kịch bản bối cảnh của CHỦ ĐỀ (quyết định PO 24/09/2026): số cảnh và bối
   // cảnh từng cảnh lấy từ kịch bản AI viết qua job `creative.scene_plan`
@@ -446,6 +457,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
             planRevision: typeof meta.scene_plan_revision === "number" ? meta.scene_plan_revision : null,
             ratio: typeof meta.ratio === "string" ? meta.ratio : null,
             direction: directionFromRecord(meta),
+            aestheticScore:
+              meta.aesthetic && typeof meta.aesthetic === "object" && typeof (meta.aesthetic as { score?: unknown }).score === "number"
+                ? ((meta.aesthetic as { score: number }).score)
+                : null,
           }
           const list = (candidates[idx] ??= [])
           if (list.length < MAX_CANDIDATES_SHOWN) list.push(candidate)
@@ -519,6 +534,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           // và số phương án. Không có thì máy chủ lấy từ kịch bản như Đợt 1.
           ...(opts?.direction ? directionRequestFields(opts.direction) : {}),
           ...(opts?.count && opts.count > 1 ? { variant_count: opts.count } : {}),
+          ...renderOptionsPayload(useCloud ? renderOpts : { ...renderOpts, quality: "standard" }),
         }),
       })
       if (!res.ok) {
@@ -572,6 +588,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           planRevision: scenePlan?.revision ?? null,
           ratio,
           direction: detail.source.direction ? directionFromRecord(detail.source.direction) : null,
+          aestheticScore: detail.quality_report?.aesthetic?.score ?? null,
         })
       })
       if (made.length === 0) throw new Error(failures[0] ?? "Không sinh được phân cảnh")
@@ -713,7 +730,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
   const sceneCount = planScenes.length
   const sceneCreditTotal = narrativeResultScenes.reduce(
-    (sum, sc) => sum + variantUnitCostCredit(sc.usesCloud ? "cloud_provider" : "local_studio"),
+    (sum, sc) => sum + variantUnitCostCredit(sc.usesCloud ? "cloud_provider" : "local_studio", renderOpts),
     0
   )
   const cloudAvailable = scenePlan?.mode === "CREATIVE"
@@ -948,15 +965,25 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   const current = sceneMeta[idx]?.direction ?? null
                   const engine = activeScene.usesCloud ? "cloud_provider" : "local_studio"
                   const busy = generatingSceneIndex !== null || generatingAllScenes
-                  const similarCost = variantTotalCostCredit(engine, SIMILAR_CANDIDATE_COUNT)
-                  const altCost = variantTotalCostCredit(engine, 1)
+                  const similarCost = variantTotalCostCredit(engine, SIMILAR_CANDIDATE_COUNT, renderOpts)
+                  const altCost = variantTotalCostCredit(engine, 1, renderOpts)
+                  const score = sceneMeta[idx]?.aestheticScore
                   return (
                     <div className="rounded-xl border border-border p-3 space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-bold text-text">
                           Phương án của cảnh {idx} ({list.length})
                         </span>
-                        {current && <span className="text-text-muted">Đang xem: {describeDirection(current)}</span>}
+                        {current && (
+                          <span className="text-text-muted">
+                            Đang xem: {describeDirection(current)}
+                            {typeof score === "number" && (
+                              <span title="Chấm kỹ thuật tự động (độ nét, phơi sáng, tách nền, bố cục) — không thay mắt người">
+                                {" "}· Kỹ thuật {Math.round(score)}/100
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </div>
                       {list.length > 1 && (
                         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -1018,6 +1045,35 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                         >
                           <Sparkles size={12} /> Thử hướng khác ({altCost} credit)
                         </Button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-text-muted">
+                        <span className="font-bold text-text">Chất lượng lượt sau:</span>
+                        {engine === "cloud_provider" && (
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={renderOpts.quality === "high"}
+                              onChange={(e) => setRenderOpts((o) => ({ ...o, quality: e.target.checked ? "high" : "standard" }))}
+                            />
+                            Cao (Stability Ultra, +{variantUnitCostCredit("cloud_provider", { quality: "high" }) - variantUnitCostCredit("cloud_provider")} credit)
+                          </label>
+                        )}
+                        <label className="flex items-center gap-1 cursor-pointer" title="Khung xuất gấp đôi; chỉ tăng nét hậu cảnh, bó hoa giữ nguyên điểm ảnh">
+                          <input
+                            type="checkbox"
+                            checked={renderOpts.upscale === "2x"}
+                            onChange={(e) => setRenderOpts((o) => ({ ...o, upscale: e.target.checked ? "2x" : "none" }))}
+                          />
+                          Xuất 2× độ phân giải
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer" title="Màu bóng theo hậu cảnh, khớp độ nét hậu cảnh — không đụng bó hoa">
+                          <input
+                            type="checkbox"
+                            checked={renderOpts.composeMode === "harmonize"}
+                            onChange={(e) => setRenderOpts((o) => ({ ...o, composeMode: e.target.checked ? "harmonize" : "paste" }))}
+                          />
+                          Hoà hợp bóng &amp; nền
+                        </label>
                       </div>
                       {engine === "local_studio" && (
                         <p className="text-[11px] text-text-muted">
