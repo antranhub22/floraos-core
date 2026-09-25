@@ -2,6 +2,8 @@ import { notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
+import { optimizationPriceKey } from "@/modules/media/domain/optimization-rules"
+import { costCreditForFeature } from "@/modules/usage/domain/pricing"
 
 export const MEDIA_OPTIMIZE_FEATURE = "media.optimize"
 
@@ -32,5 +34,6 @@ export async function requestOptimization(
     productId: asset.product_id,
     payload: { asset_id: input.assetId, config: input.config ?? {} },
     idempotencyKey: input.idempotencyKey,
+    costCredit: costCreditForFeature(optimizationPriceKey(input.config)),
   })
 }

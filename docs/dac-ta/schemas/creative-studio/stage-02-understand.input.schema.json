@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "stage-02-understand.input.schema.json",
   "title": "Chặng 02 — UNDERSTAND: Nhận diện cấu trúc & định tính thương mại — Đầu vào",
-  "description": "Mô hình thị giác (gpt-4o-mini) trả thành phần hoa, thuộc tính thị giác, bao bì, bối cảnh; người dùng sửa được từng trường.",
+  "description": "Mô hình thị giác (gpt-4o-mini) đọc ảnh TỪ KHO theo asset_id, trả thành phần hoa, thuộc tính thị giác, bao bì, bối cảnh; người dùng sửa được từng trường. Thu product.vision_extract (1 credit) khi mô hình chạy; cùng ảnh bấm lại không thu lần hai; hỏng thì hoàn.",
   "x-floraos": {
     "stageId": "02",
     "stage": 2,
@@ -19,16 +19,21 @@
   "type": "object",
   "properties": {
     "image_url": {
-      "description": "URL ảnh (ký có hạn); bỏ trống khi đã có asset_id",
+      "description": "BỎ QUA từ 25/09/2026 — máy chủ đọc ảnh từ kho theo asset_id; giữ để client cũ không vỡ",
       "type": "string"
     },
     "asset_id": {
-      "type": "string"
+      "type": "string",
+      "minLength": 1,
+      "description": "Ảnh đã lưu kho của đúng tổ chức (bắt buộc từ 25/09/2026)"
     },
     "product_title": {
       "type": "string"
     }
   },
+  "required": [
+    "asset_id"
+  ],
   "examples": [
     {
       "asset_id": "3f1c9a52-7d7e-4b8e-9d7a-1a2b3c4d5e6f",

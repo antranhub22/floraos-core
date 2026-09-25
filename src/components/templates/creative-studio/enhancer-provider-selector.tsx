@@ -3,6 +3,8 @@
 import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Sparkles, Cpu, Cloud, Zap } from "lucide-react"
+import { optimizationPriceKey } from "@/modules/media/domain/optimization-rules"
+import { costCreditForFeature } from "@/modules/usage/domain/pricing"
 
 export interface EnhancerProviderOption {
   id: string
@@ -55,7 +57,7 @@ export const ENHANCER_PROVIDERS: EnhancerProviderOption[] = [
   {
     id: "local",
     name: "Real-ESRGAN / PIL Lanczos (Local)",
-    desc: "Xử lý trực tiếp trên máy chủ cục bộ, siêu tốc độ, không tốn credit API và không cần internet.",
+    desc: "Xử lý trực tiếp trên máy chủ cục bộ, không gọi nhà cung cấp bên ngoài và không cần internet.",
     badge: "Nội bộ 0đ",
     tone: "neutral",
     icon: Cpu,
@@ -122,6 +124,11 @@ export function EnhancerProviderSelector({
 
               <div className="text-[11px] leading-relaxed text-text-muted mt-2 pl-5.5">
                 {provider.desc}
+              </div>
+              <div className="text-[11px] font-semibold text-text mt-1 pl-5.5">
+                {costCreditForFeature(optimizationPriceKey({ enhancer_provider: provider.id }))} credit/lượt
+                {optimizationPriceKey({ enhancer_provider: provider.id }) === "media.optimize.cloud" &&
+                  " · nhà cung cấp lỗi thì hoàn phần chênh"}
               </div>
             </label>
           )

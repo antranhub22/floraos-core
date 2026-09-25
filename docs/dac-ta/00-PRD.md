@@ -361,7 +361,7 @@ AI-1 đứng trước P16 vì P16 là lần đầu hệ thống gọi một lo�
 | # | Nội dung | Chặn |
 |---|---|---|
 | D13 | Cơ sở pháp lý và hình dạng cơ chế đồng ý cho dữ liệu cá nhân của khách hàng cuối, gồm quyền xoá thuộc về chính khách hàng | Go-live của M09 và M10, không chặn việc dựng lược đồ |
-| D14 | Bảng giá `cost_credit` cho các `feature` mới — biến thể ảnh, video, nội dung. Chi phí thật của một video chênh hai bậc so với một ảnh, nên D7 không mở rộng sang được | P16, P17, P18 |
+| D14 | Bảng giá `cost_credit` cho các `feature` mới — biến thể ảnh, video, nội dung. Chi phí thật của một video chênh hai bậc so với một ảnh, nên D7 không mở rộng sang được — **CHỐT v1 25/09/2026** (PO giao agent đề xuất): định giá tương đối theo bốn nguyên tắc ở `src/modules/usage/domain/pricing.ts` — 1 credit ≈ một lượt gọi một mô hình; đường nhà cung cấp ảnh = cục bộ + 1; thu theo đường thật đã chạy (lùi cục bộ → hoàn chênh); một lần bấm = một lần thu. Tỷ giá credit ↔ VND vẫn thuộc D2; xem lại con số sau 30 ngày có `cost_usd` thật (nợ #151) | — (đã chốt v1) |
 | D20 | Ngưỡng chấp nhận của từng năng lực ngoài Identity Guard. Ngưỡng Guard đã chốt; các năng lực còn lại chưa có dữ liệu có đáp án nên chạy bằng giá trị tạm có ghi nợ | AI-2 |
 
 ## 13. Rủi ro

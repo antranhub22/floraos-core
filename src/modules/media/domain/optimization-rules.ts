@@ -30,6 +30,17 @@ export function isOptimizeEnhancerProvider(value: unknown): value is OptimizeEnh
   return typeof value === "string" && (OPTIMIZE_ENHANCER_PROVIDERS as readonly string[]).includes(value)
 }
 
+/** Bộ máy gọi nhà cung cấp trả phí — thu giá `media.optimize.cloud` (bảng giá v1, 25/09/2026). */
+export const OPTIMIZE_CLOUD_PROVIDERS = ["openai", "photoroom", "fal_flux", "fal"] as const satisfies readonly OptimizeEnhancerProvider[]
+
+/** Khoá giá của một lượt tối ưu: theo BỘ MÁY được chọn, không theo cờ `engine`. */
+export function optimizationPriceKey(config: Record<string, unknown> | undefined): "media.optimize" | "media.optimize.cloud" {
+  const provider = config?.enhancer_provider
+  return typeof provider === "string" && (OPTIMIZE_CLOUD_PROVIDERS as readonly string[]).includes(provider)
+    ? "media.optimize.cloud"
+    : "media.optimize"
+}
+
 export const GUARD_RESULTS = ["SAFE", "GOOD", "WARNING", "REJECTED"] as const
 export type GuardResult = (typeof GUARD_RESULTS)[number]
 

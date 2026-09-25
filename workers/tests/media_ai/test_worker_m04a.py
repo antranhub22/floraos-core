@@ -190,6 +190,8 @@ class TestQuaCong:
         assert "master_asset_id" in output
         assert "ratios" in output
         assert len(output["ratios"]) == 4
+        # 25/09/2026: core đọc cờ này để hoàn phần chênh giá khi bộ máy nhà cung cấp lùi cục bộ.
+        assert output["provider_fallback"] is False and output["provider_fallback_reason"] is None
 
     def test_phat_su_kien_guard_de_phia_ts_doc_lai_duoc(self, gia_lap_kho):
         conn = FakeConnection(fetchone_queue=[dict(ASSET_GOC)])

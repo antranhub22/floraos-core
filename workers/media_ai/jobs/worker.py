@@ -390,6 +390,10 @@ def process_job(
             "variants": variant_storage_keys,
             "variant_ratios": variant_ratios_storage,
             "applied_changes": applied_changes,
+            # Bộ máy nhà cung cấp lỗi → lùi `StudioEnhancer` (25/09/2026). Phía
+            # core đọc cờ này để hoàn phần chênh giá — worker không ghi `usage`.
+            "provider_fallback": bool(ket_qua_tang_cuong.get("parameters", {}).get("fallback")),
+            "provider_fallback_reason": ket_qua_tang_cuong.get("parameters", {}).get("fallback_reason"),
         }
 
         with conn.cursor() as cur:

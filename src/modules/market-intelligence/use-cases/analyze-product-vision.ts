@@ -3,6 +3,14 @@
  * Tuân thủ Clean Architecture — Phụ thuộc Domain, kiểm tra Tenant Isolation.
  */
 
+import { AppError, notFound } from "@/core/http/errors";
+import type { TenantContext } from "@/core/tenancy";
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory";
+import { AssetRepository } from "@/modules/assets/infra/asset-repository";
+import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository";
+import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job";
+import { refundJob } from "@/modules/usage/use-cases/refund-job";
+
 import { marketIntelligenceRepo } from "../infra/market-intelligence-repository";
 import { extractProductVisionWithAI } from "../adapters/openai-vision-adapter";
 import type {
@@ -13,9 +21,7 @@ import type {
 } from "../domain/product-intelligence-types";
 
 export interface AnalyzeProductVisionInput {
-  organizationId: string;
-  imageUrl?: string | undefined;
-  assetId?: string | undefined;
+  assetId: string;
   productTitle?: string | undefined;
 }
 
@@ -27,49 +33,84 @@ export interface AnalyzeProductVisionOutput {
   attributes: ProductVisualAttributes;
   packaging: ProductPackaging;
   context: ProductInferredContext;
+  /** `vision_ai` = mô hình vừa đọc ảnh · `m01` = kết quả M01 đã lưu (không thu credit). */
+  source?: "vision_ai" | "m01";
 }
 
+/** Kết quả use-case = đầu ra hợp đồng + mức credit vừa thu (route đổi sang `usage` snake_case). */
+export type AnalyzeProductVisionResult = AnalyzeProductVisionOutput & {
+  usage?: { costCredit: number; balanceAfter: number | null };
+}
+
+/** Khoá giá + feature riêng — KHÔNG dùng `vision.analyze` vì worker M01 nghe feature đó và sẽ nhận nhầm job. */
+export const PRODUCT_VISION_EXTRACT_FEATURE = "product.vision_extract";
+const PREVIEW_TTL_SECONDS = 3600;
+const MAX_DEDUPE_CHAIN = 5;
+
+/**
+ * Chặng 02 UNDERSTAND (`POST /market-intelligence/vision-extract`, `V1`).
+ *
+ * 25/09/2026 (rà soát thương mại): trước ngày này mỗi lần bấm "Bóc tách" gọi
+ * OpenAI Vision (`gpt-4o-mini`, `detail: high`) KHÔNG trừ credit, không vào sổ
+ * `usage`, và gửi nguyên `image_url` do trình duyệt đưa lên (kể cả URL ngoài).
+ * Nay: ảnh đọc từ KHO theo `asset_id` của đúng tổ chức; lượt gọi mô hình đi
+ * qua `enqueueJob` (feature `product.vision_extract`, 1 credit) theo khuôn chạy
+ * tại chỗ của `generate-scene-plan.ts`; cùng một ảnh bấm lại trả kết quả cũ,
+ * không thu lần hai; mô hình không đọc được → job FAILED + hoàn credit.
+ */
 export async function analyzeProductVision(
+  ctx: TenantContext,
   input: AnalyzeProductVisionInput
-): Promise<AnalyzeProductVisionOutput> {
-  const { organizationId, assetId, imageUrl, productTitle } = input;
+): Promise<AnalyzeProductVisionResult> {
+  const { assetId, productTitle } = input;
+  const asset = await new AssetRepository().findById(ctx, assetId);
+  if (!asset) throw notFound();
+  const storage = getStorageProvider();
+  const imageUrl = await storage.signedUrl(asset.storage_key, PREVIEW_TTL_SECONDS);
 
-  // 1. Nếu có assetId, thử tra cứu kết quả phân tích M01 đã có trong DB của tenant
-  if (assetId) {
-    const existingAnalysis = await marketIntelligenceRepo.findProductAnalysis(organizationId, assetId);
-
-    if (existingAnalysis) {
-      const data = (existingAnalysis.edited || existingAnalysis.raw) as RawVisionAnalysis;
-      return mapAnalysisToProductIntelligence(data, imageUrl || "/images/sample-flower.jpg", assetId, productTitle);
-    }
+  // 1. Kết quả M01 đã có của đúng ảnh này → dùng lại, không gọi mô hình, không thu.
+  const existingAnalysis = await marketIntelligenceRepo.findProductAnalysis(ctx.organizationId, assetId);
+  if (existingAnalysis) {
+    const data = (existingAnalysis.edited || existingAnalysis.raw) as RawVisionAnalysis;
+    return { ...mapAnalysisToProductIntelligence(data, imageUrl, assetId, productTitle), source: "m01" };
   }
 
-  // 2. Thử gọi trực tiếp OpenAI Vision AI nếu có imageUrl (hỗ trợ cả Data URL base64 hoặc Web URL)
-  if (imageUrl && !imageUrl.startsWith("blob:")) {
-    try {
-      const aiResult = await extractProductVisionWithAI({
-        imageUrl,
-        productTitle,
-      });
-
-      if (aiResult) {
-        return {
-          productName: aiResult.productName,
-          imageUrl,
-          assetId,
-          components: aiResult.components,
-          attributes: aiResult.attributes,
-          packaging: aiResult.packaging,
-          context: aiResult.context,
-        };
-      }
-    } catch (err) {
-      console.warn("OpenAI Vision extraction failed, falling back to heuristic:", err);
-    }
+  // 2. Một lượt gọi mô hình = một job trong sổ. Lượt trước hỏng (đã hoàn credit)
+  //    thì nối khoá mới để người dùng thử lại được.
+  let key = `vision-extract:${assetId}`;
+  let enq = await enqueueJob(ctx, { feature: PRODUCT_VISION_EXTRACT_FEATURE, payload: { asset_id: assetId }, productId: asset.product_id, idempotencyKey: key });
+  for (let i = 0; enq.deduped && (enq.job.status === "FAILED" || enq.job.status === "CANCELLED") && i < MAX_DEDUPE_CHAIN; i++) {
+    key = `vision-extract:${assetId}:after:${enq.job.id}`;
+    enq = await enqueueJob(ctx, { feature: PRODUCT_VISION_EXTRACT_FEATURE, payload: { asset_id: assetId }, productId: asset.product_id, idempotencyKey: key });
+  }
+  if (enq.deduped) {
+    const cached = enq.job.output as Omit<AnalyzeProductVisionOutput, "imageUrl"> | null;
+    if (enq.job.status === "COMPLETED" && cached) return { ...cached, imageUrl, assetId, source: "vision_ai", usage: enq.usage };
+    throw new AppError("CONFLICT", "Ảnh này đang được Vision AI bóc tách — chờ vài giây rồi thử lại.");
   }
 
-  // 3. Fallback bóc tách thông minh dựa trên phân tích từ vựng / hình mẫu sản phẩm
-  return extractFloralAttributes(imageUrl || "", productTitle || "Bó hoa tươi nghệ thuật", assetId);
+  const jobRepo = new GenerationJobRepository();
+  await jobRepo.startInline(ctx, enq.job.id, new Date());
+  try {
+    const bytes = await storage.get(asset.storage_key);
+    const dataUrl = `data:${asset.mime_type || "image/jpeg"};base64,${Buffer.from(bytes).toString("base64")}`;
+    const ai = await extractProductVisionWithAI({ imageUrl: dataUrl, productTitle });
+    if (!ai) throw new Error("Mô hình thị giác không trả được kết quả đọc được (thiếu khoá, hết hạn mức, hoặc ảnh không có hoa rõ ràng).");
+    const output = {
+      productName: ai.productName,
+      components: ai.components,
+      attributes: ai.attributes,
+      packaging: ai.packaging,
+      context: ai.context,
+    };
+    await jobRepo.finishInline(ctx, enq.job.id, { ok: true, now: new Date(), output });
+    return { ...output, imageUrl, assetId, source: "vision_ai", usage: enq.usage };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Lỗi không xác định";
+    await jobRepo.finishInline(ctx, enq.job.id, { ok: false, error: message, now: new Date() });
+    await refundJob(ctx, enq.job.id).catch(() => undefined);
+    throw new AppError("INTERNAL", `[analyzeProductVision] Vision AI chưa bóc tách được ảnh (đã hoàn credit): ${message}`);
+  }
 }
 
 /** Một dòng hoa/lá trong kết quả M01 đã lưu (JSON, chưa kiểm dạng). */
@@ -112,7 +153,7 @@ function mapAnalysisToProductIntelligence(
   rawFlowers.forEach((f: RawVisionRow, idx: number) => {
     components.push({
       flowerType: f.name || f.loai_hoa || `Hoa tươi #${idx + 1}`,
-      quantityEstimate: parseInt(String(f.count || f.so_luong)) || (idx === 0 ? 10 : 5),
+      quantityEstimate: parseInt(String(f.count || f.so_luong)) || 0,
       unit: "cành",
       role: idx === 0 ? "dominant" : "supporting",
     });
@@ -121,7 +162,7 @@ function mapAnalysisToProductIntelligence(
   rawFoliage.forEach((fol: RawVisionRow) => {
     components.push({
       flowerType: fol.name || fol.loai_la || "Lá phụ trang trí",
-      quantityEstimate: parseInt(String(fol.count || fol.so_luong)) || 3,
+      quantityEstimate: parseInt(String(fol.count || fol.so_luong)) || 0,
       unit: "cành",
       role: "foliage",
     });
@@ -135,29 +176,30 @@ function mapAnalysisToProductIntelligence(
   }
 
   const attributes: ProductVisualAttributes = {
-    mainColors: rawPalette.length > 0 ? rawPalette.slice(0, 2) : ["Pastel hồng", "Trắng kem"],
+    mainColors: rawPalette.slice(0, 2),
     secondaryColors: rawPalette.slice(2, 4),
-    style: raw.phong_cach || "Romantic & Tinh tế (Hàn Quốc)",
-    shape: raw.shape || "Bó tròn tự nhiên",
-    sizeEstimate: raw.size || "Tiêu chuẩn (M)",
+    style: raw.phong_cach || "",
+    shape: raw.shape || "",
+    sizeEstimate: raw.size || "",
   };
 
   const packaging: ProductPackaging = {
-    wrappingMaterial: raw.wrapping?.material || "Giấy lụa mờ Kraft",
-    wrappingColor: raw.wrapping?.color || "Hồng phấn & Trắng",
-    ribbon: raw.accessories?.ribbon || "Ruy băng voan trắng",
-    accessories: raw.accessories?.card ? ["Thiệp chúc mừng"] : ["Thiệp chúc mừng thiết kế"],
+    wrappingMaterial: raw.wrapping?.material || "",
+    wrappingColor: raw.wrapping?.color || "",
+    ribbon: raw.accessories?.ribbon || "",
+    accessories: raw.accessories?.card ? ["Thiệp chúc mừng"] : [],
   };
 
   const occasions = Array.isArray(raw.dip_su_dung) && raw.dip_su_dung.length > 0
     ? raw.dip_su_dung
-    : ["Sinh nhật bạn gái", "Kỷ niệm ngày cưới"];
+    : [];
 
   const context: ProductInferredContext = {
     likelyOccasions: occasions,
-    likelyAudience: "Nữ giới 20–35 tuổi hoặc Nam giới mua tặng",
-    suggestedPrice: parseInt(String(raw.suggested_price)) || 599000,
-    confidence: typeof raw.confidence === "number" ? raw.confidence : 0.94,
+    likelyAudience: "",
+    // Giá trị M01 không có → 0/rỗng để chủ tiệm tự nhập; không bịa (AGENTS.md: số hiển thị phải là số đo).
+    suggestedPrice: parseInt(String(raw.suggested_price)) || 0,
+    confidence: typeof raw.confidence === "number" ? raw.confidence : 0,
   };
 
   return {
@@ -170,22 +212,3 @@ function mapAnalysisToProductIntelligence(
     context,
   };
 }
-
-/**
- * Fallback cuối cùng khi cả DB lẫn OpenAI Vision đều không trả được dữ liệu.
- * Throw error rõ ràng — không bịa dữ liệu cứng để đảm bảo người dùng nhận biết
- * Vision AI thất bại, tuân thủ nguyên tắc "không bịa số".
- */
-function extractFloralAttributes(
-  _imageUrl: string,
-  title: string,
-  _assetId?: string
-): never {
-  throw new Error(
-    `[analyzeProductVision] Vision AI extraction thất bại hoàn toàn cho "${title}". ` +
-    "Cả DB analysis lẫn OpenAI Vision đều không trả dữ liệu. " +
-    "Hãy kiểm tra: (1) OPENAI_API_KEY đã cấu hình, (2) imageUrl hợp lệ (không phải blob:), " +
-    "(3) hình ảnh chứa sản phẩm hoa tươi rõ ràng."
-  );
-}
-

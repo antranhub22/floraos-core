@@ -130,6 +130,13 @@
 - [x] `npm run test:tenant` xanh trên máy có Postgres — **244/244, 34/34 tệp** (Postgres 16, 25/09/2026); `test:platform` 5/5
 - [x] CI thật chạy được cổng `test:tenant`: dựng `floraos_test` trong job web; job worker cài `ffmpeg` (CI run 4 trên `main` đỏ vì hai thiếu này — 25/09/2026)
 - [x] Theo dõi job Khu vực A/B có hạn 10 phút, thử lại lỗi mạng/5xx, dừng ở 401/403/404, xử lý `CANCELLED`, dừng khi rời trang — `job-polling.ts` + `tests/unit/creative-studio/job-polling.test.ts` (trước: vòng tối ưu ảnh NGỪNG poll khi gặp một lỗi mạng → UI kẹt "đang chạy"; vòng biến thể poll vô hạn)
+- [x] Bảng giá v1 (D14/#64): nhà cung cấp = cục bộ + 1, `media.optimize.cloud` = 3, giá hiện ở bộ chọn bộ máy — `pricing.ts` + `pricing.test.ts`
+- [x] Một lần bấm = một lần thu: Chặng 05 thu gộp kịch bản + bài viết, bài hỏng hoàn phần bài — nợ #146
+- [x] Lùi cục bộ hoàn phần chênh (biến thể + tối ưu ảnh); hỏng/từ chối hoàn ngay lúc đọc — nợ #127, `tests/tenant/partial-refund.test.ts`
+- [x] Chặng 02 vào sổ: `product.vision_extract` 1 credit, ảnh đọc từ kho theo `asset_id`, không chọn sẵn ảnh mẫu/dữ liệu bịa, Vision lỗi → form nhập tay TRỐNG; chọn Catalog tra đúng ảnh trong kho (trước truyền nhầm mã sản phẩm làm `asset_id`)
+- [x] E2E hành trình (trình duyệt + app + Postgres + worker media thật): tải ảnh → Chặng 02 → Master SAFE → biến thể SAFE → gói QA + duyệt → sổ `usage` — `tests/e2e/creative-studio.spec.ts` (chưa vào CI: nợ #157)
+- [ ] Chạy thử mọi bộ máy nhà cung cấp với khoá thật — nợ #153 (**chặn mở bán**)
+- [ ] Nhạc nền hệ thống có giấy phép thương mại — nợ #154/#128 (**chặn mở bán video/âm thanh**)
 
 ## 9. Tài liệu
 

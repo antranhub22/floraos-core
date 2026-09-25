@@ -1,42 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
-import { analyzeProductVision } from "@/modules/market-intelligence/use-cases/analyze-product-vision";
 import { synthesizeProductResearchQueries } from "@/modules/market-intelligence/domain/synthesize-product-queries";
 import { analyzeProductIntelligence } from "@/modules/market-intelligence/use-cases/analyze-product-intelligence";
 
 describe("FloraOS Product Intelligence Pipeline Handshake (Output N -> Perfect Input N+1)", () => {
   const organizationId = "org_test_florist_01";
 
-  it("analyzeProductVision ném lỗi rõ ràng khi Vision AI không khả dụng (không fallback cứng)", async () => {
-    // Khi không có DB analysis và OpenAI Vision không khả dụng,
-    // hàm PHẢI throw thay vì trả dữ liệu giả "Hoa hồng kem dâu"
-    await expect(
-      analyzeProductVision({
-        organizationId,
-        productTitle: "Bó hoa tulip tone cam cháy vintage",
-        imageUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9",
-      })
-    ).rejects.toThrow("[analyzeProductVision]");
-  });
-
-  it("analyzeProductVision ném lỗi cho mẫu mẫu đơn khi Vision AI không khả dụng", async () => {
-    await expect(
-      analyzeProductVision({
-        organizationId,
-        productTitle: "Giỏ hoa mẫu đơn sang trọng chúc mừng khai trương",
-        imageUrl: "/images/peony-basket.jpg",
-      })
-    ).rejects.toThrow("[analyzeProductVision]");
-  });
-
-  it("analyzeProductVision ném lỗi cho mẫu hồng đỏ khi Vision AI không khả dụng", async () => {
-    await expect(
-      analyzeProductVision({
-        organizationId,
-        productTitle: "Bó hoa hồng đỏ giấy gói trắng nơ xanh rêu",
-        imageUrl: "/images/red-roses-bouquet.jpg",
-      })
-    ).rejects.toThrow("[analyzeProductVision]");
-  });
+  // Ba ca "analyzeProductVision ném lỗi khi Vision không khả dụng" chuyển sang
+  // `analyze-product-vision.test.ts` (25/09/2026: use-case nhận TenantContext, thu credit).
 
   it("pipeline chạy mượt mà khi Vision AI trả dữ liệu thật (không dựa fallback)", async () => {
     // Giả lập dữ liệu Vision AI thật — đây là output thật từ OpenAI Vision

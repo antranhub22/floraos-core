@@ -26,6 +26,11 @@ export type EnqueueJobInput = {
    *  24/09/2026: số cảnh × nhà cung cấp × chất lượng). Không truyền = giá
    *  theo feature (`pricing.ts`). Số nguyên ≥ 0; 0 vẫn tiêu một lượt dùng thử. */
   costCredit?: number | undefined
+  /** Job này là một bước của lượt nghiệp vụ ĐÃ thu tiền ở job khác (vd Chặng
+   *  05 thu gộp kịch bản + bài viết, nợ #146): không trừ credit, không tiêu
+   *  lượt dùng thử — vẫn ghi một dòng `usage` 0 credit trỏ về job cha để đối
+   *  soát. Job cha phải thuộc cùng tổ chức. */
+  includedInJobId?: string | undefined
 }
 
 export type EnqueueJobResult = {
@@ -98,9 +103,12 @@ export async function enqueueJob(
       const workspace = await workspaceRepo.findById(ctx, ctx.workspaceId)
       if (!workspace) throw new AppError("INTERNAL", "Workspace của ngữ cảnh không tồn tại")
 
-      const fundingSource = fundingSourceForWorkspace(workspace.kind)
+      const fundingSource = input.includedInJobId ? "bundle" : fundingSourceForWorkspace(workspace.kind)
 
-      if (fundingSource === "trial") {
+      if (fundingSource === "bundle") {
+        const parent = await new GenerationJobRepository(tx).findById(ctx, input.includedInJobId!)
+        if (!parent) throw validationFailed({ included_in_job_id: "Job cha không thuộc tổ chức này" })
+      } else if (fundingSource === "trial") {
         const ok = await workspaceRepo.tryConsumeTrial(workspace.id)
         if (!ok) throw quotaExceeded("Đã hết lượt dùng thử", { workspace_id: workspace.id })
       } else {
@@ -128,7 +136,10 @@ export async function enqueueJob(
         feature: input.feature,
         costCredit: fundingSource === "credit" ? cost : 0,
         status: "ENQUEUED",
-        metadata: { funded_by: fundingSource },
+        metadata:
+          fundingSource === "bundle"
+            ? { funded_by: fundingSource, parent_job_id: input.includedInJobId }
+            : { funded_by: fundingSource },
       })
 
       const job = await new GenerationJobRepository(tx).findById(ctx, jobId)

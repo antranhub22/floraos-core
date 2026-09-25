@@ -16,7 +16,7 @@ Quyết định PO (24/09/2026): mỗi chặng 01–14 có **một schema đầu
 | Chặng | Tệp nguồn (zod) | Lời gọi chính | Năng lực |
 |---|---|---|---|
 | 01 BRING | `stage-01-bring.ts` | `POST /assets` | G2 |
-| 02 UNDERSTAND | `stage-02-understand.ts` | `POST /market-intelligence/vision-extract` | V1 |
+| 02 UNDERSTAND | `stage-02-understand.ts` | `POST /market-intelligence/vision-extract` (asset_id bắt buộc, 1 credit — 25/09/2026) | V1 |
 | 03 DISCOVER | `stage-03-discover.ts` | `POST /market-intelligence/product-intelligence` | V1 |
 | 04 IDEATE | `stage-04-ideate.ts` | `GET /product-intelligence/:id` | V2 |
 | 05 CHOOSE | `stage-05-choose.ts` (+ hợp đồng phụ `handoff`: query `/creative-studio`) | `POST /creative-production/scene-plans` | I1 |
@@ -57,7 +57,7 @@ Giới hạn đã biết: `refine` (vd. "mỗi kênh một bài", `scene_index` 
 
 ### 1.2. Chặng 02 — UNDERSTAND
 
-`POST /api/v1/market-intelligence/vision-extract` (`V1`), thân `{ image_url, asset_id, product_title }`, mô hình `gpt-4o-mini`. Trả các khối dưới (người dùng sửa được từng trường nguyên tử):
+`POST /api/v1/market-intelligence/vision-extract` (`V1`), thân `{ asset_id, product_title? }` (`asset_id` BẮT BUỘC từ 25/09/2026; `image_url` bị bỏ qua — máy chủ đọc ảnh từ kho của đúng tổ chức), mô hình `gpt-4o-mini`. Thu `product.vision_extract` = 1 credit qua `enqueueJob` khi mô hình thật sự đọc ảnh (khoá `vision-extract:<asset_id>` — cùng ảnh bấm lại không thu lần hai; hỏng thì job FAILED + hoàn credit); ảnh đã có kết quả M01 thì dùng lại miễn phí. Đáp ứng thêm `source` (`vision_ai` | `m01`) và `usage`. Trường mô hình không trả để TRỐNG / 0 — không điền giá trị mặc định. Trả các khối dưới (người dùng sửa được từng trường nguyên tử):
 
 `ProductFlowerComponent`: `{ id?, flowerType: string, quantityEstimate: number, unit: string, role: "dominant" | "supporting" | "foliage", color? }` — lá/cành đệm là `role: "foliage"`, không có mảng riêng.
 
