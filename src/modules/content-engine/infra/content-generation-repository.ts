@@ -48,6 +48,8 @@ export interface LatestContentGenerationFilter {
 export interface ApproveContentGenerationInput {
   readonly approvedBy: string
   readonly approvedPosts: unknown
+  /** Khoá lạc quan: chỉ ghi khi trạng thái vẫn đúng như lúc đọc. Vắng = không kiểm. */
+  readonly expectedStatus?: ContentGenerationStatus | undefined
 }
 
 export class ContentGenerationRepository {
@@ -98,14 +100,15 @@ export class ContentGenerationRepository {
   async approve(ctx: TenantContext, id: string, input: ApproveContentGenerationInput): Promise<content_generations | null> {
     const existing = await this.findById(ctx, id)
     if (!existing) return null
-    await this.db.content_generations.updateMany({
-      where: scopedWhere(ctx, { id }),
+    const r = await this.db.content_generations.updateMany({
+      where: scopedWhere(ctx, input.expectedStatus ? { id, status: input.expectedStatus } : { id }),
       data: {
         status: "APPROVED" satisfies ContentGenerationStatus,
         approved_by: input.approvedBy,
         approved_posts: input.approvedPosts as Prisma.InputJsonValue,
       },
     })
+    if (r.count === 0) return null
     return this.findById(ctx, id)
   }
 

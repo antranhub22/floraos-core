@@ -34,7 +34,7 @@ import { callCapability } from "@/core/ai/gateway"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
 import { refundJob } from "@/modules/usage/use-cases/refund-job"
 import { getContentBrief } from "@/modules/content-engine/use-cases/get-content-brief"
-import { generateContent } from "@/modules/content-engine/use-cases/generate-content"
+import { dedupedStatus, generateContent } from "@/modules/content-engine/use-cases/generate-content"
 
 const briefInput: BuildContentBriefInput = {
   organizationId: "org-1",
@@ -202,6 +202,39 @@ describe("generateContent", () => {
     const r = await generateContent(ctx, { channels: ["facebook", "instagram"], idempotencyKey: "k6" })
     expect(r.status).toBe("COMPLETED")
     expect(r.posts.every((p) => p.source === "template" && p.needsReview)).toBe(true)
+    // Không thu credit cho bài AI không viết: COMPLETED + result=REJECTED rồi hoàn.
+    expect(finishInline).toHaveBeenCalledWith(ctx, "job-1", expect.objectContaining({ ok: true, result: "REJECTED" }))
+    expect(refundJob).toHaveBeenCalledWith(ctx, "job-1")
+  })
+
+  it("hoàn được credit khi cả chuỗi hỏng: usage trả về cost_credit 0", async () => {
+    vi.mocked(refundJob).mockResolvedValue({ refunded: true, creditHoanLai: 2, lyDo: "guard-tu-choi" })
+    mockGateway({ content_strategy: [failCall], content_generation: [failCall], content_qa: [failCall] })
+    const r = await generateContent(ctx, { channels: ["facebook"], idempotencyKey: "k6b" })
+    expect(r.usage).toEqual({ costCredit: 0, balanceAfter: null })
+  })
+
+  it("chỉ một kênh rơi về khuôn: vẫn thu credit, không hoàn", async () => {
+    mockGateway({
+      content_strategy: [failCall],
+      content_generation: [failCall, okWriter("Bài Instagram")],
+      content_qa: [failCall],
+    })
+    const r = await generateContent(ctx, { channels: ["facebook", "instagram"], idempotencyKey: "k6c" })
+    expect(r.usage).toEqual({ costCredit: 2, balanceAfter: 8 })
+    expect(finishInline).toHaveBeenCalledWith(ctx, "job-1", expect.not.objectContaining({ result: "REJECTED" }))
+    expect(refundJob).not.toHaveBeenCalled()
+  })
+
+  it("trùng khoá khi lượt đầu còn đang chạy: PROCESSING, không phải FAILED", async () => {
+    vi.mocked(enqueueJob).mockResolvedValue({
+      job: { id: "job-run", status: "PROCESSING", output: null },
+      deduped: true,
+      usage: { costCredit: 2, balanceAfter: 8 },
+    } as never)
+    const r = await generateContent(ctx, { channels: ["facebook"], idempotencyKey: "k-run" })
+    expect(r).toMatchObject({ jobId: "job-run", status: "PROCESSING", deduped: true, posts: [] })
+    expect(callCapability).not.toHaveBeenCalled()
   })
 
   it("lỗi bất ngờ trong lúc dựng brief: job FAILED và hoàn credit", async () => {
@@ -219,5 +252,15 @@ describe("generateContent", () => {
   it("không có kênh nào: từ chối trước khi tạo job", async () => {
     await expect(generateContent(ctx, { channels: [], idempotencyKey: "k9" })).rejects.toThrow()
     expect(enqueueJob).not.toHaveBeenCalled()
+  })
+})
+
+describe("dedupedStatus", () => {
+  it("PENDING/PROCESSING → PROCESSING; COMPLETED giữ nguyên; còn lại FAILED", () => {
+    expect(dedupedStatus("PENDING")).toBe("PROCESSING")
+    expect(dedupedStatus("PROCESSING")).toBe("PROCESSING")
+    expect(dedupedStatus("COMPLETED")).toBe("COMPLETED")
+    expect(dedupedStatus("FAILED")).toBe("FAILED")
+    expect(dedupedStatus("CANCELLED")).toBe("FAILED")
   })
 })

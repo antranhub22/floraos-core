@@ -38,3 +38,23 @@ export const generationLookupQuerySchema = z.object({
 })
 
 export type GenerationLookupQuery = z.infer<typeof generationLookupQuerySchema>
+
+/**
+ * `POST /api/v1/content-engine/generations/:id/approve` (`J5`). `posts` vắng
+ * hoặc rỗng = duyệt nguyên văn mọi bài; có thì chỉ duyệt các kênh nêu tên,
+ * `text`/`hashtags` (nếu có) là bản chủ tiệm đã sửa.
+ */
+export const approveGenerationBodySchema = z.object({
+  posts: z
+    .array(
+      z.object({
+        channel: briefChannelSchema,
+        text: z.string().min(1).max(5000).optional(),
+        hashtags: z.array(z.string().min(1).max(100)).max(30).optional(),
+      })
+    )
+    .max(4)
+    .optional(),
+})
+
+export type ApproveGenerationBody = z.infer<typeof approveGenerationBodySchema>

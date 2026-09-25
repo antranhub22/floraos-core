@@ -327,7 +327,7 @@ export function MultichannelPostCard({
         {onSchedulePost && (
           <Button size="sm" onClick={() => onSchedulePost(currentPost)} className="gap-1.5 text-xs">
             <Send size={14} />
-            Duyệt & Đưa vào lịch đăng
+            Duyệt bài này
           </Button>
         )}
       </div>

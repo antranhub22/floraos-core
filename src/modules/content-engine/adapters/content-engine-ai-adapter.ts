@@ -21,6 +21,7 @@ import type { LLMProvider, LLMResponse } from "@/core/ports/llm-provider"
 
 import type { PackageChannel } from "../../creative-production/domain/campaign-package-rules"
 import type { ContentBrief } from "../contracts/brief"
+import { AGENT_CALL_TIMEOUT_MS } from "../domain/pipeline-rules"
 import type { CriticOutput, CriticPostToReview } from "../domain/prompts/critic/v1"
 import { CRITIC_PROMPT_V1 } from "../domain/prompts/critic/v1"
 import type { RewriterPromptInput } from "../domain/prompts/rewriter/v1"
@@ -63,6 +64,7 @@ export function createStrategistAdapter(llm: LLMProvider, brief: ContentBrief, c
         organizationId,
         prompt: STRATEGIST_PROMPT_V1.build(brief, channels),
         model: model.key,
+        timeoutMs: AGENT_CALL_TIMEOUT_MS,
         jsonSchema: STRATEGIST_PROMPT_V1.jsonSchema(),
         maxTokens: 1800,
       })
@@ -87,6 +89,7 @@ export function createWriterAdapter(llm: LLMProvider, input: WriterPromptInput, 
         organizationId,
         prompt: WRITER_PROMPT_V1.build(input),
         model: model.key,
+        timeoutMs: AGENT_CALL_TIMEOUT_MS,
         jsonSchema: WRITER_PROMPT_V1.jsonSchema(),
         maxTokens: 1200,
       })
@@ -130,6 +133,7 @@ export function createCriticAdapter(
         organizationId,
         prompt: CRITIC_PROMPT_V1.build(brief, posts),
         model: model.key,
+        timeoutMs: AGENT_CALL_TIMEOUT_MS,
         jsonSchema: CRITIC_PROMPT_V1.jsonSchema(),
         maxTokens: 2000,
       })
@@ -157,6 +161,7 @@ export function createRewriterAdapter(llm: LLMProvider, input: RewriterPromptInp
         organizationId,
         prompt: REWRITER_PROMPT_V1.build(input),
         model: model.key,
+        timeoutMs: AGENT_CALL_TIMEOUT_MS,
         jsonSchema: REWRITER_PROMPT_V1.jsonSchema(),
         maxTokens: 1200,
       })

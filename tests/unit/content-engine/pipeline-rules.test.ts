@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  allChannelsFellBack,
   MAX_REWRITE_ROUNDS,
   aggregateOverallScore,
   decideChannelRewrite,
@@ -70,5 +71,14 @@ describe("needsHumanReview / MAX_REWRITE_ROUNDS", () => {
   it("không cần viết lại: không bao giờ cần người soát", () => {
     const d = decideChannelRewrite({ deterministicIssues: [], criticScores: goodScores, hasStory: false })
     expect(needsHumanReview(d, MAX_REWRITE_ROUNDS)).toBe(false)
+  })
+})
+
+describe("allChannelsFellBack", () => {
+  it("chỉ đúng khi MỌI kênh là template", () => {
+    expect(allChannelsFellBack(["template", "template"])).toBe(true)
+    expect(allChannelsFellBack(["template", "ai"])).toBe(false)
+    expect(allChannelsFellBack(["rewritten"])).toBe(false)
+    expect(allChannelsFellBack([])).toBe(false)
   })
 })

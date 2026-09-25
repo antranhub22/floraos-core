@@ -24,14 +24,27 @@ import {
   type MultichannelPostItem,
 } from "@/components/templates/content-engine"
 
-interface ProductOption {
+/** Hình dạng thô một dòng `GET /api/v1/products` — chỉ các trường trang này đọc. */
+interface RawProductRow {
   id: string
   name: string
   code?: string
-  price?: number
-  flowers?: string
-  color?: string
-  imageUrl?: string
+  category?: string
+  shape?: string
+  pricing?: { selling_price?: number }
+  master_image_url?: string
+  image_url?: string
+  images?: Array<{ url?: string }>
+}
+
+interface ProductOption {
+  id: string
+  name: string
+  code?: string | undefined
+  price?: number | undefined
+  flowers?: string | undefined
+  color?: string | undefined
+  imageUrl?: string | undefined
 }
 
 const CHANNELS_CONFIG = [
@@ -94,7 +107,6 @@ function ContentEngineContent() {
   const [phase, setPhase] = useState<"select" | "generating" | "results">("select")
   const [currentStep, setCurrentStep] = useState<string>("analyze")
   const [generatedPosts, setGeneratedPosts] = useState<MultichannelPostItem[]>([])
-  const [activePostId, setActivePostId] = useState<string | null>(null)
   const [modelInfo, setModelInfo] = useState<{
     provider?: string | undefined
     modelName?: string | undefined
@@ -138,7 +150,7 @@ function ContentEngineContent() {
           const json = await resProds.json()
           const rawList = json.data || json.items || []
           if (rawList.length > 0) {
-            const mapped = rawList.map((p: any) => ({
+            const mapped: ProductOption[] = (rawList as RawProductRow[]).map((p) => ({
               id: p.id,
               name: p.name,
               code: p.code,
@@ -215,7 +227,6 @@ function ContentEngineContent() {
       }
 
       const data = await res.json()
-      setActivePostId(data.generation_id || null)
       setGenerationId(data.generation_id || null)
 
       const posts: MultichannelPostItem[] = []
@@ -249,10 +260,10 @@ function ContentEngineContent() {
       })
       setGeneratedPosts(posts)
       setTimeout(() => setPhase("results"), 1800)
-    } catch (err: any) {
+    } catch (err) {
       setNotification({
         type: "error",
-        message: `Lỗi sinh nội dung: ${err.message || "Không gọi được Content Engine"}. Vui lòng thử lại.`,
+        message: `Lỗi sinh nội dung: ${(err instanceof Error && err.message) || "Không gọi được Content Engine"}. Vui lòng thử lại.`,
       })
       setPhase("select")
     }
@@ -265,35 +276,38 @@ function ContentEngineContent() {
     )
   }
 
-  // Duyệt bài viết và gửi sang Lịch đăng — mã lượt sinh (`content_generations.id`)
-  // thay cho `post_id` cũ của SocialFlow M07 (không còn dùng nữa, decision 2 25/09/2026).
+  // Duyệt bài viết — ghi vào core (`POST /content-engine/generations/:id/approve`,
+  // `J5`, có audit). Trước đây gọi proxy SocialFlow `m07/posts/<id>/approve`
+  // với mã lượt sinh của core (SocialFlow không biết mã này), không kiểm
+  // `res.ok`, rồi LUÔN báo "đã đưa vào hàng đợi xuất bản" — báo thành công
+  // giả. Gửi sang Lịch đăng chưa nối (nợ kỹ thuật, xem TECHNICAL_DEBT.md).
   async function handleApprovePost(post: MultichannelPostItem) {
+    if (!generationId) {
+      setNotification({ type: "error", message: "Chưa có lượt sinh bài nào để duyệt — hãy tạo bài trước." })
+      return
+    }
     try {
-      const targetId = post.postId || generationId || activePostId || "new"
-      await fetch(`/api/v1/proxy/api/m07/posts/${targetId}/approve?client=SOCIALFLOW`, {
+      const res = await fetch(`/api/v1/content-engine/generations/${encodeURIComponent(generationId)}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          post_id: targetId,
-          channel: post.channel,
-          title: post.headline,
-          body: post.bodyText,
-          hashtags: post.hashtags,
-          cta: post.cta,
+          posts: [{ channel: post.channel, text: post.bodyText, hashtags: post.hashtags }],
         }),
       })
-    } catch {
-      // Bỏ qua lỗi proxy nếu offline
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.error?.message || `Lỗi máy chủ (${res.status}) khi duyệt bài`)
+      }
+      setNotification({
+        type: "success",
+        message: `Đã duyệt bài ${post.channelLabel}. Bài đã lưu ở trạng thái "Đã duyệt"; gửi sang Lịch đăng sẽ có ở bản sau.`,
+      })
+    } catch (err) {
+      setNotification({
+        type: "error",
+        message: `Chưa duyệt được bài ${post.channelLabel}: ${err instanceof Error ? err.message : "lỗi không xác định"}`,
+      })
     }
-
-    setNotification({
-      type: "success",
-      message: `Đã duyệt bài viết ${post.channelLabel} và đưa vào hàng đợi xuất bản!`,
-    })
-
-    setTimeout(() => {
-      router.push("/lich-dang" as never)
-    }, 1200)
   }
 
   return (

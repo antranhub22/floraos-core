@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import type { AiModelCandidate } from "@/core/ai/domain/routing"
 import type { LLMProvider, LLMResponse } from "@/core/ports/llm-provider"
+import { AGENT_CALL_TIMEOUT_MS } from "@/modules/content-engine/domain/pipeline-rules"
 
 import { buildContentBrief, type BuildContentBriefInput } from "@/modules/content-engine/domain/brief-builder"
 import {
@@ -73,6 +74,18 @@ describe("content-engine-ai-adapter", () => {
       expect(outcome.scores).toEqual({ factual: 1, brand: 1 })
       expect(outcome.costUsd).toBe(0.01)
     }
+  })
+
+  it("mọi agent gửi thời hạn chờ AGENT_CALL_TIMEOUT_MS cho LLM (không treo request theo nhà cung cấp)", async () => {
+    const brief = buildContentBrief(baseInput)
+    const llm = fakeLlm(
+      JSON.stringify({
+        core_message: "m",
+        channels: [{ channel: "facebook", angle: "a", outline: "o", hooks: ["h"], fact_ids: ["f1"], cta: "c" }],
+      })
+    )
+    await createStrategistAdapter(llm, brief, ["facebook"], "org_1")(model)
+    expect(llm.complete).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: AGENT_CALL_TIMEOUT_MS }))
   })
 
   it("createStrategistAdapter: JSON hỏng → ok:false, không ném lỗi", async () => {

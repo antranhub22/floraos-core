@@ -10,6 +10,25 @@ import { RUBRIC_ACCEPT_THRESHOLD, weightedScore, type RubricChannelKey } from ".
 /** `enqueueJob` feature — cùng khoá dùng ở `pricing.ts` (`FEATURE_COST_CREDIT`) và use-case. */
 export const CONTENT_GENERATE_FEATURE = "content.generate" as const
 
+/**
+ * Thời hạn chờ MỖI lượt gọi mô hình của một agent. Chuỗi chạy tại chỗ trong
+ * request của người dùng (Strategist → Writer → Critic → Rewriter), nên mỗi
+ * bước phải có trần — hết hạn thì cổng AI coi là lượt hỏng và đi nhánh dự
+ * phòng, không giữ request treo theo nhà cung cấp.
+ */
+export const AGENT_CALL_TIMEOUT_MS = 40_000
+
+/**
+ * Mọi kênh đều phải dùng khuôn tất định vì Writer hỏng hết — tức nhà cung
+ * cấp AI không viết được gì cho lượt này. Khi đó KHÔNG coi là thành công:
+ * khách trả credit cho bài AI viết, không phải cho khuôn ghép sẵn (cùng lý lẽ
+ * D3 của `refund-policy.ts`). Một phần kênh rơi về khuôn thì vẫn giao, đánh
+ * dấu `needs_review`.
+ */
+export function allChannelsFellBack(sources: readonly string[]): boolean {
+  return sources.length > 0 && sources.every((s) => s === "template")
+}
+
 /** Mặc định tối đa 1 vòng viết lại (mục 4 kế hoạch). */
 export const MAX_REWRITE_ROUNDS = 1
 

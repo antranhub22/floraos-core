@@ -41,6 +41,7 @@ import { buildFallbackPost } from "../domain/fallback-post"
 import {
   CONTENT_GENERATE_FEATURE,
   MAX_REWRITE_ROUNDS,
+  allChannelsFellBack,
   decideChannelRewrite,
   needsHumanReview,
   aggregateOverallScore,
@@ -79,7 +80,8 @@ export interface GenerateContentInput {
 export interface ContentGenerationView {
   readonly jobId: string
   readonly generationId: string | null
-  readonly status: "COMPLETED" | "FAILED"
+  /** `PROCESSING` chỉ xảy ra khi gọi lại trùng `Idempotency-Key` lúc lượt đầu còn đang chạy. */
+  readonly status: "COMPLETED" | "PROCESSING" | "FAILED"
   readonly posts: readonly GeneratedChannelPost[]
   readonly overallScore: number
   readonly needsReview: boolean
@@ -99,6 +101,18 @@ function viewFromRecord(jobId: string, deduped: boolean, usage: ContentGeneratio
     deduped,
     usage,
   }
+}
+
+/**
+ * Trạng thái trả về khi trùng `Idempotency-Key`. Lượt đầu còn đang chạy thì
+ * báo `PROCESSING` (kèm `jobId` để theo dõi `GET /jobs/:id`) — trước đây mọi
+ * trạng thái khác `COMPLETED` đều thành `FAILED`, nên client gọi lại vì hết
+ * thời gian chờ nhận "hỏng" trong khi bài vẫn đang được viết.
+ */
+export function dedupedStatus(jobStatus: string): ContentGenerationView["status"] {
+  if (jobStatus === "COMPLETED") return "COMPLETED"
+  if (jobStatus === "PENDING" || jobStatus === "PROCESSING") return "PROCESSING"
+  return "FAILED"
 }
 
 /** Một kênh: Writer → kiểm tất định → (nếu Critic hỏng) chỉ trả bài + issues để lượt sau quyết định. */
@@ -155,7 +169,7 @@ export async function generateContent(ctx: TenantContext, input: GenerateContent
     return {
       jobId: enq.job.id,
       generationId: null,
-      status: enq.job.status === "COMPLETED" ? "COMPLETED" : "FAILED",
+      status: dedupedStatus(enq.job.status),
       posts: [],
       overallScore: 0,
       needsReview: false,
@@ -331,7 +345,19 @@ export async function generateContent(ctx: TenantContext, input: GenerateContent
       createdBy: ctx.userId,
     })
 
-    await jobRepo.finishInline(ctx, enq.job.id, { ok: true, now: new Date(), output: { generation_id: generation.id } })
+    // Writer hỏng ở MỌI kênh = nhà cung cấp AI không viết được gì. Vẫn giao
+    // khuôn tất định (mục 4 kế hoạch: không FAILED), nhưng KHÔNG thu credit
+    // cho bài AI không viết: `result=REJECTED` là diện hoàn của
+    // `refund-policy.ts` (COMPLETED + REJECTED không phải FAILED).
+    const aiUnavailable = allChannelsFellBack(finalPosts.map((p) => p.source))
+    await jobRepo.finishInline(ctx, enq.job.id, {
+      ok: true,
+      now: new Date(),
+      output: { generation_id: generation.id },
+      ...(aiUnavailable ? { result: "REJECTED" } : {}),
+    })
+    const refund = aiUnavailable ? await refundJob(ctx, enq.job.id).catch(() => null) : null
+    const usage = refund?.refunded ? { costCredit: 0, balanceAfter: null } : enq.usage
 
     return {
       jobId: enq.job.id,
@@ -341,7 +367,7 @@ export async function generateContent(ctx: TenantContext, input: GenerateContent
       overallScore,
       needsReview: finalPosts.some((p) => p.needsReview),
       deduped: false,
-      usage: enq.usage,
+      usage,
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Lỗi không xác định"

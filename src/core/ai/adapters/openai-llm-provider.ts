@@ -41,6 +41,14 @@ const MA_MO_HINH_THEO_KHOA: Readonly<Record<string, string>> = {
 
 const MA_MO_HINH_MAC_DINH = "gpt-4o-mini";
 
+/**
+ * Thời hạn chờ mặc định khi người gọi không nêu `timeoutMs`. Trước đây
+ * không có hạn nào: OpenAI treo là request người dùng và job `PROCESSING`
+ * treo theo cho tới khi `scan-stuck-jobs` quét. 120 giây đủ rộng cho lượt
+ * sinh dài nhất hiện có (kịch bản Chặng 05, gpt-4o).
+ */
+export const OPENAI_DEFAULT_TIMEOUT_MS = 120_000;
+
 /** Giá công bố, USD cho mỗi triệu token. Dùng để ghi `cost_usd` vào sổ. */
 const GIA_TOKEN: Readonly<Record<string, { vao: number; ra: number }>> = {
   "gpt-4o": { vao: 2.5, ra: 10 },
@@ -82,14 +90,24 @@ export class OpenAILLMProvider implements LLMProvider {
       openAIRequest.response_format = { type: "json_object" };
     }
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(openAIRequest),
-    });
+    const timeoutMs = request.timeoutMs ?? OPENAI_DEFAULT_TIMEOUT_MS;
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(openAIRequest),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+        throw new Error(`OpenAI không phản hồi sau ${timeoutMs} ms`);
+      }
+      throw error;
+    }
 
     if (!response.ok) {
       const error = await response.text();

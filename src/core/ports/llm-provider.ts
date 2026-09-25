@@ -11,6 +11,12 @@ export interface LLMRequest {
    * (D15, D17).
    */
   model?: string;
+  /**
+   * Thời hạn chờ nhà cung cấp, mili-giây. Hết hạn thì lượt gọi hỏng (ném
+   * lỗi) để cổng AI chuyển mô hình dự phòng, thay vì giữ request/job treo vô
+   * hạn. Vắng thì adapter dùng mặc định của nó.
+   */
+  timeoutMs?: number;
 }
 
 export interface LLMResponse {

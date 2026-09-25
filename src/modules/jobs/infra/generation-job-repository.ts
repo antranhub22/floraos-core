@@ -191,12 +191,18 @@ export class GenerationJobRepository {
   async finishInline(
     ctx: TenantContext,
     id: string,
-    input: { ok: boolean; error?: string | null; now: Date; output?: unknown }
+    input: { ok: boolean; error?: string | null; now: Date; output?: unknown; result?: string | null }
   ): Promise<void> {
     await this.db.generation_jobs.updateMany({
       where: scopedWhere(ctx, { id }),
       data: {
         status: input.ok ? "COMPLETED" : "FAILED",
+        // `stage` chỉ có nghĩa khi PROCESSING (lược đồ) — `setStage` của job
+        // chạy tại chỗ ghi nó, nên xoá khi kết thúc.
+        stage: null,
+        // Phán quyết nghiệp vụ, độc lập với `status` — vd `REJECTED` khi
+        // Content Engine chỉ giao được khuôn tất định (diện hoàn credit).
+        ...(input.result !== undefined ? { result: input.result } : {}),
         error: input.ok ? null : (input.error ?? "Lỗi không xác định"),
         completed_at: input.now,
         // Job chạy tại chỗ có kết quả nhỏ (vd kịch bản bối cảnh) ghi thẳng vào

@@ -66,7 +66,8 @@ export const POST = handle(async (request) => {
       deduped: result.deduped,
       usage: { cost_credit: result.usage.costCredit, balance_after: result.usage.balanceAfter },
     },
-    { status: result.deduped ? 200 : 201 }
+    // Trùng khoá lúc lượt đầu còn chạy: 202 + `job_id` để theo dõi `GET /jobs/:id`.
+    { status: !result.deduped ? 201 : result.status === "PROCESSING" ? 202 : 200 }
   )
 })
 

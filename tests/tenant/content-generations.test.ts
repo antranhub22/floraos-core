@@ -1,7 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 
 import { disconnectDatabase, prisma, resetDatabase } from "../helpers/database"
-import { createTenant, type Tenant } from "../helpers/fixtures"
+import { createTenant, readJson, withSession, type Tenant } from "../helpers/fixtures"
+import { POST as approveRoute } from "@/app/api/v1/content-engine/generations/[id]/approve/route"
 import { ContentGenerationRepository } from "@/modules/content-engine/infra/content-generation-repository"
 
 // Content Engine (P27, 25/09/2026) — bảng TENANT mới `content_generations`.
@@ -88,5 +89,44 @@ describe("cách ly tenant — content_generations (kết quả Content Engine)",
     const scheduled = await repo.markScheduled(a.ctx, created.id, { facebook: "sf-post-1" })
     expect(scheduled?.status).toBe("SCHEDULED")
     expect(scheduled?.social_post_ids).toEqual({ facebook: "sf-post-1" })
+  })
+
+  describe("POST /api/v1/content-engine/generations/:id/approve (J5)", () => {
+    const BASE = "http://localhost/api/v1/content-engine/generations"
+    const approve = (t: Tenant, id: string, body: unknown = {}) =>
+      approveRoute(withSession(`${BASE}/${id}/approve`, t.token, { method: "POST", body: JSON.stringify(body) }), {
+        params: Promise.resolve({ id }),
+      })
+
+    it("duyệt kèm bản sửa: APPROVED, approved_posts đúng, ghi audit_logs cùng giao dịch", async () => {
+      const created = await seed(a)
+      const res = await approve(a, created.id, { posts: [{ channel: "facebook", text: "Bài Facebook đã sửa" }] })
+      expect(res.status).toBe(200)
+      const data = (await readJson(res)) as { status: string; approved_posts: Array<{ channel: string; text: string; edited: boolean }> }
+      expect(data.status).toBe("APPROVED")
+      expect(data.approved_posts).toEqual([{ channel: "facebook", text: "Bài Facebook đã sửa", hashtags: ["#hoa"], edited: true }])
+
+      const inDb = await repo.findById(a.ctx, created.id)
+      expect(inDb?.approved_by).toBe(a.userId)
+      const log = await prisma.audit_logs.findFirst({
+        where: { organization_id: a.organizationId, action: "content_generation.approve", entity_id: created.id },
+      })
+      expect(log).not.toBeNull()
+    })
+
+    it("tổ chức khác duyệt bản ghi của A trả 404, bản ghi vẫn DRAFT", async () => {
+      const created = await seed(a)
+      const res = await approve(b, created.id)
+      expect(res.status).toBe(404)
+      expect((await repo.findById(a.ctx, created.id))?.status).toBe("DRAFT")
+    })
+
+    it("kênh không có trong lượt sinh trả 400; đã SCHEDULED trả 409", async () => {
+      const created = await seed(a)
+      expect((await approve(a, created.id, { posts: [{ channel: "tiktok" }] })).status).toBe(400)
+
+      await repo.markScheduled(a.ctx, created.id, { facebook: "sf-1" })
+      expect((await approve(a, created.id)).status).toBe(409)
+    })
   })
 })
