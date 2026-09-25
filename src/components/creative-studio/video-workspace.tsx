@@ -258,7 +258,7 @@ export function VideoWorkspace() {
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-text-muted mt-1">
                   <span className="flex items-center gap-1"><Clock size={11} /> ~{s.targetDurationSeconds}s</span>
-                  <span className="font-semibold text-amber-600 flex items-center gap-0.5" title="Credit trừ khi bấm Render"><Coins size={11} /> {RENDER_CREDIT} cr</span>
+                  <span className="font-semibold text-amber-600 flex items-center gap-0.5" title="Credit ghép khi bấm Render — cộng giá clip nhà cung cấp mỗi cảnh"><Coins size={11} /> từ {RENDER_CREDIT} cr</span>
                 </div>
               </div>
             )
@@ -368,7 +368,7 @@ export function VideoWorkspace() {
         <StageGateApprovalBar
           stageCode="Chặng 06d — SẢN XUẤT VIDEO MARKETING"
           title="Phê duyệt Kịch bản Storyboard & Video Clip (M04c)"
-          description={`Storyboard ${scenes.length} phân cảnh theo khuôn ${spec.aspectRatio}, ~${spec.targetDurationSeconds}s. "Tạo video" lập BẢN NHÁP; duyệt kịch bản (P3), render (${RENDER_CREDIT} credit) và duyệt video thành phẩm (P4) ngay trong khung video job ở trên. Chỉ khi video đã duyệt P4 mới được coi là đạt.`}
+          description={`Storyboard ${scenes.length} phân cảnh theo khuôn ${spec.aspectRatio}, ~${spec.targetDurationSeconds}s. "Tạo video" lập BẢN NHÁP; duyệt kịch bản (P3), render (${RENDER_CREDIT} credit ghép + giá clip nhà cung cấp mỗi cảnh) và duyệt video thành phẩm (P4) ngay trong khung video job ở trên. Chỉ khi video đã duyệt P4 mới được coi là đạt.`}
           isApproved={videoJob?.video_approval === "APPROVED"}
           approveLabel="Phê duyệt Video & Tiến đến Đóng gói chiến dịch (Chặng 07) →"
           onApprove={() => navigateToArea("f")}

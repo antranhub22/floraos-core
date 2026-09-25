@@ -595,7 +595,7 @@ Năng lực phân tích ảnh giữ endpoint riêng đã có (`GET · PUT /visio
 | GET · POST | `/video/jobs` | `I1` | Tạo và liệt kê job video |
 | GET | `/video/jobs/:id` | `I1` | Kèm `final_video_view_url` — URL ký có hạn để phát video đã render (24/09/2026); `final_video_url` thô không mở được vì thiếu chữ ký |
 | PATCH | `/video/jobs/:id/storyboard` | `I1` | Biên soạn phân cảnh, 2–15 cảnh |
-| POST | `/video/jobs/:id/render` | `I1` | Thân tuỳ chọn (24/09/2026) 24/09/2026 — `{ scene_images?: [{ scene_index, asset_id }] }` lấp cảnh còn trống ảnh (chỉ asset của đúng tổ chức); không gửi thì máy chủ tự lấp bằng ảnh Khu vực D mới nhất cùng số cảnh / Master của sản phẩm. Vẫn trống → 422 |
+| POST | `/video/jobs/:id/render` | `I1` | Thân tuỳ chọn (24/09/2026) 24/09/2026 — `{ scene_images?: [{ scene_index, asset_id }] }` lấp cảnh còn trống ảnh (chỉ asset của đúng tổ chức); không gửi thì máy chủ tự lấp bằng ảnh Khu vực D mới nhất cùng số cảnh / Master của sản phẩm. Vẫn trống → 422. Thêm 25/09/2026 (PO: nhà cung cấp trước): `video_provider?: veo\|kling\|runway\|luma\|local_cinematic` — bên chọn cho lượt đứng đầu, sau đó thứ tự tiệm (`creative_providers.video`) rồi mặc định; payload job mang `provider_order`; thu `video.render` + giá clip/cảnh của bên đứng đầu; worker sinh clip từng cảnh qua nhà cung cấp, ghép phụ đề/âm thanh ở FloraOS; mọi bên lỗi → Ken Burns cục bộ + ghi `provider_fallback_reason`, đọc job thì hoàn phần clip. `local_cinematic` = chỉ ghép cục bộ, không thứ tự nhà cung cấp |
 | POST | `/video/jobs/:id/approve-script` | `P3` | Cổng 1 — duyệt kịch bản (kiểm ở use-case `approve-storyboard.ts`) |
 | POST | `/video/jobs/:id/approve-video` | `P4` | Cổng 2 — duyệt video thành phẩm, trần cứng (kiểm ở use-case `approve-video-output.ts`) |
 

@@ -9,6 +9,8 @@ import {
 import { video_scenes } from "../infra/entities";
 import { canStartRender } from "../domain/video-approval-rules";
 import { AssetRepository } from "@/modules/assets/infra/asset-repository";
+import { providerOrderFor } from "@/modules/creative-production/use-cases/provider-preferences";
+import { videoRenderCredit } from "@/modules/usage/domain/pricing";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -23,7 +25,12 @@ export class DispatchVideoRenderUseCase {
   async execute(
     ctx: TenantContext,
     jobId: string,
-    options: { sceneImages?: ReadonlyArray<{ sceneIndex: number; assetId: string }> } = {}
+    options: {
+      sceneImages?: ReadonlyArray<{ sceneIndex: number; assetId: string }>;
+      /** Nhà cung cấp chọn cho lượt này (`veo | kling | runway | luma`), `local_cinematic` = Ken Burns
+       *  cục bộ đích danh, vắng = theo thứ tự ưu tiên của tiệm (PO 25/09/2026). */
+      videoProvider?: string | null;
+    } = {}
   ): Promise<DispatchRenderResult> {
     requireCapability(ctx, "I1");
 
@@ -76,6 +83,13 @@ export class DispatchVideoRenderUseCase {
       );
     }
 
+    // Nhà cung cấp trước (PO 25/09/2026): thứ tự thử gửi worker; giá theo bên đứng đầu.
+    const providerOrder =
+      options.videoProvider === "local_cinematic" ? [] : await providerOrderFor(ctx, "video", options.videoProvider ?? null);
+    const sceneCount = (job.scenes as video_scenes[]).length;
+    const plannedProvider = providerOrder[0] ?? null;
+    const costCredit = videoRenderCredit(plannedProvider, sceneCount);
+
     // Đổi trạng thái sang RENDERING
     await this.repo.updateStage(ctx, jobId, "RENDERING");
 
@@ -85,8 +99,11 @@ export class DispatchVideoRenderUseCase {
       feature: "video.render",
       idempotencyKey,
       productId: job.product_id,
+      costCredit,
       payload: {
         videoJobId: job.id,
+        provider_order: providerOrder,
+        cost_plan: { provider: plannedProvider, scenes: sceneCount, credit: costCredit },
         title: job.title,
         format: job.format,
         durationSeconds: job.duration_seconds,

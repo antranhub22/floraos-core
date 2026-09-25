@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { disconnectDatabase, resetDatabase } from "../helpers/database";
+import { disconnectDatabase, prisma, resetDatabase } from "../helpers/database";
 import { createTenant, type Tenant } from "../helpers/fixtures";
 import { CreateVideoJobUseCase } from "@/modules/video-studio/use-cases/create-video-job";
 import { ListVideoJobsUseCase } from "@/modules/video-studio/use-cases/list-video-jobs";
@@ -189,5 +189,57 @@ describe("Video Studio Tenant Isolation & Approval Lifecycle", () => {
     expect(approvedVideo.video_approval).toBe("APPROVED");
     expect(approvedVideo.stage).toBe("APPROVED");
     expect(approvedVideo.final_asset_id).toBeDefined();
+  });
+
+  // PO 25/09/2026: nhà cung cấp trước; giá theo bên đứng đầu; hoàn chênh khi lùi cục bộ.
+  it("render: thứ tự nhà cung cấp vào payload, thu theo bên đứng đầu, lùi Ken Burns thì hoàn phần clip lúc đọc", async () => {
+    const ws = await prisma.workspaces.create({ data: { organization_id: tenantA.organizationId, name: "Sản xuất", kind: "PRODUCTION" } });
+    await prisma.organizations.update({ where: { id: tenantA.organizationId }, data: { credit_balance: 100 } });
+    const ctx = { ...tenantA.ctx, workspaceId: ws.id };
+    const job = await new CreateVideoJobUseCase().execute(ctx, { title: "Clip nhà cung cấp", format: "REEL_15S" });
+    await new UpdateStoryboardUseCase().execute(ctx, {
+      jobId: job.id,
+      scenes: [
+        { sceneIndex: 1, durationSeconds: 4, textOverlay: "A", imageAssetId: "org/x/1.png" },
+        { sceneIndex: 2, durationSeconds: 4, textOverlay: "B", imageAssetId: "org/x/2.png" },
+        { sceneIndex: 3, durationSeconds: 4, textOverlay: "C", imageAssetId: "org/x/3.png" },
+      ],
+    });
+    await new ApproveStoryboardUseCase().execute(ctx, job.id);
+    const r = await new DispatchVideoRenderUseCase().execute(ctx, job.id, { videoProvider: "kling" });
+
+    const gen = await prisma.generation_jobs.findUniqueOrThrow({ where: { id: r.generationJobId } });
+    const payload = gen.payload as { provider_order: string[]; cost_plan: { credit: number } };
+    expect(payload.provider_order).toEqual(["kling", "veo", "runway", "luma"]);
+    expect(payload.cost_plan.credit).toBe(5 + 5 * 3);
+    expect((await prisma.organizations.findUniqueOrThrow({ where: { id: tenantA.organizationId } })).credit_balance).toBe(80);
+
+    // Worker: mọi nhà cung cấp lỗi → Ken Burns cục bộ.
+    await prisma.generation_jobs.update({
+      where: { id: gen.id },
+      data: { status: "COMPLETED", output: { provider_fallback: true, provider_fallback_reason: "FAL_KEY thiếu" } },
+    });
+    await new GetVideoJobUseCase().execute(ctx, job.id);
+    await new GetVideoJobUseCase().execute(ctx, job.id);
+    expect((await prisma.organizations.findUniqueOrThrow({ where: { id: tenantA.organizationId } })).credit_balance).toBe(95);
+
+    // Tổ chức khác đọc không hoàn gì hộ.
+    await expect(new GetVideoJobUseCase().execute(tenantB.ctx, job.id)).rejects.toThrow();
+  });
+
+  it("render Ken Burns cục bộ đích danh: không thứ tự nhà cung cấp, chỉ tính phí ghép", async () => {
+    const job = await new CreateVideoJobUseCase().execute(tenantA.ctx, { title: "Cục bộ", format: "REEL_15S" });
+    await new UpdateStoryboardUseCase().execute(tenantA.ctx, {
+      jobId: job.id,
+      scenes: [
+        { sceneIndex: 1, durationSeconds: 6, textOverlay: "A", imageAssetId: "org/x/1.png" },
+        { sceneIndex: 2, durationSeconds: 6, textOverlay: "B", imageAssetId: "org/x/2.png" },
+      ],
+    });
+    await new ApproveStoryboardUseCase().execute(tenantA.ctx, job.id);
+    const r = await new DispatchVideoRenderUseCase().execute(tenantA.ctx, job.id, { videoProvider: "local_cinematic" });
+    const gen = await prisma.generation_jobs.findUniqueOrThrow({ where: { id: r.generationJobId } });
+    expect((gen.payload as { provider_order: string[]; cost_plan: { credit: number } }).provider_order).toEqual([]);
+    expect((gen.payload as { cost_plan: { credit: number } }).cost_plan.credit).toBe(5);
   });
 });

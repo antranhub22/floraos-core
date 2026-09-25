@@ -90,6 +90,27 @@ const FEATURE_COST_CREDIT: Readonly<Record<string, number>> = {
   "chat.message.ai_reply": 1,
 }
 
+/**
+ * Video nhà cung cấp (PO 25/09/2026): mỗi cảnh một clip ảnh → video, giá theo
+ * TỶ LỆ chi phí công bố của từng bên (Veo 3 đắt ~3–4 lần Kling/Runway/Luma cho
+ * cùng số giây). Tổng một lượt = `video.render` (ghép + âm thanh + phụ đề của
+ * FloraOS) + giá/cảnh × số cảnh. Lùi Ken Burns cục bộ → hoàn phần clip; bên
+ * thật rẻ hơn bên đã tính → hoàn chênh (`get-video-job.ts`). Bảng giá v1.
+ */
+export const VIDEO_CLIP_CREDIT_PER_SCENE: Readonly<Record<string, number>> = {
+  veo: 12,
+  kling: 5,
+  runway: 5,
+  luma: 5,
+}
+
+/** Credit một lượt render video — `provider` = bên đứng đầu thứ tự thử, `null` = Ken Burns cục bộ. */
+export function videoRenderCredit(provider: string | null | undefined, sceneCount: number): number {
+  const base = FEATURE_COST_CREDIT["video.render"] ?? 5
+  const perScene = provider ? VIDEO_CLIP_CREDIT_PER_SCENE[provider] ?? 0 : 0
+  return base + perScene * Math.max(0, Math.floor(sceneCount))
+}
+
 const DEFAULT_COST_CREDIT = 1
 
 export function costCreditForFeature(feature: string): number {

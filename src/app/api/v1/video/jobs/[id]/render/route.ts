@@ -10,6 +10,8 @@ const bodySchema = z.object({
     .array(z.object({ scene_index: z.number().int().min(1).max(30), asset_id: z.string().uuid() }))
     .max(30)
     .optional(),
+  // PO 25/09/2026: nhà cung cấp cho lượt này; vắng = theo thứ tự ưu tiên của tiệm.
+  video_provider: z.enum(["veo", "kling", "runway", "luma", "local_cinematic"]).optional(),
 });
 
 export const POST = handle(async (request, context: { params: Promise<{ id: string }> }) => {
@@ -25,6 +27,7 @@ export const POST = handle(async (request, context: { params: Promise<{ id: stri
   const useCase = new DispatchVideoRenderUseCase();
   const result = await useCase.execute(ctx, id, {
     sceneImages: (parsed.data.scene_images ?? []).map((x) => ({ sceneIndex: x.scene_index, assetId: x.asset_id })),
+    videoProvider: parsed.data.video_provider ?? null,
   });
 
   return jsonResponse(result);
