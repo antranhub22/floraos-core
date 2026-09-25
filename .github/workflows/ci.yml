@@ -28,6 +28,13 @@ jobs:
       # cổng bắt buộc `test:tenant` không bao giờ chạy tới. Khoá riêng, không
       # dùng lại SESSION_SECRET — giữ đúng lý do tách khoá của P7.
       INTEGRATION_TOKEN_SECRET: ci-only-not-a-real-integration-secret
+      # SSO (floraos-core ↔ SocialFlow/LocalBudd) — `src/lib/env.ts` bắt buộc
+      # (commit 23c2299). Thiếu thì `db:seed` ném ở dòng import như trường hợp P7.
+      SSO_SESSION_SECRET: ci-only-not-a-real-sso-secret
+      # Khoá GIẢ. `tests/tenant/product-copies.test.ts` mock HTTP
+      # chat/completions và `tests/setup.ts` chặn mạng, nên không lời gọi nào ra
+      # ngoài — nhưng `OpenAILLMProvider` đòi khoá có mặt lúc khởi tạo.
+      OPENAI_API_KEY: ci-only-fake-key-network-is-blocked
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
