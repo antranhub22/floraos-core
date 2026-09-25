@@ -64,8 +64,12 @@ interface CaptionRequest {
 interface CreativeTopicResultItem {
   topicId: string
   topicTitle: string
-  /** Bài đăng do KỊCH BẢN SẢN XUẤT TỔNG (Chặng 05, v2) viết — ưu tiên hơn khuôn dự phòng. */
+  /** Bài đăng do KỊCH BẢN SẢN XUẤT TỔNG (Chặng 05, v2) viết — ưu tiên hơn khuôn dự phòng.
+   * Giữ lại để đọc bản ghi cũ (P27, 25/09/2026): kịch bản mới không còn tự viết
+   * bài nữa, xem `contentEnginePosts` bên dưới. */
   planPosts?: Array<{ channel: "facebook" | "instagram" | "tiktok" | "zalo"; text: string; hashtags: readonly string[] }>
+  /** Mã kịch bản Chặng 05 (`generation_jobs.id`) — dùng để tra/khởi bài Content Engine (P27). */
+  scenePlanId?: string | null
   arc?: {
     emotionalTone?: string
     narrativeReasoning?: string
@@ -165,10 +169,73 @@ function CreativeResultViewerBody({
   const hook = captions[0]?.hook || currentResult.topicTitle
   const cta = captions[0]?.cta || "Nhắn tin cho tiệm để nhận ưu đãi ngay hôm nay!"
 
-  // Sinh trọn bộ 4 bài viết hoàn chỉnh đa kênh
-  // Đợt 2 (24/09/2026): kênh nào kịch bản Chặng 05 đã viết bài thì dùng bài đó
-  // (cùng câu chuyện với ảnh/âm thanh/video); kênh còn lại dùng khuôn dự phòng.
+  // Bài viết Content Engine (P27, 25/09/2026): Chặng 05 không còn tự viết bài
+  // nữa — chuỗi Strategist→Writer→Critic→Rewriter (`generateContent()`) chạy
+  // NGƯỜI DÙNG BẤM (`handleWriteWithContentEngine`), hoặc đã chạy sẵn làm bước
+  // làm giàu thứ hai ngay sau khi kịch bản này thành công
+  // (`generate-scene-plan.ts`) — tra lại bằng `GET .../generations?scene_plan_id`
+  // (đọc, không trừ credit) rồi hiển thị nếu có.
+  const scenePlanId = currentResult.scenePlanId ?? null
+  const [contentEnginePosts, setContentEnginePosts] = useState<
+    Array<{ channel: "facebook" | "instagram" | "tiktok" | "zalo"; text: string; hashtags: readonly string[] }> | null
+  >(null)
+  const [ceStatus, setCeStatus] = useState<"idle" | "writing" | "error">("idle")
+  const [ceError, setCeError] = useState<string | null>(null)
+
+  // Tra bản đã có — chỉ ĐỌC, không tạo job, không trừ credit — nên chạy tự
+  // động khi mở kết quả, KHÔNG cần người dùng bấm.
+  useEffect(() => {
+    if (!scenePlanId) return
+    let cancelled = false
+    fetch(`/api/v1/content-engine/generations?scene_plan_id=${encodeURIComponent(scenePlanId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (cancelled || !body?.generation) return
+        const posts = (body.generation.posts ?? []) as Array<{ channel: string; text: string; hashtags: readonly string[] }>
+        setContentEnginePosts(posts.filter((p): p is typeof posts[number] & { channel: "facebook" | "instagram" | "tiktok" | "zalo" } => PLATFORMS.includes(p.channel as never)))
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [scenePlanId])
+
+  // Bấm mới GỌI THẬT (trừ credit) — không tự chạy khi mở/khi render.
+  const handleWriteWithContentEngine = async () => {
+    if (!scenePlanId) return
+    setCeStatus("writing")
+    setCeError(null)
+    try {
+      const idempotencyKey =
+        typeof window !== "undefined" && "randomUUID" in window.crypto
+          ? window.crypto.randomUUID()
+          : `content-engine-ui:${scenePlanId}:${Date.now()}`
+      const res = await fetch("/api/v1/content-engine/generations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({
+          scene_plan_id: scenePlanId,
+          asset_id: ctx?.assetId ?? null,
+          product_id: ctx?.productId ?? null,
+          channels: PLATFORMS,
+        }),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.error?.message || `Lỗi máy chủ (${res.status})`)
+      const posts = (body?.posts ?? []) as Array<{ channel: string; text: string; hashtags: readonly string[] }>
+      setContentEnginePosts(posts.filter((p): p is typeof posts[number] & { channel: "facebook" | "instagram" | "tiktok" | "zalo" } => PLATFORMS.includes(p.channel as never)))
+      setCeStatus("idle")
+    } catch (e) {
+      setCeError(e instanceof Error ? e.message : "Không viết được bài bằng Content Engine")
+      setCeStatus("error")
+    }
+  }
+
+  // Sinh trọn bộ 4 bài viết hoàn chỉnh đa kênh — ưu tiên bài Content Engine
+  // (P27), sau đó tới `planPosts` (bản ghi cũ, tương thích ngược), cuối cùng
+  // mới dùng khuôn dự phòng cho kênh còn thiếu.
   const planPosts = currentResult.planPosts
+  const effectivePlanPosts = contentEnginePosts ?? planPosts
   const generatedPosts = useMemo(() => {
     const base = generateAllPlatformPosts({
       mode,
@@ -182,7 +249,7 @@ function CreativeResultViewerBody({
       cta,
       hashtags: baseHashtags,
     })
-    for (const p of planPosts ?? []) {
+    for (const p of effectivePlanPosts ?? []) {
       const gen = base[p.channel]
       if (!gen) continue
       const tags = [...p.hashtags]
@@ -190,7 +257,7 @@ function CreativeResultViewerBody({
       base[p.channel] = { ...gen, fullContent, hashtags: tags, characterCount: fullContent.length }
     }
     return base
-  }, [mode, productName, components, colors, style, price, currentResult.topicTitle, hook, cta, baseHashtags, planPosts])
+  }, [mode, productName, components, colors, style, price, currentResult.topicTitle, hook, cta, baseHashtags, effectivePlanPosts])
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text)
@@ -599,11 +666,39 @@ function CreativeResultViewerBody({
         </div>
       </div>
 
-      {planPosts && planPosts.length > 0 && (
+      {contentEnginePosts && contentEnginePosts.length > 0 ? (
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[12px] text-emerald-800">
+          Bài {contentEnginePosts.map((p) => PLATFORM_LABELS[p.channel]?.label ?? p.channel).join(", ")} do Content Engine (P27) viết
+          (Strategist→Writer→Critic→Rewriter, cùng câu chuyện Chặng 05). Kênh khác dùng khuôn dự phòng — hãy đọc lại trước khi đăng.
+        </p>
+      ) : planPosts && planPosts.length > 0 ? (
         <p className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[12px] text-emerald-800">
           Bài {planPosts.map((p) => PLATFORM_LABELS[p.channel]?.label ?? p.channel).join(", ")} lấy từ kịch bản sản xuất Chặng 05
           (cùng câu chuyện với ảnh, âm thanh, video). Kênh khác dùng khuôn dự phòng — hãy đọc lại trước khi đăng.
         </p>
+      ) : null}
+
+      {scenePlanId && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3">
+          <div className="text-[12px] text-stone-600">
+            {contentEnginePosts && contentEnginePosts.length > 0
+              ? "Đã có bài do Content Engine viết cho kịch bản này. Bấm để viết lại (tốn credit riêng, cộng dồn với kịch bản)."
+              : "Nhờ Content Engine viết bài đa kênh theo đúng câu chuyện Chặng 05 (tốn credit riêng)."}
+            {ceError && <span className="block text-rose-600 mt-1">{ceError}</span>}
+          </div>
+          <button
+            type="button"
+            onClick={handleWriteWithContentEngine}
+            disabled={ceStatus === "writing"}
+            className="shrink-0 rounded-lg bg-rose-700 px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-60"
+          >
+            {ceStatus === "writing"
+              ? "Đang viết..."
+              : contentEnginePosts && contentEnginePosts.length > 0
+                ? "Viết lại bằng Content Engine"
+                : "Viết bằng Content Engine"}
+          </button>
+        </div>
       )}
 
       {/* ── Lưu bài vào gói chiến dịch (Khu vực F) ── */}

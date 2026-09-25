@@ -64,6 +64,8 @@ export function ContentsWorkspace() {
   // đã chọn hiển thị theo ĐÚNG kịch bản này (cùng kịch bản với ảnh D, lời
   // thoại C), thay cho cung truyện theo luật của `produce`. Chỉ tra, không trừ credit.
   const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
+  // Mã kịch bản (`generation_jobs.id`) — dùng để tra/khởi bài Content Engine (P27, 25/09/2026).
+  const [scenePlanJobId, setScenePlanJobId] = useState<string | null>(null)
   const urlPlanId = searchParams?.get("scenePlanId") ?? null
   useEffect(() => {
     if (!context) return
@@ -82,7 +84,10 @@ export function ContentsWorkspace() {
       urlPlanId
     )
       .then(({ loaded }) => {
-        if (!cancelled) setScenePlan(loaded?.plan ?? null)
+        if (!cancelled) {
+          setScenePlan(loaded?.plan ?? null)
+          setScenePlanJobId(loaded?.jobId ?? null)
+        }
       })
       .catch(() => undefined)
     return () => {
@@ -270,7 +275,8 @@ export function ContentsWorkspace() {
           mode={mode}
           topicResults={withScenePlan(
             (result.topicResults as CreativeResultViewerProps["topicResults"] | undefined) ?? [],
-            scenePlan
+            scenePlan,
+            scenePlanJobId
           )}
           totalCredits={(result.totalEstimatedCredits as number) ?? 0}
           onGoToAudio={() => navigateToArea("c")}
@@ -284,7 +290,8 @@ export function ContentsWorkspace() {
 /** Thay cung truyện theo luật của chủ đề trùng bằng kịch bản bối cảnh đã lưu. */
 function withScenePlan(
   items: CreativeResultViewerProps["topicResults"],
-  plan: ScenePlan | null
+  plan: ScenePlan | null,
+  scenePlanId: string | null
 ): CreativeResultViewerProps["topicResults"] {
   if (!plan) return items
   return items.map((item) =>
@@ -293,6 +300,7 @@ function withScenePlan(
       : {
           ...item,
           planPosts: plan.content.posts.map((p) => ({ channel: p.channel, text: p.text, hashtags: p.hashtags })),
+          scenePlanId,
           arc: {
             emotionalTone: plan.emotionalTone,
             narrativeReasoning: `${plan.source === "ai" ? "Kịch bản AI" : "Kịch bản cơ bản"} từ Chặng 05 — ${plan.reasoning}`,

@@ -15,6 +15,8 @@ const TENANT_TABLES = [
   "content_drafts",
   "voice_clones",
   "music_tracks",
+  // Content Engine (P27) — 25/09/2026
+  "content_generations",
   // Nền AI — AI-1. `ai_capabilities` và `ai_models` KHÔNG nằm ở đây: chúng là
   // sổ đăng ký cấp nền tảng, không phải dữ liệu thử của một tổ chức, và
   // `ensureSystemRoles` phía dưới cũng không dựng lại chúng.

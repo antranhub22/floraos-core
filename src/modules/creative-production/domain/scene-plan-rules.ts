@@ -444,6 +444,13 @@ function dong(nhan: string, giaTri: string | readonly string[] | undefined | nul
   return `- ${nhan}: ${v && v.length > 0 ? v : "chưa xác định"}`
 }
 
+// Bài đăng theo kênh KHÔNG còn nhờ mô hình viết ở đây nữa (P27, 25/09/2026):
+// việc viết bài đã chuyển sang Content Engine (chuỗi Strategist→Writer→
+// Critic→Rewriter, `generateContent()`), gọi tiếp sau khi kịch bản này chạy
+// xong (`generate-scene-plan.ts`). Trường "posts" giữ lại trong JSON schema
+// đầu ra và trong kiểu `ScenePlan.content.posts` để không phá bản ghi cũ,
+// nhưng KHÔNG còn hỏi mô hình sinh nó nữa — `postsRaw` ở `completeScenePlanV2()`
+// do đó luôn rỗng, `content.posts` = [] cho mọi kịch bản mới.
 export function buildScenePlanPrompt(input: ScenePlanInput): string {
   const beats = SCENE_BEATS_BY_MODE[input.mode]
   const pub = resolvePublishing(input.platforms, input.outputs)
@@ -490,11 +497,10 @@ KẾ HOẠCH SẢN XUẤT (ảnh, âm thanh, video, bài đăng dùng CHUNG kị
 - transition: ${TRANSITIONS.join(" | ")}; shot: ${SHOTS.join(" | ")}; music_cue: ${MUSIC_CUES.join(" | ")}.
 - audio.voice_id — chọn MỘT giọng hợp chủ đề: ${VOICE_CATALOG.map((v) => `${v.voiceId} (${v.displayName})`).join("; ")}. audio.music_mood: ${MUSIC_MOODS.join(" | ")}. audio.pacing: ${PACINGS.join(" | ")}.
 - video.caption_style: ${CAPTION_STYLES.join(" | ")}; video.end_card_text ≤ 60 ký tự.
-- ${pub.postChannels.length > 0 ? `posts: MỘT bài cho mỗi kênh ${pub.postChannels.join(", ")} (text tiếng Việt, đúng giọng kênh, kể cùng câu chuyện với các cảnh; hashtags). Không ghi giá nếu chưa có khoảng giá.` : "posts: [] (người dùng không chọn sản xuất bài đăng)."}
 - video_caption: chú thích khi đăng video (ngắn, có CTA) + hashtags.
 - story: hook, cta, logline (một câu tóm câu chuyện).
 
-Trả về JSON: { "emotional_tone": string, "reasoning": string, "story": { "hook", "cta", "logline" }, "scenes": [ { "beat", "title", "setting", "lighting", "palette": string[], "purpose", "background_prompt", "local_backdrop", "voice_script", "text_overlay", "motion_effect", "duration_seconds", "transition", "shot", "music_cue" } ], "audio": { "voice_id", "music_mood", "pacing" }, "video": { "caption_style", "end_card_text", "cover_scene_index" }, "posts": [ { "channel", "text", "hashtags": string[] } ], "video_caption": { "text", "hashtags": string[] } }. Không thêm lời dẫn.`
+Trả về JSON: { "emotional_tone": string, "reasoning": string, "story": { "hook", "cta", "logline" }, "scenes": [ { "beat", "title", "setting", "lighting", "palette": string[], "purpose", "background_prompt", "local_backdrop", "voice_script", "text_overlay", "motion_effect", "duration_seconds", "transition", "shot", "music_cue" } ], "audio": { "voice_id", "music_mood", "pacing" }, "video": { "caption_style", "end_card_text", "cover_scene_index" }, "video_caption": { "text", "hashtags": string[] } }. Không thêm lời dẫn.`
 }
 
 /** JSON schema gửi kèm lời gọi mô hình. */
@@ -551,18 +557,9 @@ export function scenePlanJsonSchema(mode: ScenePlanMode): Record<string, unknown
           cover_scene_index: { type: "number" },
         },
       },
-      posts: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            channel: { type: "string", enum: ["facebook", "instagram", "tiktok", "zalo"] },
-            text: { type: "string" },
-            hashtags: { type: "array", items: { type: "string" } },
-          },
-          required: ["channel", "text"],
-        },
-      },
+      // "posts" đã bỏ khỏi JSON schema gửi mô hình (P27, 25/09/2026) — Content
+      // Engine viết bài, không còn nhờ mô hình kịch bản viết nữa (xem chú
+      // thích ở buildScenePlanPrompt()).
       video_caption: {
         type: "object",
         properties: { text: { type: "string" }, hashtags: { type: "array", items: { type: "string" } } },

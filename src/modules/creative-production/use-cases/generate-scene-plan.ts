@@ -16,6 +16,8 @@ import {
   type ScenePlan,
   type ScenePlanInput,
 } from "../domain/scene-plan-rules"
+import { resolvePublishing } from "../domain/publishing-rules"
+import { generateContent } from "@/modules/content-engine/use-cases/generate-content"
 
 export type ScenePlanJobView = {
   jobId: string
@@ -96,6 +98,27 @@ export async function generateScenePlan(
     }
     const plan = aiResult.output as ScenePlan
     await jobRepo.finishInline(ctx, enq.job.id, { ok: true, now: new Date(), output: plan })
+
+    // Bước làm giàu THỨ HAI, không phải thành phần chính (P27, 25/09/2026):
+    // kịch bản bối cảnh đã là kết quả chính và ĐÃ ghi xong ở trên — gọi tiếp
+    // Content Engine để viết bài cho các kênh đã chọn (Chặng 05 không còn tự
+    // viết bài nữa, xem `scene-plan-rules.ts#buildScenePlanPrompt`). Việc này
+    // trừ credit RIÊNG, cộng dồn với credit của `creative.scene_plan`
+    // (nợ kỹ thuật #141 — chấp nhận trừ chồng, tính giá gộp sau). Hỏng ở đây
+    // KHÔNG được làm hỏng kịch bản đã thành công — chỉ log/nuốt lỗi, giống
+    // `refundJob(...).catch(() => undefined)` ở nhánh lỗi bên dưới.
+    const postChannels = resolvePublishing(input.brief.platforms, input.brief.outputs).postChannels
+    if (postChannels.length > 0) {
+      await generateContent(ctx, {
+        scenePlanId: enq.job.id,
+        assetId: input.assetId ?? null,
+        productId: input.productId ?? null,
+        topicId: input.brief.topic.id,
+        channels: postChannels,
+        idempotencyKey: `content-engine:scene-plan:${enq.job.id}`,
+      }).catch(() => undefined)
+    }
+
     return {
       jobId: enq.job.id,
       status: "COMPLETED",

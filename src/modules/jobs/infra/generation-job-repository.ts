@@ -4,6 +4,7 @@ import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 
 import type { DbClient } from "./db-client"
+import { JobEventRepository } from "./job-event-repository"
 
 export type CreateJobInput = {
   workspaceId: string
@@ -166,6 +167,25 @@ export class GenerationJobRepository {
       where: scopedWhere(ctx, { id, status: "PENDING" as const }),
       data: { status: "PROCESSING", started_at: now, attempts: { increment: 1 } },
     })
+  }
+
+  /**
+   * Ghi mốc tiến độ cho một job chạy tại chỗ (vd `generateContent`, P27) —
+   * cùng việc `_set_stage()` bên worker Python làm cho job hàng đợi (đặc tả
+   * 05 mục 8): cập nhật cột `stage` để `GET /jobs/:id` đọc trạng thái hiện
+   * tại, và ghi thêm một dòng `job_events` (`event:"stage"`) để `GET
+   * /jobs/:id/events` (SSE) phát lại từng bước cho giao diện. Chỉ có nghĩa
+   * khi job đang `PROCESSING` — bỏ qua lặng lẽ nếu không (job đã xong/hỏng
+   * thì không còn "đang ở bước nào" để ghi).
+   */
+  async setStage(ctx: TenantContext, id: string, stage: string): Promise<void> {
+    const r = await this.db.generation_jobs.updateMany({
+      where: scopedWhere(ctx, { id, status: "PROCESSING" as const }),
+      data: { stage },
+    })
+    if (r.count === 1) {
+      await new JobEventRepository(this.db).append(id, "stage", { stage })
+    }
   }
 
   async finishInline(

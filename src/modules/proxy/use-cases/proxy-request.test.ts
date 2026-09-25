@@ -148,12 +148,12 @@ describe("callProxyJson (gọi sibling từ mã máy chủ, 25/09/2026)", () => 
         client: "SOCIALFLOW",
         request: mockRequest({ [SSO_HEADER]: "jwt-sso" }),
         method: "POST",
-        path: "api/m07/generate",
+        path: "api/m07/posts",
         json: { product_name: "Bó hoa" },
       })
       expect(out).toEqual({ result_id: "r-1" })
       const call = proxyRequestMock.mock.calls.at(-1)![0] as { path: string; method: string; headers: Record<string, string>; body: string }
-      expect(call).toMatchObject({ path: "api/m07/generate", method: "POST", body: '{"product_name":"Bó hoa"}' })
+      expect(call).toMatchObject({ path: "api/m07/posts", method: "POST", body: '{"product_name":"Bó hoa"}' })
       expect(call.headers["x-floraos-sso"]).toBe("jwt-sso")
       expect(call.headers["content-type"]).toBe("application/json")
     } finally {
@@ -178,7 +178,7 @@ describe("callProxyJson (gọi sibling từ mã máy chủ, 25/09/2026)", () => 
     proxyRequestMock.mockResolvedValueOnce({ status: 500, headers: {}, body: "" })
     try {
       await expect(
-        callProxyJson({ client: "SOCIALFLOW", request: mockRequest({ [SSO_HEADER]: "jwt" }), method: "POST", path: "api/m07/generate", json: {} })
+        callProxyJson({ client: "SOCIALFLOW", request: mockRequest({ [SSO_HEADER]: "jwt" }), method: "POST", path: "api/m07/posts", json: {} })
       ).rejects.toThrow(/SOCIALFLOW/)
     } finally {
       ;(env as { SOCIALFLOW_URL?: string | undefined }).SOCIALFLOW_URL = prev

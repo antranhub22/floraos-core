@@ -41,6 +41,7 @@ export interface CreateContentGenerationInput {
 export interface LatestContentGenerationFilter {
   readonly assetId?: string | null | undefined
   readonly topicId?: string | null | undefined
+  readonly scenePlanId?: string | null | undefined
   readonly mode?: ContentGenerationMode | null | undefined
 }
 
@@ -85,6 +86,7 @@ export class ContentGenerationRepository {
     const where: Prisma.content_generationsWhereInput = {}
     if (filter.assetId !== undefined) where.asset_id = filter.assetId
     if (filter.topicId !== undefined) where.topic_id = filter.topicId
+    if (filter.scenePlanId !== undefined) where.scene_plan_id = filter.scenePlanId
     if (filter.mode !== undefined) where.mode = filter.mode
 
     return this.db.content_generations.findFirst({

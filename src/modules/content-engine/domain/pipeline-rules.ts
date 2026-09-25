@@ -7,6 +7,9 @@
 import type { DeterministicCheckIssue } from "./deterministic-checks"
 import { RUBRIC_ACCEPT_THRESHOLD, weightedScore, type RubricChannelKey } from "./rubric"
 
+/** `enqueueJob` feature — cùng khoá dùng ở `pricing.ts` (`FEATURE_COST_CREDIT`) và use-case. */
+export const CONTENT_GENERATE_FEATURE = "content.generate" as const
+
 /** Mặc định tối đa 1 vòng viết lại (mục 4 kế hoạch). */
 export const MAX_REWRITE_ROUNDS = 1
 

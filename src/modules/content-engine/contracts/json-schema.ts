@@ -16,6 +16,7 @@
 import { z } from "zod"
 
 import { BRIEF_VERSION, contentBriefSchema } from "./brief"
+import { GENERATE_CONTENT_VERSION, generateContentBodySchema } from "./generation"
 
 export const CONTENT_ENGINE_SCHEMA_DIR = "docs/dac-ta/schemas/content-engine"
 export const CONTRACTS_SOURCE_DIR = "src/modules/content-engine/contracts"
@@ -135,6 +136,15 @@ const BRIEF_EXAMPLE = {
   },
 }
 
+const GENERATE_CONTENT_BODY_EXAMPLE = {
+  asset_id: "asset_001",
+  product_id: null,
+  analysis_run_id: null,
+  topic_id: "topic_001",
+  scene_plan_id: "scene_001",
+  channels: ["facebook", "instagram"],
+}
+
 const CONTENT_ENGINE_NAMED_SCHEMAS: readonly NamedSchema[] = [
   {
     name: "brief.v1",
@@ -144,6 +154,15 @@ const CONTENT_ENGINE_NAMED_SCHEMAS: readonly NamedSchema[] = [
     schema: contentBriefSchema,
     example: BRIEF_EXAMPLE,
     meta: { briefVersion: BRIEF_VERSION },
+  },
+  {
+    name: "generate-content-request.v1",
+    title: "Content Engine — POST /generations request body",
+    summary: "Thân yêu cầu tạo lượt sinh bài đa kênh (Đợt 2) — cần asset_id hoặc product_id để dựng Brief.",
+    sourceFile: `${CONTRACTS_SOURCE_DIR}/generation.ts`,
+    schema: generateContentBodySchema,
+    example: GENERATE_CONTENT_BODY_EXAMPLE,
+    meta: { generateContentVersion: GENERATE_CONTENT_VERSION },
   },
 ]
 

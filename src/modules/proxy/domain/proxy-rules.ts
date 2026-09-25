@@ -58,7 +58,11 @@ export function requireProxyUrl(client: ProxyClient, url: string | undefined): s
 
 /** Danh sách trắng tiền tố đường dẫn theo client — không proxy linh tinh. */
 export const PROXY_ALLOWED_PREFIX: Readonly<Record<ProxyClient, readonly string[]>> = {
-  SOCIALFLOW: ["api/m04b", "api/m07", "api/posts", "api/accounts"],
+  // `api/m07/generate` KHÔNG còn trong danh sách trắng (P27, 25/09/2026):
+  // `/noi-dung` gọi thẳng `POST /api/v1/content-engine/generations`, không
+  // qua proxy SocialFlow M07 nữa. `api/m07/posts` giữ lại cho luồng duyệt/
+  // lịch đăng (approve, và `/schedule` sau này).
+  SOCIALFLOW: ["api/m04b", "api/m07/posts", "api/posts", "api/accounts"],
   LOCALBUDD: [
     "api/v1/catalog-links",
     "api/v1/projects",

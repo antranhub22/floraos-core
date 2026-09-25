@@ -35,15 +35,22 @@ describe("proxy-rules", () => {
 
 describe("isAllowedProxyPath", () => {
   it("nhận đường dẫn trong danh sách trắng, có hoặc không có / đầu", () => {
-    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07/generate")).toBe(true)
-    expect(isAllowedProxyPath("SOCIALFLOW", "/api/m07/generate")).toBe(true)
-    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07")).toBe(true)
+    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07/posts")).toBe(true)
+    expect(isAllowedProxyPath("SOCIALFLOW", "/api/m07/posts")).toBe(true)
+    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07/posts/123/approve")).toBe(true)
+    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07/posts/123/schedule")).toBe(true)
+  })
+
+  it("chặn api/m07/generate (P27, 25/09/2026: /noi-dung gọi thẳng Content Engine, không qua proxy nữa)", () => {
+    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07/generate")).toBe(false)
+    expect(isAllowedProxyPath("SOCIALFLOW", "/api/m07/generate")).toBe(false)
+    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07")).toBe(false)
   })
 
   it("từ chối tiền tố lạ, tiền tố dính chữ, và đường dẫn có ..", () => {
     expect(isAllowedProxyPath("SOCIALFLOW", "api/admin")).toBe(false)
-    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07x/generate")).toBe(false)
-    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07/../admin")).toBe(false)
-    expect(isAllowedProxyPath("LOCALBUDD", "api/m07/generate")).toBe(false)
+    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07postsx/generate")).toBe(false)
+    expect(isAllowedProxyPath("SOCIALFLOW", "api/m07/posts/../admin")).toBe(false)
+    expect(isAllowedProxyPath("LOCALBUDD", "api/m07/posts")).toBe(false)
   })
 })

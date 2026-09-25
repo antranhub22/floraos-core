@@ -20,11 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { FlowSteps, type FlowStep } from "@/components/flow/flow-steps"
 import {
   ContentGuidanceCard,
-  AngleSelectorCard,
   MultichannelPostCard,
-  ModelSelectorCard,
-  type AIContentProvider,
-  type ContentAngle,
   type MultichannelPostItem,
 } from "@/components/templates/content-engine"
 
@@ -67,18 +63,11 @@ const CHANNELS_CONFIG = [
     tag: "Tư vấn & Báo giá",
     description: "Tin nhắn chào mẫu mới, báo giá ưu đãi & tư vấn 1-chạm",
   },
-  {
-    id: "linkedin",
-    label: "LinkedIn B2B",
-    icon: "💼",
-    tag: "Doanh nghiệp & Đối tác",
-    description: "Thought Leadership, văn hóa doanh nghiệp & quà tặng đối tác",
-  },
 ]
 
 const FLOW_STEPS: FlowStep[] = [
   { key: "analyze", label: "Đọc thông số hoa & Brand Kit" },
-  { key: "generate", label: "SocialFlow M07 sinh bài đa kênh" },
+  { key: "generate", label: "Content Engine (P27) sinh bài đa kênh" },
   { key: "review", label: "Kiểm duyệt an toàn thương hiệu" },
 ]
 
@@ -93,15 +82,13 @@ function ContentEngineContent() {
   const [selectedProductId, setSelectedProductId] = useState<string>("")
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [selectedAngle, setSelectedAngle] = useState<ContentAngle>("emotional")
   const [selectedChannels, setSelectedChannels] = useState<string[]>([
     "facebook",
     "instagram",
     "tiktok",
     "zalo",
-    "linkedin",
   ])
-  const [selectedProvider, setSelectedProvider] = useState<AIContentProvider>("ollama")
+  const [generationId, setGenerationId] = useState<string | null>(null)
 
   // Trạng thái luồng
   const [phase, setPhase] = useState<"select" | "generating" | "results">("select")
@@ -113,8 +100,8 @@ function ContentEngineContent() {
     modelName?: string | undefined
     isFallback?: boolean | undefined
   }>({
-    provider: "ollama",
-    modelName: "qwen2.5:7b",
+    provider: "content_engine",
+    modelName: "Content Engine (P27)",
     isFallback: false,
   })
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null)
@@ -193,7 +180,9 @@ function ContentEngineContent() {
     )
   }
 
-  // Kích hoạt sinh nội dung qua SocialFlow Proxy
+  // Kích hoạt sinh nội dung qua Content Engine (P27) — gọi thẳng
+  // `POST /api/v1/content-engine/generations`, không qua proxy SocialFlow
+  // M07 nữa (quyết định PO 25/09/2026).
   async function handleGenerate() {
     if (selectedChannels.length === 0 || !selectedProduct) return
 
@@ -203,77 +192,67 @@ function ContentEngineContent() {
     setTimeout(() => setCurrentStep("generate"), 600)
 
     try {
-      const payload = {
-        product_id: selectedProduct.id,
-        product_name: selectedProduct.name,
-        flower_details: selectedProduct.flowers,
-        colors: selectedProduct.color,
-        price: selectedProduct.price,
-        image_url: selectedProduct.imageUrl,
-        channels: selectedChannels,
-        angle: selectedAngle,
-        provider: selectedProvider,
-      }
+      const idempotencyKey =
+        typeof window !== "undefined" && "randomUUID" in window.crypto
+          ? window.crypto.randomUUID()
+          : `noi-dung-${selectedProduct.id}-${Date.now()}`
 
-      // Gọi Server-side Proxy tới SocialFlow M07
-      const res = await fetch("/api/v1/proxy/api/m07/generate?client=SOCIALFLOW", {
+      const res = await fetch("/api/v1/content-engine/generations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({
+          product_id: selectedProduct.id,
+          channels: selectedChannels,
+        }),
       })
 
       setTimeout(() => setCurrentStep("review"), 1400)
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}))
-        const errorMsg = errJson.detail || errJson.message || `Lỗi máy chủ (${res.status}) khi gọi SocialFlow M07`
+        const errorMsg = errJson.error?.message || errJson.detail || errJson.message || `Lỗi máy chủ (${res.status}) khi gọi Content Engine`
         throw new Error(errorMsg)
       }
 
       const data = await res.json()
-      setActivePostId(data.result_id || null)
+      setActivePostId(data.generation_id || null)
+      setGenerationId(data.generation_id || null)
 
       const posts: MultichannelPostItem[] = []
-      for (const ch of selectedChannels) {
-        const chData = data.channels?.[ch]
-        if (chData) {
-          let bodyText = chData.body || ""
-          if (catalogSlug && typeof window !== "undefined") {
-            const linkUrl = `${window.location.origin}/c/${catalogSlug}`
-            if (!bodyText.includes(`/c/${catalogSlug}`)) {
-              bodyText = `${bodyText}\n\n👉 Xem trọn bộ mẫu hoa & đặt trực tuyến tại:\n${linkUrl}`
-            }
+      for (const p of data.posts ?? []) {
+        let bodyText = p.text || ""
+        if (catalogSlug && typeof window !== "undefined") {
+          const linkUrl = `${window.location.origin}/c/${catalogSlug}`
+          if (!bodyText.includes(`/c/${catalogSlug}`)) {
+            bodyText = `${bodyText}\n\n👉 Xem trọn bộ mẫu hoa & đặt trực tuyến tại:\n${linkUrl}`
           }
-
-          posts.push({
-            postId: chData.post_id || data.result_id,
-            channel: ch as any,
-            channelLabel:
-              CHANNELS_CONFIG.find((c) => c.id === ch)?.label || ch.toUpperCase(),
-            headline: chData.title || `Bó hoa ${selectedProduct.name}`,
-            bodyText,
-            hashtags: chData.hashtags || [],
-            cta: chData.cta,
-            script: chData.script,
-          })
         }
+
+        posts.push({
+          channel: p.channel,
+          channelLabel:
+            CHANNELS_CONFIG.find((c) => c.id === p.channel)?.label || String(p.channel).toUpperCase(),
+          headline: `Bó hoa ${selectedProduct.name}`,
+          bodyText,
+          hashtags: p.hashtags || [],
+        })
       }
 
       if (posts.length === 0) {
-        throw new Error("Không nhận được nội dung hợp lệ từ AI Engine cho các kênh đã chọn.")
+        throw new Error("Không nhận được nội dung hợp lệ từ Content Engine cho các kênh đã chọn.")
       }
 
       setModelInfo({
-        provider: data.provider || "ollama",
-        modelName: data.model_name || "qwen2.5:7b",
-        isFallback: false,
+        provider: "content_engine",
+        modelName: "Content Engine (P27)",
+        isFallback: Boolean(data.needs_review),
       })
       setGeneratedPosts(posts)
       setTimeout(() => setPhase("results"), 1800)
     } catch (err: any) {
       setNotification({
         type: "error",
-        message: `Lỗi sinh nội dung: ${err.message || "Không thể kết nối SocialFlow backend (cổng 8000)"}. Vui lòng kiểm tra lại dịch vụ qua npm run dev:all.`,
+        message: `Lỗi sinh nội dung: ${err.message || "Không gọi được Content Engine"}. Vui lòng thử lại.`,
       })
       setPhase("select")
     }
@@ -286,10 +265,11 @@ function ContentEngineContent() {
     )
   }
 
-  // Duyệt bài viết và gửi sang Lịch đăng
+  // Duyệt bài viết và gửi sang Lịch đăng — mã lượt sinh (`content_generations.id`)
+  // thay cho `post_id` cũ của SocialFlow M07 (không còn dùng nữa, decision 2 25/09/2026).
   async function handleApprovePost(post: MultichannelPostItem) {
     try {
-      const targetId = post.postId || activePostId || "new"
+      const targetId = post.postId || generationId || activePostId || "new"
       await fetch(`/api/v1/proxy/api/m07/posts/${targetId}/approve?client=SOCIALFLOW`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -463,18 +443,12 @@ function ContentEngineContent() {
               )}
             </Card>
 
-            {/* 2. Chọn Góc tiếp cận (Angle) */}
-            <AngleSelectorCard
-              selectedAngle={selectedAngle}
-              onSelectAngle={setSelectedAngle}
-            />
-
-            {/* 3. Chọn Kênh Phân Phối Đăng Bài */}
+            {/* 2. Chọn Kênh Phân Phối Đăng Bài */}
             <Card className="border border-border bg-card p-5 shadow-sm flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <div className="text-xs font-semibold text-text-muted">
-                    Bước 3: Chọn kênh phân phối bài đăng
+                    Bước 2: Chọn kênh phân phối bài đăng
                   </div>
                   <div className="text-[16px] font-extrabold text-text">
                     Lựa chọn nền tảng viết bài & xuất bản
@@ -561,13 +535,29 @@ function ContentEngineContent() {
               </div>
             </Card>
 
-            {/* 4. Chọn Cỗ máy AI (Model Engine) & Sinh bài viết */}
-            <ModelSelectorCard
-              selectedProvider={selectedProvider}
-              onSelectProvider={setSelectedProvider}
-              selectedChannelsCount={selectedChannels.length}
-              onGenerate={handleGenerate}
-            />
+            {/* 3. Sinh bài viết bằng Content Engine (P27) */}
+            <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-xs text-text-muted">
+                {selectedChannels.length === 0 ? (
+                  <span className="text-warning font-semibold flex items-center gap-1">
+                    ⚠️ Vui lòng chọn ít nhất 1 kênh mạng xã hội ở trên để sinh bài viết.
+                  </span>
+                ) : (
+                  <span>
+                    💡 Content Engine sẽ viết bài cho <strong>{selectedChannels.length} kênh</strong> đã chọn (Strategist → Writer → Critic → Rewriter).
+                  </span>
+                )}
+              </div>
+              <Button
+                size="default"
+                onClick={handleGenerate}
+                disabled={selectedChannels.length === 0 || !selectedProduct}
+                className="w-full sm:w-auto gap-2 font-bold px-7 shadow-md whitespace-nowrap"
+              >
+                <Sparkles size={16} />
+                {selectedChannels.length === 0 ? "Chưa chọn kênh nào" : "Sinh bài bằng Content Engine"}
+              </Button>
+            </Card>
           </div>
         )}
 
