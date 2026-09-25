@@ -213,8 +213,9 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
   const [masterApproved, setMasterApproved] = useState(false)
   const [assets, setAssets] = useState<AssetItem[]>([])
   const [selectedAssetId, setSelectedAssetId] = useState<string>("")
-  const [optimizationEngine, setOptimizationEngine] = useState<OptimizationEngine>("local_studio")
-  const [selectedEnhancerProvider, setSelectedEnhancerProvider] = useState<string>("studio")
+  // PO 25/09/2026: nhà cung cấp trước — mặc định chuỗi nhà cung cấp theo thứ tự của tiệm.
+  const [optimizationEngine, setOptimizationEngine] = useState<OptimizationEngine>("cloud_provider")
+  const [selectedEnhancerProvider, setSelectedEnhancerProvider] = useState<string>("auto")
   const [selectedStudioScene, setSelectedStudioScene] = useState<string>("warm_gray")
   const [optimizationMode, setOptimizationMode] = useState<"auto" | "custom">("auto")
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>(getDefaultAutoCapabilityIds())
@@ -245,7 +246,7 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
   const [variantJobId, setVariantJobId] = useState<string | null>(null)
   const [variantIntegrity, setVariantIntegrity] = useState<M04bIntegrity | null>(null)
   const [loadingMasters, setLoadingMasters] = useState(false)
-  const [variantEngineMode, setVariantEngineMode] = useState<VariantEngineMode>("local_studio")
+  const [variantEngineMode, setVariantEngineMode] = useState<VariantEngineMode>("cloud_provider")
   const [selectedCloudProvider, setSelectedCloudProvider] = useState<CloudProvider>("stability")
 
   // --- Visual Storytelling States ---

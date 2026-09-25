@@ -213,7 +213,22 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
                   {/* ENGINE SWITCHER */}
                   <div className="mt-3 pt-3 border-t border-border">
                     <div className="text-xs font-bold text-text mb-2">Cơ chế xử lý ảnh:</div>
+                    {/* PO 25/09/2026: nhà cung cấp TRƯỚC (chất lượng cao nhất); cục bộ là phương án dự phòng. */}
                     <div className="grid grid-cols-2 gap-2 p-1 bg-surface-alt rounded-xl border border-border">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOptimizationEngine("cloud_provider")
+                          if (selectedEnhancerProvider === "studio" || selectedEnhancerProvider === "local") setSelectedEnhancerProvider("auto")
+                        }}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                          optimizationEngine === "cloud_provider"
+                            ? "bg-primary text-white shadow-xs"
+                            : "text-text-muted hover:text-text"
+                        }`}
+                      >
+                        <Cloud size={14} /> Nhà cung cấp AI (khuyên dùng)
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -226,21 +241,7 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
                             : "text-text-muted hover:text-text"
                         }`}
                       >
-                        <Layers size={14} /> Thuật toán Cục bộ (0đ)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOptimizationEngine("cloud_provider")
-                          if (selectedEnhancerProvider === "studio") setSelectedEnhancerProvider("photoroom")
-                        }}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                          optimizationEngine === "cloud_provider"
-                            ? "bg-primary text-white shadow-xs"
-                            : "text-text-muted hover:text-text"
-                        }`}
-                      >
-                        <Cloud size={14} /> AI Tạo sinh Đám mây
+                        <Layers size={14} /> Cục bộ (dự phòng)
                       </button>
                     </div>
                   </div>

@@ -29,7 +29,9 @@ import { EXAMPLE_JOB_ID } from "./examples-shared"
 /** Thân `POST /api/v1/media/variants` (header `Idempotency-Key` bắt buộc). */
 export const mediaVariantBodySchema = z.object({
   master_asset_id: z.string().min(1).describe("Master Image đã duyệt"),
-  engine: z.enum(["local_studio", "cloud_provider"]).default("local_studio"),
+  // PO 25/09/2026: nhà cung cấp TRƯỚC — mặc định `cloud_provider`; `local_studio`
+  // chỉ khi người dùng chọn đích danh (miễn phí nhà cung cấp, chất lượng thấp hơn).
+  engine: z.enum(["local_studio", "cloud_provider"]).default("cloud_provider"),
   preset: z.enum(VARIANT_PRESET_IDS),
   ratio: z.enum(VARIANT_RATIOS),
   watermark: z.boolean().default(true),

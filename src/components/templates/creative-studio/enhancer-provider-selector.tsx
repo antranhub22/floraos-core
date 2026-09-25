@@ -23,6 +23,14 @@ export interface EnhancerProviderOption {
  */
 export const ENHANCER_PROVIDERS: EnhancerProviderOption[] = [
   {
+    id: "auto",
+    name: "Theo thứ tự ưu tiên của tiệm",
+    desc: "Thử lần lượt các nhà cung cấp theo thứ tự trong Cài đặt → Nhà cung cấp AI; bên lỗi thì chuyển bên kế tiếp, hết bên mới dùng Studio cục bộ và hoàn phần chênh.",
+    badge: "Khuyên dùng",
+    tone: "success",
+    icon: Sparkles,
+  },
+  {
     id: "photoroom",
     name: "Photoroom AI (Chuẩn E-commerce Quốc tế)",
     desc: "Photoroom tách nền, đặt lên phông studio trắng, đổ bóng và chỉnh sáng AI, tăng nét. Không xoá watermark — cần xoá thì dùng Studio AI Pipeline.",
@@ -39,10 +47,18 @@ export const ENHANCER_PROVIDERS: EnhancerProviderOption[] = [
     icon: Zap,
   },
   {
+    id: "imagen",
+    name: "Google Gemini Image",
+    desc: "Gemini dựng phông studio và chỉnh sáng theo mô tả; bó hoa được FloraOS đo lại. Không xoá watermark.",
+    badge: "Cloud AI",
+    tone: "accent",
+    icon: Cloud,
+  },
+  {
     id: "studio",
-    name: "Studio AI Pipeline (Chuẩn E-commerce)",
-    desc: "Bóc tách nền vi phẫu, xóa sạch watermark, ghép phông Studio thương mại và đổ bóng tự nhiên.",
-    badge: "Khuyên dùng / 0đ",
+    name: "Studio cục bộ (dự phòng)",
+    desc: "Chạy trên máy chủ FloraOS: tách nền, xoá watermark, ghép phông Studio. Chất lượng thấp hơn nhà cung cấp — dùng khi cần xoá watermark hoặc tiết kiệm.",
+    badge: "Dự phòng",
     tone: "accent",
     icon: Sparkles,
   },
@@ -83,7 +99,7 @@ export function EnhancerProviderSelector({
           <span>Phương thức & Nhà cung cấp AI (Provider)</span>
         </div>
         <span className="text-[11px] text-text-muted">
-          Mặc định: <strong className="text-primary font-semibold">Photoroom AI</strong>
+          Mặc định: <strong className="text-primary font-semibold">Theo thứ tự ưu tiên của tiệm</strong>
         </span>
       </div>
 

@@ -57,6 +57,7 @@ import {
 } from "./scene-plan-client"
 import { FLOW_M04B, describeIntegrity, type M04bIntegrity } from "./types"
 import type { UseCreativeStudioReturn } from "./use-creative-studio-data"
+import { ProviderSelect } from "./provider-select"
 
 // ============================================================
 // Phân cảnh Narrative Arc — helpers (23/09/2026)
@@ -144,8 +145,9 @@ const BEAT_COLORS: Record<string, string> = {
 }
 
 /** Cảnh dùng nhà cung cấp AI khi người dùng bật: CREATIVE và không phải phông trắng. */
-function sceneUsesCloud(scene: ScenePlanScene, mode: string, engine: string): boolean {
-  return engine === "cloud_provider" && mode === "CREATIVE" && scene.localBackdrop !== "studio_white"
+/** PO 25/09/2026: nhà cung cấp cho MỌI cảnh ở cả hai chế độ (AUTHENTIC: chỉ nền + ánh sáng quanh bó hoa thật). */
+function sceneUsesCloud(_scene: ScenePlanScene, _mode: string, engine: string): boolean {
+  return engine === "cloud_provider"
 }
 
 const POLL_INTERVAL_MS = 2000
@@ -194,6 +196,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   // (chốt 23/09/2026); nhà cung cấp lỗi thì worker tự lùi về phông cục bộ.
   // Cảnh 1 (studio trắng) và Cảnh 4 (tách nền) luôn chạy cục bộ — không cần hậu cảnh AI.
   const [sceneEngine, setSceneEngine] = useState<"cloud_provider" | "local_studio">("cloud_provider")
+  // Nhà cung cấp cho lượt này; rỗng = theo thứ tự ưu tiên của tiệm (PO 25/09/2026).
+  const [sceneProvider, setSceneProvider] = useState<string>("")
   // Tuỳ chọn dựng ảnh (Đợt 3, 25/09/2026) — áp cho các lượt sinh tiếp theo; giá hiện trên nút.
   // `composeMode` bỏ trống = theo engine (đám mây: nhà cung cấp làm trọn gói; cục bộ: dán nguyên khối).
   const [renderOpts, setRenderOpts] = useState<VariantRenderOptions>({
@@ -540,8 +544,9 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           scene_index: targetIndex,
           scene_plan_id: planRef,
           scene_plan_revision: scenePlan?.revision ?? 1,
-          // Không chỉ định nhà cung cấp — các bên vai trò tương đương, worker thử theo thứ tự cấu hình.
+          // Bên chọn cho lượt này (nếu có) thử trước; còn lại theo thứ tự ưu tiên của tiệm.
           ...(useCloud ? { scene_prompt: scene.backgroundPrompt } : {}),
+          ...(useCloud && sceneProvider ? { provider_key: sceneProvider } : {}),
           // Đợt 2 (25/09/2026): chỉ đạo tường minh (Sinh lại giống / Thử hướng khác)
           // và số phương án. Không có thì máy chủ lấy từ kịch bản như Đợt 1.
           ...(opts?.direction ? directionRequestFields(opts.direction) : {}),
@@ -752,7 +757,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     (sum, sc) => sum + variantUnitCostCredit(sc.usesCloud ? "cloud_provider" : "local_studio", renderOpts),
     0
   )
-  const cloudAvailable = scenePlan?.mode === "CREATIVE"
+  const cloudAvailable = Boolean(scenePlan)
   const generatedSceneCount = narrativeResultScenes.filter((s) => s.hasGenerated).length
   const measuredIntegrities = narrativeResultScenes
     .map((s) => sceneMeta[s.sceneIndex]?.integrity)
@@ -1592,7 +1597,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         )}
       </div>
 
-      {/* Nguồn hậu cảnh (chỉ CREATIVE — AUTHENTIC giữ phông cục bộ giản dị) */}
+      {/* Nguồn hậu cảnh — nhà cung cấp trước ở cả hai chế độ (PO 25/09/2026) */}
       {scenePlan && cloudAvailable && (
         <div className="w-full">
           <div className="text-xs font-bold text-text mb-2">Nguồn hậu cảnh cho các cảnh có không gian riêng:</div>
@@ -1612,24 +1617,25 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   </>
                 ) : (
                   <>
-                    <ShieldCheck size={14} /> Phông Studio cục bộ gần nhất ({variantUnitCostCredit("local_studio", renderOpts)} credit/cảnh)
+                    <ShieldCheck size={14} /> Cục bộ — dự phòng ({variantUnitCostCredit("local_studio", renderOpts)} credit/cảnh)
                   </>
                 )}
               </button>
             ))}
           </div>
+          {sceneEngine === "cloud_provider" && (
+            <div className="mt-2">
+              <ProviderSelect kind="image_variant" value={sceneProvider} onChange={setSceneProvider} label="Nhà cung cấp dựng cảnh cho lượt này" />
+            </div>
+          )}
           <p className="mt-1.5 text-[11px] text-text-muted leading-relaxed">
             {sceneEngine === "cloud_provider"
-              ? "Stability vẽ không gian trống đúng mô tả của từng cảnh; bó hoa thật được dán nguyên khối từ Master Image và đo Subject Integrity. Cảnh phông trắng luôn chạy cục bộ. Nhà cung cấp lỗi thì worker tự lùi về phông cục bộ và ghi rõ trên ảnh."
-              : "Mỗi cảnh dùng phông Studio dựng sẵn gần nhất với bối cảnh trong kịch bản (6 phông có sẵn) — rẻ hơn nhưng không đúng từng chi tiết không gian."}
+              ? `Nhà cung cấp (theo thứ tự ưu tiên của tiệm: fal / Stability / Gemini) dựng cảnh + hoà sáng quanh bó hoa thật; FloraOS đo lại hình dáng, cấu trúc, màu. ${scenePlan?.mode === "AUTHENTIC" ? "AUTHENTIC: chỉ dựng nền và ánh sáng, không thêm đạo cụ vào bó hoa. " : ""}Mọi bên lỗi thì lùi phông cục bộ, ghi rõ trên ảnh và hoàn phần chênh credit.`
+              : "Dự phòng: mỗi cảnh dùng phông Studio dựng sẵn gần nhất (6 phông) — rẻ hơn nhưng chất lượng thấp hơn nhà cung cấp."}
           </p>
         </div>
       )}
-      {scenePlan && !cloudAvailable && (
-        <p className="w-full text-[11.5px] text-text-muted">
-          Mode AUTHENTIC: giữ tinh thần ảnh thật — mọi cảnh dùng phông Studio cục bộ, không vẽ không gian mới.
-        </p>
-      )}
+
 
       {/* Multi-channel Controls (Ratio, Watermark, Credit Cost) */}
       <Card className="w-full p-4.5 border border-border bg-surface flex flex-col gap-4 shadow-xs">

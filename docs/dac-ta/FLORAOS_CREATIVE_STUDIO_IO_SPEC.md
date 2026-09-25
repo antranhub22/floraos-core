@@ -255,7 +255,7 @@ Mang qua: thân `POST /scene-plans` và `PATCH /scene-plans/:id` nhận `platfor
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
 | `master_asset_id` | string | Master `APPROVED` — ngược lại `409` |
-| `engine` | `"local_studio" \| "cloud_provider"` | mặc định `local_studio` |
+| `engine` | `"local_studio" \| "cloud_provider"` | mặc định `cloud_provider` từ 25/09/2026 (PO: nhà cung cấp trước, cả CREATIVE lẫn AUTHENTIC — AUTHENTIC chỉ dựng nền + ánh sáng); `local_studio` chỉ khi chọn đích danh. `provider_key` ∈ `fal \| stability \| imagen` thử trước, còn lại theo thứ tự ưu tiên của tiệm (`payload.provider_order`) |
 | `preset` | `transparent \| studio_white \| wedding \| living_room \| wood_minimal \| luxury_hotel` | bắt buộc |
 | `ratio` | `1:1 \| 4:5 \| 9:16 \| 16:9` | bắt buộc |
 | `watermark` | boolean | mặc định `true` |

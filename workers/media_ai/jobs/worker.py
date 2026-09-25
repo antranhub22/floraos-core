@@ -283,7 +283,7 @@ def process_job(
         config_with_schema["original_analysis"] = dau_van
         active_enhancer = (
             resolve_enhancer(config_with_schema)
-            if config.get("enhancer_provider")
+            if config.get("enhancer_provider") or config.get("provider_order")
             else enhancer
         )
 

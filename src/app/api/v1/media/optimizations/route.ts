@@ -53,7 +53,8 @@ export const POST = handle(async (request) => {
     {
       job_id: result.job.id,
       status: result.job.status,
-      engine: parsed.data.config?.engine === "cloud_provider" ? "cloud_provider" : "local_studio",
+      // Máy chủ quyết định (PO 25/09/2026: nhà cung cấp trước, cục bộ chỉ khi chọn đích danh).
+      engine: (result.job.payload as { config?: { engine?: string } } | null)?.config?.engine ?? "local_studio",
       usage: { cost_credit: result.usage.costCredit, balance_after: result.usage.balanceAfter },
     },
     { status: 201 }
