@@ -62,6 +62,25 @@ _NEGATIVE = NEGATIVE_MAC_DINH
 
 _DO_DAI_PROMPT_TOI_DA = 600
 
+# 17 giá trị `style_preset` của Stability Core v2beta (Đợt 2, 25/09/2026).
+# Nguồn: tài liệu bên thứ ba đối chiếu 24/09/2026 (trang chính thức không tải
+# được nội dung tự động — xem nợ #130). Chỉ dùng để kiểm bảng dịch bên dưới.
+STYLE_PRESETS: frozenset[str] = frozenset({
+    "3d-model", "analog-film", "anime", "cinematic", "comic-book", "digital-art",
+    "enhance", "fantasy-art", "isometric", "line-art", "low-poly",
+    "modeling-compound", "neon-punk", "origami", "photographic", "pixel-art",
+    "tile-texture",
+})
+
+# Ý định phong cách của FloraOS (`base.PHONG_CACH`) → `style_preset` Stability.
+# Chỉ các preset ảnh chụp — ảnh sản phẩm hoa thật không đi với anime/pixel-art.
+STYLE_SANG_PRESET: dict[str, str] = {
+    "natural": "photographic",
+    "cinematic": "cinematic",
+    "film": "analog-film",
+    "vivid": "enhance",
+}
+
 
 class BackgroundProviderError(RuntimeError):
     """Nhà cung cấp không sinh được hậu cảnh (thiếu khoá, hết credit, lỗi mạng…).
@@ -95,7 +114,7 @@ class StabilityBackgroundProvider:
     name = "stability_ai"
     model_version = "stable-image-core-v2beta"
     # Bảng năng lực (Đợt 1, 24/09/2026). Seed 0..4294967294 theo API v2beta.
-    nang_luc = NangLuc(seed=True, negative_prompt=True, ratios=frozenset(_TY_LE_HO_TRO))
+    nang_luc = NangLuc(seed=True, negative_prompt=True, ratios=frozenset(_TY_LE_HO_TRO), style=True)
     SEED_TOI_DA = 4_294_967_294
 
     def __init__(
@@ -118,6 +137,17 @@ class StabilityBackgroundProvider:
         ty_le = chon_ty_le(width, height)
         return {"image": self._goi(prompt, ty_le, None), "prompt": prompt, "aspect_ratio": ty_le}
 
+    @staticmethod
+    def _style_preset(style: str | None) -> tuple[str | None, list[str]]:
+        """Ý định FloraOS → `style_preset`. Giá trị lạ bị bỏ và ghi `bo_qua` —
+        không gửi thẳng cho Stability (enum lạ là HTTP 400)."""
+        if not style:
+            return None, []
+        preset = STYLE_SANG_PRESET.get(style)
+        if preset and preset in STYLE_PRESETS:
+            return preset, []
+        return None, [f"style:{style}"]
+
     def generate(self, req: BackgroundRequest) -> BackgroundResult:
         """Adapter theo khung chung: ý định FloraOS → tham số Stability Core.
 
@@ -129,7 +159,9 @@ class StabilityBackgroundProvider:
         ty_le = req.ratio if req.ratio in _TY_LE_HO_TRO else chon_ty_le(req.rong, req.cao)
         seed = req.seed if req.seed is not None else random.randint(0, self.SEED_TOI_DA)
         seed = max(0, min(int(seed), self.SEED_TOI_DA))
-        du_lieu = self._goi(prompt, ty_le, seed)
+        style_preset, bo_qua_style = self._style_preset(req.style)
+        bo_qua = bo_qua + bo_qua_style
+        du_lieu = self._goi(prompt, ty_le, seed, style_preset=style_preset)
         try:
             anh = Image.open(BytesIO(du_lieu))
             anh.load()
@@ -137,7 +169,7 @@ class StabilityBackgroundProvider:
             raise BackgroundProviderError(f"Stability trả ảnh không đọc được: {exc}") from exc
         return BackgroundResult(anh=anh, prompt=prompt, seed=seed, aspect_ratio=ty_le, bo_qua=bo_qua)
 
-    def _goi(self, prompt: str, ty_le: str, seed: int | None) -> bytes:
+    def _goi(self, prompt: str, ty_le: str, seed: int | None, style_preset: str | None = None) -> bytes:
         if not self._api_key:
             raise BackgroundProviderError("Thiếu STABILITY_API_KEY")
         du_lieu_form: dict[str, Any] = {
@@ -148,6 +180,8 @@ class StabilityBackgroundProvider:
         }
         if seed is not None:
             du_lieu_form["seed"] = str(seed)
+        if style_preset is not None:
+            du_lieu_form["style_preset"] = style_preset
         client = self._client if self._client is not None else httpx.Client(timeout=self._timeout_s)
         try:
             resp = client.post(

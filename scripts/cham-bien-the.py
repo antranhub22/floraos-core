@@ -17,6 +17,7 @@ Xuất `ket-qua.csv` + `index.html` (lưới ảnh, có cột để PO chấm m�
     python3 scripts/cham-bien-the.py --nhan truoc-dot1
     python3 scripts/cham-bien-the.py --nhan sau-dot1 --ratio 9:16,4:5
     python3 scripts/cham-bien-the.py --nhan cloud --cloud --so-anh 4   # gọi Stability THẬT, tốn credit
+    python3 scripts/cham-bien-the.py --nhan pa --so-anh 4 --phuong-an 3   # Đợt 2: 3 phương án/cảnh + độ khác nhau
 
 Mặc định dùng bộ phông cục bộ (0 credit). `--cloud` cần STABILITY_API_KEY.
 """
@@ -35,6 +36,26 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "workers"))
+
+
+def _nap_env(tep: Path) -> None:
+    """Nạp `.env` như `npm run worker:media` (`set -a; . ../.env`) — không ghi
+    đè biến đã có trong môi trường. Thiếu bước này thì `--cloud` báo "Thiếu
+    STABILITY_API_KEY" dù khoá nằm sẵn trong `.env` (25/09/2026)."""
+    if not tep.is_file():
+        return
+    for dong in tep.read_text(encoding="utf-8").splitlines():
+        dong = dong.strip()
+        if not dong or dong.startswith("#") or "=" not in dong:
+            continue
+        khoa, _, gia_tri = dong.removeprefix("export ").partition("=")
+        khoa, gia_tri = khoa.strip(), gia_tri.strip()
+        if len(gia_tri) >= 2 and gia_tri[0] == gia_tri[-1] and gia_tri[0] in "\"'":
+            gia_tri = gia_tri[1:-1]
+        os.environ.setdefault(khoa, gia_tri)
+
+
+_nap_env(REPO / ".env")
 
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
@@ -95,6 +116,36 @@ def hop_chu_the(alpha: Image.Image) -> tuple[int, int, int, int] | None:
     return alpha.point(lambda p: 255 if p > getattr(vw, "NGUONG_HOP_BO_CUC", 32) else 0).getbbox()
 
 
+# Phương án (Đợt 2, 25/09/2026) — cùng luật với `candidateDirections` phía TS
+# (`src/modules/media/domain/variant-candidates.ts`): đám mây giữ chỉ đạo, đổi
+# seed; cục bộ (không seed) xoay vị trí bó hoa và hướng sáng.
+_VI_TRI = ("center", "left_third", "right_third")
+
+
+def chi_dao_phuong_an(c: dict, n: int, cloud: bool, seed_goc: int) -> list[dict]:
+    ds = []
+    for i in range(n):
+        # Seed: đám mây → seed hậu cảnh của nhà cung cấp; cục bộ → seed phông
+        # (vùng sáng, bố cục bokeh). Cùng seed gốc → tái tạo đúng cả bộ.
+        d = {"shot": c["shot"], "placement": "center", "lighting": c["lighting"], "seed": (seed_goc + i) % 4_294_967_295}
+        if not cloud and i > 0:
+            d["placement"] = _VI_TRI[i % len(_VI_TRI)]
+            if i % 2 == 1:
+                d["lighting"] = "left" if c["lighting"] == "right" else "right"
+        ds.append(d)
+    return ds
+
+
+def do_khac_nhau(anh_list: list[Image.Image]) -> float | None:
+    """Trung bình khác biệt từng cặp (0 = y hệt, ~0,3 = rất khác) trên ảnh thu nhỏ
+    64×64 — đo "phương án khác nhau THẬT" chứ không phải n bản giống nhau."""
+    if len(anh_list) < 2:
+        return None
+    nho = [np.asarray(a.convert("RGB").resize((64, 64), Image.BILINEAR)).astype(np.float32) / 255 for a in anh_list]
+    cap = [float(np.abs(a - b).mean()) for k, a in enumerate(nho) for b in nho[k + 1:]]
+    return round(sum(cap) / len(cap), 4)
+
+
 def chay(args: argparse.Namespace) -> None:
     ra = REPO / "var" / "cham-bien-the" / args.nhan
     ra.mkdir(parents=True, exist_ok=True)
@@ -108,6 +159,7 @@ def chay(args: argparse.Namespace) -> None:
 
     ky = inspect.signature(vw.dung_bien_the).parameters
     dong: list[dict] = []
+    khac_nhau: list[float] = []
     for anh_path in chon_anh(args.so_anh):
         master_bytes = anh_path.read_bytes()
         master = Image.open(BytesIO(master_bytes)).convert("RGB")
@@ -116,62 +168,74 @@ def chay(args: argparse.Namespace) -> None:
         cao_goc = (hop[3] - hop[1]) if hop else master.height
         for c in canh:
             for ratio in ratios:
-                kw: dict = {}
-                # Tham số của Đợt 1 — chỉ truyền khi worker đã hỗ trợ.
-                if "composition" in ky:
-                    kw["composition"] = {"shot": c["shot"], "placement": "center"}
-                if "lighting" in ky:
-                    kw["lighting"] = {"direction": c["lighting"]}
-                if "fill_mode" in ky:
-                    kw["fill_mode"] = args.fill_mode
-                hau_canh = None
-                if hau_canh_provider is not None:
-                    if "nguon_hau_canh" in ky and args.fill_mode == "full_frame":
-                        from media_ai.providers.background.base import BackgroundRequest
+                nhom: list[Image.Image] = []
+                for so_pa, d in enumerate(chi_dao_phuong_an(c, args.phuong_an, bool(args.cloud), args.seed), start=1):
+                    kw: dict = {}
+                    # Tham số của Đợt 1 — chỉ truyền khi worker đã hỗ trợ.
+                    if "composition" in ky:
+                        kw["composition"] = {"shot": d["shot"], "placement": d["placement"]}
+                    if "lighting" in ky:
+                        kw["lighting"] = {"direction": d["lighting"]}
+                    if "fill_mode" in ky:
+                        kw["fill_mode"] = args.fill_mode
+                    if "seed_phong" in ky and not args.cloud and args.phuong_an > 1:
+                        kw["seed_phong"] = d["seed"]
+                    hau_canh = None
+                    if hau_canh_provider is not None:
+                        if "nguon_hau_canh" in ky and args.fill_mode == "full_frame":
+                            from media_ai.providers.background.base import BackgroundRequest
 
-                        def _nguon(r: str, rong: int, cao: int, _c=c):
-                            return hau_canh_provider.generate(
-                                BackgroundRequest(ratio=r, rong=rong, cao=cao, scene_prompt=_c["scene_prompt"],
-                                                  lighting_direction=_c["lighting"], shot=_c["shot"])
-                            ).anh
+                            def _nguon(r: str, rong: int, cao: int, _c=c, _d=d):
+                                return hau_canh_provider.generate(
+                                    BackgroundRequest(ratio=r, rong=rong, cao=cao, scene_prompt=_c["scene_prompt"],
+                                                      lighting_direction=_d["lighting"], shot=_d["shot"],
+                                                      seed=_d["seed"], style=args.style)
+                                ).anh
 
-                        kw["nguon_hau_canh"] = _nguon
-                    else:
-                        kq = hau_canh_provider.sinh_hau_canh(c["scene_prompt"], master.width, master.height)
-                        hau_canh = kq["image"]
-                t0 = time.monotonic()
-                bien_the, do_trung, _ = vw.dung_bien_the(
-                    master_bytes, c["preset"], ratio, watermark=False, logo_bytes=None, ten_tiem=None,
-                    hau_canh_bytes=hau_canh, **kw,
-                )
-                giay = round(time.monotonic() - t0, 2)
-                styled = next((b for b in bien_the if b["key"] == "styled"), None)
-                if styled is None:
-                    continue
-                anh = styled["image"].convert("RGB")
-                if styled.get("subject_box"):
-                    chu_the_px = int(styled["subject_box"][3])
-                else:  # hành vi cũ: khung làm việc = ảnh gốc, rồi co giãn đệm vào khung đích
-                    rd, cd = vw.RATIO_PRESETS[ratio]
-                    chu_the_px = int(cao_goc * min(rd / master.width, cd / master.height))
-                ten = f"{anh_path.stem.replace(' ', '')}_{c['preset']}_{ratio.replace(':', 'x')}.jpg"
-                anh.save(ra / ten, quality=90)
-                dong.append(
-                    {
-                        "anh": anh_path.name,
-                        "canh": c["preset"],
-                        "ratio": ratio,
-                        "tep": ten,
-                        "khung": f"{anh.width}x{anh.height}",
-                        "dai_dem": dai_dem(anh),
-                        "chu_the_px": chu_the_px,
-                        "phong_to": round(chu_the_px / max(1, cao_goc), 2),
-                        "do_trung": round(float(do_trung), 4),
-                        "thoi_gian_s": giay,
-                        "diem_po_1_5": "",
-                    }
-                )
-                print(f"{ten}: dai_dem={dong[-1]['dai_dem']} phong_to={dong[-1]['phong_to']} do_trung={dong[-1]['do_trung']} {giay}s")
+                            kw["nguon_hau_canh"] = _nguon
+                        else:
+                            kq = hau_canh_provider.sinh_hau_canh(c["scene_prompt"], master.width, master.height)
+                            hau_canh = kq["image"]
+                    t0 = time.monotonic()
+                    bien_the, do_trung, _ = vw.dung_bien_the(
+                        master_bytes, c["preset"], ratio, watermark=False, logo_bytes=None, ten_tiem=None,
+                        hau_canh_bytes=hau_canh, **kw,
+                    )
+                    giay = round(time.monotonic() - t0, 2)
+                    styled = next((b for b in bien_the if b["key"] == "styled"), None)
+                    if styled is None:
+                        continue
+                    anh = styled["image"].convert("RGB")
+                    nhom.append(anh)
+                    if styled.get("subject_box"):
+                        chu_the_px = int(styled["subject_box"][3])
+                    else:  # hành vi cũ: khung làm việc = ảnh gốc, rồi co giãn đệm vào khung đích
+                        rd, cd = vw.RATIO_PRESETS[ratio]
+                        chu_the_px = int(cao_goc * min(rd / master.width, cd / master.height))
+                    hau_to = f"_pa{so_pa}" if args.phuong_an > 1 else ""
+                    ten = f"{anh_path.stem.replace(' ', '')}_{c['preset']}_{ratio.replace(':', 'x')}{hau_to}.jpg"
+                    anh.save(ra / ten, quality=90)
+                    dong.append(
+                        {
+                            "anh": anh_path.name,
+                            "canh": c["preset"],
+                            "ratio": ratio,
+                            "phuong_an": so_pa,
+                            "chi_dao": f"{d['shot']}/{d['placement']}/{d['lighting']}" + (f"/seed{d['seed']}" if d["seed"] is not None else ""),
+                            "tep": ten,
+                            "khung": f"{anh.width}x{anh.height}",
+                            "dai_dem": dai_dem(anh),
+                            "chu_the_px": chu_the_px,
+                            "phong_to": round(chu_the_px / max(1, cao_goc), 2),
+                            "do_trung": round(float(do_trung), 4),
+                            "thoi_gian_s": giay,
+                            "diem_po_1_5": "",
+                        }
+                    )
+                    print(f"{ten}: dai_dem={dong[-1]['dai_dem']} phong_to={dong[-1]['phong_to']} do_trung={dong[-1]['do_trung']} {giay}s")
+                kn = do_khac_nhau(nhom)
+                if kn is not None:
+                    khac_nhau.append(kn)
 
     if not dong:
         print("Không có ảnh nào được dựng.")
@@ -185,10 +249,14 @@ def chay(args: argparse.Namespace) -> None:
     co_dem = sum(1 for d in dong if d["dai_dem"] > 0.02)
     tom_tat = (
         f"{len(dong)} ảnh · dải đệm TB {tb('dai_dem') * 100:.1f}% · ảnh có dải đệm >2%: {co_dem} · "
-        f"phóng to TB ×{tb('phong_to')} · do_trung TB {tb('do_trung')} · {tb('thoi_gian_s')}s/ảnh"
+        f"phóng to TB ×{tb('phong_to')} · do_trung TB {tb('do_trung')} (min {min(float(d['do_trung']) for d in dong)}) · "
+        f"{tb('thoi_gian_s')}s/ảnh"
     )
+    if khac_nhau:
+        tom_tat += f" · độ khác nhau giữa phương án TB {sum(khac_nhau) / len(khac_nhau):.3f} (min {min(khac_nhau):.3f})"
     the = "".join(
         f"<figure><img src='{html.escape(d['tep'])}' loading='lazy'><figcaption>{html.escape(d['anh'])} · {d['canh']} · {d['ratio']}"
+        f" · PA{d['phuong_an']} {html.escape(d['chi_dao'])}"
         f"<br>dải đệm {d['dai_dem'] * 100:.1f}% · phóng ×{d['phong_to']} · trùng {d['do_trung']}<br>Điểm PO: ___ / 5</figcaption></figure>"
         for d in dong
     )
@@ -210,4 +278,7 @@ if __name__ == "__main__":
     p.add_argument("--ratio", default="9:16,4:5")
     p.add_argument("--fill-mode", default="full_frame", choices=["full_frame", "pad"])
     p.add_argument("--cloud", action="store_true", help="Gọi Stability thật (tốn credit)")
+    p.add_argument("--phuong-an", type=int, default=1, help="Số phương án mỗi cảnh (Đợt 2) — tính thêm độ khác nhau")
+    p.add_argument("--style", default=None, choices=["natural", "cinematic", "film", "vivid"], help="Phong cách (chỉ nhánh --cloud)")
+    p.add_argument("--seed", type=int, default=1000, help="Seed gốc cho --cloud --phuong-an (tái tạo được)")
     chay(p.parse_args())

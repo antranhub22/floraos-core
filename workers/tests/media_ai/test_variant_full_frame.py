@@ -239,8 +239,10 @@ def test_phong_cuc_bo_noi_that_ve_nang_luc():
         BackgroundRequest(ratio="9:16", rong=90, cao=160, scene_prompt="x", seed=7)
     )
     assert kq.anh.size == (90, 160)
-    assert "seed" in kq.bo_qua and "prompt" in kq.bo_qua
-    assert LocalStudioBackground.nang_luc.seed is False
+    # Đợt 2 (25/09/2026): seed có tác dụng thật với phông cục bộ (vùng sáng, bokeh).
+    assert "prompt" in kq.bo_qua and "seed" not in kq.bo_qua
+    assert kq.seed == 7
+    assert LocalStudioBackground.nang_luc.seed is True
 
 
 def test_quang_mo_khong_lam_sai_bo_cuc_va_khong_dung_loi(monkeypatch):

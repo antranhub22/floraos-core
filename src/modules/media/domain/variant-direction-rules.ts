@@ -28,12 +28,33 @@ export type FillMode = (typeof FILL_MODES)[number]
 export const MAX_VARIANT_SEED = 4_294_967_294
 export const MAX_PALETTE_COLORS = 5
 
+/**
+ * Phong cách hình ảnh hậu cảnh (Đợt 2, 25/09/2026) — Ý ĐỊNH của FloraOS, không
+ * phải `style_preset` của Stability. Adapter worker tự dịch
+ * (`providers/background/stability_background.py#STYLE_SANG_PRESET`); nhà cung
+ * cấp không hỗ trợ thì ghi `provider_ignored`, không âm thầm bỏ.
+ *   natural   — ảnh chụp thật, trung tính (mặc định khi không chọn)
+ *   cinematic — tương phản điện ảnh, chiều sâu
+ *   film      — màu phim analog, hạt nhẹ
+ *   vivid     — màu tươi, nét rõ
+ */
+export const VARIANT_STYLES = ["natural", "cinematic", "film", "vivid"] as const
+export type VariantStyle = (typeof VARIANT_STYLES)[number]
+
+export const VARIANT_STYLE_LABELS: Readonly<Record<VariantStyle, string>> = {
+  natural: "Chụp thật",
+  cinematic: "Điện ảnh",
+  film: "Phim analog",
+  vivid: "Màu tươi",
+}
+
 export interface VariantDirectionInput {
   readonly fillMode?: FillMode | undefined
   readonly composition?: { readonly shot?: VariantShot | undefined; readonly placement?: VariantPlacement | undefined } | undefined
   readonly lighting?: { readonly direction?: LightDirection | undefined; readonly mood?: string | undefined } | undefined
   readonly palette?: readonly string[] | undefined
   readonly seed?: number | undefined
+  readonly style?: VariantStyle | undefined
 }
 
 /** Phần cảnh của kịch bản mà chỉ đạo khung hình cần (ScenePlanScene). */
@@ -49,6 +70,7 @@ export interface VariantDirection {
   readonly lighting: { readonly direction: LightDirection; readonly mood?: string | undefined }
   readonly palette: readonly string[]
   readonly seed?: number | undefined
+  readonly style?: VariantStyle | undefined
   /** Trường nào lấy từ kịch bản (để ghi vết, hiển thị "theo kịch bản"). */
   readonly fromPlan: readonly ("shot" | "lighting" | "palette")[]
 }
@@ -118,6 +140,7 @@ export function resolveVariantDirection(
     lighting: { direction, ...(mood ? { mood } : {}) },
     palette,
     ...(seed !== undefined ? { seed } : {}),
+    ...(input.style ? { style: input.style } : {}),
     fromPlan,
   }
 }
@@ -130,6 +153,7 @@ export function variantDirectionPayload(d: VariantDirection): Record<string, unk
     lighting: { direction: d.lighting.direction, ...(d.lighting.mood ? { mood: d.lighting.mood } : {}) },
     ...(d.palette.length > 0 ? { palette: [...d.palette] } : {}),
     ...(d.seed !== undefined ? { seed: d.seed } : {}),
+    ...(d.style ? { style: d.style } : {}),
     ...(d.fromPlan.length > 0 ? { direction_from_plan: [...d.fromPlan] } : {}),
   }
 }

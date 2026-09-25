@@ -16,7 +16,9 @@ import {
   MAX_VARIANT_SEED,
   VARIANT_PLACEMENTS,
   VARIANT_SHOTS,
+  VARIANT_STYLES,
 } from "@/modules/media/domain/variant-direction-rules"
+import { DEFAULT_VARIANT_COUNT, MAX_VARIANT_COUNT, MIN_VARIANT_COUNT } from "@/modules/media/domain/variant-candidates"
 import { defineStage } from "./define-stage"
 import { jobStatusSchema, usageSchema } from "./common"
 import { EXAMPLE_JOB_ID } from "./examples-shared"
@@ -72,6 +74,26 @@ export const mediaVariantBodySchema = z.object({
     .max(MAX_VARIANT_SEED)
     .optional()
     .describe("Cùng seed → tái tạo đúng hậu cảnh; bỏ trống thì tự bốc và ghi lại vào asset (nhà cung cấp hỗ trợ seed)"),
+  // ── Đa dạng (Đợt 2, 25/09/2026) ──
+  style: z
+    .enum(VARIANT_STYLES)
+    .optional()
+    .describe("Phong cách hậu cảnh (ý định FloraOS) — Stability dịch sang style_preset; phông cục bộ ghi provider_ignored"),
+  variant_count: z
+    .number()
+    .int()
+    .min(MIN_VARIANT_COUNT)
+    .max(MAX_VARIANT_COUNT)
+    .default(DEFAULT_VARIANT_COUNT)
+    .describe("Số phương án cho cảnh — n job con cùng job_group_id, credit nhân n. Mặc định 1 (PO chốt 24/09)"),
+})
+
+export const mediaVariantCandidateSchema = z.object({
+  index: z.number().int().min(1).describe("Thứ tự phương án, 1..variant_count"),
+  job_id: z.string(),
+  status: jobStatusSchema,
+  deduped: z.boolean(),
+  cost_credit: z.number().int().min(0),
 })
 
 export const mediaVariantResultSchema = z.object({
@@ -79,7 +101,9 @@ export const mediaVariantResultSchema = z.object({
   status: jobStatusSchema.describe("Trạng thái generation_jobs lúc nhận"),
   engine: z.enum(["local_studio", "cloud_provider"]),
   deduped: z.boolean(),
-  usage: usageSchema,
+  usage: usageSchema.describe("cost_credit = TỔNG mọi phương án"),
+  job_group_id: z.string().nullable().describe("Nhóm các phương án; null khi variant_count = 1"),
+  candidates: z.array(mediaVariantCandidateSchema).min(1).describe("Mỗi phương án một job — đọc từng job qua GET /media/variants/:id"),
 })
 
 export const stage06cMedia = defineStage({
@@ -107,13 +131,20 @@ export const stage06cMedia = defineStage({
       composition: { shot: "wide", placement: "center" },
       lighting: { direction: "right" },
       palette: ["đỏ", "kem"],
+      style: "natural",
+      variant_count: 2,
     },
     output: {
       job_id: "e5f6a7b8-c9d0-4e1f-8a2b-3c4d5e6f7a8c",
       status: "PENDING",
       engine: "cloud_provider",
       deduped: false,
-      usage: { cost_credit: 2, balance_after: 245 },
+      usage: { cost_credit: 4, balance_after: 243 },
+      job_group_id: "0b1c2d3e-4f50-4617-8829-3a4b5c6d7e8f",
+      candidates: [
+        { index: 1, job_id: "e5f6a7b8-c9d0-4e1f-8a2b-3c4d5e6f7a8c", status: "PENDING", deduped: false, cost_credit: 2 },
+        { index: 2, job_id: "f6a7b8c9-d0e1-4f2a-8b3c-4d5e6f7a8b9d", status: "PENDING", deduped: false, cost_credit: 2 },
+      ],
     },
   },
 })

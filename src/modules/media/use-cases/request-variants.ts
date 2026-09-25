@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 
 import { conflict, notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
@@ -10,8 +10,16 @@ import {
   resolveVariantDirection,
   variantDirectionPayload,
   type PlanSceneHint,
+  type VariantDirection,
   type VariantDirectionInput,
 } from "@/modules/media/domain/variant-direction-rules"
+import {
+  candidateDirections,
+  candidateIdempotencyKey,
+  clampVariantCount,
+  type VariantEngine,
+} from "@/modules/media/domain/variant-candidates"
+import type { EnqueueJobResult } from "@/modules/jobs/use-cases/enqueue-job"
 import {
   ALL_VARIANT_COMBINATIONS,
   isEligibleMasterForVariants,
@@ -46,6 +54,8 @@ export type RequestVariantsInput = {
   scenePlanRevision?: number | undefined
   /** Chỉ đạo khung hình (Đợt 1 nâng cấp chất lượng, 24/09/2026) — thiếu thì lấy từ kịch bản. */
   direction?: VariantDirectionInput | undefined
+  /** Số phương án (Đợt 2, 25/09/2026) — 1..4, mặc định 1 (PO chốt 24/09). */
+  variantCount?: number | undefined
 }
 
 /**
@@ -69,9 +79,76 @@ async function sceneHintFor(
   }
 }
 
-async function directionPayload(ctx: TenantContext, input: RequestVariantsInput) {
+async function resolveDirection(ctx: TenantContext, input: RequestVariantsInput): Promise<VariantDirection> {
   const hint = await sceneHintFor(ctx, input.scenePlanId, input.sceneIndex)
-  return variantDirectionPayload(resolveVariantDirection(input.direction ?? {}, hint))
+  return resolveVariantDirection(input.direction ?? {}, hint)
+}
+
+/** Một phương án trong lượt gọi — job con của `job_group_id`. */
+export type VariantCandidateJob = {
+  index: number
+  result: EnqueueJobResult
+}
+
+export type RequestVariantCandidatesResult = EnqueueJobResult & {
+  /** `null` khi chỉ 1 phương án (giữ nguyên hành vi trước Đợt 2). */
+  jobGroupId: string | null
+  candidates: VariantCandidateJob[]
+}
+
+/**
+ * `job_group_id` dẫn xuất TẤT ĐỊNH từ khoá idempotency gốc: gửi lại cùng khoá
+ * (job con bị `deduped`) thì trả lại đúng nhóm cũ, không đẻ nhóm mới.
+ */
+export function candidateGroupId(organizationId: string, idempotencyKey: string): string {
+  const h = createHash("sha256").update(`${organizationId}|variant-candidates|${idempotencyKey}`).digest("hex")
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`
+}
+
+/**
+ * Tạo `variant_count` job con (Đợt 2). Mỗi job con đi qua NGUYÊN `enqueueJob`
+ * — hạn mức, trừ credit, `Idempotency-Key` riêng (`candidateIdempotencyKey`) —
+ * tuần tự, cùng lý do `requestVariantBatch` không `Promise.all`.
+ */
+async function enqueueCandidates(
+  ctx: TenantContext,
+  args: {
+    feature: string
+    engine: VariantEngine
+    productId: string | null
+    basePayload: Record<string, unknown>
+    direction: VariantDirection
+    variantCount: number | undefined
+    idempotencyKey: string
+  }
+): Promise<RequestVariantCandidatesResult> {
+  const count = clampVariantCount(args.variantCount)
+  const directions = candidateDirections(args.direction, count, args.engine)
+  const jobGroupId = count > 1 ? candidateGroupId(ctx.organizationId, args.idempotencyKey) : null
+  const candidates: VariantCandidateJob[] = []
+  for (const [index, d] of directions.entries()) {
+    const result = await enqueueJob(ctx, {
+      feature: args.feature,
+      productId: args.productId,
+      payload: {
+        ...args.basePayload,
+        ...variantDirectionPayload(d),
+        ...(count > 1 ? { candidate_index: index + 1, candidate_count: count } : {}),
+      },
+      idempotencyKey: candidateIdempotencyKey(args.idempotencyKey, index),
+      ...(jobGroupId ? { jobGroupId } : {}),
+    })
+    candidates.push({ index: index + 1, result })
+  }
+  const first = candidates[0]!.result
+  const total = candidates.reduce((sum, c) => sum + c.result.usage.costCredit, 0)
+  const last = candidates[candidates.length - 1]!.result
+  return {
+    ...first,
+    usage: { costCredit: total, balanceAfter: last.usage.balanceAfter ?? first.usage.balanceAfter },
+    jobGroupId,
+    candidates,
+  }
 }
 
 /**
@@ -101,10 +178,11 @@ export async function requestVariants(ctx: TenantContext, input: RequestVariants
     )
   }
 
-  return enqueueJob(ctx, {
+  return enqueueCandidates(ctx, {
     feature: MEDIA_VARIANT_FEATURE,
+    engine: "local_studio",
     productId: master.product_id,
-    payload: {
+    basePayload: {
       master_asset_id: input.masterAssetId,
       preset: input.preset,
       ratio: input.ratio,
@@ -113,8 +191,9 @@ export async function requestVariants(ctx: TenantContext, input: RequestVariants
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
       ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),
       ...(input.scenePlanRevision ? { scene_plan_revision: input.scenePlanRevision } : {}),
-      ...(await directionPayload(ctx, input)),
     },
+    direction: await resolveDirection(ctx, input),
+    variantCount: input.variantCount,
     idempotencyKey: input.idempotencyKey,
   })
 }
@@ -151,10 +230,11 @@ export async function requestCloudVariant(ctx: TenantContext, input: RequestClou
 
   const scenePrompt = (input.scenePrompt ?? "").trim().slice(0, MAX_SCENE_PROMPT_LENGTH)
 
-  return enqueueJob(ctx, {
+  return enqueueCandidates(ctx, {
     feature: MEDIA_VARIANT_CLOUD_FEATURE,
+    engine: "cloud_provider",
     productId: master.product_id,
-    payload: {
+    basePayload: {
       master_asset_id: input.masterAssetId,
       preset: input.preset,
       ratio: input.ratio,
@@ -165,8 +245,9 @@ export async function requestCloudVariant(ctx: TenantContext, input: RequestClou
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
       ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),
       ...(input.scenePlanRevision ? { scene_plan_revision: input.scenePlanRevision } : {}),
-      ...(await directionPayload(ctx, input)),
     },
+    direction: await resolveDirection(ctx, input),
+    variantCount: input.variantCount,
     idempotencyKey: input.idempotencyKey,
   })
 }
@@ -177,6 +258,11 @@ export type RequestVariantBatchInput = {
   combinations?: readonly VariantCombination[]
   watermark: boolean
   autoEnhance?: boolean
+  /** Nợ #130e (Đợt 2, 25/09/2026): cảnh của kịch bản Chặng 05 để lấy gợi ý
+   *  cỡ cảnh / ánh sáng / bảng màu cho CẢ lô — thiếu thì mặc định như Đợt 1. */
+  scenePlanId?: string | undefined
+  sceneIndex?: NarrativeSceneIndex | undefined
+  direction?: VariantDirectionInput | undefined
   /** Khoá gốc của CẢ lượt gọi — mỗi job trong lô có khoá riêng dẫn xuất từ
    *  khoá này (`variantBatchIdempotencyKey`), không dùng thẳng. */
   idempotencyKey: string
@@ -229,6 +315,9 @@ export async function requestVariantBatch(
 
   const combinations = input.combinations ?? ALL_VARIANT_COMBINATIONS
   const jobGroupId = randomUUID()
+  // Một lần cho cả lô — cùng một cảnh nên cùng chỉ đạo khung hình.
+  const hint = await sceneHintFor(ctx, input.scenePlanId, input.sceneIndex)
+  const direction = variantDirectionPayload(resolveVariantDirection(input.direction ?? {}, hint))
   const jobs: RequestVariantBatchJobResult[] = []
 
   for (const combo of combinations) {
@@ -241,6 +330,9 @@ export async function requestVariantBatch(
         ratio: combo.ratio,
         watermark: input.watermark,
         auto_enhance: input.autoEnhance ?? false,
+        ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
+        ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),
+        ...direction,
       },
       idempotencyKey: variantBatchIdempotencyKey(input.idempotencyKey, combo),
       jobGroupId,

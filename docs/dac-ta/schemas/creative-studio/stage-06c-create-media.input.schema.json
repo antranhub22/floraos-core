@@ -157,6 +157,23 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 4294967294
+    },
+    "style": {
+      "description": "Phong cách hậu cảnh (ý định FloraOS) — Stability dịch sang style_preset; phông cục bộ ghi provider_ignored",
+      "type": "string",
+      "enum": [
+        "natural",
+        "cinematic",
+        "film",
+        "vivid"
+      ]
+    },
+    "variant_count": {
+      "default": 1,
+      "description": "Số phương án cho cảnh — n job con cùng job_group_id, credit nhân n. Mặc định 1 (PO chốt 24/09)",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
     }
   },
   "required": [
@@ -185,7 +202,9 @@
       "palette": [
         "đỏ",
         "kem"
-      ]
+      ],
+      "style": "natural",
+      "variant_count": 2
     }
   ]
 }

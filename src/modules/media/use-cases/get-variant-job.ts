@@ -48,6 +48,12 @@ export type VariantJobDetail = {
     cloud_fallback: boolean
     /** Lý do nhà cung cấp hậu cảnh lỗi (vd "Stability trả HTTP 402 …") — hiển thị cho người dùng. */
     cloud_fallback_reason: string | null
+    /** Nhóm phương án (Đợt 2, 25/09/2026) — `null` khi job đứng một mình. */
+    job_group_id: string | null
+    candidate_index: number | null
+    candidate_count: number | null
+    /** Chỉ đạo worker ĐÃ dùng (seed thật, phong cách…) — nút "Sinh lại giống thế này" gửi lại đúng bộ này. */
+    direction: Record<string, unknown> | null
   }
   /** Số ĐO, không phải số trang trí — xem `variant-rules.ts`. */
   subject_integrity: VariantIntegrityBlock | null
@@ -56,6 +62,21 @@ export type VariantJobDetail = {
     can_approve: boolean
     requires_warning: boolean
   }
+}
+
+/** Chỉ đạo đã dùng: worker ghi vào `output` (seed thật); thiếu thì lấy payload. */
+function directionOf(output: unknown, payload: unknown): Record<string, unknown> {
+  const pick = (k: string) => doc<unknown>(output, k, undefined) ?? doc<unknown>(payload, k, undefined)
+  const out: Record<string, unknown> = {}
+  for (const k of ["fill_mode", "composition", "light_direction", "palette", "seed", "style"]) {
+    const v = pick(k)
+    if (v !== undefined && v !== null) out[k] = v
+  }
+  if (out.light_direction === undefined) {
+    const lighting = doc<Record<string, unknown> | null>(payload, "lighting", null)
+    if (lighting && typeof lighting.direction === "string") out.light_direction = lighting.direction
+  }
+  return out
 }
 
 const TRANG_THAI: Record<string, "pending" | "approved" | "rejected"> = {
@@ -152,6 +173,10 @@ export async function getVariantJob(ctx: TenantContext, jobId: string): Promise<
       scene_index: typeof sceneIndex === "number" ? sceneIndex : null,
       cloud_fallback: cloudFallback === true,
       cloud_fallback_reason: typeof cloudFallbackReason === "string" ? cloudFallbackReason : null,
+      job_group_id: job.job_group_id ?? null,
+      candidate_index: typeof doc(payload, "candidate_index", null) === "number" ? doc<number>(payload, "candidate_index", 0) : null,
+      candidate_count: typeof doc(payload, "candidate_count", null) === "number" ? doc<number>(payload, "candidate_count", 0) : null,
+      direction: job.status === "COMPLETED" ? directionOf(job.output, payload) : null,
     },
     subject_integrity: integrity,
     variants,

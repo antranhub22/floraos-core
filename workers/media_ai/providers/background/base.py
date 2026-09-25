@@ -31,6 +31,10 @@ DO_DAI_PROMPT_TOI_DA = 600
 
 HUONG_SANG = ("left", "right", "above", "front")
 
+# Phong cách hậu cảnh — khớp `VARIANT_STYLES` ở
+# `src/modules/media/domain/variant-direction-rules.ts` (test TS đọc hằng này).
+PHONG_CACH = ("natural", "cinematic", "film", "vivid")
+
 _CUM_HUONG_SANG = {
     "left": "soft key light coming from the left",
     "right": "soft key light coming from the right",
@@ -69,6 +73,11 @@ class BackgroundRequest:
     palette: tuple[str, ...] = ()
     shot: str | None = None
     seed: int | None = None
+    # `style` (Đợt 2, 25/09/2026) — Ý ĐỊNH "phong cách hình ảnh" của FloraOS
+    # (`PHONG_CACH`: natural / cinematic / film / vivid), KHÔNG phải tên
+    # `style_preset` của nhà cung cấp nào. Adapter tự dịch (Stability:
+    # `STYLE_SANG_PRESET`); không hỗ trợ hoặc giá trị lạ thì ghi `bo_qua`.
+    style: str | None = None
 
 
 @dataclass(frozen=True)
@@ -79,6 +88,7 @@ class NangLuc:
     negative_prompt: bool
     ratios: frozenset[str]
     prompt: bool = True
+    style: bool = False
 
 
 @dataclass

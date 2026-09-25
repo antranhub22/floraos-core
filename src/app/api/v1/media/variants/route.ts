@@ -48,7 +48,10 @@ export const POST = handle(async (request) => {
       lighting: data.lighting,
       palette: data.palette,
       seed: data.seed,
+      style: data.style,
     },
+    // Đợt 2 (25/09/2026): n phương án = n job con cùng job_group_id.
+    variantCount: data.variant_count,
   }
 
   const result =
@@ -67,6 +70,14 @@ export const POST = handle(async (request) => {
       engine: data.engine,
       deduped: result.deduped,
       usage: { cost_credit: result.usage.costCredit, balance_after: result.usage.balanceAfter },
+      job_group_id: result.jobGroupId,
+      candidates: result.candidates.map((c) => ({
+        index: c.index,
+        job_id: c.result.job.id,
+        status: c.result.job.status,
+        deduped: c.result.deduped,
+        cost_credit: c.result.usage.costCredit,
+      })),
     },
     { status: 201 }
   )

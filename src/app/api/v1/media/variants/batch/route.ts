@@ -7,6 +7,7 @@ import { readIdempotencyKey } from "@/modules/jobs/domain/idempotency"
 import {
   VARIANT_PRESET_IDS,
   VARIANT_RATIOS,
+  type NarrativeSceneIndex,
   type VariantCombination,
 } from "@/modules/media/domain/variant-rules"
 import { requestVariantBatch } from "@/modules/media/use-cases/request-variants"
@@ -22,6 +23,10 @@ const postSchema = z.object({
   watermark: z.boolean().default(true),
   // AIC-14 — chốt 18/09 (AskUserQuestion): chỉ chỉnh vùng nền, mặc định tắt.
   auto_enhance: z.boolean().default(false),
+  // Nợ #130e (Đợt 2, 25/09/2026): lấy cỡ cảnh / ánh sáng / bảng màu của ĐÚNG
+  // cảnh trong kịch bản Chặng 05 cho cả lô. Bỏ trống = mặc định như Đợt 1.
+  scene_plan_id: z.string().trim().min(1).max(160).optional(),
+  scene_index: z.number().int().min(1).max(5).optional(),
 })
 
 /**
@@ -59,6 +64,8 @@ export const POST = handle(async (request) => {
     combinations,
     watermark: parsed.data.watermark,
     autoEnhance: parsed.data.auto_enhance,
+    scenePlanId: parsed.data.scene_plan_id,
+    sceneIndex: parsed.data.scene_index as NarrativeSceneIndex | undefined,
     idempotencyKey,
   })
 

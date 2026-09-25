@@ -40,6 +40,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import random
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -60,7 +61,7 @@ from media_ai.image.composition import tinh_bo_cuc
 from media_ai.image.defringe import EdgeDefringer
 from media_ai.image.ratio_frame import RATIO_PRESETS, dong_khung
 from media_ai.image.studio_backdrop import StudioBackdropEngine
-from media_ai.providers.background.base import HUONG_SANG, BackgroundRequest
+from media_ai.providers.background.base import HUONG_SANG, PHONG_CACH, BackgroundRequest
 from media_ai.providers.background.stability_background import (
     BackgroundProviderError,
     resolve_background_provider,
@@ -519,6 +520,7 @@ def dung_bien_the(
     composition: dict[str, Any] | None = None,
     lighting: dict[str, Any] | None = None,
     nguon_hau_canh: Callable[[str, int, int], Image.Image | None] | None = None,
+    seed_phong: int | None = None,
 ) -> tuple[list[dict[str, Any]], float, Any]:
     """Dựng danh sách biến thể, đo lõi chủ thể, và trả về bộ mở-rộng-khung
     (`ImageExpander`) đã dùng cho biến thể "styled" nếu có (`AIC-13`, nợ
@@ -561,6 +563,10 @@ def dung_bien_the(
     cho khung làm việc (nhánh Cloud) hoặc `None` để dùng phông cục bộ — gọi SAU
     khi đã biết kích thước khung, nên nhà cung cấp vẽ đúng tỉ lệ đích.
     Mỗi mục "styled" trả thêm `subject_box` (x, y, rộng, cao trong khung cuối).
+
+    `seed_phong` (Đợt 2, 25/09/2026): seed của phông CỤC BỘ (vùng sáng, bố cục
+    bokeh) — phương án cục bộ khác nhau thật và tái tạo được. Không dùng khi
+    hậu cảnh do nhà cung cấp sinh (seed đó thuộc nhà cung cấp).
 
     `on_stage` (nợ #110, 18/09): callback tuỳ chọn gọi ĐÚNG lúc chuyển từ
     bước tách chủ thể sang bước ghép bối cảnh — trước đây `process_variant_job`
@@ -638,6 +644,7 @@ def dung_bien_the(
             with_light_wrap=True,
             backdrop_image=anh_hau_canh,
             light_direction=huong_sang,
+            seed=seed_phong if anh_hau_canh is None else None,
         )
         if auto_enhance:
             anh_boi_canh = _ap_dung_auto_enhance(anh_boi_canh, khung_lam_viec)
@@ -845,6 +852,7 @@ def _ghi_asset_bien_the(
                         "scene_prompt": nguon.get("scene_prompt"),
                         "seed": nguon.get("seed"),
                         "fill_mode": nguon.get("fill_mode", "pad"),
+                        "style": nguon.get("style"),
                     }
                 ),
                 "identity_score": do_trung,
@@ -880,6 +888,12 @@ def _ghi_asset_bien_the(
                         "seed": nguon.get("seed"),
                         "scene_prompt": nguon.get("scene_prompt"),
                         "provider_ignored": nguon.get("provider_ignored") or [],
+                        # Đợt 2 (25/09/2026): phong cách + nhóm phương án.
+                        "style": nguon.get("style"),
+                        "palette": nguon.get("palette") or [],
+                        "candidate_index": nguon.get("candidate_index"),
+                        "candidate_count": nguon.get("candidate_count"),
+                        "job_group_id": nguon.get("job_group_id"),
                     }
                 ),
                 "created_by": job["user_id"],
@@ -937,7 +951,28 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
         lighting = payload.get("lighting") if isinstance(payload.get("lighting"), dict) else {}
         palette = tuple(str(m) for m in (payload.get("palette") or []) if isinstance(m, str))
         seed = payload.get("seed") if isinstance(payload.get("seed"), int) else None
-        nguon.update({"fill_mode": fill_mode, "composition": composition, "lighting": lighting})
+        # Đợt 2 (25/09/2026): phong cách (ý định FloraOS) + vị trí trong nhóm phương án.
+        style = payload.get("style") if payload.get("style") in PHONG_CACH else None
+        nguon.update(
+            {
+                "fill_mode": fill_mode, "composition": composition, "lighting": lighting,
+                "palette": list(palette), "style": style,
+                "candidate_index": payload.get("candidate_index"),
+                "candidate_count": payload.get("candidate_count"),
+                "job_group_id": job.get("job_group_id"),
+            }
+        )
+        seed_phong: int | None = None
+        if job.get("feature") != CLOUD_FEATURE or preset == "transparent":
+            # Phông cục bộ: seed đổi vùng sáng + bố cục bokeh (Đợt 2) — không
+            # truyền thì tự bốc và ghi lại để tái tạo được. Không đọc prompt /
+            # phong cách — nói thật.
+            seed_phong = seed if seed is not None else random.randint(0, 4_294_967_294)
+            nguon["seed"] = seed_phong
+            bo_qua_cuc_bo = ["style"] if style is not None else []
+            if palette or lighting.get("mood"):
+                bo_qua_cuc_bo.append("prompt")
+            nguon["provider_ignored"] = bo_qua_cuc_bo
 
         # Nhánh Cloud (23/09/2026) — nhà cung cấp chỉ vẽ HẬU CẢNH TRỐNG; mọi
         # lỗi (thiếu khoá, 402/403/429, mạng) lùi về phông cục bộ của chính
@@ -1017,6 +1052,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                             palette=palette,
                             shot=composition.get("shot"),
                             seed=seed,
+                            style=style,
                         )
                     )
                 except BackgroundProviderError as exc:
@@ -1046,6 +1082,7 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
                 composition=composition,
                 lighting=lighting,
                 nguon_hau_canh=nguon_hau_canh,
+                seed_phong=seed_phong,
             )
         except Exception:
             ghi_ai_request(
@@ -1151,6 +1188,10 @@ def process_variant_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "seed": nguon.get("seed"),
             "scene_prompt": nguon.get("scene_prompt"),
             "provider_ignored": nguon.get("provider_ignored") or [],
+            "style": nguon.get("style"),
+            "palette": nguon.get("palette") or [],
+            "candidate_index": nguon.get("candidate_index"),
+            "job_group_id": nguon.get("job_group_id"),
         }
         with conn.cursor() as cur:
             cur.execute(

@@ -61,8 +61,45 @@ class StudioBackdropEngine:
         },
     }
 
-    def create_bokeh_backdrop(self, width: int, height: int, with_grain: bool = True) -> Image.Image:
-        """Tạo phông nền không gian tiệm hoa nghệ thuật với vòng tròn Bokeh quang học f/1.8."""
+    # Tâm vùng sáng của phông theo hướng nguồn sáng (Đợt 2, 25/09/2026). Trước
+    # đây phông luôn sáng từ trên-trái dù bóng đổ đã theo `light_direction` —
+    # phông và bóng "nói hai hướng sáng khác nhau". "left" = đúng như cũ.
+    TAM_SANG_THEO_HUONG: dict[str, tuple[float, float]] = {
+        "left": (0.35, 0.25),
+        "right": (0.65, 0.25),
+        "above": (0.50, 0.12),
+        "front": (0.50, 0.38),
+    }
+
+    def _tam_sang(self, light_direction: str, seed: int | None, mac_dinh: tuple[float, float]) -> tuple[float, float, float]:
+        """(tâm x, tâm y, hệ số độ tối mép). `seed` (phương án, Đợt 2) dời tâm
+        sáng ±6% và đổi độ tối mép ±10% — cùng ý đồ, phông khác thật."""
+        if light_direction == "left" and seed is None:
+            return mac_dinh[0], mac_dinh[1], 1.0
+        cx, cy = self.TAM_SANG_THEO_HUONG.get(light_direction, mac_dinh)
+        if light_direction == "left":
+            cx, cy = mac_dinh
+        if seed is None:
+            return cx, cy, 1.0
+        rng = np.random.default_rng(seed)
+        return (
+            float(np.clip(cx + rng.uniform(-0.06, 0.06), 0.05, 0.95)),
+            float(np.clip(cy + rng.uniform(-0.06, 0.06), 0.05, 0.95)),
+            float(rng.uniform(0.9, 1.1)),
+        )
+
+    def create_bokeh_backdrop(
+        self,
+        width: int,
+        height: int,
+        with_grain: bool = True,
+        light_direction: str = "left",
+        seed: int | None = None,
+    ) -> Image.Image:
+        """Tạo phông nền không gian tiệm hoa nghệ thuật với vòng tròn Bokeh quang học f/1.8.
+
+        `seed` (Đợt 2): bố cục đốm bokeh sinh theo seed — mỗi phương án một
+        khung cảnh; `None` giữ nguyên 10 đốm cố định như trước."""
         import cv2
 
         # Lấy dải màu nền ấm từ bảng màu boutique_bokeh
@@ -71,13 +108,14 @@ class StudioBackdropEngine:
         e_r, e_g, e_b = palette["edge"]
 
         y, x = np.ogrid[:height, :width]
-        center_x = width * 0.40
-        center_y = height * 0.30
+        tx, ty, k_mep = self._tam_sang(light_direction, seed, (0.40, 0.30))
+        center_x = width * tx
+        center_y = height * ty
         max_dist = math.sqrt((width - center_x) ** 2 + (height - center_y) ** 2)
 
         dist = np.sqrt((x - center_x) ** 2 + (y - center_y) ** 2) / max_dist
         dist = np.clip(dist, 0.0, 1.0)
-        factor = dist * dist * (3 - 2 * dist)
+        factor = np.clip(dist * dist * (3 - 2 * dist) * k_mep, 0.0, 1.0)
 
         r = c_r + (e_r - c_r) * factor
         g = c_g + (e_g - c_g) * factor
@@ -103,6 +141,17 @@ class StudioBackdropEngine:
             (0.08, 0.40, 48, (250, 240, 225, 40)),
             (0.92, 0.55, 58, (252, 244, 230, 45)),
         ]
+        if seed is not None:
+            rng = np.random.default_rng(seed)
+            bokeh_spots = [
+                (
+                    float(rng.uniform(0.04, 0.96)),
+                    float(rng.uniform(0.04, 0.9)),
+                    int(rng.uniform(38, 85)),
+                    (int(rng.uniform(242, 256)), int(rng.uniform(228, 253)), int(rng.uniform(205, 241)), int(rng.uniform(30, 62))),
+                )
+                for _ in range(int(rng.integers(8, 14)))
+            ]
 
         for rx, ry, r, (cr, cg, cb, ca) in bokeh_spots:
             cx = int(width * rx)
@@ -137,13 +186,20 @@ class StudioBackdropEngine:
         height: int,
         style: StudioStyle = "warm_gray",
         with_grain: bool = True,
+        light_direction: str = "left",
+        seed: int | None = None,
     ) -> Image.Image:
-        """Tạo phông nền studio với dải sáng softbox mềm mại và vi hạt quang học (Film Grain)."""
+        """Tạo phông nền studio với dải sáng softbox mềm mại và vi hạt quang học (Film Grain).
+
+        `light_direction` / `seed` (Đợt 2, 25/09/2026): vùng sáng của phông theo
+        đúng hướng nguồn sáng của cảnh; seed đổi nhẹ vị trí/độ sâu vùng sáng
+        (và bố cục bokeh) để các phương án cục bộ khác nhau thật. Mặc định
+        ("left", None) cho ra đúng phông như trước."""
         if style == "transparent":
             return Image.new("RGBA", (width, height), (0, 0, 0, 0))
 
         if style == "boutique_bokeh":
-            return self.create_bokeh_backdrop(width, height, with_grain=with_grain)
+            return self.create_bokeh_backdrop(width, height, with_grain=with_grain, light_direction=light_direction, seed=seed)
 
         palette = self.STYLE_PALETTES.get(style, self.STYLE_PALETTES["warm_gray"])
         c_r, c_g, c_b = palette["center"]
@@ -152,14 +208,15 @@ class StudioBackdropEngine:
         # Hướng sáng mềm mại nghiêng góc 45° từ góc trên-trái (Top-Left)
         # khớp tự nhiên với ánh sáng cửa sổ thường thấy trên các ảnh chụp hoa
         y, x = np.ogrid[:height, :width]
-        center_x = width * 0.35
-        center_y = height * 0.25
+        tx, ty, k_mep = self._tam_sang(light_direction, seed, (0.35, 0.25))
+        center_x = width * tx
+        center_y = height * ty
         max_dist = math.sqrt((width - center_x) ** 2 + (height - center_y) ** 2)
 
         dist = np.sqrt((x - center_x) ** 2 + (y - center_y) ** 2) / max_dist
         dist = np.clip(dist, 0.0, 1.0)
         # Đường cong sigmoid mượt mà
-        factor = dist * dist * (3 - 2 * dist)
+        factor = np.clip(dist * dist * (3 - 2 * dist) * k_mep, 0.0, 1.0)
 
         r = c_r + (e_r - c_r) * factor
         g = c_g + (e_g - c_g) * factor
@@ -326,6 +383,7 @@ class StudioBackdropEngine:
         with_arm_fadeout: bool = False,
         backdrop_image: Image.Image | None = None,
         light_direction: str = "left",
+        seed: int | None = None,
     ) -> Image.Image:
         """Ghép chủ thể RGBA vào phông Studio với hệ thống bóng đổ 2 tầng và Light Wrap quang học.
 
@@ -343,7 +401,7 @@ class StudioBackdropEngine:
         if backdrop_image is not None:
             backdrop = self.fit_backdrop_image(backdrop_image, w, h)
         else:
-            backdrop = self.create_backdrop(w, h, style=style, with_grain=True)
+            backdrop = self.create_backdrop(w, h, style=style, with_grain=True, light_direction=light_direction, seed=seed)
 
         # 1. Làm mềm viền quang học (Alpha Feathering)
         processed_subject = self.apply_alpha_feathering(subject_rgba, radius=1.1)

@@ -24,6 +24,19 @@ import {
 } from "lucide-react"
 import { CreativeStudioContext } from "@/app/(app)/creative-studio/page"
 import type { PublishRatio } from "@/modules/creative-production/domain/publishing-rules"
+import {
+  alternateDirection,
+  directionFromRecord,
+  directionRequestFields,
+  SIMILAR_CANDIDATE_COUNT,
+  similarDirection,
+  variantTotalCostCredit,
+  variantUnitCostCredit,
+} from "@/modules/media/domain/variant-candidates"
+import {
+  VARIANT_STYLE_LABELS,
+  type VariantDirection,
+} from "@/modules/media/domain/variant-direction-rules"
 import { FlowSteps } from "@/components/flow/flow-steps"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -63,13 +76,42 @@ type SceneMeta = {
   planRevision?: number | null
   /** Tỉ lệ khung ảnh đã sinh. */
   ratio?: string | null
+  /** Chỉ đạo worker ĐÃ dùng (Đợt 2) — cho "Sinh lại giống thế này". */
+  direction?: VariantDirection | null
+}
+
+/** Một phương án của cảnh (Đợt 2, 25/09/2026) — mỗi phương án là một job. */
+type SceneCandidate = SceneMeta & { url: string }
+
+function metaOf(c: SceneCandidate): SceneMeta {
+  const { url, ...meta } = c
+  void url
+  return meta
+}
+
+/** Tối đa bao nhiêu phương án gần nhất hiện trên thẻ cảnh. */
+const MAX_CANDIDATES_SHOWN = 8
+
+const SHOT_LABEL: Record<string, string> = { close: "Cận", medium: "Trung", wide: "Toàn" }
+const LIGHT_LABEL: Record<string, string> = { left: "sáng trái", right: "sáng phải", above: "sáng trên", front: "sáng trước" }
+
+function describeDirection(d: VariantDirection | null | undefined): string {
+  if (!d) return ""
+  const parts = [SHOT_LABEL[d.composition.shot] ?? d.composition.shot, LIGHT_LABEL[d.lighting.direction] ?? d.lighting.direction]
+  if (d.style) parts.push(VARIANT_STYLE_LABELS[d.style])
+  return parts.join(" · ")
 }
 
 type VariantJobPoll = {
   status: string
   result: string | null
   error: string | null
-  source: { engine: "local_studio" | "cloud_provider"; cloud_fallback: boolean; cloud_fallback_reason?: string | null }
+  source: {
+    engine: "local_studio" | "cloud_provider"
+    cloud_fallback: boolean
+    cloud_fallback_reason?: string | null
+    direction?: Record<string, unknown> | null
+  }
   subject_integrity: { subject_pixel_identity: number } | null
   variants: Array<{ asset_id: string; variant_key: string; url: string }>
 }
@@ -133,6 +175,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   // không còn số "99.9%" gõ tay.
   const [sceneImageMap, setSceneImageMap] = useState<Record<number, string>>({})
   const [sceneMeta, setSceneMeta] = useState<Record<number, SceneMeta>>({})
+  // Các phương án của từng cảnh (Đợt 2) — mới nhất trước; phương án đang chọn = sceneMeta.
+  const [sceneCandidates, setSceneCandidates] = useState<Record<number, SceneCandidate[]>>({})
   const [sceneErrors, setSceneErrors] = useState<Record<number, string>>({})
   const [generatingSceneIndex, setGeneratingSceneIndex] = useState<number | null>(null)
   const [generatingAllScenes, setGeneratingAllScenes] = useState<boolean>(false)
@@ -367,6 +411,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         }
         const urls: Record<number, string> = {}
         const metas: Record<number, SceneMeta> = {}
+        const candidates: Record<number, SceneCandidate[]> = {}
+        const jobsSeen = new Set<string>()
         const pngByJob: Record<string, string> = {}
         const seenByRatio: Record<string, Set<number>> = {}
         const primary = planRatio ?? "9:16"
@@ -385,11 +431,13 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           const itemRatio = typeof meta.ratio === "string" ? meta.ratio : primary
           ;(seenByRatio[itemRatio] ??= new Set()).add(idx)
           if (itemRatio !== viewRatio) continue
-          if (urls[idx]) continue
-          urls[idx] = item.url
-          metas[idx] = {
+          // Mỗi job (phương án) một ảnh — bản đóng dấu và bản bối cảnh cùng job chỉ tính một.
+          if (jobId && jobsSeen.has(jobId)) continue
+          if (jobId) jobsSeen.add(jobId)
+          const candidate: SceneCandidate = {
+            url: item.url,
             assetId: item.id,
-            jobId: typeof meta.job_id === "string" ? meta.job_id : "",
+            jobId,
             integrity: typeof item.identity_score === "number" ? item.identity_score : null,
             engine: meta.engine === "cloud_provider" ? "cloud_provider" : "local_studio",
             cloudFallback: meta.cloud_fallback === true,
@@ -397,12 +445,20 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
             approved: item.approval_state === "APPROVED",
             planRevision: typeof meta.scene_plan_revision === "number" ? meta.scene_plan_revision : null,
             ratio: typeof meta.ratio === "string" ? meta.ratio : null,
+            direction: directionFromRecord(meta),
           }
+          const list = (candidates[idx] ??= [])
+          if (list.length < MAX_CANDIDATES_SHOWN) list.push(candidate)
+          if (urls[idx]) continue
+          urls[idx] = item.url
+          metas[idx] = metaOf(candidate)
         }
         if (cancelled) return
         for (const m of Object.values(metas)) m.transparentUrl = pngByJob[m.jobId] ?? null
+        for (const list of Object.values(candidates)) for (const c of list) c.transparentUrl = pngByJob[c.jobId] ?? null
         setSceneImageMap(urls)
         setSceneMeta(metas)
+        setSceneCandidates(candidates)
         setRatioCounts(Object.fromEntries(Object.entries(seenByRatio).map(([r, set]) => [r, set.size])))
       } catch (e) {
         console.error("Lỗi nạp phân cảnh đã sinh:", e)
@@ -415,7 +471,11 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   }, [activeMasterId, planRef, viewRatio, planRatio, scenesReload])
 
   // Sinh MỘT phân cảnh qua hàng đợi job rồi chờ kết quả thật.
-  const handleGenerateSingleScene = async (targetIndex: number, ratioArg?: string): Promise<void> => {
+  const handleGenerateSingleScene = async (
+    targetIndex: number,
+    ratioArg?: string,
+    opts?: { direction?: VariantDirection; count?: number }
+  ): Promise<void> => {
     const ratio = ratioArg || variantRatio || "1:1"
     // Sinh cho khung đang xem thì cập nhật bảng ngay; khung khác chỉ tăng bộ đếm.
     const isActive = () => ratio === activeRatioRef.current
@@ -455,40 +515,53 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           scene_plan_id: planRef,
           scene_plan_revision: scenePlan?.revision ?? 1,
           ...(useCloud ? { provider_key: "stability", scene_prompt: scene.backgroundPrompt } : {}),
+          // Đợt 2 (25/09/2026): chỉ đạo tường minh (Sinh lại giống / Thử hướng khác)
+          // và số phương án. Không có thì máy chủ lấy từ kịch bản như Đợt 1.
+          ...(opts?.direction ? directionRequestFields(opts.direction) : {}),
+          ...(opts?.count && opts.count > 1 ? { variant_count: opts.count } : {}),
         }),
       })
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
         throw new Error(err.error?.message || `Lỗi API HTTP ${res.status}`)
       }
-      const { job_id: jobId } = (await res.json()) as { job_id: string }
-      const detail = await waitForVariantJob(jobId)
+      const created = (await res.json()) as { job_id: string; candidates?: Array<{ job_id: string }> }
+      const jobIds = created.candidates?.map((c) => c.job_id) ?? [created.job_id]
 
-      if (detail.status !== "COMPLETED") {
-        throw new Error(detail.error || "Worker không dựng được phân cảnh này")
-      }
-      if (detail.result === "REJECTED") {
-        const measured = detail.subject_integrity?.subject_pixel_identity
-        throw new Error(
-          `Cổng Subject Integrity từ chối${
-            typeof measured === "number" ? ` (lõi trùng khít ${(measured * 100).toFixed(2)}%, cần ≥ 99%)` : ""
-          }: lõi bó hoa bị thay đổi — không biến thể nào được ghi vào kho.`
-        )
-      }
-      const wantKeys = watermarkEnabled ? ["branded", "styled"] : ["styled"]
-      const variant =
-        wantKeys.map((k) => detail.variants.find((v) => v.variant_key === k)).find(Boolean) ??
-        detail.variants[0]
-      if (!variant) throw new Error("Job hoàn tất nhưng không có ảnh nào được ghi.")
-
-      if (!isActive()) {
-        setScenesReload((n) => n + 1)
-        return
-      }
-      setSceneImageMap((prev) => ({ ...prev, [targetIndex]: variant.url }))
-      setSceneMeta((prev) => ({
-        ...prev,
-        [targetIndex]: {
+      // Mỗi phương án là một job riêng — chờ song song, phương án hỏng không kéo đổ phương án khác.
+      const settled = await Promise.allSettled(jobIds.map((id) => waitForVariantJob(id)))
+      const made: SceneCandidate[] = []
+      const failures: string[] = []
+      settled.forEach((r, i) => {
+        const jobId = jobIds[i]!
+        if (r.status === "rejected") {
+          failures.push(r.reason instanceof Error ? r.reason.message : "Không đọc được job")
+          return
+        }
+        const detail = r.value
+        if (detail.status !== "COMPLETED") {
+          failures.push(detail.error || "Worker không dựng được phân cảnh này")
+          return
+        }
+        if (detail.result === "REJECTED") {
+          const measured = detail.subject_integrity?.subject_pixel_identity
+          failures.push(
+            `Cổng Subject Integrity từ chối${
+              typeof measured === "number" ? ` (lõi trùng khít ${(measured * 100).toFixed(2)}%, cần ≥ 99%)` : ""
+            }: lõi bó hoa bị thay đổi — không biến thể nào được ghi vào kho.`
+          )
+          return
+        }
+        const wantKeys = watermarkEnabled ? ["branded", "styled"] : ["styled"]
+        const variant =
+          wantKeys.map((k) => detail.variants.find((v) => v.variant_key === k)).find(Boolean) ??
+          detail.variants[0]
+        if (!variant) {
+          failures.push("Job hoàn tất nhưng không có ảnh nào được ghi.")
+          return
+        }
+        made.push({
+          url: variant.url,
           assetId: variant.asset_id,
           jobId,
           integrity: detail.subject_integrity?.subject_pixel_identity ?? null,
@@ -498,8 +571,29 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           transparentUrl: detail.variants.find((v) => v.variant_key === "transparent")?.url ?? null,
           planRevision: scenePlan?.revision ?? null,
           ratio,
-        },
+          direction: detail.source.direction ? directionFromRecord(detail.source.direction) : null,
+        })
+      })
+      if (made.length === 0) throw new Error(failures[0] ?? "Không sinh được phân cảnh")
+
+      if (!isActive()) {
+        setScenesReload((n) => n + 1)
+        return
+      }
+      const [chosen] = made
+      const { url: chosenUrl, ...chosenMeta } = chosen!
+      setSceneImageMap((prev) => ({ ...prev, [targetIndex]: chosenUrl }))
+      setSceneMeta((prev) => ({ ...prev, [targetIndex]: chosenMeta }))
+      setSceneCandidates((prev) => ({
+        ...prev,
+        [targetIndex]: [...made, ...(prev[targetIndex] ?? [])].slice(0, MAX_CANDIDATES_SHOWN),
       }))
+      if (failures.length > 0) {
+        setSceneErrors((prev) => ({
+          ...prev,
+          [targetIndex]: `${failures.length}/${jobIds.length} phương án không dựng được: ${failures[0]}`,
+        }))
+      }
       setSelectedSceneIndex(targetIndex)
     } catch (err) {
       setSceneErrors((prev) => ({
@@ -528,6 +622,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         throw new Error(err.error?.message || `Không duyệt được (HTTP ${res.status})`)
       }
       setSceneMeta((prev) => ({ ...prev, [targetIndex]: { ...meta, approved: true } }))
+      setSceneCandidates((prev) => ({
+        ...prev,
+        [targetIndex]: (prev[targetIndex] ?? []).map((c) => (c.jobId === meta.jobId ? { ...c, approved: true } : c)),
+      }))
     } catch (err) {
       setSceneErrors((prev) => ({
         ...prev,
@@ -536,6 +634,13 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     } finally {
       setApprovingSceneIndex(null)
     }
+  }
+
+  // Chọn một phương án làm ảnh của cảnh (Đợt 2) — duyệt I5 áp lên phương án đang chọn.
+  const handleSelectCandidate = (targetIndex: number, candidate: SceneCandidate) => {
+    const { url, ...meta } = candidate
+    setSceneImageMap((prev) => ({ ...prev, [targetIndex]: url }))
+    setSceneMeta((prev) => ({ ...prev, [targetIndex]: meta }))
   }
 
   // Sinh trọn bộ phân cảnh của kịch bản — tuần tự, mỗi cảnh một job (một lượt trừ credit).
@@ -607,7 +712,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
   }, [planScenes, scenePlan, sceneEngine, sceneImageMap, sceneMeta, sceneErrors, variantRatio, viewRatio])
 
   const sceneCount = planScenes.length
-  const sceneCreditTotal = narrativeResultScenes.reduce((sum, sc) => sum + (sc.usesCloud ? 2 : 1), 0)
+  const sceneCreditTotal = narrativeResultScenes.reduce(
+    (sum, sc) => sum + variantUnitCostCredit(sc.usesCloud ? "cloud_provider" : "local_studio"),
+    0
+  )
   const cloudAvailable = scenePlan?.mode === "CREATIVE"
   const generatedSceneCount = narrativeResultScenes.filter((s) => s.hasGenerated).length
   const measuredIntegrities = narrativeResultScenes
@@ -832,6 +940,94 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                     </span>
                   </div>
                 </div>
+
+                {activeScene.hasGenerated && (() => {
+                  // ── Phương án (Đợt 2, 25/09/2026) ──
+                  const idx = activeScene.sceneIndex
+                  const list = sceneCandidates[idx] ?? []
+                  const current = sceneMeta[idx]?.direction ?? null
+                  const engine = activeScene.usesCloud ? "cloud_provider" : "local_studio"
+                  const busy = generatingSceneIndex !== null || generatingAllScenes
+                  const similarCost = variantTotalCostCredit(engine, SIMILAR_CANDIDATE_COUNT)
+                  const altCost = variantTotalCostCredit(engine, 1)
+                  return (
+                    <div className="rounded-xl border border-border p-3 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-text">
+                          Phương án của cảnh {idx} ({list.length})
+                        </span>
+                        {current && <span className="text-text-muted">Đang xem: {describeDirection(current)}</span>}
+                      </div>
+                      {list.length > 1 && (
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {list.map((c, i) => {
+                            const chosen = c.jobId === sceneMeta[idx]?.jobId
+                            return (
+                              <button
+                                key={c.jobId || c.assetId}
+                                type="button"
+                                title={describeDirection(c.direction)}
+                                onClick={() => handleSelectCandidate(idx, c)}
+                                className={`relative h-16 w-16 shrink-0 rounded-lg border-2 overflow-hidden cursor-pointer ${
+                                  chosen ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-text-muted"
+                                }`}
+                              >
+                                <img src={c.url} alt={`Phương án ${list.length - i}`} className="h-full w-full object-cover" />
+                                {c.approved && (
+                                  <span className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full bg-success text-white flex items-center justify-center">
+                                    <Check size={10} strokeWidth={3} />
+                                  </span>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={busy || !current}
+                          onClick={() =>
+                            current &&
+                            handleGenerateSingleScene(idx, activeScene.ratio, {
+                              direction: similarDirection(current, engine),
+                              count: SIMILAR_CANDIDATE_COUNT,
+                            })
+                          }
+                          className="gap-1.5 text-xs h-8 cursor-pointer"
+                          title={
+                            engine === "cloud_provider"
+                              ? "Giữ cỡ cảnh, ánh sáng, phong cách — hậu cảnh mới (seed mới)"
+                              : "Giữ cỡ cảnh và phong cách — dời vị trí bó hoa / hướng sáng"
+                          }
+                        >
+                          <RotateCcw size={12} /> Sinh lại giống thế này · {SIMILAR_CANDIDATE_COUNT} phương án ({similarCost} credit)
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={busy || !current}
+                          onClick={() =>
+                            current && handleGenerateSingleScene(idx, activeScene.ratio, { direction: alternateDirection(current) })
+                          }
+                          className="gap-1.5 text-xs h-8 cursor-pointer"
+                          title={current ? `Hướng mới: ${describeDirection(alternateDirection(current))}` : undefined}
+                        >
+                          <Sparkles size={12} /> Thử hướng khác ({altCost} credit)
+                        </Button>
+                      </div>
+                      {engine === "local_studio" && (
+                        <p className="text-[11px] text-text-muted">
+                          Phông Studio cục bộ chỉ đổi vùng sáng, bố cục bokeh và vị trí bó hoa — muốn hậu cảnh khác hẳn
+                          nhau, bật hậu cảnh Stability cho cảnh này.
+                        </p>
+                      )}
+                    </div>
+                  )
+                })()}
 
                 <div className="flex items-center gap-2.5 pt-1">
                   <Button
