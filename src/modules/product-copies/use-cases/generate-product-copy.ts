@@ -2,7 +2,8 @@ import { AppError } from "@/core/http/errors";
 import { requireCapability } from "@/core/rbac/capabilities";
 import { callCapability } from "@/core/ai/gateway";
 import { aiGatewayDeps } from "@/core/ai/wiring";
-import { OpenAILLMProvider } from "@/core/ai/adapters/openai-llm-provider";
+import { createContentLLM } from "@/core/ai/adapters/multi-llm-provider";
+import { providerOrderFor } from "@/modules/creative-production/use-cases/provider-preferences";
 import type { TenantContext } from "@/core/tenancy";
 
 import { ProductCopyRepository } from "../infra/product-copy-repository";
@@ -115,8 +116,9 @@ export async function generateProductCopy(
         privacy: "SHOP",
         entity: { type: "product_copy", id: input.analysisId },
         jobId: job.id,
+        preferredModelKeys: await providerOrderFor(ctx, "content"),
       },
-      createProductCopyAdapter(new OpenAILLMProvider(), aiPayload, ctx.organizationId),
+      createProductCopyAdapter(createContentLLM(), aiPayload, ctx.organizationId),
       aiGatewayDeps(ctx)
     );
 

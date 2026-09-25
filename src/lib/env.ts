@@ -19,6 +19,10 @@ const schema = z.object({
   // độc lập.
   SSO_SESSION_SECRET: z.string().min(16),
   OPENAI_API_KEY: z.string().optional(),
+  // Nhà cung cấp nội dung tương đương OpenAI (PO 25/09/2026) — thiếu khoá thì
+  // bên đó bị bỏ qua trong chuỗi lùi, không làm hỏng khởi động.
+  ANTHROPIC_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
   // Proxy sang engine ngoài (P15+). Ba app ba cổng theo bảng cổng cục bộ đã chốt
   // 2026-09-10 (core 3100 / LocalBudd 3000 / SocialFlow 8000). Dashboard core
   // gọi sibling qua proxy server-side để tránh rào cản CORS trình duyệt — xem

@@ -1,10 +1,13 @@
 /**
- * OpenAI Vision Adapter cho phân hệ Market Intelligence.
- * Sử dụng mô hình gpt-4o-mini đa phương thức (multimodal) để bóc tách cấu trúc hoa thực tế từ ảnh
- * (Data URL base64 hoặc Web URL).
+ * Chặng 02 — lời nhắc + bộ đọc JSON cho bước bóc tách ảnh sản phẩm hoa.
+ *
+ * 25/09/2026 (nợ #155): KHÔNG còn gọi thẳng API nhà cung cấp ở đây. Lời gọi đi
+ * qua cổng AI (`callCapability`, `product-vision-ai-adapter.ts`) với nhiều nhà
+ * cung cấp tương đương (OpenAI / Claude / Gemini) theo thứ tự ưu tiên của tiệm.
+ * Tệp này chỉ giữ phần THUẦN: lời nhắc hệ thống, lời dặn cho ảnh, và ánh xạ
+ * JSON mô hình trả về sang kiểu miền.
  */
 
-import { env } from "@/lib/env";
 import type {
   ProductFlowerComponent,
   ProductVisualAttributes,
@@ -32,33 +35,7 @@ export interface VisionExtractionResult {
   context: ProductInferredContext;
 }
 
-export async function extractProductVisionWithAI(params: {
-  imageUrl: string;
-  productTitle?: string | undefined;
-}): Promise<VisionExtractionResult | null> {
-  const apiKey = env.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
-
-  const { imageUrl, productTitle } = params;
-
-  // Chỉ gửi sang OpenAI nếu URL là Data URL base64 hoặc URL công khai http/https
-  const isEligibleUrl =
-    imageUrl.startsWith("data:image/") ||
-    imageUrl.startsWith("https://") ||
-    imageUrl.startsWith("http://");
-
-  if (!isEligibleUrl || imageUrl.startsWith("blob:")) {
-    return null;
-  }
-
-  // Trong môi trường test tự động, không gọi mạng bên ngoài trừ khi có LIVE_AI_TEST
-  if (process.env.NODE_ENV === "test" && !process.env.LIVE_AI_TEST) {
-    return null;
-  }
-
-  const systemPrompt = `Bạn là chuyên gia thẩm định thị giác hoa nghệ thuật cao cấp của FloraOS.
+export const PRODUCT_VISION_SYSTEM_PROMPT = `Bạn là chuyên gia thẩm định thị giác hoa nghệ thuật cao cấp của FloraOS.
 Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa tươi được cung cấp, nhận diện chính xác từng chi tiết và xuất ra định dạng JSON thuần túy (không markdown, không giải thích ngoài JSON) theo đúng cấu trúc sau:
 {
   "product_name": "Tên thương mại cuốn hút cho sản phẩm (ví dụ: Bó hoa hồng đỏ Passionate Love, Bó hoa tulip cam cháy vintage...)",
@@ -110,55 +87,18 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
   "confidence": 0.9 // Độ tin cậy mô hình tự đánh giá (0–1), KHÔNG làm tròn lên
 }`;
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Hãy quan sát thật kỹ và bóc tách toàn diện sản phẩm hoa trong bức ảnh này.${
-                  productTitle ? ` Gợi ý tiêu đề ban đầu: ${productTitle}.` : ""
-                } Đặc biệt chú ý:
+export function productVisionUserText(productTitle?: string | undefined): string {
+  return `Hãy quan sát thật kỹ và bóc tách toàn diện sản phẩm hoa trong bức ảnh này.${
+    productTitle ? ` Gợi ý tiêu đề ban đầu: ${productTitle}.` : ""
+  } Đặc biệt chú ý:
 1. Nhận diện các loại hoa chính, hoa phụ và cả LÁ PHỤ ĐỆM (foliage).
 2. Soi kỹ mặt trước, chân bó và vùng nơ xem CÓ THIỆP / BIỂN CHỮ KHÔNG, đọc chính xác nội dung chữ in/viết trên thiệp (OCR).
-3. Bóc tách chi tiết chất liệu giấy gói, màu ruy băng và phụ kiện trang trí đi kèm.`,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl,
-                  detail: "high",
-                },
-              },
-            ],
-          },
-        ],
-        max_tokens: 1500,
-        temperature: 0.2,
-      }),
-      signal: AbortSignal.timeout(20000), // Timeout 20s
-    });
+3. Bóc tách chi tiết chất liệu giấy gói, màu ruy băng và phụ kiện trang trí đi kèm.`;
+}
 
-    if (!response.ok) {
-      console.warn("OpenAI Vision API response error:", response.status, await response.text());
-      return null;
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) return null;
-
+/** Đọc JSON mô hình trả về → kiểu miền. Không đọc được / không có thành phần hoa → `null`. */
+export function parseProductVisionJson(content: string, productTitle?: string | undefined): VisionExtractionResult | null {
+  try {
     const parsed = JSON.parse(content);
 
     const components: ProductFlowerComponent[] = [];
@@ -286,8 +226,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
       packaging,
       context,
     };
-  } catch (error) {
-    console.error("Lỗi khi thực hiện OpenAI Vision analysis:", error);
+  } catch {
     return null;
   }
 }

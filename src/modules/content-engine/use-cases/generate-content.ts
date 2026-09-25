@@ -21,7 +21,8 @@ import { AppError } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { callCapability } from "@/core/ai/gateway"
 import { aiGatewayDeps } from "@/core/ai/wiring"
-import { OpenAILLMProvider } from "@/core/ai/adapters/openai-llm-provider"
+import { createContentLLM } from "@/core/ai/adapters/multi-llm-provider"
+import { providerOrderFor } from "@/modules/creative-production/use-cases/provider-preferences"
 import type { LLMProvider } from "@/core/ports/llm-provider"
 import type { TenantContext } from "@/core/tenancy"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
@@ -77,6 +78,8 @@ export interface GenerateContentInput {
   readonly idempotencyKey: string
   /** Lượt này đã được thu tiền ở job khác (Chặng 05, nợ #146) — xem `EnqueueJobInput.includedInJobId`. */
   readonly includedInJobId?: string | undefined
+  /** Nhà cung cấp nội dung chọn cho lượt này (khoá `provider-catalog.ts`, loại `content`). */
+  readonly contentProvider?: string | null | undefined
 }
 
 export interface ContentGenerationView {
@@ -124,10 +127,11 @@ async function writeChannel(
   brief: ContentBrief,
   channel: PackageChannel,
   strategy: { channel: PackageChannel; angle: string; hooks: readonly string[]; outline: string; factIds: readonly string[]; cta: string } | null,
-  jobId: string
+  jobId: string,
+  preferredModelKeys: readonly string[]
 ): Promise<{ text: string; hashtags: readonly string[]; factIds: readonly string[]; source: ContentPostSource }> {
   const result = await callCapability(
-    { capability: "content_generation", privacy: "SHOP", entity: { type: "content_generation", id: jobId }, jobId },
+    { capability: "content_generation", privacy: "SHOP", entity: { type: "content_generation", id: jobId }, jobId, preferredModelKeys },
     createWriterAdapter(llm, { brief, channel, strategy }, ctx.organizationId),
     aiGatewayDeps(ctx)
   )
@@ -193,7 +197,10 @@ export async function generateContent(ctx: TenantContext, input: GenerateContent
       scenePlanId: input.scenePlanId ?? null,
       channels: input.channels,
     })
-    const llm = new OpenAILLMProvider()
+    // Nhiều nhà cung cấp tương đương (PO 25/09/2026): thứ tự = bên chọn cho lượt
+    // này → thứ tự của tiệm → mặc định; cổng AI tự chuyển bên khi một bên hỏng.
+    const llm = createContentLLM()
+    const preferredModelKeys = await providerOrderFor(ctx, "content", input.contentProvider)
     const hasStory = brief.story !== null && brief.story !== undefined
 
     // Sự kiện tiến độ (`job_events`, mục 4 kế hoạch) — cùng cơ chế
@@ -204,7 +211,7 @@ export async function generateContent(ctx: TenantContext, input: GenerateContent
     // 1) Strategist — hỏng thì Writer viết thẳng từ brief (strategy: null).
     await jobRepo.setStage(ctx, enq.job.id, "STRATEGIST")
     const strategistResult = await callCapability(
-      { capability: "content_strategy", privacy: "SHOP", entity: { type: "content_generation", id: enq.job.id }, jobId: enq.job.id },
+      { capability: "content_strategy", privacy: "SHOP", entity: { type: "content_generation", id: enq.job.id }, jobId: enq.job.id, preferredModelKeys },
       createStrategistAdapter(llm, brief, input.channels, ctx.organizationId),
       aiGatewayDeps(ctx)
     )
@@ -215,7 +222,7 @@ export async function generateContent(ctx: TenantContext, input: GenerateContent
     const writerOutputs = await Promise.all(
       input.channels.map(async (channel) => {
         const channelStrategy = strategy?.channels.find((c) => c.channel === channel) ?? null
-        const written = await writeChannel(ctx, llm, brief, channel, channelStrategy, enq.job.id)
+        const written = await writeChannel(ctx, llm, brief, channel, channelStrategy, enq.job.id, preferredModelKeys)
         return { channel, ...written }
       })
     )
@@ -229,7 +236,7 @@ export async function generateContent(ctx: TenantContext, input: GenerateContent
     // 4) Critic — MỘT lượt cho tất cả kênh. Hỏng thì chỉ dùng kiểm tất định.
     await jobRepo.setStage(ctx, enq.job.id, "CRITIC")
     const criticResult = await callCapability(
-      { capability: "content_qa", privacy: "SHOP", entity: { type: "content_generation", id: enq.job.id }, jobId: enq.job.id },
+      { capability: "content_qa", privacy: "SHOP", entity: { type: "content_generation", id: enq.job.id }, jobId: enq.job.id, preferredModelKeys },
       createCriticAdapter(
         llm,
         brief,
@@ -282,7 +289,7 @@ export async function generateContent(ctx: TenantContext, input: GenerateContent
           await jobRepo.setStage(ctx, enq.job.id, "REWRITER")
         }
         const rewriteResult = await callCapability(
-          { capability: "content_generation", privacy: "SHOP", entity: { type: "content_generation", id: enq.job.id }, jobId: enq.job.id },
+          { capability: "content_generation", privacy: "SHOP", entity: { type: "content_generation", id: enq.job.id }, jobId: enq.job.id, preferredModelKeys },
           createRewriterAdapter(
             llm,
             {

@@ -12,7 +12,11 @@ import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job";
 import { refundJob } from "@/modules/usage/use-cases/refund-job";
 
 import { marketIntelligenceRepo } from "../infra/market-intelligence-repository";
-import { extractProductVisionWithAI } from "../adapters/openai-vision-adapter";
+import { callCapability } from "@/core/ai/gateway";
+import { aiGatewayDeps } from "@/core/ai/wiring";
+import { createContentLLM } from "@/core/ai/adapters/multi-llm-provider";
+import { providerOrderFor } from "@/modules/creative-production/use-cases/provider-preferences";
+import { createProductVisionAdapter } from "../adapters/product-vision-ai-adapter";
 import type {
   ProductFlowerComponent,
   ProductVisualAttributes,
@@ -93,9 +97,25 @@ export async function analyzeProductVision(
   await jobRepo.startInline(ctx, enq.job.id, new Date());
   try {
     const bytes = await storage.get(asset.storage_key);
-    const dataUrl = `data:${asset.mime_type || "image/jpeg"};base64,${Buffer.from(bytes).toString("base64")}`;
-    const ai = await extractProductVisionWithAI({ imageUrl: dataUrl, productTitle });
-    if (!ai) throw new Error("Mô hình thị giác không trả được kết quả đọc được (thiếu khoá, hết hạn mức, hoặc ảnh không có hoa rõ ràng).");
+    // Qua cổng AI (nợ #155): nhà cung cấp theo thứ tự ưu tiên của tiệm, bên hỏng
+    // thì sang bên kế tiếp; `ai_requests` ghi mô hình, chi phí, độ trễ từng lượt.
+    const aiResult = await callCapability(
+      {
+        capability: "product_vision",
+        privacy: "SHOP",
+        entity: { type: "product_vision_extract", id: enq.job.id },
+        jobId: enq.job.id,
+        preferredModelKeys: await providerOrderFor(ctx, "content"),
+      },
+      createProductVisionAdapter(
+        createContentLLM(),
+        { image: { mimeType: asset.mime_type || "image/jpeg", base64: Buffer.from(bytes).toString("base64") }, productTitle },
+        ctx.organizationId
+      ),
+      aiGatewayDeps(ctx)
+    );
+    if (aiResult.kind !== "xong") throw new Error(`Không nhà cung cấp nào đọc được ảnh (${aiResult.reason}).`);
+    const ai = aiResult.output;
     const output = {
       productName: ai.productName,
       components: ai.components,

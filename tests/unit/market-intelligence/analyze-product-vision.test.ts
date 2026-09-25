@@ -10,25 +10,32 @@ import type { TenantContext } from "@/core/tenancy"
 const ctx: TenantContext = { organizationId: "org-1", workspaceId: "ws-1", userId: "u-1", branchId: null, capabilities: new Set(["V1"]) }
 const asset = { id: "asset-1", product_id: null, storage_key: "org/org-1/unfiled/asset-1.jpg", mime_type: "image/jpeg" }
 
-const findById = vi.fn()
+const { findById } = vi.hoisted(() => ({ findById: vi.fn() }))
 vi.mock("@/modules/assets/infra/asset-repository", () => ({ AssetRepository: vi.fn().mockImplementation(() => ({ findById })) }))
 vi.mock("@/modules/assets/adapters/storage-provider-factory", () => ({
   getStorageProvider: () => ({ get: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])), signedUrl: vi.fn().mockResolvedValue("https://kho/ky.jpg") }),
 }))
-const startInline = vi.fn()
-const finishInline = vi.fn()
+const { startInline } = vi.hoisted(() => ({ startInline: vi.fn() }))
+const { finishInline } = vi.hoisted(() => ({ finishInline: vi.fn() }))
 vi.mock("@/modules/jobs/infra/generation-job-repository", () => ({
   GenerationJobRepository: vi.fn().mockImplementation(() => ({ startInline, finishInline })),
 }))
 vi.mock("@/modules/jobs/use-cases/enqueue-job", () => ({ enqueueJob: vi.fn() }))
 vi.mock("@/modules/usage/use-cases/refund-job", () => ({ refundJob: vi.fn().mockResolvedValue({ refunded: true }) }))
-vi.mock("@/modules/market-intelligence/adapters/openai-vision-adapter", () => ({ extractProductVisionWithAI: vi.fn() }))
+vi.mock("@/core/ai/gateway", () => ({ callCapability: vi.fn() }))
+vi.mock("@/core/ai/wiring", () => ({ aiGatewayDeps: vi.fn() }))
+vi.mock("@/core/ai/adapters/multi-llm-provider", () => ({ createContentLLM: vi.fn() }))
+const { createProductVisionAdapter } = vi.hoisted(() => ({ createProductVisionAdapter: vi.fn() }))
+vi.mock("@/modules/market-intelligence/adapters/product-vision-ai-adapter", () => ({ createProductVisionAdapter }))
+vi.mock("@/modules/creative-production/use-cases/provider-preferences", () => ({
+  providerOrderFor: vi.fn().mockResolvedValue(["claude_opus", "openai_structured", "gemini_pro"]),
+}))
 vi.mock("@/modules/market-intelligence/infra/market-intelligence-repository", () => ({
   marketIntelligenceRepo: { findProductAnalysis: vi.fn().mockResolvedValue(null) },
 }))
 
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
-import { extractProductVisionWithAI } from "@/modules/market-intelligence/adapters/openai-vision-adapter"
+import { callCapability } from "@/core/ai/gateway"
 import { marketIntelligenceRepo } from "@/modules/market-intelligence/infra/market-intelligence-repository"
 import { analyzeProductVision, PRODUCT_VISION_EXTRACT_FEATURE } from "@/modules/market-intelligence/use-cases/analyze-product-vision"
 import { refundJob } from "@/modules/usage/use-cases/refund-job"
@@ -51,13 +58,19 @@ describe("analyzeProductVision — Chặng 02 thu credit", () => {
 
   it("mô hình chạy: vào sổ qua enqueueJob (feature riêng, khoá theo ảnh), gửi ảnh ĐỌC TỪ KHO", async () => {
     vi.mocked(enqueueJob).mockResolvedValue({ job, deduped: false, usage: { costCredit: 1, balanceAfter: 9 } } as never)
-    vi.mocked(extractProductVisionWithAI).mockResolvedValue(aiOut as never)
+    vi.mocked(callCapability).mockResolvedValue({ kind: "xong", output: aiOut } as never)
 
     const r = await analyzeProductVision(ctx, { assetId: "asset-1" })
 
     expect(vi.mocked(enqueueJob).mock.calls[0]![1]).toMatchObject({ feature: PRODUCT_VISION_EXTRACT_FEATURE, idempotencyKey: "vision-extract:asset-1" })
     expect(PRODUCT_VISION_EXTRACT_FEATURE).not.toBe("vision.analyze")
-    expect(vi.mocked(extractProductVisionWithAI).mock.calls[0]![0].imageUrl).toBe("data:image/jpeg;base64,AQID")
+    // Qua cổng AI (nợ #155): năng lực product_vision, thứ tự nhà cung cấp của tiệm, ảnh ĐỌC TỪ KHO.
+    expect(vi.mocked(callCapability).mock.calls[0]![0]).toMatchObject({
+      capability: "product_vision",
+      jobId: "job-1",
+      preferredModelKeys: ["claude_opus", "openai_structured", "gemini_pro"],
+    })
+    expect(createProductVisionAdapter.mock.calls[0]![1].image).toEqual({ mimeType: "image/jpeg", base64: "AQID" })
     expect(finishInline).toHaveBeenCalledWith(ctx, "job-1", expect.objectContaining({ ok: true }))
     expect(r).toMatchObject({ source: "vision_ai", imageUrl: "https://kho/ky.jpg", usage: { costCredit: 1 } })
   })
@@ -67,7 +80,7 @@ describe("analyzeProductVision — Chặng 02 thu credit", () => {
       job: { ...job, status: "COMPLETED", output: aiOut }, deduped: true, usage: { costCredit: 0, balanceAfter: null },
     } as never)
     const r = await analyzeProductVision(ctx, { assetId: "asset-1" })
-    expect(extractProductVisionWithAI).not.toHaveBeenCalled()
+    expect(callCapability).not.toHaveBeenCalled()
     expect(r.components[0]!.flowerType).toBe("Hồng đỏ")
   })
 
@@ -75,14 +88,14 @@ describe("analyzeProductVision — Chặng 02 thu credit", () => {
     vi.mocked(enqueueJob)
       .mockResolvedValueOnce({ job: { ...job, id: "cu", status: "FAILED" }, deduped: true, usage: { costCredit: 0, balanceAfter: null } } as never)
       .mockResolvedValueOnce({ job, deduped: false, usage: { costCredit: 1, balanceAfter: 8 } } as never)
-    vi.mocked(extractProductVisionWithAI).mockResolvedValue(aiOut as never)
+    vi.mocked(callCapability).mockResolvedValue({ kind: "xong", output: aiOut } as never)
     await analyzeProductVision(ctx, { assetId: "asset-1" })
     expect(vi.mocked(enqueueJob).mock.calls[1]![1]).toMatchObject({ idempotencyKey: "vision-extract:asset-1:after:cu" })
   })
 
-  it("mô hình không trả gì: job FAILED + hoàn credit + lỗi rõ — không bịa dữ liệu", async () => {
+  it("mọi nhà cung cấp hỏng: job FAILED + hoàn credit + lỗi rõ — không bịa dữ liệu", async () => {
     vi.mocked(enqueueJob).mockResolvedValue({ job, deduped: false, usage: { costCredit: 1, balanceAfter: 9 } } as never)
-    vi.mocked(extractProductVisionWithAI).mockResolvedValue(null)
+    vi.mocked(callCapability).mockResolvedValue({ kind: "khong_chay_duoc", reason: "HET_DUONG_DU_PHONG", attempts: [] } as never)
     await expect(analyzeProductVision(ctx, { assetId: "asset-1" })).rejects.toThrow("[analyzeProductVision]")
     expect(finishInline).toHaveBeenCalledWith(ctx, "job-1", expect.objectContaining({ ok: false }))
     expect(refundJob).toHaveBeenCalledWith(ctx, "job-1")

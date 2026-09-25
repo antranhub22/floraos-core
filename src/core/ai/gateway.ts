@@ -40,6 +40,8 @@ export interface AiCallRequest {
   readonly entity?: { readonly type: string; readonly id: string } | undefined
   readonly source?: "CORE" | "LOCALBUDD" | "SOCIALFLOW" | undefined
   readonly maxAttempts?: number | undefined
+  /** Thứ tự nhà cung cấp tổ chức ưu tiên — xem `AiRoutingRequest.preferredModelKeys`. */
+  readonly preferredModelKeys?: readonly string[] | undefined
 }
 
 export type AdapterOutcome<O> =
@@ -162,7 +164,8 @@ export async function callCapability<O>(
     // Thác nghiệm chỉ có nghĩa khi có ngưỡng để phát hiện kết quả chưa đủ —
     // xem `AiRoutingRequest.cascade`. Chưa đo được ngưỡng (D20) thì chạy lớp
     // chất lượng cao nhất ngay từ lượt đầu.
-    cascade: threshold !== null,
+    cascade: threshold !== null && !(request.preferredModelKeys?.length),
+    preferredModelKeys: request.preferredModelKeys,
   }
 
   const first = selectModel(models, policy, routingRequest)

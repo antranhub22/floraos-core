@@ -26,6 +26,7 @@ export const productionOutputsScopeSchema = z.union([z.literal("all"), z.array(z
 /** Thân `POST /creative-production/scene-plans` (header `Idempotency-Key` bắt buộc). */
 export const scenePlanBodySchema = z.object({
   mode: productionModeSchema,
+  content_provider: z.string().min(1).max(40).optional().describe("Nhà cung cấp nội dung cho lượt này (claude_opus | openai_structured | gemini_pro | claude_sonnet | gemini_flash | openai_direct); bỏ trống = thứ tự ưu tiên của tiệm"),
   asset_id: z.string().uuid().optional(),
   product_id: z.string().uuid().optional(),
   product: z.object({
