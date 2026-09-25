@@ -4,6 +4,8 @@ Cho phép lựa chọn linh hoạt giữa:
   - 'openai': OpenAI Images API (Mặc định)
   - 'gemini': Google Gemini / Imagen API
   - 'replicate': Replicate Super-Resolution Cloud
+  - 'photoroom': Photoroom Image Editing API v2 (25/09/2026)
+  - 'fal' / 'fal_flux': fal.ai BiRefNet + BRIA Product Shot + ESRGAN (25/09/2026)
   - 'local' / 'realesrgan': Real-ESRGAN / PIL cục bộ
   - 'pil': Thuần PIL Lanczos 2x (không cần model hay API key)
   - 'passthrough': Giữ nguyên ảnh gốc (đối chứng)
@@ -15,9 +17,11 @@ import os
 from typing import Any
 
 from media_ai.providers.base import ImageEnhancer
+from media_ai.providers.enhancement.fal_enhancer import FalEnhancer
 from media_ai.providers.enhancement.gemini_enhancer import GeminiEnhancer
 from media_ai.providers.enhancement.openai_enhancer import OpenAIEnhancer
 from media_ai.providers.enhancement.passthrough import PassthroughEnhancer
+from media_ai.providers.enhancement.photoroom_enhancer import PhotoroomEnhancer
 from media_ai.providers.enhancement.realesrgan import PILEnhancer, RealESRGANEnhancer
 from media_ai.providers.enhancement.replicate_enhancer import ReplicateEnhancer
 from media_ai.providers.enhancement.studio_enhancer import StudioEnhancer
@@ -28,6 +32,10 @@ ENHANCER_REGISTRY: dict[str, type] = {
     "openai": OpenAIEnhancer,
     "gemini": GeminiEnhancer,
     "replicate": ReplicateEnhancer,
+    "photoroom": PhotoroomEnhancer,
+    "fal": FalEnhancer,
+    # Mã giao diện Creative Studio gửi (`ENHANCER_PROVIDERS`) — cùng adapter.
+    "fal_flux": FalEnhancer,
     "realesrgan": RealESRGANEnhancer,
     "local": RealESRGANEnhancer,
     "pil": PILEnhancer,

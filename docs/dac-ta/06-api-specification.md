@@ -217,6 +217,8 @@ PUT /api/v1/vision/engine
 | GET | `/media/optimizations/:id/download` | `I3` |
 | POST | `/media/promote-to-master` | `I2` |
 
+> **25/09/2026 (trả nợ #120).** `POST /media/optimizations` đưa MỌI bộ máy vào hàng đợi `media.optimize` qua `enqueueJob` — cả `config.engine = "cloud_provider"`. `config.enhancer_provider` ∈ `studio | local | openai | photoroom | fal_flux | fal` (`OPTIMIZE_ENHANCER_PROVIDERS`), mã khác → 400 trước khi trừ credit. Nhà cung cấp lỗi → worker lùi `StudioEnhancer` và ghi `parameters.fallback_reason`; Identity Guard do worker đo. Đáp ứng luôn `{ job_id, status, engine, usage }` — không còn trả ảnh ngay.
+
 ```json
 {
   "job_id": "…",

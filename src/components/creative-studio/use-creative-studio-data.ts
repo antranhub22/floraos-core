@@ -588,21 +588,9 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
         setPhase("error")
         return
       }
-      const data = (await res.json()) as {
-        job_id: string
-        status: string
-        engine?: string
-        asset_id?: string
-        image_url?: string
-      }
+      // Cả hai bộ máy (Local Studio / nhà cung cấp) đều vào hàng đợi — 25/09/2026, nợ #120.
+      const data = (await res.json()) as { job_id: string; status: string }
       setOptimizationId(data.job_id)
-
-      if (data.engine === "cloud_provider" && data.status === "COMPLETED") {
-        await loadOptimization(data.job_id)
-        setPhase("result-a")
-        return
-      }
-
       setJobPhase("PROCESSING")
       pollOptimization(data.job_id)
     } catch (e) {

@@ -125,7 +125,7 @@
 
 - [x] Mọi lượt AI của Creative Studio đi qua `enqueueJob` (trừ Vision/Product Intelligence là lời gọi đồng bộ có sổ riêng)
 - [x] Header Studio không còn nút chết `onClick: () => {}` — `page.tsx`
-- [ ] Nhánh cloud M04a (`/media/optimizations`) vẫn chạy đồng bộ — nợ #120
+- [x] Nhánh cloud M04a (`/media/optimizations`) vào hàng đợi `media.optimize` — trừ credit thật, idempotent, guard đo ở worker; adapter worker Photoroom (`photoroom_enhancer.py`) + fal (`fal_enhancer.py`) — nợ #120 đã trả 25/09/2026 (xác nhận với khoá thật: nợ #151)
 - [x] `npm run lint` toàn repo xanh — nợ #124 (0 lỗi, commit `0a26672`; đo lại 25/09/2026)
 - [x] `npm run test:tenant` xanh trên máy có Postgres — **244/244, 34/34 tệp** (Postgres 16, 25/09/2026); `test:platform` 5/5
 - [x] CI thật chạy được cổng `test:tenant`: dựng `floraos_test` trong job web; job worker cài `ffmpeg` (CI run 4 trên `main` đỏ vì hai thiếu này — 25/09/2026)

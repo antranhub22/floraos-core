@@ -15,6 +15,21 @@
  * Tệp này không import hạ tầng.
  */
 
+/**
+ * Bộ máy tối ưu ảnh worker `media.optimize` thật sự có
+ * (`workers/media_ai/providers/enhancement/router.py#ENHANCER_REGISTRY`) — cả
+ * nhánh cục bộ lẫn nhánh nhà cung cấp đều đi qua hàng đợi (25/09/2026, trả nợ
+ * #120). Mã lạ bị từ chối ở route thay vì để worker âm thầm lùi về Studio.
+ * `gemini`/`replicate` không có ở đây: hai bộ máy đó ở worker còn là stub luôn
+ * lùi PIL — nhận chúng là bán một lựa chọn không tồn tại.
+ */
+export const OPTIMIZE_ENHANCER_PROVIDERS = ["studio", "local", "openai", "photoroom", "fal_flux", "fal"] as const
+export type OptimizeEnhancerProvider = (typeof OPTIMIZE_ENHANCER_PROVIDERS)[number]
+
+export function isOptimizeEnhancerProvider(value: unknown): value is OptimizeEnhancerProvider {
+  return typeof value === "string" && (OPTIMIZE_ENHANCER_PROVIDERS as readonly string[]).includes(value)
+}
+
 export const GUARD_RESULTS = ["SAFE", "GOOD", "WARNING", "REJECTED"] as const
 export type GuardResult = (typeof GUARD_RESULTS)[number]
 

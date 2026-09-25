@@ -13,19 +13,25 @@ export interface EnhancerProviderOption {
   icon: React.ElementType
 }
 
+/**
+ * Chỉ những bộ máy worker `media.optimize` thật sự có — khớp
+ * `OPTIMIZE_ENHANCER_PROVIDERS` (`src/modules/media/domain/optimization-rules.ts`),
+ * route từ chối mã khác. Gemini/Replicate gỡ 25/09/2026: ở worker còn là stub
+ * luôn lùi PIL. Nhà cung cấp lỗi thì worker lùi về Studio và ghi lý do.
+ */
 export const ENHANCER_PROVIDERS: EnhancerProviderOption[] = [
   {
     id: "photoroom",
     name: "Photoroom AI (Chuẩn E-commerce Quốc tế)",
-    desc: "Khóa 100% chi tiết hoa thật, tự động sinh bối cảnh studio chuyên nghiệp và đổ bóng tiếp xúc vật lý.",
+    desc: "Photoroom tách nền, đặt lên phông studio trắng, đổ bóng và chỉnh sáng AI, tăng nét. Không xoá watermark — cần xoá thì dùng Studio AI Pipeline.",
     badge: "Thương mại",
     tone: "success",
     icon: Sparkles,
   },
   {
     id: "fal_flux",
-    name: "Fal.ai FLUX + IC-Light (Đỉnh cao Studio)",
-    desc: "Model FLUX.1 Fill kết hợp IC-Light hòa trộn ánh sáng môi trường chân thực nhất thế giới hiện nay.",
+    name: "Fal.ai Product Shot (Studio cao cấp)",
+    desc: "fal.ai tách nền (BiRefNet), dựng phông studio và hoà sáng (BRIA Product Shot), tăng nét 2x (Real-ESRGAN). Không xoá watermark.",
     badge: "Cao cấp",
     tone: "accent",
     icon: Zap,
@@ -54,22 +60,6 @@ export const ENHANCER_PROVIDERS: EnhancerProviderOption[] = [
     tone: "neutral",
     icon: Cpu,
   },
-  {
-    id: "gemini",
-    name: "Google Gemini Imagen (Cloud)",
-    desc: "Công nghệ AI tạo hình từ Google Cloud, tối ưu màu sắc rực rỡ và cân bằng dải tương phản rộng.",
-    badge: "Cloud AI",
-    tone: "success",
-    icon: Cloud,
-  },
-  {
-    id: "replicate",
-    name: "Replicate Real-ESRGAN (Cloud GPU)",
-    desc: "Cụm máy chủ GPU chuyên dụng trên đám mây, siêu phân giải độ nét cao phù hợp ảnh chụp mờ nhòe.",
-    badge: "Cloud GPU",
-    tone: "warning",
-    icon: Zap,
-  },
 ]
 
 export interface EnhancerProviderSelectorProps {
@@ -91,7 +81,7 @@ export function EnhancerProviderSelector({
           <span>Phương thức & Nhà cung cấp AI (Provider)</span>
         </div>
         <span className="text-[11px] text-text-muted">
-          Mặc định: <strong className="text-primary font-semibold">OpenAI Image AI</strong>
+          Mặc định: <strong className="text-primary font-semibold">Photoroom AI</strong>
         </span>
       </div>
 
