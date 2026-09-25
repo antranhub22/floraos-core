@@ -1,84 +1,35 @@
 /**
- * Bước 07: Nghiệm thu Đơn hàng & Học máy Vận hành (COMPLETED & LEARNING).
- * Khép kín hồ sơ đơn hàng, chấm điểm hiệu suất đối tác, tính toán SLA thực tế và bắn metric sang M11/M09.
+ * Bước 07: Nghiệm thu & Đóng đơn (T25–T27).
+ * Chỉ khi DELIVERED và không còn sự cố mở; chốt điểm + tiền công đối tác, ghi audit.
+ *
+ * Input = đúng zod mà route dùng (`adapters/http-schemas.ts`), output = đúng
+ * hình dạng route trả (`order-view.ts`). Trước 25/09 hợp đồng này mô tả một
+ * endpoint không tồn tại với mã quyền `O1` không có trong danh mục.
  */
 
-import { z } from "zod"
+import { closeOrderSchema } from "../adapters/http-schemas"
 import { defineStep } from "./define-step"
-import { CoordinatorStageEnum } from "./common"
+import { CoordinatorOrderResponseSchema, exampleOrderView } from "./order-view"
 
-export const Step07CloseLearnInputSchema = z.object({
-  coordinationId: z.string().uuid(),
-  coordinatorFinalReview: z.string().optional(),
-  partnerRating: z.number().min(1).max(5).default(5),
-  customerSatisfactionScore: z.number().min(1).max(5).optional(),
-})
-
-export const Step07CloseLearnOutputSchema = z.object({
-  coordinationId: z.string().uuid(),
-  orderId: z.string().uuid(),
-  stage: CoordinatorStageEnum,
-  slaReport: z.object({
-    promisedDeliveryTime: z.string(),
-    actualDeliveryTime: z.string(),
-    varianceMinutes: z.number().int(),
-    isOntime: z.boolean(),
-  }),
-  operationalScore: z.object({
-    qcScore: z.number().int(),
-    partnerScore: z.number().min(1).max(5),
-    overallExecutionRating: z.enum(["EXCELLENT", "GOOD", "ACCEPTABLE", "FAILED"]),
-  }),
-  downstreamUpdates: z.object({
-    crmHistorySynced: z.boolean(),
-    analyticsMetricsRecorded: z.boolean(),
-    partnerPerformanceUpdated: z.boolean(),
-  }),
-  completedAt: z.string(),
-})
+export const Step07CloseLearnInputSchema = closeOrderSchema
+export const Step07CloseLearnOutputSchema = CoordinatorOrderResponseSchema
 
 export const step07CloseLearnContract = defineStep({
   id: "07",
   step: 7,
   code: "CLOSE_LEARN",
   slug: "close-learn",
-  title: "Nghiệm thu & Bài học Vận hành",
-  summary: "Khép lại chu trình điều phối, tính toán SLA và cập nhật uy tín đối tác",
+  title: "Nghiệm thu & Đóng đơn (T25–T27)",
+  summary: "Chỉ khi DELIVERED và không còn sự cố mở; chốt điểm + tiền công đối tác, ghi audit",
   endpoint: {
     method: "POST",
-    path: "/api/v1/coordinator/close-learn",
-    capability: "O1",
+    path: "/api/v1/coordinator/orders/{id}/close",
+    capability: "R3",
   },
   input: Step07CloseLearnInputSchema,
   output: Step07CloseLearnOutputSchema,
   examples: {
-    input: {
-      coordinationId: "a1b2c3d4-e29b-41d4-a716-446655440001",
-      coordinatorFinalReview: "Đơn thực hiện xuất sắc, hoa đẹp, giao sớm 5 phút, khách khen ngợi",
-      partnerRating: 5,
-      customerSatisfactionScore: 5,
-    },
-    output: {
-      coordinationId: "a1b2c3d4-e29b-41d4-a716-446655440001",
-      orderId: "550e8400-e29b-41d4-a716-446655440000",
-      stage: "COMPLETED",
-      slaReport: {
-        promisedDeliveryTime: "2026-09-25T17:00:00.000Z",
-        actualDeliveryTime: "2026-09-25T16:55:00.000Z",
-        varianceMinutes: -5,
-        isOntime: true,
-      },
-      operationalScore: {
-        qcScore: 95,
-        partnerScore: 5,
-        overallExecutionRating: "EXCELLENT",
-      },
-      downstreamUpdates: {
-        crmHistorySynced: true,
-        analyticsMetricsRecorded: true,
-        partnerPerformanceUpdated: true,
-      },
-      completedAt: "2026-09-25T17:05:00.000Z",
-    },
+    input: { partnerRating: 5, partnerPayoutVnd: 350000, notes: "Giao sớm 5 phút" },
+    output: { order: exampleOrderView({ stage: "COMPLETED", stageLabel: "Hoàn tất", partnerRating: 5, partnerPayoutVnd: 350000, closureNotes: "Giao sớm 5 phút", closedAt: "2026-09-25T10:05:00.000Z" }) },
   },
 })

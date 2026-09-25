@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "step-01-intake.input.schema.json",
-  "title": "Tiếp nhận Đơn hàng — Đầu vào",
-  "description": "Nạp đơn hàng vào Tháp Điều phối và khởi tạo hồ sơ theo dõi",
+  "title": "Tiếp nhận đơn (T01) — Đầu vào",
+  "description": "Sales/AI Chat tạo đơn; máy chủ cấp mã FLR-YYMMDD-NNNN, bước INTAKE",
   "x-floraos": {
     "stepId": "01",
     "step": 1,
     "code": "INTAKE",
     "endpoint": {
       "method": "POST",
-      "path": "/api/v1/coordinator/intake",
-      "capability": "O1"
+      "path": "/api/v1/coordinator/orders",
+      "capability": "R2"
     },
     "source": "src/modules/coordinator/contracts/step-01-intake.ts",
     "direction": "input",
@@ -18,43 +18,196 @@
   },
   "type": "object",
   "properties": {
-    "orderId": {
+    "customerId": {
       "type": "string",
-      "format": "uuid",
-      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      "minLength": 1,
+      "maxLength": 64
     },
-    "source": {
+    "customerName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "customerTier": {
+      "default": "NEW",
       "type": "string",
       "enum": [
-        "ORDER_M10",
-        "CHAT_M08",
-        "CATALOG_M06",
-        "MANUAL"
-      ]
-    },
-    "priority": {
-      "type": "string",
-      "enum": [
-        "STANDARD",
-        "RUSH",
+        "NEW",
+        "BRONZE",
+        "SILVER",
+        "GOLD",
         "VIP"
       ]
     },
-    "coordinatorNote": {
-      "type": "string"
+    "recipientName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "recipientPhone": {
+      "type": "string",
+      "pattern": "^\\+?[0-9 .-]{8,15}$"
+    },
+    "deliveryAddress": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        {
+          "type": "object",
+          "properties": {
+            "street": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "ward": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "district": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "city": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "country": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "formattedAddress": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "required": [
+            "street",
+            "ward",
+            "district",
+            "city"
+          ]
+        }
+      ]
+    },
+    "deliveryTargetTime": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "deliveryTargetAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "productTitle": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "sampleImageUrl": {
+      "type": "string",
+      "maxLength": 2048
+    },
+    "sampleAssetId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "unitPriceVnd": {
+      "default": 0,
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1000000000
+    },
+    "flowers": {
+      "default": [],
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "flowerName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "quantity": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 10000
+          },
+          "unit": {
+            "default": "cành",
+            "type": "string",
+            "maxLength": 20
+          },
+          "color": {
+            "default": "",
+            "type": "string",
+            "maxLength": 60
+          },
+          "role": {
+            "default": "",
+            "type": "string",
+            "maxLength": 60
+          }
+        },
+        "required": [
+          "flowerName",
+          "quantity"
+        ]
+      }
+    },
+    "cardMessage": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "internalNote": {
+      "type": "string",
+      "maxLength": 2000
     }
   },
   "required": [
-    "orderId",
-    "source",
-    "priority"
+    "customerName",
+    "recipientName",
+    "recipientPhone",
+    "deliveryAddress",
+    "deliveryTargetTime",
+    "productTitle"
   ],
   "examples": [
     {
-      "orderId": "550e8400-e29b-41d4-a716-446655440000",
-      "source": "ORDER_M10",
-      "priority": "STANDARD",
-      "coordinatorNote": "Khách hẹn giao đúng 17h trước tiệc"
+      "customerName": "Nguyễn Văn An",
+      "customerTier": "VIP",
+      "recipientName": "Trần Thị Bình",
+      "recipientPhone": "0901234567",
+      "deliveryAddress": {
+        "street": "123 Phố Huế",
+        "ward": "Phường Ngô Thì Nhậm",
+        "district": "Quận Hai Bà Trưng",
+        "city": "Hà Nội"
+      },
+      "deliveryTargetTime": "17:00 hôm nay",
+      "deliveryTargetAt": "2026-09-25T17:00:00+07:00",
+      "productTitle": "Bó hoa hồng Pastel",
+      "unitPriceVnd": 850000,
+      "flowers": [
+        {
+          "flowerName": "Hồng Ohara",
+          "quantity": 12,
+          "unit": "cành",
+          "color": "hồng phấn",
+          "role": "Chủ đạo"
+        }
+      ],
+      "cardMessage": "Chúc mừng sinh nhật!"
     }
   ]
 }

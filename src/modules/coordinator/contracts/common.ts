@@ -57,6 +57,7 @@ export const CoordinatorStageEnum = z.enum([
   "DELIVERED",
   "COMPLETED",
   "EXCEPTION",
+  "CANCELLED",
 ])
 
 export const CoordinationRiskLevelEnum = z.enum([

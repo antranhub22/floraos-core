@@ -14,13 +14,14 @@ import {
   ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { CoordinationMockOrder } from "@/components/coordinator/control-tower-dashboard"
+import { errorMessage, type CoordinationOrder } from "@/components/coordinator/coordinator-api"
 
 export interface OrderPlanningModalProps {
   isOpen: boolean
-  order: CoordinationMockOrder | null
+  order: CoordinationOrder | null
   onClose: () => void
-  onConfirmPlan: (updatedOrder: CoordinationMockOrder) => void
+  /** Chốt kế hoạch: máy chủ chuyển đơn sang PLANNING kèm việc kế tiếp. */
+  onConfirmPlan: (nextAction: string) => Promise<void>
 }
 
 export function OrderPlanningModal({
@@ -31,33 +32,30 @@ export function OrderPlanningModal({
 }: OrderPlanningModalProps) {
   const [productionTargetTime, setProductionTargetTime] = useState("16:00")
   const [pickupTargetTime, setPickupTargetTime] = useState("16:30")
-  const [riskLevel, setRiskLevel] = useState<"NORMAL" | "ATTENTION" | "AT_RISK" | "CRITICAL">(
-    order?.riskLevel || "NORMAL"
-  )
-  const [riskReason, setRiskReason] = useState(order?.riskReason || "")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [planningNotes, setPlanningNotes] = useState("")
 
   if (!isOpen || !order) return null
 
-  const addr = order.deliveryAddress
+  const addr = order.deliveryAddress as Record<string, unknown> | string | null
   const formattedAddress: string =
     typeof addr === "object" && addr !== null
-      ? [addr.street, addr.ward, addr.district, addr.city].filter(Boolean).join(", ")
-      : String(addr)
+      ? [addr.street, addr.ward, addr.district, addr.city].filter((v) => typeof v === "string" && v).join(", ")
+      : String(addr ?? "")
 
-  const handleConfirm = () => {
-    const updatedOrder: CoordinationMockOrder = {
-      ...order,
-      stage: "ASSIGNING",
-      stageLabel: "Đã lập KH (Chờ chỉ định xưởng)",
-      riskLevel,
-      riskReason: riskReason || (riskLevel !== "NORMAL" ? "Lưu ý tiến độ sản xuất" : undefined),
-      nextAction: "Chỉ định đối tác xưởng ngoài hoặc thợ cắm hoa phù hợp",
-      internalNote: planningNotes
-        ? `${order.internalNote || ""}\n[Kế hoạch P2]: ${planningNotes}`.trim()
-        : order.internalNote,
+  const handleConfirm = async () => {
+    const plan = `Cắm xong ${productionTargetTime}, shipper lấy ${pickupTargetTime}${planningNotes.trim() ? ` — ${planningNotes.trim()}` : ""}`
+    setBusy(true)
+    setError(null)
+    try {
+      await onConfirmPlan(plan.slice(0, 300))
+      setPlanningNotes("")
+    } catch (e) {
+      setError(errorMessage(e))
+    } finally {
+      setBusy(false)
     }
-    onConfirmPlan(updatedOrder)
   }
 
   return (
@@ -194,35 +192,13 @@ export function OrderPlanningModal({
             </div>
           </div>
 
-          {/* 3. Đánh giá rủi ro (Giai đoạn 2.6 theo Sổ tay) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="font-bold text-text block mb-1 flex items-center gap-1">
-                <AlertTriangle size={13} className="text-amber-500" />
-                Mức độ rủi ro đơn hàng
-              </label>
-              <select
-                value={riskLevel}
-                onChange={(e) => setRiskLevel(e.target.value as any)}
-                className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text font-bold focus:outline-none focus:border-red-500"
-              >
-                <option value="NORMAL">🟢 Bình thường (NORMAL)</option>
-                <option value="ATTENTION">🟡 Cần chú ý (ATTENTION)</option>
-                <option value="AT_RISK">🟠 Có nguy cơ trễ (AT RISK)</option>
-                <option value="CRITICAL">🔴 Báo động khẩn cấp (CRITICAL)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="font-bold text-text block mb-1">Nguyên nhân rủi ro (nếu có)</label>
-              <input
-                type="text"
-                placeholder="Ví dụ: Đơn gấp, hoa nhập hiếm, giờ cao điểm..."
-                value={riskReason}
-                onChange={(e) => setRiskReason(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
-              />
-            </div>
+          {/* 3. Rủi ro do máy chủ tính từ giờ hẹn + sự cố (F09) — không tự chọn tay */}
+          <div className="p-3 rounded-xl border border-border bg-surface-alt flex items-center gap-2">
+            <AlertTriangle size={13} className="text-amber-500" />
+            <span>
+              Rủi ro hiện tại: <strong>{order.riskLevel}</strong>
+              {order.riskReason ? ` — ${order.riskReason}` : ""}
+            </span>
           </div>
 
           {/* 4. Ghi chú chỉ đạo kỹ thuật */}
@@ -240,6 +216,12 @@ export function OrderPlanningModal({
           </div>
         </div>
 
+        {error && (
+          <div role="alert" className="mx-5 mb-3 p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold">
+            {error}
+          </div>
+        )}
+
         {/* Footer */}
         <div className="p-4 border-t border-border flex items-center justify-between gap-3 sticky bottom-0 bg-surface">
           <Button variant="outline" size="sm" onClick={onClose}>
@@ -248,6 +230,7 @@ export function OrderPlanningModal({
 
           <Button
             size="sm"
+            disabled={busy}
             onClick={handleConfirm}
             className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5 px-4 shadow-sm"
           >

@@ -1,90 +1,45 @@
 "use client"
 
-import React, { useState } from "react"
-import {
-  X,
-  Users,
-  CheckCircle2,
-  Sparkles,
-  MapPin,
-  Star,
-  Clock,
-  ShieldCheck,
-} from "lucide-react"
+import React, { useEffect, useState } from "react"
+import { X, Users, CheckCircle2, MapPin, Star, Plus, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { StructuredAddress } from "@/modules/products/domain/product-master-index"
+import {
+  coordinatorApi,
+  errorMessage,
+  type CoordinationPartner,
+} from "@/components/coordinator/coordinator-api"
 
-export interface PartnerCandidate {
-  id: string
-  name: string
-  type: "INTERNAL_FLORIST" | "EXTERNAL_PARTNER_SHOP"
-  phone: string
-  address: string
-  distanceKm: number
-  matchScore: number // 0-100
-  matchReasons: string[]
-  tier: "STANDARD" | "PREFERRED" | "VIP"
-  rating: number
-  activeOrdersCount: number
-  estimatedReadyTime: string
-}
-
+/**
+ * P3 — Phân công đối tác (Template T06, F05).
+ *
+ * Danh sách lấy từ bảng `partners` của chính tổ chức. Bản trước bày ba xưởng
+ * cố định kèm "khoảng cách", "% khớp AI" tự bịa — nay không có ghép AI thì
+ * không hiện điểm AI (nợ #141). Công suất ngày do máy chủ kiểm khi giao.
+ */
 export interface PartnerAssignmentModalProps {
   isOpen: boolean
   orderCode: string
   recipeTitle: string
-  deliveryAddress: StructuredAddress | string
+  deliveryAddress: StructuredAddress | string | unknown
   deliveryTargetTime: string
-  candidates?: PartnerCandidate[] | undefined
+  currentPartnerId?: string | null | undefined
   onClose: () => void
-  onAssign: (partner: PartnerCandidate, notes?: string) => void
+  /** Gọi máy chủ; lỗi ném ra để modal hiện câu máy chủ trả. */
+  onAssign: (partnerId: string, notes: string, overrideCapacity: boolean) => Promise<void>
 }
 
-const DEFAULT_CANDIDATES: PartnerCandidate[] = [
-  {
-    id: "part-01",
-    name: "Flora Boutique Ba Đình",
-    type: "EXTERNAL_PARTNER_SHOP",
-    phone: "0988776655",
-    address: "24 Liễu Giai, Ba Đình, Hà Nội",
-    distanceKm: 1.2,
-    matchScore: 96,
-    matchReasons: ["Cùng quận Ba Đình", "Có sẵn Hồng Ohara Kem", "SLA đúng hạn 99%"],
-    tier: "PREFERRED",
-    rating: 4.9,
-    activeOrdersCount: 2,
-    estimatedReadyTime: "16:15",
-  },
-  {
-    id: "part-02",
-    name: "Nguyễn Thu Hà (Thợ cắm chính tiệm)",
-    type: "INTERNAL_FLORIST",
-    phone: "0912348899",
-    address: "Xưởng trung tâm FloraOS",
-    distanceKm: 3.5,
-    matchScore: 91,
-    matchReasons: ["Thợ cắm chuyên dáng hoa tròn", "Điểm QC trung bình 96/100"],
-    tier: "VIP",
-    rating: 5.0,
-    activeOrdersCount: 3,
-    estimatedReadyTime: "16:30",
-  },
-  {
-    id: "part-03",
-    name: "Xưởng Hoa Cầu Giấy Art",
-    type: "EXTERNAL_PARTNER_SHOP",
-    phone: "0904556677",
-    address: "102 Trần Thái Tông, Cầu Giấy, Hà Nội",
-    distanceKm: 4.8,
-    matchScore: 84,
-    matchReasons: ["Thế mạnh hoa khai trương", "Hỗ trợ ship nhanh"],
-    tier: "STANDARD",
-    rating: 4.7,
-    activeOrdersCount: 1,
-    estimatedReadyTime: "16:45",
-  },
-]
+function addressText(addr: unknown): string {
+  if (addr && typeof addr === "object") {
+    const a = addr as Record<string, unknown>
+    return (
+      (typeof a.formattedAddress === "string" && a.formattedAddress) ||
+      [a.street, a.ward, a.district, a.city].filter((v) => typeof v === "string" && v).join(", ")
+    )
+  }
+  return typeof addr === "string" ? addr : ""
+}
 
 export function PartnerAssignmentModal({
   isOpen,
@@ -92,175 +47,224 @@ export function PartnerAssignmentModal({
   recipeTitle,
   deliveryAddress,
   deliveryTargetTime,
-  candidates = DEFAULT_CANDIDATES,
+  currentPartnerId,
   onClose,
   onAssign,
 }: PartnerAssignmentModalProps) {
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string>(candidates[0]?.id || "")
+  const [partners, setPartners] = useState<CoordinationPartner[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(currentPartnerId ?? null)
   const [notes, setNotes] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [needsOverride, setNeedsOverride] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
+  const [draft, setDraft] = useState({ code: "", name: "", phone: "", district: "", province: "", capacityDaily: 10 })
+
+  // Dashboard dựng lại modal (`key`) mỗi lần mở, nên chỉ cần nạp một lần.
+  useEffect(() => {
+    if (!isOpen) return
+    let cancelled = false
+    coordinatorApi
+      .listPartners(true)
+      .then((list) => {
+        if (cancelled) return
+        setPartners(list)
+        setShowAdd(list.length === 0)
+      })
+      .catch((e: unknown) => !cancelled && setError(`Không tải được danh sách đối tác: ${errorMessage(e)}`))
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
-  const selectedCandidate = candidates.find((c) => c.id === selectedPartnerId)
-
-  const handleConfirm = () => {
-    if (!selectedCandidate) return
-    onAssign(selectedCandidate, notes)
-    onClose()
+  const handleConfirm = async (override = false) => {
+    if (!selectedPartnerId) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await onAssign(selectedPartnerId, notes, override)
+      setNotes("")
+      setNeedsOverride(false)
+    } catch (e) {
+      const msg = errorMessage(e)
+      setError(msg)
+      setNeedsOverride(msg.includes("đơn đang chạy"))
+    } finally {
+      setSubmitting(false)
+    }
   }
+
+  const handleCreatePartner = async () => {
+    setError(null)
+    try {
+      const partner = await coordinatorApi.createPartner({
+        code: draft.code.trim(),
+        name: draft.name.trim(),
+        phone: draft.phone.trim(),
+        ...(draft.district.trim() ? { district: draft.district.trim() } : {}),
+        ...(draft.province.trim() ? { province: draft.province.trim() } : {}),
+        capacityDaily: Number(draft.capacityDaily) || 10,
+      })
+      setPartners((prev) => [partner, ...prev])
+      setSelectedPartnerId(partner.id)
+      setShowAdd(false)
+      setDraft({ code: "", name: "", phone: "", district: "", province: "", capacityDaily: 10 })
+    } catch (e) {
+      setError(`Không thêm được đối tác: ${errorMessage(e)}`)
+    }
+  }
+
+  const input = "px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-surface border border-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
-        {/* Header */}
         <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
               <Users size={18} />
             </div>
             <div>
-              <h2 className="text-base font-extrabold text-text">
-                Phân Công Đối Tác / Thợ Cắm (Template T06)
-              </h2>
+              <h2 className="text-base font-extrabold text-text">Phân Công Đối Tác / Thợ Cắm (Template T06)</h2>
               <p className="text-[11px] text-text-muted">
                 Đơn #{orderCode}: {recipeTitle} · Hẹn giao: {deliveryTargetTime}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
+          <button onClick={onClose} aria-label="Đóng" className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
             <X size={18} />
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-6 flex flex-col gap-4 text-xs">
           <div className="p-3.5 rounded-xl bg-surface-alt border border-border flex items-start gap-2.5">
             <MapPin size={15} className="text-red-600 shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-1 w-full">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-text">Địa chỉ giao hoa đích (Phân cấp chuẩn):</span>
-                {typeof deliveryAddress === "object" && deliveryAddress !== null && (
-                  <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.2 rounded-full">
-                    Khớp khu vực
-                  </span>
-                )}
-              </div>
-              <span className="text-text font-semibold">
-                {typeof deliveryAddress === "object" && deliveryAddress !== null
-                  ? deliveryAddress.street
-                  : deliveryAddress}
-              </span>
-              {typeof deliveryAddress === "object" && deliveryAddress !== null && (
-                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                  <span className="px-1.5 py-0.2 rounded bg-red-100 text-red-800 text-[10px] font-bold">
-                    {deliveryAddress.ward}
-                  </span>
-                  <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">
-                    {deliveryAddress.district}
-                  </span>
-                  <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">
-                    {deliveryAddress.city}
-                  </span>
-                </div>
-              )}
+            <div>
+              <span className="font-bold text-text block">Địa chỉ giao:</span>
+              <span className="text-text font-semibold">{addressText(deliveryAddress) || "—"}</span>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <span className="font-bold text-text flex items-center gap-1.5 text-xs">
-              <Sparkles size={14} className="text-amber-500" />
-              Gợi ý đối tác tối ưu theo AI Matching Engine:
-            </span>
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-text text-xs">Đối tác đang nhận đơn của tiệm:</span>
+            <Button type="button" size="sm" variant="outline" onClick={() => setShowAdd((v) => !v)} className="gap-1">
+              <Plus size={13} /> Thêm đối tác
+            </Button>
+          </div>
 
+          {showAdd && (
+            <div className="p-3 rounded-xl border border-dashed border-red-300 bg-red-50/40 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input className={input} placeholder="Mã (vd XUONG-BD)" value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} />
+              <input className={input} placeholder="Tên xưởng / thợ" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              <input className={input} placeholder="Số điện thoại" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} />
+              <input className={input} placeholder="Quận/Huyện" value={draft.district} onChange={(e) => setDraft({ ...draft, district: e.target.value })} />
+              <input className={input} placeholder="Tỉnh/Thành phố" value={draft.province} onChange={(e) => setDraft({ ...draft, province: e.target.value })} />
+              <input
+                className={input}
+                type="number"
+                min={1}
+                placeholder="Công suất đơn/ngày"
+                value={draft.capacityDaily}
+                onChange={(e) => setDraft({ ...draft, capacityDaily: Number(e.target.value) })}
+              />
+              <div className="sm:col-span-2 flex justify-end">
+                <Button type="button" size="sm" onClick={handleCreatePartner} className="bg-red-600 hover:bg-red-700 text-white">
+                  Lưu đối tác
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="text-text-muted">Đang tải danh sách đối tác…</div>
+          ) : partners.length === 0 ? (
+            <div className="text-text-muted">Tiệm chưa có đối tác nào đang nhận đơn — thêm đối tác ở trên.</div>
+          ) : (
             <div className="space-y-2.5">
-              {candidates.map((cand) => {
-                const isSelected = cand.id === selectedPartnerId
+              {partners.map((p) => {
+                const isSelected = p.id === selectedPartnerId
                 return (
-                  <div
-                    key={cand.id}
-                    onClick={() => setSelectedPartnerId(cand.id)}
-                    className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col gap-2 ${
-                      isSelected
-                        ? "border-red-500 bg-red-50/40 ring-2 ring-red-500/20"
-                        : "border-border bg-surface hover:border-red-300"
+                  <label
+                    key={p.id}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
+                      isSelected ? "border-red-500 bg-red-50/40 ring-2 ring-red-500/20" : "border-border bg-surface hover:border-red-300"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="partnerCandidate"
-                          checked={isSelected}
-                          onChange={() => setSelectedPartnerId(cand.id)}
-                          className="text-red-600 focus:ring-red-500"
-                        />
-                        <span className="font-extrabold text-text text-sm">{cand.name}</span>
-                        <Badge tone={cand.type === "INTERNAL_FLORIST" ? "neutral" : "warning"} className="text-[10px]">
-                          {cand.type === "INTERNAL_FLORIST" ? "Thợ nội bộ" : "Xưởng đối tác"}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-extrabold text-xs">
-                        <Sparkles size={12} className="text-emerald-600" />
-                        <span>{cand.matchScore}% Khớp</span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="partner"
+                        checked={isSelected}
+                        onChange={() => setSelectedPartnerId(p.id)}
+                        className="text-red-600 focus:ring-red-500"
+                      />
+                      <span className="font-extrabold text-text text-sm">{p.name}</span>
+                      <Badge tone={p.tier === "STANDARD" ? "neutral" : "warning"} className="text-[10px]">
+                        {p.tier}
+                      </Badge>
+                      {p.id === currentPartnerId && <Badge tone="success" className="text-[10px]">Đang giữ đơn</Badge>}
                     </div>
-
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-text-muted text-[11.5px] pl-6">
-                      <span className="flex items-center gap-1">
-                        <MapPin size={12} />
-                        Cách {cand.distanceKm} km
-                      </span>
+                      <span>{p.code}</span>
+                      <span>{p.phone}</span>
+                      {(p.district || p.province) && (
+                        <span className="flex items-center gap-1">
+                          <MapPin size={12} />
+                          {[p.district, p.province].filter(Boolean).join(", ")}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
                         <Star size={12} className="text-amber-500 fill-amber-500" />
-                        {cand.rating}/5.0
+                        {p.rating.toFixed(1)}/5
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} />
-                        Dự kiến cắm xong: <strong className="text-text">{cand.estimatedReadyTime}</strong>
-                      </span>
+                      <span>Công suất {p.capacityDaily} đơn/ngày</span>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5 pl-6 pt-1">
-                      {cand.matchReasons.map((reason, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-0.5 rounded-md bg-surface-alt border border-border text-[10.5px] font-medium text-text-muted"
-                        >
-                          ✓ {reason}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  </label>
                 )
               })}
             </div>
-          </div>
+          )}
 
           <div>
             <label className="font-bold text-text block mb-1">Lời nhắn giao việc cho đối tác:</label>
             <input
               type="text"
-              placeholder="Ví dụ: Đơn cắm hoa kỷ niệm, lưu ý tuyển hoa búp đẹp và gửi ảnh QC trước 16:15..."
+              placeholder="Ví dụ: tuyển hoa búp đẹp, gửi ảnh thành phẩm trước 16:15"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+              className={`w-full ${input}`}
             />
           </div>
+
+          {error && (
+            <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 font-semibold flex items-start gap-2">
+              <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
         <div className="p-4 border-t border-border flex items-center justify-end gap-3 sticky bottom-0 bg-surface">
           <Button variant="outline" size="sm" onClick={onClose}>
             Hủy bỏ
           </Button>
+          {needsOverride && (
+            <Button size="sm" variant="outline" disabled={submitting} onClick={() => handleConfirm(true)}>
+              Vẫn giao (vượt công suất)
+            </Button>
+          )}
           <Button
             size="sm"
-            onClick={handleConfirm}
+            disabled={!selectedPartnerId || submitting}
+            onClick={() => handleConfirm(false)}
             className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5"
           >
             <CheckCircle2 size={15} />
-            <span>Xác Nhận Giao Việc & Phát Hành Phiếu T07</span>
+            <span>{submitting ? "Đang giao việc…" : "Xác Nhận Giao Việc & Phát Hành Phiếu T07"}</span>
           </Button>
         </div>
       </div>

@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "step-05-quality-check.input.schema.json",
-  "title": "Kiểm tra Chất lượng (QC) — Đầu vào",
-  "description": "AI Vision đối chiếu ảnh chụp hoa thành phẩm với Master Index BOM và tiêu chuẩn tiệm",
+  "title": "Kiểm định chất lượng (T14–T15) — Đầu vào",
+  "description": "Người kiểm kết luận PASSED / REWORK_REQUESTED / REJECTED; không đạt bắt buộc lý do. Điểm AI chỉ ghi khi có lượt Vision thật (nợ #140)",
   "x-floraos": {
     "stepId": "05",
     "step": 5,
     "code": "QUALITY_CHECK",
     "endpoint": {
       "method": "POST",
-      "path": "/api/v1/coordinator/qc-inspection",
-      "capability": "O1"
+      "path": "/api/v1/coordinator/orders/{id}/qc",
+      "capability": "R3"
     },
     "source": "src/modules/coordinator/contracts/step-05-quality-check.ts",
     "direction": "input",
@@ -18,34 +18,41 @@
   },
   "type": "object",
   "properties": {
-    "coordinationId": {
+    "decision": {
       "type": "string",
-      "format": "uuid",
-      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      "enum": [
+        "PASSED",
+        "REWORK_REQUESTED",
+        "REJECTED"
+      ]
     },
-    "uploadedImageUrls": {
-      "minItems": 1,
-      "type": "array",
-      "items": {
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "checklist": {
+      "type": "object",
+      "propertyNames": {
         "type": "string",
-        "format": "uri"
+        "maxLength": 60
+      },
+      "additionalProperties": {
+        "type": "boolean"
       }
-    },
-    "inspectorNote": {
-      "type": "string"
     }
   },
   "required": [
-    "coordinationId",
-    "uploadedImageUrls"
+    "decision"
   ],
   "examples": [
     {
-      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
-      "uploadedImageUrls": [
-        "https://storage.floraos.vn/org/test/qc-finished-flower-1.jpg"
-      ],
-      "inspectorNote": "Ảnh chụp trực diện ánh sáng tự nhiên"
+      "decision": "PASSED",
+      "checklist": {
+        "flowerMatch": true,
+        "colorTone": true,
+        "wrapping": true,
+        "cardMessage": true
+      }
     }
   ]
 }

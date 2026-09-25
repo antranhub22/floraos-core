@@ -1,60 +1,35 @@
 /**
- * Bước 04: Giám sát Tiến độ Cắm hoa (IN_PRODUCTION).
- * Theo dõi trạng thái xưởng: Bắt đầu cắm, hoàn tất cắm, báo sự cố nguyên liệu.
+ * Bước 04: Theo dõi sản xuất (T07–T11).
+ * Cập nhật tiến độ; báo cắm xong bắt buộc kèm ảnh thành phẩm (assets cùng tổ chức) → QUALITY_CHECK; báo thiếu vật liệu mở sự cố.
+ *
+ * Input = đúng zod mà route dùng (`adapters/http-schemas.ts`), output = đúng
+ * hình dạng route trả (`order-view.ts`). Trước 25/09 hợp đồng này mô tả một
+ * endpoint không tồn tại với mã quyền `O1` không có trong danh mục.
  */
 
-import { z } from "zod"
+import { productionUpdateSchema } from "../adapters/http-schemas"
 import { defineStep } from "./define-step"
-import { CoordinatorStageEnum, CoordinationRiskLevelEnum } from "./common"
+import { CoordinatorOrderResponseSchema, exampleOrderView } from "./order-view"
 
-export const Step04ProductionInputSchema = z.object({
-  coordinationId: z.string().uuid(),
-  action: z.enum(["START_ARRANGING", "UPDATE_PROGRESS", "REPORT_MATERIAL_ISSUE", "MARK_READY_FOR_QC"]),
-  percentCompleted: z.number().int().min(0).max(100),
-  issueDescription: z.string().optional(),
-  estimatedFinishAt: z.string().optional(),
-})
-
-export const Step04ProductionOutputSchema = z.object({
-  coordinationId: z.string().uuid(),
-  stage: CoordinatorStageEnum,
-  riskLevel: CoordinationRiskLevelEnum,
-  currentProgressPercent: z.number().int(),
-  lastUpdated: z.string(),
-  hasActiveIssue: z.boolean(),
-  issueSummary: z.string().optional(),
-  nextAction: z.string(),
-})
+export const Step04ProductionInputSchema = productionUpdateSchema
+export const Step04ProductionOutputSchema = CoordinatorOrderResponseSchema
 
 export const step04ProductionContract = defineStep({
   id: "04",
   step: 4,
   code: "PRODUCTION",
   slug: "production",
-  title: "Giám sát Tiến độ Cắm hoa",
-  summary: "Cập nhật tiến trình cắm hoa thực tế tại xưởng và cảnh báo nguy cơ trễ hẹn",
+  title: "Theo dõi sản xuất (T07–T11)",
+  summary: "Cập nhật tiến độ; báo cắm xong bắt buộc kèm ảnh thành phẩm (assets cùng tổ chức) → QUALITY_CHECK; báo thiếu vật liệu mở sự cố",
   endpoint: {
     method: "POST",
-    path: "/api/v1/coordinator/production-update",
-    capability: "O1",
+    path: "/api/v1/coordinator/orders/{id}/production",
+    capability: "R3",
   },
   input: Step04ProductionInputSchema,
   output: Step04ProductionOutputSchema,
   examples: {
-    input: {
-      coordinationId: "a1b2c3d4-e29b-41d4-a716-446655440001",
-      action: "MARK_READY_FOR_QC",
-      percentCompleted: 100,
-      estimatedFinishAt: "2026-09-25T16:10:00.000Z",
-    },
-    output: {
-      coordinationId: "a1b2c3d4-e29b-41d4-a716-446655440001",
-      stage: "QUALITY_CHECK",
-      riskLevel: "NORMAL",
-      currentProgressPercent: 100,
-      lastUpdated: "2026-09-25T16:10:00.000Z",
-      hasActiveIssue: false,
-      nextAction: "Yêu cầu thợ gửi ảnh chụp 4 góc để AI Vision QC đối chiếu Master Index",
-    },
+    input: { action: "MARK_READY", progressPercent: 100, finishedAssetIds: ["a3c1d2e4-5f60-4718-9a2b-3c4d5e6f7a8b"] },
+    output: { order: exampleOrderView({ stage: "QUALITY_CHECK", stageLabel: "Chờ kiểm định QC", productionProgress: 100, finishedImageUrls: ["/api/v1/storage/org/…/a3c1d2e4.jpg?exp=…&sig=…"] }) },
   },
 })

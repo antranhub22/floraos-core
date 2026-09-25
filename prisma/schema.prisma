@@ -2027,6 +2027,7 @@ enum coordinator_stage {
   DELIVERED
   COMPLETED
   EXCEPTION
+  CANCELLED
 }
 
 enum coordination_risk_level {
@@ -2081,6 +2082,27 @@ model order_coordinations {
   next_action_due       DateTime?
   estimated_delivery_at DateTime?
   actual_delivery_at    DateTime?
+  /// Bước quay về khi mọi sự cố của đơn đã xử lý xong (stage = EXCEPTION).
+  resume_stage          coordinator_stage?
+  production_progress   Int                     @default(0)
+  /// Mảng id `assets` cùng tổ chức — ảnh thành phẩm thợ gửi lên.
+  finished_asset_ids    Json?
+  /// Ảnh mẫu tải lên lúc tiếp nhận (id `assets`), khi không lấy từ Product Master.
+  sample_asset_id       String?
+  shipper_name          String?
+  shipper_phone         String?
+  carrier               String?
+  /// PICKED_UP · ON_THE_WAY · DELIVERED_SUCCESS · DELIVERY_FAILED (F12).
+  delivery_state        String?
+  pod_asset_id          String?
+  pod_recipient_name    String?
+  pod_captured_at       DateTime?
+  partner_payout_vnd    Decimal?                @db.Decimal(14, 2)
+  partner_rating        Int?
+  closure_notes         String?
+  closed_by             String?
+  closed_at             DateTime?
+  cancelled_reason      String?
   metadata              Json?
   created_at            DateTime                @default(now())
   updated_at            DateTime                @updatedAt
@@ -2100,9 +2122,11 @@ model order_qc_records {
   order_id         String
   inspector_id     String?
   status           qc_record_status @default(PENDING)
+  /// Điểm chấm AI — CHỈ ghi khi có lượt Vision thật (nợ #140), không nhận từ client.
   ai_score         Int?
   ai_critique      String?
-  image_urls       Json?
+  /// Mảng id `assets` cùng tổ chức — ảnh thành phẩm đã kiểm.
+  image_asset_ids  Json?
   checklist_result Json?
   notes            String?
   created_at       DateTime         @default(now())
@@ -2134,6 +2158,7 @@ model order_exceptions {
   organization    organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
   order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
+  @@unique([organization_id, code])
   @@index([organization_id, order_id])
   @@index([organization_id, status])
 }

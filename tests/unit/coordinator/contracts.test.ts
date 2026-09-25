@@ -41,3 +41,19 @@ describe("Coordinator Contracts & JSON Schemas", () => {
     expect(files[0]!.file).toBe("index.json")
   })
 })
+
+describe("hợp đồng khớp route thật", () => {
+  it("mọi endpoint trỏ tới một route.ts có thật, export đúng method, dùng mã quyền có trong danh mục", async () => {
+    const { existsSync, readFileSync } = await import("node:fs")
+    const { ALL_CAPABILITY_CODES } = await import("@/core/rbac/capability-catalog")
+    for (const step of COORDINATOR_STEPS) {
+      const dir = step.endpoint.path.replace("/api/v1/", "src/app/api/v1/").replace("{id}", "[id]")
+      const file = `${dir}/route.ts`
+      expect(existsSync(file), `${step.id}: thiếu ${file}`).toBe(true)
+      const src = readFileSync(file, "utf8")
+      expect(src, `${step.id}: ${file} không export ${step.endpoint.method}`).toContain(`export const ${step.endpoint.method} `)
+      expect(src, `${step.id}: route không gác bằng ${step.endpoint.capability}`).toContain(`"${step.endpoint.capability}"`)
+      expect(ALL_CAPABILITY_CODES).toContain(step.endpoint.capability)
+    }
+  })
+})

@@ -1,25 +1,9 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import {
-  Radio,
-  Search,
-  Filter,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
-  Layers,
-  Sparkles,
-  Truck,
-  ArrowRight,
-  Eye,
-  AlertCircle,
-  X,
-  Plus,
-} from "lucide-react"
+import React, { useCallback, useEffect, useState } from "react"
+import { Radio, Search, CheckCircle2, AlertTriangle, AlertCircle, X, Plus, RefreshCw, Ban } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
 import { CoordinatorOrderBriefCard } from "@/components/templates/coordinator/coordinator-order-brief-card"
 import { PartnerProductCard } from "@/components/templates/coordinator/partner-product-card"
@@ -27,302 +11,68 @@ import { PartnerProductionCard } from "@/components/templates/coordinator/partne
 import { AIQCReportCard } from "@/components/templates/coordinator/ai-qc-report-card"
 import { DeliveryPODCard } from "@/components/templates/coordinator/delivery-pod-card"
 import { ExceptionResolutionCard } from "@/components/templates/coordinator/exception-resolution-card"
-import { PartnerAssignmentModal, type PartnerCandidate } from "@/components/templates/coordinator/partner-assignment-modal"
+import { PartnerAssignmentModal } from "@/components/templates/coordinator/partner-assignment-modal"
 import { ProductionUpdateModal } from "@/components/templates/coordinator/production-update-modal"
 import { OrderPlanningModal } from "@/components/templates/coordinator/order-planning-modal"
 import { AiQcInspectionModal } from "@/components/templates/coordinator/ai-qc-inspection-modal"
-import { DeliveryDispatchModal } from "@/components/templates/coordinator/delivery-dispatch-modal"
+import { DeliveryDispatchModal, type DeliveryEventInput } from "@/components/templates/coordinator/delivery-dispatch-modal"
 import { OrderClosureModal } from "@/components/templates/coordinator/order-closure-modal"
-import { OrderClosureLearningCard } from "@/components/templates/coordinator/order-closure-learning-card"
 import { SalesOrderIntakeCard } from "@/components/templates/coordinator/sales-order-intake-card"
-import { MissingInfoRequestCard } from "@/components/templates/coordinator/missing-info-request-card"
 import { SalesOrderIntakeModal } from "./sales-order-intake-modal"
+import {
+  coordinatorApi,
+  errorMessage,
+  type CoordinationOrder,
+  type CreateOrderRequest,
+} from "./coordinator-api"
 import type { FlowerBomItem, StructuredAddress } from "@/modules/products/domain/product-master-index"
 
-export interface CoordinationMockOrder {
-  id: string
-  orderCode: string
-  stage: "INTAKE" | "PLANNING" | "ASSIGNING" | "IN_PRODUCTION" | "QUALITY_CHECK" | "DISPATCHING" | "DELIVERED" | "COMPLETED" | "EXCEPTION"
-  stageLabel: string
-  riskLevel: "NORMAL" | "ATTENTION" | "AT_RISK" | "CRITICAL"
-  riskReason?: string | null | undefined
-  customerName: string
-  customerTier: string
-  recipientName: string
-  recipientPhone: string
-  deliveryAddress: StructuredAddress | string
-  deliveryTargetTime: string
-  nextAction: string
-  partnerName?: string | undefined
-  productTitle: string
-  sampleImageUrl?: string | undefined
-  finishedImageUrls?: string[] | undefined
-  flowers: FlowerBomItem[]
-  cardMessage: string
-  internalNote?: string | undefined
-  aiScore?: number | undefined
-  aiCritique?: string | undefined
-  qcScore?: number | undefined
-  qcStatus?: "PASSED" | "REWORK_REQUIRED" | undefined
-  podImageUrl?: string | undefined
-  hasException?: boolean | undefined
-  exceptionData?: {
-    code: string
-    type: string
-    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
-    description: string
-    resolution?: string | undefined
-  } | undefined
-  missingItems?: Array<{
-    field: string
-    label: string
-    reason: string
-  }> | undefined
-  partnerPayoutVnd?: number | undefined
-  unitPriceVnd?: number | undefined
+/**
+ * Control Tower — Chức năng 12 (Điều phối đơn hàng).
+ *
+ * CSDL là nguồn duy nhất. Bản trước khởi đầu bằng 5 đơn mẫu cứng, lưu toàn bộ
+ * vào localStorage (khoá chung mọi tổ chức trên cùng trình duyệt) và gọi API
+ * "ngầm" rồi nuốt lỗi — nên dữ liệu mỗi máy một khác và phần lớn thao tác
+ * không bao giờ tới máy chủ. Nay mọi thao tác chờ máy chủ trả đơn đã cập nhật.
+ */
+
+/** Tự làm mới để mức rủi ro trễ (F09/F12) — tính theo giờ hiện tại — không đứng yên. */
+const REFRESH_MS = 60_000
+
+const EXCEPTION_TYPE_LABELS: Record<string, string> = {
+  MISSING_INFORMATION: "Thiếu thông tin",
+  PARTNER_DECLINE: "Đối tác từ chối",
+  PARTNER_DELAY: "Đối tác trễ",
+  MATERIAL_SHORTAGE: "Thiếu vật liệu",
+  QC_FAILURE: "QC không đạt",
+  DELIVERY_FAILURE: "Giao thất bại",
+  CUSTOMER_CHANGE: "Khách đổi yêu cầu",
+  COMMERCIAL_ISSUE: "Vấn đề thương mại",
 }
 
-const INITIAL_ORDERS: CoordinationMockOrder[] = [
-  {
-    id: "ord-001",
-    orderCode: "FLR-2026-001",
-    stage: "QUALITY_CHECK",
-    stageLabel: "Chờ duyệt QC",
-    riskLevel: "CRITICAL",
-    riskReason: "Ảnh hoa thợ gửi có nguy cơ lệch màu nơ so với ảnh mẫu",
-    customerName: "Nguyễn Văn An",
-    customerTier: "VIP",
-    recipientName: "Trần Thị Bình",
-    recipientPhone: "0912345678",
-    deliveryAddress: {
-      street: "Phòng 802, Toà Lotte Center, 54 Liễu Giai",
-      ward: "Phường Cống Vị",
-      district: "Quận Ba Đình",
-      city: "Hà Nội",
-      country: "Việt Nam",
-      formattedAddress: "Phòng 802, Toà Lotte Center, 54 Liễu Giai, Phường Cống Vị, Quận Ba Đình, Hà Nội, Việt Nam",
-    },
-    deliveryTargetTime: "17:00 Hôm nay",
-    nextAction: "Duyệt ảnh AI QC hoặc yêu cầu thợ đổi nơ đỏ",
-    partnerName: "Flora Xưởng Ba Đình",
-    productTitle: "Bó Hồng Ohara Kem Sang Trọng",
-    sampleImageUrl: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=600&q=80",
-    finishedImageUrls: ["https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=600&q=80"],
-    flowers: [
-      { flowerName: "Hồng Ohara Kem", quantity: 15, unit: "cành", color: "Kem pastel", role: "Chủ đạo" },
-      { flowerName: "Baby Trắng", quantity: 5, unit: "cành", color: "Trắng", role: "Điểm xuyến" },
-      { flowerName: "Cúc Tana", quantity: 7, unit: "cành", color: "Trắng vàng", role: "Phụ" },
-    ],
-    cardMessage: "Chúc mừng sinh nhật em yêu, chúc em luôn rạng rỡ như đóa hoa này!",
-    internalNote: "Khách VIP, bọc 2 lớp giấy lụa mờ cẩn thận tránh gió",
-    aiScore: 92,
-    aiCritique: "Hoa cắm tròn đều, 15 cành Ohara tươi mới đạt chuẩn, nơ nhung đỏ buộc chắc chắn.",
-    hasException: false,
-  },
-  {
-    id: "ord-002",
-    orderCode: "FLR-2026-002",
-    stage: "IN_PRODUCTION",
-    stageLabel: "Đang cắm hoa",
-    riskLevel: "AT_RISK",
-    riskReason: "Còn 90 phút nhưng xưởng mới hoàn thành 40%",
-    customerName: "Lê Hoàng Long",
-    customerTier: "GOLD",
-    recipientName: "Phạm Thu Hương",
-    recipientPhone: "0988776655",
-    deliveryAddress: {
-      street: "Tầng 3 Khách sạn Daewoo, 360 Kim Mã",
-      ward: "Phường Ngọc Khánh",
-      district: "Quận Ba Đình",
-      city: "Hà Nội",
-      country: "Việt Nam",
-      formattedAddress: "Tầng 3 Khách sạn Daewoo, 360 Kim Mã, Phường Ngọc Khánh, Quận Ba Đình, Hà Nội, Việt Nam",
-    },
-    deliveryTargetTime: "17:30 Hôm nay",
-    nextAction: "Gọi điện giục thợ đẩy nhanh tiến độ cắm hoa",
-    partnerName: "Tiệm Hoa Nghệ Thuật Đống Đa",
-    productTitle: "Giỏ Hoa Khai Trương Tài Lộc",
-    sampleImageUrl: "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?auto=format&fit=crop&w=600&q=80",
-    flowers: [
-      { flowerName: "Hướng Dương", quantity: 10, unit: "bông", color: "Vàng rực", role: "Chủ đạo" },
-      { flowerName: "Hồng Cam Spirit", quantity: 12, unit: "cành", color: "Cam tươi", role: "Phụ" },
-    ],
-    cardMessage: "Chúc mừng khai trương Hồng Phát - Vạn Sự Hanh Thông!",
-    hasException: true,
-    exceptionData: {
-      code: "EXP-088",
-      type: "DELAY_RISK",
-      severity: "HIGH",
-      description: "Thợ cắm chính đang hoàn thiện đơn tiệc trước đó, bắt đầu đơn này chậm 20 phút.",
-      resolution: "Bổ sung 1 thợ phụ phụ trách cắt tỉa lá đệm và chuẩn bị giỏ mây.",
-    },
-  },
-  {
-    id: "ord-003",
-    orderCode: "FLR-2026-003",
-    stage: "DISPATCHING",
-    stageLabel: "Đang giao hàng",
-    riskLevel: "NORMAL",
-    customerName: "Đỗ Minh Tuấn",
-    customerTier: "SILVER",
-    recipientName: "Bùi Thị Mai",
-    recipientPhone: "0904321987",
-    deliveryAddress: {
-      street: "Số 18, Đường Hoàng Diệu",
-      ward: "Phường Quán Thánh",
-      district: "Quận Ba Đình",
-      city: "Hà Nội",
-      country: "Việt Nam",
-      formattedAddress: "Số 18, Đường Hoàng Diệu, Phường Quán Thánh, Quận Ba Đình, Hà Nội, Việt Nam",
-    },
-    deliveryTargetTime: "16:45 Hôm nay",
-    nextAction: "Theo dõi vị trí shipper trên bản đồ",
-    partnerName: "Flora Xưởng Ba Đình",
-    productTitle: "Bó Cúc Tana Mộc Mạc",
-    sampleImageUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=600&q=80",
-    flowers: [
-      { flowerName: "Cúc Tana", quantity: 30, unit: "cành", color: "Trắng vàng", role: "Chủ đạo" },
-    ],
-    cardMessage: "Chúc ngày mới an lành và tràn đầy năng lượng tích cực!",
-    aiScore: 98,
-    hasException: false,
-  },
-  {
-    id: "ord-004",
-    orderCode: "FLR-2026-004",
-    stage: "DELIVERED",
-    stageLabel: "Đã giao (Chờ đóng đơn)",
-    riskLevel: "NORMAL",
-    customerName: "Vũ Hải Đăng",
-    customerTier: "BRONZE",
-    recipientName: "Nguyễn Thùy Chi",
-    recipientPhone: "0977112233",
-    deliveryAddress: {
-      street: "Tầng 12, Tòa Keangnam Landmark 72, Phạm Hùng",
-      ward: "Phường Mễ Trì",
-      district: "Quận Nam Từ Liêm",
-      city: "Hà Nội",
-      country: "Việt Nam",
-      formattedAddress: "Tầng 12, Tòa Keangnam Landmark 72, Phạm Hùng, Phường Mễ Trì, Quận Nam Từ Liêm, Hà Nội, Việt Nam",
-    },
-    deliveryTargetTime: "15:00 Hôm nay",
-    nextAction: "Bấm 'Nghiệm thu đóng đơn' để cập nhật điểm CRM và giải ngân đối tác",
-    partnerName: "Xưởng Hoa Cầu Giấy",
-    productTitle: "Bó Hồng Đỏ Quyến Rũ",
-    sampleImageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    podImageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    flowers: [
-      { flowerName: "Hồng Đỏ Explorer", quantity: 20, unit: "cành", color: "Đỏ nhung", role: "Chủ đạo" },
-    ],
-    cardMessage: "Mãi mãi bên nhau em nhé!",
-    hasException: false,
-    partnerPayoutVnd: 280000,
-  },
-  {
-    id: "ord-005",
-    orderCode: "FLR-2026-005",
-    stage: "INTAKE",
-    stageLabel: "Tiếp nhận đơn từ Sales",
-    riskLevel: "ATTENTION",
-    riskReason: "Sales chưa ghi rõ số phòng toà nhà & số điện thoại phụ của người nhận",
-    customerName: "Hoàng Nhật Minh",
-    customerTier: "SILVER",
-    recipientName: "Đặng Mai Phương",
-    recipientPhone: "0966881122",
-    deliveryAddress: {
-      street: "Tòa Keangnam Hanoi Landmark Tower, Phạm Hùng",
-      ward: "Phường Mễ Trì",
-      district: "Quận Nam Từ Liêm",
-      city: "Hà Nội",
-      country: "Việt Nam",
-      formattedAddress: "Tòa Keangnam Hanoi Landmark Tower, Phạm Hùng, Phường Mễ Trì, Quận Nam Từ Liêm, Hà Nội, Việt Nam",
-    },
-    deliveryTargetTime: "18:30 Hôm nay",
-    nextAction: "Yêu cầu Sales bổ sung số tầng/phòng trước khi điều phối thợ",
-    productTitle: "Bình Hoa Tulip Trắng Tinh Khôi",
-    sampleImageUrl: "https://images.unsplash.com/photo-1520763185298-1b434c919102?auto=format&fit=crop&w=600&q=80",
-    flowers: [
-      { flowerName: "Tulip Hà Lan Trắng", quantity: 20, unit: "cành", color: "Trắng tinh", role: "Chủ đạo" },
-      { flowerName: "Baby Trắng", quantity: 5, unit: "cành", color: "Trắng", role: "Điểm xuyến" },
-    ],
-    cardMessage: "Happy Birthday my sunshine!",
-    internalNote: "Khách dặn giao đúng giờ tan tầm 18h30 để tạo bất ngờ",
-    missingItems: [
-      { field: "roomNumber", label: "Số phòng/Tầng", reason: "Tòa Keangnam rộng, cần số tầng chính xác" },
-      { field: "secondaryPhone", label: "SĐT dự phòng", reason: "Tránh trường hợp người nhận bận họp máy bận" },
-    ],
-  },
-]
+type DetailTab = "SALES_INTAKE" | "BRIEF" | "PRODUCTION" | "QC" | "DELIVERY" | "EXCEPTION" | "CLOSURE"
 
-const COORDINATOR_STORAGE_KEY = "floraos_coordinator_orders_v2"
-
-export function getNextAdvancedOrder(o: CoordinationMockOrder): CoordinationMockOrder {
-  if (o.stage === "INTAKE") {
-    return {
-      ...o,
-      stage: "PLANNING",
-      stageLabel: "Đã tiếp nhận (Chờ phân công)",
-      riskLevel: "NORMAL",
-      nextAction: "Phân công đối tác xưởng ngoài hoặc thợ cắm hoa",
-    }
+function asAddress(value: unknown): StructuredAddress | string {
+  if (value && typeof value === "object") {
+    const a = value as Record<string, unknown>
+    if (typeof a.street === "string") return a as unknown as StructuredAddress
+    if (typeof a.formattedAddress === "string") return a.formattedAddress
   }
-  if (o.stage === "PLANNING" || o.stage === "ASSIGNING") {
-    return {
-      ...o,
-      stage: "IN_PRODUCTION",
-      stageLabel: "Đang cắm hoa",
-      riskLevel: "NORMAL",
-      nextAction: "Xưởng đang tiếp nhận cắm hoa theo BOM",
-    }
-  }
-  if (o.stage === "IN_PRODUCTION") {
-    return {
-      ...o,
-      stage: "QUALITY_CHECK",
-      stageLabel: "Chờ duyệt QC",
-      riskLevel: "NORMAL",
-      nextAction: "Kiểm tra ảnh hoa thợ vừa cắm xong đối chiếu Master Index",
-    }
-  }
-  if (o.stage === "QUALITY_CHECK") {
-    return {
-      ...o,
-      stage: "DISPATCHING",
-      stageLabel: "Đang giao hàng",
-      riskLevel: "NORMAL",
-      nextAction: "Shipper đang giao tới người nhận",
-    }
-  }
-  if (o.stage === "DISPATCHING") {
-    return {
-      ...o,
-      stage: "DELIVERED",
-      stageLabel: "Đã giao (Chờ đóng đơn)",
-      riskLevel: "NORMAL",
-      nextAction: "Nghiệm thu đóng đơn và giải ngân đối tác",
-    }
-  }
-  if (o.stage === "DELIVERED") {
-    return {
-      ...o,
-      stage: "COMPLETED",
-      stageLabel: "Hoàn tất 100%",
-      riskLevel: "NORMAL",
-      nextAction: "Đơn đã hoàn thành trọn vẹn",
-    }
-  }
-  if (o.stage === "EXCEPTION") {
-    return {
-      ...o,
-      hasException: false,
-      stage: "IN_PRODUCTION",
-      stageLabel: "Đang cắm hoa",
-      riskLevel: "NORMAL",
-      nextAction: "Đã xử lý xong sự cố, tiếp tục tiến trình",
-    }
-  }
-  return o
+  return typeof value === "string" ? value : ""
 }
+
+function asFlowers(order: CoordinationOrder): FlowerBomItem[] {
+  return order.flowers as unknown as FlowerBomItem[]
+}
+
+function priorityOf(order: CoordinationOrder): "STANDARD" | "RUSH" | "VIP" {
+  const note = order.internalNote ?? ""
+  if (note.startsWith("[Ưu tiên: RUSH]")) return "RUSH"
+  if (note.startsWith("[Ưu tiên: VIP]")) return "VIP"
+  return "STANDARD"
+}
+
+const fmtTime = (iso: string | null) => (iso ? new Date(iso).toLocaleString("vi-VN") : "—")
 
 export interface ControlTowerDashboardProps {
   isCreateModalOpen?: boolean | undefined
@@ -335,14 +85,15 @@ export function ControlTowerDashboard({
   onOpenCreateModal,
   onCloseCreateModal,
 }: ControlTowerDashboardProps = {}) {
-  const [orders, setOrders] = useState<CoordinationMockOrder[]>(INITIAL_ORDERS)
-  const [isMounted, setIsMounted] = useState(false)
-  const [selectedOrder, setSelectedOrder] = useState<CoordinationMockOrder | null>(null)
+  const [orders, setOrders] = useState<CoordinationOrder[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState<string>("")
-  const [detailModalTab, setDetailModalTab] = useState<
-    "SALES_INTAKE" | "BRIEF" | "MISSING_INFO" | "PRODUCTION" | "QC" | "DELIVERY" | "EXCEPTION" | "CLOSURE"
-  >("BRIEF")
+  const [detailModalTab, setDetailModalTab] = useState<DetailTab>("BRIEF")
   const [internalIsCreateOpen, setInternalIsCreateOpen] = useState(false)
   const [isPlanningModalOpen, setIsPlanningModalOpen] = useState(false)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
@@ -350,58 +101,45 @@ export function ControlTowerDashboard({
   const [isQcModalOpen, setIsQcModalOpen] = useState(false)
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false)
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false)
+  const [resolutionDrafts, setResolutionDrafts] = useState<Record<string, string>>({})
+  const [newException, setNewException] = useState({ type: "CUSTOMER_CHANGE", severity: "MEDIUM", description: "" })
+  const [cancelReason, setCancelReason] = useState("")
+  const [detailError, setDetailError] = useState<string | null>(null)
 
-  // Nạp dữ liệu bền vững từ localStorage sau khi client mount (triệt tiêu 100% lỗi SSR Hydration mismatch)
-  useEffect(() => {
-    setIsMounted(true)
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(COORDINATOR_STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setOrders(parsed)
-          }
-        }
-      } catch (e) {
-        console.error("Failed to load coordinator orders from localStorage:", e)
-      }
-    }
-  }, [])
+  const selectedOrder = orders.find((o) => o.id === selectedId) ?? null
 
-  // Đồng bộ lưu bền vững vào localStorage khi orders thay đổi sau khi đã mount
-  useEffect(() => {
-    if (!isMounted) return
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(COORDINATOR_STORAGE_KEY, JSON.stringify(orders))
-      } catch (e) {
-        console.error("Failed to save coordinator orders to localStorage:", e)
-      }
-    }
-  }, [orders, isMounted])
+  const refresh = useCallback(
+    () =>
+      coordinatorApi
+        .listOrders()
+        .then((list) => {
+          setOrders(list)
+          setLoadError(null)
+        })
+        .catch((error: unknown) => setLoadError(errorMessage(error)))
+        .finally(() => setLoading(false)),
+    []
+  )
 
-  // Tải danh sách đơn từ Database Backend khi vào trang
   useEffect(() => {
-    async function syncFromDb() {
-      try {
-        const res = await fetch("/api/v1/coordinator/orders")
-        if (res.ok) {
-          const data = await res.json()
-          if (Array.isArray(data.orders) && data.orders.length > 0) {
-            setOrders((prev) => {
-              const dbCodes = new Set(data.orders.map((o: any) => o.orderCode || o.id))
-              const localOnly = prev.filter((p) => !dbCodes.has(p.orderCode) && !dbCodes.has(p.id))
-              return [...data.orders, ...localOnly]
-            })
-          }
-        }
-      } catch (err) {
-        console.warn("Database sync offline, using local persistent storage:", err)
-      }
+    const first = setTimeout(() => void refresh(), 0)
+    const timer = setInterval(() => void refresh(), REFRESH_MS)
+    return () => {
+      clearTimeout(first)
+      clearInterval(timer)
     }
-    syncFromDb()
-  }, [])
+  }, [refresh])
+
+  const applyUpdate = (order: CoordinationOrder) => {
+    setOrders((prev) => {
+      const i = prev.findIndex((p) => p.id === order.id)
+      if (i < 0) return [order, ...prev]
+      const next = [...prev]
+      next[i] = order
+      return next
+    })
+    setSelectedId(order.id)
+  }
 
   const effectiveIsCreateOpen = isCreateModalOpen !== undefined ? isCreateModalOpen : internalIsCreateOpen
   const handleOpenCreate = onOpenCreateModal || (() => setInternalIsCreateOpen(true))
@@ -410,41 +148,184 @@ export function ControlTowerDashboard({
     onCloseCreateModal?.()
   }
 
-  const handleCreateOrder = async (newOrder: CoordinationMockOrder) => {
-    setOrders((prev) => [newOrder, ...prev])
-    // Bắn API lưu vào database ngầm
-    try {
-      await fetch("/api/v1/coordinator/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newOrder),
+  const openDetail = (order: CoordinationOrder, tab: DetailTab = "BRIEF") => {
+    setSelectedId(order.id)
+    setDetailModalTab(tab)
+    setDetailError(null)
+    setIsDetailOpen(true)
+  }
+
+  // ── Thao tác: mỗi hàm chờ máy chủ; lỗi ném lên modal để hiện đúng câu máy chủ trả ──
+
+  const handleCreateOrder = async (body: CreateOrderRequest) => {
+    const order = await coordinatorApi.createOrder(body)
+    applyUpdate(order)
+    setNotice(`Đã tạo đơn #${order.orderCode}.`)
+  }
+
+  const handleConfirmPlan = async (nextAction: string) => {
+    if (!selectedOrder) return
+    applyUpdate(await coordinatorApi.updateStage(selectedOrder.id, "PLANNING", nextAction))
+    setIsPlanningModalOpen(false)
+    setIsAssignModalOpen(true)
+  }
+
+  const handleAssignPartner = async (partnerId: string, notes: string, overrideCapacity: boolean) => {
+    if (!selectedOrder) return
+    applyUpdate(
+      await coordinatorApi.assignPartner(selectedOrder.id, {
+        partnerId,
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+        ...(overrideCapacity ? { overrideCapacity } : {}),
       })
-    } catch (err) {
-      console.warn("Coordinator API offline, saved in persistent localStorage:", err)
+    )
+    setIsAssignModalOpen(false)
+  }
+
+  const handleProductionUpdate = async (params: {
+    progressPercent: number
+    action: "UPDATE_PROGRESS" | "REPORT_MATERIAL_ISSUE" | "MARK_READY"
+    finishedAssetIds?: string[] | undefined
+    issueNote?: string | undefined
+  }) => {
+    if (!selectedOrder) return
+    const order = await coordinatorApi.production(selectedOrder.id, {
+      action: params.action,
+      progressPercent: params.progressPercent,
+      ...(params.finishedAssetIds ? { finishedAssetIds: params.finishedAssetIds } : {}),
+      ...(params.issueNote ? { issueNote: params.issueNote } : {}),
+    })
+    applyUpdate(order)
+    setIsProductionUpdateModalOpen(false)
+    if (order.stage === "QUALITY_CHECK") setIsQcModalOpen(true)
+    if (order.stage === "EXCEPTION") openDetail(order, "EXCEPTION")
+  }
+
+  const handleQc = async (decision: "PASSED" | "REWORK_REQUESTED" | "REJECTED", notes: string, checklist: Record<string, boolean>) => {
+    if (!selectedOrder) return
+    const order = await coordinatorApi.qc(selectedOrder.id, { decision, ...(notes ? { notes } : {}), checklist })
+    applyUpdate(order)
+    setIsQcModalOpen(false)
+    if (order.stage === "DISPATCHING") setIsDispatchModalOpen(true)
+    if (order.stage === "EXCEPTION") openDetail(order, "EXCEPTION")
+  }
+
+  const handleDelivery = async (input: DeliveryEventInput) => {
+    if (!selectedOrder) return
+    const order = await coordinatorApi.delivery(selectedOrder.id, input)
+    applyUpdate(order)
+    if (order.stage === "DELIVERED") {
+      setIsDispatchModalOpen(false)
+      setIsClosureModalOpen(true)
+    } else if (order.stage === "EXCEPTION") {
+      setIsDispatchModalOpen(false)
+      openDetail(order, "EXCEPTION")
     }
   }
 
-  const totalCount = orders.length
+  const handleCloseOrder = async (input: { partnerRating?: number; partnerPayoutVnd?: number; notes?: string }) => {
+    if (!selectedOrder) return
+    const order = await coordinatorApi.close(selectedOrder.id, input)
+    applyUpdate(order)
+    setIsClosureModalOpen(false)
+    setNotice(`Đơn #${order.orderCode} đã nghiệm thu và đóng.`)
+  }
+
+  const runDetailAction = async (fn: () => Promise<CoordinationOrder>) => {
+    setDetailError(null)
+    try {
+      applyUpdate(await fn())
+      return true
+    } catch (error) {
+      setDetailError(errorMessage(error))
+      return false
+    }
+  }
+
+  const handleResolveException = async (exceptionId: string) => {
+    const resolution = resolutionDrafts[exceptionId]?.trim()
+    if (!resolution) {
+      setDetailError("Ghi cách đã xử lý sự cố trước khi đóng.")
+      return
+    }
+    if (await runDetailAction(() => coordinatorApi.resolveException(exceptionId, resolution))) {
+      setResolutionDrafts((prev) => ({ ...prev, [exceptionId]: "" }))
+    }
+  }
+
+  const handleOpenException = async () => {
+    if (!selectedOrder) return
+    if (!newException.description.trim()) {
+      setDetailError("Mô tả sự cố trước khi mở.")
+      return
+    }
+    if (await runDetailAction(() => coordinatorApi.openException(selectedOrder.id, { ...newException, description: newException.description.trim() }))) {
+      setNewException({ type: "CUSTOMER_CHANGE", severity: "MEDIUM", description: "" })
+    }
+  }
+
+  const handleCancelOrder = async () => {
+    if (!selectedOrder) return
+    if (!cancelReason.trim()) {
+      setDetailError("Ghi lý do huỷ đơn.")
+      return
+    }
+    if (await runDetailAction(() => coordinatorApi.cancel(selectedOrder.id, cancelReason.trim()))) {
+      setCancelReason("")
+    }
+  }
+
+  // Nút "bước kế tiếp" mở đúng form nghiệp vụ của bước đó.
+  const handleAdvanceStage = (order: CoordinationOrder) => {
+    setSelectedId(order.id)
+    switch (order.stage) {
+      case "INTAKE":
+      case "VALIDATING":
+        setIsPlanningModalOpen(true)
+        break
+      case "PLANNING":
+      case "ASSIGNING":
+        setIsAssignModalOpen(true)
+        break
+      case "IN_PRODUCTION":
+        setIsProductionUpdateModalOpen(true)
+        break
+      case "QUALITY_CHECK":
+        setIsQcModalOpen(true)
+        break
+      case "DISPATCHING":
+        setIsDispatchModalOpen(true)
+        break
+      case "DELIVERED":
+        setIsClosureModalOpen(true)
+        break
+      case "EXCEPTION":
+        openDetail(order, "EXCEPTION")
+        break
+      default:
+        openDetail(order, "BRIEF")
+    }
+  }
+
+  const totalCount = orders.filter((o) => o.stage !== "COMPLETED" && o.stage !== "CANCELLED").length
   const criticalCount = orders.filter((o) => o.riskLevel === "CRITICAL").length
   const atRiskCount = orders.filter((o) => o.riskLevel === "AT_RISK").length
-  const onTrackCount = orders.filter((o) => o.riskLevel === "NORMAL").length
+  const onTrackCount = orders.filter((o) => o.riskLevel === "NORMAL" && o.stage !== "COMPLETED" && o.stage !== "CANCELLED").length
 
   const filteredOrders = orders.filter((o) => {
     if (activeTab !== "ALL") {
-      if (activeTab === "INTAKE" && o.stage !== "INTAKE") return false
+      if (activeTab === "INTAKE" && o.stage !== "INTAKE" && o.stage !== "VALIDATING") return false
       if (activeTab === "PLANNING" && o.stage !== "PLANNING" && o.stage !== "ASSIGNING") return false
       if (activeTab === "IN_PRODUCTION" && o.stage !== "IN_PRODUCTION") return false
       if (activeTab === "QUALITY_CHECK" && o.stage !== "QUALITY_CHECK") return false
       if (activeTab === "DISPATCHING" && o.stage !== "DISPATCHING") return false
       if (activeTab === "DELIVERED" && o.stage !== "DELIVERED" && o.stage !== "COMPLETED") return false
-      if (activeTab === "EXCEPTION" && !o.hasException) return false
+      if (activeTab === "EXCEPTION" && !o.hasException && o.stage !== "EXCEPTION") return false
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
-      const addrStr =
-        typeof o.deliveryAddress === "object" && o.deliveryAddress !== null
-          ? `${o.deliveryAddress.street} ${o.deliveryAddress.ward} ${o.deliveryAddress.district} ${o.deliveryAddress.city} ${o.deliveryAddress.country || ""}`.toLowerCase()
-          : o.deliveryAddress.toLowerCase()
+      const addr = asAddress(o.deliveryAddress)
+      const addrStr = (typeof addr === "string" ? addr : [addr.street, addr.ward, addr.district, addr.city].join(" ")).toLowerCase()
       return (
         o.orderCode.toLowerCase().includes(q) ||
         o.customerName.toLowerCase().includes(q) ||
@@ -456,189 +337,18 @@ export function ControlTowerDashboard({
     return true
   })
 
-  // Hàm đồng bộ đơn hàng vào state, localStorage và Database
-  const syncOrder = (updatedOrder: CoordinationMockOrder) => {
-    setOrders((prev) => {
-      const next = prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(COORDINATOR_STORAGE_KEY, JSON.stringify(next))
-        } catch (e) {
-          console.error("Failed to sync orders to localStorage:", e)
-        }
-      }
-      return next
-    })
-    setSelectedOrder((prev) => (prev && prev.id === updatedOrder.id ? updatedOrder : prev))
+  const tabButton = (tab: DetailTab, label: string, extra = "") => (
+    <button
+      onClick={() => setDetailModalTab(tab)}
+      className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
+        detailModalTab === tab ? "bg-red-600 text-white" : `text-text-muted hover:text-text ${extra}`
+      }`}
+    >
+      {label}
+    </button>
+  )
 
-    // Đồng bộ DB ngầm
-    fetch(`/api/v1/coordinator/orders/${updatedOrder.id}/stage`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        stage: updatedOrder.stage,
-        nextAction: updatedOrder.nextAction,
-        metadata: {
-          riskLevel: updatedOrder.riskLevel,
-          partnerName: updatedOrder.partnerName,
-          finishedImageUrls: updatedOrder.finishedImageUrls,
-          podImageUrl: updatedOrder.podImageUrl,
-          qcScore: updatedOrder.qcScore,
-        },
-      }),
-    }).catch((err) => console.warn("Background stage sync:", err))
-  }
-
-  // Chuyển bước theo đúng nghiệp vụ tác nghiệp của Điều phối viên: Mở đúng Form của bước đó
-  const handleAdvanceStage = (orderId: string) => {
-    const target = orders.find((o) => o.id === orderId)
-    if (!target) return
-    setSelectedOrder(target)
-
-    switch (target.stage) {
-      case "INTAKE":
-        // P1 -> P2: Mở Form Lập Kế Hoạch Đơn Hàng (Order Planning Modal T02)
-        setIsPlanningModalOpen(true)
-        break
-      case "PLANNING":
-        // P2 -> P3: Mở Form Tìm & Chỉ Định Đối Tác Xưởng (Partner Assignment Modal T06)
-        setIsAssignModalOpen(true)
-        break
-      case "ASSIGNING":
-      case "IN_PRODUCTION":
-        // P3/P4: Mở Form Phiếu Cắm Hoa & Cập Nhật Tiến Độ (Production Update Modal T08/T10)
-        setIsProductionUpdateModalOpen(true)
-        break
-      case "QUALITY_CHECK":
-        // P5: Mở Form Kiểm Định Chất Lượng AI QC (AI QC Inspection Modal T14)
-        setIsQcModalOpen(true)
-        break
-      case "DISPATCHING":
-        // P6: Mở Form Điều Phối Giao Hàng & Thu Thập POD (Delivery Dispatch Modal T20/T21)
-        setIsDispatchModalOpen(true)
-        break
-      case "DELIVERED":
-        // P7: Mở Form Nghiệm Thu & Đóng Đơn SLA (Order Closure Modal T25/T26)
-        setIsClosureModalOpen(true)
-        break
-      case "COMPLETED":
-        alert(`Đơn hàng #${target.orderCode} đã hoàn tất và đóng hồ sơ sạch!`)
-        break
-      default:
-        setIsPlanningModalOpen(true)
-        break
-    }
-  }
-
-  // Xử lý xác nhận Kế hoạch P2 ➔ Chuyển sang P3 Tìm đối tác
-  const handleConfirmPlan = (updatedOrder: CoordinationMockOrder) => {
-    syncOrder(updatedOrder)
-    setIsPlanningModalOpen(false)
-    // Tự động mở ngay Modal phân công xưởng P3 cho Điều phối viên tác nghiệp
-    setIsAssignModalOpen(true)
-  }
-
-  // Xử lý gán đối tác P3 ➔ Chuyển sang P4 Theo dõi gia công
-  const handleAssignPartner = (partner: PartnerCandidate, notes?: string) => {
-    if (!selectedOrder) return
-    const partnerName = partner.name
-    const updated: CoordinationMockOrder = {
-      ...selectedOrder,
-      partnerName,
-      stage: "IN_PRODUCTION",
-      stageLabel: "Đang cắm hoa",
-      nextAction: `Xưởng ${partnerName} đang cắm theo BOM (điểm tương thích ${partner.matchScore}%)`,
-      internalNote: notes
-        ? `${selectedOrder.internalNote || ""}\n[Phân công P3]: Giao xưởng ${partnerName}. Ghi chú: ${notes}`.trim()
-        : selectedOrder.internalNote,
-    }
-    syncOrder(updated)
-    setIsAssignModalOpen(false)
-  }
-
-  // Xử lý cập nhật tiến độ cắm hoa P4 ➔ Khi cắm xong 100% tự động mở AI QC P5
-  const handleProductionUpdateSubmit = (params: {
-    progressPercent: number
-    action: "UPDATE_PROGRESS" | "REPORT_MATERIAL_ISSUE" | "MARK_READY"
-    finishedImageUrl?: string | undefined
-    issueNote?: string | undefined
-  }) => {
-    if (!selectedOrder) return
-
-    if (params.action === "MARK_READY" || params.progressPercent >= 100) {
-      const finishedImgs = params.finishedImageUrl
-        ? [params.finishedImageUrl]
-        : selectedOrder.finishedImageUrls || [selectedOrder.sampleImageUrl || ""]
-      const updated: CoordinationMockOrder = {
-        ...selectedOrder,
-        stage: "QUALITY_CHECK",
-        stageLabel: "Đã cắm xong (Chờ kiểm định QC)",
-        nextAction: "Thực hiện kiểm định thị giác AI QC đối chiếu ảnh mẫu",
-        finishedImageUrls: finishedImgs,
-      }
-      syncOrder(updated)
-      setIsProductionUpdateModalOpen(false)
-      // Mở ngay Modal Kiểm Định AI QC P5
-      setIsQcModalOpen(true)
-    } else if (params.action === "REPORT_MATERIAL_ISSUE") {
-      const newException = {
-        code: `EXP-${Math.floor(100 + Math.random() * 900)}`,
-        type: "MATERIAL_SHORTAGE",
-        severity: "HIGH" as const,
-        description: params.issueNote || "Xưởng báo thiếu nguyên vật liệu hoa cần thay thế",
-        resolution: "Đang liên hệ Sales xin ý kiến khách về phương án thay thế",
-      }
-      const updated: CoordinationMockOrder = {
-        ...selectedOrder,
-        hasException: true,
-        riskLevel: "CRITICAL",
-        riskReason: "Thiếu nguyên liệu",
-        exceptionData: newException,
-        nextAction: "Liên hệ Sales xin ý kiến khách về phương án hoa thay thế",
-      }
-      syncOrder(updated)
-      setIsProductionUpdateModalOpen(false)
-      setDetailModalTab("EXCEPTION")
-    } else {
-      const updatedAction = `Xưởng hoàn thành ${params.progressPercent}%`
-      const updated: CoordinationMockOrder = {
-        ...selectedOrder,
-        nextAction: updatedAction,
-      }
-      syncOrder(updated)
-      setIsProductionUpdateModalOpen(false)
-    }
-  }
-
-  // Xử lý duyệt Đạt QC P5 ➔ Tự động mở Modal Giao hàng P6
-  const handleApprovePassQC = (updatedOrder: CoordinationMockOrder) => {
-    syncOrder(updatedOrder)
-    setIsQcModalOpen(false)
-    // Tự động mở ngay Modal Điều phối giao hàng P6
-    setIsDispatchModalOpen(true)
-  }
-
-  // Xử lý yêu cầu Rework QC P5
-  const handleRequestRework = (updatedOrder: CoordinationMockOrder, reworkNotes: string) => {
-    syncOrder(updatedOrder)
-    setIsQcModalOpen(false)
-    alert(`Đã gửi yêu cầu thợ sửa lại theo nội dung: "${reworkNotes}"`)
-  }
-
-  // Xử lý xác nhận Giao thành công P6 ➔ Tự động mở Modal Nghiệm thu P7
-  const handleConfirmDelivered = (updatedOrder: CoordinationMockOrder) => {
-    syncOrder(updatedOrder)
-    setIsDispatchModalOpen(false)
-    // Tự động mở ngay Modal Nghiệm thu & Đóng đơn P7
-    setIsClosureModalOpen(true)
-  }
-
-  // Xử lý đóng đơn & lưu trữ hồ sơ P7
-  const handleArchiveOrder = (updatedOrder: CoordinationMockOrder) => {
-    syncOrder(updatedOrder)
-    setIsClosureModalOpen(false)
-    alert(`🏆 Đơn hàng #${updatedOrder.orderCode} đã hoàn tất và đóng hồ sơ sạch! SLA xuất sắc.`)
-  }
+  const fieldClass = "px-3 py-2 rounded-xl border border-border bg-surface text-text text-xs focus:outline-none focus:border-red-500"
 
   return (
     <div className="flex flex-col gap-6">
@@ -686,7 +396,7 @@ export function ControlTowerDashboard({
         <Card className="rounded-2xl border border-border bg-surface p-4 flex flex-col justify-between shadow-sm">
           <span className="text-xs font-bold text-text-muted">TỔNG ĐƠN ĐANG ĐIỀU PHỐI</span>
           <div className="text-3xl font-black text-text mt-1">{totalCount}</div>
-          <span className="text-[11px] text-text-muted mt-2">Hôm nay</span>
+          <span className="text-[11px] text-text-muted mt-2">Chưa đóng / chưa huỷ</span>
         </Card>
 
         <Card className="rounded-2xl border border-red-200 bg-red-50/50 p-4 flex flex-col justify-between shadow-sm">
@@ -769,9 +479,28 @@ export function ControlTowerDashboard({
         </div>
       </div>
 
+      {notice && (
+        <div role="status" className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900 text-xs font-semibold flex items-center justify-between">
+          <span>{notice}</span>
+          <button onClick={() => setNotice(null)} aria-label="Ẩn thông báo">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+      {loadError && (
+        <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold flex items-center justify-between gap-2">
+          <span>Không tải được danh sách đơn: {loadError}</span>
+          <Button size="sm" variant="outline" onClick={() => void refresh()} className="gap-1 h-7">
+            <RefreshCw size={12} /> Thử lại
+          </Button>
+        </div>
+      )}
+
       {/* 4. Order List */}
       <div className="grid grid-cols-1 gap-4">
-        {filteredOrders.length > 0 ? (
+        {loading ? (
+          <div className="p-12 text-center rounded-2xl border border-dashed border-border text-xs text-text-muted">Đang tải đơn…</div>
+        ) : filteredOrders.length > 0 ? (
           filteredOrders.map((ord) => (
             <CoordinatorOrderBriefCard
               key={ord.id}
@@ -784,161 +513,92 @@ export function ControlTowerDashboard({
               customerTier={ord.customerTier}
               recipientName={ord.recipientName}
               recipientPhone={ord.recipientPhone}
-              deliveryAddress={ord.deliveryAddress}
+              deliveryAddress={asAddress(ord.deliveryAddress)}
               deliveryTargetTime={ord.deliveryTargetTime}
               nextAction={ord.nextAction}
               productTitle={ord.productTitle}
               sampleImageUrl={ord.sampleImageUrl}
-              partnerName={ord.partnerName}
-              hasMissingItems={Boolean(ord.missingItems && ord.missingItems.length > 0)}
-              onOpenDetail={() => setSelectedOrder(ord)}
-              onAdvanceStage={() => handleAdvanceStage(ord.id)}
+              partnerName={ord.partnerName ?? undefined}
+              hasMissingItems={false}
+              onOpenDetail={() => openDetail(ord)}
+              {...(ord.stage === "COMPLETED" || ord.stage === "CANCELLED" ? {} : { onAdvanceStage: () => handleAdvanceStage(ord) })}
               onOpenAssignModal={() => {
-                setSelectedOrder(ord)
+                setSelectedId(ord.id)
                 setIsAssignModalOpen(true)
               }}
-              onOpenMissingInfo={() => {
-                setSelectedOrder(ord)
-                setDetailModalTab("MISSING_INFO")
-              }}
+              onOpenMissingInfo={() => openDetail(ord, "EXCEPTION")}
               onOpenProduction={() => {
-                setSelectedOrder(ord)
+                setSelectedId(ord.id)
                 setIsProductionUpdateModalOpen(true)
               }}
               onOpenQC={() => {
-                setSelectedOrder(ord)
+                setSelectedId(ord.id)
                 setIsQcModalOpen(true)
               }}
               onOpenPOD={() => {
-                setSelectedOrder(ord)
+                setSelectedId(ord.id)
                 setIsDispatchModalOpen(true)
               }}
               onOpenClosure={() => {
-                setSelectedOrder(ord)
+                setSelectedId(ord.id)
                 setIsClosureModalOpen(true)
               }}
             />
           ))
         ) : (
           <div className="p-12 text-center rounded-2xl border border-dashed border-border text-xs text-text-muted">
-            Không tìm thấy đơn hàng nào phù hợp với bộ lọc
+            {orders.length === 0 ? "Chưa có đơn điều phối nào — bấm “Tiếp nhận đơn” để tạo đơn đầu tiên." : "Không có đơn nào khớp bộ lọc."}
           </div>
         )}
       </div>
 
-      {/* 5. Detail Modal / Drawer */}
-      {selectedOrder && (
+      {/* 5. Hồ sơ đơn */}
+      {isDetailOpen && selectedOrder && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-surface border border-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
             <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
               <div className="flex items-center gap-2">
                 <Radio size={18} className="text-red-600" />
                 <h2 className="text-base font-extrabold text-text">
-                  Hồ Sơ Điều Phối Đơn #{selectedOrder.orderCode}
+                  Hồ Sơ Điều Phối Đơn #{selectedOrder.orderCode} · {selectedOrder.stageLabel}
                 </h2>
               </div>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted"
-              >
+              <button onClick={() => setIsDetailOpen(false)} aria-label="Đóng" className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
                 <X size={18} />
               </button>
             </div>
 
             <div className="p-4 border-b border-border bg-surface-alt/40 flex items-center gap-2 overflow-x-auto">
-              <button
-                onClick={() => setDetailModalTab("SALES_INTAKE")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
-                  detailModalTab === "SALES_INTAKE" ? "bg-red-600 text-white" : "text-text-muted hover:text-text"
-                }`}
-              >
-                P1 • Tiếp nhận Sales (T01)
-              </button>
-              <button
-                onClick={() => setDetailModalTab("BRIEF")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
-                  detailModalTab === "BRIEF" ? "bg-red-600 text-white" : "text-text-muted hover:text-text"
-                }`}
-              >
-                P2 • Tóm tắt Brief (T02)
-              </button>
-              {selectedOrder.missingItems && selectedOrder.missingItems.length > 0 && (
-                <button
-                  onClick={() => setDetailModalTab("MISSING_INFO")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap flex items-center gap-1 ${
-                    detailModalTab === "MISSING_INFO" ? "bg-amber-600 text-white" : "text-amber-800 bg-amber-100"
-                  }`}
-                >
-                  <AlertTriangle size={12} />
-                  <span>P1.3 • Thiếu tin (T03)</span>
-                </button>
-              )}
-              <button
-                onClick={() => setIsAssignModalOpen(true)}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 flex items-center gap-1"
-              >
-                <span>P3 • Phân công xưởng (T06)</span>
-              </button>
-              <button
-                onClick={() => setDetailModalTab("PRODUCTION")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
-                  detailModalTab === "PRODUCTION" ? "bg-red-600 text-white" : "text-text-muted hover:text-text"
-                }`}
-              >
-                P4 • Phiếu cắm hoa (T07)
-              </button>
-              <button
-                onClick={() => setDetailModalTab("QC")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
-                  detailModalTab === "QC" ? "bg-red-600 text-white" : "text-text-muted hover:text-text"
-                }`}
-              >
-                P5 • AI QC Kiểm định (T14/T15)
-              </button>
-              <button
-                onClick={() => setDetailModalTab("DELIVERY")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
-                  detailModalTab === "DELIVERY" ? "bg-red-600 text-white" : "text-text-muted hover:text-text"
-                }`}
-              >
-                P6 • Giao hàng & POD (T21)
-              </button>
-              {selectedOrder.hasException && (
-                <button
-                  onClick={() => setDetailModalTab("EXCEPTION")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap flex items-center gap-1 ${
-                    detailModalTab === "EXCEPTION" ? "bg-red-600 text-white" : "text-red-700 bg-red-100"
-                  }`}
-                >
-                  <AlertCircle size={12} />
-                  <span>P8 • Sự cố phát sinh (T22)</span>
-                </button>
-              )}
-              <button
-                onClick={() => setDetailModalTab("CLOSURE")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
-                  detailModalTab === "CLOSURE" ? "bg-red-600 text-white" : "text-text-muted hover:text-text"
-                }`}
-              >
-                P7 • Nghiệm thu & SLA (T25)
-              </button>
+              {tabButton("SALES_INTAKE", "P1 • Tiếp nhận (T01)")}
+              {tabButton("BRIEF", "P2 • Thẻ sản phẩm (T02)")}
+              {tabButton("PRODUCTION", "P4 • Phiếu cắm hoa (T07)")}
+              {tabButton("QC", "P5 • Kiểm định QC (T14)")}
+              {tabButton("DELIVERY", "P6 • Giao hàng & POD (T21)")}
+              {tabButton("EXCEPTION", `Sự cố (${selectedOrder.exceptions.filter((e) => e.status === "OPEN" || e.status === "IN_PROGRESS").length})`, selectedOrder.hasException ? "text-red-700 bg-red-100" : "")}
+              {tabButton("CLOSURE", "P7 • Nghiệm thu (T25)")}
             </div>
 
-            <div className="p-6">
+            <div className="p-6 flex flex-col gap-4">
+              {detailError && (
+                <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold">
+                  {detailError}
+                </div>
+              )}
+
               {detailModalTab === "SALES_INTAKE" && (
                 <SalesOrderIntakeCard
                   orderCode={selectedOrder.orderCode}
-                  source="Zalo Official Account"
+                  source="Tiếp nhận tại Control Tower"
                   customerName={selectedOrder.customerName}
                   customerTier={selectedOrder.customerTier}
                   recipientName={selectedOrder.recipientName}
                   recipientPhone={selectedOrder.recipientPhone}
-                  deliveryAddress={selectedOrder.deliveryAddress}
+                  deliveryAddress={asAddress(selectedOrder.deliveryAddress)}
                   deliveryTargetTime={selectedOrder.deliveryTargetTime}
                   productTitle={selectedOrder.productTitle}
                   sampleImageUrl={selectedOrder.sampleImageUrl}
-                  unitPriceVnd={selectedOrder.unitPriceVnd || 750000}
-                  priority="STANDARD"
+                  unitPriceVnd={selectedOrder.unitPriceVnd}
+                  priority={priorityOf(selectedOrder)}
                 />
               )}
 
@@ -947,56 +607,39 @@ export function ControlTowerDashboard({
                   orderCode={selectedOrder.orderCode}
                   productTitle={selectedOrder.productTitle}
                   sampleImageUrl={selectedOrder.sampleImageUrl}
-                  flowers={selectedOrder.flowers}
+                  flowers={asFlowers(selectedOrder)}
                   unitPriceVnd={selectedOrder.unitPriceVnd}
-                  partnerPayoutVnd={selectedOrder.partnerPayoutVnd}
+                  partnerPayoutVnd={selectedOrder.partnerPayoutVnd ?? undefined}
                   deliveryTargetTime={selectedOrder.deliveryTargetTime}
-                  deliveryAddress={selectedOrder.deliveryAddress}
+                  deliveryAddress={asAddress(selectedOrder.deliveryAddress)}
                   recipientName={selectedOrder.recipientName}
                   recipientPhone={selectedOrder.recipientPhone}
                   cardMessage={selectedOrder.cardMessage}
-                  technicalNotes={selectedOrder.internalNote}
-                  partnerName={selectedOrder.partnerName}
+                  technicalNotes={selectedOrder.internalNote ?? undefined}
+                  partnerName={selectedOrder.partnerName ?? undefined}
                   riskLevel={selectedOrder.riskLevel}
                   riskReason={selectedOrder.riskReason}
-                  onAdvanceStage={() => handleAdvanceStage(selectedOrder.id)}
-                />
-              )}
-
-              {detailModalTab === "MISSING_INFO" && selectedOrder.missingItems && (
-                <MissingInfoRequestCard
-                  orderCode={selectedOrder.orderCode}
-                  salesPersonName="Lê Thùy Dương (Sales HN)"
-                  missingItems={selectedOrder.missingItems}
-                  onSendToSales={() => alert("Đã gửi thông báo nhắc nhở tới Zalo của nhân viên Sales!")}
-                  onResolved={() => {
-                    alert("Đã cập nhật thông tin thành công!")
-                    setDetailModalTab("BRIEF")
-                  }}
+                  {...(selectedOrder.stage === "COMPLETED" || selectedOrder.stage === "CANCELLED"
+                    ? {}
+                    : { onAdvanceStage: () => handleAdvanceStage(selectedOrder) })}
                 />
               )}
 
               {detailModalTab === "PRODUCTION" && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-surface-alt/50 p-3 rounded-xl border border-border">
-                    <div className="text-xs">
-                      <span className="text-text-muted">Xưởng thực hiện: </span>
-                      <strong className="text-text font-bold">
-                        {selectedOrder.partnerName || "Chưa phân công"}
-                      </strong>
-                    </div>
+                  <div className="flex items-center justify-between bg-surface-alt/50 p-3 rounded-xl border border-border text-xs">
+                    <span>
+                      Xưởng: <strong>{selectedOrder.partnerName ?? "Chưa phân công"}</strong> · Tiến độ{" "}
+                      <strong>{selectedOrder.productionProgress}%</strong>
+                    </span>
                     <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsAssignModalOpen(true)}
-                        className="text-xs h-7 px-2.5 font-bold"
-                      >
+                      <Button size="sm" variant="outline" onClick={() => setIsAssignModalOpen(true)} className="text-xs h-7 px-2.5 font-bold">
                         Phân công đối tác (T06)
                       </Button>
                       <Button
                         size="sm"
                         variant="secondary"
+                        disabled={selectedOrder.stage !== "IN_PRODUCTION"}
                         onClick={() => setIsProductionUpdateModalOpen(true)}
                         className="text-xs h-7 px-2.5 font-bold"
                       >
@@ -1004,17 +647,16 @@ export function ControlTowerDashboard({
                       </Button>
                     </div>
                   </div>
-
                   <PartnerProductionCard
                     orderCode={selectedOrder.orderCode}
                     recipeTitle={selectedOrder.productTitle}
                     targetReadyTime={selectedOrder.deliveryTargetTime}
                     sampleImageUrl={selectedOrder.sampleImageUrl}
-                    flowers={selectedOrder.flowers}
+                    flowers={asFlowers(selectedOrder)}
                     cardMessage={selectedOrder.cardMessage}
                     internalNote={selectedOrder.internalNote}
-                    partnerName={selectedOrder.partnerName}
-                    onMarkReady={() => handleAdvanceStage(selectedOrder.id)}
+                    partnerName={selectedOrder.partnerName ?? undefined}
+                    onMarkReady={() => setIsProductionUpdateModalOpen(true)}
                   />
                 </div>
               )}
@@ -1022,140 +664,183 @@ export function ControlTowerDashboard({
               {detailModalTab === "QC" && (
                 <AIQCReportCard
                   orderCode={selectedOrder.orderCode}
-                  qcStatus={selectedOrder.stage === "QUALITY_CHECK" ? "PENDING" : "PASSED"}
-                  aiScore={selectedOrder.aiScore || 95}
-                  aiCritique={selectedOrder.aiCritique || "Bó hoa đạt độ nở chuẩn, màu sắc hài hòa với mẫu thiết kế."}
-                  finishedImageUrls={selectedOrder.finishedImageUrls || [selectedOrder.sampleImageUrl || ""]}
-                  onApprove={() => handleAdvanceStage(selectedOrder.id)}
+                  qcStatus={(selectedOrder.qc?.status as "PENDING" | "PASSED" | "REJECTED" | "REWORK_REQUESTED" | undefined) ?? "PENDING"}
+                  aiScore={selectedOrder.qc?.aiScore ?? null}
+                  aiCritique={selectedOrder.qc?.notes ?? null}
+                  finishedImageUrls={selectedOrder.finishedImageUrls}
+                  onApprove={() => setIsQcModalOpen(true)}
                 />
               )}
 
               {detailModalTab === "DELIVERY" && (
                 <DeliveryPODCard
                   orderCode={selectedOrder.orderCode}
-                  shipperName="Lê Văn Hùng (AhaMove)"
-                  shipperPhone="0933221100"
-                  deliveryAddress={selectedOrder.deliveryAddress}
+                  shipperName={selectedOrder.delivery.shipperName ?? "Chưa bàn giao shipper"}
+                  shipperPhone={selectedOrder.delivery.shipperPhone ?? ""}
+                  deliveryAddress={asAddress(selectedOrder.deliveryAddress)}
                   recipientName={selectedOrder.recipientName}
                   recipientPhone={selectedOrder.recipientPhone}
                   isDelivered={selectedOrder.stage === "DELIVERED" || selectedOrder.stage === "COMPLETED"}
-                  podImageUrl={selectedOrder.podImageUrl || selectedOrder.sampleImageUrl}
-                  onConfirmComplete={() => handleAdvanceStage(selectedOrder.id)}
+                  deliveredAt={selectedOrder.delivery.actualDeliveryAt ? fmtTime(selectedOrder.delivery.actualDeliveryAt) : null}
+                  podImageUrl={selectedOrder.delivery.podImageUrl}
+                  recipientSignatureName={selectedOrder.delivery.podRecipientName}
+                  onConfirmComplete={() => setIsDispatchModalOpen(true)}
                 />
               )}
 
-              {detailModalTab === "EXCEPTION" && selectedOrder.exceptionData && (
-                <ExceptionResolutionCard
-                  orderCode={selectedOrder.orderCode}
-                  exceptionCode={selectedOrder.exceptionData.code}
-                  type={selectedOrder.exceptionData.type}
-                  severity={selectedOrder.exceptionData.severity}
-                  description={selectedOrder.exceptionData.description}
-                  resolutionPlan={selectedOrder.exceptionData.resolution}
-                  status="IN_PROGRESS"
-                  reportedAt="14:15 Hôm nay"
-                  onResolve={() => {
-                    alert("Đã giải quyết xong sự cố!")
-                    setSelectedOrder(null)
-                  }}
-                />
+              {detailModalTab === "EXCEPTION" && (
+                <div className="flex flex-col gap-4 text-xs">
+                  {selectedOrder.exceptions.length === 0 && <div className="text-text-muted">Đơn chưa có sự cố nào.</div>}
+                  {selectedOrder.exceptions.map((exc) => {
+                    const open = exc.status === "OPEN" || exc.status === "IN_PROGRESS"
+                    return (
+                      <div key={exc.id} className="flex flex-col gap-2">
+                        <ExceptionResolutionCard
+                          orderCode={selectedOrder.orderCode}
+                          exceptionCode={exc.code}
+                          type={EXCEPTION_TYPE_LABELS[exc.type] ?? exc.type}
+                          severity={exc.severity as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"}
+                          description={exc.description}
+                          resolutionPlan={exc.resolution}
+                          status={exc.status as "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CANCELLED"}
+                          reportedAt={fmtTime(exc.createdAt)}
+                        />
+                        {open && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              className={`flex-1 ${fieldClass}`}
+                              placeholder="Đã xử lý thế nào (bắt buộc)"
+                              value={resolutionDrafts[exc.id] ?? ""}
+                              onChange={(e) => setResolutionDrafts((prev) => ({ ...prev, [exc.id]: e.target.value }))}
+                            />
+                            <Button size="sm" onClick={() => void handleResolveException(exc.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                              Đóng sự cố
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {selectedOrder.stage !== "COMPLETED" && selectedOrder.stage !== "CANCELLED" && (
+                    <div className="p-3 rounded-xl border border-dashed border-red-300 flex flex-col gap-2">
+                      <span className="font-bold text-text">Mở sự cố mới (T22)</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <select className={fieldClass} value={newException.type} onChange={(e) => setNewException({ ...newException, type: e.target.value })}>
+                          {Object.entries(EXCEPTION_TYPE_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                        <select className={fieldClass} value={newException.severity} onChange={(e) => setNewException({ ...newException, severity: e.target.value })}>
+                          <option value="LOW">Thấp</option>
+                          <option value="MEDIUM">Trung bình</option>
+                          <option value="HIGH">Cao</option>
+                          <option value="CRITICAL">Khẩn cấp</option>
+                        </select>
+                      </div>
+                      <input
+                        className={fieldClass}
+                        placeholder="Mô tả sự cố"
+                        value={newException.description}
+                        onChange={(e) => setNewException({ ...newException, description: e.target.value })}
+                      />
+                      <Button size="sm" variant="outline" onClick={() => void handleOpenException()} className="w-fit text-red-700 border-red-300 gap-1">
+                        <AlertCircle size={13} /> Mở sự cố
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
 
               {detailModalTab === "CLOSURE" && (
-                <OrderClosureLearningCard
-                  orderCode={selectedOrder.orderCode}
-                  recipeTitle={selectedOrder.productTitle}
-                  partnerName={selectedOrder.partnerName || "Flora Xưởng Ba Đình"}
-                  promisedDeliveryTime={selectedOrder.deliveryTargetTime}
-                  actualDeliveryTime="16:40 (Sớm 20 phút)"
-                  varianceMinutes={-20}
-                  qcScore={selectedOrder.aiScore || 95}
-                  initialPartnerRating={5}
-                  onConfirmClosure={(review) => {
-                    alert(`Đã hoàn tất nghiệm thu! Đánh giá đối tác: ${review.partnerRating} sao. Ghi chú: ${review.reviewNote}`)
-                    handleAdvanceStage(selectedOrder.id)
-                  }}
-                />
+                <div className="flex flex-col gap-3 text-xs">
+                  {selectedOrder.stage === "COMPLETED" ? (
+                    <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 flex flex-col gap-1">
+                      <strong className="text-emerald-900">Đã đóng lúc {fmtTime(selectedOrder.closedAt)}</strong>
+                      <span>Đối tác: {selectedOrder.partnerName ?? "—"} · Điểm: {selectedOrder.partnerRating ?? "—"}/5</span>
+                      <span>
+                        Tiền công đối tác:{" "}
+                        {selectedOrder.partnerPayoutVnd === null ? "chưa chốt" : `${selectedOrder.partnerPayoutVnd.toLocaleString("vi-VN")} đ`}
+                      </span>
+                      {selectedOrder.closureNotes && <span>Ghi chú: {selectedOrder.closureNotes}</span>}
+                    </div>
+                  ) : selectedOrder.stage === "CANCELLED" ? (
+                    <div className="p-4 rounded-xl border border-border bg-surface-alt">Đơn đã huỷ: {selectedOrder.cancelledReason}</div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={selectedOrder.stage !== "DELIVERED"}
+                      onClick={() => setIsClosureModalOpen(true)}
+                      className="w-fit bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                    >
+                      <CheckCircle2 size={13} /> Nghiệm thu & đóng đơn
+                    </Button>
+                  )}
+
+                  {!["COMPLETED", "CANCELLED", "DELIVERED"].includes(selectedOrder.stage) && (
+                    <div className="p-3 rounded-xl border border-dashed border-border flex flex-col gap-2">
+                      <span className="font-bold text-text">Huỷ đơn (cần quyền điều hành)</span>
+                      <input className={fieldClass} placeholder="Lý do huỷ" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
+                      <Button size="sm" variant="outline" onClick={() => void handleCancelOrder()} className="w-fit gap-1 text-red-700 border-red-300">
+                        <Ban size={13} /> Huỷ đơn
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* 6. Sales Order Intake Modal (T01 - Chặng P1) */}
-      <SalesOrderIntakeModal
-        isOpen={effectiveIsCreateOpen}
-        onClose={handleCloseCreate}
-        onSubmit={handleCreateOrder}
-      />
+      {/* 6. Tiếp nhận đơn (T01 — P1) */}
+      <SalesOrderIntakeModal isOpen={effectiveIsCreateOpen} onClose={handleCloseCreate} onSubmit={handleCreateOrder} />
 
-      {/* 7. Order Planning Modal (T02 - Chặng P2) */}
       {selectedOrder && (
-        <OrderPlanningModal
-          isOpen={isPlanningModalOpen}
-          order={selectedOrder}
-          onClose={() => setIsPlanningModalOpen(false)}
-          onConfirmPlan={handleConfirmPlan}
-        />
-      )}
-
-      {/* 8. Partner Assignment Modal (T06 - Chặng P3) */}
-      {selectedOrder && (
-        <PartnerAssignmentModal
-          isOpen={isAssignModalOpen}
-          orderCode={selectedOrder.orderCode}
-          recipeTitle={selectedOrder.productTitle}
-          deliveryAddress={selectedOrder.deliveryAddress}
-          deliveryTargetTime={selectedOrder.deliveryTargetTime}
-          onClose={() => setIsAssignModalOpen(false)}
-          onAssign={handleAssignPartner}
-        />
-      )}
-
-      {/* 9. Production Update Modal (T08/T10 - Chặng P4) */}
-      {selectedOrder && (
-        <ProductionUpdateModal
-          isOpen={isProductionUpdateModalOpen}
-          orderCode={selectedOrder.orderCode}
-          recipeTitle={selectedOrder.productTitle}
-          currentProgressPercent={selectedOrder.stage === "IN_PRODUCTION" ? 50 : 0}
-          sampleImageUrl={selectedOrder.sampleImageUrl}
-          onClose={() => setIsProductionUpdateModalOpen(false)}
-          onSubmitUpdate={handleProductionUpdateSubmit}
-        />
-      )}
-
-      {/* 10. AI QC Inspection Modal (T14 - Chặng P5) */}
-      {selectedOrder && (
-        <AiQcInspectionModal
-          isOpen={isQcModalOpen}
-          order={selectedOrder}
-          onClose={() => setIsQcModalOpen(false)}
-          onApprovePass={handleApprovePassQC}
-          onRequestRework={handleRequestRework}
-        />
-      )}
-
-      {/* 11. Delivery Dispatch Modal (T20/T21 - Chặng P6) */}
-      {selectedOrder && (
-        <DeliveryDispatchModal
-          isOpen={isDispatchModalOpen}
-          order={selectedOrder}
-          onClose={() => setIsDispatchModalOpen(false)}
-          onConfirmDelivered={handleConfirmDelivered}
-        />
-      )}
-
-      {/* 12. Order Closure & SLA Modal (T25/T26 - Chặng P7) */}
-      {selectedOrder && (
-        <OrderClosureModal
-          isOpen={isClosureModalOpen}
-          order={selectedOrder}
-          onClose={() => setIsClosureModalOpen(false)}
-          onArchiveOrder={handleArchiveOrder}
-        />
+        <>
+          <OrderPlanningModal
+            isOpen={isPlanningModalOpen}
+            order={selectedOrder}
+            onClose={() => setIsPlanningModalOpen(false)}
+            onConfirmPlan={handleConfirmPlan}
+          />
+          <PartnerAssignmentModal
+            key={`assign-${selectedOrder.id}-${isAssignModalOpen}`}
+            isOpen={isAssignModalOpen}
+            orderCode={selectedOrder.orderCode}
+            recipeTitle={selectedOrder.productTitle}
+            deliveryAddress={selectedOrder.deliveryAddress}
+            deliveryTargetTime={selectedOrder.deliveryTargetTime}
+            currentPartnerId={selectedOrder.partner?.id ?? null}
+            onClose={() => setIsAssignModalOpen(false)}
+            onAssign={handleAssignPartner}
+          />
+          <ProductionUpdateModal
+            isOpen={isProductionUpdateModalOpen}
+            orderCode={selectedOrder.orderCode}
+            recipeTitle={selectedOrder.productTitle}
+            currentProgressPercent={selectedOrder.productionProgress}
+            onClose={() => setIsProductionUpdateModalOpen(false)}
+            onSubmitUpdate={handleProductionUpdate}
+          />
+          <AiQcInspectionModal isOpen={isQcModalOpen} order={selectedOrder} onClose={() => setIsQcModalOpen(false)} onSubmit={handleQc} />
+          <DeliveryDispatchModal
+            key={`dispatch-${selectedOrder.id}-${isDispatchModalOpen}`}
+            isOpen={isDispatchModalOpen}
+            order={selectedOrder}
+            onClose={() => setIsDispatchModalOpen(false)}
+            onSubmit={handleDelivery}
+          />
+          <OrderClosureModal
+            isOpen={isClosureModalOpen}
+            order={selectedOrder}
+            onClose={() => setIsClosureModalOpen(false)}
+            onSubmit={handleCloseOrder}
+          />
+        </>
       )}
     </div>
   )
 }
-

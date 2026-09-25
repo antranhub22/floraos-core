@@ -149,7 +149,7 @@ export function PartnerProductionCard({
                 <MessageSquare size={13} className="text-rose-600" />
                 <span>Nội dung thiệp chúc mừng (In nguyên văn):</span>
               </div>
-              <p className="text-rose-900 font-medium italic">"{cardMessage}"</p>
+              <p className="text-rose-900 font-medium italic">&ldquo;{cardMessage}&rdquo;</p>
             </div>
           )}
         </div>

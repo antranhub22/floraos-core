@@ -35,6 +35,11 @@ const TENANT_TABLES = [
   "product_inventory",
   "customer_consents",
   "customer_occasions",
+  // Chức năng 12 — Điều phối đơn hàng (25/09/2026)
+  "order_exceptions",
+  "order_qc_records",
+  "order_coordinations",
+  "partners",
   "order_events",
   "order_assignments",
   "order_items",

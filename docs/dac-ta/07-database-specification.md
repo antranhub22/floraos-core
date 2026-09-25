@@ -1654,3 +1654,156 @@ model music_tracks {
   @@index([organization_id, mood])
 }
 ```
+
+## 26. Điều phối đơn hàng — Chức năng 12 (Control Tower)
+
+Bốn bảng, đều có `organization_id`, tạo bằng migration `20260925200000_coordinator_control_tower`. `order_coordinations` là hồ sơ điều phối 1–1 với `orders` (`order_id @unique`); ba trục `status`/`production_status`/`delivery_status` vẫn nằm trên `orders` và đổi theo `stage` qua `domain/state-mapper.ts` + `domain/stage-transitions.ts` — mỗi trục đổi giá trị ghi một dòng `order_events` (nguồn đo SLA của M10). Ảnh (mẫu, thành phẩm, POD) lưu bằng id `assets` cùng tổ chức, đổi sang URL ký lúc đọc; không lưu URL ký, không lưu base64. `ai_score` chỉ ghi khi có lượt Vision thật (nợ #140). Mức rủi ro trả qua API được TÍNH LẠI lúc đọc (`evaluateRisk`), cột `risk_level` chỉ là giá trị lúc tạo.
+
+```prisma
+enum coordinator_stage {
+  INTAKE
+  VALIDATING
+  PLANNING
+  ASSIGNING
+  IN_PRODUCTION
+  QUALITY_CHECK
+  DISPATCHING
+  DELIVERED
+  COMPLETED
+  EXCEPTION
+  CANCELLED
+}
+
+enum coordination_risk_level {
+  NORMAL
+  ATTENTION
+  AT_RISK
+  CRITICAL
+}
+
+enum qc_record_status {
+  PENDING
+  PASSED
+  REJECTED
+  REWORK_REQUESTED
+}
+
+/// Mạng lưới đối tác xưởng ngoài / thợ cắm hoa. TENANT ISOLATION.
+model partners {
+  id              String   @id @default(uuid())
+  organization_id String
+  code            String
+  name            String
+  phone           String
+  address         String?
+  district        String?
+  province        String?
+  tier            String   @default("STANDARD")
+  rating          Decimal  @default(5.0) @db.Decimal(3, 2)
+  capacity_daily  Int      @default(10)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization    organizations         @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  coordinations   order_coordinations[]
+
+  @@unique([organization_id, code])
+  @@index([organization_id, is_active])
+}
+
+/// Hồ sơ điều phối tiến trình của từng đơn hàng. TENANT ISOLATION.
+model order_coordinations {
+  id                    String                  @id @default(uuid())
+  organization_id       String
+  order_id              String                  @unique
+  partner_id            String?
+  coordinator_id        String?
+  stage                 coordinator_stage       @default(INTAKE)
+  risk_level            coordination_risk_level @default(NORMAL)
+  risk_reason           String?
+  next_action           String?
+  next_action_due       DateTime?
+  estimated_delivery_at DateTime?
+  actual_delivery_at    DateTime?
+  /// Bước quay về khi mọi sự cố của đơn đã xử lý xong (stage = EXCEPTION).
+  resume_stage          coordinator_stage?
+  production_progress   Int                     @default(0)
+  /// Mảng id `assets` cùng tổ chức — ảnh thành phẩm thợ gửi lên.
+  finished_asset_ids    Json?
+  /// Ảnh mẫu tải lên lúc tiếp nhận (id `assets`), khi không lấy từ Product Master.
+  sample_asset_id       String?
+  shipper_name          String?
+  shipper_phone         String?
+  carrier               String?
+  /// PICKED_UP · ON_THE_WAY · DELIVERED_SUCCESS · DELIVERY_FAILED (F12).
+  delivery_state        String?
+  pod_asset_id          String?
+  pod_recipient_name    String?
+  pod_captured_at       DateTime?
+  partner_payout_vnd    Decimal?                @db.Decimal(14, 2)
+  partner_rating        Int?
+  closure_notes         String?
+  closed_by             String?
+  closed_at             DateTime?
+  cancelled_reason      String?
+  metadata              Json?
+  created_at            DateTime                @default(now())
+  updated_at            DateTime                @updatedAt
+
+  organization          organizations           @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order                 orders                  @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  partner               partners?               @relation(fields: [partner_id], references: [id])
+
+  @@index([organization_id, stage])
+  @@index([organization_id, risk_level])
+}
+
+/// Hồ sơ kiểm tra chất lượng sản phẩm hoa cắm (QC). TENANT ISOLATION.
+model order_qc_records {
+  id               String           @id @default(uuid())
+  organization_id  String
+  order_id         String
+  inspector_id     String?
+  status           qc_record_status @default(PENDING)
+  /// Điểm chấm AI — CHỈ ghi khi có lượt Vision thật (nợ #140), không nhận từ client.
+  ai_score         Int?
+  ai_critique      String?
+  /// Mảng id `assets` cùng tổ chức — ảnh thành phẩm đã kiểm.
+  image_asset_ids  Json?
+  checklist_result Json?
+  notes            String?
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+
+  organization     organizations    @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order            orders           @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id])
+}
+
+/// Nhật ký sự cố và ngoại lệ phát sinh trong quá trình điều phối. TENANT ISOLATION.
+model order_exceptions {
+  id              String   @id @default(uuid())
+  organization_id String
+  order_id        String
+  code            String
+  type            String
+  severity        String   @default("MEDIUM")
+  description     String
+  resolution      String?
+  status          String   @default("OPEN")
+  reported_by     String?
+  resolved_by     String?
+  resolved_at     DateTime?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization    organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@unique([organization_id, code])
+  @@index([organization_id, order_id])
+  @@index([organization_id, status])
+}
+```

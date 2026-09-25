@@ -1,342 +1,348 @@
 /**
- * Coordinator Repository (Infra Layer).
- * Tương tác trực tiếp với Prisma CSDL (orders + order_coordinations + order_items).
- * Tuân thủ tuyệt đối quy tắc Tenant Isolation — bắt buộc organization_id.
+ * Coordinator Repository — Chức năng 12.
+ *
+ * Mọi truy vấn đi qua `scopedWhere`/`scopedData` (organization_id chỉ đến từ
+ * `TenantContext`). KHÔNG còn nhánh "bảng chưa tồn tại thì trả rỗng": bản
+ * trước nuốt lỗi P2021 nên thiếu migration vẫn trông như chạy được. Nay thiếu
+ * bảng là lỗi 500 thật, lộ ngay lần gọi đầu.
  */
 
+import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import { prisma } from "@/core/tenancy/infra/prisma"
-import type { coordinator_stage, coordination_risk_level } from "@/generated/prisma/client"
+import type { Prisma } from "@/generated/prisma/client"
 import type { CoordinatorStage, CoordinationRiskLevel } from "../domain/coordinator-types"
-import { mapStageToOrderAxes } from "../domain/state-mapper"
-import type { StructuredAddress } from "@/modules/products/domain/product-master-index"
+import { changedAxes, type StageTransitionFacts } from "../domain/stage-transitions"
+import type { MappedOrderAxes } from "../domain/state-mapper"
+import type { DbClient } from "./transaction"
 
-export interface SaveCoordinatorOrderInput {
-  orderCode?: string | undefined
+const ORDER_INCLUDE = {
+  coordination: { include: { partner: true } },
+  items: true,
+  qc_records: { orderBy: { created_at: "desc" as const }, take: 1 },
+  exceptions: { orderBy: { created_at: "asc" as const } },
+} satisfies Prisma.ordersInclude
+
+export type CoordinatorOrderRow = Prisma.ordersGetPayload<{ include: typeof ORDER_INCLUDE }>
+export type PartnerRow = Prisma.partnersGetPayload<object>
+export type ExceptionRow = Prisma.order_exceptionsGetPayload<object>
+
+export interface CreateCoordinatorOrderData {
+  code: string
   stage: CoordinatorStage
-  stageLabel?: string | undefined
+  axes: MappedOrderAxes
   riskLevel: CoordinationRiskLevel
-  riskReason?: string | null | undefined
-  customerName: string
-  customerTier: string
-  recipientName: string
-  recipientPhone: string
-  deliveryAddress: StructuredAddress | string
-  deliveryTargetTime: string
   nextAction: string
-  partnerName?: string | undefined
-  productTitle: string
-  sampleImageUrl?: string | undefined
-  unitPriceVnd?: number | undefined
-  flowers?: Array<{
-    flowerName: string
-    quantity: number
-    unit: string
-    color: string
-    role: string
-  }> | undefined
-  cardMessage?: string | undefined
-  internalNote?: string | undefined
+  totalVnd: number
+  customerId: string | null
+  cardMessage: string | null
+  internalNote: string | null
+  deliveryWindow: { timeSlot: string; targetAt: string | null }
+  deliveryAddress: Record<string, unknown>
+  estimatedDeliveryAt: Date | null
+  sampleAssetId: string | null
+  items: Array<{ description: string; quantity: number; metadata: Record<string, unknown> }>
+  metadata: Record<string, unknown>
 }
 
 export class CoordinatorRepository {
-  /**
-   * Tạo đơn hàng mới kèm hồ sơ điều phối (Control Tower) trong một transaction nguyên tử.
-   */
-  async createOrderWithCoordination(
-    organizationId: string,
-    userId: string,
-    input: SaveCoordinatorOrderInput
-  ) {
-    const axes = mapStageToOrderAxes(input.stage)
-    const code = input.orderCode || `FLR-2026-${Math.floor(100 + Math.random() * 900)}`
+  constructor(private readonly db: DbClient = prisma) {}
 
-    // Đảm bảo không trùng mã code trong cùng tổ chức
-    const existing = await prisma.orders.findUnique({
-      where: {
-        organization_id_code: {
-          organization_id: organizationId,
-          code,
-        },
-      },
+  // ── Đọc ────────────────────────────────────────────────────────────────
+
+  findOrder(ctx: TenantContext, idOrCode: string): Promise<CoordinatorOrderRow | null> {
+    return this.db.orders.findFirst({
+      where: scopedWhere(ctx, {
+        OR: [{ id: idOrCode }, { code: idOrCode }],
+        coordination: { isNot: null },
+      }),
+      include: ORDER_INCLUDE,
     })
-    const finalCode = existing ? `${code}-${Date.now().toString().slice(-4)}` : code
+  }
 
-    try {
-      return await prisma.$transaction(async (tx) => {
-        const order = await tx.orders.create({
-          data: {
-            organization_id: organizationId,
-            code: finalCode,
-            status: axes.status,
-            production_status: axes.productionStatus,
-            delivery_status: axes.deliveryStatus,
-            total_vnd: input.unitPriceVnd || 0,
-            card_message: input.cardMessage || null,
-            internal_note: input.internalNote || null,
-            delivery_window: { timeSlot: input.deliveryTargetTime },
-            delivery_address:
-              typeof input.deliveryAddress === "object"
-                ? (input.deliveryAddress as any)
-                : { formattedAddress: input.deliveryAddress },
-            created_by: userId,
-          },
-        })
+  listOrders(
+    ctx: TenantContext,
+    options: { stage?: CoordinatorStage | undefined; limit: number }
+  ): Promise<CoordinatorOrderRow[]> {
+    return this.db.orders.findMany({
+      where: scopedWhere(ctx, {
+        coordination: options.stage ? { is: { stage: options.stage } } : { isNot: null },
+      }),
+      include: ORDER_INCLUDE,
+      orderBy: { created_at: "desc" },
+      take: options.limit,
+    })
+  }
 
-        // Lưu chi tiết hoa BOM vào order_items nếu có
-        if (input.flowers && input.flowers.length > 0) {
-          await tx.order_items.createMany({
-            data: input.flowers.map((fl) => ({
-              organization_id: organizationId,
-              order_id: order.id,
-              description: `${fl.flowerName} (${fl.color}, ${fl.role})`,
-              quantity: fl.quantity || 1,
-              unit_price_vnd: 0,
-              metadata: {
-                flowerName: fl.flowerName,
-                color: fl.color,
-                role: fl.role,
-                unit: fl.unit,
-              },
-            })),
-          })
-        }
+  countOrdersWithCodePrefix(ctx: TenantContext, prefix: string): Promise<number> {
+    return this.db.orders.count({ where: scopedWhere(ctx, { code: { startsWith: prefix } }) })
+  }
 
-        const coordination = await tx.order_coordinations.create({
-          data: {
-            organization_id: organizationId,
+  countOpenExceptions(ctx: TenantContext, orderId: string): Promise<number> {
+    return this.db.order_exceptions.count({
+      where: scopedWhere(ctx, { order_id: orderId, status: { in: ["OPEN", "IN_PROGRESS"] } }),
+    })
+  }
+
+  countExceptions(ctx: TenantContext, orderId: string): Promise<number> {
+    return this.db.order_exceptions.count({ where: scopedWhere(ctx, { order_id: orderId }) })
+  }
+
+  async facts(ctx: TenantContext, row: CoordinatorOrderRow): Promise<StageTransitionFacts> {
+    const c = row.coordination!
+    return {
+      partnerAssigned: Boolean(c.partner_id),
+      latestQcStatus: row.qc_records[0]?.status ?? null,
+      podCaptured: Boolean(c.pod_asset_id || c.pod_recipient_name),
+      openExceptionCount: await this.countOpenExceptions(ctx, row.id),
+      resumeStage: c.resume_stage ?? null,
+    }
+  }
+
+  // ── Ghi đơn ─────────────────────────────────────────────────────────────
+
+  async createOrder(ctx: TenantContext, data: CreateCoordinatorOrderData): Promise<{ id: string; code: string }> {
+    const order = await this.db.orders.create({
+      data: scopedData(ctx, {
+        code: data.code,
+        customer_id: data.customerId,
+        status: data.axes.status,
+        production_status: data.axes.productionStatus,
+        delivery_status: data.axes.deliveryStatus,
+        total_vnd: data.totalVnd,
+        card_message: data.cardMessage,
+        internal_note: data.internalNote,
+        delivery_window: data.deliveryWindow as Prisma.InputJsonValue,
+        delivery_address: data.deliveryAddress as Prisma.InputJsonValue,
+        created_by: ctx.userId,
+      }),
+    })
+
+    if (data.items.length > 0) {
+      await this.db.order_items.createMany({
+        data: data.items.map((it) =>
+          scopedData(ctx, {
             order_id: order.id,
-            stage: input.stage as coordinator_stage,
-            risk_level: input.riskLevel as coordination_risk_level,
-            risk_reason: input.riskReason || null,
-            next_action: input.nextAction || null,
-            metadata: {
-              customerName: input.customerName,
-              customerTier: input.customerTier,
-              recipientName: input.recipientName,
-              recipientPhone: input.recipientPhone,
-              productTitle: input.productTitle,
-              sampleImageUrl: input.sampleImageUrl,
-              partnerName: input.partnerName,
-              flowers: input.flowers,
-            },
-          },
-        })
-
-        return {
-          id: order.id,
-          orderCode: order.code,
-          stage: coordination.stage,
-          riskLevel: coordination.risk_level,
-          coordinationId: coordination.id,
-        }
+            description: it.description,
+            quantity: it.quantity,
+            unit_price_vnd: 0,
+            metadata: it.metadata as Prisma.InputJsonValue,
+          })
+        ),
       })
-    } catch (err: any) {
-      if (err?.code === "P2021" || err?.message?.includes("does not exist")) {
-        console.warn("Table order_coordinations not found in DB. Please run `npx prisma db push`.")
-        // Fallback: tạo bản ghi orders để không làm gãy luồng
-        const order = await prisma.orders.create({
-          data: {
-            organization_id: organizationId,
-            code: finalCode,
-            status: axes.status,
-            production_status: axes.productionStatus,
-            delivery_status: axes.deliveryStatus,
-            total_vnd: input.unitPriceVnd || 0,
-            card_message: input.cardMessage || null,
-            internal_note: input.internalNote || null,
-            delivery_window: { timeSlot: input.deliveryTargetTime },
-            delivery_address:
-              typeof input.deliveryAddress === "object"
-                ? (input.deliveryAddress as any)
-                : { formattedAddress: input.deliveryAddress },
-            created_by: userId,
-          },
-        })
-        return {
-          id: order.id,
-          orderCode: order.code,
-          stage: input.stage,
-          riskLevel: input.riskLevel,
-          coordinationId: `temp-${order.id}`,
-        }
-      }
-      throw err
     }
+
+    await this.db.order_coordinations.create({
+      data: scopedData(ctx, {
+        order_id: order.id,
+        coordinator_id: ctx.userId,
+        stage: data.stage,
+        risk_level: data.riskLevel,
+        next_action: data.nextAction,
+        estimated_delivery_at: data.estimatedDeliveryAt,
+        sample_asset_id: data.sampleAssetId,
+        metadata: data.metadata as Prisma.InputJsonValue,
+      }),
+    })
+
+    await this.recordEvent(ctx, order.id, "order", null, data.axes.status, "Tiếp nhận đơn điều phối")
+    return { id: order.id, code: order.code }
   }
 
   /**
-   * Lấy danh sách đơn kèm thông tin điều phối đầy đủ theo tổ chức.
+   * Chuyển bước: ba trục `orders` + `order_coordinations` + `order_events` cho
+   * từng trục đổi giá trị (M10 đo SLA từ chuỗi sự kiện này).
    */
-  async listOrdersWithCoordination(
-    organizationId: string,
-    options?: { stage?: string | undefined; limit?: number | undefined }
-  ) {
-    try {
-      const rows = await prisma.orders.findMany({
-        where: {
-          organization_id: organizationId,
-        },
-        include: {
-          coordination: true,
-          items: true,
-        },
-        orderBy: {
-          created_at: "desc",
-        },
-        take: options?.limit ?? 50,
-      })
-
-      return rows.map((row) => {
-        const meta = (row.coordination?.metadata as Record<string, any>) || {}
-        const deliveryAddress = row.delivery_address as any
-        const deliveryWindow = row.delivery_window as any
-
-        return {
-          id: row.id,
-          orderCode: row.code,
-          stage: (row.coordination?.stage || "INTAKE") as CoordinatorStage,
-          stageLabel: getStageLabel(row.coordination?.stage || "INTAKE"),
-          riskLevel: (row.coordination?.risk_level || "NORMAL") as CoordinationRiskLevel,
-          riskReason: row.coordination?.risk_reason || undefined,
-          customerName: meta.customerName || "Khách Hàng",
-          customerTier: meta.customerTier || "BRONZE",
-          recipientName: meta.recipientName || "Người Nhận",
-          recipientPhone: meta.recipientPhone || "",
-          deliveryAddress: deliveryAddress || { formattedAddress: "Chưa có địa chỉ" },
-          deliveryTargetTime: deliveryWindow?.timeSlot || "Trong ngày",
-          nextAction: row.coordination?.next_action || "Đang xử lý điều phối",
-          partnerName: meta.partnerName || undefined,
-          productTitle: meta.productTitle || "Mẫu hoa tươi",
-          sampleImageUrl: meta.sampleImageUrl || undefined,
-          flowers: (meta.flowers as any[]) || [],
-          cardMessage: row.card_message || "",
-          internalNote: row.internal_note || undefined,
-          hasException: row.coordination?.stage === "EXCEPTION",
-          unitPriceVnd: Number(row.total_vnd) || 0,
-        }
-      })
-    } catch (err: any) {
-      if (err?.code === "P2021" || err?.message?.includes("does not exist")) {
-        console.warn("Table order_coordinations not found in DB. Please run `npx prisma db push`.")
-        return []
-      }
-      throw err
+  async applyTransition(
+    ctx: TenantContext,
+    row: CoordinatorOrderRow,
+    params: {
+      from: CoordinatorStage
+      to: CoordinatorStage
+      axes: MappedOrderAxes
+      nextAction: string
+      reason: string
+      coordination?: Prisma.order_coordinationsUncheckedUpdateInput
     }
-  }
-
-  /**
-   * Cập nhật chuyển bước (Stage Advance) cho đơn hàng.
-   */
-  async updateOrderStage(
-    organizationId: string,
-    orderIdOrCode: string,
-    nextStage: CoordinatorStage,
-    nextAction?: string | undefined
-  ) {
-    try {
-      const order = await prisma.orders.findFirst({
-        where: {
-          organization_id: organizationId,
-          OR: [{ id: orderIdOrCode }, { code: orderIdOrCode }],
-        },
-        include: {
-          coordination: true,
-        },
-      })
-
-      if (!order) {
-        throw new Error(`Order ${orderIdOrCode} not found in organization`)
-      }
-
-      const axes = mapStageToOrderAxes(nextStage)
-
-      return await prisma.$transaction(async (tx) => {
-        // 1. Cập nhật 3 trục trạng thái của bảng orders
-        await tx.orders.update({
-          where: { id: order.id },
-          data: {
-            status: axes.status,
-            production_status: axes.productionStatus,
-            delivery_status: axes.deliveryStatus,
-          },
-        })
-
-        // 2. Cập nhật stage và nextAction trong order_coordinations
-        if (order.coordination) {
-          await tx.order_coordinations.update({
-            where: { id: order.coordination.id },
-            data: {
-              stage: nextStage as coordinator_stage,
-              next_action: nextAction || getNextActionDefault(nextStage),
-              updated_at: new Date(),
-            },
-          })
-        } else {
-          await tx.order_coordinations.create({
-            data: {
-              organization_id: organizationId,
-              order_id: order.id,
-              stage: nextStage as coordinator_stage,
-              risk_level: "NORMAL",
-              next_action: nextAction || getNextActionDefault(nextStage),
-            },
-          })
-        }
-      })
-    } catch (err: any) {
-      if (err?.code === "P2021" || err?.message?.includes("does not exist")) {
-        console.warn("Table order_coordinations not found in DB. Please run `npx prisma db push`.")
-        return
-      }
-      throw err
+  ): Promise<boolean> {
+    const before: MappedOrderAxes = {
+      status: row.status,
+      productionStatus: row.production_status,
+      deliveryStatus: row.delivery_status,
     }
-  }
-}
+    // Khoá lạc quan: chỉ chuyển nếu bước vẫn là `from`. Hai điều phối viên
+    // bấm cùng lúc thì người thứ hai nhận 409, không ghi đè lẫn nhau.
+    const moved = await this.db.order_coordinations.updateMany({
+      where: scopedWhere(ctx, { order_id: row.id, stage: params.from }),
+      data: { ...params.coordination, stage: params.to, next_action: params.nextAction },
+    })
+    if (moved.count === 0) return false
 
-function getStageLabel(stage: string): string {
-  switch (stage) {
-    case "INTAKE":
-      return "Tiếp nhận đơn"
-    case "PLANNING":
-    case "ASSIGNING":
-      return "Chờ phân công xưởng"
-    case "IN_PRODUCTION":
-      return "Đang cắm hoa"
-    case "QUALITY_CHECK":
-      return "Chờ duyệt QC"
-    case "DISPATCHING":
-      return "Đang giao hàng"
-    case "DELIVERED":
-      return "Đã giao (Chờ đóng đơn)"
-    case "COMPLETED":
-      return "Hoàn tất 100%"
-    case "EXCEPTION":
-      return "Sự cố cần xử lý"
-    default:
-      return stage
+    const changes = changedAxes(before, params.axes)
+    if (changes.length > 0) {
+      await this.db.orders.updateMany({
+        where: scopedWhere(ctx, { id: row.id }),
+        data: {
+          status: params.axes.status,
+          production_status: params.axes.productionStatus,
+          delivery_status: params.axes.deliveryStatus,
+        },
+      })
+    }
+    for (const ch of changes) {
+      await this.recordEvent(ctx, row.id, ch.axis, ch.from, ch.to, params.reason)
+    }
+    return true
   }
-}
 
-function getNextActionDefault(stage: CoordinatorStage): string {
-  switch (stage) {
-    case "INTAKE":
-      return "Kiểm tra thông tin đơn trước khi lập kế hoạch"
-    case "PLANNING":
-    case "ASSIGNING":
-      return "Phân công đối tác xưởng ngoài hoặc thợ cắm hoa"
-    case "IN_PRODUCTION":
-      return "Xưởng đang tiếp nhận cắm hoa theo BOM"
-    case "QUALITY_CHECK":
-      return "Kiểm tra ảnh hoa thợ vừa cắm xong đối chiếu Master Index"
-    case "DISPATCHING":
-      return "Shipper đang giao tới người nhận"
-    case "DELIVERED":
-      return "Nghiệm thu đóng đơn và giải ngân đối tác"
-    case "COMPLETED":
-      return "Đơn đã hoàn thành trọn vẹn"
-    case "EXCEPTION":
-      return "Xử lý sự cố phát sinh"
-    default:
-      return "Tiếp tục tiến trình điều phối"
+  async updateCoordination(
+    ctx: TenantContext,
+    orderId: string,
+    data: Prisma.order_coordinationsUncheckedUpdateInput
+  ): Promise<void> {
+    await this.db.order_coordinations.updateMany({
+      where: scopedWhere(ctx, { order_id: orderId }),
+      data,
+    })
+  }
+
+  async updateOrderAxis(
+    ctx: TenantContext,
+    orderId: string,
+    data: Prisma.ordersUncheckedUpdateManyInput
+  ): Promise<void> {
+    await this.db.orders.updateMany({ where: scopedWhere(ctx, { id: orderId }), data })
+  }
+
+  async recordEvent(
+    ctx: TenantContext,
+    orderId: string,
+    axis: "order" | "production" | "delivery",
+    from: string | null,
+    to: string,
+    reason: string
+  ): Promise<void> {
+    await this.db.order_events.create({
+      data: scopedData(ctx, {
+        order_id: orderId,
+        axis,
+        from_value: from,
+        to_value: to,
+        actor_id: ctx.userId,
+        reason,
+      }),
+    })
+  }
+
+  // ── QC ─────────────────────────────────────────────────────────────────
+
+  createQcRecord(
+    ctx: TenantContext,
+    data: {
+      orderId: string
+      status: "PASSED" | "REJECTED" | "REWORK_REQUESTED"
+      imageAssetIds: string[]
+      checklist: Record<string, unknown> | null
+      notes: string | null
+    }
+  ) {
+    return this.db.order_qc_records.create({
+      data: scopedData(ctx, {
+        order_id: data.orderId,
+        inspector_id: ctx.userId,
+        status: data.status,
+        image_asset_ids: data.imageAssetIds as Prisma.InputJsonValue,
+        ...(data.checklist ? { checklist_result: data.checklist as Prisma.InputJsonValue } : {}),
+        notes: data.notes,
+      }),
+    })
+  }
+
+  // ── Sự cố ──────────────────────────────────────────────────────────────
+
+  createException(
+    ctx: TenantContext,
+    data: { orderId: string; code: string; type: string; severity: string; description: string }
+  ): Promise<ExceptionRow> {
+    return this.db.order_exceptions.create({
+      data: scopedData(ctx, {
+        order_id: data.orderId,
+        code: data.code,
+        type: data.type,
+        severity: data.severity,
+        description: data.description,
+        status: "OPEN",
+        reported_by: ctx.userId,
+      }),
+    })
+  }
+
+  findException(ctx: TenantContext, id: string): Promise<ExceptionRow | null> {
+    return this.db.order_exceptions.findFirst({ where: scopedWhere(ctx, { id }) })
+  }
+
+  async resolveException(ctx: TenantContext, id: string, resolution: string): Promise<void> {
+    await this.db.order_exceptions.updateMany({
+      where: scopedWhere(ctx, { id }),
+      data: { status: "RESOLVED", resolution, resolved_by: ctx.userId, resolved_at: new Date() },
+    })
+  }
+
+  // ── Đối tác ────────────────────────────────────────────────────────────
+
+  listPartners(ctx: TenantContext, options: { activeOnly: boolean }): Promise<PartnerRow[]> {
+    return this.db.partners.findMany({
+      where: scopedWhere(ctx, options.activeOnly ? { is_active: true } : {}),
+      orderBy: [{ is_active: "desc" }, { rating: "desc" }, { name: "asc" }],
+      take: 200,
+    })
+  }
+
+  findPartner(ctx: TenantContext, id: string): Promise<PartnerRow | null> {
+    return this.db.partners.findFirst({ where: scopedWhere(ctx, { id }) })
+  }
+
+  createPartner(
+    ctx: TenantContext,
+    data: {
+      code: string
+      name: string
+      phone: string
+      address: string | null
+      district: string | null
+      province: string | null
+      tier: string
+      capacityDaily: number
+    }
+  ): Promise<PartnerRow> {
+    return this.db.partners.create({
+      data: scopedData(ctx, {
+        code: data.code,
+        name: data.name,
+        phone: data.phone,
+        address: data.address,
+        district: data.district,
+        province: data.province,
+        tier: data.tier,
+        capacity_daily: data.capacityDaily,
+      }),
+    })
+  }
+
+  async updatePartner(
+    ctx: TenantContext,
+    id: string,
+    data: Prisma.partnersUncheckedUpdateManyInput
+  ): Promise<void> {
+    await this.db.partners.updateMany({ where: scopedWhere(ctx, { id }), data })
+  }
+
+  /** Đơn đang chạy của một đối tác hôm nay — để so với `capacity_daily`. */
+  countActiveOrdersForPartner(ctx: TenantContext, partnerId: string): Promise<number> {
+    return this.db.order_coordinations.count({
+      where: scopedWhere(ctx, {
+        partner_id: partnerId,
+        stage: { in: ["ASSIGNING", "IN_PRODUCTION", "QUALITY_CHECK"] as CoordinatorStage[] },
+      }),
+    })
   }
 }

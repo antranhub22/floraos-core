@@ -66,9 +66,17 @@ export function mapStageToOrderAxes(stage: CoordinatorStage): MappedOrderAxes {
         productionStatus: "READY",
         deliveryStatus: "DELIVERED",
       }
+    // EXCEPTION và CANCELLED KHÔNG đi qua đây khi chuyển bước — xem
+    // `axesAfterTransition` (giữ nguyên trục sản xuất/giao hàng hiện có).
     case "EXCEPTION":
       return {
         status: "PROCESSING",
+        productionStatus: "WAITING",
+        deliveryStatus: "PENDING",
+      }
+    case "CANCELLED":
+      return {
+        status: "CANCELLED",
         productionStatus: "WAITING",
         deliveryStatus: "PENDING",
       }
@@ -89,6 +97,7 @@ export function mapOrderAxesToStage(
   productionStatus: ProductionStatus,
   deliveryStatus: DeliveryStatus
 ): CoordinatorStage {
+  if (status === "CANCELLED") return "CANCELLED"
   if (status === "COMPLETED") return "COMPLETED"
   if (deliveryStatus === "DELIVERED") return "DELIVERED"
   if (deliveryStatus === "DELIVERING" || deliveryStatus === "DISPATCHED") return "DISPATCHING"
@@ -118,7 +127,7 @@ export function evaluateOrderRiskLevel(params: {
     }
   }
 
-  if (stage === "COMPLETED" || stage === "DELIVERED") {
+  if (stage === "COMPLETED" || stage === "DELIVERED" || stage === "CANCELLED") {
     return { riskLevel: "NORMAL" }
   }
 

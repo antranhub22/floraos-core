@@ -172,19 +172,18 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
   const handleDownloadPng = useCallback(async () => {
     if (!cardRef.current) return
     try {
-      const html2canvas = (await import("html2canvas")).default
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-      })
+      // `html-to-image` đã là phụ thuộc của dự án (thẻ chào Sales). Bản trước
+      // import động `html2canvas` — gói không có trong package.json — nên nút
+      // này luôn rơi vào nhánh báo lỗi.
+      const { toPng } = await import("html-to-image")
+      const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, backgroundColor: "#ffffff", cacheBust: true })
       const link = document.createElement("a")
       link.download = `FloraOS_T02_${orderCode}.png`
-      link.href = canvas.toDataURL("image/png")
+      link.href = dataUrl
       link.click()
     } catch (err) {
-      console.warn("Tải PNG thất bại — có thể cần cài html2canvas:", err)
-      alert("Tính năng tải PNG cần thêm thư viện html2canvas. Hãy dùng Copy Text Zalo thay thế.")
+      console.warn("Tải PNG thất bại:", err)
+      alert("Không tạo được ảnh PNG của thẻ (ảnh mẫu có thể chặn tải chéo nguồn). Dùng Copy Zalo thay thế.")
     }
   }, [orderCode])
 

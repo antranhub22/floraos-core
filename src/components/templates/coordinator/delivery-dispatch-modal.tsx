@@ -1,86 +1,120 @@
 "use client"
 
-import React, { useState } from "react"
-import {
-  X,
-  Truck,
-  MapPin,
-  Clock,
-  Phone,
-  CheckCircle2,
-  Camera,
-  Upload,
-  ArrowRight,
-  User,
-} from "lucide-react"
+import React, { useRef, useState } from "react"
+import { X, Truck, CheckCircle2, Upload, PackageCheck, Navigation, AlertOctagon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { CoordinationMockOrder } from "@/components/coordinator/control-tower-dashboard"
+import {
+  errorMessage,
+  uploadCoordinatorPhoto,
+  type CoordinationOrder,
+} from "@/components/coordinator/coordinator-api"
+
+/**
+ * P6 — Giao hàng & POD (Template T18–T21, F11/F12).
+ *
+ * Mỗi nút là một sự kiện giao gửi thẳng lên máy chủ: lấy hàng → đang giao →
+ * giao thành công (bắt buộc ảnh POD hoặc tên người ký) / giao thất bại (mở
+ * sự cố). Bản trước điền sẵn tên shipper giả, lấy ảnh mẫu làm ảnh POD, và chỉ
+ * có một nút "giao xong".
+ */
+export type DeliveryEventInput = {
+  event: "PICKED_UP" | "ON_THE_WAY" | "DELIVERED_SUCCESS" | "DELIVERY_FAILED"
+  carrier?: string
+  shipperName: string
+  shipperPhone?: string
+  podAssetId?: string
+  recipientSignedName?: string
+  failureReason?: string
+}
 
 export interface DeliveryDispatchModalProps {
   isOpen: boolean
-  order: CoordinationMockOrder | null
+  order: CoordinationOrder | null
   onClose: () => void
-  onConfirmDelivered: (updatedOrder: CoordinationMockOrder) => void
+  onSubmit: (input: DeliveryEventInput) => Promise<void>
 }
 
-export function DeliveryDispatchModal({
-  isOpen,
-  order,
-  onClose,
-  onConfirmDelivered,
-}: DeliveryDispatchModalProps) {
-  const [carrier, setCarrier] = useState<string>("GrabExpress")
-  const [driverName, setDriverName] = useState("Trần Văn Bình")
-  const [driverPhone, setDriverPhone] = useState("0912.345.678")
-  const [trackingCode, setTrackingCode] = useState(`GRAB-${Date.now().toString().slice(-6)}`)
-  const [podImageUrl, setPodImageUrl] = useState<string>(
-    order?.podImageUrl ||
-      order?.sampleImageUrl ||
-      "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=800&q=80"
-  )
-  const [recipientActualName, setRecipientActualName] = useState(order?.recipientName || "")
-  const [deliveryNote, setDeliveryNote] = useState("Người nhận đã ký nhận hoa tươi nguyên vẹn.")
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
+const STATE_LABEL: Record<string, string> = {
+  PICKED_UP: "Shipper đã lấy hàng",
+  ON_THE_WAY: "Đang trên đường giao",
+  DELIVERED_SUCCESS: "Đã giao thành công",
+  DELIVERY_FAILED: "Giao thất bại",
+}
+
+function addressText(addr: unknown): string {
+  if (addr && typeof addr === "object") {
+    const a = addr as Record<string, unknown>
+    return (
+      (typeof a.formattedAddress === "string" && a.formattedAddress) ||
+      [a.street, a.ward, a.district, a.city].filter((v) => typeof v === "string" && v).join(", ")
+    )
+  }
+  return typeof addr === "string" ? addr : ""
+}
+
+export function DeliveryDispatchModal({ isOpen, order, onClose, onSubmit }: DeliveryDispatchModalProps) {
+  // Giá trị đầu lấy từ đơn; dashboard dựng lại modal (`key`) mỗi lần mở.
+  const [carrier, setCarrier] = useState(order?.delivery.carrier ?? "")
+  const [shipperName, setShipperName] = useState(order?.delivery.shipperName ?? "")
+  const [shipperPhone, setShipperPhone] = useState(order?.delivery.shipperPhone ?? "")
+  const [podAssetId, setPodAssetId] = useState<string | null>(null)
+  const [podPreview, setPodPreview] = useState<string | null>(null)
+  const [recipientSignedName, setRecipientSignedName] = useState("")
+  const [failureReason, setFailureReason] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   if (!isOpen || !order) return null
 
-  const addr = order.deliveryAddress
-  const formattedAddress: string =
-    typeof addr === "object" && addr !== null
-      ? [addr.street, addr.ward, addr.district, addr.city].filter(Boolean).join(", ")
-      : String(addr)
+  const state = order.delivery.state
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ""
     if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setPodImageUrl(reader.result)
-      }
+    setBusy(true)
+    setError(null)
+    try {
+      const { assetId, previewUrl } = await uploadCoordinatorPhoto(file)
+      setPodAssetId(assetId)
+      setPodPreview(previewUrl)
+    } catch (err) {
+      setError(`Không tải được ảnh POD: ${errorMessage(err)}`)
+    } finally {
+      setBusy(false)
     }
-    reader.readAsDataURL(file)
   }
 
-  const handleCompleteDelivery = () => {
-    const updated: CoordinationMockOrder = {
-      ...order,
-      stage: "DELIVERED",
-      stageLabel: "Đã giao thành công (Chờ nghiệm thu)",
-      riskLevel: "NORMAL",
-      riskReason: undefined,
-      nextAction: "Nghiệm thu đơn hàng & đánh giá SLA",
-      podImageUrl,
-      internalNote: `${order.internalNote || ""}\n[POD P6]: Shipper ${carrier} (${driverName}) giao lúc ${new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}. Người nhận: ${recipientActualName}`.trim(),
+  const send = async (event: DeliveryEventInput["event"]) => {
+    if (!shipperName.trim()) {
+      setError("Nhập tên shipper trước.")
+      return
     }
-    onConfirmDelivered(updated)
+    setBusy(true)
+    setError(null)
+    try {
+      await onSubmit({
+        event,
+        shipperName: shipperName.trim(),
+        ...(carrier.trim() ? { carrier: carrier.trim() } : {}),
+        ...(shipperPhone.trim() ? { shipperPhone: shipperPhone.trim() } : {}),
+        ...(event === "DELIVERED_SUCCESS" && podAssetId ? { podAssetId } : {}),
+        ...(event === "DELIVERED_SUCCESS" && recipientSignedName.trim() ? { recipientSignedName: recipientSignedName.trim() } : {}),
+        ...(event === "DELIVERY_FAILED" ? { failureReason: failureReason.trim() } : {}),
+      })
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
   }
+
+  const input = "w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-surface border border-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
-        {/* Header */}
         <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
@@ -91,188 +125,120 @@ export function DeliveryDispatchModal({
                 <span className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-black uppercase border border-zinc-200">
                   CHẶNG P6 • GIAO HÀNG
                 </span>
-                <h3 className="text-base font-extrabold text-text">
-                  Điều Phối Giao Hàng & Thu Thập POD (T20/T21)
-                </h3>
+                <h3 className="text-base font-extrabold text-text">Giao Hàng & Bằng Chứng Giao (T20/T21)</h3>
               </div>
               <p className="text-[11px] text-text-muted">
-                Đơn #{order.orderCode} • Bàn giao shipper & xác nhận bằng chứng giao hoa tận tay
+                Đơn #{order.orderCode} • Hẹn giao {order.deliveryTargetTime}
+                {state ? ` • Hiện tại: ${STATE_LABEL[state] ?? state}` : " • Chưa bàn giao shipper"}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
+          <button onClick={onClose} aria-label="Đóng" className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
             <X size={18} />
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-5 flex flex-col gap-4 text-xs">
-          {/* Thông tin người nhận và địa chỉ */}
-          <div className="p-3.5 rounded-xl border border-border bg-surface-alt flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-text flex items-center gap-1.5">
-                <User size={13} className="text-red-600" />
-                <span>Người nhận: <strong>{order.recipientName}</strong></span>
-              </span>
-              <a
-                href={`tel:${order.recipientPhone}`}
-                className="text-red-700 font-bold flex items-center gap-1 hover:underline"
-              >
-                <Phone size={11} />
-                <span>{order.recipientPhone}</span>
-              </a>
+          <div className="p-3 rounded-xl bg-surface-alt border border-border">
+            <div className="font-bold text-text">
+              Người nhận: {order.recipientName} · {order.recipientPhone}
             </div>
+            <div className="text-text-muted mt-0.5">{addressText(order.deliveryAddress)}</div>
+          </div>
 
-            <div className="flex items-start gap-1.5 text-text-muted text-[11.5px]">
-              <MapPin size={13} className="text-red-600 shrink-0 mt-0.5" />
-              <span className="text-text font-medium">{formattedAddress}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="font-bold text-text block mb-1">Đơn vị vận chuyển</label>
+              <input list="carriers" className={input} value={carrier} onChange={(e) => setCarrier(e.target.value)} placeholder="AhaMove, Grab…" />
+              <datalist id="carriers">
+                <option value="GrabExpress" />
+                <option value="AhaMove" />
+                <option value="Lalamove" />
+                <option value="Shipper nội bộ" />
+              </datalist>
             </div>
-
-            <div className="flex items-center gap-1 text-rose-700 font-bold text-[11px] pt-1 border-t border-dashed border-border/80">
-              <Clock size={12} />
-              <span>Hẹn giao: {order.deliveryTargetTime}</span>
+            <div>
+              <label className="font-bold text-text block mb-1">Tên shipper *</label>
+              <input className={input} value={shipperName} onChange={(e) => setShipperName(e.target.value)} />
+            </div>
+            <div>
+              <label className="font-bold text-text block mb-1">SĐT shipper</label>
+              <input className={input} value={shipperPhone} onChange={(e) => setShipperPhone(e.target.value)} />
             </div>
           </div>
 
-          {/* Chỉ định Shipper / Đơn vị vận chuyển */}
-          <div className="p-3.5 rounded-xl border border-border bg-surface flex flex-col gap-3">
-            <span className="font-bold text-text text-xs flex items-center gap-1.5">
-              <Truck size={13} className="text-indigo-600" />
-              <span>Thông tin đơn vị vận chuyển & Tài xế:</span>
-            </span>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <div>
-                <label className="font-bold text-text block mb-1">Đơn vị vận chuyển</label>
-                <select
-                  value={carrier}
-                  onChange={(e) => setCarrier(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text font-bold"
-                >
-                  <option value="GrabExpress">GrabExpress (Giao nhanh)</option>
-                  <option value="AhaMove">AhaMove (Túi giữ nhiệt)</option>
-                  <option value="Lalamove">Lalamove</option>
-                  <option value="ShipperShop">Shipper nội bộ shop</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="font-bold text-text block mb-1">Tên tài xế</label>
-                <input
-                  type="text"
-                  value={driverName}
-                  onChange={(e) => setDriverName(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-text block mb-1">SĐT tài xế</label>
-                <input
-                  type="text"
-                  value={driverPhone}
-                  onChange={(e) => setDriverPhone(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text font-medium"
-                />
-              </div>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" disabled={busy || Boolean(state)} onClick={() => send("PICKED_UP")} className="gap-1.5">
+              <PackageCheck size={14} /> Shipper đã lấy hàng
+            </Button>
+            <Button size="sm" variant="outline" disabled={busy || state === "ON_THE_WAY"} onClick={() => send("ON_THE_WAY")} className="gap-1.5">
+              <Navigation size={14} /> Đang trên đường giao
+            </Button>
           </div>
 
-          {/* Thu thập Bằng chứng Giao hàng POD */}
-          <div className="p-4 rounded-xl border-2 border-red-200 bg-red-50/40 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-red-950 text-xs flex items-center gap-1.5">
-                <Camera size={14} className="text-red-600" />
-                Ảnh Bằng Chứng Giao Hoa Tận Tay (Proof of Delivery — POD):
-              </span>
-              <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
-                Bắt buộc để đóng đơn P7
-              </span>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="relative w-28 h-28 rounded-xl border border-red-200 bg-surface overflow-hidden shrink-0 shadow-xs">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={podImageUrl} alt="Ảnh POD giao hàng" className="w-full h-full object-cover" />
-                <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] font-bold text-center py-0.5">
-                  Bằng chứng POD
-                </span>
+          <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col gap-2">
+            <span className="font-bold text-emerald-900">Giao thành công — cần ảnh POD hoặc tên người ký nhận</span>
+            <div className="flex items-center gap-3">
+              <div className="w-24 h-24 rounded-lg border border-border bg-surface overflow-hidden flex items-center justify-center shrink-0">
+                {podPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={podPreview} alt="Ảnh POD" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] text-text-muted text-center p-1">Chưa có ảnh POD</span>
+                )}
               </div>
-
               <div className="flex-1 flex flex-col gap-2">
-                <div>
-                  <label className="font-bold text-text text-[11px] block mb-0.5">
-                    Link ảnh hoặc tải ảnh chụp giao hàng thực tế:
-                  </label>
-                  <input
-                    type="text"
-                    value={podImageUrl}
-                    onChange={(e) => setPodImageUrl(e.target.value)}
-                    placeholder="Dán URL link ảnh POD..."
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text text-xs"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-xs h-7 gap-1 border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-bold"
-                  >
-                    <Upload size={12} />
-                    <span>Tải ảnh POD từ máy</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              <div>
-                <label className="font-bold text-text block mb-1">Tên người nhận thực tế ký nhận:</label>
+                <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handleUpload} />
+                <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()} className="gap-1.5 w-fit">
+                  <Upload size={13} /> Tải ảnh trao hoa
+                </Button>
                 <input
-                  type="text"
-                  value={recipientActualName}
-                  onChange={(e) => setRecipientActualName(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-text block mb-1">Ghi chú xác nhận của shipper:</label>
-                <input
-                  type="text"
-                  value={deliveryNote}
-                  onChange={(e) => setDeliveryNote(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text"
+                  className={input}
+                  placeholder="Tên người ký nhận thực tế"
+                  value={recipientSignedName}
+                  onChange={(e) => setRecipientSignedName(e.target.value)}
                 />
               </div>
             </div>
+            <Button
+              size="sm"
+              disabled={busy || (!podAssetId && !recipientSignedName.trim())}
+              onClick={() => send("DELIVERED_SUCCESS")}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 w-fit"
+            >
+              <CheckCircle2 size={14} /> Xác nhận giao thành công
+            </Button>
           </div>
+
+          <div className="p-3 rounded-xl border border-red-200 bg-red-50/40 flex flex-col gap-2">
+            <span className="font-bold text-red-900">Giao thất bại — mở sự cố</span>
+            <input
+              className={input}
+              placeholder="Lý do (người nhận không nghe máy, sai địa chỉ…)"
+              value={failureReason}
+              onChange={(e) => setFailureReason(e.target.value)}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || !failureReason.trim()}
+              onClick={() => send("DELIVERY_FAILED")}
+              className="gap-1.5 text-red-700 border-red-300 w-fit"
+            >
+              <AlertOctagon size={14} /> Báo giao thất bại
+            </Button>
+          </div>
+
+          {error && (
+            <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 font-semibold">
+              {error}
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-border flex items-center justify-between gap-3 sticky bottom-0 bg-surface">
+        <div className="p-4 border-t border-border flex items-center justify-end sticky bottom-0 bg-surface">
           <Button variant="outline" size="sm" onClick={onClose}>
             Đóng
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={handleCompleteDelivery}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5 px-4 shadow-sm"
-          >
-            <CheckCircle2 size={14} />
-            <span>Xác Nhận Đã Giao Thành Công ➔ Đóng Đơn (P7)</span>
-            <ArrowRight size={14} />
           </Button>
         </div>
       </div>

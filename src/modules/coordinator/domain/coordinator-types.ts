@@ -25,6 +25,7 @@ export type CoordinatorStage =
   | "DELIVERED"
   | "COMPLETED"
   | "EXCEPTION"
+  | "CANCELLED"
 
 export type CoordinationRiskLevel = "NORMAL" | "ATTENTION" | "AT_RISK" | "CRITICAL"
 

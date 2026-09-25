@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "step-06-delivery.input.schema.json",
-  "title": "Giao vận & Bằng chứng Giao hoa (POD) — Đầu vào",
-  "description": "Giám sát tài xế giao hoa và thu thập hình ảnh trao tận tay người nhận",
+  "title": "Giao hàng & POD (T18–T21, F11/F12) — Đầu vào",
+  "description": "PICKED_UP → ON_THE_WAY → DELIVERED_SUCCESS (bắt buộc ảnh POD hoặc tên người ký) / DELIVERY_FAILED (mở sự cố)",
   "x-floraos": {
     "stepId": "06",
     "step": 6,
     "code": "DELIVERY",
     "endpoint": {
       "method": "POST",
-      "path": "/api/v1/coordinator/delivery-update",
-      "capability": "O1"
+      "path": "/api/v1/coordinator/orders/{id}/delivery",
+      "capability": "R5"
     },
     "source": "src/modules/coordinator/contracts/step-06-delivery.ts",
     "direction": "input",
@@ -18,25 +18,7 @@
   },
   "type": "object",
   "properties": {
-    "coordinationId": {
-      "type": "string",
-      "format": "uuid",
-      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-    },
-    "shipperName": {
-      "type": "string"
-    },
-    "shipperPhone": {
-      "type": "string"
-    },
-    "podImageUrl": {
-      "type": "string",
-      "format": "uri"
-    },
-    "recipientSignedName": {
-      "type": "string"
-    },
-    "deliveryStatus": {
+    "event": {
       "type": "string",
       "enum": [
         "PICKED_UP",
@@ -45,24 +27,44 @@
         "DELIVERY_FAILED"
       ]
     },
+    "carrier": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "shipperName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "shipperPhone": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "podAssetId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "recipientSignedName": {
+      "type": "string",
+      "maxLength": 200
+    },
     "failureReason": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 1000
     }
   },
   "required": [
-    "coordinationId",
-    "shipperName",
-    "shipperPhone",
-    "deliveryStatus"
+    "event",
+    "shipperName"
   ],
   "examples": [
     {
-      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
-      "shipperName": "Lê Văn Hùng (AhaMove)",
+      "event": "DELIVERED_SUCCESS",
+      "carrier": "AhaMove",
+      "shipperName": "Lê Văn Hùng",
       "shipperPhone": "0933221100",
-      "podImageUrl": "https://storage.floraos.vn/org/test/pod-flower-delivery.jpg",
-      "recipientSignedName": "Trần Thị Bình",
-      "deliveryStatus": "DELIVERED_SUCCESS"
+      "recipientSignedName": "Trần Thị Bình"
     }
   ]
 }

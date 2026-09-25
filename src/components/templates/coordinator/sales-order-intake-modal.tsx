@@ -20,12 +20,27 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { FlowerBomItem, StructuredAddress } from "@/modules/products/domain/product-master-index"
-import type { CoordinationMockOrder } from "@/components/coordinator/control-tower-dashboard"
+import {
+  errorMessage,
+  uploadCoordinatorPhoto,
+  type CreateOrderRequest,
+} from "@/components/coordinator/coordinator-api"
+
+/** Một mục Product Master Index dùng để điền nhanh form (`GET /products/master-index`). */
+interface MasterPreset {
+  id: string
+  code?: string
+  name: string
+  masterImageUrl?: string
+  pricing?: { quotePriceVnd?: number }
+  bom?: { wrapStyle?: string; ribbon?: string; flowers?: FlowerBomItem[] }
+}
 
 export interface SalesOrderIntakeModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (newOrder: CoordinationMockOrder) => void
+  /** Gửi lên máy chủ; lỗi (400/422) ném ra để modal hiện, không đóng form. */
+  onSubmit: (body: CreateOrderRequest) => Promise<void>
 }
 
 export function SalesOrderIntakeModal({
@@ -55,98 +70,29 @@ export function SalesOrderIntakeModal({
   const [priority, setPriority] = useState<"STANDARD" | "RUSH" | "VIP">("STANDARD")
   const [cardMessage, setCardMessage] = useState("")
   const [internalNote, setInternalNote] = useState("")
-  const [sampleImageUrl, setSampleImageUrl] = useState<string>(
-    "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=600&q=80"
-  )
+  const [sampleImageUrl, setSampleImageUrl] = useState<string>("")
+  const [sampleAssetId, setSampleAssetId] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
-  // Danh sách mẫu hoa mặc định chất lượng cao cho Sales chọn nhanh khi DB chưa seed
-  const DEFAULT_MASTER_PRESETS = [
-    {
-      id: "prod-preset-01",
-      name: "Bó Hồng Ohara Kem Sang Trọng",
-      code: "BHO-OHARA-01",
-      masterImageUrl: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=800&q=80",
-      pricing: { quotePriceVnd: 750000 },
-      bom: {
-        wrapStyle: "Giấy xốp Hàn Quốc trắng sữa",
-        ribbon: "Ruy băng voan lụa champagne",
-        flowers: [
-          { flowerName: "Hồng Ohara Kem", quantity: 12, unit: "cành", color: "Kem phấn", role: "Chủ đạo" },
-          { flowerName: "Hồng Spirance", quantity: 5, unit: "cành", color: "Cam pastel", role: "Phụ" },
-          { flowerName: "Lá Bạc Dollar", quantity: 6, unit: "cành", color: "Xanh mốc", role: "Điểm xuyến" },
-          { flowerName: "Hoa Baby Trắng", quantity: 3, unit: "cành", color: "Trắng", role: "Lấp đầy" },
-        ],
-      },
-    },
-    {
-      id: "prod-preset-02",
-      name: "Giỏ Hoa Tulip Trắng Thanh Khiết",
-      code: "GHT-TULIP-02",
-      masterImageUrl: "https://images.unsplash.com/photo-1520763185298-1b434c919102?auto=format&fit=crop&w=800&q=80",
-      pricing: { quotePriceVnd: 950000 },
-      bom: {
-        wrapStyle: "Giỏ mây đan thủ công lót nilon",
-        ribbon: "Ruy băng gân lụa xanh pastel",
-        flowers: [
-          { flowerName: "Tulip Hà Lan Trắng", quantity: 15, unit: "cành", color: "Trắng tinh", role: "Chủ đạo" },
-          { flowerName: "Cúc Tana Mẫu Mới", quantity: 5, unit: "cành", color: "Trắng nhuỵ vàng", role: "Điểm xuyến" },
-          { flowerName: "Lá Tai Lừa Nhập", quantity: 4, unit: "cành", color: "Xanh nhung", role: "Lấp đầy" },
-        ],
-      },
-    },
-    {
-      id: "prod-preset-03",
-      name: "Kệ Hoa Khai Trương Hồng Phát Rực Rỡ",
-      code: "KHK-HONGPHAT-03",
-      masterImageUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=800&q=80",
-      pricing: { quotePriceVnd: 1850000 },
-      bom: {
-        wrapStyle: "Chân sắt nghệ thuật 2 tầng sơn tĩnh điện",
-        ribbon: "Băng rôn chữ đỏ nhũ vàng Chúc Mừng Khai Trương",
-        flowers: [
-          { flowerName: "Lan Hồ Điệp Vàng", quantity: 6, unit: "cành", color: "Vàng hoàng kim", role: "Chủ đạo" },
-          { flowerName: "Hồng Môn Đỏ King", quantity: 10, unit: "cành", color: "Đỏ tươi", role: "Chủ đạo" },
-          { flowerName: "Thiên Điểu", quantity: 8, unit: "cành", color: "Cam rực", role: "Phụ" },
-          { flowerName: "Lá Trầu Bà Nam Mỹ", quantity: 6, unit: "lá", color: "Xanh thẫm", role: "Điểm xuyến" },
-        ],
-      },
-    },
-    {
-      id: "prod-preset-04",
-      name: "Bó Hoa Hồng Đỏ Ecuador Tình Yêu Vĩnh Cửu",
-      code: "BHE-ECUADOR-04",
-      masterImageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80",
-      pricing: { quotePriceVnd: 1200000 },
-      bom: {
-        wrapStyle: "Giấy đen mờ huyền bí phong cách Paris",
-        ribbon: "Ruy băng đỏ nhung Ruby",
-        flowers: [
-          { flowerName: "Hồng Đỏ Ecuador", quantity: 19, unit: "cành", color: "Đỏ nhung", role: "Chủ đạo" },
-          { flowerName: "Lá Khuynh Diệp Bạc", quantity: 6, unit: "cành", color: "Xanh khói", role: "Điểm xuyến" },
-          { flowerName: "Hoa Thanh Liễu Trắng", quantity: 4, unit: "cành", color: "Trắng điểm", role: "Lấp đầy" },
-        ],
-      },
-    },
-  ]
-
-  // Xử lý upload ảnh trực tiếp từ máy (FileReader Base64)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Ảnh tải lên đi qua kho `assets` của tổ chức (không base64 trong đơn).
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ""
     if (!file) return
-
-    if (!file.type.startsWith("image/")) {
-      alert("Vui lòng chọn file hình ảnh hợp lệ (PNG, JPG, WebP)!")
-      return
+    setFormError(null)
+    setIsUploading(true)
+    try {
+      const { assetId, previewUrl } = await uploadCoordinatorPhoto(file)
+      setSampleAssetId(assetId)
+      setSampleImageUrl(previewUrl)
+    } catch (error) {
+      setFormError(`Không tải được ảnh mẫu: ${errorMessage(error)}`)
+    } finally {
+      setIsUploading(false)
     }
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setSampleImageUrl(reader.result)
-      }
-    }
-    reader.readAsDataURL(file)
   }
 
   // Danh sách BOM cành hoa nguyên tử
@@ -177,7 +123,7 @@ export function SalesOrderIntakeModal({
   }
 
   // Master index presets để Sales bấm chọn nhanh
-  const [masterProducts, setMasterProducts] = useState<any[]>(DEFAULT_MASTER_PRESETS)
+  const [masterProducts, setMasterProducts] = useState<MasterPreset[]>([])
 
   useEffect(() => {
     if (!isOpen) return
@@ -195,9 +141,12 @@ export function SalesOrderIntakeModal({
 
   if (!isOpen) return null
 
-  const handleSelectMasterProduct = (prod: any) => {
+  const handleSelectMasterProduct = (prod: MasterPreset) => {
     setProductTitle(prod.name)
-    if (prod.masterImageUrl) setSampleImageUrl(prod.masterImageUrl)
+    if (prod.masterImageUrl) {
+      setSampleImageUrl(prod.masterImageUrl)
+      setSampleAssetId(null)
+    }
     if (prod.pricing?.quotePriceVnd) setUnitPriceVnd(prod.pricing.quotePriceVnd)
     if (prod.bom?.flowers && prod.bom.flowers.length > 0) {
       setFlowers(prod.bom.flowers)
@@ -218,61 +167,66 @@ export function SalesOrderIntakeModal({
     setFlowers((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleFlowerChange = (index: number, field: keyof FlowerBomItem, val: any) => {
+  const handleFlowerChange = (index: number, field: keyof FlowerBomItem, val: string | number) => {
     setFlowers((prev) =>
       prev.map((f, i) => (i === index ? { ...f, [field]: val } : f))
     )
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError(null)
     if (!customerName || !recipientName || !recipientPhone || !addressStreet || !addressWard || !addressDistrict || !addressCity) {
-      alert("Vui lòng điền đầy đủ thông tin khách hàng, người nhận và địa chỉ phân cấp 5 tầng (Số nhà, Phường/Xã, Quận/Huyện, Tỉnh/TP)!")
+      setFormError("Điền đủ khách hàng, người nhận và địa chỉ 4 tầng (Số nhà, Phường/Xã, Quận/Huyện, Tỉnh/TP).")
       return
     }
 
-    const structuredAddress: StructuredAddress = {
+    const country = addressCountry.trim() || "Việt Nam"
+    const deliveryAddress = {
       street: addressStreet.trim(),
       ward: addressWard.trim(),
       district: addressDistrict.trim(),
       city: addressCity.trim(),
-      country: addressCountry.trim() || "Việt Nam",
-      formattedAddress: [
-        addressStreet.trim(),
-        addressWard.trim(),
-        addressDistrict.trim(),
-        addressCity.trim(),
-        addressCountry.trim() || "Việt Nam",
-      ]
+      country,
+      formattedAddress: [addressStreet, addressWard, addressDistrict, addressCity]
+        .map((v) => v.trim())
+        .concat(country)
         .filter(Boolean)
         .join(", "),
     }
+    // Giờ hẹn thật (giờ máy người nhập) — máy chủ dùng nó tính rủi ro trễ (F09/F12).
+    const target = new Date(`${deliveryDate}T${deliveryTime}:00`)
+    const priorityNote = priority === "STANDARD" ? "" : `[Ưu tiên: ${priority}] `
+    const isStoredUrl = /^https?:\/\//i.test(sampleImageUrl) || sampleImageUrl.startsWith("/")
 
-    const randomSuffix = Math.floor(100 + Math.random() * 900)
-    const newOrder: CoordinationMockOrder = {
-      id: `ord-${Date.now()}`,
-      orderCode: `FLR-2026-${randomSuffix}`,
-      stage: "PLANNING",
-      stageLabel: "Đã tiếp nhận (Chờ phân công)",
-      riskLevel: priority === "RUSH" ? "ATTENTION" : "NORMAL",
-      riskReason: priority === "RUSH" ? "Đơn gấp cần giao sớm" : undefined,
-      customerName,
+    const body: CreateOrderRequest = {
+      customerName: customerName.trim(),
       customerTier,
-      recipientName,
-      recipientPhone,
-      deliveryAddress: structuredAddress,
+      recipientName: recipientName.trim(),
+      recipientPhone: recipientPhone.trim(),
+      deliveryAddress,
       deliveryTargetTime: `${deliveryTime} ngày ${deliveryDate}`,
-      nextAction: "Phân công đối tác xưởng ngoài hoặc thợ cắm hoa",
-      productTitle: productTitle || "Bó hoa tươi nghệ thuật",
-      sampleImageUrl,
-      flowers,
-      cardMessage,
-      internalNote,
-      hasException: false,
+      ...(Number.isNaN(target.getTime()) ? {} : { deliveryTargetAt: target.toISOString() }),
+      productTitle: productTitle.trim() || "Bó hoa tươi nghệ thuật",
+      ...(sampleAssetId ? { sampleAssetId } : isStoredUrl ? { sampleImageUrl } : {}),
       unitPriceVnd: Number(unitPriceVnd) || 0,
+      flowers: flowers
+        .filter((f) => f.flowerName.trim())
+        .map((f) => ({ flowerName: f.flowerName, quantity: Number(f.quantity) || 1, unit: f.unit, color: f.color, role: f.role })),
+      ...(cardMessage.trim() ? { cardMessage } : {}),
+      ...(priorityNote || internalNote.trim() ? { internalNote: `${priorityNote}${internalNote}`.trim() } : {}),
     }
 
-    onSubmit(newOrder)
+    setIsSubmitting(true)
+    try {
+      await onSubmit(body)
+    } catch (error) {
+      setFormError(errorMessage(error))
+      return
+    } finally {
+      setIsSubmitting(false)
+    }
+
     handleClearAddress()
     setCustomerName("")
     setCustomerPhone("")
@@ -283,6 +237,8 @@ export function SalesOrderIntakeModal({
     setFlowers([])
     setCardMessage("")
     setInternalNote("")
+    setSampleImageUrl("")
+    setSampleAssetId(null)
     onClose()
   }
 
@@ -369,7 +325,7 @@ export function SalesOrderIntakeModal({
                 <label className="font-bold text-text block mb-1">Phân hạng khách hàng</label>
                 <select
                   value={customerTier}
-                  onChange={(e) => setCustomerTier(e.target.value as any)}
+                  onChange={(e) => setCustomerTier(e.target.value as typeof customerTier)}
                   className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
                 >
                   <option value="NEW">Mới (NEW)</option>
@@ -624,8 +580,12 @@ export function SalesOrderIntakeModal({
                     <input
                       type="text"
                       placeholder="Dán URL link ảnh hoa mẫu (Zalo, Facebook, Web...)..."
-                      value={sampleImageUrl}
-                      onChange={(e) => setSampleImageUrl(e.target.value)}
+                      value={sampleAssetId ? "(ảnh đã tải lên kho của tiệm)" : sampleImageUrl}
+                      readOnly={Boolean(sampleAssetId)}
+                      onChange={(e) => {
+                        setSampleImageUrl(e.target.value)
+                        setSampleAssetId(null)
+                      }}
                       className="flex-1 px-3 py-2 rounded-xl border border-border bg-surface text-text text-xs focus:outline-none focus:border-red-500 font-medium"
                     />
 
@@ -644,7 +604,7 @@ export function SalesOrderIntakeModal({
                       className="px-3 py-2 h-auto text-xs font-bold gap-1.5 border-red-300 text-red-700 bg-red-50 hover:bg-red-100 shrink-0 cursor-pointer"
                     >
                       <Upload size={13} />
-                      <span>Tải ảnh lên</span>
+                      <span>{isUploading ? "Đang tải…" : "Tải ảnh lên"}</span>
                     </Button>
                   </div>
                 </div>
@@ -653,10 +613,10 @@ export function SalesOrderIntakeModal({
                 <div className="flex flex-col gap-1.5 pt-2 border-t border-dashed border-red-200">
                   <span className="text-[11px] font-bold text-text-muted flex items-center gap-1">
                     <Sparkles size={11} className="text-amber-500" />
-                    <span>Gợi ý ảnh mẫu hoa thông dụng:</span>
+                    <span>Ảnh mẫu từ Product Master của tiệm:</span>
                   </span>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {DEFAULT_MASTER_PRESETS.map((prod) => (
+                    {masterProducts.filter((p) => p.masterImageUrl).slice(0, 6).map((prod) => (
                       <button
                         key={prod.id}
                         type="button"
@@ -828,7 +788,7 @@ export function SalesOrderIntakeModal({
                 <label className="font-bold text-text block mb-1">Mức độ ưu tiên điều phối</label>
                 <select
                   value={priority}
-                  onChange={(e) => setPriority(e.target.value as any)}
+                  onChange={(e) => setPriority(e.target.value as typeof priority)}
                   className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 font-bold"
                 >
                   <option value="STANDARD">Tiêu chuẩn (STANDARD)</option>
@@ -934,13 +894,22 @@ export function SalesOrderIntakeModal({
           </div>
 
           {/* Submit Actions */}
+          {formError && (
+            <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold">
+              {formError}
+            </div>
+          )}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>
               Hủy bỏ
             </Button>
-            <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5">
+            <Button
+              type="submit"
+              disabled={isSubmitting || isUploading}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5"
+            >
               <CheckCircle2 size={15} />
-              <span>Khởi Tạo Đơn & Đưa Vào Tháp Điều Phối</span>
+              <span>{isSubmitting ? "Đang tạo đơn…" : "Khởi Tạo Đơn & Đưa Vào Tháp Điều Phối"}</span>
             </Button>
           </div>
         </form>

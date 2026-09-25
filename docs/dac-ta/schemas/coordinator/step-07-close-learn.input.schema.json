@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "step-07-close-learn.input.schema.json",
-  "title": "Nghiệm thu & Bài học Vận hành — Đầu vào",
-  "description": "Khép lại chu trình điều phối, tính toán SLA và cập nhật uy tín đối tác",
+  "title": "Nghiệm thu & Đóng đơn (T25–T27) — Đầu vào",
+  "description": "Chỉ khi DELIVERED và không còn sự cố mở; chốt điểm + tiền công đối tác, ghi audit",
   "x-floraos": {
     "stepId": "07",
     "step": 7,
     "code": "CLOSE_LEARN",
     "endpoint": {
       "method": "POST",
-      "path": "/api/v1/coordinator/close-learn",
-      "capability": "O1"
+      "path": "/api/v1/coordinator/orders/{id}/close",
+      "capability": "R3"
     },
     "source": "src/modules/coordinator/contracts/step-07-close-learn.ts",
     "direction": "input",
@@ -18,35 +18,26 @@
   },
   "type": "object",
   "properties": {
-    "coordinationId": {
-      "type": "string",
-      "format": "uuid",
-      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-    },
-    "coordinatorFinalReview": {
-      "type": "string"
-    },
     "partnerRating": {
-      "default": 5,
-      "type": "number",
+      "type": "integer",
       "minimum": 1,
       "maximum": 5
     },
-    "customerSatisfactionScore": {
+    "partnerPayoutVnd": {
       "type": "number",
-      "minimum": 1,
-      "maximum": 5
+      "minimum": 0,
+      "maximum": 1000000000
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
     }
   },
-  "required": [
-    "coordinationId"
-  ],
   "examples": [
     {
-      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
-      "coordinatorFinalReview": "Đơn thực hiện xuất sắc, hoa đẹp, giao sớm 5 phút, khách khen ngợi",
       "partnerRating": 5,
-      "customerSatisfactionScore": 5
+      "partnerPayoutVnd": 350000,
+      "notes": "Giao sớm 5 phút"
     }
   ]
 }

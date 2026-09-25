@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { errorMessage, uploadCoordinatorPhoto } from "@/components/coordinator/coordinator-api"
 
 export interface ProductionUpdateModalProps {
   isOpen: boolean
@@ -21,12 +22,13 @@ export interface ProductionUpdateModalProps {
   currentProgressPercent: number
   sampleImageUrl?: string | undefined
   onClose: () => void
+  /** Gọi máy chủ; lỗi ném ra để modal hiện, không đóng. */
   onSubmitUpdate: (params: {
     progressPercent: number
     action: "UPDATE_PROGRESS" | "REPORT_MATERIAL_ISSUE" | "MARK_READY"
-    finishedImageUrl?: string | undefined
+    finishedAssetIds?: string[] | undefined
     issueNote?: string | undefined
-  }) => void
+  }) => Promise<void>
 }
 
 export function ProductionUpdateModal({
@@ -34,46 +36,63 @@ export function ProductionUpdateModal({
   orderCode,
   recipeTitle,
   currentProgressPercent,
-  sampleImageUrl,
   onClose,
   onSubmitUpdate,
 }: ProductionUpdateModalProps) {
   const [progress, setProgress] = useState<number>(currentProgressPercent)
   const [isReportingIssue, setIsReportingIssue] = useState(false)
   const [issueNote, setIssueNote] = useState("")
-  const [finishedImageUrl, setFinishedImageUrl] = useState<string>(
-    sampleImageUrl || "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=800&q=80"
-  )
+  // Ảnh thành phẩm PHẢI là ảnh thợ chụp — bản trước mặc định lấy chính ảnh
+  // mẫu, nên QC so ảnh mẫu với chính nó và luôn "đạt".
+  const [finishedImageUrl, setFinishedImageUrl] = useState<string>("")
+  const [finishedAssetId, setFinishedAssetId] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   if (!isOpen) return null
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ""
     if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setFinishedImageUrl(reader.result)
-        setProgress(100)
-      }
+    setError(null)
+    setBusy(true)
+    try {
+      const { assetId, previewUrl } = await uploadCoordinatorPhoto(file)
+      setFinishedAssetId(assetId)
+      setFinishedImageUrl(previewUrl)
+      setProgress(100)
+    } catch (err) {
+      setError(`Không tải được ảnh thành phẩm: ${errorMessage(err)}`)
+    } finally {
+      setBusy(false)
     }
-    reader.readAsDataURL(file)
   }
 
-  const handleSave = () => {
-    onSubmitUpdate({
-      progressPercent: progress,
-      action: isReportingIssue
-        ? "REPORT_MATERIAL_ISSUE"
-        : progress === 100
-        ? "MARK_READY"
-        : "UPDATE_PROGRESS",
-      finishedImageUrl: progress === 100 ? finishedImageUrl : undefined,
-      issueNote: isReportingIssue ? issueNote : undefined,
-    })
-    onClose()
+  const handleSave = async () => {
+    const action = isReportingIssue ? "REPORT_MATERIAL_ISSUE" : progress === 100 ? "MARK_READY" : "UPDATE_PROGRESS"
+    if (action === "MARK_READY" && !finishedAssetId) {
+      setError("Báo cắm xong phải tải lên ít nhất một ảnh thành phẩm thật để QC.")
+      return
+    }
+    setError(null)
+    setBusy(true)
+    try {
+      await onSubmitUpdate({
+        progressPercent: progress,
+        action,
+        finishedAssetIds: action === "MARK_READY" && finishedAssetId ? [finishedAssetId] : undefined,
+        issueNote: isReportingIssue ? issueNote : undefined,
+      })
+      setFinishedAssetId(null)
+      setFinishedImageUrl("")
+      onClose()
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -186,7 +205,10 @@ export function ProductionUpdateModal({
                         </button>
                         <button
                           type="button"
-                          onClick={() => setFinishedImageUrl("")}
+                          onClick={() => {
+                            setFinishedImageUrl("")
+                            setFinishedAssetId(null)
+                          }}
                           className="p-1 rounded bg-red-600 text-white hover:bg-red-700 text-xs shadow"
                         >
                           <Trash2 size={12} />
@@ -207,9 +229,9 @@ export function ProductionUpdateModal({
                 <div className="flex-1 flex flex-col gap-2">
                   <input
                     type="text"
-                    placeholder="Dán link ảnh hoa thợ gửi qua Zalo..."
-                    value={finishedImageUrl}
-                    onChange={(e) => setFinishedImageUrl(e.target.value)}
+                    placeholder="Tải ảnh thợ chụp lên (nút bên dưới)"
+                    value={finishedAssetId ? "(ảnh đã tải lên kho của tiệm)" : ""}
+                    readOnly
                     className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text text-xs focus:outline-none focus:border-emerald-500"
                   />
                   <div className="flex items-center gap-2">
@@ -263,6 +285,12 @@ export function ProductionUpdateModal({
           </div>
         </div>
 
+        {error && (
+          <div role="alert" className="mx-5 mb-3 p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold">
+            {error}
+          </div>
+        )}
+
         {/* Footer */}
         <div className="p-4 border-t border-border flex items-center justify-between gap-2.5 sticky bottom-0 bg-surface">
           <Button variant="outline" size="sm" onClick={onClose}>
@@ -272,6 +300,7 @@ export function ProductionUpdateModal({
           {progress === 100 ? (
             <Button
               size="sm"
+              disabled={busy}
               onClick={handleSave}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 shadow-sm"
             >
@@ -282,6 +311,7 @@ export function ProductionUpdateModal({
           ) : (
             <Button
               size="sm"
+              disabled={busy}
               onClick={handleSave}
               className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5 shadow-sm"
             >

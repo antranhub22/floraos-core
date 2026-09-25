@@ -801,3 +801,25 @@ Quyết định PO 25/09/2026: chỉ một content engine, đặt trong `floraos
 - [ ] Đợt 2 — Chuỗi agent Strategist→Writer→Critic→Rewriter (prompt/rubric có phiên bản) + API `/content-engine/*` (quyền `I1`/`J5`, không thêm O1/O2) + `content:eval`
 - [ ] Đợt 3 — Nối Chặng 05 (gọi thẳng trong tiến trình, một bản nội dung duy nhất cho bài đăng + audio/caption/ảnh/video), Khu vực B (bấm nút, không tự chạy), `/noi-dung`, Chặng 07 "Viết lại"; gỡ `api/m07/generate` khỏi danh sách trắng proxy
 - [ ] Đợt 4 — Ảnh vào mô hình, học từ chỉnh sửa tay + `content_metrics`, prompt v2, kênh mới (liên tục)
+
+## CN12 — Điều phối đơn hàng & Control Tower: đưa lên production (25/09/2026)
+
+Rà soát 25/09 (chiều): bản `a52cabe` trông "hoàn thành" nhưng thực chất là bản mẫu một trình duyệt — không migration cho 4 bảng mới, dữ liệu nằm trong localStorage (khoá chung mọi tổ chức), 5 đơn mẫu cứng, API chỉ nhận `stage` nên phân công/QC/POD không bao giờ lưu, "AI QC" là hằng số 94, máy chủ nhận mọi chuỗi `stage`, lỗi trả 500. Đợt này sửa tận gốc.
+
+- [x] Migration `20260925200000_coordinator_control_tower` (4 bảng + 3 enum + cột giao hàng/POD/đóng đơn/`resume_stage`, `CANCELLED`); kiểm bằng `migrate diff` từ lược đồ gốc → áp SQL → so lược đồ = rỗng
+- [x] Luật chuyển bước ở máy chủ (`domain/stage-transitions.ts`): chuỗi thuận + bằng chứng (đối tác / QC đạt / POD / hết sự cố), thoát EXCEPTION chỉ về `resume_stage`; sai luồng → 409, khoá lạc quan chống ghi đè đồng thời
+- [x] Luật thao tác thuần (`domain/operation-rules.ts`): phân công (công suất ngày), sản xuất (cắm xong bắt buộc ảnh), QC (không đạt bắt buộc lý do), giao hàng F11/F12 (không lùi trạng thái, POD bắt buộc), rủi ro trễ tính lại lúc đọc, đóng đơn, huỷ
+- [x] Repository bỏ mọi nhánh "bảng chưa có thì trả rỗng"; mã đơn `FLR-YYMMDD-NNNN` tuần tự theo ngày, thử lại khi trùng khoá
+- [x] 15 route `/api/v1/coordinator/*` (đặc tả 06 mục 15b), zod ở `adapters/http-schemas.ts` (400 thay vì 500), quyền `R1`–`R6`
+- [x] Mọi thao tác ghi `order_events` (M10 đo SLA) + `audit_logs` trong cùng giao dịch
+- [x] Ảnh mẫu / thành phẩm / POD đi qua `assets` của tổ chức (kiểm cùng tổ chức), đổi URL ký lúc đọc; cấm `data:` URL
+- [x] 7 hợp đồng bước viết lại: input = zod của route, output = hình dạng route trả (`order-view.ts` khoá ↔ kiểu TS ở tsc); test khoá mỗi hợp đồng trỏ tới route + mã quyền có thật
+- [x] Giao diện: bỏ localStorage + đơn mẫu; 7 modal gọi endpoint thật và hiện lỗi máy chủ; QC do người kiểm (không điểm AI giả); phân công từ bảng `partners` (thêm đối tác tại chỗ); giao hàng theo sự kiện; đóng đơn tính SLA thật; tab sự cố mở/đóng; huỷ đơn; "Tải PNG" dùng `html-to-image`
+- [x] `tests/tenant/coordinator.test.ts` 14 ca (cách ly đơn/đối tác/ảnh/sự cố, luồng P1→P7, làm lại, sự cố, huỷ, công suất, công tắc quyền, tạo đơn và mở sự cố đồng thời) — xanh trên Postgres 16 thật
+- [x] Unit: `stage-transitions.test.ts` + `operation-rules.test.ts` (29 ca) thay `stage-advancement.test.ts` (luật cũ nằm trong UI)
+- [x] Kiểm giao diện thật bằng Playwright (Chromium) trên `next dev` + Postgres: P1→P7 qua nút bấm, tải ảnh thật, xoá localStorage + tải lại vẫn còn đơn; nhánh giao thất bại → sự cố → xử lý → quay về giao
+- [ ] Anh Tony chạy trên máy thật: `npx prisma migrate deploy` (thêm `20260925200000`) · `npx prisma generate` · `npm run test:tenant` · mở `/dieu-phoi` đi hết một đơn
+- [ ] Chấm điểm AI cho QC qua cổng `VisionAnalyzer` + ghi `usage` (nợ #140)
+- [ ] Gợi ý đối tác bằng AI (khoảng cách, lịch sử) — nợ #141
+- [ ] Thông báo Zalo ZNS/CRM khi giao xong — `connectors/` vẫn là mã tạm (nợ #142)
+

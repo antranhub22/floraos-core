@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "step-01-intake.output.schema.json",
-  "title": "Tiếp nhận Đơn hàng — Đầu ra",
-  "description": "Nạp đơn hàng vào Tháp Điều phối và khởi tạo hồ sơ theo dõi",
+  "title": "Tiếp nhận đơn (T01) — Đầu ra",
+  "description": "Sales/AI Chat tạo đơn; máy chủ cấp mã FLR-YYMMDD-NNNN, bước INTAKE",
   "x-floraos": {
     "stepId": "01",
     "step": 1,
     "code": "INTAKE",
     "endpoint": {
       "method": "POST",
-      "path": "/api/v1/coordinator/intake",
-      "capability": "O1"
+      "path": "/api/v1/coordinator/orders",
+      "capability": "R2"
     },
     "source": "src/modules/coordinator/contracts/step-01-intake.ts",
     "direction": "output",
@@ -18,179 +18,484 @@
   },
   "type": "object",
   "properties": {
-    "coordinationId": {
-      "type": "string",
-      "format": "uuid",
-      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-    },
-    "orderId": {
-      "type": "string",
-      "format": "uuid",
-      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-    },
-    "orderCode": {
-      "type": "string"
-    },
-    "stage": {
-      "type": "string",
-      "enum": [
-        "INTAKE",
-        "VALIDATING",
-        "PLANNING",
-        "ASSIGNING",
-        "IN_PRODUCTION",
-        "QUALITY_CHECK",
-        "DISPATCHING",
-        "DELIVERED",
-        "COMPLETED",
-        "EXCEPTION"
-      ]
-    },
-    "riskLevel": {
-      "type": "string",
-      "enum": [
-        "NORMAL",
-        "ATTENTION",
-        "AT_RISK",
-        "CRITICAL"
-      ]
-    },
-    "customerSnapshot": {
+    "order": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
-        "name": {
+        "orderCode": {
           "type": "string"
         },
-        "phone": {
-          "type": "string"
-        },
-        "tier": {
+        "stage": {
           "type": "string",
           "enum": [
-            "NEW",
-            "BRONZE",
-            "SILVER",
-            "GOLD",
-            "VIP"
+            "INTAKE",
+            "VALIDATING",
+            "PLANNING",
+            "ASSIGNING",
+            "IN_PRODUCTION",
+            "QUALITY_CHECK",
+            "DISPATCHING",
+            "DELIVERED",
+            "COMPLETED",
+            "EXCEPTION",
+            "CANCELLED"
           ]
-        }
-      },
-      "required": [
-        "name",
-        "phone",
-        "tier"
-      ],
-      "additionalProperties": false
-    },
-    "deliverySnapshot": {
-      "type": "object",
-      "properties": {
+        },
+        "stageLabel": {
+          "type": "string"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "NORMAL",
+            "ATTENTION",
+            "AT_RISK",
+            "CRITICAL"
+          ]
+        },
+        "riskReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "customerTier": {
+          "type": "string"
+        },
         "recipientName": {
           "type": "string"
         },
-        "phone": {
+        "recipientPhone": {
           "type": "string"
         },
-        "address": {
+        "deliveryAddress": {},
+        "deliveryTargetTime": {
+          "type": "string"
+        },
+        "deliveryTargetAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "partner": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "phone": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "phone"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "partnerName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "productTitle": {
+          "type": "string"
+        },
+        "sampleImageUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finishedImageUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "productionProgress": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "flowers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "flowerName": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "unit": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "flowerName",
+              "quantity",
+              "unit",
+              "color",
+              "role"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "cardMessage": {
+          "type": "string"
+        },
+        "internalNote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qc": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "aiScore": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "inspectedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status",
+                "notes",
+                "aiScore",
+                "inspectedAt"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "delivery": {
           "type": "object",
           "properties": {
-            "street": {
-              "type": "string",
-              "minLength": 1
+            "carrier": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
-            "ward": {
-              "type": "string",
-              "minLength": 1
+            "shipperName": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
-            "district": {
-              "type": "string",
-              "minLength": 1
+            "shipperPhone": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
-            "city": {
-              "type": "string",
-              "minLength": 1
+            "state": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
-            "country": {
-              "default": "Việt Nam",
-              "type": "string"
+            "podImageUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
-            "formattedAddress": {
-              "type": "string"
+            "podRecipientName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "podCapturedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "actualDeliveryAt": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
-            "street",
-            "ward",
-            "district",
-            "city",
-            "country"
+            "carrier",
+            "shipperName",
+            "shipperPhone",
+            "state",
+            "podImageUrl",
+            "podRecipientName",
+            "podCapturedAt",
+            "actualDeliveryAt"
           ],
           "additionalProperties": false
         },
-        "requiredTime": {
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "resolution": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "resolvedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "type",
+              "severity",
+              "description",
+              "status",
+              "resolution",
+              "createdAt",
+              "resolvedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "hasException": {
+          "type": "boolean"
+        },
+        "unitPriceVnd": {
+          "type": "number"
+        },
+        "partnerPayoutVnd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "partnerRating": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "closureNotes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "closedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cancelledReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
           "type": "string"
         }
       },
       "required": [
+        "id",
+        "orderCode",
+        "stage",
+        "stageLabel",
+        "riskLevel",
+        "riskReason",
+        "customerId",
+        "customerName",
+        "customerTier",
         "recipientName",
-        "phone",
-        "address",
-        "requiredTime"
+        "recipientPhone",
+        "deliveryAddress",
+        "deliveryTargetTime",
+        "deliveryTargetAt",
+        "nextAction",
+        "partner",
+        "partnerName",
+        "productTitle",
+        "sampleImageUrl",
+        "finishedImageUrls",
+        "productionProgress",
+        "flowers",
+        "cardMessage",
+        "internalNote",
+        "qc",
+        "delivery",
+        "exceptions",
+        "hasException",
+        "unitPriceVnd",
+        "partnerPayoutVnd",
+        "partnerRating",
+        "closureNotes",
+        "closedAt",
+        "cancelledReason",
+        "createdAt",
+        "updatedAt"
       ],
       "additionalProperties": false
-    },
-    "productCount": {
-      "type": "integer",
-      "exclusiveMinimum": 0,
-      "maximum": 9007199254740991
-    },
-    "receivedAt": {
-      "type": "string"
     }
   },
   "required": [
-    "coordinationId",
-    "orderId",
-    "orderCode",
-    "stage",
-    "riskLevel",
-    "customerSnapshot",
-    "deliverySnapshot",
-    "productCount",
-    "receivedAt"
+    "order"
   ],
   "additionalProperties": false,
   "examples": [
     {
-      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
-      "orderId": "550e8400-e29b-41d4-a716-446655440000",
-      "orderCode": "FLR-2026-001",
-      "stage": "INTAKE",
-      "riskLevel": "NORMAL",
-      "customerSnapshot": {
-        "id": "c1b2c3d4-e29b-41d4-a716-446655440002",
-        "name": "Nguyễn Văn An",
-        "phone": "0901234567",
-        "tier": "GOLD"
-      },
-      "deliverySnapshot": {
+      "order": {
+        "id": "6f1c2b1e-0a4d-4c55-9d0e-3b1f9a7c2d10",
+        "orderCode": "FLR-260925-0001",
+        "stage": "INTAKE",
+        "stageLabel": "Tiếp nhận đơn",
+        "riskLevel": "NORMAL",
+        "riskReason": null,
+        "customerId": null,
+        "customerName": "Nguyễn Văn An",
+        "customerTier": "VIP",
         "recipientName": "Trần Thị Bình",
-        "phone": "0912345678",
-        "address": {
-          "street": "Số 18, Ngõ 95, Đường Chùa Bộc",
-          "ward": "Phường Trung Liệt",
-          "district": "Quận Đống Đa",
-          "city": "Thành phố Hà Nội",
-          "country": "Việt Nam",
-          "formattedAddress": "Số 18, Ngõ 95, Đường Chùa Bộc, Phường Trung Liệt, Quận Đống Đa, Thành phố Hà Nội, Việt Nam"
+        "recipientPhone": "0901234567",
+        "deliveryAddress": {
+          "street": "123 Phố Huế",
+          "ward": "Phường Ngô Thì Nhậm",
+          "district": "Quận Hai Bà Trưng",
+          "city": "Hà Nội",
+          "country": "Việt Nam"
         },
-        "requiredTime": "2026-09-25T17:00:00.000Z"
-      },
-      "productCount": 1,
-      "receivedAt": "2026-09-25T10:00:00.000Z"
+        "deliveryTargetTime": "17:00 hôm nay",
+        "deliveryTargetAt": "2026-09-25T10:00:00.000Z",
+        "nextAction": "Kiểm tra thông tin đơn trước khi lập kế hoạch",
+        "partner": null,
+        "partnerName": null,
+        "productTitle": "Bó hoa hồng Pastel",
+        "sampleImageUrl": null,
+        "finishedImageUrls": [],
+        "productionProgress": 0,
+        "flowers": [
+          {
+            "flowerName": "Hồng Ohara",
+            "quantity": 12,
+            "unit": "cành",
+            "color": "hồng phấn",
+            "role": "Chủ đạo"
+          }
+        ],
+        "cardMessage": "Chúc mừng sinh nhật!",
+        "internalNote": null,
+        "qc": null,
+        "delivery": {
+          "carrier": null,
+          "shipperName": null,
+          "shipperPhone": null,
+          "state": null,
+          "podImageUrl": null,
+          "podRecipientName": null,
+          "podCapturedAt": null,
+          "actualDeliveryAt": null
+        },
+        "exceptions": [],
+        "hasException": false,
+        "unitPriceVnd": 850000,
+        "partnerPayoutVnd": null,
+        "partnerRating": null,
+        "closureNotes": null,
+        "closedAt": null,
+        "cancelledReason": null,
+        "createdAt": "2026-09-25T02:00:00.000Z",
+        "updatedAt": "2026-09-25T02:00:00.000Z"
+      }
     }
   ]
 }

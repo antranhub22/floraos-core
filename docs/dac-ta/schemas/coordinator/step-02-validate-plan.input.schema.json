@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "step-02-validate-plan.input.schema.json",
-  "title": "Thẩm định & Lập Kế hoạch — Đầu vào",
-  "description": "Đối chiếu BOM Master Index, dự báo tiến độ và lập mốc giờ SLA",
+  "title": "Thẩm định & Lập kế hoạch (T02) — Đầu vào",
+  "description": "Chuyển INTAKE → VALIDATING/PLANNING → ASSIGNING; máy chủ kiểm luồng và bằng chứng (409 nếu sai)",
   "x-floraos": {
     "stepId": "02",
     "step": 2,
     "code": "VALIDATE_PLAN",
     "endpoint": {
-      "method": "POST",
-      "path": "/api/v1/coordinator/validate-plan",
-      "capability": "O1"
+      "method": "PATCH",
+      "path": "/api/v1/coordinator/orders/{id}/stage",
+      "capability": "R3"
     },
     "source": "src/modules/coordinator/contracts/step-02-validate-plan.ts",
     "direction": "input",
@@ -18,113 +18,34 @@
   },
   "type": "object",
   "properties": {
-    "coordinationId": {
+    "stage": {
       "type": "string",
-      "format": "uuid",
-      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      "enum": [
+        "INTAKE",
+        "VALIDATING",
+        "PLANNING",
+        "ASSIGNING",
+        "IN_PRODUCTION",
+        "QUALITY_CHECK",
+        "DISPATCHING",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION",
+        "CANCELLED"
+      ]
     },
-    "requiredFlowers": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "flowerName": {
-            "type": "string",
-            "minLength": 1
-          },
-          "quantity": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-          },
-          "unit": {
-            "type": "string",
-            "enum": [
-              "bông",
-              "cành",
-              "lá",
-              "cây"
-            ]
-          },
-          "color": {
-            "type": "string",
-            "minLength": 1
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "Chủ đạo",
-              "Phụ",
-              "Điểm xuyến",
-              "Lấp đầy"
-            ]
-          },
-          "shade": {
-            "type": "string"
-          },
-          "budCount": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "damagedCount": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": [
-          "flowerName",
-          "quantity",
-          "unit",
-          "color",
-          "role"
-        ]
-      }
-    },
-    "deliveryTargetTime": {
-      "type": "string"
-    },
-    "productionDurationMinutes": {
-      "default": 45,
-      "type": "integer",
-      "minimum": -9007199254740991,
-      "maximum": 9007199254740991
-    },
-    "deliveryDurationMinutes": {
-      "default": 30,
-      "type": "integer",
-      "minimum": -9007199254740991,
-      "maximum": 9007199254740991
+    "nextAction": {
+      "type": "string",
+      "maxLength": 300
     }
   },
   "required": [
-    "coordinationId",
-    "requiredFlowers",
-    "deliveryTargetTime"
+    "stage"
   ],
   "examples": [
     {
-      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
-      "requiredFlowers": [
-        {
-          "flowerName": "Hồng Ohara Kem",
-          "quantity": 15,
-          "unit": "cành",
-          "color": "Kem pastel",
-          "role": "Chủ đạo"
-        },
-        {
-          "flowerName": "Baby Trắng",
-          "quantity": 5,
-          "unit": "cành",
-          "color": "Trắng",
-          "role": "Điểm xuyến"
-        }
-      ],
-      "deliveryTargetTime": "2026-09-25T17:00:00.000Z",
-      "productionDurationMinutes": 45,
-      "deliveryDurationMinutes": 30
+      "stage": "PLANNING",
+      "nextAction": "Chốt giờ lấy hàng 16:30"
     }
   ]
 }

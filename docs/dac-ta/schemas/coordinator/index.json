@@ -13,11 +13,11 @@
       "id": "01",
       "code": "INTAKE",
       "slug": "intake",
-      "title": "Tiếp nhận Đơn hàng",
+      "title": "Tiếp nhận đơn (T01)",
       "endpoint": {
         "method": "POST",
-        "path": "/api/v1/coordinator/intake",
-        "capability": "O1"
+        "path": "/api/v1/coordinator/orders",
+        "capability": "R2"
       },
       "schemas": {
         "input": "step-01-intake.input.schema.json",
@@ -28,11 +28,11 @@
       "id": "02",
       "code": "VALIDATE_PLAN",
       "slug": "validate-plan",
-      "title": "Thẩm định & Lập Kế hoạch",
+      "title": "Thẩm định & Lập kế hoạch (T02)",
       "endpoint": {
-        "method": "POST",
-        "path": "/api/v1/coordinator/validate-plan",
-        "capability": "O1"
+        "method": "PATCH",
+        "path": "/api/v1/coordinator/orders/{id}/stage",
+        "capability": "R3"
       },
       "schemas": {
         "input": "step-02-validate-plan.input.schema.json",
@@ -43,11 +43,11 @@
       "id": "03",
       "code": "ASSIGN_PARTNER",
       "slug": "assign-partner",
-      "title": "Phân công Đối tác / Thợ cắm",
+      "title": "Phân công đối tác xưởng (T06)",
       "endpoint": {
         "method": "POST",
-        "path": "/api/v1/coordinator/assign-partner",
-        "capability": "O1"
+        "path": "/api/v1/coordinator/orders/{id}/assign-partner",
+        "capability": "R4"
       },
       "schemas": {
         "input": "step-03-assign-partner.input.schema.json",
@@ -58,11 +58,11 @@
       "id": "04",
       "code": "PRODUCTION",
       "slug": "production",
-      "title": "Giám sát Tiến độ Cắm hoa",
+      "title": "Theo dõi sản xuất (T07–T11)",
       "endpoint": {
         "method": "POST",
-        "path": "/api/v1/coordinator/production-update",
-        "capability": "O1"
+        "path": "/api/v1/coordinator/orders/{id}/production",
+        "capability": "R3"
       },
       "schemas": {
         "input": "step-04-production.input.schema.json",
@@ -73,11 +73,11 @@
       "id": "05",
       "code": "QUALITY_CHECK",
       "slug": "quality-check",
-      "title": "Kiểm tra Chất lượng (QC)",
+      "title": "Kiểm định chất lượng (T14–T15)",
       "endpoint": {
         "method": "POST",
-        "path": "/api/v1/coordinator/qc-inspection",
-        "capability": "O1"
+        "path": "/api/v1/coordinator/orders/{id}/qc",
+        "capability": "R3"
       },
       "schemas": {
         "input": "step-05-quality-check.input.schema.json",
@@ -88,11 +88,11 @@
       "id": "06",
       "code": "DELIVERY",
       "slug": "delivery",
-      "title": "Giao vận & Bằng chứng Giao hoa (POD)",
+      "title": "Giao hàng & POD (T18–T21, F11/F12)",
       "endpoint": {
         "method": "POST",
-        "path": "/api/v1/coordinator/delivery-update",
-        "capability": "O1"
+        "path": "/api/v1/coordinator/orders/{id}/delivery",
+        "capability": "R5"
       },
       "schemas": {
         "input": "step-06-delivery.input.schema.json",
@@ -103,11 +103,11 @@
       "id": "07",
       "code": "CLOSE_LEARN",
       "slug": "close-learn",
-      "title": "Nghiệm thu & Bài học Vận hành",
+      "title": "Nghiệm thu & Đóng đơn (T25–T27)",
       "endpoint": {
         "method": "POST",
-        "path": "/api/v1/coordinator/close-learn",
-        "capability": "O1"
+        "path": "/api/v1/coordinator/orders/{id}/close",
+        "capability": "R3"
       },
       "schemas": {
         "input": "step-07-close-learn.input.schema.json",

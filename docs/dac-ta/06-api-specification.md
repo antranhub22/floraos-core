@@ -493,6 +493,28 @@ Ba trục trạng thái tách rời — đơn, sản xuất, giao hàng — và 
 
 Giá trên đơn đọc từ engine giá. `POST /orders` từ chối một giá không truy được về quy tắc giá đang hiệu lực, trừ khi người gọi có đúng năng lực đè giá của nhóm `C`.
 
+## 15b. Điều phối đơn hàng — Chức năng 12 (Control Tower)
+
+Mọi route nhận `:id` là id HOẶC mã đơn (`FLR-YYMMDD-NNNN`); tổ chức khác → 404. Body sai → 400 `VALIDATION_FAILED`; luật nghiệp vụ không đạt → 422; chuyển bước sai luồng hoặc bị người khác cập nhật trước → 409. Mọi thao tác ghi `order_events` (trục đổi giá trị) và `audit_logs` trong cùng giao dịch. Hợp đồng zod + JSON Schema: `src/modules/coordinator/contracts/`, `docs/dac-ta/schemas/coordinator/`.
+
+| Phương thức | Đường dẫn | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/coordinator/orders` | `R1` | `?stage=` `?limit=` (≤200). Rủi ro trễ tính lại lúc đọc (F09/F12) |
+| POST | `/coordinator/orders` | `R2` | Mã đơn do máy chủ cấp, tuần tự theo ngày; `sampleImageUrl` cấm `data:` — ảnh tải lên dùng `sampleAssetId` |
+| GET | `/coordinator/orders/:id` | `R1` | |
+| PATCH | `/coordinator/orders/:id/stage` | `R3` | Kiểm luồng + bằng chứng (đối tác / QC đạt / POD / hết sự cố) |
+| POST | `/coordinator/orders/:id/assign-partner` | `R4` | Đối tác cùng tổ chức, đang hoạt động, chưa vượt `capacity_daily` (trừ `overrideCapacity`) |
+| POST | `/coordinator/orders/:id/production` | `R3` | `MARK_READY` bắt buộc ảnh thành phẩm (`assets` cùng tổ chức); `REPORT_MATERIAL_ISSUE` mở sự cố |
+| POST | `/coordinator/orders/:id/qc` | `R3` | Người kiểm kết luận; không đạt bắt buộc lý do; `REJECTED` mở sự cố `QC_FAILURE` |
+| POST | `/coordinator/orders/:id/delivery` | `R5` | Sự kiện giao; thành công bắt buộc ảnh POD hoặc tên người ký; thất bại mở sự cố |
+| POST | `/coordinator/orders/:id/exceptions` | `R3` | Đưa đơn về `EXCEPTION`, nhớ bước cũ |
+| POST | `/coordinator/exceptions/:id/resolve` | `R3` | Hết sự cố mở → đơn tự về bước cũ |
+| POST | `/coordinator/orders/:id/close` | `R3` | Chỉ khi `DELIVERED` và không còn sự cố; chốt điểm + tiền công đối tác |
+| POST | `/coordinator/orders/:id/cancel` | `R6` | Trần cứng điều hành; bắt buộc lý do; không huỷ đơn đã giao |
+| GET | `/coordinator/partners` | `R1` | `?active=1` |
+| POST | `/coordinator/partners` | `R4` | Trùng mã trong tổ chức → 409 |
+| PATCH | `/coordinator/partners/:id` | `R4` | Sửa hồ sơ, tạm ngưng/mở lại |
+
 ## 16. Số liệu và hồ sơ phong cách — M11
 
 > **CHƯA XÂY (soát 18/09).** Không endpoint nào trong mục này tồn tại trong mã, và bảng `learning_profiles` cũng chưa có trong lược đồ. Dải năng lực `S1`–`S4` chưa vào danh mục. `src/lib/mock-data.ts` ghi `analytics-learning: chua_san_sang`, khớp với thực tế. Xem **RS-7**.

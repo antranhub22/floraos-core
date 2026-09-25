@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "step-04-production.output.schema.json",
-  "title": "Giám sát Tiến độ Cắm hoa — Đầu ra",
-  "description": "Cập nhật tiến trình cắm hoa thực tế tại xưởng và cảnh báo nguy cơ trễ hẹn",
+  "title": "Theo dõi sản xuất (T07–T11) — Đầu ra",
+  "description": "Cập nhật tiến độ; báo cắm xong bắt buộc kèm ảnh thành phẩm (assets cùng tổ chức) → QUALITY_CHECK; báo thiếu vật liệu mở sự cố",
   "x-floraos": {
     "stepId": "04",
     "step": 4,
     "code": "PRODUCTION",
     "endpoint": {
       "method": "POST",
-      "path": "/api/v1/coordinator/production-update",
-      "capability": "O1"
+      "path": "/api/v1/coordinator/orders/{id}/production",
+      "capability": "R3"
     },
     "source": "src/modules/coordinator/contracts/step-04-production.ts",
     "direction": "output",
@@ -18,72 +18,486 @@
   },
   "type": "object",
   "properties": {
-    "coordinationId": {
-      "type": "string",
-      "format": "uuid",
-      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-    },
-    "stage": {
-      "type": "string",
-      "enum": [
-        "INTAKE",
-        "VALIDATING",
-        "PLANNING",
-        "ASSIGNING",
-        "IN_PRODUCTION",
-        "QUALITY_CHECK",
-        "DISPATCHING",
-        "DELIVERED",
-        "COMPLETED",
-        "EXCEPTION"
-      ]
-    },
-    "riskLevel": {
-      "type": "string",
-      "enum": [
-        "NORMAL",
-        "ATTENTION",
-        "AT_RISK",
-        "CRITICAL"
-      ]
-    },
-    "currentProgressPercent": {
-      "type": "integer",
-      "minimum": -9007199254740991,
-      "maximum": 9007199254740991
-    },
-    "lastUpdated": {
-      "type": "string"
-    },
-    "hasActiveIssue": {
-      "type": "boolean"
-    },
-    "issueSummary": {
-      "type": "string"
-    },
-    "nextAction": {
-      "type": "string"
+    "order": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "orderCode": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "INTAKE",
+            "VALIDATING",
+            "PLANNING",
+            "ASSIGNING",
+            "IN_PRODUCTION",
+            "QUALITY_CHECK",
+            "DISPATCHING",
+            "DELIVERED",
+            "COMPLETED",
+            "EXCEPTION",
+            "CANCELLED"
+          ]
+        },
+        "stageLabel": {
+          "type": "string"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "NORMAL",
+            "ATTENTION",
+            "AT_RISK",
+            "CRITICAL"
+          ]
+        },
+        "riskReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "customerTier": {
+          "type": "string"
+        },
+        "recipientName": {
+          "type": "string"
+        },
+        "recipientPhone": {
+          "type": "string"
+        },
+        "deliveryAddress": {},
+        "deliveryTargetTime": {
+          "type": "string"
+        },
+        "deliveryTargetAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "partner": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "phone": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "phone"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "partnerName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "productTitle": {
+          "type": "string"
+        },
+        "sampleImageUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finishedImageUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "productionProgress": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "flowers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "flowerName": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "unit": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "flowerName",
+              "quantity",
+              "unit",
+              "color",
+              "role"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "cardMessage": {
+          "type": "string"
+        },
+        "internalNote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qc": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "aiScore": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "inspectedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status",
+                "notes",
+                "aiScore",
+                "inspectedAt"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "delivery": {
+          "type": "object",
+          "properties": {
+            "carrier": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "shipperName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "shipperPhone": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "podImageUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "podRecipientName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "podCapturedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "actualDeliveryAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "carrier",
+            "shipperName",
+            "shipperPhone",
+            "state",
+            "podImageUrl",
+            "podRecipientName",
+            "podCapturedAt",
+            "actualDeliveryAt"
+          ],
+          "additionalProperties": false
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "resolution": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "resolvedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "type",
+              "severity",
+              "description",
+              "status",
+              "resolution",
+              "createdAt",
+              "resolvedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "hasException": {
+          "type": "boolean"
+        },
+        "unitPriceVnd": {
+          "type": "number"
+        },
+        "partnerPayoutVnd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "partnerRating": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "closureNotes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "closedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cancelledReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "orderCode",
+        "stage",
+        "stageLabel",
+        "riskLevel",
+        "riskReason",
+        "customerId",
+        "customerName",
+        "customerTier",
+        "recipientName",
+        "recipientPhone",
+        "deliveryAddress",
+        "deliveryTargetTime",
+        "deliveryTargetAt",
+        "nextAction",
+        "partner",
+        "partnerName",
+        "productTitle",
+        "sampleImageUrl",
+        "finishedImageUrls",
+        "productionProgress",
+        "flowers",
+        "cardMessage",
+        "internalNote",
+        "qc",
+        "delivery",
+        "exceptions",
+        "hasException",
+        "unitPriceVnd",
+        "partnerPayoutVnd",
+        "partnerRating",
+        "closureNotes",
+        "closedAt",
+        "cancelledReason",
+        "createdAt",
+        "updatedAt"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
-    "coordinationId",
-    "stage",
-    "riskLevel",
-    "currentProgressPercent",
-    "lastUpdated",
-    "hasActiveIssue",
-    "nextAction"
+    "order"
   ],
   "additionalProperties": false,
   "examples": [
     {
-      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
-      "stage": "QUALITY_CHECK",
-      "riskLevel": "NORMAL",
-      "currentProgressPercent": 100,
-      "lastUpdated": "2026-09-25T16:10:00.000Z",
-      "hasActiveIssue": false,
-      "nextAction": "Yêu cầu thợ gửi ảnh chụp 4 góc để AI Vision QC đối chiếu Master Index"
+      "order": {
+        "id": "6f1c2b1e-0a4d-4c55-9d0e-3b1f9a7c2d10",
+        "orderCode": "FLR-260925-0001",
+        "stage": "QUALITY_CHECK",
+        "stageLabel": "Chờ kiểm định QC",
+        "riskLevel": "NORMAL",
+        "riskReason": null,
+        "customerId": null,
+        "customerName": "Nguyễn Văn An",
+        "customerTier": "VIP",
+        "recipientName": "Trần Thị Bình",
+        "recipientPhone": "0901234567",
+        "deliveryAddress": {
+          "street": "123 Phố Huế",
+          "ward": "Phường Ngô Thì Nhậm",
+          "district": "Quận Hai Bà Trưng",
+          "city": "Hà Nội",
+          "country": "Việt Nam"
+        },
+        "deliveryTargetTime": "17:00 hôm nay",
+        "deliveryTargetAt": "2026-09-25T10:00:00.000Z",
+        "nextAction": "Kiểm tra thông tin đơn trước khi lập kế hoạch",
+        "partner": null,
+        "partnerName": null,
+        "productTitle": "Bó hoa hồng Pastel",
+        "sampleImageUrl": null,
+        "finishedImageUrls": [
+          "/api/v1/storage/org/…/a3c1d2e4.jpg?exp=…&sig=…"
+        ],
+        "productionProgress": 100,
+        "flowers": [
+          {
+            "flowerName": "Hồng Ohara",
+            "quantity": 12,
+            "unit": "cành",
+            "color": "hồng phấn",
+            "role": "Chủ đạo"
+          }
+        ],
+        "cardMessage": "Chúc mừng sinh nhật!",
+        "internalNote": null,
+        "qc": null,
+        "delivery": {
+          "carrier": null,
+          "shipperName": null,
+          "shipperPhone": null,
+          "state": null,
+          "podImageUrl": null,
+          "podRecipientName": null,
+          "podCapturedAt": null,
+          "actualDeliveryAt": null
+        },
+        "exceptions": [],
+        "hasException": false,
+        "unitPriceVnd": 850000,
+        "partnerPayoutVnd": null,
+        "partnerRating": null,
+        "closureNotes": null,
+        "closedAt": null,
+        "cancelledReason": null,
+        "createdAt": "2026-09-25T02:00:00.000Z",
+        "updatedAt": "2026-09-25T02:00:00.000Z"
+      }
     }
   ]
 }

@@ -27,7 +27,7 @@ export interface AIQCReportCardProps {
 export function AIQCReportCard({
   orderCode,
   qcStatus,
-  aiScore = 90,
+  aiScore = null,
   aiCritique,
   finishedImageUrls = [],
   checklist,

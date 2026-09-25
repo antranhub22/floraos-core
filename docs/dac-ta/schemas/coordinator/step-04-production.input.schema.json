@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "step-04-production.input.schema.json",
-  "title": "Giám sát Tiến độ Cắm hoa — Đầu vào",
-  "description": "Cập nhật tiến trình cắm hoa thực tế tại xưởng và cảnh báo nguy cơ trễ hẹn",
+  "title": "Theo dõi sản xuất (T07–T11) — Đầu vào",
+  "description": "Cập nhật tiến độ; báo cắm xong bắt buộc kèm ảnh thành phẩm (assets cùng tổ chức) → QUALITY_CHECK; báo thiếu vật liệu mở sự cố",
   "x-floraos": {
     "stepId": "04",
     "step": 4,
     "code": "PRODUCTION",
     "endpoint": {
       "method": "POST",
-      "path": "/api/v1/coordinator/production-update",
-      "capability": "O1"
+      "path": "/api/v1/coordinator/orders/{id}/production",
+      "capability": "R3"
     },
     "source": "src/modules/coordinator/contracts/step-04-production.ts",
     "direction": "input",
@@ -18,43 +18,44 @@
   },
   "type": "object",
   "properties": {
-    "coordinationId": {
-      "type": "string",
-      "format": "uuid",
-      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-    },
     "action": {
       "type": "string",
       "enum": [
-        "START_ARRANGING",
         "UPDATE_PROGRESS",
-        "REPORT_MATERIAL_ISSUE",
-        "MARK_READY_FOR_QC"
+        "MARK_READY",
+        "REPORT_MATERIAL_ISSUE"
       ]
     },
-    "percentCompleted": {
+    "progressPercent": {
       "type": "integer",
       "minimum": 0,
       "maximum": 100
     },
-    "issueDescription": {
-      "type": "string"
+    "finishedAssetIds": {
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
     },
-    "estimatedFinishAt": {
-      "type": "string"
+    "issueNote": {
+      "type": "string",
+      "maxLength": 1000
     }
   },
   "required": [
-    "coordinationId",
     "action",
-    "percentCompleted"
+    "progressPercent"
   ],
   "examples": [
     {
-      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
-      "action": "MARK_READY_FOR_QC",
-      "percentCompleted": 100,
-      "estimatedFinishAt": "2026-09-25T16:10:00.000Z"
+      "action": "MARK_READY",
+      "progressPercent": 100,
+      "finishedAssetIds": [
+        "a3c1d2e4-5f60-4718-9a2b-3c4d5e6f7a8b"
+      ]
     }
   ]
 }
