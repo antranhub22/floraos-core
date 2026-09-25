@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-06-delivery.output.schema.json",
+  "title": "Giao vận & Bằng chứng Giao hoa (POD) — Đầu ra",
+  "description": "Giám sát tài xế giao hoa và thu thập hình ảnh trao tận tay người nhận",
+  "x-floraos": {
+    "stepId": "06",
+    "step": 6,
+    "code": "DELIVERY",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/coordinator/delivery-update",
+      "capability": "O1"
+    },
+    "source": "src/modules/coordinator/contracts/step-06-delivery.ts",
+    "direction": "output",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:coordinator`."
+  },
+  "type": "object",
+  "properties": {
+    "coordinationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "INTAKE",
+        "VALIDATING",
+        "PLANNING",
+        "ASSIGNING",
+        "IN_PRODUCTION",
+        "QUALITY_CHECK",
+        "DISPATCHING",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION"
+      ]
+    },
+    "shipperSnapshot": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "phone"
+      ],
+      "additionalProperties": false
+    },
+    "isDelivered": {
+      "type": "boolean"
+    },
+    "podSnapshot": {
+      "type": "object",
+      "properties": {
+        "podImageUrl": {
+          "type": "string"
+        },
+        "recipientSignedName": {
+          "type": "string"
+        },
+        "deliveredAt": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "nextAction": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "coordinationId",
+    "stage",
+    "shipperSnapshot",
+    "isDelivered",
+    "podSnapshot",
+    "nextAction"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
+      "stage": "DELIVERED",
+      "shipperSnapshot": {
+        "name": "Lê Văn Hùng (AhaMove)",
+        "phone": "0933221100"
+      },
+      "isDelivered": true,
+      "podSnapshot": {
+        "podImageUrl": "https://storage.floraos.vn/org/test/pod-flower-delivery.jpg",
+        "recipientSignedName": "Trần Thị Bình",
+        "deliveredAt": "2026-09-25T16:55:00.000Z"
+      },
+      "nextAction": "Đơn giao thành công trước hẹn 5 phút. Chuyển sang bước đóng đơn và trích xuất học máy."
+    }
+  ]
+}

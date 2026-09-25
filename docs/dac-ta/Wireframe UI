@@ -1,0 +1,157 @@
+# Đặc tả wireframe FloraOS (mobile-first + desktop, low-fi) — 25/09/2026
+
+> **TRẠNG THÁI: ĐÃ DUYỆT TOÀN BỘ — anh Tony, 25/09/2026.** Canvas bản 1790302373-26f7 (118 khung, 9 trang). Khung ghi TO-BE là thiết kế cho phần sắp xây, đã duyệt để code.
+
+Tài liệu này là **spec sống**: bất kỳ agent nào (Claude Code, subagent khác) đọc file này là đủ hiểu bố cục và nội dung từng màn hình để chỉnh sửa mã nguồn hoặc yêu cầu vẽ lại wireframe, không cần mở artifact.
+
+**Artifact canvas (xem trực quan, bấm Play):** https://claude.ai/artifact/Qhuz7huaDSWdnyM4aHf2Da — riêng tư, cần Share mới gửi được cho người khác. Artifact là bản canvas kéo-thả (loại "Design"), nguồn từng khung là file `.dc.html` bên trong artifact đó — muốn sửa trực tiếp khung nào thì đọc `project/<Tên khung>.dc.html` của artifact rồi publish lại (agent nào dùng Artifact tool trong Cowork mới làm được bước này).
+
+**Nguồn xây dựng:** quét trực tiếp `src/app/**/page.tsx`, `components/layout/desktop-nav.tsx`, `bottom-nav.tsx` và các component chính trong repo `floraos-core`, snapshot 25/09/2026.
+
+**Quy ước đọc:** cột "Khung wireframe" là tên file `.dc.html` trong artifact (dùng để tra cứu/khớp khi sửa canvas). Cột "Route" là đường dẫn thật trong `src/app`. `(đề xuất)` = route được menu trỏ tới nhưng **chưa có `page.tsx`** trong repo tại thời điểm viết tài liệu — cần xác nhận với Tony trước khi build thật.
+
+---
+
+## Trang 0 · Tổng quan & Khung
+
+| Khung wireframe | Route | Mục đích | Thành phần chính |
+|---|---|---|---|
+| `Main.dc.html` | — (sitemap) | Sơ đồ toàn bộ 66 màn hình (7 mobile) + 2 thành phần menu + 2 bảng trạng thái, 7 nhóm, bấm để nhảy khung | 6 nhóm thẻ theo route, link tới **mọi** khung (đủ 3 khung Ops + 2 khung mới 25/09 chiều) |
+| `Sidebar.dc.html` | thành phần dùng chung | Điều hướng trái của ứng dụng tiệm | **Khớp 100% `desktop-nav.tsx`**: 4 nhóm (Hành Trình Giá Trị / Tài Sản & Tri Thức / Công Cụ Độc Lập / Vận Hành Tiệm), 21 mục, badge đúng code (Xu hướng & Từ khóa, Khu vực A-F, SSOT, U1, M01b, Đa Kênh, A4); chân menu có nút Copilot ⌘K. Không có "Hàng đợi duyệt" (code không có) |
+| `PlatformNav.dc.html` | thành phần dùng chung | Điều hướng trái của Cổng vận hành nền tảng | 5 mục: Tổng quan, Tổ chức, Mức dùng, Nhật ký, Sức khỏe hệ thống |
+| `DangNhap.dc.html` | `/dang-nhap` | Đăng nhập | Form tên cửa hàng, email, mật khẩu; nút "Dùng thử miễn phí" chuyển sang chế độ đăng ký |
+| `DangKy.dc.html` | `/dang-nhap` (chế độ đăng ký) | Tạo workspace dùng thử | Tên cửa hàng, Họ tên (tuỳ chọn), email, mật khẩu → `POST /api/v1/auth/signup` |
+| `TrangChu.dc.html` | `/` (tài khoản Điều hành) | Dashboard điều hành (`admin-dashboard.tsx`) | Thẻ "Hàng chờ duyệt" (→ `/duyet`) + "Bộ máy phân tích ảnh" (→ `/bo-may`); thẻ Nghiên cứu Thị trường (badge Mới); bảng Job đang chạy **và lỗi** (có nút Chạy lại); bảng Sản phẩm mới; khối Mức dùng & hạn mức; ghi chú trạng thái trống |
+| `TrangChuDungThu.dc.html` | `/` (workspace trải nghiệm) | Trang chủ chế độ dùng thử | Banner hạn mức dùng thử + CTA "Chuyển sang tổ chức thật"; grid thẻ chức năng bấm tự do |
+| `Them.dc.html` | `/them` | Tạo nhanh sản phẩm / bắt đầu phân tích | 2 thẻ lối tắt (Tải ảnh phân tích M01, Nghiên cứu thị trường) + form nhập tay SP (cần quyền L2) |
+| `Copilot.dc.html` | overlay toàn cục (⌘K) | Trợ lý FloraOS Copilot | Popup góc phải: khung chat, câu hỏi gợi ý, ô nhập — nổi trên mọi trang |
+
+## Trang 1 · Hành trình giá trị (Nghiên cứu Thị trường → Creative Studio A–F)
+
+| Khung wireframe | Route | Mục đích | Thành phần chính |
+|---|---|---|---|
+| `MI-XuHuong.dc.html` | `/market-intelligence` (tab 1) | Xu hướng thị trường vĩ mô | Bộ lọc (Tất cả/Quan trọng/Đang lên/Chủ đề/Dịp lễ); biểu đồ nhịp đập ngành; bảng chủ đề hoa ngách; grid ảnh + Trend Fit |
+| `MI-TuKhoa.dc.html` | `/market-intelligence` (tab 2) | Quét theo từ khóa | Form tiêu chí (từ khóa, khu vực, khoảng thời gian); bảng kết quả (lượt tìm, độ khó, cơ hội) |
+| `CS-A-QuetAnh.dc.html` | `/creative-studio?tab=area-a` | Chặng 01–05 (`product-intelligence-workspace.tsx`) | Thanh 5 chặng 01 BRING → 05 CHOOSE; thanh "Phê duyệt Trend Fit & Mở khóa Chặng 04"; 01 ảnh; 02 Vision bóc tách; 03 Trend/Audience Fit + KEEP/IMPROVE/TEST; 04 10 chủ đề (khoá); 05 chọn chủ đề trọng tâm |
+| `CS-B-Contents.dc.html` | `?tab=area-b` | Chặng 05: viết nội dung đa kênh | Chọn kênh (FB/IG/TikTok/Zalo/LinkedIn); chọn chế độ CREATIVE/AUTHENTIC; 6 góc nội dung gợi ý; preview bản nháp theo kênh |
+| `CS-C-Audio.dc.html` | `?tab=area-c` | Tạo giọng đọc + nhạc nền | Cấu hình giọng đọc & nhà cung cấp; thời lượng nhạc; bảng cảnh (giọng đọc/nhạc nền/chi phí) |
+| `CS-D-BienThe.dc.html` | `?tab=area-d` (Image Engine) | Chặng biến thể ảnh marketing (M04b) | Ảnh Master Image; kịch bản bối cảnh; nguồn hậu cảnh (Stability/Studio); tỉ lệ khung + watermark; kiểm định Subject Integrity |
+| `CS-E-Video.dc.html` | `?tab=area-e` | Dựng video (M04c, `video-workspace.tsx`) | 6 khuôn định dạng (Reel 15s, TikTok/Shorts 30s, Story 15s, Slideshow Ken Burns, Web/E-commerce, Motion); Cấu hình cơ bản: Tiêu đề, Giọng đọc lồng tiếng, Phụ đề, Watermark; storyboard 4 cảnh; 2 cổng duyệt; credit trừ khi Render |
+| `CS-F-GoiChienDich.dc.html` | `?tab=area-f` | Chặng 07–09: đóng gói, QA, chủ shop duyệt | 3 thẻ tài sản (video/audio/bài đăng); bảng chọn theo kênh; khối chạy QA server-side; checkbox xác nhận + chốt duyệt |
+
+## Trang 2 · Tài sản & Tri thức của tiệm
+
+| Khung wireframe | Route | Mục đích | Thành phần chính |
+|---|---|---|---|
+| `KhoDuLieu.dc.html` | `/kho-du-lieu` | Kho lưu trữ trung tâm (Media Hub) | 3 phân vùng: Ảnh Gốc / Ảnh Đã Duyệt (M01a) / Sale Pitch Hoàn Thành (FINAL) |
+| `KhoTemplates.dc.html` | `/kho-templates` | Thư viện mẫu tham khảo (chỉ xem) | Grid 8 thẻ mẫu, mỗi thẻ có nút "Mở màn hình" |
+| `TriThuc.dc.html` | `/tri-thuc` | Cẩm nang tri thức & chuẩn nhập liệu (SSOT) | Thanh tiến độ onboarding; lối tắt mở Copilot; các module hướng dẫn "Quy chuẩn nhập liệu nguyên tử" |
+| `CaiDatAI.dc.html` | `/cai-dat-ai` | Chính sách & trần sử dụng AI (cần quyền U1) | Bảng năng lực AI: trần sử dụng, sàn bảo mật (SENSITIVE = khoá cứng) |
+| `HoSo.dc.html` | `/ho-so` | Hồ sơ cửa hàng & nhận diện thương hiệu | 4 tab: Hồ sơ kinh doanh / Nhận diện thương hiệu / Chính sách & Cam kết / Dịp lễ & Giọng văn |
+| `BoMay.dc.html` | `/bo-may` | Chọn bộ máy phân tích ảnh (Vision) | Card "Đang dùng" (nhà cung cấp); cam kết "ảnh không rời hệ thống"; chỉ Điều hành mới đổi được |
+
+## Trang 3 · Bộ công cụ độc lập (M01 → M10)
+
+| Khung wireframe | Route | Mục đích | Thành phần chính |
+|---|---|---|---|
+| `TaiAnh-M01a.dc.html` | `/tai-anh` (M01a) | Phân tích ảnh mới | Đủ ①–⑥ như code: ① Tải ảnh → ② Kích hoạt AI → ③ Đang xử lý → **④ Thẻ kết quả** (bảng cấu phần nguyên tử, Lưu nháp/Cảnh báo/Bị chặn, nút Duyệt) → ⑤ Đã duyệt (sang M01b / Creative Studio) → **⑥ Hoàn tất & lưu Kho sản phẩm** |
+| `TaiAnh-M01b.dc.html` | `/tai-anh` (M01b/M01c) | Dữ liệu bán hàng & Thẻ chào | Sinh copy bán hàng (M01b); tạo Thẻ Chào sản phẩm (M01c) + nút "Copy nhanh Zalo" |
+| `SanPham.dc.html` | `/san-pham` | Danh sách sản phẩm | Grid thẻ SP (ảnh + giá niêm yết), nút Thêm |
+| `SanPham-TinhNang.dc.html` | `/san-pham/[id]/tinh-nang` | Chọn tính năng AI áp lên 1 sản phẩm | Grid 6 tính năng; khối job đang chạy trong hàng đợi |
+| `SanPham-Copy.dc.html` | `.../product-copy/[copyId]` | Đối chiếu dữ liệu bán hàng | Bảng so sánh Raw (AI) ↔ Edited (User); khối trạng thái duyệt/người tạo/người duyệt |
+| `Gia.dc.html` | `/gia` | Máy tính giá & cấu hình giá tổ chức | Kết quả: giá vốn, thưởng theo hạng, phụ phí, **Tổng shop nhận**, giá tối ưu, cọc/còn lại, cảnh báo sàn–trần, vi phạm bất biến; cấu hình: thưởng theo hạng (thêm/xoá), tỷ lệ giá tối ưu, hệ số Sàn/Trần (chỉ Điều hành sửa) |
+| `Video.dc.html` | `/video` | Video Studio 9:16 (M04c) | Bảng dự án video (2 cổng duyệt); nút tạo mới/chốt duyệt; Storyboard Editor |
+| `NoiDung.dc.html` | `/noi-dung` | Content Engine (M07, SocialFlow) | Bước 1 chọn sản phẩm; Bước 2 góc tiếp cận (3 góc); Bước 3 kênh phân phối; Bước 4 chọn cỗ máy AI (Qwen 2.5 7B / GPT-4o / Gemini Flash); kết quả xem trước & biên tập; CTA sang Lịch đăng |
+| `LichDang.dc.html` | `/lich-dang` | Social Publishing | 4 tab: Lịch Đăng Tổng Hợp / Hàng Đợi & Lên Lịch / Đăng Lại Thông Minh / Tự Duyệt |
+| `KetNoi.dc.html` | `/ket-noi` | Kết nối tài khoản mạng xã hội | Khối "Quản Lý Kết Nối & Xác Thực Tự Động Qua SocialFlow": bảng kênh + trạng thái đồng bộ |
+| `Catalog.dc.html` | `/catalog` | Quản lý Catalog & landing page (M05+M06) | 2 tab: Catalog số trực tuyến / Landing page chiến dịch |
+| `Storefront.dc.html` | `/c/[slug]` | Catalog công khai (khách xem) | Header cửa hàng + tìm kiếm; grid mẫu hoa; nút "Đặt Zalo" mỗi mẫu |
+| `HoiThoai.dc.html` | `/hoi-thoai` | AI Chat Assistant tư vấn bán hàng (M08) | Danh sách hội thoại trái; khung chat phải; lối tắt mở bảng Đơn hàng M10 |
+| `KenhTichHop.dc.html` | `/hoi-thoai/kenh-tich-hop` | Tích hợp đa kênh cho Copilot | Bảng kênh tiếp xúc khách hàng + cơ chế phí; mã nhúng widget lên website ngoài |
+| `KhachHang.dc.html` | `/khach-hang` | CRM khách hàng ngành hoa (M09) | Bộ lọc tìm kiếm/phân tầng/dịp; bảng KH (mã, phân hạng, tổng chi tiêu, gu hoa ưa thích) |
+| `DonHang.dc.html` | `/don-hang` | Vận hành xưởng hoa (M10) | Kanban 4 cột: Mới tiếp nhận → Đang cắm hoa → Vận chuyển → Hoàn tất/Đã giao; thẻ đơn có mã, người nhận, hẹn giao, huy hiệu SLA, tổng tiền |
+| `DonHangChiTiet.dc.html` | `/don-hang` (modal khi bấm thẻ) | Chi tiết đơn & tiến độ SLA (`order-detail-modal.tsx`) | 3 tab (Tổng quan & Điều hành / Thợ cắm hoa – ẩn giá / Giao hàng & thiệp A6); tổng thời gian xử lý + cảnh báo quá hạn; người nhận; mẫu hoa (BOM); chuỗi sự kiện SLA; In phiếu A6, Hủy đơn, chuyển trạng thái |
+| `SoLieu.dc.html` | `/so-lieu` | Analytics & Learning | Bảng chỉ số (tham số hiện tại/đề xuất); thẻ AI diễn giải bất thường; vòng học phong cách (sau ~20 bài) |
+
+## Trang 4 · Vận hành tiệm
+
+| Khung wireframe | Route | Mục đích | Thành phần chính |
+|---|---|---|---|
+| `Duyet.dc.html` | `/duyet` | Hàng đợi duyệt tập trung | Cần quyền H3/I2/H6; bảng mục chờ duyệt; hành động Xem/Từ chối/Bỏ kết quả |
+| `Job.dc.html` | `/job` | Danh sách job của người dùng | Bảng job đủ trạng thái (Đang chạy / Hoàn tất / Lỗi / Đang chờ) và cột Kết quả tách riêng (Hoàn tất + Từ chối ≠ Lỗi); trạng thái trống vẽ riêng |
+| `JobChiTiet.dc.html` | `/job/[id]` | Chi tiết 1 job | Trạng thái/giai đoạn/thời gian; payload kết quả |
+| `MucDung.dc.html` | `/muc-dung` **(TO-BE — chưa có `page.tsx`, đã chốt xây)** | Mức dùng credit | Số dư, đã dùng kỳ này, gói hiện tại (→ Gói & Thanh toán); bảng theo tính năng (`GET /usage/summary`); lịch sử trừ credit có trạng thái Đã trừ / Đang giữ / Hoàn lại (`GET /usage`, cursor); cảnh báo số dư thấp |
+| `GoiCuoc.dc.html` | đề xuất `/goi-cuoc` **(TO-BE — chưa có API)** | Gói & Thanh toán — mô hình **gói tháng + credit kèm** (đã chốt 25/09) | 3 thẻ gói ([Giá], [credit/tháng], thành viên, chi nhánh); nạp thêm credit; phương thức thanh toán (cổng chưa chốt); hoá đơn; đích của nút "Chuyển sang tổ chức thật" |
+| `Audit.dc.html` | `/audit` **(TO-BE — đã chốt xây)** | Nhật ký kiểm toán (A4) | Bảng thời điểm / người / hành động (nhãn Việt) / đối tượng, mới nhất trước, tải thêm (cursor); khung chi tiết trước–sau, IP, thiết bị; **không có bộ lọc ở bản đầu** (chốt 25/09); trạng thái trống / không đủ quyền / lỗi |
+| `CaiDat.dc.html` | `/cai-dat` **(TO-BE — đã chốt xây)** | Cài đặt · Thành viên | Bảng thành viên (vai trò đổi tại chỗ, phạm vi chi nhánh, gỡ có xác nhận); **không có form mời ở bản đầu — nợ kỹ thuật #132**; trạng thái trống / không đủ quyền / lỗi |
+| `CaiDat-VaiTro.dc.html` | `/cai-dat?tab=vai-tro` **(TO-BE)** | Vai trò & quyền | Danh sách vai; **tạo vai mới từ vai mẫu rồi bật/tắt từng quyền** (chốt 25/09), trần cứng khoá 🔒; lưu / khôi phục theo vai mẫu / xoá; vai hệ thống chỉ xem. Cần API mới gán quyền |
+| `CaiDat-KetNoi.dc.html` | `/cai-dat?tab=ket-noi` **(TO-BE)** | Kết nối hệ thống | Khoá LocalBudd/SocialFlow: tạo lúc, hết hạn, thu hồi; tạo khoá mới (chỉ hiện 1 lần) |
+
+**Đã chốt 25/09:** lời mời thành viên → nợ kỹ thuật #132 (làm sau); vai tự tạo → tạo từ vai mẫu rồi bật/tắt; nhật ký → bỏ bộ lọc ở bản đầu.
+
+**Thanh toán — chốt 25/09 theo đề xuất:** credit kèm gói hết hạn cuối kỳ, không cộng dồn; credit nạp thêm hạn 12 tháng, trừ sau credit kèm gói; thanh toán VietQR qua PayOS (tự xác nhận) + chuyển khoản thủ công dự phòng; quá hạn 3 ngày → chỉ xem; chuyển từ dùng thử giữ nguyên dữ liệu. **Còn trống: giá & số credit từng gói (nợ #136).** Nội dung pháp lý: nợ #134.
+
+**Lưu ý riêng cho trang này:** các khung TO-BE là thiết kế cho phần sắp xây (anh Tony đã chốt xây `/muc-dung`, `/audit`, `/cai-dat` và mô hình gói tháng + credit kèm, 25/09). Chờ anh duyệt trên canvas trước khi code.
+
+## Trang 5 · Cổng vận hành nền tảng (Platform Ops)
+
+| Khung wireframe | Route | Mục đích | Thành phần chính |
+|---|---|---|---|
+| `VH-TongQuan.dc.html` | `/van-hanh` | Tổng quan toàn nền tảng | 3 chỉ số (tổng tổ chức, mới 7 ngày, job treo); bảng tổ chức gần đây |
+| `VH-ToChuc.dc.html` | `/van-hanh/to-chuc` | Danh sách mọi tổ chức | Bảng: tổ chức, loại, thành viên, credit, tạo lúc |
+| `VH-ToChucChiTiet.dc.html` | `/van-hanh/to-chuc/[id]` | Chi tiết 1 tổ chức | Thông tin tổ chức; biểu đồ mức dùng theo tháng |
+| `VH-MucDung.dc.html` | `/van-hanh/muc-dung` | Mức dùng toàn nền tảng | Bảng theo tổ chức × tính năng |
+| `VH-NhatKy.dc.html` | `/van-hanh/nhat-ky` | Nhật ký toàn nền tảng | Bảng nguồn/hành động/đối tượng/tổ chức |
+| `VH-SucKhoe.dc.html` | `/van-hanh/suc-khoe` | Sức khỏe hệ thống | Biểu đồ job theo trạng thái; bảng job treo (chỉ đọc) |
+
+## Trang 6 · Mobile-first 390×844 — 54 màn (mọi màn của tiệm)
+
+**Nguyên tắc:** FloraOS là mobile-first — mọi màn của ứng dụng tiệm có bản 390px; chỉ Cổng vận hành nền tảng (nhân viên nội bộ) dùng máy tính. Thanh dưới đúng `bottom-nav.tsx` (Trang chủ · Sản phẩm · Duyệt hoặc Job của tôi · nút tròn Tải ảnh · Thêm). Tên khung = `M-<tên khung desktop>`.
+
+**Tab "Thêm" = lối tắt + menu đầy đủ 4 nhóm (TO-BE, nợ #135):** code hiện ẩn toàn bộ menu trên điện thoại (`desktop-nav.tsx` là `hidden md:flex`), nên không vào được phần lớn chức năng. `M-Them` là lối vào mọi màn mobile.
+
+**Quy tắc chuyển desktop → mobile:** bảng nhiều cột → danh sách thẻ; kanban → tab trạng thái; tab ngang nhiều mục → chip cuộn ngang; Creative Studio A–F → vuốt giữa 6 khu vực, mỗi khu một màn cuộn dọc; wizard nhiều bước → mỗi bước một màn; hành động chốt (Duyệt, Chốt gói, Đã cắm xong, Gửi) cố định đáy; nút ≥ 44px; Copilot mở toàn màn hình (không có ⌘K).
+
+| Hàng trên canvas | Khung |
+|---|---|
+| 1 · Vào hệ thống | `M-DangNhap`, `M-DangKy`, `M-QuenMatKhau`, `M-OB-HoSo`, `M-OB-KenhBan`, `M-OB-AnhDau`, `M-TrangChuDungThu`, `M-TrangChu`, `M-Them` (menu đầy đủ), `M-Copilot`, `M-TaiKhoan`, `M-PhapLy` |
+| 2 · Hành trình giá trị | `M-MI-XuHuong`, `M-MI-TuKhoa`, `M-CS-A` … `M-CS-F`, `M-TaiAnh`, `M-TaiAnh-M01b`, `M-Duyet`, `M-Job` |
+| 3 · Sản phẩm & nội dung | `M-JobChiTiet`, `M-SanPham`, `M-SanPham-TinhNang`, `M-SanPham-Copy`, `M-Gia`, `M-Video`, `M-NoiDung`, `M-LichDang`, `M-KetNoi`, `M-Catalog`, `M-Storefront`, `M-StorefrontChiTiet` |
+| 4 · Bán hàng & tài sản | `M-HoiThoai`, `M-KenhTichHop`, `M-KhachHang`, `M-DonHang`, `M-DonHangChiTiet`, `M-SoLieu`, `M-KhoDuLieu`, `M-KhoTemplates`, `M-TriThuc`, `M-CaiDatAI`, `M-HoSo`, `M-BoMay` |
+| 5 · Vận hành tiệm | `M-MucDung`, `M-GoiCuoc`, `M-Audit`, `M-CaiDat`, `M-CaiDat-VaiTro`, `M-CaiDat-KetNoi` |
+
+## Trang 7 · Onboarding · Tài khoản · Pháp lý (TO-BE — chưa có trong code)
+
+| Khung wireframe | Route | Thành phần chính |
+|---|---|---|
+| `OB-HoSo.dc.html` → `OB-KenhBan.dc.html` → `OB-AnhDau.dc.html` | sau `DangKy` | 3 bước có thanh tiến độ và "Bỏ qua, vào Trang chủ": hồ sơ tiệm (API hồ sơ sẵn có) → kết nối Fanpage/Zalo OA/Catalog (bỏ qua được) → tải ảnh đầu tiên (→ M01a) |
+| `TaiKhoan.dc.html` | đề xuất `/tai-khoan` | Hồ sơ cá nhân; đổi mật khẩu (**chưa có API — nợ #133**); tổ chức của tôi + chuyển (`/session/organization`); đăng xuất (`/auth/logout`) |
+| `QuenMatKhau.dc.html` | đề xuất | Nhập email → gửi liên kết đặt lại (30 phút), không tiết lộ email có tồn tại; **nợ #133** |
+| `PhapLy.dc.html` | đề xuất `/phap-ly/...` | Bố cục Chính sách bảo mật / Điều khoản; nội dung chờ luật sư (Nghị định 13/2023/NĐ-CP) |
+
+`DangKy` có ô "Tôi đồng ý Điều khoản & Chính sách bảo mật" và dẫn sang `OB-HoSo`; `DangNhap` "Quên mật khẩu?" → `QuenMatKhau`.
+
+## Trang 8 · Ma trận trạng thái
+
+`TT-1.dc.html`, `TT-2.dc.html`: 10 màn hình lõi (Trang chủ, Tải ảnh, Duyệt, Creative Studio, Sản phẩm, Đơn hàng, Khách hàng, AI Chat, Lịch đăng, Catalog khách) × 4 trạng thái (trống / đang tải / lỗi / không đủ quyền). Mỗi ô ghi **CODE** (câu chữ đang có trong mã, giữ nguyên) hoặc **ĐỀ XUẤT** (cần thêm). Một sửa bắt buộc: M01a đang hiện "Không có năng lực H1 (phân tích ảnh)" → đổi thành "Bạn chưa được cấp quyền phân tích ảnh."
+
+## Trang 5 bổ sung
+`VH-ToChucChiTiet.dc.html`: thêm khối **thao tác TO-BE** (điều chỉnh credit có lý do bắt buộc, tạm khoá tổ chức, huỷ/chạy lại job treo; xác nhận 2 lần, ghi nhật ký nền tảng). Hiện 5 route `/platform/*` đều chỉ GET.
+
+---
+
+## Khoảng trống phát hiện trong mã nguồn (cần xác nhận trước khi build)
+- `/muc-dung`, `/audit`: có thư mục route trong `src/app/(app)/` nhưng **chưa có `page.tsx`**.
+- `/cai-dat`: menu (`desktop-nav.tsx`, mục "Cài đặt") trỏ tới nhưng **route chưa tồn tại** trong `src/app`.
+- `/thu-vien-anh`, `/tich-hop`: thư mục tồn tại nhưng **rỗng**, chưa rõ vai trò dự kiến.
+
+## Cách agent khác dùng tài liệu này
+- Cần **sửa nội dung/route của 1 màn hình cụ thể**: tìm đúng dòng trong bảng theo route hoặc tên khung, đối chiếu với `page.tsx` tương ứng trong repo, sửa mã thật trước — rồi cập nhật lại dòng trong bảng này nếu bố cục đổi.
+- Cần **vẽ lại hoặc thêm khung mới trên canvas**: đọc phần "Artifact canvas" ở đầu file, dùng Artifact tool đọc `project/canvas.json` + file `.dc.html` liên quan trong artifact đó, sửa xong publish lại, rồi cập nhật bảng tương ứng ở đây.
+- Cần **biết tổng quan kiến trúc điều hướng**: nguồn sự thật là `src/components/layout/desktop-nav.tsx` (desktop) và `bottom-nav.tsx` (mobile); `Sidebar.dc.html` / `PlatformNav.dc.html` là bản vẽ khớp với code tại 25/09.
+
+## Nhật ký đồng bộ
+- **25/09 chiều — Giai đoạn 1 đồng bộ wireframe ↔ code** (kế hoạch: `claude/ke-hoach-dong-bo-wireframe-va-hoan-thien-25-09-2026.md`): menu trái 45 khung thành link bấm được, nhãn/nhóm/badge khớp `desktop-nav.tsx`, "↖ Sơ đồ màn hình" về `Main`; tab A–F, M01a/b/c, MI thành link; sửa 7 khung vẽ sai so với code (M01a, CS-A, Gia, DonHang, DangNhap, NoiDung, CS-E); thêm 2 khung `DangKy`, `DonHangChiTiet`; sửa HTML vỡ ở `Them`; sitemap đủ khung; Trang chủ/Job có trạng thái lỗi. Kiểm bằng script: 53/53 khung cân thẻ, 0 link hỏng, 0 khung mồ côi, 0 menu tĩnh.
+- **25/09 chiều — GĐ3 đợt 1:** vẽ lại `MucDung`, `Audit`, `CaiDat` theo API thật; thêm `CaiDat-VaiTro`, `CaiDat-KetNoi`, `GoiCuoc`; nút "Chuyển sang tổ chức thật" → `GoiCuoc`. 56 khung, kiểm script sạch.
+- **25/09 tối — duyệt & mobile-first:** anh Tony duyệt toàn bộ canvas; bổ sung 47 khung mobile (tổng 54, mọi màn tiệm); `M-Them` thành menu đầy đủ; chốt quy tắc thanh toán; nợ #134 (pháp lý), #135 (menu mobile), #136 (giá gói). 118 khung, mọi khung có đường vào từ `Main`.
+- **25/09 tối — GĐ3 đợt 2:** 7 khung mobile, 3 bước onboarding, Tài khoản, Quên mật khẩu, Pháp lý, 2 khung ma trận trạng thái, thao tác Ops TO-BE; lượt dọn toàn canvas: xám chữ #9A968C → #66625A, chữ ≥10px (nhãn nhỏ) / ≥11px (nội dung). 71 khung, 9 trang, kiểm script sạch.

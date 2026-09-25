@@ -781,3 +781,23 @@ Báo cáo rà soát: project claude.ai `claude/ra-soat-khu-vuc-c-audio-24-09-202
 - [x] Thư viện nhạc có giấy phép (`music_tracks`) + Voice Clone (`voice_clones`, job `audio.voice_clone`), migration `20260924120000`
 - [x] Chặng 07 phối lại giữ giọng/nhạc cũ
 - [ ] `test:tenant` (`audio-library.test.ts`) · chạy thật với `ELEVENLABS_API_KEY` · thay 4 bài nhạc chưa có giấy phép (#128)
+
+## P27 — Content Engine M07 trong core
+
+Quyết định PO 25/09/2026: chỉ một content engine, đặt trong `floraos-core` (không phải `SocialFlow`); `SocialFlow` chỉ còn đăng bài + `content_metrics`. Kế hoạch: project claude.ai `claude/ke-hoach-content-engine-core-25-09-2026.md`.
+
+- [x] Đợt 0 — chốt 8 quyết định (mục 0 của kế hoạch), sửa Level 1 (`FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 2/12, `BO_TINH_NANG_HIEN_TRANG.md` §2.4), dọn thay đổi thăm dò 25/09 (gọi M07 trực tiếp từ Chặng 05) — giữ `callProxyJson`/`isAllowedProxyPath`/`SOCIALFLOW_DIR`
+- [x] Đợt 1a — `contracts/brief.ts` (Brief v1, zod, `BRIEF_VERSION=1`) + JSON Schema sinh tự động (`gen-content-engine-schemas.ts`, `npm run gen:schemas:content-engine`/`check:schemas:content-engine`, `docs/dac-ta/schemas/content-engine/`) + `domain/channel-specs.ts` (EXTEND từ `flower_prompts.py`, khoá trần cứng với `campaign-package-rules.ts`) + `domain/deterministic-checks.ts` (độ dài/hashtag/từ cấm/claim ngoài facts) + `domain/brief-builder.ts` (thuần, nhận dữ liệu đã đọc). 30 test mới xanh, `tsc`/`eslint` sạch trên toàn repo, `check:schemas:content-engine` khớp.
+- [x] Đợt 1b — Bộ đọc `infra/` (`read-shop-context.ts`, `read-product-context.ts` — MI report → `product`/`passport`/`topic`, dự phòng `products`, `read-story-context.ts` — kịch bản Chặng 05 `creative.scene_plan`) + `use-cases/get-content-brief.ts` (gộp 3 đầu đọc + `buildContentBrief`, fallback chủ đề tối thiểu khi chưa có báo cáo, không bịa hook/CTA). Còn catalog link (Đợt 2, theo mục 3 kế hoạch). 48 test content-engine + 1024 test toàn repo xanh (trừ 1 test `variant-render-options` không liên quan, thuộc việc nâng cấp ảnh biến thể đang làm song song), `tsc`/`eslint` sạch.
+- [x] Đợt 1c (mã) — model `content_generations` (`prisma/schema.prisma`) + migration `prisma/migrations/20260925090000_content_generations` + `infra/content-generation-repository.ts` (create/findById/findLatest/approve/markScheduled) + `tests/tenant/content-generations.test.ts` (5 test cách ly tenant, theo khuôn `catalog-links.test.ts` gọi thẳng repository). **Chưa chạy được** `prisma generate`/`test:tenant` — VM Linux của cầu nối thiết bị chặn mạng tới `binaries.prisma.sh` (khác máy thật của anh Tony), đúng bẫy đã ghi ở mục 9 kế hoạch. Anh Tony chạy hộ trên Terminal thật của máy:
+  ```
+  npx prisma generate
+  npx prisma migrate deploy   # hoặc: npx prisma migrate resolve --applied 20260925090000_content_generations nếu lịch sử lệch (nợ #97/#104)
+  npm run test:tenant
+  npx tsc --noEmit
+  ```
+- [x] Đợt 1d — AIC-37 `content_strategy` (`ai-capabilities.ts`, generative, không cần duyệt riêng — Writer AIC-23 mới cần duyệt) + kênh `story` thêm vào AIC-24 `content_qa` + `seed-ai-registry.ts` (AIC-37 vào `capabilities` của `openai_structured`/`openai_direct`). Không thêm mã quyền RBAC mới — `I1`/`J5` đã có sẵn trong `SPLIT_CAPABILITY_PAIRS`/catalog. 1030 test toàn repo xanh, `tsc`/`eslint` sạch (trừ lỗi kiểu đã biết ở `content_generations`, chờ `prisma generate` trên máy thật).
+- [ ] Đợt 1e — Bộ bài chuẩn: anh Tony chọn 12–20 sản phẩm × chủ đề, chụp brief vào `golden/content/`
+- [ ] Đợt 2 — Chuỗi agent Strategist→Writer→Critic→Rewriter (prompt/rubric có phiên bản) + API `/content-engine/*` (quyền `I1`/`J5`, không thêm O1/O2) + `content:eval`
+- [ ] Đợt 3 — Nối Chặng 05 (gọi thẳng trong tiến trình, một bản nội dung duy nhất cho bài đăng + audio/caption/ảnh/video), Khu vực B (bấm nút, không tự chạy), `/noi-dung`, Chặng 07 "Viết lại"; gỡ `api/m07/generate` khỏi danh sách trắng proxy
+- [ ] Đợt 4 — Ảnh vào mô hình, học từ chỉnh sửa tay + `content_metrics`, prompt v2, kênh mới (liên tục)

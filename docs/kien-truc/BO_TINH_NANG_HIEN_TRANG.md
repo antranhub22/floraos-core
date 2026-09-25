@@ -106,6 +106,8 @@ Video Studio (P17, M04c) đã nghiệm thu hoàn thành 100%, chuyển trạng t
 
 ### 2.4 AI Content Engine — M07
 
+**Quyết định PO 25/09/2026 (P27):** bảng dưới đây mô tả pipeline 6 agent (`scout/planner/creator/reviewer/publisher/analyst`) của `SocialFlow` — đây là pipeline đăng tin công nghệ (HackerNews/GitHub → LinkedIn/X/Discord/Reddit) thừa kế từ dự án gốc, **không đọc Product Master, không có logic ngành hoa, không dùng chung với `/api/m07/generate`**. FloraOS sẽ KHÔNG nâng cấp pipeline này cho hoa; việc sinh nội dung ngành hoa được xây mới trong `floraos-core` (chuỗi Strategist→Writer→Critic→Rewriter, đọc Product Master/Master Image/kịch bản Chặng 05 thật) — xem `docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` mục 12 (dòng M07) và kế hoạch project claude.ai `claude/ke-hoach-content-engine-core-25-09-2026.md`. `SocialFlow` giữ lại phần đăng bài (§2.5) và chỉ nhận bài đã duyệt từ core.
+
 | Tính năng | Trạng thái | Nằm ở đâu |
 |---|---|---|
 | Sinh nội dung theo giọng thương hiệu | Một phần | `creator.py` đọc `brand_config`; `brand_config` đã một hàng mỗi tổ chức |

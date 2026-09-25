@@ -32,6 +32,28 @@ export interface DeliveryWindow {
   timeSlot?: string | undefined
 }
 
+export interface StructuredAddress {
+  /** Số nhà, ngõ/ngách/hẻm, tên đường, số phòng, toà nhà */
+  street: string
+  /** Phường, Xã, Thị trấn */
+  ward: string
+  /** Quận, Huyện, Thị xã, Thành phố thuộc tỉnh */
+  district: string
+  /** Tỉnh, Thành phố trực thuộc trung ương */
+  city: string
+  /** Quốc gia (mặc định "Việt Nam") */
+  country?: string | undefined
+  /** Địa chỉ đầy đủ tự động sinh */
+  formattedAddress?: string | undefined
+}
+
+export function formatStructuredAddress(addr: StructuredAddress | string | null | undefined): string {
+  if (!addr) return ""
+  if (typeof addr === "string") return addr
+  const parts = [addr.street, addr.ward, addr.district, addr.city, addr.country || "Việt Nam"].filter(Boolean)
+  return parts.join(", ")
+}
+
 export interface DeliveryAddress {
   recipientName: string
   phone: string
@@ -39,6 +61,8 @@ export interface DeliveryAddress {
   ward?: string | undefined
   district?: string | undefined
   province?: string | undefined
+  city?: string | undefined
+  country?: string | undefined
   notes?: string | undefined
 }
 

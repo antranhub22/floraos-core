@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "index.json",
+  "title": "FloraOS Content Engine — hợp đồng dữ liệu",
+  "description": "Danh sách tệp JSON Schema của Content Engine (P27).",
+  "x-floraos": {
+    "module": "content-engine",
+    "source": "src/modules/content-engine/contracts",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay."
+  },
+  "schemas": [
+    {
+      "name": "brief.v1",
+      "title": "Content Engine — Content Brief v1",
+      "source": "src/modules/content-engine/contracts/brief.ts",
+      "file": "brief.v1.schema.json"
+    }
+  ]
+}

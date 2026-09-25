@@ -14,7 +14,7 @@ import { resolveSession } from "@/modules/organization/use-cases/resolve-session
 import { ssoClaimsFor, SSO_TOKEN_TTL_SECONDS } from "@/modules/sso/domain/sso-claims"
 import { signSsoToken, verifySsoToken } from "@/modules/sso/infra/sso-jwt"
 import { proxyTimeoutSignal, proxyRequest, ProxyError, proxyErrorMessage } from "../infra/proxy-http-adapter"
-import { requireProxyUrl, SSO_HEADER, AUTHORIZATION_HEADER, NO_BODY_METHODS, PROXY_TIMEOUT_MS, type ProxyClient } from "../domain/proxy-rules"
+import { requireProxyUrl, isAllowedProxyPath, SSO_HEADER, AUTHORIZATION_HEADER, NO_BODY_METHODS, PROXY_TIMEOUT_MS, type ProxyClient } from "../domain/proxy-rules"
 
 export { ProxyClient }
 
@@ -92,14 +92,71 @@ export async function callProxy(input: {
   request: Request
   path: string
 }): Promise<ProxyResult> {
-  const baseUrl = requireProxyUrl(
-    input.client,
-    input.client === "SOCIALFLOW" ? env.SOCIALFLOW_URL : env.LOCALBUDD_URL
-  )
-  let identity = readProxyIdentity(input.request)
+  const { identity, freshSsoCookieHeader } = await resolveForwardIdentity(input.request)
+
+  const method = input.request.method.toUpperCase()
+  const contentType = input.request.headers.get("content-type") ?? undefined
+  const body =
+    method !== "GET" && method !== "HEAD" && !NO_BODY_METHODS.includes(method)
+      ? await input.request.text()
+      : null
+
+  const res = await sendToSibling({ client: input.client, identity, method, path: input.path, contentType, body })
+  const returnHeaders = { ...res.headers }
+  if (freshSsoCookieHeader) {
+    returnHeaders["set-cookie"] = freshSsoCookieHeader
+  }
+  return { status: res.status, headers: returnHeaders, body: res.body }
+}
+
+/**
+ * Gọi sibling từ MÃ PHÍA MÁY CHỦ của core (không phải trình duyệt), thân JSON,
+ * cùng danh tính của người đang thao tác trên `request` (25/09/2026 — Chặng 05
+ * gọi SocialFlow M07 viết bài). Đường dẫn vẫn phải nằm trong danh sách trắng
+ * của proxy. Không 2xx hoặc body không phải JSON → ném `ProxyRouteError`.
+ */
+export async function callProxyJson(input: {
+  client: ProxyClient
+  request: Request
+  method: "GET" | "POST" | "PUT" | "PATCH"
+  path: string
+  json?: unknown
+}): Promise<unknown> {
+  if (!isAllowedProxyPath(input.client, input.path)) {
+    throw new ProxyRouteError(`Đường dẫn ${input.path} không nằm trong danh sách proxy của ${input.client}`, "NOT_FOUND")
+  }
+  const { identity } = await resolveForwardIdentity(input.request)
+  if (identity.kind === "none") {
+    throw new ProxyRouteError(`Không có danh tính để gọi ${input.client} (thiếu phiên đăng nhập)`, "UNAUTHENTICATED")
+  }
+  const hasBody = input.method !== "GET" && input.json !== undefined
+  const res = await sendToSibling({
+    client: input.client,
+    identity,
+    method: input.method,
+    path: input.path,
+    contentType: hasBody ? "application/json" : undefined,
+    body: hasBody ? JSON.stringify(input.json) : null,
+  })
+  const err = toProxyError(res, input.client)
+  if (err) throw err
+  try {
+    return JSON.parse(res.body) as unknown
+  } catch {
+    throw new ProxyRouteError(`[${input.client}] trả body không phải JSON`, "INTERNAL")
+  }
+}
+
+/**
+ * Danh tính forward: SSO/token có sẵn trên request; thiếu hoặc JWT SSO đã hết
+ * hạn (15 phút) thì cấp mới từ phiên `floraos_session`.
+ */
+async function resolveForwardIdentity(
+  request: Request
+): Promise<{ identity: ProxyIdentity; freshSsoCookieHeader: string | null }> {
+  let identity = readProxyIdentity(request)
   let freshSsoCookieHeader: string | null = null
 
-  // Tự động cấp/làm mới SSO JWT từ floraos_session nếu thiếu hoặc token đã hết hạn (15 phút)
   const isSsoExpired =
     identity.kind === "sso" &&
     identity.value.split(".").length === 3 &&
@@ -107,7 +164,7 @@ export async function callProxy(input: {
 
   if (identity.kind === "none" || isSsoExpired) {
     try {
-      const resolved = await resolveSession(input.request)
+      const resolved = await resolveSession(request)
       if (resolved.session.organization_id) {
         const claims = ssoClaimsFor({
           userId: resolved.user.id,
@@ -123,36 +180,39 @@ export async function callProxy(input: {
       // Bỏ qua nếu không có phiên
     }
   }
+  return { identity, freshSsoCookieHeader }
+}
 
-  const method = input.request.method.toUpperCase()
-  const contentType = input.request.headers.get("content-type") ?? undefined
-  const body =
-    method !== "GET" && method !== "HEAD" && !NO_BODY_METHODS.includes(method)
-      ? await input.request.text()
-      : null
-
+/** Một lượt HTTP sang sibling, có timeout; lỗi mạng/timeout → `ProxyRouteError`. */
+async function sendToSibling(input: {
+  client: ProxyClient
+  identity: ProxyIdentity
+  method: string
+  path: string
+  contentType: string | undefined
+  body: string | null
+}): Promise<ProxyResult> {
+  const baseUrl = requireProxyUrl(
+    input.client,
+    input.client === "SOCIALFLOW" ? env.SOCIALFLOW_URL : env.LOCALBUDD_URL
+  )
   const headers = buildForwardHeaders({
-    identity,
-    contentType,
+    identity: input.identity,
+    contentType: input.contentType,
     extra: { accept: "application/json" },
   })
 
   const { signal, cancel } = proxyTimeoutSignal()
   try {
-    const res = await proxyRequest({
+    return await proxyRequest({
       client: input.client,
       baseUrl,
-      method,
+      method: input.method,
       path: input.path,
       headers,
-      body,
+      body: input.body,
       signal,
     })
-    const returnHeaders = { ...res.headers }
-    if (freshSsoCookieHeader) {
-      returnHeaders["set-cookie"] = freshSsoCookieHeader
-    }
-    return { status: res.status, headers: returnHeaders, body: res.body }
   } catch (err) {
     if (err instanceof ProxyError) {
       throw new ProxyRouteError(err.message, "INTERNAL")

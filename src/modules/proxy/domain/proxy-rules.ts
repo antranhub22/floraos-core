@@ -55,3 +55,22 @@ export function requireProxyUrl(client: ProxyClient, url: string | undefined): s
   }
   return url
 }
+
+/** Danh sách trắng tiền tố đường dẫn theo client — không proxy linh tinh. */
+export const PROXY_ALLOWED_PREFIX: Readonly<Record<ProxyClient, readonly string[]>> = {
+  SOCIALFLOW: ["api/m04b", "api/m07", "api/posts", "api/accounts"],
+  LOCALBUDD: [
+    "api/v1/catalog-links",
+    "api/v1/projects",
+    "api/v1/generate",
+    "api/v1/pages",
+    "api/v1/worker/cron",
+  ],
+}
+
+/** Đường dẫn (có hoặc không có `/` đầu) có nằm trong danh sách trắng của client không. */
+export function isAllowedProxyPath(client: ProxyClient, path: string): boolean {
+  const normalized = path.replace(/^\/+/, "")
+  if (normalized.split("/").some((seg) => seg === ".." || seg === ".")) return false
+  return PROXY_ALLOWED_PREFIX[client].some((prefix) => normalized === prefix || normalized.startsWith(prefix + "/"))
+}

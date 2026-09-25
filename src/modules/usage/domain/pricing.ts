@@ -39,6 +39,13 @@ const FEATURE_COST_CREDIT: Readonly<Record<string, number>> = {
   // Giá tạm — chờ chủ sản phẩm (nợ #64).
   "creative.scene_revise": 1,
   "creative.content_rewrite": 1,
+  // Content Engine (P27, 25/09/2026): MỘT lượt sinh bài chạy cả chuỗi
+  // Strategist→Writer×kênh→Critic→Rewriter (4–7 lượt gọi mô hình, tối đa 4
+  // kênh). Giá tạm dùng theo quyết định 0.8 — chờ chủ sản phẩm (nợ #64).
+  "content.generate": 2,
+  // Viết lại MỘT kênh của một bản đã có — Rewriter + Critic + Guard, không
+  // chạy lại Strategist/các kênh khác. Giá tạm, cùng nợ #64.
+  "content.rewrite": 1,
   "catalog.generate": 1,
   "landing.generate": 1,
   "video.render": 5,

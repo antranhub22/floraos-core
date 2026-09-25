@@ -41,10 +41,10 @@ V1 §18 (10 quy tắc bảo tồn mã cũ) **bị bãi bỏ**. Thay bằng:
 
 | Nhóm | Repo | Trách nhiệm | Trạng thái |
 |---|---|---|---|
-| **0 — Core** | **`floraos-core`** | Org · Workspace · Membership · RBAC · cách ly tenant · BusinessProfile · BrandProfile · Product Master · Asset · GenerationJob · Usage · AuditLog · Customer · Order · Integration API · M01 · M01b · M02 · M03 · M04a · **M04b** · **M04c** · **M06** · **M08** · M09 · M10 · M11 | Đang xây |
+| **0 — Core** | **`floraos-core`** | Org · Workspace · Membership · RBAC · cách ly tenant · BusinessProfile · BrandProfile · Product Master · Asset · GenerationJob · Usage · AuditLog · Customer · Order · Integration API · M01 · M01b · M02 · M03 · M04a · **M04b** · **M04c** · **M06** · **M07 (viết nội dung, Content Engine)** · **M08** · M09 · M10 · M11 | Đang xây |
 | 1 — Legacy | `FloraOS` *(hiện tại)* | Phục vụ AVI GIFT tới ngày cắt. Đóng băng tính năng | Nghỉ hưu |
 | 2 — Storefront | `LocalBudd` | M05 Landing Page · UI soạn Business Profile. M06 Catalog & QR **có bản thứ hai ở đây song song với bản ở core** — chủ sở hữu chưa chốt, xem **RS-3** | Đang phát triển |
-| 3 — Marketing | `SocialFlow` | M07 Content & Social Publishing · số liệu nền tảng cho M11. **M04b và M04c đã chuyển về core** (P16/P24 và P17) | Đang phát triển |
+| 3 — Marketing | `SocialFlow` | M07 Social Publishing (đăng bài, kết nối tài khoản, `content_metrics`) · số liệu nền tảng cho M11. **M04b, M04c và phần viết nội dung của M07 đã chuyển về core** (P16/P24, P17, P27) | Đang phát triển |
 | 4 — Messaging | — | M08 Customer Chat **đã dựng trong `floraos-core`** ở P23 (`src/modules/chat-assistant/`, `/api/v1/chat/*`); không tách repo thứ tư nữa | Xong |
 
 ### 2.1 Ranh giới sở hữu dữ liệu — luật cắt
@@ -461,7 +461,7 @@ Năm module còn lại không thuộc engine nào vì chúng không sinh nội d
 | **M04c** | Video Studio — Reel, TikTok, Story, slideshow, motion quảng cáo | Creative | **`floraos-core`** *(đổi từ `SocialFlow` ở P17)* | **ĐÃ XÂY** trong core: `/api/v1/video/jobs*`, bảng `video_jobs`/`video_scenes`, `workers/media_ai/video/`. Adapter HeyGen/Veo thu hoạch từ SocialFlow sang. Cổng duyệt còn dùng chung mã `I2` — xem **RS-1** |
 | **M05** | Landing Page Generator | Marketing | `LocalBudd` | Giữ nguyên; bỏ bảng trùng, đọc core qua API |
 | **M06** | Catalog Generator & QR | Marketing | **cả `floraos-core` lẫn `LocalBudd`** — chưa chốt, xem **RS-3** | **ĐÃ XÂY HAI LẦN**: core có `/c/[slug]`, `/api/v1/public/catalog/[slug]`, `/api/v1/catalog-links*` và bảng `catalog_links`; LocalBudd có bộ tương đương và bảng `catalog_links` riêng |
-| **M07** | Content & Social Publishing | Marketing | `SocialFlow` | **EXTEND E7** adapter nền tảng và lịch đăng đã chạy; **BUILD** chiến lược nội dung ngành hoa và adapter Zalo OA |
+| **M07** | Content & Social Publishing | Marketing | **viết nội dung ở `floraos-core`** *(đổi từ `SocialFlow` ở P27)* · đăng bài + số liệu vẫn ở `SocialFlow` | **BUILD** trong core: brief từ dữ liệu tổ chức thật + chuỗi agent Strategist→Writer→Critic→Rewriter (thay `/api/m07/generate`, vốn viết mỗi kênh bằng một prompt không đọc brief); **EXTEND E7** giữ nguyên ở SocialFlow: adapter nền tảng, lịch đăng, `content_metrics` |
 | **M08** | Customer Chat | — | **`floraos-core`** *(đổi từ "chưa có repo" ở P23)* | **ĐÃ XÂY**: `src/modules/chat-assistant/`, `/api/v1/chat/*`, bốn tầng engine, năm kênh, mã `T1`–`T4` |
 | **M09** | Customer & Repurchase | — | `floraos-core` | **BUILD** |
 | **M10** | Orders & Operations | — | `floraos-core` | **EXTEND** — 28 mã `C1`–`C28` và luồng chào giá/điều phối của v1 là nguồn thu hoạch |
@@ -486,6 +486,8 @@ Hệ quả cho yêu cầu "một ảnh gốc ra 20–50 biến thể": biến th
 **M04c dựng cảnh, không sinh sản phẩm.** Chuyển cảnh, zoom, nhạc, phụ đề, giọng đọc, CTA và logo là lớp phủ lên Master Image và các tỉ lệ đã sinh từ Smart Reframe. Mô hình video không được nhận lệnh tạo hình bó hoa; khung đầu và khung cuối luôn là ảnh đã duyệt.
 
 **M07 đọc sản phẩm thật.** Nội dung sinh ra gắn với một bản ghi Product Master và một Master Image đã duyệt, không gắn với một chủ đề rời. Đây là điều kiện để câu chữ nói đúng loại hoa, đúng số cành và đúng giá — và cũng là ranh giới phân biệt hệ điều hành ngành hoa với một công cụ viết bài tổng quát.
+
+**M07 viết nội dung ở core, không ở SocialFlow (P27, 25/09/2026)** vì cùng lý do M04a/M04b/M04c ở core: viết bài cần đọc `product_analyses`, `commercial_passport`, `brand_profiles`, `business_profiles` và kịch bản Chặng 05 — dữ liệu lõi, cùng tổ chức, cùng phiên. `SocialFlow` chỉ còn nhận bài đã duyệt để đăng và ghi `content_metrics` — không viết bài nữa; `/api/m07/generate` (mỗi kênh một prompt, không đọc dữ liệu tổ chức) ngừng dùng.
 
 **Độc lập module:** mọi module phải chạy được độc lập. `User → Product Image Analysis` phải hoạt động mà không cần Landing Page hay Catalog. Nhưng module dùng dữ liệu chung khi có sẵn, để giảm nhập liệu trùng.
 
@@ -590,7 +592,7 @@ Bảy pha đầu là MVP: chủ cửa hàng chụp ảnh bó hoa và nhận về
 | **P15** | **Ba đường ghi của Integration API** — đăng ký asset dẫn xuất, số liệu nội dung, mức dùng (mục 13). Mở khoá bốn bảng còn lại của `LocalBudd` | P7, P13 | 1–2 tuần | ✓ |
 | **P16** | **M04b** — xoá nền, đổi nền, mở rộng khung, retouch, watermark, biến thể theo kênh trên Master Image đã duyệt | P13, P15 | 3–4 tuần | ✓ |
 | **P17** | **M04c** — sáu khuôn đầu ra video, lớp dựng cảnh, `organization_id` trên `video_jobs`, usage về core | P15, P16 | 3–4 tuần | ✓ |
-| **P18** | **M07 cho ngành hoa** — nội dung sinh từ Product Master và Master Image thật, adapter Zalo OA, lịch đăng và thư viện nội dung, công tắc tự duyệt theo thời hạn | P15, P16, Đợt 3 nhóm E | 3–4 tuần | ✓ |
+| **P18** | **M07 cho ngành hoa** — nội dung sinh từ Product Master và Master Image thật, adapter Zalo OA, lịch đăng và thư viện nội dung, công tắc tự duyệt theo thời hạn. *Phần sinh nội dung chuyển về `floraos-core` ở **P27** (25/09/2026) — P18 chỉ còn đúng cho adapter nền tảng, lịch đăng, `content_metrics`* | P15, P16, Đợt 3 nhóm E | 3–4 tuần | ✓ |
 | **P19** | **M06** — catalog số, bộ lọc theo dịp/màu/loại hoa/bộ sưu tập, bộ sưu tập chiến dịch, `catalog_links` và QR | P15 | 2–3 tuần | ✓ |
 | **P20** | **M11** — số liệu hiệu quả về core, phép nối ROI, hồ sơ phong cách và vòng học | P18, P19, P22 | 3 tuần | |
 | **P21** | **M09** — khách hàng, ngày đặc biệt, nhắc mua lại, voucher, cơ chế đồng ý cho dữ liệu cá nhân | P2, P3 | 3 tuần | |

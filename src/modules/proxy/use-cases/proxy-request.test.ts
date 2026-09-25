@@ -136,3 +136,52 @@ describe("toProxyError", () => {
     expect(err?.message).toContain("product_id bắt buộc")
   })
 })
+describe("callProxyJson (gọi sibling từ mã máy chủ, 25/09/2026)", () => {
+  it("POST JSON kèm SSO của người thao tác, trả body JSON đã parse", async () => {
+    const { callProxyJson } = await import("./proxy-request")
+    const { env } = await import("@/lib/env")
+    const prev = env.SOCIALFLOW_URL
+    ;(env as { SOCIALFLOW_URL?: string | undefined }).SOCIALFLOW_URL = "http://sf.local:8000"
+    proxyRequestMock.mockResolvedValueOnce({ status: 200, headers: { "content-type": "application/json" }, body: '{"result_id":"r-1"}' })
+    try {
+      const out = await callProxyJson({
+        client: "SOCIALFLOW",
+        request: mockRequest({ [SSO_HEADER]: "jwt-sso" }),
+        method: "POST",
+        path: "api/m07/generate",
+        json: { product_name: "Bó hoa" },
+      })
+      expect(out).toEqual({ result_id: "r-1" })
+      const call = proxyRequestMock.mock.calls.at(-1)![0] as { path: string; method: string; headers: Record<string, string>; body: string }
+      expect(call).toMatchObject({ path: "api/m07/generate", method: "POST", body: '{"product_name":"Bó hoa"}' })
+      expect(call.headers["x-floraos-sso"]).toBe("jwt-sso")
+      expect(call.headers["content-type"]).toBe("application/json")
+    } finally {
+      ;(env as { SOCIALFLOW_URL?: string | undefined }).SOCIALFLOW_URL = prev
+    }
+  })
+
+  it("từ chối đường dẫn ngoài danh sách trắng trước khi gọi mạng", async () => {
+    const { callProxyJson } = await import("./proxy-request")
+    proxyRequestMock.mockClear()
+    await expect(
+      callProxyJson({ client: "SOCIALFLOW", request: mockRequest({ [SSO_HEADER]: "jwt" }), method: "POST", path: "api/admin", json: {} })
+    ).rejects.toThrow(/danh sách proxy/)
+    expect(proxyRequestMock).not.toHaveBeenCalled()
+  })
+
+  it("sibling trả lỗi → ném lỗi đã ánh xạ", async () => {
+    const { callProxyJson } = await import("./proxy-request")
+    const { env } = await import("@/lib/env")
+    const prev = env.SOCIALFLOW_URL
+    ;(env as { SOCIALFLOW_URL?: string | undefined }).SOCIALFLOW_URL = "http://sf.local:8000"
+    proxyRequestMock.mockResolvedValueOnce({ status: 500, headers: {}, body: "" })
+    try {
+      await expect(
+        callProxyJson({ client: "SOCIALFLOW", request: mockRequest({ [SSO_HEADER]: "jwt" }), method: "POST", path: "api/m07/generate", json: {} })
+      ).rejects.toThrow(/SOCIALFLOW/)
+    } finally {
+      ;(env as { SOCIALFLOW_URL?: string | undefined }).SOCIALFLOW_URL = prev
+    }
+  })
+})

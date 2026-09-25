@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-06-delivery.input.schema.json",
+  "title": "Giao vận & Bằng chứng Giao hoa (POD) — Đầu vào",
+  "description": "Giám sát tài xế giao hoa và thu thập hình ảnh trao tận tay người nhận",
+  "x-floraos": {
+    "stepId": "06",
+    "step": 6,
+    "code": "DELIVERY",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/coordinator/delivery-update",
+      "capability": "O1"
+    },
+    "source": "src/modules/coordinator/contracts/step-06-delivery.ts",
+    "direction": "input",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:coordinator`."
+  },
+  "type": "object",
+  "properties": {
+    "coordinationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "shipperName": {
+      "type": "string"
+    },
+    "shipperPhone": {
+      "type": "string"
+    },
+    "podImageUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "recipientSignedName": {
+      "type": "string"
+    },
+    "deliveryStatus": {
+      "type": "string",
+      "enum": [
+        "PICKED_UP",
+        "ON_THE_WAY",
+        "DELIVERED_SUCCESS",
+        "DELIVERY_FAILED"
+      ]
+    },
+    "failureReason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "coordinationId",
+    "shipperName",
+    "shipperPhone",
+    "deliveryStatus"
+  ],
+  "examples": [
+    {
+      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
+      "shipperName": "Lê Văn Hùng (AhaMove)",
+      "shipperPhone": "0933221100",
+      "podImageUrl": "https://storage.floraos.vn/org/test/pod-flower-delivery.jpg",
+      "recipientSignedName": "Trần Thị Bình",
+      "deliveryStatus": "DELIVERED_SUCCESS"
+    }
+  ]
+}

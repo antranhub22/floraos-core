@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-07-close-learn.output.schema.json",
+  "title": "Nghiệm thu & Bài học Vận hành — Đầu ra",
+  "description": "Khép lại chu trình điều phối, tính toán SLA và cập nhật uy tín đối tác",
+  "x-floraos": {
+    "stepId": "07",
+    "step": 7,
+    "code": "CLOSE_LEARN",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/coordinator/close-learn",
+      "capability": "O1"
+    },
+    "source": "src/modules/coordinator/contracts/step-07-close-learn.ts",
+    "direction": "output",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:coordinator`."
+  },
+  "type": "object",
+  "properties": {
+    "coordinationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "INTAKE",
+        "VALIDATING",
+        "PLANNING",
+        "ASSIGNING",
+        "IN_PRODUCTION",
+        "QUALITY_CHECK",
+        "DISPATCHING",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION"
+      ]
+    },
+    "slaReport": {
+      "type": "object",
+      "properties": {
+        "promisedDeliveryTime": {
+          "type": "string"
+        },
+        "actualDeliveryTime": {
+          "type": "string"
+        },
+        "varianceMinutes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "isOntime": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "promisedDeliveryTime",
+        "actualDeliveryTime",
+        "varianceMinutes",
+        "isOntime"
+      ],
+      "additionalProperties": false
+    },
+    "operationalScore": {
+      "type": "object",
+      "properties": {
+        "qcScore": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "partnerScore": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "overallExecutionRating": {
+          "type": "string",
+          "enum": [
+            "EXCELLENT",
+            "GOOD",
+            "ACCEPTABLE",
+            "FAILED"
+          ]
+        }
+      },
+      "required": [
+        "qcScore",
+        "partnerScore",
+        "overallExecutionRating"
+      ],
+      "additionalProperties": false
+    },
+    "downstreamUpdates": {
+      "type": "object",
+      "properties": {
+        "crmHistorySynced": {
+          "type": "boolean"
+        },
+        "analyticsMetricsRecorded": {
+          "type": "boolean"
+        },
+        "partnerPerformanceUpdated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "crmHistorySynced",
+        "analyticsMetricsRecorded",
+        "partnerPerformanceUpdated"
+      ],
+      "additionalProperties": false
+    },
+    "completedAt": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "coordinationId",
+    "orderId",
+    "stage",
+    "slaReport",
+    "operationalScore",
+    "downstreamUpdates",
+    "completedAt"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
+      "orderId": "550e8400-e29b-41d4-a716-446655440000",
+      "stage": "COMPLETED",
+      "slaReport": {
+        "promisedDeliveryTime": "2026-09-25T17:00:00.000Z",
+        "actualDeliveryTime": "2026-09-25T16:55:00.000Z",
+        "varianceMinutes": -5,
+        "isOntime": true
+      },
+      "operationalScore": {
+        "qcScore": 95,
+        "partnerScore": 5,
+        "overallExecutionRating": "EXCELLENT"
+      },
+      "downstreamUpdates": {
+        "crmHistorySynced": true,
+        "analyticsMetricsRecorded": true,
+        "partnerPerformanceUpdated": true
+      },
+      "completedAt": "2026-09-25T17:05:00.000Z"
+    }
+  ]
+}

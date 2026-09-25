@@ -250,6 +250,8 @@ export function projectFloristTicket(
   }
 }
 
+export { type StructuredAddress, formatStructuredAddress } from "@/modules/orders/domain/order-types"
+
 /**
  * 2. PROJECTION CHO GIAO VẬN & THIỆP MỪNG (Delivery Receipt)
  * Lấy thông tin người nhận, địa chỉ, thiệp chúc mừng, tổng tiền cần thu.
@@ -258,17 +260,30 @@ export function projectDeliveryReceipt(order: {
   code: string
   recipientName: string
   recipientPhone: string
-  deliveryAddress: string
+  deliveryAddress: import("@/modules/orders/domain/order-types").StructuredAddress | string
   deliveryTime: string
   cardMessage?: string
   shippingFeeVnd?: number
   totalAmountVnd: number
 }): DeliveryReceiptCardProps {
+  const formattedAddr =
+    typeof order.deliveryAddress === "string"
+      ? order.deliveryAddress
+      : [
+          order.deliveryAddress.street,
+          order.deliveryAddress.ward,
+          order.deliveryAddress.district,
+          order.deliveryAddress.city,
+          order.deliveryAddress.country || "Việt Nam",
+        ]
+          .filter(Boolean)
+          .join(", ")
+
   return {
     orderCode: order.code,
     recipientName: order.recipientName,
     recipientPhone: order.recipientPhone,
-    deliveryAddress: order.deliveryAddress,
+    deliveryAddress: formattedAddr,
     deliveryTime: order.deliveryTime,
     cardMessage: order.cardMessage || "Không có thiệp",
     shippingFee: (order.shippingFeeVnd ?? 0).toLocaleString("vi-VN") + " đ",

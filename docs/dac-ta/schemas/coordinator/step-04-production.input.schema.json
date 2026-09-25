@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-04-production.input.schema.json",
+  "title": "Giám sát Tiến độ Cắm hoa — Đầu vào",
+  "description": "Cập nhật tiến trình cắm hoa thực tế tại xưởng và cảnh báo nguy cơ trễ hẹn",
+  "x-floraos": {
+    "stepId": "04",
+    "step": 4,
+    "code": "PRODUCTION",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/coordinator/production-update",
+      "capability": "O1"
+    },
+    "source": "src/modules/coordinator/contracts/step-04-production.ts",
+    "direction": "input",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:coordinator`."
+  },
+  "type": "object",
+  "properties": {
+    "coordinationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "START_ARRANGING",
+        "UPDATE_PROGRESS",
+        "REPORT_MATERIAL_ISSUE",
+        "MARK_READY_FOR_QC"
+      ]
+    },
+    "percentCompleted": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "issueDescription": {
+      "type": "string"
+    },
+    "estimatedFinishAt": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "coordinationId",
+    "action",
+    "percentCompleted"
+  ],
+  "examples": [
+    {
+      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
+      "action": "MARK_READY_FOR_QC",
+      "percentCompleted": 100,
+      "estimatedFinishAt": "2026-09-25T16:10:00.000Z"
+    }
+  ]
+}

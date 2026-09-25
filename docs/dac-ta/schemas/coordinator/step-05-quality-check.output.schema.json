@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-05-quality-check.output.schema.json",
+  "title": "Kiểm tra Chất lượng (QC) — Đầu ra",
+  "description": "AI Vision đối chiếu ảnh chụp hoa thành phẩm với Master Index BOM và tiêu chuẩn tiệm",
+  "x-floraos": {
+    "stepId": "05",
+    "step": 5,
+    "code": "QUALITY_CHECK",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/coordinator/qc-inspection",
+      "capability": "O1"
+    },
+    "source": "src/modules/coordinator/contracts/step-05-quality-check.ts",
+    "direction": "output",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:coordinator`."
+  },
+  "type": "object",
+  "properties": {
+    "qcRecordId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "coordinationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASSED",
+        "REWORK_REQUESTED",
+        "REJECTED"
+      ]
+    },
+    "aiScore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "aiCritique": {
+      "type": "string"
+    },
+    "checklist": {
+      "type": "object",
+      "properties": {
+        "flowerMatchScore": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "colorToneMatch": {
+          "type": "boolean"
+        },
+        "wrappingMatch": {
+          "type": "boolean"
+        },
+        "ribbonMatch": {
+          "type": "boolean"
+        },
+        "cardMessageAccurate": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "flowerMatchScore",
+        "colorToneMatch",
+        "wrappingMatch",
+        "ribbonMatch",
+        "cardMessageAccurate"
+      ],
+      "additionalProperties": false
+    },
+    "reworkInstructions": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "INTAKE",
+        "VALIDATING",
+        "PLANNING",
+        "ASSIGNING",
+        "IN_PRODUCTION",
+        "QUALITY_CHECK",
+        "DISPATCHING",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION"
+      ]
+    },
+    "inspectedAt": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "qcRecordId",
+    "coordinationId",
+    "status",
+    "aiScore",
+    "aiCritique",
+    "checklist",
+    "stage",
+    "inspectedAt"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "qcRecordId": "d1b2c3d4-e29b-41d4-a716-446655440004",
+      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
+      "status": "PASSED",
+      "aiScore": 95,
+      "aiCritique": "Bó hoa cắm tròn đều, 15 bông hồng Ohara nở vừa độ đẹp, baby phân bổ điểm xuyến hài hòa. Nơ nhung đỏ buộc ngay ngắn.",
+      "checklist": {
+        "flowerMatchScore": 98,
+        "colorToneMatch": true,
+        "wrappingMatch": true,
+        "ribbonMatch": true,
+        "cardMessageAccurate": true
+      },
+      "stage": "DISPATCHING",
+      "inspectedAt": "2026-09-25T16:15:00.000Z"
+    }
+  ]
+}

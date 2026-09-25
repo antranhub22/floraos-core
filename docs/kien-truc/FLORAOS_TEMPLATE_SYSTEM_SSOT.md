@@ -25,6 +25,7 @@
    - [Chức năng 9: Trợ lý AI Chat Đa kênh (Chat Assistant M10)](#chức-năng-9-trợ-lý-ai-chat-đa-kênh-chat-assistant-m10)
    - [Chức năng 10: Báo cáo Vận hành & Giám sát AI (Analytics & Governance M11)](#chức-năng-10-báo-cáo-vận-hành--giám-sát-ai-analytics--governance-m11)
    - [Chức năng 11: Kết nối Nền tảng (Platform Connections)](#chức-năng-11-kết-nối-nền-tảng-platform-connections)
+   - [Chức năng 12: Điều phối Đơn hàng (Coordinator Operations)](#chức-năng-12-điều-phối-đơn-hàng-coordinator-operations)
 4. [Hệ Thống Trộn Biến Cốt Lõi & Bảng Ánh Xạ Cơ Sở Dữ Liệu (Database Schema Mapping Matrix)](#4-hệ-thống-trộn-biến-cốt-lõi-interpolation-engine--token-catalog)
    - [4.1. Danh mục Token Biến Chuẩn](#41-danh-mục-token-biến-chuẩn-standard-token-catalog)
    - [4.2. Khung Ngữ Cảnh Dữ Liệu InterpolationContext](#42-khung-ngữ-cảnh-dữ-liệu-interpolationcontext)
@@ -96,6 +97,7 @@ src/
         ├── chat-assistant/                # 9. Trợ lý AI Chat Đa kênh (M10)
         ├── analytics/                     # 10. Báo cáo & Giám sát AI (M11)
         ├── platform-connections/          # 11. Kết nối Nền tảng (bổ sung 17/09, P-Fix-5)
+        ├── coordinator/                   # 12. Điều phối Đơn hàng (Coordinator Operations)
         └── index.ts                       # Barrel export toàn bộ hệ thống
 ```
 
@@ -280,6 +282,32 @@ src/
 |---|---|---|---|
 | `platform-account-card.tsx` | Connection Card | Thẻ hiển thị 1 tài khoản nền tảng (Facebook/TikTok/Zalo...) — trạng thái đăng nhập, lần đăng nhập gần nhất, nút kết nối/kiểm tra/sửa/ngắt kết nối | `platform: PlatformConfig`, `account?`, `loadingAction?`, `onConnect`, `onLogin`, `onCheck`, `onEdit?`, `onDisconnect` |
 | `connect-account-modal.tsx` | Auth Modal | Modal nhập thông tin đăng nhập/token để kết nối một nền tảng mới | `platformId`, `platformName`, `initialUsername?`, `isOpen`, `isLoading`, `onClose`, `onSave` |
+
+---
+
+### Chức năng 12: Điều phối Đơn hàng (Coordinator Operations)
+> **Đường dẫn thư mục:** `src/components/templates/coordinator/`  
+> **Màn hình sử dụng:** `/dieu-phoi`  
+> **Ghi chú:** Chức năng thứ 12 hoạt động độc lập, quản lý tháp điều phối đơn hàng, phân công đối tác xưởng ngoài, AI QC kiểm định chất lượng đối chiếu Master Index và chứng từ giao hàng POD.
+
+| File Template | Loại | Mục đích & Trách nhiệm | Props cốt lõi |
+|---|---|---|---|
+| `sales-order-intake-modal.tsx` | Order Intake Form (T01) | Modal form tiếp nhận đơn hàng từ Sales với Master Index Selector và Atomic BOM phân rã nguyên tử | `isOpen`, `onClose`, `onSubmit`, `initialRecipe?`, `isSubmitting?` |
+| `sales-order-intake-card.tsx` | Order Intake Card (T01) | Thẻ tóm tắt thông tin tiếp nhận đơn hàng từ Sales (kênh bán, người nhận, lời chúc, định mức) | `orderCode`, `channel`, `salesAgentName`, `customerName`, `recipientName`, `cardMessage`, `recipeTitle`, `totalAmount` |
+| `coordinator-order-brief-card.tsx` | Order Brief (T02) | Thẻ tóm tắt thông số đơn, rủi ro SLA và hành động tiếp theo cho Điều phối viên | `orderCode`, `stageLabel`, `riskLevel`, `recipientName`, `deliveryAddress`, `nextAction` |
+| `missing-info-request-card.tsx` | Missing Info Card (T03) | Phiếu yêu cầu Sales bổ sung thông tin đơn hàng còn thiếu (địa chỉ, số điện thoại, lời chúc) | `orderCode`, `missingFields`, `customerName`, `urgency`, `deadlineTime`, `onSendReminder` |
+| `partner-assignment-modal.tsx` | Assignment Modal (T06) | Modal phân công xưởng hoa/thợ gia công với bảng so sánh điểm tương thích Match Score % | `isOpen`, `orderCode`, `recipeTitle`, `partners`, `onAssign`, `onClose`, `isSubmitting?` |
+| `partner-production-card.tsx` | Production Card (T07) | Phiếu cắm hoa xưởng/thợ hiển thị công thức hoa nguyên tử (BOM) từ Master Index, giấu giá vốn | `orderCode`, `recipeTitle`, `flowers`, `foliage`, `wrapping`, `cardMessage`, `onMarkReady` |
+| `production-update-modal.tsx` | Production Modal (T10/T11) | Modal cập nhật tiến độ gia công xưởng và báo cáo thiếu nguyên liệu/hoa thay thế | `isOpen`, `orderCode`, `recipeTitle`, `bomItems`, `onUpdateProgress`, `onReportMissingMaterial`, `onClose` |
+| `order-planning-modal.tsx` | Order Planning Modal (T02/T04/T05) | Modal lập kế hoạch đơn hàng P2, thẩm định yêu cầu, thiết lập timeline sản xuất và đánh giá rủi ro | `isOpen`, `order`, `onClose`, `onConfirmPlan` |
+| `ai-qc-inspection-modal.tsx` | AI QC Inspection Modal (T14/T15) | Modal kiểm định chất lượng AI QC Chặng P5, đối chiếu side-by-side ảnh mẫu và ảnh thành phẩm thực tế | `isOpen`, `order`, `onClose`, `onApprovePass`, `onRequestRework` |
+| `delivery-dispatch-modal.tsx` | Delivery Dispatch Modal (T20/T21) | Modal điều phối giao hàng Chặng P6, bàn giao shipper và xác nhận bằng chứng giao hoa tận tay POD | `isOpen`, `order`, `onClose`, `onConfirmDelivered` |
+| `order-closure-modal.tsx` | Order Closure Modal (T25/T26) | Modal nghiệm thu và đóng đơn SLA Chặng P7, tổng kết hiệu suất thời gian và chấm sao đánh giá đối tác | `isOpen`, `order`, `onClose`, `onArchiveOrder` |
+| `ai-qc-report-card.tsx` | AI QC (T14/T15) | Phiếu kiểm định chất lượng đối chiếu ảnh thành phẩm của thợ với Master Index và tiêu chuẩn tiệm | `orderCode`, `qcStatus`, `aiScore`, `aiCritique`, `finishedImageUrls`, `checklist` |
+| `delivery-pod-card.tsx` | POD Receipt (T21) | Phiếu giao hàng và bằng chứng người nhận ký nhận (Proof of Delivery) | `orderCode`, `shipperName`, `recipientName`, `isDelivered`, `podImageUrl` |
+| `exception-resolution-card.tsx` | Exception Card (T22) | Thẻ ghi nhận và xử lý sự cố phát sinh (hết hoa, đổi mẫu, trễ shipper) | `orderCode`, `exceptionCode`, `type`, `severity`, `description`, `resolutionPlan` |
+| `order-closure-learning-card.tsx` | Closure & SLA Card (T25/T26/T27) | Thẻ nghiệm thu đơn, đánh giá SLA, giải ngân thợ/xưởng và trích xuất bài học vận hành | `orderCode`, `customerRating`, `completionTime`, `slaMet`, `payoutAmount`, `learningNotes` |
+
 
 ---
 

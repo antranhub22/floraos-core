@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-01-intake.output.schema.json",
+  "title": "Tiếp nhận Đơn hàng — Đầu ra",
+  "description": "Nạp đơn hàng vào Tháp Điều phối và khởi tạo hồ sơ theo dõi",
+  "x-floraos": {
+    "stepId": "01",
+    "step": 1,
+    "code": "INTAKE",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/coordinator/intake",
+      "capability": "O1"
+    },
+    "source": "src/modules/coordinator/contracts/step-01-intake.ts",
+    "direction": "output",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:coordinator`."
+  },
+  "type": "object",
+  "properties": {
+    "coordinationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "orderCode": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "INTAKE",
+        "VALIDATING",
+        "PLANNING",
+        "ASSIGNING",
+        "IN_PRODUCTION",
+        "QUALITY_CHECK",
+        "DISPATCHING",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION"
+      ]
+    },
+    "riskLevel": {
+      "type": "string",
+      "enum": [
+        "NORMAL",
+        "ATTENTION",
+        "AT_RISK",
+        "CRITICAL"
+      ]
+    },
+    "customerSnapshot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "NEW",
+            "BRONZE",
+            "SILVER",
+            "GOLD",
+            "VIP"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "phone",
+        "tier"
+      ],
+      "additionalProperties": false
+    },
+    "deliverySnapshot": {
+      "type": "object",
+      "properties": {
+        "recipientName": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "address": {
+          "type": "object",
+          "properties": {
+            "street": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ward": {
+              "type": "string",
+              "minLength": 1
+            },
+            "district": {
+              "type": "string",
+              "minLength": 1
+            },
+            "city": {
+              "type": "string",
+              "minLength": 1
+            },
+            "country": {
+              "default": "Việt Nam",
+              "type": "string"
+            },
+            "formattedAddress": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "street",
+            "ward",
+            "district",
+            "city",
+            "country"
+          ],
+          "additionalProperties": false
+        },
+        "requiredTime": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "recipientName",
+        "phone",
+        "address",
+        "requiredTime"
+      ],
+      "additionalProperties": false
+    },
+    "productCount": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "receivedAt": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "coordinationId",
+    "orderId",
+    "orderCode",
+    "stage",
+    "riskLevel",
+    "customerSnapshot",
+    "deliverySnapshot",
+    "productCount",
+    "receivedAt"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
+      "orderId": "550e8400-e29b-41d4-a716-446655440000",
+      "orderCode": "FLR-2026-001",
+      "stage": "INTAKE",
+      "riskLevel": "NORMAL",
+      "customerSnapshot": {
+        "id": "c1b2c3d4-e29b-41d4-a716-446655440002",
+        "name": "Nguyễn Văn An",
+        "phone": "0901234567",
+        "tier": "GOLD"
+      },
+      "deliverySnapshot": {
+        "recipientName": "Trần Thị Bình",
+        "phone": "0912345678",
+        "address": {
+          "street": "Số 18, Ngõ 95, Đường Chùa Bộc",
+          "ward": "Phường Trung Liệt",
+          "district": "Quận Đống Đa",
+          "city": "Thành phố Hà Nội",
+          "country": "Việt Nam",
+          "formattedAddress": "Số 18, Ngõ 95, Đường Chùa Bộc, Phường Trung Liệt, Quận Đống Đa, Thành phố Hà Nội, Việt Nam"
+        },
+        "requiredTime": "2026-09-25T17:00:00.000Z"
+      },
+      "productCount": 1,
+      "receivedAt": "2026-09-25T10:00:00.000Z"
+    }
+  ]
+}

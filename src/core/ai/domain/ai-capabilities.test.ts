@@ -8,9 +8,9 @@ import {
 } from "./ai-capabilities"
 
 describe("sổ đăng ký năng lực AI", () => {
-  it("36 năng lực, mã AIC-01…AIC-36 liên tục", () => {
-    expect(ALL_AI_CAPABILITY_CODES).toHaveLength(36)
-    for (let i = 1; i <= 36; i += 1) {
+  it("37 năng lực, mã AIC-01…AIC-37 liên tục", () => {
+    expect(ALL_AI_CAPABILITY_CODES).toHaveLength(37)
+    for (let i = 1; i <= 37; i += 1) {
       expect(AI_CAPABILITIES[`AIC-${String(i).padStart(2, "0")}`]).toBeDefined()
     }
   })

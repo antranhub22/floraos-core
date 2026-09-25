@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-03-assign-partner.output.schema.json",
+  "title": "Phân công Đối tác / Thợ cắm — Đầu ra",
+  "description": "Khớp đối tác tối ưu và phát hành Phiếu cắm hoa (Template T07)",
+  "x-floraos": {
+    "stepId": "03",
+    "step": 3,
+    "code": "ASSIGN_PARTNER",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/coordinator/assign-partner",
+      "capability": "O1"
+    },
+    "source": "src/modules/coordinator/contracts/step-03-assign-partner.ts",
+    "direction": "output",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:coordinator`."
+  },
+  "type": "object",
+  "properties": {
+    "coordinationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "partnerId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "partnerName": {
+      "type": "string"
+    },
+    "partnerPhone": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "INTAKE",
+        "VALIDATING",
+        "PLANNING",
+        "ASSIGNING",
+        "IN_PRODUCTION",
+        "QUALITY_CHECK",
+        "DISPATCHING",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION"
+      ]
+    },
+    "assignedAt": {
+      "type": "string"
+    },
+    "productionCardSnapshot": {
+      "type": "object",
+      "properties": {
+        "orderCode": {
+          "type": "string"
+        },
+        "recipeTitle": {
+          "type": "string"
+        },
+        "targetReadyTime": {
+          "type": "string"
+        },
+        "flowerBomSummary": {
+          "type": "string"
+        },
+        "wrapRibbonSummary": {
+          "type": "string"
+        },
+        "cardMessage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderCode",
+        "recipeTitle",
+        "targetReadyTime",
+        "flowerBomSummary",
+        "wrapRibbonSummary",
+        "cardMessage"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "coordinationId",
+    "partnerId",
+    "partnerName",
+    "partnerPhone",
+    "stage",
+    "assignedAt",
+    "productionCardSnapshot"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
+      "partnerId": "b1b2c3d4-e29b-41d4-a716-446655440003",
+      "partnerName": "Flora Boutique Ba Đình",
+      "partnerPhone": "0988776655",
+      "stage": "ASSIGNING",
+      "assignedAt": "2026-09-25T10:15:00.000Z",
+      "productionCardSnapshot": {
+        "orderCode": "FLR-2026-001",
+        "recipeTitle": "Bó Hồng Ohara Kem Sang Trọng",
+        "targetReadyTime": "2026-09-25T16:15:00.000Z",
+        "flowerBomSummary": "15 Hồng Ohara Kem (Chủ đạo), 5 Baby Trắng (Điểm xuyến)",
+        "wrapRibbonSummary": "Giấy xi măng mộc mạc, Nơ nhung đỏ rực",
+        "cardMessage": "Chúc mừng sinh nhật em yêu!"
+      }
+    }
+  ]
+}

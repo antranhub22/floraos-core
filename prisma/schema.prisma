@@ -163,8 +163,13 @@ model organizations {
   product_analysis_runs      product_analysis_runs[]
   campaign_packages          campaign_packages[]
   content_drafts             content_drafts[]
+  content_generations        content_generations[]
   voice_clones               voice_clones[]
   music_tracks               music_tracks[]
+  partners                   partners[]
+  order_coordinations        order_coordinations[]
+  order_qc_records           order_qc_records[]
+  order_exceptions           order_exceptions[]
 }
 
 model workspaces {
@@ -1212,6 +1217,9 @@ model orders {
   items             order_items[]
   assignments       order_assignments[]
   events            order_events[]
+  coordination      order_coordinations?
+  qc_records        order_qc_records[]
+  exceptions        order_exceptions[]
 
   @@unique([organization_id, code])
   @@index([organization_id, status])
@@ -1899,6 +1907,57 @@ model content_drafts {
   @@index([organization_id, updated_at])
 }
 
+/// Kết quả Content Engine (P27, quyết định PO 25/09/2026). TENANT. Một bản ghi
+/// mỗi lượt viết bài của chuỗi agent Strategist→Writer→Critic→Rewriter (Đợt 2)
+/// — brief chụp sẵn tại thời điểm chạy, phiên bản prompt/rubric, bài theo từng
+/// kênh kèm điểm, để tái hiện/so sánh và nâng cấp đo được (mục 5 kế hoạch).
+model content_generations {
+  id              String  @id @default(uuid())
+  organization_id String
+  job_id          String?
+  /// creative_studio | content_engine_ui | package_rewrite
+  origin          String
+  asset_id        String?
+  product_id      String?
+  topic_id        String?
+  scene_plan_id   String?
+  /// AUTHENTIC | CREATIVE — vắng khi không gắn với kịch bản Chặng 05
+  mode            String?
+
+  /// Kênh đã chạy — facebook | instagram | tiktok | zalo
+  channels Json
+  /// Bản chụp Content Brief v1 tại thời điểm chạy (`contracts/brief.ts`).
+  brief    Json
+  /// Trùng `contracts/brief.ts#BRIEF_VERSION` tại thời điểm chạy.
+  brief_version Int
+  /// { strategist, writer, critic, rewriter } — mã phiên bản prompt mỗi bước.
+  prompt_versions Json
+  rubric_version  String
+
+  /// Kết quả Strategist — thông điệp chính + góc/hook/dàn ý mỗi kênh.
+  strategy Json?
+  /// [{ channel, text, hashtags, fact_ids, scores, rounds, needs_review, source }]
+  posts         Json
+  overall_score Float?
+  /// Bài sau khi chủ tiệm sửa rồi duyệt — nguồn học phong cách tiệm (Đợt 4).
+  approved_posts Json?
+
+  /// DRAFT | APPROVED | SCHEDULED
+  status          String  @default("DRAFT")
+  /// Mã bài bên SocialFlow sau khi gửi Lịch đăng (Đợt 3).
+  social_post_ids Json?
+  created_by      String
+  approved_by     String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, asset_id, topic_id, mode])
+  @@index([organization_id, created_at])
+}
+
 /// Giọng nhân bản của chủ tiệm (Khu vực C — Voice Clone, 24/09/2026). TENANT.
 /// Mẫu giọng lưu ở kho (`sample_storage_key`); worker `audio.voice_clone` gửi
 /// mẫu lên ElevenLabs Instant Voice Clone và ghi `provider_voice_id`.
@@ -1954,3 +2013,128 @@ model music_tracks {
 
   @@index([organization_id, mood])
 }
+
+// ── Chức năng 12: Điều phối Đơn hàng & Control Tower ─────────────────────────
+
+enum coordinator_stage {
+  INTAKE
+  VALIDATING
+  PLANNING
+  ASSIGNING
+  IN_PRODUCTION
+  QUALITY_CHECK
+  DISPATCHING
+  DELIVERED
+  COMPLETED
+  EXCEPTION
+}
+
+enum coordination_risk_level {
+  NORMAL
+  ATTENTION
+  AT_RISK
+  CRITICAL
+}
+
+enum qc_record_status {
+  PENDING
+  PASSED
+  REJECTED
+  REWORK_REQUESTED
+}
+
+/// Mạng lưới đối tác xưởng ngoài / thợ cắm hoa. TENANT ISOLATION.
+model partners {
+  id              String   @id @default(uuid())
+  organization_id String
+  code            String
+  name            String
+  phone           String
+  address         String?
+  district        String?
+  province        String?
+  tier            String   @default("STANDARD")
+  rating          Decimal  @default(5.0) @db.Decimal(3, 2)
+  capacity_daily  Int      @default(10)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization    organizations         @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  coordinations   order_coordinations[]
+
+  @@unique([organization_id, code])
+  @@index([organization_id, is_active])
+}
+
+/// Hồ sơ điều phối tiến trình của từng đơn hàng. TENANT ISOLATION.
+model order_coordinations {
+  id                    String                  @id @default(uuid())
+  organization_id       String
+  order_id              String                  @unique
+  partner_id            String?
+  coordinator_id        String?
+  stage                 coordinator_stage       @default(INTAKE)
+  risk_level            coordination_risk_level @default(NORMAL)
+  risk_reason           String?
+  next_action           String?
+  next_action_due       DateTime?
+  estimated_delivery_at DateTime?
+  actual_delivery_at    DateTime?
+  metadata              Json?
+  created_at            DateTime                @default(now())
+  updated_at            DateTime                @updatedAt
+
+  organization          organizations           @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order                 orders                  @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  partner               partners?               @relation(fields: [partner_id], references: [id])
+
+  @@index([organization_id, stage])
+  @@index([organization_id, risk_level])
+}
+
+/// Hồ sơ kiểm tra chất lượng sản phẩm hoa cắm (QC). TENANT ISOLATION.
+model order_qc_records {
+  id               String           @id @default(uuid())
+  organization_id  String
+  order_id         String
+  inspector_id     String?
+  status           qc_record_status @default(PENDING)
+  ai_score         Int?
+  ai_critique      String?
+  image_urls       Json?
+  checklist_result Json?
+  notes            String?
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+
+  organization     organizations    @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order            orders           @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id])
+}
+
+/// Nhật ký sự cố và ngoại lệ phát sinh trong quá trình điều phối. TENANT ISOLATION.
+model order_exceptions {
+  id              String   @id @default(uuid())
+  organization_id String
+  order_id        String
+  code            String
+  type            String
+  severity        String   @default("MEDIUM")
+  description     String
+  resolution      String?
+  status          String   @default("OPEN")
+  reported_by     String?
+  resolved_by     String?
+  resolved_at     DateTime?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization    organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id])
+  @@index([organization_id, status])
+}
+

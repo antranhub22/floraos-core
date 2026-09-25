@@ -26,6 +26,7 @@ import {
   BarChart3,
   ShieldCheck,
   Wand2,
+  Radio,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
@@ -102,6 +103,13 @@ const TOOL_ITEMS: NavItem[] = [
   { href: "/khach-hang", label: "CRM & Khách hàng", icon: Users },
   { href: "/don-hang", label: "Đơn hàng & SLA", icon: ShoppingBag },
   { href: "/so-lieu", label: "Số liệu & Học máy", icon: BarChart3 },
+  {
+    href: "/dieu-phoi",
+    label: "Điều phối Đơn hàng",
+    icon: Radio,
+    badge: "Tháp Vận Hành",
+    badgeColor: "bg-amber-100 text-amber-700",
+  },
 ]
 
 // 4. Group 4: Vận Hành Tiệm & Trợ Lý (Shop Operations & Assistant)

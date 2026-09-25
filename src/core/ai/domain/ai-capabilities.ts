@@ -59,7 +59,7 @@ const DEFINITIONS: Record<string, Omit<AiCapabilityDefinition, "code">> = {
   "AIC-21": { name: "text_to_speech",              module: "M04c", kind: "generative",    needsApproval: false, privacyFloor: "PUBLIC",    channels: ["pronunciation"] },
   "AIC-22": { name: "speech_to_text",              module: "M04c", kind: "generative",    needsApproval: false, privacyFloor: "PUBLIC",    channels: ["alignment"] },
   "AIC-23": { name: "content_generation",          module: "M07",  kind: "generative",    needsApproval: true,  privacyFloor: "SHOP",      channels: ["factual", "brand", "platform", "readability"] },
-  "AIC-24": { name: "content_qa",                  module: "M07",  kind: "measuring",     needsApproval: false, privacyFloor: "SHOP",      channels: ["factual", "brand", "platform"] },
+  "AIC-24": { name: "content_qa",                  module: "M07",  kind: "measuring",     needsApproval: false, privacyFloor: "SHOP",      channels: ["factual", "brand", "platform", "story"] },
   "AIC-25": { name: "catalog_copy",                module: "M06",  kind: "generative",    needsApproval: true,  privacyFloor: "SHOP",      channels: ["factual", "brand", "readability"] },
   "AIC-26": { name: "landing_page_plan",           module: "M05",  kind: "generative",    needsApproval: true,  privacyFloor: "SHOP",      channels: ["plan_valid", "brand"] },
   "AIC-27": { name: "product_embedding",           module: "M03",  kind: "generative",    needsApproval: false, privacyFloor: "SHOP",      channels: [] },
@@ -72,6 +72,7 @@ const DEFINITIONS: Record<string, Omit<AiCapabilityDefinition, "code">> = {
   "AIC-34": { name: "learning_pattern",            module: "M11",  kind: "generative",    needsApproval: false, privacyFloor: "SHOP",      channels: ["sample_size", "effect_measured"] },
   "AIC-35": { name: "market_intel.topic_canonicalize", module: "MI", kind: "generative", needsApproval: false, privacyFloor: "PUBLIC",    channels: ["canonical_match"] },
   "AIC-36": { name: "market_intel.opportunity_draft",  module: "MI", kind: "generative", needsApproval: true,  privacyFloor: "SHOP",      channels: ["factual", "brand"] },
+  "AIC-37": { name: "content_strategy",            module: "M07",  kind: "generative",    needsApproval: false, privacyFloor: "SHOP",      channels: ["factual", "brand"] },
 }
 
 export const AI_CAPABILITIES: Readonly<Record<string, AiCapabilityDefinition>> =

@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-02-validate-plan.output.schema.json",
+  "title": "Thẩm định & Lập Kế hoạch — Đầu ra",
+  "description": "Đối chiếu BOM Master Index, dự báo tiến độ và lập mốc giờ SLA",
+  "x-floraos": {
+    "stepId": "02",
+    "step": 2,
+    "code": "VALIDATE_PLAN",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/coordinator/validate-plan",
+      "capability": "O1"
+    },
+    "source": "src/modules/coordinator/contracts/step-02-validate-plan.ts",
+    "direction": "output",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:coordinator`."
+  },
+  "type": "object",
+  "properties": {
+    "coordinationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "INTAKE",
+        "VALIDATING",
+        "PLANNING",
+        "ASSIGNING",
+        "IN_PRODUCTION",
+        "QUALITY_CHECK",
+        "DISPATCHING",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION"
+      ]
+    },
+    "riskLevel": {
+      "type": "string",
+      "enum": [
+        "NORMAL",
+        "ATTENTION",
+        "AT_RISK",
+        "CRITICAL"
+      ]
+    },
+    "isFeasible": {
+      "type": "boolean"
+    },
+    "timeline": {
+      "type": "object",
+      "properties": {
+        "orderReceivedAt": {
+          "type": "string"
+        },
+        "latestStartProductionAt": {
+          "type": "string"
+        },
+        "targetQcReadyAt": {
+          "type": "string"
+        },
+        "targetDispatchAt": {
+          "type": "string"
+        },
+        "targetDeliveryAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderReceivedAt",
+        "latestStartProductionAt",
+        "targetQcReadyAt",
+        "targetDispatchAt",
+        "targetDeliveryAt"
+      ],
+      "additionalProperties": false
+    },
+    "materialCheck": {
+      "type": "object",
+      "properties": {
+        "totalStems": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "availableStems": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "hasMissingFlowers": {
+          "type": "boolean"
+        },
+        "missingFlowersList": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "totalStems",
+        "availableStems",
+        "hasMissingFlowers",
+        "missingFlowersList"
+      ],
+      "additionalProperties": false
+    },
+    "validationNotes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "coordinationId",
+    "stage",
+    "riskLevel",
+    "isFeasible",
+    "timeline",
+    "materialCheck",
+    "validationNotes"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
+      "stage": "PLANNING",
+      "riskLevel": "NORMAL",
+      "isFeasible": true,
+      "timeline": {
+        "orderReceivedAt": "2026-09-25T10:00:00.000Z",
+        "latestStartProductionAt": "2026-09-25T15:30:00.000Z",
+        "targetQcReadyAt": "2026-09-25T16:15:00.000Z",
+        "targetDispatchAt": "2026-09-25T16:30:00.000Z",
+        "targetDeliveryAt": "2026-09-25T17:00:00.000Z"
+      },
+      "materialCheck": {
+        "totalStems": 20,
+        "availableStems": 20,
+        "hasMissingFlowers": false,
+        "missingFlowersList": []
+      },
+      "validationNotes": "Đủ nguyên liệu hoa theo Master Index BOM. Thời gian đệm 30 phút an toàn."
+    }
+  ]
+}

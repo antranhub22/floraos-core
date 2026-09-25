@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-04-production.output.schema.json",
+  "title": "Giám sát Tiến độ Cắm hoa — Đầu ra",
+  "description": "Cập nhật tiến trình cắm hoa thực tế tại xưởng và cảnh báo nguy cơ trễ hẹn",
+  "x-floraos": {
+    "stepId": "04",
+    "step": 4,
+    "code": "PRODUCTION",
+    "endpoint": {
+      "method": "POST",
+      "path": "/api/v1/coordinator/production-update",
+      "capability": "O1"
+    },
+    "source": "src/modules/coordinator/contracts/step-04-production.ts",
+    "direction": "output",
+    "generated": "SINH TỰ ĐỘNG — không sửa tay. Sửa zod ở tệp nguồn rồi chạy `npm run gen:schemas:coordinator`."
+  },
+  "type": "object",
+  "properties": {
+    "coordinationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "INTAKE",
+        "VALIDATING",
+        "PLANNING",
+        "ASSIGNING",
+        "IN_PRODUCTION",
+        "QUALITY_CHECK",
+        "DISPATCHING",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION"
+      ]
+    },
+    "riskLevel": {
+      "type": "string",
+      "enum": [
+        "NORMAL",
+        "ATTENTION",
+        "AT_RISK",
+        "CRITICAL"
+      ]
+    },
+    "currentProgressPercent": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "lastUpdated": {
+      "type": "string"
+    },
+    "hasActiveIssue": {
+      "type": "boolean"
+    },
+    "issueSummary": {
+      "type": "string"
+    },
+    "nextAction": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "coordinationId",
+    "stage",
+    "riskLevel",
+    "currentProgressPercent",
+    "lastUpdated",
+    "hasActiveIssue",
+    "nextAction"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "coordinationId": "a1b2c3d4-e29b-41d4-a716-446655440001",
+      "stage": "QUALITY_CHECK",
+      "riskLevel": "NORMAL",
+      "currentProgressPercent": 100,
+      "lastUpdated": "2026-09-25T16:10:00.000Z",
+      "hasActiveIssue": false,
+      "nextAction": "Yêu cầu thợ gửi ảnh chụp 4 góc để AI Vision QC đối chiếu Master Index"
+    }
+  ]
+}

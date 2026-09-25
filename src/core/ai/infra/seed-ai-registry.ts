@@ -54,6 +54,8 @@ export async function seedAiCapabilities(): Promise<number> {
  * bản bối cảnh theo chủ đề của Creative Studio (`creative.scene_plan`), một lượt
  * LLM văn bản. Chạy lại seed để cột `capabilities` của DB có mã này.
  * Cùng ngày: thêm `AIC-23 content_generation` — AI viết lại bài đăng ở Chặng 07.
+ * 25/09/2026: thêm `AIC-37 content_strategy` — Strategist của Content Engine
+ * (P27), bước dựng góc/hook/dàn ý theo kênh trước khi Writer viết bài.
  */
 export async function seedVisionModels(): Promise<number> {
   const models = [
@@ -62,7 +64,7 @@ export async function seedVisionModels(): Promise<number> {
       display_name: "Đầy đủ",
       provider: "openai",
       mode: "API" as const,
-      capabilities: ["AIC-01", "AIC-02", "AIC-03", "AIC-04", "AIC-10", "AIC-18", "AIC-23"],
+      capabilities: ["AIC-01", "AIC-02", "AIC-03", "AIC-04", "AIC-10", "AIC-18", "AIC-23", "AIC-37"],
       license: "Điều khoản thương mại của nhà cung cấp",
       commercial_use: true,
       territory: "Toàn cầu theo điều khoản nhà cung cấp",
@@ -78,7 +80,7 @@ export async function seedVisionModels(): Promise<number> {
       display_name: "Gọn",
       provider: "openai",
       mode: "API" as const,
-      capabilities: ["AIC-01", "AIC-02", "AIC-04", "AIC-18", "AIC-23"],
+      capabilities: ["AIC-01", "AIC-02", "AIC-04", "AIC-18", "AIC-23", "AIC-37"],
       license: "Điều khoản thương mại của nhà cung cấp",
       commercial_use: true,
       territory: "Toàn cầu theo điều khoản nhà cung cấp",

@@ -18,24 +18,7 @@
 import { handle } from "@/core/http/response"
 import { AppError } from "@/core/http/errors"
 import { callProxy, toProxyError } from "@/modules/proxy/use-cases/proxy-request"
-import type { ProxyClient } from "@/modules/proxy/domain/proxy-rules"
-
-/** Whitelist path prefix theo client — không proxy linh tinh. */
-const ALLOWED_PREFIX: Record<ProxyClient, string[]> = {
-  SOCIALFLOW: ["api/m04b", "api/m07", "api/posts", "api/accounts"],
-  LOCALBUDD: [
-    "api/v1/catalog-links",
-    "api/v1/projects",
-    "api/v1/generate",
-    "api/v1/pages",
-    "api/v1/worker/cron",
-  ],
-}
-
-/** Kiểm path được phép proxy cho client này. */
-function isAllowedPath(client: ProxyClient, path: string): boolean {
-  return ALLOWED_PREFIX[client].some((prefix) => path === prefix || path.startsWith(prefix + "/"))
-}
+import { isAllowedProxyPath, type ProxyClient } from "@/modules/proxy/domain/proxy-rules"
 
 /** Trả về Response từ proxy result. */
 function toResponse(res: { status: number; headers: Record<string, string>; body: string }): Response {
@@ -62,7 +45,7 @@ async function proxyHandler(
 
   const path = "/" + pathParts.join("/")
   const normalized = path.replace(/^\//, "")
-  if (!isAllowedPath(client, normalized)) {
+  if (!isAllowedProxyPath(client, normalized)) {
     throw new AppError("NOT_FOUND", "Đường dẫn này không được proxy")
   }
 

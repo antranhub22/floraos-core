@@ -10,7 +10,7 @@
     "worker:vision": "cd workers && set -a && [ -f ../.env ] && . ../.env && set +a && if [ -f .venv/bin/python ]; then .venv/bin/python -m vision.jobs.worker; else python3 -m vision.jobs.worker; fi",
     "worker:media": "cd workers && set -a && [ -f ../.env ] && . ../.env && set +a && if [ -f .venv/bin/python ]; then .venv/bin/python -m media_ai.jobs.worker; else python3 -m media_ai.jobs.worker; fi",
     "worker:video": "cd workers && set -a && [ -f ../.env ] && . ../.env && set +a && if [ -f .venv/bin/python ]; then .venv/bin/python -m media_ai.video.video_worker; else python3 -m media_ai.video.video_worker; fi",
-    "worker:socialflow": "if [ -d ../SocialFlow/backend ]; then cd ../SocialFlow/backend && if [ -f ../venv/bin/python ]; then ../venv/bin/python -m uvicorn main:app --port 8000 --reload; else uvicorn main:app --port 8000 --reload; fi; else echo '[socialflow] Khong tim thay ../SocialFlow, bo qua worker nay.' && sleep 86400; fi",
+    "worker:socialflow": "SF_DIR=\"${SOCIALFLOW_DIR:-../SocialFlow}\"; if [ -d \"$SF_DIR/backend\" ]; then cd \"$SF_DIR/backend\" && if [ -f ../venv/bin/python ]; then ../venv/bin/python -m uvicorn main:app --port 8000 --reload; else uvicorn main:app --port 8000 --reload; fi; else echo \"[socialflow] Khong tim thay $SF_DIR/backend (dat SOCIALFLOW_DIR tro toi repo SocialFlow), bo qua worker nay.\" && sleep 86400; fi",
     "worker:localbudd": "if [ -d ../LocalBudd ]; then cd ../LocalBudd && npm run dev; else echo '[localbudd] Khong tim thay ../LocalBudd, bo qua worker nay.' && sleep 86400; fi",
     "worker:market-intelligence": "tsx --env-file-if-exists=.env src/modules/market-intelligence/jobs/worker.ts",
     "build": "next build",
@@ -40,6 +40,10 @@
     "check:template-ssot": "tsx scripts/check-template-ssot.ts",
     "gen:schemas:creative": "tsx scripts/gen-creative-studio-schemas.ts",
     "check:schemas:creative": "tsx scripts/gen-creative-studio-schemas.ts --check",
+    "gen:schemas:coordinator": "tsx scripts/gen-coordinator-schemas.ts",
+    "check:schemas:coordinator": "tsx scripts/gen-coordinator-schemas.ts --check",
+    "gen:schemas:content-engine": "tsx scripts/gen-content-engine-schemas.ts",
+    "check:schemas:content-engine": "tsx scripts/gen-content-engine-schemas.ts --check",
     "check:docs": "node scripts/check-docs.mjs"
   },
   "dependencies": {
