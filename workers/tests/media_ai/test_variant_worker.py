@@ -225,6 +225,18 @@ class TestDungBienTheVoiExpander:
         )
 
         master = _anh_mau(200, 150)
+        # Cố định mặt nạ chủ thể (25/09/2026): ca này khoá đường nối expander →
+        # paste-back, không khoá chất lượng tách nền. Để mô hình thật tách một
+        # ảnh nhiễu thì kết quả phụ thuộc mô hình mặc định — từ khi mặc định
+        # đổi sang `isnet-general-use` (Đợt 3), mặt nạ của ảnh nhiễu gần rỗng
+        # (alpha tối đa ~69), dán lại chỉ là điểm ảnh trong suốt và ca đỏ dù
+        # paste-back chạy đúng.
+        alpha = _mat_na(200, 150)
+        rgba = master.convert("RGBA")
+        rgba.putalpha(alpha)
+        monkeypatch.setattr(
+            "media_ai.jobs.variant_worker._doan_chu_the_tho", lambda *_a, **_k: (rgba, alpha)
+        )
         buf = BytesIO()
         master.convert("RGB").save(buf, format="PNG")
 
