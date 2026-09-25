@@ -40,7 +40,7 @@ export type NavItem = {
 }
 
 // 1. Group 1: Hành Trình Giá Trị (Primary Outcome - Master Journey)
-const OUTCOME_ITEMS: NavItem[] = [
+export const OUTCOME_ITEMS: NavItem[] = [
   { href: "/", label: "Trang chủ", icon: Home },
   {
     href: "/market-intelligence",
@@ -59,7 +59,7 @@ const OUTCOME_ITEMS: NavItem[] = [
 ]
 
 // 2. Group 2: Tài Sản & Tri Thức Tiệm (Tenant Data & Identity Assets)
-const IDENTITY_ITEMS: NavItem[] = [
+export const IDENTITY_ITEMS: NavItem[] = [
   { href: "/kho-du-lieu", label: "Kho Dữ liệu", icon: Folder },
   { href: "/kho-templates", label: "Kho Templates", icon: LayoutTemplate },
   {
@@ -78,7 +78,7 @@ const IDENTITY_ITEMS: NavItem[] = [
 ]
 
 // 3. Group 3: Bộ Công Cụ Độc Lập (Independent Tool Suite - 11 Chức Năng Độc Lập)
-const TOOL_ITEMS: NavItem[] = [
+export const TOOL_ITEMS: NavItem[] = [
   {
     href: "/tai-anh",
     label: "Quét hoa Vision",
@@ -105,10 +105,19 @@ const TOOL_ITEMS: NavItem[] = [
 ]
 
 // 4. Group 4: Vận Hành Tiệm & Trợ Lý (Shop Operations & Assistant)
-const OPERATION_ITEMS: NavItem[] = [
+export const OPERATION_ITEMS: NavItem[] = [
   { href: "/muc-dung", label: "Mức dùng Credit", icon: WalletCards },
   { href: "/audit", label: "Nhật ký Kiểm toán", icon: ShieldCheck, code: "A4" },
   { href: "/cai-dat", label: "Cài đặt", icon: Settings2 },
+]
+
+// Bốn nhóm menu dùng chung cho thanh bên desktop và menu đầy đủ trên mobile
+// (`mobile-module-menu.tsx`, nợ #135) — một nguồn duy nhất để hai nơi không lệch nhau.
+export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+  { title: "Hành Trình Giá Trị", items: OUTCOME_ITEMS },
+  { title: "Tài Sản & Tri Thức", items: IDENTITY_ITEMS },
+  { title: "Công Cụ Độc Lập", items: TOOL_ITEMS },
+  { title: "Vận Hành Tiệm", items: OPERATION_ITEMS },
 ]
 
 export function DesktopNav() {

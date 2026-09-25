@@ -3,6 +3,8 @@
 // "Thêm" — trước đây là màn "Sắp có". Nay là nơi tạo sản phẩm thủ công
 // (POST /products, `L2`, đặc tả 06 mục 6) và lối tắt sang luồng tải ảnh
 // (M01) — hai cách duy nhất hiện có để đưa một sản phẩm mới vào hệ thống.
+// Trên điện thoại trang này còn là MENU ĐẦY ĐỦ (nợ #135): thanh bên desktop
+// ẩn trên mobile nên đây là lối vào mọi chức năng ngoài 5 mục của thanh dưới.
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -10,6 +12,7 @@ import { Camera, ChevronRight, TrendingUp } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { MobileModuleMenu } from "@/components/layout/mobile-module-menu"
 
 export default function ThemPage() {
   const router = useRouter()
@@ -82,6 +85,9 @@ export default function ThemPage() {
           </div>
           <ChevronRight size={18} strokeWidth={2} className="text-text-muted" />
         </Card>
+
+        {/* Menu đầy đủ — chỉ hiện trên điện thoại (nợ #135). */}
+        <MobileModuleMenu />
 
         {coTheThemSanPham ? (
           <Card className="flex flex-col gap-3.5 p-[18px]">
