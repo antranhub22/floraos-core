@@ -909,6 +909,15 @@ Lát cắt đầu tiên của ĐP-4a (10 mục, phạm vi lớn — chọn xây 
 - [x] Anh Tony chạy trên máy thật: `npx prisma generate` sạch → `npx prisma migrate deploy` áp thành công → `npm run test:tenant` **281/281 XANH** (sau khi vá 1 hồi quy: `order-repository.ts` module M10 — điểm tạo `orders` thứ hai, thiếu `balance_vnd` khi tạo đơn, gây 500/CHECK violation cho 6 ca; đã thêm `balance_vnd: totalVnd`, eslint sạch). **CỔNG ĐP-4a.3 KHÉP KÍN HOÀN TOÀN.**
 - **CHƯA làm — 9/10 mục còn lại ĐP-4a:** 4a.1 trường T01, 4a.2 tính SLA, 4a.4 hiện 3 số trên UI đơn hàng, 4a.5–4a.8 T02–T05, 4a.9 Form Lập kế hoạch, 4a.10 đăng ký field-registry
 
+## CN12j — Sửa hồi quy P0: priority tự gợi ý làm 422 mọi đơn tạo mới (27/09/2026)
+
+- [x] Phát hiện: Tony chạy `npm run test:tenant` thật, dán kết quả — 26/281 fail, toàn bộ `newOrder()` trả 422 thay vì 201.
+- [x] Chẩn đoán nguyên nhân: `create-coordinator-order.ts` validate `priority` vô điều kiện qua `assertActiveCatalogCode`, kể cả khi giá trị là do `suggestPriority()` tự gợi ý (không phải Sales chọn tay) — trong khi DB test tenant không seed `field_catalog_values` (`db:test:setup` chỉ chạy `prisma db push`, không chạy `nap-danh-muc-truong.ts`), nên danh mục `priority` rỗng → validate luôn thất bại → MỌI đơn tạo mới bị 422.
+- [x] Sửa: chỉ validate qua danh mục khi `input.priority` được client tự gửi; bỏ qua khi máy tự gợi ý (giá trị luôn hợp lệ theo `PRIORITY_TIER_BEHAVIORS` — Lớp mã).
+- [x] Tự kiểm `eslint` sạch.
+- [x] Tự kiểm `npx tsc --noEmit` sạch cho tệp sửa (lỗi còn lại trong tsc là lỗi có sẵn/chờ Tony `prisma generate`, không liên quan).
+- [ ] Chưa tự kiểm được: `npm run test:tenant` (VM cầu nối thiếu binary rollup) — chờ Tony chạy lại xác nhận 281/281 xanh (hoặc tổng số hiện tại, đã +16 test từ ĐP-4a.2).
+
 ## CN12i — Tính SLA giao từ hành vi serviceLevel (ĐP-4a.2, 26/09/2026)
 
 - [x] `sla-calculation.ts` (thuần) — `computeDeliveryTargetAt` theo 4 hành vi OFFSET/EXACT/WINDOW/END_OF_DAY, tham số từ danh mục, mặc định an toàn khi thiếu/không nhận diện được

@@ -135,7 +135,16 @@ export async function createCoordinatorOrder(
   const priority =
     input.priority ??
     suggestPriority({ serviceLevel: input.serviceLevel, orderType: input.orderType, customerTier })
-  await assertActiveCatalogCode("priority", priority, "Mức ưu tiên")
+  // Chỉ kiểm danh mục khi client TỰ chọn priority — giá trị máy tự gợi ý
+  // (suggestPriority) luôn là mã hợp lệ theo PRIORITY_TIER_BEHAVIORS (Lớp mã),
+  // không cần soi qua field_catalog_values (Lớp cấu hình), vốn có thể chưa
+  // được seed ở một số môi trường (vd. DB test tenant — xem TRANG_THAI.md).
+  // Bug đã sửa 27/09/2026: trước đây validate priority vô điều kiện khiến MỌI
+  // đơn hàng bị 422 khi danh mục "priority" trống, kể cả đơn không hề chọn
+  // priority.
+  if (input.priority) {
+    await assertActiveCatalogCode("priority", priority, "Mức ưu tiên")
+  }
 
   // ĐP-4a.2 (26/09/2026), §2.15.2 — mốc giao THẬT tính từ hành vi serviceLevel
   // (tham số đọc từ danh mục), không còn dùng thẳng giờ Sales nhập khi đã
