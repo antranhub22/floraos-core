@@ -12,13 +12,6 @@
  * token TẠI ĐÂY là cách nâng cấp nhận diện hiệu quả nhất, ít rủi ro nhất,
  * phủ toàn bộ hệ thống trong một lần sửa, không phải sửa tay từng file.
  *
- * NGOẠI LỆ CỐ Ý — KHÔNG đụng: khối "Hướng dẫn thao tác" chuẩn hoá
- * (`FeatureGuidanceCard`, viền đỏ đứt nét) giữ NGUYÊN màu đỏ — AGENTS.md
- * mục "Tiêu chuẩn hóa khối hướng dẫn thao tác" cấm đổi màu/cấu trúc/vị trí
- * khối đó khi chưa có phê duyệt riêng của anh Tony, tách biệt khỏi bộ nhận
- * diện thương hiệu vì đây là tín hiệu UX "đọc kỹ, đây là hướng dẫn" — không
- * phải nội dung thương hiệu.
- *
  * Giữ nguyên font "Be Vietnam Pro" — đã hỗ trợ dấu tiếng Việt đầy đủ, đẹp và
  * hiện đại sẵn; đổi sang một font mới (kể cả chỉ cho tiêu đề) có rủi ro thật
  * về hiển thị dấu tiếng Việt nếu font đó không phủ đủ bộ ký tự, nên phân cấp
@@ -27,6 +20,31 @@
  */
 @theme {
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * Thang cỡ chữ chuẩn hóa (T4.1 & T4.2):
+   * 10px, 10.5px, 11px, 11.5px -> text-caption (11px, line-height 1.35)
+   * 12px, 12.5px               -> text-meta (12px, line-height 1.4)
+   * 13px                       -> text-body-sm (13px, line-height 1.5)
+   * 13.5px, 14px               -> text-body (13.5px, line-height 1.5)
+   * 14.5px, 15px               -> text-title-sm (14.5px, line-height 1.4)
+   * 16px, 17px, 18px           -> text-title (17px, line-height 1.3)
+   * 19px, 20px                 -> text-display (20px, line-height 1.25)
+   */
+  --text-caption: 11px;
+  --text-caption--line-height: 1.35;
+  --text-meta: 12px;
+  --text-meta--line-height: 1.4;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 1.5;
+  --text-body: 13.5px;
+  --text-body--line-height: 1.5;
+  --text-title-sm: 14.5px;
+  --text-title-sm--line-height: 1.4;
+  --text-title: 17px;
+  --text-title--line-height: 1.3;
+  --text-display: 20px;
+  --text-display--line-height: 1.25;
 
   /* Đã đối chiếu tỉ lệ tương phản WCAG thật (công thức luminance chuẩn,
      không suy đoán bằng mắt) trước khi chốt bảng màu này:
@@ -54,24 +72,29 @@
   --color-text: #2A1E22;
   --color-text-muted: #7C6B6C;
 
-  /* Màu chức năng (cảnh báo/nguy hiểm) CỐ TÌNH không đổi theo brand — đỏ/cam
-     là tín hiệu phổ quát người dùng đã quen, đổi theo brand sẽ giảm độ an
-     toàn nhận diện lỗi/cảnh báo, không phải chỗ để thể hiện nhận diện thương
-     hiệu. */
+  /* Token mục đang chọn (Selected Item)
+     selected-text/selected = 7.15:1 (đạt chuẩn WCAG AAA/AA) */
+  --color-selected: #F5ECE4;
+  --color-selected-text: #7A2E42;
+
+  /* Màu chức năng (cảnh báo/nguy hiểm/thành công/thông tin) */
   --color-warning: #C97A2E;
   --color-warning-bg: #FBF1E4;
   --color-danger: #C4463D;
   --color-danger-bg: #FBEBE9;
-  /* --color-success (đặc, không chỉ nền) — bổ sung 18/09 khi rà các file
-     social-publishing: nhiều nơi đã dùng `text-success`/`bg-success`/
-     `border-success` (thanh tiến trình, badge trạng thái, stepper vòng đời
-     phát hành) nhưng token đặc chưa từng được khai báo trong @theme — các
-     lớp đó âm thầm không ra CSS hợp lệ từ trước tới giờ (lỗi có sẵn, không
-     phải do đổi bảng màu Mộc Lan lần này). Dùng đúng giá trị đã đối chiếu
-     WCAG AA cho `--color-secondary-text` (6.45:1 trên nền trắng) để vừa sửa
-     lỗi vừa nhất quán với tông xanh lá của bộ nhận diện. */
   --color-success: #52643F;
   --color-success-bg: #EAF0E6;
+  --color-info: #1D4ED8;
+  --color-info-bg: #EFF6FF;
+
+  /* Token khối hướng dẫn FeatureGuidanceCard (K1: giữ nguyên hiển thị thị giác)
+     guidance/guidance-bg = 5.42:1 (đạt WCAG AA);
+     guidance-text/guidance-bg = 12.8:1 (đạt WCAG AAA). */
+  --color-guidance: #B91C1C;
+  --color-guidance-text: #450A0A;
+  --color-guidance-bg: #FEF2F2;
+  --color-guidance-border: #FCA5A5;
+  --color-guidance-tag-bg: #FEE2E2;
 }
 
 html,

@@ -509,6 +509,9 @@ Mọi route nhận `:id` là id HOẶC mã đơn (`FLR-YYMMDD-NNNN`); tổ chứ
 | POST | `/coordinator/orders` | `R2` | Mã đơn do máy chủ cấp, tuần tự theo ngày; `sampleImageUrl` cấm `data:` — ảnh tải lên dùng `sampleAssetId` |
 | GET | `/coordinator/orders/:id` | `R1` | |
 | PATCH | `/coordinator/orders/:id/stage` | `R3` | Kiểm luồng + bằng chứng (đối tác / QC đạt / POD / hết sự cố) |
+| PATCH | `/coordinator/orders/:id/custom-fields` | `R3` | ĐP-3.16 — sửa giá trị trường tự tạo (entity ORDER); trộn vào giá trị cũ, không thay nguyên khối |
+| GET | `/coordinator/orders/:id/payments` | `R1` | ĐP-4a (PO D2) — sổ thu của một đơn |
+| POST | `/coordinator/orders/:id/payments` | `R9`/`R10` | ĐP-4a (PO D2) — ghi một dòng sổ thu. `kind=DEPOSIT`/`BALANCE` đòi `R9`; `kind=REFUND` đòi `R10` (trần cứng điều hành). `orders.paid_vnd`/`balance_vnd` cập nhật cùng giao dịch |
 | POST | `/coordinator/orders/:id/assign-partner` | `R4` | Đối tác cùng tổ chức, đang hoạt động, chưa vượt `capacity_daily` (trừ `overrideCapacity`) |
 | POST | `/coordinator/orders/:id/production` | `R3` | `MARK_READY` bắt buộc ảnh thành phẩm (`assets` cùng tổ chức); `REPORT_MATERIAL_ISSUE` mở sự cố |
 | POST | `/coordinator/orders/:id/qc` | `R3` | Người kiểm kết luận; không đạt bắt buộc lý do; `REJECTED` mở sự cố `QC_FAILURE` |
@@ -520,6 +523,8 @@ Mọi route nhận `:id` là id HOẶC mã đơn (`FLR-YYMMDD-NNNN`); tổ chứ
 | GET | `/coordinator/partners` | `R1` | `?active=1` |
 | POST | `/coordinator/partners` | `R4` | Trùng mã trong tổ chức → 409 |
 | PATCH | `/coordinator/partners/:id` | `R4` | Sửa hồ sơ, tạm ngưng/mở lại |
+| GET | `/field-config` | `R1` | ĐP-3 — cấu hình trường hiệu lực cho tổ chức của người gọi (lớp mã + cấu hình nền tảng + ghi đè theo tổ chức đã cộng sẵn), `?entity=ORDER\|PARTNER`. CHỈ ĐỌC — route tenant không ghi được vào `field_definitions`/`field_config_overrides`, xem mục 21b |
+| GET | `/field-config/catalogs` | `R1` | ĐP-4a.1 — danh mục (§2.15) cho form nhập liệu tenant (T01…), `?keys=priority,serviceLevel,...` (bỏ trống trả hết). CHỈ giá trị đang `is_active`. Khác `/platform/catalogs` (đòi `N12`): route này chỉ đòi đăng nhập tổ chức, không có thao tác ghi |
 
 ## 16. Số liệu và hồ sơ phong cách — M11
 
@@ -655,6 +660,23 @@ P25a chỉ đọc (D-N5 áp dụng cho toàn bộ P25a, không riêng `/health`)
 | GET | `/platform/usage` | `N4` | Usage & chi phí gộp theo (tổ chức, tính năng), toàn hệ thống |
 | GET | `/platform/health` | `N5` | Đếm job theo trạng thái + danh sách job treo (chỉ đọc — không đánh dấu FAILED, xem `scripts/scan-stuck-jobs.ts`) |
 | GET | `/platform/audit-logs` | `N6` | Nhật ký xuyên tổ chức — hợp `audit_logs` mọi tổ chức và `platform_audit_logs` |
+
+## 21b. Nền quản trị trường (ĐP-3, 26/09/2026)
+
+Chín route dưới đây cũng là console vận hành nền tảng (`PlatformContext`, mã `N12`), theo đúng khuôn mục 21 — **có thao tác ghi** (trừ hai route đọc thêm ở cuối bảng, phục vụ Console UI 3.15), khác P25a (chỉ đọc). Đây là tuyến ghi ĐẦU TIÊN của Console Vận hành, dựng theo kế hoạch
+`docs/kien-truc/KE_HOACH_DIEU_PHOI_TRUONG_DU_LIEU.md` mục 6. Mọi thao tác ghi ghi vào `platform_audit_logs` (`recordPlatformAuditLog`). Xem Đặc tả trường §16.2–§16.3 cho nguyên lý "lớp mã / lớp cấu hình" và mức sàn không cấu hình được.
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/platform/fields` | `N12` | Liệt kê trường lõi + trường tự tạo, `?entity=ORDER\|PARTNER` |
+| PATCH | `/platform/fields` | `N12` | Sửa cấu hình platform-wide của MỘT trường đã xây (nhãn, mô tả, mức yêu cầu, hiển thị, danh mục gắn theo). Mức sàn #2 chặn hạ mức yêu cầu của trường lõi xuống dưới lớp mã → 400 |
+| POST | `/platform/fields` | `N12` | Tạo trường TỰ TẠO hoàn toàn mới (D13, Đặc tả trường §16.3). Khoá `cf_…` do máy sinh từ nhãn, không nhận từ client |
+| POST | `/platform/fields/:key/deactivate` | `N12` | Chỉ TẮT — không xoá cứng. Trường lõi `REQUIRED` không tắt được → 400 |
+| GET | `/platform/catalogs` | `N12` | Mọi danh mục (§2.15) kèm giá trị |
+| POST | `/platform/catalogs/:key/values` | `N12` | Thêm giá trị mới. Danh mục CÓ HÀNH VI bắt buộc `behavior` là mã có thật trong `behaviors.ts`; danh mục ĐÓNG từ chối → 400 |
+| PUT | `/platform/organizations/:id/field-overrides` | `N12` | Ghi đè CHỈ áp cho một tổ chức — trường (`target: "field"`) hoặc giá trị danh mục (`target: "catalogValue"`) |
+| GET | `/platform/organizations/:id/field-preview` | `N12` | ĐP-3 3.15 — "tổ chức này sẽ thấy gì" sau khi cộng ghi đè, `?entity=ORDER\|PARTNER`. Dùng chung phép tính với `/field-config` (tenant), chỉ khác ngữ cảnh gọi. CHỈ ĐỌC |
+| GET | `/platform/behaviors` | `N12` | ĐP-3 3.15 — liệt kê mã hành vi có thật trong `field-platform/domain/behaviors.ts` cho một `behavior_kind` (`?kind=…`), để Console gợi ý khi thêm giá trị danh mục CÓ HÀNH VI. CHỈ ĐỌC, không thay luật kiểm ở `upsert-catalog-value.ts` |
 
 ## 22. Phân hệ Nghiên cứu Thị trường & Xu hướng (Market Intelligence Engine, Đợt A mở rộng)
 

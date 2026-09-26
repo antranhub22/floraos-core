@@ -46,5 +46,9 @@ export const resolveAppSession = cache(async function resolveAppSession(
     organization: described.organization
       ? { id: described.organization.id, name: described.organization.name }
       : undefined,
+    // Đặc tả 03b (Role UX): khoá vai + loại tổ chức để chọn trang chủ/thứ tự
+    // điều hướng theo vai. Đã có sẵn trong `describeSession` (GET /auth/me).
+    roleKey: described.membership?.role_key ?? null,
+    organizationType: described.organization?.type ?? null,
   }
 })

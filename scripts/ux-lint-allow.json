@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "rule": "R1",
+      "pathGlob": "src/components/market-intelligence/**",
+      "match": "(tiktok|youtube)",
+      "reason": "Màu nhận diện nền tảng TikTok/YouTube (AGENTS.md Dẫn chứng Video Kép)"
+    },
+    {
+      "rule": "R3",
+      "path": "src/lib/mock-data.ts",
+      "reason": "Màu dữ liệu mẫu của hoa"
+    }
+  ]
+}

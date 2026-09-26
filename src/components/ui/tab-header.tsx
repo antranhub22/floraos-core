@@ -53,6 +53,25 @@ export function TabActionHeader({
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // K2 & 03a UX-010 validation in development
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") {
+      const primaryCount = primaryActions.filter((a) => !a.variant || a.variant === "primary").length
+      if (primaryCount > 1) {
+        console.warn(
+          `[TabActionHeader] Hơn 1 nút chính (${primaryCount}) — vi phạm K2/03a UX-010:`,
+          tabs.map((t) => t.id)
+        )
+      }
+      if (primaryActions.length > 3) {
+        console.warn(
+          `[TabActionHeader] Tổng nút hiển thị vượt quá 3 (${primaryActions.length}) — vi phạm K2/03a UX-010:`,
+          tabs.map((t) => t.id)
+        )
+      }
+    }
+  }, [primaryActions, tabs])
+
   // Close menu on click outside or Escape
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -126,7 +145,7 @@ export function TabActionHeader({
               type="button"
               disabled={tab.disabled}
               onClick={() => onTabChange(tab.id)}
-              className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs sm:text-[13px] font-bold transition-all whitespace-nowrap flex-shrink-0 ${
+              className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs sm:text-[13px] font-bold transition-all whitespace-nowrap flex-shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                 isActive
                   ? "bg-surface text-primary shadow-sm border border-border"
                   : "text-text-muted hover:text-text hover:bg-surface/60"
@@ -136,7 +155,7 @@ export function TabActionHeader({
               <span>{tab.label}</span>
               {tab.badge !== undefined && (
                 <span
-                  className={`ml-0.5 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border ${getBadgeStyles(
+                  className={`ml-0.5 text-caption font-extrabold px-1.5 py-0.2 rounded-full border ${getBadgeStyles(
                     tab.badgeTone
                   )}`}
                 >
@@ -161,7 +180,7 @@ export function TabActionHeader({
                 onClick={action.onClick}
                 disabled={action.disabled || action.loading}
                 title={action.tooltip || action.label}
-                className={`flex items-center gap-1.5 px-3.5 h-8 sm:h-8.5 rounded-xl text-xs font-bold transition-all ${getVariantStyles(
+                className={`flex items-center gap-1.5 px-3.5 h-8 sm:h-8.5 rounded-xl text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${getVariantStyles(
                   action.variant
                 )} ${action.disabled || action.loading ? "opacity-60 cursor-not-allowed" : ""}`}
               >
@@ -183,7 +202,7 @@ export function TabActionHeader({
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 title="Thao tác khác"
                 aria-label="Thao tác khác"
-                className={`flex items-center justify-center h-8 w-8 sm:h-8.5 sm:w-8.5 rounded-xl border border-border bg-surface text-text hover:bg-surface-alt hover:text-primary transition-all shadow-xs ${
+                className={`flex items-center justify-center h-8 w-8 sm:h-8.5 sm:w-8.5 rounded-xl border border-border bg-surface text-text hover:bg-surface-alt hover:text-primary transition-all shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                   isMenuOpen ? "border-primary text-primary ring-2 ring-primary/10" : ""
                 }`}
               >
@@ -193,7 +212,7 @@ export function TabActionHeader({
               {/* Overflow Dropdown Popup */}
               {isMenuOpen && (
                 <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[200px] overflow-hidden rounded-2xl border border-border bg-surface p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-text-muted">
+                  <div className="px-2.5 py-1 text-caption font-extrabold uppercase tracking-wider text-text-muted">
                     Thao tác tab
                   </div>
                   <div className="h-px bg-border my-1" />
@@ -210,7 +229,7 @@ export function TabActionHeader({
                             setIsMenuOpen(false)
                             item.onClick()
                           }}
-                          className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-colors text-left ${
+                          className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-colors text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                             item.destructive
                               ? "text-red-600 hover:bg-red-500/10 dark:hover:bg-red-950/20"
                               : "text-text hover:bg-surface-alt hover:text-primary"

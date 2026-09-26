@@ -126,8 +126,23 @@ export function CatalogManagementTab({
           {filteredProducts.map((p) => {
             const isSelected = selectedIds.includes(p.id)
             return (
-              <Card key={p.id} onClick={() => toggleSelect(p.id)} className={`p-3.5 flex items-center gap-3 cursor-pointer transition-all border ${isSelected ? "border-primary bg-primary-bg/20 shadow-xs" : "hover:border-border-hover"}`}>
-                <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(p.id)} onClick={(e) => e.stopPropagation()} className="h-4 w-4 accent-primary rounded cursor-pointer" />
+              <button
+                key={p.id}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => toggleSelect(p.id)}
+                className={`rounded-2xl border p-3.5 flex items-center gap-3 w-full text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                  isSelected ? "border-primary bg-primary-bg/20 shadow-xs" : "border-border bg-surface hover:border-border-hover"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  readOnly
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="h-4 w-4 accent-primary rounded pointer-events-none"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-bold text-text-muted">{p.code}</span>
@@ -143,7 +158,7 @@ export function CatalogManagementTab({
                     {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p.price)}
                   </div>
                 )}
-              </Card>
+              </button>
             )
           })}
         </div>

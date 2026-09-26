@@ -300,6 +300,18 @@ function FieldCard({
   )
 }
 
+const L0_FIELD_KEYS = new Set([
+  "category",
+  "product_name",
+  "name",
+  "flowers",
+  "totals",
+  "palette_accounting",
+  "tones",
+  "phong_cach",
+  "style",
+])
+
 export function ResultCard({
   images,
   beforeAfter,
@@ -339,6 +351,16 @@ export function ResultCard({
   const meta = judgmentMeta[judgment]
 
   const approveBlocked = judgment === "blocked"
+
+  const [showDetails, setShowDetails] = useState(false)
+  const l0Fields = fields.filter((f) => L0_FIELD_KEYS.has(f.key))
+  const detailFields = fields.filter((f) => !L0_FIELD_KEYS.has(f.key))
+  const visibleFields =
+    l0Fields.length > 0 && detailFields.length > 0
+      ? showDetails
+        ? fields
+        : l0Fields
+      : fields
 
   return (
     <Card className="flex flex-col gap-3 border-border">
@@ -396,7 +418,7 @@ export function ResultCard({
 
       {/* Zone 2: Data fields */}
       <div className="flex flex-col divide-y divide-border">
-        {fields.map((field) => (
+        {visibleFields.map((field) => (
           <FieldCard
             key={field.key}
             field={field}
@@ -407,6 +429,27 @@ export function ResultCard({
             {...(onItemChange ? { onItemChange } : {})}
           />
         ))}
+        {l0Fields.length > 0 && detailFields.length > 0 && (
+          <div className="pt-2 pb-1 text-center">
+            <button
+              type="button"
+              onClick={() => setShowDetails(!showDetails)}
+              className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 text-body-sm font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              {showDetails ? (
+                <>
+                  Thu gọn cấu phần chi tiết
+                  <ChevronUp size={15} aria-hidden="true" />
+                </>
+              ) : (
+                <>
+                  Xem chi tiết cấu phần ({detailFields.length} trường khác)
+                  <ChevronDown size={15} aria-hidden="true" />
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Zone 3: Quality indicators */}
@@ -442,20 +485,20 @@ export function ResultCard({
       )}
 
       {/* Zone 4: Actions */}
-      <div className="flex items-center gap-2 border-t border-border pt-3">
-        {onSaveDraft && (
-          <Button variant="secondary" onClick={onSaveDraft} disabled={disabled}>
-            Lưu nháp
-          </Button>
-        )}
-        {onReject && (
-          <Button variant="ghost" onClick={onReject} disabled={disabled}>
-            Từ chối
-          </Button>
-        )}
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         {onApprove && !approveBlocked && (
           <Button onClick={onApprove} disabled={disabled}>
             Duyệt
+          </Button>
+        )}
+        {onReject && (
+          <Button variant="outline" onClick={onReject} disabled={disabled}>
+            Không đạt
+          </Button>
+        )}
+        {onSaveDraft && (
+          <Button variant="ghost" onClick={onSaveDraft} disabled={disabled}>
+            Lưu nháp
           </Button>
         )}
         {approveBlocked && (

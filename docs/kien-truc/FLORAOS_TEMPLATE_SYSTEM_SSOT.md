@@ -47,6 +47,12 @@ Mọi Tab chức năng khi mở ra đều phải có khối hướng dẫn mở 
 - **Huy hiệu (Pill Badge)**: `inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold tracking-wider uppercase`
 - **Thanh mẹo (Bottom Tips Bar)**: `border-t border-dashed border-red-200/90` với các icon mẹo (`📸/💡/⚡/✨/🎯`) chữ `text-[11.5px] font-medium text-red-700`
 - **Component dùng chung**: Bắt buộc dùng `<FeatureGuidanceCard />` từ `@/components/templates/shared/feature-guidance-card`.
+- **Thu gọn thông minh (Smart Collapsible — 25/09)**:
+  - **Lần đầu truy cập**: Hiển thị nội dung đầy đủ (viền đỏ, badge, tiêu đề, mô tả, thanh mẹo). Đánh dấu "đã xem" vào `localStorage` (key `floraos_guidance_seen_<id>`).
+  - **Lần sau trở đi**: Tự động thu gọn thành nút compact **"📖 XEM HƯỚNG DẪN"** (viền đứt nhạt `border-red-200/80`, nền `bg-red-50/40`, hover sáng lên).
+  - **Click "Xem hướng dẫn"**: Mở lại nội dung đầy đủ + nút **"↑ Thu gọn"** ở góc trên phải.
+  - **Prop `guidanceId`**: Tùy chọn — nếu bỏ trống, tự sinh ID ổn định từ `title` (kebab-case bỏ dấu tiếng Việt). Không cần sửa các file consumer hiện tại.
+  - **SSR-safe**: Mặc định expanded khi render server → client đồng bộ lại sau hydration (tránh mismatch).
 
 ### 1.2. Chuẩn Tác Vụ Góc Trên Bên Phải (Top-Right Action Header)
 - Mọi tab đều phải thống nhất cụm nút tác vụ ở **Góc trên cùng bên phải** qua `<TabActionHeader />`.
@@ -84,7 +90,7 @@ src/
 └── components/
     └── templates/                         # Lớp Trực quan & Giao diện người dùng
         ├── shared/                        # 0. Khung dùng chung
-        │   └── feature-guidance-card.tsx  # Khung hướng dẫn viền đỏ đứt nét chuẩn
+        │   └── feature-guidance-card.tsx  # Khung hướng dẫn viền đỏ đứt nét chuẩn, thu gọn thông minh (localStorage)
         │
         ├── product-analysis/              # 1. Phân tích ảnh sản phẩm (M01a/b/c)
         ├── creative-studio/               # 2. Studio Sáng tạo Ảnh (M04a/b)
@@ -308,6 +314,7 @@ src/
 | `delivery-pod-card.tsx` | POD Receipt (T21) | Phiếu giao hàng và bằng chứng người nhận ký nhận (Proof of Delivery) | `orderCode`, `shipperName`, `recipientName`, `isDelivered`, `podImageUrl` |
 | `exception-resolution-card.tsx` | Exception Card (T22) | Thẻ ghi nhận và xử lý sự cố phát sinh (hết hoa, đổi mẫu, trễ shipper) | `orderCode`, `exceptionCode`, `type`, `severity`, `description`, `resolutionPlan` |
 | `order-closure-learning-card.tsx` | Closure & SLA Card (T25/T26/T27) | Thẻ nghiệm thu đơn, đánh giá SLA, giải ngân thợ/xưởng và trích xuất bài học vận hành | `orderCode`, `customerRating`, `completionTime`, `slaMet`, `payoutAmount`, `learningNotes` |
+| `partner-product-card.tsx` | Partner Product Card | Thẻ hiển thị sản phẩm giao đối tác xưởng hoa: Atomic BOM, ảnh mẫu, địa chỉ giao, deadline, copy Zalo | `orderCode`, `recipeTitle`, `flowers`, `deliveryAddress`, `deadline`, `cardMessage` |
 
 
 ---

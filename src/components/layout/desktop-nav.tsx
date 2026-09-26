@@ -1,157 +1,197 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo, type ComponentType } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
   Home,
-  Menu,
-  X,
-  Settings2,
-  BookOpen,
-  WalletCards,
-  FileText,
-  Sparkles,
-  Folder,
-  Camera,
-  Share2,
-  Bot,
   Users,
   ShoppingBag,
-  Video,
+  Bot,
   Globe,
   Tag,
-  LayoutTemplate,
+  Camera,
+  Folder,
+  WalletCards,
   TrendingUp,
-  Cpu,
+  Sparkles,
+  Wand2,
+  Video,
+  FileText,
+  Share2,
+  LayoutTemplate,
+  Radio,
+  Clock,
+  CheckCircle2,
   BarChart3,
   ShieldCheck,
-  Wand2,
-  Radio,
+  Settings2,
+  BookOpen,
+  Cpu,
+  ChevronDown,
+  Search,
+  X,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
-import { cn } from "@/lib/utils"
+import { cn, stripVietnamese } from "@/lib/utils"
+import {
+  buildNav,
+  type NavEntry,
+  type NavGroup,
+} from "./nav-model"
 
-export type NavItem = {
-  href: string
-  label: string
-  icon: typeof Home
-  badge?: string
-  badgeColor?: string
-  code?: string
+const ICONS: Record<string, ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
+  Home,
+  Users,
+  ShoppingBag,
+  Bot,
+  Globe,
+  Tag,
+  Camera,
+  Folder,
+  WalletCards,
+  TrendingUp,
+  Sparkles,
+  Wand2,
+  Video,
+  FileText,
+  Share2,
+  LayoutTemplate,
+  Radio,
+  Clock,
+  CheckCircle2,
+  BarChart3,
+  ShieldCheck,
+  Settings2,
+  BookOpen,
+  Cpu,
 }
 
-// 1. Group 1: Hành Trình Giá Trị (Primary Outcome - Master Journey)
-const OUTCOME_ITEMS: NavItem[] = [
-  { href: "/", label: "Trang chủ", icon: Home },
-  {
-    href: "/market-intelligence",
-    label: "Nghiên cứu Thị trường",
-    icon: TrendingUp,
-    badge: "Xu hướng & Từ khóa",
-    badgeColor: "bg-red-100 text-red-700",
-  },
-  {
-    href: "/creative-studio",
-    label: "Creative Studio",
-    icon: Sparkles,
-    badge: "Khu vực A-F",
-    badgeColor: "bg-amber-100 text-amber-700",
-  },
-]
+const STORAGE_KEY = "floraos_nav_groups_v1"
 
-// 2. Group 2: Tài Sản & Tri Thức Tiệm (Tenant Data & Identity Assets)
-const IDENTITY_ITEMS: NavItem[] = [
-  { href: "/kho-du-lieu", label: "Kho Dữ liệu", icon: Folder },
-  { href: "/kho-templates", label: "Kho Templates", icon: LayoutTemplate },
-  {
-    href: "/tri-thuc",
-    label: "Tri thức & Nhập liệu",
-    icon: BookOpen,
-    badge: "SSOT",
-    badgeColor: "bg-red-100 text-red-700",
-  },
-  {
-    href: "/cai-dat-ai",
-    label: "Cài đặt Chính sách AI",
-    icon: Cpu,
-    code: "U1",
-  },
-]
+function loadStoredGroupStates(): Record<string, boolean> {
+  if (typeof window === "undefined") return {}
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
 
-// 3. Group 3: Bộ Công Cụ Độc Lập (Independent Tool Suite - 11 Chức Năng Độc Lập)
-const TOOL_ITEMS: NavItem[] = [
-  {
-    href: "/tai-anh",
-    label: "Quét hoa Vision",
-    icon: Camera,
-    badge: "M01b",
-    badgeColor: "bg-rose-100 text-rose-700",
-  },
-  { href: "/san-pham", label: "Sản phẩm & Giá", icon: Tag },
-  { href: "/creative-studio?tab=area-d", label: "Image Engine", icon: Wand2 },
-  { href: "/video", label: "Video Studio 9:16", icon: Video },
-  { href: "/noi-dung", label: "Content Engine", icon: FileText },
-  { href: "/lich-dang", label: "Social Publishing", icon: Share2 },
-  { href: "/catalog", label: "Catalog & Website QR", icon: Globe },
-  {
-    href: "/hoi-thoai",
-    label: "AI Chat Assistant",
-    icon: Bot,
-    badge: "Đa Kênh",
-    badgeColor: "bg-rose-100 text-rose-700",
-  },
-  { href: "/khach-hang", label: "CRM & Khách hàng", icon: Users },
-  { href: "/don-hang", label: "Đơn hàng & SLA", icon: ShoppingBag },
-  { href: "/so-lieu", label: "Số liệu & Học máy", icon: BarChart3 },
-  {
-    href: "/dieu-phoi",
-    label: "Điều phối Đơn hàng",
-    icon: Radio,
-    badge: "Tháp Vận Hành",
-    badgeColor: "bg-amber-100 text-amber-700",
-  },
-]
-
-// 4. Group 4: Vận Hành Tiệm & Trợ Lý (Shop Operations & Assistant)
-const OPERATION_ITEMS: NavItem[] = [
-  { href: "/muc-dung", label: "Mức dùng Credit", icon: WalletCards },
-  { href: "/audit", label: "Nhật ký Kiểm toán", icon: ShieldCheck, code: "A4" },
-  { href: "/cai-dat", label: "Cài đặt", icon: Settings2 },
-]
+function persistGroupStates(states: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(states))
+  } catch {
+    // Không ném lỗi nếu localStorage bị khóa
+  }
+}
 
 export function DesktopNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { can } = useSession()
+  const { can, roleUx, orgName } = useSession()
 
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const navView = useMemo(() => buildNav(can, roleUx), [can, roleUx])
 
+  const [searchQuery, setSearchQuery] = useState("")
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(loadStoredGroupStates)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Phím tắt '/' để tìm kiếm nhanh
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
+    function handleKeyDown(e: KeyboardEvent) {
+      if (
+        e.key === "/" &&
+        !["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement)?.tagName)
+      ) {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      }
+      if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        setSearchQuery("")
+        searchInputRef.current?.blur()
       }
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
-  function renderNavItem(item: NavItem) {
-    if (item.code && !can(item.code)) return null
+  function isGroupExpanded(group: NavGroup): boolean {
+    if (group.key === "viec-chinh") return true
+    if (openGroups[group.key] !== undefined) return openGroups[group.key]!
+    return group.entries.some(
+      (entry) =>
+        pathname === entry.href ||
+        (entry.href !== "/" && pathname.startsWith(`${entry.href}/`))
+    )
+  }
+
+  function toggleGroup(key: string, currentExpanded: boolean) {
+    const nextStates = { ...openGroups, [key]: !currentExpanded }
+    setOpenGroups(nextStates)
+    persistGroupStates(nextStates)
+  }
+
+  // Kết quả tìm kiếm phẳng
+  const searchResults = useMemo(() => {
+    const query = stripVietnamese(searchQuery.trim())
+    if (!query) return []
+    const all = navView.groups.flatMap((g) => g.entries)
+    const seen = new Set<string>()
+    return all.filter((entry) => {
+      if (seen.has(entry.href)) return false
+      seen.add(entry.href)
+      return stripVietnamese(entry.label).includes(query)
+    })
+  }, [navView, searchQuery])
+
+  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && searchResults.length > 0) {
+      const target = searchResults[0]!
+      if (target.status !== "COMING_SOON") {
+        setSearchQuery("")
+        router.push(target.href as never)
+      }
+    }
+  }
+
+  function renderNavItem(item: NavEntry) {
+    const Icon = ICONS[item.iconKey] || Tag
+    if (item.status === "COMING_SOON") {
+      return (
+        <div
+          key={item.href}
+          aria-disabled="true"
+          title="Đang phát triển"
+          className="flex h-9 w-full cursor-not-allowed items-center justify-between rounded-lg px-2.5 text-[12.5px] font-medium text-text-muted opacity-60"
+        >
+          <div className="flex items-center gap-2.5 truncate">
+            <Icon size={16} strokeWidth={1.9} />
+            <span className="truncate">{item.label}</span>
+          </div>
+          <span className="shrink-0 rounded-full bg-surface-alt px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide">
+            Sắp có
+          </span>
+        </div>
+      )
+    }
+
     const active =
-      pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
-    const Icon = item.icon
+      pathname === item.href ||
+      (item.href !== "/" && pathname.startsWith(`${item.href}/`))
 
     return (
       <button
         key={item.href}
         type="button"
-        onClick={() => router.push(item.href as never)}
+        onClick={() => {
+          if (searchQuery) setSearchQuery("")
+          router.push(item.href as never)
+        }}
         className={cn(
           "group flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-[12.5px] font-medium transition-colors text-left",
           active
-            ? "bg-red-50 font-bold text-red-700"
+            ? "bg-surface-alt font-bold text-primary"
             : "text-text-muted hover:bg-surface-alt hover:text-text"
         )}
         aria-current={active ? "page" : undefined}
@@ -160,137 +200,133 @@ export function DesktopNav() {
           <Icon
             size={16}
             strokeWidth={active ? 2.2 : 1.9}
-            className={active ? "text-red-600" : "text-text-muted group-hover:text-text"}
+            className={active ? "text-primary" : "text-text-muted group-hover:text-text"}
           />
           <span className="truncate">{item.label}</span>
         </div>
-        {item.badge && (
-          <span
-            className={cn(
-              "rounded-full px-1.5 py-0.2 text-[9.5px] font-extrabold tracking-wide uppercase shrink-0",
-              item.badgeColor || "bg-muted text-muted-foreground"
-            )}
-          >
-            {item.badge}
-          </span>
-        )}
       </button>
     )
   }
 
-  const allItems = [...OUTCOME_ITEMS, ...IDENTITY_ITEMS, ...TOOL_ITEMS, ...OPERATION_ITEMS]
-
   return (
-    <aside className="hidden h-dvh w-60 flex-shrink-0 flex-col border-r border-border bg-surface md:flex">
+    <aside
+      aria-label="Điều hướng chính"
+      className="hidden h-dvh w-60 flex-shrink-0 flex-col border-r border-border bg-surface md:flex"
+    >
       {/* Brand Header */}
       <div className="flex h-14 items-center justify-between border-b border-border px-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-red-600 to-rose-700 text-white shadow-xs">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-xs">
             <Sparkles size={16} strokeWidth={2.2} />
           </div>
-          <div className="flex flex-col">
-            <div className="text-[13px] font-extrabold text-primary leading-tight">FloraOS</div>
-            <div className="text-[10px] text-text-muted font-medium">SaaS Operations SSOT</div>
+          <div className="flex flex-col min-w-0">
+            <div className="text-[13px] font-extrabold text-primary leading-tight">
+              FloraOS
+            </div>
+            <div className="truncate text-[10px] text-text-muted font-medium">
+              {orgName || "Cửa hàng hoa"}
+            </div>
           </div>
         </div>
+      </div>
 
-        <div ref={menuRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-              menuOpen ? "bg-surface-alt text-primary" : "text-text-muted hover:bg-surface-alt"
-            )}
-            aria-label="Menu chức năng"
-          >
-            {menuOpen ? <X size={16} strokeWidth={2} /> : <Menu size={16} strokeWidth={2} />}
-          </button>
-
-          {menuOpen && (
-            <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-border bg-surface py-1.5 shadow-xl max-h-[80vh] overflow-y-auto">
-              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                Tất cả phân hệ
-              </div>
-              {allItems.map((item) => {
-                if (item.code && !can(item.code)) return null
-                return (
-                  <button
-                    key={item.href}
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      router.push(item.href as never)
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium transition-colors",
-                      pathname === item.href ? "bg-red-50 font-bold text-red-700" : "text-text hover:bg-surface-alt"
-                    )}
-                  >
-                    <item.icon size={14} className="text-text-muted" />
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                )
-              })}
-            </div>
+      {/* Quick Search */}
+      <div className="border-b border-border px-3 py-2">
+        <div className="relative flex items-center">
+          <Search size={14} className="absolute left-2.5 text-text-muted pointer-events-none" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Tìm chức năng... (/)"
+            className="h-8 w-full rounded-lg border border-border bg-surface-alt pl-8 pr-7 text-[12px] text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 text-text-muted hover:text-text"
+              aria-label="Xóa tìm kiếm"
+            >
+              <X size={13} />
+            </button>
           )}
         </div>
       </div>
 
-      {/* Main Navigation Scroll Area */}
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
-        {/* Nhóm 1: Hành Trình Giá Trị */}
-        <div className="space-y-1">
-          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-            Hành Trình Giá Trị
+      {/* Navigation Scroll Area */}
+      <nav className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-3">
+        {searchQuery ? (
+          <div className="space-y-1">
+            <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+              Kết quả ({searchResults.length})
+            </div>
+            {searchResults.length === 0 ? (
+              <div className="px-2.5 py-4 text-center text-xs text-text-muted">
+                Không tìm thấy chức năng phù hợp
+              </div>
+            ) : (
+              searchResults.map(renderNavItem)
+            )}
           </div>
-          {OUTCOME_ITEMS.map(renderNavItem)}
-        </div>
+        ) : (
+          navView.groups.map((group) => {
+            const isViecChinh = group.key === "viec-chinh"
+            const expanded = isGroupExpanded(group)
 
-        {/* Nhóm 2: Tài Sản & Tri Thức Tiệm */}
-        <div className="space-y-1">
-          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-            Tài Sản & Tri Thức
-          </div>
-          {IDENTITY_ITEMS.map(renderNavItem)}
-        </div>
+            return (
+              <div key={group.key} className="space-y-1">
+                {isViecChinh ? (
+                  <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    {group.label}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => toggleGroup(group.key, expanded)}
+                    className="flex w-full items-center justify-between px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted hover:text-text"
+                  >
+                    <span>{group.label}</span>
+                    <ChevronDown
+                      size={12}
+                      className={cn("transition-transform duration-150", expanded ? "rotate-0" : "-rotate-90")}
+                    />
+                  </button>
+                )}
 
-        {/* Nhóm 3: Bộ Công Cụ Độc Lập */}
-        <div className="space-y-1">
-          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-            Công Cụ Độc Lập
-          </div>
-          {TOOL_ITEMS.map(renderNavItem)}
-        </div>
-
-        {/* Nhóm 4: Vận Hành Tiệm */}
-        <div className="space-y-1">
-          <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-            Vận Hành Tiệm
-          </div>
-          {OPERATION_ITEMS.map(renderNavItem)}
-        </div>
+                {expanded && (
+                  <div className="space-y-0.5">
+                    {group.entries.map(renderNavItem)}
+                  </div>
+                )}
+              </div>
+            )
+          })
+        )}
       </nav>
 
-      {/* Footer Copilot Trigger & Phím tắt */}
-      <div className="border-t border-border p-3 space-y-2">
+      {/* Footer Copilot Trigger */}
+      <div className="border-t border-border p-3">
         <button
           type="button"
           onClick={() => {
             window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))
           }}
-          className="w-full flex items-center justify-between rounded-xl bg-red-50/80 hover:bg-red-100/80 border border-red-200/80 p-2.5 text-left transition-colors"
+          className="w-full flex items-center justify-between rounded-xl bg-surface-alt hover:bg-surface-alt/80 border border-border p-2.5 text-left transition-colors"
         >
           <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-600 text-white shadow-xs">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-white shadow-xs">
               <Bot size={13} />
             </span>
             <div>
-              <div className="text-[11.5px] font-bold text-red-950">FloraOS Copilot</div>
-              <div className="text-[10px] text-red-700 font-medium">Trợ lý hỗ trợ 24/7</div>
+              <div className="text-[11.5px] font-bold text-text">FloraOS Copilot</div>
+              <div className="text-[10px] text-text-muted font-medium">Trợ lý hỗ trợ 24/7</div>
             </div>
           </div>
-          <kbd className="rounded bg-white/80 px-1.5 py-0.5 text-[9.5px] font-mono text-red-900 border border-red-200">
+          <kbd className="rounded bg-surface px-1.5 py-0.5 text-[9.5px] font-mono text-text border border-border">
             ⌘K
           </kbd>
         </button>
@@ -298,4 +334,3 @@ export function DesktopNav() {
     </aside>
   )
 }
-

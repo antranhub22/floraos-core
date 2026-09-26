@@ -54,7 +54,7 @@ export function StageGateApprovalBar({
           <div className="flex items-center gap-2 flex-wrap">
             <span
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider",
+                "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-caption font-extrabold uppercase tracking-wider",
                 isApproved
                   ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                   : "bg-purple-100 text-purple-800 border border-purple-300"
@@ -64,21 +64,21 @@ export function StageGateApprovalBar({
               {stageCode}
             </span>
             {isApproved ? (
-              <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                <CheckCircle2 size={13} className="text-emerald-600" />
+              <span className="inline-flex items-center gap-1 text-caption font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                <CheckCircle2 size={13} className="text-success" />
                 Đã được Chủ shop phê duyệt
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+              <span className="inline-flex items-center gap-1 text-caption font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
                 Chờ Chủ shop xác nhận kết quả
               </span>
             )}
           </div>
 
-          <h4 className="text-[14px] sm:text-[15px] font-bold text-stone-900">
+          <h4 className="text-body sm:text-[15px] font-bold text-stone-900">
             {title}
           </h4>
-          <p className="text-[12px] text-stone-600 leading-relaxed max-w-2xl">
+          <p className="text-meta text-stone-600 leading-relaxed max-w-2xl">
             {description}
           </p>
 
@@ -87,7 +87,7 @@ export function StageGateApprovalBar({
               {metrics.map((m, idx) => (
                 <div
                   key={idx}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 text-[11px] font-medium"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 text-caption font-medium"
                 >
                   <span className="text-stone-500">{m.label}:</span>
                   <span className="font-bold text-stone-900">{m.value}</span>
@@ -129,7 +129,7 @@ export function StageGateApprovalBar({
               onClick={onApprove}
               className="border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-50 text-xs font-bold px-3 py-1.5 gap-1.5"
             >
-              <CheckCircle2 size={14} className="text-emerald-600" />
+              <CheckCircle2 size={14} className="text-success" />
               Đã duyệt (Tiếp tục)
               <ArrowRight size={13} />
             </Button>

@@ -80,6 +80,8 @@ export function hasMarketingConsent(
   consents: CustomerConsentItem[],
   channel: CustomerConsentItem["channel"]
 ): boolean {
+  // MI-1 (ĐP-1.5, 26/09/2026): đã cấp nhưng đã bị thu hồi (`revokedAt`) thì
+  // không còn hiệu lực — trước bản này hàm chỉ nhìn `granted`.
   const c = consents.find((it) => it.channel === channel)
-  return c ? c.granted : false
+  return Boolean(c?.granted) && !c?.revokedAt
 }

@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 
 type PlatformOrganizationSummary = {
   id: string
@@ -38,7 +39,7 @@ export default function DanhSachToChucPage() {
   }, [])
 
   if (loi) return <p className="text-sm text-danger">{loi}</p>
-  if (!orgs) return <p className="text-sm text-text-muted">Đang tải…</p>
+  if (!orgs) return <div className="py-4"><SkeletonBlock lines={4} /></div>
 
   return (
     <Card className="overflow-x-auto p-4">

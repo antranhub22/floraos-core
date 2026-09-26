@@ -108,6 +108,7 @@ const COVERED_VIA_ROUTE = {
   chat_channel_integrations: "tests/tenant/chat-channel-isolation.test.ts",
   order_qc_records: "tests/tenant/coordinator.test.ts — POST /coordinator/orders/:id/qc",
   order_exceptions: "tests/tenant/coordinator.test.ts — resolve sự cố của tổ chức khác → 404",
+  order_payments: "tests/tenant/coordinator.test.ts — sổ thu: cách ly tổ chức — tổ chức khác không đọc/ghi được (404)",
 }
 for (const t of tenant) {
   if (t in COVERED_VIA_ROUTE) continue

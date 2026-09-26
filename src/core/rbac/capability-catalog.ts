@@ -220,6 +220,11 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   R6: { name: "order.cancel", group: "order_operations", label: "Huỷ một đơn hàng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   R7: { name: "order.print", group: "order_operations", label: "In phiếu đơn và phiếu sản xuất", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   R8: { name: "order.card_message.manage", group: "order_operations", label: "Quản lý lời nhắn thiệp của đơn", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  // ĐP-4a (26/09/2026, PO D2) — sổ thu. R9: Sales ghi DEPOSIT lúc nhận đơn,
+  // Điều phối ghi BALANCE lúc thu nốt. R10: hoàn tiền — trần cứng điều hành,
+  // vì hoàn tiền ảnh hưởng trực tiếp doanh thu đã ghi nhận.
+  R9: { name: "order.payment.record", group: "order_operations", label: "Ghi nhận thu tiền đơn hàng (cọc/thu nốt)", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  R10: { name: "order.payment.refund", group: "order_operations", label: "Ghi nhận hoàn tiền đơn hàng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // Q — CRM & Khách hàng ngành hoa (M09, P21)
   Q1: { name: "crm.customer.read", group: "crm", label: "Xem thông tin khách hàng và hồ sơ RFM", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   Q2: { name: "crm.customer.create", group: "crm", label: "Thêm khách hàng mới", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },

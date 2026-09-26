@@ -1,0 +1,298 @@
+"use client"
+
+// Tab "Trường lõi" — quản trị nền tảng sửa cấu hình PLATFORM-WIDE của
+// trường đã xây bằng code (`origin = CORE`). Mức sàn (không hạ được mức
+// yêu cầu dưới sàn code, `floorInternalOnly` không tắt được) đã chặn ở
+// server (`update-field-config.ts`) — UI chỉ hiện lỗi trả về, không tự ý
+// khoá thêm ở đây để tránh hai nguồn sự thật.
+
+import { useEffect, useMemo, useState } from "react"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { DiffConfirmButton, buildDiffRows } from "./diff-confirm"
+import {
+  ALL_AUDIENCES,
+  REQUIREMENT_LEVELS,
+  fieldPlatformApi,
+  type FieldAudience,
+  type FieldDefinitionApiView,
+  type FieldEntityKind,
+  type FieldRequirementLevel,
+} from "../_lib/api"
+
+type EditState = {
+  label: string
+  description: string
+  placeholder: string
+  requirement: FieldRequirementLevel
+  visibility: Record<FieldAudience, boolean>
+  catalogKey: string
+  defaultEnabled: boolean
+}
+
+function toEditState(field: FieldDefinitionApiView): EditState {
+  return {
+    label: field.label,
+    description: field.description ?? "",
+    placeholder: field.placeholder ?? "",
+    requirement: field.requirement,
+    visibility: {
+      INTERNAL: field.visibility.INTERNAL ?? true,
+      PARTNER: field.visibility.PARTNER ?? false,
+      SHIPPER: field.visibility.SHIPPER ?? false,
+      CUSTOMER: field.visibility.CUSTOMER ?? false,
+    },
+    catalogKey: field.catalogKey ?? "",
+    defaultEnabled: field.defaultEnabled,
+  }
+}
+
+function visibilityLabel(v: Record<FieldAudience, boolean>): string {
+  const on = ALL_AUDIENCES.filter((a) => v[a])
+  return on.length > 0 ? on.join(", ") : "(không hiện đâu)"
+}
+
+export function TruongLoiTab() {
+  const [entityFilter, setEntityFilter] = useState<FieldEntityKind | "ALL">("ALL")
+  const [fields, setFields] = useState<FieldDefinitionApiView[] | null>(null)
+  const [loi, setLoi] = useState<string | null>(null)
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
+  const [edit, setEdit] = useState<EditState | null>(null)
+
+  async function reload() {
+    const res = await fieldPlatformApi.listFields(entityFilter === "ALL" ? undefined : entityFilter)
+    if (!res.ok) {
+      setLoi(res.error)
+      return
+    }
+    setLoi(null)
+    setFields(res.data.filter((f) => f.origin === "CORE"))
+  }
+
+  useEffect(() => {
+    void (async () => {
+      await reload()
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityFilter])
+
+  const current = useMemo(() => fields?.find((f) => f.key === expandedKey) ?? null, [fields, expandedKey])
+
+  if (loi) return <p className="text-sm text-danger">{loi}</p>
+  if (!fields) return <p className="text-sm text-text-muted">Đang tải…</p>
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-[13px]">
+        <span className="text-text-muted">Thực thể:</span>
+        {(["ALL", "ORDER", "PARTNER"] as const).map((e) => (
+          <button
+            key={e}
+            type="button"
+            onClick={() => setEntityFilter(e)}
+            className={`rounded-lg px-2.5 py-1 font-medium ${
+              entityFilter === e ? "bg-primary text-white" : "bg-surface-alt text-text hover:bg-border"
+            }`}
+          >
+            {e === "ALL" ? "Tất cả" : e}
+          </button>
+        ))}
+        <span className="ml-auto text-text-muted">{fields.length} trường lõi</span>
+      </div>
+
+      <Card className="overflow-x-auto p-0">
+        <table className="w-full text-left text-[13px]">
+          <thead>
+            <tr className="border-b border-border text-text-muted">
+              <th className="py-2 pl-3 pr-3">Khoá</th>
+              <th className="py-2 pr-3">Nhãn</th>
+              <th className="py-2 pr-3">Kiểu</th>
+              <th className="py-2 pr-3">Mức yêu cầu</th>
+              <th className="py-2 pr-3">Hiển thị</th>
+              <th className="py-2 pr-3">Trạng thái</th>
+              <th className="py-2 pr-3" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {fields.map((f) => (
+              <>
+                <tr key={f.key} className="hover:bg-surface-alt">
+                  <td className="py-2 pl-3 pr-3 font-mono text-[12px]">{f.key}</td>
+                  <td className="py-2 pr-3 font-medium">
+                    {f.label}
+                    {f.floorInternalOnly && (
+                      <Badge tone="danger" className="ml-2">
+                        chỉ INTERNAL
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="py-2 pr-3 text-text-muted">{f.dataType}</td>
+                  <td className="py-2 pr-3">{f.requirement}</td>
+                  <td className="py-2 pr-3 text-text-muted">{visibilityLabel(toEditState(f).visibility)}</td>
+                  <td className="py-2 pr-3">
+                    <Badge tone={f.status === "ACTIVE" ? "success" : "neutral"}>{f.status}</Badge>
+                  </td>
+                  <td className="py-2 pr-3 text-right">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (expandedKey === f.key) {
+                          setExpandedKey(null)
+                          setEdit(null)
+                        } else {
+                          setExpandedKey(f.key)
+                          setEdit(toEditState(f))
+                        }
+                      }}
+                    >
+                      {expandedKey === f.key ? "Đóng" : "Sửa"}
+                    </Button>
+                  </td>
+                </tr>
+                {expandedKey === f.key && current && edit && (
+                  <tr key={`${f.key}-edit`}>
+                    <td colSpan={7} className="bg-surface-alt/60 p-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="text-[13px]">
+                          <span className="mb-1 block text-text-muted">Nhãn</span>
+                          <Input
+                            value={edit.label}
+                            onChange={(e) => setEdit({ ...edit, label: e.target.value })}
+                          />
+                        </label>
+                        <label className="text-[13px]">
+                          <span className="mb-1 block text-text-muted">Gợi ý nhập (placeholder)</span>
+                          <Input
+                            value={edit.placeholder}
+                            onChange={(e) => setEdit({ ...edit, placeholder: e.target.value })}
+                          />
+                        </label>
+                        <label className="text-[13px] sm:col-span-2">
+                          <span className="mb-1 block text-text-muted">Mô tả</span>
+                          <Input
+                            value={edit.description}
+                            onChange={(e) => setEdit({ ...edit, description: e.target.value })}
+                          />
+                        </label>
+                        <label className="text-[13px]">
+                          <span className="mb-1 block text-text-muted">
+                            Mức yêu cầu {current.origin === "CORE" && <span className="text-text-muted">(không hạ được dưới mức sàn)</span>}
+                          </span>
+                          <select
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={edit.requirement}
+                            onChange={(e) => setEdit({ ...edit, requirement: e.target.value as FieldRequirementLevel })}
+                          >
+                            {REQUIREMENT_LEVELS.map((r) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="text-[13px]">
+                          <span className="mb-1 block text-text-muted">Khoá danh mục (nếu là trường chọn)</span>
+                          <Input
+                            value={edit.catalogKey}
+                            onChange={(e) => setEdit({ ...edit, catalogKey: e.target.value })}
+                            placeholder="vd. serviceLevel"
+                          />
+                        </label>
+                        <div className="text-[13px] sm:col-span-2">
+                          <span className="mb-1 block text-text-muted">
+                            Hiển thị theo đối tượng xem
+                            {current.floorInternalOnly && (
+                              <span className="ml-1 text-danger">
+                                (mức sàn: trường này chỉ hiện INTERNAL, không mở được cho các đối tượng khác)
+                              </span>
+                            )}
+                          </span>
+                          <div className="flex flex-wrap gap-3">
+                            {ALL_AUDIENCES.map((a) => (
+                              <label key={a} className="flex items-center gap-1.5">
+                                <input
+                                  type="checkbox"
+                                  checked={edit.visibility[a]}
+                                  disabled={current.floorInternalOnly && a !== "INTERNAL"}
+                                  onChange={(e) =>
+                                    setEdit({ ...edit, visibility: { ...edit.visibility, [a]: e.target.checked } })
+                                  }
+                                />
+                                {a}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3">
+                        <DiffConfirmButton
+                          label="Lưu thay đổi"
+                          buildDiff={() =>
+                            buildDiffRows(
+                              {
+                                label: current.label,
+                                description: current.description ?? "",
+                                placeholder: current.placeholder ?? "",
+                                requirement: current.requirement,
+                                catalogKey: current.catalogKey ?? "",
+                                visibility: visibilityLabel(toEditState(current).visibility),
+                              },
+                              {
+                                label: edit.label,
+                                description: edit.description,
+                                placeholder: edit.placeholder,
+                                requirement: edit.requirement,
+                                catalogKey: edit.catalogKey,
+                                visibility: visibilityLabel(edit.visibility),
+                              },
+                              {
+                                label: "Nhãn",
+                                description: "Mô tả",
+                                placeholder: "Gợi ý nhập",
+                                requirement: "Mức yêu cầu",
+                                catalogKey: "Khoá danh mục",
+                                visibility: "Hiển thị",
+                              }
+                            )
+                          }
+                          onConfirm={async () => {
+                            const res = await fieldPlatformApi.updateFieldConfig({
+                              key: f.key,
+                              label: edit.label,
+                              description: edit.description || null,
+                              placeholder: edit.placeholder || null,
+                              requirement: edit.requirement,
+                              visibility: edit.visibility,
+                              catalogKey: edit.catalogKey || null,
+                            })
+                            if (!res.ok) return { ok: false, error: res.error }
+                            await reload()
+                            setExpandedKey(null)
+                            setEdit(null)
+                            return { ok: true }
+                          }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
+            ))}
+            {fields.length === 0 && (
+              <tr>
+                <td colSpan={7} className="py-4 text-center text-text-muted">
+                  Chưa có trường lõi nào trong sổ (chạy <code>npm run seed:field-registry</code> trên máy thật).
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  )
+}

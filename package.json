@@ -16,6 +16,7 @@
     "build": "next build",
     "start": "next start -p 3100",
     "lint": "eslint",
+    "lint:ux": "tsx scripts/ux-lint.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude 'tests/tenant/**' --exclude 'tests/platform/**' --exclude 'node_modules/**'",
     "test:harvest": "tsx --test tests/maChucNang.test.ts",
@@ -44,7 +45,9 @@
     "check:schemas:coordinator": "tsx scripts/gen-coordinator-schemas.ts --check",
     "gen:schemas:content-engine": "tsx scripts/gen-content-engine-schemas.ts",
     "check:schemas:content-engine": "tsx scripts/gen-content-engine-schemas.ts --check",
-    "check:docs": "node scripts/check-docs.mjs"
+    "check:docs": "node scripts/check-docs.mjs",
+    "seed:field-registry": "tsx --env-file-if-exists=.env scripts/nap-danh-muc-truong.ts",
+    "check:field-registry": "tsx --env-file-if-exists=.env scripts/check-field-registry.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

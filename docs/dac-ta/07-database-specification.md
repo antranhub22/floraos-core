@@ -13,7 +13,7 @@ Worker Python đọc lược đồ sinh sẵn, không tự khai bảng.
 | 3 | Asset gốc bất biến. Dẫn xuất là bản ghi mới, nối bằng `parent_asset_id` và `version` | Review |
 | 4 | Job tách ba trục `status` / `stage` / `result`. Không gộp thành một cột | Review |
 
-**Ngoại lệ của Luật 1 — danh sách đóng, đối chiếu 18/09, cập nhật 19/09.** Mười hai bảng không có `organization_id`, và mỗi bảng phải nêu được lý do khi review:
+**Ngoại lệ của Luật 1 — danh sách đóng, đối chiếu 18/09, cập nhật 26/09 (ĐP-3).** Mười lăm bảng không có `organization_id`, và mỗi bảng phải nêu được lý do khi review:
 
 | Bảng | Lý do |
 |---|---|
@@ -26,6 +26,7 @@ Worker Python đọc lược đồ sinh sẵn, không tự khai bảng.
 | `flower_taxonomy` · `flower_confusable_pairs` | Tri thức ngành hoa, không phải dữ liệu của một cửa hàng — xem mục 16 |
 | `platform_operators` · `platform_role_capabilities` · `platform_audit_logs` | Console Vận hành Nền tảng (P25, 19/09) — dữ liệu của người vận hành xuyên tổ chức, không thuộc một tổ chức nào. Từ vựng năng lực `N1`–`N8` TÁCH HẲN khỏi `roles`/`role_capabilities` của tenant (D-N6) — không dùng `capability_scope`, không thêm giá trị `PLATFORM` vào enum đó. Xem `../kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md` mục 4.1 |
 | `market_sources` · `trend_signals` · `trend_timeseries` · `topics` · `topic_signals` · `topic_scores` · `research_runs` · `provider_health` | Dữ liệu nghiên cứu thị trường cấp nền tảng (Market Intelligence Engine, Đợt A) — thu thập xu hướng chung toàn ngành, không thuộc một tổ chức nào; chỉ có `content_opportunities` thuộc tenant |
+| `field_definitions` · `field_catalogs` · `field_catalog_values` | Nền quản trị trường (ĐP-3, 26/09/2026) — sổ đăng ký trường (lõi và tự tạo) và danh mục giá trị của TOÀN hệ thống, cùng hạng với `platform_operators`/`ai_models`. `field_config_overrides` (ghi đè THEO TỪNG tổ chức) NGƯỢC LẠI có `organization_id` — thuộc tenant, không nằm trong danh sách này. Xem mục 22b |
 
 Một bảng tự nhận ngoại lệ mà không nêu được lý do ở trên là lỗi chặn ở review.
 
@@ -1759,6 +1760,65 @@ model order_coordinations {
   @@index([organization_id, risk_level])
 }
 
+Sổ thu (ĐP-4a, 26/09/2026, PO D2), migration `20260926220000_order_payments`. `orders` thêm `paid_vnd`/`balance_vnd` (Decimal); `balance_vnd = total_vnd − paid_vnd` giữ bằng CHECK ở SQL thô (không đẩy được qua `prisma db push`, cần `migrate deploy`). Mỗi lần thu/hoàn tiền là một dòng `order_payments`; `paymentStatus` (UNPAID/PARTIALLY_PAID/PAID/REFUNDED) là trường suy ra lúc đọc, không lưu.
+
+```prisma
+enum order_payment_kind {
+  DEPOSIT
+  BALANCE
+  REFUND
+}
+
+/// Sổ thu. TENANT ISOLATION.
+model order_payments {
+  id                String              @id @default(uuid())
+  organization_id   String
+  order_id          String
+  kind              order_payment_kind
+  amount_vnd        Decimal             @db.Decimal(14, 2)
+  payment_method    String?
+  reference         String?
+  evidence_asset_id String?
+  collected_by      String
+  collected_at      DateTime            @default(now())
+  note              String?
+  custom_fields     Json?
+  created_at        DateTime            @default(now())
+
+  organization      organizations       @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order             orders              @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id])
+}
+```
+
+ĐP-4a.1 (26/09/2026), T01 — đủ trường P0/P1 (Đặc tả trường §2.1/§3.1), migration `20260926230000_coordinator_p1_p2_fields`. Thêm 17 cột vào `order_coordinations`, ĐỀU CHO PHÉP NULL. Các cột kiểm theo danh mục (`channel`/`order_type`/`priority`/`service_level`/`delivery_type`/`delivery_location_type`) là CHUỖI kiểm active ở tầng ứng dụng (`field-platform/use-cases/validate-catalog-code.ts`), không phải Prisma enum (D12). `priority` để trống lúc tạo thì máy TỰ GỢI Ý (`domain/priority-suggestion.ts`, §2.15.1). `production_deadline_at`/`pickup_target_at`/`next_action_owner_id`/`handoff_at` mới có CỘT, CHƯA có logic ghi (để cho ĐP-4a.2 tính SLA và ĐP-4a.5 luồng bàn giao T02).
+
+```prisma
+model order_coordinations {
+  // … các cột đã có (xem trên) …
+  source                  String?  // ORDER_M10 · CHAT_M08 · CATALOG_M06 · MANUAL
+  source_reference        String?
+  channel                 String?  // danh mục §2.15.3 (MỞ)
+  order_type              String?  // danh mục §2.15.4 (CÓ HÀNH VI) — bật nhóm trường §12
+  priority                String?  // danh mục §2.15.1 (CÓ HÀNH VI) — máy gợi ý
+  service_level           String?  // danh mục §2.15.2 (CÓ HÀNH VI) — dùng tính SLA (ĐP-4a.2)
+  delivery_type           String?  // danh mục §2.15.5 (CÓ HÀNH VI)
+  delivery_location_type  String?  // danh mục §2.15.5 (CÓ HÀNH VI) — bật nhóm trường §12
+  card_required            Boolean  @default(false) // cardMessage bắt buộc khi true
+  received_at              DateTime?
+  delivery_window_start    DateTime?
+  delivery_window_end      DateTime?
+  production_deadline_at   DateTime? // CHƯA tính ở 4a.1 — để cho ĐP-4a.2/4a.9
+  pickup_target_at         DateTime? // CHƯA tính ở 4a.1 — để cho ĐP-4a.2/4a.9
+  sales_owner_id           String?   // gán = người tạo đơn lúc tiếp nhận (giống coordinator_id)
+  next_action_owner_id     String?   // CHƯA gán ở 4a.1 — để cho ĐP-4a.5 (bàn giao T02)
+  handoff_at               DateTime? // CHƯA ghi ở 4a.1 — để cho ĐP-4a.5
+}
+```
+
+Bảng mới `GET /api/v1/field-config/catalogs` (`R1`, tenant, CHỈ ĐỌC) đọc `field_catalogs`/`field_catalog_values` (ĐP-3, đã có) để nạp ô chọn — không phải bảng mới, chỉ route mới.
+
 /// Hồ sơ kiểm tra chất lượng sản phẩm hoa cắm (QC). TENANT ISOLATION.
 model order_qc_records {
   id               String           @id @default(uuid())
@@ -1860,3 +1920,123 @@ model content_generations {
   @@index([organization_id, created_at])
 }
 ```
+
+## 27b. Nền quản trị trường (ĐP-3, 26/09/2026)
+
+Bốn bảng theo kế hoạch `../kien-truc/KE_HOACH_DIEU_PHOI_TRUONG_DU_LIEU.md` mục 6.1. Ba bảng đầu là ngoại lệ Luật 1 (mục 1) — sổ đăng ký của TOÀN hệ thống, không thuộc tổ chức nào, cùng hạng `platform_operators`. Bảng thứ tư (`field_config_overrides`) NGƯỢC LẠI là TENANT (`organization_id` bắt buộc) — ghi đè cấu hình trường/danh mục CHỈ áp cho một tổ chức, dù chỉ quản trị nền tảng (mã `N12`) mới được ghi vào đó; ca thử cách ly ở `tests/tenant/cach-ly-repository.test.ts`.
+
+```prisma
+enum field_origin {
+  CORE
+  CUSTOM
+}
+
+enum field_requirement_level {
+  OPTIONAL
+  RECOMMENDED
+  REQUIRED
+}
+
+enum field_sensitivity {
+  NORMAL
+  PII
+  SENSITIVE
+}
+
+enum field_status {
+  ACTIVE
+  INACTIVE
+}
+
+enum field_catalog_governance {
+  OPEN
+  BEHAVIOR
+  CLOSED
+}
+
+enum field_override_target {
+  FIELD
+  CATALOG_VALUE
+}
+
+model field_definitions {
+  id                  String                   @id @default(uuid())
+  key                 String                   @unique
+  entity              String // ORDER · PARTNER (ĐP-4 mở thêm QC_RECORD/EXCEPTION/PAYMENT)
+  origin              field_origin             @default(CORE)
+  data_type           String
+  label               String
+  description         String?
+  placeholder         String?
+  placements          Json?
+  requirement         field_requirement_level  @default(OPTIONAL)
+  required_at_stage   String?
+  visibility          Json?
+  validation          Json?
+  catalog_key         String?
+  sensitivity         field_sensitivity        @default(NORMAL)
+  floor_internal_only Boolean                  @default(false)
+  status              field_status             @default(ACTIVE)
+  default_enabled     Boolean                  @default(true)
+  created_by          String?
+  updated_by          String?
+  created_at          DateTime                 @default(now())
+  updated_at          DateTime                 @updatedAt
+
+  @@index([entity])
+  @@index([catalog_key])
+}
+
+model field_catalogs {
+  id            String                    @id @default(uuid())
+  key           String                    @unique
+  label         String
+  governance    field_catalog_governance  @default(OPEN)
+  behavior_kind String?
+  created_at    DateTime                  @default(now())
+  updated_at    DateTime                  @updatedAt
+}
+
+model field_catalog_values {
+  id          String   @id @default(uuid())
+  catalog_key String
+  code        String
+  label       String
+  description String?
+  sort_order  Int      @default(0)
+  is_active   Boolean  @default(true)
+  behavior    String?
+  params      Json?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@unique([catalog_key, code])
+  @@index([catalog_key])
+}
+
+model field_config_overrides {
+  id              String                    @id @default(uuid())
+  organization_id String
+  target          field_override_target
+  override_key    String
+  label           String?
+  visibility      Json?
+  requirement     field_requirement_level?
+  is_enabled      Boolean?
+  created_by      String?
+  updated_by      String?
+  created_at      DateTime                  @default(now())
+  updated_at      DateTime                  @updatedAt
+
+  @@unique([organization_id, target, override_key])
+  @@index([organization_id])
+}
+```
+
+Kiến trúc hai lớp (Đặc tả trường §16.2): **lớp mã** là `src/modules/field-platform/domain/core-field-registry.ts` (khoá, kiểu dữ liệu, mức sàn — không đổi lúc chạy, mỗi module tự khai trường của mình, vd. `src/modules/coordinator/contracts/field-registry.ts`); **lớp cấu hình** là `field_definitions` (platform-wide, quản trị nền tảng sửa qua `N12`) cộng `field_config_overrides` (riêng một tổ chức). `field-rules.ts` là nơi DUY NHẤT cộng hai lớp (`computeEffectiveFieldConfig`) — không route/component nào tự cộng lấy.
+
+Mức sàn không cấu hình được (5 điều, Đặc tả trường §16.2): (1) `floor_internal_only = true` thì không cấu hình nào mở được hiển thị ra ngoài `INTERNAL`; (2) không hạ được `requirement` của trường lõi xuống dưới mức khai trong lớp mã; (3) `field_catalog_values` không xoá cứng, chỉ `is_active`; (4) `field_catalog_values.code` và `field_definitions.key` không đổi được sau khi tạo; (5) mọi thao tác ghi vào `platform_audit_logs`.
+
+Trường TỰ TẠO (`origin = CUSTOM`, D13) lưu giá trị ở cột `custom_fields Json?` trên chính dòng tenant (`order_coordinations`, `partners` — ĐP-4 mở thêm khi các bảng đó có), nên cách ly theo `organization_id` có sẵn, không cần thêm gì. Giới hạn an toàn (§16.3): tối đa 50 trường tự tạo/thực thể, mỗi giá trị ≤ 4 KB, không đổi kiểu dữ liệu khi đã có giá trị, khoá `cf_…` máy sinh — kiểm ở `src/modules/field-platform/domain/field-rules.ts`.
+
+`scripts/check-field-registry.ts` (`npm run check:field-registry`) đối chiếu: mọi trường lõi trong code có dòng `field_definitions`; `catalog_key`/`behavior` trong DB chỉ trỏ tới danh mục/hành vi có thật; không `field_config_overrides` mồ côi.

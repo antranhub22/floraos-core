@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useState } from "react"
-import { Radio, Search, CheckCircle2, AlertTriangle, AlertCircle, X, Plus, RefreshCw, Ban } from "lucide-react"
+import { Radio, Search, CheckCircle2, AlertTriangle, AlertCircle, X, Plus, RefreshCw, Ban, Wallet } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
@@ -19,12 +19,14 @@ import { DeliveryDispatchModal, type DeliveryEventInput } from "@/components/tem
 import { OrderClosureModal } from "@/components/templates/coordinator/order-closure-modal"
 import { SalesOrderIntakeCard } from "@/components/templates/coordinator/sales-order-intake-card"
 import { SalesOrderIntakeModal } from "./sales-order-intake-modal"
+import { PaymentLedgerModal } from "@/components/templates/coordinator/payment-ledger-modal"
 import {
   coordinatorApi,
   errorMessage,
   type CoordinationOrder,
   type CreateOrderRequest,
 } from "./coordinator-api"
+import { useCustomFieldDefinitions, visibleCustomFieldsForAudience } from "./custom-fields-section"
 import type { FlowerBomItem, StructuredAddress } from "@/modules/products/domain/product-master-index"
 
 /**
@@ -65,6 +67,17 @@ function asFlowers(order: CoordinationOrder): FlowerBomItem[] {
   return order.flowers as unknown as FlowerBomItem[]
 }
 
+/**
+ * ĐP-2.12 (26/09/2026): BOM cành hoa THẬT cho T07 — ưu tiên snapshot Master
+ * Index (`order.product.bom.flowers`, có `shade`/`budCount`) khi đơn chọn mẫu
+ * từ danh mục; đơn mẫu ngoài danh mục (không có `productId`) thì dùng BOM
+ * nhập tay như cũ (`asFlowers`), không có `shade`/`budCount` vì chưa từng có
+ * nguồn nào cho hai trường này ngoài Master Index.
+ */
+function bomFlowersOf(order: CoordinationOrder): FlowerBomItem[] {
+  return order.product ? order.product.bom.flowers : asFlowers(order)
+}
+
 function priorityOf(order: CoordinationOrder): "STANDARD" | "RUSH" | "VIP" {
   const note = order.internalNote ?? ""
   if (note.startsWith("[Ưu tiên: RUSH]")) return "RUSH"
@@ -73,6 +86,8 @@ function priorityOf(order: CoordinationOrder): "STANDARD" | "RUSH" | "VIP" {
 }
 
 const fmtTime = (iso: string | null) => (iso ? new Date(iso).toLocaleString("vi-VN") : "—")
+/** ĐP-4a.4 (26/09/2026) — hiển thị Tổng/Đã thu/Còn phải thu (sổ thu §2.14). */
+const fmtVnd = (n: number) => `${n.toLocaleString("vi-VN")}đ`
 
 export interface ControlTowerDashboardProps {
   isCreateModalOpen?: boolean | undefined
@@ -101,12 +116,22 @@ export function ControlTowerDashboard({
   const [isQcModalOpen, setIsQcModalOpen] = useState(false)
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false)
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [resolutionDrafts, setResolutionDrafts] = useState<Record<string, string>>({})
   const [newException, setNewException] = useState({ type: "CUSTOMER_CHANGE", severity: "MEDIUM", description: "" })
   const [cancelReason, setCancelReason] = useState("")
   const [detailError, setDetailError] = useState<string | null>(null)
 
   const selectedOrder = orders.find((o) => o.id === selectedId) ?? null
+
+  // ĐP-3.16 (26/09/2026): trường tự tạo (entity ORDER) hiện cho thẻ đối tác
+  // (T02/T07) — lọc đúng một chỗ (`visibleCustomFieldsForAudience`, cùng
+  // nguyên tắc "cửa duy nhất" của `project-for-audience.ts`), không để hai
+  // thẻ tự quyết định ẩn/hiện theo cách khác nhau.
+  const orderCustomFieldDefs = useCustomFieldDefinitions("ORDER")
+  const partnerVisibleCustomFields = selectedOrder
+    ? visibleCustomFieldsForAudience(selectedOrder.customFields, orderCustomFieldDefs ?? [], "PARTNER")
+    : []
 
   const refresh = useCallback(
     () =>
@@ -157,10 +182,22 @@ export function ControlTowerDashboard({
 
   // ── Thao tác: mỗi hàm chờ máy chủ; lỗi ném lên modal để hiện đúng câu máy chủ trả ──
 
-  const handleCreateOrder = async (body: CreateOrderRequest) => {
-    const order = await coordinatorApi.createOrder(body)
+  // ĐP-4a.3/4a.4 (26/09/2026, sổ thu §2.14): Sales ghi DEPOSIT ngay lúc nhận
+  // đơn nếu khách trả trước — một lượt gọi thứ hai SAU khi đơn đã tồn tại,
+  // không gộp vào `createOrder` (sổ thu có API/luật riêng, R9).
+  const handleCreateOrder = async (body: CreateOrderRequest, depositVnd: number) => {
+    let order = await coordinatorApi.createOrder(body)
+    if (depositVnd > 0) {
+      try {
+        order = await coordinatorApi.recordPayment(order.id, { kind: "DEPOSIT", amountVnd: depositVnd })
+      } catch (e) {
+        applyUpdate(order)
+        setNotice(`Đã tạo đơn #${order.orderCode}, nhưng ghi cọc thất bại: ${errorMessage(e)} — vào Sổ thu để ghi lại.`)
+        return
+      }
+    }
     applyUpdate(order)
-    setNotice(`Đã tạo đơn #${order.orderCode}.`)
+    setNotice(depositVnd > 0 ? `Đã tạo đơn #${order.orderCode} và ghi cọc ${fmtVnd(depositVnd)}.` : `Đã tạo đơn #${order.orderCode}.`)
   }
 
   const handleConfirmPlan = async (nextAction: string) => {
@@ -578,6 +615,24 @@ export function ControlTowerDashboard({
               {tabButton("CLOSURE", "P7 • Nghiệm thu (T25)")}
             </div>
 
+            <div className="px-4 py-2 flex items-center justify-between gap-2 bg-surface-alt/30 border-b border-border text-[11px] flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-text-muted">
+                  Tổng <strong className="text-text">{fmtVnd(selectedOrder.unitPriceVnd)}</strong>
+                </span>
+                <span className="text-text-muted">
+                  Đã thu <strong className="text-emerald-700">{fmtVnd(selectedOrder.paidVnd)}</strong>
+                </span>
+                <span className="text-text-muted">
+                  Còn phải thu{" "}
+                  <strong className={selectedOrder.balanceVnd > 0 ? "text-red-700" : "text-emerald-700"}>{fmtVnd(selectedOrder.balanceVnd)}</strong>
+                </span>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setIsPaymentModalOpen(true)} className="h-7 px-2.5 text-[11px] font-bold gap-1">
+                <Wallet size={12} /> Sổ thu (T01/T02/T05)
+              </Button>
+            </div>
+
             <div className="p-6 flex flex-col gap-4">
               {detailError && (
                 <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold">
@@ -607,7 +662,10 @@ export function ControlTowerDashboard({
                   orderCode={selectedOrder.orderCode}
                   productTitle={selectedOrder.productTitle}
                   sampleImageUrl={selectedOrder.sampleImageUrl}
-                  flowers={asFlowers(selectedOrder)}
+                  flowers={bomFlowersOf(selectedOrder)}
+                  foliage={selectedOrder.foliage}
+                  wrapping={selectedOrder.wrapping}
+                  accessories={selectedOrder.accessories}
                   unitPriceVnd={selectedOrder.unitPriceVnd}
                   partnerPayoutVnd={selectedOrder.partnerPayoutVnd ?? undefined}
                   deliveryTargetTime={selectedOrder.deliveryTargetTime}
@@ -615,10 +673,11 @@ export function ControlTowerDashboard({
                   recipientName={selectedOrder.recipientName}
                   recipientPhone={selectedOrder.recipientPhone}
                   cardMessage={selectedOrder.cardMessage}
-                  technicalNotes={selectedOrder.internalNote ?? undefined}
+                  technicalNotes={selectedOrder.partnerInstruction ?? undefined}
                   partnerName={selectedOrder.partnerName ?? undefined}
                   riskLevel={selectedOrder.riskLevel}
                   riskReason={selectedOrder.riskReason}
+                  customFields={partnerVisibleCustomFields}
                   {...(selectedOrder.stage === "COMPLETED" || selectedOrder.stage === "CANCELLED"
                     ? {}
                     : { onAdvanceStage: () => handleAdvanceStage(selectedOrder) })}
@@ -652,10 +711,14 @@ export function ControlTowerDashboard({
                     recipeTitle={selectedOrder.productTitle}
                     targetReadyTime={selectedOrder.deliveryTargetTime}
                     sampleImageUrl={selectedOrder.sampleImageUrl}
-                    flowers={asFlowers(selectedOrder)}
+                    flowers={bomFlowersOf(selectedOrder)}
+                    foliage={selectedOrder.foliage}
+                    wrapping={selectedOrder.wrapping}
+                    accessories={selectedOrder.accessories}
                     cardMessage={selectedOrder.cardMessage}
-                    internalNote={selectedOrder.internalNote}
+                    partnerInstruction={selectedOrder.partnerInstruction}
                     partnerName={selectedOrder.partnerName ?? undefined}
+                    customFields={partnerVisibleCustomFields}
                     onMarkReady={() => setIsProductionUpdateModalOpen(true)}
                   />
                 </div>
@@ -838,6 +901,12 @@ export function ControlTowerDashboard({
             order={selectedOrder}
             onClose={() => setIsClosureModalOpen(false)}
             onSubmit={handleCloseOrder}
+          />
+          <PaymentLedgerModal
+            isOpen={isPaymentModalOpen}
+            order={selectedOrder}
+            onClose={() => setIsPaymentModalOpen(false)}
+            onRecorded={(order) => applyUpdate(order)}
           />
         </>
       )}

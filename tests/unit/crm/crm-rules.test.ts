@@ -10,6 +10,7 @@ import {
   projectCustomerSalesCard,
   projectOccasionReminder,
   projectMarketingAudience,
+  projectCustomerCoordinationBrief,
   type CustomerMasterIndex,
 } from "@/modules/crm/domain/customer-master-index"
 
@@ -73,6 +74,13 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
       expect(hasMarketingConsent(consents, "PROMOTION")).toBe(false)
       expect(hasMarketingConsent(consents, "SMS")).toBe(false)
     })
+
+    it("ĐP-1.5 (MI-1, 26/09/2026): đã granted nhưng đã revoked thì vẫn phải từ chối", () => {
+      const consents = [
+        { channel: "ZALO_ZNS" as const, granted: true, grantedAt: "2026-01-01", revokedAt: "2026-06-01" },
+      ]
+      expect(hasMarketingConsent(consents, "ZALO_ZNS")).toBe(false)
+    })
   })
 
   describe("Field Projections", () => {
@@ -82,6 +90,7 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
       code: "KH-0001",
       name: "Chị Lan",
       phone: "0909111222",
+      updatedAt: "2026-09-20T00:00:00.000Z",
       tags: ["VIP"],
       metrics: {
         tier: "VIP",
@@ -100,7 +109,7 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
         { channel: "ZALO_ZNS", granted: true, grantedAt: "2026-01-01" },
       ],
       availableVouchers: [
-        { code: "VIP10", discountType: "PERCENTAGE", discountValue: 10 },
+        { code: "VIP10", discountType: "PERCENTAGE", discountValue: 10, minOrderVnd: 300_000, maxDiscountVnd: 200_000 },
       ],
     }
 
@@ -123,6 +132,33 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
     it("projectMarketingAudience chỉ lấy khách có consent", () => {
       expect(projectMarketingAudience(mockCustomer, "ZALO_ZNS")).not.toBeNull()
       expect(projectMarketingAudience(mockCustomer, "SMS")).toBeNull()
+    })
+
+    it("ĐP-1.5 (MI-1, 26/09/2026): khách ĐÃ cấp nhưng ĐÃ thu hồi Zalo ZNS thì không nhắc, không đưa vào tiếp thị", () => {
+      const revokedCustomer: CustomerMasterIndex = {
+        ...mockCustomer,
+        consents: [{ channel: "ZALO_ZNS", granted: true, grantedAt: "2026-01-01", revokedAt: "2026-06-01" }],
+      }
+      const rem = projectOccasionReminder(revokedCustomer, revokedCustomer.occasions[0]!, 7)
+      expect(rem.isZaloAllowed).toBe(false)
+      expect(projectMarketingAudience(revokedCustomer, "ZALO_ZNS")).toBeNull()
+    })
+
+    it("ĐP-1.6 (MI-2, 26/09/2026): projectCustomerSalesCard mang theo đủ minOrderVnd/maxDiscountVnd của voucher (qua CustomerMasterIndex)", () => {
+      expect(mockCustomer.availableVouchers[0]!.minOrderVnd).toBe(300_000)
+      expect(mockCustomer.availableVouchers[0]!.maxDiscountVnd).toBe(200_000)
+    })
+
+    it("ĐP-2.4 (MI-6, 26/09/2026): projectCustomerCoordinationBrief trích đúng tóm tắt cho Điều phối", () => {
+      const brief = projectCustomerCoordinationBrief(mockCustomer)
+      expect(brief.tier).toBe("VIP")
+      expect(brief.isVip).toBe(true)
+      expect(brief.preferredFlowers).toEqual(["Hồng Ecuador", "Baby Hà Lan"])
+    })
+
+    it("ĐP-2.4 (MI-6, 26/09/2026): khách chưa có notes thật thì trả rỗng, không bịa \"Khách hàng thân thiết\"", () => {
+      const brief = projectCustomerCoordinationBrief({ ...mockCustomer, notes: undefined })
+      expect(brief.notes).toBe("")
     })
   })
 })

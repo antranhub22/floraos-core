@@ -143,7 +143,7 @@ export default function ChatChannelsIntegrationPage() {
       {/* 2. BODY CONTENT */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-6xl mx-auto w-full">
         <FeatureGuidanceCard
-          tag="HƯỚNG DẪN TÍCH HỢP ĐA KÊNH M08"
+          tag="HƯỚNG DẪN TÍCH HỢP ĐA KÊNH"
           title="Kết Nối Trợ Lý Ảo Đa Điểm Chạm & Kiểm Soát Biểu Phí Nền Tảng"
           description="Chủ cửa hàng có toàn quyền lựa chọn kích hoạt AI Assistant trên E-Catalog, Landing Page, Facebook Messenger, Zalo OA hoặc Website riêng. FloraOS-core áp dụng cơ chế trừ credit minh bạch theo gói thuê bao và lượt tin nhắn tư vấn."
           tips={[
@@ -155,18 +155,18 @@ export default function ChatChannelsIntegrationPage() {
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold text-foreground flex items-center gap-2">
-              <Globe className="h-4 w-4 text-red-600" />
+            <h2 className="text-body-sm font-extrabold text-foreground flex items-center gap-2">
+              <Globe className="h-4 w-4 text-primary" />
               Danh Sách Kênh Tiếp Xúc Khách Hàng
             </h2>
-            <span className="text-xs text-muted-foreground">
-              Tự động đồng bộ với Product Master Index & Chốt đơn M10
+            <span className="text-caption text-text-muted">
+              Tự động đồng bộ với sản phẩm và luồng chốt đơn
             </span>
           </div>
 
           {loading ? (
             <div className="flex h-48 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-red-600" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

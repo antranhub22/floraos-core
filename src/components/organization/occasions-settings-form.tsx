@@ -13,6 +13,7 @@
 
 import React, { useEffect, useState } from "react"
 import { CalendarHeart, Plus, Check, AlertCircle, CheckCircle2, Power } from "lucide-react"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { OCCASION_REGISTER_LABELS, type OccasionRegisterValue } from "@/modules/organization/domain/occasion-rules"
 import { errorText } from "@/lib/error-text"
 
@@ -180,7 +181,7 @@ export function OccasionsSettingsForm() {
         <h3 className="text-sm font-bold text-text pb-4 border-b border-border mb-4">Danh mục dịp của cửa hàng</h3>
 
         {loading ? (
-          <p className="text-xs text-text-muted text-center py-6">Đang tải...</p>
+          <div className="py-4"><SkeletonBlock lines={3} /></div>
         ) : occasions.length === 0 ? (
           <p className="text-xs text-text-muted italic text-center py-6">Chưa có dịp nào — thêm dịp đầu tiên ở trên</p>
         ) : (

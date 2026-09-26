@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Plus, RefreshCw, Clock, Flower2, Truck, CheckCircle2, AlertTriangle, Eye } from "lucide-react"
+import { ArrowLeft, Plus, RefreshCw, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { OrderGuidanceCard } from "@/components/templates/orders/order-guidance-card"
 import { CreateOrderModal } from "@/components/orders/create-order-modal"
 import { OrderDetailModal } from "@/components/orders/order-detail-modal"
+import { EmptyState } from "@/components/ui/empty-state"
 
 type OrderItem = {
   id: string
@@ -23,6 +24,8 @@ type OrderItem = {
   createdAt: string
 }
 
+type MobileFilter = "all" | "new" | "arranging" | "delivery" | "completed"
+
 export default function DonHangPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<OrderItem[]>([])
@@ -30,6 +33,7 @@ export default function DonHangPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+  const [mobileTab, setMobileTab] = useState<MobileFilter>("all")
 
   function loadOrders() {
     setLoading(true)
@@ -43,7 +47,6 @@ export default function DonHangPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     loadOrders()
   }, [])
 
@@ -68,60 +71,119 @@ export default function DonHangPage() {
   )
   const colCompleted = filteredOrders.filter((o) => o.status === "COMPLETED" || o.status === "CANCELLED" || o.deliveryStatus === "DELIVERED")
 
+  const mobileOrders =
+    mobileTab === "new"
+      ? colNew
+      : mobileTab === "arranging"
+      ? colArranging
+      : mobileTab === "delivery"
+      ? colDelivery
+      : mobileTab === "completed"
+      ? colCompleted
+      : filteredOrders
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {/* 1. Header chuẩn FloraOS */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 py-4">
+      <header className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 sm:px-6 py-4">
         <div>
-          <div className="text-xs font-bold uppercase tracking-wider text-text-muted">M10 — Điều phối sản xuất & giao hàng</div>
-          <div className="text-lg font-extrabold text-foreground">Đơn Hàng & Vận Hành Xưởng Hoa</div>
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted">
+            Điều phối sản xuất & giao hàng
+          </div>
+          <h1 className="text-title font-extrabold text-foreground">Đơn Hàng & Vận Hành Xưởng Hoa</h1>
         </div>
 
-        {/* Top-Right Action Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={loadOrders} disabled={loading}>
-            <RefreshCw className={`mr-1.5 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Làm mới
+        {/* Top-Right Action Header: 1 primary + 2 secondary/ghost */}
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 font-semibold">
+            <Plus size={16} /> Tạo đơn mới
           </Button>
-          <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-semibold" onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" /> Tạo đơn mới
+          <Button variant="outline" size="sm" onClick={loadOrders} disabled={loading} className="hidden sm:inline-flex items-center gap-1.5">
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Làm mới
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
-            <ArrowLeft className="mr-1.5 h-4 w-4" /> Trang chủ
+          <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="hidden sm:inline-flex items-center gap-1.5">
+            <ArrowLeft size={14} /> Trang chủ
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* 2. Nội dung chính cuộn dọc */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Khối hướng dẫn thao tác chuẩn OrderGuidanceCard */}
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
         <OrderGuidanceCard />
 
         {/* Thanh tìm kiếm & bộ lọc */}
-        <div className="flex items-center justify-between">
-          <div className="w-80">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="w-full sm:w-80">
             <input
               type="text"
               placeholder="Tìm theo mã đơn, người nhận, SĐT..."
-              className="w-full rounded-md border border-border bg-surface px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-body-sm outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-primary"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="text-xs text-text-muted">
+          <div className="text-caption text-text-muted">
             Tổng cộng: <span className="font-bold text-foreground">{filteredOrders.length}</span> đơn hàng
           </div>
         </div>
 
-        {/* Kanban Board 4 cột */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+        {/* Bộ lọc trạng thái trên Mobile (< lg) */}
+        <div className="flex lg:hidden overflow-x-auto gap-2 pb-1 text-caption">
+          {[
+            { id: "all" as const, label: "Tất cả", count: filteredOrders.length },
+            { id: "new" as const, label: "Mới", count: colNew.length },
+            { id: "arranging" as const, label: "Đang cắm", count: colArranging.length },
+            { id: "delivery" as const, label: "Vận chuyển", count: colDelivery.length },
+            { id: "completed" as const, label: "Hoàn tất", count: colCompleted.length },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setMobileTab(tab.id)}
+              className={`flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-1 font-semibold whitespace-nowrap transition-colors ${
+                mobileTab === tab.id
+                  ? "bg-primary text-white"
+                  : "bg-surface border border-border text-text-muted hover:bg-surface-alt"
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={`text-[10px] rounded-full px-1.5 py-0.2 ${
+                mobileTab === tab.id ? "bg-white/20 text-white" : "bg-surface-alt text-text"
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Chế độ danh sách đơn trên Mobile (< lg) */}
+        <div className="flex flex-col gap-3 lg:hidden">
+          {mobileOrders.length === 0 ? (
+            <EmptyState
+              title="Không có đơn hàng nào"
+              reason="Chưa có đơn hàng nào ở trạng thái này hoặc không khớp với từ khoá tìm kiếm."
+              action={{
+                label: "Tạo đơn mới",
+                onClick: () => setCreateOpen(true),
+              }}
+            />
+          ) : (
+            mobileOrders.map((ord) => (
+              <OrderCard key={ord.id} order={ord} onSelect={() => setSelectedOrderId(ord.id)} />
+            ))
+          )}
+        </div>
+
+        {/* Chế độ Kanban Board 4 cột trên Desktop (lg+) */}
+        <div className="hidden lg:grid lg:grid-cols-4 gap-4">
           {/* Cột 1: Mới / Chờ duyệt */}
-          <div className="flex flex-col rounded-xl border border-border bg-surface-raised/40 p-3">
+          <div className="flex flex-col rounded-xl border border-border bg-surface-alt/40 p-3">
             <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-                <span className="font-bold text-xs uppercase text-text-main">1. Mới tiếp nhận</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-500" aria-hidden="true" />
+                <span className="font-bold text-caption uppercase text-text">1. Mới tiếp nhận</span>
               </div>
-              <Badge tone="neutral" className="text-[10px]">{colNew.length}</Badge>
+              <Badge tone="neutral" className="text-caption font-bold">{colNew.length}</Badge>
             </div>
             <div className="space-y-3 flex-1 overflow-y-auto">
               {colNew.map((ord) => (
@@ -131,13 +193,13 @@ export default function DonHangPage() {
           </div>
 
           {/* Cột 2: Đang cắm hoa */}
-          <div className="flex flex-col rounded-xl border border-border bg-surface-raised/40 p-3">
+          <div className="flex flex-col rounded-xl border border-border bg-surface-alt/40 p-3">
             <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
-                <span className="font-bold text-xs uppercase text-text-main">2. Đang cắm hoa</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-purple-500" aria-hidden="true" />
+                <span className="font-bold text-caption uppercase text-text">2. Đang cắm hoa</span>
               </div>
-              <Badge tone="neutral" className="text-[10px]">{colArranging.length}</Badge>
+              <Badge tone="neutral" className="text-caption font-bold">{colArranging.length}</Badge>
             </div>
             <div className="space-y-3 flex-1 overflow-y-auto">
               {colArranging.map((ord) => (
@@ -147,13 +209,13 @@ export default function DonHangPage() {
           </div>
 
           {/* Cột 3: Đang giao hàng */}
-          <div className="flex flex-col rounded-xl border border-border bg-surface-raised/40 p-3">
+          <div className="flex flex-col rounded-xl border border-border bg-surface-alt/40 p-3">
             <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span className="font-bold text-xs uppercase text-text-main">3. Vận chuyển</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden="true" />
+                <span className="font-bold text-caption uppercase text-text">3. Vận chuyển</span>
               </div>
-              <Badge tone="neutral" className="text-[10px]">{colDelivery.length}</Badge>
+              <Badge tone="neutral" className="text-caption font-bold">{colDelivery.length}</Badge>
             </div>
             <div className="space-y-3 flex-1 overflow-y-auto">
               {colDelivery.map((ord) => (
@@ -163,13 +225,13 @@ export default function DonHangPage() {
           </div>
 
           {/* Cột 4: Hoàn tất */}
-          <div className="flex flex-col rounded-xl border border-border bg-surface-raised/40 p-3">
+          <div className="flex flex-col rounded-xl border border-border bg-surface-alt/40 p-3">
             <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                <span className="font-bold text-xs uppercase text-text-main">4. Hoàn tất / Đã giao</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-green-500" aria-hidden="true" />
+                <span className="font-bold text-caption uppercase text-text">4. Hoàn tất / Đã giao</span>
               </div>
-              <Badge tone="neutral" className="text-[10px]">{colCompleted.length}</Badge>
+              <Badge tone="neutral" className="text-caption font-bold">{colCompleted.length}</Badge>
             </div>
             <div className="space-y-3 flex-1 overflow-y-auto">
               {colCompleted.map((ord) => (
@@ -178,16 +240,14 @@ export default function DonHangPage() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
-      {/* Modal tạo đơn hàng */}
       <CreateOrderModal
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         onSuccess={loadOrders}
       />
 
-      {/* Modal chi tiết đơn hàng & SLA */}
       <OrderDetailModal
         orderId={selectedOrderId}
         onClose={() => setSelectedOrderId(null)}
@@ -199,46 +259,47 @@ export default function DonHangPage() {
 
 function OrderCard({ order, onSelect }: { order: OrderItem; onSelect: () => void }) {
   return (
-    <div
+    <button
+      type="button"
       onClick={onSelect}
-      className="cursor-pointer rounded-lg border border-border bg-surface p-3 transition-all hover:border-primary hover:shadow-md space-y-2 text-xs"
+      className="w-full text-left cursor-pointer rounded-xl border border-border bg-surface p-3 transition-all hover:border-primary hover:shadow-sm space-y-2 text-body-sm focus-visible:outline-2 focus-visible:outline-primary min-h-11"
     >
       <div className="flex items-center justify-between">
         <span className="font-mono font-bold text-primary">{order.code}</span>
-        <span className="text-[10px] text-text-muted">
+        <span className="text-caption text-text-muted">
           {new Date(order.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
         </span>
       </div>
 
       <div>
-        <div className="font-bold text-foreground">
+        <div className="font-bold text-text">
           {order.deliveryAddress?.recipientName ?? "Khách lẻ"}
         </div>
-        <div className="text-text-muted truncate text-[11px]">
+        <div className="text-text-muted truncate text-caption">
           {order.deliveryAddress?.street ?? "Nhận tại tiệm"}
         </div>
       </div>
 
       {order.items && order.items[0] && (
-        <div className="text-[11px] text-text-muted bg-surface-raised px-2 py-1 rounded">
+        <div className="text-caption text-text-muted bg-surface-alt px-2 py-1 rounded-lg">
           🌸 {order.items[0].description} {order.items.length > 1 ? `(+${order.items.length - 1} món)` : ""}
         </div>
       )}
 
       {order.cardMessage && (
-        <div className="truncate text-[10.5px] italic text-amber-700">
+        <div className="truncate text-caption italic text-amber-700">
           💌 {order.cardMessage}
         </div>
       )}
 
-      <div className="flex items-center justify-between border-t border-border/50 pt-2">
-        <span className="font-bold text-red-600">
+      <div className="flex items-center justify-between border-t border-border pt-2">
+        <span className="font-bold text-primary">
           {order.totalVnd.toLocaleString("vi-VN")} đ
         </span>
-        <span className="text-[10px] text-primary flex items-center gap-1 font-semibold">
-          <Eye className="h-3 w-3" /> Chi tiết
+        <span className="text-caption text-primary flex items-center gap-1 font-semibold">
+          <Eye size={13} aria-hidden="true" /> Chi tiết
         </span>
       </div>
-    </div>
+    </button>
   )
 }

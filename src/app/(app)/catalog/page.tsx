@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, BookOpen, Sparkles } from "lucide-react"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { TabActionHeader } from "@/components/ui/tab-header"
 import { CatalogGuidanceCard } from "@/components/templates/catalog/catalog-guidance-card"
@@ -10,7 +11,7 @@ import { CatalogManagementTab, type CatalogProduct, type CatalogLinkItem } from 
 import { LandingCampaignTab } from "@/components/catalog/landing-campaign-tab"
 
 /**
- * Trang Catalog & Website (Chức năng #6, M06 + M05).
+ * Trang Catalog & Website.
  *
  * Orchestrator gọn — chỉ quản lý fetch dữ liệu chung và chuyển tab,
  * mọi nghiệp vụ UI nằm ở CatalogManagementTab / LandingCampaignTab.
@@ -99,9 +100,8 @@ export default function CatalogWebsitePage() {
     return (
       <div className="flex h-full flex-col overflow-hidden">
         <PageHeader onBack={() => router.push("/")} />
-        <div className="flex flex-1 flex-col items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          <p className="mt-4 text-text-muted text-sm">Đang tải danh mục sản phẩm…</p>
+        <div className="p-[18px]">
+          <SkeletonBlock lines={4} label="Đang tải danh mục sản phẩm" />
         </div>
       </div>
     )
@@ -125,7 +125,7 @@ export default function CatalogWebsitePage() {
         <TabActionHeader
           tabs={[
             { id: "catalog", label: "Catalog số trực tuyến", icon: BookOpen, badge: `${activeCount} SP`, badgeTone: "neutral" },
-            { id: "landing", label: "Landing page chiến dịch", icon: Sparkles, badge: "M05", badgeTone: "accent" },
+            { id: "landing", label: "Landing page chiến dịch", icon: Sparkles },
           ]}
           activeTab={tab}
           onTabChange={(id) => setTab(id as "catalog" | "landing")}
@@ -153,10 +153,7 @@ export default function CatalogWebsitePage() {
 function PageHeader({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
-      <div>
-        <div className="text-xs text-text-muted">M06 + M05</div>
-        <div className="text-[17px] font-extrabold text-primary">Catalog & Website</div>
-      </div>
+      <div className="text-[17px] font-extrabold text-primary">Catalog & Website</div>
       <Button variant="ghost" onClick={onBack} className="flex items-center gap-1.5">
         <ArrowLeft size={16} strokeWidth={2} /> Quay về Trang chủ
       </Button>

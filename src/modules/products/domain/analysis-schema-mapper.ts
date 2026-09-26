@@ -92,6 +92,11 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     so_nu?: number | null
     so_hong?: number | null
     confidence?: number | null
+    // MI-12 (ĐP-2b, 26/09/2026)
+    bien_the?: string | null
+    chieu_dai_cm?: number | null
+    duoc_thay_the?: boolean | null
+    thu_tu_uu_tien_thay_the?: number | null
   }, i: number) => {
     const name = f.name ?? f.nhom_hoa ?? "N/A"
     const qty = f.quantity ?? f.count ?? null
@@ -102,8 +107,14 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     const colorStr = colorDesc ? `• ${colorDesc}` : null
     const nuStr = f.so_nu && f.so_nu > 0 ? `• ${f.so_nu} nụ` : null
     const hongStr = f.so_hong && f.so_hong > 0 ? `• ${f.so_hong} cành hỏng` : null
+    // MI-12 (ĐP-2b, 26/09/2026) — chỉ hiện khi AI/người nhập có xác định, không suy đoán.
+    const varietyStr = f.bien_the ? `• Giống: ${f.bien_the}` : null
+    const stemLengthStr = f.chieu_dai_cm ? `• Dài ${f.chieu_dai_cm}cm` : null
+    const substitutionStr = f.duoc_thay_the != null
+      ? `• ${f.duoc_thay_the ? "Được thay thế" : "Không thay thế"}${f.thu_tu_uu_tien_thay_the != null ? ` (ưu tiên ${f.thu_tu_uu_tien_thay_the})` : ""}`
+      : null
 
-    const parts = [name, `— ${qtyStr}`, roleStr, colorStr, nuStr, hongStr].filter(Boolean).join(" ")
+    const parts = [name, `— ${qtyStr}`, roleStr, colorStr, nuStr, hongStr, varietyStr, stemLengthStr, substitutionStr].filter(Boolean).join(" ")
     return {
       id: f.id ?? `flower-${i}`,
       name: f.name ?? f.nhom_hoa ?? "",
@@ -111,7 +122,7 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
       quantity: qty,
       role: f.role ?? undefined,
       color: colorDesc || undefined,
-      extra: [nuStr, hongStr].filter(Boolean).join(" • ") || undefined,
+      extra: [nuStr, hongStr, varietyStr, stemLengthStr, substitutionStr].filter(Boolean).join(" • ") || undefined,
       value: parts || "N/A",
     }
   })
@@ -128,6 +139,7 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     color?: string | null
     mau?: string | null
     mo_ta_mau?: string | null
+    duoc_thay_the?: boolean | null // MI-12 (ĐP-2b, 26/09/2026)
   }, i: number) => {
     const name = f.name ?? "N/A"
     const qty = f.quantity ?? f.count ?? null
@@ -137,7 +149,8 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     const colorDesc = [f.mau, f.mo_ta_mau || f.color].filter(Boolean).join(" - ")
     const colorStr = colorDesc ? `• ${colorDesc}` : null
 
-    const parts = [`🌿 ${name}`, `— ${qtyStr}`, roleStr, colorStr].filter(Boolean).join(" ")
+    const substitutionStr = f.duoc_thay_the != null ? `• ${f.duoc_thay_the ? "Được thay thế" : "Không thay thế"}` : null
+    const parts = [`🌿 ${name}`, `— ${qtyStr}`, roleStr, colorStr, substitutionStr].filter(Boolean).join(" ")
     return {
       id: f.id ?? `foliage-${i}`,
       name: f.name ?? "",
@@ -145,6 +158,7 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
       quantity: qty,
       role: f.role ?? undefined,
       color: colorDesc || undefined,
+      extra: substitutionStr || undefined,
       value: parts || "N/A",
     }
   })
@@ -158,18 +172,21 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     color?: string | null
     quantity?: number | null
     printed_text?: string | null
+    don_vi?: string | null // MI-12 (ĐP-2b, 26/09/2026)
+    duoc_thay_the?: boolean | null
   }, i: number) => {
     const rawName = a.name ?? "N/A"
     const isCard = rawName.toLowerCase().includes("thiệp") || rawName.toLowerCase().includes("biển") || Boolean(a.printed_text)
     const icon = isCard ? "💌 " : "🎀 "
     const name = `${icon}${rawName}`
     const qty = a.quantity ?? 1
-    const unit = "cái"
+    const unit = a.don_vi ?? "cái"
     const matStr = a.material ? `(${a.material})` : null
     const colorStr = a.color ? `• Màu ${a.color}` : null
     const textStr = a.printed_text ? `• In: "${a.printed_text}"` : null
+    const substitutionStr = a.duoc_thay_the != null ? `• ${a.duoc_thay_the ? "Được thay thế" : "Không thay thế"}` : null
 
-    const parts = [name, `— ${qty} ${unit}`, matStr, colorStr, textStr].filter(Boolean).join(" ")
+    const parts = [name, `— ${qty} ${unit}`, matStr, colorStr, textStr, substitutionStr].filter(Boolean).join(" ")
     return {
       id: a.id ?? `accessory-${i}`,
       name: a.name ?? "",
@@ -177,7 +194,7 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
       quantity: qty,
       role: a.material ? `Chất liệu: ${a.material}` : undefined,
       color: a.color ?? undefined,
-      extra: a.printed_text ? `In: "${a.printed_text}"` : undefined,
+      extra: [a.printed_text ? `In: "${a.printed_text}"` : null, substitutionStr].filter(Boolean).join(" • ") || undefined,
       value: parts || "N/A",
     }
   })
@@ -191,13 +208,19 @@ export function mapAnalysisFromSchema(raw: Record<string, unknown> | null | unde
     color?: string | null
     texture?: string | null
     name?: string | null
+    hoa_van?: string | null // MI-12 (ĐP-2b, 26/09/2026)
+    so_luong?: number | null
+    duoc_thay_the?: boolean | null
   }, i: number) => {
     const layer = w.layer ?? `Lớp ${i + 1}`
     const mat = w.material ?? w.name ?? "Giấy gói"
     const colorStr = w.color ? `• Màu ${w.color}` : null
     const texStr = w.texture ? `(${w.texture})` : null
+    const patternStr = w.hoa_van ? `• Hoạ tiết: ${w.hoa_van}` : null
+    const qtyStr = w.so_luong ? `• SL: ${w.so_luong}` : null
+    const substitutionStr = w.duoc_thay_the != null ? `• ${w.duoc_thay_the ? "Được thay thế" : "Không thay thế"}` : null
 
-    const parts = [`${layer}: ${mat}`, colorStr, texStr].filter(Boolean).join(" ")
+    const parts = [`${layer}: ${mat}`, colorStr, texStr, patternStr, qtyStr, substitutionStr].filter(Boolean).join(" ")
     return {
       id: w.id ?? `wrapping-${i}`,
       value: parts || "N/A",

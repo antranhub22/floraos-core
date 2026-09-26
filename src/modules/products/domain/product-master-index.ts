@@ -32,6 +32,18 @@ export interface FlowerBomItem {
   budCount?: number | undefined
   /** Số cành hỏng/héo/dập của riêng loài này (`so_hong`) — đã NẰM TRONG `quantity` (nợ #90). */
   damagedCount?: number | undefined
+  /**
+   * MI-12 (ĐP-2b, 26/09/2026): giống/biến thể cụ thể của nhóm hoa — khác `flowerName` (tên
+   * hiển thị chọn từ danh mục) khi cần khai chi tiết hơn (vd. `flowerName` = "Hồng", `variety`
+   * = "Ohara"/"Explorer"). `undefined` khi AI/người nhập không xác định được — KHÔNG suy đoán.
+   */
+  variety?: string | undefined
+  /** MI-12: chiều dài cành (cm) — hậu tố đơn vị theo đúng quy ước `heightCm`/`widthCm` đã có. */
+  stemLengthCm?: number | undefined
+  /** MI-12: cờ cho phép thay thế CẤP TỪNG DÒNG BOM này (khác `substitutionPolicy` cấp sản phẩm). */
+  substitutionAllowed?: boolean | undefined
+  /** MI-12: thứ tự ưu tiên bị thay thế khi thiếu hàng — số nhỏ hơn thay trước. `undefined` khi chưa xếp hạng. */
+  substitutionPriority?: number | undefined
 }
 
 /** Lá/cành trang trí — cấu trúc nguyên tử thay vì chỉ giữ tên trần (nợ #88). */
@@ -42,6 +54,8 @@ export interface FoliageBomItem {
   unit: DemUnit
   color: string
   role: "Nền" | "Viền" | "Điểm nhấn" | "Lấp đầy"
+  /** MI-12 (ĐP-2b, 26/09/2026): cờ cho phép thay thế CẤP TỪNG DÒNG BOM này. */
+  substitutionAllowed?: boolean | undefined
 }
 
 /** Phụ kiện trang trí — cấu trúc nguyên tử thay vì chỉ giữ tên trần (nợ #88). */
@@ -52,6 +66,10 @@ export interface AccessoryBomItem {
   quantity: number | null
   /** Chữ in trên chính phụ kiện, nguyên văn — `null` khi không có. */
   printedText: string | null
+  /** MI-12 (ĐP-2b, 26/09/2026): đơn vị tính của phụ kiện (vd. "cái", "bộ") — khác `DemUnit` (chỉ dành cho hoa/lá). */
+  unit?: string | undefined
+  /** MI-12: cờ cho phép thay thế CẤP TỪNG DÒNG BOM này. */
+  substitutionAllowed?: boolean | undefined
 }
 
 /** Một lớp trong công thức gói — hợp đồng Vision khai đủ 4 lớp (nợ #88, phần wrapping). */
@@ -60,6 +78,12 @@ export interface WrappingLayer {
   material: string
   color: string
   texture: string
+  /** MI-12 (ĐP-2b, 26/09/2026): hoa văn/hoạ tiết — khác `texture` (kết cấu vật liệu, vd "mờ"/"bóng"). */
+  pattern?: string | undefined
+  /** MI-12: số lượng lớp/tấm của CHÍNH lớp gói này (vd. 2 lớp giấy lụa cùng màu). */
+  quantity?: number | undefined
+  /** MI-12: cờ cho phép thay thế CẤP TỪNG DÒNG BOM này. */
+  substitutionAllowed?: boolean | undefined
 }
 
 /**
@@ -76,9 +100,14 @@ export interface ProductVariant {
   multiplier: number
 }
 
-/** Một ảnh phụ ngoài ảnh chính (`masterImageUrl`) — đúng 3 vai trò còn lại của `product_images.role`. */
+/**
+ * Một ảnh phụ ngoài ảnh chính (`masterImageUrl`) — vai trò của `product_images.role`.
+ * MI-4 (ĐP-2.2, 26/09/2026): thêm `REFERENCE` — ảnh mẫu thiết kế đã DUYỆT, dùng làm chuẩn
+ * đối chiếu cho thợ cắm (T07) và QC (T14/T15). `product_images.role` là cột chuỗi tự do nên
+ * không cần migration để thêm giá trị mới.
+ */
 export interface ProductGalleryImage {
-  role: "GALLERY" | "CATALOG" | "SOCIAL"
+  role: "GALLERY" | "CATALOG" | "SOCIAL" | "REFERENCE"
   url: string
 }
 
@@ -190,6 +219,8 @@ export interface ProductMasterIndex {
   dimensions?: { heightCm: number; widthCm: number } | undefined
   /** Chính sách thay thế hoa tương đương khi hết nguyên liệu đúng loài trong BOM. */
   substitutionPolicy?: { allowed: boolean; note?: string | undefined } | undefined
+  /** MI-3 (ĐP-2.1, 26/09/2026): `products.updated_at` — làm phiên bản cho snapshot (Hợp đồng MI §5). */
+  updatedAt: string
 }
 
 /**
@@ -310,5 +341,68 @@ export function projectOrderLineItem(product: ProductMasterIndex) {
     wrapStyle: product.bom.wrapStyle,
     recipeSummary: flowerSummary,
     bom: product.bom,
+  }
+}
+
+/**
+ * 4. PROJECTION CHO SNAPSHOT ĐƠN ĐIỀU PHỐI (MI-5, ĐP-2.3, 26/09/2026)
+ * Nơi DUY NHẤT quyết định trường nào của Master Index đi vào một đơn (Hợp đồng MI §5 —
+ * Snapshot). Chụp lại đúng lúc tạo đơn (`capturedAt`), kèm phiên bản Master tại thời điểm đó
+ * (`masterUpdatedAt`) để về sau so sánh phát hiện Master đã đổi (Hợp đồng MI §6 — Override).
+ *
+ * CỐ Ý KHÔNG có `costPriceVnd` — giá vốn không bao giờ được phép rời khỏi Master Index để đi
+ * vào một đơn cụ thể (đối tác/thợ cắm có thể đọc được đơn).
+ */
+export interface CoordinatorProductSnapshot {
+  productId: string
+  code: string
+  name: string
+  category: string
+  style: string
+  colorPalette: { primaryColor: string; secondaryColor?: string | undefined }
+  /** URL các ảnh vai trò REFERENCE (MI-4) — ảnh mẫu thiết kế đã duyệt để đối chiếu. */
+  referenceImageUrls: string[]
+  bom: {
+    flowers: FlowerBomItem[]
+    foliage: FoliageBomItem[]
+    wrapping: WrappingLayer[]
+    accessories: AccessoryBomItem[]
+  }
+  tierCount?: number | undefined
+  substitutionPolicy?: { allowed: boolean; note?: string | undefined } | undefined
+  dimensions?: { heightCm: number; widthCm: number } | undefined
+  warningTags: string[]
+  quotePriceVnd: number | null
+  /** Phiên bản Master Index tại thời điểm chụp (MI-3 `product.updatedAt`). */
+  masterUpdatedAt: string
+  /** Mốc chụp snapshot — luôn là lúc tạo đơn, KHÔNG phải lúc đọc lại đơn về sau. */
+  capturedAt: string
+}
+
+export function projectCoordinatorSnapshot(product: ProductMasterIndex, now: Date = new Date()): CoordinatorProductSnapshot {
+  return {
+    productId: product.id,
+    code: product.code,
+    name: product.name,
+    category: product.category,
+    style: product.style,
+    colorPalette: {
+      primaryColor: product.colorPalette.primaryColor,
+      secondaryColor: product.colorPalette.secondaryColor,
+    },
+    referenceImageUrls: product.galleryImages.filter((g) => g.role === "REFERENCE").map((g) => g.url),
+    bom: {
+      flowers: product.bom.flowers,
+      foliage: product.bom.foliage,
+      wrapping: product.bom.wrapping,
+      accessories: product.bom.accessories,
+    },
+    tierCount: product.bom.tierCount,
+    substitutionPolicy: product.substitutionPolicy,
+    dimensions: product.dimensions,
+    warningTags: product.warningTags,
+    quotePriceVnd: product.pricing.quotePriceVnd,
+    masterUpdatedAt: product.updatedAt,
+    capturedAt: now.toISOString(),
   }
 }

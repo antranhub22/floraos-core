@@ -19,12 +19,20 @@ import {
   Eye,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { FlowerBomItem, StructuredAddress } from "@/modules/products/domain/product-master-index"
+import type {
+  AccessoryBomItem,
+  FlowerBomItem,
+  FoliageBomItem,
+  StructuredAddress,
+  WrappingLayer,
+} from "@/modules/products/domain/product-master-index"
 import {
+  coordinatorApi,
   errorMessage,
   uploadCoordinatorPhoto,
   type CreateOrderRequest,
 } from "@/components/coordinator/coordinator-api"
+import { CustomFieldsSection } from "@/components/coordinator/custom-fields-section"
 
 /** Một mục Product Master Index dùng để điền nhanh form (`GET /products/master-index`). */
 interface MasterPreset {
@@ -33,14 +41,31 @@ interface MasterPreset {
   name: string
   masterImageUrl?: string
   pricing?: { quotePriceVnd?: number }
-  bom?: { wrapStyle?: string; ribbon?: string; flowers?: FlowerBomItem[] }
+  bom?: {
+    flowers?: FlowerBomItem[]
+    foliage?: FoliageBomItem[]
+    wrapping?: WrappingLayer[]
+    accessories?: AccessoryBomItem[]
+  }
+}
+
+/** Một khách hàng khớp tìm kiếm từ Customer Master Index (`GET /crm/customers?search=`). */
+interface CustomerMatch {
+  id: string
+  name: string
+  phone: string
+  metrics?: { tier?: string }
 }
 
 export interface SalesOrderIntakeModalProps {
   isOpen: boolean
   onClose: () => void
-  /** Gửi lên máy chủ; lỗi (400/422) ném ra để modal hiện, không đóng form. */
-  onSubmit: (body: CreateOrderRequest) => Promise<void>
+  /**
+   * Gửi lên máy chủ; lỗi (400/422) ném ra để modal hiện, không đóng form.
+   * `depositVnd` (ĐP-4a.3/4a.4, sổ thu §2.14) — Sales ghi DEPOSIT ngay lúc
+   * nhận đơn nếu khách trả trước; 0 nghĩa là không ghi cọc lúc này.
+   */
+  onSubmit: (body: CreateOrderRequest, depositVnd: number) => Promise<void>
 }
 
 export function SalesOrderIntakeModal({
@@ -51,6 +76,24 @@ export function SalesOrderIntakeModal({
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
   const [customerTier, setCustomerTier] = useState<"NEW" | "BRONZE" | "SILVER" | "GOLD" | "VIP">("NEW")
+  // ĐP-2.9 (26/09/2026): chọn khách từ Customer Master Index — có `customerId`
+  // thì máy chủ TỰ lấy tên/SĐT/hạng từ CMI và bỏ qua giá trị nhập tay bên
+  // dưới, nên khoá 3 ô đó lại để không tạo cảm giác sai là sửa được.
+  const [customerId, setCustomerId] = useState<string | null>(null)
+  const [customerQuery, setCustomerQuery] = useState("")
+  const [customerMatches, setCustomerMatches] = useState<CustomerMatch[]>([])
+  const [customerSearching, setCustomerSearching] = useState(false)
+
+  // ĐP-2.6 (26/09/2026): giữ lại ID của sản phẩm Master Index đã chọn — cho
+  // phép máy chủ chụp snapshot (§5) và ghi vết nếu Sales sửa BOM (§6) sau khi
+  // chọn. Sửa BOM KHÔNG xoá `productId` — vẫn cùng một mẫu, chỉ khác chỗ nào
+  // đã tuỳ biến.
+  const [productId, setProductId] = useState<string | null>(null)
+  const [selectedProductBom, setSelectedProductBom] = useState<{
+    foliage: FoliageBomItem[]
+    wrapping: WrappingLayer[]
+    accessories: AccessoryBomItem[]
+  } | null>(null)
 
   const [recipientName, setRecipientName] = useState("")
   const [recipientPhone, setRecipientPhone] = useState("")
@@ -67,11 +110,30 @@ export function SalesOrderIntakeModal({
 
   const [productTitle, setProductTitle] = useState("")
   const [unitPriceVnd, setUnitPriceVnd] = useState<number>(0)
-  const [priority, setPriority] = useState<"STANDARD" | "RUSH" | "VIP">("STANDARD")
+  // ĐP-4a.4 (26/09/2026, sổ thu §2.14): tuỳ chọn — khách trả trước bao nhiêu
+  // lúc nhận đơn. 0/để trống = không ghi cọc lúc này (ghi sau ở Sổ thu).
+  const [depositVnd, setDepositVnd] = useState<number>(0)
+  // ĐP-4a.1 (26/09/2026): cột `priority` + danh mục thật đã có — ô "Mức ưu
+  // tiên" quay lại đây, bỏ trống = máy TỰ GỢI Ý (§2.15.1) lúc tạo đơn.
+  const [channel, setChannel] = useState("")
+  const [orderType, setOrderType] = useState("")
+  const [serviceLevel, setServiceLevel] = useState("")
+  const [deliveryType, setDeliveryType] = useState("")
+  const [deliveryLocationType, setDeliveryLocationType] = useState("")
+  const [priority, setPriority] = useState("")
+  /** Danh mục theo khoá (`priority`/`serviceLevel`/…) → mã+nhãn đang active. */
+  const [catalogs, setCatalogs] = useState<Record<string, { code: string; label: string }[]>>({})
+  const [catalogsError, setCatalogsError] = useState<string | null>(null)
   const [cardMessage, setCardMessage] = useState("")
+  // ĐP-4a.1 (26/09/2026): "Có thiệp/băng rôn" — cần thì `cardMessage` bắt
+  // buộc (kiểm ở máy chủ, `http-schemas.ts`); trước bản này cờ này không có
+  // cột, form chỉ có ô lời nhắn tuỳ chọn.
+  const [cardRequired, setCardRequired] = useState(false)
   const [internalNote, setInternalNote] = useState("")
   const [sampleImageUrl, setSampleImageUrl] = useState<string>("")
   const [sampleAssetId, setSampleAssetId] = useState<string | null>(null)
+  // ĐP-3.16 (26/09/2026): giá trị trường tự tạo (entity ORDER, khoá `cf_...`).
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({})
   const [isUploading, setIsUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -139,9 +201,60 @@ export function SalesOrderIntakeModal({
       })
   }, [isOpen])
 
+  // ĐP-2.9: tìm khách trong Customer Master Index khi Sales gõ tên/SĐT — có
+  // gõ ít nhất 2 ký tự mới tìm, tránh gọi API cho một chữ cái.
+  useEffect(() => {
+    if (!isOpen || customerId || customerQuery.trim().length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- xoá kết quả tìm cũ khi điều kiện tìm không còn thoả (query rỗng/đã chọn khách), không phải side-effect ngoài React
+      setCustomerMatches([])
+      return
+    }
+    const handle = setTimeout(() => {
+      setCustomerSearching(true)
+      fetch(`/api/v1/crm/customers?search=${encodeURIComponent(customerQuery.trim())}&limit=6`)
+        .then((r) => (r.ok ? r.json() : { items: [] }))
+        .then((res) => setCustomerMatches(Array.isArray(res.items) ? res.items : []))
+        .catch(() => setCustomerMatches([]))
+        .finally(() => setCustomerSearching(false))
+    }, 300)
+    return () => clearTimeout(handle)
+  }, [isOpen, customerQuery, customerId])
+
+  // ĐP-4a.1 (26/09/2026): tải danh mục Phân loại & Ưu tiên (§2.15) cho các ô
+  // chọn dưới — CHỈ giá trị đang active (`GET /field-config/catalogs`, R1).
+  useEffect(() => {
+    if (!isOpen) return
+    coordinatorApi
+      .listCatalogs(["priority", "serviceLevel", "channel", "orderType", "deliveryType", "deliveryLocationType"])
+      .then((rows) => {
+        const map: Record<string, { code: string; label: string }[]> = {}
+        for (const row of rows) map[row.key] = row.values.map((v) => ({ code: v.code, label: v.label }))
+        setCatalogs(map)
+      })
+      .catch((e) => setCatalogsError(errorMessage(e)))
+  }, [isOpen])
+
   if (!isOpen) return null
 
+  const handleSelectCustomer = (customer: CustomerMatch) => {
+    setCustomerId(customer.id)
+    setCustomerName(customer.name)
+    setCustomerPhone(customer.phone)
+    if (customer.metrics?.tier) setCustomerTier(customer.metrics.tier as typeof customerTier)
+    setCustomerQuery("")
+    setCustomerMatches([])
+  }
+
+  const handleClearCustomer = () => {
+    setCustomerId(null)
+    setCustomerName("")
+    setCustomerPhone("")
+    setCustomerTier("NEW")
+    setCustomerQuery("")
+  }
+
   const handleSelectMasterProduct = (prod: MasterPreset) => {
+    setProductId(prod.id)
     setProductTitle(prod.name)
     if (prod.masterImageUrl) {
       setSampleImageUrl(prod.masterImageUrl)
@@ -151,9 +264,16 @@ export function SalesOrderIntakeModal({
     if (prod.bom?.flowers && prod.bom.flowers.length > 0) {
       setFlowers(prod.bom.flowers)
     }
-    if (prod.bom?.wrapStyle || prod.bom?.ribbon) {
-      setInternalNote(`Gói: ${prod.bom.wrapStyle || "Chuẩn"}. Nơ: ${prod.bom.ribbon || "Chuẩn"}`)
-    }
+    // ĐP-2.10 (26/09/2026): TRƯỚC bản này, gói/nơ của mẫu bị nhồi thành văn
+    // bản vào `internalNote` ("Gói: ... . Nơ: ..."), trộn dữ liệu có cấu trúc
+    // (BOM) với chữ tự do — đúng lỗi cùng loại với 1.1/1.7. Nay hiện lá/gói/
+    // phụ kiện đúng cấu trúc (chỉ đọc — sửa được từ ĐP-4a) thay vì ghi đè ghi
+    // chú nội bộ của người dùng.
+    setSelectedProductBom({
+      foliage: prod.bom?.foliage ?? [],
+      wrapping: prod.bom?.wrapping ?? [],
+      accessories: prod.bom?.accessories ?? [],
+    })
   }
 
   const handleAddFlower = () => {
@@ -196,12 +316,14 @@ export function SalesOrderIntakeModal({
     }
     // Giờ hẹn thật (giờ máy người nhập) — máy chủ dùng nó tính rủi ro trễ (F09/F12).
     const target = new Date(`${deliveryDate}T${deliveryTime}:00`)
-    const priorityNote = priority === "STANDARD" ? "" : `[Ưu tiên: ${priority}] `
     const isStoredUrl = /^https?:\/\//i.test(sampleImageUrl) || sampleImageUrl.startsWith("/")
 
     const body: CreateOrderRequest = {
+      ...(customerId ? { customerId } : {}),
+      ...(productId ? { productId } : {}),
       customerName: customerName.trim(),
       customerTier,
+      ...(customerPhone.trim() ? { customerPhone: customerPhone.trim() } : {}),
       recipientName: recipientName.trim(),
       recipientPhone: recipientPhone.trim(),
       deliveryAddress,
@@ -214,12 +336,21 @@ export function SalesOrderIntakeModal({
         .filter((f) => f.flowerName.trim())
         .map((f) => ({ flowerName: f.flowerName, quantity: Number(f.quantity) || 1, unit: f.unit, color: f.color, role: f.role })),
       ...(cardMessage.trim() ? { cardMessage } : {}),
-      ...(priorityNote || internalNote.trim() ? { internalNote: `${priorityNote}${internalNote}`.trim() } : {}),
+      cardRequired,
+      ...(internalNote.trim() ? { internalNote: internalNote.trim() } : {}),
+      ...(Object.keys(customFields).length > 0 ? { customFields } : {}),
+      ...(channel ? { channel } : {}),
+      ...(orderType ? { orderType } : {}),
+      ...(serviceLevel ? { serviceLevel } : {}),
+      ...(deliveryType ? { deliveryType } : {}),
+      ...(deliveryLocationType ? { deliveryLocationType } : {}),
+      // Bỏ trống = để máy chủ TỰ GỢI Ý (§2.15.1) — không gửi giá trị mặc định giả.
+      ...(priority ? { priority } : {}),
     }
 
     setIsSubmitting(true)
     try {
-      await onSubmit(body)
+      await onSubmit(body, Number(depositVnd) || 0)
     } catch (error) {
       setFormError(errorMessage(error))
       return
@@ -228,17 +359,27 @@ export function SalesOrderIntakeModal({
     }
 
     handleClearAddress()
-    setCustomerName("")
-    setCustomerPhone("")
+    handleClearCustomer()
     setRecipientName("")
     setRecipientPhone("")
+    setProductId(null)
+    setSelectedProductBom(null)
     setProductTitle("")
     setUnitPriceVnd(0)
+    setDepositVnd(0)
     setFlowers([])
     setCardMessage("")
+    setCardRequired(false)
+    setChannel("")
+    setOrderType("")
+    setServiceLevel("")
+    setDeliveryType("")
+    setDeliveryLocationType("")
+    setPriority("")
     setInternalNote("")
     setSampleImageUrl("")
     setSampleAssetId(null)
+    setCustomFields({})
     onClose()
   }
 
@@ -297,16 +438,71 @@ export function SalesOrderIntakeModal({
               1. Khách Hàng & Người Nhận Hoa
             </span>
 
+            {/* ĐP-2.9: tìm khách đã có trong Customer Master Index trước khi cho nhập
+                tay — chọn được thì tên/SĐT/hạng bên dưới khoá lại, máy chủ lấy từ CMI. */}
+            <div className="relative">
+              <label className="font-bold text-text block mb-1">Tìm khách đã có (tên hoặc SĐT)</label>
+              {customerId ? (
+                <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-900">
+                  <span className="font-bold truncate">
+                    ✓ {customerName} {customerPhone && `— ${customerPhone}`} ({customerTier})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleClearCustomer}
+                    className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 shrink-0 ml-2"
+                  >
+                    Đổi thành khách lẻ
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Gõ tên hoặc SĐT để tìm trong hồ sơ khách…"
+                  value={customerQuery}
+                  onChange={(e) => setCustomerQuery(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                />
+              )}
+              {!customerId && (customerSearching || customerMatches.length > 0) && (
+                <div className="absolute z-10 mt-1 w-full rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
+                  {customerSearching && (
+                    <div className="px-3 py-2 text-text-muted">Đang tìm…</div>
+                  )}
+                  {!customerSearching &&
+                    customerMatches.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleSelectCustomer(c)}
+                        className="w-full text-left px-3 py-2 hover:bg-surface-alt border-b border-border/60 last:border-0"
+                      >
+                        <div className="font-bold text-text">{c.name}</div>
+                        <div className="text-[10.5px] text-text-muted">
+                          {c.phone} {c.metrics?.tier ? `· ${c.metrics.tier}` : ""}
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              )}
+              {!customerId && (
+                <p className="text-[10.5px] text-text-muted mt-1">
+                  Không tìm thấy? Điền thẳng bên dưới — sẽ lưu là khách lẻ.
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="font-bold text-text block mb-1">Tên khách đặt *</label>
                 <input
                   type="text"
                   required
+                  disabled={Boolean(customerId)}
                   placeholder="Ví dụ: Nguyễn Văn An"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 disabled:opacity-60"
                 />
               </div>
 
@@ -314,19 +510,21 @@ export function SalesOrderIntakeModal({
                 <label className="font-bold text-text block mb-1">Số điện thoại khách</label>
                 <input
                   type="text"
+                  disabled={Boolean(customerId)}
                   placeholder="0901234567"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 disabled:opacity-60"
                 />
               </div>
 
               <div>
                 <label className="font-bold text-text block mb-1">Phân hạng khách hàng</label>
                 <select
+                  disabled={Boolean(customerId)}
                   value={customerTier}
                   onChange={(e) => setCustomerTier(e.target.value as typeof customerTier)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 disabled:opacity-60"
                 >
                   <option value="NEW">Mới (NEW)</option>
                   <option value="BRONZE">Đồng (BRONZE)</option>
@@ -669,6 +867,35 @@ export function SalesOrderIntakeModal({
               </div>
             </div>
 
+            {/* ĐP-4a.4 (26/09/2026, sổ thu §2.14): tuỳ chọn ghi cọc ngay lúc nhận đơn. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+              <div>
+                <label className="font-bold text-text block mb-1">Khách trả trước (cọc, VNĐ)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={depositVnd || ""}
+                  onChange={(e) => setDepositVnd(Number(e.target.value) || 0)}
+                  placeholder="0 = chưa thu, ghi sau ở Sổ thu"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                />
+              </div>
+              <div className="sm:col-span-2 p-2.5 rounded-xl bg-surface-alt/60 border border-border text-[11px] flex items-center gap-3 flex-wrap">
+                <span className="text-text-muted">
+                  Tổng <strong className="text-text">{(Number(unitPriceVnd) || 0).toLocaleString("vi-VN")}đ</strong>
+                </span>
+                <span className="text-text-muted">
+                  Đã thu <strong className="text-emerald-700">{(Number(depositVnd) || 0).toLocaleString("vi-VN")}đ</strong>
+                </span>
+                <span className="text-text-muted">
+                  Còn phải thu{" "}
+                  <strong className="text-red-700">
+                    {Math.max(0, (Number(unitPriceVnd) || 0) - (Number(depositVnd) || 0)).toLocaleString("vi-VN")}đ
+                  </strong>
+                </span>
+              </div>
+            </div>
+
             {/* Atomic Flowers Table */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -763,6 +990,147 @@ export function SalesOrderIntakeModal({
                 </table>
               </div>
             </div>
+
+            {/* ĐP-2.10 (26/09/2026): lá/gói/phụ kiện của mẫu đã chọn — CHỈ ĐỌC ở bản
+                này (sửa được, có vết ghi ở ĐP-4a). Hiện đúng cấu trúc BOM thay vì
+                nhồi vào ghi chú nội bộ như bản trước. */}
+            {selectedProductBom &&
+              (selectedProductBom.foliage.length > 0 ||
+                selectedProductBom.wrapping.length > 0 ||
+                selectedProductBom.accessories.length > 0) && (
+                <div className="rounded-xl border border-border bg-surface-alt/60 p-3 flex flex-col gap-2 text-[11.5px]">
+                  <span className="font-bold text-text-muted">
+                    Lá/gói/phụ kiện theo mẫu đã chọn (từ Master Index — chỉ đọc):
+                  </span>
+                  {selectedProductBom.foliage.length > 0 && (
+                    <div>
+                      <span className="font-bold text-text">Lá/cành trang trí: </span>
+                      {selectedProductBom.foliage
+                        .map((f) => `${f.name} (${f.color}, ${f.role})${f.substitutionAllowed ? " · được thay thế" : ""}`)
+                        .join("; ")}
+                    </div>
+                  )}
+                  {selectedProductBom.wrapping.length > 0 && (
+                    <div>
+                      <span className="font-bold text-text">Gói: </span>
+                      {selectedProductBom.wrapping
+                        .map((w) => {
+                          const extra = [w.pattern, typeof w.quantity === "number" ? `SL ${w.quantity}` : null, w.substitutionAllowed ? "được thay thế" : null]
+                            .filter(Boolean)
+                            .join(", ")
+                          return `${w.layer}: ${w.material}, ${w.color}${extra ? ` (${extra})` : ""}`
+                        })
+                        .join("; ")}
+                    </div>
+                  )}
+                  {selectedProductBom.accessories.length > 0 && (
+                    <div>
+                      <span className="font-bold text-text">Phụ kiện: </span>
+                      {selectedProductBom.accessories
+                        .map((a) => {
+                          const extra = [a.unit ? `${a.quantity ?? ""}${a.unit}` : null, a.substitutionAllowed ? "được thay thế" : null]
+                            .filter(Boolean)
+                            .join(", ")
+                          return `${a.name} (${a.material}, ${a.color}${extra ? `, ${extra}` : ""})`
+                        })
+                        .join("; ")}
+                    </div>
+                  )}
+                </div>
+              )}
+          </div>
+
+          {/* Section 2.5: Phân loại & Ưu tiên (ĐP-4a.1, 26/09/2026) */}
+          <div className="flex flex-col gap-3">
+            <span className="font-extrabold text-text text-sm flex items-center gap-1.5 border-b border-border pb-1">
+              <ShieldAlert size={15} className="text-red-600" />
+              2.5. Phân Loại & Ưu Tiên Điều Phối
+            </span>
+            {catalogsError && (
+              <p role="alert" className="text-red-700 font-semibold">
+                Không tải được danh mục: {catalogsError}
+              </p>
+            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="font-bold text-text block mb-1">Kênh tiếp nhận</label>
+                <select
+                  value={channel}
+                  onChange={(e) => setChannel(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-border bg-surface text-text"
+                >
+                  <option value="">— Chọn —</option>
+                  {(catalogs.channel ?? []).map((v) => (
+                    <option key={v.code} value={v.code}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="font-bold text-text block mb-1">Loại đơn</label>
+                <select
+                  value={orderType}
+                  onChange={(e) => setOrderType(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-border bg-surface text-text"
+                >
+                  <option value="">— Chọn —</option>
+                  {(catalogs.orderType ?? []).map((v) => (
+                    <option key={v.code} value={v.code}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="font-bold text-text block mb-1">Cam kết thời gian giao</label>
+                <select
+                  value={serviceLevel}
+                  onChange={(e) => setServiceLevel(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-border bg-surface text-text"
+                >
+                  <option value="">— Chọn —</option>
+                  {(catalogs.serviceLevel ?? []).map((v) => (
+                    <option key={v.code} value={v.code}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="font-bold text-text block mb-1">Hình thức giao</label>
+                <select
+                  value={deliveryType}
+                  onChange={(e) => setDeliveryType(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-border bg-surface text-text"
+                >
+                  <option value="">— Chọn —</option>
+                  {(catalogs.deliveryType ?? []).map((v) => (
+                    <option key={v.code} value={v.code}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="font-bold text-text block mb-1">Loại địa điểm giao</label>
+                <select
+                  value={deliveryLocationType}
+                  onChange={(e) => setDeliveryLocationType(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-border bg-surface text-text"
+                >
+                  <option value="">— Chọn —</option>
+                  {(catalogs.deliveryLocationType ?? []).map((v) => (
+                    <option key={v.code} value={v.code}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="font-bold text-text block mb-1">Mức ưu tiên</label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-border bg-surface text-text"
+                >
+                  <option value="">— Để máy tự gợi ý —</option>
+                  {(catalogs.priority ?? []).map((v) => (
+                    <option key={v.code} value={v.code}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           {/* Section 3: Card Message & Notes */}
@@ -773,42 +1141,52 @@ export function SalesOrderIntakeModal({
             </span>
 
             <div>
-              <label className="font-bold text-text block mb-1">Lời nhắn thiệp chúc mừng (In nguyên văn):</label>
+              <label className="flex items-center gap-2 font-bold text-text mb-1.5">
+                <input
+                  type="checkbox"
+                  checked={cardRequired}
+                  onChange={(e) => setCardRequired(e.target.checked)}
+                  className="h-3.5 w-3.5"
+                />
+                Đơn có thiệp/băng rôn
+              </label>
+              <label className="font-bold text-text block mb-1">
+                Lời nhắn thiệp chúc mừng (In nguyên văn){cardRequired ? " — bắt buộc:" : ":"}
+              </label>
               <textarea
                 rows={2}
                 placeholder="Ví dụ: Chúc mừng sinh nhật em yêu, luôn vui vẻ và hạnh phúc nhé!"
                 value={cardMessage}
                 onChange={(e) => setCardMessage(e.target.value)}
+                className={`w-full px-3 py-2 rounded-xl border bg-surface text-text focus:outline-none focus:border-red-500 ${
+                  cardRequired && !cardMessage.trim() ? "border-amber-400" : "border-border"
+                }`}
+              />
+              {cardRequired && !cardMessage.trim() && (
+                <p className="text-[10.5px] text-amber-700 font-semibold mt-1">Đã chọn “có thiệp” — cần nhập lời nhắn trước khi lưu.</p>
+              )}
+            </div>
+
+            <div>
+              <label className="font-bold text-text block mb-1">Ghi chú nội bộ cho thợ cắm:</label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Gói giấy lụa mờ, nơ đỏ, kiểm tra kỹ hoa nở..."
+                value={internalNote}
+                onChange={(e) => setInternalNote(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
               />
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="font-bold text-text block mb-1">Mức độ ưu tiên điều phối</label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as typeof priority)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 font-bold"
-                >
-                  <option value="STANDARD">Tiêu chuẩn (STANDARD)</option>
-                  <option value="RUSH">Đơn gấp cần ưu tiên (RUSH)</option>
-                  <option value="VIP">Đơn VIP đối ngoại</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="font-bold text-text block mb-1">Ghi chú nội bộ cho thợ cắm:</label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: Gói giấy lụa mờ, nơ đỏ, kiểm tra kỹ hoa nở..."
-                  value={internalNote}
-                  onChange={(e) => setInternalNote(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
-                />
-              </div>
-            </div>
           </div>
+
+          {/* Section 3.5: Trường tự tạo (ĐP-3.16, 26/09/2026) — chỉ hiện nếu
+              tổ chức đã tạo trường tự tạo nào cho ORDER ở Console Vận hành. */}
+          <CustomFieldsSection
+            entity="ORDER"
+            currentStage="INTAKE"
+            values={customFields}
+            onChange={setCustomFields}
+          />
 
           {/* Section 4: Checklist Tiêu Chuẩn Đầu Vào P1 (Sổ Tay Điều Phối) */}
           <div className="p-3.5 rounded-xl border border-red-200 bg-red-50/50 flex flex-col gap-2">
@@ -880,16 +1258,14 @@ export function SalesOrderIntakeModal({
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold ${
                 cardMessage
                   ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                  : "bg-surface text-text-muted border-border"
+                  : cardRequired
+                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                    : "bg-surface text-text-muted border-border"
               }`}>
-                <span>{cardMessage ? "✓" : "○"}</span>
+                <span>{cardMessage ? "✓" : cardRequired ? "!" : "○"}</span>
                 <span className="truncate">7. Lời nhắn thiệp</span>
               </div>
 
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold bg-emerald-50 text-emerald-800 border-emerald-200">
-                <span>✓</span>
-                <span className="truncate">8. Phân loại ưu tiên ({priority})</span>
-              </div>
             </div>
           </div>
 

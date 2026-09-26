@@ -194,7 +194,7 @@ export function InlineSourcePicker({
                   <CheckCircle2 size={13} />
                   <span>Đã nạp ảnh thô — Sẵn sàng chạy tiền xử lý</span>
                 </div>
-                <span className="text-[11px] text-text-muted">Nhấp hoặc kéo thả ảnh khác để thay đổi</span>
+                <span className="text-caption text-text-muted">Nhấp hoặc kéo thả ảnh khác để thay đổi</span>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
@@ -204,7 +204,7 @@ export function InlineSourcePicker({
                 <div className="text-xs font-bold text-text">
                   Kéo thả ảnh chụp vào đây, hoặc <span className="text-primary underline">chọn từ thiết bị</span>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-text-muted">
+                <div className="flex items-center gap-2 text-caption text-text-muted">
                   <span>Hỗ trợ JPG, PNG, WEBP</span>
                   <span>•</span>
                   <span className="flex items-center gap-1 font-medium text-emerald-700">
@@ -262,11 +262,11 @@ export function InlineSourcePicker({
                         </div>
                       )}
                     </div>
-                    <div className="text-[11.5px] font-bold text-text truncate">{asset.title}</div>
-                    <div className="flex items-center justify-between text-[10px] text-text-muted mt-0.5">
+                    <div className="text-caption font-bold text-text truncate">{asset.title}</div>
+                    <div className="flex items-center justify-between text-caption text-text-muted mt-0.5">
                       <span className="truncate">{asset.category || "Master"}</span>
                       {asset.hasIdentityApproval && (
-                        <Badge tone="success" className="text-[9px] px-1.5 py-0 h-4 border border-emerald-300">
+                        <Badge tone="success" className="text-caption px-1.5 py-0 h-4 border border-emerald-300">
                           Đã duyệt
                         </Badge>
                       )}

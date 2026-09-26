@@ -207,8 +207,8 @@ export function FeaturePicker({
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-[17px] font-extrabold">Chọn tính năng AI cho sản phẩm</h2>
-              <p className="text-[12.5px] text-text-muted mt-0.5">
+              <h2 className="text-title font-extrabold">Chọn tính năng AI cho sản phẩm</h2>
+              <p className="text-meta text-text-muted mt-0.5">
                 {productName} — Tick từng tính năng, hệ thống sẽ tạo job riêng cho mỗi module
               </p>
             </div>
@@ -234,7 +234,7 @@ export function FeaturePicker({
 
           {/* Submit Bar */}
           <div className="flex items-center justify-between border-t border-border pt-3">
-            <div className="flex items-center gap-3 text-[12.5px]">
+            <div className="flex items-center gap-3 text-meta">
               {selectedArray.length > 0 && (
                 <>
                   <span className="text-primary font-bold">{selectedArray.length} tính năng đã chọn</span>
@@ -269,7 +269,7 @@ export function FeaturePicker({
           </div>
 
           {submitError && (
-            <div className="flex items-start gap-2 rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[12.5px] font-medium text-red-700">
+            <div className="flex items-start gap-2 rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-meta font-medium text-red-700">
               <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
               <span>{submitError}</span>
             </div>
@@ -314,7 +314,7 @@ export function FeaturePicker({
           <div className="flex flex-col items-center justify-center py-12 text-center text-text-muted">
             <HelpCircle size={32} className="mb-2 opacity-50" />
             <p className="font-medium">Chưa có tính năng nào sẵn sàng cho quyền của bạn</p>
-            <p className="text-[12.5px] mt-1">Liên hệ quản trị để cấp quyền hoặc chờ triển khai module mới</p>
+            <p className="text-meta mt-1">Liên hệ quản trị để cấp quyền hoặc chờ triển khai module mới</p>
           </div>
         )}
       </div>
@@ -354,8 +354,8 @@ function CreditEstimateBadge({
       aria-label="Xem chi tiết credit"
     >
       <Zap size={14} strokeWidth={2} />
-      <span className="font-bold text-[12.5px]">{formatCredits(totalCredits)}</span>
-      <span className="text-[10.5px] opacity-70">/ {formatCredits(userBalance)}</span>
+      <span className="font-bold text-meta">{formatCredits(totalCredits)}</span>
+      <span className="text-caption opacity-70">/ {formatCredits(userBalance)}</span>
       <Info size={12} strokeWidth={1.8} className="ml-0.5" />
     </button>
   );
@@ -377,7 +377,7 @@ function CreditDetailsPanel({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-md bg-surface rounded-2xl border border-border overflow-hidden shadow-2xl animate-slide-up">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h3 className="font-bold text-[14.5px]">Chi tiết ước tính Credit</h3>
+          <h3 className="font-bold text-title-sm">Chi tiết ước tính Credit</h3>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-alt">
             <EyeOff size={16} strokeWidth={2} />
           </button>
@@ -388,30 +388,30 @@ function CreditDetailsPanel({
               <div key={item.featureKey} className="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-surface-alt">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-[12.5px] truncate">{item.featureLabel}</span>
-                    <Badge tone="neutral" className="text-[9.5px]">
+                    <span className="font-medium text-meta truncate">{item.featureLabel}</span>
+                    <Badge tone="neutral" className="text-caption">
                       {item.confidence === "high" ? "🟢" : item.confidence === "medium" ? "🟡" : "🔴"}
                     </Badge>
                   </div>
                   {item.breakdown && (
-                    <p className="mt-0.5 text-[11px] text-text-muted truncate">{item.breakdown}</p>
+                    <p className="mt-0.5 text-caption text-text-muted truncate">{item.breakdown}</p>
                   )}
                 </div>
-                <span className="font-bold text-[13px] text-primary whitespace-nowrap">
+                <span className="font-bold text-body-sm text-primary whitespace-nowrap">
                   {formatCredits(item.estimatedCredits)}
                 </span>
               </div>
             ))}
             <Separator className="my-2" />
-            <div className="flex items-center justify-between text-[13.5px] font-bold">
+            <div className="flex items-center justify-between text-body font-bold">
               <span>Tổng cộng</span>
               <span className="text-primary">{formatCredits(totalCredits)}</span>
             </div>
-            <div className="flex items-center justify-between text-[12.5px] text-text-muted">
+            <div className="flex items-center justify-between text-meta text-text-muted">
               <span>Số dư hiện tại</span>
               <span>{formatCredits(userBalance)}</span>
             </div>
-            <div className="flex items-center justify-between text-[12.5px] font-medium">
+            <div className="flex items-center justify-between text-meta font-medium">
               <span>Còn lại sau khi chạy</span>
               <span className={totalCredits > userBalance ? "text-danger" : "text-secondary-text"}>
                 {formatCredits(Math.max(0, userBalance - totalCredits))}
@@ -453,16 +453,16 @@ function AutoRunModuleCard({
             <Zap size={22} strokeWidth={1.8} className="text-primary" />
           </div>
           <div>
-            <h3 className="font-bold text-[14.5px]">{label}</h3>
-            <p className="mt-0.5 text-[12.5px] text-text-muted">{desc}</p>
+            <h3 className="font-bold text-title-sm">{label}</h3>
+            <p className="mt-0.5 text-meta text-text-muted">{desc}</p>
           </div>
         </div>
-        <Badge tone={depCheck.canRun ? "neutral" : "warning"} className="text-[10.5px]">
+        <Badge tone={depCheck.canRun ? "neutral" : "warning"} className="text-caption">
           {depCheck.canRun ? "Sẵn sàng" : "Chờ điều kiện"}
         </Badge>
       </div>
 
-      <div className="flex flex-col gap-2 text-[12.5px] text-text-muted border-t border-border pt-3">
+      <div className="flex flex-col gap-2 text-meta text-text-muted border-t border-border pt-3">
         <div className="flex justify-between">
           <span>Chi phí ước tính</span>
           <span className="font-bold text-primary">{formatCredits(creditCost)}</span>
@@ -474,7 +474,7 @@ function AutoRunModuleCard({
       </div>
 
       {!depCheck.canRun && depCheck.reason && (
-        <div className="flex items-start gap-1.5 rounded-lg bg-warning-bg p-2.5 text-[11.5px] text-warning">
+        <div className="flex items-start gap-1.5 rounded-lg bg-warning-bg p-2.5 text-caption text-warning">
           <AlertCircle size={12} strokeWidth={1.8} className="mt-0.5 flex-shrink-0" />
           <span>{depCheck.reason}</span>
         </div>
@@ -524,16 +524,16 @@ return (
               <Zap size={20} strokeWidth={1.8} className="text-primary" />
             </div>
             <div>
-              <h3 className="text-[14.5px] font-bold">{group.label}</h3>
-              <p className="text-[11.5px] text-text-muted">{group.description}</p>
+              <h3 className="text-title-sm font-bold">{group.label}</h3>
+              <p className="text-caption text-text-muted">{group.description}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge tone={depCheck.canRun ? "neutral" : "warning"} className="text-[10.5px]">
+            <Badge tone={depCheck.canRun ? "neutral" : "warning"} className="text-caption">
               {depCheck.canRun ? "Sẵn sàng" : "Chờ điều kiện"}
             </Badge>
             {selectedCount > 0 && (
-              <Badge tone="accent" className="text-[10.5px]">
+              <Badge tone="accent" className="text-caption">
                 {selectedCount}/{visibleFeatures.length}
               </Badge>
             )}
@@ -548,7 +548,7 @@ return (
         {isExpanded && (
           <div className="pt-0 pb-4">
           {!depCheck.canRun && depCheck.reason && (
-            <div className="mb-3 flex items-start gap-1.5 rounded-lg bg-warning-bg p-2.5 text-[11.5px] text-warning">
+            <div className="mb-3 flex items-start gap-1.5 rounded-lg bg-warning-bg p-2.5 text-caption text-warning">
               <AlertCircle size={12} strokeWidth={1.8} className="mt-0.5 flex-shrink-0" />
               <span>{depCheck.reason}</span>
             </div>
@@ -568,7 +568,7 @@ return (
           </div>
 
           {visibleFeatures.length === 0 && (
-            <div className="py-4 text-center text-[12.5px] text-text-muted">
+            <div className="py-4 text-center text-meta text-text-muted">
               Tất cả tính năng của module này đang phát triển (coming soon)
             </div>
           )}
@@ -615,24 +615,24 @@ function FeatureCard({
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h4 className="font-semibold text-[12.5px] truncate">{feature.label}</h4>
+                  <h4 className="font-semibold text-meta truncate">{feature.label}</h4>
                   {feature.status === "coming_soon" && (
-                    <Badge tone="warning" className="text-[9.5px] h-4 px-1.5">
+                    <Badge tone="warning" className="text-caption h-4 px-1.5">
                       Sắp có
                     </Badge>
                   )}
                   {feature.needsApproval && (
-                    <Badge tone="danger" className="text-[9.5px] h-4 px-1.5">
+                    <Badge tone="danger" className="text-caption h-4 px-1.5">
                       Cần duyệt
                     </Badge>
                   )}
                 </div>
-                <p className="mt-0.5 text-[11px] text-text-muted line-clamp-2">{feature.description}</p>
+                <p className="mt-0.5 text-caption text-text-muted line-clamp-2">{feature.description}</p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <Badge tone="neutral" className="text-[9.5px] h-4 px-1.5">
+                  <Badge tone="neutral" className="text-caption h-4 px-1.5">
                     {feature.aiCapability}
                   </Badge>
-                  <Badge tone="neutral" className={cn("text-[9.5px] h-4 px-1.5", 
+                  <Badge tone="neutral" className={cn("text-caption h-4 px-1.5", 
                     feature.privacyFloor === "SENSITIVE" && "border-red-200 text-red-600",
                     feature.privacyFloor === "SHOP" && "border-yellow-200 text-yellow-600",
                     feature.privacyFloor === "PUBLIC" && "border-green-200 text-green-600"
@@ -640,12 +640,12 @@ function FeatureCard({
                     {feature.privacyFloor}
                   </Badge>
                   {feature.creditCost && (
-                    <Badge tone="accent" className="text-[9.5px] h-4 px-1.5">
+                    <Badge tone="accent" className="text-caption h-4 px-1.5">
                       ~{feature.creditCost} cr
                     </Badge>
                   )}
                   {feature.requiresApprovedInput && (
-                    <Badge tone="neutral" className="text-[9.5px] h-4 px-1.5">
+                    <Badge tone="neutral" className="text-caption h-4 px-1.5">
                       Cần: {feature.requiresApprovedInput}
                     </Badge>
                   )}
@@ -654,14 +654,14 @@ function FeatureCard({
             </div>
 
             {!enabled && depCheck.reason && (
-              <div className="absolute bottom-full left-0 right-0 mb-1.5 px-2.5 py-1.5 rounded-lg bg-warning-bg text-[10.5px] text-warning text-center">
+              <div className="absolute bottom-full left-0 right-0 mb-1.5 px-2.5 py-1.5 rounded-lg bg-warning-bg text-caption text-warning text-center">
                 {depCheck.reason}
               </div>
             )}
           </label>
         </TooltipTrigger>
         {showTooltip && (
-          <TooltipContent side="top" align="center" className="max-w-xs p-2.5 text-[11px]">
+          <TooltipContent side="top" align="center" className="max-w-xs p-2.5 text-caption">
             {!userCanRun && <p>❌ Bạn thiếu quyền: <code className="font-mono">{feature.rbacRun}</code></p>}
             {!depCheck.canRun && depCheck.reason && <p>⏸ {depCheck.reason}</p>}
             {feature.status === "coming_soon" && <p>🚧 Tính năng đang phát triển, chưa thể sử dụng</p>}

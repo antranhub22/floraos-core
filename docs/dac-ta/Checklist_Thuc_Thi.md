@@ -824,6 +824,127 @@ Rà soát 25/09 (chiều): bản `a52cabe` trông "hoàn thành" nhưng thực c
 - [ ] Gợi ý đối tác bằng AI (khoảng cách, lịch sử) — nợ #141
 - [ ] Thông báo Zalo ZNS/CRM khi giao xong — `connectors/` vẫn là mã tạm (nợ #142)
 
+## CN12b — Trường dữ liệu Điều phối, Master Index & nền quản trị trường (ĐP-1, 26/09/2026)
+
+Quyết định PO 26/09/2026 (xem `docs/kien-truc/KE_HOACH_DIEU_PHOI_TRUONG_DU_LIEU.md`): đưa Điều phối từ ~15% trường chạy thật lên đủ bộ trường Đặc tả trường (T01–T27), nối Master Index, dựng nền quản trị trường cho quản trị nền tảng. ĐP-1 — sửa lỗi P0, không thêm tính năng.
+
+- [x] 1.1 Gỡ "Giá bán khách" khỏi vùng chụp PNG của phiếu đối tác T07 (`partner-product-card.tsx`) — khối giá dời ra ngoài `cardRef`, đánh dấu "chỉ nội bộ"
+- [x] 1.2 Bỏ nhánh địa chỉ MỘT CHUỖI trong `addressSchema` (`http-schemas.ts`) — chỉ nhận object 4 tầng; dữ liệu cũ vẫn đọc được (chiều đọc không đổi)
+- [x] 1.3 `customerPhone` không còn bị rơi (lưu `order_coordinations.metadata.customerPhone`); ẩn ô "Mức độ ưu tiên điều phối" trên form tới ĐP-4a (trước đó bị nhét vào `internalNote` dạng văn bản)
+- [x] 1.4 Bỏ giá trị bịa trong `master-index-adapter.ts`: "Lá đệm theo mùa" / "Giấy gói cao cấp" / "Thiệp chúc mừng" / "Khách hàng thân thiết" — thiếu dữ liệu thật thì trả rỗng
+- [x] 1.5 MI-1: `consents[].revokedAt` — `isZaloAllowed`/`hasMarketingConsent`/`projectMarketingAudience` đều xét thu hồi, không chỉ `granted`
+- [x] 1.6 MI-2: `availableVouchers` chỉ gồm voucher chưa dùng VÀ chưa hết hạn; thêm `minOrderVnd`, `maxDiscountVnd`
+- [x] 1.7 Ghi chú phân công cho ĐỐI TÁC tách khỏi `internalNote` — lưu riêng `order_coordinations.metadata.partnerInstruction`, view trả trường riêng; `PartnerProductCard`/`PartnerProductionCard` đọc từ `partnerInstruction`, không còn hiện `internalNote` (ghi chú nội bộ) cho đối tác
+- [x] Test mới: `tests/unit/coordinator/partner-product-card.test.ts`, cập nhật `master-index-adapter.test.ts`; `tests/unit/crm/crm-rules.test.ts` (MI-1/MI-2); `tests/tenant/coordinator.test.ts` (địa chỉ 1 chuỗi → 400, customerPhone round-trip, partnerInstruction tách khỏi internalNote)
+- [x] `npx tsc --noEmit` sạch trên toàn repo sau mỗi bước
+- [ ] Anh Tony chạy trên máy thật (VM cầu nối không chạy được `vitest`/`rollup` do lệch kiến trúc nhị phân — không phải lỗi do đợt này): `npm test` · `npm run test:tenant` · `eslint` toàn repo · `node scripts/check-docs.mjs` · `npm run check:template-ssot` · `npm run check:schemas:coordinator` — gộp chung với cổng ĐP-2 bên dưới, chạy một lần khi xong toàn bộ phạm vi đã duyệt (chỉ đạo "test verify khi hoàn thành toàn bộ")
+
+## CN12c — Nối Master Index thật vào Điều phối (ĐP-2, 26/09/2026)
+
+- [x] 2.1 (MI-3) `updatedAt` trên `ProductMasterIndex` và `CustomerMasterIndex` — phiên bản cho snapshot
+- [x] 2.2 (MI-4) `ProductGalleryImage.role` thêm `REFERENCE`, đọc được ở repository — chưa có màn thao tác gắn vai trò (ghi nợ riêng, không tìm thấy màn duyệt ảnh sản phẩm nào ghi `product_images`)
+- [x] 2.3 (MI-5) `projectCoordinatorSnapshot(product, now)` — bản chụp đủ 4 nhóm BOM, không có `costPriceVnd`
+- [x] 2.4 (MI-6) `projectCustomerCoordinationBrief(customer)` thay `extractCustomerCoordinationBrief`
+- [x] 2.5 `DirectMasterIndexConnector` thi công thật (`getProductMasterIndex`/`getCustomerMasterIndex` theo `TenantContext`)
+- [x] 2.6 `createOrderSchema` nhận `productId` tuỳ chọn
+- [x] 2.7 Một dòng `order_items` cho mỗi đơn (bỏ kiểu mỗi loài hoa một dòng); có `productId` → `metadata` = snapshot; không có → BOM nhập tay
+- [x] 2.8 (Hợp đồng MI §6, bản tối thiểu) `diffAgainstSnapshot` — override có vết cho BOM cành hoa, ghi `order_items[0].metadata.overrides[]`
+- [x] 2.9 Có `customerId` → tên/hạng/SĐT lấy từ CMI, bỏ qua giá trị client; form thêm ô tìm khách
+- [x] 2.10 Form chọn mẫu nhanh giữ `productId`; bỏ nhồi `wrapStyle`/`ribbon` vào `internalNote`; hiện lá/gói/phụ kiện đúng cấu trúc (chỉ đọc)
+- [x] 2.11 View thêm `productId`, `product` (snapshot), `foliage[]`, `wrapping[]`, `accessories[]`, `substitutionPolicy`, `referenceImageUrls[]`
+- [x] 2.12 T07 hiện BOM thật từ snapshot — `shade`/`budCount`, cả lá/gói/phụ kiện (trước đó 2 màn không nhận props này dù component đã có)
+- [x] 2.13 `unit`/`role` của BOM cành hoa xiết về đúng `DemUnit`/4 vai trò hoa trong `createOrderSchema`
+- [x] Test mới: `tests/unit/coordinator/order-overrides.test.ts` (mới), cập nhật `master-index-adapter.test.ts`/`crm-rules.test.ts`/`product-master-index.test.ts`; `tests/tenant/coordinator.test.ts` (6 ca mới)
+- [x] `npx tsc --noEmit` sạch trên toàn repo; `eslint` các tệp đã sửa 0 lỗi mới
+- [ ] Anh Tony chạy trên máy thật, gộp chung với cổng ĐP-1: `npm test` · `npm run test:tenant` · `npm run test:platform` · `eslint .` · `node scripts/check-docs.mjs` · `npm run check:template-ssot` · `npm run check:schemas:coordinator`
+
+## CN12d — Nền quản trị trường, backend + Console UI + nối luồng thật (ĐP-3, 26/09/2026)
+
+Migration MỚI (`prisma/migrations/20260926210000_field_platform/`), đã chạy thật trên máy Tony. Backend + Console UI (3.15) đầy đủ; 3.16 (nối trường tự tạo + gate chuyển bước + `projectForAudience` vào luồng đơn thật) ĐÃ LÀM cho entity `ORDER` + 1 form nhập (T01) + 2 thẻ hiển thị (T02/T07) — phạm vi thật và phần còn lại ghi rõ ở dòng cuối, không phải "xong 100% mọi template".
+
+- [x] 3.1 `N12 platform.field_catalog.manage` (`platform-capability-catalog.ts`)
+- [x] 3.2 Sổ đăng ký trường lõi: `field-platform/domain/core-field-registry.ts` + `coordinator/contracts/field-registry.ts` (22 trường — một lô đại diện, chưa phủ hết Đặc tả trường §18)
+- [x] 3.3 Danh mục hành vi `behaviors.ts` (SLA, bậc ưu tiên, `orderType`/`deliveryLocationType`/`deliveryType`/`paymentMethod`/`collectionMethod`)
+- [x] 3.4 Luật thuần `field-rules.ts` — 5 mức sàn §16.2, giới hạn trường tự tạo §16.3
+- [x] 3.5 `custom-field-schema.ts` — sinh zod động, giữ giá trị trường đã tắt
+- [x] 3.6 Seed `scripts/nap-danh-muc-truong.ts` (22 trường lõi, 11 danh mục D7, idempotent)
+- [x] 3.7/3.8 Use-case nền tảng (N12, ghi `platform_audit_logs`) + use-case tenant chỉ đọc (`get-effective-field-config`, R1) — trả `*ApiView` camelCase (sửa nợ 26/09 khuya muộn, trước đó trả thẳng dòng Prisma)
+- [x] 3.9 `apply-custom-fields.ts` — nối vào `create-coordinator-order.ts` (tạo đơn) và use-case mới `update-order-custom-fields.ts` (`PATCH /coordinator/orders/:id/custom-fields`, R3, sửa sau khi tạo)
+- [x] 3.10 `stage-transitions.ts` — gắn vào `update-coordinator-stage.ts` (chặn rời bước còn trường `requiredAtStage` trống); `get-effective-field-config.ts` tách `loadEffectiveFieldConfigs` không kiểm R1 cho use-case ghi dùng nội bộ
+- [x] 3.11 `project-for-audience.ts` — nối phần TRƯỜNG TỰ TẠO vào thẻ đối tác T02 (`partner-product-card.tsx` + `buildZaloText`)/T07 (`partner-production-card.tsx`) qua `visibleCustomFieldsForAudience`; CHƯA thay logic ẩn/hiện viết tay có sẵn của các trường lõi khác (additive, đúng ý)
+- [x] 3.12 `scripts/check-field-registry.ts` (`npm run check:field-registry`)
+- [x] 3.13/3.14 Route platform (`/platform/fields`, `/platform/catalogs`, `/platform/organizations/:id/field-overrides`, `/platform/organizations/:id/field-preview`, `/platform/behaviors`) + route tenant (`GET /field-config`)
+- [x] 3.15 Console `/van-hanh/truong-du-lieu` (4 tab: Trường lõi/Trường tự tạo/Danh mục/Ghi đè theo tổ chức), xác nhận-có-diff mọi thao tác ghi, xem-trước theo tổ chức — nav thêm vào `(platform)/layout.tsx`
+- [x] Test mới: 6 tệp `src/modules/field-platform/domain/*.test.ts`, `apply-custom-fields.test.ts`, `tests/platform/field-registry.test.ts` (7 ca), +1 ca cách ly ở `tests/tenant/cach-ly-repository.test.ts`, cập nhật `platform-capability-catalog.test.ts`; Console UI: `diff-confirm.test.ts` (4 ca hàm thuần), `page.test.tsx` (1 ca dựng tĩnh 4 tab) — CHƯA có test tương tác (click/form), hạ tầng hiện tại không có jsdom/testing-library
+- [x] 3.16 test mới: `tests/tenant/coordinator.test.ts` +4 ca (customFields lưu & trả về ở view lúc tạo đơn; PATCH custom-fields trộn giá trị không xoá trường khác; trường REQUIRED tại INTAKE chặn rời bước rồi điền vào mới qua được — kiểm cả nội dung lỗi 422; trường OPTIONAL không chặn dù để trống)
+- [x] Đặc tả 06 mục 15b/21b (nay 9 route), đặc tả 07 mục 1/27b cập nhật; `node scripts/check-docs.mjs` xanh
+- [x] `npx tsc --noEmit`/`eslint` sạch cho mọi tệp không đụng 4 model mới (lỗi CHỜ `prisma generate` đã liệt kê riêng, không lẫn lỗi khác)
+- [ ] Anh Tony chạy tay TRƯỚC mọi test khác: `npx prisma migrate deploy` (hoặc `db push`) → `npx prisma generate` → `npm run seed:field-registry` → `npm run check:field-registry`; sau đó gộp cổng chung ĐP-1+ĐP-2+ĐP-3: `npm test` · `npm run test:tenant` · `npm run test:platform` · `eslint .` · `node scripts/check-docs.mjs` · `npm run check:template-ssot` · `npm run check:schemas:coordinator`
+- [x] 3.16 `<ConfiguredField>`/`<CustomFieldsSection>` (`src/components/coordinator/custom-fields-section.tsx`) — ĐÃ LÀM cho entity `ORDER`: nhập ở T01 (Sales Intake), hiển thị lọc theo PARTNER ở T02/T07, gate `requiredAtStage` chặn rời bước. **CÒN LẠI (ghi nợ tường minh, không chặn tiến độ):** entity `PARTNER` chưa có form nào gọi `CustomFieldsSection`; các màn Điều phối khác (T04/T06/T10/T24, Chi tiết đơn chung) chưa có ô nhập/hiển thị lọc — sửa qua API; không có màn SHIPPER-facing (T18) trong mã để nối; IMAGE/FILE/STRUCTURED_ADDRESS/ASSET_REF chưa có ô nhập (ghi chú thay thế); SELECT/MULTI_SELECT tạm nhập chuỗi tự do, chưa đọc `catalogKey` thật
+
+## CN12e — MI-12 mở rộng BOM nguyên tử (ĐP-2b, 26/09/2026)
+
+Mở rộng cấu trúc BOM nguyên tử của Product Master Index theo D5 (PO đã duyệt 26/09) — Điều phối không định nghĩa lại, sửa tại PMI gốc + hợp đồng Vision.
+
+- [x] 2b.1 `product-master-index.ts`: `FlowerBomItem` +`variety`/`stemLengthCm`/`substitutionAllowed`/`substitutionPriority`; `FoliageBomItem`/`AccessoryBomItem`/`WrappingLayer` +`substitutionAllowed`; `WrappingLayer` +`pattern`/`quantity`; `AccessoryBomItem` +`unit` (tất cả optional)
+- [x] 2b.2 `product-master-index-repository.ts` đọc 9 khoá Vision mới (`bien_the`/`chieu_dai_cm`/`duoc_thay_the`/`thu_tu_uu_tien_thay_the`/`hoa_van`/`so_luong`/`don_vi`) từ `analysis.edited ?? .raw`; xác nhận `product-master-merge.ts` (M01b salesData) không đụng BOM, không cần sửa
+- [x] 2b.4 `workers/vision/contracts/Schema.json` — 9 khoá nullable-bắt-buộc mới, mô tả "điền khi nhận diện được, không thì null, KHÔNG ĐOÁN", diff tối thiểu giữ nguyên định dạng gốc
+- [x] Coordinator zod: `AtomicFlowerBomItemSchema`/`AtomicFoliageBomItemSchema`/`AtomicWrappingLayerSchema`/`AtomicAccessoryBomItemSchema` (`common.ts`) cập nhật khớp — giữ `conformance` (`order-view.ts`) xanh qua `tsc`
+- [x] 2b.5 Hiện: `analysis-schema-mapper.ts` (M01a, theo đúng quy tắc mọi trường Schema.json lên UI), `sales-order-intake-modal.tsx` (T01, khối chỉ-đọc BOM theo mẫu), `partner-production-card.tsx` (T07, bảng hoa + lá/gói/phụ kiện) — chỉ khi đơn có `productId`; `projectCoordinatorSnapshot`/`bomFlowersOf` không cần sửa (mảng BOM truyền tham chiếu)
+- [x] Cổng chung: sản phẩm CŨ không có 9 trường mới vẫn qua toàn bộ test hiện có — 2 ca mới `product-master-index.test.ts` (đủ 9 trường / sản phẩm cũ không bịa giá trị)
+- [x] `npx tsc --noEmit` sạch trên mọi tệp đã sửa (1 lỗi không liên quan ở `customer-detail-modal.tsx` — việc khác, chưa commit); `eslint` 0 lỗi mới; `node scripts/check-docs.mjs` xanh; Schema.json hợp lệ, `required` khớp đúng `properties` cả 4 loại BOM
+- [ ] Anh Tony chạy `npm test` (hoặc `npx vitest run src/modules/products/domain/__tests__/product-master-index.test.ts`) để xác nhận 2 ca mới — môi trường cầu nối không chạy được vitest (giới hạn `@rollup/rollup-linux-arm64-gnu`)
+- **CHƯA làm (ghi nợ tường minh):** form M01b (`/tai-anh`, `/duyet`) chỉ HIỆN 9 trường mới (chuỗi tổng hợp), chưa có ô nhập riêng — đúng hệt giới hạn có sẵn của `color`/`role`/`shade`; T01 gõ tay BOM (không chọn mẫu) vẫn chỉ nhận 5 trường cũ, chưa nhận 9 trường MI-12; không có test tích hợp DB riêng cho việc đọc từ `product_analyses` thật (chỉ có test domain thuần)
+
+## CN12f — Sổ thu `order_payments` (ĐP-4a.3, 26/09/2026)
+
+Lát cắt đầu tiên của ĐP-4a (10 mục, phạm vi lớn — chọn xây trước một lát tự khép kín). Thiết kế theo PO D2 (§2.14 dac-ta-truong-du-lieu-dieu-phoi-v2): mỗi đơn luôn ghi Tổng/Đã thu/Còn phải thu; mỗi lượt thu/hoàn là một dòng `order_payments`.
+
+- [x] Schema: `orders` +`paid_vnd`/`balance_vnd` (CHECK `balance_vnd = total_vnd - paid_vnd`); bảng mới `order_payments` (kind DEPOSIT/BALANCE/REFUND); migration viết tay `20260926220000_order_payments` (VM cầu nối không chạy được `prisma migrate dev`)
+- [x] 2 mã năng lực mới: R9 (`order.payment.record`, Sales/Điều phối/Điều hành) và R10 (`order.payment.refund`, trần cứng Điều hành)
+- [x] `GET/POST /api/v1/coordinator/orders/:id/payments`; use-case `record-payment.ts` (tính paid/balance trong transaction, chặn hoàn quá số đã thu); `paymentStatus` suy ra lúc đọc, không lưu
+- [x] `CoordinatorOrderView` +`paidVnd`/`balanceVnd`/`paymentStatus`; 3 ca test mới `coordinator.test.ts` (luồng cọc→thu nốt + đọc lại DB + liệt kê; cách ly tổ chức 404; hoàn quá số 422 + R10 trần cứng 403)
+- [x] `eslint` sạch 10 tệp; `node scripts/check-docs.mjs` xanh (bổ sung route/bảng/enum vào 06/07-spec + `COVERED_VIA_ROUTE`)
+- **CỐ Ý CHƯA làm:** gate đóng đơn đòi `balanceVnd = 0` thuộc ĐP-4c mục 4c.8, không phải 4a — sửa ngay sẽ phá ca test "luồng đủ P1→P7" hiện có
+- [x] Anh Tony chạy trên máy thật: `npx prisma generate` sạch → `npx prisma migrate deploy` áp thành công → `npm run test:tenant` **281/281 XANH** (sau khi vá 1 hồi quy: `order-repository.ts` module M10 — điểm tạo `orders` thứ hai, thiếu `balance_vnd` khi tạo đơn, gây 500/CHECK violation cho 6 ca; đã thêm `balance_vnd: totalVnd`, eslint sạch). **CỔNG ĐP-4a.3 KHÉP KÍN HOÀN TOÀN.**
+- **CHƯA làm — 9/10 mục còn lại ĐP-4a:** 4a.1 trường T01, 4a.2 tính SLA, 4a.4 hiện 3 số trên UI đơn hàng, 4a.5–4a.8 T02–T05, 4a.9 Form Lập kế hoạch, 4a.10 đăng ký field-registry
+
+## CN12i — Tính SLA giao từ hành vi serviceLevel (ĐP-4a.2, 26/09/2026)
+
+- [x] `sla-calculation.ts` (thuần) — `computeDeliveryTargetAt` theo 4 hành vi OFFSET/EXACT/WINDOW/END_OF_DAY, tham số từ danh mục, mặc định an toàn khi thiếu/không nhận diện được
+- [x] `validate-catalog-code.ts` +`getActiveCatalogValue()` — lấy hành vi thật của serviceLevel thay vì suy từ mã
+- [x] `create-coordinator-order.ts` — dùng SLA calc để tính `estimatedDeliveryAt`; `evaluateRisk` không cần sửa (tự hưởng lợi từ mốc chính xác hơn)
+- [x] 16 unit test mới (`sla-calculation.test.ts` 9 ca + `priority-suggestion.test.ts` 7 ca viết bù) — CHƯA CHẠY được ở VM cầu nối
+- [x] `eslint`/`tsc`/`check-docs.mjs` sạch
+- [ ] Anh Tony: `npm test` (hoặc `test:tenant`) để xác nhận 16 test mới xanh
+- **Hạn chế đã biết:** `WINDOW` (TIME_SLOT) cần `deliveryWindowStart/End` nhưng T01 chưa có ô nhập khung giờ riêng — rơi về giờ hẹn đơn khi thiếu
+
+## CN12h — T01: đủ trường P0/P1 (ĐP-4a.1, 26/09/2026)
+
+Phát hiện trước khi làm: danh mục (`nap-danh-muc-truong.ts`) và luật hành vi (`behaviors.ts`) của ĐP-3 đã seed/định nghĩa sẵn ĐỦ cho 4a.1 — việc chính là nối dây cột DB + use-case + UI, không phải dựng danh mục/luật mới.
+
+- [x] Migration `20260926230000_coordinator_p1_p2_fields`: 17 cột mới `order_coordinations` (đều NULL) — 16 cột theo kế hoạch §7.1 + `card_required` (phát hiện thiếu trong lúc làm, kế hoạch gốc không liệt kê dù có nhắc luật)
+- [x] `validate-catalog-code.ts` (field-platform) — kiểm mã danh mục active trước transaction
+- [x] `GET /api/v1/field-config/catalogs` (`R1`, mới) — route TENANT đọc danh mục cho form, khác `/platform/catalogs` (đòi `N12`)
+- [x] `priority-suggestion.ts` (coordinator/domain) — gợi ý ưu tiên theo §2.15.1, không ép Sales
+- [x] `create-coordinator-order.ts`/`coordinator-repository.ts`/`present-coordinator-order.ts`/`contracts/order-view.ts` — nối đủ 17 cột hai chiều, `conditionalFieldGroups` suy từ `behaviors.ts` (§12)
+- [x] T01 UI: Section 2.5 (6 ô chọn danh mục) + checkbox "Có thiệp/băng rôn" bắt buộc `cardMessage`
+- [x] `eslint` sạch (2 lỗi tự phát hiện & sửa: unescaped-entities, noUncheckedIndexedAccess); `npx tsc --noEmit` sạch trừ đúng phần đọc cột mới qua Prisma Client chưa generate (`present-coordinator-order.ts`); `node scripts/check-docs.mjs` xanh
+- [ ] Anh Tony: `npx prisma migrate deploy` → `npx prisma generate` → `npm run db:test:setup && npm run test:tenant` → `npm run check:schemas:coordinator` → thử tạo đơn thật ở `/dieu-phoi`
+- **CỐ Ý CHƯA làm:** ô nhập chi tiết cho 9 nhóm trường có điều kiện §12 (chỉ có danh sách nhóm đang bật — đặc tả gốc ghi "lưu ở archive", không có trong tài liệu hiện có); tính `productionDeadlineAt`/`pickupTargetAt` (ĐP-4a.2/4a.9); gán `nextActionOwnerId`/`handoffAt` (ĐP-4a.5); đăng ký field-registry (ĐP-4a.10, dồn cùng 4a.5–4a.9)
+
+## CN12g — Hiện Tổng/Đã thu/Còn phải thu lên UI Control Tower (ĐP-4a.4, 26/09/2026)
+
+Kế hoạch 4a.4: "Hiển thị 3 con số Tổng/Đã thu/Còn phải thu trên T01, T02, T05 và trang Đơn hàng M10". T02/T05 chưa có màn riêng (chờ 4a.5/4a.8) — đáp ứng bằng một thanh tóm tắt xuyên suốt mọi tab của modal chi tiết đơn (đã phủ đúng các tab đang đóng vai T01/T02).
+
+- [x] `payment-ledger-modal.tsx` (mới): hiện Tổng/Đã thu/Còn phải thu/`paymentStatus`, liệt kê `order_payments` (`GET .../payments`), form ghi thêm dòng DEPOSIT/BALANCE/REFUND (`POST .../payments`)
+- [x] `control-tower-dashboard.tsx`: thanh tóm tắt 3 số + nút "Sổ thu" dưới hàng tab modal chi tiết (mọi tab); `handleCreateOrder` ghi DEPOSIT ngay sau khi tạo đơn nếu Sales nhập cọc, không nuốt lỗi nếu ghi cọc thất bại
+- [x] `sales-order-intake-modal.tsx` (T01): ô tuỳ chọn "Khách trả trước (cọc)" + khối xem trước 3 số ngay trên form — hoàn thành phần UI còn thiếu của "Sales ghi DEPOSIT ở T01" (§2.14 mục 4, API đã xây ở ĐP-4a.3 nhưng chưa nối UI)
+- [x] `coordinator-api.ts`: `RecordPaymentBody`, `recordPayment()`, `listPayments()`
+- [x] `npx tsc --noEmit` sạch trên toàn bộ tệp đã sửa (lần đầu tsc chạy được từ VM cầu nối ở đợt ĐP-4 — Prisma Client đã generate thật trên máy Tony, mount chung thư mục); `eslint` sạch (1 lần vướng `react-hooks/set-state-in-effect`, sửa theo khuôn `useCustomFieldDefinitions`)
+- [ ] `vitest` chưa chạy được ở VM cầu nối (thiếu binary rollup) — UI thuần gọi lại API đã có test xanh, rủi ro hồi quy thấp; anh Tony xác nhận bằng mắt trên `/dieu-phoi` khi tiện
+- **CHƯA làm — cố tình để lại:** hiện 3 số trên "trang Đơn hàng M10" (`src/modules/orders`, module tách biệt) — cần thêm `paidVnd`/`balanceVnd` vào `OrderRecord`/view của module đó, để lượt riêng
+
 ## REL-25/09 — Gộp chuỗi Creative Studio vào `main` (25/09/2026)
 
 Chuỗi `feature/creative-production-pipeline` → `fix/creative-studio-production-ready` → `feat/content-engine-p27` → `claude/content-engine-readiness-check-6xbaxa` (142 commit, gồm M01, Media, Market Intelligence, Điều phối, Content Engine) chưa từng chạy CI. Nhánh `release/creative-studio-to-main` dọn các cổng đỏ rồi fast-forward `main`.
@@ -847,4 +968,133 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] Nhạc nền: ElevenLabs Music sinh nhạc không lời theo tâm trạng (sau giọng đọc, đúng thời lượng), bài thư viện là dự phòng + hoàn phần nhạc; giọng đọc theo thứ tự tiệm (nợ #161)
 - [x] Giao diện Cài đặt thứ tự nhà cung cấp của tiệm (`/cai-dat-ai`, `provider-order-settings.tsx`, ghi cần `U2`) + chọn bên từng lượt cho nội dung (Chặng 05, Content Engine), giọng đọc, nhạc, ảnh, video — kiểm bằng Chromium thật
 - [ ] Chạy thật với khoá của từng nhà cung cấp (nợ #153, #159, #160)
+
+## UIUX — Nâng cấp theo 03a/03b (kế hoạch DOC-05-KE-HOACH-NANG-CAP-UIUX)
+
+### Giai đoạn UX-R & UX-0: Nền tảng & Quản trị (26/09/2026)
+- [x] TR.1 — Kiểm Role UX trên máy thật (11/11 tests role-ux-catalog xanh, 4 vai sẵn sàng)
+- [x] T0.1 — Ghi quyết định PO vào tài liệu (K1–K6, D-RU4, Q-TC, Q-MO, Q-E2E)
+- [x] T0.2 — Nâng UX Constitution thành 03a CANONICAL (`docs/dac-ta/03a-ux-constitution.md`)
+- [x] T0.3 — Thư mục và mẫu Screen Contract (`screen-contracts/_TEMPLATE.md` & `README.md`)
+- [x] T0.4 — Sửa AGENTS.md theo 03a và K1–K3 (Tab Header, FeatureGuidanceCard, Video kép, câu hỏi 12)
+- [x] T0.5 — Nối 03-UX với 03a (Trạng thái một phần/thành công, L0–L4)
+- [x] T0.6 — Mục theo dõi trong Checklist
+
+### Giai đoạn UX-1: Trạng thái, Component nền, Trợ năng nền
+- [x] T1.1 — `loading.tsx`, `error.tsx`, `not-found.tsx` cấp nhóm tuyến
+- [x] T1.2 — Component `Skeleton` + thay các chỗ "Đang tải…" ngoài vùng Điều phối
+- [x] T1.3 — Component `EmptyState`
+- [x] T1.4 — Component `InlineError`
+- [x] T1.5 — Vùng thông báo cho trình đọc màn hình (`LiveRegionProvider` + `useAnnounce`)
+- [x] T1.6 — `focus-visible` và vùng bấm cho component gốc (vùng bấm 44px)
+- [x] T1.7 — Sửa phần tử không tương tác mà có `onClick`
+- [x] T1.8a — Component `Dialog` dùng chung (`@base-ui/react`) và 3 modal mẫu
+- [ ] T1.8b — Chuyển các modal ngoài vùng Điều phối sang `Dialog` (dần theo màn ở UX-5)
+- [ ] T1.8c — Chuyển các modal vùng Điều phối sang `Dialog` (sau ĐP-4c)
+- [x] T1.9 — Liên kết "Bỏ qua tới nội dung" và mốc trang
+- [x] T1.10 — `TabActionHeader` tuân K2 (cảnh báo > 1 nút primary ở dev)
+
+### Giai đoạn UX-2: UX Lint v0
+- [x] T2.1 — Lõi `scripts/ux-lint.ts` (AST parse R1–R12)
+- [x] T2.2 — Allowlist `scripts/ux-lint-allow.json`
+- [x] T2.3 — Baseline và chế độ ratchet (`npm run lint:ux -- --check`)
+- [x] T2.4 — Test cho lint (`scripts/ux-lint/rules.test.ts` — 24/24 xanh)
+- [x] T2.5 — Chạy trong CI (`.github/workflows/ci.yml`)
+- [x] T2.6 — Tài liệu cho lint (AGENTS.md & 03a §0)
+
+### Giai đoạn UX-3: Kiến trúc thông tin và Điều hướng
+- [x] T3.1 — Mô hình điều hướng một nguồn (`nav-model.ts` + test)
+- [x] T3.2 — Nhóm điều hướng theo việc (6 nhóm việc theo K5)
+- [x] T3.3 — Gác điều hướng theo năng lực (xác minh capability của từng tuyến)
+- [x] T3.4 — Nối `desktop-nav.tsx` vào `nav-model` (bỏ mã kỹ thuật, token màu)
+- [x] T3.5 — Nhóm thu gọn, nhớ trạng thái trong `localStorage`
+- [x] T3.6 — Thay popover "Tất cả phân hệ" bằng ô lọc nhanh tìm chức năng
+- [x] T3.7 — Nối `bottom-nav.tsx` và trang `/them`
+- [x] T3.8 — Test hiển thị điều hướng (unit + E2E)
+- [x] T3.9 — Screen Contract điều hướng (`_dieu-huong.md`) + cập nhật 03-UX §3
+
+### Giai đoạn UX-4: Token và Cỡ chữ
+- [x] T4.1 — Đo tần suất cỡ chữ và màu thô (`measure-tokens.ts`)
+- [x] T4.2 — Khai token cỡ chữ và token ngữ nghĩa trong `globals.css`
+- [x] T4.3 — Cập nhật 03a với thang token
+- [x] T4.4 — Codemod an toàn (`scripts/codemod-ux-tokens.ts`)
+- [x] T4.5.1 — Codemod token `src/components/ui`
+- [x] T4.5.2 — Codemod token `src/components/layout`
+- [ ] T4.5.3 — Codemod token `src/components/dashboard` (Đợt A)
+- [ ] T4.5.4 — Codemod token `(app)/{tai-anh,duyet,job,vai-tro}` + upload/flow/result/sales (Đợt A)
+- [ ] T4.5.5 — Codemod token `templates/shared` + `product-analysis` (Đợt A)
+- [ ] T4.5.6 — Codemod token `catalog, crm, orders, chat, storage, profiles, org` + templates (Đợt B)
+- [ ] T4.5.7 — Codemod token `creative-studio` + templates (Đợt C)
+- [ ] T4.5.8 — Codemod token `video-studio, knowledge-base` + templates (Đợt C)
+- [ ] T4.5.9 — Codemod token `market-intelligence` (chia 3 commit, sau K3)
+- [ ] T4.5.10 — Codemod token `(platform)` Console (Đợt D)
+- [ ] T4.5.11 — Codemod token vùng Điều phối (sau ĐP-4c)
+- [x] T4.6 — Token hoá màu `FeatureGuidanceCard` (K1)
+- [x] T4.7 — Rà soát và token hoá mã Hex trong `.tsx`
+
+### Giai đoạn UX-5: Chuẩn hoá màn theo Screen Contract
+#### Đợt A: Màn dùng hằng ngày của 3 vai đang dùng được
+- [ ] T5.A1 — Trang chủ Quản lý cửa hàng (`StoreManagerDashboard`, `trang-chu-store-manager.md`)
+- [ ] T5.A2 — Trang chủ Bán hàng (`SalesWorkspace`, `trang-chu-sales.md`)
+- [ ] T5.A3 — Danh mục vai (`/vai-tro`, `vai-tro.md`)
+- [ ] T5.A4a — Quét ảnh hoa (`/tai-anh`) — Cấu trúc & nhãn tab (giữ nguyên Journey 14 bước & Atomic Fields)
+- [ ] T5.A4b — Quét ảnh hoa (`/tai-anh`) — Kết quả L0–L4 & duyệt tại chỗ
+- [ ] T5.A4c — Quét ảnh hoa (`/tai-anh`) — Trạng thái & mobile
+- [ ] T5.A5 — Hàng chờ duyệt (`/duyet`, `duyet.md`)
+- [ ] T5.A6 — Quản lý Job (`/job`, `/job/[id]`, `job.md`)
+
+#### Đợt B: Bán hàng và Vận hành cửa hàng
+- [ ] T5.B1 — Sản phẩm (`/san-pham`, `/san-pham/[id]`)
+- [ ] T5.B2 — Đơn hàng (`/don-hang`)
+- [ ] T5.B3 — Khách hàng (`/khach-hang`, 3 card → 1 card theo K1)
+- [ ] T5.B4 — Hội thoại (`/hoi-thoai`, `/hoi-thoai/kenh-tich-hop`)
+- [ ] T5.B5 — Catalog (`/catalog`)
+- [ ] T5.B6 — Tính giá (`/gia`)
+- [ ] T5.B7 — Trang Thêm trên mobile (`/them`)
+- [ ] T5.B8 — Menu tài khoản + Hồ sơ cửa hàng (`/ho-so`)
+
+#### Đợt C: Nội dung và Tiếp thị
+- [ ] T5.C1 — Market Intelligence (`/market-intelligence`, áp dụng K3 video kép gọn)
+- [ ] T5.C2 — Creative Studio (`/creative-studio`, Khu vực A–F)
+- [ ] T5.C3 — Video Studio (`/video`)
+- [ ] T5.C4 — Content Engine (`/noi-dung`)
+- [ ] T5.C5 — Lịch đăng (`/lich-dang`)
+- [ ] T5.C6 — Kho mẫu (`/kho-templates`)
+
+#### Đợt D: Thiết lập, Số liệu, Console, Điều phối
+- [ ] T5.D1 — Số liệu (`/so-lieu`)
+- [ ] T5.D2 — Kết nối kênh (`/ket-noi`)
+- [ ] T5.D3 — Cài đặt AI (`/cai-dat-ai`)
+- [ ] T5.D4 — Bộ máy phân tích (`/bo-may`)
+- [ ] T5.D5 — Tri thức (`/tri-thuc`)
+- [ ] T5.D6 — Kho dữ liệu (`/kho-du-lieu`)
+- [ ] T5.D7 — Mức dùng tenant (`/muc-dung`)
+- [ ] T5.D8 — Nhật ký kiểm toán tenant (`/audit`)
+- [ ] T5.D9 — Cài đặt tiệm (`/cai-dat`, hỏi PO phạm vi)
+- [ ] T5.D10 — Console Vận hành nền tảng (`/van-hanh`)
+- [ ] T5.D11 — Vùng Điều phối (`/dieu-phoi` + Control Tower — sau ĐP-4c)
+- [ ] T5.D12 — Console Trường dữ liệu (`/van-hanh/truong-du-lieu` — sau ĐP-3)
+
+### Giai đoạn UX-6: Mở khoá vai và các lớp liên vai
+- [ ] T6.1 — Mở khoá vai `product_manager`
+- [ ] T6.2 — Mở khoá vai `marketing` & `lead_marketing`
+- [ ] T6.3 — Mở khoá vai `crm`
+- [ ] T6.4 — Mở khoá vai `customer_service`
+- [ ] T6.5 — Mở khoá vai `finance_accounting` (chờ ĐP-4a)
+- [ ] T6.6 — Mở khoá vai `quality_control` (chờ ĐP-4b/4c)
+- [ ] T6.7 — Mở khoá vai `partner_manager` (chờ ĐP-4c)
+- [ ] T6.8 — Mở khoá vai `ceo` & `manager` (chờ CHAIN)
+- [ ] T6.9 — Đa vai / chuyển vai (#162, chờ PO duyệt migration)
+- [ ] T6.10 — AI theo vai (#168)
+- [ ] T6.11 — Ngoại lệ và thông báo P0–P3 (#166, #163a, sau ĐP-4c)
+- [ ] T6.12 — Pipeline Sales (#164)
+- [ ] T6.12b — Bỏ gợi ý bịa trong `projectOccasionReminder`
+- [ ] T6.13 — Thêm vai `florist` (Thợ cắm) vào danh mục (nợ #169)
+
+### Giai đoạn UX-7: Nghiệm thu liên tục và Khoá tài liệu
+- [ ] T7.1 — Chụp so sánh giao diện (Visual regression Playwright)
+- [ ] T7.2 — E2E theo vai (`role-homepage`, `navigation`, `route-states`)
+- [ ] T7.3 — Quét trợ năng tự động (`@axe-core/playwright`)
+- [ ] T7.4 — CI cho UX (`e2e-ux` job)
+- [ ] T7.5 — Khoá tài liệu (chuyển sang ARCHIVED, hoàn tất)
 

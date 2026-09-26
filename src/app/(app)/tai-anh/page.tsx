@@ -1198,10 +1198,10 @@ export default function TaiAnhPage() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-4">
         <div>
-          <div className="text-xs text-text-muted">M01 & M01b</div>
-          <div className="text-[17px] font-extrabold text-primary">Phân tích & Dữ liệu sản phẩm AI</div>
+          <div className="text-caption text-text-muted">Thị giác & Dữ liệu sản phẩm</div>
+          <h1 className="text-title font-extrabold text-primary">Nhận diện & Dữ liệu sản phẩm AI</h1>
         </div>
         <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-1.5">
           <ArrowLeft size={16} strokeWidth={2} />
@@ -1210,16 +1210,17 @@ export default function TaiAnhPage() {
       </div>
 
       {/* Mode / Tab Switcher (Standardized TabActionHeader) */}
-      <div className="px-[18px] pt-2 pb-1 border-b border-border bg-surface">
+      <div className="px-4 pt-2 pb-1 border-b border-border bg-surface">
         <TabActionHeader
           tabs={[
-            { id: "m01a", label: "M01a: Phân tích ảnh mới", icon: Camera },
-            { id: "m01b", label: "M01b: Dữ liệu bán hàng", icon: Sparkles, badge: "Kho đã duyệt", badgeTone: "neutral" },
-            { id: "m01c", label: "M01c: Thẻ chào sản phẩm", icon: FileText, badge: "Sales Pitch", badgeTone: "accent" },
+            { id: "m01a", label: "Nhận diện ảnh", icon: Camera },
+            { id: "m01b", label: "Nội dung bán hàng", icon: Sparkles, badge: "Kho đã duyệt", badgeTone: "neutral" },
+            { id: "m01c", label: "Thẻ chào hàng", icon: FileText, badge: "Sales Pitch", badgeTone: "accent" },
+            { id: "storage", label: "Kho lưu trữ", icon: Folder },
           ]}
           activeTab={activeTab}
           onTabChange={(tabId) => {
-            setActiveTab(tabId as "m01a" | "m01b" | "m01c")
+            setActiveTab(tabId as "m01a" | "m01b" | "m01c" | "storage")
             if (tabId === "m01a" && phase === "result2") {
               setPhase(analysisData ? "result1" : "upload")
             }
@@ -1458,7 +1459,7 @@ export default function TaiAnhPage() {
                   setJobStatus("CANCELLED")
                   setPhase("upload")
                 }}
-                showLog
+                showLog={false}
                 logs={
                   jobPhase
                     ? [{ seq: 1, text: `Đang ${jobPhase}...`, at: new Date().toISOString() }]
@@ -1587,11 +1588,16 @@ export default function TaiAnhPage() {
               <AlertTriangle size={40} strokeWidth={2} className="text-danger" />
             </div>
             <div className="text-center">
-              <div className="text-[17px] font-extrabold">Lỗi</div>
-              <div className="mt-1 text-[13px] text-text-muted">{errorMsg ?? "Đã xảy ra lỗi"}</div>
+              <div className="text-title font-extrabold text-danger">Xử lý không thành công</div>
+              {jobPhase && (
+                <div className="mt-1 text-body-sm font-semibold text-text">Bước gặp lỗi: {jobPhase}</div>
+              )}
+              <div className="mt-1 text-body-sm text-text-muted">{errorMsg ?? "Đã xảy ra lỗi"}</div>
             </div>
-            <Button onClick={() => { setErrorMsg(null); setPhase("upload") }}>Thử lại</Button>
-            <Button variant="ghost" onClick={() => router.push("/")}>Quay về Trang chủ</Button>
+            <div className="flex items-center gap-3">
+              <Button onClick={() => { setErrorMsg(null); setPhase("upload") }}>Chạy lại</Button>
+              <Button variant="ghost" onClick={() => router.push("/")}>Quay về Trang chủ</Button>
+            </div>
           </div>
         )}
           </>
@@ -1656,7 +1662,7 @@ export default function TaiAnhPage() {
                         className="border-primary text-primary hover:bg-primary/10 font-bold flex items-center gap-1.5"
                       >
                         <FileText size={15} />
-                        Tạo Thẻ Chào Khách (M01c) →
+                        Tạo Thẻ chào hàng →
                       </Button>
                       <Button
                         onClick={goSaved}
@@ -1683,7 +1689,7 @@ export default function TaiAnhPage() {
                     className="bg-primary text-white font-bold flex items-center gap-1.5 shadow-md shadow-primary/20"
                   >
                     <FileText size={15} />
-                    Tạo Thẻ Chào Khách (M01c) →
+                    Tạo Thẻ chào hàng →
                   </Button>
                   <Button
                     variant="secondary"

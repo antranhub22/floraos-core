@@ -4,9 +4,14 @@ import React from "react"
 import { Radio, RefreshCw, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ControlTowerDashboard } from "@/components/coordinator/control-tower-dashboard"
+import { UserMenu } from "@/components/layout/user-menu"
+import { useSession } from "@/lib/session"
 
 export default function DieuPhoiPage() {
   const [isCreateOpen, setIsCreateOpen] = React.useState(false)
+  // Vai Điều phối vào thẳng tuyến này từ "/" (đặc tả 03b §4.4) → màn cần có
+  // menu tài khoản (vai trò, đăng xuất) như trang chủ các vai khác.
+  const { userInitials } = useSession()
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
@@ -48,6 +53,7 @@ export default function DieuPhoiPage() {
             <Plus size={14} />
             <span>Tiếp nhận đơn mới</span>
           </Button>
+          <UserMenu initials={userInitials} />
         </div>
       </div>
 

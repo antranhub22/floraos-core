@@ -41,7 +41,12 @@ const TENANT_TABLES = [
   "order_exceptions",
   "order_qc_records",
   "order_coordinations",
+  "order_payments",
   "partners",
+  // ĐP-3 — Nền quản trị trường (26/09/2026). Có organization_id (ghi đè
+  // theo tổ chức); field_definitions/field_catalogs/field_catalog_values
+  // là bảng nền tảng, KHÔNG có ở đây, giống platform_operators/ai_models.
+  "field_config_overrides",
   "order_events",
   "order_assignments",
   "order_items",

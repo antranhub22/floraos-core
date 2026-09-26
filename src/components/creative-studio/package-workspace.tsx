@@ -27,6 +27,7 @@ import {
   findLatestPackage,
   promoteToMaster,
   resolveApprovedMaster,
+  samePosts,
   sceneTwoPresetFor,
   contentDraftKey,
   getContentDraft,
@@ -517,7 +518,7 @@ export function PackageWorkspace() {
   const dirty =
     !!pkg &&
     !approved &&
-    (JSON.stringify(draftPosts) !== JSON.stringify(pkg.posts) ||
+    (!samePosts(draftPosts, pkg.posts) ||
       JSON.stringify([...selectedVariants].sort()) !== JSON.stringify([...pkg.variant_asset_ids].sort()) ||
       JSON.stringify(videoJobIds) !== JSON.stringify(pkg.video_job_ids?.length ? pkg.video_job_ids : pkg.video_job_id ? [pkg.video_job_id] : []) ||
       audioJobId !== pkg.audio_job_id)
@@ -727,7 +728,7 @@ export function PackageWorkspace() {
           {!approved &&
             bDraft &&
             bDraft.posts.length > 0 &&
-            JSON.stringify(bDraft.posts) !== JSON.stringify(draftPosts) && (
+            !samePosts(bDraft.posts, draftPosts) && (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-[12px]">
                 <span>
                   Có bài từ Khu vực B tự lưu lúc {new Date(bDraft.updated_at).toLocaleString("vi-VN")} khác với bài trong gói.

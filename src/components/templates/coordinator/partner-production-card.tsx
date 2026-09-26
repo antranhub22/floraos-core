@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { FlowerBomItem, FoliageBomItem, WrappingLayer, AccessoryBomItem } from "@/modules/products/domain/product-master-index"
+import type { VisibleCustomField } from "@/components/coordinator/custom-fields-section"
 
 export interface PartnerProductionCardProps {
   orderCode: string
@@ -17,8 +18,16 @@ export interface PartnerProductionCardProps {
   wrapping?: WrappingLayer[] | undefined
   accessories?: AccessoryBomItem[] | undefined
   cardMessage?: string | null | undefined
-  internalNote?: string | null | undefined
+  /**
+   * Chỉ dẫn điều phối viên ghi RIÊNG cho đối tác lúc phân công (T06,
+   * `order_coordinations.metadata.partnerInstruction`). ĐP-1.7 (26/09/2026):
+   * trước bản này khối này hiện `internalNote` — ghi chú NỘI BỘ của điều phối,
+   * không phải nội dung dành cho đối tác — nên đổi tên và đổi nguồn cho khớp.
+   */
+  partnerInstruction?: string | null | undefined
   partnerName?: string | undefined
+  /** ĐP-3.16 (26/09/2026): trường tự tạo (entity ORDER) đã lọc theo đối tượng PARTNER — xem `partner-product-card.tsx`. */
+  customFields?: VisibleCustomField[] | undefined
   onMarkReady?: () => void
   onPrint?: () => void
 }
@@ -33,8 +42,9 @@ export function PartnerProductionCard({
   wrapping = [],
   accessories = [],
   cardMessage,
-  internalNote,
+  partnerInstruction,
   partnerName,
+  customFields = [],
   onMarkReady,
   onPrint,
 }: PartnerProductionCardProps) {
@@ -88,18 +98,32 @@ export function PartnerProductionCard({
                   <tr>
                     <th className="px-3 py-2">Loài hoa</th>
                     <th className="px-3 py-2">Số lượng</th>
-                    <th className="px-3 py-2">Màu sắc</th>
+                    <th className="px-3 py-2">Màu sắc / Tông</th>
                     <th className="px-3 py-2">Vai trò</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
                   {flowers.map((f, i) => (
                     <tr key={i} className="hover:bg-surface-alt/40">
-                      <td className="px-3 py-2 font-bold text-text">{f.flowerName}</td>
+                      <td className="px-3 py-2 font-bold text-text">
+                        {f.flowerName}
+                        {f.variety && <span className="text-[10px] font-medium text-text-muted"> · {f.variety}</span>}
+                        {typeof f.budCount === "number" && f.budCount > 0 && (
+                          <span className="ml-1.5 px-1 py-0 rounded bg-amber-100 text-amber-700 text-[10px] font-bold align-middle">
+                            {f.budCount} nụ chưa nở
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-rose-700 font-extrabold">
                         {f.quantity} {f.unit}
+                        {typeof f.stemLengthCm === "number" && (
+                          <span className="ml-1 text-[10px] font-medium text-text-muted">· dài {f.stemLengthCm}cm</span>
+                        )}
                       </td>
-                      <td className="px-3 py-2 text-text-muted">{f.color}</td>
+                      <td className="px-3 py-2 text-text-muted">
+                        {f.color}
+                        {f.shade && <span className="text-[10px] text-text-muted/80"> ({f.shade})</span>}
+                      </td>
                       <td className="px-3 py-2">
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
                           f.role === "Chủ đạo"
@@ -110,6 +134,11 @@ export function PartnerProductionCard({
                         }`}>
                           {f.role}
                         </span>
+                        {f.substitutionAllowed && (
+                          <span className="ml-1 inline-block px-1 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-bold">
+                            Được thay{typeof f.substitutionPriority === "number" ? ` #${f.substitutionPriority}` : ""}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -118,24 +147,45 @@ export function PartnerProductionCard({
             </div>
           </div>
 
-          {(foliage.length > 0 || wrapping.length > 0) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          {(foliage.length > 0 || wrapping.length > 0 || accessories.length > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               {foliage.length > 0 && (
                 <div className="p-3 rounded-xl bg-surface-alt border border-border/60">
                   <span className="font-bold text-text block mb-1">🌿 Lá & Cành đệm:</span>
                   <div className="text-text-muted space-y-0.5">
                     {foliage.map((fol, i) => (
-                      <div key={i}>• {fol.name} ({fol.role})</div>
+                      <div key={i}>
+                        • {fol.name} ({fol.role})
+                        {fol.substitutionAllowed && <span className="text-sky-700"> · được thay thế</span>}
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
               {wrapping.length > 0 && (
                 <div className="p-3 rounded-xl bg-surface-alt border border-border/60">
-                  <span className="font-bold text-text block mb-1">🎁 Giấy gói & Nơ:</span>
+                  <span className="font-bold text-text block mb-1">🎁 Giấy gói & Nơ ({wrapping.length} lớp):</span>
                   <div className="text-text-muted space-y-0.5">
                     {wrapping.map((w, i) => (
-                      <div key={i}>• {w.material} - {w.color}</div>
+                      <div key={i}>
+                        • {w.layer}: {w.material} - {w.color}
+                        {w.pattern && ` (${w.pattern})`}
+                        {typeof w.quantity === "number" && ` · SL ${w.quantity}`}
+                        {w.substitutionAllowed && <span className="text-sky-700"> · được thay thế</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {accessories.length > 0 && (
+                <div className="p-3 rounded-xl bg-surface-alt border border-border/60">
+                  <span className="font-bold text-text block mb-1">✨ Phụ kiện:</span>
+                  <div className="text-text-muted space-y-0.5">
+                    {accessories.map((a, i) => (
+                      <div key={i}>
+                        • {a.name} ({a.material}, {a.color}){a.unit ? ` · ${a.quantity ?? ""}${a.unit}` : ""}{a.printedText ? ` — "${a.printedText}"` : ""}
+                        {a.substitutionAllowed && <span className="text-sky-700"> · được thay thế</span>}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -152,12 +202,25 @@ export function PartnerProductionCard({
               <p className="text-rose-900 font-medium italic">&ldquo;{cardMessage}&rdquo;</p>
             </div>
           )}
+
+          {customFields.length > 0 && (
+            <div className="p-3 rounded-xl bg-surface-alt border border-border/60 text-xs">
+              <div className="font-bold text-text-muted uppercase text-[10px] mb-1">Thông tin bổ sung</div>
+              <div className="space-y-0.5 text-text">
+                {customFields.map((f) => (
+                  <div key={f.key}>
+                    <span className="font-semibold">{f.label}:</span> {String(f.value)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t border-dashed border-border">
         <div className="text-xs text-text-muted">
-          {internalNote && <span>Lưu ý thợ: <strong>{internalNote}</strong></span>}
+          {partnerInstruction && <span>Lưu ý thợ: <strong>{partnerInstruction}</strong></span>}
         </div>
         {onMarkReady && (
           <Button onClick={onMarkReady} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">

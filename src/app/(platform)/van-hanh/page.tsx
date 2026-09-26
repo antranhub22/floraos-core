@@ -8,6 +8,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { AlertTriangle, Building2, Clock } from "lucide-react"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 
 type PlatformOrganizationSummary = {
   id: string
@@ -56,7 +57,7 @@ export default function VanHanhTongQuanPage() {
   }, [])
 
   if (loi) return <p className="text-sm text-danger">{loi}</p>
-  if (!orgs || !health) return <p className="text-sm text-text-muted">Đang tải…</p>
+  if (!orgs || !health) return <div className="py-4"><SkeletonBlock lines={4} /></div>
 
   return (
     <div className="flex flex-col gap-4">

@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 
 type PlatformAuditRow = {
   id: string
@@ -39,7 +40,7 @@ export default function NhatKyPage() {
   }, [])
 
   if (loi) return <p className="text-sm text-danger">{loi}</p>
-  if (!rows) return <p className="text-sm text-text-muted">Đang tải…</p>
+  if (!rows) return <div className="py-4"><SkeletonBlock lines={4} /></div>
 
   return (
     <Card className="overflow-x-auto p-4">

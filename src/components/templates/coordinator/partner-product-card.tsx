@@ -20,7 +20,14 @@ import {
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import type { FlowerBomItem, StructuredAddress } from "@/modules/products/domain/product-master-index"
+import type {
+  AccessoryBomItem,
+  FlowerBomItem,
+  FoliageBomItem,
+  StructuredAddress,
+  WrappingLayer,
+} from "@/modules/products/domain/product-master-index"
+import type { VisibleCustomField } from "@/components/coordinator/custom-fields-section"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,6 +42,12 @@ export interface PartnerProductCardProps {
   sampleImageUrl?: string | null | undefined
   /** BOM — Công thức cành hoa */
   flowers: FlowerBomItem[]
+  /** ĐP-2.12 (26/09/2026): lá/cành trang trí từ snapshot Master Index (MI-5) — rỗng nếu đơn không chọn mẫu từ danh mục. */
+  foliage?: FoliageBomItem[] | undefined
+  /** Các lớp gói theo snapshot Master Index. */
+  wrapping?: WrappingLayer[] | undefined
+  /** Phụ kiện trang trí theo snapshot Master Index. */
+  accessories?: AccessoryBomItem[] | undefined
   /** Giá bán ra khách (VNĐ) */
   unitPriceVnd?: number | undefined
   /** Giá công trả đối tác (VNĐ) */
@@ -57,6 +70,13 @@ export interface PartnerProductCardProps {
   riskLevel?: "NORMAL" | "ATTENTION" | "AT_RISK" | "CRITICAL" | undefined
   /** Lý do rủi ro */
   riskReason?: string | null | undefined
+  /**
+   * ĐP-3.16 (26/09/2026): trường tự tạo (entity ORDER) đã lọc theo đối
+   * tượng PARTNER (`visibleCustomFieldsForAudience`, `custom-fields-section.tsx`)
+   * — caller (control-tower-dashboard.tsx) tự lọc trước khi truyền vào, thẻ
+   * này không tự quyết định ẩn/hiện.
+   */
+  customFields?: VisibleCustomField[] | undefined
   /** Callback chuyển bước */
   onAdvanceStage?: () => void
 }
@@ -70,7 +90,7 @@ function formatAddress(addr: StructuredAddress | string): string {
   return [addr.street, addr.ward, addr.district, addr.city].filter(Boolean).join(", ")
 }
 
-function buildZaloText(props: PartnerProductCardProps): string {
+export function buildZaloText(props: PartnerProductCardProps): string {
   const lines: string[] = [
     `🌸 PHIẾU ĐẶT HOA — ĐƠN #${props.orderCode}`,
     `━━━━━━━━━━━━━━━━━━━━`,
@@ -106,6 +126,12 @@ function buildZaloText(props: PartnerProductCardProps): string {
     lines.push(`${props.technicalNotes}`)
   }
 
+  if (props.customFields && props.customFields.length > 0) {
+    lines.push(``)
+    lines.push(`ℹ️ Thông tin bổ sung:`)
+    props.customFields.forEach((f) => lines.push(`   • ${f.label}: ${String(f.value)}`))
+  }
+
   lines.push(``)
   lines.push(`━━━━━━━━━━━━━━━━━━━━`)
   lines.push(`FloraOS • Hệ thống Điều phối Tự động`)
@@ -123,6 +149,9 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
     productTitle,
     sampleImageUrl,
     flowers,
+    foliage = [],
+    wrapping = [],
+    accessories = [],
     unitPriceVnd,
     partnerPayoutVnd,
     deliveryTargetTime,
@@ -134,6 +163,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
     partnerName,
     riskLevel,
     riskReason,
+    customFields = [],
     onAdvanceStage,
   } = props
 
@@ -243,6 +273,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
       {/* ── Product Card chính (ref cho PNG export) ── */}
       <Card
         ref={cardRef}
+        data-testid="t07-png-export-region"
         className="rounded-2xl border-2 border-red-200 bg-white p-0 shadow-lg overflow-hidden"
       >
         {/* Header gradient */}
@@ -328,17 +359,6 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
                     </div>
                   </div>
                 )}
-                {unitPriceVnd != null && unitPriceVnd > 0 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-50 border border-zinc-200">
-                    <Banknote size={14} className="text-zinc-500" />
-                    <div>
-                      <div className="text-[9px] font-bold text-zinc-500 uppercase">Giá bán khách</div>
-                      <div className="text-sm font-bold text-zinc-600">
-                        {unitPriceVnd.toLocaleString("vi-VN")}đ
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Đối tác đã phân công */}
@@ -372,8 +392,18 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
                       {i + 1}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold text-zinc-900 truncate">
-                        {fl.flowerName}
+                      <div className="text-xs font-bold text-zinc-900 truncate flex items-center gap-1.5 flex-wrap">
+                        <span>{fl.flowerName}</span>
+                        {fl.shade && (
+                          <span className="px-1 py-0 rounded bg-zinc-100 text-zinc-600 text-[9px] font-bold">
+                            {fl.shade}
+                          </span>
+                        )}
+                        {typeof fl.budCount === "number" && fl.budCount > 0 && (
+                          <span className="px-1 py-0 rounded bg-amber-100 text-amber-700 text-[9px] font-bold">
+                            {fl.budCount} nụ chưa nở
+                          </span>
+                        )}
                       </div>
                       <div className="text-[10.5px] text-zinc-500 font-medium">
                         {fl.quantity} {fl.unit} • {fl.color}
@@ -382,6 +412,43 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* ĐP-2.12 (26/09/2026): lá/gói/phụ kiện thật từ snapshot Master Index — trước bản
+              này T07-BRIEF chỉ có cành hoa, thợ không biết gói/phụ kiện đúng mẫu là gì. */}
+          {(foliage.length > 0 || wrapping.length > 0 || accessories.length > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+              {foliage.length > 0 && (
+                <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-200">
+                  <span className="font-bold text-emerald-900 block mb-1">🌿 Lá/cành đệm</span>
+                  <div className="text-emerald-800 space-y-0.5">
+                    {foliage.map((fol, i) => (
+                      <div key={i}>• {fol.name} ({fol.role}){fol.quantity ? ` × ${fol.quantity} ${fol.unit}` : ""}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {wrapping.length > 0 && (
+                <div className="p-2.5 rounded-lg bg-sky-50/60 border border-sky-200">
+                  <span className="font-bold text-sky-900 block mb-1">🎁 Gói ({wrapping.length} lớp)</span>
+                  <div className="text-sky-800 space-y-0.5">
+                    {wrapping.map((w, i) => (
+                      <div key={i}>• {w.layer}: {w.material}, {w.color}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {accessories.length > 0 && (
+                <div className="p-2.5 rounded-lg bg-violet-50/60 border border-violet-200">
+                  <span className="font-bold text-violet-900 block mb-1">✨ Phụ kiện</span>
+                  <div className="text-violet-800 space-y-0.5">
+                    {accessories.map((a, i) => (
+                      <div key={i}>• {a.name} ({a.material}, {a.color}){a.printedText ? ` — "${a.printedText}"` : ""}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -459,6 +526,20 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
               </div>
             </div>
           )}
+
+          {/* Row 6: Trường tự tạo hiện cho đối tác (ĐP-3.16) */}
+          {customFields.length > 0 && (
+            <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200">
+              <div className="text-[10px] font-bold text-zinc-500 uppercase mb-1">Thông tin bổ sung</div>
+              <div className="space-y-0.5 text-xs text-zinc-800">
+                {customFields.map((f) => (
+                  <div key={f.key}>
+                    <span className="font-semibold">{f.label}:</span> {String(f.value)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -469,6 +550,21 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
           </span>
         </div>
       </Card>
+
+      {/* ── Giá bán khách: chỉ hiển thị nội bộ, KHÔNG nằm trong vùng PNG/cardRef ── */}
+      {unitPriceVnd != null && unitPriceVnd > 0 && (
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 border border-dashed border-zinc-300 self-start">
+          <Banknote size={14} className="text-zinc-500" />
+          <div>
+            <div className="text-[9px] font-bold text-zinc-500 uppercase flex items-center gap-1">
+              Giá bán khách <span className="italic normal-case font-medium">(chỉ nội bộ, không gửi đối tác)</span>
+            </div>
+            <div className="text-sm font-bold text-zinc-600">
+              {unitPriceVnd.toLocaleString("vi-VN")}đ
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Nút chuyển bước ── */}
       {onAdvanceStage && (

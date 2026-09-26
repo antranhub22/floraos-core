@@ -1,14 +1,13 @@
 "use client"
 
-// Chi tiết job — trước đây là màn "Sắp có"; nay nối GET /jobs/:id (`G4`),
-// cộng hai thao tác đã có API sẵn: huỷ (`POST /jobs/:id/cancel`, job còn
-// PENDING) và chạy lại (`POST /jobs/:id/retry`, job đã FAILED).
-
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft } from "lucide-react"
+import { ArrowLeft, AlertTriangle, RotateCcw, XCircle, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
+import { FlowSteps, type FlowStep, type FlowStepStatus } from "@/components/flow/flow-steps"
+import { NHAN_TINH_NANG } from "@/lib/feature-labels"
 
 type JobDetail = {
   id: string
@@ -23,23 +22,68 @@ type JobDetail = {
   completed_at: string | null
 }
 
-const NHAN_TINH_NANG: Record<string, string> = {
-  "vision.analyze": "Phân tích ảnh",
-  "media.optimize": "Tối ưu ảnh",
-  "catalog.generate": "Tạo danh mục",
-}
-
 const TRANG_THAI_NHAN: Record<JobDetail["status"], string> = {
-  PENDING: "Đang chờ",
-  PROCESSING: "Đang chạy",
-  COMPLETED: "Hoàn tất",
-  FAILED: "Lỗi",
-  CANCELLED: "Đã huỷ",
+  PENDING: "Đang chờ xử lý",
+  PROCESSING: "Đang thực hiện",
+  COMPLETED: "Đã hoàn tất",
+  FAILED: "Gặp sự cố",
+  CANCELLED: "Đã huỷ bỏ",
 }
 
 function dinhDangGio(iso: string | null): string {
   if (!iso) return "—"
   return new Date(iso).toLocaleString("vi-VN")
+}
+
+function layCacBuocTheoTinhNang(feature: string): FlowStep[] {
+  if (feature === "vision.analyze") {
+    return [
+      { key: "detect", label: "Nhận diện cấu phần hoa" },
+      { key: "count", label: "Đếm hoa & cành" },
+      { key: "palette", label: "Phân tích bảng màu & cụm hoa" },
+      { key: "style", label: "Xác định phong cách cắm hoa" },
+    ]
+  }
+  if (feature === "media.optimize" || feature === "media.variant.cloud") {
+    return [
+      { key: "download", label: "Tải ảnh gốc" },
+      { key: "segment", label: "Khử viền & tách nền sản phẩm" },
+      { key: "enhance", label: "Cân bằng ánh sáng & phối cảnh" },
+      { key: "package", label: "Đóng gói & xuất bản ảnh" },
+    ]
+  }
+  if (feature === "copy.generate") {
+    return [
+      { key: "parse", label: "Đọc cấu trúc hoa" },
+      { key: "position", label: "Định vị thương mại & dịp" },
+      { key: "draft", label: "Soạn thảo kịch bản & caption" },
+      { key: "brand_check", label: "Kiểm chuẩn thương hiệu" },
+    ]
+  }
+  return [
+    { key: "init", label: "Khởi tạo tác vụ" },
+    { key: "process", label: "Xử lý AI" },
+    { key: "complete", label: "Đóng gói kết quả" },
+  ]
+}
+
+function layTrangThaiCacBuoc(steps: FlowStep[], job: JobDetail): FlowStepStatus[] {
+  const currentKey = job.stage ?? steps[0]?.key ?? "init"
+  const currentIndex = steps.findIndex((s) => s.key === currentKey)
+  const activeIdx = currentIndex >= 0 ? currentIndex : 0
+
+  return steps.map((s, idx) => {
+    if (job.status === "COMPLETED") return { key: s.key, status: "done" }
+    if (job.status === "CANCELLED") return { key: s.key, status: idx <= activeIdx ? "cancelled" : "pending" }
+    if (job.status === "FAILED") {
+      if (idx < activeIdx) return { key: s.key, status: "done" }
+      if (idx === activeIdx) return { key: s.key, status: "error" }
+      return { key: s.key, status: "pending" }
+    }
+    if (idx < activeIdx) return { key: s.key, status: "done" }
+    if (idx === activeIdx) return { key: s.key, status: "active" }
+    return { key: s.key, status: "pending" }
+  })
 }
 
 export default function JobDetailPage() {
@@ -55,7 +99,7 @@ export default function JobDetailPage() {
     try {
       const res = await fetch(`/api/v1/jobs/${jobId}`)
       if (res.status === 401) {
-        router.push("/dang-nhap")
+        router.push("/dang-nhap" as never)
         return
       }
       if (!res.ok) throw new Error(`Không tải được job (${res.status})`)
@@ -67,7 +111,6 @@ export default function JobDetailPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     napLai()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
@@ -98,82 +141,135 @@ export default function JobDetailPage() {
     }
   }
 
+  const steps = job ? layCacBuocTheoTinhNang(job.feature) : []
+  const statuses = job ? layTrangThaiCacBuoc(steps, job) : []
+  const currentStepKey = job?.stage ?? steps[0]?.key ?? "init"
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex flex-shrink-0 items-center gap-2 border-b border-border bg-surface px-[14px] py-4">
+      <header className="flex flex-shrink-0 items-center gap-3 border-b border-border bg-surface px-4 py-4">
         <button
           type="button"
-          onClick={() => router.push("/job")}
-          className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-surface-alt"
+          onClick={() => router.push("/job" as never)}
+          className="flex h-11 w-11 items-center justify-center rounded-full text-text hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-primary"
+          aria-label="Quay lại danh sách job"
         >
-          <ChevronLeft size={20} strokeWidth={2} />
+          <ArrowLeft size={18} />
         </button>
-        <div className="text-[16px] font-extrabold text-primary">
-          {job ? NHAN_TINH_NANG[job.feature] ?? job.feature : "Chi tiết job"}
+        <div>
+          <h1 className="text-title font-extrabold text-primary">
+            {job ? NHAN_TINH_NANG[job.feature] ?? job.feature : "Chi tiết job"}
+          </h1>
+          <div className="text-caption text-text-muted">Mã tác vụ: #{jobId.slice(0, 8)}</div>
         </div>
-      </div>
+      </header>
 
-      <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4">
+      <main className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 max-w-3xl mx-auto w-full">
         {loi && (
-          <div className="rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-body-sm font-medium text-red-700">
             {loi}
           </div>
         )}
 
         {job === null ? (
-          <div className="py-8 text-center text-[13px] text-text-muted">Đang tải…</div>
+          <div className="py-4">
+            <SkeletonBlock lines={5} />
+          </div>
         ) : (
-          <>
-            <Card className="flex flex-col gap-2.5 p-[18px]">
-              <div className="flex justify-between text-[13px]">
-                <span className="text-text-muted">Trạng thái</span>
-                <span className="font-bold">{TRANG_THAI_NHAN[job.status]}</span>
-              </div>
-              {job.stage && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-text-muted">Giai đoạn</span>
-                  <span className="font-bold">{job.stage}</span>
+          <div className="flex flex-col gap-4">
+            {/* Thẻ thông báo nếu job bị lỗi */}
+            {job.status === "FAILED" && (
+              <div className="flex flex-col gap-3 rounded-2xl border border-danger/30 bg-danger-bg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle size={20} className="mt-0.5 flex-shrink-0 text-danger" aria-hidden="true" />
+                  <div className="flex-1">
+                    <div className="text-body-sm font-bold text-danger">Tác vụ gặp lỗi khi đang xử lý</div>
+                    <div className="mt-1 text-caption text-text leading-relaxed">
+                      {job.stage ? `Dừng lại ở giai đoạn "${job.stage}". ` : ""}
+                      {job.error ? `Chi tiết lỗi: ${job.error}` : "Vui lòng bấm 'Chạy lại' để thử lại tác vụ."}
+                    </div>
+                  </div>
                 </div>
-              )}
-              {job.result && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-text-muted">Kết quả</span>
-                  <span className="font-bold">{job.result}</span>
+                <div className="flex justify-end pt-1">
+                  <Button
+                    disabled={dangXuLy}
+                    onClick={chayLai}
+                    className="flex items-center gap-1.5"
+                  >
+                    <RotateCcw size={15} />
+                    {dangXuLy ? "Đang chạy lại…" : "Chạy lại tác vụ"}
+                  </Button>
                 </div>
-              )}
-              {job.error && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-text-muted">Lỗi</span>
-                  <span className="font-bold text-danger">{job.error}</span>
+              </div>
+            )}
+
+            {/* Checklist từng bước (FlowSteps) */}
+            <div className="flex flex-col gap-2">
+              <h2 className="text-caption font-bold uppercase tracking-wider text-text-muted px-1">
+                Tiến trình xử lý theo bước
+              </h2>
+              <FlowSteps
+                steps={steps}
+                currentStep={currentStepKey}
+                statuses={statuses}
+                cancellable={job.status === "PENDING"}
+                onCancel={huy}
+                showLog={false}
+                logs={[
+                  { seq: 1, text: `Khởi tạo: ${dinhDangGio(job.created_at)}`, at: job.created_at },
+                  ...(job.started_at ? [{ seq: 2, text: `Bắt đầu chạy: ${dinhDangGio(job.started_at)}`, at: job.started_at }] : []),
+                  ...(job.completed_at ? [{ seq: 3, text: `Hoàn tất: ${dinhDangGio(job.completed_at)}`, at: job.completed_at }] : []),
+                  ...(job.error ? [{ seq: 4, text: `Lỗi: ${job.error}`, at: new Date().toISOString() }] : []),
+                ]}
+              />
+            </div>
+
+            {/* Thông số kỹ thuật của Job */}
+            <Card className="flex flex-col gap-2.5 p-4">
+              <h2 className="text-caption font-bold uppercase tracking-wider text-text-muted">
+                Thông số vận hành
+              </h2>
+              <div className="divide-y divide-border text-body-sm">
+                <div className="flex justify-between py-2">
+                  <span className="text-text-muted">Trạng thái</span>
+                  <span className="font-semibold text-text">{TRANG_THAI_NHAN[job.status]}</span>
                 </div>
-              )}
-              <div className="flex justify-between text-[13px]">
-                <span className="text-text-muted">Tạo lúc</span>
-                <span className="font-bold">{dinhDangGio(job.created_at)}</span>
-              </div>
-              <div className="flex justify-between text-[13px]">
-                <span className="text-text-muted">Bắt đầu chạy</span>
-                <span className="font-bold">{dinhDangGio(job.started_at)}</span>
-              </div>
-              <div className="flex justify-between text-[13px]">
-                <span className="text-text-muted">Hoàn tất</span>
-                <span className="font-bold">{dinhDangGio(job.completed_at)}</span>
+                {job.stage && (
+                  <div className="flex justify-between py-2">
+                    <span className="text-text-muted">Giai đoạn</span>
+                    <span className="font-semibold text-text">{job.stage}</span>
+                  </div>
+                )}
+                {job.result && (
+                  <div className="flex justify-between py-2">
+                    <span className="text-text-muted">Kết quả</span>
+                    <span className="font-semibold text-text">{job.result}</span>
+                  </div>
+                )}
+                <div className="flex justify-between py-2">
+                  <span className="text-text-muted">Khởi tạo</span>
+                  <span className="font-medium text-text">{dinhDangGio(job.created_at)}</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-text-muted">Bắt đầu</span>
+                  <span className="font-medium text-text">{dinhDangGio(job.started_at)}</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-text-muted">Kết thúc</span>
+                  <span className="font-medium text-text">{dinhDangGio(job.completed_at)}</span>
+                </div>
               </div>
             </Card>
 
             {job.status === "PENDING" && (
-              <Button variant="secondary" disabled={dangXuLy} onClick={huy}>
-                {dangXuLy ? "Đang huỷ…" : "Huỷ job"}
+              <Button variant="secondary" disabled={dangXuLy} onClick={huy} className="min-h-11">
+                <XCircle size={16} />
+                {dangXuLy ? "Đang huỷ…" : "Huỷ tác vụ"}
               </Button>
             )}
-            {job.status === "FAILED" && (
-              <Button disabled={dangXuLy} onClick={chayLai}>
-                {dangXuLy ? "Đang chạy lại…" : "Chạy lại"}
-              </Button>
-            )}
-          </>
+          </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

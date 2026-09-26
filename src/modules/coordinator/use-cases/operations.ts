@@ -122,8 +122,15 @@ export async function assignPartner(
       await transition(ctx, repo, row, "IN_PRODUCTION", `Phân công ${partner.name}`, { partner_id: partner.id }, nextAction)
     }
     if (note) {
-      await repo.updateOrderAxis(ctx, row.id, {
-        internal_note: [row.internal_note, `[Phân công] ${partner.name}: ${note}`].filter(Boolean).join("\n"),
+      // ĐP-1.7 (26/09/2026): trước bản này, ghi chú phân công cho ĐỐI TÁC bị
+      // nối luôn vào `internal_note` — vốn là ghi chú NỘI BỘ của điều phối
+      // viên, không phải chỉ dẫn gửi cho xưởng. Từ nay lưu riêng vào
+      // `order_coordinations.metadata.partnerInstruction`; view trả riêng
+      // trường `partnerInstruction`. Ghi chú kiểu cũ đã nối vào `internal_note`
+      // trước bản này giữ nguyên, không hồi tố.
+      const meta = (row.coordination!.metadata ?? {}) as Record<string, unknown>
+      await repo.updateCoordination(ctx, row.id, {
+        metadata: { ...meta, partnerInstruction: note },
       })
     }
     await audit(ctx, tx, "coordinator.partner.assign", row.id, { partnerId: row.coordination!.partner_id }, { partnerId: partner.id })

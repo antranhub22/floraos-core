@@ -1,12 +1,13 @@
 "use client"
 
-// Danh sách job của tôi — trước đây là màn "Sắp có"; nay nối GET /jobs
-// (`G4`, đặc tả 06 mục 7), cùng khuôn fetch với AdminDashboard.
-
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, CheckCircle2, Clock, Loader2, XCircle } from "lucide-react"
+import Link from "next/link"
+import { AlertTriangle, CheckCircle2, Clock, Loader2, XCircle, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
+import { EmptyState } from "@/components/ui/empty-state"
+import { NHAN_TINH_NANG } from "@/lib/feature-labels"
 
 type Job = {
   id: string
@@ -15,12 +16,7 @@ type Job = {
   stage: string | null
   result: string | null
   error: string | null
-}
-
-const NHAN_TINH_NANG: Record<string, string> = {
-  "vision.analyze": "Phân tích ảnh",
-  "media.optimize": "Tối ưu ảnh",
-  "catalog.generate": "Tạo danh mục",
+  created_at?: string
 }
 
 const TRANG_THAI_ICON: Record<Job["status"], typeof Clock> = {
@@ -42,9 +38,44 @@ const TRANG_THAI_NHAN: Record<Job["status"], string> = {
 const TRANG_THAI_MAU: Record<Job["status"], string> = {
   PENDING: "text-text-muted",
   PROCESSING: "text-primary",
-  COMPLETED: "text-secondary-text",
+  COMPLETED: "text-secondary",
   FAILED: "text-danger",
   CANCELLED: "text-text-muted",
+}
+
+function JobCard({ job }: { job: Job }) {
+  const Icon = TRANG_THAI_ICON[job.status]
+  const isFailed = job.status === "FAILED"
+
+  return (
+    <Link
+      href={`/job/${job.id}` as never}
+      className={`flex min-h-11 items-center justify-between gap-3 rounded-xl border p-3.5 transition-colors hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-primary ${
+        isFailed ? "border-danger/30 bg-danger-bg/20" : "border-border bg-surface"
+      }`}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <Icon
+          size={18}
+          strokeWidth={1.9}
+          className={`flex-shrink-0 ${TRANG_THAI_MAU[job.status]} ${
+            job.status === "PROCESSING" ? "animate-spin" : ""
+          }`}
+        />
+        <div className="min-w-0">
+          <div className="truncate text-body-sm font-semibold">
+            {NHAN_TINH_NANG[job.feature] ?? job.feature}
+          </div>
+          <div className="truncate text-caption text-text-muted">
+            {TRANG_THAI_NHAN[job.status]}
+            {job.stage ? ` · Giai đoạn: ${job.stage}` : ""}
+            {job.error ? ` · ${job.error}` : ""}
+          </div>
+        </div>
+      </div>
+      <ChevronRight size={16} className="flex-shrink-0 text-text-muted" aria-hidden="true" />
+    </Link>
+  )
 }
 
 export default function JobListPage() {
@@ -58,7 +89,7 @@ export default function JobListPage() {
       try {
         const res = await fetch("/api/v1/jobs?limit=50")
         if (res.status === 401) {
-          router.push("/dang-nhap")
+          router.push("/dang-nhap" as never)
           return
         }
         if (!res.ok) throw new Error(`Không tải được danh sách job (${res.status})`)
@@ -74,50 +105,86 @@ export default function JobListPage() {
     }
   }, [router])
 
+  const failedJobs = jobs?.filter((j) => j.status === "FAILED") ?? []
+  const runningJobs = jobs?.filter((j) => j.status === "PROCESSING" || j.status === "PENDING") ?? []
+  const completedJobs = jobs?.filter((j) => j.status === "COMPLETED" || j.status === "CANCELLED") ?? []
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex flex-shrink-0 items-center border-b border-border bg-surface px-[18px] py-4">
-        <div className="text-[17px] font-extrabold text-primary">Job của tôi</div>
+      <div className="flex flex-shrink-0 items-center border-b border-border bg-surface px-4 py-4">
+        <h1 className="text-title font-extrabold text-primary">Tiến trình Job của tôi</h1>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
         {loi && (
-          <div className="rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-body-sm font-medium text-red-700">
             {loi}
           </div>
         )}
 
         {jobs === null ? (
-          <div className="py-8 text-center text-[13px] text-text-muted">Đang tải…</div>
+          <div className="py-4">
+            <SkeletonBlock lines={4} />
+          </div>
         ) : jobs.length === 0 ? (
-          <Card className="flex flex-col items-center gap-2 p-8 text-center">
-            <div className="text-[13.5px] font-semibold">Chưa có job nào</div>
-            <div className="text-xs text-text-muted">Job xuất hiện ở đây sau khi bạn chạy một thao tác AI.</div>
-          </Card>
+          <EmptyState
+            title="Chưa có job nào"
+            reason="Các tác vụ xử lý ảnh, tạo danh mục hoặc sinh nội dung AI sẽ xuất hiện tại đây khi bạn chạy."
+            action={{
+              label: "Tải ảnh để phân tích",
+              onClick: () => router.push("/tai-anh" as never),
+            }}
+          />
         ) : (
-          jobs.map((job) => {
-            const Icon = TRANG_THAI_ICON[job.status]
-            return (
-              <Card
-                key={job.id}
-                className="flex cursor-pointer items-center gap-3 p-3.5 hover:shadow-md"
-                onClick={() => router.push(`/job/${job.id}`)}
-              >
-                <Icon
-                  size={18}
-                  strokeWidth={1.9}
-                  className={`flex-shrink-0 ${TRANG_THAI_MAU[job.status]} ${job.status === "PROCESSING" ? "animate-spin" : ""}`}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13.5px] font-semibold">{NHAN_TINH_NANG[job.feature] ?? job.feature}</div>
-                  <div className="truncate text-xs text-text-muted">
-                    {TRANG_THAI_NHAN[job.status]}
-                    {job.error ? ` · ${job.error}` : ""}
-                  </div>
+          <div className="flex flex-col gap-5">
+            {/* Nhóm 1: Job Lỗi (Ưu tiên can thiệp hàng đầu) */}
+            {failedJobs.length > 0 && (
+              <section aria-labelledby="heading-failed-jobs" className="flex flex-col gap-2">
+                <div className="flex items-center gap-1.5 px-1">
+                  <AlertTriangle size={15} className="text-danger" aria-hidden="true" />
+                  <h2 id="heading-failed-jobs" className="text-caption font-bold uppercase tracking-wider text-danger">
+                    Lỗi cần can thiệp ({failedJobs.length})
+                  </h2>
                 </div>
-              </Card>
-            )
-          })
+                <div className="flex flex-col gap-2">
+                  {failedJobs.map((job) => (
+                    <JobCard key={job.id} job={job} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Nhóm 2: Job Đang chạy / Đang chờ */}
+            {runningJobs.length > 0 && (
+              <section aria-labelledby="heading-running-jobs" className="flex flex-col gap-2">
+                <div className="flex items-center gap-1.5 px-1">
+                  <Loader2 size={15} className="animate-spin text-primary" aria-hidden="true" />
+                  <h2 id="heading-running-jobs" className="text-caption font-bold uppercase tracking-wider text-primary">
+                    Đang xử lý ({runningJobs.length})
+                  </h2>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {runningJobs.map((job) => (
+                    <JobCard key={job.id} job={job} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Nhóm 3: Job Đã hoàn tất / Đã huỷ */}
+            {completedJobs.length > 0 && (
+              <section aria-labelledby="heading-completed-jobs" className="flex flex-col gap-2">
+                <h2 id="heading-completed-jobs" className="px-1 text-caption font-bold uppercase tracking-wider text-text-muted">
+                  Đã hoàn tất ({completedJobs.length})
+                </h2>
+                <div className="flex flex-col gap-2">
+                  {completedJobs.map((job) => (
+                    <JobCard key={job.id} job={job} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
         )}
       </div>
     </div>

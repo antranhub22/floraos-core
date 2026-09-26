@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation"
 import { AlertTriangle, ArrowLeft, Check, Cloud, Server } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { useSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
 
@@ -121,7 +122,7 @@ export default function BoMayPage() {
         )}
 
         {danhSach === null && !loi && (
-          <div className="py-8 text-center text-[13px] text-text-muted">Đang tải…</div>
+          <div className="py-4"><SkeletonBlock lines={3} /></div>
         )}
 
         {danhSach?.map((bo) => {

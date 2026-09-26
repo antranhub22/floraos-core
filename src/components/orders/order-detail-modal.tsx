@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { X, Clock, Printer, Ban, CheckCircle, Truck, Flower2, AlertCircle, Loader2, Layers, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { FloristTicketCard } from "@/components/templates/orders/florist-ticket-card"
 import { DeliveryReceiptCard } from "@/components/templates/orders/delivery-receipt-card"
 import type { OrderItemRecord, OrderRecord, OrderSlaCalculation } from "@/modules/orders/domain/order-types"
@@ -158,10 +159,10 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
       <div className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-xl border border-border bg-surface shadow-2xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-3.5">
           <div className="flex items-center gap-3">
-            <span className="rounded bg-primary/10 px-2.5 py-1 text-xs font-mono font-bold text-primary">
-              {order?.code ?? "Đang tải..."}
+            <span className="rounded bg-primary/10 px-2.5 py-1 text-xs font-mono font-bold text-primary flex items-center min-w-16 justify-center">
+              {order?.code ?? <Skeleton className="h-3 w-14" />}
             </span>
-            <span className="text-sm font-bold text-foreground">Chi tiết đơn & Tiến độ SLA (M10)</span>
+            <span className="text-sm font-bold text-foreground">Chi tiết đơn & Tiến độ SLA</span>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />

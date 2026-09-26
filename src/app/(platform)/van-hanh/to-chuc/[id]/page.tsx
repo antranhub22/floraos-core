@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 
 type PlatformOrganizationDetail = {
   id: string
@@ -51,7 +52,7 @@ export default function ChiTietToChucPage() {
   }, [params.id])
 
   if (loi) return <p className="text-sm text-danger">{loi}</p>
-  if (!org) return <p className="text-sm text-text-muted">Đang tải…</p>
+  if (!org) return <div className="py-4"><SkeletonBlock lines={4} /></div>
 
   return (
     <Card className="max-w-xl p-4">

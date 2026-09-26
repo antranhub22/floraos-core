@@ -155,24 +155,28 @@ export function CatalogStorefront({ initialData }: CatalogStorefrontProps) {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredProducts.map((p) => (
-              <div key={p.id} onClick={() => setSelectedProduct(p)} className="group bg-white rounded-2xl overflow-hidden border border-rose-100/80 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer">
-                <div className="relative aspect-square w-full bg-slate-100 overflow-hidden">
-                  {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50"><Flower2 size={48} strokeWidth={1.5} /><span className="text-[11px] font-medium mt-1">Ảnh đang cập nhật</span></div>}
-                  <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-[11px] font-bold tracking-wide">{p.code}</div>
-                  {p.occasions.length > 0 && <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-lg bg-rose-600 text-white text-[11px] font-bold shadow-xs">{p.occasions[0]}</div>}
-                </div>
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
+              <div key={p.id} className="group bg-white rounded-2xl overflow-hidden border border-rose-100/80 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => setSelectedProduct(p)}
+                  className="w-full text-left flex flex-col flex-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-t-2xl"
+                >
+                  <div className="relative aspect-square w-full bg-slate-100 overflow-hidden">
+                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50"><Flower2 size={48} strokeWidth={1.5} /><span className="text-[11px] font-medium mt-1">Ảnh đang cập nhật</span></div>}
+                    <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-[11px] font-bold tracking-wide">{p.code}</div>
+                    {p.occasions.length > 0 && <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-lg bg-rose-600 text-white text-[11px] font-bold shadow-xs">{p.occasions[0]}</div>}
+                  </div>
+                  <div className="p-4 pb-0 flex-1 flex flex-col">
                     <div className="text-[15px] font-extrabold text-slate-900 line-clamp-1 group-hover:text-rose-600 transition-colors">{p.name}</div>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-500">
                       {p.category && <span className="font-medium text-slate-600">{p.category}</span>}
                       {p.stemCount && <span className="flex items-center gap-1"><Layers size={11} className="text-slate-400" />{p.stemCount} cành</span>}
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <div><div className="text-[11px] text-slate-400">Giá niêm yết</div><div className="text-[15px] font-black text-rose-600">{formatVnd(p.price)}</div></div>
-                    <a href={getZaloUrl(p, shop)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white text-xs font-bold transition-colors"><MessageCircle size={14} />Đặt Zalo</a>
-                  </div>
+                </button>
+                <div className="p-4 pt-3 mt-auto border-t border-slate-100 flex items-center justify-between">
+                  <div><div className="text-[11px] text-slate-400">Giá niêm yết</div><div className="text-[15px] font-black text-rose-600">{formatVnd(p.price)}</div></div>
+                  <a href={getZaloUrl(p, shop)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"><MessageCircle size={14} />Đặt Zalo</a>
                 </div>
               </div>
             ))}

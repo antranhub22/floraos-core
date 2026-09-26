@@ -251,7 +251,13 @@ export function VideoWorkspace() {
             const s = VIDEO_FORMAT_SPECS[fmtKey]
             const sel = format === fmtKey
             return (
-              <div key={fmtKey} onClick={() => { setFormat(fmtKey); setScenes([]) }} className={`cursor-pointer rounded-xl border p-3 transition-all ${sel ? "border-primary bg-primary/5 shadow-xs" : "border-border bg-background hover:border-border-hover"}`}>
+              <button
+                key={fmtKey}
+                type="button"
+                aria-pressed={sel}
+                onClick={() => { setFormat(fmtKey); setScenes([]) }}
+                className={`w-full text-left rounded-xl border p-3 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${sel ? "border-primary bg-primary/5 shadow-xs" : "border-border bg-background hover:border-border-hover"}`}
+              >
                 <div className="flex items-start justify-between gap-1">
                   <span className="text-xs font-bold text-text">{s.label}</span>
                   <Badge tone={sel ? "success" : "neutral"} className="text-[10px] px-1.5 py-0">{s.aspectRatio}</Badge>
@@ -260,7 +266,7 @@ export function VideoWorkspace() {
                   <span className="flex items-center gap-1"><Clock size={11} /> ~{s.targetDurationSeconds}s</span>
                   <span className="font-semibold text-amber-600 flex items-center gap-0.5" title="Credit ghép khi bấm Render — cộng giá clip nhà cung cấp mỗi cảnh"><Coins size={11} /> từ {RENDER_CREDIT} cr</span>
                 </div>
-              </div>
+              </button>
             )
           })}
         </div>

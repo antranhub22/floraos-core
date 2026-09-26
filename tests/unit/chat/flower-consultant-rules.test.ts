@@ -69,6 +69,7 @@ describe("Flower Consultant Rules (M08 AI Chat)", () => {
         variants: [],
         galleryImages: [],
         warningTags: [],
+        updatedAt: "2026-09-26T00:00:00.000Z",
       },
       {
         id: "p2",
@@ -87,6 +88,7 @@ describe("Flower Consultant Rules (M08 AI Chat)", () => {
         variants: [],
         galleryImages: [],
         warningTags: [],
+        updatedAt: "2026-09-26T00:00:00.000Z",
       },
     ]
 

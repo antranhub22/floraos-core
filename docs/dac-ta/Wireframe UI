@@ -21,7 +21,7 @@ Tài liệu này là **spec sống**: bất kỳ agent nào (Claude Code, subage
 | `PlatformNav.dc.html` | thành phần dùng chung | Điều hướng trái của Cổng vận hành nền tảng | 5 mục: Tổng quan, Tổ chức, Mức dùng, Nhật ký, Sức khỏe hệ thống |
 | `DangNhap.dc.html` | `/dang-nhap` | Đăng nhập | Form tên cửa hàng, email, mật khẩu; nút "Dùng thử miễn phí" chuyển sang chế độ đăng ký |
 | `DangKy.dc.html` | `/dang-nhap` (chế độ đăng ký) | Tạo workspace dùng thử | Tên cửa hàng, Họ tên (tuỳ chọn), email, mật khẩu → `POST /api/v1/auth/signup` |
-| `TrangChu.dc.html` | `/` (tài khoản Điều hành) | Dashboard điều hành (`admin-dashboard.tsx`) | Thẻ "Hàng chờ duyệt" (→ `/duyet`) + "Bộ máy phân tích ảnh" (→ `/bo-may`); thẻ Nghiên cứu Thị trường (badge Mới); bảng Job đang chạy **và lỗi** (có nút Chạy lại); bảng Sản phẩm mới; khối Mức dùng & hạn mức; ghi chú trạng thái trống |
+| `TrangChu.dc.html` | `/` (tài khoản Điều hành) | Dashboard điều hành (`store-manager-dashboard.tsx`, trước 26/09: `admin-dashboard.tsx`) | Thẻ "Hàng chờ duyệt" (→ `/duyet`) + "Bộ máy phân tích ảnh" (→ `/bo-may`); thẻ Nghiên cứu Thị trường (badge Mới); bảng Job đang chạy **và lỗi** (có nút Chạy lại); bảng Sản phẩm mới; khối Mức dùng & hạn mức; ghi chú trạng thái trống |
 | `TrangChuDungThu.dc.html` | `/` (workspace trải nghiệm) | Trang chủ chế độ dùng thử | Banner hạn mức dùng thử + CTA "Chuyển sang tổ chức thật"; grid thẻ chức năng bấm tự do |
 | `Them.dc.html` | `/them` | Tạo nhanh sản phẩm / bắt đầu phân tích | 2 thẻ lối tắt (Tải ảnh phân tích M01, Nghiên cứu thị trường) + form nhập tay SP (cần quyền L2) |
 | `Copilot.dc.html` | overlay toàn cục (⌘K) | Trợ lý FloraOS Copilot | Popup góc phải: khung chat, câu hỏi gợi ý, ô nhập — nổi trên mọi trang |

@@ -6,6 +6,7 @@ import { Headphones, Loader2, Trash2, Upload } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { VOICE_CLONE_CONSENT_TEXT } from "@/modules/audio-studio/domain/audio-task-rules"
 import { createVoiceClone, fetchVoiceClones, removeVoiceClone, type VoiceCloneItem } from "./audio-library-client"
 
@@ -68,9 +69,9 @@ export function VoiceClonePanel({ value, onChange }: { value: string | null; onC
       </p>
       {error && <p className="mb-2 text-[12px] text-rose-700">{error}</p>}
       {!clones && !error && (
-        <p className="flex items-center gap-2 text-[12px] text-text-muted">
-          <Loader2 size={12} className="animate-spin" /> Đang tải…
-        </p>
+        <div className="py-2">
+          <SkeletonBlock lines={2} />
+        </div>
       )}
       <div className="flex flex-col gap-2">
         {(clones ?? []).map((c) => (

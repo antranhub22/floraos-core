@@ -22,6 +22,7 @@
 
 import React, { useEffect, useState } from "react"
 import { MessageSquareText, Check, X, AlertCircle, CheckCircle2 } from "lucide-react"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { errorText } from "@/lib/error-text"
 
 const TEMPLATE_FAMILY = "ST"
@@ -145,7 +146,7 @@ export function GreetingLineOverrideForm() {
         </div>
 
         {loading ? (
-          <p className="text-xs text-text-muted text-center py-6">Đang tải...</p>
+          <div className="py-4"><SkeletonBlock lines={2} /></div>
         ) : (
           <>
             <textarea
