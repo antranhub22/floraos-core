@@ -15,7 +15,6 @@ import { VideoWorkspace } from "@/components/creative-studio/video-workspace"
 import { PackageWorkspace } from "@/components/creative-studio/package-workspace"
 import { ValidationScreen } from "@/components/creative-studio/validation-screen"
 import { useCreativeStudioData } from "@/components/creative-studio/use-creative-studio-data"
-import { Button } from "@/components/ui/button"
 import { validateTransition } from "@/modules/creative-production/domain/validate-transition"
 
 import type { ProductIntelligenceReport, ConcreteTopic } from "@/modules/market-intelligence/domain/product-intelligence-types"
@@ -69,42 +68,42 @@ const CREATIVE_STUDIO_TABS: Record<
 > = {
   "area-a": {
     id: "area-a",
-    label: "Khu vực A — Quét theo ảnh sản phẩm",
+    label: "Phân tích ảnh sản phẩm",
     icon: Camera,
     workspace: "area-a",
     description: "Chặng 1-5 — Bóc tách Vision & Chọn chủ đề trọng tâm",
   },
   "area-b": {
     id: "area-b",
-    label: "Khu vực B — Viết contents",
+    label: "Viết nội dung (Copywriting)",
     icon: FileText,
     workspace: "area-b",
     description: "Contents — CREATIVE / AUTHENTIC",
   },
   "area-c": {
     id: "area-c",
-    label: "Khu vực C — Tạo audio",
+    label: "Sản xuất âm thanh & Giọng đọc",
     icon: Headphones,
     workspace: "area-c",
     description: "TTS + BGM + Phối trộn",
   },
   "area-d": {
     id: "area-d",
-    label: "Khu vực D — Tạo biến thể ảnh",
+    label: "Biến thể marketing & Bối cảnh",
     icon: Wand2,
     workspace: "area-d",
     description: "M04b — Biến thể marketing",
   },
   "area-e": {
     id: "area-e",
-    label: "Khu vực E — Tạo video",
+    label: "Dựng video đa kênh",
     icon: Film,
     workspace: "area-e",
     description: "M04c — Video Studio",
   },
   "area-f": {
     id: "area-f",
-    label: "Khu vực F — Gói chiến dịch",
+    label: "Gói chiến dịch & Duyệt",
     icon: Package,
     workspace: "area-f",
     description: "Chặng 07–09 — Đóng gói, QA, Duyệt (+ Chặng 10–14)",
@@ -168,7 +167,6 @@ export default function CreativeStudioPage() {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context.assetId])
 
   // --- Tải lại report Product Intelligence bằng report.id (param `topic`) ---
@@ -351,7 +349,7 @@ export default function CreativeStudioPage() {
     { id: "go-home", label: "Quay về Trang chủ", icon: ArrowLeft, onClick: () => router.push("/") },
     ...(activeTabId !== "area-a" ? [{
       id: "back-to-a",
-      label: "Quay lại Khu vực A",
+      label: "Quay lại bước Phân tích ảnh",
       icon: ArrowLeft,
       dividerAbove: true,
       onClick: () => setActiveTabId("area-a"),
@@ -401,7 +399,7 @@ export default function CreativeStudioPage() {
         <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3">
           <div>
             <div className="text-xs text-text-muted">
-              {context.mode} mode · Chặng 01–14 · Khu vực A–F
+              {context.mode} mode · Chặng 01–14 · Studio Sáng tạo Đa phương tiện
             </div>
             <div className="text-[17px] font-extrabold text-primary">AI Creative Studio</div>
           </div>

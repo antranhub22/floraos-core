@@ -30,12 +30,13 @@ export interface MultichannelPostCardProps {
     modelName?: string | undefined
     isFallback?: boolean | undefined
   } | undefined
+  criticScore?: number | undefined
   onSchedulePost?: (post: MultichannelPostItem) => void
   onUpdatePost?: (channel: string, updated: Partial<MultichannelPostItem>) => void
 }
 
 /**
- * MultichannelPostCard (Thẻ bài đăng bán hàng đa kênh M07 — SocialFlow)
+ * MultichannelPostCard (Thẻ bài đăng bán hàng đa kênh SocialFlow)
  * Hỗ trợ Preview giao diện thực tế và phân rã trường nguyên tử để sửa trực tiếp.
  */
 export function MultichannelPostCard({
@@ -43,6 +44,7 @@ export function MultichannelPostCard({
   productName = "Sản phẩm hoa tươi",
   productImageUrl,
   modelInfo,
+  criticScore,
   onSchedulePost,
   onUpdatePost,
 }: MultichannelPostCardProps) {
@@ -78,8 +80,8 @@ export function MultichannelPostCard({
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-text-muted">M07 AI Content Engine</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-text-muted">AI Content Engine</span>
             {modelInfo?.isFallback ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
                 🛡️ Offline Fallback
@@ -102,8 +104,13 @@ export function MultichannelPostCard({
                 🚀 AI: {modelInfo?.provider} ({modelInfo?.modelName})
               </span>
             )}
+            {typeof criticScore === "number" && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-text-muted bg-surface-alt px-2 py-0.5 rounded-md border border-border">
+                Điểm duyệt Critic: {(criticScore * 10).toFixed(1)}/10
+              </span>
+            )}
           </div>
-          <div className="text-[16px] font-extrabold text-text">Nội dung tiếp thị đa kênh đã sẵn sàng</div>
+          <div className="text-[16px] font-extrabold text-text mt-0.5">Nội dung tiếp thị đa kênh đã sẵn sàng</div>
         </div>
         <div className="flex items-center gap-2">
           <Badge tone="success" className="gap-1">

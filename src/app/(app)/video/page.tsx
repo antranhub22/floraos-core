@@ -240,7 +240,7 @@ export default function VideoStudioPage() {
             </Button>
           ) : (
             <div>
-              <div className="text-xs text-text-muted font-bold tracking-wider uppercase">M04c Marketing Studio</div>
+              <div className="text-xs text-text-muted font-bold tracking-wider uppercase">Studio Tiếp thị & Video</div>
               <div className="text-[18px] font-extrabold text-primary flex items-center gap-2">
                 <Film size={20} /> AI Video Studio
               </div>

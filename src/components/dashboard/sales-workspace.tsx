@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { CalendarHeart, ChevronRight, ShoppingBag, Tag, UserPlus } from "lucide-react"
 import { useSession } from "@/lib/session"
@@ -55,7 +55,7 @@ export function SalesWorkspace() {
   const [daTai, setDaTai] = useState(false)
   const [loi, setLoi] = useState<string | null>(null)
 
-  async function napLai() {
+  const napLai = useCallback(async () => {
     setLoi(null)
     try {
       const [reminders, drafts] = await Promise.all([
@@ -73,11 +73,12 @@ export function SalesWorkspace() {
     } finally {
       setDaTai(true)
     }
-  }
+  }, [router])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu ban đầu khi mount
     napLai()
-  }, [])
+  }, [napLai])
 
   return (
     <div className="flex h-full flex-col overflow-hidden">

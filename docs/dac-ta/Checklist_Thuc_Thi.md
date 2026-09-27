@@ -1043,9 +1043,9 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 
 ### Giai đoạn UX-5: Chuẩn hoá màn theo Screen Contract
 #### Đợt A: Màn dùng hằng ngày của 3 vai đang dùng được
-- [ ] T5.A1 — Trang chủ Quản lý cửa hàng (`StoreManagerDashboard`, `trang-chu-store-manager.md`)
-- [ ] T5.A2 — Trang chủ Bán hàng (`SalesWorkspace`, `trang-chu-sales.md`)
-- [ ] T5.A3 — Danh mục vai (`/vai-tro`, `vai-tro.md`)
+- [x] T5.A1 — Trang chủ Quản lý cửa hàng (`StoreManagerDashboard`, `trang-chu-store-manager.md`)
+- [x] T5.A2 — Trang chủ Bán hàng (`SalesWorkspace`, `trang-chu-sales.md`)
+- [x] T5.A3 — Danh mục vai (`/vai-tro`, `vai-tro.md`)
 - [ ] T5.A4a — Quét ảnh hoa (`/tai-anh`) — Cấu trúc & nhãn tab (giữ nguyên Journey 14 bước & Atomic Fields)
 - [ ] T5.A4b — Quét ảnh hoa (`/tai-anh`) — Kết quả L0–L4 & duyệt tại chỗ
 - [ ] T5.A4c — Quét ảnh hoa (`/tai-anh`) — Trạng thái & mobile
@@ -1063,12 +1063,12 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] T5.B8 — Menu tài khoản + Hồ sơ cửa hàng (`/ho-so`, `ho-so.md`)
 
 #### Đợt C: Nội dung và Tiếp thị
-- [ ] T5.C1 — Market Intelligence (`/market-intelligence`, áp dụng K3 video kép gọn)
-- [ ] T5.C2 — Creative Studio (`/creative-studio`, Khu vực A–F)
-- [ ] T5.C3 — Video Studio (`/video`)
-- [ ] T5.C4 — Content Engine (`/noi-dung`)
-- [ ] T5.C5 — Lịch đăng (`/lich-dang`)
-- [ ] T5.C6 — Kho mẫu (`/kho-templates`)
+- [x] T5.C1 — Market Intelligence (`/market-intelligence`, áp dụng K3 video kép gọn, `market-intelligence.md`)
+- [x] T5.C2 — Creative Studio (`/creative-studio`, Khu vực A–F)
+- [x] T5.C3 — Video Studio (`/video`, `video.md`)
+- [x] T5.C4 — Content Engine (`/noi-dung`, `noi-dung.md`)
+- [x] T5.C5 — Lịch đăng (`/lich-dang`, `lich-dang.md`)
+- [x] T5.C6 — Kho mẫu (`/kho-templates`, `kho-templates.md`)
 
 #### Đợt D: Thiết lập, Số liệu, Console, Điều phối
 - [ ] T5.D1 — Số liệu (`/so-lieu`)

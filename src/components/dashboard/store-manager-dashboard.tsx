@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, ChevronRight, Clock, Cpu, ShoppingBag, TrendingUp } from "lucide-react"
+import { AlertTriangle, Cpu, TrendingUp } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { InlineError } from "@/components/ui/inline-error"
 import { useAnnounce } from "@/components/ui/live-region"
 import { tenTinhNang } from "@/lib/feature-labels"
+import { StoreManagerActionItemsCard, type DraftOrder } from "./store-manager-action-items-card"
 
 type Job = {
   id: string
@@ -30,12 +31,6 @@ type Product = {
   code: string
   category: string | null
   status: "DRAFT" | "ACTIVE" | "ARCHIVED"
-}
-
-type DraftOrder = {
-  id: string
-  code?: string
-  order_number?: string
 }
 
 const NHAN_TRANG_THAI_SAN_PHAM: Record<Product["status"], string> = {
@@ -60,36 +55,7 @@ async function layJson<T>(url: string): Promise<T | null> {
   return (await res.json()) as T
 }
 
-function DongCanThiep({
-  icon: Icon,
-  nhan,
-  giaTri,
-  onClick,
-  nguyCap,
-}: {
-  icon: typeof Clock
-  nhan: string
-  giaTri: string
-  onClick: () => void
-  nguyCap?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-1 text-left hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-primary"
-    >
-      <span className="flex items-center gap-2.5">
-        <Icon size={17} strokeWidth={1.9} className={nguyCap ? "text-danger" : "text-text-muted"} />
-        <span className="text-body font-semibold text-text">{nhan}</span>
-      </span>
-      <span className="flex items-center gap-1 text-body-sm font-bold text-primary">
-        {giaTri}
-        <ChevronRight size={15} aria-hidden="true" />
-      </span>
-    </button>
-  )
-}
+
 
 export function StoreManagerDashboard() {
   const router = useRouter()
@@ -106,7 +72,7 @@ export function StoreManagerDashboard() {
   const [loi, setLoi] = useState<string | null>(null)
   const [dangChayLai, setDangChayLai] = useState<string | null>(null)
 
-  async function napLai() {
+  const napLai = useCallback(async () => {
     setLoi(null)
     try {
       const [jobsRes, productsRes, usageRes, analysesRes, optimizationsRes, draftOrdersRes] =
@@ -137,11 +103,12 @@ export function StoreManagerDashboard() {
     } finally {
       setDaTai(true)
     }
-  }
+  }, [router])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount
     napLai()
-  }, [])
+  }, [napLai])
 
   async function chayLai(jobId: string) {
     setDangChayLai(jobId)
@@ -189,46 +156,15 @@ export function StoreManagerDashboard() {
         {/* Cột chính bên trái: P0 & Khối Vận hành (chiếm 2/3 trên 1280px) */}
         <div className="flex flex-col gap-4 lg:col-span-2">
           {/* P0 — Cần can thiệp */}
-          <Card className="flex flex-col gap-2 p-4">
-            <h2 className="text-title-sm font-bold">
-              {daTai && tongCanThiep === 0 ? "Không có việc cần can thiệp" : "Cần can thiệp"}
-            </h2>
-            {!daTai ? (
-              <SkeletonBlock lines={3} />
-            ) : (
-              <>
-                {loiJobs.length > 0 && (
-                  <DongCanThiep
-                    icon={AlertTriangle}
-                    nhan="Job lỗi"
-                    giaTri={`${loiJobs.length}`}
-                    nguyCap
-                    onClick={scrollToJobCard}
-                  />
-                )}
-                {soChoDuyet !== null && soChoDuyet > 0 && (
-                  <DongCanThiep icon={Clock} nhan="Kết quả chờ duyệt" giaTri={`${soChoDuyet}`} onClick={() => router.push("/duyet" as never)} />
-                )}
-                {soDonNhap !== null && soDonNhap > 0 && (
-                  <div className="space-y-1.5">
-                    <DongCanThiep icon={ShoppingBag} nhan="Đơn nháp chưa chốt" giaTri={`${soDonNhap}`} onClick={() => router.push("/don-hang" as never)} />
-                    {draftOrders.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pl-7 pb-1">
-                        {draftOrders.slice(0, 3).map((d) => (
-                          <span key={d.id} className="rounded-md bg-surface-alt px-2 py-0.5 text-caption font-semibold text-text-muted">
-                            #{d.order_number ?? d.code ?? d.id.slice(0, 8)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {tongCanThiep === 0 && (
-                  <p className="text-body-sm text-text-muted">Job, hàng chờ duyệt và đơn nháp đều đã được xử lý.</p>
-                )}
-              </>
-            )}
-          </Card>
+          <StoreManagerActionItemsCard
+            daTai={daTai}
+            tongCanThiep={tongCanThiep}
+            loiJobsCount={loiJobs.length}
+            soChoDuyet={soChoDuyet}
+            soDonNhap={soDonNhap}
+            draftOrders={draftOrders}
+            onScrollToJobs={scrollToJobCard}
+          />
 
           {/* P1 — Job đang chạy và job lỗi */}
           <Card id="khoi-job" tabIndex={-1} className="flex flex-col gap-3.5 p-4 focus:outline-none focus:ring-2 focus:ring-primary/40">
@@ -250,7 +186,7 @@ export function StoreManagerDashboard() {
                       <div className="text-body font-semibold">{tenTinhNang(job.feature)}</div>
                       <div className="truncate text-xs text-danger">{job.error ?? "Job thất bại"}</div>
                     </div>
-                    <Button size="sm" disabled={dangChayLai === job.id} onClick={() => chayLai(job.id)}>
+                    <Button variant="outline" size="sm" disabled={dangChayLai === job.id} onClick={() => chayLai(job.id)}>
                       {dangChayLai === job.id ? "Đang chạy lại…" : "Chạy lại job"}
                     </Button>
                   </div>

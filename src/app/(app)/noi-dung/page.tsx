@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FlowSteps, type FlowStep } from "@/components/flow/flow-steps"
 import {
   ContentGuidanceCard,
@@ -107,6 +108,7 @@ function ContentEngineContent() {
   const [phase, setPhase] = useState<"select" | "generating" | "results">("select")
   const [currentStep, setCurrentStep] = useState<string>("analyze")
   const [generatedPosts, setGeneratedPosts] = useState<MultichannelPostItem[]>([])
+  const [criticScore, setCriticScore] = useState<number | null>(null)
   const [modelInfo, setModelInfo] = useState<{
     provider?: string | undefined
     modelName?: string | undefined
@@ -228,6 +230,7 @@ function ContentEngineContent() {
 
       const data = await res.json()
       setGenerationId(data.generation_id || null)
+      setCriticScore(typeof data.overall_score === "number" ? data.overall_score : null)
 
       const posts: MultichannelPostItem[] = []
       for (const p of data.posts ?? []) {
@@ -315,7 +318,7 @@ function ContentEngineContent() {
       {/* Top Header */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 py-3.5">
         <div>
-          <div className="text-[11px] font-bold tracking-wider text-text-muted uppercase">M07 · SOCIALFLOW</div>
+          <div className="text-[11px] font-bold tracking-wider text-text-muted uppercase">Máy nội dung tiếp thị</div>
           <div className="text-[17px] font-black text-primary flex items-center gap-2">
             <Sparkles size={18} />
             AI Content Engine — Cỗ Máy Nội Dung Đa Kênh
@@ -402,8 +405,8 @@ function ContentEngineContent() {
               </div>
 
               {isLoadingProducts ? (
-                <div className="py-8 text-center text-xs text-text-muted animate-pulse">
-                  Đang tải danh sách sản phẩm từ cơ sở dữ liệu thật...
+                <div className="py-4">
+                  <SkeletonBlock lines={3} label="Đang tải danh sách sản phẩm từ cơ sở dữ liệu..." />
                 </div>
               ) : loadError ? (
                 <div className="py-6 text-center text-xs text-rose-600 bg-rose-50/50 rounded-lg border border-rose-200/60 p-3">
@@ -418,10 +421,12 @@ function ContentEngineContent() {
                   {products.map((prod) => {
                     const isSelected = prod.id === selectedProductId
                     return (
-                      <div
+                      <button
                         key={prod.id}
+                        type="button"
+                        aria-pressed={isSelected}
                         onClick={() => setSelectedProductId(prod.id)}
-                        className={`cursor-pointer rounded-xl border p-3 transition flex items-center gap-3 ${
+                        className={`text-left rounded-xl border p-3 transition flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                           isSelected
                             ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
                             : "border-border hover:border-text-muted bg-background"
@@ -450,7 +455,7 @@ function ContentEngineContent() {
                             {prod.flowers || "Hoa tươi nghệ thuật"}
                           </div>
                         </div>
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
@@ -500,10 +505,12 @@ function ContentEngineContent() {
                 {CHANNELS_CONFIG.map((ch) => {
                   const isChecked = selectedChannels.includes(ch.id)
                   return (
-                    <div
+                    <button
                       key={ch.id}
+                      type="button"
+                      aria-pressed={isChecked}
                       onClick={() => toggleChannel(ch.id)}
-                      className={`cursor-pointer rounded-xl border p-4 transition-all flex flex-col justify-between gap-2 relative select-none ${
+                      className={`text-left rounded-xl border p-4 transition-all flex flex-col justify-between gap-2 relative select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                         isChecked
                           ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
                           : "border-border hover:border-text-muted bg-background opacity-70 hover:opacity-100"
@@ -531,7 +538,7 @@ function ContentEngineContent() {
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-border/60 flex items-center justify-between">
+                      <div className="pt-2 border-t border-border/60 flex items-center justify-between w-full">
                         <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
                           {ch.tag}
                         </span>
@@ -543,7 +550,7 @@ function ContentEngineContent() {
                           {isChecked ? "Sẽ tạo & đăng" : "Bỏ qua"}
                         </span>
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -601,17 +608,17 @@ function ContentEngineContent() {
           <div className="flex flex-col gap-5">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-text-muted">Kết quả từ SocialFlow M07</span>
+                <span className="text-xs font-semibold text-text-muted">Kết quả từ Content Engine</span>
                 <h2 className="text-lg font-black text-text">Xem trước & Biên tập nội dung</h2>
               </div>
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
                 onClick={() => setPhase("select")}
-                className="text-xs gap-1.5"
+                className="text-xs gap-1.5 shadow-xs"
               >
                 <RefreshCw size={13} />
-                Soạn lại mẫu khác
+                Viết bài mới
               </Button>
             </div>
 
@@ -621,6 +628,7 @@ function ContentEngineContent() {
               productName={selectedProduct?.name || "Sản phẩm hoa tươi"}
               productImageUrl={selectedProduct?.imageUrl}
               modelInfo={modelInfo}
+              criticScore={criticScore ?? undefined}
               onUpdatePost={handleUpdatePost}
               onSchedulePost={handleApprovePost}
             />
