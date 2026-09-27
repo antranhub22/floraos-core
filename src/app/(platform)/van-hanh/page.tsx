@@ -61,26 +61,31 @@ export default function VanHanhTongQuanPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-base font-bold text-text">Tổng quan vận hành</h1>
+        <span className="rounded bg-muted px-2 py-0.5 text-xs text-text-muted">Phạm vi: Toàn hệ thống</span>
+      </div>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card className="flex items-center gap-3 p-4">
           <Building2 className="h-5 w-5 text-primary" />
           <div>
             <p className="text-2xl font-bold">{orgs.length}</p>
-            <p className="text-[13px] text-text-muted">Tổ chức</p>
+            <p className="text-xs text-text-muted">Tổ chức</p>
           </div>
         </Card>
         <Card className="flex items-center gap-3 p-4">
           <Clock className="h-5 w-5 text-primary" />
           <div>
             <p className="text-2xl font-bold">{moiTrong7Ngay(orgs)}</p>
-            <p className="text-[13px] text-text-muted">Tổ chức mới (7 ngày qua)</p>
+            <p className="text-xs text-text-muted">Tổ chức mới (7 ngày qua)</p>
           </div>
         </Card>
         <Card className="flex items-center gap-3 p-4">
           <AlertTriangle className="h-5 w-5 text-warning" />
           <div>
             <p className="text-2xl font-bold">{health.stuckJobs.length}</p>
-            <p className="text-[13px] text-text-muted">Job treo</p>
+            <p className="text-xs text-text-muted">Job treo</p>
           </div>
         </Card>
       </div>
@@ -92,13 +97,13 @@ export default function VanHanhTongQuanPage() {
             <Link
               key={org.id}
               href={`/van-hanh/to-chuc/${org.id}` as never}
-              className="flex items-center justify-between py-2 text-[13px] hover:bg-surface-alt"
+              className="flex items-center justify-between py-2 text-xs hover:bg-surface-alt"
             >
               <span className="font-medium">{org.name}</span>
               <span className="text-text-muted">{org.type} · {org.memberCount} thành viên</span>
             </Link>
           ))}
-          {orgs.length === 0 && <p className="py-2 text-[13px] text-text-muted">Chưa có tổ chức nào.</p>}
+          {orgs.length === 0 && <p className="py-2 text-xs text-text-muted">Chưa có tổ chức nào.</p>}
         </div>
       </Card>
     </div>

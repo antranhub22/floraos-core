@@ -41,16 +41,21 @@ export default function SucKhoeHeThongPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-base font-bold text-text">Sức khỏe hệ thống & hạ tầng</h1>
+        <span className="rounded bg-muted px-2 py-0.5 text-xs text-text-muted">Phạm vi: Toàn hạ tầng</span>
+      </div>
+
       <Card className="p-4">
         <p className="mb-3 text-sm font-semibold">Job theo trạng thái</p>
         <div className="flex flex-wrap gap-3">
           {Object.entries(health.jobCountsByStatus).map(([status, count]) => (
-            <div key={status} className="rounded-xl border border-border px-3 py-2 text-[13px]">
+            <div key={status} className="rounded-xl border border-border px-3 py-2 text-xs">
               <span className="font-semibold">{count}</span> <span className="text-text-muted">{status}</span>
             </div>
           ))}
           {Object.keys(health.jobCountsByStatus).length === 0 && (
-            <p className="text-[13px] text-text-muted">Chưa có job nào.</p>
+            <p className="text-xs text-text-muted">Chưa có job nào.</p>
           )}
         </div>
       </Card>

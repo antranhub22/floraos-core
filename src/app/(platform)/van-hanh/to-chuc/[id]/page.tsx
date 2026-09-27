@@ -28,7 +28,7 @@ async function layJson<T>(url: string): Promise<T | null> {
 
 function Dong({ nhan, giaTri }: { nhan: string; giaTri: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between border-b border-border py-2 text-[13px] last:border-0">
+    <div className="flex items-center justify-between border-b border-border py-2 text-xs last:border-0">
       <span className="text-text-muted">{nhan}</span>
       <span className="font-medium">{giaTri}</span>
     </div>
@@ -56,7 +56,10 @@ export default function ChiTietToChucPage() {
 
   return (
     <Card className="max-w-xl p-4">
-      <p className="mb-3 text-lg font-semibold">{org.name}</p>
+      <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
+        <p className="text-lg font-semibold">{org.name}</p>
+        <span className="rounded bg-muted px-2 py-0.5 text-xs text-text-muted">Phạm vi: Tổ chức cụ thể</span>
+      </div>
       <Dong nhan="Slug" giaTri={org.slug} />
       <Dong nhan="Loại tổ chức" giaTri={org.type} />
       <Dong nhan="Số dư credit" giaTri={org.creditBalance} />

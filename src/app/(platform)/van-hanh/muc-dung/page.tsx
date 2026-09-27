@@ -40,7 +40,11 @@ export default function MucDungPage() {
 
   return (
     <Card className="overflow-x-auto p-4">
-      <table className="w-full text-left text-[13px]">
+      <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
+        <h1 className="text-base font-bold text-text">Mức dùng toàn hệ thống</h1>
+        <span className="rounded bg-muted px-2 py-0.5 text-xs text-text-muted">Phạm vi: Toàn hệ thống</span>
+      </div>
+      <table className="w-full text-left text-xs">
         <thead>
           <tr className="border-b border-border text-text-muted">
             <th className="py-2 pr-3">Tổ chức</th>
