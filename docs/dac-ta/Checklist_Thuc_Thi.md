@@ -1049,8 +1049,8 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [ ] T5.A4a — Quét ảnh hoa (`/tai-anh`) — Cấu trúc & nhãn tab (giữ nguyên Journey 14 bước & Atomic Fields)
 - [ ] T5.A4b — Quét ảnh hoa (`/tai-anh`) — Kết quả L0–L4 & duyệt tại chỗ
 - [ ] T5.A4c — Quét ảnh hoa (`/tai-anh`) — Trạng thái & mobile
-- [ ] T5.A5 — Hàng chờ duyệt (`/duyet`, `duyet.md`)
-- [ ] T5.A6 — Quản lý Job (`/job`, `/job/[id]`, `job.md`)
+- [x] T5.A5 — Hàng chờ duyệt (`/duyet`, `duyet.md`)
+- [x] T5.A6 — Quản lý Job (`/job`, `/job/[id]`, `job.md`)
 
 #### Đợt B: Bán hàng và Vận hành cửa hàng
 - [ ] T5.B1 — Sản phẩm (`/san-pham`, `/san-pham/[id]`)

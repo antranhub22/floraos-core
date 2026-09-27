@@ -314,7 +314,7 @@ src/
 | `delivery-pod-card.tsx` | POD Receipt (T21) | Phiếu giao hàng và bằng chứng người nhận ký nhận (Proof of Delivery) | `orderCode`, `shipperName`, `recipientName`, `isDelivered`, `podImageUrl` |
 | `exception-resolution-card.tsx` | Exception Card (T22) | Thẻ ghi nhận và xử lý sự cố phát sinh (hết hoa, đổi mẫu, trễ shipper) | `orderCode`, `exceptionCode`, `type`, `severity`, `description`, `resolutionPlan` |
 | `order-closure-learning-card.tsx` | Closure & SLA Card (T25/T26/T27) | Thẻ nghiệm thu đơn, đánh giá SLA, giải ngân thợ/xưởng và trích xuất bài học vận hành | `orderCode`, `customerRating`, `completionTime`, `slaMet`, `payoutAmount`, `learningNotes` |
-| `partner-product-card.tsx` | Partner Product Card | Thẻ hiển thị sản phẩm giao đối tác xưởng hoa: Atomic BOM, ảnh mẫu, địa chỉ giao, deadline, copy Zalo | `orderCode`, `recipeTitle`, `flowers`, `deliveryAddress`, `deadline`, `cardMessage` |
+| `payment-ledger-modal.tsx` | Ledger Modal (T17/F14) | Modal sổ thu của đơn: tổng tiền, đã thu, còn phải thu + lịch sử dòng thu (cọc/thu nốt/hoàn), ghi thêm dòng thu mới | `isOpen`, `order`, `onClose`, `onRecorded` |
 
 
 ---

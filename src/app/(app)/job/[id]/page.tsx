@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, AlertTriangle, RotateCcw, XCircle, Info } from "lucide-react"
+import { ArrowLeft, AlertTriangle, RotateCcw, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { SkeletonBlock } from "@/components/ui/skeleton"
@@ -95,7 +95,7 @@ export default function JobDetailPage() {
   const [loi, setLoi] = useState<string | null>(null)
   const [dangXuLy, setDangXuLy] = useState(false)
 
-  async function napLai() {
+  const napLai = useCallback(async (isCancelled?: () => boolean) => {
     try {
       const res = await fetch(`/api/v1/jobs/${jobId}`)
       if (res.status === 401) {
@@ -104,16 +104,26 @@ export default function JobDetailPage() {
       }
       if (!res.ok) throw new Error(`Không tải được job (${res.status})`)
       const data = (await res.json()) as { job: JobDetail }
-      setJob(data.job)
+      if (!isCancelled?.()) {
+        setJob(data.job)
+      }
     } catch (e) {
-      setLoi(e instanceof Error ? e.message : "Không tải được job")
+      if (!isCancelled?.()) {
+        setLoi(e instanceof Error ? e.message : "Không tải được job")
+      }
     }
-  }
+  }, [jobId, router])
 
   useEffect(() => {
-    napLai()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId])
+    let cancelled = false
+    async function load() {
+      await napLai(() => cancelled)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [napLai])
 
   async function huy() {
     setDangXuLy(true)

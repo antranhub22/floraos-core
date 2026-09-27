@@ -229,7 +229,10 @@ export default function DuyetPage() {
               label: "Tải toàn bộ lượt phân tích (CSV)",
               icon: Download,
               onClick: () => {
-                window.location.href = "/api/v1/vision/analyses/export"
+                const a = document.createElement("a")
+                a.href = "/api/v1/vision/analyses/export"
+                a.download = ""
+                a.click()
               },
             },
             {

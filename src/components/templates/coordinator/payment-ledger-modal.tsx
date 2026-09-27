@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react"
 import { X, Wallet, PlusCircle, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import {
   coordinatorApi,
   errorMessage,
@@ -144,15 +145,15 @@ export function PaymentLedgerModal({ isOpen, order, onClose, onRecorded }: Payme
               <strong className={`text-sm ${order.balanceVnd > 0 ? "text-red-700" : "text-emerald-700"}`}>{fmtVnd(order.balanceVnd)}</strong>
             </div>
             <div className="col-span-3">
-              <span className={`inline-block px-2 py-0.5 rounded border text-[10px] font-bold ${statusTag.className}`}>{statusTag.label}</span>
+              <span className={`inline-block px-2 py-0.5 rounded border text-caption font-bold ${statusTag.className}`}>{statusTag.label}</span>
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <span className="font-bold text-text">Lịch sử thu:</span>
-            {loadingList && <p className="text-text-muted">Đang tải…</p>}
+            {loadingList && <SkeletonBlock lines={2} />}
             {listError && (
-              <p role="alert" className="text-red-700 font-semibold">
+              <p role="alert" className="text-danger font-semibold">
                 {listError}
               </p>
             )}
