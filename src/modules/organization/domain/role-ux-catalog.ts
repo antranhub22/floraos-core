@@ -43,6 +43,7 @@ export type RoleUxHomepage =
   | "STORE_COMMAND_CENTER"
   | "SALES_WORKSPACE"
   | "PRODUCT_WORKSPACE"
+  | "CREATIVE_WORKSPACE"
   | "CONTROL_TOWER"
   | "NOT_BUILT"
 
@@ -152,12 +153,12 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
     primaryQuestion: "Nội dung nào cần tôi xử lý tiếp?",
     homepageModel: "Creative Workspace",
     dominantActions: ["Tạo", "Duyệt", "Phát hành"],
-    status: "IN_DEVELOPMENT",
-    homepage: "NOT_BUILT",
-    systemRoleKeys: [],
-    entryHref: null,
-    navPriority: [],
-    debtRefs: [165],
+    status: "AVAILABLE",
+    homepage: "CREATIVE_WORKSPACE",
+    systemRoleKeys: ["marketing"],
+    entryHref: "/creative-studio",
+    navPriority: ["/creative-studio", "/noi-dung", "/lich-dang", "/market-intelligence"],
+    debtRefs: [],
   },
   {
     key: "ceo",
@@ -271,11 +272,13 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
     primaryQuestion: "Nội dung nào cần tôi xử lý tiếp?",
     homepageModel: "Creative Workspace",
     dominantActions: ["Tạo", "Duyệt", "Phát hành"],
-    status: "IN_DEVELOPMENT",
-    homepage: "NOT_BUILT",
+    status: "AVAILABLE",
+    homepage: "CREATIVE_WORKSPACE",
+    // Chuỗi/CHAIN: Vai phân quyền "marketing" đã gắn cho lead_marketing
+    // (ONE_STORE). Tổ chức CHAIN cần vai phân quyền riêng — nợ #165.
     systemRoleKeys: [],
-    entryHref: null,
-    navPriority: [],
+    entryHref: "/creative-studio",
+    navPriority: ["/creative-studio", "/noi-dung", "/lich-dang", "/market-intelligence"],
     debtRefs: [165],
   },
   {

@@ -39,14 +39,14 @@
 | `store_manager` | Quản lý cửa hàng | Một cửa hàng | Business & Operations Command Center (Executive Dashboard) | `/`, dùng `StoreManagerDashboard` | `dieu_hanh` | **Đang dùng được** |
 | `sales` | Bán hàng | Một cửa hàng | Pipeline-first | `/`, dùng `SalesWorkspace` | `sale` | **Đang dùng được** *(pipeline: DATA GAP #164)* |
 | `crm` | Chăm sóc vòng đời khách hàng | Một cửa hàng | Customer Lifecycle Management (Relationship Management) | Customer Lifecycle Workspace | — | Đang phát triển (#165) |
-| `lead_marketing` | Trưởng Marketing | Một cửa hàng | Creative Workspace | Creative Workspace | — | Đang phát triển (#165) |
+| `lead_marketing` | Trưởng Marketing | Một cửa hàng | Creative Workspace | `/`, dùng `MarketingWorkspace` | `marketing` | **Đang dùng được** (T6.2) |
 | `ceo` | Giám đốc điều hành | Chuỗi | Strategic Command Center (Performance Dashboard) | Strategic Command Center | — | Đang phát triển (#165) |
 | `manager` | Quản lý vận hành | Chuỗi | Operations Command Center | Operations Command Center | — | Đang phát triển (#165) |
 | `coordinator` | Điều phối | Chuỗi | Control Tower & Exception Management (Real-time Operations) | `/` chuyển sang `/dieu-phoi` | `dieu_phoi` | **Đang dùng được** *(nợ #166)* |
 | `quality_control` | Kiểm soát chất lượng | Chuỗi | Quality Control & Exception | Quality Exception Board | — | Đang phát triển (#165) |
 | `customer_service` | Chăm sóc khách hàng (CSKH) | Chuỗi | Customer Context-first (Conversation-first) | Conversation Workspace | — | Đang phát triển (#165) |
 | `partner_manager` | Quản lý đối tác | Chuỗi | Relationship Management (Partner Growth, Partner Performance) | Partner Portfolio | — | Đang phát triển (#165) |
-| `marketing` | Marketing | Chuỗi | Creative Workspace | Creative Workspace | — | Đang phát triển (#165) |
+| `marketing` | Marketing | Chuỗi | Creative Workspace | `/`, dùng `MarketingWorkspace` | *(CHAIN cần vai phân quyền riêng — nợ #165)* | **Đang dùng được** (T6.2) |
 | `product_manager` | Quản lý sản phẩm | Chuỗi | Product-centric (Catalog-centric) | `/`, dùng `ProductManagerWorkspace` | `product_manager` | **Đang dùng được** (T6.1) |
 | `finance_accounting` | Tài chính – Kế toán | Chuỗi | Transaction-first | Transaction Workspace | — | Đang phát triển (#165) |
 | `florist` | Thợ cắm | Một cửa hàng | Production Queue | Production Queue | — | Đang phát triển (#169) |
@@ -97,7 +97,7 @@ Mỗi vai theo khuôn: **câu hỏi chính → P0 (thấy ngay) → P1 (thấy k
 Mọi logic gom nhóm và sắp xếp điều hướng theo vai được tập trung tại `src/components/layout/nav-model.ts` (Screen Contract `docs/dac-ta/screen-contracts/_dieu-huong.md`).
 
 - **Desktop:** hàm `buildNav(can, roleUx)` sinh nhóm **"Việc chính · <tên vai>"** đứng đầu thanh bên, gồm Trang chủ (`/`) và các mục trong `navPriority` của vai. Các mục này **rời khỏi nhóm gốc**, không hiện hai lần. Năm nhóm chức năng còn lại theo chuẩn K5 (`ban-hang`, `san-pham`, `noi-dung`, `van-hanh`, `thiet-lap`) tự động lọc bỏ các mục đã ghim và ẩn các mục người dùng thiếu năng lực.
-- **Điện thoại:** hàm `mobileSecondSlot(can, roleUx)` chọn ô thứ hai của thanh dưới là mục đầu tiên trong `navPriority` chưa có trên thanh: Quản lý cửa hàng thấy **Đơn hàng**, Bán hàng thấy **Khách hàng**, Điều phối thấy **Điều phối**, Quản lý sản phẩm thấy **Sản phẩm**. Vai chưa có khuôn thấy **Sản phẩm** như cũ.
+- **Điện thoại:** hàm `mobileSecondSlot(can, roleUx)` chọn ô thứ hai của thanh dưới là mục đầu tiên trong `navPriority` chưa có trên thanh: Quản lý cửa hàng thấy **Đơn hàng**, Bán hàng thấy **Khách hàng**, Điều phối thấy **Điều phối**, Quản lý sản phẩm thấy **Sản phẩm**, Marketing thấy **Creative Studio**. Vai chưa có khuôn thấy **Sản phẩm** như cũ.
 - Nút giữa mobile gác năng lực `H1` (quét ảnh): có `H1` → **Tải ảnh** (`/tai-anh`), không có `H1` → Việc chính đầu tiên của vai hoặc **Sản phẩm**.
 - Vai chỉ quyết định **thứ tự**. Quyền hiển thị và thao tác được gác chặt chẽ bởi mã năng lực qua `can(code)` và máy chủ kiểm soát lại ở mọi endpoint.
 
@@ -107,10 +107,11 @@ Mọi logic gom nhóm và sắp xếp điều hướng theo vai được tập t
 | `sales` | `/khach-hang` · `/don-hang` · `/san-pham` · `/hoi-thoai` | `/` (Sales Workspace) |
 | `coordinator` | `/dieu-phoi` · `/don-hang` · `/san-pham` · `/khach-hang` | `/dieu-phoi` (Control Tower) |
 | `product_manager` | `/san-pham` · `/catalog` · `/gia` · `/kho-templates` | `/` (Product Workspace) |
+| `lead_marketing` / `marketing` | `/creative-studio` · `/noi-dung` · `/lich-dang` · `/market-intelligence` | `/` (Creative Workspace) |
 
 ## 6. Vai chưa có và mục chưa có màn: hiện nhưng vô hiệu
 
-- Màn **`/vai-tro`** (mở từ menu tài khoản) liệt kê đủ 14 vai theo ba nhóm. Vai đang dùng được có nhãn "Đang dùng được" và nút mở nơi vào. Vai chưa có có nhãn "Đang phát triển", `aria-disabled`, mờ đi, không bấm được.
+- Màn **`/vai-tro`** (mở từ menu tài khoản) liệt kê đủ 15 vai theo ba nhóm. Vai đang dùng được có nhãn "Đang dùng được" và nút mở nơi vào. Vai chưa có có nhãn "Đang phát triển", `aria-disabled`, mờ đi, không bấm được.
 - Màn này **chỉ đọc danh mục trong mã**. Nó không gọi API và không đổi vai của ai; đổi vai vẫn cần `A4`.
 - Vai đang phát triển **không bao giờ** được dùng làm trang chủ, dù có vai phân quyền trỏ tới (`resolveRoleUx` chỉ trả vai `AVAILABLE`).
 - Ba mục điều hướng trước đây trỏ vào tuyến không tồn tại (`/muc-dung`, `/audit`, `/cai-dat`) nay hiện nhãn "Sắp có" và không bấm được (nợ #167).
@@ -146,12 +147,13 @@ Mô hình mục tiêu theo contract §12–§16: thông báo P0–P3, ngoại l�
 
 | Việc | Tệp |
 |---|---|
-| Danh mục 14 vai + `resolveRoleUx` + `orderByRolePriority` | `src/modules/organization/domain/role-ux-catalog.ts` (+ `.test.ts`, 11 ca) |
+| Danh mục 15 vai + `resolveRoleUx` + `orderByRolePriority` | `src/modules/organization/domain/role-ux-catalog.ts` (+ `.test.ts`, 12 ca) |
 | Phiên mang `roleKey` + `organizationType` | `src/modules/organization/use-cases/resolve-app-session.ts`, `src/lib/mock-data.ts` (`MockSession`), `src/lib/session.tsx` (`roleUx`) |
 | Trang chủ theo vai | `src/app/(app)/page.tsx` |
 | Khuôn store_manager | `src/components/dashboard/store-manager-dashboard.tsx` |
 | Khuôn sales | `src/components/dashboard/sales-workspace.tsx` |
 | Khuôn coordinator | `src/app/(app)/dieu-phoi/page.tsx` (có sẵn, thêm menu tài khoản) |
+| Khuôn marketing / lead_marketing | `src/components/dashboard/marketing-workspace.tsx` |
 | Điều hướng theo vai | `src/components/layout/desktop-nav.tsx`, `src/components/layout/bottom-nav.tsx` |
 | Danh mục vai | `src/app/(app)/vai-tro/page.tsx`, lối vào ở `src/components/layout/user-menu.tsx` |
 

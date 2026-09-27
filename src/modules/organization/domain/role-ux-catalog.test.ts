@@ -14,9 +14,16 @@ describe("danh mục 15 vai trải nghiệm (03b-role-ux)", () => {
     expect(new Set(ROLE_UX_CATALOG.map((r) => r.key)).size).toBe(15)
   })
 
-  it("đúng năm vai đang dùng được: platform_admin, store_manager, sales, coordinator, product_manager", () => {
+  it("đúng bảy vai đang dùng được", () => {
     const available = ROLE_UX_CATALOG.filter((r) => r.status === "AVAILABLE").map((r) => r.key)
-    expect(available.sort()).toEqual(["coordinator", "platform_admin", "product_manager", "sales", "store_manager"])
+    expect(available.sort()).toEqual(["coordinator", "lead_marketing", "marketing", "platform_admin", "product_manager", "sales", "store_manager"])
+  })
+
+  it("vai marketing (CHAIN) AVAILABLE nhưng chưa gắn vai phân quyền (nợ #165)", () => {
+    const mkt = ROLE_UX_CATALOG.find((r) => r.key === "marketing")
+    expect(mkt?.status).toBe("AVAILABLE")
+    expect(mkt?.homepage).toBe("CREATIVE_WORKSPACE")
+    expect(mkt?.systemRoleKeys).toHaveLength(0)
   })
 
   it("vai đang phát triển không có trang chủ, không nơi vào, không gắn vai phân quyền, có số nợ", () => {
@@ -47,11 +54,12 @@ describe("danh mục 15 vai trải nghiệm (03b-role-ux)", () => {
 })
 
 describe("resolveRoleUx", () => {
-  it("ánh xạ bốn vai hệ thống sang khuôn tương ứng", () => {
+  it("ánh xạ năm vai hệ thống sang khuôn tương ứng", () => {
     expect(resolveRoleUx("dieu_hanh")?.key).toBe("store_manager")
     expect(resolveRoleUx("sale")?.key).toBe("sales")
     expect(resolveRoleUx("dieu_phoi")?.key).toBe("coordinator")
     expect(resolveRoleUx("product_manager")?.key).toBe("product_manager")
+    expect(resolveRoleUx("marketing")?.key).toBe("lead_marketing")
   })
 
   it("tổ chức CHAIN tạm thời vẫn dùng khuôn store_manager cho dieu_hanh (nợ #163)", () => {

@@ -11,6 +11,8 @@ export const SYSTEM_ROLES = [
   { key: "dieu_phoi", name: "Điều phối" },
   { key: "sale", name: "Sale" },
   { key: "product_manager", name: "Quản lý sản phẩm" },
+  { key: "marketing", name: "Marketing" },
+  { key: "crm", name: "Chăm sóc khách hàng" },
   { key: "experience_user", name: "Experience User" },
 ] as const
 

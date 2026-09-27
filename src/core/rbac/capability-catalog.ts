@@ -154,27 +154,27 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   // quản trị token, tách khỏi phạm vi quyền mà token đó mang khi gọi lại.
   F9: { name: "integration.token.manage", group: "org_member", label: "Cấp phát, xoay và thu hồi token tích hợp máy-máy", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // G — Asset và job
-  G1: { name: "asset.read", group: "asset_job", label: "Xem asset của tổ chức", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
-  G2: { name: "asset.upload", group: "asset_job", label: "Tải asset lên", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  G1: { name: "asset.read", group: "asset_job", label: "Xem asset của tổ chức", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "marketing"] },
+  G2: { name: "asset.upload", group: "asset_job", label: "Tải asset lên", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "marketing"] },
   G3: { name: "asset.delete", group: "asset_job", label: "Xoá asset", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
-  G4: { name: "job.read", group: "asset_job", label: "Xem job của chính mình", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  G4: { name: "job.read", group: "asset_job", label: "Xem job của chính mình", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "marketing"] },
   G5: { name: "job.read.all", group: "asset_job", label: "Xem job của toàn tổ chức", defaultRoles: ["dieu_hanh"] },
-  G6: { name: "job.cancel", group: "asset_job", label: "Huỷ job đang chờ", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
-  G7: { name: "job.retry", group: "asset_job", label: "Chạy lại job thất bại", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  G6: { name: "job.cancel", group: "asset_job", label: "Huỷ job đang chờ", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "marketing"] },
+  G7: { name: "job.retry", group: "asset_job", label: "Chạy lại job thất bại", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
   G8: { name: "usage.read", group: "asset_job", label: "Xem mức dùng và hạn mức", defaultRoles: ["dieu_hanh"] },
   G9: { name: "audit.read", group: "asset_job", label: "Đọc nhật ký kiểm toán", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // H — Vision
-  H1: { name: "vision.analyze", group: "vision", label: "Chạy phân tích ảnh sản phẩm", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
-  H2: { name: "vision.result.edit", group: "vision", label: "Sửa kết quả phân tích trước khi duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  H1: { name: "vision.analyze", group: "vision", label: "Chạy phân tích ảnh sản phẩm", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "marketing"] },
+  H2: { name: "vision.result.edit", group: "vision", label: "Sửa kết quả phân tích trước khi duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
   H3: { name: "product.approve", group: "vision", label: "Duyệt kết quả, ghi vào Product Master", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   H4: { name: "vision.engine.manage", group: "vision", label: "Chọn bộ máy phân tích ảnh dùng cho cả tổ chức", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
-  H5: { name: "product_copy.generate", group: "vision", label: "Tạo dữ liệu bán hàng từ phân tích đã duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  H5: { name: "product_copy.generate", group: "vision", label: "Tạo dữ liệu bán hàng từ phân tích đã duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
   H6: { name: "product_copy.approve", group: "vision", label: "Duyệt dữ liệu bán hàng, ghi Product Master", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // I — Tối ưu ảnh
-  I1: { name: "media.optimize", group: "media", label: "Chạy job tối ưu ảnh", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  I1: { name: "media.optimize", group: "media", label: "Chạy job tối ưu ảnh", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "marketing"] },
   I2: { name: "media.approve", group: "media", label: "Nâng Master Image thành ảnh chính thức của sản phẩm", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
-  I3: { name: "media.download", group: "media", label: "Tải ảnh đã tối ưu về máy", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
-  I4: { name: "media.variant.run", group: "media", label: "Dựng biến thể marketing từ Master Image đã duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  I3: { name: "media.download", group: "media", label: "Tải ảnh đã tối ưu về máy", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "marketing"] },
+  I4: { name: "media.variant.run", group: "media", label: "Dựng biến thể marketing từ Master Image đã duyệt", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "marketing"] },
   I5: { name: "media.variant.approve", group: "media", label: "Duyệt một biến thể marketing thành ảnh dùng được", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // P — Video Studio (M04c, P17). Soát 18/09 (RS-1) phát hiện hai cổng duyệt
   // video (`approve-script`, `approve-video`) dùng chung `I2` — mã duyệt
@@ -182,17 +182,17 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   // (`video_jobs.script_approval` / `video_jobs.video_approval` là hai cột
   // riêng); P3/P4 tách nốt ở tầng quyền cho khớp. Dải `P` đúng như đặc tả 02
   // mục 4 dự tính cho M04b/M04c — M04b cuối cùng dùng lại `I4`/`I5`.
-  P3: { name: "video.approve_script", group: "media", label: "Duyệt kịch bản video trước khi tốn tài nguyên render", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  P3: { name: "video.approve_script", group: "media", label: "Duyệt kịch bản video trước khi tốn tài nguyên render", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
   P4: { name: "video.approve_final", group: "media", label: "Duyệt video thành phẩm, lưu vào thư viện Asset chính thức", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // J — Kênh bán
-  J1: { name: "catalog.create", group: "channel", label: "Tạo catalog", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  J1: { name: "catalog.create", group: "channel", label: "Tạo catalog", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
   J2: { name: "catalog.publish", group: "channel", label: "Xuất bản catalog", defaultRoles: ["dieu_hanh"] },
-  J3: { name: "landing.create", group: "channel", label: "Tạo landing page", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  J3: { name: "landing.create", group: "channel", label: "Tạo landing page", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
   J4: { name: "landing.publish", group: "channel", label: "Xuất bản landing page", defaultRoles: ["dieu_hanh"] },
-  J5: { name: "social.publish", group: "channel", label: "Đăng bài lên mạng xã hội", defaultRoles: ["dieu_hanh"] },
-  J6: { name: "chat.manage", group: "channel", label: "Quản lý hội thoại khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  J5: { name: "social.publish", group: "channel", label: "Đăng bài lên mạng xã hội", defaultRoles: ["dieu_hanh", "marketing"] },
+  J6: { name: "chat.manage", group: "channel", label: "Quản lý hội thoại khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
   // L — Sản phẩm và giá
-  L1: { name: "product.read", group: "product_pricing", label: "Xem sản phẩm trong Product Master", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "product_manager"] },
+  L1: { name: "product.read", group: "product_pricing", label: "Xem sản phẩm trong Product Master", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "product_manager", "marketing"] },
   L2: { name: "product.create", group: "product_pricing", label: "Thêm sản phẩm mới", defaultRoles: ["dieu_hanh", "dieu_phoi", "product_manager"] },
   L3: { name: "product.update", group: "product_pricing", label: "Sửa thông tin sản phẩm", defaultRoles: ["dieu_hanh", "dieu_phoi", "product_manager"] },
   L4: { name: "product.archive", group: "product_pricing", label: "Ngừng kinh doanh một sản phẩm", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
@@ -247,8 +247,8 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   T3: { name: "chat.order.create", group: "ai_chat", label: "Tạo đơn hàng nhanh từ gợi ý trong hội thoại", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   T4: { name: "chat.config.manage", group: "ai_chat", label: "Cài đặt bot tự động và phong cách xưng hô", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // V — Nghiên cứu thị trường & Xu hướng (Market Intelligence Engine, Đợt A)
-  V1: { name: "market_intel.research.run", group: "market_intelligence", label: "Kích hoạt lượt nghiên cứu thị trường", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
-  V2: { name: "market_intel.opportunity.read", group: "market_intelligence", label: "Xem gợi ý cơ hội nội dung theo xu hướng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  V1: { name: "market_intel.research.run", group: "market_intelligence", label: "Kích hoạt lượt nghiên cứu thị trường", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
+  V2: { name: "market_intel.opportunity.read", group: "market_intelligence", label: "Xem gợi ý cơ hội nội dung theo xu hướng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "marketing"] },
   V3: { name: "market_intel.config.manage", group: "market_intelligence", label: "Quản lý cấu hình nguồn và trọng số xu hướng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
 }
 
