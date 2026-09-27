@@ -2,6 +2,7 @@
 
 import { useState, useMemo, type ComponentType } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import {
   Camera,
   ChevronRight,
@@ -169,43 +170,43 @@ export default function ThemPage() {
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-20">
         {/* Lối tắt nhanh */}
-        <Card
-          className="flex cursor-pointer items-center gap-3 p-3.5 hover:shadow-md"
-          onClick={() => router.push("/tai-anh" as never)}
+        <Link
+          href="/tai-anh"
+          className="flex min-h-11 items-center gap-3 rounded-2xl border border-border bg-surface p-3.5 shadow-xs transition-colors hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-primary"
         >
           <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-surface-alt">
             <Camera size={20} strokeWidth={1.8} className="text-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">Tải ảnh, để AI nhận diện</div>
-            <div className="text-xs text-text-muted">Phân tích ảnh sản phẩm và bóc tách dữ liệu</div>
+            <div className="text-body-sm font-semibold text-text">Tải ảnh, để AI nhận diện</div>
+            <div className="text-caption text-text-muted">Phân tích ảnh sản phẩm và bóc tách dữ liệu</div>
           </div>
           <ChevronRight size={18} strokeWidth={2} className="text-text-muted" />
-        </Card>
+        </Link>
 
-        <Card
-          className="flex cursor-pointer items-center gap-3 p-3.5 hover:shadow-md"
-          onClick={() => router.push("/market-intelligence" as never)}
+        <Link
+          href="/market-intelligence"
+          className="flex min-h-11 items-center gap-3 rounded-2xl border border-border bg-surface p-3.5 shadow-xs transition-colors hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-primary"
         >
           <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-surface-alt text-primary">
             <TrendingUp size={20} strokeWidth={1.8} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-sm font-semibold text-text">
+            <div className="flex items-center gap-1.5 text-body-sm font-semibold text-text">
               Nghiên cứu Thị trường & Xu hướng
             </div>
-            <div className="text-xs text-text-muted">Khám phá cơ hội và xu hướng bán hàng</div>
+            <div className="text-caption text-text-muted">Khám phá cơ hội và xu hướng bán hàng</div>
           </div>
           <ChevronRight size={18} strokeWidth={2} className="text-text-muted" />
-        </Card>
+        </Link>
 
         {/* Nhập tay sản phẩm mới */}
         {coTheThemSanPham ? (
           <Card className="flex flex-col gap-3.5 p-4">
-            <div className="text-sm font-bold">Hoặc nhập tay sản phẩm mới</div>
+            <div className="text-body-sm font-bold text-text">Hoặc nhập tay sản phẩm mới</div>
 
             {loi && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+              <div className="rounded-xl border border-danger/30 bg-danger-bg px-3.5 py-2.5 text-body-sm font-medium text-danger">
                 {loi}
               </div>
             )}

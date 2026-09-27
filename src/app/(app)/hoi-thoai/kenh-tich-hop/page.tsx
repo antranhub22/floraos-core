@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import {
   Share2,
@@ -29,7 +29,7 @@ export default function ChatChannelsIntegrationPage() {
   const [modalConfigForm, setModalConfigForm] = useState<ChannelConfig>({})
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  function loadChannels() {
+  const loadChannels = useCallback(() => {
     setLoading(true)
     fetch("/api/v1/chat/channels")
       .then((r) => r.json())
@@ -38,12 +38,12 @@ export default function ChatChannelsIntegrationPage() {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false))
-  }
+  }, [])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     loadChannels()
-  }, [])
+  }, [loadChannels])
 
   async function handleToggleChannel(channelItem: ChannelStatusItem) {
     const nextState = !channelItem.isEnabled
@@ -125,7 +125,7 @@ export default function ChatChannelsIntegrationPage() {
           </Link>
           <div className="h-4 w-[1px] bg-border" />
           <div className="flex items-center gap-2">
-            <Share2 className="h-4 w-4 text-red-600" />
+            <Share2 className="h-4 w-4 text-primary" />
             <h1 className="text-sm font-bold text-foreground">
               Tích Hợp Đa Kênh AI Chat Assistant (Omnichannel)
             </h1>
@@ -133,7 +133,7 @@ export default function ChatChannelsIntegrationPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge className="bg-red-50 text-red-700 border border-red-200 gap-1 text-xs">
+          <Badge tone="neutral" className="gap-1 text-xs">
             <Coins className="h-3.5 w-3.5" />
             Cơ chế định giá & Thu phí FloraOS
           </Badge>
@@ -188,17 +188,17 @@ export default function ChatChannelsIntegrationPage() {
         </div>
 
         {/* Khối lấy mã nhúng cho website riêng */}
-        <div className="rounded-2xl border border-red-200 bg-red-50/40 p-5 space-y-3 shadow-xs">
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600 text-white">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white">
                 <Globe className="h-4 w-4" />
               </span>
               <div>
-                <h3 className="text-xs font-bold text-red-950">
+                <h3 className="text-xs font-bold text-foreground">
                   Mã Nhúng Trợ Lý Ảo Lên Website Ngoài (WordPress, Haravan, Shopify)
                 </h3>
-                <p className="text-[11px] text-red-800/80">
+                <p className="text-[11px] text-text-muted">
                   Chèn thẻ script này vào trước thẻ &lt;/body&gt; trên website của tiệm để mở khung chat 24/7.
                 </p>
               </div>
@@ -206,7 +206,7 @@ export default function ChatChannelsIntegrationPage() {
             <Button
               size="sm"
               onClick={copyEmbedScript}
-              className="bg-red-600 hover:bg-red-700 text-white text-xs h-8 gap-1.5 shadow-xs"
+              className="text-xs h-8 gap-1.5 shadow-xs"
             >
               {copiedScript ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               {copiedScript ? "Đã chép mã" : "Sao chép mã nhúng"}

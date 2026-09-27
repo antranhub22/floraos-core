@@ -44,8 +44,8 @@ export function ChannelConfigModal({
     >
       <div className="space-y-4">
         {saveError && (
-          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-2.5 text-caption font-medium text-red-800">
-            <AlertCircle className="h-4 w-4 shrink-0 text-red-600" aria-hidden="true" />
+          <div className="flex items-center gap-2 rounded-xl border border-danger/30 bg-danger-bg p-2.5 text-caption font-medium text-danger">
+            <AlertCircle className="h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
             {saveError}
           </div>
         )}

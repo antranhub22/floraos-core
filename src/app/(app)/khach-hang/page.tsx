@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { Users, UserPlus, Sparkles, Search, Filter, Phone, Calendar, ArrowRight, ShieldCheck, Gift } from "lucide-react"
+import React, { useState, useEffect, useCallback } from "react"
+import { Users, UserPlus, Sparkles, Search, Calendar, ArrowRight, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
@@ -25,7 +25,7 @@ export default function CRMPage() {
   const [showReminders, setShowReminders] = useState(false)
   const [scanningReminders, setScanningReminders] = useState(false)
 
-  function loadCustomers() {
+  const loadCustomers = useCallback(() => {
     setLoading(true)
     const params = new URLSearchParams()
     if (search.trim()) params.set("search", search.trim())
@@ -38,12 +38,12 @@ export default function CRMPage() {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false))
-  }
+  }, [search, tierFilter])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     loadCustomers()
-  }, [tierFilter])
+  }, [loadCustomers])
 
   async function handleScanReminders() {
     setScanningReminders(true)
@@ -118,28 +118,29 @@ export default function CRMPage() {
 
         {/* Reminders Banner (nếu mở) */}
         {showReminders && (
-          <div className="rounded-xl border border-red-300 bg-red-50/80 p-4 space-y-3">
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-red-950 flex items-center gap-2">
-                <Gift className="h-4 w-4 text-red-600" />
+              <span className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Gift className="h-4 w-4 text-primary" />
                 Danh sách {reminders.length} dịp kỷ niệm sắp tới (trong 14 ngày tới)
               </span>
               <button
+                type="button"
                 onClick={() => setShowReminders(false)}
-                className="text-xs font-semibold text-red-700 hover:underline"
+                className="text-xs font-semibold text-primary hover:underline min-h-9 px-2 inline-flex items-center"
               >
                 Đóng danh sách
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {reminders.map((r, idx) => (
-                <div key={idx} className="rounded-lg border border-red-200 bg-white p-3 space-y-1 text-xs shadow-xs">
+                <div key={idx} className="rounded-lg border border-border bg-surface p-3 space-y-1 text-xs shadow-xs">
                   <div className="flex items-center justify-between font-bold text-foreground">
                     <span>{r.customerName}</span>
-                    <span className="text-red-600 font-extrabold">{r.daysLeft === 0 ? "Hôm nay!" : `Còn ${r.daysLeft} ngày`}</span>
+                    <span className="text-primary font-extrabold">{r.daysLeft === 0 ? "Hôm nay!" : `Còn ${r.daysLeft} ngày`}</span>
                   </div>
                   <div className="text-text-muted">Dịp: <span className="font-semibold text-text-main">{r.occasionName}</span> ({r.targetDate})</div>
-                  <div className="text-text-muted">Gợi ý hoa: <span className="font-semibold text-red-700">{r.suggestedFlower}</span></div>
+                  <div className="text-text-muted">Gợi ý hoa: <span className="font-semibold text-primary">{r.suggestedFlower}</span></div>
                   <div className="text-text-muted">SĐT: {r.customerPhone}</div>
                 </div>
               ))}

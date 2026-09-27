@@ -1,17 +1,15 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
-  MessageSquare,
   Send,
   Plus,
   Bot,
   User,
-  Sparkles,
   ShoppingBag,
   Clock,
-  ArrowRight,
   ArrowLeft,
   CheckCircle2,
   Flower2,
@@ -26,6 +24,7 @@ import type { Route } from "next"
 import type { ChatConversation, ChatMessage } from "@/modules/chat-assistant/domain/chat-types"
 
 export default function ChatAssistantPage() {
+  const router = useRouter()
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -38,7 +37,7 @@ export default function ChatAssistantPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // 1. Tải danh sách hội thoại
-  function loadConversations() {
+  const loadConversations = useCallback(() => {
     fetch("/api/v1/chat/conversations")
       .then((r) => r.json())
       .then((res) => {
@@ -49,11 +48,11 @@ export default function ChatAssistantPage() {
         }
       })
       .catch((err) => console.error(err))
-  }
+  }, [selectedConvId])
 
   useEffect(() => {
     loadConversations()
-  }, [])
+  }, [loadConversations])
 
   // 2. Tải tin nhắn của hội thoại đã chọn
   useEffect(() => {
@@ -202,7 +201,7 @@ export default function ChatAssistantPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => (window.location.href = "/don-hang")}
+              onClick={() => router.push("/don-hang" as Route)}
               className="text-caption"
             >
               Mở bảng Đơn hàng <ExternalLink className="ml-1 h-3.5 w-3.5" />
@@ -279,7 +278,7 @@ export default function ChatAssistantPage() {
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-                  <Bot className="h-10 w-10 text-red-400" />
+                  <Bot className="h-10 w-10 text-primary/60" />
                   <p className="max-w-md">
                     Chào bạn! Tôi là trợ lý AI am hiểu hoa tươi. Hãy thử hỏi về ngân sách, dịp tặng hoặc phong cách cắm hoa yêu thích!
                   </p>
@@ -291,8 +290,9 @@ export default function ChatAssistantPage() {
                     ].map((sample, idx) => (
                       <button
                         key={idx}
+                        type="button"
                         onClick={() => handleSendMessage(sample)}
-                        className="rounded-full border border-dashed border-red-300 bg-red-50/60 px-3 py-1.5 text-xs text-red-800 hover:bg-red-100 transition-colors"
+                        className="rounded-full border border-dashed border-primary/30 bg-primary/5 px-3 py-1.5 text-xs text-primary hover:bg-primary/10 transition-colors"
                       >
                         ⚡ {sample}
                       </button>
@@ -316,7 +316,7 @@ export default function ChatAssistantPage() {
                   return (
                     <div key={m.id} className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
                       {!isUser && (
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">
                           <Bot className="h-4 w-4" />
                         </span>
                       )}
@@ -325,7 +325,7 @@ export default function ChatAssistantPage() {
                         <div
                           className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                             isUser
-                              ? "bg-red-600 text-white font-medium rounded-br-none"
+                              ? "bg-primary text-white font-medium rounded-br-none"
                               : "bg-surface-raised border border-border text-foreground rounded-bl-none"
                           }`}
                         >
@@ -335,24 +335,24 @@ export default function ChatAssistantPage() {
                         {/* Danh sách Card mẫu hoa gợi ý từ Master Index */}
                         {suggestedFlowers.length > 0 && (
                           <div className="space-y-2 pt-1">
-                            <div className="text-[11px] font-bold text-red-900 flex items-center gap-1.5">
-                              <Flower2 className="h-3.5 w-3.5 text-red-600" />
+                            <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                              <Flower2 className="h-3.5 w-3.5 text-primary" />
                               Mẫu hoa đề xuất từ Master Catalog ({suggestedFlowers.length} mẫu):
                             </div>
                             <div className="grid grid-cols-1 gap-2.5">
                               {suggestedFlowers.map((f) => (
                                 <div
                                   key={f.productId}
-                                  className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50/40 p-2.5 shadow-xs"
+                                  className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-2.5 shadow-xs"
                                 >
                                   {f.sampleImageUrl ? (
                                     <img
                                       src={f.sampleImageUrl}
                                       alt={f.productName}
-                                      className="h-16 w-16 rounded-lg object-cover border border-red-200"
+                                      className="h-16 w-16 rounded-lg object-cover border border-border"
                                     />
                                   ) : (
-                                    <div className="h-16 w-16 rounded-lg bg-red-100 flex items-center justify-center text-red-500">
+                                    <div className="h-16 w-16 rounded-lg bg-primary-subtle flex items-center justify-center text-primary">
                                       <Flower2 className="h-6 w-6" />
                                     </div>
                                   )}
@@ -361,7 +361,7 @@ export default function ChatAssistantPage() {
                                     <div className="font-bold text-foreground text-xs truncate">
                                       {f.productName}
                                     </div>
-                                    <div className="text-red-600 font-extrabold text-xs mt-0.5">
+                                    <div className="text-primary font-extrabold text-xs mt-0.5">
                                       {Number(f.priceVnd).toLocaleString("vi-VN")} đ
                                     </div>
                                     <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
@@ -373,7 +373,7 @@ export default function ChatAssistantPage() {
                                     size="sm"
                                     disabled={creatingOrderFor === f.productId}
                                     onClick={() => handleQuickCreateOrder(f.productId)}
-                                    className="bg-red-600 hover:bg-red-700 text-white text-xs shrink-0"
+                                    className="text-xs shrink-0"
                                   >
                                     {creatingOrderFor === f.productId ? (
                                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -423,7 +423,6 @@ export default function ChatAssistantPage() {
                   type="submit"
                   size="sm"
                   disabled={!inputQuery.trim() || sending}
-                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>

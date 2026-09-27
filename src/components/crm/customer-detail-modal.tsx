@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Calendar, Gift, Shield, Heart, Plus, Loader2, Sparkles, Check, Phone, MapPin, Tag } from "lucide-react"
+import { Calendar, Gift, Shield, Plus, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -217,7 +217,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                   </div>
 
                   <div className="rounded-lg border border-border p-4 space-y-2 text-xs">
-                    <div className="font-bold text-text-main text-sm">Gu thẩm mỹ & Sở thích ngành hoa (M01 Vision)</div>
+                    <div className="font-bold text-text-main text-sm">Gu thẩm mỹ & Sở thích ngành hoa</div>
                     <div className="flex items-center gap-2">
                       <span className="text-text-muted">Hoa yêu thích:</span>
                       <span className="font-semibold text-foreground">{data.preferences.preferredFlowers.join(", ") || "Chưa ghi nhận"}</span>
@@ -241,8 +241,8 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                 </div>
 
                 {showAddOccasion && (
-                  <form onSubmit={handleAddOccasion} className="rounded-xl border border-dashed border-red-300 bg-red-50/60 p-4 space-y-3 text-xs">
-                    <div className="font-bold text-red-950">Thêm ngày kỷ niệm mới</div>
+                  <form onSubmit={handleAddOccasion} className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 space-y-3 text-xs">
+                    <div className="font-bold text-foreground">Thêm ngày kỷ niệm mới</div>
                     <div className="grid grid-cols-2 gap-3">
                       <input
                         type="text"
@@ -270,7 +270,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                     />
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="outline" size="sm" onClick={() => setShowAddOccasion(false)}>Hủy</Button>
-                      <Button type="submit" size="sm" className="bg-red-600 text-white" disabled={actionLoading}>Lưu dịp</Button>
+                      <Button type="submit" size="sm" disabled={actionLoading}>Lưu dịp</Button>
                     </div>
                   </form>
                 )}
@@ -284,7 +284,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                     data.occasions.map((o) => (
                       <div key={o.id} className="flex items-center justify-between rounded-lg border border-border p-3 text-xs">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-700">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-subtle text-primary">
                             <Gift className="h-3.5 w-3.5" />
                           </span>
                           <div>
@@ -302,7 +302,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
 
             {activeTab === "privacy" && (
               <div className="space-y-4">
-                <div className="rounded-lg bg-blue-50/70 border border-blue-200 p-3 text-xs text-blue-900">
+                <div className="rounded-lg bg-info-bg border border-info/30 p-3 text-xs text-info">
                   🛡️ <strong>Chính sách bảo vệ người tiêu dùng:</strong> FloraOS chỉ gửi tin nhắn nhắc nhở hoặc tiếp thị qua các kênh khách hàng đã đồng ý (Consent).
                 </div>
 
@@ -321,10 +321,11 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                           <div className="text-text-muted">Kênh: {c.channel}</div>
                         </div>
                         <button
+                          type="button"
                           onClick={() => handleToggleConsent(c.channel, isGranted)}
                           disabled={actionLoading}
                           className={`px-3 py-1.5 rounded-full font-bold transition-colors ${
-                            isGranted ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                            isGranted ? "bg-success-bg text-success hover:opacity-85" : "bg-muted text-muted-foreground hover:bg-muted/80"
                           }`}
                         >
                           {isGranted ? "✓ Đã đồng ý" : "✕ Chưa cấp phép"}

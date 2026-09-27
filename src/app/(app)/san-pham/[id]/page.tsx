@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, Sparkles, Tag, Layers, Box, CheckCircle2, AlertCircle } from "lucide-react"
+import { ArrowLeft, Sparkles, Tag, Layers } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
@@ -83,22 +82,24 @@ export default function ProductDetailPage() {
     <div className="flex h-full flex-col overflow-hidden">
       <header className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-4">
         <div className="flex items-center gap-3">
-          <Link
-            href="/san-pham"
+          <button
+            type="button"
+            onClick={() => router.push("/san-pham" as never)}
             aria-label="Về danh sách sản phẩm"
             className="flex h-11 w-11 items-center justify-center rounded-full text-text hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-primary"
           >
             <ArrowLeft size={18} />
-          </Link>
+          </button>
           <div>
             <div className="text-caption text-text-muted">Chi tiết sản phẩm</div>
             <h1 className="text-title font-extrabold text-primary">
-              {product ? product.name : "Đang tải…"}
+              {product ? product.name : ""}
             </h1>
           </div>
         </div>
         {product && (
           <Button
+            variant="outline"
             size="sm"
             onClick={() => router.push(`/san-pham/${productId}/tinh-nang` as never)}
             className="flex items-center gap-1.5"
@@ -111,7 +112,7 @@ export default function ProductDetailPage() {
 
       <main className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 max-w-4xl mx-auto w-full">
         {loi && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-body-sm font-medium text-red-700">
+          <div className="rounded-xl border border-danger/30 bg-danger-bg px-3.5 py-2.5 text-body-sm font-medium text-danger">
             {loi}
           </div>
         )}

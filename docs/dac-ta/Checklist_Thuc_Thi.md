@@ -1052,15 +1052,15 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] T5.A5 — Hàng chờ duyệt (`/duyet`, `duyet.md`)
 - [x] T5.A6 — Quản lý Job (`/job`, `/job/[id]`, `job.md`)
 
-#### Đợt B: Bán hàng và Vận hành cửa hàng
-- [ ] T5.B1 — Sản phẩm (`/san-pham`, `/san-pham/[id]`)
-- [ ] T5.B2 — Đơn hàng (`/don-hang`)
-- [ ] T5.B3 — Khách hàng (`/khach-hang`, 3 card → 1 card theo K1)
-- [ ] T5.B4 — Hội thoại (`/hoi-thoai`, `/hoi-thoai/kenh-tich-hop`)
+#### Đợt B: Bán hàng và Vận hành cửa hàng (Hoàn tất 100%)
+- [x] T5.B1 — Sản phẩm (`/san-pham`, `/san-pham/[id]`, `san-pham.md`)
+- [x] T5.B2 — Đơn hàng (`/don-hang`, `don-hang.md`)
+- [x] T5.B3 — Khách hàng (`/khach-hang`, 3 card → 1 card theo K1, `khach-hang.md`)
+- [x] T5.B4 — Hội thoại (`/hoi-thoai`, `/hoi-thoai/kenh-tich-hop`, `hoi-thoai.md`)
 - [x] T5.B5 — Catalog (`/catalog`, `catalog.md`)
 - [x] T5.B6 — Tính giá (`/gia`, `gia.md`)
-- [ ] T5.B7 — Trang Thêm trên mobile (`/them`)
-- [ ] T5.B8 — Menu tài khoản + Hồ sơ cửa hàng (`/ho-so`)
+- [x] T5.B7 — Trang Thêm trên mobile (`/them`, `them.md`)
+- [x] T5.B8 — Menu tài khoản + Hồ sơ cửa hàng (`/ho-so`, `ho-so.md`)
 
 #### Đợt C: Nội dung và Tiếp thị
 - [ ] T5.C1 — Market Intelligence (`/market-intelligence`, áp dụng K3 video kép gọn)

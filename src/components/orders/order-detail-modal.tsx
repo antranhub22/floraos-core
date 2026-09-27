@@ -164,7 +164,11 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
             </span>
             <span className="text-sm font-bold text-foreground">Chi tiết đơn & Tiến độ SLA</span>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface-alt transition-colors focus-visible:outline-2 focus-visible:outline-primary"
+            aria-label="Đóng chi tiết đơn hàng"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -175,7 +179,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
             onClick={() => setActiveTab("overview")}
             className={`pb-2.5 px-3 border-b-2 transition-colors ${
               activeTab === "overview"
-                ? "border-red-600 text-red-600 font-bold"
+                ? "border-primary text-primary font-bold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -185,7 +189,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
             onClick={() => setActiveTab("florist")}
             className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
               activeTab === "florist"
-                ? "border-red-600 text-red-600 font-bold"
+                ? "border-primary text-primary font-bold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -196,7 +200,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
             onClick={() => setActiveTab("delivery")}
             className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
               activeTab === "delivery"
-                ? "border-red-600 text-red-600 font-bold"
+                ? "border-primary text-primary font-bold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -363,7 +367,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-red-600 hover:bg-red-50 border-red-200"
+                    className="text-danger hover:bg-danger-bg border-danger/30"
                     onClick={() => setCancelModal(true)}
                   >
                     <Ban className="mr-1.5 h-4 w-4" /> Hủy đơn
@@ -372,46 +376,57 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
               </div>
 
               <div className="flex gap-2">
-                {order.productionStatus === "PENDING" && (
-                  <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    disabled={actionLoading}
-                    onClick={() => handleUpdateStatus({ productionStatus: "IN_PRODUCTION", status: "CONFIRMED" })}
-                  >
-                    <Flower2 className="mr-1.5 h-4 w-4" /> Nhận cắm hoa
-                  </Button>
-                )}
-                {order.productionStatus === "IN_PRODUCTION" && (
-                  <Button
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
-                    disabled={actionLoading}
-                    onClick={() => handleUpdateStatus({ productionStatus: "COMPLETED" })}
-                  >
-                    <CheckCircle className="mr-1.5 h-4 w-4" /> Đã cắm xong
-                  </Button>
-                )}
-                {order.productionStatus === "COMPLETED" && order.deliveryStatus === "NOT_STARTED" && (
-                  <Button
-                    size="sm"
-                    className="bg-amber-600 hover:bg-amber-700 text-white"
-                    disabled={actionLoading}
-                    onClick={() => handleUpdateStatus({ deliveryStatus: "SHIPPING", status: "IN_PROGRESS" })}
-                  >
-                    <Truck className="mr-1.5 h-4 w-4" /> Bắt đầu giao
-                  </Button>
-                )}
-                {order.deliveryStatus === "SHIPPING" && (
-                  <Button
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    disabled={actionLoading}
-                    onClick={() => handleUpdateStatus({ deliveryStatus: "DELIVERED", status: "COMPLETED" })}
-                  >
-                    <CheckCircle className="mr-1.5 h-4 w-4" /> Giao thành công
-                  </Button>
-                )}
+                {(() => {
+                  if (order.productionStatus === "PENDING") {
+                    return (
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        disabled={actionLoading}
+                        onClick={() => handleUpdateStatus({ productionStatus: "IN_PRODUCTION", status: "CONFIRMED" })}
+                      >
+                        <Flower2 className="mr-1.5 h-4 w-4" /> Nhận cắm hoa
+                      </Button>
+                    )
+                  }
+                  if (order.productionStatus === "IN_PRODUCTION") {
+                    return (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={actionLoading}
+                        onClick={() => handleUpdateStatus({ productionStatus: "COMPLETED" })}
+                      >
+                        <CheckCircle className="mr-1.5 h-4 w-4" /> Đã cắm xong
+                      </Button>
+                    )
+                  }
+                  if (order.productionStatus === "COMPLETED" && order.deliveryStatus === "NOT_STARTED") {
+                    return (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={actionLoading}
+                        onClick={() => handleUpdateStatus({ deliveryStatus: "SHIPPING", status: "IN_PROGRESS" })}
+                      >
+                        <Truck className="mr-1.5 h-4 w-4" /> Bắt đầu giao
+                      </Button>
+                    )
+                  }
+                  if (order.deliveryStatus === "SHIPPING") {
+                    return (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={actionLoading}
+                        onClick={() => handleUpdateStatus({ deliveryStatus: "DELIVERED", status: "COMPLETED" })}
+                      >
+                        <CheckCircle className="mr-1.5 h-4 w-4" /> Giao thành công
+                      </Button>
+                    )
+                  }
+                  return null
+                })()}
               </div>
             </div>
           </div>
@@ -423,7 +438,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
         {cancelModal && (
           <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4">
             <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-2xl space-y-4">
-              <div className="flex items-center gap-2 text-red-600 font-bold">
+              <div className="flex items-center gap-2 text-danger font-bold">
                 <AlertCircle className="h-5 w-5" />
                 <span>Xác nhận hủy đơn hàng #{order?.code}</span>
               </div>
@@ -432,7 +447,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
               </p>
               <textarea
                 rows={3}
-                className="w-full rounded-md border border-border bg-background p-2.5 text-xs focus:ring-1 focus:ring-red-500"
+                className="w-full rounded-md border border-border bg-background p-2.5 text-xs focus:ring-1 focus:ring-primary"
                 placeholder="Nhập lý do hủy đơn (bắt buộc)..."
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
@@ -442,8 +457,9 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                   Đóng
                 </Button>
                 <Button
+                  variant="outline"
                   size="sm"
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="border-danger/30 text-danger hover:bg-danger-bg"
                   disabled={!cancelReason.trim() || actionLoading}
                   onClick={handleCancelOrder}
                 >

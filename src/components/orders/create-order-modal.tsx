@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { X, Plus, Trash2, Loader2, Sparkles, Flower2, Package } from "lucide-react"
+import { X, Plus, Trash2, Loader2, Sparkles, Flower2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { errorText } from "@/lib/error-text"
 import type { ProductMasterIndex } from "@/modules/products/domain/product-master-index"
@@ -182,22 +182,27 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-surface shadow-2xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-red-100 text-red-700">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-subtle text-primary">
               <Sparkles className="h-4 w-4" />
             </span>
             <div>
-              <h2 className="text-base font-bold text-foreground">Tạo Đơn Hàng Hoa Mới (M10)</h2>
-              <div className="text-[11px] text-muted-foreground">Đồng bộ Master Index & BOM Phân tích M01</div>
+              <h2 className="text-base font-bold text-foreground">Tạo Đơn Hàng Hoa Mới</h2>
+              <div className="text-[11px] text-muted-foreground">Đồng bộ Master Index & Công thức cắm hoa</div>
             </div>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Đóng"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-sm">
           {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-xs font-medium text-red-700 border border-red-200">
+            <div className="rounded-lg bg-danger-bg p-3 text-xs font-medium text-danger border border-danger/30">
               {error}
             </div>
           )}
@@ -335,7 +340,8 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                     <button
                       type="button"
                       onClick={() => removeItem(idx)}
-                      className="p-1 text-muted-foreground hover:text-red-600"
+                      aria-label="Xóa dòng"
+                      className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-danger"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -369,7 +375,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
           <div className="flex items-center justify-between rounded-lg bg-surface-raised px-4 py-3">
             <span className="font-semibold text-text-muted">Tổng tiền tạm tính:</span>
-            <span className="text-lg font-bold text-red-600">
+            <span className="text-lg font-bold text-primary">
               {totalVnd.toLocaleString("vi-VN")} đ
             </span>
           </div>
@@ -378,7 +384,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Hủy
             </Button>
-            <Button type="submit" disabled={loading} className="bg-red-600 hover:bg-red-700 text-white font-semibold">
+            <Button type="submit" disabled={loading} className="font-semibold">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Xác nhận tạo đơn
             </Button>

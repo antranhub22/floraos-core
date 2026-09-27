@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Plus, Search, ChevronRight, Sparkles, Eye } from "lucide-react"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FlowerPlaceholder } from "@/components/ui/flower-placeholder"
 import { SkeletonBlock } from "@/components/ui/skeleton"
@@ -90,7 +89,7 @@ export default function SanPhamPage() {
 
       <main className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4">
         {loi && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-body-sm font-medium text-red-700">
+          <div className="rounded-xl border border-danger/30 bg-danger-bg px-3.5 py-2.5 text-body-sm font-medium text-danger">
             {loi}
           </div>
         )}
