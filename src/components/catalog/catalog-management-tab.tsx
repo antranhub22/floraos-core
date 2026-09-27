@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from "react"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { PublishedCatalogLinks, CreateCatalogModal, type CatalogLinkItem } from "./catalog-link-widgets"

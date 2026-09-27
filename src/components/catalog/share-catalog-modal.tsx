@@ -3,11 +3,9 @@
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import {
-  Share2,
   Copy,
   Check,
   Sparkles,
-  ExternalLink,
   MessageCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
