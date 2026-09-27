@@ -20,7 +20,11 @@ import {
 } from "@/modules/field-platform/domain/behaviors"
 import type { CoordinatorStage } from "../domain/coordinator-types"
 import { evaluateRisk, stageLabel } from "../domain/operation-rules"
+import { computeLatestStarts } from "../domain/planning-timeline"
 import type { CoordinatorOrderRow } from "../infra/coordinator-repository"
+import { loadEffectiveFieldConfigs } from "@/modules/field-platform/use-cases/get-effective-field-config"
+import { findMissingRequiredFields } from "@/modules/field-platform/domain/stage-transitions"
+import { buildOrderFieldValueLookup } from "./field-value-lookup"
 
 const IMAGE_URL_TTL_SECONDS = 3600
 
@@ -106,6 +110,9 @@ export interface CoordinatorOrderView {
   stageLabel: string
   riskLevel: "NORMAL" | "ATTENTION" | "AT_RISK" | "CRITICAL"
   riskReason: string | null
+  /** ĐP-4a.8 (27/09/2026), §4.1 `timeRemaining` — phút còn lại tới `deliveryTargetAt`.
+   * `null` khi đơn chưa có hạn giao hoặc đã đóng/huỷ (xem `evaluateRisk`). Âm = đã trễ. */
+  timeRemaining: number | null
   customerId: string | null
   customerName: string
   customerTier: string
@@ -155,6 +162,48 @@ export interface CoordinatorOrderView {
   deliveryWindowStart: string | null
   deliveryWindowEnd: string | null
   salesOwnerId: string | null
+  /** ĐP-4a.5 (27/09/2026) — T02: mốc bàn giao Sales → Điều phối. */
+  handoffAt: string | null
+  handoffConfirmed: boolean
+  /** ĐP-4a.5 — T02 Sales Order Brief. */
+  specialRequirements: string | null
+  /** ĐP-4a.5 — `{ promiseType, promiseValue, promisedBy, promisedAt }[]`, dùng chung với Form Lập kế hoạch (T02/4.2). */
+  customerCommitments: Array<{
+    promiseType: string
+    promiseValue: string
+    promisedBy: string
+    promisedAt: string
+  }>
+  /** ĐP-4a.5, §3.2 — trường còn thiếu để rời INTAKE, tính theo cấu hình bắt buộc hiệu lực
+   * (lõi + tự tạo, `field_config_overrides`), dùng CHUNG cổng với `updateCoordinatorStage`. */
+  missingFields: Array<{ key: string; label: string }>
+  missingFieldCount: number
+  /** CHƯA XÂY thật — phụ thuộc bóc tách AI (`aiConflictFields`, T01) chưa có năng lực (§3.1).
+   * Luôn rỗng cho tới khi AI trích đơn từ tin nhắn ra đời; giữ trường để hợp đồng ổn định. */
+  conflictFields: Array<{ key: string; label: string; values: string[] }>
+  /** ĐP-4a.9, §4.2 — Form Lập kế hoạch đơn. */
+  plannedAt: string | null
+  productionDeadlineAt: string | null
+  pickupTargetAt: string | null
+  productionBufferMinutes: number | null
+  pickupBufferMinutes: number | null
+  plannedProductionMinutes: number | null
+  plannedQcBufferMinutes: number | null
+  plannedPickupMinutes: number | null
+  plannedDeliveryMinutes: number | null
+  partnerSelectionDeadlineAt: string | null
+  technicalInstruction: string | null
+  nextActionOwnerId: string | null
+  /** `order_coordinations.next_action_due` — có cột từ trước ĐP-4a, chưa từng lên view (§4.1). */
+  nextActionAt: string | null
+  /** ĐP-4a.9 — tính ngược từ `deliveryTargetAt` (`domain/planning-timeline.ts`). `null` khi thiếu hạn giao. */
+  latestProductionStart: string | null
+  latestQCStart: string | null
+  latestPickupStart: string | null
+  latestDispatchStart: string | null
+  /** ĐP-4a.3 bù + 4a.8 — cách thu và hạn thu PHẦN CÒN LẠI (khác `paymentMethod` trên từng dòng sổ thu). */
+  collectionMethod: string | null
+  collectionDueAt: string | null
   qc: { status: string; notes: string | null; aiScore: number | null; inspectedAt: string } | null
   delivery: {
     carrier: string | null
@@ -178,6 +227,8 @@ export interface CoordinatorOrderView {
     resolvedAt: string | null
   }>
   hasException: boolean
+  /** ĐP-4a.8, §4.1 `openExceptionCount` — đếm thật thay vì chỉ có/không như `hasException`. */
+  openExceptionCount: number
   unitPriceVnd: number
   /** ĐP-4a (26/09/2026, PO D2) — sổ thu. Tổng đã thu, luỹ kế mọi dòng `order_payments`. */
   paidVnd: number
@@ -227,6 +278,9 @@ export async function presentCoordinatorOrders(
     ids.push(...assetIdList(c.finished_asset_ids))
   }
   const urls = await signedAssetUrls(ctx, ids)
+  const fieldConfigs = rows.some((r) => r.coordination?.stage === "INTAKE")
+    ? await loadEffectiveFieldConfigs(ctx, "ORDER")
+    : []
 
   return rows.map((r) => {
     const c = r.coordination!
@@ -246,6 +300,27 @@ export async function presentCoordinatorOrders(
     const itemMeta = (firstItem?.metadata ?? {}) as Record<string, unknown>
     const productSnapshot = readProductSnapshot(itemMeta.product)
 
+    const missing =
+      c.stage === "INTAKE" && fieldConfigs.length > 0
+        ? findMissingRequiredFields(fieldConfigs, "INTAKE", buildOrderFieldValueLookup(r))
+        : []
+
+    const latest = computeLatestStarts(c.estimated_delivery_at, {
+      plannedProductionMinutes: c.planned_production_minutes,
+      plannedQcBufferMinutes: c.planned_qc_buffer_minutes,
+      plannedPickupMinutes: c.planned_pickup_minutes,
+      plannedDeliveryMinutes: c.planned_delivery_minutes,
+    })
+
+    const customerCommitments = Array.isArray(meta.customerCommitments)
+      ? (meta.customerCommitments as Array<{
+          promiseType: string
+          promiseValue: string
+          promisedBy: string
+          promisedAt: string
+        }>)
+      : []
+
     return {
       id: r.id,
       orderCode: r.code,
@@ -253,6 +328,7 @@ export async function presentCoordinatorOrders(
       stageLabel: stageLabel(c.stage),
       riskLevel: risk.riskLevel,
       riskReason: risk.reason,
+      timeRemaining: risk.minutesLeft,
       customerId: r.customer_id,
       customerName: str("customerName"),
       customerTier: str("customerTier", "NEW"),
@@ -296,6 +372,32 @@ export async function presentCoordinatorOrders(
       deliveryWindowStart: iso(c.delivery_window_start),
       deliveryWindowEnd: iso(c.delivery_window_end),
       salesOwnerId: c.sales_owner_id,
+      handoffAt: iso(c.handoff_at),
+      handoffConfirmed: c.handoff_confirmed ?? false,
+      specialRequirements: typeof meta.specialRequirements === "string" ? meta.specialRequirements : null,
+      customerCommitments,
+      missingFields: missing.map((m) => ({ key: m.key, label: m.label })),
+      missingFieldCount: missing.length,
+      conflictFields: [],
+      plannedAt: iso(c.planned_at),
+      productionDeadlineAt: iso(c.production_deadline_at),
+      pickupTargetAt: iso(c.pickup_target_at),
+      productionBufferMinutes: c.production_buffer_minutes,
+      pickupBufferMinutes: c.pickup_buffer_minutes,
+      plannedProductionMinutes: c.planned_production_minutes,
+      plannedQcBufferMinutes: c.planned_qc_buffer_minutes,
+      plannedPickupMinutes: c.planned_pickup_minutes,
+      plannedDeliveryMinutes: c.planned_delivery_minutes,
+      partnerSelectionDeadlineAt: iso(c.partner_selection_deadline_at),
+      technicalInstruction: c.technical_instruction,
+      nextActionOwnerId: c.next_action_owner_id,
+      nextActionAt: iso(c.next_action_due),
+      latestProductionStart: iso(latest.latestProductionStart),
+      latestQCStart: iso(latest.latestQCStart),
+      latestPickupStart: iso(latest.latestPickupStart),
+      latestDispatchStart: iso(latest.latestDispatchStart),
+      collectionMethod: c.collection_method,
+      collectionDueAt: iso(c.collection_due_at),
       qc: qc
         ? { status: qc.status, notes: qc.notes, aiScore: qc.ai_score, inspectedAt: qc.created_at.toISOString() }
         : null,
@@ -321,6 +423,7 @@ export async function presentCoordinatorOrders(
         resolvedAt: iso(e.resolved_at),
       })),
       hasException: openExceptions.length > 0,
+      openExceptionCount: openExceptions.length,
       unitPriceVnd: Number(r.total_vnd),
       paidVnd: Number(r.paid_vnd),
       balanceVnd: Number(r.balance_vnd),

@@ -1814,6 +1814,120 @@ model order_coordinations {
   sales_owner_id           String?   // gán = người tạo đơn lúc tiếp nhận (giống coordinator_id)
   next_action_owner_id     String?   // CHƯA gán ở 4a.1 — để cho ĐP-4a.5 (bàn giao T02)
   handoff_at               DateTime? // CHƯA ghi ở 4a.1 — để cho ĐP-4a.5
+  handoff_confirmed        Boolean   @default(false)
+  collection_method        String?
+  collection_due_at        DateTime?
+  planned_at               DateTime?
+  production_buffer_minutes     Int?
+  pickup_buffer_minutes         Int?
+  planned_production_minutes    Int?
+  planned_qc_buffer_minutes     Int?
+  planned_pickup_minutes        Int?
+  planned_delivery_minutes      Int?
+  partner_selection_deadline_at DateTime?
+  technical_instruction         String?
+}
+```
+
+ĐP-4a.6/4a.7 (27/09/2026), T03 Yêu cầu bổ sung thông tin & T04 Yêu cầu thay đổi đơn, migration `20260927100000_coordinator_p1_p2_remaining`.
+
+```prisma
+enum order_info_request_status {
+  OPEN
+  SENT
+  WAITING
+  RECEIVED
+  OVERDUE
+  CANCELLED
+}
+
+enum order_change_type {
+  PRODUCT
+  FLOWERS
+  COLOR
+  WRAPPING
+  ACCESSORY
+  CARD_MESSAGE
+  ADDRESS
+  RECIPIENT
+  DELIVERY_DATE
+  DELIVERY_TIME
+  PRICE
+  QUANTITY
+  PARTNER
+  OTHER
+}
+
+enum order_change_request_status {
+  PENDING
+  APPROVED
+  REJECTED
+  APPLIED
+  CANCELLED
+}
+
+/// Yêu cầu bổ sung thông tin còn thiếu (T03, ĐP-4a.6). TENANT ISOLATION.
+model order_info_requests {
+  id                    String                    @id @default(uuid())
+  organization_id       String
+  order_id              String
+  missing_field         String
+  field_label           String
+  reason                String
+  business_impact       String?
+  requested_from        String
+  requested_by          String
+  requested_at          DateTime                  @default(now())
+  due_at                DateTime?
+  channel               String?
+  message_template      String?
+  response_required     Boolean                   @default(true)
+  response_value        String?
+  response_received_at  DateTime?
+  status                order_info_request_status @default(OPEN)
+  cancelled_reason      String?
+  created_at            DateTime                  @default(now())
+  updated_at            DateTime                  @updatedAt
+
+  organization          organizations             @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order                 orders                    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id])
+  @@index([organization_id, status])
+}
+
+/// Yêu cầu thay đổi đơn (T04, ĐP-4a.7). TENANT ISOLATION.
+model order_change_requests {
+  id                 String                       @id @default(uuid())
+  organization_id    String
+  order_id           String
+  requested_by       String
+  requested_at       DateTime                     @default(now())
+  change_type        order_change_type
+  field_changed      String
+  old_value          String?
+  new_value          String?
+  reason             String
+  customer_impact    String?
+  production_impact  String?
+  delivery_impact    String?
+  cost_impact_vnd    Decimal?                     @db.Decimal(14, 2)
+  requires_approval  Boolean                      @default(false)
+  approved_by        String?
+  approved_at        DateTime?
+  partner_notified   Boolean                      @default(false)
+  customer_confirmed Boolean                      @default(false)
+  effective_at       DateTime?
+  status             order_change_request_status  @default(PENDING)
+  rejected_reason    String?
+  created_at         DateTime                     @default(now())
+  updated_at         DateTime                     @updatedAt
+
+  organization       organizations                @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order              orders                       @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id])
+  @@index([organization_id, status])
 }
 ```
 

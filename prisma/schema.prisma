@@ -172,6 +172,8 @@ model organizations {
   order_payments             order_payments[]
   order_exceptions           order_exceptions[]
   field_config_overrides     field_config_overrides[]
+  order_info_requests        order_info_requests[]
+  order_change_requests      order_change_requests[]
 }
 
 model workspaces {
@@ -1233,6 +1235,8 @@ model orders {
   qc_records        order_qc_records[]
   exceptions        order_exceptions[]
   payments          order_payments[]
+  info_requests     order_info_requests[]
+  change_requests   order_change_requests[]
 
   @@unique([organization_id, code])
   @@index([organization_id, status])
@@ -2184,6 +2188,40 @@ enum order_payment_kind {
   REFUND
 }
 
+enum order_info_request_status {
+  OPEN
+  SENT
+  WAITING
+  RECEIVED
+  OVERDUE
+  CANCELLED
+}
+
+enum order_change_type {
+  PRODUCT
+  FLOWERS
+  COLOR
+  WRAPPING
+  ACCESSORY
+  CARD_MESSAGE
+  ADDRESS
+  RECIPIENT
+  DELIVERY_DATE
+  DELIVERY_TIME
+  PRICE
+  QUANTITY
+  PARTNER
+  OTHER
+}
+
+enum order_change_request_status {
+  PENDING
+  APPROVED
+  REJECTED
+  APPLIED
+  CANCELLED
+}
+
 enum coordinator_stage {
   INTAKE
   VALIDATING
@@ -2313,6 +2351,27 @@ model order_coordinations {
   /// Mốc bàn giao Sales → Điều phối (T02) — CHƯA ghi ở đợt 4a.1 (ĐP-4a.5).
   handoff_at              DateTime?
 
+  // ── ĐP-4a.5 (27/09/2026) — T02: xác nhận bàn giao Sales → Điều phối ──────
+  /// true khi Điều phối đã nhận bàn giao (đặt cùng lúc với `handoff_at`, lúc rời INTAKE).
+  handoff_confirmed       Boolean                 @default(false)
+
+  // ── ĐP-4a.3 bù (27/09/2026) — Điều phối đặt cách thu + hạn thu phần còn lại ──
+  /// Danh mục §2.15.7 (MỞ) — mã chuỗi kiểm active ở tầng ứng dụng (D12).
+  collection_method       String?
+  collection_due_at       DateTime?
+
+  // ── ĐP-4a.9 (27/09/2026) — Form Lập kế hoạch đơn (Đặc tả trường §4.2) ────
+  /// Mốc điều phối viên lập kế hoạch xong (khác `created_at`/`handoff_at`).
+  planned_at                     DateTime?
+  production_buffer_minutes     Int?
+  pickup_buffer_minutes         Int?
+  planned_production_minutes    Int?
+  planned_qc_buffer_minutes     Int?
+  planned_pickup_minutes        Int?
+  planned_delivery_minutes      Int?
+  partner_selection_deadline_at DateTime?
+  technical_instruction         String?
+
   created_at            DateTime                @default(now())
   updated_at            DateTime                @updatedAt
 
@@ -2351,6 +2410,85 @@ model order_payments {
   order             orders              @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, order_id])
+}
+
+/// Yêu cầu bổ sung thông tin còn thiếu (T03, ĐP-4a.6, 27/09/2026, Đặc tả
+/// trường §3.3). Dùng lại `MissingInfoRequestCard` (trước đó dựng sẵn
+/// nhưng không được render — dashboard đang mở SỰ CỐ loại
+/// `MISSING_INFORMATION` thay vì tạo yêu cầu riêng). TENANT ISOLATION.
+model order_info_requests {
+  id                    String                    @id @default(uuid())
+  organization_id       String
+  order_id              String
+  /// Khoá trường lõi (`field-registry.ts`) hoặc trường tự tạo đang thiếu.
+  missing_field         String
+  field_label           String
+  reason                String
+  business_impact       String?
+  /// Hỏi ai — mô tả tự do (khách qua Zalo, SĐT khách…), KHÔNG phải id có cấu trúc.
+  requested_from        String
+  requested_by          String
+  requested_at          DateTime                  @default(now())
+  due_at                DateTime?
+  /// Danh mục §2.15.3 (kênh hỏi lại — có thể khác kênh nhận đơn gốc).
+  channel               String?
+  message_template      String?
+  response_required     Boolean                   @default(true)
+  response_value        String?
+  response_received_at  DateTime?
+  status                order_info_request_status @default(OPEN)
+  cancelled_reason      String?
+  created_at            DateTime                  @default(now())
+  updated_at            DateTime                  @updatedAt
+
+  organization          organizations             @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order                 orders                    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id])
+  @@index([organization_id, status])
+}
+
+/// Yêu cầu thay đổi đơn (T04, ĐP-4a.7, 27/09/2026, Đặc tả trường §3.4 —
+/// bản ĐẦY ĐỦ của Quy tắc Override, Hợp đồng MI §6, thay cho bản tối thiểu
+/// `diffAgainstSnapshot` chỉ so một lần lúc tạo đơn). TENANT ISOLATION.
+model order_change_requests {
+  id                 String                       @id @default(uuid())
+  organization_id    String
+  order_id           String
+  requested_by       String
+  requested_at       DateTime                     @default(now())
+  change_type        order_change_type
+  /// Đường dẫn trường bị đổi (khớp khoá `field-registry.ts` khi có, hoặc `bom.flowers[…]`…).
+  field_changed      String
+  /// Máy chủ tự đọc giá trị HIỆN TẠI qua `buildOrderFieldValueLookup` — không tin client
+  /// (yếu tố 1+6 của Quy tắc Override: "chỉ ra giá trị nguồn" + "giữ nguyên giá trị gốc").
+  old_value          String?
+  new_value          String?
+  reason             String
+  customer_impact    String?
+  production_impact  String?
+  delivery_impact    String?
+  /// Chênh lệch tiền khi `change_type = PRICE` (âm = giảm giá). Dùng tính lại `balance_vnd`.
+  cost_impact_vnd    Decimal?                     @db.Decimal(14, 2)
+  /// PRICE/QUANTITY luôn cần duyệt trước khi áp dụng — xem `create-order-change-request.ts`.
+  requires_approval  Boolean                      @default(false)
+  approved_by        String?
+  approved_at        DateTime?
+  /// true khi đã báo đối tác — mặc định false; nếu đơn đã phân công lúc tạo yêu cầu,
+  /// view tính cờ DERIVED `needsPartnerNotice = partnerId != null && !partnerNotified`.
+  partner_notified   Boolean                      @default(false)
+  customer_confirmed Boolean                      @default(false)
+  effective_at       DateTime?
+  status             order_change_request_status  @default(PENDING)
+  rejected_reason    String?
+  created_at         DateTime                     @default(now())
+  updated_at         DateTime                     @updatedAt
+
+  organization       organizations                @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order               orders                      @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, order_id])
+  @@index([organization_id, status])
 }
 
 /// Hồ sơ kiểm tra chất lượng sản phẩm hoa cắm (QC). TENANT ISOLATION.

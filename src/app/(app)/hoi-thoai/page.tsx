@@ -12,6 +12,7 @@ import {
   ShoppingBag,
   Clock,
   ArrowRight,
+  ArrowLeft,
   CheckCircle2,
   Flower2,
   Loader2,

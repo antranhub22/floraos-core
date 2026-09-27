@@ -5,14 +5,14 @@ import { cn } from "@/lib/utils"
 
 export interface EmptyStateProps {
   title: string
-  reason?: string
+  reason?: string | undefined
   action?: {
     label: string
     onClick?: () => void
     href?: string
-  }
-  icon?: LucideIcon
-  className?: string
+  } | undefined
+  icon?: LucideIcon | undefined
+  className?: string | undefined
 }
 
 export function EmptyState({ title, reason, action, icon: Icon, className }: EmptyStateProps) {

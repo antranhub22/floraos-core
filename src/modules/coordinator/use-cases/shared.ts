@@ -5,10 +5,11 @@ import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import type { CoordinatorStage } from "../domain/coordinator-types"
 import type { RuleResult } from "../domain/operation-rules"
 import { checkStageTransition, type StageTransitionFacts } from "../domain/stage-transitions"
-import type { FieldValueLookup } from "@/modules/field-platform/domain/stage-transitions"
 import { CoordinatorRepository, type CoordinatorOrderRow } from "../infra/coordinator-repository"
 import { isUniqueViolation, runInTransaction, type DbClient } from "../infra/transaction"
 import { presentCoordinatorOrders, type CoordinatorOrderView } from "./present-coordinator-order"
+
+export { buildOrderFieldValueLookup } from "./field-value-lookup"
 
 /** Luật nghiệp vụ không đạt → 422 kèm lý do đọc được. */
 export function ensureRule(result: RuleResult): void {
@@ -35,38 +36,6 @@ export function concurrentUpdate(): AppError {
   return new AppError("CONFLICT", "Đơn vừa được người khác cập nhật — tải lại rồi thử lại.")
 }
 
-/**
- * ĐP-3.16 (26/09/2026): giá trị hiện tại của đơn theo khoá trường, cho cổng
- * `findMissingRequiredFields` (field-platform §6.2 mục 3.10). Trường LÕI có
- * `requiredAtStage` khai ở `contracts/field-registry.ts` đọc thẳng cột/
- * `metadata` — khớp 1:1 với thuộc tính cùng tên ở `CoordinatorOrderView`
- * (thiết kế có chủ đích, xem ĐP-2.11). Trường TỰ TẠO đọc `custom_fields`.
- * Thêm khoá lõi REQUIRED mới ở field-registry.ts thì thêm dòng tương ứng ở
- * đây CÙNG LƯỢT (quy tắc chung #7 của kế hoạch) — nếu không, cổng sẽ luôn
- * coi trường đó là "trống" và chặn nhầm.
- */
-export function buildOrderFieldValueLookup(row: CoordinatorOrderRow): FieldValueLookup {
-  const c = row.coordination!
-  const meta = (c.metadata ?? {}) as Record<string, unknown>
-  const customFields = (c.custom_fields ?? {}) as Record<string, unknown>
-  const core: Record<string, unknown> = {
-    customerId: row.customer_id,
-    customerName: meta.customerName,
-    customerPhone: meta.customerPhone,
-    recipientName: meta.recipientName,
-    recipientPhone: meta.recipientPhone,
-    productId: row.items[0]?.product_id ?? null,
-    productTitle: meta.productTitle,
-    deliveryAddress: row.delivery_address,
-    deliveryTargetAt: c.estimated_delivery_at,
-    cardMessage: row.card_message,
-    internalNote: row.internal_note,
-    partnerInstruction: meta.partnerInstruction,
-    unitPriceVnd: row.total_vnd,
-    partnerPayoutVnd: c.partner_payout_vnd,
-  }
-  return (key: string) => (key in core ? core[key] : customFields[key])
-}
 
 /**
  * Ảnh gắn vào đơn phải là `assets` CỦA CHÍNH tổ chức. Id của tổ chức khác

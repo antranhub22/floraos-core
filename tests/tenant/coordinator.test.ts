@@ -697,4 +697,57 @@ describe("Chức năng 12 — Điều phối đơn hàng: cách ly tenant và lu
     // R9 (ghi DEPOSIT/BALANCE) không bị ảnh hưởng bởi việc tắt R10.
     expect((await call(recordOrderPayment, a, order.id, { kind: "DEPOSIT", amountVnd: 1 })).status).toBe(201)
   })
+
+  it("order_info_requests: cách ly tổ chức — tổ chức B không thấy yêu cầu thông tin của tổ chức A", async () => {
+    const orderA = await newOrder(a)
+    await prisma.order_info_requests.create({
+      data: {
+        organization_id: a.organizationId,
+        order_id: orderA.id,
+        missing_field: "deliveryAddress",
+        field_label: "Địa chỉ giao hàng",
+        reason: "Khách chưa gửi địa chỉ",
+        requested_from: "Zalo khách",
+        requested_by: a.userId,
+      },
+    })
+
+    const reqsB = await prisma.order_info_requests.findMany({
+      where: { organization_id: b.organizationId },
+    })
+    expect(reqsB).toHaveLength(0)
+
+    const reqsA = await prisma.order_info_requests.findMany({
+      where: { organization_id: a.organizationId },
+    })
+    expect(reqsA).toHaveLength(1)
+    expect(reqsA[0]!.order_id).toBe(orderA.id)
+  })
+
+  it("order_change_requests: cách ly tổ chức — tổ chức B không thấy yêu cầu thay đổi của tổ chức A", async () => {
+    const orderA = await newOrder(a)
+    await prisma.order_change_requests.create({
+      data: {
+        organization_id: a.organizationId,
+        order_id: orderA.id,
+        requested_by: a.userId,
+        change_type: "CARD_MESSAGE",
+        field_changed: "cardMessage",
+        old_value: "Chúc mừng",
+        new_value: "Sinh nhật vui vẻ",
+        reason: "Khách đổi ý",
+      },
+    })
+
+    const reqsB = await prisma.order_change_requests.findMany({
+      where: { organization_id: b.organizationId },
+    })
+    expect(reqsB).toHaveLength(0)
+
+    const reqsA = await prisma.order_change_requests.findMany({
+      where: { organization_id: a.organizationId },
+    })
+    expect(reqsA).toHaveLength(1)
+    expect(reqsA[0]!.order_id).toBe(orderA.id)
+  })
 })

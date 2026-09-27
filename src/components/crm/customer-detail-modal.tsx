@@ -169,7 +169,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                       <div>
                         <div className="text-caption font-bold text-primary">Dịp kỷ niệm đã lưu</div>
                         <div className="text-caption text-text">
-                          {data.occasions[0]?.occasionName} · Ngày {data.occasions[0]?.targetDate}
+                          {data.occasions[0]?.name} · Ngày {data.occasions[0]?.date}
                           {data.occasions[0]?.recipientName ? ` (người nhận: ${data.occasions[0].recipientName})` : ""}
                         </div>
                       </div>

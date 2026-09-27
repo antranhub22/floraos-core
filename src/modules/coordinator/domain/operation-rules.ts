@@ -167,33 +167,35 @@ export function evaluateRisk(params: {
   openExceptionCount: number
   deliveryState: string | null
   now?: Date
-}): { riskLevel: CoordinationRiskLevel; reason: string | null } {
+}): { riskLevel: CoordinationRiskLevel; reason: string | null; minutesLeft: number | null } {
   const { stage, targetDeliveryAt, openExceptionCount, deliveryState, now = new Date() } = params
   if (stage === "COMPLETED" || stage === "CANCELLED" || stage === "DELIVERED") {
-    return { riskLevel: "NORMAL", reason: null }
+    return { riskLevel: "NORMAL", reason: null, minutesLeft: null }
   }
   if (openExceptionCount > 0) {
-    return { riskLevel: "CRITICAL", reason: `${openExceptionCount} sự cố chưa xử lý` }
+    return { riskLevel: "CRITICAL", reason: `${openExceptionCount} sự cố chưa xử lý`, minutesLeft: null }
   }
-  if (!targetDeliveryAt) return { riskLevel: "NORMAL", reason: null }
+  if (!targetDeliveryAt) return { riskLevel: "NORMAL", reason: null, minutesLeft: null }
 
+  // ĐP-4a.8 (27/09/2026), Đặc tả trường §4.1 — `timeRemaining`: trước đây chỉ
+  // dùng NỘI BỘ để xếp mức rủi ro, giờ trả luôn ra cho T05 hiển thị đếm ngược.
   const minutesLeft = Math.floor((targetDeliveryAt.getTime() - now.getTime()) / 60_000)
   if (minutesLeft < 0) {
-    return { riskLevel: "CRITICAL", reason: `Quá giờ hẹn giao ${Math.abs(minutesLeft)} phút` }
+    return { riskLevel: "CRITICAL", reason: `Quá giờ hẹn giao ${Math.abs(minutesLeft)} phút`, minutesLeft }
   }
   if (stage === "DISPATCHING") {
     if (minutesLeft <= 15 && deliveryState !== "ON_THE_WAY") {
-      return { riskLevel: "AT_RISK", reason: `Còn ${minutesLeft} phút mà shipper chưa lên đường` }
+      return { riskLevel: "AT_RISK", reason: `Còn ${minutesLeft} phút mà shipper chưa lên đường`, minutesLeft }
     }
-    return { riskLevel: "NORMAL", reason: null }
+    return { riskLevel: "NORMAL", reason: null, minutesLeft }
   }
   if (minutesLeft <= 60) {
-    return { riskLevel: "AT_RISK", reason: `Còn ${minutesLeft} phút nhưng hoa chưa bàn giao shipper` }
+    return { riskLevel: "AT_RISK", reason: `Còn ${minutesLeft} phút nhưng hoa chưa bàn giao shipper`, minutesLeft }
   }
   if (minutesLeft <= 120 && ["INTAKE", "VALIDATING", "PLANNING", "ASSIGNING"].includes(stage)) {
-    return { riskLevel: "ATTENTION", reason: `Còn ${minutesLeft} phút nhưng chưa vào sản xuất` }
+    return { riskLevel: "ATTENTION", reason: `Còn ${minutesLeft} phút nhưng chưa vào sản xuất`, minutesLeft }
   }
-  return { riskLevel: "NORMAL", reason: null }
+  return { riskLevel: "NORMAL", reason: null, minutesLeft }
 }
 
 // ── F13 · Sự cố ─────────────────────────────────────────────────────────

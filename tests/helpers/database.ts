@@ -42,6 +42,8 @@ const TENANT_TABLES = [
   "order_qc_records",
   "order_coordinations",
   "order_payments",
+  "order_info_requests",
+  "order_change_requests",
   "partners",
   // ĐP-3 — Nền quản trị trường (26/09/2026). Có organization_id (ghi đè
   // theo tổ chức); field_definitions/field_catalogs/field_catalog_values
