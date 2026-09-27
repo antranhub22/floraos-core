@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   deriveCustomerTier,
+  deriveCustomerLifecycleStage,
   isValidVietnamesePhone,
   normalizeVietnamesePhone,
   calculateDaysUntilOccasion,
@@ -37,6 +38,50 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
 
     it("xếp hạng NEW khi chưa có đơn hàng nào", () => {
       expect(deriveCustomerTier(0, 0)).toBe("NEW")
+    })
+  })
+
+  describe("Giai đoạn vòng đời khách hàng (deriveCustomerLifecycleStage)", () => {
+    const fixedNow = new Date("2026-09-27T12:00:00Z")
+
+    it("khách 0 đơn hoặc chưa có lastOrderAt là ACQUIRE", () => {
+      expect(deriveCustomerLifecycleStage({ orderCount: 0, totalSpentVnd: 0 }, fixedNow)).toBe("ACQUIRE")
+      expect(deriveCustomerLifecycleStage({ orderCount: 1, totalSpentVnd: 500_000, lastOrderAt: null }, fixedNow)).toBe("ACQUIRE")
+    })
+
+    it("khách mới 1 đơn mua trong vòng 30 ngày là ACQUIRE", () => {
+      const lastOrder = new Date("2026-09-10T12:00:00Z").toISOString() // 17 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 1, totalSpentVnd: 500_000, lastOrderAt: lastOrder }, fixedNow)).toBe("ACQUIRE")
+    })
+
+    it("khách 1 đơn nhưng quá 30 ngày (dưới 90 ngày) là AT_RISK", () => {
+      const lastOrder = new Date("2026-08-01T12:00:00Z").toISOString() // 57 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 1, totalSpentVnd: 500_000, lastOrderAt: lastOrder }, fixedNow)).toBe("AT_RISK")
+    })
+
+    it("khách 2-4 đơn mua trong vòng 60 ngày là GROW", () => {
+      const lastOrder = new Date("2026-09-01T12:00:00Z").toISOString() // 26 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 3, totalSpentVnd: 1_800_000, lastOrderAt: lastOrder }, fixedNow)).toBe("GROW")
+    })
+
+    it("khách VIP/GOLD mua trong vòng 90 ngày là RETAIN", () => {
+      const lastOrder = new Date("2026-07-20T12:00:00Z").toISOString() // 69 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 6, totalSpentVnd: 6_000_000, lastOrderAt: lastOrder }, fixedNow)).toBe("RETAIN")
+    })
+
+    it("khách VIP/GOLD không mua trong 91-180 ngày là AT_RISK", () => {
+      const lastOrder = new Date("2026-05-20T12:00:00Z").toISOString() // 130 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 6, totalSpentVnd: 6_000_000, lastOrderAt: lastOrder }, fixedNow)).toBe("AT_RISK")
+    })
+
+    it("khách VIP/GOLD không mua > 180 ngày là DORMANT", () => {
+      const lastOrder = new Date("2026-01-01T12:00:00Z").toISOString() // ~270 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 6, totalSpentVnd: 6_000_000, lastOrderAt: lastOrder }, fixedNow)).toBe("DORMANT")
+    })
+
+    it("khách thường không mua > 120 ngày là DORMANT", () => {
+      const lastOrder = new Date("2026-04-01T12:00:00Z").toISOString() // ~180 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 2, totalSpentVnd: 1_000_000, lastOrderAt: lastOrder }, fixedNow)).toBe("DORMANT")
     })
   })
 

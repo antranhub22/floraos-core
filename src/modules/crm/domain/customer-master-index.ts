@@ -7,6 +7,7 @@
  */
 
 export type CustomerTier = "NEW" | "BRONZE" | "SILVER" | "GOLD" | "VIP"
+export type { CustomerLifecycleStage } from "./crm-rules"
 
 export interface CustomerOccasionItem {
   id: string

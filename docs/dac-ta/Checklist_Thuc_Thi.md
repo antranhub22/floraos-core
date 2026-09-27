@@ -1087,7 +1087,7 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 ### Giai đoạn UX-6: Mở khoá vai và các lớp liên vai
 - [x] T6.1 — Mở khoá vai `product_manager`
 - [x] T6.2 — Mở khoá vai `marketing` & `lead_marketing`
-- [ ] T6.3 — Mở khoá vai `crm`
+- [x] T6.3 — Mở khoá vai `crm`
 - [ ] T6.4 — Mở khoá vai `customer_service`
 - [ ] T6.5 — Mở khoá vai `finance_accounting` (chờ ĐP-4a)
 - [ ] T6.6 — Mở khoá vai `quality_control` (chờ ĐP-4b/4c)

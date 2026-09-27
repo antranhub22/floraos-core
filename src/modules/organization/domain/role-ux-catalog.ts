@@ -44,6 +44,7 @@ export type RoleUxHomepage =
   | "SALES_WORKSPACE"
   | "PRODUCT_WORKSPACE"
   | "CREATIVE_WORKSPACE"
+  | "CRM_WORKSPACE"
   | "CONTROL_TOWER"
   | "NOT_BUILT"
 
@@ -136,12 +137,12 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
     primaryQuestion: "Khách nào cần được giữ chân hoặc kích hoạt lại?",
     homepageModel: "Customer Lifecycle Workspace",
     dominantActions: ["Hiểu khách", "Tương tác", "Giữ chân"],
-    status: "IN_DEVELOPMENT",
-    homepage: "NOT_BUILT",
-    systemRoleKeys: [],
-    entryHref: null,
-    navPriority: [],
-    debtRefs: [165],
+    status: "AVAILABLE",
+    homepage: "CRM_WORKSPACE",
+    systemRoleKeys: ["crm"],
+    entryHref: "/khach-hang",
+    navPriority: ["/khach-hang", "/hoi-thoai", "/don-hang"],
+    debtRefs: [],
   },
   {
     key: "lead_marketing",

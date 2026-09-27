@@ -38,7 +38,7 @@
 | `platform_admin` | Quản trị nền tảng | Nền tảng | Governance & Control (Control Tower) | Control Center, tức `/van-hanh` | *(không phải vai tổ chức: cấp qua `platform_operators`, D-N6)* | **Đang dùng được** |
 | `store_manager` | Quản lý cửa hàng | Một cửa hàng | Business & Operations Command Center (Executive Dashboard) | `/`, dùng `StoreManagerDashboard` | `dieu_hanh` | **Đang dùng được** |
 | `sales` | Bán hàng | Một cửa hàng | Pipeline-first | `/`, dùng `SalesWorkspace` | `sale` | **Đang dùng được** *(pipeline: DATA GAP #164)* |
-| `crm` | Chăm sóc vòng đời khách hàng | Một cửa hàng | Customer Lifecycle Management (Relationship Management) | Customer Lifecycle Workspace | — | Đang phát triển (#165) |
+| `crm` | Chăm sóc vòng đời khách hàng | Một cửa hàng | Customer Lifecycle Management (Relationship Management) | `/`, dùng `CrmWorkspace` | `crm` | **Đang dùng được** (T6.3) |
 | `lead_marketing` | Trưởng Marketing | Một cửa hàng | Creative Workspace | `/`, dùng `MarketingWorkspace` | `marketing` | **Đang dùng được** (T6.2) |
 | `ceo` | Giám đốc điều hành | Chuỗi | Strategic Command Center (Performance Dashboard) | Strategic Command Center | — | Đang phát triển (#165) |
 | `manager` | Quản lý vận hành | Chuỗi | Operations Command Center | Operations Command Center | — | Đang phát triển (#165) |
@@ -154,6 +154,7 @@ Mô hình mục tiêu theo contract §12–§16: thông báo P0–P3, ngoại l�
 | Khuôn sales | `src/components/dashboard/sales-workspace.tsx` |
 | Khuôn coordinator | `src/app/(app)/dieu-phoi/page.tsx` (có sẵn, thêm menu tài khoản) |
 | Khuôn marketing / lead_marketing | `src/components/dashboard/marketing-workspace.tsx` |
+| Khuôn crm | `src/components/dashboard/crm-workspace.tsx` |
 | Điều hướng theo vai | `src/components/layout/desktop-nav.tsx`, `src/components/layout/bottom-nav.tsx` |
 | Danh mục vai | `src/app/(app)/vai-tro/page.tsx`, lối vào ở `src/components/layout/user-menu.tsx` |
 

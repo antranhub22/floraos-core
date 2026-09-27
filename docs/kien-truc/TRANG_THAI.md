@@ -6,6 +6,13 @@
 
 ## 1. Đang ở đâu
 
+**27/09 — Nâng cấp UI/UX: Mở khoá vai Chăm sóc khách hàng CRM (T6.3) hoàn tất 100%.**
+- **Luật vòng đời khách hàng thuần túy (`CustomerLifecycleStage`)**: PO duyệt bộ luật 5 giai đoạn (`ACQUIRE`, `GROW`, `RETAIN`, `AT_RISK`, `DORMANT`) suy từ RFM (`orderCount`, `totalSpentVnd`, `tier`) và mốc đơn gần nhất (`lastOrderAt`). Viết trong `crm-rules.ts`, có test unit 26/26 xanh (`tests/unit/crm/crm-rules.test.ts`).
+- **Phân quyền RBAC**: Gắn vai `crm` vào `defaultRoles` của các năng lực: `Q1, Q2, Q3, Q6, Q7, Q8, Q9` (nhóm CRM), `R1` (xem đơn), `L1` (tra giá/sản phẩm), `T1` (hội thoại chat) trong `capability-catalog.ts`. Test danh mục năng lực 10/10 xanh.
+- **Danh mục Role UX**: Vai `crm` chuyển sang `AVAILABLE`, homepage `CRM_WORKSPACE`, dẫn vào `/khach-hang`, ưu tiên điều hướng `["/khach-hang", "/hoi-thoai", "/don-hang"]`. Test danh mục 15 vai & 8 vai đang dùng được 12/12 xanh (`role-ux-catalog.test.ts`).
+- **Giao diện trang chủ (`CrmWorkspace` & `CrmToolkitGrid`)**: Ghép từ component chuẩn, hiển thị thống kê 4 ô vòng đời CRM, 2 cột P0 (Dịp kỷ niệm sắp tới & Khách hàng cần giữ chân/kích hoạt), tuân thủ chặt chẽ SRP ≤ 350 dòng (`crm-workspace.tsx` 341 dòng, `crm-toolkit-grid.tsx` 73 dòng), K1 (1 FeatureGuidanceCard), K2 (1 nút chính + 2 nút phụ).
+- **Định tuyến & Hợp đồng**: Thêm case `CRM_WORKSPACE` vào `src/app/(app)/page.tsx`; lập Screen Contract `docs/dac-ta/screen-contracts/trang-chu-crm.md`. Cập nhật `03b-role-ux.md`, `Checklist_Thuc_Thi.md`, `TECHNICAL_DEBT.md` (nợ #165).
+
 **27/09 — Chức năng 12: ĐP-4a.5–4a.10 nghiệm thu kỹ thuật thành công 100% trên máy thật.**
 - **Prisma Client & DB Test**: Đã chạy `npx prisma generate` thành công; `npm run db:test:setup` đã áp toàn bộ 56 cột và 2 bảng mới `order_info_requests`, `order_change_requests` vào `floraos_test`.
 - **Khử toàn bộ lỗi TypeScript**: `npx tsc --noEmit` sạch 100% (0 lỗi). Sửa lỗi import `ArrowLeft` ở `hoi-thoai/page.tsx`, `EmptyStateProps` ở `san-pham/page.tsx`, `name`/`date` ở `customer-detail-modal.tsx`, khớp `CoordinatorOrderViewSchema` và `exampleOrderView` với `CoordinatorOrderView` trong `order-view.ts`, hoàn thiện mapper `presentCoordinatorOrders` đọc `timeRemaining`, `handoffAt`, `handoffConfirmed`, `missingFields`, `plannedAt`, `latest*Start` (qua `planning-timeline.ts`), và `openExceptionCount`.

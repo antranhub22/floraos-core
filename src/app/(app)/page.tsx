@@ -22,6 +22,7 @@ import { ExperienceGrid } from "@/components/dashboard/experience-grid"
 import { SalesWorkspace } from "@/components/dashboard/sales-workspace"
 import { ProductManagerWorkspace } from "@/components/dashboard/product-manager-workspace"
 import { MarketingWorkspace } from "@/components/dashboard/marketing-workspace"
+import { CrmWorkspace } from "@/components/dashboard/crm-workspace"
 import { StoreManagerDashboard } from "@/components/dashboard/store-manager-dashboard"
 import { resolveRoleUx } from "@/modules/organization/domain/role-ux-catalog"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
@@ -50,6 +51,8 @@ export default async function DashboardPage() {
       return <ProductManagerWorkspace />
     case "CREATIVE_WORKSPACE":
       return <MarketingWorkspace />
+    case "CRM_WORKSPACE":
+      return <CrmWorkspace />
     default:
       return <StoreManagerDashboard />
   }

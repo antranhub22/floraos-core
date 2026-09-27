@@ -22,6 +22,55 @@ export function deriveCustomerTier(totalSpentVnd: number, orderCount: number): C
 }
 
 /**
+ * Giai đoạn vòng đời khách hàng ngành hoa (Customer Lifecycle Stage)
+ * PO duyệt 27/09/2026: ACQUIRE, GROW, RETAIN, AT_RISK, DORMANT.
+ */
+export type CustomerLifecycleStage = "ACQUIRE" | "GROW" | "RETAIN" | "AT_RISK" | "DORMANT"
+
+export interface CustomerLifecycleMetrics {
+  orderCount: number
+  totalSpentVnd: number
+  tier?: CustomerTier | undefined
+  lastOrderAt?: string | null | undefined
+}
+
+export function deriveCustomerLifecycleStage(
+  metrics: CustomerLifecycleMetrics,
+  now: Date = new Date()
+): CustomerLifecycleStage {
+  const { orderCount, totalSpentVnd, lastOrderAt } = metrics
+
+  // Chưa từng có đơn hàng -> Giai đoạn Tiếp cận / Mới (ACQUIRE)
+  if (orderCount === 0 || !lastOrderAt) {
+    return "ACQUIRE"
+  }
+
+  const lastOrderDate = new Date(lastOrderAt)
+  const diffMs = now.getTime() - lastOrderDate.getTime()
+  const daysSinceLastOrder = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+
+  const isHighValue = totalSpentVnd >= 5_000_000 || orderCount >= 5
+
+  if (isHighValue) {
+    if (daysSinceLastOrder <= 90) return "RETAIN"
+    if (daysSinceLastOrder <= 180) return "AT_RISK"
+    return "DORMANT"
+  }
+
+  // Khách mới 1 đơn
+  if (orderCount === 1) {
+    if (daysSinceLastOrder <= 30) return "ACQUIRE"
+    if (daysSinceLastOrder <= 90) return "AT_RISK"
+    return "DORMANT"
+  }
+
+  // Khách 2-4 đơn (đang phát triển)
+  if (daysSinceLastOrder <= 60) return "GROW"
+  if (daysSinceLastOrder <= 120) return "AT_RISK"
+  return "DORMANT"
+}
+
+/**
  * Kiểm tra định dạng số điện thoại Việt Nam hợp lệ
  */
 export function isValidVietnamesePhone(phone: string): boolean {
