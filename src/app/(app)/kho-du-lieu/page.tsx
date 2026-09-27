@@ -24,7 +24,7 @@ export default function KhoDuLieuPage() {
 
         <div className="flex items-center gap-3">
           <Link href="/tai-anh">
-            <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold h-10 px-4 shadow-sm">
+            <Button variant="primary" className="flex items-center gap-2 font-bold h-10 px-4 shadow-xs">
               <Camera size={16} strokeWidth={2} />
               + Tải ảnh mới để phân tích
             </Button>

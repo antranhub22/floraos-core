@@ -19,6 +19,7 @@ import { useSession } from "@/lib/session"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { ProviderOrderSettings } from "@/components/creative-studio/provider-order-settings"
 
 interface AllowedModel {
@@ -176,7 +177,7 @@ export default function AiSettingsPage() {
         <div>
           <h1 className="text-lg font-extrabold text-text">Danh mục Năng lực AI</h1>
           <p className="text-xs text-text-muted">
-            Tổ chức: <span className="font-semibold text-text">{orgName || "Mặc định"}</span>
+            Tổ chức: <span className="font-semibold text-text">{orgName || "Mặc định"}</span> (Phạm vi áp dụng chỉ trong tổ chức hiện tại)
           </p>
         </div>
         <Button
@@ -193,7 +194,9 @@ export default function AiSettingsPage() {
 
       {/* Danh sách năng lực */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-text-muted">Đang tải dữ liệu chính sách AI...</div>
+        <div className="py-6">
+          <SkeletonBlock lines={4} label="Đang tải dữ liệu chính sách AI của tổ chức..." />
+        </div>
       ) : policies.length === 0 ? (
         <div className="py-12 text-center text-xs text-text-muted border border-dashed rounded-xl">
           Chưa có năng lực AI nào được cấu hình cho tổ chức.

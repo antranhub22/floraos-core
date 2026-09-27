@@ -217,7 +217,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     label: "Mức dùng",
     group: "van-hanh",
     iconKey: "WalletCards",
-    status: "COMING_SOON",
+    capability: "G8",
     mobileLabel: "Mức dùng",
   },
   {
@@ -225,8 +225,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     label: "Nhật ký kiểm toán",
     group: "van-hanh",
     iconKey: "ShieldCheck",
-    capability: "A4",
-    status: "COMING_SOON",
+    capability: "G9",
     mobileLabel: "Kiểm toán",
   },
 

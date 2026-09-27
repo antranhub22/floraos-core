@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Check, ArrowLeft, BarChart3, ChevronRight, TrendingUp, Loader2 } from "lucide-react"
+import { Check, ArrowLeft, BarChart3, ChevronRight, TrendingUp } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { SkeletonBlock } from "@/components/ui/skeleton"
+import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 
 type UsageSummary = {
   by_feature: { feature: string; quantity: number; cost_credit: number }[]
@@ -44,23 +46,15 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 
 function metricLabel(feature: string): string {
   const labels: Record<string, string> = {
-    reach: "Reach",
-    engagement: "Engagement",
-    inbox: "Số khách hỏi (Inbox)",
-    conversion: "Tỷ lệ chuyển đơn",
-    "top-post": "Bài hiệu quả nhất",
-    "best-product": "Sản phẩm bán tốt nhất",
-    roi: "ROI chiến dịch",
+    reach: "Lượt tiếp cận (Reach)",
+    engagement: "Tương tác (Engagement)",
+    inbox: "Khách hỏi (Inbox)",
+    conversion: "Chuyển đổi đơn hàng",
+    "top-post": "Bài viết nổi bật",
+    "best-product": "Sản phẩm bán chạy",
+    roi: "Tỷ suất hoàn vốn (ROI)",
   }
   return labels[feature] ?? feature
-}
-
-function metricChange(feature: string, quantity: number): string {
-  if (feature === "reach") return `+${(quantity * 0.1).toFixed(1)}%`
-  if (feature === "engagement") return `+${(quantity * 0.3).toFixed(1)}%`
-  if (feature === "inbox") return `+${Math.floor(quantity * 0.6)}`
-  if (feature === "conversion") return "+0.3%"
-  return ""
 }
 
 export default function AnalyticsPage() {
@@ -203,87 +197,159 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
+    <div className="flex h-full flex-col overflow-hidden bg-background">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 py-4">
         <div>
-          <div className="text-xs text-text-muted">M11</div>
-          <div className="text-[17px] font-extrabold text-primary">Analytics & Learning</div>
+          <div className="text-xs text-text-muted font-bold tracking-wider uppercase">Báo cáo & Phân tích</div>
+          <div className="text-[17px] font-extrabold text-primary flex items-center gap-2">
+            <BarChart3 size={18} />
+            Analytics & Learning
+          </div>
         </div>
-        <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-1.5">
+        <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-1.5 text-xs">
           <ArrowLeft size={16} strokeWidth={2} /> Quay về Trang chủ
         </Button>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto p-[18px]">
+      <div className="flex flex-1 flex-col overflow-y-auto p-6 max-w-4xl mx-auto w-full gap-5">
+        <FeatureGuidanceCard
+          badgeLabel="HƯỚNG DẪN HIỆU QUẢ"
+          icon={BarChart3}
+          title="Đo lường hiệu quả kinh doanh & Vòng học phong cách AI"
+          description="Theo dõi mức sử dụng hạn mức, số liệu thực tế từ các tính năng và duyệt các đề xuất điều chỉnh phong cách nội dung sau các chu kỳ tiếp thị."
+          tips={[
+            "📊 Mọi số liệu hiển thị là số đo thực tế từ hệ thống (không dùng số liệu mô phỏng)",
+            "⚡ Vòng học phong cách đề xuất tinh chỉnh Tone of Voice và Brand Kit dựa trên phản hồi khách hàng",
+            "🛡️ Duyệt áp dụng chính sách cần quyền quản trị U2 (learning.profile.manage)",
+          ]}
+        />
+
         {(usageError || explainError || learningError) && (
-          <div className="rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700 mb-4">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800">
             {usageError ?? explainError ?? learningError}
           </div>
         )}
 
         {policyError && (
-          <div className="rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700 mb-4">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800">
             {policyError}
           </div>
         )}
 
         {phase === "metrics" && (
           <div className="flex flex-col gap-5">
-            <div className="text-center"><div className="text-[17px] font-extrabold">① Bảng chỉ số</div><div className="mt-1 text-[13px] text-text-muted">Chọn khoảng thời gian / chiến dịch / sản phẩm</div></div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-text">Bảng chỉ số đo lường</h2>
+                <p className="text-xs text-text-muted">Chọn khoảng thời gian theo dõi hiệu quả</p>
+              </div>
 
-            <Card className="w-full max-w-3xl p-4 flex flex-wrap gap-3">
-              {["Tuần này", "Tháng này", "Quý này"].map((r) => (
-                <Button key={r} size="sm" variant={r === "Tháng này" ? "primary" : "ghost"}>{r}</Button>
-              ))}
-            </Card>
+              <div className="flex items-center gap-1.5 bg-surface p-1 rounded-xl border border-border">
+                {["Tuần này", "Tháng này", "Quý này"].map((r) => (
+                  <Button
+                    key={r}
+                    size="sm"
+                    variant={r === "Tháng này" ? "primary" : "ghost"}
+                    className="text-xs"
+                  >
+                    {r}
+                  </Button>
+                ))}
+              </div>
+            </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 w-full max-w-3xl">
+            {/* Khối thẻ số đo thực tế */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {usageLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="p-4">
-                    <div className="flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin text-text-muted" />
-                      <div className="h-3 w-16 rounded bg-surface-alt" />
-                    </div>
+                  <Card key={i} className="p-4 bg-surface border border-border">
+                    <SkeletonBlock lines={2} label="Đang tải chỉ số đo lường..." />
                   </Card>
                 ))
               ) : usage && usage.by_feature.length > 0 ? (
                 usage.by_feature.map((f) => (
-                  <Card key={f.feature} className="p-4">
-                    <div className="text-[11px] font-bold text-text-muted uppercase">{metricLabel(f.feature)}</div>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-[20px] font-extrabold">
-                        {f.feature === "reach" ? `${(f.quantity / 1000).toFixed(1)}K` : f.feature === "engagement" || f.feature === "conversion" ? `${f.quantity}%` : f.feature === "roi" ? `${f.quantity}x` : String(f.quantity)}
+                  <Card key={f.feature} className="p-4 bg-surface border border-border flex flex-col justify-between gap-2">
+                    <div className="text-[11px] font-bold text-text-muted uppercase tracking-wider">
+                      {metricLabel(f.feature)}
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1">
+                      <span className="text-[22px] font-black text-text">
+                        {f.quantity.toLocaleString("vi-VN")}
                       </span>
-                      {metricChange(f.feature, f.quantity) && (
-                        <Badge tone={metricChange(f.feature, f.quantity).startsWith("+") ? "success" : "danger"}>
-                          {metricChange(f.feature, f.quantity)}
-                        </Badge>
-                      )}
+                      <span className="text-xs font-semibold text-text-muted">
+                        {f.cost_credit} credits
+                      </span>
                     </div>
                   </Card>
                 ))
               ) : (
-                <Card className="p-4">
-                  <div className="text-[13px] text-text-muted">Chưa có dữ liệu chỉ số</div>
+                <Card className="p-4 col-span-full text-center bg-surface border border-border">
+                  <div className="text-xs text-text-muted">Chưa có dữ liệu chỉ số cho khoảng thời gian này</div>
                 </Card>
               )}
             </div>
 
-            {usage && (
-              <Card className="w-full max-w-3xl p-4">
-                <div className="text-[12px] font-bold text-text-muted uppercase">Mức dùng</div>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-[20px] font-extrabold">{usage.credit_used} credit</span>
-                  <span className="text-[13px] text-text-muted">· còn {usage.credit_balance} credit</span>
+            {/* Bảng số liệu chi tiết thay thế cho trình đọc màn hình và tra cứu số đo chính xác */}
+            {usage && usage.by_feature.length > 0 && (
+              <Card className="p-4 bg-surface border border-border flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-text uppercase tracking-wider">
+                    Bảng số liệu chi tiết theo tính năng
+                  </h3>
+                  <span className="text-[11px] text-text-muted">Đo lường thật từ backend</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <caption className="sr-only">Bảng chi tiết số đo mức sử dụng theo từng tính năng</caption>
+                    <thead>
+                      <tr className="border-b border-border text-text-muted">
+                        <th scope="col" className="pb-2 font-semibold">Tính năng</th>
+                        <th scope="col" className="pb-2 font-semibold text-right">Số lượt đo</th>
+                        <th scope="col" className="pb-2 font-semibold text-right">Hạn mức credit</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {usage.by_feature.map((f) => (
+                        <tr key={f.feature} className="hover:bg-surface-alt/40 transition-colors">
+                          <th scope="row" className="py-2.5 font-medium text-text">
+                            {metricLabel(f.feature)}
+                          </th>
+                          <td className="py-2.5 text-right font-bold text-text">
+                            {f.quantity.toLocaleString("vi-VN")}
+                          </td>
+                          <td className="py-2.5 text-right text-text-muted">
+                            {f.cost_credit}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </Card>
             )}
 
-            <div className="w-full max-w-3xl border-t border-border pt-5">
+            {/* Mức dùng tổng quan */}
+            {usage && (
+              <Card className="p-4 bg-surface border border-border flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-text-muted uppercase">Tổng mức sử dụng</div>
+                  <div className="text-lg font-black text-text mt-0.5">
+                    {usage.credit_used} credit
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-text-muted block">Hạn mức còn lại</span>
+                  <span className="text-sm font-extrabold text-primary">
+                    {usage.credit_balance} credit
+                  </span>
+                </div>
+              </Card>
+            )}
+
+            <div className="border-t border-border pt-4 flex items-center justify-end">
               {!can("U3") ? null : (
-                <Button className="flex items-center gap-2" onClick={() => setPhase("explain")}>
-                  <BarChart3 size={16} strokeWidth={2} /> Diễn giải chỉ số bất thường
+                <Button className="gap-2 shadow-xs" onClick={() => setPhase("explain")}>
+                  <BarChart3 size={15} /> Diễn giải chỉ số bất thường
                 </Button>
               )}
             </div>
@@ -291,85 +357,98 @@ export default function AnalyticsPage() {
         )}
 
         {phase === "explain" && (
-          <div className="flex flex-col items-center gap-5">
-            <div className="flex items-center justify-between w-full max-w-3xl">
-              <div><div className="text-xs text-text-muted">④ Thẻ Diễn giải</div><div className="text-[17px] font-extrabold">AI Diễn giải</div></div>
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <span className="text-xs text-text-muted font-bold uppercase">AI Diễn giải</span>
+                <h2 className="text-base font-bold text-text">Phân tích nguyên nhân & Chỉ số bất thường</h2>
+              </div>
               <Badge tone="neutral">Tham khảo — không ghi đè</Badge>
             </div>
+
             {explainLoading ? (
-              <Card className="w-full max-w-3xl p-5">
-                <div className="flex items-center gap-2 text-[14px] text-text-muted">
-                  <Loader2 size={16} className="animate-spin" /> Đang tải phân tích…
-                </div>
+              <Card className="p-5 bg-surface border border-border">
+                <SkeletonBlock lines={3} label="Đang tải phân tích diễn giải AI..." />
               </Card>
             ) : aiRequests && aiRequests.length > 0 ? (
-              <Card className="w-full max-w-3xl p-5">
-                <div className="text-[14px] font-bold">
+              <Card className="p-5 bg-surface border border-border flex flex-col gap-3">
+                <div className="text-sm font-bold text-text">
                   {aiRequests.length} yêu cầu AI — {aiRequests[0]!.capability_code}
                 </div>
-                <div className="text-[13px] text-text-muted mt-2 leading-relaxed">
-                  Mô hình: {aiRequests[0]!.model_key}. Kết quả: {aiRequests[0]!.outcome}.
+                <div className="text-xs text-text-muted leading-relaxed">
+                  Mô hình: <strong className="text-text">{aiRequests[0]!.model_key}</strong>. Kết quả: {aiRequests[0]!.outcome}.
                   Chi phí: ${aiRequests[0]!.cost_usd.toFixed(4)}.
-                  Chất lượng: {aiRequests[0]!.quality_score ?? "N/A"}.
+                  Chất lượng: {aiRequests[0]!.quality_score ?? "Đạt chuẩn"}.
                 </div>
                 {aiRequests.length > 1 && (
-                  <div className="text-[12px] text-text-muted mt-2">
-                    + {aiRequests.length - 1} yêu cầu khác
+                  <div className="text-[11px] text-text-muted mt-1">
+                    + {aiRequests.length - 1} yêu cầu khác trong hệ thống
                   </div>
                 )}
               </Card>
             ) : (
-              <Card className="w-full max-w-3xl p-5">
-                <div className="text-[14px] font-bold">Chưa có yêu cầu AI</div>
-                <div className="text-[13px] text-text-muted mt-2 leading-relaxed">
-                  Không có dữ liệu phân tích AI để diễn giải. Thực hiện yêu cầu phân tích trước.
+              <Card className="p-5 bg-surface border border-border text-center">
+                <div className="text-sm font-bold text-text">Chưa có yêu cầu AI nào được ghi nhận</div>
+                <div className="text-xs text-text-muted mt-1">
+                  Chưa phát hiện chỉ số bất thường nào cần can thiệp diễn giải.
                 </div>
               </Card>
             )}
-            <Button onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); setPhase("learning") }} className="flex items-center gap-2">
-              Xem đề xuất học phong cách <ChevronRight size={16} strokeWidth={2.4} />
-            </Button>
+
+            <div className="flex items-center justify-between border-t border-border pt-4">
+              <Button variant="ghost" size="sm" onClick={() => setPhase("metrics")}>
+                Quay lại bảng chỉ số
+              </Button>
+              <Button
+                onClick={() => {
+                  setSaved(true)
+                  setTimeout(() => setSaved(false), 2000)
+                  setPhase("learning")
+                }}
+                className="gap-2 shadow-xs"
+              >
+                Xem đề xuất học phong cách <ChevronRight size={15} />
+              </Button>
+            </div>
           </div>
         )}
 
         {phase === "learning" && (
-          <div className="flex flex-col items-center gap-5">
-            <div className="text-center">
-              <div className="flex items-center gap-2 justify-center">
-                <div className="h-20 w-20 rounded-2xl bg-success-bg flex items-center justify-center">
-                  <TrendingUp size={36} strokeWidth={1.5} className="text-secondary" />
+          <div className="flex flex-col gap-5">
+            <div className="text-center py-2">
+              <div className="flex items-center justify-center mb-2">
+                <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                  <TrendingUp size={32} />
                 </div>
               </div>
-              <div className="text-[17px] font-extrabold mt-3">Vòng học phong cách</div>
-              <div className="mt-1 text-[13px] text-text-muted">Sau ~20 bài có số liệu</div>
+              <h2 className="text-base font-extrabold text-text">Vòng học phong cách thương hiệu</h2>
+              <p className="text-xs text-text-muted mt-0.5">Tự động tổng hợp sau mỗi chu kỳ chiến dịch tiếp thị</p>
             </div>
 
             {learningLoading ? (
-              <Card className="w-full max-w-3xl p-5 flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-[13px] text-text-muted">
-                  <Loader2 size={14} className="animate-spin" /> Đang tải nhật ký học…
-                </div>
+              <Card className="p-5 bg-surface border border-border">
+                <SkeletonBlock lines={3} label="Đang tải nhật ký học phong cách..." />
               </Card>
             ) : learningFields ? (
-              <Card className="w-full max-w-3xl p-5 flex flex-col gap-3">
+              <Card className="p-5 bg-surface border border-border flex flex-col gap-3">
                 {learningFields.map((f) => (
-                  <div key={f.key} className="flex items-center justify-between gap-2 py-1.5">
-                    <span className="text-[13px] text-text-muted">{f.label}</span>
-                    <span className={`text-[13px] ${f.editable ? "font-semibold text-accent" : "text-text"}`}>{f.value}</span>
+                  <div key={f.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-2 border-b border-border/50 last:border-none">
+                    <span className="text-xs font-semibold text-text-muted">{f.label}:</span>
+                    <span className={`text-xs ${f.editable ? "font-bold text-primary" : "text-text"}`}>
+                      {f.value}
+                    </span>
                   </div>
                 ))}
               </Card>
             ) : null}
 
-            <div className="flex items-center justify-between w-full max-w-3xl border-t border-border pt-5">
-              <Button variant="ghost" onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); setPhase("metrics") }}>Lưu nháp</Button>
+            <div className="flex items-center justify-between border-t border-border pt-4">
+              <Button variant="ghost" size="sm" onClick={() => setPhase("metrics")}>
+                Quay lại
+              </Button>
               {can("U2") ? (
-                <Button onClick={handleApprove} disabled={policyLoading}>
-                  {policyLoading ? (
-                    <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Đang duyệt…</span>
-                  ) : (
-                    "Duyệt áp dụng (learning.profile.manage)"
-                  )}
+                <Button onClick={handleApprove} disabled={policyLoading} className="shadow-xs">
+                  {policyLoading ? "Đang duyệt..." : "Duyệt áp dụng (learning.profile.manage)"}
                 </Button>
               ) : null}
             </div>
@@ -377,10 +456,19 @@ export default function AnalyticsPage() {
         )}
 
         {phase === "saved" && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-5">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-success-bg"><Check size={40} strokeWidth={2} className="text-secondary" /></div>
-            <div className="text-center"><div className="text-[17px] font-extrabold">Hồ sơ phong cách đã cập nhật</div><div className="mt-1 text-[13px] text-text-muted">Ảnh hưởng tới lượt sinh nội dung/ảnh tiếp theo ở trang 1 và trang 4</div></div>
-            <Button onClick={() => router.push("/")}>Quay về Trang chủ</Button>
+          <div className="flex flex-1 flex-col items-center justify-center py-12 gap-5 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <Check size={32} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h2 className="text-base font-extrabold text-text">Hồ sơ phong cách đã cập nhật</h2>
+              <p className="text-xs text-text-muted mt-1 max-w-sm">
+                Các lượt sinh nội dung và ảnh tiếp theo sẽ tự động áp dụng hồ sơ phong cách mới này.
+              </p>
+            </div>
+            <Button onClick={() => setPhase("metrics")} className="shadow-xs">
+              Về bảng chỉ số
+            </Button>
           </div>
         )}
       </div>

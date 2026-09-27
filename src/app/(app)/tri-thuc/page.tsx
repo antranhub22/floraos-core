@@ -68,7 +68,7 @@ export default function KnowledgeBasePage() {
           </p>
         </div>
 
-        {/* Top-Right Action Toolbar */}
+        {/* Top-Right Action Toolbar (K2: 1 primary + 1 secondary) */}
         <div className="flex items-center gap-3">
           <Link href={"/hoi-thoai/kenh-tich-hop" as Route}>
             <Button
@@ -76,15 +76,16 @@ export default function KnowledgeBasePage() {
               size="sm"
               className="text-xs font-bold gap-1.5 border-border hover:bg-muted"
             >
-              <Bot className="h-3.5 w-3.5 text-red-600" />
-              <span>Kênh Chat Đa Kênh M08</span>
+              <Bot className="h-3.5 w-3.5 text-primary" />
+              <span>Kênh hội thoại đa kênh</span>
             </Button>
           </Link>
 
           <Button
+            variant="primary"
             size="sm"
             onClick={() => handleAskCopilot("Hỏi Copilot")}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs gap-1.5 shadow-sm"
+            className="font-bold text-xs gap-1.5 shadow-xs"
           >
             <Sparkles className="h-3.5 w-3.5" />
             <span>Mở FloraOS Copilot (⌘K)</span>
@@ -94,7 +95,7 @@ export default function KnowledgeBasePage() {
 
       {/* 2. Main Content */}
       <main className="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
-        {/* Banner Hướng Dẫn Chuẩn FeatureGuidanceCard */}
+        {/* Banner Hướng Dẫn Chuẩn FeatureGuidanceCard (K1: đúng 1 card duy nhất) */}
         <FeatureGuidanceCard
           badgeLabel="CẨM NANG VẬN HÀNH THƯƠNG MẠI SSOT"
           badgeIcon={BookOpen}
@@ -129,13 +130,13 @@ export default function KnowledgeBasePage() {
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             {[
               { code: "ALL", label: "Tất cả" },
-              { code: "M01", label: "M01 Vision" },
-              { code: "M02", label: "M02 Giá" },
-              { code: "M04c", label: "M04 Video" },
-              { code: "M06", label: "M06 Catalog" },
-              { code: "M08", label: "M08 Chat AI" },
-              { code: "M09", label: "M09 CRM" },
-              { code: "M10", label: "M10 Đơn hàng" },
+              { code: "M01", label: "Nhận diện ảnh" },
+              { code: "M02", label: "Cấu hình giá" },
+              { code: "M04c", label: "Studio video" },
+              { code: "M06", label: "Bộ mẫu catalog" },
+              { code: "M08", label: "Hội thoại tư vấn" },
+              { code: "M09", label: "Khách hàng CRM" },
+              { code: "M10", label: "Quản lý đơn hàng" },
             ].map((tab) => (
               <button
                 key={tab.code}
@@ -143,7 +144,7 @@ export default function KnowledgeBasePage() {
                 onClick={() => setSelectedModuleFilter(tab.code)}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl whitespace-nowrap transition-colors ${
                   selectedModuleFilter === tab.code
-                    ? "bg-red-600 text-white"
+                    ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >

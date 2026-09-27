@@ -61,7 +61,6 @@ describe("nav-model (Kiến trúc điều hướng SSOT)", () => {
     const allEntries = nav.groups.flatMap((g) => g.entries)
     const comingSoonEntries = allEntries.filter((e) => e.status === "COMING_SOON")
     expect(comingSoonEntries.length).toBeGreaterThan(0)
-    expect(comingSoonEntries.map((e) => e.href)).toContain("/muc-dung")
     expect(comingSoonEntries.map((e) => e.href)).toContain("/cai-dat")
   })
 

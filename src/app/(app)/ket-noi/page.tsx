@@ -245,7 +245,7 @@ export default function PlatformConnectionsPage() {
         <div>
           <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
             <Share2 size={13} className="text-primary" />
-            SocialFlow M07 · Tích Hợp Đa Nền Tảng
+            Tích hợp Đa nền tảng Mạng xã hội
           </div>
           <h1 className="text-xl font-black text-text mt-0.5">
             Kết Nối Nền Tảng Mạng Xã Hội
