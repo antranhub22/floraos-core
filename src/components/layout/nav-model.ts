@@ -273,7 +273,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     label: "Cài đặt",
     group: "thiet-lap",
     iconKey: "Settings2",
-    status: "COMING_SOON",
+    capability: "F1",
     mobileLabel: "Cài đặt",
   },
 ] as const

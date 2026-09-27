@@ -52,16 +52,11 @@ describe("nav-model (Kiến trúc điều hướng SSOT)", () => {
     expect(slot2.href).toBe("/dieu-phoi")
   })
 
-  it("4. Mục COMING_SOON luôn có mặt (để hiện vô hiệu) nhưng không bao giờ vào viec-chinh", () => {
+  it("4. Mục COMING_SOON (nếu có) không bao giờ vào viec-chinh", () => {
     const nav = buildNav(() => true, roleSales)
     const viecChinh = nav.groups.find((g) => g.key === "viec-chinh")!
 
     expect(viecChinh.entries.some((e) => e.status === "COMING_SOON")).toBe(false)
-
-    const allEntries = nav.groups.flatMap((g) => g.entries)
-    const comingSoonEntries = allEntries.filter((e) => e.status === "COMING_SOON")
-    expect(comingSoonEntries.length).toBeGreaterThan(0)
-    expect(comingSoonEntries.map((e) => e.href)).toContain("/cai-dat")
   })
 
   it("5. Mỗi href có mặt đúng một lần trong toàn bộ kết quả", () => {
