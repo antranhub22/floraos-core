@@ -8,15 +8,15 @@ import {
   resolveRoleUx,
 } from "./role-ux-catalog"
 
-describe("danh mục 14 vai trải nghiệm (03b-role-ux)", () => {
-  it("đủ 14 vai, khoá không trùng", () => {
-    expect(ROLE_UX_CATALOG).toHaveLength(14)
-    expect(new Set(ROLE_UX_CATALOG.map((r) => r.key)).size).toBe(14)
+describe("danh mục 15 vai trải nghiệm (03b-role-ux)", () => {
+  it("đủ 15 vai, khoá không trùng", () => {
+    expect(ROLE_UX_CATALOG).toHaveLength(15)
+    expect(new Set(ROLE_UX_CATALOG.map((r) => r.key)).size).toBe(15)
   })
 
-  it("đúng bốn vai đang dùng được: platform_admin, store_manager, sales, coordinator", () => {
+  it("đúng năm vai đang dùng được: platform_admin, store_manager, sales, coordinator, product_manager", () => {
     const available = ROLE_UX_CATALOG.filter((r) => r.status === "AVAILABLE").map((r) => r.key)
-    expect(available.sort()).toEqual(["coordinator", "platform_admin", "sales", "store_manager"])
+    expect(available.sort()).toEqual(["coordinator", "platform_admin", "product_manager", "sales", "store_manager"])
   })
 
   it("vai đang phát triển không có trang chủ, không nơi vào, không gắn vai phân quyền, có số nợ", () => {
@@ -47,10 +47,11 @@ describe("danh mục 14 vai trải nghiệm (03b-role-ux)", () => {
 })
 
 describe("resolveRoleUx", () => {
-  it("ánh xạ ba vai hệ thống sang khuôn tương ứng", () => {
+  it("ánh xạ bốn vai hệ thống sang khuôn tương ứng", () => {
     expect(resolveRoleUx("dieu_hanh")?.key).toBe("store_manager")
     expect(resolveRoleUx("sale")?.key).toBe("sales")
     expect(resolveRoleUx("dieu_phoi")?.key).toBe("coordinator")
+    expect(resolveRoleUx("product_manager")?.key).toBe("product_manager")
   })
 
   it("tổ chức CHAIN tạm thời vẫn dùng khuôn store_manager cho dieu_hanh (nợ #163)", () => {

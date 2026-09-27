@@ -123,8 +123,9 @@ export function projectOccasionReminder(
     targetDate: occasion.date,
     daysLeft,
     recipientName: occasion.recipientName || customer.name,
-    suggestedFlower: customer.preferences.preferredFlowers[0] || "Hoa hồng thiết kế",
-    suggestedTone: customer.preferences.preferredColors[0] || "Pastel dịu ngọt",
+    // T6.12b (nợ #164b): không bịa "Hoa hồng thiết kế" / "Pastel dịu ngọt" khi khách chưa khai
+    suggestedFlower: customer.preferences.preferredFlowers[0] ?? null,
+    suggestedTone: customer.preferences.preferredColors[0] ?? null,
     isZaloAllowed,
   }
 }

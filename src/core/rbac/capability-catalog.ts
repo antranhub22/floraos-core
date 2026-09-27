@@ -192,11 +192,11 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   J5: { name: "social.publish", group: "channel", label: "Đăng bài lên mạng xã hội", defaultRoles: ["dieu_hanh"] },
   J6: { name: "chat.manage", group: "channel", label: "Quản lý hội thoại khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   // L — Sản phẩm và giá
-  L1: { name: "product.read", group: "product_pricing", label: "Xem sản phẩm trong Product Master", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
-  L2: { name: "product.create", group: "product_pricing", label: "Thêm sản phẩm mới", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
-  L3: { name: "product.update", group: "product_pricing", label: "Sửa thông tin sản phẩm", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  L1: { name: "product.read", group: "product_pricing", label: "Xem sản phẩm trong Product Master", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "product_manager"] },
+  L2: { name: "product.create", group: "product_pricing", label: "Thêm sản phẩm mới", defaultRoles: ["dieu_hanh", "dieu_phoi", "product_manager"] },
+  L3: { name: "product.update", group: "product_pricing", label: "Sửa thông tin sản phẩm", defaultRoles: ["dieu_hanh", "dieu_phoi", "product_manager"] },
   L4: { name: "product.archive", group: "product_pricing", label: "Ngừng kinh doanh một sản phẩm", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
-  L5: { name: "pricing.read", group: "product_pricing", label: "Xem quy tắc giá của tổ chức", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
+  L5: { name: "pricing.read", group: "product_pricing", label: "Xem quy tắc giá của tổ chức", defaultRoles: ["dieu_hanh", "dieu_phoi", "product_manager"] },
   L6: { name: "pricing.manage", group: "product_pricing", label: "Sửa quy tắc giá của tổ chức", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // K — Trải nghiệm. Không nằm dưới quy tắc "Điều hành là tập cha": trải
   // nghiệm là một hạn mức dùng thử, không phải một mức quyền trong tổ chức.

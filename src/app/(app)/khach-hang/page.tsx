@@ -140,7 +140,7 @@ export default function CRMPage() {
                     <span className="text-primary font-extrabold">{r.daysLeft === 0 ? "Hôm nay!" : `Còn ${r.daysLeft} ngày`}</span>
                   </div>
                   <div className="text-text-muted">Dịp: <span className="font-semibold text-text-main">{r.occasionName}</span> ({r.targetDate})</div>
-                  <div className="text-text-muted">Gợi ý hoa: <span className="font-semibold text-primary">{r.suggestedFlower}</span></div>
+                  <div className="text-text-muted">Gợi ý hoa: <span className="font-semibold text-primary">{r.suggestedFlower || "Chưa có"}</span></div>
                   <div className="text-text-muted">SĐT: {r.customerPhone}</div>
                 </div>
               ))}

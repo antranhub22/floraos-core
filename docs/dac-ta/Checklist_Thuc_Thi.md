@@ -1071,21 +1071,21 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] T5.C6 — Kho mẫu (`/kho-templates`, `kho-templates.md`)
 
 #### Đợt D: Thiết lập, Số liệu, Console, Điều phối
-- [ ] T5.D1 — Số liệu (`/so-lieu`)
-- [ ] T5.D2 — Kết nối kênh (`/ket-noi`)
-- [ ] T5.D3 — Cài đặt AI (`/cai-dat-ai`)
-- [ ] T5.D4 — Bộ máy phân tích (`/bo-may`)
-- [ ] T5.D5 — Tri thức (`/tri-thuc`)
-- [ ] T5.D6 — Kho dữ liệu (`/kho-du-lieu`)
-- [ ] T5.D7 — Mức dùng tenant (`/muc-dung`)
-- [ ] T5.D8 — Nhật ký kiểm toán tenant (`/audit`)
-- [ ] T5.D9 — Cài đặt tiệm (`/cai-dat`, hỏi PO phạm vi)
-- [ ] T5.D10 — Console Vận hành nền tảng (`/van-hanh`)
+- [x] T5.D1 — Số liệu (`/so-lieu`)
+- [x] T5.D2 — Kết nối kênh (`/ket-noi`)
+- [x] T5.D3 — Cài đặt AI (`/cai-dat-ai`)
+- [x] T5.D4 — Bộ máy phân tích (`/bo-may`)
+- [x] T5.D5 — Tri thức (`/tri-thuc`)
+- [x] T5.D6 — Kho dữ liệu (`/kho-du-lieu`)
+- [x] T5.D7 — Mức dùng tenant (`/muc-dung`)
+- [x] T5.D8 — Nhật ký kiểm toán tenant (`/audit`)
+- [x] T5.D9 — Cài đặt tiệm (`/cai-dat`, hỏi PO phạm vi)
+- [x] T5.D10 — Console Vận hành nền tảng (`/van-hanh`)
 - [ ] T5.D11 — Vùng Điều phối (`/dieu-phoi` + Control Tower — sau ĐP-4c)
 - [ ] T5.D12 — Console Trường dữ liệu (`/van-hanh/truong-du-lieu` — sau ĐP-3)
 
 ### Giai đoạn UX-6: Mở khoá vai và các lớp liên vai
-- [ ] T6.1 — Mở khoá vai `product_manager`
+- [x] T6.1 — Mở khoá vai `product_manager`
 - [ ] T6.2 — Mở khoá vai `marketing` & `lead_marketing`
 - [ ] T6.3 — Mở khoá vai `crm`
 - [ ] T6.4 — Mở khoá vai `customer_service`
@@ -1097,8 +1097,8 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [ ] T6.10 — AI theo vai (#168)
 - [ ] T6.11 — Ngoại lệ và thông báo P0–P3 (#166, #163a, sau ĐP-4c)
 - [ ] T6.12 — Pipeline Sales (#164)
-- [ ] T6.12b — Bỏ gợi ý bịa trong `projectOccasionReminder`
-- [ ] T6.13 — Thêm vai `florist` (Thợ cắm) vào danh mục (nợ #169)
+- [x] T6.12b — Bỏ gợi ý bịa trong `projectOccasionReminder`
+- [x] T6.13 — Thêm vai `florist` (Thợ cắm) vào danh mục (nợ #169)
 
 ### Giai đoạn UX-7: Nghiệm thu liên tục và Khoá tài liệu
 - [ ] T7.1 — Chụp so sánh giao diện (Visual regression Playwright)

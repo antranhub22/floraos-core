@@ -31,7 +31,7 @@
 5. **Không bịa hiện trạng.** Thiếu dữ liệu thì ghi `DATA GAP / WORKFLOW GAP / PERMISSION GAP / BLOCKED` và mở nợ. Không dựng số liệu giả để lấp màn.
 6. **Rà soát trước khi thiết kế lại.** Không đổi tên tuyến hay tái cấu trúc điều hướng chỉ vì mô hình lý thuyết đề xuất.
 
-## 3. Danh mục 14 vai trải nghiệm
+## 3. Danh mục 15 vai trải nghiệm
 
 | Khoá | Tên hiển thị | Nhóm | Triết lý chính (phụ) | Trang chủ | Vai phân quyền gắn vào | Trạng thái |
 |---|---|---|---|---|---|---|
@@ -47,10 +47,11 @@
 | `customer_service` | Chăm sóc khách hàng (CSKH) | Chuỗi | Customer Context-first (Conversation-first) | Conversation Workspace | — | Đang phát triển (#165) |
 | `partner_manager` | Quản lý đối tác | Chuỗi | Relationship Management (Partner Growth, Partner Performance) | Partner Portfolio | — | Đang phát triển (#165) |
 | `marketing` | Marketing | Chuỗi | Creative Workspace | Creative Workspace | — | Đang phát triển (#165) |
-| `product_manager` | Quản lý sản phẩm | Chuỗi | Product-centric (Catalog-centric) | Product Workspace | — | Đang phát triển (#165) |
+| `product_manager` | Quản lý sản phẩm | Chuỗi | Product-centric (Catalog-centric) | `/`, dùng `ProductManagerWorkspace` | `product_manager` | **Đang dùng được** (T6.1) |
 | `finance_accounting` | Tài chính – Kế toán | Chuỗi | Transaction-first | Transaction Workspace | — | Đang phát triển (#165) |
+| `florist` | Thợ cắm | Một cửa hàng | Production Queue | Production Queue | — | Đang phát triển (#169) |
 
-**Vai phân quyền chưa có khuôn:** `experience_user` dùng lưới thẻ Trải nghiệm như cũ. Vai riêng của tổ chức dùng `StoreManagerDashboard` như trước 26/09. **Thợ cắm** (PRD §152) chưa có vai hệ thống và chưa thuộc 14 vai; PO chưa quyết định.
+**Vai phân quyền chưa có khuôn:** `experience_user` dùng lưới thẻ Trải nghiệm như cũ. Vai riêng của tổ chức dùng `StoreManagerDashboard` như trước 26/09. Vai **Thợ cắm** (`florist`) đã được bổ sung vào danh mục vai trải nghiệm với trạng thái `IN_DEVELOPMENT` theo quyết định Q-TC (PO 26/09/2026, T6.13).
 
 **Tổ chức CHAIN:** `dieu_hanh` tạm dùng khuôn `store_manager` cho tới khi `ceo`/`manager` có dữ liệu (nợ #163).
 
@@ -85,12 +86,18 @@ Mỗi vai theo khuôn: **câu hỏi chính → P0 (thấy ngay) → P1 (thấy k
 - **Hiện trạng:** `/` chuyển sang tuyến có sẵn `/dieu-phoi` (`ControlTowerDashboard`), không dựng màn thứ hai. Đã thêm menu tài khoản vào đầu trang `/dieu-phoi`.
 - **Còn thiếu (nợ #166):** vòng đời ngoại lệ đủ 8 bước (thiếu người phụ trách, bằng chứng, xác minh, nguyên nhân gốc, tái diễn), bảng thông báo, rà soát thứ tự "ngoại lệ trước, KPI sau".
 
+### 4.5 `product_manager` — Product Workspace
+- **Câu hỏi chính:** Sản phẩm nào chưa sẵn sàng để bán?
+- **P0:** Sản phẩm chưa sẵn sàng bán kèm lý do thiếu (ảnh, giá/BOM, danh mục, trạng thái nháp) và điểm sẵn sàng · **P1:** Thống kê nhanh danh mục (tổng sản phẩm, cần hoàn thiện, sẵn sàng bán, điểm sẵn sàng trung bình) · **P2:** Danh sách sản phẩm hoàn thiện đang bán.
+- **Hành động:** Thêm sản phẩm (`L2`), Tra cứu Catalog (`L1`), Quy tắc giá (`L5`).
+- **Hiện trạng:** Tuyến `/` với component `ProductManagerWorkspace` (`src/components/dashboard/product-manager-workspace.tsx`), liên kết sâu tới `/san-pham`, `/catalog`, `/gia`.
+
 ## 5. Điều hướng theo vai (SSOT `nav-model.ts`)
 
 Mọi logic gom nhóm và sắp xếp điều hướng theo vai được tập trung tại `src/components/layout/nav-model.ts` (Screen Contract `docs/dac-ta/screen-contracts/_dieu-huong.md`).
 
 - **Desktop:** hàm `buildNav(can, roleUx)` sinh nhóm **"Việc chính · <tên vai>"** đứng đầu thanh bên, gồm Trang chủ (`/`) và các mục trong `navPriority` của vai. Các mục này **rời khỏi nhóm gốc**, không hiện hai lần. Năm nhóm chức năng còn lại theo chuẩn K5 (`ban-hang`, `san-pham`, `noi-dung`, `van-hanh`, `thiet-lap`) tự động lọc bỏ các mục đã ghim và ẩn các mục người dùng thiếu năng lực.
-- **Điện thoại:** hàm `mobileSecondSlot(can, roleUx)` chọn ô thứ hai của thanh dưới là mục đầu tiên trong `navPriority` chưa có trên thanh: Quản lý cửa hàng thấy **Đơn hàng**, Bán hàng thấy **Khách hàng**, Điều phối thấy **Điều phối**. Vai chưa có khuôn thấy **Sản phẩm** như cũ.
+- **Điện thoại:** hàm `mobileSecondSlot(can, roleUx)` chọn ô thứ hai của thanh dưới là mục đầu tiên trong `navPriority` chưa có trên thanh: Quản lý cửa hàng thấy **Đơn hàng**, Bán hàng thấy **Khách hàng**, Điều phối thấy **Điều phối**, Quản lý sản phẩm thấy **Sản phẩm**. Vai chưa có khuôn thấy **Sản phẩm** như cũ.
 - Nút giữa mobile gác năng lực `H1` (quét ảnh): có `H1` → **Tải ảnh** (`/tai-anh`), không có `H1` → Việc chính đầu tiên của vai hoặc **Sản phẩm**.
 - Vai chỉ quyết định **thứ tự**. Quyền hiển thị và thao tác được gác chặt chẽ bởi mã năng lực qua `can(code)` và máy chủ kiểm soát lại ở mọi endpoint.
 
@@ -99,6 +106,7 @@ Mọi logic gom nhóm và sắp xếp điều hướng theo vai được tập t
 | `store_manager` | `/duyet` · `/don-hang` · `/san-pham` · `/khach-hang` | `/` (Dashboard Điều hành) |
 | `sales` | `/khach-hang` · `/don-hang` · `/san-pham` · `/hoi-thoai` | `/` (Sales Workspace) |
 | `coordinator` | `/dieu-phoi` · `/don-hang` · `/san-pham` · `/khach-hang` | `/dieu-phoi` (Control Tower) |
+| `product_manager` | `/san-pham` · `/catalog` · `/gia` · `/kho-templates` | `/` (Product Workspace) |
 
 ## 6. Vai chưa có và mục chưa có màn: hiện nhưng vô hiệu
 

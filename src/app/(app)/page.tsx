@@ -20,6 +20,7 @@ import { redirect } from "next/navigation"
 
 import { ExperienceGrid } from "@/components/dashboard/experience-grid"
 import { SalesWorkspace } from "@/components/dashboard/sales-workspace"
+import { ProductManagerWorkspace } from "@/components/dashboard/product-manager-workspace"
 import { StoreManagerDashboard } from "@/components/dashboard/store-manager-dashboard"
 import { resolveRoleUx } from "@/modules/organization/domain/role-ux-catalog"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
@@ -44,6 +45,8 @@ export default async function DashboardPage() {
       return redirect("/dieu-phoi" as never)
     case "SALES_WORKSPACE":
       return <SalesWorkspace />
+    case "PRODUCT_WORKSPACE":
+      return <ProductManagerWorkspace />
     default:
       return <StoreManagerDashboard />
   }

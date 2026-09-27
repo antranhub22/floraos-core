@@ -27,6 +27,7 @@ export type RoleUxKey =
   | "marketing"
   | "product_manager"
   | "finance_accounting"
+  | "florist"
 
 export type RoleUxGroup = "PLATFORM" | "ONE_STORE" | "CHAIN"
 
@@ -41,6 +42,7 @@ export type RoleUxHomepage =
   | "CONTROL_CENTER"
   | "STORE_COMMAND_CENTER"
   | "SALES_WORKSPACE"
+  | "PRODUCT_WORKSPACE"
   | "CONTROL_TOWER"
   | "NOT_BUILT"
 
@@ -286,12 +288,12 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
     primaryQuestion: "Sản phẩm nào chưa sẵn sàng để bán?",
     homepageModel: "Product Workspace",
     dominantActions: ["Định nghĩa", "Xác thực", "Phát hành"],
-    status: "IN_DEVELOPMENT",
-    homepage: "NOT_BUILT",
-    systemRoleKeys: [],
-    entryHref: null,
-    navPriority: [],
-    debtRefs: [165],
+    status: "AVAILABLE",
+    homepage: "PRODUCT_WORKSPACE",
+    systemRoleKeys: ["product_manager"],
+    entryHref: "/san-pham",
+    navPriority: ["/san-pham", "/catalog", "/gia", "/kho-templates"],
+    debtRefs: [],
   },
   {
     key: "finance_accounting",
@@ -309,6 +311,23 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
     entryHref: null,
     navPriority: [],
     debtRefs: [165],
+  },
+  {
+    key: "florist",
+    label: "Thợ cắm",
+    group: "ONE_STORE",
+    primaryPhilosophy: "Production Queue",
+    supportingPhilosophies: [],
+    mission: "Cắm hoa đúng công thức, đúng tiến độ và chuẩn chất lượng theo từng phiếu cắm.",
+    primaryQuestion: "Hôm nay tôi cắm những đơn nào, theo thứ tự nào?",
+    homepageModel: "Production Queue",
+    dominantActions: ["Nhận việc", "Cắm hoa", "Báo xong"],
+    status: "IN_DEVELOPMENT",
+    homepage: "NOT_BUILT",
+    systemRoleKeys: [],
+    entryHref: null,
+    navPriority: [],
+    debtRefs: [169],
   },
 ] as const
 

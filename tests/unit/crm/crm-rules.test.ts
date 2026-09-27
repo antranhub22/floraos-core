@@ -126,7 +126,21 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
       expect(rem.occasionName).toBe("Sinh nhật sếp")
       expect(rem.daysLeft).toBe(7)
       expect(rem.suggestedFlower).toBe("Hồng Ecuador")
+      expect(rem.suggestedTone).toBe("Đỏ nhung")
       expect(rem.isZaloAllowed).toBe(true)
+    })
+
+    it("T6.12b (nợ #164b): khách chưa khai sở thích thì trả null, không bịa hoa hồng hay pastel", () => {
+      const noPrefCustomer: CustomerMasterIndex = {
+        ...mockCustomer,
+        preferences: {
+          preferredFlowers: [],
+          preferredColors: [],
+        },
+      }
+      const rem = projectOccasionReminder(noPrefCustomer, noPrefCustomer.occasions[0]!, 7)
+      expect(rem.suggestedFlower).toBeNull()
+      expect(rem.suggestedTone).toBeNull()
     })
 
     it("projectMarketingAudience chỉ lấy khách có consent", () => {
