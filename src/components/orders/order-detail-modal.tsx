@@ -230,7 +230,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                   </div>
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-bold ${
-                      sla?.isSlaMet ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      sla?.isSlaMet ? "bg-success-bg text-success" : "bg-danger-bg text-danger"
                     }`}
                   >
                     {sla?.isSlaMet ? "✓ ĐẠT CHUẨN SLA" : "⚠️ CẢNH BÁO QUÁ HẠN"}
@@ -258,10 +258,10 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                       Hẹn giao: <span className="font-semibold text-foreground">{order.deliveryWindow?.date} ({order.deliveryWindow?.timeSlot})</span>
                     </div>
                     <div className="text-text-muted text-xs">
-                      Sản xuất: <span className="font-semibold text-blue-600">{order.productionStatus}</span>
+                      Sản xuất: <span className="font-semibold text-info">{order.productionStatus}</span>
                     </div>
                     <div className="text-text-muted text-xs">
-                      Vận chuyển: <span className="font-semibold text-amber-600">{order.deliveryStatus}</span>
+                      Vận chuyển: <span className="font-semibold text-warning">{order.deliveryStatus}</span>
                     </div>
                   </div>
                 </div>
@@ -283,14 +283,14 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                     ))}
                     <div className="flex items-center justify-between bg-surface-raised p-3 text-sm font-bold">
                       <span>Tổng tiền:</span>
-                      <span className="text-red-600">{order.totalVnd.toLocaleString("vi-VN")} đ</span>
+                      <span className="text-primary">{order.totalVnd.toLocaleString("vi-VN")} đ</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Lời nhắn thiệp */}
                 {order.cardMessage && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900">
+                  <div className="rounded-lg border border-warning/30 bg-warning-bg/70 p-3 text-xs text-warning">
                     <span className="font-bold">💌 Lời nhắn thiệp: </span>
                     {order.cardMessage}
                   </div>
@@ -317,7 +317,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
             {/* TAB 2: PROJECTION CHO THỢ CẮM HOA (ẨN GIÁ TIỀN HOÀN TOÀN) */}
             {activeTab === "florist" && (
               <div className="space-y-4">
-                <div className="rounded-lg bg-blue-50/70 border border-blue-200 p-3 text-xs text-blue-900">
+                <div className="rounded-lg bg-info-bg/70 border border-info/30 p-3 text-xs text-info">
                   ℹ️ <strong>Nguyên tắc bảo mật:</strong> Lát cắt dữ liệu cho xưởng cắm hoa chỉ hiển thị công thức hoa (BOM), ảnh mẫu và thời hạn giao hoa. Toàn bộ giá vốn, giá bán và thông tin tài chính đã được lọc bỏ.
                 </div>
                 <FloristTicketCard
@@ -339,7 +339,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
             {/* TAB 3: PROJECTION CHO GIAO VẬN (A6 DELIVERY RECEIPT) */}
             {activeTab === "delivery" && (
               <div className="space-y-4">
-                <div className="rounded-lg bg-amber-50/70 border border-amber-200 p-3 text-xs text-amber-900">
+                <div className="rounded-lg bg-warning-bg/70 border border-warning/30 p-3 text-xs text-warning">
                   ℹ️ <strong>Phiếu giao vận A6:</strong> Chuẩn hóa thông tin người nhận, lời nhắn thiệp mừng chúc mừng và số tiền cần thu hộ COD.
                 </div>
                 <DeliveryReceiptCard

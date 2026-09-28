@@ -163,9 +163,9 @@ export function StorageSidebar({
           <span>Kho Dữ Liệu</span>
         </div>
         <div className="mt-4 flex flex-col gap-2">
-          <span className="h-2 w-2 rounded-full bg-amber-500" title={`Ảnh gốc (${rawAssets.length})`} />
-          <span className="h-2 w-2 rounded-full bg-blue-500" title={`Đã duyệt BOM (${approvedAnalyses.length})`} />
-          <span className="h-2 w-2 rounded-full bg-emerald-500" title={`Sale Pitch (${finalizedPitches.length})`} />
+          <span className="h-2 w-2 rounded-full bg-warning" title={`Ảnh gốc (${rawAssets.length})`} />
+          <span className="h-2 w-2 rounded-full bg-info" title={`Đã duyệt BOM (${approvedAnalyses.length})`} />
+          <span className="h-2 w-2 rounded-full bg-success" title={`Sale Pitch (${finalizedPitches.length})`} />
         </div>
       </div>
     )
@@ -236,7 +236,7 @@ export function StorageSidebar({
             type="button"
             onClick={() => setFilter("raw")}
             className={`px-2 py-0.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
-              filter === "raw" ? "bg-amber-500 text-white font-bold" : "bg-surface-alt text-text-muted hover:text-text"
+              filter === "raw" ? "bg-warning text-white font-bold" : "bg-surface-alt text-text-muted hover:text-text"
             }`}
           >
             Ảnh gốc ({rawAssets.length})
@@ -245,7 +245,7 @@ export function StorageSidebar({
             type="button"
             onClick={() => setFilter("approved")}
             className={`px-2 py-0.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
-              filter === "approved" ? "bg-blue-600 text-white font-bold" : "bg-surface-alt text-text-muted hover:text-text"
+              filter === "approved" ? "bg-info text-white font-bold" : "bg-surface-alt text-text-muted hover:text-text"
             }`}
           >
             Đã duyệt BOM ({approvedAnalyses.length})
@@ -254,7 +254,7 @@ export function StorageSidebar({
             type="button"
             onClick={() => setFilter("finalized")}
             className={`px-2 py-0.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
-              filter === "finalized" ? "bg-emerald-600 text-white font-bold" : "bg-surface-alt text-text-muted hover:text-text"
+              filter === "finalized" ? "bg-success text-white font-bold" : "bg-surface-alt text-text-muted hover:text-text"
             }`}
           >
             Sale Pitch ({finalizedPitches.length})
@@ -297,7 +297,7 @@ export function StorageSidebar({
                         <ImageIcon size={18} className="opacity-40" />
                       </div>
                     )}
-                    <Badge className="absolute left-1 top-1 bg-amber-500 text-white text-[8.5px] py-0 px-1 border-none font-bold">
+                    <Badge className="absolute left-1 top-1 bg-warning text-white text-[8.5px] py-0 px-1 border-none font-bold">
                       GỐC
                     </Badge>
                   </div>
@@ -305,7 +305,7 @@ export function StorageSidebar({
                   <div className="flex-1 min-w-0">
                     <div className="text-[12px] font-bold text-text truncate">{item.title}</div>
                     <div className="text-[10.5px] text-text-muted truncate mt-0.5">{item.subtitle}</div>
-                    <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                    <div className="mt-1 flex items-center gap-1 text-[10px] text-warning dark:text-warning font-semibold">
                       <span>• Chưa phân tích cấu phần</span>
                     </div>
                   </div>
@@ -350,7 +350,7 @@ export function StorageSidebar({
                         <ImageIcon size={18} className="opacity-40" />
                       </div>
                     )}
-                    <Badge className="absolute left-1 top-1 bg-blue-600 text-white text-[8.5px] py-0 px-1 border-none font-bold">
+                    <Badge className="absolute left-1 top-1 bg-info text-white text-[8.5px] py-0 px-1 border-none font-bold">
                       M01a
                     </Badge>
                   </div>
@@ -363,7 +363,7 @@ export function StorageSidebar({
                       </Badge>
                     </div>
                     <div className="text-[10.5px] text-text-muted truncate mt-0.5">{item.subtitle}</div>
-                    <div className="mt-0.5 text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                    <div className="mt-0.5 text-[10px] text-info dark:text-info font-semibold">
                       Chờ sinh Copy bán hàng &amp; Thẻ chào
                     </div>
                   </div>
@@ -412,8 +412,8 @@ export function StorageSidebar({
                 onClick={() => onSelectFinalizedPitch(pitch)}
                 className={`group relative flex flex-col gap-2 rounded-2xl border-2 p-2.5 cursor-pointer transition-all hover:shadow-md ${
                   isSelected
-                    ? "border-emerald-500 bg-emerald-500/[0.06] ring-1 ring-emerald-500/50"
-                    : "border-emerald-500/30 bg-surface hover:border-emerald-500/60"
+                    ? "border-success bg-success/[0.06] ring-1 ring-success/50"
+                    : "border-success/30 bg-surface hover:border-success/60"
                 }`}
               >
                 <div className="flex gap-2.5 items-center">
@@ -426,7 +426,7 @@ export function StorageSidebar({
                         <ImageIcon size={18} className="opacity-40" />
                       </div>
                     )}
-                    <Badge className="absolute left-1 top-1 bg-emerald-600 text-white text-[8.5px] py-0 px-1 border-none font-bold">
+                    <Badge className="absolute left-1 top-1 bg-success text-white text-[8.5px] py-0 px-1 border-none font-bold">
                       FINAL
                     </Badge>
                   </div>
@@ -439,7 +439,7 @@ export function StorageSidebar({
                       </span>
                     </div>
                     <div className="text-[10.5px] text-text-muted truncate mt-0.5">{item.subtitle}</div>
-                    <div className="mt-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <div className="mt-0.5 text-[10px] text-success dark:text-success font-semibold flex items-center gap-1">
                       <CheckCircle2 size={10} strokeWidth={2.5} /> Sẵn sàng tư vấn khách
                     </div>
                   </div>
@@ -462,7 +462,7 @@ export function StorageSidebar({
                     size="sm"
                     onClick={(e) => handleCopyZaloQuick(pitch, e)}
                     className={`text-[11px] h-7 gap-1 px-1 font-bold ${
-                      isCopied ? "bg-emerald-600 text-white" : "bg-primary hover:bg-primary/90 text-white"
+                      isCopied ? "bg-success text-white" : "bg-primary hover:bg-primary/90 text-white"
                     }`}
                   >
                     {isCopied ? <Check size={12} strokeWidth={2.5} /> : <Copy size={12} />}
@@ -480,7 +480,7 @@ export function StorageSidebar({
       {/* Sidebar Footer Stats */}
       <div className="p-2.5 border-t border-border bg-surface-alt/50 text-[11px] text-text-muted flex items-center justify-between">
         <span>Tổng cộng: {unifiedItems.length} sản phẩm</span>
-        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+        <span className="text-success dark:text-success font-semibold">
           {finalizedPitches.length} đã xong Final
         </span>
       </div>

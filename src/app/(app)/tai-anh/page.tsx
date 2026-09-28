@@ -1248,7 +1248,7 @@ export default function TaiAnhPage() {
       </div>
 
       {errorMsg && (
-        <div className="mx-[18px] mt-3 rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700">
+        <div className="mx-[18px] mt-3 rounded-xl border-[1.5px] border-danger/30 bg-danger-bg px-3.5 py-2.5 text-body-sm font-medium text-danger">
           {errorMsg}
           <Button variant="ghost" size="sm" className="ml-2" onClick={() => setErrorMsg(null)}>Đóng</Button>
         </div>
@@ -1406,7 +1406,7 @@ export default function TaiAnhPage() {
                   <button
                     type="button"
                     onClick={() => removeLocalPhoto(p.id)}
-                    className="p-1 text-text-muted hover:text-red-500 transition-colors"
+                    className="p-1 text-text-muted hover:text-danger transition-colors"
                   >
                     <X size={15} strokeWidth={2} />
                   </button>
@@ -1519,9 +1519,9 @@ export default function TaiAnhPage() {
 
             {approvalState === "APPROVED" && (
               <div className="w-full max-w-3xl border-t border-border pt-5">
-                <div className="flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+                <div className="flex items-center justify-between rounded-xl bg-success-bg border border-success/30 p-4">
                   <div>
-                    <div className="text-[14px] font-bold text-emerald-800">✓ Đã duyệt — Chuyển sang Sáng tạo nội dung</div>
+                    <div className="text-body font-bold text-success">✓ Đã duyệt — Chuyển sang Sáng tạo nội dung</div>
                     <div className="text-[12px] text-text-muted">Đặc điểm nhận diện đã duyệt → Creative Studio (Chặng 5-14)</div>
                   </div>
                   <Button
@@ -1709,7 +1709,7 @@ export default function TaiAnhPage() {
                 <M01bGuidanceCard />
 
                 {!canH5 && (
-                  <div className="max-w-xl mx-auto w-full rounded-xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-800">
+                  <div className="max-w-xl mx-auto w-full rounded-xl border border-warning/30 bg-warning-bg p-3 text-body-sm text-warning">
                     Tài khoản của bạn chưa có quyền H5 (sinh dữ liệu bán hàng). Vui lòng liên hệ quản trị viên.
                   </div>
                 )}

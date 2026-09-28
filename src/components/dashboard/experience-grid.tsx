@@ -104,7 +104,7 @@ export function ExperienceGrid() {
         <div>
           <div className="flex items-center gap-2">
             <div className="text-title font-extrabold text-primary">{orgName}</div>
-            <span className="rounded-full bg-[#FBEAEC] px-2 py-0.5 text-caption font-bold text-[#B45566]">
+            <span className="rounded-full bg-danger-bg px-2 py-0.5 text-caption font-bold text-primary">
               Đang dùng thử
             </span>
           </div>
@@ -267,7 +267,7 @@ export function ExperienceGrid() {
         {isLocked && (
           <div className="flex items-center gap-3 rounded-2xl bg-warning-bg p-3.5">
             <Zap size={20} strokeWidth={1.8} className="text-warning" />
-            <div className="flex-1 text-meta leading-snug text-[#7A5320]">
+            <div className="flex-1 text-meta leading-snug text-warning">
               Đã dùng hết hạn mức dùng thử. Chuyển sang tổ chức thật để tiếp tục.
             </div>
           </div>

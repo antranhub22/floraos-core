@@ -209,18 +209,18 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
           {/* Master Index Quick Picker */}
           {masterProducts.length > 0 && (
-            <div className="rounded-xl border border-dashed border-red-300 bg-red-50/60 p-3.5 space-y-2">
+            <div className="rounded-xl border border-dashed border-guidance-border bg-guidance-bg/60 p-3.5 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-900">
-                  <Flower2 className="h-4 w-4 text-red-600" />
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-guidance-text">
+                  <Flower2 className="h-4 w-4 text-guidance" />
                   ⚡ Chọn mẫu nhanh từ Master Index (Đầy đủ BOM & Ảnh)
                 </span>
-                <span className="text-[11px] font-medium text-red-700">
+                <span className="text-[11px] font-medium text-guidance">
                   {masterProducts.length} mẫu sẵn sàng
                 </span>
               </div>
               <select
-                className="w-full rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-medium text-text focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full rounded-md border border-guidance-border bg-white px-3 py-2 text-xs font-medium text-text focus:outline-none focus:ring-1 focus:ring-guidance"
                 value={selectedProductId}
                 onChange={(e) => handleSelectMasterProduct(e.target.value)}
               >

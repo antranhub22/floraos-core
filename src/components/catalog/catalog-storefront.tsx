@@ -54,7 +54,7 @@ export function CatalogStorefront({ initialData }: CatalogStorefrontProps) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center flex flex-col items-center">
-          <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4"><AlertCircle size={32} /></div>
+          <div className="w-16 h-16 rounded-2xl bg-warning-bg text-warning flex items-center justify-center mb-4"><AlertCircle size={32} /></div>
           <h1 className="text-xl font-black text-slate-900 mb-2">Bộ sưu tập đã đóng</h1>
           <p className="text-sm text-slate-600 leading-relaxed mb-6">
             Bộ sưu tập <span className="font-semibold text-slate-800">&quot;{initialData.catalogName}&quot;</span> đã tạm ngừng chia sẻ.
@@ -142,7 +142,7 @@ export function CatalogStorefront({ initialData }: CatalogStorefrontProps) {
       <main className="max-w-4xl mx-auto px-4 pt-2">
         <div className="flex items-center justify-between text-xs text-slate-500 mb-3 px-1">
           <span>Hiển thị <strong>{filteredProducts.length}</strong> mẫu hoa</span>
-          <span className="flex items-center gap-1 text-emerald-700 font-medium"><Check size={13} />Hoa tươi 100% tuyển chọn mỗi ngày</span>
+          <span className="flex items-center gap-1 text-success font-medium"><Check size={13} />Hoa tươi 100% tuyển chọn mỗi ngày</span>
         </div>
 
         {filteredProducts.length === 0 ? (

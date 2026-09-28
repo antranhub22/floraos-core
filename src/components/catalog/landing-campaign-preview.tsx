@@ -82,7 +82,7 @@ export function LandingCampaignPreview({
             <Button
               onClick={onPublish}
               disabled={isPublishing}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-8 text-xs font-bold"
+              className="bg-success hover:bg-success/90 text-white gap-1.5 h-8 text-xs font-bold"
             >
               <CheckCircle2 size={14} />
               <span>{isPublishing ? "Đang xuất bản..." : "Duyệt & Xuất bản Landing Page"}</span>

@@ -460,7 +460,7 @@ export function AccountStorageHub({
           </div>
 
           {errorRaw && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 flex items-center gap-2">
+            <div className="rounded-xl border border-danger/30 bg-danger-bg p-3.5 text-xs text-danger flex items-center gap-2">
               <AlertCircle size={15} />
               {errorRaw}
             </div>
@@ -541,7 +541,7 @@ export function AccountStorageHub({
           </div>
 
           {errorApproved && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 flex items-center gap-2">
+            <div className="rounded-xl border border-danger/30 bg-danger-bg p-3.5 text-xs text-danger flex items-center gap-2">
               <AlertCircle size={15} />
               {errorApproved}
             </div>
@@ -673,7 +673,7 @@ export function AccountStorageHub({
 
           {filteredFinalizedPitches.length === 0 && (
             <Card className="p-8 text-center bg-surface-alt border-dashed">
-              <CheckCircle2 size={32} className="mx-auto text-emerald-500 mb-2 opacity-60" />
+              <CheckCircle2 size={32} className="mx-auto text-success mb-2 opacity-60" />
               <div className="text-sm font-bold text-text">Chưa có Sale Pitch nào được chốt duyệt Final</div>
               <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
                 Khi bạn chỉnh sửa Thẻ Chào Sản Phẩm tại tab &quot;M01c: Thẻ chào sản phẩm&quot; và bấm <strong>&quot;Chốt duyệt &amp; Xuất bản Final&quot;</strong>, thẻ sẽ tự động lưu vào kho này để sử dụng lâu dài.
@@ -689,7 +689,7 @@ export function AccountStorageHub({
               return (
                 <Card
                   key={pitchKey}
-                  className="overflow-hidden rounded-2xl border-2 border-emerald-500/25 bg-surface p-4 hover:shadow-lg transition-all flex flex-col justify-between gap-3.5"
+                  className="overflow-hidden rounded-2xl border-2 border-success/25 bg-surface p-4 hover:shadow-lg transition-all flex flex-col justify-between gap-3.5"
                 >
                   <div className="flex gap-3.5">
                     {/* Thumbnail */}
@@ -715,7 +715,7 @@ export function AccountStorageHub({
                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold text-[10px] py-0 px-1.5 border border-emerald-500/30 gap-0.5">
+                          <Badge className="bg-success/15 text-success dark:text-success font-bold text-[10px] py-0 px-1.5 border border-success/30 gap-0.5">
                             <CheckCircle2 size={10} strokeWidth={2.5} /> FINAL
                           </Badge>
                           <span className="text-[12px] font-extrabold text-primary">
@@ -765,7 +765,7 @@ export function AccountStorageHub({
                       size="sm"
                       onClick={() => handleQuickCopyZalo(pitch)}
                       className={`flex-1 text-xs h-8 gap-1 font-bold ${
-                        isCopied ? "bg-emerald-600 text-white" : "bg-primary hover:bg-primary/90 text-white"
+                        isCopied ? "bg-success text-white" : "bg-primary hover:bg-primary/90 text-white"
                       }`}
                     >
                       {isCopied ? <Check size={13} strokeWidth={2.5} /> : <Copy size={13} />}
@@ -776,7 +776,7 @@ export function AccountStorageHub({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeletePitch(pitchKey)}
-                      className="h-8 w-8 p-0 text-text-muted hover:text-red-600 hover:bg-red-50"
+                      className="h-8 w-8 p-0 text-text-muted hover:text-danger hover:bg-danger-bg"
                       title="Xóa Thẻ Chào này"
                     >
                       <Trash2 size={13} />

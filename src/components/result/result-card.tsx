@@ -212,7 +212,7 @@ function FieldCard({
                   <button
                     type="button"
                     onClick={() => onFieldRemove?.(field.key, item.id)}
-                    className="ml-auto flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-red-50 hover:text-red-600 transition-colors"
+                    className="ml-auto flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-danger-bg hover:text-danger transition-colors"
                     aria-label="Xoá mục này"
                   >
                     <X size={13} strokeWidth={2} />

@@ -269,7 +269,7 @@ export function FeaturePicker({
           </div>
 
           {submitError && (
-            <div className="flex items-start gap-2 rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-meta font-medium text-red-700">
+            <div className="flex items-start gap-2 rounded-xl border-[1.5px] border-danger/30 bg-danger-bg px-3.5 py-2.5 text-meta font-medium text-danger">
               <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
               <span>{submitError}</span>
             </div>
@@ -633,9 +633,9 @@ function FeatureCard({
                     {feature.aiCapability}
                   </Badge>
                   <Badge tone="neutral" className={cn("text-caption h-4 px-1.5", 
-                    feature.privacyFloor === "SENSITIVE" && "border-red-200 text-red-600",
-                    feature.privacyFloor === "SHOP" && "border-yellow-200 text-yellow-600",
-                    feature.privacyFloor === "PUBLIC" && "border-green-200 text-green-600"
+                    feature.privacyFloor === "SENSITIVE" && "border-danger/30 text-danger",
+                    feature.privacyFloor === "SHOP" && "border-warning/30 text-warning",
+                    feature.privacyFloor === "PUBLIC" && "border-success/30 text-success"
                   )}>
                     {feature.privacyFloor}
                   </Badge>

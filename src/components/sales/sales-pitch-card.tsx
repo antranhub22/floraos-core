@@ -553,8 +553,8 @@ export function SalesPitchCard({
     <div className="flex flex-col gap-5 w-full max-w-5xl mx-auto">
       {/* Celebration Banner when finalized */}
       {justFinalized && (
-        <div className="flex items-center gap-3 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 p-4 text-emerald-800 dark:text-emerald-300 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white flex-shrink-0">
+        <div className="flex items-center gap-3 rounded-2xl bg-success/10 border-2 border-success/30 p-4 text-success dark:text-success animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success text-white flex-shrink-0">
             <CheckCircle2 size={22} strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
@@ -572,7 +572,7 @@ export function SalesPitchCard({
           <div className="flex items-center gap-2">
             <span className="text-[11.5px] font-bold text-accent uppercase tracking-wider">M01c — Công cụ Sales Rep</span>
             {status === "FINALIZED" ? (
-              <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold text-[11px] gap-1 py-0.5">
+              <Badge className="bg-success/15 text-success dark:text-success border border-success/30 font-bold text-[11px] gap-1 py-0.5">
                 <CheckCircle2 size={12} strokeWidth={2.5} />
                 ĐÃ CHỐT DUYỆT FINAL
               </Badge>
@@ -735,7 +735,7 @@ export function SalesPitchCard({
                       <button
                         type="button"
                         onClick={() => removeOccasion(idx)}
-                        className="text-text-muted hover:text-red-500"
+                        className="text-text-muted hover:text-danger"
                       >
                         ×
                       </button>
@@ -852,7 +852,7 @@ export function SalesPitchCard({
                         <button
                           type="button"
                           onClick={() => removeFlower(idx)}
-                          className="p-1 text-text-muted hover:text-red-500 transition-colors"
+                          className="p-1 text-text-muted hover:text-danger transition-colors"
                           title="Xóa dòng hoa này"
                         >
                           <Trash2 size={15} />
@@ -911,7 +911,7 @@ export function SalesPitchCard({
                         <button
                           type="button"
                           onClick={() => removeFoliage(idx)}
-                          className="p-1 text-text-muted hover:text-red-500"
+                          className="p-1 text-text-muted hover:text-danger"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -992,7 +992,7 @@ export function SalesPitchCard({
                       <button
                         type="button"
                         onClick={() => removeGiftItem(idx)}
-                        className="text-text-muted hover:text-red-500"
+                        className="text-text-muted hover:text-danger"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -1025,7 +1025,7 @@ export function SalesPitchCard({
                 <div className="flex flex-col gap-2 mb-2">
                   {guarantees.map((gua, idx) => (
                     <div key={idx} className="flex items-center gap-2 bg-surface-alt px-3 py-2 rounded-xl border border-border text-xs">
-                      <ShieldCheck size={14} className="text-emerald-500 flex-shrink-0" />
+                      <ShieldCheck size={14} className="text-success flex-shrink-0" />
                       <input
                         type="text"
                         value={gua}
@@ -1038,7 +1038,7 @@ export function SalesPitchCard({
                       <button
                         type="button"
                         onClick={() => removeGuaranteeItem(idx)}
-                        className="text-text-muted hover:text-red-500"
+                        className="text-text-muted hover:text-danger"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -1086,7 +1086,7 @@ export function SalesPitchCard({
                 <Button
                   size="sm"
                   onClick={handleFinalize}
-                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                  className="text-xs bg-success hover:bg-success/90 text-white font-bold"
                 >
                   <CheckCircle2 size={14} className="mr-1" />
                   Chốt duyệt & Xuất bản Final
@@ -1106,7 +1106,7 @@ export function SalesPitchCard({
               Bản xem trước Thẻ Chào Khách (Khổ A6 / Share Card)
             </span>
             {status === "FINALIZED" && (
-              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="text-[11px] font-semibold text-success dark:text-success">
                 Đã chốt duyệt Final
               </span>
             )}
@@ -1114,14 +1114,14 @@ export function SalesPitchCard({
 
           {/* Notification messages */}
           {exportSuccess && (
-            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/25 p-3 text-xs font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-2 animate-in fade-in duration-200">
-              <CheckCircle2 size={16} className="text-emerald-600 flex-shrink-0" />
+            <div className="rounded-xl bg-success/10 border border-success/25 p-3 text-xs font-medium text-success dark:text-success flex items-center gap-2 animate-in fade-in duration-200">
+              <CheckCircle2 size={16} className="text-success flex-shrink-0" />
               <span>{exportSuccess}</span>
             </div>
           )}
           {exportError && (
-            <div className="rounded-xl bg-red-500/10 border border-red-500/25 p-3 text-xs font-medium text-red-800 dark:text-red-300 flex items-center gap-2 animate-in fade-in duration-200">
-              <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
+            <div className="rounded-xl bg-danger/10 border border-danger/25 p-3 text-xs font-medium text-danger dark:text-danger flex items-center gap-2 animate-in fade-in duration-200">
+              <AlertCircle size={16} className="text-danger flex-shrink-0" />
               <span>{exportError}</span>
             </div>
           )}

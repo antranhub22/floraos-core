@@ -77,8 +77,8 @@ ${catalogUrl}`
           <Button variant="ghost" size="sm" onClick={handleCopyLink} className="h-9 gap-1 text-xs shrink-0">
             {copiedLink ? (
               <>
-                <Check size={14} className="text-emerald-600" />
-                <span className="text-emerald-600">Đã chép</span>
+                <Check size={14} className="text-success" />
+                <span className="text-success">Đã chép</span>
               </>
             ) : (
               <>
@@ -127,8 +127,8 @@ ${catalogUrl}`
             >
               {copiedCaption ? (
                 <>
-                  <Check size={13} className="text-emerald-600" />
-                  <span className="text-emerald-600">Đã chép</span>
+                  <Check size={13} className="text-success" />
+                  <span className="text-success">Đã chép</span>
                 </>
               ) : (
                 <>

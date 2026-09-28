@@ -237,7 +237,7 @@ export function LandingCampaignTab({ products, onRefresh }: LandingCampaignTabPr
         {/* Action Button */}
         <div className="pt-2 flex items-center justify-between border-t border-border">
           <div className="text-xs text-text-muted flex items-center gap-1.5">
-            <CheckCircle2 size={13} className="text-emerald-600" />
+            <CheckCircle2 size={13} className="text-success" />
             <span>Tự động tối ưu giao diện điện thoại & bảo đảm nhận diện thương hiệu</span>
           </div>
           <Button

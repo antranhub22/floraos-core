@@ -26,8 +26,8 @@ export function ChannelIntegrationCard({
     <div
       className={`flex flex-col justify-between rounded-2xl border p-5 transition-all shadow-xs ${
         isEnabled
-          ? "border-red-300/80 bg-red-50/30"
-          : "border-border bg-surface hover:border-red-200"
+          ? "border-primary/30 bg-primary/5"
+          : "border-border bg-surface hover:border-primary/20"
       }`}
     >
       <div className="space-y-3">
@@ -42,7 +42,7 @@ export function ChannelIntegrationCard({
           <Badge
             className={`text-[10px] shrink-0 font-bold ${
               isEnabled
-                ? "bg-green-100 text-green-800 border-green-200"
+                ? "bg-success-bg text-success border-success/30"
                 : "bg-muted text-muted-foreground"
             }`}
           >
@@ -54,7 +54,7 @@ export function ChannelIntegrationCard({
         <div className="rounded-xl bg-surface-raised border border-border/70 p-3 space-y-1.5 text-xs">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-[11px]">Phí kích hoạt kênh:</span>
-            <span className="font-bold text-red-600">
+            <span className="font-bold text-primary">
               {isFree ? "Miễn Phí" : `${pricing.monthlyCreditCost} Credit / tháng`}
             </span>
           </div>
@@ -95,7 +95,7 @@ export function ChannelIntegrationCard({
           variant={isEnabled ? "outline" : "primary"}
           onClick={onToggle}
           className={`text-xs h-8 ${pricing.requiresSetup ? "flex-1" : "w-full"} ${
-            !isEnabled ? "bg-red-600 hover:bg-red-700 text-white" : "border-red-300 text-red-700 hover:bg-red-50"
+            !isEnabled ? "bg-primary hover:bg-primary-dark text-white" : "border-primary/30 text-primary hover:bg-primary/5"
           }`}
         >
           {isBusy ? (

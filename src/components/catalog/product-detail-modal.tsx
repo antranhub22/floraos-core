@@ -115,15 +115,15 @@ export function ProductDetailModal({ product, shop, onClose }: ProductDetailModa
         {/* Guarantees */}
         <div className="space-y-2 text-xs text-text-muted">
           <div className="flex items-center gap-2">
-            <Check size={14} className="text-emerald-600 shrink-0" />
+            <Check size={14} className="text-success shrink-0" />
             Cam kết hoa tươi từ 3 – 5 ngày khi cắm xốp chuyên dụng
           </div>
           <div className="flex items-center gap-2">
-            <Check size={14} className="text-emerald-600 shrink-0" />
+            <Check size={14} className="text-success shrink-0" />
             Tặng kèm thiệp thiết kế & banner in màu cao cấp
           </div>
           <div className="flex items-center gap-2">
-            <Check size={14} className="text-emerald-600 shrink-0" />
+            <Check size={14} className="text-success shrink-0" />
             Chụp ảnh thành phẩm gửi khách duyệt trước khi giao
           </div>
         </div>

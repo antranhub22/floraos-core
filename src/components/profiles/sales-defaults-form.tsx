@@ -111,7 +111,7 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
         <div className="flex items-center justify-between pb-4 border-b border-border mb-5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10 text-pink-600">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Gift size={18} />
             </div>
             <div>
@@ -146,7 +146,7 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
                 type="button"
                 onClick={() => handleRemoveGift(index)}
                 title="Xóa quà tặng này"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:text-danger hover:bg-danger-bg transition-colors flex-shrink-0"
               >
                 <Trash2 size={15} />
               </button>
@@ -162,7 +162,7 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
         <div className="flex items-center justify-between pb-4 border-b border-border mb-5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success/10 text-success">
               <ShieldCheck size={18} />
             </div>
             <div>
@@ -175,7 +175,7 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
             onClick={handleAddGuarantee}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-alt text-xs font-semibold text-text transition-colors"
           >
-            <Plus size={14} className="text-emerald-600" />
+            <Plus size={14} className="text-success" />
             <span>Thêm cam kết</span>
           </button>
         </div>
@@ -197,7 +197,7 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
                 type="button"
                 onClick={() => handleRemoveGuarantee(index)}
                 title="Xóa cam kết này"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:text-danger hover:bg-danger-bg transition-colors flex-shrink-0"
               >
                 <Trash2 size={15} />
               </button>

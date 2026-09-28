@@ -112,7 +112,7 @@ export function PublishedCatalogLinks({ catalogLinks, onRefresh }: PublishedCata
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleCopyLink(link.slug)} className="h-8 gap-1 text-xs">
                         {copiedSlug === link.slug ? (
-                          <><Check size={13} className="text-emerald-600" /><span className="text-emerald-600">Đã chép</span></>
+                          <><Check size={13} className="text-success" /><span className="text-success">Đã chép</span></>
                         ) : (
                           <><Copy size={13} /> Copy link</>
                         )}

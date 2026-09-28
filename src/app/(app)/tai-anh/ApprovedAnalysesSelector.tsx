@@ -101,7 +101,7 @@ export function ApprovedAnalysesSelector({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm theo mã sản phẩm, loại hoa, phong cách..."
-            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-border bg-surface text-[13px] outline-none focus:border-primary transition-colors"
+            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-border bg-surface text-body-sm outline-none focus:border-primary transition-colors"
           />
         </div>
         <Button
@@ -118,7 +118,7 @@ export function ApprovedAnalysesSelector({
 
       {/* Error display */}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-[13px] text-red-700 flex items-start gap-2.5">
+        <div className="rounded-xl border border-danger/30 bg-danger-bg p-3.5 text-body-sm text-danger flex items-start gap-2.5">
           <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">{error}</div>
         </div>
@@ -126,7 +126,7 @@ export function ApprovedAnalysesSelector({
 
       {/* Loading state */}
       {loading && items.length === 0 && (
-        <div className="py-12 text-center text-text-muted text-[13px] flex flex-col items-center gap-2">
+        <div className="py-12 text-center text-text-muted text-body-sm flex flex-col items-center gap-2">
           <RefreshCw size={24} className="animate-spin text-primary" />
           <span>Đang tải danh sách phân tích đã duyệt từ kho...</span>
         </div>
@@ -138,8 +138,8 @@ export function ApprovedAnalysesSelector({
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface shadow-sm mb-3">
             <Layers size={24} className="text-text-muted" />
           </div>
-          <div className="text-[15px] font-bold">Chưa có phân tích nào được duyệt</div>
-          <div className="mt-1.5 text-[13px] text-text-muted max-w-md mx-auto">
+          <div className="text-title-sm font-bold">Chưa có phân tích nào được duyệt</div>
+          <div className="mt-1.5 text-body-sm text-text-muted max-w-md mx-auto">
             Để sử dụng M01b (Sinh dữ liệu bán hàng), bạn cần thực hiện phân tích ảnh ở tab{" "}
             <span className="font-semibold text-primary">Phân tích ảnh mới</span> và phê duyệt kết quả trước.
           </div>
