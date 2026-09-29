@@ -32,15 +32,15 @@ export function TemplatePreviewModal({
       size={wide ? "lg" : "md"}
       title={
         <div className="flex flex-wrap items-center gap-2">
-          <code className="truncate text-[13px] font-bold text-text">{fileName}</code>
-          <span className="shrink-0 rounded-full bg-surface-alt px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-text-muted uppercase">
+          <code className="truncate text-body-sm font-bold text-text">{fileName}</code>
+          <span className="shrink-0 rounded-full bg-surface-alt px-2 py-0.5 text-caption font-bold tracking-wide text-text-muted uppercase">
             {fileType}
           </span>
         </div>
       }
       description={purpose}
       footer={
-        <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-text-muted w-full">
+        <div className="flex shrink-0 items-center gap-1.5 text-caption text-text-muted w-full">
           <Info size={13} className="shrink-0 text-primary" />
           <span>Dữ liệu minh hoạ để xem giao diện — không phải dữ liệu thật trong hệ thống.</span>
         </div>

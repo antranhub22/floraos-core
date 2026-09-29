@@ -167,7 +167,7 @@ export function ExperienceGrid() {
           <button
             type="button"
             onClick={() => setHienThongBaoNangCap((v) => !v)}
-            className="w-fit text-meta font-bold text-accent"
+            className="w-fit text-meta font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"
           >
             Chuyển sang tổ chức thật →
           </button>
@@ -178,6 +178,7 @@ export function ExperienceGrid() {
                 Bản hiện tại chưa hỗ trợ tự chuyển đổi — liên hệ quản trị hệ thống để nâng cấp tổ chức.
               </div>
               <button
+              aria-label="Đóng"
                 type="button"
                 onClick={() => setHienThongBaoNangCap(false)}
                 className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
@@ -203,17 +204,24 @@ export function ExperienceGrid() {
             return (
               <div
                 key={mod.id}
-                onClick={() => openFeature(mod)}
+                aria-disabled={disabled || undefined}
                 className={cn(
-                  "flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5 transition-shadow hover:shadow-md cursor-pointer",
-                  disabled && "opacity-45 cursor-not-allowed"
+                  "flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5 transition-shadow hover:shadow-md",
+                  disabled && "opacity-45"
                 )}
               >
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface-alt">
                   <Icon size={22} strokeWidth={1.8} className={cn("text-primary", disabled && "opacity-50")} />
                 </div>
                 <div>
-                  <div className="text-body font-bold">{mod.name}</div>
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => openFeature(mod)}
+                    className="text-left text-body font-bold text-text hover:text-primary transition-colors focus-visible:outline-2 focus-visible:outline-primary disabled:hover:text-text disabled:cursor-not-allowed"
+                  >
+                    {mod.name}
+                  </button>
                   <div className="mt-0.5 text-xs leading-snug text-text-muted">{mod.desc}</div>
                 </div>
                 <StatusBadge status={mod.status ?? "chua_co"} />
@@ -227,15 +235,13 @@ export function ExperienceGrid() {
                     {disabled ? "Sắp có" : route ? "Mở ngay" : "Chưa có"}
                   </span>
                   <button
+                    aria-label={`Mở ${mod.name}`}
                     type="button"
                     disabled={disabled || !route}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      openFeature(mod)
-                    }}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => openFeature(mod)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-primary disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary"
                   >
-                    <ChevronRight size={17} strokeWidth={2.4} color="#fff" />
+                    <ChevronRight size={17} strokeWidth={2.4} color="white" />
                   </button>
                 </div>
                 {noticeId === mod.id && (
@@ -251,6 +257,7 @@ export function ExperienceGrid() {
                             : "Chưa có màn thao tác cho chức năng này trong bản hiện tại."}
                     </div>
                     <button
+              aria-label="Đóng"
                       type="button"
                       onClick={() => setNoticeId(null)}
                       className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"

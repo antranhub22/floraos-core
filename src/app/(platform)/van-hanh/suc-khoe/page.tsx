@@ -66,7 +66,7 @@ export default function SucKhoeHeThongPage() {
         </p>
         <div className="flex flex-col divide-y divide-border">
           {health.stuckJobs.map((job) => (
-            <div key={job.id} className="flex items-center justify-between py-2 text-[13px]">
+            <div key={job.id} className="flex items-center justify-between py-2 text-body-sm">
               <span>{job.feature} · tổ chức {job.organizationId}</span>
               <span className="text-text-muted">
                 {job.startedAt ? new Date(job.startedAt).toLocaleString("vi-VN") : "—"}
@@ -74,7 +74,7 @@ export default function SucKhoeHeThongPage() {
             </div>
           ))}
           {health.stuckJobs.length === 0 && (
-            <p className="py-2 text-[13px] text-text-muted">Không có job treo.</p>
+            <p className="py-2 text-body-sm text-text-muted">Không có job treo.</p>
           )}
         </div>
       </Card>

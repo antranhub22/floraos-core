@@ -378,14 +378,14 @@ export function ControlTowerDashboard({
     <button
       onClick={() => setDetailModalTab(tab)}
       className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
-        detailModalTab === tab ? "bg-red-600 text-white" : `text-text-muted hover:text-text ${extra}`
+        detailModalTab === tab ? "bg-primary text-white" : `text-text-muted hover:text-text ${extra}`
       }`}
     >
       {label}
     </button>
   )
 
-  const fieldClass = "px-3 py-2 rounded-xl border border-border bg-surface text-text text-xs focus:outline-none focus:border-red-500"
+  const fieldClass = "px-3 py-2 rounded-xl border border-border bg-surface text-text text-xs focus:outline-none focus:border-primary"
 
   return (
     <div className="flex flex-col gap-6">
@@ -403,14 +403,14 @@ export function ControlTowerDashboard({
       />
 
       {/* Khối Tôn Chỉ Vận Hành Sổ Tay Điều Phối (P10 & P12) */}
-      <div className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50/80 via-white to-amber-50/60 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
+      <div className="rounded-2xl border border-primary/20 bg-surface-alt p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-xs">
             <Radio size={20} className="animate-pulse" />
           </div>
           <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-wider text-red-700 flex items-center gap-1.5">
-              <span>SỔ TAY ĐIỀU PHỐI • MANTRA CỐT LÕI (P12)</span>
+            <div className="text-caption font-extrabold uppercase tracking-wider text-primary flex items-center gap-1.5">
+              <span>SỔ TAY ĐIỀU PHỐI • MANTRA CỐT LÕI</span>
             </div>
             <div className="text-xs md:text-sm font-black text-text mt-0.5">
               “Nhận đúng — Hiểu đúng — Chọn đúng — Làm đúng — Kiểm tra đúng — Giao đúng — Đóng đúng”
@@ -418,13 +418,13 @@ export function ControlTowerDashboard({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold text-text-muted bg-surface/80 px-3 py-1.5 rounded-xl border border-border/80">
-          <span className="text-red-600 font-extrabold">5 Câu Hỏi P10:</span>
-          <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700">1. Đơn ở đâu?</span>
-          <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700">2. Tiếp theo làm gì?</span>
-          <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700">3. Ai giữ bóng?</span>
-          <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700">4. Có rủi ro gì?</span>
-          <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700">5. Khi nào xong?</span>
+        <div className="flex items-center gap-1.5 flex-wrap text-caption font-bold text-text-muted bg-surface/80 px-3 py-1.5 rounded-xl border border-border/80">
+          <span className="text-primary font-extrabold">5 Câu Hỏi Kiểm Tra:</span>
+          <span className="px-1.5 py-0.5 rounded bg-surface text-text-muted">1. Đơn ở đâu?</span>
+          <span className="px-1.5 py-0.5 rounded bg-surface text-text-muted">2. Tiếp theo làm gì?</span>
+          <span className="px-1.5 py-0.5 rounded bg-surface text-text-muted">3. Ai giữ bóng?</span>
+          <span className="px-1.5 py-0.5 rounded bg-surface text-text-muted">4. Có rủi ro gì?</span>
+          <span className="px-1.5 py-0.5 rounded bg-surface text-text-muted">5. Khi nào xong?</span>
         </div>
       </div>
 
@@ -433,34 +433,34 @@ export function ControlTowerDashboard({
         <Card className="rounded-2xl border border-border bg-surface p-4 flex flex-col justify-between shadow-sm">
           <span className="text-xs font-bold text-text-muted">TỔNG ĐƠN ĐANG ĐIỀU PHỐI</span>
           <div className="text-3xl font-black text-text mt-1">{totalCount}</div>
-          <span className="text-[11px] text-text-muted mt-2">Chưa đóng / chưa huỷ</span>
+          <span className="text-caption text-text-muted mt-2">Chưa đóng / chưa huỷ</span>
         </Card>
 
-        <Card className="rounded-2xl border border-red-200 bg-red-50/50 p-4 flex flex-col justify-between shadow-sm">
-          <span className="text-xs font-bold text-red-800 flex items-center gap-1">
-            <AlertCircle size={14} className="text-red-600" />
+        <Card className="rounded-2xl border border-danger/30 bg-danger/10 p-4 flex flex-col justify-between shadow-sm">
+          <span className="text-xs font-bold text-danger flex items-center gap-1">
+            <AlertCircle size={14} className="text-danger" />
             CẦN XỬ LÝ GẤP (CRITICAL)
           </span>
-          <div className="text-3xl font-black text-red-950 mt-1">{criticalCount}</div>
-          <span className="text-[11px] text-red-700 mt-2 font-medium">Sự cố hoặc lệch QC</span>
+          <div className="text-3xl font-black text-danger mt-1">{criticalCount}</div>
+          <span className="text-caption text-danger mt-2 font-medium">Sự cố hoặc lệch QC</span>
         </Card>
 
-        <Card className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 flex flex-col justify-between shadow-sm">
-          <span className="text-xs font-bold text-amber-800 flex items-center gap-1">
-            <AlertTriangle size={14} className="text-amber-600" />
+        <Card className="rounded-2xl border border-warning/30 bg-warning/10 p-4 flex flex-col justify-between shadow-sm">
+          <span className="text-xs font-bold text-warning flex items-center gap-1">
+            <AlertTriangle size={14} className="text-warning" />
             CÓ NGUY CƠ TRỄ (AT RISK)
           </span>
-          <div className="text-3xl font-black text-amber-950 mt-1">{atRiskCount}</div>
-          <span className="text-[11px] text-amber-700 mt-2 font-medium">Cần thúc đẩy thợ cắm</span>
+          <div className="text-3xl font-black text-warning mt-1">{atRiskCount}</div>
+          <span className="text-caption text-warning mt-2 font-medium">Cần thúc đẩy thợ cắm</span>
         </Card>
 
-        <Card className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex flex-col justify-between shadow-sm">
-          <span className="text-xs font-bold text-emerald-800 flex items-center gap-1">
-            <CheckCircle2 size={14} className="text-emerald-600" />
+        <Card className="rounded-2xl border border-success/30 bg-success/10 p-4 flex flex-col justify-between shadow-sm">
+          <span className="text-xs font-bold text-success flex items-center gap-1">
+            <CheckCircle2 size={14} className="text-success" />
             ĐÚNG HẠN (ON TRACK)
           </span>
-          <div className="text-3xl font-black text-emerald-950 mt-1">{onTrackCount}</div>
-          <span className="text-[11px] text-emerald-700 mt-2 font-medium">Tiến độ an toàn</span>
+          <div className="text-3xl font-black text-success mt-1">{onTrackCount}</div>
+          <span className="text-caption text-success mt-2 font-medium">Tiến độ an toàn</span>
         </Card>
       </div>
 
@@ -482,9 +482,9 @@ export function ControlTowerDashboard({
               onClick={() => setActiveTab(tab.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "bg-red-600 text-white shadow-sm"
+                  ? "bg-primary text-white shadow-sm"
                   : tab.id === "EXCEPTION"
-                  ? "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
+                  ? "bg-danger/10 text-danger border border-danger/30 hover:bg-danger/15"
                   : "bg-surface border border-border text-text-muted hover:text-text"
               }`}
             >
@@ -501,14 +501,14 @@ export function ControlTowerDashboard({
               placeholder="Tìm theo mã đơn, khách hàng, mẫu hoa..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-border bg-surface text-text focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-border bg-surface text-text focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           <Button
             size="sm"
             onClick={handleOpenCreate}
-            className="bg-red-600 hover:bg-red-700 text-white text-xs gap-1.5 shrink-0 font-bold shadow-xs h-8 px-3"
+            className="bg-primary hover:bg-primary-dark text-white text-xs gap-1.5 shrink-0 font-bold shadow-xs h-8 px-3"
           >
             <Plus size={13} />
             <span>Tiếp nhận đơn (Sales T01)</span>
@@ -517,7 +517,7 @@ export function ControlTowerDashboard({
       </div>
 
       {notice && (
-        <div role="status" className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900 text-xs font-semibold flex items-center justify-between">
+        <div role="status" className="p-3 rounded-xl border border-success/30 bg-success/10 text-success text-xs font-semibold flex items-center justify-between">
           <span>{notice}</span>
           <button onClick={() => setNotice(null)} aria-label="Ẩn thông báo">
             <X size={14} />
@@ -525,7 +525,7 @@ export function ControlTowerDashboard({
         </div>
       )}
       {loadError && (
-        <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold flex items-center justify-between gap-2">
+        <div role="alert" className="p-3 rounded-xl border border-danger/30 bg-danger/10 text-danger text-xs font-semibold flex items-center justify-between gap-2">
           <span>Không tải được danh sách đơn: {loadError}</span>
           <Button size="sm" variant="outline" onClick={() => void refresh()} className="gap-1 h-7">
             <RefreshCw size={12} /> Thử lại
@@ -595,7 +595,7 @@ export function ControlTowerDashboard({
           <div className="bg-surface border border-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
             <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
               <div className="flex items-center gap-2">
-                <Radio size={18} className="text-red-600" />
+                <Radio size={18} className="text-primary" />
                 <h2 className="text-base font-extrabold text-text">
                   Hồ Sơ Điều Phối Đơn #{selectedOrder.orderCode} · {selectedOrder.stageLabel}
                 </h2>
@@ -611,31 +611,31 @@ export function ControlTowerDashboard({
               {tabButton("PRODUCTION", "P4 • Phiếu cắm hoa (T07)")}
               {tabButton("QC", "P5 • Kiểm định QC (T14)")}
               {tabButton("DELIVERY", "P6 • Giao hàng & POD (T21)")}
-              {tabButton("EXCEPTION", `Sự cố (${selectedOrder.exceptions.filter((e) => e.status === "OPEN" || e.status === "IN_PROGRESS").length})`, selectedOrder.hasException ? "text-red-700 bg-red-100" : "")}
+              {tabButton("EXCEPTION", `Sự cố (${selectedOrder.exceptions.filter((e) => e.status === "OPEN" || e.status === "IN_PROGRESS").length})`, selectedOrder.hasException ? "text-danger bg-danger/10" : "")}
               {tabButton("CLOSURE", "P7 • Nghiệm thu (T25)")}
             </div>
 
-            <div className="px-4 py-2 flex items-center justify-between gap-2 bg-surface-alt/30 border-b border-border text-[11px] flex-wrap">
+            <div className="px-4 py-2 flex items-center justify-between gap-2 bg-surface-alt/30 border-b border-border text-caption flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-text-muted">
                   Tổng <strong className="text-text">{fmtVnd(selectedOrder.unitPriceVnd)}</strong>
                 </span>
                 <span className="text-text-muted">
-                  Đã thu <strong className="text-emerald-700">{fmtVnd(selectedOrder.paidVnd)}</strong>
+                  Đã thu <strong className="text-success">{fmtVnd(selectedOrder.paidVnd)}</strong>
                 </span>
                 <span className="text-text-muted">
                   Còn phải thu{" "}
-                  <strong className={selectedOrder.balanceVnd > 0 ? "text-red-700" : "text-emerald-700"}>{fmtVnd(selectedOrder.balanceVnd)}</strong>
+                  <strong className={selectedOrder.balanceVnd > 0 ? "text-danger" : "text-success"}>{fmtVnd(selectedOrder.balanceVnd)}</strong>
                 </span>
               </div>
-              <Button size="sm" variant="outline" onClick={() => setIsPaymentModalOpen(true)} className="h-7 px-2.5 text-[11px] font-bold gap-1">
+              <Button size="sm" variant="outline" onClick={() => setIsPaymentModalOpen(true)} className="h-7 px-2.5 text-caption font-bold gap-1">
                 <Wallet size={12} /> Sổ thu (T01/T02/T05)
               </Button>
             </div>
 
             <div className="p-6 flex flex-col gap-4">
               {detailError && (
-                <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold">
+                <div role="alert" className="p-3 rounded-xl border border-danger/30 bg-danger/10 text-danger text-xs font-semibold">
                   {detailError}
                 </div>
               )}
@@ -776,7 +776,7 @@ export function ControlTowerDashboard({
                               value={resolutionDrafts[exc.id] ?? ""}
                               onChange={(e) => setResolutionDrafts((prev) => ({ ...prev, [exc.id]: e.target.value }))}
                             />
-                            <Button size="sm" onClick={() => void handleResolveException(exc.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                            <Button size="sm" onClick={() => void handleResolveException(exc.id)} className="bg-success hover:bg-success-dark text-white">
                               Đóng sự cố
                             </Button>
                           </div>
@@ -786,7 +786,7 @@ export function ControlTowerDashboard({
                   })}
 
                   {selectedOrder.stage !== "COMPLETED" && selectedOrder.stage !== "CANCELLED" && (
-                    <div className="p-3 rounded-xl border border-dashed border-red-300 flex flex-col gap-2">
+                    <div className="p-3 rounded-xl border border-dashed border-danger/40 flex flex-col gap-2">
                       <span className="font-bold text-text">Mở sự cố mới (T22)</span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <select className={fieldClass} value={newException.type} onChange={(e) => setNewException({ ...newException, type: e.target.value })}>
@@ -809,7 +809,7 @@ export function ControlTowerDashboard({
                         value={newException.description}
                         onChange={(e) => setNewException({ ...newException, description: e.target.value })}
                       />
-                      <Button size="sm" variant="outline" onClick={() => void handleOpenException()} className="w-fit text-red-700 border-red-300 gap-1">
+                      <Button size="sm" variant="outline" onClick={() => void handleOpenException()} className="w-fit text-danger border-danger/40 gap-1">
                         <AlertCircle size={13} /> Mở sự cố
                       </Button>
                     </div>
@@ -820,8 +820,8 @@ export function ControlTowerDashboard({
               {detailModalTab === "CLOSURE" && (
                 <div className="flex flex-col gap-3 text-xs">
                   {selectedOrder.stage === "COMPLETED" ? (
-                    <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 flex flex-col gap-1">
-                      <strong className="text-emerald-900">Đã đóng lúc {fmtTime(selectedOrder.closedAt)}</strong>
+                    <div className="p-4 rounded-xl border border-success/30 bg-success/10 flex flex-col gap-1">
+                      <strong className="text-success">Đã đóng lúc {fmtTime(selectedOrder.closedAt)}</strong>
                       <span>Đối tác: {selectedOrder.partnerName ?? "—"} · Điểm: {selectedOrder.partnerRating ?? "—"}/5</span>
                       <span>
                         Tiền công đối tác:{" "}
@@ -836,7 +836,7 @@ export function ControlTowerDashboard({
                       size="sm"
                       disabled={selectedOrder.stage !== "DELIVERED"}
                       onClick={() => setIsClosureModalOpen(true)}
-                      className="w-fit bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                      className="w-fit bg-success hover:bg-success-dark text-white gap-1"
                     >
                       <CheckCircle2 size={13} /> Nghiệm thu & đóng đơn
                     </Button>
@@ -846,7 +846,7 @@ export function ControlTowerDashboard({
                     <div className="p-3 rounded-xl border border-dashed border-border flex flex-col gap-2">
                       <span className="font-bold text-text">Huỷ đơn (cần quyền điều hành)</span>
                       <input className={fieldClass} placeholder="Lý do huỷ" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
-                      <Button size="sm" variant="outline" onClick={() => void handleCancelOrder()} className="w-fit gap-1 text-red-700 border-red-300">
+                      <Button size="sm" variant="outline" onClick={() => void handleCancelOrder()} className="w-fit gap-1 text-danger border-danger/40">
                         <Ban size={13} /> Huỷ đơn
                       </Button>
                     </div>

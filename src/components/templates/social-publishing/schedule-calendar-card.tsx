@@ -59,11 +59,11 @@ export function ScheduleCalendarCard({
       {/* Header & Thống kê */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
             <Sparkles size={12} className="text-primary" />
-            M07 Social Publishing · Bảng Lịch Đăng Tổng Hợp
+            Đăng mạng xã hội Social Publishing · Bảng Lịch Đăng Tổng Hợp
           </div>
-          <div className="text-[17px] font-extrabold text-text mt-0.5">
+          <div className="text-title font-extrabold text-text mt-0.5">
             Kế Hoạch & Khung Giờ Phát Bài Đa Kênh
           </div>
         </div>
@@ -87,7 +87,7 @@ export function ScheduleCalendarCard({
 
       {/* Bộ lọc kênh phát */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        <div className="text-[11px] font-semibold text-text-muted flex items-center gap-1 mr-1">
+        <div className="text-caption font-semibold text-text-muted flex items-center gap-1 mr-1">
           <Filter size={11} /> Kênh:
         </div>
         {[
@@ -117,8 +117,8 @@ export function ScheduleCalendarCard({
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-10 text-center border-dashed border border-border rounded-xl bg-surface-alt/50">
           <Calendar size={28} className="text-text-muted mb-2 opacity-50" />
-          <div className="text-[13.5px] font-bold text-text">Chưa có bài viết nào trong lịch xuất bản này</div>
-          <div className="text-[11.5px] text-text-muted mt-1 max-w-sm">
+          <div className="text-body font-bold text-text">Chưa có bài viết nào trong lịch xuất bản này</div>
+          <div className="text-caption text-text-muted mt-1 max-w-sm">
             Các bài viết sau khi được chọn thời điểm xuất bản sẽ hiển thị chi tiết theo từng khung giờ phát tại đây.
           </div>
           {onNewSchedule && (
@@ -133,6 +133,8 @@ export function ScheduleCalendarCard({
             const isCurrent = selectedId === item.id
             return (
               <div
+              role="button"
+              tabIndex={0}
                 key={item.id}
                 onClick={() => onSelectPost?.(item)}
                 className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
@@ -145,11 +147,11 @@ export function ScheduleCalendarCard({
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
                   {/* Cột khung giờ phát */}
                   <div className="flex flex-col items-center justify-center min-w-[72px] px-2 py-1.5 rounded-lg bg-surface-alt border border-border flex-shrink-0 text-center">
-                    <div className="text-[12.5px] font-black text-primary flex items-center gap-1">
+                    <div className="text-meta font-black text-primary flex items-center gap-1">
                       <Clock size={12} />
                       {item.scheduledTime}
                     </div>
-                    <div className="text-[9.5px] font-medium text-text-muted truncate max-w-[68px]">
+                    <div className="text-caption font-medium text-text-muted truncate max-w-[68px]">
                       {item.dateStr || "Hôm nay"}
                     </div>
                   </div>
@@ -159,7 +161,7 @@ export function ScheduleCalendarCard({
                     <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-border">
                       <img src={item.media_url} alt="" className="w-full h-full object-cover" />
                       {item.is_mock_media && (
-                        <span className="absolute bottom-0 inset-x-0 bg-warning/90 text-[8px] font-black text-white text-center leading-none py-0.5">
+                        <span className="absolute bottom-0 inset-x-0 bg-warning/90 text-caption font-black text-white text-center leading-none py-0.5">
                           MOCK
                         </span>
                       )}
@@ -168,15 +170,15 @@ export function ScheduleCalendarCard({
 
                   {/* Chi tiết bài đăng */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-bold text-text truncate">{item.title}</div>
-                    <div className="text-[11px] text-text-muted flex items-center gap-2 mt-0.5">
+                    <div className="text-body-sm font-bold text-text truncate">{item.title}</div>
+                    <div className="text-caption text-text-muted flex items-center gap-2 mt-0.5">
                       <span className="font-semibold text-primary capitalize">
                         {item.channelLabel || item.channel}
                       </span>
                       <span>·</span>
                       <span>ID #{item.id}</span>
                       {item.is_mock_media && (
-                        <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-warning-bg text-warning border border-warning/30">
+                        <span className="text-caption font-bold px-1.5 py-0.2 rounded bg-warning-bg text-warning border border-warning/30">
                           Ảnh mẫu (Mock)
                         </span>
                       )}
@@ -199,7 +201,7 @@ export function ScheduleCalendarCard({
                         }
                       }}
                       disabled={publishingId === item.id}
-                      className="text-[11px] font-bold h-7 px-2.5 bg-primary text-white gap-1 hover:bg-primary/90 shadow-2xs"
+                      className="text-caption font-bold h-7 px-2.5 bg-primary text-white gap-1 hover:bg-primary/90 shadow-2xs"
                       title="Phát sóng ngay bài viết này"
                     >
                       {publishingId === item.id ? (
@@ -219,7 +221,7 @@ export function ScheduleCalendarCard({
                         ? "neutral"
                         : "danger"
                     }
-                    className="text-[11px] gap-1 px-2 py-0.5"
+                    className="text-caption gap-1 px-2 py-0.5"
                   >
                     {item.status === "published" ? (
                       <>

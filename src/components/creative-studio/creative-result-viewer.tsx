@@ -113,10 +113,10 @@ const PLATFORMS: Array<"facebook" | "instagram" | "tiktok" | "zalo"> = [
 ]
 
 const PLATFORM_LABELS: Record<"facebook" | "instagram" | "tiktok" | "zalo", { label: string; icon: string; bgActive: string }> = {
-  facebook: { label: "Facebook Fanpage", icon: "📘", bgActive: "bg-blue-600 text-white" },
-  instagram: { label: "Instagram Reels & Feed", icon: "📸", bgActive: "bg-gradient-to-r from-purple-600 to-pink-600 text-white" },
-  tiktok: { label: "TikTok Video (9:16)", icon: "🎵", bgActive: "bg-stone-900 text-white" },
-  zalo: { label: "Zalo OA Bán hàng", icon: "💬", bgActive: "bg-blue-500 text-white" },
+  facebook: { label: "Facebook Fanpage", icon: "📘", bgActive: "bg-primary text-primary-foreground" },
+  instagram: { label: "Instagram Reels & Feed", icon: "📸", bgActive: "bg-primary text-primary-foreground" },
+  tiktok: { label: "TikTok Video (9:16)", icon: "🎵", bgActive: "bg-primary text-primary-foreground" },
+  zalo: { label: "Zalo OA Bán hàng", icon: "💬", bgActive: "bg-primary text-primary-foreground" },
 }
 
 // Tách vỏ/thân (23/09/2026): bản trước gọi `useMemo` SAU `return null` sớm —
@@ -170,7 +170,7 @@ function CreativeResultViewerBody({
   const hook = captions[0]?.hook || currentResult.topicTitle
   const cta = captions[0]?.cta || "Nhắn tin cho tiệm để nhận ưu đãi ngay hôm nay!"
 
-  // Bài viết Content Engine (P27, 25/09/2026): Chặng 05 không còn tự viết bài
+  // Bài viết Content Engine (Phiên bản hiện tại, 25/09/2026): Chặng 05 không còn tự viết bài
   // nữa — chuỗi Strategist→Writer→Critic→Rewriter (`generateContent()`) chạy
   // NGƯỜI DÙNG BẤM (`handleWriteWithContentEngine`), hoặc đã chạy sẵn làm bước
   // làm giàu thứ hai ngay sau khi kịch bản này thành công
@@ -303,8 +303,8 @@ function CreativeResultViewerBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKeyStr, generatedPosts, customEdits])
 
-  // Lưu 4 bài vào gói chiến dịch của Master hiện tại (Khu vực F đọc lại qua API)
-  // — thay cho việc kết quả Khu vực B mất khi chuyển tab (23/09/2026).
+  // Lưu 4 bài vào gói chiến dịch của Master hiện tại (Chiến dịch đọc lại qua API)
+  // — thay cho việc kết quả Nội dung mất khi chuyển tab (23/09/2026).
   const [savingToPackage, setSavingToPackage] = useState(false)
   const [packageNotice, setPackageNotice] = useState<string | null>(null)
   const handleSaveToPackage = async () => {
@@ -348,17 +348,17 @@ function CreativeResultViewerBody({
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* ── Tiêu đề kết quả & Thông tin tổng hợp ── */}
-      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-stone-50 p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-100 pb-3">
+      <div className="rounded-2xl border border-success/30 bg-gradient-to-br from-success/10 via-surface to-surface-alt p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-success/20 pb-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-success text-white shadow-xs">
               <Sparkles size={18} />
             </span>
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-extrabold uppercase tracking-wider mb-0.5">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-caption font-extrabold uppercase tracking-wider mb-0.5">
                 {mode === "CREATIVE" ? "✨ AI CREATIVE SẢN XUẤT THÀNH CÔNG" : "🌿 AUTHENTIC XƯỞNG HOÀN THÀNH"}
               </div>
-              <h3 className="text-[16px] font-extrabold text-stone-900">
+              <h3 className="text-title font-extrabold text-text">
                 {currentResult.topicTitle || "Nội dung truyền thông hoa tươi"}
               </h3>
             </div>
@@ -366,19 +366,19 @@ function CreativeResultViewerBody({
 
           <div className="flex items-center gap-2 text-xs">
             {arc?.totalDurationSeconds && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-stone-100 text-stone-700 font-semibold">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-alt text-text-muted font-semibold">
                 <Clock size={12} /> Thời lượng video: {arc.totalDurationSeconds}s
               </span>
             )}
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 font-bold">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold">
               {totalCredits} credits
             </span>
           </div>
         </div>
 
         {arc?.narrativeReasoning && (
-          <div className="pt-3 text-xs text-stone-600 leading-relaxed">
-            <span className="font-bold text-stone-800">Ý đồ kịch bản: </span>
+          <div className="pt-3 text-xs text-text-muted leading-relaxed">
+            <span className="font-bold text-text">Ý đồ kịch bản: </span>
             {arc.narrativeReasoning}
           </div>
         )}
@@ -386,16 +386,16 @@ function CreativeResultViewerBody({
 
       {/* ── Cung truyện 5 nhịp (Narrative Arc) ── */}
       {arc && arc.scenes && arc.scenes.length > 0 && (
-        <div className="rounded-2xl border border-stone-200 bg-white p-5 space-y-4 shadow-xs">
-          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div className="rounded-2xl border border-border bg-surface p-5 space-y-4 shadow-xs">
+          <div className="flex items-center justify-between border-b border-border/60 pb-3">
             <div className="flex items-center gap-2">
-              <Film size={18} className="text-purple-600" />
-              <h4 className="text-sm font-bold text-stone-900">
+              <Film size={18} className="text-primary" />
+              <h4 className="text-sm font-bold text-text">
                 1. Kịch bản video cốt truyện 5 nhịp ({arc.scenes.length} cảnh)
               </h4>
             </div>
-            <span className="text-[11px] text-stone-500 font-medium">
-              Tone cảm xúc: <strong className="text-purple-700">{arc.emotionalTone || "Chạm cảm xúc"}</strong>
+            <span className="text-caption text-text-muted font-medium">
+              Tone cảm xúc: <strong className="text-primary">{arc.emotionalTone || "Chạm cảm xúc"}</strong>
             </span>
           </div>
 
@@ -405,67 +405,67 @@ function CreativeResultViewerBody({
               return (
                 <div
                   key={scene.sceneIndex}
-                  className="rounded-xl border border-stone-100 bg-stone-50/60 p-3.5 space-y-2 text-xs hover:border-purple-200 transition-colors"
+                  className="rounded-xl border border-border/60 bg-surface-alt/60 p-3.5 space-y-2 text-xs hover:border-primary/30 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-purple-600 text-white text-[10px] font-extrabold">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-caption font-extrabold">
                         {scene.sceneIndex}
                       </span>
-                      <span className="font-bold text-stone-800">
+                      <span className="font-bold text-text">
                         {scene.beatTitle || `Nhịp ${scene.sceneIndex}`}
                       </span>
                       {scene.beat && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 uppercase">
+                        <span className="px-1.5 py-0.5 rounded text-caption font-bold bg-primary/10 text-primary uppercase">
                           {scene.beat}
                         </span>
                       )}
                     </div>
-                    <span className="text-[11px] text-stone-400 font-mono flex items-center gap-1">
+                    <span className="text-caption text-text-muted font-mono flex items-center gap-1">
                       <Clock size={11} /> {scene.durationSeconds}s
                     </span>
                   </div>
 
                   {scene.sceneDescription && (
-                    <div className="text-[11.5px] text-stone-600 leading-relaxed">
-                      <span className="font-semibold text-stone-800">Bối cảnh: </span>
+                    <div className="text-caption text-text-muted leading-relaxed">
+                      <span className="font-semibold text-text">Bối cảnh: </span>
                       {scene.sceneDescription}
                     </div>
                   )}
 
                   {/* Lời thoại lồng tiếng */}
-                  <div className="rounded-lg bg-white p-2.5 border border-stone-100 text-xs space-y-1">
-                    <div className="flex items-center justify-between text-stone-500 text-[10.5px] font-semibold">
-                      <span className="flex items-center gap-1 text-purple-700">
+                  <div className="rounded-lg bg-surface p-2.5 border border-border/60 text-xs space-y-1">
+                    <div className="flex items-center justify-between text-text-muted text-caption font-semibold">
+                      <span className="flex items-center gap-1 text-primary">
                         <Volume2 size={12} /> Giọng đọc lồng tiếng (Voiceover):
                       </span>
                       <button
                         type="button"
                         onClick={() => handleCopy(scene.voiceScript, sceneKey)}
-                        className="text-stone-400 hover:text-stone-700 flex items-center gap-1 transition"
+                        className="text-text-muted hover:text-text flex items-center gap-1 transition"
                       >
                         {copiedKey === sceneKey ? (
-                          <><Check size={11} className="text-emerald-600" /> Đã chép</>
+                          <><Check size={11} className="text-success" /> Đã chép</>
                         ) : (
                           <><Copy size={11} /> Chép lời</>
                         )}
                       </button>
                     </div>
-                    <p className="text-stone-800 leading-relaxed font-medium">
+                    <p className="text-text leading-relaxed font-medium">
                       “{scene.voiceScript}”
                     </p>
                   </div>
 
                   {/* Text Overlay & Góc quay */}
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-stone-500 pt-0.5">
+                  <div className="flex flex-wrap items-center gap-3 text-caption text-text-muted pt-0.5">
                     {scene.textOverlay && (
                       <div>
-                        Chữ video: <strong className="text-stone-800">“{scene.textOverlay}”</strong>
+                        Chữ video: <strong className="text-text">“{scene.textOverlay}”</strong>
                       </div>
                     )}
                     {scene.motionEffect && (
                       <div>
-                        Chuyển động: <span className="font-mono text-stone-700">{scene.motionEffect}</span>
+                        Chuyển động: <span className="font-mono text-text">{scene.motionEffect}</span>
                       </div>
                     )}
                   </div>
@@ -479,15 +479,15 @@ function CreativeResultViewerBody({
       {/* ══════════════════════════════════════════════════════════════════
           2. BÀI VIẾT MẠNG XÃ HỘI ĐA KÊNH HOÀN CHỈNH (FULL POST COPY)
       ══════════════════════════════════════════════════════════════════ */}
-      <div className="rounded-2xl border border-stone-200 bg-white p-5 space-y-4 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3">
+      <div className="rounded-2xl border border-border bg-surface p-5 space-y-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
           <div className="flex items-center gap-2">
-            <FileText size={18} className="text-blue-600" />
+            <FileText size={18} className="text-primary" />
             <div>
-              <h4 className="text-sm font-bold text-stone-900">
+              <h4 className="text-sm font-bold text-text">
                 2. Bài viết mạng xã hội hoàn chỉnh đa kênh (Facebook, Instagram, TikTok, Zalo)
               </h4>
-              <p className="text-[11.5px] text-stone-500">
+              <p className="text-caption text-text-muted">
                 Nội dung đã được biên soạn và tối ưu cấu trúc riêng biệt cho từng nền tảng bán hoa.
               </p>
             </div>
@@ -499,7 +499,7 @@ function CreativeResultViewerBody({
               type="button"
               onClick={() => setViewMode("tabbed")}
               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
-                viewMode === "tabbed" ? "bg-stone-800 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                viewMode === "tabbed" ? "bg-primary text-primary-foreground" : "bg-surface-alt text-text-muted hover:bg-surface-alt/80"
               }`}
             >
               <Eye size={12} /> Xem từng kênh
@@ -508,7 +508,7 @@ function CreativeResultViewerBody({
               type="button"
               onClick={() => setViewMode("grid")}
               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
-                viewMode === "grid" ? "bg-stone-800 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                viewMode === "grid" ? "bg-primary text-primary-foreground" : "bg-surface-alt text-text-muted hover:bg-surface-alt/80"
               }`}
             >
               <Grid size={12} /> Xem cả 4 kênh
@@ -530,7 +530,7 @@ function CreativeResultViewerBody({
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
                     isSelected
                       ? info.bgActive + " shadow-sm scale-102"
-                      : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                      : "bg-surface-alt text-text hover:bg-surface-alt/80"
                   }`}
                 >
                   <span className="text-sm">{info.icon}</span>
@@ -553,22 +553,22 @@ function CreativeResultViewerBody({
             return (
               <div
                 key={platform}
-                className="rounded-xl border border-stone-200 bg-stone-50/60 p-4 space-y-3 flex flex-col justify-between transition-all hover:border-stone-300"
+                className="rounded-xl border border-border bg-surface-alt/60 p-4 space-y-3 flex flex-col justify-between transition-all hover:border-border-hover"
               >
                 {/* Header thẻ bài viết */}
-                <div className="space-y-2 border-b border-stone-200/80 pb-3">
+                <div className="space-y-2 border-b border-border/80 pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{post.icon}</span>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-stone-900">{post.platformLabel}</span>
-                          <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.2 rounded-full border border-blue-200">
+                          <span className="text-xs font-bold text-text">{post.platformLabel}</span>
+                          <span className="text-caption text-primary font-bold bg-primary/10 px-1.5 py-0.2 rounded-full border border-primary/20">
                             ✓ Đã tối ưu
                           </span>
                         </div>
-                        <span className="text-[11px] text-stone-500 block">
-                          Khung giờ vàng: <strong className="text-stone-700">{post.recommendedPostingTime}</strong>
+                        <span className="text-caption text-text-muted block">
+                          Khung giờ vàng: <strong className="text-text">{post.recommendedPostingTime}</strong>
                         </span>
                       </div>
                     </div>
@@ -579,7 +579,7 @@ function CreativeResultViewerBody({
                         variant="ghost"
                         size="sm"
                         onClick={() => setEditingPlatform(isEditing ? null : platform)}
-                        className="text-stone-600 hover:text-stone-900 text-xs font-semibold h-7 px-2 gap-1"
+                        className="text-text-muted hover:text-text text-xs font-semibold h-7 px-2 gap-1"
                       >
                         <Edit3 size={12} />
                         {isEditing ? "Đóng sửa" : "Chỉnh sửa"}
@@ -589,10 +589,10 @@ function CreativeResultViewerBody({
                         variant="outline"
                         size="sm"
                         onClick={() => handleCopy(content, copyKey)}
-                        className="text-xs font-bold gap-1 h-7 px-2.5 bg-white shadow-2xs hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300"
+                        className="text-xs font-bold gap-1 h-7 px-2.5 bg-surface shadow-2xs hover:bg-success/10 hover:text-success hover:border-success/30"
                       >
                         {copiedKey === copyKey ? (
-                          <><Check size={12} className="text-emerald-600" /> Đã sao chép</>
+                          <><Check size={12} className="text-success" /> Đã sao chép</>
                         ) : (
                           <><Copy size={12} /> Sao chép bài</>
                         )}
@@ -600,39 +600,39 @@ function CreativeResultViewerBody({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-[10.5px] text-stone-500 flex-wrap">
-                    <span className="bg-white px-2 py-0.5 rounded border border-stone-200">
+                  <div className="flex items-center gap-2 text-caption text-text-muted flex-wrap">
+                    <span className="bg-surface px-2 py-0.5 rounded border border-border">
                       {post.characterCount} ký tự
                     </span>
-                    <span className="bg-white px-2 py-0.5 rounded border border-stone-200 truncate max-w-xs">
+                    <span className="bg-surface px-2 py-0.5 rounded border border-border truncate max-w-xs">
                       {post.targetAudience}
                     </span>
                   </div>
                 </div>
 
                 {/* Body bài viết (Social Post Preview) */}
-                <div className="rounded-lg bg-white p-3.5 border border-stone-200 text-xs text-stone-800 shadow-2xs leading-relaxed">
+                <div className="rounded-lg bg-surface p-3.5 border border-border text-xs text-text shadow-2xs leading-relaxed">
                   {isEditing ? (
                     <div className="space-y-2">
                       <textarea
                         value={content}
                         onChange={(e) => handleUpdateContent(platform, e.target.value)}
                         rows={12}
-                        className="w-full rounded-lg border border-stone-300 p-2.5 text-xs text-stone-900 focus:border-blue-500 focus:outline-none font-mono"
+                        className="w-full rounded-lg border border-border p-2.5 text-xs text-text focus:border-primary focus:outline-none font-mono"
                       />
                       <div className="flex justify-end">
                         <Button
                           type="button"
                           size="sm"
                           onClick={() => setEditingPlatform(null)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-7 px-3"
+                          className="bg-success hover:bg-success-dark text-white text-xs font-bold h-7 px-3"
                         >
                           <Check size={12} className="mr-1" /> Lưu chỉnh sửa
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <div className="whitespace-pre-line font-sans text-stone-800 space-y-1">
+                    <div className="whitespace-pre-line font-sans text-text space-y-1">
                       {content}
                     </div>
                   )}
@@ -644,7 +644,7 @@ function CreativeResultViewerBody({
                     {Array.from(new Set(post.hashtags)).map((tag, tagIdx) => (
                       <span
                         key={`${platform}-${tag}-${tagIdx}`}
-                        className="inline-block px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[10.5px] font-medium"
+                        className="inline-block px-2 py-0.5 rounded-full bg-surface-alt text-text-muted text-caption font-medium"
                       >
                         {tag}
                       </span>
@@ -657,12 +657,12 @@ function CreativeResultViewerBody({
         </div>
 
         {/* Nút sao chép toàn bộ tất cả bài viết */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-stone-100 text-xs text-stone-500">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-border/60 text-xs text-text-muted">
           <span>💡 Bạn có thể nhấp <strong>“Sao chép bài”</strong> ở từng kênh để dán trực tiếp lên Facebook Fanpage, TikTok Shop hoặc Zalo OA.</span>
           <button
             type="button"
             onClick={handleCopyAllHashtags}
-            className="text-xs font-bold text-rose-700 hover:text-rose-900 flex items-center gap-1 transition shrink-0"
+            className="text-xs font-bold text-primary hover:text-primary-dark flex items-center gap-1 transition shrink-0"
           >
             {copiedKey === "all-hashtags" ? "✓ Đã sao chép tất cả hashtags" : "Sao chép tất cả hashtags →"}
           </button>
@@ -670,24 +670,24 @@ function CreativeResultViewerBody({
       </div>
 
       {contentEnginePosts && contentEnginePosts.length > 0 ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[12px] text-emerald-800">
-          Bài {contentEnginePosts.map((p) => PLATFORM_LABELS[p.channel]?.label ?? p.channel).join(", ")} do Content Engine (P27) viết
+        <p className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-meta text-success">
+          Bài {contentEnginePosts.map((p) => PLATFORM_LABELS[p.channel]?.label ?? p.channel).join(", ")} do Content Engine (Phiên bản hiện tại) viết
           (Strategist→Writer→Critic→Rewriter, cùng câu chuyện Chặng 05). Kênh khác dùng khuôn dự phòng — hãy đọc lại trước khi đăng.
         </p>
       ) : planPosts && planPosts.length > 0 ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[12px] text-emerald-800">
+        <p className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-meta text-success">
           Bài {planPosts.map((p) => PLATFORM_LABELS[p.channel]?.label ?? p.channel).join(", ")} lấy từ kịch bản sản xuất Chặng 05
           (cùng câu chuyện với ảnh, âm thanh, video). Kênh khác dùng khuôn dự phòng — hãy đọc lại trước khi đăng.
         </p>
       ) : null}
 
       {scenePlanId && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3">
-          <div className="text-[12px] text-stone-600">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-xl border border-border bg-surface p-3">
+          <div className="text-meta text-text-muted">
             {contentEnginePosts && contentEnginePosts.length > 0
               ? "Đã có bài do Content Engine viết cho kịch bản này. Bấm để viết lại (tốn credit riêng, cộng dồn với kịch bản)."
               : "Nhờ Content Engine viết bài đa kênh theo đúng câu chuyện Chặng 05 (tốn credit riêng)."}
-            {ceError && <span className="block text-rose-600 mt-1">{ceError}</span>}
+            {ceError && <span className="block text-danger mt-1">{ceError}</span>}
           </div>
           <div className="w-full sm:w-60 shrink-0">
             <ProviderSelect kind="content" value={ceProvider} onChange={setCeProvider} label="AI viết bài" disabled={ceStatus === "writing"} />
@@ -696,7 +696,7 @@ function CreativeResultViewerBody({
             type="button"
             onClick={handleWriteWithContentEngine}
             disabled={ceStatus === "writing"}
-            className="shrink-0 rounded-lg bg-rose-700 px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-60"
+            className="shrink-0 rounded-lg bg-primary hover:bg-primary-dark px-3 py-1.5 text-meta font-bold text-white disabled:opacity-60"
           >
             {ceStatus === "writing"
               ? "Đang viết..."
@@ -708,21 +708,21 @@ function CreativeResultViewerBody({
       )}
 
       {/* ── Lưu bài vào gói chiến dịch (Khu vực F) ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3">
-        <span className="text-[12px] text-stone-600">
-          Lưu 4 bài (kể cả phần bạn đã sửa) vào gói chiến dịch để Khu vực F chạy QA và duyệt.
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-xl border border-border bg-surface p-3">
+        <span className="text-meta text-text-muted">
+          Lưu 4 bài (kể cả phần bạn đã sửa) vào gói chiến dịch để Chiến dịch chạy QA và duyệt.
         </span>
         <button
           type="button"
           onClick={handleSaveToPackage}
           disabled={savingToPackage}
-          className="shrink-0 rounded-lg bg-stone-900 px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-60"
+          className="shrink-0 rounded-lg bg-primary hover:bg-primary-dark px-3 py-1.5 text-meta font-bold text-white disabled:opacity-60"
         >
           {savingToPackage ? "Đang lưu..." : "Lưu bài vào gói chiến dịch"}
         </button>
       </div>
-      {packageNotice && <p className="text-[12px] text-stone-700">{packageNotice}</p>}
-      <p className={`text-[11.5px] ${autoSaved.error ? "text-rose-700" : "text-stone-500"}`}>
+      {packageNotice && <p className="text-meta text-text">{packageNotice}</p>}
+      <p className={`text-caption ${autoSaved.error ? "text-danger" : "text-text-muted"}`}>
         {autoSaved.error
           ? `Chưa tự lưu được: ${autoSaved.error}`
           : autoSaved.at
@@ -751,7 +751,7 @@ function CreativeResultViewerBody({
               <button
                 type="button"
                 onClick={onGoToPackage}
-                className="text-[11.5px] font-semibold text-stone-500 hover:text-stone-800 flex items-center gap-1 transition underline decoration-dotted"
+                className="text-caption font-semibold text-text-muted hover:text-text flex items-center gap-1 transition underline decoration-dotted"
               >
                 ⚡ Bỏ qua tạo Audio/Ảnh/Video, đi thẳng đến Đóng gói chiến dịch (Chặng 07) →
               </button>

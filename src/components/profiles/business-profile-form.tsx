@@ -118,7 +118,7 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
               }`}
             />
             {errors.displayName && (
-              <p className="mt-1 text-[11px] font-medium text-danger">{errors.displayName}</p>
+              <p className="mt-1 text-caption font-medium text-danger">{errors.displayName}</p>
             )}
           </div>
 
@@ -204,12 +204,12 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="contact@tiemhoathaomoc.vn"
                 className={`w-full rounded-xl border bg-surface pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                  errors.email ? "border-red-500 ring-2 ring-red-500/10" : "border-border focus:border-primary"
+                  errors.email ? "border-danger ring-2 ring-danger/10" : "border-border focus:border-primary"
                 }`}
               />
             </div>
             {errors.email && (
-              <p className="mt-1 text-[11px] font-medium text-danger">{errors.email}</p>
+              <p className="mt-1 text-caption font-medium text-danger">{errors.email}</p>
             )}
           </div>
 

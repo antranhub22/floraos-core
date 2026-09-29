@@ -127,8 +127,8 @@ export function BeforeAfterPreviewCard({
     <Card className="overflow-hidden rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4 w-full">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold text-text-muted">M04a Studio Preview</div>
-          <div className="text-[16px] font-extrabold text-text">{title}</div>
+          <div className="text-xs font-semibold text-text-muted">Tối ưu ảnh Studio Preview</div>
+          <div className="text-title font-extrabold text-text">{title}</div>
         </div>
         <Badge tone={badgeTone} className="gap-1">
           <Sparkles size={12} />

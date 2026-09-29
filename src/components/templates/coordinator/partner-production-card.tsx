@@ -52,7 +52,7 @@ export function PartnerProductionCard({
     <Card className="rounded-2xl border border-border bg-surface p-6 shadow-sm flex flex-col gap-5">
       <div className="flex items-center justify-between border-b border-dashed border-border pb-4">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted">
             Lệnh Cắm Hoa & Phiếu Xưởng (T07)
           </div>
           <h3 className="text-lg font-extrabold text-text">
@@ -89,7 +89,7 @@ export function PartnerProductionCard({
         <div className={sampleImageUrl ? "md:col-span-2 flex flex-col gap-4" : "md:col-span-3 flex flex-col gap-4"}>
           <div>
             <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Layers size={13} className="text-red-600" />
+              <Layers size={13} className="text-alert-600" />
               <span>CÔNG THỨC HOA NGUYÊN TỬ (MASTER INDEX BOM)</span>
             </div>
             <div className="rounded-xl border border-border overflow-hidden">
@@ -107,35 +107,35 @@ export function PartnerProductionCard({
                     <tr key={i} className="hover:bg-surface-alt/40">
                       <td className="px-3 py-2 font-bold text-text">
                         {f.flowerName}
-                        {f.variety && <span className="text-[10px] font-medium text-text-muted"> · {f.variety}</span>}
+                        {f.variety && <span className="text-caption font-medium text-text-muted"> · {f.variety}</span>}
                         {typeof f.budCount === "number" && f.budCount > 0 && (
-                          <span className="ml-1.5 px-1 py-0 rounded bg-amber-100 text-amber-700 text-[10px] font-bold align-middle">
+                          <span className="ml-1.5 px-1 py-0 rounded bg-sand-100 text-sand-700 text-caption font-bold align-middle">
                             {f.budCount} nụ chưa nở
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-rose-700 font-extrabold">
+                      <td className="px-3 py-2 text-blush-700 font-extrabold">
                         {f.quantity} {f.unit}
                         {typeof f.stemLengthCm === "number" && (
-                          <span className="ml-1 text-[10px] font-medium text-text-muted">· dài {f.stemLengthCm}cm</span>
+                          <span className="ml-1 text-caption font-medium text-text-muted">· dài {f.stemLengthCm}cm</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-text-muted">
                         {f.color}
-                        {f.shade && <span className="text-[10px] text-text-muted/80"> ({f.shade})</span>}
+                        {f.shade && <span className="text-caption text-text-muted/80"> ({f.shade})</span>}
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-caption font-bold ${
                           f.role === "Chủ đạo"
-                            ? "bg-rose-100 text-rose-800"
+                            ? "bg-blush-100 text-blush-800"
                             : f.role === "Điểm xuyến"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-neutral-100 text-neutral-800"
+                            ? "bg-sand-100 text-sand-800"
+                            : "bg-cool-100 text-cool-800"
                         }`}>
                           {f.role}
                         </span>
                         {f.substitutionAllowed && (
-                          <span className="ml-1 inline-block px-1 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-bold">
+                          <span className="ml-1 inline-block px-1 py-0.5 rounded bg-azure-100 text-azure-800 text-caption font-bold">
                             Được thay{typeof f.substitutionPriority === "number" ? ` #${f.substitutionPriority}` : ""}
                           </span>
                         )}
@@ -156,7 +156,7 @@ export function PartnerProductionCard({
                     {foliage.map((fol, i) => (
                       <div key={i}>
                         • {fol.name} ({fol.role})
-                        {fol.substitutionAllowed && <span className="text-sky-700"> · được thay thế</span>}
+                        {fol.substitutionAllowed && <span className="text-azure-700"> · được thay thế</span>}
                       </div>
                     ))}
                   </div>
@@ -171,7 +171,7 @@ export function PartnerProductionCard({
                         • {w.layer}: {w.material} - {w.color}
                         {w.pattern && ` (${w.pattern})`}
                         {typeof w.quantity === "number" && ` · SL ${w.quantity}`}
-                        {w.substitutionAllowed && <span className="text-sky-700"> · được thay thế</span>}
+                        {w.substitutionAllowed && <span className="text-azure-700"> · được thay thế</span>}
                       </div>
                     ))}
                   </div>
@@ -184,7 +184,7 @@ export function PartnerProductionCard({
                     {accessories.map((a, i) => (
                       <div key={i}>
                         • {a.name} ({a.material}, {a.color}){a.unit ? ` · ${a.quantity ?? ""}${a.unit}` : ""}{a.printedText ? ` — "${a.printedText}"` : ""}
-                        {a.substitutionAllowed && <span className="text-sky-700"> · được thay thế</span>}
+                        {a.substitutionAllowed && <span className="text-azure-700"> · được thay thế</span>}
                       </div>
                     ))}
                   </div>
@@ -194,18 +194,18 @@ export function PartnerProductionCard({
           )}
 
           {cardMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200 text-xs">
-              <div className="font-bold text-rose-950 flex items-center gap-1.5 mb-1">
-                <MessageSquare size={13} className="text-rose-600" />
+            <div className="p-3.5 rounded-xl bg-blush-50/70 border border-blush-200 text-xs">
+              <div className="font-bold text-blush-950 flex items-center gap-1.5 mb-1">
+                <MessageSquare size={13} className="text-blush-600" />
                 <span>Nội dung thiệp chúc mừng (In nguyên văn):</span>
               </div>
-              <p className="text-rose-900 font-medium italic">&ldquo;{cardMessage}&rdquo;</p>
+              <p className="text-blush-900 font-medium italic">&ldquo;{cardMessage}&rdquo;</p>
             </div>
           )}
 
           {customFields.length > 0 && (
             <div className="p-3 rounded-xl bg-surface-alt border border-border/60 text-xs">
-              <div className="font-bold text-text-muted uppercase text-[10px] mb-1">Thông tin bổ sung</div>
+              <div className="font-bold text-text-muted uppercase text-caption mb-1">Thông tin bổ sung</div>
               <div className="space-y-0.5 text-text">
                 {customFields.map((f) => (
                   <div key={f.key}>
@@ -223,7 +223,7 @@ export function PartnerProductionCard({
           {partnerInstruction && <span>Lưu ý thợ: <strong>{partnerInstruction}</strong></span>}
         </div>
         {onMarkReady && (
-          <Button onClick={onMarkReady} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+          <Button onClick={onMarkReady} className="bg-mint-600 hover:bg-mint-700 text-white gap-1.5">
             <CheckCircle2 size={15} />
             <span>Hoàn tất cắm hoa & Chuyển QC</span>
           </Button>

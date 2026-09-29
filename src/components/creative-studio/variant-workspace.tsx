@@ -137,11 +137,11 @@ function formatIntegrity(value: number | null, hasGenerated: boolean, detail?: s
 }
 
 const BEAT_COLORS: Record<string, string> = {
-  SETUP: "bg-blue-100 text-blue-800 border-blue-200",
-  RISING: "bg-purple-100 text-purple-800 border-purple-200",
-  CLIMAX: "bg-rose-100 text-rose-800 border-rose-200",
-  RESOLUTION: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  CTA: "bg-amber-100 text-amber-800 border-amber-200",
+  SETUP: "bg-primary/10 text-primary border-primary/20",
+  RISING: "bg-primary/15 text-primary border-primary/30",
+  CLIMAX: "bg-danger/10 text-danger border-danger/20",
+  RESOLUTION: "bg-success/10 text-success border-success/20",
+  CTA: "bg-warning/10 text-warning border-warning/20",
 }
 
 /** Cảnh dùng nhà cung cấp AI khi người dùng bật: CREATIVE và không phải phông trắng. */
@@ -771,8 +771,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     return (
       <div className="flex flex-1 flex-col items-center gap-5 w-full max-w-xl mx-auto py-8">
         <div className="text-center">
-          <div className="text-[17px] font-extrabold text-text">Đang sinh biến thể M04b</div>
-          <div className="mt-1 text-[13px] text-text-muted">
+          <div className="text-title font-extrabold text-text">Đang sinh biến thể Biến thể marketing</div>
+          <div className="mt-1 text-body-sm text-text-muted">
             {jobPhase ?? "Đang xếp hàng chờ worker nhận việc..."}
           </div>
         </div>
@@ -801,7 +801,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
       <div className="flex flex-col items-center gap-6 w-full max-w-5xl mx-auto">
         {planRatios.length > 1 && (
           <div className="flex w-full flex-wrap items-center gap-1.5" role="tablist" aria-label="Khung ảnh">
-            <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-text-muted">Khung theo nền tảng:</span>
+            <span className="mr-1 text-caption font-bold uppercase tracking-wider text-text-muted">Khung theo nền tảng:</span>
             {planRatios.map((r) => {
               const done = r === viewRatio ? generatedSceneCount : (ratioCounts[r] ?? 0)
               return (
@@ -811,7 +811,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   role="tab"
                   aria-selected={r === viewRatio}
                   onClick={() => setVariantRatio(r)}
-                  className={`rounded-lg border px-3 py-1.5 text-[11.5px] font-bold cursor-pointer ${
+                  className={`rounded-lg border px-3 py-1.5 text-caption font-bold cursor-pointer ${
                     r === viewRatio ? "border-primary bg-primary text-white" : "border-border bg-surface text-text-muted"
                   }`}
                 >
@@ -824,12 +824,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         {/* Header kết quả */}
         <div className="flex items-center justify-between w-full flex-wrap gap-2 border-b border-border pb-4">
           <div>
-            <div className="text-xs text-text-muted">④ Thẻ kết quả — M04b · Kịch bản bối cảnh {scenePlan?.source === "rule" ? "cơ bản" : "AI"} · {scenePlan?.mode}</div>
-            <div className="text-[19px] font-extrabold text-text">Bộ {sceneCount} phân cảnh theo chủ đề: {scenePlan?.topicTitle}</div>
+            <div className="text-xs text-text-muted">④ Thẻ kết quả — Biến thể · Kịch bản bối cảnh {scenePlan?.source === "rule" ? "cơ bản" : "AI"} · {scenePlan?.mode}</div>
+            <div className="text-display font-extrabold text-text">Bộ {sceneCount} phân cảnh theo chủ đề: {scenePlan?.topicTitle}</div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {cloudAvailable && (
-            <div className="inline-flex rounded-lg border border-border overflow-hidden text-[11px] font-bold">
+            <div className="inline-flex rounded-lg border border-border overflow-hidden text-caption font-bold">
               {(["cloud_provider", "local_studio"] as const).map((eng) => (
                 <button
                   key={eng}
@@ -851,7 +851,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               size="sm"
               onClick={handleGenerateAllScenes}
               disabled={generatingAllScenes || generatingSceneIndex !== null}
-              className="gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold shadow-md hover:from-red-700 hover:to-rose-700 h-9 cursor-pointer"
+              className="gap-2 bg-primary text-primary-foreground hover:bg-primary-hover font-bold shadow-md h-9 cursor-pointer"
             >
               <Sparkles size={14} className={generatingAllScenes ? "animate-spin" : ""} />
               {generatingAllScenes
@@ -865,7 +865,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                 onClick={handleGenerateAllRatios}
                 disabled={generatingAllScenes || generatingSceneIndex !== null}
                 className="h-9 gap-1.5 font-bold cursor-pointer"
-                title="Mỗi khung trong phạm vi sản xuất một bộ ảnh riêng (một video riêng ở Khu vực E)"
+                title="Mỗi khung trong phạm vi sản xuất một bộ ảnh riêng (một video riêng ở Video)"
               >
                 Sinh đủ {planRatios.length} khung ({sceneCreditTotal * planRatios.length} credit)
               </Button>
@@ -880,7 +880,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
         {/* Cổng toàn vẹn từ chối */}
         {judgmentB === "blocked" && (
-          <div className="w-full rounded-xl border-2 border-danger bg-danger-bg px-4 py-3 text-[13px] text-danger">
+          <div className="w-full rounded-xl border-2 border-danger bg-danger-bg px-4 py-3 text-body-sm text-danger">
             <div className="font-bold">Không có biến thể nào được ghi</div>
             <div className="mt-1">
               Cổng toàn vẹn đo thấy lõi bó hoa bị thay đổi trong lúc ghép bối cảnh, nên không
@@ -898,7 +898,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
         {/* Cảnh báo trước khi duyệt */}
         {judgmentB === "warning" && variantIntegrity && (
-          <div className="w-full rounded-xl border-2 border-warning bg-warning-bg px-4 py-3 text-[13px] text-warning">
+          <div className="w-full rounded-xl border-2 border-warning bg-warning-bg px-4 py-3 text-body-sm text-warning">
             Lõi chủ thể lệch nhẹ so với Master Image (
             {(variantIntegrity.subject_pixel_identity * 100).toFixed(2)}%). Xem kỹ ảnh trước
             khi duyệt.
@@ -926,10 +926,10 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   <ImageIcon size={40} className="text-text-muted" />
                 )}
                 <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider border shadow-2xs ${activeScene.beatColor}`}>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-caption font-extrabold uppercase tracking-wider border shadow-2xs ${activeScene.beatColor}`}>
                     Cảnh {activeScene.sceneIndex} · {activeScene.beat}
                   </span>
-                  <Badge tone={activeScene.isOriginal ? "neutral" : "success"} className="text-[10px]">
+                  <Badge tone={activeScene.isOriginal ? "neutral" : "success"} className="text-caption">
                     {activeScene.tag}
                   </Badge>
                 </div>
@@ -939,25 +939,25 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               <div className="md:col-span-7 flex flex-col justify-between h-full space-y-3.5">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-primary uppercase tracking-wider">
+                    <span className="text-caption font-bold text-primary uppercase tracking-wider">
                       Phân cảnh đang xem ({activeScene.sceneIndex}/{sceneCount})
                     </span>
-                    <span className="text-stone-300">·</span>
+                    <span className="text-border">·</span>
                     <span className="text-xs text-text-muted">{activeScene.lighting}</span>
                   </div>
                   <h4 className="text-base sm:text-lg font-bold text-text mt-1">
                     {activeScene.title}
                   </h4>
-                  <p className="text-xs sm:text-[13px] text-text-muted mt-2 leading-relaxed">
+                  <p className="text-xs sm:text-body-sm text-text-muted mt-2 leading-relaxed">
                     {activeScene.setting}
                   </p>
                   {activeScene.palette.length > 0 && (
-                    <p className="text-[11px] text-text-muted mt-1">Bảng màu: {activeScene.palette.join(" · ")}</p>
+                    <p className="text-caption text-text-muted mt-1">Bảng màu: {activeScene.palette.join(" · ")}</p>
                   )}
                 </div>
 
                 {activeScene.fallbackReason && (
-                  <div className="rounded-xl border border-warning bg-warning-bg px-3.5 py-2.5 text-[12px] text-warning">
+                  <div className="rounded-xl border border-warning bg-warning-bg px-3.5 py-2.5 text-meta text-warning">
                     <strong>Chưa có bối cảnh của kịch bản:</strong> các nhà cung cấp AI đều không dựng được cảnh nên worker lùi
                     về phông Studio cục bộ (chỉ là nền trơn). Lý do: {activeScene.fallbackReason}. Đã hoàn phần credit chênh so với giá cục bộ.
                   </div>
@@ -1070,7 +1070,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                           <Sparkles size={12} /> Thử hướng khác ({altCost} credit)
                         </Button>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-text-muted">
+                      <div className="flex flex-wrap items-center gap-3 text-caption text-text-muted">
                         <span className="font-bold text-text">Chất lượng lượt sau:</span>
                         {engine === "cloud_provider" && (
                           <label
@@ -1124,7 +1124,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                         )}
                       </div>
                       {engine === "local_studio" && (
-                        <p className="text-[11px] text-text-muted">
+                        <p className="text-caption text-text-muted">
                           Phông Studio cục bộ chỉ đổi vùng sáng, bố cục bokeh và vị trí bó hoa — muốn hậu cảnh khác hẳn
                           nhau, dùng nhà cung cấp AI cho cảnh này.
                         </p>
@@ -1172,7 +1172,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                         : "Duyệt ảnh này"}
                     </Button>
                   )}
-                  <span className="text-[11px] text-text-muted">
+                  <span className="text-caption text-text-muted">
                     Bấm vào các khung bên dưới để chuyển xem từng cảnh
                   </span>
                 </div>
@@ -1187,7 +1187,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
             <span className="text-xs font-bold text-text uppercase tracking-wider">
               Danh sách {sceneCount} phân cảnh (chọn cảnh để xem tiêu điểm):
             </span>
-            <span className="text-[11px] text-text-muted">
+            <span className="text-caption text-text-muted">
               Chuẩn kịch bản Narrative Arc Chặng 04–05
             </span>
           </div>
@@ -1197,6 +1197,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               const isSelected = scene.sceneIndex === selectedSceneIndex
               return (
                 <div
+              role="button"
+              tabIndex={0}
                   key={scene.sceneIndex}
                   onClick={() => setSelectedSceneIndex(scene.sceneIndex)}
                   className={`relative overflow-hidden rounded-xl border-2 transition-all flex flex-col cursor-pointer ${
@@ -1224,7 +1226,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
 
                     {/* Top badges */}
                     <div className="absolute top-2 left-2 flex flex-col gap-1">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-2xs ${scene.beatColor}`}>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-extrabold uppercase tracking-wider border shadow-2xs ${scene.beatColor}`}>
                         Cảnh {scene.sceneIndex} · {scene.beat}
                       </span>
                     </div>
@@ -1241,20 +1243,20 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                   <div className="p-3.5 flex flex-col flex-1 justify-between gap-2 border-t border-border">
                     <div>
                       <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="text-[10px] font-bold text-text-muted uppercase">
+                        <span className="text-caption font-bold text-text-muted uppercase">
                           Cảnh {scene.sceneIndex}
                         </span>
-                        <Badge tone={scene.isOriginal ? "neutral" : "success"} className="text-[9px] px-1.5 py-0">
+                        <Badge tone={scene.isOriginal ? "neutral" : "success"} className="text-caption px-1.5 py-0">
                           {scene.tag}
                         </Badge>
                       </div>
                       <h5 className="text-xs font-bold text-text line-clamp-1">{scene.title}</h5>
-                      <p className="text-[11px] text-text-muted mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-caption text-text-muted mt-1 line-clamp-2 leading-relaxed">
                         {scene.setting}
                       </p>
                     </div>
 
-                    <div className="pt-2 border-t border-dashed border-border flex items-center justify-between text-[10px]">
+                    <div className="pt-2 border-t border-dashed border-border flex items-center justify-between text-caption">
                       <span className="text-secondary font-bold truncate max-w-[120px]">
                         {scene.integrityText}
                       </span>
@@ -1278,7 +1280,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                         e.stopPropagation()
                         handleGenerateSingleScene(scene.sceneIndex)
                       }}
-                      className="w-full mt-2 py-1.5 px-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-[11px] border border-purple-200 flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-60"
+                      className="w-full mt-2 py-1.5 px-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold text-caption border border-primary/20 flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-60"
                     >
                       <Sparkles size={12} className={generatingSceneIndex === scene.sceneIndex ? "animate-spin" : ""} />
                       {generatingSceneIndex === scene.sceneIndex
@@ -1290,12 +1292,12 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                         : `⚡ Sinh Cảnh ${scene.sceneIndex} (Studio cục bộ)`}
                     </button>
                     {scene.fallbackReason && (
-                      <p className="mt-1.5 text-[10.5px] leading-snug text-warning">
+                      <p className="mt-1.5 text-caption leading-snug text-warning">
                         Nhà cung cấp AI không dựng được cảnh — đã dùng phông cục bộ (đã hoàn credit chênh): {scene.fallbackReason}
                       </p>
                     )}
                     {scene.error && (
-                      <p className="mt-1.5 text-[10.5px] leading-snug text-danger">{scene.error}</p>
+                      <p className="mt-1.5 text-caption leading-snug text-danger">{scene.error}</p>
                     )}
                   </div>
                 </div>
@@ -1347,8 +1349,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           <Check size={40} strokeWidth={2} className="text-secondary" />
         </div>
         <div>
-          <div className="text-[18px] font-extrabold text-text">Đã lưu vào Kho ảnh sản phẩm</div>
-          <div className="mt-1 text-[13px] text-text-muted">
+          <div className="text-title font-extrabold text-text">Đã lưu vào Kho ảnh sản phẩm</div>
+          <div className="mt-1 text-body-sm text-text-muted">
             Biến thể marketing và Master Image đều được bảo toàn trong kho ảnh của tiệm
           </div>
         </div>
@@ -1357,7 +1359,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
             Tạo thêm biến thể khác
           </Button>
           <Button onClick={() => navigateToArea("e")} className="gap-1.5">
-            Tiếp tục → Chuyển sang Tạo Video (Khu vực E)
+            Tiếp tục → Chuyển sang Tạo Video (Video)
           </Button>
         </div>
       </div>
@@ -1374,8 +1376,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
           <AlertTriangle size={40} strokeWidth={2} className="text-danger" />
         </div>
         <div>
-          <div className="text-[18px] font-extrabold text-text">Đã xảy ra lỗi</div>
-          <div className="mt-1 text-[13px] text-text-muted">{errorMsg ?? "Không thể hoàn thành tác vụ"}</div>
+          <div className="text-title font-extrabold text-text">Đã xảy ra lỗi</div>
+          <div className="mt-1 text-body-sm text-text-muted">{errorMsg ?? "Không thể hoàn thành tác vụ"}</div>
         </div>
         <div className="flex gap-3 mt-2">
           <Button onClick={() => { setErrorMsg(null); setPhase("config-b") }}>Thử lại</Button>
@@ -1406,8 +1408,8 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
     <div className="flex flex-col items-center gap-6 w-full max-w-3xl mx-auto">
       {/* Title */}
       <div className="text-center w-full">
-        <div className="text-[17px] font-extrabold text-primary">Khu vực D — Tạo biến thể ảnh Marketing Tiếp thị (M04b)</div>
-        <div className="mt-1 text-[13px] text-text-muted">
+        <div className="text-title font-extrabold text-primary">Biến thể marketing — Tạo biến thể ảnh Marketing Tiếp thị (Biến thể marketing)</div>
+        <div className="mt-1 text-body-sm text-text-muted">
           Tự động liên kết ảnh sản phẩm thật và áp dụng kịch bản bối cảnh cung truyện (Narrative Arc) từ Chặng 04–05.
         </div>
       </div>
@@ -1415,9 +1417,9 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
       {/* Nguồn ảnh hoa thật từ Chặng 01–02 */}
       {context?.sourceImageUrl || context?.assetId ? (
         <div className="w-full space-y-2">
-          <Card className="w-full p-4 border border-emerald-200 bg-emerald-50/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+          <Card className="w-full p-4 border border-success/30 bg-success/10 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
             <div className="flex items-center gap-3.5 min-w-0 w-full sm:w-auto">
-              <div className="h-16 w-16 rounded-xl border border-emerald-200 bg-white p-1 overflow-hidden shrink-0 shadow-2xs">
+              <div className="h-16 w-16 rounded-xl border border-success/30 bg-surface p-1 overflow-hidden shrink-0 shadow-2xs">
                 {context.sourceImageUrl ? (
                   <img
                     src={context.sourceImageUrl}
@@ -1425,27 +1427,27 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                     className="h-full w-full object-cover rounded-lg"
                   />
                 ) : (
-                  <div className="h-full w-full flex items-center justify-center bg-emerald-50 text-emerald-600">
+                  <div className="h-full w-full flex items-center justify-center bg-success/10 text-success">
                     <Camera size={22} />
                   </div>
                 )}
               </div>
               <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge tone="success" className="text-[10px] px-2 py-0.5">
+                  <Badge tone="success" className="text-caption px-2 py-0.5">
                     <CheckCircle2 size={11} className="mr-1" />
                     Ảnh hoa thật từ Chặng 01–02 (Đang sử dụng)
                   </Badge>
                   {context.assetId && (
-                    <span className="text-[10.5px] font-mono text-stone-500">
+                    <span className="text-caption font-mono text-text-muted">
                       Asset #{context.assetId.slice(0, 8)}
                     </span>
                   )}
                 </div>
-                <h4 className="text-xs sm:text-sm font-bold text-stone-900 truncate">
+                <h4 className="text-xs sm:text-sm font-bold text-text truncate">
                   {context.productName || "Giỏ hoa chúc mừng khai trương"}
                 </h4>
-                <p className="text-[11px] text-stone-600 truncate">
+                <p className="text-caption text-text-muted truncate">
                   {context.commercialPassport?.style || "Hiện đại & Tinh tế"} · {context.commercialPassport?.category || "Hoa tươi thiết kế"}
                 </p>
               </div>
@@ -1457,7 +1459,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowManualSourcePicker(!showManualSourcePicker)}
-                className="text-xs text-stone-600 hover:text-stone-900 h-8"
+                className="text-xs text-text-muted hover:text-text h-8"
               >
                 {showManualSourcePicker ? "Ẩn đổi ảnh" : "Đổi ảnh khác từ kho"}
               </Button>
@@ -1501,7 +1503,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               Kịch bản bối cảnh hình ảnh theo chủ đề
             </span>
           </div>
-          <span className="text-[11px] text-text-muted">
+          <span className="text-caption text-text-muted">
             Chủ đề:{" "}
             <strong>{context?.selectedTopic?.title || "chưa chọn ở Chặng 05 — dùng tên sản phẩm"}</strong>
             {" · "}
@@ -1510,18 +1512,18 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         </div>
 
         {planLoading && (
-          <div className="rounded-xl border border-border bg-surface-alt px-4 py-3 text-[12px] text-text-muted">
+          <div className="rounded-xl border border-border bg-surface-alt px-4 py-3 text-meta text-text-muted">
             Đang tra kịch bản đã có cho chủ đề này...
           </div>
         )}
 
         {!planLoading && !scenePlan && (
           <Card className="w-full p-4 border border-primary/30 bg-primary/5 flex flex-col gap-3">
-            <div className="text-[13px] text-text">
+            <div className="text-body-sm text-text">
               <span className="font-bold">Chưa tìm thấy kịch bản bối cảnh của chủ đề này.</span> Kịch bản được AI
               viết khi bấm &quot;Bắt đầu sáng tạo&quot; ở Chặng 05; phiên này mở Creative Studio mà chưa qua bước đó
               (hoặc lượt viết đã lỗi). Viết ngay tại đây — AI đọc chủ đề (dịp, tông màu, cảm xúc, hook, CTA) và thông
-              tin bó hoa để viết từng cảnh. Kịch bản được lưu, dùng chung cho Khu vực B, C, D, E.
+              tin bó hoa để viết từng cảnh. Kịch bản được lưu, dùng chung cho Nội dung, C, D, E.
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -1541,16 +1543,16 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
         )}
 
         {planError && (
-          <div className="w-full rounded-xl border border-danger bg-danger-bg px-4 py-3 text-[12.5px] text-danger">
+          <div className="w-full rounded-xl border border-danger bg-danger-bg px-4 py-3 text-meta text-danger">
             {planError}
           </div>
         )}
 
         {scenePlan && (
           <>
-            <div className="rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-[12px] text-text-muted flex flex-wrap items-center justify-between gap-2">
+            <div className="rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-meta text-text-muted flex flex-wrap items-center justify-between gap-2">
               <span>
-                <Badge tone={scenePlan.source === "ai" ? "success" : "neutral"} className="text-[10px] mr-2">
+                <Badge tone={scenePlan.source === "ai" ? "success" : "neutral"} className="text-caption mr-2">
                   {scenePlan.source === "ai" ? "AI viết" : "Kịch bản cơ bản"}
                 </Badge>
                 {scenePlan.emotionalTone && <strong className="text-text">{scenePlan.emotionalTone}. </strong>}
@@ -1560,7 +1562,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                 type="button"
                 onClick={() => void handleWritePlan(true)}
                 disabled={planWriting}
-                className="text-[11.5px] font-bold text-primary hover:underline disabled:opacity-60 cursor-pointer"
+                className="text-caption font-bold text-primary hover:underline disabled:opacity-60 cursor-pointer"
               >
                 {planWriting ? "Đang viết lại..." : "↻ AI viết lại kịch bản (1 credit)"}
               </button>
@@ -1569,22 +1571,22 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               {narrativeResultScenes.map((scene) => (
                 <div key={scene.sceneIndex} className="p-3.5 rounded-xl border-2 border-border bg-surface">
                   <div className="flex items-start justify-between gap-1 mb-1">
-                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${scene.beatColor}`}>
+                    <span className={`text-caption font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${scene.beatColor}`}>
                       Cảnh {scene.sceneIndex} · {scene.beat}
                     </span>
                     {scene.purpose && (
-                      <Badge tone="neutral" className="text-[10px] px-1.5 py-0 max-w-[55%] truncate">
+                      <Badge tone="neutral" className="text-caption px-1.5 py-0 max-w-[55%] truncate">
                         {scene.purpose}
                       </Badge>
                     )}
                   </div>
                   <h5 className="text-xs font-bold text-text mt-1">{scene.title}</h5>
-                  <p className="text-[11.5px] text-text-muted mt-1 leading-relaxed">{scene.setting}</p>
-                  <div className="flex items-center justify-between pt-2 mt-2 border-t border-dashed border-border text-[10.5px] gap-2">
-                    <span className="text-stone-500 font-medium truncate">
+                  <p className="text-caption text-text-muted mt-1 leading-relaxed">{scene.setting}</p>
+                  <div className="flex items-center justify-between pt-2 mt-2 border-t border-dashed border-border text-caption gap-2">
+                    <span className="text-text-muted font-medium truncate">
                       {[scene.lighting, scene.palette.join(", ")].filter(Boolean).join(" · ")}
                     </span>
-                    <span className="font-bold text-stone-500 shrink-0">
+                    <span className="font-bold text-text-muted shrink-0">
                       {scene.usesCloud
                         ? `Nhà cung cấp AI · ${variantUnitCostCredit("cloud_provider", renderOpts)} credit`
                         : `Studio cục bộ · ${variantUnitCostCredit("local_studio", renderOpts)} credit`}
@@ -1628,7 +1630,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               <ProviderSelect kind="image_variant" value={sceneProvider} onChange={setSceneProvider} label="Nhà cung cấp dựng cảnh cho lượt này" />
             </div>
           )}
-          <p className="mt-1.5 text-[11px] text-text-muted leading-relaxed">
+          <p className="mt-1.5 text-caption text-text-muted leading-relaxed">
             {sceneEngine === "cloud_provider"
               ? `Nhà cung cấp (theo thứ tự ưu tiên của tiệm: fal / Stability / Gemini) dựng cảnh + hoà sáng quanh bó hoa thật; FloraOS đo lại hình dáng, cấu trúc, màu. ${scenePlan?.mode === "AUTHENTIC" ? "AUTHENTIC: chỉ dựng nền và ánh sáng, không thêm đạo cụ vào bó hoa. " : ""}Mọi bên lỗi thì lùi phông cục bộ, ghi rõ trên ảnh và hoàn phần chênh credit.`
               : "Dự phòng: mỗi cảnh dùng phông Studio dựng sẵn gần nhất (6 phông) — rẻ hơn nhưng chất lượng thấp hơn nhà cung cấp."}
@@ -1641,7 +1643,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
       <Card className="w-full p-4.5 border border-border bg-surface flex flex-col gap-4 shadow-xs">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="text-xs font-semibold text-text-muted uppercase tracking-wider">Tùy biến xuất bản đa kênh</div>
-          <Badge tone="accent" className="text-[11px] font-bold">
+          <Badge tone="accent" className="text-caption font-bold">
             {scenePlan ? `Trọn bộ ${sceneCount} cảnh: ${sceneCreditTotal} credit` : "Chưa có kịch bản"}
           </Badge>
         </div>
@@ -1665,7 +1667,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                 </button>
               ))}
             </div>
-            <div className="text-[11px] text-text-muted mt-1">
+            <div className="text-caption text-text-muted mt-1">
               {variantRatio === "1:1" && "Vuông chuẩn Instagram / Zalo"}
               {variantRatio === "4:5" && "Dọc nhẹ chuẩn Facebook Feed"}
               {variantRatio === "9:16" && "Dọc toàn màn hình Story / Reels / TikTok"}
@@ -1684,7 +1686,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
               />
               <div className="text-xs">
                 <span className="font-bold text-text">Đóng dấu Watermark Shop</span>
-                <span className="block text-[11px] text-text-muted">Logo/tên tiệm từ Hồ sơ thương hiệu; bản PNG tách nền không đóng dấu</span>
+                <span className="block text-caption text-text-muted">Logo/tên tiệm từ Hồ sơ thương hiệu; bản PNG tách nền không đóng dấu</span>
               </div>
             </label>
           </div>
@@ -1724,26 +1726,26 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
       </div>
 
       {masterError && (
-        <div className="w-full rounded-xl border border-danger bg-danger-bg px-4 py-3 text-[13px] text-danger">
+        <div className="w-full rounded-xl border border-danger bg-danger-bg px-4 py-3 text-body-sm text-danger">
           {masterError}
         </div>
       )}
       {!activeMasterId && context?.assetId && !masterError && (
-        <p className="w-full text-[12px] text-text-muted">
-          Ảnh từ Khu vực A chưa là Master Image — khi bấm tạo, hệ thống sẽ dùng nguyên ảnh gốc làm Master (không chỉnh ảnh, cần quyền duyệt ảnh I2).
+        <p className="w-full text-meta text-text-muted">
+          Ảnh từ Tải &amp; chọn ảnh chưa là Master Image — khi bấm tạo, hệ thống sẽ dùng nguyên ảnh gốc làm Master (không chỉnh ảnh, cần quyền duyệt ảnh I2).
         </p>
       )}
 
       <div className="w-full flex items-center justify-between pt-2">
         <Button variant="ghost" size="sm" onClick={() => navigateToArea("a")}>
-          <ArrowLeft size={14} className="mr-1.5" /> Quay lại Khu vực A
+          <ArrowLeft size={14} className="mr-1.5" /> Quay lại Tải &amp; chọn ảnh
         </Button>
         <button
           type="button"
           onClick={() => navigateToArea("e")}
-          className="text-xs font-semibold text-stone-500 hover:text-stone-800 transition underline decoration-dotted"
+          className="text-xs font-semibold text-text-muted hover:text-text transition underline decoration-dotted"
         >
-          Bỏ qua tạo biến thể & Chuyển sang Tạo Video (Khu vực E) →
+          Bỏ qua tạo biến thể & Chuyển sang Tạo Video (Video) →
         </button>
       </div>
     </div>

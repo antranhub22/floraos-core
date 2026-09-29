@@ -84,7 +84,7 @@ export function ModelSelectorCard({
           <div className="text-xs font-semibold text-text-muted">
             Bước 4: Chọn Cỗ máy AI (Model Engine)
           </div>
-          <div className="text-[16px] font-extrabold text-text flex items-center gap-2">
+          <div className="text-title font-extrabold text-text flex items-center gap-2">
             <span>Lựa chọn Model sinh nội dung tiếp thị</span>
             <ShieldCheck size={16} className="text-secondary-text" />
           </div>
@@ -105,6 +105,8 @@ export function ModelSelectorCard({
 
           return (
             <div
+              role="button"
+              tabIndex={0}
               key={model.id}
               onClick={() => !disabled && onSelectProvider(model.id)}
               className={`cursor-pointer rounded-xl border p-4 transition-all flex flex-col justify-between gap-3 select-none relative ${
@@ -124,27 +126,27 @@ export function ModelSelectorCard({
                     <Icon size={18} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[13px] font-black text-text truncate">
+                    <div className="text-body-sm font-black text-text truncate">
                       {model.name}
                     </div>
-                    <div className="text-[10.5px] text-text-muted truncate font-medium">
+                    <div className="text-caption text-text-muted truncate font-medium">
                       {model.subtitle}
                     </div>
                   </div>
                 </div>
 
-                <Badge tone={model.badgeTone} className="text-[10px] px-2 py-0.5 flex-shrink-0">
+                <Badge tone={model.badgeTone} className="text-caption px-2 py-0.5 flex-shrink-0">
                   {model.badge}
                 </Badge>
               </div>
 
               {/* Mô tả tính năng */}
-              <p className="text-[11.5px] text-text-muted leading-relaxed line-clamp-3">
+              <p className="text-caption text-text-muted leading-relaxed line-clamp-3">
                 {model.desc}
               </p>
 
               {/* Footer: Tốc độ & Chi phí */}
-              <div className="pt-2 border-t border-border/60 flex items-center justify-between text-[11px]">
+              <div className="pt-2 border-t border-border/60 flex items-center justify-between text-caption">
                 <span className="text-text-muted">
                   ⚡ <strong className="font-semibold text-text">{model.latency}</strong>
                 </span>

@@ -98,9 +98,9 @@ ${catalogUrl}`
             <button
               onClick={handleShareFacebook}
               type="button"
-              className="p-3 rounded-2xl border border-blue-100 bg-blue-50/50 hover:bg-blue-100/60 text-blue-700 text-xs font-bold flex items-center justify-center gap-2 transition-colors focus-visible:outline-2 focus-visible:outline-primary"
+              className="p-3 rounded-2xl border border-info/20 bg-info/5 hover:bg-info/10 text-info text-xs font-bold flex items-center justify-center gap-2 transition-colors focus-visible:outline-2 focus-visible:outline-primary"
             >
-              <svg className="w-4 h-4 text-blue-600 fill-current" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-info fill-current" viewBox="0 0 24 24">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
               <span>Đăng lên Facebook</span>
@@ -108,9 +108,9 @@ ${catalogUrl}`
             <button
               onClick={handleShareZalo}
               type="button"
-              className="p-3 rounded-2xl border border-cyan-100 bg-cyan-50/50 hover:bg-cyan-100/60 text-cyan-800 text-xs font-bold flex items-center justify-center gap-2 transition-colors focus-visible:outline-2 focus-visible:outline-primary"
+              className="p-3 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-bold flex items-center justify-center gap-2 transition-colors focus-visible:outline-2 focus-visible:outline-primary"
             >
-              <MessageCircle size={16} className="text-cyan-600" />
+              <MessageCircle size={16} className="text-primary" />
               <span>Chia sẻ lên Zalo</span>
             </button>
           </div>
@@ -144,17 +144,17 @@ ${catalogUrl}`
         </div>
 
         {/* 3. Deep Integration with Content Engine */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-50 to-amber-50 border border-rose-100 space-y-2.5">
+        <div className="p-4 rounded-2xl bg-surface-alt border border-primary/20 space-y-2.5">
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-rose-600 shrink-0" />
-            <span className="text-xs font-bold text-rose-950">Quảng bá tự động với AI Content Engine</span>
+            <Sparkles size={16} className="text-primary shrink-0" />
+            <span className="text-xs font-bold text-text">Quảng bá tự động với AI Content Engine</span>
           </div>
-          <p className="text-[11.5px] text-rose-800 leading-relaxed">
+          <p className="text-caption text-text-muted leading-relaxed">
             Chuyển Catalog này sang xưởng nội dung để AI tự động viết bài đa kênh (Fanpage, Instagram, TikTok, Zalo OA) và chuẩn bị lịch xuất bản tự động.
           </p>
           <Button
             onClick={handleOpenM07}
-            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-9 gap-1.5 shadow-xs"
+            className="w-full bg-primary hover:bg-primary-dark text-white font-bold text-xs h-9 gap-1.5 shadow-xs"
           >
             <Sparkles size={14} />
             <span>Soạn bài chiến dịch cho Catalog này</span>

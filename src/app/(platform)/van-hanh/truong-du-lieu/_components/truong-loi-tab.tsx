@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { DiffConfirmButton, buildDiffRows } from "./diff-confirm"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import {
   ALL_AUDIENCES,
   REQUIREMENT_LEVELS,
@@ -81,11 +82,11 @@ export function TruongLoiTab() {
   const current = useMemo(() => fields?.find((f) => f.key === expandedKey) ?? null, [fields, expandedKey])
 
   if (loi) return <p className="text-sm text-danger">{loi}</p>
-  if (!fields) return <p className="text-sm text-text-muted">Đang tải…</p>
+  if (!fields) return <SkeletonBlock lines={2} />
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-[13px]">
+      <div className="flex items-center gap-2 text-body-sm">
         <span className="text-text-muted">Thực thể:</span>
         {(["ALL", "ORDER", "PARTNER"] as const).map((e) => (
           <button
@@ -103,7 +104,7 @@ export function TruongLoiTab() {
       </div>
 
       <Card className="overflow-x-auto p-0">
-        <table className="w-full text-left text-[13px]">
+        <table className="w-full text-left text-body-sm">
           <thead>
             <tr className="border-b border-border text-text-muted">
               <th className="py-2 pl-3 pr-3">Khoá</th>
@@ -119,7 +120,7 @@ export function TruongLoiTab() {
             {fields.map((f) => (
               <>
                 <tr key={f.key} className="hover:bg-surface-alt">
-                  <td className="py-2 pl-3 pr-3 font-mono text-[12px]">{f.key}</td>
+                  <td className="py-2 pl-3 pr-3 font-mono text-meta">{f.key}</td>
                   <td className="py-2 pr-3 font-medium">
                     {f.label}
                     {f.floorInternalOnly && (
@@ -157,28 +158,28 @@ export function TruongLoiTab() {
                   <tr key={`${f.key}-edit`}>
                     <td colSpan={7} className="bg-surface-alt/60 p-3">
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="text-[13px]">
+                        <label className="text-body-sm">
                           <span className="mb-1 block text-text-muted">Nhãn</span>
                           <Input
                             value={edit.label}
                             onChange={(e) => setEdit({ ...edit, label: e.target.value })}
                           />
                         </label>
-                        <label className="text-[13px]">
+                        <label className="text-body-sm">
                           <span className="mb-1 block text-text-muted">Gợi ý nhập (placeholder)</span>
                           <Input
                             value={edit.placeholder}
                             onChange={(e) => setEdit({ ...edit, placeholder: e.target.value })}
                           />
                         </label>
-                        <label className="text-[13px] sm:col-span-2">
+                        <label className="text-body-sm sm:col-span-2">
                           <span className="mb-1 block text-text-muted">Mô tả</span>
                           <Input
                             value={edit.description}
                             onChange={(e) => setEdit({ ...edit, description: e.target.value })}
                           />
                         </label>
-                        <label className="text-[13px]">
+                        <label className="text-body-sm">
                           <span className="mb-1 block text-text-muted">
                             Mức yêu cầu {current.origin === "CORE" && <span className="text-text-muted">(không hạ được dưới mức sàn)</span>}
                           </span>
@@ -194,7 +195,7 @@ export function TruongLoiTab() {
                             ))}
                           </select>
                         </label>
-                        <label className="text-[13px]">
+                        <label className="text-body-sm">
                           <span className="mb-1 block text-text-muted">Khoá danh mục (nếu là trường chọn)</span>
                           <Input
                             value={edit.catalogKey}
@@ -202,7 +203,7 @@ export function TruongLoiTab() {
                             placeholder="vd. serviceLevel"
                           />
                         </label>
-                        <div className="text-[13px] sm:col-span-2">
+                        <div className="text-body-sm sm:col-span-2">
                           <span className="mb-1 block text-text-muted">
                             Hiển thị theo đối tượng xem
                             {current.floorInternalOnly && (

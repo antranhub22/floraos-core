@@ -97,10 +97,10 @@ export default function MarketIntelligencePage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-text flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-rose-600" />
+              <TrendingUp className="h-5 w-5 text-primary" />
               FloraOS Intelligence Engine
             </h1>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/80">
+            <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
               v2.0 Omnichannel
             </span>
           </div>
@@ -111,14 +111,14 @@ export default function MarketIntelligencePage() {
 
         <div className="flex flex-wrap items-center gap-2.5">
           {/* 2 Tính Năng Cốt Lõi Switcher */}
-          <div className="flex items-center bg-stone-100 p-1 rounded-xl gap-1">
+          <div className="flex items-center bg-surface-alt p-1 rounded-xl gap-1">
             <button
               type="button"
               onClick={() => setActiveTab("market")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                 activeTab === "market"
-                  ? "bg-white text-rose-700 shadow-sm"
-                  : "text-stone-600 hover:text-stone-900"
+                  ? "bg-surface text-primary shadow-sm"
+                  : "text-text-muted hover:text-text"
               }`}
             >
               <TrendingUp size={13} />
@@ -129,8 +129,8 @@ export default function MarketIntelligencePage() {
               onClick={() => setActiveTab("keyword")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                 activeTab === "keyword"
-                  ? "bg-white text-rose-700 shadow-sm"
-                  : "text-stone-600 hover:text-stone-900"
+                  ? "bg-surface text-primary shadow-sm"
+                  : "text-text-muted hover:text-text"
               }`}
             >
               <Search size={13} />
@@ -139,8 +139,8 @@ export default function MarketIntelligencePage() {
             <button
               type="button"
               onClick={() => router.push("/creative-studio?tab=area-a")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-stone-500 hover:text-rose-700 hover:bg-white/60 transition"
-              title="Quét theo ảnh sản phẩm hoa (Chặng 1-5) đã quy hoạch vào Khu vực A của Creative Studio"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-primary hover:bg-surface/60 transition"
+              title="Quét xu hướng dựa theo ảnh sản phẩm hoa từ Creative Studio"
             >
               <Camera size={13} />
               Quét Theo Ảnh Mẫu (Creative Studio) →
@@ -164,10 +164,10 @@ export default function MarketIntelligencePage() {
             <button
               type="button"
               onClick={() => setIsSettingsModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-rose-200 bg-rose-50/80 text-rose-700 hover:bg-rose-100 shadow-2xs transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 shadow-2xs transition"
               title="Cài đặt lịch quét tự động, biểu mẫu đầu vào & đầu ra của tính năng hiện tại"
             >
-              <Settings className="h-3.5 w-3.5 text-rose-600" />
+              <Settings className="h-3.5 w-3.5 text-primary" />
               Cài Đặt & Biểu Mẫu
             </button>
 
@@ -175,10 +175,10 @@ export default function MarketIntelligencePage() {
             {isSaaSAdmin && (
               <button
                 onClick={() => setIsAdminModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-purple-100 text-purple-800 border border-purple-200 hover:bg-purple-200 shadow-2xs transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 shadow-2xs transition"
                 title="SaaS Admin: Thiết lập tiêu chí Xu hướng vĩ mô toàn quốc cho mọi Tenant"
               >
-                <Shield className="h-3.5 w-3.5 text-purple-700" />
+                <Shield className="h-3.5 w-3.5 text-primary" />
                 Tiêu Chí Vĩ Mô
               </button>
             )}

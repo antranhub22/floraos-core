@@ -198,7 +198,7 @@ export default function ChatChannelsIntegrationPage() {
                 <h3 className="text-xs font-bold text-foreground">
                   Mã Nhúng Trợ Lý Ảo Lên Website Ngoài (WordPress, Haravan, Shopify)
                 </h3>
-                <p className="text-[11px] text-text-muted">
+                <p className="text-caption text-text-muted">
                   Chèn thẻ script này vào trước thẻ &lt;/body&gt; trên website của tiệm để mở khung chat 24/7.
                 </p>
               </div>
@@ -213,7 +213,7 @@ export default function ChatChannelsIntegrationPage() {
             </Button>
           </div>
 
-          <div className="rounded-xl bg-slate-900 p-3 font-mono text-[11px] text-green-400 overflow-x-auto select-all">
+          <div className="rounded-xl bg-text p-3 font-mono text-caption text-success overflow-x-auto select-all">
             &lt;script src=&quot;https://floraos.vn/sdk/floraos-chat.js&quot; data-shop-slug=&quot;tiem-hoa-moc-lan&quot; defer&gt;&lt;/script&gt;
           </div>
         </div>

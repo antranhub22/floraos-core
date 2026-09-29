@@ -115,7 +115,7 @@ export function CommercialContentCard({
       />
 
       {isSaved && (
-        <div className="flex items-center gap-2 rounded-xl bg-success-bg px-4 py-2.5 text-[12.5px] font-medium text-secondary-text">
+        <div className="flex items-center gap-2 rounded-xl bg-success-bg px-4 py-2.5 text-meta font-medium text-secondary-text">
           <CheckCircle2 size={14} strokeWidth={2.2} className="shrink-0" />
           Đã lưu nháp nội dung bán hàng.
         </div>

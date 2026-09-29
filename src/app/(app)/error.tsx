@@ -25,7 +25,7 @@ export default function ErrorBoundary({
         <Button variant="primary" onClick={() => reset()}>
           Tải lại trang
         </Button>
-        <Link href="/" className="inline-flex items-center justify-center h-12 px-5 text-[15px] font-semibold rounded-xl border border-border bg-transparent text-text hover:bg-surface-alt transition-colors">
+        <Link href="/" className="inline-flex items-center justify-center h-12 px-5 text-title-sm font-semibold rounded-xl border border-border bg-transparent text-text hover:bg-surface-alt transition-colors">
           Về trang chủ
         </Link>
       </div>

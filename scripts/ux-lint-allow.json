@@ -10,6 +10,131 @@
       "rule": "R3",
       "path": "src/lib/mock-data.ts",
       "reason": "Màu dữ liệu mẫu của hoa"
+    },
+    {
+      "rule": "R3",
+      "path": "src/components/profiles/brand-profile-form.tsx",
+      "reason": "Giá trị màu mặc định trong form chọn màu thương hiệu (dữ liệu nghiệp vụ, không phải styling)"
+    },
+    {
+      "rule": "R4",
+      "path": "src/app/(app)/hoi-thoai/page.tsx",
+      "reason": "Các nút ở các phase/role khác nhau — không hiện cùng lúc"
+    },
+    {
+      "rule": "R4",
+      "path": "src/app/(app)/noi-dung/page.tsx",
+      "reason": "Wizard sinh nội dung 3 phase — 1 nút primary mỗi phase"
+    },
+    {
+      "rule": "R4",
+      "path": "src/app/(app)/san-pham/[id]/tinh-nang/page.tsx",
+      "reason": "Nút phụ thuộc quyền/trạng thái — điều kiện isPending/canEdit"
+    },
+    {
+      "rule": "R4",
+      "path": "src/app/(app)/san-pham/[id]/tinh-nang/product-copy/[copyId]/page.tsx",
+      "reason": "Nút Lưu chỉ xuất hiện khi isPending && canEdit — không cạnh tranh với Duyệt"
+    },
+    {
+      "rule": "R4",
+      "path": "src/app/(app)/so-lieu/page.tsx",
+      "reason": "4 phase riêng biệt (metrics/explain/learning/saved) — mỗi phase 1 primary"
+    },
+    {
+      "rule": "R4",
+      "path": "src/app/(app)/tai-anh/page.tsx",
+      "reason": "Wizard 6 bước — mỗi bước 1 nút primary"
+    },
+    {
+      "rule": "R4",
+      "path": "src/app/(app)/video/page.tsx",
+      "reason": "Step-conditional: Tạo/Duyệt kịch bản/Render/Duyệt video — không cùng lúc"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/upload/upload-wizard.tsx",
+      "reason": "Upload wizard nhiều bước — mỗi bước 1 CTA primary"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/market-intelligence/creative-handoff-modal.tsx",
+      "reason": "Nút 'Dùng kịch bản' phụ thuộc preview.jobId — conditional"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/creative-studio/optimize-workspace.tsx",
+      "reason": "Phase-based workspace — mỗi phase 1 nút primary"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/creative-studio/variant-workspace.tsx",
+      "reason": "Phase-based workspace — 7 bước không hiện đồng thời"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/creative-studio/package-workspace.tsx",
+      "reason": "Step-based package flow — ternary conditional"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/creative-studio/package-review-section.tsx",
+      "reason": "Conditional review/approve flow"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/creative-studio/package-revise-panels.tsx",
+      "reason": "Revise panels với trạng thái stage !== null"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/creative-studio/video-job-lifecycle.tsx",
+      "reason": "Job state branches — Retry/Render/Approve không hiện cùng lúc"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/coordinator/control-tower-dashboard.tsx",
+      "reason": "Dashboard đa section — nút trong list exception items và detail panel riêng biệt"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/chat/copilot-message-item.tsx",
+      "reason": "Loại message khác nhau — navigate vs create order không cùng loại message"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/result/result-card.tsx",
+      "reason": "Card state branches — Approve/Confirm-replace không cùng trạng thái"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/templates/social-publishing/post-status-report-card.tsx",
+      "reason": "Status branches — Đăng ngay chỉ hiện ở 1 trong 2 status branch"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/templates/social-publishing/schedule-calendar-card.tsx",
+      "reason": "Header + item đều conditional on different states"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/templates/social-publishing/schedule-queue-tab.tsx",
+      "reason": "Empty state CTA vs Confirm schedule — không hiện cùng lúc"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/templates/platform-connections/platform-account-card.tsx",
+      "reason": "Auth state branches — Đăng nhập vs Kết nối không hiện cùng lúc"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/templates/coordinator/production-update-modal.tsx",
+      "reason": "progress === 100 ternary — Lưu chỉ hiện khi hoàn tất"
+    },
+    {
+      "rule": "R4",
+      "path": "src/app/(platform)/van-hanh/truong-du-lieu/_components/diff-confirm.tsx",
+      "reason": "Toggle component: if (!open) → trigger button, else → confirm button — 2 trạng thái loại trừ nhau"
     }
   ]
 }

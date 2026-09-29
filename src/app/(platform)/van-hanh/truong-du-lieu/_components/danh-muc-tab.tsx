@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { DiffConfirmButton } from "./diff-confirm"
 import { fieldPlatformApi, type CatalogApiView } from "../_lib/api"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 
 function governanceTone(g: CatalogApiView["governance"]): "success" | "warning" | "neutral" {
   if (g === "OPEN") return "success"
@@ -37,20 +38,20 @@ function ThemGiaTriForm({ catalog, onDone }: { catalog: CatalogApiView; onDone: 
   return (
     <div className="mt-2 space-y-2 rounded-xl border border-dashed border-border p-3">
       <div className="grid gap-2 sm:grid-cols-3">
-        <label className="text-[13px]">
+        <label className="text-body-sm">
           <span className="mb-1 block text-text-muted">Mã (không đổi được sau khi tạo)</span>
           <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="vd. EXPRESS_2H" />
         </label>
-        <label className="text-[13px] sm:col-span-2">
+        <label className="text-body-sm sm:col-span-2">
           <span className="mb-1 block text-text-muted">Nhãn</span>
           <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="vd. Giao nhanh 2 giờ" />
         </label>
-        <label className="text-[13px] sm:col-span-3">
+        <label className="text-body-sm sm:col-span-3">
           <span className="mb-1 block text-text-muted">Mô tả</span>
           <Input value={description} onChange={(e) => setDescription(e.target.value)} />
         </label>
         {catalog.governance === "BEHAVIOR" && (
-          <label className="text-[13px] sm:col-span-3">
+          <label className="text-body-sm sm:col-span-3">
             <span className="mb-1 block text-text-muted">
               Hành vi có sẵn trong code (nhóm <code>{catalog.behaviorKind}</code>) — bắt buộc
             </span>
@@ -124,21 +125,21 @@ export function DanhMucTab() {
   }, [])
 
   if (loi) return <p className="text-sm text-danger">{loi}</p>
-  if (!catalogs) return <p className="text-sm text-text-muted">Đang tải…</p>
+  if (!catalogs) return <SkeletonBlock lines={2} />
 
   return (
     <div className="space-y-3">
       {catalogs.map((c) => (
         <Card key={c.key} className="p-4">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <p className="font-mono text-[12px] text-text-muted">{c.key}</p>
+            <p className="font-mono text-meta text-text-muted">{c.key}</p>
             <p className="font-semibold">{c.label}</p>
             <Badge tone={governanceTone(c.governance)}>{c.governance}</Badge>
-            {c.behaviorKind && <span className="text-[12px] text-text-muted">nhóm hành vi: {c.behaviorKind}</span>}
-            <span className="ml-auto text-[12px] text-text-muted">{c.values.length} giá trị</span>
+            {c.behaviorKind && <span className="text-meta text-text-muted">nhóm hành vi: {c.behaviorKind}</span>}
+            <span className="ml-auto text-meta text-text-muted">{c.values.length} giá trị</span>
           </div>
 
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full text-left text-body-sm">
             <thead>
               <tr className="border-b border-border text-text-muted">
                 <th className="py-1.5 pr-3">Mã</th>
@@ -151,7 +152,7 @@ export function DanhMucTab() {
             <tbody className="divide-y divide-border">
               {c.values.map((v) => (
                 <tr key={v.id}>
-                  <td className="py-1.5 pr-3 font-mono text-[12px]">{v.code}</td>
+                  <td className="py-1.5 pr-3 font-mono text-meta">{v.code}</td>
                   <td className="py-1.5 pr-3">{v.label}</td>
                   <td className="py-1.5 pr-3 text-text-muted">{v.behavior ?? "—"}</td>
                   <td className="py-1.5 pr-3 text-text-muted">{v.sortOrder}</td>
@@ -171,7 +172,7 @@ export function DanhMucTab() {
           </table>
 
           {c.governance === "CLOSED" ? (
-            <p className="mt-2 text-[12px] text-text-muted">
+            <p className="mt-2 text-meta text-text-muted">
               Danh mục ĐÓNG — logic mã nguồn phụ thuộc giá trị này, không thêm/xoá được ở đây.
             </p>
           ) : (

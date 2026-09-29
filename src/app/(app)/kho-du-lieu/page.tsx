@@ -16,7 +16,7 @@ export default function KhoDuLieuPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-text">Kho Dữ Liệu Sản Phẩm</h1>
-            <p className="text-[13px] text-text-muted mt-0.5">
+            <p className="text-body-sm text-text-muted mt-0.5">
               Kho lưu trữ trung tâm phân loại 3 phân vùng độc lập cho tài khoản của bạn.
             </p>
           </div>

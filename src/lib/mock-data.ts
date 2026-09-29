@@ -53,7 +53,7 @@ export const FEATURE_ICONS: Record<FeatureId, LucideIcon> = {
 
 export const STATUS_META: Record<ModuleStatus, FeatureStatusMeta> = {
   hoat_dong: { label: "Hoạt động", dotClass: "bg-secondary-text", textClass: "text-secondary-text", bgClass: "bg-success-bg" },
-  chua_san_sang: { label: "Chưa sẵn sàng", dotClass: "bg-warning", textClass: "text-warning", bgClass: "bg-warning-bg" },
+  chua_san_sang: { label: "Chưa sẵn sàng", dotClass: "bg-warning", textClass: "text-warning-text", bgClass: "bg-warning-bg" },
   chua_co: { label: "Chưa có", dotClass: "bg-text-muted", textClass: "text-text-muted", bgClass: "bg-surface-alt" },
   disabled: { label: "Sắp có", dotClass: "bg-text-muted", textClass: "text-text-muted", bgClass: "bg-surface-alt" },
 }

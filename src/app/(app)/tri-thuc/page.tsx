@@ -56,8 +56,8 @@ export default function KnowledgeBasePage() {
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-6 py-4 backdrop-blur-sm">
         <div>
           <div className="flex items-center gap-2">
-            <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-mono font-bold text-red-700 uppercase tracking-wider">
-              SSOT KNOWLEDGE BASE
+            <span className="rounded bg-danger/15 px-2 py-0.5 text-xs font-mono font-bold text-danger uppercase tracking-wider">
+              KHO TRI THỨC HỆ THỐNG
             </span>
             <h1 className="text-xl font-extrabold text-foreground">
               Cẩm Nang Tri Thức & Quy Chuẩn Nhập Liệu

@@ -83,34 +83,34 @@ export function MultichannelPostCard({
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-text-muted">AI Content Engine</span>
             {modelInfo?.isFallback ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+              <span className="inline-flex items-center gap-1 text-caption font-bold text-sand-700 dark:text-sand-400 bg-sand-500/10 px-2.5 py-0.5 rounded-full border border-sand-500/30">
                 🛡️ Offline Fallback
               </span>
             ) : modelInfo?.provider === "ollama" ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 text-caption font-bold text-mint-700 dark:text-mint-400 bg-mint-500/10 px-2.5 py-0.5 rounded-full border border-mint-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-mint-500 animate-pulse" />
                 🤖 Local LLM: {modelInfo.modelName || "qwen2.5:7b"} (GPU Metal)
               </span>
             ) : modelInfo?.provider === "openai" ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 dark:text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/30">
+              <span className="inline-flex items-center gap-1 text-caption font-bold text-ocean-700 dark:text-ocean-400 bg-ocean-500/10 px-2.5 py-0.5 rounded-full border border-ocean-500/30">
                 ⚡ Cloud AI: OpenAI ({modelInfo.modelName || "gpt-4o"})
               </span>
             ) : modelInfo?.provider === "gemini" ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 dark:text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/30">
+              <span className="inline-flex items-center gap-1 text-caption font-bold text-orchid-700 dark:text-orchid-400 bg-orchid-500/10 px-2.5 py-0.5 rounded-full border border-orchid-500/30">
                 ✨ Cloud AI: Google Gemini ({modelInfo.modelName || "gemini-flash"})
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-700 dark:text-gray-400 bg-gray-500/10 px-2.5 py-0.5 rounded-full border border-gray-500/30">
+              <span className="inline-flex items-center gap-1 text-caption font-bold text-cool-700 dark:text-cool-400 bg-cool-500/10 px-2.5 py-0.5 rounded-full border border-cool-500/30">
                 🚀 AI: {modelInfo?.provider} ({modelInfo?.modelName})
               </span>
             )}
             {typeof criticScore === "number" && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-text-muted bg-surface-alt px-2 py-0.5 rounded-md border border-border">
+              <span className="inline-flex items-center gap-1 text-caption font-medium text-text-muted bg-surface-alt px-2 py-0.5 rounded-md border border-border">
                 Điểm duyệt Critic: {(criticScore * 10).toFixed(1)}/10
               </span>
             )}
           </div>
-          <div className="text-[16px] font-extrabold text-text mt-0.5">Nội dung tiếp thị đa kênh đã sẵn sàng</div>
+          <div className="text-title font-extrabold text-text mt-0.5">Nội dung tiếp thị đa kênh đã sẵn sàng</div>
         </div>
         <div className="flex items-center gap-2">
           <Badge tone="success" className="gap-1">
@@ -203,7 +203,7 @@ export function MultichannelPostCard({
         <div className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface-alt/30 p-4.5">
           {/* Tiêu đề / Hook */}
           <div>
-            <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+            <label className="text-caption font-bold text-text-muted uppercase tracking-wider block mb-1">
               {currentPost.channel === "tiktok" ? "Hook mở đầu (0-3s)" : "Tiêu đề bài viết"}
             </label>
           {isEditing ? (
@@ -222,7 +222,7 @@ export function MultichannelPostCard({
 
         {/* Thân bài / Kịch bản */}
         <div>
-          <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+          <label className="text-caption font-bold text-text-muted uppercase tracking-wider block mb-1">
             Nội dung chi tiết
           </label>
           {isEditing ? (
@@ -264,7 +264,7 @@ export function MultichannelPostCard({
 
         {/* Lời kêu gọi hành động (CTA) */}
         <div>
-          <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+          <label className="text-caption font-bold text-text-muted uppercase tracking-wider block mb-1">
             Lời kêu gọi hành động (CTA)
           </label>
           {isEditing ? (
@@ -285,7 +285,7 @@ export function MultichannelPostCard({
 
         {/* Hashtags */}
         <div>
-          <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+          <label className="text-caption font-bold text-text-muted uppercase tracking-wider block mb-1">
             Hashtags ({currentPost.hashtags?.length || 0})
           </label>
           {isEditing ? (
@@ -301,7 +301,7 @@ export function MultichannelPostCard({
               placeholder="#HoaTuoi #Florist #HoaSinhNhat"
             />
           ) : (
-            <div className="flex flex-wrap gap-1.5 text-[11px] font-semibold text-primary">
+            <div className="flex flex-wrap gap-1.5 text-caption font-semibold text-primary">
               {currentPost.hashtags?.map((tag, idx) => (
                 <span key={idx} className="bg-primary/10 px-2 py-0.5 rounded-md">
                   {tag.startsWith("#") ? tag : `#${tag}`}
@@ -320,7 +320,7 @@ export function MultichannelPostCard({
             variant="outline"
             size="sm"
             onClick={handleCopyZaloQuick}
-            className="gap-1.5 text-xs text-blue-700 border-blue-200 bg-blue-50/50 hover:bg-blue-50"
+            className="gap-1.5 text-xs text-ocean-700 border-ocean-200 bg-ocean-50/50 hover:bg-ocean-50"
           >
             {copiedZalo ? <Check size={14} className="text-secondary-text" /> : <MessageCircle size={14} />}
             {copiedZalo ? "Đã chép mẫu Zalo" : "Copy nhanh Zalo"}

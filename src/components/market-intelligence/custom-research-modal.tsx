@@ -59,7 +59,7 @@ export function CustomResearchModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blush-50 text-blush-600">
               <Compass size={18} strokeWidth={2.2} />
             </div>
             <div>
@@ -68,6 +68,7 @@ export function CustomResearchModal({
             </div>
           </div>
           <button
+              aria-label="Đóng"
             type="button"
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt transition"
@@ -80,7 +81,7 @@ export function CustomResearchModal({
           {/* Keyword Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-text flex items-center gap-1.5">
-              <Search size={14} className="text-rose-600" />
+              <Search size={14} className="text-blush-600" />
               Chủ đề / Từ khóa hoa cần nghiên cứu
             </label>
             <input
@@ -92,13 +93,13 @@ export function CustomResearchModal({
             />
             {/* Quick Suggestions */}
             <div className="flex flex-wrap gap-1.5 pt-1">
-              <span className="text-[10.5px] text-text-muted self-center">Gợi ý nhanh:</span>
+              <span className="text-caption text-text-muted self-center">Gợi ý nhanh:</span>
               {QUICK_SUGGESTIONS.map((sug) => (
                 <button
                   key={sug}
                   type="button"
                   onClick={() => setKeyword(sug)}
-                  className="rounded-full bg-surface-alt px-2.5 py-0.5 text-[10.5px] font-medium text-text-muted hover:bg-rose-50 hover:text-rose-700 transition"
+                  className="rounded-full bg-surface-alt px-2.5 py-0.5 text-caption font-medium text-text-muted hover:bg-blush-50 hover:text-blush-700 transition"
                 >
                   + {sug}
                 </button>
@@ -120,7 +121,7 @@ export function CustomResearchModal({
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-text flex items-center gap-1.5">
-                <Zap size={14} className="text-rose-600" />
+                <Zap size={14} className="text-blush-600" />
                 Chế độ phân tích
               </label>
               <select

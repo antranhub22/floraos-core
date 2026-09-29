@@ -69,9 +69,9 @@ export function DiffConfirmButton({
     <div className="rounded-xl border border-border bg-surface-alt p-3">
       <p className="mb-2 text-xs font-semibold text-text-muted">Xác nhận thay đổi</p>
       {diff.length === 0 ? (
-        <p className="mb-2 text-[13px] text-text-muted">Không có gì thay đổi so với hiện tại.</p>
+        <p className="mb-2 text-body-sm text-text-muted">Không có gì thay đổi so với hiện tại.</p>
       ) : (
-        <ul className="mb-2 space-y-1 text-[13px]">
+        <ul className="mb-2 space-y-1 text-body-sm">
           {diff.map((d, i) => (
             <li key={`${d.label}-${i}`}>
               <span className="font-medium">{d.label}:</span>{" "}
@@ -81,7 +81,7 @@ export function DiffConfirmButton({
           ))}
         </ul>
       )}
-      {error && <p className="mb-2 text-[13px] text-danger">{error}</p>}
+      {error && <p className="mb-2 text-body-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button
           type="button"

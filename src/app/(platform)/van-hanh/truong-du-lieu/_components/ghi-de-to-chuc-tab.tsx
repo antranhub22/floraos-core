@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { DiffConfirmButton } from "./diff-confirm"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import {
   ALL_AUDIENCES,
   REQUIREMENT_LEVELS,
@@ -20,6 +21,7 @@ import {
   type FieldRequirementLevel,
   type PlatformOrganizationSummary,
 } from "../_lib/api"
+
 
 export function GhiDeToChucTab() {
   const [orgs, setOrgs] = useState<PlatformOrganizationSummary[] | null>(null)
@@ -75,7 +77,7 @@ export function GhiDeToChucTab() {
     <div className="space-y-3">
       <Card className="p-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-[13px]">
+          <label className="text-body-sm">
             <span className="mb-1 block text-text-muted">Tổ chức</span>
             <select
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -90,7 +92,7 @@ export function GhiDeToChucTab() {
               ))}
             </select>
           </label>
-          <label className="text-[13px]">
+          <label className="text-body-sm">
             <span className="mb-1 block text-text-muted">Thực thể xem trước</span>
             <select
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -104,22 +106,22 @@ export function GhiDeToChucTab() {
         </div>
       </Card>
 
-      {!orgId && <p className="text-[13px] text-text-muted">Chọn một tổ chức để xem cấu hình hiệu lực và ghi đè.</p>}
+      {!orgId && <p className="text-body-sm text-text-muted">Chọn một tổ chức để xem cấu hình hiệu lực và ghi đè.</p>}
 
       {orgId && (
         <>
           <Card className="p-4">
             <p className="mb-2 text-sm font-semibold">Ghi đè một trường cho tổ chức này</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="text-[13px]">
+              <label className="text-body-sm">
                 <span className="mb-1 block text-text-muted">Khoá trường</span>
                 <Input value={fieldKey} onChange={(e) => setFieldKey(e.target.value)} placeholder="vd. cardMessage" />
               </label>
-              <label className="text-[13px]">
+              <label className="text-body-sm">
                 <span className="mb-1 block text-text-muted">Nhãn riêng (để trống nếu không đổi nhãn)</span>
                 <Input value={overrideLabel} onChange={(e) => setOverrideLabel(e.target.value)} />
               </label>
-              <label className="text-[13px]">
+              <label className="text-body-sm">
                 <span className="mb-1 block text-text-muted">Mức yêu cầu riêng (để trống nếu giữ mặc định)</span>
                 <select
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -134,7 +136,7 @@ export function GhiDeToChucTab() {
                   ))}
                 </select>
               </label>
-              <div className="text-[13px]">
+              <div className="text-body-sm">
                 <span className="mb-1 block text-text-muted">Hiển thị riêng cho tổ chức này</span>
                 <div className="flex flex-wrap gap-3">
                   {ALL_AUDIENCES.map((a) => (
@@ -182,19 +184,19 @@ export function GhiDeToChucTab() {
           <Card className="p-4">
             <p className="mb-2 text-sm font-semibold">Ghi đè một giá trị danh mục cho tổ chức này</p>
             <div className="grid gap-3 sm:grid-cols-3">
-              <label className="text-[13px]">
+              <label className="text-body-sm">
                 <span className="mb-1 block text-text-muted">Khoá danh mục</span>
                 <Input value={catalogKey} onChange={(e) => setCatalogKey(e.target.value)} placeholder="vd. serviceLevel" />
               </label>
-              <label className="text-[13px]">
+              <label className="text-body-sm">
                 <span className="mb-1 block text-text-muted">Mã giá trị</span>
                 <Input value={catalogCode} onChange={(e) => setCatalogCode(e.target.value)} placeholder="vd. EXPRESS_2H" />
               </label>
-              <label className="text-[13px]">
+              <label className="text-body-sm">
                 <span className="mb-1 block text-text-muted">Nhãn riêng (tuỳ chọn)</span>
                 <Input value={catalogLabel} onChange={(e) => setCatalogLabel(e.target.value)} />
               </label>
-              <label className="flex items-center gap-1.5 text-[13px]">
+              <label className="flex items-center gap-1.5 text-body-sm">
                 <input type="checkbox" checked={catalogEnabled} onChange={(e) => setCatalogEnabled(e.target.checked)} />
                 Bật cho tổ chức này (tắt = ẩn giá trị này chỉ với tổ chức này)
               </label>
@@ -228,13 +230,13 @@ export function GhiDeToChucTab() {
           </Card>
 
           <Card className="overflow-x-auto p-0">
-            <div className="border-b border-border p-3 text-[13px] font-semibold">
+            <div className="border-b border-border p-3 text-body-sm font-semibold">
               Xem trước — tổ chức này sẽ thấy gì (sau khi cộng ghi đè)
             </div>
             {loi && <p className="p-3 text-sm text-danger">{loi}</p>}
-            {!loi && !preview && <p className="p-3 text-sm text-text-muted">Đang tải…</p>}
+            {!loi && !preview && <SkeletonBlock lines={2} />}
             {!loi && preview && (
-              <table className="w-full text-left text-[13px]">
+              <table className="w-full text-left text-body-sm">
                 <thead>
                   <tr className="border-b border-border text-text-muted">
                     <th className="py-2 pl-3 pr-3">Khoá</th>
@@ -246,7 +248,7 @@ export function GhiDeToChucTab() {
                 <tbody className="divide-y divide-border">
                   {preview.map((p) => (
                     <tr key={p.key}>
-                      <td className="py-1.5 pl-3 pr-3 font-mono text-[12px]">{p.key}</td>
+                      <td className="py-1.5 pl-3 pr-3 font-mono text-meta">{p.key}</td>
                       <td className="py-1.5 pr-3">{p.label}</td>
                       <td className="py-1.5 pr-3">
                         <Badge tone={p.requirement === "REQUIRED" ? "warning" : "neutral"}>{p.requirement}</Badge>

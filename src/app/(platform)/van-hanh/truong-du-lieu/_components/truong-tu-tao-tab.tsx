@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { DiffConfirmButton } from "./diff-confirm"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import {
   ALL_AUDIENCES,
   CUSTOM_FIELD_DATA_TYPES,
@@ -60,12 +61,12 @@ export function TruongTuTaoTab() {
   }, [])
 
   if (loi) return <p className="text-sm text-danger">{loi}</p>
-  if (!fields) return <p className="text-sm text-text-muted">Đang tải…</p>
+  if (!fields) return <SkeletonBlock lines={2} />
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[13px] text-text-muted">{fields.length} trường tự tạo (tối đa 50 mỗi thực thể)</p>
+        <p className="text-body-sm text-text-muted">{fields.length} trường tự tạo (tối đa 50 mỗi thực thể)</p>
         <Button type="button" size="sm" onClick={() => setShowForm((s) => !s)}>
           {showForm ? "Đóng form" : "+ Tạo trường mới"}
         </Button>
@@ -74,7 +75,7 @@ export function TruongTuTaoTab() {
       {showForm && (
         <Card className="space-y-3 p-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-[13px]">
+            <label className="text-body-sm">
               <span className="mb-1 block text-text-muted">Thực thể</span>
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -85,7 +86,7 @@ export function TruongTuTaoTab() {
                 <option value="PARTNER">Đối tác</option>
               </select>
             </label>
-            <label className="text-[13px]">
+            <label className="text-body-sm">
               <span className="mb-1 block text-text-muted">Kiểu dữ liệu</span>
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -99,19 +100,19 @@ export function TruongTuTaoTab() {
                 ))}
               </select>
             </label>
-            <label className="text-[13px] sm:col-span-2">
+            <label className="text-body-sm sm:col-span-2">
               <span className="mb-1 block text-text-muted">Nhãn</span>
               <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="vd. Mã PO khách" />
             </label>
-            <label className="text-[13px] sm:col-span-2">
+            <label className="text-body-sm sm:col-span-2">
               <span className="mb-1 block text-text-muted">Mô tả</span>
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </label>
-            <label className="text-[13px]">
+            <label className="text-body-sm">
               <span className="mb-1 block text-text-muted">Gợi ý nhập</span>
               <Input value={form.placeholder} onChange={(e) => setForm({ ...form, placeholder: e.target.value })} />
             </label>
-            <label className="text-[13px]">
+            <label className="text-body-sm">
               <span className="mb-1 block text-text-muted">Mức yêu cầu</span>
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -125,7 +126,7 @@ export function TruongTuTaoTab() {
                 ))}
               </select>
             </label>
-            <label className="text-[13px]">
+            <label className="text-body-sm">
               <span className="mb-1 block text-text-muted">Bắt buộc phải có trước bước (mã bước, để trống nếu không chặn)</span>
               <Input
                 value={form.requiredAtStage}
@@ -133,7 +134,7 @@ export function TruongTuTaoTab() {
                 placeholder="vd. INTAKE"
               />
             </label>
-            <label className="text-[13px]">
+            <label className="text-body-sm">
               <span className="mb-1 block text-text-muted">Độ nhạy</span>
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -147,11 +148,11 @@ export function TruongTuTaoTab() {
                 ))}
               </select>
             </label>
-            <label className="text-[13px]">
+            <label className="text-body-sm">
               <span className="mb-1 block text-text-muted">Khoá danh mục (nếu kiểu SELECT/MULTI_SELECT)</span>
               <Input value={form.catalogKey} onChange={(e) => setForm({ ...form, catalogKey: e.target.value })} />
             </label>
-            <div className="text-[13px] sm:col-span-2">
+            <div className="text-body-sm sm:col-span-2">
               <span className="mb-1 block text-text-muted">Hiển thị theo đối tượng xem</span>
               <div className="flex flex-wrap gap-3">
                 {ALL_AUDIENCES.map((a) => (
@@ -203,7 +204,7 @@ export function TruongTuTaoTab() {
       )}
 
       <Card className="overflow-x-auto p-0">
-        <table className="w-full text-left text-[13px]">
+        <table className="w-full text-left text-body-sm">
           <thead>
             <tr className="border-b border-border text-text-muted">
               <th className="py-2 pl-3 pr-3">Khoá</th>
@@ -218,7 +219,7 @@ export function TruongTuTaoTab() {
           <tbody className="divide-y divide-border">
             {fields.map((f) => (
               <tr key={f.key} className="hover:bg-surface-alt">
-                <td className="py-2 pl-3 pr-3 font-mono text-[12px]">{f.key}</td>
+                <td className="py-2 pl-3 pr-3 font-mono text-meta">{f.key}</td>
                 <td className="py-2 pr-3 font-medium">{f.label}</td>
                 <td className="py-2 pr-3 text-text-muted">{f.entity}</td>
                 <td className="py-2 pr-3 text-text-muted">{f.dataType}</td>

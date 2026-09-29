@@ -10,6 +10,8 @@ export interface DialogProps {
   onOpenChange: (open: boolean) => void
   title: React.ReactNode
   description?: React.ReactNode
+  /** Slot nằm giữa header và vùng cuộn — dùng cho thanh tab điều hướng cố định. */
+  subHeader?: React.ReactNode
   children: React.ReactNode
   footer?: React.ReactNode
   size?: "sm" | "md" | "lg"
@@ -22,6 +24,7 @@ export function Dialog({
   onOpenChange,
   title,
   description,
+  subHeader,
   children,
   footer,
   size = "md",
@@ -67,6 +70,13 @@ export function Dialog({
                 </BaseDialog.Close>
               )}
             </div>
+
+            {/* Sub-header (pinned tab nav, etc.) */}
+            {subHeader && (
+              <div className="flex-shrink-0 border-b border-border">
+                {subHeader}
+              </div>
+            )}
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 text-sm min-h-0">

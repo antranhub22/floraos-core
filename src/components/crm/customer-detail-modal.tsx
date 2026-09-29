@@ -108,7 +108,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
           </span>
           <div>
             <div className="text-base font-bold text-foreground">{data?.name ?? "Chi tiết khách hàng"}</div>
-            <div className="text-[11px] text-text-muted">{data?.phone}</div>
+            <div className="text-caption text-text-muted">{data?.phone}</div>
           </div>
         </div>
       }

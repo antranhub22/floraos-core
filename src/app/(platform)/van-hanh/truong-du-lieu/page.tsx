@@ -29,7 +29,7 @@ export default function TruongDuLieuPage() {
     <div className="space-y-4">
       <div>
         <p className="text-lg font-semibold">Trường dữ liệu</p>
-        <p className="text-[13px] text-text-muted">
+        <p className="text-body-sm text-text-muted">
           Kiến trúc hai lớp mã/cấu hình, 5 mức sàn không cấu hình được (Đặc tả trường §16.2). Mọi thay đổi ghi vào nhật
           ký nền tảng.
         </p>

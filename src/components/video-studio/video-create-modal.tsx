@@ -122,15 +122,15 @@ export function VideoCreateModal({
                 >
                   <div className="flex items-start justify-between gap-1 w-full">
                     <span className="text-xs font-bold text-text">{spec.label}</span>
-                    <Badge tone={isSelected ? "success" : "neutral"} className="text-[10px] px-1.5 py-0">
+                    <Badge tone={isSelected ? "success" : "neutral"} className="text-caption px-1.5 py-0">
                       {spec.aspectRatio}
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-text-muted mt-1 w-full">
+                  <div className="flex items-center justify-between text-caption text-text-muted mt-1 w-full">
                     <span className="flex items-center gap-1">
                       <Clock size={11} /> ~{spec.targetDurationSeconds}s
                     </span>
-                    <span className="font-semibold text-amber-600 flex items-center gap-0.5">
+                    <span className="font-semibold text-warning flex items-center gap-0.5">
                       <Coins size={11} /> {spec.defaultCreditCost} credits
                     </span>
                   </div>
@@ -213,12 +213,12 @@ export function VideoCreateModal({
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="font-bold text-[11px] text-text">{spec.label}</span>
+                    <span className="font-bold text-caption text-text">{spec.label}</span>
                     {isSel && (
                       <span className="h-2 w-2 rounded-full bg-primary" />
                     )}
                   </div>
-                  <span className="text-[10px] text-text-muted leading-tight line-clamp-2">
+                  <span className="text-caption text-text-muted leading-tight line-clamp-2">
                     {spec.description}
                   </span>
                 </button>
@@ -231,11 +231,11 @@ export function VideoCreateModal({
         <div className="rounded-xl bg-surface-alt border border-border p-3.5 flex items-center justify-between text-xs">
           <div className="flex flex-col">
             <span className="font-bold text-text">Dự toán hạn mức:</span>
-            <span className="text-text-muted text-[11px]">
+            <span className="text-text-muted text-caption">
               {format === "SLIDESHOW" ? "Slideshow cục bộ chi phí $0 API" : "Bao gồm chi phí AI Render & Giọng đọc"}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-sm font-extrabold text-amber-600">
+          <div className="flex items-center gap-1.5 text-sm font-extrabold text-warning">
             <Coins size={15} />
             {currentSpec?.defaultCreditCost} Credits
           </div>

@@ -115,7 +115,7 @@ export function ScheduleConfirmModal({
       <div className="flex flex-col gap-4 text-xs">
         {/* Danh sách bài viết được chọn */}
         <div>
-          <div className="text-[11.5px] font-bold uppercase tracking-wider text-text-muted mb-2">
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted mb-2">
             Bài viết đã chọn ({selectedPosts.length})
           </div>
           <div className="flex flex-col gap-2 max-h-36 overflow-y-auto pr-1">
@@ -130,10 +130,10 @@ export function ScheduleConfirmModal({
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12.5px] font-bold text-text truncate">{post.title}</div>
-                  <div className="text-[11px] text-text-muted capitalize">{post.channel_label}</div>
+                  <div className="text-meta font-bold text-text truncate">{post.title}</div>
+                  <div className="text-caption text-text-muted capitalize">{post.channel_label}</div>
                 </div>
-                <Badge tone="neutral" className="text-[10px]">
+                <Badge tone="neutral" className="text-caption">
                   Bản nháp
                 </Badge>
               </div>
@@ -143,7 +143,7 @@ export function ScheduleConfirmModal({
 
         {/* Chọn khung giờ vàng */}
         <div>
-          <div className="text-[11.5px] font-bold uppercase tracking-wider text-text-muted mb-2 flex items-center gap-1.5">
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted mb-2 flex items-center gap-1.5">
             <Sparkles size={12} className="text-primary" />
             Chọn thời điểm phát bài tối ưu
           </div>
@@ -165,8 +165,8 @@ export function ScheduleConfirmModal({
                   <Zap size={16} />
                 </div>
                 <div>
-                  <div className="text-[13px] font-bold text-text">Đăng ngay bây giờ</div>
-                  <div className="text-[11px] text-text-muted">Đưa ngay vào hàng đợi xuất bản tức thì</div>
+                  <div className="text-body-sm font-bold text-text">Đăng ngay bây giờ</div>
+                  <div className="text-caption text-text-muted">Đưa ngay vào hàng đợi xuất bản tức thì</div>
                 </div>
               </div>
               {mode === "now" && <CheckCircle2 size={16} className="text-primary" />}
@@ -188,8 +188,8 @@ export function ScheduleConfirmModal({
                   <Sun size={16} />
                 </div>
                 <div>
-                  <div className="text-[13px] font-bold text-text">Giờ trưa vàng (11:30)</div>
-                  <div className="text-[11px] text-text-muted">Khung giờ nghỉ trưa, tương tác cao nhất trong ngày</div>
+                  <div className="text-body-sm font-bold text-text">Giờ trưa vàng (11:30)</div>
+                  <div className="text-caption text-text-muted">Khung giờ nghỉ trưa, tương tác cao nhất trong ngày</div>
                 </div>
               </div>
               {mode === "lunch" && <CheckCircle2 size={16} className="text-primary" />}
@@ -211,8 +211,8 @@ export function ScheduleConfirmModal({
                   <Moon size={16} />
                 </div>
                 <div>
-                  <div className="text-[13px] font-bold text-text">Giờ tối vàng (19:30)</div>
-                  <div className="text-[11px] text-text-muted">Thời điểm mua sắm, đặt hoa tặng và thư giãn</div>
+                  <div className="text-body-sm font-bold text-text">Giờ tối vàng (19:30)</div>
+                  <div className="text-caption text-text-muted">Thời điểm mua sắm, đặt hoa tặng và thư giãn</div>
                 </div>
               </div>
               {mode === "evening" && <CheckCircle2 size={16} className="text-primary" />}
@@ -234,8 +234,8 @@ export function ScheduleConfirmModal({
                   <Clock size={16} />
                 </div>
                 <div>
-                  <div className="text-[13px] font-bold text-text">Tùy chỉnh ngày & giờ</div>
-                  <div className="text-[11px] text-text-muted">Chủ động chọn mốc thời gian cụ thể</div>
+                  <div className="text-body-sm font-bold text-text">Tùy chỉnh ngày & giờ</div>
+                  <div className="text-caption text-text-muted">Chủ động chọn mốc thời gian cụ thể</div>
                 </div>
               </div>
               {mode === "custom" && <CheckCircle2 size={16} className="text-primary" />}

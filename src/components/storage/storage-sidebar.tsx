@@ -183,8 +183,8 @@ export function StorageSidebar({
               <Folder size={15} strokeWidth={2.2} />
             </div>
             <div>
-              <h3 className="text-[13px] font-extrabold text-text tracking-tight">Kho Dữ Liệu Sản Phẩm</h3>
-              <div className="text-[10.5px] text-text-muted">Chọn thẻ để tiếp tục luồng xử lý</div>
+              <h3 className="text-body-sm font-extrabold text-text tracking-tight">Kho Dữ Liệu Sản Phẩm</h3>
+              <div className="text-caption text-text-muted">Chọn thẻ để tiếp tục luồng xử lý</div>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -222,7 +222,7 @@ export function StorageSidebar({
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-[11px] no-scrollbar">
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-caption no-scrollbar">
           <button
             type="button"
             onClick={() => setFilter("all")}
@@ -279,6 +279,8 @@ export function StorageSidebar({
             const rawAsset = item.data as RawAssetItem
             return (
               <div
+              role="button"
+              tabIndex={0}
                 key={`raw-${item.id}`}
                 onClick={() => onSelectRawPhoto(rawAsset)}
                 className={`group relative flex flex-col gap-2 rounded-2xl border p-2.5 cursor-pointer transition-all hover:shadow-md ${
@@ -297,22 +299,22 @@ export function StorageSidebar({
                         <ImageIcon size={18} className="opacity-40" />
                       </div>
                     )}
-                    <Badge className="absolute left-1 top-1 bg-warning text-white text-[8.5px] py-0 px-1 border-none font-bold">
+                    <Badge className="absolute left-1 top-1 bg-warning text-white text-caption py-0 px-1 border-none font-bold">
                       GỐC
                     </Badge>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="text-[12px] font-bold text-text truncate">{item.title}</div>
-                    <div className="text-[10.5px] text-text-muted truncate mt-0.5">{item.subtitle}</div>
-                    <div className="mt-1 flex items-center gap-1 text-[10px] text-warning dark:text-warning font-semibold">
+                    <div className="text-meta font-bold text-text truncate">{item.title}</div>
+                    <div className="text-caption text-text-muted truncate mt-0.5">{item.subtitle}</div>
+                    <div className="mt-1 flex items-center gap-1 text-caption text-warning dark:text-warning font-semibold">
                       <span>• Chưa phân tích cấu phần</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Uncompleted Action Button */}
-                <Button
+                <Button variant="secondary"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation()
@@ -321,7 +323,7 @@ export function StorageSidebar({
                   className="w-full text-xs h-7 gap-1 bg-primary hover:bg-primary/90 text-white font-bold"
                 >
                   <Sparkles size={12} />
-                  Kích hoạt phân tích AI (M01a) →
+                  Kích hoạt phân tích AI (Nhận diện sản phẩm) →
                 </Button>
               </div>
             )
@@ -332,6 +334,8 @@ export function StorageSidebar({
             const analysis = item.data as ApprovedAnalysisItem
             return (
               <div
+              role="button"
+              tabIndex={0}
                 key={`approved-${item.id}`}
                 onClick={() => onSelectApprovedAnalysis(analysis, "m01c")}
                 className={`group relative flex flex-col gap-2 rounded-2xl border p-2.5 cursor-pointer transition-all hover:shadow-md ${
@@ -350,20 +354,20 @@ export function StorageSidebar({
                         <ImageIcon size={18} className="opacity-40" />
                       </div>
                     )}
-                    <Badge className="absolute left-1 top-1 bg-info text-white text-[8.5px] py-0 px-1 border-none font-bold">
-                      M01a
+                    <Badge className="absolute left-1 top-1 bg-info text-white text-caption py-0 px-1 border-none font-bold">
+                      Nhận diện sản phẩm
                     </Badge>
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <div className="text-[12px] font-bold text-text truncate">{item.title}</div>
-                      <Badge tone="success" className="text-[9px] py-0 px-1 font-bold">
+                      <div className="text-meta font-bold text-text truncate">{item.title}</div>
+                      <Badge tone="success" className="text-caption py-0 px-1 font-bold">
                         ĐÃ DUYỆT
                       </Badge>
                     </div>
-                    <div className="text-[10.5px] text-text-muted truncate mt-0.5">{item.subtitle}</div>
-                    <div className="mt-0.5 text-[10px] text-info dark:text-info font-semibold">
+                    <div className="text-caption text-text-muted truncate mt-0.5">{item.subtitle}</div>
+                    <div className="mt-0.5 text-caption text-info dark:text-info font-semibold">
                       Chờ sinh Copy bán hàng &amp; Thẻ chào
                     </div>
                   </div>
@@ -378,20 +382,20 @@ export function StorageSidebar({
                       e.stopPropagation()
                       onSelectApprovedAnalysis(analysis, "m01b")
                     }}
-                    className="text-[11px] h-7 gap-1 px-1 font-semibold hover:text-primary border-border"
-                    title="Sinh câu từ bán hàng M01b"
+                    className="text-caption h-7 gap-1 px-1 font-semibold hover:text-primary border-border"
+                    title="Sinh câu từ bán hàng Sinh dữ liệu bán hàng"
                   >
                     <Sparkles size={11} className="text-accent" />
-                    Sinh Copy (M01b)
+                    Sinh Copy (Sinh dữ liệu bán hàng)
                   </Button>
-                  <Button
+                  <Button variant="secondary"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation()
                       onSelectApprovedAnalysis(analysis, "m01c")
                     }}
-                    className="text-[11px] h-7 gap-1 px-1 bg-primary hover:bg-primary/90 text-white font-bold"
-                    title="Tạo thẻ chào khách hàng M01c"
+                    className="text-caption h-7 gap-1 px-1 bg-primary hover:bg-primary/90 text-white font-bold"
+                    title="Tạo thẻ chào khách hàng Nghiên cứu thị trường"
                   >
                     <Tag size={11} />
                     Tạo Thẻ Chào →
@@ -408,6 +412,8 @@ export function StorageSidebar({
 
             return (
               <div
+                role="button"
+                tabIndex={0}
                 key={`finalized-${item.id}`}
                 onClick={() => onSelectFinalizedPitch(pitch)}
                 className={`group relative flex flex-col gap-2 rounded-2xl border-2 p-2.5 cursor-pointer transition-all hover:shadow-md ${
@@ -426,20 +432,20 @@ export function StorageSidebar({
                         <ImageIcon size={18} className="opacity-40" />
                       </div>
                     )}
-                    <Badge className="absolute left-1 top-1 bg-success text-white text-[8.5px] py-0 px-1 border-none font-bold">
+                    <Badge className="absolute left-1 top-1 bg-success text-white text-caption py-0 px-1 border-none font-bold">
                       FINAL
                     </Badge>
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <div className="text-[12px] font-bold text-text truncate">{item.title}</div>
-                      <span className="text-[11px] font-extrabold text-primary">
+                      <div className="text-meta font-bold text-text truncate">{item.title}</div>
+                      <span className="text-caption font-extrabold text-primary">
                         {formatCurrencyVnd(pitch.priceVnd)}
                       </span>
                     </div>
-                    <div className="text-[10.5px] text-text-muted truncate mt-0.5">{item.subtitle}</div>
-                    <div className="mt-0.5 text-[10px] text-success dark:text-success font-semibold flex items-center gap-1">
+                    <div className="text-caption text-text-muted truncate mt-0.5">{item.subtitle}</div>
+                    <div className="mt-0.5 text-caption text-success dark:text-success font-semibold flex items-center gap-1">
                       <CheckCircle2 size={10} strokeWidth={2.5} /> Sẵn sàng tư vấn khách
                     </div>
                   </div>
@@ -454,14 +460,14 @@ export function StorageSidebar({
                       e.stopPropagation()
                       onSelectFinalizedPitch(pitch)
                     }}
-                    className="text-[11px] h-7 gap-1 px-1 border-border font-semibold text-text"
+                    className="text-caption h-7 gap-1 px-1 border-border font-semibold text-text"
                   >
                     Xem &amp; Sửa lại
                   </Button>
-                  <Button
+                  <Button variant="secondary"
                     size="sm"
                     onClick={(e) => handleCopyZaloQuick(pitch, e)}
-                    className={`text-[11px] h-7 gap-1 px-1 font-bold ${
+                    className={`text-caption h-7 gap-1 px-1 font-bold ${
                       isCopied ? "bg-success text-white" : "bg-primary hover:bg-primary/90 text-white"
                     }`}
                   >
@@ -478,7 +484,7 @@ export function StorageSidebar({
       </div>
 
       {/* Sidebar Footer Stats */}
-      <div className="p-2.5 border-t border-border bg-surface-alt/50 text-[11px] text-text-muted flex items-center justify-between">
+      <div className="p-2.5 border-t border-border bg-surface-alt/50 text-caption text-text-muted flex items-center justify-between">
         <span>Tổng cộng: {unifiedItems.length} sản phẩm</span>
         <span className="text-success dark:text-success font-semibold">
           {finalizedPitches.length} đã xong Final

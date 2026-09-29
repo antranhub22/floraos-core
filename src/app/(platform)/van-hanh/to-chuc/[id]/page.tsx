@@ -51,7 +51,7 @@ export default function ChiTietToChucPage() {
     })()
   }, [params.id])
 
-  if (loi) return <p className="text-sm text-danger">{loi}</p>
+  if (loi) return <p role="alert" className="text-sm text-danger">{loi}</p>
   if (!org) return <div className="py-4"><SkeletonBlock lines={4} /></div>
 
   return (

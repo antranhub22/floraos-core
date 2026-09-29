@@ -130,7 +130,7 @@ export function PlanVideoAssembly({
         <h3 className="flex items-center gap-2 text-sm font-bold text-text">
           <Clapperboard size={14} /> Dựng video từ bộ tài sản của kịch bản
         </h3>
-        <Badge tone="neutral" className="text-[10px]">
+        <Badge tone="neutral" className="text-caption">
           Kịch bản phiên bản {loaded.plan.revision} · {ratios.length} khung
         </Badge>
       </div>
@@ -145,7 +145,7 @@ export function PlanVideoAssembly({
                 role="tab"
                 aria-selected={r === ratio}
                 onClick={() => setRatio(r)}
-                className={`rounded-lg border px-3 py-1.5 text-[11.5px] font-bold cursor-pointer ${
+                className={`rounded-lg border px-3 py-1.5 text-caption font-bold cursor-pointer ${
                   r === ratio ? "border-primary bg-primary text-white" : "border-border bg-surface text-text-muted"
                 }`}
               >
@@ -156,42 +156,42 @@ export function PlanVideoAssembly({
           })}
         </div>
       )}
-      <p className="mb-3 text-[12px] text-text-muted">
-        Ảnh từng cảnh lấy từ Khu vực D, âm thanh dùng <b>nguyên bản phối Khu vực C</b> (không đọc lại), phụ đề, chuyển cảnh,
+      <p className="mb-3 text-meta text-text-muted">
+        Ảnh từng cảnh lấy từ Biến thể marketing, âm thanh dùng <b>nguyên bản phối Âm thanh</b> (không đọc lại), phụ đề, chuyển cảnh,
         thời lượng và khuôn theo kịch bản Chặng 05. Thiếu tài sản nào thì chưa dựng được.
       </p>
 
       {report && (
-        <div className="mb-3 flex flex-col gap-1.5 text-[12px]">
+        <div className="mb-3 flex flex-col gap-1.5 text-meta">
           {report.ready ? (
-            <p className="flex items-center gap-1.5 font-semibold text-emerald-700">
+            <p className="flex items-center gap-1.5 font-semibold text-success">
               <CheckCircle2 size={14} /> Đủ tài sản: {report.scenes.length} cảnh · ~{Math.round(report.total_duration_seconds)}s ·{" "}
               {report.aspect_ratio} · khuôn {report.format}
             </p>
           ) : (
             report.problems.map((p, i) => (
-              <div key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-rose-800">
+              <div key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-1.5 text-danger">
                 <span className="flex items-center gap-1.5">
                   <AlertTriangle size={13} /> {p.message}
                 </span>
                 {p.kind === "missing_image" ? (
                   <button type="button" onClick={() => onGoArea("d", p.sceneIndex, ratio)} className="font-bold underline cursor-pointer">
-                    Sinh cảnh {p.sceneIndex} khung {ratio} ở Khu vực D →
+                    Sinh cảnh {p.sceneIndex} khung {ratio} →
                   </button>
                 ) : p.kind !== "duration" && p.kind !== "ratio_out_of_scope" ? (
                   <button type="button" onClick={() => onGoArea("c")} className="font-bold underline cursor-pointer">
-                    Mở Khu vực C →
+                    Mở Âm thanh →
                   </button>
                 ) : null}
               </div>
             ))
           )}
           {report.warnings.map((w, i) => (
-            <p key={i} className="text-amber-700">⚠ {w}</p>
+            <p key={i} className="text-warning">⚠ {w}</p>
           ))}
         </div>
       )}
-      {error && <p className="mb-2 text-[12px] text-rose-700">{error}</p>}
+      {error && <p className="mb-2 text-meta text-danger">{error}</p>}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" className="gap-1.5" disabled={busy !== null} onClick={() => void check()}>
@@ -200,7 +200,7 @@ export function PlanVideoAssembly({
         <Button size="sm" className="gap-1.5" disabled={busy !== null || !report?.ready} onClick={() => void build()}>
           {busy === "build" ? <Loader2 size={13} className="animate-spin" /> : <Clapperboard size={13} />} Dựng video {ratio}
         </Button>
-        <span className="text-[11px] text-text-muted">Tạo bản nháp miễn phí → duyệt kịch bản (P3) → render 5 credit → duyệt video (P4).</span>
+        <span className="text-caption text-text-muted">Tạo bản nháp miễn phí → duyệt kịch bản (P3) → render 5 credit → duyệt video (P4).</span>
       </div>
     </Card>
   )

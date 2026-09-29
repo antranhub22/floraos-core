@@ -190,7 +190,7 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   J3: { name: "landing.create", group: "channel", label: "Tạo landing page", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
   J4: { name: "landing.publish", group: "channel", label: "Xuất bản landing page", defaultRoles: ["dieu_hanh"] },
   J5: { name: "social.publish", group: "channel", label: "Đăng bài lên mạng xã hội", defaultRoles: ["dieu_hanh", "marketing"] },
-  J6: { name: "chat.manage", group: "channel", label: "Quản lý hội thoại khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },
+  J6: { name: "chat.manage", group: "channel", label: "Quản lý hội thoại khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing", "customer_service"] },
   // L — Sản phẩm và giá
   L1: { name: "product.read", group: "product_pricing", label: "Xem sản phẩm trong Product Master", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "product_manager", "marketing", "crm"] },
   L2: { name: "product.create", group: "product_pricing", label: "Thêm sản phẩm mới", defaultRoles: ["dieu_hanh", "dieu_phoi", "product_manager"] },
@@ -212,23 +212,23 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   K1: { name: "experience.use", group: "experience", label: "Dùng workspace trải nghiệm trong hạn mức", defaultRoles: ["experience_user"] },
   K2: { name: "experience.convert", group: "experience", label: "Chuyển workspace trải nghiệm thành tổ chức thật", defaultRoles: ["experience_user", "dieu_hanh"] },
   // R — Đơn hàng và vận hành (M10, P22 — đặc tả 02 mục 4, đặc tả 07 mục 12)
-  R1: { name: "order.read", group: "order_operations", label: "Xem đơn hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm"] },
+  R1: { name: "order.read", group: "order_operations", label: "Xem đơn hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm", "customer_service"] },
   R2: { name: "order.create", group: "order_operations", label: "Tạo đơn hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   R3: { name: "order.update", group: "order_operations", label: "Sửa đơn và cập nhật trạng thái sản xuất", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   R4: { name: "order.assign", group: "order_operations", label: "Phân công thợ cắm cho một đơn", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   R5: { name: "delivery.manage", group: "order_operations", label: "Theo dõi và cập nhật giao hàng, đặt khung giờ", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   R6: { name: "order.cancel", group: "order_operations", label: "Huỷ một đơn hàng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   R7: { name: "order.print", group: "order_operations", label: "In phiếu đơn và phiếu sản xuất", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
-  R8: { name: "order.card_message.manage", group: "order_operations", label: "Quản lý lời nhắn thiệp của đơn", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  R8: { name: "order.card_message.manage", group: "order_operations", label: "Quản lý lời nhắn thiệp của đơn", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "customer_service"] },
   // ĐP-4a (26/09/2026, PO D2) — sổ thu. R9: Sales ghi DEPOSIT lúc nhận đơn,
   // Điều phối ghi BALANCE lúc thu nốt. R10: hoàn tiền — trần cứng điều hành,
   // vì hoàn tiền ảnh hưởng trực tiếp doanh thu đã ghi nhận.
   R9: { name: "order.payment.record", group: "order_operations", label: "Ghi nhận thu tiền đơn hàng (cọc/thu nốt)", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
   R10: { name: "order.payment.refund", group: "order_operations", label: "Ghi nhận hoàn tiền đơn hàng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // Q — CRM & Khách hàng ngành hoa (M09, P21)
-  Q1: { name: "crm.customer.read", group: "crm", label: "Xem thông tin khách hàng và hồ sơ RFM", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm"] },
-  Q2: { name: "crm.customer.create", group: "crm", label: "Thêm khách hàng mới", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm"] },
-  Q3: { name: "crm.customer.update", group: "crm", label: "Cập nhật hồ sơ, sở thích hoa và phân tầng khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm"] },
+  Q1: { name: "crm.customer.read", group: "crm", label: "Xem thông tin khách hàng và hồ sơ RFM", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm", "customer_service"] },
+  Q2: { name: "crm.customer.create", group: "crm", label: "Thêm khách hàng mới", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm", "customer_service"] },
+  Q3: { name: "crm.customer.update", group: "crm", label: "Cập nhật hồ sơ, sở thích hoa và phân tầng khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm", "customer_service"] },
   Q4: { name: "crm.customer.delete", group: "crm", label: "Xoá khách hàng", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // Q5/Q6 đổi nghĩa 18/09 (RS-10). Đặc tả 02 nhóm Q luôn định nghĩa
   // `Q5` = xuất danh sách khách hàng (trần cứng — lấy toàn bộ dữ liệu cá nhân
@@ -237,14 +237,14 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   // mã riêng trong đặc tả. Sửa lại khớp đặc tả — `GET /crm/customers/export`
   // (chưa xây) giữ đúng trần cứng của nó khi được dựng; thêm `Q9` cho consent.
   Q5: { name: "crm.customer.export", group: "crm", label: "Xuất danh sách khách hàng ra tệp", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
-  Q6: { name: "crm.occasion.manage", group: "crm", label: "Thêm và quản lý ngày kỷ niệm của khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm"] },
-  Q7: { name: "crm.campaign.suggest", group: "crm", label: "Quét và chạy AI gợi ý nhắc mua theo dịp", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm"] },
-  Q8: { name: "crm.voucher.manage", group: "crm", label: "Tạo và quản lý voucher tri ân khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "crm"] },
-  Q9: { name: "crm.consent.manage", group: "crm", label: "Cập nhật quyền riêng tư và sự đồng ý nhận tin", defaultRoles: ["dieu_hanh", "dieu_phoi", "crm"] },
+  Q6: { name: "crm.occasion.manage", group: "crm", label: "Thêm và quản lý ngày kỷ niệm của khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm", "customer_service"] },
+  Q7: { name: "crm.campaign.suggest", group: "crm", label: "Quét và chạy AI gợi ý nhắc mua theo dịp", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm", "customer_service"] },
+  Q8: { name: "crm.voucher.manage", group: "crm", label: "Tạo và quản lý voucher tri ân khách hàng", defaultRoles: ["dieu_hanh", "dieu_phoi", "crm", "customer_service"] },
+  Q9: { name: "crm.consent.manage", group: "crm", label: "Cập nhật quyền riêng tư và sự đồng ý nhận tin", defaultRoles: ["dieu_hanh", "dieu_phoi", "crm", "customer_service"] },
   // T — AI Chat Assistant & Hội thoại (M08, P23)
-  T1: { name: "chat.conversation.read", group: "ai_chat", label: "Xem lịch sử hội thoại và tin nhắn tư vấn", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm"] },
-  T2: { name: "chat.message.send", group: "ai_chat", label: "Gửi tin nhắn tư vấn và trò chuyện với AI", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
-  T3: { name: "chat.order.create", group: "ai_chat", label: "Tạo đơn hàng nhanh từ gợi ý trong hội thoại", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale"] },
+  T1: { name: "chat.conversation.read", group: "ai_chat", label: "Xem lịch sử hội thoại và tin nhắn tư vấn", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm", "customer_service"] },
+  T2: { name: "chat.message.send", group: "ai_chat", label: "Gửi tin nhắn tư vấn và trò chuyện với AI", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "customer_service"] },
+  T3: { name: "chat.order.create", group: "ai_chat", label: "Tạo đơn hàng nhanh từ gợi ý trong hội thoại", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "customer_service"] },
   T4: { name: "chat.config.manage", group: "ai_chat", label: "Cài đặt bot tự động và phong cách xưng hô", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
   // V — Nghiên cứu thị trường & Xu hướng (Market Intelligence Engine, Đợt A)
   V1: { name: "market_intel.research.run", group: "market_intelligence", label: "Kích hoạt lượt nghiên cứu thị trường", defaultRoles: ["dieu_hanh", "dieu_phoi", "marketing"] },

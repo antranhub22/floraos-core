@@ -57,20 +57,20 @@ export function ProductionScopePicker({
 }) {
   const pub = resolvePublishing(value.platforms, value.outputs)
   const chip = (on: boolean, derived = false) =>
-    `rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+    `rounded-full border px-2.5 py-1 text-caption font-semibold transition ${
       on
-        ? "border-primary bg-rose-50 text-primary"
+        ? "border-primary bg-primary/10 text-primary"
         : derived
-          ? "border-dashed border-amber-300 bg-amber-50 text-amber-700"
-          : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+          ? "border-dashed border-warning/30 bg-warning/10 text-warning"
+          : "border-border bg-surface text-text-muted hover:bg-surface-alt"
     }`
 
   return (
-    <div className={compact ? "space-y-2.5" : "space-y-3 rounded-xl border border-stone-200 bg-white p-4"}>
+    <div className={compact ? "space-y-2.5" : "space-y-3 rounded-xl border border-border bg-surface p-4"}>
       {!compact && (
         <div>
-          <p className="text-[12.5px] font-bold text-stone-900">Phạm vi sản xuất</p>
-          <p className="text-[11px] text-stone-500">
+          <p className="text-meta font-bold text-text">Phạm vi sản xuất</p>
+          <p className="text-caption text-text-muted">
             Hệ thống chỉ sinh đúng những gì bạn chọn. Chọn &ldquo;Tất cả&rdquo; để sản xuất cho mọi nền tảng.
           </p>
         </div>
@@ -78,12 +78,12 @@ export function ProductionScopePicker({
 
       <div>
         <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[11.5px] font-bold uppercase tracking-wider text-stone-700">Nền tảng sẽ đăng</span>
+          <span className="text-caption font-bold uppercase tracking-wider text-text">Nền tảng sẽ đăng</span>
           <div className="flex gap-1.5">
             <button
               type="button"
               onClick={() => onChange({ ...value, platforms: [...DEFAULT_PLATFORMS] })}
-              className="text-[10.5px] font-semibold text-stone-500 hover:text-primary"
+              className="text-caption font-semibold text-text-muted hover:text-primary"
             >
               Mặc định
             </button>
@@ -113,7 +113,7 @@ export function ProductionScopePicker({
 
       <div>
         <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[11.5px] font-bold uppercase tracking-wider text-stone-700">Loại kết quả</span>
+          <span className="text-caption font-bold uppercase tracking-wider text-text">Loại kết quả</span>
           <button type="button" onClick={() => onChange({ ...value, outputs: ALL })} className={chip(value.outputs === ALL)}>
             Tất cả
           </button>
@@ -139,7 +139,7 @@ export function ProductionScopePicker({
         </div>
       </div>
 
-      <p className="text-[11px] leading-relaxed text-stone-600">
+      <p className="text-caption leading-relaxed text-text-muted">
         Sẽ sản xuất: <b>{pub.produce.map((o) => OUTPUT_LABELS[o]).join(", ")}</b>
         {pub.produce.includes("image") || pub.produce.includes("video") ? (
           <>

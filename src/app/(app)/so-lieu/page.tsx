@@ -63,6 +63,7 @@ export default function AnalyticsPage() {
   const [phase, setPhase] = useState<"metrics" | "explain" | "learning" | "saved">("metrics")
   const [saved, setSaved] = useState(false)
   const [learningApproved, setLearningApproved] = useState(false)
+  const [selectedRange, setSelectedRange] = useState("Tháng này")
 
   const [usageLoading, setUsageLoading] = useState(true)
   const [usage, setUsage] = useState<UsageSummary | null>(null)
@@ -201,7 +202,7 @@ export default function AnalyticsPage() {
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 py-4">
         <div>
           <div className="text-xs text-text-muted font-bold tracking-wider uppercase">Báo cáo & Phân tích</div>
-          <div className="text-[17px] font-extrabold text-primary flex items-center gap-2">
+          <div className="text-title font-extrabold text-primary flex items-center gap-2">
             <BarChart3 size={18} />
             Analytics & Learning
           </div>
@@ -225,13 +226,13 @@ export default function AnalyticsPage() {
         />
 
         {(usageError || explainError || learningError) && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800">
+          <div className="rounded-xl border border-danger/30 bg-danger/10 p-3.5 text-xs font-semibold text-danger">
             {usageError ?? explainError ?? learningError}
           </div>
         )}
 
         {policyError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800">
+          <div className="rounded-xl border border-danger/30 bg-danger/10 p-3.5 text-xs font-semibold text-danger">
             {policyError}
           </div>
         )}
@@ -249,8 +250,9 @@ export default function AnalyticsPage() {
                   <Button
                     key={r}
                     size="sm"
-                    variant={r === "Tháng này" ? "primary" : "ghost"}
+                    variant={r === selectedRange ? "primary" : "ghost"}
                     className="text-xs"
+                    onClick={() => setSelectedRange(r)}
                   >
                     {r}
                   </Button>
@@ -269,11 +271,11 @@ export default function AnalyticsPage() {
               ) : usage && usage.by_feature.length > 0 ? (
                 usage.by_feature.map((f) => (
                   <Card key={f.feature} className="p-4 bg-surface border border-border flex flex-col justify-between gap-2">
-                    <div className="text-[11px] font-bold text-text-muted uppercase tracking-wider">
+                    <div className="text-caption font-bold text-text-muted uppercase tracking-wider">
                       {metricLabel(f.feature)}
                     </div>
                     <div className="flex items-baseline justify-between mt-1">
-                      <span className="text-[22px] font-black text-text">
+                      <span className="text-display-lg font-black text-text">
                         {f.quantity.toLocaleString("vi-VN")}
                       </span>
                       <span className="text-xs font-semibold text-text-muted">
@@ -296,7 +298,7 @@ export default function AnalyticsPage() {
                   <h3 className="text-xs font-bold text-text uppercase tracking-wider">
                     Bảng số liệu chi tiết theo tính năng
                   </h3>
-                  <span className="text-[11px] text-text-muted">Đo lường thật từ backend</span>
+                  <span className="text-caption text-text-muted">Đo lường thật từ backend</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
@@ -381,7 +383,7 @@ export default function AnalyticsPage() {
                   Chất lượng: {aiRequests[0]!.quality_score ?? "Đạt chuẩn"}.
                 </div>
                 {aiRequests.length > 1 && (
-                  <div className="text-[11px] text-text-muted mt-1">
+                  <div className="text-caption text-text-muted mt-1">
                     + {aiRequests.length - 1} yêu cầu khác trong hệ thống
                   </div>
                 )}
@@ -457,7 +459,7 @@ export default function AnalyticsPage() {
 
         {phase === "saved" && (
           <div className="flex flex-1 flex-col items-center justify-center py-12 gap-5 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-success/15 text-success">
               <Check size={32} strokeWidth={2.5} />
             </div>
             <div>

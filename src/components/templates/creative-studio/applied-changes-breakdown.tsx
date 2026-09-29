@@ -34,10 +34,10 @@ export const AppliedChangesBreakdown: React.FC<AppliedChangesBreakdownProps> = (
             <ListChecks size={16} strokeWidth={2.2} />
           </div>
           <div>
-            <h4 className="text-[13.5px] font-bold text-text flex items-center gap-1.5">
+            <h4 className="text-body font-bold text-text flex items-center gap-1.5">
               Chi tiết các hạng mục đã tối ưu
             </h4>
-            <p className="text-[11px] text-text-muted">
+            <p className="text-caption text-text-muted">
               Minh bạch từng công đoạn chỉnh sửa AI đã thực thi trên bức ảnh
             </p>
           </div>
@@ -45,11 +45,11 @@ export const AppliedChangesBreakdown: React.FC<AppliedChangesBreakdownProps> = (
 
         <div className="flex items-center gap-1.5 flex-wrap">
           {providerName && (
-            <Badge tone="neutral" className="text-[10px]">
+            <Badge tone="neutral" className="text-caption">
               {providerName}
             </Badge>
           )}
-          <Badge tone={isCustom ? "neutral" : "accent"} className="text-[10px]">
+          <Badge tone={isCustom ? "neutral" : "accent"} className="text-caption">
             {isCustom ? "Tùy chọn độc lập" : "Tự động hoàn toàn"}
           </Badge>
         </div>
@@ -59,7 +59,7 @@ export const AppliedChangesBreakdown: React.FC<AppliedChangesBreakdownProps> = (
         {items.map((changeText, idx) => (
           <div
             key={idx}
-            className="flex items-start gap-2.5 rounded-xl bg-surface-alt/50 p-2.5 border border-border/50 text-[12px] leading-snug text-text"
+            className="flex items-start gap-2.5 rounded-xl bg-surface-alt/50 p-2.5 border border-border/50 text-meta leading-snug text-text"
           >
             <CheckCircle2
               size={15}
@@ -71,7 +71,7 @@ export const AppliedChangesBreakdown: React.FC<AppliedChangesBreakdownProps> = (
         ))}
       </div>
 
-      <div className="flex items-center justify-between pt-1 text-[11px] text-text-muted">
+      <div className="flex items-center justify-between pt-1 text-caption text-text-muted">
         <span className="flex items-center gap-1">
           <Sparkles size={12} className="text-primary" />
           Toàn bộ cấu trúc hoa thật được bảo vệ 100% qua Identity Guard.

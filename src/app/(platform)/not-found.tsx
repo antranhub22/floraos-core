@@ -9,7 +9,7 @@ export default function PlatformNotFound() {
       </p>
       <Link
         href="/van-hanh"
-        className="inline-flex items-center justify-center h-12 px-5 text-[15px] font-semibold rounded-xl bg-primary text-white hover:bg-primary-dark transition-colors"
+        className="inline-flex items-center justify-center h-12 px-5 text-title-sm font-semibold rounded-xl bg-primary text-white hover:bg-primary-dark transition-colors"
       >
         Về Console
       </Link>

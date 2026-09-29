@@ -389,19 +389,20 @@ export function SalesOrderIntakeModal({
         {/* Header */}
         <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-alert-100 text-alert-700 flex items-center justify-center">
               <Flower2 size={18} />
             </div>
             <div>
               <h2 className="text-base font-extrabold text-text">
                 Tiếp Nhận Đơn Hàng Mới (Sales Order Intake — T01)
               </h2>
-              <p className="text-[11px] text-text-muted">
+              <p className="text-caption text-text-muted">
                 Tạo đơn hàng từ Sales & Đưa ngay vào Tháp Điều Phối Control Tower
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
+          <button
+              aria-label="Đóng" onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
             <X size={18} />
           </button>
         </div>
@@ -410,9 +411,9 @@ export function SalesOrderIntakeModal({
         <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-6 text-xs">
           {/* Quick Select from Master Index */}
           {masterProducts.length > 0 && (
-            <div className="p-4 rounded-xl border border-red-200 bg-red-50/50 flex flex-col gap-2">
-              <div className="font-bold text-red-950 flex items-center gap-1.5">
-                <Sparkles size={14} className="text-red-600" />
+            <div className="p-4 rounded-xl border border-alert-200 bg-alert-50/50 flex flex-col gap-2">
+              <div className="font-bold text-alert-950 flex items-center gap-1.5">
+                <Sparkles size={14} className="text-alert-600" />
                 <span>⚡ Chọn mẫu nhanh từ Product Master Index:</span>
               </div>
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -421,10 +422,10 @@ export function SalesOrderIntakeModal({
                     key={p.id}
                     type="button"
                     onClick={() => handleSelectMasterProduct(p)}
-                    className="px-2.5 py-1.5 rounded-lg border border-red-200 bg-surface hover:border-red-500 text-left shrink-0 transition-colors"
+                    className="px-2.5 py-1.5 rounded-lg border border-alert-200 bg-surface hover:border-alert-500 text-left shrink-0 transition-colors"
                   >
                     <div className="font-bold text-text truncate max-w-[140px]">{p.name}</div>
-                    <div className="text-[10px] text-text-muted">{p.code}</div>
+                    <div className="text-caption text-text-muted">{p.code}</div>
                   </button>
                 ))}
               </div>
@@ -434,7 +435,7 @@ export function SalesOrderIntakeModal({
           {/* Section 1: Customer & Recipient */}
           <div className="flex flex-col gap-3">
             <span className="font-extrabold text-text text-sm flex items-center gap-1.5 border-b border-border pb-1">
-              <User size={15} className="text-red-600" />
+              <User size={15} className="text-alert-600" />
               1. Khách Hàng & Người Nhận Hoa
             </span>
 
@@ -443,14 +444,14 @@ export function SalesOrderIntakeModal({
             <div className="relative">
               <label className="font-bold text-text block mb-1">Tìm khách đã có (tên hoặc SĐT)</label>
               {customerId ? (
-                <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-900">
+                <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-mint-300 bg-mint-50 text-mint-900">
                   <span className="font-bold truncate">
                     ✓ {customerName} {customerPhone && `— ${customerPhone}`} ({customerTier})
                   </span>
                   <button
                     type="button"
                     onClick={handleClearCustomer}
-                    className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 shrink-0 ml-2"
+                    className="text-caption font-bold text-mint-700 hover:text-mint-900 shrink-0 ml-2"
                   >
                     Đổi thành khách lẻ
                   </button>
@@ -461,7 +462,7 @@ export function SalesOrderIntakeModal({
                   placeholder="Gõ tên hoặc SĐT để tìm trong hồ sơ khách…"
                   value={customerQuery}
                   onChange={(e) => setCustomerQuery(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
                 />
               )}
               {!customerId && (customerSearching || customerMatches.length > 0) && (
@@ -478,7 +479,7 @@ export function SalesOrderIntakeModal({
                         className="w-full text-left px-3 py-2 hover:bg-surface-alt border-b border-border/60 last:border-0"
                       >
                         <div className="font-bold text-text">{c.name}</div>
-                        <div className="text-[10.5px] text-text-muted">
+                        <div className="text-caption text-text-muted">
                           {c.phone} {c.metrics?.tier ? `· ${c.metrics.tier}` : ""}
                         </div>
                       </button>
@@ -486,7 +487,7 @@ export function SalesOrderIntakeModal({
                 </div>
               )}
               {!customerId && (
-                <p className="text-[10.5px] text-text-muted mt-1">
+                <p className="text-caption text-text-muted mt-1">
                   Không tìm thấy? Điền thẳng bên dưới — sẽ lưu là khách lẻ.
                 </p>
               )}
@@ -502,7 +503,7 @@ export function SalesOrderIntakeModal({
                   placeholder="Ví dụ: Nguyễn Văn An"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 disabled:opacity-60"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500 disabled:opacity-60"
                 />
               </div>
 
@@ -514,7 +515,7 @@ export function SalesOrderIntakeModal({
                   placeholder="0901234567"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 disabled:opacity-60"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500 disabled:opacity-60"
                 />
               </div>
 
@@ -524,7 +525,7 @@ export function SalesOrderIntakeModal({
                   disabled={Boolean(customerId)}
                   value={customerTier}
                   onChange={(e) => setCustomerTier(e.target.value as typeof customerTier)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 disabled:opacity-60"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500 disabled:opacity-60"
                 >
                   <option value="NEW">Mới (NEW)</option>
                   <option value="BRONZE">Đồng (BRONZE)</option>
@@ -544,7 +545,7 @@ export function SalesOrderIntakeModal({
                   placeholder="Ví dụ: Trần Thị Bình"
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
                 />
               </div>
 
@@ -556,30 +557,30 @@ export function SalesOrderIntakeModal({
                   placeholder="0912345678"
                   value={recipientPhone}
                   onChange={(e) => setRecipientPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
                 />
               </div>
             </div>
 
             {/* Phân cấp địa chỉ 5 tầng: Số nhà/ngõ + Phường/xã + Quận/huyện + Tỉnh/TP + Quốc gia */}
-            <div className="p-3.5 rounded-xl border border-red-200/80 bg-red-50/40 flex flex-col gap-3">
+            <div className="p-3.5 rounded-xl border border-alert-200/80 bg-alert-50/40 flex flex-col gap-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="font-bold text-red-950 flex items-center gap-1.5">
-                  <MapPin size={14} className="text-red-600" />
+                <span className="font-bold text-alert-950 flex items-center gap-1.5">
+                  <MapPin size={14} className="text-alert-600" />
                   ĐỊA CHỈ GIAO HÀNG PHÂN CẤP (ATOMIC STRUCTURED ADDRESS) *
                 </span>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     type="button"
                     onClick={handlePrefillSampleAddressHN}
-                    className="text-[10px] text-zinc-700 bg-white border border-border hover:bg-zinc-50 px-2 py-0.5 rounded-md font-bold transition-colors"
+                    className="text-caption text-cool-700 bg-white border border-border hover:bg-cool-50 px-2 py-0.5 rounded-md font-bold transition-colors"
                   >
                     ⚡ Mẫu HN
                   </button>
                   <button
                     type="button"
                     onClick={handlePrefillSampleAddressHCM}
-                    className="text-[10px] text-zinc-700 bg-white border border-border hover:bg-zinc-50 px-2 py-0.5 rounded-md font-bold transition-colors"
+                    className="text-caption text-cool-700 bg-white border border-border hover:bg-cool-50 px-2 py-0.5 rounded-md font-bold transition-colors"
                   >
                     ⚡ Mẫu HCM
                   </button>
@@ -587,12 +588,12 @@ export function SalesOrderIntakeModal({
                     <button
                       type="button"
                       onClick={handleClearAddress}
-                      className="text-[10px] text-red-700 hover:text-red-800 font-bold px-1"
+                      className="text-caption text-alert-700 hover:text-alert-800 font-bold px-1"
                     >
                       Xóa
                     </button>
                   )}
-                  <span className="text-[10px] text-red-700 bg-red-100 px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-caption text-alert-700 bg-alert-100 px-2 py-0.5 rounded-full font-bold">
                     Chuẩn 5 Tầng
                   </span>
                 </div>
@@ -609,7 +610,7 @@ export function SalesOrderIntakeModal({
                   placeholder="Ví dụ: 195 Lương Thế Vinh (hoặc P.802 Toà Lotte Center, 54 Liễu Giai)"
                   value={addressStreet}
                   onChange={(e) => setAddressStreet(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 font-medium"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500 font-medium"
                 />
               </div>
 
@@ -623,7 +624,7 @@ export function SalesOrderIntakeModal({
                     placeholder="Ví dụ: Phường Trung Văn"
                     value={addressWard}
                     onChange={(e) => setAddressWard(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 font-medium"
+                    className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500 font-medium"
                   />
                 </div>
 
@@ -635,7 +636,7 @@ export function SalesOrderIntakeModal({
                     placeholder="Ví dụ: Quận Nam Từ Liêm"
                     value={addressDistrict}
                     onChange={(e) => setAddressDistrict(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 font-medium"
+                    className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500 font-medium"
                   />
                 </div>
 
@@ -647,7 +648,7 @@ export function SalesOrderIntakeModal({
                     placeholder="Ví dụ: Hà Nội"
                     value={addressCity}
                     onChange={(e) => setAddressCity(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 font-medium"
+                    className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500 font-medium"
                   />
                 </div>
               </div>
@@ -660,13 +661,13 @@ export function SalesOrderIntakeModal({
                     type="text"
                     value={addressCountry}
                     onChange={(e) => setAddressCountry(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500 font-medium"
+                    className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500 font-medium"
                   />
                 </div>
 
                 <div className="sm:col-span-2 flex flex-col justify-end">
-                  <div className="p-2 rounded-xl bg-surface border border-border/80 text-[11px] flex items-start gap-1.5">
-                    <span className="font-bold text-red-600 shrink-0">Ghép chuẩn SSOT:</span>
+                  <div className="p-2 rounded-xl bg-surface border border-border/80 text-caption flex items-start gap-1.5">
+                    <span className="font-bold text-alert-600 shrink-0">Ghép chuẩn Cẩm nang hệ thống:</span>
                     <span className="text-text font-medium line-clamp-2">
                       {[addressStreet, addressWard, addressDistrict, addressCity, addressCountry].filter(Boolean).join(", ")}
                     </span>
@@ -682,7 +683,7 @@ export function SalesOrderIntakeModal({
                   type="date"
                   value={deliveryDate}
                   onChange={(e) => setDeliveryDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
                 />
               </div>
 
@@ -693,7 +694,7 @@ export function SalesOrderIntakeModal({
                   required
                   value={deliveryTime}
                   onChange={(e) => setDeliveryTime(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
                 />
               </div>
             </div>
@@ -703,19 +704,19 @@ export function SalesOrderIntakeModal({
           <div className="flex flex-col gap-4">
             <span className="font-extrabold text-text text-sm flex items-center justify-between border-b border-border pb-1.5">
               <span className="flex items-center gap-1.5">
-                <Flower2 size={16} className="text-red-600" />
+                <Flower2 size={16} className="text-alert-600" />
                 2. Mẫu Sản Phẩm & Công Thức Cắm Hoa (Atomic BOM)
               </span>
-              <span className="text-[11px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+              <span className="text-caption font-bold text-alert-700 bg-alert-50 border border-alert-200 px-2 py-0.5 rounded-full">
                 📸 Chuẩn Input Kỹ Thuật Đầu Vào
               </span>
             </span>
 
             {/* Khối Hiển Thị & Tải Ảnh Sản Phẩm Mẫu (Master Sample Image Spec) */}
-            <div className="p-4 rounded-2xl border-2 border-red-200 bg-red-50/40 flex flex-col md:flex-row gap-4 items-start">
+            <div className="p-4 rounded-2xl border-2 border-alert-200 bg-alert-50/40 flex flex-col md:flex-row gap-4 items-start">
               {/* Cột Trái: Khung Preview Ảnh Mẫu */}
               <div className="flex flex-col items-center gap-2 shrink-0 w-full md:w-44">
-                <div className="relative w-full aspect-square rounded-xl border border-red-200 bg-surface overflow-hidden shadow-sm flex items-center justify-center group">
+                <div className="relative w-full aspect-square rounded-xl border border-alert-200 bg-surface overflow-hidden shadow-sm flex items-center justify-center group">
                   {sampleImageUrl ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -737,26 +738,26 @@ export function SalesOrderIntakeModal({
                           type="button"
                           onClick={() => setSampleImageUrl("")}
                           title="Xóa ảnh mẫu"
-                          className="p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 text-xs font-bold shadow cursor-pointer"
+                          className="p-1.5 rounded-lg bg-alert-600 text-white hover:bg-alert-700 text-xs font-bold shadow cursor-pointer"
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
-                      <span className="absolute bottom-1.5 left-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[9.5px] font-bold text-white text-center backdrop-blur-xs truncate">
+                      <span className="absolute bottom-1.5 left-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-caption font-bold text-white text-center backdrop-blur-xs truncate">
                         Ảnh mẫu cắm đối chiếu
                       </span>
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center p-3 text-center text-text-muted">
-                      <ImageIcon size={32} className="text-red-400 mb-1" />
-                      <span className="text-[11px] font-bold text-text">Chưa có ảnh mẫu</span>
-                      <span className="text-[10px] text-text-muted mt-0.5">Tải ảnh hoặc dán URL</span>
+                      <ImageIcon size={32} className="text-alert-400 mb-1" />
+                      <span className="text-caption font-bold text-text">Chưa có ảnh mẫu</span>
+                      <span className="text-caption text-text-muted mt-0.5">Tải ảnh hoặc dán URL</span>
                     </div>
                   )}
                 </div>
 
                 {sampleImageUrl && (
-                  <div className="text-[10.5px] text-emerald-700 font-bold flex items-center gap-1">
+                  <div className="text-caption text-mint-700 font-bold flex items-center gap-1">
                     <CheckCircle2 size={12} />
                     <span>Đã nạp ảnh chuẩn đầu vào</span>
                   </div>
@@ -768,10 +769,10 @@ export function SalesOrderIntakeModal({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="font-bold text-text text-xs flex items-center gap-1.5">
-                      <Camera size={13} className="text-red-600" />
+                      <Camera size={13} className="text-alert-600" />
                       <span>Ảnh Mẫu Hoa Tiêu Chuẩn Đầu Vào (Master Image Spec) *</span>
                     </label>
-                    <span className="text-[10.5px] text-text-muted">Dùng cho AI QC đối chiếu Chặng 05</span>
+                    <span className="text-caption text-text-muted">Dùng cho AI QC đối chiếu Chặng 05</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -784,7 +785,7 @@ export function SalesOrderIntakeModal({
                         setSampleImageUrl(e.target.value)
                         setSampleAssetId(null)
                       }}
-                      className="flex-1 px-3 py-2 rounded-xl border border-border bg-surface text-text text-xs focus:outline-none focus:border-red-500 font-medium"
+                      className="flex-1 px-3 py-2 rounded-xl border border-border bg-surface text-text text-xs focus:outline-none focus:border-alert-500 font-medium"
                     />
 
                     <input
@@ -799,7 +800,7 @@ export function SalesOrderIntakeModal({
                       type="button"
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-3 py-2 h-auto text-xs font-bold gap-1.5 border-red-300 text-red-700 bg-red-50 hover:bg-red-100 shrink-0 cursor-pointer"
+                      className="px-3 py-2 h-auto text-xs font-bold gap-1.5 border-alert-300 text-alert-700 bg-alert-50 hover:bg-alert-100 shrink-0 cursor-pointer"
                     >
                       <Upload size={13} />
                       <span>{isUploading ? "Đang tải…" : "Tải ảnh lên"}</span>
@@ -808,9 +809,9 @@ export function SalesOrderIntakeModal({
                 </div>
 
                 {/* Chọn nhanh ảnh mẫu từ preset */}
-                <div className="flex flex-col gap-1.5 pt-2 border-t border-dashed border-red-200">
-                  <span className="text-[11px] font-bold text-text-muted flex items-center gap-1">
-                    <Sparkles size={11} className="text-amber-500" />
+                <div className="flex flex-col gap-1.5 pt-2 border-t border-dashed border-alert-200">
+                  <span className="text-caption font-bold text-text-muted flex items-center gap-1">
+                    <Sparkles size={11} className="text-sand-500" />
                     <span>Ảnh mẫu từ Product Master của tiệm:</span>
                   </span>
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -819,10 +820,10 @@ export function SalesOrderIntakeModal({
                         key={prod.id}
                         type="button"
                         onClick={() => handleSelectMasterProduct(prod)}
-                        className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        className={`px-2 py-1 rounded-lg border text-caption font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                           sampleImageUrl === prod.masterImageUrl
-                            ? "border-red-500 bg-red-100/80 text-red-900 font-bold"
-                            : "border-border bg-surface hover:border-red-300 text-text"
+                            ? "border-alert-500 bg-alert-100/80 text-alert-900 font-bold"
+                            : "border-border bg-surface hover:border-alert-300 text-text"
                         }`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -837,7 +838,7 @@ export function SalesOrderIntakeModal({
                   </div>
                 </div>
 
-                <div className="p-2 rounded-lg bg-surface/80 border border-border text-[11px] text-text-muted leading-relaxed">
+                <div className="p-2 rounded-lg bg-surface/80 border border-border text-caption text-text-muted leading-relaxed">
                   💡 <strong>Tiêu chuẩn nghiệp vụ:</strong> Ảnh sản phẩm mẫu là căn cứ kỹ thuật bắt buộc của toàn bộ hành trình điều phối: làm tài liệu cho Thợ/Xưởng cắm hoa đúng mẫu (Chặng 04), làm dữ liệu đối trọng để <strong>AI QC so sánh độ tương đồng thị giác (Visual Similarity Score)</strong> tại Chặng 05, và lưu vào hồ sơ bàn giao nghiệm thu.
                 </div>
               </div>
@@ -852,7 +853,7 @@ export function SalesOrderIntakeModal({
                   placeholder="Ví dụ: Bó Hồng Ohara Kem Sang Trọng"
                   value={productTitle}
                   onChange={(e) => setProductTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
                 />
               </div>
 
@@ -862,7 +863,7 @@ export function SalesOrderIntakeModal({
                   type="number"
                   value={unitPriceVnd}
                   onChange={(e) => setUnitPriceVnd(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
                 />
               </div>
             </div>
@@ -877,19 +878,19 @@ export function SalesOrderIntakeModal({
                   value={depositVnd || ""}
                   onChange={(e) => setDepositVnd(Number(e.target.value) || 0)}
                   placeholder="0 = chưa thu, ghi sau ở Sổ thu"
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
                 />
               </div>
-              <div className="sm:col-span-2 p-2.5 rounded-xl bg-surface-alt/60 border border-border text-[11px] flex items-center gap-3 flex-wrap">
+              <div className="sm:col-span-2 p-2.5 rounded-xl bg-surface-alt/60 border border-border text-caption flex items-center gap-3 flex-wrap">
                 <span className="text-text-muted">
                   Tổng <strong className="text-text">{(Number(unitPriceVnd) || 0).toLocaleString("vi-VN")}đ</strong>
                 </span>
                 <span className="text-text-muted">
-                  Đã thu <strong className="text-emerald-700">{(Number(depositVnd) || 0).toLocaleString("vi-VN")}đ</strong>
+                  Đã thu <strong className="text-mint-700">{(Number(depositVnd) || 0).toLocaleString("vi-VN")}đ</strong>
                 </span>
                 <span className="text-text-muted">
                   Còn phải thu{" "}
-                  <strong className="text-red-700">
+                  <strong className="text-alert-700">
                     {Math.max(0, (Number(unitPriceVnd) || 0) - (Number(depositVnd) || 0)).toLocaleString("vi-VN")}đ
                   </strong>
                 </span>
@@ -900,7 +901,7 @@ export function SalesOrderIntakeModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="font-bold text-text">Công thức hoa nguyên tử (BOM):</label>
-                <Button type="button" variant="outline" size="sm" onClick={handleAddFlower} className="h-6 text-[11px] gap-1">
+                <Button type="button" variant="outline" size="sm" onClick={handleAddFlower} className="h-6 text-caption gap-1">
                   <Plus size={11} />
                   Thêm cành hoa
                 </Button>
@@ -976,9 +977,10 @@ export function SalesOrderIntakeModal({
                         <td className="p-1.5 text-center">
                           {flowers.length > 1 && (
                             <button
+              aria-label="Xóa"
                               type="button"
                               onClick={() => handleRemoveFlower(idx)}
-                              className="text-text-muted hover:text-red-600 p-1"
+                              className="text-text-muted hover:text-alert-600 p-1"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -998,7 +1000,7 @@ export function SalesOrderIntakeModal({
               (selectedProductBom.foliage.length > 0 ||
                 selectedProductBom.wrapping.length > 0 ||
                 selectedProductBom.accessories.length > 0) && (
-                <div className="rounded-xl border border-border bg-surface-alt/60 p-3 flex flex-col gap-2 text-[11.5px]">
+                <div className="rounded-xl border border-border bg-surface-alt/60 p-3 flex flex-col gap-2 text-caption">
                   <span className="font-bold text-text-muted">
                     Lá/gói/phụ kiện theo mẫu đã chọn (từ Master Index — chỉ đọc):
                   </span>
@@ -1043,11 +1045,11 @@ export function SalesOrderIntakeModal({
           {/* Section 2.5: Phân loại & Ưu tiên (ĐP-4a.1, 26/09/2026) */}
           <div className="flex flex-col gap-3">
             <span className="font-extrabold text-text text-sm flex items-center gap-1.5 border-b border-border pb-1">
-              <ShieldAlert size={15} className="text-red-600" />
+              <ShieldAlert size={15} className="text-alert-600" />
               2.5. Phân Loại & Ưu Tiên Điều Phối
             </span>
             {catalogsError && (
-              <p role="alert" className="text-red-700 font-semibold">
+              <p role="alert" className="text-alert-700 font-semibold">
                 Không tải được danh mục: {catalogsError}
               </p>
             )}
@@ -1136,7 +1138,7 @@ export function SalesOrderIntakeModal({
           {/* Section 3: Card Message & Notes */}
           <div className="flex flex-col gap-3">
             <span className="font-extrabold text-text text-sm flex items-center gap-1.5 border-b border-border pb-1">
-              <MessageSquare size={15} className="text-red-600" />
+              <MessageSquare size={15} className="text-alert-600" />
               3. Thiệp Chúc Mừng & Lưu Ý Điều Phối
             </span>
 
@@ -1158,12 +1160,12 @@ export function SalesOrderIntakeModal({
                 placeholder="Ví dụ: Chúc mừng sinh nhật em yêu, luôn vui vẻ và hạnh phúc nhé!"
                 value={cardMessage}
                 onChange={(e) => setCardMessage(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl border bg-surface text-text focus:outline-none focus:border-red-500 ${
-                  cardRequired && !cardMessage.trim() ? "border-amber-400" : "border-border"
+                className={`w-full px-3 py-2 rounded-xl border bg-surface text-text focus:outline-none focus:border-alert-500 ${
+                  cardRequired && !cardMessage.trim() ? "border-sand-400" : "border-border"
                 }`}
               />
               {cardRequired && !cardMessage.trim() && (
-                <p className="text-[10.5px] text-amber-700 font-semibold mt-1">Đã chọn “có thiệp” — cần nhập lời nhắn trước khi lưu.</p>
+                <p className="text-caption text-sand-700 font-semibold mt-1">Đã chọn “có thiệp” — cần nhập lời nhắn trước khi lưu.</p>
               )}
             </div>
 
@@ -1174,7 +1176,7 @@ export function SalesOrderIntakeModal({
                 placeholder="Ví dụ: Gói giấy lụa mờ, nơ đỏ, kiểm tra kỹ hoa nở..."
                 value={internalNote}
                 onChange={(e) => setInternalNote(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+                className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
               />
             </div>
           </div>
@@ -1189,21 +1191,21 @@ export function SalesOrderIntakeModal({
           />
 
           {/* Section 4: Checklist Tiêu Chuẩn Đầu Vào P1 (Sổ Tay Điều Phối) */}
-          <div className="p-3.5 rounded-xl border border-red-200 bg-red-50/50 flex flex-col gap-2">
+          <div className="p-3.5 rounded-xl border border-alert-200 bg-alert-50/50 flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="font-extrabold text-red-950 text-xs flex items-center gap-1.5">
-                <CheckCircle2 size={14} className="text-red-600" />
+              <span className="font-extrabold text-alert-950 text-xs flex items-center gap-1.5">
+                <CheckCircle2 size={14} className="text-alert-600" />
                 Kiểm Định Tiêu Chuẩn Đầu Vào P1 (Điều 4 Quy chế & Sổ Tay Điều Phối):
               </span>
-              <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+              <span className="text-caption font-bold text-alert-700 bg-alert-100 px-2 py-0.5 rounded-full">
                 Mục tiêu P1: Đủ thông tin trước khi lập KH P2
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-caption">
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold ${
                 customerName && recipientName && recipientPhone
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  ? "bg-mint-50 text-mint-800 border-mint-200"
                   : "bg-surface text-text-muted border-border"
               }`}>
                 <span>{customerName && recipientName && recipientPhone ? "✓" : "○"}</span>
@@ -1212,7 +1214,7 @@ export function SalesOrderIntakeModal({
 
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold ${
                 addressStreet && addressWard && addressDistrict && addressCity
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  ? "bg-mint-50 text-mint-800 border-mint-200"
                   : "bg-surface text-text-muted border-border"
               }`}>
                 <span>{addressStreet && addressWard && addressDistrict && addressCity ? "✓" : "○"}</span>
@@ -1221,7 +1223,7 @@ export function SalesOrderIntakeModal({
 
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold ${
                 deliveryDate && deliveryTime
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  ? "bg-mint-50 text-mint-800 border-mint-200"
                   : "bg-surface text-text-muted border-border"
               }`}>
                 <span>{deliveryDate && deliveryTime ? "✓" : "○"}</span>
@@ -1230,8 +1232,8 @@ export function SalesOrderIntakeModal({
 
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold ${
                 sampleImageUrl
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                  : "bg-amber-50 text-amber-800 border-amber-200"
+                  ? "bg-mint-50 text-mint-800 border-mint-200"
+                  : "bg-sand-50 text-sand-800 border-sand-200"
               }`}>
                 <span>{sampleImageUrl ? "✓" : "!"}</span>
                 <span className="truncate">4. Ảnh mẫu đối chiếu</span>
@@ -1239,7 +1241,7 @@ export function SalesOrderIntakeModal({
 
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold ${
                 productTitle && unitPriceVnd > 0
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  ? "bg-mint-50 text-mint-800 border-mint-200"
                   : "bg-surface text-text-muted border-border"
               }`}>
                 <span>{productTitle && unitPriceVnd > 0 ? "✓" : "○"}</span>
@@ -1248,8 +1250,8 @@ export function SalesOrderIntakeModal({
 
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold ${
                 flowers.length > 0
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                  : "bg-amber-50 text-amber-800 border-amber-200"
+                  ? "bg-mint-50 text-mint-800 border-mint-200"
+                  : "bg-sand-50 text-sand-800 border-sand-200"
               }`}>
                 <span>{flowers.length > 0 ? "✓" : "!"}</span>
                 <span className="truncate">6. Công thức cành BOM</span>
@@ -1257,9 +1259,9 @@ export function SalesOrderIntakeModal({
 
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold ${
                 cardMessage
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  ? "bg-mint-50 text-mint-800 border-mint-200"
                   : cardRequired
-                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                    ? "bg-sand-50 text-sand-800 border-sand-200"
                     : "bg-surface text-text-muted border-border"
               }`}>
                 <span>{cardMessage ? "✓" : cardRequired ? "!" : "○"}</span>
@@ -1271,7 +1273,7 @@ export function SalesOrderIntakeModal({
 
           {/* Submit Actions */}
           {formError && (
-            <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold">
+            <div role="alert" className="p-3 rounded-xl border border-alert-300 bg-alert-50 text-alert-800 text-xs font-semibold">
               {formError}
             </div>
           )}
@@ -1282,7 +1284,7 @@ export function SalesOrderIntakeModal({
             <Button
               type="submit"
               disabled={isSubmitting || isUploading}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5"
+              className="bg-alert-600 hover:bg-alert-700 text-white font-bold gap-1.5"
             >
               <CheckCircle2 size={15} />
               <span>{isSubmitting ? "Đang tạo đơn…" : "Khởi Tạo Đơn & Đưa Vào Tháp Điều Phối"}</span>

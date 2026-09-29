@@ -35,12 +35,12 @@ export function ChannelIntegrationCard({
         <div className="flex items-start justify-between gap-2">
           <div>
             <div className="font-bold text-sm text-foreground">{pricing.name}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+            <div className="text-caption text-muted-foreground mt-0.5 leading-relaxed">
               {pricing.description}
             </div>
           </div>
           <Badge
-            className={`text-[10px] shrink-0 font-bold ${
+            className={`text-caption shrink-0 font-bold ${
               isEnabled
                 ? "bg-success-bg text-success border-success/30"
                 : "bg-muted text-muted-foreground"
@@ -53,19 +53,19 @@ export function ChannelIntegrationCard({
         {/* Thông tin biểu phí */}
         <div className="rounded-xl bg-surface-raised border border-border/70 p-3 space-y-1.5 text-xs">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-[11px]">Phí kích hoạt kênh:</span>
+            <span className="text-muted-foreground text-caption">Phí kích hoạt kênh:</span>
             <span className="font-bold text-primary">
               {isFree ? "Miễn Phí" : `${pricing.monthlyCreditCost} Credit / tháng`}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-[11px]">Phí tin nhắn tư vấn:</span>
+            <span className="text-muted-foreground text-caption">Phí tin nhắn tư vấn:</span>
             <span className="font-medium text-foreground">
               {pricing.messageCreditCost} Credit / 10 tin
             </span>
           </div>
           {!isFree && subscriptionExpiresAt && (
-            <div className="flex items-center justify-between border-t border-border pt-1.5 text-[10.5px]">
+            <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption">
               <span className="text-muted-foreground">Hạn thuê bao:</span>
               <span className="text-muted-foreground font-mono">
                 {new Date(subscriptionExpiresAt).toLocaleDateString("vi-VN")}

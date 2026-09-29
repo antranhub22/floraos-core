@@ -142,14 +142,14 @@ export function VideoJobLifecycle({
     <Card className="p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-bold text-text flex items-center gap-2">
-          <Clapperboard size={14} /> Video job <span className="font-mono text-[11px] text-text-muted">{job.id.slice(0, 8)}</span>
+          <Clapperboard size={14} /> Video job <span className="font-mono text-caption text-text-muted">{job.id.slice(0, 8)}</span>
         </h3>
-        <Badge tone={job.stage === "FAILED" ? "danger" : job.stage === "APPROVED" ? "success" : "neutral"} className="text-[11px]">
+        <Badge tone={job.stage === "FAILED" ? "danger" : job.stage === "APPROVED" ? "success" : "neutral"} className="text-caption">
           {STAGE_LABEL[job.stage] ?? job.stage}
         </Badge>
       </div>
 
-      <ol className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[12px]">
+      <ol className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-meta">
         <li className={`rounded-lg border p-3 ${scriptOk ? "border-success bg-success-bg" : "border-border"}`}>
           <div className="font-bold text-text">1. Duyệt kịch bản (P3)</div>
           <div className="text-text-muted mt-0.5">{scriptOk ? "Đã duyệt" : "Chưa duyệt — kiểm tra storyboard rồi duyệt"}</div>
@@ -174,7 +174,7 @@ export function VideoJobLifecycle({
           {canRender && (
             <div className="mt-2 space-y-1.5">
               <ProviderSelect kind="video" value={videoProvider === "local_cinematic" ? "" : videoProvider} onChange={setVideoProvider} label="Nhà cung cấp dựng clip" disabled={videoProvider === "local_cinematic"} />
-              <label className="flex items-center gap-1.5 text-[11px] text-text-muted">
+              <label className="flex items-center gap-1.5 text-caption text-text-muted">
                 <input
                   type="checkbox"
                   checked={videoProvider === "local_cinematic"}
@@ -205,12 +205,12 @@ export function VideoJobLifecycle({
       </ol>
 
       {job.stage === "FAILED" && job.error_message && (
-        <div className="rounded-lg border border-danger bg-danger-bg px-3 py-2 text-[12px] text-danger">
+        <div className="rounded-lg border border-danger bg-danger-bg px-3 py-2 text-meta text-danger">
           Lỗi render: {job.error_message}
         </div>
       )}
       {error && (
-        <div className="rounded-lg border border-danger bg-danger-bg px-3 py-2 text-[12px] text-danger">{error}</div>
+        <div className="rounded-lg border border-danger bg-danger-bg px-3 py-2 text-meta text-danger">{error}</div>
       )}
 
       {rendered && (
@@ -231,13 +231,13 @@ export function VideoJobLifecycle({
               <Download size={12} /> Tải video
             </a>
             {job.video_approval === "APPROVED" && (
-              <span className="text-[12px] text-success flex items-center gap-1">
+              <span className="text-meta text-success flex items-center gap-1">
                 <CheckCircle2 size={12} /> Video đã duyệt
               </span>
             )}
           </div>
         ) : (
-          <div className="text-[12px] text-danger">Render báo xong nhưng không có tệp video để phát.</div>
+          <div className="text-meta text-danger">Render báo xong nhưng không có tệp video để phát.</div>
         )
       )}
     </Card>

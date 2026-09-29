@@ -238,7 +238,7 @@ export default function ChatAssistantPage() {
                   >
                     <div className="flex items-center justify-between text-body-sm">
                       <span className="font-bold text-text truncate">{c.title}</span>
-                      <Badge tone={c.channel === "ZALO" ? "accent" : "neutral"} className="text-[10px]">
+                      <Badge tone={c.channel === "ZALO" ? "accent" : "neutral"} className="text-caption">
                         {c.channel === "ZALO" ? "Zalo" : "Web"}
                       </Badge>
                     </div>
@@ -335,7 +335,7 @@ export default function ChatAssistantPage() {
                         {/* Danh sách Card mẫu hoa gợi ý từ Master Index */}
                         {suggestedFlowers.length > 0 && (
                           <div className="space-y-2 pt-1">
-                            <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                            <div className="text-caption font-bold text-foreground flex items-center gap-1.5">
                               <Flower2 className="h-3.5 w-3.5 text-primary" />
                               Mẫu hoa đề xuất từ Master Catalog ({suggestedFlowers.length} mẫu):
                             </div>
@@ -364,7 +364,7 @@ export default function ChatAssistantPage() {
                                     <div className="text-primary font-extrabold text-xs mt-0.5">
                                       {Number(f.priceVnd).toLocaleString("vi-VN")} đ
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
+                                    <div className="text-caption text-muted-foreground line-clamp-1 mt-0.5">
                                       {f.reason}
                                     </div>
                                   </div>

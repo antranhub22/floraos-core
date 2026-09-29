@@ -24,6 +24,7 @@
     "test:platform": "DATABASE_URL=\"${DATABASE_URL_TEST:-postgresql://floraos:floraos@localhost:5432/floraos_test}\" vitest run tests/platform",
     "db:test:setup": "bash scripts/dung-db-test.sh",
     "test:e2e": "playwright test",
+    "test:e2e:ux": "playwright test tests/e2e/ux",
     "nap:danh-muc": "tsx --env-file-if-exists=.env scripts/nap-avi-gift-vao-core.ts",
     "nap:phan-tich": "tsx --env-file-if-exists=.env scripts/nap-avi-gift-phan-tich.ts",
     "nap:credit": "tsx --env-file-if-exists=.env scripts/nap-credit.ts",
@@ -73,6 +74,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/bcryptjs": "^2.4.6",

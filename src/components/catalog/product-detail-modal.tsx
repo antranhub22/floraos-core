@@ -58,7 +58,7 @@ export function ProductDetailModal({ product, shop, onClose }: ProductDetailModa
             href={getZaloUrl(product, shop)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-extrabold text-white shadow-xs hover:bg-rose-700 transition-colors focus-visible:outline-2 focus-visible:outline-rose-600"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-extrabold text-white shadow-xs hover:bg-primary-dark transition-colors focus-visible:outline-2 focus-visible:outline-primary"
           >
             <MessageCircle size={18} /> Nhắn tin Zalo đặt mẫu này
           </a>
@@ -80,7 +80,7 @@ export function ProductDetailModal({ product, shop, onClose }: ProductDetailModa
 
         {/* Pricing */}
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-black text-rose-600">{formatVnd(product.price)}</span>
+          <span className="text-2xl font-black text-primary">{formatVnd(product.price)}</span>
           <span className="text-xs text-text-muted">Đã bao gồm thuế & thiệp chúc mừng</span>
         </div>
 
@@ -93,19 +93,19 @@ export function ProductDetailModal({ product, shop, onClose }: ProductDetailModa
         {/* Attributes */}
         <div className="grid grid-cols-2 gap-2.5 text-xs">
           {product.category && (
-            <div className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50/60 p-3">
-              <Tag size={15} className="text-rose-600" />
+            <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <Tag size={15} className="text-primary" />
               <div>
-                <div className="text-[10px] text-text-muted">Danh mục</div>
+                <div className="text-caption text-text-muted">Danh mục</div>
                 <div className="font-bold text-text">{product.category}</div>
               </div>
             </div>
           )}
           {product.stemCount && (
-            <div className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50/60 p-3">
-              <Layers size={15} className="text-rose-600" />
+            <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <Layers size={15} className="text-primary" />
               <div>
-                <div className="text-[10px] text-text-muted">Định lượng</div>
+                <div className="text-caption text-text-muted">Định lượng</div>
                 <div className="font-bold text-text">{product.stemCount} cành</div>
               </div>
             </div>

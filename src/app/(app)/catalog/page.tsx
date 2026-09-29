@@ -113,7 +113,7 @@ export default function CatalogWebsitePage() {
 
       <div className="flex flex-1 flex-col overflow-y-auto p-[18px] gap-5">
         {error && (
-          <div className="rounded-lg bg-destructive-bg px-4 py-2 text-[13px] text-destructive flex items-center gap-2">
+          <div className="rounded-lg bg-destructive-bg px-4 py-2 text-body-sm text-destructive flex items-center gap-2">
             ⚠️ {error}
           </div>
         )}
@@ -153,7 +153,7 @@ export default function CatalogWebsitePage() {
 function PageHeader({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
-      <div className="text-[17px] font-extrabold text-primary">Catalog & Website</div>
+      <div className="text-title font-extrabold text-primary">Catalog & Website</div>
       <Button variant="ghost" onClick={onBack} className="flex items-center gap-1.5">
         <ArrowLeft size={16} strokeWidth={2} /> Quay về Trang chủ
       </Button>

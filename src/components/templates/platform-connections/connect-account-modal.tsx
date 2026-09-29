@@ -121,7 +121,7 @@ export function ConnectAccountModal({
 
         {/* Username / Email Field */}
         <div>
-          <label className="block text-[11.5px] font-bold text-text mb-1">
+          <label className="block text-caption font-bold text-text mb-1">
             {platformId === "instagram"
               ? "Tên người dùng Instagram (@username)"
               : platformId === "zalo"
@@ -146,7 +146,7 @@ export function ConnectAccountModal({
 
         {/* Password Field */}
         <div>
-          <label className="block text-[11.5px] font-bold text-text mb-1">
+          <label className="block text-caption font-bold text-text mb-1">
             {initialUsername ? "Mật khẩu mới của tài khoản" : "Mật khẩu tài khoản"}
           </label>
           <input
@@ -158,7 +158,7 @@ export function ConnectAccountModal({
             className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-xs text-text placeholder:text-text-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
           />
           {initialUsername && (
-            <p className="text-[11px] text-text-muted mt-1">
+            <p className="text-caption text-text-muted mt-1">
               💡 Nhập mật khẩu mới nhất của bạn tại đây để hệ thống tự động cập nhật vào máy chủ.
             </p>
           )}
@@ -167,11 +167,11 @@ export function ConnectAccountModal({
         {/* Optional Fanpage settings for Facebook */}
         {isFacebook && (
           <div className="p-3 rounded-xl bg-surface-alt/60 border border-border/80 space-y-2.5">
-            <div className="text-[11.5px] font-bold text-primary flex items-center gap-1.5">
+            <div className="text-caption font-bold text-primary flex items-center gap-1.5">
               <span>📘 Cấu hình Fanpage (Tùy chọn nâng cao)</span>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-text-muted mb-0.5">
+              <label className="block text-caption font-semibold text-text-muted mb-0.5">
                 Facebook Fanpage ID
               </label>
               <input
@@ -183,7 +183,7 @@ export function ConnectAccountModal({
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-text-muted mb-0.5">
+              <label className="block text-caption font-semibold text-text-muted mb-0.5">
                 Page Access Token (Tùy chọn)
               </label>
               <input
@@ -198,7 +198,7 @@ export function ConnectAccountModal({
         )}
 
         {/* Security Notice */}
-        <div className="rounded-xl bg-surface-alt/70 p-3 border border-border/60 flex items-start gap-2.5 text-[11.5px] text-text-muted leading-relaxed">
+        <div className="rounded-xl bg-surface-alt/70 p-3 border border-border/60 flex items-start gap-2.5 text-caption text-text-muted leading-relaxed">
           <ShieldCheck size={16} className="text-secondary flex-shrink-0 mt-0.5" />
           <div>
             Thông tin đăng nhập được mã hóa hai chiều bằng thuật toán <strong>AES-256</strong> trên máy chủ nội bộ. Hệ thống sử dụng phiên duyệt tự động (Playwright Session) để đăng bài mà không lưu mật khẩu thô.

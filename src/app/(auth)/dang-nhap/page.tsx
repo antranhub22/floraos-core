@@ -61,33 +61,33 @@ export default function DangNhapPage() {
   return (
     <div className="relative flex min-h-dvh flex-col justify-center overflow-hidden bg-bg px-[30px] py-9">
       <svg width="260" height="260" viewBox="0 0 260 260" className="pointer-events-none absolute -right-24 -top-24 opacity-50">
-        <circle cx="130" cy="130" r="130" fill="#EEF4EE" />
+        <circle cx="130" cy="130" r="130" fill="var(--color-flora-leaf)" />
       </svg>
 
       <div className="mx-auto flex w-full max-w-sm flex-col gap-9">
         <div className="flex flex-col items-center gap-3.5">
           <svg width="52" height="52" viewBox="0 0 100 100">
-            <path d="M50,50 C48.5,45 41.5,38 50,32 C58.5,38 51.5,45 50,50 Z" fill="#E48692" transform="rotate(258 50 50)" />
-            <path d="M50,50 C47,40 33,26 50,14 C67,26 53,40 50,50 Z" fill="#174C3C" />
-            <path d="M50,50 C47,40 33,26 50,14 C67,26 53,40 50,50 Z" fill="#5F9670" transform="rotate(140 50 50)" />
-            <circle cx="50" cy="50" r="3" fill="#174C3C" />
+            <path d="M50,50 C48.5,45 41.5,38 50,32 C58.5,38 51.5,45 50,50 Z" fill="var(--color-flora-petal)" transform="rotate(258 50 50)" />
+            <path d="M50,50 C47,40 33,26 50,14 C67,26 53,40 50,50 Z" fill="var(--color-flora-green)" />
+            <path d="M50,50 C47,40 33,26 50,14 C67,26 53,40 50,50 Z" fill="var(--color-flora-sage)" transform="rotate(140 50 50)" />
+            <circle cx="50" cy="50" r="3" fill="var(--color-flora-green)" />
           </svg>
-          <div className="text-[26px] font-extrabold tracking-tight text-primary">FloraOS</div>
-          <div className="text-center text-[13.5px] text-text-muted">
+          <div className="text-display-xl font-extrabold tracking-tight text-primary">FloraOS</div>
+          <div className="text-center text-body text-text-muted">
             Nền tảng cho cửa hàng và chuỗi cửa hàng hoa
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {loi && (
-            <div className="rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700">
+            <div className="rounded-xl border-[1.5px] border-danger/30 bg-danger/10 px-3.5 py-2.5 text-body-sm font-medium text-danger">
               {loi}
             </div>
           )}
 
           {cheDo === "dang-ky" && (
             <div>
-              <div className="mb-1.5 text-[13px] font-semibold">Tên cửa hàng / tổ chức</div>
+              <div className="mb-1.5 text-body-sm font-semibold">Tên cửa hàng / tổ chức</div>
               <input
                 type="text"
                 value={tenToChuc}
@@ -100,7 +100,7 @@ export default function DangNhapPage() {
 
           {cheDo === "dang-ky" && (
             <div>
-              <div className="mb-1.5 text-[13px] font-semibold">Họ tên (tuỳ chọn)</div>
+              <div className="mb-1.5 text-body-sm font-semibold">Họ tên (tuỳ chọn)</div>
               <input
                 type="text"
                 value={ten}
@@ -112,7 +112,7 @@ export default function DangNhapPage() {
           )}
 
           <div>
-            <div className="mb-1.5 text-[13px] font-semibold">Email</div>
+            <div className="mb-1.5 text-body-sm font-semibold">Email</div>
             <input
               type="text"
               value={email}
@@ -123,7 +123,7 @@ export default function DangNhapPage() {
             />
           </div>
           <div>
-            <div className="mb-1.5 text-[13px] font-semibold">Mật khẩu</div>
+            <div className="mb-1.5 text-body-sm font-semibold">Mật khẩu</div>
             <div className="relative">
               <input
                 type={showPw ? "text" : "password"}
@@ -146,7 +146,7 @@ export default function DangNhapPage() {
                 <button
                   type="button"
                   onClick={() => setHienThongBaoQuenMatKhau((v) => !v)}
-                  className="text-[13px] font-semibold text-primary"
+                  className="text-body-sm font-semibold text-primary"
                 >
                   Quên mật khẩu?
                 </button>
@@ -155,7 +155,7 @@ export default function DangNhapPage() {
             {hienThongBaoQuenMatKhau && (
               <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-surface-alt px-2.5 py-2">
                 <Info size={13} strokeWidth={1.8} className="mt-0.5 flex-shrink-0 text-text-muted" />
-                <div className="flex-1 text-[11.5px] leading-snug text-text-muted">
+                <div className="flex-1 text-caption leading-snug text-text-muted">
                   Bản hiện tại chưa hỗ trợ tự khôi phục mật khẩu — liên hệ quản trị hệ thống để được đặt lại.
                 </div>
               </div>
@@ -178,7 +178,7 @@ export default function DangNhapPage() {
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          <div className="text-center text-[13.5px] text-text-muted">
+          <div className="text-center text-body text-text-muted">
             {cheDo === "dang-nhap" ? (
               <>
                 Chưa có tài khoản?{" "}
@@ -212,7 +212,7 @@ export default function DangNhapPage() {
         </form>
       </div>
 
-      <div className="pb-1 pt-9 text-center text-[11.5px] text-text-muted/70">
+      <div className="pb-1 pt-9 text-center text-caption text-text-muted/70">
         © FloraOS — nền tảng cho cửa hàng hoa
       </div>
     </div>

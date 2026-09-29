@@ -89,22 +89,22 @@ export function CatalogManagementTab({
       {/* Filter Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-surface border border-border">
         <div>
-          <label className="block text-[11px] font-semibold text-text-muted mb-1">Tìm kiếm</label>
+          <label className="block text-caption font-semibold text-text-muted mb-1">Tìm kiếm</label>
           <Input placeholder="Tên hoặc mã hoa…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-9 text-xs" />
         </div>
         <div>
-          <label className="block text-[11px] font-semibold text-text-muted mb-1">Dịp tặng</label>
+          <label className="block text-caption font-semibold text-text-muted mb-1">Dịp tặng</label>
           <select value={filterOccasion} onChange={(e) => setFilterOccasion(e.target.value)} className="w-full h-9 rounded-md border border-border bg-white px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary">
             <option value="">Tất cả dịp</option>
             {availableOccasions.map((occ) => <option key={occ} value={occ}>{occ}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-[11px] font-semibold text-text-muted mb-1">Giá từ (VNĐ)</label>
+          <label className="block text-caption font-semibold text-text-muted mb-1">Giá từ (VNĐ)</label>
           <Input type="number" placeholder="0" value={filterPriceMin} onChange={(e) => setFilterPriceMin(e.target.value)} className="h-9 text-xs" />
         </div>
         <div>
-          <label className="block text-[11px] font-semibold text-text-muted mb-1">Giá đến (VNĐ)</label>
+          <label className="block text-caption font-semibold text-text-muted mb-1">Giá đến (VNĐ)</label>
           <Input type="number" placeholder="Tối đa" value={filterPriceMax} onChange={(e) => setFilterPriceMax(e.target.value)} className="h-9 text-xs" />
         </div>
       </div>
@@ -144,10 +144,10 @@ export function CatalogManagementTab({
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-text-muted">{p.code}</span>
+                    <span className="text-caption font-bold text-text-muted">{p.code}</span>
                     <span className="text-xs font-bold text-text truncate">{p.name}</span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1 text-[11px] text-text-muted">
+                  <div className="flex items-center gap-2 mt-1 text-caption text-text-muted">
                     {p.category && <span>{p.category}</span>}
                     {p.occasion_code && <span>· {p.occasion_code}</span>}
                   </div>

@@ -62,7 +62,7 @@ function markAsSeen(id: string): void {
  * Khung chuẩn hiển thị hướng dẫn thao tác cho các Tab tính năng trong FloraOS:
  * - Khung viền đứt nét màu đỏ: `border-2 border-dashed border-red-300`
  * - Nền đỏ pastel dịu mắt: `bg-red-50/70`
- * - Badge định danh chức năng: `bg-red-100 text-red-700`
+ * - Badge định danh chức năng: `bg-alert-100 text-red-700`
  * - Tiêu đề & nội dung đỏ chuẩn tương phản cao WCAG (>7:1)
  * - Thanh gợi ý mẹo thao tác ở chân khối: `border-t border-dashed border-red-200/90`
  *

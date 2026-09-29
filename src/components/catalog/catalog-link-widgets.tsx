@@ -107,7 +107,7 @@ export function PublishedCatalogLinks({ catalogLinks, onRefresh }: PublishedCata
                       <Button variant="ghost" size="sm" onClick={() => window.open(`/c/${link.slug}`, "_blank")} className="h-8 gap-1 text-xs">
                         <ExternalLink size={13} /> Xem trước
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setSharingLink(link)} className="h-8 gap-1 text-xs text-rose-600 font-bold hover:bg-rose-50">
+                      <Button variant="ghost" size="sm" onClick={() => setSharingLink(link)} className="h-8 gap-1 text-xs text-primary font-bold hover:bg-primary/10">
                         <Share2 size={13} /> Chia sẻ MXH
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleCopyLink(link.slug)} className="h-8 gap-1 text-xs">

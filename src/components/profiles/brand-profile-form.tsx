@@ -194,7 +194,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
               <Palette size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text">Bảng màu nhận diện thương hiệu (5 Mã Hex SSOT)</h3>
+              <h3 className="text-sm font-bold text-text">Bảng màu nhận diện thương hiệu (5 Mã Hex Cẩm nang hệ thống)</h3>
               <p className="text-xs text-text-muted">Áp dụng trực tiếp vào E-Catalog, Video Studio và Thẻ chào sản phẩm</p>
             </div>
           </div>
@@ -259,7 +259,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
                     style={{ backgroundColor: isValidHexColor(currentVal) ? currentVal : "#cccccc" }}
                   />
                 </div>
-                <p className="text-[11px] text-text-muted mb-3 leading-tight">{cfg.description}</p>
+                <p className="text-caption text-text-muted mb-3 leading-tight">{cfg.description}</p>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -277,7 +277,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
                     }`}
                   />
                 </div>
-                {hasErr && <p className="mt-1 text-[10px] text-danger">{errors[cfg.key]}</p>}
+                {hasErr && <p className="mt-1 text-caption text-danger">{errors[cfg.key]}</p>}
               </div>
             )
           })}
@@ -342,7 +342,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
               placeholder="https://... hoặc mã asset logo của tiệm"
               className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
             />
-            <p className="mt-1 text-[11px] text-text-muted">
+            <p className="mt-1 text-caption text-text-muted">
               Logo này sẽ được tự động đóng dấu Watermark mờ lên video TikTok/Reels và hiển thị trên E-Catalog
             </p>
           </div>
@@ -419,7 +419,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
               placeholder="hoa rẻ, phá giá, xả hàng tồn..."
               className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
             />
-            <p className="mt-1 text-[11px] text-text-muted">
+            <p className="mt-1 text-caption text-text-muted">
               AI Content Engine sẽ tự động loại bỏ tuyệt đối các từ này trong mọi bài đăng bán hoa
             </p>
           </div>

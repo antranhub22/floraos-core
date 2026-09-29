@@ -163,13 +163,13 @@ export function DesktopNav() {
           key={item.href}
           aria-disabled="true"
           title="Đang phát triển"
-          className="flex h-9 w-full cursor-not-allowed items-center justify-between rounded-lg px-2.5 text-[12.5px] font-medium text-text-muted opacity-60"
+          className="flex h-9 w-full cursor-not-allowed items-center justify-between rounded-lg px-2.5 text-meta font-medium text-text-muted opacity-60"
         >
           <div className="flex items-center gap-2.5 truncate">
             <Icon size={16} strokeWidth={1.9} />
             <span className="truncate">{item.label}</span>
           </div>
-          <span className="shrink-0 rounded-full bg-surface-alt px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide">
+          <span className="shrink-0 rounded-full bg-surface-alt px-1.5 py-0.5 text-caption font-extrabold uppercase tracking-wide">
             Sắp có
           </span>
         </div>
@@ -189,7 +189,7 @@ export function DesktopNav() {
           router.push(item.href as never)
         }}
         className={cn(
-          "group flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-[12.5px] font-medium transition-colors text-left",
+          "group flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-meta font-medium transition-colors text-left",
           active
             ? "bg-surface-alt font-bold text-primary"
             : "text-text-muted hover:bg-surface-alt hover:text-text"
@@ -220,10 +220,10 @@ export function DesktopNav() {
             <Sparkles size={16} strokeWidth={2.2} />
           </div>
           <div className="flex flex-col min-w-0">
-            <div className="text-[13px] font-extrabold text-primary leading-tight">
+            <div className="text-body-sm font-extrabold text-primary leading-tight">
               FloraOS
             </div>
-            <div className="truncate text-[10px] text-text-muted font-medium">
+            <div className="truncate text-caption text-text-muted font-medium">
               {orgName || "Cửa hàng hoa"}
             </div>
           </div>
@@ -241,7 +241,7 @@ export function DesktopNav() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder="Tìm chức năng... (/)"
-            className="h-8 w-full rounded-lg border border-border bg-surface-alt pl-8 pr-7 text-[12px] text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+            className="h-8 w-full rounded-lg border border-border bg-surface-alt pl-8 pr-7 text-meta text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
           />
           {searchQuery && (
             <button
@@ -260,7 +260,7 @@ export function DesktopNav() {
       <nav className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-3">
         {searchQuery ? (
           <div className="space-y-1">
-            <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+            <div className="px-2 pb-1 text-caption font-bold uppercase tracking-wider text-text-muted">
               Kết quả ({searchResults.length})
             </div>
             {searchResults.length === 0 ? (
@@ -279,7 +279,7 @@ export function DesktopNav() {
             return (
               <div key={group.key} className="space-y-1">
                 {isViecChinh ? (
-                  <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                  <div className="px-2 pb-1 text-caption font-bold uppercase tracking-wider text-text-muted">
                     {group.label}
                   </div>
                 ) : (
@@ -287,7 +287,7 @@ export function DesktopNav() {
                     type="button"
                     aria-expanded={expanded}
                     onClick={() => toggleGroup(group.key, expanded)}
-                    className="flex w-full items-center justify-between px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-muted hover:text-text"
+                    className="flex w-full items-center justify-between px-2 pb-1 text-caption font-bold uppercase tracking-wider text-text-muted hover:text-text"
                   >
                     <span>{group.label}</span>
                     <ChevronDown
@@ -322,11 +322,11 @@ export function DesktopNav() {
               <Bot size={13} />
             </span>
             <div>
-              <div className="text-[11.5px] font-bold text-text">FloraOS Copilot</div>
-              <div className="text-[10px] text-text-muted font-medium">Trợ lý hỗ trợ 24/7</div>
+              <div className="text-caption font-bold text-text">FloraOS Copilot</div>
+              <div className="text-caption text-text-muted font-medium">Trợ lý hỗ trợ 24/7</div>
             </div>
           </div>
-          <kbd className="rounded bg-surface px-1.5 py-0.5 text-[9.5px] font-mono text-text border border-border">
+          <kbd className="rounded bg-surface px-1.5 py-0.5 text-caption font-mono text-text border border-border">
             ⌘K
           </kbd>
         </button>

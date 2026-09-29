@@ -98,7 +98,7 @@ export function PackageWorkspace() {
   const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
   const [planRef, setPlanRef] = useState<string | null>(null)
   const [assetsNonce, setAssetsNonce] = useState(0)
-  // Bài Khu vực B đã tự lưu (24/09/2026) — đưa sẵn vào gói / đề xuất thay.
+  // Bài Nội dung đã tự lưu (24/09/2026) — đưa sẵn vào gói / đề xuất thay.
   const [bDraft, setBDraft] = useState<ContentDraftDto | null>(null)
 
   // Bản nháp chỉnh sửa (Chặng 07) — lưu bằng PATCH.
@@ -535,9 +535,9 @@ export function PackageWorkspace() {
   if (!masterId) {
     return (
       <Card className="w-full max-w-3xl mx-auto p-6 space-y-3">
-        <h3 className="text-[15px] font-bold text-text">Cần Master Image đã duyệt trước khi đóng gói</h3>
-        <p className="text-[13px] text-text-muted">
-          Gói chiến dịch neo vào Master Image đã duyệt (cổng 2). Bạn có thể dùng ngay ảnh gốc từ Khu vực A làm
+        <h3 className="text-title-sm font-bold text-text">Cần Master Image đã duyệt trước khi đóng gói</h3>
+        <p className="text-body-sm text-text-muted">
+          Gói chiến dịch neo vào Master Image đã duyệt (cổng 2). Bạn có thể dùng ngay ảnh gốc từ Tải &amp; chọn ảnh làm
           Master (không chỉnh sửa ảnh), hoặc tối ưu ảnh trước ở Tải ảnh.
         </p>
         {ctx?.assetId ? (
@@ -546,9 +546,9 @@ export function PackageWorkspace() {
             Skip — Dùng ảnh gốc làm Master (I2)
           </Button>
         ) : (
-          <p className="text-[13px] text-danger">Chưa có ảnh sản phẩm — bắt đầu ở Khu vực A.</p>
+          <p className="text-body-sm text-danger">Chưa có ảnh sản phẩm — bắt đầu ở Tải &amp; chọn ảnh.</p>
         )}
-        {error && <p className="text-[12.5px] text-danger">{error}</p>}
+        {error && <p className="text-meta text-danger">{error}</p>}
       </Card>
     )
   }
@@ -558,16 +558,16 @@ export function PackageWorkspace() {
       <Card className="w-full max-w-3xl mx-auto p-6 space-y-3">
         <div className="flex items-center gap-2.5">
           <Package size={18} className="text-primary" />
-          <h3 className="text-[15px] font-bold text-text">Chặng 07 — Tạo gói chiến dịch</h3>
+          <h3 className="text-title-sm font-bold text-text">Chặng 07 — Tạo gói chiến dịch</h3>
         </div>
-        <p className="text-[13px] text-text-muted">
-          Chưa có gói nào cho Master Image này. Dưới đây là những gì đã sản xuất ở Khu vực B–E — bấm tạo gói để đưa
+        <p className="text-body-sm text-text-muted">
+          Chưa có gói nào cho Master Image này. Dưới đây là những gì đã sản xuất ở Nội dung–E — bấm tạo gói để đưa
           sẵn vào, sau đó chỉnh, chạy QA và duyệt.
         </p>
 
         <div className="rounded-xl border border-border bg-surface-alt p-3.5 space-y-3">
-          <div className="text-[12px] font-bold text-text">
-            Ảnh biến thể theo kịch bản (Khu vực D): {producedScenes.length} ảnh
+          <div className="text-meta font-bold text-text">
+            Ảnh biến thể theo kịch bản: {producedScenes.length} ảnh
             {multiRatio ? ` · ${planRatios.length} khung (${planRatios.join(", ")})` : ""}
           </div>
           {producedScenes.length > 0 ? (
@@ -575,21 +575,21 @@ export function PackageWorkspace() {
               {producedScenes.map((a) => (
                 <div key={a.id} className="relative aspect-square overflow-hidden rounded-lg border border-border bg-white">
                   {a.url && <img src={a.url} alt="" className="h-full w-full object-cover" />}
-                  <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] font-bold text-white">
+                  <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-caption font-bold text-white">
                     Cảnh {String(a.metadata?.scene_index ?? "")}
                     {multiRatio && typeof a.metadata?.ratio === "string" ? ` · ${a.metadata.ratio}` : ""}
                   </span>
                   {a.approval_state !== "APPROVED" && (
-                    <span className="absolute bottom-1 left-1 rounded bg-warning-bg px-1 text-[9.5px] text-warning">chưa duyệt</span>
+                    <span className="absolute bottom-1 left-1 rounded bg-warning-bg px-1 text-caption text-warning">chưa duyệt</span>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[12px] text-text-muted">Chưa có ảnh — sinh ảnh ở Khu vực D.</p>
+            <p className="text-meta text-text-muted">Chưa có ảnh — sinh ảnh ở Biến thể marketing.</p>
           )}
-          <div className="text-[12px] text-text">
-            <span className="font-bold">Video (Khu vực E):</span>{" "}
+          <div className="text-meta text-text">
+            <span className="font-bold">Video (Video):</span>{" "}
             {suggestedVideos.length > 0
               ? suggestedVideos
                   .map((v) => `${multiRatio ? `${v.aspect_ratio} · ` : ""}job ${v.id.slice(0, 8)} · ${v.video_approval === "APPROVED" ? "đã duyệt P4" : v.stage === "RENDER_COMPLETED" ? "đã render, chưa duyệt P4" : v.stage}`)
@@ -601,18 +601,18 @@ export function PackageWorkspace() {
               </span>
             )}
           </div>
-          <div className="text-[12px] text-text">
-            <span className="font-bold">Âm thanh (Khu vực C):</span>{" "}
+          <div className="text-meta text-text">
+            <span className="font-bold">Âm thanh (Âm thanh):</span>{" "}
             {urlAudioJobId ? `job ${urlAudioJobId.slice(0, 8)}` : "chưa có"}
           </div>
-          <div className="text-[12px] text-text">
-            <span className="font-bold">Bài đăng (Khu vực B):</span>{" "}
+          <div className="text-meta text-text">
+            <span className="font-bold">Bài đăng (Nội dung):</span>{" "}
             {bDraft && bDraft.posts.length > 0
               ? `${bDraft.posts.length} kênh (${bDraft.posts.map((p) => p.channel).join(", ")}) · tự lưu lúc ${new Date(bDraft.updated_at).toLocaleString("vi-VN")}`
               : "chưa có — viết ở Khu vực B (tự lưu) hoặc soạn trực tiếp sau khi tạo gói"}
             {!(bDraft && bDraft.posts.length > 0) && (
               <button type="button" className="ml-2 font-bold text-primary hover:underline" onClick={() => goRework("b")}>
-                Mở Khu vực B →
+                Mở Nội dung →
               </button>
             )}
           </div>
@@ -622,7 +622,7 @@ export function PackageWorkspace() {
           {busy === "create" ? <Loader2 size={14} className="animate-spin" /> : <Package size={14} />}
           Tạo gói chiến dịch với các tài sản trên
         </Button>
-        {error && <p className="text-[12.5px] text-danger">{error}</p>}
+        {error && <p className="text-meta text-danger">{error}</p>}
       </Card>
     )
   }
@@ -632,9 +632,9 @@ export function PackageWorkspace() {
       {/* Tiêu đề + trạng thái */}
       <Card className="p-5 flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-primary">Khu vực F — Gói chiến dịch</div>
-          <h3 className="text-[16px] font-bold text-text">{pkg.name}</h3>
-          <p className="text-[12px] text-text-muted">
+          <div className="text-caption font-bold uppercase tracking-wider text-primary">Chiến dịch — Gói chiến dịch</div>
+          <h3 className="text-title font-bold text-text">{pkg.name}</h3>
+          <p className="text-meta text-text-muted">
             Mode {pkg.mode} · Master #{pkg.master_asset_id.slice(0, 8)}
             {pkg.topic ? ` · Chủ đề: ${pkg.topic.title}` : ""}
           </p>
@@ -648,7 +648,7 @@ export function PackageWorkspace() {
       </Card>
 
       {error && (
-        <div className="rounded-xl border border-danger bg-danger-bg px-4 py-3 text-[13px] text-danger flex items-start gap-2">
+        <div className="rounded-xl border border-danger bg-danger-bg px-4 py-3 text-body-sm text-danger flex items-start gap-2">
           <AlertTriangle size={15} className="shrink-0 mt-0.5" /> {error}
         </div>
       )}
@@ -656,7 +656,7 @@ export function PackageWorkspace() {
       {/* ── Chặng 07 — PACKAGE ── */}
       <Card className="p-5 space-y-5">
         <div className="flex items-center justify-between">
-          <h4 className="text-[14px] font-bold text-text">Chặng 07 — Chọn tài sản & bài đăng</h4>
+          <h4 className="text-body font-bold text-text">Chặng 07 — Chọn tài sản & bài đăng</h4>
           {!approved && (
             <Button size="sm" onClick={handleSave} disabled={!dirty || busy !== null} className="gap-1.5">
               {busy === "save" ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
@@ -667,7 +667,7 @@ export function PackageWorkspace() {
 
         {multiRatio && (
           <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Video theo khung">
-            <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-text-muted">Video theo khung:</span>
+            <span className="mr-1 text-caption font-bold uppercase tracking-wider text-text-muted">Video theo khung:</span>
             {planRatios.map((r) => {
               const has = videoJobIds.some((id) => ratioOfVideo(id) === r)
               return (
@@ -677,7 +677,7 @@ export function PackageWorkspace() {
                   role="tab"
                   aria-selected={r === activeRatio}
                   onClick={() => setVideoRatioTab(r)}
-                  className={`rounded-lg border px-3 py-1.5 text-[11.5px] font-bold cursor-pointer ${
+                  className={`rounded-lg border px-3 py-1.5 text-caption font-bold cursor-pointer ${
                     r === activeRatio ? "border-primary bg-primary text-white" : "border-border bg-surface text-text-muted"
                   }`}
                 >
@@ -718,10 +718,10 @@ export function PackageWorkspace() {
 
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-[12px] font-bold text-text">Bài đăng theo kênh (lưu từ Khu vực B hoặc soạn tại đây)</div>
+            <div className="text-meta font-bold text-text">Bài đăng theo kênh (lưu từ Nội dung hoặc soạn tại đây)</div>
             {!approved && (
-              <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => goRework("b")}>
-                <RefreshCw size={11} /> Viết lại ở Khu vực B
+              <Button size="sm" variant="outline" className="h-7 text-caption gap-1" onClick={() => goRework("b")}>
+                <RefreshCw size={11} /> Viết lại ở Nội dung
               </Button>
             )}
           </div>
@@ -729,12 +729,12 @@ export function PackageWorkspace() {
             bDraft &&
             bDraft.posts.length > 0 &&
             !samePosts(bDraft.posts, draftPosts) && (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-[12px]">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-meta">
                 <span>
-                  Có bài từ Khu vực B tự lưu lúc {new Date(bDraft.updated_at).toLocaleString("vi-VN")} khác với bài trong gói.
+                  Có bài tự lưu lúc {new Date(bDraft.updated_at).toLocaleString("vi-VN")} khác với bài trong gói.
                 </span>
                 <button type="button" className="font-bold text-primary hover:underline" onClick={applyBDraft}>
-                  ↻ Dùng bài của Khu vực B
+                  ↻ Dùng bài của Nội dung
                 </button>
               </div>
             )}
@@ -742,7 +742,7 @@ export function PackageWorkspace() {
             const p = posts[c.id]
             return (
               <div key={c.id} className="rounded-lg border border-border p-3 space-y-2">
-                <label className="flex items-center gap-2 text-[12px] font-bold">
+                <label className="flex items-center gap-2 text-meta font-bold">
                   <input
                     type="checkbox"
                     checked={p.on}
@@ -768,7 +768,7 @@ export function PackageWorkspace() {
                       className="w-full rounded border border-border px-2 py-1.5 text-xs"
                       placeholder="#hashtag cách nhau bằng dấu cách"
                     />
-                    <div className="text-[10.5px] text-text-muted">{p.text.length} ký tự</div>
+                    <div className="text-caption text-text-muted">{p.text.length} ký tự</div>
                     {!approved && (
                       <div className="flex flex-col gap-1.5 rounded border border-dashed border-border p-2">
                         <div className="flex gap-2">
@@ -781,7 +781,7 @@ export function PackageWorkspace() {
                           />
                           <Button
                             size="sm"
-                            className="h-7 text-[11px] gap-1 shrink-0"
+                            className="h-7 text-caption gap-1 shrink-0"
                             disabled={rewriteBusy !== null}
                             onClick={() => void rewritePost(c.id)}
                           >
@@ -789,7 +789,7 @@ export function PackageWorkspace() {
                             AI viết lại (1 credit)
                           </Button>
                         </div>
-                        {rewriteMsg[c.id] && <div className="text-[11px] text-text-muted">{rewriteMsg[c.id]}</div>}
+                        {rewriteMsg[c.id] && <div className="text-caption text-text-muted">{rewriteMsg[c.id]}</div>}
                       </div>
                     )}
                   </>
@@ -803,7 +803,7 @@ export function PackageWorkspace() {
       {/* ── Chặng 08 — QA ── */}
       <Card className="p-5 space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h4 className="text-[14px] font-bold text-text flex items-center gap-2">
+          <h4 className="text-body font-bold text-text flex items-center gap-2">
             <ShieldCheck size={16} /> Chặng 08 — Kiểm định QA (chạy phía máy chủ)
           </h4>
           {!approved && (
@@ -813,25 +813,25 @@ export function PackageWorkspace() {
             </Button>
           )}
         </div>
-        {dirty && <p className="text-[12px] text-warning">Có thay đổi chưa lưu — lưu gói trước khi chạy QA.</p>}
+        {dirty && <p className="text-meta text-warning">Có thay đổi chưa lưu — lưu gói trước khi chạy QA.</p>}
         {pkg.qa_report ? (
           <PackageQACard report={pkg.qa_report} />
         ) : (
-          <p className="text-[12px] text-text-muted">Chưa chạy QA cho phiên bản gói hiện tại.</p>
+          <p className="text-meta text-text-muted">Chưa chạy QA cho phiên bản gói hiện tại.</p>
         )}
       </Card>
 
       {/* ── Chặng 09 — APPROVE ── */}
       <Card className="p-5 space-y-3">
-        <h4 className="text-[14px] font-bold text-text">Chặng 09 — Chủ shop duyệt chốt</h4>
+        <h4 className="text-body font-bold text-text">Chặng 09 — Chủ shop duyệt chốt</h4>
         {approved ? (
-          <p className="text-[13px] text-success flex items-center gap-2">
+          <p className="text-body-sm text-success flex items-center gap-2">
             <CheckCircle2 size={15} /> Đã duyệt lúc {pkg.approved_at ? new Date(pkg.approved_at).toLocaleString("vi-VN") : ""} — đã ghi nhật ký kiểm toán.
           </p>
         ) : (
           <>
             {pkg.status === "QA_NEEDS_REVIEW" && (
-              <label className="flex items-start gap-2 text-[12.5px]">
+              <label className="flex items-start gap-2 text-meta">
                 <input type="checkbox" checked={acknowledge} onChange={(e) => setAcknowledge(e.target.checked)} />
                 Tôi đã xem các cảnh báo QA ở trên và chấp nhận đăng gói này.
               </label>
@@ -848,7 +848,7 @@ export function PackageWorkspace() {
               {busy === "approve" ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
               Duyệt chốt gói chiến dịch (J5)
             </Button>
-            <p className="text-[11.5px] text-text-muted">
+            <p className="text-caption text-text-muted">
               Chỉ duyệt được sau khi QA đạt, hoặc QA cần xem lại và bạn đã xác nhận. QA từ chối thì phải sửa rồi chạy lại.
             </p>
           </>

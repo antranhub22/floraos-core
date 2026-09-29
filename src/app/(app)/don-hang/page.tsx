@@ -147,7 +147,7 @@ export default function DonHangPage() {
               }`}
             >
               <span>{tab.label}</span>
-              <span className={`text-[10px] rounded-full px-1.5 py-0.2 ${
+              <span className={`text-caption rounded-full px-1.5 py-0.2 ${
                 mobileTab === tab.id ? "bg-white/20 text-white" : "bg-surface-alt text-text"
               }`}>
                 {tab.count}
@@ -180,7 +180,7 @@ export default function DonHangPage() {
           <div className="flex flex-col rounded-xl border border-border bg-surface-alt/40 p-3">
             <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-blue-500" aria-hidden="true" />
+                <span className="h-2.5 w-2.5 rounded-full bg-info" aria-hidden="true" />
                 <span className="font-bold text-caption uppercase text-text">1. Mới tiếp nhận</span>
               </div>
               <Badge tone="neutral" className="text-caption font-bold">{colNew.length}</Badge>
@@ -196,7 +196,7 @@ export default function DonHangPage() {
           <div className="flex flex-col rounded-xl border border-border bg-surface-alt/40 p-3">
             <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-purple-500" aria-hidden="true" />
+                <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden="true" />
                 <span className="font-bold text-caption uppercase text-text">2. Đang cắm hoa</span>
               </div>
               <Badge tone="neutral" className="text-caption font-bold">{colArranging.length}</Badge>
@@ -212,7 +212,7 @@ export default function DonHangPage() {
           <div className="flex flex-col rounded-xl border border-border bg-surface-alt/40 p-3">
             <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden="true" />
+                <span className="h-2.5 w-2.5 rounded-full bg-warning" aria-hidden="true" />
                 <span className="font-bold text-caption uppercase text-text">3. Vận chuyển</span>
               </div>
               <Badge tone="neutral" className="text-caption font-bold">{colDelivery.length}</Badge>
@@ -228,7 +228,7 @@ export default function DonHangPage() {
           <div className="flex flex-col rounded-xl border border-border bg-surface-alt/40 p-3">
             <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500" aria-hidden="true" />
+                <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden="true" />
                 <span className="font-bold text-caption uppercase text-text">4. Hoàn tất / Đã giao</span>
               </div>
               <Badge tone="neutral" className="text-caption font-bold">{colCompleted.length}</Badge>
@@ -287,7 +287,7 @@ function OrderCard({ order, onSelect }: { order: OrderItem; onSelect: () => void
       )}
 
       {order.cardMessage && (
-        <div className="truncate text-caption italic text-amber-700">
+        <div className="truncate text-caption italic text-warning">
           💌 {order.cardMessage}
         </div>
       )}

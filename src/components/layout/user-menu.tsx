@@ -32,6 +32,8 @@ export function UserMenu({ initials }: { initials: string }) {
     setDangXuat(true)
     try {
       await fetch("/api/v1/auth/logout", { method: "POST" })
+    } catch {
+      // Vẫn chuyển hướng dù logout API lỗi (token hết hạn phía server)
     } finally {
       router.push("/dang-nhap")
       router.refresh()
@@ -46,7 +48,7 @@ export function UserMenu({ initials }: { initials: string }) {
         onClick={() => setMo((v) => !v)}
         aria-label="Menu tài khoản"
         aria-expanded={mo}
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-body-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {initials}
       </button>
@@ -63,19 +65,19 @@ export function UserMenu({ initials }: { initials: string }) {
                 setMo(false)
                 router.push("/vai-tro" as never)
               }}
-              className="flex w-full items-center gap-2 border-b border-border px-3.5 py-2.5 text-left text-[13px] font-semibold text-text hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="flex w-full items-center gap-2 border-b border-border px-3.5 py-2.5 text-left text-body-sm font-semibold text-text hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <UserRound size={16} strokeWidth={1.8} aria-hidden="true" />
               <span className="min-w-0">
                 <span className="block">Vai trò</span>
-                {roleUx && <span className="block truncate text-[11.5px] font-medium text-text-muted">{roleUx.label}</span>}
+                {roleUx && <span className="block truncate text-caption font-medium text-text-muted">{roleUx.label}</span>}
               </span>
             </button>
             <button
               type="button"
               onClick={handleLogout}
               disabled={dangXuat}
-              className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-[13px] font-semibold text-danger hover:bg-surface-alt disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-body-sm font-semibold text-danger hover:bg-surface-alt disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <LogOut size={16} strokeWidth={1.8} />
               {dangXuat ? "Đang đăng xuất…" : "Đăng xuất"}

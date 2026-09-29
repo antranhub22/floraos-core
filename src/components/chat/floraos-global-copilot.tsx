@@ -191,9 +191,9 @@ export function FloraOSGlobalCopilot() {
             <Bot className="h-5 w-5 transition-transform group-hover:rotate-6" />
 
             {/* Tooltip bay sang trái khi hover — không chiếm chỗ cố định */}
-            <div className="pointer-events-none absolute right-full mr-2.5 hidden sm:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-stone-900/90 px-2.5 py-1 text-[11px] font-bold text-white shadow-md backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="pointer-events-none absolute right-full mr-2.5 hidden sm:flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-text/90 px-2.5 py-1 text-caption font-bold text-white shadow-md backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity">
               <span>FloraOS Copilot</span>
-              <kbd className="rounded bg-white/20 px-1 py-0.2 text-[9.5px] font-mono">⌘K</kbd>
+              <kbd className="rounded bg-white/20 px-1 py-0.2 text-caption font-mono">⌘K</kbd>
             </div>
           </button>
         )}
@@ -213,10 +213,11 @@ export function FloraOSGlobalCopilot() {
                   FloraOS SaaS Copilot
                   <span className="inline-block h-2 w-2 rounded-full bg-success animate-pulse" />
                 </div>
-                <div className="text-[10px] font-medium text-text-muted">Hỏi đáp vận hành & Tư vấn hoa 24/7</div>
+                <div className="text-caption font-medium text-text-muted">Hỏi đáp vận hành & Tư vấn hoa 24/7</div>
               </div>
             </div>
             <button
+              aria-label="Đóng"
               onClick={() => setIsOpen(false)}
               className="rounded-lg p-1.5 text-muted-foreground hover:bg-black/5 hover:text-foreground"
             >
@@ -233,13 +234,13 @@ export function FloraOSGlobalCopilot() {
                 </div>
                 <div>
                   <div className="font-bold text-foreground text-sm">Xin chào! Em có thể giúp gì cho tiệm?</div>
-                  <p className="text-[11px] text-muted-foreground mt-1 max-w-[280px] mx-auto">
+                  <p className="text-caption text-muted-foreground mt-1 max-w-[280px] mx-auto">
                     Anh/chị có thể hỏi về cách sử dụng tính năng trên hệ thống hoặc nhờ tư vấn mẫu hoa và chốt đơn!
                   </p>
                 </div>
 
                 <div className="space-y-1.5 w-full pt-2">
-                  <div className="text-[10px] font-bold text-muted-foreground text-left px-1">💡 Câu hỏi gợi ý:</div>
+                  <div className="text-caption font-bold text-muted-foreground text-left px-1">💡 Câu hỏi gợi ý:</div>
                   {[
                     "Làm sao in phiếu cắm hoa giấu giá cho thợ?",
                     "Cách quét ngày kỷ niệm khách hàng?",
@@ -249,7 +250,7 @@ export function FloraOSGlobalCopilot() {
                     <button
                       key={idx}
                       onClick={() => handleSendMessage(q)}
-                      className="w-full text-left rounded-xl border border-primary/20 bg-primary/5 p-2 text-[11px] font-medium text-foreground hover:bg-primary/10 transition-colors flex items-center justify-between"
+                      className="w-full text-left rounded-xl border border-primary/20 bg-primary/5 p-2 text-caption font-medium text-foreground hover:bg-primary/10 transition-colors flex items-center justify-between"
                     >
                       <span className="truncate">{q}</span>
                       <ArrowRight className="h-3 w-3 text-primary shrink-0 ml-1" />
@@ -272,7 +273,7 @@ export function FloraOSGlobalCopilot() {
                   />
                 ))}
                 {sending && (
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground p-2 rounded-xl bg-muted/40 animate-pulse">
+                  <div className="flex items-center gap-2 text-caption text-muted-foreground p-2 rounded-xl bg-muted/40 animate-pulse">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                     <span>FloraOS Copilot đang tra cứu và soạn câu trả lời...</span>
                   </div>

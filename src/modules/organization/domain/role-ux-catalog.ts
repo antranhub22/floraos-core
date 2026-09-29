@@ -45,6 +45,7 @@ export type RoleUxHomepage =
   | "PRODUCT_WORKSPACE"
   | "CREATIVE_WORKSPACE"
   | "CRM_WORKSPACE"
+  | "CUSTOMER_SERVICE_WORKSPACE"
   | "CONTROL_TOWER"
   | "NOT_BUILT"
 
@@ -239,11 +240,11 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
     primaryQuestion: "Khách này đang cần gì ngay lúc này?",
     homepageModel: "Conversation Workspace",
     dominantActions: ["Phản hồi", "Giải quyết", "Theo dõi"],
-    status: "IN_DEVELOPMENT",
-    homepage: "NOT_BUILT",
-    systemRoleKeys: [],
-    entryHref: null,
-    navPriority: [],
+    status: "AVAILABLE",
+    homepage: "CUSTOMER_SERVICE_WORKSPACE",
+    systemRoleKeys: ["customer_service"],
+    entryHref: "/hoi-thoai",
+    navPriority: ["/hoi-thoai", "/khach-hang", "/don-hang"],
     debtRefs: [165],
   },
   {

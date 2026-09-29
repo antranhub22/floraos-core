@@ -86,3 +86,37 @@ jobs:
       - run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
       - run: pip install -r requirements.txt
       - run: python -m pytest tests -q
+
+  e2e-ux:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: floraos
+          POSTGRES_PASSWORD: floraos
+          POSTGRES_DB: floraos
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://floraos:floraos@localhost:5432/floraos
+      SESSION_SECRET: ci-only-not-a-real-secret
+      INTEGRATION_TOKEN_SECRET: ci-only-not-a-real-integration-secret
+      SSO_SESSION_SECRET: ci-only-not-a-real-sso-secret
+      OPENAI_API_KEY: ci-only-fake-key-network-is-blocked
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma db push
+      - run: npm run db:seed
+      - run: npx playwright install chromium --with-deps
+      - run: npm run build
+      - name: Chạy kiểm thử E2E UX theo vai và mốc trợ năng
+        run: E2E_WEB_COMMAND="npm run start" npx playwright test tests/e2e/ux

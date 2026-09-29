@@ -262,7 +262,7 @@ export default function KhoTemplatesPage() {
             </div>
             <div>
               <h1 className="text-lg font-extrabold text-text">Kho Templates</h1>
-              <p className="text-[12.5px] text-text-muted">
+              <p className="text-meta text-text-muted">
                 Thư viện xem trước {TOTAL_FILES} template trên {CATEGORIES.length} chức năng nghiệp vụ
               </p>
             </div>
@@ -277,7 +277,7 @@ export default function KhoTemplatesPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tìm template theo tên hoặc chức năng..."
-              className="w-full rounded-xl border border-border bg-surface py-2 pr-3 pl-9 text-[13px] text-text outline-none transition-colors focus:border-primary"
+              className="w-full rounded-xl border border-border bg-surface py-2 pr-3 pl-9 text-body-sm text-text outline-none transition-colors focus:border-primary"
             />
           </div>
         </div>
@@ -291,7 +291,7 @@ export default function KhoTemplatesPage() {
         />
 
         {filtered.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border bg-surface-alt/40 p-8 text-center text-[13px] text-text-muted">
+          <div className="rounded-2xl border border-dashed border-border bg-surface-alt/40 p-8 text-center text-body-sm text-text-muted">
             Không tìm thấy template nào khớp “{query}”.
           </div>
         )}
@@ -308,22 +308,22 @@ export default function KhoTemplatesPage() {
                     </div>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-[14px] font-bold text-text">{cat.title}</h2>
-                        <span className="rounded-full bg-surface-alt px-2 py-0.5 text-[10px] font-bold tracking-wide text-text-muted uppercase">
+                        <h2 className="text-body font-bold text-text">{cat.title}</h2>
+                        <span className="rounded-full bg-surface-alt px-2 py-0.5 text-caption font-bold tracking-wide text-text-muted uppercase">
                           {cat.code}
                         </span>
-                        <span className="rounded-full bg-surface-alt px-2 py-0.5 text-[10.5px] font-semibold text-text-muted">
+                        <span className="rounded-full bg-surface-alt px-2 py-0.5 text-caption font-semibold text-text-muted">
                           {cat.files.length} template
                         </span>
                       </div>
-                      <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-text-muted">
+                      <p className="mt-1 max-w-2xl text-meta leading-relaxed text-text-muted">
                         {cat.description}
                       </p>
                     </div>
                   </div>
                   <Link
                     href={cat.route as never}
-                    className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg bg-primary px-3 py-2 text-[12px] font-bold text-white shadow-xs transition-colors hover:bg-primary/90 sm:self-center"
+                    className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg bg-primary px-3 py-2 text-meta font-bold text-white shadow-xs transition-colors hover:bg-primary/90 sm:self-center"
                   >
                     Mở màn hình
                     <ArrowUpRight size={14} />
@@ -346,14 +346,14 @@ export default function KhoTemplatesPage() {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <code className="truncate text-[11.5px] font-bold text-text">{f.file}</code>
-                          <span className="shrink-0 rounded-full bg-surface-alt px-1.5 py-0.5 text-[9.5px] font-bold tracking-wide text-text-muted uppercase">
+                          <code className="truncate text-caption font-bold text-text">{f.file}</code>
+                          <span className="shrink-0 rounded-full bg-surface-alt px-1.5 py-0.5 text-caption font-bold tracking-wide text-text-muted uppercase">
                             {f.type}
                           </span>
                         </div>
-                        <p className="mt-1.5 text-[11.5px] leading-relaxed text-text-muted">{f.purpose}</p>
+                        <p className="mt-1.5 text-caption leading-relaxed text-text-muted">{f.purpose}</p>
                         {hasPreview && (
-                          <div className="mt-2 flex items-center gap-1 text-[10.5px] font-semibold text-primary">
+                          <div className="mt-2 flex items-center gap-1 text-caption font-semibold text-primary">
                             <Eye size={11} />
                             Xem trước mẫu
                           </div>

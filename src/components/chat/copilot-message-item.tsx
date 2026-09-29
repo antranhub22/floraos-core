@@ -32,7 +32,7 @@ export function CopilotMessageItem({
 
   if (isSystem) {
     return (
-      <div className="rounded-lg bg-surface-raised border border-border p-2.5 text-center text-[11px] text-muted-foreground italic">
+      <div className="rounded-lg bg-surface-raised border border-border p-2.5 text-center text-caption text-muted-foreground italic">
         {message.content}
       </div>
     )
@@ -96,7 +96,7 @@ export function CopilotMessageItem({
                   <div className="font-bold text-foreground text-xs truncate">
                     {f.productName}
                   </div>
-                  <div className="text-primary font-extrabold text-[11px]">
+                  <div className="text-primary font-extrabold text-caption">
                     {Number(f.priceVnd).toLocaleString("vi-VN")} đ
                   </div>
                 </div>
@@ -105,7 +105,7 @@ export function CopilotMessageItem({
                   size="sm"
                   disabled={creatingOrderFor === f.productId}
                   onClick={() => onQuickCreateOrder(f.productId)}
-                  className="h-7 px-2.5 bg-primary hover:bg-primary-dark text-white text-[11px] shrink-0"
+                  className="h-7 px-2.5 bg-primary hover:bg-primary-dark text-white text-caption shrink-0"
                 >
                   {creatingOrderFor === f.productId ? (
                     <Loader2 className="h-3 w-3 animate-spin" />

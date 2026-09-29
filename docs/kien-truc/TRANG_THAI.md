@@ -1,10 +1,18 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-27 (Chức năng 12 — ĐP-4a TOÀN BỘ CỔNG XANH: `npx prisma generate` xong trên máy thật, `db:test:setup` đồng bộ `floraos_test`, `npx tsc --noEmit` SẠCH 100% (0 lỗi), `npm test` 160/160 tệp (1.322 ca) XANH, `npm run test:tenant` 36/36 tệp (283 ca) XANH, `check:schemas:coordinator` khớp 15/15 tệp, `check:field-registry` khớp 39 trường/11 danh mục/55 giá trị, `node scripts/check-docs.mjs` khớp 100% không lệch).
+**Cập nhật:** 2026-09-29 (UX-7 Nghiệm thu liên tục & Tự động hoá: **T7.1, T7.2, T7.3, T7.4 HOÀN TẤT 100%** — Bộ test E2E Playwright `npm run test:e2e:ux` 12/12 ca xanh thật; axe-core WCAG 2.2 AA 0 critical/serious; Visual Regression mobile 390 & desktop 1280 ổn định 0 diff; Job CI `e2e-ux` sẵn sàng; UX Lint 0 vi phạm; `npm test` **1339/1339** xanh, `tsc` sạch).
 
 ---
 
 ## 1. Đang ở đâu
+
+**29/09 — Nâng cấp UI/UX: Hoàn thành bộ kiểm thử đầu cuối E2E, Quét trợ năng WCAG 2.2 AA và Visual Regression (Giai đoạn UX-7: T7.1, T7.2, T7.3, T7.4).**
+- **E2E theo vai & trạng thái tuyến (T7.2)**: Xây dựng `tests/e2e/ux/` gồm 7 ca kiểm thử chính xác luồng phân phối trang chủ (`dieu_hanh` → Command Center, `sale` → Pipeline Workspace, `dieu_phoi` → `/dieu-phoi`), trang lỗi 404 toàn cục `src/app/not-found.tsx`, mốc Skip Link trợ năng, và danh mục vai `/vai-tro` kiểm soát trạng thái vô hiệu `aria-disabled="true"` của các vai đang phát triển.
+- **Quét trợ năng tự động axe-core (T7.3)**: Tích hợp `@axe-core/playwright`, kiểm soát chuẩn WCAG 2.2 AA trên toàn bộ các màn hình chính (trang chủ, vai trò, 404). Tinh chỉnh token màu `--color-text-muted` và `--color-warning-text` đạt độ tương phản chuẩn ≥ 4.5:1; loại bỏ hoàn toàn lỗi lồng nút tương tác (nested interactive elements) trên lưới chức năng trải nghiệm.
+- **Chụp so sánh giao diện Visual Regression (T7.1)**: `visual.spec.ts` chụp và đối chiếu snapshot giao diện ở 2 độ phân giải chuẩn (mobile 390x844 và desktop 1280x800) với mức sai khác pixel bằng 0 sau 2 lần chạy liên tiếp.
+- **Tích hợp CI (T7.4)**: Thêm job `e2e-ux` vào `.github/workflows/ci.yml` và script `npm run test:e2e:ux` vào `package.json`.
+- **Kết quả nghiệm thu**: `npm run test:e2e:ux` **12/12 tests xanh 100%** · `npm run lint:ux -- --check` **0 vi phạm** · `npm test` **1339/1339 xanh** · `tsc --noEmit` **sạch 100%**.
+
 
 **27/09 — Nâng cấp UI/UX: Mở khoá vai Chăm sóc khách hàng CRM (T6.3) hoàn tất 100%.**
 - **Luật vòng đời khách hàng thuần túy (`CustomerLifecycleStage`)**: PO duyệt bộ luật 5 giai đoạn (`ACQUIRE`, `GROW`, `RETAIN`, `AT_RISK`, `DORMANT`) suy từ RFM (`orderCount`, `totalSpentVnd`, `tier`) và mốc đơn gần nhất (`lastOrderAt`). Viết trong `crm-rules.ts`, có test unit 26/26 xanh (`tests/unit/crm/crm-rules.test.ts`).

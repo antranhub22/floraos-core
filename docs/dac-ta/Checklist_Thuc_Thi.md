@@ -998,7 +998,7 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] T1.6 — `focus-visible` và vùng bấm cho component gốc (vùng bấm 44px)
 - [x] T1.7 — Sửa phần tử không tương tác mà có `onClick`
 - [x] T1.8a — Component `Dialog` dùng chung (`@base-ui/react`) và 3 modal mẫu
-- [ ] T1.8b — Chuyển các modal ngoài vùng Điều phối sang `Dialog` (dần theo màn ở UX-5)
+- [x] T1.8b — Chuyển các modal ngoài vùng Điều phối sang `Dialog` (dần theo màn ở UX-5) · **DONE 29/09** — `create-order-modal` + `order-detail-modal` (476→~280 dòng, tách `order-cancel-dialog` + `order-action-buttons`); thêm `subHeader` slot vào Dialog
 - [ ] T1.8c — Chuyển các modal vùng Điều phối sang `Dialog` (sau ĐP-4c)
 - [x] T1.9 — Liên kết "Bỏ qua tới nội dung" và mốc trang
 - [x] T1.10 — `TabActionHeader` tuân K2 (cảnh báo > 1 nút primary ở dev)
@@ -1029,14 +1029,14 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] T4.4 — Codemod an toàn (`scripts/codemod-ux-tokens.ts`)
 - [x] T4.5.1 — Codemod token `src/components/ui`
 - [x] T4.5.2 — Codemod token `src/components/layout`
-- [ ] T4.5.3 — Codemod token `src/components/dashboard` (Đợt A)
-- [ ] T4.5.4 — Codemod token `(app)/{tai-anh,duyet,job,vai-tro}` + upload/flow/result/sales (Đợt A)
-- [ ] T4.5.5 — Codemod token `templates/shared` + `product-analysis` (Đợt A)
-- [ ] T4.5.6 — Codemod token `catalog, crm, orders, chat, storage, profiles, org` + templates (Đợt B)
-- [ ] T4.5.7 — Codemod token `creative-studio` + templates (Đợt C)
-- [ ] T4.5.8 — Codemod token `video-studio, knowledge-base` + templates (Đợt C)
-- [ ] T4.5.9 — Codemod token `market-intelligence` (chia 3 commit, sau K3)
-- [ ] T4.5.10 — Codemod token `(platform)` Console (Đợt D)
+- [x] T4.5.3 — Codemod token `src/components/dashboard` (Đợt A) · **DONE 29/09** — 0 R1/R2 xác nhận sạch
+- [x] T4.5.4 — Codemod token `(app)/{tai-anh,duyet,job,vai-tro}` + upload/flow/result/sales (Đợt A) · **DONE 29/09** — 95 thay đổi; R2 app/(app) 96→0; upload 46→0
+- [x] T4.5.5 — Codemod token `templates/shared` + `product-analysis` (Đợt A) · **DONE 29/09** — shared sạch
+- [x] T4.5.6 — Codemod token `catalog, crm, orders, chat, storage, profiles, org` + templates (Đợt B) · **DONE 29/09** — 31 thay đổi; sales 31→0; −203 vi phạm tổng
+- [x] T4.5.7 — Codemod token `creative-studio` + templates (Đợt C) · **DONE 29/09** — 326 thay đổi/22 tệp
+- [x] T4.5.8 — Codemod token `video-studio, knowledge-base` + templates (Đợt C) · **DONE 29/09** — 18 thay đổi/4 tệp
+- [x] T4.5.9 — Codemod token `market-intelligence` (chia 3 commit, sau K3) · **DONE 29/09** — 214 thay đổi/28 tệp; R2 222→14; R1 1885→1881; −212 vi phạm
+- [x] T4.5.10 — Codemod token `(platform)` Console (Đợt D) · **DONE 29/09** — 56 thay đổi/10 tệp; R2 −599 tổng cộng (3421→2822)
 - [ ] T4.5.11 — Codemod token vùng Điều phối (sau ĐP-4c)
 - [x] T4.6 — Token hoá màu `FeatureGuidanceCard` (K1)
 - [x] T4.7 — Rà soát và token hoá mã Hex trong `.tsx`
@@ -1046,9 +1046,9 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] T5.A1 — Trang chủ Quản lý cửa hàng (`StoreManagerDashboard`, `trang-chu-store-manager.md`)
 - [x] T5.A2 — Trang chủ Bán hàng (`SalesWorkspace`, `trang-chu-sales.md`)
 - [x] T5.A3 — Danh mục vai (`/vai-tro`, `vai-tro.md`)
-- [ ] T5.A4a — Quét ảnh hoa (`/tai-anh`) — Cấu trúc & nhãn tab (giữ nguyên Journey 14 bước & Atomic Fields)
-- [ ] T5.A4b — Quét ảnh hoa (`/tai-anh`) — Kết quả L0–L4 & duyệt tại chỗ
-- [ ] T5.A4c — Quét ảnh hoa (`/tai-anh`) — Trạng thái & mobile
+- [x] T5.A4a — Quét ảnh hoa (`/tai-anh`) — Cấu trúc & nhãn tab (giữ nguyên Journey 14 bước & Atomic Fields) · **DONE 29/09/2026** — 16 vi phạm R2 → token; badge m01b count động; 2 nhãn R8 sửa; tsc sạch; lint −30
+- [x] T5.A4b — Quét ảnh hoa (`/tai-anh`) — Kết quả L0–L4 & duyệt tại chỗ · **DONE 29/09/2026** — Zone 4 K2: [Không đạt][Duyệt] cạnh nhau căn phải, Lưu nháp căn trái; 31 vi phạm R2 → token; tsc sạch; lint −31
+- [x] T5.A4c — Quét ảnh hoa (`/tai-anh`) — Trạng thái & mobile · **DONE 29/09/2026** — R5: Card upload role/tabIndex/onKeyDown; R8: jobPhase → FLOW_M01 label; vùng thả >>44px; mobile max-w-md; nợ #client-compress
 - [x] T5.A5 — Hàng chờ duyệt (`/duyet`, `duyet.md`)
 - [x] T5.A6 — Quản lý Job (`/job`, `/job/[id]`, `job.md`)
 
@@ -1088,7 +1088,7 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] T6.1 — Mở khoá vai `product_manager`
 - [x] T6.2 — Mở khoá vai `marketing` & `lead_marketing`
 - [x] T6.3 — Mở khoá vai `crm`
-- [ ] T6.4 — Mở khoá vai `customer_service`
+- [x] T6.4 — Mở khoá vai `customer_service` · **DONE 29/09/2026** — `CustomerServiceWorkspace` (hội thoại chờ, dịp KN, tác vụ nhanh); `CUSTOMER_SERVICE_WORKSPACE` enum; test 1339/1339 xanh; lint:ux --check đạt; tsc sạch
 - [ ] T6.5 — Mở khoá vai `finance_accounting` (chờ ĐP-4a)
 - [ ] T6.6 — Mở khoá vai `quality_control` (chờ ĐP-4b/4c)
 - [ ] T6.7 — Mở khoá vai `partner_manager` (chờ ĐP-4c)
@@ -1101,9 +1101,9 @@ Quyết định PO 25/09/2026: mọi bước TẠO (nội dung, giọng, nhạc,
 - [x] T6.13 — Thêm vai `florist` (Thợ cắm) vào danh mục (nợ #169)
 
 ### Giai đoạn UX-7: Nghiệm thu liên tục và Khoá tài liệu
-- [ ] T7.1 — Chụp so sánh giao diện (Visual regression Playwright)
-- [ ] T7.2 — E2E theo vai (`role-homepage`, `navigation`, `route-states`)
-- [ ] T7.3 — Quét trợ năng tự động (`@axe-core/playwright`)
-- [ ] T7.4 — CI cho UX (`e2e-ux` job)
+- [x] T7.1 — Chụp so sánh giao diện (Visual regression Playwright) · **DONE 29/09/2026** — `visual.spec.ts` kiểm thử regression khổ 390x844 và 1280x800 không lệch (0 diff)
+- [x] T7.2 — E2E theo vai (`role-homepage`, `navigation`, `route-states`) · **DONE 29/09/2026** — 7/7 tests Playwright xanh thật (route-states 404, skip-link, role-homepage cho dieu_hanh, sale, dieu_phoi, navigation vai-tro disabled)
+- [x] T7.3 — Quét trợ năng tự động (`@axe-core/playwright`) · **DONE 29/09/2026** — tích hợp axe-core kiểm định WCAG 2.2 AA (0 critical/serious violations; tinh chỉnh độ tương phản text-muted và warning-text; chuẩn hoá nút không lồng nhau)
+- [x] T7.4 — CI cho UX (`e2e-ux` job) · **DONE 29/09/2026** — bổ sung job `e2e-ux` trong `.github/workflows/ci.yml` chạy `test:e2e:ux`
 - [ ] T7.5 — Khoá tài liệu (chuyển sang ARCHIVED, hoàn tất)
 

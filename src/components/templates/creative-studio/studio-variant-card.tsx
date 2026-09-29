@@ -31,8 +31,8 @@ export function StudioVariantCard({
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold text-text-muted">M04b Background Presets</div>
-          <div className="text-[16px] font-extrabold text-text">Chọn bối cảnh không gian</div>
+          <div className="text-xs font-semibold text-text-muted">Biến thể marketing Background Presets</div>
+          <div className="text-title font-extrabold text-text">Chọn bối cảnh không gian</div>
         </div>
         <Badge tone="neutral" className="gap-1">
           <Sparkles size={12} />
@@ -45,6 +45,8 @@ export function StudioVariantCard({
           const isSelected = item.id === selectedId
           return (
             <div
+              role="button"
+              tabIndex={0}
               key={item.id}
               onClick={() => onSelectVariant(item.id)}
               className={`group relative cursor-pointer overflow-hidden rounded-xl border p-2 transition-all ${
@@ -65,14 +67,14 @@ export function StudioVariantCard({
                   </div>
                 )}
                 {item.tag && (
-                  <div className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                  <div className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-caption font-bold text-white backdrop-blur-sm">
                     {item.tag}
                   </div>
                 )}
               </div>
               <div className="mt-2">
                 <div className="text-xs font-bold text-text truncate">{item.name}</div>
-                <div className="text-[11px] text-text-muted truncate">{item.description}</div>
+                <div className="text-caption text-text-muted truncate">{item.description}</div>
               </div>
             </div>
           )

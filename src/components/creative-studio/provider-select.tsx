@@ -58,7 +58,7 @@ export function ProviderSelect({
   const view = useProviderKind(kind)
   const theoTiem = view?.order.map((k) => view.providers.find((p) => p.key === k)?.label ?? k).join(" → ")
   return (
-    <label className="flex w-full flex-col gap-1 text-[11.5px] text-text-muted">
+    <label className="flex w-full flex-col gap-1 text-caption text-text-muted">
       <span className="font-bold text-text">{label}</span>
       <select
         className="w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-text"

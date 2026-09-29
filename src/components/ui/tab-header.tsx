@@ -102,11 +102,11 @@ export function TabActionHeader({
       case "primary":
         return "bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20"
       case "success":
-        return "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/20"
+        return "bg-mint-600 text-white hover:bg-mint-700 shadow-sm shadow-mint-600/20"
       case "secondary":
         return "bg-surface-alt text-text hover:bg-border"
       case "danger":
-        return "bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-600/20"
+        return "bg-alert-600 text-white hover:bg-alert-700 shadow-sm shadow-alert-600/20"
       case "outline":
       default:
         return "border border-border bg-surface text-text hover:bg-surface-alt hover:text-primary"
@@ -116,11 +116,11 @@ export function TabActionHeader({
   const getBadgeStyles = (tone: TabItem["badgeTone"] = "neutral") => {
     switch (tone) {
       case "success":
-        return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+        return "bg-mint-500/15 text-mint-700 dark:text-mint-400 border-mint-500/30"
       case "warning":
-        return "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+        return "bg-sand-500/15 text-sand-700 dark:text-sand-400 border-sand-500/30"
       case "danger":
-        return "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
+        return "bg-alert-500/15 text-alert-700 dark:text-alert-400 border-alert-500/30"
       case "accent":
         return "bg-accent/15 text-accent border-accent/30"
       case "neutral":
@@ -145,7 +145,7 @@ export function TabActionHeader({
               type="button"
               disabled={tab.disabled}
               onClick={() => onTabChange(tab.id)}
-              className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs sm:text-[13px] font-bold transition-all whitespace-nowrap flex-shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs sm:text-body-sm font-bold transition-all whitespace-nowrap flex-shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                 isActive
                   ? "bg-surface text-primary shadow-sm border border-border"
                   : "text-text-muted hover:text-text hover:bg-surface/60"
@@ -231,14 +231,14 @@ export function TabActionHeader({
                           }}
                           className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-colors text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                             item.destructive
-                              ? "text-red-600 hover:bg-red-500/10 dark:hover:bg-red-950/20"
+                              ? "text-danger hover:bg-danger/10"
                               : "text-text hover:bg-surface-alt hover:text-primary"
                           } ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
                           {ItemIcon && (
                             <ItemIcon
                               size={14}
-                              className={item.destructive ? "text-red-500" : "text-text-muted"}
+                              className={item.destructive ? "text-danger" : "text-text-muted"}
                             />
                           )}
                           <span>{item.label}</span>

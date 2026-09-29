@@ -136,15 +136,15 @@ export function MarketIntelligenceView({
 
       {/* Thông báo nếu mốc thời gian đang chọn không có kết quả */}
       {filteredByTime.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-stone-200 bg-stone-50/60 p-8 text-center space-y-3">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+        <div className="rounded-2xl border border-dashed border-cool-200 bg-cool-50/60 p-8 text-center space-y-3">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-sand-50 text-sand-600">
             <Clock size={20} />
           </div>
           <div className="max-w-md mx-auto">
-            <h4 className="text-sm font-bold text-stone-800">
+            <h4 className="text-sm font-bold text-cool-800">
               Không có cơ hội nào trong &ldquo;{currentFilterLabel}&rdquo;
             </h4>
-            <p className="text-xs text-stone-500 mt-1">
+            <p className="text-xs text-cool-500 mt-1">
               Hãy chọn mốc ngày/tuần khác có cơ hội phát hiện hoặc chọn &ldquo;Tất cả&rdquo; để xem toàn bộ {opportunities.length} cơ hội thị trường.
             </p>
           </div>
@@ -154,7 +154,7 @@ export function MarketIntelligenceView({
               setSelectedTimeframe("ALL");
               setSelectedBucket(null);
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 shadow-xs transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blush-600 text-white hover:bg-blush-700 shadow-xs transition"
           >
             <RefreshCw size={13} />
             Xem tất cả ({opportunities.length})
@@ -194,14 +194,14 @@ export function MarketIntelligenceView({
       {/* 4. Chế Độ Toàn Cảnh (ALL) - Hiển thị toàn bộ cơ hội & Hàng đợi worker */}
       {filteredByTime.length > 0 && activeFilter === "ALL" && (
         <div className="space-y-4">
-          <div id="research-results-section" className="flex border-b border-stone-200 gap-6 text-sm font-medium pt-2">
+          <div id="research-results-section" className="flex border-b border-cool-200 gap-6 text-sm font-medium pt-2">
             <button
               type="button"
               onClick={() => setActiveTab("opportunities")}
               className={`pb-3 flex items-center gap-2 border-b-2 transition ${
                 activeTab === "opportunities"
-                  ? "border-rose-600 text-rose-600 font-semibold"
-                  : "border-transparent text-stone-500 hover:text-stone-800"
+                  ? "border-blush-600 text-blush-600 font-semibold"
+                  : "border-transparent text-cool-500 hover:text-cool-800"
               }`}
             >
               <Sparkles className="h-4 w-4" />
@@ -212,8 +212,8 @@ export function MarketIntelligenceView({
               onClick={() => setActiveTab("monitoring")}
               className={`pb-3 flex items-center gap-2 border-b-2 transition ${
                 activeTab === "monitoring"
-                  ? "border-rose-600 text-rose-600 font-semibold"
-                  : "border-transparent text-stone-500 hover:text-stone-800"
+                  ? "border-blush-600 text-blush-600 font-semibold"
+                  : "border-transparent text-cool-500 hover:text-cool-800"
               }`}
             >
               <Activity className="h-4 w-4" />

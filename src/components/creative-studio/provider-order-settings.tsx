@@ -87,7 +87,7 @@ export function ProviderOrderSettings({ canEdit }: { canEdit: boolean }) {
     <div className="flex flex-col gap-4">
       {message && (
         <div
-          className={`flex items-center gap-2 rounded-xl border p-3 text-xs ${message.ok ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}
+          className={`flex items-center gap-2 rounded-xl border p-3 text-xs ${message.ok ? "border-success/30 bg-success/10 text-success" : "border-danger/30 bg-danger/10 text-danger"}`}
         >
           {message.ok ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
           <span>{message.text}</span>
@@ -113,15 +113,15 @@ export function ProviderOrderSettings({ canEdit }: { canEdit: boolean }) {
                   const p = view.providers.find((x) => x.key === key)
                   return (
                     <li key={key} className="flex items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-1.5">
-                      <span className="w-4 text-[11px] font-bold text-text-muted">{i + 1}</span>
+                      <span className="w-4 text-caption font-bold text-text-muted">{i + 1}</span>
                       <span className="flex-1 min-w-0">
                         <span className="block truncate text-xs font-semibold text-text">
                           {p?.label ?? key} <span className="font-normal text-text-muted">— {p?.vendor}</span>
                         </span>
-                        <span className="block truncate text-[11px] text-text-muted">{p?.note}</span>
+                        <span className="block truncate text-caption text-text-muted">{p?.note}</span>
                       </span>
                       {p && !p.configured && (
-                        <Badge tone="warning" className="shrink-0 text-[10px]">
+                        <Badge tone="warning" className="shrink-0 text-caption">
                           chưa có khoá
                         </Badge>
                       )}
@@ -139,7 +139,7 @@ export function ProviderOrderSettings({ canEdit }: { canEdit: boolean }) {
                   )
                 })}
               </ol>
-              <p className="text-[11px] text-text-muted">
+              <p className="text-caption text-text-muted">
                 {view.local_fallback
                   ? `Mọi bên lỗi → dự phòng: ${view.local_fallback.label} (ghi rõ lý do, hoàn phần chênh credit).`
                   : "Mọi bên lỗi → lượt tạo báo lỗi và hoàn credit."}

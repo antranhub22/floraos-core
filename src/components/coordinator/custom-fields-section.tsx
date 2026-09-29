@@ -41,7 +41,7 @@ export type EffectiveCustomFieldConfig = EffectiveFieldConfig
 const UNSUPPORTED_INPUT_TYPES = new Set(["IMAGE", "FILE", "STRUCTURED_ADDRESS", "ASSET_REF"])
 
 const inputClass =
-  "w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+  "w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-primary"
 
 /** Nạp cấu hình trường tự tạo đang hiệu lực (đã cộng ghi đè theo tổ chức) cho một thực thể. */
 export function useCustomFieldDefinitions(entity: "ORDER" | "PARTNER"): EffectiveCustomFieldConfig[] | null {
@@ -88,7 +88,7 @@ export function ConfiguredField({
     <div>
       <label className="font-bold text-text block mb-1">
         {def.label}
-        {requiredNow ? <span className="text-red-600"> *</span> : null}
+        {requiredNow ? <span className="text-danger"> *</span> : null}
       </label>
       {renderCustomFieldInput(def, value, onChange)}
     </div>
@@ -98,7 +98,7 @@ export function ConfiguredField({
 function renderCustomFieldInput(def: EffectiveCustomFieldConfig, value: unknown, onChange: (v: unknown) => void) {
   if (UNSUPPORTED_INPUT_TYPES.has(def.dataType)) {
     return (
-      <p className="text-[11px] text-text-muted italic">
+      <p className="text-caption text-text-muted italic">
         Kiểu {def.dataType} chưa có ô nhập ở form này — sửa qua API custom-fields.
       </p>
     )

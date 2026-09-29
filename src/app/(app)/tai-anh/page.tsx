@@ -1214,7 +1214,7 @@ export default function TaiAnhPage() {
         <TabActionHeader
           tabs={[
             { id: "m01a", label: "Nhận diện ảnh", icon: Camera },
-            { id: "m01b", label: "Nội dung bán hàng", icon: Sparkles, badge: "Kho đã duyệt", badgeTone: "neutral" },
+            { id: "m01b", label: "Nội dung bán hàng", icon: Sparkles, ...(finalizedPitches.length > 0 ? { badge: String(finalizedPitches.length), badgeTone: "neutral" as const } : {}) },
             { id: "m01c", label: "Thẻ chào hàng", icon: FileText, badge: "Sales Pitch", badgeTone: "accent" },
             { id: "storage", label: "Kho lưu trữ", icon: Folder },
           ]}
@@ -1272,14 +1272,17 @@ export default function TaiAnhPage() {
             <M01aGuidanceCard />
 
             <Card
+              role="button"
+              tabIndex={0}
               onClick={() => fileInputRef.current?.click()}
-              className="w-full max-w-md flex flex-col items-center gap-3 border-dashed border-2 border-border bg-surface-alt p-8 cursor-pointer hover:border-primary/50 transition-colors"
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click() } }}
+              className="w-full max-w-md flex flex-col items-center gap-3 border-dashed border-2 border-border bg-surface-alt p-8 cursor-pointer hover:border-primary/50 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface shadow-sm">
                 <Camera size={28} strokeWidth={1.5} className="text-primary" />
               </div>
-              <div className="text-[14px] font-semibold">Chụp ảnh hoặc chọn từ thiết bị</div>
-              <div className="text-[12px] text-text-muted text-center">
+              <div className="text-title-sm font-semibold">Chụp ảnh hoặc chọn từ thiết bị</div>
+              <div className="text-meta text-text-muted text-center">
                 Nhiều ảnh cùng lúc được — tối đa 10 ảnh (JPG, PNG, WebP)
               </div>
               <div className="flex flex-wrap gap-2.5 mt-1 justify-center">
@@ -1352,7 +1355,7 @@ export default function TaiAnhPage() {
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {assets.map((a) => (
-                    <label key={a.id} className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 cursor-pointer text-[13px]">
+                    <label key={a.id} className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 cursor-pointer text-body-sm">
                       <input
                         type="checkbox"
                         checked={selectedAssetIds.includes(a.id)}
@@ -1371,7 +1374,7 @@ export default function TaiAnhPage() {
             )}
 
             {loadingAssets && (
-              <div className="text-[13px] text-text-muted">Đang tải danh sách ảnh từ kho…</div>
+              <div className="text-body-sm text-text-muted">Đang tải danh sách ảnh từ kho…</div>
             )}
 
             {totalSelectedCount > 0 && (
@@ -1389,8 +1392,8 @@ export default function TaiAnhPage() {
         {phase === "confirm" && (
           <div className="flex flex-1 flex-col items-center pt-4 pb-12 gap-6">
             <div className="text-center">
-              <div className="text-[17px] font-extrabold">② Kích hoạt AI</div>
-              <div className="mt-1 text-[13px] text-text-muted">{totalSelectedCount} ảnh — 1 credit</div>
+              <div className="text-title font-extrabold">② Kích hoạt AI</div>
+              <div className="mt-1 text-body-sm text-text-muted">{totalSelectedCount} ảnh — 1 credit</div>
             </div>
             <Card className="w-full max-w-md p-4 divide-y divide-border">
               {localPhotos.map((p) => (
@@ -1400,10 +1403,11 @@ export default function TaiAnhPage() {
                     <img src={p.previewUrl} alt={p.name} className="h-full w-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium truncate">{p.name}</div>
-                    <div className="text-[11px] text-text-muted">Tải từ máy</div>
+                    <div className="text-body-sm font-medium truncate">{p.name}</div>
+                    <div className="text-caption text-text-muted">Tải từ máy</div>
                   </div>
                   <button
+              aria-label="Chụp ảnh"
                     type="button"
                     onClick={() => removeLocalPhoto(p.id)}
                     className="p-1 text-text-muted hover:text-danger transition-colors"
@@ -1420,8 +1424,8 @@ export default function TaiAnhPage() {
                       <Camera size={20} strokeWidth={1.5} className="text-text-muted" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-medium truncate">{a.name}</div>
-                      <div className="text-[11px] text-text-muted">Kho máy chủ</div>
+                      <div className="text-body-sm font-medium truncate">{a.name}</div>
+                      <div className="text-caption text-text-muted">Kho máy chủ</div>
                     </div>
                     <Badge tone="neutral">Sẵn có</Badge>
                   </div>
@@ -1447,8 +1451,8 @@ export default function TaiAnhPage() {
         {phase === "running" && (
           <div className="flex flex-1 flex-col items-center gap-5">
             <div className="text-center">
-              <div className="text-[17px] font-extrabold">③ Đang xử lý</div>
-              <div className="mt-1 text-[13px] text-text-muted">{jobPhase ?? "Đang chuẩn bị..."}</div>
+              <div className="text-title font-extrabold">③ Đang xử lý</div>
+              <div className="mt-1 text-body-sm text-text-muted">{jobPhase ?? "Đang chuẩn bị..."}</div>
             </div>
             <div className="w-full max-w-md">
               <FlowSteps
@@ -1500,8 +1504,8 @@ export default function TaiAnhPage() {
               <div className="w-full max-w-3xl border-t border-border pt-5">
                 <div className="flex items-center justify-between rounded-xl bg-primary/5 p-4">
                   <div>
-                    <div className="text-[14px] font-bold text-primary">⑤ Đã duyệt đặc điểm nhận diện</div>
-                    <div className="text-[12px] text-text-muted">Sản phẩm đã có trong kho ở dạng cấu trúc</div>
+                    <div className="text-title-sm font-bold text-primary">⑤ Đã duyệt đặc điểm nhận diện</div>
+                    <div className="text-meta text-text-muted">Sản phẩm đã có trong kho ở dạng cấu trúc</div>
                   </div>
                   <Button
                     onClick={goSuggest}
@@ -1511,7 +1515,7 @@ export default function TaiAnhPage() {
                     <ChevronRight size={16} strokeWidth={2.4} />
                   </Button>
                 </div>
-                <div className="mt-2 text-center text-[11.5px] text-text-muted">
+                <div className="mt-2 text-center text-caption text-text-muted">
                   Người dùng chọn đi tiếp — không tự chạy.
                 </div>
               </div>
@@ -1522,11 +1526,11 @@ export default function TaiAnhPage() {
                 <div className="flex items-center justify-between rounded-xl bg-success-bg border border-success/30 p-4">
                   <div>
                     <div className="text-body font-bold text-success">✓ Đã duyệt — Chuyển sang Sáng tạo nội dung</div>
-                    <div className="text-[12px] text-text-muted">Đặc điểm nhận diện đã duyệt → Creative Studio (Chặng 5-14)</div>
+                    <div className="text-meta text-text-muted">Đặc điểm nhận diện đã duyệt → Creative Studio (Chặng 5-14)</div>
                   </div>
                   <Button
                     onClick={handleGoCreativeStudio}
-                    className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white"
+                    className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white"
                   >
                     <Sparkles size={14} /> Tới Creative Studio
                   </Button>
@@ -1540,17 +1544,17 @@ export default function TaiAnhPage() {
         {phase === "suggest" && (
           <div className="flex flex-1 flex-col items-center justify-center gap-6">
             <div className="text-center">
-              <div className="text-[17px] font-extrabold">Gợi ý bước kế tiếp</div>
-              <div className="mt-1 text-[13px] text-text-muted">Sản phẩm đã có trong kho — M01b: Nội dung bán hàng</div>
+              <div className="text-title font-extrabold">Gợi ý bước kế tiếp</div>
+              <div className="mt-1 text-body-sm text-text-muted">Sản phẩm đã có trong kho — Nội dung bán hàng</div>
             </div>
             <Card className="w-full max-w-md p-6 text-center">
               <Sparkles size={32} strokeWidth={1.5} className="mx-auto mb-3 text-primary" />
-              <div className="text-[14px] font-semibold">Sinh nội dung bán hàng (M01b)</div>
-              <div className="mt-1 text-[12px] text-text-muted">
+              <div className="text-title-sm font-semibold">Sinh nội dung bán hàng</div>
+              <div className="mt-1 text-meta text-text-muted">
                 Đọc từ Product Master vừa duyệt → Tên, mô tả, thẻ, tone, dịp, phân khúc giá
               </div>
               <Button className="mt-5 w-full" onClick={goResult2}>
-                Tiếp tục sang M01b
+                Tiếp tục sang Nội dung bán hàng
               </Button>
             </Card>
             <Button variant="ghost" onClick={goResult1}>
@@ -1566,8 +1570,8 @@ export default function TaiAnhPage() {
               <Check size={40} strokeWidth={2} className="text-secondary" />
             </div>
             <div className="text-center">
-              <div className="text-[17px] font-extrabold">Đã lưu vào Kho</div>
-              <div className="mt-1 text-[13px] text-text-muted">Đặc điểm nhận diện đã được lưu vào Product Master</div>
+              <div className="text-title font-extrabold">Đã lưu vào Kho</div>
+              <div className="mt-1 text-body-sm text-text-muted">Đặc điểm nhận diện đã được lưu vào Product Master</div>
             </div>
             <div className="flex gap-3">
               <Button variant="secondary" onClick={() => setPhase("upload")}>
@@ -1590,7 +1594,9 @@ export default function TaiAnhPage() {
             <div className="text-center">
               <div className="text-title font-extrabold text-danger">Xử lý không thành công</div>
               {jobPhase && (
-                <div className="mt-1 text-body-sm font-semibold text-text">Bước gặp lỗi: {jobPhase}</div>
+                <div className="mt-1 text-body-sm font-semibold text-text">
+                  Bước gặp lỗi: {FLOW_M01.find((s) => s.key === jobPhase)?.label ?? jobPhase}
+                </div>
               )}
               <div className="mt-1 text-body-sm text-text-muted">{errorMsg ?? "Đã xảy ra lỗi"}</div>
             </div>
@@ -1613,8 +1619,8 @@ export default function TaiAnhPage() {
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary animate-pulse">
                   <Sparkles size={32} />
                 </div>
-                <div className="text-[16px] font-bold">Đang sinh dữ liệu bán hàng (AI)...</div>
-                <div className="text-[13px] text-text-muted max-w-sm text-center">
+                <div className="text-title font-bold">Đang sinh dữ liệu bán hàng (AI)...</div>
+                <div className="text-body-sm text-text-muted max-w-sm text-center">
                   AI đang tổng hợp tên gợi ý, mô tả sản phẩm, thẻ phân loại, tone màu, dịp và phân khúc giá.
                 </div>
               </div>
@@ -1680,8 +1686,8 @@ export default function TaiAnhPage() {
                   <Check size={40} strokeWidth={2} className="text-secondary" />
                 </div>
                 <div className="text-center">
-                  <div className="text-[17px] font-extrabold">Đã lưu vào Kho sản phẩm</div>
-                  <div className="mt-1 text-[13px] text-text-muted">Product Master + Thư viện nội dung bán hàng đã được cập nhật</div>
+                  <div className="text-title font-extrabold">Đã lưu vào Kho sản phẩm</div>
+                  <div className="mt-1 text-body-sm text-text-muted">Product Master + Thư viện nội dung bán hàng đã được cập nhật</div>
                 </div>
                 <div className="flex gap-3">
                   <Button
@@ -1757,7 +1763,7 @@ export default function TaiAnhPage() {
                 />
                 <div className="flex items-center justify-between border-t border-border pt-4 pb-8">
                   <Button variant="secondary" onClick={() => setActiveTab("m01b")}>
-                    ← Quay lại M01b (Dữ liệu bán hàng)
+                    ← Quay lại Nội dung bán hàng
                   </Button>
                 </div>
               </>

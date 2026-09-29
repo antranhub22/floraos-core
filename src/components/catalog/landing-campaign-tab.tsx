@@ -170,7 +170,7 @@ export function LandingCampaignTab({ products, onRefresh }: LandingCampaignTabPr
                 }`}
               >
                 <div className="text-xs font-bold text-text">{arch.name}</div>
-                <div className="text-[11px] text-text-muted mt-0.5">{arch.desc}</div>
+                <div className="text-caption text-text-muted mt-0.5">{arch.desc}</div>
               </button>
             ))}
           </div>
@@ -204,7 +204,7 @@ export function LandingCampaignTab({ products, onRefresh }: LandingCampaignTabPr
                   setSelectedProductIds(activeProducts.map((p) => p.id))
                 }
               }}
-              className="text-[11px] h-7"
+              className="text-caption h-7"
             >
               {selectedProductIds.length === activeProducts.length ? "Bỏ chọn" : "Chọn tất cả"}
             </Button>
@@ -215,6 +215,8 @@ export function LandingCampaignTab({ products, onRefresh }: LandingCampaignTabPr
               const isSelected = selectedProductIds.includes(p.id)
               return (
                 <div
+              role="button"
+              tabIndex={0}
                   key={p.id}
                   onClick={() => toggleProduct(p.id)}
                   className={`p-2.5 rounded-lg border text-xs cursor-pointer flex items-center gap-2 transition-colors ${

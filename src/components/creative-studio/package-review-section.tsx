@@ -271,11 +271,11 @@ export function PackageReviewSection(props: {
 
   return (
     <div className="space-y-5">
-      {error && <div className="rounded-lg border border-danger bg-danger-bg px-3 py-2 text-[12px] text-danger">{error}</div>}
+      {error && <div className="rounded-lg border border-danger bg-danger-bg px-3 py-2 text-meta text-danger">{error}</div>}
 
       {/* Kịch bản — để đối chiếu ảnh/video/lời thoại có kể cùng một câu chuyện */}
       {scenePlan && (
-        <section className="rounded-lg border border-border bg-surface-alt p-3 text-[12px] text-text-muted">
+        <section className="rounded-lg border border-border bg-surface-alt p-3 text-meta text-text-muted">
           <span className="font-bold text-text">Kịch bản bối cảnh: </span>
           {scenePlan.topicTitle} — {scenePlan.scenes.map((s) => `${s.sceneIndex}. ${s.title}`).join(" → ")}
         </section>
@@ -284,10 +284,10 @@ export function PackageReviewSection(props: {
       {/* ẢNH theo cảnh */}
       <section className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[12px] font-bold text-text flex items-center gap-1.5">
-            <ImageIcon size={13} /> Ảnh theo cảnh (Khu vực D) — {selectedByScene.size}/{scenes.length} cảnh trong gói
+          <div className="text-meta font-bold text-text flex items-center gap-1.5">
+            <ImageIcon size={13} /> Ảnh biến thể theo cảnh — {selectedByScene.size}/{scenes.length} cảnh trong gói
           </div>
-          <button type="button" className="text-[11.5px] text-primary hover:underline" onClick={() => setShowAll((v) => !v)}>
+          <button type="button" className="text-caption text-primary hover:underline" onClick={() => setShowAll((v) => !v)}>
             {showAll ? "Ẩn kho ảnh" : "Chọn ảnh khác từ kho"}
           </button>
         </div>
@@ -299,26 +299,26 @@ export function PackageReviewSection(props: {
             const hasNewer = !!(chosen && latest && latest.id !== chosen.id)
             return (
               <div key={sc.index} className="rounded-xl border border-border overflow-hidden bg-surface">
-                <div className="relative aspect-square bg-stone-50 flex items-center justify-center">
+                <div className="relative aspect-square bg-surface-alt flex items-center justify-center">
                   {shown?.url ? (
                     <img src={shown.url} alt={sc.title} className="h-full w-full object-contain" />
                   ) : (
-                    <span className="text-[12px] text-text-muted">Chưa có ảnh cảnh này</span>
+                    <span className="text-meta text-text-muted">Chưa có ảnh cảnh này</span>
                   )}
-                  <span className="absolute left-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[10.5px] font-bold text-white">
+                  <span className="absolute left-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-caption font-bold text-white">
                     Cảnh {sc.index}{sc.beat ? ` · ${sc.beat}` : ""}
                   </span>
                   {shown && !chosen && (
-                    <span className="absolute right-2 top-2 rounded bg-warning-bg px-1.5 py-0.5 text-[10px] text-warning">chưa trong gói</span>
+                    <span className="absolute right-2 top-2 rounded bg-warning-bg px-1.5 py-0.5 text-caption text-warning">chưa trong gói</span>
                   )}
                 </div>
-                <div className="p-3 space-y-1.5 text-[11.5px]">
+                <div className="p-3 space-y-1.5 text-caption">
                   <div className="font-bold text-text">{sc.title}</div>
                   {sc.setting && <div className="text-text-muted line-clamp-2">{sc.setting}</div>}
                   {shown && (
                     <div className="flex items-center gap-2">
                       <span className="text-text-muted">Lõi bó hoa: {pct(shown.identity_score)}</span>
-                      <Badge tone={shown.approval_state === "APPROVED" ? "success" : "neutral"} className="text-[10px]">
+                      <Badge tone={shown.approval_state === "APPROVED" ? "success" : "neutral"} className="text-caption">
                         {shown.approval_state === "APPROVED" ? "Đã duyệt (I5)" : "Chưa duyệt"}
                       </Badge>
                     </div>
@@ -331,7 +331,7 @@ export function PackageReviewSection(props: {
                   {!approved && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {shown && !chosen && (
-                        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => swapIn(sc.index, shown)}>
+                        <Button size="sm" variant="outline" className="h-7 text-caption" onClick={() => swapIn(sc.index, shown)}>
                           Đưa vào gói
                         </Button>
                       )}
@@ -339,24 +339,24 @@ export function PackageReviewSection(props: {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 text-[11px]"
+                          className="h-7 text-caption"
                           onClick={() => setSelectedVariants((prev) => prev.filter((x) => x !== chosen.id))}
                         >
                           Bỏ khỏi gói
                         </Button>
                       )}
                       {shown && shown.approval_state !== "APPROVED" && (
-                        <Button size="sm" className="h-7 text-[11px] gap-1" disabled={busy !== null} onClick={() => void approveImage(shown)}>
+                        <Button size="sm" className="h-7 text-caption gap-1" disabled={busy !== null} onClick={() => void approveImage(shown)}>
                           {busy === `img-${shown.id}` ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} Duyệt ảnh
                         </Button>
                       )}
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 text-[11px] gap-1"
+                        className="h-7 text-caption gap-1"
                         onClick={() => onRework("d", { focusScene: String(sc.index) })}
                       >
-                        <Wand2 size={11} /> Mở Khu vực D
+                        <Wand2 size={11} /> Mở Biến thể marketing
                       </Button>
                     </div>
                   )}
@@ -368,20 +368,20 @@ export function PackageReviewSection(props: {
                         disabled={!!sceneStage[sc.index]}
                         onChange={(e) => setInstructions((p) => ({ ...p, [sc.index]: e.target.value }))}
                         placeholder="Yêu cầu sửa cảnh, vd: đổi sang quầy lễ tân tông vàng ấm, thêm ánh nắng chiều"
-                        className="w-full rounded border border-border px-2 py-1 text-[11.5px]"
+                        className="w-full rounded border border-border px-2 py-1 text-caption"
                       />
                       <Button
                         size="sm"
-                        className="h-7 text-[11px] gap-1"
+                        className="h-7 text-caption gap-1"
                         disabled={!!sceneStage[sc.index]}
                         onClick={() => void runSceneRevise(sc.index, sc.plan as ScenePlanScene, shown?.aspect_ratio || "1:1")}
                       >
                         {sceneStage[sc.index] ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
                         Sửa cảnh ({sceneReviseCredit(sc.plan, scenePlan?.mode ?? mode)} credit)
                       </Button>
-                      {sceneStage[sc.index] && <div className="text-[11px] text-primary">{sceneStage[sc.index]}</div>}
-                      {sceneError[sc.index] && <div className="text-[11px] text-danger">{sceneError[sc.index]}</div>}
-                      {sceneNote[sc.index] && <div className="text-[11px] text-primary">{sceneNote[sc.index]}</div>}
+                      {sceneStage[sc.index] && <div className="text-caption text-primary">{sceneStage[sc.index]}</div>}
+                      {sceneError[sc.index] && <div className="text-caption text-danger">{sceneError[sc.index]}</div>}
+                      {sceneNote[sc.index] && <div className="text-caption text-primary">{sceneNote[sc.index]}</div>}
                     </div>
                   )}
                 </div>
@@ -403,7 +403,7 @@ export function PackageReviewSection(props: {
                   title={`Cảnh ${String(a.metadata?.scene_index ?? "?")} · ${pct(a.identity_score)}`}
                 >
                   {a.url && <img src={a.url} alt="" className="aspect-square w-full object-cover" />}
-                  <div className="text-[10px] p-1">Cảnh {String(a.metadata?.scene_index ?? "?")}</div>
+                  <div className="text-caption p-1">Cảnh {String(a.metadata?.scene_index ?? "?")}</div>
                 </button>
               )
             })}
@@ -413,17 +413,17 @@ export function PackageReviewSection(props: {
 
       {/* VIDEO */}
       <section className="space-y-2">
-        <div className="text-[12px] font-bold text-text flex items-center gap-1.5"><Film size={13} /> Video (Khu vực E)</div>
+        <div className="text-meta font-bold text-text flex items-center gap-1.5"><Film size={13} /> Video (Video)</div>
         {newerVideo && !approved && (
-          <button type="button" className="text-[12px] text-primary font-bold hover:underline" onClick={() => setVideoJobId(newerVideo)}>
-            ↻ Có video mới từ Khu vực E (job {newerVideo.slice(0, 8)}) — dùng video này
+          <button type="button" className="text-meta text-primary font-bold hover:underline" onClick={() => setVideoJobId(newerVideo)}>
+            ↻ Có video mới (job {newerVideo.slice(0, 8)}) — dùng video này
           </button>
         )}
         {videoJobId && !video && !videoDetail.error && (
-          <p className="text-[12px] text-text-muted flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Đang đọc video...</p>
+          <p className="text-meta text-text-muted flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Đang đọc video...</p>
         )}
-        {videoDetail.error && <p className="text-[12px] text-danger">Không đọc được video: {videoDetail.error}</p>}
-        {!videoJobId && <p className="text-[12px] text-text-muted">Chưa kèm video.</p>}
+        {videoDetail.error && <p className="text-meta text-danger">Không đọc được video: {videoDetail.error}</p>}
+        {!videoJobId && <p className="text-meta text-text-muted">Chưa kèm video.</p>}
         {video && (
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="md:col-span-2">
@@ -436,7 +436,7 @@ export function PackageReviewSection(props: {
                   className="w-full max-h-[460px] rounded-xl border border-border bg-black"
                 />
               ) : (
-                <div className="rounded-xl border border-dashed border-border p-6 text-center text-[12px] text-text-muted">
+                <div className="rounded-xl border border-dashed border-border p-6 text-center text-meta text-text-muted">
                   {video.stage === "RENDERING"
                     ? "Đang render..."
                     : video.stage === "FAILED"
@@ -445,14 +445,14 @@ export function PackageReviewSection(props: {
                 </div>
               )}
               {video.final_video_view_url && (
-                <a href={video.final_video_view_url} download className="mt-1 block text-center text-[11.5px] font-bold text-primary hover:underline">
+                <a href={video.final_video_view_url} download className="mt-1 block text-center text-caption font-bold text-primary hover:underline">
                   Tải video
                 </a>
               )}
             </div>
             <div className="md:col-span-3 space-y-2">
-              <div className="flex flex-wrap items-center gap-2 text-[12px]">
-                <Badge tone={video.video_approval === "APPROVED" ? "success" : "neutral"} className="text-[10.5px]">
+              <div className="flex flex-wrap items-center gap-2 text-meta">
+                <Badge tone={video.video_approval === "APPROVED" ? "success" : "neutral"} className="text-caption">
                   {video.video_approval === "APPROVED"
                     ? "Đã duyệt P4"
                     : video.stage === "RENDER_COMPLETED"
@@ -462,7 +462,7 @@ export function PackageReviewSection(props: {
                 {!approved && video.stage === "RENDER_COMPLETED" && video.video_approval !== "APPROVED" && (
                   <Button
                     size="sm"
-                    className="h-7 text-[11px] gap-1"
+                    className="h-7 text-caption gap-1"
                     disabled={busy !== null}
                     onClick={() =>
                       void act("video", async () => {
@@ -478,7 +478,7 @@ export function PackageReviewSection(props: {
               </div>
               {/* Storyboard của video — để đối chiếu phụ đề / lời thoại từng cảnh */}
               {video.scenes && video.scenes.length > 0 && (
-                <ol className="space-y-1.5 text-[11.5px]">
+                <ol className="space-y-1.5 text-caption">
                   {[...video.scenes]
                     .sort((x, y) => x.scene_index - y.scene_index)
                     .map((sc) => (
@@ -537,7 +537,7 @@ export function PackageReviewSection(props: {
             <Button
               size="sm"
               variant="outline"
-              className="h-8 text-[11px] gap-1"
+              className="h-8 text-caption gap-1"
               onClick={() => onRework("e", videoJobId ? { videoJobId } : {})}
             >
               <RefreshCw size={11} /> Sửa storyboard / render lại
@@ -548,16 +548,16 @@ export function PackageReviewSection(props: {
 
       {/* ÂM THANH */}
       <section className="space-y-2">
-        <div className="text-[12px] font-bold text-text flex items-center gap-1.5"><Headphones size={13} /> Âm thanh (Khu vực C)</div>
+        <div className="text-meta font-bold text-text flex items-center gap-1.5"><Headphones size={13} /> Âm thanh (Âm thanh)</div>
         {newerAudio && !approved && (
-          <button type="button" className="text-[12px] text-primary font-bold hover:underline" onClick={() => setAudioJobId(newerAudio)}>
-            ↻ Có bản phối mới từ Khu vực C (job {newerAudio.slice(0, 8)}) — dùng bản này
+          <button type="button" className="text-meta text-primary font-bold hover:underline" onClick={() => setAudioJobId(newerAudio)}>
+            ↻ Có bản phối mới (job {newerAudio.slice(0, 8)}) — dùng bản này
           </button>
         )}
         {audioDetail.data?.audio_url ? (
           <audio controls src={audioDetail.data.audio_url} className="w-full" />
         ) : audioJobId ? (
-          <p className="text-[12px] text-text-muted">
+          <p className="text-meta text-text-muted">
             {audioDetail.error
               ? `Không đọc được bản phối: ${audioDetail.error}`
               : audioDetail.data
@@ -567,12 +567,12 @@ export function PackageReviewSection(props: {
               : "Đang đọc bản phối..."}
           </p>
         ) : (
-          <p className="text-[12px] text-text-muted">Chưa kèm âm thanh.</p>
+          <p className="text-meta text-text-muted">Chưa kèm âm thanh.</p>
         )}
         {!approved && (
           <div className="flex flex-wrap gap-2">
             {audioJobId && (
-              <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAudioJobId(null)}>
+              <Button size="sm" variant="ghost" className="h-7 text-caption" onClick={() => setAudioJobId(null)}>
                 Bỏ khỏi gói
               </Button>
             )}
@@ -587,7 +587,7 @@ export function PackageReviewSection(props: {
       </section>
 
       {approved && (
-        <p className="text-[12px] text-success flex items-center gap-1.5">
+        <p className="text-meta text-success flex items-center gap-1.5">
           <CheckCircle2 size={13} /> Gói đã duyệt — không đổi tài sản được nữa.
         </p>
       )}

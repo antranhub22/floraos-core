@@ -29,28 +29,28 @@ export function ResearchStatusBanner({
     <div
       className={`relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 shadow-sm ${
         status.state === "running"
-          ? "border-rose-200 bg-gradient-to-r from-rose-50/90 via-pink-50/70 to-rose-50/90 text-rose-950"
+          ? "border-blush-200 bg-gradient-to-r from-blush-50/90 via-petal-50/70 to-blush-50/90 text-blush-950"
           : status.state === "completed"
-          ? "border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-emerald-50/90 text-emerald-950"
-          : "border-red-200 bg-red-50 text-red-950"
+          ? "border-mint-200 bg-gradient-to-r from-mint-50/90 via-lagoon-50/70 to-mint-50/90 text-mint-950"
+          : "border-alert-200 bg-alert-50 text-alert-950"
       }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-start sm:items-center gap-3">
           {status.state === "running" ? (
-            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-600 text-white shadow-sm">
+            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blush-600 text-white shadow-sm">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blush-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-blush-500"></span>
               </span>
             </div>
           ) : status.state === "completed" ? (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-mint-600 text-white shadow-sm">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           ) : (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-alert-600 text-white shadow-sm">
               <AlertCircle className="h-5 w-5" />
             </div>
           )}
@@ -63,16 +63,16 @@ export function ResearchStatusBanner({
                 {status.state === "error" && "Lỗi trong quá trình nghiên cứu"}
               </h3>
               {status.keyword && (
-                <span className="rounded-md bg-white/80 px-2 py-0.5 text-[11px] font-bold shadow-xs">
+                <span className="rounded-md bg-white/80 px-2 py-0.5 text-caption font-bold shadow-xs">
                   {status.keyword}
                 </span>
               )}
             </div>
-            <p className="text-[12px] opacity-90 leading-relaxed font-medium">
+            <p className="text-meta opacity-90 leading-relaxed font-medium">
               {status.message}
             </p>
             {status.details && (
-              <p className="text-[11px] opacity-75 italic">{status.details}</p>
+              <p className="text-caption opacity-75 italic">{status.details}</p>
             )}
           </div>
         </div>
@@ -82,7 +82,7 @@ export function ResearchStatusBanner({
             <button
               type="button"
               onClick={onViewResults}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-mint-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-mint-700 transition"
             >
               <ArrowDown className="h-3.5 w-3.5" />
               Xem kết quả ngay
@@ -90,8 +90,8 @@ export function ResearchStatusBanner({
           )}
 
           {status.state === "running" && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg bg-rose-100/80 px-2.5 py-1 text-[11px] font-bold text-rose-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-blush-100/80 px-2.5 py-1 text-caption font-bold text-blush-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-blush-600 animate-pulse" />
               Đang cào dữ liệu...
             </div>
           )}
@@ -100,7 +100,7 @@ export function ResearchStatusBanner({
             <button
               type="button"
               onClick={onDismiss}
-              className="rounded-lg p-1 text-stone-400 hover:text-stone-700 hover:bg-black/5 transition text-xs"
+              className="rounded-lg p-1 text-cool-400 hover:text-cool-700 hover:bg-black/5 transition text-xs"
             >
               ✕
             </button>
@@ -109,8 +109,8 @@ export function ResearchStatusBanner({
       </div>
 
       {status.state === "running" && (
-        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-rose-100">
-          <div className="h-full w-full bg-rose-600 rounded-full animate-pulse" />
+        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-blush-100">
+          <div className="h-full w-full bg-blush-600 rounded-full animate-pulse" />
         </div>
       )}
     </div>

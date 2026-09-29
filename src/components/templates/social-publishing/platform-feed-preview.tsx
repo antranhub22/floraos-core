@@ -113,8 +113,8 @@ export function PlatformFeedPreview({
         <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
           <Sparkles size={18} />
         </div>
-        <div className="text-[14px] font-bold text-text">Chưa chọn bài viết để xem trước</div>
-        <div className="text-[12px] text-text-muted mt-1 max-w-sm">
+        <div className="text-body font-bold text-text">Chưa chọn bài viết để xem trước</div>
+        <div className="text-meta text-text-muted mt-1 max-w-sm">
           Nhấp vào bất kỳ bài viết nào trong danh sách trên để xem trước giao diện hiển thị thực tế trên các nền tảng mạng xã hội.
         </div>
       </Card>
@@ -179,11 +179,11 @@ export function PlatformFeedPreview({
                   : "border-border bg-surface hover:border-primary/40 text-text"
               }`}
             >
-              <div className="text-[12.5px] font-bold flex items-center justify-center gap-1.5">
+              <div className="text-meta font-bold flex items-center justify-center gap-1.5">
                 {item.label}
-                {isSelected && <Badge tone="success" className="text-[9px] px-1 py-0">Đang xem</Badge>}
+                {isSelected && <Badge tone="success" className="text-caption px-1 py-0">Đang xem</Badge>}
               </div>
-              <div className="mt-0.5 text-[10.5px] text-text-muted">{item.desc}</div>
+              <div className="mt-0.5 text-caption text-text-muted">{item.desc}</div>
             </button>
           )
         })}
@@ -192,17 +192,17 @@ export function PlatformFeedPreview({
       {/* Khung mô phỏng hiển thị thực tế kèm ảnh theo template SSOT */}
       <div className="p-4 border border-border rounded-xl bg-surface/60 shadow-xs max-w-2xl mx-auto w-full space-y-2.5">
         <div className="flex items-center justify-between text-xs pb-2 border-b border-border/60">
-          <span className="text-[11.5px] font-bold text-text-muted flex items-center gap-1.5">
+          <span className="text-caption font-bold text-text-muted flex items-center gap-1.5">
             <Sparkles size={13} className="text-primary" />
             Mô phỏng hiển thị trên mạng xã hội
           </span>
           <div className="flex items-center gap-1.5">
             {post.is_mock_media && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning/30 flex items-center gap-1">
+              <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning/30 flex items-center gap-1">
                 <span>🖼️</span> Ảnh mẫu (Mock Media)
               </span>
             )}
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-alt text-text-muted border border-border">
+            <span className="text-caption font-semibold px-2 py-0.5 rounded-full bg-surface-alt text-text-muted border border-border">
               Giao diện mô phỏng (Mock Preview)
             </span>
           </div>

@@ -243,7 +243,7 @@ export default function PlatformConnectionsPage() {
       {/* Header Trang */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
             <Share2 size={13} className="text-primary" />
             Tích hợp Đa nền tảng Mạng xã hội
           </div>

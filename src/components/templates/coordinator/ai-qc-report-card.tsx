@@ -42,7 +42,7 @@ export function AIQCReportCard({
     <Card className="rounded-2xl border border-border bg-surface p-6 shadow-sm flex flex-col gap-5">
       <div className="flex items-center justify-between border-b border-dashed border-border pb-4">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted">
             Kiểm Định Chất Lượng Thành Phẩm (T14 / T15)
           </div>
           <h3 className="text-lg font-extrabold text-text">
@@ -57,8 +57,8 @@ export function AIQCReportCard({
             {isPassed ? "ĐẠT CHUẨN (PASS)" : isRework ? "YÊU CẦU CẮM LẠI" : "CHỜ KIỂM ĐỊNH"}
           </Badge>
           {aiScore !== null && aiScore !== undefined && (
-            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-extrabold text-xs">
-              <Sparkles size={13} className="text-emerald-600" />
+            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-mint-50 border border-mint-200 text-mint-800 font-extrabold text-xs">
+              <Sparkles size={13} className="text-mint-600" />
               <span>{aiScore}/100 Điểm</span>
             </div>
           )}
@@ -89,28 +89,28 @@ export function AIQCReportCard({
             <div className="rounded-xl border border-border bg-surface-alt p-3.5 space-y-2.5 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-text font-medium">Khớp loài hoa & số lượng cành (BOM):</span>
-                <span className="font-bold text-emerald-700 flex items-center gap-1">
+                <span className="font-bold text-mint-700 flex items-center gap-1">
                   <Check size={14} />
                   {checklist?.flowerMatchScore || 95}%
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text font-medium">Đúng tone màu & ánh sắc:</span>
-                <span className="font-bold text-emerald-700 flex items-center gap-1">
+                <span className="font-bold text-mint-700 flex items-center gap-1">
                   <Check size={14} />
                   {checklist?.colorToneMatch !== false ? "Đạt" : "Lệch tone"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text font-medium">Đúng chất liệu giấy gói & nơ:</span>
-                <span className="font-bold text-emerald-700 flex items-center gap-1">
+                <span className="font-bold text-mint-700 flex items-center gap-1">
                   <Check size={14} />
                   {checklist?.wrappingMatch !== false ? "Đạt" : "Sai loại giấy"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text font-medium">Thiệp chúc mừng đầy đủ, chính xác:</span>
-                <span className="font-bold text-emerald-700 flex items-center gap-1">
+                <span className="font-bold text-mint-700 flex items-center gap-1">
                   <Check size={14} />
                   {checklist?.cardMessageAccurate !== false ? "Đạt" : "Chưa có thiệp"}
                 </span>
@@ -126,9 +126,9 @@ export function AIQCReportCard({
           )}
 
           {reworkInstructions && (
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
-              <span className="font-bold block mb-1 flex items-center gap-1 text-amber-950">
-                <AlertTriangle size={14} className="text-amber-600" />
+            <div className="p-3.5 rounded-xl bg-sand-50 border border-sand-200 text-xs text-sand-900">
+              <span className="font-bold block mb-1 flex items-center gap-1 text-sand-950">
+                <AlertTriangle size={14} className="text-sand-600" />
                 Hướng dẫn chỉnh sửa / cắm lại:
               </span>
               <p>{reworkInstructions}</p>
@@ -139,13 +139,13 @@ export function AIQCReportCard({
 
       <div className="flex items-center justify-end gap-3 pt-3 border-t border-dashed border-border">
         {onRequestRework && (
-          <Button variant="outline" size="sm" onClick={onRequestRework} className="gap-1.5 text-amber-800 border-amber-300 hover:bg-amber-50">
+          <Button variant="outline" size="sm" onClick={onRequestRework} className="gap-1.5 text-sand-800 border-sand-300 hover:bg-sand-50">
             <RotateCcw size={14} />
             <span>Yêu cầu sửa / Cắm lại</span>
           </Button>
         )}
         {onApprove && (
-          <Button size="sm" onClick={onApprove} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-bold">
+          <Button size="sm" onClick={onApprove} className="bg-mint-600 hover:bg-mint-700 text-white gap-1.5 font-bold">
             <CheckCircle2 size={15} />
             <span>Chốt Duyệt QC & Bàn Giao Shipper</span>
           </Button>

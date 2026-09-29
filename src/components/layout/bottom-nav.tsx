@@ -79,7 +79,7 @@ export function BottomNav() {
         )}
       >
         <Home size={20} strokeWidth={1.9} />
-        <span className="text-[10.5px]">Trang chủ</span>
+        <span className="text-caption">Trang chủ</span>
       </Link>
 
       {/* 2. Ô thứ hai theo vai */}
@@ -92,7 +92,7 @@ export function BottomNav() {
         )}
       >
         <Slot2Icon size={20} strokeWidth={1.9} />
-        <span className="text-[10.5px] truncate max-w-[64px]">
+        <span className="text-caption truncate max-w-[64px]">
           {slot2.mobileLabel || slot2.label}
         </span>
       </Link>
@@ -125,7 +125,7 @@ export function BottomNav() {
             <CheckCircle2 size={20} strokeWidth={1.9} />
             <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
           </div>
-          <span className="text-[10.5px]">Duyệt</span>
+          <span className="text-caption">Duyệt</span>
         </Link>
       ) : (
         <Link
@@ -137,7 +137,7 @@ export function BottomNav() {
           )}
         >
           <Clock size={20} strokeWidth={1.9} />
-          <span className="text-[10.5px]">Job của tôi</span>
+          <span className="text-caption">Job của tôi</span>
         </Link>
       )}
 
@@ -151,7 +151,7 @@ export function BottomNav() {
         )}
       >
         <Plus size={20} strokeWidth={1.9} />
-        <span className="text-[10.5px]">Thêm</span>
+        <span className="text-caption">Thêm</span>
       </Link>
     </nav>
   )

@@ -18,14 +18,14 @@ export default function DieuPhoiPage() {
       {/* Top Header with Standardized Tab Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-danger/15 text-danger flex items-center justify-center shrink-0">
             <Radio size={22} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-extrabold text-text">Điều Phối Đơn Hàng</h1>
-              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold">
-                Chức năng 12
+              <span className="px-2 py-0.5 rounded-full bg-warning/15 text-warning text-caption font-bold">
+                Đang triển khai
               </span>
             </div>
             <p className="text-xs text-text-muted mt-0.5">
@@ -48,7 +48,7 @@ export default function DieuPhoiPage() {
           <Button
             size="sm"
             onClick={() => setIsCreateOpen(true)}
-            className="bg-red-600 hover:bg-red-700 text-white text-xs gap-1.5 h-9 font-bold shadow-sm"
+            className="bg-primary hover:bg-primary-dark text-white text-xs gap-1.5 h-9 font-bold shadow-sm"
           >
             <Plus size={14} />
             <span>Tiếp nhận đơn mới</span>

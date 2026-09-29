@@ -118,19 +118,19 @@ export function PartnerAssignmentModal({
     }
   }
 
-  const input = "px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+  const input = "px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-surface border border-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
         <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-alert-100 text-alert-700 flex items-center justify-center">
               <Users size={18} />
             </div>
             <div>
               <h2 className="text-base font-extrabold text-text">Phân Công Đối Tác / Thợ Cắm (Template T06)</h2>
-              <p className="text-[11px] text-text-muted">
+              <p className="text-caption text-text-muted">
                 Đơn #{orderCode}: {recipeTitle} · Hẹn giao: {deliveryTargetTime}
               </p>
             </div>
@@ -142,7 +142,7 @@ export function PartnerAssignmentModal({
 
         <div className="p-6 flex flex-col gap-4 text-xs">
           <div className="p-3.5 rounded-xl bg-surface-alt border border-border flex items-start gap-2.5">
-            <MapPin size={15} className="text-red-600 shrink-0 mt-0.5" />
+            <MapPin size={15} className="text-alert-600 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold text-text block">Địa chỉ giao:</span>
               <span className="text-text font-semibold">{addressText(deliveryAddress) || "—"}</span>
@@ -157,7 +157,7 @@ export function PartnerAssignmentModal({
           </div>
 
           {showAdd && (
-            <div className="p-3 rounded-xl border border-dashed border-red-300 bg-red-50/40 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="p-3 rounded-xl border border-dashed border-alert-300 bg-alert-50/40 grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input className={input} placeholder="Mã (vd XUONG-BD)" value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} />
               <input className={input} placeholder="Tên xưởng / thợ" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
               <input className={input} placeholder="Số điện thoại" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} />
@@ -172,7 +172,7 @@ export function PartnerAssignmentModal({
                 onChange={(e) => setDraft({ ...draft, capacityDaily: Number(e.target.value) })}
               />
               <div className="sm:col-span-2 flex justify-end">
-                <Button type="button" size="sm" onClick={handleCreatePartner} className="bg-red-600 hover:bg-red-700 text-white">
+                <Button type="button" variant="secondary" size="sm" onClick={handleCreatePartner} className="bg-alert-600 hover:bg-alert-700 text-white">
                   Lưu đối tác
                 </Button>
               </div>
@@ -191,7 +191,7 @@ export function PartnerAssignmentModal({
                   <label
                     key={p.id}
                     className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
-                      isSelected ? "border-red-500 bg-red-50/40 ring-2 ring-red-500/20" : "border-border bg-surface hover:border-red-300"
+                      isSelected ? "border-alert-500 bg-alert-50/40 ring-2 ring-alert-500/20" : "border-border bg-surface hover:border-alert-300"
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -200,15 +200,15 @@ export function PartnerAssignmentModal({
                         name="partner"
                         checked={isSelected}
                         onChange={() => setSelectedPartnerId(p.id)}
-                        className="text-red-600 focus:ring-red-500"
+                        className="text-alert-600 focus:ring-alert-500"
                       />
                       <span className="font-extrabold text-text text-sm">{p.name}</span>
-                      <Badge tone={p.tier === "STANDARD" ? "neutral" : "warning"} className="text-[10px]">
+                      <Badge tone={p.tier === "STANDARD" ? "neutral" : "warning"} className="text-caption">
                         {p.tier}
                       </Badge>
-                      {p.id === currentPartnerId && <Badge tone="success" className="text-[10px]">Đang giữ đơn</Badge>}
+                      {p.id === currentPartnerId && <Badge tone="success" className="text-caption">Đang giữ đơn</Badge>}
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-text-muted text-[11.5px] pl-6">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-text-muted text-caption pl-6">
                       <span>{p.code}</span>
                       <span>{p.phone}</span>
                       {(p.district || p.province) && (
@@ -218,7 +218,7 @@ export function PartnerAssignmentModal({
                         </span>
                       )}
                       <span className="flex items-center gap-1">
-                        <Star size={12} className="text-amber-500 fill-amber-500" />
+                        <Star size={12} className="text-sand-500 fill-sand-500" />
                         {p.rating.toFixed(1)}/5
                       </span>
                       <span>Công suất {p.capacityDaily} đơn/ngày</span>
@@ -241,7 +241,7 @@ export function PartnerAssignmentModal({
           </div>
 
           {error && (
-            <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 font-semibold flex items-start gap-2">
+            <div role="alert" className="p-3 rounded-xl border border-alert-300 bg-alert-50 text-alert-800 font-semibold flex items-start gap-2">
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -261,7 +261,7 @@ export function PartnerAssignmentModal({
             size="sm"
             disabled={!selectedPartnerId || submitting}
             onClick={() => handleConfirm(false)}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5"
+            className="bg-alert-600 hover:bg-alert-700 text-white font-bold gap-1.5"
           >
             <CheckCircle2 size={15} />
             <span>{submitting ? "Đang giao việc…" : "Xác Nhận Giao Việc & Phát Hành Phiếu T07"}</span>

@@ -14,9 +14,19 @@ describe("danh mục 15 vai trải nghiệm (03b-role-ux)", () => {
     expect(new Set(ROLE_UX_CATALOG.map((r) => r.key)).size).toBe(15)
   })
 
-  it("đúng tám vai đang dùng được", () => {
+  it("đúng chín vai đang dùng được", () => {
     const available = ROLE_UX_CATALOG.filter((r) => r.status === "AVAILABLE").map((r) => r.key)
-    expect(available.sort()).toEqual(["coordinator", "crm", "lead_marketing", "marketing", "platform_admin", "product_manager", "sales", "store_manager"])
+    expect(available.sort()).toEqual([
+      "coordinator",
+      "crm",
+      "customer_service",
+      "lead_marketing",
+      "marketing",
+      "platform_admin",
+      "product_manager",
+      "sales",
+      "store_manager",
+    ])
   })
 
   it("vai marketing (CHAIN) AVAILABLE nhưng chưa gắn vai phân quyền (nợ #165)", () => {
@@ -54,13 +64,14 @@ describe("danh mục 15 vai trải nghiệm (03b-role-ux)", () => {
 })
 
 describe("resolveRoleUx", () => {
-  it("ánh xạ sáu vai hệ thống sang khuôn tương ứng", () => {
+  it("ánh xạ bảy vai hệ thống sang khuôn tương ứng", () => {
     expect(resolveRoleUx("dieu_hanh")?.key).toBe("store_manager")
     expect(resolveRoleUx("sale")?.key).toBe("sales")
     expect(resolveRoleUx("dieu_phoi")?.key).toBe("coordinator")
     expect(resolveRoleUx("product_manager")?.key).toBe("product_manager")
     expect(resolveRoleUx("marketing")?.key).toBe("lead_marketing")
     expect(resolveRoleUx("crm")?.key).toBe("crm")
+    expect(resolveRoleUx("customer_service")?.key).toBe("customer_service")
   })
 
   it("tổ chức CHAIN tạm thời vẫn dùng khuôn store_manager cho dieu_hanh (nợ #163)", () => {

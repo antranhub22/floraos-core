@@ -77,12 +77,12 @@ describe("không khoá ghi toàn cục", () => {
     ])
 
     const roles = new RoleRepository()
-    for (const key of ["dieu_hanh", "dieu_phoi", "sale", "product_manager", "marketing", "crm", "experience_user"]) {
+    for (const key of ["dieu_hanh", "dieu_phoi", "sale", "product_manager", "marketing", "crm", "customer_service", "experience_user"]) {
       expect(await roles.findSystemRoleByKey(key)).not.toBeNull()
     }
 
     const all = await prisma.roles.findMany({ where: { organization_id: null } })
-    expect(all).toHaveLength(7)
+    expect(all).toHaveLength(8)
   })
 
   it("hai người đăng ký cùng lúc không giành nhau slug", async () => {

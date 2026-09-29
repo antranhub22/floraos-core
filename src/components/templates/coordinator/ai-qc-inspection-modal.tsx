@@ -63,7 +63,7 @@ export function AiQcInspectionModal({ isOpen, order, onClose, onSubmit }: AiQcIn
           // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt={title} className="w-full h-full object-cover" />
         ) : (
-          <span className="text-text-muted text-[11px] p-4 text-center">{empty}</span>
+          <span className="text-text-muted text-caption p-4 text-center">{empty}</span>
         )}
       </div>
     </div>
@@ -74,17 +74,17 @@ export function AiQcInspectionModal({ isOpen, order, onClose, onSubmit }: AiQcIn
       <div className="bg-surface border border-border rounded-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto shadow-2xl flex flex-col">
         <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-mint-100 text-mint-800 flex items-center justify-center">
               <ShieldCheck size={18} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-black uppercase border border-zinc-200">
+                <span className="px-2 py-0.5 rounded bg-cool-100 text-cool-700 text-caption font-black uppercase border border-cool-200">
                   CHẶNG P5 • KIỂM ĐỊNH QC
                 </span>
                 <h3 className="text-base font-extrabold text-text">Kiểm Định Chất Lượng (T14)</h3>
               </div>
-              <p className="text-[11px] text-text-muted">
+              <p className="text-caption text-text-muted">
                 Đơn #{order.orderCode} • Đối chiếu ảnh thợ cắm với ảnh mẫu chuẩn đầu vào
               </p>
             </div>
@@ -100,7 +100,7 @@ export function AiQcInspectionModal({ isOpen, order, onClose, onSubmit }: AiQcIn
             {imageBox("🌸 Ảnh thành phẩm thợ gửi", finished, "Chưa có ảnh thành phẩm — không kiểm được")}
           </div>
 
-          <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/60 text-blue-900 flex items-start gap-2">
+          <div className="p-3 rounded-xl border border-ocean-200 bg-ocean-50/60 text-ocean-900 flex items-start gap-2">
             <Info size={14} className="shrink-0 mt-0.5" />
             <span>
               Chấm điểm AI tự động chưa bật cho điều phối — kết luận dưới đây là của người kiểm và được ghi vào hồ sơ QC
@@ -129,12 +129,12 @@ export function AiQcInspectionModal({ isOpen, order, onClose, onSubmit }: AiQcIn
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="Ví dụ: nơ lệch màu, thiếu 2 cành hồng chủ đạo…"
-              className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+              className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
             />
           </div>
 
           {error && (
-            <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 font-semibold">
+            <div role="alert" className="p-3 rounded-xl border border-alert-300 bg-alert-50 text-alert-800 font-semibold">
               {error}
             </div>
           )}
@@ -144,7 +144,7 @@ export function AiQcInspectionModal({ isOpen, order, onClose, onSubmit }: AiQcIn
           <Button variant="outline" size="sm" onClick={onClose}>
             Đóng
           </Button>
-          <Button variant="outline" size="sm" disabled={busy || !finished} onClick={() => decide("REJECTED")} className="gap-1.5 text-red-700 border-red-300">
+          <Button variant="outline" size="sm" disabled={busy || !finished} onClick={() => decide("REJECTED")} className="gap-1.5 text-alert-700 border-alert-300">
             <Ban size={14} /> Loại — mở sự cố
           </Button>
           <Button variant="outline" size="sm" disabled={busy || !finished} onClick={() => decide("REWORK_REQUESTED")} className="gap-1.5">
@@ -155,7 +155,7 @@ export function AiQcInspectionModal({ isOpen, order, onClose, onSubmit }: AiQcIn
             disabled={busy || !finished || !allChecked}
             onClick={() => decide("PASSED")}
             title={allChecked ? undefined : "Tích đủ danh mục kiểm trước khi duyệt đạt"}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5"
+            className="bg-mint-600 hover:bg-mint-700 text-white font-bold gap-1.5"
           >
             <CheckCircle2 size={14} /> Đạt — chuyển giao hàng (P6)
           </Button>

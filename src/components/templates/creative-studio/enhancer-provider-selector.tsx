@@ -98,7 +98,7 @@ export function EnhancerProviderSelector({
           <Sparkles size={14} className="text-primary" />
           <span>Phương thức & Nhà cung cấp AI (Provider)</span>
         </div>
-        <span className="text-[11px] text-text-muted">
+        <span className="text-caption text-text-muted">
           Mặc định: <strong className="text-primary font-semibold">Theo thứ tự ưu tiên của tiệm</strong>
         </span>
       </div>
@@ -129,19 +129,19 @@ export function EnhancerProviderSelector({
                     className="accent-primary h-3.5 w-3.5 flex-shrink-0"
                   />
                   <Icon size={16} className={isSelected ? "text-primary flex-shrink-0" : "text-text-muted flex-shrink-0"} />
-                  <span className="text-[13px] font-bold text-text truncate">
+                  <span className="text-body-sm font-bold text-text truncate">
                     {provider.name}
                   </span>
                 </div>
-                <Badge tone={provider.tone} className="flex-shrink-0 text-[10px] px-2 py-0.5">
+                <Badge tone={provider.tone} className="flex-shrink-0 text-caption px-2 py-0.5">
                   {provider.badge}
                 </Badge>
               </div>
 
-              <div className="text-[11px] leading-relaxed text-text-muted mt-2 pl-5.5">
+              <div className="text-caption leading-relaxed text-text-muted mt-2 pl-5.5">
                 {provider.desc}
               </div>
-              <div className="text-[11px] font-semibold text-text mt-1 pl-5.5">
+              <div className="text-caption font-semibold text-text mt-1 pl-5.5">
                 {costCreditForFeature(optimizationPriceKey({ enhancer_provider: provider.id }))} credit/lượt
                 {optimizationPriceKey({ enhancer_provider: provider.id }) === "media.optimize.cloud" &&
                   " · nhà cung cấp lỗi thì hoàn phần chênh"}

@@ -107,7 +107,7 @@ export default function CRMPage() {
         <FeatureGuidanceCard
           badgeLabel="HƯỚNG DẪN CRM KHÁCH HÀNG"
           badgeIcon={Users}
-          title="Quy trình Quản lý Khách hàng & Tiếp thị Chăm sóc Chuẩn SSOT"
+          title="Quy trình Quản lý Khách hàng & Tiếp thị Chăm sóc"
           description="Lưu trữ hồ sơ khách hàng toàn diện từ lịch sử đơn hàng, tự động phân hạng RFM (VIP/Vàng/Bạc/Đồng) và bảo vệ tuyệt đối quyền riêng tư khi gửi tin tiếp thị (Consent Engine)."
           tips={[
             { icon: "💎", text: "Phân tầng tự động: Dựa trên tổng chi tiêu và số đơn hàng thật của khách" },

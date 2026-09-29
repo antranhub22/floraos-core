@@ -44,7 +44,7 @@
 | `manager` | Quản lý vận hành | Chuỗi | Operations Command Center | Operations Command Center | — | Đang phát triển (#165) |
 | `coordinator` | Điều phối | Chuỗi | Control Tower & Exception Management (Real-time Operations) | `/` chuyển sang `/dieu-phoi` | `dieu_phoi` | **Đang dùng được** *(nợ #166)* |
 | `quality_control` | Kiểm soát chất lượng | Chuỗi | Quality Control & Exception | Quality Exception Board | — | Đang phát triển (#165) |
-| `customer_service` | Chăm sóc khách hàng (CSKH) | Chuỗi | Customer Context-first (Conversation-first) | Conversation Workspace | — | Đang phát triển (#165) |
+| `customer_service` | Chăm sóc khách hàng (CSKH) | Chuỗi | Customer Context-first (Conversation-first) | Conversation Workspace | `customer_service` | **Đang dùng được** (T6.4) |
 | `partner_manager` | Quản lý đối tác | Chuỗi | Relationship Management (Partner Growth, Partner Performance) | Partner Portfolio | — | Đang phát triển (#165) |
 | `marketing` | Marketing | Chuỗi | Creative Workspace | `/`, dùng `MarketingWorkspace` | *(CHAIN cần vai phân quyền riêng — nợ #165)* | **Đang dùng được** (T6.2) |
 | `product_manager` | Quản lý sản phẩm | Chuỗi | Product-centric (Catalog-centric) | `/`, dùng `ProductManagerWorkspace` | `product_manager` | **Đang dùng được** (T6.1) |
@@ -92,12 +92,19 @@ Mỗi vai theo khuôn: **câu hỏi chính → P0 (thấy ngay) → P1 (thấy k
 - **Hành động:** Thêm sản phẩm (`L2`), Tra cứu Catalog (`L1`), Quy tắc giá (`L5`).
 - **Hiện trạng:** Tuyến `/` với component `ProductManagerWorkspace` (`src/components/dashboard/product-manager-workspace.tsx`), liên kết sâu tới `/san-pham`, `/catalog`, `/gia`.
 
+### 4.6 `customer_service` — Conversation Workspace *(T6.4)*
+- **Câu hỏi chính:** Khách này đang cần gì ngay lúc này?
+- **P0:** Hội thoại đang chờ (ACTIVE), số dịp kỷ niệm cần liên hệ hôm nay/ngày mai · **P1:** Dịp kỷ niệm 7 ngày tới · **P2:** Tác vụ nhanh Hội thoại & Khách hàng.
+- **Hành động:** Phản hồi, Giải quyết, Theo dõi.
+- **Hiện trạng:** Tuyến `/` với component `CustomerServiceWorkspace` (`src/components/dashboard/customer-service-workspace.tsx`); nơi vào `/hoi-thoai`.
+- **Còn thiếu (nợ #165):** Pipeline CHAIN đa-cửa-hàng, phân công nội bộ, báo cáo KPI CSKH.
+
 ## 5. Điều hướng theo vai (SSOT `nav-model.ts`)
 
 Mọi logic gom nhóm và sắp xếp điều hướng theo vai được tập trung tại `src/components/layout/nav-model.ts` (Screen Contract `docs/dac-ta/screen-contracts/_dieu-huong.md`).
 
 - **Desktop:** hàm `buildNav(can, roleUx)` sinh nhóm **"Việc chính · <tên vai>"** đứng đầu thanh bên, gồm Trang chủ (`/`) và các mục trong `navPriority` của vai. Các mục này **rời khỏi nhóm gốc**, không hiện hai lần. Năm nhóm chức năng còn lại theo chuẩn K5 (`ban-hang`, `san-pham`, `noi-dung`, `van-hanh`, `thiet-lap`) tự động lọc bỏ các mục đã ghim và ẩn các mục người dùng thiếu năng lực.
-- **Điện thoại:** hàm `mobileSecondSlot(can, roleUx)` chọn ô thứ hai của thanh dưới là mục đầu tiên trong `navPriority` chưa có trên thanh: Quản lý cửa hàng thấy **Đơn hàng**, Bán hàng thấy **Khách hàng**, Điều phối thấy **Điều phối**, Quản lý sản phẩm thấy **Sản phẩm**, Marketing thấy **Creative Studio**. Vai chưa có khuôn thấy **Sản phẩm** như cũ.
+- **Điện thoại:** hàm `mobileSecondSlot(can, roleUx)` chọn ô thứ hai của thanh dưới là mục đầu tiên trong `navPriority` chưa có trên thanh: Quản lý cửa hàng thấy **Đơn hàng**, Bán hàng thấy **Khách hàng**, Điều phối thấy **Điều phối**, Quản lý sản phẩm thấy **Sản phẩm**, Marketing thấy **Creative Studio**, CSKH thấy **Hội thoại**. Vai chưa có khuôn thấy **Sản phẩm** như cũ.
 - Nút giữa mobile gác năng lực `H1` (quét ảnh): có `H1` → **Tải ảnh** (`/tai-anh`), không có `H1` → Việc chính đầu tiên của vai hoặc **Sản phẩm**.
 - Vai chỉ quyết định **thứ tự**. Quyền hiển thị và thao tác được gác chặt chẽ bởi mã năng lực qua `can(code)` và máy chủ kiểm soát lại ở mọi endpoint.
 
@@ -108,6 +115,7 @@ Mọi logic gom nhóm và sắp xếp điều hướng theo vai được tập t
 | `coordinator` | `/dieu-phoi` · `/don-hang` · `/san-pham` · `/khach-hang` | `/dieu-phoi` (Control Tower) |
 | `product_manager` | `/san-pham` · `/catalog` · `/gia` · `/kho-templates` | `/` (Product Workspace) |
 | `lead_marketing` / `marketing` | `/creative-studio` · `/noi-dung` · `/lich-dang` · `/market-intelligence` | `/` (Creative Workspace) |
+| `customer_service` | `/hoi-thoai` · `/khach-hang` · `/don-hang` | `/hoi-thoai` → `/` (Conversation Workspace) |
 
 ## 6. Vai chưa có và mục chưa có màn: hiện nhưng vô hiệu
 

@@ -251,13 +251,13 @@ export function AudioRevisePanel(props: {
 
   if (!open) {
     return (
-      <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => void openPanel()}>
+      <Button size="sm" variant="outline" className="h-7 text-caption gap-1" onClick={() => void openPanel()}>
         <Mic size={11} /> Sửa âm thanh
       </Button>
     )
   }
   return (
-    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 text-[12px]">
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 text-meta">
       <div className="font-bold text-text">
         Sửa lời thoại / nhạc rồi phối lại ({credit === 0 ? "miễn phí" : `${credit} credit`}
         {isClone ? " · giọng nhân bản" : ""})
@@ -281,7 +281,7 @@ export function AudioRevisePanel(props: {
             <option key={m.id} value={m.id}>{m.label}</option>
           ))}
         </select>
-        <Button size="sm" className="h-7 text-[11px] gap-1" disabled={stage !== null} onClick={() => void run()}>
+        <Button size="sm" className="h-7 text-caption gap-1" disabled={stage !== null} onClick={() => void run()}>
           {stage ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />} Sửa & phối lại
         </Button>
         <button type="button" className="text-text-muted underline" disabled={stage !== null} onClick={() => setOpen(false)}>
@@ -383,13 +383,13 @@ export function VideoRevisePanel(props: {
 
   if (!open) {
     return (
-      <Button size="sm" variant="outline" className="h-8 text-[11px] gap-1" onClick={() => setOpen(true)}>
+      <Button size="sm" variant="outline" className="h-8 text-caption gap-1" onClick={() => setOpen(true)}>
         <Wand2 size={11} /> Sửa video
       </Button>
     )
   }
   return (
-    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3 text-[12px]">
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3 text-meta">
       <div className="flex items-center justify-between">
         <div className="font-bold text-text">Sửa storyboard → tạo bản sửa → duyệt kịch bản (P3) → render ({renderCredit} credit)</div>
         <button type="button" className="text-text-muted underline" onClick={() => setOpen(false)}>Đóng</button>
@@ -446,7 +446,7 @@ export function VideoRevisePanel(props: {
                 <option key={v.code} value={v.code}>{v.label}</option>
               ))}
             </select>
-            <Button size="sm" className="h-7 text-[11px] gap-1" disabled={creating} onClick={() => void create()}>
+            <Button size="sm" className="h-7 text-caption gap-1" disabled={creating} onClick={() => void create()}>
               {creating ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />} Tạo bản sửa
             </Button>
           </div>

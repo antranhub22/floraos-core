@@ -354,8 +354,8 @@ export default function SocialPublishingPage() {
       {/* Top Header */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 py-3.5">
         <div>
-          <div className="text-[11px] font-bold tracking-wider text-text-muted uppercase">Xuất bản & Lịch đăng bài</div>
-          <div className="text-[17px] font-black text-primary flex items-center gap-2">
+          <div className="text-caption font-bold tracking-wider text-text-muted uppercase">Xuất bản & Lịch đăng bài</div>
+          <div className="text-title font-black text-primary flex items-center gap-2">
             <Share2 size={18} />
             Social Publishing — Xuất Bản Đa Kênh
           </div>
@@ -419,7 +419,7 @@ export default function SocialPublishingPage() {
         </div>
 
         {notice && (
-          <div className="rounded-xl bg-success-bg border border-success/30 px-4 py-2.5 text-[13px] font-semibold text-secondary flex items-center gap-2">
+          <div className="rounded-xl bg-success-bg border border-success/30 px-4 py-2.5 text-body-sm font-semibold text-secondary flex items-center gap-2">
             <CheckCircle2 size={16} className="text-success" />
             {notice}
           </div>
@@ -464,7 +464,7 @@ export default function SocialPublishingPage() {
 
             {/* Khung Xem trước nền tảng của bài được chọn */}
             <div className="border-t border-border pt-5">
-              <div className="text-[14px] font-bold text-text mb-3 flex items-center justify-between">
+              <div className="text-body font-bold text-text mb-3 flex items-center justify-between">
                 <span>Xem trước nền tảng thực tế</span>
                 {selectedPost && (
                   <span className="text-xs font-normal text-text-muted">

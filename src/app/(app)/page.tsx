@@ -23,6 +23,7 @@ import { SalesWorkspace } from "@/components/dashboard/sales-workspace"
 import { ProductManagerWorkspace } from "@/components/dashboard/product-manager-workspace"
 import { MarketingWorkspace } from "@/components/dashboard/marketing-workspace"
 import { CrmWorkspace } from "@/components/dashboard/crm-workspace"
+import { CustomerServiceWorkspace } from "@/components/dashboard/customer-service-workspace"
 import { StoreManagerDashboard } from "@/components/dashboard/store-manager-dashboard"
 import { resolveRoleUx } from "@/modules/organization/domain/role-ux-catalog"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
@@ -53,6 +54,8 @@ export default async function DashboardPage() {
       return <MarketingWorkspace />
     case "CRM_WORKSPACE":
       return <CrmWorkspace />
+    case "CUSTOMER_SERVICE_WORKSPACE":
+      return <CustomerServiceWorkspace />
     default:
       return <StoreManagerDashboard />
   }

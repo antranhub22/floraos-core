@@ -107,7 +107,7 @@ export function PublicStorefrontChatWidget({
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 p-3.5 text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105"
+            className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-primary via-primary/95 to-primary-dark p-3.5 text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105"
             aria-label="Tư vấn đặt hoa"
           >
             <MessageCircle className="h-6 w-6 animate-pulse" />
@@ -132,10 +132,11 @@ export function PublicStorefrontChatWidget({
                   Trợ Lý {shopName}
                   <span className="inline-block h-2 w-2 rounded-full bg-success" />
                 </div>
-                <div className="text-[10px] text-text-muted">Tư vấn mẫu hoa & Báo giá trực tuyến</div>
+                <div className="text-caption text-text-muted">Tư vấn mẫu hoa & Báo giá trực tuyến</div>
               </div>
             </div>
             <button
+              aria-label="Đóng"
               onClick={() => setIsOpen(false)}
               className="rounded-lg p-1.5 text-muted-foreground hover:bg-black/5"
             >
@@ -152,7 +153,7 @@ export function PublicStorefrontChatWidget({
                 </div>
                 <div>
                   <div className="font-bold text-foreground text-xs">Kính chào Quý Khách!</div>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                  <p className="text-caption text-muted-foreground mt-0.5">
                     Quý khách đang tìm hoa cho dịp gì và ngân sách khoảng bao nhiêu ạ?
                   </p>
                 </div>
@@ -166,7 +167,7 @@ export function PublicStorefrontChatWidget({
                     <button
                       key={idx}
                       onClick={() => handleSendMessage(q)}
-                      className="w-full text-left rounded-xl border border-primary/20 bg-primary/5 p-2 text-[11px] font-medium text-foreground hover:bg-primary/10 flex items-center justify-between"
+                      className="w-full text-left rounded-xl border border-primary/20 bg-primary/5 p-2 text-caption font-medium text-foreground hover:bg-primary/10 flex items-center justify-between"
                     >
                       <span className="truncate">{q}</span>
                       <ArrowRight className="h-3 w-3 text-primary shrink-0 ml-1" />
@@ -222,17 +223,17 @@ export function PublicStorefrontChatWidget({
                                 <div className="font-bold text-foreground text-xs truncate">
                                   {f.productName}
                                 </div>
-                                <div className="text-primary font-extrabold text-[11px]">
+                                <div className="text-primary font-extrabold text-caption">
                                   {Number(f.priceVnd).toLocaleString("vi-VN")} đ
                                 </div>
                               </div>
 
-                              <Button
+                              <Button variant="outline"
                                 size="sm"
                                 onClick={() =>
                                   handleSendMessage(`Tôi muốn đặt mẫu hoa "${f.productName}"`)
                                 }
-                                className="h-7 px-2.5 bg-primary hover:bg-primary-dark text-white text-[11px] shrink-0"
+                                className="h-7 px-2.5 bg-primary hover:bg-primary-dark text-white text-caption shrink-0"
                               >
                                 <ShoppingBag className="mr-1 h-3 w-3" /> Đặt ngay
                               </Button>

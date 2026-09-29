@@ -132,7 +132,7 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
         <div className="space-y-2.5">
           {gifts.map((item, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-alt text-[11px] font-bold text-text-muted flex-shrink-0">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-alt text-caption font-bold text-text-muted flex-shrink-0">
                 {index + 1}
               </span>
               <input
@@ -183,7 +183,7 @@ export function SalesDefaultsForm({ initialBrandData, onSave, saving }: SalesDef
         <div className="space-y-2.5">
           {guarantees.map((item, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-alt text-[11px] font-bold text-text-muted flex-shrink-0">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-alt text-caption font-bold text-text-muted flex-shrink-0">
                 {index + 1}
               </span>
               <input

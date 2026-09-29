@@ -374,11 +374,14 @@ function CreditDetailsPanel({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div
+              role="button"
+              tabIndex={0} className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-md bg-surface rounded-2xl border border-border overflow-hidden shadow-2xl animate-slide-up">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="font-bold text-title-sm">Chi tiết ước tính Credit</h3>
-          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-alt">
+          <button
+              aria-label="Ẩn thông tin" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-alt">
             <EyeOff size={16} strokeWidth={2} />
           </button>
         </div>
@@ -428,10 +431,12 @@ function AutoRunModuleCard({
   group,
   depCheck,
   hasApprovedMasterImage,
+  onRun,
 }: {
   group: ModuleFeatureGroup;
   depCheck: { canRun: boolean; reason?: string };
   hasApprovedMasterImage: boolean;
+  onRun?: () => void;
 }) {
   const isM01 = group.module === "M01";
   const isM04a = group.module === "M04a";
@@ -484,6 +489,7 @@ function AutoRunModuleCard({
         className="w-full mt-2"
         disabled={!depCheck.canRun}
         variant={isM04a ? "secondary" : "primary"}
+        onClick={onRun}
       >
         {isM01 ? "Bắt đầu phân tích" : "Tạo Master Image"}
       </Button>
@@ -515,7 +521,9 @@ function ModuleAccordion({
 
 return (
       <Card className={cn("border-border", !depCheck.canRun && "opacity-50")}>
-        <div 
+        <div
+              role="button"
+              tabIndex={0} 
           className="flex flex-row items-center justify-between p-3 cursor-pointer"
           onClick={onToggleExpand}
         >

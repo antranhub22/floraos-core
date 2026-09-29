@@ -90,6 +90,8 @@ export function VideoJobList({
         const spec = VIDEO_FORMAT_SPECS[job.format];
         return (
           <Card
+              role="button"
+              tabIndex={0}
             key={job.id}
             onClick={() => onSelectJob(job.id)}
             className="cursor-pointer border border-border p-4 hover:border-primary hover:shadow-md transition-all flex flex-col justify-between gap-3 group"
@@ -101,7 +103,7 @@ export function VideoJobList({
                 </span>
                 {renderStageBadge(job.stage)}
               </div>
-              <h4 className="mt-2 text-[15px] font-bold text-text line-clamp-1 group-hover:text-primary transition-colors">
+              <h4 className="mt-2 text-title-sm font-bold text-text line-clamp-1 group-hover:text-primary transition-colors">
                 {job.title}
               </h4>
             </div>
@@ -111,7 +113,7 @@ export function VideoJobList({
                 <span className="flex items-center gap-1">
                   <Clock size={13} /> {job.duration_seconds}s
                 </span>
-                <span className="font-medium text-amber-600">
+                <span className="font-medium text-warning">
                   {job.cost_credits} credits
                 </span>
               </div>

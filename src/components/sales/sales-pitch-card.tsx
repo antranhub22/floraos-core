@@ -570,14 +570,14 @@ export function SalesPitchCard({
       <div className="flex items-center justify-between gap-4 rounded-2xl bg-surface p-4 border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[11.5px] font-bold text-accent uppercase tracking-wider">M01c — Công cụ Sales Rep</span>
+            <span className="text-caption font-bold text-accent uppercase tracking-wider">Nghiên cứu thị trường — Công cụ Sales Rep</span>
             {status === "FINALIZED" ? (
-              <Badge className="bg-success/15 text-success dark:text-success border border-success/30 font-bold text-[11px] gap-1 py-0.5">
+              <Badge className="bg-success/15 text-success dark:text-success border border-success/30 font-bold text-caption gap-1 py-0.5">
                 <CheckCircle2 size={12} strokeWidth={2.5} />
                 ĐÃ CHỐT DUYỆT FINAL
               </Badge>
             ) : (
-              <Badge tone="neutral" className="font-semibold text-[11px] py-0.5">
+              <Badge tone="neutral" className="font-semibold text-caption py-0.5">
                 Bản nháp đang biên tập
               </Badge>
             )}
@@ -604,7 +604,7 @@ export function SalesPitchCard({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3 mb-4">
             <div className="flex items-center gap-2">
               <Pencil size={18} className="text-primary" />
-              <h3 className="text-sm font-bold text-text">Trình biên tập toàn diện Thẻ Chào Sản Phẩm (M01c)</h3>
+              <h3 className="text-sm font-bold text-text">Trình biên tập toàn diện Thẻ Chào Sản Phẩm (Nghiên cứu thị trường)</h3>
             </div>
             <div className="flex items-center gap-1 bg-surface-alt p-1 rounded-xl border border-border">
               <button
@@ -642,34 +642,34 @@ export function SalesPitchCard({
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="sm:col-span-2">
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Tên sản phẩm chào khách</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Tên sản phẩm chào khách</label>
                   <input
                     type="text"
                     value={productName}
                     onChange={(e) => setProductName(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-bold text-text outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm font-bold text-text outline-none focus:border-primary"
                     placeholder="Ví dụ: Bó Tulip Vàng Nắng Hoàng Kim..."
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Mã SKU / Tham chiếu</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Mã SKU / Tham chiếu</label>
                   <input
                     type="text"
                     value={sku}
                     onChange={(e) => setSku(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary font-mono"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary font-mono"
                     placeholder="TL-001"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Phong cách thiết kế</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Phong cách thiết kế</label>
                   <input
                     type="text"
                     value={style}
                     onChange={(e) => setStyle(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary"
                     placeholder="Hiện đại, Cổ điển, Hàn Quốc..."
                   />
                 </div>
@@ -678,45 +678,45 @@ export function SalesPitchCard({
               {/* Pricing & Hotline */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 bg-primary/[0.03] p-3.5 rounded-xl border border-primary/20">
                 <div>
-                  <label className="text-[11.5px] font-bold text-primary block mb-1">Giá chào ưu đãi (VND) *</label>
+                  <label className="text-caption font-bold text-primary block mb-1">Giá chào ưu đãi (VND) *</label>
                   <input
                     type="number"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="w-full rounded-lg border-2 border-primary/60 bg-surface px-3 py-2 text-[14px] font-bold text-primary outline-none focus:border-primary"
+                    className="w-full rounded-lg border-2 border-primary/60 bg-surface px-3 py-2 text-body font-bold text-primary outline-none focus:border-primary"
                     placeholder="850000"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Giá gốc niêm yết (nếu có)</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Giá gốc niêm yết (nếu có)</label>
                   <input
                     type="number"
                     value={originalPrice}
                     onChange={(e) => setOriginalPrice(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary"
                     placeholder="1000000"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Hotline tư vấn</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Hotline tư vấn</label>
                   <input
                     type="text"
                     value={shopHotline}
                     onChange={(e) => setShopHotline(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary"
                     placeholder="1900 xxxx hoặc 090..."
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Tên cửa hàng / Thương hiệu</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Tên cửa hàng / Thương hiệu</label>
                   <input
                     type="text"
                     value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary"
                     placeholder="FloraOS Boutique"
                   />
                 </div>
@@ -724,7 +724,7 @@ export function SalesPitchCard({
 
               {/* Dịp sử dụng (Tag pills) */}
               <div>
-                <label className="text-[11.5px] font-bold text-text-muted block mb-1.5">Dịp phù hợp tặng hoa</label>
+                <label className="text-caption font-bold text-text-muted block mb-1.5">Dịp phù hợp tặng hoa</label>
                 <div className="flex flex-wrap items-center gap-2">
                   {occasions.map((occ, idx) => (
                     <span
@@ -768,24 +768,24 @@ export function SalesPitchCard({
 
               {/* Mô tả cảm xúc */}
               <div>
-                <label className="text-[11.5px] font-bold text-text-muted block mb-1">Mô tả cảm xúc & thông điệp chào hàng</label>
+                <label className="text-caption font-bold text-text-muted block mb-1">Mô tả cảm xúc & thông điệp chào hàng</label>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary resize-none leading-relaxed"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary resize-none leading-relaxed"
                   placeholder="Nhập thông điệp ý nghĩa dành cho khách hàng..."
                 />
               </div>
 
               {/* Ghi chú riêng */}
               <div>
-                <label className="text-[11.5px] font-bold text-text-muted block mb-1">Ghi chú riêng / Ưu đãi đặc biệt cho đợt chào này</label>
+                <label className="text-caption font-bold text-text-muted block mb-1">Ghi chú riêng / Ưu đãi đặc biệt cho đợt chào này</label>
                 <input
                   type="text"
                   value={customNote}
                   onChange={(e) => setCustomNote(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary"
                   placeholder="Ví dụ: Giảm thêm 50k khi đặt trước 12h trưa nay..."
                 />
               </div>
@@ -909,6 +909,7 @@ export function SalesPitchCard({
                       </div>
                       <div className="col-span-1 flex justify-center">
                         <button
+              aria-label="Xóa"
                           type="button"
                           onClick={() => removeFoliage(idx)}
                           className="p-1 text-text-muted hover:text-danger"
@@ -924,45 +925,45 @@ export function SalesPitchCard({
               {/* Vật chứa, Giấy gói & Kích thước */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-3 border-t border-border">
                 <div>
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Vật chứa (Bình/Giỏ/Bó)</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Vật chứa (Bình/Giỏ/Bó)</label>
                   <input
                     type="text"
                     value={container}
                     onChange={(e) => setContainer(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary"
                     placeholder="Bình gốm, Giỏ mây, Bó hoa..."
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Chất liệu giấy gói / Nơ</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Chất liệu giấy gói / Nơ</label>
                   <input
                     type="text"
                     value={wrapping}
                     onChange={(e) => setWrapping(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary"
                     placeholder="Giấy lụa, Giấy xi măng..."
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Chiều cao ước tính (cm)</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Chiều cao ước tính (cm)</label>
                   <input
                     type="number"
                     value={heightCm}
                     onChange={(e) => setHeightCm(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary"
                     placeholder="55"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11.5px] font-bold text-text-muted block mb-1">Chiều rộng ước tính (cm)</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Chiều rộng ước tính (cm)</label>
                   <input
                     type="number"
                     value={widthCm}
                     onChange={(e) => setWidthCm(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-body-sm text-text outline-none focus:border-primary"
                     placeholder="40"
                   />
                 </div>
@@ -990,6 +991,7 @@ export function SalesPitchCard({
                         className="flex-1 bg-transparent border-none outline-none font-medium text-text text-xs"
                       />
                       <button
+              aria-label="Xóa"
                         type="button"
                         onClick={() => removeGiftItem(idx)}
                         className="text-text-muted hover:text-danger"
@@ -1036,6 +1038,7 @@ export function SalesPitchCard({
                         className="flex-1 bg-transparent border-none outline-none font-medium text-text text-xs"
                       />
                       <button
+                        aria-label="Xóa"
                         type="button"
                         onClick={() => removeGuaranteeItem(idx)}
                         className="text-text-muted hover:text-danger"
@@ -1106,7 +1109,7 @@ export function SalesPitchCard({
               Bản xem trước Thẻ Chào Khách (Khổ A6 / Share Card)
             </span>
             {status === "FINALIZED" && (
-              <span className="text-[11px] font-semibold text-success dark:text-success">
+              <span className="text-caption font-semibold text-success dark:text-success">
                 Đã chốt duyệt Final
               </span>
             )}

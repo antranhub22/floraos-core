@@ -35,10 +35,10 @@ const KIND_LABEL: Record<RecordPaymentBody["kind"], string> = {
 }
 
 const STATUS_LABEL: Record<CoordinationOrder["paymentStatus"], { label: string; className: string }> = {
-  UNPAID: { label: "Chưa thu", className: "bg-zinc-100 text-zinc-700 border-zinc-200" },
-  PARTIALLY_PAID: { label: "Thu một phần", className: "bg-amber-100 text-amber-800 border-amber-200" },
-  PAID: { label: "Đã thu đủ", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  REFUNDED: { label: "Đã hoàn tiền", className: "bg-red-100 text-red-700 border-red-200" },
+  UNPAID: { label: "Chưa thu", className: "bg-cool-100 text-cool-700 border-cool-200" },
+  PARTIALLY_PAID: { label: "Thu một phần", className: "bg-sand-100 text-sand-800 border-sand-200" },
+  PAID: { label: "Đã thu đủ", className: "bg-mint-100 text-mint-800 border-mint-200" },
+  REFUNDED: { label: "Đã hoàn tiền", className: "bg-alert-100 text-alert-700 border-alert-200" },
 }
 
 const fmtVnd = (n: number) => `${n.toLocaleString("vi-VN")}đ`
@@ -117,12 +117,12 @@ export function PaymentLedgerModal({ isOpen, order, onClose, onRecorded }: Payme
       <div className="bg-surface border border-border rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
         <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-mint-100 text-mint-800 flex items-center justify-center">
               <Wallet size={18} />
             </div>
             <div>
               <h3 className="text-base font-extrabold text-text">Sổ Thu — Đơn #{order.orderCode}</h3>
-              <p className="text-[11px] text-text-muted">Đặt cọc, thu nốt, hoàn tiền (§2.14)</p>
+              <p className="text-caption text-text-muted">Đặt cọc, thu nốt, hoàn tiền (§2.14)</p>
             </div>
           </div>
           <button onClick={onClose} aria-label="Đóng" className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
@@ -138,11 +138,11 @@ export function PaymentLedgerModal({ isOpen, order, onClose, onRecorded }: Payme
             </div>
             <div>
               <span className="text-text-muted block">Đã thu</span>
-              <strong className="text-emerald-700 text-sm">{fmtVnd(order.paidVnd)}</strong>
+              <strong className="text-mint-700 text-sm">{fmtVnd(order.paidVnd)}</strong>
             </div>
             <div>
               <span className="text-text-muted block">Còn phải thu</span>
-              <strong className={`text-sm ${order.balanceVnd > 0 ? "text-red-700" : "text-emerald-700"}`}>{fmtVnd(order.balanceVnd)}</strong>
+              <strong className={`text-sm ${order.balanceVnd > 0 ? "text-alert-700" : "text-mint-700"}`}>{fmtVnd(order.balanceVnd)}</strong>
             </div>
             <div className="col-span-3">
               <span className={`inline-block px-2 py-0.5 rounded border text-caption font-bold ${statusTag.className}`}>{statusTag.label}</span>
@@ -166,12 +166,12 @@ export function PaymentLedgerModal({ isOpen, order, onClose, onRecorded }: Payme
                       <span className="font-semibold text-text">
                         {KIND_LABEL[p.kind]} {p.paymentMethod ? `· ${p.paymentMethod}` : ""}
                       </span>
-                      <span className="text-text-muted text-[10.5px]">
+                      <span className="text-text-muted text-caption">
                         {new Date(p.collectedAt).toLocaleString("vi-VN")}
                         {p.note ? ` · ${p.note}` : ""}
                       </span>
                     </div>
-                    <strong className={p.kind === "REFUND" ? "text-red-700" : "text-emerald-700"}>
+                    <strong className={p.kind === "REFUND" ? "text-alert-700" : "text-mint-700"}>
                       {p.kind === "REFUND" ? "−" : "+"}
                       {fmtVnd(p.amountVnd)}
                     </strong>
@@ -183,7 +183,7 @@ export function PaymentLedgerModal({ isOpen, order, onClose, onRecorded }: Payme
 
           <div className="p-3.5 rounded-xl border border-border bg-surface flex flex-col gap-2.5">
             <span className="font-bold text-text flex items-center gap-1.5">
-              <PlusCircle size={14} className="text-red-600" /> Ghi dòng mới:
+              <PlusCircle size={14} className="text-alert-600" /> Ghi dòng mới:
             </span>
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -239,12 +239,12 @@ export function PaymentLedgerModal({ isOpen, order, onClose, onRecorded }: Payme
               </div>
             </div>
             {kind === "REFUND" && (
-              <p className="text-[10.5px] text-amber-700 font-semibold">
+              <p className="text-caption text-sand-700 font-semibold">
                 Hoàn tiền chỉ dành cho Điều hành (R10) — máy chủ sẽ từ chối nếu tài khoản không đủ quyền.
               </p>
             )}
             {formError && (
-              <p role="alert" className="text-red-700 font-semibold">
+              <p role="alert" className="text-alert-700 font-semibold">
                 {formError}
               </p>
             )}
