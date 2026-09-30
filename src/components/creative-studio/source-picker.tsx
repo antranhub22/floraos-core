@@ -76,10 +76,10 @@ export function SourcePicker({
   if (masters.length === 0 && assets.length === 0 && !loadingMasters && !loadingAssets) {
     return (
       <Card className="w-full p-4.5 border-2 border-dashed border-warning bg-warning-bg flex flex-col gap-2 shadow-xs">
-        <div className="text-[14px] font-extrabold text-warning">
+        <div className="text-body font-extrabold text-warning">
           Chưa có ảnh nào trong kho
         </div>
-        <div className="text-[12.5px] text-warning">
+        <div className="text-meta text-warning">
           Hãy tải ảnh lên ở Tab Tối ưu trước để có ảnh nguồn.
         </div>
         <div>
@@ -118,21 +118,21 @@ export function SourcePicker({
               className="accent-primary h-4 w-4 mt-0.5 flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-bold text-text flex items-center gap-2">
+              <div className="text-body-sm font-bold text-text flex items-center gap-2">
                 <ShieldCheck size={15} className="text-secondary flex-shrink-0" />
                 Chọn Master Image đã duyệt (từ Tab 1)
               </div>
-              <div className="text-[11.5px] text-text-muted mt-0.5">
+              <div className="text-caption text-text-muted mt-0.5">
                 Ảnh đã qua cổng Identity Guard — đảm bảo chất lượng chuẩn Studio
               </div>
               {masters.length === 0 && (
-                <div className="text-[11px] text-warning font-bold mt-1">
+                <div className="text-caption text-warning font-bold mt-1">
                   Chưa có Master nào. Chạy Tab 1 trước hoặc chọn Skip bên dưới.
                 </div>
               )}
             </div>
             {masters.length > 0 && (
-              <Badge tone="success" className="flex-shrink-0 text-[10px]">
+              <Badge tone="success" className="flex-shrink-0 text-caption">
                 {masters.length} ảnh
               </Badge>
             )}
@@ -156,11 +156,11 @@ export function SourcePicker({
               className="accent-primary h-4 w-4 mt-0.5 flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-bold text-text flex items-center gap-2">
+              <div className="text-body-sm font-bold text-text flex items-center gap-2">
                 <Sparkles size={15} className="text-primary flex-shrink-0" />
                 Skip — Chỉ dùng ảnh gốc (không qua Tab 1)
               </div>
-              <div className="text-[11.5px] text-text-muted mt-0.5">
+              <div className="text-caption text-text-muted mt-0.5">
                 Ảnh gốc đã đẹp sẵn / muốn giữ mộc mạc — duyệt nhanh 1-chạm thành Master
               </div>
             </div>
@@ -187,7 +187,7 @@ export function SourcePicker({
                       <ImageIcon size={24} className="text-text-muted" />
                     )}
                     <div className="absolute top-1 right-1 rounded-full bg-success-bg p-0.5 text-secondary">
-                      <span className="text-[8px] font-bold">✓</span>
+                      <span className="text-caption font-bold">✓</span>
                     </div>
                   </div>
                   <div className="min-w-0">
@@ -195,9 +195,9 @@ export function SourcePicker({
                       <span className="text-xs font-bold uppercase tracking-wider text-secondary">
                         Master Image nguồn
                       </span>
-                      <Badge tone="success" className="text-[10px]">Đã duyệt</Badge>
+                      <Badge tone="success" className="text-caption">Đã duyệt</Badge>
                     </div>
-                    <div className="text-[14.5px] font-extrabold text-text truncate mt-0.5">
+                    <div className="text-title-sm font-extrabold text-text truncate mt-0.5">
                       {activeMaster.name}
                     </div>
                   </div>
@@ -261,8 +261,8 @@ export function SourcePicker({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12px] font-bold truncate text-text">{a.name}</div>
-                  <div className="text-[10px] text-text-muted">{a.id.slice(0, 8).toUpperCase()}</div>
+                  <div className="text-meta font-bold truncate text-text">{a.name}</div>
+                  <div className="text-caption text-text-muted">{a.id.slice(0, 8).toUpperCase()}</div>
                 </div>
               </label>
             ))}
@@ -288,7 +288,7 @@ export function SourcePicker({
           </Button>
 
           {!canApprove && (
-            <div className="text-[11px] text-warning font-medium text-center">
+            <div className="text-caption text-warning font-medium text-center">
               Tài khoản chưa có năng lực I2 (duyệt ảnh). Liên hệ quản trị viên.
             </div>
           )}

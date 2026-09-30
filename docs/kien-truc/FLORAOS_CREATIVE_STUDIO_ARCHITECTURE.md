@@ -270,7 +270,7 @@ Nút "Mở Khu vực B/C/D/E" vẫn còn (mang `returnTo=f`), về gói thì đ�
 ## 9. Giới hạn & nợ còn mở (chi tiết ở `TECHNICAL_DEBT.md`)
 
 - **#119** — Khuôn bài đăng (`social-post-generator.ts`) còn câu cam kết dịch vụ chung ("giao 2 giờ", "tặng thiệp", "freeship nội thành") không lấy từ hồ sơ tiệm — chủ tiệm phải sửa trước khi đăng; QA không bắt được.
-- **#120** — Nhánh cloud của **M04a** (`POST /media/optimizations` engine cloud → `executeCloudCreative`) vẫn chạy đồng bộ trong request, integrity ước lượng 0,98/1,0, bản RATIO trỏ cùng tệp. Ngoài phạm vi Creative Studio (M04a chạy ở `/tai-anh`).
+- **#120** — ĐÃ TRẢ 25/09/2026: nhánh cloud của **M04a** (`POST /media/optimizations`, `engine=cloud_provider`) vào hàng đợi `media.optimize` như nhánh cục bộ; `executeCloudCreative` đã gỡ; Photoroom/fal có adapter ở worker (`workers/media_ai/providers/enhancement/`). Khu vực A của Creative Studio gọi chính route này.
 - **#121** — Năng lực: B/C/E/F dùng chung `I1`; duyệt gói dùng `J5` (không trần cứng). Chờ PO quyết thêm mã riêng.
 - **#122** — 10 chủ đề của Chặng 04 là khuôn theo luật; "video tham khảo" là danh mục tuyển chọn (metrics ước tính, TikTok là trang tìm kiếm) — giao diện đã gắn nhãn; chưa có nguồn video thời gian thực.
 - **#123** — Video E đọc lại lời thoại bằng giọng chọn ở E (khớp từng cảnh), chưa dùng bản phối đã tạo ở Khu vực C.

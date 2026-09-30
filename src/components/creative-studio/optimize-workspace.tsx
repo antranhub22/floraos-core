@@ -109,8 +109,8 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
           />
 
           <div className="text-center">
-            <div className="text-[17px] font-extrabold text-text">Khu vực A — Tối ưu ảnh gốc & Kiểm duyệt Danh tính</div>
-            <div className="mt-1 text-[13px] text-text-muted">
+            <div className="text-title font-extrabold text-text">Tải &amp; chọn ảnh — Tối ưu ảnh gốc & Kiểm duyệt Danh tính</div>
+            <div className="mt-1 text-body-sm text-text-muted">
               {masterApproved && phase === "select"
                 ? "Đã có Master Image chính thức — bạn có thể tối ưu lại với ảnh khác hoặc sang Tab 2"
                 : "Tải ảnh chụp xưởng hoa từ máy tính hoặc chọn ảnh sẵn có để nâng cấp chuẩn HD Master"}
@@ -120,7 +120,7 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
           {/* Banner khi đã có Master Image */}
           {masterApproved && phase === "select" && (
             <div className="w-full rounded-xl bg-surface-alt p-5 text-center border border-border shadow-xs">
-              <div className="text-[14px] font-bold text-secondary">Đã có Master Image được duyệt chính thức</div>
+              <div className="text-body font-bold text-secondary">Đã có Master Image được duyệt chính thức</div>
               <div className="text-xs text-text-muted mt-1">Bạn có thể tạo thêm biến thể ở Tab 2 hoặc tối ưu lại ảnh mới.</div>
               <div className="flex justify-center gap-3 mt-4">
                 <Button variant="outline" onClick={() => { setPhase("confirm-a"); loadAssets() }}>
@@ -139,8 +139,8 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface shadow-xs">
                 <Camera size={28} strokeWidth={1.5} className="text-primary" />
               </div>
-              <div className="text-[15px] font-bold">Bắt đầu tối ưu ảnh xưởng hoa</div>
-              <div className="text-[12.5px] text-text-muted max-w-md">
+              <div className="text-title-sm font-bold">Bắt đầu tối ưu ảnh xưởng hoa</div>
+              <div className="text-meta text-text-muted max-w-md">
                 Ảnh sẽ được tăng cường độ nét (Lanczos 2x), cân bằng tương phản và kiểm duyệt 4 cổng Identity Guard.
               </div>
               <div className="flex gap-2.5 mt-2">
@@ -166,6 +166,8 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
             <div className="w-full flex flex-col gap-4">
               {/* Upload card */}
               <Card
+              role="button"
+              tabIndex={0}
                 onClick={() => !uploadingDirect && fileInputRef.current?.click()}
                 className="w-full flex flex-col items-center justify-center gap-2.5 border-dashed border-2 border-primary/40 bg-primary/5 p-6 cursor-pointer hover:border-primary transition-all text-center select-none"
               >
@@ -213,7 +215,22 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
                   {/* ENGINE SWITCHER */}
                   <div className="mt-3 pt-3 border-t border-border">
                     <div className="text-xs font-bold text-text mb-2">Cơ chế xử lý ảnh:</div>
+                    {/* PO 25/09/2026: nhà cung cấp TRƯỚC (chất lượng cao nhất); cục bộ là phương án dự phòng. */}
                     <div className="grid grid-cols-2 gap-2 p-1 bg-surface-alt rounded-xl border border-border">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOptimizationEngine("cloud_provider")
+                          if (selectedEnhancerProvider === "studio" || selectedEnhancerProvider === "local") setSelectedEnhancerProvider("auto")
+                        }}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                          optimizationEngine === "cloud_provider"
+                            ? "bg-primary text-white shadow-xs"
+                            : "text-text-muted hover:text-text"
+                        }`}
+                      >
+                        <Cloud size={14} /> Nhà cung cấp AI (khuyên dùng)
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -226,21 +243,7 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
                             : "text-text-muted hover:text-text"
                         }`}
                       >
-                        <Layers size={14} /> Thuật toán Cục bộ (0đ)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOptimizationEngine("cloud_provider")
-                          if (selectedEnhancerProvider === "studio") setSelectedEnhancerProvider("photoroom")
-                        }}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                          optimizationEngine === "cloud_provider"
-                            ? "bg-primary text-white shadow-xs"
-                            : "text-text-muted hover:text-text"
-                        }`}
-                      >
-                        <Cloud size={14} /> AI Tạo sinh Đám mây
+                        <Layers size={14} /> Cục bộ (dự phòng)
                       </button>
                     </div>
                   </div>
@@ -248,7 +251,7 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
                   {/* LOCAL STUDIO BRANCH */}
                   {optimizationEngine === "local_studio" && (
                     <div className="flex flex-col gap-3 mt-1">
-                      <div className="rounded-lg bg-surface-alt p-3 border border-border text-[12px] text-text-muted flex items-start gap-2">
+                      <div className="rounded-lg bg-surface-alt p-3 border border-border text-meta text-text-muted flex items-start gap-2">
                         <ShieldCheck size={16} className="text-success mt-0.5 flex-shrink-0" />
                         <div>
                           <span className="font-bold text-text">Bảo tồn chủ thể 100% (Offline 0đ):</span> Bóc tách viền sắc nét bằng model cục bộ, cân bằng ánh sáng Studio, khử viền & Smart Reframe 4 tỷ lệ không phụ thuộc Cloud API.
@@ -272,7 +275,7 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
                   {/* CLOUD PROVIDER BRANCH */}
                   {optimizationEngine === "cloud_provider" && (
                     <div className="flex flex-col gap-3 mt-1">
-                      <div className="rounded-lg bg-primary/5 p-3 border border-primary/20 text-[12px] text-primary flex items-start gap-2">
+                      <div className="rounded-lg bg-primary/5 p-3 border border-primary/20 text-meta text-primary flex items-start gap-2">
                         <Sparkles size={16} className="text-primary mt-0.5 flex-shrink-0" />
                         <div>
                           <span className="font-bold">AI Cloud Models:</span> Nâng cấp độ nét, tái tạo ánh sáng nghệ thuật và bóc tách phông nền qua các Cloud Provider chuyên nghiệp hàng đầu.
@@ -319,7 +322,7 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
               )}
 
               {assets.length === 0 && !loadingAssets && (
-                <div className="text-center py-4 text-[13px] text-text-muted">
+                <div className="text-center py-4 text-body-sm text-text-muted">
                   Kho chưa có ảnh nào. Vui lòng bấm khung phía trên để tải ảnh từ máy tính.
                 </div>
               )}
@@ -332,8 +335,8 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
       {phase === "running-a" && (
         <div className="flex flex-1 flex-col items-center gap-5 w-full max-w-xl mx-auto">
           <div className="text-center">
-            <div className="text-[17px] font-extrabold">Đang tối ưu ảnh & Kiểm duyệt Identity Guard</div>
-            <div className="mt-1 text-[13px] text-text-muted">{jobPhase ?? "Đang khởi tạo job..."}</div>
+            <div className="text-title font-extrabold">Đang tối ưu ảnh & Kiểm duyệt Identity Guard</div>
+            <div className="mt-1 text-body-sm text-text-muted">{jobPhase ?? "Đang khởi tạo job..."}</div>
           </div>
           <div className="w-full">
             <FlowSteps
@@ -354,7 +357,7 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
           <div className="flex items-start gap-2.5 rounded-xl bg-surface-alt p-4 border border-border w-full">
             <AlertTriangle size={16} strokeWidth={1.8} className="mt-0.5 flex-shrink-0 text-primary" />
             <div className="text-xs leading-relaxed text-text-muted">
-              Job M04a chạy độc lập tại máy chủ — bạn có thể an tâm chuyển trang mà không làm mất tiến trình xử lý.
+              Job Tối ưu ảnh chạy độc lập tại máy chủ — bạn có thể an tâm chuyển trang mà không làm mất tiến trình xử lý.
             </div>
           </div>
         </div>
@@ -365,8 +368,8 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
         <div className="flex flex-col items-center gap-6 w-full max-w-3xl mx-auto">
           <div className="flex items-center justify-between w-full">
             <div>
-              <div className="text-xs text-text-muted">④ Thẻ kết quả — M04a</div>
-              <div className="text-[17px] font-extrabold">Kết quả tối ưu ảnh & Kiểm duyệt Identity Guard</div>
+              <div className="text-xs text-text-muted">④ Thẻ kết quả — Tối ưu ảnh</div>
+              <div className="text-title font-extrabold">Kết quả tối ưu ảnh & Kiểm duyệt Identity Guard</div>
             </div>
             <Badge tone={savedA ? "success" : judgmentA === "blocked" ? "danger" : judgmentA === "warning" ? "warning" : "neutral"}>
               {savedA ? "Đã lưu nháp" : judgmentA === "blocked" ? "Bị từ chối" : judgmentA === "warning" ? "Cảnh báo" : "An toàn"}
@@ -375,10 +378,10 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
 
           {/* Warning banner */}
           {requiresWarning && approvalState !== "approved" && (
-            <div className="w-full rounded-xl border-[1.5px] border-amber-300 bg-amber-50 p-4">
+            <div className="w-full rounded-xl border-[1.5px] border-warning/30 bg-warning/10 p-4">
               <div className="flex items-start gap-2.5">
-                <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 flex-shrink-0 text-amber-700" />
-                <div className="text-[13px] leading-relaxed text-amber-900 font-medium">
+                <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 flex-shrink-0 text-warning" />
+                <div className="text-body-sm leading-relaxed text-warning font-medium">
                   Lưu ý chất lượng: Identity Guard phát hiện sự khác biệt nhẹ giữa ảnh gốc và ảnh sau tối ưu. Vui lòng kiểm tra kỹ trước khi duyệt.
                 </div>
               </div>
@@ -391,8 +394,8 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
               <div className="flex items-start gap-2.5">
                 <ShieldCheck size={18} strokeWidth={2} className="mt-0.5 flex-shrink-0 text-danger" />
                 <div className="flex-1">
-                  <div className="text-[14.5px] font-bold text-danger">Identity Guard đã TỪ CHỐI ảnh này</div>
-                  <div className="text-[12.5px] text-danger/90 mt-0.5 leading-relaxed">
+                  <div className="text-title-sm font-bold text-danger">Identity Guard đã TỪ CHỐI ảnh này</div>
+                  <div className="text-meta text-danger/90 mt-0.5 leading-relaxed">
                     Ảnh sau khi tăng cường làm sai lệch đặc tính hoa thật (điểm số dưới ngưỡng an toàn 90%). Nút duyệt Master Image đã được khóa bảo vệ.
                   </div>
                 </div>
@@ -558,7 +561,7 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
             <div className="w-full border-t border-border pt-5">
               {masterApproved && (
                 <div className="rounded-xl bg-surface-alt p-4 mb-3 border border-border">
-                  <div className="text-[12px] font-bold text-primary">
+                  <div className="text-meta font-bold text-primary">
                     Ranh giới cứng: Biến thể marketing không thay đổi bản chất bó hoa. Nếu cần chỉnh ánh sáng hoặc hình dáng sản phẩm, hãy quay lại Tab 1.
                   </div>
                   <Button size="sm" variant="ghost" onClick={() => setShowBoundary(!showBoundary)} className="mt-2">
@@ -568,8 +571,8 @@ export function OptimizeWorkspace({ data }: OptimizeWorkspaceProps) {
               )}
               <div className="flex items-center justify-between rounded-xl bg-primary/5 p-4 border border-primary/20">
                 <div>
-                  <div className="text-[14px] font-bold text-primary">Tab 2 — Biến thể marketing (M04b)</div>
-                  <div className="text-[12px] text-text-muted">
+                  <div className="text-body font-bold text-primary">Tab 2 — Biến thể marketing (Biến thể marketing)</div>
+                  <div className="text-meta text-text-muted">
                     {masterApproved ? "Master Image đã duyệt — sẵn sàng tạo biến thể bối cảnh" : "Cần duyệt Master Image trước khi tạo biến thể"}
                   </div>
                 </div>

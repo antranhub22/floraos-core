@@ -671,7 +671,7 @@ Bốn đợt, mã `AI-1` đến `AI-4`. Chúng không đánh số theo dải P v
 | # | Quyết định | Chặn pha |
 |---|---|---|
 | **D13** | Cơ sở pháp lý và hình dạng cơ chế đồng ý cho dữ liệu cá nhân của khách hàng cuối, gồm quyền xoá thuộc về chính khách hàng. Điều kiện chặn go-live của M09 và M10, không chặn việc dựng lược đồ | P21 |
-| **D14** | Bảng giá `cost_credit` cho các `feature` mới — sinh ảnh biến thể, sinh video, sinh nội dung. Chi phí thật của một video chênh hai bậc so với một ảnh, nên D7 (thu cùng một mức) không mở rộng sang được | P16, P17, P18 |
+| **D14** | Bảng giá `cost_credit` cho các `feature` mới — sinh ảnh biến thể, sinh video, sinh nội dung. Chi phí thật của một video chênh hai bậc so với một ảnh, nên D7 (thu cùng một mức) không mở rộng sang được — **CHỐT v1 25/09/2026** (PO giao agent đề xuất): định giá tương đối theo bốn nguyên tắc ở `src/modules/usage/domain/pricing.ts` — 1 credit ≈ một lượt gọi một mô hình; đường nhà cung cấp ảnh = cục bộ + 1; thu theo đường thật đã chạy (lùi cục bộ → hoàn chênh); một lần bấm = một lần thu. Tỷ giá credit ↔ VND vẫn thuộc D2; xem lại con số sau 30 ngày có `cost_usd` thật (nợ #151) | — (đã chốt v1) |
 | **D20** | Ngưỡng chấp nhận của từng năng lực ngoài `AIC-10`. Ngưỡng của Identity Guard đã chốt (0,95 và 0,90); các năng lực còn lại chưa có dữ liệu có đáp án để đặt ngưỡng, nên chúng chạy bằng giá trị tạm có ghi nợ, không bằng một con số trông hợp lý | AI-2 |
 
 ### 17.1 D5 — quyết định: cổng ở mức Hợp đồng JSON (D5-c)

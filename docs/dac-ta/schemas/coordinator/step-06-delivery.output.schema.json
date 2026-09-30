@@ -61,6 +61,12 @@
             "null"
           ]
         },
+        "timeRemaining": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "customerId": {
           "type": [
             "string",
@@ -71,6 +77,9 @@
           "type": "string"
         },
         "customerTier": {
+          "type": "string"
+        },
+        "customerPhone": {
           "type": "string"
         },
         "recipientName": {
@@ -176,10 +185,888 @@
             "additionalProperties": false
           }
         },
+        "productId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "product": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "style": {
+                  "type": "string"
+                },
+                "colorPalette": {
+                  "type": "object",
+                  "properties": {
+                    "primaryColor": {
+                      "type": "string"
+                    },
+                    "secondaryColor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "primaryColor"
+                  ],
+                  "additionalProperties": false
+                },
+                "referenceImageUrls": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "bom": {
+                  "type": "object",
+                  "properties": {
+                    "flowers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "flowerName": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "quantity": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "unit": {
+                            "type": "string",
+                            "enum": [
+                              "bông",
+                              "cành",
+                              "lá",
+                              "cây"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "Chủ đạo",
+                              "Phụ",
+                              "Điểm xuyến",
+                              "Lấp đầy"
+                            ]
+                          },
+                          "shade": {
+                            "type": "string"
+                          },
+                          "budCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "damagedCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "variety": {
+                            "type": "string"
+                          },
+                          "stemLengthCm": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "substitutionAllowed": {
+                            "type": "boolean"
+                          },
+                          "substitutionPriority": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "flowerName",
+                          "quantity",
+                          "unit",
+                          "color",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "foliage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "quantity": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "unit": {
+                            "type": "string",
+                            "enum": [
+                              "bông",
+                              "cành",
+                              "lá",
+                              "cây"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "Nền",
+                              "Viền",
+                              "Điểm nhấn",
+                              "Lấp đầy"
+                            ]
+                          },
+                          "substitutionAllowed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "quantity",
+                          "unit",
+                          "color",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "wrapping": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "layer": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "material": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "color": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "texture": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "pattern": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "substitutionAllowed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "layer",
+                          "material",
+                          "color",
+                          "texture"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "accessories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "material": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "color": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "quantity": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "printedText": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "unit": {
+                            "type": "string"
+                          },
+                          "substitutionAllowed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "material",
+                          "color",
+                          "quantity",
+                          "printedText"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "flowers",
+                    "foliage",
+                    "wrapping",
+                    "accessories"
+                  ],
+                  "additionalProperties": false
+                },
+                "tierCount": {
+                  "type": "number"
+                },
+                "substitutionPolicy": {
+                  "type": "object",
+                  "properties": {
+                    "allowed": {
+                      "type": "boolean"
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "allowed"
+                  ],
+                  "additionalProperties": false
+                },
+                "dimensions": {
+                  "type": "object",
+                  "properties": {
+                    "heightCm": {
+                      "type": "number"
+                    },
+                    "widthCm": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "heightCm",
+                    "widthCm"
+                  ],
+                  "additionalProperties": false
+                },
+                "warningTags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "quotePriceVnd": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "masterUpdatedAt": {
+                  "type": "string"
+                },
+                "capturedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "productId",
+                "code",
+                "name",
+                "category",
+                "style",
+                "colorPalette",
+                "referenceImageUrls",
+                "bom",
+                "warningTags",
+                "quotePriceVnd",
+                "masterUpdatedAt",
+                "capturedAt"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "foliage": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "bông",
+                  "cành",
+                  "lá",
+                  "cây"
+                ]
+              },
+              "color": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "Nền",
+                  "Viền",
+                  "Điểm nhấn",
+                  "Lấp đầy"
+                ]
+              },
+              "substitutionAllowed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "quantity",
+              "unit",
+              "color",
+              "role"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "wrapping": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "layer": {
+                "type": "string",
+                "minLength": 1
+              },
+              "material": {
+                "type": "string",
+                "minLength": 1
+              },
+              "color": {
+                "type": "string",
+                "minLength": 1
+              },
+              "texture": {
+                "type": "string",
+                "minLength": 1
+              },
+              "pattern": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "substitutionAllowed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "layer",
+              "material",
+              "color",
+              "texture"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "material": {
+                "type": "string",
+                "minLength": 1
+              },
+              "color": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "printedText": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "unit": {
+                "type": "string"
+              },
+              "substitutionAllowed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "material",
+              "color",
+              "quantity",
+              "printedText"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "substitutionPolicy": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "allowed": {
+                  "type": "boolean"
+                },
+                "note": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "allowed"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "referenceImageUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "cardMessage": {
           "type": "string"
         },
+        "cardRequired": {
+          "type": "boolean"
+        },
         "internalNote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partnerInstruction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceReference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "channel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "orderType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priority": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serviceLevel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deliveryType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deliveryLocationType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conditionalFieldGroups": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "SYMPATHY",
+              "GRAND_OPENING",
+              "WEDDING_EVENT",
+              "CORPORATE",
+              "SUBSCRIPTION",
+              "OFFICE_BUILDING",
+              "HOSPITAL",
+              "HOTEL",
+              "VENUE"
+            ]
+          }
+        },
+        "receivedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deliveryWindowStart": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deliveryWindowEnd": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "salesOwnerId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "handoffAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "handoffConfirmed": {
+          "type": "boolean"
+        },
+        "specialRequirements": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerCommitments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "promiseType": {
+                "type": "string"
+              },
+              "promiseValue": {
+                "type": "string"
+              },
+              "promisedBy": {
+                "type": "string"
+              },
+              "promisedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "promiseType",
+              "promiseValue",
+              "promisedBy",
+              "promisedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "missingFields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key",
+              "label"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "missingFieldCount": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "conflictFields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "values"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "plannedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "productionDeadlineAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pickupTargetAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "productionBufferMinutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pickupBufferMinutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plannedProductionMinutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plannedQcBufferMinutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plannedPickupMinutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plannedDeliveryMinutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "partnerSelectionDeadlineAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "technicalInstruction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextActionOwnerId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextActionAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "latestProductionStart": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "latestQCStart": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "latestPickupStart": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "latestDispatchStart": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "collectionMethod": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "collectionDueAt": {
           "type": [
             "string",
             "null"
@@ -342,8 +1229,28 @@
         "hasException": {
           "type": "boolean"
         },
+        "openExceptionCount": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
         "unitPriceVnd": {
           "type": "number"
+        },
+        "paidVnd": {
+          "type": "number"
+        },
+        "balanceVnd": {
+          "type": "number"
+        },
+        "paymentStatus": {
+          "type": "string",
+          "enum": [
+            "UNPAID",
+            "PARTIALLY_PAID",
+            "PAID",
+            "REFUNDED"
+          ]
         },
         "partnerPayoutVnd": {
           "type": [
@@ -386,6 +1293,13 @@
         },
         "updatedAt": {
           "type": "string"
+        },
+        "customFields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -395,9 +1309,11 @@
         "stageLabel",
         "riskLevel",
         "riskReason",
+        "timeRemaining",
         "customerId",
         "customerName",
         "customerTier",
+        "customerPhone",
         "recipientName",
         "recipientPhone",
         "deliveryAddress",
@@ -411,20 +1327,73 @@
         "finishedImageUrls",
         "productionProgress",
         "flowers",
+        "productId",
+        "product",
+        "foliage",
+        "wrapping",
+        "accessories",
+        "substitutionPolicy",
+        "referenceImageUrls",
         "cardMessage",
+        "cardRequired",
         "internalNote",
+        "partnerInstruction",
+        "source",
+        "sourceReference",
+        "channel",
+        "orderType",
+        "priority",
+        "serviceLevel",
+        "deliveryType",
+        "deliveryLocationType",
+        "conditionalFieldGroups",
+        "receivedAt",
+        "deliveryWindowStart",
+        "deliveryWindowEnd",
+        "salesOwnerId",
+        "handoffAt",
+        "handoffConfirmed",
+        "specialRequirements",
+        "customerCommitments",
+        "missingFields",
+        "missingFieldCount",
+        "conflictFields",
+        "plannedAt",
+        "productionDeadlineAt",
+        "pickupTargetAt",
+        "productionBufferMinutes",
+        "pickupBufferMinutes",
+        "plannedProductionMinutes",
+        "plannedQcBufferMinutes",
+        "plannedPickupMinutes",
+        "plannedDeliveryMinutes",
+        "partnerSelectionDeadlineAt",
+        "technicalInstruction",
+        "nextActionOwnerId",
+        "nextActionAt",
+        "latestProductionStart",
+        "latestQCStart",
+        "latestPickupStart",
+        "latestDispatchStart",
+        "collectionMethod",
+        "collectionDueAt",
         "qc",
         "delivery",
         "exceptions",
         "hasException",
+        "openExceptionCount",
         "unitPriceVnd",
+        "paidVnd",
+        "balanceVnd",
+        "paymentStatus",
         "partnerPayoutVnd",
         "partnerRating",
         "closureNotes",
         "closedAt",
         "cancelledReason",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        "customFields"
       ],
       "additionalProperties": false
     }
@@ -442,9 +1411,11 @@
         "stageLabel": "Đã giao (chờ đóng đơn)",
         "riskLevel": "NORMAL",
         "riskReason": null,
+        "timeRemaining": null,
         "customerId": null,
         "customerName": "Nguyễn Văn An",
         "customerTier": "VIP",
+        "customerPhone": "0987654321",
         "recipientName": "Trần Thị Bình",
         "recipientPhone": "0901234567",
         "deliveryAddress": {
@@ -472,8 +1443,56 @@
             "role": "Chủ đạo"
           }
         ],
+        "productId": null,
+        "product": null,
+        "foliage": [],
+        "wrapping": [],
+        "accessories": [],
+        "substitutionPolicy": null,
+        "referenceImageUrls": [],
         "cardMessage": "Chúc mừng sinh nhật!",
+        "cardRequired": true,
         "internalNote": null,
+        "partnerInstruction": null,
+        "source": "MANUAL",
+        "sourceReference": null,
+        "channel": null,
+        "orderType": null,
+        "priority": "NORMAL",
+        "serviceLevel": null,
+        "deliveryType": null,
+        "deliveryLocationType": null,
+        "conditionalFieldGroups": [],
+        "receivedAt": null,
+        "deliveryWindowStart": null,
+        "deliveryWindowEnd": null,
+        "salesOwnerId": null,
+        "handoffAt": null,
+        "handoffConfirmed": false,
+        "specialRequirements": null,
+        "customerCommitments": [],
+        "missingFields": [],
+        "missingFieldCount": 0,
+        "conflictFields": [],
+        "plannedAt": null,
+        "productionDeadlineAt": null,
+        "pickupTargetAt": null,
+        "productionBufferMinutes": null,
+        "pickupBufferMinutes": null,
+        "plannedProductionMinutes": null,
+        "plannedQcBufferMinutes": null,
+        "plannedPickupMinutes": null,
+        "plannedDeliveryMinutes": null,
+        "partnerSelectionDeadlineAt": null,
+        "technicalInstruction": null,
+        "nextActionOwnerId": null,
+        "nextActionAt": null,
+        "latestProductionStart": null,
+        "latestQCStart": null,
+        "latestPickupStart": null,
+        "latestDispatchStart": null,
+        "collectionMethod": null,
+        "collectionDueAt": null,
         "qc": null,
         "delivery": {
           "carrier": "AhaMove",
@@ -487,14 +1506,19 @@
         },
         "exceptions": [],
         "hasException": false,
+        "openExceptionCount": 0,
         "unitPriceVnd": 850000,
+        "paidVnd": 0,
+        "balanceVnd": 850000,
+        "paymentStatus": "UNPAID",
         "partnerPayoutVnd": null,
         "partnerRating": null,
         "closureNotes": null,
         "closedAt": null,
         "cancelledReason": null,
         "createdAt": "2026-09-25T02:00:00.000Z",
-        "updatedAt": "2026-09-25T02:00:00.000Z"
+        "updatedAt": "2026-09-25T02:00:00.000Z",
+        "customFields": {}
       }
     }
   ]

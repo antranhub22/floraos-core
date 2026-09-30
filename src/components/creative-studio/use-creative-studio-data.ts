@@ -12,6 +12,16 @@
 "use client"
 
 import { useState, useEffect, useRef, type ChangeEvent } from "react"
+
+import {
+  JOB_CANCELLED_MESSAGE,
+  JOB_POLL_INTERVAL_MS,
+  onPollFailure,
+  onPollPending,
+  startJobPoll,
+  type JobPollState,
+  type JobPollVerdict,
+} from "./job-polling"
 import { useRouter } from "next/navigation"
 import type { ResultField, JudgmentState } from "@/components/result/result-card"
 import { useSession } from "@/lib/session"
@@ -203,8 +213,9 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
   const [masterApproved, setMasterApproved] = useState(false)
   const [assets, setAssets] = useState<AssetItem[]>([])
   const [selectedAssetId, setSelectedAssetId] = useState<string>("")
-  const [optimizationEngine, setOptimizationEngine] = useState<OptimizationEngine>("local_studio")
-  const [selectedEnhancerProvider, setSelectedEnhancerProvider] = useState<string>("studio")
+  // PO 25/09/2026: nhà cung cấp trước — mặc định chuỗi nhà cung cấp theo thứ tự của tiệm.
+  const [optimizationEngine, setOptimizationEngine] = useState<OptimizationEngine>("cloud_provider")
+  const [selectedEnhancerProvider, setSelectedEnhancerProvider] = useState<string>("auto")
   const [selectedStudioScene, setSelectedStudioScene] = useState<string>("warm_gray")
   const [optimizationMode, setOptimizationMode] = useState<"auto" | "custom">("auto")
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>(getDefaultAutoCapabilityIds())
@@ -235,7 +246,7 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
   const [variantJobId, setVariantJobId] = useState<string | null>(null)
   const [variantIntegrity, setVariantIntegrity] = useState<M04bIntegrity | null>(null)
   const [loadingMasters, setLoadingMasters] = useState(false)
-  const [variantEngineMode, setVariantEngineMode] = useState<VariantEngineMode>("local_studio")
+  const [variantEngineMode, setVariantEngineMode] = useState<VariantEngineMode>("cloud_provider")
   const [selectedCloudProvider, setSelectedCloudProvider] = useState<CloudProvider>("stability")
 
   // --- Visual Storytelling States ---
@@ -245,6 +256,9 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
 
   // --- File Upload ---
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Token của vòng poll đang chạy (Khu vực A/B). Tăng khi bắt đầu vòng mới
+  // hoặc khi rời trang — vòng cũ thấy token lệch thì tự dừng.
+  const pollTokenRef = useRef(0)
   const [uploadingDirect, setUploadingDirect] = useState(false)
 
   // --- Capabilities ---
@@ -462,10 +476,33 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
     }
   }
 
-  const pollOptimization = async (jobId: string) => {
+  /** Lượt poll kế tiếp, hoặc dừng và báo lỗi khi lỗi không tự khỏi / quá hạn. */
+  function continuePolling(verdict: JobPollVerdict, token: number, next: (state: JobPollState) => void): void {
+    if (token !== pollTokenRef.current) return
+    if (verdict.retry) {
+      const state = verdict.state
+      setTimeout(() => next(state), JOB_POLL_INTERVAL_MS)
+      return
+    }
+    setJobPhase(null)
+    setErrorMsg(verdict.message)
+    setPhase("error")
+  }
+
+  const pollOptimization = async (
+    jobId: string,
+    state: JobPollState = startJobPoll(),
+    token: number = ++pollTokenRef.current
+  ) => {
+    if (token !== pollTokenRef.current) return
+    const again = (s: JobPollState) => void pollOptimization(jobId, s, token)
     try {
       const res = await apiFetchWithAuth(`/api/v1/media/optimizations/${jobId}`)
-      if (!res.ok || !res.data) return
+      if (token !== pollTokenRef.current) return
+      if (!res.ok || !res.data) {
+        continuePolling(onPollFailure(res.status, state), token, again)
+        return
+      }
       const opt = res.data as {
         job_id: string
         status: string
@@ -500,10 +537,17 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
         setJobPhase(null)
         setErrorMsg(String(rawData.error || "Tối ưu ảnh thất bại"))
         setPhase("error")
+      } else if (opt.status === "CANCELLED") {
+        setJobStatus("CANCELLED")
+        setJobPhase(null)
+        setErrorMsg(JOB_CANCELLED_MESSAGE)
+        setPhase("error")
       } else {
-        setTimeout(() => pollOptimization(jobId), 2000)
+        continuePolling(onPollPending(state), token, again)
       }
-    } catch { /* polling continues */ }
+    } catch {
+      continuePolling(onPollFailure(null, state), token, again)
+    }
   }
 
   function goRunningA() {
@@ -545,21 +589,9 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
         setPhase("error")
         return
       }
-      const data = (await res.json()) as {
-        job_id: string
-        status: string
-        engine?: string
-        asset_id?: string
-        image_url?: string
-      }
+      // Cả hai bộ máy (Local Studio / nhà cung cấp) đều vào hàng đợi — 25/09/2026, nợ #120.
+      const data = (await res.json()) as { job_id: string; status: string }
       setOptimizationId(data.job_id)
-
-      if (data.engine === "cloud_provider" && data.status === "COMPLETED") {
-        await loadOptimization(data.job_id)
-        setPhase("result-a")
-        return
-      }
-
       setJobPhase("PROCESSING")
       pollOptimization(data.job_id)
     } catch (e) {
@@ -685,11 +717,18 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
     }
   }
 
-  async function pollVariantJob(jobId: string) {
+  async function pollVariantJob(
+    jobId: string,
+    state: JobPollState = startJobPoll(),
+    token: number = ++pollTokenRef.current
+  ) {
+    if (token !== pollTokenRef.current) return
+    const again = (s: JobPollState) => void pollVariantJob(jobId, s, token)
     try {
       const res = await apiFetchWithAuth(`/api/v1/media/variants/${jobId}`)
+      if (token !== pollTokenRef.current) return
       if (!res.ok || !res.data) {
-        setTimeout(() => pollVariantJob(jobId), 2000)
+        continuePolling(onPollFailure(res.status, state), token, again)
         return
       }
       const chiTiet = res.data as {
@@ -733,10 +772,18 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
         return
       }
 
+      if (chiTiet.status === "CANCELLED") {
+        setJobStatus("CANCELLED")
+        setJobPhase(null)
+        setErrorMsg(JOB_CANCELLED_MESSAGE)
+        setPhase("error")
+        return
+      }
+
       setJobStatus("PROCESSING")
-      setTimeout(() => pollVariantJob(jobId), 2000)
+      continuePolling(onPollPending(state), token, again)
     } catch {
-      setTimeout(() => pollVariantJob(jobId), 2000)
+      continuePolling(onPollFailure(null, state), token, again)
     }
   }
 
@@ -856,6 +903,12 @@ export function useCreativeStudioData(): UseCreativeStudioReturn {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ state từ nguồn ngoài (URL/API), chủ đích
     loadAssets()
     loadApprovedMasters()
+    // Rời trang thì mọi vòng poll đang chạy tự dừng ở lượt kế tiếp. Ref này
+    // là bộ đếm chứ không trỏ node DOM — đọc giá trị lúc dọn là chủ đích.
+    const pollToken = pollTokenRef
+    return () => {
+      pollToken.current++
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

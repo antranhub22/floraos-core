@@ -321,13 +321,13 @@ export function AccountStorageHub({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-accent uppercase tracking-wider">FloraOS Media Hub</span>
-              <Badge className="bg-primary/10 text-primary font-semibold text-[11px]">Kho Lưu Trữ Tài Khoản</Badge>
+              <span className="text-meta font-bold text-accent uppercase tracking-wider">FloraOS Media Hub</span>
+              <Badge className="bg-primary/10 text-primary font-semibold text-caption">Kho Lưu Trữ Tài Khoản</Badge>
             </div>
             <h2 className="mt-1 text-xl font-extrabold text-text tracking-tight">
               Quản Lý Dữ Liệu Sản Phẩm & Sale Pitch
             </h2>
-            <p className="text-[13px] text-text-muted mt-0.5">
+            <p className="text-body-sm text-text-muted mt-0.5">
               Phân loại 3 phân vùng chuẩn hóa: Ảnh gốc, Ảnh đã duyệt chờ sinh dữ liệu, và Sale Pitch đã hoàn thành.
             </p>
           </div>
@@ -340,7 +340,7 @@ export function AccountStorageHub({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tìm kiếm trong kho..."
-              className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border bg-surface-alt text-[13px] outline-none focus:border-primary transition-colors"
+              className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border bg-surface-alt text-body-sm outline-none focus:border-primary transition-colors"
             />
           </div>
         </div>
@@ -460,7 +460,7 @@ export function AccountStorageHub({
           </div>
 
           {errorRaw && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 flex items-center gap-2">
+            <div className="rounded-xl border border-danger/30 bg-danger-bg p-3.5 text-xs text-danger flex items-center gap-2">
               <AlertCircle size={15} />
               {errorRaw}
             </div>
@@ -496,17 +496,17 @@ export function AccountStorageHub({
                     </div>
                   )}
                   {asset.isLocal && (
-                    <Badge className="absolute left-2 top-2 bg-blue-500/85 text-white text-[10px] py-0 px-1.5 font-bold border-none">
+                    <Badge className="absolute left-2 top-2 bg-info text-white text-caption py-0 px-1.5 font-bold border-none">
                       Mới tải lên
                     </Badge>
                   )}
                 </div>
 
                 <div className="p-3 flex flex-col gap-2">
-                  <div className="text-[12px] font-semibold text-text truncate" title={asset.name}>
+                  <div className="text-meta font-semibold text-text truncate" title={asset.name}>
                     {asset.name}
                   </div>
-                  <Button
+                  <Button variant="secondary"
                     size="sm"
                     onClick={() => handleSelectRaw(asset)}
                     className="w-full text-xs h-7 gap-1 bg-primary hover:bg-primary/90 text-white font-semibold"
@@ -541,7 +541,7 @@ export function AccountStorageHub({
           </div>
 
           {errorApproved && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 flex items-center gap-2">
+            <div className="rounded-xl border border-danger/30 bg-danger-bg p-3.5 text-xs text-danger flex items-center gap-2">
               <AlertCircle size={15} />
               {errorApproved}
             </div>
@@ -552,7 +552,7 @@ export function AccountStorageHub({
               <Layers size={32} className="mx-auto text-text-muted mb-2 opacity-50" />
               <div className="text-sm font-bold text-text">Chưa có phân tích nào được phê duyệt</div>
               <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
-                Hãy chuyển sang tab &quot;M01a: Phân tích kỹ thuật&quot; để nhận diện và duyệt BOM sản phẩm trước khi sinh dữ liệu bán hàng.
+                Hãy chuyển sang tab &quot;Nhận diện sản phẩm: Phân tích kỹ thuật&quot; để nhận diện và duyệt BOM sản phẩm trước khi sinh dữ liệu bán hàng.
               </p>
             </Card>
           )}
@@ -598,7 +598,7 @@ export function AccountStorageHub({
                           <ImageIcon size={22} className="opacity-40" />
                         </div>
                       )}
-                      <span className="absolute bottom-1 right-1 rounded-md bg-black/70 px-1 py-0.5 text-[9.5px] font-bold text-white">
+                      <span className="absolute bottom-1 right-1 rounded-md bg-black/70 px-1 py-0.5 text-caption font-bold text-white">
                         {flowerCount} cành
                       </span>
                     </div>
@@ -607,25 +607,25 @@ export function AccountStorageHub({
                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                          <Badge tone="success" className="text-[10px] py-0 px-1.5 font-bold gap-1">
+                          <Badge tone="success" className="text-caption py-0 px-1.5 font-bold gap-1">
                             <CheckCircle2 size={10} /> ĐÃ DUYỆT BOM
                           </Badge>
-                          <span className="text-[11px] text-text-muted font-medium">{displayStyle}</span>
+                          <span className="text-caption text-text-muted font-medium">{displayStyle}</span>
                           {displayOccasion && (
-                            <span className="text-[11px] text-primary font-semibold truncate">• {displayOccasion}</span>
+                            <span className="text-caption text-primary font-semibold truncate">• {displayOccasion}</span>
                           )}
                         </div>
 
-                        <h4 className="text-[14px] font-bold text-text truncate">{displayName}</h4>
+                        <h4 className="text-body font-bold text-text truncate">{displayName}</h4>
 
                         {flowers.length > 0 && (
-                          <div className="mt-1 text-[11.5px] text-text-muted truncate">
+                          <div className="mt-1 text-caption text-text-muted truncate">
                             {flowers.map((f: BomFlowerRow) => `${f.name || "Hoa"}${f.quantity ? ` (${f.quantity})` : ""}`).join(", ")}
                           </div>
                         )}
                       </div>
 
-                      <div className="text-[10.5px] text-text-muted flex items-center gap-1 mt-1">
+                      <div className="text-caption text-text-muted flex items-center gap-1 mt-1">
                         <Clock size={11} />
                         {item.approved_at ? new Date(item.approved_at).toLocaleDateString("vi-VN") : "Gần đây"}
                       </div>
@@ -641,15 +641,15 @@ export function AccountStorageHub({
                       className="flex-1 text-xs h-8 gap-1 border-border font-semibold text-text hover:text-primary"
                     >
                       <Sparkles size={13} className="text-accent" />
-                      1. Sinh Copy (M01b)
+                      1. Sinh Copy (Sinh dữ liệu bán hàng)
                     </Button>
-                    <Button
+                    <Button variant="secondary"
                       size="sm"
                       onClick={() => handleSelectApproved(item, "m01c")}
                       className="flex-1 text-xs h-8 gap-1 bg-primary hover:bg-primary/90 text-white font-bold"
                     >
                       <Tag size={13} />
-                      2. Tạo Thẻ Chào (M01c)
+                      2. Tạo Thẻ Chào (Nghiên cứu thị trường)
                     </Button>
                   </div>
                 </Card>
@@ -673,10 +673,10 @@ export function AccountStorageHub({
 
           {filteredFinalizedPitches.length === 0 && (
             <Card className="p-8 text-center bg-surface-alt border-dashed">
-              <CheckCircle2 size={32} className="mx-auto text-emerald-500 mb-2 opacity-60" />
+              <CheckCircle2 size={32} className="mx-auto text-success mb-2 opacity-60" />
               <div className="text-sm font-bold text-text">Chưa có Sale Pitch nào được chốt duyệt Final</div>
               <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
-                Khi bạn chỉnh sửa Thẻ Chào Sản Phẩm tại tab &quot;M01c: Thẻ chào sản phẩm&quot; và bấm <strong>&quot;Chốt duyệt &amp; Xuất bản Final&quot;</strong>, thẻ sẽ tự động lưu vào kho này để sử dụng lâu dài.
+                Khi bạn chỉnh sửa Thẻ Chào Sản Phẩm tại tab &quot;Nghiên cứu thị trường: Thẻ chào sản phẩm&quot; và bấm <strong>&quot;Chốt duyệt &amp; Xuất bản Final&quot;</strong>, thẻ sẽ tự động lưu vào kho này để sử dụng lâu dài.
               </p>
             </Card>
           )}
@@ -689,7 +689,7 @@ export function AccountStorageHub({
               return (
                 <Card
                   key={pitchKey}
-                  className="overflow-hidden rounded-2xl border-2 border-emerald-500/25 bg-surface p-4 hover:shadow-lg transition-all flex flex-col justify-between gap-3.5"
+                  className="overflow-hidden rounded-2xl border-2 border-success/25 bg-surface p-4 hover:shadow-lg transition-all flex flex-col justify-between gap-3.5"
                 >
                   <div className="flex gap-3.5">
                     {/* Thumbnail */}
@@ -706,7 +706,7 @@ export function AccountStorageHub({
                           <ImageIcon size={24} className="opacity-40" />
                         </div>
                       )}
-                      <div className="absolute inset-x-0 bottom-0 bg-black/75 py-0.5 text-center text-[10px] font-bold text-white">
+                      <div className="absolute inset-x-0 bottom-0 bg-black/75 py-0.5 text-center text-caption font-bold text-white">
                         {pitch.dimensions.heightCm}×{pitch.dimensions.widthCm} cm
                       </div>
                     </div>
@@ -715,15 +715,15 @@ export function AccountStorageHub({
                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold text-[10px] py-0 px-1.5 border border-emerald-500/30 gap-0.5">
+                          <Badge className="bg-success/15 text-success dark:text-success font-bold text-caption py-0 px-1.5 border border-success/30 gap-0.5">
                             <CheckCircle2 size={10} strokeWidth={2.5} /> FINAL
                           </Badge>
-                          <span className="text-[12px] font-extrabold text-primary">
+                          <span className="text-meta font-extrabold text-primary">
                             {formatCurrencyVnd(pitch.priceVnd)}
                           </span>
                         </div>
 
-                        <h4 className="text-[14px] font-extrabold text-text tracking-tight truncate leading-tight">
+                        <h4 className="text-body font-extrabold text-text tracking-tight truncate leading-tight">
                           {pitch.productName}
                         </h4>
 
@@ -731,19 +731,19 @@ export function AccountStorageHub({
                           {pitch.occasions.slice(0, 2).map((occ, i) => (
                             <span
                               key={i}
-                              className="rounded-md bg-surface-alt px-1.5 py-0.5 text-[10.5px] font-medium text-text-muted border border-border/60"
+                              className="rounded-md bg-surface-alt px-1.5 py-0.5 text-caption font-medium text-text-muted border border-border/60"
                             >
                               {occ}
                             </span>
                           ))}
                         </div>
 
-                        <div className="mt-1 text-[11.5px] text-text-muted line-clamp-1">
+                        <div className="mt-1 text-caption text-text-muted line-clamp-1">
                           {pitch.mainFlowers.map((f) => `${f.name}${f.quantity ? ` (${f.quantity})` : ""}`).join(", ")}
                         </div>
                       </div>
 
-                      <div className="text-[10px] text-text-muted flex items-center justify-between mt-1">
+                      <div className="text-caption text-text-muted flex items-center justify-between mt-1">
                         <span>{pitch.style}</span>
                         <span>{pitch.finalizedAt ? new Date(pitch.finalizedAt).toLocaleDateString("vi-VN") : "Hôm nay"}</span>
                       </div>
@@ -761,11 +761,11 @@ export function AccountStorageHub({
                       <Eye size={13} /> Xem Thẻ Chào
                     </Button>
 
-                    <Button
+                    <Button variant="secondary"
                       size="sm"
                       onClick={() => handleQuickCopyZalo(pitch)}
                       className={`flex-1 text-xs h-8 gap-1 font-bold ${
-                        isCopied ? "bg-emerald-600 text-white" : "bg-primary hover:bg-primary/90 text-white"
+                        isCopied ? "bg-success text-white" : "bg-primary hover:bg-primary/90 text-white"
                       }`}
                     >
                       {isCopied ? <Check size={13} strokeWidth={2.5} /> : <Copy size={13} />}
@@ -776,7 +776,7 @@ export function AccountStorageHub({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeletePitch(pitchKey)}
-                      className="h-8 w-8 p-0 text-text-muted hover:text-red-600 hover:bg-red-50"
+                      className="h-8 w-8 p-0 text-text-muted hover:text-danger hover:bg-danger-bg"
                       title="Xóa Thẻ Chào này"
                     >
                       <Trash2 size={13} />

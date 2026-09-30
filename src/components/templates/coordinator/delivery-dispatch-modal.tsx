@@ -110,24 +110,24 @@ export function DeliveryDispatchModal({ isOpen, order, onClose, onSubmit }: Deli
     }
   }
 
-  const input = "w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-red-500"
+  const input = "w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-surface border border-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
         <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-alert-100 text-alert-700 flex items-center justify-center">
               <Truck size={18} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-black uppercase border border-zinc-200">
+                <span className="px-2 py-0.5 rounded bg-cool-100 text-cool-700 text-caption font-black uppercase border border-cool-200">
                   CHẶNG P6 • GIAO HÀNG
                 </span>
                 <h3 className="text-base font-extrabold text-text">Giao Hàng & Bằng Chứng Giao (T20/T21)</h3>
               </div>
-              <p className="text-[11px] text-text-muted">
+              <p className="text-caption text-text-muted">
                 Đơn #{order.orderCode} • Hẹn giao {order.deliveryTargetTime}
                 {state ? ` • Hiện tại: ${STATE_LABEL[state] ?? state}` : " • Chưa bàn giao shipper"}
               </p>
@@ -176,15 +176,15 @@ export function DeliveryDispatchModal({ isOpen, order, onClose, onSubmit }: Deli
             </Button>
           </div>
 
-          <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col gap-2">
-            <span className="font-bold text-emerald-900">Giao thành công — cần ảnh POD hoặc tên người ký nhận</span>
+          <div className="p-3 rounded-xl border border-mint-200 bg-mint-50/40 flex flex-col gap-2">
+            <span className="font-bold text-mint-900">Giao thành công — cần ảnh POD hoặc tên người ký nhận</span>
             <div className="flex items-center gap-3">
               <div className="w-24 h-24 rounded-lg border border-border bg-surface overflow-hidden flex items-center justify-center shrink-0">
                 {podPreview ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={podPreview} alt="Ảnh POD" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-[10px] text-text-muted text-center p-1">Chưa có ảnh POD</span>
+                  <span className="text-caption text-text-muted text-center p-1">Chưa có ảnh POD</span>
                 )}
               </div>
               <div className="flex-1 flex flex-col gap-2">
@@ -204,14 +204,14 @@ export function DeliveryDispatchModal({ isOpen, order, onClose, onSubmit }: Deli
               size="sm"
               disabled={busy || (!podAssetId && !recipientSignedName.trim())}
               onClick={() => send("DELIVERED_SUCCESS")}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 w-fit"
+              className="bg-mint-600 hover:bg-mint-700 text-white font-bold gap-1.5 w-fit"
             >
               <CheckCircle2 size={14} /> Xác nhận giao thành công
             </Button>
           </div>
 
-          <div className="p-3 rounded-xl border border-red-200 bg-red-50/40 flex flex-col gap-2">
-            <span className="font-bold text-red-900">Giao thất bại — mở sự cố</span>
+          <div className="p-3 rounded-xl border border-alert-200 bg-alert-50/40 flex flex-col gap-2">
+            <span className="font-bold text-alert-900">Giao thất bại — mở sự cố</span>
             <input
               className={input}
               placeholder="Lý do (người nhận không nghe máy, sai địa chỉ…)"
@@ -223,14 +223,14 @@ export function DeliveryDispatchModal({ isOpen, order, onClose, onSubmit }: Deli
               variant="outline"
               disabled={busy || !failureReason.trim()}
               onClick={() => send("DELIVERY_FAILED")}
-              className="gap-1.5 text-red-700 border-red-300 w-fit"
+              className="gap-1.5 text-alert-700 border-alert-300 w-fit"
             >
               <AlertOctagon size={14} /> Báo giao thất bại
             </Button>
           </div>
 
           {error && (
-            <div role="alert" className="p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 font-semibold">
+            <div role="alert" className="p-3 rounded-xl border border-alert-300 bg-alert-50 text-alert-800 font-semibold">
               {error}
             </div>
           )}

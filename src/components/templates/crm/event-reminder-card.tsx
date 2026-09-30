@@ -32,8 +32,8 @@ export function EventReminderCard({
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold text-text-muted">M08 Retention Care</div>
-          <div className="text-[16px] font-extrabold text-text">Nhắc hẹn ngày kỷ niệm sắp tới</div>
+          <div className="text-xs font-semibold text-text-muted">CRM khách hàng Retention Care</div>
+          <div className="text-title font-extrabold text-text">Nhắc hẹn ngày kỷ niệm sắp tới</div>
         </div>
         <Badge tone="warning" className="gap-1">
           <Bell size={12} />
@@ -54,12 +54,12 @@ export function EventReminderCard({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-extrabold text-text">{item.customerName}</span>
-                  <Badge tone={item.daysRemaining <= 2 ? "danger" : "warning"} className="text-[10px]">
+                  <Badge tone={item.daysRemaining <= 2 ? "danger" : "warning"} className="text-caption">
                     Còn {item.daysRemaining} ngày
                   </Badge>
                 </div>
                 <div className="text-xs font-semibold text-text mt-0.5">{item.eventTitle} ({item.eventDate})</div>
-                <div className="text-[11px] text-text-muted">
+                <div className="text-caption text-text-muted">
                   Gợi ý: {item.preferredStyle} • Tầm giá: {item.suggestedBudget}
                 </div>
               </div>

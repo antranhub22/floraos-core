@@ -68,11 +68,11 @@ export const OptimizationModeSelector: React.FC<OptimizationModeSelectorProps> =
   return (
     <div className="w-full flex flex-col gap-3.5">
       <div className="flex items-center justify-between">
-        <label className="text-[13px] font-bold text-text flex items-center gap-1.5">
+        <label className="text-body-sm font-bold text-text flex items-center gap-1.5">
           <Sparkles size={15} className="text-primary" />
-          Chế độ tối ưu hóa ảnh M04a:
+          Chế độ tối ưu hóa ảnh Tối ưu ảnh:
         </label>
-        <span className="text-[11px] text-text-muted">
+        <span className="text-caption text-text-muted">
           {mode === "auto" ? "AI tự động cấu hình chuẩn Marketing" : `${selectedCapabilities.length} năng lực đã chọn`}
         </span>
       </div>
@@ -97,10 +97,10 @@ export const OptimizationModeSelector: React.FC<OptimizationModeSelectorProps> =
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-[13px] font-bold text-text">1. Tự động hoàn toàn</span>
-              <Badge tone="accent" className="text-[10px] px-1.5 py-0">Khuyên dùng</Badge>
+              <span className="text-body-sm font-bold text-text">1. Tự động hoàn toàn</span>
+              <Badge tone="accent" className="text-caption px-1.5 py-0">Khuyên dùng</Badge>
             </div>
-            <p className="text-[11.5px] text-text-muted mt-0.5 leading-relaxed">
+            <p className="text-caption text-text-muted mt-0.5 leading-relaxed">
               1-Click Studio: Tự động tách nền studio, xóa watermark, cân bằng sáng và tăng nét cánh hoa đạt chuẩn bán hàng.
             </p>
           </div>
@@ -124,10 +124,10 @@ export const OptimizationModeSelector: React.FC<OptimizationModeSelectorProps> =
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-[13px] font-bold text-text">2. Tùy chọn độc lập</span>
-              <Badge tone="neutral" className="text-[10px] px-1.5 py-0">Chuyên sâu</Badge>
+              <span className="text-body-sm font-bold text-text">2. Tùy chọn độc lập</span>
+              <Badge tone="neutral" className="text-caption px-1.5 py-0">Chuyên sâu</Badge>
             </div>
-            <p className="text-[11.5px] text-text-muted mt-0.5 leading-relaxed">
+            <p className="text-caption text-text-muted mt-0.5 leading-relaxed">
               Tùy biến từng tác vụ: Chỉ chọn các năng lực bạn muốn hệ thống can thiệp trên ảnh (chỉ xóa watermark, v.v.).
             </p>
           </div>
@@ -153,10 +153,10 @@ export const OptimizationModeSelector: React.FC<OptimizationModeSelectorProps> =
       {mode === "custom" && (
         <div className="flex flex-col gap-2.5 pt-1">
           <div className="flex items-center justify-between px-1">
-            <span className="text-[11.5px] font-medium text-text-muted">
+            <span className="text-caption font-medium text-text-muted">
               Chọn các tác vụ bạn muốn thực thi:
             </span>
-            <div className="flex items-center gap-2 text-[11px]">
+            <div className="flex items-center gap-2 text-caption">
               <button
                 type="button"
                 onClick={selectAllSupported}
@@ -183,6 +183,8 @@ export const OptimizationModeSelector: React.FC<OptimizationModeSelectorProps> =
 
               return (
                 <div
+              role="button"
+              tabIndex={0}
                   key={cap.id}
                   onClick={() => toggleCapability(cap.id, supported)}
                   className={`flex items-start gap-3 rounded-xl border p-3 transition-all ${
@@ -205,16 +207,16 @@ export const OptimizationModeSelector: React.FC<OptimizationModeSelectorProps> =
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-[12.5px] font-bold ${supported ? "text-text" : "text-text-muted"}`}>
+                      <span className={`text-meta font-bold ${supported ? "text-text" : "text-text-muted"}`}>
                         {cap.name}
                       </span>
                       {!supported && (
-                        <Badge tone="warning" className="text-[9.5px] px-1 py-0 gap-1 flex items-center">
+                        <Badge tone="warning" className="text-caption px-1 py-0 gap-1 flex items-center">
                           <AlertCircle size={10} /> Cần Cloud AI
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[11px] text-text-muted mt-0.5 leading-relaxed">
+                    <p className="text-caption text-text-muted mt-0.5 leading-relaxed">
                       {cap.description}
                     </p>
                   </div>

@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react"
 import { AlertTriangle } from "lucide-react"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 
 type PlatformSystemHealth = {
   jobCountsByStatus: Record<string, number>
@@ -36,20 +37,25 @@ export default function SucKhoeHeThongPage() {
   }, [])
 
   if (loi) return <p className="text-sm text-danger">{loi}</p>
-  if (!health) return <p className="text-sm text-text-muted">Đang tải…</p>
+  if (!health) return <div className="py-4"><SkeletonBlock lines={4} /></div>
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-base font-bold text-text">Sức khỏe hệ thống & hạ tầng</h1>
+        <span className="rounded bg-muted px-2 py-0.5 text-xs text-text-muted">Phạm vi: Toàn hạ tầng</span>
+      </div>
+
       <Card className="p-4">
         <p className="mb-3 text-sm font-semibold">Job theo trạng thái</p>
         <div className="flex flex-wrap gap-3">
           {Object.entries(health.jobCountsByStatus).map(([status, count]) => (
-            <div key={status} className="rounded-xl border border-border px-3 py-2 text-[13px]">
+            <div key={status} className="rounded-xl border border-border px-3 py-2 text-xs">
               <span className="font-semibold">{count}</span> <span className="text-text-muted">{status}</span>
             </div>
           ))}
           {Object.keys(health.jobCountsByStatus).length === 0 && (
-            <p className="text-[13px] text-text-muted">Chưa có job nào.</p>
+            <p className="text-xs text-text-muted">Chưa có job nào.</p>
           )}
         </div>
       </Card>
@@ -60,7 +66,7 @@ export default function SucKhoeHeThongPage() {
         </p>
         <div className="flex flex-col divide-y divide-border">
           {health.stuckJobs.map((job) => (
-            <div key={job.id} className="flex items-center justify-between py-2 text-[13px]">
+            <div key={job.id} className="flex items-center justify-between py-2 text-body-sm">
               <span>{job.feature} · tổ chức {job.organizationId}</span>
               <span className="text-text-muted">
                 {job.startedAt ? new Date(job.startedAt).toLocaleString("vi-VN") : "—"}
@@ -68,7 +74,7 @@ export default function SucKhoeHeThongPage() {
             </div>
           ))}
           {health.stuckJobs.length === 0 && (
-            <p className="py-2 text-[13px] text-text-muted">Không có job treo.</p>
+            <p className="py-2 text-body-sm text-text-muted">Không có job treo.</p>
           )}
         </div>
       </Card>

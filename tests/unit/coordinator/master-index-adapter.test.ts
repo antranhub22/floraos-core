@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest"
-import {
-  extractFloristRecipeFromOrderItem,
-  extractCustomerCoordinationBrief,
-} from "@/modules/coordinator/domain/master-index-adapter"
+import { extractFloristRecipeFromOrderItem } from "@/modules/coordinator/domain/master-index-adapter"
+// ĐP-2.4 (MI-6, 26/09/2026): `extractCustomerCoordinationBrief` bị xoá khỏi Điều phối —
+// tóm tắt hồ sơ khách nay đọc qua `projectCustomerCoordinationBrief` của CMI, xem
+// `tests/unit/crm/crm-rules.test.ts`.
 
 describe("Coordinator Master Index Adapter", () => {
   it("trích xuất Atomic BOM từ metadata có cấu trúc của Master Index", () => {
@@ -67,36 +67,36 @@ describe("Coordinator Master Index Adapter", () => {
     expect(recipe.flowers).toHaveLength(1)
     expect(recipe.flowers[0]!.flowerName).toBe("Khách đặt giỏ hoa quả kèm hoa hồng tự do")
     expect(recipe.flowers[0]!.quantity).toBe(1)
-    expect(recipe.foliage).toHaveLength(1)
-    expect(recipe.wrapping).toHaveLength(1)
+    // ĐP-1.4 (26/09/2026): trước bản này, thiếu lá/gói/phụ kiện thì hàm BỊA ra
+    // "Lá đệm theo mùa" / "Giấy gói cao cấp" — giao diện tưởng đó là dữ liệu
+    // thật. Từ nay: không có nguồn thì trả mảng RỖNG, không suy đoán.
+    expect(recipe.foliage).toHaveLength(0)
+    expect(recipe.wrapping).toHaveLength(0)
+    expect(recipe.accessories).toHaveLength(0)
   })
 
-  it("trích xuất đúng hồ sơ khách hàng từ Customer Master Index", () => {
-    const mockCustomer = {
-      id: "cust-1",
-      organizationId: "org-1",
-      code: "KH-001",
-      name: "Nguyễn Văn VIP",
-      phone: "0900000001",
-      tags: ["VIP"],
-      metrics: {
-        tier: "VIP" as const,
-        totalSpentVnd: 50000000,
-        orderCount: 15,
-        aovVnd: 3333333,
+  it("ĐP-1.4 (26/09/2026): có BOM lá/gói/phụ kiện thật thì giữ nguyên, không ghi đè bằng giá trị bịa", () => {
+    const rawItem = {
+      orderId: "ord-test-3",
+      orderCode: "FLR-003",
+      productTitle: "Bó Tulip Hà Lan",
+      targetReadyTime: "09:00",
+      deliveryAddress: "789 Cầu Giấy",
+      metadata: {
+        flowers: [{ flowerName: "Tulip", quantity: 15, unit: "cành", color: "Vàng", role: "Chủ đạo" }],
+        foliage: [{ name: "Dương xỉ", quantity: 3, unit: "cành", color: "Xanh", role: "Nền" }],
+        wrapping: [{ layer: "Lớp trong", material: "Giấy kraft", color: "Nâu", texture: "Thô" }],
+        accessories: [{ name: "Ruy băng lụa", material: "Lụa", color: "Vàng gold", quantity: 1, printedText: null }],
+        wrapStyle: "Giấy xi măng",
       },
-      preferences: {
-        preferredFlowers: ["Hồng Ecuador", "Mẫu đơn"],
-        preferredColors: ["Đỏ", "Hồng"],
-      },
-      occasions: [],
-      consents: [],
-      availableVouchers: [],
     }
 
-    const brief = extractCustomerCoordinationBrief(mockCustomer)
-    expect(brief.tier).toBe("VIP")
-    expect(brief.isVip).toBe(true)
-    expect(brief.preferredFlowers).toContain("Mẫu đơn")
+    const recipe = extractFloristRecipeFromOrderItem(rawItem)
+    expect(recipe.foliage).toHaveLength(1)
+    expect(recipe.foliage[0]!.name).toBe("Dương xỉ")
+    expect(recipe.wrapping).toHaveLength(1)
+    expect(recipe.wrapping[0]!.material).toBe("Giấy kraft")
+    expect(recipe.accessories).toHaveLength(1)
+    expect(recipe.accessories[0]!.name).toBe("Ruy băng lụa")
   })
 })

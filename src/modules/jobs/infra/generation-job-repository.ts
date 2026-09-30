@@ -58,6 +58,14 @@ export class GenerationJobRepository {
     })
   }
 
+  /** Job mới nhất (mọi trạng thái) của `feature` có `payload.<key> = value`. */
+  findLatestByPayload(ctx: TenantContext, feature: string, key: string, value: string): Promise<generation_jobs | null> {
+    return this.db.generation_jobs.findFirst({
+      where: scopedWhere(ctx, { feature, payload: { path: [key], equals: value } }),
+      orderBy: { created_at: "desc" },
+    })
+  }
+
   create(ctx: TenantContext, input: CreateJobInput): Promise<generation_jobs> {
     return this.db.generation_jobs.create({
       data: scopedData(ctx, {

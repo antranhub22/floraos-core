@@ -38,8 +38,8 @@ export function StoryboardScriptCard({
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold text-text-muted">M05 Storyboard Script</div>
-          <div className="text-[16px] font-extrabold text-text">{title}</div>
+          <div className="text-xs font-semibold text-text-muted">Video Studio Storyboard Script</div>
+          <div className="text-title font-extrabold text-text">{title}</div>
         </div>
         <div className="flex items-center gap-2">
           <Badge tone="neutral" className="gap-1">
@@ -65,7 +65,7 @@ export function StoryboardScriptCard({
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-text">{scene.visualCue}</span>
-                <span className="text-[11px] text-text-muted">{scene.durationSeconds}s</span>
+                <span className="text-caption text-text-muted">{scene.durationSeconds}s</span>
               </div>
               <p className="mt-1 text-xs text-text-muted leading-relaxed italic">
                 &ldquo;{scene.voiceoverText}&rdquo;

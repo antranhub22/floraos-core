@@ -280,7 +280,11 @@
         "mo_ta_mau",
         "dau_hieu_nhan_dang",
         "so_nu",
-        "so_hong"
+        "so_hong",
+        "bien_the",
+        "chieu_dai_cm",
+        "duoc_thay_the",
+        "thu_tu_uu_tien_thay_the"
        ],
        "properties": {
         "nhom_hoa": {
@@ -430,6 +434,34 @@
           "null"
          ],
          "description": "So don vi HONG cua rieng loai nay: gay co, heo, dap canh. Da NAM TRONG quantity, khong cong them. Khong thay don vi hong nao thi 0."
+        },
+        "bien_the": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "description": "Giong/bien the cu the cua nhom hoa (vd nhom_hoa = Hong, bien_the = Ohara/Explorer). MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
+        },
+        "chieu_dai_cm": {
+         "type": [
+          "number",
+          "null"
+         ],
+         "description": "Chieu dai canh hoa, don vi cm. MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
+        },
+        "duoc_thay_the": {
+         "type": [
+          "boolean",
+          "null"
+         ],
+         "description": "Co cho phep thay the dong BOM nay khi thieu hang. MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
+        },
+        "thu_tu_uu_tien_thay_the": {
+         "type": [
+          "integer",
+          "null"
+         ],
+         "description": "Thu tu uu tien bi thay the khi thieu hang, so nho hon thay truoc. MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
         }
        }
       }
@@ -450,7 +482,8 @@
         "dvt_dem",
         "mau",
         "mo_ta_mau",
-        "dau_hieu_nhan_dang"
+        "dau_hieu_nhan_dang",
+        "duoc_thay_the"
        ],
        "properties": {
         "name": {
@@ -550,6 +583,13 @@
           "null"
          ],
          "description": "Nhãn thô tiếng Anh gốc của mô hình — luôn có, khớp mã hay không."
+        },
+        "duoc_thay_the": {
+         "type": [
+          "boolean",
+          "null"
+         ],
+         "description": "Co cho phep thay the dong BOM nay khi thieu hang. MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
         }
        }
       }
@@ -566,7 +606,9 @@
         "quantity",
         "printed_text",
         "confidence",
-        "ma"
+        "ma",
+        "don_vi",
+        "duoc_thay_the"
        ],
        "properties": {
         "name": {
@@ -612,6 +654,20 @@
           "null"
          ],
          "description": "Mã trong danh mục, null khi không khớp."
+        },
+        "don_vi": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "description": "Don vi tinh cua phu kien (vd cai, bo) - khac dvt_dem (chi danh cho hoa/la). MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
+        },
+        "duoc_thay_the": {
+         "type": [
+          "boolean",
+          "null"
+         ],
+         "description": "Co cho phep thay the dong BOM nay khi thieu hang. MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
         }
        }
       }
@@ -627,7 +683,10 @@
         "color",
         "texture",
         "confidence",
-        "ma"
+        "ma",
+        "hoa_van",
+        "so_luong",
+        "duoc_thay_the"
        ],
        "properties": {
         "layer": {
@@ -681,6 +740,27 @@
           "null"
          ],
          "description": "Mã trong danh mục, null khi không khớp."
+        },
+        "hoa_van": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "description": "Hoa van/hoa tiet cua lop goi nay - khac texture (ket cau vat lieu). MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
+        },
+        "so_luong": {
+         "type": [
+          "integer",
+          "null"
+         ],
+         "description": "So luong lop/tam cua CHINH lop goi nay (vd 2 lop giay lua cung mau). MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
+        },
+        "duoc_thay_the": {
+         "type": [
+          "boolean",
+          "null"
+         ],
+         "description": "Co cho phep thay the dong BOM nay khi thieu hang. MI-12 (DP-2b, 26/09/2026). AI dien khi nhan dien duoc; khong nhan dien duoc thi de null, KHONG DOAN."
         }
        }
       }

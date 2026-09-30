@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "stage-06b-create-audio.input.schema.json",
   "title": "Chặng 06b — CREATE · Khu vực C: Giọng đọc & nhạc nền — Đầu vào",
-  "description": "Bốn tác vụ thật: VOICEOVER, MUSIC_SELECT (0 credit), AUDIO_MIX, VOICE_CLONE. Kết quả cuối (audio_storage_key) đọc từ job khi COMPLETED.",
+  "description": "Bốn tác vụ thật: VOICEOVER, MUSIC_SELECT, AUDIO_MIX, VOICE_CLONE. Nhà cung cấp trước (25/09/2026): giọng theo thứ tự tiệm, nhạc nền AI (ElevenLabs Music) với bài thư viện làm dự phòng; musicProvider=library = 0 credit phần nhạc. Kết quả cuối (audio_storage_key) đọc từ job khi COMPLETED.",
   "x-floraos": {
     "stageId": "06b",
     "stage": 6,
@@ -109,6 +109,14 @@
     "topicAngleCategory": {
       "type": "string",
       "maxLength": 60
+    },
+    "musicProvider": {
+      "description": "Bỏ trống = nhạc AI theo thứ tự tiệm (bài musicTrackId là dự phòng); library = chỉ bài thư viện (0 credit)",
+      "type": "string",
+      "enum": [
+        "elevenlabs_music",
+        "library"
+      ]
     },
     "scenePlanId": {
       "description": "Kịch bản sản xuất tổng (Chặng 05) mà bản âm thanh thực thi",

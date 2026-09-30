@@ -8,14 +8,21 @@ import {
 } from "./platform-capability-catalog"
 
 describe("platform-capability-catalog", () => {
-  it("có đúng tám mã N1..N8, không nhiều hơn không ít hơn", () => {
-    expect(ALL_PLATFORM_CAPABILITY_CODES).toEqual(["N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8"])
+  it("có đúng chín mã (N1..N8, N12), không nhiều hơn không ít hơn", () => {
+    expect(ALL_PLATFORM_CAPABILITY_CODES).toEqual([
+      "N1", "N12", "N2", "N3", "N4", "N5", "N6", "N7", "N8",
+    ])
   })
 
-  it("N9-N11 không tồn tại trong dải này — thuộc tuyến AI-1", () => {
+  it("N9-N11 không tồn tại trong dải này — giữ chỗ cho tuyến AI-1", () => {
     expect(isPlatformCapabilityCode("N9")).toBe(false)
     expect(isPlatformCapabilityCode("N10")).toBe(false)
     expect(isPlatformCapabilityCode("N11")).toBe(false)
+  })
+
+  it("N12 là mã quản trị trường dữ liệu của ĐP-3", () => {
+    expect(isPlatformCapabilityCode("N12")).toBe(true)
+    expect(platformCapability("N12").name).toBe("platform.field_catalog.manage")
   })
 
   it("không mã nào trùng với dải mã tenant (A-L, chữ cái khác N)", () => {

@@ -60,22 +60,24 @@ export function VideoPreviewModal({ isOpen, onClose, data }: VideoPreviewModalPr
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-3xl bg-stone-950 rounded-2xl overflow-hidden shadow-2xl border border-stone-800 flex flex-col max-h-[92vh]"
+              role="button"
+              tabIndex={0}
+        className="relative w-full max-w-3xl bg-cool-950 rounded-2xl overflow-hidden shadow-2xl border border-cool-800 flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-stone-800/80 bg-stone-900/60">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cool-800/80 bg-cool-900/60">
           <div className="flex items-center gap-2.5 min-w-0 pr-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-600 text-white shrink-0 shadow-xs">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blush-600 text-white shrink-0 shadow-xs">
               <Film size={15} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <span className="text-caption font-extrabold uppercase px-1.5 py-0.5 rounded bg-blush-500/20 text-blush-400 border border-blush-500/30">
                   Dẫn chứng video
                 </span>
                 {data.topicName && (
-                  <span className="text-xs font-semibold text-stone-400 truncate">
+                  <span className="text-xs font-semibold text-cool-400 truncate">
                     • {data.topicName}
                   </span>
                 )}
@@ -90,7 +92,7 @@ export function VideoPreviewModal({ isOpen, onClose, data }: VideoPreviewModalPr
             type="button"
             onClick={onClose}
             aria-label="Đóng video"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-stone-400 hover:text-white hover:bg-stone-800 transition-colors shrink-0"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-cool-400 hover:text-white hover:bg-cool-800 transition-colors shrink-0"
           >
             <X size={18} />
           </button>
@@ -115,10 +117,10 @@ export function VideoPreviewModal({ isOpen, onClose, data }: VideoPreviewModalPr
             />
           ) : (
             <div className="text-center p-6 space-y-3">
-              <div className="w-12 h-12 rounded-full bg-stone-800 text-stone-400 flex items-center justify-center mx-auto">
+              <div className="w-12 h-12 rounded-full bg-cool-800 text-cool-400 flex items-center justify-center mx-auto">
                 <Play size={20} className="translate-x-0.5" />
               </div>
-              <p className="text-xs text-stone-300">
+              <p className="text-xs text-cool-300">
                 Video này có định dạng xem trực tiếp trên nền tảng nguồn
               </p>
               {directExternalUrl && (
@@ -126,7 +128,7 @@ export function VideoPreviewModal({ isOpen, onClose, data }: VideoPreviewModalPr
                   href={directExternalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blush-600 hover:bg-blush-500 text-white text-xs font-bold transition-colors"
                 >
                   <span>Mở video trên tab mới</span>
                   <ExternalLink size={13} />
@@ -137,16 +139,16 @@ export function VideoPreviewModal({ isOpen, onClose, data }: VideoPreviewModalPr
         </div>
 
         {/* Footer Meta & Controls */}
-        <div className="px-4 py-2.5 bg-stone-900/90 border-t border-stone-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-3 text-stone-400 text-[11.5px]">
+        <div className="px-4 py-2.5 bg-cool-900/90 border-t border-cool-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-3 text-cool-400 text-caption">
             {data.author && (
               <span>
-                Kênh: <strong className="text-stone-200">{data.author}</strong>
+                Kênh: <strong className="text-cool-200">{data.author}</strong>
               </span>
             )}
             {data.metrics && (
               <span>
-                Chỉ số: <span className="text-amber-400 font-semibold">{data.metrics}</span>
+                Chỉ số: <span className="text-sand-400 font-semibold">{data.metrics}</span>
               </span>
             )}
           </div>
@@ -157,7 +159,7 @@ export function VideoPreviewModal({ isOpen, onClose, data }: VideoPreviewModalPr
                 href={directExternalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white text-[11px] font-semibold transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-cool-800 hover:bg-cool-700 text-cool-200 hover:text-white text-caption font-semibold transition-colors"
               >
                 <span>Xem trên YouTube</span>
                 <ExternalLink size={11} />
@@ -168,7 +170,7 @@ export function VideoPreviewModal({ isOpen, onClose, data }: VideoPreviewModalPr
                 href={data.tiktokUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white text-[11px] font-semibold transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-cool-800 hover:bg-cool-700 text-cool-200 hover:text-white text-caption font-semibold transition-colors"
               >
                 <span>Kênh TikTok</span>
                 <ExternalLink size={11} />

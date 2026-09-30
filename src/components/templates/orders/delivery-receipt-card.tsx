@@ -38,8 +38,8 @@ export function DeliveryReceiptCard({
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold text-text-muted">M09 Delivery Slip</div>
-          <div className="text-[16px] font-extrabold text-text">Phiếu giao hàng #{orderCode}</div>
+          <div className="text-xs font-semibold text-text-muted">Đơn hàng Delivery Slip</div>
+          <div className="text-title font-extrabold text-text">Phiếu giao hàng #{orderCode}</div>
         </div>
         <Badge tone="neutral">Khổ A6 Giao Vận</Badge>
       </div>

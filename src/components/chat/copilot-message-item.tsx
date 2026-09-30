@@ -32,7 +32,7 @@ export function CopilotMessageItem({
 
   if (isSystem) {
     return (
-      <div className="rounded-lg bg-surface-raised border border-border p-2.5 text-center text-[11px] text-muted-foreground italic">
+      <div className="rounded-lg bg-surface-raised border border-border p-2.5 text-center text-caption text-muted-foreground italic">
         {message.content}
       </div>
     )
@@ -41,7 +41,7 @@ export function CopilotMessageItem({
   return (
     <div className={`flex gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && (
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700 mt-0.5">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary mt-0.5">
           <Bot className="h-3.5 w-3.5" />
         </span>
       )}
@@ -50,7 +50,7 @@ export function CopilotMessageItem({
         <div
           className={`rounded-2xl px-3.5 py-2 text-xs leading-relaxed whitespace-pre-line ${
             isUser
-              ? "bg-red-600 text-white font-medium rounded-br-none"
+              ? "bg-primary text-white font-medium rounded-br-none"
               : "bg-surface-raised border border-border text-foreground rounded-bl-none shadow-2xs"
           }`}
         >
@@ -63,7 +63,7 @@ export function CopilotMessageItem({
             <Button
               size="sm"
               onClick={() => onNavigate(targetRoute)}
-              className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs"
+              className="w-full bg-primary hover:bg-primary-dark text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs"
             >
               <BookOpen className="h-3.5 w-3.5" />
               {actionLabel}
@@ -78,16 +78,16 @@ export function CopilotMessageItem({
             {suggestedFlowers.map((f) => (
               <div
                 key={f.productId}
-                className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50/60 p-2 shadow-2xs"
+                className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-2 shadow-2xs"
               >
                 {f.sampleImageUrl ? (
                   <img
                     src={f.sampleImageUrl}
                     alt={f.productName}
-                    className="h-12 w-12 rounded-lg object-cover border border-red-200"
+                    className="h-12 w-12 rounded-lg object-cover border border-primary/20"
                   />
                 ) : (
-                  <div className="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center text-red-500">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary/60">
                     <Flower2 className="h-5 w-5" />
                   </div>
                 )}
@@ -96,7 +96,7 @@ export function CopilotMessageItem({
                   <div className="font-bold text-foreground text-xs truncate">
                     {f.productName}
                   </div>
-                  <div className="text-red-600 font-extrabold text-[11px]">
+                  <div className="text-primary font-extrabold text-caption">
                     {Number(f.priceVnd).toLocaleString("vi-VN")} đ
                   </div>
                 </div>
@@ -105,7 +105,7 @@ export function CopilotMessageItem({
                   size="sm"
                   disabled={creatingOrderFor === f.productId}
                   onClick={() => onQuickCreateOrder(f.productId)}
-                  className="h-7 px-2.5 bg-red-600 hover:bg-red-700 text-white text-[11px] shrink-0"
+                  className="h-7 px-2.5 bg-primary hover:bg-primary-dark text-white text-caption shrink-0"
                 >
                   {creatingOrderFor === f.productId ? (
                     <Loader2 className="h-3 w-3 animate-spin" />

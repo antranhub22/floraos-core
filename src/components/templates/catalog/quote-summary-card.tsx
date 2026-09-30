@@ -38,8 +38,8 @@ export function QuoteSummaryCard({
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold text-text-muted">M02 Smart Pricing</div>
-          <div className="text-[16px] font-extrabold text-text">Bảng tính giá cấu phần: {productName}</div>
+          <div className="text-xs font-semibold text-text-muted">Catalog sản phẩm Smart Pricing</div>
+          <div className="text-title font-extrabold text-text">Bảng tính giá cấu phần: {productName}</div>
         </div>
         <Badge tone="success" className="gap-1">
           <Calculator size={12} />

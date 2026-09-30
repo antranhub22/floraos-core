@@ -1,8 +1,8 @@
 version: "1.0"
 governance:
   constitution: "docs/00-DOCUMENTATION-CONSTITUTION.md"
-  updated_at: "2026-09-23T21:35:00+07:00"
-  total_documents: 47
+  updated_at: "2026-09-30T08:56:00+07:00"
+  total_documents: 65
 
 documents:
   # =========================================================================
@@ -350,6 +350,34 @@ documents:
     dependencies: ["docs/dac-ta/10-ai-orchestration.md"]
     supersedes: []
 
+  - id: "DOC-03-COORD-MI-CONTRACT"
+    path: "docs/dac-ta/FLORAOS_COORDINATOR_MASTER_INDEX_CONTRACT.md"
+    title: "Hợp đồng Master Index × Điều phối (Chức năng 12)"
+    domain: "Module Coordinator (Chức năng 12)"
+    layer: "Level 3"
+    purpose: "v2.2 (26/09/2026: admin = quản trị nền tảng, mọi trường sửa được trên Console §7.1) · v2.1 (MI-12 đã duyệt, cấu hình hiển thị trường §7.1, phân vai thanh toán §7.2; v2.0 chuẩn hoá theo mã) — ranh giới dữ liệu giữa Product/Customer Master Index và Điều phối: 2 trục phân loại (sở hữu × người nhập), quy tắc snapshot/override/thương mại, 8 quy tắc tương thích, danh mục nâng cấp Master Index MI-1…MI-12 và 10 tiêu chí nghiệm thu kèm hiện trạng"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Product Owner / Backend Lead"
+    dependencies: ["docs/dac-ta/07-database-specification.md", "docs/dac-ta/FLORAOS_COORDINATOR_FIELD_SPEC.md"]
+    supersedes: ["docs/archive/merged/FLORAOS_COORDINATOR_CANONICAL.md", "docs/archive/merged/FLORAOS_MASTER_INDEX_COORDINATOR_UPGRADE_REPORT.md"]
+
+  - id: "DOC-03-COORD-FIELD-SPEC"
+    path: "docs/dac-ta/FLORAOS_COORDINATOR_FIELD_SPEC.md"
+    title: "Đặc tả trường dữ liệu Template & Form — Điều phối (T01–T27)"
+    domain: "Module Coordinator (Chức năng 12)"
+    layer: "Level 3"
+    purpose: "v2.3 (26/09/2026: quản trị nền tảng được tạo trường hoàn toàn mới §16.3) · v2.2 (nguyên lý PO — mọi trường đã xây và mọi danh mục do quản trị nền tảng sửa được trên Console Vận hành, kiến trúc hai lớp mã/cấu hình §16.2) · v2.1 (PO chốt D2 thanh toán hai module + sổ thu §2.14, D3 không cổng đối tác + vết nhập hộ §2.16, D5 MI-12 + cấu hình hiển thị §16.1, D6 T17≠T24, D7 danh mục giá trị §2.15; v2.0 chuẩn hoá theo mã) — tên chuẩn theo code, quyền sở hữu và trạng thái thi công (CÓ · ĐỔI TÊN · MỘT PHẦN · MI · MI-THIẾU · CHƯA XÂY) của từng trường trong Order Object, T01–T27, form Lập kế hoạch/Phân công/Hồ sơ đối tác/Huỷ đơn; đề xuất địa chỉ hai cơ chế song song (chờ PO chọn); 11 điểm khác biệt D1–D11 so với đặc tả gốc"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Product Owner / Coordinator Lead"
+    dependencies: ["docs/dac-ta/FLORAOS_COORDINATOR_MASTER_INDEX_CONTRACT.md", "docs/FLORAOS_COORDINATOR_AI_AGENT_PACKAGE/FLORAOS_COORDINATOR_TEMPLATE_ARCHITECTURE.md"]
+    supersedes: ["docs/archive/merged/FLORAOS_COORDINATOR_TEMPLATE_FIELD_SPEC_PRODUCTION_READY.md", "docs/archive/merged/FLORAOS_COORDINATOR_TEMPLATE_FORM_FIELDS_SYNCHRONIZED_WITH_MASTER_INDEX.md"]
+
   - id: "DOC-03-UX-ARCH"
     path: "docs/dac-ta/03-ux-architecture.md"
     title: "UX Architecture Specification"
@@ -362,6 +390,62 @@ documents:
     ssot: true
     owner: "Product Design Lead"
     dependencies: ["docs/dac-ta/00-PRD.md"]
+    supersedes: []
+
+  - id: "DOC-03-ROLE-UX"
+    path: "docs/dac-ta/03b-role-ux.md"
+    title: "Role UX — Trải nghiệm theo 14 vai"
+    domain: "UX/UI"
+    layer: "Level 3"
+    purpose: "SSOT 14 vai trải nghiệm: khuôn trang chủ, thứ tự điều hướng, ưu tiên thông tin, hành động chính, AI theo vai; vai chưa có hiện ở trạng thái vô hiệu (PO 26/09/2026)"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Product Owner"
+    dependencies: ["docs/dac-ta/03-ux-architecture.md", "docs/dac-ta/02-function-catalog.md", "src/modules/organization/domain/role-ux-catalog.ts"]
+    supersedes: []
+
+  - id: "DOC-03-UX-CONSTITUTION"
+    path: "docs/dac-ta/03a-ux-constitution.md"
+    title: "FloraOS UX Constitution — Chuẩn chất lượng UX toàn cục"
+    domain: "UX/UI"
+    layer: "Level 3"
+    purpose: "Chuẩn chất lượng UX toàn cục: thứ bậc thông tin L0–L4, mật độ, content budget, trạng thái, WCAG 2.2, Screen Contract, UX Lint, định nghĩa Production/Commercial-ready"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Product Owner"
+    dependencies: ["docs/dac-ta/03-ux-architecture.md", "docs/dac-ta/03b-role-ux.md"]
+    supersedes: ["docs/archive/drafts/FLORAOS_UX_CONSTITUTION_DRAFT.md"]
+
+  - id: "DOC-03-ROLE-UX-CONTRACT"
+    path: "docs/kien-truc/FLORAOS_ROLE_UX_EXECUTION_CONTRACT.md"
+    title: "FLORAOS-UX-ROLE-001 — Role UX AI Agent Execution Contract v1.1"
+    domain: "UX/UI"
+    layer: "Level 3"
+    purpose: "Hợp đồng gốc cho AI Agent (khung audit Phần B, anti-pattern, handoff, exception); 03b-role-ux.md thắng khi khác biệt"
+    status: "SUPPORTING"
+    authority: "Level 3"
+    canonical: false
+    ssot: false
+    owner: "Product Owner"
+    dependencies: ["docs/dac-ta/03b-role-ux.md"]
+    supersedes: []
+
+  - id: "DOC-03-SCREEN-CONTRACTS"
+    path: "docs/dac-ta/screen-contracts/README.md"
+    title: "FloraOS Screen Contracts — Chỉ mục & Quy chuẩn Hợp đồng Giao diện"
+    domain: "UX/UI"
+    layer: "Level 3"
+    purpose: "Chỉ mục và quy chuẩn hồ sơ hợp đồng giao diện từng màn theo 03a-ux-constitution.md. Từng Screen Contract thành phần không cần mục REGISTRY riêng, README này đóng vai trò chỉ mục tổng hợp"
+    status: "SUPPORTING"
+    authority: "Level 3"
+    canonical: false
+    ssot: false
+    owner: "Product Owner"
+    dependencies: ["docs/dac-ta/03a-ux-constitution.md", "docs/dac-ta/03b-role-ux.md"]
     supersedes: []
 
   - id: "DOC-03-UX-MACRO-MICRO"
@@ -494,6 +578,62 @@ documents:
     dependencies: ["docs/dac-ta/Checklist_Thuc_Thi.md"]
     supersedes: ["docs/kien-truc/DASHBOARD_VAN_HANH_NEN_TANG.md"]
 
+  - id: "DOC-05-KE-HOACH-NANG-CAP-UIUX"
+    path: "docs/kien-truc/KE_HOACH_NANG_CAP_UIUX.md"
+    title: "Kế hoạch Thực thi chi tiết — Nâng cấp UI/UX toàn hệ thống (bản giao việc cho AI Agent, v2.0)"
+    domain: "UX/UI"
+    layer: "Level 5"
+    purpose: "v2.0 (26/09/2026): luật vận hành agent + điều kiện dừng + cổng G1–G7, bảng quyết định PO (K1–K6, D-RU4, Q-TC, Q-MO, Q-E2E), hiện trạng đo được, ~90 thẻ việc UX-0…UX-7 (tệp được sửa, bước, mã mẫu, test, tiêu chí xong), SOP Screen Contract, SOP mở khoá vai, luật UX Lint R1–R12, prompt mẫu + mẫu báo cáo"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Product Owner / Engineering Lead"
+    dependencies: ["docs/dac-ta/03-ux-architecture.md", "docs/dac-ta/03b-role-ux.md", "docs/archive/drafts/FLORAOS_UX_CONSTITUTION_DRAFT.md"]
+    supersedes: []
+
+  - id: "DOC-05-KE-HOACH-DIEU-PHOI-TRUONG"
+    path: "docs/kien-truc/KE_HOACH_DIEU_PHOI_TRUONG_DU_LIEU.md"
+    title: "Kế hoạch Thực thi — Điều phối: Trường dữ liệu, Master Index & Quản trị trường nền tảng"
+    domain: "Module Coordinator (Chức năng 12)"
+    layer: "Level 5"
+    purpose: "Kế hoạch thi công bản cuối (26/09/2026) ĐP-1…ĐP-5 + ĐP-2b + ĐP-ĐC: sửa lỗi P0, nối Master Index + snapshot, MI-12, nền quản trị trường trên Console Vận hành (N12, danh mục D7, hiển thị theo đối tượng, trường tự tạo), P1–P7 + sổ thu D2, nhận đơn M10/Chat, địa chỉ hai cơ chế (chờ Q-ĐC)"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Product Owner / Engineering Lead"
+    dependencies: ["docs/dac-ta/FLORAOS_COORDINATOR_FIELD_SPEC.md", "docs/dac-ta/FLORAOS_COORDINATOR_MASTER_INDEX_CONTRACT.md", "docs/kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md"]
+    supersedes: []
+
+  - id: "DOC-05-KE-HOACH-ROLE-CAPABILITY"
+    path: "docs/kien-truc/KE_HOACH_THUC_THI_NANG_CAP_ROLE_CAPABILITY_ARCHITECTURE.md"
+    title: "Kế hoạch Thực thi — Nâng cấp Kiến trúc Role UX, Scope & Capability (Chuẩn Commercial & Production Ready)"
+    domain: "Role UX & RBAC"
+    layer: "Level 5"
+    purpose: "Lộ trình 6 giai đoạn thi công chuyển đổi từ mô hình ONE_STORE/CHAIN sang STORE/FLOWER_NETWORK: 3 Top-Level Roles, 4 tầng năng lực, bảo tồn 12 vai chuyên môn, an toàn CSDL, 2 dashboard trọng tâm Store Growth Center & Flower Network Command Center"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Product Owner / Chief Architect"
+    dependencies: ["docs/FLORAOS_CORE_ROLE_CAPABILITY_ARCHITECTURE_UPGRADE.md", "docs/dac-ta/03b-role-ux.md", "docs/dac-ta/02-function-catalog.md"]
+    supersedes: []
+
+  - id: "DOC-05-KE-HOACH-JOURNEY-FIRST-UX"
+    path: "docs/kien-truc/KE_HOACH_THUC_THI_JOURNEY_FIRST_UX_ARCHITECTURE.md"
+    title: "Kế hoạch Thực thi — Nâng cấp Kiến trúc Journey-First UX Architecture"
+    domain: "Role UX & Journey Engine"
+    layer: "Level 5"
+    purpose: "Lộ trình 7 giai đoạn triển khai triết lý Journey-First UX: trang chủ 'Bạn muốn làm gì?', Progressive Disclosure, Journey Engine domain & state machine, ChoiceGrid 3 role, Action Contract 7 bước, Combo Workflow, bảo toàn 7 dashboard hiện có theo nguyên tắc WRAP"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Product Owner / Chief Architect"
+    dependencies: ["docs/FLORAOS_CORE_JOURNEY_FIRST_UX_ARCHITECTURE_FINAL.md", "docs/dac-ta/03b-role-ux.md", "docs/kien-truc/KE_HOACH_THUC_THI_NANG_CAP_ROLE_CAPABILITY_ARCHITECTURE.md"]
+    supersedes: []
+
   - id: "DOC-05-CHECKLIST-CREATIVE-STUDIO"
     path: "docs/dac-ta/FLORAOS_CREATIVE_STUDIO_CHECKLIST.md"
     title: "Creative Studio Execution Checklist"
@@ -612,6 +752,20 @@ documents:
     dependencies: []
     supersedes: []
 
+  - id: "DOC-ARC-UX-CONSTITUTION-DRAFT"
+    path: "docs/archive/drafts/FLORAOS_UX_CONSTITUTION_DRAFT.md"
+    title: "FLORAOS-UX-CONSTITUTION-001 — Global UX Quality & Production Readiness (bản nhận 26/09)"
+    domain: "UX/UI"
+    layer: "Archive"
+    purpose: "Đã nâng thành DOC-03-UX-CONSTITUTION ngày 26/09/2026"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "Product Owner"
+    dependencies: ["docs/dac-ta/03-ux-architecture.md", "docs/dac-ta/03b-role-ux.md"]
+    supersedes: []
+
   - id: "DOC-ARC-DASHBOARD-DRAFT"
     path: "docs/archive/drafts/DASHBOARD_VAN_HANH_NEN_TANG.md"
     title: "Bản phác thảo Dashboard Vận hành (Cũ)"
@@ -716,6 +870,62 @@ documents:
     domain: "QA / Audit"
     layer: "Archive"
     purpose: "Nhật ký lệnh cURL kiểm thử tích hợp đa repo ngày 10/09"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-COORD-CANONICAL-V1"
+    path: "docs/archive/merged/FLORAOS_COORDINATOR_CANONICAL.md"
+    title: "Coordinator Canonical Field Data Contract v1.0 (Đã gộp)"
+    domain: "Module Coordinator (Chức năng 12)"
+    layer: "Archive"
+    purpose: "Bản v1.0 (26/09) đã gộp vào DOC-03-COORD-MI-CONTRACT"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-COORD-MI-UPGRADE-REPORT"
+    path: "docs/archive/merged/FLORAOS_MASTER_INDEX_COORDINATOR_UPGRADE_REPORT.md"
+    title: "Master Index Upgrade Report từ đối chiếu Điều phối (Đã gộp)"
+    domain: "Module Coordinator (Chức năng 12)"
+    layer: "Archive"
+    purpose: "Báo cáo 26/09 đã gộp vào DOC-03-COORD-MI-CONTRACT §9 (MI-1…MI-12)"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-COORD-FIELDS-SYNC-V1"
+    path: "docs/archive/merged/FLORAOS_COORDINATOR_TEMPLATE_FORM_FIELDS_SYNCHRONIZED_WITH_MASTER_INDEX.md"
+    title: "Coordinator Template/Form Fields Synchronized with Master Index v1.0 (Đã gộp)"
+    domain: "Module Coordinator (Chức năng 12)"
+    layer: "Archive"
+    purpose: "Bản v1.0 (26/09) đã gộp vào DOC-03-COORD-MI-CONTRACT và DOC-03-COORD-FIELD-SPEC"
+    status: "ARCHIVED"
+    authority: "None"
+    canonical: false
+    ssot: false
+    owner: "None"
+    dependencies: []
+    supersedes: []
+
+  - id: "DOC-ARC-COORD-FIELD-SPEC-V1"
+    path: "docs/archive/merged/FLORAOS_COORDINATOR_TEMPLATE_FIELD_SPEC_PRODUCTION_READY.md"
+    title: "Coordinator Template & Form Field Spec v1.0 — bản mục tiêu (Đã gộp)"
+    domain: "Module Coordinator (Chức năng 12)"
+    layer: "Archive"
+    purpose: "Đặc tả trường gốc v1.0 (26/09) đã chuẩn hoá theo mã thành DOC-03-COORD-FIELD-SPEC v2.0"
     status: "ARCHIVED"
     authority: "None"
     canonical: false

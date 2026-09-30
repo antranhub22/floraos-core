@@ -99,3 +99,18 @@ class FalClient:
         finally:
             if self._client is None:
                 client.close()
+
+    def tai_bytes(self, url: str) -> bytes:
+        """Tải tệp kết quả (video) theo URL fal trả về."""
+        client = self._client or httpx.Client(timeout=self._timeout_s)
+        try:
+            r = client.get(url)
+            if r.status_code != 200:
+                raise SceneProviderError(f"Không tải được tệp kết quả fal (HTTP {r.status_code})", r.status_code)
+            return r.content
+        except httpx.HTTPError as exc:
+            raise SceneProviderError(f"Lỗi mạng khi tải tệp fal: {exc}") from exc
+        finally:
+            if self._client is None:
+                client.close()
+

@@ -143,20 +143,20 @@ export function PackageDownstreamCard({ pkg, onUpdated }: PackageDownstreamCardP
 
   return (
     <div className="space-y-5">
-      {error && <p className="text-[12.5px] text-danger">{error}</p>}
+      {error && <p className="text-meta text-danger">{error}</p>}
 
       {/* Chặng 10 — LAUNCH */}
       <Card className="p-5 space-y-3">
-        <h4 className="text-[14px] font-bold text-text flex items-center gap-2">
+        <h4 className="text-body font-bold text-text flex items-center gap-2">
           <Rocket size={16} /> Chặng 10 — Kế hoạch đăng
         </h4>
-        <p className="text-[12px] text-text-muted">
-          Đăng hoặc lên lịch bài ở <strong>Lịch đăng</strong> (SocialFlow M07), rồi gắn mã bài vào đây để Chặng 12 đo
+        <p className="text-meta text-text-muted">
+          Đăng hoặc lên lịch bài ở <strong>Lịch đăng</strong> (SocialFlow Đăng mạng xã hội), rồi gắn mã bài vào đây để Chặng 12 đo
           được số liệu kênh thật.
         </p>
         <div className="flex flex-wrap gap-3">
           {CHANNELS.map((c) => (
-            <label key={c.id} className="flex items-center gap-1.5 text-[12.5px]">
+            <label key={c.id} className="flex items-center gap-1.5 text-meta">
               <input
                 type="checkbox"
                 checked={channels.includes(c.id)}
@@ -168,7 +168,7 @@ export function PackageDownstreamCard({ pkg, onUpdated }: PackageDownstreamCardP
             </label>
           ))}
         </div>
-        <label className="block text-[12px]">
+        <label className="block text-meta">
           Giờ đăng dự kiến
           <input
             type="datetime-local"
@@ -178,7 +178,7 @@ export function PackageDownstreamCard({ pkg, onUpdated }: PackageDownstreamCardP
           />
         </label>
         <div className="space-y-2">
-          <div className="text-[12px] font-bold">Mã bài đã đăng</div>
+          <div className="text-meta font-bold">Mã bài đã đăng</div>
           {refs.map((r, i) => (
             <div key={i} className="flex items-center gap-2">
               <select
@@ -200,7 +200,8 @@ export function PackageDownstreamCard({ pkg, onUpdated }: PackageDownstreamCardP
                 placeholder="Mã bài (content_id)"
                 className="flex-1 rounded border border-border px-2 py-1 text-xs font-mono"
               />
-              <button type="button" onClick={() => setRefs((prev) => prev.filter((_, j) => j !== i))} className="text-danger">
+              <button
+              aria-label="Xóa" type="button" onClick={() => setRefs((prev) => prev.filter((_, j) => j !== i))} className="text-danger">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -208,7 +209,7 @@ export function PackageDownstreamCard({ pkg, onUpdated }: PackageDownstreamCardP
           <button
             type="button"
             onClick={() => setRefs((prev) => [...prev, { platform: channels[0] ?? "facebook", contentId: "" }])}
-            className="inline-flex items-center gap-1 text-[12px] text-primary font-bold"
+            className="inline-flex items-center gap-1 text-meta text-primary font-bold"
           >
             <Plus size={13} /> Thêm mã bài
           </button>
@@ -226,7 +227,7 @@ export function PackageDownstreamCard({ pkg, onUpdated }: PackageDownstreamCardP
       {/* Chặng 11–12 */}
       <Card className="p-5 space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-[14px] font-bold text-text flex items-center gap-2">
+          <h4 className="text-body font-bold text-text flex items-center gap-2">
             <BarChart3 size={16} /> Chặng 11–12 — Bán hàng & Đo lường (số liệu thật)
           </h4>
           <Button size="sm" variant="ghost" onClick={loadPerformance} disabled={loadingPerf}>
@@ -237,60 +238,60 @@ export function PackageDownstreamCard({ pkg, onUpdated }: PackageDownstreamCardP
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
               <div className="rounded-lg border border-border p-3">
-                <div className="text-[11px] text-text-muted flex items-center justify-center gap-1">
+                <div className="text-caption text-text-muted flex items-center justify-center gap-1">
                   <MessageCircle size={11} /> Hội thoại mới
                 </div>
                 <div className="text-lg font-black">{m.conversations.toLocaleString("vi-VN")}</div>
               </div>
               <div className="rounded-lg border border-border p-3">
-                <div className="text-[11px] text-text-muted">Đơn có sản phẩm</div>
+                <div className="text-caption text-text-muted">Đơn có sản phẩm</div>
                 <div className="text-lg font-black">{m.orders.count.toLocaleString("vi-VN")}</div>
               </div>
               <div className="rounded-lg border border-border p-3">
-                <div className="text-[11px] text-text-muted">Doanh thu sản phẩm</div>
+                <div className="text-caption text-text-muted">Doanh thu sản phẩm</div>
                 <div className="text-lg font-black">{m.orders.revenueVnd.toLocaleString("vi-VN")}đ</div>
               </div>
               <div className="rounded-lg border border-border p-3">
-                <div className="text-[11px] text-text-muted">Bài có số liệu kênh</div>
+                <div className="text-caption text-text-muted">Bài có số liệu kênh</div>
                 <div className="text-lg font-black">
                   {m.channel.postsWithData}/{m.channel.linkedPosts}
                 </div>
               </div>
             </div>
-            <div className="text-[12px] text-text-muted grid grid-cols-2 sm:grid-cols-5 gap-1">
+            <div className="text-meta text-text-muted grid grid-cols-2 sm:grid-cols-5 gap-1">
               <span>Reach: {fmt(m.channel.reach)}</span>
               <span>Hiển thị: {fmt(m.channel.impressions)}</span>
               <span>Tương tác: {fmt(m.channel.engagement)}</span>
               <span>Click: {fmt(m.channel.clicks)}</span>
               <span>Chuyển đổi: {fmt(m.channel.conversions)}</span>
             </div>
-            <ul className="list-disc pl-5 text-[11.5px] text-text-muted">
+            <ul className="list-disc pl-5 text-caption text-text-muted">
               {m.caveats.map((c, i) => (
                 <li key={i}>{c}</li>
               ))}
             </ul>
           </>
         ) : (
-          <p className="text-[12px] text-text-muted">{loadingPerf ? "Đang tính..." : "Chưa có số liệu."}</p>
+          <p className="text-meta text-text-muted">{loadingPerf ? "Đang tính..." : "Chưa có số liệu."}</p>
         )}
       </Card>
 
       {/* Chặng 13 */}
       <Card className="p-5 space-y-2">
-        <h4 className="text-[14px] font-bold text-text flex items-center gap-2">
+        <h4 className="text-body font-bold text-text flex items-center gap-2">
           <Brain size={16} /> Chặng 13 — Mẫu thắng (Winning Patterns)
         </h4>
         {!perf ? null : perf.learn.status === "INSUFFICIENT_DATA" ? (
-          <p className="text-[12.5px] text-text-muted">
+          <p className="text-meta text-text-muted">
             Chưa đủ dữ liệu: tiệm mới có {perf.learn.have}/{perf.learn.need} gói đã duyệt gắn với sản phẩm. Hệ thống không
             kết luận “mẫu thắng” khi dữ liệu chưa đủ.
           </p>
         ) : perf.learn.patterns.length === 0 ? (
-          <p className="text-[12.5px] text-text-muted">
+          <p className="text-meta text-text-muted">
             Đã so {perf.learn.basedOn} gói nhưng chưa thấy khác biệt doanh thu giữa các nhóm.
           </p>
         ) : (
-          <ul className="space-y-1.5 text-[12.5px]">
+          <ul className="space-y-1.5 text-meta">
             {perf.learn.patterns.map((p) => (
               <li key={p.dimension} className="rounded-lg border border-border p-2.5">
                 <strong>{DIMENSION_LABEL[p.dimension] ?? p.dimension}:</strong> {p.value} — trung bình{" "}
@@ -303,18 +304,18 @@ export function PackageDownstreamCard({ pkg, onUpdated }: PackageDownstreamCardP
 
       {/* Chặng 14 */}
       <Card className="p-5 space-y-2">
-        <h4 className="text-[14px] font-bold text-text flex items-center gap-2">
+        <h4 className="text-body font-bold text-text flex items-center gap-2">
           <Target size={16} /> Chặng 14 — Việc nên làm tiếp
         </h4>
         {perf && perf.next_best_actions.length === 0 && (
-          <p className="text-[12.5px] text-text-muted">Chưa có đề xuất mới.</p>
+          <p className="text-meta text-text-muted">Chưa có đề xuất mới.</p>
         )}
         <ul className="space-y-2">
           {perf?.next_best_actions.map((a) => (
             <li key={a.id} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
               <div>
-                <div className="text-[12.5px] font-bold">{a.title}</div>
-                <div className="text-[11.5px] text-text-muted">{a.why}</div>
+                <div className="text-meta font-bold">{a.title}</div>
+                <div className="text-caption text-text-muted">{a.why}</div>
               </div>
               <Button size="sm" variant="outline" onClick={() => goTarget(a.target)}>
                 Làm ngay

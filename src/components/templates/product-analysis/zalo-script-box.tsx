@@ -86,7 +86,7 @@ export function ZaloScriptBox({
             <Sparkles size={13} className="text-primary" />
             Tự động điền thông số hoa, giá ưu đãi & quà tặng
           </span>
-          <span className="text-[11px] font-mono text-text-muted/80">
+          <span className="text-caption font-mono text-text-muted/80">
             {script.length} ký tự
           </span>
         </div>
@@ -96,12 +96,12 @@ export function ZaloScriptBox({
             value={script}
             onChange={(e) => onScriptChange?.(e.target.value)}
             rows={18}
-            className="w-full rounded-xl border border-border bg-surface-alt/30 p-3.5 font-sans text-[13px] leading-relaxed text-text outline-none focus:border-primary focus:bg-surface transition-colors"
+            className="w-full rounded-xl border border-border bg-surface-alt/30 p-3.5 font-sans text-body-sm leading-relaxed text-text outline-none focus:border-primary focus:bg-surface transition-colors"
             placeholder="Nội dung kịch bản tư vấn Zalo..."
           />
         </div>
 
-        <div className="flex items-center justify-between border-t border-border bg-surface-alt/30 px-4 py-2 text-[11px] text-text-muted">
+        <div className="flex items-center justify-between border-t border-border bg-surface-alt/30 px-4 py-2 text-caption text-text-muted">
           <span>💡 Mẹo: Nhân viên có thể sửa trực tiếp văn bản ở trên trước khi bấm Sao chép.</span>
           <span>Hỗ trợ Zalo, Messenger, SMS</span>
         </div>

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   deriveCustomerTier,
+  deriveCustomerLifecycleStage,
   isValidVietnamesePhone,
   normalizeVietnamesePhone,
   calculateDaysUntilOccasion,
@@ -10,6 +11,7 @@ import {
   projectCustomerSalesCard,
   projectOccasionReminder,
   projectMarketingAudience,
+  projectCustomerCoordinationBrief,
   type CustomerMasterIndex,
 } from "@/modules/crm/domain/customer-master-index"
 
@@ -36,6 +38,50 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
 
     it("xếp hạng NEW khi chưa có đơn hàng nào", () => {
       expect(deriveCustomerTier(0, 0)).toBe("NEW")
+    })
+  })
+
+  describe("Giai đoạn vòng đời khách hàng (deriveCustomerLifecycleStage)", () => {
+    const fixedNow = new Date("2026-09-27T12:00:00Z")
+
+    it("khách 0 đơn hoặc chưa có lastOrderAt là ACQUIRE", () => {
+      expect(deriveCustomerLifecycleStage({ orderCount: 0, totalSpentVnd: 0 }, fixedNow)).toBe("ACQUIRE")
+      expect(deriveCustomerLifecycleStage({ orderCount: 1, totalSpentVnd: 500_000, lastOrderAt: null }, fixedNow)).toBe("ACQUIRE")
+    })
+
+    it("khách mới 1 đơn mua trong vòng 30 ngày là ACQUIRE", () => {
+      const lastOrder = new Date("2026-09-10T12:00:00Z").toISOString() // 17 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 1, totalSpentVnd: 500_000, lastOrderAt: lastOrder }, fixedNow)).toBe("ACQUIRE")
+    })
+
+    it("khách 1 đơn nhưng quá 30 ngày (dưới 90 ngày) là AT_RISK", () => {
+      const lastOrder = new Date("2026-08-01T12:00:00Z").toISOString() // 57 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 1, totalSpentVnd: 500_000, lastOrderAt: lastOrder }, fixedNow)).toBe("AT_RISK")
+    })
+
+    it("khách 2-4 đơn mua trong vòng 60 ngày là GROW", () => {
+      const lastOrder = new Date("2026-09-01T12:00:00Z").toISOString() // 26 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 3, totalSpentVnd: 1_800_000, lastOrderAt: lastOrder }, fixedNow)).toBe("GROW")
+    })
+
+    it("khách VIP/GOLD mua trong vòng 90 ngày là RETAIN", () => {
+      const lastOrder = new Date("2026-07-20T12:00:00Z").toISOString() // 69 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 6, totalSpentVnd: 6_000_000, lastOrderAt: lastOrder }, fixedNow)).toBe("RETAIN")
+    })
+
+    it("khách VIP/GOLD không mua trong 91-180 ngày là AT_RISK", () => {
+      const lastOrder = new Date("2026-05-20T12:00:00Z").toISOString() // 130 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 6, totalSpentVnd: 6_000_000, lastOrderAt: lastOrder }, fixedNow)).toBe("AT_RISK")
+    })
+
+    it("khách VIP/GOLD không mua > 180 ngày là DORMANT", () => {
+      const lastOrder = new Date("2026-01-01T12:00:00Z").toISOString() // ~270 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 6, totalSpentVnd: 6_000_000, lastOrderAt: lastOrder }, fixedNow)).toBe("DORMANT")
+    })
+
+    it("khách thường không mua > 120 ngày là DORMANT", () => {
+      const lastOrder = new Date("2026-04-01T12:00:00Z").toISOString() // ~180 ngày trước
+      expect(deriveCustomerLifecycleStage({ orderCount: 2, totalSpentVnd: 1_000_000, lastOrderAt: lastOrder }, fixedNow)).toBe("DORMANT")
     })
   })
 
@@ -73,6 +119,13 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
       expect(hasMarketingConsent(consents, "PROMOTION")).toBe(false)
       expect(hasMarketingConsent(consents, "SMS")).toBe(false)
     })
+
+    it("ĐP-1.5 (MI-1, 26/09/2026): đã granted nhưng đã revoked thì vẫn phải từ chối", () => {
+      const consents = [
+        { channel: "ZALO_ZNS" as const, granted: true, grantedAt: "2026-01-01", revokedAt: "2026-06-01" },
+      ]
+      expect(hasMarketingConsent(consents, "ZALO_ZNS")).toBe(false)
+    })
   })
 
   describe("Field Projections", () => {
@@ -82,6 +135,7 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
       code: "KH-0001",
       name: "Chị Lan",
       phone: "0909111222",
+      updatedAt: "2026-09-20T00:00:00.000Z",
       tags: ["VIP"],
       metrics: {
         tier: "VIP",
@@ -100,7 +154,7 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
         { channel: "ZALO_ZNS", granted: true, grantedAt: "2026-01-01" },
       ],
       availableVouchers: [
-        { code: "VIP10", discountType: "PERCENTAGE", discountValue: 10 },
+        { code: "VIP10", discountType: "PERCENTAGE", discountValue: 10, minOrderVnd: 300_000, maxDiscountVnd: 200_000 },
       ],
     }
 
@@ -117,12 +171,53 @@ describe("CRM Domain Rules — Ngành hoa M09", () => {
       expect(rem.occasionName).toBe("Sinh nhật sếp")
       expect(rem.daysLeft).toBe(7)
       expect(rem.suggestedFlower).toBe("Hồng Ecuador")
+      expect(rem.suggestedTone).toBe("Đỏ nhung")
       expect(rem.isZaloAllowed).toBe(true)
+    })
+
+    it("T6.12b (nợ #164b): khách chưa khai sở thích thì trả null, không bịa hoa hồng hay pastel", () => {
+      const noPrefCustomer: CustomerMasterIndex = {
+        ...mockCustomer,
+        preferences: {
+          preferredFlowers: [],
+          preferredColors: [],
+        },
+      }
+      const rem = projectOccasionReminder(noPrefCustomer, noPrefCustomer.occasions[0]!, 7)
+      expect(rem.suggestedFlower).toBeNull()
+      expect(rem.suggestedTone).toBeNull()
     })
 
     it("projectMarketingAudience chỉ lấy khách có consent", () => {
       expect(projectMarketingAudience(mockCustomer, "ZALO_ZNS")).not.toBeNull()
       expect(projectMarketingAudience(mockCustomer, "SMS")).toBeNull()
+    })
+
+    it("ĐP-1.5 (MI-1, 26/09/2026): khách ĐÃ cấp nhưng ĐÃ thu hồi Zalo ZNS thì không nhắc, không đưa vào tiếp thị", () => {
+      const revokedCustomer: CustomerMasterIndex = {
+        ...mockCustomer,
+        consents: [{ channel: "ZALO_ZNS", granted: true, grantedAt: "2026-01-01", revokedAt: "2026-06-01" }],
+      }
+      const rem = projectOccasionReminder(revokedCustomer, revokedCustomer.occasions[0]!, 7)
+      expect(rem.isZaloAllowed).toBe(false)
+      expect(projectMarketingAudience(revokedCustomer, "ZALO_ZNS")).toBeNull()
+    })
+
+    it("ĐP-1.6 (MI-2, 26/09/2026): projectCustomerSalesCard mang theo đủ minOrderVnd/maxDiscountVnd của voucher (qua CustomerMasterIndex)", () => {
+      expect(mockCustomer.availableVouchers[0]!.minOrderVnd).toBe(300_000)
+      expect(mockCustomer.availableVouchers[0]!.maxDiscountVnd).toBe(200_000)
+    })
+
+    it("ĐP-2.4 (MI-6, 26/09/2026): projectCustomerCoordinationBrief trích đúng tóm tắt cho Điều phối", () => {
+      const brief = projectCustomerCoordinationBrief(mockCustomer)
+      expect(brief.tier).toBe("VIP")
+      expect(brief.isVip).toBe(true)
+      expect(brief.preferredFlowers).toEqual(["Hồng Ecuador", "Baby Hà Lan"])
+    })
+
+    it("ĐP-2.4 (MI-6, 26/09/2026): khách chưa có notes thật thì trả rỗng, không bịa \"Khách hàng thân thiết\"", () => {
+      const brief = projectCustomerCoordinationBrief({ ...mockCustomer, notes: undefined })
+      expect(brief.notes).toBe("")
     })
   })
 })

@@ -190,11 +190,11 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
         <div className="flex items-center justify-between pb-4 border-b border-border mb-5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10 text-pink-600">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Palette size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text">Bảng màu nhận diện thương hiệu (5 Mã Hex SSOT)</h3>
+              <h3 className="text-sm font-bold text-text">Bảng màu nhận diện thương hiệu (5 Mã Hex Cẩm nang hệ thống)</h3>
               <p className="text-xs text-text-muted">Áp dụng trực tiếp vào E-Catalog, Video Studio và Thẻ chào sản phẩm</p>
             </div>
           </div>
@@ -259,7 +259,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
                     style={{ backgroundColor: isValidHexColor(currentVal) ? currentVal : "#cccccc" }}
                   />
                 </div>
-                <p className="text-[11px] text-text-muted mb-3 leading-tight">{cfg.description}</p>
+                <p className="text-caption text-text-muted mb-3 leading-tight">{cfg.description}</p>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -273,11 +273,11 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
                     onChange={(e) => handleColorChange(cfg.key, e.target.value)}
                     placeholder="#e11d48"
                     className={`flex-1 rounded-lg border bg-surface px-2.5 py-1.5 text-xs font-mono font-medium text-text uppercase ${
-                      hasErr ? "border-red-500 ring-1 ring-red-500/20" : "border-border focus:border-primary"
+                      hasErr ? "border-danger ring-1 ring-danger/20" : "border-border focus:border-primary"
                     }`}
                   />
                 </div>
-                {hasErr && <p className="mt-1 text-[10px] text-red-500">{errors[cfg.key]}</p>}
+                {hasErr && <p className="mt-1 text-caption text-danger">{errors[cfg.key]}</p>}
               </div>
             )
           })}
@@ -287,7 +287,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
       {/* Khối 2: Typography & Logo */}
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
         <div className="flex items-center gap-2.5 pb-4 border-b border-border mb-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-info/10 text-info">
             <Type size={18} />
           </div>
           <div>
@@ -342,7 +342,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
               placeholder="https://... hoặc mã asset logo của tiệm"
               className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
             />
-            <p className="mt-1 text-[11px] text-text-muted">
+            <p className="mt-1 text-caption text-text-muted">
               Logo này sẽ được tự động đóng dấu Watermark mờ lên video TikTok/Reels và hiển thị trên E-Catalog
             </p>
           </div>
@@ -352,7 +352,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
       {/* Khối 3: Giọng văn thương hiệu & Rào chắn nội dung AI */}
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
         <div className="flex items-center gap-2.5 pb-4 border-b border-border mb-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-warning/10 text-warning">
             <Sparkles size={18} />
           </div>
           <div>
@@ -407,7 +407,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
 
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
-              <ShieldAlert size={14} className="text-amber-500" />
+              <ShieldAlert size={14} className="text-warning" />
               <label className="text-xs font-semibold text-text">
                 Từ cấm & Phong cách cấm kỵ (Forbidden Words - phân cách bằng dấu phẩy)
               </label>
@@ -419,7 +419,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
               placeholder="hoa rẻ, phá giá, xả hàng tồn..."
               className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
             />
-            <p className="mt-1 text-[11px] text-text-muted">
+            <p className="mt-1 text-caption text-text-muted">
               AI Content Engine sẽ tự động loại bỏ tuyệt đối các từ này trong mọi bài đăng bán hoa
             </p>
           </div>

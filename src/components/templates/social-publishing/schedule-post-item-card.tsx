@@ -30,6 +30,8 @@ export function SchedulePostItemCard({
 
   return (
     <Card
+              role="button"
+              tabIndex={0}
       onClick={onSelect}
       className={`flex items-center gap-3.5 p-3.5 transition-all cursor-pointer border ${
         isActive
@@ -59,8 +61,8 @@ export function SchedulePostItemCard({
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <div className="text-[13.5px] font-bold text-text truncate">{item.title}</div>
-        <div className="text-[11.5px] text-text-muted flex items-center gap-2 mt-0.5">
+        <div className="text-body font-bold text-text truncate">{item.title}</div>
+        <div className="text-caption text-text-muted flex items-center gap-2 mt-0.5">
           <span className="font-semibold text-primary">{item.channel_label}</span>
           <span>·</span>
           <span className="flex items-center gap-1">
@@ -78,7 +80,7 @@ export function SchedulePostItemCard({
               ? "neutral"
               : "danger"
           }
-          className="text-[11px]"
+          className="text-caption"
         >
           {item.status === "scheduled"
             ? "Đã lên lịch"

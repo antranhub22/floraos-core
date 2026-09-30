@@ -12,16 +12,16 @@ import type { CampaignPackageDto } from "./package-client"
 type Report = NonNullable<CampaignPackageDto["qa_report"]>
 
 const VERDICT_STYLE: Record<Report["verdict"], { label: string; cls: string; Icon: typeof CheckCircle2 }> = {
-  PASS: { label: "Đạt", cls: "text-emerald-700 bg-emerald-50 border-emerald-200", Icon: CheckCircle2 },
-  NEEDS_REVIEW: { label: "Cần xem lại", cls: "text-amber-700 bg-amber-50 border-amber-200", Icon: AlertCircle },
-  REJECTED: { label: "Từ chối", cls: "text-rose-700 bg-rose-50 border-rose-200", Icon: XCircle },
+  PASS: { label: "Đạt", cls: "text-mint-700 bg-success-bg border-mint-200", Icon: CheckCircle2 },
+  NEEDS_REVIEW: { label: "Cần xem lại", cls: "text-warning bg-warning-bg border-sand-200", Icon: AlertCircle },
+  REJECTED: { label: "Từ chối", cls: "text-blush-700 bg-blush-50 border-blush-200", Icon: XCircle },
 }
 
 export function PackageQACard({ report }: { report: Report }) {
   const overall = VERDICT_STYLE[report.verdict]
   return (
     <div className="space-y-3">
-      <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-bold ${overall.cls}`}>
+      <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-meta font-bold ${overall.cls}`}>
         <overall.Icon size={14} /> Kết luận QA: {overall.label}
         <span className="font-normal opacity-80">· {new Date(report.checkedAt).toLocaleString("vi-VN")}</span>
       </div>
@@ -31,13 +31,13 @@ export function PackageQACard({ report }: { report: Report }) {
           return (
             <div key={c.id} className="rounded-lg border border-border p-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[12.5px] font-bold text-text">{c.title}</span>
-                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ${st.cls}`}>
+                <span className="text-meta font-bold text-text">{c.title}</span>
+                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-caption font-bold ${st.cls}`}>
                   <st.Icon size={12} /> {st.label}
                 </span>
               </div>
               {c.reasons.length > 0 && (
-                <ul className="mt-1.5 list-disc pl-5 text-[12px] text-text-muted space-y-0.5">
+                <ul className="mt-1.5 list-disc pl-5 text-meta text-text-muted space-y-0.5">
                   {c.reasons.map((r, i) => (
                     <li key={i}>{r}</li>
                   ))}

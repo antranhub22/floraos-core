@@ -11,7 +11,7 @@ import type { TenantContext } from "@/core/tenancy"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { JobEventRepository } from "@/modules/jobs/infra/job-event-repository"
-import { MEDIA_VARIANT_FEATURE } from "@/modules/media/domain/variant-rules"
+import { MEDIA_VARIANT_CLOUD_FEATURE, MEDIA_VARIANT_FEATURE } from "@/modules/media/domain/variant-rules"
 import { requestVariants } from "@/modules/media/use-cases/request-variants"
 
 import { disconnectDatabase, prisma, resetDatabase } from "../helpers/database"
@@ -287,11 +287,16 @@ describe("cách ly tenant — M04b biến thể marketing (P24)", () => {
 
       // Đây là điều ca này khoá lại, và là điều đường chạy cũ KHÔNG có: mỗi
       // lượt gọi mô hình để lại đúng một dòng trong sổ, gắn với tổ chức.
+      // PO 25/09/2026: không nêu `engine` = nhà cung cấp trước (`media.variant.cloud`),
+      // kèm thứ tự thử của tiệm trong payload.
       const rows = await prisma.usage.findMany({
-        where: { organization_id: a.organizationId, feature: MEDIA_VARIANT_FEATURE },
+        where: { organization_id: a.organizationId, feature: MEDIA_VARIANT_CLOUD_FEATURE },
       })
       expect(rows).toHaveLength(1)
       expect(rows[0]!.status).toBe("ENQUEUED")
+      expect(await prisma.usage.count({ where: { organization_id: a.organizationId, feature: MEDIA_VARIANT_FEATURE } })).toBe(0)
+      const job = await prisma.generation_jobs.findFirst({ where: { organization_id: a.organizationId } })
+      expect((job!.payload as { provider_order: string[] }).provider_order).toEqual(["fal", "stability", "imagen"])
 
       // Workspace mặc định là `EXPERIENCE` nên lượt này đi hạn mức TRIAL:
       // `cost_credit` là 0 và `credit_balance` không bị đụng. Đường CREDIT

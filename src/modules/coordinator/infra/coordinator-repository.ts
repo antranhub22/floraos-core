@@ -20,6 +20,9 @@ const ORDER_INCLUDE = {
   items: true,
   qc_records: { orderBy: { created_at: "desc" as const }, take: 1 },
   exceptions: { orderBy: { created_at: "asc" as const } },
+  // ĐP-4a (26/09/2026) — sổ thu, cần để suy `paymentStatus` (§2.15.7: REFUNDED
+  // đòi hỏi biết có dòng REFUND hay không, không suy được chỉ từ paid_vnd).
+  payments: { orderBy: { collected_at: "asc" as const } },
 } satisfies Prisma.ordersInclude
 
 export type CoordinatorOrderRow = Prisma.ordersGetPayload<{ include: typeof ORDER_INCLUDE }>
@@ -35,13 +38,30 @@ export interface CreateCoordinatorOrderData {
   totalVnd: number
   customerId: string | null
   cardMessage: string | null
+  /** ĐP-4a.1 (26/09/2026) — `cardMessage` bắt buộc khi true. */
+  cardRequired: boolean
   internalNote: string | null
   deliveryWindow: { timeSlot: string; targetAt: string | null }
   deliveryAddress: Record<string, unknown>
   estimatedDeliveryAt: Date | null
   sampleAssetId: string | null
-  items: Array<{ description: string; quantity: number; metadata: Record<string, unknown> }>
+  items: Array<{ productId?: string | null; description: string; quantity: number; metadata: Record<string, unknown> }>
   metadata: Record<string, unknown>
+  /** ĐP-3.16 (26/09/2026): giá trị trường tự tạo đã qua `applyCustomFields` (entity = ORDER). */
+  customFields: Record<string, unknown>
+  // ── ĐP-4a.1 (26/09/2026) — T01: đủ trường P0/P1 (Đặc tả trường §2.1/§3.1) ──
+  source: string
+  sourceReference: string | null
+  channel: string | null
+  orderType: string | null
+  priority: string
+  serviceLevel: string | null
+  deliveryType: string | null
+  deliveryLocationType: string | null
+  receivedAt: Date
+  deliveryWindowStart: Date | null
+  deliveryWindowEnd: Date | null
+  salesOwnerId: string
 }
 
 export class CoordinatorRepository {
@@ -109,6 +129,8 @@ export class CoordinatorRepository {
         production_status: data.axes.productionStatus,
         delivery_status: data.axes.deliveryStatus,
         total_vnd: data.totalVnd,
+        // ĐP-4a (26/09/2026): chưa thu gì lúc tạo đơn → còn phải thu = tổng số.
+        balance_vnd: data.totalVnd,
         card_message: data.cardMessage,
         internal_note: data.internalNote,
         delivery_window: data.deliveryWindow as Prisma.InputJsonValue,
@@ -122,6 +144,7 @@ export class CoordinatorRepository {
         data: data.items.map((it) =>
           scopedData(ctx, {
             order_id: order.id,
+            product_id: it.productId ?? null,
             description: it.description,
             quantity: it.quantity,
             unit_price_vnd: 0,
@@ -141,6 +164,21 @@ export class CoordinatorRepository {
         estimated_delivery_at: data.estimatedDeliveryAt,
         sample_asset_id: data.sampleAssetId,
         metadata: data.metadata as Prisma.InputJsonValue,
+        custom_fields: data.customFields as Prisma.InputJsonValue,
+        // ĐP-4a.1 (26/09/2026) — T01: đủ trường P0/P1.
+        card_required: data.cardRequired,
+        source: data.source,
+        source_reference: data.sourceReference,
+        channel: data.channel,
+        order_type: data.orderType,
+        priority: data.priority,
+        service_level: data.serviceLevel,
+        delivery_type: data.deliveryType,
+        delivery_location_type: data.deliveryLocationType,
+        received_at: data.receivedAt,
+        delivery_window_start: data.deliveryWindowStart,
+        delivery_window_end: data.deliveryWindowEnd,
+        sales_owner_id: data.salesOwnerId,
       }),
     })
 
@@ -202,6 +240,63 @@ export class CoordinatorRepository {
     await this.db.order_coordinations.updateMany({
       where: scopedWhere(ctx, { order_id: orderId }),
       data,
+    })
+  }
+
+  /**
+   * ĐP-3.16 (26/09/2026): ghi `custom_fields` (JSON) — tách riêng khỏi
+   * `updateCoordination` vì cast `Prisma.InputJsonValue` phải nằm TRONG
+   * `infra/`, không lộ kiểu Prisma ra `use-cases/`
+   * (`tests/tenant/khong-import-prisma-ngoai-infra.test.ts`).
+   */
+  async updateCustomFields(ctx: TenantContext, orderId: string, customFields: Record<string, unknown>): Promise<void> {
+    await this.updateCoordination(ctx, orderId, { custom_fields: customFields as Prisma.InputJsonValue })
+  }
+
+  /**
+   * ĐP-4a (26/09/2026, PO D2) — sổ thu. Một dòng `order_payments` MỘT tổ chức
+   * (`scopedData`), cộng cập nhật `orders.paid_vnd`/`balance_vnd` trong CÙNG
+   * giao dịch (gọi trong `runCoordinatorTx`, xem `record-payment.ts`). Số đã
+   * cộng/trừ được tính SẴN ở use-case (đọc `paid_vnd` hiện tại trước, cộng
+   * DEPOSIT/BALANCE hoặc trừ REFUND) — repository chỉ ghi, không tính.
+   */
+  async recordPayment(
+    ctx: TenantContext,
+    orderId: string,
+    payment: {
+      kind: "DEPOSIT" | "BALANCE" | "REFUND"
+      amountVnd: number
+      paymentMethod: string | null
+      reference: string | null
+      evidenceAssetId: string | null
+      note: string | null
+    },
+    newPaidVnd: number,
+    newBalanceVnd: number
+  ): Promise<{ id: string }> {
+    const row = await this.db.order_payments.create({
+      data: scopedData(ctx, {
+        order_id: orderId,
+        kind: payment.kind,
+        amount_vnd: payment.amountVnd,
+        payment_method: payment.paymentMethod,
+        reference: payment.reference,
+        evidence_asset_id: payment.evidenceAssetId,
+        collected_by: ctx.userId,
+        note: payment.note,
+      }),
+    })
+    await this.db.orders.updateMany({
+      where: scopedWhere(ctx, { id: orderId }),
+      data: { paid_vnd: newPaidVnd, balance_vnd: newBalanceVnd },
+    })
+    return { id: row.id }
+  }
+
+  listPayments(ctx: TenantContext, orderId: string) {
+    return this.db.order_payments.findMany({
+      where: scopedWhere(ctx, { order_id: orderId }),
+      orderBy: { collected_at: "asc" },
     })
   }
 

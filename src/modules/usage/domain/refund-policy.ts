@@ -41,3 +41,38 @@ export function lyDoHoanCredit(job: JobKetThuc): LyDoHoan | null {
 export function duocHoanCredit(job: JobKetThuc): boolean {
   return lyDoHoanCredit(job) !== null
 }
+
+/**
+ * Lý do hoàn MỘT PHẦN (25/09/2026) — khách nhận được kết quả, nhưng rẻ hơn
+ * thứ đã trả tiền lúc enqueue:
+ * - `cloud-lui-cuc-bo`: biến thể cloud (`media.variant.cloud`) lùi về phông
+ *   cục bộ → hoàn phần chênh so với `media.variant` (nợ #127).
+ * - `goi-noi-dung-hong`: Chặng 05 thu gộp kịch bản + bài viết, bước Content
+ *   Engine hỏng → hoàn phần của bài viết (nợ #146).
+ */
+export type LyDoHoanMotPhan = "cloud-lui-cuc-bo" | "goi-noi-dung-hong"
+
+/**
+ * Số credit thật được hoàn một phần: không vượt phần credit còn lại của job
+ * (tổng `cost_credit` các dòng — dòng hoàn một phần mang số ÂM). Đã hoàn toàn
+ * phần (`REFUNDED`), đã hoàn đúng lý do này, hoặc job đi đường dùng thử (0
+ * credit) → 0.
+ */
+export function soCreditHoanMotPhan(
+  dong: readonly { status: string; cost_credit: number; metadata: unknown }[],
+  lyDo: LyDoHoanMotPhan,
+  soMuonHoan: number
+): number {
+  if (!Number.isInteger(soMuonHoan) || soMuonHoan <= 0) return 0
+  if (dong.some((d) => d.status === "REFUNDED")) return 0
+  const daHoanLyDoNay = dong.some(
+    (d) =>
+      d.status === "PARTIAL_REFUND" &&
+      typeof d.metadata === "object" &&
+      d.metadata !== null &&
+      (d.metadata as Record<string, unknown>).reason === lyDo
+  )
+  if (daHoanLyDoNay) return 0
+  const conLai = dong.reduce((tong, d) => tong + d.cost_credit, 0)
+  return Math.max(0, Math.min(soMuonHoan, conLai))
+}

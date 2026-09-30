@@ -106,7 +106,7 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-xs font-semibold text-text mb-1.5">
-              Tên hiển thị cửa hàng <span className="text-red-500">*</span>
+              Tên hiển thị cửa hàng <span className="text-danger">*</span>
             </label>
             <input
               type="text"
@@ -114,11 +114,11 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Ví dụ: Tiệm Hoa Tươi Thảo Mộc"
               className={`w-full rounded-xl border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                errors.displayName ? "border-red-500 ring-2 ring-red-500/10" : "border-border focus:border-primary"
+                errors.displayName ? "border-danger ring-2 ring-danger/10" : "border-border focus:border-primary"
               }`}
             />
             {errors.displayName && (
-              <p className="mt-1 text-[11px] font-medium text-red-500">{errors.displayName}</p>
+              <p className="mt-1 text-caption font-medium text-danger">{errors.displayName}</p>
             )}
           </div>
 
@@ -166,7 +166,7 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
       {/* Khối 2: Thông tin liên hệ & Kênh phân phối */}
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
         <div className="flex items-center gap-2.5 pb-4 border-b border-border mb-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success/10 text-success">
             <Phone size={18} />
           </div>
           <div>
@@ -204,12 +204,12 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="contact@tiemhoathaomoc.vn"
                 className={`w-full rounded-xl border bg-surface pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                  errors.email ? "border-red-500 ring-2 ring-red-500/10" : "border-border focus:border-primary"
+                  errors.email ? "border-danger ring-2 ring-danger/10" : "border-border focus:border-primary"
                 }`}
               />
             </div>
             {errors.email && (
-              <p className="mt-1 text-[11px] font-medium text-red-500">{errors.email}</p>
+              <p className="mt-1 text-caption font-medium text-danger">{errors.email}</p>
             )}
           </div>
 
@@ -263,7 +263,7 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
       {/* Khối 3: Giờ vận hành */}
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
         <div className="flex items-center gap-2.5 pb-4 border-b border-border mb-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-warning/10 text-warning">
             <Clock size={18} />
           </div>
           <div>

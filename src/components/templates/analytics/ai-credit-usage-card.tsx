@@ -36,8 +36,8 @@ export function AiCreditUsageCard({
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold text-text-muted">M11 Aegis AI Governance</div>
-          <div className="text-[16px] font-extrabold text-text">Giám sát hạn mức AI tháng</div>
+          <div className="text-xs font-semibold text-text-muted">Tín dụng AI Aegis AI Governance</div>
+          <div className="text-title font-extrabold text-text">Giám sát hạn mức AI tháng</div>
         </div>
         <Badge tone={percentUsed > 80 ? "warning" : "success"} className="gap-1">
           <ShieldCheck size={12} />
@@ -60,7 +60,7 @@ export function AiCreditUsageCard({
             style={{ width: `${percentUsed}%` }}
           />
         </div>
-        <div className="flex items-center justify-between text-[11px] text-text-muted mt-1">
+        <div className="flex items-center justify-between text-caption text-text-muted mt-1">
           <span>Chi phí thực tế: <strong className="text-text">{costSpent}</strong></span>
           <span>Trần ngân sách: <strong className="text-text">{budgetLimit}</strong></span>
         </div>

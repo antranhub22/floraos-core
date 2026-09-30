@@ -82,6 +82,19 @@
         ],
         "description": "Kênh bài đăng: facebook | instagram | tiktok | zalo"
       }
+    },
+    "content_provider": {
+      "description": "Nhà cung cấp nội dung cho lượt này (claude_opus | openai_structured | gemini_pro | claude_sonnet | gemini_flash | openai_direct); bỏ trống = thứ tự ưu tiên của tiệm",
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [

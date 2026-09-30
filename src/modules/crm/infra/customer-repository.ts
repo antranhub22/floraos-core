@@ -68,7 +68,8 @@ export class CustomerRepository {
       include: {
         occasions: true,
         consents: true,
-        vouchers: { where: { is_used: false } },
+        // MI-2 (ĐP-1.6, 26/09/2026): "khả dụng" = chưa dùng VÀ chưa hết hạn — trước bản này chỉ lọc is_used, voucher hết hạn vẫn hiện ra được.
+        vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
       },
     })
 
@@ -81,7 +82,7 @@ export class CustomerRepository {
       include: {
         occasions: true,
         consents: true,
-        vouchers: { where: { is_used: false } },
+        vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
       },
     })
 
@@ -95,7 +96,7 @@ export class CustomerRepository {
       include: {
         occasions: true,
         consents: true,
-        vouchers: { where: { is_used: false } },
+        vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
       },
     })
 
@@ -124,7 +125,7 @@ export class CustomerRepository {
       include: {
         occasions: true,
         consents: true,
-        vouchers: { where: { is_used: false } },
+        vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
       },
     })
 
@@ -166,7 +167,7 @@ export class CustomerRepository {
         include: {
           occasions: true,
           consents: true,
-          vouchers: { where: { is_used: false } },
+          vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
         },
         orderBy: { updated_at: "desc" },
         take: pagination?.limit ?? 50,
@@ -275,6 +276,8 @@ export class CustomerRepository {
       code: row.code,
       name: row.name,
       phone: row.phone,
+      // MI-3 (ĐP-2.1, 26/09/2026): phiên bản Master Index cho snapshot của Điều phối.
+      updatedAt: row.updated_at.toISOString(),
       email: row.email ?? undefined,
       address: row.address ?? undefined,
       notes: row.notes ?? undefined,
@@ -303,12 +306,15 @@ export class CustomerRepository {
         channel: c.channel,
         granted: c.granted,
         grantedAt: c.granted_at.toISOString(),
+        revokedAt: c.revoked_at ? c.revoked_at.toISOString() : undefined,
       })),
       availableVouchers: (row.vouchers ?? []).map((v) => ({
         code: v.code,
         discountType: v.discount_type,
         discountValue: Number(v.discount_value),
         expiresAt: v.expires_at ? v.expires_at.toISOString() : undefined,
+        minOrderVnd: Number(v.min_order_vnd),
+        maxDiscountVnd: v.max_discount_vnd != null ? Number(v.max_discount_vnd) : undefined,
       })),
     }
   }

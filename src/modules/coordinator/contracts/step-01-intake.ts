@@ -32,6 +32,7 @@ export const step01IntakeContract = defineStep({
     input: {
       customerName: "Nguyễn Văn An",
       customerTier: "VIP",
+      customerPhone: "0987654321",
       recipientName: "Trần Thị Bình",
       recipientPhone: "0901234567",
       deliveryAddress: { street: "123 Phố Huế", ward: "Phường Ngô Thì Nhậm", district: "Quận Hai Bà Trưng", city: "Hà Nội" },

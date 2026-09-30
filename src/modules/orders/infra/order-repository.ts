@@ -112,6 +112,8 @@ export class OrderRepository {
           code,
           customer_id: input.customerId ?? null,
           total_vnd: totalVnd,
+          // ĐP-4a.3 (26/09/2026, sổ thu): đơn mới luôn chưa thu gì -> balance = total.
+          balance_vnd: totalVnd,
           pricing_rule_ref: (input.pricingRuleRef as unknown as Prisma.InputJsonValue) ?? null,
           voucher_id: input.voucherId ?? null,
           card_message: input.cardMessage ?? null,

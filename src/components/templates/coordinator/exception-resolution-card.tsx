@@ -33,44 +33,44 @@ export function ExceptionResolutionCard({
   const tone = severity === "CRITICAL" ? "danger" : severity === "HIGH" ? "warning" : "neutral"
 
   return (
-    <Card className="rounded-2xl border border-red-200 bg-red-50/40 p-5 shadow-sm flex flex-col gap-4">
+    <Card className="rounded-2xl border border-alert-200 bg-alert-50/40 p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <AlertCircle size={16} className="text-red-600" />
-          <span className="text-xs font-bold text-red-900">SỰ CỐ #{exceptionCode} (ĐƠN #{orderCode})</span>
-          <Badge tone={tone} className="text-[10px] font-extrabold">
+          <AlertCircle size={16} className="text-alert-600" />
+          <span className="text-xs font-bold text-alert-900">SỰ CỐ #{exceptionCode} (ĐƠN #{orderCode})</span>
+          <Badge tone={tone} className="text-caption font-extrabold">
             {severity}
           </Badge>
         </div>
-        <div className="flex items-center gap-1 text-[11px] text-text-muted">
+        <div className="flex items-center gap-1 text-caption text-text-muted">
           <Clock size={12} />
           <span>Báo lúc: {reportedAt}</span>
         </div>
       </div>
 
       <div className="text-xs">
-        <div className="font-bold text-text mb-0.5">Loại sự cố: <span className="text-red-700">{type}</span></div>
+        <div className="font-bold text-text mb-0.5">Loại sự cố: <span className="text-alert-700">{type}</span></div>
         <p className="text-text-muted leading-relaxed bg-surface p-3 rounded-xl border border-border">
           {description}
         </p>
       </div>
 
       {resolutionPlan && (
-        <div className="p-3 rounded-xl bg-surface border border-emerald-200 text-xs">
-          <div className="font-bold text-emerald-950 flex items-center gap-1 mb-1">
-            <Wrench size={13} className="text-emerald-600" />
+        <div className="p-3 rounded-xl bg-surface border border-mint-200 text-xs">
+          <div className="font-bold text-mint-950 flex items-center gap-1 mb-1">
+            <Wrench size={13} className="text-mint-600" />
             <span>Phương án xử lý đề xuất:</span>
           </div>
           <p className="text-text-muted">{resolutionPlan}</p>
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-2 border-t border-dashed border-red-200">
+      <div className="flex items-center justify-between pt-2 border-t border-dashed border-alert-200">
         <Badge tone={isResolved ? "success" : "warning"} className="text-xs">
           {isResolved ? "ĐÃ XỬ LÝ XONG" : "ĐANG CHỜ ĐIỀU PHỐI XỬ LÝ"}
         </Badge>
         {!isResolved && onResolve && (
-          <Button size="sm" onClick={onResolve} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs">
+          <Button size="sm" onClick={onResolve} className="bg-mint-600 hover:bg-mint-700 text-white gap-1 text-xs">
             <CheckCircle2 size={13} />
             <span>Chốt Xử Lý & Tiếp Tục Đơn</span>
           </Button>

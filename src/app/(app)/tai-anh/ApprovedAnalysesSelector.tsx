@@ -101,7 +101,7 @@ export function ApprovedAnalysesSelector({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm theo mã sản phẩm, loại hoa, phong cách..."
-            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-border bg-surface text-[13px] outline-none focus:border-primary transition-colors"
+            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-border bg-surface text-body-sm outline-none focus:border-primary transition-colors"
           />
         </div>
         <Button
@@ -118,7 +118,7 @@ export function ApprovedAnalysesSelector({
 
       {/* Error display */}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-[13px] text-red-700 flex items-start gap-2.5">
+        <div className="rounded-xl border border-danger/30 bg-danger-bg p-3.5 text-body-sm text-danger flex items-start gap-2.5">
           <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
           <div className="flex-1">{error}</div>
         </div>
@@ -126,7 +126,7 @@ export function ApprovedAnalysesSelector({
 
       {/* Loading state */}
       {loading && items.length === 0 && (
-        <div className="py-12 text-center text-text-muted text-[13px] flex flex-col items-center gap-2">
+        <div className="py-12 text-center text-text-muted text-body-sm flex flex-col items-center gap-2">
           <RefreshCw size={24} className="animate-spin text-primary" />
           <span>Đang tải danh sách phân tích đã duyệt từ kho...</span>
         </div>
@@ -138,9 +138,9 @@ export function ApprovedAnalysesSelector({
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface shadow-sm mb-3">
             <Layers size={24} className="text-text-muted" />
           </div>
-          <div className="text-[15px] font-bold">Chưa có phân tích nào được duyệt</div>
-          <div className="mt-1.5 text-[13px] text-text-muted max-w-md mx-auto">
-            Để sử dụng M01b (Sinh dữ liệu bán hàng), bạn cần thực hiện phân tích ảnh ở tab{" "}
+          <div className="text-title-sm font-bold">Chưa có phân tích nào được duyệt</div>
+          <div className="mt-1.5 text-body-sm text-text-muted max-w-md mx-auto">
+            Để sử dụng tính năng Sinh dữ liệu bán hàng, bạn cần thực hiện phân tích ảnh ở tab{" "}
             <span className="font-semibold text-primary">Phân tích ảnh mới</span> và phê duyệt kết quả trước.
           </div>
         </Card>
@@ -167,6 +167,8 @@ export function ApprovedAnalysesSelector({
 
           return (
             <Card
+              role="button"
+              tabIndex={0}
               key={item.id}
               className={`p-4 flex flex-col justify-between transition-all hover:border-primary/60 cursor-pointer ${
                 isSelected ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "bg-surface"
@@ -184,12 +186,12 @@ export function ApprovedAnalysesSelector({
                       </div>
                     ) : null}
                     <div className="min-w-0">
-                      <div className="text-[14px] font-bold truncate text-text">
+                      <div className="text-body font-bold truncate text-text">
                         {item.product?.name ?? `Bản phân tích #${item.id.slice(0, 8)}`}
                       </div>
-                      <div className="text-[11px] text-text-muted flex items-center gap-1.5 mt-0.5">
+                      <div className="text-caption text-text-muted flex items-center gap-1.5 mt-0.5">
                         {item.product?.code && (
-                          <span className="font-mono bg-surface-alt px-1.5 py-0.5 rounded text-[10px]">
+                          <span className="font-mono bg-surface-alt px-1.5 py-0.5 rounded text-caption">
                             {item.product.code}
                           </span>
                         )}
@@ -207,14 +209,14 @@ export function ApprovedAnalysesSelector({
                       </div>
                     </div>
                   </div>
-                  <Badge tone="success" className="flex items-center gap-1 flex-shrink-0 text-[11px]">
+                  <Badge tone="success" className="flex items-center gap-1 flex-shrink-0 text-caption">
                     <CheckCircle2 size={11} />
                     Đã duyệt
                   </Badge>
                 </div>
 
                 {/* Details */}
-                <div className="space-y-1.5 text-[12.5px] bg-surface-alt/60 p-2.5 rounded-lg">
+                <div className="space-y-1.5 text-meta bg-surface-alt/60 p-2.5 rounded-lg">
                   <div className="flex items-start gap-1.5">
                     <span className="text-text-muted min-w-[70px]">Thành phần:</span>
                     <span className="font-medium text-text line-clamp-2">
@@ -226,7 +228,7 @@ export function ApprovedAnalysesSelector({
                     <span className="text-text-muted min-w-[70px]">Phong cách:</span>
                     <span className="font-medium text-text">{style}</span>
                     {totalStems !== null && (
-                      <span className="text-text-muted text-[11px] ml-auto">({totalStems} cành)</span>
+                      <span className="text-text-muted text-caption ml-auto">({totalStems} cành)</span>
                     )}
                   </div>
                 </div>
@@ -234,7 +236,7 @@ export function ApprovedAnalysesSelector({
 
               {/* Action Button */}
               <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between">
-                <span className="text-[11px] text-text-muted">M01b Copywriting</span>
+                <span className="text-caption text-text-muted">Dữ liệu bán hàng</span>
                 <Button
                   size="sm"
                   disabled={disabled}
@@ -254,7 +256,7 @@ export function ApprovedAnalysesSelector({
       </div>
 
       {!loading && filteredItems.length === 0 && items.length > 0 && (
-        <div className="py-8 text-center text-text-muted text-[13px]">
+        <div className="py-8 text-center text-text-muted text-body-sm">
           Không tìm thấy phân tích nào khớp với từ khoá &quot;{searchQuery}&quot;.
         </div>
       )}

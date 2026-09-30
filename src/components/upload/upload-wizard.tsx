@@ -637,14 +637,14 @@ function UploadStep({
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-alt">
             <Camera size={26} strokeWidth={1.8} className="text-primary" />
           </div>
-          <div className="text-[14.5px] font-bold">Chụp ảnh hoặc chọn từ thư viện</div>
+          <div className="text-title-sm font-bold">Chụp ảnh hoặc chọn từ thư viện</div>
           <div className="text-center text-xs text-text-muted">
             Nhiều ảnh cùng lúc được — mỗi ảnh một lượt nhận diện. Tối đa {MAX_PHOTOS} ảnh, jpg/png/webp/gif.
           </div>
         </button>
 
         {note && (
-          <div className="flex items-start gap-1.5 rounded-lg bg-warning-bg px-2.5 py-2 text-[11.5px] text-warning">
+          <div className="flex items-start gap-1.5 rounded-lg bg-warning-bg px-2.5 py-2 text-caption text-warning">
             <Info size={13} strokeWidth={1.8} className="mt-0.5 flex-shrink-0" />
             <div>{note}</div>
           </div>
@@ -652,7 +652,7 @@ function UploadStep({
 
         {photos.length > 0 ? (
           <div>
-            <div className="mb-2.5 text-[13px] font-bold text-text-muted">Ảnh đã chọn · {photos.length}</div>
+            <div className="mb-2.5 text-body-sm font-bold text-text-muted">Ảnh đã chọn · {photos.length}</div>
             <div className="grid grid-cols-3 gap-2.5">
               {photos.map((p) => (
                 <div key={p.id} className="relative aspect-square overflow-hidden rounded-xl bg-surface-alt">
@@ -664,14 +664,14 @@ function UploadStep({
                     className="absolute right-0.5 top-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-black/60"
                     aria-label="Bỏ ảnh"
                   >
-                    <X size={13} strokeWidth={2.6} color="#fff" />
+                    <X size={13} strokeWidth={2.6} color="white" />
                   </button>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <div className="px-2.5 text-center text-[13px] text-text-muted">
+          <div className="px-2.5 text-center text-body-sm text-text-muted">
             Chưa có ảnh nào — bấm ô phía trên để bắt đầu.
           </div>
         )}
@@ -701,7 +701,7 @@ function ConfirmStep({
   return (
     <>
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
-        <div className="text-[12.5px] text-text-muted">
+        <div className="text-meta text-text-muted">
           Kiểm tra lại danh sách ảnh trước khi chạy. Bỏ được từng ảnh khỏi lượt chạy.
         </div>
 
@@ -716,9 +716,9 @@ function ConfirmStep({
                 <input
                   value={p.name}
                   onChange={(e) => onRename(p.id, e.target.value)}
-                  className="w-full border-none bg-transparent text-[13.5px] font-semibold text-text outline-none"
+                  className="w-full border-none bg-transparent text-body font-semibold text-text outline-none"
                 />
-                <div className="mt-0.5 truncate text-[11.5px] text-text-muted">{p.file.name}</div>
+                <div className="mt-0.5 truncate text-caption text-text-muted">{p.file.name}</div>
               </div>
               <button
                 type="button"
@@ -731,16 +731,16 @@ function ConfirmStep({
             </Card>
           ))}
           {photos.length === 0 && (
-            <div className="py-5 text-center text-[13px] text-text-muted">Không còn ảnh nào trong lượt chạy này.</div>
+            <div className="py-5 text-center text-body-sm text-text-muted">Không còn ảnh nào trong lượt chạy này.</div>
           )}
         </div>
 
-        <Card className="flex flex-col gap-1.5 border-none bg-surface-alt p-4 text-[13px]">
+        <Card className="flex flex-col gap-1.5 border-none bg-surface-alt p-4 text-body-sm">
           <div className="flex justify-between">
             <span className="text-text-muted">Cả lượt chạy này ({photos.length} ảnh)</span>
             <span className="font-bold text-primary">1 credit</span>
           </div>
-          <div className="text-[11.5px] text-text-muted">
+          <div className="text-caption text-text-muted">
             Tính theo mỗi lượt phân tích, không theo số ảnh trong lượt.
           </div>
         </Card>
@@ -751,7 +751,7 @@ function ConfirmStep({
             Bắt đầu phân tích
           </Button>
         ) : (
-          <div className="rounded-xl bg-surface-alt px-3.5 py-3 text-center text-[12.5px] text-text-muted">
+          <div className="rounded-xl bg-surface-alt px-3.5 py-3 text-center text-meta text-text-muted">
             Tài khoản này chưa có quyền chạy phân tích ảnh.
           </div>
         )}
@@ -789,8 +789,8 @@ function RunningStep({
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger-bg">
           <AlertTriangle size={26} strokeWidth={1.8} className="text-danger" />
         </div>
-        <div className="text-[14.5px] font-bold">Lượt phân tích chưa xong</div>
-        <div className="max-w-xs text-[12.5px] leading-relaxed text-text-muted">{error}</div>
+        <div className="text-title-sm font-bold">Lượt phân tích chưa xong</div>
+        <div className="max-w-xs text-meta leading-relaxed text-text-muted">{error}</div>
         <div className="flex w-full max-w-xs flex-col gap-2">
           <Button className="w-full" onClick={onRetry}>
             <RotateCcw size={15} strokeWidth={2} />
@@ -806,7 +806,7 @@ function RunningStep({
 
   return (
     <div className="flex flex-1 flex-col gap-[22px] overflow-y-auto p-[22px]">
-      <div className="text-[13px] text-text-muted">Đang phân tích {photoCount} ảnh trong lượt này.</div>
+      <div className="text-body-sm text-text-muted">Đang phân tích {photoCount} ảnh trong lượt này.</div>
 
       <Card className="flex flex-col p-[18px]">
         {RUN_PHASES.map((p, i) => {
@@ -817,7 +817,7 @@ function RunningStep({
               <div className="flex flex-col items-center">
                 {isDone ? (
                   <div className="flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full bg-secondary">
-                    <Check size={12} strokeWidth={3} color="#fff" />
+                    <Check size={12} strokeWidth={3} color="white" />
                   </div>
                 ) : isActive ? (
                   <div className="h-[22px] w-[22px] flex-shrink-0 animate-pulse rounded-full bg-primary" />
@@ -829,10 +829,10 @@ function RunningStep({
               <div className="pb-[22px]">
                 <div className={cn("text-sm", i > phaseIndex ? "text-text-muted" : "font-bold")}>{p.label}</div>
                 {isActive && p.key === "waiting" && job?.status === "PENDING" && (
-                  <div className="mt-0.5 text-[11.5px] text-text-muted">Chờ tới lượt trong hàng đợi worker...</div>
+                  <div className="mt-0.5 text-caption text-text-muted">Chờ tới lượt trong hàng đợi worker...</div>
                 )}
                 {isActive && p.key === "processing" && (
-                  <div className="mt-0.5 text-[11.5px] text-text-muted">
+                  <div className="mt-0.5 text-caption text-text-muted">
                     {job?.stage === "DETECTING" ? "Đang nhận diện cấu phần trong ảnh..." : "Đang xử lý..."}
                   </div>
                 )}
@@ -945,7 +945,7 @@ function ResultStep({
 
   if (analyses.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-[13px] text-text-muted">
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-body-sm text-text-muted">
         Không tìm thấy kết quả phân tích cho lượt chạy này.
       </div>
     )
@@ -1017,7 +1017,7 @@ function ResultStep({
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-[18px]">
-        <div className="flex items-center justify-between text-[12.5px] text-text-muted">
+        <div className="flex items-center justify-between text-meta text-text-muted">
           <span>
             Ảnh {index + 1}/{analyses.length}
           </span>
@@ -1049,17 +1049,17 @@ function ResultStep({
             </div>
           ) : null}
           <div className="flex items-center justify-between">
-            <div className="text-[15px] font-extrabold">{photo?.name ?? "Ảnh sản phẩm"}</div>
+            <div className="text-title-sm font-extrabold">{photo?.name ?? "Ảnh sản phẩm"}</div>
             <div className="flex items-center gap-1.5">
               {current.approval_state === "APPROVED" && (
-                <span className="rounded-full bg-success-bg px-2.5 py-1 text-[11.5px] font-bold text-primary">
+                <span className="rounded-full bg-success-bg px-2.5 py-1 text-caption font-bold text-primary">
                   Đã duyệt
                 </span>
               )}
               {overallConfidence != null && (
                 <span
                   className={cn(
-                    "rounded-full px-2.5 py-1 text-[11.5px] font-bold",
+                    "rounded-full px-2.5 py-1 text-caption font-bold",
                     overallConfidence < 70 ? "bg-warning-bg text-warning" : "bg-surface-alt text-text-muted"
                   )}
                 >
@@ -1069,7 +1069,7 @@ function ResultStep({
             </div>
           </div>
           {job?.result === "LOW_CONFIDENCE" && (
-            <div className="flex items-start gap-1.5 rounded-lg bg-warning-bg px-2.5 py-2 text-[11.5px] text-warning">
+            <div className="flex items-start gap-1.5 rounded-lg bg-warning-bg px-2.5 py-2 text-caption text-warning">
               <AlertTriangle size={13} strokeWidth={1.8} className="mt-0.5 flex-shrink-0" />
               <div>Lượt phân tích này có ảnh nhận diện với độ tin cậy thấp — nên kiểm lại trước khi duyệt.</div>
             </div>
@@ -1081,7 +1081,7 @@ function ResultStep({
           if (rows.length === 0) return null
           return (
             <Card key={section} className="flex flex-col gap-3 p-4">
-              <div className="text-[13px] font-bold uppercase tracking-wide text-text-muted">
+              <div className="text-body-sm font-bold uppercase tracking-wide text-text-muted">
                 {SECTION_LABELS[section]}
               </div>
               {rows.map((row, rowIndex) => {
@@ -1105,23 +1105,23 @@ function ResultStep({
                         />
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="text-[13.5px] font-semibold">{label}</div>
+                        <div className="text-body font-semibold">{label}</div>
                         {rawLabel && rawLabel !== label && (
                           <div
-                            className="mt-0.5 truncate text-[11px] italic text-text-muted"
+                            className="mt-0.5 truncate text-caption italic text-text-muted"
                             title={rawLabel}
                           >
                             Mô hình mô tả: {rawLabel}
                           </div>
                         )}
                         {confidence != null && confidence < 70 && (
-                          <span className="mt-0.5 inline-flex items-center rounded-full border-[1.3px] border-warning px-1.5 py-0.5 text-[10.5px] font-bold text-warning">
+                          <span className="mt-0.5 inline-flex items-center rounded-full border-[1.3px] border-warning px-1.5 py-0.5 text-caption font-bold text-warning">
                             Chưa chắc — nên kiểm lại
                           </span>
                         )}
                       </div>
                       {qty != null && !isEditingRow && (
-                        <div className="text-[13.5px] font-bold">× {qty}</div>
+                        <div className="text-body font-bold">× {qty}</div>
                       )}
                       {canEdit && !isEditingRow && (
                         <button
@@ -1147,7 +1147,7 @@ function ResultStep({
                           onChange={(e) => setEditName(e.target.value)}
                           placeholder="Tên cấu phần"
                           aria-label="Tên cấu phần"
-                          className="h-[34px] min-w-0 flex-1 rounded-lg border-[1.5px] border-primary bg-surface px-2 text-[13.5px] outline-none"
+                          className="h-[34px] min-w-0 flex-1 rounded-lg border-[1.5px] border-primary bg-surface px-2 text-body outline-none"
                         />
                         {qty != null && (
                           <input
@@ -1155,7 +1155,7 @@ function ResultStep({
                             onChange={(e) => setEditValue(e.target.value)}
                             inputMode="numeric"
                             aria-label="Số lượng"
-                            className="h-[34px] w-14 flex-shrink-0 rounded-lg border-[1.5px] border-primary bg-surface text-center text-[13.5px] font-bold outline-none"
+                            className="h-[34px] w-14 flex-shrink-0 rounded-lg border-[1.5px] border-primary bg-surface text-center text-body font-bold outline-none"
                           />
                         )}
                         <button
@@ -1188,12 +1188,12 @@ function ResultStep({
           )
         })}
 
-        <div className="px-3 text-center text-[11.5px] text-text-muted">
+        <div className="px-3 text-center text-caption text-text-muted">
           Bản sửa lưu tách khỏi dự đoán gốc — xem lại được máy đoán gì ban đầu.
         </div>
 
         {rowError && (
-          <div className="rounded-lg bg-danger-bg px-2.5 py-2 text-center text-[11.5px] font-medium text-danger">
+          <div className="rounded-lg bg-danger-bg px-2.5 py-2 text-center text-caption font-medium text-danger">
             {rowError}
           </div>
         )}
@@ -1203,7 +1203,7 @@ function ResultStep({
         {current.approval_state === "APPROVED" ? (
           allApproved ? (
             <div className="flex flex-col gap-2">
-              <div className="text-center text-[12.5px] text-text-muted">
+              <div className="text-center text-meta text-text-muted">
                 Đã duyệt cả {analyses.length} ảnh
                 {balanceAfter != null ? ` — còn ${balanceAfter} credit.` : "."}
               </div>
@@ -1223,7 +1223,7 @@ function ResultStep({
           )
         ) : current.approval_state === "REJECTED" ? (
           <div className="flex flex-col gap-2">
-            <div className="text-center text-[12.5px] text-text-muted">
+            <div className="text-center text-meta text-text-muted">
               Kết quả này đã bị từ chối và không vào Product Master.
             </div>
             <Button
@@ -1240,7 +1240,7 @@ function ResultStep({
             Kiểm tra và xác nhận
           </Button>
         ) : (
-          <div className="rounded-xl bg-surface-alt px-3.5 py-3 text-center text-[12.5px] text-text-muted">
+          <div className="rounded-xl bg-surface-alt px-3.5 py-3 text-center text-meta text-text-muted">
             Chỉ Điều hành mới duyệt được kết quả phân tích.
           </div>
         )}
@@ -1316,7 +1316,7 @@ function XacNhanDialog({
 
       <div className="flex max-h-[86%] flex-col rounded-t-2xl bg-surface">
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-          <div className="text-[15px] font-extrabold">Xác nhận trước khi ghi</div>
+          <div className="text-title-sm font-extrabold">Xác nhận trước khi ghi</div>
           <button
             type="button"
             onClick={onDong}
@@ -1328,20 +1328,20 @@ function XacNhanDialog({
         </div>
 
         <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-5">
-          <div className="text-[12.5px] leading-relaxed text-text-muted">
+          <div className="text-meta leading-relaxed text-text-muted">
             Duyệt sẽ ghi những dữ liệu dưới đây vào Product Master và dùng lại ở tính giá, tra cứu và
             các kênh bán. {daSua ? "Bản này đã có chỉnh sửa của người soát." : "Bản này giữ nguyên dự đoán của máy."}
           </div>
 
           <Card className="flex flex-col gap-2 p-4">
-            <div className="text-[12.5px] font-bold uppercase tracking-wide text-text-muted">Nhận dạng</div>
+            <div className="text-meta font-bold uppercase tracking-wide text-text-muted">Nhận dạng</div>
             {[
               ["Dạng sản phẩm", asText(identity.category)],
               ["Hình khối", asText(identity.shape)],
               ["Mặt trình bày", asText(identity.facing)],
               ["Vật chứa", asText(identity.container)],
             ].map(([nhan, gia_tri]) => (
-              <div key={nhan} className="flex justify-between text-[13px]">
+              <div key={nhan} className="flex justify-between text-body-sm">
                 <span className="text-text-muted">{nhan}</span>
                 <span className={cn("font-semibold", !gia_tri && "text-text-muted")}>
                   {gia_tri ?? "chưa xác định"}
@@ -1353,8 +1353,8 @@ function XacNhanDialog({
           <Card className="flex justify-between gap-2 p-4">
             {tong.map((t) => (
               <div key={t.nhan} className="flex flex-1 flex-col items-center gap-1">
-                <div className="text-[11.5px] text-text-muted">{t.nhan}</div>
-                <div className={cn("text-[19px] font-extrabold", t.gia_tri === null && "text-text-muted")}>
+                <div className="text-caption text-text-muted">{t.nhan}</div>
+                <div className={cn("text-display font-extrabold", t.gia_tri === null && "text-text-muted")}>
                   {t.gia_tri ?? "—"}
                 </div>
               </div>
@@ -1366,13 +1366,13 @@ function XacNhanDialog({
             if (rows.length === 0) return null
             return (
               <Card key={section} className="flex flex-col gap-2 p-4">
-                <div className="text-[12.5px] font-bold uppercase tracking-wide text-text-muted">
+                <div className="text-meta font-bold uppercase tracking-wide text-text-muted">
                   {SECTION_LABELS[section]}
                 </div>
                 {rows.map((row, i) => {
                   const qty = rowQuantity(row)
                   return (
-                    <div key={i} className="flex items-center justify-between gap-3 text-[13px]">
+                    <div key={i} className="flex items-center justify-between gap-3 text-body-sm">
                       <span className="min-w-0 flex-1 truncate">{rowLabel(section, row)}</span>
                       <span className="flex-shrink-0 font-bold">{qty === null ? "—" : `× ${qty}`}</span>
                     </div>
@@ -1384,7 +1384,7 @@ function XacNhanDialog({
 
           {chonTuChoi && (
             <Card className="flex flex-col gap-2 border-none bg-surface-alt p-4">
-              <label htmlFor="ly-do-tu-choi" className="text-[12.5px] font-bold">
+              <label htmlFor="ly-do-tu-choi" className="text-meta font-bold">
                 Vì sao bỏ kết quả này
               </label>
               <input
@@ -1392,16 +1392,16 @@ function XacNhanDialog({
                 value={lyDo}
                 onChange={(e) => setLyDo(e.target.value)}
                 placeholder="Nhận sai loài, ảnh chụp thiếu sản phẩm..."
-                className="h-[38px] rounded-lg border-[1.5px] border-border bg-surface px-2.5 text-[13px] outline-none focus:border-primary"
+                className="h-[38px] rounded-lg border-[1.5px] border-border bg-surface px-2.5 text-body-sm outline-none focus:border-primary"
               />
-              <div className="text-[11.5px] text-text-muted">
+              <div className="text-caption text-text-muted">
                 Câu này vào nhật ký kiểm toán — chỗ duy nhất còn giữ được lý do sau này.
               </div>
             </Card>
           )}
 
           {loi && (
-            <div className="rounded-lg bg-danger-bg px-2.5 py-2 text-center text-[11.5px] font-medium text-danger">
+            <div className="rounded-lg bg-danger-bg px-2.5 py-2 text-center text-caption font-medium text-danger">
               {loi}
             </div>
           )}

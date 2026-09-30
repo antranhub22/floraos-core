@@ -17,6 +17,7 @@ import {
   PostStatusReportCard,
   ScheduleQueueTab,
   SmartRepostTab,
+  PublishingGuidanceCard,
 } from "@/components/templates/social-publishing"
 
 type LichDangTab = "board" | "queue" | "repost" | "auto"
@@ -316,9 +317,18 @@ export default function SocialPublishingPage() {
     }
   }
 
-  const calendarPosts = posts.filter(
-    (p) => p.status === "scheduled" || p.status === "draft" || p.status === "failed" || p.status === "error"
-  )
+  // 03a UX-012: Bài lỗi xuất bản được ưu tiên đưa lên đầu danh sách để xử lý ngay
+  const calendarPosts = posts
+    .filter(
+      (p) => p.status === "scheduled" || p.status === "draft" || p.status === "failed" || p.status === "error"
+    )
+    .sort((a, b) => {
+      const isErrorA = a.status === "failed" || a.status === "error"
+      const isErrorB = b.status === "failed" || b.status === "error"
+      if (isErrorA && !isErrorB) return -1
+      if (!isErrorA && isErrorB) return 1
+      return 0
+    })
   const repostPosts = posts.filter((p) => p.status === "published" || p.status === "posted")
 
   const scheduledOrPublished = posts.filter((p) => p.status === "scheduled" || p.status === "published")
@@ -344,13 +354,27 @@ export default function SocialPublishingPage() {
       {/* Top Header */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 py-3.5">
         <div>
-          <div className="text-[11px] font-bold tracking-wider text-text-muted uppercase">M07 (PHẦN ĐĂNG)</div>
-          <div className="text-[17px] font-black text-primary flex items-center gap-2">
+          <div className="text-caption font-bold tracking-wider text-text-muted uppercase">Xuất bản & Lịch đăng bài</div>
+          <div className="text-title font-black text-primary flex items-center gap-2">
             <Share2 size={18} />
             Social Publishing — Xuất Bản Đa Kênh
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => {
+              if (selectedPost || selectedIds.length > 0) {
+                setIsScheduleModalOpen(true)
+              } else {
+                setActiveTab("queue")
+              }
+            }}
+            className="text-xs font-bold gap-1.5 shadow-xs"
+          >
+            <Calendar size={13} />
+            Lên lịch bài
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -369,6 +393,9 @@ export default function SocialPublishingPage() {
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-y-auto p-6 max-w-4xl mx-auto w-full gap-5">
+        {/* Khối hướng dẫn K1 */}
+        <PublishingGuidanceCard />
+
         {/* Tab Navigation */}
         <div className="flex items-center gap-2 border-b border-border pb-3">
           {(
@@ -392,7 +419,7 @@ export default function SocialPublishingPage() {
         </div>
 
         {notice && (
-          <div className="rounded-xl bg-success-bg border border-success/30 px-4 py-2.5 text-[13px] font-semibold text-secondary flex items-center gap-2">
+          <div className="rounded-xl bg-success-bg border border-success/30 px-4 py-2.5 text-body-sm font-semibold text-secondary flex items-center gap-2">
             <CheckCircle2 size={16} className="text-success" />
             {notice}
           </div>
@@ -437,7 +464,7 @@ export default function SocialPublishingPage() {
 
             {/* Khung Xem trước nền tảng của bài được chọn */}
             <div className="border-t border-border pt-5">
-              <div className="text-[14px] font-bold text-text mb-3 flex items-center justify-between">
+              <div className="text-body font-bold text-text mb-3 flex items-center justify-between">
                 <span>Xem trước nền tảng thực tế</span>
                 {selectedPost && (
                   <span className="text-xs font-normal text-text-muted">

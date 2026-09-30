@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState } from "react"
-import { Building2, Palette, ShieldCheck, CalendarHeart, RotateCcw, Save, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react"
+import { Building2, Palette, ShieldCheck, CalendarHeart, RotateCcw, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { TabActionHeader, type TabItem, type TabAction, type TabOverflowAction } from "@/components/ui/tab-header"
 import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
@@ -99,24 +100,23 @@ export default function ProfilePage() {
 
       {/* Thông báo trạng thái (Alert Banners) */}
       {successMessage && (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50/90 p-4 text-xs sm:text-sm font-medium text-emerald-800 animate-in fade-in duration-200 shadow-xs">
-          <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-2xl border border-secondary/30 bg-secondary-bg p-4 text-body-sm font-medium text-secondary animate-in fade-in duration-200 shadow-xs">
+          <CheckCircle2 size={18} className="text-secondary flex-shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-red-200 bg-red-50/90 p-4 text-xs sm:text-sm font-medium text-red-800 animate-in fade-in duration-200 shadow-xs">
-          <AlertCircle size={18} className="text-red-600 flex-shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-2xl border border-danger/30 bg-danger-bg p-4 text-body-sm font-medium text-danger animate-in fade-in duration-200 shadow-xs">
+          <AlertCircle size={18} className="text-danger flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* 3. Nội dung Form theo từng Tab */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center p-12 rounded-2xl border border-border bg-surface text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mb-3" />
-          <p className="text-xs font-semibold text-text-muted">Đang tải dữ liệu hồ sơ tổ chức...</p>
+        <div className="p-4 rounded-2xl border border-border bg-surface">
+          <SkeletonBlock lines={5} label="Đang tải dữ liệu hồ sơ tổ chức" />
         </div>
       ) : (
         <div>

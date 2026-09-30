@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Dialog } from "@/components/ui/dialog"
 import { generateQRCodeDataUrl, triggerDownload } from "@/core/media/qr-engine"
 import { ShareCatalogModal } from "./share-catalog-modal"
 
@@ -106,12 +107,12 @@ export function PublishedCatalogLinks({ catalogLinks, onRefresh }: PublishedCata
                       <Button variant="ghost" size="sm" onClick={() => window.open(`/c/${link.slug}`, "_blank")} className="h-8 gap-1 text-xs">
                         <ExternalLink size={13} /> Xem trước
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setSharingLink(link)} className="h-8 gap-1 text-xs text-rose-600 font-bold hover:bg-rose-50">
+                      <Button variant="ghost" size="sm" onClick={() => setSharingLink(link)} className="h-8 gap-1 text-xs text-primary font-bold hover:bg-primary/10">
                         <Share2 size={13} /> Chia sẻ MXH
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleCopyLink(link.slug)} className="h-8 gap-1 text-xs">
                         {copiedSlug === link.slug ? (
-                          <><Check size={13} className="text-emerald-600" /><span className="text-emerald-600">Đã chép</span></>
+                          <><Check size={13} className="text-success" /><span className="text-success">Đã chép</span></>
                         ) : (
                           <><Copy size={13} /> Copy link</>
                         )}
@@ -156,8 +157,7 @@ export function CreateCatalogModal({ selectedIds, onClose, onCreated }: CreateCa
   const [desc, setDesc] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     if (!name.trim()) return
     setIsSubmitting(true)
     try {
@@ -191,13 +191,23 @@ export function CreateCatalogModal({ selectedIds, onClose, onCreated }: CreateCa
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-border space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-text">Xuất bản Catalog số mới</h3>
-          <button type="button" onClick={onClose} className="text-text-muted hover:text-text text-sm font-bold">✕</button>
-        </div>
-
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      title="Xuất bản Catalog số mới"
+      size="sm"
+      footer={
+        <>
+          <Button type="button" variant="ghost" onClick={onClose}>Hủy bỏ</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} variant="primary">
+            {isSubmitting ? "Đang tạo…" : "Xác nhận xuất bản"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
         <div>
           <label className="block text-xs font-semibold text-text mb-1.5">Tên Catalog / Bộ sưu tập *</label>
           <Input required placeholder="VD: Mẫu Hoa Khai Trương 2026" value={name} onChange={(e) => setName(e.target.value)} />
@@ -213,14 +223,8 @@ export function CreateCatalogModal({ selectedIds, onClose, onCreated }: CreateCa
             ? <span>Đang chọn <strong>{selectedIds.length}</strong> mẫu hoa cho catalog này.</span>
             : <span>Tất cả mẫu hoa đang hoạt động sẽ tự động hiển thị.</span>}
         </div>
-
-        <div className="flex items-center justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Hủy bỏ</Button>
-          <Button type="submit" disabled={isSubmitting || !name.trim()} className="bg-primary text-white">
-            {isSubmitting ? "Đang tạo…" : "Xác nhận xuất bản"}
-          </Button>
-        </div>
-      </form>
-    </div>
+      </div>
+    </Dialog>
   )
 }
+

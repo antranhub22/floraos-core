@@ -1,17 +1,16 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
-  MessageSquare,
   Send,
   Plus,
   Bot,
   User,
-  Sparkles,
   ShoppingBag,
   Clock,
-  ArrowRight,
+  ArrowLeft,
   CheckCircle2,
   Flower2,
   Loader2,
@@ -25,6 +24,7 @@ import type { Route } from "next"
 import type { ChatConversation, ChatMessage } from "@/modules/chat-assistant/domain/chat-types"
 
 export default function ChatAssistantPage() {
+  const router = useRouter()
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -37,7 +37,7 @@ export default function ChatAssistantPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // 1. Tải danh sách hội thoại
-  function loadConversations() {
+  const loadConversations = useCallback(() => {
     fetch("/api/v1/chat/conversations")
       .then((r) => r.json())
       .then((res) => {
@@ -48,11 +48,11 @@ export default function ChatAssistantPage() {
         }
       })
       .catch((err) => console.error(err))
-  }
+  }, [selectedConvId])
 
   useEffect(() => {
     loadConversations()
-  }, [])
+  }, [loadConversations])
 
   // 2. Tải tin nhắn của hội thoại đã chọn
   useEffect(() => {
@@ -143,89 +143,86 @@ export default function ChatAssistantPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* 1. Header chuẩn Top-Right Action Header */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-6 py-4 backdrop-blur-sm">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-4 sm:px-6 py-4 backdrop-blur-sm">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-mono font-bold text-primary">
-              M08 AI Chat
-            </span>
-            <h1 className="text-xl font-extrabold text-foreground">AI Chat Assistant & Tư Vấn Bán Hàng</h1>
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted">
+            Trợ lý tư vấn AI & Bán hàng đa kênh
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Tự động truy vấn Product Master Index & Customer Master Index · Trả lời thông minh · 1-chạm chốt đơn sang M10
+          <h1 className="text-title font-extrabold text-foreground">AI Chat & Tư Vấn Bán Hàng</h1>
+          <p className="text-caption text-text-muted mt-0.5">
+            Tự động truy vấn sản phẩm và lịch sử khách hàng · Trả lời thông minh · 1-chạm chốt đơn sang xưởng hoa
           </p>
         </div>
 
         {/* Top-Right Action Header */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={handleCreateNewConv}
+            className="font-semibold flex items-center gap-1.5"
+          >
+            <Plus size={16} /> Cuộc trò chuyện mới
+          </Button>
           <Link href={"/hoi-thoai/kenh-tich-hop" as Route}>
             <Button
               variant="outline"
               size="sm"
-              className="font-semibold text-xs gap-1.5 border-red-200 text-red-700 hover:bg-red-50"
+              className="font-semibold text-caption gap-1.5"
             >
-              <Share2 className="h-3.5 w-3.5" />
-              Tích Hợp Đa Kênh & Biểu Phí
+              <Share2 size={14} />
+              Tích Hợp Đa Kênh
             </Button>
           </Link>
-          <Button
-            size="sm"
-            onClick={handleCreateNewConv}
-            className="bg-red-600 hover:bg-red-700 text-white font-semibold"
-          >
-            <Plus className="mr-1.5 h-4 w-4" /> Cuộc trò chuyện mới
-          </Button>
         </div>
       </header>
 
       {/* 2. Main content */}
-      <main className="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full flex flex-col">
+      <main className="flex-1 p-4 sm:p-6 space-y-5 max-w-7xl mx-auto w-full flex flex-col">
         {/* Khối hướng dẫn SSOT FeatureGuidanceCard */}
         <FeatureGuidanceCard
-          badgeLabel="HƯỚNG DẪN AI CHAT ASSISTANT M08"
+          badgeLabel="HƯỚNG DẪN AI CHAT ASSISTANT"
           badgeIcon={Bot}
           title="Trợ Lý Tư Vấn Hoa Tươi & Tự Động Hóa Chốt Đơn"
-          description="Hệ thống tích hợp kiến trúc Headless AI (Dify Engine), tự động liên kết dữ liệu mẫu hoa, công thức BOM từ M01 và lịch sử khách hàng từ M09 để gợi ý chính xác và đẩy đơn nháp 1-chạm sang M10."
+          description="Hệ thống tích hợp AI đàm thoại chuyên sâu, tự động liên kết dữ liệu mẫu hoa, công thức định lượng cành và lịch sử khách hàng để gợi ý chuẩn xác và đẩy đơn nháp 1-chạm sang xưởng hoa."
           tips={[
-            { icon: "⚡", text: "1-chạm chốt đơn: Bấm 'Chốt đơn mẫu này' để tạo ngay đơn nháp sang Kanban M10" },
-            { icon: "🎯", text: "Nhận diện ngân sách & dịp: AI tự bóc tách số tiền (vd: 500k, 1tr) và ngày lễ (sinh nhật, khai trương)" },
-            { icon: "💎", text: "Master Index SSOT: Mẫu hoa gợi ý luôn có ảnh thật, BOM cành hoa và giá niêm yết chuẩn" },
-            { icon: "🛡️", text: "Bảo mật Tenant: Hoạt động cách ly hoàn toàn theo tổ chức, an toàn tuyệt đối" },
+            { icon: "⚡", text: "1-chạm chốt đơn: Bấm 'Chốt đơn mẫu này' để tạo ngay đơn nháp sang xưởng hoa" },
+            { icon: "🎯", text: "Nhận diện ngân sách & dịp: AI tự bóc tách số tiền và ngày lễ (sinh nhật, khai trương)" },
+            { icon: "💎", text: "Master Index: Mẫu hoa gợi ý luôn có ảnh thật, BOM cành hoa và giá chuẩn" },
           ]}
         />
 
         {/* Thông báo tạo đơn thành công */}
         {createdOrderNotice && (
-          <div className="flex items-center justify-between rounded-xl bg-green-50 border border-green-200 p-4 text-sm font-bold text-green-800">
+          <div className="flex items-center justify-between rounded-xl bg-success-bg border border-success/30 p-4 text-body-sm font-bold text-success">
             <span className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <CheckCircle2 className="h-5 w-5 text-success" />
               {createdOrderNotice}
             </span>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => (window.location.href = "/don-hang")}
-              className="text-xs border-green-300 text-green-800 hover:bg-green-100"
+              onClick={() => router.push("/don-hang" as Route)}
+              className="text-caption"
             >
-              Mở bảng Đơn hàng M10 <ExternalLink className="ml-1 h-3.5 w-3.5" />
+              Mở bảng Đơn hàng <ExternalLink className="ml-1 h-3.5 w-3.5" />
             </Button>
           </div>
         )}
 
         {/* Khung Chat 2 Cột */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[550px] rounded-xl border border-border bg-surface overflow-hidden shadow-xs">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[550px] rounded-xl border border-border bg-surface overflow-hidden shadow-xs">
           {/* CỘT TRÁI: DANH SÁCH HỘI THOẠI */}
-          <div className="border-r border-border flex flex-col bg-surface-raised/40">
-            <div className="p-3.5 border-b border-border font-bold text-xs text-muted-foreground flex items-center justify-between">
+          <div className={`border-r border-border flex flex-col bg-surface-alt/40 ${selectedConvId ? "hidden md:flex" : "flex"}`}>
+            <div className="p-3.5 border-b border-border font-bold text-caption text-text-muted flex items-center justify-between">
               <span>Danh sách hội thoại ({conversations.length})</span>
-              <Button size="sm" variant="ghost" onClick={handleCreateNewConv} className="h-7 px-2 text-xs">
-                <Plus className="h-3.5 w-3.5" /> Mới
+              <Button size="sm" variant="ghost" onClick={handleCreateNewConv} className="h-7 px-2 text-caption">
+                <Plus size={14} /> Mới
               </Button>
             </div>
 
             <div className="flex-1 overflow-y-auto divide-y divide-border">
               {conversations.length === 0 ? (
-                <div className="p-6 text-center text-xs text-muted-foreground">
+                <div className="p-6 text-center text-caption text-text-muted">
                   Chưa có hội thoại nào. Bấm &quot;+ Mới&quot; để bắt đầu!
                 </div>
               ) : (
@@ -233,20 +230,20 @@ export default function ChatAssistantPage() {
                   <button
                     key={c.id}
                     onClick={() => setSelectedConvId(c.id)}
-                    className={`w-full text-left p-3.5 transition-colors flex flex-col gap-1 ${
+                    className={`w-full text-left p-3.5 transition-colors flex flex-col gap-1 min-h-11 ${
                       selectedConvId === c.id
-                        ? "bg-red-50/80 border-l-4 border-red-600"
-                        : "hover:bg-muted/40"
+                        ? "bg-primary/10 border-l-4 border-primary"
+                        : "hover:bg-surface-alt/60"
                     }`}
                   >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-foreground truncate">{c.title}</span>
-                      <Badge tone={c.channel === "ZALO" ? "accent" : "neutral"} className="text-[10px]">
+                    <div className="flex items-center justify-between text-body-sm">
+                      <span className="font-bold text-text truncate">{c.title}</span>
+                      <Badge tone={c.channel === "ZALO" ? "accent" : "neutral"} className="text-caption">
                         {c.channel === "ZALO" ? "Zalo" : "Web"}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Clock className="h-3 w-3" />
+                    <div className="flex items-center gap-1 text-caption text-text-muted">
+                      <Clock size={12} />
                       {new Date(c.updatedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </button>
@@ -256,16 +253,32 @@ export default function ChatAssistantPage() {
           </div>
 
           {/* CỘT PHẢI: CỬA SỔ CHAT & GỢI Ý MẪU HOA */}
-          <div className="col-span-2 flex flex-col bg-background">
+          <div className={`col-span-2 flex flex-col bg-background ${selectedConvId ? "flex" : "hidden md:flex"}`}>
+            {/* Thanh điều hướng quay lại danh sách trên Mobile */}
+            {selectedConvId && (
+              <div className="flex md:hidden items-center justify-between border-b border-border bg-surface px-4 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedConvId(null)}
+                  className="flex items-center gap-1.5 text-caption font-semibold text-primary"
+                >
+                  <ArrowLeft size={16} /> Danh sách hội thoại
+                </button>
+                <span className="text-caption font-bold truncate max-w-[180px]">
+                  {conversations.find((c) => c.id === selectedConvId)?.title ?? "Hội thoại"}
+                </span>
+              </div>
+            )}
+
             {/* Vùng tin nhắn */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-body-sm">
               {loading ? (
                 <div className="flex h-full items-center justify-center">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-                  <Bot className="h-10 w-10 text-red-400" />
+                  <Bot className="h-10 w-10 text-primary/60" />
                   <p className="max-w-md">
                     Chào bạn! Tôi là trợ lý AI am hiểu hoa tươi. Hãy thử hỏi về ngân sách, dịp tặng hoặc phong cách cắm hoa yêu thích!
                   </p>
@@ -277,8 +290,9 @@ export default function ChatAssistantPage() {
                     ].map((sample, idx) => (
                       <button
                         key={idx}
+                        type="button"
                         onClick={() => handleSendMessage(sample)}
-                        className="rounded-full border border-dashed border-red-300 bg-red-50/60 px-3 py-1.5 text-xs text-red-800 hover:bg-red-100 transition-colors"
+                        className="rounded-full border border-dashed border-primary/30 bg-primary/5 px-3 py-1.5 text-xs text-primary hover:bg-primary/10 transition-colors"
                       >
                         ⚡ {sample}
                       </button>
@@ -302,7 +316,7 @@ export default function ChatAssistantPage() {
                   return (
                     <div key={m.id} className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
                       {!isUser && (
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">
                           <Bot className="h-4 w-4" />
                         </span>
                       )}
@@ -311,7 +325,7 @@ export default function ChatAssistantPage() {
                         <div
                           className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                             isUser
-                              ? "bg-red-600 text-white font-medium rounded-br-none"
+                              ? "bg-primary text-white font-medium rounded-br-none"
                               : "bg-surface-raised border border-border text-foreground rounded-bl-none"
                           }`}
                         >
@@ -321,24 +335,24 @@ export default function ChatAssistantPage() {
                         {/* Danh sách Card mẫu hoa gợi ý từ Master Index */}
                         {suggestedFlowers.length > 0 && (
                           <div className="space-y-2 pt-1">
-                            <div className="text-[11px] font-bold text-red-900 flex items-center gap-1.5">
-                              <Flower2 className="h-3.5 w-3.5 text-red-600" />
+                            <div className="text-caption font-bold text-foreground flex items-center gap-1.5">
+                              <Flower2 className="h-3.5 w-3.5 text-primary" />
                               Mẫu hoa đề xuất từ Master Catalog ({suggestedFlowers.length} mẫu):
                             </div>
                             <div className="grid grid-cols-1 gap-2.5">
                               {suggestedFlowers.map((f) => (
                                 <div
                                   key={f.productId}
-                                  className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50/40 p-2.5 shadow-xs"
+                                  className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-2.5 shadow-xs"
                                 >
                                   {f.sampleImageUrl ? (
                                     <img
                                       src={f.sampleImageUrl}
                                       alt={f.productName}
-                                      className="h-16 w-16 rounded-lg object-cover border border-red-200"
+                                      className="h-16 w-16 rounded-lg object-cover border border-border"
                                     />
                                   ) : (
-                                    <div className="h-16 w-16 rounded-lg bg-red-100 flex items-center justify-center text-red-500">
+                                    <div className="h-16 w-16 rounded-lg bg-primary-subtle flex items-center justify-center text-primary">
                                       <Flower2 className="h-6 w-6" />
                                     </div>
                                   )}
@@ -347,10 +361,10 @@ export default function ChatAssistantPage() {
                                     <div className="font-bold text-foreground text-xs truncate">
                                       {f.productName}
                                     </div>
-                                    <div className="text-red-600 font-extrabold text-xs mt-0.5">
+                                    <div className="text-primary font-extrabold text-xs mt-0.5">
                                       {Number(f.priceVnd).toLocaleString("vi-VN")} đ
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
+                                    <div className="text-caption text-muted-foreground line-clamp-1 mt-0.5">
                                       {f.reason}
                                     </div>
                                   </div>
@@ -359,7 +373,7 @@ export default function ChatAssistantPage() {
                                     size="sm"
                                     disabled={creatingOrderFor === f.productId}
                                     onClick={() => handleQuickCreateOrder(f.productId)}
-                                    className="bg-red-600 hover:bg-red-700 text-white text-xs shrink-0"
+                                    className="text-xs shrink-0"
                                   >
                                     {creatingOrderFor === f.productId ? (
                                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -409,7 +423,6 @@ export default function ChatAssistantPage() {
                   type="submit"
                   size="sm"
                   disabled={!inputQuery.trim() || sending}
-                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>

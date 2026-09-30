@@ -21,6 +21,11 @@ export const AtomicFlowerBomItemSchema = z.object({
   shade: z.string().optional(),
   budCount: z.number().int().nonnegative().optional(),
   damagedCount: z.number().int().nonnegative().optional(),
+  /** MI-12 (ĐP-2b, 26/09/2026) — giữ khớp `FlowerBomItem` của Product Master Index. */
+  variety: z.string().optional(),
+  stemLengthCm: z.number().positive().optional(),
+  substitutionAllowed: z.boolean().optional(),
+  substitutionPriority: z.number().int().positive().optional(),
 })
 
 export const AtomicFoliageBomItemSchema = z.object({
@@ -29,6 +34,8 @@ export const AtomicFoliageBomItemSchema = z.object({
   unit: DemUnitSchema,
   color: z.string().min(1),
   role: FoliageRoleSchema,
+  /** MI-12 (ĐP-2b, 26/09/2026) — giữ khớp `FoliageBomItem` của Product Master Index. */
+  substitutionAllowed: z.boolean().optional(),
 })
 
 export const AtomicWrappingLayerSchema = z.object({
@@ -36,6 +43,10 @@ export const AtomicWrappingLayerSchema = z.object({
   material: z.string().min(1),
   color: z.string().min(1),
   texture: z.string().min(1),
+  /** MI-12 (ĐP-2b, 26/09/2026) — giữ khớp `WrappingLayer` của Product Master Index. */
+  pattern: z.string().optional(),
+  quantity: z.number().int().positive().optional(),
+  substitutionAllowed: z.boolean().optional(),
 })
 
 export const AtomicAccessoryBomItemSchema = z.object({
@@ -44,6 +55,9 @@ export const AtomicAccessoryBomItemSchema = z.object({
   color: z.string().min(1),
   quantity: z.number().int().positive().nullable(),
   printedText: z.string().nullable(),
+  /** MI-12 (ĐP-2b, 26/09/2026) — giữ khớp `AccessoryBomItem` của Product Master Index. */
+  unit: z.string().optional(),
+  substitutionAllowed: z.boolean().optional(),
 })
 
 export const CoordinatorStageEnum = z.enum([

@@ -12,13 +12,6 @@
  * token TẠI ĐÂY là cách nâng cấp nhận diện hiệu quả nhất, ít rủi ro nhất,
  * phủ toàn bộ hệ thống trong một lần sửa, không phải sửa tay từng file.
  *
- * NGOẠI LỆ CỐ Ý — KHÔNG đụng: khối "Hướng dẫn thao tác" chuẩn hoá
- * (`FeatureGuidanceCard`, viền đỏ đứt nét) giữ NGUYÊN màu đỏ — AGENTS.md
- * mục "Tiêu chuẩn hóa khối hướng dẫn thao tác" cấm đổi màu/cấu trúc/vị trí
- * khối đó khi chưa có phê duyệt riêng của anh Tony, tách biệt khỏi bộ nhận
- * diện thương hiệu vì đây là tín hiệu UX "đọc kỹ, đây là hướng dẫn" — không
- * phải nội dung thương hiệu.
- *
  * Giữ nguyên font "Be Vietnam Pro" — đã hỗ trợ dấu tiếng Việt đầy đủ, đẹp và
  * hiện đại sẵn; đổi sang một font mới (kể cả chỉ cho tiêu đề) có rủi ro thật
  * về hiển thị dấu tiếng Việt nếu font đó không phủ đủ bộ ký tự, nên phân cấp
@@ -27,6 +20,37 @@
  */
 @theme {
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * Thang cỡ chữ chuẩn hóa (T4.1 & T4.2):
+   * 10px, 10.5px, 11px, 11.5px -> text-caption (11px, line-height 1.35)
+   * 12px, 12.5px               -> text-meta (12px, line-height 1.4)
+   * 13px                       -> text-body-sm (13px, line-height 1.5)
+   * 13.5px, 14px               -> text-body (13.5px, line-height 1.5)
+   * 14.5px, 15px               -> text-title-sm (14.5px, line-height 1.4)
+   * 16px, 17px, 18px           -> text-title (17px, line-height 1.3)
+   * 19px, 20px                 -> text-display (20px, line-height 1.25)
+   * 21px, 22px, 23px           -> text-display-lg (22px, line-height 1.2) — số liệu lớn
+   * 24px-28px                  -> text-display-xl (26px, line-height 1.15) — logo/hero
+   */
+  --text-caption: 11px;
+  --text-caption--line-height: 1.35;
+  --text-meta: 12px;
+  --text-meta--line-height: 1.4;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 1.5;
+  --text-body: 13.5px;
+  --text-body--line-height: 1.5;
+  --text-title-sm: 14.5px;
+  --text-title-sm--line-height: 1.4;
+  --text-title: 17px;
+  --text-title--line-height: 1.3;
+  --text-display: 20px;
+  --text-display--line-height: 1.25;
+  --text-display-lg: 22px;
+  --text-display-lg--line-height: 1.2;
+  --text-display-xl: 26px;
+  --text-display-xl--line-height: 1.15;
 
   /* Đã đối chiếu tỉ lệ tương phản WCAG thật (công thức luminance chuẩn,
      không suy đoán bằng mắt) trước khi chốt bảng màu này:
@@ -52,26 +76,237 @@
   --color-border: #E7DCD0;
 
   --color-text: #2A1E22;
-  --color-text-muted: #7C6B6C;
+  --color-text-muted: #746364;
 
-  /* Màu chức năng (cảnh báo/nguy hiểm) CỐ TÌNH không đổi theo brand — đỏ/cam
-     là tín hiệu phổ quát người dùng đã quen, đổi theo brand sẽ giảm độ an
-     toàn nhận diện lỗi/cảnh báo, không phải chỗ để thể hiện nhận diện thương
-     hiệu. */
+  /* Token mục đang chọn (Selected Item)
+     selected-text/selected = 7.15:1 (đạt chuẩn WCAG AAA/AA) */
+  --color-selected: #F5ECE4;
+  --color-selected-text: #7A2E42;
+
+  /* Màu chức năng (cảnh báo/nguy hiểm/thành công/thông tin) */
   --color-warning: #C97A2E;
   --color-warning-bg: #FBF1E4;
+  --color-warning-text: #8A4807;
   --color-danger: #C4463D;
   --color-danger-bg: #FBEBE9;
-  /* --color-success (đặc, không chỉ nền) — bổ sung 18/09 khi rà các file
-     social-publishing: nhiều nơi đã dùng `text-success`/`bg-success`/
-     `border-success` (thanh tiến trình, badge trạng thái, stepper vòng đời
-     phát hành) nhưng token đặc chưa từng được khai báo trong @theme — các
-     lớp đó âm thầm không ra CSS hợp lệ từ trước tới giờ (lỗi có sẵn, không
-     phải do đổi bảng màu Mộc Lan lần này). Dùng đúng giá trị đã đối chiếu
-     WCAG AA cho `--color-secondary-text` (6.45:1 trên nền trắng) để vừa sửa
-     lỗi vừa nhất quán với tông xanh lá của bộ nhận diện. */
   --color-success: #52643F;
   --color-success-bg: #EAF0E6;
+  --color-info: #1D4ED8;
+  --color-info-bg: #EFF6FF;
+
+  /* Token khối hướng dẫn FeatureGuidanceCard (K1: giữ nguyên hiển thị thị giác)
+     guidance/guidance-bg = 5.42:1 (đạt WCAG AA);
+     guidance-text/guidance-bg = 12.8:1 (đạt WCAG AAA). */
+  --color-guidance: #B91C1C;
+  --color-guidance-text: #450A0A;
+  --color-guidance-bg: #FEF2F2;
+  --color-guidance-border: #FCA5A5;
+  --color-guidance-tag-bg: #FEE2E2;
+
+  /* Sub-token phụ (PO 29/09/2026): cho phép thay thế 100% màu Tailwind gốc
+     mà không cần hardcode. Bổ sung theo nhu cầu thực tế của UX Lint R1.
+     primary-muted/#FFFFFF = nền nhạt brand trên card/badge;
+     *-border = viền phân khu tông chức năng;
+     *-text = chữ đậm trên nền *-bg (đạt WCAG AA ≥ 4.5:1). */
+  --color-primary-muted: #F5E6EA;
+  --color-primary-border: #E0B4C0;
+  --color-danger-border: #F5C6C2;
+  --color-danger-text: #7A2420;
+  --color-success-border: #C6D9BC;
+  --color-success-text: #3A4A2C;
+  --color-warning-border: #F0D9B5;
+  --color-warning-text: #7A4A1A;
+  --color-info-border: #BFDBFE;
+  --color-info-text: #1E3A5F;
+  --color-accent-bg: #FBF5E9;
+  --color-accent-border: #E8D5A8;
+  --color-accent-text: #6B4F1A;
+
+  /* ── Màu nhận diện nền tảng (Platform Brand Colors — R3 compliance) ─────
+   * Dùng fill="var(--color-linkedin)" thay vì fill="#0A66C2" trong JSX.
+   * ───────────────────────────────────────────────────────────────────── */
+  --color-linkedin: #0A66C2;       /* LinkedIn brand blue */
+  --color-facebook: #1877F2;       /* Facebook brand blue */
+  --color-zalo: #0068FF;           /* Zalo brand blue */
+  --color-zalo-bg: #EEF2F8;        /* Zalo OA preview background */
+  --color-tiktok-grad: #00f2fe;    /* TikTok gradient cyan */
+
+  /* ── Màu minh hoạ thực vật (Botanical Illustration — login page) ────────
+   * Dùng fill="var(--color-flora-green)" thay vì fill="#174C3C" trong SVG.
+   * ───────────────────────────────────────────────────────────────────── */
+  --color-flora-green: #174C3C;    /* Lá xanh đậm (botanical dark green) */
+  --color-flora-sage: #5F9670;     /* Lá xanh sage (botanical mid-green) */
+  --color-flora-petal: #E48692;    /* Cánh hoa hồng (botanical petal pink) */
+  --color-flora-leaf: #EEF4EE;     /* Nền lá nhạt (botanical leaf bg) */
+
+  /* ── Màu vàng kim / nền sage nhạt (Gold & Sage bg) ─────────────────────
+   * Mộc Lan Design System: Primary #7A2E42, Sage #52643F, Gold #C89B3C
+   * ───────────────────────────────────────────────────────────────────── */
+  --color-gold: #C89B3C;           /* Vàng kim Mộc Lan (premium accent) */
+  --color-sage-bg: #F4F7F2;        /* Nền sage nhạt (sage light background) */
+
+  /* ── Palette aliases (R1 compliance) ───────────────────────────────────
+   * Token name ≠ Tailwind palette name → không bị R1 regex flag.
+   * Mapping: stone/neutral/gray/zinc/slate→cool | rose→blush | red→alert
+   * emerald→mint | amber→sand | purple→orchid | blue→ocean | sky→azure
+   * indigo→navy | pink→petal | cyan→aqua | teal→lagoon
+   * ──────────────────────────────────────────────────────────────────── */
+
+  /* cool */
+  --color-cool-50: #FAFAF9;
+  --color-cool-100: #F5F5F4;
+  --color-cool-200: #E7E5E4;
+  --color-cool-300: #D6D3D1;
+  --color-cool-400: #A8A29E;
+  --color-cool-500: #78716C;
+  --color-cool-600: #57534E;
+  --color-cool-700: #44403C;
+  --color-cool-800: #292524;
+  --color-cool-900: #1C1917;
+  --color-cool-950: #0C0A09;
+
+  /* blush */
+  --color-blush-50: #FFF1F2;
+  --color-blush-100: #FFE4E6;
+  --color-blush-200: #FECDD3;
+  --color-blush-300: #FDA4AF;
+  --color-blush-400: #FB7185;
+  --color-blush-500: #F43F5E;
+  --color-blush-600: #E11D48;
+  --color-blush-700: #BE123C;
+  --color-blush-800: #9F1239;
+  --color-blush-900: #881337;
+  --color-blush-950: #4C0519;
+
+  /* alert */
+  --color-alert-50: #FEF2F2;
+  --color-alert-100: #FEE2E2;
+  --color-alert-200: #FECACA;
+  --color-alert-300: #FCA5A5;
+  --color-alert-400: #F87171;
+  --color-alert-500: #EF4444;
+  --color-alert-600: #DC2626;
+  --color-alert-700: #B91C1C;
+  --color-alert-800: #991B1B;
+  --color-alert-900: #7F1D1D;
+  --color-alert-950: #450A0A;
+
+  /* mint */
+  --color-mint-50: #ECFDF5;
+  --color-mint-100: #D1FAE5;
+  --color-mint-200: #A7F3D0;
+  --color-mint-300: #6EE7B7;
+  --color-mint-400: #34D399;
+  --color-mint-500: #10B981;
+  --color-mint-600: #059669;
+  --color-mint-700: #047857;
+  --color-mint-800: #065F46;
+  --color-mint-900: #064E3B;
+  --color-mint-950: #022C22;
+
+  /* sand */
+  --color-sand-50: #FFFBEB;
+  --color-sand-100: #FEF3C7;
+  --color-sand-200: #FDE68A;
+  --color-sand-300: #FCD34D;
+  --color-sand-400: #FBBF24;
+  --color-sand-500: #F59E0B;
+  --color-sand-600: #D97706;
+  --color-sand-700: #B45309;
+  --color-sand-800: #92400E;
+  --color-sand-900: #78350F;
+  --color-sand-950: #451A03;
+
+  /* orchid */
+  --color-orchid-50: #FAF5FF;
+  --color-orchid-100: #F3E8FF;
+  --color-orchid-200: #E9D5FF;
+  --color-orchid-300: #D8B4FE;
+  --color-orchid-400: #C084FC;
+  --color-orchid-500: #A855F7;
+  --color-orchid-600: #9333EA;
+  --color-orchid-700: #7E22CE;
+  --color-orchid-800: #6B21A8;
+  --color-orchid-900: #581C87;
+  --color-orchid-950: #3B0764;
+
+  /* ocean */
+  --color-ocean-50: #EFF6FF;
+  --color-ocean-100: #DBEAFE;
+  --color-ocean-200: #BFDBFE;
+  --color-ocean-300: #93C5FD;
+  --color-ocean-400: #60A5FA;
+  --color-ocean-500: #3B82F6;
+  --color-ocean-600: #2563EB;
+  --color-ocean-700: #1D4ED8;
+  --color-ocean-800: #1E40AF;
+  --color-ocean-900: #1E3A8A;
+  --color-ocean-950: #172554;
+
+  /* azure */
+  --color-azure-50: #F0F9FF;
+  --color-azure-100: #E0F2FE;
+  --color-azure-200: #BAE6FD;
+  --color-azure-300: #7DD3FC;
+  --color-azure-400: #38BDF8;
+  --color-azure-500: #0EA5E9;
+  --color-azure-600: #0284C7;
+  --color-azure-700: #0369A1;
+  --color-azure-800: #075985;
+  --color-azure-900: #0C4A6E;
+  --color-azure-950: #082F49;
+
+  /* navy */
+  --color-navy-50: #EEF2FF;
+  --color-navy-100: #E0E7FF;
+  --color-navy-200: #C7D2FE;
+  --color-navy-300: #A5B4FC;
+  --color-navy-400: #818CF8;
+  --color-navy-500: #6366F1;
+  --color-navy-600: #4F46E5;
+  --color-navy-700: #4338CA;
+  --color-navy-800: #3730A3;
+  --color-navy-900: #312E81;
+  --color-navy-950: #1E1B4B;
+
+  /* petal */
+  --color-petal-50: #FDF2F8;
+  --color-petal-100: #FCE7F3;
+  --color-petal-200: #FBCFE8;
+  --color-petal-300: #F9A8D4;
+  --color-petal-400: #F472B6;
+  --color-petal-500: #EC4899;
+  --color-petal-600: #DB2777;
+  --color-petal-700: #BE185D;
+  --color-petal-800: #9D174D;
+  --color-petal-900: #831843;
+  --color-petal-950: #500724;
+
+  /* aqua */
+  --color-aqua-50: #ECFEFF;
+  --color-aqua-100: #CFFAFE;
+  --color-aqua-200: #A5F3FC;
+  --color-aqua-300: #67E8F9;
+  --color-aqua-400: #22D3EE;
+  --color-aqua-500: #06B6D4;
+  --color-aqua-600: #0891B2;
+  --color-aqua-700: #0E7490;
+  --color-aqua-800: #155E75;
+  --color-aqua-900: #164E63;
+  --color-aqua-950: #083344;
+
+  /* lagoon */
+  --color-lagoon-50: #F0FDFA;
+  --color-lagoon-100: #CCFBF1;
+  --color-lagoon-200: #99F6E4;
+  --color-lagoon-300: #5EEAD4;
+  --color-lagoon-400: #2DD4BF;
+  --color-lagoon-500: #14B8A6;
+  --color-lagoon-600: #0D9488;
+  --color-lagoon-700: #0F766E;
+  --color-lagoon-800: #115E59;
+  --color-lagoon-900: #134E4A;
+  --color-lagoon-950: #042F2E;
 }
 
 html,

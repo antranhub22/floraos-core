@@ -9,9 +9,12 @@
 
 import type { CoordinatorOrderView } from "@/modules/coordinator/use-cases/present-coordinator-order"
 import type { PartnerView } from "@/modules/coordinator/use-cases/manage-partners"
+import type { OrderPaymentView } from "@/modules/coordinator/use-cases/record-payment"
+import type { TenantCatalogView } from "@/modules/field-platform/use-cases/list-catalogs-for-tenant"
 
 export type CoordinationOrder = CoordinatorOrderView
 export type CoordinationPartner = PartnerView
+export type { OrderPaymentView, TenantCatalogView }
 
 export class CoordinatorApiError extends Error {
   constructor(
@@ -52,8 +55,12 @@ async function orderCall(url: string, init: RequestInit): Promise<CoordinationOr
 }
 
 export interface CreateOrderRequest {
+  customerId?: string
+  /** ĐP-2.6 (26/09/2026): có thì máy chủ đọc Product Master Index và chụp snapshot. */
+  productId?: string
   customerName: string
   customerTier: "NEW" | "BRONZE" | "SILVER" | "GOLD" | "VIP"
+  customerPhone?: string
   recipientName: string
   recipientPhone: string
   deliveryAddress: { street: string; ward: string; district: string; city: string; country?: string; formattedAddress?: string }
@@ -65,7 +72,34 @@ export interface CreateOrderRequest {
   unitPriceVnd: number
   flowers: Array<{ flowerName: string; quantity: number; unit: string; color: string; role: string }>
   cardMessage?: string
+  /** ĐP-4a.1 (26/09/2026) — `cardMessage` bắt buộc khi true. */
+  cardRequired?: boolean
   internalNote?: string
+  /** ĐP-3.16 (26/09/2026): giá trị trường tự tạo (entity ORDER), khoá `cf_...`. */
+  customFields?: Record<string, unknown>
+  // ── ĐP-4a.1 (26/09/2026) — T01: đủ trường P0/P1 ──
+  source?: "ORDER_M10" | "CHAT_M08" | "CATALOG_M06" | "MANUAL"
+  sourceReference?: string
+  channel?: string
+  orderType?: string
+  /** Bỏ trống thì máy chủ TỰ GỢI Ý (§2.15.1). */
+  priority?: string
+  serviceLevel?: string
+  deliveryType?: string
+  deliveryLocationType?: string
+  receivedAt?: string
+  deliveryWindowStart?: string
+  deliveryWindowEnd?: string
+}
+
+/** ĐP-4a.3 (26/09/2026, sổ thu) — thân `POST .../payments`. */
+export interface RecordPaymentBody {
+  kind: "DEPOSIT" | "BALANCE" | "REFUND"
+  amountVnd: number
+  paymentMethod?: string
+  reference?: string
+  evidenceAssetId?: string
+  note?: string
 }
 
 export const coordinatorApi = {
@@ -106,10 +140,22 @@ export const coordinatorApi = {
   close: (id: string, body: { partnerRating?: number; partnerPayoutVnd?: number; notes?: string }) =>
     orderCall(`${BASE}/orders/${id}/close`, post(body)),
   cancel: (id: string, reason: string) => orderCall(`${BASE}/orders/${id}/cancel`, post({ reason })),
+  updateCustomFields: (id: string, customFields: Record<string, unknown>) =>
+    orderCall(`${BASE}/orders/${id}/custom-fields`, { method: "PATCH", body: JSON.stringify({ customFields }) }),
+  /** ĐP-4a.3 (26/09/2026) — ghi một dòng sổ thu (cọc/thu nốt/hoàn tiền); trả đơn đã cập nhật (paidVnd/balanceVnd/paymentStatus). */
+  recordPayment: (id: string, body: RecordPaymentBody) => orderCall(`${BASE}/orders/${id}/payments`, post(body)),
+  /** Liệt kê sổ thu của một đơn. */
+  listPayments: async (id: string) =>
+    (await request<{ payments: OrderPaymentView[] }>(`${BASE}/orders/${id}/payments`, { method: "GET" })).payments,
   listPartners: async (activeOnly = false) =>
     (await request<{ partners: CoordinationPartner[] }>(`${BASE}/partners${activeOnly ? "?active=1" : ""}`)).partners,
   createPartner: async (body: { code: string; name: string; phone: string; district?: string; province?: string; capacityDaily?: number }) =>
     (await request<{ partner: CoordinationPartner }>(`${BASE}/partners`, post(body))).partner,
+  /** ĐP-4a.1 (26/09/2026) — danh mục (§2.15) cho ô chọn ở T01. `keys` bỏ trống trả hết. */
+  listCatalogs: async (keys?: readonly string[]) => {
+    const qs = keys && keys.length > 0 ? `?keys=${encodeURIComponent(keys.join(","))}` : ""
+    return (await request<{ data: TenantCatalogView[] }>(`/api/v1/field-config/catalogs${qs}`, { method: "GET" })).data
+  },
 }
 
 /**

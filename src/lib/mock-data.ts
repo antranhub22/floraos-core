@@ -53,7 +53,7 @@ export const FEATURE_ICONS: Record<FeatureId, LucideIcon> = {
 
 export const STATUS_META: Record<ModuleStatus, FeatureStatusMeta> = {
   hoat_dong: { label: "Hoạt động", dotClass: "bg-secondary-text", textClass: "text-secondary-text", bgClass: "bg-success-bg" },
-  chua_san_sang: { label: "Chưa sẵn sàng", dotClass: "bg-warning", textClass: "text-warning", bgClass: "bg-warning-bg" },
+  chua_san_sang: { label: "Chưa sẵn sàng", dotClass: "bg-warning", textClass: "text-warning-text", bgClass: "bg-warning-bg" },
   chua_co: { label: "Chưa có", dotClass: "bg-text-muted", textClass: "text-text-muted", bgClass: "bg-surface-alt" },
   disabled: { label: "Sắp có", dotClass: "bg-text-muted", textClass: "text-text-muted", bgClass: "bg-surface-alt" },
 }
@@ -174,6 +174,14 @@ export type MockSession = {
   workspaceKind: WorkspaceKind
   capabilities: string[]
   organization?: { id: string; name?: string } | undefined
+  /**
+   * Khoá vai phân quyền (`roles.key`) của membership hiện tại — CHỈ dùng để
+   * chọn khuôn trải nghiệm (`resolveRoleUx`, đặc tả 03b). Không bao giờ dùng
+   * để suy quyền: quyền vẫn là `capabilities`.
+   */
+  roleKey?: string | null | undefined
+  /** `organizations.type` — EXPERIENCE · SINGLE · CHAIN. */
+  organizationType?: string | null | undefined
 }
 
 export const MOCK_SESSION: MockSession = {

@@ -68,11 +68,11 @@ export function SettingsInputTab({
 }: SettingsInputTabProps) {
   return (
     <div className="space-y-3">
-      <p className="text-stone-600">Chọn nguồn dữ liệu muốn thu thập:</p>
+      <p className="text-cool-600">Chọn nguồn dữ liệu muốn thu thập:</p>
 
       {activeFeature === "market" && (
-        <div className="grid grid-cols-2 gap-2 bg-stone-50 p-3.5 rounded-xl border border-stone-200">
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+        <div className="grid grid-cols-2 gap-2 bg-cool-50 p-3.5 rounded-xl border border-cool-200">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={marketInput.sourceGoogle}
@@ -80,7 +80,7 @@ export function SettingsInputTab({
             />
             Google Search Trends
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={marketInput.sourceTikTok}
@@ -88,7 +88,7 @@ export function SettingsInputTab({
             />
             TikTok Short Video Trends
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={marketInput.sourcePinterest}
@@ -100,13 +100,13 @@ export function SettingsInputTab({
       )}
 
       {activeFeature === "keyword" && (
-        <div className="space-y-2.5 bg-stone-50 p-3.5 rounded-xl border border-stone-200">
+        <div className="space-y-2.5 bg-cool-50 p-3.5 rounded-xl border border-cool-200">
           <div className="space-y-1">
-            <label className="font-semibold text-stone-700">Phong cách phối hoa mặc định:</label>
+            <label className="font-semibold text-cool-700">Phong cách phối hoa mặc định:</label>
             <select
               value={keywordInput.defaultStyle}
               onChange={(e) => setKeywordInput({ ...keywordInput, defaultStyle: e.target.value })}
-              className="h-8 w-full rounded-lg border border-stone-300 bg-white px-2 text-xs"
+              className="h-8 w-full rounded-lg border border-cool-300 bg-white px-2 text-xs"
             >
               <option value="Romantic & Tinh tế">Romantic & Tinh tế (Hàn Quốc / Pháp)</option>
               <option value="Vintage & Cổ điển">Vintage & Cổ điển (Tone cam cháy)</option>
@@ -117,9 +117,9 @@ export function SettingsInputTab({
       )}
 
       {activeFeature === "product" && (
-        <div className="space-y-2 bg-stone-50 p-3.5 rounded-xl border border-stone-200">
-          <span className="font-bold text-stone-800 block">Các thành phần Vision AI cần bóc tách:</span>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+        <div className="space-y-2 bg-cool-50 p-3.5 rounded-xl border border-cool-200">
+          <span className="font-bold text-cool-800 block">Các thành phần Vision AI cần bóc tách:</span>
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={productInput.extractFlowers}
@@ -127,7 +127,7 @@ export function SettingsInputTab({
             />
             Tên hoa, số lượng ước tính & vai trò (Chủ đạo / Phụ trợ / Lá)
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={productInput.extractColors}
@@ -135,7 +135,7 @@ export function SettingsInputTab({
             />
             Phối màu sắc (Màu chủ đạo, màu phụ trợ)
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={productInput.extractPackaging}

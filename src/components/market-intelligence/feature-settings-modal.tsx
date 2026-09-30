@@ -111,47 +111,48 @@ export function FeatureSettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs animate-in fade-in">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cool-900/50 backdrop-blur-xs animate-in fade-in">
+      <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-cool-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-stone-50/70">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-cool-200 bg-cool-50/70">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600 border border-rose-200/60">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blush-50 text-blush-600 border border-blush-200/60">
               {activeFeature === "market" && <TrendingUp size={18} />}
               {activeFeature === "keyword" && <Search size={18} />}
               {activeFeature === "product" && <Camera size={18} />}
             </div>
             <div>
-              <h3 className="font-bold text-stone-900 text-sm flex items-center gap-2">
+              <h3 className="font-bold text-cool-900 text-sm flex items-center gap-2">
                 Cài đặt
-                <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                <span className="text-caption font-extrabold px-2.5 py-0.5 rounded-full bg-blush-100 text-blush-800">
                   {activeFeature === "market" && "Xu Hướng Thị Trường"}
                   {activeFeature === "keyword" && "Quét Theo Từ Khóa"}
                   {activeFeature === "product" && "Quét Theo Ảnh Mẫu"}
                 </span>
               </h3>
-              <p className="text-[11px] text-stone-500">Lịch chạy và dữ liệu cho tính năng này</p>
+              <p className="text-caption text-cool-500">Lịch chạy và dữ liệu cho tính năng này</p>
             </div>
           </div>
 
           <button
+              aria-label="Đóng"
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-200/60 hover:text-stone-700 transition"
+            className="rounded-lg p-1.5 text-cool-400 hover:bg-cool-200/60 hover:text-cool-700 transition"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* 3 Tab Navigation */}
-        <div className="flex border-b border-stone-200 px-6 bg-white gap-6 text-xs font-bold pt-2">
+        <div className="flex border-b border-cool-200 px-6 bg-white gap-6 text-xs font-bold pt-2">
           <button
             type="button"
             onClick={() => setActiveTab("schedule")}
             className={`pb-3 flex items-center gap-2 border-b-2 transition ${
               activeTab === "schedule"
-                ? "border-rose-600 text-rose-600 font-extrabold"
-                : "border-transparent text-stone-500 hover:text-stone-800"
+                ? "border-blush-600 text-blush-600 font-extrabold"
+                : "border-transparent text-cool-500 hover:text-cool-800"
             }`}
           >
             <Clock size={14} />
@@ -162,8 +163,8 @@ export function FeatureSettingsModal({
             onClick={() => setActiveTab("input")}
             className={`pb-3 flex items-center gap-2 border-b-2 transition ${
               activeTab === "input"
-                ? "border-rose-600 text-rose-600 font-extrabold"
-                : "border-transparent text-stone-500 hover:text-stone-800"
+                ? "border-blush-600 text-blush-600 font-extrabold"
+                : "border-transparent text-cool-500 hover:text-cool-800"
             }`}
           >
             <FileInput size={14} />
@@ -174,8 +175,8 @@ export function FeatureSettingsModal({
             onClick={() => setActiveTab("output")}
             className={`pb-3 flex items-center gap-2 border-b-2 transition ${
               activeTab === "output"
-                ? "border-rose-600 text-rose-600 font-extrabold"
-                : "border-transparent text-stone-500 hover:text-stone-800"
+                ? "border-blush-600 text-blush-600 font-extrabold"
+                : "border-transparent text-cool-500 hover:text-cool-800"
             }`}
           >
             <FileOutput size={14} />
@@ -225,8 +226,8 @@ export function FeatureSettingsModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-t border-stone-200 bg-stone-50/70">
-          <span className="text-[11px] text-stone-500 font-medium">
+        <div className="flex items-center justify-between px-6 py-3.5 border-t border-cool-200 bg-cool-50/70">
+          <span className="text-caption text-cool-500 font-medium">
             Cấu hình chỉ áp dụng cho cửa hàng của bạn
           </span>
 
@@ -234,14 +235,14 @@ export function FeatureSettingsModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 rounded-lg border border-stone-300 text-stone-600 font-bold hover:bg-white transition text-xs"
+              className="px-3.5 py-1.5 rounded-lg border border-cool-300 text-cool-600 font-bold hover:bg-white transition text-xs"
             >
               Đóng
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 transition text-xs shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blush-600 text-white font-bold hover:bg-blush-700 transition text-xs shadow-sm"
             >
               {isSaved ? (
                 <>

@@ -101,24 +101,25 @@ export function ProductionUpdateModal({
         {/* Header */}
         <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-alert-100 text-alert-700 flex items-center justify-center">
               <Sliders size={18} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-black uppercase border border-zinc-200">
+                <span className="px-2 py-0.5 rounded bg-cool-100 text-cool-700 text-caption font-black uppercase border border-cool-200">
                   CHẶNG P4 • GIA CÔNG
                 </span>
                 <h3 className="text-base font-extrabold text-text">
                   Tiến Độ & Ảnh Thành Phẩm (T08/T10)
                 </h3>
               </div>
-              <p className="text-[11px] text-text-muted">
+              <p className="text-caption text-text-muted">
                 Đơn #{orderCode}: {recipeTitle}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
+          <button
+              aria-label="Đóng" onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted">
             <X size={18} />
           </button>
         </div>
@@ -129,7 +130,7 @@ export function ProductionUpdateModal({
           <div className="p-4 rounded-xl border border-border bg-surface-alt flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <label className="font-bold text-text">Tiến độ hoàn thiện mẫu cắm:</label>
-              <span className="font-extrabold text-red-700 text-base">{progress}%</span>
+              <span className="font-extrabold text-alert-700 text-base">{progress}%</span>
             </div>
             <input
               type="range"
@@ -140,7 +141,7 @@ export function ProductionUpdateModal({
               onChange={(e) => setProgress(Number(e.target.value))}
               className="w-full accent-red-600 cursor-pointer h-2 bg-surface rounded-lg"
             />
-            <div className="flex justify-between text-[10.5px] font-semibold text-text-muted mt-1">
+            <div className="flex justify-between text-caption font-semibold text-text-muted mt-1">
               <button
                 type="button"
                 onClick={() => setProgress(25)}
@@ -165,7 +166,7 @@ export function ProductionUpdateModal({
               <button
                 type="button"
                 onClick={() => setProgress(100)}
-                className="text-red-700 font-bold hover:underline cursor-pointer"
+                className="text-alert-700 font-bold hover:underline cursor-pointer"
               >
                 100% Cắm xong ➔
               </button>
@@ -174,19 +175,19 @@ export function ProductionUpdateModal({
 
           {/* Khối tải ảnh thành phẩm cắm xong thực tế khi progress >= 80% */}
           {progress >= 80 && (
-            <div className="p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50/40 flex flex-col gap-3">
+            <div className="p-4 rounded-xl border-2 border-mint-200 bg-mint-50/40 flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="font-extrabold text-emerald-950 text-xs flex items-center gap-1.5">
-                  <Camera size={14} className="text-emerald-700" />
+                <span className="font-extrabold text-mint-950 text-xs flex items-center gap-1.5">
+                  <Camera size={14} className="text-mint-700" />
                   Ảnh Hoa Thành Phẩm Thực Tế (Bắt buộc cho Chặng P5 AI QC):
                 </span>
-                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                <span className="text-caption font-bold text-mint-800 bg-mint-100 px-2 py-0.5 rounded-full">
                   Thợ cắm gửi về
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="relative w-24 h-24 rounded-xl border border-emerald-300 bg-surface overflow-hidden shrink-0 shadow-xs group">
+                <div className="relative w-24 h-24 rounded-xl border border-mint-300 bg-surface overflow-hidden shrink-0 shadow-xs group">
                   {finishedImageUrl ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -197,6 +198,7 @@ export function ProductionUpdateModal({
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                         <button
+              aria-label="Hiển thị thông tin"
                           type="button"
                           onClick={() => window.open(finishedImageUrl, "_blank")}
                           className="p-1 rounded bg-surface text-text hover:bg-white text-xs shadow"
@@ -204,24 +206,25 @@ export function ProductionUpdateModal({
                           <Eye size={12} />
                         </button>
                         <button
+                          aria-label="Xóa ảnh"
                           type="button"
                           onClick={() => {
                             setFinishedImageUrl("")
                             setFinishedAssetId(null)
                           }}
-                          className="p-1 rounded bg-red-600 text-white hover:bg-red-700 text-xs shadow"
+                          className="p-1 rounded bg-alert-600 text-white hover:bg-alert-700 text-xs shadow"
                         >
                           <Trash2 size={12} />
                         </button>
                       </div>
-                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] font-bold text-center py-0.5">
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-caption font-bold text-center py-0.5">
                         Thành phẩm
                       </span>
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-center text-text-muted p-1">
-                      <Camera size={20} className="text-emerald-500 mb-0.5" />
-                      <span className="text-[9.5px]">Chưa có ảnh</span>
+                      <Camera size={20} className="text-mint-500 mb-0.5" />
+                      <span className="text-caption">Chưa có ảnh</span>
                     </div>
                   )}
                 </div>
@@ -232,7 +235,7 @@ export function ProductionUpdateModal({
                     placeholder="Tải ảnh thợ chụp lên (nút bên dưới)"
                     value={finishedAssetId ? "(ảnh đã tải lên kho của tiệm)" : ""}
                     readOnly
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-text text-xs focus:outline-none focus:border-mint-500"
                   />
                   <div className="flex items-center gap-2">
                     <input
@@ -247,7 +250,7 @@ export function ProductionUpdateModal({
                       variant="outline"
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-xs h-7 gap-1 border-emerald-300 text-emerald-800 bg-emerald-100 hover:bg-emerald-200 font-bold"
+                      className="text-xs h-7 gap-1 border-mint-300 text-mint-800 bg-mint-100 hover:bg-mint-200 font-bold"
                     >
                       <Upload size={12} />
                       <span>Tải ảnh hoa thợ cắm lên</span>
@@ -262,14 +265,14 @@ export function ProductionUpdateModal({
           <div className="p-3 rounded-xl border border-border bg-surface-alt flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-text flex items-center gap-1.5">
-                <AlertTriangle size={14} className="text-amber-500" />
+                <AlertTriangle size={14} className="text-sand-500" />
                 Báo cáo sự cố hoa / nguyên liệu (P8):
               </span>
               <input
                 type="checkbox"
                 checked={isReportingIssue}
                 onChange={(e) => setIsReportingIssue(e.target.checked)}
-                className="h-4 w-4 rounded text-red-600 focus:ring-red-500"
+                className="h-4 w-4 rounded text-alert-600 focus:ring-alert-500"
               />
             </div>
 
@@ -279,14 +282,14 @@ export function ProductionUpdateModal({
                 placeholder="Mô tả sự cố (ví dụ: Thiếu 3 cành Hồng Ohara kem, xin đổi sang Hồng Juliet cùng tone màu...)"
                 value={issueNote}
                 onChange={(e) => setIssueNote(e.target.value)}
-                className="w-full p-2.5 rounded-lg border border-amber-200 bg-surface text-text text-xs focus:outline-none focus:border-red-500 mt-1"
+                className="w-full p-2.5 rounded-lg border border-sand-200 bg-surface text-text text-xs focus:outline-none focus:border-alert-500 mt-1"
               />
             )}
           </div>
         </div>
 
         {error && (
-          <div role="alert" className="mx-5 mb-3 p-3 rounded-xl border border-red-300 bg-red-50 text-red-800 text-xs font-semibold">
+          <div role="alert" className="mx-5 mb-3 p-3 rounded-xl border border-alert-300 bg-alert-50 text-alert-800 text-xs font-semibold">
             {error}
           </div>
         )}
@@ -302,7 +305,7 @@ export function ProductionUpdateModal({
               size="sm"
               disabled={busy}
               onClick={handleSave}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 shadow-sm"
+              className="bg-mint-600 hover:bg-mint-700 text-white font-bold gap-1.5 shadow-sm"
             >
               <CheckCircle2 size={14} />
               <span>Cắm Xong ➔ Gửi Kiểm Định AI QC (P5)</span>
@@ -313,7 +316,7 @@ export function ProductionUpdateModal({
               size="sm"
               disabled={busy}
               onClick={handleSave}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5 shadow-sm"
+              className="bg-alert-600 hover:bg-alert-700 text-white font-bold gap-1.5 shadow-sm"
             >
               <CheckCircle2 size={14} />
               <span>Lưu Cập Nhật Tiến Trình</span>

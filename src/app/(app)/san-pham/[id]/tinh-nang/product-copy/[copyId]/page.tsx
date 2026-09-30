@@ -188,7 +188,7 @@ export default function ProductCopyDetailPage() {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-danger-bg">
           <AlertCircle size={32} strokeWidth={1.8} className="text-danger" />
         </div>
-        <h2 className="text-[17px] font-bold">Không tải được dữ liệu</h2>
+        <h2 className="text-title font-bold">Không tải được dữ liệu</h2>
         <p className="text-text-muted max-w-xs">{error}</p>
         <Button variant="secondary" onClick={() => router.refresh()}>
           <RefreshCw size={15} strokeWidth={2} /> Thử lại
@@ -206,6 +206,7 @@ export default function ProductCopyDetailPage() {
         <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
           <div className="flex items-center gap-3">
             <Button
+              aria-label="Quay lại"
               variant="ghost"
               size="icon"
               onClick={() => {
@@ -217,7 +218,7 @@ export default function ProductCopyDetailPage() {
             </Button>
             <div>
               <div className="flex items-center gap-2">
-                <div className="text-[17px] font-extrabold text-primary">
+                <div className="text-title font-extrabold text-primary">
                   Dữ liệu bán hàng #{copy.id.slice(0, 8)}
                 </div>
                 <Badge
@@ -228,7 +229,7 @@ export default function ProductCopyDetailPage() {
                       ? "danger"
                       : "warning"
                   }
-                  className="text-[10.5px]"
+                  className="text-caption"
                 >
                   {copy.approval_state === "APPROVED"
                     ? "Đã duyệt"
@@ -237,7 +238,7 @@ export default function ProductCopyDetailPage() {
                     : "Chờ duyệt"}
                 </Badge>
               </div>
-              <div className="mt-0.5 flex items-center gap-2 text-[12.5px] text-text-muted">
+              <div className="mt-0.5 flex items-center gap-2 text-meta text-text-muted">
                 <span>Phân tích: <code className="font-mono">{copy.analysis_id.slice(0, 8)}…</code></span>
                 {copy.product_id && (
                   <>
@@ -249,7 +250,8 @@ export default function ProductCopyDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => router.refresh()}>
+            <Button
+              aria-label="Làm mới" variant="ghost" size="icon" onClick={() => router.refresh()}>
               <RefreshCw size={18} strokeWidth={2} className="text-text-muted" />
             </Button>
           </div>
@@ -258,7 +260,7 @@ export default function ProductCopyDetailPage() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {error && (
-            <div className="mb-4 rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700">
+            <div className="mb-4 rounded-xl border-[1.5px] border-danger/30 bg-danger/10 px-3.5 py-2.5 text-body-sm font-medium text-danger">
               {error}
             </div>
           )}
@@ -266,7 +268,7 @@ export default function ProductCopyDetailPage() {
           {/* Raw vs Edited Comparison */}
           <Card className="mb-4">
             <div className="border-b border-border px-4 py-3">
-              <h3 className="font-bold text-[14.5px]">So sánh Raw ↔ Edited</h3>
+              <h3 className="font-bold text-title-sm">So sánh Raw ↔ Edited</h3>
             </div>
             <div className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -289,20 +291,20 @@ export default function ProductCopyDetailPage() {
 
                   return (
                     <div key={field} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-                      <div className="font-medium text-[13px] text-text-muted">
+                      <div className="font-medium text-body-sm text-text-muted">
                         {FIELD_LABELS[field]}
                       </div>
-                      <div className="text-center text-[13px]">
+                      <div className="text-center text-body-sm">
                         {Array.isArray(rawValue) ? (
                           <span className="flex flex-wrap justify-center gap-1">
                             {rawValue.map((t, i) => (
-                              <Badge key={i} tone="neutral" className="text-[10px] h-4 px-1.5">
+                              <Badge key={i} tone="neutral" className="text-caption h-4 px-1.5">
                                 {t}
                               </Badge>
                             ))}
                           </span>
                         ) : (
-                          <code className="font-mono text-[12px] bg-surface-alt px-2 py-1 rounded">
+                          <code className="font-mono text-meta bg-surface-alt px-2 py-1 rounded">
                             {String(rawValue)}
                           </code>
                         )}
@@ -331,7 +333,7 @@ export default function ProductCopyDetailPage() {
                                 <Badge
                                   key={i}
                                   tone={isEdited ? "accent" : "neutral"}
-                                  className="text-[10px] h-4 px-1.5"
+                                  className="text-caption h-4 px-1.5"
                                 >
                                   {tag}
                                 </Badge>
@@ -350,9 +352,9 @@ export default function ProductCopyDetailPage() {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="ml-1.5 text-[10px] text-primary font-medium">●</span>
+                                <span className="ml-1.5 text-caption text-primary font-medium">●</span>
                               </TooltipTrigger>
-                              <TooltipContent side="top" align="center" className="p-2 text-[10px]">
+                              <TooltipContent side="top" align="center" className="p-2 text-caption">
                                 Đã chỉnh sửa
                               </TooltipContent>
                             </Tooltip>
@@ -402,7 +404,7 @@ export default function ProductCopyDetailPage() {
                     tone={
                       copy.approval_state === "APPROVED" ? "success" : "danger"
                     }
-                    className="text-[10.5px] flex-1 text-center"
+                    className="text-caption flex-1 text-center"
                   >
                     {copy.approval_state === "APPROVED"
                       ? `Đã duyệt bởi ${copy.approved_by?.slice(0, 8)} lúc ${new Date(copy.approved_at!).toLocaleString("vi-VN")}`
@@ -416,9 +418,9 @@ export default function ProductCopyDetailPage() {
           {/* Metadata */}
           <Card>
             <div className="border-b border-border px-4 py-3">
-              <h3 className="font-bold text-[14.5px]">Thông tin</h3>
+              <h3 className="font-bold text-title-sm">Thông tin</h3>
             </div>
-            <div className="p-4 grid grid-cols-2 gap-4 text-[13px]">
+            <div className="p-4 grid grid-cols-2 gap-4 text-body-sm">
               <div>
                 <div className="text-text-muted">Trạng thái duyệt</div>
                 <div className="font-medium capitalize">{copy.approval_state.toLowerCase()}</div>

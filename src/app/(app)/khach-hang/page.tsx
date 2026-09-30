@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { Users, UserPlus, Sparkles, Search, Filter, Phone, Calendar, ArrowRight, ShieldCheck, Gift } from "lucide-react"
+import React, { useState, useEffect, useCallback } from "react"
+import { Users, UserPlus, Sparkles, Search, Calendar, ArrowRight, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { CreateCustomerModal } from "@/components/crm/create-customer-modal"
 import { CustomerDetailModal } from "@/components/crm/customer-detail-modal"
 import type { CustomerMasterIndex, OccasionReminder } from "@/modules/crm/domain/customer-master-index"
@@ -24,7 +25,7 @@ export default function CRMPage() {
   const [showReminders, setShowReminders] = useState(false)
   const [scanningReminders, setScanningReminders] = useState(false)
 
-  function loadCustomers() {
+  const loadCustomers = useCallback(() => {
     setLoading(true)
     const params = new URLSearchParams()
     if (search.trim()) params.set("search", search.trim())
@@ -37,12 +38,12 @@ export default function CRMPage() {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false))
-  }
+  }, [search, tierFilter])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     loadCustomers()
-  }, [tierFilter])
+  }, [loadCustomers])
 
   async function handleScanReminders() {
     setScanningReminders(true)
@@ -66,37 +67,36 @@ export default function CRMPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* 1. Header chuẩn có Top-Right Action Header */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-6 py-4 backdrop-blur-sm">
+      {/* 1. Header chuẩn có Top-Right Action Header */}
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-4 sm:px-6 py-4 backdrop-blur-sm">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-mono font-bold text-primary">
-              M09 CRM
-            </span>
-            <h1 className="text-xl font-extrabold text-foreground">CRM & Quản Lý Khách Hàng Ngành Hoa</h1>
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted">
+            Quản lý quan hệ khách hàng & Chăm sóc
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <h1 className="text-title font-extrabold text-foreground">CRM & Khách Hàng Ngành Hoa</h1>
+          <p className="text-caption text-text-muted mt-0.5">
             Hồ sơ khách hàng hợp nhất (Customer Master Index) · Phân tầng RFM tự động · Nhắc hẹn ngày kỷ niệm
           </p>
         </div>
 
         {/* Top-Right Action Header */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setIsCreateOpen(true)}
+            className="font-semibold flex items-center gap-1.5"
+          >
+            <UserPlus size={16} /> Thêm khách hàng
+          </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleScanReminders}
             disabled={scanningReminders}
-            className="border-red-200 text-red-700 hover:bg-red-50"
+            className="flex items-center gap-1.5"
           >
-            <Sparkles className="mr-1.5 h-4 w-4 text-red-600" />
+            <Sparkles size={14} className="text-primary" />
             {scanningReminders ? "Đang quét..." : "⚡ Quét dịp sắp tới (14 ngày)"}
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setIsCreateOpen(true)}
-            className="bg-red-600 hover:bg-red-700 text-white font-semibold"
-          >
-            <UserPlus className="mr-1.5 h-4 w-4" /> Thêm khách hàng
           </Button>
         </div>
       </header>
@@ -105,42 +105,42 @@ export default function CRMPage() {
       <main className="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
         {/* Khối hướng dẫn SSOT FeatureGuidanceCard */}
         <FeatureGuidanceCard
-          badgeLabel="HƯỚNG DẪN CRM & KHÁCH HÀNG M09"
+          badgeLabel="HƯỚNG DẪN CRM KHÁCH HÀNG"
           badgeIcon={Users}
-          title="Quy trình Quản lý Khách hàng & Tiếp thị Chăm sóc Chuẩn SSOT"
-          description="Lưu trữ hồ sơ khách hàng toàn diện từ lịch sử đơn hàng M10, tự động phân hạng RFM (VIP/Vàng/Bạc/Đồng) và bảo vệ tuyệt đối quyền riêng tư khi gửi tin tiếp thị (Consent Engine)."
+          title="Quy trình Quản lý Khách hàng & Tiếp thị Chăm sóc"
+          description="Lưu trữ hồ sơ khách hàng toàn diện từ lịch sử đơn hàng, tự động phân hạng RFM (VIP/Vàng/Bạc/Đồng) và bảo vệ tuyệt đối quyền riêng tư khi gửi tin tiếp thị (Consent Engine)."
           tips={[
-            { icon: "💎", text: "Phân tầng tự động: Dựa trên tổng chi tiêu và số đơn hàng thật từ M10" },
+            { icon: "💎", text: "Phân tầng tự động: Dựa trên tổng chi tiêu và số đơn hàng thật của khách" },
             { icon: "🎂", text: "Lưu ngày kỷ niệm: Nhắc trước 7-14 ngày để tư vấn mẫu hoa và lời nhắn thiệp" },
             { icon: "🛡️", text: "Bảo vệ Consent: Chỉ gửi tin nhắn qua Zalo/SMS khi khách đã đồng ý" },
-            { icon: "⚡", text: "Master Index: Đồng bộ gu màu và hoa ưa thích từ M01 Vision sang màn hình bán hàng" },
           ]}
         />
 
         {/* Reminders Banner (nếu mở) */}
         {showReminders && (
-          <div className="rounded-xl border border-red-300 bg-red-50/80 p-4 space-y-3">
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-red-950 flex items-center gap-2">
-                <Gift className="h-4 w-4 text-red-600" />
+              <span className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Gift className="h-4 w-4 text-primary" />
                 Danh sách {reminders.length} dịp kỷ niệm sắp tới (trong 14 ngày tới)
               </span>
               <button
+                type="button"
                 onClick={() => setShowReminders(false)}
-                className="text-xs font-semibold text-red-700 hover:underline"
+                className="text-xs font-semibold text-primary hover:underline min-h-9 px-2 inline-flex items-center"
               >
                 Đóng danh sách
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {reminders.map((r, idx) => (
-                <div key={idx} className="rounded-lg border border-red-200 bg-white p-3 space-y-1 text-xs shadow-xs">
+                <div key={idx} className="rounded-lg border border-border bg-surface p-3 space-y-1 text-xs shadow-xs">
                   <div className="flex items-center justify-between font-bold text-foreground">
                     <span>{r.customerName}</span>
-                    <span className="text-red-600 font-extrabold">{r.daysLeft === 0 ? "Hôm nay!" : `Còn ${r.daysLeft} ngày`}</span>
+                    <span className="text-primary font-extrabold">{r.daysLeft === 0 ? "Hôm nay!" : `Còn ${r.daysLeft} ngày`}</span>
                   </div>
                   <div className="text-text-muted">Dịp: <span className="font-semibold text-text-main">{r.occasionName}</span> ({r.targetDate})</div>
-                  <div className="text-text-muted">Gợi ý hoa: <span className="font-semibold text-red-700">{r.suggestedFlower}</span></div>
+                  <div className="text-text-muted">Gợi ý hoa: <span className="font-semibold text-primary">{r.suggestedFlower || "Chưa có"}</span></div>
                   <div className="text-text-muted">SĐT: {r.customerPhone}</div>
                 </div>
               ))}
@@ -179,10 +179,10 @@ export default function CRMPage() {
               <button
                 key={t}
                 onClick={() => setTierFilter(t)}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
+                className={`px-3 py-1 rounded-full text-caption transition-colors ${
                   tierFilter === t
-                    ? "bg-red-600 text-white font-bold"
-                    : "bg-surface-raised border border-border text-muted-foreground hover:text-foreground"
+                    ? "bg-primary text-white font-bold"
+                    : "bg-surface border border-border text-text-muted hover:bg-surface-alt hover:text-text"
                 }`}
               >
                 {t === "" ? "Tất cả" : t}
@@ -193,12 +193,12 @@ export default function CRMPage() {
 
         {/* Bảng danh sách khách hàng */}
         <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-border bg-surface-raised font-bold text-muted-foreground">
+          <table className="w-full text-left text-body-sm">
+            <thead className="border-b border-border bg-surface-alt font-bold text-caption uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="px-4 py-3">Mã KH</th>
                 <th className="px-4 py-3">Khách hàng</th>
-                <th className="px-4 py-3">Phân hạng</th>
+                <th className="px-4 py-3">Phân hạng RFM</th>
                 <th className="px-4 py-3">Tổng chi tiêu</th>
                 <th className="px-4 py-3">Số đơn</th>
                 <th className="px-4 py-3">Dịp kỷ niệm</th>
@@ -209,30 +209,30 @@ export default function CRMPage() {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted-foreground">
-                    Đang tải dữ liệu khách hàng...
+                  <td colSpan={8} className="py-6 px-4">
+                    <SkeletonBlock lines={4} />
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-12 text-center text-caption text-text-muted">
                     Chưa có khách hàng nào phù hợp với điều kiện tìm kiếm.
                   </td>
                 </tr>
               ) : (
                 customers.map((c) => (
-                  <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                  <tr key={c.id} className="hover:bg-surface-alt/50 transition-colors">
                     <td className="px-4 py-3 font-mono font-bold text-primary">{c.code}</td>
                     <td className="px-4 py-3">
-                      <div className="font-bold text-foreground">{c.name}</div>
-                      <div className="text-[11px] text-muted-foreground">{c.phone}</div>
+                      <div className="font-bold text-text">{c.name}</div>
+                      <div className="text-caption text-text-muted">{c.phone}</div>
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={tierColors[c.metrics?.tier] ?? "neutral"} className="font-bold">
-                        {c.metrics?.tier}
+                        {c.metrics?.tier === "VIP" ? "VIP" : c.metrics?.tier === "GOLD" ? "Vàng" : c.metrics?.tier === "SILVER" ? "Bạc" : c.metrics?.tier === "BRONZE" ? "Đồng" : "Khách mới"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 font-bold text-red-600">
+                    <td className="px-4 py-3 font-bold text-primary">
                       {Number(c.metrics?.totalSpentVnd ?? 0).toLocaleString("vi-VN")} đ
                     </td>
                     <td className="px-4 py-3 font-semibold text-foreground">{c.metrics?.orderCount ?? 0} đơn</td>

@@ -38,7 +38,7 @@ Ba hình thái tổ chức: **Experience** (demo tạm) · **Single Shop / Brand
 | 1 | Mọi bản ghi thuộc tenant mang `organization_id`. Không ngoại lệ, kể cả bảng tra cứu và demo workspace |
 | 2 | `organization_id` giải từ phiên đăng nhập phía máy chủ, không bao giờ nhận từ client |
 | 3 | Đầu ra AI không tự động thành dữ liệu nghiệp vụ chính thức — phải qua Review → Approve |
-| 4 | Quyền theo mã năng lực, không theo vai giao diện. Năng lực duyệt tách khỏi năng lực sinh kết quả |
+| 4 | Quyền theo mã năng lực, không theo vai giao diện. Vai trải nghiệm (`03b-role-ux.md`) chỉ quyết định trang chủ, thứ tự điều hướng và ưu tiên thông tin — không mở quyền. Năng lực duyệt tách khỏi năng lực sinh kết quả |
 | 5 | Thao tác AI dài chạy bằng job, không chặn HTTP. Trạng thái job ở Postgres, không ở RAM |
 | 6 | Asset gốc bất biến. Dẫn xuất là phiên bản mới hoặc asset mới |
 | 7 | Tăng cường sản phẩm, không tái sinh sản phẩm. Nhận dạng sản phẩm là bất biến |
@@ -150,6 +150,7 @@ Mỗi mũi tên đi qua một cổng duyệt của riêng nó. Không bước n�
 - Ba lớp cắt: mặc định theo vai → bảng công tắc → trần cứng cắt sau cùng.
 - Quyền là bộ ba `(vai, mã, phạm vi)` với phạm vi ∈ {organization, branch}.
 - Vai là bản ghi, không phải enum. Vai tối thiểu: Experience User · Admin/Điều hành · Sale · Điều phối · Thợ cắm. Tổ chức thêm vai riêng được mà không sửa lược đồ.
+- Mỗi vai phân quyền gắn tối đa một trong 14 **vai trải nghiệm** (Role UX, `03b-role-ux.md`, PO 26/09/2026): `dieu_hanh` → Quản lý cửa hàng, `sale` → Bán hàng, `dieu_phoi` → Điều phối; 10 vai còn lại hiện ở trạng thái "Đang phát triển". "Quản trị nền tảng" (`platform_admin`) là người vận hành Console, không phải vai của tổ chức.
 - Cặp năng lực tách bắt buộc, một cặp cho mỗi loại đầu ra AI: `vision.analyze` ↔ `product.approve` · `product.copy.generate` ↔ `product.copy.approve` · `media.optimize` ↔ `media.approve` · `creative.compose` ↔ `creative.approve` · `video.generate` ↔ `video.approve` · `content.generate` ↔ `content.approve` · `catalog.create` ↔ `catalog.publish` · `landing.create` ↔ `landing.publish`.
 
 ### 7.3 Job
@@ -361,7 +362,7 @@ AI-1 đứng trước P16 vì P16 là lần đầu hệ thống gọi một lo�
 | # | Nội dung | Chặn |
 |---|---|---|
 | D13 | Cơ sở pháp lý và hình dạng cơ chế đồng ý cho dữ liệu cá nhân của khách hàng cuối, gồm quyền xoá thuộc về chính khách hàng | Go-live của M09 và M10, không chặn việc dựng lược đồ |
-| D14 | Bảng giá `cost_credit` cho các `feature` mới — biến thể ảnh, video, nội dung. Chi phí thật của một video chênh hai bậc so với một ảnh, nên D7 không mở rộng sang được | P16, P17, P18 |
+| D14 | Bảng giá `cost_credit` cho các `feature` mới — biến thể ảnh, video, nội dung. Chi phí thật của một video chênh hai bậc so với một ảnh, nên D7 không mở rộng sang được — **CHỐT v1 25/09/2026** (PO giao agent đề xuất): định giá tương đối theo bốn nguyên tắc ở `src/modules/usage/domain/pricing.ts` — 1 credit ≈ một lượt gọi một mô hình; đường nhà cung cấp ảnh = cục bộ + 1; thu theo đường thật đã chạy (lùi cục bộ → hoàn chênh); một lần bấm = một lần thu. Tỷ giá credit ↔ VND vẫn thuộc D2; xem lại con số sau 30 ngày có `cost_usd` thật (nợ #151) | — (đã chốt v1) |
 | D20 | Ngưỡng chấp nhận của từng năng lực ngoài Identity Guard. Ngưỡng Guard đã chốt; các năng lực còn lại chưa có dữ liệu có đáp án nên chạy bằng giá trị tạm có ghi nợ | AI-2 |
 
 ## 13. Rủi ro

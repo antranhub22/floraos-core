@@ -7,6 +7,7 @@
  */
 
 export type CustomerTier = "NEW" | "BRONZE" | "SILVER" | "GOLD" | "VIP"
+export type { CustomerLifecycleStage } from "./crm-rules"
 
 export interface CustomerOccasionItem {
   id: string
@@ -22,6 +23,8 @@ export interface CustomerConsentItem {
   channel: "ZALO_ZNS" | "SMS" | "PHONE_CALL" | "PROMOTION"
   granted: boolean
   grantedAt: string
+  /** MI-1 (ĐP-1.5, 26/09/2026): mốc thu hồi — có giá trị thì quyền đã bị rút, dù `granted` vẫn `true` từ lần cấp trước. */
+  revokedAt?: string | undefined
 }
 
 export interface CustomerVoucherItem {
@@ -29,6 +32,10 @@ export interface CustomerVoucherItem {
   discountType: "PERCENTAGE" | "FIXED_AMOUNT"
   discountValue: number
   expiresAt?: string | undefined
+  /** MI-2 (ĐP-1.6, 26/09/2026): đơn tối thiểu để áp voucher. */
+  minOrderVnd: number
+  /** MI-2: trần số tiền giảm — có ý nghĩa với voucher %; voucher FIXED_AMOUNT thường không đặt. */
+  maxDiscountVnd?: number | undefined
 }
 
 /** Cấu trúc Customer Master Index hoàn chỉnh */
@@ -66,6 +73,9 @@ export interface CustomerMasterIndex {
 
   // Voucher ưu đãi tích lũy
   availableVouchers: CustomerVoucherItem[]
+
+  /** MI-3 (ĐP-2.1, 26/09/2026): `customers.updated_at` — làm phiên bản cho snapshot (Hợp đồng MI §5). */
+  updatedAt: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -100,6 +110,12 @@ export function projectOccasionReminder(
   occasion: CustomerOccasionItem,
   daysLeft: number
 ) {
+  // MI-1 (ĐP-1.5, 26/09/2026): trước bản này chỉ xét `granted`, bỏ qua
+  // `revokedAt` — khách đã RÚT quyền Zalo ZNS vẫn nhận nhắc lịch. Đủ điều kiện
+  // gửi là: đã cấp VÀ chưa (hoặc không còn) bị thu hồi.
+  const zaloConsent = customer.consents.find((c) => c.channel === "ZALO_ZNS")
+  const isZaloAllowed = Boolean(zaloConsent?.granted) && !zaloConsent?.revokedAt
+
   return {
     customerId: customer.id,
     customerName: customer.name,
@@ -108,9 +124,10 @@ export function projectOccasionReminder(
     targetDate: occasion.date,
     daysLeft,
     recipientName: occasion.recipientName || customer.name,
-    suggestedFlower: customer.preferences.preferredFlowers[0] || "Hoa hồng thiết kế",
-    suggestedTone: customer.preferences.preferredColors[0] || "Pastel dịu ngọt",
-    isZaloAllowed: customer.consents.find((c) => c.channel === "ZALO_ZNS")?.granted ?? false,
+    // T6.12b (nợ #164b): không bịa "Hoa hồng thiết kế" / "Pastel dịu ngọt" khi khách chưa khai
+    suggestedFlower: customer.preferences.preferredFlowers[0] ?? null,
+    suggestedTone: customer.preferences.preferredColors[0] ?? null,
+    isZaloAllowed,
   }
 }
 
@@ -124,7 +141,10 @@ export function projectMarketingAudience(
   customer: CustomerMasterIndex,
   channel: "ZALO_ZNS" | "SMS" | "PROMOTION"
 ) {
-  const hasConsent = customer.consents.find((c) => c.channel === channel)?.granted ?? false
+  // MI-1 (ĐP-1.5, 26/09/2026): cùng lỗi như `projectOccasionReminder` — thu
+  // hồi quyền phải chặn được việc đưa khách vào danh sách tiếp thị.
+  const consent = customer.consents.find((c) => c.channel === channel)
+  const hasConsent = Boolean(consent?.granted) && !consent?.revokedAt
   if (!hasConsent) return null
 
   return {
@@ -133,5 +153,31 @@ export function projectMarketingAudience(
     phone: customer.phone,
     tier: customer.metrics.tier,
     voucherCode: customer.availableVouchers[0]?.code,
+  }
+}
+
+/**
+ * 4. PROJECTION CHO ĐIỀU PHỐI ĐƠN HÀNG (Coordination Brief) — MI-6, ĐP-2.4, 26/09/2026
+ * Trước bản này, Điều phối tự trích (`master-index-adapter.ts#extractCustomerCoordinationBrief`)
+ * thay vì đọc qua CMI — sai nguyên tắc "chỉ trích lát cắt qua projection của Master Index"
+ * (Hợp đồng MI §3/§7). Hàm đó đã bị XOÁ khỏi Điều phối; đây là nơi thay thế duy nhất.
+ *
+ * Nhận `CustomerMasterIndex` CÓ THẬT — trường hợp khách vãng lai (chưa có hồ sơ CMI) do
+ * NƠI GỌI (Điều phối) tự quyết định hiển thị gì, không phải việc của projection này.
+ */
+export interface CustomerCoordinationBrief {
+  tier: CustomerTier
+  isVip: boolean
+  preferredFlowers: string[]
+  notes: string
+}
+
+export function projectCustomerCoordinationBrief(customer: CustomerMasterIndex): CustomerCoordinationBrief {
+  return {
+    tier: customer.metrics.tier,
+    isVip: customer.metrics.tier === "VIP" || customer.metrics.tier === "GOLD",
+    preferredFlowers: customer.preferences.preferredFlowers,
+    // Không suy đoán quan hệ với khách khi CRM chưa ghi `notes` — để rỗng (cùng nguyên tắc ĐP-1.4).
+    notes: customer.notes || "",
   }
 }

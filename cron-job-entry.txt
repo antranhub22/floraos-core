@@ -1,0 +1,2 @@
+# Run scan-stuck-jobs every 5 minutes
+*/5 * * * * /Users/tuan/Projects/floraos-core/scripts/cron-job.sh >> /Users/tuan/Projects/floraos-core/logs/scan-stuck-jobs.log 2>&1

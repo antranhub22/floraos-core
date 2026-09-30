@@ -16,6 +16,7 @@
     "build": "next build",
     "start": "next start -p 3100",
     "lint": "eslint",
+    "lint:ux": "tsx scripts/ux-lint.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude 'tests/tenant/**' --exclude 'tests/platform/**' --exclude 'node_modules/**'",
     "test:harvest": "tsx --test tests/maChucNang.test.ts",
@@ -23,6 +24,7 @@
     "test:platform": "DATABASE_URL=\"${DATABASE_URL_TEST:-postgresql://floraos:floraos@localhost:5432/floraos_test}\" vitest run tests/platform",
     "db:test:setup": "bash scripts/dung-db-test.sh",
     "test:e2e": "playwright test",
+    "test:e2e:ux": "playwright test tests/e2e/ux",
     "nap:danh-muc": "tsx --env-file-if-exists=.env scripts/nap-avi-gift-vao-core.ts",
     "nap:phan-tich": "tsx --env-file-if-exists=.env scripts/nap-avi-gift-phan-tich.ts",
     "nap:credit": "tsx --env-file-if-exists=.env scripts/nap-credit.ts",
@@ -44,9 +46,12 @@
     "check:schemas:coordinator": "tsx scripts/gen-coordinator-schemas.ts --check",
     "gen:schemas:content-engine": "tsx scripts/gen-content-engine-schemas.ts",
     "check:schemas:content-engine": "tsx scripts/gen-content-engine-schemas.ts --check",
-    "check:docs": "node scripts/check-docs.mjs"
+    "check:docs": "node scripts/check-docs.mjs",
+    "seed:field-registry": "tsx --env-file-if-exists=.env scripts/nap-danh-muc-truong.ts",
+    "check:field-registry": "tsx --env-file-if-exists=.env scripts/check-field-registry.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@base-ui/react": "^1.8.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.9.1",
@@ -69,6 +74,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/bcryptjs": "^2.4.6",

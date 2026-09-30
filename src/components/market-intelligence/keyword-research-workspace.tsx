@@ -106,15 +106,15 @@ export function KeywordResearchWorkspace({
       />
 
       {/* 4. Sub Tabs & Filter Bar */}
-      <div id="keyword-results-section" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-200 pb-2">
+      <div id="keyword-results-section" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cool-200 pb-2">
         <div className="flex gap-4 text-xs font-bold">
           <button
             type="button"
             onClick={() => setActiveSubTab("results")}
             className={`pb-2 flex items-center gap-1.5 border-b-2 transition ${
               activeSubTab === "results"
-                ? "border-rose-600 text-rose-600 font-extrabold"
-                : "border-transparent text-stone-500 hover:text-stone-800"
+                ? "border-blush-600 text-blush-600 font-extrabold"
+                : "border-transparent text-cool-500 hover:text-cool-800"
             }`}
           >
             <Sparkles size={14} />
@@ -125,8 +125,8 @@ export function KeywordResearchWorkspace({
             onClick={() => setActiveSubTab("runs")}
             className={`pb-2 flex items-center gap-1.5 border-b-2 transition ${
               activeSubTab === "runs"
-                ? "border-rose-600 text-rose-600 font-extrabold"
-                : "border-transparent text-stone-500 hover:text-stone-800"
+                ? "border-blush-600 text-blush-600 font-extrabold"
+                : "border-transparent text-cool-500 hover:text-cool-800"
             }`}
           >
             <Activity size={14} />
@@ -135,15 +135,15 @@ export function KeywordResearchWorkspace({
         </div>
 
         {activeSubTab === "results" && (
-          <div className="flex items-center gap-1.5 text-[11px] font-bold">
-            <span className="text-stone-400">Lọc nhanh:</span>
+          <div className="flex items-center gap-1.5 text-caption font-bold">
+            <span className="text-cool-400">Lọc nhanh:</span>
             <button
               type="button"
               onClick={() => setActiveFilter("ALL")}
               className={`px-2.5 py-0.5 rounded-full transition ${
                 activeFilter === "ALL"
-                  ? "bg-rose-600 text-white"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "bg-blush-600 text-white"
+                  : "bg-cool-100 text-cool-600 hover:bg-cool-200"
               }`}
             >
               Tất cả ({filteredByTime.length})
@@ -153,8 +153,8 @@ export function KeywordResearchWorkspace({
               onClick={() => setActiveFilter("IMPORTANT")}
               className={`px-2.5 py-0.5 rounded-full transition ${
                 activeFilter === "IMPORTANT"
-                  ? "bg-rose-600 text-white"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "bg-blush-600 text-white"
+                  : "bg-cool-100 text-cool-600 hover:bg-cool-200"
               }`}
             >
               🔥 Điểm &gt; 75
@@ -164,8 +164,8 @@ export function KeywordResearchWorkspace({
               onClick={() => setActiveFilter("RISING")}
               className={`px-2.5 py-0.5 rounded-full transition ${
                 activeFilter === "RISING"
-                  ? "bg-rose-600 text-white"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "bg-blush-600 text-white"
+                  : "bg-cool-100 text-cool-600 hover:bg-cool-200"
               }`}
             >
               📈 Xu hướng bứt phá
@@ -177,15 +177,15 @@ export function KeywordResearchWorkspace({
       {/* 5. Tab Content */}
       {activeSubTab === "results" ? (
         filtered.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed border-stone-200 rounded-xl bg-stone-50/50 space-y-3">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-500">
+          <div className="text-center py-12 border-2 border-dashed border-cool-200 rounded-xl bg-cool-50/50 space-y-3">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-cool-100 text-cool-500">
               <Clock size={20} />
             </div>
             <div className="max-w-md mx-auto">
-              <p className="text-stone-700 text-sm font-bold">
+              <p className="text-cool-700 text-sm font-bold">
                 Chưa có kết quả quét trong &ldquo;{currentFilterLabel}&rdquo;
               </p>
-              <p className="text-stone-400 text-xs mt-1">
+              <p className="text-cool-400 text-xs mt-1">
                 {selectedBucket || selectedTimeframe !== "ALL"
                   ? "Hãy chọn mốc ngày/tuần khác hoặc chọn 'Tất cả' để xem toàn bộ kết quả đã quét."
                   : "Hãy nhập từ khóa hoa ở khung trên và nhấn 'Quét Xu Hướng'."}
@@ -198,7 +198,7 @@ export function KeywordResearchWorkspace({
                   setSelectedTimeframe("ALL");
                   setSelectedBucket(null);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 shadow-xs transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blush-600 text-white hover:bg-blush-700 shadow-xs transition"
               >
                 <RefreshCw size={13} />
                 Xem tất cả ({opportunities.length})

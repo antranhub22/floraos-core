@@ -102,8 +102,17 @@ def process_video_job(conn: psycopg.Connection, job: Dict[str, Any]):
         out_file = out_dir / f"{video_job_id}.mp4"
 
         # 3. Lựa chọn Provider (Mặc định Phương án A LOCAL_CINEMATIC hoặc Phương án B VEO/HEYGEN)
-        provider_name = payload.get("provider") or payload.get("videoProvider")
-        provider = get_video_provider(provider_name)
+        # PO 25/09/2026: nhà cung cấp trước — core gửi thứ tự thử (`provider_order`);
+        # rỗng = người dùng chọn đích danh Ken Burns cục bộ. Job cũ không có
+        # trường này giữ cách chọn cũ theo `provider`/biến môi trường.
+        provider_order = payload.get("provider_order")
+        if isinstance(provider_order, list) and provider_order:
+            from media_ai.video.providers.ai_clip_provider import AiClipVideoProvider
+
+            provider = AiClipVideoProvider([str(k) for k in provider_order])
+        else:
+            provider_name = payload.get("provider") or payload.get("videoProvider")
+            provider = get_video_provider(provider_name)
         print(f"🎬 [VideoWorker] Điều phối render qua [{provider.name}] ({provider.model_version})", flush=True)
 
         def handle_progress(evt_type: str, data: Dict[str, Any]):
@@ -138,6 +147,8 @@ def process_video_job(conn: psycopg.Connection, job: Dict[str, Any]):
                 "video_url": video_url,
                 "video_job_id": video_job_id,
                 "provider": provider.name,
+                # Core đọc để hoàn phần chênh credit khi nhà cung cấp lỗi và video dựng cục bộ.
+                **getattr(provider, "ket_qua", {}),
             })
             cur.execute(
                 """
@@ -168,8 +179,8 @@ def process_video_job(conn: psycopg.Connection, job: Dict[str, Any]):
             cur.execute(
                 """
                 UPDATE generation_jobs
-                SET status = 'FAILED', stage = NULL, result = 'REJECTED',
-                    error_message = %s, completed_at = NOW()
+                SET status = 'FAILED', stage = NULL, result = NULL,
+                    error = %s, completed_at = NOW()
                 WHERE id = %s
                 """,
                 (err_msg[:500], job_id),

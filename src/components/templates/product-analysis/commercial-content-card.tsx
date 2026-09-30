@@ -73,8 +73,8 @@ export function CommercialContentCard({
               <Sparkles size={17} strokeWidth={2} />
             </div>
             <div>
-              <div className="text-[11px] font-semibold text-text-muted">M01b — Dữ liệu bán hàng</div>
-              <div className="text-[16px] font-extrabold text-text leading-tight">Nội dung bán hàng</div>
+              <div className="text-caption font-semibold text-text-muted">Dữ liệu thương mại sản phẩm</div>
+              <div className="text-title font-extrabold text-text leading-tight">Nội dung bán hàng</div>
             </div>
           </div>
         </div>
@@ -115,7 +115,7 @@ export function CommercialContentCard({
       />
 
       {isSaved && (
-        <div className="flex items-center gap-2 rounded-xl bg-success-bg px-4 py-2.5 text-[12.5px] font-medium text-secondary-text">
+        <div className="flex items-center gap-2 rounded-xl bg-success-bg px-4 py-2.5 text-meta font-medium text-secondary-text">
           <CheckCircle2 size={14} strokeWidth={2.2} className="shrink-0" />
           Đã lưu nháp nội dung bán hàng.
         </div>

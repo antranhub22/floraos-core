@@ -7,9 +7,15 @@
 
 import { createContext, useContext, useMemo } from "react"
 import type { MockSession } from "@/lib/mock-data"
+import { resolveRoleUx, type RoleUxDefinition } from "@/modules/organization/domain/role-ux-catalog"
 
 type SessionContextValue = MockSession & {
   can: (code: string) => boolean
+  /**
+   * Khuôn trải nghiệm của vai hiện tại (đặc tả 03b) — chỉ quyết định thứ tự và
+   * trang chủ, KHÔNG mở quyền. `null` = vai chưa gắn khuôn (giữ hành vi cũ).
+   */
+  roleUx: RoleUxDefinition | null
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null)
@@ -25,6 +31,7 @@ export function SessionProvider({
     () => ({
       ...session,
       can: (code: string) => session.capabilities.includes(code),
+      roleUx: resolveRoleUx(session.roleKey, session.organizationType),
     }),
     [session]
   )

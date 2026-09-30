@@ -45,7 +45,7 @@ export function CustomerProfileCard({
             {name.charAt(0)}
           </div>
           <div>
-            <div className="text-[16px] font-extrabold text-text">{name}</div>
+            <div className="text-title font-extrabold text-text">{name}</div>
             <div className="text-xs text-text-muted flex items-center gap-1">
               <Phone size={12} />
               {phone}
@@ -62,12 +62,12 @@ export function CustomerProfileCard({
         <div className="flex items-center gap-2">
           <ShoppingBag size={16} className="text-text-muted" />
           <div>
-            <div className="text-[11px] text-text-muted">Đơn hàng đã đặt</div>
+            <div className="text-caption text-text-muted">Đơn hàng đã đặt</div>
             <div className="text-xs font-bold text-text">{totalOrders} đơn</div>
           </div>
         </div>
         <div>
-          <div className="text-[11px] text-text-muted">Tổng chi tiêu</div>
+          <div className="text-caption text-text-muted">Tổng chi tiêu</div>
           <div className="text-xs font-bold text-primary">{totalSpent}</div>
         </div>
       </div>
@@ -79,12 +79,12 @@ export function CustomerProfileCard({
         </div>
         <div className="flex flex-wrap gap-1.5">
           {preferredColors.map((col, idx) => (
-            <span key={idx} className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[11px] text-primary font-medium">
+            <span key={idx} className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-caption text-primary font-medium">
               Tone {col}
             </span>
           ))}
           {preferredFlowers.map((flw, idx) => (
-            <span key={idx} className="rounded-full bg-secondary/15 border border-secondary/25 px-2 py-0.5 text-[11px] text-secondary-text font-medium">
+            <span key={idx} className="rounded-full bg-secondary/15 border border-secondary/25 px-2 py-0.5 text-caption text-secondary-text font-medium">
               Hoa {flw}
             </span>
           ))}

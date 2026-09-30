@@ -42,8 +42,8 @@ export function ScheduleQueueTab({
   return (
     <div className="flex flex-col gap-5">
       <div className="text-center">
-        <div className="text-[17px] font-extrabold text-text">❺ Xác nhận lịch đăng</div>
-        <div className="mt-1 text-[13px] text-text-muted">
+        <div className="text-title font-extrabold text-text">❺ Xác nhận lịch đăng</div>
+        <div className="mt-1 text-body-sm text-text-muted">
           Chọn bài từ Thư viện nội dung đã duyệt → chọn nền tảng + thời điểm → xác nhận
         </div>
       </div>
@@ -53,9 +53,9 @@ export function ScheduleQueueTab({
           <div className="w-12 h-12 rounded-2xl bg-surface-alt text-text-muted flex items-center justify-center mb-3">
             <Sparkles size={24} />
           </div>
-          <div className="text-[15px] font-bold text-text">Chưa có bài viết nào chờ lên lịch</div>
+          <div className="text-title-sm font-bold text-text">Chưa có bài viết nào chờ lên lịch</div>
           <div className="text-xs text-text-muted max-w-sm mt-1">
-            Hãy vào tab <strong>Sinh Nội Dung AI (M07)</strong> để tạo và duyệt bài viết hoa tươi cho Facebook, Instagram, TikTok, Zalo và LinkedIn.
+            Hãy vào tab <strong>Sinh Nội Dung AI (Đăng mạng xã hội)</strong> để tạo và duyệt bài viết hoa tươi cho Facebook, Instagram, TikTok, Zalo và LinkedIn.
           </div>
           <Button
             className="mt-4 text-xs font-bold"
@@ -84,7 +84,7 @@ export function ScheduleQueueTab({
       {/* Action Footer */}
       <div className="flex flex-col gap-2.5 border-t border-border pt-4">
         {notice && (
-          <div className="rounded-xl bg-success-bg border border-success/30 px-4 py-2.5 text-[13px] font-semibold text-success flex items-center gap-2 animate-in fade-in">
+          <div className="rounded-xl bg-success-bg border border-success/30 px-4 py-2.5 text-body-sm font-semibold text-success flex items-center gap-2 animate-in fade-in">
             <CheckCircle2 size={16} className="text-success flex-shrink-0" />
             <span>{notice}</span>
           </div>
@@ -98,7 +98,7 @@ export function ScheduleQueueTab({
             >
               {selectedIds.length === calendarPosts.length ? "Bỏ chọn tất cả" : "Chọn tất cả"}
             </button>
-            <div className="text-[12.5px] text-text-muted font-medium">
+            <div className="text-meta text-text-muted font-medium">
               {selectedIds.length > 0 ? (
                 <span><strong>{selectedIds.length}</strong> bài đã chọn để lên lịch</span>
               ) : selectedPost ? (
@@ -122,7 +122,7 @@ export function ScheduleQueueTab({
 
       {/* Khung Xem trước nền tảng thực tế */}
       <div className="border-t border-border pt-5">
-        <div className="text-[14px] font-bold text-text mb-3 flex items-center justify-between">
+        <div className="text-body font-bold text-text mb-3 flex items-center justify-between">
           <span>Xem trước nền tảng</span>
           {selectedPost && (
             <span className="text-xs font-normal text-text-muted">

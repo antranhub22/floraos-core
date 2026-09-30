@@ -66,7 +66,7 @@ function ConfidenceBadge({ value }: { value: number | null | undefined }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold",
+        "inline-flex items-center rounded-full px-2 py-0.5 text-caption font-bold",
         value >= 80 ? "bg-success-bg text-secondary"
           : value >= 60 ? "bg-warning-bg text-warning"
           : "bg-danger-bg text-danger"
@@ -99,8 +99,8 @@ function FieldCard({
   if (field.type === "readonly") {
     return (
       <div className="flex items-center justify-between gap-2 py-2">
-        <span className="text-[13px] text-text-muted">{field.label}</span>
-        <span className="text-[13px] font-semibold text-text">
+        <span className="text-body-sm text-text-muted">{field.label}</span>
+        <span className="text-body-sm font-semibold text-text">
           {field.value != null && String(field.value).trim() !== "" && String(field.value) !== "—"
             ? String(field.value)
             : "N/A"}
@@ -114,11 +114,11 @@ function FieldCard({
     return (
       <div className="flex flex-col gap-2 py-2">
         <div className="flex items-center justify-between">
-          <span className="text-[13px] font-semibold text-text">{field.label}</span>
+          <span className="text-body-sm font-semibold text-text">{field.label}</span>
           <ConfidenceBadge value={field.confidence ?? null} />
         </div>
         {items.length === 0 && (
-          <div className="rounded-lg bg-surface-alt/50 px-3 py-2 text-[12px] text-text-muted italic border border-dashed border-border/80">
+          <div className="rounded-lg bg-surface-alt/50 px-3 py-2 text-meta text-text-muted italic border border-dashed border-border/80">
             N/A (Chưa có dữ liệu)
           </div>
         )}
@@ -141,16 +141,16 @@ function FieldCard({
                         onItemChange?.(field.key, item.id, { ...item, name: e.target.value })
                       }
                       placeholder="Tên thành phần"
-                      className="w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[13px] font-medium text-text outline-none focus:border-primary"
+                      className="w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-body-sm font-medium text-text outline-none focus:border-primary"
                     />
                   ) : (
-                    <span className="text-[13px] font-semibold text-text">{item.name || "N/A"}</span>
+                    <span className="text-body-sm font-semibold text-text">{item.name || "N/A"}</span>
                   )}
                 </div>
 
                 {/* Đơn vị */}
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11.5px] font-medium text-text-muted">Đơn vị:</span>
+                  <span className="text-caption font-medium text-text-muted">Đơn vị:</span>
                   {editable ? (
                     <input
                       type="text"
@@ -159,10 +159,10 @@ function FieldCard({
                         onItemChange?.(field.key, item.id, { ...item, unit: e.target.value })
                       }
                       placeholder="ĐVT"
-                      className="w-20 rounded-lg border border-border bg-surface px-2 py-1.5 text-[12.5px] font-medium text-text outline-none focus:border-primary"
+                      className="w-20 rounded-lg border border-border bg-surface px-2 py-1.5 text-meta font-medium text-text outline-none focus:border-primary"
                     />
                   ) : (
-                    <span className="rounded-md bg-surface px-2 py-0.5 text-[12px] font-medium text-text border border-border/60">
+                    <span className="rounded-md bg-surface px-2 py-0.5 text-meta font-medium text-text border border-border/60">
                       {item.unit ?? "cành"}
                     </span>
                   )}
@@ -170,7 +170,7 @@ function FieldCard({
 
                 {/* Số lượng */}
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11.5px] font-semibold text-primary">Số lượng:</span>
+                  <span className="text-caption font-semibold text-primary">Số lượng:</span>
                   {editable ? (
                     <input
                       type="number"
@@ -181,10 +181,10 @@ function FieldCard({
                         onItemChange?.(field.key, item.id, { ...item, quantity: val })
                       }}
                       placeholder="SL"
-                      className="w-20 rounded-lg border-2 border-primary/40 bg-surface px-2 py-1.5 text-[13px] font-bold text-center text-primary outline-none focus:border-primary"
+                      className="w-20 rounded-lg border-2 border-primary/40 bg-surface px-2 py-1.5 text-body-sm font-bold text-center text-primary outline-none focus:border-primary"
                     />
                   ) : (
-                    <span className="font-bold text-[13px] text-primary bg-primary/10 px-2.5 py-0.5 rounded-md">
+                    <span className="font-bold text-body-sm text-primary bg-primary/10 px-2.5 py-0.5 rounded-md">
                       {item.quantity != null ? item.quantity : "N/A"}
                     </span>
                   )}
@@ -192,7 +192,7 @@ function FieldCard({
 
                 {/* Badges / Extras */}
                 {(item.role || item.color || item.extra) && (
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-text-muted">
+                  <div className="flex flex-wrap items-center gap-1.5 text-caption text-text-muted">
                     {item.role && (
                       <span className="bg-surface px-2 py-0.5 rounded-full border border-border/60 font-medium text-text">
                         {item.role}
@@ -212,7 +212,7 @@ function FieldCard({
                   <button
                     type="button"
                     onClick={() => onFieldRemove?.(field.key, item.id)}
-                    className="ml-auto flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-red-50 hover:text-red-600 transition-colors"
+                    className="ml-auto flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-danger-bg hover:text-danger transition-colors"
                     aria-label="Xoá mục này"
                   >
                     <X size={13} strokeWidth={2} />
@@ -225,7 +225,7 @@ function FieldCard({
           // Simple string item fallback
           return (
             <div key={item.id} className="flex items-center gap-2 rounded-lg bg-surface-alt px-2.5 py-1.5">
-              <span className="flex-1 text-[13px] text-text">{item.value}</span>
+              <span className="flex-1 text-body-sm text-text">{item.value}</span>
               {editable && (
                 <button
                   type="button"
@@ -246,7 +246,7 @@ function FieldCard({
               const defaultUnit = field.key === "flowers" ? "bông" : field.key === "accessories" ? "cái" : "cành"
               onFieldAdd?.(field.key, { id: crypto.randomUUID(), name: "", unit: defaultUnit, quantity: 1, value: "" })
             }}
-            className="mt-0.5 flex items-center gap-1.5 text-[12.5px] font-bold text-accent"
+            className="mt-0.5 flex items-center gap-1.5 text-meta font-bold text-accent"
           >
             <Plus size={14} strokeWidth={2.4} /> Thêm dòng
           </button>
@@ -258,7 +258,7 @@ function FieldCard({
   return (
     <div className="flex flex-col gap-1 py-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[13px] font-semibold text-text">{field.label}</span>
+        <span className="text-body-sm font-semibold text-text">{field.label}</span>
         <ConfidenceBadge value={field.confidence ?? null} />
       </div>
       {field.type === "textarea" ? (
@@ -269,11 +269,11 @@ function FieldCard({
               setLocalValue(e.target.value)
               onFieldChange?.(field.key, e.target.value)
             }}
-            className="min-h-[60px] w-full rounded-lg border-[1.5px] border-border bg-surface px-2.5 py-2 text-[13px] text-text outline-none focus:border-primary"
+            className="min-h-[60px] w-full rounded-lg border-[1.5px] border-border bg-surface px-2.5 py-2 text-body-sm text-text outline-none focus:border-primary"
             placeholder={field.placeholder}
           />
         ) : (
-          <div className="text-[13px] text-text leading-relaxed">{localValue && localValue !== "—" ? localValue : "N/A"}</div>
+          <div className="text-body-sm text-text leading-relaxed">{localValue && localValue !== "—" ? localValue : "N/A"}</div>
         )
       ) : (
         <div className="flex items-center gap-2">
@@ -285,11 +285,11 @@ function FieldCard({
                 setLocalValue(e.target.value)
                 onFieldChange?.(field.key, e.target.value)
               }}
-              className="flex-1 rounded-lg border-[1.5px] border-border bg-surface px-2.5 py-1.5 text-[13px] text-text outline-none focus:border-primary"
+              className="flex-1 rounded-lg border-[1.5px] border-border bg-surface px-2.5 py-1.5 text-body-sm text-text outline-none focus:border-primary"
               placeholder={field.placeholder}
             />
           ) : (
-            <span className="text-[13px] text-text">{localValue && localValue !== "—" ? localValue : "N/A"}</span>
+            <span className="text-body-sm text-text">{localValue && localValue !== "—" ? localValue : "N/A"}</span>
           )}
           {editable && (
             <Pencil size={14} strokeWidth={1.8} className="text-text-muted" />
@@ -299,6 +299,18 @@ function FieldCard({
     </div>
   )
 }
+
+const L0_FIELD_KEYS = new Set([
+  "category",
+  "product_name",
+  "name",
+  "flowers",
+  "totals",
+  "palette_accounting",
+  "tones",
+  "phong_cach",
+  "style",
+])
 
 export function ResultCard({
   images,
@@ -340,6 +352,16 @@ export function ResultCard({
 
   const approveBlocked = judgment === "blocked"
 
+  const [showDetails, setShowDetails] = useState(false)
+  const l0Fields = fields.filter((f) => L0_FIELD_KEYS.has(f.key))
+  const detailFields = fields.filter((f) => !L0_FIELD_KEYS.has(f.key))
+  const visibleFields =
+    l0Fields.length > 0 && detailFields.length > 0
+      ? showDetails
+        ? fields
+        : l0Fields
+      : fields
+
   return (
     <Card className="flex flex-col gap-3 border-border">
       {/* Zone 1: Illustration */}
@@ -351,7 +373,7 @@ export function ResultCard({
               alt="Trước"
               className="h-full w-full object-cover"
             />
-            <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
+            <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-caption font-bold text-white">
               Trước
             </span>
           </div>
@@ -361,11 +383,11 @@ export function ResultCard({
               alt="Sau"
               className="h-full w-full object-cover"
             />
-            <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
+            <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-caption font-bold text-white">
               Sau
             </span>
             {beforeAfter.caption && (
-              <span className="absolute bottom-2 left-2 right-2 rounded-lg bg-black/60 px-2 py-1 text-[10px] text-white text-center">
+              <span className="absolute bottom-2 left-2 right-2 rounded-lg bg-black/60 px-2 py-1 text-caption text-white text-center">
                 {beforeAfter.caption}
               </span>
             )}
@@ -380,12 +402,12 @@ export function ResultCard({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={img.src} alt={img.alt} className="h-full w-full object-cover" />
               {img.isBefore && (
-                <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
+                <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-caption font-bold text-white">
                   Trước
                 </span>
               )}
               {img.isAfter && (
-                <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
+                <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-caption font-bold text-white">
                   Sau
                 </span>
               )}
@@ -396,7 +418,7 @@ export function ResultCard({
 
       {/* Zone 2: Data fields */}
       <div className="flex flex-col divide-y divide-border">
-        {fields.map((field) => (
+        {visibleFields.map((field) => (
           <FieldCard
             key={field.key}
             field={field}
@@ -407,6 +429,27 @@ export function ResultCard({
             {...(onItemChange ? { onItemChange } : {})}
           />
         ))}
+        {l0Fields.length > 0 && detailFields.length > 0 && (
+          <div className="pt-2 pb-1 text-center">
+            <button
+              type="button"
+              onClick={() => setShowDetails(!showDetails)}
+              className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 text-body-sm font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              {showDetails ? (
+                <>
+                  Thu gọn cấu phần chi tiết
+                  <ChevronUp size={15} aria-hidden="true" />
+                </>
+              ) : (
+                <>
+                  Xem chi tiết cấu phần ({detailFields.length} trường khác)
+                  <ChevronDown size={15} aria-hidden="true" />
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Zone 3: Quality indicators */}
@@ -417,10 +460,10 @@ export function ResultCard({
             onClick={() => setExpandedQuality(!expandedQuality)}
             className="flex w-full items-center justify-between rounded-lg bg-surface-alt px-3 py-2"
           >
-            <span className="flex items-center gap-2 text-[13px] font-bold text-text">
+            <span className="flex items-center gap-2 text-body-sm font-bold text-text">
               <span className={cn("h-2 w-2 flex-shrink-0 rounded-full", meta.dot)} />
               Chất lượng: {quality.label}
-              <Badge className={cn("text-[9.5px]", meta.badge)}>{meta.label}</Badge>
+              <Badge className={cn("text-caption", meta.badge)}>{meta.label}</Badge>
             </span>
             {expandedQuality ? (
               <ChevronUp size={14} className="text-text-muted" />
@@ -429,7 +472,7 @@ export function ResultCard({
             )}
           </button>
           {expandedQuality && (
-            <div className="mt-1.5 rounded-lg bg-surface-alt px-3 py-2 text-[12px] text-text-muted">
+            <div className="mt-1.5 rounded-lg bg-surface-alt px-3 py-2 text-meta text-text-muted">
               {quality.score != null && (
                 <div>
                   Điểm: <span className="font-bold text-text">{quality.score}/100</span>
@@ -441,43 +484,50 @@ export function ResultCard({
         </div>
       )}
 
-      {/* Zone 4: Actions */}
-      <div className="flex items-center gap-2 border-t border-border pt-3">
-        {onSaveDraft && (
-          <Button variant="secondary" onClick={onSaveDraft} disabled={disabled}>
-            Lưu nháp
-          </Button>
-        )}
-        {onReject && (
-          <Button variant="ghost" onClick={onReject} disabled={disabled}>
-            Từ chối
-          </Button>
-        )}
-        {onApprove && !approveBlocked && (
-          <Button onClick={onApprove} disabled={disabled}>
-            Duyệt
-          </Button>
-        )}
-        {approveBlocked && (
-          <div className="flex flex-1 flex-col gap-1.5">
-            <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-danger">
-              <ShieldCheck size={14} strokeWidth={1.8} />
-              Kết quả bị chặn — không thể duyệt trực tiếp
+      {/* Zone 4: Actions — K2: Duyệt (primary) + Không đạt (outline) cạnh nhau ở phải; Lưu nháp ở trái */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+        {/* Lưu nháp — bên trái */}
+        <div>
+          {onSaveDraft && (
+            <Button variant="ghost" onClick={onSaveDraft} disabled={disabled}>
+              Lưu nháp
+            </Button>
+          )}
+        </div>
+
+        {/* Nhóm duyệt — bên phải, luôn cạnh nhau */}
+        <div className="flex items-center gap-2">
+          {!approveBlocked && onReject && (
+            <Button variant="outline" onClick={onReject} disabled={disabled}>
+              Không đạt
+            </Button>
+          )}
+          {!approveBlocked && onApprove && (
+            <Button onClick={onApprove} disabled={disabled}>
+              Duyệt
+            </Button>
+          )}
+          {approveBlocked && (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5 text-meta font-medium text-danger">
+                <ShieldCheck size={14} strokeWidth={1.8} />
+                Kết quả bị chặn — không thể duyệt trực tiếp
+              </div>
+              <div className="flex gap-2">
+                {onRunAgain && (
+                  <Button variant="secondary" onClick={onRunAgain} disabled={disabled}>
+                    Chạy lại
+                  </Button>
+                )}
+                {onSkip && (
+                  <Button variant="ghost" onClick={onSkip} disabled={disabled}>
+                    Bỏ qua
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex gap-2">
-              {onRunAgain && (
-                <Button variant="secondary" onClick={onRunAgain} disabled={disabled}>
-                  Chạy lại
-                </Button>
-              )}
-              {onSkip && (
-                <Button variant="ghost" onClick={onSkip} disabled={disabled}>
-                  Bỏ qua
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </Card>
   )
@@ -497,7 +547,7 @@ export function WarningBanner({
     <div className="flex flex-col gap-3 rounded-xl border-[1.5px] border-warning bg-warning-bg p-4">
       <div className="flex items-start gap-2">
         <AlertTriangle size={16} strokeWidth={1.8} className="mt-0.5 flex-shrink-0 text-warning" />
-        <div className="flex-1 text-[12.5px] leading-relaxed text-warning">{message}</div>
+        <div className="flex-1 text-meta leading-relaxed text-warning">{message}</div>
       </div>
       <div className="flex items-center justify-end gap-2">
         {onCancel && (

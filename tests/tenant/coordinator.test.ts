@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto"
 
-import { afterAll, beforeEach, describe, expect, it } from "vitest"
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import { GET as listOrders, POST as createOrder } from "@/app/api/v1/coordinator/orders/route"
 import { GET as getOrder } from "@/app/api/v1/coordinator/orders/[id]/route"
 import { PATCH as patchStage } from "@/app/api/v1/coordinator/orders/[id]/stage/route"
+import { PATCH as patchCustomFields } from "@/app/api/v1/coordinator/orders/[id]/custom-fields/route"
 import { POST as assignPartner } from "@/app/api/v1/coordinator/orders/[id]/assign-partner/route"
 import { POST as production } from "@/app/api/v1/coordinator/orders/[id]/production/route"
 import { POST as qc } from "@/app/api/v1/coordinator/orders/[id]/qc/route"
@@ -14,12 +15,15 @@ import { POST as closeOrder } from "@/app/api/v1/coordinator/orders/[id]/close/r
 import { POST as cancelOrder } from "@/app/api/v1/coordinator/orders/[id]/cancel/route"
 import { POST as resolveException } from "@/app/api/v1/coordinator/exceptions/[id]/resolve/route"
 import { GET as listPartners, POST as createPartner } from "@/app/api/v1/coordinator/partners/route"
+import { GET as listOrderPayments, POST as recordOrderPayment } from "@/app/api/v1/coordinator/orders/[id]/payments/route"
 import { PATCH as patchPartner } from "@/app/api/v1/coordinator/partners/[id]/route"
 import type { TenantContext } from "@/core/tenancy"
 import { prisma } from "@/core/tenancy/infra/prisma"
+import type { Prisma } from "@/generated/prisma/client"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import type { PartnerView } from "@/modules/coordinator/use-cases/manage-partners"
 import type { CoordinatorOrderView } from "@/modules/coordinator/use-cases/present-coordinator-order"
+import type { OrderPaymentView } from "@/modules/coordinator/use-cases/record-payment"
 
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, readJson, withSession, type Tenant } from "../helpers/fixtures"
@@ -40,6 +44,7 @@ type ApiBody = {
   orders: CoordinatorOrderView[]
   partner: PartnerView
   partners: PartnerView[]
+  payments: OrderPaymentView[]
 }
 
 async function json(res: Response): Promise<ApiBody> {
@@ -48,6 +53,12 @@ async function json(res: Response): Promise<ApiBody> {
 
 const ORDER_BODY = {
   customerName: "Nguyễn Văn An",
+  // ĐP-3.16 (26/09/2026): trường lõi REQUIRED tại INTAKE (field-registry seed)
+  // — thiếu thì cổng `update-coordinator-stage.ts` chặn RỜI bước INTAKE.
+  // Trước đây không bắt buộc ở tầng chạy nên fixture này không có, giờ mọi
+  // đơn mặc định của bộ test phải có để còn chuyển bước được (nợ phát hiện
+  // 26/09/2026 khi chạy `test:tenant` thật lần đầu sau ĐP-2b).
+  customerPhone: "0987654321",
   customerTier: "VIP",
   recipientName: "Trần Thị Bình",
   recipientPhone: "0901234567",
@@ -107,13 +118,37 @@ describe("Chức năng 12 — Điều phối đơn hàng: cách ly tenant và lu
   let a: Tenant
   let b: Tenant
 
+  // `field_definitions` là bảng NỀN TẢNG (như `ai_models`), KHÔNG bị
+  // `resetDatabase()` TRUNCATE giữa các ca thử — 5 khoá `seedCustomField` tạo
+  // ở đây (đặc biệt `cf_ghi_chu_bat_buoc`, REQUIRED tại INTAKE) từng để lại vĩnh
+  // viễn sau khi bộ test chạy xong, làm MỌI đơn của MỌI tổ chức (kể cả các bộ
+  // test khác chạy sau) không rời nổi INTAKE ở lần chạy `test:tenant` kế tiếp
+  // (phát hiện 26/09/2026, lần chạy thứ hai). Dọn ở cả đầu lẫn cuối để chống cả
+  // dữ liệu vương lại từ lần chạy trước lẫn để lại cho lần chạy sau.
+  const CUSTOM_FIELD_TEST_KEYS = ["cf_ma_don_ngoai", "cf_a", "cf_b", "cf_ghi_chu_bat_buoc", "cf_khong_bat_buoc"]
+
+  beforeAll(async () => {
+    await prisma.field_definitions.deleteMany({ where: { key: { in: CUSTOM_FIELD_TEST_KEYS } } })
+  })
+
   beforeEach(async () => {
     await resetDatabase()
     a = await createTenant("alpha")
     b = await createTenant("beta")
   })
 
+  // Dọn lại NGAY SAU MỖI ca — không chỉ đầu/cuối cả tệp. Ca REQUIRED-tại-INTAKE
+  // ("cf_ghi_chu_bat_buoc") `upsert` field GLOBAL rồi để `default_enabled: true`
+  // sống sót qua `resetDatabase()` (không TRUNCATE `field_definitions`), nên nếu
+  // chỉ dọn ở `afterAll` thì MỌI ca chạy SAU nó trong cùng lần `vitest` (mọi tổ
+  // chức, kể cả không liên quan gì tới trường tự tạo) đều bị chặn rời INTAKE vì
+  // thiếu trường đó — đúng lỗi phát hiện 26/09/2026, lần chạy thứ ba.
+  afterEach(async () => {
+    await prisma.field_definitions.deleteMany({ where: { key: { in: CUSTOM_FIELD_TEST_KEYS } } })
+  })
+
   afterAll(async () => {
+    await prisma.field_definitions.deleteMany({ where: { key: { in: CUSTOM_FIELD_TEST_KEYS } } })
     await disconnectDatabase()
   })
 
@@ -128,6 +163,73 @@ describe("Chức năng 12 — Điều phối đơn hàng: cách ly tenant và lu
     expect(coordination?.organization_id).toBe(a.organizationId)
     expect(await prisma.order_events.count({ where: { order_id: first.id } })).toBe(1)
     expect(await prisma.audit_logs.count({ where: { entity_id: first.id, action: "coordinator.order.create" } })).toBe(1)
+  })
+
+  // ── ĐP-3.16 (26/09/2026) — nối trường tự tạo vào luồng đơn thật ──────────
+
+  async function seedCustomField(
+    key: string,
+    opts: { requirement?: "OPTIONAL" | "RECOMMENDED" | "REQUIRED"; requiredAtStage?: string | null } = {}
+  ) {
+    // `field_definitions` là bảng NỀN TẢNG (như `ai_models`/`platform_operators`),
+    // không nằm trong TENANT_TABLES bị TRUNCATE giữa các ca thử (xem
+    // `tests/helpers/database.ts`) — `create` trần sẽ vỡ `field_definitions_key_key`
+    // ngay từ lần chạy `test:tenant` thứ hai trở đi (phát hiện 26/09/2026 khi
+    // anh Tony chạy lại). `upsert` theo đúng khuôn `seed-ai-registry.ts`.
+    const data = {
+      entity: "ORDER" as const,
+      origin: "CUSTOM" as const,
+      data_type: "TEXT" as const,
+      label: `Nhãn ${key}`,
+      requirement: opts.requirement ?? "OPTIONAL",
+      required_at_stage: opts.requiredAtStage ?? null,
+      status: "ACTIVE" as const,
+      default_enabled: true,
+    }
+    await prisma.field_definitions.upsert({
+      where: { key },
+      create: { key, ...data },
+      update: data,
+    })
+  }
+
+  it("customFields lúc tạo đơn được kiểm theo định nghĩa đang ACTIVE rồi lưu vào custom_fields, trả về ở view", async () => {
+    await seedCustomField("cf_ma_don_ngoai")
+    const order = await newOrder(a, { ...ORDER_BODY, customFields: { cf_ma_don_ngoai: "PO-123" } })
+    expect(order.customFields).toMatchObject({ cf_ma_don_ngoai: "PO-123" })
+
+    const coordination = await prisma.order_coordinations.findUnique({ where: { order_id: order.id } })
+    expect((coordination?.custom_fields as Record<string, unknown> | null)?.cf_ma_don_ngoai).toBe("PO-123")
+  })
+
+  it("PATCH .../custom-fields trộn giá trị mới vào giá trị cũ, không thay nguyên khối", async () => {
+    await seedCustomField("cf_a")
+    await seedCustomField("cf_b")
+    const order = await newOrder(a, { ...ORDER_BODY, customFields: { cf_a: "giá trị a" } })
+
+    const res = await call(patchCustomFields, a, order.id, { customFields: { cf_b: "giá trị b" } }, "PATCH")
+    expect(res.status).toBe(200)
+    const updated = (await json(res)).order
+    expect(updated.customFields).toMatchObject({ cf_a: "giá trị a", cf_b: "giá trị b" })
+  })
+
+  it("trường tự tạo REQUIRED tại INTAKE còn trống thì chặn rời bước (422), điền vào rồi mới rời được", async () => {
+    await seedCustomField("cf_ghi_chu_bat_buoc", { requirement: "REQUIRED", requiredAtStage: "INTAKE" })
+    const order = await newOrder(a, ORDER_BODY)
+
+    const blocked = await call(patchStage, a, order.id, { stage: "VALIDATING" }, "PATCH")
+    expect(blocked.status).toBe(422)
+    const blockedBody = (await readJson(blocked)) as { error: { message: string } }
+    expect(blockedBody.error.message).toContain("cf_ghi_chu_bat_buoc")
+
+    expect((await call(patchCustomFields, a, order.id, { customFields: { cf_ghi_chu_bat_buoc: "đã điền" } }, "PATCH")).status).toBe(200)
+    expect((await call(patchStage, a, order.id, { stage: "VALIDATING" }, "PATCH")).status).toBe(200)
+  })
+
+  it("trường tự tạo OPTIONAL (không requiredAtStage) không chặn rời bước dù để trống", async () => {
+    await seedCustomField("cf_khong_bat_buoc")
+    const orderB = await newOrder(b, ORDER_BODY)
+    expect((await call(patchStage, b, orderB.id, { stage: "VALIDATING" }, "PATCH")).status).toBe(200)
   })
 
   it("tạo đơn đồng thời không sinh trùng mã (thử lại khi đụng khoá duy nhất)", async () => {
@@ -202,6 +304,176 @@ describe("Chức năng 12 — Điều phối đơn hàng: cách ly tenant và lu
     expect((await call(patchStage, a, order.id, { stage: "COMPLETED" }, "PATCH")).status).toBe(409)
     expect((await call(patchStage, a, order.id, { stage: "DISPATCHING" }, "PATCH")).status).toBe(409)
     expect((await call(getOrder, a, randomUUID(), undefined, "GET")).status).toBe(404)
+  })
+
+  it("ĐP-1.2 (26/09/2026): địa chỉ giao gửi MỘT CHUỖI (không chia tầng) → 400", async () => {
+    const oneStringAddress = await createOrder(
+      withSession(`${BASE}/orders`, a.token, {
+        method: "POST",
+        body: JSON.stringify({ ...ORDER_BODY, deliveryAddress: "123 Phố Huế, Hà Nội" }),
+      })
+    )
+    expect(oneStringAddress.status).toBe(400)
+
+    const missingTier = await createOrder(
+      withSession(`${BASE}/orders`, a.token, {
+        method: "POST",
+        body: JSON.stringify({ ...ORDER_BODY, deliveryAddress: { street: "123 Phố Huế", city: "Hà Nội" } }),
+      })
+    )
+    expect(missingTier.status).toBe(400)
+  })
+
+  it("ĐP-1.3 (26/09/2026): customerPhone không còn bị rơi, đọc lại được ở view", async () => {
+    const order = await newOrder(a, ORDER_BODY)
+    expect(order.customerPhone).toBe("0987654321")
+
+    const fetched = await call(getOrder, a, order.id, undefined, "GET")
+    expect(fetched.status).toBe(200)
+    expect((await json(fetched)).order.customerPhone).toBe("0987654321")
+
+    // Không gửi customerPhone (khách không cho số, hoặc đã chọn từ CMI) → chuỗi rỗng, không lỗi
+    // lúc TẠO đơn (chỉ chặn lúc RỜI bước INTAKE, xem cổng 3.16). `undefined` để
+    // JSON.stringify bỏ hẳn khoá, mô phỏng đúng "không gửi trường này".
+    const withoutPhone = await newOrder(a, { ...ORDER_BODY, customerPhone: undefined })
+    expect(withoutPhone.customerPhone).toBe("")
+  })
+
+  it("ĐP-1.7 (26/09/2026): ghi chú phân công cho đối tác tách khỏi ghi chú nội bộ", async () => {
+    const order = await newOrder(a, { ...ORDER_BODY, internalNote: "Ghi chú riêng của điều phối, không cho xưởng xem" })
+    const partner = await newPartner(a)
+    await call(patchStage, a, order.id, { stage: "PLANNING" }, "PATCH")
+
+    const res = await call(assignPartner, a, order.id, { partnerId: partner.id, notes: "Gói giấy lụa mờ, nơ đỏ" })
+    expect(res.status).toBe(200)
+    const view = (await json(res)).order
+
+    expect(view.partnerInstruction).toBe("Gói giấy lụa mờ, nơ đỏ")
+    // internalNote KHÔNG bị đổi bởi việc phân công — hai trường độc lập.
+    expect(view.internalNote).toBe("Ghi chú riêng của điều phối, không cho xưởng xem")
+  })
+
+  // ĐP-2 (26/09/2026): nối Master Index thật vào Điều phối (Hợp đồng MI §5/§9).
+  async function seedProduct(
+    t: Tenant,
+    over: { name?: string; priceVnd?: number; flowers?: Array<Record<string, unknown>> } = {}
+  ): Promise<string> {
+    const attributes: Record<string, unknown> = {
+      price_vnd: over.priceVnd ?? 850000,
+      bom: {
+        flowers: over.flowers ?? [
+          { name: "Hồng Ohara", quantity: 10, dvt_dem: "Cành", mau: "Kem", role: "Hoa chủ đạo" },
+        ],
+        foliage: [{ name: "Lá bạc", quantity: 5, dvt_dem: "Cành", mau: "Xanh bạc", role: "Điểm nhấn" }],
+        wrapping: [{ layer: "Lớp ngoài", material: "Giấy Hàn", color: "Kem", texture: "Mờ" }],
+        accessories: [{ name: "Thiệp mini", material: "Giấy", color: "Trắng", quantity: 1, printed_text: null }],
+      },
+    }
+    const product = await prisma.products.create({
+      data: {
+        organization_id: t.organizationId,
+        code: `SP-${randomUUID().slice(0, 8)}`,
+        name: over.name ?? "Bó Hồng Ohara Kem",
+        category: "Bó hoa",
+        status: "ACTIVE",
+        attributes: attributes as Prisma.InputJsonValue,
+      },
+    })
+    return product.id
+  }
+
+  it("ĐP-2.6/2.7 (26/09/2026): tạo đơn có productId → snapshot Master Index (MI-5), không lộ costPriceVnd", async () => {
+    const productId = await seedProduct(a)
+    const order = await newOrder(a, { ...ORDER_BODY, productId })
+
+    expect(order.productId).toBe(productId)
+    expect(order.product).not.toBeNull()
+    expect(order.product?.code).toMatch(/^SP-/)
+    expect(order.product).not.toHaveProperty("costPriceVnd")
+    expect(order.foliage).toEqual([{ name: "Lá bạc", quantity: 5, unit: "cành", color: "Xanh bạc", role: "Điểm nhấn" }])
+    expect(order.wrapping).toEqual([{ layer: "Lớp ngoài", material: "Giấy Hàn", color: "Kem", texture: "Mờ" }])
+    expect(order.accessories).toHaveLength(1)
+
+    // Không productId → đơn mẫu ngoài danh mục, không có snapshot.
+    const offCatalog = await newOrder(a)
+    expect(offCatalog.productId).toBeNull()
+    expect(offCatalog.product).toBeNull()
+    expect(offCatalog.foliage).toEqual([])
+  })
+
+  it("ĐP-2.6: productId của tổ chức khác hoặc không tồn tại → 422, không tạo đơn", async () => {
+    const productId = await seedProduct(b)
+    const res = await createOrder(
+      withSession(`${BASE}/orders`, a.token, { method: "POST", body: JSON.stringify({ ...ORDER_BODY, productId }) })
+    )
+    expect(res.status).toBe(422)
+
+    const resMissing = await createOrder(
+      withSession(`${BASE}/orders`, a.token, {
+        method: "POST",
+        body: JSON.stringify({ ...ORDER_BODY, productId: randomUUID() }),
+      })
+    )
+    expect(resMissing.status).toBe(422)
+  })
+
+  it("ĐP-2.8: Sales sửa số lượng/màu so với snapshot → ghi override có vết, không âm thầm ghi đè", async () => {
+    const productId = await seedProduct(a)
+    const order = await newOrder(a, {
+      ...ORDER_BODY,
+      productId,
+      flowers: [{ flowerName: "Hồng Ohara", quantity: 20, unit: "cành", color: "Hồng phấn", role: "Chủ đạo" }],
+    })
+    const item = await prisma.order_items.findFirst({ where: { order_id: order.id } })
+    const meta = item?.metadata as Record<string, unknown>
+    const overrides = meta.overrides as Array<Record<string, unknown>>
+    expect(overrides.some((o) => o.path === "bom.flowers[Hồng Ohara].quantity" && o.masterValue === 10 && o.orderValue === 20)).toBe(true)
+    expect(overrides.some((o) => o.path === "bom.flowers[Hồng Ohara].color")).toBe(true)
+  })
+
+  it("ĐP-2.9 (26/09/2026): có customerId → tên/hạng/SĐT lấy từ Customer Master Index, bỏ qua giá trị client gửi", async () => {
+    const customer = await prisma.customers.create({
+      data: {
+        organization_id: a.organizationId,
+        code: `KH-${randomUUID().slice(0, 8)}`,
+        name: "Lê Thị Hồng Từ CMI",
+        phone: "0911222333",
+        tier: "VIP",
+      },
+    })
+    const order = await newOrder(a, {
+      ...ORDER_BODY,
+      customerId: customer.id,
+      customerName: "Tên giả client tự gõ",
+      customerTier: "NEW",
+      customerPhone: "0000000000",
+    })
+    expect(order.customerName).toBe("Lê Thị Hồng Từ CMI")
+    expect(order.customerTier).toBe("VIP")
+    expect(order.customerPhone).toBe("0911222333")
+  })
+
+  it("ĐP-2.9: customerId không tồn tại (hoặc của tổ chức khác) → 422", async () => {
+    const customer = await prisma.customers.create({
+      data: { organization_id: b.organizationId, code: `KH-${randomUUID().slice(0, 8)}`, name: "Khách bên B", phone: "0900000001" },
+    })
+    const res = await createOrder(
+      withSession(`${BASE}/orders`, a.token, { method: "POST", body: JSON.stringify({ ...ORDER_BODY, customerId: customer.id }) })
+    )
+    expect(res.status).toBe(422)
+  })
+
+  it("ĐP-2.13: unit/role ngoài danh mục DemUnit/vai trò hoa → 400", async () => {
+    const res = await createOrder(
+      withSession(`${BASE}/orders`, a.token, {
+        method: "POST",
+        body: JSON.stringify({
+          ...ORDER_BODY,
+          flowers: [{ flowerName: "Hồng Ohara", quantity: 10, unit: "nhánh", color: "Kem", role: "Chủ đạo" }],
+        }),
+      })
+    )
+    expect(res.status).toBe(400)
   })
 
   it("luồng đủ P1→P7: kế hoạch → phân công → cắm → QC đạt → giao có POD → đóng đơn", async () => {
@@ -360,5 +632,122 @@ describe("Chức năng 12 — Điều phối đơn hàng: cách ly tenant và lu
       },
     })
     expect((await call(delivery, a, order.id, { event: "PICKED_UP", shipperName: "Bình" })).status).toBe(403)
+  })
+
+  // ── ĐP-4a (26/09/2026, PO D2) — Sổ thu ───────────────────────────────────
+
+  it("sổ thu: cọc rồi thu nốt → paidVnd/balanceVnd/paymentStatus đúng, khớp DB", async () => {
+    const order = await newOrder(a, { ...ORDER_BODY, unitPriceVnd: 1_000_000 })
+    expect(order.paidVnd).toBe(0)
+    expect(order.balanceVnd).toBe(1_000_000)
+    expect(order.paymentStatus).toBe("UNPAID")
+
+    const deposit = await json(
+      await call(recordOrderPayment, a, order.id, { kind: "DEPOSIT", amountVnd: 500_000, paymentMethod: "CASH" })
+    )
+    expect(deposit.order.paidVnd).toBe(500_000)
+    expect(deposit.order.balanceVnd).toBe(500_000)
+    expect(deposit.order.paymentStatus).toBe("PARTIALLY_PAID")
+
+    const balance = await json(
+      await call(recordOrderPayment, a, order.id, { kind: "BALANCE", amountVnd: 500_000, reference: "VCB-001" })
+    )
+    expect(balance.order.paidVnd).toBe(1_000_000)
+    expect(balance.order.balanceVnd).toBe(0)
+    expect(balance.order.paymentStatus).toBe("PAID")
+
+    // Đọc lại thẳng từ DB — không suy từ giá trị response cũ còn giữ trong bộ nhớ.
+    const row = await prisma.orders.findUnique({ where: { id: order.id } })
+    expect(Number(row?.paid_vnd)).toBe(1_000_000)
+    expect(Number(row?.balance_vnd)).toBe(0)
+
+    const list = await json(await call(listOrderPayments, a, order.id, undefined, "GET"))
+    expect(list.payments).toHaveLength(2)
+    expect(list.payments.map((p) => p.kind)).toEqual(["DEPOSIT", "BALANCE"])
+    expect(list.payments[1]?.reference).toBe("VCB-001")
+  })
+
+  it("sổ thu: cách ly tổ chức — tổ chức khác không đọc/ghi được", async () => {
+    const order = await newOrder(a)
+    expect((await call(recordOrderPayment, b, order.id, { kind: "DEPOSIT", amountVnd: 100_000 })).status).toBe(404)
+    expect((await call(listOrderPayments, b, order.id, undefined, "GET")).status).toBe(404)
+  })
+
+  it("sổ thu: hoàn tiền không được vượt số đã thu (422), REFUND gác bằng R10 (trần cứng điều hành)", async () => {
+    const order = await newOrder(a, { ...ORDER_BODY, unitPriceVnd: 500_000 })
+    await call(recordOrderPayment, a, order.id, { kind: "DEPOSIT", amountVnd: 500_000 })
+
+    expect((await call(recordOrderPayment, a, order.id, { kind: "REFUND", amountVnd: 600_000 })).status).toBe(422)
+
+    const refunded = await json(await call(recordOrderPayment, a, order.id, { kind: "REFUND", amountVnd: 500_000 }))
+    expect(refunded.order.paidVnd).toBe(0)
+    expect(refunded.order.paymentStatus).toBe("REFUNDED")
+
+    const membership = await prisma.memberships.findFirst({ where: { organization_id: a.organizationId, user_id: a.userId } })
+    await prisma.capability_overrides.create({
+      data: {
+        organization_id: a.organizationId,
+        role_id: membership!.role_id,
+        capability_code: "R10",
+        allowed: false,
+        updated_by: a.userId,
+      },
+    })
+    expect((await call(recordOrderPayment, a, order.id, { kind: "REFUND", amountVnd: 1 })).status).toBe(403)
+    // R9 (ghi DEPOSIT/BALANCE) không bị ảnh hưởng bởi việc tắt R10.
+    expect((await call(recordOrderPayment, a, order.id, { kind: "DEPOSIT", amountVnd: 1 })).status).toBe(201)
+  })
+
+  it("order_info_requests: cách ly tổ chức — tổ chức B không thấy yêu cầu thông tin của tổ chức A", async () => {
+    const orderA = await newOrder(a)
+    await prisma.order_info_requests.create({
+      data: {
+        organization_id: a.organizationId,
+        order_id: orderA.id,
+        missing_field: "deliveryAddress",
+        field_label: "Địa chỉ giao hàng",
+        reason: "Khách chưa gửi địa chỉ",
+        requested_from: "Zalo khách",
+        requested_by: a.userId,
+      },
+    })
+
+    const reqsB = await prisma.order_info_requests.findMany({
+      where: { organization_id: b.organizationId },
+    })
+    expect(reqsB).toHaveLength(0)
+
+    const reqsA = await prisma.order_info_requests.findMany({
+      where: { organization_id: a.organizationId },
+    })
+    expect(reqsA).toHaveLength(1)
+    expect(reqsA[0]!.order_id).toBe(orderA.id)
+  })
+
+  it("order_change_requests: cách ly tổ chức — tổ chức B không thấy yêu cầu thay đổi của tổ chức A", async () => {
+    const orderA = await newOrder(a)
+    await prisma.order_change_requests.create({
+      data: {
+        organization_id: a.organizationId,
+        order_id: orderA.id,
+        requested_by: a.userId,
+        change_type: "CARD_MESSAGE",
+        field_changed: "cardMessage",
+        old_value: "Chúc mừng",
+        new_value: "Sinh nhật vui vẻ",
+        reason: "Khách đổi ý",
+      },
+    })
+
+    const reqsB = await prisma.order_change_requests.findMany({
+      where: { organization_id: b.organizationId },
+    })
+    expect(reqsB).toHaveLength(0)
+
+    const reqsA = await prisma.order_change_requests.findMany({
+      where: { organization_id: a.organizationId },
+    })
+    expect(reqsA).toHaveLength(1)
+    expect(reqsA[0]!.order_id).toBe(orderA.id)
   })
 })

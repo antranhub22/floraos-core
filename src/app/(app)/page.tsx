@@ -1,18 +1,35 @@
-// Điểm vào theo vai (đặc tả 03 mục 3): workspace THẬT vào Dashboard Điều hành,
-// workspace TRẢI NGHIỆM vào lưới thẻ chức năng. Một tuyến "/", khác nhau ở nội
-// dung render theo `workspace.kind` THẬT đọc từ phiên đăng nhập.
+// Điểm vào theo vai (đặc tả 03 mục 3 + đặc tả 03b-role-ux mục 4): một tuyến
+// "/", nội dung chọn theo phiên đăng nhập THẬT đọc từ máy chủ.
 //
-// Trước đây chọn màn theo tham số URL thủ công `?che_do=trai-nghiem` — ai
-// cũng gõ được URL đó bất kể workspace thật của họ là gì, không phải cơ chế
-// thật. Đã gỡ: tài khoản tự đăng ký qua "Dùng thử miễn phí" (`POST
-// /auth/signup`) luôn được tạo workspace `EXPERIENCE` (`sign-up.ts`), nên tự
-// thấy đúng màn Trải nghiệm; tài khoản thật (workspace `PRODUCTION`) tự thấy
-// Dashboard Điều hành — không cần mẹo URL nào nữa.
+// 1. Workspace TRẢI NGHIỆM → lưới thẻ chức năng (như cũ).
+// 2. Workspace THẬT → khuôn trải nghiệm của vai (`resolveRoleUx`):
+//    - `store_manager` (vai `dieu_hanh`) → Business & Operations Command Center
+//    - `sales` (vai `sale`)             → Pipeline Workspace
+//    - `coordinator` (vai `dieu_phoi`)  → Control Tower — chuyển sang tuyến có
+//      sẵn `/dieu-phoi`, không dựng màn thứ hai cho cùng một việc (03b §4.4)
+//    - vai chưa gắn khuôn (vai riêng của tổ chức…) → Command Center, giữ đúng
+//      hành vi trước 26/09.
+// Khuôn chỉ chọn MÀN; năng lực (`capabilities`) vẫn quyết định nút nào hiện
+// và máy chủ vẫn kiểm lại ở mọi endpoint.
+//
+// Trước đây chọn màn theo tham số URL thủ công `?che_do=trai-nghiem` — đã gỡ:
+// tài khoản tự đăng ký (`POST /auth/signup`) luôn có workspace `EXPERIENCE`.
 
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 
-import { AdminDashboard } from "@/components/dashboard/admin-dashboard"
 import { ExperienceGrid } from "@/components/dashboard/experience-grid"
+import { SalesWorkspace } from "@/components/dashboard/sales-workspace"
+import { ProductManagerWorkspace } from "@/components/dashboard/product-manager-workspace"
+import { MarketingWorkspace } from "@/components/dashboard/marketing-workspace"
+import { CrmWorkspace } from "@/components/dashboard/crm-workspace"
+import { CustomerServiceWorkspace } from "@/components/dashboard/customer-service-workspace"
+import { StoreGrowthCenter } from "@/components/dashboard/store-growth-center"
+import { FlowerNetworkCommandCenter } from "@/components/dashboard/flower-network-command-center"
+import { StoreJourneyHome } from "@/components/dashboard/store-journey-home"
+import { NetworkJourneyHome } from "@/components/dashboard/network-journey-home"
+import { PlatformJourneyHome } from "@/components/dashboard/platform-journey-home"
+import { resolveRoleUx } from "@/modules/organization/domain/role-ux-catalog"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
 
 export default async function DashboardPage() {
@@ -27,5 +44,34 @@ export default async function DashboardPage() {
   // sang /dang-nhap trước khi tới đây — nhánh này chỉ để tsc yên tâm về kiểu.
   if (!session) return null
 
-  return session.workspaceKind === "EXPERIENCE" ? <ExperienceGrid /> : <AdminDashboard />
+  const roleUx = resolveRoleUx(session.roleKey, session.organizationType)
+
+  switch (roleUx?.homepage) {
+    case "STORE_JOURNEY_HOME":
+      return <StoreJourneyHome />
+    case "NETWORK_JOURNEY_HOME":
+      return <NetworkJourneyHome />
+    case "PLATFORM_JOURNEY_HOME":
+      return <PlatformJourneyHome />
+    case "CONTROL_TOWER":
+      return redirect("/dieu-phoi" as never)
+    case "CONTROL_CENTER":
+      return redirect("/van-hanh" as never)
+    case "FLOWER_NETWORK_COMMAND_CENTER":
+      return <FlowerNetworkCommandCenter />
+    case "SALES_WORKSPACE":
+      return <SalesWorkspace />
+    case "PRODUCT_WORKSPACE":
+      return <ProductManagerWorkspace />
+    case "CREATIVE_WORKSPACE":
+      return <MarketingWorkspace />
+    case "CRM_WORKSPACE":
+      return <CrmWorkspace />
+    case "CUSTOMER_SERVICE_WORKSPACE":
+      return <CustomerServiceWorkspace />
+    case "STORE_GROWTH_CENTER":
+    case "STORE_COMMAND_CENTER":
+    default:
+      return <StoreJourneyHome />
+  }
 }

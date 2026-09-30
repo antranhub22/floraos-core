@@ -45,8 +45,8 @@ export function FloristTicketCard({
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold text-text-muted">M09 Lệnh Cắm Hoa (Xưởng)</div>
-          <div className="text-[16px] font-extrabold text-text">Đơn #{orderCode}: {productName}</div>
+          <div className="text-xs font-semibold text-text-muted">Đơn hàng Lệnh Cắm Hoa (Xưởng)</div>
+          <div className="text-title font-extrabold text-text">Đơn #{orderCode}: {productName}</div>
         </div>
         <Badge tone="danger" className="gap-1 font-bold">
           <Clock size={12} />
@@ -58,7 +58,7 @@ export function FloristTicketCard({
         {sampleImageUrl && (
           <div className="relative aspect-square w-32 h-32 shrink-0 overflow-hidden rounded-xl border border-border bg-surface-alt">
             <img src={sampleImageUrl} alt="Mẫu cắm" className="h-full w-full object-cover" />
-            <div className="absolute bottom-1 left-1 rounded bg-black/60 px-1 py-0.5 text-[9px] font-bold text-white">
+            <div className="absolute bottom-1 left-1 rounded bg-black/60 px-1 py-0.5 text-caption font-bold text-white">
               Ảnh mẫu
             </div>
           </div>

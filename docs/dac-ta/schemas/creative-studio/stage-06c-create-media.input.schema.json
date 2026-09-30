@@ -25,7 +25,7 @@
       "description": "Master Image đã duyệt"
     },
     "engine": {
-      "default": "local_studio",
+      "default": "cloud_provider",
       "type": "string",
       "enum": [
         "local_studio",
@@ -82,7 +82,8 @@
       "type": "string",
       "enum": [
         "fal",
-        "stability"
+        "stability",
+        "imagen"
       ]
     },
     "scene_prompt": {

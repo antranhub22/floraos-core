@@ -17,7 +17,7 @@ import type { ProductContext } from "./production-types"
 
 /**
  * Contract đầu vào cho M04b Creative Studio.
- * Tham chiếu: src/modules/media/use-cases/execute-cloud-creative.ts
+ * Tham chiếu: `src/modules/media/domain/variant-rules.ts` (M04b chạy qua job `media.variant` / `media.variant.cloud`).
  */
 export interface VariantJobInput {
   /** Ảnh gốc (Data URL hoặc storage URL) */

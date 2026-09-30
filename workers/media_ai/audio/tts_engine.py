@@ -20,7 +20,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -321,6 +321,7 @@ def generate_speech(
     quality: str = "standard",
     voice_map: Optional[Dict[str, str]] = None,
     strict: bool = False,
+    chain_order: Optional[List[str]] = None,
 ) -> tuple[bool, str]:
     """
     Sinh giọng đọc; trả (success, provider_used).
@@ -328,11 +329,16 @@ def generate_speech(
     - `voice_map`: mã giọng của CÙNG một giọng ở từng nhà cung cấp (danh mục TS)
       — khi lùi, giọng nữ vẫn là giọng nữ (trước đây gửi "nova" cho ElevenLabs).
     - `strict`: chỉ thử đúng `provider` (giọng nhân bản không được thay).
+    - `chain_order`: thứ tự nhà cung cấp của tiệm cho lượt này (PO 25/09/2026)
+      — lùi theo đúng thứ tự đó trước, rồi mới tới chuỗi mặc định.
     """
     if strict:
         chain = [provider]
     else:
-        chain = [provider] + [p for p in FALLBACK_CHAIN if p != provider]
+        chain = []
+        for p in [provider, *(chain_order or []), *FALLBACK_CHAIN]:
+            if p and p not in chain:
+                chain.append(p)
 
     for prov in chain:
         func = PROVIDER_FUNCTIONS.get(prov)

@@ -85,7 +85,7 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-stone-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-cool-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -93,18 +93,19 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
       {/* Slide-over Panel */}
       <div className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl animate-in slide-in-from-right duration-300">
         {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-stone-200 px-6 py-4 bg-stone-50/50">
+        <div className="flex items-center justify-between border-b border-cool-200 px-6 py-4 bg-cool-50/50">
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1 text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border ${spec.bgClass} ${spec.colorClass} ${spec.borderClass}`}>
+            <span className={`inline-flex items-center gap-1 text-caption font-bold px-2.5 py-0.5 rounded-full border ${spec.bgClass} ${spec.colorClass} ${spec.borderClass}`}>
               <span className="h-1.5 w-1.5 rounded-full bg-current" />
               {spec.label}
             </span>
           </div>
 
           <button
+              aria-label="Đóng"
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition"
+            className="rounded-lg p-1.5 text-cool-400 hover:bg-cool-100 hover:text-cool-700 transition"
           >
             <X className="h-5 w-5" />
           </button>
@@ -113,7 +114,7 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
         {/* Scrollable Story Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Ảnh minh họa theo chủ đề */}
-          <div className="relative -mx-6 -mt-6 aspect-[21/9] w-[calc(100%+3rem)] overflow-hidden bg-stone-100">
+          <div className="relative -mx-6 -mt-6 aspect-[21/9] w-[calc(100%+3rem)] overflow-hidden bg-cool-100">
             <img
               src={illustration.url}
               alt={illustration.alt}
@@ -126,66 +127,66 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
           {/* LAYER 1: WHAT — Điều gì đang diễn ra trên thị trường */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
+              <span className="text-caption font-extrabold uppercase tracking-wider text-blush-600 flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5" />
                 1. Hiện tượng thị trường
               </span>
-              <div className="flex items-baseline gap-1 text-xs font-bold text-stone-500">
+              <div className="flex items-baseline gap-1 text-xs font-bold text-cool-500">
                 Điểm cơ hội:{" "}
-                <span className="text-base font-black text-rose-600">
+                <span className="text-base font-black text-blush-600">
                   {Math.round(item.contentOpportunityScore)}/100
                 </span>
               </div>
             </div>
-            <h2 className="text-lg font-extrabold text-stone-900 leading-snug">
+            <h2 className="text-lg font-extrabold text-cool-900 leading-snug">
               {item.opportunitySummary}
             </h2>
           </div>
 
           {/* LAYER 2: WHY — Tại sao xu hướng này lại bùng nổ */}
-          <div className="rounded-2xl border border-stone-200/90 bg-stone-50/50 p-4 space-y-3">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
-              <Flame className="h-3.5 w-3.5 text-amber-500" />
+          <div className="rounded-2xl border border-cool-200/90 bg-cool-50/50 p-4 space-y-3">
+            <span className="text-caption font-extrabold uppercase tracking-wider text-cool-800 flex items-center gap-1.5">
+              <Flame className="h-3.5 w-3.5 text-sand-500" />
               2. Vì sao xu hướng này tăng
             </span>
-            <p className="text-xs text-stone-600 leading-relaxed">
+            <p className="text-xs text-cool-600 leading-relaxed">
               {getTrendRationale(item)}
             </p>
             {/* 3 Trục Điểm số với diễn giải ý nghĩa */}
             <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-              <div className="bg-white p-2.5 rounded-xl border border-stone-200/70 shadow-2xs">
-                <span className="text-stone-400 text-[10px] block font-semibold">Độ nóng</span>
-                <span className="text-stone-900 font-bold text-sm">{Math.round(item.trendScore)}/100</span>
-                <span className="text-[9.5px] text-stone-500 block mt-0.5">Xu hướng thị trường</span>
+              <div className="bg-white p-2.5 rounded-xl border border-cool-200/70 shadow-2xs">
+                <span className="text-cool-400 text-caption block font-semibold">Độ nóng</span>
+                <span className="text-cool-900 font-bold text-sm">{Math.round(item.trendScore)}/100</span>
+                <span className="text-caption text-cool-500 block mt-0.5">Xu hướng thị trường</span>
               </div>
-              <div className="bg-white p-2.5 rounded-xl border border-stone-200/70 shadow-2xs">
-                <span className="text-stone-400 text-[10px] block font-semibold">Lan tỏa</span>
-                <span className="text-rose-600 font-bold text-sm">{Math.round(item.viralScore)}/100</span>
-                <span className="text-[9.5px] text-rose-600/80 block mt-0.5">Tiềm năng video</span>
+              <div className="bg-white p-2.5 rounded-xl border border-cool-200/70 shadow-2xs">
+                <span className="text-cool-400 text-caption block font-semibold">Lan tỏa</span>
+                <span className="text-blush-600 font-bold text-sm">{Math.round(item.viralScore)}/100</span>
+                <span className="text-caption text-blush-600/80 block mt-0.5">Tiềm năng video</span>
               </div>
-              <div className="bg-white p-2.5 rounded-xl border border-stone-200/70 shadow-2xs">
-                <span className="text-stone-400 text-[10px] block font-semibold">Thương mại</span>
-                <span className="text-emerald-700 font-bold text-sm">{Math.round(item.commercialScore)}/100</span>
-                <span className="text-[9.5px] text-emerald-600 block mt-0.5">Sức mua thực tế</span>
+              <div className="bg-white p-2.5 rounded-xl border border-cool-200/70 shadow-2xs">
+                <span className="text-cool-400 text-caption block font-semibold">Thương mại</span>
+                <span className="text-mint-700 font-bold text-sm">{Math.round(item.commercialScore)}/100</span>
+                <span className="text-caption text-mint-600 block mt-0.5">Sức mua thực tế</span>
               </div>
             </div>
           </div>
 
           {/* LAYER 3: WHO & HOW — Khách hàng mục tiêu & Cách tiếp cận */}
-          <div className="rounded-2xl border border-stone-200/90 bg-white p-4 space-y-3">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-blue-600" />
+          <div className="rounded-2xl border border-cool-200/90 bg-white p-4 space-y-3">
+            <span className="text-caption font-extrabold uppercase tracking-wider text-cool-800 flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-ocean-600" />
               3. Khách hàng mục tiêu
             </span>
-            <div className="text-xs text-stone-700 space-y-2">
+            <div className="text-xs text-cool-700 space-y-2">
               <div className="flex items-start gap-2">
-                <span className="font-bold text-stone-900 min-w-[110px]">Tệp khách mua:</span>
-                <span className="text-stone-600">{item.audience || "Khách hàng trẻ 18–35 tuổi, người mua tặng quà kỷ niệm"}</span>
+                <span className="font-bold text-cool-900 min-w-[110px]">Tệp khách mua:</span>
+                <span className="text-cool-600">{item.audience || "Khách hàng trẻ 18–35 tuổi, người mua tặng quà kỷ niệm"}</span>
               </div>
               {Boolean(item.recommendedFormats) && (
                 <div className="flex items-start gap-2">
-                  <span className="font-bold text-stone-900 min-w-[110px]">Định dạng đề xuất:</span>
-                  <span className="text-stone-600">
+                  <span className="font-bold text-cool-900 min-w-[110px]">Định dạng đề xuất:</span>
+                  <span className="text-cool-600">
                     {Array.isArray(item.recommendedFormats) ? item.recommendedFormats.join(", ") : String(item.recommendedFormats)}
                   </span>
                 </div>
@@ -194,14 +195,14 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
           </div>
 
           {/* LAYER 4: SO WHAT — Lời khuyên cho tiệm & Kịch bản Hook */}
-          <div className="rounded-2xl border border-rose-200 bg-rose-50/40 p-4 space-y-3">
+          <div className="rounded-2xl border border-blush-200 bg-blush-50/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
-                <Lightbulb className="h-3.5 w-3.5 text-rose-600" />
+              <span className="text-caption font-extrabold uppercase tracking-wider text-blush-800 flex items-center gap-1.5">
+                <Lightbulb className="h-3.5 w-3.5 text-blush-600" />
                 4. Cơ hội bán & câu mở đầu
               </span>
             </div>
-            <p className="text-xs text-stone-700 font-medium leading-relaxed">
+            <p className="text-xs text-cool-700 font-medium leading-relaxed">
               Sử dụng ngay các câu Hook đã được kiểm chứng dưới đây làm tiêu đề video TikTok/Reels hoặc caption bài đăng Facebook để tăng tỷ lệ giữ chân khách hàng:
             </p>
 
@@ -210,18 +211,18 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
                 {hooks.map((hk: string, idx: number) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-rose-200/80 text-xs shadow-2xs"
+                    className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-blush-200/80 text-xs shadow-2xs"
                   >
-                    <p className="italic text-stone-800 font-medium">&ldquo;{hk}&rdquo;</p>
+                    <p className="italic text-cool-800 font-medium">&ldquo;{hk}&rdquo;</p>
                     <button
                       type="button"
                       onClick={() => handleCopyHook(hk, idx)}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition flex-shrink-0"
+                      className="inline-flex items-center gap-1 text-caption font-bold text-blush-600 hover:text-blush-700 bg-blush-50 hover:bg-blush-100 px-2.5 py-1 rounded-lg transition flex-shrink-0"
                     >
                       {copiedHookIndex === idx ? (
                         <>
-                          <Check size={12} className="text-emerald-600" />
-                          <span className="text-emerald-700">Đã chép</span>
+                          <Check size={12} className="text-mint-600" />
+                          <span className="text-mint-700">Đã chép</span>
                         </>
                       ) : (
                         <>
@@ -234,53 +235,53 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
                 ))}
               </div>
             ) : (
-              <div className="bg-white p-3 rounded-xl border border-stone-200 text-xs text-stone-500 italic">
+              <div className="bg-white p-3 rounded-xl border border-cool-200 text-xs text-cool-500 italic">
                 Chưa có kịch bản hook tùy chỉnh cho chủ đề này.
               </div>
             )}
           </div>
 
           {/* LAYER 5: EVIDENCE — Bằng chứng & Mẫu thực tế đa kênh */}
-          <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden">
+          <div className="rounded-2xl border border-cool-200 bg-white overflow-hidden">
             <button
               type="button"
               onClick={() => setIsEvidenceOpen(!isEvidenceOpen)}
-              className="w-full flex items-center justify-between p-4 bg-stone-50/60 hover:bg-stone-100/60 transition text-left"
+              className="w-full flex items-center justify-between p-4 bg-cool-50/60 hover:bg-cool-100/60 transition text-left"
             >
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-stone-800">
+                <ShieldCheck className="h-4 w-4 text-mint-600" />
+                <span className="text-caption font-extrabold uppercase tracking-wider text-cool-800">
                   5. Dẫn chứng đa kênh ({references.length} nguồn)
                 </span>
               </div>
               <ChevronDown
                 size={15}
-                className={`text-stone-400 transition-transform duration-200 ${isEvidenceOpen ? "rotate-180" : ""}`}
+                className={`text-cool-400 transition-transform duration-200 ${isEvidenceOpen ? "rotate-180" : ""}`}
               />
             </button>
 
             {isEvidenceOpen && (
-              <div className="p-4 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="p-4 border-t border-cool-100 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {references.length > 0 ? (
                   references.map((ref, idx) => {
-                    let icon = <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-stone-400" />;
-                    let badgeBg = "bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200";
+                    let icon = <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-cool-400" />;
+                    let badgeBg = "bg-cool-50 hover:bg-cool-100 text-cool-700 border-cool-200";
 
                     if (ref.type === "TIKTOK_REELS") {
-                      icon = <Video className="h-3.5 w-3.5 flex-shrink-0 text-pink-600" />;
-                      badgeBg = "bg-pink-50/60 hover:bg-pink-100/80 text-pink-900 border-pink-200/70";
+                      icon = <Video className="h-3.5 w-3.5 flex-shrink-0 text-petal-600" />;
+                      badgeBg = "bg-petal-50/60 hover:bg-petal-100/80 text-petal-900 border-petal-200/70";
                     } else if (ref.type === "FACEBOOK") {
-                      icon = <FacebookIcon className="h-3.5 w-3.5 flex-shrink-0 text-[#1877F2]" />;
-                      badgeBg = "bg-blue-50/70 hover:bg-blue-100/90 text-blue-950 border-blue-200/80";
+                      icon = <FacebookIcon className="h-3.5 w-3.5 flex-shrink-0 text-[var(--color-facebook)]" />;
+                      badgeBg = "bg-ocean-50/70 hover:bg-ocean-100/90 text-ocean-950 border-ocean-200/80";
                     } else if (ref.type === "IMAGE_PINTEREST") {
-                      icon = <ImageIcon className="h-3.5 w-3.5 flex-shrink-0 text-red-600" />;
-                      badgeBg = "bg-red-50/60 hover:bg-red-100/80 text-red-900 border-red-200/70";
+                      icon = <ImageIcon className="h-3.5 w-3.5 flex-shrink-0 text-alert-600" />;
+                      badgeBg = "bg-alert-50/60 hover:bg-alert-100/80 text-alert-900 border-alert-200/70";
                     } else if (ref.type === "GOOGLE_TRENDS") {
-                      icon = <TrendingUp className="h-3.5 w-3.5 flex-shrink-0 text-blue-600" />;
-                      badgeBg = "bg-blue-50/60 hover:bg-blue-100/80 text-blue-900 border-blue-200/70";
+                      icon = <TrendingUp className="h-3.5 w-3.5 flex-shrink-0 text-ocean-600" />;
+                      badgeBg = "bg-ocean-50/60 hover:bg-ocean-100/80 text-ocean-900 border-ocean-200/70";
                     } else if (ref.type === "YOUTUBE") {
-                      icon = <Play className="h-3.5 w-3.5 flex-shrink-0 text-amber-600" />;
-                      badgeBg = "bg-amber-50/60 hover:bg-amber-100/80 text-amber-900 border-amber-200/70";
+                      icon = <Play className="h-3.5 w-3.5 flex-shrink-0 text-sand-600" />;
+                      badgeBg = "bg-sand-50/60 hover:bg-sand-100/80 text-sand-900 border-sand-200/70";
                     }
 
                     return (
@@ -292,7 +293,7 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
                         className={`flex items-center gap-3 p-2.5 rounded-xl border text-xs font-semibold transition group ${badgeBg}`}
                       >
                         {ref.thumbnailUrl ? (
-                          <div className="relative h-12 w-16 rounded-lg overflow-hidden flex-shrink-0 bg-stone-900 border border-stone-200 shadow-2xs">
+                          <div className="relative h-12 w-16 rounded-lg overflow-hidden flex-shrink-0 bg-cool-900 border border-cool-200 shadow-2xs">
                             <img src={ref.thumbnailUrl} alt={ref.title} className="h-full w-full object-cover" />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition">
                               <Play className="h-3 w-3 fill-white text-white" />
@@ -304,15 +305,15 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 text-[10px] text-stone-500 uppercase tracking-wider font-bold">
+                          <div className="flex items-center gap-1.5 text-caption text-cool-500 uppercase tracking-wider font-bold">
                             <span>{ref.platform}</span>
-                            {ref.metrics ? <span className="text-stone-400 font-normal">• {ref.metrics}</span> : null}
+                            {ref.metrics ? <span className="text-cool-400 font-normal">• {ref.metrics}</span> : null}
                           </div>
-                          <div className="font-bold text-stone-800 truncate group-hover:text-rose-600 transition">
+                          <div className="font-bold text-cool-800 truncate group-hover:text-blush-600 transition">
                             {ref.title || ref.platform}
                           </div>
                           {ref.author ? (
-                            <div className="text-[10px] text-stone-500 truncate font-medium">
+                            <div className="text-caption text-cool-500 truncate font-medium">
                               Kênh: {ref.author}
                             </div>
                           ) : null}
@@ -322,7 +323,7 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
                     );
                   })
                 ) : (
-                  <p className="text-xs text-stone-500 italic sm:col-span-2">
+                  <p className="text-xs text-cool-500 italic sm:col-span-2">
                     Không có dẫn chứng nào cho phân tích này.
                   </p>
                 )}
@@ -332,8 +333,8 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
         </div>
 
         {/* Sticky Action Footer (Layer 04 — ACTION) */}
-        <div className="border-t border-stone-200 bg-white p-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-          <div className="text-xs text-stone-500 font-medium hidden sm:block">
+        <div className="border-t border-cool-200 bg-white p-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+          <div className="text-xs text-cool-500 font-medium hidden sm:block">
             Sẵn sàng chuyển hóa thành nội dung bán hàng?
           </div>
 
@@ -341,16 +342,16 @@ export function OpportunityDetailDrawer({ item, onClose }: OpportunityDetailDraw
             <button
               type="button"
               onClick={handleGoToMedia}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs font-bold transition"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-cool-200 bg-white hover:bg-cool-50 text-cool-700 text-xs font-bold transition"
             >
-              <ImageIcon className="h-3.5 w-3.5 text-stone-600" />
+              <ImageIcon className="h-3.5 w-3.5 text-cool-600" />
               Tạo ảnh
             </button>
 
             <button
               type="button"
               onClick={handleGoToVideo}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-blush-600 hover:bg-blush-700 text-white text-xs font-bold shadow-sm transition"
             >
               <Video className="h-3.5 w-3.5" />
               Tạo video kịch bản

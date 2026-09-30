@@ -71,10 +71,10 @@ export function FlowSteps({
                   isCancelled && "bg-text-muted"
                 )}
               >
-                {isDone && <Check size={13} strokeWidth={3} color="#fff" />}
-                {isActive && <Circle size={10} strokeWidth={3} color="#fff" />}
-                {isError && <AlertCircle size={13} strokeWidth={2} color="#fff" />}
-                {isCancelled && <Ban size={11} strokeWidth={2} color="#fff" />}
+                {isDone && <Check size={13} strokeWidth={3} color="white" />}
+                {isActive && <Circle size={10} strokeWidth={3} color="white" />}
+                {isError && <AlertCircle size={13} strokeWidth={2} color="white" />}
+                {isCancelled && <Ban size={11} strokeWidth={2} color="white" />}
                 {status === "pending" && <Circle size={10} strokeWidth={2} className="text-text-muted" />}
               </div>
               {index < steps.length - 1 && (
@@ -89,7 +89,7 @@ export function FlowSteps({
             <div className="pb-3">
               <div
                 className={cn(
-                  "text-[13px]",
+                  "text-body-sm",
                   isDone && "font-semibold text-text",
                   isActive && "font-bold text-primary",
                   (status === "pending" || isCancelled) && "text-text-muted",
@@ -99,7 +99,7 @@ export function FlowSteps({
                 {step.label}
               </div>
               {isError && (
-                <div className="mt-0.5 text-[11px] text-danger">
+                <div className="mt-0.5 text-caption text-danger">
                   Có lỗi — cần xử lý trước khi tiếp
                 </div>
               )}
@@ -126,7 +126,7 @@ export function FlowSteps({
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
-            className="flex w-full items-center justify-between text-[12.5px] font-bold text-text"
+            className="flex w-full items-center justify-between text-meta font-bold text-text"
           >
             <span>Nhật ký</span>
             {expanded ? (
@@ -138,8 +138,8 @@ export function FlowSteps({
           {expanded && (
             <div className="mt-2 max-h-40 overflow-y-auto rounded-lg bg-surface-alt p-2">
               {logs.map((log) => (
-                <div key={log.seq} className="text-[11px] text-text-muted">
-                  <span className="font-mono text-[10px] text-secondary-text">
+                <div key={log.seq} className="text-caption text-text-muted">
+                  <span className="font-mono text-caption text-secondary-text">
                     [{log.at}]
                   </span>{" "}
                   {log.text}
@@ -207,8 +207,8 @@ export function JobErrorDisplay({
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger-bg">
         <AlertCircle size={26} strokeWidth={1.8} className="text-danger" />
       </div>
-      <div className="text-[14.5px] font-bold">Đang xử lý — chưa xong</div>
-      <div className="max-w-xs text-[12.5px] leading-relaxed text-text-muted">{error}</div>
+      <div className="text-title-sm font-bold">Đang xử lý — chưa xong</div>
+      <div className="max-w-xs text-meta leading-relaxed text-text-muted">{error}</div>
       <div className="flex w-full max-w-xs flex-col gap-2">
         {onRetry && (
           <Button onClick={onRetry} className="w-full">

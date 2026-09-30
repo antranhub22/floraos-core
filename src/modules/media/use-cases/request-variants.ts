@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto"
 
 import { conflict, notFound } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
+import { providerOrderFor } from "@/modules/creative-production/use-cases/provider-preferences"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
@@ -260,6 +261,8 @@ export async function requestCloudVariant(ctx: TenantContext, input: RequestClou
       watermark: input.watermark,
       auto_enhance: input.autoEnhance ?? false,
       ...(input.provider ? { provider: input.provider } : {}),
+      // Thứ tự thử nhà cung cấp (PO 25/09/2026): bên chọn cho lượt → thứ tự tiệm → mặc định.
+      provider_order: await providerOrderFor(ctx, "image_variant", input.provider ?? null),
       ...(scenePrompt ? { scene_prompt: scenePrompt } : {}),
       ...(input.sceneIndex ? { scene_index: input.sceneIndex } : {}),
       ...(input.scenePlanId ? { scene_plan_id: input.scenePlanId } : {}),

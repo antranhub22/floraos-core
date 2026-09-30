@@ -95,8 +95,8 @@ export function VideoPlayerCard({
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col items-center gap-4">
       <div className="w-full flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold text-text-muted">M05 Video Preview</div>
-          <div className="text-[16px] font-extrabold text-text">{title}</div>
+          <div className="text-xs font-semibold text-text-muted">Video Studio Video Preview</div>
+          <div className="text-title font-extrabold text-text">{title}</div>
         </div>
         <Badge tone="success">Chuẩn 9:16 Mobile</Badge>
       </div>
@@ -118,13 +118,15 @@ export function VideoPlayerCard({
           />
         ) : effectivePoster ? (
           <img
+              role="button"
+              tabIndex={0}
             src={effectivePoster}
             alt={productName}
             className="h-full w-full object-cover cursor-pointer"
             onClick={handleTogglePlay}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-[12px] text-white/70">Chưa có video</div>
+          <div className="flex h-full w-full items-center justify-center text-meta text-white/70">Chưa có video</div>
         )}
 
         <div
