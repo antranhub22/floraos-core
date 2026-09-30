@@ -16,9 +16,10 @@ export const TIER_LABELS: Record<string, { label: string; tone: "neutral" | "suc
 export interface PartnerCardProps {
   partner: PartnerView
   onToggleStatus: (partner: PartnerView) => void
+  onOpenSettlement?: ((partner: PartnerView) => void) | undefined
 }
 
-export function PartnerCard({ partner, onToggleStatus }: PartnerCardProps) {
+export function PartnerCard({ partner, onToggleStatus, onOpenSettlement }: PartnerCardProps) {
   const tierInfo = TIER_LABELS[partner.tier] || { label: partner.tier, tone: "neutral" as const }
 
   return (
@@ -64,6 +65,18 @@ export function PartnerCard({ partner, onToggleStatus }: PartnerCardProps) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {onOpenSettlement && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenSettlement(partner)}
+              className="text-xs gap-1.5 text-text-muted hover:text-primary hover:border-primary/30"
+              title="Đối soát tài chính & tiền công gia công"
+            >
+              Sổ đối soát
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"

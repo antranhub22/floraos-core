@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
+import { BusinessPerformanceCard } from "@/components/dashboard/business-performance-card"
+import type { OrderReportingItem } from "@/modules/orders/domain/business-reporting"
 
 type UsageSummary = {
   by_feature: { feature: string; quantity: number; cost_credit: number }[]
@@ -59,7 +61,8 @@ function metricLabel(feature: string): string {
 
 export default function AnalyticsPage() {
   const router = useRouter()
-  const { can } = useSession()
+  const { can, orgName } = useSession()
+  const [orders, setOrders] = useState<OrderReportingItem[]>([])
   const [phase, setPhase] = useState<"metrics" | "explain" | "learning" | "saved">("metrics")
   const [saved, setSaved] = useState(false)
   const [learningApproved, setLearningApproved] = useState(false)
@@ -96,7 +99,28 @@ export default function AnalyticsPage() {
         setUsageLoading(false)
       }
     }
+
+    async function loadOrders() {
+      try {
+        const data = await fetchJson<{ items: Array<{ id: string; code: string; status: string; totalVnd: number; customerName?: string; createdAt: string; items?: Array<{ description?: string }> }> }>("/api/v1/orders?limit=50")
+        if (data && Array.isArray(data.items)) {
+          setOrders(data.items.map((o) => ({
+            id: o.id,
+            code: o.code,
+            status: o.status as OrderReportingItem["status"],
+            totalVnd: o.totalVnd,
+            customerName: o.customerName,
+            productTitle: o.items?.[0]?.description ?? "Sản phẩm hoa",
+            createdAt: o.createdAt,
+          })))
+        }
+      } catch {
+        // im lặng fallback
+      }
+    }
+
     loadUsage()
+    loadOrders()
   }, [router])
 
   useEffect(() => {
@@ -259,6 +283,13 @@ export default function AnalyticsPage() {
                 ))}
               </div>
             </div>
+
+            {/* Báo cáo Hiệu năng Kinh doanh & Doanh số (BC-01..06) */}
+            <BusinessPerformanceCard
+              orders={orders}
+              aiCreditUsed={usage?.credit_used ?? 0}
+              shopName={orgName || "Tiệm Hoa"}
+            />
 
             {/* Khối thẻ số đo thực tế */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

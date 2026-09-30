@@ -24,6 +24,7 @@ import {
   MultichannelPostCard,
   type MultichannelPostItem,
 } from "@/components/templates/content-engine"
+import { FlowerContentStudioModal } from "@/components/content/flower-content-studio-modal"
 
 /** Hình dạng thô một dòng `GET /api/v1/products` — chỉ các trường trang này đọc. */
 interface RawProductRow {
@@ -103,6 +104,7 @@ function ContentEngineContent() {
     "zalo",
   ])
   const [generationId, setGenerationId] = useState<string | null>(null)
+  const [isStudioModalOpen, setIsStudioModalOpen] = useState(false)
 
   // Trạng thái luồng
   const [phase, setPhase] = useState<"select" | "generating" | "results">("select")
@@ -327,6 +329,15 @@ function ContentEngineContent() {
 
         {/* Standardized Tab Action Header */}
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsStudioModalOpen(true)}
+            className="text-xs gap-1.5"
+          >
+            <Sparkles size={14} />
+            Studio 5 Tone giọng
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -655,6 +666,12 @@ function ContentEngineContent() {
           </div>
         )}
       </div>
+
+      <FlowerContentStudioModal
+        open={isStudioModalOpen}
+        onOpenChange={setIsStudioModalOpen}
+        initialProductName={products.find((p) => p.id === selectedProductId)?.name}
+      />
     </div>
   )
 }
