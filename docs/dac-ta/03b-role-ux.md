@@ -2,54 +2,57 @@
 
 > [!NOTE]
 > **VAI TRÒ TÀI LIỆU — SSOT LỚP TRẢI NGHIỆM THEO VAI (Level 3, CANONICAL)**
-> Tệp này quy định **14 vai trải nghiệm** của FloraOS: vai đó thấy gì trước, trang chủ là gì, điều hướng ưu tiên gì, hành động chính là gì, AI cư xử ra sao.
+> Tệp này quy định **16 vai trải nghiệm** của FloraOS: vai đó thấy gì trước, trang chủ là gì, điều hướng ưu tiên gì, hành động chính là gì, AI cư xử ra sao.
 > Tệp **không** quy định quyền. Quyền vẫn là mã năng lực ở `02-function-catalog.md` + `src/core/rbac/capability-catalog.ts`.
-> **Nguồn:** hợp đồng `FLORAOS-UX-ROLE-001` v1.1 (`docs/kien-truc/FLORAOS_ROLE_UX_EXECUTION_CONTRACT.md`, SUPPORTING). PO duyệt ngày 26/09/2026.
+> **Nguồn:** hợp đồng `FLORAOS-UX-ROLE-001` v1.1 (`docs/kien-truc/FLORAOS_ROLE_UX_EXECUTION_CONTRACT.md`, SUPPORTING) và Kế hoạch nâng cấp kiến trúc năng lực (`docs/kien-truc/KE_HOACH_THUC_THI_NANG_CAP_ROLE_CAPABILITY_ARCHITECTURE.md`).
 > **Mã nguồn chuẩn:** `src/modules/organization/domain/role-ux-catalog.ts` (+ test cùng thư mục). Tài liệu và mã phải khớp nhau. Lệch nhau thì sửa cả hai trong cùng một commit.
 
 ---
 
-## 1. Quyết định của PO ngày 26/09/2026
+## 1. Quyết định của PO & Kiến trúc sư (26/09 & 30/09/2026)
 
 | # | Quyết định | Hệ quả |
 |---|---|---|
-| D-RU1 | Xây **14 vai trải nghiệm** theo contract. Vai đã có dữ liệu và luồng thật thì **nâng cấp ngay**. Vai chưa có vẫn **hiển thị nhưng vô hiệu** cho tới khi phát triển xong, và ghi vào `TECHNICAL_DEBT.md`. | Mục 3 và mục 6. Nợ #162–#168 |
+| D-RU1 | Xây **16 vai trải nghiệm** theo contract và kiến trúc nâng cấp. Vai đã có dữ liệu và luồng thật thì **nâng cấp ngay**. Vai chưa có vẫn **hiển thị nhưng vô hiệu** cho tới khi phát triển xong, và ghi vào `TECHNICAL_DEBT.md`. | Mục 3 và mục 6. Nợ #162–#169 |
 | D-RU2 | Sửa nguyên tắc "một bộ màn hình": **dùng chung một bộ màn hình và component. Vai quyết định trang chủ, thứ tự điều hướng và ưu tiên thông tin. Mã năng lực quyết định nút nào được hiện và được dùng.** | Đã sửa `03-ux-architecture.md` §1–§3, PRD nguyên tắc #4, `AGENTS.md` mục Quy ước |
-| D-RU3 | "admin" trong contract đổi thành **`platform_admin`**, tức Quản trị nền tảng, dùng Console Vận hành `/van-hanh`. Vai **Điều hành** của tiệm giữ nguyên. | `admin-dashboard.tsx` đổi thành `store-manager-dashboard.tsx` |
+| D-RU3 | "admin" trong contract đổi thành **`platform_admin`**, tức Quản trị nền tảng, dùng Console Vận hành `/van-hanh`. Vai **Điều hành** của tiệm chuẩn hóa thành **`store_admin`** (alias tương thích ngược `store_manager`). | `store-manager-dashboard.tsx` / `store-growth-center.tsx` |
 | D-RU4 | **Đa vai / chuyển vai: hoãn.** PO xác nhận ngày 26/09/2026. Mỗi người vẫn chỉ có một vai trong một tổ chức (`memberships @@unique([organization_id, user_id])`). | Nợ #162 |
-| Q-TC | **Thêm vai trải nghiệm Thợ cắm (`florist`)** vào danh mục với trạng thái `IN_DEVELOPMENT` (vai 15). PO phê duyệt 26/09/2026. | T6.13, Nợ #169 |
+| Q-TC | **Thêm vai trải nghiệm Thợ cắm (`florist`)** vào danh mục với trạng thái `IN_DEVELOPMENT`. | T6.13, Nợ #169 |
+| Q-FNA | **Xác lập Top-Level Role: Điện hoa Admin (`flower_network_admin`)** vận hành Flower Network Command Center 4 tầng, kết nối mạng lưới xưởng ngoài và điều phối đơn M11. | `flower-network-command-center.tsx` |
+| D-JUX | **Nâng cấp Kiến trúc Journey-First UX (30/09/2026)**: Trang chủ của 3 Role cấp cao (`store_admin`, `flower_network_admin`, `platform_admin`) chuyển sang mô hình **ChoiceGrid ("Bạn muốn làm gì?")**, Progressive Disclosure, Action Contract 7 bước, Combo Workflow; bọc toàn bộ dashboard hiện có theo nguyên tắc **"WRAP, không REPLACE"**; cung cấp nút chuyển đổi linh hoạt sang **"Chế độ chuyên gia"** (Expert Mode). | `docs/kien-truc/KE_HOACH_THUC_THI_JOURNEY_FIRST_UX_ARCHITECTURE.md` |
 
 ## 2. Nguyên tắc bất biến
 
 1. **Vai ≠ Người.** Một người có thể giữ một hay nhiều vai; một vai có thể giao cho nhiều người. Không mã hoá UX theo một người cụ thể.
 2. **Vai trải nghiệm ≠ Vai phân quyền ≠ Quyền.**
    - **Vai phân quyền** là bản ghi `roles` (`dieu_hanh`, `dieu_phoi`, `sale`, `experience_user`, cộng vai riêng của tổ chức). Vai này mang bộ mã năng lực.
-   - **Vai trải nghiệm** (14 vai ở mục 3) là khuôn UX mà một vai phân quyền được gắn vào.
+   - **Vai trải nghiệm** (16 vai ở mục 3) là khuôn UX mà một vai phân quyền được gắn vào.
    - Thứ bậc: **Quyền (mã năng lực) > Phạm vi (tổ chức/chi nhánh) > Vai trải nghiệm > Ưu tiên UX.** Khuôn trải nghiệm **không bao giờ mở thêm quyền**.
 3. **UX theo vai ≠ Giao diện riêng theo vai.** Mọi vai dùng chung token, typography, component. Chỉ khác thứ bậc thông tin, trang chủ, thứ tự điều hướng, hành động chính, hành vi AI.
 4. **Dùng lại trước, tạo mới sau:** `REUSE > EXTEND > COMPOSE > CREATE`.
 5. **Không bịa hiện trạng.** Thiếu dữ liệu thì ghi `DATA GAP / WORKFLOW GAP / PERMISSION GAP / BLOCKED` và mở nợ. Không dựng số liệu giả để lấp màn.
 6. **Rà soát trước khi thiết kế lại.** Không đổi tên tuyến hay tái cấu trúc điều hướng chỉ vì mô hình lý thuyết đề xuất.
 
-## 3. Danh mục 15 vai trải nghiệm
+## 3. Danh mục 16 vai trải nghiệm
 
-| Khoá | Tên hiển thị | Nhóm | Triết lý chính (phụ) | Trang chủ | Vai phân quyền gắn vào | Trạng thái |
+| Khoá | Tên hiển thị | Nhóm Scope | Triết lý chính (phụ) | Trang chủ | Vai phân quyền gắn vào | Trạng thái |
 |---|---|---|---|---|---|---|
-| `platform_admin` | Quản trị nền tảng | Nền tảng | Governance & Control (Control Tower) | Control Center, tức `/van-hanh` | *(không phải vai tổ chức: cấp qua `platform_operators`, D-N6)* | **Đang dùng được** |
-| `store_manager` | Quản lý cửa hàng | Một cửa hàng | Business & Operations Command Center (Executive Dashboard) | `/`, dùng `StoreManagerDashboard` | `dieu_hanh` | **Đang dùng được** |
-| `sales` | Bán hàng | Một cửa hàng | Pipeline-first | `/`, dùng `SalesWorkspace` | `sale` | **Đang dùng được** *(pipeline: DATA GAP #164)* |
-| `crm` | Chăm sóc vòng đời khách hàng | Một cửa hàng | Customer Lifecycle Management (Relationship Management) | `/`, dùng `CrmWorkspace` | `crm` | **Đang dùng được** (T6.3) |
-| `lead_marketing` | Trưởng Marketing | Một cửa hàng | Creative Workspace | `/`, dùng `MarketingWorkspace` | `marketing` | **Đang dùng được** (T6.2) |
-| `ceo` | Giám đốc điều hành | Chuỗi | Strategic Command Center (Performance Dashboard) | Strategic Command Center | — | Đang phát triển (#165) |
-| `manager` | Quản lý vận hành | Chuỗi | Operations Command Center | Operations Command Center | — | Đang phát triển (#165) |
-| `coordinator` | Điều phối | Chuỗi | Control Tower & Exception Management (Real-time Operations) | `/` chuyển sang `/dieu-phoi` | `dieu_phoi` | **Đang dùng được** *(nợ #166)* |
-| `quality_control` | Kiểm soát chất lượng | Chuỗi | Quality Control & Exception | Quality Exception Board | — | Đang phát triển (#165) |
-| `customer_service` | Chăm sóc khách hàng (CSKH) | Chuỗi | Customer Context-first (Conversation-first) | Conversation Workspace | `customer_service` | **Đang dùng được** (T6.4) |
-| `partner_manager` | Quản lý đối tác | Chuỗi | Relationship Management (Partner Growth, Partner Performance) | Partner Portfolio | — | Đang phát triển (#165) |
-| `marketing` | Marketing | Chuỗi | Creative Workspace | `/`, dùng `MarketingWorkspace` | *(CHAIN cần vai phân quyền riêng — nợ #165)* | **Đang dùng được** (T6.2) |
-| `product_manager` | Quản lý sản phẩm | Chuỗi | Product-centric (Catalog-centric) | `/`, dùng `ProductManagerWorkspace` | `product_manager` | **Đang dùng được** (T6.1) |
-| `finance_accounting` | Tài chính – Kế toán | Chuỗi | Transaction-first | Transaction Workspace | — | Đang phát triển (#165) |
-| `florist` | Thợ cắm | Một cửa hàng | Production Queue | Production Queue | — | Đang phát triển (#169) |
+| `platform_admin` | Quản trị nền tảng | `PLATFORM` | Journey-first & Governance (Control Tower) | `PLATFORM_JOURNEY_HOME` (ChoiceGrid 10 tác vụ tại `/van-hanh`) | *(cấp qua `platform_operators`, D-N6)* | **Đang dùng được** |
+| `store_admin` *(alias: `store_manager`)* | Quản trị cửa hàng hoa | `STORE` | Journey-first & Store Growth (Executive Dashboard) | `STORE_JOURNEY_HOME` (ChoiceGrid 12 tác vụ, bọc `StoreGrowthCenter`) | `dieu_hanh` | **Đang dùng được** |
+| `flower_network_admin` | Quản trị mạng lưới điện hoa | `FLOWER_NETWORK` | Journey-first & Network Orchestration (Multi-Hub Logistics) | `NETWORK_JOURNEY_HOME` (ChoiceGrid 8 tác vụ, bọc `FlowerNetworkCommandCenter`) | `dieu_hanh` | **Đang dùng được** |
+| `sales` | Bán hàng | `STORE` | Pipeline-first | `/`, dùng `SalesWorkspace` | `sale` | **Đang dùng được** *(pipeline: DATA GAP #164)* |
+| `crm` | Chăm sóc vòng đời khách hàng | `STORE` | Customer Lifecycle Management (Relationship Management) | `/`, dùng `CrmWorkspace` | `crm` | **Đang dùng được** (T6.3) |
+| `lead_marketing` | Trưởng Marketing | `STORE` | Creative Workspace | `/`, dùng `MarketingWorkspace` | `marketing` | **Đang dùng được** (T6.2) |
+| `ceo` | Giám đốc điều hành | `FLOWER_NETWORK` | Strategic Command Center (Performance Dashboard) | Strategic Command Center | — | Đang phát triển (#165) |
+| `manager` | Quản lý vận hành chuỗi | `FLOWER_NETWORK` | Operations Command Center | Operations Command Center | — | Đang phát triển (#165) |
+| `coordinator` | Điều phối đơn & mạng lưới | `FLOWER_NETWORK` / `STORE` | Control Tower & Exception Management (Real-time Operations) | `/` chuyển sang `/dieu-phoi` | `dieu_phoi` | **Đang dùng được** *(nợ #166)* |
+| `quality_control` | Kiểm soát chất lượng (QC) | `FLOWER_NETWORK` | Quality Control & Exception | Quality Exception Board | — | Đang phát triển (#165) |
+| `customer_service` | Chăm sóc khách hàng (CSKH) | `STORE` | Customer Context-first (Conversation-first) | Conversation Workspace | `customer_service` | **Đang dùng được** (T6.4) |
+| `partner_manager` | Quản lý đối tác xưởng ngoài | `FLOWER_NETWORK` | Relationship Management (Partner Growth, Partner Performance) | Partner Portfolio | — | Đang phát triển (#165) |
+| `marketing` | Chuyên viên Marketing | `FLOWER_NETWORK` / `STORE` | Creative Workspace | `/`, dùng `MarketingWorkspace` | `marketing` | **Đang dùng được** (T6.2) |
+| `product_manager` | Quản lý sản phẩm | `FLOWER_NETWORK` / `STORE` | Product-centric (Catalog-centric) | `/`, dùng `ProductManagerWorkspace` | `product_manager` | **Đang dùng được** (T6.1) |
+| `finance_accounting` | Tài chính – Kế toán | `FLOWER_NETWORK` | Transaction-first | Transaction Workspace | — | Đang phát triển (#165) |
+| `florist` | Thợ cắm | `STORE` | Production Queue | Production Queue | — | Đang phát triển (#169) |
 
 **Vai phân quyền chưa có khuôn:** `experience_user` dùng lưới thẻ Trải nghiệm như cũ. Vai riêng của tổ chức dùng `StoreManagerDashboard` như trước 26/09. Vai **Thợ cắm** (`florist`) đã được bổ sung vào danh mục vai trải nghiệm với trạng thái `IN_DEVELOPMENT` theo quyết định Q-TC (PO 26/09/2026, T6.13).
 
@@ -59,21 +62,25 @@
 
 Mỗi vai theo khuôn: **câu hỏi chính → P0 (thấy ngay) → P1 (thấy khi cần) → P2 (xem sâu) → hành động chính.**
 
-### 4.1 `platform_admin` — Control Center
-- **Câu hỏi chính:** Cấu hình nào đang lệch hoặc cần áp dụng?
-- **P0:** trạng thái hệ thống, cấu hình, phạm vi, xung đột, cảnh báo quản trị · **P1:** đối tượng cấu hình, phụ thuộc, tác động, nhật ký · **P2:** mức dùng, tối ưu.
-- **Hành động:** Cấu hình, Kiểm tra, Áp dụng. Mọi thay đổi cấp toàn nền tảng phải hiện rõ phạm vi: tất cả tổ chức, tổ chức được chọn, hay chỉ tổ chức mới.
-- **Hiện trạng:** Console `/van-hanh` (tổ chức · mức dùng · nhật ký · sức khoẻ). Quản trị trường (`N12`) đã có API nhưng chưa có UI (ĐP-3 mục 3.15).
+### 4.1 `platform_admin` — Platform Journey Home (ChoiceGrid 10 tác vụ)
+- **Câu hỏi chính:** Bạn muốn làm gì với FloraOS hôm nay?
+- **P0:** Lưới ChoiceGrid 10 tác vụ quản trị (Báo cáo hệ thống, Quản lý tổ chức, Quản lý người dùng, Gói dịch vụ, Năng lực, AI & Credit, Tích hợp, Sức khỏe hệ thống, Cài đặt, Kiểm toán bảo mật).
+- **Hành động:** Chọn tác vụ mục tiêu để mở workspace/route chức năng tương ứng; hỗ trợ toggle "Chế độ chuyên gia" để xem bảng số liệu tổng quan.
+- **Giao diện:** `PlatformJourneyHome` (`src/components/dashboard/platform-journey-home.tsx`) tại tuyến `/van-hanh`.
 
-### 4.2 `store_manager` — Business & Operations Command Center
-- **Câu hỏi chính:** Hôm nay cửa hàng cần tôi can thiệp ở đâu?
-- **P0 "Cần can thiệp":** job lỗi, kết quả chờ duyệt, đơn nháp chưa chốt. Mọi số đều đếm từ API thật; khối nào bị 403 thì ẩn.
-- **P1 "Tình hình":** job đang chạy, sản phẩm mới, mức dùng credit.
-- **P2:** lối tắt Nghiên cứu thị trường, Bộ máy phân tích ảnh.
-- **Hành động:** Xem xét, Ưu tiên, Hành động.
-- **Còn thiếu (nợ #163):** ngoại lệ Điều phối trong hàng can thiệp (chưa có endpoint danh sách), khối khối lượng việc của đội, thông báo.
+### 4.2 `store_admin` *(alias: `store_manager`)* — Store Journey Home (ChoiceGrid 12 tác vụ)
+- **Câu hỏi chính:** Bạn muốn làm gì cho cửa hàng hôm nay?
+- **P0:** Lưới ChoiceGrid 12 tác vụ (Xem tình hình, Phân tích ảnh, Báo giá, Tạo ảnh, Tạo video, Viết bài, Tạo catalog, Combo ra mắt sản phẩm, AI gợi ý từ ảnh, Xu hướng thị trường, Tạo đơn, Quản lý khách).
+- **Hành động:** Khởi động hành trình tác vụ (Action Contract 7 bước) hoặc mở Combo Workflow 6 bước; hỗ trợ nút "Chế độ chuyên gia" để vào thẳng trung tâm chỉ huy tăng trưởng.
+- **Giao diện:** `StoreJourneyHome` (`src/components/dashboard/store-journey-home.tsx`) bọc `StoreGrowthCenter` theo nguyên tắc WRAP.
 
-### 4.3 `sales` — Pipeline Workspace
+### 4.3 `flower_network_admin` — Network Journey Home (ChoiceGrid 8 tác vụ)
+- **Câu hỏi chính:** Bạn muốn làm gì cho hoạt động điện hoa hôm nay?
+- **P0:** Lưới ChoiceGrid 8 tác vụ (Báo cáo toàn hệ thống, Sản phẩm mạng lưới, Bán hàng, Điều phối, Quản lý đối tác xưởng ngoài, Khách hàng & CRM, Tiếp thị, Đối soát tài chính).
+- **Hành động:** Điều phối liên tỉnh, Giám sát đối tác xưởng ngoài, Đối soát hoa hồng; hỗ trợ toggle "Chế độ chuyên gia" để xem Command Center 4 tầng.
+- **Giao diện:** `NetworkJourneyHome` (`src/components/dashboard/network-journey-home.tsx`) bọc `FlowerNetworkCommandCenter`.
+
+### 4.4 `sales` — Pipeline Workspace
 - **Câu hỏi chính:** Khách nào cần tôi liên hệ hôm nay?
 - **P0:** khách sắp tới dịp kỷ niệm trong 14 ngày (`GET /crm/reminders/upcoming`, `Q7`) và đơn nháp cần chốt (`GET /orders?status=DRAFT`, `R1`).
 - **Hành động:** nút chính **Tạo đơn** (`R2`), nút phụ **Thêm khách** (`Q2`) và **Tra giá** (`L1`). Mỗi nút ẩn theo năng lực.

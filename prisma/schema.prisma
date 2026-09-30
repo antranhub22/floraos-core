@@ -28,7 +28,9 @@ datasource db {
 enum organization_type {
   EXPERIENCE
   SINGLE
+  STORE
   CHAIN
+  FLOWER_NETWORK
 }
 
 enum workspace_kind {
@@ -51,6 +53,8 @@ enum trial_status {
 enum capability_scope {
   ORGANIZATION
   BRANCH
+  STORE
+  FLOWER_NETWORK
 }
 
 // Nền AI — đợt AI-1 (đặc tả 10). Sổ đăng ký năng lực và mô hình là dữ liệu

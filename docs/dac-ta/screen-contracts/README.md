@@ -36,4 +36,6 @@ Thư mục này chứa các bản hợp đồng giao diện (Screen Contracts) c
 | Tệp | Tuyến | Vai chính | Thẻ thực hiện | Trạng thái QA |
 |---|---|---|---|:---:|
 | `_TEMPLATE.md` | — | — | T0.3 | Mẫu chuẩn |
-*(Các hợp đồng màn hình sẽ được bổ sung lần lượt theo tiến độ các thẻ UX-3 và UX-5)*
+| `_journey-home-store.md` | `/` | `store_admin` | J1–J7 | **PASS** |
+| `_journey-home-network.md` | `/` | `flower_network_admin` | J1–J7 | **PASS** |
+| `_journey-home-platform.md` | `/van-hanh` | `platform_admin` | J1–J7 | **PASS** |

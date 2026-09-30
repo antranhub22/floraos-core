@@ -14,7 +14,9 @@
 
 export type RoleUxKey =
   | "platform_admin"
-  | "store_manager"
+  | "store_admin"
+  | "store_manager" // backward-compatibility alias for store_admin
+  | "flower_network_admin"
   | "sales"
   | "crm"
   | "lead_marketing"
@@ -29,7 +31,7 @@ export type RoleUxKey =
   | "finance_accounting"
   | "florist"
 
-export type RoleUxGroup = "PLATFORM" | "ONE_STORE" | "CHAIN"
+export type RoleUxGroup = "PLATFORM" | "STORE" | "FLOWER_NETWORK" | "ONE_STORE" | "CHAIN"
 
 /**
  * `AVAILABLE` — đã có dữ liệu + luồng thật, đã có trang chủ theo vai.
@@ -39,8 +41,13 @@ export type RoleUxGroup = "PLATFORM" | "ONE_STORE" | "CHAIN"
 export type RoleUxStatus = "AVAILABLE" | "IN_DEVELOPMENT"
 
 export type RoleUxHomepage =
+  | "STORE_JOURNEY_HOME"
+  | "NETWORK_JOURNEY_HOME"
+  | "PLATFORM_JOURNEY_HOME"
   | "CONTROL_CENTER"
   | "STORE_COMMAND_CENTER"
+  | "STORE_GROWTH_CENTER"
+  | "FLOWER_NETWORK_COMMAND_CENTER"
   | "SALES_WORKSPACE"
   | "PRODUCT_WORKSPACE"
   | "CREATIVE_WORKSPACE"
@@ -84,10 +91,10 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
     supportingPhilosophies: ["Control Tower"],
     mission: "Quản trị cấu hình, chuẩn dữ liệu, phạm vi và hành vi toàn nền tảng.",
     primaryQuestion: "Cấu hình nào đang lệch hoặc cần áp dụng?",
-    homepageModel: "Control Center",
+    homepageModel: "Platform Journey Home",
     dominantActions: ["Cấu hình", "Kiểm tra", "Áp dụng"],
     status: "AVAILABLE",
-    homepage: "CONTROL_CENTER",
+    homepage: "PLATFORM_JOURNEY_HOME",
     // Không phải vai của tổ chức: cấp qua `platform_operators` (D-N6).
     systemRoleKeys: [],
     entryHref: "/van-hanh",
@@ -95,26 +102,43 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
     debtRefs: [],
   },
   {
-    key: "store_manager",
-    label: "Quản lý cửa hàng",
-    group: "ONE_STORE",
-    primaryPhilosophy: "Business & Operations Command Center",
+    key: "store_admin",
+    label: "Quản trị cửa hàng",
+    group: "STORE",
+    primaryPhilosophy: "Store Growth & Operations Command Center",
     supportingPhilosophies: ["Executive Dashboard"],
-    mission: "Vận hành cửa hàng hiệu quả, can thiệp đúng chỗ cần can thiệp.",
-    primaryQuestion: "Hôm nay cửa hàng cần tôi can thiệp ở đâu?",
-    homepageModel: "Business & Operations Command Center",
+    mission: "Vận hành và phát triển cửa hàng hoa hiệu quả, thúc đẩy kinh doanh toàn diện.",
+    primaryQuestion: "Hôm nay tôi cần làm gì để cửa hàng phát triển?",
+    homepageModel: "Store Journey Home",
     dominantActions: ["Xem xét", "Ưu tiên", "Hành động"],
     status: "AVAILABLE",
-    homepage: "STORE_COMMAND_CENTER",
+    homepage: "STORE_JOURNEY_HOME",
     systemRoleKeys: ["dieu_hanh"],
     entryHref: "/",
     navPriority: ["/duyet", "/don-hang", "/san-pham", "/khach-hang"],
     debtRefs: [163],
   },
   {
+    key: "flower_network_admin",
+    label: "Điện hoa Admin",
+    group: "FLOWER_NETWORK",
+    primaryPhilosophy: "Real-time Network Command & Operations Orchestration",
+    supportingPhilosophies: ["Control Tower", "Exception Management"],
+    mission: "Vận hành, giám sát, quản lý và điều hành toàn bộ hệ thống mạng lưới điện hoa.",
+    primaryQuestion: "Toàn bộ hệ thống điện hoa đang hoạt động thế nào và tôi cần can thiệp ở đâu?",
+    homepageModel: "Network Journey Home",
+    dominantActions: ["Điều phối", "Giám sát", "Quản lý", "Điều hành"],
+    status: "AVAILABLE",
+    homepage: "NETWORK_JOURNEY_HOME",
+    systemRoleKeys: [],
+    entryHref: "/dieu-phoi",
+    navPriority: ["/dieu-phoi", "/don-hang", "/san-pham", "/khach-hang"],
+    debtRefs: [],
+  },
+  {
     key: "sales",
     label: "Bán hàng",
-    group: "ONE_STORE",
+    group: "STORE",
     primaryPhilosophy: "Pipeline-first",
     supportingPhilosophies: [],
     mission: "Biến cơ hội đủ điều kiện thành doanh thu.",
@@ -131,7 +155,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "crm",
     label: "Chăm sóc vòng đời khách hàng (CRM)",
-    group: "ONE_STORE",
+    group: "STORE",
     primaryPhilosophy: "Customer Lifecycle Management",
     supportingPhilosophies: ["Relationship Management"],
     mission: "Thu hút, giữ chân, kích hoạt lại và phát triển khách hàng.",
@@ -148,7 +172,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "lead_marketing",
     label: "Trưởng Marketing",
-    group: "ONE_STORE",
+    group: "STORE",
     primaryPhilosophy: "Creative Workspace",
     supportingPhilosophies: [],
     mission: "Dẫn dắt nghiên cứu, sáng tạo, duyệt và phát hành nội dung.",
@@ -165,7 +189,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "ceo",
     label: "Giám đốc điều hành (CEO)",
-    group: "CHAIN",
+    group: "FLOWER_NETWORK",
     primaryPhilosophy: "Strategic Command Center",
     supportingPhilosophies: ["Performance Dashboard"],
     mission: "Nắm tín hiệu chiến lược, ra quyết định và theo dõi thực thi.",
@@ -182,7 +206,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "manager",
     label: "Quản lý vận hành",
-    group: "CHAIN",
+    group: "FLOWER_NETWORK",
     primaryPhilosophy: "Operations Command Center",
     supportingPhilosophies: [],
     mission: "Lập kế hoạch, phân bổ, giám sát và điều chỉnh vận hành.",
@@ -199,7 +223,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "coordinator",
     label: "Điều phối",
-    group: "CHAIN",
+    group: "FLOWER_NETWORK",
     primaryPhilosophy: "Control Tower & Exception Management",
     supportingPhilosophies: ["Real-time Operations"],
     mission: "Quan sát, phát hiện, ưu tiên và xử lý ngoại lệ vận hành theo thời gian thực.",
@@ -216,7 +240,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "quality_control",
     label: "Kiểm soát chất lượng (QC)",
-    group: "CHAIN",
+    group: "FLOWER_NETWORK",
     primaryPhilosophy: "Quality Control & Exception",
     supportingPhilosophies: [],
     mission: "Phát hiện, xác minh, khắc phục và phòng ngừa lỗi chất lượng.",
@@ -233,7 +257,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "customer_service",
     label: "Chăm sóc khách hàng (CSKH)",
-    group: "CHAIN",
+    group: "FLOWER_NETWORK",
     primaryPhilosophy: "Customer Context-first",
     supportingPhilosophies: ["Conversation-first"],
     mission: "Nắm ngữ cảnh khách, trò chuyện, giải quyết và theo dõi sau xử lý.",
@@ -250,7 +274,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "partner_manager",
     label: "Quản lý đối tác",
-    group: "CHAIN",
+    group: "FLOWER_NETWORK",
     primaryPhilosophy: "Relationship Management",
     supportingPhilosophies: ["Partner Growth", "Partner Performance"],
     mission: "Hiểu, đánh giá, phát triển và giám sát mạng lưới đối tác.",
@@ -267,7 +291,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "marketing",
     label: "Marketing",
-    group: "CHAIN",
+    group: "FLOWER_NETWORK",
     primaryPhilosophy: "Creative Workspace",
     supportingPhilosophies: [],
     mission: "Nghiên cứu, sáng tạo, duyệt, phát hành và học từ kết quả.",
@@ -286,7 +310,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "product_manager",
     label: "Quản lý sản phẩm",
-    group: "CHAIN",
+    group: "FLOWER_NETWORK",
     primaryPhilosophy: "Product-centric",
     supportingPhilosophies: ["Catalog-centric"],
     mission: "Định nghĩa, cấu trúc, xác thực, phát hành và cải thiện sản phẩm.",
@@ -303,7 +327,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "finance_accounting",
     label: "Tài chính – Kế toán",
-    group: "CHAIN",
+    group: "FLOWER_NETWORK",
     primaryPhilosophy: "Transaction-first",
     supportingPhilosophies: [],
     mission: "Xác thực, đối soát, tất toán giao dịch và lập báo cáo.",
@@ -320,7 +344,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
   {
     key: "florist",
     label: "Thợ cắm",
-    group: "ONE_STORE",
+    group: "STORE",
     primaryPhilosophy: "Production Queue",
     supportingPhilosophies: [],
     mission: "Cắm hoa đúng công thức, đúng tiến độ và chuẩn chất lượng theo từng phiếu cắm.",
@@ -338,12 +362,15 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
 
 export const ROLE_UX_GROUP_LABEL: Record<RoleUxGroup, string> = {
   PLATFORM: "Nền tảng",
-  ONE_STORE: "Một cửa hàng",
-  CHAIN: "Chuỗi / Mạng lưới giao hoa",
+  STORE: "Cửa hàng hoa",
+  FLOWER_NETWORK: "Mạng lưới điện hoa",
+  ONE_STORE: "Cửa hàng hoa",
+  CHAIN: "Mạng lưới điện hoa",
 }
 
 export function getRoleUx(key: RoleUxKey): RoleUxDefinition {
-  const found = ROLE_UX_CATALOG.find((r) => r.key === key)
+  const normalizedKey = key === "store_manager" ? "store_admin" : key
+  const found = ROLE_UX_CATALOG.find((r) => r.key === normalizedKey)
   if (!found) throw new Error(`Không có vai trải nghiệm "${key}"`)
   return found
 }
@@ -354,16 +381,24 @@ export function getRoleUx(key: RoleUxKey): RoleUxDefinition {
  *
  * Chỉ trả khuôn `AVAILABLE` — một khuôn đang phát triển không bao giờ được
  * dùng làm trang chủ dù có vai phân quyền trỏ tới.
- *
- * `organizationType` nhận vào để dành cho tách `dieu_hanh` thành ceo/manager ở
- * tổ chức CHAIN (nợ #163) — hiện CHAIN vẫn dùng khuôn store_manager.
  */
 export function resolveRoleUx(
   systemRoleKey: string | null | undefined,
   organizationType?: string | null
 ): RoleUxDefinition | null {
-  void organizationType
   if (!systemRoleKey) return null
+
+  // Khi là tổ chức Điện hoa / Mạng lưới (FLOWER_NETWORK hoặc CHAIN):
+  const isNetwork =
+    organizationType === "FLOWER_NETWORK" || organizationType === "CHAIN"
+  if (
+    isNetwork &&
+    (systemRoleKey === "dieu_hanh" || systemRoleKey === "flower_network_admin")
+  ) {
+    const fnAdmin = ROLE_UX_CATALOG.find((r) => r.key === "flower_network_admin")
+    if (fnAdmin && fnAdmin.status === "AVAILABLE") return fnAdmin
+  }
+
   const found = ROLE_UX_CATALOG.find((r) => r.systemRoleKeys.includes(systemRoleKey))
   if (!found || found.status !== "AVAILABLE") return null
   return found

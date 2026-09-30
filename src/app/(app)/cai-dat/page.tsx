@@ -17,6 +17,7 @@ import {
   Store,
   Sparkles,
   Save,
+  Users,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
@@ -113,7 +114,7 @@ export default function CaiDatTiemPage() {
         <h2 className="text-sm font-bold text-text uppercase tracking-wider mb-3">
           Liên Kết Thiết Lập Chuyên Sâu
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
           <Link
             href={"/ho-so" as Route}
             className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:shadow-xs transition-all flex flex-col justify-between group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -191,6 +192,26 @@ export default function CaiDatTiemPage() {
             </div>
             <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-primary pt-2 border-t border-border/60">
               <span>Chọn bộ máy</span> <ArrowRight size={13} />
+            </div>
+          </Link>
+
+          <Link
+            href={"/cai-dat/thanh-vien" as Route}
+            className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:shadow-xs transition-all flex flex-col justify-between group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <div className="space-y-2">
+              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <Users size={18} />
+              </div>
+              <div className="text-sm font-bold text-text group-hover:text-primary transition-colors">
+                Đội Ngũ & Phân Quyền
+              </div>
+              <p className="text-xs text-text-muted leading-relaxed">
+                Mời nhân viên mới, phân vai trò và gán chi nhánh chuỗi tiệm.
+              </p>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-primary pt-2 border-t border-border/60">
+              <span>Quản trị nhân sự</span> <ArrowRight size={13} />
             </div>
           </Link>
         </div>

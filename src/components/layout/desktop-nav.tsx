@@ -38,6 +38,7 @@ import {
   type NavEntry,
   type NavGroup,
 } from "./nav-model"
+import { DesktopNavItem } from "./desktop-nav-item"
 
 const ICONS: Record<string, ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
   Home,
@@ -67,6 +68,7 @@ const ICONS: Record<string, ComponentType<{ size?: number; className?: string; s
 }
 
 const STORAGE_KEY = "floraos_nav_groups_v1"
+const REPORTS_STORAGE_KEY = "floraos_nav_reports_open_v1"
 
 function loadStoredGroupStates(): Record<string, boolean> {
   if (typeof window === "undefined") return {}
@@ -94,8 +96,25 @@ export function DesktopNav() {
   const navView = useMemo(() => buildNav(can, roleUx), [can, roleUx])
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(loadStoredGroupStates)
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const [reportsOpen, setReportsOpen] = useState(true)
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Đồng bộ trạng thái đóng mở nhóm và mục Báo cáo từ localStorage
+  useEffect(() => {
+    const stored = loadStoredGroupStates()
+    if (Object.keys(stored).length > 0) {
+      setOpenGroups(stored)
+    }
+    try {
+      const storedReports = localStorage.getItem(REPORTS_STORAGE_KEY)
+      if (storedReports !== null) {
+        setReportsOpen(storedReports === "true")
+      }
+    } catch {
+      // bỏ qua
+    }
+  }, [])
 
   // Phím tắt '/' để tìm kiếm nhanh
   useEffect(() => {
@@ -115,6 +134,15 @@ export function DesktopNav() {
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
+
+  function toggleReports(nextOpen: boolean) {
+    setReportsOpen(nextOpen)
+    try {
+      localStorage.setItem(REPORTS_STORAGE_KEY, String(nextOpen))
+    } catch {
+      // bỏ qua
+    }
+  }
 
   function isGroupExpanded(group: NavGroup): boolean {
     if (group.key === "viec-chinh") return true
@@ -155,57 +183,9 @@ export function DesktopNav() {
     }
   }
 
-  function renderNavItem(item: NavEntry) {
-    const Icon = ICONS[item.iconKey] || Tag
-    if (item.status === "COMING_SOON") {
-      return (
-        <div
-          key={item.href}
-          aria-disabled="true"
-          title="Đang phát triển"
-          className="flex h-9 w-full cursor-not-allowed items-center justify-between rounded-lg px-2.5 text-meta font-medium text-text-muted opacity-60"
-        >
-          <div className="flex items-center gap-2.5 truncate">
-            <Icon size={16} strokeWidth={1.9} />
-            <span className="truncate">{item.label}</span>
-          </div>
-          <span className="shrink-0 rounded-full bg-surface-alt px-1.5 py-0.5 text-caption font-extrabold uppercase tracking-wide">
-            Sắp có
-          </span>
-        </div>
-      )
-    }
-
-    const active =
-      pathname === item.href ||
-      (item.href !== "/" && pathname.startsWith(`${item.href}/`))
-
-    return (
-      <button
-        key={item.href}
-        type="button"
-        onClick={() => {
-          if (searchQuery) setSearchQuery("")
-          router.push(item.href as never)
-        }}
-        className={cn(
-          "group flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-meta font-medium transition-colors text-left",
-          active
-            ? "bg-surface-alt font-bold text-primary"
-            : "text-text-muted hover:bg-surface-alt hover:text-text"
-        )}
-        aria-current={active ? "page" : undefined}
-      >
-        <div className="flex items-center gap-2.5 truncate">
-          <Icon
-            size={16}
-            strokeWidth={active ? 2.2 : 1.9}
-            className={active ? "text-primary" : "text-text-muted group-hover:text-text"}
-          />
-          <span className="truncate">{item.label}</span>
-        </div>
-      </button>
-    )
+  function navigateTo(href: string) {
+    if (searchQuery) setSearchQuery("")
+    router.push(href as never)
   }
 
   return (
@@ -268,7 +248,15 @@ export function DesktopNav() {
                 Không tìm thấy chức năng phù hợp
               </div>
             ) : (
-              searchResults.map(renderNavItem)
+              searchResults.map((entry) => (
+                <DesktopNavItem
+                  key={entry.href}
+                  item={entry}
+                  active={pathname === entry.href || (entry.href !== "/" && pathname.startsWith(`${entry.href}/`))}
+                  iconComponent={ICONS[entry.iconKey]}
+                  onClick={() => navigateTo(entry.href)}
+                />
+              ))
             )}
           </div>
         ) : (
@@ -276,30 +264,106 @@ export function DesktopNav() {
             const isViecChinh = group.key === "viec-chinh"
             const expanded = isGroupExpanded(group)
 
-            return (
-              <div key={group.key} className="space-y-1">
-                {isViecChinh ? (
+            if (isViecChinh) {
+              const homeEntry = group.entries.find((e) => e.href === "/")
+              const reportEntries = group.entries.filter((e) => e.href !== "/")
+              const isReportActive = reportEntries.some(
+                (e) => pathname === e.href || pathname.startsWith(`${e.href}/`)
+              ) || pathname === "/so-lieu"
+
+              return (
+                <div key={group.key} className="space-y-1">
                   <div className="px-2 pb-1 text-caption font-bold uppercase tracking-wider text-text-muted">
                     {group.label}
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    aria-expanded={expanded}
-                    onClick={() => toggleGroup(group.key, expanded)}
-                    className="flex w-full items-center justify-between px-2 pb-1 text-caption font-bold uppercase tracking-wider text-text-muted hover:text-text"
-                  >
-                    <span>{group.label}</span>
-                    <ChevronDown
-                      size={12}
-                      className={cn("transition-transform duration-150", expanded ? "rotate-0" : "-rotate-90")}
+
+                  {/* Mục Trang chủ */}
+                  {homeEntry && (
+                    <DesktopNavItem
+                      item={homeEntry}
+                      active={pathname === "/"}
+                      iconComponent={ICONS[homeEntry.iconKey]}
+                      onClick={() => navigateTo("/")}
                     />
-                  </button>
-                )}
+                  )}
+
+                  {/* Mục Báo cáo gom các nội dung dưới Trang chủ (Hàng chờ duyệt, Đơn hàng, Sản phẩm & Giá, Khách hàng) */}
+                  {reportEntries.length > 0 && (
+                    <div className="pt-0.5 space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => toggleReports(!reportsOpen)}
+                        aria-expanded={reportsOpen}
+                        className={cn(
+                          "group flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-meta font-medium transition-colors text-left",
+                          isReportActive && !reportsOpen
+                            ? "bg-surface-alt font-bold text-primary"
+                            : "text-text-muted hover:bg-surface-alt hover:text-text"
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <BarChart3
+                            size={16}
+                            strokeWidth={isReportActive ? 2.2 : 1.9}
+                            className={isReportActive ? "text-primary" : "text-text-muted group-hover:text-text"}
+                          />
+                          <span className="truncate">Báo cáo</span>
+                        </div>
+                        <ChevronDown
+                          size={12}
+                          className={cn(
+                            "transition-transform duration-150 text-text-muted group-hover:text-text",
+                            reportsOpen ? "rotate-0" : "-rotate-90"
+                          )}
+                        />
+                      </button>
+
+                      {reportsOpen && (
+                        <div className="ml-3.5 space-y-0.5 border-l border-border pl-2 pt-0.5">
+                          {reportEntries.map((item) => (
+                            <DesktopNavItem
+                              key={item.href}
+                              item={item}
+                              isSubItem
+                              active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                              iconComponent={ICONS[item.iconKey]}
+                              onClick={() => navigateTo(item.href)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
+            return (
+              <div key={group.key} className="space-y-1">
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  onClick={() => toggleGroup(group.key, expanded)}
+                  className="flex w-full items-center justify-between px-2 pb-1 text-caption font-bold uppercase tracking-wider text-text-muted hover:text-text"
+                >
+                  <span>{group.label}</span>
+                  <ChevronDown
+                    size={12}
+                    className={cn("transition-transform duration-150", expanded ? "rotate-0" : "-rotate-90")}
+                  />
+                </button>
 
                 {expanded && (
                   <div className="space-y-0.5">
-                    {group.entries.map(renderNavItem)}
+                    {group.entries.map((entry) => (
+                      <DesktopNavItem
+                        key={entry.href}
+                        item={entry}
+                        active={pathname === entry.href || (entry.href !== "/" && pathname.startsWith(`${entry.href}/`))}
+                        iconComponent={ICONS[entry.iconKey]}
+                        onClick={() => navigateTo(entry.href)}
+                      />
+                    ))}
                   </div>
                 )}
               </div>

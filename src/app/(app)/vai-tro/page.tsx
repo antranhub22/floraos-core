@@ -19,7 +19,7 @@ import {
   type RoleUxGroup,
 } from "@/modules/organization/domain/role-ux-catalog"
 
-const NHOM: RoleUxGroup[] = ["PLATFORM", "ONE_STORE", "CHAIN"]
+const NHOM: RoleUxGroup[] = ["PLATFORM", "STORE", "FLOWER_NETWORK"]
 
 function DongVai({ role, laVaiCuaToi }: { role: RoleUxDefinition; laVaiCuaToi: boolean }) {
   const dungDuoc = role.status === "AVAILABLE"

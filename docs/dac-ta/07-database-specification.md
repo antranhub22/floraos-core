@@ -37,10 +37,10 @@ Một bảng tự nhận ngoại lệ mà không nêu được lý do ở trên 
 > **Đối chiếu 18/09 với `prisma/schema.prisma`.** Bốn enum từng lệch giá trị (`order_status`, `production_status`, `delivery_status`, `asset_kind`) đã sửa theo lược đồ; mười một enum có trong lược đồ mà thiếu ở đây đã bổ sung; hai enum chỉ tồn tại trên giấy (`consent_state`, `catalog_link_state`) đã bỏ.
 
 ```prisma
-enum organization_type { EXPERIENCE  SINGLE  CHAIN }
+enum organization_type { EXPERIENCE  SINGLE  STORE  CHAIN  FLOWER_NETWORK }
 enum workspace_kind    { EXPERIENCE  PRODUCTION }
 enum membership_status { INVITED  ACTIVE  SUSPENDED }
-enum capability_scope  { ORGANIZATION  BRANCH }
+enum capability_scope  { ORGANIZATION  BRANCH  STORE  FLOWER_NETWORK }
 enum job_status        { PENDING  PROCESSING  COMPLETED  FAILED  CANCELLED }
 enum approval_state    { PENDING  APPROVED  REJECTED }
 enum product_status    { DRAFT  ACTIVE  ARCHIVED }

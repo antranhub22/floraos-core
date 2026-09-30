@@ -8,28 +8,29 @@ import {
   resolveRoleUx,
 } from "./role-ux-catalog"
 
-describe("danh mục 15 vai trải nghiệm (03b-role-ux)", () => {
-  it("đủ 15 vai, khoá không trùng", () => {
-    expect(ROLE_UX_CATALOG).toHaveLength(15)
-    expect(new Set(ROLE_UX_CATALOG.map((r) => r.key)).size).toBe(15)
+describe("danh mục 16 vai trải nghiệm (Role & Capability Architecture)", () => {
+  it("đủ 16 vai, khoá không trùng", () => {
+    expect(ROLE_UX_CATALOG).toHaveLength(16)
+    expect(new Set(ROLE_UX_CATALOG.map((r) => r.key)).size).toBe(16)
   })
 
-  it("đúng chín vai đang dùng được", () => {
+  it("đúng 10 vai đang dùng được (gồm 3 Top-Level Roles)", () => {
     const available = ROLE_UX_CATALOG.filter((r) => r.status === "AVAILABLE").map((r) => r.key)
     expect(available.sort()).toEqual([
       "coordinator",
       "crm",
       "customer_service",
+      "flower_network_admin",
       "lead_marketing",
       "marketing",
       "platform_admin",
       "product_manager",
       "sales",
-      "store_manager",
+      "store_admin",
     ])
   })
 
-  it("vai marketing (CHAIN) AVAILABLE nhưng chưa gắn vai phân quyền (nợ #165)", () => {
+  it("vai marketing (FLOWER_NETWORK) AVAILABLE nhưng chưa gắn vai phân quyền (nợ #165)", () => {
     const mkt = ROLE_UX_CATALOG.find((r) => r.key === "marketing")
     expect(mkt?.status).toBe("AVAILABLE")
     expect(mkt?.homepage).toBe("CREATIVE_WORKSPACE")
@@ -61,11 +62,15 @@ describe("danh mục 15 vai trải nghiệm (03b-role-ux)", () => {
     expect(getRoleUx("platform_admin").systemRoleKeys).toHaveLength(0)
     expect(getRoleUx("platform_admin").entryHref).toBe("/van-hanh")
   })
+
+  it("hỗ trợ alias store_manager trỏ về store_admin", () => {
+    expect(getRoleUx("store_manager").key).toBe("store_admin")
+  })
 })
 
 describe("resolveRoleUx", () => {
   it("ánh xạ bảy vai hệ thống sang khuôn tương ứng", () => {
-    expect(resolveRoleUx("dieu_hanh")?.key).toBe("store_manager")
+    expect(resolveRoleUx("dieu_hanh")?.key).toBe("store_admin")
     expect(resolveRoleUx("sale")?.key).toBe("sales")
     expect(resolveRoleUx("dieu_phoi")?.key).toBe("coordinator")
     expect(resolveRoleUx("product_manager")?.key).toBe("product_manager")
@@ -74,8 +79,14 @@ describe("resolveRoleUx", () => {
     expect(resolveRoleUx("customer_service")?.key).toBe("customer_service")
   })
 
-  it("tổ chức CHAIN tạm thời vẫn dùng khuôn store_manager cho dieu_hanh (nợ #163)", () => {
-    expect(resolveRoleUx("dieu_hanh", "CHAIN")?.key).toBe("store_manager")
+  it("tổ chức FLOWER_NETWORK hoặc CHAIN giải dieu_hanh sang flower_network_admin", () => {
+    expect(resolveRoleUx("dieu_hanh", "FLOWER_NETWORK")?.key).toBe("flower_network_admin")
+    expect(resolveRoleUx("dieu_hanh", "CHAIN")?.key).toBe("flower_network_admin")
+  })
+
+  it("tổ chức STORE hoặc SINGLE giải dieu_hanh sang store_admin", () => {
+    expect(resolveRoleUx("dieu_hanh", "STORE")?.key).toBe("store_admin")
+    expect(resolveRoleUx("dieu_hanh", "SINGLE")?.key).toBe("store_admin")
   })
 
   it("experience_user, vai riêng của tổ chức, rỗng → null (giữ hành vi cũ)", () => {

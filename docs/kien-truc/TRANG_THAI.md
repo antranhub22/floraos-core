@@ -1,10 +1,46 @@
 # TRẠNG THÁI — đọc tệp này đầu tiên
 
-**Cập nhật:** 2026-09-29 (UX-7 Nghiệm thu liên tục & Tự động hoá: **T7.1, T7.2, T7.3, T7.4 HOÀN TẤT 100%** — Bộ test E2E Playwright `npm run test:e2e:ux` 12/12 ca xanh thật; axe-core WCAG 2.2 AA 0 critical/serious; Visual Regression mobile 390 & desktop 1280 ổn định 0 diff; Job CI `e2e-ux` sẵn sàng; UX Lint 0 vi phạm; `npm test` **1339/1339** xanh, `tsc` sạch).
+**Cập nhật:** 2026-09-30 (Nâng cấp Kiến trúc Journey-First UX Architecture: **HOÀN TẤT 100% ĐẠT CHUẨN PRODUCTION READY** — Triết lý Journey-First "Bạn muốn làm gì?", Progressive Disclosure, Lõi Journey Engine domain & state machine, 3 Journey Home cho `store_admin`, `flower_network_admin`, `platform_admin`, Action Contract 7 bước, NextActions, Combo Workflow; bảo toàn 100% 7 Dashboard hiện có theo nguyên tắc "WRAP, không REPLACE"; `npm test` **1.367/1.367** xanh, `test:tenant` **283/283** xanh, `tsc` sạch 100%, `lint:ux` **0 vi phạm**, `check:docs` khớp).
 
 ---
 
 ## 1. Đang ở đâu
+
+**30/09 (Trưa) — Nâng cấp Kiến trúc Journey-First UX Architecture: Hoàn tất 100% Đạt Chuẩn Production Ready.**
+- **Lập & Phê duyệt Kế hoạch Thực thi**: PO phê duyệt `PLAN-2026-JOURNEY-UX-01` (`docs/kien-truc/KE_HOACH_THUC_THI_JOURNEY_FIRST_UX_ARCHITECTURE.md`), đăng ký mã tài liệu `DOC-05-KE-HOACH-JOURNEY-FIRST-UX` vào `docs/00-DOCUMENTATION-REGISTRY.yaml`.
+- **Lõi Domain Journey Engine thuần**:
+  - `src/modules/journey/domain/journey-model.ts`: Định nghĩa mô hình dữ liệu `JourneyDefinition`, `JourneyStepDefinition`, `JourneyStepStatus`, `JourneyInputType`.
+  - `src/modules/journey/domain/journey-state.ts`: Máy trạng thái thuần túy (Advance, Retry, Skip, Complete, Reset).
+  - `src/modules/journey/domain/journey-catalog.ts`: Danh mục tĩnh cho 3 Role cấp cao (12 tác vụ Store, 10 tác vụ Platform, 8 tác vụ Network), 100% tiếng Việt tự nhiên, tuân thủ nghiêm ngặt UX Lint R8 (0 mã kỹ thuật).
+  - `src/modules/journey/domain/next-actions-registry.ts`: Sổ đăng ký việc tiếp theo cho các kết quả nghiệp vụ.
+  - `src/modules/journey/domain/workflow-composer.ts` & `ai-journey-suggest.ts`: Ghép combo tác vụ và AI đề xuất chặng theo đúng quy tắc tham vấn người dùng trước khi chạy.
+  - Đầy đủ cấu trúc 4 tầng Clean Architecture: `domain/`, `use-cases/`, `infra/`, `adapters/`.
+- **Bộ UI Components Journey Kit (`src/components/journey/`)**:
+  - `ActionCard`, `ChoiceGrid`, `JourneyHeader`, `JourneyProgress`, `JourneyShell`, `NextActions`, `WorkflowPreview`, `ActionContractWrapper`. Tuân thủ 100% design tokens `globals.css` (R1), cỡ chữ chuẩn hóa (R2), chuẩn WCAG 2.2 AA (R5).
+- **3 Trang chủ Journey Home & Điều hướng**:
+  - `StoreJourneyHome` (`src/components/dashboard/store-journey-home.tsx`): Lưới 12 tác vụ cho chủ tiệm hoa, tích hợp bọc `StoreGrowthCenter` trong Journey flow, hỗ trợ chuyển đổi linh hoạt sang "Chế độ chuyên gia".
+  - `NetworkJourneyHome` (`src/components/dashboard/network-journey-home.tsx`): Lưới 8 tác vụ cho điện hoa, bọc `FlowerNetworkCommandCenter`.
+  - `PlatformJourneyHome` (`src/components/dashboard/platform-journey-home.tsx`): Lưới 10 tác vụ định hướng vận hành nền tảng `/van-hanh/*`.
+  - Cập nhật `RoleUxHomepage` trong `role-ux-catalog.ts` và routing tại `src/app/(app)/page.tsx`.
+- **Hệ thống Screen Contracts**: Tạo mới `_journey-home-store.md`, `_journey-home-network.md`, `_journey-home-platform.md` vượt qua 14/14 tiêu chí QA Matrix 03a §34.
+- **Kết quả Kiểm thử Toàn diện**:
+  - `npm test` **167/167 files passed (1.367/1.367 tests)**.
+  - `npm run test:tenant` **36/36 files passed (283/283 tests)**.
+  - `npx tsc --noEmit` **sạch 100%**.
+  - `npm run lint:ux -- --check` **0 vi phạm**.
+  - `npm run check:docs` **khớp mã 100%**.
+
+**30/09 (Sáng) — Nâng cấp Kiến trúc Năng lực & Vai trò (Role & Capability Architecture Upgrade): Hoàn tất 100% Đạt Chuẩn Production & Commercial Ready.**
+- **Chuẩn hóa 3 Top-Level Scopes**: Mở rộng `organization_type` và `capability_scope` trong `prisma/schema.prisma` từ `PLATFORM` | `ONE_STORE` | `CHAIN` sang `PLATFORM` | `STORE` | `FLOWER_NETWORK`. Đồng bộ schema qua `prisma generate` và `prisma db push`.
+- **Lớp tương thích ngược không gián đoạn (Compatibility Bridge)**: Xây dựng `src/modules/organization/domain/role-compatibility.ts` với test unit 100% xanh; ánh xạ trong suốt `store_manager` ↔ `store_admin`, `ONE_STORE` ↔ `STORE`, `CHAIN` ↔ `FLOWER_NETWORK`. Bảo toàn toàn vẹn dữ liệu và phiên người dùng hiện hữu.
+- **Tách biệt Ủy quyền & Quyền thương mại (Entitlement Gateway)**: Xây dựng `src/core/entitlements/entitlement-service.ts` và tích hợp mã lỗi `ENTITLEMENT_REQUIRED` (HTTP 403, `requiresUpgrade: true`). Tách bạch năng lực kỹ thuật với hạn ngạch gói dịch vụ trả phí.
+- **2 Dashboard Trọng tâm Mới**:
+  - `StoreGrowthCenter` (`src/components/dashboard/store-growth-center.tsx`, 276 dòng < 350): Trung tâm chỉ huy tăng trưởng cho chủ tiệm hoa, tích hợp 4 ô KPI doanh thu/đơn hàng, bảng việc cần xử lý P0, lối tắt nghiệp vụ.
+  - `FlowerNetworkCommandCenter` (`src/components/dashboard/flower-network-command-center.tsx`, 249 dòng < 350): Trung tâm điều phối mạng lưới điện hoa 4 tầng, kết nối xưởng vệ tinh, giám sát SLA và ngoại lệ M11.
+- **Hệ thống Tài liệu SSOT & Kiểm thử Toàn diện**:
+  - Lập Kế hoạch thực thi SSOT tại `docs/kien-truc/KE_HOACH_THUC_THI_NANG_CAP_ROLE_CAPABILITY_ARCHITECTURE.md`, đăng ký vào `docs/00-DOCUMENTATION-REGISTRY.yaml`.
+  - Đồng bộ `docs/dac-ta/07-database-specification.md` và `docs/dac-ta/03b-role-ux.md`.
+  - Kết quả kiểm thử: `npm test` **163/163 test files passed (1.348/1.348 tests)** · `npm run test:tenant` **36/36 passed (283/283 tests)** · `npx tsc --noEmit` **sạch 100%** · `npm run check:docs` **khớp mã 100%** · `npm run lint:ux` **0 vi phạm**.
 
 **29/09 — Nâng cấp UI/UX: Hoàn thành bộ kiểm thử đầu cuối E2E, Quét trợ năng WCAG 2.2 AA và Visual Regression (Giai đoạn UX-7: T7.1, T7.2, T7.3, T7.4).**
 - **E2E theo vai & trạng thái tuyến (T7.2)**: Xây dựng `tests/e2e/ux/` gồm 7 ca kiểm thử chính xác luồng phân phối trang chủ (`dieu_hanh` → Command Center, `sale` → Pipeline Workspace, `dieu_phoi` → `/dieu-phoi`), trang lỗi 404 toàn cục `src/app/not-found.tsx`, mốc Skip Link trợ năng, và danh mục vai `/vai-tro` kiểm soát trạng thái vô hiệu `aria-disabled="true"` của các vai đang phát triển.

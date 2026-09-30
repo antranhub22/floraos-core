@@ -6,7 +6,7 @@
 // server (`update-field-config.ts`) — UI chỉ hiện lỗi trả về, không tự ý
 // khoá thêm ở đây để tránh hai nguồn sự thật.
 
-import { useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -118,8 +118,8 @@ export function TruongLoiTab() {
           </thead>
           <tbody className="divide-y divide-border">
             {fields.map((f) => (
-              <>
-                <tr key={f.key} className="hover:bg-surface-alt">
+              <Fragment key={f.key}>
+                <tr className="hover:bg-surface-alt">
                   <td className="py-2 pl-3 pr-3 font-mono text-meta">{f.key}</td>
                   <td className="py-2 pr-3 font-medium">
                     {f.label}
@@ -282,7 +282,7 @@ export function TruongLoiTab() {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
             {fields.length === 0 && (
               <tr>

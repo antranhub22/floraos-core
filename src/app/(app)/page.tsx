@@ -24,7 +24,11 @@ import { ProductManagerWorkspace } from "@/components/dashboard/product-manager-
 import { MarketingWorkspace } from "@/components/dashboard/marketing-workspace"
 import { CrmWorkspace } from "@/components/dashboard/crm-workspace"
 import { CustomerServiceWorkspace } from "@/components/dashboard/customer-service-workspace"
-import { StoreManagerDashboard } from "@/components/dashboard/store-manager-dashboard"
+import { StoreGrowthCenter } from "@/components/dashboard/store-growth-center"
+import { FlowerNetworkCommandCenter } from "@/components/dashboard/flower-network-command-center"
+import { StoreJourneyHome } from "@/components/dashboard/store-journey-home"
+import { NetworkJourneyHome } from "@/components/dashboard/network-journey-home"
+import { PlatformJourneyHome } from "@/components/dashboard/platform-journey-home"
 import { resolveRoleUx } from "@/modules/organization/domain/role-ux-catalog"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
 
@@ -40,12 +44,21 @@ export default async function DashboardPage() {
   // sang /dang-nhap trước khi tới đây — nhánh này chỉ để tsc yên tâm về kiểu.
   if (!session) return null
 
-  if (session.workspaceKind === "EXPERIENCE") return <ExperienceGrid />
-
   const roleUx = resolveRoleUx(session.roleKey, session.organizationType)
+
   switch (roleUx?.homepage) {
+    case "STORE_JOURNEY_HOME":
+      return <StoreJourneyHome />
+    case "NETWORK_JOURNEY_HOME":
+      return <NetworkJourneyHome />
+    case "PLATFORM_JOURNEY_HOME":
+      return <PlatformJourneyHome />
     case "CONTROL_TOWER":
       return redirect("/dieu-phoi" as never)
+    case "CONTROL_CENTER":
+      return redirect("/van-hanh" as never)
+    case "FLOWER_NETWORK_COMMAND_CENTER":
+      return <FlowerNetworkCommandCenter />
     case "SALES_WORKSPACE":
       return <SalesWorkspace />
     case "PRODUCT_WORKSPACE":
@@ -56,7 +69,9 @@ export default async function DashboardPage() {
       return <CrmWorkspace />
     case "CUSTOMER_SERVICE_WORKSPACE":
       return <CustomerServiceWorkspace />
+    case "STORE_GROWTH_CENTER":
+    case "STORE_COMMAND_CENTER":
     default:
-      return <StoreManagerDashboard />
+      return <StoreJourneyHome />
   }
 }

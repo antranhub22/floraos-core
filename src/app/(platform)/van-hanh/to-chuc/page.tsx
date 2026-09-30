@@ -66,7 +66,14 @@ export default function DanhSachToChucPage() {
                 </Link>
                 <span className="ml-1 text-text-muted">({org.slug})</span>
               </td>
-              <td className="py-2 pr-3">{org.type}</td>
+              <td className="py-2 pr-3">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-caption font-medium bg-muted text-text">
+                  {org.type === "STORE" || org.type === "SINGLE" ? "Cửa hàng" :
+                   org.type === "FLOWER_NETWORK" || org.type === "CHAIN" ? "Mạng lưới điện hoa" :
+                   org.type === "PLATFORM" ? "Nền tảng" :
+                   org.type === "EXPERIENCE" ? "Trải nghiệm" : org.type}
+                </span>
+              </td>
               <td className="py-2 pr-3">{org.memberCount}</td>
               <td className="py-2 pr-3">{org.creditBalance}</td>
               <td className="py-2 pr-3">{new Date(org.createdAt).toLocaleDateString("vi-VN")}</td>

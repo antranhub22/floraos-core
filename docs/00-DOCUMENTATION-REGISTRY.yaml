@@ -1,8 +1,8 @@
 version: "1.0"
 governance:
   constitution: "docs/00-DOCUMENTATION-CONSTITUTION.md"
-  updated_at: "2026-09-26T18:50:00+07:00"
-  total_documents: 63
+  updated_at: "2026-09-30T08:56:00+07:00"
+  total_documents: 65
 
 documents:
   # =========================================================================
@@ -604,6 +604,34 @@ documents:
     ssot: false
     owner: "Product Owner / Engineering Lead"
     dependencies: ["docs/dac-ta/FLORAOS_COORDINATOR_FIELD_SPEC.md", "docs/dac-ta/FLORAOS_COORDINATOR_MASTER_INDEX_CONTRACT.md", "docs/kien-truc/KE_HOACH_CONSOLE_VAN_HANH.md"]
+    supersedes: []
+
+  - id: "DOC-05-KE-HOACH-ROLE-CAPABILITY"
+    path: "docs/kien-truc/KE_HOACH_THUC_THI_NANG_CAP_ROLE_CAPABILITY_ARCHITECTURE.md"
+    title: "Kế hoạch Thực thi — Nâng cấp Kiến trúc Role UX, Scope & Capability (Chuẩn Commercial & Production Ready)"
+    domain: "Role UX & RBAC"
+    layer: "Level 5"
+    purpose: "Lộ trình 6 giai đoạn thi công chuyển đổi từ mô hình ONE_STORE/CHAIN sang STORE/FLOWER_NETWORK: 3 Top-Level Roles, 4 tầng năng lực, bảo tồn 12 vai chuyên môn, an toàn CSDL, 2 dashboard trọng tâm Store Growth Center & Flower Network Command Center"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Product Owner / Chief Architect"
+    dependencies: ["docs/FLORAOS_CORE_ROLE_CAPABILITY_ARCHITECTURE_UPGRADE.md", "docs/dac-ta/03b-role-ux.md", "docs/dac-ta/02-function-catalog.md"]
+    supersedes: []
+
+  - id: "DOC-05-KE-HOACH-JOURNEY-FIRST-UX"
+    path: "docs/kien-truc/KE_HOACH_THUC_THI_JOURNEY_FIRST_UX_ARCHITECTURE.md"
+    title: "Kế hoạch Thực thi — Nâng cấp Kiến trúc Journey-First UX Architecture"
+    domain: "Role UX & Journey Engine"
+    layer: "Level 5"
+    purpose: "Lộ trình 7 giai đoạn triển khai triết lý Journey-First UX: trang chủ 'Bạn muốn làm gì?', Progressive Disclosure, Journey Engine domain & state machine, ChoiceGrid 3 role, Action Contract 7 bước, Combo Workflow, bảo toàn 7 dashboard hiện có theo nguyên tắc WRAP"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Product Owner / Chief Architect"
+    dependencies: ["docs/FLORAOS_CORE_JOURNEY_FIRST_UX_ARCHITECTURE_FINAL.md", "docs/dac-ta/03b-role-ux.md", "docs/kien-truc/KE_HOACH_THUC_THI_NANG_CAP_ROLE_CAPABILITY_ARCHITECTURE.md"]
     supersedes: []
 
   - id: "DOC-05-CHECKLIST-CREATIVE-STUDIO"

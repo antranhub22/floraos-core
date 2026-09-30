@@ -61,7 +61,15 @@ export default function ChiTietToChucPage() {
         <span className="rounded bg-muted px-2 py-0.5 text-xs text-text-muted">Phạm vi: Tổ chức cụ thể</span>
       </div>
       <Dong nhan="Slug" giaTri={org.slug} />
-      <Dong nhan="Loại tổ chức" giaTri={org.type} />
+      <Dong
+        nhan="Loại tổ chức"
+        giaTri={
+          org.type === "STORE" || org.type === "SINGLE" ? "Cửa hàng hoa (STORE)" :
+          org.type === "FLOWER_NETWORK" || org.type === "CHAIN" ? "Mạng lưới điện hoa (FLOWER_NETWORK)" :
+          org.type === "PLATFORM" ? "Nền tảng (PLATFORM)" :
+          org.type === "EXPERIENCE" ? "Trải nghiệm (EXPERIENCE)" : org.type
+        }
+      />
       <Dong nhan="Số dư credit" giaTri={org.creditBalance} />
       <Dong nhan="Thành viên" giaTri={org.memberCount} />
       <Dong nhan="Chi nhánh" giaTri={org.branchCount} />
