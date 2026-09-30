@@ -30,6 +30,7 @@ import {
   RotateCcw,
   MessageSquareText,
   ShoppingBag,
+  BookOpen,
 } from "lucide-react"
 import { toBlob, toPng, toJpeg } from "html-to-image"
 import jsPDF from "jspdf"
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/tab-header"
 import { SalesPitchCardA6, ZaloScriptBox } from "@/components/templates/product-analysis"
 import { CreateOrderModal, type CreateOrderInitialData } from "@/components/orders/create-order-modal"
+import { SalesScriptLibraryModal } from "./sales-script-library-modal"
 import {
   type SalesPitchData,
   type SalesPitchOverrides,
@@ -122,6 +124,9 @@ export function SalesPitchCard({
   // State & Data cho tác vụ BH-15: Chuyển Báo giá / Thẻ chào thành Đơn hàng 1-chạm
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
   const [orderCreatedSuccess, setOrderCreatedSuccess] = useState(false)
+
+  // State cho Thư viện kịch bản tư vấn chốt sale (KB-01..14)
+  const [isScriptLibraryOpen, setIsScriptLibraryOpen] = useState(false)
 
   const orderInitialData: CreateOrderInitialData = {
     items: [
@@ -534,6 +539,13 @@ export function SalesPitchCard({
 
     if (activeTab === "script") {
       const primary: TabAction[] = [
+        {
+          id: "open-script-library",
+          label: "Thư viện 14 kịch bản",
+          icon: BookOpen,
+          variant: "outline",
+          onClick: () => setIsScriptLibraryOpen(true),
+        },
         {
           id: "create-order-script",
           label: "Chốt đơn mẫu này",
@@ -1248,15 +1260,27 @@ export function SalesPitchCard({
               ← Xem Thẻ chào khách A6
             </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsOrderModalOpen(true)}
-              className="text-xs font-semibold gap-1.5 text-primary border-primary/40 hover:bg-primary/5"
-            >
-              <ShoppingBag size={14} />
-              Chốt đơn hàng ngay
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsScriptLibraryOpen(true)}
+                className="text-xs font-semibold gap-1.5 text-text hover:text-primary"
+              >
+                <BookOpen size={14} />
+                Thư viện 14 kịch bản chốt sale
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsOrderModalOpen(true)}
+                className="text-xs font-semibold gap-1.5 text-primary border-primary/40 hover:bg-primary/5"
+              >
+                <ShoppingBag size={14} />
+                Chốt đơn hàng ngay
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -1271,6 +1295,21 @@ export function SalesPitchCard({
           setTimeout(() => setOrderCreatedSuccess(false), 5000)
         }}
         initialData={orderInitialData}
+      />
+
+      {/* Modal Thư viện 14 kịch bản tư vấn thực chiến (KB-01..14) */}
+      <SalesScriptLibraryModal
+        isOpen={isScriptLibraryOpen}
+        onClose={() => setIsScriptLibraryOpen(false)}
+        variables={{
+          productName,
+          priceVnd: typeof price === "number" ? price : (Number(price) || 0),
+          occasion: occasions[0] || "sinh nhật",
+          style,
+          freeGifts: freeGifts.join(", "),
+          shopName,
+          hotline: shopHotline,
+        }}
       />
     </div>
   )
