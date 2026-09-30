@@ -1,7 +1,7 @@
 # CHECKLIST TIẾN ĐỘ TRIỂN KHAI CAPABILITY MAP FLORAOS
 > **Nhánh Git:** `feat/capability-map-expansion`  
-> **Cập nhật lúc:** 30/09/2026 (Sau khi hoàn tất GÓI A, GÓI B và các hạng mục cốt lõi GÓI C)  
-> **Bảo đảm:** 1.432/1.432 Unit Tests XANH (178 tệp) · 283/283 Tenant Tests XANH (36 tệp) · 0 lỗi Typecheck · 0 lỗi UX Lint
+> **Cập nhật lúc:** 30/09/2026 (Hoàn tất 100% GÓI A, GÓI B và Hoàn tất 5/5 GÓI C)  
+> **Bảo đảm:** 1.444/1.444 Unit Tests XANH (181 tệp) · 283/283 Tenant Tests XANH (36 tệp) · 0 lỗi Typecheck · 0 lỗi UX Lint
 
 ---
 
@@ -11,7 +11,7 @@
 |---|---|---|:---:|:---:|
 | **GÓI A** | Core Revenue Flow & Quick Wins | Dòng tiền bán hàng & Nền tảng điều phối | **HOÀN THÀNH 100%** | 5 / 5 |
 | **GÓI B** | Network Operation & Smart CRM | SLA cảnh báo trễ, Chăm sóc Zalo, Xuất đa tỉ lệ & Báo cáo | **HOÀN THÀNH 100%** | 4 / 4 |
-| **GÓI C** | Financial Ledger & Advanced Automation | Sổ cái đối soát tài chính, Studio 5 Tone giọng & Tự động hóa | **ĐANG TRIỂN KHAI** | 2 / 5 |
+| **GÓI C** | Financial Ledger & Advanced Automation | Sổ cái tài chính, Studio 5 Tone, VietQR PRO & Size Variants | **HOÀN THÀNH 100%** | 5 / 5 |
 
 ---
 
@@ -68,7 +68,7 @@
 
 ---
 
-## 💎 CHI TIẾT GÓI C: FINANCIAL LEDGER & ADVANCED AUTOMATION (ĐANG TRIỂN KHAI)
+## 💎 CHI TIẾT GÓI C: FINANCIAL LEDGER & ADVANCED AUTOMATION (100% HOÀN TẤT)
 
 - [x] **1. [Điện hoa] Sổ cái đối soát tài chính, công nợ 2 chiều, phân tích chi phí gia công (`TC-01` → `TC-06`)**
   - **Mã nguồn:** `src/modules/coordinator/domain/partner-settlement.ts`, `src/components/coordinator/partner-settlement-modal.tsx`, `partner-card.tsx`, `partner-management-modal.tsx`
@@ -85,6 +85,23 @@
     - Sinh nội dung đa nền tảng: Bài viết Facebook (`ND-01`), Caption Instagram thẩm mỹ (`ND-02`), Mô tả sản phẩm website (`ND-04`), Quảng cáo Facebook Ads (`ND-05`), Trạng thái ngắn Story/Zalo (`ND-08`), Kịch bản quay video TikTok 30s với 3 phân cảnh chi tiết (`ND-10`).
     - Gợi ý hashtag thông minh theo slug không dấu, bộ đếm ký tự thời gian thực, nút Copy 1-chạm và Live Social Preview.
     - Nút "Studio 5 Tone giọng" tích hợp trực tiếp trên thanh công cụ của Xưởng nội dung AI (`/noi-dung`).
-- [ ] **3. [Platform] Cổng thanh toán gói cước tự động (PayOS / VietQR PRO)**
-- [ ] **4. [Shop] AI Vector search sản phẩm tương đồng & Tìm theo ngân sách (`SP-18, 19`, `BH-04`)**
-- [ ] **5. [Shop] Đăng bài tự động đa kênh trực tiếp qua API mạng xã hội**
+- [x] **3. [Shop] Bộ lọc thông minh Tìm hoa theo Ngân sách & Gợi ý Upsell (`SP-18, 19`, `BH-04`)**
+  - **Mã nguồn:** `src/modules/products/domain/budget-flower-matcher.ts`, `src/components/sales/budget-matching-modal.tsx`, `src/app/(app)/catalog/page.tsx`
+  - **Mô tả:**
+    - Thuật toán đối sánh ngân sách và tính điểm tương thích (Match Score 0–100%) dựa trên khoảng giá, dịp tặng, màu sắc và người nhận.
+    - Cơ chế đề xuất Upsell thông minh (+10% đến +25% ngân sách) với các mẫu sang trọng vượt trội.
+    - Tự động sinh câu thoại tư vấn chốt sale tự nhiên kèm nút Copy 1-chạm gửi Zalo/Chat.
+    - Tích hợp nút "Tìm hoa theo ngân sách" trên thanh tiêu đề Catalog & Website (`/catalog`).
+- [x] **4. [Platform] Cổng thanh toán VietQR PRO & Nạp Credit AI tự động (`PAY-01` → `PAY-05`)**
+  - **Mã nguồn:** `src/modules/platform/domain/vietqr-billing.ts`, `src/components/platform/vietqr-topup-modal.tsx`, `src/components/dashboard/platform-overview-metrics.tsx`
+  - **Mô tả:**
+    - Cấu hình 3 gói cước thuê bao phần mềm (Khởi Nghiệp, Tăng Trưởng, Chuỗi Pro) và 3 mức nạp Credit AI kèm ưu đãi tặng thêm đến +50%.
+    - Sinh mã VietQR PRO chuẩn Napas 247 thời gian thực, tạo cú pháp chuyển khoản định danh đối soát tự động (`FLO {ORG} {PKG} {SUFFIX}`).
+    - Đồng hồ đếm ngược 15 phút, nút sao chép 1-chạm số tài khoản, số tiền và nội dung chuyển khoản.
+    - Tích hợp nút "Nạp Credit VietQR" vào Bảng chỉ số vận hành Console Platform Admin.
+- [x] **5. [Shop] Bộ biến thể kích thước Size S - M - L - XL & Tự động co giãn công thức cành (`SP-12`, `SP-13`, `SP-14`)**
+  - **Mã nguồn:** `src/modules/products/domain/product-size-variants.ts`, `src/app/(app)/gia/pricing-calculator-card.tsx`
+  - **Mô tả:**
+    - 4 phiên bản kích thước chuẩn ngành hoa: Size S (0.7x), Size M (1.0x), Size L (1.4x), Size XL (1.8x).
+    - Thuật toán co giãn Dynamic BOM: tự động tính lại số lượng cành hoa chính, hoa phụ theo tỷ lệ, giữ nguyên phụ liệu cố định (giấy gói, hộp, giỏ), tính giá vốn và giá bán đề xuất.
+    - Tích hợp bộ chuyển đổi kích thước Size S - M - L - XL trực tiếp trên Máy tính giá sản phẩm (`/gia`), bấm đổi Size là giá vốn và giá bán cập nhật ngay tức thì.

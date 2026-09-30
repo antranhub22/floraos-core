@@ -9,6 +9,8 @@ import { TabActionHeader } from "@/components/ui/tab-header"
 import { CatalogGuidanceCard } from "@/components/templates/catalog/catalog-guidance-card"
 import { CatalogManagementTab, type CatalogProduct, type CatalogLinkItem } from "@/components/catalog/catalog-management-tab"
 import { LandingCampaignTab } from "@/components/catalog/landing-campaign-tab"
+import { BudgetMatchingModal } from "@/components/sales/budget-matching-modal"
+import type { ProductMatchCandidate } from "@/modules/products/domain/budget-flower-matcher"
 
 /**
  * Trang Catalog & Website.
@@ -19,6 +21,7 @@ import { LandingCampaignTab } from "@/components/catalog/landing-campaign-tab"
 export default function CatalogWebsitePage() {
   const router = useRouter()
   const [tab, setTab] = useState<"catalog" | "landing">("catalog")
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false)
   const [products, setProducts] = useState<CatalogProduct[]>([])
   const [catalogLinks, setCatalogLinks] = useState<CatalogLinkItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -107,9 +110,25 @@ export default function CatalogWebsitePage() {
     )
   }
 
+  const matchCandidates: ProductMatchCandidate[] = products.map((p) => ({
+    id: p.id,
+    code: p.code || p.id,
+    name: p.name,
+    sellingPriceVnd: p.price ?? 500_000,
+    category: p.category || "Hoa tươi",
+    colorTheme: "Đa sắc",
+    occasions: ["Sinh nhật", "Kỷ niệm", "Khai trương"],
+    style: "Thiết kế hiện đại",
+    imageUrl: p.imageUrl || undefined,
+    highlightFlowers: [],
+  }))
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <PageHeader onBack={() => router.push("/")} />
+      <PageHeader
+        onBack={() => router.push("/")}
+        onOpenBudgetMatcher={() => setIsBudgetModalOpen(true)}
+      />
 
       <div className="flex flex-1 flex-col overflow-y-auto p-[18px] gap-5">
         {error && (
@@ -144,19 +163,43 @@ export default function CatalogWebsitePage() {
           <LandingCampaignTab products={products} onRefresh={refreshAll} />
         )}
       </div>
+
+      <BudgetMatchingModal
+        open={isBudgetModalOpen}
+        onOpenChange={setIsBudgetModalOpen}
+        customCandidates={matchCandidates}
+      />
     </div>
   )
 }
 
 /* ── Micro-component Header ──────────────────────────────────────────── */
 
-function PageHeader({ onBack }: { onBack: () => void }) {
+function PageHeader({
+  onBack,
+  onOpenBudgetMatcher,
+}: {
+  onBack: () => void
+  onOpenBudgetMatcher?: (() => void) | undefined
+}) {
   return (
     <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
       <div className="text-title font-extrabold text-primary">Catalog & Website</div>
-      <Button variant="ghost" onClick={onBack} className="flex items-center gap-1.5">
-        <ArrowLeft size={16} strokeWidth={2} /> Quay về Trang chủ
-      </Button>
+      <div className="flex items-center gap-2">
+        {onOpenBudgetMatcher && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenBudgetMatcher}
+            className="flex items-center gap-1.5 text-xs"
+          >
+            <Sparkles size={14} /> Tìm hoa theo ngân sách
+          </Button>
+        )}
+        <Button variant="ghost" onClick={onBack} className="flex items-center gap-1.5">
+          <ArrowLeft size={16} strokeWidth={2} /> Quay về Trang chủ
+        </Button>
+      </div>
     </div>
   )
 }

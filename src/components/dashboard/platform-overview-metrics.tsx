@@ -1,8 +1,9 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import Link from "next/link"
-import { Building2, Clock, AlertTriangle, ArrowRight } from "lucide-react"
+import { Building2, Clock, AlertTriangle, ArrowRight, Zap } from "lucide-react"
+import { VietQrTopupModal } from "@/components/platform/vietqr-topup-modal"
 
 export interface PlatformOrganizationSummary {
   id: string
@@ -33,6 +34,8 @@ export function PlatformOverviewMetrics({
   orgs,
   health,
 }: PlatformOverviewMetricsProps) {
+  const [isTopupOpen, setIsTopupOpen] = useState(false)
+
   return (
     <div className="space-y-6">
       {/* 3 Metric Cards */}
@@ -79,13 +82,23 @@ export function PlatformOverviewMetrics({
               Các đơn vị đăng ký và sử dụng hệ thống mới nhất
             </p>
           </div>
-          <Link
-            href={"/van-hanh/to-chuc" as never}
-            className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-primary hover:underline"
-          >
-            <span>Xem tất cả tổ chức</span>
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsTopupOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/5 text-body-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Zap className="w-4 h-4" aria-hidden="true" />
+              <span>Nạp Credit VietQR</span>
+            </button>
+            <Link
+              href={"/van-hanh/to-chuc" as never}
+              className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-primary hover:underline"
+            >
+              <span>Xem tất cả tổ chức</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          </div>
         </div>
 
         <div className="divide-y divide-border">
@@ -113,6 +126,12 @@ export function PlatformOverviewMetrics({
           )}
         </div>
       </div>
+
+      <VietQrTopupModal
+        open={isTopupOpen}
+        onOpenChange={setIsTopupOpen}
+        orgCode="FLORA_HQ"
+      />
     </div>
   )
 }
