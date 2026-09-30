@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { BusinessPerformanceCard } from "@/components/dashboard/business-performance-card"
+import { AdPerformanceModal } from "@/components/marketing/ad-performance-modal"
 import type { OrderReportingItem } from "@/modules/orders/domain/business-reporting"
 
 type UsageSummary = {
@@ -67,6 +68,7 @@ export default function AnalyticsPage() {
   const [saved, setSaved] = useState(false)
   const [learningApproved, setLearningApproved] = useState(false)
   const [selectedRange, setSelectedRange] = useState("Tháng này")
+  const [adModalOpen, setAdModalOpen] = useState(false)
 
   const [usageLoading, setUsageLoading] = useState(true)
   const [usage, setUsage] = useState<UsageSummary | null>(null)
@@ -231,9 +233,19 @@ export default function AnalyticsPage() {
             Analytics & Learning
           </div>
         </div>
-        <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-1.5 text-xs">
-          <ArrowLeft size={16} strokeWidth={2} /> Quay về Trang chủ
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAdModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5"
+          >
+            <TrendingUp size={14} /> Hiệu quả Ads (MK-10)
+          </Button>
+          <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-1.5 text-xs">
+            <ArrowLeft size={16} strokeWidth={2} /> Trang chủ
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col overflow-y-auto p-6 max-w-4xl mx-auto w-full gap-5">
@@ -505,6 +517,11 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      <AdPerformanceModal
+        isOpen={adModalOpen}
+        onClose={() => setAdModalOpen(false)}
+      />
     </div>
   )
 }

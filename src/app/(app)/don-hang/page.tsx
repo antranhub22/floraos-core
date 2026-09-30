@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Plus, RefreshCw, Eye } from "lucide-react"
+import { ArrowLeft, Plus, RefreshCw, Eye, MessageSquarePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { OrderGuidanceCard } from "@/components/templates/orders/order-guidance-card"
 import { CreateOrderModal } from "@/components/orders/create-order-modal"
 import { OrderDetailModal } from "@/components/orders/order-detail-modal"
+import { ChatOrderCheckoutModal } from "@/components/chat/chat-order-checkout-modal"
 import { EmptyState } from "@/components/ui/empty-state"
 
 type OrderItem = {
@@ -31,6 +32,7 @@ export default function DonHangPage() {
   const [orders, setOrders] = useState<OrderItem[]>([])
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
+  const [chatModalOpen, setChatModalOpen] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [mobileTab, setMobileTab] = useState<MobileFilter>("all")
@@ -99,6 +101,9 @@ export default function DonHangPage() {
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 font-semibold">
             <Plus size={16} /> Tạo đơn mới
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setChatModalOpen(true)} className="flex items-center gap-1.5 font-semibold text-primary border-primary/30 hover:bg-primary/5">
+            <MessageSquarePlus size={14} /> Tạo từ chat
           </Button>
           <Button variant="outline" size="sm" onClick={loadOrders} disabled={loading} className="hidden sm:inline-flex items-center gap-1.5">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Làm mới
@@ -254,6 +259,24 @@ export default function DonHangPage() {
         orderId={selectedOrderId}
         onClose={() => setSelectedOrderId(null)}
         onUpdated={loadOrders}
+      />
+
+      <ChatOrderCheckoutModal
+        isOpen={chatModalOpen}
+        onClose={() => setChatModalOpen(false)}
+        initialDraft={{
+          recipientName: null,
+          recipientPhone: null,
+          deliveryAddress: null,
+          deliveryTime: null,
+          occasion: null,
+          cardMessage: null,
+          flowerStyleOrTone: null,
+          budgetVnd: null,
+        }}
+        onOrderCreated={() => {
+          loadOrders()
+        }}
       />
     </div>
   )

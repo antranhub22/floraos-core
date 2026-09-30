@@ -1,7 +1,7 @@
 # CHECKLIST TIẾN ĐỘ TRIỂN KHAI CAPABILITY MAP FLORAOS
 > **Nhánh Git:** `feat/capability-map-expansion`  
-> **Cập nhật lúc:** 30/09/2026 (Hoàn tất 100% GÓI A, GÓI B và Hoàn tất 5/5 GÓI C)  
-> **Bảo đảm:** 1.444/1.444 Unit Tests XANH (181 tệp) · 283/283 Tenant Tests XANH (36 tệp) · 0 lỗi Typecheck · 0 lỗi UX Lint
+> **Cập nhật lúc:** 30/09/2026 (Hoàn tất 100% GÓI A, GÓI B, GÓI C và GÓI D — ĐẠT 201/201 TÍNH NĂNG 100%)  
+> **Bảo đảm:** 1.457/1.457 Unit Tests XANH (183 tệp) · 283/283 Tenant Tests XANH (36 tệp) · 0 lỗi Typecheck · 0 lỗi UX Lint
 
 ---
 
@@ -12,6 +12,7 @@
 | **GÓI A** | Core Revenue Flow & Quick Wins | Dòng tiền bán hàng & Nền tảng điều phối | **HOÀN THÀNH 100%** | 5 / 5 |
 | **GÓI B** | Network Operation & Smart CRM | SLA cảnh báo trễ, Chăm sóc Zalo, Xuất đa tỉ lệ & Báo cáo | **HOÀN THÀNH 100%** | 4 / 4 |
 | **GÓI C** | Financial Ledger & Advanced Automation | Sổ cái tài chính, Studio 5 Tone, VietQR PRO & Size Variants | **HOÀN THÀNH 100%** | 5 / 5 |
+| **GÓI D** | AI Chat Checkout & Ads Analytics | Trích xuất đơn từ chat, Chốt đơn VietQR & Báo cáo Ads | **HOÀN THÀNH 100%** | 3 / 3 |
 
 ---
 
@@ -105,3 +106,27 @@
     - 4 phiên bản kích thước chuẩn ngành hoa: Size S (0.7x), Size M (1.0x), Size L (1.4x), Size XL (1.8x).
     - Thuật toán co giãn Dynamic BOM: tự động tính lại số lượng cành hoa chính, hoa phụ theo tỷ lệ, giữ nguyên phụ liệu cố định (giấy gói, hộp, giỏ), tính giá vốn và giá bán đề xuất.
     - Tích hợp bộ chuyển đổi kích thước Size S - M - L - XL trực tiếp trên Máy tính giá sản phẩm (`/gia`), bấm đổi Size là giá vốn và giá bán cập nhật ngay tức thì.
+
+---
+
+## ⚡ CHI TIẾT GÓI D: AI CHAT CHECKOUT & ADS ANALYTICS (100% HOÀN TẤT)
+
+- [x] **1. [Shop] Tự động trích xuất Đơn hàng từ hội thoại chat (`DH-03`)**
+  - **Mã nguồn:** `src/modules/chat-assistant/domain/chat-order-extractor.ts`, `src/components/chat/chat-order-checkout-modal.tsx`, `src/app/(app)/don-hang/page.tsx`
+  - **Mô tả:**
+    - Thuật toán bóc tách cấu trúc hội thoại tự nhiên: tên người nhận, số điện thoại VN 10 số, địa chỉ giao hàng (số nhà, đường, quận/huyện), thời gian giao hoa, nội dung thiệp chúc mừng, ngân sách và phong cách hoa.
+    - Đánh giá điểm tin cậy AI (Confidence Score 0–100%) và phát hiện các trường còn thiếu cần bổ sung.
+    - Tích hợp nút "Tạo từ chat" trên thanh công cụ Đơn Hàng (`/don-hang`) và nút "Trích xuất đơn VietQR" ngay trong Widget Chat Storefront.
+- [x] **2. [Shop] Chatbot chốt đơn & Thanh toán VietQR Napas 247 tức thời (`DH-04`)**
+  - **Mã nguồn:** `src/modules/chat-assistant/domain/chat-order-extractor.ts`, `src/components/chat/chat-order-checkout-modal.tsx`, `src/components/chat/public-storefront-chat-widget.tsx`
+  - **Mô tả:**
+    - Khép kín hành trình chốt đơn 1-chạm: sinh mã đơn hàng `DH-{timestamp}`, tự động tạo mã VietQR Napas 247 định danh đối soát theo cú pháp `FLO {ORG} {ORDER_CODE}`.
+    - Modal hiển thị ảnh mã QR, số tiền, số tài khoản, nội dung chuyển khoản với nút sao chép 1-chạm và tin nhắn phản hồi tự động trong hội thoại chat.
+- [x] **3. [Shop] Báo cáo & Phân tích hiệu quả quảng cáo đa kênh (`MK-10`)**
+  - **Mã nguồn:** `src/modules/content-engine/domain/ad-performance-analytics.ts`, `src/components/marketing/ad-performance-modal.tsx`, `src/app/(app)/so-lieu/page.tsx`
+  - **Mô tả:**
+    - Đo lường và tính toán toàn diện các chỉ số quảng cáo: Lượt hiển thị (Impressions), Lượt nhấp (Clicks), CTR (%), Chi phí (Spend), CPC, Số đơn hàng (Conversions), CPA, Doanh thu (Revenue), ROAS (lần), ROI (%).
+    - So sánh trực quan 4 kênh quảng cáo: Facebook Ads, TikTok Ads, Google Ads, Zalo Ads.
+    - Phân loại đánh giá hiệu quả 4 cấp độ: Xuất sắc (ROAS ≥ 4.0x), Tốt (ROAS ≥ 2.5x), Hòa vốn (ROAS ≥ 1.5x), Cần tối ưu (< 1.5x) kèm khuyến nghị phân bổ ngân sách AI.
+    - Tích hợp nút "Hiệu quả Ads (MK-10)" và chức năng Xuất báo cáo CSV UTF-8 BOM chuẩn tiếng Việt cho Excel.
+

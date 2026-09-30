@@ -14,6 +14,11 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { SuggestedFlowerCard } from "@/modules/chat-assistant/domain/chat-types"
+import {
+  extractOrderDraftFromChat,
+  type ChatOrderDraft,
+} from "@/modules/chat-assistant/domain/chat-order-extractor"
+import { ChatOrderCheckoutModal } from "./chat-order-checkout-modal"
 
 interface WidgetMessage {
   id: string
@@ -50,12 +55,23 @@ export function PublicStorefrontChatWidget({
   const [messages, setMessages] = useState<WidgetMessage[]>([])
   const [inputQuery, setInputQuery] = useState("")
   const [sending, setSending] = useState(false)
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false)
+  const [activeDraft, setActiveDraft] = useState<ChatOrderDraft | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  function handleOpenCheckout(prefill?: Partial<ChatOrderDraft>) {
+    const draft = extractOrderDraftFromChat(messages)
+    setActiveDraft({
+      ...draft,
+      ...(prefill || {}),
+    })
+    setCheckoutModalOpen(true)
+  }
 
   async function handleSendMessage(queryText?: string) {
     const text = queryText || inputQuery
@@ -231,7 +247,10 @@ export function PublicStorefrontChatWidget({
                               <Button variant="outline"
                                 size="sm"
                                 onClick={() =>
-                                  handleSendMessage(`Tôi muốn đặt mẫu hoa "${f.productName}"`)
+                                  handleOpenCheckout({
+                                    productName: f.productName,
+                                    budgetVnd: f.priceVnd ?? null,
+                                  })
                                 }
                                 className="h-7 px-2.5 bg-primary hover:bg-primary-dark text-white text-caption shrink-0"
                               >
@@ -248,6 +267,20 @@ export function PublicStorefrontChatWidget({
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Thanh chốt đơn nhanh khi đã có tin nhắn */}
+          {messages.length > 0 && (
+            <div className="px-3 py-1.5 bg-primary/5 border-t border-primary/10 flex items-center justify-between">
+              <span className="text-caption text-text-muted">Chốt đơn từ tin nhắn?</span>
+              <button
+                type="button"
+                onClick={() => handleOpenCheckout()}
+                className="inline-flex items-center gap-1 text-caption font-bold text-primary hover:underline"
+              >
+                <Sparkles className="h-3 w-3" /> Trích xuất đơn VietQR →
+              </button>
+            </div>
+          )}
 
           {/* Form nhập */}
           <div className="border-t border-border p-2.5 bg-surface">
@@ -277,6 +310,25 @@ export function PublicStorefrontChatWidget({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal Chốt Đơn & Thanh Toán VietQR (DH-03, DH-04) */}
+      {activeDraft && (
+        <ChatOrderCheckoutModal
+          isOpen={checkoutModalOpen}
+          onClose={() => setCheckoutModalOpen(false)}
+          initialDraft={activeDraft}
+          onOrderCreated={(orderCode) => {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: newMessageId("bot"),
+                senderType: "ASSISTANT",
+                content: `Dạ em đã tạo đơn hàng #${orderCode} thành công cho mình qua thanh toán VietQR Napas 247 rồi ạ! Tiệm sẽ chuẩn bị hoa và giao đúng hẹn cho mình ạ.`,
+              },
+            ])
+          }}
+        />
       )}
     </>
   )
