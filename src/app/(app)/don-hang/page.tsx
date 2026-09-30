@@ -42,7 +42,9 @@ export default function DonHangPage() {
       .then((res) => {
         if (res.orders) setOrders(res.orders)
       })
-      .catch((err) => console.error(err))
+      .catch(() => {
+        // Im lặng fallback về danh sách rỗng khi lỗi mạng
+      })
       .finally(() => setLoading(false))
   }
 
