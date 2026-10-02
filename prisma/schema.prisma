@@ -120,64 +120,66 @@ model organizations {
   credit_balance Int               @default(0)
   credit_plan    String?
   settings       Json? // bảng công tắc cấp tổ chức, gồm cho_phep_tu_duyet
+  data_region    String?           @default("vn") // ADR-006: Vùng dữ liệu tenant
   created_at     DateTime          @default(now())
   updated_at     DateTime          @updatedAt
 
   // Khoá ngoại tới organizations mở lại ở P3 (TECHNICAL_DEBT #8) — bốn bảng
   // dưới đây là bốn bảng nợ đó; assets/generation_jobs/usage/audit_logs khai
   // khoá ngoại ngay từ khi tạo, không nợ.
-  workspaces            workspaces[]
-  branches              branches[]
-  capability_overrides  capability_overrides[]
-  memberships           memberships[]
-  assets                assets[]
-  generation_jobs       generation_jobs[]
-  usage                 usage[]
-  audit_logs            audit_logs[]
-  business_profile      business_profiles?
-  brand_profile         brand_profiles?
-  products              products[]
-  product_variants      product_variants[]
-  product_images        product_images[]
-  product_analyses      product_analyses[]
-  product_inventory     product_inventory[]
-  pricing_rules         pricing_rules[]
-  integration_tokens    integration_tokens[]
-  ai_policies           ai_policies[]
-  ai_requests           ai_requests[]
-  ai_evaluations        ai_evaluations[]
-  occasions             occasions[]
-  template_overrides    template_overrides[]
-  catalog_links         catalog_links[]
-  product_copies        product_copies[]
-  content_metrics       content_metrics[]
-  video_jobs            video_jobs[]
-  orders                orders[]
-  order_items           order_items[]
-  order_assignments     order_assignments[]
-  order_events          order_events[]
-  customers             customers[]
-  customer_occasions    customer_occasions[]
-  customer_consents     customer_consents[]
-  vouchers              vouchers[]
-  chat_conversations         chat_conversations[]
-  chat_messages              chat_messages[]
-  chat_channel_integrations  chat_channel_integrations[]
-  content_opportunities      content_opportunities[]
-  product_analysis_runs      product_analysis_runs[]
-  campaign_packages          campaign_packages[]
-  content_drafts             content_drafts[]
-  content_generations        content_generations[]
-  voice_clones               voice_clones[]
-  music_tracks               music_tracks[]
-  partners                   partners[]
-  order_coordinations        order_coordinations[]
-  order_qc_records           order_qc_records[]
-  order_payments             order_payments[]
-  order_exceptions           order_exceptions[]
-  field_config_overrides     field_config_overrides[]
-  order_info_requests        order_info_requests[]
-  order_change_requests      order_change_requests[]
+  workspaces                workspaces[]
+  branches                  branches[]
+  capability_overrides      capability_overrides[]
+  memberships               memberships[]
+  assets                    assets[]
+  generation_jobs           generation_jobs[]
+  usage                     usage[]
+  audit_logs                audit_logs[]
+  business_profile          business_profiles?
+  brand_profile             brand_profiles?
+  products                  products[]
+  product_variants          product_variants[]
+  product_images            product_images[]
+  product_analyses          product_analyses[]
+  product_inventory         product_inventory[]
+  pricing_rules             pricing_rules[]
+  integration_tokens        integration_tokens[]
+  ai_policies               ai_policies[]
+  ai_requests               ai_requests[]
+  ai_evaluations            ai_evaluations[]
+  occasions                 occasions[]
+  template_overrides        template_overrides[]
+  catalog_links             catalog_links[]
+  product_copies            product_copies[]
+  content_metrics           content_metrics[]
+  video_jobs                video_jobs[]
+  orders                    orders[]
+  order_items               order_items[]
+  order_assignments         order_assignments[]
+  order_events              order_events[]
+  customers                 customers[]
+  customer_occasions        customer_occasions[]
+  journey_runs              journey_runs[]
+  customer_consents         customer_consents[]
+  vouchers                  vouchers[]
+  chat_conversations        chat_conversations[]
+  chat_messages             chat_messages[]
+  chat_channel_integrations chat_channel_integrations[]
+  content_opportunities     content_opportunities[]
+  product_analysis_runs     product_analysis_runs[]
+  campaign_packages         campaign_packages[]
+  content_drafts            content_drafts[]
+  content_generations       content_generations[]
+  voice_clones              voice_clones[]
+  music_tracks              music_tracks[]
+  partners                  partners[]
+  order_coordinations       order_coordinations[]
+  order_qc_records          order_qc_records[]
+  order_payments            order_payments[]
+  order_exceptions          order_exceptions[]
+  field_config_overrides    field_config_overrides[]
+  order_info_requests       order_info_requests[]
+  order_change_requests     order_change_requests[]
 }
 
 model workspaces {
@@ -205,7 +207,7 @@ model branches {
   is_active       Boolean  @default(true)
   created_at      DateTime @default(now())
 
-  organization organizations @relation(fields: [organization_id], references: [id])
+  organization organizations       @relation(fields: [organization_id], references: [id])
   inventory    product_inventory[]
 
   @@unique([organization_id, code])
@@ -231,7 +233,6 @@ model roles {
  * hai). Vai hệ thống (`organization_id = null` của chính `roles`) được nạp
  * sẵn từ bản mặc định trong `src/core/rbac/capability-catalog.ts` lúc
  * `ensureSystemRoles`. Vai riêng của tổ chức có switchboard của chính nó.
- *
  * Trần cứng (lớp ba) KHÔNG nằm ở đây — nó là hằng trong mã, xem
  * `src/core/rbac/capability-catalog.ts`. Một dòng bật ở bảng này cho một mã
  * đã bị trần cứng chặn vẫn không mở được năng lực đó.
@@ -253,7 +254,6 @@ model role_capabilities {
  * được. `allowed = true` bật thêm một mã; `allowed = false` tắt một mã đang
  * bật mặc định. Vai riêng của tổ chức không cần dùng bảng này — tổ chức sửa
  * thẳng `role_capabilities` của vai đó.
- *
  * Trần cứng vẫn cắt sau cùng: `allowed = true` cho một mã có trần cứng không
  * bao gồm vai đó không mở được năng lực (`YC-Q3`).
  */
@@ -373,8 +373,8 @@ model assets {
   // rõ AI ai duyệt và lúc nào trên chính bản ghi ảnh, không chỉ ở audit log:
   // audit log trả lời "chuyện gì đã xảy ra", hai cột này trả lời "ảnh này
   // hiện do ai chịu trách nhiệm" mà không phải quét lịch sử.
-  approved_by    String?
-  approved_at    DateTime?
+  approved_by String?
+  approved_at DateTime?
 
   metadata   Json?
   created_by String
@@ -392,7 +392,6 @@ model assets {
 /**
  * Thu hoạch E2 từ `LocalBudd` (`status` + `step`), thêm trục thứ ba `result`
  * — đặc tả 07 mục 6. Ba trục không gộp (`YC-J1` `YC-J2`).
- *
  * `idempotency_key` không có ở bản đặc tả 07 gốc; thêm ở đây để thực thi
  * `YC-U7` (chống trùng 24 giờ). Lược đồ là nguồn sự thật — tài liệu 07 đã cập
  * nhật theo cùng đợt commit này.
@@ -421,7 +420,7 @@ model generation_jobs {
   payload  Json
   output   Json?
   error    String?
-  attempts Int    @default(0)
+  attempts Int     @default(0)
 
   created_at   DateTime  @default(now())
   started_at   DateTime?
@@ -466,14 +465,14 @@ model job_events {
  * (`YC-U4`).
  */
 model usage {
-  id              String  @id @default(uuid())
+  id              String   @id @default(uuid())
   organization_id String
   workspace_id    String
   user_id         String
   job_id          String?
   feature         String
-  quantity        Int     @default(1)
-  cost_credit     Int     @default(0)
+  quantity        Int      @default(1)
+  cost_credit     Int      @default(0)
   cost_usd        Float? // chi phí thật phía nhà cung cấp, để đối soát
   status          String // ENQUEUED · COMPLETED · REFUNDED
   metadata        Json?
@@ -501,6 +500,9 @@ model audit_logs {
   after           Json?
   ip              String?
   user_agent      String?
+  decision_id     String? // Patch v2.3 / P2: Id quyết định theo Decision Registry
+  ownership       String? // USER | SYSTEM | SHARED
+  decided_by      String? // user_override | user_confirm | system_default | system_rule
   created_at      DateTime @default(now())
 
   organization organizations @relation(fields: [organization_id], references: [id])
@@ -547,26 +549,27 @@ model business_profiles {
  * dạng đã có ở `brand_config.hashtags_<nền tảng>` của SocialFlow.
  */
 model brand_profiles {
-  id                String   @id @default(uuid())
-  organization_id   String
-  primary_color     String?
-  secondary_color   String?
-  accent_color      String?
-  background_color  String?
-  text_color        String?
-  font_heading      String?
-  font_body         String?
-  logo_asset_id     String?
-  tone_of_voice     String?
-  hashtags          Json? // mảng thẻ hashtag của cửa hàng — hình dạng thật { default: string[] }, đọc qua extractBrandHashtags() (profile-rules.ts, nợ #103)
-  cta_templates     Json? // MỘT câu kêu gọi hành động (nợ #102, chốt 17/09) — hình dạng thật { default: string } do brand-profile-form.tsx ghi, đọc qua extractBrandCtaPhrase() (profile-rules.ts, nợ #103). KHÔNG còn chứa free_gifts/guarantees
-  default_offers    Json? // { free_gifts?: string[], guarantees?: string[] } — tách khỏi cta_templates (nợ #102, 17/09):
-                          // trước đây `SalesDefaultsForm` ghi nhầm free_gifts/guarantees vào cta_templates, xung đột
-                          // với product-copy-adapter.ts coi cta_templates là string[] câu CTA. Đọc có dự phòng dữ
-                          // liệu cũ trong cta_templates cho tổ chức đã lưu trước 17/09 — xem sales-defaults-form.tsx.
-  forbidden_styles  Json?
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  id               String   @id @default(uuid())
+  organization_id  String
+  primary_color    String?
+  secondary_color  String?
+  accent_color     String?
+  background_color String?
+  text_color       String?
+  font_heading     String?
+  font_body        String?
+  logo_asset_id    String?
+  tone_of_voice    String?
+  hashtags         Json? // mảng thẻ hashtag của cửa hàng — hình dạng thật { default: string[] }, đọc qua extractBrandHashtags() (profile-rules.ts, nợ #103)
+  cta_templates    Json? // MỘT câu kêu gọi hành động (nợ #102, chốt 17/09) — hình dạng thật { default: string } do brand-profile-form.tsx ghi, đọc qua extractBrandCtaPhrase() (profile-rules.ts, nợ #103). KHÔNG còn chứa free_gifts/guarantees
+  default_offers   Json? // { free_gifts?: string[], guarantees?: string[] } — tách khỏi cta_templates (nợ #102, 17/09):
+  // trước đây `SalesDefaultsForm` ghi nhầm free_gifts/guarantees vào cta_templates, xung đột
+  // với product-copy-adapter.ts coi cta_templates là string[] câu CTA. Đọc có dự phòng dữ
+  // liệu cũ trong cta_templates cho tổ chức đã lưu trước 17/09 — xem sales-defaults-form.tsx.
+  forbidden_styles Json?
+  brand_assets     Json? // { storefront_photos?: string[], intro_video?: string, qr_code?: string } — Nguyên liệu thương hiệu cấp Tiệm (Master Assets, đặc tả FLORAOS_BUSINESS_PROFILE_AND_INPUT_SPEC mục 4.1)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
 
   organization organizations @relation(fields: [organization_id], references: [id])
 
@@ -585,7 +588,9 @@ enum product_status {
   ARCHIVED
 }
 
-/** Trạng thái còn hàng của MẪU sản phẩm dựng sẵn tại một chi nhánh (P-Fix-3a, 17/09). */
+/**
+ * Trạng thái còn hàng của MẪU sản phẩm dựng sẵn tại một chi nhánh (P-Fix-3a, 17/09).
+ */
 enum stock_status {
   IN_STOCK
   PRE_ORDER_ONLY
@@ -613,7 +618,7 @@ model products {
   created_at      DateTime       @default(now())
   updated_at      DateTime       @updatedAt
 
-  organization organizations @relation(fields: [organization_id], references: [id])
+  organization organizations       @relation(fields: [organization_id], references: [id])
   variants     product_variants[]
   images       product_images[]
   analyses     product_analyses[]
@@ -624,12 +629,12 @@ model products {
 }
 
 model product_variants {
-  id              String   @id @default(uuid())
+  id              String  @id @default(uuid())
   organization_id String
   product_id      String
   name            String
   size            String?
-  multiplier      Float    @default(1)
+  multiplier      Float   @default(1)
   attributes      Json?
 
   organization organizations @relation(fields: [organization_id], references: [id])
@@ -639,12 +644,12 @@ model product_variants {
 }
 
 model product_images {
-  id              String   @id @default(uuid())
+  id              String @id @default(uuid())
   organization_id String
   product_id      String
   asset_id        String
   role            String // MAIN · GALLERY · CATALOG · SOCIAL
-  position        Int      @default(0)
+  position        Int    @default(0)
 
   organization organizations @relation(fields: [organization_id], references: [id])
   product      products      @relation(fields: [product_id], references: [id])
@@ -657,19 +662,18 @@ model product_images {
  * Tồn kho MẪU SẢN PHẨM (bó/giỏ dựng sẵn) theo từng chi nhánh — KHÔNG phải tồn kho nguyên
  * liệu hoa rời (chốt với chủ sản phẩm 17/09, xem TECHNICAL_DEBT.md mục P-Fix-3a và
  * `product-master-index.ts`, `ProductMasterIndex.stock`).
- *
  * `branch_id` BẮT BUỘC (không nullable) — mỗi dòng gắn với đúng một chi nhánh cụ thể, tránh
  * hẳn cái bẫy Postgres coi mọi NULL là phân biệt (nợ #7, đã ghi trong TECHNICAL_DEBT.md) mà
  * một `branch_id` tuỳ chọn sẽ vướng phải nếu dùng `@@unique` thông thường.
  */
 model product_inventory {
-  id                 String      @id @default(uuid())
+  id                 String       @id @default(uuid())
   organization_id    String
   product_id         String
   branch_id          String
   status             stock_status @default(IN_STOCK)
   quantity_available Int?
-  updated_at         DateTime    @updatedAt
+  updated_at         DateTime     @updatedAt
 
   organization organizations @relation(fields: [organization_id], references: [id])
   product      products      @relation(fields: [product_id], references: [id])
@@ -686,35 +690,34 @@ model product_inventory {
  * bao giờ bị ghi đè. `edited` là bản người sửa trước khi duyệt (`PATCH
  * /vision/analyses/:id`, `H2`) — dữ liệu huấn luyện tương lai nằm ở cặp
  * *raw/edited* này, không được gộp làm một.
- *
  * `product_id` để trống khi phân tích chưa gắn vào sản phẩm nào (`POST
  * /vision/analyses` cho phép `product_id: null`, đặc tả 06 mục 8) —
  * `approveAnalysis` tạo `products` mới trong trường hợp đó (xem
  * `use-cases/approve-analysis.ts`).
  */
 model product_analyses {
-  id                String         @id @default(uuid())
-  organization_id   String
-  product_id        String?
-  asset_id          String
-  job_id            String
+  id              String  @id @default(uuid())
+  organization_id String
+  product_id      String?
+  asset_id        String
+  job_id          String
 
-  provider          String
-  model             String
-  model_version     String
-  contract_name     String // "PhanTichSanPhamHoa"
-  contract_version  String
+  provider         String
+  model            String
+  model_version    String
+  contract_name    String // "PhanTichSanPhamHoa"
+  contract_version String
 
-  raw               Json // dự đoán gốc của máy, bất biến
-  edited            Json? // bản người sửa, lưu tách biệt
-  approval_state    approval_state @default(PENDING)
-  approved_by       String?
-  approved_at       DateTime?
+  raw            Json // dự đoán gốc của máy, bất biến
+  edited         Json? // bản người sửa, lưu tách biệt
+  approval_state approval_state @default(PENDING)
+  approved_by    String?
+  approved_at    DateTime?
 
-  created_at        DateTime       @default(now())
+  created_at DateTime @default(now())
 
   organization organizations @relation(fields: [organization_id], references: [id])
-  product      products?      @relation(fields: [product_id], references: [id])
+  product      products?     @relation(fields: [product_id], references: [id])
 
   // Một ảnh chỉ có đúng một kết quả trong một lượt job. Không có ràng buộc
   // này thì một job lô hỏng giữa chừng rồi chạy lại (`POST /jobs/:id/retry`)
@@ -763,7 +766,6 @@ enum integration_client {
  * dùng: nó cố định theo `client` (đặc tả 08 mục 4) và áp thẳng trong từng
  * route `/api/v1/integration/*` — token không phải một vai giao diện, nên
  * không có hàng trong `role_capabilities`/`capability_overrides`.
- *
  * Xoay không dừng dịch vụ (đặc tả 08 mục 3): `rotated_from_id` nối token mới
  * tới token cũ, nhưng tạo token mới KHÔNG tự thu hồi token cũ — core chấp
  * nhận cả hai cùng lúc cho tới khi người quản trị tự thu hồi token cũ qua
@@ -795,15 +797,15 @@ model content_metrics {
   content_id      String
   metric_date     DateTime @db.Date
 
-  reach           Int?
-  impressions     Int?
-  engagement      Int?
-  clicks          Int?
-  conversions     Int?
-  spend_usd       Float?
+  reach       Int?
+  impressions Int?
+  engagement  Int?
+  clicks      Int?
+  conversions Int?
+  spend_usd   Float?
 
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   organization organizations @relation(fields: [organization_id], references: [id])
 
@@ -959,7 +961,9 @@ model occasions {
   name            String
   sort_order      Int               @default(0)
   is_active       Boolean           @default(true)
-  /** Tông giọng khi dịp này được dùng để sinh kịch bản Zalo (nợ #104). */
+  /**
+   * Tông giọng khi dịp này được dùng để sinh kịch bản Zalo (nợ #104).
+   */
   register        occasion_register @default(FESTIVE)
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
@@ -1010,18 +1014,18 @@ model template_overrides {
 /// Liên kết catalog chia sẻ — slug unique toàn cục, thu hồi được, không xoá.
 /// LocalBudd đọc qua Integration API để render trang catalog công khai.
 model catalog_links {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   organization_id String
-  slug            String   @unique
+  slug            String    @unique
   name            String
   description     String?
   filters         Json?
-  is_revoked      Boolean  @default(false)
+  is_revoked      Boolean   @default(false)
   revoked_at      DateTime?
   revoked_by      String?
   created_by      String
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
 
   organization organizations @relation(fields: [organization_id], references: [id])
 
@@ -1034,19 +1038,19 @@ model catalog_links {
 // (YC-R3). `analysis_id` trỏ tới `product_analyses` đã APPROVED.
 // Duyệt (`H6`) ghi Product Master + `audit_logs` trong một giao dịch.
 model product_copies {
-  id              String   @id @default(uuid())
+  id              String  @id @default(uuid())
   organization_id String
   analysis_id     String // bắt buộc: product_analyses đã APPROVED
   product_id      String? // null khi phân tích chưa gắn sản phẩm (sẽ tạo mới khi duyệt)
 
   // Dự đoán gốc của máy (bất biến) — keys: suggested_name, suggested_description,
   // suggested_tags[], suggested_occasions[], suggested_price_segment
-  raw             Json
+  raw            Json
   // Bản người sửa trước khi duyệt (PATCH /product-copies/:id, H5)
-  edited          Json?
-  approval_state  approval_state @default(PENDING)
-  approved_by     String?
-  approved_at     DateTime?
+  edited         Json?
+  approval_state approval_state @default(PENDING)
+  approved_by    String?
+  approved_at    DateTime?
 
   // Phiên bản hồ sơ phong cách đã dùng (learning_profiles.version), để truy xuất
   profile_version String?
@@ -1054,18 +1058,18 @@ model product_copies {
   // Lý do từ chối — CỘT RIÊNG, không nhét vào `edited`. `edited` là bản sửa
   // của người theo hình dạng câu chữ bán hàng; trộn một khoá quản trị vào đó
   // làm `resolveEffective` phải phân biệt hai loại khoá trong cùng một object.
-  reject_reason   String?
+  reject_reason String?
 
   // Truy vết lượt gọi mô hình đã sinh ra bản này — PRD mục 9, nhóm "Truy vết".
   // Không có bốn cột này thì không đối soát được chi phí, không so sánh được
   // hai mô hình, và không biết bản nào sinh ra bởi mô hình nào khi đổi mô hình.
-  job_id          String?
-  model_key       String?
-  provider        String?
-  cost_usd        Float?
-  latency_ms      Int?
+  job_id     String?
+  model_key  String?
+  provider   String?
+  cost_usd   Float?
+  latency_ms Int?
 
-  created_at      DateTime @default(now())
+  created_at DateTime @default(now())
 
   organization organizations @relation(fields: [organization_id], references: [id])
 
@@ -1099,31 +1103,31 @@ enum video_stage {
 }
 
 model video_jobs {
-  id                 String          @id @default(uuid())
-  organization_id    String
-  product_id         String?
-  title              String
-  format             video_format
-  stage              video_stage     @default(DRAFT)
+  id              String       @id @default(uuid())
+  organization_id String
+  product_id      String?
+  title           String
+  format          video_format
+  stage           video_stage  @default(DRAFT)
 
   // Cổng duyệt 1: Kịch bản (Script / Storyboard)
-  script_approval    approval_state  @default(PENDING)
+  script_approval    approval_state @default(PENDING)
   script_approved_at DateTime?
   script_approved_by String?
 
   // Cổng duyệt 2: Video kết quả (Final Render)
-  video_approval     approval_state  @default(PENDING)
-  video_approved_at  DateTime?
-  video_approved_by  String?
+  video_approval    approval_state @default(PENDING)
+  video_approved_at DateTime?
+  video_approved_by String?
 
   // Cấu hình video
-  duration_seconds   Int             @default(15)
-  aspect_ratio       String          @default("9:16")
-  music_track        String?
-  voice_code         String?
-  has_subtitle       Boolean         @default(true)
-  caption_style      String          @default("MODERN_BADGE")
-  has_watermark      Boolean         @default(false)
+  duration_seconds Int     @default(15)
+  aspect_ratio     String  @default("9:16")
+  music_track      String?
+  voice_code       String?
+  has_subtitle     Boolean @default(true)
+  caption_style    String  @default("MODERN_BADGE")
+  has_watermark    Boolean @default(false)
 
   // Đợt 4 (24/09/2026): video lắp từ KỊCH BẢN SẢN XUẤT TỔNG + bản phối Khu vực C.
   // Có `audio_storage_key` thì worker dùng nguyên bản phối, không đọc lại TTS.
@@ -1133,16 +1137,16 @@ model video_jobs {
   audio_storage_key   String?
 
   // Tài sản đầu ra & Hạch toán
-  final_video_url    String?
-  final_asset_id     String?
-  cost_credits       Int             @default(0)
-  error_message      String?
+  final_video_url String?
+  final_asset_id  String?
+  cost_credits    Int     @default(0)
+  error_message   String?
 
-  created_at         DateTime        @default(now())
-  updated_at         DateTime        @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  organization       organizations   @relation(fields: [organization_id], references: [id])
-  scenes             video_scenes[]
+  organization organizations  @relation(fields: [organization_id], references: [id])
+  scenes       video_scenes[]
 
   @@index([organization_id])
   @@index([organization_id, product_id])
@@ -1152,23 +1156,23 @@ model video_jobs {
 }
 
 model video_scenes {
-  id                String       @id @default(uuid())
+  id                String   @id @default(uuid())
   video_job_id      String
   scene_index       Int
-  duration_seconds  Float        @default(3.0)
+  duration_seconds  Float    @default(3.0)
   image_asset_id    String?
   text_overlay      String?
   voice_script      String?
-  transition_effect String?      @default("fade")
+  transition_effect String?  @default("fade")
   /// Ken Burns (ZOOM_IN | ZOOM_OUT | PAN_UP | PAN_RIGHT | STATIC) — 23/09/2026:
   /// trước đó lựa chọn ở Khu vực E không được lưu, worker luôn tự xoay vòng.
   motion_effect     String?
-  created_at        DateTime     @default(now())
+  created_at        DateTime @default(now())
 
-  job               video_jobs   @relation(fields: [video_job_id], references: [id], onDelete: Cascade)
+  job video_jobs @relation(fields: [video_job_id], references: [id], onDelete: Cascade)
 
-  @@index([video_job_id])
   @@unique([video_job_id, scene_index])
+  @@index([video_job_id])
 }
 
 // ── M10 — Đơn hàng và vận hành (P22) ────────────────────────────────────────
@@ -1208,39 +1212,39 @@ model orders {
   production_status production_status @default(WAITING)
   delivery_status   delivery_status   @default(PENDING)
 
-  total_vnd         Decimal           @db.Decimal(14, 2)
+  total_vnd        Decimal @db.Decimal(14, 2)
   /// ĐP-4a (26/09/2026) — Sổ thu (PO 26/09, D2). Tổng đã thu, cập nhật CÙNG
   /// giao dịch với mỗi dòng `order_payments`. Đơn cũ (trước ĐP-4a): 0, gán
   /// trong migration.
-  paid_vnd          Decimal           @default(0) @db.Decimal(14, 2)
+  paid_vnd         Decimal @default(0) @db.Decimal(14, 2)
   /// Còn phải thu = total_vnd − paid_vnd. Máy chủ ghi, không ai sửa tay.
   /// KHÔNG có ràng buộc CHECK ở tầng Prisma (xem migration.sql của
   /// `..._coordinator_p1_p2_payments` — CHECK viết tay ở SQL thô, `prisma db
   /// push` không đẩy được ràng buộc CHECK, chỉ `migrate deploy` mới đẩy).
   /// Đơn cũ: gán = total_vnd trong migration (chưa thu gì).
-  balance_vnd       Decimal           @db.Decimal(14, 2)
-  pricing_rule_ref  Json?                       // quy tắc giá đã dùng, để đối soát
-  voucher_id        String?
-  card_message      String?                     // lời nhắn thiệp, tách khỏi ghi chú nội bộ
-  internal_note     String?
-  delivery_window   Json?                       // ngày và khung giờ đã hẹn
-  delivery_address  Json?
+  balance_vnd      Decimal @db.Decimal(14, 2)
+  pricing_rule_ref Json? // quy tắc giá đã dùng, để đối soát
+  voucher_id       String?
+  card_message     String? // lời nhắn thiệp, tách khỏi ghi chú nội bộ
+  internal_note    String?
+  delivery_window  Json? // ngày và khung giờ đã hẹn
+  delivery_address Json?
 
-  created_by        String
-  created_at        DateTime          @default(now())
-  updated_at        DateTime          @updatedAt
+  created_by String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  organization      organizations     @relation(fields: [organization_id], references: [id])
-  customer          customers?        @relation(fields: [customer_id], references: [id])
-  items             order_items[]
-  assignments       order_assignments[]
-  events            order_events[]
-  coordination      order_coordinations?
-  qc_records        order_qc_records[]
-  exceptions        order_exceptions[]
-  payments          order_payments[]
-  info_requests     order_info_requests[]
-  change_requests   order_change_requests[]
+  organization    organizations           @relation(fields: [organization_id], references: [id])
+  customer        customers?              @relation(fields: [customer_id], references: [id])
+  items           order_items[]
+  assignments     order_assignments[]
+  events          order_events[]
+  coordination    order_coordinations?
+  qc_records      order_qc_records[]
+  exceptions      order_exceptions[]
+  payments        order_payments[]
+  info_requests   order_info_requests[]
+  change_requests order_change_requests[]
 
   @@unique([organization_id, code])
   @@index([organization_id, status])
@@ -1248,34 +1252,34 @@ model orders {
 }
 
 model order_items {
-  id              String   @id @default(uuid())
+  id              String  @id @default(uuid())
   organization_id String
   order_id        String
   product_id      String?
   variant_id      String?
-  description     String?              // khi khách đặt mẫu ngoài danh mục
-  quantity        Int      @default(1)
-  unit_price_vnd  Decimal  @db.Decimal(14, 2)
-  metadata        Json?                // BOM có cấu trúc (FlowerBomItem[]), wrapStyle/ribbon, ảnh mẫu — từ Product Master Index lúc chọn mẫu, để phiếu cắm hoa (florist ticket) không phải bịa dữ liệu
+  description     String? // khi khách đặt mẫu ngoài danh mục
+  quantity        Int     @default(1)
+  unit_price_vnd  Decimal @db.Decimal(14, 2)
+  metadata        Json? // BOM có cấu trúc (FlowerBomItem[]), wrapStyle/ribbon, ảnh mẫu — từ Product Master Index lúc chọn mẫu, để phiếu cắm hoa (florist ticket) không phải bịa dữ liệu
 
-  organization    organizations @relation(fields: [organization_id], references: [id])
-  order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id])
+  order        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, order_id])
 }
 
 model order_assignments {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   organization_id String
   order_id        String
-  assignee_id     String                // thành viên nhận việc cắm
+  assignee_id     String // thành viên nhận việc cắm
   assigned_by     String
-  difficulty      String?               // định mức tiền công theo độ khó
-  assigned_at     DateTime @default(now())
+  difficulty      String? // định mức tiền công theo độ khó
+  assigned_at     DateTime  @default(now())
   released_at     DateTime?
 
-  organization    organizations @relation(fields: [organization_id], references: [id])
-  order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id])
+  order        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, assignee_id])
   @@index([organization_id, order_id])
@@ -1285,15 +1289,15 @@ model order_events {
   id              String   @id @default(uuid())
   organization_id String
   order_id        String
-  axis            String                // order · production · delivery
+  axis            String // order · production · delivery
   from_value      String?
   to_value        String
   actor_id        String?
   reason          String?
   created_at      DateTime @default(now())
 
-  organization    organizations @relation(fields: [organization_id], references: [id])
-  order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id])
+  order        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, order_id, created_at])
 }
@@ -1321,32 +1325,32 @@ enum voucher_discount_type {
 }
 
 model customers {
-  id                String         @id @default(uuid())
+  id                String        @id @default(uuid())
   organization_id   String
-  code              String         // KH-0001, KH-0002
+  code              String // KH-0001, KH-0002
   name              String
   phone             String
   email             String?
   address           String?
-  tier              customer_tier  @default(NEW)
+  tier              customer_tier @default(NEW)
   notes             String?
-  tags              String[]       @default([])
-  preferred_flowers String[]       @default([])
-  preferred_colors  String[]       @default([])
+  tags              String[]      @default([])
+  preferred_flowers String[]      @default([])
+  preferred_colors  String[]      @default([])
 
-  total_spent       Decimal        @default(0) @db.Decimal(14, 2)
-  order_count       Int            @default(0)
-  last_order_at     DateTime?
+  total_spent   Decimal   @default(0) @db.Decimal(14, 2)
+  order_count   Int       @default(0)
+  last_order_at DateTime?
 
-  created_at        DateTime       @default(now())
-  updated_at        DateTime       @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  organization      organizations  @relation(fields: [organization_id], references: [id])
-  orders            orders[]
-  occasions         customer_occasions[]
-  consents          customer_consents[]
-  vouchers          vouchers[]
-  conversations     chat_conversations[]
+  organization  organizations        @relation(fields: [organization_id], references: [id])
+  orders        orders[]
+  occasions     customer_occasions[]
+  consents      customer_consents[]
+  vouchers      vouchers[]
+  conversations chat_conversations[]
 
   @@unique([organization_id, phone])
   @@unique([organization_id, code])
@@ -1355,19 +1359,19 @@ model customers {
 }
 
 model customer_occasions {
-  id                   String        @id @default(uuid())
+  id                   String   @id @default(uuid())
   organization_id      String
   customer_id          String
-  name                 String        // Sinh nhật vợ, Kỷ niệm ngày cưới, Ngày của Mẹ...
-  date                 String        // MM-DD hoặc YYYY-MM-DD
-  is_recurring         Boolean       @default(true)
-  reminder_days_before Int           @default(7)
+  name                 String // Sinh nhật vợ, Kỷ niệm ngày cưới, Ngày của Mẹ...
+  date                 String // MM-DD hoặc YYYY-MM-DD
+  is_recurring         Boolean  @default(true)
+  reminder_days_before Int      @default(7)
   recipient_name       String?
   notes                String?
-  created_at           DateTime      @default(now())
+  created_at           DateTime @default(now())
 
-  organization         organizations @relation(fields: [organization_id], references: [id])
-  customer             customers     @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id])
+  customer     customers     @relation(fields: [customer_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, customer_id])
   @@index([organization_id, date])
@@ -1383,8 +1387,8 @@ model customer_consents {
   revoked_at      DateTime?
   created_at      DateTime        @default(now())
 
-  organization    organizations   @relation(fields: [organization_id], references: [id])
-  customer        customers       @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id])
+  customer     customers     @relation(fields: [customer_id], references: [id], onDelete: Cascade)
 
   @@unique([customer_id, channel])
   @@index([organization_id, customer_id])
@@ -1393,8 +1397,8 @@ model customer_consents {
 model vouchers {
   id               String                @id @default(uuid())
   organization_id  String
-  customer_id      String?               // null nếu áp dụng công khai
-  code             String                // FLORA10, VIP2026
+  customer_id      String? // null nếu áp dụng công khai
+  code             String // FLORA10, VIP2026
   discount_type    voucher_discount_type @default(PERCENTAGE)
   discount_value   Decimal               @db.Decimal(14, 2)
   min_order_vnd    Decimal               @default(0) @db.Decimal(14, 2)
@@ -1405,8 +1409,8 @@ model vouchers {
   order_id         String?
   created_at       DateTime              @default(now())
 
-  organization     organizations         @relation(fields: [organization_id], references: [id])
-  customer         customers?            @relation(fields: [customer_id], references: [id])
+  organization organizations @relation(fields: [organization_id], references: [id])
+  customer     customers?    @relation(fields: [customer_id], references: [id])
 
   @@unique([organization_id, code])
   @@index([organization_id, customer_id])
@@ -1432,50 +1436,50 @@ enum chat_sender_type {
 }
 
 model chat_conversations {
-  id              String        @id @default(uuid())
+  id              String       @id @default(uuid())
   organization_id String
   customer_id     String?
-  title           String        @default("Hội thoại tư vấn hoa")
-  channel         chat_channel  @default(WEB_WIDGET)
-  status          String        @default("ACTIVE") // ACTIVE, CLOSED
-  created_at      DateTime      @default(now())
-  updated_at      DateTime      @updatedAt
+  title           String       @default("Hội thoại tư vấn hoa")
+  channel         chat_channel @default(WEB_WIDGET)
+  status          String       @default("ACTIVE") // ACTIVE, CLOSED
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
 
-  organization    organizations @relation(fields: [organization_id], references: [id])
-  customer        customers?    @relation(fields: [customer_id], references: [id])
-  messages        chat_messages[]
+  organization organizations   @relation(fields: [organization_id], references: [id])
+  customer     customers?      @relation(fields: [customer_id], references: [id])
+  messages     chat_messages[]
 
   @@index([organization_id, status])
   @@index([organization_id, customer_id])
 }
 
 model chat_messages {
-  id              String            @id @default(uuid())
+  id              String           @id @default(uuid())
   organization_id String
   conversation_id String
   sender_type     chat_sender_type
   content         String
-  metadata        Json?             // Gợi ý hoa từ Master Index, Draft Order ID
+  metadata        Json? // Gợi ý hoa từ Master Index, Draft Order ID
 
-  created_at      DateTime          @default(now())
+  created_at DateTime @default(now())
 
-  organization    organizations      @relation(fields: [organization_id], references: [id])
-  conversation    chat_conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  organization organizations      @relation(fields: [organization_id], references: [id])
+  conversation chat_conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, conversation_id, created_at])
 }
 
 model chat_channel_integrations {
-  id                       String        @id @default(uuid())
-  organization_id          String
-  channel                  chat_channel
-  is_enabled               Boolean       @default(false)
-  config                   Json          @default("{}")
-  subscription_expires_at  DateTime?
-  created_at               DateTime      @default(now())
-  updated_at               DateTime      @updatedAt
+  id                      String       @id @default(uuid())
+  organization_id         String
+  channel                 chat_channel
+  is_enabled              Boolean      @default(false)
+  config                  Json         @default("{}")
+  subscription_expires_at DateTime?
+  created_at              DateTime     @default(now())
+  updated_at              DateTime     @updatedAt
 
-  organization             organizations @relation(fields: [organization_id], references: [id])
+  organization organizations @relation(fields: [organization_id], references: [id])
 
   @@unique([organization_id, channel])
   @@index([organization_id, is_enabled])
@@ -1493,26 +1497,26 @@ model chat_channel_integrations {
 // để bước soát tên loài tra được bằng truy vấn thay vì nạp cả tệp vào bộ nhớ.
 
 model flower_taxonomy {
-  ma_loai      String  @id // LH001…
-  nhom         String  // Hoa · Lá · Phụ kiện
-  cong_nang    String? // Hoa chính · Hoa phụ · Hoa lấp đầy…
-  ten_chuan    String
-  ten_khac     Json    // string[] — tên gọi khác, dùng để so tên máy trả về
-  nhom_hoa     String?
-  dvt_chuan    String?
-  so_bong_tren_dvt Int?
-  duong_kinh_bong_cm Float?
-  dien_tich_phu_cm2  Float?
+  ma_loai              String  @id // LH001…
+  nhom                 String // Hoa · Lá · Phụ kiện
+  cong_nang            String? // Hoa chính · Hoa phụ · Hoa lấp đầy…
+  ten_chuan            String
+  ten_khac             Json // string[] — tên gọi khác, dùng để so tên máy trả về
+  nhom_hoa             String?
+  dvt_chuan            String?
+  so_bong_tren_dvt     Int?
+  duong_kinh_bong_cm   Float?
+  dien_tich_phu_cm2    Float?
   ty_le_nhuy_tren_bong Float?
-  mau_nhuy     String?
-  kieu_moc     String?
-  dai_mau_tu_nhien Json?  // string[]
-  dac_diem_phan_biet String?
-  mua_vu       String?
-  trang_thai   String  @default("Đang dùng")
+  mau_nhuy             String?
+  kieu_moc             String?
+  dai_mau_tu_nhien     Json? // string[]
+  dac_diem_phan_biet   String?
+  mua_vu               String?
+  trang_thai           String  @default("Đang dùng")
 
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   cap_a flower_confusable_pairs[] @relation("loai_a")
   cap_b flower_confusable_pairs[] @relation("loai_b")
@@ -1655,37 +1659,37 @@ enum field_override_target {
 /// bằng seed 3.6) và trường tự tạo (`origin = CUSTOM`, tạo thẳng từ Console
 /// theo 3.7). `key` không đổi sau khi tạo (luật 3.4).
 model field_definitions {
-  id                String                   @id @default(uuid())
-  key               String                   @unique
-  entity            String // ORDER · PARTNER (ĐP-4 mở thêm QC_RECORD/EXCEPTION/PAYMENT)
-  origin            field_origin             @default(CORE)
-  data_type         String
-  label             String
-  description       String?
-  placeholder       String?
+  id                  String                  @id @default(uuid())
+  key                 String                  @unique
+  entity              String // ORDER · PARTNER (ĐP-4 mở thêm QC_RECORD/EXCEPTION/PAYMENT)
+  origin              field_origin            @default(CORE)
+  data_type           String
+  label               String
+  description         String?
+  placeholder         String?
   /// { placements: [{ placement: "T01.delivery", order: 3 }, …] }
-  placements        Json?
-  requirement       field_requirement_level  @default(OPTIONAL)
-  required_at_stage String?
+  placements          Json?
+  requirement         field_requirement_level @default(OPTIONAL)
+  required_at_stage   String?
   /// { INTERNAL: true, PARTNER: false, SHIPPER: false, CUSTOMER: false }
-  visibility        Json?
+  visibility          Json?
   /// Ràng buộc bổ sung ngoài `data_type` (độ dài, min/max, regex…).
-  validation        Json?
-  catalog_key       String?
-  sensitivity       field_sensitivity        @default(NORMAL)
+  validation          Json?
+  catalog_key         String?
+  sensitivity         field_sensitivity       @default(NORMAL)
   /// Mức sàn §16.2 mục 1: true thì KHÔNG tổ chức nào, cấu hình nào mở được
   /// hiển thị ra ngoài INTERNAL (giá bán, giá vốn…). Đọc CÙNG với
   /// `sensitivity` ở `field-rules.ts` — hai cờ độc lập, cùng mục đích khoá sàn.
-  floor_internal_only Boolean                @default(false)
-  status            field_status             @default(ACTIVE)
+  floor_internal_only Boolean                 @default(false)
+  status              field_status            @default(ACTIVE)
   /// Trường tự tạo mặc định áp cho tổ chức nào: true = mọi tổ chức trừ khi
   /// bị tắt qua `field_config_overrides`; false = "trường tự tạo chỉ áp
   /// cho tổ chức này" — cần override `is_enabled = true` mới thấy (6.1).
-  default_enabled   Boolean                  @default(true)
-  created_by        String?
-  updated_by        String?
-  created_at        DateTime                 @default(now())
-  updated_at        DateTime                 @updatedAt
+  default_enabled     Boolean                 @default(true)
+  created_by          String?
+  updated_by          String?
+  created_at          DateTime                @default(now())
+  updated_at          DateTime                @updatedAt
 
   @@index([entity])
   @@index([catalog_key])
@@ -1698,13 +1702,13 @@ model field_definitions {
 /// `behavior`; `CLOSED` — chỉ bật/tắt, không thêm/sửa (vd. trạng thái nội
 /// bộ do luật nghiệp vụ cố định số lượng).
 model field_catalogs {
-  id            String                    @id @default(uuid())
-  key           String                    @unique
+  id            String                   @id @default(uuid())
+  key           String                   @unique
   label         String
-  governance    field_catalog_governance  @default(OPEN)
+  governance    field_catalog_governance @default(OPEN)
   behavior_kind String?
-  created_at    DateTime                  @default(now())
-  updated_at    DateTime                  @updatedAt
+  created_at    DateTime                 @default(now())
+  updated_at    DateTime                 @updatedAt
 
   values field_catalog_values[]
 }
@@ -1735,7 +1739,7 @@ model field_catalog_values {
 /// dùng `override_key = "<catalog_key>:<code>"`. Mức sàn (luật 3.4) cắt sau
 /// cùng, không đọc thẳng từ đây — không route nào được phép bỏ qua lớp mã.
 model field_config_overrides {
-  id              String                    @id @default(uuid())
+  id              String                   @id @default(uuid())
   organization_id String
   target          field_override_target
   override_key    String
@@ -1745,8 +1749,8 @@ model field_config_overrides {
   is_enabled      Boolean?
   created_by      String?
   updated_by      String?
-  created_at      DateTime                  @default(now())
-  updated_at      DateTime                  @updatedAt
+  created_at      DateTime                 @default(now())
+  updated_at      DateTime                 @updatedAt
 
   organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
@@ -1922,7 +1926,7 @@ model topic_scores {
 
 /// Gợi ý cơ hội nội dung được cá nhân hóa cho từng tổ chức (TENANT)
 model content_opportunities {
-  id                        String   @id @default(uuid())
+  id                        String    @id @default(uuid())
   organization_id           String
   topic_id                  String
   audience                  String?
@@ -1934,10 +1938,10 @@ model content_opportunities {
   viral_score               Float
   commercial_score          Float
   content_opportunity_score Float
-  confidence                Float    @default(1.0)
+  confidence                Float     @default(1.0)
   expires_at                DateTime?
-  created_at                DateTime @default(now())
-  updated_at                DateTime @updatedAt
+  created_at                DateTime  @default(now())
+  updated_at                DateTime  @updatedAt
 
   organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
   topic        topics        @relation(fields: [topic_id], references: [id], onDelete: Cascade)
@@ -1963,16 +1967,16 @@ model content_opportunities {
 /// `report` JSONB cũng không còn mang `imageUrl` thật (rỗng hoá trước khi
 /// ghi) — xem `analyze-product-intelligence.ts`.
 model product_analysis_runs {
-  id                  String   @id @default(uuid())
-  organization_id     String
-  asset_id            String
-  product_name        String
-  trend_fit_score     Float
-  audience_fit_score  Float
-  content_fit_score   Float
-  overall_fit         String
-  report              Json
-  created_at          DateTime @default(now())
+  id                 String   @id @default(uuid())
+  organization_id    String
+  asset_id           String
+  product_name       String
+  trend_fit_score    Float
+  audience_fit_score Float
+  content_fit_score  Float
+  overall_fit        String
+  report             Json
+  created_at         DateTime @default(now())
 
   organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
@@ -2018,33 +2022,33 @@ model provider_health {
 /// + nội dung bài đăng do người dùng soạn; QA chạy phía máy chủ trên dữ liệu thật
 /// (`campaign-package-rules.ts`), duyệt ghi `audit_logs` cùng giao dịch.
 model campaign_packages {
-  id                 String    @id @default(uuid())
-  organization_id    String
-  product_id         String?
-  master_asset_id    String
-  name               String
-  mode               String                      // CREATIVE | AUTHENTIC
+  id                String    @id @default(uuid())
+  organization_id   String
+  product_id        String?
+  master_asset_id   String
+  name              String
+  mode              String // CREATIVE | AUTHENTIC
   /// Ảnh chụp chủ đề đã chọn ở Chặng 05 (id, title, angleCategory, hook, cta).
-  topic              Json?
+  topic             Json?
   /// Nội dung bài đăng theo kênh: [{ channel, text, hashtags[] }].
-  content            Json?
-  variant_asset_ids  String[]  @default([])
+  content           Json?
+  variant_asset_ids String[]  @default([])
   /// Video chính (= phần tử đầu của `video_job_ids`, giữ để tương thích).
-  video_job_id       String?
+  video_job_id      String?
   /// Mọi video của gói — mỗi khung hình trong phạm vi sản xuất một video (24/09/2026).
-  video_job_ids      String[]  @default([])
-  audio_job_id       String?
+  video_job_ids     String[]  @default([])
+  audio_job_id      String?
   /// DRAFT | QA_PASSED | QA_NEEDS_REVIEW | QA_REJECTED | APPROVED
-  status             String    @default("DRAFT")
-  qa_report          Json?
-  qa_checked_at      DateTime?
-  approved_by        String?
-  approved_at        DateTime?
+  status            String    @default("DRAFT")
+  qa_report         Json?
+  qa_checked_at     DateTime?
+  approved_by       String?
+  approved_at       DateTime?
   /// Kế hoạch đăng (Chặng 10): { channels[], scheduled_at, post_refs[{platform, content_id}] }.
-  launch_plan        Json?
-  created_by         String
-  created_at         DateTime  @default(now())
-  updated_at         DateTime  @updatedAt
+  launch_plan       Json?
+  created_by        String
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
 
   organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
@@ -2062,7 +2066,7 @@ model content_drafts {
   /// Ảnh sản phẩm Khu vực A (`assets.id`) — cùng khoá với kịch bản bối cảnh.
   asset_id        String
   topic_id        String
-  mode            String                        // CREATIVE | AUTHENTIC
+  mode            String // CREATIVE | AUTHENTIC
   topic_title     String?
   /// [{ channel, text, hashtags[] }] — cùng hình dạng `campaign_packages.content`.
   posts           Json
@@ -2095,20 +2099,20 @@ model content_generations {
   mode            String?
 
   /// Kênh đã chạy — facebook | instagram | tiktok | zalo
-  channels Json
+  channels        Json
   /// Bản chụp Content Brief v1 tại thời điểm chạy (`contracts/brief.ts`).
-  brief    Json
+  brief           Json
   /// Trùng `contracts/brief.ts#BRIEF_VERSION` tại thời điểm chạy.
-  brief_version Int
+  brief_version   Int
   /// { strategist, writer, critic, rewriter } — mã phiên bản prompt mỗi bước.
   prompt_versions Json
   rubric_version  String
 
   /// Kết quả Strategist — thông điệp chính + góc/hook/dàn ý mỗi kênh.
-  strategy Json?
+  strategy       Json?
   /// [{ channel, text, hashtags, fact_ids, scores, rounds, needs_review, source }]
-  posts         Json
-  overall_score Float?
+  posts          Json
+  overall_score  Float?
   /// Bài sau khi chủ tiệm sửa rồi duyệt — nguồn học phong cách tiệm (Đợt 4).
   approved_posts Json?
 
@@ -2273,8 +2277,8 @@ model partners {
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
-  organization    organizations         @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  coordinations   order_coordinations[]
+  organization  organizations         @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  coordinations order_coordinations[]
 
   @@unique([organization_id, code])
   @@index([organization_id, is_active])
@@ -2337,36 +2341,36 @@ model order_coordinations {
   /// Danh mục §2.15.5 (CÓ HÀNH VI DELIVERY_LOCATION) — kích hoạt nhóm trường có điều kiện §12.
   delivery_location_type String?
   /// `cardMessage` bắt buộc khi cột này = true (kiểm ở `http-schemas.ts`).
-  card_required           Boolean                 @default(false)
+  card_required          Boolean   @default(false)
   /// Thời điểm đơn THỰC SỰ đến (khác `created_at` khi đơn đến từ kênh ngoài có độ trễ nhập liệu).
-  received_at             DateTime?
+  received_at            DateTime?
   /// Dùng khi `service_level = TIME_SLOT` (§2.15.2).
-  delivery_window_start   DateTime?
-  delivery_window_end     DateTime?
+  delivery_window_start  DateTime?
+  delivery_window_end    DateTime?
   /// Hạn sản xuất xong — tính ngược từ SLA giao (ĐP-4a.2/4a.9), CHƯA tính ở đợt 4a.1.
-  production_deadline_at  DateTime?
+  production_deadline_at DateTime?
   /// Hạn lấy hàng đi giao — tính ngược từ SLA giao (ĐP-4a.2/4a.9), CHƯA tính ở đợt 4a.1.
-  pickup_target_at        DateTime?
+  pickup_target_at       DateTime?
   /// Người phụ trách bán (§2.1) — gán = người tạo đơn lúc tiếp nhận, giống `coordinator_id`;
   /// chưa có API đổi người phụ trách (cùng tình trạng "MỘT PHẦN" như `coordinator_id`).
-  sales_owner_id          String?
+  sales_owner_id         String?
   /// Người phụ trách hành động kế tiếp — CHƯA gán ở đợt 4a.1 (thuộc luồng bàn giao T02, ĐP-4a.5).
-  next_action_owner_id    String?
+  next_action_owner_id   String?
   /// Mốc bàn giao Sales → Điều phối (T02) — CHƯA ghi ở đợt 4a.1 (ĐP-4a.5).
-  handoff_at              DateTime?
+  handoff_at             DateTime?
 
   // ── ĐP-4a.5 (27/09/2026) — T02: xác nhận bàn giao Sales → Điều phối ──────
   /// true khi Điều phối đã nhận bàn giao (đặt cùng lúc với `handoff_at`, lúc rời INTAKE).
-  handoff_confirmed       Boolean                 @default(false)
+  handoff_confirmed Boolean @default(false)
 
   // ── ĐP-4a.3 bù (27/09/2026) — Điều phối đặt cách thu + hạn thu phần còn lại ──
   /// Danh mục §2.15.7 (MỞ) — mã chuỗi kiểm active ở tầng ứng dụng (D12).
-  collection_method       String?
-  collection_due_at       DateTime?
+  collection_method String?
+  collection_due_at DateTime?
 
   // ── ĐP-4a.9 (27/09/2026) — Form Lập kế hoạch đơn (Đặc tả trường §4.2) ────
   /// Mốc điều phối viên lập kế hoạch xong (khác `created_at`/`handoff_at`).
-  planned_at                     DateTime?
+  planned_at                    DateTime?
   production_buffer_minutes     Int?
   pickup_buffer_minutes         Int?
   planned_production_minutes    Int?
@@ -2376,12 +2380,12 @@ model order_coordinations {
   partner_selection_deadline_at DateTime?
   technical_instruction         String?
 
-  created_at            DateTime                @default(now())
-  updated_at            DateTime                @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  organization          organizations           @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  order                 orders                  @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  partner               partners?               @relation(fields: [partner_id], references: [id])
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  partner      partners?     @relation(fields: [partner_id], references: [id])
 
   @@index([organization_id, stage])
   @@index([organization_id, risk_level])
@@ -2391,11 +2395,11 @@ model order_coordinations {
 /// `orders.paid_vnd`/`balance_vnd` được máy chủ cập nhật CÙNG giao dịch với
 /// dòng này (`record-payment.ts`). TENANT ISOLATION.
 model order_payments {
-  id                String              @id @default(uuid())
+  id                String             @id @default(uuid())
   organization_id   String
   order_id          String
   kind              order_payment_kind
-  amount_vnd        Decimal             @db.Decimal(14, 2)
+  amount_vnd        Decimal            @db.Decimal(14, 2)
   /// Danh mục §2.15.7 (`CASH`·`BANK_TRANSFER`·`COD`·`CARD`·`E_WALLET`·`OTHER`).
   /// Mã chuỗi kiểm theo danh mục — không dùng Prisma enum (D12).
   payment_method    String?
@@ -2404,14 +2408,14 @@ model order_payments {
   /// Ảnh chuyển khoản/biên nhận — id `assets` cùng tổ chức.
   evidence_asset_id String?
   collected_by      String
-  collected_at      DateTime            @default(now())
+  collected_at      DateTime           @default(now())
   note              String?
   /// ĐP-3 — trường tự tạo (entity = ORDER, đặt trên dòng sổ thu — dự phòng cho tương lai).
   custom_fields     Json?
-  created_at        DateTime            @default(now())
+  created_at        DateTime           @default(now())
 
-  organization      organizations       @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  order             orders              @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, order_id])
 }
@@ -2421,32 +2425,32 @@ model order_payments {
 /// nhưng không được render — dashboard đang mở SỰ CỐ loại
 /// `MISSING_INFORMATION` thay vì tạo yêu cầu riêng). TENANT ISOLATION.
 model order_info_requests {
-  id                    String                    @id @default(uuid())
-  organization_id       String
-  order_id              String
+  id                   String                    @id @default(uuid())
+  organization_id      String
+  order_id             String
   /// Khoá trường lõi (`field-registry.ts`) hoặc trường tự tạo đang thiếu.
-  missing_field         String
-  field_label           String
-  reason                String
-  business_impact       String?
+  missing_field        String
+  field_label          String
+  reason               String
+  business_impact      String?
   /// Hỏi ai — mô tả tự do (khách qua Zalo, SĐT khách…), KHÔNG phải id có cấu trúc.
-  requested_from        String
-  requested_by          String
-  requested_at          DateTime                  @default(now())
-  due_at                DateTime?
+  requested_from       String
+  requested_by         String
+  requested_at         DateTime                  @default(now())
+  due_at               DateTime?
   /// Danh mục §2.15.3 (kênh hỏi lại — có thể khác kênh nhận đơn gốc).
-  channel               String?
-  message_template      String?
-  response_required     Boolean                   @default(true)
-  response_value        String?
-  response_received_at  DateTime?
-  status                order_info_request_status @default(OPEN)
-  cancelled_reason      String?
-  created_at            DateTime                  @default(now())
-  updated_at            DateTime                  @updatedAt
+  channel              String?
+  message_template     String?
+  response_required    Boolean                   @default(true)
+  response_value       String?
+  response_received_at DateTime?
+  status               order_info_request_status @default(OPEN)
+  cancelled_reason     String?
+  created_at           DateTime                  @default(now())
+  updated_at           DateTime                  @updatedAt
 
-  organization          organizations             @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  order                 orders                    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, order_id])
   @@index([organization_id, status])
@@ -2456,11 +2460,11 @@ model order_info_requests {
 /// bản ĐẦY ĐỦ của Quy tắc Override, Hợp đồng MI §6, thay cho bản tối thiểu
 /// `diffAgainstSnapshot` chỉ so một lần lúc tạo đơn). TENANT ISOLATION.
 model order_change_requests {
-  id                 String                       @id @default(uuid())
+  id                 String                      @id @default(uuid())
   organization_id    String
   order_id           String
   requested_by       String
-  requested_at       DateTime                     @default(now())
+  requested_at       DateTime                    @default(now())
   change_type        order_change_type
   /// Đường dẫn trường bị đổi (khớp khoá `field-registry.ts` khi có, hoặc `bom.flowers[…]`…).
   field_changed      String
@@ -2473,23 +2477,23 @@ model order_change_requests {
   production_impact  String?
   delivery_impact    String?
   /// Chênh lệch tiền khi `change_type = PRICE` (âm = giảm giá). Dùng tính lại `balance_vnd`.
-  cost_impact_vnd    Decimal?                     @db.Decimal(14, 2)
+  cost_impact_vnd    Decimal?                    @db.Decimal(14, 2)
   /// PRICE/QUANTITY luôn cần duyệt trước khi áp dụng — xem `create-order-change-request.ts`.
-  requires_approval  Boolean                      @default(false)
+  requires_approval  Boolean                     @default(false)
   approved_by        String?
   approved_at        DateTime?
   /// true khi đã báo đối tác — mặc định false; nếu đơn đã phân công lúc tạo yêu cầu,
   /// view tính cờ DERIVED `needsPartnerNotice = partnerId != null && !partnerNotified`.
-  partner_notified   Boolean                      @default(false)
-  customer_confirmed Boolean                      @default(false)
+  partner_notified   Boolean                     @default(false)
+  customer_confirmed Boolean                     @default(false)
   effective_at       DateTime?
-  status             order_change_request_status  @default(PENDING)
+  status             order_change_request_status @default(PENDING)
   rejected_reason    String?
-  created_at         DateTime                     @default(now())
-  updated_at         DateTime                     @updatedAt
+  created_at         DateTime                    @default(now())
+  updated_at         DateTime                    @updatedAt
 
-  organization       organizations                @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  order               orders                      @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, order_id])
   @@index([organization_id, status])
@@ -2512,34 +2516,68 @@ model order_qc_records {
   created_at       DateTime         @default(now())
   updated_at       DateTime         @updatedAt
 
-  organization     organizations    @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  order            orders           @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, order_id])
 }
 
 /// Nhật ký sự cố và ngoại lệ phát sinh trong quá trình điều phối. TENANT ISOLATION.
 model order_exceptions {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   organization_id String
   order_id        String
   code            String
   type            String
-  severity        String   @default("MEDIUM")
+  severity        String    @default("MEDIUM")
   description     String
   resolution      String?
-  status          String   @default("OPEN")
+  status          String    @default("OPEN")
   reported_by     String?
   resolved_by     String?
   resolved_at     DateTime?
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
 
-  organization    organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  order           orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  order        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   @@unique([organization_id, code])
   @@index([organization_id, order_id])
   @@index([organization_id, status])
 }
 
+// ── Journey Runs & Decision Registry (Patch v2.3 / P1 & P2) ──────────────────
+
+/// Lượt thực thi của Journey theo Manifest v2 (Manual/Automatic)
+model journey_runs {
+  id               String   @id @default(uuid())
+  organization_id  String
+  workspace_id     String?
+  manifest_id      String
+  execution_mode   String   @default("manual") // manual | automatic
+  status           String   @default("PENDING") // PENDING | RUNNING | COMPLETED | FAILED
+  params           Json?
+  context_snapshot Json?
+  degraded_steps   Json?
+  created_by       String
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, manifest_id])
+  @@index([organization_id, status])
+}
+
+/// Sổ đăng ký quyết định (Decision Registry - 19 dòng chuẩn D-*)
+model decision_registry {
+  decision_id String  @id
+  ownership   String // USER | SYSTEM | SHARED
+  locked      Boolean @default(false)
+  description String
+  spec_ref    String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}

@@ -100,11 +100,22 @@ API Route (src/app/api/v1/) → handle() → requireTenantContext() → requireC
 - **Zero-Leak Policy**: Cross-tenant unauthorized access MUST return `404 Not Found` or empty results. **NEVER return `403 Forbidden`** (HTTP 403 leaks the existence of another tenant's confidential record).
 - **Database Schema**: Every tenant-owned table MUST contain an `organization_id` column with an index `@@index([organization_id])`.
 
-## 12. AEGIS PROTECTION (Resource & AI Quota Safeguards)
-- Strict prevention of infinite loops (guards against runaway costs and API quota exhaustion).
-- Database updates MUST use `updateIfChanged()`. All external AI calls MUST be wrapped with `AICircuitBreaker`.
+## 13. JOURNEY-FIRST UX ARCHITECTURE (J1–J7 Standards)
+- **Journey-First Entry Point**: Entry pages/dashboards start with the user's action goal (`ChoiceGrid` asking "What do you want to do?") rather than raw metrics or module menus.
+- **Mandatory Dual-Mode Entry**: Every feature workflow (create, draft, configure) MUST provide 2 initial entry options:
+  1. *Automatic AI Fast-Track (`SmartInputDropzone`)*: User inputs raw media/text (Images, Video URL, Notes) ➔ AI analyzes (Vision OCR, Content Engine) and **pre-fills all wizard steps (Human-in-the-loop)**.
+  2. *Manually Guided Wizard*: Step-by-step sequential guided progress (Progressive Disclosure J2).
+- **7 Core Principles**:
+  1. `J1` Journey-First: Action-oriented choice grid over module hierarchy.
+  2. `J2` Progressive Disclosure: Show only the relevant steps/inputs for the current stage.
+  3. `J3` Next Best Actions: Every result state MUST lead to recommended next actions (`NextActions`).
+  4. `J4` Contextual AI: AI embedded directly into workflow stages, not isolated.
+  5. `J5` Role UX ≠ Capability: Role UX personalizes the journey, but RBAC / Capability Codes strictly enforce authorization.
+  6. `J6` 7-Step Action Contract: `Select` → `Input` → `Preview` → `Execute` → `Processing` → `Result` → `Next Action` (`ActionContractWrapper`).
+  7. `J7` "WRAP, not REPLACE" & Expert Mode: Wrap existing dashboards as journey destinations; provide toggleable Expert Mode for power users.
+- **Core Modules & UI Kit**: `src/modules/journey/` (domain/catalog) & `src/components/journey/` (`ChoiceGrid`, `ActionCard`, `JourneyShell`, `NextActions`).
 
-## 13. KNOWN FAILURE PATTERNS (FloraOS Battle-Tested Log)
+## 14. KNOWN FAILURE PATTERNS (FloraOS Battle-Tested Log)
 | # | Issue | Root Cause | Standard Remedy |
 |---|---|---|---|
 | 1 | `server-only` crash in Vitest | Missing `react-server` condition in Vitest | Use stub at `tests/helpers/server-only-stub.ts` |

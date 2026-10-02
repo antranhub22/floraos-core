@@ -1,19 +1,40 @@
 "use client"
 
 import React, { useState } from "react"
-import { Building2, Palette, ShieldCheck, CalendarHeart, RotateCcw, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react"
+import { Building2, Palette, Sparkles, ShieldCheck, CalendarHeart, RotateCcw, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { TabActionHeader, type TabItem, type TabAction, type TabOverflowAction } from "@/components/ui/tab-header"
 import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
 import { BusinessProfileForm } from "@/components/profiles/business-profile-form"
 import { BrandProfileForm } from "@/components/profiles/brand-profile-form"
+import { BrandAssetsManagerTab } from "@/components/profiles/brand-assets-manager-tab"
 import { SalesDefaultsForm } from "@/components/profiles/sales-defaults-form"
 import { GreetingLineOverrideForm } from "@/components/profiles/greeting-line-override-form"
 import { OccasionsSettingsForm } from "@/components/organization/occasions-settings-form"
+import { ProfileJourneyWorkspace } from "@/components/profiles/journey/profile-journey-workspace"
+
+const EXPERT_MODE_STORAGE_KEY = "floraos_profile_expert_mode"
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<string>("business")
+  const [isExpertMode, setIsExpertMode] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(EXPERT_MODE_STORAGE_KEY) === "true"
+    }
+    return false
+  })
+
+  const toggleExpertMode = () => {
+    setIsExpertMode((prev) => {
+      const next = !prev
+      if (typeof window !== "undefined") {
+        localStorage.setItem(EXPERT_MODE_STORAGE_KEY, String(next))
+      }
+      return next
+    })
+  }
+
   const {
     business,
     brand,
@@ -37,6 +58,13 @@ export default function ProfilePage() {
       label: "Nhận diện thương hiệu",
       icon: Palette,
       badge: "5 Màu Hex",
+      badgeTone: "accent",
+    },
+    {
+      id: "assets",
+      label: "Tài nguyên thương hiệu",
+      icon: Sparkles,
+      badge: "Master",
       badgeTone: "accent",
     },
     {
@@ -75,28 +103,25 @@ export default function ProfilePage() {
 
   return (
     <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-      {/* 1. Khối Hướng dẫn Thao tác Chuẩn FloraOS (FeatureGuidanceCard) */}
-      <FeatureGuidanceCard
-        tag="HƯỚNG DẪN THIẾT LẬP HỒ SƠ"
-        title="Hồ Sơ Cửa Hàng & Nhận Diện Thương Hiệu (Master Profile)"
-        titleIcon={Building2}
-        description="Thông tin cấu hình tại đây là Nguồn Chân Lý Duy Nhất (SSOT), tự động nạp vào Thẻ chào khách A6, Kịch bản Zalo, Watermark Video Studio, Theme E-Catalog và Rào chắn ngôn từ AI Content."
-        maxWidthClassName="max-w-4xl"
-        tips={[
-          "🏬 Nhập chính xác hotline/Zalo để tự động tạo link đặt hoa nhanh",
-          "🎨 Cài đặt 5 mã màu hex để đồng bộ giao diện nhận diện đa kênh",
-          "✨ Tone giọng và từ cấm giúp AI không bao giờ nói sai định vị của shop",
-        ]}
+      {/* 1. LỚP JOURNEY-FIRST UX WORKSPACE (Mặc định chào đón Store Admin) */}
+      <ProfileJourneyWorkspace
+        business={business}
+        brand={brand}
+        onSelectTab={setActiveTab}
+        onToggleExpertMode={toggleExpertMode}
+        isExpertMode={isExpertMode}
       />
 
-      {/* 2. Thanh Điều Hướng Tab & Hành Động Góc Trên Bên Phải (Standardized Tab Action Header) */}
-      <TabActionHeader
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        primaryActions={primaryActions}
-        overflowActions={overflowActions}
-      />
+      {/* 2. Thanh Điều Hướng Tab (Hiển thị khi ở Chế độ Chuyên gia hoặc người dùng muốn chuyển tab nhanh) */}
+      {isExpertMode && (
+        <TabActionHeader
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          primaryActions={primaryActions}
+          overflowActions={overflowActions}
+        />
+      )}
 
       {/* Thông báo trạng thái (Alert Banners) */}
       {successMessage && (
@@ -130,6 +155,14 @@ export default function ProfilePage() {
 
           {activeTab === "brand" && (
             <BrandProfileForm
+              initialData={brand}
+              onSave={saveBrand}
+              saving={saving}
+            />
+          )}
+
+          {activeTab === "assets" && (
+            <BrandAssetsManagerTab
               initialData={brand}
               onSave={saveBrand}
               saving={saving}

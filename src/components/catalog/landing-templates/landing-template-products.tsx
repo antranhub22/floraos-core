@@ -3,6 +3,8 @@
 import React from "react"
 import { MessageCircle, Flower2, Sparkles } from "lucide-react"
 import type { CatalogProduct } from "../catalog-management-tab"
+import { resolveFlowerImage } from "../flower-image-fallback"
+import { SmartFlowerImage } from "../smart-flower-image"
 
 interface LandingTemplateProductsProps {
   products: CatalogProduct[]
@@ -71,21 +73,14 @@ export function LandingTemplateProducts({
             key={p.id}
             className={`group rounded-2xl overflow-hidden border shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between ${cardBorder}`}
           >
-            {/* Image Box */}
-            <div className="relative aspect-4/3 w-full bg-surface-alt overflow-hidden">
-              {p.imageUrl ? (
-                <img
-                  src={p.imageUrl}
-                  alt={p.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-text-muted bg-surface-alt">
-                  <Flower2 size={40} strokeWidth={1.5} />
-                  <span className="text-caption font-medium mt-1">Ảnh thực tế</span>
-                </div>
-              )}
+            {/* Image Box — Căn giữa dáng hoa toàn diện */}
+            <div className="relative w-full overflow-hidden">
+              <SmartFlowerImage
+                src={p.imageUrl}
+                alt={p.name}
+                aspectRatio="4/3"
+                fallbackIndex={idx}
+              />
 
               {/* Badges */}
               <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-sm text-white text-caption font-mono font-bold tracking-wide">

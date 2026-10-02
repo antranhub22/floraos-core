@@ -120,6 +120,19 @@ Overview → Liên quan → Hành động → Tùy chọn → Nâng cao. Không 
 
 Route group `(app)` dùng slug tiếng Việt: `/san-pham`, `/don-hang`, `/khach-hang`. Tạo route mới → slug tiếng Việt có dấu gạch nối.
 
+### 9. Journey-First UX Architecture (J1–J7)
+
+- **Entry point ưu tiên hành trình (J1)**: Trang chủ và dashboard mở đầu bằng câu hỏi mục tiêu *"Bạn muốn làm gì?"* qua `ChoiceGrid` / `ActionCard`.
+- **Cặp chế độ kép bắt buộc (Dual-Mode Entry)**: Mọi chức năng tạo mới/soạn thảo luôn cung cấp 2 chế độ:
+  1. *Tự động bằng AI (Automatic AI Fast-Track)*: Tiếp nhận nguyên liệu thô qua `SmartInputDropzone` (Ảnh + Video + Ghi chú) ➔ AI phân tích (Vision, OCR, Content Engine) và **pre-fill sẵn toàn bộ các bước vào Wizard (Human-in-the-loop)**.
+  2. *Tự thiết kế từng bước (Manually Guided Wizard)*: Tiến trình lũy tiến từng bước (Progressive Disclosure J2).
+- **Progressive Disclosure (J2)**: Chỉ hiển thị dữ liệu và bước tương ứng chặng hiện tại qua `JourneyShell` và `JourneyProgress`.
+- **Luôn có Next Actions (J3)**: Mọi kết quả xử lý phải kết nối đến bước tiếp theo qua `<NextActions />`. Tuyệt đối cấm ngõ cụt.
+- **AI trong tiến trình (J4)**: Nhúng AI gợi ý trực tiếp vào từng bước tác vụ, không tách rời thành trang biệt lập.
+- **Role UX ≠ Quyền (J5)**: Trải nghiệm vai tối ưu hóa luồng, nhưng RBAC và Capability Code vẫn kiểm soát quyền.
+- **Hợp đồng tác vụ 7 bước (J6)**: Chuẩn hóa theo `ActionContractWrapper` (Chọn → Nhập → Xem trước → Tiến hành → Xử lý → Kết quả → Tiếp theo).
+- **WRAP, không REPLACE (J7)**: Bọc dashboard hiện có vào Journey; cung cấp công tắc Chế độ Chuyên gia (`localStorage`).
+
 ---
 
 ## DO / DON'T
@@ -186,6 +199,7 @@ return <div>{items.map(item => <Card key={item.id} />)}</div>
 | Pattern | File |
 |---|---|
 | Base UI components | `src/components/ui/` (button, card, dialog, select...) |
+| Journey UI Kit (J1–J7) | `src/components/journey/` (ChoiceGrid, ActionCard, JourneyShell, NextActions) |
 | App layout / sidebar | `src/components/layout/` |
 | Feature component mẫu | `src/components/catalog/` |
 | Dashboard widgets | `src/components/dashboard/` |
@@ -200,10 +214,11 @@ return <div>{items.map(item => <Card key={item.id} />)}</div>
 2. **`"use client"` chỉ khi cần** — mặc định Server Component. Chỉ thêm khi cần `useState`, `useEffect`, event handler.
 3. **Chuẩn UX 03a**: Màn hình mới/sửa bố cục phải có Screen Contract + `npm run lint:ux -- --check` không tăng vi phạm.
 4. **Tối đa 1 `<FeatureGuidanceCard />`** mỗi màn/tab. Cấm spam nhiều khối hướng dẫn.
+5. **Chuẩn Journey-First (J1–J7)**: Luôn bắt đầu từ mục tiêu công việc của người dùng, không tạo màn hình cụt thiếu `NextActions`.
 
 ---
 
-## 9. Token Ngữ Nghĩa Bắt Buộc (03a §31 — UX Lint R1/R2)
+## 10. Token Ngữ Nghĩa Bắt Buộc (03a §31 — UX Lint R1/R2)
 
 **CẤM dùng màu Tailwind gốc** (`bg-red-100`, `text-emerald-700`, `border-zinc-200`…).
 **BẮT BUỘC dùng token ngữ nghĩa** đã đăng ký tại `src/app/globals.css` @theme.

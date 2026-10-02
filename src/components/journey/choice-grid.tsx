@@ -3,6 +3,8 @@
 import React, { useState } from "react"
 import { Sparkles, SlidersHorizontal, Search } from "lucide-react"
 import type { JourneyDefinition } from "@/modules/journey/domain/journey-model"
+import { useSession } from "@/lib/session"
+import { UserMenu } from "@/components/layout/user-menu"
 import { ActionCard } from "./action-card"
 
 interface ChoiceGridProps {
@@ -20,6 +22,7 @@ export function ChoiceGrid({
   onSelectJourney,
   onSwitchToExpertMode,
 }: ChoiceGridProps) {
+  const { userInitials } = useSession()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL")
 
@@ -55,16 +58,19 @@ export function ChoiceGrid({
           </p>
         </div>
 
-        {onSwitchToExpertMode && (
-          <button
-            type="button"
-            onClick={onSwitchToExpertMode}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-border bg-surface hover:bg-surface-alt text-body-sm font-medium text-text transition-colors self-start md:self-auto cursor-pointer"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-text-muted" aria-hidden="true" />
-            <span>Chế độ chuyên gia</span>
-          </button>
-        )}
+        <div className="flex items-center gap-3 self-start md:self-auto">
+          {onSwitchToExpertMode && (
+            <button
+              type="button"
+              onClick={onSwitchToExpertMode}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-border bg-surface hover:bg-surface-alt text-body-sm font-medium text-text transition-colors cursor-pointer"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-text-muted" aria-hidden="true" />
+              <span>Chế độ chuyên gia</span>
+            </button>
+          )}
+          <UserMenu initials={userInitials || "U"} direction="down" />
+        </div>
       </div>
 
       {/* Filter and Search Bar */}

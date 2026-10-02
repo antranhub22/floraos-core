@@ -19,6 +19,7 @@ export type PutBrandProfileInput = {
   cta_templates?: Record<string, unknown> | null | undefined
   default_offers?: Record<string, unknown> | null | undefined
   forbidden_styles?: Record<string, unknown> | null | undefined
+  brand_assets?: Record<string, unknown> | null | undefined
 }
 
 /**
