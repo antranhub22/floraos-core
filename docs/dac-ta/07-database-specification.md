@@ -1807,3 +1807,56 @@ model order_exceptions {
   @@index([organization_id, status])
 }
 ```
+
+## 27. Content Engine — `content_generations` (P27)
+
+> **Thêm 25/09/2026.** Mỗi lượt chạy chuỗi agent Strategist→Writer→Critic→Rewriter (`POST /content-engine/generations`, feature `content.generate`) ghi một dòng. Bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly và ca thử `tests/tenant/content-generations.test.ts`. Vòng đời `DRAFT → APPROVED → SCHEDULED`; duyệt (`J5`) ghi `approved_posts` + `audit_logs` cùng giao dịch. Migration: `prisma/migrations/20260925090000_content_generations`.
+
+```prisma
+model content_generations {
+  id              String  @id @default(uuid())
+  organization_id String
+  job_id          String?
+  /// creative_studio | content_engine_ui | package_rewrite
+  origin          String
+  asset_id        String?
+  product_id      String?
+  topic_id        String?
+  scene_plan_id   String?
+  /// AUTHENTIC | CREATIVE — vắng khi không gắn với kịch bản Chặng 05
+  mode            String?
+
+  /// Kênh đã chạy — facebook | instagram | tiktok | zalo
+  channels Json
+  /// Bản chụp Content Brief v1 tại thời điểm chạy (`contracts/brief.ts`).
+  brief    Json
+  /// Trùng `contracts/brief.ts#BRIEF_VERSION` tại thời điểm chạy.
+  brief_version Int
+  /// { strategist, writer, critic, rewriter } — mã phiên bản prompt mỗi bước.
+  prompt_versions Json
+  rubric_version  String
+
+  /// Kết quả Strategist — thông điệp chính + góc/hook/dàn ý mỗi kênh.
+  strategy Json?
+  /// [{ channel, text, hashtags, fact_ids, scores, rounds, needs_review, source }]
+  posts         Json
+  overall_score Float?
+  /// Bài sau khi chủ tiệm sửa rồi duyệt — nguồn học phong cách tiệm (Đợt 4).
+  approved_posts Json?
+
+  /// DRAFT | APPROVED | SCHEDULED
+  status          String  @default("DRAFT")
+  /// Mã bài bên SocialFlow sau khi gửi Lịch đăng (Đợt 3).
+  social_post_ids Json?
+  created_by      String
+  approved_by     String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, asset_id, topic_id, mode])
+  @@index([organization_id, created_at])
+}
+```

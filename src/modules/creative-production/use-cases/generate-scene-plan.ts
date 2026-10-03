@@ -7,6 +7,10 @@ import type { TenantContext } from "@/core/tenancy"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
 import { refundJob } from "@/modules/usage/use-cases/refund-job"
+import { refundPartial } from "@/modules/usage/use-cases/refund-partial"
+import { lyDoHoanCredit } from "@/modules/usage/domain/refund-policy"
+import { costCreditForFeature } from "@/modules/usage/domain/pricing"
+import { CONTENT_GENERATE_FEATURE } from "@/modules/content-engine/domain/pipeline-rules"
 
 import { createScenePlanAdapter } from "../adapters/scene-plan-ai-adapter"
 import { applyScenePlanEdit, type ScenePlanEdit } from "../domain/scene-plan-edit"
@@ -61,8 +65,16 @@ export async function generateScenePlan(
 ): Promise<ScenePlanResult> {
   requireCapability(ctx, "I1")
 
+  // Một lần bấm = một lần thu (nợ #146, 25/09/2026): kịch bản + bài viết các
+  // kênh đã chọn thu GỘP trên job kịch bản; job Content Engine đi kèm chạy
+  // với `includedInJobId` (0 credit, không tiêu lượt dùng thử). Bước viết bài
+  // hỏng → hoàn đúng phần của bài viết (`refundPartial`).
+  const postChannels = resolvePublishing(input.brief.platforms, input.brief.outputs).postChannels
+  const contentCredit = postChannels.length > 0 ? costCreditForFeature(CONTENT_GENERATE_FEATURE) : 0
+
   const enq = await enqueueJob(ctx, {
     feature: SCENE_PLAN_FEATURE,
+    costCredit: costCreditForFeature(SCENE_PLAN_FEATURE) + contentCredit,
     payload: {
       topic_id: input.brief.topic.id,
       topic_title: input.brief.topic.title,
@@ -99,24 +111,34 @@ export async function generateScenePlan(
     const plan = aiResult.output as ScenePlan
     await jobRepo.finishInline(ctx, enq.job.id, { ok: true, now: new Date(), output: plan })
 
-    // Bước làm giàu THỨ HAI, không phải thành phần chính (P27, 25/09/2026):
-    // kịch bản bối cảnh đã là kết quả chính và ĐÃ ghi xong ở trên — gọi tiếp
-    // Content Engine để viết bài cho các kênh đã chọn (Chặng 05 không còn tự
-    // viết bài nữa, xem `scene-plan-rules.ts#buildScenePlanPrompt`). Việc này
-    // trừ credit RIÊNG, cộng dồn với credit của `creative.scene_plan`
-    // (nợ kỹ thuật #141 — chấp nhận trừ chồng, tính giá gộp sau). Hỏng ở đây
-    // KHÔNG được làm hỏng kịch bản đã thành công — chỉ log/nuốt lỗi, giống
-    // `refundJob(...).catch(() => undefined)` ở nhánh lỗi bên dưới.
-    const postChannels = resolvePublishing(input.brief.platforms, input.brief.outputs).postChannels
+    // Bước làm giàu THỨ HAI, không phải thành phần chính (P27): kịch bản đã
+    // ghi xong ở trên — gọi tiếp Content Engine viết bài cho các kênh đã chọn
+    // (Chặng 05 không tự viết bài, xem `scene-plan-rules.ts#buildScenePlanPrompt`).
+    // Hỏng ở đây KHÔNG làm hỏng kịch bản; chỉ hoàn phần tiền của bài viết.
+    let usage = enq.usage
     if (postChannels.length > 0) {
-      await generateContent(ctx, {
+      const content = await generateContent(ctx, {
         scenePlanId: enq.job.id,
         assetId: input.assetId ?? null,
         productId: input.productId ?? null,
         topicId: input.brief.topic.id,
         channels: postChannels,
         idempotencyKey: `content-engine:scene-plan:${enq.job.id}`,
-      }).catch(() => undefined)
+        includedInJobId: enq.job.id,
+      }).catch(() => null)
+      const contentJob = content ? await jobRepo.findById(ctx, content.jobId) : null
+      const contentDelivered = contentJob !== null && lyDoHoanCredit(contentJob) === null
+      if (!contentDelivered) {
+        const { refunded } = await refundPartial(ctx, enq.job.id, "goi-noi-dung-hong", contentCredit).catch(() => ({
+          refunded: 0,
+        }))
+        if (refunded > 0) {
+          usage = {
+            costCredit: usage.costCredit - refunded,
+            balanceAfter: usage.balanceAfter === null ? null : usage.balanceAfter + refunded,
+          }
+        }
+      }
     }
 
     return {
@@ -125,7 +147,7 @@ export async function generateScenePlan(
       error: null,
       plan,
       deduped: false,
-      usage: enq.usage,
+      usage,
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Lỗi không xác định"

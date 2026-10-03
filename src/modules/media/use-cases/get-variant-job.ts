@@ -1,4 +1,8 @@
 import { notFound } from "@/core/http/errors"
+import { costCreditForFeature } from "@/modules/usage/domain/pricing"
+import { lyDoHoanCredit } from "@/modules/usage/domain/refund-policy"
+import { refundJob } from "@/modules/usage/use-cases/refund-job"
+import { refundPartial } from "@/modules/usage/use-cases/refund-partial"
 import type { TenantContext } from "@/core/tenancy"
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
@@ -7,6 +11,7 @@ import { JobEventRepository } from "@/modules/jobs/infra/job-event-repository"
 import {
   canApproveVariant,
   MEDIA_VARIANT_CLOUD_FEATURE,
+  MEDIA_VARIANT_FEATURE,
   MEDIA_VARIANT_FEATURES,
   parseVariantIntegrityBlock,
   variantRequiresWarning,
@@ -143,6 +148,16 @@ export async function getVariantJob(ctx: TenantContext, jobId: string): Promise<
     job.feature === MEDIA_VARIANT_CLOUD_FEATURE ? "cloud_provider" : "local_studio"
   const cloudFallback = doc<boolean>(job.output, "cloud_fallback", false)
   const cloudFallbackReason = doc<string | null>(job.output, "cloud_fallback_reason", null)
+
+  // Hoàn credit lúc đọc (25/09/2026, cùng khuôn `get-audio-job.ts`) — idempotent:
+  // job hỏng / bị cổng toàn vẹn từ chối → hoàn toàn phần; cloud lùi phông cục
+  // bộ → hoàn phần chênh giữa giá cloud và giá cục bộ (nợ #127).
+  if (lyDoHoanCredit(job) !== null) {
+    await refundJob(ctx, jobId).catch(() => undefined)
+  } else if (job.status === "COMPLETED" && engine === "cloud_provider" && cloudFallback === true) {
+    const chenh = costCreditForFeature(MEDIA_VARIANT_CLOUD_FEATURE) - costCreditForFeature(MEDIA_VARIANT_FEATURE)
+    await refundPartial(ctx, jobId, "cloud-lui-cuc-bo", chenh).catch(() => undefined)
+  }
 
   let masterUrl: string | null = null
   if (masterAssetId) {

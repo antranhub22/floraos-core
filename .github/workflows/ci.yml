@@ -44,6 +44,16 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npx prisma db push
+      # Database RIÊNG cho `test:tenant`/`test:platform` — hai bộ test này
+      # TRUNCATE mọi bảng và `tests/helpers/database.ts` từ chối database không
+      # kết thúc bằng `_test`. Thiếu bước này thì cổng bắt buộc đỏ với
+      # `database "floraos_test" does not exist` (CI run 4, 25/09/2026).
+      - name: Dựng database floraos_test
+        env:
+          PGPASSWORD: floraos
+        run: |
+          psql -h localhost -U floraos -d postgres -c 'CREATE DATABASE floraos_test'
+          DATABASE_URL=postgresql://floraos:floraos@localhost:5432/floraos_test npx prisma db push
       - run: npm run db:seed
       - run: npm run typecheck
       - run: npm run lint
@@ -69,5 +79,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      # Worker âm thanh/video gọi ffmpeg thật (phối trộn, đo độ to) — runner
+      # ubuntu-latest không cài sẵn, thiếu thì 12 ca test_audio_worker /
+      # test_voice_clone_worker đỏ `FileNotFoundError: 'ffmpeg'`.
+      - run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
       - run: pip install -r requirements.txt
       - run: python -m pytest tests -q

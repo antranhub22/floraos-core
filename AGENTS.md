@@ -14,7 +14,7 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 | Chạy worker media | `npm run worker:media` |
 | Chạy worker video | `npm run worker:video` (hoặc `cd workers && python -m media_ai.video.video_worker`) |
 | Test web | `npm test` |
-| Test đầu cuối | `npm run test:e2e` |
+| Test đầu cuối | `npm run test:e2e` — cần worker media đang chạy; máy không có khoá OpenAI: `python tests/e2e/gia-lap-openai.py &` rồi chạy worker với `OPENAI_BASE_URL=http://127.0.0.1:4010/v1 OPENAI_API_KEY=e2e` (nợ #157) |
 | Test worker | `cd workers && .venv/bin/python -m pytest tests -q` |
 | Typecheck | `npx tsc --noEmit` |
 | Dựng CSDL cho test | `npm run db:test:setup` — **chạy một lần** sau `docker compose up -d` |
@@ -234,29 +234,12 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 - Biến `DATABASE_URL` export ra shell theo `cd` sang repo khác, và `process.loadEnvFile()` KHÔNG ghi đè biến đã có sẵn. Chạy `set -a && source .env` trong `LocalBudd` rồi `cd` sang đây là đủ để `npx prisma db push` của core trỏ vào Supabase của LocalBudd — suýt xảy ra 09/10. Trước mọi lệnh Prisma: `echo "[$DATABASE_URL]"` phải rỗng, và nhìn dòng `Datasource "db"` nó in ra.
 - `prisma generate` KHÔNG chạy được trong VM của `device_bash`: nó tải nhị phân từ `binaries.prisma.sh` và host đó trả 403 qua proxy của VM (`PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` không giúp — bước sau vẫn phải tải chính tệp engine). Hệ quả cụ thể: thêm model vào `schema.prisma` thì `npx tsc --noEmit` báo `Property 'x' does not exist on type 'DbClient'` cho tới khi ai đó chạy `prisma generate` trên Terminal Mac thật. Phân loại lỗi `tsc` trước khi đi sửa: lỗi dạng đó là lỗi CHỜ, không phải lỗi mã.
 - `npm test` loại `tests/tenant/**` theo thiết kế; gọi thẳng `npx vitest run` sẽ kéo cả bộ test cách ly vào và nó TỪ CHỐI chạy vì database không kết thúc bằng `_test`. Dùng đúng hai lệnh: `npm test` và `npm run test:tenant`.
-- `next dev` (Next 16) TỰ CHÈN khối `<!-- BEGIN:nextjs-agent-rules -->` vào cuối `AGENTS.md` mỗi lần chạy. Đừng commit khối đó — xoá riêng khối đó trước khi commit; ĐỪNG `git checkout AGENTS.md` khi chính mình đang sửa tệp này (mất luôn phần sửa — gặp 25/09).
-- Prisma chặn `prisma db push --accept-data-loss` khi do agent AI chạy (đòi `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`). Không lách: dựng DB test bằng `npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script | psql` lên database `*_test` (gặp 25/09).
-- `npm run lint` từng dừng ngay vì repo thiếu `eslint.config.mjs` — cổng thứ hai của CI chưa từng chạy trong suốt P0. Thêm một cổng vào CI thì chạy thử nó một lần tại máy.
-- Sandbox `device_bash` từng chặn `npx vitest`/`npx tsc` bằng lỗi `Cannot find module '@rollup/rollup-linux-arm64-gnu'` (kiến trúc gói sai trong `node_modules` cài sẵn). Sửa bằng `npm install @rollup/rollup-linux-arm64-gnu --no-save` — chạy được thật `vitest`/`tsc --noEmit` trong sandbox từ đó, không cần đợi anh Tony chạy trên máy thật mới biết type có sai không.
-- Tên tệp/thư mục tiếng Việt có dấu qua cầu nối máy Mac (`device_bash`) ở dạng Unicode **NFD** (tổ hợp dấu rời), còn chuỗi gõ trong mã nguồn ở đây là **NFC**. So khớp chuỗi trực tiếp (`"giỏ" in ten_thu_muc`) luôn sai lặng lẽ, không báo lỗi. Luôn `unicodedata.normalize("NFC", ...)` cả hai phía trước khi so — xem `scripts/xay-dung-bo-anh-vang.py`.
-- `BoAnhVang/` (ảnh thô để dựng bộ ảnh vàng) từng KHÔNG có trong `.gitignore` — ảnh sản phẩm của khách hàng đã có nguy cơ vào git nếu ai đó lỡ `git add -A`. Đã thêm vào `.gitignore` ngày 09/09. Mọi thư mục chứa ảnh khách hàng ngoài `golden/images/` cần rà lại `.gitignore` trước khi coi là an toàn.
+- `next dev` (Next 16) TỰ CHÈN khối `<!-- BEGIN:nextjs-agent-rules -->
 
-## Kết thúc mỗi việc — bắt buộc
+# This is NOT the Next.js you know
 
-Việc chưa ghi lại là việc lần sau không ai biết đã làm. Trước khi báo xong, làm đủ ba bước, **trong cùng lần đó**:
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
-1. **Tích ô trong `docs/dac-ta/Checklist_Thuc_Thi.md`.** Đổi `- [ ]` thành `- [x]` cho đúng những ô vừa làm xong. Không tích trước, không tích ô chỉ làm một nửa.
-2. **Nếu ô vừa tích là ô cuối của một pha** — cập nhật `docs/kien-truc/TRANG_THAI.md`: mục 1 (đang ở đâu), mục 6 (việc kế tiếp), và thêm một dòng vào mục 8 (nhật ký).
-3. **Commit cả mã lẫn tài liệu trong cùng một commit.** Tách ra là tạo ra khoảng thời gian mã và tài liệu lệch nhau.
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
-Phát sinh thêm việc chưa có trong checklist thì **thêm ô mới** vào đúng pha, đừng làm âm thầm. Gặp thứ phải chấp nhận tạm thì thêm một dòng vào `docs/dac-ta/TECHNICAL_DEBT.md` kèm điều kiện trả.
-
-Đầu mỗi phiên làm việc: đọc `TRANG_THAI.md` rồi tới `Checklist_Thuc_Thi.md`. Ô chưa tích đầu tiên chính là việc kế tiếp.
-
-## Quy tắc làm việc
-
-- Nêu tên các tệp định mở trước khi mở.
-- Vá bằng diff. Không in lại phần mã không đổi.
-- Hỏng hai lần thì ngừng vá: nêu điều mà thất bại chứng minh là sai trong hình dung về mã, rồi mở đúng tệp giải quyết được điều đó.
-- Cần tìm kiếm toàn repo lần thứ hai trong một việc nghĩa là bản đồ thiếu một dòng — bổ sung dòng đó trước khi kết thúc.
-- Gặp mâu thuẫn giữa tài liệu Level 1 và Level 2 → **dừng và báo chủ sản phẩm**, không tự chọn bên nào.
+<!-- END:nextjs-agent-rules -->

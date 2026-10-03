@@ -954,7 +954,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                 {activeScene.fallbackReason && (
                   <div className="rounded-xl border border-warning bg-warning-bg px-3.5 py-2.5 text-[12px] text-warning">
                     <strong>Chưa có bối cảnh của kịch bản:</strong> các nhà cung cấp AI đều không dựng được cảnh nên worker lùi
-                    về phông Studio cục bộ (chỉ là nền trơn). Lý do: {activeScene.fallbackReason}
+                    về phông Studio cục bộ (chỉ là nền trơn). Lý do: {activeScene.fallbackReason}. Đã hoàn phần credit chênh so với giá cục bộ.
                   </div>
                 )}
                 <div className="rounded-xl bg-surface-alt p-3.5 border border-border space-y-2">
@@ -1286,7 +1286,7 @@ export function VariantWorkspace({ data }: VariantWorkspaceProps) {
                     </button>
                     {scene.fallbackReason && (
                       <p className="mt-1.5 text-[10.5px] leading-snug text-warning">
-                        Nhà cung cấp AI không dựng được cảnh — đã dùng phông cục bộ: {scene.fallbackReason}
+                        Nhà cung cấp AI không dựng được cảnh — đã dùng phông cục bộ (đã hoàn credit chênh): {scene.fallbackReason}
                       </p>
                     )}
                     {scene.error && (

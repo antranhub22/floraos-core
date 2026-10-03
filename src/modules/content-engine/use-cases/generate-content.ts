@@ -75,6 +75,8 @@ export interface GenerateContentInput {
   readonly scenePlanId?: string | null | undefined
   readonly channels: readonly PackageChannel[]
   readonly idempotencyKey: string
+  /** Lượt này đã được thu tiền ở job khác (Chặng 05, nợ #146) — xem `EnqueueJobInput.includedInJobId`. */
+  readonly includedInJobId?: string | undefined
 }
 
 export interface ContentGenerationView {
@@ -158,6 +160,7 @@ export async function generateContent(ctx: TenantContext, input: GenerateContent
     },
     productId: input.productId ?? null,
     idempotencyKey: input.idempotencyKey,
+    ...(input.includedInJobId ? { includedInJobId: input.includedInJobId } : {}),
   })
 
   if (enq.deduped) {

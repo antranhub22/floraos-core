@@ -12,7 +12,7 @@ Vì sao hậu cảnh RIÊNG, không "sửa ảnh có hoa":
 
 Endpoint: `POST https://api.stability.ai/v2beta/stable-image/generate/core`
 (multipart/form-data, trả thẳng byte ảnh khi `Accept: image/*`) — cùng
-endpoint `src/modules/media/adapters/stability-ai-image-provider.ts` đang dùng.
+endpoint adapter TS cũ `stability-ai-image-provider.ts` từng dùng (đã gỡ 25/09 — nợ #152).
 
 Chi phí: Stability không trả số tiền trong phản hồi. `cost_usd` để `None`
 (chưa đo được), đúng nguyên tắc "chưa đo được khác 0" của `providers/chung.py`.

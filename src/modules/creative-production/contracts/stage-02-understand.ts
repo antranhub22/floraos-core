@@ -18,8 +18,8 @@ import {
 } from "./examples-shared"
 
 export const visionExtractBodySchema = z.object({
-  image_url: z.string().optional().describe("URL ảnh (ký có hạn); bỏ trống khi đã có asset_id"),
-  asset_id: z.string().optional(),
+  image_url: z.string().optional().describe("BỎ QUA từ 25/09/2026 — máy chủ đọc ảnh từ kho theo asset_id; giữ để client cũ không vỡ"),
+  asset_id: z.string().min(1).describe("Ảnh đã lưu kho của đúng tổ chức (bắt buộc từ 25/09/2026)"),
   product_title: z.string().optional(),
 })
 
@@ -31,6 +31,8 @@ export const visionExtractResultSchema = z.object({
   attributes: productVisualAttributesSchema,
   packaging: productPackagingSchema,
   context: productInferredContextSchema,
+  source: z.enum(["vision_ai", "m01"]).optional().describe("vision_ai = mô hình vừa đọc ảnh (thu credit) · m01 = kết quả M01 đã lưu (miễn phí)"),
+  usage: z.object({ cost_credit: z.number().int(), balance_after: z.number().int().nullable() }).optional(),
 })
 
 export const stage02Understand = defineStage({
@@ -39,7 +41,7 @@ export const stage02Understand = defineStage({
   code: "UNDERSTAND",
   slug: "understand",
   title: "Chặng 02 — UNDERSTAND: Nhận diện cấu trúc & định tính thương mại",
-  summary: "Mô hình thị giác (gpt-4o-mini) trả thành phần hoa, thuộc tính thị giác, bao bì, bối cảnh; người dùng sửa được từng trường.",
+  summary: "Mô hình thị giác (gpt-4o-mini) đọc ảnh TỪ KHO theo asset_id, trả thành phần hoa, thuộc tính thị giác, bao bì, bối cảnh; người dùng sửa được từng trường. Thu product.vision_extract (1 credit) khi mô hình chạy; cùng ảnh bấm lại không thu lần hai; hỏng thì hoàn.",
   endpoint: { method: "POST", path: "/api/v1/market-intelligence/vision-extract", capability: "V1" },
   input: visionExtractBodySchema,
   output: visionExtractResultSchema,

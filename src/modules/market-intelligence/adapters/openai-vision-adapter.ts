@@ -107,7 +107,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
   "occasions": ["Dịp tặng phù hợp 1", "Dịp tặng phù hợp 2"], // ví dụ: ["Tỏ tình lãng mạn", "Kỷ niệm tình yêu", "Sinh nhật bạn gái", "Valentine"]
   "audience": "Mô tả tệp khách hàng phù hợp nhất (ví dụ: Nam giới 20–35 tuổi tặng bạn gái / vợ)",
   "suggested_price": 650000, // Giá bán đề xuất thực tế (VND)
-  "confidence": 0.95 // Độ tin cậy (0.85 - 0.98)
+  "confidence": 0.9 // Độ tin cậy mô hình tự đánh giá (0–1), KHÔNG làm tròn lên
 }`;
 
   try {
@@ -167,7 +167,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
         components.push({
           id: `flower-${idx}`,
           flowerType: f.name || `Hoa tươi #${idx + 1}`,
-          quantityEstimate: parseInt(String(f.count)) || (idx === 0 ? 12 : 5),
+          quantityEstimate: parseInt(String(f.count)) || 0,
           unit: f.unit || "cành",
           role: f.role === "supporting" ? "supporting" : "dominant",
         });
@@ -179,7 +179,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
         components.push({
           id: `foliage-${idx}`,
           flowerType: fol.name || "Lá phụ trang trí",
-          quantityEstimate: parseInt(String(fol.count)) || 3,
+          quantityEstimate: parseInt(String(fol.count)) || 0,
           unit: fol.unit || "cành",
           role: "foliage",
         });
@@ -193,11 +193,11 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
     const attributes: ProductVisualAttributes = {
       mainColors: Array.isArray(parsed.dominant_colors) && parsed.dominant_colors.length > 0
         ? parsed.dominant_colors
-        : ["Đỏ nhung", "Trắng"],
-      secondaryColors: Array.isArray(parsed.secondary_colors) ? parsed.secondary_colors : ["Xanh rêu"],
-      style: parsed.style || "Classic Romantic & Tinh tế",
-      shape: parsed.shape || "Bó tròn nở rộ",
-      sizeEstimate: parsed.size || "Tiêu chuẩn (M)",
+        : [],
+      secondaryColors: Array.isArray(parsed.secondary_colors) ? parsed.secondary_colors : [],
+      style: parsed.style || "",
+      shape: parsed.shape || "",
+      sizeEstimate: parsed.size || "",
     };
 
     // Phân rã nguyên tử phụ liệu (Card, Ribbon, Decor)
@@ -216,14 +216,14 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
 
     const ribbonDetail = parsed.ribbon_detail
       ? {
-          ribbonMaterial: parsed.ribbon_detail.material || parsed.ribbon || "Ruy băng voan",
-          ribbonColor: parsed.ribbon_detail.color || "Trắng kem",
-          bowStyle: parsed.ribbon_detail.bow_style || "Nơ cánh bướm",
+          ribbonMaterial: parsed.ribbon_detail.material || parsed.ribbon || "",
+          ribbonColor: parsed.ribbon_detail.color || "",
+          bowStyle: parsed.ribbon_detail.bow_style || "",
         }
       : {
-          ribbonMaterial: parsed.ribbon || "Ruy băng voan thắt nơ",
-          ribbonColor: "Trắng kem",
-          bowStyle: "Nơ 2 lớp",
+          ribbonMaterial: parsed.ribbon || "",
+          ribbonColor: "",
+          bowStyle: "",
         };
 
     const otherAccessories = Array.isArray(parsed.other_accessories)
@@ -244,14 +244,11 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
     if (otherAccessories.length > 0) {
       otherAccessories.forEach((acc: { name: string; quantity: number; unit: string }) => accessoriesList.push(`${acc.name} (${acc.quantity} ${acc.unit})`));
     }
-    if (accessoriesList.length === 0) {
-      accessoriesList.push("Thiệp chúc mừng cao cấp");
-    }
 
     const packaging: ProductPackaging = {
-      wrappingMaterial: parsed.wrapping_material || "Giấy lụa mờ cao cấp",
-      wrappingColor: parsed.wrapping_color || "Trắng kem xếp tầng",
-      ribbon: parsed.ribbon || `${ribbonDetail.ribbonMaterial} màu ${ribbonDetail.ribbonColor}`,
+      wrappingMaterial: parsed.wrapping_material || "",
+      wrappingColor: parsed.wrapping_color || "",
+      ribbon: parsed.ribbon || [ribbonDetail.ribbonMaterial, ribbonDetail.ribbonColor].filter(Boolean).join(" màu "),
       accessories: accessoriesList,
       card,
       ribbonDetail,
@@ -260,7 +257,7 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
 
     const inferredOccasions: string[] = Array.isArray(parsed.occasions) && parsed.occasions.length > 0
       ? parsed.occasions
-      : ["Sinh nhật bạn gái", "Kỷ niệm tình yêu", "Tỏ tình lãng mạn"];
+      : [];
 
     // Nếu chữ trên thiệp có chứa từ khoá dịp cụ thể, đưa lên đầu danh sách dịp
     if (card.printedText) {
@@ -276,9 +273,10 @@ Nhiệm vụ của bạn là quan sát thật kỹ bức ảnh sản phẩm hoa 
 
     const context: ProductInferredContext = {
       likelyOccasions: inferredOccasions,
-      likelyAudience: parsed.audience || "Khách hàng mua tặng người yêu, phân khúc hiện đại",
-      suggestedPrice: parseInt(parsed.suggested_price) || 699000,
-      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.95,
+      likelyAudience: parsed.audience || "",
+      // 0 = mô hình không đề xuất — giao diện để trống cho chủ tiệm tự nhập, không bịa giá.
+      suggestedPrice: parseInt(parsed.suggested_price) || 0,
+      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
     };
 
     return {

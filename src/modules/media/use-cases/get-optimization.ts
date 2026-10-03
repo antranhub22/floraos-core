@@ -9,8 +9,13 @@ import {
   isGuardResult,
   parseIdentityGuardBlock,
   requiresWarningBeforeApprove,
+  optimizationPriceKey,
   type IdentityGuardBlock,
 } from "@/modules/media/domain/optimization-rules"
+import { costCreditForFeature } from "@/modules/usage/domain/pricing"
+import { lyDoHoanCredit } from "@/modules/usage/domain/refund-policy"
+import { refundJob } from "@/modules/usage/use-cases/refund-job"
+import { refundPartial } from "@/modules/usage/use-cases/refund-partial"
 
 export type OptimizationDetail = {
   job_id: string
@@ -61,6 +66,22 @@ export async function getOptimization(
 ): Promise<OptimizationDetail> {
   const job = await new GenerationJobRepository().findById(ctx, jobId)
   if (!job) throw notFound()
+
+  // Hoàn credit lúc đọc (25/09/2026, cùng khuôn biến thể/âm thanh) — idempotent:
+  // Guard từ chối / hỏng / huỷ → hoàn toàn phần; bộ máy nhà cung cấp lỗi và
+  // worker lùi `StudioEnhancer` (`output.provider_fallback`) → hoàn phần chênh
+  // giữa giá nhà cung cấp và giá cục bộ.
+  const config = (job.payload as { config?: Record<string, unknown> } | null)?.config
+  if (lyDoHoanCredit(job) !== null) {
+    await refundJob(ctx, jobId).catch(() => undefined)
+  } else if (
+    job.status === "COMPLETED" &&
+    optimizationPriceKey(config) === "media.optimize.cloud" &&
+    (job.output as { provider_fallback?: unknown } | null)?.provider_fallback === true
+  ) {
+    const chenh = costCreditForFeature("media.optimize.cloud") - costCreditForFeature("media.optimize")
+    await refundPartial(ctx, jobId, "cloud-lui-cuc-bo", chenh).catch(() => undefined)
+  }
 
   // Quyền sở hữu job đã kiểm ở trên — `job_events` không mang
   // `organization_id` nên thứ tự này là bắt buộc, không phải tuỳ chọn.

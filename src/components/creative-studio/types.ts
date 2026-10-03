@@ -154,7 +154,8 @@ export const FIELDS_M04B_DEFAULT: ResultField[] = [
 
 const PROVIDER_DISPLAY_MAP: Record<string, string> = {
   photoroom: "Photoroom AI (Chuẩn E-commerce Quốc tế)",
-  fal_flux: "Fal.ai FLUX + IC-Light (Đỉnh cao Studio)",
+  fal_flux: "Fal.ai Product Shot (Studio cao cấp)",
+  fal: "Fal.ai Product Shot (Studio cao cấp)",
   studio: "Studio AI Pipeline (Chuẩn E-commerce)",
   openai: "OpenAI Image AI (Cloud)",
   gemini: "Google Gemini Imagen (Cloud)",

@@ -9,15 +9,44 @@
  * giữa các tổ chức.
  *
  * Thuần: không import hạ tầng, test không cần cơ sở dữ liệu.
+ *
+ * **Bảng giá v1 (chốt 25/09/2026 — nợ #64/D14, PO giao agent đề xuất và thực
+ * hiện).** Chưa có tỷ giá credit ↔ VND (việc của gói thuê bao, D2), nên v1
+ * định giá TƯƠNG ĐỐI theo bốn nguyên tắc, khoá bằng `pricing.test.ts`:
+ *   1. 1 credit ≈ một lượt nghiệp vụ gọi MỘT mô hình văn bản/thị giác
+ *      (`vision.analyze`, `product.copy.generate`, `creative.scene_plan`...).
+ *      Chuỗi nhiều lời gọi (Content Engine 4–7 lượt) = 2.
+ *   2. Cùng một việc, đường gọi nhà cung cấp ảnh trả phí = đường cục bộ + 1
+ *      (`media.variant` 1 → `.cloud` 2, `media.optimize` 2 → `.cloud` 3).
+ *   3. Thu theo đường THẬT đã chạy: nhà cung cấp lỗi, worker lùi cục bộ →
+ *      hoàn phần chênh lúc đọc kết quả (`refundPartial`, lý do
+ *      `cloud-lui-cuc-bo`); hỏng / Guard từ chối → hoàn toàn phần (D3-b).
+ *   4. Một lần bấm = một lần thu: lượt nghiệp vụ gồm nhiều job (Chặng 05 =
+ *      kịch bản + bài viết) thu GỘP ở job đầu, job đi kèm chạy
+ *      `includedInJobId` (0 credit, không tiêu lượt dùng thử); bước đi kèm
+ *      hỏng → hoàn đúng phần của nó.
+ * Xem lại sau 30 ngày có `ai_requests.cost_usd` thật (nợ #151 ghi chi phí
+ * Photoroom/fal) — đổi con số ở đây, không đổi nguyên tắc.
  */
 const FEATURE_COST_CREDIT: Readonly<Record<string, number>> = {
   "vision.analyze": 1,
+  // Chặng 02 Creative Studio (25/09/2026): một lượt OpenAI Vision đọc ảnh sản
+  // phẩm — cùng hạng `vision.analyze` (nguyên tắc 1). Feature riêng vì worker
+  // M01 nghe `vision.analyze`. Trước ngày này lượt gọi này không vào sổ.
+  "product.vision_extract": 1,
   // Sinh câu chữ bán hàng (M01b). Một lượt gọi mô hình ngôn ngữ trên dữ liệu
   // đã có sẵn, không đụng ảnh — rẻ hơn một lượt phân tích ảnh, nhưng KHÔNG
   // miễn phí: bỏ nó khỏi bảng này là mọi lượt sinh nội dung chạy ngoài sổ,
   // không trừ hạn mức và không đối soát được với hoá đơn nhà cung cấp.
   "product.copy.generate": 1,
   "media.optimize": 2,
+  // Khoá GIÁ, không phải `feature` của job: lượt `media.optimize` chọn bộ máy
+  // nhà cung cấp (Photoroom / fal / OpenAI — `OPTIMIZE_CLOUD_PROVIDERS`) thu
+  // giá này qua `enqueueJob({ costCredit })`. Cùng quy tắc với cặp
+  // `media.variant` / `media.variant.cloud`: đường nhà cung cấp = cục bộ + 1
+  // (một lượt gọi mô hình ảnh trả phí); nhà cung cấp lỗi, worker lùi cục bộ
+  // → hoàn phần chênh lúc đọc kết quả (bảng giá v1, 25/09/2026).
+  "media.optimize.cloud": 3,
   // Biến thể marketing (M04b). Rẻ hơn một lượt tối ưu vì nó KHÔNG gọi lại
   // mô hình tăng cường: chủ thể đã có sẵn trong Master Image, lượt này chỉ
   // tách nền, ghép bối cảnh và đóng khung. Nhưng vẫn là một lượt chạy mô
