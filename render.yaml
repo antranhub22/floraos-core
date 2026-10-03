@@ -1,15 +1,5 @@
 # render.yaml — FloraOS Core Infrastructure as Code
-# Deploy: https://dashboard.render.com/select-repo
 # Docs: https://render.com/docs/infrastructure-as-code
-#
-# ⚠️  QUAN TRỌNG — pg_cron:
-#   Render Managed PostgreSQL KHÔNG hỗ trợ shared_preload_libraries → pg_cron
-#   sẽ KHÔNG hoạt động trên Render. Giải pháp:
-#   1. Dùng Render Cron Job service thay thế (đã cấu hình bên dưới)
-#   2. Module Market Intelligence (D-MI3) cần migration plan riêng
-#
-# Thứ tự khởi động: postgres → web (chạy migrate) → workers
-# ─────────────────────────────────────────────────────────────
 
 services:
   # ══════════════════════════════════════════════
@@ -32,10 +22,6 @@ services:
           property: connectionString
       - key: NODE_ENV
         value: production
-      - key: NODE_VERSION
-        value: "22"
-      - key: PORT
-        value: "3100"
       - key: SESSION_SECRET
         generateValue: true
       - key: SSO_SESSION_SECRET
@@ -96,7 +82,7 @@ services:
         value: ""
 
   # ══════════════════════════════════════════════
-  # 2. BACKGROUND WORKER — Media AI (Image Processing)
+  # 2. BACKGROUND WORKER — Media AI
   # ══════════════════════════════════════════════
   - type: worker
     name: floraos-worker-media
@@ -123,8 +109,6 @@ services:
         sync: false
       - key: STABILITY_API_KEY
         sync: false
-      - key: GOOGLE_VERTEX_API_KEY
-        sync: false
       - key: STORAGE_ENDPOINT
         sync: false
       - key: STORAGE_BUCKET
@@ -143,13 +127,9 @@ services:
         value: "60"
       - key: IOPAINT_DEVICE
         value: cpu
-      - key: IOPAINT_TIMEOUT_SECONDS
-        value: "120"
-      - key: PYTHON_VERSION
-        value: "3.11"
 
   # ══════════════════════════════════════════════
-  # 3. BACKGROUND WORKER — Video AI (Video Rendering)
+  # 3. BACKGROUND WORKER — Video AI
   # ══════════════════════════════════════════════
   - type: worker
     name: floraos-worker-video
@@ -182,11 +162,9 @@ services:
         sync: false
       - key: STORAGE_REGION
         value: auto
-      - key: PYTHON_VERSION
-        value: "3.11"
 
   # ══════════════════════════════════════════════
-  # 4. BACKGROUND WORKER — Vision AI (Product Recognition)
+  # 4. BACKGROUND WORKER — Vision AI
   # ══════════════════════════════════════════════
   - type: worker
     name: floraos-worker-vision
@@ -217,31 +195,6 @@ services:
         sync: false
       - key: STORAGE_REGION
         value: auto
-      - key: PYTHON_VERSION
-        value: "3.11"
-
-  # ══════════════════════════════════════════════
-  # 5. CRON JOB — Market Intelligence Scheduler
-  #    (Thay thế pg_cron — không hỗ trợ trên Render Managed PG)
-  # ══════════════════════════════════════════════
-  - type: cron
-    name: floraos-market-intelligence-cron
-    runtime: node
-    region: singapore
-    plan: starter
-    schedule: "0 */6 * * *"
-    buildCommand: npm ci && npx prisma generate
-    startCommand: npm run worker:market-intelligence
-    branch: main
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: floraos-postgres
-          property: connectionString
-      - key: SERPAPI_API_KEY
-        sync: false
-      - key: NODE_VERSION
-        value: "22"
 
 # ══════════════════════════════════════════════
 # DATABASE — PostgreSQL 16
@@ -252,5 +205,3 @@ databases:
     user: floraos
     region: singapore
     plan: starter
-    # ⚠️ pg_cron KHÔNG hỗ trợ trên Render Managed PostgreSQL.
-    # Market Intelligence cron đã được chuyển sang Render Cron Job service.
