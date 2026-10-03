@@ -1,0 +1,999 @@
+# FLORAOS CORE — MODULE THẺ CHÀO
+
+## 1. MỤC ĐÍCH MODULE
+
+Phát triển một **module chức năng độc lập bên trong `floraos-core`** để tạo và vận hành **Thẻ chào sản phẩm hoa**.
+
+Module không phải một webapp độc lập.
+
+Module phải:
+
+- Tái sử dụng Authentication hiện có của FloraOS.
+- Tái sử dụng User/Role hiện có.
+- Tái sử dụng Product Library hiện có.
+- Tái sử dụng Customer hiện có nếu phù hợp.
+- Tái sử dụng Order hiện có nếu phù hợp.
+- Tái sử dụng Media/Storage hiện có.
+- Tái sử dụng Notification hiện có.
+- Tuân thủ database, API, design system và coding convention hiện có của `floraos-core`.
+- Không tạo hệ thống song song nếu `floraos-core` đã có capability tương ứng.
+
+### Mục tiêu cuối cùng
+
+Sale có thể:
+
+> Chọn Catalog → tạo Thẻ chào → tạo link → gửi khách.
+
+Khách có thể:
+
+> Mở link → xem hoa → swipe → chọn hoa → đặt hàng → thanh toán QR → theo dõi đơn.
+
+Admin có thể:
+
+> Quản lý sản phẩm → Catalog → xác nhận thanh toán → theo dõi hoạt động.
+
+Điều phối có thể:
+
+> Nhận đơn → xử lý → cập nhật trạng thái → upload ảnh → hoàn tất đơn.
+
+---
+
+# 2. NGUYÊN TẮC KIẾN TRÚC
+
+## 2.1 Module độc lập về chức năng
+
+Module phải có boundary rõ ràng:
+
+```text
+floraos-core
+│
+├── Authentication
+├── Users / Roles
+├── Product Library
+├── Customers
+├── Orders
+├── Media
+├── Notifications
+│
+└── THẺ CHÀO MODULE
+       ├── Catalog
+       ├── Send Link
+       ├── Customer Session
+       ├── Customer Journey
+       ├── Product Selection
+       ├── Payment Journey
+       └── Customer Tracking
+```
+
+Module được phép sử dụng các core services nhưng không được tạo duplicate service nếu capability đã tồn tại.
+
+---
+
+# 3. TÊN MODULE
+
+Tên chức năng trên UI:
+
+**THẺ CHÀO**
+
+Tên kỹ thuật:
+
+`greeting-card` hoặc `the-chao`
+
+Khuyến nghị:
+
+```text
+Module ID:
+greeting-card
+
+UI Name:
+Thẻ chào
+```
+
+---
+
+# 4. KHÁI NIỆM THẺ CHÀO
+
+Thẻ chào là một trang/catalog sản phẩm được Sale gửi cho khách thông qua một link riêng.
+
+Ví dụ:
+
+```text
+https://siinstore.vn/20-10/T01-037
+```
+
+Trong đó:
+
+- `siinstore.vn` = Brand Domain.
+- `20-10` = Catalog Code.
+- `T01-037` = Send Code.
+
+Client Catalog:
+
+```text
+https://siinstore.vn/cc/T01-038
+```
+
+`cc` = Client Catalog.
+
+---
+
+# 5. KHÔNG XÂY WEBAPP ĐỘC LẬP
+
+AI Agent MUST NOT:
+
+- Tạo project Next.js mới nếu `floraos-core` đã có frontend.
+- Tạo database riêng.
+- Tạo authentication riêng.
+- Tạo user system riêng.
+- Tạo Product Library riêng.
+- Tạo Customer system riêng.
+- Tạo Order system riêng.
+- Tạo Storage riêng nếu core đã có.
+- Tạo notification engine riêng nếu core đã có.
+- Tạo payment gateway riêng.
+
+AI Agent phải kiểm tra `floraos-core` trước khi implement.
+
+---
+
+# 6. BƯỚC 0 — CODEBASE DISCOVERY
+
+Trước khi viết code, AI Agent phải audit `floraos-core`.
+
+Phải xác định:
+
+1. Frontend architecture.
+2. Backend architecture.
+3. Routing.
+4. Database schema.
+5. ORM/data access.
+6. Authentication.
+7. RBAC.
+8. Product model.
+9. Customer model.
+10. Order model.
+11. Media/Storage.
+12. Notification.
+13. Design System.
+14. API conventions.
+15. Error handling.
+16. Logging.
+17. Existing reusable components.
+18. Existing tests.
+
+### Rule
+
+Không được tự tạo abstraction mới nếu đã có abstraction tương ứng trong core.
+
+---
+
+# 7. MODULE WORKSPACES
+
+Module có 4 trải nghiệm:
+
+## 7.1 Admin
+
+Quản lý:
+
+- Brand/Domain.
+- Catalog chuẩn.
+- Product Library.
+- User/permission liên quan.
+- Payment confirmation.
+- Báo cáo module.
+
+## 7.2 Sale
+
+Workspace chính:
+
+- Chọn Catalog.
+- Tạo Client Catalog.
+- Chọn sản phẩm.
+- Tạo Thẻ chào.
+- Tạo Send Code.
+- Copy link.
+- Theo dõi Customer Session.
+- Theo dõi Order/Payment status.
+
+## 7.3 Điều phối
+
+Workspace chính:
+
+- Danh sách Order.
+- Assignment.
+- Status.
+- Deadline.
+- Issue.
+- Upload ảnh.
+- Hoàn tất đơn.
+
+## 7.4 Customer
+
+Không đăng nhập.
+
+Mở link → Customer Journey.
+
+---
+
+# 8. PRODUCT LIBRARY
+
+Module phải sử dụng Product Library hiện có của FloraOS.
+
+Nếu core chưa có đầy đủ Product Library capability, module bổ sung capability theo chuẩn core.
+
+Product cần hỗ trợ tối thiểu:
+
+- product_code
+- product_name
+- cover_image
+- gallery_images
+- price
+- flower_components
+- accessory_components
+- description
+- meaning
+- occasion
+- style
+- flower_types
+- colors
+- production_status
+
+Product Library là:
+
+**SOURCE OF TRUTH của sản phẩm.**
+
+Không copy Product Master vào Catalog.
+
+---
+
+# 9. NHẬP PRODUCT
+
+Admin có hai cách:
+
+### A. Nhập Excel
+
+Có template chuẩn:
+
+`PRODUCT_IMPORT_TEMPLATE.xlsx`
+
+Các trường tối thiểu:
+
+- Mã sản phẩm
+- Tên sản phẩm
+- Ảnh chính
+- Ảnh bổ sung
+- Giá
+- Thành phần
+- Ý nghĩa
+- Mô tả
+- Dịp sử dụng
+- Phong cách
+- Loại hoa
+- Màu sắc
+- Trạng thái sản xuất
+
+Flow:
+
+```text
+Upload
+→ Validate
+→ Preview
+→ Hiển thị lỗi
+→ Import
+```
+
+Không import trực tiếp.
+
+### B. Thêm từng sản phẩm
+
+Product Form sử dụng UI component của FloraOS.
+
+---
+
+# 10. CATALOG
+
+Có 2 loại:
+
+### STANDARD
+
+Catalog được Admin định nghĩa.
+
+Ví dụ:
+
+- 20-10
+- 8-3
+- Valentine
+- Sinh nhật
+- Khai trương
+- HOT
+
+Sale chỉ được chọn Catalog đã có.
+
+### CLIENT CATALOG
+
+Catalog được tạo theo yêu cầu riêng của khách.
+
+URL path luôn:
+
+```text
+/cc/
+```
+
+Sale không đặt tên URL.
+
+Hệ thống lưu tiêu chí tìm kiếm của Client Catalog.
+
+---
+
+# 11. PRODUCT SEARCH / FILTER
+
+Client Catalog cho phép Sale nhập yêu cầu:
+
+Ví dụ:
+
+```text
+Dịp: 20/10
+Giá: 800.000 – 1.200.000
+Loại hoa: Hoa hồng
+Màu: Pastel
+Số mẫu: 15
+```
+
+Hệ thống tìm Product Library.
+
+Đây là:
+
+**Product Search & Filtering Engine**
+
+Không phải AI Recommendation Engine.
+
+Nếu chỉ có 7 sản phẩm phù hợp:
+
+> Hiển thị 7 sản phẩm phù hợp.
+
+Không tự động thêm sản phẩm không phù hợp.
+
+---
+
+# 12. TẠO SEND LINK
+
+Sale:
+
+```text
+Chọn Brand
+→ Chọn Catalog
+→ TẠO THẺ CHÀO
+```
+
+Backend tự tạo:
+
+```text
+SEND_CODE
+```
+
+Ví dụ:
+
+`T01-037`
+
+Sequence tăng theo:
+
+**mỗi lần tạo Send Link**
+
+Không tăng theo Order.
+
+Sale không được sửa Send Code.
+
+---
+
+# 13. CUSTOMER SESSION
+
+Mỗi Send Code tạo một Customer Session.
+
+Ví dụ:
+
+```text
+Catalog 20-10
+│
+├── T01-037 → Customer Session A
+├── T01-038 → Customer Session B
+└── T01-039 → Customer Session C
+```
+
+Một Catalog có thể có nhiều Session.
+
+Session không đồng nghĩa với Catalog.
+
+Session không đồng nghĩa với Order.
+
+---
+
+# 14. CUSTOMER JOURNEY
+
+Khi Customer mở link, Session được tạo/khởi động.
+
+Journey:
+
+```text
+MỞ LINK
+↓
+ĐANG XEM CATALOG
+↓
+XEM SẢN PHẨM
+↓
+CHỌN SẢN PHẨM
+↓
+ĐIỀN ĐƠN
+↓
+ĐẶT HÀNG
+↓
+THANH TOÁN
+↓
+KHÁCH BÁO ĐÃ THANH TOÁN
+↓
+ADMIN XÁC NHẬN
+↓
+ĐÃ THANH TOÁN
+↓
+ĐANG XỬ LÝ
+↓
+THEO DÕI ĐƠN
+```
+
+Journey phải luôn cho Customer biết:
+
+- Đang ở đâu.
+- Vừa hoàn thành gì.
+- Cần làm gì tiếp theo.
+- Hướng dẫn tương ứng.
+- Notification khi trạng thái thay đổi.
+
+---
+
+# 15. SWIPE CATALOG
+
+Swipe chỉ là **navigation**.
+
+Không có:
+
+- Like.
+- Dislike.
+- Thích.
+- Bỏ qua.
+
+Quy tắc:
+
+```text
+Swipe phải → sản phẩm tiếp theo
+
+Swipe trái → sản phẩm phía trước
+```
+
+Có nút fallback:
+
+- Mẫu trước.
+- Mẫu tiếp theo.
+
+Nút nghiệp vụ duy nhất:
+
+**CHỌN MẪU NÀY**
+
+---
+
+# 16. CUSTOMER PRODUCT SELECTION
+
+Khi Customer chọn sản phẩm:
+
+Module phải lưu:
+
+- Session ID.
+- Product ID.
+- Product snapshot.
+- Selected timestamp.
+
+Ngay sau đó hiển thị:
+
+**Bạn đã chọn mẫu này.**
+
+---
+
+# 17. ORDER FORM
+
+Order Form phải hiển thị rõ:
+
+```text
+[ẢNH SẢN PHẨM]
+
+Tên sản phẩm
+Giá sản phẩm
+```
+
+Sau đó:
+
+- Tên khách.
+- Số điện thoại.
+- Tên người nhận.
+- Số điện thoại người nhận.
+- Ngày giao.
+- Địa chỉ.
+- Lời nhắn thiệp.
+- Ghi chú.
+
+Customer phải nhìn thấy **đúng sản phẩm mình đang đặt** trước khi submit.
+
+---
+
+# 18. PRODUCT SNAPSHOT
+
+Khi Order được tạo, phải snapshot:
+
+- Product ID.
+- Product Code.
+- Product Name.
+- Product Image.
+- Unit Price.
+- Selected timestamp.
+
+Mục đích:
+
+Nếu Product Master thay đổi sau này:
+
+**Order cũ không được thay đổi theo.**
+
+---
+
+# 19. PAYMENT
+
+MVP:
+
+**Không Bank API/Webhook.**
+
+Flow:
+
+```text
+Order
+↓
+Payment QR
+↓
+Customer chuyển khoản
+↓
+TÔI ĐÃ THANH TOÁN
+↓
+KHÁCH ĐÃ BÁO THANH TOÁN
+↓
+ADMIN kiểm tra ngân hàng
+↓
+XÁC NHẬN ĐÃ THANH TOÁN
+↓
+ĐÃ THANH TOÁN
+```
+
+QR chứa:
+
+- Số tài khoản.
+- Tên tài khoản.
+- Số tiền.
+- Nội dung chuyển khoản.
+
+Sale không xác nhận thanh toán.
+
+Điều phối không xác nhận thanh toán.
+
+Admin là người xác nhận.
+
+---
+
+# 20. ORDER STATUS — SSOT
+
+Order Status là:
+
+**Single Source of Truth.**
+
+Không tạo các status độc lập cho từng role.
+
+```text
+ORDER STATUS
+     ↓
++----+----------+
+↓    ↓          ↓
+Sale Điều phối Customer
+```
+
+Customer-facing status chỉ là presentation mapping.
+
+---
+
+# 21. OPERATIONS
+
+Điều phối có thể:
+
+- Xem Order.
+- Xác nhận.
+- Assign Shop.
+- Assign User.
+- Cập nhật trạng thái.
+- Set production deadline.
+- Set delivery deadline.
+- Ghi internal note.
+- Upload ảnh.
+- Gắn issue.
+- Hoàn tất đơn.
+
+Internal status:
+
+```text
+NEW
+CONFIRMED
+ASSIGNED
+SHOP_ACCEPTED
+PREPARING
+IN_PRODUCTION
+QC
+COMPLETED
+WAITING_DELIVERY
+OUT_FOR_DELIVERY
+DELIVERED
+CANCELLED
+ON_HOLD
+```
+
+---
+
+# 22. CUSTOMER TRACKING
+
+Customer Tracking sử dụng Order Status SSOT.
+
+Customer thấy:
+
+- Mã đơn.
+- Sản phẩm.
+- Ảnh sản phẩm.
+- Trạng thái hiện tại.
+- Timeline.
+- Thời gian cập nhật.
+- Customer message.
+- Ảnh thực tế.
+
+Không thấy:
+
+- Internal note.
+- Internal issue.
+- Internal assignment.
+- Thông tin nội bộ.
+
+Khi hoa hoàn thiện:
+
+**HOA ĐÃ HOÀN THIỆN**
+
++ ảnh thực tế.
+
+---
+
+# 23. IMAGE PERFORMANCE — P0
+
+Ảnh là ưu tiên UX cao nhất.
+
+AI Agent phải kiểm tra capability image optimization hiện có của FloraOS trước.
+
+Nếu chưa có, xây theo nguyên tắc:
+
+- Original storage.
+- Responsive derivatives.
+- WebP/AVIF.
+- CDN/Edge Cache.
+- Lazy loading.
+- Preload card kế tiếp.
+- Cache ảnh đã xem.
+- Placeholder.
+- Không layout shift.
+- Retry.
+- Fallback.
+- Cache invalidation.
+
+Customer phải có cảm giác:
+
+**Swipe → ảnh tiếp theo xuất hiện tức thì.**
+
+Không reload toàn trang.
+
+---
+
+# 24. UI/UX BENCHMARK
+
+### Customer
+
+Benchmark:
+
+**Tinder interaction model**
+
+Học:
+
+- Card.
+- Swipe.
+- Motion.
+- Preload.
+- One-handed interaction.
+- Feedback.
+
+Không clone source code/UI.
+
+### Internal
+
+Benchmark:
+
+**Shopify Admin / Polaris**
+
+Học:
+
+- Table.
+- Search.
+- Filter.
+- Drawer.
+- Form.
+- Badge.
+- Toast.
+- Loading.
+- Empty.
+- Error.
+
+### Payment
+
+Benchmark:
+
+**Stripe Checkout**
+
+Học:
+
+- CTA hierarchy.
+- Clarity.
+- Confirmation.
+- Error/recovery.
+- State communication.
+
+Visual identity:
+
+**100% FloraOS.**
+
+---
+
+# 25. MODULE UI RULE
+
+Module phải sử dụng:
+
+- FloraOS Design System.
+- FloraOS navigation.
+- FloraOS typography.
+- FloraOS spacing.
+- FloraOS components.
+- FloraOS notification.
+- FloraOS permission model.
+
+Không tạo design system thứ hai.
+
+---
+
+# 26. TECHNICAL INTEGRATION RULE
+
+Trước khi tạo database/table/API/component mới, AI Agent phải kiểm tra:
+
+> “Capability này đã tồn tại trong floraos-core chưa?”
+
+Nếu có:
+
+**Reuse.**
+
+Nếu chưa có:
+
+**Extend core theo convention hiện tại.**
+
+Chỉ tạo module-specific entity khi entity đó thực sự thuộc domain Thẻ chào.
+
+---
+
+# 27. MODULE-SPECIFIC ENTITIES
+
+Các entity có khả năng thuộc module:
+
+- greeting_catalogs
+- greeting_catalog_products
+- greeting_sessions
+- greeting_send_codes
+- greeting_journey_events
+
+Các entity sau ưu tiên reuse core:
+
+- users
+- products
+- customers
+- orders
+- order_items
+- media
+- notifications
+- payments nếu core đã có.
+
+Tên bảng thực tế phải được quyết định sau khi audit schema hiện tại.
+
+**Không được tạo duplicate `products`, `customers` hoặc `orders` nếu core đã có.**
+
+---
+
+# 28. SECURITY
+
+Bắt buộc:
+
+- RBAC hiện có.
+- RLS nếu Supabase.
+- Server-side authorization.
+- Session isolation.
+- SEND_CODE không phải security credential.
+- Không chứa PII trong URL.
+- Customer chỉ truy cập Session của link hiện tại.
+- Customer chỉ xem Order thuộc Session tương ứng.
+- Internal notes không được expose ra public API.
+
+---
+
+# 29. DATA INTEGRITY
+
+Phải xử lý bằng kỹ thuật:
+
+- SEND_CODE duplicate → DB UNIQUE/sequence.
+- Duplicate Order → idempotency.
+- Double submit → idempotency.
+- Concurrent edit → optimistic concurrency.
+- Product deleted → soft delete.
+- Product changed → snapshot.
+- Catalog changed → version/snapshot.
+- QR amount → lấy trực tiếp từ Order.
+- Media → gắn với đúng Order/Status Update.
+- Session → persistent.
+- Unauthorized session access → server authorization + RLS.
+
+---
+
+# 30. DEVELOPMENT PROCESS
+
+AI Agent phải thực hiện theo thứ tự:
+
+### PHASE 1 — DISCOVERY
+
+Audit floraos-core.
+
+Không code trước khi hiểu architecture.
+
+### PHASE 2 — DOMAIN MAPPING
+
+Map:
+
+```text
+Existing Core
+       ↓
+Reusable Capability
+       ↓
+New Greeting Card Capability
+```
+
+### PHASE 3 — DATABASE
+
+Chỉ tạo/extend schema cần thiết.
+
+### PHASE 4 — API / SERVICE
+
+Theo convention hiện tại của core.
+
+### PHASE 5 — UI
+
+Dùng FloraOS Design System.
+
+### PHASE 6 — CUSTOMER JOURNEY
+
+Test end-to-end:
+
+Link → Catalog → Swipe → Select → Order → Payment → Tracking.
+
+### PHASE 7 — PERFORMANCE
+
+Ưu tiên image loading và mobile interaction.
+
+### PHASE 8 — SECURITY
+
+RBAC, RLS, session isolation, authorization.
+
+### PHASE 9 — QA
+
+Test role + journey + edge cases.
+
+---
+
+# 31. DEFINITION OF DONE
+
+Module chỉ được coi là hoàn thành khi:
+
+## Product
+
+- Dùng Product Library core.
+- Thêm Product được.
+- Import Excel được.
+- Validation được.
+- Image optimization hoạt động.
+- Product snapshot hoạt động.
+
+## Sale
+
+- Chọn Catalog.
+- Tạo Client Catalog.
+- Chọn Product.
+- Tạo Send Link.
+- SEND_CODE tự sinh.
+- Copy link.
+- Theo dõi Session.
+
+## Customer
+
+- Mở link không login.
+- Ảnh tải nhanh.
+- Swipe phải = mẫu tiếp.
+- Swipe trái = mẫu trước.
+- Chọn mẫu.
+- Thấy đúng ảnh mẫu.
+- Đặt hàng.
+- Thanh toán QR.
+- Báo đã thanh toán.
+- Xem Tracking.
+
+## Admin
+
+- Quản lý Product.
+- Catalog.
+- User/permission.
+- Xác nhận Payment.
+
+## Điều phối
+
+- Order.
+- Assignment.
+- Status.
+- Deadline.
+- Media.
+- Issue.
+- Completion.
+
+## Architecture
+
+- Không tạo duplicate core capability.
+- Không tạo webapp độc lập.
+- Không tạo authentication riêng.
+- Không tạo Product/Customer/Order system riêng.
+- Tuân thủ FloraOS architecture.
+- Không phá vỡ chức năng hiện có.
+
+---
+
+# 32. NO-OVERENGINEERING
+
+Không thêm nếu chưa được yêu cầu:
+
+- AI recommendation.
+- AI matching.
+- Customer scoring.
+- CRM.
+- Chat integration.
+- Zalo/Messenger API.
+- Chatbot.
+- Loyalty.
+- Marketplace.
+- Bank API/Webhook.
+- Payment gateway.
+- Customer account.
+- Complex analytics.
+
+---
+
+# 33. FINAL PRINCIPLE
+
+> **THẺ CHÀO là một module của FloraOS, không phải một sản phẩm độc lập.**
+
+> **Module sử dụng dữ liệu và capability của FloraOS làm nền tảng; chỉ bổ sung những capability thực sự thuộc hành trình Thẻ chào.**
+
+> **Product Library là nguồn sản phẩm chuẩn. Catalog là tập sản phẩm được chọn. Session đại diện cho một lượt gửi khách. Order là giao dịch. Order Status là SSOT. Customer Journey luôn hướng dẫn bước tiếp theo.**
+
+> **Mục tiêu của module là giúp Sale gửi sản phẩm cho khách nhanh hơn và giúp khách chọn, đặt, thanh toán và theo dõi hoa với số thao tác ít nhất có thể.**

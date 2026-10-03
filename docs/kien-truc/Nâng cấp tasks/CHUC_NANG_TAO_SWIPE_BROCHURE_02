@@ -1,0 +1,590 @@
+# 34. MODULARITY & FUTURE EXTRACTION ARCHITECTURE
+
+## 34.1 Mục tiêu
+
+Module **Thẻ chào** được phát triển bên trong `floraos-core`, nhưng phải được kiến trúc như một **bounded module độc lập**.
+
+Mục tiêu:
+
+1. Chạy như một chức năng hoàn chỉnh bên trong FloraOS.
+2. Có thể phát triển độc lập với các module khác.
+3. Có thể test độc lập.
+4. Có thể deploy độc lập nếu cần.
+5. Có thể tách thành repository riêng trong tương lai.
+6. Khi tách repo, không phải viết lại business logic cốt lõi.
+
+Nguyên tắc:
+
+> **Build inside FloraOS, architect for extraction.**
+
+---
+
+# 34.2 Git Strategy
+
+Tạo branch riêng:
+
+```text
+main
+│
+└── feature/greeting-card
+```
+
+Tất cả development ban đầu của module thực hiện trên branch:
+
+```text
+feature/greeting-card
+```
+
+Không phát triển module bằng cách sửa trực tiếp `main`.
+
+Các commit phải có phạm vi rõ ràng:
+
+```text
+feat(greeting-card): add catalog model
+feat(greeting-card): add send code service
+feat(greeting-card): add customer session
+feat(greeting-card): add swipe catalog
+feat(greeting-card): add payment confirmation
+```
+
+Không trộn commit của module với các tính năng không liên quan của FloraOS.
+
+---
+
+# 34.3 Module Boundary (Chuẩn Clean Architecture FloraOS)
+
+Module tuân thủ nghiêm ngặt mô hình Clean Architecture 4 tầng chuẩn của `floraos-core`:
+
+```text
+src/modules/greeting-card/
+├── domain/               # Luật nghiệp vụ thuần, types, rules, validation (không import Prisma/React)
+│   ├── greeting-card-types.ts
+│   ├── greeting-card-rules.ts
+│   └── __tests__/
+├── use-cases/            # Các kịch bản nghiệp vụ tác vụ (Orchestration)
+│   ├── create-send-link.ts
+│   ├── get-greeting-catalog.ts
+│   ├── submit-brochure-order.ts
+│   ├── confirm-brochure-payment.ts
+│   └── get-brochure-tracking.ts
+├── infra/                # Truy cập CSDL đa tenant & I/O
+│   └── greeting-card-repository.ts
+└── adapters/             # Chuyển đổi định dạng, VietQR Napas, Core Gateways
+    └── vietqr-helper.ts
+```
+
+UI và Route được phân bổ theo quy ước App Router của Next.js:
+- Public Customer Experience: `src/app/b/[sendCode]/` + `src/components/greeting-card/customer/`
+- Internal Workspaces & Tabs: `src/app/(app)/the-chao/` + `src/components/greeting-card/{sales, coordinator, admin}/`
+- API Namespace: `src/app/api/v1/greeting-card/` & `src/app/api/v1/public/brochure/`
+
+---
+
+# 34.4 Dependency Rule (Quy tắc phụ thuộc một chiều)
+
+Dependency chỉ được phép đi theo hướng:
+
+```text
+UI (Components / Pages / Tabs)
+        ↓
+API Routes (/api/v1/...)
+        ↓
+Use Cases (src/modules/greeting-card/use-cases)
+        ↓
+Domain Rules & Ports (src/modules/greeting-card/domain)
+        ↓
+Infrastructure & Adapters (Prisma Scoped, External VietQR, Core Gateways)
+```
+
+**Tuyệt đối cấm phụ thuộc ngược**:
+1. Core của FloraOS không được import logic triển khai nội bộ của Greeting Card.
+2. Domain của Greeting Card không được import Prisma, Next.js hay các thư viện hạ tầng.
+3. Khi cần tương tác với Product, Order, CRM của Core, Greeting Card gọi qua Adapter/Port Interface.
+
+
+---
+
+# 34.5 Domain Isolation
+
+Business logic của Thẻ chào phải nằm trong module.
+
+Ví dụ:
+
+```text
+greeting-card/domain/
+```
+
+chịu trách nhiệm:
+
+- Catalog.
+- Send Code.
+- Session.
+- Customer Journey.
+- Product Selection.
+- Greeting Card rules.
+
+Không đặt business logic này rải rác trong:
+
+```text
+products/
+orders/
+customers/
+```
+
+của core.
+
+---
+
+# 34.6 Core Capability Reuse
+
+Module được phép sử dụng các capability của FloraOS:
+
+```text
+Auth
+Users
+Roles
+Products
+Customers
+Orders
+Media
+Notifications
+Storage
+```
+
+Nhưng phải sử dụng thông qua:
+
+**Service / Interface / API Contract**
+
+nếu architecture hiện tại cho phép.
+
+Ví dụ:
+
+```typescript
+interface ProductService {
+  getProduct(id: string): Promise<Product>;
+  searchProducts(criteria: ProductSearchCriteria): Promise<Product[]>;
+}
+```
+
+Greeting Card không được phụ thuộc trực tiếp vào implementation cụ thể nếu có thể tránh.
+
+---
+
+# 34.7 Anti-Coupling Rule
+
+Không được viết dependency kiểu:
+
+```typescript
+import X from "../../../core/internal/..."
+```
+
+hoặc phụ thuộc vào:
+
+- internal database implementation.
+- private helper.
+- private component.
+- private service.
+- internal state của module khác.
+
+Nếu cần capability:
+
+```text
+Greeting Card
+      ↓
+Contract
+      ↓
+FloraOS Adapter
+```
+
+---
+
+# 34.8 Adapter Layer
+
+Tạo adapter layer nếu cần:
+
+```text
+modules/greeting-card/infrastructure/
+```
+
+Ví dụ:
+
+```text
+FloraOSProductAdapter
+FloraOSCustomerAdapter
+FloraOSOrderAdapter
+FloraOSMediaAdapter
+FloraOSNotificationAdapter
+```
+
+Mục tiêu:
+
+> Business logic của Greeting Card không cần biết Product/Order service được implement bằng cách nào.
+
+---
+
+# 34.9 Database Isolation
+
+Không tạo database riêng ở giai đoạn đầu.
+
+Module sử dụng database của `floraos-core`.
+
+Nhưng các bảng module-specific phải có namespace/domain rõ ràng.
+
+Ví dụ:
+
+```text
+greeting_catalogs
+greeting_catalog_products
+greeting_sessions
+greeting_send_codes
+greeting_journey_events
+```
+
+Không tạo duplicate:
+
+```text
+products
+customers
+orders
+users
+```
+
+nếu các entity này đã tồn tại trong core.
+
+---
+
+# 34.10 Foreign Key Rule
+
+Nếu dùng foreign key tới Core entity:
+
+```text
+greeting_sessions
+      ↓
+customer_id
+      ↓
+core.customers
+```
+
+Module được phép reference Core entity.
+
+Core không được tạo foreign key ngược tới Greeting Card chỉ để phục vụ module.
+
+---
+
+# 34.11 API Boundary (Phiên bản hóa /api/v1/)
+
+API của module tuân thủ quy tắc SSOT của FloraOS: **Route bắt buộc dưới `/api/v1/`**:
+
+### Internal Management APIs (Auth + Tenant Scoped):
+```text
+POST /api/v1/greeting-card/catalogs            # Tạo catalog (Chuẩn hoặc Client)
+GET  /api/v1/greeting-card/catalogs            # Lấy danh sách catalog
+POST /api/v1/greeting-card/send-links          # Sale tạo send link (sinh send_code T01-xxx)
+GET  /api/v1/greeting-card/send-links          # Giám sát các phiên khách tương tác
+GET  /api/v1/greeting-card/orders              # Lọc các đơn hàng có nguồn BROCHURE
+POST /api/v1/greeting-card/orders/[id]/confirm-payment # Admin xác nhận đã thu tiền
+```
+
+### Public Customer APIs (Public, không yêu cầu đăng nhập, bảo vệ qua Send Code):
+```text
+GET  /api/v1/public/brochure/[sendCode]                 # Lấy thông tin catalog & sản phẩm vuốt card
+POST /api/v1/public/brochure/[sendCode]/select          # Ghi nhận khách chọn mẫu (Product Snapshot)
+POST /api/v1/public/brochure/[sendCode]/order           # Khách gửi form đặt hoa (sinh Order + CRM)
+POST /api/v1/public/brochure/[sendCode]/payment-notify  # Khách báo "Tôi đã thanh toán"
+GET  /api/v1/public/brochure/tracking/[code]            # Khách theo dõi tiến độ cắm hoa & ảnh thực tế
+```
+
+---
+
+# 34.12 Public API của Module (Clean Service Contracts)
+
+Module cung cấp các Use Case rõ ràng để bên ngoài có thể gọi:
+
+```typescript
+createCatalog(ctx, input)
+createSendLink(ctx, input)
+getGreetingCatalogForCustomer(sendCode)
+submitBrochureOrder(sendCode, input)
+reportCustomerPayment(sendCode)
+adminConfirmBrochurePayment(ctx, orderId, input)
+getBrochureTracking(orderCode)
+```
+
+Tất cả business logic chỉ được phép thực thi thông qua các Use Case này.
+
+---
+
+# 34.13 Customer Public Route (Tuyến khách hàng công khai)
+
+Định tuyến khách hàng công khai được định danh rõ ràng theo tiền tố `/b/` (Brochure):
+
+```text
+/b/[sendCode]          # Ví dụ: /b/T01-037 (Mở link Thẻ chào xem hoa, vuốt chọn, đặt hàng, quét QR)
+```
+
+**Đặc điểm**:
+- Hoàn toàn độc lập với hệ thống authentication nội bộ (khách không cần đăng nhập).
+- Tối ưu Mobile-First, cử chỉ vuốt thẻ tương tác chuẩn Tinder.
+- Bảo mật thông tin: Không để lộ giá vốn, ghi chú nội bộ, hay dữ liệu của khách hàng khác.
+
+---
+
+# 34.14 Admin / Sale / Operations Workspaces & Tabs
+
+Tích hợp mượt mà vào luồng tác nghiệp hiện có của FloraOS, không tạo ứng dụng song song:
+
+1. **Thanh Sidebar Navigation (Nhóm Bán hàng & Khách)**:
+   - Mục `/the-chao` ("Thẻ chào mẫu hoa", biểu tượng `Sparkles`).
+   - Màn hình trung tâm quản lý toàn bộ link chào hàng và duyệt thanh toán.
+
+2. **Màn hình Bán hàng (`/don-hang`)**:
+   - Tab **"Thẻ Chào & Link Chào Khách (Sale)"**: Tạo link, copy link, giám sát thời gian thực phiên khách xem/chọn hoa.
+   - Tab **"Duyệt TT Thẻ Chào (Điều hành)"**: Danh sách các đơn khách đã báo chuyển khoản để đối soát và duyệt tiền.
+
+3. **Màn hình Điều phối (`/dieu-phoi`)**:
+   - Tab **"Đơn từ Thẻ Chào (Brochure Orders)"**: Hiển thị ảnh mẫu hoa chuẩn snapshot khách chọn, ngày giờ hẹn giao, lời nhắn thiệp, phân công thợ cắm hoa và chụp ảnh thành phẩm.
+
+---
+
+# 34.15 Permission Boundary (RBAC & Capability Codes)
+
+Module kế thừa 100% hệ thống RBAC phân quyền 3 lớp của FloraOS:
+- `R1` (`order.read`): Quyền xem danh sách đơn hàng và danh sách Thẻ chào (mặc định: `sale`, `dieu_hanh`, `dieu_phoi`, `crm`).
+- `R2` (`order.create`): Quyền tạo đơn hàng và tạo link Thẻ chào gửi khách (mặc định: `sale`, `dieu_hanh`, `dieu_phoi`).
+- `R9` (`order.payment.record`): Quyền đối soát và xác nhận thanh toán (mặc định: `dieu_hanh`).
+- `J1` (`catalog.read` / `catalog.create`): Quyền quản lý danh mục mẫu hoa.
+- `Q1` / `Q2` (`crm.customer.read` / `crm.customer.create`): Tự động liên kết khách hàng với CRM khi đặt hoa.
+
+
+---
+
+# 34.16 Feature Flag
+
+Module nên được kích hoạt bằng Feature Flag nếu FloraOS hiện có hệ thống Feature Flag.
+
+Ví dụ:
+
+```text
+GREETING_CARD_ENABLED=true
+```
+
+Mục đích:
+
+- Deploy code nhưng chưa mở cho user.
+- Test nội bộ.
+- Rollback nhanh.
+- Gradual rollout.
+- Tắt module mà không ảnh hưởng core.
+
+Nếu core chưa có Feature Flag, không tự tạo hệ thống lớn chỉ cho module; sử dụng cơ chế configuration hiện có.
+
+---
+
+# 34.17 Independent Testing
+
+Module phải có test riêng:
+
+```text
+modules/greeting-card/tests/
+```
+
+Test tối thiểu:
+
+### Unit
+
+- Send Code generation.
+- Catalog rules.
+- Session rules.
+- Product selection.
+- Payment state.
+- Journey transitions.
+
+### Integration
+
+- Product Library.
+- Order.
+- Media.
+- Auth/RBAC.
+- Database.
+
+### E2E
+
+```text
+Sale
+→ Create Catalog
+→ Create Link
+→ Customer Open
+→ Swipe
+→ Select
+→ Order
+→ Payment
+→ Admin Confirm
+→ Tracking
+```
+
+---
+
+# 34.18 Independent Development Environment
+
+Module phải có khả năng chạy trong local development mà không cần toàn bộ FloraOS UI hoạt động.
+
+Tối thiểu:
+
+```text
+Core Services
+      +
+Greeting Card Module
+```
+
+Không yêu cầu các module không liên quan phải hoạt động.
+
+Nếu core có monorepo:
+
+```text
+pnpm dev --filter greeting-card
+```
+
+hoặc equivalent theo tooling hiện tại.
+
+Không tự tạo tooling mới nếu monorepo đã có convention.
+
+---
+
+# 34.19 Independent Deployment Readiness
+
+Ngay từ đầu module phải tránh phụ thuộc vào:
+
+- hardcoded domain.
+- hardcoded hostname.
+- hardcoded storage URL.
+- hardcoded database schema.
+- hardcoded FloraOS branding.
+
+Các giá trị này phải đi qua:
+
+```text
+environment/configuration
+```
+
+Ví dụ:
+
+```text
+PUBLIC_GREETING_CARD_URL
+MEDIA_BASE_URL
+CORE_API_URL
+```
+
+Tên biến thực tế tuân theo convention hiện tại.
+
+---
+
+# 34.20 Configuration Boundary
+
+Module-specific configuration phải được gom riêng:
+
+```text
+GreetingCardConfig
+```
+
+Ví dụ:
+
+- Public URL.
+- Catalog settings.
+- Payment settings.
+- Session settings.
+- Image settings.
+
+Không rải magic numbers/string trong code.
+
+---
+
+# 34.21 Event Boundary
+
+Nếu FloraOS có Event Bus/Event system, module nên publish/consume event thông qua event contract.
+
+Ví dụ:
+
+```text
+GreetingCardSessionStarted
+GreetingCardProductSelected
+GreetingCardOrderCreated
+GreetingCardPaymentClaimed
+GreetingCardPaymentConfirmed
+GreetingCardOrderStatusChanged
+```
+
+Không gọi trực tiếp internal function của module khác để tạo side effect nếu event architecture đã tồn tại.
+
+---
+
+# 34.22 Logging
+
+Log phải có module identifier:
+
+```text
+module=greeting-card
+```
+
+và context:
+
+```text
+session_id
+catalog_id
+send_code
+order_id
+```
+
+Không log PII nhạy cảm hoặc payment information không cần thiết.
+
+---
+
+# 34.23 Observability
+
+Module cần có:
+
+- Error tracking.
+- Request logging.
+- Performance monitoring.
+- Image loading metrics nếu hệ thống hiện có hỗ trợ.
+- Customer journey funnel.
+
+Tận dụng observability của FloraOS.
+
+Không tạo monitoring stack riêng nếu core đã có.
+
+---
+
+# 34.24 Extraction Readiness Test
+
+Trước khi tách repo, phải đạt:
+
+### Test 1
+
+Module có thể build độc lập.
+
+### Test 2
+
+Module có thể chạy toàn bộ test suite (unit, integration) mà không cần phụ thuộc vào external database của core.
+
+### Test 3
+
+Mọi tương tác với core services (Products, Orders, Customers, Media) đều thông qua Adapter Layer và Interface Contract rõ ràng.
+
+### Test 4
+
+Khi tách repo, chỉ cần thay thế các Adapter nội bộ bằng HTTP/gRPC Client gọi về FloraOS API Gateway mà không cần viết lại bất kỳ dòng business logic nào trong tầng `domain/` hay `use-cases/`.
+
+---
+
+# 35. CHECKLIST NGHIỆM THU KIẾN TRÚC MODULARITY
+
+- [x] **Cô lập Domain**: Mã nguồn module đặt trọn vẹn trong `src/modules/greeting-card/` (4 tầng `domain`, `use-cases`, `infra`, `adapters`).
+- [x] **Zero Circular Dependency**: Core không import ngược implementation của Greeting Card.
+- [x] **API Namespace**: Mọi API nội bộ nằm dưới `/api/v1/greeting-card/`, API khách hàng công khai nằm dưới `/api/v1/public/brochure/`.
+- [x] **Database Namespace**: Các bảng mới đều có prefix `greeting_` (`greeting_catalogs`, `greeting_catalog_products`, `greeting_sessions`, `greeting_journey_events`).
+- [x] **Tách Tabs Chuyên Biệt**:
+  - Tab Sale: Quản lý Thẻ chào, sinh link, copy link, theo dõi tương tác khách.
+  - Tab Điều phối: Tiếp nhận đơn từ Thẻ chào, xem ảnh snapshot, phân công florist, up ảnh thành phẩm.
+  - Tab Điều hành: Đối soát và 1-click duyệt thanh toán chuyển khoản.
+- [x] **Public Customer Experience**: Giao diện vuốt Tinder Swipe (`/b/[sendCode]`), điền đơn, sinh VietQR động Napas, theo dõi tiến độ đơn hàng thời gian thực.
+- [x] **Typecheck & Tests**: 100% code TypeScript typecheck xanh (`tsc --noEmit`), vượt qua toàn bộ 1,489 unit tests của hệ thống.

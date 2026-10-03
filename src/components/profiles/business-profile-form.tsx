@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react"
 import { Building2, Phone, Mail, MapPin, Globe, Clock, FileText, Check } from "lucide-react"
 import type { BusinessProfileDetail } from "@/modules/profiles/use-cases/get-business-profile"
 import type { UpsertBusinessProfileInput } from "@/modules/profiles/infra/business-profile-repository"
+import { AiRewriteInput } from "./ai-rewrite-input"
 
 export interface BusinessProfileFormProps {
   initialData: BusinessProfileDetail | null
@@ -149,15 +150,13 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-text mb-1.5">
-              Mô tả ngắn gọn về cửa hàng
-            </label>
-            <input
-              type="text"
+            <AiRewriteInput
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               placeholder="Chuyên hoa sự kiện, hoa cưới, hoa sinh nhật thiết kế cao cấp"
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              fieldType="description"
+              label="Mô tả ngắn gọn về cửa hàng"
+              helperText="Được AI sử dụng làm bối cảnh chính để giới thiệu tiệm trên Landing Page và Catalog"
             />
           </div>
         </div>

@@ -7,10 +7,22 @@ import { Dialog } from "@/components/ui/dialog"
 import { errorText } from "@/lib/error-text"
 import type { ProductMasterIndex } from "@/modules/products/domain/product-master-index"
 
+export interface CreateOrderInitialData {
+  recipientName?: string
+  phone?: string
+  street?: string
+  deliveryDate?: string
+  timeSlot?: string
+  cardMessage?: string
+  internalNote?: string
+  items?: ItemRow[]
+}
+
 interface CreateOrderModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
+  initialData?: CreateOrderInitialData | null
 }
 
 interface FlowerBomItemLite {
@@ -25,15 +37,15 @@ interface ItemRow {
   quantity: number
   unitPriceVnd: number
   sampleImageUrl?: string | undefined
-  bomSummary?: string
+  bomSummary?: string | undefined
   /** BOM có cấu trúc thật lấy từ Master Index — để phiếu cắm hoa (florist ticket) đọc được
    * đúng từng loại hoa/số lượng/màu thay vì phải bịa lại từ mô tả chữ tự do. */
-  bomFlowers?: FlowerBomItemLite[]
-  wrapStyle?: string
-  ribbon?: string
+  bomFlowers?: FlowerBomItemLite[] | undefined
+  wrapStyle?: string | undefined
+  ribbon?: string | undefined
 }
 
-export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModalProps) {
+export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: CreateOrderModalProps) {
   const [loading, setLoading] = useState(false)
   const [masterProducts, setMasterProducts] = useState<ProductMasterIndex[]>([])
   const [selectedProductId, setSelectedProductId] = useState<string>("")
@@ -48,6 +60,21 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     { description: "Bó hoa hồng đỏ 20 cành (Thiết kế tiêu chuẩn)", quantity: 1, unitPriceVnd: 650000 },
   ])
   const [error, setError] = useState<string | null>(null)
+
+  // Khởi tạo từ initialData khi modal mở hoặc dữ liệu thay đổi
+  useEffect(() => {
+    if (!isOpen) return
+    if (initialData) {
+      if (initialData.recipientName !== undefined) setRecipientName(initialData.recipientName)
+      if (initialData.phone !== undefined) setPhone(initialData.phone)
+      if (initialData.street !== undefined) setStreet(initialData.street)
+      if (initialData.deliveryDate !== undefined) setDeliveryDate(initialData.deliveryDate)
+      if (initialData.timeSlot !== undefined) setTimeSlot(initialData.timeSlot)
+      if (initialData.cardMessage !== undefined) setCardMessage(initialData.cardMessage)
+      if (initialData.internalNote !== undefined) setInternalNote(initialData.internalNote)
+      if (initialData.items && initialData.items.length > 0) setItems(initialData.items)
+    }
+  }, [isOpen, initialData])
 
   // Tải danh sách Master Index từ M01/Catalog
   useEffect(() => {

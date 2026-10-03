@@ -1,20 +1,26 @@
 "use client"
 
-// Menu tài khoản dùng chung cho Dashboard Điều hành và màn Trải nghiệm —
-// trước đây avatar chỉ là một vòng tròn tĩnh, không có cách nào đăng xuất
-// từ giao diện dù API đã có sẵn (`POST /api/v1/auth/logout`).
+// Menu tài khoản dùng chung cho Header và Sidebar Navigation.
+// Cung cấp avatar viết tắt, thông tin người dùng, chuyển đổi vai trò và nút Đăng xuất.
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, UserRound } from "lucide-react"
 import { useSession } from "@/lib/session"
+import { cn } from "@/lib/utils"
 
-export function UserMenu({ initials }: { initials: string }) {
+export interface UserMenuProps {
+  initials: string
+  direction?: "up" | "down"
+  size?: "sm" | "md"
+}
+
+export function UserMenu({ initials, direction = "down", size = "md" }: UserMenuProps) {
   const router = useRouter()
   const [mo, setMo] = useState(false)
   const [dangXuat, setDangXuat] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const { roleUx } = useSession()
+  const { roleUx, userName, orgName } = useSession()
 
   useEffect(() => {
     if (!mo) return
@@ -48,39 +54,71 @@ export function UserMenu({ initials }: { initials: string }) {
         onClick={() => setMo((v) => !v)}
         aria-label="Menu tài khoản"
         aria-expanded={mo}
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-body-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={cn(
+          "flex items-center justify-center rounded-full bg-primary font-bold text-white shadow-xs transition-opacity hover:opacity-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary cursor-pointer",
+          size === "sm" ? "h-9 w-9 text-caption" : "h-10 w-10 text-body-sm"
+        )}
       >
         {initials}
       </button>
 
       {mo && (
         <>
-          {/* Lớp phủ để bấm ra ngoài là đóng menu — không dùng thư viện popover ngoài. */}
-          <div className="fixed inset-0 z-10" onClick={() => setMo(false)} />
-          <div className="absolute right-0 top-12 z-20 w-52 overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
-            {/* Vai trải nghiệm hiện tại + danh mục 14 vai (đặc tả 03b §3). */}
+          {/* Lớp phủ để bấm ra ngoài là đóng menu */}
+          <button
+            type="button"
+            aria-label="Đóng menu"
+            tabIndex={-1}
+            onClick={() => setMo(false)}
+            className="fixed inset-0 z-40 bg-transparent cursor-default border-0"
+          />
+
+          {/* Menu popover */}
+          <div
+            className={cn(
+              "absolute z-50 w-56 overflow-hidden rounded-xl border border-border bg-surface shadow-lg",
+              direction === "up" ? "bottom-full mb-2 left-0" : "top-full mt-2 right-0"
+            )}
+          >
+            {/* Header thông tin người dùng */}
+            <div className="border-b border-border bg-surface-alt px-3.5 py-2.5">
+              <div className="truncate text-caption font-bold text-text">
+                {userName || "Người dùng"}
+              </div>
+              <div className="truncate text-caption text-text-muted">
+                {roleUx?.label ?? orgName}
+              </div>
+            </div>
+
+            {/* Vai trải nghiệm hiện tại + danh mục 14 vai (đặc tả 03b §3) */}
             <button
               type="button"
               onClick={() => {
                 setMo(false)
                 router.push("/vai-tro" as never)
               }}
-              className="flex w-full items-center gap-2 border-b border-border px-3.5 py-2.5 text-left text-body-sm font-semibold text-text hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="flex w-full items-center gap-2 border-b border-border px-3.5 py-2.5 text-left text-body-sm font-semibold text-text hover:bg-surface-alt transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary cursor-pointer"
             >
               <UserRound size={16} strokeWidth={1.8} aria-hidden="true" />
               <span className="min-w-0">
-                <span className="block">Vai trò</span>
-                {roleUx && <span className="block truncate text-caption font-medium text-text-muted">{roleUx.label}</span>}
+                <span className="block">Vai trò trải nghiệm</span>
+                {roleUx && (
+                  <span className="block truncate text-caption font-medium text-text-muted">
+                    {roleUx.label}
+                  </span>
+                )}
               </span>
             </button>
+
+            {/* Nút đăng xuất */}
             <button
               type="button"
               onClick={handleLogout}
               disabled={dangXuat}
-              className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-body-sm font-semibold text-danger hover:bg-surface-alt disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-body-sm font-semibold text-danger hover:bg-danger-bg transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary cursor-pointer"
             >
-              <LogOut size={16} strokeWidth={1.8} />
-              {dangXuat ? "Đang đăng xuất…" : "Đăng xuất"}
+              <LogOut size={16} strokeWidth={1.8} aria-hidden="true" />
+              <span>{dangXuat ? "Đang đăng xuất…" : "Đăng xuất"}</span>
             </button>
           </div>
         </>

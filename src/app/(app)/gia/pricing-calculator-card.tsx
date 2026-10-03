@@ -12,6 +12,10 @@ import {
   type SurchargeGroup,
 } from "@/modules/products/domain/pricing"
 import { checkPriceGuard } from "@/modules/products/domain/price-guard"
+import {
+  SIZE_VARIANT_CONFIGS,
+  type ProductSizeKey,
+} from "@/modules/products/domain/product-size-variants"
 
 export interface PricingCalculatorCardProps {
   partnerTierBonus: Record<string, number>
@@ -45,6 +49,21 @@ export function PricingCalculatorCard({
   const [ketQua, setKetQua] = useState<PriceQuoteResult | null>(null)
   const [canhBaoSanTran, setCanhBaoSanTran] = useState("")
   const [viPhamBatBien, setViPhamBatBien] = useState<string[]>([])
+  const [selectedSize, setSelectedSize] = useState<ProductSizeKey>("SIZE_M")
+
+  function handleSelectSize(newSize: ProductSizeKey) {
+    const currentMultiplier = SIZE_VARIANT_CONFIGS[selectedSize].scaleMultiplier
+    const targetMultiplier = SIZE_VARIANT_CONFIGS[newSize].scaleMultiplier
+    const ratio = targetMultiplier / currentMultiplier
+    setSelectedSize(newSize)
+
+    if (typeof costVnd === "number" && costVnd > 0) {
+      setCostVnd(Math.round(costVnd * ratio))
+    }
+    if (typeof listPriceVnd === "number" && listPriceVnd > 0) {
+      setListPriceVnd(Math.round(listPriceVnd * ratio))
+    }
+  }
 
   function validate(): boolean {
     const errors: Record<string, string> = {}
@@ -107,6 +126,27 @@ export function PricingCalculatorCard({
       <div className="text-body-sm font-bold text-text">Máy tính giá sản phẩm</div>
 
       <div className="flex flex-col gap-3">
+        {/* Bộ chuyển đổi kích thước Size S - M - L - XL (SP-12, 13, 14) */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-caption font-semibold text-text">Kích thước sản phẩm (Size S - M - L - XL)</span>
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface border border-border">
+            {(Object.keys(SIZE_VARIANT_CONFIGS) as ProductSizeKey[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleSelectSize(key)}
+                className={`flex-1 py-1.5 rounded-lg text-caption font-semibold transition ${
+                  selectedSize === key
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-text-muted hover:text-text"
+                }`}
+              >
+                {SIZE_VARIANT_CONFIGS[key].shortLabel}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <label className="flex flex-col gap-1 text-caption font-medium text-text">
           <span>Giá vốn (VNĐ) *</span>
           <input

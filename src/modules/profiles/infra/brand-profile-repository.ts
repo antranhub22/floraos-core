@@ -19,6 +19,7 @@ export type UpsertBrandProfileInput = {
   cta_templates?: Record<string, unknown> | null | undefined
   default_offers?: Record<string, unknown> | null | undefined
   forbidden_styles?: Record<string, unknown> | null | undefined
+  brand_assets?: Record<string, unknown> | null | undefined
 }
 
 /**
@@ -50,6 +51,7 @@ export class BrandProfileRepository {
       cta_templates: (input.cta_templates ?? null) as InputJsonValue,
       default_offers: (input.default_offers ?? null) as InputJsonValue,
       forbidden_styles: (input.forbidden_styles ?? null) as InputJsonValue,
+      brand_assets: (input.brand_assets ?? null) as InputJsonValue,
     }
 
     return this.db.brand_profiles.upsert({

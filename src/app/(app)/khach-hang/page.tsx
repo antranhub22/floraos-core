@@ -1,16 +1,19 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { Users, UserPlus, Sparkles, Search, Calendar, ArrowRight, Gift } from "lucide-react"
+import { Users, UserPlus, Sparkles, Search, Calendar, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { CreateCustomerModal } from "@/components/crm/create-customer-modal"
 import { CustomerDetailModal } from "@/components/crm/customer-detail-modal"
+import { OccasionCarePanel } from "@/components/crm/occasion-care-panel"
+import { useSession } from "@/lib/session"
 import type { CustomerMasterIndex, OccasionReminder } from "@/modules/crm/domain/customer-master-index"
 
 export default function CRMPage() {
+  const { orgName } = useSession()
   const [customers, setCustomers] = useState<CustomerMasterIndex[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -36,7 +39,9 @@ export default function CRMPage() {
       .then((res) => {
         setCustomers(res.items ?? [])
       })
-      .catch((err) => console.error(err))
+      .catch(() => {
+        // Im lặng fallback về danh sách rỗng khi lỗi mạng
+      })
       .finally(() => setLoading(false))
   }, [search, tierFilter])
 
@@ -116,36 +121,14 @@ export default function CRMPage() {
           ]}
         />
 
-        {/* Reminders Banner (nếu mở) */}
+        {/* Panel Lịch Chăm Sóc Ngày Kỷ Niệm (CRM-08..12) */}
         {showReminders && (
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Gift className="h-4 w-4 text-primary" />
-                Danh sách {reminders.length} dịp kỷ niệm sắp tới (trong 14 ngày tới)
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowReminders(false)}
-                className="text-xs font-semibold text-primary hover:underline min-h-9 px-2 inline-flex items-center"
-              >
-                Đóng danh sách
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {reminders.map((r, idx) => (
-                <div key={idx} className="rounded-lg border border-border bg-surface p-3 space-y-1 text-xs shadow-xs">
-                  <div className="flex items-center justify-between font-bold text-foreground">
-                    <span>{r.customerName}</span>
-                    <span className="text-primary font-extrabold">{r.daysLeft === 0 ? "Hôm nay!" : `Còn ${r.daysLeft} ngày`}</span>
-                  </div>
-                  <div className="text-text-muted">Dịp: <span className="font-semibold text-text-main">{r.occasionName}</span> ({r.targetDate})</div>
-                  <div className="text-text-muted">Gợi ý hoa: <span className="font-semibold text-primary">{r.suggestedFlower || "Chưa có"}</span></div>
-                  <div className="text-text-muted">SĐT: {r.customerPhone}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <OccasionCarePanel
+            reminders={reminders}
+            shopName={orgName || "Tiệm Hoa của bạn"}
+            onClose={() => setShowReminders(false)}
+            onViewCustomer={(id) => setSelectedCustomerId(id)}
+          />
         )}
 
         {/* Thanh công cụ tìm kiếm & lọc */}

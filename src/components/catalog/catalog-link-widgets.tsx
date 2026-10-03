@@ -2,12 +2,14 @@
 
 import React, { useState } from "react"
 import {
-  QrCode,
   ExternalLink,
   Copy,
   Check,
-  Ban,
   Share2,
+  Wand2,
+  BookOpen,
+  LayoutGrid,
+  List,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +17,10 @@ import { Input } from "@/components/ui/input"
 import { Dialog } from "@/components/ui/dialog"
 import { generateQRCodeDataUrl, triggerDownload } from "@/core/media/qr-engine"
 import { ShareCatalogModal } from "./share-catalog-modal"
+import {
+  CATALOG_STYLE_OPTIONS,
+  type CatalogStyleVariant,
+} from "@/modules/content-engine/domain/catalog-content-generator"
 
 export interface CatalogLinkItem {
   slug: string
@@ -56,17 +62,6 @@ export function PublishedCatalogLinks({ catalogLinks, onRefresh }: PublishedCata
     }
   }
 
-  const handleRevoke = async (slug: string) => {
-    if (!confirm(`Thu hồi link catalog "${slug}"? Khách hàng sẽ không thể xem danh mục này nữa.`)) return
-    try {
-      const res = await fetch(`/api/v1/catalog-links/${slug}/revoke`, { method: "POST" })
-      if (!res.ok) throw new Error("Thu hồi thất bại")
-      onRefresh()
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Lỗi khi thu hồi link")
-    }
-  }
-
   return (
     <div className="border-t border-border pt-6">
       <h3 className="text-sm font-bold text-text mb-3">
@@ -80,6 +75,7 @@ export function PublishedCatalogLinks({ catalogLinks, onRefresh }: PublishedCata
         <div className="space-y-2.5">
           {catalogLinks.map((link) => {
             const isRevoked = Boolean(link.is_revoked || link.revoked_at)
+            const style = (link.filters?.styleVariant as string) || "MODERN_SHOWROOM"
             return (
               <div
                 key={link.slug}
@@ -93,6 +89,9 @@ export function PublishedCatalogLinks({ catalogLinks, onRefresh }: PublishedCata
                     ) : (
                       <Badge tone="success">Đang mở</Badge>
                     )}
+                    <span className="text-caption px-2 py-0.5 rounded-full bg-surface-alt border text-text-muted font-mono">
+                      {style === "EDITORIAL_LOOKBOOK" ? "Lookbook" : style === "COMPACT_LIST" ? "B2B List" : "Showroom"}
+                    </span>
                   </div>
                   <div className="text-xs text-text-muted mt-1 flex flex-wrap items-center gap-2">
                     <span>Đường dẫn: <code>/c/{link.slug}</code></span>
@@ -108,7 +107,7 @@ export function PublishedCatalogLinks({ catalogLinks, onRefresh }: PublishedCata
                         <ExternalLink size={13} /> Xem trước
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setSharingLink(link)} className="h-8 gap-1 text-xs text-primary font-bold hover:bg-primary/10">
-                        <Share2 size={13} /> Chia sẻ MXH
+                        <Share2 size={13} /> Chia sẻ
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleCopyLink(link.slug)} className="h-8 gap-1 text-xs">
                         {copiedSlug === link.slug ? (
@@ -118,10 +117,7 @@ export function PublishedCatalogLinks({ catalogLinks, onRefresh }: PublishedCata
                         )}
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleDownloadQR(link.slug)} disabled={downloadingQR === link.slug} className="h-8 gap-1 text-xs text-primary">
-                        <QrCode size={13} /> {downloadingQR === link.slug ? "Đang tạo..." : "Tải QR"}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleRevoke(link.slug)} className="h-8 gap-1 text-xs text-destructive hover:text-destructive">
-                        <Ban size={13} /> Thu hồi
+                        {downloadingQR === link.slug ? "Đang tạo..." : "Tải QR"}
                       </Button>
                     </>
                   )}
@@ -144,7 +140,7 @@ export function PublishedCatalogLinks({ catalogLinks, onRefresh }: PublishedCata
   )
 }
 
-/* ── Modal Xuất bản Catalog mới ────────────────────────────────────── */
+/* ── Modal Xuất bản Catalog mới với 3 Styles & AI Content Engine ────────────────────────────────────── */
 
 interface CreateCatalogModalProps {
   selectedIds: string[]
@@ -155,7 +151,34 @@ interface CreateCatalogModalProps {
 export function CreateCatalogModal({ selectedIds, onClose, onCreated }: CreateCatalogModalProps) {
   const [name, setName] = useState("")
   const [desc, setDesc] = useState("")
+  const [styleVariant, setStyleVariant] = useState<CatalogStyleVariant>("MODERN_SHOWROOM")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAiGenerating, setIsAiGenerating] = useState(false)
+
+  const handleAiWriteIntro = async () => {
+    if (!name.trim()) return
+    setIsAiGenerating(true)
+    try {
+      const res = await fetch("/api/v1/content-engine/catalog-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          collectionName: name.trim(),
+          productCount: selectedIds.length,
+          styleVariant,
+        }),
+      })
+      if (!res.ok) throw new Error("Không thể sinh nội dung")
+      const json = await res.json()
+      if (json.data?.description) {
+        setDesc(json.data.description)
+      }
+    } catch (err) {
+      console.error("AI error:", err)
+    } finally {
+      setIsAiGenerating(false)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!name.trim()) return
@@ -175,7 +198,10 @@ export function CreateCatalogModal({ selectedIds, onClose, onCreated }: CreateCa
           slug,
           name: name.trim(),
           description: desc.trim() || null,
-          filters: selectedIds.length > 0 ? { product_ids: selectedIds } : null,
+          filters: {
+            product_ids: selectedIds,
+            styleVariant,
+          },
         }),
       })
       if (!res.ok) {
@@ -208,17 +234,61 @@ export function CreateCatalogModal({ selectedIds, onClose, onCreated }: CreateCa
       }
     >
       <div className="space-y-4">
+        {/* Style Variant Selector */}
+        <div>
+          <label className="block text-xs font-bold text-text mb-1.5">Phong cách trưng bày</label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {CATALOG_STYLE_OPTIONS.map((st) => (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setStyleVariant(st.id)}
+                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                  styleVariant === st.id
+                    ? "border-primary bg-primary-bg/25 text-primary font-bold shadow-xs"
+                    : "border-border bg-surface text-text hover:border-border-hover"
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  {st.id === "MODERN_SHOWROOM" && <LayoutGrid size={14} />}
+                  {st.id === "EDITORIAL_LOOKBOOK" && <BookOpen size={14} />}
+                  {st.id === "COMPACT_LIST" && <List size={14} />}
+                  <span className="text-xs">{st.name}</span>
+                </div>
+                <div className="text-caption text-text-muted mt-1 font-normal line-clamp-2">{st.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div>
           <label className="block text-xs font-semibold text-text mb-1.5">Tên Catalog / Bộ sưu tập *</label>
           <Input required placeholder="VD: Mẫu Hoa Khai Trương 2026" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-text mb-1.5">Mô tả ngắn</label>
-          <textarea rows={3} placeholder="Lời tựa giới thiệu…" value={desc} onChange={(e) => setDesc(e.target.value)} className="w-full rounded-xl border border-border p-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-semibold text-text">Mô tả / Lời tựa giới thiệu</label>
+            <button
+              type="button"
+              onClick={handleAiWriteIntro}
+              disabled={isAiGenerating || !name.trim()}
+              className="text-caption text-primary font-bold hover:underline flex items-center gap-1 disabled:opacity-50"
+            >
+              <Wand2 size={12} />
+              <span>{isAiGenerating ? "Đang viết..." : "✨ AI viết tự động"}</span>
+            </button>
+          </div>
+          <textarea
+            rows={3}
+            placeholder="Lời tựa mở đầu cho bộ sưu tập hoa..."
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            className="w-full rounded-xl border border-border p-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+          />
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-surface border text-xs text-text-muted">
+        <div className="p-3 rounded-xl bg-surface border text-xs text-text-muted">
           {selectedIds.length > 0
             ? <span>Đang chọn <strong>{selectedIds.length}</strong> mẫu hoa cho catalog này.</span>
             : <span>Tất cả mẫu hoa đang hoạt động sẽ tự động hiển thị.</span>}
@@ -227,4 +297,3 @@ export function CreateCatalogModal({ selectedIds, onClose, onCreated }: CreateCa
     </Dialog>
   )
 }
-

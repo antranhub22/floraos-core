@@ -76,6 +76,123 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 - **Cấm mã kỹ thuật trên giao diện (UX Lint R8, PO 29/09/2026)**: Không hiển thị `M01a`, `Khu vực D`, `SSOT`, `Chặng 05`, `P2`… trên label/text mà người dùng cửa hàng hoa nhìn thấy. Chỉ dùng trong `data-testid`, `title` cho dev, hoặc comment code. Kiểm bằng `npm run lint:ux -- --check` — cấm tăng vi phạm R8.
 - **Cấm `onClick` trên phần tử phi tương tác (UX Lint R5 / WCAG 2.1.1, PO 29/09/2026)**: Không đặt `onClick` lên `<div>`, `<span>`, `<li>`, `<tr>`, `<td>`, `<img>`. Dùng `<button type="button">` thay thế. Nếu bất khả kháng (modal backdrop) thì PHẢI có `role="button"` + `tabIndex={0}` + `onKeyDown`. Kiểm bằng `npm run lint:ux -- --check` — cấm tăng vi phạm R5.
 - **Chuẩn UX toàn cục (03a)**: Bất kỳ màn hình mới nào hoặc màn hình bị sửa đổi bố cục/thứ bậc/luồng bắt buộc phải có Screen Contract lưu tại `docs/dac-ta/screen-contracts/` + vượt qua QA Matrix 03a §34 (không có chỉ số FAIL) + `npm run lint:ux -- --check` không tăng vi phạm (từ T2.3).
+- **Chuẩn Kiến trúc Trải nghiệm Người dùng Hành trình Trước (Journey-First UX Architecture Standard, PO 30/09/2026)**:
+  - **Tài liệu SSOT**: `docs/FLORAOS_CORE_JOURNEY_FIRST_UX_ARCHITECTURE_FINAL.md`, Kế hoạch thực thi `docs/kien-truc/KE_HOACH_THUC_THI_JOURNEY_FIRST_UX_ARCHITECTURE.md` (`PLAN-2026-JOURNEY-UX-01`), và quyết định `D-JUX` trong `docs/dac-ta/03b-role-ux.md`.
+  - **Phạm vi áp dụng**: BẮT BUỘC áp dụng cho toàn bộ hệ thống giao diện, dashboard, trang chủ và quy trình tác vụ của FloraOS.
+  - **Bảy nguyên tắc cốt lõi (J1–J7)**:
+    1. **J1 — Khởi đầu từ Hành trình (Journey-First)**: Trang chủ và luồng điều hướng khởi đầu bằng câu hỏi mục tiêu *"Bạn muốn làm gì?"* thông qua lưới lựa chọn hành trình (`ChoiceGrid` / `ActionCard`), cấm đập vào mắt người dùng một dashboard toàn số liệu/biểu đồ kỹ thuật hoặc danh mục module phức tạp gây quá tải nhận thức.
+    2. **J2 — Tiết lộ lũy tiến (Progressive Disclosure)**: Chỉ hiển thị dữ liệu, biểu mẫu nhập liệu và công cụ tương ứng với bước hiện tại của hành trình (`JourneyShell`, `JourneyProgress`). Không phơi bày toàn bộ cấu hình phức tạp cùng lúc.
+    3. **J3 — Luôn có hành động tiếp theo (Next Best Actions)**: Mọi màn hình kết quả hoặc trạng thái hoàn thành BẮT BUỘC phải có khối hành động đề xuất tiếp theo (`NextActions`), tuyệt đối không dẫn người dùng vào ngõ cụt (dead end).
+    4. **J4 — AI trong tiến trình nghiệp vụ (Contextual AI)**: Trợ lý AI và tính năng tự động hóa phải được tích hợp tự nhiên như một bước trợ giúp tại chỗ trong tiến trình, không cô lập thành các trang/tính năng rời rạc.
+    5. **J5 — Trải nghiệm vai tách biệt với quyền (Role UX ≠ Capability)**: Hành trình trải nghiệm theo vai định hướng luồng tác nghiệp và trang chủ tối ưu cho vai trò người dùng, nhưng mọi quyền truy cập, hiển thị nút bấm và phê duyệt vẫn do RBAC và Capability Code (trần cứng) kiểm soát.
+    6. **J6 — Chuỗi Chuẩn Tác Vụ & Hợp Đồng Journey Contract (Action Contract)**:
+       - Chuỗi tác vụ chuẩn hóa (bắt buộc tuân thủ):
+         ```text
+         USER GOAL → JOURNEY → EXECUTION MODE → RAW INPUT → CAPABILITY CHAIN
+         → EXECUTION → RESULT → REVIEW/EDIT → PUBLISH/APPLY → NEXT ACTION
+         ```
+       - Agent MUST NOT bắt đầu code từ màn hình, component hay API khi **Journey Contract** chưa xác định. Mẫu chuẩn:
+         ```yaml
+         journey_contract:
+           id:                      # Định danh duy nhất của Journey
+           user_goal:               # Một mục tiêu nghiệp vụ cụ thể của người dùng, không phải tên module
+           modes_supported: [guided, autonomous] # Nếu chỉ hỗ trợ một mode, phải ghi rõ lý do kiến trúc
+           raw_inputs: []           # Ảnh/video/văn bản/URL/tệp/sản phẩm (coi là dữ liệu KHÔNG TIN CẬY)
+           capability_allowlist: [] # Orchestrator CHỈ ĐƯỢC chọn trong danh sách capability này
+           decisions:               # Quyền quyết định tham chiếu Decision Registry
+             - {id, owner: USER|SHARED|SYSTEM, checkpoint, required_role}
+           limits: {max_steps, max_cost, timeout}
+           result: {editable, publishable, provenance, next_actions}
+           recovery: {retry_policy, partial_policy, cancel_policy}
+           rbac: {start, decide, publish}
+           tests: [happy, failure, waiting, resume, permission_change]
+         ```
+       - Bọc và đồng bộ bởi component `ActionContractWrapper`.
+    7. **J7 — Nguyên tắc "WRAP, không REPLACE" & Chế độ Chuyên gia (Expert Mode)**: Bọc các dashboard/workspace hiện có thành các đích đến hoặc chặng chuyên sâu trong Journey (ví dụ: hành trình "Xem báo cáo & tình hình cửa hàng"), không tự ý xóa bỏ; hỗ trợ công tắc Chế độ chuyên gia (lưu `localStorage`) cho phép người dùng chuyển đổi trực tiếp sang giao diện truyền thống.
+  - **Hạ tầng chuẩn hóa**: Phân hệ lõi `src/modules/journey/` (Clean Architecture 4 tầng `domain/`, `use-cases/`, `infra/`, `adapters/`) và Bộ UI Kit dùng chung `src/components/journey/` (`ChoiceGrid`, `ActionCard`, `JourneyShell`, `JourneyProgress`, `ExecutionModeSelector`, `RawInputCollector`, `WorkflowPreview`, `ProcessingProgress`, `ResultWorkspace`, `ReviewEditor`, `PublishPanel`, `NextActions`, `ActionContractWrapper`).
+- **Quy chuẩn Cặp Chế Độ Kép Khởi Đầu (Dual-Mode Entry Standard: Autonomous vs Guided, PO 01/10/2026)**:
+  - **Phạm vi áp dụng**: BẮT BUỘC áp dụng cho mọi chức năng tạo mới, soạn thảo nội dung, thiết lập chiến dịch, nhập liệu hoặc xử lý tác vụ trong toàn bộ hệ thống FloraOS khi kết hợp với Journey-First UX.
+  - **Hai chế độ chuẩn hóa & Nhãn UI**:
+    | Mode | Nhãn UI | Ý nghĩa & Luồng thao tác |
+    |---|---|---|
+    | **AUTONOMOUS** | ⚡ **AI làm cho tôi** | User đưa raw input (ảnh/video/text) → AI tự lập plan, chạy background qua chuỗi capability, trả Result Workspace |
+    | **GUIDED** | 🛠️ **Tôi muốn tự chọn từng bước** | User đưa raw input → tự lựa chọn thông số & cấu hình từng bước (3–5 bước tuần tự qua `StepIndicator`) |
+  - **Quy tắc hiển thị và tương tác**:
+    - Chọn mode **ở đầu Journey, trước khi nhập liệu chi tiết** (trừ raw input tối thiểu để kích hoạt Journey).
+    - Câu hỏi UI chuẩn: *"Bạn muốn FloraOS thực hiện như thế nào?"*
+    - **CẤM** dùng từ ngữ kỹ thuật `"manual"`, `"automatic"` làm nhãn hiển thị cho người dùng.
+    - **Bảo toàn dữ liệu khi chuyển mode**: Khi người dùng chuyển đổi giữa 2 mode giữa chừng, **TUYỆT ĐỐI KHÔNG** làm mất input, output, bản sửa đổi của người dùng (`USER_EDITED`), hoặc bắt chạy lại các bước đã hoàn thành.
+  - **Xử lý nguyên liệu đầu vào tại `SmartInputDropzone`**:
+    - *Hình ảnh*: Phân tích thị giác (Vision AI) bóc tách loài hoa, màu sắc, phong cách, đọc thiệp mừng OCR; nâng cấp/tách nền/cân bằng sáng theo chuỗi Cloud Provider ➔ lùi Local Engine nếu lỗi; bắt buộc qua cổng kiểm định toàn vẹn sản phẩm (*Subject Integrity*).
+    - *Video*: Giữ nguyên độ mượt gốc, không nén chỉnh sửa phức tạp, nhúng trực tiếp vào khu vực video của trang/mục tiêu.
+    - *Văn bản (Text/Directives)*: Đưa trực tiếp vào Content Engine làm chỉ đạo ngữ cảnh (Context Prompt) để sinh tiêu đề, câu chuyện thương hiệu, đặc quyền, giá bán.
+  - **Cơ chế Pre-fill Wizard (Human-in-the-loop)**: AI KHÔNG hoạt động như một "hộp đen" đóng kín. Sau khi phân tích, AI tự động điền sẵn (pre-fill) toàn bộ các thông số tối ưu vào chính Wizard từng bước kèm huy hiệu `✨ AI đã tối ưu lựa chọn cho bạn`. Người dùng có toàn quyền kiểm tra, điều chỉnh bất kỳ bước nào trước khi xuất bản.
+- **Quyền Quyết Định (Decision Ownership) & Vùng Cấm Của AI**:
+  - **Ba tầng sở hữu quyết định**:
+    | Owner | Hành vi hệ thống |
+    |---|---|
+    | **USER** | Cần hành động chủ động của user. Chế độ Autonomous **BẮT BUỘC DỪNG** tại checkpoint (`WAITING_FOR_USER`) |
+    | **SHARED** | Hệ thống đề xuất giá trị tối ưu, user có toàn quyền chỉnh sửa trực tiếp |
+    | **SYSTEM** | Hệ thống tự động xử lý, hiển thị kết quả và lý do minh bạch |
+  - **Vùng cấm của AI (AI MUST NOT)**:
+    - AI **TUYỆT ĐỐI KHÔNG** tự ý: xuất bản (publish) · duyệt công khai · xác minh sự thật (fact) · cấp quyền truy cập · chấp nhận hậu quả pháp lý/tài chính · tự ghi đè nội dung người dùng đã chỉnh sửa.
+    - *Nguyên tắc cốt lõi*: AI hoàn thành output **KHÔNG** đồng nghĩa với việc output đã được xuất bản (Publish).
+- **Quy Chuẩn Vận Hành Autonomous Execution (State Machine & Background Worker)**:
+  - **Máy trạng thái 3 tầng tách bạch**:
+    ```text
+    JourneyRun    : DRAFT → QUEUED → PROCESSING ⇄ WAITING_FOR_USER
+                    PROCESSING → RETRYING → PROCESSING
+                    terminal: COMPLETED | PARTIAL | FAILED | CANCELLED
+    ExecutionStep : PENDING → RUNNING → SUCCEEDED | FAILED | SKIPPED | WAITING
+    Output        : GENERATED → IN_REVIEW → USER_EDITED → USER_APPROVED → PUBLISHED
+    ```
+    *(Lưu ý: `RESUMED` và `RESULT_READY` là event/notification, KHÔNG phải trạng thái state).*
+  - **Yêu cầu lưu trữ & xử lý nền (Persistence & Background Execution)**:
+    - Bắt buộc persist `JourneyRun`, `ExecutionPlan`, `ExecutionStep` phía server trong Postgres. **Trình duyệt (Browser) không bao giờ là nơi lưu trạng thái duy nhất.**
+    - Workflow dài (>10 giây), nhiều lời gọi AI, xử lý media/video, hoặc cần retry → **BẮT BUỘC** chạy worker/job ngầm qua Postgres queue. Cấm giữ một HTTP request dài chờ đợi hoặc xoay `isLoading` vô hạn.
+    - Retry policy: Bắt buộc có `max_attempts`, phân rã lỗi `retryable` vs `non-retryable`, áp dụng exponential backoff, và thao tác retry **bắt buộc mang tính lũy đẳng (idempotent)**.
+  - **Xử lý trạng thái `WAITING_FOR_USER`**:
+    ```text
+    PROCESSING → WAITING_FOR_USER → USER DECISION → RESUME → PROCESSING
+    ```
+    - Tuyệt đối không đánh dấu Fail Journey chỉ vì đang chờ phản hồi của người dùng. Bảo toàn 100% execution context để resume chính xác.
+    - UI phải giải thích rõ ràng: vì sao cần người dùng quyết định, lựa chọn là gì, và tiếp tục từ đúng bước đó.
+  - **Xử lý thất bại từng phần (Partial Failure)**: Phân định rành mạch giữa `COMPLETED` / `PARTIAL` / `FAILED`. Người dùng phải nắm rõ phần nào đã xong, phần nào bị lỗi, và nút thử lại (retry) riêng cho phần lỗi.
+- **Tiêu Chuẩn Result Workspace & Bảo Vệ Chỉnh Sửa (User Edit Protection)**:
+  - Mọi Autonomous Journey **BẮT BUỘC** kết thúc bằng Result Workspace đầy đủ:
+    `Status · Preview · Output · Summary · Provenance · Warnings/Errors · Sửa (Edit) · Sinh lại (Regenerate) · Xuất bản (Publish/Apply) · Next Best Actions.`
+  - Tuyệt đối không kết thúc cộc lốc bằng câu thông báo "Đã xong".
+  - **User Edit Protection (Bảo vệ bản sửa của người dùng)**: Khi người dùng đã can thiệp chỉnh sửa (`USER_EDITED`), hành động *Tạo lại / Sinh lại (Regenerate)* **TUYỆT ĐỐI KHÔNG ĐƯỢC** âm thầm ghi đè nội dung người dùng đã sửa. Bắt buộc tạo phiên bản mới hoặc hiển thị hộp thoại xác nhận.
+  - Khối **Next Best Actions (J3)** chỉ hiển thị những hành động phù hợp ngữ cảnh, người dùng có đủ quyền (Capability) và các điều kiện tiên quyết đã hoàn tất.
+- **Bảo Mật Trong Vận Hành Autonomous Orchestration**:
+  - **Kiểm tra quyền 2 lớp (Re-check on Resume & Publish)**: Quyền (RBAC / Entitlement / Capability) phải được kiểm tra lại ở phía máy chủ **cả lúc bắt đầu, lúc resume sau trạng thái chờ, và lúc bấm xuất bản (publish)** (phòng trường hợp vai trò hoặc quyền bị thu hồi trong lúc chờ).
+  - **Zero-Trust Raw Input (Chống Prompt Injection)**: Mọi dữ liệu thô (URL, tệp đính kèm, văn bản chỉ đạo, metadata ảnh) từ người dùng là dữ liệu KHÔNG TIN CẬY. Không bao giờ đưa trực tiếp nội dung người dùng vào prompt như một chỉ thị hệ thống.
+  - **Capability Allowlist**: Orchestrator AI chỉ được phép lập kế hoạch và kích hoạt các năng lực nằm trong `capability_allowlist` được khai báo trong Journey Contract.
+  - **Audit Logging chuẩn hóa**: Ghi nhận đầy đủ audit log cho các sự kiện: `journey_started`, `mode_selected`, `plan_created`, `step_started`, `step_completed`, `step_failed`, `waiting_for_user`, `user_decision`, `resumed`, `retried`, `cancelled`, `regenerated`, `user_edited`, `permission_denied`, `published`. Không ghi PII vào tên sự kiện.
+- **Quy Trình Triển Khai Journey & Definition of Done (DoD)**:
+  - **Quy tắc ưu tiên tái sử dụng**: `REUSE → EXTEND → COMPOSE → CREATE`. Ưu tiên sử dụng **Journey Wrapper** bọc các workspace/capability hiện có đang hoạt động tốt; không viết lại module cũ từ đầu chỉ để gắn Journey-First.
+  - **Trình tự 8 bước thực thi**:
+    1. Soát xét hệ thống & capability hiện có (`REUSE / EXTEND`).
+    2. Xác định User Goal, Journey Scope, và Output mong đợi.
+    3. Xác định Execution Mode, Raw Input hợp lệ, Capability Allowlist, Dependency.
+    4. Định nghĩa State Machine, Orchestrator Plan, Background Job.
+    5. Thiết kế Result Workspace, Review/Edit, Publish Gate, Next Actions.
+    6. Kiểm tra RBAC / Entitlement / Decision Registry.
+    7. Tái sử dụng / Mở rộng / Hợp nhất / Viết mới (`REUSE / EXTEND / COMPOSE / CREATE`).
+    8. Thực thi mã & Kiểm thử tự động khép kín.
+    *(Lưu ý: Bước 1–6 BẮT BUỘC phải làm rõ trước khi viết bất kỳ dòng mã UI nào).*
+  - **Checklist Definition of Done (DoD) cho Journey**:
+    - [ ] Hợp đồng Journey Contract đầy đủ các trường bắt buộc.
+    - [ ] Execution Mode rõ ràng; khối lựa chọn mode đặt ở đầu Journey.
+    - [ ] State Machine 3 tầng lưu trữ persistent phía server; background worker cho tác vụ >10s.
+    - [ ] Cơ chế `WAITING_FOR_USER` bảo toàn trọn vẹn context khi có quyết định của người dùng.
+    - [ ] Retry policy có giới hạn, hỗ trợ resume, partial failure, cancel.
+    - [ ] Result Workspace đầy đủ: provenance, Review/Edit, Publish gate, Next Best Actions.
+    - [ ] Nội dung người dùng sửa (`USER_EDITED`) được bảo vệ 100%, không bị ghi đè.
+    - [ ] Kiểm tra quyền RBAC phía server tại điểm bắt đầu, điểm resume và điểm publish.
+    - [ ] Sử dụng shared component (`src/components/journey/`), đạt chuẩn WCAG 2.2 AA, responsive.
+    - [ ] Ghi nhận đầy đủ chuỗi Audit Events chuẩn hóa.
+    - [ ] Bộ test tự động xanh: Happy path, failure, waiting, resume, permission change, và tenant isolation.
 - **Quy tắc Hành trình Sản phẩm ra Thị trường từ Ảnh Tải lên (FloraOS Product-to-Market User Journey Standard)**:
   - **Tài liệu SSOT quy trình**: `docs/dac-ta/FLORAOS_PRODUCT_TO_MARKET_USER_JOURNEY.md` (chuẩn hóa 14 chặng khép kín: `01. BRING` 📸 Tải ảnh → `02. UNDERSTAND` 🔎 Nhận diện cấu trúc & định tính thương mại → `03. DISCOVER` 🔥 Nghiên cứu xu hướng & cơ hội thị trường → `04. IDEATE` 💡 Sinh chủ đề / góc tiếp cận / hooks / stories → `05. CHOOSE` 🎯 Chủ shop chọn định hướng tiếp cận → `06. CREATE` ✍️ Nội dung / 🖼️ Ảnh biến thể / 🎬 Video / 🎙️ Voiceover & nhạc → `07. PACKAGE` 📦 Đóng gói trọn bộ chiến dịch Campaign Package → `08. QA` 🤖 Kiểm tra chất lượng Thương hiệu / Sản phẩm / Nội dung / Kênh → `09. APPROVE` 👤 Chủ shop chốt duyệt / hiệu chỉnh / yêu cầu AI nâng cấp → `10. LAUNCH` 🚀 Đăng tải / Lên lịch đa kênh → `11. SELL` 💬 AI Chat Sales tư vấn chốt đơn → `12. MEASURE` 📊 Đo lường hiệu quả kinh doanh & doanh thu → `13. LEARN` 🧠 Trích xuất mẫu thành công Winning Patterns → `14. NEXT BEST ACTION` 🎯 Đề xuất hành động tối ưu tiếp theo).
   - **Nguyên tắc không chạy mù quáng toàn bộ 14 bước**: Không phải bất kỳ lúc nào người dùng tải ảnh lên cũng chạy hết cả 14 bước trong Journey. Phạm vi các bước kích hoạt phụ thuộc hoàn toàn vào ngữ cảnh và mục tiêu cụ thể của từng tính năng nghiệp vụ (ví dụ: tạo sản phẩm catalog đơn thuần chỉ cần Chặng 01–02; studio sáng tạo ảnh chỉ cần 01–02–06; chiến dịch tiếp thị tổng lực mới kích hoạt chuỗi dài).

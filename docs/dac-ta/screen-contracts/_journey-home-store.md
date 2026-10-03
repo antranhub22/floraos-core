@@ -19,14 +19,14 @@
 | Lớp | Nội dung | Vị trí hiển thị |
 |---|---|---|
 | L0 Thiết yếu | Tiêu đề "Bạn muốn làm gì cho cửa hàng?", thanh lọc tác vụ, nút chuyển chế độ chuyên gia | Khung nhìn đầu |
-| L1 Hành động | 12 thẻ tác vụ (Xem tình hình, Phân tích sản phẩm, Báo giá, Ảnh, Video, Bài viết, Combo...) | Lưới thẻ chính |
+| L1 Hành động | 13 thẻ tác vụ (Xem báo cáo, Mẫu hoa yêu thích, Thẻ sản phẩm, Báo giá, Viết bài, Giọng đọc, Ảnh quảng cáo, Video chuyển động, Bán hoa, Đơn hàng, Quản lý khách hàng, Bộ nội dung tự động, Tư vấn & nhận đơn) | Lưới thẻ chính |
 | L2 Ngữ cảnh | Xem trước quy trình (WorkflowPreview) cho tác vụ Combo | Modal / Lớp xem trước |
 | L3 Chi tiết | Không gian làm việc từng bước (JourneyShell) | Workspace hành trình |
 | L4 Nâng cao | Chế độ chuyên gia (Bảng điều khiển tăng trưởng cửa hàng StoreGrowthCenter) | Chế độ mở rộng |
 
 ## 4. Hành động
 - Chính (1): Chọn thẻ tác vụ mong muốn để bắt đầu hành trình
-- Phụ (≤ 2): Lọc tác vụ (Tất cả, Đơn, Gói quy trình, Gợi ý từ ảnh), Tìm kiếm
+- Phụ (≤ 2): Lọc tác vụ (Tất cả, Tác vụ đơn, Gói quy trình, Trợ lý ảo), Tìm kiếm
 - Menu `…`: Chuyển sang Chế độ chuyên gia
 
 ## 5. Content budget

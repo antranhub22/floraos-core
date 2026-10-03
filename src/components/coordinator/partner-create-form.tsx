@@ -1,0 +1,178 @@
+"use client"
+
+import React, { useState } from "react"
+import { Sparkles } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+
+export interface PartnerCreateFormProps {
+  onSuccess: () => void
+  onCancel: () => void
+  onError: (msg: string) => void
+}
+
+export function PartnerCreateForm({ onSuccess, onCancel, onError }: PartnerCreateFormProps) {
+  const [code, setCode] = useState("")
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [province, setProvince] = useState("TP. Hồ Chí Minh")
+  const [district, setDistrict] = useState("")
+  const [address, setAddress] = useState("")
+  const [tier, setTier] = useState<"STANDARD" | "PREFERRED" | "VIP">("STANDARD")
+  const [capacity, setCapacity] = useState(15)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!code.trim() || !name.trim() || !phone.trim()) {
+      onError("Vui lòng điền đầy đủ mã đối tác, tên xưởng và số điện thoại")
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/v1/coordinator/partners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: code.trim().toUpperCase(),
+          name: name.trim(),
+          phone: phone.trim(),
+          province: province.trim() || undefined,
+          district: district.trim() || undefined,
+          address: address.trim() || undefined,
+          tier,
+          capacityDaily: Number(capacity) || 10,
+        }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || "Tạo đối tác thất bại")
+      }
+      onSuccess()
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Lỗi thêm đối tác")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3"
+    >
+      <div className="text-caption font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+        <Sparkles size={13} />
+        Đăng ký xưởng đối tác mạng lưới mới
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="text-caption text-text-muted font-semibold block mb-1">Mã xưởng *</label>
+          <Input
+            placeholder="VD: XUONG-Q1-01"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            className="h-8 text-xs font-mono uppercase"
+            required
+          />
+        </div>
+        <div>
+          <label className="text-caption text-text-muted font-semibold block mb-1">Tên tiệm / Xưởng *</label>
+          <Input
+            placeholder="Tiệm Hoa Nắng Ban Mai"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-8 text-xs"
+            required
+          />
+        </div>
+        <div>
+          <label className="text-caption text-text-muted font-semibold block mb-1">Số điện thoại *</label>
+          <Input
+            placeholder="0901234567"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="h-8 text-xs"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div>
+          <label className="text-caption text-text-muted font-semibold block mb-1">Tỉnh / Thành phố</label>
+          <Input
+            placeholder="TP. Hồ Chí Minh"
+            value={province}
+            onChange={(e) => setProvince(e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
+        <div>
+          <label className="text-caption text-text-muted font-semibold block mb-1">Quận / Huyện</label>
+          <Input
+            placeholder="Quận 1, Bình Thạnh..."
+            value={district}
+            onChange={(e) => setDistrict(e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
+        <div>
+          <label className="text-caption text-text-muted font-semibold block mb-1">Cấp bậc</label>
+          <select
+            value={tier}
+            onChange={(e) => setTier(e.target.value as "STANDARD" | "PREFERRED" | "VIP")}
+            className="h-8 w-full rounded-md border border-border bg-surface px-2 text-caption text-text"
+          >
+            <option value="STANDARD">Tiêu chuẩn</option>
+            <option value="PREFERRED">Ưu tiên</option>
+            <option value="VIP">VIP</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-caption text-text-muted font-semibold block mb-1">Định mức đơn/ngày</label>
+          <Input
+            type="number"
+            min={1}
+            max={500}
+            value={capacity}
+            onChange={(e) => setCapacity(Number(e.target.value))}
+            className="h-8 text-xs"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-caption text-text-muted font-semibold block mb-1">Địa chỉ cụ thể</label>
+        <Input
+          placeholder="123 Nguyễn Huệ, Phường Bến Nghé"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          className="h-8 text-xs"
+        />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          className="text-xs"
+        >
+          Hủy
+        </Button>
+        <Button
+          type="submit"
+          variant="outline"
+          size="sm"
+          disabled={submitting}
+          className="text-xs font-bold text-primary border-primary/40 hover:bg-primary/5"
+        >
+          {submitting ? "Đang lưu..." : "Lưu đối tác mới"}
+        </Button>
+      </div>
+    </form>
+  )
+}

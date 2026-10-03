@@ -5,34 +5,75 @@ import { Eye, CheckCircle2, ExternalLink, QrCode, Smartphone, Monitor } from "lu
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { CatalogProduct } from "./catalog-management-tab"
+import type { GeneratedLandingPackage } from "@/modules/content-engine/domain/landing-content-generator"
 import {
   LandingTemplateHero,
+  LandingTemplateStory,
   LandingTemplateProducts,
+  LandingTemplatePerks,
+  LandingTemplateProcess,
+  LandingTemplateReviews,
+  LandingTemplateFaq,
   LandingTemplateLead,
+  LandingTemplateVideo,
+  LandingTemplateGallery,
 } from "./landing-templates"
+import { resolveFlowerImage, FLORIST_STORY_IMAGE } from "./flower-image-fallback"
+
+export interface EnabledSectionsConfig {
+  story: boolean
+  products: boolean
+  perks: boolean
+  process: boolean
+  gallery?: boolean
+  reviews: boolean
+  faq: boolean
+  lead: boolean
+}
 
 interface LandingCampaignPreviewProps {
   headline: string
+  subHeadline?: string | undefined
   selectedProducts: CatalogProduct[]
-  occasionId?: string
-  archetypeId?: string
+  occasionId?: string | undefined
+  archetypeId?: string | undefined
+  customHeroImageUrl?: string | undefined
+  videoUrl?: string | undefined
   isPublished: boolean
   isPublishing: boolean
   publishedUrl: string | null
   downloadingQR: boolean
+  generatedPackage?: GeneratedLandingPackage | null | undefined
+  enabledSections?: EnabledSectionsConfig | undefined
   onPublish: () => void
   onDownloadQR: () => void
 }
 
+const DEFAULT_ENABLED_SECTIONS: EnabledSectionsConfig = {
+  story: true,
+  products: true,
+  perks: true,
+  process: true,
+  gallery: true,
+  reviews: true,
+  faq: true,
+  lead: true,
+}
+
 export function LandingCampaignPreview({
   headline,
+  subHeadline,
   selectedProducts,
   occasionId = "20-10",
   archetypeId = "minimal-luxury",
+  customHeroImageUrl,
+  videoUrl,
   isPublished,
   isPublishing,
   publishedUrl,
   downloadingQR,
+  generatedPackage,
+  enabledSections = DEFAULT_ENABLED_SECTIONS,
   onPublish,
   onDownloadQR,
 }: LandingCampaignPreviewProps) {
@@ -116,30 +157,101 @@ export function LandingCampaignPreview({
       {/* Visual Live Preview Frame */}
       <div className="bg-surface-alt/80 p-4 sm:p-6 rounded-2xl border border-border flex justify-center">
         <div
-          className={`w-full transition-all duration-300 space-y-4 ${
+          className={`w-full transition-all duration-300 space-y-6 ${
             deviceView === "mobile"
               ? "max-w-md bg-surface p-3.5 rounded-3xl shadow-lg border border-border"
-              : "max-w-2xl bg-surface p-5 rounded-3xl shadow-lg border border-border"
+              : "max-w-2xl bg-surface p-6 rounded-3xl shadow-lg border border-border"
           }`}
         >
-          {/* 1. Hero Section */}
-          <LandingTemplateHero
-            headline={headline}
-            occasionId={occasionId}
-            archetypeId={archetypeId}
-          />
+          {/* Featured Hero Image: Ưu tiên ảnh tùy chỉnh, sau đó đến ảnh sản phẩm thật, fallback sang ảnh mẫu */}
+          {(() => {
+            const firstWithImage = selectedProducts.find((p) => p.imageUrl && p.imageUrl.trim().length > 0)
+            const heroImg = customHeroImageUrl || resolveFlowerImage(firstWithImage?.imageUrl || selectedProducts[0]?.imageUrl, 0)
 
-          {/* 2. Products Showcase Section */}
-          <LandingTemplateProducts
-            products={selectedProducts}
-            archetypeId={archetypeId}
-          />
+            return (
+              <>
+                {/* Section 1: Hero Section */}
+                <LandingTemplateHero
+                  headline={headline}
+                  occasionId={occasionId}
+                  archetypeId={archetypeId}
+                  heroImageUrl={heroImg}
+                />
 
-          {/* 3. Lead Voucher CTA Section */}
-          <LandingTemplateLead
-            archetypeId={archetypeId}
-            occasionTitle={headline}
-          />
+                {/* Section Video: Thước phim chân thực nếu có videoUrl */}
+                {videoUrl && (
+                  <LandingTemplateVideo
+                    videoUrl={videoUrl}
+                    archetypeId={archetypeId}
+                    title="Video Cận Cảnh Mẫu Hoa Thực Tế"
+                  />
+                )}
+
+                {/* Section 2: Story Section */}
+                {enabledSections.story && generatedPackage?.story && (
+                  <LandingTemplateStory
+                    story={generatedPackage.story}
+                    archetypeId={archetypeId}
+                    storyImageUrl={FLORIST_STORY_IMAGE}
+                  />
+                )}
+              </>
+            )
+          })()}
+
+          {/* Section 3: Products Showcase */}
+          {enabledSections.products && (
+            <LandingTemplateProducts
+              products={selectedProducts}
+              archetypeId={archetypeId}
+            />
+          )}
+
+          {/* Section 4: 4 Service Perks */}
+          {enabledSections.perks && (
+            <LandingTemplatePerks
+              perks={generatedPackage?.perks}
+              archetypeId={archetypeId}
+            />
+          )}
+
+          {/* Section 5: 3-Step Process */}
+          {enabledSections.process && (
+            <LandingTemplateProcess
+              steps={generatedPackage?.steps}
+              archetypeId={archetypeId}
+            />
+          )}
+
+          {/* Section: Khoảnh Khắc Hoa Tươi Tại Xưởng (Gallery) */}
+          {enabledSections.gallery !== false && (
+            <LandingTemplateGallery
+              archetypeId={archetypeId}
+            />
+          )}
+
+          {/* Section 6: Customer Reviews */}
+          {enabledSections.reviews && (
+            <LandingTemplateReviews
+              archetypeId={archetypeId}
+            />
+          )}
+
+          {/* Section 7: FAQ */}
+          {enabledSections.faq && (
+            <LandingTemplateFaq
+              faq={generatedPackage?.faq}
+              archetypeId={archetypeId}
+            />
+          )}
+
+          {/* Section 8: Lead Voucher CTA */}
+          {enabledSections.lead && (
+            <LandingTemplateLead
+              archetypeId={archetypeId}
+              occasionTitle={headline}
+            />
+          )}
         </div>
       </div>
     </div>

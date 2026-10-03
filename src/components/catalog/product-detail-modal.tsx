@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { Dialog } from "@/components/ui/dialog"
 import type { PublicCatalogProduct, PublicCatalogShop } from "@/modules/catalog-links/use-cases/get-public-catalog"
+import { SmartFlowerImage } from "./smart-flower-image"
 
 interface ProductDetailModalProps {
   product: PublicCatalogProduct
@@ -68,14 +69,12 @@ export function ProductDetailModal({ product, shop, onClose }: ProductDetailModa
       <div className="flex flex-col gap-4">
         {/* Product Image */}
         <div className="relative aspect-4/3 w-full overflow-hidden rounded-xl bg-surface-alt shrink-0">
-          {product.imageUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-text-muted">
-              <Flower2 size={64} />
-            </div>
-          )}
+          <SmartFlowerImage
+            src={product.imageUrl}
+            alt={product.name}
+            aspectRatio="4/3"
+            className="rounded-xl"
+          />
         </div>
 
         {/* Pricing */}

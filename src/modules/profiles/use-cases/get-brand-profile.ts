@@ -15,6 +15,7 @@ export type BrandProfileDetail = {
   cta_templates: Record<string, unknown> | null
   default_offers: Record<string, unknown> | null
   forbidden_styles: Record<string, unknown> | null
+  brand_assets: Record<string, unknown> | null
 }
 
 /**
@@ -38,5 +39,6 @@ export async function getBrandProfile(ctx: TenantContext): Promise<BrandProfileD
     cta_templates: (profile.cta_templates as Record<string, unknown> | null) ?? null,
     default_offers: (profile.default_offers as Record<string, unknown> | null) ?? null,
     forbidden_styles: (profile.forbidden_styles as Record<string, unknown> | null) ?? null,
+    brand_assets: (profile.brand_assets as Record<string, unknown> | null) ?? null,
   }
 }

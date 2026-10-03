@@ -30,6 +30,7 @@ import {
   ChevronDown,
   Search,
   X,
+  FileSpreadsheet,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { cn, stripVietnamese } from "@/lib/utils"
@@ -39,6 +40,7 @@ import {
   type NavGroup,
 } from "./nav-model"
 import { DesktopNavItem } from "./desktop-nav-item"
+import { DesktopNavFooter } from "./desktop-nav-footer"
 
 const ICONS: Record<string, ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
   Home,
@@ -65,6 +67,7 @@ const ICONS: Record<string, ComponentType<{ size?: number; className?: string; s
   Settings2,
   BookOpen,
   Cpu,
+  FileSpreadsheet,
 }
 
 const STORAGE_KEY = "floraos_nav_groups_v1"
@@ -372,29 +375,8 @@ export function DesktopNav() {
         )}
       </nav>
 
-      {/* Footer Copilot Trigger */}
-      <div className="border-t border-border p-3">
-        <button
-          type="button"
-          onClick={() => {
-            window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))
-          }}
-          className="w-full flex items-center justify-between rounded-xl bg-surface-alt hover:bg-surface-alt/80 border border-border p-2.5 text-left transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-white shadow-xs">
-              <Bot size={13} />
-            </span>
-            <div>
-              <div className="text-caption font-bold text-text">FloraOS Copilot</div>
-              <div className="text-caption text-text-muted font-medium">Trợ lý hỗ trợ 24/7</div>
-            </div>
-          </div>
-          <kbd className="rounded bg-surface px-1.5 py-0.5 text-caption font-mono text-text border border-border">
-            ⌘K
-          </kbd>
-        </button>
-      </div>
+      {/* Footer Copilot & User Account */}
+      <DesktopNavFooter />
     </aside>
   )
 }

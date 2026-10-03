@@ -71,7 +71,7 @@ export function ActionCard({ journey, onSelect, disabled = false }: ActionCardPr
           {isCombo
             ? `${journey.steps.length} bước liền mạch`
             : isAi
-            ? "Đề xuất thông minh"
+            ? "Trò chuyện ngay"
             : "Bắt đầu ngay"}
         </span>
         <LucideIcons.ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />

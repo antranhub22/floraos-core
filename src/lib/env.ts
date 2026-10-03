@@ -33,6 +33,14 @@ const schema = z.object({
   STORAGE_BUCKET: z.string().optional(),
   STORAGE_ACCESS_KEY: z.string().optional(),
   STORAGE_SECRET_KEY: z.string().optional(),
+  // === FEATURE FLAGS ===
+  // Thẻ chào / Swipe Brochure (§34.16). Mặc định bật (“true”) — đặt "false"
+  // để tắt module mà không cần xóa code hay deploy lại.
+  GREETING_CARD_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v !== "false")
+    .default(true),
 })
 
 const parsed = schema.safeParse(process.env)

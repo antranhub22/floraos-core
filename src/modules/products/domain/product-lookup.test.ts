@@ -13,6 +13,8 @@ const PRODUCT: ProductLookupRaw = {
   container: "Giấy gói",
   status: "ACTIVE",
   branch_id: null,
+  masterImageUrl: undefined,
+  price_vnd: null,
 }
 
 const RULE_ROWS: PricingRuleRow[] = [
@@ -56,6 +58,8 @@ describe("filterProductLookup", () => {
         "container",
         "status",
         "branch_id",
+        "masterImageUrl",
+        "price_vnd",
         "pricing",
         "redacted_fields",
       ].sort()

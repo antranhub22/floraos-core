@@ -1,16 +1,18 @@
 "use client"
 
-import React from "react"
-import { Radio, RefreshCw, Plus } from "lucide-react"
+import React, { useState } from "react"
+import { Radio, RefreshCw, Plus, LayoutDashboard, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ControlTowerDashboard } from "@/components/coordinator/control-tower-dashboard"
+import { CoordinatorBrochureTab } from "@/components/greeting-card/coordinator/coordinator-brochure-tab"
 import { UserMenu } from "@/components/layout/user-menu"
 import { useSession } from "@/lib/session"
 
+type CoordinatorTab = "tower" | "brochure"
+
 export default function DieuPhoiPage() {
-  const [isCreateOpen, setIsCreateOpen] = React.useState(false)
-  // Vai Điều phối vào thẳng tuyến này từ "/" (đặc tả 03b §4.4) → màn cần có
-  // menu tài khoản (vai trò, đăng xuất) như trang chủ các vai khác.
+  const [activeTab, setActiveTab] = useState<CoordinatorTab>("tower")
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const { userInitials } = useSession()
 
   return (
@@ -29,7 +31,7 @@ export default function DieuPhoiPage() {
               </span>
             </div>
             <p className="text-xs text-text-muted mt-0.5">
-              Tháp Vận Hành Control Tower · Kết nối Đối tác Xưởng Ngoài & AI Vision QC
+              Tháp Vận Hành Control Tower · Kết nối Đối tác Xưởng Ngoài & Đơn từ Thẻ Chào
             </p>
           </div>
         </div>
@@ -57,12 +59,45 @@ export default function DieuPhoiPage() {
         </div>
       </div>
 
-      {/* Main Control Tower Dashboard */}
-      <ControlTowerDashboard
-        isCreateModalOpen={isCreateOpen}
-        onOpenCreateModal={() => setIsCreateOpen(true)}
-        onCloseCreateModal={() => setIsCreateOpen(false)}
-      />
+      {/* Coordinator Tabs Switcher */}
+      <div className="flex items-center gap-2 border-b border-border bg-surface px-4 py-1 rounded-xl">
+        <button
+          type="button"
+          onClick={() => setActiveTab("tower")}
+          className={`flex items-center gap-2 py-2 px-3 text-body-sm font-bold border-b-2 transition-colors ${
+            activeTab === "tower"
+              ? "border-primary text-primary"
+              : "border-transparent text-text-muted hover:text-foreground"
+          }`}
+        >
+          <LayoutDashboard size={16} />
+          <span>Tháp Điều Phối Tổng Thể (Control Tower)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("brochure")}
+          className={`flex items-center gap-2 py-2 px-3 text-body-sm font-bold border-b-2 transition-colors ${
+            activeTab === "brochure"
+              ? "border-primary text-primary"
+              : "border-transparent text-text-muted hover:text-foreground"
+          }`}
+        >
+          <Sparkles size={16} />
+          <span>Đơn từ Thẻ Chào (Brochure Orders)</span>
+        </button>
+      </div>
+
+      {/* Tab Contents */}
+      {activeTab === "tower" && (
+        <ControlTowerDashboard
+          isCreateModalOpen={isCreateOpen}
+          onOpenCreateModal={() => setIsCreateOpen(true)}
+          onCloseCreateModal={() => setIsCreateOpen(false)}
+        />
+      )}
+
+      {activeTab === "brochure" && <CoordinatorBrochureTab />}
     </div>
   )
 }

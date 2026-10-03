@@ -1,56 +1,25 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Palette, Type, Sparkles, ShieldAlert, Check, RefreshCw } from "lucide-react"
+import { Type, Sparkles, ShieldAlert, Check, MessageSquareQuote, CheckCircle2 } from "lucide-react"
 import type { BrandProfileDetail } from "@/modules/profiles/use-cases/get-brand-profile"
 import type { UpsertBrandProfileInput } from "@/modules/profiles/infra/brand-profile-repository"
 import { isValidHexColor } from "@/modules/profiles/domain/profile-rules"
+import {
+  BrandColorsSection,
+  type BrandColors,
+} from "./brand-colors-section"
+import {
+  FLORIST_TONE_OPTIONS,
+  FLORIST_FORBIDDEN_GROUPS,
+} from "@/modules/profiles/domain/florist-advisor-catalog"
+import { AiRewriteInput } from "./ai-rewrite-input"
 
 export interface BrandProfileFormProps {
   initialData: BrandProfileDetail | null
   onSave: (data: UpsertBrandProfileInput) => Promise<boolean>
   saving: boolean
 }
-
-interface ColorFieldConfig {
-  key: "primary_color" | "secondary_color" | "accent_color" | "background_color" | "text_color"
-  label: string
-  description: string
-  defaultColor: string
-}
-
-const COLOR_FIELDS: ColorFieldConfig[] = [
-  {
-    key: "primary_color",
-    label: "Màu chủ đạo (Primary)",
-    description: "Nút bấm, thanh tiêu đề, viền nổi bật",
-    defaultColor: "#e11d48",
-  },
-  {
-    key: "secondary_color",
-    label: "Màu phụ (Secondary)",
-    description: "Huy hiệu, thẻ phụ, nhãn trạng thái",
-    defaultColor: "#fda4af",
-  },
-  {
-    key: "accent_color",
-    label: "Màu nhấn (Accent)",
-    description: "Giá ưu đãi, thông báo sốt dẻo, ngôi sao đánh giá",
-    defaultColor: "#f59e0b",
-  },
-  {
-    key: "background_color",
-    label: "Màu nền trang (Background)",
-    description: "Nền E-Catalog, nền Landing Page",
-    defaultColor: "#ffffff",
-  },
-  {
-    key: "text_color",
-    label: "Màu chữ chính (Text)",
-    description: "Văn bản nội dung và tiêu đề chính",
-    defaultColor: "#111827",
-  },
-]
 
 const FONT_OPTIONS = [
   { label: "Inter (Hiện đại, rõ nét)", value: "Inter" },
@@ -60,15 +29,8 @@ const FONT_OPTIONS = [
   { label: "Lora (Thơ mộng, nghệ thuật)", value: "Lora" },
 ]
 
-const TONE_OPTIONS = [
-  { label: "Thơ mộng & Lãng mạn (Dành cho hoa tình yêu, Valentine)", value: "romantic" },
-  { label: "Sang trọng & Đẳng cấp (Dành cho hoa sự kiện, đối tác)", value: "luxury" },
-  { label: "Ấm áp & Thân thiện (Dành cho hoa gia đình, sinh nhật)", value: "warm" },
-  { label: "Trẻ trung & Năng động (Dành cho giới trẻ, chúc mừng)", value: "modern" },
-]
-
 export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFormProps) {
-  const [colors, setColors] = useState({
+  const [colors, setColors] = useState<BrandColors>({
     primary_color: "#e11d48",
     secondary_color: "#fda4af",
     accent_color: "#f59e0b",
@@ -77,16 +39,15 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
   })
   const [fontHeading, setFontHeading] = useState("Playfair Display")
   const [fontBody, setFontBody] = useState("Inter")
-  const [logoAssetId, setLogoAssetId] = useState("")
   const [toneOfVoice, setToneOfVoice] = useState("romantic")
   const [hashtagsText, setHashtagsText] = useState("#hoatuoi, #tiemhoa, #hoathietke, #hoasinhnhat")
   const [ctaText, setCtaText] = useState("Ghé thăm tiệm hoa hoặc nhắn Zalo để được nghệ nhân tư vấn riêng!")
   const [forbiddenWords, setForbiddenWords] = useState("hoa rẻ, xả hàng tồn, phá giá")
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   useEffect(() => {
     if (initialData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ lại form khi dữ liệu ban đầu (props) đổi, chủ đích
       setColors({
         primary_color: initialData.primary_color || "#e11d48",
         secondary_color: initialData.secondary_color || "#fda4af",
@@ -96,7 +57,6 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
       })
       setFontHeading(initialData.font_heading || "Playfair Display")
       setFontBody(initialData.font_body || "Inter")
-      setLogoAssetId(initialData.logo_asset_id || "")
       setToneOfVoice(initialData.tone_of_voice || "romantic")
 
       if (initialData.hashtags) {
@@ -122,7 +82,7 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
     }
   }, [initialData])
 
-  const handleColorChange = (key: keyof typeof colors, val: string) => {
+  const handleColorChange = (key: keyof BrandColors, val: string) => {
     setColors((prev) => ({ ...prev, [key]: val }))
     if (errors[key] && isValidHexColor(val)) {
       setErrors((prev) => {
@@ -131,6 +91,23 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
         return clone
       })
     }
+  }
+
+  const handleToggleForbiddenGroup = (words: string[]) => {
+    const currentList = forbiddenWords
+      .split(",")
+      .map((w) => w.trim())
+      .filter((w) => w.length > 0)
+
+    const allPresent = words.every((w) => currentList.includes(w))
+    let nextList: string[]
+    if (allPresent) {
+      nextList = currentList.filter((w) => !words.includes(w))
+    } else {
+      const merged = new Set([...currentList, ...words])
+      nextList = Array.from(merged)
+    }
+    setForbiddenWords(nextList.join(", "))
   }
 
   const validate = (): boolean => {
@@ -146,17 +123,17 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validate()) return
+    if (!validate() || !initialData) return
 
     const hashtagsList = hashtagsText
       .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
 
     const bannedList = forbiddenWords
       .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
+      .map((w) => w.trim())
+      .filter((w) => w.length > 0)
 
     const payload: UpsertBrandProfileInput = {
       primary_color: colors.primary_color,
@@ -166,145 +143,63 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
       text_color: colors.text_color,
       font_heading: fontHeading,
       font_body: fontBody,
-      logo_asset_id: logoAssetId.trim() || null,
+      logo_asset_id: initialData.logo_asset_id,
+      brand_assets: initialData.brand_assets,
       tone_of_voice: toneOfVoice,
       hashtags: { default: hashtagsList },
       cta_templates: { default: ctaText.trim() },
       forbidden_styles: { banned_words: bannedList },
-      // `PUT /brand-profile` thay TOÀN BỘ bản ghi (không phải patch từng
-      // trường) — cùng ngữ nghĩa với `BrandProfileRepository.upsert`. Form
-      // này không có ô nhập cho quà tặng/cam kết (`default_offers`, sở hữu
-      // bởi `SalesDefaultsForm`); không chuyển tiếp nguyên giá trị hiện có
-      // ở đây thì mỗi lần lưu màu/giọng văn sẽ XOÁ MẤT quà tặng/cam kết đã
-      // cấu hình ở màn hình khác — đúng lỗi mất dữ liệu đã xảy ra khi cả
-      // hai còn gộp chung vào `cta_templates` cũ (nợ #102, sửa 17/09).
-      default_offers: (initialData?.default_offers as Record<string, unknown> | null) ?? null,
+      default_offers: initialData.default_offers,
     }
 
-    await onSave(payload)
+    const ok = await onSave(payload)
+    if (ok) {
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+    }
   }
+
+  const currentTone = FLORIST_TONE_OPTIONS.find((t) => t.value === toneOfVoice) || FLORIST_TONE_OPTIONS[0]
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Khối 1: Bảng 5 mã màu thương hiệu */}
-      <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
-        <div className="flex items-center justify-between pb-4 border-b border-border mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Palette size={18} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-text">Bảng màu nhận diện thương hiệu (5 Mã Hex Cẩm nang hệ thống)</h3>
-              <p className="text-xs text-text-muted">Áp dụng trực tiếp vào E-Catalog, Video Studio và Thẻ chào sản phẩm</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() =>
-              setColors({
-                primary_color: "#e11d48",
-                secondary_color: "#fda4af",
-                accent_color: "#f59e0b",
-                background_color: "#ffffff",
-                text_color: "#111827",
-              })
-            }
-            className="flex items-center gap-1.5 text-xs text-text-muted hover:text-primary transition-colors"
-          >
-            <RefreshCw size={13} />
-            <span>Mặc định tiệm hoa</span>
-          </button>
-        </div>
+      <BrandColorsSection
+        colors={colors}
+        errors={errors}
+        onColorChange={handleColorChange}
+        onResetDefault={() =>
+          setColors({
+            primary_color: "#e11d48",
+            secondary_color: "#fda4af",
+            accent_color: "#f59e0b",
+            background_color: "#ffffff",
+            text_color: "#111827",
+          })
+        }
+      />
 
-        {/* Live Color Preview Bar */}
-        <div className="mb-6 p-4 rounded-xl border border-border bg-surface-alt flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="text-xs font-semibold text-text-muted">Xem trước phối màu thương hiệu:</span>
-          <div className="flex items-center gap-2">
-            <div
-              className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-xs"
-              style={{ backgroundColor: colors.primary_color }}
-            >
-              Nút chính
-            </div>
-            <div
-              className="px-3 py-1.5 rounded-md text-xs font-semibold border"
-              style={{
-                backgroundColor: colors.secondary_color,
-                color: colors.text_color,
-                borderColor: colors.primary_color,
-              }}
-            >
-              Huy hiệu
-            </div>
-            <div
-              className="px-2.5 py-1 rounded text-xs font-extrabold text-white"
-              style={{ backgroundColor: colors.accent_color }}
-            >
-              Hot Sale
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {COLOR_FIELDS.map((cfg) => {
-            const currentVal = colors[cfg.key]
-            const hasErr = Boolean(errors[cfg.key])
-
-            return (
-              <div key={cfg.key} className="rounded-xl border border-border/80 bg-surface-alt/40 p-3.5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-text">{cfg.label}</span>
-                  <div
-                    className="h-5 w-5 rounded-full border border-black/10 shadow-xs"
-                    style={{ backgroundColor: isValidHexColor(currentVal) ? currentVal : "#cccccc" }}
-                  />
-                </div>
-                <p className="text-caption text-text-muted mb-3 leading-tight">{cfg.description}</p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={isValidHexColor(currentVal) ? currentVal : "#000000"}
-                    onChange={(e) => handleColorChange(cfg.key, e.target.value)}
-                    className="h-8 w-8 cursor-pointer rounded-lg border border-border bg-transparent p-0.5"
-                  />
-                  <input
-                    type="text"
-                    value={currentVal}
-                    onChange={(e) => handleColorChange(cfg.key, e.target.value)}
-                    placeholder="#e11d48"
-                    className={`flex-1 rounded-lg border bg-surface px-2.5 py-1.5 text-xs font-mono font-medium text-text uppercase ${
-                      hasErr ? "border-danger ring-1 ring-danger/20" : "border-border focus:border-primary"
-                    }`}
-                  />
-                </div>
-                {hasErr && <p className="mt-1 text-caption text-danger">{errors[cfg.key]}</p>}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Khối 2: Typography & Logo */}
+      {/* Khối 2: Typography & Phông chữ thương hiệu */}
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
         <div className="flex items-center gap-2.5 pb-4 border-b border-border mb-5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-info/10 text-info">
             <Type size={18} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-text">Kiểu chữ & Logo thương hiệu</h3>
-            <p className="text-xs text-text-muted">Định hình phong thái truyền thông qua phông chữ và dấu ấn logo</p>
+            <h3 className="text-body font-bold text-text">Kiểu chữ nhận diện (Typography)</h3>
+            <p className="text-caption text-text-muted">Định hình phong thái truyền thông qua phông chữ tiêu đề và nội dung</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-semibold text-text mb-1.5">
+            <label className="block text-caption font-semibold text-text mb-1.5">
               Phông chữ tiêu đề (Heading Font)
             </label>
             <select
               value={fontHeading}
               onChange={(e) => setFontHeading(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-body-sm text-text transition-all focus:border-primary focus:outline-none"
             >
               {FONT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -315,13 +210,13 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-text mb-1.5">
+            <label className="block text-caption font-semibold text-text mb-1.5">
               Phông chữ nội dung (Body Font)
             </label>
             <select
               value={fontBody}
               onChange={(e) => setFontBody(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-body-sm text-text transition-all focus:border-primary focus:outline-none"
             >
               {FONT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -329,22 +224,6 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
                 </option>
               ))}
             </select>
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-text mb-1.5">
-              Logo thương hiệu (Đường dẫn URL ảnh PNG trong suốt hoặc Asset ID)
-            </label>
-            <input
-              type="text"
-              value={logoAssetId}
-              onChange={(e) => setLogoAssetId(e.target.value)}
-              placeholder="https://... hoặc mã asset logo của tiệm"
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
-            />
-            <p className="mt-1 text-caption text-text-muted">
-              Logo này sẽ được tự động đóng dấu Watermark mờ lên video TikTok/Reels và hiển thị trên E-Catalog
-            </p>
           </div>
         </div>
       </div>
@@ -356,31 +235,45 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
             <Sparkles size={18} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-text">Giọng văn AI & Rào chắn thương hiệu</h3>
-            <p className="text-xs text-text-muted">Khóa chặt hành vi của AI Gateway khi tự động sinh bài viết tiếp thị</p>
+            <h3 className="text-body font-bold text-text">Giọng văn AI & Rào chắn thương hiệu ngành hoa</h3>
+            <p className="text-caption text-text-muted">Khóa chặt phong cách và ngữ từ của AI Gateway khi viết bài tiếp thị & tư vấn khách</p>
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Dropdown Tông giọng */}
           <div>
-            <label className="block text-xs font-semibold text-text mb-1.5">
-              Định vị giọng điệu chính (Tone of Voice)
+            <label className="block text-body-sm font-bold text-text mb-1.5">
+              Định vị Tông giọng Trợ lý AI (Tone of Voice)
             </label>
             <select
               value={toneOfVoice}
               onChange={(e) => setToneOfVoice(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-body-sm text-text transition-all focus:border-primary focus:outline-none"
             >
-              {TONE_OPTIONS.map((opt) => (
+              {FLORIST_TONE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {opt.label} — {opt.tagline}
                 </option>
               ))}
             </select>
+
+            {/* Trích dẫn mẫu câu thoại minh họa */}
+            {currentTone && (
+              <div className="mt-2.5 rounded-xl border border-border bg-surface-alt/60 p-3.5 flex items-start gap-2.5">
+                <MessageSquareQuote size={18} className="text-primary shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-caption font-bold text-text mb-0.5">Minh họa câu thoại AI sẽ xưng hô với khách:</div>
+                  <div className="text-caption text-text-muted italic leading-relaxed">
+                    "{currentTone.exampleDialog}"
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-text mb-1.5">
+            <label className="block text-caption font-semibold text-text mb-1.5">
               Bộ Hashtags mặc định (phân cách bằng dấu phẩy)
             </label>
             <input
@@ -388,39 +281,77 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
               value={hashtagsText}
               onChange={(e) => setHashtagsText(e.target.value)}
               placeholder="#hoatuoi, #tiemhoa, #hoathietke"
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-body-sm text-text transition-all focus:border-primary focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-text mb-1.5">
-              Mẫu câu kêu gọi hành động mặc định (Default Call-to-Action)
-            </label>
-            <input
-              type="text"
+            <AiRewriteInput
               value={ctaText}
-              onChange={(e) => setCtaText(e.target.value)}
+              onChange={setCtaText}
               placeholder="Nhắn tin ngay cho tiệm để nhận ưu đãi cắm hoa theo yêu cầu"
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
+              fieldType="cta"
+              label="Mẫu câu kêu gọi hành động mặc định (Default Call-to-Action)"
+              helperText="Tự động gắn vào cuối các bài viết tạo bởi AI và tin nhắn chăm sóc khách hàng"
             />
           </div>
 
-          <div>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <ShieldAlert size={14} className="text-warning" />
-              <label className="text-xs font-semibold text-text">
-                Từ cấm & Phong cách cấm kỵ (Forbidden Words - phân cách bằng dấu phẩy)
+          {/* Rào chắn từ cấm */}
+          <div className="pt-2 border-t border-border">
+            <div className="flex items-center gap-1.5 mb-2">
+              <ShieldAlert size={16} className="text-warning" />
+              <label className="text-body-sm font-bold text-text">
+                Rào chắn từ ngữ cấm kỵ (AI Guardrails)
               </label>
             </div>
+            <p className="text-caption text-text-muted mb-3">
+              Tick chọn nhanh các nhóm từ cấm chuẩn ngành hoa hoặc tự gõ thêm từ cấm riêng của tiệm:
+            </p>
+
+            {/* Checkbox nhóm từ cấm */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">
+              {FLORIST_FORBIDDEN_GROUPS.map((grp) => {
+                const wordsList = forbiddenWords.split(",").map((w) => w.trim())
+                const isSelected = grp.words.every((w) => wordsList.includes(w))
+
+                return (
+                  <button
+                    key={grp.id}
+                    type="button"
+                    onClick={() => handleToggleForbiddenGroup(grp.words)}
+                    className={`rounded-xl border p-3 text-left transition-all ${
+                      isSelected
+                        ? "border-warning bg-warning/10"
+                        : "border-border bg-surface-alt/40 hover:border-warning/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-caption font-bold text-text">{grp.title}</span>
+                      <div
+                        className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${
+                          isSelected ? "border-warning bg-warning text-white" : "border-border"
+                        }`}
+                      >
+                        {isSelected && <Check size={10} strokeWidth={3} />}
+                      </div>
+                    </div>
+                    <div className="text-caption text-text-muted leading-tight">
+                      {grp.words.slice(0, 3).join(", ")}...
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
             <input
               type="text"
               value={forbiddenWords}
               onChange={(e) => setForbiddenWords(e.target.value)}
-              placeholder="hoa rẻ, phá giá, xả hàng tồn..."
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none"
+              placeholder="hoa rẻ, phá giá, xả hàng tồn, chặt chém..."
+              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-body-sm text-text transition-all focus:border-primary focus:outline-none"
             />
             <p className="mt-1 text-caption text-text-muted">
-              AI Content Engine sẽ tự động loại bỏ tuyệt đối các từ này trong mọi bài đăng bán hoa
+              AI Gateway sẽ tự động chặn và lọc bỏ tuyệt đối các từ ngữ này trong mọi bài viết và câu tư vấn
             </p>
           </div>
         </div>
@@ -431,10 +362,21 @@ export function BrandProfileForm({ initialData, onSave, saving }: BrandProfileFo
         <button
           type="submit"
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white text-xs sm:text-sm font-bold shadow-md hover:bg-primary/95 transition-all disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-body-sm font-bold text-white shadow-xs transition-opacity hover:opacity-95 disabled:opacity-50"
         >
-          <Check size={16} />
-          <span>{saving ? "Đang lưu..." : "Lưu nhận diện thương hiệu"}</span>
+          {saving ? (
+            <span>Đang lưu...</span>
+          ) : saveSuccess ? (
+            <>
+              <CheckCircle2 size={16} className="text-white" />
+              <span>Đã lưu nhận diện thành công!</span>
+            </>
+          ) : (
+            <>
+              <Check size={16} />
+              <span>Lưu nhận diện thương hiệu</span>
+            </>
+          )}
         </button>
       </div>
     </form>

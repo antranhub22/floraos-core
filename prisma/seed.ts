@@ -23,6 +23,15 @@ async function main(): Promise<void> {
   const capabilities = await seedAiCapabilities()
   const models = await seedVisionModels()
   console.log(`Sổ đăng ký nền AI: ${capabilities} năng lực, ${models} mô hình`)
+
+  const { seedDecisionRegistry } = await import("./seed/decision-registry")
+  await seedDecisionRegistry()
+
+  // Dev fixture: chỉ chạy trong môi trường phát triển — tuyệt đối không nạp lên production
+  if (process.env.NODE_ENV !== "production") {
+    const { seedDevShopMoclan } = await import("./seed/dev-shop-moclan")
+    await seedDevShopMoclan()
+  }
 }
 
 main()

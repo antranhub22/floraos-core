@@ -115,7 +115,7 @@ export const ROLE_UX_CATALOG: readonly RoleUxDefinition[] = [
     homepage: "STORE_JOURNEY_HOME",
     systemRoleKeys: ["dieu_hanh"],
     entryHref: "/",
-    navPriority: ["/duyet", "/don-hang", "/san-pham", "/khach-hang"],
+    navPriority: [],
     debtRefs: [163],
   },
   {

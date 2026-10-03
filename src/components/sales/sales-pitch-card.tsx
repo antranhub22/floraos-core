@@ -26,10 +26,11 @@ import {
   FileDown,
   Image as ImageIcon,
   Share2,
-  Loader2,
   Unlock,
   RotateCcw,
   MessageSquareText,
+  ShoppingBag,
+  BookOpen,
 } from "lucide-react"
 import { toBlob, toPng, toJpeg } from "html-to-image"
 import jsPDF from "jspdf"
@@ -40,6 +41,8 @@ import {
   type TabOverflowAction,
 } from "@/components/ui/tab-header"
 import { SalesPitchCardA6, ZaloScriptBox } from "@/components/templates/product-analysis"
+import { CreateOrderModal, type CreateOrderInitialData } from "@/components/orders/create-order-modal"
+import { SalesScriptLibraryModal } from "./sales-script-library-modal"
 import {
   type SalesPitchData,
   type SalesPitchOverrides,
@@ -117,6 +120,39 @@ export function SalesPitchCard({
   const [copiedImage, setCopiedImage] = useState(false)
   const [exportSuccess, setExportSuccess] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
+
+  // State & Data cho tác vụ BH-15: Chuyển Báo giá / Thẻ chào thành Đơn hàng 1-chạm
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
+  const [orderCreatedSuccess, setOrderCreatedSuccess] = useState(false)
+
+  // State cho Thư viện kịch bản tư vấn chốt sale (KB-01..14)
+  const [isScriptLibraryOpen, setIsScriptLibraryOpen] = useState(false)
+
+  const orderInitialData: CreateOrderInitialData = {
+    items: [
+      {
+        description: `${productName}${sku ? ` [${sku}]` : ""}`,
+        quantity: 1,
+        unitPriceVnd: typeof price === "number" ? price : (Number(price) || 0),
+        sampleImageUrl: pitchData.imageUrl || undefined,
+        bomSummary: mainFlowers.map((f) => `${f.name} (${f.quantity} ${f.unit})`).join(", "),
+        bomFlowers: mainFlowers.map((f) => ({
+          flowerName: f.name,
+          quantity: typeof f.quantity === "number" ? f.quantity : (Number(f.quantity) || 1),
+          unit: f.unit || "cành",
+          color: f.color || "Tươi",
+        })),
+        wrapStyle: wrapping || undefined,
+        ribbon: accessoryItems.map((a) => a.name).join(", ") || undefined,
+      },
+    ],
+    internalNote: `Mẫu từ Thẻ chào: ${productName}. Phong cách: ${style}. Dịp: ${occasions.join(", ")}.${freeGifts.length > 0 ? ` Quà tặng: ${freeGifts.join(", ")}.` : ""}`,
+    cardMessage: occasions.some((o) => o.toLowerCase().includes("sinh nhật"))
+      ? "Chúc mừng sinh nhật!"
+      : occasions.some((o) => o.toLowerCase().includes("khai trương"))
+      ? "Chúc mừng khai trương hồng phát!"
+      : "",
+  }
 
   const sanitizeFileName = (name: string) => {
     return (
@@ -445,10 +481,17 @@ export function SalesPitchCard({
     if (activeTab === "card") {
       const primary: TabAction[] = [
         {
+          id: "create-order",
+          label: "Tạo đơn hàng",
+          icon: ShoppingBag,
+          variant: "primary",
+          onClick: () => setIsOrderModalOpen(true),
+        },
+        {
           id: "copy-card",
           label: copiedImage ? "Đã copy ảnh!" : "Copy ảnh Zalo",
           icon: copiedImage ? Check : Copy,
-          variant: "primary",
+          variant: "outline",
           loading: isExporting,
           onClick: handleCopyCardImage,
         },
@@ -497,11 +540,18 @@ export function SalesPitchCard({
     if (activeTab === "script") {
       const primary: TabAction[] = [
         {
-          id: "edit-content",
-          label: "Chỉnh sửa nội dung",
-          icon: Pencil,
+          id: "open-script-library",
+          label: "Thư viện 14 kịch bản",
+          icon: BookOpen,
           variant: "outline",
-          onClick: () => setActiveTab("edit"),
+          onClick: () => setIsScriptLibraryOpen(true),
+        },
+        {
+          id: "create-order-script",
+          label: "Chốt đơn mẫu này",
+          icon: ShoppingBag,
+          variant: "outline",
+          onClick: () => setIsOrderModalOpen(true),
         },
         {
           id: "copy-script",
@@ -513,6 +563,12 @@ export function SalesPitchCard({
       ]
 
       const overflow: TabOverflowAction[] = [
+        {
+          id: "edit-content",
+          label: "Chỉnh sửa nội dung",
+          icon: Pencil,
+          onClick: () => setActiveTab("edit"),
+        },
         {
           id: "goto-card",
           label: "Xem Thẻ chào khách A6",
@@ -561,6 +617,21 @@ export function SalesPitchCard({
             <h4 className="text-sm font-bold">Xuất bản Thẻ Chào Sản Phẩm thành công!</h4>
             <p className="text-xs opacity-90">
               Thẻ đã được chốt duyệt Final và lưu vào <strong>Kho lưu trữ &gt; Sale Pitch đã hoàn thành</strong>.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Banner khi tạo đơn hàng thành công từ Thẻ chào */}
+      {orderCreatedSuccess && (
+        <div className="flex items-center gap-3 rounded-2xl bg-success/10 border-2 border-success/30 p-4 text-success dark:text-success animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success text-white flex-shrink-0">
+            <CheckCircle2 size={22} strokeWidth={2.5} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-bold">Tạo đơn hàng thành công từ Thẻ chào!</h4>
+            <p className="text-xs opacity-90">
+              Đơn hàng đã được đẩy sang phân hệ <strong>Vận hành Đơn hàng (Kanban)</strong> với đầy đủ công thức hoa và sẵn sàng in phiếu cho xưởng cắm hoa.
             </p>
           </div>
         </div>
@@ -1136,7 +1207,7 @@ export function SalesPitchCard({
           />
 
           {/* Quick navigation at bottom of card */}
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <Button
               variant="outline"
               size="sm"
@@ -1144,7 +1215,17 @@ export function SalesPitchCard({
               className="text-xs font-semibold gap-1 text-text hover:text-primary"
             >
               <Pencil size={13} />
-              Chỉnh sửa thông tin thẻ này
+              Chỉnh sửa thông tin
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsOrderModalOpen(true)}
+              className="text-xs font-semibold gap-1.5 text-primary border-primary/40 hover:bg-primary/5"
+            >
+              <ShoppingBag size={14} />
+              Tạo đơn hàng từ mẫu này
             </Button>
 
             <Button
@@ -1178,9 +1259,58 @@ export function SalesPitchCard({
               <Eye size={13} />
               ← Xem Thẻ chào khách A6
             </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsScriptLibraryOpen(true)}
+                className="text-xs font-semibold gap-1.5 text-text hover:text-primary"
+              >
+                <BookOpen size={14} />
+                Thư viện 14 kịch bản chốt sale
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsOrderModalOpen(true)}
+                className="text-xs font-semibold gap-1.5 text-primary border-primary/40 hover:bg-primary/5"
+              >
+                <ShoppingBag size={14} />
+                Chốt đơn hàng ngay
+              </Button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Modal tạo đơn hàng 1-chạm (BH-15) */}
+      <CreateOrderModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        onSuccess={() => {
+          setIsOrderModalOpen(false)
+          setOrderCreatedSuccess(true)
+          setTimeout(() => setOrderCreatedSuccess(false), 5000)
+        }}
+        initialData={orderInitialData}
+      />
+
+      {/* Modal Thư viện 14 kịch bản tư vấn thực chiến (KB-01..14) */}
+      <SalesScriptLibraryModal
+        isOpen={isScriptLibraryOpen}
+        onClose={() => setIsScriptLibraryOpen(false)}
+        variables={{
+          productName,
+          priceVnd: typeof price === "number" ? price : (Number(price) || 0),
+          occasion: occasions[0] || "sinh nhật",
+          style,
+          freeGifts: freeGifts.join(", "),
+          shopName,
+          hotline: shopHotline,
+        }}
+      />
     </div>
   )
 }

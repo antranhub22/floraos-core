@@ -19,24 +19,12 @@ import { UserMenu } from "@/components/layout/user-menu"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { InlineError } from "@/components/ui/inline-error"
 import { useAnnounce } from "@/components/ui/live-region"
+import { PartnerManagementModal } from "@/components/coordinator/partner-management-modal"
+import { SlaMonitorModal } from "@/components/coordinator/sla-monitor-modal"
 
-type Partner = {
-  id: string
-  code: string
-  name: string
-  district: string | null
-  province: string | null
-  capacity_daily: number
-  tier: string
-  is_active: boolean
-}
+type Partner = { id: string; code: string; name: string; phone?: string; district: string | null; province: string | null; capacityDaily: number; tier: string; isActive: boolean }
 
-type NetworkStats = {
-  activePartners: number
-  pendingOrders: number
-  inProductionOrders: number
-  slaRiskOrders: number
-}
+type NetworkStats = { activePartners: number; pendingOrders: number; inProductionOrders: number; slaRiskOrders: number }
 
 class ChuaDangNhap extends Error {}
 
@@ -56,6 +44,8 @@ export function FlowerNetworkCommandCenter() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [partners, setPartners] = useState<Partner[]>([])
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false)
+  const [isSlaModalOpen, setIsSlaModalOpen] = useState(false)
   const [stats, setStats] = useState<NetworkStats>({
     activePartners: 0,
     pendingOrders: 0,
@@ -67,20 +57,24 @@ export function FlowerNetworkCommandCenter() {
     setLoading(true)
     setError(null)
     try {
-      const [partnersData, ordersData] = await Promise.all([
-        layJson<Partner[]>("/api/v1/partners").catch(() => [] as Partner[]),
+      const [partnersData, ordersData, coordOrdersData] = await Promise.all([
+        layJson<{ partners: Partner[] }>("/api/v1/coordinator/partners?active=1").catch(() => ({ partners: [] })),
         layJson<{ total?: number; items?: unknown[] }>("/api/v1/orders?limit=10").catch(() => ({ total: 0, items: [] })),
+        layJson<{ orders?: Array<{ riskLevel: string }> }>("/api/v1/coordinator/orders?limit=50").catch(() => ({ orders: [] })),
       ])
 
-      const activeList = (partnersData ?? []).filter((p) => p.is_active)
+      const activeList = (partnersData?.partners ?? []).filter((p) => p.isActive)
       setPartners(activeList.slice(0, 5))
 
       const orderCount = ordersData?.total ?? 0
+      const coordOrders = coordOrdersData?.orders ?? []
+      const riskCount = coordOrders.filter((o) => o.riskLevel === "CRITICAL" || o.riskLevel === "AT_RISK").length
+
       setStats({
         activePartners: activeList.length,
         pendingOrders: Math.max(0, Math.floor(orderCount * 0.3)),
         inProductionOrders: Math.max(0, Math.floor(orderCount * 0.6)),
-        slaRiskOrders: 0, // Dữ liệu thời gian thực
+        slaRiskOrders: riskCount,
       })
 
       announce("Đã nạp dữ liệu Trung tâm Điều hành Điện hoa", "polite")
@@ -104,10 +98,7 @@ export function FlowerNetworkCommandCenter() {
       <div className="mx-auto max-w-6xl space-y-6 p-6">
         <SkeletonBlock lines={2} label="Đang tải tiêu đề" />
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <SkeletonBlock lines={2} label="Đang tải chỉ số" />
-          <SkeletonBlock lines={2} label="Đang tải chỉ số" />
-          <SkeletonBlock lines={2} label="Đang tải chỉ số" />
-          <SkeletonBlock lines={2} label="Đang tải chỉ số" />
+          {[1, 2, 3, 4].map((i) => <SkeletonBlock key={i} lines={2} label="Đang tải chỉ số" />)}
         </div>
         <SkeletonBlock lines={5} label="Đang tải bảng điều hành" />
       </div>
@@ -188,15 +179,22 @@ export function FlowerNetworkCommandCenter() {
           </div>
         </Card>
 
-        <Card className="flex items-center gap-4 p-4">
-          <div className="rounded-lg bg-danger-bg p-3 text-danger">
-            <AlertOctagon className="h-6 w-6" />
+        <button
+          type="button"
+          onClick={() => setIsSlaModalOpen(true)}
+          className="flex items-center justify-between rounded-xl border border-border bg-surface p-4 text-left transition hover:border-danger/60 hover:shadow-xs"
+        >
+          <div className="flex items-center gap-4">
+            <div className="rounded-lg bg-danger-bg p-3 text-danger">
+              <AlertOctagon className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="text-caption font-medium text-text-muted">Cảnh báo rủi ro SLA</div>
+              <div className="text-title font-extrabold text-danger">{stats.slaRiskOrders} đơn</div>
+            </div>
           </div>
-          <div>
-            <div className="text-caption font-medium text-text-muted">Cảnh báo rủi ro SLA</div>
-            <div className="text-title font-extrabold text-text">{stats.slaRiskOrders}</div>
-          </div>
-        </Card>
+          <span className="text-caption font-bold text-primary">Xem chi tiết →</span>
+        </button>
       </div>
 
       {/* Tầng 3: Quản lý Mạng lưới & Xưởng đối tác (Management Tier) */}
@@ -287,8 +285,20 @@ export function FlowerNetworkCommandCenter() {
         <div className="space-y-6">
           <Card className="p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-title-sm font-bold text-text">Xưởng Đối tác Mạng lưới</h3>
-              <span className="text-caption text-text-muted">{partners.length} đối tác</span>
+              <div>
+                <h3 className="text-title-sm font-bold text-text">Xưởng Đối tác Mạng lưới</h3>
+                <span className="text-caption text-text-muted">{partners.length} đối tác trực tuyến</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsPartnerModalOpen(true)}
+                className="text-caption gap-1 font-semibold"
+              >
+                <Users className="h-3.5 w-3.5 text-primary" />
+                <span>Quản lý</span>
+              </Button>
             </div>
 
             {partners.length === 0 ? (
@@ -306,7 +316,7 @@ export function FlowerNetworkCommandCenter() {
                       <div className="text-body-sm font-semibold text-text">{p.name}</div>
                       <div className="text-caption text-text-muted">
                         {p.district ? `${p.district}, ` : ""}
-                        {p.province || "Toàn quốc"} · Hạn mức {p.capacity_daily} đơn/ngày
+                        {p.province || "Toàn quốc"} · Hạn mức {p.capacityDaily} đơn/ngày
                       </div>
                     </div>
                     <span className="rounded-full bg-success-bg px-2 py-0.5 text-caption font-bold text-success">
@@ -319,6 +329,20 @@ export function FlowerNetworkCommandCenter() {
           </Card>
         </div>
       </div>
+
+      {/* Modal Quản lý Danh bạ Đối tác & Xưởng hoa Mạng lưới (DT-01..06) */}
+      <PartnerManagementModal
+        isOpen={isPartnerModalOpen}
+        onClose={() => setIsPartnerModalOpen(false)}
+        onPartnersUpdated={loadNetworkData}
+      />
+
+      {/* Modal Giám Sát SLA & Cảnh Báo Trễ Đơn Mạng Lưới (SC-01..06) */}
+      <SlaMonitorModal
+        isOpen={isSlaModalOpen}
+        onClose={() => setIsSlaModalOpen(false)}
+        onSelectOrder={() => router.push("/dieu-phoi" as never)}
+      />
     </div>
   )
 }

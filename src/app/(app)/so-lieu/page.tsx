@@ -9,6 +9,9 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
+import { BusinessPerformanceCard } from "@/components/dashboard/business-performance-card"
+import { AdPerformanceModal } from "@/components/marketing/ad-performance-modal"
+import type { OrderReportingItem } from "@/modules/orders/domain/business-reporting"
 
 type UsageSummary = {
   by_feature: { feature: string; quantity: number; cost_credit: number }[]
@@ -59,11 +62,13 @@ function metricLabel(feature: string): string {
 
 export default function AnalyticsPage() {
   const router = useRouter()
-  const { can } = useSession()
+  const { can, orgName } = useSession()
+  const [orders, setOrders] = useState<OrderReportingItem[]>([])
   const [phase, setPhase] = useState<"metrics" | "explain" | "learning" | "saved">("metrics")
   const [saved, setSaved] = useState(false)
   const [learningApproved, setLearningApproved] = useState(false)
   const [selectedRange, setSelectedRange] = useState("Tháng này")
+  const [adModalOpen, setAdModalOpen] = useState(false)
 
   const [usageLoading, setUsageLoading] = useState(true)
   const [usage, setUsage] = useState<UsageSummary | null>(null)
@@ -96,7 +101,28 @@ export default function AnalyticsPage() {
         setUsageLoading(false)
       }
     }
+
+    async function loadOrders() {
+      try {
+        const data = await fetchJson<{ items: Array<{ id: string; code: string; status: string; totalVnd: number; customerName?: string; createdAt: string; items?: Array<{ description?: string }> }> }>("/api/v1/orders?limit=50")
+        if (data && Array.isArray(data.items)) {
+          setOrders(data.items.map((o) => ({
+            id: o.id,
+            code: o.code,
+            status: o.status as OrderReportingItem["status"],
+            totalVnd: o.totalVnd,
+            customerName: o.customerName,
+            productTitle: o.items?.[0]?.description ?? "Sản phẩm hoa",
+            createdAt: o.createdAt,
+          })))
+        }
+      } catch {
+        // im lặng fallback
+      }
+    }
+
     loadUsage()
+    loadOrders()
   }, [router])
 
   useEffect(() => {
@@ -207,9 +233,19 @@ export default function AnalyticsPage() {
             Analytics & Learning
           </div>
         </div>
-        <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-1.5 text-xs">
-          <ArrowLeft size={16} strokeWidth={2} /> Quay về Trang chủ
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAdModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5"
+          >
+            <TrendingUp size={14} /> Hiệu quả Ads (MK-10)
+          </Button>
+          <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-1.5 text-xs">
+            <ArrowLeft size={16} strokeWidth={2} /> Trang chủ
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col overflow-y-auto p-6 max-w-4xl mx-auto w-full gap-5">
@@ -259,6 +295,13 @@ export default function AnalyticsPage() {
                 ))}
               </div>
             </div>
+
+            {/* Báo cáo Hiệu năng Kinh doanh & Doanh số (BC-01..06) */}
+            <BusinessPerformanceCard
+              orders={orders}
+              aiCreditUsed={usage?.credit_used ?? 0}
+              shopName={orgName || "Tiệm Hoa"}
+            />
 
             {/* Khối thẻ số đo thực tế */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -474,6 +517,11 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      <AdPerformanceModal
+        isOpen={adModalOpen}
+        onClose={() => setAdModalOpen(false)}
+      />
     </div>
   )
 }
