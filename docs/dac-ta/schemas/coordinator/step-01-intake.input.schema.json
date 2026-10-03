@@ -23,6 +23,11 @@
       "minLength": 1,
       "maxLength": 64
     },
+    "productId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
     "customerName": {
       "type": "string",
       "minLength": 1,
@@ -39,6 +44,10 @@
         "VIP"
       ]
     },
+    "customerPhone": {
+      "type": "string",
+      "maxLength": 20
+    },
     "recipientName": {
       "type": "string",
       "minLength": 1,
@@ -49,51 +58,42 @@
       "pattern": "^\\+?[0-9 .-]{8,15}$"
     },
     "deliveryAddress": {
-      "anyOf": [
-        {
+      "type": "object",
+      "properties": {
+        "street": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 500
+          "maxLength": 200
         },
-        {
-          "type": "object",
-          "properties": {
-            "street": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            },
-            "ward": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 100
-            },
-            "district": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 100
-            },
-            "city": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 100
-            },
-            "country": {
-              "type": "string",
-              "maxLength": 100
-            },
-            "formattedAddress": {
-              "type": "string",
-              "maxLength": 500
-            }
-          },
-          "required": [
-            "street",
-            "ward",
-            "district",
-            "city"
-          ]
+        "ward": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "district": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "city": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "country": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "formattedAddress": {
+          "type": "string",
+          "maxLength": 500
         }
+      },
+      "required": [
+        "street",
+        "ward",
+        "district",
+        "city"
       ]
     },
     "deliveryTargetTime": {
@@ -146,7 +146,12 @@
           "unit": {
             "default": "cành",
             "type": "string",
-            "maxLength": 20
+            "enum": [
+              "bông",
+              "cành",
+              "lá",
+              "cây"
+            ]
           },
           "color": {
             "default": "",
@@ -154,9 +159,14 @@
             "maxLength": 60
           },
           "role": {
-            "default": "",
+            "default": "Phụ",
             "type": "string",
-            "maxLength": 60
+            "enum": [
+              "Chủ đạo",
+              "Phụ",
+              "Điểm xuyến",
+              "Lấp đầy"
+            ]
           }
         },
         "required": [
@@ -169,9 +179,72 @@
       "type": "string",
       "maxLength": 1000
     },
+    "cardRequired": {
+      "default": false,
+      "type": "boolean"
+    },
     "internalNote": {
       "type": "string",
       "maxLength": 2000
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "ORDER_M10",
+        "CHAT_M08",
+        "CATALOG_M06",
+        "MANUAL"
+      ]
+    },
+    "sourceReference": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "channel": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "orderType": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "priority": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "serviceLevel": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "deliveryType": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "deliveryLocationType": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "receivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "deliveryWindowStart": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "deliveryWindowEnd": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "customFields": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
     }
   },
   "required": [
@@ -186,6 +259,7 @@
     {
       "customerName": "Nguyễn Văn An",
       "customerTier": "VIP",
+      "customerPhone": "0987654321",
       "recipientName": "Trần Thị Bình",
       "recipientPhone": "0901234567",
       "deliveryAddress": {

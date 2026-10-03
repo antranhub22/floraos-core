@@ -4,7 +4,8 @@ import { requireCapability } from "@/core/rbac/capabilities"
 import { callCapability, type AdapterOutcome } from "@/core/ai/gateway"
 import { aiGatewayDeps } from "@/core/ai/wiring"
 import type { AiModelCandidate } from "@/core/ai/domain/routing"
-import { OpenAILLMProvider } from "@/core/ai/adapters/openai-llm-provider"
+import { createContentLLM } from "@/core/ai/adapters/multi-llm-provider"
+import { providerOrderFor } from "@/modules/creative-production/use-cases/provider-preferences"
 import type { TenantContext } from "@/core/tenancy"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
@@ -61,8 +62,9 @@ async function runInlineAiJob<O>(
   const jobs = new GenerationJobRepository()
   await jobs.startInline(ctx, enq.job.id, new Date())
   try {
+    const preferredModelKeys = await providerOrderFor(ctx, "content")
     const ai = await callCapability(
-      { capability: opts.capability, privacy: "SHOP", entity: { type: opts.entityType, id: enq.job.id }, jobId: enq.job.id },
+      { capability: opts.capability, privacy: "SHOP", entity: { type: opts.entityType, id: enq.job.id }, jobId: enq.job.id, preferredModelKeys },
       opts.adapter,
       aiGatewayDeps(ctx)
     )
@@ -123,7 +125,7 @@ export async function reviseScene(
     payload: { scene_plan_id: input.scenePlanId ?? null, scene_index: input.sceneIndex, instruction: input.instruction, before: current },
     capability: "video_storyboard",
     entityType: "scene_revise",
-    adapter: createSceneReviseAdapter(new OpenAILLMProvider(), brief, ctx.organizationId),
+    adapter: createSceneReviseAdapter(createContentLLM(), brief, ctx.organizationId),
   })
 
   // Ghi cảnh đã sửa vào kịch bản đang dùng — C/D/E đọc lại đúng bản mới.
@@ -166,7 +168,7 @@ export async function rewriteContent(
     capability: "content_generation",
     entityType: "content_rewrite",
     adapter: createContentRewriteAdapter(
-      new OpenAILLMProvider(),
+      createContentLLM(),
       {
         channel: input.channel,
         text: input.text,

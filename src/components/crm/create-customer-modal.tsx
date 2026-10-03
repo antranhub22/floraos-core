@@ -1,8 +1,10 @@
 "use client"
 
 import React, { useState } from "react"
-import { X, UserPlus, Loader2, Sparkles, Phone, MapPin, Tag, Heart } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Dialog } from "@/components/ui/dialog"
+import { InlineError } from "@/components/ui/inline-error"
 import { errorText } from "@/lib/error-text"
 
 interface CreateCustomerModalProps {
@@ -21,8 +23,6 @@ export function CreateCustomerModal({ isOpen, onClose, onSuccess }: CreateCustom
   const [preferredFlowers, setPreferredFlowers] = useState("Hoa hồng, Baby")
   const [preferredColors, setPreferredColors] = useState("Pastel, Đỏ")
   const [error, setError] = useState<string | null>(null)
-
-  if (!isOpen) return null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -67,119 +67,113 @@ export function CreateCustomerModal({ isOpen, onClose, onSuccess }: CreateCustom
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl border border-border bg-surface shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-red-100 text-red-700">
-              <UserPlus className="h-4 w-4" />
-            </span>
-            <h2 className="text-base font-bold text-foreground">Thêm Khách Hàng Mới (CRM M09)</h2>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="h-5 w-5" />
-          </button>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      title="Thêm Khách Hàng Mới"
+      size="md"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+            Hủy
+          </Button>
+          <Button
+            type="submit"
+            form="create-customer-form"
+            disabled={loading}
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Lưu khách hàng
+          </Button>
+        </>
+      }
+    >
+      <form id="create-customer-form" onSubmit={handleSubmit} className="space-y-4 text-sm">
+        {error && <InlineError message={error} />}
+
+        <div>
+          <label className="mb-1 block font-semibold text-text">Họ và tên khách hàng *</label>
+          <input
+            type="text"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            placeholder="Nguyễn Văn A"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-sm">
-          {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-xs font-medium text-red-700 border border-red-200">
-              {error}
-            </div>
-          )}
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block font-semibold text-text-main">Họ và tên khách hàng *</label>
+            <label className="mb-1 block font-semibold text-text">Số điện thoại *</label>
             <input
               type="text"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary"
-              placeholder="Nguyễn Văn A"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              placeholder="0909xxxxxx"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               required
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block font-semibold text-text-main">Số điện thoại *</label>
-              <input
-                type="text"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary"
-                placeholder="0909xxxxxx"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-semibold text-text-main">Email (tùy chọn)</label>
-              <input
-                type="email"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary"
-                placeholder="khachhang@gmail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-          </div>
-
           <div>
-            <label className="mb-1 block font-semibold text-text-main">Địa chỉ thường nhận hoa</label>
+            <label className="mb-1 block font-semibold text-text">Email (tùy chọn)</label>
+            <input
+              type="email"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              placeholder="khachhang@gmail.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block font-semibold text-text">Địa chỉ thường nhận hoa</label>
+          <input
+            type="text"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            placeholder="Số nhà, đường, phường, quận..."
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block font-semibold text-text">Hoa yêu thích (phân cách bằng dấu phẩy)</label>
             <input
               type="text"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary"
-              placeholder="Số nhà, đường, phường, quận..."
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              placeholder="Hồng đỏ, Baby, Tulip"
+              value={preferredFlowers}
+              onChange={(e) => setPreferredFlowers(e.target.value)}
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block font-semibold text-text-main">Hoa yêu thích (phân cách bằng dấu phẩy)</label>
-              <input
-                type="text"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary"
-                placeholder="Hồng đỏ, Baby, Tulip"
-                value={preferredFlowers}
-                onChange={(e) => setPreferredFlowers(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-semibold text-text-main">Gu màu ưa thích</label>
-              <input
-                type="text"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary"
-                placeholder="Pastel, Đỏ rực rỡ, Trắng kem"
-                value={preferredColors}
-                onChange={(e) => setPreferredColors(e.target.value)}
-              />
-            </div>
-          </div>
-
           <div>
-            <label className="mb-1 block font-semibold text-text-main">Ghi chú chăm sóc / Đặc điểm khách hàng</label>
-            <textarea
-              rows={2}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary"
-              placeholder="Khách thích hoa sang trọng, hay tặng đối tác..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+            <label className="mb-1 block font-semibold text-text">Gu màu ưa thích</label>
+            <input
+              type="text"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              placeholder="Pastel, Đỏ rực rỡ, Trắng kem"
+              value={preferredColors}
+              onChange={(e) => setPreferredColors(e.target.value)}
             />
           </div>
+        </div>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Hủy
-            </Button>
-            <Button type="submit" disabled={loading} className="bg-red-600 hover:bg-red-700 text-white font-semibold">
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Lưu khách hàng
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div>
+          <label className="mb-1 block font-semibold text-text">Ghi chú chăm sóc / Đặc điểm khách hàng</label>
+          <textarea
+            rows={2}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            placeholder="Khách thích hoa sang trọng, hay tặng đối tác..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+      </form>
+    </Dialog>
   )
 }

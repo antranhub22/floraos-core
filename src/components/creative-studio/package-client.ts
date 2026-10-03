@@ -13,6 +13,23 @@ export interface PackagePostDto {
   hashtags: string[]
 }
 
+/**
+ * So hai bộ bài đăng theo NỘI DUNG (26/09/2026). Không so `JSON.stringify`
+ * thô: cột `content` là `jsonb`, Postgres không giữ thứ tự khoá
+ * (`{channel,text,hashtags}` đọc ra thành `{text,channel,hashtags}`) và bài từ
+ * Khu vực B có thể xếp kênh khác — so thô khiến gói luôn "có thay đổi chưa lưu",
+ * khoá Chặng 08–09.
+ */
+export function samePosts(a: readonly PackagePostDto[], b: readonly PackagePostDto[]): boolean {
+  const norm = (list: readonly PackagePostDto[]) =>
+    JSON.stringify(
+      [...list]
+        .map((p) => [p.channel, p.text ?? "", [...(p.hashtags ?? [])]] as const)
+        .sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0))
+    )
+  return norm(a) === norm(b)
+}
+
 export interface QaCheckDto {
   id: string
   title: string

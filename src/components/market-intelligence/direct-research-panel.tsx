@@ -52,18 +52,18 @@ export function DirectResearchPanel({
     : MARKET_TAXONOMY_CATEGORIES.find((c) => c.id === activeCategoryTab)?.keywords.slice(0, 8) ?? seasonalKeywords;
 
   return (
-    <div className="rounded-2xl border border-stone-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all space-y-3">
+    <div className="rounded-2xl border border-cool-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all space-y-3">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-2.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cool-100 pb-2.5">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blush-50 text-blush-600">
             <Search size={15} />
           </div>
           <div>
-            <h2 className="text-xs sm:text-sm font-bold text-stone-900">
+            <h2 className="text-xs sm:text-sm font-bold text-cool-900">
               Quét nhanh theo từ khóa thị trường
             </h2>
-            <p className="text-[11px] text-stone-500">
+            <p className="text-caption text-cool-500">
               Tra cứu trực tiếp chỉ số Google Trends, video viral TikTok và tiềm năng chốt đơn
             </p>
           </div>
@@ -72,11 +72,11 @@ export function DirectResearchPanel({
         <button
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-stone-600 hover:text-rose-700 bg-stone-50 hover:bg-rose-50/60 px-2.5 py-1 rounded-lg border border-stone-200/70 transition"
+          className="inline-flex items-center gap-1.5 text-caption font-semibold text-cool-600 hover:text-blush-700 bg-cool-50 hover:bg-blush-50/60 px-2.5 py-1 rounded-lg border border-cool-200/70 transition"
         >
-          <SlidersHorizontal size={12} className={showAdvanced ? "text-rose-600" : "text-stone-500"} />
+          <SlidersHorizontal size={12} className={showAdvanced ? "text-blush-600" : "text-cool-500"} />
           <span>{showAdvanced ? "Ẩn tùy chỉnh" : "Tùy chỉnh"}</span>
-          <ChevronDown size={12} className={`transition-transform duration-200 ${showAdvanced ? "rotate-180 text-rose-600" : ""}`} />
+          <ChevronDown size={12} className={`transition-transform duration-200 ${showAdvanced ? "rotate-180 text-blush-600" : ""}`} />
         </button>
       </div>
 
@@ -84,20 +84,20 @@ export function DirectResearchPanel({
         {/* Thanh tìm kiếm chính 1 dòng */}
         <div className="flex flex-col sm:flex-row gap-2 items-center">
           <div className="relative flex-1 w-full">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-cool-400" />
             <input
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="Nhập từ khóa hoặc chọn từ 210 từ khóa chuẩn (VD: Bó hoa tốt nghiệp hướng dương, Hoa 20/10...)"
-              className="h-10 w-full rounded-xl border border-stone-200 bg-stone-50/60 pl-9 pr-3 text-xs text-stone-900 placeholder:text-stone-400 outline-none focus:border-rose-500 focus:bg-white focus:ring-2 focus:ring-rose-100 transition"
+              className="h-10 w-full rounded-xl border border-cool-200 bg-cool-50/60 pl-9 pr-3 text-xs text-cool-900 placeholder:text-cool-400 outline-none focus:border-blush-500 focus:bg-white focus:ring-2 focus:ring-blush-100 transition"
             />
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full sm:w-auto flex-shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 h-10 text-xs font-bold text-white hover:bg-rose-700 shadow-xs hover:shadow-sm transition disabled:opacity-50"
+            className="w-full sm:w-auto flex-shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-blush-600 px-5 h-10 text-xs font-bold text-white hover:bg-blush-700 shadow-xs hover:shadow-sm transition disabled:opacity-50"
           >
             {isSubmitting ? (
               <>
@@ -116,16 +116,16 @@ export function DirectResearchPanel({
         {/* Category switcher for quick suggestions */}
         <div className="space-y-1.5 pt-1">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-            <span className="text-[10.5px] text-stone-400 font-medium flex-shrink-0 flex items-center gap-1">
+            <span className="text-caption text-cool-400 font-medium flex-shrink-0 flex items-center gap-1">
               <Layers size={11} /> Nhóm từ khóa:
             </span>
             <button
               type="button"
               onClick={() => setActiveCategoryTab("seasonal")}
-              className={`flex-shrink-0 text-[10.5px] px-2 py-0.5 rounded-md font-semibold transition ${
+              className={`flex-shrink-0 text-caption px-2 py-0.5 rounded-md font-semibold transition ${
                 activeCategoryTab === "seasonal"
-                  ? "bg-rose-600 text-white shadow-2xs"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "bg-blush-600 text-white shadow-2xs"
+                  : "bg-cool-100 text-cool-600 hover:bg-cool-200"
               }`}
             >
               Mùa thu này
@@ -135,10 +135,10 @@ export function DirectResearchPanel({
                 key={cat.id}
                 type="button"
                 onClick={() => setActiveCategoryTab(cat.id)}
-                className={`flex-shrink-0 text-[10.5px] px-2 py-0.5 rounded-md font-medium transition ${
+                className={`flex-shrink-0 text-caption px-2 py-0.5 rounded-md font-medium transition ${
                   activeCategoryTab === cat.id
-                    ? "bg-rose-600 text-white shadow-2xs"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                    ? "bg-blush-600 text-white shadow-2xs"
+                    : "bg-cool-100 text-cool-600 hover:bg-cool-200"
                 }`}
               >
                 {cat.shortName}
@@ -153,10 +153,10 @@ export function DirectResearchPanel({
                 key={sug}
                 type="button"
                 onClick={() => setKeyword(sug)}
-                className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-medium border transition ${
+                className={`rounded-full px-2.5 py-0.5 text-caption font-medium border transition ${
                   keyword === sug
-                    ? "bg-rose-50 text-rose-700 border-rose-300 font-semibold"
-                    : "bg-stone-50 text-stone-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border-stone-200/80"
+                    ? "bg-blush-50 text-blush-700 border-blush-300 font-semibold"
+                    : "bg-cool-50 text-cool-600 hover:bg-blush-50 hover:text-blush-700 hover:border-blush-200 border-cool-200/80"
                 }`}
               >
                 + {sug}
@@ -167,7 +167,7 @@ export function DirectResearchPanel({
 
         {/* Khu vực tham số tùy chỉnh nâng cao (toggle mở rộng) */}
         {showAdvanced && (
-          <div className="mt-3 pt-3 border-t border-stone-100">
+          <div className="mt-3 pt-3 border-t border-cool-100">
             <ResearchParameterFields
               geo={geo}
               timeframe={timeframe}

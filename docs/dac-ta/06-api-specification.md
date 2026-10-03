@@ -217,7 +217,7 @@ PUT /api/v1/vision/engine
 | GET | `/media/optimizations/:id/download` | `I3` |
 | POST | `/media/promote-to-master` | `I2` |
 
-> **25/09/2026 (trả nợ #120).** `POST /media/optimizations` đưa MỌI bộ máy vào hàng đợi `media.optimize` qua `enqueueJob` — cả `config.engine = "cloud_provider"`. `config.enhancer_provider` ∈ `studio | local | openai | photoroom | fal_flux | fal` (`OPTIMIZE_ENHANCER_PROVIDERS`), mã khác → 400 trước khi trừ credit. Nhà cung cấp lỗi → worker lùi `StudioEnhancer` và ghi `parameters.fallback_reason`; Identity Guard do worker đo. Đáp ứng luôn `{ job_id, status, engine, usage }` — không còn trả ảnh ngay. Giá (bảng giá v1): Photoroom/fal/OpenAI thu `media.optimize.cloud` = 3 credit, Studio/Local thu `media.optimize` = 2; `GET /media/optimizations/:id` hoàn chênh 1 credit khi worker lùi cục bộ (`output.provider_fallback`), hoàn toàn phần khi Guard từ chối / hỏng / huỷ.
+> **25/09/2026 (trả nợ #120).** `POST /media/optimizations` đưa MỌI bộ máy vào hàng đợi `media.optimize` qua `enqueueJob` — cả `config.engine = "cloud_provider"`. `config.enhancer_provider` ∈ `studio | local | openai | photoroom | fal_flux | fal` (`OPTIMIZE_ENHANCER_PROVIDERS`), mã khác → 400 trước khi trừ credit. Nhà cung cấp lỗi → worker lùi `StudioEnhancer` và ghi `parameters.fallback_reason`; Identity Guard do worker đo. Đáp ứng luôn `{ job_id, status, engine, usage }` — không còn trả ảnh ngay. Từ 25/09/2026 (PO: nhà cung cấp trước): trừ khi `enhancer_provider` là `studio`/`local`, máy chủ ghi `config.provider_order` (bên chọn cho lượt — `photoroom | fal_flux | imagen | openai`, `auto` = theo tiệm — rồi thứ tự của tiệm) và worker chạy chuỗi `ProviderChainEnhancer`; `engine` trong đáp ứng do máy chủ quyết. Giá (bảng giá v1): Photoroom/fal/OpenAI thu `media.optimize.cloud` = 3 credit, Studio/Local thu `media.optimize` = 2; `GET /media/optimizations/:id` hoàn chênh 1 credit khi worker lùi cục bộ (`output.provider_fallback`), hoàn toàn phần khi Guard từ chối / hỏng / huỷ.
 
 ```json
 {
@@ -249,6 +249,8 @@ Tải ảnh về (`/download`) **không** phải là phê duyệt. Hai việc kh
 | GET | `/media/variants/:id/download` | `I3` |
 
 **Hai nhánh, cùng đi qua `enqueueJob` (cập nhật 23/09/2026):** thân `POST /media/variants` mang `engine: "local_studio" | "cloud_provider"`, `preset` + `ratio` bắt buộc cho cả hai, `scene_index` (1–5, phân cảnh theo kịch bản bối cảnh của chủ đề — CREATIVE 5, AUTHENTIC 3; từ 24/09/2026) và `scene_plan_id` (job `creative.scene_plan` hoặc `rule:<topic>:<mode>`, ghi vào `assets.metadata`) tuỳ chọn; nhánh cloud thêm `provider_key` (hiện chỉ `stability`) và `scene_prompt` (≤ 600 ký tự, mô tả KHÔNG GIAN hậu cảnh). `local_studio` → job `media.variant` (1 credit); `cloud_provider` → job `media.variant.cloud` (2 credit, giá tạm — nợ #64). Worker Python xử lý CẢ HAI: nhánh cloud chỉ nhờ nhà cung cấp vẽ hậu cảnh trống, bó hoa dán nguyên khối từ Master Image, Subject Integrity là số ĐO; nhà cung cấp lỗi thì lùi về phông Studio cục bộ và ghi `cloud_fallback` vào asset + sự kiện job. `Idempotency-Key` bắt buộc. Đáp ứng: `{ job_id, status, engine, deduped, usage }` — kết quả đọc qua `GET /media/variants/:id` (nay trả thêm `source.engine`, `source.scene_index`, `source.cloud_fallback`). Trước 23/09 nhánh cloud chạy đồng bộ trong request (`executeCloudCreative`), không trừ credit, integrity gõ tay 0,98 — đã gỡ.
+
+**Nhà cung cấp trước (PO 25/09/2026):** thân không nêu `engine` = `cloud_provider`; máy chủ ghi `payload.provider_order` (bên `provider_key` chọn cho lượt → thứ tự của tiệm → mặc định `fal → stability → imagen`), worker thử lần lượt, mọi bên lỗi mới lùi phông cục bộ. AUTHENTIC cũng dùng nhà cung cấp (chỉ dựng nền + ánh sáng).
 
 **Hoàn credit lúc đọc (25/09/2026, trả nợ #127):** `GET /media/variants/:id` hoàn toàn phần khi job hỏng / huỷ / bị cổng toàn vẹn từ chối, và hoàn phần chênh `media.variant.cloud` − `media.variant` (1 credit) khi nhánh cloud lùi phông cục bộ (`source.cloud_fallback`). Idempotent — đọc bao nhiêu lần cũng chỉ hoàn một lần.
 
@@ -507,6 +509,9 @@ Mọi route nhận `:id` là id HOẶC mã đơn (`FLR-YYMMDD-NNNN`); tổ chứ
 | POST | `/coordinator/orders` | `R2` | Mã đơn do máy chủ cấp, tuần tự theo ngày; `sampleImageUrl` cấm `data:` — ảnh tải lên dùng `sampleAssetId` |
 | GET | `/coordinator/orders/:id` | `R1` | |
 | PATCH | `/coordinator/orders/:id/stage` | `R3` | Kiểm luồng + bằng chứng (đối tác / QC đạt / POD / hết sự cố) |
+| PATCH | `/coordinator/orders/:id/custom-fields` | `R3` | ĐP-3.16 — sửa giá trị trường tự tạo (entity ORDER); trộn vào giá trị cũ, không thay nguyên khối |
+| GET | `/coordinator/orders/:id/payments` | `R1` | ĐP-4a (PO D2) — sổ thu của một đơn |
+| POST | `/coordinator/orders/:id/payments` | `R9`/`R10` | ĐP-4a (PO D2) — ghi một dòng sổ thu. `kind=DEPOSIT`/`BALANCE` đòi `R9`; `kind=REFUND` đòi `R10` (trần cứng điều hành). `orders.paid_vnd`/`balance_vnd` cập nhật cùng giao dịch |
 | POST | `/coordinator/orders/:id/assign-partner` | `R4` | Đối tác cùng tổ chức, đang hoạt động, chưa vượt `capacity_daily` (trừ `overrideCapacity`) |
 | POST | `/coordinator/orders/:id/production` | `R3` | `MARK_READY` bắt buộc ảnh thành phẩm (`assets` cùng tổ chức); `REPORT_MATERIAL_ISSUE` mở sự cố |
 | POST | `/coordinator/orders/:id/qc` | `R3` | Người kiểm kết luận; không đạt bắt buộc lý do; `REJECTED` mở sự cố `QC_FAILURE` |
@@ -518,6 +523,8 @@ Mọi route nhận `:id` là id HOẶC mã đơn (`FLR-YYMMDD-NNNN`); tổ chứ
 | GET | `/coordinator/partners` | `R1` | `?active=1` |
 | POST | `/coordinator/partners` | `R4` | Trùng mã trong tổ chức → 409 |
 | PATCH | `/coordinator/partners/:id` | `R4` | Sửa hồ sơ, tạm ngưng/mở lại |
+| GET | `/field-config` | `R1` | ĐP-3 — cấu hình trường hiệu lực cho tổ chức của người gọi (lớp mã + cấu hình nền tảng + ghi đè theo tổ chức đã cộng sẵn), `?entity=ORDER\|PARTNER`. CHỈ ĐỌC — route tenant không ghi được vào `field_definitions`/`field_config_overrides`, xem mục 21b |
+| GET | `/field-config/catalogs` | `R1` | ĐP-4a.1 — danh mục (§2.15) cho form nhập liệu tenant (T01…), `?keys=priority,serviceLevel,...` (bỏ trống trả hết). CHỈ giá trị đang `is_active`. Khác `/platform/catalogs` (đòi `N12`): route này chỉ đòi đăng nhập tổ chức, không có thao tác ghi |
 
 ## 16. Số liệu và hồ sơ phong cách — M11
 
@@ -593,7 +600,7 @@ Năng lực phân tích ảnh giữ endpoint riêng đã có (`GET · PUT /visio
 | GET · POST | `/video/jobs` | `I1` | Tạo và liệt kê job video |
 | GET | `/video/jobs/:id` | `I1` | Kèm `final_video_view_url` — URL ký có hạn để phát video đã render (24/09/2026); `final_video_url` thô không mở được vì thiếu chữ ký |
 | PATCH | `/video/jobs/:id/storyboard` | `I1` | Biên soạn phân cảnh, 2–15 cảnh |
-| POST | `/video/jobs/:id/render` | `I1` | Thân tuỳ chọn (24/09/2026) 24/09/2026 — `{ scene_images?: [{ scene_index, asset_id }] }` lấp cảnh còn trống ảnh (chỉ asset của đúng tổ chức); không gửi thì máy chủ tự lấp bằng ảnh Khu vực D mới nhất cùng số cảnh / Master của sản phẩm. Vẫn trống → 422 |
+| POST | `/video/jobs/:id/render` | `I1` | Thân tuỳ chọn (24/09/2026) 24/09/2026 — `{ scene_images?: [{ scene_index, asset_id }] }` lấp cảnh còn trống ảnh (chỉ asset của đúng tổ chức); không gửi thì máy chủ tự lấp bằng ảnh Khu vực D mới nhất cùng số cảnh / Master của sản phẩm. Vẫn trống → 422. Thêm 25/09/2026 (PO: nhà cung cấp trước): `video_provider?: veo\|kling\|runway\|luma\|local_cinematic` — bên chọn cho lượt đứng đầu, sau đó thứ tự tiệm (`creative_providers.video`) rồi mặc định; payload job mang `provider_order`; thu `video.render` + giá clip/cảnh của bên đứng đầu; worker sinh clip từng cảnh qua nhà cung cấp, ghép phụ đề/âm thanh ở FloraOS; mọi bên lỗi → Ken Burns cục bộ + ghi `provider_fallback_reason`, đọc job thì hoàn phần clip. `local_cinematic` = chỉ ghép cục bộ, không thứ tự nhà cung cấp |
 | POST | `/video/jobs/:id/approve-script` | `P3` | Cổng 1 — duyệt kịch bản (kiểm ở use-case `approve-storyboard.ts`) |
 | POST | `/video/jobs/:id/approve-video` | `P4` | Cổng 2 — duyệt video thành phẩm, trần cứng (kiểm ở use-case `approve-video-output.ts`) |
 
@@ -654,6 +661,23 @@ P25a chỉ đọc (D-N5 áp dụng cho toàn bộ P25a, không riêng `/health`)
 | GET | `/platform/health` | `N5` | Đếm job theo trạng thái + danh sách job treo (chỉ đọc — không đánh dấu FAILED, xem `scripts/scan-stuck-jobs.ts`) |
 | GET | `/platform/audit-logs` | `N6` | Nhật ký xuyên tổ chức — hợp `audit_logs` mọi tổ chức và `platform_audit_logs` |
 
+## 21b. Nền quản trị trường (ĐP-3, 26/09/2026)
+
+Chín route dưới đây cũng là console vận hành nền tảng (`PlatformContext`, mã `N12`), theo đúng khuôn mục 21 — **có thao tác ghi** (trừ hai route đọc thêm ở cuối bảng, phục vụ Console UI 3.15), khác P25a (chỉ đọc). Đây là tuyến ghi ĐẦU TIÊN của Console Vận hành, dựng theo kế hoạch
+`docs/kien-truc/KE_HOACH_DIEU_PHOI_TRUONG_DU_LIEU.md` mục 6. Mọi thao tác ghi ghi vào `platform_audit_logs` (`recordPlatformAuditLog`). Xem Đặc tả trường §16.2–§16.3 cho nguyên lý "lớp mã / lớp cấu hình" và mức sàn không cấu hình được.
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/platform/fields` | `N12` | Liệt kê trường lõi + trường tự tạo, `?entity=ORDER\|PARTNER` |
+| PATCH | `/platform/fields` | `N12` | Sửa cấu hình platform-wide của MỘT trường đã xây (nhãn, mô tả, mức yêu cầu, hiển thị, danh mục gắn theo). Mức sàn #2 chặn hạ mức yêu cầu của trường lõi xuống dưới lớp mã → 400 |
+| POST | `/platform/fields` | `N12` | Tạo trường TỰ TẠO hoàn toàn mới (D13, Đặc tả trường §16.3). Khoá `cf_…` do máy sinh từ nhãn, không nhận từ client |
+| POST | `/platform/fields/:key/deactivate` | `N12` | Chỉ TẮT — không xoá cứng. Trường lõi `REQUIRED` không tắt được → 400 |
+| GET | `/platform/catalogs` | `N12` | Mọi danh mục (§2.15) kèm giá trị |
+| POST | `/platform/catalogs/:key/values` | `N12` | Thêm giá trị mới. Danh mục CÓ HÀNH VI bắt buộc `behavior` là mã có thật trong `behaviors.ts`; danh mục ĐÓNG từ chối → 400 |
+| PUT | `/platform/organizations/:id/field-overrides` | `N12` | Ghi đè CHỈ áp cho một tổ chức — trường (`target: "field"`) hoặc giá trị danh mục (`target: "catalogValue"`) |
+| GET | `/platform/organizations/:id/field-preview` | `N12` | ĐP-3 3.15 — "tổ chức này sẽ thấy gì" sau khi cộng ghi đè, `?entity=ORDER\|PARTNER`. Dùng chung phép tính với `/field-config` (tenant), chỉ khác ngữ cảnh gọi. CHỈ ĐỌC |
+| GET | `/platform/behaviors` | `N12` | ĐP-3 3.15 — liệt kê mã hành vi có thật trong `field-platform/domain/behaviors.ts` cho một `behavior_kind` (`?kind=…`), để Console gợi ý khi thêm giá trị danh mục CÓ HÀNH VI. CHỈ ĐỌC, không thay luật kiểm ở `upsert-catalog-value.ts` |
+
 ## 22. Phân hệ Nghiên cứu Thị trường & Xu hướng (Market Intelligence Engine, Đợt A mở rộng)
 
 Đợt A mở rộng theo `FloraOS-Intelligence-Engine_FINAL_v2.0.md` (đặc tả đầy đủ, mục 8–19: Product Intelligence) — xem ghi chú mở rộng D-MI5 tại project claude.ai (`ke-hoach-market-intelligence-dot-a-19-09-2026.md`).
@@ -691,8 +715,8 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | POST | `/creative-production/scene-revisions` | `I1` | 24/09/2026 — Chặng 07 "Sửa cảnh": AI sửa MỘT cảnh của kịch bản bối cảnh theo `instruction` (feature `creative.scene_revise`, 1 credit, `AIC-18`, `Idempotency-Key` bắt buộc); có `scene_plan_id` thì đọc cảnh từ kho và ghi kịch bản đã sửa. Sinh lại ảnh là job `POST /media/variants` riêng |
 | POST | `/creative-production/content-rewrites` | `I1` | 24/09/2026 — Chặng 07 "AI viết lại" MỘT bài theo `instruction` (feature `creative.content_rewrite`, 1 credit, `AIC-23`, `Idempotency-Key` bắt buộc); từ cấm ngành hoa/thương hiệu vi phạm cứng → loại lượt, hoàn credit |
 | POST | `/creative-production/video-assembly` | `I1` | 24/09/2026 (Đợt 4) — dựng video từ bộ tài sản của kịch bản sản xuất tổng. Thân `{ scene_plan_id, plan? (chỉ kịch bản cơ bản rule:…), master_asset_id, audio_job_id?, title?, dry_run?, ratio? }` — `ratio` (`9:16\|4:5\|1:1\|16:9`, bỏ trống = khung chính): mỗi khung trong phạm vi một video; khung ngoài phạm vi → `problems: ratio_out_of_scope`; kịch bản nhiều khung thì chỉ dùng ảnh đúng khung. Đáp ứng `plan` thêm `ratios[]`. Ảnh = biến thể Khu vực D đúng `scene_plan_id` + `scene_index` trên Master (ưu tiên đúng khung + revision mới nhất); âm thanh = bản phối Khu vực C chỉ định hoặc bản COMPLETED mới nhất có `payload.scenePlanId` trùng; thời lượng cảnh = thời lượng thật của C. Thiếu ảnh/âm thanh, âm thanh của kịch bản khác hoặc chỉ có nhạc → `ready: false` + `problems[]` (không tạo job). Đủ → tạo `video_jobs` `DRAFT` gắn `scene_plan_id`, `audio_job_id`, `audio_storage_key`; render dùng nguyên bản phối C. Không trừ credit (render trừ `video.render`) |
-| POST | `/audio/jobs` | `I1` | Tạo job `audio.generate`. `Idempotency-Key` BẮT BUỘC (từ 23/09/2026). Từ 24/09/2026 bốn `taskType` ra kết quả khác nhau thật: `VOICEOVER` chỉ giọng · `MUSIC_SELECT` chỉ nhạc (0 credit, không TTS) · `AUDIO_MIX` giọng + nhạc (sidechain ducking, -14 LUFS) · `VOICE_CLONE` giọng nhân bản READY (`voiceCloneId`, ElevenLabs, không lùi nhà cung cấp). `musicTrackId` = `trackId` hệ thống hoặc `org:<uuid>`. Credit trừ = bảng `audio-pricing-guard.ts` qua `enqueueJob({ costCredit })`. `providerKey` `google_cloud`/`local_fallback` → 422 |
-| GET | `/audio/jobs/:id` | `I1` | Trạng thái + URL ký có hạn của bản phối và bản chỉ-giọng; `provider_used`/`provider_fallback` (nhà cung cấp thật đã đọc), `loudness_lufs`, thời lượng thật từng cảnh, `refunded`. Job `FAILED` tự hoàn credit ở lần đọc này (24/09/2026) |
+| POST | `/audio/jobs` | `I1` | Tạo job `audio.generate`. `Idempotency-Key` BẮT BUỘC (từ 23/09/2026). Từ 24/09/2026 bốn `taskType` ra kết quả khác nhau thật: `VOICEOVER` chỉ giọng · `MUSIC_SELECT` chỉ nhạc (0 credit, không TTS) · `AUDIO_MIX` giọng + nhạc (sidechain ducking, -14 LUFS) · `VOICE_CLONE` giọng nhân bản READY (`voiceCloneId`, ElevenLabs, không lùi nhà cung cấp). `musicTrackId` = `trackId` hệ thống hoặc `org:<uuid>`. Credit trừ = bảng `audio-pricing-guard.ts` qua `enqueueJob({ costCredit })`. `providerKey` `google_cloud`/`local_fallback` → 422. 25/09/2026 (PO: nhà cung cấp trước): bỏ trống `providerKey` = thứ tự tiệm; `musicProvider?: elevenlabs_music\|library` — mặc định nhạc AI, bài thư viện là dự phòng, `library` = 0 credit phần nhạc |
+| GET | `/audio/jobs/:id` | `I1` | Trạng thái + URL ký có hạn của bản phối và bản chỉ-giọng; `provider_used`/`provider_fallback` (nhà cung cấp thật đã đọc), `loudness_lufs`, thời lượng thật từng cảnh, `refunded`. Job `FAILED` tự hoàn credit ở lần đọc này (24/09/2026). 25/09/2026: `music_provider_used`/`music_fallback`/`music_fallback_reason`; nhạc lùi thư viện hoặc giọng lùi bên rẻ hơn → hoàn chênh |
 | GET | `/audio/music-tracks` | `I1` | 24/09/2026 — thư viện nhạc: bài tiệm tải (`music_tracks`, mã `org:<uuid>`) + bài hệ thống (`music-catalog.ts`), kèm `license_type`, `license_source`, `license_verified`, `preview_url` |
 | POST | `/audio/music-tracks` | `I1` | Multipart: `file` (MP3/WAV/M4A ≤ 20MB, nhận diện bằng byte đầu), `title`, `mood`, `license_type` (`owned\|royalty_free\|licensed\|creative_commons`), `license_source`, `license_note?`, `attest=true` (bắt buộc) |
 | DELETE | `/audio/music-tracks/:id` | `I1` | Gỡ bài tiệm đã tải (đánh dấu `deleted_at`); bài tổ chức khác → 404 |
@@ -701,6 +725,7 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | POST | `/audio/voice-clones` | `I1` | Multipart: `name`, `sample` (MP3/WAV/M4A 50KB–10MB, worker đòi ≥ 20 giây), `consent=true` (lưu nguyên văn câu cam kết). Tạo job `audio.voice_clone` (5 credit, giá tạm #64) → worker gửi ElevenLabs Instant Voice Clone. `Idempotency-Key` bắt buộc |
 | GET | `/audio/voice-clones/:id` | `I1` | Trạng thái + URL ký nghe lại mẫu |
 | DELETE | `/audio/voice-clones/:id` | `I1` | Gỡ giọng trên ElevenLabs rồi đánh dấu `DELETED` |
+| GET · PUT | `/creative-production/providers` | `I1` · `U2` | 25/09/2026 (PO: nhà cung cấp trước, cục bộ chỉ là đường lùi) — danh mục nhà cung cấp theo loại `content` · `image_optimize` · `image_variant` · `video` · `voice` · `music` (`provider-catalog.ts`), thứ tự ưu tiên của tiệm, bên nào đã có khoá (`configured`), đường lùi cục bộ. PUT thân `{ kind, order[] }` ghi `organizations.settings.creative_providers[kind]` + `audit_logs` |
 | POST | `/content-engine/generations` | `I1` | 25/09/2026 (P27) — chuỗi agent Strategist→Writer→Critic→Rewriter viết bài đa kênh, chạy tại chỗ (feature `content.generate`). `Idempotency-Key` BẮT BUỘC; trùng khoá trả bản ghi cũ, không trừ credit lần hai (lượt đầu còn chạy → 202 + `job_id`). Thân: `asset_id?`, `product_id?`, `analysis_run_id?`, `topic_id?`, `scene_plan_id?`, `channels`. Đáp ứng `{ job_id, generation_id, status, posts, overall_score, needs_review, deduped, usage }`. Ghi `content_generations` `DRAFT` |
 | GET | `/content-engine/generations` | `I1` | Query `asset_id?`, `topic_id?`, `scene_plan_id?`, `mode?` — bản mới nhất khớp bộ lọc, KHÔNG tạo job, không trừ credit; chưa có thì `generation: null` |
 | GET | `/content-engine/generations/:id` | `I1` | Đọc một lượt sinh (brief, strategy, posts, điểm rubric, phiên bản prompt); tổ chức khác → 404 |

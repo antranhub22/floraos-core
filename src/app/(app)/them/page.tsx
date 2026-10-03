@@ -1,19 +1,72 @@
 "use client"
 
-// "Thêm" — trước đây là màn "Sắp có". Nay là nơi tạo sản phẩm thủ công
-// (POST /products, `L2`, đặc tả 06 mục 6) và lối tắt sang luồng tải ảnh
-// (M01) — hai cách duy nhất hiện có để đưa một sản phẩm mới vào hệ thống.
-
-import { useState } from "react"
+import { useState, useMemo, type ComponentType } from "react"
 import { useRouter } from "next/navigation"
-import { Camera, ChevronRight, TrendingUp } from "lucide-react"
+import Link from "next/link"
+import {
+  Camera,
+  ChevronRight,
+  TrendingUp,
+  Tag,
+  Users,
+  ShoppingBag,
+  Bot,
+  Globe,
+  Folder,
+  WalletCards,
+  Sparkles,
+  Wand2,
+  Video,
+  FileText,
+  Share2,
+  LayoutTemplate,
+  Radio,
+  Clock,
+  CheckCircle2,
+  BarChart3,
+  ShieldCheck,
+  Settings2,
+  BookOpen,
+  Cpu,
+} from "lucide-react"
 import { useSession } from "@/lib/session"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import {
+  buildNav,
+  mobileSecondSlot,
+  type NavEntry,
+} from "@/components/layout/nav-model"
+
+const ICONS: Record<string, ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
+  Users,
+  ShoppingBag,
+  Bot,
+  Globe,
+  Tag,
+  Camera,
+  Folder,
+  WalletCards,
+  TrendingUp,
+  Sparkles,
+  Wand2,
+  Video,
+  FileText,
+  Share2,
+  LayoutTemplate,
+  Radio,
+  Clock,
+  CheckCircle2,
+  BarChart3,
+  ShieldCheck,
+  Settings2,
+  BookOpen,
+  Cpu,
+}
 
 export default function ThemPage() {
   const router = useRouter()
-  const { can } = useSession()
+  const { can, roleUx } = useSession()
   const coTheThemSanPham = can("L2")
 
   const [code, setCode] = useState("")
@@ -21,6 +74,32 @@ export default function ThemPage() {
   const [category, setCategory] = useState("")
   const [loi, setLoi] = useState<string | null>(null)
   const [dangGui, setDangGui] = useState(false)
+
+  const navView = useMemo(() => buildNav(can, roleUx), [can, roleUx])
+  const slot2 = useMemo(() => mobileSecondSlot(can, roleUx), [can, roleUx])
+  const canApprove = can("H3") || can("I2")
+
+  // Các mục đã có trên thanh dưới bottom nav
+  const bottomBarHrefs = useMemo(() => {
+    return new Set([
+      "/",
+      "/tai-anh",
+      "/them",
+      slot2.href,
+      canApprove ? "/duyet" : "/job",
+    ])
+  }, [slot2.href, canApprove])
+
+  // Lọc các nhóm để hiển thị dưới trang Thêm (bỏ viec-chinh và các mục đã có trên thanh dưới)
+  const additionalGroups = useMemo(() => {
+    return navView.groups
+      .filter((g) => g.key !== "viec-chinh")
+      .map((g) => ({
+        ...g,
+        entries: g.entries.filter((e) => !bottomBarHrefs.has(e.href)),
+      }))
+      .filter((g) => g.entries.length > 0)
+  }, [navView, bottomBarHrefs])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -37,7 +116,7 @@ export default function ThemPage() {
         setLoi(data?.error?.message ?? `Tạo sản phẩm thất bại (${res.status})`)
         return
       }
-      router.push("/san-pham")
+      router.push("/san-pham" as never)
     } catch {
       setLoi("Không kết nối được máy chủ")
     } finally {
@@ -45,82 +124,121 @@ export default function ThemPage() {
     }
   }
 
+  function renderGroupEntry(item: NavEntry) {
+    const Icon = ICONS[item.iconKey] || Tag
+    const isComingSoon = item.status === "COMING_SOON"
+
+    if (isComingSoon) {
+      return (
+        <div
+          key={item.href}
+          aria-disabled="true"
+          className="flex min-h-[44px] items-center justify-between rounded-xl border border-border bg-surface px-3.5 py-2.5 text-text-muted opacity-60"
+        >
+          <div className="flex items-center gap-3">
+            <Icon size={18} strokeWidth={1.8} className="text-text-muted" />
+            <span className="text-sm font-medium">{item.label}</span>
+          </div>
+          <span className="rounded-full bg-surface-alt px-2 py-0.5 text-xs font-extrabold uppercase tracking-wide">
+            Sắp có
+          </span>
+        </div>
+      )
+    }
+
+    return (
+      <button
+        key={item.href}
+        type="button"
+        onClick={() => router.push(item.href as never)}
+        className="flex min-h-[44px] w-full items-center justify-between rounded-xl border border-border bg-surface px-3.5 py-2.5 text-left transition-colors hover:bg-surface-alt active:bg-surface-alt/80"
+      >
+        <div className="flex items-center gap-3">
+          <Icon size={18} strokeWidth={1.8} className="text-primary" />
+          <span className="text-sm font-medium text-text">{item.label}</span>
+        </div>
+        <ChevronRight size={18} strokeWidth={2} className="text-text-muted" />
+      </button>
+    )
+  }
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex flex-shrink-0 items-center border-b border-border bg-surface px-[18px] py-4">
-        <div className="text-[17px] font-extrabold text-primary">Thêm</div>
+      <div className="flex flex-shrink-0 items-center border-b border-border bg-surface px-4 py-4">
+        <div className="text-lg font-extrabold text-primary">Thêm & Điều hướng</div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4">
-        <Card
-          className="flex cursor-pointer items-center gap-3 p-3.5 hover:shadow-md"
-          onClick={() => router.push("/tai-anh")}
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-20">
+        {/* Lối tắt nhanh */}
+        <Link
+          href="/tai-anh"
+          className="flex min-h-11 items-center gap-3 rounded-2xl border border-border bg-surface p-3.5 shadow-xs transition-colors hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-primary"
         >
           <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-surface-alt">
             <Camera size={20} strokeWidth={1.8} className="text-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[13.5px] font-semibold">Tải ảnh, để AI nhận diện</div>
-            <div className="text-xs text-text-muted">Phân tích ảnh sản phẩm (M01)</div>
+            <div className="text-body-sm font-semibold text-text">Tải ảnh, để AI nhận diện</div>
+            <div className="text-caption text-text-muted">Phân tích ảnh sản phẩm và bóc tách dữ liệu</div>
           </div>
           <ChevronRight size={18} strokeWidth={2} className="text-text-muted" />
-        </Card>
+        </Link>
 
-        <Card
-          className="flex cursor-pointer items-center gap-3 p-3.5 hover:shadow-md"
-          onClick={() => router.push("/market-intelligence")}
+        <Link
+          href="/market-intelligence"
+          className="flex min-h-11 items-center gap-3 rounded-2xl border border-border bg-surface p-3.5 shadow-xs transition-colors hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-primary"
         >
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-surface-alt text-primary">
             <TrendingUp size={20} strokeWidth={1.8} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-[13.5px] font-semibold text-text">
+            <div className="flex items-center gap-1.5 text-body-sm font-semibold text-text">
               Nghiên cứu Thị trường & Xu hướng
-              <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-extrabold text-rose-700">Mới</span>
             </div>
-            <div className="text-xs text-text-muted">Google Trends, SerpApi, cơ hội viral</div>
+            <div className="text-caption text-text-muted">Khám phá cơ hội và xu hướng bán hàng</div>
           </div>
           <ChevronRight size={18} strokeWidth={2} className="text-text-muted" />
-        </Card>
+        </Link>
 
+        {/* Nhập tay sản phẩm mới */}
         {coTheThemSanPham ? (
-          <Card className="flex flex-col gap-3.5 p-[18px]">
-            <div className="text-[14.5px] font-bold">Hoặc nhập tay sản phẩm mới</div>
+          <Card className="flex flex-col gap-3.5 p-4">
+            <div className="text-body-sm font-bold text-text">Hoặc nhập tay sản phẩm mới</div>
 
             {loi && (
-              <div className="rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700">
+              <div className="rounded-xl border border-danger/30 bg-danger-bg px-3.5 py-2.5 text-body-sm font-medium text-danger">
                 {loi}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <div>
-                <div className="mb-1.5 text-[13px] font-semibold">Mã sản phẩm</div>
+                <div className="mb-1.5 text-sm font-semibold">Mã sản phẩm</div>
                 <input
                   required
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="VD: BHC-001"
-                  className="h-11 w-full rounded-xl border-[1.5px] border-border bg-surface px-3.5 text-sm outline-none focus:border-primary"
+                  className="h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-primary"
                 />
               </div>
               <div>
-                <div className="mb-1.5 text-[13px] font-semibold">Tên sản phẩm</div>
+                <div className="mb-1.5 text-sm font-semibold">Tên sản phẩm</div>
                 <input
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="VD: Bó hồng đỏ 20 cành"
-                  className="h-11 w-full rounded-xl border-[1.5px] border-border bg-surface px-3.5 text-sm outline-none focus:border-primary"
+                  className="h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-primary"
                 />
               </div>
               <div>
-                <div className="mb-1.5 text-[13px] font-semibold">Danh mục (tuỳ chọn)</div>
+                <div className="mb-1.5 text-sm font-semibold">Danh mục (tuỳ chọn)</div>
                 <input
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   placeholder="VD: Bó hoa"
-                  className="h-11 w-full rounded-xl border-[1.5px] border-border bg-surface px-3.5 text-sm outline-none focus:border-primary"
+                  className="h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm outline-none focus:border-primary"
                 />
               </div>
               <Button type="submit" disabled={dangGui}>
@@ -129,10 +247,25 @@ export default function ThemPage() {
             </form>
           </Card>
         ) : (
-          <Card className="p-[18px] text-[13px] text-text-muted">
+          <Card className="p-4 text-sm text-text-muted">
             Tài khoản này chưa có quyền tạo sản phẩm thủ công (cần năng lực L2).
           </Card>
         )}
+
+        {/* Danh sách các chức năng còn lại theo chuỗi giá trị */}
+        <div className="mt-2 space-y-4">
+          <div className="text-sm font-bold text-text">Tất cả chức năng hệ thống</div>
+          {additionalGroups.map((group) => (
+            <div key={group.key} className="space-y-1.5">
+              <div className="text-xs font-bold uppercase tracking-wider text-text-muted">
+                {group.label}
+              </div>
+              <div className="space-y-1">
+                {group.entries.map(renderGroupEntry)}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import { hardCapOf } from "./capability-catalog"
 
-export type CapabilityScope = "ORGANIZATION" | "BRANCH"
+export type CapabilityScope = "ORGANIZATION" | "BRANCH" | "STORE" | "FLOWER_NETWORK"
 
 export interface CapabilityGrant {
   readonly code: string

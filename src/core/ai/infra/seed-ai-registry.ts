@@ -64,7 +64,7 @@ export async function seedVisionModels(): Promise<number> {
       display_name: "Đầy đủ",
       provider: "openai",
       mode: "API" as const,
-      capabilities: ["AIC-01", "AIC-02", "AIC-03", "AIC-04", "AIC-10", "AIC-18", "AIC-23", "AIC-37"],
+      capabilities: ["AIC-01", "AIC-02", "AIC-03", "AIC-04", "AIC-10", "AIC-18", "AIC-23", "AIC-24", "AIC-37"],
       license: "Điều khoản thương mại của nhà cung cấp",
       commercial_use: true,
       territory: "Toàn cầu theo điều khoản nhà cung cấp",
@@ -80,7 +80,7 @@ export async function seedVisionModels(): Promise<number> {
       display_name: "Gọn",
       provider: "openai",
       mode: "API" as const,
-      capabilities: ["AIC-01", "AIC-02", "AIC-04", "AIC-18", "AIC-23", "AIC-37"],
+      capabilities: ["AIC-01", "AIC-02", "AIC-04", "AIC-18", "AIC-23", "AIC-24", "AIC-37"],
       license: "Điều khoản thương mại của nhà cung cấp",
       commercial_use: true,
       territory: "Toàn cầu theo điều khoản nhà cung cấp",
@@ -90,6 +90,82 @@ export async function seedVisionModels(): Promise<number> {
       quality_class: "trung_binh",
       leaves_infra: true,
       version: "1.0.0",
+    },
+    {
+      key: "claude_opus",
+      display_name: "Claude Opus 5",
+      provider: "anthropic",
+      mode: "API" as const,
+      capabilities: ["AIC-01", "AIC-04", "AIC-18", "AIC-23", "AIC-24", "AIC-37"],
+      license: "Anthropic Commercial Terms of Service",
+      commercial_use: true,
+      territory: "Toàn cầu theo điều khoản nhà cung cấp",
+      allowed_use: "Viết nội dung bán hàng, kịch bản, chấm bài, đọc ảnh sản phẩm của tổ chức",
+      cost_class: "cao",
+      latency_class: "trung_binh",
+      quality_class: "cao",
+      leaves_infra: true,
+      version: "1.0.0",
+      // Chưa đo trên bộ đánh giá nội dung — chỉ chạy khi nằm trong thứ tự ưu
+      // tiên nhà cung cấp của tổ chức (`routing.ts#preferredModelKeys`).
+      measure_state: "THU_NGHIEM" as const,
+    },
+    {
+      key: "claude_sonnet",
+      display_name: "Claude Sonnet 5",
+      provider: "anthropic",
+      mode: "API" as const,
+      capabilities: ["AIC-01", "AIC-04", "AIC-18", "AIC-23", "AIC-24", "AIC-37"],
+      license: "Anthropic Commercial Terms of Service",
+      commercial_use: true,
+      territory: "Toàn cầu theo điều khoản nhà cung cấp",
+      allowed_use: "Viết nội dung bán hàng, kịch bản, chấm bài, đọc ảnh sản phẩm của tổ chức",
+      cost_class: "trung_binh",
+      latency_class: "thap",
+      quality_class: "trung_binh",
+      leaves_infra: true,
+      version: "1.0.0",
+      // Chưa đo trên bộ đánh giá nội dung — chỉ chạy khi nằm trong thứ tự ưu
+      // tiên nhà cung cấp của tổ chức (`routing.ts#preferredModelKeys`).
+      measure_state: "THU_NGHIEM" as const,
+    },
+    {
+      key: "gemini_pro",
+      display_name: "Gemini 2.5 Pro",
+      provider: "google",
+      mode: "API" as const,
+      capabilities: ["AIC-01", "AIC-04", "AIC-18", "AIC-23", "AIC-24", "AIC-37"],
+      license: "Gemini API Additional Terms of Service (bản trả phí)",
+      commercial_use: true,
+      territory: "Toàn cầu theo điều khoản nhà cung cấp",
+      allowed_use: "Viết nội dung bán hàng, kịch bản, chấm bài, đọc ảnh sản phẩm của tổ chức",
+      cost_class: "trung_binh",
+      latency_class: "trung_binh",
+      quality_class: "cao",
+      leaves_infra: true,
+      version: "1.0.0",
+      // Chưa đo trên bộ đánh giá nội dung — chỉ chạy khi nằm trong thứ tự ưu
+      // tiên nhà cung cấp của tổ chức (`routing.ts#preferredModelKeys`).
+      measure_state: "THU_NGHIEM" as const,
+    },
+    {
+      key: "gemini_flash",
+      display_name: "Gemini 2.5 Flash",
+      provider: "google",
+      mode: "API" as const,
+      capabilities: ["AIC-01", "AIC-04", "AIC-18", "AIC-23", "AIC-24", "AIC-37"],
+      license: "Gemini API Additional Terms of Service (bản trả phí)",
+      commercial_use: true,
+      territory: "Toàn cầu theo điều khoản nhà cung cấp",
+      allowed_use: "Viết nội dung bán hàng, kịch bản, chấm bài, đọc ảnh sản phẩm của tổ chức",
+      cost_class: "thap",
+      latency_class: "thap",
+      quality_class: "trung_binh",
+      leaves_infra: true,
+      version: "1.0.0",
+      // Chưa đo trên bộ đánh giá nội dung — chỉ chạy khi nằm trong thứ tự ưu
+      // tiên nhà cung cấp của tổ chức (`routing.ts#preferredModelKeys`).
+      measure_state: "THU_NGHIEM" as const,
     },
     {
       key: "local_cv",
@@ -112,7 +188,7 @@ export async function seedVisionModels(): Promise<number> {
   for (const model of models) {
     await prisma.ai_models.upsert({
       where: { key: model.key },
-      create: { ...model, measure_state: "SAN_XUAT", enabled: true, registered_by: "seed" },
+      create: { ...model, measure_state: "measure_state" in model ? model.measure_state : "SAN_XUAT", enabled: true, registered_by: "seed" },
       // Không ghi đè `measure_state` lẫn `enabled`: hai cột đó là kết quả đo
       // và quyết định vận hành, không phải hằng số trong mã.
       update: {

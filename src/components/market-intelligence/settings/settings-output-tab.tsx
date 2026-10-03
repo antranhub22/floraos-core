@@ -66,11 +66,11 @@ export function SettingsOutputTab({
 }: SettingsOutputTabProps) {
   return (
     <div className="space-y-3">
-      <p className="text-stone-600">Chọn nội dung muốn hiển thị trong báo cáo:</p>
+      <p className="text-cool-600">Chọn nội dung muốn hiển thị trong báo cáo:</p>
 
       {activeFeature === "market" && (
-        <div className="space-y-2 bg-stone-50 p-3.5 rounded-xl border border-stone-200">
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+        <div className="space-y-2 bg-cool-50 p-3.5 rounded-xl border border-cool-200">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={marketOutput.executiveSummary}
@@ -78,7 +78,7 @@ export function SettingsOutputTab({
             />
             Tóm tắt điều hành (Executive Summary)
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={marketOutput.trendLifecycle}
@@ -86,7 +86,7 @@ export function SettingsOutputTab({
             />
             Nhãn vòng đời xu hướng (Rising, Peaking, Maturing)
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={marketOutput.threeScores}
@@ -94,7 +94,7 @@ export function SettingsOutputTab({
             />
             3 Trục điểm số (Độ nóng, Lan tỏa, Thương mại)
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={marketOutput.recommendedHooks}
@@ -102,7 +102,7 @@ export function SettingsOutputTab({
             />
             Gợi ý câu mở đầu giật tít (Hook)
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={marketOutput.evidenceReferences}
@@ -114,8 +114,8 @@ export function SettingsOutputTab({
       )}
 
       {activeFeature === "keyword" && (
-        <div className="space-y-2 bg-stone-50 p-3.5 rounded-xl border border-stone-200">
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+        <div className="space-y-2 bg-cool-50 p-3.5 rounded-xl border border-cool-200">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={keywordOutput.commercialAdvice}
@@ -123,7 +123,7 @@ export function SettingsOutputTab({
             />
             Lời khuyên thương mại và định vị sản phẩm
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={keywordOutput.audiencePersona}
@@ -131,7 +131,7 @@ export function SettingsOutputTab({
             />
             Tệp khách hàng mục tiêu & tâm lý mua
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={keywordOutput.hooks}
@@ -139,7 +139,7 @@ export function SettingsOutputTab({
             />
             Hook tiêu đề video / bài đăng
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={keywordOutput.recommendedFormats}
@@ -151,8 +151,8 @@ export function SettingsOutputTab({
       )}
 
       {activeFeature === "product" && (
-        <div className="space-y-2 bg-stone-50 p-3.5 rounded-xl border border-stone-200">
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+        <div className="space-y-2 bg-cool-50 p-3.5 rounded-xl border border-cool-200">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={productOutput.matrixScores}
@@ -160,7 +160,7 @@ export function SettingsOutputTab({
             />
             Ma trận đối soát Trend Fit 3 chiều
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={productOutput.threeZonesKeepImproveTest}
@@ -168,7 +168,7 @@ export function SettingsOutputTab({
             />
             Khuyến nghị cải tiến 3 vùng (GIỮ hoa / CẢI TIẾN giấy gói / THỬ NGHIỆM)
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={productOutput.exportVideoStudio}
@@ -176,7 +176,7 @@ export function SettingsOutputTab({
             />
             Tạo sẵn kịch bản xuất sang Video Studio
           </label>
-          <label className="flex items-center gap-2 text-stone-700 font-medium cursor-pointer">
+          <label className="flex items-center gap-2 text-cool-700 font-medium cursor-pointer">
             <input
               type="checkbox"
               checked={productOutput.exportMediaStudio}

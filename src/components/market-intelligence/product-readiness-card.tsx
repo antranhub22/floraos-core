@@ -16,19 +16,19 @@ export function ProductReadinessCard({
   onGoToMedia,
 }: ProductReadinessCardProps) {
   return (
-    <div className="rounded-2xl border border-stone-200 bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900 text-white p-5 shadow-sm space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-700/60 pb-3">
+    <div className="rounded-2xl border border-cool-200 bg-gradient-to-br from-cool-900 via-cool-800 to-cool-900 text-white p-5 shadow-sm space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cool-700/60 pb-3">
         <div>
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Sparkles size={16} className="text-rose-400" />
+            <Sparkles size={16} className="text-blush-400" />
             6. Đánh giá mức độ sẵn sàng tiếp thị
           </h3>
-          <p className="text-[11.5px] text-stone-300">
+          <p className="text-caption text-cool-300">
             Hệ thống đã kiểm duyệt các tiêu chí kỹ thuật và định vị để sẵn sàng chuyển giao sang các xưởng sáng tạo
           </p>
         </div>
 
-        <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold self-start sm:self-auto">
+        <div className="inline-flex items-center gap-1.5 bg-mint-500/20 text-mint-300 border border-mint-500/30 px-3 py-1 rounded-full text-xs font-bold self-start sm:self-auto">
           <CheckCircle2 size={14} />
           Đủ điều kiện xuất bản
         </div>
@@ -37,43 +37,43 @@ export function ProductReadinessCard({
       {/* Grid Tiêu chí */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-xs">
         <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center space-y-1">
-          <span className="text-[10px] text-stone-400 block">Nhận diện hoa</span>
-          <span className="font-bold text-emerald-400 flex items-center justify-center gap-1">
+          <span className="text-caption text-cool-400 block">Nhận diện hoa</span>
+          <span className="font-bold text-mint-400 flex items-center justify-center gap-1">
             <CheckCircle2 size={13} /> Hoàn tất
           </span>
         </div>
 
         <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center space-y-1">
-          <span className="text-[10px] text-stone-400 block">Khớp xu hướng</span>
-          <span className="font-bold text-emerald-400 flex items-center justify-center gap-1">
+          <span className="text-caption text-cool-400 block">Khớp xu hướng</span>
+          <span className="font-bold text-mint-400 flex items-center justify-center gap-1">
             <CheckCircle2 size={13} /> Trend Fit Cao
           </span>
         </div>
 
         <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center space-y-1">
-          <span className="text-[10px] text-stone-400 block">Khách hàng mục tiêu</span>
-          <span className="font-bold text-emerald-400 flex items-center justify-center gap-1">
+          <span className="text-caption text-cool-400 block">Khách hàng mục tiêu</span>
+          <span className="font-bold text-mint-400 flex items-center justify-center gap-1">
             <CheckCircle2 size={13} /> Đã xác lập
           </span>
         </div>
 
         <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center space-y-1">
-          <span className="text-[10px] text-stone-400 block">Định vị & Dịp tặng</span>
-          <span className="font-bold text-emerald-400 flex items-center justify-center gap-1">
+          <span className="text-caption text-cool-400 block">Định vị & Dịp tặng</span>
+          <span className="font-bold text-mint-400 flex items-center justify-center gap-1">
             <CheckCircle2 size={13} /> Đã chuẩn hóa
           </span>
         </div>
 
         <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center space-y-1">
-          <span className="text-[10px] text-stone-400 block">Chất lượng ảnh</span>
-          <span className="font-bold text-emerald-400 flex items-center justify-center gap-1">
+          <span className="text-caption text-cool-400 block">Chất lượng ảnh</span>
+          <span className="font-bold text-mint-400 flex items-center justify-center gap-1">
             <CheckCircle2 size={13} /> Sắc nét (HD)
           </span>
         </div>
 
         <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center space-y-1">
-          <span className="text-[10px] text-stone-400 block">Tiềm năng Video</span>
-          <span className="font-bold text-emerald-400 flex items-center justify-center gap-1">
+          <span className="text-caption text-cool-400 block">Tiềm năng Video</span>
+          <span className="font-bold text-mint-400 flex items-center justify-center gap-1">
             <CheckCircle2 size={13} /> Rất cao
           </span>
         </div>
@@ -81,7 +81,7 @@ export function ProductReadinessCard({
 
       {/* Action Handoffs */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-        <span className="text-xs text-stone-300 font-medium">
+        <span className="text-xs text-cool-300 font-medium">
           🚀 Chuyển giao ngay sang các công cụ sáng tạo nội dung của FloraOS:
         </span>
 
@@ -98,7 +98,7 @@ export function ProductReadinessCard({
           <button
             type="button"
             onClick={onGoToVideo}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md transition"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blush-600 hover:bg-blush-700 text-white text-xs font-bold shadow-md transition"
           >
             <Video size={14} />
             Dựng video marketing tự động

@@ -52,7 +52,7 @@ export const MEDIA_VARIANT_FEATURES = [MEDIA_VARIANT_FEATURE, MEDIA_VARIANT_CLOU
  * Thêm nhà cung cấp mới = thêm adapter ở worker + một phần tử ở đây.
  * Người gọi không chọn thì worker thử theo `VARIANT_PROVIDER_ORDER`.
  */
-export const VARIANT_CLOUD_PROVIDERS = ["fal", "stability"] as const
+export const VARIANT_CLOUD_PROVIDERS = ["fal", "stability", "imagen"] as const
 export type VariantCloudProvider = (typeof VARIANT_CLOUD_PROVIDERS)[number]
 
 /** Giới hạn độ dài mô tả cảnh gửi nhà cung cấp — cùng hằng ở worker. */

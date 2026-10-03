@@ -81,12 +81,12 @@ export function PlatformAccountCard({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[15px] font-bold text-text">{platform.name}</span>
-                <span className="text-[10px] font-semibold text-text-muted bg-surface-alt px-2 py-0.5 rounded-full border border-border">
+                <span className="text-title-sm font-bold text-text">{platform.name}</span>
+                <span className="text-caption font-semibold text-text-muted bg-surface-alt px-2 py-0.5 rounded-full border border-border">
                   {platform.tag}
                 </span>
               </div>
-              <div className="text-[12px] text-text-muted mt-0.5 leading-relaxed">
+              <div className="text-meta text-text-muted mt-0.5 leading-relaxed">
                 {platform.description}
               </div>
             </div>
@@ -95,16 +95,16 @@ export function PlatformAccountCard({
           <div>
             {account ? (
               isLoggedIn ? (
-                <Badge tone="success" className="text-[11px] gap-1 px-2.5 py-0.5">
+                <Badge tone="success" className="text-caption gap-1 px-2.5 py-0.5">
                   <CheckCircle2 size={12} /> Sẵn sàng đăng
                 </Badge>
               ) : (
-                <Badge tone="danger" className="text-[11px] gap-1 px-2.5 py-0.5">
+                <Badge tone="danger" className="text-caption gap-1 px-2.5 py-0.5">
                   <Clock size={12} /> Cần đăng nhập lại
                 </Badge>
               )
             ) : (
-              <Badge tone="neutral" className="text-[11px] px-2.5 py-0.5">
+              <Badge tone="neutral" className="text-caption px-2.5 py-0.5">
                 Chưa kết nối
               </Badge>
             )}
@@ -116,7 +116,7 @@ export function PlatformAccountCard({
           {platform.features.map((feat, idx) => (
             <span
               key={idx}
-              className="text-[10.5px] text-text-muted bg-surface-alt/60 px-2 py-0.5 rounded-md border border-border/50"
+              className="text-caption text-text-muted bg-surface-alt/60 px-2 py-0.5 rounded-md border border-border/50"
             >
               • {feat}
             </span>
@@ -140,7 +140,7 @@ export function PlatformAccountCard({
               </div>
             )}
 
-            <div className="flex items-center justify-between text-[11px] text-text-muted">
+            <div className="flex items-center justify-between text-caption text-text-muted">
               <span>Phiên đăng nhập:</span>
               <span>{formatLastLogin(account.last_login)}</span>
             </div>
@@ -206,7 +206,7 @@ export function PlatformAccountCard({
           </>
         ) : (
           <div className="w-full flex items-center justify-between">
-            <span className="text-[11.5px] text-text-muted flex items-center gap-1">
+            <span className="text-caption text-text-muted flex items-center gap-1">
               <Lock size={12} /> Mã hóa an toàn AES-256
             </span>
             <Button

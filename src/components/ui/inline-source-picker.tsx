@@ -158,6 +158,8 @@ export function InlineSourcePicker({
       {route === "route-a" && (
         <div className="pt-4 space-y-4">
           <div
+              role="button"
+              tabIndex={0}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -166,7 +168,7 @@ export function InlineSourcePicker({
             className={cn(
               "relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center",
               dragActive
-                ? "border-primary bg-red-50/50"
+                ? "border-primary bg-primary/5"
                 : "border-border hover:border-primary/50 hover:bg-surface-alt/50",
               disabled && "opacity-50 cursor-not-allowed"
             )}
@@ -194,20 +196,20 @@ export function InlineSourcePicker({
                   <CheckCircle2 size={13} />
                   <span>Đã nạp ảnh thô — Sẵn sàng chạy tiền xử lý</span>
                 </div>
-                <span className="text-[11px] text-text-muted">Nhấp hoặc kéo thả ảnh khác để thay đổi</span>
+                <span className="text-caption text-text-muted">Nhấp hoặc kéo thả ảnh khác để thay đổi</span>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-primary">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <UploadCloud size={24} />
                 </div>
                 <div className="text-xs font-bold text-text">
                   Kéo thả ảnh chụp vào đây, hoặc <span className="text-primary underline">chọn từ thiết bị</span>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-text-muted">
+                <div className="flex items-center gap-2 text-caption text-text-muted">
                   <span>Hỗ trợ JPG, PNG, WEBP</span>
                   <span>•</span>
-                  <span className="flex items-center gap-1 font-medium text-emerald-700">
+                  <span className="flex items-center gap-1 font-medium text-success">
                     <ShieldCheck size={12} />
                     Tự động kiểm tra Identity Guard
                   </span>
@@ -244,12 +246,14 @@ export function InlineSourcePicker({
                 const isSelected = selectedAssetId === asset.id
                 return (
                   <div
+              role="button"
+              tabIndex={0}
                     key={asset.id}
                     onClick={() => !disabled && onAssetSelect?.(asset)}
                     className={cn(
                       "group relative flex flex-col rounded-xl border p-2 cursor-pointer transition-all",
                       isSelected
-                        ? "border-primary bg-red-50/40 ring-1 ring-primary"
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
                         : "border-border hover:border-primary/50 hover:bg-surface-alt"
                     )}
                   >
@@ -262,11 +266,11 @@ export function InlineSourcePicker({
                         </div>
                       )}
                     </div>
-                    <div className="text-[11.5px] font-bold text-text truncate">{asset.title}</div>
-                    <div className="flex items-center justify-between text-[10px] text-text-muted mt-0.5">
+                    <div className="text-caption font-bold text-text truncate">{asset.title}</div>
+                    <div className="flex items-center justify-between text-caption text-text-muted mt-0.5">
                       <span className="truncate">{asset.category || "Master"}</span>
                       {asset.hasIdentityApproval && (
-                        <Badge tone="success" className="text-[9px] px-1.5 py-0 h-4 border border-emerald-300">
+                        <Badge tone="success" className="text-caption px-1.5 py-0 h-4 border border-success/30">
                           Đã duyệt
                         </Badge>
                       )}

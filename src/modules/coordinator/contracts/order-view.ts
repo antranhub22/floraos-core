@@ -7,7 +7,44 @@
 import { z } from "zod"
 
 import type { CoordinatorOrderView } from "../use-cases/present-coordinator-order"
-import { CoordinationRiskLevelEnum, CoordinatorStageEnum } from "./common"
+import {
+  AtomicAccessoryBomItemSchema,
+  AtomicFlowerBomItemSchema,
+  AtomicFoliageBomItemSchema,
+  AtomicWrappingLayerSchema,
+  CoordinationRiskLevelEnum,
+  CoordinatorStageEnum,
+} from "./common"
+
+/**
+ * Snapshot Master Index bất biến (MI-5, Hợp đồng MI §5) — ĐP-2.3/2.11
+ * (26/09/2026). Khớp với `CoordinatorProductSnapshot`
+ * (`modules/products/domain/product-master-index.ts`). KHÔNG có
+ * `costPriceVnd` — giá vốn không được rời Master Index vào một đơn mà đối
+ * tác/khách có thể nhìn thấy.
+ */
+const CoordinatorProductSnapshotSchema = z.object({
+  productId: z.string(),
+  code: z.string(),
+  name: z.string(),
+  category: z.string(),
+  style: z.string(),
+  colorPalette: z.object({ primaryColor: z.string(), secondaryColor: z.string().optional() }),
+  referenceImageUrls: z.array(z.string()),
+  bom: z.object({
+    flowers: z.array(AtomicFlowerBomItemSchema),
+    foliage: z.array(AtomicFoliageBomItemSchema),
+    wrapping: z.array(AtomicWrappingLayerSchema),
+    accessories: z.array(AtomicAccessoryBomItemSchema),
+  }),
+  tierCount: z.number().optional(),
+  substitutionPolicy: z.object({ allowed: z.boolean(), note: z.string().optional() }).optional(),
+  dimensions: z.object({ heightCm: z.number(), widthCm: z.number() }).optional(),
+  warningTags: z.array(z.string()),
+  quotePriceVnd: z.number().nullable(),
+  masterUpdatedAt: z.string(),
+  capturedAt: z.string(),
+})
 
 const isoOrNull = z.string().nullable()
 
@@ -18,9 +55,11 @@ export const CoordinatorOrderViewSchema = z.object({
   stageLabel: z.string(),
   riskLevel: CoordinationRiskLevelEnum,
   riskReason: z.string().nullable(),
+  timeRemaining: z.number().nullable(),
   customerId: z.string().nullable(),
   customerName: z.string(),
   customerTier: z.string(),
+  customerPhone: z.string(),
   recipientName: z.string(),
   recipientPhone: z.string(),
   deliveryAddress: z.unknown(),
@@ -36,8 +75,76 @@ export const CoordinatorOrderViewSchema = z.object({
   flowers: z.array(
     z.object({ flowerName: z.string(), quantity: z.number(), unit: z.string(), color: z.string(), role: z.string() })
   ),
+  productId: z.string().nullable(),
+  product: CoordinatorProductSnapshotSchema.nullable(),
+  foliage: z.array(AtomicFoliageBomItemSchema),
+  wrapping: z.array(AtomicWrappingLayerSchema),
+  accessories: z.array(AtomicAccessoryBomItemSchema),
+  substitutionPolicy: z.object({ allowed: z.boolean(), note: z.string().optional() }).nullable(),
+  referenceImageUrls: z.array(z.string()),
   cardMessage: z.string(),
+  cardRequired: z.boolean(),
   internalNote: z.string().nullable(),
+  partnerInstruction: z.string().nullable(),
+  // ── ĐP-4a.1 (26/09/2026) — T01: đủ trường P0/P1 (Đặc tả trường §2.1/§3.1) ──
+  source: z.string().nullable(),
+  sourceReference: z.string().nullable(),
+  channel: z.string().nullable(),
+  orderType: z.string().nullable(),
+  priority: z.string().nullable(),
+  serviceLevel: z.string().nullable(),
+  deliveryType: z.string().nullable(),
+  deliveryLocationType: z.string().nullable(),
+  conditionalFieldGroups: z.array(
+    z.enum([
+      "SYMPATHY",
+      "GRAND_OPENING",
+      "WEDDING_EVENT",
+      "CORPORATE",
+      "SUBSCRIPTION",
+      "OFFICE_BUILDING",
+      "HOSPITAL",
+      "HOTEL",
+      "VENUE",
+    ])
+  ),
+  receivedAt: isoOrNull,
+  deliveryWindowStart: isoOrNull,
+  deliveryWindowEnd: isoOrNull,
+  salesOwnerId: z.string().nullable(),
+  handoffAt: isoOrNull,
+  handoffConfirmed: z.boolean(),
+  specialRequirements: z.string().nullable(),
+  customerCommitments: z.array(
+    z.object({
+      promiseType: z.string(),
+      promiseValue: z.string(),
+      promisedBy: z.string(),
+      promisedAt: z.string(),
+    })
+  ),
+  missingFields: z.array(z.object({ key: z.string(), label: z.string() })),
+  missingFieldCount: z.number().int(),
+  conflictFields: z.array(z.object({ key: z.string(), label: z.string(), values: z.array(z.string()) })),
+  plannedAt: isoOrNull,
+  productionDeadlineAt: isoOrNull,
+  pickupTargetAt: isoOrNull,
+  productionBufferMinutes: z.number().int().nullable(),
+  pickupBufferMinutes: z.number().int().nullable(),
+  plannedProductionMinutes: z.number().int().nullable(),
+  plannedQcBufferMinutes: z.number().int().nullable(),
+  plannedPickupMinutes: z.number().int().nullable(),
+  plannedDeliveryMinutes: z.number().int().nullable(),
+  partnerSelectionDeadlineAt: isoOrNull,
+  technicalInstruction: z.string().nullable(),
+  nextActionOwnerId: z.string().nullable(),
+  nextActionAt: isoOrNull,
+  latestProductionStart: isoOrNull,
+  latestQCStart: isoOrNull,
+  latestPickupStart: isoOrNull,
+  latestDispatchStart: isoOrNull,
+  collectionMethod: z.string().nullable(),
+  collectionDueAt: isoOrNull,
   qc: z
     .object({ status: z.string(), notes: z.string().nullable(), aiScore: z.number().nullable(), inspectedAt: z.string() })
     .nullable(),
@@ -65,7 +172,11 @@ export const CoordinatorOrderViewSchema = z.object({
     })
   ),
   hasException: z.boolean(),
+  openExceptionCount: z.number().int(),
   unitPriceVnd: z.number(),
+  paidVnd: z.number(),
+  balanceVnd: z.number(),
+  paymentStatus: z.enum(["UNPAID", "PARTIALLY_PAID", "PAID", "REFUNDED"]),
   partnerPayoutVnd: z.number().nullable(),
   partnerRating: z.number().int().nullable(),
   closureNotes: z.string().nullable(),
@@ -73,6 +184,7 @@ export const CoordinatorOrderViewSchema = z.object({
   cancelledReason: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  customFields: z.record(z.string(), z.unknown()),
 })
 
 export const CoordinatorOrderResponseSchema = z.object({ order: CoordinatorOrderViewSchema })
@@ -89,9 +201,11 @@ export function exampleOrderView(over: Partial<CoordinatorOrderView> = {}): Coor
     stageLabel: "Tiếp nhận đơn",
     riskLevel: "NORMAL",
     riskReason: null,
+    timeRemaining: null,
     customerId: null,
     customerName: "Nguyễn Văn An",
     customerTier: "VIP",
+    customerPhone: "0987654321",
     recipientName: "Trần Thị Bình",
     recipientPhone: "0901234567",
     deliveryAddress: {
@@ -111,8 +225,56 @@ export function exampleOrderView(over: Partial<CoordinatorOrderView> = {}): Coor
     finishedImageUrls: [],
     productionProgress: 0,
     flowers: [{ flowerName: "Hồng Ohara", quantity: 12, unit: "cành", color: "hồng phấn", role: "Chủ đạo" }],
+    productId: null,
+    product: null,
+    foliage: [],
+    wrapping: [],
+    accessories: [],
+    substitutionPolicy: null,
+    referenceImageUrls: [],
     cardMessage: "Chúc mừng sinh nhật!",
+    cardRequired: true,
     internalNote: null,
+    partnerInstruction: null,
+    source: "MANUAL",
+    sourceReference: null,
+    channel: null,
+    orderType: null,
+    priority: "NORMAL",
+    serviceLevel: null,
+    deliveryType: null,
+    deliveryLocationType: null,
+    conditionalFieldGroups: [],
+    receivedAt: null,
+    deliveryWindowStart: null,
+    deliveryWindowEnd: null,
+    salesOwnerId: null,
+    handoffAt: null,
+    handoffConfirmed: false,
+    specialRequirements: null,
+    customerCommitments: [],
+    missingFields: [],
+    missingFieldCount: 0,
+    conflictFields: [],
+    plannedAt: null,
+    productionDeadlineAt: null,
+    pickupTargetAt: null,
+    productionBufferMinutes: null,
+    pickupBufferMinutes: null,
+    plannedProductionMinutes: null,
+    plannedQcBufferMinutes: null,
+    plannedPickupMinutes: null,
+    plannedDeliveryMinutes: null,
+    partnerSelectionDeadlineAt: null,
+    technicalInstruction: null,
+    nextActionOwnerId: null,
+    nextActionAt: null,
+    latestProductionStart: null,
+    latestQCStart: null,
+    latestPickupStart: null,
+    latestDispatchStart: null,
+    collectionMethod: null,
+    collectionDueAt: null,
     qc: null,
     delivery: {
       carrier: null,
@@ -126,7 +288,11 @@ export function exampleOrderView(over: Partial<CoordinatorOrderView> = {}): Coor
     },
     exceptions: [],
     hasException: false,
+    openExceptionCount: 0,
     unitPriceVnd: 850000,
+    paidVnd: 0,
+    balanceVnd: 850000,
+    paymentStatus: "UNPAID",
     partnerPayoutVnd: null,
     partnerRating: null,
     closureNotes: null,
@@ -134,6 +300,7 @@ export function exampleOrderView(over: Partial<CoordinatorOrderView> = {}): Coor
     cancelledReason: null,
     createdAt: "2026-09-25T02:00:00.000Z",
     updatedAt: "2026-09-25T02:00:00.000Z",
+    customFields: {},
     ...over,
   }
 }

@@ -161,13 +161,13 @@ export function PostStatusReportCard({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3.5">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+          <div className="text-caption font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
             <Sparkles size={12} className="text-primary" />
             Báo Cáo Trạng Thái & Hiệu Suất Bài Đăng
           </div>
-          <div className="text-[15px] font-extrabold text-text mt-0.5 flex items-center gap-2">
+          <div className="text-title-sm font-extrabold text-text mt-0.5 flex items-center gap-2">
             <span>{post.title}</span>
-            <Badge tone="neutral" className="text-[10px] font-mono px-1.5 py-0">
+            <Badge tone="neutral" className="text-caption font-mono px-1.5 py-0">
               ID #{post.id}
             </Badge>
           </div>
@@ -250,7 +250,7 @@ export function PostStatusReportCard({
             </span>
           </div>
           {isScheduled && !isPublished && (
-            <div className="text-[11.5px] font-semibold text-text-muted flex items-center gap-1.5 bg-surface-alt px-2.5 py-1 rounded-full border border-border">
+            <div className="text-caption font-semibold text-text-muted flex items-center gap-1.5 bg-surface-alt px-2.5 py-1 rounded-full border border-border">
               <Clock size={12} className="text-primary animate-pulse" />
               <span>Khung giờ hẹn: <strong>{post.scheduledTime || "Trong ngày"}</strong></span>
             </div>
@@ -304,8 +304,8 @@ export function PostStatusReportCard({
           <div className="w-6 h-6 rounded-full bg-success-bg text-success border border-success/30 flex items-center justify-center text-xs font-bold mb-1">
             ✓
           </div>
-          <div className="text-[11px] font-bold text-text">1. Soạn thảo</div>
-          <div className="text-[9.5px] text-text-muted">Hoàn tất</div>
+          <div className="text-caption font-bold text-text">1. Soạn thảo</div>
+          <div className="text-caption text-text-muted">Hoàn tất</div>
         </div>
 
         <div className="flex flex-col items-center text-center">
@@ -318,8 +318,8 @@ export function PostStatusReportCard({
           >
             {isScheduled || isPublished || isFailed ? "✓" : "2"}
           </div>
-          <div className="text-[11px] font-bold text-text">2. Lên lịch</div>
-          <div className="text-[9.5px] text-text-muted">
+          <div className="text-caption font-bold text-text">2. Lên lịch</div>
+          <div className="text-caption text-text-muted">
             {post.scheduledTime ? `${post.scheduledTime}` : "Đăng ngay"}
           </div>
         </div>
@@ -336,8 +336,8 @@ export function PostStatusReportCard({
           >
             {isScheduled || isPublished ? "✓" : isFailed ? "!" : "3"}
           </div>
-          <div className="text-[11px] font-bold text-text">3. Phê duyệt</div>
-          <div className="text-[9.5px] text-text-muted">
+          <div className="text-caption font-bold text-text">3. Phê duyệt</div>
+          <div className="text-caption text-text-muted">
             {isFailed ? "Cần kiểm tra" : "Đã thông qua"}
           </div>
         </div>
@@ -356,8 +356,8 @@ export function PostStatusReportCard({
           >
             {isPublished ? "✓" : isFailed ? "✕" : "4"}
           </div>
-          <div className="text-[11px] font-bold text-text">4. Xuất bản</div>
-          <div className="text-[9.5px] text-text-muted">
+          <div className="text-caption font-bold text-text">4. Xuất bản</div>
+          <div className="text-caption text-text-muted">
             {isPublished ? "Thành công" : isFailed ? "Gặp sự cố" : isScheduled ? "Đang chờ giờ" : "Chưa gửi"}
           </div>
         </div>
@@ -366,7 +366,7 @@ export function PostStatusReportCard({
       {/* Thông tin kỹ thuật & Kênh xuất bản */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
         <div className="p-3 rounded-xl border border-border bg-surface-alt/40 flex flex-col gap-1.5">
-          <div className="text-[11px] font-semibold text-text-muted uppercase">Thông số kỹ thuật</div>
+          <div className="text-caption font-semibold text-text-muted uppercase">Thông số kỹ thuật</div>
           <div className="flex justify-between">
             <span className="text-text-muted">Kênh xuất bản:</span>
             <span className="font-bold text-primary capitalize">{post.channelLabel || post.channel}</span>
@@ -384,7 +384,7 @@ export function PostStatusReportCard({
         </div>
 
         <div className="p-3 rounded-xl border border-border bg-surface-alt/40 flex flex-col gap-1.5">
-          <div className="text-[11px] font-semibold text-text-muted uppercase">Nhật ký xử lý (Audit Log)</div>
+          <div className="text-caption font-semibold text-text-muted uppercase">Nhật ký xử lý (Audit Log)</div>
           <div className="flex justify-between">
             <span className="text-text-muted">Trạng thái API:</span>
             <span className={isPublished ? "text-success font-semibold" : isFailed ? "text-danger font-semibold" : "text-text-muted"}>
@@ -393,14 +393,14 @@ export function PostStatusReportCard({
           </div>
           <div className="flex justify-between">
             <span className="text-text-muted">Cơ chế phát sóng:</span>
-            <span className="font-medium text-text">SocialFlow M07 Scheduler</span>
+            <span className="font-medium text-text">SocialFlow Đăng mạng xã hội Scheduler</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-text-muted">Ảnh đính kèm:</span>
             <span className="text-text font-medium flex items-center gap-1.5">
               <span>{post.media_url ? "Đã sẵn sàng" : "Chưa có"}</span>
               {post.is_mock_media && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-warning-bg text-warning border border-warning/30">
+                <span className="text-caption font-bold px-1.5 py-0.2 rounded bg-warning-bg text-warning border border-warning/30">
                   Ảnh mẫu (Mock)
                 </span>
               )}
@@ -413,49 +413,49 @@ export function PostStatusReportCard({
       {isPublished && (
         <div className="flex flex-col gap-2 border-t border-border pt-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="text-[12.5px] font-bold text-text flex items-center gap-2">
+            <div className="text-meta font-bold text-text flex items-center gap-2">
               <TrendingUp size={14} className="text-success" />
               <span>Báo cáo tương tác mạng xã hội</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning/30">
+              <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-warning-bg text-warning border border-warning/30">
                 ⚠️ DỮ LIỆU MÔ PHỎNG (MOCK DATA)
               </span>
             </div>
-            <div className="text-[11px] text-success font-bold bg-success-bg px-2 py-0.5 rounded-full border border-success/20">
+            <div className="text-caption text-success font-bold bg-success-bg px-2 py-0.5 rounded-full border border-success/20">
               Tỷ lệ tương tác: {metrics.engagementRate}% (Ước tính)
             </div>
           </div>
 
-          <div className="text-[11px] text-text-muted italic bg-surface-alt/50 px-3 py-1.5 rounded-lg border border-border/60">
+          <div className="text-caption text-text-muted italic bg-surface-alt/50 px-3 py-1.5 rounded-lg border border-border/60">
             * Lưu ý: Các chỉ số Lượt xem, Yêu thích, Bình luận dưới đây hiện đang dùng thuật toán mô phỏng (Mock Data) để kiểm thử giao diện phân tích, chưa đồng bộ trực tiếp với API thống kê thật của nền tảng.
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="p-3 rounded-xl bg-surface-alt/70 border border-border text-center">
-              <div className="text-text-muted flex items-center justify-center gap-1 text-[11px] mb-0.5">
+              <div className="text-text-muted flex items-center justify-center gap-1 text-caption mb-0.5">
                 <Eye size={12} /> Lượt xem (Reach)
               </div>
-              <div className="text-[16px] font-black text-text">{metrics.reach.toLocaleString()}</div>
+              <div className="text-title font-black text-text">{metrics.reach.toLocaleString()}</div>
             </div>
 
             <div className="p-3 rounded-xl bg-surface-alt/70 border border-border text-center">
-              <div className="text-primary flex items-center justify-center gap-1 text-[11px] mb-0.5">
+              <div className="text-primary flex items-center justify-center gap-1 text-caption mb-0.5">
                 <Heart size={12} /> Yêu thích
               </div>
-              <div className="text-[16px] font-black text-primary">{metrics.likes.toLocaleString()}</div>
+              <div className="text-title font-black text-primary">{metrics.likes.toLocaleString()}</div>
             </div>
 
             <div className="p-3 rounded-xl bg-surface-alt/70 border border-border text-center">
-              <div className="text-secondary-text flex items-center justify-center gap-1 text-[11px] mb-0.5">
+              <div className="text-secondary-text flex items-center justify-center gap-1 text-caption mb-0.5">
                 <MessageCircle size={12} /> Bình luận
               </div>
-              <div className="text-[16px] font-black text-secondary-text">{metrics.comments.toLocaleString()}</div>
+              <div className="text-title font-black text-secondary-text">{metrics.comments.toLocaleString()}</div>
             </div>
 
             <div className="p-3 rounded-xl bg-surface-alt/70 border border-border text-center">
-              <div className="text-secondary-text flex items-center justify-center gap-1 text-[11px] mb-0.5">
+              <div className="text-secondary-text flex items-center justify-center gap-1 text-caption mb-0.5">
                 <Share2 size={12} /> Chia sẻ
               </div>
-              <div className="text-[16px] font-black text-secondary-text">{metrics.shares.toLocaleString()}</div>
+              <div className="text-title font-black text-secondary-text">{metrics.shares.toLocaleString()}</div>
             </div>
           </div>
         </div>
@@ -468,7 +468,7 @@ export function PostStatusReportCard({
             <AlertCircle size={16} className="flex-shrink-0" />
             <div>
               <div className="font-bold">Gặp sự cố khi xuất bản bài viết</div>
-              <div className="text-[11px] opacity-90">
+              <div className="text-caption opacity-90">
                 {post.errorMessage || "Phiên đăng nhập hết hạn hoặc chưa kết nối tài khoản trên SocialFlow."}
               </div>
             </div>

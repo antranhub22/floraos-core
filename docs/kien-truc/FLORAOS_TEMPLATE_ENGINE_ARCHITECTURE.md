@@ -177,7 +177,7 @@ src/
 ├── components/
 │   └── templates/                         # Thư viện UI Template chuẩn hóa THEO 10 CHỨC NĂNG CỐT LÕI
 │       ├── shared/                        # Khung template cơ sở dùng chung
-│       │   └── feature-guidance-card.tsx  # Khung hướng dẫn viền đỏ đứt nét, badge, tips bar
+│       │   └── feature-guidance-card.tsx  # Khung hướng dẫn viền đỏ đứt nét, badge, tips bar, thu gọn thông minh (localStorage)
 │       │
 │       ├── product-analysis/              # 1. Phân tích ảnh sản phẩm (M01a/b/c)
 │       │   ├── m01a-guidance-card.tsx     # Hướng dẫn nhận diện cấu phần hoa M01a

@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FlowSteps, type FlowStep } from "@/components/flow/flow-steps"
 import {
   ContentGuidanceCard,
@@ -107,6 +108,7 @@ function ContentEngineContent() {
   const [phase, setPhase] = useState<"select" | "generating" | "results">("select")
   const [currentStep, setCurrentStep] = useState<string>("analyze")
   const [generatedPosts, setGeneratedPosts] = useState<MultichannelPostItem[]>([])
+  const [criticScore, setCriticScore] = useState<number | null>(null)
   const [modelInfo, setModelInfo] = useState<{
     provider?: string | undefined
     modelName?: string | undefined
@@ -228,6 +230,7 @@ function ContentEngineContent() {
 
       const data = await res.json()
       setGenerationId(data.generation_id || null)
+      setCriticScore(typeof data.overall_score === "number" ? data.overall_score : null)
 
       const posts: MultichannelPostItem[] = []
       for (const p of data.posts ?? []) {
@@ -315,8 +318,8 @@ function ContentEngineContent() {
       {/* Top Header */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-6 py-3.5">
         <div>
-          <div className="text-[11px] font-bold tracking-wider text-text-muted uppercase">M07 · SOCIALFLOW</div>
-          <div className="text-[17px] font-black text-primary flex items-center gap-2">
+          <div className="text-caption font-bold tracking-wider text-text-muted uppercase">Máy nội dung tiếp thị</div>
+          <div className="text-title font-black text-primary flex items-center gap-2">
             <Sparkles size={18} />
             AI Content Engine — Cỗ Máy Nội Dung Đa Kênh
           </div>
@@ -352,8 +355,8 @@ function ContentEngineContent() {
           <div
             className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
               notification.type === "success"
-                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                : "bg-red-50 text-red-800 border border-red-200"
+                ? "bg-success/10 text-success border border-success/30"
+                : "bg-danger/10 text-danger border border-danger/30"
             }`}
           >
             <CheckCircle2 size={16} />
@@ -363,19 +366,19 @@ function ContentEngineContent() {
 
         {/* Khối Chiến dịch Quảng bá Catalog nếu được mở từ Module M06 */}
         {catalogSlug && (
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-50 via-amber-50 to-rose-50 border border-rose-200 flex items-center justify-between shadow-xs">
+          <div className="p-4 rounded-2xl bg-surface-alt border border-primary/20 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-xs">
                 <Sparkles size={20} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-extrabold text-rose-950">
+                  <span className="text-sm font-extrabold text-text">
                     Chiến dịch quảng bá Catalog: {catalogName || catalogSlug}
                   </span>
-                  <Badge tone="accent">M06 → M07</Badge>
+                  <Badge tone="accent">Nội dung → Lịch đăng</Badge>
                 </div>
-                <p className="text-xs text-rose-800 mt-0.5">
+                <p className="text-xs text-text-muted mt-0.5">
                   Bài viết đa kênh sinh ra sẽ tự động kèm liên kết đặt hoa trực tuyến: <code>/c/{catalogSlug}</code>
                 </p>
               </div>
@@ -394,7 +397,7 @@ function ContentEngineContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-xs font-semibold text-text-muted">Bước 1: Chọn sản phẩm hoa</div>
-                  <div className="text-[15px] font-extrabold text-text">Dữ liệu từ Product Master</div>
+                  <div className="text-title-sm font-extrabold text-text">Dữ liệu từ Product Master</div>
                 </div>
                 <Badge tone="accent" className="text-xs">
                   {products.length} sản phẩm sẵn sàng
@@ -402,11 +405,11 @@ function ContentEngineContent() {
               </div>
 
               {isLoadingProducts ? (
-                <div className="py-8 text-center text-xs text-text-muted animate-pulse">
-                  Đang tải danh sách sản phẩm từ cơ sở dữ liệu thật...
+                <div className="py-4">
+                  <SkeletonBlock lines={3} label="Đang tải danh sách sản phẩm từ cơ sở dữ liệu..." />
                 </div>
               ) : loadError ? (
-                <div className="py-6 text-center text-xs text-rose-600 bg-rose-50/50 rounded-lg border border-rose-200/60 p-3">
+                <div className="py-6 text-center text-xs text-danger bg-danger/10 rounded-lg border border-danger/30 p-3">
                   {loadError}
                 </div>
               ) : products.length === 0 ? (
@@ -418,10 +421,12 @@ function ContentEngineContent() {
                   {products.map((prod) => {
                     const isSelected = prod.id === selectedProductId
                     return (
-                      <div
+                      <button
                         key={prod.id}
+                        type="button"
+                        aria-pressed={isSelected}
                         onClick={() => setSelectedProductId(prod.id)}
-                        className={`cursor-pointer rounded-xl border p-3 transition flex items-center gap-3 ${
+                        className={`text-left rounded-xl border p-3 transition flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                           isSelected
                             ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
                             : "border-border hover:border-text-muted bg-background"
@@ -440,17 +445,17 @@ function ContentEngineContent() {
                         )}
                         <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-text-muted truncate">{prod.code || "SKU"}</span>
-                            <span className="text-[11px] font-bold text-primary">
+                            <span className="text-caption font-bold text-text-muted truncate">{prod.code || "SKU"}</span>
+                            <span className="text-caption font-bold text-primary">
                               {prod.price ? `${prod.price.toLocaleString("vi-VN")}đ` : "Giá liên hệ"}
                             </span>
                           </div>
                           <div className="text-xs font-bold text-text line-clamp-1">{prod.name}</div>
-                          <div className="text-[10.5px] text-text-muted line-clamp-1">
+                          <div className="text-caption text-text-muted line-clamp-1">
                             {prod.flowers || "Hoa tươi nghệ thuật"}
                           </div>
                         </div>
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
@@ -464,7 +469,7 @@ function ContentEngineContent() {
                   <div className="text-xs font-semibold text-text-muted">
                     Bước 2: Chọn kênh phân phối bài đăng
                   </div>
-                  <div className="text-[16px] font-extrabold text-text">
+                  <div className="text-title font-extrabold text-text">
                     Lựa chọn nền tảng viết bài & xuất bản
                   </div>
                 </div>
@@ -500,10 +505,12 @@ function ContentEngineContent() {
                 {CHANNELS_CONFIG.map((ch) => {
                   const isChecked = selectedChannels.includes(ch.id)
                   return (
-                    <div
+                    <button
                       key={ch.id}
+                      type="button"
+                      aria-pressed={isChecked}
                       onClick={() => toggleChannel(ch.id)}
-                      className={`cursor-pointer rounded-xl border p-4 transition-all flex flex-col justify-between gap-2 relative select-none ${
+                      className={`text-left rounded-xl border p-4 transition-all flex flex-col justify-between gap-2 relative select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                         isChecked
                           ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
                           : "border-border hover:border-text-muted bg-background opacity-70 hover:opacity-100"
@@ -526,24 +533,24 @@ function ContentEngineContent() {
                         <div className="text-xs font-bold text-text flex items-center gap-1.5">
                           {ch.label}
                         </div>
-                        <div className="text-[11px] text-text-muted line-clamp-2 mt-0.5 leading-snug">
+                        <div className="text-caption text-text-muted line-clamp-2 mt-0.5 leading-snug">
                           {ch.description}
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-border/60 flex items-center justify-between">
-                        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                      <div className="pt-2 border-t border-border/60 flex items-center justify-between w-full">
+                        <span className="text-caption font-semibold text-text-muted uppercase tracking-wider">
                           {ch.tag}
                         </span>
                         <span
-                          className={`text-[11px] font-bold ${
+                          className={`text-caption font-bold ${
                             isChecked ? "text-primary" : "text-text-muted"
                           }`}
                         >
                           {isChecked ? "Sẽ tạo & đăng" : "Bỏ qua"}
                         </span>
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -580,7 +587,7 @@ function ContentEngineContent() {
           <div className="flex flex-col items-center justify-center py-12 gap-6">
             <div className="text-center">
               <div className="text-sm font-semibold text-primary animate-pulse">SocialFlow Engine đang xử lý...</div>
-              <div className="text-[18px] font-black text-text mt-1">Đang soạn thảo nội dung tiếp thị ngành hoa</div>
+              <div className="text-title font-black text-text mt-1">Đang soạn thảo nội dung tiếp thị ngành hoa</div>
               <div className="text-xs text-text-muted mt-1">
                 Tự động tối ưu theo từng nền tảng & kiểm duyệt từ ngữ cấm
               </div>
@@ -601,17 +608,17 @@ function ContentEngineContent() {
           <div className="flex flex-col gap-5">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-text-muted">Kết quả từ SocialFlow M07</span>
+                <span className="text-xs font-semibold text-text-muted">Kết quả từ Content Engine</span>
                 <h2 className="text-lg font-black text-text">Xem trước & Biên tập nội dung</h2>
               </div>
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
                 onClick={() => setPhase("select")}
-                className="text-xs gap-1.5"
+                className="text-xs gap-1.5 shadow-xs"
               >
                 <RefreshCw size={13} />
-                Soạn lại mẫu khác
+                Viết bài mới
               </Button>
             </div>
 
@@ -621,6 +628,7 @@ function ContentEngineContent() {
               productName={selectedProduct?.name || "Sản phẩm hoa tươi"}
               productImageUrl={selectedProduct?.imageUrl}
               modelInfo={modelInfo}
+              criticScore={criticScore ?? undefined}
               onUpdatePost={handleUpdatePost}
               onSchedulePost={handleApprovePost}
             />

@@ -150,7 +150,7 @@ export function VideoRenderingProgress({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-extrabold text-text">Đang sản xuất video marketing</h3>
-              <Badge tone="warning" className="animate-pulse text-[10px]">
+              <Badge tone="warning" className="animate-pulse text-caption">
                 Xử lý nền
               </Badge>
             </div>
@@ -159,7 +159,7 @@ export function VideoRenderingProgress({
         </div>
         <div className="text-right">
           <span className="text-2xl font-black text-primary">{Math.round(progress)}%</span>
-          <div className="flex items-center gap-1 text-[11px] text-text-muted justify-end mt-0.5">
+          <div className="flex items-center gap-1 text-caption text-text-muted justify-end mt-0.5">
             <Clock size={11} /> Đã chạy {elapsedSeconds}s
           </div>
         </div>
@@ -168,7 +168,7 @@ export function VideoRenderingProgress({
       {/* Thanh tiến độ động */}
       <div className="flex flex-col gap-1.5">
         <Progress value={progress} className="h-2.5 bg-surface-alt rounded-full overflow-hidden" />
-        <div className="flex items-center justify-between text-[11px] text-text-muted px-0.5">
+        <div className="flex items-center justify-between text-caption text-text-muted px-0.5">
           <span>0% Bắt đầu</span>
           <span>Ước tính còn ~{Math.max(5, 30 - elapsedSeconds)} giây</span>
           <span>100% Hoàn tất</span>
@@ -187,13 +187,13 @@ export function VideoRenderingProgress({
                 isCurrent
                   ? "border-primary bg-primary/5 font-semibold text-text shadow-xs"
                   : isDone
-                  ? "border-emerald-200 bg-emerald-50/50 text-emerald-900"
+                  ? "border-success/30 bg-success/10 text-success"
                   : "border-border/50 bg-background text-text-muted opacity-60"
               }`}
             >
               <div className="shrink-0 mt-0.5">
                 {isDone ? (
-                  <CheckCircle2 size={15} className="text-emerald-600" />
+                  <CheckCircle2 size={15} className="text-success" />
                 ) : isCurrent ? (
                   <Sparkles size={15} className="text-primary animate-pulse" />
                 ) : (
@@ -201,8 +201,8 @@ export function VideoRenderingProgress({
                 )}
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="font-bold text-[11px]">Bước {idx + 1}</span>
-                <span className="leading-snug text-[11.5px]">{step.label}</span>
+                <span className="font-bold text-caption">Bước {idx + 1}</span>
+                <span className="leading-snug text-caption">{step.label}</span>
               </div>
             </div>
           );

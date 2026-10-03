@@ -3,6 +3,8 @@
 > [!NOTE]
 > **VAI TRÒ TÀI LIỆU — KIẾN TRÚC TRẢI NGHIỆM CẤP KHUNG (UX FRAMEWORK & PRINCIPLES)**  
 > Tệp này quy định các nguyên tắc thiết kế trải nghiệm nền tảng, luồng phân vai (Role-based Navigation) và hành vi hệ thống chung.  
+> **Chuẩn chất lượng UX toàn cục, thứ bậc L0–L4, WCAG 2.2 và Screen Contract**: [`docs/dac-ta/03a-ux-constitution.md`](file:///Users/tuan/Projects/floraos-core/docs/dac-ta/03a-ux-constitution.md) (Level 3, CANONICAL).  
+> **Đặc tả trải nghiệm 14 vai (Role UX)**: [`docs/dac-ta/03b-role-ux.md`](file:///Users/tuan/Projects/floraos-core/docs/dac-ta/03b-role-ux.md) (Level 3, CANONICAL).  
 > **Đặc tả chi tiết giao diện 10 màn hình chức năng lõi và tương tác trực quan** được duy trì tại: [`docs/FloraOS-UIUX-10-chuc-nang.md`](file:///Users/tuan/Projects/floraos-core/docs/FloraOS-UIUX-10-chuc-nang.md).
 > **Nguyên tắc bố cục thông tin nền tảng (áp dụng mọi page)** — Macro trước Micro, người dùng tự chọn hướng đi, tiết lộ thông tin theo lớp — đã tích hợp trực tiếp vào **§18** của tài liệu này. *(File gốc đã lưu trữ tại `docs/archive/merged/MACRO_TO_MICRO_STORYTELLING_UX_FRAMEWORK.md`)*
 
@@ -11,7 +13,7 @@
 | Quyết định | Nội dung | Hệ quả |
 |---|---|---|
 | Thiết bị | **Điện thoại trước, máy tính sau** | Thiết kế cho màn hẹp trước; màn rộng là mở rộng, không phải ngược lại |
-| Điểm vào | **Dashboard theo vai** | Experience vào lưới thẻ chức năng; cửa hàng và chuỗi vào dashboard Điều hành |
+| Điểm vào | **Trang chủ theo vai trải nghiệm** (đặc tả `03b-role-ux.md`) | Experience vào lưới thẻ chức năng; workspace thật vào trang chủ của khuôn vai: Quản lý cửa hàng → Command Center, Bán hàng → Pipeline Workspace, Điều phối → Control Tower (`/dieu-phoi`). Vai chưa có khuôn → Command Center |
 | Tiến trình job | **Checklist theo bước là chính**, nhật ký mở ra khi cần | Người dùng thấy đang tới đâu mà không phải đọc log |
 | Duyệt | **Cả tại chỗ lẫn ở hàng đợi** | Duyệt ngay sau khi xem kết quả, hoặc gom lại duyệt hàng loạt. Đường bỏ một kết quả đặt cạnh đường duyệt ở cả hai chỗ |
 | Trường dữ liệu | **Nguyên tử hóa để tối ưu chỉnh sửa** | Tách biệt hoàn toàn văn bản với số lượng/đơn vị; không gộp chuỗi tự do để user click sửa trực tiếp từng thông số |
@@ -23,36 +25,31 @@ Phạm vi chi nhánh không có bộ chọn ở bản đầu. RBAC vẫn đỡ s
 
 Điều hành có đầy đủ năng lực của Sale và Điều phối. Giao diện phải phản ánh điều đó mà không biến màn hình thành mớ hỗn độn: Điều hành thấy **cùng những màn hình** mà Sale và Điều phối thấy, cộng thêm bốn khối quản trị trên dashboard.
 
-Không dựng hai bộ màn hình song song cho hai vai. Một bộ màn hình, khác nhau ở chỗ nút nào hiện — quyết định bởi danh sách năng lực trả về từ `GET /auth/me`.
+**Một bộ màn hình và component dùng chung; vai quyết định trang chủ, thứ tự điều hướng và ưu tiên thông tin; mã năng lực quyết định nút nào được hiện và được dùng** (sửa theo quyết định PO 26/09/2026, D-RU2 — chi tiết ở [`03b-role-ux.md`](file:///Users/tuan/Projects/floraos-core/docs/dac-ta/03b-role-ux.md)). Không dựng hai bản của cùng một màn cho hai vai; khác biệt giữa các vai nằm ở *thứ tự và điểm vào*, không ở *bản sao màn hình*. Danh sách năng lực vẫn đọc từ `GET /auth/me`; khuôn vai chọn theo `membership.role_key` và không bao giờ mở thêm quyền.
 
-## 3. Bản đồ màn hình
+## 3. Bản đồ màn hình và Điều hướng (SSOT `nav-model.ts`)
 
-```
-Đăng nhập
-   │
-   ├── Workspace TRẢI NGHIỆM ──► Lưới thẻ chức năng
-   │                                 └── mỗi thẻ mở thẳng vào luồng của module
-   │
-   └── Workspace THẬT ──────────► Dashboard Điều hành
-                                     ├── Hàng chờ duyệt
-                                     ├── Job đang chạy · job lỗi
-                                     ├── Sản phẩm mới và thay đổi gần đây
-                                     └── Mức dùng và hạn mức
+Hệ thống điều hướng toàn cục của FloraOS được chuẩn hóa tập trung qua mô hình một nguồn (`src/components/layout/nav-model.ts`, Screen Contract `docs/dac-ta/screen-contracts/_dieu-huong.md`).
 
-Điều hướng chính (thanh dưới trên điện thoại, thanh bên trên máy tính)
-   Trang chủ · Sản phẩm · Tải ảnh · Duyệt · Thêm
+### Sơ đồ điều hướng máy tính (Desktop Sidebar w-60 — 6 nhóm K5)
 
-Mục `Thêm` mở danh sách mọi luồng còn lại, ẩn hiện theo năng lực
-   Soạn ảnh marketing · Video · Nội dung · Lịch đăng · Catalog và QR
-   · Landing page · Khách hàng · Đơn hàng · Số liệu · Hội thoại
-   · Cài đặt · Cài đặt AI
-```
+1. **Việc chính · `<vai>`** (Tự sinh): `/` (Trang chủ) + danh sách ưu tiên `navPriority` của vai (03b §5). Luôn mở sẵn, không thu gọn.
+2. **Bán hàng & Khách** (`ban-hang`): `/khach-hang` (Q1), `/don-hang` (R1), `/hoi-thoai` (T1), `/catalog` (J1).
+3. **Sản phẩm** (`san-pham`): `/san-pham` (L1), `/tai-anh` (H1), `/kho-du-lieu` (G1), `/gia` (L6).
+4. **Nội dung & Tiếp thị** (`noi-dung`): `/market-intelligence` (V2), `/creative-studio` (I1), `/creative-studio?tab=area-d` (I4), `/video` (I1), `/noi-dung` (I1), `/lich-dang`, `/kho-templates`.
+5. **Vận hành** (`van-hanh`): `/dieu-phoi` (C23), `/job` (G4), `/duyet` (H3), `/so-lieu` (U3), `/muc-dung` (`COMING_SOON`), `/audit` (A4, `COMING_SOON`).
+6. **Thiết lập** (`thiet-lap`): `/ho-so` (F1), `/tri-thuc`, `/cai-dat-ai` (U1), `/ket-noi`, `/bo-may` (H4), `/cai-dat` (`COMING_SOON`).
 
-`Tải ảnh` đặt ở giữa thanh điều hướng. Đó là việc lặp lại nhiều nhất trong ngày và là việc Sale làm bằng điện thoại ngay tại cửa hàng.
+- Mọi nhóm chức năng đều hỗ trợ thu gọn/mở rộng `aria-expanded`, ghi nhớ trạng thái qua `localStorage` (`floraos_nav_groups_v1`). Khi mới vào chỉ mở nhóm chứa trang hiện tại (≤ 8 mục mở sẵn).
+- Ô tìm kiếm nhanh dưới logo hỗ trợ phím tắt `/`, lọc tức thì không phân biệt dấu tiếng Việt (`stripVietnamese`). Phím tắt `⌘K` ở chân thanh bên kích hoạt Copilot.
 
-`Duyệt` chỉ hiện với người có ít nhất một năng lực duyệt — `H3`, `H6`, `I2`, `P2`, `P4`, `O3`, `J2`, `J4`. Với người khác, vị trí đó là `Job của tôi`.
+### Thanh điều hướng di động (Mobile BottomNav h-16 — 5 vị trí)
 
-Mục `Thêm` không phải một ngăn chứa những gì không xếp được chỗ. Bốn việc trên thanh chính là bốn việc lặp lại trong ngày; mọi thứ trong `Thêm` là việc làm theo đợt, và thứ tự trong đó theo đúng chuỗi giá trị: ảnh, video, nội dung, kênh, khách, đơn, số liệu.
+1. **Slot 1 (Trái):** `Trang chủ` (`/`).
+2. **Slot 2 (Vai):** Đổi động qua `mobileSecondSlot(can, roleUx)` — lấy mục đầu tiên trong `navPriority` của vai chưa trùng các slot khác (vd: `Khách hàng` cho Bán hàng, `Điều phối` cho Điều phối, mặc định `Sản phẩm`).
+3. **Slot 3 (Giữa - Nổi bật):** Nút tròn nổi gác `H1`. Người dùng có `H1` (quét ảnh) → `Tải ảnh` (`/tai-anh`). Người dùng không có `H1` → Việc chính đầu tiên của vai (hoặc `Sản phẩm`).
+4. **Slot 4:** `Duyệt` (`/duyet` nếu có năng lực duyệt `H3` hoặc `I2`, kèm chấm thông báo) hoặc `Job của tôi` (`/job`).
+5. **Slot 5 (Phải):** `Thêm` (`/them`) dẫn tới trang tạo sản phẩm thủ công (L2) kèm toàn bộ danh sách chức năng còn lại xếp theo chuỗi giá trị (hàng cao ≥ 44px).
 
 ## 4. Dashboard Điều hành
 
@@ -256,8 +253,10 @@ Chọn nhiều dòng để duyệt hàng loạt, tối đa 50 mục một lần.
 | Đang tải | Khung xám giữ đúng chỗ nội dung sẽ hiện, không con quay giữa màn hình |
 | Lỗi mạng | Nêu việc đang làm dở và nút thử lại. Không mất dữ liệu người dùng vừa nhập |
 | Hết hạn mức | Nói rõ đã dùng bao nhiêu, hết khi nào được đặt lại, và đường nâng cấp |
-| Không đủ quyền | Ẩn nút thay vì hiện rồi báo lỗi khi bấm. Trường hợp phải hiện thì nói rõ ai duyệt được việc này |
+| Không đủ quyền | Ẩn nút thay vì hiện rồi báo lỗi khi bấm. Trường hợp phải hiện thì nói rõ ai duyệt được việc này. Riêng lộ trình (vai/mục chưa xây) hiện vô hiệu kèm lý do — 03b §6 |
 | Mất kết nối giữa job | Job vẫn chạy. Màn hình nối lại nhật ký từ vị trí cũ khi có mạng lại |
+| Dữ liệu một phần | Hiện phần có được, ghi rõ phần nào chưa tải được, nút tải lại phần đó |
+| Thành công | Xác nhận ngắn tại chỗ + thông báo cho trình đọc màn hình; không chặn bằng hộp thoại |
 
 ## 16. Ngôn ngữ và cách viết
 
@@ -300,6 +299,7 @@ ACT (Hành động 1-chạm: Đăng bài / Duyệt / Xuất dữ liệu)
 ```
 
 ### 3. Quy chuẩn Hiển thị
+- **Phân lớp L0–L4:** Phân loại thông tin theo 03a §04; khung nhìn đầu tiên chỉ hiển thị L0 (thiết yếu) + L1 (hành động).
 - **Không nhồi nhét thông tin (Zero Keyword Dumping):** Cấm đổ từ khóa thô hoặc chuỗi văn bản tự do lên giao diện.
 - **Tiết lộ theo lớp (Progressive Disclosure):** Chỉ hiển thị thông số chi tiết khi người dùng nhấp chọn hoặc yêu cầu xem sâu.
 - **Khối hướng dẫn chuẩn hóa:** Sử dụng `<FeatureGuidanceCard />` viền đỏ đứt nét, nền hồng dịu `bg-red-50/70` ở đầu mỗi tab tính năng.

@@ -83,7 +83,7 @@ export function VisualStorytellingControls({
             <div className="text-xs font-bold uppercase tracking-wider text-text">
               Góc Chụp & Tương Tác Người Mẫu (Visual Storytelling)
             </div>
-            <div className="text-[11.5px] text-text-muted">
+            <div className="text-caption text-text-muted">
               Đa dạng hóa góc nhìn sản phẩm & kích hoạt cảm xúc mua hàng
             </div>
           </div>
@@ -113,16 +113,16 @@ export function VisualStorytellingControls({
               <Sparkles size={13} />
               Kịch bản Chiến dịch Story Carousel (Tự động tạo đồng bộ 4 ảnh)
             </span>
-            <Badge tone="accent" className="text-[10px]">Tiết kiệm 4x thời gian</Badge>
+            <Badge tone="accent" className="text-caption">Tiết kiệm 4x thời gian</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
             {STORY_CHAPTERS.map((ch) => (
               <div key={ch.step} className="p-2.5 rounded-lg bg-surface border border-border flex flex-col gap-1 shadow-2xs">
-                <div className="text-[11.5px] font-extrabold text-primary flex items-center gap-1">
+                <div className="text-caption font-extrabold text-primary flex items-center gap-1">
                   <Check size={11} strokeWidth={3} />
                   {ch.title}
                 </div>
-                <div className="text-[11px] text-text-muted leading-snug">{ch.desc}</div>
+                <div className="text-caption text-text-muted leading-snug">{ch.desc}</div>
               </div>
             ))}
           </div>
@@ -131,9 +131,9 @@ export function VisualStorytellingControls({
         <>
           {/* Section 1: Camera Angles */}
           <div>
-            <div className="text-[11.5px] font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
+            <div className="text-caption font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
               <span>1. Góc chụp máy ảnh (Camera Angles)</span>
-              <span className="text-[11px] font-normal text-text-muted">Chọn 1 góc</span>
+              <span className="text-caption font-normal text-text-muted">Chọn 1 góc</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {CAMERA_ANGLES.map((angle) => {
@@ -156,7 +156,7 @@ export function VisualStorytellingControls({
                       {isSelected && <Check size={12} strokeWidth={3} className="text-primary" />}
                     </div>
                     <div className="text-xs font-bold">{angle.label}</div>
-                    <div className="text-[10.5px] text-text-muted line-clamp-1 mt-0.5">{angle.desc}</div>
+                    <div className="text-caption text-text-muted line-clamp-1 mt-0.5">{angle.desc}</div>
                   </button>
                 )
               })}
@@ -165,9 +165,9 @@ export function VisualStorytellingControls({
 
           {/* Section 2: Human Interaction */}
           <div>
-            <div className="text-[11.5px] font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
+            <div className="text-caption font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
               <span>2. Bối cảnh tương tác người mẫu (Lifestyle Context)</span>
-              <span className="text-[11px] font-normal text-text-muted">Tỷ lệ cơ thể trực quan</span>
+              <span className="text-caption font-normal text-text-muted">Tỷ lệ cơ thể trực quan</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {HUMAN_INTERACTIONS.map((item) => {
@@ -187,12 +187,12 @@ export function VisualStorytellingControls({
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <Icon size={14} className={isSelected ? "text-primary" : "text-text-muted"} />
-                      <Badge tone={isSelected ? "accent" : "neutral"} className="text-[9px] px-1 py-0">
+                      <Badge tone={isSelected ? "accent" : "neutral"} className="text-caption px-1 py-0">
                         {item.badge}
                       </Badge>
                     </div>
                     <div className="text-xs font-bold line-clamp-1">{item.label}</div>
-                    <div className="text-[10.5px] text-text-muted line-clamp-1 mt-0.5">{item.desc}</div>
+                    <div className="text-caption text-text-muted line-clamp-1 mt-0.5">{item.desc}</div>
                   </button>
                 )
               })}

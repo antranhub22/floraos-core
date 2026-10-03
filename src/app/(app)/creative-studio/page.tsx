@@ -15,7 +15,6 @@ import { VideoWorkspace } from "@/components/creative-studio/video-workspace"
 import { PackageWorkspace } from "@/components/creative-studio/package-workspace"
 import { ValidationScreen } from "@/components/creative-studio/validation-screen"
 import { useCreativeStudioData } from "@/components/creative-studio/use-creative-studio-data"
-import { Button } from "@/components/ui/button"
 import { validateTransition } from "@/modules/creative-production/domain/validate-transition"
 
 import type { ProductIntelligenceReport, ConcreteTopic } from "@/modules/market-intelligence/domain/product-intelligence-types"
@@ -69,42 +68,42 @@ const CREATIVE_STUDIO_TABS: Record<
 > = {
   "area-a": {
     id: "area-a",
-    label: "Khu vực A — Quét theo ảnh sản phẩm",
+    label: "Phân tích ảnh sản phẩm",
     icon: Camera,
     workspace: "area-a",
     description: "Chặng 1-5 — Bóc tách Vision & Chọn chủ đề trọng tâm",
   },
   "area-b": {
     id: "area-b",
-    label: "Khu vực B — Viết contents",
+    label: "Viết nội dung (Copywriting)",
     icon: FileText,
     workspace: "area-b",
     description: "Contents — CREATIVE / AUTHENTIC",
   },
   "area-c": {
     id: "area-c",
-    label: "Khu vực C — Tạo audio",
+    label: "Sản xuất âm thanh & Giọng đọc",
     icon: Headphones,
     workspace: "area-c",
     description: "TTS + BGM + Phối trộn",
   },
   "area-d": {
     id: "area-d",
-    label: "Khu vực D — Tạo biến thể ảnh",
+    label: "Biến thể marketing & Bối cảnh",
     icon: Wand2,
     workspace: "area-d",
     description: "M04b — Biến thể marketing",
   },
   "area-e": {
     id: "area-e",
-    label: "Khu vực E — Tạo video",
+    label: "Dựng video đa kênh",
     icon: Film,
     workspace: "area-e",
     description: "M04c — Video Studio",
   },
   "area-f": {
     id: "area-f",
-    label: "Khu vực F — Gói chiến dịch",
+    label: "Gói chiến dịch & Duyệt",
     icon: Package,
     workspace: "area-f",
     description: "Chặng 07–09 — Đóng gói, QA, Duyệt (+ Chặng 10–14)",
@@ -168,7 +167,6 @@ export default function CreativeStudioPage() {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context.assetId])
 
   // --- Tải lại report Product Intelligence bằng report.id (param `topic`) ---
@@ -351,7 +349,7 @@ export default function CreativeStudioPage() {
     { id: "go-home", label: "Quay về Trang chủ", icon: ArrowLeft, onClick: () => router.push("/") },
     ...(activeTabId !== "area-a" ? [{
       id: "back-to-a",
-      label: "Quay lại Khu vực A",
+      label: "Quay lại bước Phân tích ảnh",
       icon: ArrowLeft,
       dividerAbove: true,
       onClick: () => setActiveTabId("area-a"),
@@ -401,9 +399,9 @@ export default function CreativeStudioPage() {
         <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3">
           <div>
             <div className="text-xs text-text-muted">
-              {context.mode} mode · Chặng 01–14 · Khu vực A–F
+              {context.mode} mode · Chặng 01–14 · Studio Sáng tạo Đa phương tiện
             </div>
-            <div className="text-[17px] font-extrabold text-primary">AI Creative Studio</div>
+            <div className="text-title font-extrabold text-primary">AI Creative Studio</div>
           </div>
           <TabActionHeader
             tabs={tabs}
@@ -416,8 +414,8 @@ export default function CreativeStudioPage() {
 
         <div className="flex flex-1 flex-col overflow-y-auto p-4 md:p-6 gap-6">
           {(imageLoadError || reportLoadError) && (
-            <div className="w-full max-w-3xl mx-auto rounded-xl border border-amber-200 bg-amber-50/80 p-3 flex items-start gap-2 text-[12.5px] text-amber-800">
-              <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="w-full max-w-3xl mx-auto rounded-xl border border-warning/30 bg-warning/10 p-3 flex items-start gap-2 text-meta text-warning">
+              <AlertTriangle size={16} className="text-warning shrink-0 mt-0.5" />
               <div className="space-y-0.5">
                 {imageLoadError && <p>{imageLoadError}</p>}
                 {reportLoadError && <p>{reportLoadError}</p>}
@@ -440,21 +438,21 @@ export default function CreativeStudioPage() {
 
               {/* Context Info Bar — chỉ hiển thị tại Khu vực B-F khi đã có topic/product */}
               {activeTabId !== "area-a" && (context.topicId || context.productName) && (
-                <div className="w-full max-w-3xl mx-auto rounded-xl border border-stone-200 bg-stone-50 p-4">
-                  <p className="text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">📦 Context carry-forward (Chặng 1-5)</p>
-                  <div className="grid grid-cols-2 gap-2 text-[12px]">
-                    <div><span className="text-stone-500">Topic:</span> <span className="font-medium">{context.topicId || "—"}</span></div>
-                    <div><span className="text-stone-500">Mode:</span> <span className="font-medium">{context.mode}</span></div>
-                    <div><span className="text-stone-500">Product:</span> <span className="font-medium">{context.productName || "—"}</span></div>
-                    <div><span className="text-stone-500">Source:</span> <span className="font-medium">{context.sourceImageUrl ? "Image" : context.sourceVideoUrl ? "Video" : "—"}</span></div>
+                <div className="w-full max-w-3xl mx-auto rounded-xl border border-border bg-surface-alt p-4">
+                  <p className="text-xs font-bold text-text uppercase tracking-wider mb-2">📦 Context carry-forward (Chặng 1-5)</p>
+                  <div className="grid grid-cols-2 gap-2 text-meta">
+                    <div><span className="text-text-muted">Topic:</span> <span className="font-medium">{context.topicId || "—"}</span></div>
+                    <div><span className="text-text-muted">Mode:</span> <span className="font-medium">{context.mode}</span></div>
+                    <div><span className="text-text-muted">Product:</span> <span className="font-medium">{context.productName || "—"}</span></div>
+                    <div><span className="text-text-muted">Source:</span> <span className="font-medium">{context.sourceImageUrl ? "Image" : context.sourceVideoUrl ? "Video" : "—"}</span></div>
                   </div>
                 </div>
               )}
 
               {activeScope !== "in" && (
                 <div
-                  className={`w-full max-w-3xl mx-auto rounded-xl border p-3 text-[12.5px] ${
-                    activeScope === "out" ? "border-stone-300 bg-stone-50 text-stone-700" : "border-amber-200 bg-amber-50/80 text-amber-800"
+                  className={`w-full max-w-3xl mx-auto rounded-xl border p-3 text-meta ${
+                    activeScope === "out" ? "border-border bg-surface-alt text-text" : "border-warning/30 bg-warning/10 text-warning"
                   }`}
                 >
                   {activeScope === "out"
@@ -466,14 +464,14 @@ export default function CreativeStudioPage() {
 
               {/* Workspace */}
               {returnToPackage && (
-                <div className="sticky top-0 z-20 mb-4 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-[12.5px]">
+                <div className="sticky top-0 z-20 mb-4 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-meta">
                   <span className="text-text">
                     Đang làm lại tài sản cho <strong>gói chiến dịch</strong>. Xong thì quay lại — tài sản mới sẽ được đề xuất thay vào gói.
                   </span>
                   <button
                     type="button"
                     onClick={backToPackage}
-                    className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-bold text-white cursor-pointer"
+                    className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-meta font-bold text-white cursor-pointer"
                   >
                     ← Quay lại gói (Chặng 07)
                   </button>

@@ -14,7 +14,6 @@ import {
   AUDIO_TASK_SPECS,
   AUDIO_TASK_TYPES,
   MAX_VOICE_SCRIPT_LENGTH,
-  SELECTABLE_TTS_PROVIDERS,
   audioJobCreditCost,
   estimateSpeechSeconds,
   validateAudioTask,
@@ -25,6 +24,7 @@ import { findScenePlan, type ScenePlan } from "./scene-plan-client"
 import { MusicLibraryPanel } from "./music-library-panel"
 import { VoiceClonePanel } from "./voice-clone-panel"
 import { readAudioApiError } from "./audio-library-client"
+import { ProviderSelect, useProviderKind } from "./provider-select"
 
 interface AudioScene { sceneIndex: number; voiceScript: string; targetDurationSeconds: number }
 
@@ -37,6 +37,9 @@ interface AudioJobDetail {
   provider_used: string | null
   provider_fallback: boolean
   music_track_name: string | null
+  music_provider_used?: string | null
+  music_fallback?: boolean
+  music_fallback_reason?: string | null
   has_voice: boolean
   total_duration_seconds: number
   loudness_lufs: number | null
@@ -89,7 +92,7 @@ export function AudioWorkspace() {
   const [scenes, setScenes] = useState<AudioScene[]>(buildInitialScenes)
   const [scenesEdited, setScenesEdited] = useState(false)
 
-  // Lời thoại theo KỊCH BẢN BỐI CẢNH của chủ đề (cùng kịch bản với Khu vực D) — chỉ tra.
+  // Lời thoại theo KỊCH BẢN BỐI CẢNH của chủ đề (cùng kịch bản với Biến thể marketing) — chỉ tra.
   const [scenePlan, setScenePlan] = useState<ScenePlan | null>(null)
   const [scenePlanRef, setScenePlanRef] = useState<string | null>(null)
   const urlPlanId = searchParams?.get("scenePlanId") ?? null
@@ -132,7 +135,13 @@ export function AudioWorkspace() {
 
 
   const [voiceId, setVoiceId] = useState(ctx.voiceId ?? "flora-nu-truyen-cam")
-  const [providerKey, setProviderKey] = useState<TtsProviderKey>("openai")
+  // "" = theo thứ tự nhà cung cấp của tiệm (PO 25/09/2026 — nhà cung cấp trước).
+  const [providerKey, setProviderKey] = useState<TtsProviderKey | "">("")
+  const voiceKind = useProviderKind("voice")
+  const effectiveProvider = (providerKey || voiceKind?.order[0] || "openai") as TtsProviderKey
+  // Nhạc nền: "" = nhạc AI theo thứ tự tiệm (bài thư viện là dự phòng); "library" = chỉ bài thư viện.
+  const [musicProvider, setMusicProvider] = useState<string>("")
+  const musicKind = useProviderKind("music")
   const [qualityTier, setQualityTier] = useState<AudioQualityTier>("hd")
   const [musicTrackId, setMusicTrackId] = useState<string | null>(null)
   const [userPickedMusic, setUserPickedMusic] = useState(false)
@@ -184,7 +193,15 @@ export function AudioWorkspace() {
     ? scenes.reduce((a, s) => a + Math.max(s.targetDurationSeconds, estimateSpeechSeconds(s.voiceScript) + 0.3), 0)
     : musicDuration
   const effectiveMusic = spec.music === "none" ? null : musicTrackId
-  const credit = audioJobCreditCost({ taskType, providerKey, qualityTier, scenes })
+  const musicAiProvider = spec.music === "none" || !effectiveMusic || musicProvider === "library" ? null : musicProvider || musicKind?.order[0] || null
+  const credit = audioJobCreditCost({
+    taskType,
+    providerKey: effectiveProvider,
+    qualityTier,
+    scenes,
+    musicProvider: musicAiProvider,
+    musicSeconds: totalDuration,
+  })
   const validation = validateAudioTask({ taskType, scenes, musicTrackId: effectiveMusic, voiceCloneId })
   const firstProblem = Object.values(validation)[0] ?? null
 
@@ -261,7 +278,8 @@ export function AudioWorkspace() {
           totalDurationSeconds: Math.max(1, Math.round(totalDuration)),
           voiceId: taskType === "VOICE_CLONE" ? undefined : voiceId,
           voiceCloneId: taskType === "VOICE_CLONE" ? voiceCloneId ?? undefined : undefined,
-          providerKey: taskType === "VOICE_CLONE" ? undefined : providerKey,
+          providerKey: taskType === "VOICE_CLONE" || !providerKey ? undefined : providerKey,
+          ...(effectiveMusic && musicProvider ? { musicProvider } : {}),
           qualityTier,
           musicTrackId: effectiveMusic ?? undefined,
           musicMood: effectiveMusic ? undefined : "none",
@@ -293,7 +311,7 @@ export function AudioWorkspace() {
             return (
               <button key={tt} type="button" onClick={() => setTaskType(tt)} className={`rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${taskType === tt ? "border-primary bg-primary/10" : "border-border bg-background hover:border-border-hover"}`}>
                 <span className={`flex items-center gap-1.5 text-xs font-bold ${taskType === tt ? "text-primary" : "text-text"}`}><Icon size={14} /> {s.label}</span>
-                <span className="mt-1 block text-[11px] leading-snug text-text-muted">{s.description}</span>
+                <span className="mt-1 block text-caption leading-snug text-text-muted">{s.description}</span>
               </button>
             )
           })}
@@ -306,23 +324,15 @@ export function AudioWorkspace() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {VOICE_CATALOG.map((v) => (
               <button key={v.voiceId} type="button" onClick={() => setVoiceId(v.voiceId)} className={`rounded-lg border px-3 py-2 text-left cursor-pointer ${voiceId === v.voiceId ? "border-primary bg-primary/5" : "border-border"}`}>
-                <span className="block text-[12px] font-bold text-text">{v.displayName}</span>
-                <span className="block text-[11px] text-text-muted">{v.gender === "female" ? "Nữ" : "Nam"} · {v.description}</span>
+                <span className="block text-meta font-bold text-text">{v.displayName}</span>
+                <span className="block text-caption text-text-muted">{v.gender === "female" ? "Nữ" : "Nam"} · {v.description}</span>
               </button>
             ))}
           </div>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <ProviderSelect kind="voice" value={providerKey} onChange={(v) => setProviderKey(v as TtsProviderKey | "")} label="Nhà cung cấp giọng đọc" />
             <div>
-              <label className="text-[11px] font-semibold text-text-muted block mb-1">Nhà cung cấp</label>
-              <Select value={providerKey} onValueChange={(v) => setProviderKey(v as TtsProviderKey)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SELECTABLE_TTS_PROVIDERS.map((p) => <SelectItem key={p} value={p}>{PROVIDER_LABEL[p] ?? p}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-[11px] font-semibold text-text-muted block mb-1">Chất lượng</label>
+              <label className="text-caption font-semibold text-text-muted block mb-1">Chất lượng</label>
               <Select value={qualityTier} onValueChange={(v) => setQualityTier(v as AudioQualityTier)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -333,7 +343,7 @@ export function AudioWorkspace() {
               </Select>
             </div>
           </div>
-          <p className="mt-2 text-[11px] text-text-muted">
+          <p className="mt-2 text-caption text-text-muted">
             Nhà cung cấp lỗi thì hệ thống lùi sang nhà cung cấp khác với <b>cùng giọng</b> {selectedVoice ? `(${selectedVoice.displayName})` : ""} và báo rõ trên kết quả.
           </p>
         </Card>
@@ -343,7 +353,7 @@ export function AudioWorkspace() {
         <>
           <VoiceClonePanel value={voiceCloneId} onChange={(id) => setVoiceCloneId(id)} />
           <Card className="p-5">
-            <label className="text-[11px] font-semibold text-text-muted block mb-1">Chất lượng giọng nhân bản</label>
+            <label className="text-caption font-semibold text-text-muted block mb-1">Chất lượng giọng nhân bản</label>
             <Select value={qualityTier} onValueChange={(v) => setQualityTier(v as AudioQualityTier)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -369,11 +379,31 @@ export function AudioWorkspace() {
         />
       )}
 
+      {spec.music !== "none" && effectiveMusic && (
+        <Card className="p-5">
+          <h3 className="text-sm font-bold text-text mb-3 flex items-center gap-2"><Music size={14} /> Nhạc nền do AI sinh</h3>
+          <ProviderSelect
+            kind="music"
+            value={musicProvider === "library" ? "" : musicProvider}
+            onChange={setMusicProvider}
+            label="Nhà cung cấp nhạc nền"
+            disabled={musicProvider === "library"}
+          />
+          <label className="mt-2 flex items-center gap-2 text-caption text-text-muted">
+            <input type="checkbox" checked={musicProvider === "library"} onChange={(e) => setMusicProvider(e.target.checked ? "library" : "")} />
+            Chỉ dùng bài đã chọn trong thư viện (miễn phí, không sinh nhạc mới)
+          </label>
+          {musicProvider !== "library" && (
+            <p className="mt-1 text-caption text-text-muted">Nhạc không lời sinh theo tâm trạng, đủ thời lượng thật của bản đọc. Bài đang chọn ở thư viện là bài dự phòng khi nhà cung cấp lỗi (hoàn phần credit nhạc).</p>
+          )}
+        </Card>
+      )}
+
       {taskType === "MUSIC_SELECT" && (
         <Card className="p-5">
-          <label className="text-[11px] font-semibold text-text-muted block mb-1">Thời lượng bản nhạc (giây)</label>
+          <label className="text-caption font-semibold text-text-muted block mb-1">Thời lượng bản nhạc (giây)</label>
           <input type="number" min={5} max={120} value={musicDuration} onChange={(e) => setMusicDuration(Math.min(120, Math.max(5, parseInt(e.target.value) || 15)))} className="w-32 rounded border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none" />
-          <p className="mt-1 text-[11px] text-text-muted">Nhạc được cắt/lặp đủ thời lượng, fade in/out, chuẩn độ to -14 LUFS.</p>
+          <p className="mt-1 text-caption text-text-muted">Nhạc được cắt/lặp đủ thời lượng, fade in/out, chuẩn độ to -14 LUFS.</p>
         </Card>
       )}
 
@@ -384,9 +414,9 @@ export function AudioWorkspace() {
             <Button variant="secondary" size="sm" onClick={addScene} className="gap-1.5" disabled={scenes.length >= 12}><Mic size={12} /> Thêm cảnh</Button>
           </div>
           {scenePlan ? (
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-alt px-3 py-2 text-[12px] text-text-muted">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-alt px-3 py-2 text-meta text-text-muted">
               <span>
-                Lời thoại theo kịch bản bối cảnh của chủ đề ({scenePlan.scenes.length} cảnh, cùng kịch bản với ảnh ở Khu vực D
+                Lời thoại theo kịch bản bối cảnh của chủ đề ({scenePlan.scenes.length} cảnh, cùng kịch bản với ảnh biến thể
                 {scenePlan.source === "rule" ? " — kịch bản cơ bản" : ""}).
               </span>
               {scenesEdited && (
@@ -396,8 +426,8 @@ export function AudioWorkspace() {
               )}
             </div>
           ) : (
-            <p className="mb-3 text-[12px] text-text-muted">
-              Chưa có kịch bản bối cảnh cho chủ đề này — lời thoại đang điền từ hook/tiêu đề/CTA. Viết kịch bản ở Khu vực D để ảnh và giọng đọc kể cùng một câu chuyện.
+            <p className="mb-3 text-meta text-text-muted">
+              Chưa có kịch bản bối cảnh cho chủ đề này — lời thoại đang điền từ hook/tiêu đề/CTA. Viết kịch bản ở Biến thể marketing để ảnh và giọng đọc kể cùng một câu chuyện.
             </p>
           )}
           <div className="flex flex-col gap-3">
@@ -409,18 +439,18 @@ export function AudioWorkspace() {
                   <div className="flex items-center justify-between mb-2">
                     <Badge tone="neutral">Cảnh #{scene.sceneIndex}</Badge>
                     {scenes.length > 1 && (
-                      <button type="button" onClick={() => removeScene(scene.sceneIndex)} className="text-[10px] text-rose-600 font-semibold cursor-pointer">Xóa</button>
+                      <button type="button" onClick={() => removeScene(scene.sceneIndex)} className="text-caption text-danger font-semibold cursor-pointer">Xóa</button>
                     )}
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-[110px_1fr]">
                     <div>
-                      <label className="text-[10px] font-semibold text-text-muted block mb-1">Thời lượng (s)</label>
+                      <label className="text-caption font-semibold text-text-muted block mb-1">Thời lượng (s)</label>
                       <input type="number" min="1" max="60" value={scene.targetDurationSeconds} onChange={(e) => updateScene(scene.sceneIndex, "targetDurationSeconds", Math.min(60, parseFloat(e.target.value) || 1))} className="w-full rounded border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none" />
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-text-muted block mb-1">Lời thoại</label>
+                      <label className="text-caption font-semibold text-text-muted block mb-1">Lời thoại</label>
                       <textarea rows={2} maxLength={MAX_VOICE_SCRIPT_LENGTH} value={scene.voiceScript} onChange={(e) => updateScene(scene.sceneIndex, "voiceScript", e.target.value)} placeholder="Nhập lời thoại…" className="w-full rounded border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none" />
-                      <p className={`mt-0.5 text-[10px] ${longer ? "text-amber-700" : "text-text-muted"}`}>
+                      <p className={`mt-0.5 text-caption ${longer ? "text-warning" : "text-text-muted"}`}>
                         {scene.voiceScript.length}/{MAX_VOICE_SCRIPT_LENGTH} ký tự · đọc ~{est}s
                         {longer ? ` — dài hơn ${scene.targetDurationSeconds}s, cảnh sẽ tự kéo dài để đọc trọn câu` : ""}
                       </p>
@@ -434,38 +464,43 @@ export function AudioWorkspace() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] text-text-muted">
-          {firstProblem ? <span className="text-amber-700">{firstProblem}</span> : <>Tổng ~{Math.round(totalDuration)}s · {spec.label}</>}
+        <p className="text-caption text-text-muted">
+          {firstProblem ? <span className="text-warning">{firstProblem}</span> : <>Tổng ~{Math.round(totalDuration)}s · {spec.label}</>}
         </p>
         <Button onClick={handleCreate} disabled={loading || polling || Boolean(firstProblem)} className="gap-2">
           {loading ? <><Loader2 size={14} className="animate-spin" /> Đang tạo...</> : polling ? <><Loader2 size={14} className="animate-spin" /> Đang chờ kết quả...</> : <><Send size={14} /> Tạo {spec.label} · {credit === 0 ? "miễn phí" : `${credit} credit`}</>}
         </Button>
       </div>
       {spec.music !== "none" && effectiveMusic && musicLicenseOk === false && (
-        <p className="text-[11px] text-amber-700">Bài nhạc đang chọn chưa có hồ sơ giấy phép thương mại.</p>
+        <p className="text-caption text-warning">Bài nhạc đang chọn chưa có hồ sơ giấy phép thương mại.</p>
       )}
-      {error && <Card className="border-rose-200 bg-rose-50 p-4 flex items-center gap-3"><AlertCircle size={16} className="text-rose-600 shrink-0" /><p className="text-xs text-rose-800">{error}{audioJob?.refunded ? " — đã hoàn credit." : ""}</p></Card>}
+      {error && <Card className="border-danger/30 bg-danger/10 p-4 flex items-center gap-3"><AlertCircle size={16} className="text-danger shrink-0" /><p className="text-xs text-danger">{error}{audioJob?.refunded ? " — đã hoàn credit." : ""}</p></Card>}
       {currentJobId && (
-        <Card className="p-5 border-emerald-200 bg-emerald-50/40">
-          <h3 className="text-sm font-bold text-emerald-800 mb-1 flex items-center gap-2">
-            {stage === "COMPLETED" ? <CheckCircle2 size={15} className="text-emerald-600" /> : stage === "FAILED" ? <AlertCircle size={15} className="text-rose-600" /> : <Loader2 size={15} className="animate-spin text-emerald-600" />}
+        <Card className="p-5 border-success/30 bg-success/10">
+          <h3 className="text-sm font-bold text-success mb-1 flex items-center gap-2">
+            {stage === "COMPLETED" ? <CheckCircle2 size={15} className="text-success" /> : stage === "FAILED" ? <AlertCircle size={15} className="text-danger" /> : <Loader2 size={15} className="animate-spin text-success" />}
             {stage === "COMPLETED" ? "Đã xong — nghe thử bên dưới" : stage === "FAILED" ? "Thất bại" : stage === "GENERATING" ? "Worker đang xử lý âm thanh..." : "Đang xếp hàng chờ worker nhận việc..."}
-            {polling && stage !== "COMPLETED" && stage !== "FAILED" && <span className="font-normal text-emerald-700">({waitSeconds}s)</span>}
+            {polling && stage !== "COMPLETED" && stage !== "FAILED" && <span className="font-normal text-success">({waitSeconds}s)</span>}
           </h3>
           {queuedTooLong && (
-            <p className="mb-3 text-[12px] text-amber-700">
+            <p className="mb-3 text-meta text-warning">
               Chưa worker nào nhận job này. Kiểm tra terminal đang chạy <code>npm run worker:media</code> (hoặc <code>npm run dev:all</code>) — nếu nó được bật trước khi cập nhật mã, hãy tắt và chạy lại. Job vẫn nằm trong hàng đợi, không cần tạo lại.
             </p>
           )}
           {stage === "COMPLETED" && audioJob?.provider_fallback && (
-            <p className="mb-2 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[12px] text-amber-800">
+            <p className="mb-2 rounded border border-warning/30 bg-warning/10 px-2 py-1 text-meta text-warning">
               {PROVIDER_LABEL[audioJob.provider_key ?? ""] ?? audioJob.provider_key} lỗi — giọng đã được đọc bằng {PROVIDER_LABEL[audioJob.provider_used ?? ""] ?? audioJob.provider_used} (cùng giọng trong danh mục).
             </p>
           )}
+          {stage === "COMPLETED" && audioJob?.music_fallback && (
+            <p className="mb-2 rounded border border-warning/30 bg-warning/10 px-2 py-1 text-meta text-warning">
+              Không sinh được nhạc AI ({audioJob.music_fallback_reason ?? "nhà cung cấp lỗi"}) — đã dùng bài dự phòng {audioJob.music_track_name ?? ""}; phần credit nhạc được hoàn.
+            </p>
+          )}
           {stage === "COMPLETED" && audioJob?.audio_url && (
-            <div className="mb-3 rounded-lg border border-emerald-200 bg-white p-3">
+            <div className="mb-3 rounded-lg border border-success/30 bg-surface p-3">
               <audio controls preload="auto" src={audioJob.audio_url} className="w-full">Trình duyệt không phát được âm thanh.</audio>
-              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-text-muted">
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-caption text-text-muted">
                 <span>
                   {audioJob.total_duration_seconds ? `${Math.round(audioJob.total_duration_seconds * 10) / 10}s` : "—"}
                   {audioJob.loudness_lufs !== null ? ` · ${audioJob.loudness_lufs} LUFS` : ""}
@@ -479,16 +514,16 @@ export function AudioWorkspace() {
             </div>
           )}
           {stage === "COMPLETED" && !audioJob?.audio_url && (
-            <p className="mb-3 text-[12px] text-rose-700">Job xong nhưng không có tệp âm thanh trong kho.</p>
+            <p className="mb-3 text-meta text-danger">Job xong nhưng không có tệp âm thanh trong kho.</p>
           )}
           {!polling && stage !== "COMPLETED" && stage !== "FAILED" && (
             <Button size="sm" variant="outline" className="mb-3" onClick={() => void pollAudioJob(currentJobId, { updateUrl: true })}>Kiểm tra lại</Button>
           )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="bg-white p-3 rounded-lg border border-emerald-100"><p className="text-[11px] text-text-muted">Tác vụ</p><p className="font-bold text-stone-800 truncate">{AUDIO_TASK_SPECS[audioJob?.task_type ?? taskType].label}</p></div>
-            <div className="bg-white p-3 rounded-lg border border-emerald-100"><p className="text-[11px] text-text-muted">Giọng đọc</p><p className="font-bold text-stone-800 truncate">{audioJob?.voice_display_name ?? (spec.needsVoice ? "—" : "Không có")}</p></div>
-            <div className="bg-white p-3 rounded-lg border border-emerald-100"><p className="text-[11px] text-text-muted">Nhạc nền</p><p className="font-bold text-stone-800 truncate">{audioJob?.music_track_name ?? "Không có"}</p></div>
-            <div className="bg-white p-3 rounded-lg border border-emerald-100"><p className="text-[11px] text-text-muted">Chi phí</p><p className="font-bold text-amber-600 font-mono">{audioJob ? (audioJob.refunded ? "đã hoàn" : `${audioJob.credits_cost} credit`) : "—"}</p></div>
+            <div className="bg-surface p-3 rounded-lg border border-success/20"><p className="text-caption text-text-muted">Tác vụ</p><p className="font-bold text-text truncate">{AUDIO_TASK_SPECS[audioJob?.task_type ?? taskType].label}</p></div>
+            <div className="bg-surface p-3 rounded-lg border border-success/20"><p className="text-caption text-text-muted">Giọng đọc</p><p className="font-bold text-text truncate">{audioJob?.voice_display_name ?? (spec.needsVoice ? "—" : "Không có")}</p></div>
+            <div className="bg-surface p-3 rounded-lg border border-success/20"><p className="text-caption text-text-muted">Nhạc nền</p><p className="font-bold text-text truncate">{audioJob?.music_provider_used ? "Nhạc AI (ElevenLabs Music)" : audioJob?.music_track_name ?? "Không có"}</p></div>
+            <div className="bg-surface p-3 rounded-lg border border-success/20"><p className="text-caption text-text-muted">Chi phí</p><p className="font-bold text-warning font-mono">{audioJob ? (audioJob.refunded ? "đã hoàn" : `${audioJob.credits_cost} credit`) : "—"}</p></div>
           </div>
         </Card>
       )}
@@ -509,9 +544,9 @@ export function AudioWorkspace() {
             { label: "Giọng đọc", value: taskType === "VOICE_CLONE" ? "Giọng nhân bản" : spec.needsVoice ? selectedVoice?.displayName ?? "—" : "Không" },
           ]}
         />
-        <div className="flex justify-between items-center text-xs text-stone-500 pt-1">
-          <button type="button" onClick={() => navigateToArea("b")} className="hover:text-stone-800 transition">← Quay lại Khu vực B (Nội dung)</button>
-          <button type="button" onClick={() => navigateToArea("f")} className="font-medium text-stone-500 hover:text-stone-800 transition underline decoration-dotted">⚡ Đi thẳng đến Đóng gói chiến dịch (Chặng 07) →</button>
+        <div className="flex justify-between items-center text-xs text-text-muted pt-1">
+          <button type="button" onClick={() => navigateToArea("b")} className="hover:text-text transition">← Quay lại Nội dung (Nội dung)</button>
+          <button type="button" onClick={() => navigateToArea("f")} className="font-medium text-text-muted hover:text-text transition underline decoration-dotted">⚡ Đi thẳng đến Đóng gói chiến dịch (Chặng 07) →</button>
         </div>
       </div>
     </div>

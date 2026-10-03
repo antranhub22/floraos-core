@@ -68,18 +68,16 @@ class LocalCinematicProvider(BaseVideoProvider):
 
         return None
 
-    def render_video(
+    def chuan_bi(
         self,
         job_id: str,
         org_id: str,
         payload: Dict[str, Any],
-        out_file: Path,
+        out_dir: Path,
         progress_callback: Optional[Any] = None,
-    ) -> Path:
-        """Render video với đầy đủ chuyển động Ken Burns, âm thanh và phụ đề."""
-        if not self.is_available():
-            raise VideoProviderError("FFmpeg chưa được cài đặt trên hệ thống.")
-
+    ) -> Dict[str, Any]:
+        """Ảnh từng cảnh, thời lượng, chuyển động, âm thanh (bản phối C), lớp phụ đề —
+        dùng chung cho Ken Burns cục bộ VÀ bộ ghép clip nhà cung cấp (25/09/2026)."""
         scenes = payload.get("scenes") or []
         aspect_ratio = payload.get("aspectRatio") or "9:16"
         duration_seconds = int(payload.get("durationSeconds") or 15)
@@ -88,7 +86,6 @@ class LocalCinematicProvider(BaseVideoProvider):
         caption_style = str(payload.get("captionStyle") or payload.get("caption_style") or "MODERN_BADGE")
         video_job_id = payload.get("videoJobId") or job_id
 
-        out_dir = out_file.parent
         out_dir.mkdir(parents=True, exist_ok=True)
 
         if progress_callback:
@@ -178,6 +175,42 @@ class LocalCinematicProvider(BaseVideoProvider):
                 temp_caption_files.append(png)
                 subtitle_overlays.append((png, start, end))
 
+        return {
+            "image_paths": image_paths,
+            "scene_motions": scene_motions,
+            "scene_durations": scene_durations,
+            "audio_path": audio_path,
+            "subtitle_overlays": subtitle_overlays,
+            "temp_files": temp_caption_files,
+            "aspect_ratio": aspect_ratio,
+            "duration_seconds": duration_seconds,
+            "captioned_paths": captioned_paths,
+        }
+
+    def render_video(
+        self,
+        job_id: str,
+        org_id: str,
+        payload: Dict[str, Any],
+        out_file: Path,
+        progress_callback: Optional[Any] = None,
+    ) -> Path:
+        """Render video với đầy đủ chuyển động Ken Burns, âm thanh và phụ đề."""
+        if not self.is_available():
+            raise VideoProviderError("FFmpeg chưa được cài đặt trên hệ thống.")
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+        cb = self.chuan_bi(job_id, org_id, payload, out_file.parent, progress_callback)
+        return self.render_tu_chuan_bi(cb, out_file, progress_callback)
+
+    def render_tu_chuan_bi(self, cb: Dict[str, Any], out_file: Path, progress_callback: Optional[Any] = None) -> Path:
+        captioned_paths = cb["captioned_paths"]
+        aspect_ratio = cb["aspect_ratio"]
+        duration_seconds = cb["duration_seconds"]
+        audio_path = cb["audio_path"]
+        scene_motions = cb["scene_motions"]
+        scene_durations = cb["scene_durations"]
+        subtitle_overlays = cb["subtitle_overlays"]
+        temp_caption_files = cb["temp_files"]
         # 4. Render FFmpeg Cinematic Ken Burns
         if progress_callback:
             progress_callback("STAGE", {"stage": "RENDERING", "progress": 70})

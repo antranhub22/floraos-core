@@ -21,6 +21,7 @@ export const generateContentBodySchema = z
     topic_id: z.string().min(1).nullish(),
     scene_plan_id: z.string().min(1).nullish(),
     channels: z.array(briefChannelSchema).min(1).max(4),
+    content_provider: z.string().min(1).max(40).nullish().describe("Nhà cung cấp nội dung cho lượt này (claude_opus | openai_structured | gemini_pro | claude_sonnet | gemini_flash | openai_direct); bỏ trống = thứ tự ưu tiên của tiệm"),
   })
   .refine((d) => Boolean(d.asset_id || d.product_id), {
     message: "Cần asset_id hoặc product_id để dựng Content Brief",

@@ -2,7 +2,8 @@ import { AppError } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { callCapability } from "@/core/ai/gateway"
 import { aiGatewayDeps } from "@/core/ai/wiring"
-import { OpenAILLMProvider } from "@/core/ai/adapters/openai-llm-provider"
+import { createContentLLM } from "@/core/ai/adapters/multi-llm-provider"
+import { providerOrderFor } from "@/modules/creative-production/use-cases/provider-preferences"
 import type { TenantContext } from "@/core/tenancy"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
@@ -61,7 +62,14 @@ function view(job: {
  */
 export async function generateScenePlan(
   ctx: TenantContext,
-  input: { brief: ScenePlanInput; idempotencyKey: string; productId?: string | null; assetId?: string | null }
+  input: {
+    brief: ScenePlanInput
+    idempotencyKey: string
+    productId?: string | null
+    assetId?: string | null
+    /** Nhà cung cấp nội dung chọn cho lượt này (khoá `provider-catalog.ts`, loại `content`). */
+    contentProvider?: string | null
+  }
 ): Promise<ScenePlanResult> {
   requireCapability(ctx, "I1")
 
@@ -93,6 +101,7 @@ export async function generateScenePlan(
 
   const jobRepo = new GenerationJobRepository()
   await jobRepo.startInline(ctx, enq.job.id, new Date())
+  const preferredModelKeys = await providerOrderFor(ctx, "content", input.contentProvider)
 
   try {
     const aiResult = await callCapability(
@@ -101,8 +110,9 @@ export async function generateScenePlan(
         privacy: "SHOP",
         entity: { type: "scene_plan", id: enq.job.id },
         jobId: enq.job.id,
+        preferredModelKeys,
       },
-      createScenePlanAdapter(new OpenAILLMProvider(), input.brief, ctx.organizationId),
+      createScenePlanAdapter(createContentLLM(), input.brief, ctx.organizationId),
       aiGatewayDeps(ctx)
     )
     if (aiResult.kind !== "xong") {
@@ -125,6 +135,7 @@ export async function generateScenePlan(
         channels: postChannels,
         idempotencyKey: `content-engine:scene-plan:${enq.job.id}`,
         includedInJobId: enq.job.id,
+        contentProvider: input.contentProvider ?? null,
       }).catch(() => null)
       const contentJob = content ? await jobRepo.findById(ctx, content.jobId) : null
       const contentDelivered = contentJob !== null && lyDoHoanCredit(contentJob) === null

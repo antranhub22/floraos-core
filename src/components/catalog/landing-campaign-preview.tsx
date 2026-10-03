@@ -82,7 +82,7 @@ export function LandingCampaignPreview({
             <Button
               onClick={onPublish}
               disabled={isPublishing}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-8 text-xs font-bold"
+              className="bg-success hover:bg-success/90 text-white gap-1.5 h-8 text-xs font-bold"
             >
               <CheckCircle2 size={14} />
               <span>{isPublishing ? "Đang xuất bản..." : "Duyệt & Xuất bản Landing Page"}</span>
@@ -114,12 +114,12 @@ export function LandingCampaignPreview({
       </div>
 
       {/* Visual Live Preview Frame */}
-      <div className="bg-slate-100/80 p-4 sm:p-6 rounded-2xl border border-slate-200/80 flex justify-center">
+      <div className="bg-surface-alt/80 p-4 sm:p-6 rounded-2xl border border-border flex justify-center">
         <div
           className={`w-full transition-all duration-300 space-y-4 ${
             deviceView === "mobile"
-              ? "max-w-md bg-white p-3.5 rounded-3xl shadow-lg border border-slate-200"
-              : "max-w-2xl bg-white p-5 rounded-3xl shadow-lg border border-slate-200"
+              ? "max-w-md bg-surface p-3.5 rounded-3xl shadow-lg border border-border"
+              : "max-w-2xl bg-surface p-5 rounded-3xl shadow-lg border border-border"
           }`}
         >
           {/* 1. Hero Section */}

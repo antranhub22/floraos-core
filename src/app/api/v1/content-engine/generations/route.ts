@@ -53,6 +53,7 @@ export const POST = handle(async (request) => {
     topicId: d.topic_id ?? null,
     scenePlanId: d.scene_plan_id ?? null,
     channels: d.channels,
+    contentProvider: d.content_provider ?? null,
   })
 
   return jsonResponse(

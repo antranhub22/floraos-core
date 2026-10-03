@@ -87,7 +87,7 @@ export function MusicLibraryPanel({
               key={m}
               type="button"
               onClick={() => setMood(m)}
-              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold cursor-pointer ${
+              className={`rounded-full border px-2.5 py-1 text-caption font-semibold cursor-pointer ${
                 mood === m ? "border-primary bg-primary/10 text-primary" : "border-border text-text-muted"
               }`}
             >
@@ -97,16 +97,16 @@ export function MusicLibraryPanel({
         </div>
       </div>
 
-      {error && <p className="mb-2 text-[12px] text-rose-700">{error}</p>}
+      {error && <p className="mb-2 text-meta text-danger">{error}</p>}
       {!tracks && !error && (
-        <p className="flex items-center gap-2 text-[12px] text-text-muted">
+        <p className="flex items-center gap-2 text-meta text-text-muted">
           <Loader2 size={12} className="animate-spin" /> Đang tải thư viện nhạc…
         </p>
       )}
 
       <div className="flex flex-col gap-2">
         {!required && (
-          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-[12px]">
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-meta">
             <input type="radio" checked={value === null} onChange={() => onChange(null, null, true)} />
             Không dùng nhạc nền
           </label>
@@ -117,7 +117,7 @@ export function MusicLibraryPanel({
             className={`rounded-lg border px-3 py-2 ${value === t.track_id ? "border-primary bg-primary/5" : "border-border"}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-text">
+              <label className="flex cursor-pointer items-center gap-2 text-meta font-semibold text-text">
                 <input type="radio" checked={value === t.track_id} onChange={() => onChange(t.track_id, t, true)} />
                 {t.title}
                 <span className="font-normal text-text-muted">
@@ -142,7 +142,7 @@ export function MusicLibraryPanel({
                       if (value === t.track_id) onChange(null, null)
                       setReloadKey((k) => k + 1)
                     }}
-                    className="text-rose-600 cursor-pointer"
+                    className="text-danger cursor-pointer"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -150,16 +150,16 @@ export function MusicLibraryPanel({
               </div>
             </div>
             <audio controls preload="none" src={t.preview_url} className="mt-1.5 h-8 w-full" />
-            <p className="mt-1 text-[10px] text-text-muted">Nguồn: {t.license_source}</p>
+            <p className="mt-1 text-caption text-text-muted">Nguồn: {t.license_source}</p>
           </div>
         ))}
         {tracks && visible.length === 0 && (
-          <p className="text-[12px] text-text-muted">Chưa có bài nào cho mood này — tải nhạc của tiệm lên bên dưới.</p>
+          <p className="text-meta text-text-muted">Chưa có bài nào cho mood này — tải nhạc của tiệm lên bên dưới.</p>
         )}
       </div>
 
       {selected && !selected.license_verified && (
-        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+        <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-meta text-warning">
           Bài này chưa có hồ sơ giấy phép thương mại. Chỉ nên dùng để thử — trước khi đăng quảng cáo hãy chọn bài đã xác
           minh hoặc tải nhạc tiệm có giấy phép.
         </p>
@@ -223,11 +223,11 @@ function MusicUploadForm({ onDone }: { onDone: (t: MusicTrackItem) => void }) {
         <option value="creative_commons">Creative Commons cho phép thương mại</option>
       </select>
       <input className={input} placeholder="Nguồn: nơi mua, mã giấy phép hoặc đường dẫn" value={licenseSource} onChange={(e) => setLicenseSource(e.target.value)} />
-      <label className="flex items-start gap-2 text-[11px] text-text-muted sm:col-span-2">
+      <label className="flex items-start gap-2 text-caption text-text-muted sm:col-span-2">
         <input type="checkbox" checked={attest} onChange={(e) => setAttest(e.target.checked)} className="mt-0.5" />
         Tôi xác nhận tiệm có quyền dùng bài này trong video/bài quảng cáo trên mạng xã hội, và thông tin nguồn ở trên là đúng.
       </label>
-      {error && <p className="text-[12px] text-rose-700 sm:col-span-2">{error}</p>}
+      {error && <p className="text-meta text-danger sm:col-span-2">{error}</p>}
       <Button size="sm" onClick={submit} disabled={busy || !attest} className="gap-1.5 sm:col-span-2">
         {busy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Tải lên thư viện của tiệm
       </Button>

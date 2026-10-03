@@ -1,9 +1,11 @@
-import { describe, expect, test } from "vitest"
+import { describe, expect, it, test } from "vitest"
 
 import {
   AUDIO_TASK_SPECS,
   SELECTABLE_TTS_PROVIDERS,
+  audioCostPlan,
   audioJobCreditCost,
+  audioJobRefund,
   estimateSpeechSeconds,
   isOrgTrackId,
   orgTrackUuid,
@@ -11,6 +13,7 @@ import {
   validateAudioTask,
 } from "@/modules/audio-studio/domain/audio-task-rules"
 import { MUSIC_CATALOG, suggestMusicTrack } from "@/modules/audio-studio/domain/music-catalog"
+import { musicGenerationCredit } from "@/modules/audio-studio/domain/audio-pricing-guard"
 import { costCreditForFeature } from "@/modules/usage/domain/pricing"
 
 // Rà soát Khu vực C 24/09/2026: bốn loại tác vụ phải KHÁC nhau thật, credit
@@ -105,5 +108,43 @@ describe("nhạc & tệp", () => {
   test("ước lượng thời lượng đọc", () => {
     expect(estimateSpeechSeconds("")).toBe(0)
     expect(estimateSpeechSeconds("a".repeat(140))).toBeGreaterThan(9)
+  })
+})
+
+describe("nhà cung cấp trước — nhạc AI + hoàn chênh (PO 25/09/2026)", () => {
+  const scenes = [
+    { sceneIndex: 1, voiceScript: "Xin chào", targetDurationSeconds: 4 },
+    { sceneIndex: 2, voiceScript: "Đặt hoa", targetDurationSeconds: 4 },
+  ]
+
+  it("nhạc AI cộng credit theo mỗi 30 giây; bài thư viện 0", () => {
+    expect(musicGenerationCredit("elevenlabs_music", 20)).toBe(2)
+    expect(musicGenerationCredit("elevenlabs_music", 61)).toBe(6)
+    expect(musicGenerationCredit(null, 60)).toBe(0)
+    const base = audioJobCreditCost({ taskType: "AUDIO_MIX", providerKey: "openai", qualityTier: "standard", scenes })
+    expect(
+      audioJobCreditCost({ taskType: "AUDIO_MIX", providerKey: "openai", qualityTier: "standard", scenes, musicProvider: "elevenlabs_music", musicSeconds: 8 })
+    ).toBe(base + 2)
+    expect(audioJobCreditCost({ taskType: "VOICEOVER", providerKey: "openai", qualityTier: "standard", scenes, musicProvider: "elevenlabs_music" })).toBe(base)
+    expect(audioJobCreditCost({ taskType: "MUSIC_SELECT", providerKey: "openai", qualityTier: "standard", scenes: [] })).toBe(0)
+  })
+
+  it("nhạc lùi thư viện → hoàn phần nhạc; giọng lùi bên rẻ hơn → hoàn chênh; không thu thêm", () => {
+    const plan = audioCostPlan({
+      taskType: "AUDIO_MIX",
+      providerKey: "elevenlabs",
+      qualityTier: "standard",
+      scenes,
+      musicProvider: "elevenlabs_music",
+      musicSeconds: 8,
+    })
+    expect(plan.voiceCredit).toBe(4)
+    expect(plan.musicCredit).toBe(2)
+    expect(audioJobRefund(plan, { provider_used: "elevenlabs", music_provider_used: "elevenlabs_music", music_fallback: false })).toBe(0)
+    expect(audioJobRefund(plan, { provider_used: "elevenlabs", music_provider_used: null, music_fallback: true })).toBe(2)
+    expect(audioJobRefund(plan, { provider_used: "openai", music_provider_used: "elevenlabs_music" })).toBe(2)
+    expect(audioJobRefund(plan, { provider_used: "edge_tts,openai", music_fallback: true })).toBe(2 + 2)
+    const re = audioCostPlan({ taskType: "AUDIO_MIX", providerKey: "openai", qualityTier: "standard", scenes, musicProvider: null, musicSeconds: 8 })
+    expect(audioJobRefund(re, { provider_used: "elevenlabs" })).toBe(0)
   })
 })

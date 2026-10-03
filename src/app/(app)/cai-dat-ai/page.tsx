@@ -19,6 +19,8 @@ import { useSession } from "@/lib/session"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { SkeletonBlock } from "@/components/ui/skeleton"
+import { ProviderOrderSettings } from "@/components/creative-studio/provider-order-settings"
 
 interface AllowedModel {
   key: string
@@ -147,24 +149,35 @@ export default function AiSettingsPage() {
 
       {/* Thông báo trạng thái */}
       {error && (
-        <div className="flex items-center gap-2 p-3 text-xs bg-red-50 text-red-700 border border-red-200 rounded-xl">
+        <div className="flex items-center gap-2 p-3 text-xs bg-danger/10 text-danger border border-danger/30 rounded-xl">
           <AlertCircle size={15} />
           <span>{error}</span>
         </div>
       )}
       {successMsg && (
-        <div className="flex items-center gap-2 p-3 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl">
+        <div className="flex items-center gap-2 p-3 text-xs bg-success/10 text-success border border-success/30 rounded-xl">
           <CheckCircle2 size={15} />
           <span>{successMsg}</span>
         </div>
       )}
+
+      {/* Nhà cung cấp Creative Studio — PO 25/09/2026: nhà cung cấp trước, cục bộ là dự phòng */}
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-extrabold text-text">Nhà cung cấp AI cho Creative Studio</h2>
+          <p className="text-xs text-text-muted">
+            Thứ tự ưu tiên của tiệm cho nội dung, ảnh, video, giọng đọc và nhạc nền. Bên đầu tiên được thử trước; mỗi lượt tạo vẫn chọn được bên khác.
+          </p>
+        </div>
+        <ProviderOrderSettings canEdit={canEdit} />
+      </section>
 
       {/* Header hành động */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-extrabold text-text">Danh mục Năng lực AI</h1>
           <p className="text-xs text-text-muted">
-            Tổ chức: <span className="font-semibold text-text">{orgName || "Mặc định"}</span>
+            Tổ chức: <span className="font-semibold text-text">{orgName || "Mặc định"}</span> (Phạm vi áp dụng chỉ trong tổ chức hiện tại)
           </p>
         </div>
         <Button
@@ -181,7 +194,9 @@ export default function AiSettingsPage() {
 
       {/* Danh sách năng lực */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-text-muted">Đang tải dữ liệu chính sách AI...</div>
+        <div className="py-6">
+          <SkeletonBlock lines={4} label="Đang tải dữ liệu chính sách AI của tổ chức..." />
+        </div>
       ) : policies.length === 0 ? (
         <div className="py-12 text-center text-xs text-text-muted border border-dashed rounded-xl">
           Chưa có năng lực AI nào được cấu hình cho tổ chức.
@@ -195,7 +210,7 @@ export default function AiSettingsPage() {
             return (
               <div
                 key={cap.capability_code}
-                className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-surface hover:border-red-200 transition-colors"
+                className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-surface hover:border-primary/40 transition-colors"
               >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2">
@@ -203,7 +218,7 @@ export default function AiSettingsPage() {
                       {cap.capability_code}
                     </span>
                     <span className="text-sm font-bold text-text">{cap.capability_name}</span>
-                    <Badge tone="neutral" className="text-[10px] uppercase border border-border">
+                    <Badge tone="neutral" className="text-caption uppercase border border-border">
                       {cap.module}
                     </Badge>
                   </div>
@@ -231,14 +246,14 @@ export default function AiSettingsPage() {
                 {/* Sàn bảo mật & Thao tác */}
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="flex flex-col items-end">
-                    <span className="text-[10px] text-text-muted uppercase font-bold">Sàn bảo mật</span>
+                    <span className="text-caption text-text-muted uppercase font-bold">Sàn bảo mật</span>
                     {isSensitive ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-bold border border-amber-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-caption font-bold border border-warning/30">
                         <Lock size={10} />
                         SENSITIVE (Khóa cứng)
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-caption font-bold border border-success/30">
                         <Shield size={10} />
                         {cap.privacy_floor}
                       </span>

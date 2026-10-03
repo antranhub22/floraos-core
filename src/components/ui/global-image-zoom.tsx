@@ -144,6 +144,7 @@ export function GlobalImageZoom() {
     >
       {/* Top Controls Bar */}
       <div
+        role="presentation"
         className="w-full flex items-center justify-between px-6 py-3 bg-black/40 border-b border-white/10 z-10 select-none"
         onClick={(e) => e.stopPropagation()}
       >
@@ -224,7 +225,7 @@ export function GlobalImageZoom() {
             type="button"
             onClick={handleClose}
             title="Đóng (ESC)"
-            className="p-1.5 bg-white/10 text-white hover:bg-red-500/80 rounded-lg transition"
+            className="p-1.5 bg-white/10 text-white hover:bg-danger/80 rounded-lg transition"
           >
             <X size={18} />
           </button>
@@ -233,6 +234,8 @@ export function GlobalImageZoom() {
 
       {/* Main Image Viewport */}
       <div
+        role="button"
+        tabIndex={0}
         className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing p-4"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -258,6 +261,9 @@ export function GlobalImageZoom() {
                 }
               : {}),
           }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           <img
@@ -272,6 +278,7 @@ export function GlobalImageZoom() {
 
       {/* Bottom Hint Footer */}
       <div
+        role="presentation"
         className="w-full text-center py-2 text-xs text-white/50 bg-black/30 select-none"
         onClick={(e) => e.stopPropagation()}
       >

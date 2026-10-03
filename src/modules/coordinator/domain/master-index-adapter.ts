@@ -11,7 +11,6 @@ import type {
   AccessoryBomItem,
   StructuredAddress,
 } from "@/modules/products/domain/product-master-index"
-import type { CustomerMasterIndex } from "@/modules/crm/domain/customer-master-index"
 import type { FloristProductionCardData } from "./coordinator-types"
 
 /**
@@ -48,40 +47,14 @@ export function extractFloristRecipeFromOrderItem(item: {
         },
       ]
 
-  const foliage: FoliageBomItem[] = rawFoliage.length > 0
-    ? rawFoliage
-    : [
-        {
-          name: "Lá đệm theo mùa",
-          quantity: null,
-          unit: "lá",
-          color: "Xanh lá",
-          role: "Nền",
-        },
-      ]
-
-  const wrapping: WrappingLayer[] = rawWrapping.length > 0
-    ? rawWrapping
-    : [
-        {
-          layer: "Lớp ngoài",
-          material: (meta.wrapStyle as string) || "Giấy gói cao cấp",
-          color: "Tone chuẩn",
-          texture: "Mịn",
-        },
-      ]
-
-  const accessories: AccessoryBomItem[] = rawAccessories.length > 0
-    ? rawAccessories
-    : [
-        {
-          name: "Thiệp chúc mừng",
-          material: "Giấy mỹ thuật",
-          color: "Trắng kem",
-          quantity: 1,
-          printedText: item.cardMessage || null,
-        },
-      ]
+  // ĐP-1.4 (26/09/2026): trước bản này, thiếu dữ liệu BOM thật thì hàm này BỊA
+  // ra "Lá đệm theo mùa" / "Giấy gói cao cấp" / "Thiệp chúc mừng" — đối tác xưởng
+  // đọc phiếu tưởng đó là yêu cầu thật của Sales. Theo nguyên tắc "không bịa dữ
+  // liệu" (AGENTS.md), thiếu thì trả mảng RỖNG; giao diện (`partner-production-card.tsx`)
+  // đã tự ẩn khối tương ứng khi mảng rỗng.
+  const foliage: FoliageBomItem[] = rawFoliage
+  const wrapping: WrappingLayer[] = rawWrapping
+  const accessories: AccessoryBomItem[] = rawAccessories
 
   return {
     orderId: item.orderId,
@@ -99,23 +72,7 @@ export function extractFloristRecipeFromOrderItem(item: {
   }
 }
 
-/**
- * Trích xuất tóm tắt hồ sơ khách hàng phục vụ ưu tiên điều phối.
- */
-export function extractCustomerCoordinationBrief(customer?: CustomerMasterIndex | null) {
-  if (!customer) {
-    return {
-      tier: "NEW" as const,
-      isVip: false,
-      preferredFlowers: [],
-      notes: "Khách vãng lai / Đặt trực tiếp",
-    }
-  }
-
-  return {
-    tier: customer.metrics.tier,
-    isVip: customer.metrics.tier === "VIP" || customer.metrics.tier === "GOLD",
-    preferredFlowers: customer.preferences.preferredFlowers,
-    notes: customer.notes || "Khách hàng thân thiết",
-  }
-}
+// MI-6 (ĐP-2.4, 26/09/2026): `extractCustomerCoordinationBrief` từng sống ở đây đã XOÁ.
+// Đọc tóm tắt hồ sơ khách qua `projectCustomerCoordinationBrief` của Customer Master Index
+// (`@/modules/crm/domain/customer-master-index`) — Hợp đồng MI §3/§7 cấm Điều phối tự trích
+// lát cắt CMI thay vì đi qua projection chính chủ.

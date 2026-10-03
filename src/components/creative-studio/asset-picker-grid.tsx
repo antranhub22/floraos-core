@@ -45,7 +45,7 @@ export function AssetPickerGrid({
 
   if (assets.length === 0) {
     return (
-      <div className="text-center py-4 text-[13px] text-text-muted">
+      <div className="text-center py-4 text-body-sm text-text-muted">
         Kho chưa có ảnh nào.
       </div>
     )
@@ -57,7 +57,7 @@ export function AssetPickerGrid({
         <div className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           {label} ({assets.length})
         </div>
-        <span className="text-[11px] text-text-muted">Click chọn ảnh để tối ưu</span>
+        <span className="text-caption text-text-muted">Click chọn ảnh để tối ưu</span>
       </div>
 
       <div
@@ -96,14 +96,14 @@ export function AssetPickerGrid({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-bold truncate text-text" title={a.name}>
+              <div className="text-body-sm font-bold truncate text-text" title={a.name}>
                 {a.name}
               </div>
-              <div className="text-[11px] text-text-muted truncate mt-0.5">
+              <div className="text-caption text-text-muted truncate mt-0.5">
                 Mã: {a.id.slice(0, 8).toUpperCase()}
               </div>
             </div>
-            <Badge tone="neutral" className="flex-shrink-0 text-[10px]">{badgeLabel}</Badge>
+            <Badge tone="neutral" className="flex-shrink-0 text-caption">{badgeLabel}</Badge>
           </label>
         ))}
       </div>
@@ -140,7 +140,7 @@ export function MasterPickerCard({ masters, selectedId, onSelect }: MasterPicker
             <ImageIcon size={24} className="text-text-muted" />
           )}
           <div className="absolute top-1 right-1 rounded-full bg-success-bg p-0.5 text-secondary">
-            <span className="text-[8px] font-bold">✓</span>
+            <span className="text-caption font-bold">✓</span>
           </div>
         </div>
         <div className="min-w-0">
@@ -148,12 +148,12 @@ export function MasterPickerCard({ masters, selectedId, onSelect }: MasterPicker
             <span className="text-xs font-bold uppercase tracking-wider text-secondary">
               Master Image nguồn
             </span>
-            <Badge tone="success" className="text-[10px]">Đã duyệt</Badge>
+            <Badge tone="success" className="text-caption">Đã duyệt</Badge>
           </div>
-          <div className="text-[14.5px] font-extrabold text-text truncate mt-0.5">
+          <div className="text-title-sm font-extrabold text-text truncate mt-0.5">
             {activeMaster.name}
           </div>
-          <div className="text-[11.5px] text-text-muted mt-0.5">
+          <div className="text-caption text-text-muted mt-0.5">
             Mã ảnh: {activeMaster.id.slice(0, 8).toUpperCase()}
           </div>
         </div>

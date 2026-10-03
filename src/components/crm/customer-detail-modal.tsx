@@ -1,9 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { X, Calendar, Gift, Shield, Heart, Plus, Loader2, Sparkles, Check, Phone, MapPin, Tag } from "lucide-react"
+import { Calendar, Gift, Shield, Plus, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog } from "@/components/ui/dialog"
 import type { CustomerMasterIndex } from "@/modules/crm/domain/customer-master-index"
 
 interface CustomerDetailModalProps {
@@ -93,52 +95,57 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-surface shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="rounded bg-primary/10 px-2.5 py-1 text-xs font-mono font-bold text-primary">
-              {data?.code ?? "Đang tải..."}
-            </span>
-            <div>
-              <h2 className="text-base font-bold text-foreground">{data?.name ?? "Chi tiết khách hàng"}</h2>
-              <div className="text-[11px] text-muted-foreground">{data?.phone}</div>
-            </div>
+    <Dialog
+      open={Boolean(customerId)}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      size="lg"
+      title={
+        <div className="flex items-center gap-3">
+          <span className="rounded bg-primary/10 px-2.5 py-1 text-xs font-mono font-bold text-primary flex items-center min-w-14 justify-center">
+            {data?.code ?? <Skeleton className="h-3 w-12" />}
+          </span>
+          <div>
+            <div className="text-base font-bold text-foreground">{data?.name ?? "Chi tiết khách hàng"}</div>
+            <div className="text-caption text-text-muted">{data?.phone}</div>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="h-5 w-5" />
-          </button>
         </div>
-
+      }
+    >
+      <div className="-mx-5 -mt-5 sm:-mx-6 sm:-mt-6">
         {/* Tab Navigation */}
-        <div className="flex border-b border-border bg-muted/30 px-6 gap-3 pt-2 text-xs font-semibold">
+        <div className="flex border-b border-border bg-muted/30 px-5 sm:px-6 gap-3 pt-2 text-xs font-semibold">
           <button
+            type="button"
             onClick={() => setActiveTab("profile")}
-            className={`pb-2.5 px-2 border-b-2 transition-colors ${
+            className={`pb-2.5 px-2 border-b-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               activeTab === "profile"
-                ? "border-red-600 text-red-600 font-bold"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "border-primary text-primary font-bold"
+                : "border-transparent text-text-muted hover:text-foreground"
             }`}
           >
             Hồ sơ Master & RFM
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("occasions")}
-            className={`pb-2.5 px-2 border-b-2 flex items-center gap-1.5 transition-colors ${
+            className={`pb-2.5 px-2 border-b-2 flex items-center gap-1.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               activeTab === "occasions"
-                ? "border-red-600 text-red-600 font-bold"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "border-primary text-primary font-bold"
+                : "border-transparent text-text-muted hover:text-foreground"
             }`}
           >
             <Calendar className="h-3.5 w-3.5" />
             Dịp kỷ niệm ({data?.occasions?.length ?? 0})
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("privacy")}
-            className={`pb-2.5 px-2 border-b-2 flex items-center gap-1.5 transition-colors ${
+            className={`pb-2.5 px-2 border-b-2 flex items-center gap-1.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               activeTab === "privacy"
-                ? "border-red-600 text-red-600 font-bold"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "border-primary text-primary font-bold"
+                : "border-transparent text-text-muted hover:text-foreground"
             }`}
           >
             <Shield className="h-3.5 w-3.5" />
@@ -154,27 +161,46 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
           <div className="flex-1 overflow-y-auto p-6 space-y-5 text-sm">
             {activeTab === "profile" && (
               <>
+                {/* Dịp kỷ niệm sắp tới (L1 - Nâng lên theo chuẩn 03a UX) */}
+                {data.occasions && data.occasions.length > 0 && (
+                  <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3">
+                    <div className="flex items-center gap-2.5">
+                      <Calendar className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />
+                      <div>
+                        <div className="text-caption font-bold text-primary">Dịp kỷ niệm đã lưu</div>
+                        <div className="text-caption text-text">
+                          {data.occasions[0]?.name} · Ngày {data.occasions[0]?.date}
+                          {data.occasions[0]?.recipientName ? ` (người nhận: ${data.occasions[0].recipientName})` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setActiveTab("occasions")} className="text-caption font-semibold">
+                      Xem tất cả ({data.occasions.length})
+                    </Button>
+                  </div>
+                )}
+
                 {/* Thẻ RFM */}
-                <div className="grid grid-cols-4 gap-3 rounded-xl border border-border bg-surface-raised p-4 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-xl border border-border bg-surface-alt p-4 text-center">
                   <div>
-                    <div className="text-[11px] text-text-muted">Phân hạng</div>
+                    <div className="text-caption text-text-muted">Phân hạng RFM</div>
                     <Badge tone={tierColors[data.metrics.tier] ?? "neutral"} className="mt-1 font-bold">
-                      {data.metrics.tier}
+                      {data.metrics.tier === "VIP" ? "VIP" : data.metrics.tier === "GOLD" ? "Vàng" : data.metrics.tier === "SILVER" ? "Bạc" : data.metrics.tier === "BRONZE" ? "Đồng" : "Khách mới"}
                     </Badge>
                   </div>
                   <div>
-                    <div className="text-[11px] text-text-muted">Tổng chi tiêu</div>
-                    <div className="mt-1 font-bold text-red-600">
+                    <div className="text-caption text-text-muted">Tổng chi tiêu</div>
+                    <div className="mt-1 font-bold text-primary">
                       {Number(data.metrics.totalSpentVnd).toLocaleString("vi-VN")} đ
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-text-muted">Số đơn hàng</div>
-                    <div className="mt-1 font-bold text-text-main">{data.metrics.orderCount} đơn</div>
+                    <div className="text-caption text-text-muted">Số đơn hàng</div>
+                    <div className="mt-1 font-bold text-text">{data.metrics.orderCount} đơn</div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-text-muted">Giá trị TB (AOV)</div>
-                    <div className="mt-1 font-bold text-text-main">
+                    <div className="text-caption text-text-muted">Giá trị TB (AOV)</div>
+                    <div className="mt-1 font-bold text-text">
                       {Number(data.metrics.aovVnd).toLocaleString("vi-VN")} đ
                     </div>
                   </div>
@@ -191,7 +217,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                   </div>
 
                   <div className="rounded-lg border border-border p-4 space-y-2 text-xs">
-                    <div className="font-bold text-text-main text-sm">Gu thẩm mỹ & Sở thích ngành hoa (M01 Vision)</div>
+                    <div className="font-bold text-text-main text-sm">Gu thẩm mỹ & Sở thích ngành hoa</div>
                     <div className="flex items-center gap-2">
                       <span className="text-text-muted">Hoa yêu thích:</span>
                       <span className="font-semibold text-foreground">{data.preferences.preferredFlowers.join(", ") || "Chưa ghi nhận"}</span>
@@ -215,8 +241,8 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                 </div>
 
                 {showAddOccasion && (
-                  <form onSubmit={handleAddOccasion} className="rounded-xl border border-dashed border-red-300 bg-red-50/60 p-4 space-y-3 text-xs">
-                    <div className="font-bold text-red-950">Thêm ngày kỷ niệm mới</div>
+                  <form onSubmit={handleAddOccasion} className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 space-y-3 text-xs">
+                    <div className="font-bold text-foreground">Thêm ngày kỷ niệm mới</div>
                     <div className="grid grid-cols-2 gap-3">
                       <input
                         type="text"
@@ -244,7 +270,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                     />
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="outline" size="sm" onClick={() => setShowAddOccasion(false)}>Hủy</Button>
-                      <Button type="submit" size="sm" className="bg-red-600 text-white" disabled={actionLoading}>Lưu dịp</Button>
+                      <Button type="submit" size="sm" disabled={actionLoading}>Lưu dịp</Button>
                     </div>
                   </form>
                 )}
@@ -258,7 +284,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                     data.occasions.map((o) => (
                       <div key={o.id} className="flex items-center justify-between rounded-lg border border-border p-3 text-xs">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-700">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-subtle text-primary">
                             <Gift className="h-3.5 w-3.5" />
                           </span>
                           <div>
@@ -276,7 +302,7 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
 
             {activeTab === "privacy" && (
               <div className="space-y-4">
-                <div className="rounded-lg bg-blue-50/70 border border-blue-200 p-3 text-xs text-blue-900">
+                <div className="rounded-lg bg-info-bg border border-info/30 p-3 text-xs text-info">
                   🛡️ <strong>Chính sách bảo vệ người tiêu dùng:</strong> FloraOS chỉ gửi tin nhắn nhắc nhở hoặc tiếp thị qua các kênh khách hàng đã đồng ý (Consent).
                 </div>
 
@@ -295,10 +321,11 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
                           <div className="text-text-muted">Kênh: {c.channel}</div>
                         </div>
                         <button
+                          type="button"
                           onClick={() => handleToggleConsent(c.channel, isGranted)}
                           disabled={actionLoading}
                           className={`px-3 py-1.5 rounded-full font-bold transition-colors ${
-                            isGranted ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                            isGranted ? "bg-success-bg text-success hover:opacity-85" : "bg-muted text-muted-foreground hover:bg-muted/80"
                           }`}
                         >
                           {isGranted ? "✓ Đã đồng ý" : "✕ Chưa cấp phép"}
@@ -314,6 +341,6 @@ export function CustomerDetailModal({ customerId, onClose, onUpdated }: Customer
           <div className="p-8 text-center text-text-muted">Không tìm thấy thông tin.</div>
         )}
       </div>
-    </div>
+    </Dialog>
   )
 }

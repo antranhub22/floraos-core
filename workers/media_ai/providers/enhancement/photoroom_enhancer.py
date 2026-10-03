@@ -26,7 +26,7 @@ import httpx
 from PIL import Image
 
 from media_ai.providers.base import KetQuaTangCuong
-from media_ai.providers.enhancement._cloud_common import chon_nang_luc, lui_ve_cuc_bo
+from media_ai.providers.enhancement._cloud_common import NhaCungCapLoi, chon_nang_luc, lui_ve_cuc_bo
 
 ENDPOINT = "https://image-api.photoroom.com/v2/edit"
 MAU_PHONG_STUDIO = "FFFFFF"
@@ -44,7 +44,9 @@ class PhotoroomEnhancer:
     name = "photoroom"
     model_version = "photoroom-v2-edit"
 
-    def __init__(self, api_key: str | None = None, client: httpx.Client | None = None, timeout_s: float | None = None) -> None:
+    def __init__(self, api_key: str | None = None, client: httpx.Client | None = None, timeout_s: float | None = None,
+                 lui_cuc_bo: bool = True) -> None:
+        self._lui_cuc_bo = lui_cuc_bo
         self.api_key = api_key if api_key is not None else os.environ.get("PHOTOROOM_API_KEY")
         self._client = client
         self._timeout_s = timeout_s or float(os.environ.get("PHOTOROOM_TIMEOUT_SECONDS") or 90)
@@ -70,10 +72,16 @@ class PhotoroomEnhancer:
         bo_qua = [c for c in selected_caps if c in KHONG_HO_TRO]
         return data, da_ap_dung, bo_qua
 
+    def _loi(self, image: bytes, config: dict[str, Any], ly_do: str) -> KetQuaTangCuong:
+        """`lui_cuc_bo=False` (trong chuỗi nhà cung cấp): ném để thử bên kế tiếp."""
+        if not self._lui_cuc_bo:
+            raise NhaCungCapLoi(self.name, ly_do)
+        return lui_ve_cuc_bo(image, config, self.name, ly_do)
+
     def enhance(self, image: bytes, config: dict[str, Any]) -> KetQuaTangCuong:
         mode, selected_caps = chon_nang_luc(config)
         if not self.api_key:
-            return lui_ve_cuc_bo(image, config, self.name, "Thiếu PHOTOROOM_API_KEY")
+            return self._loi(image, config, "Thiếu PHOTOROOM_API_KEY")
 
         data, da_ap_dung, bo_qua = self.tham_so(selected_caps)
         client = self._client or httpx.Client(timeout=self._timeout_s)
@@ -85,15 +93,15 @@ class PhotoroomEnhancer:
                 files={"imageFile": ("image.jpg", image, "image/jpeg")},
             )
             if r.status_code != 200:
-                return lui_ve_cuc_bo(
-                    image, config, self.name, f"Photoroom từ chối (HTTP {r.status_code}): {r.text[:160]}"
+                return self._loi(
+                    image, config, f"Photoroom từ chối (HTTP {r.status_code}): {r.text[:160]}"
                 )
             anh = Image.open(BytesIO(r.content))
             anh.load()
         except httpx.HTTPError as exc:
-            return lui_ve_cuc_bo(image, config, self.name, f"Lỗi mạng khi gọi Photoroom: {exc}")
+            return self._loi(image, config, f"Lỗi mạng khi gọi Photoroom: {exc}")
         except OSError as exc:
-            return lui_ve_cuc_bo(image, config, self.name, f"Ảnh Photoroom trả về không đọc được: {exc}")
+            return self._loi(image, config, f"Ảnh Photoroom trả về không đọc được: {exc}")
         finally:
             if self._client is None:
                 client.close()

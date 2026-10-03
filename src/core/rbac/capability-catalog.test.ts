@@ -21,15 +21,15 @@ const VAI_TO_KEY: Record<string, "dieu_hanh" | "dieu_phoi" | "sale"> = {
 const HARVESTED_CODES = MOI_MA.filter((ma) => /^[A-E]\d+$/.test(ma))
 
 describe("danh mục năng lực — đặc tả 02", () => {
-  it("149 mã: 76 thu hoạch (A–E) cộng 73 mã mới (F–L, U1–U4, H5–H6, R1–R8, Q1–Q9, T1–T4, I4–I5, P3–P4, V1–V3) — thêm V1–V3 (Market Intelligence)", () => {
+  it("151 mã: 76 thu hoạch (A–E) cộng 75 mã mới (F–L, U1–U4, H5–H6, R1–R10, Q1–Q9, T1–T4, I4–I5, P3–P4, V1–V3) — ĐP-4a thêm R9/R10 (sổ thu)", () => {
     expect(HARVESTED_CODES.length).toBe(76)
-    expect(ALL_CAPABILITY_CODES.length).toBe(149)
+    expect(ALL_CAPABILITY_CODES.length).toBe(151)
   })
 
-  it("18 mã thu hoạch có trần cứng, tổng cả catalog là 42 — V3 thêm trần cứng", () => {
+  it("18 mã thu hoạch có trần cứng, tổng cả catalog là 43 — ĐP-4a thêm R10 (hoàn tiền)", () => {
     const harvestedHardCap = HARVESTED_CODES.filter((ma) => khai(ma).tranCung)
     expect(harvestedHardCap.length).toBe(18)
-    expect(HARD_CAPPED_CODES.length).toBe(42)
+    expect(HARD_CAPPED_CODES.length).toBe(43)
   })
 
   it("mỗi mã A–E khớp nguyên vẹn với bản harvest — không lệch khi mã nguồn đổi", () => {

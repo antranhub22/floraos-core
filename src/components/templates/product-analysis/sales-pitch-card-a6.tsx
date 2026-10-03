@@ -48,11 +48,11 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
 
           {/* Floating Badges */}
           <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
-            <Badge className="bg-black/65 text-white backdrop-blur-md font-semibold text-[11px] border-none shadow-sm">
+            <Badge className="bg-black/65 text-white backdrop-blur-md font-semibold text-caption border-none shadow-sm">
               {activePitch.style}
             </Badge>
             {activePitch.sku && (
-              <Badge className="bg-white/85 text-black backdrop-blur-md font-bold text-[10px] border-none font-mono">
+              <Badge className="bg-white/85 text-black backdrop-blur-md font-bold text-caption border-none font-mono">
                 {activePitch.sku}
               </Badge>
             )}
@@ -61,7 +61,7 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
           {/* Status Ribbon */}
           {status === "FINALIZED" && (
             <div className="absolute right-3 top-3">
-              <Badge className="bg-secondary-text text-white font-bold text-[11px] gap-1 shadow-md border-none">
+              <Badge className="bg-secondary-text text-white font-bold text-caption gap-1 shadow-md border-none">
                 <CheckCircle2 size={12} strokeWidth={2.5} />
                 FINAL
               </Badge>
@@ -71,7 +71,7 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
           {/* Price Banner overlay at bottom of image */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 text-white flex items-end justify-between">
             <div>
-              <div className="text-[11px] text-white/80 font-medium uppercase tracking-wider">Mức giá chào ưu đãi</div>
+              <div className="text-caption text-white/80 font-medium uppercase tracking-wider">Mức giá chào ưu đãi</div>
               <div className="text-2xl font-black tracking-tight text-white flex items-baseline gap-2">
                 {formatCurrencyVnd(activePitch.priceVnd)}
                 {activePitch.originalPriceVnd && activePitch.priceVnd && activePitch.originalPriceVnd > activePitch.priceVnd && (
@@ -83,7 +83,7 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
             </div>
 
             <div className="text-right">
-              <div className="text-[10px] text-white/70 font-mono">Kích thước chuẩn</div>
+              <div className="text-caption text-white/70 font-mono">Kích thước chuẩn</div>
               <div className="text-xs font-bold text-white/95">
                 ~{activePitch.dimensions.heightCm} × {activePitch.dimensions.widthCm} cm
               </div>
@@ -102,7 +102,7 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
               {activePitch.occasions.map((occ, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary"
+                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-caption font-semibold text-primary"
                 >
                   <Tag size={10} />
                   {occ}
@@ -112,25 +112,25 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
           </div>
 
           {/* Emotional Description */}
-          <p className="text-[12.5px] text-text-muted italic border-l-2 border-primary/40 pl-3 leading-relaxed">
+          <p className="text-meta text-text-muted italic border-l-2 border-primary/40 pl-3 leading-relaxed">
             &ldquo;{activePitch.description}&rdquo;
           </p>
 
           {/* Composition / BOM Table */}
           <div className="rounded-xl bg-surface-alt p-3.5 border border-border/60">
-            <div className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
+            <div className="text-caption font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
               <span>Cấu phần hoa & vật liệu</span>
-              <span className="text-[10px] font-normal text-text-muted">{activePitch.container}</span>
+              <span className="text-caption font-normal text-text-muted">{activePitch.container}</span>
             </div>
 
-            <div className="flex flex-col gap-1.5 divide-y divide-border/40 text-[12.5px]">
+            <div className="flex flex-col gap-1.5 divide-y divide-border/40 text-meta">
               {activePitch.mainFlowers.map((flower, idx) => (
                 <div key={idx} className="pt-1.5 first:pt-0 flex items-center justify-between">
                   <span className="font-semibold text-text flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                     {flower.name}
                     {flower.color && (
-                      <span className="text-[11px] font-normal text-text-muted">({flower.color})</span>
+                      <span className="text-caption font-normal text-text-muted">({flower.color})</span>
                     )}
                   </span>
                   <span className="font-bold text-text font-mono">
@@ -140,7 +140,7 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
               ))}
 
               {activePitch.foliageItems.length > 0 && (
-                <div className="pt-1.5 flex items-center justify-between text-[11.5px] text-text-muted">
+                <div className="pt-1.5 flex items-center justify-between text-caption text-text-muted">
                   <span>Lá đệm phụ:</span>
                   <span className="font-medium text-text">
                     {activePitch.foliageItems.map((f) => f.name).join(", ")}
@@ -148,7 +148,7 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
                 </div>
               )}
 
-              <div className="pt-1.5 flex items-center justify-between text-[11.5px] text-text-muted">
+              <div className="pt-1.5 flex items-center justify-between text-caption text-text-muted">
                 <span>Quy cách gói:</span>
                 <span className="font-medium text-text truncate max-w-[200px]">{activePitch.wrapping}</span>
               </div>
@@ -156,7 +156,7 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
           </div>
 
           {/* Gifts & Guarantees */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-caption">
             <div className="rounded-xl bg-primary/[0.04] p-2.5 border border-primary/15">
               <div className="font-bold text-primary flex items-center gap-1 mb-1">
                 <Gift size={12} /> Quà tặng đính kèm
@@ -182,13 +182,13 @@ export const SalesPitchCardA6 = forwardRef<HTMLDivElement, SalesPitchCardA6Props
 
           {/* Custom note if present */}
           {activePitch.customNote && (
-            <div className="text-[11.5px] rounded-lg bg-warning-bg border border-warning/25 p-2 text-warning">
+            <div className="text-caption rounded-lg bg-warning-bg border border-warning/25 p-2 text-warning">
               <strong>Ưu đãi riêng:</strong> {activePitch.customNote}
             </div>
           )}
 
           {/* Footer */}
-          <div className="pt-2 border-t border-border flex items-center justify-between text-[11px] text-text-muted">
+          <div className="pt-2 border-t border-border flex items-center justify-between text-caption text-text-muted">
             <span>{activePitch.shopName}</span>
             <span>Hotline: {activePitch.shopHotline}</span>
           </div>

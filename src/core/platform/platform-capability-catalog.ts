@@ -28,6 +28,9 @@ const DEFINITIONS: Record<string, Omit<PlatformCapabilityDefinition, "code">> = 
   N6: { name: "platform.audit.read", label: "Nhật ký xuyên tổ chức" },
   N7: { name: "platform.organizations.create", label: "Tạo tổ chức mới" },
   N8: { name: "platform.integration_tokens.manage", label: "Token tích hợp theo tổ chức" },
+  // N9–N11 giữ chỗ cho tuyến AI-1 (sổ đăng ký mô hình AI, sổ ngưỡng, chi
+  // phí theo mô hình) — chưa khai ở đây, xem lời dẫn ở đầu tệp.
+  N12: { name: "platform.field_catalog.manage", label: "Quản trị trường dữ liệu, danh mục & trường tự tạo (ĐP-3)" },
 }
 
 export const PLATFORM_CAPABILITIES: Record<string, PlatformCapabilityDefinition> = Object.fromEntries(

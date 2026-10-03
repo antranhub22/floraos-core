@@ -156,6 +156,8 @@ const PROVIDER_DISPLAY_MAP: Record<string, string> = {
   photoroom: "Photoroom AI (Chuẩn E-commerce Quốc tế)",
   fal_flux: "Fal.ai Product Shot (Studio cao cấp)",
   fal: "Fal.ai Product Shot (Studio cao cấp)",
+  imagen: "Google Gemini Image",
+  provider_chain: "Chuỗi nhà cung cấp",
   studio: "Studio AI Pipeline (Chuẩn E-commerce)",
   openai: "OpenAI Image AI (Cloud)",
   gemini: "Google Gemini Imagen (Cloud)",

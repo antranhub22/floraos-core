@@ -150,6 +150,7 @@ interface OriginalAudioJob {
   provider_key: string | null
   quality_tier: string | null
   music_track_id: string | null
+  music_provider_used?: string | null
 }
 
 /**
@@ -191,7 +192,16 @@ export function AudioRevisePanel(props: {
   const taskType: AudioTaskType = isClone ? "VOICE_CLONE" : hasMusic ? "AUDIO_MIX" : "VOICEOVER"
   const providerKey = ((original?.provider_key as TtsProviderKey | null) ?? "openai") as TtsProviderKey
   const qualityTier = ((original?.quality_tier as AudioQualityTier | null) ?? "hd") as AudioQualityTier
-  const credit = audioJobCreditCost({ taskType, providerKey, qualityTier, scenes })
+  // Nhạc: giữ bài thư viện của bản cũ thì không sinh lại (0 credit); bản cũ là nhạc AI hoặc đổi tâm trạng → sinh mới.
+  const musicLibraryOnly = mood === "keep" && Boolean(keepMusic) && !original?.music_provider_used
+  const credit = audioJobCreditCost({
+    taskType,
+    providerKey,
+    qualityTier,
+    scenes,
+    musicProvider: hasMusic && !musicLibraryOnly ? "elevenlabs_music" : null,
+    musicSeconds: scenes.reduce((a, s) => a + s.targetDurationSeconds, 0),
+  })
 
   const run = async () => {
     setError(null)
@@ -212,6 +222,7 @@ export function AudioRevisePanel(props: {
               ? { musicTrackId: keepMusic }
               : { musicMood: "none" }
             : { musicMood: mood }),
+          ...(musicLibraryOnly ? { musicProvider: "library" } : {}),
           topicAngleCategory: props.angleCategory,
         },
         `audio-${crypto.randomUUID()}`
@@ -240,13 +251,13 @@ export function AudioRevisePanel(props: {
 
   if (!open) {
     return (
-      <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => void openPanel()}>
+      <Button size="sm" variant="outline" className="h-7 text-caption gap-1" onClick={() => void openPanel()}>
         <Mic size={11} /> Sửa âm thanh
       </Button>
     )
   }
   return (
-    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 text-[12px]">
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 text-meta">
       <div className="font-bold text-text">
         Sửa lời thoại / nhạc rồi phối lại ({credit === 0 ? "miễn phí" : `${credit} credit`}
         {isClone ? " · giọng nhân bản" : ""})
@@ -270,7 +281,7 @@ export function AudioRevisePanel(props: {
             <option key={m.id} value={m.id}>{m.label}</option>
           ))}
         </select>
-        <Button size="sm" className="h-7 text-[11px] gap-1" disabled={stage !== null} onClick={() => void run()}>
+        <Button size="sm" className="h-7 text-caption gap-1" disabled={stage !== null} onClick={() => void run()}>
           {stage ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />} Sửa & phối lại
         </Button>
         <button type="button" className="text-text-muted underline" disabled={stage !== null} onClick={() => setOpen(false)}>
@@ -372,13 +383,13 @@ export function VideoRevisePanel(props: {
 
   if (!open) {
     return (
-      <Button size="sm" variant="outline" className="h-8 text-[11px] gap-1" onClick={() => setOpen(true)}>
+      <Button size="sm" variant="outline" className="h-8 text-caption gap-1" onClick={() => setOpen(true)}>
         <Wand2 size={11} /> Sửa video
       </Button>
     )
   }
   return (
-    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3 text-[12px]">
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3 text-meta">
       <div className="flex items-center justify-between">
         <div className="font-bold text-text">Sửa storyboard → tạo bản sửa → duyệt kịch bản (P3) → render ({renderCredit} credit)</div>
         <button type="button" className="text-text-muted underline" onClick={() => setOpen(false)}>Đóng</button>
@@ -435,7 +446,7 @@ export function VideoRevisePanel(props: {
                 <option key={v.code} value={v.code}>{v.label}</option>
               ))}
             </select>
-            <Button size="sm" className="h-7 text-[11px] gap-1" disabled={creating} onClick={() => void create()}>
+            <Button size="sm" className="h-7 text-caption gap-1" disabled={creating} onClick={() => void create()}>
               {creating ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />} Tạo bản sửa
             </Button>
           </div>

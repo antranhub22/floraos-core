@@ -158,3 +158,22 @@ export function findCheapestProvider(
 
   return cheapest
 }
+
+// ============================================================
+// NHẠC NỀN DO NHÀ CUNG CẤP SINH (PO 25/09/2026)
+// ============================================================
+
+/**
+ * Credit sinh nhạc nền theo mỗi 30 giây (làm tròn lên), theo TỶ LỆ giá công
+ * bố của nhà cung cấp — bảng giá v1, chưa đối chiếu hoá đơn (nợ #161). Bài
+ * thư viện / bài tiệm tự tải vẫn 0 credit.
+ */
+export const MUSIC_GENERATION_CREDIT_PER_30S: Readonly<Record<string, number>> = {
+  elevenlabs_music: 2,
+}
+
+export function musicGenerationCredit(provider: string | null | undefined, seconds: number): number {
+  if (!provider) return 0
+  const per = MUSIC_GENERATION_CREDIT_PER_30S[provider] ?? 0
+  return per * Math.max(1, Math.ceil(Math.max(0, seconds) / 30))
+}

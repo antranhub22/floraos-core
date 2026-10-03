@@ -20,7 +20,14 @@ import {
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import type { FlowerBomItem, StructuredAddress } from "@/modules/products/domain/product-master-index"
+import type {
+  AccessoryBomItem,
+  FlowerBomItem,
+  FoliageBomItem,
+  StructuredAddress,
+  WrappingLayer,
+} from "@/modules/products/domain/product-master-index"
+import type { VisibleCustomField } from "@/components/coordinator/custom-fields-section"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,6 +42,12 @@ export interface PartnerProductCardProps {
   sampleImageUrl?: string | null | undefined
   /** BOM — Công thức cành hoa */
   flowers: FlowerBomItem[]
+  /** ĐP-2.12 (26/09/2026): lá/cành trang trí từ snapshot Master Index (MI-5) — rỗng nếu đơn không chọn mẫu từ danh mục. */
+  foliage?: FoliageBomItem[] | undefined
+  /** Các lớp gói theo snapshot Master Index. */
+  wrapping?: WrappingLayer[] | undefined
+  /** Phụ kiện trang trí theo snapshot Master Index. */
+  accessories?: AccessoryBomItem[] | undefined
   /** Giá bán ra khách (VNĐ) */
   unitPriceVnd?: number | undefined
   /** Giá công trả đối tác (VNĐ) */
@@ -57,6 +70,13 @@ export interface PartnerProductCardProps {
   riskLevel?: "NORMAL" | "ATTENTION" | "AT_RISK" | "CRITICAL" | undefined
   /** Lý do rủi ro */
   riskReason?: string | null | undefined
+  /**
+   * ĐP-3.16 (26/09/2026): trường tự tạo (entity ORDER) đã lọc theo đối
+   * tượng PARTNER (`visibleCustomFieldsForAudience`, `custom-fields-section.tsx`)
+   * — caller (control-tower-dashboard.tsx) tự lọc trước khi truyền vào, thẻ
+   * này không tự quyết định ẩn/hiện.
+   */
+  customFields?: VisibleCustomField[] | undefined
   /** Callback chuyển bước */
   onAdvanceStage?: () => void
 }
@@ -70,7 +90,7 @@ function formatAddress(addr: StructuredAddress | string): string {
   return [addr.street, addr.ward, addr.district, addr.city].filter(Boolean).join(", ")
 }
 
-function buildZaloText(props: PartnerProductCardProps): string {
+export function buildZaloText(props: PartnerProductCardProps): string {
   const lines: string[] = [
     `🌸 PHIẾU ĐẶT HOA — ĐƠN #${props.orderCode}`,
     `━━━━━━━━━━━━━━━━━━━━`,
@@ -106,6 +126,12 @@ function buildZaloText(props: PartnerProductCardProps): string {
     lines.push(`${props.technicalNotes}`)
   }
 
+  if (props.customFields && props.customFields.length > 0) {
+    lines.push(``)
+    lines.push(`ℹ️ Thông tin bổ sung:`)
+    props.customFields.forEach((f) => lines.push(`   • ${f.label}: ${String(f.value)}`))
+  }
+
   lines.push(``)
   lines.push(`━━━━━━━━━━━━━━━━━━━━`)
   lines.push(`FloraOS • Hệ thống Điều phối Tự động`)
@@ -123,6 +149,9 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
     productTitle,
     sampleImageUrl,
     flowers,
+    foliage = [],
+    wrapping = [],
+    accessories = [],
     unitPriceVnd,
     partnerPayoutVnd,
     deliveryTargetTime,
@@ -134,6 +163,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
     partnerName,
     riskLevel,
     riskReason,
+    customFields = [],
     onAdvanceStage,
   } = props
 
@@ -201,7 +231,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
       {/* ── Thanh tác vụ góc trên bên phải ── */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-0.5 rounded-md bg-red-100 text-red-800 text-[10px] font-black uppercase border border-red-200 tracking-wider">
+          <span className="px-2.5 py-0.5 rounded-md bg-primary-muted text-primary text-caption font-black uppercase border border-primary-border tracking-wider">
             T02 • PRODUCT CARD
           </span>
           <span className="text-xs font-bold text-text-muted">PHIẾU ĐẶT HOA GỬI ĐỐI TÁC</span>
@@ -214,7 +244,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
             size="sm"
             variant="outline"
             onClick={handleCopyZalo}
-            className="h-7 text-[11px] px-2.5 font-bold gap-1 border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
+            className="h-7 text-caption px-2.5 font-bold gap-1 border-success-border text-success-text bg-success-bg hover:bg-success-bg/80"
           >
             {copied ? <CheckCircle2 size={13} /> : <Copy size={13} />}
             <span>{copied ? "Đã copy!" : "Copy Zalo"}</span>
@@ -223,7 +253,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
             size="sm"
             variant="outline"
             onClick={handleSendZalo}
-            className="h-7 text-[11px] px-2.5 font-bold gap-1 border-blue-300 text-blue-800 bg-blue-50 hover:bg-blue-100"
+            className="h-7 text-caption px-2.5 font-bold gap-1 border-info-border text-info-text bg-info-bg hover:bg-info-bg/80"
           >
             <Send size={12} />
             <span>Gửi Zalo</span>
@@ -232,7 +262,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
             size="sm"
             variant="outline"
             onClick={handleDownloadPng}
-            className="h-7 text-[11px] px-2.5 font-bold gap-1 border-zinc-300 text-zinc-700 bg-zinc-50 hover:bg-zinc-100"
+            className="h-7 text-caption px-2.5 font-bold gap-1 border-border text-text-muted bg-surface-alt hover:bg-surface-alt/80"
           >
             <Download size={12} />
             <span>Tải PNG</span>
@@ -243,16 +273,17 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
       {/* ── Product Card chính (ref cho PNG export) ── */}
       <Card
         ref={cardRef}
-        className="rounded-2xl border-2 border-red-200 bg-white p-0 shadow-lg overflow-hidden"
+        data-testid="t07-png-export-region"
+        className="rounded-2xl border-2 border-alert-200 bg-white p-0 shadow-lg overflow-hidden"
       >
         {/* Header gradient */}
-        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 px-5 py-3.5 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-primary via-primary to-primary-dark px-5 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <Flower2 size={18} className="text-white" />
             </div>
             <div>
-              <div className="text-white/80 text-[10px] font-bold uppercase tracking-wider">
+              <div className="text-white/80 text-caption font-bold uppercase tracking-wider">
                 Phiếu Đặt Hoa Đối Tác
               </div>
               <div className="text-white text-sm font-extrabold">
@@ -261,7 +292,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
             </div>
           </div>
           <div className="flex flex-col items-end gap-0.5">
-            <div className="flex items-center gap-1.5 text-white/90 text-[11px] font-bold">
+            <div className="flex items-center gap-1.5 text-white/90 text-caption font-bold">
               <Clock size={12} />
               <span>Hoàn thành trước:</span>
             </div>
@@ -275,8 +306,8 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
         <div className="p-5 flex flex-col gap-4">
           {/* Rủi ro cảnh báo */}
           {riskLevel && riskLevel !== "NORMAL" && riskReason && (
-            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium">
-              <AlertTriangle size={14} className="shrink-0 text-amber-600 mt-0.5" />
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-warning-bg border border-warning-border text-warning-text text-xs font-medium">
+              <AlertTriangle size={14} className="shrink-0 text-warning mt-0.5" />
               <span>{riskReason}</span>
             </div>
           )}
@@ -284,7 +315,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
           {/* Row 1: Ảnh + Thông tin sản phẩm */}
           <div className="flex gap-4">
             {/* Ảnh mẫu lớn */}
-            <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-xl border-2 border-red-200 overflow-hidden shrink-0 relative bg-zinc-50 shadow-sm">
+            <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-xl border-2 border-primary-border overflow-hidden shrink-0 relative bg-surface-alt shadow-sm">
               {sampleImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -293,13 +324,13 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-1.5">
+                <div className="w-full h-full flex flex-col items-center justify-center text-text-muted gap-1.5">
                   <ImageIcon size={32} />
-                  <span className="text-[10px] font-medium">Chưa có ảnh mẫu</span>
+                  <span className="text-caption font-medium">Chưa có ảnh mẫu</span>
                 </div>
               )}
               {/* Badge ảnh mẫu */}
-              <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-red-600/90 text-white text-[9px] font-black uppercase backdrop-blur-sm">
+              <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-alert-600/90 text-white text-caption font-black uppercase backdrop-blur-sm">
                 Ảnh Mẫu
               </div>
             </div>
@@ -307,10 +338,10 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
             {/* Thông tin sản phẩm */}
             <div className="flex-1 flex flex-col gap-2.5 min-w-0">
               <div>
-                <div className="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-0.5">
+                <div className="text-caption font-bold text-primary uppercase tracking-wide mb-0.5">
                   Tên sản phẩm
                 </div>
-                <div className="text-base font-extrabold text-zinc-900 leading-snug">
+                <div className="text-base font-extrabold text-text leading-snug">
                   {productTitle}
                 </div>
               </div>
@@ -318,23 +349,12 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
               {/* Giá */}
               <div className="flex items-center gap-3 flex-wrap">
                 {partnerPayoutVnd != null && partnerPayoutVnd > 0 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                    <Banknote size={14} className="text-emerald-600" />
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-success-bg border border-success-border">
+                    <Banknote size={14} className="text-success" />
                     <div>
-                      <div className="text-[9px] font-bold text-emerald-700 uppercase">Giá công đối tác</div>
-                      <div className="text-sm font-black text-emerald-800">
+                      <div className="text-caption font-bold text-success uppercase">Giá công đối tác</div>
+                      <div className="text-sm font-black text-success-text">
                         {partnerPayoutVnd.toLocaleString("vi-VN")}đ
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {unitPriceVnd != null && unitPriceVnd > 0 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-50 border border-zinc-200">
-                    <Banknote size={14} className="text-zinc-500" />
-                    <div>
-                      <div className="text-[9px] font-bold text-zinc-500 uppercase">Giá bán khách</div>
-                      <div className="text-sm font-bold text-zinc-600">
-                        {unitPriceVnd.toLocaleString("vi-VN")}đ
                       </div>
                     </div>
                   </div>
@@ -343,7 +363,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
 
               {/* Đối tác đã phân công */}
               {partnerName && (
-                <div className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-xs font-bold text-blue-800 inline-flex items-center gap-1.5 self-start">
+                <div className="px-2.5 py-1 rounded-lg bg-info-bg border border-info-border text-xs font-bold text-info-text inline-flex items-center gap-1.5 self-start">
                   🏪 Xưởng: {partnerName}
                 </div>
               )}
@@ -352,13 +372,13 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
 
           {/* Row 2: BOM — Công thức cành hoa */}
           {flowers.length > 0 && (
-            <div className="p-3.5 rounded-xl bg-rose-50/60 border border-rose-200">
+            <div className="p-3.5 rounded-xl bg-primary-muted/60 border border-primary-border">
               <div className="flex items-center gap-1.5 mb-2.5">
-                <Scissors size={13} className="text-rose-600" />
-                <span className="text-xs font-extrabold text-rose-900 uppercase tracking-wide">
+                <Scissors size={13} className="text-primary" />
+                <span className="text-xs font-extrabold text-primary-dark uppercase tracking-wide">
                   Công Thức Cành Hoa (BOM)
                 </span>
-                <Badge tone="danger" className="text-[9px] font-black ml-1">
+                <Badge tone="danger" className="text-caption font-black ml-1">
                   {flowers.length} loại
                 </Badge>
               </div>
@@ -366,16 +386,26 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
                 {flowers.map((fl, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-rose-100 shadow-xs"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface border border-primary-muted shadow-xs"
                   >
-                    <span className="w-6 h-6 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                    <span className="w-6 h-6 rounded-full bg-primary-muted text-primary text-caption font-black flex items-center justify-center shrink-0">
                       {i + 1}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold text-zinc-900 truncate">
-                        {fl.flowerName}
+                      <div className="text-xs font-bold text-text truncate flex items-center gap-1.5 flex-wrap">
+                        <span>{fl.flowerName}</span>
+                        {fl.shade && (
+                          <span className="px-1 py-0 rounded bg-surface-alt text-text-muted text-caption font-bold">
+                            {fl.shade}
+                          </span>
+                        )}
+                        {typeof fl.budCount === "number" && fl.budCount > 0 && (
+                          <span className="px-1 py-0 rounded bg-warning-bg text-warning text-caption font-bold">
+                            {fl.budCount} nụ chưa nở
+                          </span>
+                        )}
                       </div>
-                      <div className="text-[10.5px] text-zinc-500 font-medium">
+                      <div className="text-caption text-text-muted font-medium">
                         {fl.quantity} {fl.unit} • {fl.color}
                       </div>
                     </div>
@@ -385,31 +415,68 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
             </div>
           )}
 
+          {/* ĐP-2.12 (26/09/2026): lá/gói/phụ kiện thật từ snapshot Master Index — trước bản
+              này T07-BRIEF chỉ có cành hoa, thợ không biết gói/phụ kiện đúng mẫu là gì. */}
+          {(foliage.length > 0 || wrapping.length > 0 || accessories.length > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-caption">
+              {foliage.length > 0 && (
+                <div className="p-2.5 rounded-lg bg-success-bg/60 border border-success-border">
+                  <span className="font-bold text-success-text block mb-1">🌿 Lá/cành đệm</span>
+                  <div className="text-success space-y-0.5">
+                    {foliage.map((fol, i) => (
+                      <div key={i}>• {fol.name} ({fol.role}){fol.quantity ? ` × ${fol.quantity} ${fol.unit}` : ""}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {wrapping.length > 0 && (
+                <div className="p-2.5 rounded-lg bg-info-bg/60 border border-info-border">
+                  <span className="font-bold text-info-text block mb-1">🎁 Gói ({wrapping.length} lớp)</span>
+                  <div className="text-info space-y-0.5">
+                    {wrapping.map((w, i) => (
+                      <div key={i}>• {w.layer}: {w.material}, {w.color}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {accessories.length > 0 && (
+                <div className="p-2.5 rounded-lg bg-accent-bg/60 border border-accent-border">
+                  <span className="font-bold text-accent-text block mb-1">✨ Phụ kiện</span>
+                  <div className="text-accent space-y-0.5">
+                    {accessories.map((a, i) => (
+                      <div key={i}>• {a.name} ({a.material}, {a.color}){a.printedText ? ` — "${a.printedText}"` : ""}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Row 3: Thông tin giao hàng */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Địa chỉ giao */}
-            <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200 flex flex-col gap-1.5">
+            <div className="p-3 rounded-xl bg-surface-alt border border-border flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
-                <MapPin size={13} className="text-red-600" />
-                <span className="text-[10px] font-bold text-zinc-500 uppercase">Địa chỉ giao hàng</span>
+                <MapPin size={13} className="text-alert-600" />
+                <span className="text-caption font-bold text-text-muted uppercase">Địa chỉ giao hàng</span>
                 {typeof deliveryAddress === "object" && deliveryAddress !== null && (
-                  <span className="text-[9px] font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                  <span className="text-caption font-bold text-alert-700 bg-alert-50 px-1.5 py-0.5 rounded border border-alert-200">
                     Chuẩn 5 tầng
                   </span>
                 )}
               </div>
-              <div className="text-xs font-bold text-zinc-900 leading-relaxed">
+              <div className="text-xs font-bold text-text leading-relaxed">
                 {formattedAddress}
               </div>
               {typeof deliveryAddress === "object" && deliveryAddress !== null && (
                 <div className="flex items-center gap-1 flex-wrap pt-0.5">
-                  <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 text-[10px] font-bold">
+                  <span className="px-1.5 py-0.5 rounded bg-primary-muted text-primary text-caption font-bold">
                     {deliveryAddress.ward}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold">
+                  <span className="px-1.5 py-0.5 rounded bg-info-bg text-info-text text-caption font-bold">
                     {deliveryAddress.district}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-bold">
+                  <span className="px-1.5 py-0.5 rounded bg-accent-bg text-accent-text text-caption font-bold">
                     {deliveryAddress.city}
                   </span>
                 </div>
@@ -417,14 +484,14 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
             </div>
 
             {/* Người nhận */}
-            <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200 flex flex-col gap-1.5">
+            <div className="p-3 rounded-xl bg-surface-alt border border-border flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase">👤 Người nhận hoa</span>
+                <span className="text-caption font-bold text-text-muted uppercase">👤 Người nhận hoa</span>
               </div>
-              <div className="text-xs font-bold text-zinc-900">
+              <div className="text-xs font-bold text-text">
                 {recipientName}
               </div>
-              <div className="text-[11px] text-zinc-600 font-medium">
+              <div className="text-caption text-text-muted font-medium">
                 📞 {recipientPhone}
               </div>
             </div>
@@ -432,13 +499,13 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
 
           {/* Row 4: Thiệp */}
           {cardMessage && (
-            <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200 flex items-start gap-2">
-              <MessageSquare size={14} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-xl bg-warning-bg/60 border border-warning-border flex items-start gap-2">
+              <MessageSquare size={14} className="text-warning shrink-0 mt-0.5" />
               <div>
-                <div className="text-[10px] font-bold text-amber-700 uppercase mb-0.5">
+                <div className="text-caption font-bold text-warning uppercase mb-0.5">
                   Nội dung thiệp chúc mừng
                 </div>
-                <div className="text-xs text-amber-900 font-semibold italic leading-relaxed">
+                <div className="text-xs text-warning-text font-semibold italic leading-relaxed">
                   &ldquo;{cardMessage}&rdquo;
                 </div>
               </div>
@@ -447,22 +514,36 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
 
           {/* Row 5: Ghi chú kỹ thuật */}
           {technicalNotes && (
-            <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200 flex items-start gap-2">
-              <ClipboardList size={14} className="text-indigo-600 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-xl bg-accent-bg/60 border border-accent-border flex items-start gap-2">
+              <ClipboardList size={14} className="text-accent shrink-0 mt-0.5" />
               <div>
-                <div className="text-[10px] font-bold text-indigo-700 uppercase mb-0.5">
+                <div className="text-caption font-bold text-accent uppercase mb-0.5">
                   Ghi chú kỹ thuật từ Điều phối
                 </div>
-                <div className="text-xs text-indigo-900 font-medium leading-relaxed whitespace-pre-line">
+                <div className="text-xs text-accent-text font-medium leading-relaxed whitespace-pre-line">
                   {technicalNotes}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Row 6: Trường tự tạo hiện cho đối tác (ĐP-3.16) */}
+          {customFields.length > 0 && (
+            <div className="p-3 rounded-xl bg-surface-alt border border-border">
+              <div className="text-caption font-bold text-text-muted uppercase mb-1">Thông tin bổ sung</div>
+              <div className="space-y-0.5 text-xs text-text">
+                {customFields.map((f) => (
+                  <div key={f.key}>
+                    <span className="font-semibold">{f.label}:</span> {String(f.value)}
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between text-[10px] text-zinc-500">
+        <div className="px-5 py-3 bg-surface-alt border-t border-border flex items-center justify-between text-caption text-text-muted">
           <span>FloraOS Coordinator • Phiếu T02 tự động</span>
           <span className="font-bold">
             {new Date().toLocaleDateString("vi-VN")} {new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
@@ -470,13 +551,28 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
         </div>
       </Card>
 
+      {/* ── Giá bán khách: chỉ hiển thị nội bộ, KHÔNG nằm trong vùng PNG/cardRef ── */}
+      {unitPriceVnd != null && unitPriceVnd > 0 && (
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-alt border border-dashed border-border self-start">
+          <Banknote size={14} className="text-text-muted" />
+          <div>
+            <div className="text-caption font-bold text-text-muted uppercase flex items-center gap-1">
+              Giá bán khách <span className="italic normal-case font-medium">(chỉ nội bộ, không gửi đối tác)</span>
+            </div>
+            <div className="text-sm font-bold text-text-muted">
+              {unitPriceVnd.toLocaleString("vi-VN")}đ
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Nút chuyển bước ── */}
       {onAdvanceStage && (
         <div className="flex justify-end">
           <Button
             size="sm"
             onClick={onAdvanceStage}
-            className="bg-red-600 hover:bg-red-700 text-white gap-1.5 px-4 font-bold shadow-sm"
+            className="bg-alert-600 hover:bg-alert-700 text-white gap-1.5 px-4 font-bold shadow-sm"
           >
             <span>Chuyển bước</span>
             <ArrowRight size={14} />

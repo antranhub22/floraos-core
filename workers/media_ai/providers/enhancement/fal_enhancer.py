@@ -20,7 +20,7 @@ from typing import Any
 from PIL import Image
 
 from media_ai.providers.base import KetQuaTangCuong
-from media_ai.providers.enhancement._cloud_common import chon_nang_luc, lui_ve_cuc_bo
+from media_ai.providers.enhancement._cloud_common import NhaCungCapLoi, chon_nang_luc, lui_ve_cuc_bo
 from media_ai.providers.scene.base import SceneProviderError, SceneRequest
 from media_ai.providers.scene.fal_scene import MODEL_CANH, MODEL_TACH_NEN, MODEL_TANG_NET, FalSceneProvider
 
@@ -36,18 +36,25 @@ class FalEnhancer:
     name = "fal"
     model_version = MODEL_CANH
 
-    def __init__(self, provider: Any | None = None) -> None:
+    def __init__(self, provider: Any | None = None, lui_cuc_bo: bool = True) -> None:
+        self._lui_cuc_bo = lui_cuc_bo
         self._p = provider if provider is not None else FalSceneProvider()
+
+    def _loi(self, image: bytes, config: dict[str, Any], ly_do: str) -> KetQuaTangCuong:
+        """`lui_cuc_bo=False` (trong chuỗi nhà cung cấp): ném để thử bên kế tiếp."""
+        if not self._lui_cuc_bo:
+            raise NhaCungCapLoi(self.name, ly_do)
+        return lui_ve_cuc_bo(image, config, self.name, ly_do)
 
     def enhance(self, image: bytes, config: dict[str, Any]) -> KetQuaTangCuong:
         mode, selected_caps = chon_nang_luc(config)
         if not self._p.co_khoa():
-            return lui_ve_cuc_bo(image, config, self.name, "Thiếu FAL_KEY")
+            return self._loi(image, config, "Thiếu FAL_KEY")
 
         can_dung_nen = "remove_background" in selected_caps or "enhance_lighting" in selected_caps
         can_tang_net = "upscale_clarity" in selected_caps
         if not (can_dung_nen or can_tang_net):
-            return lui_ve_cuc_bo(image, config, self.name, "Lựa chọn không có bước nào fal làm được")
+            return self._loi(image, config, "Lựa chọn không có bước nào fal làm được")
 
         goc = Image.open(BytesIO(image)).convert("RGB")
         anh = goc
@@ -79,7 +86,7 @@ class FalEnhancer:
                 else:
                     bo_qua.append(f"upscale_clarity:canh_dai>{CANH_TOI_DA_TANG_NET}")
         except SceneProviderError as exc:
-            return lui_ve_cuc_bo(image, config, self.name, f"fal lỗi: {exc}")
+            return self._loi(image, config, f"fal lỗi: {exc}")
 
         if "smart_reframe" in selected_caps:
             da_ap_dung.append("Đã tạo 4 tỷ lệ chuẩn (1:1, 4:5, 9:16, 16:9) bảo toàn 100% bó hoa")

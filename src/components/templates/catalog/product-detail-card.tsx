@@ -52,7 +52,7 @@ export function ProductDetailCard({
         </div>
 
         <div className="flex-1 flex flex-col gap-2">
-          <div className="text-[17px] font-extrabold text-text">{name}</div>
+          <div className="text-title font-extrabold text-text">{name}</div>
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-black text-primary">{price}</span>
             {originalPrice && (

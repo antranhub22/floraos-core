@@ -2,6 +2,11 @@ import { type TenantContext } from "@/core/tenancy";
 import { requireCapability } from "@/core/rbac/capabilities";
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory";
 import { ASSET_VIEW_URL_TTL_SECONDS } from "@/modules/assets/use-cases/get-asset-view-url";
+import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository";
+import { lyDoHoanCredit } from "@/modules/usage/domain/refund-policy";
+import { refundJob } from "@/modules/usage/use-cases/refund-job";
+import { refundPartial } from "@/modules/usage/use-cases/refund-partial";
+import { videoRenderRefund } from "../domain/video-provider-billing";
 import {
   VideoJobRepository,
   type VideoJobWithScenes,
@@ -21,8 +26,27 @@ export class GetVideoJobUseCase {
       throw new Error(`Không tìm thấy tác vụ video với mã: ${jobId}`);
     }
 
+    await settleVideoRenderCredit(ctx, jobId).catch(() => undefined);
     return job;
   }
+}
+
+/**
+ * Hoàn credit lúc đọc (25/09/2026, cùng khuôn biến thể/tối ưu ảnh) — idempotent:
+ * lượt render hỏng → hoàn toàn phần; nhà cung cấp lỗi, video dựng Ken Burns cục
+ * bộ, hoặc bên thật rẻ hơn bên đã tính → hoàn chênh (`videoRenderRefund`).
+ */
+async function settleVideoRenderCredit(ctx: TenantContext, videoJobId: string): Promise<void> {
+  const gen = await new GenerationJobRepository().findLatestByPayload(ctx, "video.render", "videoJobId", videoJobId);
+  if (!gen) return;
+  if (lyDoHoanCredit(gen) !== null) {
+    await refundJob(ctx, gen.id);
+    return;
+  }
+  if (gen.status !== "COMPLETED") return;
+  const plan = (gen.payload as { cost_plan?: { provider?: string | null; scenes?: number; credit?: number } } | null)?.cost_plan;
+  const hoan = videoRenderRefund(plan, gen.output as { clip_provider?: string | null; provider_fallback?: boolean } | null);
+  if (hoan > 0) await refundPartial(ctx, gen.id, "cloud-lui-cuc-bo", hoan);
 }
 
 const STORAGE_PREFIX = "/api/v1/storage/";

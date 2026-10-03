@@ -14,6 +14,7 @@ import { BottomNav } from "@/components/layout/bottom-nav"
 import { DesktopNav } from "@/components/layout/desktop-nav"
 import { GlobalImageZoom } from "@/components/ui/global-image-zoom"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
+import { LiveRegionProvider } from "@/components/ui/live-region"
 
 import { FloraOSGlobalCopilot } from "@/components/chat/floraos-global-copilot"
 
@@ -31,13 +32,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <SessionProvider session={session}>
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-none md:flex-row">
-        <DesktopNav />
-        <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</div>
-        <BottomNav />
-      </div>
-      <GlobalImageZoom />
-      <FloraOSGlobalCopilot />
+      <LiveRegionProvider>
+        <a
+          href="#noi-dung-chinh"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2.5 focus:text-sm focus:font-bold focus:text-white focus:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          Bỏ qua tới nội dung
+        </a>
+        <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col md:max-w-none md:flex-row">
+          <DesktopNav />
+          <div id="noi-dung-chinh" tabIndex={-1} className="min-h-0 min-w-0 flex-1 overflow-hidden focus:outline-none">
+            {children}
+          </div>
+          <BottomNav />
+        </div>
+        <GlobalImageZoom />
+        <FloraOSGlobalCopilot />
+      </LiveRegionProvider>
     </SessionProvider>
   )
 }

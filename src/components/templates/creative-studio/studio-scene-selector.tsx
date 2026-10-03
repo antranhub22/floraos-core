@@ -74,7 +74,7 @@ export function StudioSceneSelector({
           <Palette className="h-3.5 w-3.5 text-primary" />
           Bối cảnh Studio & Phong cách (Scene Presets)
         </label>
-        <span className="text-[11px] text-text-muted">{STUDIO_SCENE_PRESETS.length} phong cách</span>
+        <span className="text-caption text-text-muted">{STUDIO_SCENE_PRESETS.length} phong cách</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -110,13 +110,13 @@ export function StudioSceneSelector({
                 </div>
                 <Badge
                   tone={isSelected ? "accent" : "neutral"}
-                  className="text-[10px] py-0 px-1.5 font-semibold"
+                  className="text-caption py-0 px-1.5 font-semibold"
                 >
                   {preset.badge}
                 </Badge>
               </div>
 
-              <p className="text-[11.5px] leading-relaxed text-text-muted">
+              <p className="text-caption leading-relaxed text-text-muted">
                 {preset.desc}
               </p>
             </button>

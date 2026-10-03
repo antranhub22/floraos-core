@@ -28,8 +28,8 @@ export function ChannelStatusCard({
   return (
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div>
-        <div className="text-xs font-semibold text-text-muted">M07 Channel Integration</div>
-        <div className="text-[16px] font-extrabold text-text">Trạng thái kết nối kênh</div>
+        <div className="text-xs font-semibold text-text-muted">Đăng mạng xã hội Channel Integration</div>
+        <div className="text-title font-extrabold text-text">Trạng thái kết nối kênh</div>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -48,12 +48,12 @@ export function ChannelStatusCard({
               </div>
               <div>
                 <div className="text-xs font-bold text-text">{ch.name}</div>
-                <div className="text-[11px] text-text-muted">{ch.accountName}</div>
+                <div className="text-caption text-text-muted">{ch.accountName}</div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-text-muted">{ch.lastSyncTime || "Vừa xong"}</span>
+              <span className="text-caption text-text-muted">{ch.lastSyncTime || "Vừa xong"}</span>
               {!ch.isConnected && onReconnect && (
                 <Button variant="outline" size="sm" onClick={() => onReconnect(ch.id)} className="gap-1 h-7 text-xs">
                   <RefreshCw size={12} />

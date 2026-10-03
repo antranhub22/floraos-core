@@ -14,6 +14,7 @@ import { UsageRepository } from "@/modules/usage/infra/usage-repository"
 import { BrandProfileRepository } from "@/modules/profiles/infra/brand-profile-repository"
 import { BusinessProfileRepository } from "@/modules/profiles/infra/business-profile-repository"
 import { IntegrationTokenRepository } from "@/modules/integration/infra/integration-token-repository"
+import { FieldConfigOverrideRepository } from "@/modules/field-platform/infra/field-config-override-repository"
 
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, type Tenant } from "../helpers/fixtures"
@@ -283,5 +284,29 @@ describe("cách ly tenant ở tầng repository", () => {
       id: "bat-ky",
       organization_id: a.organizationId,
     })
+  })
+
+  /**
+   * ĐP-3 — `field_config_overrides` là bảng TENANT nhưng chỉ quản trị nền
+   * tảng (N12) ghi vào; route tenant duy nhất chạm bảng này
+   * (`GET /field-config`) chỉ ĐỌC qua `listForOrganization(ctx)`
+   * (`scopedWhere`). Ghi thẳng bằng `organizationId` (như use-case nền tảng
+   * làm) rồi xác nhận ngữ cảnh của B không đọc được ghi đè của A.
+   */
+  it("field_config_overrides — ghi đè của A không đọc được bằng ngữ cảnh của B", async () => {
+    const repository = new FieldConfigOverrideRepository()
+
+    await repository.setFieldOverride({
+      organizationId: a.organizationId,
+      fieldKey: "cardMessage",
+      label: "Nội dung thiệp (tổ chức A)",
+      actorUserId: "system_seed",
+    })
+
+    const ofA = await repository.listForOrganization(a.ctx)
+    expect(ofA.map((row) => row.override_key)).toEqual(["cardMessage"])
+
+    const ofB = await repository.listForOrganization(b.ctx)
+    expect(ofB).toEqual([])
   })
 })

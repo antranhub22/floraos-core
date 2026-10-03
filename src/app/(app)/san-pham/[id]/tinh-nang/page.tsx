@@ -139,7 +139,7 @@ const handleMonitorJobs = () => {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-danger-bg">
           <AlertCircle size={32} strokeWidth={1.8} className="text-danger" />
         </div>
-        <h2 className="text-[17px] font-bold">Không tải được sản phẩm</h2>
+        <h2 className="text-title font-bold">Không tải được sản phẩm</h2>
         <p className="text-text-muted max-w-xs">{error}</p>
         <div className="flex gap-2 mt-4">
           <Button variant="secondary" onClick={handleRetry}>
@@ -162,7 +162,7 @@ const handleMonitorJobs = () => {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success-bg">
           <CheckCircle2 size={32} strokeWidth={1.8} className="text-primary" />
         </div>
-        <h2 className="text-[17px] font-bold">Đã tạo {jobsCreated.length} tác vụ</h2>
+        <h2 className="text-title font-bold">Đã tạo {jobsCreated.length} tác vụ</h2>
         <p className="text-text-muted max-w-xs">
           Tác vụ đang chạy trong hàng đợi. Bạn có thể theo dõi tiến trình hoặc quay lại sau.
         </p>
@@ -170,10 +170,10 @@ const handleMonitorJobs = () => {
           {jobsCreated.map((job, i) => (
             <div key={job.jobId} className="flex items-center justify-between rounded-xl border border-border bg-surface p-3 text-left">
               <div className="flex items-center gap-2">
-                <Badge tone="neutral" className="text-[10.5px]">{job.module}</Badge>
-                <span className="font-mono text-[11px] text-text-muted truncate max-w-[200px]">{job.jobId.slice(0, 8)}…</span>
+                <Badge tone="neutral" className="text-caption">{job.module}</Badge>
+                <span className="font-mono text-caption text-text-muted truncate max-w-[200px]">{job.jobId.slice(0, 8)}…</span>
               </div>
-              <Badge tone={job.feature.includes("vision") ? "success" : "neutral"} className="text-[10.5px]">
+              <Badge tone={job.feature.includes("vision") ? "success" : "neutral"} className="text-caption">
                 {job.feature}
               </Badge>
             </div>
@@ -196,17 +196,18 @@ const handleMonitorJobs = () => {
       {/* Top Bar */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push((returnTo ?? "/san-pham") as Route)}>
+          <Button
+              aria-label="Quay lại" variant="ghost" size="icon" onClick={() => router.push((returnTo ?? "/san-pham") as Route)}>
             <ArrowLeft size={20} strokeWidth={2} />
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <div className="text-[17px] font-extrabold text-primary">{product.name}</div>
-              <Badge tone={product.status === "ACTIVE" ? "success" : "neutral"} className="text-[10.5px]">
+              <div className="text-title font-extrabold text-primary">{product.name}</div>
+              <Badge tone={product.status === "ACTIVE" ? "success" : "neutral"} className="text-caption">
                 {product.status}
               </Badge>
             </div>
-            <div className="mt-0.5 flex items-center gap-2 text-[12.5px] text-text-muted">
+            <div className="mt-0.5 flex items-center gap-2 text-meta text-text-muted">
               <span>ID: <code className="font-mono">{product.id.slice(0, 8)}…</code></span>
               <Separator orientation="vertical" className="h-3" />
               <span className="flex items-center gap-1">
@@ -217,7 +218,8 @@ const handleMonitorJobs = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => router.refresh()}>
+          <Button
+              aria-label="Làm mới" variant="ghost" size="icon" onClick={() => router.refresh()}>
             <RefreshCw size={18} strokeWidth={2} className={cn("text-text-muted", loading && "animate-spin")} />
           </Button>
         </div>
@@ -226,16 +228,16 @@ const handleMonitorJobs = () => {
       {/* Prerequisites Status */}
       <div className="flex flex-shrink-0 gap-3 border-b border-border bg-surface/50 px-[18px] py-3">
         <PrerequisiteBadge
-          label="Phân tích ảnh (M01)"
+          label="Phân tích ảnh sản phẩm"
           ready={product.hasApprovedAnalysis}
           icon={product.hasApprovedAnalysis ? CheckCircle2 : AlertCircle}
-          description={product.hasApprovedAnalysis ? "Đã duyệt — có thể chạy M01b, M04a" : "Chưa duyệt — cần phân tích và duyệt trước"}
+          description={product.hasApprovedAnalysis ? "Đã duyệt — có thể sinh dữ liệu bán hàng và tối ưu ảnh" : "Chưa duyệt — cần phân tích và duyệt trước"}
         />
         <PrerequisiteBadge
-          label="Master Image (M04a)"
+          label="Ảnh chuẩn sản phẩm"
           ready={product.hasApprovedMasterImage}
           icon={product.hasApprovedMasterImage ? CheckCircle2 : AlertCircle}
-          description={product.hasApprovedMasterImage ? "Đã duyệt — có thể chạy Creative, Video, Content" : "Chưa duyệt — cần chạy M04a và duyệt trước"}
+          description={product.hasApprovedMasterImage ? "Đã duyệt — có thể chạy Creative, Video, Content" : "Chưa duyệt — cần tối ưu ảnh và duyệt trước"}
         />
       </div>
 
@@ -290,15 +292,15 @@ function PrerequisiteBadge({
               strokeWidth={1.8} 
               className={cn(ready ? "text-primary" : "text-warning")} 
             />
-            <span className={cn("font-medium text-[12.5px]", ready ? "text-primary" : "text-warning")}>
+            <span className={cn("font-medium text-meta", ready ? "text-primary" : "text-warning")}>
               {label}
             </span>
-            <span className={cn("text-[10.5px] font-bold", ready ? "text-primary" : "text-warning")}>
+            <span className={cn("text-caption font-bold", ready ? "text-primary" : "text-warning")}>
               {ready ? "✓ Sẵn sàng" : "⏳ Chờ"}
             </span>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="bottom" align="center" className="max-w-xs p-2.5 text-[11px]">
+        <TooltipContent side="bottom" align="center" className="max-w-xs p-2.5 text-caption">
           <p>{description}</p>
         </TooltipContent>
       </Tooltip>
@@ -323,7 +325,7 @@ function EmptyState({
         <Info size={40} strokeWidth={1.5} className="text-text-muted" />
       </div>
       <div className="max-w-md">
-        <h2 className="text-[17px] font-bold">{title}</h2>
+        <h2 className="text-title font-bold">{title}</h2>
         <p className="mt-2 text-text-muted">{description}</p>
       </div>
       <Button onClick={onAction} className="w-full max-w-sm">

@@ -3,7 +3,7 @@ import type { TenantContext } from "@/core/tenancy"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import { OrganizationRepository } from "@/modules/organization/infra/organization-repository"
 
-const REQUESTABLE_TYPES = ["SINGLE", "CHAIN"] as const
+const REQUESTABLE_TYPES = ["SINGLE", "STORE", "CHAIN", "FLOWER_NETWORK"] as const
 
 export type RequestedOrganizationType = (typeof REQUESTABLE_TYPES)[number]
 

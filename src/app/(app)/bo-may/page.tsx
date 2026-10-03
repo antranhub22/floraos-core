@@ -14,6 +14,8 @@ import { useRouter } from "next/navigation"
 import { AlertTriangle, ArrowLeft, Check, Cloud, Server } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Dialog } from "@/components/ui/dialog"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { useSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
 
@@ -42,6 +44,7 @@ export default function BoMayPage() {
   const [dangLuu, setDangLuu] = useState(false)
   const [loi, setLoi] = useState<string | null>(null)
   const [daLuu, setDaLuu] = useState(false)
+  const [hienXacNhan, setHienXacNhan] = useState(false)
 
   useEffect(() => {
     let huy = false
@@ -85,6 +88,7 @@ export default function BoMayPage() {
       const data = (await res.json()) as { dang_dung: string }
       setDangDung(data.dang_dung)
       setDaLuu(true)
+      setHienXacNhan(false)
     } catch (e) {
       setLoi(e instanceof Error ? e.message : "Không lưu được")
     } finally {
@@ -93,6 +97,8 @@ export default function BoMayPage() {
   }
 
   const doiDuoc = can("H4")
+  const boChonMoTa = danhSach?.find((b) => b.key === chon)
+  const boHienTaiMoTa = danhSach?.find((b) => b.key === dangDung)
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -100,81 +106,91 @@ export default function BoMayPage() {
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-surface-alt focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           aria-label="Quay lại"
         >
           <ArrowLeft size={18} strokeWidth={2} />
         </button>
-        <div className="text-[17px] font-extrabold text-primary">Bộ máy phân tích ảnh</div>
+        <div className="text-base font-extrabold text-primary">Bộ máy phân tích ảnh</div>
       </div>
 
       <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4">
-        <div className="text-[12.5px] leading-relaxed text-text-muted">
+        <div className="text-xs leading-relaxed text-text-muted">
           Cả ba bộ trả về cùng một cấu trúc kết quả, nên luồng duyệt và dữ liệu sản phẩm không đổi khi
           bạn chuyển. Thứ đổi là độ chính xác, chi phí mỗi lượt, và ảnh có rời khỏi hệ thống hay không.
         </div>
 
         {loi && (
-          <div className="rounded-xl border-[1.5px] border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700">
+          <div className="rounded-xl border border-warning/30 bg-warning-bg px-3.5 py-2.5 text-xs font-medium text-warning">
             {loi}
           </div>
         )}
 
         {danhSach === null && !loi && (
-          <div className="py-8 text-center text-[13px] text-text-muted">Đang tải…</div>
+          <div className="py-4"><SkeletonBlock lines={3} /></div>
         )}
 
-        {danhSach?.map((bo) => {
-          const dangChon = chon === bo.key
-          const nhan = NHAN_TRANG_THAI[bo.trang_thai]
-          return (
-            <Card
-              key={bo.key}
-              className={cn(
-                "flex flex-col gap-2.5 p-4",
-                dangChon && "border-[1.5px] border-primary",
-                doiDuoc && "cursor-pointer"
-              )}
-              onClick={() => doiDuoc && setChon(bo.key)}
-            >
-              <div className="flex items-center gap-2">
-                <div
+        {danhSach && (
+          <div role="radiogroup" aria-label="Danh sách bộ máy phân tích ảnh" className="flex flex-col gap-3">
+            {danhSach.map((bo) => {
+              const dangChon = chon === bo.key
+              const nhan = NHAN_TRANG_THAI[bo.trang_thai]
+              return (
+                <button
+                  key={bo.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={dangChon}
+                  disabled={!doiDuoc}
+                  onClick={() => doiDuoc && setChon(bo.key)}
                   className={cn(
-                    "flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full border-2",
-                    dangChon ? "border-primary bg-primary" : "border-border"
+                    "flex flex-col gap-2.5 p-4 rounded-2xl border text-left transition-all duration-150 bg-surface",
+                    dangChon
+                      ? "border-primary ring-1 ring-primary/20 bg-primary/[0.02]"
+                      : "border-border hover:border-border-subtle",
+                    doiDuoc ? "cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" : "cursor-default opacity-85"
                   )}
                 >
-                  {dangChon && <Check size={13} strokeWidth={3} color="#fff" />}
-                </div>
-                <div className="flex-1 text-[14.5px] font-bold">{bo.ten}</div>
-                {bo.key === dangDung && (
-                  <span className="rounded-full bg-success-bg px-2.5 py-1 text-[11px] font-bold text-primary">
-                    Đang dùng
-                  </span>
-                )}
-              </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                        dangChon ? "border-primary bg-primary text-white" : "border-border"
+                      )}
+                    >
+                      {dangChon && <Check size={13} strokeWidth={3} />}
+                    </div>
+                    <div className="flex-1 text-sm font-bold text-text">{bo.ten}</div>
+                    {bo.key === dangDung && (
+                      <span className="rounded-full bg-success-bg px-2.5 py-1 text-xs font-bold text-primary">
+                        Đang dùng
+                      </span>
+                    )}
+                  </div>
 
-              <div className="text-[12.5px] leading-relaxed text-text-muted">{bo.mo_ta}</div>
+                  <div className="text-xs leading-relaxed text-text-muted">{bo.mo_ta}</div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", nhan.lop)}>
-                  {nhan.chu}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-surface-alt px-2 py-0.5 text-[11px] font-semibold text-text-muted">
-                  {bo.gui_anh_ra_ngoai ? (
-                    <>
-                      <Cloud size={11} strokeWidth={2} /> Ảnh gửi ra nhà cung cấp
-                    </>
-                  ) : (
-                    <>
-                      <Server size={11} strokeWidth={2} /> Ảnh không rời hệ thống
-                    </>
-                  )}
-                </span>
-              </div>
-            </Card>
-          )
-        })}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", nhan.lop)}>
+                      {nhan.chu}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-surface-alt px-2 py-0.5 text-xs font-semibold text-text-muted">
+                      {bo.gui_anh_ra_ngoai ? (
+                        <>
+                          <Cloud size={11} strokeWidth={2} /> Ảnh gửi ra nhà cung cấp
+                        </>
+                      ) : (
+                        <>
+                          <Server size={11} strokeWidth={2} /> Ảnh không rời hệ thống
+                        </>
+                      )}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {danhSach && (
           <div className="flex items-start gap-2 rounded-xl bg-warning-bg p-3.5">
@@ -193,25 +209,81 @@ export default function BoMayPage() {
           {doiDuoc ? (
             <>
               <Button
+                variant="primary"
                 className="h-[50px] w-full"
                 disabled={dangLuu || !chon || chon === dangDung}
-                onClick={luu}
+                onClick={() => setHienXacNhan(true)}
               >
-                {dangLuu ? "Đang lưu…" : chon === dangDung ? "Đang dùng bộ này" : "Chuyển sang bộ đã chọn"}
+                {chon === dangDung ? "Đang dùng bộ này" : "Chuyển sang bộ đã chọn"}
               </Button>
               {daLuu && (
-                <div className="mt-2 text-center text-[12px] text-text-muted">
+                <div className="mt-2 text-center text-xs text-text-muted">
                   Đã lưu. Lượt phân tích đang chạy dở vẫn dùng bộ cũ.
                 </div>
               )}
             </>
           ) : (
-            <div className="rounded-xl bg-surface-alt px-3.5 py-3 text-center text-[12.5px] text-text-muted">
+            <div className="rounded-xl bg-surface-alt px-3.5 py-3 text-center text-xs text-text-muted">
               Chỉ Điều hành mới đổi được bộ máy phân tích.
             </div>
           )}
         </div>
       )}
+
+      {/* Dialog xác nhận đổi bộ máy theo 03a §22 */}
+      <Dialog
+        open={hienXacNhan}
+        onOpenChange={setHienXacNhan}
+        title="Xác nhận đổi bộ máy phân tích ảnh"
+        description="Hành động tác động lớn đến toàn bộ quy trình nhận diện hoa của tổ chức."
+        size="md"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={dangLuu}
+              onClick={() => setHienXacNhan(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="warning"
+              size="sm"
+              disabled={dangLuu}
+              onClick={luu}
+            >
+              {dangLuu ? "Đang lưu…" : "Xác nhận chuyển đổi"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3.5 text-xs text-text">
+          <div className="p-3 rounded-xl bg-surface-alt border border-border flex flex-col gap-1.5">
+            <div className="flex justify-between">
+              <span className="text-text-muted">Bộ máy hiện tại:</span>
+              <span className="font-bold">{boHienTaiMoTa?.ten || dangDung}</span>
+            </div>
+            <div className="flex justify-between text-primary">
+              <span className="text-text-muted">Chuyển sang:</span>
+              <span className="font-extrabold">{boChonMoTa?.ten || chon}</span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-warning/30 bg-warning-bg p-3 flex flex-col gap-1.5 text-warning">
+            <div className="font-bold flex items-center gap-1.5">
+              <AlertTriangle size={14} /> Lưu ý trước khi đổi:
+            </div>
+            <ul className="list-disc pl-4 space-y-1 text-xs leading-relaxed">
+              <li>Lượt nhận diện ảnh đang chạy dở vẫn tiếp tục dùng bộ máy cũ.</li>
+              <li>Bộ máy mới sẽ áp dụng ngay cho tất cả lượt tải ảnh tiếp theo của toàn tổ chức.</li>
+              <li>Quyền riêng tư dữ liệu: {boChonMoTa?.gui_anh_ra_ngoai ? "Ảnh sẽ gửi ra nhà cung cấp AI bên ngoài." : "Ảnh xử lý nội bộ, không rời khỏi hệ thống."}</li>
+              <li>Hành động này sẽ được ghi nhận vào nhật ký kiểm toán hệ thống (Audit Log).</li>
+            </ul>
+          </div>
+        </div>
+      </Dialog>
     </div>
   )
 }
+

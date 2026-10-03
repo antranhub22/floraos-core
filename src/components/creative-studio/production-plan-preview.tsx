@@ -101,23 +101,23 @@ export function ProductionPlanPreview({
   }
 
   return (
-    <div className="flex flex-col gap-3 text-[12px]">
-      <div className="rounded-xl border border-rose-200/80 bg-rose-50/40 p-3">
+    <div className="flex flex-col gap-3 text-meta">
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
         <div className="mb-1 flex flex-wrap items-center gap-1.5">
-          <Badge tone={plan.source === "ai" ? "success" : "neutral"} className="text-[10px]">
+          <Badge tone={plan.source === "ai" ? "success" : "neutral"} className="text-caption">
             {plan.source === "ai" ? "Kịch bản AI" : "Kịch bản cơ bản"}
           </Badge>
-          <Badge tone="neutral" className="text-[10px]">Phiên bản {plan.revision}</Badge>
-          <span className="text-stone-500">{plan.emotionalTone}</span>
+          <Badge tone="neutral" className="text-caption">Phiên bản {plan.revision}</Badge>
+          <span className="text-text-muted">{plan.emotionalTone}</span>
         </div>
-        {plan.story.logline && <p className="font-semibold text-stone-900">{plan.story.logline}</p>}
-        {plan.story.hook && <p className="mt-1 italic text-stone-700">Hook: “{plan.story.hook}”</p>}
-        {plan.story.cta && <p className="mt-0.5 text-[#52643F] font-semibold">CTA: {plan.story.cta}</p>}
+        {plan.story.logline && <p className="font-semibold text-text">{plan.story.logline}</p>}
+        {plan.story.hook && <p className="mt-1 italic text-text-muted">Hook: “{plan.story.hook}”</p>}
+        {plan.story.cta && <p className="mt-0.5 text-success font-semibold">CTA: {plan.story.cta}</p>}
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div className="rounded-lg border border-stone-200 bg-white p-3">
-          <p className="mb-1 flex items-center gap-1.5 font-bold text-stone-800"><Film size={13} /> Video</p>
+        <div className="rounded-lg border border-border bg-surface p-3">
+          <p className="mb-1 flex items-center gap-1.5 font-bold text-text"><Film size={13} /> Video</p>
           <p>
             Đăng: {plan.publishing.allPlatforms ? "Tất cả nền tảng" : plan.publishing.platforms.map((p) => PLATFORM_SPECS[p]?.label ?? p).join(", ")}
           </p>
@@ -138,27 +138,27 @@ export function ProductionPlanPreview({
           )}
           <p>Màn kết: {plan.video.endCardText || "—"}</p>
         </div>
-        <div className="rounded-lg border border-stone-200 bg-white p-3">
-          <p className="mb-1 flex items-center gap-1.5 font-bold text-stone-800"><Music size={13} /> Âm thanh</p>
+        <div className="rounded-lg border border-border bg-surface p-3">
+          <p className="mb-1 flex items-center gap-1.5 font-bold text-text"><Music size={13} /> Âm thanh</p>
           <p>Giọng: {voice?.displayName ?? plan.audio.voiceId}</p>
           <p>Nhạc: {MOOD_LABEL[plan.audio.musicMood] ?? plan.audio.musicMood} · nhịp {PACING_LABEL[plan.audio.pacing] ?? plan.audio.pacing}</p>
-          <p className="text-stone-500">Khu vực C phối đúng giọng + nhạc này; video dùng nguyên bản phối.</p>
+          <p className="text-text-muted">Âm thanh phối đúng giọng + nhạc này; video dùng nguyên bản phối.</p>
         </div>
       </div>
 
-      <div className="rounded-lg border border-stone-200 bg-white p-3">
-        <p className="mb-2 flex items-center gap-1.5 font-bold text-stone-800"><Clapperboard size={13} /> Từng cảnh (ảnh D · lời thoại C · video E)</p>
+      <div className="rounded-lg border border-border bg-surface p-3">
+        <p className="mb-2 flex items-center gap-1.5 font-bold text-text"><Clapperboard size={13} /> Từng cảnh (ảnh D · lời thoại C · video E)</p>
         <div className="flex flex-col gap-2">
           {plan.scenes.map((s) => {
             const d = drafts[s.sceneIndex] ?? { duration: s.durationSeconds, voice: s.voiceScript, overlay: s.textOverlay }
             const need = estimateSpeechSeconds(d.voice)
             return (
-              <div key={s.sceneIndex} className="rounded-lg border border-stone-100 bg-stone-50/60 p-2">
+              <div key={s.sceneIndex} className="rounded-lg border border-border/60 bg-surface-alt/60 p-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-bold text-stone-900">
+                  <span className="font-bold text-text">
                     {s.sceneIndex}. {BEAT_LABEL[s.beat] ?? s.beat} — {s.title}
                   </span>
-                  <span className="flex items-center gap-1 text-stone-500">
+                  <span className="flex items-center gap-1 text-text-muted">
                     {canEdit ? (
                       <input
                         type="number"
@@ -169,7 +169,7 @@ export function ProductionPlanPreview({
                         onChange={(e) =>
                           setDrafts((prev) => ({ ...prev, [s.sceneIndex]: { ...d, duration: Math.min(15, Math.max(1.5, parseFloat(e.target.value) || 1.5)) } }))
                         }
-                        className="w-16 rounded border border-stone-200 px-1 py-0.5 text-right"
+                        className="w-16 rounded border border-border px-1 py-0.5 text-right"
                       />
                     ) : (
                       <b>{s.durationSeconds}</b>
@@ -177,7 +177,7 @@ export function ProductionPlanPreview({
                     s · {TRANSITION_LABEL[s.transition] ?? s.transition}
                   </span>
                 </div>
-                <p className="text-stone-500">Bối cảnh: {s.setting}</p>
+                <p className="text-text-muted">Bối cảnh: {s.setting}</p>
                 {canEdit ? (
                   <>
                     <textarea
@@ -186,15 +186,15 @@ export function ProductionPlanPreview({
                       maxLength={300}
                       onChange={(e) => setDrafts((prev) => ({ ...prev, [s.sceneIndex]: { ...d, voice: e.target.value } }))}
                       placeholder="Lời thoại (cũng là phụ đề trên video)"
-                      className="mt-1 w-full rounded border border-stone-200 px-2 py-1"
+                      className="mt-1 w-full rounded border border-border px-2 py-1"
                     />
                     {need > d.duration && (
-                      <p className="text-[11px] text-amber-700">Lời thoại cần ~{need}s — dài hơn cảnh, âm thanh sẽ kéo dài cảnh này.</p>
+                      <p className="text-caption text-warning">Lời thoại cần ~{need}s — dài hơn cảnh, âm thanh sẽ kéo dài cảnh này.</p>
                     )}
                   </>
                 ) : (
                   <>
-                    <p className="italic">“{s.voiceScript}” <span className="not-italic text-stone-400">(lời thoại = phụ đề)</span></p>
+                    <p className="italic">“{s.voiceScript}” <span className="not-italic text-text-muted">(lời thoại = phụ đề)</span></p>
                   </>
                 )}
               </div>
@@ -203,30 +203,30 @@ export function ProductionPlanPreview({
         </div>
         {canEdit && (
           <div className="mt-2 flex items-center justify-between gap-2">
-            <span className="text-stone-500">Tổng ~{Math.round(total)}s</span>
-            <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px]" disabled={!dirty || saving} onClick={() => void save()}>
+            <span className="text-text-muted">Tổng ~{Math.round(total)}s</span>
+            <Button size="sm" variant="outline" className="h-8 gap-1 text-caption" disabled={!dirty || saving} onClick={() => void save()}>
               {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Lưu thay đổi (miễn phí)
             </Button>
           </div>
         )}
-        {error && <p className="mt-1 text-rose-700">{error}</p>}
+        {error && <p className="mt-1 text-danger">{error}</p>}
       </div>
 
-      <div className="rounded-lg border border-stone-200 bg-white p-3">
-        <p className="mb-1 flex items-center gap-1.5 font-bold text-stone-800"><Megaphone size={13} /> Bài đăng (Khu vực B)</p>
+      <div className="rounded-lg border border-border bg-surface p-3">
+        <p className="mb-1 flex items-center gap-1.5 font-bold text-text"><Megaphone size={13} /> Bài đăng (Nội dung)</p>
         {plan.content.posts.length === 0 ? (
-          <p className="text-stone-500">Chưa có bài theo kịch bản — Khu vực B sẽ viết theo khuôn dự phòng.</p>
+          <p className="text-text-muted">Chưa có bài theo kịch bản — Nội dung sẽ viết theo khuôn dự phòng.</p>
         ) : (
           plan.content.posts.map((p) => (
             <details key={p.channel} className="mb-1">
               <summary className="cursor-pointer font-semibold">{CHANNEL_LABEL[p.channel] ?? p.channel}</summary>
-              <p className="whitespace-pre-line text-stone-700">{p.text}</p>
-              {p.hashtags.length > 0 && <p className="text-stone-500">{p.hashtags.join(" ")}</p>}
+              <p className="whitespace-pre-line text-text">{p.text}</p>
+              {p.hashtags.length > 0 && <p className="text-text-muted">{p.hashtags.join(" ")}</p>}
             </details>
           ))
         )}
         {plan.content.videoCaption.text && (
-          <p className="mt-1 text-stone-700">
+          <p className="mt-1 text-text">
             <b>Chú thích video:</b> {plan.content.videoCaption.text} {plan.content.videoCaption.hashtags.join(" ")}
           </p>
         )}

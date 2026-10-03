@@ -24,6 +24,15 @@ DEFAULT_AUTO_CAPABILITIES = [
 ]
 
 
+class NhaCungCapLoi(RuntimeError):
+    """Nhà cung cấp không làm được lượt này — chuỗi (`chain.py`) thử bên kế tiếp."""
+
+    def __init__(self, provider: str, ly_do: str) -> None:
+        super().__init__(f"{provider}: {ly_do}")
+        self.provider = provider
+        self.ly_do = ly_do
+
+
 def chon_nang_luc(config: dict[str, Any]) -> tuple[str, list[str]]:
     """Chế độ + danh sách năng lực người dùng chọn — cùng luật với `StudioEnhancer`."""
     mode = config.get("mode", "auto")

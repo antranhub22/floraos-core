@@ -10,7 +10,7 @@
  */
 
 import type { AudioQualityTier, AudioSceneInput, AudioTaskType, TtsProviderKey } from "./audio-types"
-import { calculateAudioCreditCost } from "./audio-pricing-guard"
+import { calculateAudioCreditCost, musicGenerationCredit } from "./audio-pricing-guard"
 
 export interface AudioTaskSpec {
   readonly taskType: AudioTaskType
@@ -37,7 +37,7 @@ export const AUDIO_TASK_SPECS: Readonly<Record<AudioTaskType, AudioTaskSpec>> = 
   MUSIC_SELECT: {
     taskType: "MUSIC_SELECT",
     label: "Music Select",
-    description: "Chọn và cắt nhạc nền đủ thời lượng, không giọng đọc. Miễn phí.",
+    description: "Nhạc nền không lời đủ thời lượng, không giọng đọc — AI sinh theo tâm trạng, hoặc bài thư viện (miễn phí).",
     needsVoice: false,
     music: "required",
     output: "music_only",
@@ -164,10 +164,23 @@ export function validateAudioTask(input: AudioTaskValidationInput): Record<strin
 
 /**
  * Credit THẬT của một lượt (truyền vào `enqueueJob({ costCredit })`) — đúng
- * bảng `audio-pricing-guard.ts`, quyết định PO 24/09/2026. MUSIC_SELECT = 0,
- * VOICE_CLONE tính theo ElevenLabs, số cảnh = số cảnh CÓ lời thoại.
+ * bảng `audio-pricing-guard.ts`, quyết định PO 24/09/2026. VOICE_CLONE tính
+ * theo ElevenLabs, số cảnh = số cảnh CÓ lời thoại. 25/09/2026: cộng phần nhạc
+ * nền do nhà cung cấp sinh (`musicProvider`, theo `musicSeconds`); bài thư
+ * viện = 0 (MUSIC_SELECT dùng thư viện vẫn miễn phí).
  */
 export function audioJobCreditCost(input: {
+  taskType: AudioTaskType
+  providerKey: TtsProviderKey
+  qualityTier: AudioQualityTier
+  scenes: readonly AudioSceneInput[]
+  musicProvider?: string | null | undefined
+  musicSeconds?: number | undefined
+}): number {
+  return voiceCredit(input) + musicCredit(input)
+}
+
+function voiceCredit(input: {
   taskType: AudioTaskType
   providerKey: TtsProviderKey
   qualityTier: AudioQualityTier
@@ -183,4 +196,67 @@ export function audioJobCreditCost(input: {
     qualityTier: input.qualityTier,
     sceneCount,
   }).totalCredits
+}
+
+function musicCredit(input: { taskType: AudioTaskType; musicProvider?: string | null | undefined; musicSeconds?: number | undefined }): number {
+  if (AUDIO_TASK_SPECS[input.taskType].music === "none") return 0
+  return musicGenerationCredit(input.musicProvider, input.musicSeconds ?? 30)
+}
+
+/** Kế hoạch thu của một lượt — lưu vào payload để hoàn chênh lúc đọc. */
+export interface AudioCostPlan {
+  readonly taskType: AudioTaskType
+  readonly qualityTier: AudioQualityTier
+  readonly voiceProvider: TtsProviderKey | null
+  readonly voiceSceneCount: number
+  readonly voiceCredit: number
+  readonly musicProvider: string | null
+  readonly musicCredit: number
+}
+
+export function audioCostPlan(input: {
+  taskType: AudioTaskType
+  providerKey: TtsProviderKey | null
+  qualityTier: AudioQualityTier
+  scenes: readonly AudioSceneInput[]
+  musicProvider: string | null
+  musicSeconds: number
+}): AudioCostPlan {
+  const voiceProvider = AUDIO_TASK_SPECS[input.taskType].needsVoice ? input.providerKey ?? "openai" : null
+  return {
+    taskType: input.taskType,
+    qualityTier: input.qualityTier,
+    voiceProvider,
+    voiceSceneCount: input.scenes.filter((s) => s.voiceScript.trim().length > 0).length,
+    voiceCredit: voiceProvider ? voiceCredit({ ...input, providerKey: voiceProvider }) : 0,
+    musicProvider: input.musicProvider,
+    musicCredit: musicCredit(input),
+  }
+}
+
+/**
+ * Phần hoàn sau một lượt đã xong (bảng giá v1 nguyên tắc 3 — thu theo đường
+ * thật đã chạy). Nhạc lùi về thư viện → hoàn phần nhạc; giọng lùi sang bên
+ * RẺ hơn → hoàn chênh (nhiều bên trong một lượt thì tính theo bên đắt nhất đã
+ * dùng). Chỉ hoàn, không thu thêm.
+ */
+export function audioJobRefund(
+  plan: AudioCostPlan | null | undefined,
+  output: { provider_used?: string | null; music_fallback?: boolean; music_provider_used?: string | null } | null | undefined
+): number {
+  if (!plan || !output) return 0
+  let hoan = 0
+  if (plan.musicCredit > 0 && (output.music_fallback === true || !output.music_provider_used)) hoan += plan.musicCredit
+  if (plan.voiceProvider && plan.voiceCredit > 0 && plan.taskType !== "VOICE_CLONE" && output.provider_used) {
+    const used = output.provider_used.split(",").map((p) => p.trim()).filter(Boolean) as TtsProviderKey[]
+    if (used.length > 0) {
+      const thuc = Math.max(
+        ...used.map((p) =>
+          calculateAudioCreditCost({ taskType: plan.taskType, provider: p, qualityTier: plan.qualityTier, sceneCount: plan.voiceSceneCount }).totalCredits
+        )
+      )
+      hoan += Math.max(0, plan.voiceCredit - thuc)
+    }
+  }
+  return hoan
 }

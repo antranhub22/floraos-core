@@ -6,6 +6,7 @@ import { Headphones, Loader2, Trash2, Upload } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { VOICE_CLONE_CONSENT_TEXT } from "@/modules/audio-studio/domain/audio-task-rules"
 import { createVoiceClone, fetchVoiceClones, removeVoiceClone, type VoiceCloneItem } from "./audio-library-client"
 
@@ -62,21 +63,21 @@ export function VoiceClonePanel({ value, onChange }: { value: string | null; onC
       <h3 className="mb-1 flex items-center gap-2 text-sm font-bold text-text">
         <Headphones size={14} /> Giọng nhân bản của tiệm
       </h3>
-      <p className="mb-3 text-[12px] text-text-muted">
+      <p className="mb-3 text-meta text-text-muted">
         Đọc lời thoại bằng chính giọng chủ tiệm (ElevenLabs). Giọng nhân bản không bao giờ bị thay bằng giọng khác — nhà
         cung cấp lỗi thì job dừng và hoàn credit.
       </p>
-      {error && <p className="mb-2 text-[12px] text-rose-700">{error}</p>}
+      {error && <p className="mb-2 text-meta text-danger">{error}</p>}
       {!clones && !error && (
-        <p className="flex items-center gap-2 text-[12px] text-text-muted">
-          <Loader2 size={12} className="animate-spin" /> Đang tải…
-        </p>
+        <div className="py-2">
+          <SkeletonBlock lines={2} />
+        </div>
       )}
       <div className="flex flex-col gap-2">
         {(clones ?? []).map((c) => (
           <div key={c.id} className={`rounded-lg border px-3 py-2 ${value === c.id ? "border-primary bg-primary/5" : "border-border"}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-text">
+              <label className="flex cursor-pointer items-center gap-2 text-meta font-semibold text-text">
                 <input type="radio" disabled={c.status !== "READY"} checked={value === c.id} onChange={() => onChange(c.id, c)} />
                 {c.name}
               </label>
@@ -91,16 +92,16 @@ export function VoiceClonePanel({ value, onChange }: { value: string | null; onC
                     if (value === c.id) onChange(null, null)
                     setReloadKey((k) => k + 1)
                   }}
-                  className="text-rose-600 cursor-pointer"
+                  className="text-danger cursor-pointer"
                 >
                   <Trash2 size={13} />
                 </button>
               </div>
             </div>
-            {c.status === "FAILED" && c.error && <p className="mt-1 text-[11px] text-rose-700">{c.error}</p>}
+            {c.status === "FAILED" && c.error && <p className="mt-1 text-caption text-danger">{c.error}</p>}
           </div>
         ))}
-        {clones && clones.length === 0 && <p className="text-[12px] text-text-muted">Chưa có giọng nhân bản nào.</p>}
+        {clones && clones.length === 0 && <p className="text-meta text-text-muted">Chưa có giọng nhân bản nào.</p>}
       </div>
       <div className="mt-3">
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowCreate((s) => !s)}>
@@ -142,17 +143,17 @@ function CreateCloneForm({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
-      <ul className="list-disc pl-4 text-[11px] text-text-muted">
+      <ul className="list-disc pl-4 text-caption text-text-muted">
         <li>Tệp MP3/WAV/M4A dài 1–3 phút (tối thiểu 20 giây), một người nói, rõ, không nhạc nền, không tiếng vang.</li>
         <li>Đọc tự nhiên như khi tư vấn khách — giọng nhân bản sẽ giữ nhịp và ngữ điệu này.</li>
       </ul>
       <input className="w-full rounded border border-border px-2 py-1.5 text-xs" placeholder="Tên giọng (vd. Chị Lan chủ tiệm)" value={name} onChange={(e) => setName(e.target.value)} />
       <input type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-xs" />
-      <label className="flex items-start gap-2 text-[11px] text-text">
+      <label className="flex items-start gap-2 text-caption text-text">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
         {VOICE_CLONE_CONSENT_TEXT}
       </label>
-      {error && <p className="text-[12px] text-rose-700">{error}</p>}
+      {error && <p className="text-meta text-danger">{error}</p>}
       <Button size="sm" onClick={submit} disabled={busy || !consent || name.trim().length < 2} className="gap-1.5">
         {busy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Nhân bản giọng ({CLONE_CREDIT} credit)
       </Button>

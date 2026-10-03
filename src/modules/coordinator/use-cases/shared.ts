@@ -9,6 +9,8 @@ import { CoordinatorRepository, type CoordinatorOrderRow } from "../infra/coordi
 import { isUniqueViolation, runInTransaction, type DbClient } from "../infra/transaction"
 import { presentCoordinatorOrders, type CoordinatorOrderView } from "./present-coordinator-order"
 
+export { buildOrderFieldValueLookup } from "./field-value-lookup"
+
 /** Luật nghiệp vụ không đạt → 422 kèm lý do đọc được. */
 export function ensureRule(result: RuleResult): void {
   if (!result.ok) throw new AppError("UNPROCESSABLE_ENTITY", result.reason)
@@ -33,6 +35,7 @@ export function ensureTransition(from: CoordinatorStage, to: CoordinatorStage, f
 export function concurrentUpdate(): AppError {
   return new AppError("CONFLICT", "Đơn vừa được người khác cập nhật — tải lại rồi thử lại.")
 }
+
 
 /**
  * Ảnh gắn vào đơn phải là `assets` CỦA CHÍNH tổ chức. Id của tổ chức khác

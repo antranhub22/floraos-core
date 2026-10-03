@@ -42,8 +42,8 @@ export function AngleSelectorCard({
   return (
     <Card className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-4">
       <div>
-        <div className="text-xs font-semibold text-text-muted">Bước 2: Chọn góc độ tiếp cận (M07 Copywriting Angle)</div>
-        <div className="text-[16px] font-extrabold text-text">Chọn góc tiếp cận bài viết</div>
+        <div className="text-xs font-semibold text-text-muted">Bước 2: Chọn góc độ tiếp cận (Đăng mạng xã hội Copywriting Angle)</div>
+        <div className="text-title font-extrabold text-text">Chọn góc tiếp cận bài viết</div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -52,6 +52,8 @@ export function AngleSelectorCard({
           const Icon = item.icon
           return (
             <div
+              role="button"
+              tabIndex={0}
               key={item.id}
               onClick={() => onSelectAngle(item.id)}
               className={`cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col gap-2 ${
@@ -66,7 +68,7 @@ export function AngleSelectorCard({
                 </div>
                 <div className="text-xs font-bold text-text">{item.title}</div>
               </div>
-              <p className="text-[11.5px] text-text-muted leading-relaxed">
+              <p className="text-caption text-text-muted leading-relaxed">
                 {item.description}
               </p>
             </div>

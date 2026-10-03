@@ -17,6 +17,7 @@ import { resolvePlatformSession } from "@/modules/platform/use-cases/resolve-pla
 const MUC: Array<{ href: string; nhan: string }> = [
   { href: "/van-hanh", nhan: "Tổng quan" },
   { href: "/van-hanh/to-chuc", nhan: "Tổ chức" },
+  { href: "/van-hanh/truong-du-lieu", nhan: "Trường dữ liệu" },
   { href: "/van-hanh/muc-dung", nhan: "Mức dùng" },
   { href: "/van-hanh/suc-khoe", nhan: "Sức khoẻ hệ thống" },
   { href: "/van-hanh/nhat-ky", nhan: "Nhật ký" },
@@ -38,14 +39,14 @@ export default async function PlatformLayout({ children }: { children: React.Rea
       <header className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Vận hành nền tảng</p>
-          <p className="text-[13px] text-text-muted">Xuyên tổ chức — không phải màn của một tổ chức nào</p>
+          <p className="text-body-sm text-text-muted">Xuyên tổ chức — không phải màn của một tổ chức nào</p>
         </div>
         <nav className="flex flex-wrap gap-1">
           {MUC.map((m) => (
             <Link
               key={m.href}
               href={m.href as never}
-              className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-text hover:bg-surface-alt"
+              className="rounded-lg px-3 py-1.5 text-body-sm font-medium text-text hover:bg-surface-alt"
             >
               {m.nhan}
             </Link>

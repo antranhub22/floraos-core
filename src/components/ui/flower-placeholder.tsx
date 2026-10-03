@@ -3,7 +3,7 @@
 
 export function FlowerPlaceholder({
   size = 24,
-  color = "#174C3C",
+  color,
   className,
 }: {
   size?: number
@@ -12,7 +12,7 @@ export function FlowerPlaceholder({
 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" className={className}>
-      <path d="M50,50 C47,40 33,26 50,14 C67,26 53,40 50,50 Z" fill={color} />
+      <path d="M50,50 C47,40 33,26 50,14 C67,26 53,40 50,50 Z" fill={color ?? "currentColor"} />
     </svg>
   )
 }

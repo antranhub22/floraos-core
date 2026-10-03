@@ -48,8 +48,8 @@ export function ChatThreadCard({
             {customerName.charAt(0)}
           </div>
           <div>
-            <div className="text-[15px] font-extrabold text-text">{customerName}</div>
-            <div className="text-[11px] text-text-muted capitalize">Kênh: {channel}</div>
+            <div className="text-title-sm font-extrabold text-text">{customerName}</div>
+            <div className="text-caption text-text-muted capitalize">Kênh: {channel}</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ export function ChatThreadCard({
                     : "bg-surface-alt text-text rounded-bl-none border border-border"
                 }`}
               >
-                <div className="flex items-center gap-1.5 mb-1 text-[10px] opacity-75 font-semibold">
+                <div className="flex items-center gap-1.5 mb-1 text-caption opacity-75 font-semibold">
                   {isUser ? <User size={10} /> : <Bot size={10} />}
                   {isUser ? customerName : "Trợ lý AI Flora"} • {msg.time}
                 </div>
@@ -89,7 +89,7 @@ export function ChatThreadCard({
                 {msg.suggestedProducts && msg.suggestedProducts.length > 0 && (
                   <div className="mt-2 flex flex-col gap-1 border-t border-border/40 pt-1.5">
                     {msg.suggestedProducts.map((p, idx) => (
-                      <div key={idx} className="flex items-center justify-between rounded bg-surface/60 px-2 py-1 text-[11px]">
+                      <div key={idx} className="flex items-center justify-between rounded bg-surface/60 px-2 py-1 text-caption">
                         <span className="font-bold">{p.name}</span>
                         <span className="text-primary font-bold">{p.price}</span>
                       </div>

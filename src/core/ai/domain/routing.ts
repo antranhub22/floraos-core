@@ -63,6 +63,16 @@ export interface AiRoutingRequest {
    * Cổng AI đặt cờ này bằng `threshold !== null`, không đặt bằng cấu hình.
    */
   readonly cascade?: boolean | undefined
+  /**
+   * Thứ tự ưu tiên nhà cung cấp của tổ chức cho lượt này (PO 25/09/2026 —
+   * `creative-production/domain/provider-catalog.ts`, loại `content`). Có giá
+   * trị thì: (a) mô hình trong danh sách được coi là TỔ CHỨC TỰ CHỌN nên chạy
+   * được dù chưa đo trên bộ ảnh vàng (cùng ngoại lệ của ràng buộc 1); (b) xếp
+   * hạng theo đúng thứ tự này trước mọi tiêu chí lớp; (c) dự phòng đi theo thứ
+   * tự này, kể cả sang mô hình lớp thấp hơn mà tổ chức đã xếp — vẫn trong trần
+   * và vẫn qua sàn quyền riêng tư.
+   */
+  readonly preferredModelKeys?: readonly string[] | undefined
 }
 
 export type RoutingRefusalReason =
@@ -153,7 +163,8 @@ export function selectModel(
   // Ràng buộc 1 — tự động chỉ chọn mô hình ĐÃ ĐO. Ngoại lệ duy nhất: tổ chức
   // đã thu trần về đúng một mô hình, tức chính họ đã chọn nó (`H4`/`U2`).
   const explicitSingleChoice = ceiling.length === 1
-  const measured = eligible.filter((m) => m.measureState === "SAN_XUAT")
+  const preferred = request.preferredModelKeys ?? []
+  const measured = eligible.filter((m) => m.measureState === "SAN_XUAT" || preferred.includes(m.key))
   const pool = measured.length > 0 ? measured : explicitSingleChoice ? eligible : []
 
   for (const model of eligible) {
@@ -165,7 +176,12 @@ export function selectModel(
   }
 
   const target = request.qualityTarget ?? policy.qualityTarget
+  const rank = (key: string) => {
+    const i = preferred.indexOf(key)
+    return i < 0 ? Number.MAX_SAFE_INTEGER : i
+  }
   const ranked = [...pool].sort((a, b) => {
+    if (preferred.length > 0 && rank(a.key) !== rank(b.key)) return rank(a.key) - rank(b.key)
     if (target) {
       const da = Math.abs(CLASS_RANK[a.qualityClass] - CLASS_RANK[target])
       const db = Math.abs(CLASS_RANK[b.qualityClass] - CLASS_RANK[target])
@@ -239,12 +255,17 @@ export function nextFallback(
   alreadyTried: readonly string[] = []
 ): AiModelCandidate | null {
   const tried = new Set([failed.key, ...alreadyTried])
-  const others = candidates.filter(
-    (m) =>
-      !tried.has(m.key) &&
-      m.provider !== failed.provider &&
-      CLASS_RANK[m.qualityClass] >= CLASS_RANK[failed.qualityClass]
-  )
+  // Có thứ tự ưu tiên của tổ chức: đi tiếp đúng thứ tự đó (xem
+  // `AiRoutingRequest.preferredModelKeys`). Không có: luật cũ — nhà cung cấp
+  // khác, không hạ lớp.
+  const others = request.preferredModelKeys?.length
+    ? candidates.filter((m) => !tried.has(m.key) && request.preferredModelKeys!.includes(m.key))
+    : candidates.filter(
+        (m) =>
+          !tried.has(m.key) &&
+          m.provider !== failed.provider &&
+          CLASS_RANK[m.qualityClass] >= CLASS_RANK[failed.qualityClass]
+      )
   const decision = selectModel(others, policy, khongChotMoHinh(request))
   return decision.kind === "chon" ? decision.model : null
 }

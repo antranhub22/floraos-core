@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "stage-06b-create-audio.output.schema.json",
   "title": "Chặng 06b — CREATE · Khu vực C: Giọng đọc & nhạc nền — Đầu ra",
-  "description": "Bốn tác vụ thật: VOICEOVER, MUSIC_SELECT (0 credit), AUDIO_MIX, VOICE_CLONE. Kết quả cuối (audio_storage_key) đọc từ job khi COMPLETED.",
+  "description": "Bốn tác vụ thật: VOICEOVER, MUSIC_SELECT, AUDIO_MIX, VOICE_CLONE. Nhà cung cấp trước (25/09/2026): giọng theo thứ tự tiệm, nhạc nền AI (ElevenLabs Music) với bài thư viện làm dự phòng; musicProvider=library = 0 credit phần nhạc. Kết quả cuối (audio_storage_key) đọc từ job khi COMPLETED.",
   "x-floraos": {
     "stageId": "06b",
     "stage": 6,
@@ -62,6 +62,13 @@
         }
       ]
     },
+    "musicProvider": {
+      "description": "Nhà cung cấp sinh nhạc đứng đầu lượt; null = chỉ bài thư viện",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "musicTrackName": {
       "type": [
         "string",
@@ -104,6 +111,7 @@
     "creditsCost",
     "voiceDisplayName",
     "providerKey",
+    "musicProvider",
     "musicTrackName",
     "musicLicenseVerified",
     "usage",
@@ -118,6 +126,7 @@
       "creditsCost": 2,
       "voiceDisplayName": "Flora Nữ Truyền Cảm",
       "providerKey": "edge_tts",
+      "musicProvider": null,
       "musicTrackName": "Warm Strings",
       "musicLicenseVerified": true,
       "usage": {

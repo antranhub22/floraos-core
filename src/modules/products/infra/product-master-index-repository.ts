@@ -49,6 +49,14 @@ interface RawFlowerRow {
   so_nu?: number | null
   /** Số cành hỏng/héo/dập của riêng loài này — đã NẰM TRONG `quantity` (nợ #90). */
   so_hong?: number | null
+  /** MI-12 (ĐP-2b, 26/09/2026): giống/biến thể cụ thể — khác `name`/`nhom_hoa`. */
+  bien_the?: string | null
+  /** MI-12: chiều dài cành (cm). */
+  chieu_dai_cm?: number | null
+  /** MI-12: cờ cho phép thay thế cấp từng dòng BOM. */
+  duoc_thay_the?: boolean | null
+  /** MI-12: thứ tự ưu tiên bị thay thế khi thiếu hàng — số nhỏ hơn thay trước. */
+  thu_tu_uu_tien_thay_the?: number | null
 }
 
 interface RawAccessoryRow {
@@ -57,6 +65,10 @@ interface RawAccessoryRow {
   color?: string | null
   quantity?: number | null
   printed_text?: string | null
+  /** MI-12 (ĐP-2b, 26/09/2026): đơn vị tính (vd. "cái", "bộ"). */
+  don_vi?: string | null
+  /** MI-12: cờ cho phép thay thế cấp từng dòng BOM. */
+  duoc_thay_the?: boolean | null
 }
 
 interface RawWrappingLayer {
@@ -64,6 +76,12 @@ interface RawWrappingLayer {
   material?: string | null
   color?: string | null
   texture?: string | null
+  /** MI-12 (ĐP-2b, 26/09/2026): hoa văn/hoạ tiết — khác `texture` (kết cấu vật liệu). */
+  hoa_van?: string | null
+  /** MI-12: số lượng lớp/tấm của CHÍNH lớp gói này. */
+  so_luong?: number | null
+  /** MI-12: cờ cho phép thay thế cấp từng dòng BOM. */
+  duoc_thay_the?: boolean | null
 }
 
 const DEM_UNITS: readonly DemUnit[] = ["bông", "cành", "lá", "cây"]
@@ -186,6 +204,11 @@ export class ProductMasterIndexRepository {
       ...(f.shade ? { shade: f.shade } : {}),
       ...(typeof f.so_nu === "number" ? { budCount: f.so_nu } : {}),
       ...(typeof f.so_hong === "number" ? { damagedCount: f.so_hong } : {}),
+      // MI-12 (ĐP-2b, 26/09/2026) — chỉ khai khi có giá trị thật, không suy đoán/mặc định.
+      ...(f.bien_the ? { variety: f.bien_the } : {}),
+      ...(typeof f.chieu_dai_cm === "number" ? { stemLengthCm: f.chieu_dai_cm } : {}),
+      ...(typeof f.duoc_thay_the === "boolean" ? { substitutionAllowed: f.duoc_thay_the } : {}),
+      ...(typeof f.thu_tu_uu_tien_thay_the === "number" ? { substitutionPriority: f.thu_tu_uu_tien_thay_the } : {}),
     }))
 
     // Cấu trúc atomic đầy đủ (số lượng/màu/vai trò/chất liệu/chữ in) thay vì chỉ giữ tên
@@ -201,6 +224,8 @@ export class ProductMasterIndexRepository {
             unit: toDemUnit(l.dvt_dem ?? l.unit),
             color: l.mo_ta_mau ?? l.mau ?? l.color ?? "Chưa rõ màu",
             role: mapFoliageRole(l.role),
+            // MI-12 (ĐP-2b, 26/09/2026).
+            ...(typeof l.duoc_thay_the === "boolean" ? { substitutionAllowed: l.duoc_thay_the } : {}),
           }
     )
 
@@ -214,6 +239,9 @@ export class ProductMasterIndexRepository {
             color: a.color ?? "Chưa rõ màu",
             quantity: typeof a.quantity === "number" ? a.quantity : null,
             printedText: a.printed_text ?? null,
+            // MI-12 (ĐP-2b, 26/09/2026).
+            ...(a.don_vi ? { unit: a.don_vi } : {}),
+            ...(typeof a.duoc_thay_the === "boolean" ? { substitutionAllowed: a.duoc_thay_the } : {}),
           }
     )
 
@@ -237,6 +265,10 @@ export class ProductMasterIndexRepository {
       material: w.material ?? "Chưa rõ chất liệu",
       color: w.color ?? "Chưa rõ màu",
       texture: w.texture ?? "Chưa rõ kết cấu",
+      // MI-12 (ĐP-2b, 26/09/2026).
+      ...(w.hoa_van ? { pattern: w.hoa_van } : {}),
+      ...(typeof w.so_luong === "number" ? { quantity: w.so_luong } : {}),
+      ...(typeof w.duoc_thay_the === "boolean" ? { substitutionAllowed: w.duoc_thay_the } : {}),
     }))
 
     // Số tầng cắm (`san_xuat.so_tang_lop`) — phục vụ QC/định giá công thợ (nợ #90).
@@ -261,8 +293,8 @@ export class ProductMasterIndexRepository {
     const allImages = asRowArray<{ role?: string | null; asset_id: string; position?: number | null }>(row.images)
     const mainImage = allImages.find((img) => img.role === "MAIN")
     const galleryImageRows = allImages
-      .filter((img): img is { role: "GALLERY" | "CATALOG" | "SOCIAL"; asset_id: string; position?: number | null } =>
-        img.role === "GALLERY" || img.role === "CATALOG" || img.role === "SOCIAL"
+      .filter((img): img is { role: "GALLERY" | "CATALOG" | "SOCIAL" | "REFERENCE"; asset_id: string; position?: number | null } =>
+        img.role === "GALLERY" || img.role === "CATALOG" || img.role === "SOCIAL" || img.role === "REFERENCE"
       )
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
 
@@ -360,6 +392,8 @@ export class ProductMasterIndexRepository {
       code: row.code,
       name: row.name,
       status: row.status,
+      // MI-3 (ĐP-2.1, 26/09/2026): phiên bản Master Index cho snapshot của Điều phối (Hợp đồng MI §5).
+      updatedAt: row.updated_at.toISOString(),
       category: row.category ?? "Bó hoa",
       shape: row.shape ?? "Tròn",
       facing: row.facing ?? "Một mặt",

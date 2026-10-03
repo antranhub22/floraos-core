@@ -154,8 +154,8 @@ export function StoryboardEditor({
 
       {/* Cảnh báo nếu kịch bản chưa hợp lệ */}
       {!validation.isValid && (
-        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-3 text-xs">
-          <AlertTriangle size={15} className="shrink-0 mt-0.5 text-amber-600" />
+        <div className="flex items-start gap-2 bg-warning/10 border border-warning/30 text-text rounded-lg p-3 text-xs">
+          <AlertTriangle size={15} className="shrink-0 mt-0.5 text-warning" />
           <div className="flex flex-col gap-0.5">
             <span className="font-semibold">Cần điều chỉnh kịch bản:</span>
             {validation.errors.map((err, i) => (
@@ -195,7 +195,7 @@ export function StoryboardEditor({
                   <button
                     type="button"
                     onClick={() => handleRemoveScene(idx)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer shrink-0"
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-danger bg-danger/10 hover:bg-danger/20 border border-danger/30 transition-colors cursor-pointer shrink-0"
                     title={`Xóa phân cảnh #${idx + 1}`}
                   >
                     <Trash2 size={13} />
@@ -218,10 +218,10 @@ export function StoryboardEditor({
                 )}
               </div>
               <div className="flex-1 flex flex-col gap-0.5 min-w-0">
-                <label className="text-[11px] font-bold text-text flex items-center gap-1.5">
+                <label className="text-caption font-bold text-text flex items-center gap-1.5">
                   <ImageIcon size={13} className="text-primary" /> Hình ảnh phân cảnh
                 </label>
-                <span className="text-[11px] text-text-muted truncate">
+                <span className="text-caption text-text-muted truncate">
                   {scene.imageAssetId
                     ? `Ảnh sản phẩm trong kho · asset ${String(scene.imageAssetId).slice(0, 8)}`
                     : "Chưa có ảnh — sinh ảnh cảnh này ở Khu vực D (biến thể theo kịch bản)"}
@@ -232,24 +232,24 @@ export function StoryboardEditor({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Phụ đề = lời thoại (PO 24/09/2026) — không nhập riêng */}
               <div>
-                <label className="text-[11px] font-semibold text-text-muted block mb-1">
+                <label className="text-caption font-semibold text-text-muted block mb-1">
                   Phụ đề
                 </label>
-                <p className="rounded-md border border-dashed border-border px-3 py-1.5 text-[11px] text-text-muted">
+                <p className="rounded-md border border-dashed border-border px-3 py-1.5 text-caption text-text-muted">
                   Luôn giống lời thoại bên dưới — sửa lời thoại là sửa phụ đề.
                 </p>
               </div>
 
               {/* Chuyển động máy quay điện ảnh */}
               <div>
-                <label className="text-[11px] font-semibold text-text-muted block mb-1">
+                <label className="text-caption font-semibold text-text-muted block mb-1">
                   Chuyển động máy quay (Camera)
                 </label>
                 <select
                   disabled={isLocked}
                   value={scene.motionEffect || "ZOOM_IN"}
                   onChange={(e) => handleUpdateScene(idx, "motionEffect", e.target.value as VideoMotionEffect)}
-                  className="w-full rounded-md border border-emerald-200 bg-emerald-50/40 text-emerald-800 px-2.5 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none disabled:bg-muted"
+                  className="w-full rounded-md border border-success/30 bg-success/10 text-success px-2.5 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none disabled:bg-muted"
                 >
                   {Object.values(VIDEO_MOTION_SPECS).map((m) => (
                     <option key={m.motion} value={m.motion}>
@@ -261,7 +261,7 @@ export function StoryboardEditor({
 
               {/* Hiệu ứng chuyển cảnh */}
               <div>
-                <label className="text-[11px] font-semibold text-text-muted block mb-1">
+                <label className="text-caption font-semibold text-text-muted block mb-1">
                   Chuyển cảnh (Transition)
                 </label>
                 <select
@@ -281,7 +281,7 @@ export function StoryboardEditor({
 
               {/* Lời thoại đọc voiceover */}
               <div className="md:col-span-3">
-                <label className="text-[11px] font-semibold text-text-muted block mb-1">
+                <label className="text-caption font-semibold text-text-muted block mb-1">
                   Lời thoại lồng tiếng AI (Voiceover Script)
                 </label>
                 <textarea
@@ -307,7 +307,7 @@ export function StoryboardEditor({
         )}
         <div className="flex items-center gap-2 ml-auto">
           {savedSuccess && (
-            <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+            <span className="text-xs font-semibold text-success flex items-center gap-1">
               <Check size={14} /> Đã lưu kịch bản
             </span>
           )}

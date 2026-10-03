@@ -61,18 +61,18 @@ export function ResearchParameterFields({
   size = "md",
   selectClassName,
 }: ResearchParameterFieldsProps) {
-  const heightClass = size === "sm" ? "h-8.5 text-[11.5px]" : "h-10 text-xs";
-  const labelClass = size === "sm" ? "text-[11px]" : "text-xs";
+  const heightClass = size === "sm" ? "h-8.5 text-caption" : "h-10 text-xs";
+  const labelClass = size === "sm" ? "text-caption" : "text-xs";
   const iconSize = size === "sm" ? 12 : 14;
   const selectClass =
     selectClassName ??
-    `${heightClass} w-full rounded-lg border border-stone-200 bg-stone-50/50 px-2 text-stone-800 outline-none focus:border-rose-500 transition`;
+    `${heightClass} w-full rounded-lg border border-cool-200 bg-cool-50/50 px-2 text-cool-800 outline-none focus:border-blush-500 transition`;
 
   return (
     <>
       <div className="space-y-1">
-        <label className={`${labelClass} font-semibold text-stone-700 flex items-center gap-1`}>
-          <Globe size={iconSize} className="text-rose-600" />
+        <label className={`${labelClass} font-semibold text-cool-700 flex items-center gap-1`}>
+          <Globe size={iconSize} className="text-blush-600" />
           Khu vực
         </label>
         <select value={geo} onChange={(e) => onGeoChange(e.target.value)} className={selectClass}>
@@ -83,8 +83,8 @@ export function ResearchParameterFields({
       </div>
 
       <div className="space-y-1">
-        <label className={`${labelClass} font-semibold text-stone-700 flex items-center gap-1`}>
-          <Calendar size={iconSize} className="text-rose-600" />
+        <label className={`${labelClass} font-semibold text-cool-700 flex items-center gap-1`}>
+          <Calendar size={iconSize} className="text-blush-600" />
           Khung thời gian
         </label>
         <select value={timeframe} onChange={(e) => onTimeframeChange(e.target.value)} className={selectClass}>
@@ -95,8 +95,8 @@ export function ResearchParameterFields({
       </div>
 
       <div className="space-y-1">
-        <label className={`${labelClass} font-semibold text-stone-700 flex items-center gap-1`}>
-          <Layers size={iconSize} className="text-rose-600" />
+        <label className={`${labelClass} font-semibold text-cool-700 flex items-center gap-1`}>
+          <Layers size={iconSize} className="text-blush-600" />
           Kênh nghiên cứu
         </label>
         <select value={channel} onChange={(e) => onChannelChange(e.target.value)} className={selectClass}>

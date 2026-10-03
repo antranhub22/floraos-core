@@ -22,6 +22,7 @@
 
 import React, { useEffect, useState } from "react"
 import { MessageSquareText, Check, X, AlertCircle, CheckCircle2 } from "lucide-react"
+import { SkeletonBlock } from "@/components/ui/skeleton"
 import { errorText } from "@/lib/error-text"
 
 const TEMPLATE_FAMILY = "ST"
@@ -118,14 +119,14 @@ export function GreetingLineOverrideForm() {
   return (
     <div className="space-y-6">
       {successMessage && (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50/90 p-4 text-xs sm:text-sm font-medium text-emerald-800 shadow-xs">
-          <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-2xl border border-success/30 bg-success/10 p-4 text-xs sm:text-sm font-medium text-success shadow-xs">
+          <CheckCircle2 size={18} className="text-success flex-shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
       {error && (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-red-200 bg-red-50/90 p-4 text-xs sm:text-sm font-medium text-red-800 shadow-xs">
-          <AlertCircle size={18} className="text-red-600 flex-shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-2xl border border-danger/30 bg-danger/10 p-4 text-xs sm:text-sm font-medium text-danger shadow-xs">
+          <AlertCircle size={18} className="text-danger flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -145,7 +146,7 @@ export function GreetingLineOverrideForm() {
         </div>
 
         {loading ? (
-          <p className="text-xs text-text-muted text-center py-6">Đang tải...</p>
+          <div className="py-4"><SkeletonBlock lines={2} /></div>
         ) : (
           <>
             <textarea
@@ -157,14 +158,14 @@ export function GreetingLineOverrideForm() {
               className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none resize-none"
             />
             <div className="flex items-center justify-between mt-2">
-              <span className="text-[11px] text-text-muted">{value.length}/{MAX_LENGTH} ký tự</span>
+              <span className="text-caption text-text-muted">{value.length}/{MAX_LENGTH} ký tự</span>
               <div className="flex items-center gap-2">
                 {hasOverride && (
                   <button
                     type="button"
                     onClick={handleClear}
                     disabled={saving}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border text-text-muted text-xs sm:text-sm font-semibold hover:text-red-600 hover:border-red-200 transition-colors disabled:opacity-60"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border text-text-muted text-xs sm:text-sm font-semibold hover:text-danger hover:border-danger/30 transition-colors disabled:opacity-60"
                   >
                     <X size={14} />
                     <span>Xoá, dùng mặc định</span>

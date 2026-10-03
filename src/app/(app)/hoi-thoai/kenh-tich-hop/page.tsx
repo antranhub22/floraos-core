@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import {
   Share2,
@@ -29,7 +29,7 @@ export default function ChatChannelsIntegrationPage() {
   const [modalConfigForm, setModalConfigForm] = useState<ChannelConfig>({})
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  function loadChannels() {
+  const loadChannels = useCallback(() => {
     setLoading(true)
     fetch("/api/v1/chat/channels")
       .then((r) => r.json())
@@ -38,12 +38,12 @@ export default function ChatChannelsIntegrationPage() {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false))
-  }
+  }, [])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     loadChannels()
-  }, [])
+  }, [loadChannels])
 
   async function handleToggleChannel(channelItem: ChannelStatusItem) {
     const nextState = !channelItem.isEnabled
@@ -125,7 +125,7 @@ export default function ChatChannelsIntegrationPage() {
           </Link>
           <div className="h-4 w-[1px] bg-border" />
           <div className="flex items-center gap-2">
-            <Share2 className="h-4 w-4 text-red-600" />
+            <Share2 className="h-4 w-4 text-primary" />
             <h1 className="text-sm font-bold text-foreground">
               Tích Hợp Đa Kênh AI Chat Assistant (Omnichannel)
             </h1>
@@ -133,7 +133,7 @@ export default function ChatChannelsIntegrationPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge className="bg-red-50 text-red-700 border border-red-200 gap-1 text-xs">
+          <Badge tone="neutral" className="gap-1 text-xs">
             <Coins className="h-3.5 w-3.5" />
             Cơ chế định giá & Thu phí FloraOS
           </Badge>
@@ -143,7 +143,7 @@ export default function ChatChannelsIntegrationPage() {
       {/* 2. BODY CONTENT */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-6xl mx-auto w-full">
         <FeatureGuidanceCard
-          tag="HƯỚNG DẪN TÍCH HỢP ĐA KÊNH M08"
+          tag="HƯỚNG DẪN TÍCH HỢP ĐA KÊNH"
           title="Kết Nối Trợ Lý Ảo Đa Điểm Chạm & Kiểm Soát Biểu Phí Nền Tảng"
           description="Chủ cửa hàng có toàn quyền lựa chọn kích hoạt AI Assistant trên E-Catalog, Landing Page, Facebook Messenger, Zalo OA hoặc Website riêng. FloraOS-core áp dụng cơ chế trừ credit minh bạch theo gói thuê bao và lượt tin nhắn tư vấn."
           tips={[
@@ -155,18 +155,18 @@ export default function ChatChannelsIntegrationPage() {
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold text-foreground flex items-center gap-2">
-              <Globe className="h-4 w-4 text-red-600" />
+            <h2 className="text-body-sm font-extrabold text-foreground flex items-center gap-2">
+              <Globe className="h-4 w-4 text-primary" />
               Danh Sách Kênh Tiếp Xúc Khách Hàng
             </h2>
-            <span className="text-xs text-muted-foreground">
-              Tự động đồng bộ với Product Master Index & Chốt đơn M10
+            <span className="text-caption text-text-muted">
+              Tự động đồng bộ với sản phẩm và luồng chốt đơn
             </span>
           </div>
 
           {loading ? (
             <div className="flex h-48 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-red-600" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -188,17 +188,17 @@ export default function ChatChannelsIntegrationPage() {
         </div>
 
         {/* Khối lấy mã nhúng cho website riêng */}
-        <div className="rounded-2xl border border-red-200 bg-red-50/40 p-5 space-y-3 shadow-xs">
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600 text-white">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white">
                 <Globe className="h-4 w-4" />
               </span>
               <div>
-                <h3 className="text-xs font-bold text-red-950">
+                <h3 className="text-xs font-bold text-foreground">
                   Mã Nhúng Trợ Lý Ảo Lên Website Ngoài (WordPress, Haravan, Shopify)
                 </h3>
-                <p className="text-[11px] text-red-800/80">
+                <p className="text-caption text-text-muted">
                   Chèn thẻ script này vào trước thẻ &lt;/body&gt; trên website của tiệm để mở khung chat 24/7.
                 </p>
               </div>
@@ -206,14 +206,14 @@ export default function ChatChannelsIntegrationPage() {
             <Button
               size="sm"
               onClick={copyEmbedScript}
-              className="bg-red-600 hover:bg-red-700 text-white text-xs h-8 gap-1.5 shadow-xs"
+              className="text-xs h-8 gap-1.5 shadow-xs"
             >
               {copiedScript ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               {copiedScript ? "Đã chép mã" : "Sao chép mã nhúng"}
             </Button>
           </div>
 
-          <div className="rounded-xl bg-slate-900 p-3 font-mono text-[11px] text-green-400 overflow-x-auto select-all">
+          <div className="rounded-xl bg-text p-3 font-mono text-caption text-success overflow-x-auto select-all">
             &lt;script src=&quot;https://floraos.vn/sdk/floraos-chat.js&quot; data-shop-slug=&quot;tiem-hoa-moc-lan&quot; defer&gt;&lt;/script&gt;
           </div>
         </div>
