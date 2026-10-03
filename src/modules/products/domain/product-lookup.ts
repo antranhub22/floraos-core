@@ -29,6 +29,16 @@ export interface ProductLookupRaw {
   container: string | null
   status: string
   branch_id: string | null
+  /**
+   * URL ảnh chính của sản phẩm — `/api/v1/storage/<storage_key>` nếu có ảnh MAIN,
+   * `undefined` khi sản phẩm chưa có ảnh. Không bịa placeholder URL tại domain.
+   */
+  masterImageUrl?: string | undefined
+  /**
+   * Giá tham chiếu của sản phẩm (đọc từ `products.attributes.price` hoặc variant đầu tiên).
+   * `null` = chưa có giá niêm yết — giao diện hiển thị "Liên hệ", tuyệt đối không hiển thị 0đ.
+   */
+  price_vnd: number | null
 }
 
 export interface ProductPricingSummary {
@@ -48,6 +58,10 @@ export interface ProductLookupResult {
   container: string | null
   status: string
   branch_id: string | null
+  /** URL ảnh chính — `undefined` khi chưa có ảnh. */
+  masterImageUrl?: string | undefined
+  /** Giá tham chiếu — `null` nghĩa là "Liên hệ để báo giá", không phải 0đ. */
+  price_vnd: number | null
   /** `null` khi năng lực `L5` không có mặt — khác `null` do tổ chức chưa cấu hình. */
   pricing: ProductPricingSummary | null
   /** Kê tên khối bị cắt, để giao diện viết đúng câu — tương ứng `bi_cat` bản gốc. */
@@ -57,6 +71,7 @@ export interface ProductLookupResult {
 /**
  * Lọc một bản ghi sản phẩm theo năng lực của người xem. Kê tên trường sản
  * phẩm luôn đi ra nguyên vẹn; khối `pricing` cắt theo `canReadPricing` (`L5`).
+ * `masterImageUrl` và `price_vnd` luôn đi ra (không nhạy cảm).
  */
 export function filterProductLookup(
   product: ProductLookupRaw,
@@ -88,6 +103,8 @@ export function filterProductLookup(
     container: product.container,
     status: product.status,
     branch_id: product.branch_id,
+    masterImageUrl: product.masterImageUrl,
+    price_vnd: product.price_vnd,
     pricing,
     redacted_fields: redactedFields,
   }

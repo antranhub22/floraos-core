@@ -1,8 +1,8 @@
 version: "1.0"
 governance:
   constitution: "docs/00-DOCUMENTATION-CONSTITUTION.md"
-  updated_at: "2026-09-30T08:56:00+07:00"
-  total_documents: 66
+  updated_at: "2026-10-02T19:28:00+07:00"
+  total_documents: 67
 
 documents:
   # =========================================================================
@@ -534,6 +534,20 @@ documents:
     ssot: true
     owner: "Content Policy Lead"
     dependencies: ["docs/dac-ta/10-ai-orchestration.md"]
+    supersedes: []
+
+  - id: "DOC-03-STORE-13-USER-JOURNEYS"
+    path: "docs/dac-ta/FLORAOS_STORE_13_USER_JOURNEYS_DETAIL_SPEC.md"
+    title: "Đặc tả Chi tiết User Journey 13 Chức năng Quản trị Cửa hàng"
+    domain: "Journey / Store UX"
+    layer: "Level 3"
+    purpose: "Đặc tả chuẩn hóa User Journey, Action Contract và luồng điều hướng của 13 tác vụ Quản trị Cửa hàng"
+    status: "CANONICAL"
+    authority: "Level 3"
+    canonical: true
+    ssot: true
+    owner: "Lead UX Architect"
+    dependencies: ["docs/FLORAOS_CORE_JOURNEY_FIRST_UX_ARCHITECTURE_FINAL.md", "docs/dac-ta/screen-contracts/_journey-home-store.md"]
     supersedes: []
 
   # =========================================================================

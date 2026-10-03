@@ -11,7 +11,7 @@
 import { z } from "zod"
 import { handle, jsonResponse } from "@/core/http/response"
 import { notFound, validationFailed } from "@/core/http/errors"
-import { prisma } from "@/core/tenancy/infra/prisma"
+import { CatalogLinkRepository } from "@/modules/catalog-links/infra/catalog-link-repository"
 
 const bodySchema = z.object({
   phone: z.string().min(8).max(20),
@@ -22,38 +22,22 @@ export const POST = handle<[{ params: Promise<{ slug: string }> }]>(
   async (request, context) => {
     const { slug } = await context.params
 
-    const link = await prisma.catalog_links.findUnique({ where: { slug } })
-    if (!link || link.is_revoked) {
-      throw notFound()
-    }
-
     const body = await request.json().catch(() => null)
     const parsed = bodySchema.safeParse(body)
     if (!parsed.success) {
       throw validationFailed({ issues: parsed.error.issues })
     }
 
-    // Ghi lead vào JSON field `leads` của catalog_link — không cần schema migration riêng
-    const existing = (link.filters as Record<string, unknown>) ?? {}
-    const existingLeads = Array.isArray(existing.leads)
-      ? (existing.leads as Array<Record<string, unknown>>)
-      : []
-
-    const newLead = {
+    const repo = new CatalogLinkRepository()
+    const recorded = await repo.recordLead(slug, {
       phone: parsed.data.phone,
       message: parsed.data.message ?? null,
       submittedAt: new Date().toISOString(),
-    }
-
-    await prisma.catalog_links.update({
-      where: { slug },
-      data: {
-        filters: {
-          ...existing,
-          leads: [...existingLeads, newLead],
-        } as never,
-      },
     })
+
+    if (!recorded) {
+      throw notFound()
+    }
 
     return jsonResponse({ success: true })
   }

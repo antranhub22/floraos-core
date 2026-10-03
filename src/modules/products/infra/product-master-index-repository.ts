@@ -17,6 +17,7 @@
 import type { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy/tenant-context"
+import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 import type {
   ProductMasterIndex,
   FlowerBomItem,
@@ -312,11 +313,17 @@ export class ProductMasterIndexRepository {
 
       if (mainImage) {
         const key = storageKeyById.get(mainImage.asset_id)
-        if (key) masterImageUrl = `/api/v1/storage/${key}`
+        if (key) {
+          const exp = Date.now() + 86_400_000 // 24h
+          masterImageUrl = `/api/v1/storage/${key}?exp=${exp}&sig=${signStorageUrl(key, exp)}`
+        }
       }
       for (const img of galleryImageRows) {
         const key = storageKeyById.get(img.asset_id)
-        if (key) galleryImages.push({ role: img.role, url: `/api/v1/storage/${key}` })
+        if (key) {
+          const exp = Date.now() + 86_400_000
+          galleryImages.push({ role: img.role, url: `/api/v1/storage/${key}?exp=${exp}&sig=${signStorageUrl(key, exp)}` })
+        }
       }
     }
 

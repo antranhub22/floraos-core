@@ -27,7 +27,7 @@ export async function listProducts(
     throw validationFailed({ limit: `Phải trong khoảng 1..${MAX_LIMIT}` })
   }
 
-  const rows = await new ProductRepository().list(ctx, filters, {
+  const rows = await new ProductRepository().listWithPreview(ctx, filters, {
     limit: limit + 1,
     cursor: options.cursor ?? null,
   })
@@ -50,6 +50,8 @@ export async function listProducts(
         container: product.container,
         status: product.status,
         branch_id: product.branch_id,
+        masterImageUrl: product.masterImageUrl,
+        price_vnd: product.price_vnd,
       },
       pricingRuleRows,
       { canReadPricing, branchId: ctx.branchId }

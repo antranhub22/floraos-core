@@ -29,6 +29,11 @@ export async function getProduct(ctx: TenantContext, id: string): Promise<Produc
       container: product.container,
       status: product.status,
       branch_id: product.branch_id,
+      // `getProduct` không eager-load ảnh/biến thể (chỉ dùng ở trang chi tiết,
+      // không cần preview). Nếu cần masterImageUrl ở trang chi tiết, dùng
+      // `ProductMasterIndexRepository.getById` thay thế.
+      masterImageUrl: undefined,
+      price_vnd: null,
     },
     pricingRuleRows,
     { canReadPricing, branchId: ctx.branchId }

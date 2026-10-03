@@ -118,7 +118,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Gợi ý từ ảnh
+            Trợ lý ảo
           </button>
         </div>
 

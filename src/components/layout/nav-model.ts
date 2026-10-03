@@ -88,6 +88,14 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     capability: "J1",
     mobileLabel: "Catalog",
   },
+  {
+    href: "/the-chao",
+    label: "Thẻ chào mẫu hoa",
+    group: "ban-hang",
+    iconKey: "Sparkles",
+    capability: "R1",
+    mobileLabel: "Thẻ chào",
+  },
 
   // 2. Nhóm Sản phẩm
   {
@@ -97,6 +105,22 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     iconKey: "Tag",
     capability: "L1",
     mobileLabel: "Sản phẩm",
+  },
+  {
+    href: "/san-pham/tao-moi",
+    label: "Tạo mẫu hoa mới",
+    group: "san-pham",
+    iconKey: "Sparkles",
+    capability: "L2",
+    mobileLabel: "Tạo mẫu",
+  },
+  {
+    href: "/san-pham/nhap-hang-loat",
+    label: "Nhập từ Excel & Ảnh",
+    group: "san-pham",
+    iconKey: "FileSpreadsheet",
+    capability: "L2",
+    mobileLabel: "Nhập Excel",
   },
   {
     href: "/tai-anh",
@@ -316,6 +340,13 @@ export function buildNav(
       key: "viec-chinh",
       label: `Việc chính · ${role.label}`,
       entries: viecChinhEntries,
+    })
+  } else if (role?.key === "store_admin") {
+    // Với Chủ tiệm, đặt Trang chủ ở đầu để luôn có lối về Tổng quan
+    groups.push({
+      key: "viec-chinh",
+      label: "Tổng quan",
+      entries: [HOME_ENTRY],
     })
   }
 

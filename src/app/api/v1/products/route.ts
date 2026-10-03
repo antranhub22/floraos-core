@@ -62,6 +62,7 @@ const postSchema = z.object({
   container: z.string().min(1).nullable().optional(),
   status: z.enum(PRODUCT_STATUS).optional(),
   attributes: z.record(z.string(), z.unknown()).nullable().optional(),
+  image_asset_id: z.string().min(1).nullable().optional(),
 })
 
 /** `POST /products` (`L2`, đặc tả 06 mục 6). */
@@ -82,6 +83,7 @@ export const POST = handle(async (request) => {
     container: parsed.data.container ?? null,
     status: parsed.data.status,
     attributes: parsed.data.attributes ?? null,
+    imageAssetId: parsed.data.image_asset_id ?? null,
   })
 
   return jsonResponse(product, { status: 201 })

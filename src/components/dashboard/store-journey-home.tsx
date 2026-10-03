@@ -49,6 +49,13 @@ export function StoreJourneyHome() {
       return
     }
 
+    if (journey.id === "floraos-copilot-chat") {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("floraos:open-copilot"))
+      }
+      return
+    }
+
     if (journey.category === "COMBO") {
       setActiveJourney(journey)
       setShowComboPreview(true)

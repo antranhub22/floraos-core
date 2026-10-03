@@ -180,6 +180,10 @@ model organizations {
   field_config_overrides    field_config_overrides[]
   order_info_requests       order_info_requests[]
   order_change_requests     order_change_requests[]
+  greeting_catalogs         greeting_catalogs[]
+  greeting_catalog_products greeting_catalog_products[]
+  greeting_sessions         greeting_sessions[]
+  greeting_journey_events   greeting_journey_events[]
 }
 
 model workspaces {
@@ -619,10 +623,11 @@ model products {
   updated_at      DateTime       @updatedAt
 
   organization organizations       @relation(fields: [organization_id], references: [id])
-  variants     product_variants[]
-  images       product_images[]
-  analyses     product_analyses[]
-  inventory    product_inventory[]
+  variants                  product_variants[]
+  images                    product_images[]
+  analyses                  product_analyses[]
+  inventory                 product_inventory[]
+  greeting_catalog_products greeting_catalog_products[]
 
   @@unique([organization_id, code])
   @@index([organization_id])
@@ -1243,12 +1248,16 @@ model orders {
   qc_records      order_qc_records[]
   exceptions      order_exceptions[]
   payments        order_payments[]
-  info_requests   order_info_requests[]
-  change_requests order_change_requests[]
+  info_requests     order_info_requests[]
+  change_requests   order_change_requests[]
+  source            String?                 @default("MANUAL") // MANUAL | CHAT | BROCHURE
+  source_session_id String?                 // greeting_sessions.id
+  greeting_sessions greeting_sessions[]
 
   @@unique([organization_id, code])
   @@index([organization_id, status])
   @@index([organization_id, production_status])
+  @@index([organization_id, source])
 }
 
 model order_items {
@@ -2581,3 +2590,91 @@ model decision_registry {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
+
+// ── Module Thẻ Chào / Swipe Brochure (greeting-card) ─────────────────────────
+
+/// Danh mục mẫu hoa dùng để tạo thẻ chào (Chuẩn hoặc Client Catalog)
+model greeting_catalogs {
+  id              String   @id @default(uuid())
+  organization_id String
+  code            String   // 20-10, 8-3, sinh-nhat, cc
+  name            String
+  type            String   @default("STANDARD") // STANDARD | CLIENT
+  description     String?
+  filters         Json?    // Bộ lọc dịp, mức giá, màu sắc khi tạo Client Catalog
+  is_active       Boolean  @default(true)
+  created_by      String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization organizations               @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  items        greeting_catalog_products[]
+  sessions     greeting_sessions[]
+
+  @@unique([organization_id, code])
+  @@index([organization_id])
+}
+
+/// Sản phẩm gán vào Catalog Thẻ chào (tham chiếu Product Master SSOT)
+model greeting_catalog_products {
+  id              String   @id @default(uuid())
+  organization_id String
+  catalog_id      String
+  product_id      String
+  sort_order      Int      @default(0)
+  created_at      DateTime @default(now())
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  catalog      greeting_catalogs @relation(fields: [catalog_id], references: [id], onDelete: Cascade)
+  product      products          @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([catalog_id, product_id])
+  @@index([organization_id, catalog_id])
+  @@index([product_id])
+}
+
+/// Phiên tương tác của khách hàng khi mở link Thẻ chào (Send Code)
+model greeting_sessions {
+  id                  String    @id @default(uuid())
+  organization_id     String
+  catalog_id          String
+  send_code           String    // T01-001, T01-002...
+  sale_id             String    // Người tạo link chào khách
+  customer_name       String?
+  customer_phone      String?
+  status              String    @default("CREATED") // CREATED | OPENED | BROWSING | SELECTED | ORDER_SUBMITTED | PAYMENT_REPORTED | COMPLETED
+  selected_product_id String?
+  product_snapshot    Json?     // Đóng băng ảnh, tên, giá mẫu hoa lúc khách chốt
+  order_id            String?
+  opened_at           DateTime?
+  selected_at         DateTime?
+  last_active_at      DateTime  @default(now())
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  organization organizations             @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  catalog      greeting_catalogs         @relation(fields: [catalog_id], references: [id], onDelete: Cascade)
+  order        orders?                   @relation(fields: [order_id], references: [id], onDelete: SetNull)
+  events       greeting_journey_events[]
+
+  @@unique([organization_id, send_code])
+  @@index([organization_id, catalog_id])
+  @@index([organization_id, sale_id])
+  @@index([send_code])
+}
+
+/// Ghi nhật ký hành trình tương tác của khách trên Thẻ chào (Swipe, Select, Checkout...)
+model greeting_journey_events {
+  id              String   @id @default(uuid())
+  organization_id String
+  session_id      String
+  event_type      String   // OPEN | SWIPE_NEXT | SWIPE_PREV | SELECT_PRODUCT | OPEN_ORDER_FORM | SUBMIT_ORDER | CLICK_PAID | TRACK_VIEW
+  metadata        Json?
+  created_at      DateTime @default(now())
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  session      greeting_sessions @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, session_id])
+}
+

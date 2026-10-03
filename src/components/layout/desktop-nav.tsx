@@ -30,6 +30,7 @@ import {
   ChevronDown,
   Search,
   X,
+  FileSpreadsheet,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { cn, stripVietnamese } from "@/lib/utils"
@@ -66,6 +67,7 @@ const ICONS: Record<string, ComponentType<{ size?: number; className?: string; s
   Settings2,
   BookOpen,
   Cpu,
+  FileSpreadsheet,
 }
 
 const STORAGE_KEY = "floraos_nav_groups_v1"

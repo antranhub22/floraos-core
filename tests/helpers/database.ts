@@ -9,6 +9,11 @@ const TENANT_TABLES = [
   "content_opportunities",
   // Product Intelligence (Quét theo ảnh sản phẩm) — nợ #113, đã trả 21/09/2026
   "product_analysis_runs",
+  // Thẻ Chào / Swipe Brochure — 03/10/2026
+  "greeting_journey_events",
+  "greeting_sessions",
+  "greeting_catalog_products",
+  "greeting_catalogs",
   // Gói chiến dịch Creative Studio (Khu vực F, Chặng 07–14) — 23/09/2026
   "campaign_packages",
   // Bài Khu vực B tự lưu — 24/09/2026

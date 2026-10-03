@@ -2,8 +2,15 @@ import type { InputJsonValue, product_status, products } from "./entities"
 
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
+import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 
 import type { DbClient } from "./db-client"
+
+/** Kết quả trả về từ `listWithPreview` — bản ghi sản phẩm kèm ảnh chính và giá. */
+export type ProductPreviewRow = products & {
+  masterImageUrl?: string | undefined
+  price_vnd: number | null
+}
 
 export type CreateProductInput = {
   code: string
@@ -15,6 +22,7 @@ export type CreateProductInput = {
   container?: string | null | undefined
   status?: product_status | undefined
   attributes?: Record<string, unknown> | null | undefined
+  imageAssetId?: string | null | undefined
 }
 
 export type UpdateProductIdentityInput = {
@@ -128,8 +136,85 @@ export class ProductRepository {
     })
   }
 
-  create(ctx: TenantContext, input: CreateProductInput): Promise<products> {
-    return this.db.products.create({
+  /**
+   * Phần mở rộng của `list` cho màn hình Kho Sản Phẩm và modal chọn mẫu hoa.
+   * Được include `product_images` (MAIN) và `product_variants` rồi giải asset URL
+   * bằng 1 query `IN(asset_ids)` tập trung — không N+1 (cùng kỹ thuật đã dùng
+   * trong `ProductMasterIndexRepository`).
+   *
+   * Giá `price_vnd`: ưu tiên `products.attributes.price`, fallback `product_variants[0].attributes.price`.
+   * Đây là giá THAM CHIẾU hiển thị — giá bán thật vẫn phải qua `quotePrice()` (M02).
+   */
+  async listWithPreview(
+    ctx: TenantContext,
+    filters: ListProductsFilters,
+    page: ListProductsPage
+  ): Promise<ProductPreviewRow[]> {
+    const where = scopedWhere(ctx, {
+      ...(filters.branchId !== undefined ? { branch_id: filters.branchId } : {}),
+      ...(filters.status !== undefined ? { status: filters.status } : {}),
+      ...(filters.category !== undefined ? { category: filters.category } : {}),
+      ...(filters.occasionCode !== undefined
+        ? { attributes: { path: ["occasionCodes"], array_contains: filters.occasionCode } }
+        : {}),
+      ...(filters.color !== undefined
+        ? { attributes: { path: ["color"], equals: filters.color } }
+        : {}),
+      ...(filters.collection !== undefined
+        ? { attributes: { path: ["collection"], equals: filters.collection } }
+        : {}),
+    })
+
+    // `prisma` singleton (không phải `this.db`) vì `include` cần full PrismaClient type;
+    // `listWithPreview` không được gọi trong transaction (không có use-case nào cần).
+    const rows = await prisma.products.findMany({
+      where,
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+      take: page.limit,
+      ...(page.cursor ? { cursor: { id: page.cursor }, skip: 1 } : {}),
+      include: {
+        images: { where: { role: "MAIN" }, take: 1 },
+        variants: { take: 1 },
+      },
+    })
+
+    if (rows.length === 0) return []
+
+    // 1 query IN(asset_ids) thay vì N lượt — chống N+1.
+    const assetIds = rows.flatMap((r) => r.images.map((img) => img.asset_id))
+    const storageKeyById = new Map<string, string>()
+    if (assetIds.length > 0) {
+      const assets = await prisma.assets.findMany({
+        where: { id: { in: assetIds } },
+        select: { id: true, storage_key: true },
+      })
+      for (const a of assets) storageKeyById.set(a.id, a.storage_key)
+    }
+
+    return rows.map((row) => {
+      const mainImg = row.images[0]
+      const masterImageUrl = mainImg
+        ? (() => {
+            const key = storageKeyById.get(mainImg.asset_id)
+            if (!key) return undefined
+            const exp = Date.now() + 86_400_000 // 24h
+            return `/api/v1/storage/${key}?exp=${exp}&sig=${signStorageUrl(key, exp)}`
+          })()
+        : undefined
+
+      const attrs = (row.attributes as Record<string, unknown>) ?? {}
+      const priceFromAttrs = typeof attrs.price === "number" && attrs.price > 0 ? attrs.price : null
+      const variantAttrs = (row.variants[0]?.attributes as Record<string, unknown>) ?? {}
+      const priceFromVariant = typeof variantAttrs.price === "number" && variantAttrs.price > 0 ? variantAttrs.price : null
+      const price_vnd = priceFromAttrs ?? priceFromVariant
+
+      const { images: _img, variants: _var, ...base } = row
+      return { ...base, masterImageUrl, price_vnd }
+    })
+  }
+
+  async create(ctx: TenantContext, input: CreateProductInput): Promise<products> {
+    const product = await this.db.products.create({
       data: scopedData(ctx, {
         code: input.code,
         name: input.name,
@@ -142,6 +227,36 @@ export class ProductRepository {
         attributes: (input.attributes ?? null) as InputJsonValue,
       }),
     })
+
+    if (input.imageAssetId) {
+      // Gán liên kết ảnh chính vào product_images
+      await this.db.product_images.upsert({
+        where: {
+          organization_id_product_id_asset_id_role: {
+            organization_id: ctx.organizationId,
+            product_id: product.id,
+            asset_id: input.imageAssetId,
+            role: "MAIN",
+          },
+        },
+        update: { position: 0 },
+        create: {
+          organization_id: ctx.organizationId,
+          product_id: product.id,
+          asset_id: input.imageAssetId,
+          role: "MAIN",
+          position: 0,
+        },
+      })
+
+      // Cập nhật product_id trên bản ghi asset (nếu chưa có)
+      await this.db.assets.updateMany({
+        where: scopedWhere(ctx, { id: input.imageAssetId }),
+        data: { product_id: product.id },
+      })
+    }
+
+    return product
   }
 
   /**
