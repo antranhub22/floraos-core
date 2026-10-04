@@ -6,19 +6,23 @@ import Link from "next/link"
 import {
   Plus,
   Search,
-  ChevronRight,
   Sparkles,
   Eye,
   LayoutGrid,
   LayoutList,
   ImageOff,
-  Camera,
   RefreshCw,
   FileSpreadsheet,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/ui/empty-state"
+import { useSession } from "@/lib/session"
+import {
+  TrashConfirmModal,
+  type TrashConfirmTarget,
+} from "@/components/storage/trash-confirm-modal"
 
 type Product = {
   id: string
@@ -69,42 +73,66 @@ function PriceLabel({ price }: { price: number | null }) {
   )
 }
 
-function ProductCard({ product }: { product: Product }) {
-  return (
-    <Link
-      href={`/san-pham/${product.id}` as never}
-      className="group flex flex-col rounded-2xl border border-border bg-surface overflow-hidden transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary"
-    >
-      {/* Ảnh sản phẩm */}
-      <div className="relative aspect-square w-full bg-surface-alt overflow-hidden">
-        {product.masterImageUrl ? (
-          <img
-            src={product.masterImageUrl}
-            alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-text-muted">
-            <ImageOff size={28} strokeWidth={1.5} />
-            <span className="text-caption">Chưa có ảnh</span>
-          </div>
-        )}
-        <div className="absolute top-2 right-2">
-          <StatusBadge status={product.status} />
-        </div>
-      </div>
+interface ProductCardProps {
+  product: Product
+  isExecutive?: boolean
+  onTrash?: (product: Product) => void
+}
 
-      {/* Thông tin */}
-      <div className="flex flex-col gap-1 p-3">
-        <div className="truncate text-body-sm font-bold text-text">{product.name}</div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-caption text-text-muted">{product.category ?? "Chưa phân loại"}</span>
-          <PriceLabel price={product.price_vnd} />
+function ProductCard({ product, isExecutive, onTrash }: ProductCardProps) {
+  return (
+    <div className="group flex flex-col rounded-2xl border border-border bg-surface overflow-hidden transition-all hover:border-primary/40 hover:shadow-md relative">
+      <Link
+        href={`/san-pham/${product.id}` as never}
+        className="flex flex-col flex-1 focus-visible:outline-2 focus-visible:outline-primary"
+      >
+        {/* Ảnh sản phẩm */}
+        <div className="relative aspect-square w-full bg-surface-alt overflow-hidden">
+          {product.masterImageUrl ? (
+            <img
+              src={product.masterImageUrl}
+              alt={product.name}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-text-muted">
+              <ImageOff size={28} strokeWidth={1.5} />
+              <span className="text-caption">Chưa có ảnh</span>
+            </div>
+          )}
+          <div className="absolute top-2 left-2">
+            <StatusBadge status={product.status} />
+          </div>
         </div>
-        <div className="mt-1 text-caption text-text-muted font-mono">#{product.code}</div>
-      </div>
-    </Link>
+
+        {/* Thông tin */}
+        <div className="flex flex-col gap-1 p-3">
+          <div className="truncate text-body-sm font-bold text-text">{product.name}</div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-caption text-text-muted">{product.category ?? "Chưa phân loại"}</span>
+            <PriceLabel price={product.price_vnd} />
+          </div>
+          <div className="mt-1 text-caption text-text-muted font-mono">#{product.code}</div>
+        </div>
+      </Link>
+
+      {/* Nút xóa – chỉ Điều hành */}
+      {isExecutive && onTrash && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            onTrash(product)
+          }}
+          aria-label={`Chuyển "${product.name}" vào thùng rác`}
+          className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/55 text-white hover:bg-danger hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-danger"
+          title="Xóa sản phẩm (Chỉ Điều hành)"
+        >
+          <Trash2 size={13} />
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -112,11 +140,19 @@ const CATEGORIES = ["Tất cả", "Bó hoa", "Giỏ hoa", "Kệ khai trương", 
 
 export default function SanPhamPage() {
   const router = useRouter()
+  const session = useSession()
   const [products, setProducts] = useState<Product[] | null>(null)
   const [loi, setLoi] = useState<string | null>(null)
   const [tuKhoa, setTuKhoa] = useState("")
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [activeCategory, setActiveCategory] = useState("Tất cả")
+  const [trashTarget, setTrashTarget] = useState<TrashConfirmTarget | null>(null)
+
+  const isExecutive =
+    session.roleKey === "dieu_hanh" ||
+    session.roleKey === "store_admin" ||
+    session.can("G3") ||
+    session.can("L4")
 
   const napLai = useCallback(async () => {
     setLoi(null)
@@ -137,6 +173,20 @@ export default function SanPhamPage() {
   useEffect(() => {
     napLai()
   }, [napLai])
+
+  const handleConfirmTrash = async (target: TrashConfirmTarget) => {
+    const res = await fetch("/api/v1/storage/trash", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: target.id, type: target.type }),
+    })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      throw new Error(d?.message || d?.error || "Không thể chuyển sản phẩm vào thùng rác")
+    }
+    // Xóa khỏi danh sách hiển thị ngay
+    setProducts((prev) => (prev ? prev.filter((p) => p.id !== target.id) : prev))
+  }
 
   const hien = (products ?? []).filter((p) => {
     const tuKhoaOk =
@@ -276,7 +326,20 @@ export default function SanPhamPage() {
           /* Dạng lưới card có ảnh */
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {hien.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                isExecutive={isExecutive}
+                onTrash={(prod) =>
+                  setTrashTarget({
+                    id: prod.id,
+                    name: prod.name,
+                    code: prod.code,
+                    imageUrl: prod.masterImageUrl,
+                    type: "PRODUCT",
+                  })
+                }
+              />
             ))}
           </div>
         ) : (
@@ -342,6 +405,24 @@ export default function SanPhamPage() {
                           <Sparkles size={13} />
                           Studio
                         </button>
+                        {isExecutive && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setTrashTarget({
+                                id: p.id,
+                                name: p.name,
+                                code: p.code,
+                                imageUrl: p.masterImageUrl,
+                                type: "PRODUCT",
+                              })
+                            }
+                            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-caption font-semibold text-text-muted hover:bg-danger-bg hover:text-danger transition-colors focus-visible:outline-2 focus-visible:outline-danger"
+                            title="Chuyển vào thùng rác 30 ngày (Chỉ Điều hành)"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -358,6 +439,13 @@ export default function SanPhamPage() {
           </div>
         )}
       </main>
+
+      {/* Modal xác nhận xóa an toàn */}
+      <TrashConfirmModal
+        target={trashTarget}
+        onClose={() => setTrashTarget(null)}
+        onConfirm={handleConfirmTrash}
+      />
     </div>
   )
 }

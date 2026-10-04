@@ -1,5 +1,16 @@
 {
-  "summary": {},
-  "total": 0,
-  "updatedAt": "2026-09-29T13:53:32.343Z"
+  "summary": {
+    "app/(app)": {
+      "R4": 2,
+      "R5": 1
+    },
+    "components/greeting-card": {
+      "R4": 1,
+      "R5": 1,
+      "R6": 4,
+      "R7": 2
+    }
+  },
+  "total": 11,
+  "updatedAt": "2026-10-04T03:56:37.157Z"
 }

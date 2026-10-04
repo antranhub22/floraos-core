@@ -43,7 +43,10 @@ import {
   formatCurrencyVnd,
 } from "@/modules/products/domain/sales-pitch-template"
 
-export type StorageTab = "raw" | "approved" | "finalized"
+import { TrashConfirmModal, type TrashConfirmTarget } from "@/components/storage/trash-confirm-modal"
+import { StorageTrashTab } from "@/components/storage/storage-trash-tab"
+
+export type StorageTab = "raw" | "approved" | "finalized" | "trash"
 
 /** Một dòng `GET /api/v1/assets` — chỉ các trường kho ảnh đọc. */
 interface AssetApiRow {
@@ -139,6 +142,16 @@ export function AccountStorageHub({
 
   // Finalized pitches state with localStorage sync
   const [internalFinalizedPitches, setInternalFinalizedPitches] = useState<SalesPitchData[]>(finalizedPitches)
+
+  // Trash & Executive state
+  const [trashTarget, setTrashTarget] = useState<TrashConfirmTarget | null>(null)
+  const [trashCount, setTrashCount] = useState<number>(0)
+
+  const isExecutive =
+    session.roleKey === "dieu_hanh" ||
+    session.roleKey === "store_admin" ||
+    session.can("G3") ||
+    session.can("L4")
 
   useEffect(() => {
     if (finalizedPitches.length > 0) {
@@ -244,11 +257,49 @@ export function AccountStorageHub({
     }
   }
 
+  // Fetch Trash items count (Executive only)
+  const fetchTrashCount = async () => {
+    if (!isExecutive) return
+    try {
+      const res = await fetch("/api/v1/storage/trash")
+      if (res.ok) {
+        const json = await res.json()
+        if (Array.isArray(json.data)) {
+          setTrashCount(json.data.length)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleConfirmTrash = async (target: TrashConfirmTarget) => {
+    const res = await fetch("/api/v1/storage/trash", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: target.id, type: target.type }),
+    })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      throw new Error(d?.message || d?.error || "Không thể chuyển vào thùng rác")
+    }
+    // Cập nhật state UI ngay lập tức
+    if (target.type === "RAW_ASSET") {
+      setServerAssets((prev) => prev.filter((a) => a.id !== target.id))
+    } else if (target.type === "APPROVED_ANALYSIS") {
+      setApprovedItems((prev) => prev.filter((i) => i.id !== target.id))
+    }
+    await fetchTrashCount()
+  }
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount/đổi tham số; setState nằm trong hàm tải (nợ #149)
     fetchRawAssets()
     fetchApprovedAnalyses()
-  }, [])
+    if (isExecutive) {
+      fetchTrashCount()
+    }
+  }, [isExecutive])
 
   // All raw assets combined (local uploads + server assets)
   const allRawAssets: RawAssetItem[] = useMemo(() => {
@@ -369,6 +420,17 @@ export function AccountStorageHub({
               badge: internalFinalizedPitches.length,
               badgeTone: "success",
             },
+            ...(isExecutive
+              ? [
+                  {
+                    id: "trash",
+                    label: "4. Thùng Rác (30 ngày)",
+                    icon: Trash2,
+                    badge: trashCount,
+                    badgeTone: "danger" as const,
+                  },
+                ]
+              : []),
           ]}
           activeTab={activeTab}
           onTabChange={(tabId) => setActiveTab(tabId as StorageTab)}
@@ -506,14 +568,35 @@ export function AccountStorageHub({
                   <div className="text-meta font-semibold text-text truncate" title={asset.name}>
                     {asset.name}
                   </div>
-                  <Button variant="secondary"
-                    size="sm"
-                    onClick={() => handleSelectRaw(asset)}
-                    className="w-full text-xs h-7 gap-1 bg-primary hover:bg-primary/90 text-white font-semibold"
-                  >
-                    <Sparkles size={12} />
-                    Phân tích ảnh này
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleSelectRaw(asset)}
+                      className="flex-1 text-xs h-7 gap-1 bg-primary hover:bg-primary/90 text-white font-semibold"
+                    >
+                      <Sparkles size={12} />
+                      Phân tích
+                    </Button>
+                    {isExecutive && !asset.isLocal && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setTrashTarget({
+                            id: asset.id,
+                            name: asset.name,
+                            imageUrl: asset.image_url,
+                            type: "RAW_ASSET",
+                          })
+                        }
+                        className="h-7 w-7 p-0 text-text-muted hover:text-danger hover:bg-danger-bg shrink-0 rounded-lg"
+                        title="Chuyển vào thùng rác 30 ngày (Chỉ Điều hành)"
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
             ))}
@@ -651,6 +734,24 @@ export function AccountStorageHub({
                       <Tag size={13} />
                       2. Tạo Thẻ Chào (Nghiên cứu thị trường)
                     </Button>
+                    {isExecutive && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setTrashTarget({
+                            id: item.id,
+                            name: displayName,
+                            imageUrl: item.image_url,
+                            type: "APPROVED_ANALYSIS",
+                          })
+                        }
+                        className="h-8 w-8 p-0 text-text-muted hover:text-danger hover:bg-danger-bg shrink-0 rounded-lg"
+                        title="Chuyển vào thùng rác 30 ngày (Chỉ Điều hành)"
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    )}
                   </div>
                 </Card>
               )
@@ -788,6 +889,24 @@ export function AccountStorageHub({
           </div>
         </div>
       )}
+
+      {/* TAB CONTENT 4: Thùng Rác Lưu Trữ 30 Ngày (Chỉ Điều Hành) */}
+      {activeTab === "trash" && isExecutive && (
+        <StorageTrashTab
+          onItemRestored={() => {
+            fetchRawAssets()
+            fetchApprovedAnalyses()
+            fetchTrashCount()
+          }}
+        />
+      )}
+
+      {/* Modal xác nhận xóa an toàn */}
+      <TrashConfirmModal
+        target={trashTarget}
+        onClose={() => setTrashTarget(null)}
+        onConfirm={handleConfirmTrash}
+      />
     </div>
   )
 }
