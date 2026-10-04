@@ -1,5 +1,14 @@
 import type { StorageProvider, StorageMethod } from "@/core/ports"
 
+/** Ném khi kho tệp trả 404 — route serve ảnh bắt để trả HTTP 404 thay vì 500. */
+export class StorageFileNotFoundError extends Error {
+  readonly code = "STORAGE_NOT_FOUND"
+  constructor(key: string) {
+    super(`Không tìm thấy tệp trong kho: ${key}`)
+    this.name = "StorageFileNotFoundError"
+  }
+}
+
 import {
   maHoaDuongDan,
   sha256Hex,
@@ -95,6 +104,9 @@ export class S3StorageProvider implements StorageProvider {
       headers,
     })
 
+    if (res.status === 404) {
+      throw new StorageFileNotFoundError(key)
+    }
     if (!res.ok) {
       throw new Error(`Kho tệp từ chối đọc ${key}: ${res.status}`)
     }

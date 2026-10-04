@@ -2,6 +2,7 @@ import { handle, jsonResponse } from "@/core/http/response"
 import { validationFailed } from "@/core/http/errors"
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { verifyStorageSignature } from "@/modules/assets/infra/storage-signing"
+import { StorageFileNotFoundError } from "@/modules/assets/adapters/s3-storage-provider"
 
 /**
  * Đích của URL ký sẵn do `LocalDiskStorageProvider.signedUrl` sinh ra — xem
@@ -36,7 +37,13 @@ export const GET = handle(async (request, context: { params: Promise<{ key: stri
   const key = segments.join("/")
   verifyOrThrow(key, new URL(request.url))
 
-  const bytes = await getStorageProvider().get(key)
+  const bytes = await getStorageProvider().get(key).catch((err: unknown) => {
+    if (err instanceof StorageFileNotFoundError) return null
+    throw err
+  })
+  if (!bytes) {
+    return new Response(null, { status: 404 })
+  }
   let contentType = "application/octet-stream"
   if (key.endsWith(".jpg") || key.endsWith(".jpeg")) contentType = "image/jpeg"
   else if (key.endsWith(".png")) contentType = "image/png"
