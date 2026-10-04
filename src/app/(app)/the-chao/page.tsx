@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Sparkles, Send, ShieldCheck, BookOpen, RefreshCw, SlidersHorizontal, Wand2 } from "lucide-react"
+import { ArrowLeft, Sparkles, Send, ShieldCheck, BookOpen, RefreshCw, SlidersHorizontal, Wand2, GitMerge } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SalesBrochureTab } from "@/components/greeting-card/sales/sales-brochure-tab"
 import { AdminBrochurePaymentTab } from "@/components/greeting-card/admin/admin-brochure-payment-tab"
@@ -10,8 +10,9 @@ import { CatalogListTab } from "@/components/greeting-card/catalog/catalog-list-
 import { CatalogDetailPanel } from "@/components/greeting-card/catalog/catalog-detail-panel"
 import { JourneyWizard } from "@/components/greeting-card/journey/journey-wizard"
 import { CoordinatorBrochureTab } from "@/components/greeting-card/coordinator/coordinator-brochure-tab"
+import { BrochureOrderTrackingTab } from "@/components/greeting-card/tracking/brochure-order-tracking-tab"
 
-type ActiveTab = "sales" | "payment" | "catalog" | "coordinator"
+type ActiveTab = "sales" | "payment" | "catalog" | "coordinator" | "tracking"
 type CatalogBasic = { id: string; name: string }
 
 export default function TheChaoPage() {
@@ -42,6 +43,7 @@ export default function TheChaoPage() {
 
   const tabs: { id: ActiveTab; icon: React.ReactNode; label: string }[] = [
     { id: "catalog", icon: <BookOpen size={16} />, label: "Bộ Sưu Tập" },
+    { id: "tracking", icon: <GitMerge size={16} />, label: "Theo Dõi Tiến Độ" },
     { id: "sales", icon: <Send size={16} />, label: "Sale" },
     { id: "payment", icon: <ShieldCheck size={16} />, label: "Điều hành" },
     { id: "coordinator", icon: <Sparkles size={16} />, label: "Điều phối" },
@@ -180,6 +182,7 @@ export default function TheChaoPage() {
               />
             )
           )}
+          {activeTab === "tracking" && <BrochureOrderTrackingTab />}
           {activeTab === "sales" && (
             <SalesBrochureTab
               onNavigateToCatalog={() => {
