@@ -4,6 +4,17 @@ import { z } from "zod"
  * Cấu hình kiểm lúc khởi động. Thiếu biến thì tiến trình không lên —
  * chạy tiếp với giá trị mặc định âm thầm là cách hỏng khó tìm nhất.
  */
+
+/**
+ * Helper: chuyển empty string "" thành undefined trước khi validate URL.
+ * Cần thiết khi deploy trên Render/Vercel — platform có thể set env var
+ * thành "" thay vì bỏ trống, khiến z.string().url() reject dù là optional.
+ */
+const optionalUrl = z.preprocess(
+  (v) => (v === "" || v === undefined ? undefined : v),
+  z.string().url().optional()
+)
+
 const schema = z.object({
   DATABASE_URL: z.string().url(),
   SESSION_SECRET: z.string().min(16),
@@ -27,8 +38,8 @@ const schema = z.object({
   // 2026-09-10 (core 3100 / LocalBudd 3000 / SocialFlow 8000). Dashboard core
   // gọi sibling qua proxy server-side để tránh rào cản CORS trình duyệt — xem
   // `src/modules/proxy/`. Trống khi không chạy engine ngoài (vd. test đơn lẻ).
-  SOCIALFLOW_URL: z.string().url().optional(),
-  LOCALBUDD_URL: z.string().url().optional(),
+  SOCIALFLOW_URL: optionalUrl,
+  LOCALBUDD_URL: optionalUrl,
   STORAGE_ENDPOINT: z.string().optional(),
   STORAGE_BUCKET: z.string().optional(),
   STORAGE_ACCESS_KEY: z.string().optional(),
