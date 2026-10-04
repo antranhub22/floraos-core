@@ -72,14 +72,13 @@ services:
         value: cpu
       - key: GREETING_CARD_ENABLED
         value: "true"
-      - key: SOCIALFLOW_URL
-        value: ""
-      - key: LOCALBUDD_URL
-        value: ""
-      - key: NEXT_PUBLIC_SOCIALFLOW_URL
-        value: ""
-      - key: NEXT_PUBLIC_LOCALBUDD_URL
-        value: ""
+      # SOCIALFLOW_URL và LOCALBUDD_URL để undefined (không set) thay vì ""
+      # vì Zod schema dùng .url().optional() — chấp nhận undefined nhưng
+      # reject empty string. Điền URL thật sau khi deploy SocialFlow/LocalBudd.
+      # - key: SOCIALFLOW_URL
+      # - key: LOCALBUDD_URL
+      # - key: NEXT_PUBLIC_SOCIALFLOW_URL
+      # - key: NEXT_PUBLIC_LOCALBUDD_URL
 
   # ══════════════════════════════════════════════
   # 2. BACKGROUND WORKER — Media AI
