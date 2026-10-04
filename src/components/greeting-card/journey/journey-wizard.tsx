@@ -9,12 +9,18 @@ import {
 import { Button } from "@/components/ui/button"
 import { CatalogProductPicker } from "@/components/greeting-card/catalog/catalog-product-picker"
 import { BrochurePreviewModal } from "@/components/greeting-card/customer/brochure-preview-modal"
+import { TemplateSelectorCard } from "@/components/greeting-card/customer/templates/template-selector-card"
+import {
+  GreetingTemplateId,
+  resolveGreetingTemplateId,
+} from "@/modules/greeting-card/domain/greeting-template-registry"
 
 interface CatalogOption {
   id: string
   name: string
   code: string
   itemCount: number
+  filters?: Record<string, unknown> | null
 }
 
 interface JourneyWizardProps {
@@ -46,6 +52,27 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
   const [savingCatalog, setSavingCatalog] = useState(false)
   // Số sản phẩm đã thêm vào catalog được chọn — cần > 0 để tiếp tục sang Bước 2
   const [catalogItemCount, setCatalogItemCount] = useState(0)
+  // Mẫu Template trải nghiệm khách hàng
+  const [selectedTemplateId, setSelectedTemplateId] = useState<GreetingTemplateId>("enterprise-luxury")
+
+  async function handleSelectTemplate(newTemplateId: GreetingTemplateId) {
+    setSelectedTemplateId(newTemplateId)
+    if (selectedCatalogId) {
+      const currentCat = catalogs.find((c) => c.id === selectedCatalogId)
+      const existingFilters = (currentCat?.filters as Record<string, unknown> | null) || {}
+      const updatedFilters = { ...existingFilters, templateId: newTemplateId }
+      try {
+        await fetch(`/api/v1/greeting-card/catalogs/${selectedCatalogId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filters: updatedFilters }),
+        })
+        setCatalogs((prev) =>
+          prev.map((c) => (c.id === selectedCatalogId ? { ...c, filters: updatedFilters } : c))
+        )
+      } catch {}
+    }
+  }
 
   // Step 2: Tạo link gửi khách
   const [customerName, setCustomerName] = useState("")
@@ -152,6 +179,7 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
           name: c.name,
           code: c.code,
           itemCount: c._count?.items ?? 0,
+          filters: (c as { filters?: Record<string, unknown> | null }).filters ?? null,
         }))
         setCatalogs(list)
         if (list.length > 0 && !selectedCatalogId) {
@@ -159,6 +187,11 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
           if (first) {
             setSelectedCatalogId(first.id)
             setCatalogItemCount(first.itemCount)
+            if (first.filters && typeof first.filters === "object") {
+              setSelectedTemplateId(
+                resolveGreetingTemplateId((first.filters as Record<string, unknown>).templateId as string | undefined)
+              )
+            }
           }
         }
       }
@@ -185,6 +218,7 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
           name: newCatalogName.trim(),
           code,
           type: "STANDARD",
+          filters: { templateId: selectedTemplateId },
         }),
       })
       const json = await res.json() as { data?: { id: string } }
@@ -419,6 +453,13 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
                         onClick={() => {
                           setSelectedCatalogId(cat.id)
                           setCatalogItemCount(cat.itemCount)
+                          if (cat.filters && typeof cat.filters === "object") {
+                            setSelectedTemplateId(
+                              resolveGreetingTemplateId(
+                                (cat.filters as Record<string, unknown>).templateId as string | undefined
+                              )
+                            )
+                          }
                         }}
                         className={`p-4 rounded-xl border text-left flex items-start justify-between gap-3 transition-all ${
                           isSelected
@@ -455,6 +496,16 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
                       catalogId={selectedCatalogId}
                       compact
                       onItemCountChange={setCatalogItemCount}
+                    />
+                  </div>
+                )}
+
+                {/* Template Selection for this catalog */}
+                {selectedCatalogId && (
+                  <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-2xs">
+                    <TemplateSelectorCard
+                      selectedTemplateId={selectedTemplateId}
+                      onSelectTemplate={handleSelectTemplate}
                     />
                   </div>
                 )}

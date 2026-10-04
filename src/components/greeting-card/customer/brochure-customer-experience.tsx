@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { BrochureSwipeDeck } from "./brochure-swipe-deck"
+import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
 import { BrochureOrderForm } from "./brochure-order-form"
 import { BrochurePaymentView } from "./brochure-payment-view"
 import { BrochureTrackingView } from "./brochure-tracking-view"
@@ -21,6 +21,7 @@ interface BrochureCustomerExperienceProps {
       code: string
       name: string
       description: string | null
+      filters?: Record<string, unknown> | null
     }
     products: GreetingCatalogProduct[]
     order: {
@@ -156,7 +157,8 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
         </div>
 
         {step === "SWIPING" && (
-          <BrochureSwipeDeck
+          <GreetingTemplateRenderer
+            templateId={(catalog.filters as Record<string, unknown> | null)?.templateId as string | undefined}
             products={products}
             catalogName={catalog.name}
             selectedProductId={selectedProduct?.id || session.selectedProductId || null}

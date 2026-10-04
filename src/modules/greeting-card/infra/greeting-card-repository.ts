@@ -359,6 +359,7 @@ export class GreetingCardRepository {
       description?: string | null | undefined
       type?: GreetingCatalogType | undefined
       isActive?: boolean | undefined
+      filters?: Record<string, unknown> | null | undefined
     }
   ) {
     return this.db.greeting_catalogs.updateMany({
@@ -368,6 +369,7 @@ export class GreetingCardRepository {
         ...(data.description !== undefined ? { description: data.description } : {}),
         ...(data.type !== undefined ? { type: data.type } : {}),
         ...(data.isActive !== undefined ? { is_active: data.isActive } : {}),
+        ...(data.filters !== undefined ? { filters: data.filters as object } : {}),
       },
     })
   }
