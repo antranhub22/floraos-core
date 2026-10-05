@@ -127,3 +127,13 @@ jobs:
       - run: npm run build
       - name: Chạy kiểm thử E2E UX theo vai và mốc trợ năng
         run: E2E_WEB_COMMAND="npm run start" npx playwright test tests/e2e/ux
+      # Giữ ảnh chụp/trace khi E2E đỏ. Ảnh `*-actual.png` của visual.spec.ts
+      # chụp đúng trên runner này là nguồn ảnh mẫu `*-linux.png` (nợ #172) —
+      # không chụp ảnh mẫu trên máy khác vì font tải từ Google lúc chạy.
+      - name: Lưu kết quả E2E khi đỏ
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ux-test-results
+          path: test-results/
+          retention-days: 7
