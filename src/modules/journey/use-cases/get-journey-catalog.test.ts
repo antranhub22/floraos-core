@@ -4,11 +4,11 @@ import { getJourneyCatalogUseCase } from "./get-journey-catalog"
 describe("getJourneyCatalogUseCase", () => {
   it("trả về danh mục Store cho roleScope STORE và ONE_STORE", () => {
     const storeRes = getJourneyCatalogUseCase({ roleScope: "STORE" })
-    expect(storeRes.length).toBe(13)
+    expect(storeRes.length).toBe(14) // +greeting-card-hub (M14, d840344)
     expect(storeRes[0]?.roleScope).toBe("STORE")
 
     const oneStoreRes = getJourneyCatalogUseCase({ roleScope: "ONE_STORE" })
-    expect(oneStoreRes.length).toBe(13)
+    expect(oneStoreRes.length).toBe(14)
   })
 
   it("trả về danh mục Platform cho roleScope PLATFORM", () => {

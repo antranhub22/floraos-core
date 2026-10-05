@@ -39,7 +39,7 @@ Otherwise pick the conventional default, state it, and proceed.
 
 | Gate | Command | When |
 |---|---|---|
-| Types + lint | `npm run typecheck && npm run lint` | TS changes |
+| Types + lint | `npm run typecheck && npm run lint:ratchet` (no new ESLint errors per file × rule) | TS changes |
 | UX lint ratchet | `npm run lint:ux -- --check` | `.tsx` in `src/app`, `src/components` |
 | Unit | `npm test` | always |
 | Tenant / platform isolation | `npm run test:tenant` · `npm run test:platform` | data access, routes, schema, auth, RBAC — **blocking** |
@@ -48,7 +48,7 @@ Otherwise pick the conventional default, state it, and proceed.
 | Worker | `cd workers && python -m pytest tests -q` | `workers/**` |
 | Build · E2E UX | `npm run build` · `npm run test:e2e:ux` | config/routing · new screens |
 
-**Rule: no new failures versus `main`.** `main` is not fully green (known reds: `TECHNICAL_DEBT.md` #172) — compare against it (`git worktree add /tmp/base origin/main`) and report "pre-existing" vs "new"; only new failures block. Never fix unrelated pre-existing failures under `[PROD]`.
+**Rule: no new failures versus `main`.** Known leftovers: 78 old ESLint errors (ratcheted) and missing Linux visual snapshots (`TECHNICAL_DEBT.md` #172). For anything else red, compare against it (`git worktree add /tmp/base origin/main`) and report "pre-existing" vs "new"; only new failures block. Never fix unrelated pre-existing failures under `[PROD]`.
 
 Also: a new business rule or bug fix ships with a test; a new unguarded route must be listed with a reason in `tests/unit/architecture/route-capability-guard.test.ts`; SSOT docs/Screen Contracts update in the same commit; a recurring failure gets a row in `AGENT_RULES.md` §14. Files already over 350 lines: don't grow them; split only when the task substantially rewrites them. If a gate cannot run here (no Postgres, Prisma binaries blocked), say so — never claim it passed.
 
