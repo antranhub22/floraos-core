@@ -1,6 +1,6 @@
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
-import { FALLBACK_CATALOG_PRICE, resolveCatalogProductPrice } from "../domain/catalog-product-price"
+import { catalogItemToProduct } from "../domain/catalog-product-price"
 import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
 
 export type PublicGreetingCatalogResult =
@@ -35,21 +35,8 @@ export async function mapCatalogToPublicResult(
   const assetMap = await repo.getAssetsStorageMap(assetIds)
 
   const products: GreetingCatalogProduct[] = catalog.items.map((item) => {
-    const p = item.product
-    const mainImg = p.images[0]
-    const imageUrl = mainImg ? assetMap.get(mainImg.asset_id) ?? null : null
-
-    const price = resolveCatalogProductPrice(p) ?? FALLBACK_CATALOG_PRICE
-
-    return {
-      id: p.id,
-      code: p.code,
-      name: p.name,
-      price,
-      imageUrl,
-      description: p.category ? `Danh mục: ${p.category}` : null,
-      sortOrder: item.sort_order,
-    }
+    const mainImg = item.product.images[0]
+    return catalogItemToProduct(item, mainImg ? assetMap.get(mainImg.asset_id) ?? null : null)
   })
 
   return {
@@ -60,7 +47,7 @@ export async function mapCatalogToPublicResult(
       name: catalog.name,
       description: catalog.description,
       orgSlug: catalog.organization.slug,
-      filters: toPublicCatalogFilters(catalog.filters),
+      filters: toPublicCatalogFilters(catalog.filters, catalog.organization.settings),
     },
     products,
   }

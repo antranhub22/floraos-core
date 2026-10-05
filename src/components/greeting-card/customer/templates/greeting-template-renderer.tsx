@@ -11,6 +11,8 @@ import {
 } from "@/modules/greeting-card/domain/greeting-template-registry"
 import { SwipeBrochureEngine } from "./swipe-brochure-engine"
 import { EmbeddedPreviewContext } from "./aux/embedded"
+import { DisplayFieldsContext } from "./product-info/display-fields-context"
+import { DEFAULT_ENABLED_FIELDS, type OptionalDisplayField } from "@/modules/greeting-card/domain/display-fields"
 import { LookbookGridDeck } from "./lookbook-grid-deck"
 import { EditorialStoryDeck } from "./editorial-story-deck"
 import { VideoReelsDeck } from "./video-reels-deck"
@@ -27,6 +29,8 @@ interface GreetingTemplateRendererProps {
   showTemplateSwitcher?: boolean | undefined
   /** Dựng thu nhỏ trong khung xem trước của trang quản lý */
   embedded?: boolean | undefined
+  /** Trường thông tin cửa hàng bật cho mẫu này (mặc định: tất cả) */
+  displayFields?: readonly OptionalDisplayField[] | undefined
 }
 
 export function GreetingTemplateRenderer({
@@ -37,6 +41,7 @@ export function GreetingTemplateRenderer({
   onSelectProduct,
   showTemplateSwitcher = false,
   embedded = false,
+  displayFields = DEFAULT_ENABLED_FIELDS,
 }: GreetingTemplateRendererProps) {
   const [activeTemplate, setActiveTemplate] = useState<GreetingTemplateId>(() =>
     resolveGreetingTemplateId(templateId)
@@ -54,6 +59,7 @@ export function GreetingTemplateRenderer({
 
   return (
     <EmbeddedPreviewContext.Provider value={embedded}>
+    <DisplayFieldsContext.Provider value={displayFields}>
     <div className={`w-full flex flex-col items-center relative ${embedded ? "h-full" : ""}`}>
       {/* Subtle Floating Template Switcher (Cho phép khách/nhân viên đổi mẫu xem nhanh) */}
       {showTemplateSwitcher && (
@@ -192,6 +198,7 @@ export function GreetingTemplateRenderer({
         />
       )}
     </div>
+    </DisplayFieldsContext.Provider>
     </EmbeddedPreviewContext.Provider>
   )
 }

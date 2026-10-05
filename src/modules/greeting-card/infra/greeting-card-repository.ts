@@ -74,6 +74,8 @@ export class GreetingCardRepository {
               include: {
                 images: true,
                 variants: true,
+                // Nguồn Master Index (bản phân tích APPROVED mới nhất) cho các trường hiển thị
+                analyses: { where: { approval_state: "APPROVED" }, orderBy: { created_at: "desc" }, take: 1, select: { raw: true, edited: true } },
               },
             },
           },
@@ -153,6 +155,8 @@ export class GreetingCardRepository {
     return this.db.greeting_sessions.findFirst({
       where: { send_code: sendCode.toUpperCase().trim() },
       include: {
+        // Chỉ đọc khoá cấu hình hiển thị trong settings (xem toPublicCatalogFilters) — không gửi nguyên ra ngoài
+        organization: { select: { settings: true } },
         catalog: {
           include: {
             items: {
@@ -161,6 +165,7 @@ export class GreetingCardRepository {
                   include: {
                     images: true,
                     variants: true,
+                    analyses: { where: { approval_state: "APPROVED" }, orderBy: { created_at: "desc" }, take: 1, select: { raw: true, edited: true } },
                   },
                 },
               },
@@ -178,11 +183,11 @@ export class GreetingCardRepository {
     return this.db.greeting_catalogs.findFirst({
       where: { id: catalogId, is_active: true },
       include: {
-        organization: { select: { id: true, name: true, slug: true } },
+        organization: { select: { id: true, name: true, slug: true, settings: true } },
         items: {
           include: {
             product: {
-              include: { images: { where: { role: "MAIN" }, take: 1 }, variants: { take: 1 } },
+              include: { images: { where: { role: "MAIN" }, take: 1 }, variants: { take: 1 }, analyses: { where: { approval_state: "APPROVED" }, orderBy: { created_at: "desc" }, take: 1, select: { raw: true, edited: true } } },
             },
           },
           orderBy: { sort_order: "asc" },
@@ -203,11 +208,11 @@ export class GreetingCardRepository {
         organization: { slug: orgSlug.toLowerCase().trim() },
       },
       include: {
-        organization: { select: { id: true, name: true, slug: true } },
+        organization: { select: { id: true, name: true, slug: true, settings: true } },
         items: {
           include: {
             product: {
-              include: { images: { where: { role: "MAIN" }, take: 1 }, variants: { take: 1 } },
+              include: { images: { where: { role: "MAIN" }, take: 1 }, variants: { take: 1 }, analyses: { where: { approval_state: "APPROVED" }, orderBy: { created_at: "desc" }, take: 1, select: { raw: true, edited: true } } },
             },
           },
           orderBy: { sort_order: "asc" },
@@ -319,7 +324,7 @@ export class GreetingCardRepository {
         items: {
           include: {
             product: {
-              include: { images: { where: { role: "MAIN" }, take: 1 }, variants: { take: 1 } },
+              include: { images: { where: { role: "MAIN" }, take: 1 }, variants: { take: 1 }, analyses: { where: { approval_state: "APPROVED" }, orderBy: { created_at: "desc" }, take: 1, select: { raw: true, edited: true } } },
             },
           },
           orderBy: { sort_order: "asc" },

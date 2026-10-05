@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
-import { AuxPage, Chip, EmptyCatalog, ProductImage, formatVnd } from "./aux/aux-kit"
+import { AuxPage, Chip, EmptyCatalog, ProductImage } from "./aux/aux-kit"
 import { budgetsOf, matchProducts, occasionsOf } from "./aux/catalog-filters"
 import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
+import { ProductInfo } from "./product-info/product-info"
 
 interface OccasionBudgetDeckProps {
   products: GreetingCatalogProduct[]
@@ -83,9 +84,7 @@ export function OccasionBudgetDeck({ products, catalogName, onSelectProduct }: O
                   <ProductImage product={p} />
                 </button>
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <p className="line-clamp-2 text-body-sm font-semibold leading-snug">{p.name}</p>
-                  <p className="mt-0.5 text-body-sm font-bold text-primary">{formatVnd(p.price)}</p>
-                  {p.occasion && <p className="mt-0.5 truncate text-caption text-text-muted">{p.occasion}</p>}
+                  <ProductInfo product={p} level="standard" size="sm" muted="var(--color-text-muted)" titleClassName="font-semibold" />
                   <div className="mt-auto flex gap-2 pt-2">
                     <button type="button" onClick={() => onSelectProduct(p)} className="h-10 flex-1 rounded-xl bg-primary text-body-sm font-bold text-white">
                       Đặt mẫu
