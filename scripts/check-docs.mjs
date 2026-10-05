@@ -2,7 +2,7 @@
 // Đối chiếu đặc tả 06/07 với mã thật. Chạy: node scripts/check-docs.mjs
 // Sinh ra ở lượt rà soát 18/09 — xem docs/kien-truc/RA_SOAT_DONG_BO_18_09.md.
 // Ý tưởng: tài liệu không tự nhớ con số; CI đọc mã rồi so lại.
-import { readFileSync, readdirSync, statSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs"
 import { join } from "node:path"
 
 const CHUA_XAY = /CHƯA XÂY|chưa gác|chưa xây/i
@@ -122,6 +122,32 @@ for (const t of tenant) {
 const helper = readFileSync("tests/helpers/database.ts", "utf8")
 const trunc = new Set([...helper.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]))
 for (const t of tenant) if (!trunc.has(t)) bao(`bảng tenant "${t}" không nằm trong TENANT_TABLES — không được dọn giữa các ca thử`)
+
+// ── 4. Tài liệu cho agent ─────────────────────────────────────────────────
+// CLAUDE.md nạp vào MỌI phiên — giữ nhỏ. Đường dẫn/lệnh trong tài liệu agent
+// phải có thật: link `file:///Users/...` hỏng và `HARVEST_MANIFEST.md` sai chỗ
+// từng nằm đó mà không ai biết (05/10/2026).
+console.log("── Tài liệu cho agent")
+const CLAUDE_MD_MAX = 6144
+const claudeMd = readFileSync("CLAUDE.md", "utf8")
+if (Buffer.byteLength(claudeMd) > CLAUDE_MD_MAX)
+  bao(`CLAUDE.md ${Buffer.byteLength(claudeMd)} byte > ${CLAUDE_MD_MAX} — chuyển chi tiết sang skill/tài liệu tham chiếu`)
+const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts
+const agentDocs = ["CLAUDE.md", ".agents/AGENT_RULES.md",
+  ...readdirSync(".agents/skills").map((d) => `.agents/skills/${d}/SKILL.md`)]
+for (const f of agentDocs) {
+  const t = readFileSync(f, "utf8")
+  for (const m of t.matchAll(/npm run ([\w:.-]+)/g)) if (!(m[1] in scripts)) bao(`${f}: "npm run ${m[1]}" không có trong package.json`)
+  for (const m of t.matchAll(/`((?:src|tests|scripts|workers|prisma|docs|\.agents|\.claude)\/[^`\s*{}<>|]+?)`/g)) {
+    const pth = m[1].replace(/[:#].*$/, "").replace(/\/$/, "")
+    if (!existsSync(pth)) bao(`${f}: đường dẫn \`${m[1]}\` không tồn tại`)
+  }
+  for (const m of t.matchAll(/\]\(((?!https?:|#)[^)\s]+)\)/g)) {
+    if (m[1].startsWith("file:")) { bao(`${f}: link tuyệt đối "${m[1]}" — dùng đường dẫn tương đối`); continue }
+    const pth = join(f.includes("/") ? f.slice(0, f.lastIndexOf("/")) : ".", m[1].replace(/#.*$/, ""))
+    if (!existsSync(pth)) bao(`${f}: link "${m[1]}" không tồn tại`)
+  }
+}
 
 console.log(loi === 0 ? "\n✓ Tài liệu khớp mã." : `\n✗ ${loi} chỗ lệch giữa tài liệu và mã.`)
 process.exit(loi === 0 ? 0 : 1)

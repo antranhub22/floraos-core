@@ -40,7 +40,7 @@ When rules conflict, resolve strictly in this order (lower numbers ALWAYS take p
 | A6 | `useEffect` for data fetching | Race conditions, infinite loops | Server Components, SWR, or React Query |
 | A7 | Architectural leaks (e.g., ORM in Domain) | High coupling, impossible unit testing | Port Interfaces & Dependency Inversion |
 | A8 | Files exceeding 350 lines | Violates SRP, unmaintainable | Decompose into sub-components/hooks |
-| A9 | Direct third-party SDK calls (AI, Payments) | Uncontrolled quota, bypasses circuit breaker | Centralized Gateway abstraction |
+| A9 | Direct third-party SDK calls (AI, Payments) | Uncontrolled quota, bypasses fallback/attempt limits, privacy floor and license filter | Centralized Gateway abstraction |
 | A10 | `SELECT *` or over-fetching columns | DB memory bloat, network latency | Precise column projection (`select`) |
 | A11 | Manual SQL string concatenation | SQL Injection vulnerability | Parameterized queries / ORM methods |
 | A12 | Tenant ID accepted from client request body | Critical cross-tenant security breach | Verified Server-Side Session ONLY |

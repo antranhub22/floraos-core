@@ -9,6 +9,8 @@ description: >-
 
 # Creative Studio & Product Journey — FloraOS
 
+> Rà theo mã thật: 05/10/2026. Đường dẫn và lệnh `npm run` trong tệp này được `npm run check:docs` kiểm tự động.
+
 ## Quick Reference
 
 ### 14 chặng Product-to-Market Journey
@@ -51,13 +53,16 @@ Mỗi khi đụng chức năng **user upload ảnh**, Agent **PHẢI DỪNG LẠ
 
 ### 3. Khu vực Creative Studio
 
+Nguồn: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md` (6 khu vực A–F; rà 05/10/2026).
+
 | Khu vực | Chức năng | Key |
 |---|---|---|
+| **A** | Điểm khởi đầu — tải ảnh, chọn chủ đề; **không bao giờ bị chặn** | `ValidationScreen` chỉ hiện khi vào B–F thiếu dữ liệu |
 | **B** | Content (bài viết) | `content_drafts` |
 | **C** | Audio (voiceover/music/mix/voice clone) | `music_tracks`, `voice_clones` |
-| **D** | Image variants (marketing) | Local Studio Backdrop Engine, RGBA cache |
+| **D** | Ảnh phân cảnh theo kịch bản bối cảnh | **Nhà cung cấp trước** (PO 25/09/2026, mẫu `workers/media_ai/providers/scene/`); Local Studio Backdrop Engine + RGBA cache chỉ là đường lùi, phải ghi rõ lý do |
 | **E** | Video (storyboard) | Giọng đọc, phát ký có hạn |
-| **F** | Campaign package | Chặng 10–14, `campaign_packages` |
+| **F** | Gói chiến dịch | Chặng 07–14, `campaign_packages` (đặc tả 07 §23) |
 
 ### 4. Template System
 - SSOT: `docs/kien-truc/FLORAOS_TEMPLATE_SYSTEM_SSOT.md`

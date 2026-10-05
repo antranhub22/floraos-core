@@ -27,7 +27,7 @@ Full rulebook (anti-patterns A1–A12, security, performance, Journey-First UX, 
 ## Stop and ask the PO first when the task would
 
 - touch a feature where the user uploads photos (confirm which of the 14 journey stages run);
-- drop/rename schema columns/tables, change `organization_id`, or need a data migration;
+- change `prisma/schema.prisma` at all (database-schema skill) — production deploys run `db push --accept-data-loss`;
 - weaken tenancy, RBAC ceilings, the AI privacy floor, the model license filter, or auth/SSO;
 - change PO-locked UX (`<FeatureGuidanceCard />`, Tab Action Header);
 - add a dependency, provider, paid API, or change CI/`render.yaml`;
@@ -48,12 +48,14 @@ Otherwise pick the conventional default, state it, and proceed.
 | Worker | `cd workers && python -m pytest tests -q` | `workers/**` |
 | Build · E2E UX | `npm run build` · `npm run test:e2e:ux` | config/routing · new screens |
 
-Also: a new business rule or bug fix ships with a test; SSOT docs/Screen Contracts update in the same commit; a recurring failure gets a row in `AGENT_RULES.md` §14. If a gate cannot run here (no Postgres, Prisma binaries blocked), say so — never claim it passed.
+**Rule: no new failures versus `main`.** `main` is not fully green (known reds: `TECHNICAL_DEBT.md` #172) — compare against it (`git worktree add /tmp/base origin/main`) and report "pre-existing" vs "new"; only new failures block. Never fix unrelated pre-existing failures under `[PROD]`.
+
+Also: a new business rule or bug fix ships with a test; a new unguarded route must be listed with a reason in `tests/unit/architecture/route-capability-guard.test.ts`; SSOT docs/Screen Contracts update in the same commit; a recurring failure gets a row in `AGENT_RULES.md` §14. Files already over 350 lines: don't grow them; split only when the task substantially rewrites them. If a gate cannot run here (no Postgres, Prisma binaries blocked), say so — never claim it passed.
 
 ## Safety traps
 
 - `test:tenant`/`test:platform` **TRUNCATE all tables**; they run only on a DB named `*_test` (`npm run db:test:setup` once). Check `echo "[$DATABASE_URL]"` before any Prisma CLI command.
-- Use `npm test`, never bare `npx vitest run` (pulls tenant suites in).
+- Use `npm test`, never bare `npx vitest run` (pulls tenant suites in). A `.claude/hooks` guard denies bare `vitest run` and asks before Prisma writes to a non-local DB.
 - Prisma 7: URL lives in `prisma.config.ts`; run `npx prisma generate` after editing the schema before trusting `tsc`.
 - Next.js 16 differs from training data — check `node_modules/next/dist/docs/` for unfamiliar APIs.
 - More: `AGENTS.md` → "Bẫy" (grep it).
