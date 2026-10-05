@@ -2747,9 +2747,9 @@ model greeting_catalog_events {
   id              String   @id @default(uuid())
   organization_id String
   catalog_id      String
-  channel         String // fanpage | zalo | ads | tiktok | bio | khac — từ ?kenh= trên link, mặc định "khac"
+  channel         String // zalo | facebook | instagram | tiktok | website | khac | truc-tiep (?kenh= lạ/trống)
   event_type      String // VIEW | DETAIL | FORM_OPEN | ORDER
-  visitor_hash    String
+  visitor_hash    String // sha256(catalog_id:mã khách ngẫu nhiên) — không lưu IP
   order_id        String?
   created_at      DateTime @default(now())
 

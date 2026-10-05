@@ -2168,6 +2168,7 @@ Trường TỰ TẠO (`origin = CUSTOM`, D13) lưu giá trị ở cột `custom_
 - `greeting_catalogs` — bộ sưu tập chào khách theo dịp (`STANDARD`) hoặc riêng cho một khách (`CLIENT`); xoá là đặt `is_active = false`.
 - `greeting_catalog_products` — sản phẩm trong catalog. **Sản phẩm phải thuộc cùng tổ chức** (kiểm ở repository từ 05/10/2026; trước đó gắn được sản phẩm của tổ chức khác).
 - `greeting_sessions` — một đường link chào khách (`send_code`, duy nhất theo tổ chức); `product_snapshot` đóng băng mẫu hoa lúc khách chốt.
+- `greeting_catalog_events` — lượt xem/xem mẫu/mở form/đặt đơn trên link bộ sưu tập công khai theo kênh chia sẻ `?kenh=` (06/10/2026); mỗi khách × bước 1 lần/ngày.
 - `greeting_journey_events` — sự kiện hành trình của khách (`OPEN`, `SELECT_PRODUCT`, `CLICK_PAID`…) và ghi chú nội bộ (`INTERNAL_NOTE`).
 
 ```prisma
@@ -2254,6 +2255,23 @@ model greeting_journey_events {
   session      greeting_sessions @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, session_id])
+}
+
+model greeting_catalog_events {
+  id              String   @id @default(uuid())
+  organization_id String // suy từ catalog ở server, không nhận từ khách
+  catalog_id      String
+  channel         String // zalo | facebook | instagram | tiktok | website | khac | truc-tiep
+  event_type      String // VIEW | DETAIL | FORM_OPEN | ORDER
+  visitor_hash    String // sha256(catalog_id:mã khách ngẫu nhiên) — không lưu IP
+  order_id        String?
+  created_at      DateTime @default(now())
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  catalog      greeting_catalogs @relation(fields: [catalog_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, catalog_id, created_at])
+  @@index([organization_id, channel])
 }
 
 model greeting_integrations {

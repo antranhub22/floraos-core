@@ -15,6 +15,7 @@ const TENANT_TABLES = [
   "greeting_notifications",
   "greeting_payment_events",
   "greeting_integrations",
+  "greeting_catalog_events",
   "greeting_journey_events",
   "greeting_sessions",
   "greeting_catalog_products",

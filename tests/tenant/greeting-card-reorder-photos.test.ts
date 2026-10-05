@@ -195,5 +195,6 @@ describe("greeting-card: thống kê link bộ sưu tập theo kênh (mục 16)"
     expect(funnel.rows.find((r) => r.channel === "zalo")).toMatchObject({ views: 2, orders: 1, orderRate: 50 })
     expect(funnel.rows.find((r) => r.channel === "truc-tiep")).toMatchObject({ views: 1 })
     expect((await getChannelFunnel(b.ctx, 30)).rows).toEqual([])
+    expect(await prisma.greeting_catalog_events.count({ where: { organization_id: b.organizationId } })).toBe(0)
   })
 })
