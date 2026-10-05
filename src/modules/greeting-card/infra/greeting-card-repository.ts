@@ -5,7 +5,7 @@ import { log } from "@/core/observability/log"
 import { Prisma } from "@/generated/prisma/client"
 import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 import { isUniqueViolation } from "@/modules/coordinator/infra/transaction"
-import { generateSendCode } from "../domain/greeting-card-rules"
+import { generateSendCode, linkAvailability } from "../domain/greeting-card-rules"
 import type {
   GreetingCatalogType,
   GreetingSessionStatus,
@@ -143,6 +143,7 @@ export class GreetingCardRepository {
       saleId: string
       customerName?: string | null | undefined
       customerPhone?: string | null | undefined
+      expiresAt?: Date | null | undefined
     }
   ) {
     const catalog = await this.db.greeting_catalogs.findFirst({
@@ -158,6 +159,7 @@ export class GreetingCardRepository {
       sale_id: input.saleId,
       customer_name: input.customerName ?? null,
       customer_phone: input.customerPhone ?? null,
+      expires_at: input.expiresAt ?? null,
       status: "CREATED",
     }))
   }
@@ -272,6 +274,22 @@ export class GreetingCardRepository {
     })
   }
 
+  /** Thu hồi link chưa có đơn. Trả `false` khi không có link nào đổi (không tồn tại/đã thu hồi/đã có đơn). */
+  async revokeSession(ctx: TenantContext, sessionId: string): Promise<boolean> {
+    const result = await this.db.greeting_sessions.updateMany({
+      where: scopedWhere(ctx, { id: sessionId, revoked_at: null, order_id: null }),
+      data: { revoked_at: new Date(), revoked_by: ctx.userId },
+    })
+    return result.count > 0
+  }
+
+  async findSessionState(ctx: TenantContext, sessionId: string) {
+    return this.db.greeting_sessions.findFirst({
+      where: scopedWhere(ctx, { id: sessionId }),
+      select: { id: true, order_id: true, revoked_at: true },
+    })
+  }
+
   async recordJourneyEvent(
     organizationId: string,
     sessionId: string,
@@ -288,14 +306,19 @@ export class GreetingCardRepository {
     })
   }
 
+  /**
+   * Danh sách link đã gửi, phân trang con trỏ (mới nhất trước). Lấy dư 1 dòng
+   * để bên gọi biết còn trang sau (`toPage`). Kèm trạng thái hiệu lực link.
+   */
   async listSessions(
     ctx: TenantContext,
     options: {
       saleId?: string | undefined
       catalogId?: string | undefined
       status?: string | undefined
-      limit?: number | undefined
-    } = {}
+      limit: number
+      cursor?: string | undefined
+    }
   ) {
     const rows = await this.db.greeting_sessions.findMany({
       where: scopedWhere(ctx, {
@@ -303,16 +326,29 @@ export class GreetingCardRepository {
         ...(options.catalogId ? { catalog_id: options.catalogId } : {}),
         ...(options.status ? { status: options.status } : {}),
       }),
-      include: {
+      select: {
+        id: true,
+        send_code: true,
+        sale_id: true,
+        customer_name: true,
+        customer_phone: true,
+        status: true,
+        order_id: true,
+        expires_at: true,
+        revoked_at: true,
+        last_active_at: true,
+        created_at: true,
         catalog: { select: { id: true, name: true, code: true } },
         order: { select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true } },
       },
-      orderBy: { created_at: "desc" },
-      take: Math.min(Math.max(options.limit ?? 50, 1), 100),
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+      take: options.limit + 1,
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
     })
     // Decimal → number: JSON của Decimal là chuỗi, UI cần số để định dạng/so sánh
     return rows.map((r) => ({
       ...r,
+      link_state: linkAvailability({ expiresAt: r.expires_at, revokedAt: r.revoked_at, hasOrder: r.order_id !== null }),
       order: r.order ? { ...r.order, total_vnd: Number(r.order.total_vnd), paid_vnd: Number(r.order.paid_vnd) } : null,
     }))
   }

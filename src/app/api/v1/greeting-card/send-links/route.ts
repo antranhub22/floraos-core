@@ -5,6 +5,7 @@ import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-link"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
+import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 const createSendLinkSchema = z.object({
@@ -13,6 +14,8 @@ const createSendLinkSchema = z.object({
   customerName: z.string().max(100).nullable().optional(),
   customerPhone: z.string().max(20).nullable().optional(),
   prefix: z.string().max(10).optional(),
+  // null = không hết hạn; bỏ trống = mặc định 30 ngày
+  expiresInDays: z.number().int().min(1).max(365).nullable().optional(),
   customCatalog: z
     .object({
       name: z.string().max(120),
@@ -42,6 +45,7 @@ export const POST = handle(async (request: Request) => {
     customerName: parsed.data.customerName,
     customerPhone: parsed.data.customerPhone,
     prefix: parsed.data.prefix,
+    expiresInDays: parsed.data.expiresInDays,
     customCatalog: parsed.data.customCatalog
       ? {
           name: parsed.data.customCatalog.name,
@@ -63,13 +67,9 @@ export const GET = handle(async (request: Request) => {
   const statusParam = url.searchParams.get("status") || undefined
   const status = SESSION_STATUSES.find((s) => s === statusParam)
   if (statusParam && !status) throw validationFailed({ status: `Phải là một trong: ${SESSION_STATUSES.join(", ")}` })
-  const limitParam = url.searchParams.get("limit")
-  const limit = limitParam ? Number(limitParam) : 50
-  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-    throw validationFailed({ limit: "Phải là số nguyên từ 1 đến 100" })
-  }
+  const { limit, cursor } = parseListQuery(url)
 
   const repo = new GreetingCardRepository()
-  const sessions = await repo.listSessions(ctx, { saleId, catalogId, status, limit })
-  return jsonResponse({ data: sessions })
+  const rows = await repo.listSessions(ctx, { saleId, catalogId, status, limit, cursor })
+  return jsonResponse(toPage(rows, limit))
 })

@@ -18,6 +18,8 @@ import {
   dispatchBrochureShipping,
   uploadBrochureProductPhoto,
 } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
+import { revokeSendLink } from "@/modules/greeting-card/use-cases/create-send-link"
+import { getSalesFunnel } from "@/modules/greeting-card/use-cases/get-sales-funnel"
 import { POST as selectPOST } from "@/app/api/v1/public/brochure/[sendCode]/select/route"
 import { POST as orderPOST } from "@/app/api/v1/public/brochure/[sendCode]/order/route"
 
@@ -262,5 +264,47 @@ describe("greeting-card hardening", () => {
       expect(view.payment?.qrUrl).toContain("VCB-0011223344")
       expect(view.payment?.amount).toBe(650000)
     }
+  })
+
+  it("link hết hạn hoặc đã thu hồi (greeting_sessions) trả 404 khi chưa có đơn", async () => {
+    const { catalog } = await catalogWith(a, "han", 500000)
+    const expired = await createSendLink(a.ctx, { catalogId: catalog.id })
+    await prisma.greeting_sessions.update({
+      where: { id: expired.sessionId },
+      data: { expires_at: new Date(Date.now() - 1000) },
+    })
+    expect((await getGreetingCatalogForCustomer(expired.sendCode)).status).toBe("NOT_FOUND")
+
+    const revoked = await createSendLink(a.ctx, { catalogId: catalog.id })
+    expect(await codeOf(revokeSendLink(b.ctx, revoked.sessionId))).toBe("NOT_FOUND")
+    await revokeSendLink(a.ctx, revoked.sessionId)
+    await revokeSendLink(a.ctx, revoked.sessionId) // idempotent
+    expect((await getGreetingCatalogForCustomer(revoked.sendCode)).status).toBe("NOT_FOUND")
+  })
+
+  it("không thu hồi được link đã có đơn; đơn vẫn xem được dù link quá hạn", async () => {
+    const { product, catalog } = await catalogWith(a, "co-don", 500000)
+    const link = await createSendLink(a.ctx, { catalogId: catalog.id, expiresInDays: 1 })
+    await selectBrochureProduct(link.sendCode, product.id)
+    await submitBrochureOrder(link.sendCode, ORDER_INPUT)
+    expect(await codeOf(revokeSendLink(a.ctx, link.sessionId))).toBe("CONFLICT")
+    await prisma.greeting_sessions.update({ where: { id: link.sessionId }, data: { expires_at: new Date(0) } })
+    expect((await getGreetingCatalogForCustomer(link.sendCode)).status).toBe("ACTIVE")
+  })
+
+  it("phễu theo sale chỉ đếm dữ liệu của chính tổ chức", async () => {
+    const { product, catalog } = await catalogWith(a, "pheu", 400000)
+    const l1 = await createSendLink(a.ctx, { catalogId: catalog.id })
+    await createSendLink(a.ctx, { catalogId: catalog.id })
+    await selectBrochureProduct(l1.sendCode, product.id)
+    const order = await submitBrochureOrder(l1.sendCode, ORDER_INPUT)
+    await adminConfirmBrochurePayment(a.ctx, order.orderId)
+    const { catalog: cb } = await catalogWith(b, "pheu-b", 400000)
+    await createSendLink(b.ctx, { catalogId: cb.id })
+
+    const funnel = await getSalesFunnel(a.ctx, 30)
+    expect(funnel.total).toMatchObject({ sent: 2, opened: 0, selected: 1, ordered: 1, paid: 1, revenueVnd: 400000 })
+    expect(funnel.rows[0]?.saleName).toBe("Người dùng alpha")
+    expect((await getSalesFunnel(b.ctx, 30)).total.sent).toBe(1)
   })
 })

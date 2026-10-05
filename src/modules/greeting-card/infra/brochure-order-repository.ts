@@ -38,7 +38,10 @@ export class BrochureOrderRepository {
    * `paid_vnd >= total_vnd` theo thứ tự chữ ("1000000" < "850000") nên đơn
    * đã thu đủ vẫn hiện "Chưa thu tiền".
    */
-  async listBrochureOrders(ctx: TenantContext, options: { status?: order_status | undefined; limit?: number } = {}) {
+  async listBrochureOrders(
+    ctx: TenantContext,
+    options: { status?: order_status | undefined; limit: number; cursor?: string | undefined }
+  ) {
     const rows = await this.db.orders.findMany({
       where: scopedWhere(ctx, {
         source: "BROCHURE",
@@ -50,8 +53,9 @@ export class BrochureOrderRepository {
         payments: true,
         greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true } },
       },
-      orderBy: { created_at: "desc" },
-      take: Math.min(Math.max(options.limit ?? 50, 1), 100),
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+      take: options.limit + 1, // dư 1 dòng để biết còn trang sau
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
     })
     return rows.map((o) => ({
       ...o,

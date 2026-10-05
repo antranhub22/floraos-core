@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useCallback } from "react"
+import { useSWRConfig } from "swr"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Sparkles, Send, ShieldCheck, BookOpen, RefreshCw, SlidersHorizontal, Wand2, GitMerge } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -21,25 +22,9 @@ export default function TheChaoPage() {
   const [viewMode, setViewMode] = useState<"wizard" | "manager">("wizard")
   const [activeTab, setActiveTab] = useState<ActiveTab>("catalog")
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogBasic | null>(null)
-  const [catalogCount, setCatalogCount] = useState<number>(0)
-  const [sessionCount, setSessionCount] = useState<number>(0)
-
-  const loadCounts = useCallback(async () => {
-    try {
-      const [catRes, sesRes] = await Promise.all([
-        fetch("/api/v1/greeting-card/catalogs").then((r) => r.json()).catch(() => ({ data: [] })),
-        fetch("/api/v1/greeting-card/send-links").then((r) => r.json()).catch(() => ({ data: [] })),
-      ])
-      if (Array.isArray(catRes.data)) setCatalogCount(catRes.data.length)
-      if (Array.isArray(sesRes.data)) setSessionCount(sesRes.data.length)
-    } catch {
-      // Ignore count fetch errors
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadCounts()
-  }, [loadCounts])
+  // "Làm mới" = yêu cầu mọi danh sách SWR trên trang tải lại
+  const { mutate } = useSWRConfig()
+  const refreshAll = useCallback(() => void mutate(() => true), [mutate])
 
   const tabs: { id: ActiveTab; icon: React.ReactNode; label: string }[] = [
     { id: "catalog", icon: <BookOpen size={16} />, label: "Bộ Sưu Tập" },
@@ -109,7 +94,7 @@ export default function TheChaoPage() {
             variant="outline"
             size="sm"
             onClick={() => {
-              void loadCounts()
+              refreshAll()
               router.refresh()
             }}
             aria-label="Làm mới trang"
@@ -124,7 +109,7 @@ export default function TheChaoPage() {
       {viewMode === "wizard" ? (
         <JourneyWizard
           onFinish={() => {
-            void loadCounts()
+            refreshAll()
             setActiveTab("sales")
             setViewMode("manager")
           }}
@@ -173,7 +158,7 @@ export default function TheChaoPage() {
                 catalogName={selectedCatalog.name}
                 onBack={() => {
                   setSelectedCatalog(null)
-                  void loadCounts()
+                  refreshAll()
                 }}
               />
             ) : (

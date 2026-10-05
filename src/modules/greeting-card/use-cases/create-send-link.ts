@@ -1,7 +1,7 @@
 import type { TenantContext } from "@/core/tenancy"
-import { notFound } from "@/core/http/errors"
+import { conflict, notFound } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
-import { normalizePhone, randomCode } from "../domain/greeting-card-rules"
+import { computeLinkExpiry, normalizePhone, randomCode } from "../domain/greeting-card-rules"
 
 export interface CreateSendLinkInput {
   catalogId?: string | undefined
@@ -9,6 +9,8 @@ export interface CreateSendLinkInput {
   customerName?: string | null | undefined
   customerPhone?: string | null | undefined
   prefix?: string | undefined
+  /** Số ngày link còn hiệu lực; `null` = không hết hạn; bỏ trống = mặc định 30 ngày. */
+  expiresInDays?: number | null | undefined
   // Support creating Client Catalog on the fly
   customCatalog?: {
     name: string
@@ -59,6 +61,7 @@ export async function createSendLink(
     saleId: ctx.userId,
     customerName: input.customerName?.trim() || null,
     customerPhone: phone || null,
+    expiresAt: computeLinkExpiry(input.expiresInDays),
   })
 
   return {
@@ -66,5 +69,19 @@ export async function createSendLink(
     sendCode: session.send_code,
     catalogId: session.catalog_id,
     shareUrl: `/b/${session.send_code}`,
+    expiresAt: session.expires_at?.toISOString() ?? null,
   }
+}
+
+/** Thu hồi link đã gửi (chưa có đơn): khách mở lại sẽ thấy link không còn hiệu lực. */
+export async function revokeSendLink(ctx: TenantContext, sessionId: string, repo = new GreetingCardRepository()) {
+  const changed = await repo.revokeSession(ctx, sessionId)
+  if (changed) {
+    await repo.recordJourneyEvent(ctx.organizationId, sessionId, "LINK_REVOKED", { revokedBy: ctx.userId })
+    return { revoked: true }
+  }
+  const state = await repo.findSessionState(ctx, sessionId)
+  if (!state) throw notFound()
+  if (state.order_id) throw conflict("Link đã có đơn hàng — hãy huỷ đơn thay vì thu hồi link")
+  return { revoked: true } // đã thu hồi trước đó — idempotent
 }

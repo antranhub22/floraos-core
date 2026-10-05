@@ -3,6 +3,7 @@ import { handle, jsonResponse } from "@/core/http/response"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { BrochureOrderRepository, ORDER_STATUSES } from "@/modules/greeting-card/infra/brochure-order-repository"
+import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 export const GET = handle(async (request) => {
@@ -13,7 +14,9 @@ export const GET = handle(async (request) => {
   const status = ORDER_STATUSES.find((s) => s === statusParam)
   if (statusParam && !status) throw validationFailed({ status: `Phải là một trong: ${ORDER_STATUSES.join(", ")}` })
 
+  const { limit, cursor } = parseListQuery(url)
+
   const repo = new BrochureOrderRepository()
-  const orders = await repo.listBrochureOrders(ctx, { status })
-  return jsonResponse({ data: orders })
+  const rows = await repo.listBrochureOrders(ctx, { status, limit, cursor })
+  return jsonResponse(toPage(rows, limit))
 })

@@ -246,3 +246,28 @@ export function mapOrderStatusToTrackingStep(
     percentage: 25,
   }
 }
+
+// ── Hạn dùng link ─────────────────────────────────────────────────────────────
+
+export const DEFAULT_LINK_EXPIRY_DAYS = 30
+export const MAX_LINK_EXPIRY_DAYS = 365
+
+/** `null` = không hết hạn. Số ngày ngoài [1, 365] bị kẹp về biên. */
+export function computeLinkExpiry(days: number | null | undefined, now: Date = new Date()): Date | null {
+  if (days === null) return null
+  const d = Math.min(Math.max(Math.round(days ?? DEFAULT_LINK_EXPIRY_DAYS), 1), MAX_LINK_EXPIRY_DAYS)
+  return new Date(now.getTime() + d * 86_400_000)
+}
+
+export type LinkAvailability = "ACTIVE" | "EXPIRED" | "REVOKED"
+
+/** Link đã có đơn luôn mở được (khách cần xem thanh toán/theo dõi). */
+export function linkAvailability(
+  s: { expiresAt: Date | null; revokedAt: Date | null; hasOrder: boolean },
+  now: Date = new Date()
+): LinkAvailability {
+  if (s.hasOrder) return "ACTIVE"
+  if (s.revokedAt) return "REVOKED"
+  if (s.expiresAt && s.expiresAt.getTime() <= now.getTime()) return "EXPIRED"
+  return "ACTIVE"
+}

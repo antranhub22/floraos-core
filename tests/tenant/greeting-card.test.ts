@@ -74,8 +74,8 @@ describe("greeting-card tenant isolation", () => {
       prefix: "T02",
     })
 
-    const sessionsA = await repo.listSessions(tenantA.ctx)
-    const sessionsB = await repo.listSessions(tenantB.ctx)
+    const sessionsA = await repo.listSessions(tenantA.ctx, { limit: 20 })
+    const sessionsB = await repo.listSessions(tenantB.ctx, { limit: 20 })
 
     expect(sessionsA).toHaveLength(1)
     expect(sessionsA[0]?.customer_name).toBe("Khách A")

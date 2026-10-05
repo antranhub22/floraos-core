@@ -9,7 +9,10 @@ const TENANT_TABLES = [
   "content_opportunities",
   // Product Intelligence (Quét theo ảnh sản phẩm) — nợ #113, đã trả 21/09/2026
   "product_analysis_runs",
-  // Thẻ Chào / Swipe Brochure — 03/10/2026
+  // Thẻ Chào / Swipe Brochure — 03/10/2026 (+ tích hợp/đối soát/thông báo 05/10/2026)
+  "greeting_notifications",
+  "greeting_payment_events",
+  "greeting_integrations",
   "greeting_journey_events",
   "greeting_sessions",
   "greeting_catalog_products",
