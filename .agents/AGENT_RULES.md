@@ -128,7 +128,7 @@ API Route (src/app/api/v1/) → handle() → requireTenantContext() → requireC
 ---
 
 # ⚡ PART III: ON-DEMAND SKILLS REGISTRY (Workflow Tier)
-*Load specialized domain instructions dynamically from `.agents/skills/`.*
+*Load specialized domain instructions dynamically from `.agents/skills/`. Claude Code discovers the same files automatically via the `.claude/skills` symlink — keep one source here.*
 
 | When working on... | Read Skill File |
 |---|---|
