@@ -15,6 +15,9 @@ interface Props {
   emptyState: React.ReactNode
 }
 
+const ACTION_BTN =
+  "inline-flex items-center justify-center h-8 rounded-lg border border-border text-text-muted hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+
 function formatDate(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString("vi-VN") : "Không hết hạn"
 }
@@ -97,40 +100,36 @@ export function SalesSessionTable({ sessions, hasMore, isLoadingMore, onLoadMore
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Button
+                    <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                      <button
                         type="button"
-                        variant="outline"
-                        size="sm"
                         disabled={!active}
                         onClick={() => copyLink(row.send_code)}
-                        className="h-8 px-2.5 text-caption gap-1"
+                        className={`${ACTION_BTN} px-2.5 gap-1 text-caption font-semibold`}
                       >
                         {copiedCode === row.send_code ? <Check size={13} className="text-success" /> : <Copy size={13} />}
                         <span>{copiedCode === row.send_code ? "Đã copy" : "Copy link"}</span>
-                      </Button>
+                      </button>
                       <a
                         href={`/b/${row.send_code}`}
                         target="_blank"
                         rel="noreferrer"
                         aria-label={`Mở link ${row.send_code}`}
-                        className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border hover:bg-surface-muted text-text-muted hover:text-foreground"
+                        className={`${ACTION_BTN} w-8`}
                       >
                         <ExternalLink size={14} />
                       </a>
                       {active && !row.order_id && (
-                        <Button
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="sm"
                           disabled={revokingId === row.id}
                           onClick={() => void revoke(row)}
                           aria-label={`Thu hồi link ${row.send_code}`}
                           title="Thu hồi link"
-                          className="h-8 w-8 p-0 text-danger"
+                          className={`${ACTION_BTN} w-8 text-danger`}
                         >
                           <Ban size={14} />
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </td>

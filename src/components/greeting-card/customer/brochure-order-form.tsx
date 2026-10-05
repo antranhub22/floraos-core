@@ -132,13 +132,17 @@ export function BrochureOrderForm({
       </div>
 
       {errorMessage && (
-        <div className="mb-5 p-3 rounded-xl bg-danger-bg border border-danger/30 text-danger text-body-sm flex items-start gap-2">
+        <div
+          role="alert"
+          // Form dài trên điện thoại: đưa thông báo lỗi vào tầm nhìn ngay khi nó xuất hiện
+          ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "center" })}
+          className="mb-5 p-3 rounded-xl bg-danger-bg border border-danger/30 text-danger text-body-sm flex items-start gap-2">
           <AlertCircle size={18} className="shrink-0 mt-0.5" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <BrochureOrderOptions
           variants={variants}
           basePrice={productSnapshot.price}
