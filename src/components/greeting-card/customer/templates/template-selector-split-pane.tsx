@@ -1,34 +1,27 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
-import {
-  Check, ChevronLeft, ChevronRight, Layers,
-  Smartphone, Sparkles,
-  Film, Heart, Leaf, Store, Sun, Camera, Home, PenTool,
-  LayoutGrid, BookOpen, Play, Zap, Palette, ZoomIn,
-} from "lucide-react"
+import { Check, ChevronLeft, ChevronRight, Layers, Sparkles } from "lucide-react"
 import {
   GreetingTemplateId,
   GREETING_TEMPLATE_LIST,
 } from "@/modules/greeting-card/domain/greeting-template-registry"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
-import { getTemplateStyleConfig } from "./styles/template-style-configs"
-import { SwipeCardItem } from "./swipe-card-item"
-import { StylePreviewThumb } from "./template-style-preview-thumb"
+import { GreetingTemplateRenderer } from "./greeting-template-renderer"
+import { TemplateThumb } from "./template-thumb"
 import { useCatalogProducts } from "./use-catalog-products"
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Natural width the SwipeCardItem renders at */
-const CARD_NATURAL_W = 380
+/** Kích thước màn hình điện thoại mà mẫu thật được dựng trước khi thu nhỏ */
+const CARD_NATURAL_W = 390
 /** Scale factor to fit inside our compact phone shell */
 const CARD_SCALE = 0.55
 /** Resulting displayed width/height of the scaled card area */
 const PHONE_INNER_W = Math.round(CARD_NATURAL_W * CARD_SCALE) // ≈ 209px
-/** SwipeCardItem natural height minimum */
-const CARD_NATURAL_H = 560
+const CARD_NATURAL_H = 760
 const PHONE_INNER_H = Math.round(CARD_NATURAL_H * CARD_SCALE) // ≈ 308px
 /** Total height of the split pane panel */
 const PANEL_H = 520
@@ -51,46 +44,14 @@ interface TemplateSelectorSplitPaneProps {
 }
 
 // ---------------------------------------------------------------------------
-// Icon helper
-// ---------------------------------------------------------------------------
-
-function getIcon(id: GreetingTemplateId) {
-  if (id === "editorial-luxury" || id === "enterprise-luxury") return <Sparkles size={14} />
-  if (id === "minimal-clean" || id === "swipe-classic") return <Smartphone size={14} />
-  if (id === "cinematic-dark") return <Film size={14} />
-  if (id === "romantic-pastel") return <Heart size={14} />
-  if (id === "botanical-frame") return <Leaf size={14} />
-  if (id === "glassmorphism") return <Layers size={14} />
-  if (id === "real-life-shop" || id === "real-life-in-store") return <Store size={14} />
-  if (id === "real-life-daylight") return <Sun size={14} />
-  if (id === "real-life-handheld") return <Camera size={14} />
-  if (id === "lifestyle-context") return <Home size={14} />
-  if (id === "mixed-media") return <PenTool size={14} />
-  if (id === "lookbook-grid") return <LayoutGrid size={14} />
-  if (id === "editorial-story") return <BookOpen size={14} />
-  if (id === "video-reels") return <Play size={14} />
-  if (id === "occasion-budget-quiz") return <Zap size={14} />
-  if (id === "event-moodboard") return <Palette size={14} />
-  return <ZoomIn size={14} />
-}
-
-// ---------------------------------------------------------------------------
-// Scaled phone shell — contains SwipeCardItem at reduced size via CSS scale
+// Khung điện thoại thu nhỏ — dựng đúng giao diện khách sẽ thấy của mẫu đang chọn
 // ---------------------------------------------------------------------------
 function CompactPhonePreview({
-  product,
-  styleConfig,
-  isFav,
-  onToggleFav,
-  productIdx,
-  totalCount,
+  templateId,
+  products,
 }: {
-  product: GreetingCatalogProduct
-  styleConfig: ReturnType<typeof getTemplateStyleConfig>
-  isFav: boolean
-  onToggleFav: () => void
-  productIdx: number
-  totalCount: number
+  templateId: GreetingTemplateId
+  products: GreetingCatalogProduct[]
 }) {
   // Frame chrome dimensions derived from constants
   const frameW = PHONE_INNER_W + 16   // 8px padding each side
@@ -143,19 +104,19 @@ function CompactPhonePreview({
             top: 0,
             left: 0,
             width: CARD_NATURAL_W,
+            height: CARD_NATURAL_H,
             transformOrigin: "top left",
             transform: `scale(${CARD_SCALE})`,
             pointerEvents: "none", // preview only — no interaction needed
           }}
         >
-          <SwipeCardItem
-            product={product}
-            styleConfig={styleConfig}
-            isActive={true}
-            isFavorite={isFav}
-            currentIndex={productIdx}
-            totalCount={totalCount}
-            onToggleFavorite={onToggleFav}
+          <GreetingTemplateRenderer
+            embedded
+            templateId={templateId}
+            products={products}
+            catalogName="Bộ sưu tập của tiệm"
+            selectedProductId={null}
+            onSelectProduct={() => {}}
           />
         </div>
       </div>
@@ -176,11 +137,13 @@ function TemplateListItem({
   isActive,
   isSelected,
   onClick,
+  photo,
 }: {
   tpl: (typeof GREETING_TEMPLATE_LIST)[number]
   isActive: boolean
   isSelected: boolean
   onClick: () => void
+  photo: string | null
 }) {
   const accent = ACCENT[tpl.styleNumber ?? ""] ?? "#888"
   const ref = useRef<HTMLButtonElement>(null)
@@ -207,13 +170,7 @@ function TemplateListItem({
         className="shrink-0 rounded-lg overflow-hidden relative"
         style={{ width: 40, height: 52 }}
       >
-        {tpl.styleNumber ? (
-          <StylePreviewThumb styleNumber={tpl.styleNumber} fillParent />
-        ) : (
-          <div className="absolute inset-0 bg-surface-muted flex items-center justify-center text-text-muted">
-            {getIcon(tpl.id)}
-          </div>
-        )}
+        <TemplateThumb templateId={tpl.id} photo={photo} />
         {tpl.styleNumber && (
           <div
             className="absolute bottom-0.5 right-0.5 text-white font-mono font-bold"
@@ -271,7 +228,6 @@ function LivePreviewPane({
   onSelect: () => void
 }) {
   const [productIdx, setProductIdx] = useState(0)
-  const [isFav, setIsFav] = useState(false)
   const [prevTplId, setPrevTplId] = useState(tpl.id)
   const [fadeKey, setFadeKey] = useState(0)
 
@@ -282,9 +238,7 @@ function LivePreviewPane({
     setProductIdx(0)
   }
 
-  const styleConfig = getTemplateStyleConfig(tpl.styleNumber || tpl.id)
   const safeIdx = productIdx < products.length ? productIdx : 0
-  const product = products[safeIdx] ?? products[0]
 
   const prev = useCallback(() => {
     setProductIdx((i) => (i - 1 + products.length) % products.length)
@@ -315,12 +269,8 @@ function LivePreviewPane({
           </div>
         ) : (
           <CompactPhonePreview
-            product={product!}
-            styleConfig={styleConfig}
-            isFav={isFav}
-            onToggleFav={() => setIsFav((v) => !v)}
-            productIdx={safeIdx}
-            totalCount={products.length}
+            templateId={tpl.id}
+            products={[...products.slice(safeIdx), ...products.slice(0, safeIdx)]}
           />
         )}
       </div>
@@ -494,6 +444,7 @@ export function TemplateSelectorSplitPane({
                   isActive={activeId === tpl.id}
                   isSelected={selectedTemplateId === tpl.id}
                   onClick={() => setActiveId(tpl.id)}
+                  photo={products[0]?.imageUrl ?? null}
                 />
               ))}
             </div>

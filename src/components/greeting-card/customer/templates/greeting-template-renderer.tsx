@@ -10,8 +10,7 @@ import {
   resolveGreetingTemplateId,
 } from "@/modules/greeting-card/domain/greeting-template-registry"
 import { SwipeBrochureEngine } from "./swipe-brochure-engine"
-import { EnterpriseLuxuryDeck } from "./enterprise-luxury-deck"
-import { BrochureSwipeDeck } from "../brochure-swipe-deck"
+import { EmbeddedPreviewContext } from "./aux/embedded"
 import { LookbookGridDeck } from "./lookbook-grid-deck"
 import { EditorialStoryDeck } from "./editorial-story-deck"
 import { VideoReelsDeck } from "./video-reels-deck"
@@ -26,6 +25,8 @@ interface GreetingTemplateRendererProps {
   selectedProductId: string | null
   onSelectProduct: (product: GreetingCatalogProduct) => void
   showTemplateSwitcher?: boolean | undefined
+  /** Dựng thu nhỏ trong khung xem trước của trang quản lý */
+  embedded?: boolean | undefined
 }
 
 export function GreetingTemplateRenderer({
@@ -35,6 +36,7 @@ export function GreetingTemplateRenderer({
   selectedProductId,
   onSelectProduct,
   showTemplateSwitcher = false,
+  embedded = false,
 }: GreetingTemplateRendererProps) {
   const [activeTemplate, setActiveTemplate] = useState<GreetingTemplateId>(() =>
     resolveGreetingTemplateId(templateId)
@@ -51,7 +53,8 @@ export function GreetingTemplateRenderer({
   const currentDef = GREETING_TEMPLATES[activeTemplate] || GREETING_TEMPLATES["editorial-luxury"]
 
   return (
-    <div className="w-full flex flex-col items-center relative">
+    <EmbeddedPreviewContext.Provider value={embedded}>
+    <div className={`w-full flex flex-col items-center relative ${embedded ? "h-full" : ""}`}>
       {/* Subtle Floating Template Switcher (Cho phép khách/nhân viên đổi mẫu xem nhanh) */}
       {showTemplateSwitcher && (
         <div className="w-full max-w-sm flex items-center justify-between px-4 mb-2">
@@ -122,7 +125,9 @@ export function GreetingTemplateRenderer({
         activeTemplate === "real-life-in-store" ||
         activeTemplate === "real-life-handheld" ||
         activeTemplate === "lifestyle-context" ||
-        activeTemplate === "mixed-media") && (
+        activeTemplate === "mixed-media" ||
+        activeTemplate === "enterprise-luxury" ||
+        activeTemplate === "swipe-classic") && (
         <SwipeBrochureEngine
           products={products}
           catalogName={catalogName}
@@ -132,25 +137,7 @@ export function GreetingTemplateRenderer({
         />
       )}
 
-      {/* Legacy / Auxiliary Decks */}
-      {activeTemplate === "enterprise-luxury" && (
-        <EnterpriseLuxuryDeck
-          products={products}
-          catalogName={catalogName}
-          selectedProductId={selectedProductId}
-          onSelectProduct={onSelectProduct}
-        />
-      )}
-
-      {activeTemplate === "swipe-classic" && (
-        <BrochureSwipeDeck
-          products={products}
-          catalogName={catalogName}
-          selectedProductId={selectedProductId}
-          onSelectProduct={onSelectProduct}
-        />
-      )}
-
+      {/* Auxiliary Decks */}
       {activeTemplate === "lookbook-grid" && (
         <LookbookGridDeck
           products={products}
@@ -205,5 +192,6 @@ export function GreetingTemplateRenderer({
         />
       )}
     </div>
+    </EmbeddedPreviewContext.Provider>
   )
 }

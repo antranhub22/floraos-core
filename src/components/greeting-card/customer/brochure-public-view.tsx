@@ -130,7 +130,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
   // 3. PREVIEW SELECTED CARD WITH "ĐẶT NGAY" BUTTON
   if (step === "PREVIEW" && selected) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="min-h-screen flex items-center justify-center bg-bg p-4">
         <div className="w-full max-w-md bg-surface rounded-3xl shadow-xl overflow-hidden border border-border">
           <FlowerImage src={selected.imageUrl} alt={selected.name} sizes="(max-width: 448px) 100vw, 448px" priority className="w-full aspect-square" />
           <div className="p-6 flex flex-col gap-4">

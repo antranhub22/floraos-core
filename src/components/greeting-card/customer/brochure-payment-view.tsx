@@ -14,6 +14,7 @@ const PAID_ORDER_STATUSES = new Set(["CONFIRMED", "PROCESSING", "DELIVERED", "CO
 function isPaid(order: { status: string; paidVnd: number; totalVnd: number } | undefined): boolean {
   return !!order && (order.paidVnd >= order.totalVnd || PAID_ORDER_STATUSES.has(order.status))
 }
+import { BrochureQuotePending } from "./brochure-quote-pending"
 
 interface BrochurePaymentViewProps {
   orderCode: string
@@ -65,6 +66,9 @@ export function BrochurePaymentView({
       setLoading(false)
     }
   }
+
+  // Mẫu chưa có giá ("Liên hệ"): không hiện QR 0 đồng, cửa hàng sẽ báo giá trước khi thu tiền
+  if (totalVnd <= 0) return <BrochureQuotePending orderCode={orderCode} onGoToTracking={onGoToTracking} />
 
   return (
     <div className="w-full max-w-md mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-6 shadow-sm flex flex-col items-center text-center">
