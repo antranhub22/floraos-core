@@ -1,13 +1,13 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState } from "react"
 import {
   ArrowLeft, Package, Plus, Trash2, Search,
   ImageOff, Loader2, X, CheckCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useCatalogItems } from "./use-catalog-items"
 
-type ProductImage = { id: string; asset_id: string }
 type ProductVariant = { id: string; price_vnd: number; name: string }
 type CatalogProduct = {
   id: string
@@ -18,16 +18,6 @@ type CatalogProduct = {
     variants: ProductVariant[]
   }
   sort_order: number
-}
-type AvailableProduct = {
-  id: string
-  name: string
-  code: string
-  category: string | null
-  /** URL ảnh chính — từ SSOT API `/api/v1/products`. `undefined` khi chưa có ảnh. */
-  masterImageUrl?: string | undefined
-  /** Giá tham chiếu — `null` = Liên hệ báo giá. */
-  price_vnd: number | null
 }
 type CatalogDetail = {
   id: string
@@ -46,72 +36,23 @@ type Props = {
 }
 
 export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
-  const [catalog, setCatalog] = useState<CatalogDetail | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [removingId, setRemovingId] = useState<string | null>(null)
-  const [isAddOpen, setIsAddOpen] = useState(false)
-  const [allProducts, setAllProducts] = useState<AvailableProduct[]>([])
   const [productSearch, setProductSearch] = useState("")
-  const [addingId, setAddingId] = useState<string | null>(null)
-
-  const loadCatalog = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/v1/greeting-card/catalogs/${catalogId}`)
-      if (!res.ok) return
-      const json = await res.json() as { data: CatalogDetail }
-      setCatalog(json.data)
-    } finally {
-      setLoading(false)
-    }
-  }, [catalogId])
-
-  useEffect(() => { void loadCatalog() }, [loadCatalog])
-
-  async function openAddProduct() {
-    const res = await fetch("/api/v1/products?limit=100")
-    if (res.ok) {
-      // API trả `{ data: ProductLookupResult[], next_cursor }` — dùng đúng shape
-      const json = await res.json() as { data: AvailableProduct[] }
-      setAllProducts(Array.isArray(json.data) ? json.data : [])
-    }
-    setIsAddOpen(true)
-  }
-
-  async function handleAddProduct(productId: string) {
-    setAddingId(productId)
-    try {
-      const res = await fetch(`/api/v1/greeting-card/catalogs/${catalogId}/products`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      })
-      if (res.ok) await loadCatalog()
-    } finally {
-      setAddingId(null)
-    }
-  }
-
-  async function handleRemoveProduct(productId: string) {
+  const ci = useCatalogItems<CatalogDetail>(catalogId)
+  const catalog = ci.catalog
+  const loading = ci.loading
+  const loadCatalog = ci.reload
+  const isAddOpen = ci.pickerOpen
+  const setIsAddOpen = (open: boolean) => (open ? ci.openPicker() : ci.closePicker())
+  const openAddProduct = ci.openPicker
+  const addingId = ci.busyId
+  const removingId = ci.busyId
+  const handleAddProduct = (productId: string) => void ci.add(productId)
+  function handleRemoveProduct(productId: string) {
     if (!window.confirm("Xóa sản phẩm này khỏi bộ sưu tập?")) return
-    setRemovingId(productId)
-    try {
-      await fetch(`/api/v1/greeting-card/catalogs/${catalogId}/products`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      })
-      await loadCatalog()
-    } finally {
-      setRemovingId(null)
-    }
+    void ci.remove(productId)
   }
-
-  const existingProductIds = new Set(catalog?.items.map((i) => i.product.id) ?? [])
-  const filteredProducts = allProducts.filter(
-    (p) =>
-      !existingProductIds.has(p.id) &&
-      (!productSearch.trim() || p.name.toLowerCase().includes(productSearch.toLowerCase()))
+  const filteredProducts = ci.available.filter(
+    (p) => !productSearch.trim() || p.name.toLowerCase().includes(productSearch.toLowerCase())
   )
 
   if (loading && !catalog) {
@@ -125,6 +66,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
+      {ci.error && <p role="alert" className="p-3 rounded-xl bg-danger-bg text-danger text-body-sm">{ci.error}</p>}
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div className="flex items-center gap-3">

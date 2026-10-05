@@ -42,7 +42,6 @@ export class GreetingCatalogRepository {
     return unique
   }
 
-
   async createCatalog(
     ctx: TenantContext,
     input: {
@@ -93,7 +92,6 @@ export class GreetingCatalogRepository {
     })
   }
 
-
   async getCatalogByCode(ctx: TenantContext, code: string) {
     return this.db.greeting_catalogs.findFirst({
       where: scopedWhere(ctx, { code: code.toLowerCase().trim(), is_active: true }),
@@ -101,19 +99,20 @@ export class GreetingCatalogRepository {
     })
   }
 
-
-  async listCatalogs(ctx: TenantContext) {
+  /** Bộ sưu tập đang dùng, mới nhất trước; lấy dư 1 dòng để biết còn trang sau (`toPage`). */
+  async listCatalogs(ctx: TenantContext, options: { limit?: number; cursor?: string | undefined } = {}) {
+    const limit = options.limit ?? 100
     return this.db.greeting_catalogs.findMany({
       where: scopedWhere(ctx, { is_active: true }),
       include: {
         organization: { select: { id: true, name: true, slug: true } },
         _count: { select: { items: true, sessions: true } },
       },
-      orderBy: { created_at: "desc" },
-      take: 100,
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+      take: limit + 1,
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
     })
   }
-
 
   async getCatalogById(ctx: TenantContext, id: string) {
     const catalog = await this.db.greeting_catalogs.findFirst({
@@ -138,7 +137,6 @@ export class GreetingCatalogRepository {
     }
   }
 
-
   async updateCatalog(
     ctx: TenantContext,
     id: string,
@@ -161,7 +159,6 @@ export class GreetingCatalogRepository {
     if (result.count === 0) throw notFound()
   }
 
-
   async deleteCatalog(ctx: TenantContext, id: string) {
     // Soft delete: đặt is_active=false, không xóa thật
     const result = await this.db.greeting_catalogs.updateMany({
@@ -170,7 +167,6 @@ export class GreetingCatalogRepository {
     })
     if (result.count === 0) throw notFound()
   }
-
 
   async addProductToCatalog(ctx: TenantContext, catalogId: string, productId: string) {
     const catalog = await this.db.greeting_catalogs.findFirst({
@@ -197,7 +193,6 @@ export class GreetingCatalogRepository {
     })
   }
 
-
   async removeProductFromCatalog(ctx: TenantContext, catalogId: string, productId: string) {
     const catalog = await this.db.greeting_catalogs.findFirst({
       where: scopedWhere(ctx, { id: catalogId }),
@@ -209,7 +204,6 @@ export class GreetingCatalogRepository {
       where: { organization_id: ctx.organizationId, catalog_id: catalogId, product_id: productId },
     })
   }
-
 
   /** Ký URL ảnh — chỉ ký asset của đúng tổ chức sở hữu thẻ. */
   async getAssetsStorageMap(organizationId: string, assetIds: string[]): Promise<Map<string, string>> {
@@ -223,7 +217,6 @@ export class GreetingCatalogRepository {
     for (const a of assets) map.set(a.id, signedStorageUrl(a.storage_key, exp))
     return map
   }
-
 
   async getAssetStorageUrl(organizationId: string, assetId: string): Promise<string | null> {
     const map = await this.getAssetsStorageMap(organizationId, [assetId])

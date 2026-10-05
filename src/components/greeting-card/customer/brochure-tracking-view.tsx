@@ -1,6 +1,8 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React from "react"
+import useSWR from "swr"
+import { apiGet } from "@/components/greeting-card/greeting-api"
 import { CheckCircle2, Clock, Truck, Gift, Camera, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -32,25 +34,13 @@ type TrackingData = {
 }
 
 export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
-  const [data, setData] = useState<TrackingData | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  function loadTracking() {
-    setLoading(true)
-    fetch(`/api/v1/public/brochure/tracking/${orderCode}`)
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.status === "FOUND") setData(res)
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }
-
-  useEffect(() => {
-    loadTracking()
-    const timer = setInterval(loadTracking, 15000) // Polling every 15s
-    return () => clearInterval(timer)
-  }, [orderCode])
+  // SWR: tự hỏi lại mỗi 15 giây khi tab đang mở, giữ dữ liệu cũ trong lúc chờ
+  const tracking = useSWR<TrackingData>(`/api/v1/public/brochure/tracking/${orderCode}`, apiGet, {
+    refreshInterval: 15_000,
+  })
+  const data = tracking.data?.status === "FOUND" ? tracking.data : null
+  const loading = tracking.isLoading
+  const loadTracking = () => void tracking.mutate()
 
   if (loading && !data) {
     return (
@@ -195,7 +185,7 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
               Lời nhắn thiệp:
             </span>
             <p className="text-body-sm italic text-foreground bg-surface p-2.5 rounded-lg border border-border">
-              "{order.cardMessage}"
+              &ldquo;{order.cardMessage}&rdquo;
             </p>
           </div>
         )}

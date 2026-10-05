@@ -1,17 +1,9 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState } from "react"
 import { Search, ImageOff, Plus, Trash2, Loader2, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-type AvailableProduct = {
-  id: string
-  name: string
-  code: string
-  category: string | null
-  masterImageUrl?: string | undefined
-  price_vnd: number | null
-}
+import { useCatalogItems } from "./use-catalog-items"
 
 type CatalogItem = {
   id: string
@@ -28,80 +20,23 @@ interface Props {
 }
 
 export function CatalogProductPicker({ catalogId, compact = false, onItemCountChange }: Props) {
-  const [items, setItems] = useState<CatalogItem[]>([])
-  const [allProducts, setAllProducts] = useState<AvailableProduct[]>([])
   const [productSearch, setProductSearch] = useState("")
-  const [loadingItems, setLoadingItems] = useState(true)
-  const [loadingProducts, setLoadingProducts] = useState(false)
-  const [addingId, setAddingId] = useState<string | null>(null)
-  const [removingId, setRemovingId] = useState<string | null>(null)
-  const [showPicker, setShowPicker] = useState(false)
-
-  const loadCatalogItems = useCallback(async () => {
-    setLoadingItems(true)
-    try {
-      const res = await fetch(`/api/v1/greeting-card/catalogs/${catalogId}`)
-      if (!res.ok) return
-      const json = await res.json() as { data: { items: CatalogItem[] } }
-      const newItems = json.data?.items ?? []
-      setItems(newItems)
-      onItemCountChange?.(newItems.length)
-    } finally {
-      setLoadingItems(false)
-    }
-  }, [catalogId, onItemCountChange])
-
-  useEffect(() => { void loadCatalogItems() }, [loadCatalogItems])
-
-  async function openPicker() {
-    setLoadingProducts(true)
-    setShowPicker(true)
-    try {
-      const res = await fetch("/api/v1/products?limit=100")
-      if (res.ok) {
-        const json = await res.json() as { data: AvailableProduct[] }
-        setAllProducts(Array.isArray(json.data) ? json.data : [])
-      }
-    } finally {
-      setLoadingProducts(false)
-    }
-  }
-
-  async function handleAdd(productId: string) {
-    setAddingId(productId)
-    try {
-      const res = await fetch(`/api/v1/greeting-card/catalogs/${catalogId}/products`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      })
-      if (res.ok) await loadCatalogItems()
-    } finally {
-      setAddingId(null)
-    }
-  }
-
-  async function handleRemove(productId: string) {
-    setRemovingId(productId)
-    try {
-      await fetch(`/api/v1/greeting-card/catalogs/${catalogId}/products`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      })
-      await loadCatalogItems()
-    } finally {
-      setRemovingId(null)
-    }
-  }
-
-  const existingIds = new Set(items.map((i) => i.product.id))
-  const filtered = allProducts.filter(
+  const ci = useCatalogItems<{ items: CatalogItem[] }>(catalogId, onItemCountChange)
+  const items = ci.catalog?.items ?? []
+  const loadingItems = ci.loading
+  const loadingProducts = ci.loadingProducts
+  const showPicker = ci.pickerOpen
+  const openPicker = ci.openPicker
+  const setShowPicker = (open: boolean) => (open ? ci.openPicker() : ci.closePicker())
+  const addingId = ci.busyId
+  const removingId = ci.busyId
+  const handleAdd = (productId: string) => void ci.add(productId)
+  const handleRemove = (productId: string) => void ci.remove(productId)
+  const filtered = ci.available.filter(
     (p) =>
-      !existingIds.has(p.id) &&
-      (!productSearch.trim() ||
-        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-        p.code.toLowerCase().includes(productSearch.toLowerCase()))
+      !productSearch.trim() ||
+      p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+      p.code.toLowerCase().includes(productSearch.toLowerCase())
   )
 
   if (loadingItems) {
@@ -199,6 +134,8 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
       )}
 
       {/* Inline picker panel */}
+      {ci.error && <p role="alert" className="p-2.5 rounded-xl bg-danger-bg text-danger text-body-sm">{ci.error}</p>}
+
       {showPicker && (
         <div className="rounded-2xl border border-border bg-surface-muted p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">

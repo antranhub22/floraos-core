@@ -1,12 +1,18 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
+import useSWR from "swr"
+import { apiGet } from "@/components/greeting-card/greeting-api"
 import { Check, Copy, QrCode, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { BrochurePaymentInstructions } from "@/modules/greeting-card/domain/greeting-card-types"
 
 const POLL_INTERVAL_MS = 5000
 const PAID_ORDER_STATUSES = new Set(["CONFIRMED", "PROCESSING", "DELIVERED", "COMPLETED"])
+
+function isPaid(order: { status: string; paidVnd: number; totalVnd: number } | undefined): boolean {
+  return !!order && (order.paidVnd >= order.totalVnd || PAID_ORDER_STATUSES.has(order.status))
+}
 
 interface BrochurePaymentViewProps {
   orderCode: string
@@ -28,39 +34,17 @@ export function BrochurePaymentView({
 }: BrochurePaymentViewProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [hasReported, setHasReported] = useState(false)
-  const [isPaymentConfirmed, setIsPaymentConfirmed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
 
-  // Hỏi trạng thái đơn định kỳ để tự hiện "đã thanh toán" khi Điều hành xác nhận.
-  // Dừng hẳn khi đã xác nhận; bỏ qua lượt khi tab đang ẩn (tiết kiệm pin/băng thông).
-  useEffect(() => {
-    if (isPaymentConfirmed) return
-    let isMounted = true
-    const checkPaymentStatus = async () => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return
-      try {
-        const res = await fetch(`/api/v1/public/brochure/tracking/${orderCode}`)
-        if (!res.ok) return
-        const data = await res.json()
-        if (data.status === "FOUND" && data.order) {
-          const isPaid =
-            Number(data.order.paidVnd) >= Number(data.order.totalVnd) ||
-            PAID_ORDER_STATUSES.has(String(data.order.status))
-          if (isPaid && isMounted) setIsPaymentConfirmed(true)
-        }
-      } catch {
-        // Mạng chập chờn — lượt sau hỏi lại
-      }
-    }
-
-    void checkPaymentStatus()
-    const interval = setInterval(checkPaymentStatus, POLL_INTERVAL_MS)
-    return () => {
-      isMounted = false
-      clearInterval(interval)
-    }
-  }, [orderCode, isPaymentConfirmed])
+  // Hỏi trạng thái đơn định kỳ (SWR) để tự hiện "đã thanh toán" khi Điều hành/ngân hàng xác nhận.
+  // Dừng khi đã xác nhận; SWR tự bỏ lượt khi tab đang ẩn.
+  const tracking = useSWR<{ status: string; order?: { status: string; paidVnd: number; totalVnd: number } }>(
+    `/api/v1/public/brochure/tracking/${orderCode}`,
+    apiGet,
+    { refreshInterval: (latest) => (isPaid(latest?.order) ? 0 : POLL_INTERVAL_MS), revalidateOnFocus: true }
+  )
+  const isPaymentConfirmed = isPaid(tracking.data?.order)
 
   function copyToClipboard(text: string, field: string) {
     void navigator.clipboard.writeText(text)

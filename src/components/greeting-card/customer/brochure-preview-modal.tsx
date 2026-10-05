@@ -2,7 +2,6 @@
 
 import React, { useState } from "react"
 import { X, Smartphone, Monitor, ExternalLink, RefreshCw } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 interface BrochurePreviewModalProps {
   url: string

@@ -4,6 +4,7 @@ import { handle, jsonResponse } from "@/core/http/response"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
+import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 const createCatalogSchema = z.object({
@@ -18,9 +19,11 @@ const createCatalogSchema = z.object({
 export const GET = handle(async (request: Request) => {
   const { ctx } = await requireTenantContext(request)
   requireCapability(ctx, GREETING_CARD_CAPABILITY.read)
-  const repo = new GreetingCardRepository()
-  const catalogs = await repo.listCatalogs(ctx)
-  return jsonResponse({ data: catalogs })
+  const url = new URL(request.url)
+  const limit = url.searchParams.has("limit") ? parseListQuery(url).limit : 100
+  const cursor = url.searchParams.get("cursor")?.trim() || undefined
+  const rows = await new GreetingCardRepository().listCatalogs(ctx, { limit, cursor })
+  return jsonResponse(toPage(rows, limit))
 })
 
 export const POST = handle(async (request: Request) => {
