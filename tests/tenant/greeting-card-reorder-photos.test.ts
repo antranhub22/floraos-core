@@ -61,14 +61,28 @@ describe("greeting-card: đặt thêm đơn, ảnh theo dõi, sale phụ trách"
     return { product, link, order }
   }
 
-  async function asset() {
+  async function asset(mime = "image/jpeg", ext = "jpg") {
     return prisma.assets.create({
       data: {
         id: randomUUID(), organization_id: a.organizationId, kind: "ORIGINAL", state: "READY", version: 1,
-        storage_key: `org/${a.organizationId}/unfiled/${randomUUID()}.jpg`, mime_type: "image/jpeg", created_by: a.userId,
+        storage_key: `org/${a.organizationId}/unfiled/${randomUUID()}.${ext}`, mime_type: mime, created_by: a.userId,
       },
     })
   }
+
+  it("một lần chụp nhận nhiều ảnh + video và giữ đúng giới hạn (mục 6)", async () => {
+    const { order } = await orderedLink()
+    await assignBrochureFlorist(a.ctx, order.orderId, { floristNote: "Thợ A" })
+    const six = await Promise.all(Array.from({ length: 6 }, () => asset()))
+    expect(await codeOf(uploadBrochureProductPhoto(a.ctx, order.orderId, { assetIds: six.map((x) => x.id) }))).toBe("VALIDATION_FAILED")
+    const onlyVideo = await asset("video/mp4", "mp4")
+    expect(await codeOf(uploadBrochureProductPhoto(a.ctx, order.orderId, { assetIds: [onlyVideo.id] }))).toBe("VALIDATION_FAILED")
+
+    const set = [await asset(), await asset(), onlyVideo]
+    await uploadBrochureProductPhoto(a.ctx, order.orderId, { assetIds: set.map((x) => x.id) })
+    const tracking = await getBrochureTracking(order.orderCode)
+    expect(tracking.status === "FOUND" && tracking.order.productPhotoUrls).toHaveLength(3)
+  })
 
   it("đặt thêm đơn trên cùng link: link mới, mã đơn mới, cùng sale; đơn cũ giữ nguyên", async () => {
     const { product, link, order } = await orderedLink()

@@ -27,6 +27,10 @@ const EXTENSION_BY_MIME: Readonly<Record<string, string>> = {
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
+  // Video ngắn của điều phối (ảnh thành phẩm / người nhận đơn Thẻ chào)
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
 }
 
 export function extensionForMimeType(mimeType: string): string {

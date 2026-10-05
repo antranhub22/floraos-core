@@ -1,5 +1,6 @@
 import type { TenantContext } from "@/core/tenancy"
-import { conflict, notFound } from "@/core/http/errors"
+import { conflict, notFound, validationFailed } from "@/core/http/errors"
+import { mediaSelectionError } from "../domain/media-limits"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { coordinatorActionBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
 import { paymentGateBlocker, parsePaymentPolicy } from "../domain/brochure-payment-policy"
@@ -31,8 +32,21 @@ async function loadForAction(
   return order
 }
 
-async function assertAssetOwned(ctx: TenantContext, assetId: string, repo: BrochureOrderRepository) {
-  if (!(await repo.assetBelongsToTenant(ctx, assetId))) throw notFound()
+/** Đầu vào ảnh: `assetIds` (1–5 ảnh + 0–2 video) hoặc `assetId` (client cũ, một ảnh). */
+export type PhotoInput = { assetId?: string | undefined; assetIds?: string[] | undefined }
+
+/**
+ * Mọi asset phải thuộc đúng tổ chức (khác → 404) và bộ tệp đúng giới hạn ảnh/video.
+ * Thời lượng video do trình duyệt kiểm; máy chủ kiểm loại, số lượng, dung lượng.
+ */
+async function ownedMediaIds(ctx: TenantContext, input: PhotoInput, repo: BrochureOrderRepository): Promise<string[]> {
+  const ids = [...new Set(input.assetIds ?? (input.assetId ? [input.assetId] : []))]
+  if (ids.length === 0) throw validationFailed({ assetIds: "Cần ít nhất 1 ảnh" })
+  const meta = await repo.ownedAssetsMeta(ctx, ids)
+  if (meta.length !== ids.length) throw notFound()
+  const error = mediaSelectionError(meta.map((m) => ({ mimeType: m.mime_type, sizeBytes: m.file_size })))
+  if (error) throw validationFailed({ assetIds: error })
+  return ids
 }
 
 export async function assignBrochureFlorist(
@@ -52,15 +66,15 @@ export async function assignBrochureFlorist(
 export async function uploadBrochureProductPhoto(
   ctx: TenantContext,
   orderId: string,
-  input: { assetId: string },
+  input: PhotoInput,
   repo = new BrochureOrderRepository()
 ) {
   const order = await loadForAction(ctx, orderId, "product-photo", repo)
-  await assertAssetOwned(ctx, input.assetId, repo)
+  const assetIds = await ownedMediaIds(ctx, input, repo)
   const result = await repo.applyProgress(ctx, order, {
     eventType: "PRODUCT_PHOTO_UPLOADED",
     productionStatus: "READY",
-    qcImageAssetId: input.assetId,
+    qcAssetIds: assetIds,
   })
   queueOrderNotification(ctx.organizationId, order.id, "READY")
   return result
@@ -85,16 +99,16 @@ export async function dispatchBrochureShipping(
 export async function uploadBrochureRecipientPhoto(
   ctx: TenantContext,
   orderId: string,
-  input: { assetId: string },
+  input: PhotoInput,
   repo = new BrochureOrderRepository()
 ) {
   const order = await loadForAction(ctx, orderId, "recipient-photo", repo)
-  await assertAssetOwned(ctx, input.assetId, repo)
+  const assetIds = await ownedMediaIds(ctx, input, repo)
   const result = await repo.applyProgress(ctx, order, {
     eventType: "RECIPIENT_PHOTO_UPLOADED",
     deliveryStatus: "DELIVERED",
     orderStatus: "COMPLETED",
-    qcImageAssetId: input.assetId,
+    qcAssetIds: assetIds,
   })
   queueOrderNotification(ctx.organizationId, order.id, "DELIVERED")
   return result

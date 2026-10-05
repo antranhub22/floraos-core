@@ -12,7 +12,12 @@ import {
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 const floristSchema = z.object({ floristNote: z.string().trim().min(1, "Nhập ghi chú phân công florist").max(500) })
-const photoSchema = z.object({ assetId: z.string().min(1, "Thiếu asset ID ảnh").max(64) })
+const photoSchema = z
+  .object({
+    assetId: z.string().min(1).max(64).optional(),
+    assetIds: z.array(z.string().min(1).max(64)).min(1).max(7).optional(),
+  })
+  .refine((v) => v.assetId || v.assetIds, { message: "Thiếu ảnh" })
 const shipSchema = z.object({ trackingNote: z.string().trim().min(1, "Nhập thông tin vận chuyển").max(500) })
 
 type RouteCtx = { params: Promise<{ id: string }> }

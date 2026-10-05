@@ -51,6 +51,8 @@ export const GET = handle(async (request, context: { params: Promise<{ key: stri
   else if (key.endsWith(".gif")) contentType = "image/gif"
   else if (key.endsWith(".svg")) contentType = "image/svg+xml"
   else if (key.endsWith(".mp4")) contentType = "video/mp4"
+  else if (key.endsWith(".mov")) contentType = "video/quicktime"
+  else if (key.endsWith(".webm")) contentType = "video/webm"
   // Âm thanh Khu vực C (23/09/2026) — thiếu MIME thì Safari không phát được.
   else if (key.endsWith(".m4a")) contentType = "audio/mp4"
   else if (key.endsWith(".mp3")) contentType = "audio/mpeg"

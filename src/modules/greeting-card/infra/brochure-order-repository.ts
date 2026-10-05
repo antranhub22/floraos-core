@@ -86,6 +86,14 @@ export class BrochureOrderRepository {
     return matches.length === 1 ? matches[0] ?? null : null
   }
 
+  /** Loại + dung lượng của các asset thuộc đúng tổ chức (asset tổ chức khác không có trong kết quả). */
+  async ownedAssetsMeta(ctx: TenantContext, assetIds: readonly string[]) {
+    return this.db.assets.findMany({
+      where: scopedWhere(ctx, { id: { in: [...new Set(assetIds)] } }),
+      select: { id: true, mime_type: true, file_size: true },
+    })
+  }
+
   async assetBelongsToTenant(ctx: TenantContext, assetId: string): Promise<boolean> {
     const asset = await this.db.assets.findFirst({ where: scopedWhere(ctx, { id: assetId }), select: { id: true } })
     return asset !== null
@@ -104,16 +112,17 @@ export class BrochureOrderRepository {
       deliveryStatus?: delivery_status | undefined
       orderStatus?: order_status | undefined
       noteAppend?: string | undefined
-      qcImageAssetId?: string | undefined
+      /** Ảnh/video của lần chụp này — một bản ghi QC chứa cả bộ */
+      qcAssetIds?: readonly string[] | undefined
     }
   ) {
     return this.db.$transaction(async (tx) => {
-      if (input.qcImageAssetId) {
+      if (input.qcAssetIds && input.qcAssetIds.length > 0) {
         await tx.order_qc_records.create({
           data: {
             organization_id: ctx.organizationId,
             order_id: order.id,
-            image_asset_ids: [input.qcImageAssetId],
+            image_asset_ids: [...input.qcAssetIds],
             status: "PASSED",
             notes: input.eventType,
             inspector_id: ctx.userId,
