@@ -3,6 +3,11 @@
 import { Info } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { SWIPE_SIGNAL, type SwipeTheme } from "./swipe-themes"
+import { ProductInfo } from "../product-info/product-info"
+import { formatVnd } from "../product-info/product-display"
+import { toProductDisplay } from "../product-info/product-display"
+
+export { formatVnd }
 
 /**
  * Nền phía sau ảnh: chủ đề sáng dùng màu giấy (nền trắng của ảnh thành màu giấy, liền với
@@ -13,10 +18,6 @@ export function photoBackdrop(theme: SwipeTheme): string {
     return `radial-gradient(90% 70% at 50% 40%, #ffffff 0%, ${theme.infoBg} 70%)`
   }
   return `radial-gradient(110% 80% at 50% 38%, #ffffff 0%, #f3efe9 34%, ${theme.card} 100%)`
-}
-
-export function formatVnd(value: number | null): string {
-  return value !== null && value > 0 ? `${value.toLocaleString("vi-VN")} ₫` : "Liên hệ"
 }
 
 interface SwipeCardProps {
@@ -66,25 +67,6 @@ function ProgressBars({ index, total, light }: { index: number; total: number; l
   )
 }
 
-function Meta({ product }: { product: GreetingCatalogProduct }) {
-  const chips = [product.occasion, product.style].filter((v): v is string => Boolean(v)).slice(0, 2)
-  const line = product.flowersSummary || product.meaning || product.description
-  return (
-    <>
-      {line && <p className="mt-1.5 line-clamp-2 text-body-sm leading-snug opacity-80">{line}</p>}
-      {chips.length > 0 && (
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
-          {chips.map((c) => (
-            <span key={c} className="rounded-full border border-current/25 px-2.5 py-0.5 text-caption opacity-85">
-              {c}
-            </span>
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
 export function SwipeCard({ product, theme, brand, index, total, progress = 0, onInfo }: SwipeCardProps) {
   const paper = theme.info === "paper" || theme.info === "polaroid"
   const polaroid = theme.info === "polaroid"
@@ -93,22 +75,6 @@ export function SwipeCard({ product, theme, brand, index, total, progress = 0, o
 
   const serif = theme.font.includes("serif") && !theme.font.includes("sans")
   const fontSize = polaroid ? 30 : theme.titleUpper ? 20 : serif ? 26 : 22
-  const title = (
-    <>
-      {theme.eyebrow && (
-        <p className="mb-1.5 flex items-center gap-2 text-caption font-medium uppercase tracking-[0.18em] opacity-75">
-          <span aria-hidden="true" className="h-px w-5 bg-current" />
-          {theme.eyebrow}
-        </p>
-      )}
-      <h3
-        className={`line-clamp-2 text-balance leading-tight ${theme.titleUpper ? "uppercase tracking-[0.08em]" : ""}`}
-        style={{ fontFamily: theme.font, fontWeight: theme.titleWeight, fontSize }}
-      >
-        {product.name}
-      </h3>
-    </>
-  )
   const infoButton = onInfo && (
     <button
       type="button"
@@ -120,20 +86,32 @@ export function SwipeCard({ product, theme, brand, index, total, progress = 0, o
       <Info size={18} aria-hidden="true" />
     </button>
   )
+  const info = (
+    <ProductInfo
+      product={product}
+      level="standard"
+      eyebrow={theme.eyebrow}
+      accent={theme.accent}
+      muted={paper ? theme.muted : undefined}
+      titleClassName={theme.titleUpper ? "uppercase tracking-[0.08em]" : undefined}
+      titleStyle={{ fontFamily: theme.font, fontWeight: theme.titleWeight, fontSize }}
+      trailing={infoButton}
+    />
+  )
 
   return (
     <article
-      aria-label={`${product.name}, ${formatVnd(product.price)}, mẫu ${index + 1} trên ${total}`}
+      aria-label={`${toProductDisplay(product).ariaLabel}, mẫu ${index + 1} trên ${total}`}
       className="relative flex h-full w-full select-none flex-col overflow-hidden"
       style={{ borderRadius: theme.radius, background: theme.card, boxShadow: "0 18px 50px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)" }}
     >
       <div className={`relative min-h-0 flex-1 overflow-hidden ${polaroid ? "m-3 mb-0 rounded-sm" : ""}`}>
         {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <>
             {/* Nền hòa ảnh: ảnh nền trắng được nhân (multiply) lên nền chủ đề, nên phần trắng
                 tan vào khung thay vì lộ thành một khối chữ nhật. Ảnh có bối cảnh thật gần như không đổi. */}
             <div aria-hidden="true" className="absolute inset-0" style={{ background: photoBackdrop(theme) }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.imageUrl}
               alt=""
@@ -180,16 +158,7 @@ export function SwipeCard({ product, theme, brand, index, total, progress = 0, o
             <div
               className={theme.info === "glass" ? "rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-xl" : ""}
             >
-              <div className="flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  {title}
-                  <p className="mt-1 text-title-sm font-bold" style={{ color: theme.accent }}>
-                    {formatVnd(product.price)}
-                  </p>
-                </div>
-                {infoButton}
-              </div>
-              <Meta product={product} />
+              {info}
             </div>
           </div>
         )}
@@ -197,18 +166,7 @@ export function SwipeCard({ product, theme, brand, index, total, progress = 0, o
 
       {paper && (
         <div className="shrink-0 px-5 pb-5 pt-4" style={{ background: theme.infoBg, color: theme.text }}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              {title}
-              <p className="mt-1 text-title-sm font-bold" style={{ color: theme.accent }}>
-                {formatVnd(product.price)}
-              </p>
-            </div>
-            {infoButton}
-          </div>
-          <div style={{ color: theme.muted }}>
-            <Meta product={product} />
-          </div>
+          {info}
         </div>
       )}
     </article>

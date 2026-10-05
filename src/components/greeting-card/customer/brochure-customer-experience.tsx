@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
+import type { OptionalDisplayField } from "@/modules/greeting-card/domain/display-fields"
 import { BrochureOrderForm } from "./brochure-order-form"
 import { BrochurePaymentView } from "./brochure-payment-view"
 import { BrochureTrackingView } from "./brochure-tracking-view"
@@ -119,6 +120,7 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
             <GreetingTemplateRenderer
               showTemplateSwitcher={false}
               templateId={(catalog.filters as Record<string, unknown> | null | undefined)?.templateId as string | undefined}
+              displayFields={(catalog.filters as Record<string, unknown> | null | undefined)?.displayFields as OptionalDisplayField[] | undefined}
               products={products}
               catalogName={catalog.name}
               selectedProductId={snapshot?.id || session.selectedProductId || null}

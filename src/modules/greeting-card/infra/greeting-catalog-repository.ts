@@ -15,6 +15,13 @@ export const CATALOG_ITEMS_INCLUDE = {
         include: {
           images: { where: { role: "MAIN" as const }, take: 1 },
           variants: { orderBy: { multiplier: "asc" as const }, take: 10 },
+          // Nguồn Master Index (bản phân tích APPROVED mới nhất) cho các trường hiển thị
+          analyses: {
+            where: { approval_state: "APPROVED" as const },
+            orderBy: { created_at: "desc" as const },
+            take: 1,
+            select: { raw: true, edited: true },
+          },
         },
       },
     },

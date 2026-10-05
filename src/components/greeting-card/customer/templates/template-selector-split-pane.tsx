@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
-import { Check, ChevronLeft, ChevronRight, Layers, Sparkles } from "lucide-react"
+import { Check, ChevronLeft, ChevronRight, Layers, Settings2, Sparkles } from "lucide-react"
+import { enabledFieldsFor, type DisplaySettings, type OptionalDisplayField } from "@/modules/greeting-card/domain/display-fields"
 import {
   GreetingTemplateId,
   GREETING_TEMPLATE_LIST,
@@ -41,6 +42,10 @@ interface TemplateSelectorSplitPaneProps {
   onSelectTemplate: (id: GreetingTemplateId) => void
   catalogId?: string | undefined
   previewProducts?: GreetingCatalogProduct[] | undefined
+  /** Cấu hình trường hiển thị của cửa hàng — khung xem trước áp dụng ngay */
+  displaySettings?: DisplaySettings | undefined
+  /** Mở cài đặt bật/tắt trường cho một mẫu */
+  onOpenDisplaySettings?: ((id: GreetingTemplateId) => void) | undefined
 }
 
 // ---------------------------------------------------------------------------
@@ -49,9 +54,11 @@ interface TemplateSelectorSplitPaneProps {
 function CompactPhonePreview({
   templateId,
   products,
+  displayFields,
 }: {
   templateId: GreetingTemplateId
   products: GreetingCatalogProduct[]
+  displayFields: readonly OptionalDisplayField[]
 }) {
   // Frame chrome dimensions derived from constants
   const frameW = PHONE_INNER_W + 16   // 8px padding each side
@@ -112,6 +119,7 @@ function CompactPhonePreview({
         >
           <GreetingTemplateRenderer
             embedded
+            displayFields={displayFields}
             templateId={templateId}
             products={products}
             catalogName="Bộ sưu tập của tiệm"
@@ -219,6 +227,8 @@ function LivePreviewPane({
   isRealData,
   isSelected,
   onSelect,
+  displayFields,
+  onOpenSettings,
 }: {
   tpl: (typeof GREETING_TEMPLATE_LIST)[number]
   products: GreetingCatalogProduct[]
@@ -226,6 +236,8 @@ function LivePreviewPane({
   isRealData: boolean
   isSelected: boolean
   onSelect: () => void
+  displayFields: readonly OptionalDisplayField[]
+  onOpenSettings?: (() => void) | undefined
 }) {
   const [productIdx, setProductIdx] = useState(0)
   const [prevTplId, setPrevTplId] = useState(tpl.id)
@@ -271,6 +283,7 @@ function LivePreviewPane({
           <CompactPhonePreview
             templateId={tpl.id}
             products={[...products.slice(safeIdx), ...products.slice(0, safeIdx)]}
+            displayFields={displayFields}
           />
         )}
       </div>
@@ -333,6 +346,17 @@ function LivePreviewPane({
           </div>
         )}
 
+        {onOpenSettings && (
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="inline-flex items-center gap-1.5 self-start text-body-sm font-semibold text-primary hover:underline"
+          >
+            <Settings2 size={14} aria-hidden="true" />
+            Thông tin hiển thị
+          </button>
+        )}
+
         {/* CTA */}
         {isSelected ? (
           <div className="w-full py-2 px-3 rounded-xl text-body-sm font-bold flex items-center justify-center gap-1.5 border border-primary/30 bg-primary/10 text-primary">
@@ -362,6 +386,8 @@ export function TemplateSelectorSplitPane({
   onSelectTemplate,
   catalogId,
   previewProducts,
+  displaySettings,
+  onOpenDisplaySettings,
 }: TemplateSelectorSplitPaneProps) {
   const [activeId, setActiveId] = useState<GreetingTemplateId>(selectedTemplateId)
   const [activeFilter, setActiveFilter] = useState<"all" | "swipe-style" | "interactive-deck">("swipe-style")
@@ -460,6 +486,8 @@ export function TemplateSelectorSplitPane({
                 isRealData={isRealData}
                 isSelected={selectedTemplateId === activeTpl.id}
                 onSelect={() => onSelectTemplate(activeTpl.id)}
+                displayFields={enabledFieldsFor(displaySettings ?? {}, activeTpl.id)}
+                onOpenSettings={onOpenDisplaySettings ? () => onOpenDisplaySettings(activeTpl.id) : undefined}
               />
             )}
           </div>

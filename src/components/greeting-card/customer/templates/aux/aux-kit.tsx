@@ -4,7 +4,8 @@ import { useState, type ReactNode } from "react"
 import { Heart } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { cn } from "@/lib/utils"
-import { formatVnd } from "../swipe/swipe-card"
+import { formatVnd, toProductDisplay } from "../product-info/product-display"
+import { ProductInfo } from "../product-info/product-info"
 import { rootHeight, useEmbeddedPreview } from "./embedded"
 
 export { formatVnd }
@@ -118,12 +119,11 @@ interface ProductTileProps {
 export function ProductTile({ product, liked, onLike, onOpen, selected, aspect = "aspect-[4/5]" }: ProductTileProps) {
   return (
     <div className="group relative">
-      <button type="button" onClick={onOpen} className="block w-full text-left" aria-label={`Xem ${product.name}, ${formatVnd(product.price)}`}>
+      <button type="button" onClick={onOpen} className="block w-full text-left" aria-label={`Xem ${toProductDisplay(product).ariaLabel}`}>
         <div className={cn("relative w-full overflow-hidden rounded-2xl bg-surface-alt", aspect, selected && "ring-2 ring-primary ring-offset-2 ring-offset-bg")}>
           <ProductImage product={product} className="transition-transform duration-500 group-hover:scale-[1.04]" />
         </div>
-        <p className="mt-2 line-clamp-2 text-body-sm font-medium leading-snug">{product.name}</p>
-        <p className="mt-0.5 text-body-sm font-bold text-primary">{formatVnd(product.price)}</p>
+        <ProductInfo product={product} level="compact" size="sm" titleClassName="font-medium" className="mt-2" />
       </button>
       <HeartToggle active={liked} onToggle={onLike} name={product.name} className="absolute right-2 top-2" />
     </div>
@@ -137,10 +137,7 @@ export function OrderBar({ product, onOrder, hint }: { product: GreetingCatalogP
   }
   return (
     <div className="flex items-center gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-body-sm font-semibold">{product.name}</p>
-        <p className="text-body-sm font-bold text-primary">{formatVnd(product.price)}</p>
-      </div>
+      <ProductInfo product={product} level="compact" size="sm" titleLines={1} titleClassName="font-semibold" className="flex-1" />
       <button
         type="button"
         onClick={() => onOrder(product)}

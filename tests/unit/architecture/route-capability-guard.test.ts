@@ -42,6 +42,7 @@ const NO_CAPABILITY_GUARD: Record<string, string> = {
   "content-engine/catalog-generate": DEBT_170,
   "content-engine/landing-generate": DEBT_170,
   "content-engine/rewrite": DEBT_170,
+  "greeting-card/display-settings": DEBT_170,
 }
 
 function routeFiles(dir: string): string[] {

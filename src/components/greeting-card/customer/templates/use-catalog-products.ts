@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { resolveCatalogProductPrice } from "@/modules/greeting-card/domain/catalog-product-price"
+import { catalogItemToProduct } from "@/modules/greeting-card/domain/catalog-product-price"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 
 const SAMPLE_PRODUCTS: GreetingCatalogProduct[] = [
@@ -61,38 +61,10 @@ export function useCatalogProducts(
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         if (cancelled || !json?.data?.items) return
-        type RawItem = {
-          product: {
-            id: string
-            name: string
-            code?: string
-            masterImageUrl?: string
-            attributes?: unknown
-            description?: string | null
-            flowers_summary?: string | null
-            style?: string | null
-            meaning?: string | null
-            variants?: Array<{ attributes?: unknown }>
-          }
-          sort_order: number
-        }
-        const mapped: GreetingCatalogProduct[] = (json.data.items as RawItem[]).map(
-          (item, idx) => {
-            const p = item.product
-            const price = resolveCatalogProductPrice(p)
-            return {
-              id: p.id,
-              name: p.name,
-              code: p.code || `SP-${idx + 1}`,
-              price: Number(price) || 0,
-              imageUrl: p.masterImageUrl || "",
-              description: p.description || "",
-              flowersSummary: p.flowers_summary || "",
-              style: p.style || null,
-              meaning: p.meaning || "",
-              sortOrder: item.sort_order ?? idx + 1,
-            }
-          }
+        type RawItem = Parameters<typeof catalogItemToProduct>[0] & { product: { masterImageUrl?: string } }
+        // Cùng hàm dựng với trang khách — khung xem trước hiện đúng những gì khách sẽ thấy
+        const mapped: GreetingCatalogProduct[] = (json.data.items as RawItem[]).map((item) =>
+          catalogItemToProduct(item, item.product.masterImageUrl ?? null),
         )
         if (mapped.length > 0 && !cancelled) setLoadedProducts(mapped)
       })

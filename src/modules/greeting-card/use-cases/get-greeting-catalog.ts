@@ -82,7 +82,7 @@ export async function getGreetingCatalogForCustomer(
       code: session.catalog.code,
       name: session.catalog.name,
       description: session.catalog.description,
-      filters: toPublicCatalogFilters(session.catalog.filters),
+      filters: toPublicCatalogFilters(session.catalog.filters, session.organization?.settings),
     },
     products,
     shipping: parseShippingConfig(shop.settings),

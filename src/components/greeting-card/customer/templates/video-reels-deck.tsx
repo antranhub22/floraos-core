@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react"
 import { ChevronUp, Info } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
-import { EmptyCatalog, HeartToggle, ProductImage, formatVnd, useShortlist } from "./aux/aux-kit"
+import { EmptyCatalog, HeartToggle, ProductImage, useShortlist } from "./aux/aux-kit"
 import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
 import { useEmbeddedPreview } from "./aux/embedded"
 import { photoBackdrop } from "./swipe/swipe-card"
 import { getSwipeTheme } from "./swipe/swipe-themes"
+import { ProductInfo } from "./product-info/product-info"
+import { toProductDisplay } from "./product-info/product-display"
 
 const REELS_BACKDROP = photoBackdrop(getSwipeTheme("03"))
 
@@ -56,7 +58,7 @@ export function VideoReelsDeck({ products, catalogName, onSelectProduct }: Video
           <section
             key={p.id}
             data-index={i}
-            aria-label={`${p.name}, ${formatVnd(p.price)}`}
+            aria-label={toProductDisplay(p).ariaLabel}
             className={`relative mx-auto ${embedded ? "h-full" : "h-dvh"} w-full max-w-[480px] snap-start snap-always overflow-hidden`}
           >
             <ProductImage product={p} className="absolute inset-0" backdrop={REELS_BACKDROP} />
@@ -76,13 +78,7 @@ export function VideoReelsDeck({ products, catalogName, onSelectProduct }: Video
             </div>
 
             <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-[max(env(safe-area-inset-bottom),20px)]">
-              <div className="pr-16">
-                <h2 className="line-clamp-2 text-title font-bold leading-tight">{p.name}</h2>
-                <p className="mt-1 text-title-sm font-bold text-warning-bg">{formatVnd(p.price)}</p>
-                {(p.flowersSummary || p.description) && (
-                  <p className="mt-1.5 line-clamp-2 text-body-sm text-white/80">{p.flowersSummary || p.description}</p>
-                )}
-              </div>
+              <ProductInfo product={p} level="standard" size="lg" as="h2" accent="var(--color-warning-bg)" titleClassName="font-bold" className="pr-16" />
               <button
                 type="button"
                 onClick={() => onSelectProduct(p)}

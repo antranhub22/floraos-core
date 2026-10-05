@@ -45,7 +45,7 @@ export async function mapCatalogToPublicResult(
       name: catalog.name,
       description: catalog.description,
       orgSlug: catalog.organization.slug,
-      filters: toPublicCatalogFilters(catalog.filters),
+      filters: toPublicCatalogFilters(catalog.filters, catalog.organization.settings),
     },
     products,
   }

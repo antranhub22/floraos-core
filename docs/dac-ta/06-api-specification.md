@@ -800,6 +800,7 @@ Bảng: đặc tả 07 mục 28. Ca thử cách ly: `tests/tenant/greeting-card.
 | GET · POST | `/greeting-card/catalogs` | **chưa gác** (nợ #170) | Liệt kê / tạo catalog (`code`, `name`, `type`, `productIds?` — id không thuộc tổ chức bị bỏ qua) |
 | GET · PATCH · DELETE | `/greeting-card/catalogs/:id` | **chưa gác** (nợ #170) | DELETE là xoá mềm (`is_active = false`); tổ chức khác → 404 |
 | POST · DELETE | `/greeting-card/catalogs/:id/products` | **chưa gác** (nợ #170) | Thêm / bớt `{ productId }`; catalog hoặc sản phẩm của tổ chức khác → lỗi "không tìm thấy" |
+| GET · PUT | `/greeting-card/display-settings` | **chưa gác** (nợ #170) | Bật/tắt trường thông tin sản phẩm hiển thị theo từng mẫu Thẻ chào, cấp cửa hàng. PUT `{ templateId, fields[] }` lưu vào `organizations.settings.greetingCardDisplay` (giữ nguyên khoá cài đặt khác). Mã mẫu, tên, giá luôn hiển thị; khoá trường lạ bị bỏ; mẫu không tồn tại → 400 |
 | GET · POST | `/greeting-card/send-links` | **chưa gác** (nợ #170) | Tạo link chào khách (`send_code` tuần tự theo `prefix`), có thể kèm catalog riêng cho khách; GET lọc `sale_id`, `catalog_id`, `status` |
 | GET | `/greeting-card/orders` | **chưa gác** (nợ #170) | Đơn đến từ Thẻ chào (`orders.source = BROCHURE`), lọc `status` |
 | POST | `/greeting-card/orders/:id/confirm-payment` | **chưa gác** (nợ #170) | Tiệm xác nhận đã nhận tiền `{ reference?, note? }`; đơn tổ chức khác → lỗi "không tìm thấy" |

@@ -96,6 +96,8 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
     const matches = await this.db.greeting_sessions.findMany({
       where: { send_code: sendCode.toUpperCase().trim() },
       include: {
+        // Chỉ đọc khoá cấu hình hiển thị trong settings (xem toPublicCatalogFilters) — không gửi nguyên ra ngoài
+        organization: { select: { settings: true } },
         catalog: { include: CATALOG_ITEMS_INCLUDE },
         order: true,
       },
@@ -113,7 +115,7 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
     return this.db.greeting_catalogs.findFirst({
       where: { id: catalogId, is_active: true },
       include: {
-        organization: { select: { id: true, name: true, slug: true } },
+        organization: { select: { id: true, name: true, slug: true, settings: true } },
         ...CATALOG_ITEMS_INCLUDE,
       },
     })
@@ -131,7 +133,7 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
         organization: { slug: orgSlug.toLowerCase().trim() },
       },
       include: {
-        organization: { select: { id: true, name: true, slug: true } },
+        organization: { select: { id: true, name: true, slug: true, settings: true } },
         ...CATALOG_ITEMS_INCLUDE,
       },
     })

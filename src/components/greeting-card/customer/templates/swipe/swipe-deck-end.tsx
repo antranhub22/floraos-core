@@ -2,7 +2,8 @@
 
 import { Heart, RefreshCw, RotateCcw } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
-import { formatVnd, photoBackdrop } from "./swipe-card"
+import { photoBackdrop } from "./swipe-card"
+import { ProductInfo } from "../product-info/product-info"
 import { ProductImage } from "../aux/aux-kit"
 import { SWIPE_SIGNAL, isLightTheme, type SwipeTheme } from "./swipe-themes"
 
@@ -47,12 +48,7 @@ export function SwipeDeckEnd({ theme, liked, total, onOrder, onRestart, onRewind
               <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl">
                 <ProductImage product={p} backdrop={photoBackdrop(theme)} />
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 text-body-sm font-semibold leading-snug">{p.name}</p>
-                <p className="mt-0.5 text-body-sm font-bold" style={{ color: light ? theme.ctaBg : theme.accent }}>
-                  {formatVnd(p.price)}
-                </p>
-              </div>
+              <ProductInfo product={p} level="compact" size="sm" accent={light ? theme.ctaBg : theme.accent} titleClassName="font-semibold" className="flex-1" />
               <button
                 type="button"
                 onClick={() => onOrder(p)}
