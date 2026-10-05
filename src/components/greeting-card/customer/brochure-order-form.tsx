@@ -17,8 +17,9 @@ import { BrochureOrderOptions } from "./brochure-order-options"
 import { useBrochureQuote } from "./use-brochure-quote"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { OrderReview } from "./order-review"
+import { useOrderDraft } from "./use-order-draft"
 import { AddressFields } from "./address-fields"
-import { composeAddress, validateAddressParts, type AddressParts } from "@/modules/greeting-card/domain/delivery-address"
+import { composeAddress, validateAddressParts } from "@/modules/greeting-card/domain/delivery-address"
 import { DELIVERY_SLOTS, availableSlots, deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-card/domain/delivery-schedule"
 
 interface BrochureOrderFormProps {
@@ -47,16 +48,12 @@ export function BrochureOrderForm({
   onSubmit,
 }: BrochureOrderFormProps) {
   const uid = useId()
-  const [customerName, setCustomerName] = useState("")
-  const [customerPhone, setCustomerPhone] = useState("")
-  const [recipientName, setRecipientName] = useState("")
-  const [recipientPhone, setRecipientPhone] = useState("")
-  const [deliveryDate, setDeliveryDate] = useState("")
-  const [deliveryTimeSlot, setDeliveryTimeSlot] = useState("Buổi sáng (8h - 12h)")
-  const [addressParts, setAddressParts] = useState<AddressParts>({ houseNumber: "", street: "", ward: "", province: "" })
+  const {
+    customerName, customerPhone, recipientName, recipientPhone, deliveryDate, deliveryTimeSlot, addressParts, cardMessage, senderNote,
+    setCustomerName, setCustomerPhone, setRecipientName, setRecipientPhone, setDeliveryDate, setDeliveryTimeSlot, setAddressParts,
+    setCardMessage, setSenderNote, clearDraft,
+  } = useOrderDraft()
   const deliveryAddress = composeAddress(addressParts)
-  const [cardMessage, setCardMessage] = useState("")
-  const [senderNote, setSenderNote] = useState("")
 
   const [loading, setLoading] = useState(false)
   const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone)
@@ -122,6 +119,7 @@ export function BrochureOrderForm({
     setLoading(true)
     try {
       await onSubmit(review)
+      clearDraft()
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Đã có lỗi xảy ra khi đặt hoa")
     } finally {

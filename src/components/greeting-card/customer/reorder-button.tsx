@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 import { readApiError } from "@/components/greeting-card/api-error"
 
 /** "Đặt thêm một đơn khác": mở link mới (mã đơn mới), đơn hiện tại giữ nguyên. */
 export function ReorderButton({ sendCode }: { sendCode: string }) {
+  const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -16,7 +18,7 @@ export function ReorderButton({ sendCode }: { sendCode: string }) {
       const res = await fetch(`/api/v1/public/brochure/${encodeURIComponent(sendCode)}/reorder`, { method: "POST" })
       if (!res.ok) throw new Error(await readApiError(res, "Chưa mở được đơn mới, vui lòng thử lại"))
       const data = (await res.json()) as { sendCode: string }
-      window.location.assign(`/b/${encodeURIComponent(data.sendCode)}`)
+      router.push(`/b/${encodeURIComponent(data.sendCode)}` as Parameters<typeof router.push>[0])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chưa mở được đơn mới, vui lòng thử lại")
       setBusy(false)

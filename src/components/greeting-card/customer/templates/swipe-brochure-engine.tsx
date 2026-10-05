@@ -1,5 +1,6 @@
 "use client"
 
+import { useSavedState } from "../use-saved-state"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Heart, Info, RotateCcw, X } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
@@ -59,8 +60,21 @@ export function SwipeBrochureEngine({
   const embedded = useEmbeddedPreview()
   const theme = useMemo(() => getSwipeTheme(styleKey), [styleKey])
   const light = isLightTheme(theme)
-  const [index, setIndex] = useState(0)
-  const [history, setHistory] = useState<{ id: string; dir: SwipeDirection }[]>([])
+  // Lượt vuốt + mẫu đã thích nhớ trên máy khách: mở lại link vẫn tiếp tục từ chỗ cũ
+  const [savedHistory, setHistory] = useSavedState<{ id: string; dir: SwipeDirection }[]>(
+    embedded ? "preview-swipes" : "swipes",
+    [],
+  )
+  const history = useMemo(() => {
+    // Bỏ lượt của mẫu đã bị gỡ khỏi bộ sưu tập; dừng ở mẫu đầu tiên lệch thứ tự
+    const out: typeof savedHistory = []
+    for (const h of savedHistory) {
+      if (products[out.length]?.id !== h.id) break
+      out.push(h)
+    }
+    return out
+  }, [savedHistory, products])
+  const index = history.length
   const [inspect, setInspect] = useState<GreetingCatalogProduct | null>(null)
 
   const likedIds = useMemo(() => new Set(history.filter((h) => h.dir === "like").map((h) => h.id)), [history])
@@ -71,10 +85,9 @@ export function SwipeBrochureEngine({
     (dir: SwipeDirection) => {
       const p = products[index]
       if (!p) return
-      setHistory((h) => [...h, { id: p.id, dir }])
-      setIndex((i) => i + 1)
+      setHistory([...history, { id: p.id, dir }])
     },
-    [index, products],
+    [index, products, history, setHistory],
   )
 
   const swipe = useCardSwipe({
@@ -85,9 +98,8 @@ export function SwipeBrochureEngine({
 
   const rewind = useCallback(() => {
     if (history.length === 0 || swipe.isExiting) return
-    setHistory((h) => h.slice(0, -1))
-    setIndex((i) => Math.max(0, i - 1))
-  }, [history.length, swipe.isExiting])
+    setHistory(history.slice(0, -1))
+  }, [history, setHistory, swipe.isExiting])
 
   // Bàn phím: ← bỏ qua, → thích, ↑/Enter chi tiết, Backspace hoàn tác
   useEffect(() => {
@@ -208,7 +220,6 @@ export function SwipeBrochureEngine({
             onOrder={onSelectProduct}
             onRestart={() => {
               setHistory([])
-              setIndex(0)
             }}
             onRewind={rewind}
           />
