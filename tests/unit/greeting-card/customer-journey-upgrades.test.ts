@@ -88,3 +88,43 @@ describe("tin nhắn đã nhận đơn", () => {
     expect(text).toContain("https://x/b/T01-ABC")
   })
 })
+
+import { composeAddress, normalizeOrderAddress, validateAddressParts } from "@/modules/greeting-card/domain/delivery-address"
+
+describe("địa chỉ giao 5 ô", () => {
+  const parts = { houseNumber: "45", street: "Lê Lợi", ward: "Phường Bến Thành", district: "", province: "TP. Hồ Chí Minh" }
+
+  it("ghép một dòng, bỏ ô trống (quận/huyện tuỳ chọn)", () => {
+    expect(composeAddress(parts)).toBe("45 Lê Lợi, Phường Bến Thành, TP. Hồ Chí Minh")
+    expect(composeAddress({ ...parts, district: "Quận 1" })).toBe("45 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh")
+  })
+
+  it("bắt buộc số nhà, đường, phường/xã, tỉnh/thành", () => {
+    expect(Object.keys(validateAddressParts({ houseNumber: "", street: "", ward: "", province: "" }))).toEqual(["houseNumber", "street", "ward", "province"])
+    expect(validateAddressParts(parts)).toEqual({})
+  })
+
+  it("máy chủ tự ghép dòng địa chỉ từ 5 ô, không tin dòng client gửi", () => {
+    const { input, errors } = normalizeOrderAddress({ deliveryAddress: "giả mạo", addressParts: parts })
+    expect(errors).toEqual({})
+    expect(input.deliveryAddress).toBe("45 Lê Lợi, Phường Bến Thành, TP. Hồ Chí Minh")
+    expect(normalizeOrderAddress({ deliveryAddress: "123 Đường cũ, Q1" }).input.deliveryAddress).toBe("123 Đường cũ, Q1")
+  })
+})
+
+import { mediaSelectionError } from "@/modules/greeting-card/domain/media-limits"
+
+describe("giới hạn ảnh/video của điều phối", () => {
+  const img = { mimeType: "image/jpeg", sizeBytes: 1000 }
+  const vid = (s: number) => ({ mimeType: "video/mp4", sizeBytes: 1000, durationSeconds: s })
+
+  it("1–5 ảnh, 0–2 video ≤ 15 giây", () => {
+    expect(mediaSelectionError([img])).toBeNull()
+    expect(mediaSelectionError([img, vid(15), vid(10)])).toBeNull()
+    expect(mediaSelectionError([vid(5)])).toBe("Cần ít nhất 1 ảnh")
+    expect(mediaSelectionError(Array(6).fill(img))).toBe("Tối đa 5 ảnh")
+    expect(mediaSelectionError([img, vid(5), vid(5), vid(5)])).toBe("Tối đa 2 video")
+    expect(mediaSelectionError([img, vid(20)])).toBe("Mỗi video tối đa 15 giây")
+    expect(mediaSelectionError([{ mimeType: "application/pdf" }])).toContain("Chỉ nhận")
+  })
+})

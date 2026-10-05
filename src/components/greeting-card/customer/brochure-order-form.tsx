@@ -17,6 +17,9 @@ import { BrochureOrderOptions } from "./brochure-order-options"
 import { useBrochureQuote } from "./use-brochure-quote"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { OrderReview } from "./order-review"
+import { useOrderDraft } from "./use-order-draft"
+import { AddressFields } from "./address-fields"
+import { composeAddress, validateAddressParts } from "@/modules/greeting-card/domain/delivery-address"
 import { DELIVERY_SLOTS, availableSlots, deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-card/domain/delivery-schedule"
 
 interface BrochureOrderFormProps {
@@ -45,15 +48,12 @@ export function BrochureOrderForm({
   onSubmit,
 }: BrochureOrderFormProps) {
   const uid = useId()
-  const [customerName, setCustomerName] = useState("")
-  const [customerPhone, setCustomerPhone] = useState("")
-  const [recipientName, setRecipientName] = useState("")
-  const [recipientPhone, setRecipientPhone] = useState("")
-  const [deliveryDate, setDeliveryDate] = useState("")
-  const [deliveryTimeSlot, setDeliveryTimeSlot] = useState("Buổi sáng (8h - 12h)")
-  const [deliveryAddress, setDeliveryAddress] = useState("")
-  const [cardMessage, setCardMessage] = useState("")
-  const [senderNote, setSenderNote] = useState("")
+  const {
+    customerName, customerPhone, recipientName, recipientPhone, deliveryDate, deliveryTimeSlot, addressParts, cardMessage, senderNote,
+    setCustomerName, setCustomerPhone, setRecipientName, setRecipientPhone, setDeliveryDate, setDeliveryTimeSlot, setAddressParts,
+    setCardMessage, setSenderNote, clearDraft,
+  } = useOrderDraft()
+  const deliveryAddress = composeAddress(addressParts)
 
   const [loading, setLoading] = useState(false)
   const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone)
@@ -78,6 +78,12 @@ export function BrochureOrderForm({
       check.errors.deliveryDate = scheduleError
       check.valid = false
     }
+    const addressErrors = validateAddressParts(addressParts)
+    if (Object.keys(addressErrors).length > 0) {
+      delete check.errors.deliveryAddress // báo đúng ô còn thiếu thay vì "địa chỉ chung"
+      Object.assign(check.errors, addressErrors)
+      check.valid = false
+    }
     if (shipping.zones.length > 0 && !pricing.selection.shippingZoneId) {
       check.errors.shippingZoneId = "Vui lòng chọn khu vực giao hoa"
       check.valid = false
@@ -97,6 +103,7 @@ export function BrochureOrderForm({
       deliveryDate,
       deliveryTimeSlot,
       deliveryAddress,
+      addressParts,
       cardMessage,
       senderNote,
       quantity: pricing.selection.quantity,
@@ -112,6 +119,7 @@ export function BrochureOrderForm({
     setLoading(true)
     try {
       await onSubmit(review)
+      clearDraft()
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Đã có lỗi xảy ra khi đặt hoa")
     } finally {
@@ -287,21 +295,7 @@ export function BrochureOrderForm({
           </div>
         </div>
 
-        {/* Địa chỉ giao */}
-        <div>
-          <label htmlFor={`${uid}-deliveryAddress`} className="block text-body-sm font-bold text-foreground mb-1">
-            Địa chỉ giao hoa chi tiết <span className="text-danger">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành"
-            value={deliveryAddress}
-            maxLength={ORDER_FIELD_MAX.address}
-            id={`${uid}-deliveryAddress`} autoComplete="street-address" onChange={(e) => setDeliveryAddress(e.target.value)}
-            className={INPUT}
-          />
-        </div>
+        <AddressFields idPrefix={uid} value={addressParts} inputClassName={INPUT} onChange={setAddressParts} />
 
         {/* Lời nhắn thiệp */}
         <div>

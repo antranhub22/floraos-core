@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { ORDER_FIELD_MAX } from "../domain/greeting-card-rules"
 import { MAX_ORDER_QUANTITY } from "../domain/brochure-pricing"
+import { ADDRESS_PART_MAX } from "../domain/delivery-address"
 
 /**
  * Hình dạng thân yêu cầu đặt hoa công khai. Chỉ kiểm kiểu + độ dài ở biên;
@@ -14,6 +15,15 @@ export const publicOrderBodySchema = z.object({
   deliveryDate: z.string().max(10),
   deliveryTimeSlot: z.string().max(ORDER_FIELD_MAX.timeSlot).optional(),
   deliveryAddress: z.string().max(ORDER_FIELD_MAX.address),
+  addressParts: z
+    .object({
+      houseNumber: z.string().max(ADDRESS_PART_MAX),
+      street: z.string().max(ADDRESS_PART_MAX),
+      ward: z.string().max(ADDRESS_PART_MAX),
+      district: z.string().max(ADDRESS_PART_MAX).optional(),
+      province: z.string().max(ADDRESS_PART_MAX),
+    })
+    .optional(),
   cardMessage: z.string().max(ORDER_FIELD_MAX.cardMessage).optional(),
   senderNote: z.string().max(ORDER_FIELD_MAX.senderNote).optional(),
   variantId: z.string().max(64).optional(),

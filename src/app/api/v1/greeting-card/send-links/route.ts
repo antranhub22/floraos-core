@@ -5,6 +5,7 @@ import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-link"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
+import { resolveSaleScope } from "@/modules/greeting-card/use-cases/order-scope"
 import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
@@ -62,7 +63,8 @@ export const GET = handle(async (request: Request) => {
   const { ctx } = await requireTenantContext(request)
   requireCapability(ctx, GREETING_CARD_CAPABILITY.orderRead)
   const url = new URL(request.url)
-  const saleId = url.searchParams.get("sale_id") || undefined
+  // Chế độ "chỉ của mình" ghi đè bộ lọc client gửi lên
+  const saleId = (await resolveSaleScope(ctx)) ?? (url.searchParams.get("sale_id") || undefined)
   const catalogId = url.searchParams.get("catalog_id") || undefined
   const statusParam = url.searchParams.get("status") || undefined
   const status = SESSION_STATUSES.find((s) => s === statusParam)

@@ -1,0 +1,62 @@
+"use client"
+
+import { useEffect, useRef, useState } from "react"
+
+const PREFIX = "floraos:brochure:"
+const TTL_MS = 7 * 86_400_000
+
+/** Đọc/ghi localStorage an toàn (tab ẩn danh, bộ nhớ bị chặn → coi như không có). */
+function read<T>(key: string): T | null {
+  try {
+    const raw = window.localStorage.getItem(PREFIX + key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { at: number; value: T }
+    if (Date.now() - parsed.at > TTL_MS) {
+      window.localStorage.removeItem(PREFIX + key)
+      return null
+    }
+    return parsed.value
+  } catch {
+    return null
+  }
+}
+
+function write<T>(key: string, value: T | null): void {
+  try {
+    if (value === null) window.localStorage.removeItem(PREFIX + key)
+    else window.localStorage.setItem(PREFIX + key, JSON.stringify({ at: Date.now(), value }))
+  } catch {
+    // bộ nhớ trình duyệt bị chặn — bỏ qua, trang vẫn chạy bình thường
+  }
+}
+
+/**
+ * State nhớ trên chính máy khách theo trang đang mở (giữ 7 ngày): khách đóng tab rồi
+ * mở lại link vẫn thấy mẫu đã thích / thông tin đang điền dở. Không gửi lên máy chủ.
+ */
+export function useSavedState<T>(
+  name: string,
+  initial: T,
+): [T, (next: T | ((prev: T) => T)) => void, () => void] {
+  const keyRef = useRef<string | null>(null)
+  const restored = useRef(false)
+  const [value, setValue] = useState<T>(initial)
+
+  useEffect(() => {
+    keyRef.current = `${window.location.pathname}:${name}`
+    const saved = read<T>(keyRef.current)
+    if (saved !== null) setValue(saved)
+    restored.current = true
+  }, [name])
+
+  // Ghi sau mỗi lần đổi (bỏ qua lần dựng đầu, trước khi khôi phục)
+  useEffect(() => {
+    if (restored.current && keyRef.current) write(keyRef.current, value)
+  }, [value])
+
+  const clear = () => {
+    restored.current = false
+    if (keyRef.current) write(keyRef.current, null)
+  }
+  return [value, setValue, clear]
+}

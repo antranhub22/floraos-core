@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useRef, useState } from "react"
-import { Upload, X, CheckCircle2, AlertCircle } from "lucide-react"
+import React, { useEffect, useRef, useState } from "react"
+import { Upload, X, CheckCircle2, AlertCircle, Play, ImagePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { readApiError } from "@/components/greeting-card/api-error"
-import Image from "next/image"
+import { MEDIA_LIMITS, mediaKindOf, mediaSelectionError } from "@/modules/greeting-card/domain/media-limits"
 
 interface CoordinatorImageUploadProps {
   orderId: string
@@ -15,91 +15,93 @@ interface CoordinatorImageUploadProps {
 }
 
 type UploadState = "idle" | "uploading" | "success" | "error"
+type Picked = { file: File; url: string; kind: "image" | "video"; duration: number | null }
 
-export function CoordinatorImageUpload({
-  orderId,
-  endpoint,
-  label,
-  onSuccess,
-  onCancel,
-}: CoordinatorImageUploadProps) {
+/** Thời lượng video (giây) đo bằng trình duyệt — máy chủ không đọc được. */
+function videoDuration(url: string): Promise<number | null> {
+  return new Promise((resolve) => {
+    const v = document.createElement("video")
+    v.preload = "metadata"
+    v.onloadedmetadata = () => resolve(Number.isFinite(v.duration) ? v.duration : null)
+    v.onerror = () => resolve(null)
+    v.src = url
+  })
+}
+
+async function uploadOne(file: File): Promise<string> {
+  const urlRes = await fetch("/api/v1/assets/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mime_type: file.type }),
+  })
+  if (!urlRes.ok) throw new Error(await readApiError(urlRes, "Lỗi lấy địa chỉ tải tệp"))
+  const { asset_id, storage_key, upload_url } = (await urlRes.json()) as { asset_id: string; storage_key: string; upload_url: string }
+  const putRes = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file })
+  if (!putRes.ok) throw new Error("Lỗi tải tệp lên kho lưu trữ")
+  const registerRes = await fetch("/api/v1/assets", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ asset_id, storage_key, kind: "ORIGINAL", mime_type: file.type, file_size: file.size }),
+  })
+  if (!registerRes.ok) throw new Error("Lỗi đăng ký tệp trong hệ thống")
+  return asset_id
+}
+
+/**
+ * Tải ảnh/video cho một lần chụp (thành phẩm hoặc người nhận): 1–5 ảnh, 0–2 video ≤ 15 giây.
+ * Lưới xem trước, xoá từng tệp trước khi lưu; cả bộ gắn vào đơn trong một lần.
+ */
+export function CoordinatorImageUpload({ orderId, endpoint, label, onSuccess, onCancel }: CoordinatorImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [preview, setPreview] = useState<string | null>(null)
-  const [file, setFile] = useState<File | null>(null)
+  const [picked, setPicked] = useState<Picked[]>([])
   const [state, setState] = useState<UploadState>("idle")
   const [errorMsg, setErrorMsg] = useState("")
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]
-    if (!f) return
-    if (!f.type.startsWith("image/")) {
-      setErrorMsg("Chỉ chấp nhận file ảnh (JPG, PNG, WEBP)")
+  // Giải phóng URL xem trước khi đóng
+  useEffect(() => () => picked.forEach((p) => URL.revokeObjectURL(p.url)), [picked])
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ""
+    const added: Picked[] = []
+    for (const file of files) {
+      const kind = mediaKindOf(file.type)
+      if (!kind) {
+        setErrorMsg("Chỉ nhận ảnh JPG, PNG, WEBP và video MP4, MOV, WEBM")
+        continue
+      }
+      const url = URL.createObjectURL(file)
+      added.push({ file, url, kind, duration: kind === "video" ? await videoDuration(url) : null })
+    }
+    const next = [...picked, ...added]
+    const error = mediaSelectionError(next.map((p) => ({ mimeType: p.file.type, sizeBytes: p.file.size, durationSeconds: p.duration })))
+    // Thiếu ảnh chỉ báo khi lưu; các lỗi khác báo ngay và không nhận tệp vừa chọn
+    if (error && error !== "Cần ít nhất 1 ảnh") {
+      added.forEach((p) => URL.revokeObjectURL(p.url))
+      setErrorMsg(error)
       return
     }
-    if (f.size > 10 * 1024 * 1024) {
-      setErrorMsg("Ảnh không được vượt quá 10MB")
-      return
-    }
-    setFile(f)
     setErrorMsg("")
-    const reader = new FileReader()
-    reader.onload = (ev) => setPreview(ev.target?.result as string)
-    reader.readAsDataURL(f)
+    setPicked(next)
   }
 
   async function handleUpload() {
-    if (!file) return
+    const error = mediaSelectionError(picked.map((p) => ({ mimeType: p.file.type, sizeBytes: p.file.size, durationSeconds: p.duration })))
+    if (error) {
+      setErrorMsg(error)
+      return
+    }
     setState("uploading")
     setErrorMsg("")
-
     try {
-      // Step 1: Lấy presigned upload URL từ hệ thống
-      const urlRes = await fetch("/api/v1/assets/upload-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mime_type: file.type }),
-      })
-      if (!urlRes.ok) throw new Error("Lỗi lấy địa chỉ upload ảnh")
-      const urlData = await urlRes.json()
-      const { asset_id, storage_key, upload_url } = urlData as {
-        asset_id: string
-        storage_key: string
-        upload_url: string
-      }
-      if (!asset_id || !upload_url) throw new Error("Phản hồi upload URL không hợp lệ")
-
-      // Step 2: PUT file trực tiếp lên presigned URL (S3-compatible)
-      const putRes = await fetch(upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      })
-      if (!putRes.ok) throw new Error("Lỗi tải ảnh lên kho lưu trữ")
-
-      // Step 3: Đăng ký asset trong DB
-      const registerRes = await fetch("/api/v1/assets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          asset_id,
-          storage_key,
-          kind: "ORIGINAL",
-          mime_type: file.type,
-          file_size: file.size,
-        }),
-      })
-      if (!registerRes.ok) throw new Error("Lỗi đăng ký ảnh trong hệ thống")
-
-      // Step 4: Gắn asset vào đơn hàng
+      const assetIds: string[] = []
+      for (const p of picked) assetIds.push(await uploadOne(p.file))
       const attachRes = await fetch(`/api/v1/greeting-card/orders/${orderId}/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assetId: asset_id }),
+        body: JSON.stringify({ assetIds }),
       })
-      if (!attachRes.ok) {
-        throw new Error(await readApiError(attachRes, "Lỗi gắn ảnh vào đơn hàng"))
-      }
-
+      if (!attachRes.ok) throw new Error(await readApiError(attachRes, "Lỗi gắn ảnh vào đơn hàng"))
       setState("success")
       setTimeout(onSuccess, 1200)
     } catch (err) {
@@ -111,70 +113,89 @@ export function CoordinatorImageUpload({
   if (state === "success") {
     return (
       <div className="flex flex-col items-center gap-3 py-6 text-center">
-        <CheckCircle2 size={40} className="text-success" />
+        <CheckCircle2 size={40} className="text-success" aria-hidden="true" />
         <p className="text-body font-bold text-success">{label} đã được cập nhật!</p>
-        <p className="text-body-sm text-text-muted">Khách hàng sẽ thấy ảnh trong vòng 15 giây.</p>
+        <p className="text-body-sm text-text-muted">Khách hàng sẽ thấy trên trang theo dõi đơn.</p>
       </div>
     )
   }
 
+  const images = picked.filter((p) => p.kind === "image").length
+  const videos = picked.length - images
+  const full = images >= MEDIA_LIMITS.imagesMax && videos >= MEDIA_LIMITS.videosMax
+
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-body-sm text-text-muted">{label} — Chụp rõ nét, ánh sáng tốt.</p>
+      <p className="text-body-sm text-text-muted">
+        {label}: {MEDIA_LIMITS.imagesMin}–{MEDIA_LIMITS.imagesMax} ảnh, tối đa {MEDIA_LIMITS.videosMax} video (mỗi video ≤ {MEDIA_LIMITS.videoMaxSeconds} giây).
+      </p>
 
-      {/* Drop zone */}
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="w-full border-2 border-dashed border-border rounded-2xl p-6 flex flex-col items-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
-      >
-        {preview ? (
-          <Image
-            src={preview}
-            alt="Ảnh xem trước"
-            width={480}
-            height={208}
-            unoptimized
-            className="w-full max-h-52 object-contain rounded-xl"
-          />
-        ) : (
-          <>
-            <Upload size={28} className="text-text-muted" />
-            <span className="text-body-sm font-medium text-text-muted">
-              Nhấn để chọn ảnh từ máy
-            </span>
-            <span className="text-caption text-text-muted">JPG, PNG, WEBP · Tối đa 10MB</span>
-          </>
+      <ul className="grid grid-cols-3 gap-2" aria-label="Tệp đã chọn">
+        {picked.map((p, i) => (
+          <li key={p.url} className="relative aspect-square overflow-hidden rounded-xl border border-border bg-surface-muted">
+            {p.kind === "video" ? (
+              <>
+                <video src={p.url} muted preload="metadata" className="h-full w-full object-cover" />
+                <span className="absolute bottom-1 left-1 inline-flex items-center gap-0.5 rounded bg-text/70 px-1 text-caption text-surface">
+                  <Play size={10} aria-hidden="true" />
+                  {p.duration ? `${Math.round(p.duration)}s` : "video"}
+                </span>
+              </>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={p.url} alt={`Ảnh ${i + 1}`} className="h-full w-full object-cover" />
+            )}
+            <button
+              type="button"
+              aria-label={`Bỏ tệp ${i + 1}`}
+              onClick={() => setPicked((list) => list.filter((x) => x !== p))}
+              disabled={state === "uploading"}
+              className="absolute right-1 top-1 rounded-full bg-text/70 p-1 text-surface"
+            >
+              <X size={12} aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+        {!full && (
+          <li>
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={state === "uploading"}
+              className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-text-muted hover:border-primary/50 hover:bg-primary/5"
+            >
+              {picked.length === 0 ? <Upload size={22} aria-hidden="true" /> : <ImagePlus size={22} aria-hidden="true" />}
+              <span className="text-caption font-medium">{picked.length === 0 ? "Chọn ảnh/video" : "Thêm"}</span>
+            </button>
+          </li>
         )}
-      </button>
+      </ul>
+      <p className="text-caption text-text-muted">
+        Đã chọn {images}/{MEDIA_LIMITS.imagesMax} ảnh · {videos}/{MEDIA_LIMITS.videosMax} video
+      </p>
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        multiple
+        accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
         className="hidden"
-        onChange={handleFileChange}
+        onChange={(e) => void handleFiles(e)}
       />
 
       {errorMsg && (
-        <div className="flex items-center gap-2 text-danger text-body-sm p-3 bg-danger-bg rounded-xl border border-danger/30">
-          <AlertCircle size={16} className="shrink-0" />
+        <div role="alert" className="flex items-center gap-2 text-danger text-body-sm p-3 bg-danger-bg rounded-xl border border-danger/30">
+          <AlertCircle size={16} className="shrink-0" aria-hidden="true" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" size="sm" onClick={onCancel} className="h-9 text-caption">
-          <X size={14} className="mr-1" />
+          <X size={14} className="mr-1" aria-hidden="true" />
           Huỷ
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={!file || state === "uploading"}
-          onClick={handleUpload}
-          className="h-9 text-caption"
-        >
-          {state === "uploading" ? "Đang tải lên..." : "Lưu ảnh"}
+        <Button type="button" size="sm" disabled={images === 0 || state === "uploading"} onClick={() => void handleUpload()} className="h-9 text-caption">
+          {state === "uploading" ? "Đang tải lên..." : `Lưu ${picked.length} tệp`}
         </Button>
       </div>
     </div>

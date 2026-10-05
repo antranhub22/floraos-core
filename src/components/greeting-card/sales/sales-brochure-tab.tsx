@@ -5,6 +5,7 @@ import { Plus, RefreshCw, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi, usePagedList } from "@/components/greeting-card/greeting-api"
 import { SalesFunnelStats } from "./sales-funnel-stats"
+import { ChannelFunnelStats } from "./channel-funnel-stats"
 import { SalesSessionTable } from "./sales-session-table"
 import { SalesCreateLinkModal } from "./sales-create-link-modal"
 import type { CatalogOption, SessionRow } from "./sales-types"
@@ -76,6 +77,7 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
       </div>
 
       <SalesFunnelStats />
+      <ChannelFunnelStats />
 
       <section className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
         <div className="p-4 border-b border-border flex items-center justify-between">

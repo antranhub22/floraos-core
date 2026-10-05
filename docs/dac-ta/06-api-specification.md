@@ -747,15 +747,16 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | GET · POST | `/greeting-card/send-links` | `R1` · `R2` | POST sinh mã gửi ngẫu nhiên duy nhất toàn hệ thống (`T01-XXXXXXXX`), `expiresInDays` 1–365 hoặc `null` (mặc định 30). GET kèm `link_state` ACTIVE/EXPIRED/REVOKED |
 | POST | `/greeting-card/send-links/:id/revoke` | `R2` | Thu hồi link chưa có đơn (idempotent); đã có đơn → 409 |
 | GET | `/greeting-card/stats` | `R1` | `?days=7\|30\|90` — phễu gửi → mở → chọn → đặt → thu tiền + doanh thu theo sale |
+| GET | `/greeting-card/stats/channels` | `R1` | `?days=7\|30\|90` — phễu link bộ sưu tập theo kênh chia sẻ (`?kenh=` zalo/facebook/instagram/tiktok/website/khac; lạ/trống = trực tiếp): khách xem → xem mẫu → mở form → đặt đơn, đếm khách không trùng |
 | GET | `/greeting-card/orders` | `R1` | `?status=` (order_status), `?payment=OUTSTANDING\|PAID` (OUTSTANDING gồm cả đơn chờ báo giá — tổng 0); tiền trả dạng số |
 | POST | `/greeting-card/orders/:id/confirm-payment` | `R9` | `amountVnd?` (bỏ trống = khoản đang chờ theo chính sách cọc). Khoá lạc quan trên `paid_vnd`, ghi `order_payments` (DEPOSIT/BALANCE) + `order_events` + `audit_logs`; đã thu đủ → 409; vượt phần còn lại → 422 |
 | POST | `/greeting-card/orders/:id/quote` | `R9` | `{ totalVnd }` — báo giá trọn gói cho đơn đặt mẫu chưa niêm yết giá (tổng 0). Khoá lạc quan `total_vnd = 0`; đã có giá/đã huỷ → 409; số tiền sai → 422; tổ chức khác → 404; audit `greeting_card.order.quote` |
 | POST | `/greeting-card/orders/:id/cancel` | `R6` | `{ reason }`; trả lại mã giảm giá; đơn đã giao/đã huỷ → 409; audit |
 | POST | `/greeting-card/orders/:id/refund` | `R10` | `{ amountVnd, reason }`; không vượt số đã thu (422); ghi REFUND + audit |
 | POST | `/greeting-card/orders/:id/assign-florist` | `R4` | Thứ tự xưởng + chính sách thu tiền (`brochure_policy`) chặn sai bước → 409 |
-| POST | `/greeting-card/orders/:id/product-photo` | `R3` | `{ assetId }` phải thuộc tổ chức (khác → 404) |
+| POST | `/greeting-card/orders/:id/product-photo` | `R3` | `{ assetIds }` (hoặc `{ assetId }` cũ): 1–5 ảnh JPG/PNG/WEBP + 0–2 video MP4/MOV/WEBM (≤ 50MB; ≤ 15 giây kiểm ở trình duyệt), một bản ghi QC cho cả bộ; asset phải thuộc tổ chức (khác → 404), sai giới hạn → 400 |
 | POST | `/greeting-card/orders/:id/dispatch-shipping` | `R5` | Cần hoa READY (+ thu đủ nếu chính sách bật) |
-| POST | `/greeting-card/orders/:id/recipient-photo` | `R5` | Cần đang giao; đóng đơn COMPLETED |
+| POST | `/greeting-card/orders/:id/recipient-photo` | `R5` | Cần đang giao; đóng đơn COMPLETED. Cùng luật ảnh/video như `product-photo`; trang theo dõi hiện thành mục "Ảnh người nhận" riêng |
 | GET · POST | `/greeting-card/tracking-pipeline` | `R1` | Bảng theo dõi; POST ghi chú nội bộ — tên người gửi lấy từ phiên |
 | GET | `/greeting-card/integrations` | `R1` | Trạng thái webhook ngân hàng + kênh thông báo; KHÔNG trả khoá/bí mật |
 | POST · DELETE | `/greeting-card/integrations/payment-webhook` | `F2` | POST sinh khoá SePay mới (trả MỘT lần, chỉ lưu băm SHA-256); DELETE tắt |
@@ -765,6 +766,7 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | POST | `/greeting-card/payment-events/:id/handle` | `R9` | `{ note }` đánh dấu đã xử lý tay |
 | GET | `/public/brochure/:sendCode` | — | Trang khách: mẫu (giá theo Product Master, `null` = "Liên hệ" — vẫn đặt được, cửa hàng báo giá sau), size, khu vực giao, đơn + hướng dẫn chuyển khoản. Không lộ SĐT/id tổ chức. Link hết hạn/thu hồi/catalog ẩn (chưa có đơn) → 404 |
 | POST | `/public/brochure/:sendCode/select` | — | Chỉ nhận `productId`; ảnh chụp mẫu dựng ở server |
+| POST | `/public/greeting-catalog/:id/event` | — | `{ type: VIEW\|DETAIL\|FORM_OPEN, channel?, visitorId }` → 202; mã khách ngẫu nhiên trên máy, băm ở server (không lưu IP); mỗi khách × bước 1 lần/ngày; catalog ẩn → 404. Bước `ORDER` chỉ ghi ở server khi `POST /public/greeting-catalog/:id/order` thành công (thân đơn mang `tracking?`); lỗi ghi thống kê không làm hỏng đơn |
 | POST | `/public/brochure/:sendCode/quote` | — | Báo giá `{ variantId?, quantity?, shippingZoneId?, voucherCode?, customerPhone? }` → `{ quote, errors }` |
 | POST | `/public/brochure/:sendCode/order` | — | Tạo đơn (idempotent theo phiên); server báo giá lại, lựa chọn sai → 400 theo trường. Mẫu chưa niêm yết giá: đơn tổng 0, `quote.awaitingQuote = true`, không QR, không nhận mã giảm giá |
 | POST | `/public/brochure/:sendCode/payment-notify` | — | Khách báo đã chuyển khoản (cần có đơn) |

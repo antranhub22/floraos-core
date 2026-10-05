@@ -22,6 +22,8 @@ export class BrochureOrderRepository {
       status?: order_status | undefined
       /** OUTSTANDING = còn phải thu (chưa huỷ); PAID = đã thu đủ. */
       payment?: "OUTSTANDING" | "PAID" | undefined
+      /** Chỉ đơn từ link do sale này gửi (chế độ xem "chỉ đơn của mình") */
+      saleId?: string | undefined
       limit: number
       cursor?: string | undefined
     }
@@ -30,6 +32,7 @@ export class BrochureOrderRepository {
       where: scopedWhere(ctx, {
         source: "BROCHURE",
         ...(options.status ? { status: options.status } : {}),
+        ...(options.saleId ? { greeting_sessions: { some: { sale_id: options.saleId } } } : {}),
         // Đơn chờ báo giá (tổng 0) cũng tính là "còn phải thu"
         ...(options.payment === "OUTSTANDING"
           ? { OR: [{ balance_vnd: { gt: 0 } }, { total_vnd: 0 }], NOT: { status: "CANCELLED" as const } }
@@ -83,6 +86,14 @@ export class BrochureOrderRepository {
     return matches.length === 1 ? matches[0] ?? null : null
   }
 
+  /** Loại + dung lượng của các asset thuộc đúng tổ chức (asset tổ chức khác không có trong kết quả). */
+  async ownedAssetsMeta(ctx: TenantContext, assetIds: readonly string[]) {
+    return this.db.assets.findMany({
+      where: scopedWhere(ctx, { id: { in: [...new Set(assetIds)] } }),
+      select: { id: true, mime_type: true, file_size: true },
+    })
+  }
+
   async assetBelongsToTenant(ctx: TenantContext, assetId: string): Promise<boolean> {
     const asset = await this.db.assets.findFirst({ where: scopedWhere(ctx, { id: assetId }), select: { id: true } })
     return asset !== null
@@ -101,16 +112,17 @@ export class BrochureOrderRepository {
       deliveryStatus?: delivery_status | undefined
       orderStatus?: order_status | undefined
       noteAppend?: string | undefined
-      qcImageAssetId?: string | undefined
+      /** Ảnh/video của lần chụp này — một bản ghi QC chứa cả bộ */
+      qcAssetIds?: readonly string[] | undefined
     }
   ) {
     return this.db.$transaction(async (tx) => {
-      if (input.qcImageAssetId) {
+      if (input.qcAssetIds && input.qcAssetIds.length > 0) {
         await tx.order_qc_records.create({
           data: {
             organization_id: ctx.organizationId,
             order_id: order.id,
-            image_asset_ids: [input.qcImageAssetId],
+            image_asset_ids: [...input.qcAssetIds],
             status: "PASSED",
             notes: input.eventType,
             inspector_id: ctx.userId,

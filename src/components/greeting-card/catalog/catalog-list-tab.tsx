@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { BrochurePreviewModal } from "@/components/greeting-card/customer/brochure-preview-modal"
 import { readApiError } from "@/components/greeting-card/api-error"
+import { CATALOG_CHANNELS, withChannel } from "@/modules/greeting-card/domain/catalog-channel"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { CatalogCreateModal } from "./catalog-create-modal"
 
@@ -37,6 +38,7 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [copiedCatalogId, setCopiedCatalogId] = useState<string | null>(null)
+  const [shareChannel, setShareChannel] = useState("")
   // Slug tổ chức để dựng URL thân thiện; chưa có → dùng link /g/{id}
   const org = useApi<{ slug?: string }>("/api/v1/organizations/current")
   const orgSlug = org.data?.slug ?? null
@@ -49,7 +51,7 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
   }
 
   function copyPublicLink(catalog: CatalogItem) {
-    const url = buildPublicUrl(catalog)
+    const url = withChannel(buildPublicUrl(catalog), shareChannel)
     void navigator.clipboard.writeText(url)
     setCopiedCatalogId(catalog.id)
     setTimeout(() => setCopiedCatalogId(null), 2000)
@@ -76,6 +78,20 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
           {actionError}
         </div>
       )}
+      <label className="flex flex-wrap items-center gap-2 text-body-sm text-text-muted">
+        Link sao chép dùng cho kênh
+        <select
+          value={shareChannel}
+          onChange={(e) => setShareChannel(e.target.value)}
+          className="h-9 rounded-lg border border-border bg-surface px-2 text-body-sm text-foreground"
+        >
+          <option value="">Không ghi kênh</option>
+          {CATALOG_CHANNELS.map((c) => (
+            <option key={c.code} value={c.code}>{c.label}</option>
+          ))}
+        </select>
+        <span className="text-caption">— để biết khách đến từ đâu trong mục Hiệu quả theo kênh.</span>
+      </label>
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div>
@@ -225,7 +241,7 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
                 <button
                   type="button"
                   onClick={() => copyPublicLink(catalog)}
-                  title={`Sao chép: ${buildPublicUrl(catalog)}`}
+                  title={`Sao chép: ${withChannel(buildPublicUrl(catalog), shareChannel)}`}
                   aria-label={`Sao chép link công khai của ${catalog.name}`}
                   className="p-1.5 rounded-lg border border-border hover:bg-surface-muted transition-colors text-text-muted hover:text-foreground"
                 >

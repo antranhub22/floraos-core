@@ -7,10 +7,14 @@ import type { InternalNoteRole, TrackingPipelineStepId } from "../domain/trackin
 export class TrackingPipelineRepository {
   constructor(private readonly db = prisma) {}
 
-  async listBrochureOrders(ctx: TenantContext) {
+  async listBrochureOrders(ctx: TenantContext, saleId: string | null = null) {
     return this.db.orders.findMany({
       // Đơn đã huỷ không còn bước nào để theo dõi
-      where: scopedWhere(ctx, { source: "BROCHURE", NOT: { status: "CANCELLED" as const } }),
+      where: scopedWhere(ctx, {
+        source: "BROCHURE",
+        NOT: { status: "CANCELLED" as const },
+        ...(saleId ? { greeting_sessions: { some: { sale_id: saleId } } } : {}),
+      }),
       include: {
         customer: true,
         items: true,
@@ -33,10 +37,10 @@ export class TrackingPipelineRepository {
     })
   }
 
-  async listActiveSessions(ctx: TenantContext) {
+  async listActiveSessions(ctx: TenantContext, saleId: string | null = null) {
     return this.db.greeting_sessions.findMany({
       // Link chưa có đơn, còn hiệu lực (chưa thu hồi)
-      where: scopedWhere(ctx, { order_id: null, revoked_at: null }),
+      where: scopedWhere(ctx, { order_id: null, revoked_at: null, ...(saleId ? { sale_id: saleId } : {}) }),
       include: {
         catalog: { select: { id: true, name: true, code: true } },
         events: { orderBy: { created_at: "asc" } },
