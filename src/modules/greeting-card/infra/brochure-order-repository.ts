@@ -75,7 +75,8 @@ export class BrochureOrderRepository {
       where: { code: orderCode.trim().toUpperCase(), source: "BROCHURE" },
       include: {
         items: { take: 1 },
-        qc_records: { orderBy: { created_at: "desc" }, take: 1 },
+        // Đủ để tách ảnh thành phẩm và ảnh người nhận (mỗi loại tối đa 5 ảnh + 2 video)
+        qc_records: { orderBy: { created_at: "desc" }, take: 20 },
       },
       take: 2,
     })

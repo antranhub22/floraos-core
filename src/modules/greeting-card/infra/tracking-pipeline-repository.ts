@@ -46,6 +46,17 @@ export class TrackingPipelineRepository {
     })
   }
 
+  /** Tên hiển thị của các thành viên tổ chức (sale phụ trách link) — chỉ người thuộc đúng tổ chức. */
+  async memberNames(ctx: TenantContext, userIds: string[]): Promise<Map<string, string>> {
+    const ids = [...new Set(userIds)].filter(Boolean)
+    if (ids.length === 0) return new Map()
+    const rows = await this.db.memberships.findMany({
+      where: scopedWhere(ctx, { user_id: { in: ids } }),
+      select: { user_id: true, user: { select: { name: true, email: true } } },
+    })
+    return new Map(rows.map((r) => [r.user_id, r.user.name?.trim() || r.user.email.split("@")[0] || "Nhân viên"]))
+  }
+
   /** Tên người gửi lấy từ tài khoản đăng nhập — không nhận tên do client tự khai. */
   async getUserDisplayName(userId: string): Promise<string | null> {
     const user = await this.db.users.findUnique({ where: { id: userId }, select: { name: true, email: true } })

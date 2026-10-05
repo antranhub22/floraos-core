@@ -25,13 +25,19 @@ export async function getBrochureTracking(
   const firstItem = order.items[0]
   const snapshot = (firstItem?.metadata as unknown as ProductSnapshot | null) ?? null
 
-  // Ảnh thành phẩm/người nhận gần nhất — chỉ ký asset của đúng tổ chức sở hữu đơn
-  let finishedImageUrl: string | null = null
-  const latestQc = order.qc_records[0]
-  const assetIds = Array.isArray(latestQc?.image_asset_ids) ? latestQc.image_asset_ids : []
-  if (typeof assetIds[0] === "string") {
-    finishedImageUrl = await repo.getAssetStorageUrl(order.organization_id, assetIds[0])
-  }
+  // Ảnh thành phẩm và ảnh người nhận là HAI mục riêng — ảnh người nhận không đè ảnh thành phẩm.
+  // Mỗi bản ghi QC ghi loại ảnh ở `notes`; chỉ ký asset của đúng tổ chức sở hữu đơn.
+  const idsOf = (kind: string) =>
+    order.qc_records
+      .filter((qc) => qc.notes === kind)
+      .flatMap((qc) => (Array.isArray(qc.image_asset_ids) ? qc.image_asset_ids : []))
+      .filter((id): id is string => typeof id === "string")
+  const productIds = idsOf("PRODUCT_PHOTO_UPLOADED")
+  const recipientIds = idsOf("RECIPIENT_PHOTO_UPLOADED")
+  const urls = await repo.getAssetsStorageMap(order.organization_id, [...productIds, ...recipientIds])
+  const toUrls = (ids: string[]) => ids.map((id) => urls.get(id)).filter((u): u is string => Boolean(u))
+  const productPhotoUrls = toUrls(productIds)
+  const recipientPhotoUrls = toUrls(recipientIds)
 
   const deliveryAddress = (order.delivery_address as Record<string, string> | null) || {}
   const deliveryWindow = (order.delivery_window as Record<string, string> | null) || {}
@@ -52,7 +58,10 @@ export async function getBrochureTracking(
       deliveryDate: deliveryWindow.date || null,
       deliveryTimeSlot: deliveryWindow.timeSlot || null,
       productSnapshot: snapshot,
-      finishedImageUrl,
+      /** Giữ cho client cũ: ảnh thành phẩm mới nhất */
+      finishedImageUrl: productPhotoUrls[0] ?? null,
+      productPhotoUrls,
+      recipientPhotoUrls,
       createdAt: order.created_at.toISOString(),
       updatedAt: order.updated_at.toISOString(),
     },
