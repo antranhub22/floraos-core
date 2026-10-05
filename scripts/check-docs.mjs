@@ -32,6 +32,9 @@ const dive = (dir) => {
       const src = readFileSync(f, "utf8")
       for (const m of src.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+(GET|POST|PUT|PATCH|DELETE)\b/g))
         codeEps.add(`${m[1]} ${rel}`)
+      // Route chỉ re-export handler (`export { fooPOST as POST }`) — trước 05/10/2026 lọt khỏi phép dò.
+      for (const m of src.matchAll(/export\s*\{([^}]*)\}/g))
+        for (const n of m[1].matchAll(/\bas\s+(GET|POST|PUT|PATCH|DELETE)\b/g)) codeEps.add(`${n[1]} ${rel}`)
     }
   }
 }

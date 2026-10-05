@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
@@ -6,10 +7,29 @@ import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-c
 import { ProductRepository } from "@/modules/products/infra/product-repository"
 import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-link"
 import { createInternalNote } from "@/modules/greeting-card/use-cases/create-internal-note"
+import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
+import { uploadBrochureProductPhoto } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
+import { AssetRepository } from "@/modules/assets/infra/asset-repository"
+import type { TenantContext } from "@/core/tenancy"
 
 // Cách ly hai bảng con của Thẻ chào mà greeting-card.test.ts chưa chạm tới:
 // greeting_catalog_products (sản phẩm gắn vào catalog) và
-// greeting_journey_events (sự kiện / ghi chú nội bộ của phiên chào khách).
+// greeting_journey_events (sự kiện / ghi chú nội bộ của phiên chào khách),
+// và ảnh QC gắn vào đơn Thẻ chào (trang tra cứu công khai ký URL cho ảnh đó).
+
+async function seedAsset(ctx: TenantContext): Promise<string> {
+  const asset = await new AssetRepository().create(ctx, {
+    id: randomUUID(),
+    productId: null,
+    parentAssetId: null,
+    kind: "ORIGINAL",
+    version: 1,
+    storageKey: `org/${ctx.organizationId}/the-chao/${randomUUID()}.jpg`,
+    mimeType: "image/jpeg",
+    createdBy: ctx.userId,
+  })
+  return asset.id
+}
 describe("greeting_catalog_products & greeting_journey_events — cách ly tenant", () => {
   let tenantA: Tenant
   let tenantB: Tenant
@@ -119,5 +139,34 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
       select: { organization_id: true },
     })
     expect(own).toEqual([{ organization_id: tenantB.organizationId }])
+  })
+
+  it("order_qc_records: không gắn được ảnh của tổ chức khác làm ảnh thành phẩm đơn Thẻ chào", async () => {
+    const productA = await products.create(tenantA.ctx, { code: "HOA-A", name: "Hoa của A" })
+    const catA = await repo.createCatalog(tenantA.ctx, {
+      code: "cat-a",
+      name: "Catalog A",
+      productIds: [productA.id],
+      createdBy: tenantA.userId,
+    })
+    const linkA = await createSendLink(tenantA.ctx, { catalogId: catA.id, customerName: "Khách A" })
+    const order = await submitBrochureOrder(linkA.sendCode, {
+      customerName: "Khách A",
+      customerPhone: "0987654321",
+      recipientName: "Người nhận A",
+      recipientPhone: "0912345678",
+      deliveryDate: "2026-10-20",
+      deliveryAddress: "1 Đường A, Quận 1, TP.HCM",
+    })
+    const assetB = await seedAsset(tenantB.ctx)
+
+    await expect(
+      uploadBrochureProductPhoto(tenantA.ctx, order.orderId, { assetId: assetB })
+    ).rejects.toThrow("Không tìm thấy ảnh")
+    expect(await prisma.order_qc_records.count({ where: { order_id: order.orderId } })).toBe(0)
+
+    const assetA = await seedAsset(tenantA.ctx)
+    await uploadBrochureProductPhoto(tenantA.ctx, order.orderId, { assetId: assetA })
+    expect(await prisma.order_qc_records.count({ where: { order_id: order.orderId } })).toBe(1)
   })
 })

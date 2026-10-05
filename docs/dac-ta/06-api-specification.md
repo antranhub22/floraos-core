@@ -638,7 +638,7 @@ Khuôn video là enum `video_format`: `REEL_15S` · `TIKTOK_30S` · `STORY_15S` 
 | GET | `/assets` | `G1` | Liệt kê asset, lọc theo sản phẩm và `kind` |
 | POST | `/assets/:id/approve` | `I2` | Duyệt asset dẫn xuất |
 | GET | `/media/optimizations` | `I1` | Liệt kê lượt tối ưu M04a |
-| POST | `/jobs/batch` | **chưa gác** — xem **RS-8** | Tạo job cho một module với danh sách mã `AIC` chọn sẵn |
+| POST | `/jobs/batch` | mã "run" theo `module` (`MODULE_RUN_CAPABILITY`, mặc định từ chối — RS-8) | Tạo job cho một module với danh sách mã `AIC` chọn sẵn. Sửa dòng này 05/10/2026: route đã gác từ RS-8 18/09, đặc tả ghi "chưa gác" là cũ |
 | POST | `/media/variants/batch` | `I4` | |
 | POST | `/media/background-removal` | — | **ĐÃ ĐÓNG ở P24**, luôn trả 409 kèm đường thay thế |
 | GET | `/ai-capabilities` | `U1` | |
@@ -765,6 +765,10 @@ Bảng: đặc tả 07 mục 28. Ca thử cách ly: `tests/tenant/greeting-card.
 | GET · POST | `/greeting-card/send-links` | **chưa gác** (nợ #170) | Tạo link chào khách (`send_code` tuần tự theo `prefix`), có thể kèm catalog riêng cho khách; GET lọc `sale_id`, `catalog_id`, `status` |
 | GET | `/greeting-card/orders` | **chưa gác** (nợ #170) | Đơn đến từ Thẻ chào (`orders.source = BROCHURE`), lọc `status` |
 | POST | `/greeting-card/orders/:id/confirm-payment` | **chưa gác** (nợ #170) | Tiệm xác nhận đã nhận tiền `{ reference?, note? }`; đơn tổ chức khác → lỗi "không tìm thấy" |
+| POST | `/greeting-card/orders/:id/assign-florist` | **chưa gác** (nợ #170) | Phân công thợ cắm `{ floristNote }` |
+| POST | `/greeting-card/orders/:id/product-photo` | **chưa gác** (nợ #170) | Gắn ảnh thành phẩm `{ assetId }` → `order_qc_records`; ảnh phải thuộc tổ chức (kiểm từ 05/10/2026) — trang tra cứu công khai ký URL cho ảnh này |
+| POST | `/greeting-card/orders/:id/dispatch-shipping` | **chưa gác** (nợ #170) | Giao vận chuyển `{ trackingNote }` |
+| POST | `/greeting-card/orders/:id/recipient-photo` | **chưa gác** (nợ #170) | Ảnh người nhận `{ assetId }`; cùng luật ảnh như `product-photo` |
 | GET · POST | `/greeting-card/tracking-pipeline` | **chưa gác** (nợ #170) | Bảng theo dõi đơn theo bước; POST ghi chú nội bộ vào đơn hoặc phiên. `role`/`senderName` hiện nhận từ client (nợ #171) |
 
 ### 25.3 Thẻ chào — phía khách (công khai, không đăng nhập)

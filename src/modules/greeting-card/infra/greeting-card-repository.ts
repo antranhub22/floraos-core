@@ -717,6 +717,13 @@ export class GreetingCardRepository {
     })
     if (!order) throw new Error("Không tìm thấy đơn hàng Thẻ chào")
 
+    // Ảnh phải thuộc tenant: trang tra cứu công khai ký URL cho ảnh này.
+    const asset = await this.db.assets.findFirst({
+      where: scopedWhere(ctx, { id: input.imageAssetId }),
+      select: { id: true },
+    })
+    if (!asset) throw new Error("Không tìm thấy ảnh")
+
     return this.db.$transaction(async (tx) => {
       await tx.order_qc_records.create({
         data: {
