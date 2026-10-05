@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
-import { EmptyCatalog, HeartToggle, ProductImage, formatVnd, useShortlist } from "./aux/aux-kit"
+import { EmptyCatalog, HeartToggle, ProductImage, useShortlist } from "./aux/aux-kit"
 import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
 import { rootHeight, useEmbeddedPreview } from "./aux/embedded"
+import { ProductInfo } from "./product-info/product-info"
 
 interface EditorialStoryDeckProps {
   products: GreetingCatalogProduct[]
@@ -33,7 +34,6 @@ export function EditorialStoryDeck({ products, catalogName, onSelectProduct }: E
 
         <ol className="flex flex-col gap-14">
           {products.map((p, i) => {
-            const story = p.meaning || p.description
             return (
               <li key={p.id}>
                 <article aria-labelledby={`story-${p.id}`}>
@@ -45,13 +45,17 @@ export function EditorialStoryDeck({ products, catalogName, onSelectProduct }: E
                     <div className="flex items-baseline gap-3">
                       <span className="font-serif text-display font-light text-primary tabular-nums">{String(i + 1).padStart(2, "0")}</span>
                       <span aria-hidden="true" className="h-px flex-1 bg-border" />
-                      <span className="text-body-sm font-bold tabular-nums">{formatVnd(p.price)}</span>
                     </div>
-                    <h2 id={`story-${p.id}`} className="mt-2 font-serif text-title font-medium leading-snug">
-                      {p.name}
-                    </h2>
-                    {story && <p className="mt-3 font-serif text-body italic leading-relaxed text-text">“{story}”</p>}
-                    {p.flowersSummary && <p className="mt-3 text-body-sm text-text-muted">{p.flowersSummary}</p>}
+                    <ProductInfo
+                      product={p}
+                      level="full"
+                      size="lg"
+                      as="h2"
+                      id={`story-${p.id}`}
+                      muted="var(--color-text-muted)"
+                      titleClassName="font-serif font-medium"
+                      className="mt-2"
+                    />
                     <div className="mt-5 flex gap-2">
                       <button
                         type="button"

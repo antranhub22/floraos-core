@@ -3,7 +3,9 @@
 import { useState } from "react"
 import { ArrowLeftRight } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
-import { AuxPage, EmptyCatalog, ProductImage, formatVnd } from "./aux/aux-kit"
+import { AuxPage, EmptyCatalog, ProductImage } from "./aux/aux-kit"
+import { PRODUCT_SPEC_FIELDS } from "./product-info/product-display"
+import { ProductInfo } from "./product-info/product-info"
 import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
 
 interface SplitCompareDeckProps {
@@ -13,12 +15,8 @@ interface SplitCompareDeckProps {
   onSelectProduct: (product: GreetingCatalogProduct) => void
 }
 
-const ROWS: { label: string; get: (p: GreetingCatalogProduct) => string | null | undefined }[] = [
-  { label: "Giá", get: (p) => formatVnd(p.price) },
-  { label: "Thành phần", get: (p) => p.flowersSummary },
-  { label: "Dịp tặng", get: (p) => p.occasion },
-  { label: "Phong cách", get: (p) => p.style },
-]
+// Thông số so sánh lấy từ nguồn duy nhất — đổi trường ở product-display.ts
+const ROWS = PRODUCT_SPEC_FIELDS
 
 function Picker({ products, value, onChange, label }: { products: GreetingCatalogProduct[]; value: number; onChange: (i: number) => void; label: string }) {
   return (
@@ -71,7 +69,7 @@ export function SplitCompareDeck({ products, catalogName, onSelectProduct }: Spl
             <button type="button" onClick={() => setOpen(p)} className="aspect-[3/4] overflow-hidden rounded-2xl bg-surface-alt" aria-label={`Chi tiết ${p.name}`}>
               <ProductImage product={p} />
             </button>
-            <h2 className="mt-2 line-clamp-2 min-h-[2.5em] text-body-sm font-semibold leading-snug">{p.name}</h2>
+            <ProductInfo product={p} level="compact" size="sm" as="h2" titleClassName="min-h-[2.5em] font-semibold" className="mt-2" />
             <button
               type="button"
               onClick={() => onSelectProduct(p)}
