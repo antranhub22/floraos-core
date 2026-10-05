@@ -22,6 +22,8 @@ export const GREETING_CARD_CAPABILITY = {
   deliveryManage: "R5",
   /** Huỷ đơn — R6 order.cancel (trần cứng điều hành) */
   orderCancel: "R6",
+  /** Cấu hình tích hợp (khoá webhook ngân hàng, kênh thông báo) — F2 org.update */
+  integrationManage: "F2",
   /** Hoàn tiền — R10 order.payment.refund (trần cứng điều hành) */
   paymentRefund: "R10",
 } as const

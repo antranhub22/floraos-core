@@ -8,6 +8,8 @@ import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-paym
 import { BrochurePaymentSettings } from "./brochure-payment-settings"
 import { BrochureShippingSettings } from "./brochure-shipping-settings"
 import { BrochurePolicySettings } from "./brochure-policy-settings"
+import { BrochureBankSyncSettings } from "./brochure-bank-sync-settings"
+import { UnmatchedPaymentsPanel } from "./unmatched-payments-panel"
 import { AdminOrderTable } from "./admin-order-table"
 import { AdminOrderActionDialog } from "./admin-order-action-dialog"
 import { ORDER_FILTERS, type AdminOrder, type OrderAction, type OrderFilterId } from "./admin-order-types"
@@ -40,11 +42,14 @@ export function AdminBrochurePaymentTab() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <BrochurePaymentSettings />
+        <BrochureBankSyncSettings />
         <BrochurePolicySettings />
         <BrochureShippingSettings />
       </div>
+
+      <UnmatchedPaymentsPanel />
 
       {notice && (
         <div role="status" className="p-3.5 rounded-xl bg-success-bg border border-success/30 text-success text-body-sm font-bold flex items-center gap-2">
