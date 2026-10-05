@@ -30,3 +30,13 @@ export function resolveGreetingTemplateId(candidate?: string | null): GreetingTe
   }
   return "editorial-luxury"
 }
+
+/**
+ * Phần `filters` được phép gửi ra trang khách: chỉ `templateId`.
+ * Các khóa khác (bộ lọc dịp, mức giá…) là dữ liệu nội bộ của cửa hàng.
+ */
+export function toPublicCatalogFilters(raw: unknown): { templateId: string } | null {
+  if (!raw || typeof raw !== "object") return null
+  const templateId = (raw as Record<string, unknown>).templateId
+  return typeof templateId === "string" ? { templateId } : null
+}

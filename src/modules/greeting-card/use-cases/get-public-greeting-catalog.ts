@@ -1,5 +1,6 @@
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
+import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
 
 export type PublicGreetingCatalogResult =
   | {
@@ -64,7 +65,7 @@ export async function mapCatalogToPublicResult(
       name: catalog.name,
       description: catalog.description,
       orgSlug: catalog.organization.slug,
-      filters: (catalog.filters as Record<string, unknown> | null) ?? null,
+      filters: toPublicCatalogFilters(catalog.filters),
     },
     products,
   }

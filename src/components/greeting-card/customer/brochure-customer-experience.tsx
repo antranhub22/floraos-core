@@ -158,6 +158,7 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
 
         {step === "SWIPING" && (
           <GreetingTemplateRenderer
+            showTemplateSwitcher={false}
             templateId={(catalog.filters as Record<string, unknown> | null)?.templateId as string | undefined}
             products={products}
             catalogName={catalog.name}

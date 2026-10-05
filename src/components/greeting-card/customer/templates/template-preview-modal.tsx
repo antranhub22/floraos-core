@@ -60,18 +60,13 @@ export function TemplatePreviewModal({
   const [productIndex, setProductIndex] = useState(0)
   const [isFav, setIsFav] = useState(false)
   const [loadedProducts, setLoadedProducts] = useState<GreetingCatalogProduct[]>([])
-  const [isLoadingCatalog, setIsLoadingCatalog] = useState(false)
 
   // Fetch real products from catalogId if provided and no previewProducts passed
+  const hasPreview = Boolean(previewProducts && previewProducts.length > 0)
   React.useEffect(() => {
-    if (previewProducts && previewProducts.length > 0) {
-      setLoadedProducts(previewProducts)
-      return
-    }
-    if (!catalogId) return
+    if (hasPreview || !catalogId) return
 
     let cancelled = false
-    setIsLoadingCatalog(true)
     fetch(`/api/v1/greeting-card/catalogs/${catalogId}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
@@ -112,23 +107,22 @@ export function TemplatePreviewModal({
         }
       })
       .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setIsLoadingCatalog(false)
-      })
 
     return () => {
       cancelled = true
     }
-  }, [catalogId, previewProducts])
+  }, [catalogId, hasPreview])
 
   if (!templateId) return null
 
   const styleKey = styleNumber || templateId
   const styleConfig = getTemplateStyleConfig(styleKey)
   const activeProductList =
-    loadedProducts.length > 0
-      ? loadedProducts
-      : (previewProducts && previewProducts.length > 0 ? previewProducts : SAMPLE_PREVIEW_PRODUCTS)
+    hasPreview && previewProducts
+      ? previewProducts
+      : loadedProducts.length > 0
+        ? loadedProducts
+        : SAMPLE_PREVIEW_PRODUCTS
   const safeIndex = productIndex < activeProductList.length ? productIndex : 0
   const activeProduct = activeProductList[safeIndex] || SAMPLE_PREVIEW_PRODUCTS[0]!
 

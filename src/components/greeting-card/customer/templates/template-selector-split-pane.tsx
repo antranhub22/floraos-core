@@ -275,13 +275,12 @@ function LivePreviewPane({
   const [prevTplId, setPrevTplId] = useState(tpl.id)
   const [fadeKey, setFadeKey] = useState(0)
 
-  useEffect(() => {
-    if (tpl.id !== prevTplId) {
-      setFadeKey((k) => k + 1)
-      setPrevTplId(tpl.id)
-      setProductIdx(0)
-    }
-  }, [tpl.id, prevTplId])
+  // Đổi mẫu → reset vị trí và chạy lại hiệu ứng (điều chỉnh state trong lúc render)
+  if (tpl.id !== prevTplId) {
+    setFadeKey((k) => k + 1)
+    setPrevTplId(tpl.id)
+    setProductIdx(0)
+  }
 
   const styleConfig = getTemplateStyleConfig(tpl.styleNumber || tpl.id)
   const safeIdx = productIdx < products.length ? productIdx : 0
@@ -297,7 +296,7 @@ function LivePreviewPane({
 
   return (
     // 2-column: phone left | nav + CTA right — mobile-first compact
-    <div className="flex items-center gap-4 w-full h-full px-3 py-4">
+    <div className="flex h-full w-full flex-col items-center gap-4 px-3 py-4 sm:flex-row">
 
       {/* LEFT: phone preview */}
       <div
@@ -419,9 +418,11 @@ export function TemplateSelectorSplitPane({
 
   const { products, isLoading, isRealData } = useCatalogProducts(catalogId, previewProducts)
 
-  useEffect(() => {
+  const [syncedSelectedId, setSyncedSelectedId] = useState(selectedTemplateId)
+  if (syncedSelectedId !== selectedTemplateId) {
+    setSyncedSelectedId(selectedTemplateId)
     setActiveId(selectedTemplateId)
-  }, [selectedTemplateId])
+  }
 
   const swipeStyles = GREETING_TEMPLATE_LIST.filter((t) => t.category === "swipe-style" && t.styleNumber)
   const auxDecks = GREETING_TEMPLATE_LIST.filter((t) => t.category !== "swipe-style" || !t.styleNumber)
@@ -450,10 +451,10 @@ export function TemplateSelectorSplitPane({
           <div>
             <label className="text-body-sm font-extrabold text-foreground flex items-center gap-1.5">
               <Layers size={15} className="text-primary" />
-              <span>Chọn Template Trải Nghiệm</span>
+              <span>Giao diện khách xem</span>
             </label>
             <p className="text-caption text-text-muted mt-0.5">
-              Nhấn vào mẫu bên trái · Preview cập nhật ngay bên phải
+              Bấm một mẫu để xem trước, rồi bấm “Chọn mẫu” để áp dụng cho bộ sưu tập
             </p>
           </div>
 
@@ -482,15 +483,9 @@ export function TemplateSelectorSplitPane({
         </div>
 
         {/* Split Pane — fixed height, both panels scroll internally */}
-        <div
-          className="flex rounded-2xl border border-border overflow-hidden bg-surface"
-          style={{ height: PANEL_H }}
-        >
-          {/* LEFT: scrollable template list — fixed 200px width */}
-          <div
-            className="shrink-0 overflow-y-auto border-r border-border"
-            style={{ width: 200 }}
-          >
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface sm:h-[var(--panel-h)] sm:flex-row" style={{ "--panel-h": `${PANEL_H}px` } as React.CSSProperties}>
+          {/* LEFT: scrollable template list */}
+          <div className="max-h-56 w-full shrink-0 overflow-y-auto border-b border-border sm:max-h-none sm:w-64 sm:border-b-0 sm:border-r">
             <div className="p-1.5 space-y-0.5">
               {displayed.map((tpl) => (
                 <TemplateListItem

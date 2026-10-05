@@ -7,6 +7,7 @@ import type { CatalogOption } from "./use-journey-catalogs"
 
 interface ShareSummaryPanelProps {
   catalog: CatalogOption | undefined
+  templateLabel: string | null
   itemCount: number
   publicPath: string
   publicUrl: string
@@ -30,7 +31,7 @@ function ChecklistRow({ done, label }: { done: boolean; label: string }) {
 
 /** Cột tóm tắt: trạng thái sẵn sàng + link dùng chung (một nơi duy nhất cho thao tác chia sẻ). */
 export function ShareSummaryPanel(props: ShareSummaryPanelProps) {
-  const { catalog, itemCount, publicPath, publicUrl, copied, copyError, onCopy, onPreview, onClone } = props
+  const { catalog, templateLabel, itemCount, publicPath, publicUrl, copied, copyError, onCopy, onPreview, onClone } = props
   const ready = Boolean(catalog) && itemCount > 0
 
   return (
@@ -44,6 +45,11 @@ export function ShareSummaryPanel(props: ShareSummaryPanelProps) {
           <ChecklistRow done={Boolean(catalog)} label="Đã chọn bộ sưu tập" />
           <ChecklistRow done={itemCount > 0} label={itemCount > 0 ? `Có ${itemCount} mẫu hoa` : "Thêm ít nhất 1 mẫu hoa"} />
         </ul>
+        {templateLabel && (
+          <p className="mt-4 border-t border-border pt-3 text-body-sm text-text-muted">
+            Giao diện: <span className="font-semibold text-foreground">{templateLabel}</span>
+          </p>
+        )}
       </section>
 
       <section

@@ -7,10 +7,18 @@ export interface CatalogOption {
   name: string
   code: string
   itemCount: number
+  /** Cấu hình JSON của bộ sưu tập; `templateId` là giao diện khách xem. */
+  filters: Record<string, unknown> | null
 }
 
 type CatalogListResponse = {
-  data?: Array<{ id: string; name: string; code: string; _count?: { items: number } }>
+  data?: Array<{
+    id: string
+    name: string
+    code: string
+    filters?: Record<string, unknown> | null
+    _count?: { items: number }
+  }>
 }
 
 const CATALOG_API = "/api/v1/greeting-card/catalogs"
@@ -61,6 +69,7 @@ export function useJourneyCatalogs() {
         name: c.name,
         code: c.code,
         itemCount: c._count?.items ?? 0,
+        filters: c.filters ?? null,
       }))
       setCatalogs(list)
       setLoadError(null)
@@ -146,5 +155,17 @@ export function useJourneyCatalogs() {
     [],
   )
 
-  return { catalogs, setCatalogs, orgSlug, loading, loadError, reload, createCatalog, cloneCatalog, createSendLink }
+  /** Lưu giao diện khách xem vào `filters.templateId`, giữ nguyên các khóa khác. */
+  const saveTemplate = useCallback(async (catalog: CatalogOption, templateId: string) => {
+    const filters = { ...(catalog.filters ?? {}), templateId }
+    const res = await fetch(`${CATALOG_API}/${catalog.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filters }),
+    })
+    if (!res.ok) throw new Error(await readError(res, "Không lưu được giao diện. Vui lòng thử lại."))
+    setCatalogs((list) => list.map((c) => (c.id === catalog.id ? { ...c, filters } : c)))
+  }, [])
+
+  return { saveTemplate, catalogs, setCatalogs, orgSlug, loading, loadError, reload, createCatalog, cloneCatalog, createSendLink }
 }

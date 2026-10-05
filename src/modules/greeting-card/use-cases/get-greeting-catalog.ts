@@ -4,6 +4,7 @@ import type {
   GreetingSessionRecord,
   ProductSnapshot,
 } from "../domain/greeting-card-types"
+import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
 
 export async function getGreetingCatalogForCustomer(
   sendCode: string,
@@ -88,7 +89,7 @@ export async function getGreetingCatalogForCustomer(
       code: session.catalog.code,
       name: session.catalog.name,
       description: session.catalog.description,
-      filters: (session.catalog.filters as Record<string, unknown> | null) ?? null,
+      filters: toPublicCatalogFilters(session.catalog.filters),
     },
     products,
     order: session.order

@@ -8,6 +8,7 @@ import { ShareSummaryPanel } from "./share-summary-panel"
 import { StepCatalog } from "./step-catalog"
 import { StepCustomer } from "./step-customer"
 import { StepResult } from "./step-result"
+import { TemplateSection, catalogTemplateId, templateName } from "./template-section"
 import { useCopyLink } from "./use-copy-link"
 import { catalogPublicPath, normalizeLinkCode, useJourneyCatalogs, type CatalogOption } from "./use-journey-catalogs"
 
@@ -98,6 +99,7 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
               onCreate={() => setDialog("create")}
               onItemCountChange={handleItemCountChange}
               onNext={() => setStep(2)}
+              templateSlot={selected && <TemplateSection catalog={selected} onSave={data.saveTemplate} />}
             />
           )}
           {step === 2 && selected && (
@@ -128,6 +130,7 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
 
         <ShareSummaryPanel
           catalog={selected}
+          templateLabel={selected ? templateName(catalogTemplateId(selected)) : null}
           itemCount={itemCount}
           publicPath={publicPath}
           publicUrl={publicUrl}

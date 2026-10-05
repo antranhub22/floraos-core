@@ -34,17 +34,19 @@ export function GreetingTemplateRenderer({
   catalogName,
   selectedProductId,
   onSelectProduct,
-  showTemplateSwitcher = true,
+  showTemplateSwitcher = false,
 }: GreetingTemplateRendererProps) {
   const [activeTemplate, setActiveTemplate] = useState<GreetingTemplateId>(() =>
     resolveGreetingTemplateId(templateId)
   )
   const [showSwitchMenu, setShowSwitchMenu] = useState(false)
 
-  // Sync state when templateId prop changes from parent
-  React.useEffect(() => {
+  // Đồng bộ khi cha đổi templateId (điều chỉnh state trong lúc render, không dùng effect)
+  const [syncedTemplateId, setSyncedTemplateId] = useState(templateId)
+  if (syncedTemplateId !== templateId) {
+    setSyncedTemplateId(templateId)
     setActiveTemplate(resolveGreetingTemplateId(templateId))
-  }, [templateId])
+  }
 
   const currentDef = GREETING_TEMPLATES[activeTemplate] || GREETING_TEMPLATES["editorial-luxury"]
 

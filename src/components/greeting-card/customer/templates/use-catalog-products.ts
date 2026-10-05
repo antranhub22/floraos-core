@@ -47,17 +47,15 @@ export function useCatalogProducts(
   previewProducts?: GreetingCatalogProduct[] | undefined
 ): UseCatalogProductsResult {
   const [loadedProducts, setLoadedProducts] = useState<GreetingCatalogProduct[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  // Bộ sưu tập đã tải xong (thành công hoặc lỗi) — dùng để suy ra trạng thái đang tải
+  const [settledFor, setSettledFor] = useState<string | null>(null)
+  const hasPreview = Boolean(previewProducts && previewProducts.length > 0)
+  const isLoading = Boolean(catalogId) && !hasPreview && settledFor !== catalogId
 
   useEffect(() => {
-    if (previewProducts && previewProducts.length > 0) {
-      setLoadedProducts(previewProducts)
-      return
-    }
-    if (!catalogId) return
+    if (hasPreview || !catalogId) return
 
     let cancelled = false
-    setIsLoading(true)
     fetch(`/api/v1/greeting-card/catalogs/${catalogId}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
@@ -99,24 +97,26 @@ export function useCatalogProducts(
       })
       .catch(() => {})
       .finally(() => {
-        if (!cancelled) setIsLoading(false)
+        if (!cancelled) setSettledFor(catalogId)
       })
 
     return () => {
       cancelled = true
     }
-  }, [catalogId, previewProducts])
+  }, [catalogId, hasPreview])
 
   const products =
-    loadedProducts.length > 0
-      ? loadedProducts
-      : previewProducts && previewProducts.length > 0
+    hasPreview && previewProducts
+      ? previewProducts
+      : loadedProducts.length > 0
+        ? loadedProducts
+        : previewProducts && previewProducts.length > 0
         ? previewProducts
         : SAMPLE_PRODUCTS
 
   return {
     products,
     isLoading,
-    isRealData: loadedProducts.length > 0,
+    isRealData: hasPreview || loadedProducts.length > 0,
   }
 }

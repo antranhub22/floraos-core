@@ -1,5 +1,7 @@
 "use client"
 
+import type { ReactNode } from "react"
+
 import { ArrowRight, BookOpen, Check, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -21,6 +23,8 @@ interface StepCatalogProps {
   onCreate: () => void
   onItemCountChange: (count: number) => void
   onNext: () => void
+  /** Phần chọn giao diện khách xem, hiển thị dưới danh sách mẫu hoa. */
+  templateSlot?: ReactNode
 }
 
 export function StepCatalog(props: StepCatalogProps) {
@@ -108,6 +112,8 @@ export function StepCatalog(props: StepCatalogProps) {
           <CatalogProductPicker catalogId={selectedId} compact onItemCountChange={props.onItemCountChange} />
         </div>
       )}
+
+      {selectedId && props.templateSlot}
 
       {catalogs.length > 0 && (
         <footer className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">

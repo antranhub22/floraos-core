@@ -176,6 +176,7 @@ export function BrochurePublicView({ catalog, products }: Props) {
   // 4. MAIN GREETING TEMPLATE DECK
   return (
     <GreetingTemplateRenderer
+      showTemplateSwitcher={false}
       templateId={(catalog.filters as Record<string, unknown> | null)?.templateId as string | undefined}
       catalogName={catalog.name}
       products={products}
