@@ -1,6 +1,7 @@
 import { openSecret, sealSecret } from "@/core/security/secret-box"
 import { runInBackground } from "@/core/runtime/background"
 import { log } from "@/core/observability/log"
+import { publicAppUrl } from "@/lib/public-url"
 import { GreetingNotificationRepository } from "../infra/greeting-notification-repository"
 import {
   NOTIFY_EVENT_LABELS,
@@ -18,7 +19,7 @@ export const NOTIFY_SECRET_PURPOSE = "greeting-card-notify"
 export type NotifyOutcome = "SENT" | "FAILED" | "SKIPPED" | "DUPLICATE" | "DISABLED"
 
 function publicBaseUrl(): string {
-  return (process.env["PUBLIC_APP_URL"] || process.env["RENDER_EXTERNAL_URL"] || "").replace(/\/$/, "")
+  return publicAppUrl()
 }
 
 /**
