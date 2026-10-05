@@ -1,5 +1,6 @@
 "use client"
 
+import { ReorderButton } from "./reorder-button"
 import { ShopContactBar } from "./shop-contact-bar"
 import React, { useState } from "react"
 import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
@@ -151,6 +152,10 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
 
         {step === "TRACKING" && orderResult && (
           <BrochureTrackingView orderCode={orderResult.orderCode} />
+        )}
+
+        {(step === "PAYMENT" || step === "TRACKING") && orderResult && (
+          <ReorderButton sendCode={session.sendCode} />
         )}
       </div>
 

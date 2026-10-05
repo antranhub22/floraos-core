@@ -1,7 +1,7 @@
 "use client"
 
-import React from "react"
-import { MessageSquare, MapPin, Calendar, Phone, User } from "lucide-react"
+import React, { useState } from "react"
+import { ChevronDown, Clock, MapPin, MessageSquare, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TrackingStepperView } from "./tracking-stepper-view"
 import type {
@@ -19,135 +19,111 @@ function formatVnd(val: number) {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val)
 }
 
+/** "dd/mm" từ "yyyy-mm-dd". */
+function shortDate(iso: string | null | undefined): string | null {
+  const [, m, d] = (iso ?? "").split("-")
+  return m && d ? `${d}/${m}` : null
+}
+
+function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null
+  return (
+    <div className="flex gap-2 text-caption">
+      <dt className="w-24 shrink-0 text-text-muted">{label}</dt>
+      <dd className="min-w-0 break-words font-semibold text-foreground">{value}</dd>
+    </div>
+  )
+}
+
+/**
+ * Thẻ theo dõi tiến độ — chỉ hiện điều cần để nắm tiến độ: ảnh, tên mẫu, giá,
+ * giai đoạn, giờ phải giao, khu vực, sale phụ trách. Thông tin khách/người nhận
+ * nằm trong "Chi tiết".
+ */
 export function TrackingOrderCard({ item, onOpenNotes }: TrackingOrderCardProps) {
+  const [open, setOpen] = useState(false)
   const isOrder = item.type === "ORDER"
   const isPaid = item.paidVnd >= item.totalVnd && item.totalVnd > 0
+  const due = [shortDate(item.deliveryDate), item.deliveryTimeSlot].filter(Boolean).join(" · ")
+  const detailsId = `tracking-details-${item.id}`
 
   return (
-    <div className="bg-surface rounded-2xl border border-border p-5 shadow-xs space-y-4 hover:border-primary/40 transition-colors">
-      {/* Header: Code, catalog, and active step badge */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-extrabold text-body text-foreground">
-            {item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-surface border border-border text-text-muted text-caption font-bold">
-            {item.catalogName}
-          </span>
-          {isOrder ? (
-            <span
-              className={`px-2 py-0.5 rounded-full text-caption font-bold ${
-                isPaid
-                  ? "bg-success-bg text-success border border-success/30"
-                  : "bg-warning-bg text-warning border border-warning/30"
-              }`}
-            >
-              {isPaid ? "Đã thanh toán đủ" : `Chưa thanh toán (${formatVnd(item.balanceVnd)})`}
-            </span>
-          ) : (
-            <span className="px-2 py-0.5 rounded-full bg-info-bg text-info text-caption font-bold border border-info/30">
-              Khách đang duyệt mẫu
-            </span>
-          )}
+    <div className="bg-surface rounded-2xl border border-border p-4 shadow-xs flex flex-col gap-3 hover:border-primary/40 transition-colors">
+      <div className="flex items-center gap-3">
+        <div className="w-14 h-14 rounded-xl bg-surface border border-border overflow-hidden shrink-0">
+          <FlowerImage src={item.productImageUrl} alt={item.productName} sizes="56px" fallback="icon" className="w-full h-full" />
         </div>
-
-        {/* Current status tag & Internal Note trigger */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenNotes(item, item.currentStepId)}
-            className="h-8 gap-1.5 text-caption font-bold text-foreground border-border hover:bg-surface-hover"
-          >
-            <MessageSquare size={14} className="text-primary" />
-            <span>Lưu ý nội bộ</span>
-            {item.notes.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-primary text-white text-caption font-extrabold">
-                {item.notes.length}
-              </span>
-            )}
-          </Button>
+        <div className="min-w-0 flex-1">
+          <p className="text-body font-bold text-foreground truncate" title={item.productName}>{item.productName}</p>
+          <p className="text-body-sm font-extrabold text-primary">{formatVnd(item.totalVnd)}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-body-sm font-extrabold text-primary">{item.currentStepTitle}</p>
+          {isOrder && (
+            <p className={`text-caption font-bold ${isPaid ? "text-success" : "text-warning"}`}>
+              {isPaid ? "Đã thu đủ" : "Chưa thu đủ"}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Main Content Info */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-        {/* Product snapshot (4 cols) */}
-        <div className="md:col-span-4 flex gap-3 items-center">
-          <div className="w-16 h-16 rounded-xl bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center">
-            <FlowerImage src={item.productImageUrl} alt={item.productName} sizes="64px" fallback="icon" className="w-full h-full" />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-caption text-text-muted font-bold">Mẫu hoa đã chọn</span>
-            <span className="text-body font-bold text-foreground truncate" title={item.productName}>
-              {item.productName}
-            </span>
-            <span className="text-caption font-extrabold text-primary">
-              {formatVnd(item.totalVnd)}
-            </span>
-          </div>
+      <dl className="grid grid-cols-1 gap-1.5 text-caption sm:grid-cols-3">
+        <div className="flex items-center gap-1.5">
+          <Clock size={14} className="text-text-muted shrink-0" aria-hidden="true" />
+          <dt className="sr-only">Thời gian phải giao</dt>
+          <dd className="font-semibold text-foreground">{due || (isOrder ? "Chưa có giờ giao" : "Khách đang chọn mẫu")}</dd>
         </div>
-
-        {/* Customer & Delivery (5 cols) */}
-        <div className="md:col-span-5 flex flex-col justify-center space-y-1 text-caption text-text-muted">
-          <div className="flex items-center gap-1.5 text-foreground font-bold">
-            <User size={13} className="text-primary" />
-            <span>Người đặt: {item.customerName}</span>
-            {item.customerPhone && (
-              <span className="text-text-muted font-normal">({item.customerPhone})</span>
-            )}
-          </div>
-
-          {item.recipientName && (
-            <div className="flex items-center gap-1.5">
-              <Phone size={13} className="text-text-muted" />
-              <span>Người nhận: <strong className="text-foreground">{item.recipientName}</strong> ({item.recipientPhone || "—"})</span>
-            </div>
-          )}
-
-          {item.deliveryAddress && (
-            <div className="flex items-center gap-1.5 truncate">
-              <MapPin size={13} className="text-text-muted shrink-0" />
-              <span className="truncate" title={item.deliveryAddress}>{item.deliveryAddress}</span>
-            </div>
-          )}
-
-          {item.deliveryDate && (
-            <div className="flex items-center gap-1.5">
-              <Calendar size={13} className="text-text-muted" />
-              <span>Ngày giao: <strong className="text-foreground">{item.deliveryDate}</strong></span>
-            </div>
-          )}
+        <div className="flex items-center gap-1.5">
+          <MapPin size={14} className="text-text-muted shrink-0" aria-hidden="true" />
+          <dt className="sr-only">Khu vực</dt>
+          <dd className="font-semibold text-foreground">{item.deliveryZone || "—"}</dd>
         </div>
-
-        {/* Status Callout (3 cols) */}
-        <div className="md:col-span-3 flex flex-col justify-center items-start md:items-end p-3 rounded-xl bg-surface border border-border">
-          <span className="text-caption text-text-muted font-bold">Giai đoạn hiện tại</span>
-          <span className="text-body-sm font-extrabold text-primary text-left md:text-right mt-0.5">
-            {item.currentStepTitle}
-          </span>
-          <span className="text-caption text-text-muted mt-1">
-            Cập nhật: {new Date(item.lastActiveAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-          </span>
+        <div className="flex items-center gap-1.5">
+          <UserRound size={14} className="text-text-muted shrink-0" aria-hidden="true" />
+          <dt className="text-text-muted">Sale:</dt>
+          <dd className="font-semibold text-foreground truncate">{item.saleName}</dd>
         </div>
+      </dl>
+
+      <TrackingStepperView
+        steps={item.steps}
+        currentStepId={item.currentStepId}
+        onSelectStepNote={(stepId) => onOpenNotes(item, stepId)}
+      />
+
+      <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={detailsId}
+          onClick={() => setOpen((v) => !v)}
+          className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-body-sm font-semibold text-text-muted hover:text-foreground"
+        >
+          <ChevronDown size={16} aria-hidden="true" className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+          Chi tiết
+        </button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onOpenNotes(item, item.currentStepId)}
+          className="h-9 gap-1.5 text-caption font-bold"
+        >
+          <MessageSquare size={14} className="text-primary" aria-hidden="true" />
+          Lưu ý nội bộ{item.notes.length > 0 ? ` (${item.notes.length})` : ""}
+        </Button>
       </div>
 
-      {/* Stepper horizontal line */}
-      <div className="pt-2 border-t border-border">
-        <TrackingStepperView
-          steps={item.steps}
-          currentStepId={item.currentStepId}
-          onSelectStepNote={(stepId) => onOpenNotes(item, stepId)}
-        />
-      </div>
-
-      {/* Card message if present */}
-      {item.cardMessage && (
-        <div className="p-2.5 rounded-xl bg-surface border border-border text-caption flex items-start gap-2">
-          <span className="font-bold text-foreground shrink-0">Lời chúc thiệp:</span>
-          <span className="italic text-text-muted">&ldquo;{item.cardMessage}&rdquo;</span>
-        </div>
+      {open && (
+        <dl id={detailsId} className="flex flex-col gap-1.5 rounded-xl bg-surface-muted p-3">
+          <DetailRow label="Mã" value={item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`} />
+          <DetailRow label="Bộ sưu tập" value={item.catalogName} />
+          <DetailRow label="Người đặt" value={[item.customerName, item.customerPhone].filter(Boolean).join(" · ")} />
+          <DetailRow label="Người nhận" value={[item.recipientName, item.recipientPhone].filter(Boolean).join(" · ")} />
+          <DetailRow label="Địa chỉ" value={item.deliveryAddress} />
+          <DetailRow label="Thanh toán" value={isOrder ? `${formatVnd(item.paidVnd)} / ${formatVnd(item.totalVnd)}` : null} />
+          <DetailRow label="Lời chúc" value={item.cardMessage ? `“${item.cardMessage}”` : null} />
+        </dl>
       )}
     </div>
   )

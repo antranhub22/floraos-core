@@ -19,6 +19,8 @@ type LooseJson = {
   phone?: string
   street?: string
   date?: string
+  timeSlot?: string
+  zone?: string
   role?: string
   stepKey?: string
   senderName?: string
@@ -81,6 +83,13 @@ export async function getTrackingPipeline(
   ])
 
   const stepMap = new Map(PIPELINE_STEPS.map((s) => [s.id, s]))
+  const saleIds = [
+    ...orders.map((o) => o.greeting_sessions[0]?.sale_id ?? ""),
+    ...activeSessions.map((s) => s.sale_id),
+  ]
+  const names = await repo.memberNames(ctx, saleIds)
+  const saleNameOf = (saleId: string | undefined) =>
+    !saleId ? "Chưa gán" : saleId === "public" ? "Link bộ sưu tập công khai" : names.get(saleId) ?? "Nhân viên đã rời"
 
   // 1. Process Orders
   const orderItems: TrackingPipelineItem[] = orders.map((order) => {
@@ -153,6 +162,9 @@ export async function getTrackingPipeline(
       recipientPhone: deliveryAddress?.phone ?? null,
       deliveryAddress: deliveryAddress?.street ?? null,
       deliveryDate: deliveryWindow?.date ?? null,
+      deliveryTimeSlot: deliveryWindow?.timeSlot ?? null,
+      deliveryZone: deliveryAddress?.zone ?? null,
+      saleName: saleNameOf(session?.sale_id),
       cardMessage: order.card_message ?? null,
       productName: snapshot?.name || order.items[0]?.description || "Mẫu hoa Thẻ chào",
       productPrice: Number(snapshot?.price || order.items[0]?.unit_price_vnd || 0),
@@ -232,6 +244,7 @@ export async function getTrackingPipeline(
       recipientPhone: null,
       deliveryAddress: null,
       deliveryDate: null,
+      saleName: saleNameOf(session.sale_id),
       cardMessage: null,
       productName: snapshot?.name || "Chưa chốt mẫu",
       productPrice: Number(snapshot?.price || 0),

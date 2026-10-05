@@ -768,6 +768,7 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | POST | `/public/brochure/:sendCode/quote` | — | Báo giá `{ variantId?, quantity?, shippingZoneId?, voucherCode?, customerPhone? }` → `{ quote, errors }` |
 | POST | `/public/brochure/:sendCode/order` | — | Tạo đơn (idempotent theo phiên); server báo giá lại, lựa chọn sai → 400 theo trường. Mẫu chưa niêm yết giá: đơn tổng 0, `quote.awaitingQuote = true`, không QR, không nhận mã giảm giá |
 | POST | `/public/brochure/:sendCode/payment-notify` | — | Khách báo đã chuyển khoản (cần có đơn) |
+| POST | `/public/brochure/:sendCode/reorder` | — | Khách đặt thêm đơn từ link đã có đơn: tạo phiên mới (mã link + mã đơn mới) cùng sale, khách, bộ sưu tập; ghi sự kiện `REORDER`; trả `{ sendCode }` mới. Link chưa có đơn → 409. 10 lần/10 phút/IP |
 | GET | `/public/brochure/tracking/:code` | — | Theo dõi theo mã đơn — chỉ đơn nguồn BROCHURE |
 | POST | `/public/greeting-catalog/:id/quote` | — | Như trên cho link bộ sưu tập công khai, kèm `productId` |
 | POST | `/public/greeting-catalog/:id/order` | — | Đặt hoa từ link bộ sưu tập công khai |

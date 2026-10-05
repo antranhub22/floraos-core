@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { paymentGateBlocker, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
+import { CoordinatorProgressStrip } from "./coordinator-progress-strip"
 
 export interface BrochureOrder {
   id: string
@@ -132,6 +133,12 @@ export function CoordinatorOrderCard({
           </div>
         </div>
       </div>
+
+      <CoordinatorProgressStrip
+        status={order.status}
+        productionStatus={order.production_status}
+        deliveryStatus={order.delivery_status}
+      />
 
       {/* Logistics */}
       <div className="bg-surface-muted rounded-xl p-3 flex flex-col gap-1.5 text-body-sm text-text-muted">

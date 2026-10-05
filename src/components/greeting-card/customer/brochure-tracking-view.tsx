@@ -1,11 +1,11 @@
 "use client"
 
+import { MediaGallery } from "@/components/greeting-card/media-gallery"
 import React from "react"
 import useSWR from "swr"
 import { apiGet } from "@/components/greeting-card/greeting-api"
 import { CheckCircle2, Clock, Truck, Gift, Camera, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 interface BrochureTrackingViewProps {
   orderCode: string
@@ -24,6 +24,8 @@ type TrackingData = {
     recipientName: string
     deliveryAddress: string
     finishedImageUrl?: string | null
+    productPhotoUrls?: string[]
+    recipientPhotoUrls?: string[]
     createdAt: string
   }
   trackingStep: {
@@ -61,6 +63,8 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
   }
 
   const { order, trackingStep } = data
+  const productPhotos = order.productPhotoUrls ?? (order.finishedImageUrl ? [order.finishedImageUrl] : [])
+  const recipientPhotos = order.recipientPhotoUrls ?? []
   const awaitingQuote = order.totalVnd <= 0
   const isPaid = !awaitingQuote && order.paidVnd >= order.totalVnd
 
@@ -143,21 +147,27 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
         </div>
       </div>
 
-      {/* Actual Finished Flower Photo Uploaded by Florist/Coordinator */}
-      {order.finishedImageUrl ? (
-        <div className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-muted border border-border">
-          <div className="flex items-center gap-2 text-foreground font-extrabold text-body">
-            <Camera size={18} className="text-primary" />
-            <span>Ảnh hoa thực tế thành phẩm từ thợ cắm:</span>
-          </div>
-          <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-border shadow-sm">
-            <FlowerImage src={order.finishedImageUrl} alt="Ảnh hoa thực tế" sizes="(max-width: 512px) 100vw, 512px" className="w-full h-full" />
-          </div>
-          <span className="text-caption text-text-muted text-center mt-1">
-            Hoa đã được chụp nghiệm thu trước khi giao đến tay người nhận.
-          </span>
-        </div>
-      ) : null}
+      {/* Ảnh thành phẩm và ảnh người nhận: hai mục riêng, ảnh sau không đè ảnh trước */}
+      {productPhotos.length > 0 && (
+        <section className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-muted border border-border">
+          <h3 className="flex items-center gap-2 text-foreground font-extrabold text-body">
+            <Camera size={18} className="text-primary" aria-hidden="true" />
+            Ảnh hoa thành phẩm
+          </h3>
+          <MediaGallery urls={productPhotos} label="Ảnh hoa thành phẩm" />
+          <p className="text-caption text-text-muted">Hoa được chụp nghiệm thu trước khi giao.</p>
+        </section>
+      )}
+      {recipientPhotos.length > 0 && (
+        <section className="flex flex-col gap-2 p-4 rounded-2xl bg-surface-muted border border-border">
+          <h3 className="flex items-center gap-2 text-foreground font-extrabold text-body">
+            <Camera size={18} className="text-success" aria-hidden="true" />
+            Ảnh người nhận
+          </h3>
+          <MediaGallery urls={recipientPhotos} label="Ảnh người nhận" />
+          <p className="text-caption text-text-muted">Hoa đã được trao tận tay người nhận.</p>
+        </section>
+      )}
 
       {/* Order Details Summary */}
       <div className="flex flex-col gap-2 text-body-sm text-text-muted bg-surface-muted p-4 rounded-xl border border-border">

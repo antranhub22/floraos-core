@@ -65,6 +65,32 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
     }))
   }
 
+  /**
+   * Phiên mới cho "đặt thêm đơn" từ một link đã có đơn: cùng tổ chức, bộ sưu tập,
+   * sale phụ trách và khách — mỗi đơn có link + mã đơn riêng, không đụng đơn cũ.
+   */
+  async createFollowUpSession(from: {
+    organization_id: string
+    catalog_id: string
+    send_code: string
+    sale_id: string
+    customer_name: string | null
+    customer_phone: string | null
+    expires_at: Date | null
+  }) {
+    return this.createSessionWithFreshCode(from.send_code.split("-")[0], (sendCode) => ({
+      organization_id: from.organization_id,
+      catalog_id: from.catalog_id,
+      send_code: sendCode,
+      sale_id: from.sale_id,
+      customer_name: from.customer_name,
+      customer_phone: from.customer_phone,
+      expires_at: from.expires_at,
+      status: "OPENED",
+      opened_at: new Date(),
+    }))
+  }
+
   async createPublicSession(input: {
     organizationId: string
     catalogId: string
