@@ -4,7 +4,14 @@ import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
 export type PublicGreetingCatalogResult =
   | {
       status: "ACTIVE"
-      catalog: { id: string; code: string; name: string; description: string | null; orgSlug: string }
+      catalog: {
+        id: string
+        code: string
+        name: string
+        description: string | null
+        orgSlug: string
+        filters?: Record<string, unknown> | null
+      }
       products: GreetingCatalogProduct[]
     }
   | { status: "NOT_FOUND" }
@@ -57,6 +64,7 @@ export async function mapCatalogToPublicResult(
       name: catalog.name,
       description: catalog.description,
       orgSlug: catalog.organization.slug,
+      filters: (catalog.filters as Record<string, unknown> | null) ?? null,
     },
     products,
   }
