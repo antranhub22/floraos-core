@@ -63,6 +63,7 @@ export function EmptyCatalog() {
 /**
  * Ảnh sản phẩm hòa nền: nhân (multiply) lên `backdrop` để nền trắng của ảnh studio
  * tan vào màu khung, không lộ thành khối chữ nhật. Ảnh có bối cảnh thật gần như không đổi.
+ * Luôn `object-contain`: khách phải thấy trọn mẫu hoa, không bị cắt mép.
  */
 export function ProductImage({
   product,
@@ -76,7 +77,7 @@ export function ProductImage({
   return product.imageUrl ? (
     <span className={cn("block h-full w-full overflow-hidden", className?.includes("absolute") ? undefined : "relative", className)} style={{ background: backdrop }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={product.imageUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" style={{ mixBlendMode: "multiply" }} />
+      <img src={product.imageUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain" style={{ mixBlendMode: "multiply" }} />
     </span>
   ) : (
     <div className={cn("flex h-full w-full items-center justify-center bg-surface-alt text-caption text-text-muted", className)}>

@@ -116,7 +116,7 @@ export function SwipeCard({ product, theme, brand, index, total, progress = 0, o
               src={product.imageUrl}
               alt=""
               draggable={false}
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-contain"
               style={{ objectPosition: "50% 35%", filter: theme.photoFilter, mixBlendMode: "multiply" }}
             />
           </>
