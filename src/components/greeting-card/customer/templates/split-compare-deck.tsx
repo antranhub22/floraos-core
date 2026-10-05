@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useState } from "react"
-import { Check, Sparkles, ChevronLeft, ChevronRight, ZoomIn, Ruler, Flower2, ShieldCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react"
+import { ArrowLeftRight } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
+import { AuxPage, EmptyCatalog, ProductImage, formatVnd } from "./aux/aux-kit"
+import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
 
 interface SplitCompareDeckProps {
   products: GreetingCatalogProduct[]
@@ -12,173 +13,102 @@ interface SplitCompareDeckProps {
   onSelectProduct: (product: GreetingCatalogProduct) => void
 }
 
-export function SplitCompareDeck({
-  products,
-  catalogName,
-  selectedProductId,
-  onSelectProduct,
-}: SplitCompareDeckProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isZoomed, setIsZoomed] = useState(false)
+const ROWS: { label: string; get: (p: GreetingCatalogProduct) => string | null | undefined }[] = [
+  { label: "Giá", get: (p) => formatVnd(p.price) },
+  { label: "Thành phần", get: (p) => p.flowersSummary },
+  { label: "Dịp tặng", get: (p) => p.occasion },
+  { label: "Phong cách", get: (p) => p.style },
+]
 
-  if (products.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 text-center text-text-muted">
-        <Sparkles size={40} className="text-primary mb-3" />
-        <p className="text-body font-medium">Hiện chưa có mẫu hoa nào trong bộ sưu tập này.</p>
-      </div>
-    )
-  }
+function Picker({ products, value, onChange, label }: { products: GreetingCatalogProduct[]; value: number; onChange: (i: number) => void; label: string }) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="h-10 w-full truncate rounded-xl border border-border bg-surface px-2 text-body-sm"
+    >
+      {products.map((p, i) => (
+        <option key={p.id} value={i}>{p.name}</option>
+      ))}
+    </select>
+  )
+}
 
-  const currentProduct = products[currentIndex]
-  if (!currentProduct) return null
+/** So sánh: đặt hai mẫu cạnh nhau, đối chiếu giá và thành phần rồi chọn mẫu ưng ý. */
+export function SplitCompareDeck({ products, catalogName, onSelectProduct }: SplitCompareDeckProps) {
+  const [left, setLeft] = useState(0)
+  const [right, setRight] = useState(Math.min(1, products.length - 1))
+  const [open, setOpen] = useState<GreetingCatalogProduct | null>(null)
 
-  const isSelected = selectedProductId === currentProduct.id
+  if (products.length === 0) return <EmptyCatalog />
+  const pair = [products[left], products[right]].filter((p): p is GreetingCatalogProduct => Boolean(p))
+  const rows = ROWS.filter((r) => pair.some((p) => r.get(p)))
 
   return (
-    <div className="w-full max-w-md mx-auto px-3 py-2 pb-24 select-none">
-      {/* Catalog Header */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <div>
-          <span className="text-caption font-bold text-accent tracking-widest uppercase">
-            Soi Cận Cảnh Chi Tiết
-          </span>
-          <h2 className="font-serif text-title sm:text-display font-medium text-foreground tracking-tight truncate">
-            {catalogName}
-          </h2>
-          <span className="text-caption text-text-muted">Mẫu {currentIndex + 1} / {products.length}</span>
-        </div>
-        <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-caption font-bold border border-primary/20">
-          Chế Độ So Sánh Cánh Hoa
-        </span>
-      </div>
-
-      {/* Top Split: Detailed Zoom Visual Frame */}
-      <div className="relative aspect-[4/3] w-full rounded-[28px] overflow-hidden border border-border shadow-xl bg-surface-muted mb-4 group">
-        {currentProduct.imageUrl ? (
+    <AuxPage eyebrow="So sánh" title={catalogName} subtitle="Đặt hai mẫu cạnh nhau để chọn mẫu hợp ý nhất.">
+      {products.length > 1 && (
+        <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <Picker products={products} value={left} onChange={setLeft} label="Mẫu bên trái" />
           <button
             type="button"
-            onClick={() => setIsZoomed((z) => !z)}
-            aria-label="Phóng to hoặc thu nhỏ ảnh hoa"
-            className="w-full h-full block p-0 m-0 border-0 bg-transparent cursor-pointer overflow-hidden"
+            onClick={() => {
+              setLeft(right)
+              setRight(left)
+            }}
+            aria-label="Đổi chỗ hai mẫu"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
           >
-            <img
-              src={currentProduct.imageUrl}
-              alt={currentProduct.name}
-              className={`w-full h-full object-cover transition-transform duration-500 ${
-                isZoomed ? "scale-150 cursor-zoom-out" : "scale-100 cursor-zoom-in"
-              }`}
-            />
+            <ArrowLeftRight size={16} aria-hidden="true" />
           </button>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-caption text-text-muted">
-            Hoa tươi nhập khẩu
-          </div>
-        )}
+          <Picker products={products} value={right} onChange={setRight} label="Mẫu bên phải" />
+        </div>
+      )}
 
-        {/* Ambient bottom mask */}
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+      <div className="grid grid-cols-2 gap-3">
+        {pair.map((p, i) => (
+          <article key={`${p.id}-${i}`} className="flex flex-col">
+            <button type="button" onClick={() => setOpen(p)} className="aspect-[3/4] overflow-hidden rounded-2xl bg-surface-alt" aria-label={`Chi tiết ${p.name}`}>
+              <ProductImage product={p} />
+            </button>
+            <h2 className="mt-2 line-clamp-2 min-h-[2.5em] text-body-sm font-semibold leading-snug">{p.name}</h2>
+            <button
+              type="button"
+              onClick={() => onSelectProduct(p)}
+              className="mt-2 h-11 rounded-xl bg-primary text-body-sm font-bold text-white active:scale-[0.99]"
+            >
+              Chọn mẫu này
+            </button>
+          </article>
+        ))}
+      </div>
 
-        {/* Zoom Tooltip */}
-        <button
-          type="button"
-          onClick={() => setIsZoomed((z) => !z)}
-          aria-label="Phóng to chi tiết"
-          className="absolute bottom-3.5 right-3.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-caption font-bold flex items-center gap-1.5 shadow-md border border-white/20 hover:bg-black/80 transition-colors cursor-pointer"
-        >
-          <ZoomIn size={13} />
-          <span>{isZoomed ? "Thu nhỏ" : "Chạm phóng to"}</span>
-        </button>
+      {rows.length > 0 && (
+        <dl className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
+          {rows.map((r) => (
+            <div key={r.label} className="border-b border-border px-4 py-3 last:border-0">
+              <dt className="mb-1.5 text-caption font-semibold uppercase tracking-wider text-text-muted">{r.label}</dt>
+              <div className="grid grid-cols-2 gap-3">
+                {pair.map((p, i) => (
+                  <dd key={i} className="text-body-sm">{r.get(p) || "—"}</dd>
+                ))}
+              </div>
+            </div>
+          ))}
+        </dl>
+      )}
 
-        {/* Navigation arrows */}
-        <button
-          type="button"
-          disabled={currentIndex === 0}
-          onClick={() => {
-            setIsZoomed(false)
-            setCurrentIndex((i) => i - 1)
+      {open && (
+        <EnterpriseSpecSheet
+          product={open}
+          isOpen
+          onClose={() => setOpen(null)}
+          onSelectProduct={(p) => {
+            setOpen(null)
+            onSelectProduct(p)
           }}
-          aria-label="Mẫu trước"
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed hover:bg-black/70 border border-white/20 shadow-md cursor-pointer transition-transform active:scale-90"
-        >
-          <ChevronLeft size={18} />
-        </button>
-        <button
-          type="button"
-          disabled={currentIndex === products.length - 1}
-          onClick={() => {
-            setIsZoomed(false)
-            setCurrentIndex((i) => i + 1)
-          }}
-          aria-label="Mẫu sau"
-          className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed hover:bg-black/70 border border-white/20 shadow-md cursor-pointer transition-transform active:scale-90"
-        >
-          <ChevronRight size={18} />
-        </button>
-      </div>
-
-      {/* Bottom Split: Atomic Spec Sheet & Dimension Details */}
-      <div className="bg-surface rounded-3xl border border-border p-5 shadow-lg space-y-4">
-        <div>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="font-serif text-title sm:text-display font-medium text-foreground tracking-tight">
-                {currentProduct.name}
-              </h3>
-              <p className="text-caption text-text-muted mt-0.5">Mã thiết kế: {currentProduct.code}</p>
-            </div>
-            <span className="font-serif text-title sm:text-display font-semibold text-primary whitespace-nowrap">
-              {currentProduct.price > 0 ? `${currentProduct.price.toLocaleString("vi-VN")} đ` : "Liên hệ"}
-            </span>
-          </div>
-          {currentProduct.description && (
-            <p className="text-caption text-text-muted mt-2 leading-relaxed">
-              {currentProduct.description}
-            </p>
-          )}
-        </div>
-
-        {/* Dimension & Freshness Grid */}
-        <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-border/70">
-          <div className="p-3 rounded-2xl bg-surface-alt/70 border border-border/80 flex items-center gap-2.5">
-            <Ruler size={18} className="text-info shrink-0" />
-            <div>
-              <span className="text-caption text-text-muted block">Kích thước chuẩn</span>
-              <span className="text-caption font-extrabold text-foreground">Cao ~60cm · Tán ~45cm</span>
-            </div>
-          </div>
-          <div className="p-3 rounded-2xl bg-surface-alt/70 border border-border/80 flex items-center gap-2.5">
-            <ShieldCheck size={18} className="text-success shrink-0" />
-            <div>
-              <span className="text-caption text-text-muted block">Độ tươi rực rỡ</span>
-              <span className="text-caption font-extrabold text-foreground">3 – 5 ngày ổn định</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Floral composition */}
-        <div className="p-3.5 rounded-2xl bg-surface-muted border border-border/60 flex items-start gap-3">
-          <Flower2 size={18} className="text-primary shrink-0 mt-0.5" />
-          <div className="text-caption text-text-muted leading-relaxed">
-            <span className="font-bold text-foreground">Cấu phần tuyển chọn: </span>
-            {currentProduct.flowersSummary || "Hoa tươi loại 1 kết hợp lá đệm nhập khẩu và giấy gói cao cấp phong cách hiện đại."}
-          </div>
-        </div>
-      </div>
-
-      {/* Strictly Preserved Primary Conversion Channel */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-sm px-4">
-        <Button
-          type="button"
-          variant={isSelected ? "secondary" : "primary"}
-          size="default"
-          onClick={() => onSelectProduct(currentProduct)}
-          className="w-full h-12 rounded-2xl shadow-xl font-extrabold text-body-sm flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white cursor-pointer transition-transform active:scale-95"
-        >
-          <Check size={18} />
-          <span>{isSelected ? "ĐÃ CHỌN MẪU NÀY" : `CHỌN MẪU NÀY · ${currentProduct.price > 0 ? `${currentProduct.price.toLocaleString("vi-VN")} đ` : "Chi Tiết"}`}</span>
-        </Button>
-      </div>
-    </div>
+        />
+      )}
+    </AuxPage>
   )
 }

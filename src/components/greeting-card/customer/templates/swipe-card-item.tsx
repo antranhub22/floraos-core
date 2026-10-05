@@ -3,7 +3,8 @@
 import React from "react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import type { TemplateStyleConfig } from "./styles/template-style-configs"
-import { StyleLayoutDispatcher } from "./styles/style-layout-dispatcher"
+import { SwipeCard } from "./swipe/swipe-card"
+import { getSwipeTheme } from "./swipe/swipe-themes"
 
 interface SwipeCardItemProps {
   product: GreetingCatalogProduct
@@ -12,47 +13,23 @@ interface SwipeCardItemProps {
   isFavorite: boolean
   currentIndex: number
   totalCount: number
+  /** Tên hiển thị góc trên thẻ (mặc định: tên kiểu) */
+  brand?: string | undefined
   onTapDetail?: (() => void) | undefined
   onToggleFavorite?: (() => void) | undefined
 }
 
-/**
- * SwipeCardItem — outer shell providing the card stack geometry.
- * Visual content is fully delegated to StyleLayoutDispatcher,
- * which picks the correct per-style layout component.
- *
- * Card dimensions: 360–430px width, full-height mobile editorial.
- * Shadow: 0 20px 60px rgba(0,0,0,0.16) per spec.
- */
-export function SwipeCardItem({
-  product,
-  styleConfig,
-  isActive,
-  isFavorite,
-  currentIndex,
-  totalCount,
-  onTapDetail,
-  onToggleFavorite,
-}: SwipeCardItemProps) {
+/** Một thẻ tĩnh dùng cho ô xem trước mẫu (trình chọn template, modal xem trước). */
+export function SwipeCardItem({ product, styleConfig, currentIndex, totalCount, brand, onTapDetail }: SwipeCardItemProps) {
   return (
-    <div
-      className="relative w-full select-none overflow-hidden"
-      style={{
-        height: "clamp(560px, 82vh, 700px)",
-        borderRadius: 32,
-        boxShadow: "0 20px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.10)",
-        touchAction: "pan-y",
-      }}
-    >
-      <StyleLayoutDispatcher
+    <div className="relative w-full select-none" style={{ height: 560 }}>
+      <SwipeCard
         product={product}
-        styleConfig={styleConfig}
-        isActive={isActive}
-        isFavorite={isFavorite}
-        currentIndex={currentIndex}
-        totalCount={totalCount}
-        onTapDetail={onTapDetail}
-        onToggleFavorite={onToggleFavorite}
+        theme={getSwipeTheme(styleConfig.styleNumber)}
+        brand={brand ?? "Bộ sưu tập của tiệm"}
+        index={currentIndex}
+        total={totalCount}
+        onInfo={onTapDetail}
       />
     </div>
   )

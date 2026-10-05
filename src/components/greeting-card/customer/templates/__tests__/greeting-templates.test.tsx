@@ -92,8 +92,12 @@ describe("Greeting Card 12 Visual Swipe Styles & Engine Tests", () => {
       )
 
       expect(html).toContain("Bó Hoa Hồng Red Naomi")
-      expect(html).toContain("CHỌN MẪU NÀY")
+      expect(html).toContain("Đặt mẫu này")
       expect(html).toContain("850.000")
+      // Cử chỉ vuốt chuẩn Tinder: có nhãn THÍCH / BỎ QUA và nút hoàn tác
+      expect(html).toContain("THÍCH")
+      expect(html).toContain("BỎ QUA")
+      expect(html).toContain("Hoàn tác")
     })
   })
 
@@ -112,7 +116,8 @@ describe("Greeting Card 12 Visual Swipe Styles & Engine Tests", () => {
       )
 
       expect(html).toContain("Bó Hoa Hồng Red Naomi")
-      expect(html).toContain("CHỌN MẪU")
+      // Mỗi mẫu đều có đường đặt hoa: nút trực tiếp hoặc chạm ảnh để mở chi tiết
+      expect(html).toMatch(/Đặt mẫu|Chọn mẫu này|aria-label="Xem Bó Hoa Hồng Red Naomi/)
     })
   })
 
@@ -129,7 +134,7 @@ describe("Greeting Card 12 Visual Swipe Styles & Engine Tests", () => {
         })
       )
 
-      expect(html).toContain("Hiện chưa có mẫu hoa")
+      expect(html).toContain("chưa có mẫu hoa")
     }
   })
 
@@ -146,7 +151,7 @@ describe("Greeting Card 12 Visual Swipe Styles & Engine Tests", () => {
     )
 
     expect(html).toContain("Bó Hoa Hồng Red Naomi")
-    expect(html).toContain("CHỌN MẪU NÀY")
+    expect(html).toContain("Đặt mẫu này")
   })
 
   it("should render TemplateSelectorCard with 12 styles and filtering tabs", () => {

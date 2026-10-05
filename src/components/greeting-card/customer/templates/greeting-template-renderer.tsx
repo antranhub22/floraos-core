@@ -10,8 +10,6 @@ import {
   resolveGreetingTemplateId,
 } from "@/modules/greeting-card/domain/greeting-template-registry"
 import { SwipeBrochureEngine } from "./swipe-brochure-engine"
-import { EnterpriseLuxuryDeck } from "./enterprise-luxury-deck"
-import { BrochureSwipeDeck } from "../brochure-swipe-deck"
 import { LookbookGridDeck } from "./lookbook-grid-deck"
 import { EditorialStoryDeck } from "./editorial-story-deck"
 import { VideoReelsDeck } from "./video-reels-deck"
@@ -122,7 +120,9 @@ export function GreetingTemplateRenderer({
         activeTemplate === "real-life-in-store" ||
         activeTemplate === "real-life-handheld" ||
         activeTemplate === "lifestyle-context" ||
-        activeTemplate === "mixed-media") && (
+        activeTemplate === "mixed-media" ||
+        activeTemplate === "enterprise-luxury" ||
+        activeTemplate === "swipe-classic") && (
         <SwipeBrochureEngine
           products={products}
           catalogName={catalogName}
@@ -132,25 +132,7 @@ export function GreetingTemplateRenderer({
         />
       )}
 
-      {/* Legacy / Auxiliary Decks */}
-      {activeTemplate === "enterprise-luxury" && (
-        <EnterpriseLuxuryDeck
-          products={products}
-          catalogName={catalogName}
-          selectedProductId={selectedProductId}
-          onSelectProduct={onSelectProduct}
-        />
-      )}
-
-      {activeTemplate === "swipe-classic" && (
-        <BrochureSwipeDeck
-          products={products}
-          catalogName={catalogName}
-          selectedProductId={selectedProductId}
-          onSelectProduct={onSelectProduct}
-        />
-      )}
-
+      {/* Auxiliary Decks */}
       {activeTemplate === "lookbook-grid" && (
         <LookbookGridDeck
           products={products}

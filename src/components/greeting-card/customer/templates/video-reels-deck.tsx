@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useState } from "react"
-import { Check, Sparkles, Play, Volume2, ChevronUp, ChevronDown, Heart, ShieldCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useEffect, useRef, useState } from "react"
+import { ChevronUp, Info } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
+import { EmptyCatalog, HeartToggle, ProductImage, formatVnd, useShortlist } from "./aux/aux-kit"
+import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
 
 interface VideoReelsDeckProps {
   products: GreetingCatalogProduct[]
@@ -12,159 +13,98 @@ interface VideoReelsDeckProps {
   onSelectProduct: (product: GreetingCatalogProduct) => void
 }
 
-export function VideoReelsDeck({
-  products,
-  catalogName,
-  selectedProductId,
-  onSelectProduct,
-}: VideoReelsDeckProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(true)
-  const [isHearted, setIsHearted] = useState<string[]>([])
+/** Reels: lướt dọc toàn màn hình như TikTok/Instagram, mỗi mẫu một khung hình. */
+export function VideoReelsDeck({ products, catalogName, onSelectProduct }: VideoReelsDeckProps) {
+  const shortlist = useShortlist()
+  const [open, setOpen] = useState<GreetingCatalogProduct | null>(null)
+  const [active, setActive] = useState(0)
+  const scroller = useRef<HTMLDivElement>(null)
 
-  if (products.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 text-center text-text-muted">
-        <Sparkles size={40} className="text-primary mb-3" />
-        <p className="text-body font-medium">Hiện chưa có mẫu hoa nào trong bộ sưu tập này.</p>
-      </div>
+  // Theo dõi khung đang hiển thị để cập nhật bộ đếm
+  useEffect(() => {
+    const root = scroller.current
+    if (!root) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) setActive(Number((e.target as HTMLElement).dataset.index))
+      },
+      { root, threshold: 0.6 },
     )
-  }
+    root.querySelectorAll("[data-index]").forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [products.length])
 
-  const currentProduct = products[currentIndex]
-  if (!currentProduct) return null
-
-  const isSelected = selectedProductId === currentProduct.id
-  const hearted = isHearted.includes(currentProduct.id)
+  if (products.length === 0) return <EmptyCatalog />
 
   return (
-    <div className="w-full max-w-sm mx-auto px-2 py-1 select-none flex flex-col items-center pb-8">
-      {/* Top Reel Counter */}
-      <div className="w-full flex items-center justify-between px-2 mb-2">
-        <span className="text-caption font-bold text-foreground truncate max-w-[200px]">{catalogName}</span>
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-caption font-extrabold border border-primary/20">
-          <Play size={10} className="fill-current" />
-          <span>Reels {currentIndex + 1} / {products.length}</span>
-        </div>
+    <div className="relative h-dvh w-full bg-black text-white">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pb-8 pt-4" style={{ background: "linear-gradient(180deg,rgba(0,0,0,0.55),rgba(0,0,0,0))" }}>
+        <h1 className="truncate text-body font-semibold">{catalogName}</h1>
+        <span className="text-caption tabular-nums text-white/80">
+          {active + 1} / {products.length}
+        </span>
       </div>
 
-      {/* 9:16 Vertical Video / 360 Screen Frame */}
-      <div className="relative w-full aspect-[9/16] rounded-[36px] overflow-hidden shadow-2xl border border-white/20 bg-black flex flex-col justify-between">
-        {/* Media (Image or Video) with Full-Bleed Scaling */}
-        {currentProduct.imageUrl ? (
-          <img
-            src={currentProduct.imageUrl}
-            alt={currentProduct.name}
-            className={`absolute inset-0 w-full h-full object-cover transition-transform duration-1000 ${
-              isPlaying ? "scale-105" : "scale-100"
-            }`}
-          />
-        ) : (
-          <div className="absolute inset-0 w-full h-full bg-surface-muted flex flex-col items-center justify-center text-text-muted">
-            <Play size={44} className="text-primary/40 mb-2" />
-            <span className="text-caption">Đang chuẩn bị góc quay 360°</span>
-          </div>
-        )}
-
-        {/* Ambient Dark Gradient Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/50 pointer-events-none" />
-
-        {/* Top Floating Glass Badges */}
-        <div className="relative z-10 p-4 flex items-center justify-between pointer-events-none">
-          <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-caption font-bold shadow-md">
-            <ShieldCheck size={14} className="text-success" />
-            <span>Góc quay 360° thực tế</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsPlaying((p) => !p)}
-            aria-label="Tạm dừng hoặc tiếp tục video"
-            className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center pointer-events-auto hover:bg-black/80 transition-colors shadow-md cursor-pointer"
+      <div ref={scroller} className="h-full snap-y snap-mandatory overflow-y-auto [scrollbar-width:none]">
+        {products.map((p, i) => (
+          <section
+            key={p.id}
+            data-index={i}
+            aria-label={`${p.name}, ${formatVnd(p.price)}`}
+            className="relative mx-auto h-dvh w-full max-w-[480px] snap-start snap-always overflow-hidden"
           >
-            {isPlaying ? <Volume2 size={15} /> : <Play size={15} />}
-          </button>
-        </div>
+            <ProductImage product={p} className="absolute inset-0" />
+            <div className="absolute inset-x-0 bottom-0 h-2/3" style={{ background: "linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.5) 50%,rgba(0,0,0,0.9) 100%)" }} />
 
-        {/* Right Action Rail (Vertical TikTok/Reels Style) */}
-        <div className="absolute right-3.5 bottom-36 z-20 flex flex-col items-center gap-3">
-          <button
-            type="button"
-            onClick={() =>
-              setIsHearted((prev) =>
-                prev.includes(currentProduct.id)
-                  ? prev.filter((id) => id !== currentProduct.id)
-                  : [...prev, currentProduct.id]
-              )
-            }
-            aria-label="Thả tim tác phẩm"
-            className={`w-11 h-11 rounded-full backdrop-blur-md border flex items-center justify-center shadow-xl transition-transform active:scale-90 cursor-pointer ${
-              hearted
-                ? "bg-danger text-white border-danger shadow-danger/40"
-                : "bg-black/60 text-white border-white/25 hover:bg-black/80"
-            }`}
-          >
-            <Heart size={20} className={hearted ? "fill-current text-white" : ""} />
-          </button>
-
-          {/* Up arrow for prev reel */}
-          <button
-            type="button"
-            disabled={currentIndex === 0}
-            onClick={() => setCurrentIndex((i) => i - 1)}
-            aria-label="Video trước"
-            className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/80 transition-colors cursor-pointer shadow-md"
-          >
-            <ChevronUp size={20} />
-          </button>
-
-          {/* Down arrow for next reel */}
-          <button
-            type="button"
-            disabled={currentIndex === products.length - 1}
-            onClick={() => setCurrentIndex((i) => i + 1)}
-            aria-label="Video tiếp theo"
-            className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/80 transition-colors cursor-pointer shadow-md"
-          >
-            <ChevronDown size={20} />
-          </button>
-        </div>
-
-        {/* Bottom Frosted Glass Card & Strictly Preserved "CHỌN MẪU NÀY" CTA */}
-        <div className="relative z-10 m-3.5 p-4.5 rounded-3xl bg-black/65 backdrop-blur-xl border border-white/25 text-white flex flex-col gap-3.5 shadow-2xl">
-          <div className="pr-10">
-            <h2 className="font-serif text-title sm:text-display font-medium text-white line-clamp-1 drop-shadow-md">
-              {currentProduct.name}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="font-serif text-title font-semibold text-warning">
-                {currentProduct.price > 0 ? `${currentProduct.price.toLocaleString("vi-VN")} đ` : "Liên hệ"}
-              </span>
-              <span className="text-caption text-white/70">· Mã: {currentProduct.code}</span>
+            <div className="absolute bottom-40 right-3 z-10 flex flex-col items-center gap-5">
+              <div className="flex flex-col items-center gap-1">
+                <HeartToggle active={shortlist.has(p.id)} onToggle={() => shortlist.toggle(p.id)} name={p.name} className="h-12 w-12" />
+                <span className="text-caption font-semibold">Thích</span>
+              </div>
+              <button type="button" onClick={() => setOpen(p)} className="flex flex-col items-center gap-1" aria-label={`Chi tiết ${p.name}`}>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/35 backdrop-blur-md">
+                  <Info size={22} aria-hidden="true" />
+                </span>
+                <span className="text-caption font-semibold">Chi tiết</span>
+              </button>
             </div>
-            {currentProduct.description && (
-              <p className="text-caption text-white/85 line-clamp-2 mt-1 leading-snug">
-                {currentProduct.description}
-              </p>
-            )}
-          </div>
 
-          <Button
-            type="button"
-            variant={isSelected ? "secondary" : "primary"}
-            size="default"
-            onClick={() => onSelectProduct(currentProduct)}
-            className="w-full h-11.5 rounded-2xl shadow-xl font-bold text-body-sm bg-primary hover:bg-primary-dark text-white flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-transform"
-          >
-            <Check size={18} />
-            <span>
-              {isSelected
-                ? "BẠN ĐÃ CHỌN MẪU NÀY"
-                : `CHỌN MẪU NÀY · ${currentProduct.price > 0 ? `${currentProduct.price.toLocaleString("vi-VN")} đ` : currentProduct.name}`}
-            </span>
-          </Button>
-        </div>
+            <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-[max(env(safe-area-inset-bottom),20px)]">
+              <div className="pr-16">
+                <h2 className="line-clamp-2 text-title font-bold leading-tight">{p.name}</h2>
+                <p className="mt-1 text-title-sm font-bold text-warning-bg">{formatVnd(p.price)}</p>
+                {(p.flowersSummary || p.description) && (
+                  <p className="mt-1.5 line-clamp-2 text-body-sm text-white/80">{p.flowersSummary || p.description}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectProduct(p)}
+                className="mt-4 h-12 w-full rounded-2xl bg-white text-body font-bold text-black shadow-lg active:scale-[0.99]"
+              >
+                Đặt mẫu này
+              </button>
+              {i === 0 && products.length > 1 && (
+                <p className="mt-3 flex items-center justify-center gap-1 text-caption text-white/70" aria-hidden="true">
+                  <ChevronUp size={14} className="animate-bounce" /> Vuốt lên để xem mẫu tiếp
+                </p>
+              )}
+            </div>
+          </section>
+        ))}
       </div>
+
+      {open && (
+        <EnterpriseSpecSheet
+          product={open}
+          isOpen
+          onClose={() => setOpen(null)}
+          onSelectProduct={(p) => {
+            setOpen(null)
+            onSelectProduct(p)
+          }}
+        />
+      )}
     </div>
   )
 }
