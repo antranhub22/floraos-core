@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from "react"
-import { ChevronLeft, ChevronRight, Check, Sparkles, Heart, ArrowRight, ArrowLeft } from "lucide-react"
+import { ChevronLeft, ChevronRight, Check, Sparkles, ArrowRight, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatPriceVnd } from "@/components/greeting-card/api-error"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 interface BrochureSwipeDeckProps {
   products: GreetingCatalogProduct[]
@@ -162,18 +163,7 @@ export function BrochureSwipeDeck({
             }}
             className="absolute inset-0 rounded-3xl overflow-hidden border border-border bg-surface shadow-md pointer-events-none"
           >
-            {nextProduct.imageUrl ? (
-              <img
-                src={nextProduct.imageUrl}
-                alt={nextProduct.name}
-                onError={(e) => { e.currentTarget.style.display = "none" }}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-surface-muted flex items-center justify-center">
-                <Heart size={40} className="text-text-muted" />
-              </div>
-            )}
+            <FlowerImage src={nextProduct.imageUrl} alt={nextProduct.name} sizes="(max-width: 640px) 100vw, 384px" fallback="icon" className="w-full h-full" />
             <div className="absolute inset-0 bg-black/30" />
           </div>
         )}
@@ -192,20 +182,15 @@ export function BrochureSwipeDeck({
             isDragging ? "cursor-grabbing" : "cursor-grab"
           }`}
         >
-          {currentProduct.imageUrl ? (
-            <img
-              src={currentProduct.imageUrl}
-              alt={currentProduct.name}
-              draggable={false}
-              onError={(e) => { e.currentTarget.style.display = "none" }}
-              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-            />
-          ) : (
-            <div className="absolute inset-0 w-full h-full bg-surface-muted flex flex-col items-center justify-center text-text-muted">
-              <Heart size={48} className="text-primary/40 mb-2" />
-              <span className="text-caption">Hình ảnh đang cập nhật</span>
-            </div>
-          )}
+          <FlowerImage
+            src={currentProduct.imageUrl}
+            alt={currentProduct.name}
+            sizes="(max-width: 640px) 100vw, 384px"
+            priority
+            draggable={false}
+            position="absolute"
+            className="inset-0 w-full h-full pointer-events-none"
+          />
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
 

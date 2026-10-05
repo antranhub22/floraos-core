@@ -1,23 +1,14 @@
 "use client"
 
 import React from "react"
-import {
-  MessageSquare,
-  MapPin,
-  Calendar,
-  Phone,
-  User,
-  Sparkles,
-  ShieldCheck,
-  ChevronRight,
-  ExternalLink,
-} from "lucide-react"
+import { MessageSquare, MapPin, Calendar, Phone, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TrackingStepperView } from "./tracking-stepper-view"
 import type {
   TrackingPipelineItem,
   TrackingPipelineStepId,
 } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 interface TrackingOrderCardProps {
   item: TrackingPipelineItem
@@ -85,15 +76,7 @@ export function TrackingOrderCard({ item, onOpenNotes }: TrackingOrderCardProps)
         {/* Product snapshot (4 cols) */}
         <div className="md:col-span-4 flex gap-3 items-center">
           <div className="w-16 h-16 rounded-xl bg-surface border border-border overflow-hidden shrink-0 flex items-center justify-center">
-            {item.productImageUrl ? (
-              <img
-                src={item.productImageUrl}
-                alt={item.productName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Sparkles size={24} className="text-primary/40" />
-            )}
+            <FlowerImage src={item.productImageUrl} alt={item.productName} sizes="64px" fallback="icon" className="w-full h-full" />
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-caption text-text-muted font-bold">Mẫu hoa đã chọn</span>
@@ -163,7 +146,7 @@ export function TrackingOrderCard({ item, onOpenNotes }: TrackingOrderCardProps)
       {item.cardMessage && (
         <div className="p-2.5 rounded-xl bg-surface border border-border text-caption flex items-start gap-2">
           <span className="font-bold text-foreground shrink-0">Lời chúc thiệp:</span>
-          <span className="italic text-text-muted">"{item.cardMessage}"</span>
+          <span className="italic text-text-muted">&ldquo;{item.cardMessage}&rdquo;</span>
         </div>
       )}
     </div>

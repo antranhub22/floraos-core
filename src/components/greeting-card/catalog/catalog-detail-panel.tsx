@@ -1,12 +1,10 @@
 "use client"
 
 import React, { useState } from "react"
-import {
-  ArrowLeft, Package, Plus, Trash2, Search,
-  ImageOff, Loader2, X, CheckCircle,
-} from "lucide-react"
+import { ArrowLeft, Package, Plus, Trash2, Search, Loader2, X, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCatalogItems } from "./use-catalog-items"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 type ProductVariant = { id: string; price_vnd: number; name: string }
 type CatalogProduct = {
@@ -40,7 +38,6 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
   const ci = useCatalogItems<CatalogDetail>(catalogId)
   const catalog = ci.catalog
   const loading = ci.loading
-  const loadCatalog = ci.reload
   const isAddOpen = ci.pickerOpen
   const setIsAddOpen = (open: boolean) => (open ? ci.openPicker() : ci.closePicker())
   const openAddProduct = ci.openPicker
@@ -135,15 +132,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                       className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-surface transition-colors"
                     >
                       <div className="w-12 h-12 rounded-lg bg-surface-alt border border-border flex items-center justify-center shrink-0 overflow-hidden">
-                        {product.masterImageUrl ? (
-                          <img
-                            src={product.masterImageUrl}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <ImageOff size={16} className="text-text-muted" />
-                        )}
+                        <FlowerImage src={product.masterImageUrl} alt={product.name} sizes="(max-width: 640px) 50vw, 200px" fallback="icon" className="w-full h-full" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-body-sm font-bold text-foreground truncate">{product.name}</p>
@@ -214,17 +203,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                 className="bg-surface rounded-xl border border-border overflow-hidden flex flex-col hover:border-primary/30 hover:shadow-md transition-all duration-200 group"
               >
                 <div className="aspect-square bg-surface-muted relative overflow-hidden">
-                  {item.product.masterImageUrl ? (
-                    <img
-                      src={item.product.masterImageUrl}
-                      alt={item.product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageOff size={24} className="text-text-muted" />
-                    </div>
-                  )}
+                  <FlowerImage src={item.product.masterImageUrl} alt={item.product.name} sizes="(max-width: 640px) 50vw, 200px" fallback="icon" className="w-full h-full" />
                   <div className="absolute top-2 left-2">
                     <span className="w-6 h-6 rounded-full bg-black/50 text-white text-caption font-bold flex items-center justify-center">
                       {item.sort_order + 1}

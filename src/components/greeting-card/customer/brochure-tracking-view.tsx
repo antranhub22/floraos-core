@@ -5,6 +5,7 @@ import useSWR from "swr"
 import { apiGet } from "@/components/greeting-card/greeting-api"
 import { CheckCircle2, Clock, Truck, Gift, Camera, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 interface BrochureTrackingViewProps {
   orderCode: string
@@ -149,11 +150,7 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
             <span>Ảnh hoa thực tế thành phẩm từ thợ cắm:</span>
           </div>
           <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-border shadow-sm">
-            <img
-              src={order.finishedImageUrl}
-              alt="Ảnh hoa thực tế"
-              className="w-full h-full object-cover"
-            />
+            <FlowerImage src={order.finishedImageUrl} alt="Ảnh hoa thực tế" sizes="(max-width: 512px) 100vw, 512px" className="w-full h-full" />
           </div>
           <span className="text-caption text-text-muted text-center mt-1">
             Hoa đã được chụp nghiệm thu trước khi giao đến tay người nhận.

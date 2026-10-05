@@ -14,6 +14,7 @@ import type {
 } from "@/modules/greeting-card/domain/greeting-card-types"
 import { ShoppingBag } from "lucide-react"
 import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 interface Props {
   catalog: { id: string; code: string; name: string; description: string | null }
@@ -131,13 +132,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="w-full max-w-md bg-surface rounded-3xl shadow-xl overflow-hidden border border-border">
-          {selected.imageUrl && (
-            <img
-              src={selected.imageUrl}
-              alt={selected.name}
-              className="w-full aspect-square object-cover"
-            />
-          )}
+          <FlowerImage src={selected.imageUrl} alt={selected.name} sizes="(max-width: 448px) 100vw, 448px" priority className="w-full aspect-square" />
           <div className="p-6 flex flex-col gap-4">
             <div>
               <h2 className="text-title font-extrabold text-foreground">{selected.name}</h2>

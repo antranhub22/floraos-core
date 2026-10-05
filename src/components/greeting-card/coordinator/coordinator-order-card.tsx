@@ -1,10 +1,11 @@
 "use client"
 
 import React from "react"
-import { Sparkles, MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera } from "lucide-react"
+import { MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { paymentGateBlocker, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 export interface BrochureOrder {
   id: string
@@ -108,17 +109,13 @@ export function CoordinatorOrderCard({
 
       {/* Product */}
       <div className="flex gap-3.5 items-start">
-        {snapshot?.imageUrl ? (
-          <img
-            src={snapshot.imageUrl}
-            alt={snapshot.name || "Mẫu hoa"}
-            className="w-20 h-20 rounded-xl object-cover border border-border shrink-0"
-          />
-        ) : (
-          <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Sparkles size={24} className="text-primary" />
-          </div>
-        )}
+        <FlowerImage
+          src={snapshot?.imageUrl}
+          alt={snapshot?.name || "Mẫu hoa"}
+          sizes="80px"
+          fallback="icon"
+          className="w-20 h-20 rounded-xl border border-border shrink-0"
+        />
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <div className="text-caption text-text-muted font-medium">Mẫu khách chọn:</div>
           <div className="text-body font-bold text-foreground truncate">

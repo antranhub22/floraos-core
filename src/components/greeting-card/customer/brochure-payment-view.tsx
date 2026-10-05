@@ -6,6 +6,7 @@ import { apiGet } from "@/components/greeting-card/greeting-api"
 import { Check, Copy, QrCode, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { BrochurePaymentInstructions } from "@/modules/greeting-card/domain/greeting-card-types"
+import Image from "next/image"
 
 const POLL_INTERVAL_MS = 5000
 const PAID_ORDER_STATUSES = new Set(["CONFIRMED", "PROCESSING", "DELIVERED", "COMPLETED"])
@@ -88,9 +89,13 @@ export function BrochurePaymentView({
 
         {/* QR Card */}
         <div className="p-3 bg-white rounded-2xl border border-border shadow-md mb-5 w-64 aspect-square flex items-center justify-center">
-          <img
+          <Image
             src={vietQr.qrUrl}
             alt={`Mã VietQR đơn ${orderCode}`}
+            width={232}
+            height={232}
+            unoptimized
+            priority
             className="w-full h-full object-contain"
           />
         </div>

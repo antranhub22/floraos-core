@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react"
 import { Upload, X, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { readApiError } from "@/components/greeting-card/api-error"
+import Image from "next/image"
 
 interface CoordinatorImageUploadProps {
   orderId: string
@@ -128,9 +129,12 @@ export function CoordinatorImageUpload({
         className="w-full border-2 border-dashed border-border rounded-2xl p-6 flex flex-col items-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
       >
         {preview ? (
-          <img
+          <Image
             src={preview}
-            alt="Preview"
+            alt="Ảnh xem trước"
+            width={480}
+            height={208}
+            unoptimized
             className="w-full max-h-52 object-contain rounded-xl"
           />
         ) : (

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { ArrowLeft, Send, Sparkles, AlertCircle } from "lucide-react"
+import { ArrowLeft, Send, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   ORDER_FIELD_MAX,
@@ -16,6 +16,7 @@ import type {
 import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
 import { BrochureOrderOptions } from "./brochure-order-options"
 import { useBrochureQuote } from "./use-brochure-quote"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 interface BrochureOrderFormProps {
   productSnapshot: ProductSnapshot
@@ -118,17 +119,7 @@ export function BrochureOrderForm({
 
       {/* Product Snapshot Header */}
       <div className="flex items-center gap-3.5 p-3 rounded-xl bg-surface-muted border border-border mb-5">
-        {productSnapshot.imageUrl ? (
-          <img
-            src={productSnapshot.imageUrl}
-            alt={productSnapshot.name}
-            className="w-16 h-16 rounded-lg object-cover shrink-0 border border-border"
-          />
-        ) : (
-          <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Sparkles size={24} className="text-primary" />
-          </div>
-        )}
+        <FlowerImage src={productSnapshot.imageUrl} alt={productSnapshot.name} sizes="64px" fallback="icon" className="w-16 h-16 rounded-lg shrink-0 border border-border" />
         <div className="flex-1 min-w-0">
           <div className="text-caption text-text-muted">Mẫu đã chọn:</div>
           <div className="text-body font-extrabold text-foreground truncate">

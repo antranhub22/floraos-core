@@ -1,9 +1,10 @@
 "use client"
 
 import React, { useState } from "react"
-import { Search, ImageOff, Plus, Trash2, Loader2, CheckCircle } from "lucide-react"
+import { Search, Plus, Trash2, Loader2, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCatalogItems } from "./use-catalog-items"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 type CatalogItem = {
   id: string
@@ -90,15 +91,7 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
               className="relative group rounded-xl border border-border bg-surface overflow-hidden"
             >
               <div className="aspect-square bg-surface-alt flex items-center justify-center overflow-hidden">
-                {item.product.masterImageUrl ? (
-                  <img
-                    src={item.product.masterImageUrl}
-                    alt={item.product.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <ImageOff size={20} className="text-text-muted" />
-                )}
+                <FlowerImage src={item.product.masterImageUrl} alt={item.product.name} sizes="(max-width: 640px) 50vw, 160px" fallback="icon" className="w-full h-full" />
               </div>
               <div className="p-2">
                 <p className="text-caption font-semibold text-text line-clamp-2 leading-tight">
@@ -187,15 +180,7 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
                   className="flex items-center gap-3 p-2.5 rounded-xl border border-border bg-background hover:border-primary/30 transition-colors"
                 >
                   <div className="w-11 h-11 rounded-lg bg-surface-alt border border-border flex items-center justify-center shrink-0 overflow-hidden">
-                    {product.masterImageUrl ? (
-                      <img
-                        src={product.masterImageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <ImageOff size={14} className="text-text-muted" />
-                    )}
+                    <FlowerImage src={product.masterImageUrl} alt={product.name} sizes="(max-width: 640px) 50vw, 160px" fallback="icon" className="w-full h-full" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-body-sm font-bold text-text truncate">{product.name}</p>

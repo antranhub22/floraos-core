@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import {
   PIPELINE_STEPS,
   ROLE_LABELS,
-  type InternalNoteMessage,
   type InternalNoteRole,
   type TrackingPipelineItem,
   type TrackingPipelineStepId,
