@@ -104,6 +104,20 @@ export function BrochurePaymentView({
           />
         </div>
 
+        {/* Khách thường xem QR trên chính điện thoại dùng để chuyển khoản → không tự quét được:
+            mở ảnh ở thẻ mới để nhấn giữ "Lưu ảnh", rồi chọn ảnh QR từ thư viện trong app ngân hàng */}
+        <a
+          href={vietQr.qrUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="-mt-2 mb-5 inline-flex h-11 items-center justify-center rounded-xl border border-border px-4 text-body-sm font-semibold text-primary hover:bg-surface-muted"
+        >
+          Mở ảnh QR để lưu vào máy
+        </a>
+        <p className="-mt-3 mb-5 text-caption text-text-muted">
+          Đang dùng điện thoại này để chuyển khoản? Lưu ảnh QR rồi chọn &quot;Quét từ ảnh&quot; trong ứng dụng ngân hàng.
+        </p>
+
         {/* Payment details list */}
         <div className="w-full bg-surface-muted rounded-xl p-3.5 flex flex-col gap-2.5 text-body-sm text-left mb-5 border border-border">
           <div className="flex items-center justify-between">
