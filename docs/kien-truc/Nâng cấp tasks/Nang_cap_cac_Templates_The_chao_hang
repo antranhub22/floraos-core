@@ -1,0 +1,602 @@
+# SWIPE FLOWER BROCHURE
+## 12 Visual Template Styles — Technical Specification
+
+### Global Requirements
+
+**Canvas**
+- Mobile-first: 360–430px width
+- Target reference: 390 × 844px
+- Full-screen vertical experience
+- Safe-area aware
+
+**Product Asset**
+- Transparent PNG/WebP
+- `object-fit: contain`
+- Preserve original product proportions
+- No AI regeneration or modification of flower/product
+- Product remains the primary visual element
+
+**Common Interaction**
+- Swipe left: next / reject
+- Swipe right: favorite / select
+- Tap: product detail
+- Drag: card follows finger position
+- Rotation during drag: max ±7°
+- Card transition: 350–500ms
+- Spring-based motion
+- Preload current + next 1–2 products
+
+**Card Stack**
+```text
+Active:  scale 1.00 / opacity 1.00
+Next:    scale 0.96 / opacity 0.65 / Y +12px
+Third:   scale 0.93 / opacity 0.30 / Y +24px
+```
+
+---
+
+# STYLE 01 — EDITORIAL LUXURY
+
+### Visual
+- Warm ivory / cream background
+- High-contrast editorial serif
+- Minimal sans-serif metadata
+- Hairline borders
+- Large negative space
+- Very soft shadow
+
+### Product
+- 75–85% viewport height
+- Center or slightly asymmetric
+- Can visually overflow the editorial frame
+
+### Typography
+```text
+Product name: 42–64px serif
+Metadata:      10–13px sans-serif
+Price:         16–20px
+Tracking:      0.08–0.15em
+```
+
+### Motion
+- Product: scale 1.03 → 1.00
+- Text: fade + translateY 12–16px
+- Background: static
+
+### Signature
+Large editorial typography partially overlaps or sits behind the bouquet.
+
+---
+
+# STYLE 02 — MINIMAL CLEAN
+
+### Visual
+- Off-white / white background
+- Modern sans-serif
+- Almost no decoration
+- No visible card border
+- Minimal controls
+
+### Product
+- Center aligned
+- 70–80% viewport height
+- Maximum visual clarity
+
+### Typography
+```text
+Heading: 32–44px
+Body:    12–14px
+Price:   16–18px
+```
+
+### Effects
+- Soft contact shadow
+- No glow
+- No particles
+- No complex background
+
+### Motion
+- Very smooth scale transition
+- Minimal card rotation
+
+### Signature
+Extreme negative space around the bouquet.
+
+---
+
+# STYLE 03 — CINEMATIC DARK
+
+### Visual
+- Near-black background
+- Deep burgundy / red / gold accents
+- High contrast
+- Cinematic lighting
+- Dark vignette
+
+### Product
+- Large central composition
+- Strong visual separation from background
+
+### Effects
+- Rim light
+- Soft ambient glow
+- Deep contact shadow
+- Subtle light streak
+
+### Typography
+```text
+Heading: 36–52px serif
+Metadata: 10–12px uppercase
+Price: 16–20px
+```
+
+### Motion
+- Background light follows finger movement
+- Product moves slightly slower than card
+- Swipe creates directional light streak
+
+### Signature
+Bouquet appears to sit inside a dark photographic studio.
+
+---
+
+# STYLE 04 — ROMANTIC PASTEL
+
+### Visual
+- Blush pink
+- Peach
+- Cream
+- Lavender
+- Soft coral
+
+### Background
+Use blurred radial gradients and soft color fields.
+
+### Product
+- Center
+- 65–80% viewport height
+
+### Effects
+- Soft bokeh
+- Floating petals
+- Very subtle glow
+
+### Typography
+- Elegant serif
+- Optional script accent
+
+### Motion
+- Petals move according to swipe direction
+- Background gradient slowly shifts
+- Product remains stable
+
+### Signature
+Soft atmospheric depth without changing the product image.
+
+---
+
+# STYLE 05 — BOTANICAL FRAME
+
+### Visual
+- Ivory / warm paper background
+- Fine botanical line art
+- Editorial serif typography
+- Thin decorative borders
+
+### Frame
+Botanical elements positioned primarily at:
+- corners
+- side edges
+- upper/lower margins
+
+Decorative elements must occupy <10% visual weight.
+
+### Product
+- Center
+- 70–80% viewport height
+
+### Effects
+- SVG leaves / branches
+- Fine line illustrations
+- Very subtle texture
+
+### Motion
+Botanical elements reveal or move slightly when the card enters.
+
+### Signature
+Delicate botanical border surrounding the product without competing with it.
+
+---
+
+# STYLE 06 — GLASSMORPHISM
+
+### Visual
+- Product/background image environment
+- Transparent glass information panel
+- Blur
+- Soft highlights
+- Modern typography
+
+### Glass Panel
+```css
+background: rgba(255,255,255,0.12);
+backdrop-filter: blur(20px);
+border: 1px solid rgba(255,255,255,0.20);
+border-radius: 20–28px;
+```
+
+### Product
+- Large behind/around glass panel
+- Panel should not cover more than ~35% of product
+
+### Motion
+- Product and panel move at slightly different speeds
+- Reflection shifts with pointer/finger movement
+
+### Signature
+Foreground glass layer creates depth between product and UI.
+
+---
+
+# STYLE 07 — REAL LIFE / SHOP PHOTO
+
+### Visual
+- Natural flower-shop environment
+- Warm indoor light
+- Shelves / counter / flowers in background
+- Slight photographic imperfections
+
+### Product
+Transparent product composited into the environment.
+
+### Required Effects
+- Contact shadow
+- Ambient shadow
+- Directional light matching environment
+- Background depth of field
+
+### Typography
+Simple sans-serif.
+
+### Motion
+Very limited.
+
+### Signature
+Product should appear physically present inside the florist shop.
+
+---
+
+# STYLE 08 — REAL LIFE / DAYLIGHT
+
+### Visual
+- Natural daylight
+- Window light
+- Neutral walls
+- Wood / stone / natural surfaces
+- Realistic exposure
+
+### Product
+- Natural scale
+- Slightly lower composition
+- Preserve realistic perspective
+
+### Effects
+- Soft sunlight
+- Natural shadow
+- Mild lens/bokeh effect
+
+### Typography
+Small and unobtrusive.
+
+### Motion
+Subtle camera/parallax movement only.
+
+### Signature
+The overall composition should resemble a high-quality smartphone photo.
+
+---
+
+# STYLE 09 — REAL LIFE / IN STORE
+
+### Visual
+- Actual florist shop atmosphere
+- Flower shelves
+- Work table
+- Refrigerated display
+- Warm ambient lighting
+
+### Composition
+```text
+Foreground: product
+Midground:  shop environment
+Background: soft bokeh
+```
+
+### Motion
+- Background parallax: 2–4px
+- Product movement: 6–10px
+- UI remains fixed
+
+### Typography
+White or dark depending on background.
+
+### Signature
+Strong environmental depth while keeping the bouquet visually dominant.
+
+---
+
+# STYLE 10 — REAL LIFE / HANDHELD
+
+### Visual
+- Bouquet held by hand
+- Casual camera angle
+- Outdoor / café / street / home environments
+- Natural imperfections
+
+### Product
+Should visually integrate with hand/environment.
+
+### Effects
+- Natural shadow
+- Slight motion blur where appropriate
+- Realistic depth
+
+### Typography
+Small overlay labels.
+
+### Decorative elements
+Optional handwritten annotations.
+
+### Motion
+Minimal.
+
+### Signature
+UGC / social-media photography aesthetic.
+
+---
+
+# STYLE 11 — LIFESTYLE CONTEXT
+
+### Visual
+Place the bouquet inside a contextual environment.
+
+Possible environments:
+- dining table
+- bedside
+- office
+- wedding table
+- hotel room
+- celebration setting
+
+### Composition
+Product remains the primary foreground element.
+
+### Background
+Soft depth-of-field.
+
+### Effects
+Optional:
+- curtain movement
+- candle flicker
+- ambient light movement
+- soft bokeh
+
+### Typography
+Editorial serif + small metadata.
+
+### Signature
+The bouquet is visually integrated into a complete scene.
+
+---
+
+# STYLE 12 — MIXED MEDIA
+
+### Visual
+Combination of:
+- product photography
+- typography
+- graphic shapes
+- handwritten elements
+- thin lines
+- annotations
+- subtle texture
+
+### Layout
+Asymmetric editorial composition.
+
+### Typography
+Mix:
+- large serif
+- clean sans-serif
+- handwritten accent
+
+### Decorative Limit
+Maximum 3–4 decorative elements per screen.
+
+### Motion
+Elements can move independently during swipe.
+
+Example:
+```text
+Product:       100% movement
+Typography:     85%
+Graphic layer:  70%
+Background:     50%
+```
+
+### Signature
+Layered editorial collage with controlled visual asymmetry.
+
+---
+
+# COMMON VISUAL TOKENS
+
+## Border Radius
+
+```text
+Minimal:        0–12px
+Modern:         16–24px
+Glass:          20–28px
+Editorial:      0–8px
+```
+
+## Shadow
+
+```text
+Soft:
+0 15px 50px rgba(0,0,0,.10)
+
+Medium:
+0 20px 60px rgba(0,0,0,.16)
+```
+
+Avoid hard shadows.
+
+## Product Scale
+
+Default:
+
+```text
+65–85% viewport height
+```
+
+Allow template-specific variation.
+
+## UI Controls
+
+Minimum touch target:
+
+```text
+44 × 44px
+```
+
+Default actions:
+
+```text
+Reject / Skip
+Favorite
+Next
+```
+
+Controls should inherit each template's visual language.
+
+---
+
+# TEMPLATE CONFIGURATION MODEL
+
+Each style should be represented as a configuration rather than a separate application.
+
+```typescript
+type TemplateStyle = {
+  id: string;
+  name: string;
+
+  background: {
+    type: string;
+    color?: string;
+    gradient?: string;
+  };
+
+  typography: {
+    heading: string;
+    body: string;
+    accent?: string;
+  };
+
+  product: {
+    scale: number;
+    positionX: number;
+    positionY: number;
+    rotation?: number;
+  };
+
+  effects: {
+    shadow: boolean;
+    glow: boolean;
+    blur: boolean;
+    particles: boolean;
+    parallax: boolean;
+    glass: boolean;
+    botanical: boolean;
+  };
+
+  layout: {
+    titlePosition: string;
+    pricePosition: string;
+    controlsPosition: string;
+  };
+
+  motion: {
+    cardDuration: number;
+    entranceDuration: number;
+    parallaxIntensity: number;
+  };
+};
+```
+
+---
+
+# IMPLEMENTATION RULE
+
+Build **one Swipe Brochure Engine**.
+
+Do NOT build 12 independent pages.
+
+Architecture:
+
+```text
+                 PRODUCT DATA
+                      ↓
+              SWIPE ENGINE
+                      ↓
+             TEMPLATE ENGINE
+                      ↓
+       ┌──────┬──────┬──────┐
+       ↓      ↓      ↓      ↓
+     Style 01 Style 02 ... Style 12
+       ↓      ↓      ↓      ↓
+             SAME PRODUCT
+```
+
+The only differences between templates should be:
+
+- visual composition
+- typography
+- colors
+- background treatment
+- decorative layers
+- product positioning
+- shadow/light treatment
+- motion treatment
+
+The following must remain shared:
+
+- product data
+- image assets
+- swipe gesture
+- card stack
+- favorites
+- navigation
+- product detail
+- analytics
+- preload/cache
+- responsive behavior
+
+---
+
+# QUALITY BAR
+
+The final result should NOT look like:
+
+- generic ecommerce cards
+- standard Bootstrap cards
+- ordinary florist websites
+- excessive 3D effects
+- AI-generated flower artwork
+- overloaded UI
+
+The visual target is:
+
+**premium mobile editorial + authentic product photography + Tinder-like interaction.**
+
+The product image must always remain the visual hero.

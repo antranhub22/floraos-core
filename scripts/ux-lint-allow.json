@@ -13,6 +13,16 @@
     },
     {
       "rule": "R3",
+      "path": "src/components/greeting-card/customer/templates/template-style-preview-thumb.tsx",
+      "reason": "SVG illustration thumbnail — stopColor/fill/stroke là dữ liệu màu minh họa của 12 style, không phải CSS UI styling"
+    },
+    {
+      "rule": "R2",
+      "path": "src/components/greeting-card/customer/templates/template-selector-card.tsx",
+      "reason": "Nhãn overlay trong thumbnail preview (text-[10px]/text-[11px]) — nằm bên trong SVG card, không phải typography hệ thống"
+    },
+    {
+      "rule": "R3",
       "path": "src/components/profiles/brand-profile-form.tsx",
       "reason": "Giá trị màu mặc định trong form chọn màu thương hiệu (dữ liệu nghiệp vụ, không phải styling)"
     },

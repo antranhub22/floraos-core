@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { BrochureSwipeDeck } from "./brochure-swipe-deck"
+import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
 import { BrochureOrderForm } from "./brochure-order-form"
 import { BrochurePaymentView } from "./brochure-payment-view"
 import { BrochureTrackingView } from "./brochure-tracking-view"
@@ -13,7 +13,7 @@ import type {
 import { ShoppingBag } from "lucide-react"
 
 interface Props {
-  catalog: { id: string; code: string; name: string; description: string | null }
+  catalog: { id: string; code: string; name: string; description: string | null; filters?: Record<string, unknown> | null }
   products: GreetingCatalogProduct[]
 }
 
@@ -173,9 +173,11 @@ export function BrochurePublicView({ catalog, products }: Props) {
     )
   }
 
-  // 4. MAIN SWIPE DECK
+  // 4. MAIN GREETING TEMPLATE DECK
   return (
-    <BrochureSwipeDeck
+    <GreetingTemplateRenderer
+      showTemplateSwitcher={false}
+      templateId={(catalog.filters as Record<string, unknown> | null)?.templateId as string | undefined}
       catalogName={catalog.name}
       products={products}
       selectedProductId={selected?.id ?? null}
