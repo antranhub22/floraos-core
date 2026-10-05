@@ -9,40 +9,31 @@ description: >-
 
 # Python Workers — FloraOS
 
+> Rà theo mã thật: 05/10/2026. Đường dẫn và lệnh `npm run` trong tệp này được `npm run check:docs` kiểm tự động.
+
 ## Quick Reference (Khuôn chuẩn Worker FloraOS)
 
 ### Job Handler & 3 Trục Trạng thái (status / stage / result)
-```python
-# Khuôn chuẩn từ workers/media_ai/jobs/worker.py
-import uuid
-from typing import Any
-import psycopg
-from psycopg.rows import dict_row
-from shared.storage import doc_bytes, ghi_bytes
 
-def handle_job(conn: psycopg.Connection, job: dict[str, Any]) -> None:
-    job_id = job["id"]
-    org_id = job["organization_id"]  # BẮT BUỘC: chỉ lấy từ dòng job trong DB
-    
-    # 1. Cập nhật stage tiến trình
-    update_stage(conn, job_id, stage="PROCESSING")
-    
-    # 2. Đọc tệp qua shared.storage (đường dẫn chuẩn: org/<org_id>/<prod_id>/<asset_id>.<ext>)
-    input_bytes = doc_bytes(job["input_storage_path"])
-    
-    # 3. Xử lý nghiệp vụ + Guard thẩm định
-    result_bytes, is_valid, reason = run_pipeline_with_guard(input_bytes)
-    
-    # 4. Phân định rõ 3 trục: status / stage / result
-    # QUAN TRỌNG: REJECTED không phải FAILED (job chạy đúng nhưng vi phạm tiêu chuẩn chất lượng)
-    if not is_valid:
-        set_verdict(conn, job_id, status="COMPLETED", stage="VERIFYING", result="REJECTED", reason=reason)
-        return  # Không ghi asset mới khi bị từ chối
-        
-    out_path = f"org/{org_id}/{job['product_id']}/{uuid.uuid4()}.jpg"
-    ghi_bytes(out_path, result_bytes, content_type="image/jpeg")
-    set_verdict(conn, job_id, status="COMPLETED", stage="GENERATING_OUTPUTS", result="APPROVED", output_path=out_path)
+> Rà theo mã thật 05/10/2026. Bản trước dùng `update_stage`/`set_verdict`/`input_storage_path` — các tên đó KHÔNG tồn tại. Khuôn dưới rút gọn từ `workers/media_ai/jobs/worker.py`.
+
+```python
+# workers/media_ai/jobs/worker.py — rút gọn
+def claim_next(conn, feature):            # SELECT … FOR UPDATE SKIP LOCKED LIMIT 1
+    ...                                    # → status = 'PROCESSING', started_at = now()
+
+def process_job(conn, job, ...):
+    payload = job["payload"] if isinstance(job["payload"], dict) else json.loads(job["payload"])
+    organization_id = job["organization_id"]          # chỉ từ dòng job, KHÔNG từ payload
+    asset_goc = _doc_asset(conn, organization_id, payload["asset_id"])  # đọc asset có lọc tổ chức
+    anh_goc = _read_bytes(asset_goc["storage_key"])   # bọc shared.storage.doc_bytes(key, STORAGE_ROOT)
+
+    _set_stage(conn, job["id"], "ANALYZING")          # UPDATE generation_jobs.stage + job_events
+    ...
+    # Phán quyết: cổng từ chối vẫn là COMPLETED — REJECTED KHÔNG phải FAILED
+    # UPDATE generation_jobs SET status = 'COMPLETED', result = %s, stage = NULL, completed_at = now()
 ```
+Đường dẫn ghi: `org/<organization_id>/<product_id>/<asset_id>.<ext>` qua `_write_bytes` (`shared.storage.ghi_bytes`).
 ---
 
 ## Rules (bắt buộc)
@@ -87,9 +78,10 @@ requests.post("http://localhost:8080/process-image", json=payload)
 
 ### ✅ DO — INSERT job vào DB, worker tự lấy
 ```typescript
-// Từ Next.js use-case
-await db.jobs.create({ data: { type: "media.process", payload, ...scopedData(ctx, {}) } })
-// Worker tự SELECT ... FOR UPDATE SKIP LOCKED
+// Từ Next.js use-case — enqueueJob ghi generation_jobs + usage/credit + Idempotency-Key trong MỘT giao dịch
+import { enqueueJob } from "@/modules/jobs/use-cases/enqueue-job"
+const { job } = await enqueueJob(ctx, { feature: "media.optimize", payload, idempotencyKey })
+// Worker tự SELECT … FOR UPDATE SKIP LOCKED (claim_next) — không bao giờ INSERT thẳng vào generation_jobs
 ```
 
 ### ❌ DON'T — subprocess + parse stdout
@@ -100,8 +92,9 @@ result = parse_json(output.decode())
 
 ### ✅ DO — Import và gọi trực tiếp
 ```python
-from media_ai.image.processor import process_image
-result = await process_image(image_path, config)
+# Import module Python và gọi hàm trong cùng tiến trình worker (vd media_ai/jobs/worker.py gọi
+# verifier.phan_tich(...), enhancer.enhance(...)) — không spawn tiến trình con rồi parse stdout.
+ket_qua = enhancer.enhance(anh_goc, config)
 ```
 
 ---

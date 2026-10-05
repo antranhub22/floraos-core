@@ -145,6 +145,7 @@ export class GreetingCatalogRepository {
       description?: string | null | undefined
       type?: GreetingCatalogType | undefined
       isActive?: boolean | undefined
+      filters?: Record<string, unknown> | null | undefined
     }
   ) {
     const result = await this.db.greeting_catalogs.updateMany({
@@ -154,6 +155,9 @@ export class GreetingCatalogRepository {
         ...(data.description !== undefined ? { description: data.description } : {}),
         ...(data.type !== undefined ? { type: data.type } : {}),
         ...(data.isActive !== undefined ? { is_active: data.isActive } : {}),
+        ...(data.filters !== undefined
+          ? { filters: (data.filters ?? Prisma.DbNull) as Prisma.InputJsonValue }
+          : {}),
       },
     })
     if (result.count === 0) throw notFound()

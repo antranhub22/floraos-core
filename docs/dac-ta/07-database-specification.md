@@ -2165,6 +2165,10 @@ Trường TỰ TẠO (`origin = CUSTOM`, D13) lưu giá trị ở cột `custom_
 - `greeting_payment_events`: unique `(organization_id, provider, external_id)` — webhook gửi lại không ghi thu hai lần.
 - `greeting_notifications`: unique `(organization_id, order_id, event_key)` — mỗi mốc gửi một lần; FAILED được gửi lại.
 - Cấu hình tiệm nằm trong `organizations.settings`: `brochure_payment` (tài khoản nhận tiền), `brochure_policy` (cọc %, chặn xưởng), `brochure_shipping` (khu vực + phí giao).
+- `greeting_catalogs` — bộ sưu tập chào khách theo dịp (`STANDARD`) hoặc riêng cho một khách (`CLIENT`); xoá là đặt `is_active = false`.
+- `greeting_catalog_products` — sản phẩm trong catalog. **Sản phẩm phải thuộc cùng tổ chức** (kiểm ở repository từ 05/10/2026; trước đó gắn được sản phẩm của tổ chức khác).
+- `greeting_sessions` — một đường link chào khách (`send_code`, duy nhất theo tổ chức); `product_snapshot` đóng băng mẫu hoa lúc khách chốt.
+- `greeting_journey_events` — sự kiện hành trình của khách (`OPEN`, `SELECT_PRODUCT`, `CLICK_PAID`…) và ghi chú nội bộ (`INTERNAL_NOTE`).
 
 ```prisma
 model greeting_catalogs {
@@ -2309,5 +2313,45 @@ model greeting_notifications {
 
   @@unique([organization_id, order_id, event_key])
   @@index([organization_id, order_id])
+}
+```
+
+## 29. Journey Engine — `journey_runs`, `decision_registry` (30/09/2026)
+
+> **Bổ sung 05/10/2026** theo mã thật.
+>
+> - `journey_runs` — **TENANT**, có `organization_id`. **Chưa có đường đọc/ghi nào trong `src/`** (soát bằng `grep` 05/10/2026), nên nằm trong `SCHEMA_ONLY_CHUA_NOI` của `scripts/check-docs.mjs`; vẫn có trong `TRUNCATE` của bộ test cách ly. Khi có đường ghi thật phải bỏ khỏi danh sách đó và thêm ca thử cách ly.
+> - `decision_registry` — **bảng nền tảng**, không có `organization_id` (ngoại lệ có chủ đích của Luật 1, như `ai_capabilities`). Nạp từ `DECISION_REGISTRY_SEED` (`src/modules/journey/domain/decision-ownership.ts`) bởi `prisma/seed/decision-registry.ts`; đối chiếu bằng `npm run lint:decisions`.
+
+```prisma
+model journey_runs {
+  id               String   @id @default(uuid())
+  organization_id  String
+  workspace_id     String?
+  manifest_id      String
+  execution_mode   String   @default("manual") // manual | automatic
+  status           String   @default("PENDING") // PENDING | RUNNING | COMPLETED | FAILED
+  params           Json?
+  context_snapshot Json?
+  degraded_steps   Json?
+  created_by       String
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, manifest_id])
+  @@index([organization_id, status])
+}
+
+model decision_registry {
+  decision_id String  @id
+  ownership   String // USER | SYSTEM | SHARED
+  locked      Boolean @default(false)
+  description String
+  spec_ref    String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 ```

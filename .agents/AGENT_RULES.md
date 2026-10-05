@@ -40,7 +40,7 @@ When rules conflict, resolve strictly in this order (lower numbers ALWAYS take p
 | A6 | `useEffect` for data fetching | Race conditions, infinite loops | Server Components, SWR, or React Query |
 | A7 | Architectural leaks (e.g., ORM in Domain) | High coupling, impossible unit testing | Port Interfaces & Dependency Inversion |
 | A8 | Files exceeding 350 lines | Violates SRP, unmaintainable | Decompose into sub-components/hooks |
-| A9 | Direct third-party SDK calls (AI, Payments) | Uncontrolled quota, bypasses circuit breaker | Centralized Gateway abstraction |
+| A9 | Direct third-party SDK calls (AI, Payments) | Uncontrolled quota, bypasses fallback/attempt limits, privacy floor and license filter | Centralized Gateway abstraction |
 | A10 | `SELECT *` or over-fetching columns | DB memory bloat, network latency | Precise column projection (`select`) |
 | A11 | Manual SQL string concatenation | SQL Injection vulnerability | Parameterized queries / ORM methods |
 | A12 | Tenant ID accepted from client request body | Critical cross-tenant security breach | Verified Server-Side Session ONLY |
@@ -63,7 +63,7 @@ When rules conflict, resolve strictly in this order (lower numbers ALWAYS take p
   - [ ] User-facing strings: 100% Vietnamese verified (§8)?
   - [ ] Zero violations of the 12 Anti-patterns (§4) and SRP limit (§3)?
   - [ ] Passes typecheck, linting, and automated test suites?
-- **Learning Protocol**: When fixing a recurring failure, document the root cause and solution in §12 (Known Failures) to prevent regression.
+- **Learning Protocol**: When fixing a recurring failure, document the root cause and solution in §14 (Known Failure Patterns) to prevent regression.
 
 ---
 
@@ -128,14 +128,14 @@ API Route (src/app/api/v1/) → handle() → requireTenantContext() → requireC
 ---
 
 # ⚡ PART III: ON-DEMAND SKILLS REGISTRY (Workflow Tier)
-*Load specialized domain instructions dynamically from `.agents/skills/`.*
+*Load specialized domain instructions dynamically from `.agents/skills/`. Claude Code discovers the same files automatically via the `.claude/skills` symlink — keep one source here.*
 
 | When working on... | Read Skill File |
 |---|---|
-| API routes, use-cases, repositories, validation | [`api-development`](file:///Users/tuan/Projects/floraos-core/.agents/skills/api-development/SKILL.md) |
-| React components, UI layouts, forms, modals, Vietnamese UX | [`ui-development`](file:///Users/tuan/Projects/floraos-core/.agents/skills/ui-development/SKILL.md) |
-| AI gateway, provider adapters, port interfaces, LLM calls | [`ai-integration`](file:///Users/tuan/Projects/floraos-core/.agents/skills/ai-integration/SKILL.md) |
-| Python workers, background queues, media processing | [`worker-python`](file:///Users/tuan/Projects/floraos-core/.agents/skills/worker-python/SKILL.md) |
-| Prisma schema updates, DB migrations, data modeling | [`database-schema`](file:///Users/tuan/Projects/floraos-core/.agents/skills/database-schema/SKILL.md) |
-| Writing tests, debugging Vitest / Playwright, tenant tests | [`testing`](file:///Users/tuan/Projects/floraos-core/.agents/skills/testing/SKILL.md) |
-| Creative Studio features, 14-step Product-to-Market Journey | [`creative-studio`](file:///Users/tuan/Projects/floraos-core/.agents/skills/creative-studio/SKILL.md) |
+| API routes, use-cases, repositories, validation | [`api-development`](skills/api-development/SKILL.md) |
+| React components, UI layouts, forms, modals, Vietnamese UX | [`ui-development`](skills/ui-development/SKILL.md) |
+| AI gateway, provider adapters, port interfaces, LLM calls | [`ai-integration`](skills/ai-integration/SKILL.md) |
+| Python workers, background queues, media processing | [`worker-python`](skills/worker-python/SKILL.md) |
+| Prisma schema updates, DB migrations, data modeling | [`database-schema`](skills/database-schema/SKILL.md) |
+| Writing tests, debugging Vitest / Playwright, tenant tests | [`testing`](skills/testing/SKILL.md) |
+| Creative Studio features, 14-step Product-to-Market Journey | [`creative-studio`](skills/creative-studio/SKILL.md) |

@@ -56,7 +56,14 @@ jobs:
           DATABASE_URL=postgresql://floraos:floraos@localhost:5432/floraos_test npx prisma db push
       - run: npm run db:seed
       - run: npm run typecheck
-      - run: npm run lint
+      # Ratchet thay cho `npm run lint` (nợ #172, 05/10/2026): main mang 78 lỗi
+      # ESLint cũ, bước lint đỏ trước nên CI bỏ qua MỌI bước sau — kể cả cổng
+      # bắt buộc test:tenant. Ratchet đỏ khi (tệp, luật) nào tăng lỗi so với
+      # scripts/eslint-baseline.json; lỗi cũ dọn dần rồi chạy --update-baseline.
+      - name: ESLint (ratchet — không thêm lỗi mới)
+        run: npm run lint:ratchet
+      - name: Đối chiếu tài liệu với mã (đặc tả 06/07, cách ly tenant, tài liệu agent)
+        run: npm run check:docs
       - run: npm run lint:ux -- --check
       - run: npm test
       - name: Đối chiếu SSOT template với code thật
@@ -120,3 +127,13 @@ jobs:
       - run: npm run build
       - name: Chạy kiểm thử E2E UX theo vai và mốc trợ năng
         run: E2E_WEB_COMMAND="npm run start" npx playwright test tests/e2e/ux
+      # Giữ ảnh chụp/trace khi E2E đỏ. Ảnh `*-actual.png` của visual.spec.ts
+      # chụp đúng trên runner này là nguồn ảnh mẫu `*-linux.png` (nợ #172) —
+      # không chụp ảnh mẫu trên máy khác vì font tải từ Google lúc chạy.
+      - name: Lưu kết quả E2E khi đỏ
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ux-test-results
+          path: test-results/
+          retention-days: 7

@@ -103,6 +103,7 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 | GET | `/products` | `L1` | Lọc theo `branch_id`, `status`, `category` |
 | POST | `/products` | `L2` | |
 | GET · PATCH | `/products/:id` | `L1` · `L3` | |
+| POST | `/products/batch-import` | `L2` | Nhập đồng loạt tối đa 500 sản phẩm (Excel/thư mục ảnh đã parse); `skip_duplicates` mặc định `true`. Bổ sung vào đặc tả 05/10/2026 |
 | GET | `/products/:id/images` | **CHƯA XÂY** `G1` | |
 | PUT | `/products/:id/images` | **CHƯA XÂY** `G2` | Đặt lại thứ tự và vai trò ảnh |
 | GET · PUT | `/pricing-rules` | `L5` · `L6` | Theo tổ chức, có thể theo chi nhánh |
@@ -446,6 +447,7 @@ Cùng khuôn với M01: `raw` giữ bản máy sinh, `PATCH` ghi vào `edited`, 
 | PATCH | `/integration/catalog-links/:slug` | `J1` (nhánh SSO) | Mới 18/09 (RS-3) |
 | POST | `/integration/catalog-links/:slug/revoke` | `J2` (nhánh SSO) | Mới 18/09 (RS-3) |
 | GET | `/public/catalog/:slug` | — *(công khai)* | Storefront khách xem; ảnh ký HMAC |
+| POST | `/public/catalog/:slug/lead` | — *(công khai)* | Form Lead Capture: `{ phone, message? }` ghi vào `metadata.leads` của `catalog_links`; tổ chức suy từ bản ghi, không nhận từ client. Bổ sung vào đặc tả 05/10/2026 |
 
 **Chưa có:** `GET /catalog-links/:slug/qr` (ảnh PNG mã QR để in) ở core — `LocalBudd` tự sinh QR phía route của nó (`qrcode`, trỏ về `/c/:slug` của chính nó), core cũng có `src/core/media/qr-engine.ts` sinh QR phía giao diện, không qua endpoint. Xem **RS-7**.
 
@@ -636,7 +638,7 @@ Khuôn video là enum `video_format`: `REEL_15S` · `TIKTOK_30S` · `STORY_15S` 
 | GET | `/assets` | `G1` | Liệt kê asset, lọc theo sản phẩm và `kind` |
 | POST | `/assets/:id/approve` | `I2` | Duyệt asset dẫn xuất |
 | GET | `/media/optimizations` | `I1` | Liệt kê lượt tối ưu M04a |
-| POST | `/jobs/batch` | **chưa gác** — xem **RS-8** | Tạo job cho một module với danh sách mã `AIC` chọn sẵn |
+| POST | `/jobs/batch` | mã "run" theo `module` (`MODULE_RUN_CAPABILITY`, mặc định từ chối — RS-8) | Tạo job cho một module với danh sách mã `AIC` chọn sẵn. Sửa dòng này 05/10/2026: route đã gác từ RS-8 18/09, đặc tả ghi "chưa gác" là cũ |
 | POST | `/media/variants/batch` | `I4` | |
 | POST | `/media/background-removal` | — | **ĐÃ ĐÓNG ở P24**, luôn trả 409 kèm đường thay thế |
 | GET | `/ai-capabilities` | `U1` | |
@@ -775,4 +777,57 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 Endpoint mang khoá nhà cung cấp riêng của tổ chức. Quyết định D2 chốt nền tảng giữ khoá và tính credit, nên nhóm endpoint đó không tồn tại. Nếu D2 đổi về sau, nhóm này thêm vào dưới `/organizations/current/providers` mà không đụng tới endpoint nào đang có.
 
 **Đã đánh dấu CHƯA XÂY trong chính các mục trên** (soát 18/09): mục 9 hàng đợi duyệt gộp · mục 16 toàn bộ M11 · bốn đường Integration ở mục 11 · `GET /crm/customers/export`, `/reminder-campaigns`, `/vouchers` ở mục 14 · `POST /orders/:id/delivery` ở mục 15 · `handoff` và `conversations/settings` ở mục 17 · `PATCH /catalog-links/:slug` và `/catalog-links/:slug/qr` ở mục 13 · `GET /ai-evaluations/…` ở mục 18. Gộp lại ở **RS-7** để anh Tony quyết cái nào còn trong kế hoạch, cái nào bỏ.
+
+## 25. Bổ sung theo mã thật (05/10/2026)
+
+> Các route dưới đây đã có trong mã nhưng chưa vào đặc tả (`npm run check:docs` bắt được). Ghi **đúng hiện trạng mã**, kể cả chỗ chưa đạt bốn luật ở mục 1 — **"chưa gác"** nghĩa là route chỉ gọi `requireTenantContext`, không kiểm mã năng lực ở route lẫn use-case: thành viên nào của tổ chức cũng gọi được. Chọn mã năng lực là quyết định của chủ sản phẩm — xem `TECHNICAL_DEBT.md` nợ #170, #171.
+
+### 25.1 Content Engine — sinh nhanh tại chỗ
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| POST | `/content-engine/catalog-generate` | **chưa gác** (nợ #170) | Writer→Critic qua `callCapability` (`content_generation`, `content_qa`) sinh badge/mô tả/CTA cho catalog. Chạy tại chỗ, **không trừ credit, không ghi `usage`, không có `Idempotency-Key`** |
+| POST | `/content-engine/landing-generate` | **chưa gác** (nợ #170) | Như trên cho landing page (hero/story/perks/faq/lead), lấy ngữ cảnh từ hồ sơ kinh doanh + thương hiệu |
+| POST | `/content-engine/rewrite` | **chưa gác** (nợ #170) | Viết lại MỘT câu ≤ 500 ký tự theo `field_type`/`style`, trả 3 gợi ý; parse lỗi thì trả gợi ý dựng sẵn |
+
+### 25.2 Thẻ chào / Swipe Brochure — phía tiệm
+
+Bảng: đặc tả 07 mục 28. Ca thử cách ly: `tests/tenant/greeting-card.test.ts`, `tests/tenant/greeting-catalog-products-events.test.ts`.
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET · POST | `/greeting-card/catalogs` | **chưa gác** (nợ #170) | Liệt kê / tạo catalog (`code`, `name`, `type`, `productIds?` — id không thuộc tổ chức bị bỏ qua) |
+| GET · PATCH · DELETE | `/greeting-card/catalogs/:id` | **chưa gác** (nợ #170) | DELETE là xoá mềm (`is_active = false`); tổ chức khác → 404 |
+| POST · DELETE | `/greeting-card/catalogs/:id/products` | **chưa gác** (nợ #170) | Thêm / bớt `{ productId }`; catalog hoặc sản phẩm của tổ chức khác → lỗi "không tìm thấy" |
+| GET · POST | `/greeting-card/send-links` | **chưa gác** (nợ #170) | Tạo link chào khách (`send_code` tuần tự theo `prefix`), có thể kèm catalog riêng cho khách; GET lọc `sale_id`, `catalog_id`, `status` |
+| GET | `/greeting-card/orders` | **chưa gác** (nợ #170) | Đơn đến từ Thẻ chào (`orders.source = BROCHURE`), lọc `status` |
+| POST | `/greeting-card/orders/:id/confirm-payment` | **chưa gác** (nợ #170) | Tiệm xác nhận đã nhận tiền `{ reference?, note? }`; đơn tổ chức khác → lỗi "không tìm thấy" |
+| POST | `/greeting-card/orders/:id/assign-florist` | **chưa gác** (nợ #170) | Phân công thợ cắm `{ floristNote }` |
+| POST | `/greeting-card/orders/:id/product-photo` | **chưa gác** (nợ #170) | Gắn ảnh thành phẩm `{ assetId }` → `order_qc_records`; ảnh phải thuộc tổ chức (kiểm từ 05/10/2026) — trang tra cứu công khai ký URL cho ảnh này |
+| POST | `/greeting-card/orders/:id/dispatch-shipping` | **chưa gác** (nợ #170) | Giao vận chuyển `{ trackingNote }` |
+| POST | `/greeting-card/orders/:id/recipient-photo` | **chưa gác** (nợ #170) | Ảnh người nhận `{ assetId }`; cùng luật ảnh như `product-photo` |
+| GET · POST | `/greeting-card/tracking-pipeline` | **chưa gác** (nợ #170) | Bảng theo dõi đơn theo bước; POST ghi chú nội bộ vào đơn hoặc phiên. `role`/`senderName` hiện nhận từ client (nợ #171) |
+
+### 25.3 Thẻ chào — phía khách (công khai, không đăng nhập)
+
+Tổ chức suy từ `send_code` / id catalog trong cơ sở dữ liệu, không nhận từ client.
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/public/brochure/:sendCode` | — *(công khai)* | Khách mở link: catalog + sản phẩm; ghi sự kiện `OPEN` |
+| POST | `/public/brochure/:sendCode/select` | — *(công khai)* | Khách chọn mẫu; lưu `product_snapshot`. **Snapshot hiện lấy từ `product` client gửi lên (kể cả giá)** — nợ #171 |
+| POST | `/public/brochure/:sendCode/order` | — *(công khai)* | Khách gửi thông tin người nhận/giao hàng → tạo đơn `BROCHURE` |
+| POST | `/public/brochure/:sendCode/payment-notify` | — *(công khai)* | Khách báo đã chuyển khoản (`PAYMENT_REPORTED`); tiệm xác nhận ở `confirm-payment` |
+| GET | `/public/brochure/tracking/:code` | — *(công khai)* | Khách tra trạng thái đơn theo mã |
+| POST | `/public/greeting-catalog/:id/order` | — *(công khai)* | Đặt hoa thẳng từ catalog công khai (không qua link chào riêng) |
+
+Các route công khai ở mục này trả nguyên `err.message` khi lỗi, chưa theo hình dạng lỗi chuẩn ở mục 2 — nợ #171.
+
+### 25.4 Thùng rác kho dữ liệu (30 ngày)
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET · POST | `/storage/trash` | `G3` \| `L4` \| `A3` \| `B6` *(kiểm ở use-case)* | Liệt kê / chuyển vào thùng rác `{ id, type: RAW_ASSET \| APPROVED_ANALYSIS \| PRODUCT }`. Chỉ vai Điều hành (một trong bốn mã) |
+| POST | `/storage/trash/:id/restore` | như trên | Khôi phục `{ type }` |
+| DELETE | `/storage/trash/:id` | như trên | Xoá vĩnh viễn, `?type=` bắt buộc |
 

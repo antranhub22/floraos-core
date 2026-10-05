@@ -11,12 +11,13 @@ import type {
 } from "../domain/greeting-card-types"
 import { loadPublicSession } from "./brochure-session-access"
 import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
+import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
 
 export type CustomerBrochureView = {
   status: "ACTIVE"
   session: PublicBrochureSessionView
   shop: { name: string; phone: string | null }
-  catalog: { id: string; code: string; name: string; description: string | null }
+  catalog: { id: string; code: string; name: string; description: string | null; filters?: Record<string, unknown> | null }
   products: GreetingCatalogProduct[]
   order: { id: string; code: string; status: string; totalVnd: number; paidVnd: number } | null
   /** Khu vực giao + phí của tiệm để khách chọn trên form. */
@@ -81,6 +82,7 @@ export async function getGreetingCatalogForCustomer(
       code: session.catalog.code,
       name: session.catalog.name,
       description: session.catalog.description,
+      filters: toPublicCatalogFilters(session.catalog.filters),
     },
     products,
     shipping: parseShippingConfig(shop.settings),

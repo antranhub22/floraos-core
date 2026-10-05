@@ -8,30 +8,42 @@ description: >-
 
 # AI Integration — FloraOS
 
+> Rà theo mã thật: 05/10/2026. Đường dẫn và lệnh `npm run` trong tệp này được `npm run check:docs` kiểm tự động.
+
 ## Quick Reference (copy-paste)
+
+> Rà theo mã thật 05/10/2026 (`src/core/ai/gateway.ts`). Không có `aiGateway.generate` hay `AICircuitBreaker` — bản trước của skill này ghi sai.
 
 ### Gọi AI qua gateway
 ```typescript
-import { aiGateway } from "@/core/ai/gateway"
+import { callCapability } from "@/core/ai/gateway"
+import { aiGatewayDeps } from "@/core/ai/wiring"
 
-const result = await aiGateway.generate({
-  capability: "text_generation",
-  input: { prompt: "..." },
-  ctx,
-})
+const result = await callCapability(
+  {
+    capability: "content_generation", // mã AIC-xx hoặc tên năng lực
+    privacy: "SHOP",                   // suy từ LOẠI dữ liệu, không nhận từ client
+    jobId: job.id,                     // null nếu chạy tại chỗ không có job
+  },
+  myAdapter,          // AdapterRun<O>: (model) => Promise<AdapterOutcome<O>>
+  aiGatewayDeps(ctx)  // chỗ duy nhất nối repo thật (wiring.ts)
+)
+if (result.kind !== "xong") {
+  // "khong_chay_duoc": hết đường dự phòng — job FAILED + hoàn credit (việc của `usage`)
+}
 ```
+Mẫu thật: `src/modules/creative-production/use-cases/generate-scene-plan.ts`.
 
 ### Tạo adapter mới cho provider
 ```typescript
-// src/core/ai/adapters/<provider>-adapter.ts
-import type { LlmProvider } from "@/core/ports/llm-provider"
+// src/core/ai/adapters/<provider>-llm-provider.ts
+import type { LLMProvider, LLMRequest, LLMResponse } from "@/core/ports/llm-provider"
 
-export class MyProviderAdapter implements LlmProvider {
-  async generate(input: LlmInput): Promise<LlmOutput> {
-    // SDK call tại đây — KHÔNG ở đâu khác
-  }
+export class MyProviderLLM implements LLMProvider {
+  // SDK nhà cung cấp chỉ được import ở đây — KHÔNG ở đâu khác
 }
 ```
+Mẫu thật: `src/core/ai/adapters/anthropic-llm-provider.ts`, `openai-llm-provider.ts`.
 
 ---
 
@@ -42,8 +54,8 @@ export class MyProviderAdapter implements LlmProvider {
 - **Mã nghiệp vụ gọi NĂNG LỰC, không gọi nhà cung cấp.**
 - Mô hình AI là hàng trong bảng `ai_models`, không phải hằng trong mã.
 
-### 2. Port Interfaces (13 cổng tại `src/core/ports/`)
-`llm-provider` · `image-provider` · `video-provider` · `speech-provider` · `vision-analyzer` · `segmentation-provider` · `embedding-provider` · `storage-provider` · `queue-provider` · `publisher-provider` · `trend-provider` · `shared-media` · `video-provider`
+### 2. Port Interfaces (12 tệp tại `src/core/ports/`, xuất qua `index.ts`)
+`llm-provider` · `image-provider` · `video-provider` · `speech-provider` · `vision-analyzer` · `segmentation-provider` · `embedding-provider` · `storage-provider` · `queue-provider` · `publisher-provider` · `trend-provider` · `shared-media`
 
 ### 3. Provider Rules
 - SDK (OpenAI, Anthropic, ElevenLabs) **chỉ xuất hiện** trong `adapters/`.
@@ -56,8 +68,8 @@ Mô hình không vào production thiếu 1 trong 4 ô: `license`, `commercial_us
 ### 5. Privacy Floor
 Lời gọi `SENSITIVE` không ra nhà cung cấp ngoài, kể cả fallback.
 
-### 6. Circuit Breaker
-AI calls bắt buộc qua `AICircuitBreaker`.
+### 6. Giới hạn lần thử (Aegis)
+Không có lớp circuit breaker riêng. Gateway tự giới hạn: `maxAttempts` mặc định 3, trần 5; chuỗi dự phòng chỉ đổi nhà cung cấp, không vượt sàn quyền riêng tư; hết đường trả `khong_chay_duoc`. Mã gọi KHÔNG tự bọc vòng thử lại quanh `callCapability`.
 
 ---
 
@@ -74,8 +86,9 @@ const result = await client.chat.completions.create(...)
 ### ✅ DO — Gọi qua gateway
 ```typescript
 // src/modules/<module>/use-cases/generate-text.ts
-import { aiGateway } from "@/core/ai/gateway"
-const result = await aiGateway.generate({ capability: "text_generation", input, ctx })
+import { callCapability } from "@/core/ai/gateway"
+import { aiGatewayDeps } from "@/core/ai/wiring"
+const result = await callCapability({ capability: "content_generation", privacy: "SHOP", jobId }, adapter, aiGatewayDeps(ctx))
 ```
 
 ---
@@ -87,7 +100,7 @@ const result = await aiGateway.generate({ capability: "text_generation", input, 
 | AI Gateway | `src/core/ai/gateway.ts` |
 | Gateway test | `src/core/ai/gateway.test.ts` |
 | Wiring (DI) | `src/core/ai/wiring.ts` |
-| Port interfaces | `src/core/ports/` (13 files) |
+| Port interfaces | `src/core/ports/` (12 files + `index.ts`) |
 | Provider mẫu | `workers/media_ai/providers/scene/` |
 
 > Xem thêm: skill `worker-python` §5 cho provider routing trong worker.

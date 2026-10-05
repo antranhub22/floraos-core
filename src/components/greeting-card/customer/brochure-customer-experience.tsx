@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { BrochureSwipeDeck } from "./brochure-swipe-deck"
+import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
 import { BrochureOrderForm } from "./brochure-order-form"
 import { BrochurePaymentView } from "./brochure-payment-view"
 import { BrochureTrackingView } from "./brochure-tracking-view"
@@ -115,7 +115,9 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
                 {shop.phone && <span className="block mt-1">Liên hệ cửa hàng: {shop.phone}</span>}
               </div>
             )}
-            <BrochureSwipeDeck
+            <GreetingTemplateRenderer
+              showTemplateSwitcher={false}
+              templateId={(catalog.filters as Record<string, unknown> | null | undefined)?.templateId as string | undefined}
               products={products}
               catalogName={catalog.name}
               selectedProductId={snapshot?.id || session.selectedProductId || null}

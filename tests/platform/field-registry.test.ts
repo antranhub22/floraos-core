@@ -29,6 +29,11 @@ describe("Nền quản trị trường (ĐP-3) — N12", () => {
 
   beforeEach(async () => {
     await resetDatabase()
+    // Sổ đăng ký trường là bảng nền tảng, resetDatabase() không dọn — ca thử
+    // tự tạo `customerPhone` ở hai ca liền nhau sẽ đụng khoá duy nhất.
+    await prisma.$executeRawUnsafe(
+      "TRUNCATE TABLE field_catalog_values, field_catalogs, field_definitions RESTART IDENTITY CASCADE"
+    )
     a = await createTenant("field-a")
     b = await createTenant("field-b")
     nguoiVanHanh = await createTenant("field-nguoi-van-hanh")

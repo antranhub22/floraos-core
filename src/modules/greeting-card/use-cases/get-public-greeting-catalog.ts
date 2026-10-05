@@ -2,11 +2,19 @@ import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
 import { parseShippingConfig, type ShippingConfig } from "../domain/brochure-pricing"
 import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
+import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
 
 export type PublicGreetingCatalogResult =
   | {
       status: "ACTIVE"
-      catalog: { id: string; code: string; name: string; description: string | null; orgSlug: string }
+      catalog: {
+        id: string
+        code: string
+        name: string
+        description: string | null
+        orgSlug: string
+        filters?: Record<string, unknown> | null
+      }
       products: GreetingCatalogProduct[]
       shipping: ShippingConfig
     }
@@ -37,6 +45,7 @@ export async function mapCatalogToPublicResult(
       name: catalog.name,
       description: catalog.description,
       orgSlug: catalog.organization.slug,
+      filters: toPublicCatalogFilters(catalog.filters),
     },
     products,
   }

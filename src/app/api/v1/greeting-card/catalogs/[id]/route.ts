@@ -11,6 +11,7 @@ const updateCatalogSchema = z.object({
   description: z.string().max(1000).nullable().optional(),
   type: z.enum(["STANDARD", "CLIENT"]).optional(),
   isActive: z.boolean().optional(),
+  filters: z.record(z.string(), z.unknown()).nullable().optional(),
 })
 
 type Context = { params: Promise<{ id: string }> }

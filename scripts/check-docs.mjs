@@ -2,7 +2,7 @@
 // Đối chiếu đặc tả 06/07 với mã thật. Chạy: node scripts/check-docs.mjs
 // Sinh ra ở lượt rà soát 18/09 — xem docs/kien-truc/RA_SOAT_DONG_BO_18_09.md.
 // Ý tưởng: tài liệu không tự nhớ con số; CI đọc mã rồi so lại.
-import { readFileSync, readdirSync, statSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs"
 import { join } from "node:path"
 
 const CHUA_XAY = /CHƯA XÂY|chưa gác|chưa xây/i
@@ -32,6 +32,9 @@ const dive = (dir) => {
       const src = readFileSync(f, "utf8")
       for (const m of src.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+(GET|POST|PUT|PATCH|DELETE)\b/g))
         codeEps.add(`${m[1]} ${rel}`)
+      // Route chỉ re-export handler (`export { fooPOST as POST }`) — trước 05/10/2026 lọt khỏi phép dò.
+      for (const m of src.matchAll(/export\s*\{([^}]*)\}/g))
+        for (const n of m[1].matchAll(/\bas\s+(GET|POST|PUT|PATCH|DELETE)\b/g)) codeEps.add(`${n[1]} ${rel}`)
     }
   }
 }
@@ -87,6 +90,7 @@ const SCHEMA_ONLY_CHUA_NOI = new Set([
   "product_images", // product-master-index-repository.ts: "chưa từng được nối"
   "product_inventory", // nợ #95: "chưa được nối"
   "vouchers", // chỉ có đọc lồng qua customers; chưa có route tạo/sửa
+  "journey_runs", // 05/10/2026: grep src/ không có đường đọc/ghi nào — bảng Journey Engine mới khai ở lược đồ
 ])
 const tenant = [...sm].filter(([, b]) => /^\s*organization_id\s/m.test(b)).map(([n]) => n).filter((n) => !SCHEMA_ONLY_CHUA_NOI.has(n))
 const thu = readdirSync("tests/tenant").filter((f) => f.endsWith(".ts"))
@@ -118,6 +122,32 @@ for (const t of tenant) {
 const helper = readFileSync("tests/helpers/database.ts", "utf8")
 const trunc = new Set([...helper.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]))
 for (const t of tenant) if (!trunc.has(t)) bao(`bảng tenant "${t}" không nằm trong TENANT_TABLES — không được dọn giữa các ca thử`)
+
+// ── 4. Tài liệu cho agent ─────────────────────────────────────────────────
+// CLAUDE.md nạp vào MỌI phiên — giữ nhỏ. Đường dẫn/lệnh trong tài liệu agent
+// phải có thật: link `file:///Users/...` hỏng và `HARVEST_MANIFEST.md` sai chỗ
+// từng nằm đó mà không ai biết (05/10/2026).
+console.log("── Tài liệu cho agent")
+const CLAUDE_MD_MAX = 6144
+const claudeMd = readFileSync("CLAUDE.md", "utf8")
+if (Buffer.byteLength(claudeMd) > CLAUDE_MD_MAX)
+  bao(`CLAUDE.md ${Buffer.byteLength(claudeMd)} byte > ${CLAUDE_MD_MAX} — chuyển chi tiết sang skill/tài liệu tham chiếu`)
+const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts
+const agentDocs = ["CLAUDE.md", ".agents/AGENT_RULES.md",
+  ...readdirSync(".agents/skills").map((d) => `.agents/skills/${d}/SKILL.md`)]
+for (const f of agentDocs) {
+  const t = readFileSync(f, "utf8")
+  for (const m of t.matchAll(/npm run ([\w:.-]+)/g)) if (!(m[1] in scripts)) bao(`${f}: "npm run ${m[1]}" không có trong package.json`)
+  for (const m of t.matchAll(/`((?:src|tests|scripts|workers|prisma|docs|\.agents|\.claude)\/[^`\s*{}<>|]+?)`/g)) {
+    const pth = m[1].replace(/[:#].*$/, "").replace(/\/$/, "")
+    if (!existsSync(pth)) bao(`${f}: đường dẫn \`${m[1]}\` không tồn tại`)
+  }
+  for (const m of t.matchAll(/\]\(((?!https?:|#)[^)\s]+)\)/g)) {
+    if (m[1].startsWith("file:")) { bao(`${f}: link tuyệt đối "${m[1]}" — dùng đường dẫn tương đối`); continue }
+    const pth = join(f.includes("/") ? f.slice(0, f.lastIndexOf("/")) : ".", m[1].replace(/#.*$/, ""))
+    if (!existsSync(pth)) bao(`${f}: link "${m[1]}" không tồn tại`)
+  }
+}
 
 console.log(loi === 0 ? "\n✓ Tài liệu khớp mã." : `\n✗ ${loi} chỗ lệch giữa tài liệu và mã.`)
 process.exit(loi === 0 ? 0 : 1)
