@@ -65,6 +65,8 @@ Claude outputs/
 .venv-iopaint/
 .claude/*
 !.claude/skills
+!.claude/hooks
+!.claude/settings.json
 .kilo/
 
 # Kết quả đo chất lượng ảnh biến thể (scripts/cham-bien-the.py) — ảnh sinh ra, không commit
