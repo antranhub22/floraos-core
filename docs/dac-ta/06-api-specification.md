@@ -825,6 +825,12 @@ Tổ chức suy từ `send_code` / id catalog trong cơ sở dữ liệu, không
 
 Các route công khai ở mục này trả nguyên `err.message` khi lỗi, chưa theo hình dạng lỗi chuẩn ở mục 2 — nợ #171.
 
+### 25.3b Báo cáo vi phạm CSP (công khai)
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| POST | `/public/csp-report` | — *(công khai)* | Trình duyệt gửi báo cáo khi trang tải nguồn ngoài `Content-Security-Policy-Report-Only` (`next.config.ts`). Chỉ ghi log `csp.violation` (directive, nguồn bị vi phạm, đường dẫn trang không query); trả 204. 60 lần/phút/IP. Không chặn gì — nợ #175 |
+
 ### 25.4 Thùng rác kho dữ liệu (30 ngày)
 
 | Method | Path | Năng lực | Ghi chú |
