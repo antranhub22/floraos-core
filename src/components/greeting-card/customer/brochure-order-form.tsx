@@ -17,6 +17,7 @@ import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pri
 import { BrochureOrderOptions } from "./brochure-order-options"
 import { useBrochureQuote } from "./use-brochure-quote"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
+import { PrivacyNotice } from "./privacy-notice"
 
 interface BrochureOrderFormProps {
   productSnapshot: ProductSnapshot
@@ -311,6 +312,7 @@ export function BrochureOrderForm({
           <Send size={18} aria-hidden="true" />
           <span>{loading ? "Đang gửi đơn hàng..." : "Đặt hoa & thanh toán"}</span>
         </Button>
+        <PrivacyNotice />
       </form>
     </div>
   )
