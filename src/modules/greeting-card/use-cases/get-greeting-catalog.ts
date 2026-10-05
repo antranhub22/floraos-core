@@ -2,6 +2,7 @@ import { AppError } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
 import { buildPaymentInstructions } from "../adapters/vietqr-helper"
+import { parseShippingConfig, type ShippingConfig } from "../domain/brochure-pricing"
 import type {
   BrochurePaymentInstructions,
   GreetingCatalogProduct,
@@ -19,6 +20,8 @@ export type CustomerBrochureView = {
   catalog: { id: string; code: string; name: string; description: string | null }
   products: GreetingCatalogProduct[]
   order: { id: string; code: string; status: string; totalVnd: number; paidVnd: number } | null
+  /** Khu vực giao + phí của tiệm để khách chọn trên form. */
+  shipping: ShippingConfig
   /** Hướng dẫn chuyển khoản cho đơn hiện có — `null` khi chưa có đơn hoặc tiệm chưa cấu hình. */
   payment: BrochurePaymentInstructions | null
 }
@@ -87,6 +90,7 @@ export async function getGreetingCatalogForCustomer(
       description: session.catalog.description,
     },
     products,
+    shipping: parseShippingConfig(shop.settings),
     order,
     payment,
   }

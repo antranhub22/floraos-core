@@ -1,32 +1,11 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { conflict, notFound } from "@/core/http/errors"
-import { Prisma } from "@/generated/prisma/client"
 import type { delivery_status, order_status, production_status } from "@/generated/prisma/client"
-import { isUniqueViolation } from "@/modules/coordinator/infra/transaction"
-import { randomCode } from "../domain/greeting-card-rules"
-import type { ProductSnapshot } from "../domain/greeting-card-types"
 
 export const ORDER_STATUSES: readonly order_status[] = [
   "DRAFT", "CONFIRMED", "PROCESSING", "DELIVERED", "COMPLETED", "CANCELLED",
 ]
-
-export interface CreateBrochureOrderData {
-  organizationId: string
-  sessionId: string
-  code: string
-  customerName: string
-  customerPhone: string
-  recipientName: string
-  recipientPhone: string
-  deliveryAddress: string
-  deliveryDate: string
-  deliveryTimeSlot: string
-  cardMessage?: string | null | undefined
-  note?: string | null | undefined
-  snapshot: ProductSnapshot
-  totalAmount: number
-}
 
 /** Đơn hàng nguồn Thẻ chào: tạo đơn, thu tiền, tra cứu, cập nhật xưởng. */
 export class BrochureOrderRepository {
@@ -77,103 +56,6 @@ export class BrochureOrderRepository {
     return this.db.orders.findFirst({
       where: { id: orderId, organization_id: organizationId },
       select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true },
-    })
-  }
-
-  /**
-   * Khách theo SĐT. Làm NGOÀI giao dịch tạo đơn: mã `KH-xxxx` sinh theo đếm
-   * có thể trùng (khách đã xoá, hai đơn đồng thời) — trùng thì lấy đuôi ngẫu
-   * nhiên, thay vì làm hỏng cả đơn như bản cũ.
-   */
-  private async findOrCreateCustomer(data: CreateBrochureOrderData) {
-    const where = { organization_id: data.organizationId, phone: data.customerPhone }
-    const existing = await this.db.customers.findFirst({ where, select: { id: true } })
-    if (existing) return existing.id
-
-    const count = await this.db.customers.count({ where: { organization_id: data.organizationId } })
-    const candidates = [`KH-${String(count + 1).padStart(4, "0")}`, `KH-${randomCode(6)}`, `KH-${randomCode(8)}`]
-    for (const code of candidates) {
-      try {
-        const created = await this.db.customers.create({
-          data: { ...where, code, name: data.customerName, address: data.deliveryAddress },
-          select: { id: true },
-        })
-        return created.id
-      } catch (error) {
-        if (!isUniqueViolation(error)) throw error
-        const raced = await this.db.customers.findFirst({ where, select: { id: true } })
-        if (raced) return raced.id
-      }
-    }
-    throw conflict("Không tạo được hồ sơ khách hàng, vui lòng thử lại")
-  }
-
-  /**
-   * Tạo đơn + gắn vào phiên trong MỘT giao dịch. Phiên chỉ nhận đơn khi chưa
-   * có đơn (`order_id IS NULL`) — hai lần bấm "Đặt hoa" không sinh hai đơn.
-   */
-  async createBrochureOrder(data: CreateBrochureOrderData) {
-    const customerId = await this.findOrCreateCustomer(data)
-
-    return this.db.$transaction(async (tx) => {
-      const order = await tx.orders.create({
-        data: {
-          organization_id: data.organizationId,
-          customer_id: customerId,
-          code: data.code,
-          source: "BROCHURE",
-          source_session_id: data.sessionId,
-          status: "DRAFT",
-          production_status: "WAITING",
-          delivery_status: "PENDING",
-          total_vnd: data.totalAmount,
-          paid_vnd: 0,
-          balance_vnd: data.totalAmount,
-          card_message: data.cardMessage ?? null,
-          internal_note: data.note ?? null,
-          delivery_window: { date: data.deliveryDate, timeSlot: data.deliveryTimeSlot },
-          delivery_address: {
-            recipientName: data.recipientName,
-            phone: data.recipientPhone,
-            street: data.deliveryAddress,
-          },
-          created_by: "customer-brochure",
-          items: {
-            create: {
-              organization_id: data.organizationId,
-              product_id: data.snapshot.id,
-              quantity: 1,
-              unit_price_vnd: data.totalAmount,
-              description: data.snapshot.name,
-              metadata: data.snapshot as unknown as Prisma.InputJsonValue,
-            },
-          },
-        },
-      })
-
-      const attached = await tx.greeting_sessions.updateMany({
-        where: { id: data.sessionId, order_id: null },
-        data: {
-          order_id: order.id,
-          status: "ORDER_SUBMITTED",
-          customer_name: data.customerName,
-          customer_phone: data.customerPhone,
-          product_snapshot: data.snapshot as unknown as Prisma.InputJsonValue,
-          last_active_at: new Date(),
-        },
-      })
-      if (attached.count === 0) throw conflict("Thẻ chào này đã có đơn hàng")
-
-      await tx.greeting_journey_events.create({
-        data: {
-          organization_id: data.organizationId,
-          session_id: data.sessionId,
-          event_type: "SUBMIT_ORDER",
-          metadata: { orderId: order.id, orderCode: order.code, amount: data.totalAmount },
-        },
-      })
-
-      return order
     })
   }
 

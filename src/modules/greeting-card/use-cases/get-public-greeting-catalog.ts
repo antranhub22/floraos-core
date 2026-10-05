@@ -1,5 +1,6 @@
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
+import { parseShippingConfig, type ShippingConfig } from "../domain/brochure-pricing"
 import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
 
 export type PublicGreetingCatalogResult =
@@ -7,6 +8,7 @@ export type PublicGreetingCatalogResult =
       status: "ACTIVE"
       catalog: { id: string; code: string; name: string; description: string | null; orgSlug: string }
       products: GreetingCatalogProduct[]
+      shipping: ShippingConfig
     }
   | { status: "NOT_FOUND" }
 
@@ -24,8 +26,11 @@ export async function mapCatalogToPublicResult(
   const assetMap = await repo.getAssetsStorageMap(catalog.organization_id, collectImageAssetIds(catalog.items))
   const products: GreetingCatalogProduct[] = catalog.items.map((item) => toCatalogProduct(item, assetMap))
 
+  const shop = await repo.getShopProfile(catalog.organization_id)
+
   return {
     status: "ACTIVE",
+    shipping: parseShippingConfig(shop.settings),
     catalog: {
       id: catalog.id,
       code: catalog.code,

@@ -1,5 +1,6 @@
 import { resolveProductPriceVnd } from "../domain/brochure-commerce-rules"
 import { createProductSnapshot } from "../domain/greeting-card-rules"
+import { resolvePricedVariants } from "../domain/brochure-pricing"
 import type { GreetingCatalogProduct, ProductSnapshot } from "../domain/greeting-card-types"
 
 /** Hình dạng tối thiểu của một dòng `greeting_catalog_products` kèm sản phẩm. */
@@ -12,7 +13,7 @@ export interface CatalogItemRow {
     category: string | null
     attributes: unknown
     images: Array<{ asset_id: string }>
-    variants: Array<{ attributes: unknown }>
+    variants: Array<{ id: string; name: string; size: string | null; multiplier: number; attributes: unknown }>
   }
 }
 
@@ -28,6 +29,7 @@ export function toCatalogProduct(item: CatalogItemRow, imageUrls: Map<string, st
     imageUrl: mainImg ? imageUrls.get(mainImg.asset_id) ?? null : null,
     description: p.category ? `Danh mục: ${p.category}` : null,
     sortOrder: item.sort_order,
+    variants: resolvePricedVariants(p.attributes, p.variants),
   }
 }
 

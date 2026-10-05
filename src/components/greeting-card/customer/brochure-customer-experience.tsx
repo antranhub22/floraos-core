@@ -127,6 +127,9 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
         {step === "ORDER_FORM" && snapshot && (
           <BrochureOrderForm
             productSnapshot={snapshot}
+            variants={products.find((p) => p.id === snapshot.id)?.variants ?? []}
+            shipping={initialData.shipping}
+            quoteUrl={`/api/v1/public/brochure/${session.sendCode}/quote`}
             onBack={() => setStep("SWIPING")}
             onSubmit={handleSubmitOrder}
           />

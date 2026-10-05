@@ -13,15 +13,17 @@ import type {
   ProductSnapshot,
 } from "@/modules/greeting-card/domain/greeting-card-types"
 import { ShoppingBag } from "lucide-react"
+import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
 
 interface Props {
   catalog: { id: string; code: string; name: string; description: string | null }
   products: GreetingCatalogProduct[]
+  shipping: ShippingConfig
 }
 
 type PublicStep = "SWIPING" | "PREVIEW" | "ORDER_FORM" | "PAYMENT" | "TRACKING"
 
-export function BrochurePublicView({ catalog, products }: Props) {
+export function BrochurePublicView({ catalog, products, shipping }: Props) {
   const [step, setStep] = useState<PublicStep>("SWIPING")
   const [selected, setSelected] = useState<GreetingCatalogProduct | null>(null)
   const [orderResult, setOrderResult] = useState<{
@@ -75,6 +77,10 @@ export function BrochurePublicView({ catalog, products }: Props) {
       <div className="min-h-screen bg-background text-foreground flex flex-col justify-start py-6 px-4 sm:px-6">
         <BrochureOrderForm
           productSnapshot={activeSnapshot}
+          variants={selected?.variants ?? []}
+          shipping={shipping}
+          quoteUrl={`/api/v1/public/greeting-catalog/${catalog.id}/quote`}
+          quoteExtraBody={{ productId: activeSnapshot.id }}
           onBack={() => setStep("PREVIEW")}
           onSubmit={handleSubmitOrder}
         />

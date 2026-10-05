@@ -1,34 +1,17 @@
 import { unprocessable, validationFailed } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
-import {
-  generateBrochureOrderCode,
-  normalizePhone,
-  validateCustomerOrderInput,
-} from "../domain/greeting-card-rules"
+import { validateCustomerOrderInput } from "../domain/greeting-card-rules"
 import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
 import { buildPaymentInstructions } from "../adapters/vietqr-helper"
-import type {
-  BrochurePaymentInstructions,
-  CustomerOrderSubmitInput,
-  ProductSnapshot,
-} from "../domain/greeting-card-types"
+import type { CustomerOrderSubmitInput, ProductSnapshot } from "../domain/greeting-card-types"
 import { loadPublicSession, resolveOrderableProduct } from "./brochure-session-access"
-import { snapshotOf } from "./brochure-product-mapper"
+import { placeBrochureOrder, type BrochureOrderResult } from "./place-brochure-order"
+import { quoteForProduct, type QuoteRequest, type QuoteResult } from "./brochure-quote"
 
-export const DEFAULT_TIME_SLOT = "Trong ngày"
+export { DEFAULT_TIME_SLOT, type BrochureOrderResult } from "./place-brochure-order"
 
-export interface BrochureOrderResult {
-  /** Mã phiên để khách báo chuyển khoản (`/payment-notify`). */
-  sendCode: string
-  orderId: string
-  orderCode: string
-  totalVnd: number
-  productSnapshot: ProductSnapshot
-  /** `null` khi tiệm chưa cấu hình tài khoản nhận tiền — cửa hàng sẽ liên hệ khách. */
-  vietQr: BrochurePaymentInstructions | null
-}
-
+/** Khách gửi đơn từ link chào `/b/[sendCode]` (đã chọn mẫu trước đó). */
 export async function submitBrochureOrder(
   sendCode: string,
   input: CustomerOrderSubmitInput,
@@ -40,7 +23,6 @@ export async function submitBrochureOrder(
 
   const session = await loadPublicSession(sendCode, repo)
   const shop = await repo.getShopProfile(session.organization_id)
-  const paymentConfig = parseBrochurePaymentConfig(shop.settings)
 
   // Idempotent: phiên đã có đơn → trả lại đúng đơn đó (khách bấm hai lần, mạng chập chờn).
   if (session.order_id) {
@@ -53,8 +35,13 @@ export async function submitBrochureOrder(
         orderId: existing.id,
         orderCode: existing.code,
         totalVnd: total,
+        quote: null,
         productSnapshot: snapshot,
-        vietQr: buildPaymentInstructions(paymentConfig, total - Number(existing.paid_vnd), existing.code),
+        vietQr: buildPaymentInstructions(
+          parseBrochurePaymentConfig(shop.settings),
+          total - Number(existing.paid_vnd),
+          existing.code
+        ),
       }
     }
   }
@@ -65,32 +52,26 @@ export async function submitBrochureOrder(
   }
   // Tính lại giá từ Product Master lúc đặt — không tin ảnh chụp đã lưu.
   const product = await resolveOrderableProduct(session, session.selected_product_id, repo)
-  const snapshot = snapshotOf(product)
 
-  const note = input.senderNote?.trim()
-  const order = await orders.createBrochureOrder({
+  return placeBrochureOrder({
     organizationId: session.organization_id,
-    sessionId: session.id,
-    code: generateBrochureOrderCode(),
-    customerName: input.customerName.trim(),
-    customerPhone: normalizePhone(input.customerPhone),
-    recipientName: input.recipientName.trim(),
-    recipientPhone: normalizePhone(input.recipientPhone),
-    deliveryAddress: input.deliveryAddress.trim(),
-    deliveryDate: input.deliveryDate.trim(),
-    deliveryTimeSlot: input.deliveryTimeSlot?.trim() || DEFAULT_TIME_SLOT,
-    cardMessage: input.cardMessage?.trim() || null,
-    note: note ? `[Thẻ chào ${session.send_code}] ${note}` : `[Thẻ chào ${session.send_code}]`,
-    snapshot,
-    totalAmount: snapshot.price,
+    session,
+    product,
+    input,
+    notePrefix: `[Thẻ chào ${session.send_code}]`,
+    shopSettings: shop.settings,
   })
+}
 
-  return {
-    sendCode: session.send_code,
-    orderId: order.id,
-    orderCode: order.code,
-    totalVnd: snapshot.price,
-    productSnapshot: snapshot,
-    vietQr: buildPaymentInstructions(paymentConfig, snapshot.price, order.code),
-  }
+/** Báo giá trực tiếp trên form đặt hoa của link chào (mẫu đã chọn). */
+export async function quoteBrochureSession(
+  sendCode: string,
+  req: QuoteRequest,
+  repo = new GreetingCardRepository()
+): Promise<QuoteResult> {
+  const session = await loadPublicSession(sendCode, repo)
+  if (!session.selected_product_id) throw unprocessable("Vui lòng chọn mẫu hoa trước")
+  const product = await resolveOrderableProduct(session, session.selected_product_id, repo)
+  const shop = await repo.getShopProfile(session.organization_id)
+  return quoteForProduct(session.organization_id, product, req, shop.settings)
 }

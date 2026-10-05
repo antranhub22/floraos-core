@@ -50,6 +50,8 @@ export interface GreetingCatalogProduct {
   style?: string | null | undefined
   flowersSummary?: string | null | undefined
   sortOrder: number
+  /** Các size/biến thể bán online (đã có giá); rỗng = chỉ bán bản gốc. */
+  variants?: Array<{ id: string; name: string; priceVnd: number }> | undefined
 }
 
 export interface GreetingCatalogRecord {
@@ -96,6 +98,11 @@ export interface CustomerOrderSubmitInput {
   deliveryAddress: string
   cardMessage?: string | undefined
   senderNote?: string | undefined
+  /** Lựa chọn mua — server tính lại giá từ các lựa chọn này, không nhận giá từ client. */
+  variantId?: string | undefined
+  quantity?: number | undefined
+  shippingZoneId?: string | undefined
+  voucherCode?: string | undefined
 }
 
 export interface BrochureOrderSummary {

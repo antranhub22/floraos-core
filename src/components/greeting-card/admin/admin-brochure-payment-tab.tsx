@@ -5,6 +5,7 @@ import { Check, RefreshCw, AlertCircle, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { readApiError } from "@/components/greeting-card/api-error"
 import { BrochurePaymentSettings } from "./brochure-payment-settings"
+import { BrochureShippingSettings } from "./brochure-shipping-settings"
 
 interface PaymentOrder {
   id: string
@@ -96,7 +97,10 @@ export function AdminBrochurePaymentTab() {
         </Button>
       </div>
 
-      <BrochurePaymentSettings />
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <BrochurePaymentSettings />
+        <BrochureShippingSettings />
+      </div>
 
       {errorMsg && (
         <div role="alert" className="p-3.5 rounded-xl bg-danger-bg border border-danger/30 text-danger text-body-sm font-bold flex items-center gap-2">

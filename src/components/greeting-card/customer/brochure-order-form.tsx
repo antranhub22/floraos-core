@@ -13,15 +13,28 @@ import type {
   ProductSnapshot,
   CustomerOrderSubmitInput,
 } from "@/modules/greeting-card/domain/greeting-card-types"
+import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
+import { BrochureOrderOptions } from "./brochure-order-options"
+import { useBrochureQuote } from "./use-brochure-quote"
 
 interface BrochureOrderFormProps {
   productSnapshot: ProductSnapshot
+  /** Size/biến thể bán online của mẫu đã chọn. */
+  variants: Array<{ id: string; name: string; priceVnd: number }>
+  shipping: ShippingConfig
+  /** Endpoint báo giá + phần thân cố định (vd. `productId` ở link công khai). */
+  quoteUrl: string
+  quoteExtraBody?: Record<string, string> | undefined
   onBack: () => void
   onSubmit: (input: CustomerOrderSubmitInput) => Promise<void>
 }
 
 export function BrochureOrderForm({
   productSnapshot,
+  variants,
+  shipping,
+  quoteUrl,
+  quoteExtraBody = {},
   onBack,
   onSubmit,
 }: BrochureOrderFormProps) {
@@ -36,6 +49,7 @@ export function BrochureOrderForm({
   const [senderNote, setSenderNote] = useState("")
 
   const [loading, setLoading] = useState(false)
+  const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone)
   const minDate = todayInVietnam()
   const maxDate = new Date(Date.parse(`${minDate}T00:00:00Z`) + MAX_DELIVERY_LEAD_DAYS * 86_400_000)
     .toISOString()
@@ -51,6 +65,10 @@ export function BrochureOrderForm({
       customerName, customerPhone, recipientName, recipientPhone,
       deliveryDate, deliveryTimeSlot, deliveryAddress, cardMessage, senderNote,
     })
+    if (shipping.zones.length > 0 && !pricing.selection.shippingZoneId) {
+      check.errors.shippingZoneId = "Vui lòng chọn khu vực giao hoa"
+      check.valid = false
+    }
     if (!check.valid) {
       setErrorMessage(Object.values(check.errors)[0] ?? "Thông tin đặt hàng chưa hợp lệ")
       return
@@ -68,6 +86,10 @@ export function BrochureOrderForm({
         deliveryAddress,
         cardMessage,
         senderNote,
+        quantity: pricing.selection.quantity,
+        ...(pricing.selection.variantId ? { variantId: pricing.selection.variantId } : {}),
+        ...(pricing.selection.shippingZoneId ? { shippingZoneId: pricing.selection.shippingZoneId } : {}),
+        ...(pricing.selection.voucherCode ? { voucherCode: pricing.selection.voucherCode } : {}),
       })
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Đã có lỗi xảy ra khi đặt hoa")
@@ -126,6 +148,17 @@ export function BrochureOrderForm({
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <BrochureOrderOptions
+          variants={variants}
+          basePrice={productSnapshot.price}
+          shipping={shipping}
+          selection={pricing.selection}
+          onChange={pricing.update}
+          quote={pricing.quote}
+          errors={pricing.errors}
+          loading={pricing.loading}
+        />
+
         {/* Người đặt */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
