@@ -74,6 +74,24 @@ export function BrochurePaymentView({
     }
   }
 
+  // Mẫu chưa có giá ("Liên hệ"): không hiện QR 0 đồng, cửa hàng sẽ báo giá trước khi thu tiền
+  if (totalVnd <= 0) {
+    return (
+      <div className="w-full max-w-md mx-auto bg-surface rounded-3xl border border-border shadow-lg p-6 flex flex-col items-center text-center gap-3">
+        <div className="w-12 h-12 rounded-full bg-success-bg text-success flex items-center justify-center">
+          <CheckCircle2 size={26} />
+        </div>
+        <h2 className="text-title font-extrabold">Đã nhận đơn #{orderCode}</h2>
+        <p className="text-body-sm text-text-muted">
+          Mẫu hoa này chưa niêm yết giá. Cửa hàng sẽ liên hệ báo giá và hướng dẫn thanh toán cho bạn sớm nhất.
+        </p>
+        <Button type="button" onClick={onGoToTracking} className="w-full gap-1.5">
+          Theo dõi đơn hàng <ArrowRight size={16} />
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full max-w-md mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-6 shadow-sm flex flex-col items-center text-center">
       <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">

@@ -113,7 +113,7 @@ export function BrochureOrderForm({
             {productSnapshot.name}
           </div>
           <div className="text-body-sm font-extrabold text-primary">
-            {productSnapshot.price.toLocaleString("vi-VN")} đ
+            {productSnapshot.price > 0 ? `${productSnapshot.price.toLocaleString("vi-VN")} đ` : "Liên hệ"}
           </div>
         </div>
       </div>

@@ -141,7 +141,7 @@ export function BrochurePublicView({ catalog, products }: Props) {
                 <p className="text-body-sm text-text-muted mt-1">{selected.description}</p>
               )}
               <p className="text-display font-extrabold text-primary mt-3">
-                {selected.price.toLocaleString("vi-VN")}đ
+                {selected.price > 0 ? `${selected.price.toLocaleString("vi-VN")}đ` : "Liên hệ"}
               </p>
             </div>
 

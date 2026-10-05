@@ -16,8 +16,11 @@ export function resolveCatalogProductPrice(product: {
   return pick(product.attributes) ?? pick(product.variants?.[0]?.attributes)
 }
 
-/** Giá dự phòng khi sản phẩm chưa khai báo giá (giữ hành vi hiện có của link công khai). */
-export const FALLBACK_CATALOG_PRICE = 500_000
+/**
+ * Sản phẩm chưa khai báo giá: 0 = "Liên hệ" trên giao diện; đơn hàng được nhận
+ * nhưng không hiện QR, cửa hàng báo giá sau. (Trước đây tự gán 500.000 ₫.)
+ */
+export const FALLBACK_CATALOG_PRICE = 0
 
 interface CatalogItemLike {
   sort_order: number

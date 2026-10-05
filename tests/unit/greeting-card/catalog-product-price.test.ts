@@ -24,8 +24,9 @@ describe("giá mẫu hoa trong thẻ chào", () => {
     expect(catalogItemToProduct(item).price).toBe(1_950_000)
   })
 
-  it("chỉ dùng giá dự phòng khi sản phẩm chưa có giá", () => {
+  it("sản phẩm chưa có giá thành 0 (hiển thị \"Liên hệ\"), không tự gán 500.000", () => {
     const item = { sort_order: 0, product: { id: "p2", code: "X", name: "Bó hoa", attributes: null, variants: [] } }
     expect(catalogItemToProduct(item).price).toBe(FALLBACK_CATALOG_PRICE)
+    expect(FALLBACK_CATALOG_PRICE).toBe(0)
   })
 })
