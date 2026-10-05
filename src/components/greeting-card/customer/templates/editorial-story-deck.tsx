@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useState } from "react"
-import { Check, Sparkles, ChevronLeft, ChevronRight, BookOpen, Quote, Heart } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
+import { EmptyCatalog, HeartToggle, ProductImage, formatVnd, useShortlist } from "./aux/aux-kit"
+import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
+import { rootHeight, useEmbeddedPreview } from "./aux/embedded"
 
 interface EditorialStoryDeckProps {
   products: GreetingCatalogProduct[]
@@ -12,196 +13,80 @@ interface EditorialStoryDeckProps {
   onSelectProduct: (product: GreetingCatalogProduct) => void
 }
 
-export function EditorialStoryDeck({
-  products,
-  catalogName,
-  selectedProductId,
-  onSelectProduct,
-}: EditorialStoryDeckProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [shortlisted, setShortlisted] = useState<string[]>([])
+/** Câu chuyện: dàn trang như tạp chí — ảnh lớn, số thứ tự, lời kể về ý nghĩa mẫu hoa. */
+export function EditorialStoryDeck({ products, catalogName, onSelectProduct }: EditorialStoryDeckProps) {
+  const embedded = useEmbeddedPreview()
+  const shortlist = useShortlist()
+  const [open, setOpen] = useState<GreetingCatalogProduct | null>(null)
 
-  if (products.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 text-center text-text-muted">
-        <Sparkles size={40} className="text-primary mb-3" />
-        <p className="text-body font-medium">Hiện chưa có mẫu hoa nào trong bộ sưu tập này.</p>
-      </div>
-    )
-  }
-
-  const currentProduct = products[currentIndex]
-  if (!currentProduct) return null
-
-  const isSelected = selectedProductId === currentProduct.id
-  const isHearted = shortlisted.includes(currentProduct.id)
-
-  const flowerMeaning =
-    currentProduct.meaning ||
-    "Mỗi cánh hoa mang theo một lời chúc bình an, tượng trưng cho tình cảm chân thành và sự trân quý sâu sắc nhất."
+  if (products.length === 0) return <EmptyCatalog />
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-2 pb-24 select-none">
-      {/* Editorial Header */}
-      <div className="text-center mb-4 space-y-1">
-        <span className="text-caption font-bold text-accent tracking-widest uppercase">
-          Tạp Chí Hoa Nghệ Thuật
-        </span>
-        <h2 className="font-serif text-display sm:text-display-lg text-foreground tracking-tight font-medium">
-          {catalogName}
-        </h2>
-        <div className="flex items-center justify-center gap-2 text-caption text-text-muted">
-          <span>Tác phẩm số {currentIndex + 1} / {products.length}</span>
-          <span>·</span>
-          <span>Xưởng Hoa Thiết Kế</span>
-        </div>
+    <div className={`${rootHeight(embedded)} w-full bg-bg text-text`}>
+      <div className="mx-auto w-full max-w-[480px] pb-12">
+        <header className="px-6 pb-8 pt-10 text-center">
+          <p className="text-caption font-semibold uppercase tracking-[0.3em] text-primary">Câu chuyện bộ sưu tập</p>
+          <h1 className="mt-3 font-serif text-display-lg font-medium leading-[1.05] tracking-tight">{catalogName}</h1>
+          <p className="mt-3 text-body-sm text-text-muted">{products.length} mẫu hoa, mỗi mẫu một lời nhắn</p>
+          <span aria-hidden="true" className="mx-auto mt-6 block h-10 w-px bg-border" />
+        </header>
+
+        <ol className="flex flex-col gap-14">
+          {products.map((p, i) => {
+            const story = p.meaning || p.description
+            return (
+              <li key={p.id}>
+                <article aria-labelledby={`story-${p.id}`}>
+                  <div className="relative mx-4 aspect-[4/5] overflow-hidden rounded-[4px] bg-surface-alt">
+                    <ProductImage product={p} />
+                    <HeartToggle active={shortlist.has(p.id)} onToggle={() => shortlist.toggle(p.id)} name={p.name} className="absolute right-3 top-3" />
+                  </div>
+                  <div className="px-6 pt-5">
+                    <div className="flex items-baseline gap-3">
+                      <span className="font-serif text-display font-light text-primary tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                      <span aria-hidden="true" className="h-px flex-1 bg-border" />
+                      <span className="text-body-sm font-bold tabular-nums">{formatVnd(p.price)}</span>
+                    </div>
+                    <h2 id={`story-${p.id}`} className="mt-2 font-serif text-title font-medium leading-snug">
+                      {p.name}
+                    </h2>
+                    {story && <p className="mt-3 font-serif text-body italic leading-relaxed text-text">“{story}”</p>}
+                    {p.flowersSummary && <p className="mt-3 text-body-sm text-text-muted">{p.flowersSummary}</p>}
+                    <div className="mt-5 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onSelectProduct(p)}
+                        className="h-11 flex-1 rounded-full bg-text text-body-sm font-bold text-surface active:scale-[0.99]"
+                      >
+                        Đặt mẫu này
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOpen(p)}
+                        className="h-11 rounded-full border border-border px-5 text-body-sm font-semibold"
+                      >
+                        Chi tiết
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              </li>
+            )
+          })}
+        </ol>
       </div>
 
-      {/* Main Editorial Card */}
-      <div className="bg-surface rounded-[32px] border border-border shadow-2xl overflow-hidden flex flex-col">
-        {/* Large 4:5 Art Image Frame with Full-Bleed Aesthetic */}
-        <div className="relative aspect-[4/5] w-full bg-surface-muted overflow-hidden">
-          {currentProduct.imageUrl ? (
-            <img
-              src={currentProduct.imageUrl}
-              alt={currentProduct.name}
-              className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-text-muted">
-              <BookOpen size={48} className="text-primary/30 mb-2" />
-              <span className="text-caption">Hình ảnh tác phẩm đang hoàn thiện</span>
-            </div>
-          )}
-
-          {/* Top Heart Badge */}
-          <button
-            type="button"
-            onClick={() =>
-              setShortlisted((prev) =>
-                prev.includes(currentProduct.id)
-                  ? prev.filter((id) => id !== currentProduct.id)
-                  : [...prev, currentProduct.id]
-              )
-            }
-            aria-label="Lưu tác phẩm yêu thích"
-            className={`absolute top-4 right-4 w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-transform active:scale-90 shadow-md cursor-pointer ${
-              isHearted
-                ? "bg-danger text-white shadow-danger/30"
-                : "bg-surface/85 text-foreground hover:bg-surface border border-white/20"
-            }`}
-          >
-            <Heart size={18} className={isHearted ? "fill-current" : ""} />
-          </button>
-
-          {/* Occasion / Style Pill */}
-          <div className="absolute top-4 left-4 px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-caption font-semibold border border-white/20 shadow-sm">
-            {currentProduct.style || "Thiết Kế Độc Bản"}
-          </div>
-
-          {/* Subtle Bottom Ambient Gradient */}
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-        </div>
-
-        {/* Narrative & Story Section */}
-        <div className="p-6 flex flex-col gap-4 bg-surface">
-          <div>
-            <div className="flex items-baseline justify-between gap-2">
-              <h3 className="font-serif text-title sm:text-display font-medium text-foreground tracking-tight">
-                {currentProduct.name}
-              </h3>
-              <span className="font-serif text-title sm:text-display font-semibold text-primary whitespace-nowrap">
-                {currentProduct.price > 0 ? `${currentProduct.price.toLocaleString("vi-VN")} đ` : "Liên hệ"}
-              </span>
-            </div>
-            {currentProduct.flowersSummary && (
-              <p className="text-caption text-text-muted mt-1 leading-relaxed line-clamp-2">
-                {currentProduct.flowersSummary}
-              </p>
-            )}
-          </div>
-
-          {/* Poetic quote with Serif Typography */}
-          <div className="p-4 rounded-2xl bg-surface-alt/70 border border-border/80 flex items-start gap-3">
-            <Quote size={20} className="text-primary shrink-0 mt-0.5 rotate-180" />
-            <p className="font-serif italic text-body-sm text-text leading-relaxed">
-              &ldquo;{flowerMeaning}&rdquo;
-            </p>
-          </div>
-
-          {currentProduct.description && (
-            <p className="text-caption text-text-muted leading-relaxed">
-              {currentProduct.description}
-            </p>
-          )}
-
-          {/* Navigation thumbnails */}
-          <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none">
-              {products.map((p, idx) => (
-                <button
-                  type="button"
-                  key={p.id}
-                  onClick={() => setCurrentIndex(idx)}
-                  aria-label={`Xem tác phẩm ${p.name}`}
-                  className={`w-10 h-10 rounded-xl overflow-hidden border shrink-0 transition-all cursor-pointer ${
-                    idx === currentIndex
-                      ? "border-primary ring-2 ring-primary/20 scale-105 shadow-sm"
-                      : "border-border opacity-60 hover:opacity-100"
-                  }`}
-                >
-                  {p.imageUrl ? (
-                    <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-surface-muted" />
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                disabled={currentIndex === 0}
-                onClick={() => setCurrentIndex((i) => i - 1)}
-                className="w-9 h-9 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-2xs"
-                title="Tác phẩm trước"
-                aria-label="Tác phẩm trước"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                type="button"
-                disabled={currentIndex === products.length - 1}
-                onClick={() => setCurrentIndex((i) => i + 1)}
-                className="w-9 h-9 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-2xs"
-                title="Tác phẩm sau"
-                aria-label="Tác phẩm sau"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Strictly Preserved Primary Conversion Channel */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-sm px-4">
-        <Button
-          type="button"
-          variant={isSelected ? "secondary" : "primary"}
-          size="default"
-          onClick={() => onSelectProduct(currentProduct)}
-          className="w-full h-12 rounded-2xl shadow-xl font-bold text-body-sm flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white cursor-pointer active:scale-98 transition-transform"
-        >
-          <Check size={18} />
-          <span>
-            {isSelected
-              ? "BẠN ĐÃ CHỌN TÁC PHẨM NÀY"
-              : `CHỌN MẪU NÀY · ${currentProduct.price > 0 ? `${currentProduct.price.toLocaleString("vi-VN")} đ` : currentProduct.name}`}
-          </span>
-        </Button>
-      </div>
+      {open && (
+        <EnterpriseSpecSheet
+          product={open}
+          isOpen
+          onClose={() => setOpen(null)}
+          onSelectProduct={(p) => {
+            setOpen(null)
+            onSelectProduct(p)
+          }}
+        />
+      )}
     </div>
   )
 }

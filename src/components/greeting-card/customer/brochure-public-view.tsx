@@ -11,6 +11,7 @@ import type {
   ProductSnapshot,
 } from "@/modules/greeting-card/domain/greeting-card-types"
 import { ShoppingBag } from "lucide-react"
+import { ProductImage } from "./templates/aux/aux-kit"
 
 interface Props {
   catalog: { id: string; code: string; name: string; description: string | null; filters?: Record<string, unknown> | null }
@@ -128,15 +129,11 @@ export function BrochurePublicView({ catalog, products }: Props) {
   // 3. PREVIEW SELECTED CARD WITH "ĐẶT NGAY" BUTTON
   if (step === "PREVIEW" && selected) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="min-h-screen flex items-center justify-center bg-bg p-4">
         <div className="w-full max-w-md bg-surface rounded-3xl shadow-xl overflow-hidden border border-border">
-          {selected.imageUrl && (
-            <img
-              src={selected.imageUrl}
-              alt={selected.name}
-              className="w-full aspect-square object-cover"
-            />
-          )}
+          <div className="aspect-square w-full">
+            <ProductImage product={selected} />
+          </div>
           <div className="p-6 flex flex-col gap-4">
             <div>
               <h2 className="text-title font-extrabold text-foreground">{selected.name}</h2>
@@ -144,7 +141,7 @@ export function BrochurePublicView({ catalog, products }: Props) {
                 <p className="text-body-sm text-text-muted mt-1">{selected.description}</p>
               )}
               <p className="text-display font-extrabold text-primary mt-3">
-                {selected.price.toLocaleString("vi-VN")}đ
+                {selected.price > 0 ? `${selected.price.toLocaleString("vi-VN")}đ` : "Liên hệ"}
               </p>
             </div>
 

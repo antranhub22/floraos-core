@@ -5,6 +5,7 @@ import type {
   ProductSnapshot,
 } from "../domain/greeting-card-types"
 import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
+import { FALLBACK_CATALOG_PRICE, resolveCatalogProductPrice } from "../domain/catalog-product-price"
 
 export async function getGreetingCatalogForCustomer(
   sendCode: string,
@@ -39,12 +40,8 @@ export async function getGreetingCatalogForCustomer(
   // Format products
   const products: GreetingCatalogProduct[] = (session.catalog.items || []).map((item) => {
     const p = item.product
-    let price = 500000
-    if (p.variants && p.variants.length > 0) {
-      const v = p.variants[0]
-      const multiplier = v ? v.multiplier : 1
-      price = Math.round(500000 * multiplier)
-    }
+    // Cùng cách tính với link công khai — trước đây là 500.000 × hệ số biến thể (giá sai)
+    const price = resolveCatalogProductPrice(p) ?? FALLBACK_CATALOG_PRICE
 
     let firstImageUrl: string | null = null
     if (p.images && p.images.length > 0 && p.images[0]) {
