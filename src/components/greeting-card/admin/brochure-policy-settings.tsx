@@ -37,6 +37,7 @@ export function BrochurePolicySettings() {
               deposit_percent: policy.depositPercent,
               require_paid_before_production: policy.requirePaidBeforeProduction,
               require_full_before_dispatch: policy.requireFullBeforeDispatch,
+              hold_minutes: policy.holdMinutes ?? 0,
             },
           },
         },
@@ -80,6 +81,17 @@ export function BrochurePolicySettings() {
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={policy.requireFullBeforeDispatch} onChange={(e) => edit({ requireFullBeforeDispatch: e.target.checked })} />
             <span>Chỉ giao hoa khi đã thu đủ tiền</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-text-muted">Giữ đơn chờ chuyển khoản</span>
+            <select
+              value={policy.holdMinutes ?? 0}
+              onChange={(e) => edit({ holdMinutes: Number(e.target.value) })}
+              className="h-9 px-2 rounded-lg border border-border bg-background"
+            >
+              <option value={0}>Không hiện đồng hồ</option>
+              {[15, 30, 60, 120].map((m) => <option key={m} value={m}>{m} phút</option>)}
+            </select>
           </label>
         </div>
       )}

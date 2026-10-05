@@ -18,11 +18,21 @@ interface ZoneDraft {
 
 const FIELD = "h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
 
-function toDraft(config: ShippingConfig): { zones: ZoneDraft[]; freeOver: string } {
+type Draft = { zones: ZoneDraft[]; freeOver: string; cutoff: string; prep: string }
+
+function toDraft(config: ShippingConfig): Draft {
   return {
     zones: config.zones.map((z) => ({ id: z.id, name: z.name, fee: String(z.feeVnd) })),
     freeOver: config.freeShippingOverVnd ? String(config.freeShippingOverVnd) : "",
+    cutoff: config.sameDayCutoffHour != null ? String(config.sameDayCutoffHour) : "",
+    prep: config.prepHours ? String(config.prepHours) : "",
   }
+}
+
+/** "" → null; ngoài khoảng → null (máy chủ cũng bỏ giá trị lạ). */
+function hourOrNull(v: string, min: number, max: number): number | null {
+  const n = Number(v.replace(/\D/g, ""))
+  return v.trim() && Number.isInteger(n) && n >= min && n <= max ? n : null
 }
 
 /**
@@ -31,13 +41,13 @@ function toDraft(config: ShippingConfig): { zones: ZoneDraft[]; freeOver: string
  */
 export function BrochureShippingSettings() {
   const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
-  const [draft, setDraft] = useState<{ zones: ZoneDraft[]; freeOver: string } | null>(null)
+  const [draft, setDraft] = useState<Draft | null>(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
   // Bản nháp khởi tạo từ dữ liệu đã lưu ở lần sửa đầu tiên — không cần effect đồng bộ.
   const current = draft ?? (org.data ? toDraft(parseShippingConfig(org.data.settings)) : null)
-  const edit = (next: { zones: ZoneDraft[]; freeOver: string }) => {
+  const edit = (next: Draft) => {
     setDraft(next)
     setMessage(null)
   }
@@ -52,6 +62,8 @@ export function BrochureShippingSettings() {
       [BROCHURE_SHIPPING_SETTINGS_KEY]: {
         zones,
         free_shipping_over_vnd: current.freeOver ? Number(current.freeOver.replace(/\D/g, "")) : null,
+        same_day_cutoff_hour: hourOrNull(current.cutoff, 1, 23),
+        prep_hours: hourOrNull(current.prep, 0, 24) ?? 0,
       },
     }
     setSaving(true)
@@ -71,7 +83,7 @@ export function BrochureShippingSettings() {
     <form onSubmit={save} className="bg-surface rounded-2xl border border-border p-5 shadow-sm flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <Truck size={18} className="text-primary" />
-        <h3 className="text-title-sm font-extrabold text-foreground">Khu vực & phí giao hoa</h3>
+        <h3 className="text-title-sm font-extrabold text-foreground">Khu vực, phí giao & giờ nhận đơn</h3>
       </div>
 
       {org.error ? (
@@ -133,6 +145,30 @@ export function BrochureShippingSettings() {
                 className={`${FIELD} w-44`}
               />
               <span className="text-text-muted">đ</span>
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
+            <label className="flex items-center gap-2 text-body-sm">
+              <span className="text-text-muted">Nhận giao trong ngày đến</span>
+              <input
+                inputMode="numeric"
+                value={current.cutoff}
+                placeholder="VD: 16"
+                onChange={(e) => edit({ ...current, cutoff: e.target.value })}
+                className={`${FIELD} w-20`}
+              />
+              <span className="text-text-muted">giờ (bỏ trống = không giới hạn)</span>
+            </label>
+            <label className="flex items-center gap-2 text-body-sm">
+              <span className="text-text-muted">Cần chuẩn bị</span>
+              <input
+                inputMode="numeric"
+                value={current.prep}
+                placeholder="VD: 3"
+                onChange={(e) => edit({ ...current, prep: e.target.value })}
+                className={`${FIELD} w-16`}
+              />
+              <span className="text-text-muted">giờ trước khi giao</span>
             </label>
           </div>
         </>

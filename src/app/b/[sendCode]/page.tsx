@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getGreetingCatalogForCustomer } from "@/modules/greeting-card/use-cases/get-greeting-catalog"
+import { LinkUnavailable } from "@/components/greeting-card/customer/link-unavailable"
 import { BrochureCustomerExperience } from "@/components/greeting-card/customer/brochure-customer-experience"
 
 interface PageProps {
@@ -39,6 +40,7 @@ export default async function PublicBrochurePage({ params }: PageProps) {
   if (data.status === "NOT_FOUND") {
     notFound()
   }
+  if (data.status === "UNAVAILABLE") return <LinkUnavailable shop={data.shop} />
 
   return <BrochureCustomerExperience initialData={data} />
 }

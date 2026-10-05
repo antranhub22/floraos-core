@@ -1,5 +1,6 @@
 "use client"
 
+import { ShopContactBar } from "./shop-contact-bar"
 import React, { useState } from "react"
 import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
 import type { OptionalDisplayField } from "@/modules/greeting-card/domain/display-fields"
@@ -101,13 +102,10 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
   }
 
   return (
+    <>
+    <ShopContactBar shop={shop} />
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between py-6 px-4 sm:px-6">
       <div className="w-full max-w-md mx-auto mb-6 flex flex-col items-center">
-        {/* Brand header — tên tiệm thật, không phải nhãn mẫu */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-          <span className="text-body font-extrabold tracking-wide uppercase">{shop.name}</span>
-        </div>
 
         {step === "SWIPING" && (
           <>
@@ -160,5 +158,6 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
         Hệ thống Thẻ Chào & Đặt Hoa Trực Tuyến · Vận hành bởi FloraOS
       </footer>
     </div>
+    </>
   )
 }

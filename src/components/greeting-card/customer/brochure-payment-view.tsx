@@ -1,5 +1,6 @@
 "use client"
 
+import { HoldCountdown } from "./hold-countdown"
 import React, { useState } from "react"
 import useSWR from "swr"
 import { apiGet } from "@/components/greeting-card/greeting-api"
@@ -84,6 +85,7 @@ export function BrochurePaymentView({
         <p className="text-caption text-text-muted mb-4">
           Mở ứng dụng ngân hàng bất kỳ để quét mã QR thanh toán nhanh
         </p>
+        {vietQr.holdUntil && !isPaymentConfirmed && !hasReported && <HoldCountdown until={vietQr.holdUntil} />}
           {vietQr.purpose !== "FULL" && (
             <p className="text-body-sm text-foreground mb-3">
               Tổng giá trị đơn: <strong>{vietQr.orderTotalVnd.toLocaleString("vi-VN")} đ</strong>

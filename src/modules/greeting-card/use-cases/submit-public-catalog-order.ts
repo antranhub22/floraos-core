@@ -1,3 +1,5 @@
+import { deliveryScheduleError } from "../domain/delivery-schedule"
+import { parseShippingConfig } from "../domain/brochure-pricing"
 import { notFound, validationFailed } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { validateCustomerOrderInput, normalizePhone } from "../domain/greeting-card-rules"
@@ -37,6 +39,9 @@ export async function submitPublicCatalogOrder(
 
   const { catalog, product } = await orderableFromCatalog(catalogId, input.productId, repo)
   const shop = await repo.getShopProfile(catalog.organization_id)
+  // Giờ chốt đơn / thời gian chuẩn bị của tiệm — chặn cả khi khách gửi thẳng API
+  const scheduleError = deliveryScheduleError(input.deliveryDate, input.deliveryTimeSlot, parseShippingConfig(shop.settings))
+  if (scheduleError) throw validationFailed({ deliveryDate: scheduleError })
 
   // Kiểm lựa chọn TRƯỚC khi tạo phiên — tránh phiên mồ côi khi khách chọn sai khu vực/mã giảm giá
   const precheck = await quoteForProduct(

@@ -59,6 +59,10 @@ export interface ShippingConfig {
   zones: ShippingZone[]
   /** Miễn phí giao khi tạm tính (sau giảm giá) từ mức này; null = không miễn. */
   freeShippingOverVnd: number | null
+  /** Sau giờ này (0–23, giờ VN) không nhận giao trong ngày; null = không giới hạn. */
+  sameDayCutoffHour?: number | null
+  /** Số giờ cần để cắm + giao trước khi hết khung giờ khách chọn (mặc định 0). */
+  prepHours?: number
 }
 
 /** Đọc `organizations.settings.brochure_shipping`; sai/thiếu → không khu vực nào (phí 0, báo sau). */
@@ -75,7 +79,15 @@ export function parseShippingConfig(settings: unknown): ShippingConfig {
     seen.add(id)
     zones.push({ id, name, feeVnd: fee })
   }
-  return { zones: zones.slice(0, 30), freeShippingOverVnd: positiveInt(raw.free_shipping_over_vnd) }
+  const cutoff = raw.same_day_cutoff_hour
+  const prep = raw.prep_hours
+  return {
+    zones: zones.slice(0, 30),
+    freeShippingOverVnd: positiveInt(raw.free_shipping_over_vnd),
+    // Chỉ thêm khoá khi tiệm đã cấu hình — cấu hình cũ giữ nguyên hình dạng
+    ...(typeof cutoff === "number" && Number.isInteger(cutoff) && cutoff >= 1 && cutoff <= 23 ? { sameDayCutoffHour: cutoff } : {}),
+    ...(typeof prep === "number" && Number.isFinite(prep) && prep > 0 && prep <= 24 ? { prepHours: Math.round(prep) } : {}),
+  }
 }
 
 // ── Mã giảm giá ──────────────────────────────────────────────────────────────

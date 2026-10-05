@@ -12,11 +12,14 @@ import type {
 import { loadPublicSession } from "./brochure-session-access"
 import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
 import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
+import type { ShopContact } from "../domain/shop-contact"
+import { getShopContact } from "./get-shop-contact"
 
 export type CustomerBrochureView = {
   status: "ACTIVE"
   session: PublicBrochureSessionView
-  shop: { name: string; phone: string | null }
+  /** Tên, SĐT, Zalo, địa chỉ, logo của tiệm — khách luôn liên hệ được */
+  shop: ShopContact
   catalog: { id: string; code: string; name: string; description: string | null; filters?: Record<string, unknown> | null }
   products: GreetingCatalogProduct[]
   order: { id: string; code: string; status: string; totalVnd: number; paidVnd: number } | null
@@ -33,13 +36,16 @@ export type CustomerBrochureView = {
 export async function getGreetingCatalogForCustomer(
   sendCode: string,
   repo = new GreetingCardRepository()
-): Promise<CustomerBrochureView | { status: "NOT_FOUND" }> {
+): Promise<CustomerBrochureView | { status: "NOT_FOUND" } | { status: "UNAVAILABLE"; shop: ShopContact }> {
   let session
   try {
     session = await loadPublicSession(sendCode, repo)
   } catch (error) {
     if (error instanceof AppError && error.code === "NOT_FOUND") {
-      return { status: "NOT_FOUND" }
+      // Link có thật nhưng đã hết hạn / thu hồi / bộ sưu tập ngừng: cho khách cách liên hệ tiệm
+      const raw = await repo.getPublicSessionBySendCode(sendCode).catch(() => null)
+      const contact = raw ? await getShopContact(raw.organization_id) : null
+      return contact ? { status: "UNAVAILABLE", shop: contact } : { status: "NOT_FOUND" }
     }
     throw error
   }
@@ -55,6 +61,9 @@ export async function getGreetingCatalogForCustomer(
   const urls = await repo.getAssetsStorageMap(session.organization_id, collectImageAssetIds(session.catalog.items))
   const products = session.catalog.items.map((item) => toCatalogProduct(item, urls))
   const shop = await repo.getShopProfile(session.organization_id)
+  const contact = (await getShopContact(session.organization_id)) ?? {
+    name: shop.name, phone: shop.phone, zaloUrl: null, address: null, logoUrl: null,
+  }
 
   const order = session.order
     ? {
@@ -65,7 +74,7 @@ export async function getGreetingCatalogForCustomer(
         paidVnd: Number(session.order.paid_vnd),
       }
     : null
-  const payment = order && order.status !== "CANCELLED" ? paymentInstructionsFor(shop.settings, order, order.code) : null
+  const payment = order && order.status !== "CANCELLED" ? paymentInstructionsFor(shop.settings, { ...order, createdAt: session.order?.created_at }, order.code) : null
 
   return {
     status: "ACTIVE",
@@ -76,7 +85,7 @@ export async function getGreetingCatalogForCustomer(
       selectedProductId: session.selected_product_id,
       productSnapshot: (session.product_snapshot as unknown as ProductSnapshot | null) ?? null,
     },
-    shop: { name: shop.name, phone: shop.phone },
+    shop: contact,
     catalog: {
       id: session.catalog.id,
       code: session.catalog.code,

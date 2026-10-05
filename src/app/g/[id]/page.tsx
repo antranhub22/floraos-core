@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getPublicGreetingCatalog } from "@/modules/greeting-card/use-cases/get-public-greeting-catalog"
+import { ShopContactBar } from "@/components/greeting-card/customer/shop-contact-bar"
 import { BrochurePublicView } from "@/components/greeting-card/customer/brochure-public-view"
 
 interface PageProps {
@@ -34,7 +35,12 @@ export default async function PublicGreetingCatalogPage({ params }: PageProps) {
     notFound()
   }
 
-  return <BrochurePublicView catalog={data.catalog} products={data.products} shipping={data.shipping} />
+  return (
+    <>
+      {data.shop && <ShopContactBar shop={data.shop} />}
+      <BrochurePublicView catalog={data.catalog} products={data.products} shipping={data.shipping} />
+    </>
+  )
 }
 
 export const dynamic = "force-dynamic"

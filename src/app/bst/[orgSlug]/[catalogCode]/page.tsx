@@ -1,6 +1,9 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getPublicGreetingCatalogBySlug } from "@/modules/greeting-card/use-cases/get-public-greeting-catalog-by-slug"
+import { LinkUnavailable } from "@/components/greeting-card/customer/link-unavailable"
+import { ShopContactBar } from "@/components/greeting-card/customer/shop-contact-bar"
+import { getShopContactBySlug } from "@/modules/greeting-card/use-cases/get-shop-contact"
 import { BrochurePublicView } from "@/components/greeting-card/customer/brochure-public-view"
 
 interface PageProps {
@@ -31,10 +34,18 @@ export default async function PublicGreetingCatalogSlugPage({ params }: PageProp
   const data = await getPublicGreetingCatalogBySlug(orgSlug, catalogCode)
 
   if (data.status === "NOT_FOUND") {
+    // Đúng cửa hàng nhưng bộ sưu tập đã ngừng/sai mã: hiện liên hệ tiệm thay vì 404 chung
+    const shop = await getShopContactBySlug(orgSlug)
+    if (shop) return <LinkUnavailable shop={shop} />
     notFound()
   }
 
-  return <BrochurePublicView catalog={data.catalog} products={data.products} shipping={data.shipping} />
+  return (
+    <>
+      {data.shop && <ShopContactBar shop={data.shop} />}
+      <BrochurePublicView catalog={data.catalog} products={data.products} shipping={data.shipping} />
+    </>
+  )
 }
 
 export const dynamic = "force-dynamic"

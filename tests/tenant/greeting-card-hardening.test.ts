@@ -273,13 +273,15 @@ describe("greeting-card hardening", () => {
       where: { id: expired.sessionId },
       data: { expires_at: new Date(Date.now() - 1000) },
     })
-    expect((await getGreetingCatalogForCustomer(expired.sendCode)).status).toBe("NOT_FOUND")
+    // Link chết vẫn không dùng được, nhưng khách thấy trang liên hệ đúng cửa hàng thay vì 404 trơn
+    expect((await getGreetingCatalogForCustomer(expired.sendCode)).status).toBe("UNAVAILABLE")
 
     const revoked = await createSendLink(a.ctx, { catalogId: catalog.id })
     expect(await codeOf(revokeSendLink(b.ctx, revoked.sessionId))).toBe("NOT_FOUND")
     await revokeSendLink(a.ctx, revoked.sessionId)
     await revokeSendLink(a.ctx, revoked.sessionId) // idempotent
-    expect((await getGreetingCatalogForCustomer(revoked.sendCode)).status).toBe("NOT_FOUND")
+    // Link chết vẫn không dùng được, nhưng khách thấy trang liên hệ đúng cửa hàng thay vì 404 trơn
+    expect((await getGreetingCatalogForCustomer(revoked.sendCode)).status).toBe("UNAVAILABLE")
   })
 
   it("không thu hồi được link đã có đơn; đơn vẫn xem được dù link quá hạn", async () => {

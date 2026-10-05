@@ -65,7 +65,7 @@ export class BrochureOrderRepository {
   async findOrderById(organizationId: string, orderId: string) {
     return this.db.orders.findFirst({
       where: { id: orderId, organization_id: organizationId },
-      select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true },
+      select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, created_at: true },
     })
   }
 

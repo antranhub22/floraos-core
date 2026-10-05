@@ -1,3 +1,5 @@
+import { deliveryScheduleError } from "../domain/delivery-schedule"
+import { parseShippingConfig } from "../domain/brochure-pricing"
 import { unprocessable, validationFailed } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
@@ -36,10 +38,14 @@ export async function submitBrochureOrder(
         totalVnd: total,
         quote: null,
         productSnapshot: snapshot,
-        vietQr: paymentInstructionsFor(shop.settings, { totalVnd: total, paidVnd: Number(existing.paid_vnd) }, existing.code),
+        vietQr: paymentInstructionsFor(shop.settings, { totalVnd: total, paidVnd: Number(existing.paid_vnd), createdAt: existing.created_at }, existing.code),
       }
     }
   }
+
+  // Giờ chốt đơn / thời gian chuẩn bị của tiệm — chặn cả khi khách gửi thẳng API
+  const scheduleError = deliveryScheduleError(input.deliveryDate, input.deliveryTimeSlot, parseShippingConfig(shop.settings))
+  if (scheduleError) throw validationFailed({ deliveryDate: scheduleError })
 
   // Không còn "tự lấy mẫu đầu tiên" như bản cũ: khách phải chọn mẫu.
   if (!session.selected_product_id) {
