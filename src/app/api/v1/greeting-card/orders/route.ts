@@ -14,9 +14,12 @@ export const GET = handle(async (request) => {
   const status = ORDER_STATUSES.find((s) => s === statusParam)
   if (statusParam && !status) throw validationFailed({ status: `Phải là một trong: ${ORDER_STATUSES.join(", ")}` })
 
+  const paymentParam = url.searchParams.get("payment") || undefined
+  const payment = (["OUTSTANDING", "PAID"] as const).find((p) => p === paymentParam)
+  if (paymentParam && !payment) throw validationFailed({ payment: "Phải là OUTSTANDING hoặc PAID" })
   const { limit, cursor } = parseListQuery(url)
 
   const repo = new BrochureOrderRepository()
-  const rows = await repo.listBrochureOrders(ctx, { status, limit, cursor })
+  const rows = await repo.listBrochureOrders(ctx, { status, payment, limit, cursor })
   return jsonResponse(toPage(rows, limit))
 })

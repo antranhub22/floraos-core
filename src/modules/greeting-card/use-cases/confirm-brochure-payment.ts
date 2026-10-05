@@ -1,7 +1,9 @@
 import type { TenantContext } from "@/core/tenancy"
-import { unprocessable } from "@/core/http/errors"
+import { notFound, unprocessable } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
+import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
+import { expectedPayment, parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import { loadPublicSession } from "./brochure-session-access"
 
 /**
@@ -25,14 +27,51 @@ export async function reportCustomerPayment(sendCode: string, repo = new Greetin
   return { success: true, message: "Đã ghi nhận thông báo chuyển khoản của bạn" }
 }
 
+/**
+ * Điều hành xác nhận đã nhận tiền. Không truyền số tiền → lấy đúng khoản
+ * khách được yêu cầu chuyển (cọc theo chính sách tiệm, hoặc phần còn lại).
+ */
 export async function adminConfirmBrochurePayment(
   ctx: TenantContext,
   orderId: string,
   input: {
+    amountVnd?: number | undefined
     reference?: string | null | undefined
     note?: string | null | undefined
   } = {},
-  repo = new BrochureOrderRepository()
+  payments = new BrochurePaymentRepository(),
+  orders = new BrochureOrderRepository(),
+  repo = new GreetingCardRepository()
 ) {
-  return repo.confirmPaymentTransaction(ctx, orderId, input)
+  let amountVnd = input.amountVnd
+  if (amountVnd === undefined) {
+    const order = await orders.findBrochureOrder(ctx, orderId)
+    if (!order) throw notFound()
+    const shop = await repo.getShopProfile(ctx.organizationId)
+    amountVnd = expectedPayment(parsePaymentPolicy(shop.settings), Number(order.total_vnd), Number(order.paid_vnd)).amountVnd
+  }
+  return payments.recordIncomingPayment(ctx, orderId, {
+    amountVnd,
+    method: "BANK_TRANSFER",
+    reference: input.reference?.trim() || `BROCHURE-${orderId.slice(0, 8)}`,
+    note: input.note?.trim() || "Xác nhận chuyển khoản qua Thẻ chào",
+  })
+}
+
+export async function cancelBrochureOrder(
+  ctx: TenantContext,
+  orderId: string,
+  reason: string,
+  payments = new BrochurePaymentRepository()
+) {
+  return payments.cancel(ctx, orderId, reason.trim())
+}
+
+export async function refundBrochureOrder(
+  ctx: TenantContext,
+  orderId: string,
+  input: { amountVnd: number; reason: string },
+  payments = new BrochurePaymentRepository()
+) {
+  return payments.refund(ctx, orderId, { amountVnd: input.amountVnd, reason: input.reason.trim() })
 }

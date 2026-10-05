@@ -1,7 +1,6 @@
 import { validationFailed } from "@/core/http/errors"
 import { generateBrochureOrderCode, normalizePhone } from "../domain/greeting-card-rules"
-import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
-import { buildPaymentInstructions } from "../adapters/vietqr-helper"
+import { paymentInstructionsFor } from "./payment-instructions"
 import type {
   BrochurePaymentInstructions,
   CustomerOrderSubmitInput,
@@ -92,6 +91,6 @@ export async function placeBrochureOrder(
     totalVnd: priced.quote.totalVnd,
     quote: priced.quote,
     productSnapshot: snapshot,
-    vietQr: buildPaymentInstructions(parseBrochurePaymentConfig(params.shopSettings), priced.quote.totalVnd, order.code),
+    vietQr: paymentInstructionsFor(params.shopSettings, { totalVnd: priced.quote.totalVnd, paidVnd: 0 }, order.code),
   }
 }

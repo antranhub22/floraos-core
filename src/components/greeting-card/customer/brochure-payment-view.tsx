@@ -95,6 +95,12 @@ export function BrochurePaymentView({
         <p className="text-caption text-text-muted mb-4">
           Mở ứng dụng ngân hàng bất kỳ để quét mã QR thanh toán nhanh
         </p>
+          {vietQr.purpose !== "FULL" && (
+            <p className="text-body-sm text-foreground mb-3">
+              Tổng giá trị đơn: <strong>{vietQr.orderTotalVnd.toLocaleString("vi-VN")} đ</strong>
+              {vietQr.purpose === "DEPOSIT" && " — phần còn lại cửa hàng sẽ thu sau theo thoả thuận."}
+            </p>
+          )}
 
         {/* QR Card */}
         <div className="p-3 bg-white rounded-2xl border border-border shadow-md mb-5 w-64 aspect-square flex items-center justify-center">
@@ -133,12 +139,14 @@ export function BrochurePaymentView({
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-text-muted">Số tiền:</span>
+            <span className="text-text-muted">
+              {vietQr.purpose === "DEPOSIT" ? "Đặt cọc lần này:" : vietQr.purpose === "BALANCE" ? "Còn phải trả:" : "Số tiền:"}
+            </span>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-primary">{totalVnd.toLocaleString("vi-VN")} đ</span>
+              <span className="font-bold text-primary">{vietQr.amount.toLocaleString("vi-VN")} đ</span>
               <button
                 type="button"
-                onClick={() => copyToClipboard(String(totalVnd), "amount")}
+                onClick={() => copyToClipboard(String(vietQr.amount), "amount")}
                 aria-label="Sao chép số tiền"
                 className="text-primary hover:text-primary-dark p-1 cursor-pointer"
               >

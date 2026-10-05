@@ -4,6 +4,7 @@
  */
 
 import type { BrochurePaymentConfig } from "../domain/brochure-commerce-rules"
+import { expectedPayment, type BrochurePaymentPolicy } from "../domain/brochure-payment-policy"
 import type { BrochurePaymentInstructions } from "../domain/greeting-card-types"
 
 export interface VietQrConfig {
@@ -25,14 +26,22 @@ export function generateVietQrUrl(config: VietQrConfig): string {
   return `https://img.vietqr.io/image/${bank}-${account}-compact2.png?amount=${amount}&addInfo=${memo}&accountName=${accountName}`
 }
 
-/** Dựng hướng dẫn chuyển khoản cho một đơn; `null` khi tiệm chưa cấu hình tài khoản. */
+/**
+ * Dựng hướng dẫn chuyển khoản cho LẦN THU này của một đơn (đủ / cọc / phần
+ * còn lại theo chính sách tiệm); `null` khi tiệm chưa cấu hình tài khoản
+ * hoặc không còn gì phải thu.
+ */
 export function buildPaymentInstructions(
   config: BrochurePaymentConfig | null,
-  amount: number,
+  order: { totalVnd: number; paidVnd: number },
+  policy: BrochurePaymentPolicy,
   transferMemo: string
 ): BrochurePaymentInstructions | null {
+  const { amountVnd: amount, purpose } = expectedPayment(policy, order.totalVnd, order.paidVnd)
   if (!config || amount <= 0) return null
   return {
+    purpose,
+    orderTotalVnd: order.totalVnd,
     qrUrl: generateVietQrUrl({
       bankId: config.bankId,
       accountNo: config.accountNo,

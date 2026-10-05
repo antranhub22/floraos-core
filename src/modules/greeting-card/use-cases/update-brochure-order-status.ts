@@ -2,6 +2,8 @@ import type { TenantContext } from "@/core/tenancy"
 import { conflict, notFound } from "@/core/http/errors"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { coordinatorActionBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
+import { paymentGateBlocker, parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { GreetingCardRepository } from "../infra/greeting-card-repository"
 
 /** Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). */
 async function loadForAction(
@@ -18,6 +20,13 @@ async function loadForAction(
     deliveryStatus: order.delivery_status,
   })
   if (blocker) throw conflict(blocker)
+  // Chính sách thu tiền của tiệm (cọc trước khi cắm, thu đủ trước khi giao)
+  const shop = await new GreetingCardRepository().getShopProfile(ctx.organizationId)
+  const moneyBlocker = paymentGateBlocker(action, parsePaymentPolicy(shop.settings), {
+    totalVnd: Number(order.total_vnd),
+    paidVnd: Number(order.paid_vnd),
+  })
+  if (moneyBlocker) throw conflict(moneyBlocker)
   return order
 }
 

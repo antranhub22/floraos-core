@@ -4,6 +4,7 @@ import React from "react"
 import { Sparkles, MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
+import { paymentGateBlocker, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 
 export interface BrochureOrder {
   id: string
@@ -62,7 +63,15 @@ function deliveryLabel(status: string) {
 }
 
 /** Thẻ một đơn Thẻ chào trong tab Điều phối: mẫu, giao nhận, thanh toán, bốn tác vụ xưởng. */
-export function CoordinatorOrderCard({ order, onOpen }: { order: BrochureOrder; onOpen: (m: ModalState) => void }) {
+export function CoordinatorOrderCard({
+  order,
+  policy,
+  onOpen,
+}: {
+  order: BrochureOrder
+  policy: BrochurePaymentPolicy
+  onOpen: (m: ModalState) => void
+}) {
   const session = order.greeting_sessions[0]
   const snapshot = session?.product_snapshot || order.items[0]?.metadata
   const recipient = order.delivery_address?.recipientName || "Khách nhận"
@@ -78,7 +87,7 @@ export function CoordinatorOrderCard({ order, onOpen }: { order: BrochureOrder; 
       status: order.status,
       productionStatus: order.production_status,
       deliveryStatus: order.delivery_status,
-    })
+    }) ?? paymentGateBlocker(action, policy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd })
 
   return (
     <div className="bg-surface rounded-2xl border border-border p-5 shadow-sm flex flex-col gap-4">

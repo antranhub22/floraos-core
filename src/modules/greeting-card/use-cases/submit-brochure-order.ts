@@ -2,8 +2,7 @@ import { unprocessable, validationFailed } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { validateCustomerOrderInput } from "../domain/greeting-card-rules"
-import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
-import { buildPaymentInstructions } from "../adapters/vietqr-helper"
+import { paymentInstructionsFor } from "./payment-instructions"
 import type { CustomerOrderSubmitInput, ProductSnapshot } from "../domain/greeting-card-types"
 import { loadPublicSession, resolveOrderableProduct } from "./brochure-session-access"
 import { placeBrochureOrder, type BrochureOrderResult } from "./place-brochure-order"
@@ -37,11 +36,7 @@ export async function submitBrochureOrder(
         totalVnd: total,
         quote: null,
         productSnapshot: snapshot,
-        vietQr: buildPaymentInstructions(
-          parseBrochurePaymentConfig(shop.settings),
-          total - Number(existing.paid_vnd),
-          existing.code
-        ),
+        vietQr: paymentInstructionsFor(shop.settings, { totalVnd: total, paidVnd: Number(existing.paid_vnd) }, existing.code),
       }
     }
   }

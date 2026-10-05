@@ -1,6 +1,5 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
-import { conflict, notFound } from "@/core/http/errors"
 import type { delivery_status, order_status, production_status } from "@/generated/prisma/client"
 
 export const ORDER_STATUSES: readonly order_status[] = [
@@ -19,12 +18,20 @@ export class BrochureOrderRepository {
    */
   async listBrochureOrders(
     ctx: TenantContext,
-    options: { status?: order_status | undefined; limit: number; cursor?: string | undefined }
+    options: {
+      status?: order_status | undefined
+      /** OUTSTANDING = còn phải thu (chưa huỷ); PAID = đã thu đủ. */
+      payment?: "OUTSTANDING" | "PAID" | undefined
+      limit: number
+      cursor?: string | undefined
+    }
   ) {
     const rows = await this.db.orders.findMany({
       where: scopedWhere(ctx, {
         source: "BROCHURE",
         ...(options.status ? { status: options.status } : {}),
+        ...(options.payment === "OUTSTANDING" ? { balance_vnd: { gt: 0 }, NOT: { status: "CANCELLED" as const } } : {}),
+        ...(options.payment === "PAID" ? { balance_vnd: { lte: 0 } } : {}),
       }),
       include: {
         customer: { select: { id: true, code: true, name: true, phone: true } },
@@ -56,81 +63,6 @@ export class BrochureOrderRepository {
     return this.db.orders.findFirst({
       where: { id: orderId, organization_id: organizationId },
       select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true },
-    })
-  }
-
-  /**
-   * Xác nhận đã nhận đủ tiền. Chỉ đơn còn DRAFT mới chuyển được — chuyển
-   * trạng thái có điều kiện ngay trong giao dịch nên bấm hai lần (hay hai
-   * người cùng bấm) chỉ ghi MỘT phiếu thu.
-   */
-  async confirmPaymentTransaction(
-    ctx: TenantContext,
-    orderId: string,
-    input: { reference?: string | null | undefined; note?: string | null | undefined }
-  ) {
-    const order = await this.findBrochureOrder(ctx, orderId)
-    if (!order) throw notFound()
-    if (order.status === "CANCELLED") throw conflict("Đơn hàng đã huỷ, không thể xác nhận thanh toán")
-    if (order.status !== "DRAFT") throw conflict("Đơn hàng đã được xác nhận thanh toán trước đó")
-
-    const totalAmount = Number(order.total_vnd)
-    const outstanding = Math.max(0, totalAmount - Number(order.paid_vnd))
-
-    return this.db.$transaction(async (tx) => {
-      const moved = await tx.orders.updateMany({
-        where: { id: order.id, organization_id: ctx.organizationId, status: "DRAFT" },
-        data: { status: "CONFIRMED", paid_vnd: totalAmount, balance_vnd: 0 },
-      })
-      if (moved.count === 0) throw conflict("Đơn hàng đã được xác nhận thanh toán trước đó")
-
-      const payment = await tx.order_payments.create({
-        data: {
-          organization_id: ctx.organizationId,
-          order_id: order.id,
-          kind: "BALANCE",
-          amount_vnd: outstanding,
-          payment_method: "BANK_TRANSFER",
-          reference: input.reference || `BROCHURE-${order.code}`,
-          collected_by: ctx.userId,
-          note: input.note || "Xác nhận chuyển khoản qua Thẻ chào",
-        },
-      })
-
-      await tx.order_events.create({
-        data: {
-          organization_id: ctx.organizationId,
-          order_id: order.id,
-          axis: "order",
-          from_value: "DRAFT",
-          to_value: "CONFIRMED",
-          reason: "BROCHURE_PAYMENT_CONFIRMED",
-          actor_id: ctx.userId,
-        },
-      })
-
-      if (order.source_session_id) {
-        await tx.greeting_sessions.updateMany({
-          where: { id: order.source_session_id, organization_id: ctx.organizationId },
-          data: { status: "COMPLETED" },
-        })
-        await tx.greeting_journey_events.create({
-          data: {
-            organization_id: ctx.organizationId,
-            session_id: order.source_session_id,
-            event_type: "ADMIN_CONFIRMED_PAYMENT",
-            metadata: { paymentId: payment.id, amount: outstanding, confirmedBy: ctx.userId },
-          },
-        })
-      }
-
-      return {
-        orderId: order.id,
-        orderCode: order.code,
-        status: "CONFIRMED" as const,
-        paidVnd: totalAmount,
-        balanceVnd: 0,
-      }
     })
   }
 

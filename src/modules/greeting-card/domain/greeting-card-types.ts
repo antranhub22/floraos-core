@@ -128,6 +128,10 @@ export interface BrochureOrderSummary {
 
 /** Thông tin chuyển khoản hiển thị cho khách — luôn dựng ở server từ cài đặt của tiệm. */
 export interface BrochurePaymentInstructions {
+  /** FULL = trả đủ; DEPOSIT = đặt cọc theo chính sách tiệm; BALANCE = thu phần còn lại. */
+  purpose: "FULL" | "DEPOSIT" | "BALANCE"
+  /** Tổng giá trị đơn (để hiển thị "cọc X / tổng Y"). */
+  orderTotalVnd: number
   qrUrl: string
   bankName: string
   accountNo: string

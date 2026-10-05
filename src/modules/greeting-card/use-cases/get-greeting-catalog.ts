@@ -1,7 +1,6 @@
 import { AppError } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
-import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
-import { buildPaymentInstructions } from "../adapters/vietqr-helper"
+import { paymentInstructionsFor } from "./payment-instructions"
 import { parseShippingConfig, type ShippingConfig } from "../domain/brochure-pricing"
 import type {
   BrochurePaymentInstructions,
@@ -65,13 +64,7 @@ export async function getGreetingCatalogForCustomer(
         paidVnd: Number(session.order.paid_vnd),
       }
     : null
-  const payment = order
-    ? buildPaymentInstructions(
-        parseBrochurePaymentConfig(shop.settings),
-        Math.max(0, order.totalVnd - order.paidVnd),
-        order.code
-      )
-    : null
+  const payment = order && order.status !== "CANCELLED" ? paymentInstructionsFor(shop.settings, order, order.code) : null
 
   return {
     status: "ACTIVE",

@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useState } from "react"
 import { Landmark, Loader2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { readApiError } from "@/components/greeting-card/api-error"
+import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
 import {
   BROCHURE_PAYMENT_SETTINGS_KEY,
   parseBrochurePaymentConfig,
@@ -26,28 +26,16 @@ const FIELDS: Array<{ key: keyof FormState; label: string; placeholder: string }
  * không hiện QR mà báo "cửa hàng sẽ liên hệ". Lưu cần quyền sửa hồ sơ tổ chức.
  */
 export function BrochurePaymentSettings() {
-  const [form, setForm] = useState<FormState>(EMPTY)
-  const [configured, setConfigured] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
+  const [draft, setDraft] = useState<FormState | null>(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null)
-
-  useEffect(() => {
-    let alive = true
-    fetch("/api/v1/organizations/current")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((org: { settings?: Record<string, unknown> | null } | null) => {
-        if (!alive || !org) return
-        const raw = (org.settings?.[BROCHURE_PAYMENT_SETTINGS_KEY] ?? {}) as Partial<FormState>
-        setForm({ ...EMPTY, ...raw })
-        setConfigured(parseBrochurePaymentConfig(org.settings) !== null)
-      })
-      .catch(() => {})
-      .finally(() => alive && setLoading(false))
-    return () => {
-      alive = false
-    }
-  }, [])
+  const loading = !org.data && !org.error
+  const configured = parseBrochurePaymentConfig(org.data?.settings) !== null
+  // Bản nháp sinh từ dữ liệu đã lưu ở lần sửa đầu — không cần effect đồng bộ state
+  const saved = { ...EMPTY, ...((org.data?.settings?.[BROCHURE_PAYMENT_SETTINGS_KEY] ?? {}) as Partial<FormState>) }
+  const form = draft ?? saved
+  const setForm = (update: (prev: FormState) => FormState) => setDraft(update(form))
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -59,13 +47,9 @@ export function BrochurePaymentSettings() {
     }
     setSaving(true)
     try {
-      const res = await fetch("/api/v1/organizations/current", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings: payload }),
-      })
-      if (!res.ok) throw new Error(await readApiError(res, "Không lưu được tài khoản nhận tiền"))
-      setConfigured(true)
+      await apiSend("/api/v1/organizations/current", "PATCH", { settings: payload }, "Không lưu được tài khoản nhận tiền")
+      await org.mutate()
+      setDraft(null)
       setMessage({ kind: "ok", text: "Đã lưu tài khoản nhận tiền. Mã QR trên Thẻ chào sẽ dùng tài khoản này." })
     } catch (err) {
       setMessage({ kind: "error", text: err instanceof Error ? err.message : "Không lưu được tài khoản nhận tiền" })

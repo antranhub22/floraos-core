@@ -7,6 +7,8 @@ import { adminConfirmBrochurePayment } from "@/modules/greeting-card/use-cases/c
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 const confirmPaymentSchema = z.object({
+  // Bỏ trống = đúng khoản khách được yêu cầu chuyển (cọc hoặc phần còn lại)
+  amountVnd: z.number().int().positive().max(10_000_000_000).optional(),
   reference: z.string().max(100).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
 })
@@ -23,6 +25,7 @@ export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request
   }
 
   const result = await adminConfirmBrochurePayment(ctx, id, {
+    amountVnd: parsed.data.amountVnd,
     reference: parsed.data.reference,
     note: parsed.data.note,
   })

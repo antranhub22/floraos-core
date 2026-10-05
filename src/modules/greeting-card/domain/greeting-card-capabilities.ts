@@ -20,4 +20,8 @@ export const GREETING_CARD_CAPABILITY = {
   productionUpdate: "R3",
   /** Giao ship, ảnh người nhận — R5 delivery.manage */
   deliveryManage: "R5",
+  /** Huỷ đơn — R6 order.cancel (trần cứng điều hành) */
+  orderCancel: "R6",
+  /** Hoàn tiền — R10 order.payment.refund (trần cứng điều hành) */
+  paymentRefund: "R10",
 } as const

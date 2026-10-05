@@ -1,31 +1,26 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState } from "react"
 import { RefreshCw, Camera, Sparkles, UserCheck, Truck, Image as ImageIcon, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CoordinatorImageUpload } from "./coordinator-image-upload"
 import { CoordinatorOrderCard, type BrochureOrder, type ModalState } from "./coordinator-order-card"
-import { readApiError } from "@/components/greeting-card/api-error"
+import { apiSend, useApi, usePagedList } from "@/components/greeting-card/greeting-api"
+import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 
 export function CoordinatorBrochureTab() {
-  const [orders, setOrders] = useState<BrochureOrder[]>([])
-  const [loading, setLoading] = useState(true)
+  // Chỉ đơn chưa huỷ — bảng xưởng không cần đơn đã huỷ
+  const list = usePagedList<BrochureOrder>("/api/v1/greeting-card/orders")
+  const orders = list.items.filter((o) => o.status !== "CANCELLED")
+  const loading = list.isLoading
+  const loadOrders = () => void list.refresh()
+  const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
+  const policy = parsePaymentPolicy(org.data?.settings)
   const [modal, setModal] = useState<ModalState>({ type: "none" })
   const [floristNote, setFloristNote] = useState("")
   const [shipNote, setShipNote] = useState("")
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState("")
-
-  const loadOrders = useCallback(() => {
-    setLoading(true)
-    fetch("/api/v1/greeting-card/orders")
-      .then((r) => r.json())
-      .then((res) => { if (res.data) setOrders(res.data) })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => { loadOrders() }, [loadOrders])
 
   function openModal(m: ModalState) {
     setModal(m)
@@ -38,14 +33,7 @@ export function CoordinatorBrochureTab() {
     setActionLoading(true)
     setActionError("")
     try {
-      const res = await fetch(`/api/v1/greeting-card/orders/${orderId}/${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) {
-        throw new Error(await readApiError(res, "Lỗi thực hiện tác vụ"))
-      }
+      await apiSend(`/api/v1/greeting-card/orders/${orderId}/${path}`, "POST", body, "Lỗi thực hiện tác vụ")
       setModal({ type: "none" })
       loadOrders()
     } catch (err) {
@@ -88,8 +76,15 @@ export function CoordinatorBrochureTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {orders.map((order) => (
-            <CoordinatorOrderCard key={order.id} order={order} onOpen={openModal} />
+            <CoordinatorOrderCard key={order.id} order={order} policy={policy} onOpen={openModal} />
           ))}
+        </div>
+      )}
+      {list.hasMore && (
+        <div className="flex justify-center">
+          <Button type="button" variant="outline" size="sm" disabled={list.isLoadingMore} onClick={() => void list.loadMore()}>
+            {list.isLoadingMore ? "Đang tải..." : "Tải thêm đơn"}
+          </Button>
         </div>
       )}
 
