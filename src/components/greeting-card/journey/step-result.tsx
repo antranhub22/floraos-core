@@ -35,10 +35,11 @@ export function StepResult(props: StepResultProps) {
         <output className="block break-all rounded-xl border border-border bg-background p-3 text-left font-mono text-body-sm text-foreground select-all">
           {props.shareUrl}
         </output>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto]">
-          <Button size="sm" onClick={props.onCopy} className="gap-1.5">
+        <p className="text-left text-caption text-text-muted">Dán link vào Zalo, Messenger hoặc tin nhắn để gửi khách.</p>
+        <div className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <Button size="sm" onClick={props.onCopy} className="col-span-2 gap-1.5 sm:col-span-1">
             {props.copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
-            {props.copied ? "Đã sao chép" : "Sao chép link gửi Zalo, tin nhắn"}
+            {props.copied ? "Đã sao chép" : "Sao chép link"}
           </Button>
           <Button variant="secondary" size="sm" onClick={props.onPreview} className="gap-1.5">
             <Eye size={16} aria-hidden="true" />

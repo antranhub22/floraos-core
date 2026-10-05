@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils"
 
 export type JourneyStep = 1 | 2 | 3
 
-const STEPS: { id: JourneyStep; title: string; hint: string }[] = [
-  { id: 1, title: "Chọn bộ sưu tập", hint: "Mẫu hoa khách sẽ xem" },
-  { id: 2, title: "Thông tin khách", hint: "Lời chào riêng, theo dõi đơn" },
-  { id: 3, title: "Gửi link", hint: "Sao chép và gửi qua Zalo" },
+const STEPS: { id: JourneyStep; short: string; title: string; hint: string }[] = [
+  { id: 1, short: "Bộ sưu tập", title: "Chọn bộ sưu tập", hint: "Mẫu hoa khách sẽ xem" },
+  { id: 2, short: "Khách", title: "Thông tin khách", hint: "Lời chào riêng, theo dõi đơn" },
+  { id: 3, short: "Gửi link", title: "Gửi link", hint: "Sao chép và gửi qua Zalo" },
 ]
 
 interface JourneyStepperProps {
@@ -32,7 +32,7 @@ export function JourneyStepper({ step, onStepClick }: JourneyStepperProps) {
                 aria-current={current ? "step" : undefined}
                 onClick={() => onStepClick(s.id)}
                 className={cn(
-                  "group flex w-full items-center gap-3 rounded-xl border-b-2 px-2 py-3 text-left transition-colors sm:px-3",
+                  "group flex w-full flex-col items-center gap-1.5 text-center sm:flex-row sm:gap-3 sm:text-left rounded-xl border-b-2 px-2 py-3 transition-colors sm:px-3",
                   current && "border-primary",
                   done && "border-success hover:bg-surface-alt",
                   !current && !done && "border-border",
@@ -48,9 +48,10 @@ export function JourneyStepper({ step, onStepClick }: JourneyStepperProps) {
                 >
                   {done ? <Check size={14} aria-hidden="true" /> : s.id}
                 </span>
-                <span className="min-w-0">
+                <span className="w-full min-w-0 sm:w-auto">
                   <span className={cn("block truncate text-body-sm font-bold", current ? "text-foreground" : "text-text-muted")}>
-                    {s.title}
+                    <span className="sm:hidden">{s.short}</span>
+                    <span className="hidden sm:inline">{s.title}</span>
                   </span>
                   <span className="hidden truncate text-caption text-text-muted md:block">{s.hint}</span>
                 </span>

@@ -109,17 +109,19 @@ export function StepCatalog(props: StepCatalogProps) {
         </div>
       )}
 
-      <footer className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-body-sm text-text-muted">
-          {itemCount > 0
-            ? "Muốn gửi kèm lời chào riêng cho từng khách? Tiếp tục sang bước 2."
-            : "Thêm ít nhất 1 mẫu hoa để tiếp tục."}
-        </p>
-        <Button size="sm" disabled={!selectedId || itemCount === 0} onClick={props.onNext} className="gap-1.5">
-          Gửi riêng cho khách
-          <ArrowRight size={16} aria-hidden="true" />
-        </Button>
-      </footer>
+      {catalogs.length > 0 && (
+        <footer className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-body-sm text-text-muted">
+            {itemCount > 0
+              ? "Muốn gửi kèm lời chào riêng cho từng khách? Tiếp tục sang bước 2."
+              : "Thêm ít nhất 1 mẫu hoa để tiếp tục."}
+          </p>
+          <Button size="sm" disabled={!selectedId || itemCount === 0} onClick={props.onNext} className="gap-1.5">
+            Gửi riêng cho khách
+            <ArrowRight size={16} aria-hidden="true" />
+          </Button>
+        </footer>
+      )}
     </section>
   )
 }

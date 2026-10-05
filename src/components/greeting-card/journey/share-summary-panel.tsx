@@ -77,11 +77,11 @@ export function ShareSummaryPanel(props: ShareSummaryPanelProps) {
               </a>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button variant="secondary" size="sm" onClick={onPreview} className="gap-1.5">
+              <Button variant="secondary" size="sm" onClick={onPreview} className="gap-1.5 whitespace-nowrap px-3">
                 <Eye size={16} aria-hidden="true" />
                 Xem trước
               </Button>
-              <Button variant="primary" size="sm" onClick={onCopy} className="gap-1.5">
+              <Button variant="primary" size="sm" onClick={onCopy} className="gap-1.5 whitespace-nowrap px-3">
                 {copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
                 {copied ? "Đã chép" : "Sao chép"}
               </Button>
