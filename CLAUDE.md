@@ -20,7 +20,7 @@ Full rulebook (anti-patterns A1–A12, security, performance, Journey-First UX, 
 ## Before coding
 
 - Domain skills in `.claude/skills/` load automatically by task (api, ui, ai, worker, db schema, testing, creative studio). Read every skill that applies.
-- Find the SSOT for the area in `docs/00-DOCUMENTATION-REGISTRY.yaml` and current state in `docs/kien-truc/TRANG_THAI.md` **with `grep`** — never read these files whole (≈12k and ≈90k tokens).
+- Find the SSOT for the area in `docs/00-DOCUMENTATION-REGISTRY.yaml` **with `grep`**; for current state read only §4–6 of `docs/kien-truc/TRANG_THAI.md` and grep the rest. Never read either file whole (≈12k and ≈90k tokens).
 - Read the real code and its tests before changing them; a ticked checklist or a doc is not evidence.
 - Conflicts: user instruction → `AGENT_RULES.md` → `docs/00-DOCUMENTATION-CONSTITUTION.md` → architecture/`TRANG_THAI.md` → skill → `AGENTS.md` → existing code. Still unclear → ask.
 

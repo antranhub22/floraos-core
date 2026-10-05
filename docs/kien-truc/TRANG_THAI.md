@@ -1,6 +1,8 @@
-# TRẠNG THÁI — đọc tệp này đầu tiên
+# TRẠNG THÁI — tra tệp này đầu tiên (đọc đúng mục, không đọc cả tệp)
 
 **Cập nhật:** 2026-09-30 (Nâng cấp Kiến trúc Journey-First UX Architecture: **HOÀN TẤT 100% ĐẠT CHUẨN PRODUCTION READY** — Triết lý Journey-First "Bạn muốn làm gì?", Progressive Disclosure, Lõi Journey Engine domain & state machine, 3 Journey Home cho `store_admin`, `flower_network_admin`, `platform_admin`, Action Contract 7 bước, NextActions, Combo Workflow; bảo toàn 100% 7 Dashboard hiện có theo nguyên tắc "WRAP, không REPLACE"; `npm test` **1.367/1.367** xanh, `test:tenant` **283/283** xanh, `tsc` sạch 100%, `lint:ux` **0 vi phạm**, `check:docs` khớp).
+
+> **Cách đọc tệp này (tiết kiệm ngữ cảnh — tệp gần 300 KB):** đọc dòng **Cập nhật** ở trên, mục **4 Đã chốt**, **5 Còn mở — chặn việc**, **6 Việc kế tiếp** (cộng lại khoảng 18 KB). Mục 1, mục ĐP-2b, mục 8 Nhật ký và mục 9 là **lịch sử** — chỉ tra bằng `grep` theo mã pha / mã nợ / tên module (vd `grep -n "P24\|#104" docs/kien-truc/TRANG_THAI.md`), không đọc tuần tự. Danh mục mục: `grep -n "^## " docs/kien-truc/TRANG_THAI.md`.
 
 ---
 
@@ -921,7 +923,7 @@ Còn lại (không chặn): gọi API thật trên 4 ảnh vàng còn lại (g00
 
 | # | Tệp | Đọc để biết |
 |---|---|---|
-| 1 | `TRANG_THAI.md` (tệp này) | Đang ở đâu, làm gì tiếp |
+| 1 | `TRANG_THAI.md` (tệp này) | Đang ở đâu, làm gì tiếp — chỉ mục 4–6, phần còn lại tra bằng `grep` |
 | 1b | `BO_TINH_NANG_HIEN_TRANG.md` | Bộ tính năng hoàn chỉnh và nền AI đối chiếu mã thật — cái nào đã có, cái nào còn phải xây, và bốn chỗ tài liệu nguồn va vào quyết định đã chốt |
 | 2 | `FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` | **Level 1 — thắng tuyệt đối.** Kiến trúc đích, lộ trình P0–P12, quyết định |
 | 3 | `floraos-core/docs/dac-ta/` | **Bộ đặc tả 13 tệp** — PRD, yêu cầu kỹ thuật, danh mục năng lực, UX, frontend, backend, API, cơ sở dữ liệu, tích hợp, checklist, lộ trình, nợ kỹ thuật |
@@ -1099,7 +1101,7 @@ Nghiệm thu trên máy thật 09/10: chạy server qua `venv/bin/python -m uvic
 Được, với ba điều kiện:
 
 1. **Mỗi tài khoản một nhánh git riêng.** Hai agent sửa cùng tệp trên cùng nhánh là xung đột, và không agent nào biết agent kia vừa làm gì.
-2. **Mỗi phiên bắt đầu bằng `git pull` và đọc tệp này.** Bộ nhớ của tài khoản khác không thấy được gì ở đây.
+2. **Mỗi phiên bắt đầu bằng `git pull` và đọc mục 4–6 của tệp này** (theo khối "Cách đọc tệp này" ở đầu tệp). Bộ nhớ của tài khoản khác không thấy được gì ở đây.
 3. **Mỗi phiên kết thúc bằng: cập nhật tệp này + commit + push.** Việc chưa push là việc chưa tồn tại với tài khoản khác.
 
 Phân việc theo **pha**, không theo tệp — P1 (tenant) và bộ ảnh vàng chạy song song được; P5 và P6 thì không, P6 phụ thuộc P5.

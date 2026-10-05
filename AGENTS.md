@@ -2,7 +2,7 @@
 
 Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postgres) → `workers/` (Python, xử lý ảnh) → Postgres dùng chung.
 
-**Đọc trước khi làm bất cứ việc gì:** `docs/00-DOCUMENTATION-CONSTITUTION.md` (Hiến pháp tài liệu), `docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` (Level 1) và `docs/kien-truc/TRANG_THAI.md` (đang ở đâu). Tra cứu `docs/00-DOCUMENTATION-REGISTRY.yaml` để xác định đúng SSOT trước khi sửa đổi tài liệu.
+**Đọc trước khi làm (đọc ĐÚNG MỤC, không đọc cả tệp — ba tệp dưới đây cộng lại hơn 350 KB):** `docs/00-DOCUMENTATION-CONSTITUTION.md` (Hiến pháp tài liệu, 11 KB — đọc mục liên quan) · `docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md` (Level 1 — `grep -n "^## "` rồi đọc mục cần, vd §5 đa tenant, §6 phân quyền, §15 lộ trình) · `docs/kien-truc/TRANG_THAI.md` (đang ở đâu — xem khối "Cách đọc tệp này" ở đầu tệp). Tra `docs/00-DOCUMENTATION-REGISTRY.yaml` bằng `grep` để xác định đúng SSOT trước khi sửa đổi tài liệu.
 
 ## Lệnh
 
