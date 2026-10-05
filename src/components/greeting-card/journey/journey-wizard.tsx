@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { CatalogProductPicker } from "@/components/greeting-card/catalog/catalog-product-picker"
 import { BrochurePreviewModal } from "@/components/greeting-card/customer/brochure-preview-modal"
+import { readApiError } from "@/components/greeting-card/api-error"
 
 interface CatalogOption {
   id: string
@@ -26,7 +27,7 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [catalogs, setCatalogs] = useState<CatalogOption[]>([])
   const [loadingCatalogs, setLoadingCatalogs] = useState(true)
-  const [orgSlug, setOrgSlug] = useState<string>("siinstore")
+  const [orgSlug, setOrgSlug] = useState<string>("") // rỗng → link /g/{id}, không bao giờ đoán slug tiệm khác
 
   // Live preview modal state
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -55,6 +56,7 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
   // Step 3: Kết quả link gửi
   const [createdSendCode, setCreatedSendCode] = useState<string>("")
   const [createdShareUrl, setCreatedShareUrl] = useState<string>("")
+  const [wizardError, setWizardError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [copiedPublicLink, setCopiedPublicLink] = useState(false)
 
@@ -113,7 +115,10 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
         }),
       })
 
-      if (createRes.ok) {
+      if (!createRes.ok) {
+        setWizardError(await readApiError(createRes, "Không nhân bản được bộ sưu tập"))
+      } else {
+        setWizardError(null)
         const createJson = await createRes.json() as { data?: { id: string } }
         setIsCloning(false)
         setCloneCode("")
@@ -187,6 +192,11 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
           type: "STANDARD",
         }),
       })
+      if (!res.ok) {
+        setWizardError(await readApiError(res, "Không tạo được bộ sưu tập"))
+        return
+      }
+      setWizardError(null)
       const json = await res.json() as { data?: { id: string } }
       if (json.data?.id) {
         await loadCatalogs()
@@ -215,6 +225,11 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
           customerPhone: customerPhone.trim() || undefined,
         }),
       })
+      if (!res.ok) {
+        setWizardError(await readApiError(res, "Không tạo được link chào khách"))
+        return
+      }
+      setWizardError(null)
       const json = await res.json() as { data?: { sendCode: string; shareUrl: string } }
       if (json.data) {
         setCreatedSendCode(json.data.sendCode)
@@ -237,6 +252,11 @@ export function JourneyWizard({ onFinish, onGoToManager }: JourneyWizardProps) {
 
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-6">
+      {wizardError && (
+        <div role="alert" className="p-3 rounded-xl bg-danger-bg text-danger text-body-sm font-medium">
+          {wizardError}
+        </div>
+      )}
       {/* Stepper Header */}
       <div className="bg-surface rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">

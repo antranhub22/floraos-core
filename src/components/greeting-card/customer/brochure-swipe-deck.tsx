@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import { ChevronLeft, ChevronRight, Check, Sparkles, Heart, ArrowRight, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { formatPriceVnd } from "@/components/greeting-card/api-error"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 
 interface BrochureSwipeDeckProps {
@@ -239,7 +240,7 @@ export function BrochureSwipeDeck({
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-title font-extrabold line-clamp-1">{currentProduct.name}</h2>
               <span className="text-title font-extrabold text-warning whitespace-nowrap">
-                {currentProduct.price.toLocaleString("vi-VN")} đ
+                {formatPriceVnd(currentProduct.price)}
               </span>
             </div>
             {currentProduct.description && (
@@ -272,11 +273,15 @@ export function BrochureSwipeDeck({
           type="button"
           variant={isSelected ? "secondary" : "primary"}
           size="sm"
+          disabled={currentProduct.price === null}
+          title={currentProduct.price === null ? "Mẫu này chưa có giá bán online — vui lòng liên hệ cửa hàng" : undefined}
           onClick={() => onSelectProduct(currentProduct)}
           className="flex-[2] gap-1.5 text-body-sm font-extrabold h-11 shadow-md bg-primary hover:bg-primary-dark text-white"
         >
           <Check size={18} />
-          <span>{isSelected ? "ĐÃ CHỌN MẪU NÀY" : "CHỌN MẪU NÀY"}</span>
+          <span>
+            {currentProduct.price === null ? "LIÊN HỆ BÁO GIÁ" : isSelected ? "ĐÃ CHỌN MẪU NÀY" : "CHỌN MẪU NÀY"}
+          </span>
         </Button>
 
         <Button

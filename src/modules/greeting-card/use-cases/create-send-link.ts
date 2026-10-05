@@ -1,5 +1,7 @@
 import type { TenantContext } from "@/core/tenancy"
+import { notFound } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
+import { normalizePhone, randomCode } from "../domain/greeting-card-rules"
 
 export interface CreateSendLinkInput {
   catalogId?: string | undefined
@@ -25,41 +27,38 @@ export async function createSendLink(
 
   // If Sale provided a custom catalog (Client Catalog)
   if (!targetCatalogId && input.customCatalog) {
-    const timestamp = Date.now().toString(36).slice(-4)
     const clientCatalog = await repo.createCatalog(ctx, {
-      code: `cc-${timestamp}`,
+      code: `cc-${randomCode(8).toLowerCase()}`,
       name: input.customCatalog.name || "Bộ sưu tập riêng theo yêu cầu",
       type: "CLIENT",
       description: input.customCatalog.description ?? null,
       filters: input.customCatalog.filters ?? null,
       productIds: input.customCatalog.productIds,
-      createdBy: ctx.userId || "system",
+      createdBy: ctx.userId,
     })
     targetCatalogId = clientCatalog.id
   }
 
   if (!targetCatalogId && input.catalogCode) {
     const found = await repo.getCatalogByCode(ctx, input.catalogCode)
-    if (found) targetCatalogId = found.id
+    if (!found) throw notFound()
+    targetCatalogId = found.id
   }
 
   if (!targetCatalogId) {
-    // If still no catalog, pick the latest active standard catalog
+    // If still no catalog, pick the latest active catalog
     const catalogs = await repo.listCatalogs(ctx)
-    if (catalogs.length > 0 && catalogs[0]) {
-      targetCatalogId = catalogs[0].id
-    } else {
-      throw new Error("Không tìm thấy danh mục hoa để tạo Thẻ chào")
-    }
+    if (!catalogs[0]) throw notFound()
+    targetCatalogId = catalogs[0].id
   }
 
-  const sendCode = await repo.getNextSendCode(ctx, input.prefix || "T01")
+  const phone = input.customerPhone ? normalizePhone(input.customerPhone) : null
   const session = await repo.createSession(ctx, {
     catalogId: targetCatalogId,
-    sendCode,
-    saleId: ctx.userId || "sale",
-    customerName: input.customerName ?? null,
-    customerPhone: input.customerPhone ?? null,
+    prefix: input.prefix,
+    saleId: ctx.userId,
+    customerName: input.customerName?.trim() || null,
+    customerPhone: phone || null,
   })
 
   return {

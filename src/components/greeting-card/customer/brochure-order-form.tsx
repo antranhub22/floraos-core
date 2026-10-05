@@ -3,6 +3,12 @@
 import React, { useState } from "react"
 import { ArrowLeft, Send, Sparkles, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  ORDER_FIELD_MAX,
+  MAX_DELIVERY_LEAD_DAYS,
+  todayInVietnam,
+  validateCustomerOrderInput,
+} from "@/modules/greeting-card/domain/greeting-card-rules"
 import type {
   ProductSnapshot,
   CustomerOrderSubmitInput,
@@ -30,29 +36,23 @@ export function BrochureOrderForm({
   const [senderNote, setSenderNote] = useState("")
 
   const [loading, setLoading] = useState(false)
+  const minDate = todayInVietnam()
+  const maxDate = new Date(Date.parse(`${minDate}T00:00:00Z`) + MAX_DELIVERY_LEAD_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErrorMessage(null)
 
-    if (!customerName.trim() || !customerPhone.trim()) {
-      setErrorMessage("Vui lòng nhập tên và số điện thoại người đặt hoa")
-      return
-    }
-
-    if (!recipientName.trim() || !recipientPhone.trim()) {
-      setErrorMessage("Vui lòng nhập tên và số điện thoại người nhận hoa")
-      return
-    }
-
-    if (!deliveryDate) {
-      setErrorMessage("Vui lòng chọn ngày giao hoa")
-      return
-    }
-
-    if (!deliveryAddress.trim() || deliveryAddress.trim().length < 5) {
-      setErrorMessage("Vui lòng nhập địa chỉ giao hoa chi tiết")
+    // Cùng bộ luật với server (SĐT, ngày giao theo giờ VN, độ dài) — báo lỗi ngay, đỡ một vòng mạng.
+    const check = validateCustomerOrderInput({
+      customerName, customerPhone, recipientName, recipientPhone,
+      deliveryDate, deliveryTimeSlot, deliveryAddress, cardMessage, senderNote,
+    })
+    if (!check.valid) {
+      setErrorMessage(Object.values(check.errors)[0] ?? "Thông tin đặt hàng chưa hợp lệ")
       return
     }
 
@@ -137,6 +137,7 @@ export function BrochureOrderForm({
               required
               placeholder="VD: Nguyễn Văn A"
               value={customerName}
+              maxLength={ORDER_FIELD_MAX.name}
               onChange={(e) => setCustomerName(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -150,6 +151,7 @@ export function BrochureOrderForm({
               required
               placeholder="VD: 0901234567"
               value={customerPhone}
+              maxLength={15}
               onChange={(e) => setCustomerPhone(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -167,6 +169,7 @@ export function BrochureOrderForm({
               required
               placeholder="VD: Trần Thị B"
               value={recipientName}
+              maxLength={ORDER_FIELD_MAX.name}
               onChange={(e) => setRecipientName(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -180,6 +183,7 @@ export function BrochureOrderForm({
               required
               placeholder="VD: 0912345678"
               value={recipientPhone}
+              maxLength={15}
               onChange={(e) => setRecipientPhone(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -195,6 +199,8 @@ export function BrochureOrderForm({
             <input
               type="date"
               required
+              min={minDate}
+              max={maxDate}
               value={deliveryDate}
               onChange={(e) => setDeliveryDate(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -227,6 +233,7 @@ export function BrochureOrderForm({
             required
             placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành"
             value={deliveryAddress}
+            maxLength={ORDER_FIELD_MAX.address}
             onChange={(e) => setDeliveryAddress(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
@@ -241,6 +248,7 @@ export function BrochureOrderForm({
             rows={2}
             placeholder="VD: Chúc mừng ngày 20/10 người phụ nữ tuyệt vời của anh..."
             value={cardMessage}
+            maxLength={ORDER_FIELD_MAX.cardMessage}
             onChange={(e) => setCardMessage(e.target.value)}
             className="w-full p-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
           />
@@ -255,6 +263,7 @@ export function BrochureOrderForm({
             type="text"
             placeholder="VD: Giao hoa nhẹ tay, gọi trước khi đến 15 phút"
             value={senderNote}
+            maxLength={ORDER_FIELD_MAX.senderNote}
             onChange={(e) => setSenderNote(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           />

@@ -1,0 +1,36 @@
+import { notFound, unprocessable } from "@/core/http/errors"
+import { GreetingCardRepository } from "../infra/greeting-card-repository"
+import { validateSendCode } from "../domain/greeting-card-rules"
+import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
+import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
+
+export type PublicSession = NonNullable<Awaited<ReturnType<GreetingCardRepository["getPublicSessionBySendCode"]>>>
+
+/**
+ * Phiên công khai theo mã gửi. Mã sai định dạng hoặc không có → 404 (không
+ * chạm DB với mã rác). Catalog đã ngừng thì link chết, trừ khi khách đã có
+ * đơn (vẫn phải xem được thanh toán và theo dõi).
+ */
+export async function loadPublicSession(sendCode: string, repo: GreetingCardRepository): Promise<PublicSession> {
+  if (!validateSendCode(sendCode)) throw notFound()
+  const session = await repo.getPublicSessionBySendCode(sendCode)
+  if (!session) throw notFound()
+  if (!session.catalog.is_active && !session.order_id) throw notFound()
+  return session
+}
+
+/** Mẫu thuộc đúng catalog của phiên, đã có giá — chỉ khi đó mới được chọn/đặt. */
+export async function resolveOrderableProduct(
+  session: PublicSession,
+  productId: string,
+  repo: GreetingCardRepository
+): Promise<GreetingCatalogProduct & { price: number }> {
+  const item = session.catalog.items.find((i) => i.product.id === productId)
+  if (!item) throw notFound()
+  const urls = await repo.getAssetsStorageMap(session.organization_id, collectImageAssetIds([item]))
+  const product = toCatalogProduct(item, urls)
+  if (product.price === null) {
+    throw unprocessable("Mẫu hoa này chưa có giá bán online, vui lòng liên hệ cửa hàng để được báo giá")
+  }
+  return { ...product, price: product.price }
+}

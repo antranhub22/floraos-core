@@ -23,6 +23,8 @@ export type GreetingJourneyEventType =
   | "SUBMIT_ORDER"
   | "CLICK_PAID"
   | "TRACK_VIEW"
+  | "ADMIN_CONFIRMED_PAYMENT"
+  | "INTERNAL_NOTE"
 
 export interface ProductSnapshot {
   id: string
@@ -39,7 +41,8 @@ export interface GreetingCatalogProduct {
   id: string
   code: string
   name: string
-  price: number
+  /** `null` = chưa có giá trong Product Master → hiển thị "Giá liên hệ", không cho đặt online. */
+  price: number | null
   imageUrl: string | null
   description?: string | null | undefined
   meaning?: string | null | undefined
@@ -114,4 +117,23 @@ export interface BrochureOrderSummary {
   paymentReportedAt?: string | null | undefined
   finishedImageUrl?: string | null | undefined
   createdAt: string
+}
+
+/** Thông tin chuyển khoản hiển thị cho khách — luôn dựng ở server từ cài đặt của tiệm. */
+export interface BrochurePaymentInstructions {
+  qrUrl: string
+  bankName: string
+  accountNo: string
+  accountName: string
+  amount: number
+  transferMemo: string
+}
+
+/** Phần phiên trả ra trang công khai — KHÔNG chứa SĐT khách, id tổ chức, id sale. */
+export interface PublicBrochureSessionView {
+  sendCode: string
+  status: GreetingSessionStatus
+  customerName: string | null
+  selectedProductId: string | null
+  productSnapshot: ProductSnapshot | null
 }

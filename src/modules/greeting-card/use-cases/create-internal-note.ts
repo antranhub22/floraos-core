@@ -1,4 +1,5 @@
 import type { TenantContext } from "@/core/tenancy"
+import { validationFailed } from "@/core/http/errors"
 import { TrackingPipelineRepository } from "../infra/tracking-pipeline-repository"
 import {
   ROLE_LABELS,
@@ -11,7 +12,6 @@ export interface CreateInternalNoteInput {
   sessionId?: string | null | undefined
   stepKey: TrackingPipelineStepId | "GENERAL"
   role: InternalNoteRole
-  senderName: string
   content: string
 }
 
@@ -22,11 +22,11 @@ export async function createInternalNote(
 ) {
   const content = input.content.trim()
   if (!content) {
-    throw new Error("Nội dung tin nhắn nội bộ không được để trống")
+    throw validationFailed({ content: "Nội dung tin nhắn nội bộ không được để trống" })
   }
 
   const roleLabel = ROLE_LABELS[input.role] || "Nhân viên"
-  const senderName = input.senderName.trim() || roleLabel
+  const senderName = (await repo.getUserDisplayName(ctx.userId)) || roleLabel
 
   if (input.orderId) {
     return repo.addOrderInternalNote(ctx, {
@@ -50,5 +50,5 @@ export async function createInternalNote(
     })
   }
 
-  throw new Error("Phải chỉ định đơn hàng (orderId) hoặc phiên (sessionId) để gửi tin nhắn")
+  throw validationFailed({ orderId: "Phải chỉ định đơn hàng hoặc phiên để gửi tin nhắn" })
 }

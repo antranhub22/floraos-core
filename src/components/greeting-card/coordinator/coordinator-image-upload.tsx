@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react"
 import { Upload, X, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { readApiError } from "@/components/greeting-card/api-error"
 
 interface CoordinatorImageUploadProps {
   orderId: string
@@ -95,8 +96,7 @@ export function CoordinatorImageUpload({
         body: JSON.stringify({ assetId: asset_id }),
       })
       if (!attachRes.ok) {
-        const errData = await attachRes.json().catch(() => ({}))
-        throw new Error((errData as { error?: string })?.error || "Lỗi gắn ảnh vào đơn hàng")
+        throw new Error(await readApiError(attachRes, "Lỗi gắn ảnh vào đơn hàng"))
       }
 
       setState("success")

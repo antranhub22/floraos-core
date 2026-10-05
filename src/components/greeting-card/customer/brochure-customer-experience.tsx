@@ -5,101 +5,74 @@ import { BrochureSwipeDeck } from "./brochure-swipe-deck"
 import { BrochureOrderForm } from "./brochure-order-form"
 import { BrochurePaymentView } from "./brochure-payment-view"
 import { BrochureTrackingView } from "./brochure-tracking-view"
+import { readApiError } from "@/components/greeting-card/api-error"
 import type {
+  BrochurePaymentInstructions,
   GreetingCatalogProduct,
-  GreetingSessionRecord,
   ProductSnapshot,
   CustomerOrderSubmitInput,
 } from "@/modules/greeting-card/domain/greeting-card-types"
+import type { CustomerBrochureView } from "@/modules/greeting-card/use-cases/get-greeting-catalog"
 
 interface BrochureCustomerExperienceProps {
-  initialData: {
-    status: "ACTIVE"
-    session: GreetingSessionRecord
-    catalog: {
-      id: string
-      code: string
-      name: string
-      description: string | null
-    }
-    products: GreetingCatalogProduct[]
-    order: {
-      id: string
-      code: string
-      status: string
-      totalVnd: number
-      paidVnd: number
-    } | null
-  }
+  initialData: CustomerBrochureView
 }
 
 type CustomerStep = "SWIPING" | "ORDER_FORM" | "PAYMENT" | "TRACKING"
 
+interface OrderState {
+  orderCode: string
+  totalVnd: number
+  vietQr: BrochurePaymentInstructions | null
+}
+
 export function BrochureCustomerExperience({ initialData }: BrochureCustomerExperienceProps) {
-  const { session, catalog, products } = initialData
+  const { session, catalog, products, shop } = initialData
 
   // Determine initial step based on session status
   const [step, setStep] = useState<CustomerStep>(() => {
     if (initialData.order) {
-      if (initialData.order.paidVnd >= initialData.order.totalVnd || session.status === "COMPLETED") {
-        return "TRACKING"
-      }
-      return "PAYMENT"
+      const paid = initialData.order.paidVnd >= initialData.order.totalVnd
+      return paid || session.status === "COMPLETED" ? "TRACKING" : "PAYMENT"
     }
-    if (session.status === "SELECTED" && session.productSnapshot) {
-      return "ORDER_FORM"
-    }
+    if (session.status === "SELECTED" && session.productSnapshot) return "ORDER_FORM"
     return "SWIPING"
   })
 
-  const [selectedProduct, setSelectedProduct] = useState<GreetingCatalogProduct | null>(() => {
-    if (session.selectedProductId) {
-      return products.find((p) => p.id === session.selectedProductId) || null
-    }
-    return null
-  })
+  // Ảnh chụp mẫu do SERVER dựng (giá thật từ Product Master) — client không tự ghép giá.
+  const [snapshot, setSnapshot] = useState<ProductSnapshot | null>(session.productSnapshot)
+  const [selectError, setSelectError] = useState<string | null>(null)
+  const [selecting, setSelecting] = useState(false)
 
-  const [orderResult, setOrderResult] = useState<{
-    orderId: string
-    orderCode: string
-    totalVnd: number
-    vietQr: {
-      qrUrl: string
-      bankName: string
-      accountNo: string
-      accountName: string
-      amount: number
-      transferMemo: string
-    }
-  } | null>(() => {
-    if (initialData.order) {
-      return {
-        orderId: initialData.order.id,
-        orderCode: initialData.order.code,
-        totalVnd: initialData.order.totalVnd,
-        vietQr: {
-          qrUrl: `https://img.vietqr.io/image/MB-0988776655-compact2.png?amount=${initialData.order.totalVnd}&addInfo=${initialData.order.code}&accountName=TIEM%20HOA%20FLORAOS`,
-          bankName: "Ngân hàng Quân Đội (MB Bank)",
-          accountNo: "0988776655",
-          accountName: "TIEM HOA FLORAOS",
-          amount: initialData.order.totalVnd,
-          transferMemo: initialData.order.code,
-        },
-      }
-    }
-    return null
-  })
+  // Hướng dẫn chuyển khoản luôn lấy từ server theo cấu hình của tiệm.
+  const [orderResult, setOrderResult] = useState<OrderState | null>(() =>
+    initialData.order
+      ? { orderCode: initialData.order.code, totalVnd: initialData.order.totalVnd, vietQr: initialData.payment }
+      : null
+  )
 
   async function handleSelectProduct(product: GreetingCatalogProduct) {
-    setSelectedProduct(product)
+    if (selecting) return
+    setSelectError(null)
+    setSelecting(true)
     try {
-      await fetch(`/api/v1/public/brochure/${session.sendCode}/select`, {
+      const res = await fetch(`/api/v1/public/brochure/${session.sendCode}/select`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, product }),
+        body: JSON.stringify({ productId: product.id }),
       })
-    } catch {}
-    setStep("ORDER_FORM")
+      if (!res.ok) {
+        setSelectError(await readApiError(res, "Không chọn được mẫu này, vui lòng thử lại"))
+        return
+      }
+      const data = (await res.json()) as { snapshot: ProductSnapshot }
+      setSnapshot(data.snapshot)
+      setStep("ORDER_FORM")
+    } catch {
+      setSelectError("Mất kết nối mạng, vui lòng thử lại")
+    } finally {
+      setSelecting(false)
+    }
   }
 
   async function handleSubmitOrder(input: CustomerOrderSubmitInput) {
@@ -110,63 +83,50 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
     })
 
     if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}))
-      throw new Error(errJson.error || "Không thể gửi đơn đặt hoa")
+      throw new Error(await readApiError(res, "Không thể gửi đơn đặt hoa"))
     }
 
-    const data = await res.json()
-    setOrderResult(data)
+    const data = (await res.json()) as OrderState
+    setOrderResult({ orderCode: data.orderCode, totalVnd: data.totalVnd, vietQr: data.vietQr })
     setStep("PAYMENT")
   }
 
   async function handleReportPaid() {
-    await fetch(`/api/v1/public/brochure/${session.sendCode}/payment-notify`, {
+    const res = await fetch(`/api/v1/public/brochure/${session.sendCode}/payment-notify`, {
       method: "POST",
     })
+    if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
   }
-
-  const activeSnapshot: ProductSnapshot = selectedProduct
-    ? {
-        id: selectedProduct.id,
-        code: selectedProduct.code,
-        name: selectedProduct.name,
-        price: selectedProduct.price,
-        imageUrl: selectedProduct.imageUrl,
-        description: selectedProduct.description,
-        selectedAt: new Date().toISOString(),
-      }
-    : session.productSnapshot || {
-        id: "prod",
-        code: "HOA",
-        name: "Mẫu hoa tươi đã chọn",
-        price: 500000,
-        imageUrl: null,
-        selectedAt: new Date().toISOString(),
-      }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between py-6 px-4 sm:px-6">
       <div className="w-full max-w-md mx-auto mb-6 flex flex-col items-center">
-        {/* Brand header */}
+        {/* Brand header — tên tiệm thật, không phải nhãn mẫu */}
         <div className="flex items-center gap-2 mb-4">
           <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-          <span className="text-body font-extrabold tracking-wide uppercase">
-            FLORAOS STORE
-          </span>
+          <span className="text-body font-extrabold tracking-wide uppercase">{shop.name}</span>
         </div>
 
         {step === "SWIPING" && (
-          <BrochureSwipeDeck
-            products={products}
-            catalogName={catalog.name}
-            selectedProductId={selectedProduct?.id || session.selectedProductId || null}
-            onSelectProduct={handleSelectProduct}
-          />
+          <>
+            {selectError && (
+              <div role="alert" className="w-full mb-3 p-3 rounded-xl bg-danger-bg text-danger text-body-sm font-medium">
+                {selectError}
+                {shop.phone && <span className="block mt-1">Liên hệ cửa hàng: {shop.phone}</span>}
+              </div>
+            )}
+            <BrochureSwipeDeck
+              products={products}
+              catalogName={catalog.name}
+              selectedProductId={snapshot?.id || session.selectedProductId || null}
+              onSelectProduct={handleSelectProduct}
+            />
+          </>
         )}
 
-        {step === "ORDER_FORM" && (
+        {step === "ORDER_FORM" && snapshot && (
           <BrochureOrderForm
-            productSnapshot={activeSnapshot}
+            productSnapshot={snapshot}
             onBack={() => setStep("SWIPING")}
             onSubmit={handleSubmitOrder}
           />
@@ -177,6 +137,7 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
             orderCode={orderResult.orderCode}
             totalVnd={orderResult.totalVnd}
             vietQr={orderResult.vietQr}
+            shopPhone={shop.phone}
             onReportPaid={handleReportPaid}
             onGoToTracking={() => setStep("TRACKING")}
           />

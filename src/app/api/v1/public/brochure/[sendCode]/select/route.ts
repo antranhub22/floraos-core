@@ -1,53 +1,20 @@
-import { NextResponse } from "next/server"
-import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
-import { createProductSnapshot } from "@/modules/greeting-card/domain/greeting-card-rules"
+import { z } from "zod"
+import { validationFailed } from "@/core/http/errors"
+import { handle, jsonResponse } from "@/core/http/response"
+import { enforceRateLimit } from "@/core/http/rate-limit"
+import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
 
-interface RouteParams {
-  params: Promise<{ sendCode: string }>
-}
+// Chỉ nhận productId — mọi field khác (giá, tên, ảnh) khách gửi lên đều bị bỏ qua.
+const bodySchema = z.object({ productId: z.string().min(1).max(64) })
 
-export async function POST(request: Request, context: unknown) {
-  try {
-    const { sendCode } = await (context as RouteParams).params
-    const body = await request.json().catch(() => ({}))
-    const { productId, product } = body
+/** POST /api/v1/public/brochure/[sendCode]/select */
+export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
+  enforceRateLimit(request, { scope: "brochure-select", limit: 30, windowMs: 60_000 })
+  const { sendCode } = await context.params
+  const parsed = bodySchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) throw validationFailed({ productId: "Thiếu thông tin mẫu hoa" })
+  const snapshot = await selectBrochureProduct(sendCode, parsed.data.productId)
+  return jsonResponse({ success: true, snapshot })
+})
 
-    if (!productId) {
-      return NextResponse.json({ error: "Thiếu thông tin sản phẩm" }, { status: 400 })
-    }
-
-    const repo = new GreetingCardRepository()
-    const session = await repo.getPublicSessionBySendCode(sendCode)
-    if (!session) {
-      return NextResponse.json({ error: "Không tìm thấy Thẻ chào" }, { status: 404 })
-    }
-
-    const snapshot = product
-      ? createProductSnapshot(product)
-      : createProductSnapshot({
-          id: productId,
-          code: "PROD",
-          name: "Sản phẩm đã chọn",
-          price: 500000,
-          imageUrl: null,
-          sortOrder: 0,
-        })
-
-    await repo.updateSession(session.id, {
-      status: "SELECTED",
-      selectedProductId: productId,
-      productSnapshot: snapshot,
-      selectedAt: new Date(),
-    })
-
-    await repo.recordJourneyEvent(session.organization_id, session.id, "SELECT_PRODUCT", {
-      productId,
-      snapshot,
-    })
-
-    return NextResponse.json({ success: true, snapshot })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Lỗi xử lý yêu cầu"
-    return NextResponse.json({ error: message }, { status: 500 })
-  }
-}
+export const dynamic = "force-dynamic"

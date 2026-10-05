@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react"
 import { Check, RefreshCw, AlertCircle, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { readApiError } from "@/components/greeting-card/api-error"
+import { BrochurePaymentSettings } from "./brochure-payment-settings"
 
 interface PaymentOrder {
   id: string
@@ -20,6 +22,7 @@ export function AdminBrochurePaymentTab() {
   const [loading, setLoading] = useState(true)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   function loadPendingPayments() {
     setLoading(true)
@@ -39,6 +42,7 @@ export function AdminBrochurePaymentTab() {
   async function handleConfirmPayment(orderId: string) {
     setConfirmingId(orderId)
     setSuccessMsg(null)
+    setErrorMsg(null)
     try {
       const res = await fetch(`/api/v1/greeting-card/orders/${orderId}/confirm-payment`, {
         method: "POST",
@@ -47,20 +51,22 @@ export function AdminBrochurePaymentTab() {
       })
 
       if (!res.ok) {
-        throw new Error("Không thể xác nhận thanh toán")
+        throw new Error(await readApiError(res, "Không thể xác nhận thanh toán"))
       }
 
       setSuccessMsg("Đã xác nhận thanh toán thành công! Đơn hàng đã chuyển sang Điều phối.")
       loadPendingPayments()
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Đã có lỗi xảy ra")
+      setErrorMsg(err instanceof Error ? err.message : "Đã có lỗi xảy ra")
+      loadPendingPayments()
     } finally {
       setConfirmingId(null)
     }
   }
 
-  const pendingOrders = orders.filter((o) => o.paid_vnd < o.total_vnd)
-  const confirmedOrders = orders.filter((o) => o.paid_vnd >= o.total_vnd)
+  // Theo trạng thái đơn (server chỉ cho xác nhận đơn DRAFT); đơn huỷ không nằm ở bảng nào
+  const pendingOrders = orders.filter((o) => o.status === "DRAFT")
+  const confirmedOrders = orders.filter((o) => o.status !== "DRAFT" && o.status !== "CANCELLED")
 
   return (
     <div className="flex flex-col gap-6">
@@ -89,6 +95,15 @@ export function AdminBrochurePaymentTab() {
           <span>Làm mới</span>
         </Button>
       </div>
+
+      <BrochurePaymentSettings />
+
+      {errorMsg && (
+        <div role="alert" className="p-3.5 rounded-xl bg-danger-bg border border-danger/30 text-danger text-body-sm font-bold flex items-center gap-2">
+          <AlertCircle size={20} />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
       {successMsg && (
         <div className="p-3.5 rounded-xl bg-success-bg border border-success/30 text-success text-body-sm font-bold flex items-center gap-2">

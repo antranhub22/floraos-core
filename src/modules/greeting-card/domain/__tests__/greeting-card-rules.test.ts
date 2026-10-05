@@ -6,27 +6,39 @@ import {
   canTransitionSessionStatus,
   validateCustomerOrderInput,
   mapOrderStatusToTrackingStep,
+  validateDeliveryDate,
 } from "../greeting-card-rules"
 
 describe("Greeting Card Domain Rules", () => {
   describe("generateSendCode", () => {
-    it("should format sequence correctly with 3 digits padding", () => {
-      expect(generateSendCode(1, "T01")).toBe("T01-001")
-      expect(generateSendCode(37, "T01")).toBe("T01-037")
-      expect(generateSendCode(105, "SIIN")).toBe("SIIN-105")
+    const fixedBytes = (n: number) => new Uint8Array(n).map((_, i) => i)
+
+    it("sinh mã tiền tố + 8 ký tự ngẫu nhiên, khớp regex", () => {
+      expect(generateSendCode("T01", fixedBytes)).toBe("T01-01234567")
+      expect(validateSendCode(generateSendCode("siin"))).toBe(true)
+    })
+
+    it("chuẩn hoá tiền tố lạ về T01", () => {
+      expect(generateSendCode("!", fixedBytes).startsWith("T01-")).toBe(true)
+    })
+
+    it("hai lần sinh liên tiếp không trùng", () => {
+      expect(generateSendCode()).not.toBe(generateSendCode())
     })
   })
 
   describe("validateSendCode", () => {
-    it("should accept valid send codes", () => {
+    it("should accept valid send codes (kể cả mã số cũ)", () => {
       expect(validateSendCode("T01-037")).toBe(true)
       expect(validateSendCode("SIIN-001")).toBe(true)
+      expect(validateSendCode("T01-K7Q9XMZ2")).toBe(true)
     })
 
     it("should reject invalid format", () => {
       expect(validateSendCode("")).toBe(false)
       expect(validateSendCode("invalid")).toBe(false)
       expect(validateSendCode("T-1")).toBe(false)
+      expect(validateSendCode("T01-../../x")).toBe(false)
     })
   })
 
@@ -63,6 +75,8 @@ describe("Greeting Card Domain Rules", () => {
   })
 
   describe("validateCustomerOrderInput", () => {
+    const NOW = new Date("2026-10-05T03:00:00Z")
+
     it("should validate complete input successfully", () => {
       const result = validateCustomerOrderInput({
         customerName: "Nguyễn Văn A",
@@ -71,7 +85,7 @@ describe("Greeting Card Domain Rules", () => {
         recipientPhone: "0912345678",
         deliveryDate: "2026-10-20",
         deliveryAddress: "123 Nguyễn Huệ, Phường Bến Nghé, Quận 1",
-      })
+      }, NOW)
       expect(result.valid).toBe(true)
       expect(Object.keys(result.errors).length).toBe(0)
     })
@@ -91,6 +105,37 @@ describe("Greeting Card Domain Rules", () => {
       expect(result.errors.recipientName).toBeDefined()
       expect(result.errors.deliveryDate).toBeDefined()
       expect(result.errors.deliveryAddress).toBeDefined()
+    })
+
+    it("từ chối SĐT có ký tự | (lỗi regex cũ [3|5|7|8|9])", () => {
+      const result = validateCustomerOrderInput({
+        customerName: "A", customerPhone: "0|12345678", recipientName: "B", recipientPhone: "0912345678",
+        deliveryDate: "2026-10-20", deliveryAddress: "123 Nguyễn Huệ",
+      }, NOW)
+      expect(result.errors.customerPhone).toBeDefined()
+    })
+
+    it("từ chối lời nhắn thiệp quá dài", () => {
+      const result = validateCustomerOrderInput({
+        customerName: "A", customerPhone: "0901234567", recipientName: "B", recipientPhone: "0912345678",
+        deliveryDate: "2026-10-20", deliveryAddress: "123 Nguyễn Huệ", cardMessage: "x".repeat(501),
+      }, NOW)
+      expect(result.errors.cardMessage).toBeDefined()
+    })
+  })
+
+  describe("validateDeliveryDate", () => {
+    const NOW = new Date("2026-10-05T18:30:00Z") // 01:30 ngày 06/10 giờ Việt Nam
+
+    it("tính 'hôm nay' theo giờ Việt Nam", () => {
+      expect(validateDeliveryDate("2026-10-05", NOW)).toMatch(/quá khứ/)
+      expect(validateDeliveryDate("2026-10-06", NOW)).toBeNull()
+    })
+
+    it("từ chối ngày không tồn tại, sai định dạng, quá xa", () => {
+      expect(validateDeliveryDate("2026-02-30", NOW)).not.toBeNull()
+      expect(validateDeliveryDate("06/10/2026", NOW)).not.toBeNull()
+      expect(validateDeliveryDate("2028-01-01", NOW)).toMatch(/tối đa/)
     })
   })
 

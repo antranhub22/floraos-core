@@ -3,6 +3,9 @@
  * Generates Napas-compatible Quick Link and payload.
  */
 
+import type { BrochurePaymentConfig } from "../domain/brochure-commerce-rules"
+import type { BrochurePaymentInstructions } from "../domain/greeting-card-types"
+
 export interface VietQrConfig {
   bankId: string // e.g. "MB", "VCB", "ICB", "TCB", "ACB"
   accountNo: string // e.g. "0381000523456"
@@ -22,9 +25,25 @@ export function generateVietQrUrl(config: VietQrConfig): string {
   return `https://img.vietqr.io/image/${bank}-${account}-compact2.png?amount=${amount}&addInfo=${memo}&accountName=${accountName}`
 }
 
-export const DEFAULT_SHOP_PAYMENT_INFO = {
-  bankId: "MB",
-  bankName: "Ngân hàng Quân Đội (MB Bank)",
-  accountNo: "0988776655",
-  accountName: "TIEM HOA FLORAOS",
+/** Dựng hướng dẫn chuyển khoản cho một đơn; `null` khi tiệm chưa cấu hình tài khoản. */
+export function buildPaymentInstructions(
+  config: BrochurePaymentConfig | null,
+  amount: number,
+  transferMemo: string
+): BrochurePaymentInstructions | null {
+  if (!config || amount <= 0) return null
+  return {
+    qrUrl: generateVietQrUrl({
+      bankId: config.bankId,
+      accountNo: config.accountNo,
+      accountName: config.accountName,
+      amount,
+      description: transferMemo,
+    }),
+    bankName: config.bankName,
+    accountNo: config.accountNo,
+    accountName: config.accountName,
+    amount,
+    transferMemo,
+  }
 }

@@ -1,88 +1,85 @@
+import { AppError } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
+import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
+import { buildPaymentInstructions } from "../adapters/vietqr-helper"
 import type {
+  BrochurePaymentInstructions,
   GreetingCatalogProduct,
-  GreetingSessionRecord,
+  GreetingSessionStatus,
   ProductSnapshot,
+  PublicBrochureSessionView,
 } from "../domain/greeting-card-types"
+import { loadPublicSession } from "./brochure-session-access"
+import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
 
+export type CustomerBrochureView = {
+  status: "ACTIVE"
+  session: PublicBrochureSessionView
+  shop: { name: string; phone: string | null }
+  catalog: { id: string; code: string; name: string; description: string | null }
+  products: GreetingCatalogProduct[]
+  order: { id: string; code: string; status: string; totalVnd: number; paidVnd: number } | null
+  /** Hướng dẫn chuyển khoản cho đơn hiện có — `null` khi chưa có đơn hoặc tiệm chưa cấu hình. */
+  payment: BrochurePaymentInstructions | null
+}
+
+/**
+ * Dữ liệu trang khách `/b/[sendCode]`. Chỉ trả những gì khách cần — không
+ * SĐT, không id tổ chức/sale. Lần mở đầu ghi sự kiện OPEN.
+ */
 export async function getGreetingCatalogForCustomer(
   sendCode: string,
   repo = new GreetingCardRepository()
-) {
-  const session = await repo.getPublicSessionBySendCode(sendCode)
-  if (!session) {
-    return { status: "NOT_FOUND" as const }
+): Promise<CustomerBrochureView | { status: "NOT_FOUND" }> {
+  let session
+  try {
+    session = await loadPublicSession(sendCode, repo)
+  } catch (error) {
+    if (error instanceof AppError && error.code === "NOT_FOUND") {
+      return { status: "NOT_FOUND" }
+    }
+    throw error
   }
 
-  // Record open event if not opened yet
-  if (session.status === "CREATED") {
-    await repo.updateSession(session.id, {
-      status: "OPENED",
-      openedAt: new Date(),
-    })
-    await repo.recordJourneyEvent(session.organization_id, session.id, "OPEN", {
-      openedAt: new Date().toISOString(),
-    })
+  let status = session.status as GreetingSessionStatus
+  if (status === "CREATED") {
+    const now = new Date()
+    await repo.updateSession(session.id, { status: "OPENED", openedAt: now })
+    await repo.recordJourneyEvent(session.organization_id, session.id, "OPEN", { openedAt: now.toISOString() })
+    status = "OPENED"
   }
 
-  // Gather asset IDs to resolve storage keys
-  const assetIds: string[] = []
-  for (const item of session.catalog.items) {
-    for (const img of item.product.images) {
-      if (img.asset_id) assetIds.push(img.asset_id)
-    }
-  }
+  const urls = await repo.getAssetsStorageMap(session.organization_id, collectImageAssetIds(session.catalog.items))
+  const products = session.catalog.items.map((item) => toCatalogProduct(item, urls))
+  const shop = await repo.getShopProfile(session.organization_id)
 
-  const assetMap = await repo.getAssetsStorageMap(assetIds)
-
-  // Format products
-  const products: GreetingCatalogProduct[] = (session.catalog.items || []).map((item) => {
-    const p = item.product
-    let price = 500000
-    if (p.variants && p.variants.length > 0) {
-      const v = p.variants[0]
-      const multiplier = v ? v.multiplier : 1
-      price = Math.round(500000 * multiplier)
-    }
-
-    let firstImageUrl: string | null = null
-    if (p.images && p.images.length > 0 && p.images[0]) {
-      firstImageUrl = assetMap.get(p.images[0].asset_id) || null
-    }
-
-    return {
-      id: p.id,
-      code: p.code,
-      name: p.name,
-      price,
-      imageUrl: firstImageUrl,
-      description: p.category ? `Danh mục: ${p.category}` : null,
-      sortOrder: item.sort_order,
-    }
-  })
-
-  const sessionRecord: GreetingSessionRecord = {
-    id: session.id,
-    organizationId: session.organization_id,
-    catalogId: session.catalog_id,
-    sendCode: session.send_code,
-    saleId: session.sale_id,
-    customerName: session.customer_name,
-    customerPhone: session.customer_phone,
-    status: session.status as any,
-    selectedProductId: session.selected_product_id,
-    productSnapshot: (session.product_snapshot as unknown as ProductSnapshot) || null,
-    orderId: session.order_id,
-    openedAt: session.opened_at,
-    selectedAt: session.selected_at,
-    lastActiveAt: session.last_active_at,
-    createdAt: session.created_at,
-    updatedAt: session.updated_at,
-  }
+  const order = session.order
+    ? {
+        id: session.order.id,
+        code: session.order.code,
+        status: session.order.status,
+        totalVnd: Number(session.order.total_vnd),
+        paidVnd: Number(session.order.paid_vnd),
+      }
+    : null
+  const payment = order
+    ? buildPaymentInstructions(
+        parseBrochurePaymentConfig(shop.settings),
+        Math.max(0, order.totalVnd - order.paidVnd),
+        order.code
+      )
+    : null
 
   return {
-    status: "ACTIVE" as const,
-    session: sessionRecord,
+    status: "ACTIVE",
+    session: {
+      sendCode: session.send_code,
+      status,
+      customerName: session.customer_name,
+      selectedProductId: session.selected_product_id,
+      productSnapshot: (session.product_snapshot as unknown as ProductSnapshot | null) ?? null,
+    },
+    shop: { name: shop.name, phone: shop.phone },
     catalog: {
       id: session.catalog.id,
       code: session.catalog.code,
@@ -90,14 +87,7 @@ export async function getGreetingCatalogForCustomer(
       description: session.catalog.description,
     },
     products,
-    order: session.order
-      ? {
-          id: session.order.id,
-          code: session.order.code,
-          status: session.order.status,
-          totalVnd: Number(session.order.total_vnd),
-          paidVnd: Number(session.order.paid_vnd),
-        }
-      : null,
+    order,
+    payment,
   }
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
+import { notFound } from "@/core/http/errors"
 import { Prisma } from "@/generated/prisma/client"
 import type { InternalNoteRole, TrackingPipelineStepId } from "../domain/tracking-pipeline-types"
 
@@ -47,6 +48,13 @@ export class TrackingPipelineRepository {
     })
   }
 
+  /** Tên người gửi lấy từ tài khoản đăng nhập — không nhận tên do client tự khai. */
+  async getUserDisplayName(userId: string): Promise<string | null> {
+    const user = await this.db.users.findUnique({ where: { id: userId }, select: { name: true, email: true } })
+    if (!user) return null
+    return user.name?.trim() || user.email.split("@")[0] || null
+  }
+
   async addOrderInternalNote(
     ctx: TenantContext,
     input: {
@@ -61,9 +69,7 @@ export class TrackingPipelineRepository {
     const order = await this.db.orders.findFirst({
       where: scopedWhere(ctx, { id: input.orderId, source: "BROCHURE" }),
     })
-    if (!order) {
-      throw new Error("Không tìm thấy đơn hàng Thẻ chào tương ứng")
-    }
+    if (!order) throw notFound()
 
     const appendText = `[${input.roleLabel} - ${input.senderName}] (${input.stepKey}): ${input.content}`
 
@@ -75,7 +81,7 @@ export class TrackingPipelineRepository {
           axis: "internal_note",
           from_value: input.stepKey,
           to_value: input.role,
-          actor_id: input.senderName,
+          actor_id: ctx.userId,
           reason: input.content,
         },
       })
@@ -105,9 +111,7 @@ export class TrackingPipelineRepository {
     const session = await this.db.greeting_sessions.findFirst({
       where: scopedWhere(ctx, { id: input.sessionId }),
     })
-    if (!session) {
-      throw new Error("Không tìm thấy phiên Thẻ chào tương ứng")
-    }
+    if (!session) throw notFound()
 
     return this.db.greeting_journey_events.create({
       data: {

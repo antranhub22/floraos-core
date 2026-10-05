@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { Plus, Copy, Check, ExternalLink, RefreshCw, Send, Users, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { readApiError } from "@/components/greeting-card/api-error"
 
 interface CatalogOption {
   id: string
@@ -35,6 +36,7 @@ export function SalesBrochureTab({
   const [catalogs, setCatalogs] = useState<CatalogOption[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   // Modal create state
@@ -74,6 +76,7 @@ export function SalesBrochureTab({
   async function handleCreateLink(e: React.FormEvent) {
     e.preventDefault()
     setCreating(true)
+    setCreateError(null)
     try {
       const res = await fetch("/api/v1/greeting-card/send-links", {
         method: "POST",
@@ -84,11 +87,17 @@ export function SalesBrochureTab({
           customerPhone: customerPhone.trim() || undefined,
         }),
       })
+      if (!res.ok) {
+        setCreateError(await readApiError(res, "Không tạo được link chào khách"))
+        return
+      }
       const json = await res.json()
       if (json.data?.shareUrl) {
         setCreatedLink(`${window.location.origin}${json.data.shareUrl}`)
         loadData()
       }
+    } catch {
+      setCreateError("Mất kết nối mạng, vui lòng thử lại")
     } finally {
       setCreating(false)
     }
@@ -96,6 +105,11 @@ export function SalesBrochureTab({
 
   return (
     <div className="flex flex-col gap-6">
+      {createError && (
+        <div role="alert" className="p-3 rounded-xl bg-danger-bg text-danger text-body-sm font-medium">
+          {createError}
+        </div>
+      )}
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div>

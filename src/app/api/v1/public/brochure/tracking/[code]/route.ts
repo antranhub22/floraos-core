@@ -1,22 +1,15 @@
-import { NextResponse } from "next/server"
+import { notFound } from "@/core/http/errors"
+import { handle, jsonResponse } from "@/core/http/response"
+import { enforceRateLimit } from "@/core/http/rate-limit"
 import { getBrochureTracking } from "@/modules/greeting-card/use-cases/get-brochure-tracking"
 
-interface RouteParams {
-  params: Promise<{ code: string }>
-}
+/** GET /api/v1/public/brochure/tracking/[code] — khách theo dõi đơn theo mã đơn. */
+export const GET = handle<[{ params: Promise<{ code: string }> }]>(async (request, context) => {
+  enforceRateLimit(request, { scope: "brochure-tracking", limit: 60, windowMs: 60_000 })
+  const { code } = await context.params
+  const data = await getBrochureTracking(code)
+  if (data.status === "NOT_FOUND") throw notFound()
+  return jsonResponse(data)
+})
 
-export async function GET(request: Request, context: unknown) {
-  try {
-    const { code } = await (context as RouteParams).params
-    const data = await getBrochureTracking(code)
-
-    if (data.status === "NOT_FOUND") {
-      return NextResponse.json({ error: "Không tìm thấy thông tin đơn hàng" }, { status: 404 })
-    }
-
-    return NextResponse.json(data)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Lỗi xử lý yêu cầu"
-    return NextResponse.json({ error: message }, { status: 500 })
-  }
-}
+export const dynamic = "force-dynamic"

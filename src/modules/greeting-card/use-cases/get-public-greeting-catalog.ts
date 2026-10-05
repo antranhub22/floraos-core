@@ -1,5 +1,6 @@
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
+import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
 
 export type PublicGreetingCatalogResult =
   | {
@@ -19,35 +20,9 @@ export async function mapCatalogToPublicResult(
   catalog: CatalogWithItems,
   repo: GreetingCardRepository
 ): Promise<PublicGreetingCatalogResult> {
-  // Batch resolve asset storage keys (chống N+1)
-  const assetIds = catalog.items.flatMap((item) =>
-    item.product.images.map((img) => img.asset_id)
-  )
-  const assetMap = await repo.getAssetsStorageMap(assetIds)
-
-  const products: GreetingCatalogProduct[] = catalog.items.map((item) => {
-    const p = item.product
-    const mainImg = p.images[0]
-    const imageUrl = mainImg ? assetMap.get(mainImg.asset_id) ?? null : null
-
-    const attrs = (p.attributes as Record<string, unknown>) ?? {}
-    const variant = p.variants[0]
-    const variantAttrs = (variant?.attributes as Record<string, unknown>) ?? {}
-    const price =
-      (typeof attrs.price === "number" && attrs.price > 0 ? attrs.price : null) ??
-      (typeof variantAttrs.price === "number" && variantAttrs.price > 0 ? variantAttrs.price : null) ??
-      500000
-
-    return {
-      id: p.id,
-      code: p.code,
-      name: p.name,
-      price,
-      imageUrl,
-      description: p.category ? `Danh mục: ${p.category}` : null,
-      sortOrder: item.sort_order,
-    }
-  })
+  // Batch resolve asset storage keys (chống N+1) — giá theo Product Master, không bịa giá
+  const assetMap = await repo.getAssetsStorageMap(catalog.organization_id, collectImageAssetIds(catalog.items))
+  const products: GreetingCatalogProduct[] = catalog.items.map((item) => toCatalogProduct(item, assetMap))
 
   return {
     status: "ACTIVE",

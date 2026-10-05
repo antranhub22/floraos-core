@@ -10,11 +10,46 @@ import type {
   CustomerOrderSubmitInput,
 } from "./greeting-card-types"
 
-export const SEND_CODE_REGEX = /^[A-Z0-9]{2,6}-[0-9]{3,6}$/
+/**
+ * Mã gửi = `<PREFIX>-<phần ngẫu nhiên>`. Phần đuôi cũ là số thứ tự (`T01-001`)
+ * nên đoán được và TRÙNG giữa hai tiệm (unique chỉ theo tổ chức) — link công
+ * khai tra không theo tổ chức nên khách tiệm A có thể mở nhầm thẻ của tiệm B.
+ * Regex vẫn nhận mã số cũ để link đã gửi không chết.
+ */
+export const SEND_CODE_REGEX = /^[A-Z0-9]{2,6}-[A-Z0-9]{3,12}$/
 
-export function generateSendCode(sequence: number, prefix = "T01"): string {
-  const padded = String(Math.max(1, sequence)).padStart(3, "0")
-  return `${prefix.toUpperCase()}-${padded}`
+/** Bảng chữ Crockford base32 — bỏ I, L, O, U để khách đọc/gõ lại không nhầm. */
+const CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+export const SEND_CODE_RANDOM_LENGTH = 8
+
+export type RandomBytes = (length: number) => Uint8Array
+
+const defaultRandomBytes: RandomBytes = (length) =>
+  globalThis.crypto.getRandomValues(new Uint8Array(length))
+
+export function randomCode(length: number, randomBytes: RandomBytes = defaultRandomBytes): string {
+  const bytes = randomBytes(length)
+  let out = ""
+  for (let i = 0; i < length; i++) out += CODE_ALPHABET[(bytes[i] ?? 0) % CODE_ALPHABET.length]
+  return out
+}
+
+export function normalizeSendCodePrefix(prefix: string | undefined): string {
+  const clean = (prefix ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6)
+  return clean.length >= 2 ? clean : "T01"
+}
+
+export function generateSendCode(prefix = "T01", randomBytes: RandomBytes = defaultRandomBytes): string {
+  return `${normalizeSendCodePrefix(prefix)}-${randomCode(SEND_CODE_RANDOM_LENGTH, randomBytes)}`
+}
+
+/** Mã đơn Thẻ chào: `DH<yymmdd>-<ngẫu nhiên>` — cũng là khoá tra cứu công khai nên không được đoán ra. */
+export function generateBrochureOrderCode(
+  now: Date = new Date(),
+  randomBytes: RandomBytes = defaultRandomBytes
+): string {
+  const ymd = now.toISOString().slice(2, 10).replace(/-/g, "")
+  return `DH${ymd}-${randomCode(8, randomBytes)}`
 }
 
 export function validateSendCode(code: string): boolean {
@@ -23,7 +58,7 @@ export function validateSendCode(code: string): boolean {
 }
 
 export function createProductSnapshot(
-  product: GreetingCatalogProduct,
+  product: GreetingCatalogProduct & { price: number },
   timestamp: string = new Date().toISOString()
 ): ProductSnapshot {
   return {
@@ -39,7 +74,7 @@ export function createProductSnapshot(
 }
 
 export const VALID_SESSION_TRANSITIONS: Record<GreetingSessionStatus, GreetingSessionStatus[]> = {
-  CREATED: ["OPENED", "BROWSING"],
+  CREATED: ["OPENED", "BROWSING", "SELECTED"],
   OPENED: ["BROWSING", "SELECTED"],
   BROWSING: ["SELECTED", "BROWSING"],
   SELECTED: ["BROWSING", "ORDER_SUBMITTED"],
@@ -57,37 +92,96 @@ export function canTransitionSessionStatus(
   return allowed.includes(target)
 }
 
-export function validateCustomerOrderInput(input: CustomerOrderSubmitInput): {
+/** Giới hạn độ dài trường khách nhập — chặn spam/payload phình ở link công khai. */
+export const ORDER_FIELD_MAX = {
+  name: 100,
+  address: 300,
+  cardMessage: 500,
+  senderNote: 500,
+  timeSlot: 50,
+} as const
+
+/** Đặt trước tối đa bao nhiêu ngày. */
+export const MAX_DELIVERY_LEAD_DAYS = 365
+
+const VN_PHONE_REGEX = /^(0|\+84)[35789][0-9]{8}$/
+const VN_OFFSET_MS = 7 * 3_600_000
+
+export function normalizePhone(phone: string | undefined | null): string {
+  return (phone ?? "").replace(/[\s.-]+/g, "")
+}
+
+/** Ngày hôm nay theo giờ Việt Nam, dạng YYYY-MM-DD. */
+export function todayInVietnam(now: Date = new Date()): string {
+  return new Date(now.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10)
+}
+
+/** Trả thông báo lỗi tiếng Việt, hoặc `null` nếu ngày giao hợp lệ. */
+export function validateDeliveryDate(value: string | undefined, now: Date = new Date()): string | null {
+  const date = (value ?? "").trim()
+  if (!date) return "Vui lòng chọn ngày giao hoa"
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "Ngày giao hoa không hợp lệ"
+  const parsed = new Date(`${date}T00:00:00Z`)
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+    return "Ngày giao hoa không hợp lệ"
+  }
+  const today = todayInVietnam(now)
+  if (date < today) return "Ngày giao hoa không được ở trong quá khứ"
+  const max = new Date(`${today}T00:00:00Z`)
+  max.setUTCDate(max.getUTCDate() + MAX_DELIVERY_LEAD_DAYS)
+  if (parsed > max) return `Chỉ nhận đặt trước tối đa ${MAX_DELIVERY_LEAD_DAYS} ngày`
+  return null
+}
+
+export function validateCustomerOrderInput(
+  input: CustomerOrderSubmitInput,
+  now: Date = new Date()
+): {
   valid: boolean
   errors: Record<string, string>
 } {
   const errors: Record<string, string> = {}
 
-  if (!input.customerName?.trim()) {
+  const customerName = input.customerName?.trim() ?? ""
+  if (!customerName) {
     errors.customerName = "Vui lòng nhập họ tên người đặt hoa"
+  } else if (customerName.length > ORDER_FIELD_MAX.name) {
+    errors.customerName = `Họ tên tối đa ${ORDER_FIELD_MAX.name} ký tự`
   }
 
-  const phoneRegex = /^(0|\+84)[3|5|7|8|9][0-9]{8}$/
-  const cleanPhone = (input.customerPhone || "").replace(/\s+/g, "")
-  if (!cleanPhone || !phoneRegex.test(cleanPhone)) {
+  if (!VN_PHONE_REGEX.test(normalizePhone(input.customerPhone))) {
     errors.customerPhone = "Số điện thoại người đặt không hợp lệ (10 số)"
   }
 
-  if (!input.recipientName?.trim()) {
+  const recipientName = input.recipientName?.trim() ?? ""
+  if (!recipientName) {
     errors.recipientName = "Vui lòng nhập họ tên người nhận hoa"
+  } else if (recipientName.length > ORDER_FIELD_MAX.name) {
+    errors.recipientName = `Họ tên tối đa ${ORDER_FIELD_MAX.name} ký tự`
   }
 
-  const cleanRecipientPhone = (input.recipientPhone || "").replace(/\s+/g, "")
-  if (!cleanRecipientPhone || !phoneRegex.test(cleanRecipientPhone)) {
+  if (!VN_PHONE_REGEX.test(normalizePhone(input.recipientPhone))) {
     errors.recipientPhone = "Số điện thoại người nhận không hợp lệ (10 số)"
   }
 
-  if (!input.deliveryDate?.trim()) {
-    errors.deliveryDate = "Vui lòng chọn ngày giao hoa"
+  const dateError = validateDeliveryDate(input.deliveryDate, now)
+  if (dateError) errors.deliveryDate = dateError
+
+  const address = input.deliveryAddress?.trim() ?? ""
+  if (address.length < 5) {
+    errors.deliveryAddress = "Vui lòng nhập địa chỉ giao hoa chi tiết (tối thiểu 5 ký tự)"
+  } else if (address.length > ORDER_FIELD_MAX.address) {
+    errors.deliveryAddress = `Địa chỉ tối đa ${ORDER_FIELD_MAX.address} ký tự`
   }
 
-  if (!input.deliveryAddress?.trim() || input.deliveryAddress.trim().length < 5) {
-    errors.deliveryAddress = "Vui lòng nhập địa chỉ giao hoa chi tiết (tối thiểu 5 ký tự)"
+  if ((input.cardMessage?.length ?? 0) > ORDER_FIELD_MAX.cardMessage) {
+    errors.cardMessage = `Lời nhắn thiệp tối đa ${ORDER_FIELD_MAX.cardMessage} ký tự`
+  }
+  if ((input.senderNote?.length ?? 0) > ORDER_FIELD_MAX.senderNote) {
+    errors.senderNote = `Ghi chú tối đa ${ORDER_FIELD_MAX.senderNote} ký tự`
+  }
+  if ((input.deliveryTimeSlot?.length ?? 0) > ORDER_FIELD_MAX.timeSlot) {
+    errors.deliveryTimeSlot = "Khung giờ giao không hợp lệ"
   }
 
   return {

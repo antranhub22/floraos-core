@@ -11,6 +11,7 @@ import {
   type TrackingPipelineItem,
   type TrackingPipelineStepId,
 } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import { readApiError } from "@/components/greeting-card/api-error"
 
 interface TrackingInternalChatDrawerProps {
   item: TrackingPipelineItem
@@ -60,7 +61,6 @@ export function TrackingInternalChatDrawer({
     initialStepId === "GENERAL" ? (item?.currentStepId ?? "GENERAL") : initialStepId
   )
   const [role, setRole] = useState<InternalNoteRole>("SALE")
-  const [senderName, setSenderName] = useState("Tư vấn Sale")
   const [content, setContent] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState("")
@@ -74,7 +74,6 @@ export function TrackingInternalChatDrawer({
 
   function handleRoleChange(newRole: InternalNoteRole) {
     setRole(newRole)
-    setSenderName(ROLE_LABELS[newRole])
   }
 
   async function handleSendNote(e: React.FormEvent) {
@@ -92,14 +91,12 @@ export function TrackingInternalChatDrawer({
           sessionId: item.sessionId ?? null,
           stepKey,
           role,
-          senderName: senderName.trim() || ROLE_LABELS[role],
           content: content.trim(),
         }),
       })
 
       if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error(d?.message || d?.error || "Không thể gửi tin nhắn")
+        throw new Error(await readApiError(res, "Không thể gửi tin nhắn"))
       }
 
       setContent("")
@@ -262,7 +259,7 @@ export function TrackingInternalChatDrawer({
               <label className="block text-text-muted font-bold mb-1">Gắn với bước:</label>
               <select
                 value={stepKey}
-                onChange={(e) => setStepKey(e.target.value as any)}
+                onChange={(e) => setStepKey(e.target.value as TrackingPipelineStepId | "GENERAL")}
                 className="w-full h-8 px-2 rounded-lg border border-border bg-surface text-foreground font-bold focus:outline-hidden focus:ring-1 focus:ring-primary"
               >
                 <option value="GENERAL">Lưu ý chung</option>
@@ -275,17 +272,10 @@ export function TrackingInternalChatDrawer({
             </div>
           </div>
 
-          {/* Sender Name */}
-          <div className="flex items-center gap-2">
-            <span className="text-caption text-text-muted font-bold whitespace-nowrap">Tên người note:</span>
-            <input
-              type="text"
-              value={senderName}
-              onChange={(e) => setSenderName(e.target.value)}
-              placeholder="VD: Mai Lan (Sale 01)"
-              className="flex-1 h-8 px-2.5 rounded-lg border border-border bg-surface text-caption text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
-            />
-          </div>
+          {/* Tên người gửi lấy từ tài khoản đăng nhập — không cho tự khai */}
+          <p className="text-caption text-text-muted">
+            Tin nhắn ghi tên theo tài khoản đăng nhập của bạn, kèm vai trò đã chọn ({ROLE_LABELS[role]}).
+          </p>
 
           {/* Input text + Send button */}
           <div className="flex gap-2 items-end">

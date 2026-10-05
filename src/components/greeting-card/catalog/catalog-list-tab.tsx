@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BrochurePreviewModal } from "@/components/greeting-card/customer/brochure-preview-modal"
+import { readApiError } from "@/components/greeting-card/api-error"
 
 type CatalogItem = {
   id: string
@@ -37,6 +38,7 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
   })
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [copiedCatalogId, setCopiedCatalogId] = useState<string | null>(null)
   const [orgSlug, setOrgSlug] = useState<string | null>(null)
 
@@ -82,6 +84,7 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
     e.preventDefault()
     if (!createForm.code.trim() || !createForm.name.trim()) return
     setCreating(true)
+    setActionError(null)
     try {
       const res = await fetch("/api/v1/greeting-card/catalogs", {
         method: "POST",
@@ -97,7 +100,11 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
         setIsCreateOpen(false)
         setCreateForm({ code: "", name: "", type: "STANDARD", description: "" })
         await loadCatalogs()
+      } else {
+        setActionError(await readApiError(res, "Không tạo được bộ sưu tập"))
       }
+    } catch {
+      setActionError("Mất kết nối mạng, vui lòng thử lại")
     } finally {
       setCreating(false)
     }
@@ -106,8 +113,10 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
   async function handleDelete(id: string) {
     if (!window.confirm("Ẩn catalog này? Các link đã gửi vẫn còn hoạt động.")) return
     setDeletingId(id)
+    setActionError(null)
     try {
-      await fetch(`/api/v1/greeting-card/catalogs/${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/v1/greeting-card/catalogs/${id}`, { method: "DELETE" })
+      if (!res.ok) setActionError(await readApiError(res, "Không ẩn được bộ sưu tập"))
       await loadCatalogs()
     } finally {
       setDeletingId(null)
@@ -116,6 +125,11 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
+      {actionError && (
+        <div role="alert" className="p-3 rounded-xl bg-danger-bg text-danger text-body-sm font-medium">
+          {actionError}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div>

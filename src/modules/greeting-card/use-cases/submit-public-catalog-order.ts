@@ -1,107 +1,81 @@
+import { notFound, unprocessable, validationFailed } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
-import { validateCustomerOrderInput } from "../domain/greeting-card-rules"
-import { generateVietQrUrl, DEFAULT_SHOP_PAYMENT_INFO } from "../adapters/vietqr-helper"
-import type { CustomerOrderSubmitInput, ProductSnapshot } from "../domain/greeting-card-types"
+import { BrochureOrderRepository } from "../infra/brochure-order-repository"
+import {
+  generateBrochureOrderCode,
+  normalizePhone,
+  validateCustomerOrderInput,
+} from "../domain/greeting-card-rules"
+import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
+import { buildPaymentInstructions } from "../adapters/vietqr-helper"
+import type { CustomerOrderSubmitInput } from "../domain/greeting-card-types"
+import { collectImageAssetIds, snapshotOf, toCatalogProduct } from "./brochure-product-mapper"
+import { DEFAULT_TIME_SLOT, type BrochureOrderResult } from "./submit-brochure-order"
 
-interface PublicCatalogOrderInput extends CustomerOrderSubmitInput {
+export interface PublicCatalogOrderInput extends CustomerOrderSubmitInput {
   productId: string
 }
 
+/** Đặt hoa trực tiếp từ link bộ sưu tập công khai `/g/...` (không qua link chào riêng). */
 export async function submitPublicCatalogOrder(
   catalogId: string,
   input: PublicCatalogOrderInput,
-  repo = new GreetingCardRepository()
-) {
+  repo = new GreetingCardRepository(),
+  orders = new BrochureOrderRepository()
+): Promise<BrochureOrderResult> {
   const validation = validateCustomerOrderInput(input)
-  if (!validation.valid) {
-    throw new Error(Object.values(validation.errors)[0] || "Thông tin đặt hàng không hợp lệ")
-  }
+  if (!validation.valid) throw validationFailed(validation.errors)
 
   const catalog = await repo.getPublicCatalogById(catalogId)
-  if (!catalog) {
-    throw new Error("Không tìm thấy bộ sưu tập hoa tương ứng")
-  }
+  if (!catalog) throw notFound()
 
   const item = catalog.items.find((i) => i.product.id === input.productId)
-  if (!item) {
-    throw new Error("Mẫu hoa không tồn tại trong bộ sưu tập này")
+  if (!item) throw notFound()
+
+  const urls = await repo.getAssetsStorageMap(catalog.organization_id, collectImageAssetIds([item]))
+  const product = toCatalogProduct(item, urls)
+  if (product.price === null) {
+    throw unprocessable("Mẫu hoa này chưa có giá bán online, vui lòng liên hệ cửa hàng để được báo giá")
   }
+  const snapshot = snapshotOf({ ...product, price: product.price })
 
-  const p = item.product
-  const attrs = (p.attributes as Record<string, unknown>) ?? {}
-  const variant = p.variants[0]
-  const variantAttrs = (variant?.attributes as Record<string, unknown>) ?? {}
-  const price =
-    (typeof attrs.price === "number" && attrs.price > 0 ? attrs.price : null) ??
-    (typeof variantAttrs.price === "number" && variantAttrs.price > 0 ? variantAttrs.price : null) ??
-    500000
-
-  let masterImageUrl: string | null = null
-  if (p.images && p.images[0]) {
-    masterImageUrl = await repo.getAssetStorageUrl(p.images[0].asset_id)
-  }
-
-  const snapshot: ProductSnapshot = {
-    id: p.id,
-    code: p.code,
-    name: p.name,
-    price,
-    imageUrl: masterImageUrl,
-    description: p.category ? `Danh mục: ${p.category}` : null,
-    selectedAt: new Date().toISOString(),
-  }
-
-  const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase()
-  const sendCode = `PUB-${randomSuffix}`
-
+  const customerPhone = normalizePhone(input.customerPhone)
   const session = await repo.createPublicSession({
     organizationId: catalog.organization_id,
     catalogId: catalog.id,
-    sendCode,
-    customerName: input.customerName,
-    customerPhone: input.customerPhone,
-    productId: p.id,
+    customerName: input.customerName.trim(),
+    customerPhone,
+    productId: product.id,
     snapshot,
   })
 
-  const order = await repo.createBrochureOrder({
+  const note = input.senderNote?.trim()
+  const order = await orders.createBrochureOrder({
     organizationId: catalog.organization_id,
     sessionId: session.id,
-    code: `DH${new Date().toISOString().slice(2, 10).replace(/-/g, "")}-${sendCode.replace(/[^A-Za-z0-9]/g, "")}`,
+    code: generateBrochureOrderCode(),
     customerName: input.customerName.trim(),
-    customerPhone: input.customerPhone.replace(/\s+/g, ""),
+    customerPhone,
     recipientName: input.recipientName.trim(),
-    recipientPhone: input.recipientPhone.replace(/\s+/g, ""),
+    recipientPhone: normalizePhone(input.recipientPhone),
     deliveryAddress: input.deliveryAddress.trim(),
-    deliveryDate: input.deliveryDate,
+    deliveryDate: input.deliveryDate.trim(),
+    deliveryTimeSlot: input.deliveryTimeSlot?.trim() || DEFAULT_TIME_SLOT,
     cardMessage: input.cardMessage?.trim() || null,
-    note: input.senderNote?.trim()
-      ? `[Đặt từ Link công khai /g/${catalog.code}] ${input.senderNote.trim()}`
+    note: note
+      ? `[Đặt từ Link công khai /g/${catalog.code}] ${note}`
       : `[Đặt từ Link công khai /g/${catalog.code}]`,
     snapshot,
-    totalAmount: price,
+    totalAmount: snapshot.price,
   })
 
-  const qrUrl = generateVietQrUrl({
-    bankId: DEFAULT_SHOP_PAYMENT_INFO.bankId,
-    accountNo: DEFAULT_SHOP_PAYMENT_INFO.accountNo,
-    accountName: DEFAULT_SHOP_PAYMENT_INFO.accountName,
-    amount: price,
-    description: order.code,
-  })
-
+  const shop = await repo.getShopProfile(catalog.organization_id)
   return {
+    sendCode: session.send_code,
     orderId: order.id,
     orderCode: order.code,
-    totalVnd: price,
+    totalVnd: snapshot.price,
     productSnapshot: snapshot,
-    vietQr: {
-      qrUrl,
-      bankName: DEFAULT_SHOP_PAYMENT_INFO.bankName,
-      accountNo: DEFAULT_SHOP_PAYMENT_INFO.accountNo,
-      accountName: DEFAULT_SHOP_PAYMENT_INFO.accountName,
-      amount: price,
-      transferMemo: order.code,
-    },
+    vietQr: buildPaymentInstructions(parseBrochurePaymentConfig(shop.settings), snapshot.price, order.code),
   }
 }
