@@ -10,6 +10,7 @@ import { BrochureShippingSettings } from "./brochure-shipping-settings"
 import { BrochurePolicySettings } from "./brochure-policy-settings"
 import { BrochureBankSyncSettings } from "./brochure-bank-sync-settings"
 import { UnmatchedPaymentsPanel } from "./unmatched-payments-panel"
+import { BrochureNotifySettings } from "./brochure-notify-settings"
 import { AdminOrderTable } from "./admin-order-table"
 import { AdminOrderActionDialog } from "./admin-order-action-dialog"
 import { ORDER_FILTERS, type AdminOrder, type OrderAction, type OrderFilterId } from "./admin-order-types"
@@ -47,6 +48,7 @@ export function AdminBrochurePaymentTab() {
         <BrochureBankSyncSettings />
         <BrochurePolicySettings />
         <BrochureShippingSettings />
+        <BrochureNotifySettings />
       </div>
 
       <UnmatchedPaymentsPanel />

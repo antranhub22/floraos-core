@@ -5,6 +5,8 @@ import { log } from "@/core/observability/log"
 import { GreetingIntegrationRepository } from "../infra/greeting-integration-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { decideTransfer, extractOrderCode } from "../domain/bank-transfer-matching"
+import { paymentNotifyEvent } from "../domain/customer-notifications"
+import { queueOrderNotification } from "./notify-customer"
 
 export const SEPAY_PROVIDER = "SEPAY"
 
@@ -99,6 +101,7 @@ export async function handleSepayWebhook(
       note: ["Tự động đối soát qua SePay", transfer.referenceCode, decision.note].filter(Boolean).join(" · "),
     })
     await repo.resolvePaymentEvent(row.id, { status: "MATCHED", orderId: order.id, paymentId: result.paymentId, note: decision.note })
+    queueOrderNotification(orgId, order.id, paymentNotifyEvent(result.balanceVnd))
     return { status: "MATCHED", duplicate, orderCode: order.code }
   } catch (error) {
     const note = error instanceof AppError ? error.message : "Lỗi ghi thu tự động"

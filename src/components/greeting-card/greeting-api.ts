@@ -16,10 +16,10 @@ export async function apiGet<T>(url: string): Promise<T> {
   return (await res.json()) as T
 }
 
-/** POST/PATCH/DELETE — ném `Error` mang thông báo tiếng Việt của server. */
+/** POST/PUT/PATCH/DELETE — ném `Error` mang thông báo tiếng Việt của server. */
 export async function apiSend<T = unknown>(
   url: string,
-  method: "POST" | "PATCH" | "DELETE",
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
   body?: unknown,
   fallback = "Thao tác không thành công"
 ): Promise<T> {

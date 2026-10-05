@@ -5,6 +5,8 @@ import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { expectedPayment, parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import { loadPublicSession } from "./brochure-session-access"
+import { queueOrderNotification } from "./notify-customer"
+import { paymentNotifyEvent } from "../domain/customer-notifications"
 
 /**
  * Khách bấm "Tôi đã chuyển khoản". Chỉ hợp lệ khi đã có đơn; gọi lại nhiều
@@ -50,12 +52,14 @@ export async function adminConfirmBrochurePayment(
     const shop = await repo.getShopProfile(ctx.organizationId)
     amountVnd = expectedPayment(parsePaymentPolicy(shop.settings), Number(order.total_vnd), Number(order.paid_vnd)).amountVnd
   }
-  return payments.recordIncomingPayment(ctx, orderId, {
+  const result = await payments.recordIncomingPayment(ctx, orderId, {
     amountVnd,
     method: "BANK_TRANSFER",
     reference: input.reference?.trim() || `BROCHURE-${orderId.slice(0, 8)}`,
     note: input.note?.trim() || "Xác nhận chuyển khoản qua Thẻ chào",
   })
+  queueOrderNotification(ctx.organizationId, orderId, paymentNotifyEvent(result.balanceVnd))
+  return result
 }
 
 export async function cancelBrochureOrder(
@@ -64,7 +68,9 @@ export async function cancelBrochureOrder(
   reason: string,
   payments = new BrochurePaymentRepository()
 ) {
-  return payments.cancel(ctx, orderId, reason.trim())
+  const result = await payments.cancel(ctx, orderId, reason.trim())
+  queueOrderNotification(ctx.organizationId, orderId, "CANCELLED")
+  return result
 }
 
 export async function refundBrochureOrder(
