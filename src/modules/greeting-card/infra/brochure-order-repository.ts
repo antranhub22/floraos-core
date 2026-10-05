@@ -22,6 +22,8 @@ export class BrochureOrderRepository {
       status?: order_status | undefined
       /** OUTSTANDING = còn phải thu (chưa huỷ); PAID = đã thu đủ. */
       payment?: "OUTSTANDING" | "PAID" | undefined
+      /** Chỉ đơn từ link do sale này gửi (chế độ xem "chỉ đơn của mình") */
+      saleId?: string | undefined
       limit: number
       cursor?: string | undefined
     }
@@ -30,6 +32,7 @@ export class BrochureOrderRepository {
       where: scopedWhere(ctx, {
         source: "BROCHURE",
         ...(options.status ? { status: options.status } : {}),
+        ...(options.saleId ? { greeting_sessions: { some: { sale_id: options.saleId } } } : {}),
         // Đơn chờ báo giá (tổng 0) cũng tính là "còn phải thu"
         ...(options.payment === "OUTSTANDING"
           ? { OR: [{ balance_vnd: { gt: 0 } }, { total_vnd: 0 }], NOT: { status: "CANCELLED" as const } }

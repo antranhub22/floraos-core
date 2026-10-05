@@ -1,3 +1,4 @@
+import { resolveSaleScope } from "./order-scope"
 import type { TenantContext } from "@/core/tenancy"
 import { TrackingPipelineRepository } from "../infra/tracking-pipeline-repository"
 import {
@@ -77,9 +78,10 @@ export async function getTrackingPipeline(
   ctx: TenantContext,
   repo = new TrackingPipelineRepository()
 ): Promise<TrackingPipelineItem[]> {
+  const saleId = await resolveSaleScope(ctx)
   const [orders, activeSessions] = await Promise.all([
-    repo.listBrochureOrders(ctx),
-    repo.listActiveSessions(ctx),
+    repo.listBrochureOrders(ctx, saleId),
+    repo.listActiveSessions(ctx, saleId),
   ])
 
   const stepMap = new Map(PIPELINE_STEPS.map((s) => [s.id, s]))

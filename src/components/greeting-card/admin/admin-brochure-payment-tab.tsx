@@ -1,5 +1,6 @@
 "use client"
 
+import { BrochureVisibilitySettings } from "./brochure-visibility-settings"
 import React, { useState } from "react"
 import { RefreshCw, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -47,6 +48,7 @@ export function AdminBrochurePaymentTab() {
         <BrochurePaymentSettings />
         <BrochureBankSyncSettings />
         <BrochurePolicySettings />
+        <BrochureVisibilitySettings />
         <BrochureShippingSettings />
         <BrochureNotifySettings />
       </div>

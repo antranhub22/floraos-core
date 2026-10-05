@@ -4,6 +4,7 @@ import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { BrochureOrderRepository, ORDER_STATUSES } from "@/modules/greeting-card/infra/brochure-order-repository"
 import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
+import { resolveSaleScope } from "@/modules/greeting-card/use-cases/order-scope"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 export const GET = handle(async (request) => {
@@ -20,6 +21,7 @@ export const GET = handle(async (request) => {
   const { limit, cursor } = parseListQuery(url)
 
   const repo = new BrochureOrderRepository()
-  const rows = await repo.listBrochureOrders(ctx, { status, payment, limit, cursor })
+  const saleId = (await resolveSaleScope(ctx)) ?? undefined
+  const rows = await repo.listBrochureOrders(ctx, { status, payment, saleId, limit, cursor })
   return jsonResponse(toPage(rows, limit))
 })

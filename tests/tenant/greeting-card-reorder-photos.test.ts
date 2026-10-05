@@ -119,3 +119,34 @@ describe("greeting-card: đặt thêm đơn, ảnh theo dõi, sale phụ trách"
     expect(row?.saleName).toBe("Người dùng alpha")
   })
 })
+
+describe("greeting-card: phạm vi xem đơn của sale (mục 10)", () => {
+  let a: Tenant
+
+  beforeEach(async () => {
+    await resetDatabase()
+    a = await createTenant("alpha")
+  })
+
+  afterAll(async () => {
+    await disconnectDatabase()
+  })
+
+  it("chế độ OWN: sale thuần chỉ thấy link của mình; điều hành vẫn thấy tất cả; mặc định thấy tất cả", async () => {
+    const repo = new GreetingCardRepository()
+    const product = await new ProductRepository().create(a.ctx, { code: "HOA-V", name: "Bó V", attributes: { price: 1 } })
+    const catalog = await repo.createCatalog(a.ctx, { code: "bo-v", name: "Bộ V", productIds: [product.id], createdBy: a.userId })
+    const saleA = { ...a.ctx, userId: "sale-a", capabilities: new Set(["R1", "R2"]) }
+    const saleB = { ...a.ctx, userId: "sale-b", capabilities: new Set(["R1", "R2"]) }
+    const linkA = await createSendLink(saleA, { catalogId: catalog.id })
+    const linkB = await createSendLink(saleB, { catalogId: catalog.id })
+    const codes = async (ctx: typeof saleA) => (await getTrackingPipeline(ctx)).map((i) => i.sendCode).sort()
+
+    expect(await codes(saleA)).toEqual([linkA.sendCode, linkB.sendCode].sort())
+
+    await prisma.organizations.update({ where: { id: a.organizationId }, data: { settings: { brochure_visibility: { mode: "OWN" } } } })
+    expect(await codes(saleA)).toEqual([linkA.sendCode])
+    expect(await codes(saleB)).toEqual([linkB.sendCode])
+    expect(await codes({ ...saleA, capabilities: new Set(["R1", "R9"]) })).toEqual([linkA.sendCode, linkB.sendCode].sort())
+  })
+})
