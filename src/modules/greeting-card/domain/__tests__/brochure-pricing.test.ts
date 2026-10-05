@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
+  awaitingQuote,
   computeQuote,
   parseShippingConfig,
   resolvePricedVariants,
@@ -74,5 +75,12 @@ describe("computeQuote", () => {
     const q = computeQuote({ unitPriceVnd: 800000, quantity: 2, zone: shipping.zones[0]!, shipping, voucher: null })
     expect(q.shippingFeeVnd).toBe(0)
     expect(q.totalVnd).toBe(1_600_000)
+  })
+})
+
+describe("awaitingQuote", () => {
+  it("mẫu chưa niêm yết giá: tổng 0, không phí giao, giữ khu vực và số lượng (kẹp 1–20)", () => {
+    const q = awaitingQuote(50, { id: "q1", name: "Quận 1", feeVnd: 30_000 })
+    expect(q).toMatchObject({ totalVnd: 0, shippingFeeVnd: 0, quantity: 20, awaitingQuote: true, shippingZone: { id: "q1" } })
   })
 })

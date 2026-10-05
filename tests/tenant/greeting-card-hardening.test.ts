@@ -107,11 +107,11 @@ describe("greeting-card hardening", () => {
     expect(await codeOf(selectBrochureProduct(link.sendCode, other.id))).toBe("NOT_FOUND")
   })
 
-  it("không đặt đơn khi khách chưa chọn mẫu, và chặn mẫu chưa có giá", async () => {
+  it("không đặt đơn khi khách chưa chọn mẫu; mẫu chưa có giá vẫn chọn được với giá 0 (\"Liên hệ\")", async () => {
     const { product, catalog } = await catalogWith(a, "chua-gia", null)
     const link = await createSendLink(a.ctx, { catalogId: catalog.id })
     expect(await codeOf(submitBrochureOrder(link.sendCode, ORDER_INPUT))).toBe("UNPROCESSABLE_ENTITY")
-    expect(await codeOf(selectBrochureProduct(link.sendCode, product.id))).toBe("UNPROCESSABLE_ENTITY")
+    expect(await selectBrochureProduct(link.sendCode, product.id)).toMatchObject({ id: product.id, price: 0 })
   })
 
   it("mã gửi của hai tiệm không trùng và không đoán được theo thứ tự", async () => {

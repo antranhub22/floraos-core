@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { cancelBlocker, expectedPayment, parsePaymentPolicy, paymentGateBlocker } from "../brochure-payment-policy"
+import { cancelBlocker, expectedPayment, parsePaymentPolicy, paymentGateBlocker, quoteBlocker } from "../brochure-payment-policy"
 
 describe("parsePaymentPolicy", () => {
   it("mặc định trả đủ, không chặn; % cọc ngoài 1–99 bị bỏ", () => {
@@ -32,5 +32,21 @@ describe("paymentGateBlocker / cancelBlocker", () => {
     expect(cancelBlocker({ status: "CONFIRMED", deliveryStatus: "DELIVERED" })).not.toBeNull()
     expect(cancelBlocker({ status: "CANCELLED", deliveryStatus: "PENDING" })).not.toBeNull()
     expect(cancelBlocker({ status: "DRAFT", deliveryStatus: "PENDING" })).toBeNull()
+  })
+})
+
+describe("đơn chờ báo giá (tổng 0)", () => {
+  const strict = { depositPercent: 0, requirePaidBeforeProduction: false, requireFullBeforeDispatch: true }
+
+  it("không giao hoa khi chưa báo giá dù 0 ≥ 0", () => {
+    expect(paymentGateBlocker("dispatch-shipping", strict, { totalVnd: 0, paidVnd: 0 })).toMatch(/báo giá/)
+  })
+
+  it("chỉ báo giá đơn tổng 0, chưa huỷ, số tiền nguyên dương", () => {
+    expect(quoteBlocker({ status: "DRAFT", totalVnd: 0 }, 850_000)).toBeNull()
+    expect(quoteBlocker({ status: "DRAFT", totalVnd: 500_000 }, 850_000)).not.toBeNull()
+    expect(quoteBlocker({ status: "CANCELLED", totalVnd: 0 }, 850_000)).not.toBeNull()
+    expect(quoteBlocker({ status: "DRAFT", totalVnd: 0 }, 0)).not.toBeNull()
+    expect(quoteBlocker({ status: "DRAFT", totalVnd: 0 }, 1.5)).not.toBeNull()
   })
 })

@@ -32,7 +32,8 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
   // Determine initial step based on session status
   const [step, setStep] = useState<CustomerStep>(() => {
     if (initialData.order) {
-      const paid = initialData.order.paidVnd >= initialData.order.totalVnd
+      // Đơn chờ báo giá (tổng 0) chưa phải đã thanh toán — vẫn ở bước thanh toán để thấy QR khi có giá
+      const paid = initialData.order.totalVnd > 0 && initialData.order.paidVnd >= initialData.order.totalVnd
       return paid || session.status === "COMPLETED" ? "TRACKING" : "PAYMENT"
     }
     if (session.status === "SELECTED" && session.productSnapshot) return "ORDER_FORM"

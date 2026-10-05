@@ -61,7 +61,8 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
   }
 
   const { order, trackingStep } = data
-  const isPaid = order.paidVnd >= order.totalVnd
+  const awaitingQuote = order.totalVnd <= 0
+  const isPaid = !awaitingQuote && order.paidVnd >= order.totalVnd
 
   const steps = [
     { label: "Tiếp nhận", icon: Clock },
@@ -173,7 +174,7 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
         <div className="flex justify-between">
           <span>Thanh toán:</span>
           <span className={`font-bold ${isPaid ? "text-success" : "text-warning"}`}>
-            {isPaid ? "Đã thanh toán" : "Chờ xác nhận chuyển khoản"}
+            {awaitingQuote ? "Chờ cửa hàng báo giá" : isPaid ? "Đã thanh toán" : "Chờ xác nhận chuyển khoản"}
           </span>
         </div>
         {order.cardMessage && (

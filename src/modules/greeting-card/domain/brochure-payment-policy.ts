@@ -64,8 +64,9 @@ export function paymentGateBlocker(
   if (producing && policy.requirePaidBeforeProduction && money.paidVnd <= 0) {
     return "Tiệm yêu cầu thu cọc/thanh toán trước khi cắm hoa"
   }
-  if (action === "dispatch-shipping" && policy.requireFullBeforeDispatch && money.paidVnd < money.totalVnd) {
-    return "Tiệm yêu cầu thu đủ tiền trước khi giao hoa"
+  if (action === "dispatch-shipping" && policy.requireFullBeforeDispatch) {
+    if (money.totalVnd <= 0) return "Đơn chưa báo giá — báo giá và thu đủ tiền trước khi giao hoa"
+    if (money.paidVnd < money.totalVnd) return "Tiệm yêu cầu thu đủ tiền trước khi giao hoa"
   }
   return null
 }
@@ -74,5 +75,19 @@ export function paymentGateBlocker(
 export function cancelBlocker(s: { status: string; deliveryStatus: string }): string | null {
   if (s.status === "CANCELLED") return "Đơn hàng đã huỷ trước đó"
   if (s.status === "COMPLETED" || s.deliveryStatus === "DELIVERED") return "Đơn đã giao xong, không thể huỷ"
+  return null
+}
+
+/** Số tiền tối đa cửa hàng được báo cho một đơn Thẻ chào. */
+export const MAX_QUOTE_VND = 1_000_000_000
+
+/**
+ * Lý do không báo giá được cho đơn, hoặc `null`. Chỉ báo giá đơn đang chờ
+ * (tổng 0 — khách đặt mẫu chưa niêm yết giá), chưa huỷ.
+ */
+export function quoteBlocker(order: { status: string; totalVnd: number }, totalVnd: number): string | null {
+  if (order.status === "CANCELLED") return "Đơn hàng đã huỷ"
+  if (order.totalVnd > 0) return "Đơn hàng đã có giá, không báo giá lại được"
+  if (!Number.isInteger(totalVnd) || totalVnd <= 0 || totalVnd > MAX_QUOTE_VND) return "Số tiền báo giá không hợp lệ"
   return null
 }

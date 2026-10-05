@@ -1,4 +1,4 @@
-import { notFound, unprocessable } from "@/core/http/errors"
+import { notFound } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { linkAvailability, validateSendCode } from "../domain/greeting-card-rules"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
@@ -26,18 +26,17 @@ export async function loadPublicSession(sendCode: string, repo: GreetingCardRepo
   return session
 }
 
-/** Mẫu thuộc đúng catalog của phiên, đã có giá — chỉ khi đó mới được chọn/đặt. */
+/**
+ * Mẫu thuộc đúng catalog của phiên — chỉ khi đó mới được chọn/đặt. Mẫu chưa
+ * niêm yết giá vẫn đặt được; cửa hàng báo giá sau.
+ */
 export async function resolveOrderableProduct(
   session: PublicSession,
   productId: string,
   repo: GreetingCardRepository
-): Promise<GreetingCatalogProduct & { price: number }> {
+): Promise<GreetingCatalogProduct> {
   const item = session.catalog.items.find((i) => i.product.id === productId)
   if (!item) throw notFound()
   const urls = await repo.getAssetsStorageMap(session.organization_id, collectImageAssetIds([item]))
-  const product = toCatalogProduct(item, urls)
-  if (product.price === null) {
-    throw unprocessable("Mẫu hoa này chưa có giá bán online, vui lòng liên hệ cửa hàng để được báo giá")
-  }
-  return { ...product, price: product.price }
+  return toCatalogProduct(item, urls)
 }

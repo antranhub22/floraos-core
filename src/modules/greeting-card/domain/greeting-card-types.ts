@@ -41,7 +41,7 @@ export interface GreetingCatalogProduct {
   id: string
   code: string
   name: string
-  /** `null` = chưa có giá trong Product Master → hiển thị "Giá liên hệ", không cho đặt online. */
+  /** `null` = chưa có giá trong Product Master → hiển thị "Liên hệ"; vẫn đặt được, cửa hàng báo giá sau. */
   price: number | null
   imageUrl: string | null
   description?: string | null | undefined

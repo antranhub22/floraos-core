@@ -60,12 +60,12 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
 
   // Giá hiển thị trên form chỉ để khách xem — server tự tính lại giá khi tạo đơn.
   const activeSnapshot: ProductSnapshot | null =
-    selected && selected.price !== null
+    selected
       ? {
           id: selected.id,
           code: selected.code,
           name: selected.name,
-          price: selected.price,
+          price: selected.price ?? 0,
           imageUrl: selected.imageUrl,
           description: selected.description,
           selectedAt: new Date().toISOString(),
@@ -144,14 +144,13 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
               </p>
               {selected.price === null && (
                 <p className="text-body-sm text-text-muted mt-1">
-                  Mẫu này chưa có giá bán online — vui lòng liên hệ cửa hàng để được báo giá.
+                  Mẫu này chưa niêm yết giá — bạn cứ đặt, cửa hàng sẽ liên hệ báo giá trước khi thu tiền.
                 </p>
               )}
             </div>
 
             <button
               type="button"
-              disabled={selected.price === null}
               onClick={() => setStep("ORDER_FORM")}
               className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl bg-primary text-white font-bold text-body shadow-md hover:bg-primary-dark transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >

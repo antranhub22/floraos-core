@@ -37,7 +37,7 @@ export function collectImageAssetIds(items: CatalogItemRow[]): string[] {
   return items.flatMap((item) => item.product.images.map((img) => img.asset_id))
 }
 
-/** Đóng băng mẫu đã chọn; chỉ gọi với mẫu đã có giá. */
-export function snapshotOf(product: GreetingCatalogProduct & { price: number }, now = new Date()): ProductSnapshot {
-  return createProductSnapshot(product, now.toISOString())
+/** Đóng băng mẫu đã chọn. Mẫu chưa niêm yết giá ghi giá 0 = "Liên hệ" (cửa hàng báo giá sau). */
+export function snapshotOf(product: GreetingCatalogProduct, now = new Date()): ProductSnapshot {
+  return createProductSnapshot({ ...product, price: product.price ?? 0 }, now.toISOString())
 }

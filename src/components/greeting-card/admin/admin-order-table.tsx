@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Ban, Check, RotateCcw } from "lucide-react"
+import { Ban, Check, RotateCcw, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { vnd, type AdminOrder, type OrderAction } from "./admin-order-types"
 
@@ -32,6 +32,7 @@ export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; on
         <tbody className="divide-y divide-border">
           {orders.map((o) => {
             const balance = Math.max(0, o.total_vnd - o.paid_vnd)
+            const awaitingQuote = o.total_vnd <= 0 && o.status !== "CANCELLED"
             const badge = STATUS_BADGE[o.status] ?? { label: o.status, className: "bg-surface-muted" }
             const cancellable = o.status !== "CANCELLED" && o.status !== "COMPLETED" && o.delivery_status !== "DELIVERED"
             return (
@@ -46,7 +47,9 @@ export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; on
                   <div className="font-semibold text-foreground">{o.customer?.name || "Khách đặt hoa"}</div>
                   <div className="text-caption text-text-muted">{o.customer?.phone ?? ""}</div>
                 </td>
-                <td className="px-4 py-3 text-right font-extrabold">{vnd(o.total_vnd)}</td>
+                <td className="px-4 py-3 text-right font-extrabold">
+                  {awaitingQuote ? <span className="text-warning">Chờ báo giá</span> : vnd(o.total_vnd)}
+                </td>
                 <td className="px-4 py-3 text-right">
                   <div className={balance > 0 ? "font-bold text-warning" : "font-bold text-success"}>{vnd(o.paid_vnd)}</div>
                   {balance > 0 && o.status !== "CANCELLED" && <div className="text-caption text-text-muted">còn {vnd(balance)}</div>}
@@ -56,6 +59,11 @@ export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; on
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1.5">
+                    {awaitingQuote && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => onAction({ type: "quote", order: o })} className="h-8 text-caption gap-1">
+                        <Tag size={13} /> Báo giá
+                      </Button>
+                    )}
                     {balance > 0 && o.status !== "CANCELLED" && (
                       <Button type="button" size="sm" onClick={() => onAction({ type: "collect", order: o })} className="h-8 bg-success hover:bg-success/90 text-white text-caption gap-1">
                         <Check size={13} /> Thu tiền

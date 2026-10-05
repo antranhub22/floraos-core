@@ -35,7 +35,7 @@ export async function placeBrochureOrder(
   params: {
     organizationId: string
     session: { id: string; send_code: string }
-    product: GreetingCatalogProduct & { price: number }
+    product: GreetingCatalogProduct
     input: CustomerOrderSubmitInput
     notePrefix: string
     shopSettings: unknown
@@ -61,7 +61,9 @@ export async function placeBrochureOrder(
     deliveryAddress: input.deliveryAddress.trim(),
   })
 
-  const note = input.senderNote?.trim()
+  const note = [params.notePrefix, priced.quote.awaitingQuote ? "[Chờ báo giá]" : "", input.senderNote?.trim() ?? ""]
+    .filter(Boolean)
+    .join(" ")
   const order = await checkout.createBrochureOrder(
     {
       organizationId,
@@ -75,7 +77,7 @@ export async function placeBrochureOrder(
       deliveryDate: input.deliveryDate.trim(),
       deliveryTimeSlot: input.deliveryTimeSlot?.trim() || DEFAULT_TIME_SLOT,
       cardMessage: input.cardMessage?.trim() || null,
-      note: note ? `${params.notePrefix} ${note}` : params.notePrefix,
+      note,
       snapshot,
       variant: priced.variant ? { id: priced.variant.id, name: priced.variant.name } : null,
       quote: priced.quote,

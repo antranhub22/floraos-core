@@ -30,8 +30,11 @@ export class BrochureOrderRepository {
       where: scopedWhere(ctx, {
         source: "BROCHURE",
         ...(options.status ? { status: options.status } : {}),
-        ...(options.payment === "OUTSTANDING" ? { balance_vnd: { gt: 0 }, NOT: { status: "CANCELLED" as const } } : {}),
-        ...(options.payment === "PAID" ? { balance_vnd: { lte: 0 } } : {}),
+        // Đơn chờ báo giá (tổng 0) cũng tính là "còn phải thu"
+        ...(options.payment === "OUTSTANDING"
+          ? { OR: [{ balance_vnd: { gt: 0 } }, { total_vnd: 0 }], NOT: { status: "CANCELLED" as const } }
+          : {}),
+        ...(options.payment === "PAID" ? { balance_vnd: { lte: 0 }, total_vnd: { gt: 0 } } : {}),
       }),
       include: {
         customer: { select: { id: true, code: true, name: true, phone: true } },

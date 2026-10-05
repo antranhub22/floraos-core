@@ -134,6 +134,8 @@ export interface BrochureQuote {
   totalVnd: number
   shippingZone: { id: string; name: string } | null
   voucherCode: string | null
+  /** Mẫu chưa niêm yết giá: đơn được nhận với tổng 0, cửa hàng báo giá sau. */
+  awaitingQuote?: boolean
 }
 
 export function computeQuote(input: QuoteInput): BrochureQuote {
@@ -152,5 +154,23 @@ export function computeQuote(input: QuoteInput): BrochureQuote {
     totalVnd: afterDiscount + shippingFeeVnd,
     shippingZone: input.zone ? { id: input.zone.id, name: input.zone.name } : null,
     voucherCode: input.voucher?.code ?? null,
+  }
+}
+
+/**
+ * Báo giá cho mẫu chưa niêm yết giá: chưa tính tiền hàng, phí giao hay giảm
+ * giá — cửa hàng báo trọn gói sau khi nhận đơn.
+ */
+export function awaitingQuote(quantity: number, zone: ShippingZone | null): BrochureQuote {
+  return {
+    unitPriceVnd: 0,
+    quantity: Math.min(Math.max(Math.round(quantity), 1), MAX_ORDER_QUANTITY),
+    subtotalVnd: 0,
+    discountVnd: 0,
+    shippingFeeVnd: 0,
+    totalVnd: 0,
+    shippingZone: zone ? { id: zone.id, name: zone.name } : null,
+    voucherCode: null,
+    awaitingQuote: true,
   }
 }

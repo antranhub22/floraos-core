@@ -8,7 +8,12 @@ import { vnd, type OrderAction } from "./admin-order-types"
 
 const FIELD = "w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
 
-const TITLES = { collect: "Ghi nhận đã nhận tiền", cancel: "Huỷ đơn hàng", refund: "Ghi nhận hoàn tiền" } as const
+const TITLES = {
+  quote: "Báo giá cho khách",
+  collect: "Ghi nhận đã nhận tiền",
+  cancel: "Huỷ đơn hàng",
+  refund: "Ghi nhận hoàn tiền",
+} as const
 
 /** Hộp thoại thu tiền / huỷ đơn / hoàn tiền cho một đơn Thẻ chào. */
 export function AdminOrderActionDialog({
@@ -36,7 +41,10 @@ export function AdminOrderActionDialog({
     setError(null)
     const amountVnd = Number(amount.replace(/\D/g, ""))
     try {
-      if (type === "collect") {
+      if (type === "quote") {
+        await apiSend(`/api/v1/greeting-card/orders/${order.id}/quote`, "POST", { totalVnd: amountVnd }, "Không lưu được báo giá")
+        onDone(`Đã báo giá ${vnd(amountVnd)} cho đơn ${order.code}. Khách mở lại Thẻ chào sẽ thấy mã QR thanh toán.`)
+      } else if (type === "collect") {
         await apiSend(`/api/v1/greeting-card/orders/${order.id}/confirm-payment`, "POST", {
           amountVnd, ...(text.trim() ? { reference: text.trim() } : {}),
         }, "Không ghi nhận được thanh toán")
@@ -65,28 +73,35 @@ export function AdminOrderActionDialog({
           Tổng đơn {vnd(order.total_vnd)} · Đã thu {vnd(order.paid_vnd)} · Còn {vnd(Math.max(0, order.total_vnd - order.paid_vnd))}
         </p>
         {error && <p role="alert" className="p-3 rounded-xl bg-danger-bg text-danger text-body-sm">{error}</p>}
+        {type === "quote" && (
+          <p className="text-caption text-text-muted">Khách đặt mẫu chưa niêm yết giá. Nhập tổng tiền trọn gói (gồm phí giao) để khách thanh toán.</p>
+        )}
         {type !== "cancel" && (
           <label className="flex flex-col gap-1">
-            <span className="text-caption font-bold">{type === "collect" ? "Số tiền đã nhận (đ)" : "Số tiền hoàn (đ)"}</span>
+            <span className="text-caption font-bold">
+              {type === "quote" ? "Tổng tiền báo giá (đ)" : type === "collect" ? "Số tiền đã nhận (đ)" : "Số tiền hoàn (đ)"}
+            </span>
             <input inputMode="numeric" required value={amount} onChange={(e) => setAmount(e.target.value)} className={FIELD} />
           </label>
         )}
-        <label className="flex flex-col gap-1">
-          <span className="text-caption font-bold">
-            {type === "collect" ? "Mã giao dịch ngân hàng (không bắt buộc)" : type === "cancel" ? "Lý do huỷ *" : "Lý do hoàn tiền *"}
-          </span>
-          <input
-            value={text}
-            maxLength={type === "collect" ? 100 : 500}
-            required={type !== "collect"}
-            minLength={type === "collect" ? 0 : 3}
-            onChange={(e) => setText(e.target.value)}
-            className={FIELD}
-          />
-        </label>
+        {type !== "quote" && (
+          <label className="flex flex-col gap-1">
+            <span className="text-caption font-bold">
+              {type === "collect" ? "Mã giao dịch ngân hàng (không bắt buộc)" : type === "cancel" ? "Lý do huỷ *" : "Lý do hoàn tiền *"}
+            </span>
+            <input
+              value={text}
+              maxLength={type === "collect" ? 100 : 500}
+              required={type !== "collect"}
+              minLength={type === "collect" ? 0 : 3}
+              onChange={(e) => setText(e.target.value)}
+              className={FIELD}
+            />
+          </label>
+        )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>Đóng</Button>
-          <Button type="submit" disabled={busy} className={type === "collect" ? "bg-success hover:bg-success/90 text-white" : "bg-danger hover:bg-danger/90 text-white"}>
+          <Button type="submit" disabled={busy} className={type === "collect" || type === "quote" ? "bg-success hover:bg-success/90 text-white" : "bg-danger hover:bg-danger/90 text-white"}>
             {busy ? "Đang xử lý..." : TITLES[type]}
           </Button>
         </div>

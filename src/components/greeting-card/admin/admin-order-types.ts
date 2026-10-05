@@ -12,7 +12,7 @@ export interface AdminOrder {
   created_at: string
 }
 
-export type OrderAction = { type: "collect" | "cancel" | "refund"; order: AdminOrder }
+export type OrderAction = { type: "quote" | "collect" | "cancel" | "refund"; order: AdminOrder }
 
 export const ORDER_FILTERS = [
   { id: "outstanding", label: "Còn phải thu", query: "payment=OUTSTANDING" },

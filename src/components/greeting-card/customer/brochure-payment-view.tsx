@@ -12,7 +12,7 @@ const POLL_INTERVAL_MS = 5000
 const PAID_ORDER_STATUSES = new Set(["CONFIRMED", "PROCESSING", "DELIVERED", "COMPLETED"])
 
 function isPaid(order: { status: string; paidVnd: number; totalVnd: number } | undefined): boolean {
-  return !!order && (order.paidVnd >= order.totalVnd || PAID_ORDER_STATUSES.has(order.status))
+  return !!order && ((order.totalVnd > 0 && order.paidVnd >= order.totalVnd) || PAID_ORDER_STATUSES.has(order.status))
 }
 import { BrochureQuotePending } from "./brochure-quote-pending"
 

@@ -31,7 +31,7 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
           <label className="flex flex-col gap-1">
             <span className="text-caption font-bold text-foreground">Kích thước / Phiên bản</span>
             <select value={selection.variantId} onChange={(e) => onChange({ variantId: e.target.value })} className={FIELD}>
-              <option value="">Bản tiêu chuẩn — {vnd(basePrice)}</option>
+              <option value="">Bản tiêu chuẩn — {basePrice > 0 ? vnd(basePrice) : "Liên hệ"}</option>
               {variants.map((v) => (
                 <option key={v.id} value={v.id}>{v.name} — {vnd(v.priceVnd)}</option>
               ))}
@@ -102,20 +102,26 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
         {errors.voucherCode && <span className="text-caption text-danger">{errors.voucherCode}</span>}
       </div>
 
-      <dl className="flex flex-col gap-1 text-body-sm border-t border-border pt-2" aria-busy={loading}>
-        <div className="flex justify-between"><dt className="text-text-muted">Tạm tính</dt><dd>{quote ? vnd(quote.subtotalVnd) : "—"}</dd></div>
-        {quote && quote.discountVnd > 0 && (
-          <div className="flex justify-between text-success"><dt>Giảm giá ({quote.voucherCode})</dt><dd>−{vnd(quote.discountVnd)}</dd></div>
-        )}
-        <div className="flex justify-between">
-          <dt className="text-text-muted">Phí giao hoa</dt>
-          <dd>{shipping.zones.length === 0 ? "Cửa hàng báo sau" : quote?.shippingZone ? (quote.shippingFeeVnd > 0 ? vnd(quote.shippingFeeVnd) : "Miễn phí") : "—"}</dd>
-        </div>
-        <div className="flex justify-between font-extrabold text-body">
-          <dt>Tổng thanh toán</dt>
-          <dd className="text-primary">{quote ? vnd(quote.totalVnd) : "—"}</dd>
-        </div>
-      </dl>
+      {quote?.awaitingQuote ? (
+        <p role="status" className="text-body-sm text-text-muted border-t border-border pt-2">
+          Mẫu này chưa niêm yết giá. Cửa hàng sẽ báo giá trọn gói (gồm phí giao) sau khi nhận đơn — bạn chưa cần thanh toán lúc này.
+        </p>
+      ) : (
+        <dl className="flex flex-col gap-1 text-body-sm border-t border-border pt-2" aria-busy={loading}>
+          <div className="flex justify-between"><dt className="text-text-muted">Tạm tính</dt><dd>{quote ? vnd(quote.subtotalVnd) : "—"}</dd></div>
+          {quote && quote.discountVnd > 0 && (
+            <div className="flex justify-between text-success"><dt>Giảm giá ({quote.voucherCode})</dt><dd>−{vnd(quote.discountVnd)}</dd></div>
+          )}
+          <div className="flex justify-between">
+            <dt className="text-text-muted">Phí giao hoa</dt>
+            <dd>{shipping.zones.length === 0 ? "Cửa hàng báo sau" : quote?.shippingZone ? (quote.shippingFeeVnd > 0 ? vnd(quote.shippingFeeVnd) : "Miễn phí") : "—"}</dd>
+          </div>
+          <div className="flex justify-between font-extrabold text-body">
+            <dt>Tổng thanh toán</dt>
+            <dd className="text-primary">{quote ? vnd(quote.totalVnd) : "—"}</dd>
+          </div>
+        </dl>
+      )}
     </div>
   )
 }

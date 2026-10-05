@@ -1,5 +1,6 @@
 import { normalizePhone } from "../domain/greeting-card-rules"
 import {
+  awaitingQuote,
   computeQuote,
   parseShippingConfig,
   voucherBlocker,
@@ -32,7 +33,7 @@ export interface QuoteResult {
  */
 export async function quoteForProduct(
   organizationId: string,
-  product: GreetingCatalogProduct & { price: number },
+  product: GreetingCatalogProduct,
   req: QuoteRequest,
   shopSettings: unknown,
   checkout = new BrochureCheckoutRepository()
@@ -55,6 +56,11 @@ export async function quoteForProduct(
 
   const unitPriceVnd = variant?.priceVnd ?? product.price
   const quantity = req.quantity ?? 1
+  if (unitPriceVnd === null) {
+    // Mẫu chưa niêm yết giá: nhận đơn, cửa hàng báo giá trọn gói sau
+    if (req.voucherCode?.trim()) errors.voucherCode = "Mẫu này chưa niêm yết giá nên chưa áp dụng được mã giảm giá"
+    return { quote: awaitingQuote(quantity, zone), variant, voucher: null, errors }
+  }
   let voucher: VoucherFacts | null = null
   const code = req.voucherCode?.trim()
   if (code) {

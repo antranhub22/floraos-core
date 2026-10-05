@@ -1,8 +1,9 @@
+import type { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { conflict, notFound, unprocessable } from "@/core/http/errors"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
-import { cancelBlocker } from "../domain/brochure-payment-policy"
+import { cancelBlocker, quoteBlocker } from "../domain/brochure-payment-policy"
 
 export interface IncomingPayment {
   amountVnd: number
@@ -42,6 +43,7 @@ export class BrochurePaymentRepository {
     const total = Number(order.total_vnd)
     const paidBefore = Number(order.paid_vnd)
     const balanceBefore = total - paidBefore
+    if (total <= 0) throw conflict("Đơn đang chờ báo giá — hãy báo giá trước khi thu tiền")
     if (balanceBefore <= 0) throw conflict("Đơn hàng đã được thanh toán đủ")
     if (!Number.isInteger(input.amountVnd) || input.amountVnd <= 0) throw unprocessable("Số tiền thu không hợp lệ")
     if (input.amountVnd > balanceBefore) {
@@ -161,6 +163,44 @@ export class BrochurePaymentRepository {
         tx
       )
       return { orderId: order.id, orderCode: order.code, paidVnd: paidAfter, refundedVnd: input.amountVnd }
+    })
+  }
+
+  /**
+   * Cửa hàng báo giá trọn gói cho đơn đặt mẫu chưa niêm yết giá (tổng đang
+   * là 0). Chỉ ghi khi tổng vẫn là 0 — hai người báo giá cùng lúc thì một
+   * người nhận 409.
+   */
+  async setQuote(ctx: TenantContext, orderId: string, totalVnd: number) {
+    const order = await this.loadOrder(ctx, orderId)
+    const blocker = quoteBlocker({ status: order.status, totalVnd: Number(order.total_vnd) }, totalVnd)
+    if (blocker) throw (order.status === "CANCELLED" || Number(order.total_vnd) > 0 ? conflict(blocker) : unprocessable(blocker))
+    const paid = Number(order.paid_vnd)
+    const ref = (order.pricing_rule_ref ?? {}) as Record<string, unknown>
+
+    return this.db.$transaction(async (tx) => {
+      const moved = await tx.orders.updateMany({
+        where: { id: order.id, organization_id: ctx.organizationId, total_vnd: 0, status: { not: "CANCELLED" } },
+        data: {
+          total_vnd: totalVnd,
+          balance_vnd: totalVnd - paid,
+          pricing_rule_ref: { ...ref, awaitingQuote: false, quotedTotalVnd: totalVnd, quotedAt: new Date().toISOString() } as Prisma.InputJsonValue,
+          internal_note: [order.internal_note, `[Báo giá] ${totalVnd.toLocaleString("vi-VN")} đ`].filter(Boolean).join("\n"),
+        },
+      })
+      if (moved.count === 0) throw conflict("Đơn hàng vừa được báo giá, vui lòng tải lại")
+      await recordAuditLog(
+        ctx,
+        {
+          action: "greeting_card.order.quote",
+          entityType: "order",
+          entityId: order.id,
+          before: { totalVnd: 0 },
+          after: { totalVnd },
+        },
+        tx
+      )
+      return { orderId: order.id, orderCode: order.code, totalVnd, balanceVnd: totalVnd - paid }
     })
   }
 

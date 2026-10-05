@@ -1,4 +1,4 @@
-import { notFound, unprocessable, validationFailed } from "@/core/http/errors"
+import { notFound, validationFailed } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { validateCustomerOrderInput, normalizePhone } from "../domain/greeting-card-rules"
 import type { CustomerOrderSubmitInput, GreetingCatalogProduct } from "../domain/greeting-card-types"
@@ -12,22 +12,18 @@ export interface PublicCatalogOrderInput extends CustomerOrderSubmitInput {
 
 type PublicCatalog = NonNullable<Awaited<ReturnType<GreetingCardRepository["getPublicCatalogById"]>>>
 
-/** Mẫu thuộc catalog công khai, đã có giá — chỉ khi đó mới báo giá/đặt được. */
+/** Mẫu thuộc catalog công khai (mẫu chưa niêm yết giá vẫn đặt được, cửa hàng báo giá sau). */
 async function orderableFromCatalog(
   catalogId: string,
   productId: string,
   repo: GreetingCardRepository
-): Promise<{ catalog: PublicCatalog; product: GreetingCatalogProduct & { price: number } }> {
+): Promise<{ catalog: PublicCatalog; product: GreetingCatalogProduct }> {
   const catalog = await repo.getPublicCatalogById(catalogId)
   if (!catalog) throw notFound()
   const item = catalog.items.find((i) => i.product.id === productId)
   if (!item) throw notFound()
   const urls = await repo.getAssetsStorageMap(catalog.organization_id, collectImageAssetIds([item]))
-  const product = toCatalogProduct(item, urls)
-  if (product.price === null) {
-    throw unprocessable("Mẫu hoa này chưa có giá bán online, vui lòng liên hệ cửa hàng để được báo giá")
-  }
-  return { catalog, product: { ...product, price: product.price } }
+  return { catalog, product: toCatalogProduct(item, urls) }
 }
 
 /** Đặt hoa trực tiếp từ link bộ sưu tập công khai `/g/...` (không qua link chào riêng). */

@@ -81,3 +81,13 @@ export async function refundBrochureOrder(
 ) {
   return payments.refund(ctx, orderId, { amountVnd: input.amountVnd, reason: input.reason.trim() })
 }
+
+/** Cửa hàng báo giá cho đơn đặt mẫu chưa niêm yết giá; sau đó khách thấy mã QR thanh toán. */
+export async function quoteBrochureOrder(
+  ctx: TenantContext,
+  orderId: string,
+  totalVnd: number,
+  payments = new BrochurePaymentRepository()
+) {
+  return payments.setQuote(ctx, orderId, totalVnd)
+}

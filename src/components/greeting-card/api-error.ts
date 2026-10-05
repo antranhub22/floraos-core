@@ -20,7 +20,7 @@ export async function readApiError(res: Response, fallback: string): Promise<str
   return typeof message === "string" && message ? message : fallback
 }
 
-/** Định dạng giá VNĐ; `null` = mẫu chưa có giá bán online. */
+/** Định dạng giá VNĐ; `null` = mẫu chưa niêm yết giá (vẫn đặt được, cửa hàng báo giá sau). */
 export function formatPriceVnd(price: number | null | undefined): string {
   return typeof price === "number" ? `${price.toLocaleString("vi-VN")} đ` : "Giá liên hệ"
 }
