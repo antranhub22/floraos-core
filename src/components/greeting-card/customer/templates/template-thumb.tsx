@@ -14,7 +14,7 @@ function Photo({ src, backdrop, className = "" }: { src: string | null; backdrop
     <span className={`relative block overflow-hidden ${className}`} style={{ background: backdrop }}>
       {src && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" style={{ mixBlendMode: "multiply" }} />
+        <img src={src} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain" style={{ mixBlendMode: "multiply" }} />
       )}
     </span>
   )

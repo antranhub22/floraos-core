@@ -98,6 +98,9 @@ describe("Greeting Card 12 Visual Swipe Styles & Engine Tests", () => {
       expect(html).toContain("THÍCH")
       expect(html).toContain("BỎ QUA")
       expect(html).toContain("Hoàn tác")
+      // Ảnh sản phẩm luôn hiện trọn (không cắt mép)
+      expect(html).toMatch(/<img[^>]*object-contain/)
+      expect(html).not.toMatch(/<img[^>]*object-cover/)
     })
   })
 
@@ -118,6 +121,7 @@ describe("Greeting Card 12 Visual Swipe Styles & Engine Tests", () => {
       expect(html).toContain("Bó Hoa Hồng Red Naomi")
       // Mỗi mẫu đều có đường đặt hoa: nút trực tiếp hoặc chạm ảnh để mở chi tiết
       expect(html).toMatch(/Đặt mẫu|Chọn mẫu này|aria-label="Xem Bó Hoa Hồng Red Naomi/)
+      expect(html).not.toMatch(/<img[^>]*object-cover/)
     })
   })
 
