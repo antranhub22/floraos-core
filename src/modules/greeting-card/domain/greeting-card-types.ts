@@ -46,6 +46,14 @@ export interface GreetingCatalogProduct {
   occasion?: string | null | undefined
   style?: string | null | undefined
   flowersSummary?: string | null | undefined
+  /** Loại sản phẩm (bó, giỏ, kệ…) — từ Master Index */
+  category?: string | null | undefined
+  /** Màu chủ đạo — từ Master Index */
+  color?: string | null | undefined
+  /** Kích thước đã định dạng, ví dụ "Cao 60 cm · Rộng 40 cm" */
+  dimensions?: string | null | undefined
+  /** Kiểu gói lớp ngoài — từ Master Index */
+  wrapStyle?: string | null | undefined
   sortOrder: number
 }
 

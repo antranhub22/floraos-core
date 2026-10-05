@@ -4,7 +4,8 @@ import { useState } from "react"
 import { ArrowLeftRight } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { AuxPage, EmptyCatalog, ProductImage } from "./aux/aux-kit"
-import { PRODUCT_SPEC_FIELDS } from "./product-info/product-display"
+import { comparisonRows } from "./product-info/product-display"
+import { useDisplayFields } from "./product-info/display-fields-context"
 import { ProductInfo } from "./product-info/product-info"
 import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
 
@@ -15,8 +16,6 @@ interface SplitCompareDeckProps {
   onSelectProduct: (product: GreetingCatalogProduct) => void
 }
 
-// Thông số so sánh lấy từ nguồn duy nhất — đổi trường ở product-display.ts
-const ROWS = PRODUCT_SPEC_FIELDS
 
 function Picker({ products, value, onChange, label }: { products: GreetingCatalogProduct[]; value: number; onChange: (i: number) => void; label: string }) {
   return (
@@ -37,6 +36,8 @@ function Picker({ products, value, onChange, label }: { products: GreetingCatalo
 export function SplitCompareDeck({ products, catalogName, onSelectProduct }: SplitCompareDeckProps) {
   const [left, setLeft] = useState(0)
   const [right, setRight] = useState(Math.min(1, products.length - 1))
+  // Dòng so sánh lấy từ nguồn chung + cấu hình bật/tắt của cửa hàng
+  const ROWS = comparisonRows(useDisplayFields())
   const [open, setOpen] = useState<GreetingCatalogProduct | null>(null)
 
   if (products.length === 0) return <EmptyCatalog />

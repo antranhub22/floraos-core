@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
+import type { OptionalDisplayField } from "@/modules/greeting-card/domain/display-fields"
 import { BrochureOrderForm } from "./brochure-order-form"
 import { BrochurePaymentView } from "./brochure-payment-view"
 import { BrochureTrackingView } from "./brochure-tracking-view"
@@ -175,6 +176,7 @@ export function BrochurePublicView({ catalog, products }: Props) {
     <GreetingTemplateRenderer
       showTemplateSwitcher={false}
       templateId={(catalog.filters as Record<string, unknown> | null)?.templateId as string | undefined}
+      displayFields={(catalog.filters as Record<string, unknown> | null)?.displayFields as OptionalDisplayField[] | undefined}
       catalogName={catalog.name}
       products={products}
       selectedProductId={selected?.id ?? null}

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { InlineError } from "@/components/ui/inline-error"
+import { DisplaySettingsDialog, useDisplaySettings } from "./display-settings-dialog"
 import { useAnnounce } from "@/components/ui/live-region"
 import { TemplateSelectorSplitPane } from "@/components/greeting-card/customer/templates/template-selector-split-pane"
 import {
@@ -32,6 +33,8 @@ export function TemplateSection({ catalog, onSave }: TemplateSectionProps) {
   const [error, setError] = useState<string | null>(null)
   const { announce } = useAnnounce()
   const savedId = catalogTemplateId(catalog)
+  const display = useDisplaySettings()
+  const [settingsFor, setSettingsFor] = useState<GreetingTemplateId | null>(null)
 
   async function handleSelect(id: GreetingTemplateId) {
     if (id === savedId || pendingId) return
@@ -54,8 +57,20 @@ export function TemplateSection({ catalog, onSave }: TemplateSectionProps) {
         selectedTemplateId={pendingId ?? savedId}
         onSelectTemplate={(id) => void handleSelect(id)}
         catalogId={catalog.id}
+        displaySettings={display.settings}
+        onOpenDisplaySettings={setSettingsFor}
       />
       {error && <InlineError message={error} />}
+      {settingsFor && (
+        <DisplaySettingsDialog
+          key={settingsFor}
+          open
+          onOpenChange={(o) => !o && setSettingsFor(null)}
+          templateId={settingsFor}
+          settings={display.settings}
+          onSave={display.save}
+        />
+      )}
     </section>
   )
 }

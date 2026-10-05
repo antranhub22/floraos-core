@@ -5,7 +5,7 @@ import type {
   ProductSnapshot,
 } from "../domain/greeting-card-types"
 import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
-import { FALLBACK_CATALOG_PRICE, resolveCatalogProductPrice } from "../domain/catalog-product-price"
+import { catalogItemToProduct } from "../domain/catalog-product-price"
 
 export async function getGreetingCatalogForCustomer(
   sendCode: string,
@@ -39,24 +39,9 @@ export async function getGreetingCatalogForCustomer(
 
   // Format products
   const products: GreetingCatalogProduct[] = (session.catalog.items || []).map((item) => {
-    const p = item.product
-    // Cùng cách tính với link công khai — trước đây là 500.000 × hệ số biến thể (giá sai)
-    const price = resolveCatalogProductPrice(p) ?? FALLBACK_CATALOG_PRICE
-
-    let firstImageUrl: string | null = null
-    if (p.images && p.images.length > 0 && p.images[0]) {
-      firstImageUrl = assetMap.get(p.images[0].asset_id) || null
-    }
-
-    return {
-      id: p.id,
-      code: p.code,
-      name: p.name,
-      price,
-      imageUrl: firstImageUrl,
-      description: p.category ? `Danh mục: ${p.category}` : null,
-      sortOrder: item.sort_order,
-    }
+    // Cùng cách dựng với link công khai (giá + trường Master Index)
+    const firstImage = item.product.images?.[0]
+    return catalogItemToProduct(item, firstImage ? assetMap.get(firstImage.asset_id) || null : null)
   })
 
   const sessionRecord: GreetingSessionRecord = {
@@ -86,7 +71,7 @@ export async function getGreetingCatalogForCustomer(
       code: session.catalog.code,
       name: session.catalog.name,
       description: session.catalog.description,
-      filters: toPublicCatalogFilters(session.catalog.filters),
+      filters: toPublicCatalogFilters(session.catalog.filters, session.organization?.settings),
     },
     products,
     order: session.order

@@ -9,6 +9,7 @@ import type {
   TemplateCategory,
 } from "./greeting-template-types"
 import { GREETING_TEMPLATES } from "./greeting-template-catalog"
+import { enabledFieldsFor, readDisplaySettings, type OptionalDisplayField } from "./display-fields"
 
 export type { GreetingTemplateId, GreetingCardTemplateDef, TemplateCategory }
 export { GREETING_TEMPLATES }
@@ -32,11 +33,17 @@ export function resolveGreetingTemplateId(candidate?: string | null): GreetingTe
 }
 
 /**
- * Phần `filters` được phép gửi ra trang khách: chỉ `templateId`.
- * Các khóa khác (bộ lọc dịp, mức giá…) là dữ liệu nội bộ của cửa hàng.
+ * Phần cấu hình được phép gửi ra trang khách: mẫu đang dùng và các trường thông tin
+ * cửa hàng bật cho mẫu đó. Các khóa khác của `filters` (bộ lọc dịp, mức giá…) và của
+ * `organizations.settings` là dữ liệu nội bộ, không gửi ra.
  */
-export function toPublicCatalogFilters(raw: unknown): { templateId: string } | null {
-  if (!raw || typeof raw !== "object") return null
-  const templateId = (raw as Record<string, unknown>).templateId
-  return typeof templateId === "string" ? { templateId } : null
+export function toPublicCatalogFilters(
+  raw: unknown,
+  orgSettings?: unknown,
+): { templateId: string; displayFields: OptionalDisplayField[] } | null {
+  const rawId = raw && typeof raw === "object" ? (raw as Record<string, unknown>).templateId : undefined
+  const templateId = resolveGreetingTemplateId(typeof rawId === "string" ? rawId : null)
+  const displayFields = enabledFieldsFor(readDisplaySettings(orgSettings), templateId)
+  if (typeof rawId !== "string" && orgSettings === undefined) return null
+  return { templateId, displayFields }
 }

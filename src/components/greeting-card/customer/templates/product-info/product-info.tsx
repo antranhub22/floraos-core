@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { cn } from "@/lib/utils"
 import { toProductDisplay } from "./product-display"
+import { useDisplayFields } from "./display-fields-context"
 
 /**
  * Mức chi tiết — mọi mẫu dùng cùng thứ tự trường, chỉ khác số trường hiện:
@@ -55,7 +56,7 @@ export function ProductInfo({
   id,
   className,
 }: ProductInfoProps) {
-  const d = toProductDisplay(product)
+  const d = toProductDisplay(product, useDisplayFields())
   const mutedStyle = muted ? { color: muted } : undefined
 
   return (
@@ -77,6 +78,9 @@ export function ProductInfo({
           </Title>
           <p className={cn("mt-1 font-bold tabular-nums", PRICE_SIZE[size], !accent && "text-primary")} style={accent ? { color: accent } : undefined}>
             {d.priceLabel}
+          </p>
+          <p className="mt-0.5 text-caption tabular-nums opacity-70" style={mutedStyle}>
+            Mã {d.code}
           </p>
         </div>
         {trailing}

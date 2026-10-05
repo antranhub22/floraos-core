@@ -43,6 +43,7 @@ const NO_CAPABILITY_GUARD: Record<string, string> = {
   "content-engine/landing-generate": DEBT_170,
   "content-engine/rewrite": DEBT_170,
   "greeting-card/catalogs": DEBT_170,
+  "greeting-card/display-settings": DEBT_170,
   "greeting-card/catalogs/[id]": DEBT_170,
   "greeting-card/catalogs/[id]/products": DEBT_170,
   "greeting-card/orders": DEBT_170,

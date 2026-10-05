@@ -29,8 +29,13 @@ import type {
   ProductGalleryImage,
   StockStatus,
 } from "../domain/product-master-index"
-import { mergeOccasions } from "../domain/product-master-index"
-import { mauChuDao } from "../domain/product-analysis-rules"
+import {
+  readDimensions,
+  readOccasions,
+  readPrimaryColor,
+  readStyle,
+  readWrapStyle,
+} from "../domain/master-index-fields"
 import { toneChuDao } from "@/modules/product-copies/domain/analysis-projection"
 
 /** Hình dạng lỏng lẻo của một dòng `bom.flowers`/`bom.foliage` theo hợp đồng Vision — chỉ khai những khoá hàm này thật sự đọc. */
@@ -189,7 +194,8 @@ export class ProductMasterIndexRepository {
     const attrs = (row.attributes as Record<string, unknown>) ?? {}
     const analysis = row.analyses?.[0]
     const analysisData = ((analysis?.edited ?? analysis?.raw) as Record<string, unknown>) ?? {}
-    const identity = (analysisData.identity as Record<string, unknown>) ?? {}
+    // Quy tắc đọc trường dùng chung với phép chiếu công khai (Thẻ chào) — xem master-index-fields.ts
+    const source = { category: row.category, attributes: row.attributes, analysis: analysisData }
     const bomData = (analysisData.bom as Record<string, unknown>) ?? {}
     const attrsBom = (attrs.bom as Record<string, unknown>) ?? {}
     // Ưu tiên BOM của lượt phân tích APPROVED gắn với sản phẩm; nếu sản phẩm không có lượt
@@ -248,10 +254,7 @@ export class ProductMasterIndexRepository {
 
     // `bom.wrapping` là MẢNG các lớp gói {layer, material, color, texture}, không phải object đơn.
     const wrappingList = asRowArray<RawWrappingLayer>(bomData.wrapping ?? attrsBom.wrapping)
-    const outerWrap = wrappingList.find((w) => w.layer === "Lớp ngoài") ?? wrappingList[0]
-    const wrapStyle = outerWrap
-      ? [outerWrap.material, outerWrap.color].filter(Boolean).join(" ") || "Chưa rõ kiểu gói"
-      : String(attrs.wrapStyle ?? "Chưa rõ kiểu gói")
+    const wrapStyle = readWrapStyle(source) ?? "Chưa rõ kiểu gói"
 
     const tieWrap = wrappingList.find((w) => w.layer === "Đai buộc")
     const ribbonFromAccessories = accessories.find((a) => a.name.includes("ruy") || a.name.includes("nơ"))?.name
@@ -347,11 +350,7 @@ export class ProductMasterIndexRepository {
     // Kích thước vật lý — chỉ đọc khi có số thật đã nhập ở `products.attributes.dimensions`,
     // KHÔNG bịa mặc định "55×40" như `sales-pitch-template.ts` từng làm cho Thẻ chào A6 (nợ
     // ghi riêng — xem TECHNICAL_DEBT.md, phát hiện lúc thêm trường này).
-    const rawDimensions = attrs.dimensions as Record<string, unknown> | undefined
-    const dimensions =
-      rawDimensions && typeof rawDimensions.heightCm === "number" && typeof rawDimensions.widthCm === "number"
-        ? { heightCm: rawDimensions.heightCm, widthCm: rawDimensions.widthCm }
-        : undefined
+    const dimensions = readDimensions(source) ?? undefined
 
     // Chính sách thay thế hoa tương đương — cờ + ghi chú tuỳ chọn ở `products.attributes.substitutionPolicy`.
     const rawSubstitution = attrs.substitutionPolicy as Record<string, unknown> | undefined
@@ -391,7 +390,6 @@ export class ProductMasterIndexRepository {
       : undefined
 
     const toneMau = toneChuDao(analysisData)
-    const primaryColorFromAttrs = typeof attrs.color === "string" && attrs.color ? attrs.color : null
 
     return {
       id: row.id,
@@ -405,19 +403,14 @@ export class ProductMasterIndexRepository {
       shape: row.shape ?? "Tròn",
       facing: row.facing ?? "Một mặt",
       container: row.container ?? undefined,
-      style: String(identity.phong_cach ?? "Chưa rõ phong cách"),
+      style: readStyle(source) ?? "Chưa rõ phong cách",
       // Hợp nhất dịp AI đoán (M01, `identity.dip_su_dung`) với dịp người duyệt
       // M01b đã chỉnh tay (`attrs.salesData.occasions`) — trước bản sửa này chỉ
       // đọc một nguồn, làm mất lựa chọn của người duyệt (nợ #92).
-      occasions: mergeOccasions(
-        Array.isArray((attrs.salesData as Record<string, unknown> | undefined)?.occasions)
-          ? ((attrs.salesData as Record<string, unknown>).occasions as unknown[]).map(String)
-          : undefined,
-        identity.dip_su_dung ? String(identity.dip_su_dung) : undefined
-      ),
+      occasions: readOccasions(source),
       masterImageUrl,
       colorPalette: {
-        primaryColor: toneMau[0] ?? primaryColorFromAttrs ?? mauChuDao(analysisData) ?? "Chưa rõ màu chủ đạo",
+        primaryColor: readPrimaryColor(source) ?? "Chưa rõ màu chủ đạo",
         secondaryColor: toneMau[1] ?? undefined,
         // Không có nơi nào trong hệ thống tính "tông hài hoà" (Pastel/Rực rỡ/Trầm ấm/Đơn sắc)
         // từ dữ liệu AI — để trống thay vì bịa "Nổi bật" cho mọi sản phẩm.
