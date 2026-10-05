@@ -16,6 +16,7 @@ import type {
 import { ShoppingBag } from "lucide-react"
 import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
+import { useCatalogTracking } from "./use-catalog-tracking"
 
 interface Props {
   catalog: { id: string; code: string; name: string; description: string | null; filters?: Record<string, unknown> | null }
@@ -35,8 +36,10 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
     totalVnd: number
     vietQr: BrochurePaymentInstructions | null
   } | null>(null)
+  const { track, orderMeta } = useCatalogTracking(catalog.id)
 
   function handleSelectFromDeck(product: GreetingCatalogProduct) {
+    track("DETAIL")
     setSelected(product)
     setStep("PREVIEW")
   }
@@ -47,7 +50,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
     const res = await fetch(`/api/v1/public/greeting-catalog/${catalog.id}/order`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...input, productId: selected.id }),
+      body: JSON.stringify({ ...input, productId: selected.id, tracking: orderMeta() }),
     })
 
     if (!res.ok) {
@@ -155,7 +158,10 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
 
             <button
               type="button"
-              onClick={() => setStep("ORDER_FORM")}
+              onClick={() => {
+                track("FORM_OPEN")
+                setStep("ORDER_FORM")
+              }}
               className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl bg-primary text-white font-bold text-body shadow-md hover:bg-primary-dark transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ShoppingBag size={18} />

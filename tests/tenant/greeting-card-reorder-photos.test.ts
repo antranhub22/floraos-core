@@ -164,3 +164,36 @@ describe("greeting-card: phạm vi xem đơn của sale (mục 10)", () => {
     expect(await codes({ ...saleA, capabilities: new Set(["R1", "R9"]) })).toEqual([linkA.sendCode, linkB.sendCode].sort())
   })
 })
+
+describe("greeting-card: thống kê link bộ sưu tập theo kênh (mục 16)", () => {
+  let a: Tenant
+  let b: Tenant
+
+  beforeEach(async () => {
+    await resetDatabase()
+    a = await createTenant("alpha")
+    b = await createTenant("beta")
+  })
+
+  afterAll(async () => {
+    await disconnectDatabase()
+  })
+
+  it("đếm khách không trùng theo kênh, tổ chức lấy từ catalog, không lộ sang tổ chức khác", async () => {
+    const { recordCatalogEvent, getChannelFunnel } = await import("@/modules/greeting-card/use-cases/catalog-channel-events")
+    const product = await new ProductRepository().create(a.ctx, { code: "HOA-K", name: "Bó K", attributes: { price: 1 } })
+    const catalog = await new GreetingCardRepository().createCatalog(a.ctx, { code: "bo-k", name: "Bộ K", productIds: [product.id], createdBy: a.userId })
+
+    await recordCatalogEvent({ catalogId: catalog.id, channel: "zalo", eventType: "VIEW", visitorId: "visitor-1" })
+    await recordCatalogEvent({ catalogId: catalog.id, channel: "zalo", eventType: "VIEW", visitorId: "visitor-1" })
+    await recordCatalogEvent({ catalogId: catalog.id, channel: "zalo", eventType: "VIEW", visitorId: "visitor-2" })
+    await recordCatalogEvent({ catalogId: catalog.id, channel: "zalo", eventType: "ORDER", visitorId: "visitor-2" })
+    await recordCatalogEvent({ catalogId: catalog.id, channel: "bịa", eventType: "VIEW", visitorId: "visitor-3" })
+    expect(await recordCatalogEvent({ catalogId: randomUUID(), channel: "zalo", eventType: "VIEW", visitorId: "visitor-1" })).toBe(false)
+
+    const funnel = await getChannelFunnel(a.ctx, 30)
+    expect(funnel.rows.find((r) => r.channel === "zalo")).toMatchObject({ views: 2, orders: 1, orderRate: 50 })
+    expect(funnel.rows.find((r) => r.channel === "truc-tiep")).toMatchObject({ views: 1 })
+    expect((await getChannelFunnel(b.ctx, 30)).rows).toEqual([])
+  })
+})

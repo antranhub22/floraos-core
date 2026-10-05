@@ -188,6 +188,7 @@ model organizations {
   greeting_integration      greeting_integrations?
   greeting_payment_events   greeting_payment_events[]
   greeting_notifications    greeting_notifications[]
+  greeting_catalog_events greeting_catalog_events[]
 }
 
 model workspaces {
@@ -2615,6 +2616,7 @@ model greeting_catalogs {
   items        greeting_catalog_products[]
   sessions     greeting_sessions[]
 
+  catalog_events greeting_catalog_events[]
   @@unique([organization_id, code])
   @@index([organization_id])
 }
@@ -2738,6 +2740,26 @@ model greeting_notifications {
 }
 
 /// Ghi nhật ký hành trình tương tác của khách trên Thẻ chào (Swipe, Select, Checkout...)
+/// Phễu link dùng chung (`/bst`, `/g`) theo kênh — PO duyệt 06/10/2026 (mục 16).
+/// Một dòng mỗi bước của một người xem; `visitor_hash` là băm ngẫu nhiên trên máy
+/// khách (không IP, không SĐT). Đơn đặt từ link ghi thêm bước ORDER kèm order_id.
+model greeting_catalog_events {
+  id              String   @id @default(uuid())
+  organization_id String
+  catalog_id      String
+  channel         String // fanpage | zalo | ads | tiktok | bio | khac — từ ?kenh= trên link, mặc định "khac"
+  event_type      String // VIEW | DETAIL | FORM_OPEN | ORDER
+  visitor_hash    String
+  order_id        String?
+  created_at      DateTime @default(now())
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  catalog      greeting_catalogs @relation(fields: [catalog_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, catalog_id, created_at])
+  @@index([organization_id, channel])
+}
+
 model greeting_journey_events {
   id              String   @id @default(uuid())
   organization_id String
