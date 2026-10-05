@@ -13,6 +13,8 @@ export interface BrochurePaymentPolicy {
   depositPercent: number
   requirePaidBeforeProduction: boolean
   requireFullBeforeDispatch: boolean
+  /** Số phút giữ đơn chờ chuyển khoản lần đầu (hiện đồng hồ đếm ngược cho khách); 0 = không hiện. */
+  holdMinutes?: number
 }
 
 export const DEFAULT_PAYMENT_POLICY: BrochurePaymentPolicy = {
@@ -31,6 +33,10 @@ export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
     depositPercent: pct >= 1 && pct <= 99 ? pct : 0,
     requirePaidBeforeProduction: r.require_paid_before_production === true,
     requireFullBeforeDispatch: r.require_full_before_dispatch === true,
+    // Chỉ thêm khoá khi tiệm bật giữ đơn — chính sách cũ giữ nguyên hình dạng
+    ...(typeof r.hold_minutes === "number" && Number.isInteger(r.hold_minutes) && r.hold_minutes >= 5 && r.hold_minutes <= 1440
+      ? { holdMinutes: r.hold_minutes }
+      : {}),
   }
 }
 
@@ -90,4 +96,14 @@ export function quoteBlocker(order: { status: string; totalVnd: number }, totalV
   if (order.totalVnd > 0) return "Đơn hàng đã có giá, không báo giá lại được"
   if (!Number.isInteger(totalVnd) || totalVnd <= 0 || totalVnd > MAX_QUOTE_VND) return "Số tiền báo giá không hợp lệ"
   return null
+}
+
+/** Hạn giữ đơn (ISO) khi tiệm bật giữ đơn và khách chưa trả đồng nào; ngược lại `null`. */
+export function paymentHoldUntil(
+  policy: BrochurePaymentPolicy,
+  order: { paidVnd: number; createdAt?: Date | undefined },
+): string | null {
+  const minutes = policy.holdMinutes ?? 0
+  if (minutes <= 0 || order.paidVnd > 0 || !order.createdAt) return null
+  return new Date(order.createdAt.getTime() + minutes * 60_000).toISOString()
 }

@@ -146,6 +146,8 @@ export interface BrochurePaymentInstructions {
   accountName: string
   amount: number
   transferMemo: string
+  /** Hạn giữ đơn chờ chuyển khoản (ISO) — trang khách hiện đếm ngược; null = không giữ hạn. */
+  holdUntil?: string | null
 }
 
 /** Phần phiên trả ra trang công khai — KHÔNG chứa SĐT khách, id tổ chức, id sale. */

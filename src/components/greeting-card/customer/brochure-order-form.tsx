@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import {
   ORDER_FIELD_MAX,
   MAX_DELIVERY_LEAD_DAYS,
-  todayInVietnam,
   validateCustomerOrderInput,
 } from "@/modules/greeting-card/domain/greeting-card-rules"
 import type {
@@ -17,7 +16,8 @@ import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pri
 import { BrochureOrderOptions } from "./brochure-order-options"
 import { useBrochureQuote } from "./use-brochure-quote"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
-import { PrivacyNotice } from "./privacy-notice"
+import { OrderReview } from "./order-review"
+import { DELIVERY_SLOTS, availableSlots, deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-card/domain/delivery-schedule"
 
 interface BrochureOrderFormProps {
   productSnapshot: ProductSnapshot
@@ -57,11 +57,12 @@ export function BrochureOrderForm({
 
   const [loading, setLoading] = useState(false)
   const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone)
-  const minDate = todayInVietnam()
+  const minDate = earliestDeliveryDate(shipping)
   const maxDate = new Date(Date.parse(`${minDate}T00:00:00Z`) + MAX_DELIVERY_LEAD_DAYS * 86_400_000)
     .toISOString()
     .slice(0, 10)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [review, setReview] = useState<CustomerOrderSubmitInput | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -72,6 +73,11 @@ export function BrochureOrderForm({
       customerName, customerPhone, recipientName, recipientPhone,
       deliveryDate, deliveryTimeSlot, deliveryAddress, cardMessage, senderNote,
     })
+    const scheduleError = deliveryDate ? deliveryScheduleError(deliveryDate, deliveryTimeSlot, shipping) : null
+    if (scheduleError) {
+      check.errors.deliveryDate = scheduleError
+      check.valid = false
+    }
     if (shipping.zones.length > 0 && !pricing.selection.shippingZoneId) {
       check.errors.shippingZoneId = "Vui lòng chọn khu vực giao hoa"
       check.valid = false
@@ -81,28 +87,53 @@ export function BrochureOrderForm({
       return
     }
 
+    // Sang bước "Xem lại đơn"; chỉ gửi khi khách bấm xác nhận
+    window.scrollTo({ top: 0 })
+    setReview({
+      customerName,
+      customerPhone,
+      recipientName,
+      recipientPhone,
+      deliveryDate,
+      deliveryTimeSlot,
+      deliveryAddress,
+      cardMessage,
+      senderNote,
+      quantity: pricing.selection.quantity,
+      ...(pricing.selection.variantId ? { variantId: pricing.selection.variantId } : {}),
+      ...(pricing.selection.shippingZoneId ? { shippingZoneId: pricing.selection.shippingZoneId } : {}),
+      ...(pricing.selection.voucherCode ? { voucherCode: pricing.selection.voucherCode } : {}),
+    })
+  }
+
+  async function handleConfirm() {
+    if (!review) return
+    setErrorMessage(null)
     setLoading(true)
     try {
-      await onSubmit({
-        customerName,
-        customerPhone,
-        recipientName,
-        recipientPhone,
-        deliveryDate,
-        deliveryTimeSlot,
-        deliveryAddress,
-        cardMessage,
-        senderNote,
-        quantity: pricing.selection.quantity,
-        ...(pricing.selection.variantId ? { variantId: pricing.selection.variantId } : {}),
-        ...(pricing.selection.shippingZoneId ? { shippingZoneId: pricing.selection.shippingZoneId } : {}),
-        ...(pricing.selection.voucherCode ? { voucherCode: pricing.selection.voucherCode } : {}),
-      })
+      await onSubmit(review)
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Đã có lỗi xảy ra khi đặt hoa")
     } finally {
       setLoading(false)
     }
+  }
+
+  if (review) {
+    return (
+      <div className="w-full max-w-lg mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-6 shadow-sm">
+        <OrderReview
+          product={productSnapshot}
+          variantName={variants.find((v) => v.id === review.variantId)?.name ?? null}
+          input={review}
+          quote={pricing.quote}
+          submitting={loading}
+          error={errorMessage}
+          onEdit={() => setReview(null)}
+          onConfirm={() => void handleConfirm()}
+        />
+      </div>
+    )
   }
 
   return (
@@ -249,10 +280,9 @@ export function BrochureOrderForm({
               id={`${uid}-deliveryTimeSlot`} onChange={(e) => setDeliveryTimeSlot(e.target.value)}
               className={INPUT}
             >
-              <option value="Buổi sáng (8h - 12h)">Buổi sáng (8h - 12h)</option>
-              <option value="Buổi chiều (13h - 17h)">Buổi chiều (13h - 17h)</option>
-              <option value="Buổi tối (18h - 21h)">Buổi tối (18h - 21h)</option>
-              <option value="Giờ cụ thể (liên hệ)">Giờ cụ thể (liên hệ)</option>
+              {(deliveryDate ? availableSlots(deliveryDate, shipping) : DELIVERY_SLOTS.map((x) => x.label)).map((slot) => (
+                <option key={slot} value={slot}>{slot}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -310,9 +340,8 @@ export function BrochureOrderForm({
           className="mt-2 w-full h-12 bg-primary hover:bg-primary-dark text-white font-extrabold text-body flex items-center justify-center gap-2 rounded-xl shadow-md"
         >
           <Send size={18} aria-hidden="true" />
-          <span>{loading ? "Đang gửi đơn hàng..." : "Đặt hoa & thanh toán"}</span>
+          <span>{loading ? "Đang gửi đơn hàng..." : "Xem lại đơn"}</span>
         </Button>
-        <PrivacyNotice />
       </form>
     </div>
   )

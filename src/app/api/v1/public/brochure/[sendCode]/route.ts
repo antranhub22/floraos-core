@@ -8,7 +8,7 @@ export const GET = handle<[{ params: Promise<{ sendCode: string }> }]>(async (re
   await enforceRateLimit(request, { scope: "brochure-view", limit: 120, windowMs: 60_000 })
   const { sendCode } = await context.params
   const data = await getGreetingCatalogForCustomer(sendCode)
-  if (data.status === "NOT_FOUND") throw notFound()
+  if (data.status !== "ACTIVE") throw notFound()
   return jsonResponse(data)
 })
 

@@ -1,3 +1,4 @@
+import { queueOrderNotification } from "./notify-customer"
 import { validationFailed } from "@/core/http/errors"
 import { generateBrochureOrderCode, normalizePhone } from "../domain/greeting-card-rules"
 import { paymentInstructionsFor } from "./payment-instructions"
@@ -85,6 +86,8 @@ export async function placeBrochureOrder(
     },
     customerId
   )
+  // Tin "Đã nhận đơn" kèm link theo dõi — chạy nền, lỗi gửi tin không ảnh hưởng đơn
+  queueOrderNotification(organizationId, order.id, "ORDER_RECEIVED")
 
   return {
     sendCode: session.send_code,
@@ -93,6 +96,6 @@ export async function placeBrochureOrder(
     totalVnd: priced.quote.totalVnd,
     quote: priced.quote,
     productSnapshot: snapshot,
-    vietQr: paymentInstructionsFor(params.shopSettings, { totalVnd: priced.quote.totalVnd, paidVnd: 0 }, order.code),
+    vietQr: paymentInstructionsFor(params.shopSettings, { totalVnd: priced.quote.totalVnd, paidVnd: 0, createdAt: new Date() }, order.code),
   }
 }
