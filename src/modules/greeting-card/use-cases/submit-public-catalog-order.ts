@@ -1,3 +1,4 @@
+import { normalizeOrderAddress } from "../domain/delivery-address"
 import { deliveryScheduleError } from "../domain/delivery-schedule"
 import { parseShippingConfig } from "../domain/brochure-pricing"
 import { notFound, validationFailed } from "@/core/http/errors"
@@ -31,11 +32,14 @@ async function orderableFromCatalog(
 /** Đặt hoa trực tiếp từ link bộ sưu tập công khai `/g/...` (không qua link chào riêng). */
 export async function submitPublicCatalogOrder(
   catalogId: string,
-  input: PublicCatalogOrderInput,
+  rawInput: PublicCatalogOrderInput,
   repo = new GreetingCardRepository()
 ): Promise<BrochureOrderResult> {
+  const address = normalizeOrderAddress(rawInput)
+  const input = address.input
   const validation = validateCustomerOrderInput(input)
-  if (!validation.valid) throw validationFailed(validation.errors)
+  const errors = { ...validation.errors, ...address.errors }
+  if (Object.keys(errors).length > 0) throw validationFailed(errors)
 
   const { catalog, product } = await orderableFromCatalog(catalogId, input.productId, repo)
   const shop = await repo.getShopProfile(catalog.organization_id)

@@ -17,6 +17,8 @@ import { BrochureOrderOptions } from "./brochure-order-options"
 import { useBrochureQuote } from "./use-brochure-quote"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { OrderReview } from "./order-review"
+import { AddressFields } from "./address-fields"
+import { composeAddress, validateAddressParts, type AddressParts } from "@/modules/greeting-card/domain/delivery-address"
 import { DELIVERY_SLOTS, availableSlots, deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-card/domain/delivery-schedule"
 
 interface BrochureOrderFormProps {
@@ -51,7 +53,8 @@ export function BrochureOrderForm({
   const [recipientPhone, setRecipientPhone] = useState("")
   const [deliveryDate, setDeliveryDate] = useState("")
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState("Buổi sáng (8h - 12h)")
-  const [deliveryAddress, setDeliveryAddress] = useState("")
+  const [addressParts, setAddressParts] = useState<AddressParts>({ houseNumber: "", street: "", ward: "", province: "" })
+  const deliveryAddress = composeAddress(addressParts)
   const [cardMessage, setCardMessage] = useState("")
   const [senderNote, setSenderNote] = useState("")
 
@@ -78,6 +81,12 @@ export function BrochureOrderForm({
       check.errors.deliveryDate = scheduleError
       check.valid = false
     }
+    const addressErrors = validateAddressParts(addressParts)
+    if (Object.keys(addressErrors).length > 0) {
+      delete check.errors.deliveryAddress // báo đúng ô còn thiếu thay vì "địa chỉ chung"
+      Object.assign(check.errors, addressErrors)
+      check.valid = false
+    }
     if (shipping.zones.length > 0 && !pricing.selection.shippingZoneId) {
       check.errors.shippingZoneId = "Vui lòng chọn khu vực giao hoa"
       check.valid = false
@@ -97,6 +106,7 @@ export function BrochureOrderForm({
       deliveryDate,
       deliveryTimeSlot,
       deliveryAddress,
+      addressParts,
       cardMessage,
       senderNote,
       quantity: pricing.selection.quantity,
@@ -287,21 +297,7 @@ export function BrochureOrderForm({
           </div>
         </div>
 
-        {/* Địa chỉ giao */}
-        <div>
-          <label htmlFor={`${uid}-deliveryAddress`} className="block text-body-sm font-bold text-foreground mb-1">
-            Địa chỉ giao hoa chi tiết <span className="text-danger">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành"
-            value={deliveryAddress}
-            maxLength={ORDER_FIELD_MAX.address}
-            id={`${uid}-deliveryAddress`} autoComplete="street-address" onChange={(e) => setDeliveryAddress(e.target.value)}
-            className={INPUT}
-          />
-        </div>
+        <AddressFields idPrefix={uid} value={addressParts} inputClassName={INPUT} onChange={setAddressParts} />
 
         {/* Lời nhắn thiệp */}
         <div>

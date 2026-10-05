@@ -1,3 +1,4 @@
+import type { AddressParts } from "../domain/delivery-address"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { conflict } from "@/core/http/errors"
 import { Prisma } from "@/generated/prisma/client"
@@ -15,6 +16,8 @@ export interface CreateBrochureOrderData {
   recipientName: string
   recipientPhone: string
   deliveryAddress: string
+  /** 5 ô địa chỉ (form mới) — lưu kèm để in phiếu/lọc theo phường, tỉnh */
+  addressParts?: AddressParts | null | undefined
   deliveryDate: string
   deliveryTimeSlot: string
   cardMessage?: string | null | undefined
@@ -118,6 +121,7 @@ export class BrochureCheckoutRepository {
             recipientName: data.recipientName,
             phone: data.recipientPhone,
             street: data.deliveryAddress,
+            ...(data.addressParts ? { parts: { ...data.addressParts } } : {}),
             ...(quote.shippingZone ? { zone: quote.shippingZone.name } : {}),
           },
           created_by: "customer-brochure",

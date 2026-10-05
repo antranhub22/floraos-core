@@ -1,3 +1,4 @@
+import { normalizeOrderAddress } from "../domain/delivery-address"
 import { deliveryScheduleError } from "../domain/delivery-schedule"
 import { parseShippingConfig } from "../domain/brochure-pricing"
 import { unprocessable, validationFailed } from "@/core/http/errors"
@@ -15,12 +16,15 @@ export { DEFAULT_TIME_SLOT, type BrochureOrderResult } from "./place-brochure-or
 /** Khách gửi đơn từ link chào `/b/[sendCode]` (đã chọn mẫu trước đó). */
 export async function submitBrochureOrder(
   sendCode: string,
-  input: CustomerOrderSubmitInput,
+  rawInput: CustomerOrderSubmitInput,
   repo = new GreetingCardRepository(),
   orders = new BrochureOrderRepository()
 ): Promise<BrochureOrderResult> {
+  const address = normalizeOrderAddress(rawInput)
+  const input = address.input
   const validation = validateCustomerOrderInput(input)
-  if (!validation.valid) throw validationFailed(validation.errors)
+  const errors = { ...validation.errors, ...address.errors }
+  if (Object.keys(errors).length > 0) throw validationFailed(errors)
 
   const session = await loadPublicSession(sendCode, repo)
   const shop = await repo.getShopProfile(session.organization_id)

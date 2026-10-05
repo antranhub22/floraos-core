@@ -88,3 +88,26 @@ describe("tin nhắn đã nhận đơn", () => {
     expect(text).toContain("https://x/b/T01-ABC")
   })
 })
+
+import { composeAddress, normalizeOrderAddress, validateAddressParts } from "@/modules/greeting-card/domain/delivery-address"
+
+describe("địa chỉ giao 5 ô", () => {
+  const parts = { houseNumber: "45", street: "Lê Lợi", ward: "Phường Bến Thành", district: "", province: "TP. Hồ Chí Minh" }
+
+  it("ghép một dòng, bỏ ô trống (quận/huyện tuỳ chọn)", () => {
+    expect(composeAddress(parts)).toBe("45 Lê Lợi, Phường Bến Thành, TP. Hồ Chí Minh")
+    expect(composeAddress({ ...parts, district: "Quận 1" })).toBe("45 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh")
+  })
+
+  it("bắt buộc số nhà, đường, phường/xã, tỉnh/thành", () => {
+    expect(Object.keys(validateAddressParts({ houseNumber: "", street: "", ward: "", province: "" }))).toEqual(["houseNumber", "street", "ward", "province"])
+    expect(validateAddressParts(parts)).toEqual({})
+  })
+
+  it("máy chủ tự ghép dòng địa chỉ từ 5 ô, không tin dòng client gửi", () => {
+    const { input, errors } = normalizeOrderAddress({ deliveryAddress: "giả mạo", addressParts: parts })
+    expect(errors).toEqual({})
+    expect(input.deliveryAddress).toBe("45 Lê Lợi, Phường Bến Thành, TP. Hồ Chí Minh")
+    expect(normalizeOrderAddress({ deliveryAddress: "123 Đường cũ, Q1" }).input.deliveryAddress).toBe("123 Đường cũ, Q1")
+  })
+})

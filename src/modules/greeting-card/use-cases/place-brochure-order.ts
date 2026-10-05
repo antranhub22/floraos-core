@@ -75,6 +75,7 @@ export async function placeBrochureOrder(
       recipientName: input.recipientName.trim(),
       recipientPhone: normalizePhone(input.recipientPhone),
       deliveryAddress: input.deliveryAddress.trim(),
+      addressParts: input.addressParts ?? null,
       deliveryDate: input.deliveryDate.trim(),
       deliveryTimeSlot: input.deliveryTimeSlot?.trim() || DEFAULT_TIME_SLOT,
       cardMessage: input.cardMessage?.trim() || null,

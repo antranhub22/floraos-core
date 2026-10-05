@@ -1,3 +1,5 @@
+import type { AddressParts } from "./delivery-address"
+
 /**
  * Domain Types for Greeting Card / Swipe Brochure Module (Thẻ Chào / Brochure).
  * Pure TypeScript — No Prisma or external infrastructure imports.
@@ -104,6 +106,8 @@ export interface CustomerOrderSubmitInput {
   deliveryDate: string // YYYY-MM-DD
   deliveryTimeSlot?: string | undefined
   deliveryAddress: string
+  /** Địa chỉ tách 5 ô (form mới); `deliveryAddress` là dòng ghép đầy đủ để tương thích */
+  addressParts?: AddressParts | undefined
   cardMessage?: string | undefined
   senderNote?: string | undefined
   /** Lựa chọn mua — server tính lại giá từ các lựa chọn này, không nhận giá từ client. */
