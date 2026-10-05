@@ -8,6 +8,8 @@ description: >-
 
 # UI Development — FloraOS
 
+> Rà theo mã thật: 05/10/2026. Đường dẫn và lệnh `npm run` trong tệp này được `npm run check:docs` kiểm tự động.
+
 ## Quick Reference (copy-paste)
 
 ### Page layout chuẩn
@@ -118,7 +120,7 @@ Overview → Liên quan → Hành động → Tùy chọn → Nâng cao. Không 
 
 ### 8. Route tiếng Việt
 
-Route group `(app)` dùng slug tiếng Việt: `/san-pham`, `/don-hang`, `/khach-hang`. Tạo route mới → slug tiếng Việt có dấu gạch nối.
+Route group `(app)` dùng slug tiếng Việt: `/san-pham`, `/don-hang`, `/khach-hang`. Tạo route mới → slug tiếng Việt có dấu gạch nối. Tuyến cũ tiếng Anh (`/audit`, `/catalog`, `/chat`, `/creative-studio`, `/job`, `/market-intelligence`) giữ nguyên — đổi tên làm gãy link đã chia sẻ; không tự đổi.
 
 ### 9. Journey-First UX Architecture (J1–J7)
 

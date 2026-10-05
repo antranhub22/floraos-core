@@ -8,13 +8,15 @@ description: >-
 
 # Database & Prisma Schema — FloraOS
 
+> Rà theo mã thật: 05/10/2026. Đường dẫn và lệnh `npm run` trong tệp này được `npm run check:docs` kiểm tự động.
+
 ## Quick Reference (copy-paste)
 
 ### Thêm bảng mới (checklist)
 ```
 1. Thêm model vào prisma/schema.prisma — BẮT BUỘC có organization_id
 2. npx prisma generate
-3. npx prisma db push (dev) hoặc npx prisma migrate dev (production-track)
+3. npx prisma db push (dev). ⚠ Production (Render) cũng chạy `prisma db push --accept-data-loss` khi build (`render.yaml`) — đổi tên/xoá cột là MẤT DỮ LIỆU THẬT lúc deploy
 4. Tạo repository tại src/modules/<module>/infra/<table>-repository.ts
 5. Dùng scopedWhere(ctx) + scopedData(ctx, data)
 6. Viết tenant test tại tests/tenant/<resource>.test.ts
@@ -24,7 +26,7 @@ description: >-
 ### Model mẫu
 ```prisma
 model my_table {
-  id              String   @id @default(cuid())
+  id              String   @id @default(uuid())
   organization_id String
   name            String
   status          String   @default("DRAFT")
@@ -42,19 +44,20 @@ model my_table {
 ## Rules (bắt buộc)
 
 ### 1. Tenant — organization_id bắt buộc
-- Mọi bảng PHẢI có `organization_id`. Không ngoại lệ.
+- Mọi bảng **thuộc tenant** PHẢI có `organization_id` — kể cả bảng tra cứu và demo workspace.
+- Ngoại lệ duy nhất: bảng **cấp nền tảng** (sổ đăng ký dùng chung, không phải dữ liệu của một tiệm — vd `ai_models`, `ai_capabilities`, `field_definitions`, `platform_operators`, `decision_registry`; 24/83 bảng lúc rà 05/10/2026). Thêm bảng loại này phải ghi lý do ở đặc tả 07.
 - Kiểm ở tầng repository (scopedWhere/scopedData), không ở route.
 - **Không tạo bảng trước khi P1 (tenant) và P2 (RBAC) đạt nghiệm thu.**
 
 ### 2. Schema Conventions
 - Lược đồ: `snake_case` tiếng Anh. Không PascalCase, không tiếng Việt.
-- Schema file: `prisma/schema.prisma` (~99KB).
-- Mỗi bảng có `@@index([organization_id])` cho tenant query.
+- Schema file: `prisma/schema.prisma` (~105KB, 83 model). Id mặc định `@default(uuid())`.
+- Mỗi bảng tenant có `@@index([organization_id])` hoặc index ghép BẮT ĐẦU bằng `organization_id`.
 
 ### 3. Quy trình sửa schema
 1. Sửa `prisma/schema.prisma`
 2. `npx prisma generate`
-3. `npx prisma db push` (dev) hoặc `npx prisma migrate dev`
+3. `npx prisma db push` (dev — hook `.claude/hooks/guard-bash.mjs` hỏi lại nếu `DATABASE_URL` không phải máy cục bộ)
 4. `npx prisma db seed` nếu cần
 5. **⚠️ DỪNG LẠI HỎI USER trước khi sửa schema.**
 
@@ -79,7 +82,7 @@ model settings {
 ### ✅ DO — Luôn có organization_id + index
 ```prisma
 model settings {
-  id              String @id @default(cuid())
+  id              String @id @default(uuid())
   organization_id String
   key             String
   value           String
@@ -118,9 +121,9 @@ const items = await db.myTable.findMany({
 
 ## Gotchas
 
-1. **Schema ~99KB** — `npx prisma generate` mất thời gian. Không chạy liên tục.
+1. **Schema ~105KB** — `npx prisma generate` mất thời gian. Không chạy liên tục.
 2. **`exactOptionalPropertyTypes: true`** — Không gán `undefined`. Bỏ key hoặc dùng `T | undefined`.
 3. **Migration đã chạy** — KHÔNG sửa tay file trong `prisma/migrations/`.
-4. **Index** — Mọi bảng ít nhất có `@@index([organization_id])`. Query thường xuyên → thêm composite index.
+4. **Index** — Mọi bảng tenant có index dẫn đầu bằng `organization_id`. Query thường xuyên → thêm composite index.
 
 > Xem thêm: skill `api-development` §7 cho tenant trong use-case. Skill `testing` §4 cho tenant test.

@@ -8,7 +8,7 @@ import { validateJourneyDefinition } from "./journey-model"
 
 describe("journey-catalog domain", () => {
   it("toàn bộ Store Admin journeys hợp lệ theo quy chuẩn", () => {
-    expect(STORE_JOURNEYS.length).toBe(13)
+    expect(STORE_JOURNEYS.length).toBe(14) // +greeting-card-hub (M14, d840344)
     for (const journey of STORE_JOURNEYS) {
       const result = validateJourneyDefinition(journey)
       expect(result.valid).toBe(true)

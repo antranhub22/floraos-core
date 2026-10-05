@@ -7,6 +7,8 @@ description: >-
 
 # Testing — FloraOS
 
+> Rà theo mã thật: 05/10/2026. Đường dẫn và lệnh `npm run` trong tệp này được `npm run check:docs` kiểm tự động.
+
 ## Quick Reference (copy-paste)
 
 ### Unit test cho use-case
@@ -32,22 +34,29 @@ describe("myAction", () => {
 
 ### Tenant isolation test (Chuẩn FloraOS: 404 chứ không 403)
 ```typescript
-// tests/tenant/<resource>.test.ts
-import { describe, it, expect } from "vitest"
+// tests/tenant/<resource>.test.ts — khuôn thật, xem tests/tenant/greeting-card.test.ts
+import { afterAll, beforeEach, describe, expect, it } from "vitest"
+import { disconnectDatabase, resetDatabase } from "../helpers/database"
+import { createTenant, type Tenant } from "../helpers/fixtures"
 
-describe("tenant isolation: <resource>", () => {
-  it("org-A không thấy dữ liệu org-B (phải trả về 404/rỗng, KHÔNG trả 403 vì 403 làm lộ sự tồn tại)", async () => {
-    // 1. Tạo record cho org-B
-    const recordB = await createForOrg("org-B", { name: "Secret B" })
-    
-    // 2. Query bằng ctx của org-A
-    const result = await findById(ctxOrgA, recordB.id)
-    
-    // 3. Kỳ vọng: null hoặc ném 404 NOT_FOUND (tuyệt đối không trả 403 FORBIDDEN)
-    expect(result).toBeNull()
+describe("<resource> — cách ly tenant", () => {
+  let tenantA: Tenant
+  let tenantB: Tenant
+
+  beforeEach(async () => {
+    await resetDatabase()                 // TRUNCATE mọi bảng trong TENANT_TABLES
+    tenantA = await createTenant("alpha") // dựng tổ chức qua đúng luồng đăng ký thật
+    tenantB = await createTenant("beta")
+  })
+  afterAll(async () => { await disconnectDatabase() })
+
+  it("tổ chức A không đọc được bản ghi của B (null/404, KHÔNG 403)", async () => {
+    const recordB = await repo.create(tenantB.ctx, { name: "Bí mật B" })
+    expect(await repo.findById(tenantA.ctx, recordB.id)).toBeNull()
   })
 })
 ```
+Bảng tenant mới ⇒ thêm tên bảng vào `TENANT_TABLES` (`tests/helpers/database.ts`) — `npm run check:docs` đỏ nếu quên.
 ---
 
 ## Rules (bắt buộc)
@@ -56,7 +65,7 @@ describe("tenant isolation: <resource>", () => {
 
 | Suite | Lệnh | Gate |
 |---|---|---|
-| Unit | `npm test` | Phải xanh |
+| Unit | `npm test` | Không thêm ca đỏ so với `main` (nợ #172) |
 | Tenant | `npm run test:tenant` | **BẮT BUỘC xanh trước merge** |
 | Platform | `npm run test:platform` | Phải xanh |
 | E2E | `npm run test:e2e` | Cần worker media đang chạy |
@@ -73,17 +82,17 @@ describe("tenant isolation: <resource>", () => {
 
 - **Mock ở tầng infra**: Mock repository, không mock domain logic.
 - **Dùng `vi.mock()`** cho external services (AI, storage).
-- **KHÔNG mock** `TenantContext` — tạo context thật: `{ organizationId: "org-test", ... }`.
+- **KHÔNG mock** `TenantContext`. Unit test: dựng context thật `{ organizationId: "org-test", ... }`. Tenant test: dùng `createTenant()` (`tests/helpers/fixtures.ts`) — tổ chức thật qua luồng đăng ký.
 - **Test DB** cho tenant test: dùng `floraos_test`, setup bằng `npm run db:test:setup`.
 
 ### 4. Test Data
 
 - Tạo test data rõ ràng trong mỗi test. Không dùng shared mutable state.
-- Dọn dẹp sau test nếu dùng DB thật (tenant suite).
+- Tenant suite: `resetDatabase()` ở `beforeEach` (TRUNCATE), `disconnectDatabase()` ở `afterAll`.
 
 ### 5. Vitest Gotchas
 
-- **`fileParallelism: false`**: KHÔNG bật — tests dùng chung DB.
+- **`fileParallelism: false`** trong `vitest.config.ts`: GIỮ NGUYÊN `false` — các tệp tenant dùng chung DB, chạy song song sẽ đè dữ liệu nhau.
 - **`server-only` stub**: Đã alias tại `vitest.config.ts` → `tests/helpers/server-only-stub.ts`. Không cần xử lý riêng.
 - **Setup**: `tests/setup.ts` chạy trước mỗi suite.
 
@@ -140,6 +149,7 @@ it("không trả sản phẩm của tổ chức khác", async () => {
 | Tenant test mẫu | `tests/tenant/` |
 | E2E test | `tests/e2e/` |
 | Architecture test (cấm import Prisma ngoài infra) | `tests/tenant/khong-import-prisma-ngoai-infra.test.ts` |
+| Architecture test (route phải gác mã năng lực) | `tests/unit/architecture/route-capability-guard.test.ts` |
 | Tenant context test | `src/core/tenancy/tenant-context.test.ts` |
 
 > Xem thêm: skill `api-development` cho pattern API cần test. Skill `database-schema` §4 cho DB test setup.

@@ -1,0 +1,164 @@
+{
+  "total": 78,
+  "files": {
+    "src/app/(app)/audit/page.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/(app)/bao-gia/page.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/(app)/cai-dat/page.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/(app)/cai-dat/thanh-vien/_components/change-role-dialog.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/(app)/cai-dat/thanh-vien/page.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/(app)/don-hang/page.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/(app)/muc-dung/page.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/(app)/san-pham/page.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/(app)/san-pham/tao-moi/page.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/(app)/the-chao/page.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/app/api/v1/greeting-card/tracking-pipeline/route.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/catalog/catalog-journey-entry.tsx": {
+      "react/no-unescaped-entities": 2
+    },
+    "src/components/catalog/landing-templates/landing-template-video.tsx": {
+      "react-hooks/rules-of-hooks": 1
+    },
+    "src/components/coordinator/partner-management-modal.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/coordinator/sla-monitor-modal.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/dashboard/crm-workspace.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/dashboard/customer-service-workspace.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/dashboard/flower-network-command-center.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/dashboard/marketing-workspace.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/dashboard/network-journey-home.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/dashboard/platform-journey-home.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/dashboard/product-manager-workspace.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/dashboard/store-growth-center.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/dashboard/store-journey-home.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/greeting-card/admin/admin-brochure-payment-tab.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/greeting-card/catalog/catalog-detail-panel.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/greeting-card/catalog/catalog-list-tab.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/greeting-card/catalog/catalog-product-picker.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/greeting-card/coordinator/coordinator-brochure-tab.tsx": {
+      "react-hooks/set-state-in-effect": 1,
+      "react/no-unescaped-entities": 2
+    },
+    "src/components/greeting-card/customer/brochure-tracking-view.tsx": {
+      "react-hooks/set-state-in-effect": 1,
+      "react/no-unescaped-entities": 2
+    },
+    "src/components/greeting-card/journey/journey-wizard.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/greeting-card/sales/sales-brochure-tab.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/greeting-card/tracking/brochure-order-tracking-tab.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/greeting-card/tracking/tracking-internal-chat-drawer.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/greeting-card/tracking/tracking-order-card.tsx": {
+      "react/no-unescaped-entities": 2
+    },
+    "src/components/layout/desktop-nav.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/orders/create-order-modal.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/orders/order-detail-modal.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/platform/vietqr-topup-modal.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/profiles/brand-assets-manager-tab.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/profiles/brand-assets-uploader.tsx": {
+      "react/no-unescaped-entities": 2
+    },
+    "src/components/profiles/brand-profile-form.tsx": {
+      "react-hooks/set-state-in-effect": 1,
+      "react/no-unescaped-entities": 2
+    },
+    "src/components/profiles/sales-defaults-form.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/storage/storage-trash-tab.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/components/templates/shared/feature-guidance-card.tsx": {
+      "react-hooks/set-state-in-effect": 1
+    },
+    "src/modules/content-engine/domain/landing-content-generator.ts": {
+      "prefer-const": 1
+    },
+    "src/modules/greeting-card/infra/greeting-card-repository.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/modules/greeting-card/use-cases/get-greeting-catalog.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/modules/greeting-card/use-cases/get-tracking-pipeline.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/modules/journey/domain/journey-state.test.ts": {
+      "prefer-const": 1
+    },
+    "src/modules/profiles/adapters/business-profile-fact-reader.test.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/modules/storage/infra/trash-repository.ts": {
+      "@typescript-eslint/no-explicit-any": 5
+    }
+  }
+}

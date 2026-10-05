@@ -8,6 +8,8 @@ description: >-
 
 # API Development — FloraOS
 
+> Rà theo mã thật: 05/10/2026. Đường dẫn và lệnh `npm run` trong tệp này được `npm run check:docs` kiểm tự động.
+
 ## Quick Reference (copy-paste)
 
 ### Tạo API route
@@ -51,10 +53,10 @@ import type { TenantContext } from "@/core/tenancy"
 import { notFound } from "@/core/http/errors"
 import { MyRepository } from "@/modules/<module>/infra/my-repository"
 
-export async function myAction(ctx: TenantContext, input: MyInput) {
-  const record = await MyRepository.findById(ctx, input.id)
+export async function myAction(ctx: TenantContext, input: MyInput, repo = new MyRepository()) {
+  const record = await repo.findById(ctx, input.id) // repository là instance, nhận ctx — xem products/infra/product-repository.ts
   if (!record) throw notFound()
-  return MyRepository.update(ctx, record.id, input)
+  return repo.update(ctx, record.id, input)
 }
 ```
 
@@ -81,6 +83,7 @@ export const MyRepository = {
 
 ### 1. Route Pattern
 - Mọi route PHẢI qua `requireTenantContext()` → `requireCapability()`.
+- Khoá bằng test: `tests/unit/architecture/route-capability-guard.test.ts` đỏ khi route mới không gọi gác quyền. Ngoại lệ có chủ đích (webhook, URL ký, đăng nhập…) ghi vào `NO_CAPABILITY_GUARD` kèm lý do.
 - Route wrapper `handle()` tự bắt `AppError` và format response.
 - Route dưới `/api/v1/`. Endpoint duyệt tách: `/x/[id]/approve`.
 

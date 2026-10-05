@@ -36,9 +36,22 @@ export class GreetingCardRepository {
       },
     })
 
-    if (input.productIds && input.productIds.length > 0) {
+    // Chỉ nhận sản phẩm của chính tenant; id của tổ chức khác coi như không tồn tại.
+    const owned = input.productIds?.length
+      ? new Set(
+          (
+            await this.db.products.findMany({
+              where: scopedWhere(ctx, { id: { in: input.productIds } }),
+              select: { id: true },
+            })
+          ).map((p) => p.id)
+        )
+      : new Set<string>()
+    const productIds = (input.productIds ?? []).filter((id) => owned.has(id))
+
+    if (productIds.length > 0) {
       await this.db.greeting_catalog_products.createMany({
-        data: input.productIds.map((productId, index) => ({
+        data: productIds.map((productId, index) => ({
           organization_id: ctx.organizationId,
           catalog_id: catalog.id,
           product_id: productId,
@@ -387,6 +400,14 @@ export class GreetingCardRepository {
     })
     if (!catalog) throw new Error("Không tìm thấy catalog")
 
+    // Sản phẩm cũng phải thuộc tenant — thiếu kiểm này thì gắn được sản phẩm
+    // của tổ chức khác vào catalog mình và đọc ra tên/giá/ảnh ký của nó.
+    const product = await this.db.products.findFirst({
+      where: scopedWhere(ctx, { id: productId }),
+      select: { id: true },
+    })
+    if (!product) throw new Error("Không tìm thấy sản phẩm")
+
     const maxOrder = await this.db.greeting_catalog_products.aggregate({
       where: { catalog_id: catalogId },
       _max: { sort_order: true },
@@ -695,6 +716,13 @@ export class GreetingCardRepository {
       where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
     })
     if (!order) throw new Error("Không tìm thấy đơn hàng Thẻ chào")
+
+    // Ảnh phải thuộc tenant: trang tra cứu công khai ký URL cho ảnh này.
+    const asset = await this.db.assets.findFirst({
+      where: scopedWhere(ctx, { id: input.imageAssetId }),
+      select: { id: true },
+    })
+    if (!asset) throw new Error("Không tìm thấy ảnh")
 
     return this.db.$transaction(async (tx) => {
       await tx.order_qc_records.create({

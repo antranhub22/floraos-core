@@ -2154,3 +2154,135 @@ Mức sàn không cấu hình được (5 điều, Đặc tả trường §16.2)
 Trường TỰ TẠO (`origin = CUSTOM`, D13) lưu giá trị ở cột `custom_fields Json?` trên chính dòng tenant (`order_coordinations`, `partners` — ĐP-4 mở thêm khi các bảng đó có), nên cách ly theo `organization_id` có sẵn, không cần thêm gì. Giới hạn an toàn (§16.3): tối đa 50 trường tự tạo/thực thể, mỗi giá trị ≤ 4 KB, không đổi kiểu dữ liệu khi đã có giá trị, khoá `cf_…` máy sinh — kiểm ở `src/modules/field-platform/domain/field-rules.ts`.
 
 `scripts/check-field-registry.ts` (`npm run check:field-registry`) đối chiếu: mọi trường lõi trong code có dòng `field_definitions`; `catalog_key`/`behavior` trong DB chỉ trỏ tới danh mục/hành vi có thật; không `field_config_overrides` mồ côi.
+
+## 28. Thẻ chào / Swipe Brochure — `greeting_*` (03/10/2026)
+
+> **Bổ sung 05/10/2026** theo mã thật (`check:docs` bắt được bảng chưa khai). Bốn bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly. Ca thử: `tests/tenant/greeting-card.test.ts` (catalog, phiên, xác nhận thanh toán) và `tests/tenant/greeting-catalog-products-events.test.ts` (sản phẩm trong catalog, ghi chú nội bộ). Repository: `src/modules/greeting-card/infra/{greeting-card,tracking-pipeline}-repository.ts`. Endpoint: đặc tả 06 mục 25.
+
+- `greeting_catalogs` — bộ sưu tập chào khách theo dịp (`STANDARD`) hoặc riêng cho một khách (`CLIENT`); xoá là đặt `is_active = false`.
+- `greeting_catalog_products` — sản phẩm trong catalog. **Sản phẩm phải thuộc cùng tổ chức** (kiểm ở repository từ 05/10/2026; trước đó gắn được sản phẩm của tổ chức khác).
+- `greeting_sessions` — một đường link chào khách (`send_code`, duy nhất theo tổ chức); `product_snapshot` đóng băng mẫu hoa lúc khách chốt.
+- `greeting_journey_events` — sự kiện hành trình của khách (`OPEN`, `SELECT_PRODUCT`, `CLICK_PAID`…) và ghi chú nội bộ (`INTERNAL_NOTE`).
+
+```prisma
+model greeting_catalogs {
+  id              String   @id @default(uuid())
+  organization_id String
+  code            String   // 20-10, 8-3, sinh-nhat, cc
+  name            String
+  type            String   @default("STANDARD") // STANDARD | CLIENT
+  description     String?
+  filters         Json?    // Bộ lọc dịp, mức giá, màu sắc khi tạo Client Catalog
+  is_active       Boolean  @default(true)
+  created_by      String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization organizations               @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  items        greeting_catalog_products[]
+  sessions     greeting_sessions[]
+
+  @@unique([organization_id, code])
+  @@index([organization_id])
+}
+
+model greeting_catalog_products {
+  id              String   @id @default(uuid())
+  organization_id String
+  catalog_id      String
+  product_id      String
+  sort_order      Int      @default(0)
+  created_at      DateTime @default(now())
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  catalog      greeting_catalogs @relation(fields: [catalog_id], references: [id], onDelete: Cascade)
+  product      products          @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([catalog_id, product_id])
+  @@index([organization_id, catalog_id])
+  @@index([product_id])
+}
+
+model greeting_sessions {
+  id                  String    @id @default(uuid())
+  organization_id     String
+  catalog_id          String
+  send_code           String    // T01-001, T01-002...
+  sale_id             String    // Người tạo link chào khách
+  customer_name       String?
+  customer_phone      String?
+  status              String    @default("CREATED") // CREATED | OPENED | BROWSING | SELECTED | ORDER_SUBMITTED | PAYMENT_REPORTED | COMPLETED
+  selected_product_id String?
+  product_snapshot    Json?     // Đóng băng ảnh, tên, giá mẫu hoa lúc khách chốt
+  order_id            String?
+  opened_at           DateTime?
+  selected_at         DateTime?
+  last_active_at      DateTime  @default(now())
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  organization organizations             @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  catalog      greeting_catalogs         @relation(fields: [catalog_id], references: [id], onDelete: Cascade)
+  order        orders?                   @relation(fields: [order_id], references: [id], onDelete: SetNull)
+  events       greeting_journey_events[]
+
+  @@unique([organization_id, send_code])
+  @@index([organization_id, catalog_id])
+  @@index([organization_id, sale_id])
+  @@index([send_code])
+}
+
+model greeting_journey_events {
+  id              String   @id @default(uuid())
+  organization_id String
+  session_id      String
+  event_type      String   // OPEN | SWIPE_NEXT | SWIPE_PREV | SELECT_PRODUCT | OPEN_ORDER_FORM | SUBMIT_ORDER | CLICK_PAID | TRACK_VIEW
+  metadata        Json?
+  created_at      DateTime @default(now())
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  session      greeting_sessions @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, session_id])
+}
+```
+
+## 29. Journey Engine — `journey_runs`, `decision_registry` (30/09/2026)
+
+> **Bổ sung 05/10/2026** theo mã thật.
+>
+> - `journey_runs` — **TENANT**, có `organization_id`. **Chưa có đường đọc/ghi nào trong `src/`** (soát bằng `grep` 05/10/2026), nên nằm trong `SCHEMA_ONLY_CHUA_NOI` của `scripts/check-docs.mjs`; vẫn có trong `TRUNCATE` của bộ test cách ly. Khi có đường ghi thật phải bỏ khỏi danh sách đó và thêm ca thử cách ly.
+> - `decision_registry` — **bảng nền tảng**, không có `organization_id` (ngoại lệ có chủ đích của Luật 1, như `ai_capabilities`). Nạp từ `DECISION_REGISTRY_SEED` (`src/modules/journey/domain/decision-ownership.ts`) bởi `prisma/seed/decision-registry.ts`; đối chiếu bằng `npm run lint:decisions`.
+
+```prisma
+model journey_runs {
+  id               String   @id @default(uuid())
+  organization_id  String
+  workspace_id     String?
+  manifest_id      String
+  execution_mode   String   @default("manual") // manual | automatic
+  status           String   @default("PENDING") // PENDING | RUNNING | COMPLETED | FAILED
+  params           Json?
+  context_snapshot Json?
+  degraded_steps   Json?
+  created_by       String
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, manifest_id])
+  @@index([organization_id, status])
+}
+
+model decision_registry {
+  decision_id String  @id
+  ownership   String // USER | SYSTEM | SHARED
+  locked      Boolean @default(false)
+  description String
+  spec_ref    String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+```

@@ -51,7 +51,8 @@
     "seed:field-registry": "tsx --env-file-if-exists=.env scripts/nap-danh-muc-truong.ts",
     "check:field-registry": "tsx --env-file-if-exists=.env scripts/check-field-registry.ts",
     "lint:decisions": "tsx scripts/lint-decision-registry.ts",
-    "lint:manifests": "tsx scripts/lint-journey-manifests.ts"
+    "lint:manifests": "tsx scripts/lint-journey-manifests.ts",
+    "lint:ratchet": "node scripts/eslint-ratchet.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
