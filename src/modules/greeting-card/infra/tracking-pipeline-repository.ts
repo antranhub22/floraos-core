@@ -9,9 +9,8 @@ export class TrackingPipelineRepository {
 
   async listBrochureOrders(ctx: TenantContext) {
     return this.db.orders.findMany({
-      where: scopedWhere(ctx, {
-        source: "BROCHURE",
-      }),
+      // Đơn đã huỷ không còn bước nào để theo dõi
+      where: scopedWhere(ctx, { source: "BROCHURE", NOT: { status: "CANCELLED" as const } }),
       include: {
         customer: true,
         items: true,
@@ -36,9 +35,8 @@ export class TrackingPipelineRepository {
 
   async listActiveSessions(ctx: TenantContext) {
     return this.db.greeting_sessions.findMany({
-      where: scopedWhere(ctx, {
-        order_id: null,
-      }),
+      // Link chưa có đơn, còn hiệu lực (chưa thu hồi)
+      where: scopedWhere(ctx, { order_id: null, revoked_at: null }),
       include: {
         catalog: { select: { id: true, name: true, code: true } },
         events: { orderBy: { created_at: "asc" } },

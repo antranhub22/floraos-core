@@ -12,6 +12,8 @@ function inTenDays(): string {
   return new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10)
 }
 
+// Bảng phủ: greeting_catalogs, greeting_catalog_products (gắn sản phẩm), greeting_sessions,
+// greeting_journey_events (ghi theo phiên) — xem thêm greeting-card-*.test.ts
 describe("greeting-card tenant isolation", () => {
   let tenantA: Tenant
   let tenantB: Tenant

@@ -1,2 +1,3 @@
 import { productPhotoPOST } from "../_coordinator-handlers"
-export { productPhotoPOST as POST }
+
+export const POST = productPhotoPOST
