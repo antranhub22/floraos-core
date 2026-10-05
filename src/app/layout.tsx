@@ -1,7 +1,13 @@
 import type { Metadata } from "next"
 import "./globals.css"
+import { publicAppUrl } from "@/lib/public-url"
+
+const appUrl = publicAppUrl()
 
 export const metadata: Metadata = {
+  // Ảnh xem trước khi dán link vào Zalo/Facebook cần URL tuyệt đối; thiếu dòng này
+  // Next.js rơi về http://localhost:<PORT> ở mọi môi trường ngoài Vercel.
+  ...(appUrl ? { metadataBase: new URL(appUrl) } : {}),
   title: "FloraOS",
   description: "Nền tảng cho cửa hàng hoa",
 }
