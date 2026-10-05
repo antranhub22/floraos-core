@@ -42,18 +42,7 @@ const NO_CAPABILITY_GUARD: Record<string, string> = {
   "content-engine/catalog-generate": DEBT_170,
   "content-engine/landing-generate": DEBT_170,
   "content-engine/rewrite": DEBT_170,
-  "greeting-card/catalogs": DEBT_170,
   "greeting-card/display-settings": DEBT_170,
-  "greeting-card/catalogs/[id]": DEBT_170,
-  "greeting-card/catalogs/[id]/products": DEBT_170,
-  "greeting-card/orders": DEBT_170,
-  "greeting-card/orders/[id]/confirm-payment": DEBT_170,
-  "greeting-card/orders/[id]/assign-florist": DEBT_170,
-  "greeting-card/orders/[id]/dispatch-shipping": DEBT_170,
-  "greeting-card/orders/[id]/product-photo": DEBT_170,
-  "greeting-card/orders/[id]/recipient-photo": DEBT_170,
-  "greeting-card/send-links": DEBT_170,
-  "greeting-card/tracking-pipeline": DEBT_170,
 }
 
 function routeFiles(dir: string): string[] {

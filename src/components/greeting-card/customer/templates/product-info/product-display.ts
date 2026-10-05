@@ -13,8 +13,8 @@ import {
  * Mã mẫu, tên và giá luôn hiển thị.
  */
 
-export function formatVnd(value: number): string {
-  return value > 0 ? `${value.toLocaleString("vi-VN")} ₫` : "Liên hệ"
+export function formatVnd(value: number | null): string {
+  return value !== null && value > 0 ? `${value.toLocaleString("vi-VN")} ₫` : "Liên hệ"
 }
 
 const clean = (v: string | null | undefined): string | null => {

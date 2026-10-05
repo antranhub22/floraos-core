@@ -8,6 +8,7 @@ import { ProductRepository } from "@/modules/products/infra/product-repository"
 import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-link"
 import { createInternalNote } from "@/modules/greeting-card/use-cases/create-internal-note"
 import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
+import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
 import { uploadBrochureProductPhoto } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import type { TenantContext } from "@/core/tenancy"
@@ -56,26 +57,24 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
       createdBy: tenantA.userId,
     })
 
-    await expect(repo.addProductToCatalog(tenantA.ctx, catA.id, productB.id)).rejects.toThrow(
-      "Không tìm thấy sản phẩm"
-    )
+    await expect(repo.addProductToCatalog(tenantA.ctx, catA.id, productB.id)).rejects.toMatchObject({ code: "NOT_FOUND" })
     const detail = await repo.getCatalogById(tenantA.ctx, catA.id)
     expect(detail?.items).toHaveLength(0)
   })
 
-  it("greeting_catalog_products: tạo catalog kèm productIds của tổ chức khác thì bỏ qua id đó", async () => {
+  it("greeting_catalog_products: tạo catalog kèm productIds của tổ chức khác bị từ chối (404), không tạo catalog dở dang", async () => {
     const productA = await products.create(tenantA.ctx, { code: "HOA-A", name: "Hoa của A" })
     const productB = await products.create(tenantB.ctx, { code: "HOA-B", name: "Hoa của B" })
 
-    const catA = await repo.createCatalog(tenantA.ctx, {
-      code: "cat-a",
-      name: "Catalog A",
-      productIds: [productB.id, productA.id],
-      createdBy: tenantA.userId,
-    })
-
-    const detail = await repo.getCatalogById(tenantA.ctx, catA.id)
-    expect(detail?.items.map((i) => i.product_id)).toEqual([productA.id])
+    await expect(
+      repo.createCatalog(tenantA.ctx, {
+        code: "cat-a",
+        name: "Catalog A",
+        productIds: [productB.id, productA.id],
+        createdBy: tenantA.userId,
+      })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
+    expect(await prisma.greeting_catalogs.count({ where: { organization_id: tenantA.organizationId } })).toBe(0)
   })
 
   it("greeting_catalog_products: không thêm/bớt được sản phẩm trong catalog của tổ chức khác", async () => {
@@ -88,12 +87,8 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
       createdBy: tenantB.userId,
     })
 
-    await expect(repo.addProductToCatalog(tenantA.ctx, catB.id, productA.id)).rejects.toThrow(
-      "Không tìm thấy catalog"
-    )
-    await expect(repo.removeProductFromCatalog(tenantA.ctx, catB.id, productB.id)).rejects.toThrow(
-      "Không tìm thấy catalog"
-    )
+    await expect(repo.addProductToCatalog(tenantA.ctx, catB.id, productA.id)).rejects.toMatchObject({ code: "NOT_FOUND" })
+    await expect(repo.removeProductFromCatalog(tenantA.ctx, catB.id, productB.id)).rejects.toMatchObject({ code: "NOT_FOUND" })
     expect(await repo.getCatalogById(tenantA.ctx, catB.id)).toBeNull()
 
     const detailB = await repo.getCatalogById(tenantB.ctx, catB.id)
@@ -117,10 +112,9 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
         sessionId: sessionB.id,
         stepKey: "GENERAL",
         role: "SALE",
-        senderName: "Nhân viên A",
         content: "Ghi chú chen ngang",
       })
-    ).rejects.toThrow("Không tìm thấy phiên Thẻ chào tương ứng")
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
 
     const notes = await prisma.greeting_journey_events.count({
       where: { session_id: sessionB.id, event_type: "INTERNAL_NOTE" },
@@ -131,7 +125,6 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
       sessionId: sessionB.id,
       stepKey: "GENERAL",
       role: "SALE",
-      senderName: "Nhân viên B",
       content: "Ghi chú hợp lệ",
     })
     const own = await prisma.greeting_journey_events.findMany({
@@ -142,7 +135,11 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
   })
 
   it("order_qc_records: không gắn được ảnh của tổ chức khác làm ảnh thành phẩm đơn Thẻ chào", async () => {
-    const productA = await products.create(tenantA.ctx, { code: "HOA-A", name: "Hoa của A" })
+    const productA = await products.create(tenantA.ctx, {
+      code: "HOA-A",
+      name: "Hoa của A",
+      attributes: { price: 500000 },
+    })
     const catA = await repo.createCatalog(tenantA.ctx, {
       code: "cat-a",
       name: "Catalog A",
@@ -150,19 +147,20 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
       createdBy: tenantA.userId,
     })
     const linkA = await createSendLink(tenantA.ctx, { catalogId: catA.id, customerName: "Khách A" })
+    await selectBrochureProduct(linkA.sendCode, productA.id)
     const order = await submitBrochureOrder(linkA.sendCode, {
       customerName: "Khách A",
       customerPhone: "0987654321",
       recipientName: "Người nhận A",
       recipientPhone: "0912345678",
-      deliveryDate: "2026-10-20",
+      deliveryDate: new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10),
       deliveryAddress: "1 Đường A, Quận 1, TP.HCM",
     })
     const assetB = await seedAsset(tenantB.ctx)
 
     await expect(
       uploadBrochureProductPhoto(tenantA.ctx, order.orderId, { assetId: assetB })
-    ).rejects.toThrow("Không tìm thấy ảnh")
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
     expect(await prisma.order_qc_records.count({ where: { order_id: order.orderId } })).toBe(0)
 
     const assetA = await seedAsset(tenantA.ctx)

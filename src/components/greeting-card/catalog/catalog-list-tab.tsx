@@ -1,12 +1,15 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState } from "react"
 import {
   BookOpen, Plus, Edit2, Trash2, Eye, Package,
-  RefreshCw, ChevronRight, Check, X, Loader2, Copy, ExternalLink,
+  RefreshCw, ChevronRight, Check, Loader2, Copy, ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BrochurePreviewModal } from "@/components/greeting-card/customer/brochure-preview-modal"
+import { readApiError } from "@/components/greeting-card/api-error"
+import { useApi } from "@/components/greeting-card/greeting-api"
+import { CatalogCreateModal } from "./catalog-create-modal"
 
 type CatalogItem = {
   id: string
@@ -24,31 +27,19 @@ type Props = {
 }
 
 export function CatalogListTab({ onSelectCatalog }: Props) {
-  const [catalogs, setCatalogs] = useState<CatalogItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const list = useApi<{ data: CatalogItem[] }>("/api/v1/greeting-card/catalogs")
+  const catalogs = list.data?.data ?? []
+  const loading = list.isLoading || list.isValidating
+  const loadCatalogs = () => list.mutate()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewTitle, setPreviewTitle] = useState<string>("")
-  const [createForm, setCreateForm] = useState({
-    code: "",
-    name: "",
-    type: "STANDARD" as "STANDARD" | "CLIENT",
-    description: "",
-  })
-  const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [copiedCatalogId, setCopiedCatalogId] = useState<string | null>(null)
-  const [orgSlug, setOrgSlug] = useState<string | null>(null)
-
-  // Lấy slug tổ chức để xây dựng URL thân thiện
-  useEffect(() => {
-    fetch("/api/v1/organizations/current")
-      .then((r) => r.json())
-      .then((res: { slug?: string }) => {
-        if (res.slug) setOrgSlug(res.slug)
-      })
-      .catch(() => {})
-  }, [])
+  // Slug tổ chức để dựng URL thân thiện; chưa có → dùng link /g/{id}
+  const org = useApi<{ slug?: string }>("/api/v1/organizations/current")
+  const orgSlug = org.data?.slug ?? null
 
   function buildPublicUrl(catalog: CatalogItem) {
     if (orgSlug && catalog.code) {
@@ -64,50 +55,14 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
     setTimeout(() => setCopiedCatalogId(null), 2000)
   }
 
-  const loadCatalogs = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch("/api/v1/greeting-card/catalogs")
-      if (!res.ok) return
-      const json = await res.json() as { data: CatalogItem[] }
-      setCatalogs(json.data)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { void loadCatalogs() }, [loadCatalogs])
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!createForm.code.trim() || !createForm.name.trim()) return
-    setCreating(true)
-    try {
-      const res = await fetch("/api/v1/greeting-card/catalogs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: createForm.code.trim(),
-          name: createForm.name.trim(),
-          type: createForm.type,
-          description: createForm.description.trim() || null,
-        }),
-      })
-      if (res.ok) {
-        setIsCreateOpen(false)
-        setCreateForm({ code: "", name: "", type: "STANDARD", description: "" })
-        await loadCatalogs()
-      }
-    } finally {
-      setCreating(false)
-    }
-  }
 
   async function handleDelete(id: string) {
     if (!window.confirm("Ẩn catalog này? Các link đã gửi vẫn còn hoạt động.")) return
     setDeletingId(id)
+    setActionError(null)
     try {
-      await fetch(`/api/v1/greeting-card/catalogs/${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/v1/greeting-card/catalogs/${id}`, { method: "DELETE" })
+      if (!res.ok) setActionError(await readApiError(res, "Không ẩn được bộ sưu tập"))
       await loadCatalogs()
     } finally {
       setDeletingId(null)
@@ -116,6 +71,11 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
+      {actionError && (
+        <div role="alert" className="p-3 rounded-xl bg-danger-bg text-danger text-body-sm font-medium">
+          {actionError}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div>
@@ -132,7 +92,7 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
             type="button"
             variant="outline"
             size="sm"
-            onClick={loadCatalogs}
+            onClick={() => void loadCatalogs()}
             className="gap-1.5 text-caption h-9"
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -150,81 +110,14 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
         </div>
       </div>
 
-      {/* Create Form Modal */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-background rounded-2xl shadow-2xl border border-border w-full max-w-md mx-4 p-6 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-title-sm font-extrabold text-foreground">Tạo Bộ Sưu Tập Mới</h3>
-              <button
-                type="button"
-                onClick={() => setIsCreateOpen(false)}
-                aria-label="Đóng form tạo bộ sưu tập"
-                className="p-1.5 rounded-lg hover:bg-surface text-text-muted hover:text-foreground"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleCreate} className="flex flex-col gap-3.5">
-              <div>
-                <label className="block text-caption font-bold text-foreground mb-1">Mã nhận dạng *</label>
-                <input
-                  type="text"
-                  placeholder="VD: 20-10-basic, valentine-2027"
-                  value={createForm.code}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, code: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-caption font-bold text-foreground mb-1">Tên bộ sưu tập *</label>
-                <input
-                  type="text"
-                  placeholder="VD: Bộ Hoa 20/10 Phổ Thông"
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-caption font-bold text-foreground mb-1">Loại</label>
-                <select
-                  value={createForm.type}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, type: e.target.value as "STANDARD" | "CLIENT" }))}
-                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
-                >
-                  <option value="STANDARD">Tiêu chuẩn (dùng chung)</option>
-                  <option value="CLIENT">Riêng theo khách</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-caption font-bold text-foreground mb-1">Mô tả (không bắt buộc)</label>
-                <textarea
-                  placeholder="Ghi chú nội bộ về bộ sưu tập này..."
-                  value={createForm.description}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-body text-foreground resize-none"
-                />
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="h-10">
-                  Hủy
-                </Button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="inline-flex items-center justify-center rounded-xl bg-primary hover:bg-primary-dark text-white font-bold h-10 px-5 gap-1.5 text-body-sm shadow-sm transition-colors disabled:opacity-50"
-                >
-                  {creating ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-                  {creating ? "Đang tạo..." : "Tạo ngay"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CatalogCreateModal
+          onClose={() => setIsCreateOpen(false)}
+          onCreated={() => {
+            setIsCreateOpen(false)
+            void loadCatalogs()
+          }}
+        />
       )}
 
       {/* Catalog Grid */}

@@ -1,2 +1,3 @@
 import { dispatchShippingPOST } from "../_coordinator-handlers"
-export { dispatchShippingPOST as POST }
+
+export const POST = dispatchShippingPOST

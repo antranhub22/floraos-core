@@ -1,21 +1,41 @@
 "use client"
 
 import React, { useState } from "react"
-import { ArrowLeft, Send, Sparkles, AlertCircle } from "lucide-react"
+import { ArrowLeft, Send, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  ORDER_FIELD_MAX,
+  MAX_DELIVERY_LEAD_DAYS,
+  todayInVietnam,
+  validateCustomerOrderInput,
+} from "@/modules/greeting-card/domain/greeting-card-rules"
 import type {
   ProductSnapshot,
   CustomerOrderSubmitInput,
 } from "@/modules/greeting-card/domain/greeting-card-types"
+import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
+import { BrochureOrderOptions } from "./brochure-order-options"
+import { useBrochureQuote } from "./use-brochure-quote"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 interface BrochureOrderFormProps {
   productSnapshot: ProductSnapshot
+  /** Size/biến thể bán online của mẫu đã chọn. */
+  variants: Array<{ id: string; name: string; priceVnd: number }>
+  shipping: ShippingConfig
+  /** Endpoint báo giá + phần thân cố định (vd. `productId` ở link công khai). */
+  quoteUrl: string
+  quoteExtraBody?: Record<string, string> | undefined
   onBack: () => void
   onSubmit: (input: CustomerOrderSubmitInput) => Promise<void>
 }
 
 export function BrochureOrderForm({
   productSnapshot,
+  variants,
+  shipping,
+  quoteUrl,
+  quoteExtraBody = {},
   onBack,
   onSubmit,
 }: BrochureOrderFormProps) {
@@ -30,29 +50,28 @@ export function BrochureOrderForm({
   const [senderNote, setSenderNote] = useState("")
 
   const [loading, setLoading] = useState(false)
+  const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone)
+  const minDate = todayInVietnam()
+  const maxDate = new Date(Date.parse(`${minDate}T00:00:00Z`) + MAX_DELIVERY_LEAD_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErrorMessage(null)
 
-    if (!customerName.trim() || !customerPhone.trim()) {
-      setErrorMessage("Vui lòng nhập tên và số điện thoại người đặt hoa")
-      return
+    // Cùng bộ luật với server (SĐT, ngày giao theo giờ VN, độ dài) — báo lỗi ngay, đỡ một vòng mạng.
+    const check = validateCustomerOrderInput({
+      customerName, customerPhone, recipientName, recipientPhone,
+      deliveryDate, deliveryTimeSlot, deliveryAddress, cardMessage, senderNote,
+    })
+    if (shipping.zones.length > 0 && !pricing.selection.shippingZoneId) {
+      check.errors.shippingZoneId = "Vui lòng chọn khu vực giao hoa"
+      check.valid = false
     }
-
-    if (!recipientName.trim() || !recipientPhone.trim()) {
-      setErrorMessage("Vui lòng nhập tên và số điện thoại người nhận hoa")
-      return
-    }
-
-    if (!deliveryDate) {
-      setErrorMessage("Vui lòng chọn ngày giao hoa")
-      return
-    }
-
-    if (!deliveryAddress.trim() || deliveryAddress.trim().length < 5) {
-      setErrorMessage("Vui lòng nhập địa chỉ giao hoa chi tiết")
+    if (!check.valid) {
+      setErrorMessage(Object.values(check.errors)[0] ?? "Thông tin đặt hàng chưa hợp lệ")
       return
     }
 
@@ -68,6 +87,10 @@ export function BrochureOrderForm({
         deliveryAddress,
         cardMessage,
         senderNote,
+        quantity: pricing.selection.quantity,
+        ...(pricing.selection.variantId ? { variantId: pricing.selection.variantId } : {}),
+        ...(pricing.selection.shippingZoneId ? { shippingZoneId: pricing.selection.shippingZoneId } : {}),
+        ...(pricing.selection.voucherCode ? { voucherCode: pricing.selection.voucherCode } : {}),
       })
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Đã có lỗi xảy ra khi đặt hoa")
@@ -96,17 +119,7 @@ export function BrochureOrderForm({
 
       {/* Product Snapshot Header */}
       <div className="flex items-center gap-3.5 p-3 rounded-xl bg-surface-muted border border-border mb-5">
-        {productSnapshot.imageUrl ? (
-          <img
-            src={productSnapshot.imageUrl}
-            alt={productSnapshot.name}
-            className="w-16 h-16 rounded-lg object-cover shrink-0 border border-border"
-          />
-        ) : (
-          <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Sparkles size={24} className="text-primary" />
-          </div>
-        )}
+        <FlowerImage src={productSnapshot.imageUrl} alt={productSnapshot.name} sizes="64px" fallback="icon" className="w-16 h-16 rounded-lg shrink-0 border border-border" />
         <div className="flex-1 min-w-0">
           <div className="text-caption text-text-muted">Mẫu đã chọn:</div>
           <div className="text-body font-extrabold text-foreground truncate">
@@ -119,13 +132,28 @@ export function BrochureOrderForm({
       </div>
 
       {errorMessage && (
-        <div className="mb-5 p-3 rounded-xl bg-danger-bg border border-danger/30 text-danger text-body-sm flex items-start gap-2">
+        <div
+          role="alert"
+          // Form dài trên điện thoại: đưa thông báo lỗi vào tầm nhìn ngay khi nó xuất hiện
+          ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "center" })}
+          className="mb-5 p-3 rounded-xl bg-danger-bg border border-danger/30 text-danger text-body-sm flex items-start gap-2">
           <AlertCircle size={18} className="shrink-0 mt-0.5" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <BrochureOrderOptions
+          variants={variants}
+          basePrice={productSnapshot.price}
+          shipping={shipping}
+          selection={pricing.selection}
+          onChange={pricing.update}
+          quote={pricing.quote}
+          errors={pricing.errors}
+          loading={pricing.loading}
+        />
+
         {/* Người đặt */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -137,6 +165,7 @@ export function BrochureOrderForm({
               required
               placeholder="VD: Nguyễn Văn A"
               value={customerName}
+              maxLength={ORDER_FIELD_MAX.name}
               onChange={(e) => setCustomerName(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -150,6 +179,7 @@ export function BrochureOrderForm({
               required
               placeholder="VD: 0901234567"
               value={customerPhone}
+              maxLength={15}
               onChange={(e) => setCustomerPhone(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -167,6 +197,7 @@ export function BrochureOrderForm({
               required
               placeholder="VD: Trần Thị B"
               value={recipientName}
+              maxLength={ORDER_FIELD_MAX.name}
               onChange={(e) => setRecipientName(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -180,6 +211,7 @@ export function BrochureOrderForm({
               required
               placeholder="VD: 0912345678"
               value={recipientPhone}
+              maxLength={15}
               onChange={(e) => setRecipientPhone(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -195,6 +227,8 @@ export function BrochureOrderForm({
             <input
               type="date"
               required
+              min={minDate}
+              max={maxDate}
               value={deliveryDate}
               onChange={(e) => setDeliveryDate(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -227,6 +261,7 @@ export function BrochureOrderForm({
             required
             placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành"
             value={deliveryAddress}
+            maxLength={ORDER_FIELD_MAX.address}
             onChange={(e) => setDeliveryAddress(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
@@ -241,6 +276,7 @@ export function BrochureOrderForm({
             rows={2}
             placeholder="VD: Chúc mừng ngày 20/10 người phụ nữ tuyệt vời của anh..."
             value={cardMessage}
+            maxLength={ORDER_FIELD_MAX.cardMessage}
             onChange={(e) => setCardMessage(e.target.value)}
             className="w-full p-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
           />
@@ -255,6 +291,7 @@ export function BrochureOrderForm({
             type="text"
             placeholder="VD: Giao hoa nhẹ tay, gọi trước khi đến 15 phút"
             value={senderNote}
+            maxLength={ORDER_FIELD_MAX.senderNote}
             onChange={(e) => setSenderNote(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           />

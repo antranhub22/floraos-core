@@ -6,36 +6,34 @@ import type { OptionalDisplayField } from "@/modules/greeting-card/domain/displa
 import { BrochureOrderForm } from "./brochure-order-form"
 import { BrochurePaymentView } from "./brochure-payment-view"
 import { BrochureTrackingView } from "./brochure-tracking-view"
+import { formatPriceVnd, readApiError } from "@/components/greeting-card/api-error"
 import type {
+  BrochurePaymentInstructions,
   GreetingCatalogProduct,
   CustomerOrderSubmitInput,
   ProductSnapshot,
 } from "@/modules/greeting-card/domain/greeting-card-types"
 import { ShoppingBag } from "lucide-react"
-import { ProductImage } from "./templates/aux/aux-kit"
+import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 interface Props {
   catalog: { id: string; code: string; name: string; description: string | null; filters?: Record<string, unknown> | null }
   products: GreetingCatalogProduct[]
+  shipping: ShippingConfig
 }
 
 type PublicStep = "SWIPING" | "PREVIEW" | "ORDER_FORM" | "PAYMENT" | "TRACKING"
 
-export function BrochurePublicView({ catalog, products }: Props) {
+export function BrochurePublicView({ catalog, products, shipping }: Props) {
   const [step, setStep] = useState<PublicStep>("SWIPING")
   const [selected, setSelected] = useState<GreetingCatalogProduct | null>(null)
   const [orderResult, setOrderResult] = useState<{
+    sendCode: string
     orderId: string
     orderCode: string
     totalVnd: number
-    vietQr: {
-      qrUrl: string
-      bankName: string
-      accountNo: string
-      accountName: string
-      amount: number
-      transferMemo: string
-    }
+    vietQr: BrochurePaymentInstructions | null
   } | null>(null)
 
   function handleSelectFromDeck(product: GreetingCatalogProduct) {
@@ -53,8 +51,7 @@ export function BrochurePublicView({ catalog, products }: Props) {
     })
 
     if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}))
-      throw new Error(errJson.error || "Không thể gửi đơn đặt hoa")
+      throw new Error(await readApiError(res, "Không thể gửi đơn đặt hoa"))
     }
 
     const data = await res.json()
@@ -62,31 +59,30 @@ export function BrochurePublicView({ catalog, products }: Props) {
     setStep("PAYMENT")
   }
 
-  const activeSnapshot: ProductSnapshot = selected
-    ? {
-        id: selected.id,
-        code: selected.code,
-        name: selected.name,
-        price: selected.price,
-        imageUrl: selected.imageUrl,
-        description: selected.description,
-        selectedAt: new Date().toISOString(),
-      }
-    : {
-        id: "prod",
-        code: "HOA",
-        name: "Mẫu hoa tươi đã chọn",
-        price: 500000,
-        imageUrl: null,
-        selectedAt: new Date().toISOString(),
-      }
+  // Giá hiển thị trên form chỉ để khách xem — server tự tính lại giá khi tạo đơn.
+  const activeSnapshot: ProductSnapshot | null =
+    selected
+      ? {
+          id: selected.id,
+          code: selected.code,
+          name: selected.name,
+          price: selected.price ?? 0,
+          imageUrl: selected.imageUrl,
+          description: selected.description,
+          selectedAt: new Date().toISOString(),
+        }
+      : null
 
   // 1. ORDER FORM STEP
-  if (step === "ORDER_FORM" && selected) {
+  if (step === "ORDER_FORM" && activeSnapshot) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col justify-start py-6 px-4 sm:px-6">
         <BrochureOrderForm
           productSnapshot={activeSnapshot}
+          variants={selected?.variants ?? []}
+          shipping={shipping}
+          quoteUrl={`/api/v1/public/greeting-catalog/${catalog.id}/quote`}
+          quoteExtraBody={{ productId: activeSnapshot.id }}
           onBack={() => setStep("PREVIEW")}
           onSubmit={handleSubmitOrder}
         />
@@ -102,7 +98,12 @@ export function BrochurePublicView({ catalog, products }: Props) {
           orderCode={orderResult.orderCode}
           totalVnd={orderResult.totalVnd}
           vietQr={orderResult.vietQr}
-          onReportPaid={async () => {}}
+          onReportPaid={async () => {
+            const res = await fetch(`/api/v1/public/brochure/${orderResult.sendCode}/payment-notify`, {
+              method: "POST",
+            })
+            if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
+          }}
           onGoToTracking={() => setStep("TRACKING")}
         />
       </div>
@@ -132,9 +133,7 @@ export function BrochurePublicView({ catalog, products }: Props) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg p-4">
         <div className="w-full max-w-md bg-surface rounded-3xl shadow-xl overflow-hidden border border-border">
-          <div className="aspect-square w-full">
-            <ProductImage product={selected} />
-          </div>
+          <FlowerImage src={selected.imageUrl} alt={selected.name} sizes="(max-width: 448px) 100vw, 448px" priority className="w-full aspect-square" />
           <div className="p-6 flex flex-col gap-4">
             <div>
               <h2 className="text-title font-extrabold text-foreground">{selected.name}</h2>
@@ -142,14 +141,19 @@ export function BrochurePublicView({ catalog, products }: Props) {
                 <p className="text-body-sm text-text-muted mt-1">{selected.description}</p>
               )}
               <p className="text-display font-extrabold text-primary mt-3">
-                {selected.price > 0 ? `${selected.price.toLocaleString("vi-VN")}đ` : "Liên hệ"}
+                {formatPriceVnd(selected.price)}
               </p>
+              {selected.price === null && (
+                <p className="text-body-sm text-text-muted mt-1">
+                  Mẫu này chưa niêm yết giá — bạn cứ đặt, cửa hàng sẽ liên hệ báo giá trước khi thu tiền.
+                </p>
+              )}
             </div>
 
             <button
               type="button"
               onClick={() => setStep("ORDER_FORM")}
-              className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl bg-primary text-white font-bold text-body shadow-md hover:bg-primary-dark transition-colors cursor-pointer"
+              className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl bg-primary text-white font-bold text-body shadow-md hover:bg-primary-dark transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ShoppingBag size={18} />
               <span>Đặt ngay</span>

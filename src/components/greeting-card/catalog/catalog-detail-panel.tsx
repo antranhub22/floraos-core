@@ -1,13 +1,11 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
-import {
-  ArrowLeft, Package, Plus, Trash2, Search,
-  ImageOff, Loader2, X, CheckCircle,
-} from "lucide-react"
+import React, { useState } from "react"
+import { ArrowLeft, Package, Plus, Trash2, Search, Loader2, X, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useCatalogItems } from "./use-catalog-items"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
-type ProductImage = { id: string; asset_id: string }
 type ProductVariant = { id: string; price_vnd: number; name: string }
 type CatalogProduct = {
   id: string
@@ -18,16 +16,6 @@ type CatalogProduct = {
     variants: ProductVariant[]
   }
   sort_order: number
-}
-type AvailableProduct = {
-  id: string
-  name: string
-  code: string
-  category: string | null
-  /** URL ảnh chính — từ SSOT API `/api/v1/products`. `undefined` khi chưa có ảnh. */
-  masterImageUrl?: string | undefined
-  /** Giá tham chiếu — `null` = Liên hệ báo giá. */
-  price_vnd: number | null
 }
 type CatalogDetail = {
   id: string
@@ -46,72 +34,22 @@ type Props = {
 }
 
 export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
-  const [catalog, setCatalog] = useState<CatalogDetail | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [removingId, setRemovingId] = useState<string | null>(null)
-  const [isAddOpen, setIsAddOpen] = useState(false)
-  const [allProducts, setAllProducts] = useState<AvailableProduct[]>([])
   const [productSearch, setProductSearch] = useState("")
-  const [addingId, setAddingId] = useState<string | null>(null)
-
-  const loadCatalog = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/v1/greeting-card/catalogs/${catalogId}`)
-      if (!res.ok) return
-      const json = await res.json() as { data: CatalogDetail }
-      setCatalog(json.data)
-    } finally {
-      setLoading(false)
-    }
-  }, [catalogId])
-
-  useEffect(() => { void loadCatalog() }, [loadCatalog])
-
-  async function openAddProduct() {
-    const res = await fetch("/api/v1/products?limit=100")
-    if (res.ok) {
-      // API trả `{ data: ProductLookupResult[], next_cursor }` — dùng đúng shape
-      const json = await res.json() as { data: AvailableProduct[] }
-      setAllProducts(Array.isArray(json.data) ? json.data : [])
-    }
-    setIsAddOpen(true)
-  }
-
-  async function handleAddProduct(productId: string) {
-    setAddingId(productId)
-    try {
-      const res = await fetch(`/api/v1/greeting-card/catalogs/${catalogId}/products`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      })
-      if (res.ok) await loadCatalog()
-    } finally {
-      setAddingId(null)
-    }
-  }
-
-  async function handleRemoveProduct(productId: string) {
+  const ci = useCatalogItems<CatalogDetail>(catalogId)
+  const catalog = ci.catalog
+  const loading = ci.loading
+  const isAddOpen = ci.pickerOpen
+  const setIsAddOpen = (open: boolean) => (open ? ci.openPicker() : ci.closePicker())
+  const openAddProduct = ci.openPicker
+  const addingId = ci.busyId
+  const removingId = ci.busyId
+  const handleAddProduct = (productId: string) => void ci.add(productId)
+  function handleRemoveProduct(productId: string) {
     if (!window.confirm("Xóa sản phẩm này khỏi bộ sưu tập?")) return
-    setRemovingId(productId)
-    try {
-      await fetch(`/api/v1/greeting-card/catalogs/${catalogId}/products`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      })
-      await loadCatalog()
-    } finally {
-      setRemovingId(null)
-    }
+    void ci.remove(productId)
   }
-
-  const existingProductIds = new Set(catalog?.items.map((i) => i.product.id) ?? [])
-  const filteredProducts = allProducts.filter(
-    (p) =>
-      !existingProductIds.has(p.id) &&
-      (!productSearch.trim() || p.name.toLowerCase().includes(productSearch.toLowerCase()))
+  const filteredProducts = ci.available.filter(
+    (p) => !productSearch.trim() || p.name.toLowerCase().includes(productSearch.toLowerCase())
   )
 
   if (loading && !catalog) {
@@ -125,6 +63,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
+      {ci.error && <p role="alert" className="p-3 rounded-xl bg-danger-bg text-danger text-body-sm">{ci.error}</p>}
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div className="flex items-center gap-3">
@@ -193,15 +132,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                       className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-surface transition-colors"
                     >
                       <div className="w-12 h-12 rounded-lg bg-surface-alt border border-border flex items-center justify-center shrink-0 overflow-hidden">
-                        {product.masterImageUrl ? (
-                          <img
-                            src={product.masterImageUrl}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <ImageOff size={16} className="text-text-muted" />
-                        )}
+                        <FlowerImage src={product.masterImageUrl} alt={product.name} sizes="(max-width: 640px) 50vw, 200px" fallback="icon" className="w-full h-full" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-body-sm font-bold text-foreground truncate">{product.name}</p>
@@ -272,17 +203,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                 className="bg-surface rounded-xl border border-border overflow-hidden flex flex-col hover:border-primary/30 hover:shadow-md transition-all duration-200 group"
               >
                 <div className="aspect-square bg-surface-muted relative overflow-hidden">
-                  {item.product.masterImageUrl ? (
-                    <img
-                      src={item.product.masterImageUrl}
-                      alt={item.product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageOff size={24} className="text-text-muted" />
-                    </div>
-                  )}
+                  <FlowerImage src={item.product.masterImageUrl} alt={item.product.name} sizes="(max-width: 640px) 50vw, 200px" fallback="icon" className="w-full h-full" />
                   <div className="absolute top-2 left-2">
                     <span className="w-6 h-6 rounded-full bg-black/50 text-white text-caption font-bold flex items-center justify-center">
                       {item.sort_order + 1}

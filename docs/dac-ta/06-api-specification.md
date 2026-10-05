@@ -735,6 +735,44 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 
 ⚠ Audio, video và Creative Production dùng chung `I1` (`media.optimize`) — sai ngữ nghĩa RBAC, chờ chủ sản phẩm quyết có thêm mã riêng hay không (đụng con số 143 mã). Xem `TECHNICAL_DEBT.md` nợ #121.
 
+## 23b. Thẻ Chào mẫu hoa — Swipe Brochure (`greeting-card`)
+
+Đồng bộ theo mã 05/10/2026 (đợt debug + nâng cấp thương mại). Năng lực gom tại `src/modules/greeting-card/domain/greeting-card-capabilities.ts` — dùng lại mã sẵn có, không thêm mã mới. Endpoint `/public/*` không cần đăng nhập: tổ chức suy ra từ mã gửi / catalog / khoá webhook ở server, KHÔNG nhận từ thân yêu cầu; đều qua giới hạn tần suất dùng chung (Redis, `REDIS_URL`). Danh sách trả `{ data, next_cursor }`, `?limit=1–100&cursor=`.
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET · POST | `/greeting-card/catalogs` | `L1` · `R2` | Bộ sưu tập đang dùng (mặc định trang 100). POST: `productIds` phải thuộc tổ chức (khác → 404); mã trùng → 409 |
+| GET · PATCH · DELETE | `/greeting-card/catalogs/:id` | `L1` · `R2` · `R2` | DELETE = ẩn (`is_active=false`); tổ chức khác → 404 |
+| POST · DELETE | `/greeting-card/catalogs/:id/products` | `R2` | Thân `{ productId }`; sản phẩm tổ chức khác → 404 |
+| GET · POST | `/greeting-card/send-links` | `R1` · `R2` | POST sinh mã gửi ngẫu nhiên duy nhất toàn hệ thống (`T01-XXXXXXXX`), `expiresInDays` 1–365 hoặc `null` (mặc định 30). GET kèm `link_state` ACTIVE/EXPIRED/REVOKED |
+| POST | `/greeting-card/send-links/:id/revoke` | `R2` | Thu hồi link chưa có đơn (idempotent); đã có đơn → 409 |
+| GET | `/greeting-card/stats` | `R1` | `?days=7\|30\|90` — phễu gửi → mở → chọn → đặt → thu tiền + doanh thu theo sale |
+| GET | `/greeting-card/orders` | `R1` | `?status=` (order_status), `?payment=OUTSTANDING\|PAID` (OUTSTANDING gồm cả đơn chờ báo giá — tổng 0); tiền trả dạng số |
+| POST | `/greeting-card/orders/:id/confirm-payment` | `R9` | `amountVnd?` (bỏ trống = khoản đang chờ theo chính sách cọc). Khoá lạc quan trên `paid_vnd`, ghi `order_payments` (DEPOSIT/BALANCE) + `order_events` + `audit_logs`; đã thu đủ → 409; vượt phần còn lại → 422 |
+| POST | `/greeting-card/orders/:id/quote` | `R9` | `{ totalVnd }` — báo giá trọn gói cho đơn đặt mẫu chưa niêm yết giá (tổng 0). Khoá lạc quan `total_vnd = 0`; đã có giá/đã huỷ → 409; số tiền sai → 422; tổ chức khác → 404; audit `greeting_card.order.quote` |
+| POST | `/greeting-card/orders/:id/cancel` | `R6` | `{ reason }`; trả lại mã giảm giá; đơn đã giao/đã huỷ → 409; audit |
+| POST | `/greeting-card/orders/:id/refund` | `R10` | `{ amountVnd, reason }`; không vượt số đã thu (422); ghi REFUND + audit |
+| POST | `/greeting-card/orders/:id/assign-florist` | `R4` | Thứ tự xưởng + chính sách thu tiền (`brochure_policy`) chặn sai bước → 409 |
+| POST | `/greeting-card/orders/:id/product-photo` | `R3` | `{ assetId }` phải thuộc tổ chức (khác → 404) |
+| POST | `/greeting-card/orders/:id/dispatch-shipping` | `R5` | Cần hoa READY (+ thu đủ nếu chính sách bật) |
+| POST | `/greeting-card/orders/:id/recipient-photo` | `R5` | Cần đang giao; đóng đơn COMPLETED |
+| GET · POST | `/greeting-card/tracking-pipeline` | `R1` | Bảng theo dõi; POST ghi chú nội bộ — tên người gửi lấy từ phiên |
+| GET | `/greeting-card/integrations` | `R1` | Trạng thái webhook ngân hàng + kênh thông báo; KHÔNG trả khoá/bí mật |
+| POST · DELETE | `/greeting-card/integrations/payment-webhook` | `F2` | POST sinh khoá SePay mới (trả MỘT lần, chỉ lưu băm SHA-256); DELETE tắt |
+| PUT | `/greeting-card/integrations/notifications` | `F2` | `{ enabled, channel: ZNS\|ESMS, credentials?, templates? }` — credentials chỉ ghi, lưu AES-256-GCM |
+| POST | `/greeting-card/integrations/notifications/test` | `F2` | `{ phone }` gửi một tin thử |
+| GET | `/greeting-card/payment-events` | `R9` | Giao dịch ngân hàng nhận qua webhook, `?status=UNMATCHED…` |
+| POST | `/greeting-card/payment-events/:id/handle` | `R9` | `{ note }` đánh dấu đã xử lý tay |
+| GET | `/public/brochure/:sendCode` | — | Trang khách: mẫu (giá theo Product Master, `null` = "Liên hệ" — vẫn đặt được, cửa hàng báo giá sau), size, khu vực giao, đơn + hướng dẫn chuyển khoản. Không lộ SĐT/id tổ chức. Link hết hạn/thu hồi/catalog ẩn (chưa có đơn) → 404 |
+| POST | `/public/brochure/:sendCode/select` | — | Chỉ nhận `productId`; ảnh chụp mẫu dựng ở server |
+| POST | `/public/brochure/:sendCode/quote` | — | Báo giá `{ variantId?, quantity?, shippingZoneId?, voucherCode?, customerPhone? }` → `{ quote, errors }` |
+| POST | `/public/brochure/:sendCode/order` | — | Tạo đơn (idempotent theo phiên); server báo giá lại, lựa chọn sai → 400 theo trường. Mẫu chưa niêm yết giá: đơn tổng 0, `quote.awaitingQuote = true`, không QR, không nhận mã giảm giá |
+| POST | `/public/brochure/:sendCode/payment-notify` | — | Khách báo đã chuyển khoản (cần có đơn) |
+| GET | `/public/brochure/tracking/:code` | — | Theo dõi theo mã đơn — chỉ đơn nguồn BROCHURE |
+| POST | `/public/greeting-catalog/:id/quote` | — | Như trên cho link bộ sưu tập công khai, kèm `productId` |
+| POST | `/public/greeting-catalog/:id/order` | — | Đặt hoa từ link bộ sưu tập công khai |
+| POST | `/public/payments/sepay` | — | Webhook SePay, `Authorization: Apikey <khoá>`; idempotent theo mã giao dịch; tự ghi thu theo mã đơn trong nội dung chuyển khoản |
+
 ## 24. Chưa có ở bản này
 
 Endpoint mang khoá nhà cung cấp riêng của tổ chức. Quyết định D2 chốt nền tảng giữ khoá và tính credit, nên nhóm endpoint đó không tồn tại. Nếu D2 đổi về sau, nhóm này thêm vào dưới `/organizations/current/providers` mà không đụng tới endpoint nào đang có.

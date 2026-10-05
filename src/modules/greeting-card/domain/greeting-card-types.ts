@@ -23,6 +23,8 @@ export type GreetingJourneyEventType =
   | "SUBMIT_ORDER"
   | "CLICK_PAID"
   | "TRACK_VIEW"
+  | "ADMIN_CONFIRMED_PAYMENT"
+  | "INTERNAL_NOTE"
 
 export interface ProductSnapshot {
   id: string
@@ -39,7 +41,8 @@ export interface GreetingCatalogProduct {
   id: string
   code: string
   name: string
-  price: number
+  /** `null` = chưa có giá trong Product Master → hiển thị "Liên hệ"; vẫn đặt được, cửa hàng báo giá sau. */
+  price: number | null
   imageUrl: string | null
   description?: string | null | undefined
   meaning?: string | null | undefined
@@ -55,6 +58,8 @@ export interface GreetingCatalogProduct {
   /** Kiểu gói lớp ngoài — từ Master Index */
   wrapStyle?: string | null | undefined
   sortOrder: number
+  /** Các size/biến thể bán online (đã có giá); rỗng = chỉ bán bản gốc. */
+  variants?: Array<{ id: string; name: string; priceVnd: number }> | undefined
 }
 
 export interface GreetingCatalogRecord {
@@ -101,6 +106,11 @@ export interface CustomerOrderSubmitInput {
   deliveryAddress: string
   cardMessage?: string | undefined
   senderNote?: string | undefined
+  /** Lựa chọn mua — server tính lại giá từ các lựa chọn này, không nhận giá từ client. */
+  variantId?: string | undefined
+  quantity?: number | undefined
+  shippingZoneId?: string | undefined
+  voucherCode?: string | undefined
 }
 
 export interface BrochureOrderSummary {
@@ -122,4 +132,27 @@ export interface BrochureOrderSummary {
   paymentReportedAt?: string | null | undefined
   finishedImageUrl?: string | null | undefined
   createdAt: string
+}
+
+/** Thông tin chuyển khoản hiển thị cho khách — luôn dựng ở server từ cài đặt của tiệm. */
+export interface BrochurePaymentInstructions {
+  /** FULL = trả đủ; DEPOSIT = đặt cọc theo chính sách tiệm; BALANCE = thu phần còn lại. */
+  purpose: "FULL" | "DEPOSIT" | "BALANCE"
+  /** Tổng giá trị đơn (để hiển thị "cọc X / tổng Y"). */
+  orderTotalVnd: number
+  qrUrl: string
+  bankName: string
+  accountNo: string
+  accountName: string
+  amount: number
+  transferMemo: string
+}
+
+/** Phần phiên trả ra trang công khai — KHÔNG chứa SĐT khách, id tổ chức, id sale. */
+export interface PublicBrochureSessionView {
+  sendCode: string
+  status: GreetingSessionStatus
+  customerName: string | null
+  selectedProductId: string | null
+  productSnapshot: ProductSnapshot | null
 }

@@ -34,7 +34,7 @@ export default async function PublicGreetingCatalogPage({ params }: PageProps) {
     notFound()
   }
 
-  return <BrochurePublicView catalog={data.catalog} products={data.products} />
+  return <BrochurePublicView catalog={data.catalog} products={data.products} shipping={data.shipping} />
 }
 
 export const dynamic = "force-dynamic"

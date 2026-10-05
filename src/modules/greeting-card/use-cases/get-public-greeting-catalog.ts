@@ -1,6 +1,7 @@
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
-import { catalogItemToProduct } from "../domain/catalog-product-price"
+import { parseShippingConfig, type ShippingConfig } from "../domain/brochure-pricing"
+import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
 import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
 
 export type PublicGreetingCatalogResult =
@@ -15,6 +16,7 @@ export type PublicGreetingCatalogResult =
         filters?: Record<string, unknown> | null
       }
       products: GreetingCatalogProduct[]
+      shipping: ShippingConfig
     }
   | { status: "NOT_FOUND" }
 
@@ -28,19 +30,15 @@ export async function mapCatalogToPublicResult(
   catalog: CatalogWithItems,
   repo: GreetingCardRepository
 ): Promise<PublicGreetingCatalogResult> {
-  // Batch resolve asset storage keys (chống N+1)
-  const assetIds = catalog.items.flatMap((item) =>
-    item.product.images.map((img) => img.asset_id)
-  )
-  const assetMap = await repo.getAssetsStorageMap(assetIds)
+  // Batch resolve asset storage keys (chống N+1) — giá theo Product Master, không bịa giá
+  const assetMap = await repo.getAssetsStorageMap(catalog.organization_id, collectImageAssetIds(catalog.items))
+  const products: GreetingCatalogProduct[] = catalog.items.map((item) => toCatalogProduct(item, assetMap))
 
-  const products: GreetingCatalogProduct[] = catalog.items.map((item) => {
-    const mainImg = item.product.images[0]
-    return catalogItemToProduct(item, mainImg ? assetMap.get(mainImg.asset_id) ?? null : null)
-  })
+  const shop = await repo.getShopProfile(catalog.organization_id)
 
   return {
     status: "ACTIVE",
+    shipping: parseShippingConfig(shop.settings),
     catalog: {
       id: catalog.id,
       code: catalog.code,

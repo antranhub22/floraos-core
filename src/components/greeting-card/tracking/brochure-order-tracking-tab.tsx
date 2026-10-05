@@ -1,18 +1,9 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
-import {
-  RefreshCw,
-  Search,
-  Sparkles,
-  ShieldCheck,
-  Flower2,
-  Truck,
-  CheckCircle2,
-  Eye,
-  Filter,
-} from "lucide-react"
+import React, { useState } from "react"
+import { RefreshCw, Search, Sparkles, ShieldCheck, Flower2, Truck, CheckCircle2, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useApi } from "@/components/greeting-card/greeting-api"
 import { TrackingOrderCard } from "./tracking-order-card"
 import { TrackingInternalChatDrawer } from "./tracking-internal-chat-drawer"
 import type {
@@ -23,33 +14,19 @@ import type {
 type FilterCategory = "ALL" | "BROWSING" | "PAYMENT_WAITING" | "ARRANGING" | "DELIVERING" | "COMPLETED"
 
 export function BrochureOrderTrackingTab() {
-  const [items, setItems] = useState<TrackingPipelineItem[]>([])
-  const [loading, setLoading] = useState(true)
+  // SWR, tự làm mới mỗi 30 giây — bảng theo dõi nhiều người cùng xem
+  const pipeline = useApi<{ data: TrackingPipelineItem[] }>("/api/v1/greeting-card/tracking-pipeline", {
+    refreshInterval: 30_000,
+  })
+  const items = pipeline.data?.data ?? []
+  const loading = pipeline.isLoading || pipeline.isValidating
+  const loadPipeline = () => pipeline.mutate()
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<FilterCategory>("ALL")
   const [selectedNoteItem, setSelectedNoteItem] = useState<{
     item: TrackingPipelineItem
     stepId?: TrackingPipelineStepId | "GENERAL" | undefined
   } | null>(null)
-
-  const loadPipeline = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch("/api/v1/greeting-card/tracking-pipeline")
-      const json = await res.json()
-      if (Array.isArray(json.data)) {
-        setItems(json.data)
-      }
-    } catch {
-      // Ignore network errors
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadPipeline()
-  }, [loadPipeline])
 
   // Filter items based on category and search query
   const filteredItems = items.filter((item) => {

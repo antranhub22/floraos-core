@@ -5,8 +5,15 @@ import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-c
 import { ProductRepository } from "@/modules/products/infra/product-repository"
 import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-link"
 import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
+import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
 import { adminConfirmBrochurePayment } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
 
+function inTenDays(): string {
+  return new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10)
+}
+
+// Bảng phủ: greeting_catalogs, greeting_catalog_products (gắn sản phẩm), greeting_sessions,
+// greeting_journey_events (ghi theo phiên) — xem thêm greeting-card-*.test.ts
 describe("greeting-card tenant isolation", () => {
   let tenantA: Tenant
   let tenantB: Tenant
@@ -69,8 +76,8 @@ describe("greeting-card tenant isolation", () => {
       prefix: "T02",
     })
 
-    const sessionsA = await repo.listSessions(tenantA.ctx)
-    const sessionsB = await repo.listSessions(tenantB.ctx)
+    const sessionsA = await repo.listSessions(tenantA.ctx, { limit: 20 })
+    const sessionsB = await repo.listSessions(tenantB.ctx, { limit: 20 })
 
     expect(sessionsA).toHaveLength(1)
     expect(sessionsA[0]?.customer_name).toBe("Khách A")
@@ -83,6 +90,7 @@ describe("greeting-card tenant isolation", () => {
     const productB = await prodRepo.create(tenantB.ctx, {
       code: "HOA-B-01",
       name: "Bó Hoa Hồng B",
+      attributes: { price: 750000 },
     })
 
     const catB = await repo.createCatalog(tenantB.ctx, {
@@ -97,19 +105,20 @@ describe("greeting-card tenant isolation", () => {
       customerName: "Khách B",
     })
 
+    await selectBrochureProduct(linkB.sendCode, productB.id)
     const orderResult = await submitBrochureOrder(linkB.sendCode, {
       customerName: "Khách B",
       customerPhone: "0987654321",
       recipientName: "Người nhận B",
       recipientPhone: "0912345678",
-      deliveryDate: "2026-10-20",
+      deliveryDate: inTenDays(),
       deliveryAddress: "123 Đường B, Quận 1, TP.HCM",
     })
 
     // Tenant A tries to confirm payment of Tenant B's order
     await expect(
       adminConfirmBrochurePayment(tenantA.ctx, orderResult.orderId)
-    ).rejects.toThrow("Không tìm thấy đơn hàng Thẻ chào tương ứng")
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
 
     // Tenant B confirms payment successfully
     const confirmed = await adminConfirmBrochurePayment(tenantB.ctx, orderResult.orderId)

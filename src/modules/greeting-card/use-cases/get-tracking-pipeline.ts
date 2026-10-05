@@ -10,6 +10,25 @@ import {
   type TrackingStepState,
 } from "../domain/tracking-pipeline-types"
 
+/** Trường JSON lỏng (ảnh chụp mẫu, địa chỉ, khung giờ, metadata ghi chú) — đọc phòng thủ, không `any`. */
+type LooseJson = {
+  name?: string
+  price?: number
+  imageUrl?: string
+  recipientName?: string
+  phone?: string
+  street?: string
+  date?: string
+  role?: string
+  stepKey?: string
+  senderName?: string
+  content?: string
+}
+
+function loose(value: unknown): LooseJson {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as LooseJson) : {}
+}
+
 function resolveOrderStep(order: {
   status: string
   production_status: string
@@ -66,9 +85,9 @@ export async function getTrackingPipeline(
   // 1. Process Orders
   const orderItems: TrackingPipelineItem[] = orders.map((order) => {
     const session = order.greeting_sessions[0]
-    const snapshot = (session?.product_snapshot as any) || (order.items[0]?.metadata as any) || {}
-    const deliveryAddress = order.delivery_address as any
-    const deliveryWindow = order.delivery_window as any
+    const snapshot = session?.product_snapshot ? loose(session.product_snapshot) : loose(order.items[0]?.metadata)
+    const deliveryAddress = loose(order.delivery_address)
+    const deliveryWindow = loose(order.delivery_window)
 
     const currentStepId = resolveOrderStep({
       status: order.status,
@@ -152,7 +171,7 @@ export async function getTrackingPipeline(
 
   // 2. Process Sessions without order
   const sessionItems: TrackingPipelineItem[] = activeSessions.map((session) => {
-    const snapshot = (session.product_snapshot as any) || {}
+    const snapshot = loose(session.product_snapshot)
     const currentStepId = resolveSessionStep({
       status: session.status,
       opened_at: session.opened_at,
@@ -164,7 +183,7 @@ export async function getTrackingPipeline(
     const notes: InternalNoteMessage[] = (session.events || [])
       .filter((e) => e.event_type === "INTERNAL_NOTE")
       .map((e) => {
-        const meta = (e.metadata as any) || {}
+        const meta = loose(e.metadata)
         const role = (meta.role as InternalNoteRole) || "SALE"
         const stepKey = (meta.stepKey as TrackingPipelineStepId) || "GENERAL"
         const step = stepMap.get(stepKey as TrackingPipelineStepId)

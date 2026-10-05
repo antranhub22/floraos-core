@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback } from "react"
+import useSWR from "swr"
 
 export interface CatalogOption {
   id: string
@@ -52,55 +53,38 @@ async function readError(res: Response, fallback: string): Promise<string> {
   }
 }
 
-/** Dữ liệu và thao tác bộ sưu tập dùng cho luồng gửi thẻ chào. */
+/** Dữ liệu và thao tác bộ sưu tập dùng cho luồng gửi thẻ chào (SWR — không tải bằng useEffect). */
 export function useJourneyCatalogs() {
-  const [catalogs, setCatalogs] = useState<CatalogOption[]>([])
-  const [orgSlug, setOrgSlug] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const list = useSWR<CatalogOption[]>(CATALOG_API, async (url: string) => {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(await readError(res, "Không tải được danh sách bộ sưu tập."))
+    const json = (await res.json()) as CatalogListResponse
+    return (json.data ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      code: c.code,
+      itemCount: c._count?.items ?? 0,
+      filters: c.filters ?? null,
+    }))
+  })
+  // Không có slug (lỗi/không quyền) → dùng link dạng g/<id>
+  const org = useSWR<{ slug?: string }>("/api/v1/organizations/current", (url: string) =>
+    fetch(url).then((r) => (r.ok ? r.json() : {}))
+  )
+  const catalogs = list.data ?? []
+  const orgSlug = org.data?.slug ?? ""
+  const loading = list.isLoading
+  const loadError = list.error instanceof Error ? list.error.message : null
 
-  const fetchList = useCallback(async (): Promise<CatalogOption[]> => {
-    try {
-      const res = await fetch(CATALOG_API)
-      if (!res.ok) throw new Error(await readError(res, "Không tải được danh sách bộ sưu tập."))
-      const json = (await res.json()) as CatalogListResponse
-      const list = (json.data ?? []).map((c) => ({
-        id: c.id,
-        name: c.name,
-        code: c.code,
-        itemCount: c._count?.items ?? 0,
-        filters: c.filters ?? null,
-      }))
-      setCatalogs(list)
-      setLoadError(null)
-      return list
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Không tải được danh sách bộ sưu tập.")
-      return []
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  /** Cập nhật lạc quan danh sách đang có (vd. số mẫu sau khi thêm/xoá trong picker). */
+  const setCatalogs = useCallback(
+    (update: (prev: CatalogOption[]) => CatalogOption[]) => {
+      void list.mutate((prev) => update(prev ?? []), { revalidate: false })
+    },
+    [list]
+  )
 
-  const reload = useCallback(async (): Promise<CatalogOption[]> => {
-    setLoading(true)
-    return fetchList()
-  }, [fetchList])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu từ API khi mount; setState chỉ chạy sau await trong hàm tải
-    void fetchList()
-    void (async () => {
-      try {
-        const res = await fetch("/api/v1/organizations/current")
-        if (!res.ok) return
-        const data = (await res.json()) as { slug?: string }
-        if (data.slug) setOrgSlug(data.slug)
-      } catch {
-        // Không có slug → dùng link dạng g/<id>
-      }
-    })()
-  }, [fetchList])
+  const reload = useCallback(async (): Promise<CatalogOption[]> => (await list.mutate()) ?? [], [list])
 
   const createCatalog = useCallback(
     async (input: { name: string; code?: string; productIds?: string[] }): Promise<string> => {
@@ -137,7 +121,7 @@ export function useJourneyCatalogs() {
   )
 
   const createSendLink = useCallback(
-    async (input: { catalogId: string; customerName: string; customerPhone: string }) => {
+    async (input: { catalogId: string; customerName: string; customerPhone: string; expiresInDays: number | null }) => {
       const res = await fetch("/api/v1/greeting-card/send-links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -145,6 +129,7 @@ export function useJourneyCatalogs() {
           catalogId: input.catalogId,
           customerName: input.customerName.trim() || undefined,
           customerPhone: input.customerPhone.trim() || undefined,
+          expiresInDays: input.expiresInDays,
         }),
       })
       if (!res.ok) throw new Error(await readError(res, "Không tạo được link gửi khách. Vui lòng thử lại."))
@@ -164,8 +149,8 @@ export function useJourneyCatalogs() {
       body: JSON.stringify({ filters }),
     })
     if (!res.ok) throw new Error(await readError(res, "Không lưu được giao diện. Vui lòng thử lại."))
-    setCatalogs((list) => list.map((c) => (c.id === catalog.id ? { ...c, filters } : c)))
-  }, [])
+    setCatalogs((items) => items.map((c) => (c.id === catalog.id ? { ...c, filters } : c)))
+  }, [setCatalogs])
 
   return { saveTemplate, catalogs, setCatalogs, orgSlug, loading, loadError, reload, createCatalog, cloneCatalog, createSendLink }
 }

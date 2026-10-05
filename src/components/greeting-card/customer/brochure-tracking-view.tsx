@@ -1,8 +1,11 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React from "react"
+import useSWR from "swr"
+import { apiGet } from "@/components/greeting-card/greeting-api"
 import { CheckCircle2, Clock, Truck, Gift, Camera, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 interface BrochureTrackingViewProps {
   orderCode: string
@@ -32,25 +35,13 @@ type TrackingData = {
 }
 
 export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
-  const [data, setData] = useState<TrackingData | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  function loadTracking() {
-    setLoading(true)
-    fetch(`/api/v1/public/brochure/tracking/${orderCode}`)
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.status === "FOUND") setData(res)
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }
-
-  useEffect(() => {
-    loadTracking()
-    const timer = setInterval(loadTracking, 15000) // Polling every 15s
-    return () => clearInterval(timer)
-  }, [orderCode])
+  // SWR: tự hỏi lại mỗi 15 giây khi tab đang mở, giữ dữ liệu cũ trong lúc chờ
+  const tracking = useSWR<TrackingData>(`/api/v1/public/brochure/tracking/${orderCode}`, apiGet, {
+    refreshInterval: 15_000,
+  })
+  const data = tracking.data?.status === "FOUND" ? tracking.data : null
+  const loading = tracking.isLoading
+  const loadTracking = () => void tracking.mutate()
 
   if (loading && !data) {
     return (
@@ -70,7 +61,8 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
   }
 
   const { order, trackingStep } = data
-  const isPaid = order.paidVnd >= order.totalVnd
+  const awaitingQuote = order.totalVnd <= 0
+  const isPaid = !awaitingQuote && order.paidVnd >= order.totalVnd
 
   const steps = [
     { label: "Tiếp nhận", icon: Clock },
@@ -159,11 +151,7 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
             <span>Ảnh hoa thực tế thành phẩm từ thợ cắm:</span>
           </div>
           <div className="w-full aspect-[4/3] rounded-xl overflow-hidden border border-border shadow-sm">
-            <img
-              src={order.finishedImageUrl}
-              alt="Ảnh hoa thực tế"
-              className="w-full h-full object-cover"
-            />
+            <FlowerImage src={order.finishedImageUrl} alt="Ảnh hoa thực tế" sizes="(max-width: 512px) 100vw, 512px" className="w-full h-full" />
           </div>
           <span className="text-caption text-text-muted text-center mt-1">
             Hoa đã được chụp nghiệm thu trước khi giao đến tay người nhận.
@@ -186,7 +174,7 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
         <div className="flex justify-between">
           <span>Thanh toán:</span>
           <span className={`font-bold ${isPaid ? "text-success" : "text-warning"}`}>
-            {isPaid ? "Đã thanh toán" : "Chờ xác nhận chuyển khoản"}
+            {awaitingQuote ? "Chờ cửa hàng báo giá" : isPaid ? "Đã thanh toán" : "Chờ xác nhận chuyển khoản"}
           </span>
         </div>
         {order.cardMessage && (
@@ -195,7 +183,7 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
               Lời nhắn thiệp:
             </span>
             <p className="text-body-sm italic text-foreground bg-surface p-2.5 rounded-lg border border-border">
-              "{order.cardMessage}"
+              &ldquo;{order.cardMessage}&rdquo;
             </p>
           </div>
         )}

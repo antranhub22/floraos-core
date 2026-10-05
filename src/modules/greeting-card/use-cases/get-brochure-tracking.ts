@@ -1,41 +1,40 @@
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
+import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { mapOrderStatusToTrackingStep } from "../domain/greeting-card-rules"
 import type { ProductSnapshot } from "../domain/greeting-card-types"
 
+const ORDER_CODE_REGEX = /^[A-Z0-9-]{4,40}$/
+
+/**
+ * Trang theo dõi công khai theo mã đơn. Chỉ đơn nguồn Thẻ chào; chỉ trả tên
+ * người nhận và địa chỉ đã rút gọn (không SĐT).
+ */
 export async function getBrochureTracking(
   orderCode: string,
+  orders = new BrochureOrderRepository(),
   repo = new GreetingCardRepository()
 ) {
-  const order = await repo.getTrackingOrderByCode(orderCode)
+  const code = orderCode.trim().toUpperCase()
+  if (!ORDER_CODE_REGEX.test(code)) return { status: "NOT_FOUND" as const }
 
-  if (!order) {
-    return { status: "NOT_FOUND" as const }
-  }
+  const order = await orders.getTrackingOrderByCode(code)
+  if (!order) return { status: "NOT_FOUND" as const }
 
-  const step = mapOrderStatusToTrackingStep(
-    order.status,
-    order.production_status,
-    order.delivery_status
-  )
+  const step = mapOrderStatusToTrackingStep(order.status, order.production_status, order.delivery_status)
 
-  // Extract snapshot from item metadata or session
-  let snapshot: ProductSnapshot | null = null
-  const firstOrderItem = order.items.length > 0 ? order.items[0] : null
-  if (firstOrderItem && firstOrderItem.metadata) {
-    snapshot = firstOrderItem.metadata as unknown as ProductSnapshot
-  }
+  const firstItem = order.items[0]
+  const snapshot = (firstItem?.metadata as unknown as ProductSnapshot | null) ?? null
 
-  // Look for finished flower image in QC records or session
+  // Ảnh thành phẩm/người nhận gần nhất — chỉ ký asset của đúng tổ chức sở hữu đơn
   let finishedImageUrl: string | null = null
-  const latestQc = order.qc_records.length > 0 ? order.qc_records[0] : null
-  if (latestQc && latestQc.image_asset_ids && Array.isArray(latestQc.image_asset_ids)) {
-    const firstAssetId = latestQc.image_asset_ids[0]
-    if (typeof firstAssetId === "string") {
-      finishedImageUrl = await repo.getAssetStorageUrl(firstAssetId)
-    }
+  const latestQc = order.qc_records[0]
+  const assetIds = Array.isArray(latestQc?.image_asset_ids) ? latestQc.image_asset_ids : []
+  if (typeof assetIds[0] === "string") {
+    finishedImageUrl = await repo.getAssetStorageUrl(order.organization_id, assetIds[0])
   }
 
   const deliveryAddress = (order.delivery_address as Record<string, string> | null) || {}
+  const deliveryWindow = (order.delivery_window as Record<string, string> | null) || {}
 
   return {
     status: "FOUND" as const,
@@ -50,6 +49,8 @@ export async function getBrochureTracking(
       cardMessage: order.card_message,
       recipientName: deliveryAddress.recipientName || "Khách nhận",
       deliveryAddress: deliveryAddress.street || "",
+      deliveryDate: deliveryWindow.date || null,
+      deliveryTimeSlot: deliveryWindow.timeSlot || null,
       productSnapshot: snapshot,
       finishedImageUrl,
       createdAt: order.created_at.toISOString(),

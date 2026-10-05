@@ -1,22 +1,15 @@
-import { NextResponse } from "next/server"
+import { notFound } from "@/core/http/errors"
+import { handle, jsonResponse } from "@/core/http/response"
+import { enforceRateLimit } from "@/core/http/rate-limit"
 import { getGreetingCatalogForCustomer } from "@/modules/greeting-card/use-cases/get-greeting-catalog"
 
-interface RouteParams {
-  params: Promise<{ sendCode: string }>
-}
+/** GET /api/v1/public/brochure/[sendCode] — công khai, không cần đăng nhập. */
+export const GET = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
+  await enforceRateLimit(request, { scope: "brochure-view", limit: 120, windowMs: 60_000 })
+  const { sendCode } = await context.params
+  const data = await getGreetingCatalogForCustomer(sendCode)
+  if (data.status === "NOT_FOUND") throw notFound()
+  return jsonResponse(data)
+})
 
-export async function GET(request: Request, context: unknown) {
-  try {
-    const { sendCode } = await (context as RouteParams).params
-    const data = await getGreetingCatalogForCustomer(sendCode)
-
-    if (data.status === "NOT_FOUND") {
-      return NextResponse.json({ error: "Không tìm thấy Thẻ chào hoặc đường link đã hết hạn" }, { status: 404 })
-    }
-
-    return NextResponse.json(data)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Lỗi xử lý yêu cầu"
-    return NextResponse.json({ error: message }, { status: 500 })
-  }
-}
+export const dynamic = "force-dynamic"

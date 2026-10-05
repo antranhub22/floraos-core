@@ -1,54 +1,20 @@
-import { NextResponse } from "next/server"
-import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
-import { createProductSnapshot } from "@/modules/greeting-card/domain/greeting-card-rules"
-import { catalogItemToProduct } from "@/modules/greeting-card/domain/catalog-product-price"
+import { z } from "zod"
+import { validationFailed } from "@/core/http/errors"
+import { handle, jsonResponse } from "@/core/http/response"
+import { enforceRateLimit } from "@/core/http/rate-limit"
+import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
 
-interface RouteParams {
-  params: Promise<{ sendCode: string }>
-}
+// Chỉ nhận productId — mọi field khác (giá, tên, ảnh) khách gửi lên đều bị bỏ qua.
+const bodySchema = z.object({ productId: z.string().min(1).max(64) })
 
-export async function POST(request: Request, context: unknown) {
-  try {
-    const { sendCode } = await (context as RouteParams).params
-    const body = await request.json().catch(() => ({}))
-    // Chỉ nhận productId; tên, giá, ảnh lấy từ bộ sưu tập phía máy chủ (không tin dữ liệu khách gửi)
-    const { productId } = body as { productId?: string }
+/** POST /api/v1/public/brochure/[sendCode]/select */
+export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
+  await enforceRateLimit(request, { scope: "brochure-select", limit: 30, windowMs: 60_000 })
+  const { sendCode } = await context.params
+  const parsed = bodySchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) throw validationFailed({ productId: "Thiếu thông tin mẫu hoa" })
+  const snapshot = await selectBrochureProduct(sendCode, parsed.data.productId)
+  return jsonResponse({ success: true, snapshot })
+})
 
-    if (!productId) {
-      return NextResponse.json({ error: "Thiếu thông tin sản phẩm" }, { status: 400 })
-    }
-
-    const repo = new GreetingCardRepository()
-    const session = await repo.getPublicSessionBySendCode(sendCode)
-    if (!session) {
-      return NextResponse.json({ error: "Không tìm thấy Thẻ chào" }, { status: 404 })
-    }
-
-    const item = session.catalog.items.find((i) => i.product.id === productId)
-    if (!item) {
-      return NextResponse.json({ error: "Mẫu hoa không có trong bộ sưu tập này" }, { status: 404 })
-    }
-    const mainImage = item.product.images.find((img) => img.role === "MAIN") ?? item.product.images[0]
-    const assetMap = mainImage ? await repo.getAssetsStorageMap([mainImage.asset_id]) : new Map<string, string>()
-    const snapshot = createProductSnapshot(
-      catalogItemToProduct(item, mainImage ? assetMap.get(mainImage.asset_id) ?? null : null),
-    )
-
-    await repo.updateSession(session.id, {
-      status: "SELECTED",
-      selectedProductId: productId,
-      productSnapshot: snapshot,
-      selectedAt: new Date(),
-    })
-
-    await repo.recordJourneyEvent(session.organization_id, session.id, "SELECT_PRODUCT", {
-      productId,
-      snapshot,
-    })
-
-    return NextResponse.json({ success: true, snapshot })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Lỗi xử lý yêu cầu"
-    return NextResponse.json({ error: message }, { status: 500 })
-  }
-}
+export const dynamic = "force-dynamic"

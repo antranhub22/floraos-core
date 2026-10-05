@@ -14,9 +14,9 @@ interface LookbookGridDeckProps {
 
 const PRICE_FILTERS = [
   { id: "all", label: "Tất cả", test: () => true },
-  { id: "lt500", label: "Dưới 500.000 ₫", test: (p: number) => p < 500_000 },
-  { id: "500-1m", label: "500.000 – 1 triệu", test: (p: number) => p >= 500_000 && p <= 1_000_000 },
-  { id: "gt1m", label: "Trên 1 triệu", test: (p: number) => p > 1_000_000 },
+  { id: "lt500", label: "Dưới 500.000 ₫", test: (p: number | null) => p !== null && p < 500_000 },
+  { id: "500-1m", label: "500.000 – 1 triệu", test: (p: number | null) => p !== null && p >= 500_000 && p <= 1_000_000 },
+  { id: "gt1m", label: "Trên 1 triệu", test: (p: number | null) => p !== null && p > 1_000_000 },
 ] as const
 
 /** Lookbook: lưới ảnh lớn như cửa hàng thời trang, lọc theo giá, chạm để xem chi tiết. */

@@ -46,7 +46,6 @@ function getStepIcon(stepId: TrackingPipelineStepId, size = 14) {
 
 export function TrackingStepperView({
   steps,
-  currentStepId,
   onSelectStepNote,
 }: TrackingStepperViewProps) {
   return (
@@ -55,7 +54,6 @@ export function TrackingStepperView({
         {steps.map((step, idx) => {
           const isCompleted = step.status === "completed"
           const isCurrent = step.status === "current"
-          const isPending = step.status === "pending"
           const isLast = idx === steps.length - 1
 
           return (

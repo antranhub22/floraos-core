@@ -1,5 +1,5 @@
 {
-  "total": 78,
+  "total": 46,
   "files": {
     "src/app/(app)/audit/page.tsx": {
       "react-hooks/set-state-in-effect": 1
@@ -27,12 +27,6 @@
     },
     "src/app/(app)/san-pham/tao-moi/page.tsx": {
       "react-hooks/set-state-in-effect": 1
-    },
-    "src/app/(app)/the-chao/page.tsx": {
-      "react-hooks/set-state-in-effect": 1
-    },
-    "src/app/api/v1/greeting-card/tracking-pipeline/route.ts": {
-      "@typescript-eslint/no-explicit-any": 1
     },
     "src/components/catalog/catalog-journey-entry.tsx": {
       "react/no-unescaped-entities": 2
@@ -73,41 +67,6 @@
     "src/components/dashboard/store-journey-home.tsx": {
       "react-hooks/set-state-in-effect": 1
     },
-    "src/components/greeting-card/admin/admin-brochure-payment-tab.tsx": {
-      "react-hooks/set-state-in-effect": 1
-    },
-    "src/components/greeting-card/catalog/catalog-detail-panel.tsx": {
-      "react-hooks/set-state-in-effect": 1
-    },
-    "src/components/greeting-card/catalog/catalog-list-tab.tsx": {
-      "react-hooks/set-state-in-effect": 1
-    },
-    "src/components/greeting-card/catalog/catalog-product-picker.tsx": {
-      "react-hooks/set-state-in-effect": 1
-    },
-    "src/components/greeting-card/coordinator/coordinator-brochure-tab.tsx": {
-      "react-hooks/set-state-in-effect": 1,
-      "react/no-unescaped-entities": 2
-    },
-    "src/components/greeting-card/customer/brochure-tracking-view.tsx": {
-      "react-hooks/set-state-in-effect": 1,
-      "react/no-unescaped-entities": 2
-    },
-    "src/components/greeting-card/journey/journey-wizard.tsx": {
-      "react-hooks/set-state-in-effect": 1
-    },
-    "src/components/greeting-card/sales/sales-brochure-tab.tsx": {
-      "react-hooks/set-state-in-effect": 1
-    },
-    "src/components/greeting-card/tracking/brochure-order-tracking-tab.tsx": {
-      "react-hooks/set-state-in-effect": 1
-    },
-    "src/components/greeting-card/tracking/tracking-internal-chat-drawer.tsx": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/components/greeting-card/tracking/tracking-order-card.tsx": {
-      "react/no-unescaped-entities": 2
-    },
     "src/components/layout/desktop-nav.tsx": {
       "react-hooks/set-state-in-effect": 1
     },
@@ -141,15 +100,6 @@
     },
     "src/modules/content-engine/domain/landing-content-generator.ts": {
       "prefer-const": 1
-    },
-    "src/modules/greeting-card/infra/greeting-card-repository.ts": {
-      "@typescript-eslint/no-explicit-any": 7
-    },
-    "src/modules/greeting-card/use-cases/get-greeting-catalog.ts": {
-      "@typescript-eslint/no-explicit-any": 1
-    },
-    "src/modules/greeting-card/use-cases/get-tracking-pipeline.ts": {
-      "@typescript-eslint/no-explicit-any": 6
     },
     "src/modules/journey/domain/journey-state.test.ts": {
       "prefer-const": 1

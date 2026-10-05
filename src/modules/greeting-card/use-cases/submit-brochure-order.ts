@@ -1,91 +1,72 @@
+import { unprocessable, validationFailed } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
-import {
-  validateCustomerOrderInput,
-  createProductSnapshot,
-} from "../domain/greeting-card-rules"
-import {
-  generateVietQrUrl,
-  DEFAULT_SHOP_PAYMENT_INFO,
-} from "../adapters/vietqr-helper"
+import { BrochureOrderRepository } from "../infra/brochure-order-repository"
+import { validateCustomerOrderInput } from "../domain/greeting-card-rules"
+import { paymentInstructionsFor } from "./payment-instructions"
 import type { CustomerOrderSubmitInput, ProductSnapshot } from "../domain/greeting-card-types"
-import { catalogItemToProduct } from "../domain/catalog-product-price"
+import { loadPublicSession, resolveOrderableProduct } from "./brochure-session-access"
+import { placeBrochureOrder, type BrochureOrderResult } from "./place-brochure-order"
+import { quoteForProduct, type QuoteRequest, type QuoteResult } from "./brochure-quote"
 
+export { DEFAULT_TIME_SLOT, type BrochureOrderResult } from "./place-brochure-order"
+
+/** Khách gửi đơn từ link chào `/b/[sendCode]` (đã chọn mẫu trước đó). */
 export async function submitBrochureOrder(
   sendCode: string,
   input: CustomerOrderSubmitInput,
-  repo = new GreetingCardRepository()
-) {
+  repo = new GreetingCardRepository(),
+  orders = new BrochureOrderRepository()
+): Promise<BrochureOrderResult> {
   const validation = validateCustomerOrderInput(input)
-  if (!validation.valid) {
-    throw new Error(Object.values(validation.errors)[0] || "Thông tin đặt hàng không hợp lệ")
-  }
+  if (!validation.valid) throw validationFailed(validation.errors)
 
-  const session = await repo.getPublicSessionBySendCode(sendCode)
-  if (!session) {
-    throw new Error("Không tìm thấy phiên Thẻ chào tương ứng")
-  }
+  const session = await loadPublicSession(sendCode, repo)
+  const shop = await repo.getShopProfile(session.organization_id)
 
-  let snapshot = session.product_snapshot as unknown as ProductSnapshot | null
-
-  // If no snapshot yet, try to find the selected product or the first catalog product
-  if (!snapshot && session.selected_product_id) {
-    const item = session.catalog.items.find((i) => i.product.id === session.selected_product_id)
-    if (item) {
-      snapshot = createProductSnapshot(catalogItemToProduct(item))
+  // Idempotent: phiên đã có đơn → trả lại đúng đơn đó (khách bấm hai lần, mạng chập chờn).
+  if (session.order_id) {
+    const existing = await orders.findOrderById(session.organization_id, session.order_id)
+    const snapshot = session.product_snapshot as unknown as ProductSnapshot | null
+    if (existing && snapshot) {
+      const total = Number(existing.total_vnd)
+      return {
+        sendCode: session.send_code,
+        orderId: existing.id,
+        orderCode: existing.code,
+        totalVnd: total,
+        quote: null,
+        productSnapshot: snapshot,
+        vietQr: paymentInstructionsFor(shop.settings, { totalVnd: total, paidVnd: Number(existing.paid_vnd) }, existing.code),
+      }
     }
   }
 
-  if (!snapshot && session.catalog.items.length > 0 && session.catalog.items[0]) {
-    const firstItem = session.catalog.items[0]
-    snapshot = createProductSnapshot(catalogItemToProduct(firstItem))
+  // Không còn "tự lấy mẫu đầu tiên" như bản cũ: khách phải chọn mẫu.
+  if (!session.selected_product_id) {
+    throw unprocessable("Vui lòng chọn mẫu hoa trước khi hoàn tất đặt hàng")
   }
+  // Tính lại giá từ Product Master lúc đặt — không tin ảnh chụp đã lưu.
+  const product = await resolveOrderableProduct(session, session.selected_product_id, repo)
 
-  if (!snapshot) {
-    throw new Error("Vui lòng chọn mẫu hoa trước khi hoàn tất đặt hàng")
-  }
-
-  const orgId = session.organization_id
-  const cleanPhone = input.customerPhone.replace(/\s+/g, "")
-
-  const order = await repo.createBrochureOrder({
-    organizationId: orgId,
-    sessionId: session.id,
-    code: `DH${new Date().toISOString().slice(2, 10).replace(/-/g, "")}-${session.send_code.replace(/[^A-Za-z0-9]/g, "")}`,
-    customerName: input.customerName.trim(),
-    customerPhone: cleanPhone,
-    recipientName: input.recipientName.trim(),
-    recipientPhone: input.recipientPhone.replace(/\s+/g, ""),
-    deliveryAddress: input.deliveryAddress.trim(),
-    deliveryDate: input.deliveryDate,
-    cardMessage: input.cardMessage?.trim() || null,
-    note: input.senderNote?.trim() ? `[Thẻ chào ${session.send_code}] ${input.senderNote.trim()}` : `[Thẻ chào ${session.send_code}]`,
-    snapshot,
-    totalAmount: snapshot.price,
+  return placeBrochureOrder({
+    organizationId: session.organization_id,
+    session,
+    product,
+    input,
+    notePrefix: `[Thẻ chào ${session.send_code}]`,
+    shopSettings: shop.settings,
   })
+}
 
-  const totalVnd = snapshot.price
-
-  // 6. Generate VietQR
-  const qrUrl = generateVietQrUrl({
-    bankId: DEFAULT_SHOP_PAYMENT_INFO.bankId,
-    accountNo: DEFAULT_SHOP_PAYMENT_INFO.accountNo,
-    accountName: DEFAULT_SHOP_PAYMENT_INFO.accountName,
-    amount: totalVnd,
-    description: order.code,
-  })
-
-  return {
-    orderId: order.id,
-    orderCode: order.code,
-    totalVnd,
-    productSnapshot: snapshot,
-    vietQr: {
-      qrUrl,
-      bankName: DEFAULT_SHOP_PAYMENT_INFO.bankName,
-      accountNo: DEFAULT_SHOP_PAYMENT_INFO.accountNo,
-      accountName: DEFAULT_SHOP_PAYMENT_INFO.accountName,
-      amount: totalVnd,
-      transferMemo: order.code,
-    },
-  }
+/** Báo giá trực tiếp trên form đặt hoa của link chào (mẫu đã chọn). */
+export async function quoteBrochureSession(
+  sendCode: string,
+  req: QuoteRequest,
+  repo = new GreetingCardRepository()
+): Promise<QuoteResult> {
+  const session = await loadPublicSession(sendCode, repo)
+  if (!session.selected_product_id) throw unprocessable("Vui lòng chọn mẫu hoa trước")
+  const product = await resolveOrderableProduct(session, session.selected_product_id, repo)
+  const shop = await repo.getShopProfile(session.organization_id)
+  return quoteForProduct(session.organization_id, product, req, shop.settings)
 }

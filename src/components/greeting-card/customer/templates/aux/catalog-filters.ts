@@ -27,7 +27,7 @@ export function occasionsOf(products: GreetingCatalogProduct[]): string[] {
 
 /** Mức ngân sách có ít nhất một mẫu hoa. */
 export function budgetsOf(products: GreetingCatalogProduct[]): BudgetTier[] {
-  return BUDGET_TIERS.filter((t) => products.some((p) => p.price >= t.min && p.price <= t.max))
+  return BUDGET_TIERS.filter((t) => products.some((p) => p.price !== null && p.price >= t.min && p.price <= t.max))
 }
 
 export function matchProducts(
@@ -39,7 +39,7 @@ export function matchProducts(
   const occ = occasion?.toLowerCase()
   return products.filter(
     (p) =>
-      (!tier || (p.price >= tier.min && p.price <= tier.max)) &&
+      (!tier || (p.price !== null && p.price >= tier.min && p.price <= tier.max)) &&
       (!occ || (p.occasion ?? "").toLowerCase().includes(occ)),
   )
 }

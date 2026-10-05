@@ -1,27 +1,34 @@
 import { z } from "zod"
 import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
+import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
+import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
+import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 const createCatalogSchema = z.object({
-  code: z.string().min(2),
-  name: z.string().min(2),
+  code: z.string().trim().min(2).max(40).regex(/^[a-zA-Z0-9-]+$/, "Mã chỉ gồm chữ, số và dấu gạch ngang"),
+  name: z.string().trim().min(2).max(120),
   type: z.enum(["STANDARD", "CLIENT"]).optional(),
-  description: z.string().nullable().optional(),
+  description: z.string().max(1000).nullable().optional(),
   filters: z.record(z.string(), z.unknown()).nullable().optional(),
-  productIds: z.array(z.string()).optional(),
+  productIds: z.array(z.string().min(1)).max(200).optional(),
 })
 
 export const GET = handle(async (request: Request) => {
   const { ctx } = await requireTenantContext(request)
-  const repo = new GreetingCardRepository()
-  const catalogs = await repo.listCatalogs(ctx)
-  return jsonResponse({ data: catalogs })
+  requireCapability(ctx, GREETING_CARD_CAPABILITY.read)
+  const url = new URL(request.url)
+  const limit = url.searchParams.has("limit") ? parseListQuery(url).limit : 100
+  const cursor = url.searchParams.get("cursor")?.trim() || undefined
+  const rows = await new GreetingCardRepository().listCatalogs(ctx, { limit, cursor })
+  return jsonResponse(toPage(rows, limit))
 })
 
 export const POST = handle(async (request: Request) => {
   const { ctx } = await requireTenantContext(request)
+  requireCapability(ctx, GREETING_CARD_CAPABILITY.manage)
   const body = await request.json().catch(() => ({}))
   const parsed = createCatalogSchema.safeParse(body)
   if (!parsed.success) {
@@ -36,7 +43,7 @@ export const POST = handle(async (request: Request) => {
     description: parsed.data.description,
     filters: parsed.data.filters,
     productIds: parsed.data.productIds,
-    createdBy: ctx.userId || "user",
+    createdBy: ctx.userId,
   })
 
   return jsonResponse({ data: catalog }, { status: 201 })

@@ -1,18 +1,22 @@
 import { z } from "zod"
 import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
+import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { adminConfirmBrochurePayment } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
+import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 const confirmPaymentSchema = z.object({
-  reference: z.string().nullable().optional(),
-  note: z.string().nullable().optional(),
+  // Bỏ trống = đúng khoản khách được yêu cầu chuyển (cọc hoặc phần còn lại)
+  amountVnd: z.number().int().positive().max(10_000_000_000).optional(),
+  reference: z.string().max(100).nullable().optional(),
+  note: z.string().max(500).nullable().optional(),
 })
 
-export const POST = handle(async (request: Request, context: unknown) => {
+export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request, context) => {
   const { ctx } = await requireTenantContext(request)
-  const params = await (context as { params: Promise<{ id: string }> }).params
-  const id = params.id
+  requireCapability(ctx, GREETING_CARD_CAPABILITY.paymentRecord)
+  const { id } = await context.params
 
   const body = await request.json().catch(() => ({}))
   const parsed = confirmPaymentSchema.safeParse(body)
@@ -21,6 +25,7 @@ export const POST = handle(async (request: Request, context: unknown) => {
   }
 
   const result = await adminConfirmBrochurePayment(ctx, id, {
+    amountVnd: parsed.data.amountVnd,
     reference: parsed.data.reference,
     note: parsed.data.note,
   })

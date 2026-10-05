@@ -2155,10 +2155,16 @@ Trường TỰ TẠO (`origin = CUSTOM`, D13) lưu giá trị ở cột `custom_
 
 `scripts/check-field-registry.ts` (`npm run check:field-registry`) đối chiếu: mọi trường lõi trong code có dòng `field_definitions`; `catalog_key`/`behavior` trong DB chỉ trỏ tới danh mục/hành vi có thật; không `field_config_overrides` mồ côi.
 
-## 28. Thẻ chào / Swipe Brochure — `greeting_*` (03/10/2026)
+## 28. Thẻ Chào mẫu hoa — Swipe Brochure (`greeting-card`)
 
-> **Bổ sung 05/10/2026** theo mã thật (`check:docs` bắt được bảng chưa khai). Bốn bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly. Ca thử: `tests/tenant/greeting-card.test.ts` (catalog, phiên, xác nhận thanh toán) và `tests/tenant/greeting-catalog-products-events.test.ts` (sản phẩm trong catalog, ghi chú nội bộ). Repository: `src/modules/greeting-card/infra/{greeting-card,tracking-pipeline}-repository.ts`. Endpoint: đặc tả 06 mục 25.
+> **Đồng bộ 05/10/2026.** Bảy bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly; ca thử: `tests/tenant/greeting-card*.test.ts`. Lược đồ đẩy bằng `prisma db push` như build Render (thư mục migrations dừng ở 27/09/2026 — xem `TECHNICAL_DEBT.md`).
 
+- `greeting_sessions.send_code` sinh ngẫu nhiên, duy nhất toàn hệ thống (kiểm ở use-case; ràng buộc DB vẫn theo tổ chức để giữ link cũ `T01-001`); tra công khai trùng giữa hai tiệm → 404.
+- `expires_at`/`revoked_at` chỉ chặn link CHƯA có đơn.
+- `greeting_integrations`: khoá webhook ngân hàng chỉ lưu băm SHA-256; thông tin đăng nhập Zalo/eSMS lưu AES-256-GCM (khoá dẫn xuất HKDF từ `INTEGRATION_TOKEN_SECRET`).
+- `greeting_payment_events`: unique `(organization_id, provider, external_id)` — webhook gửi lại không ghi thu hai lần.
+- `greeting_notifications`: unique `(organization_id, order_id, event_key)` — mỗi mốc gửi một lần; FAILED được gửi lại.
+- Cấu hình tiệm nằm trong `organizations.settings`: `brochure_payment` (tài khoản nhận tiền), `brochure_policy` (cọc %, chặn xưởng), `brochure_shipping` (khu vực + phí giao).
 - `greeting_catalogs` — bộ sưu tập chào khách theo dịp (`STANDARD`) hoặc riêng cho một khách (`CLIENT`); xoá là đặt `is_active = false`.
 - `greeting_catalog_products` — sản phẩm trong catalog. **Sản phẩm phải thuộc cùng tổ chức** (kiểm ở repository từ 05/10/2026; trước đó gắn được sản phẩm của tổ chức khác).
 - `greeting_sessions` — một đường link chào khách (`send_code`, duy nhất theo tổ chức); `product_snapshot` đóng băng mẫu hoa lúc khách chốt.
@@ -2168,11 +2174,11 @@ Trường TỰ TẠO (`origin = CUSTOM`, D13) lưu giá trị ở cột `custom_
 model greeting_catalogs {
   id              String   @id @default(uuid())
   organization_id String
-  code            String   // 20-10, 8-3, sinh-nhat, cc
+  code            String // 20-10, 8-3, sinh-nhat, cc
   name            String
   type            String   @default("STANDARD") // STANDARD | CLIENT
   description     String?
-  filters         Json?    // Bộ lọc dịp, mức giá, màu sắc khi tạo Client Catalog
+  filters         Json? // Bộ lọc dịp, mức giá, màu sắc khi tạo Client Catalog
   is_active       Boolean  @default(true)
   created_by      String
   created_at      DateTime @default(now())
@@ -2207,16 +2213,20 @@ model greeting_sessions {
   id                  String    @id @default(uuid())
   organization_id     String
   catalog_id          String
-  send_code           String    // T01-001, T01-002...
-  sale_id             String    // Người tạo link chào khách
+  send_code           String // T01-001, T01-002...
+  sale_id             String // Người tạo link chào khách
   customer_name       String?
   customer_phone      String?
   status              String    @default("CREATED") // CREATED | OPENED | BROWSING | SELECTED | ORDER_SUBMITTED | PAYMENT_REPORTED | COMPLETED
   selected_product_id String?
-  product_snapshot    Json?     // Đóng băng ảnh, tên, giá mẫu hoa lúc khách chốt
+  product_snapshot    Json? // Đóng băng ảnh, tên, giá mẫu hoa lúc khách chốt
   order_id            String?
   opened_at           DateTime?
   selected_at         DateTime?
+  /// Hết hạn link (null = không hết hạn). Hết hạn/thu hồi mà chưa có đơn → link trả 404.
+  expires_at          DateTime?
+  revoked_at          DateTime?
+  revoked_by          String?
   last_active_at      DateTime  @default(now())
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
@@ -2236,7 +2246,7 @@ model greeting_journey_events {
   id              String   @id @default(uuid())
   organization_id String
   session_id      String
-  event_type      String   // OPEN | SWIPE_NEXT | SWIPE_PREV | SELECT_PRODUCT | OPEN_ORDER_FORM | SUBMIT_ORDER | CLICK_PAID | TRACK_VIEW
+  event_type      String // OPEN | SWIPE_NEXT | SWIPE_PREV | SELECT_PRODUCT | OPEN_ORDER_FORM | SUBMIT_ORDER | CLICK_PAID | TRACK_VIEW
   metadata        Json?
   created_at      DateTime @default(now())
 
@@ -2244,6 +2254,65 @@ model greeting_journey_events {
   session      greeting_sessions @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, session_id])
+}
+
+model greeting_integrations {
+  id                       String   @id @default(uuid())
+  organization_id          String   @unique
+  payment_provider         String? // SEPAY
+  payment_webhook_key_hash String?  @unique
+  payment_webhook_key_hint String? // 4 ký tự cuối, để nhận diện khoá
+  payment_webhook_enabled  Boolean  @default(false)
+  notify_channel           String? // ZNS | ESMS
+  notify_enabled           Boolean  @default(false)
+  notify_config_encrypted  String?
+  notify_templates         Json? // mã mẫu tin theo sự kiện — không bí mật
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id])
+}
+
+model greeting_payment_events {
+  id              String    @id @default(uuid())
+  organization_id String
+  provider        String // SEPAY
+  external_id     String
+  amount_vnd      Decimal   @db.Decimal(14, 2)
+  content         String
+  account_no      String?
+  transaction_at  DateTime?
+  status          String // MATCHED | UNMATCHED | IGNORED
+  order_id        String?
+  payment_id      String?
+  note            String?
+  created_at      DateTime  @default(now())
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@unique([organization_id, provider, external_id])
+  @@index([organization_id, status])
+}
+
+model greeting_notifications {
+  id                  String   @id @default(uuid())
+  organization_id     String
+  order_id            String
+  event_key           String // PAYMENT_CONFIRMED | READY | DISPATCHED | DELIVERED | CANCELLED
+  channel             String // ZNS | ESMS
+  recipient_masked    String
+  status              String // SENT | FAILED | SKIPPED
+  provider_message_id String?
+  error               String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@unique([organization_id, order_id, event_key])
+  @@index([organization_id, order_id])
 }
 ```
 

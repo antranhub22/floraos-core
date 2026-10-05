@@ -1,7 +1,9 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useCallback } from "react"
 import Link from "next/link"
+import { useSWRConfig } from "swr"
+import { useApi } from "@/components/greeting-card/greeting-api"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Sparkles, Send, ShieldCheck, BookOpen, RefreshCw, GitMerge, Wand2, LayoutList } from "lucide-react"
 import { TabActionHeader, type TabItem } from "@/components/ui/tab-header"
@@ -29,26 +31,18 @@ export default function TheChaoPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("wizard")
   const [activeTab, setActiveTab] = useState<ActiveTab>("catalog")
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogBasic | null>(null)
-  const [catalogCount, setCatalogCount] = useState<number | null>(null)
-  const [sessionCount, setSessionCount] = useState<number | null>(null)
+  // Số đếm cho huy hiệu tab (SWR). Danh sách phân trang: quá 100 thì hiện "100+".
+  const catalogList = useApi<{ data: unknown[]; next_cursor: string | null }>("/api/v1/greeting-card/catalogs?limit=100")
+  const sessionList = useApi<{ data: unknown[]; next_cursor: string | null }>("/api/v1/greeting-card/send-links?limit=100")
+  const countOf = (r: { data: unknown[]; next_cursor: string | null } | undefined) =>
+    r ? (r.next_cursor ? "100+" : r.data.length) : null
+  const catalogCount = countOf(catalogList.data)
+  const sessionCount = countOf(sessionList.data)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const loadCounts = useCallback(async () => {
-    try {
-      const [catRes, sesRes] = await Promise.all([
-        fetch("/api/v1/greeting-card/catalogs").then((r) => r.json()).catch(() => ({ data: null })),
-        fetch("/api/v1/greeting-card/send-links").then((r) => r.json()).catch(() => ({ data: null })),
-      ])
-      if (Array.isArray(catRes.data)) setCatalogCount(catRes.data.length)
-      if (Array.isArray(sesRes.data)) setSessionCount(sesRes.data.length)
-    } catch {
-      // Số đếm chỉ để tham khảo — bỏ qua lỗi
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadCounts()
-  }, [loadCounts])
+  // "Làm mới" = mọi danh sách SWR trên trang tải lại
+  const { mutate } = useSWRConfig()
+  const refreshAll = useCallback(() => void mutate(() => true), [mutate])
 
   const tabs: TabItem[] = [
     { id: "catalog", icon: BookOpen, label: "Bộ sưu tập", ...(catalogCount !== null ? { badge: catalogCount } : {}) },
@@ -101,7 +95,7 @@ export default function TheChaoPage() {
           <button
             type="button"
             onClick={() => {
-              void loadCounts()
+              refreshAll()
               setRefreshKey((k) => k + 1)
               router.refresh()
             }}
@@ -118,7 +112,7 @@ export default function TheChaoPage() {
         <JourneyWizard
           key={refreshKey}
           onFinish={() => {
-            void loadCounts()
+            refreshAll()
             setActiveTab("sales")
             setViewMode("manager")
           }}
@@ -141,7 +135,7 @@ export default function TheChaoPage() {
                 catalogName={selectedCatalog.name}
                 onBack={() => {
                   setSelectedCatalog(null)
-                  void loadCounts()
+                  refreshAll()
                 }}
               />
             ) : (
