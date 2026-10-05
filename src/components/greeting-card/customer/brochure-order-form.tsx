@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useId, useState } from "react"
 import { ArrowLeft, Send, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,6 +30,10 @@ interface BrochureOrderFormProps {
   onSubmit: (input: CustomerOrderSubmitInput) => Promise<void>
 }
 
+// Chữ trong ô ≥ 16px (`text-title`) để iPhone không tự phóng to khi khách chạm vào ô
+const INPUT =
+  "w-full h-12 px-3 rounded-lg border border-border bg-background text-title font-normal text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+
 export function BrochureOrderForm({
   productSnapshot,
   variants,
@@ -39,6 +43,7 @@ export function BrochureOrderForm({
   onBack,
   onSubmit,
 }: BrochureOrderFormProps) {
+  const uid = useId()
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
   const [recipientName, setRecipientName] = useState("")
@@ -137,7 +142,7 @@ export function BrochureOrderForm({
           // Form dài trên điện thoại: đưa thông báo lỗi vào tầm nhìn ngay khi nó xuất hiện
           ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "center" })}
           className="mb-5 p-3 rounded-xl bg-danger-bg border border-danger/30 text-danger text-body-sm flex items-start gap-2">
-          <AlertCircle size={18} className="shrink-0 mt-0.5" />
+          <AlertCircle size={18} className="shrink-0 mt-0.5" aria-hidden="true" />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -157,7 +162,7 @@ export function BrochureOrderForm({
         {/* Người đặt */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-caption font-bold text-foreground mb-1">
+            <label htmlFor={`${uid}-customerName`} className="block text-body-sm font-bold text-foreground mb-1">
               Họ tên của bạn <span className="text-danger">*</span>
             </label>
             <input
@@ -166,12 +171,12 @@ export function BrochureOrderForm({
               placeholder="VD: Nguyễn Văn A"
               value={customerName}
               maxLength={ORDER_FIELD_MAX.name}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              id={`${uid}-customerName`} autoComplete="name" onChange={(e) => setCustomerName(e.target.value)}
+              className={INPUT}
             />
           </div>
           <div>
-            <label className="block text-caption font-bold text-foreground mb-1">
+            <label htmlFor={`${uid}-customerPhone`} className="block text-body-sm font-bold text-foreground mb-1">
               Số điện thoại của bạn <span className="text-danger">*</span>
             </label>
             <input
@@ -180,8 +185,8 @@ export function BrochureOrderForm({
               placeholder="VD: 0901234567"
               value={customerPhone}
               maxLength={15}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              id={`${uid}-customerPhone`} autoComplete="tel" inputMode="tel" onChange={(e) => setCustomerPhone(e.target.value)}
+              className={INPUT}
             />
           </div>
         </div>
@@ -189,7 +194,7 @@ export function BrochureOrderForm({
         {/* Người nhận */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-caption font-bold text-foreground mb-1">
+            <label htmlFor={`${uid}-recipientName`} className="block text-body-sm font-bold text-foreground mb-1">
               Họ tên người nhận hoa <span className="text-danger">*</span>
             </label>
             <input
@@ -198,12 +203,12 @@ export function BrochureOrderForm({
               placeholder="VD: Trần Thị B"
               value={recipientName}
               maxLength={ORDER_FIELD_MAX.name}
-              onChange={(e) => setRecipientName(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              id={`${uid}-recipientName`} autoComplete="off" onChange={(e) => setRecipientName(e.target.value)}
+              className={INPUT}
             />
           </div>
           <div>
-            <label className="block text-caption font-bold text-foreground mb-1">
+            <label htmlFor={`${uid}-recipientPhone`} className="block text-body-sm font-bold text-foreground mb-1">
               Số điện thoại người nhận <span className="text-danger">*</span>
             </label>
             <input
@@ -212,8 +217,8 @@ export function BrochureOrderForm({
               placeholder="VD: 0912345678"
               value={recipientPhone}
               maxLength={15}
-              onChange={(e) => setRecipientPhone(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              id={`${uid}-recipientPhone`} autoComplete="off" inputMode="tel" onChange={(e) => setRecipientPhone(e.target.value)}
+              className={INPUT}
             />
           </div>
         </div>
@@ -221,7 +226,7 @@ export function BrochureOrderForm({
         {/* Ngày & Giờ giao */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-caption font-bold text-foreground mb-1">
+            <label htmlFor={`${uid}-deliveryDate`} className="block text-body-sm font-bold text-foreground mb-1">
               Ngày giao hoa <span className="text-danger">*</span>
             </label>
             <input
@@ -230,18 +235,18 @@ export function BrochureOrderForm({
               min={minDate}
               max={maxDate}
               value={deliveryDate}
-              onChange={(e) => setDeliveryDate(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              id={`${uid}-deliveryDate`} onChange={(e) => setDeliveryDate(e.target.value)}
+              className={INPUT}
             />
           </div>
           <div>
-            <label className="block text-caption font-bold text-foreground mb-1">
+            <label htmlFor={`${uid}-deliveryTimeSlot`} className="block text-body-sm font-bold text-foreground mb-1">
               Khung giờ mong muốn
             </label>
             <select
               value={deliveryTimeSlot}
-              onChange={(e) => setDeliveryTimeSlot(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              id={`${uid}-deliveryTimeSlot`} onChange={(e) => setDeliveryTimeSlot(e.target.value)}
+              className={INPUT}
             >
               <option value="Buổi sáng (8h - 12h)">Buổi sáng (8h - 12h)</option>
               <option value="Buổi chiều (13h - 17h)">Buổi chiều (13h - 17h)</option>
@@ -253,7 +258,7 @@ export function BrochureOrderForm({
 
         {/* Địa chỉ giao */}
         <div>
-          <label className="block text-caption font-bold text-foreground mb-1">
+          <label htmlFor={`${uid}-deliveryAddress`} className="block text-body-sm font-bold text-foreground mb-1">
             Địa chỉ giao hoa chi tiết <span className="text-danger">*</span>
           </label>
           <input
@@ -262,14 +267,14 @@ export function BrochureOrderForm({
             placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành"
             value={deliveryAddress}
             maxLength={ORDER_FIELD_MAX.address}
-            onChange={(e) => setDeliveryAddress(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+            id={`${uid}-deliveryAddress`} autoComplete="street-address" onChange={(e) => setDeliveryAddress(e.target.value)}
+            className={INPUT}
           />
         </div>
 
         {/* Lời nhắn thiệp */}
         <div>
-          <label className="block text-caption font-bold text-foreground mb-1">
+          <label htmlFor={`${uid}-cardMessage`} className="block text-body-sm font-bold text-foreground mb-1">
             Nội dung thiệp mừng / băng rôn
           </label>
           <textarea
@@ -277,14 +282,14 @@ export function BrochureOrderForm({
             placeholder="VD: Chúc mừng ngày 20/10 người phụ nữ tuyệt vời của anh..."
             value={cardMessage}
             maxLength={ORDER_FIELD_MAX.cardMessage}
-            onChange={(e) => setCardMessage(e.target.value)}
-            className="w-full p-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+            id={`${uid}-cardMessage`} onChange={(e) => setCardMessage(e.target.value)}
+            className={`${INPUT} h-auto p-3 resize-none`}
           />
         </div>
 
         {/* Ghi chú thêm */}
         <div>
-          <label className="block text-caption font-bold text-foreground mb-1">
+          <label htmlFor={`${uid}-senderNote`} className="block text-body-sm font-bold text-foreground mb-1">
             Ghi chú thêm cho thợ cắm hoa
           </label>
           <input
@@ -292,8 +297,8 @@ export function BrochureOrderForm({
             placeholder="VD: Giao hoa nhẹ tay, gọi trước khi đến 15 phút"
             value={senderNote}
             maxLength={ORDER_FIELD_MAX.senderNote}
-            onChange={(e) => setSenderNote(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+            id={`${uid}-senderNote`} onChange={(e) => setSenderNote(e.target.value)}
+            className={INPUT}
           />
         </div>
 
@@ -303,8 +308,8 @@ export function BrochureOrderForm({
           disabled={loading}
           className="mt-2 w-full h-12 bg-primary hover:bg-primary-dark text-white font-extrabold text-body flex items-center justify-center gap-2 rounded-xl shadow-md"
         >
-          <Send size={18} />
-          <span>{loading ? "Đang gửi đơn hàng..." : "HOÀN TẤT ĐẶT HOA & THANH TOÁN"}</span>
+          <Send size={18} aria-hidden="true" />
+          <span>{loading ? "Đang gửi đơn hàng..." : "Đặt hoa & thanh toán"}</span>
         </Button>
       </form>
     </div>
