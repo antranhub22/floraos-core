@@ -57,6 +57,9 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
     const data = await res.json()
     setOrderResult(data)
     setStep("PAYMENT")
+    // Đổi địa chỉ sang link riêng của đơn (không tải lại trang): khách tải lại hoặc
+    // mở lại vẫn thấy QR và tiến độ, thay vì quay về màn lướt mẫu và mất mã đơn.
+    if (data?.sendCode) window.history.replaceState(null, "", `/b/${encodeURIComponent(data.sendCode)}`)
   }
 
   // Giá hiển thị trên form chỉ để khách xem — server tự tính lại giá khi tạo đơn.
