@@ -5,7 +5,7 @@ import { getGreetingCatalogForCustomer } from "@/modules/greeting-card/use-cases
 
 /** GET /api/v1/public/brochure/[sendCode] — công khai, không cần đăng nhập. */
 export const GET = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
-  enforceRateLimit(request, { scope: "brochure-view", limit: 120, windowMs: 60_000 })
+  await enforceRateLimit(request, { scope: "brochure-view", limit: 120, windowMs: 60_000 })
   const { sendCode } = await context.params
   const data = await getGreetingCatalogForCustomer(sendCode)
   if (data.status === "NOT_FOUND") throw notFound()

@@ -44,6 +44,9 @@ const schema = z.object({
   STORAGE_BUCKET: z.string().optional(),
   STORAGE_ACCESS_KEY: z.string().optional(),
   STORAGE_SECRET_KEY: z.string().optional(),
+  // Redis dùng chung (giới hạn tần suất endpoint công khai). Trống → đếm
+  // trong bộ nhớ từng instance (chỉ phù hợp dev/một instance).
+  REDIS_URL: optionalUrl,
   // === FEATURE FLAGS ===
   // Thẻ chào / Swipe Brochure (§34.16). Mặc định bật (“true”) — đặt "false"
   // để tắt module mà không cần xóa code hay deploy lại.

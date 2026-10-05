@@ -9,7 +9,7 @@ const bodySchema = z.object({ productId: z.string().min(1).max(64) })
 
 /** POST /api/v1/public/brochure/[sendCode]/select */
 export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
-  enforceRateLimit(request, { scope: "brochure-select", limit: 30, windowMs: 60_000 })
+  await enforceRateLimit(request, { scope: "brochure-select", limit: 30, windowMs: 60_000 })
   const { sendCode } = await context.params
   const parsed = bodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ productId: "Thiếu thông tin mẫu hoa" })

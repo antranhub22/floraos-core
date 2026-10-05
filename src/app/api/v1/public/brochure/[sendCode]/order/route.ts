@@ -6,7 +6,7 @@ import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-br
 
 /** POST /api/v1/public/brochure/[sendCode]/order — khách gửi đơn đặt hoa. */
 export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
-  enforceRateLimit(request, { scope: "brochure-order", limit: 10, windowMs: 10 * 60_000 })
+  await enforceRateLimit(request, { scope: "brochure-order", limit: 10, windowMs: 10 * 60_000 })
   const { sendCode } = await context.params
   const parsed = publicOrderBodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed(issuesToDetails(parsed.error.issues))

@@ -9,7 +9,7 @@ const bodySchema = publicOrderBodySchema.extend({ productId: z.string().min(1).m
 
 /** POST /api/v1/public/greeting-catalog/[id]/order — đặt hoa từ link bộ sưu tập công khai. */
 export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request, context) => {
-  enforceRateLimit(request, { scope: "greeting-catalog-order", limit: 10, windowMs: 10 * 60_000 })
+  await enforceRateLimit(request, { scope: "greeting-catalog-order", limit: 10, windowMs: 10 * 60_000 })
   const { id } = await context.params
   const parsed = bodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed(issuesToDetails(parsed.error.issues))

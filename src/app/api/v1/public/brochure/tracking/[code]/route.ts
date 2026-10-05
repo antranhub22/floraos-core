@@ -5,7 +5,7 @@ import { getBrochureTracking } from "@/modules/greeting-card/use-cases/get-broch
 
 /** GET /api/v1/public/brochure/tracking/[code] — khách theo dõi đơn theo mã đơn. */
 export const GET = handle<[{ params: Promise<{ code: string }> }]>(async (request, context) => {
-  enforceRateLimit(request, { scope: "brochure-tracking", limit: 60, windowMs: 60_000 })
+  await enforceRateLimit(request, { scope: "brochure-tracking", limit: 60, windowMs: 60_000 })
   const { code } = await context.params
   const data = await getBrochureTracking(code)
   if (data.status === "NOT_FOUND") throw notFound()

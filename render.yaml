@@ -32,6 +32,12 @@ services:
         generateValue: true
       - key: INTEGRATION_TOKEN_SECRET
         generateValue: true
+      # Redis dùng chung cho giới hạn tần suất endpoint công khai (Thẻ chào)
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: floraos-redis
+          property: connectionString
       - key: OPENAI_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY
@@ -198,6 +204,16 @@ services:
         sync: false
       - key: STORAGE_REGION
         value: auto
+
+  # ══════════════════════════════════════════════
+  # KEY VALUE (Redis) — bộ đếm giới hạn tần suất dùng chung các instance
+  # ══════════════════════════════════════════════
+  - type: keyvalue
+    name: floraos-redis
+    region: singapore
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: [] # chỉ dịch vụ nội bộ Render truy cập
 
 # ══════════════════════════════════════════════
 # DATABASE — PostgreSQL 16
