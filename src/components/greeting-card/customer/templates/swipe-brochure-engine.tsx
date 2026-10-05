@@ -8,6 +8,7 @@ import { SwipeCard, formatVnd } from "./swipe/swipe-card"
 import { SwipeDeckEnd } from "./swipe/swipe-deck-end"
 import { SWIPE_SIGNAL, getSwipeTheme, isLightTheme } from "./swipe/swipe-themes"
 import { useCardSwipe, type SwipeDirection } from "./swipe/use-card-swipe"
+import { rootHeight, useEmbeddedPreview } from "./aux/embedded"
 
 interface SwipeBrochureEngineProps {
   products: GreetingCatalogProduct[]
@@ -55,6 +56,7 @@ export function SwipeBrochureEngine({
   onSelectProduct,
   styleKey = "01",
 }: SwipeBrochureEngineProps) {
+  const embedded = useEmbeddedPreview()
   const theme = useMemo(() => getSwipeTheme(styleKey), [styleKey])
   const light = isLightTheme(theme)
   const [index, setIndex] = useState(0)
@@ -89,6 +91,7 @@ export function SwipeBrochureEngine({
 
   // Bàn phím: ← bỏ qua, → thích, ↑/Enter chi tiết, Backspace hoàn tác
   useEffect(() => {
+    if (embedded) return
     function onKey(e: KeyboardEvent) {
       if (inspect || (e.target instanceof HTMLElement && /INPUT|TEXTAREA/.test(e.target.tagName))) return
       if (e.key === "ArrowLeft") swipe.fling("nope")
@@ -98,7 +101,7 @@ export function SwipeBrochureEngine({
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [swipe, rewind, current, inspect])
+  }, [swipe, rewind, current, inspect, embedded])
 
   // Tải trước ảnh của 2 thẻ kế tiếp
   useEffect(() => {
@@ -111,7 +114,7 @@ export function SwipeBrochureEngine({
 
   if (products.length === 0) {
     return (
-      <div className="flex min-h-dvh w-full items-center justify-center p-6 text-center" style={stageStyle}>
+      <div className={`flex ${rootHeight(embedded)} w-full items-center justify-center p-6 text-center`} style={stageStyle}>
         <p className="text-body">Bộ sưu tập này chưa có mẫu hoa nào.</p>
       </div>
     )
@@ -120,7 +123,7 @@ export function SwipeBrochureEngine({
   const drag = Math.abs(swipe.progress)
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center" style={stageStyle}>
+    <div className={`flex ${embedded ? "h-full" : "min-h-dvh"} w-full flex-col items-center`} style={stageStyle}>
       <div className="flex w-full max-w-[440px] flex-1 flex-col px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-3">
         <header className="flex items-center justify-between px-1 pb-3">
           <h1 className="truncate text-body font-semibold" style={{ fontFamily: theme.font }}>{catalogName}</h1>
@@ -131,7 +134,7 @@ export function SwipeBrochureEngine({
 
         {current ? (
           <>
-            <div className="relative min-h-[420px] flex-1" style={{ maxHeight: 680 }}>
+            <div className={`relative flex-1 ${embedded ? "min-h-0" : "min-h-[420px]"}`} style={{ maxHeight: 680 }}>
               {[2, 1].map((offset) => {
                 const p = products[index + offset]
                 if (!p) return null

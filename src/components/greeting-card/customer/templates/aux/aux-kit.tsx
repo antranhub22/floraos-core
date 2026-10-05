@@ -5,6 +5,7 @@ import { Heart } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { cn } from "@/lib/utils"
 import { formatVnd } from "../swipe/swipe-card"
+import { rootHeight, useEmbeddedPreview } from "./embedded"
 
 export { formatVnd }
 
@@ -29,8 +30,9 @@ interface AuxPageProps {
 }
 
 export function AuxPage({ eyebrow, title, subtitle, children, bottom, className }: AuxPageProps) {
+  const embedded = useEmbeddedPreview()
   return (
-    <div className={cn("min-h-dvh w-full bg-bg text-text", className)}>
+    <div className={cn(rootHeight(embedded), "w-full bg-bg text-text", className)}>
       <div className={cn("mx-auto w-full max-w-[480px] px-4 pt-6", bottom ? "pb-28" : "pb-10")}>
         <header className="mb-5">
           {eyebrow && <p className="text-caption font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>}
@@ -49,17 +51,32 @@ export function AuxPage({ eyebrow, title, subtitle, children, bottom, className 
 }
 
 export function EmptyCatalog() {
+  const embedded = useEmbeddedPreview()
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-bg p-6 text-center">
+    <div className={`flex ${rootHeight(embedded)} items-center justify-center bg-bg p-6 text-center`}>
       <p className="text-body text-text-muted">Bộ sưu tập này chưa có mẫu hoa nào.</p>
     </div>
   )
 }
 
-export function ProductImage({ product, className }: { product: GreetingCatalogProduct; className?: string }) {
+/**
+ * Ảnh sản phẩm hòa nền: nhân (multiply) lên `backdrop` để nền trắng của ảnh studio
+ * tan vào màu khung, không lộ thành khối chữ nhật. Ảnh có bối cảnh thật gần như không đổi.
+ */
+export function ProductImage({
+  product,
+  className,
+  backdrop = "radial-gradient(90% 70% at 50% 40%, var(--color-surface) 0%, var(--color-surface-alt) 100%)",
+}: {
+  product: GreetingCatalogProduct
+  className?: string
+  backdrop?: string
+}) {
   return product.imageUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={product.imageUrl} alt="" loading="lazy" className={cn("h-full w-full object-cover", className)} />
+    <span className={cn("block h-full w-full overflow-hidden", className?.includes("absolute") ? undefined : "relative", className)} style={{ background: backdrop }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={product.imageUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" style={{ mixBlendMode: "multiply" }} />
+    </span>
   ) : (
     <div className={cn("flex h-full w-full items-center justify-center bg-surface-alt text-caption text-text-muted", className)}>
       Chưa có ảnh

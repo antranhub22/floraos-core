@@ -8,6 +8,7 @@ import {
   DEFAULT_SHOP_PAYMENT_INFO,
 } from "../adapters/vietqr-helper"
 import type { CustomerOrderSubmitInput, ProductSnapshot } from "../domain/greeting-card-types"
+import { catalogItemToProduct } from "../domain/catalog-product-price"
 
 export async function submitBrochureOrder(
   sendCode: string,
@@ -30,27 +31,13 @@ export async function submitBrochureOrder(
   if (!snapshot && session.selected_product_id) {
     const item = session.catalog.items.find((i) => i.product.id === session.selected_product_id)
     if (item) {
-      snapshot = createProductSnapshot({
-        id: item.product.id,
-        code: item.product.code,
-        name: item.product.name,
-        price: 500000,
-        imageUrl: null,
-        sortOrder: item.sort_order,
-      })
+      snapshot = createProductSnapshot(catalogItemToProduct(item))
     }
   }
 
   if (!snapshot && session.catalog.items.length > 0 && session.catalog.items[0]) {
     const firstItem = session.catalog.items[0]
-    snapshot = createProductSnapshot({
-      id: firstItem.product.id,
-      code: firstItem.product.code,
-      name: firstItem.product.name,
-      price: 500000,
-      imageUrl: null,
-      sortOrder: firstItem.sort_order,
-    })
+    snapshot = createProductSnapshot(catalogItemToProduct(firstItem))
   }
 
   if (!snapshot) {

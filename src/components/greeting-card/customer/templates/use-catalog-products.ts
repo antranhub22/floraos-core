@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { resolveCatalogProductPrice } from "@/modules/greeting-card/domain/catalog-product-price"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 
 const SAMPLE_PRODUCTS: GreetingCatalogProduct[] = [
@@ -66,19 +67,19 @@ export function useCatalogProducts(
             name: string
             code?: string
             masterImageUrl?: string
-            price_vnd?: number | null
+            attributes?: unknown
             description?: string | null
             flowers_summary?: string | null
             style?: string | null
             meaning?: string | null
-            variants?: Array<{ price_vnd?: number | null }>
+            variants?: Array<{ attributes?: unknown }>
           }
           sort_order: number
         }
         const mapped: GreetingCatalogProduct[] = (json.data.items as RawItem[]).map(
           (item, idx) => {
             const p = item.product
-            const price = p.price_vnd ?? p.variants?.[0]?.price_vnd ?? 0
+            const price = resolveCatalogProductPrice(p) ?? 0
             return {
               id: p.id,
               name: p.name,
@@ -87,7 +88,7 @@ export function useCatalogProducts(
               imageUrl: p.masterImageUrl || "",
               description: p.description || "",
               flowersSummary: p.flowers_summary || "",
-              style: p.style || "Thiết Kế",
+              style: p.style || null,
               meaning: p.meaning || "",
               sortOrder: item.sort_order ?? idx + 1,
             }

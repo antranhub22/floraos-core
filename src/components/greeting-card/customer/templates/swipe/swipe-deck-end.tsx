@@ -2,7 +2,8 @@
 
 import { Heart, RefreshCw, RotateCcw } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
-import { formatVnd } from "./swipe-card"
+import { formatVnd, photoBackdrop } from "./swipe-card"
+import { ProductImage } from "../aux/aux-kit"
 import { SWIPE_SIGNAL, isLightTheme, type SwipeTheme } from "./swipe-themes"
 
 interface SwipeDeckEndProps {
@@ -43,12 +44,9 @@ export function SwipeDeckEnd({ theme, liked, total, onOrder, onRestart, onRewind
         <ul className="flex flex-col gap-2.5 overflow-y-auto">
           {liked.map((p) => (
             <li key={p.id} className="flex items-center gap-3 rounded-2xl border p-2.5" style={{ background: panel, borderColor: line }}>
-              {p.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.imageUrl} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
-              ) : (
-                <span className="h-16 w-16 shrink-0 rounded-xl" style={{ background: line }} />
-              )}
+              <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl">
+                <ProductImage product={p} backdrop={photoBackdrop(theme)} />
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 text-body-sm font-semibold leading-snug">{p.name}</p>
                 <p className="mt-0.5 text-body-sm font-bold" style={{ color: light ? theme.ctaBg : theme.accent }}>

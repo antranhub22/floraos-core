@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { X } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { formatVnd } from "./swipe/swipe-card"
+import { ProductImage } from "./aux/aux-kit"
 
 interface EnterpriseSpecSheetProps {
   product: GreetingCatalogProduct
@@ -46,10 +47,7 @@ export function EnterpriseSpecSheet({ product, isOpen, onClose, onSelectProduct 
       <button type="button" aria-label="Đóng" onClick={onClose} className="absolute inset-0 bg-black/55 backdrop-blur-[2px] animate-in fade-in duration-200" />
       <div className="relative flex max-h-[92dvh] w-full max-w-[480px] flex-col overflow-hidden rounded-t-[28px] bg-surface text-text shadow-2xl animate-in slide-in-from-bottom duration-300">
         <div className="relative aspect-[4/3] w-full shrink-0 bg-surface-alt">
-          {product.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-          )}
+          <ProductImage product={product} />
           <span aria-hidden="true" className="absolute left-1/2 top-2.5 h-1.5 w-10 -translate-x-1/2 rounded-full bg-white/80" />
           <button
             type="button"

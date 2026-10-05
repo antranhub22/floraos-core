@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { GreetingTemplateRenderer } from "../greeting-template-renderer"
-import { TemplateSelectorCard } from "../template-selector-card"
+import { TemplateSelectorSplitPane } from "../template-selector-split-pane"
 import {
   GREETING_TEMPLATES,
   GREETING_TEMPLATE_LIST,
@@ -154,19 +154,19 @@ describe("Greeting Card 12 Visual Swipe Styles & Engine Tests", () => {
     expect(html).toContain("Đặt mẫu này")
   })
 
-  it("should render TemplateSelectorCard with 12 styles and filtering tabs", () => {
-    const html = renderToStaticMarkup(
-      createElement(TemplateSelectorCard, {
-        selectedTemplateId: "editorial-luxury",
-        onSelectTemplate: () => {},
-      })
-    )
-
-    for (const tpl of SWIPE_12_STYLES) {
-      expect(html).toContain(tpl.name.replace(/&/g, "&amp;"))
-      expect(html).toContain(tpl.badge)
+  it("trình chọn mẫu dựng đúng giao diện thật của mẫu đang chọn trong khung xem trước", () => {
+    for (const templateId of ["cinematic-dark", "lookbook-grid"] as const) {
+      const html = renderToStaticMarkup(
+        createElement(TemplateSelectorSplitPane, {
+          selectedTemplateId: templateId,
+          onSelectTemplate: () => {},
+          previewProducts: mockProducts,
+        })
+      )
+      for (const tpl of SWIPE_12_STYLES) expect(html).toContain(tpl.name.replace(/&/g, "&amp;"))
+      expect(html).toContain("Bó Hoa Hồng Red Naomi")
+      // Khung xem trước là giao diện thật: thẻ vuốt có nút Thích, lookbook có ô lọc giá
+      expect(html).toContain(templateId === "cinematic-dark" ? "Hoàn tác" : "Lookbook")
     }
-    expect(html).toContain("12 Phong Cách Vuốt Thẻ")
-    expect(html).toContain("Đang chọn")
   })
 })

@@ -5,6 +5,11 @@ import { ChevronUp, Info } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { EmptyCatalog, HeartToggle, ProductImage, formatVnd, useShortlist } from "./aux/aux-kit"
 import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
+import { useEmbeddedPreview } from "./aux/embedded"
+import { photoBackdrop } from "./swipe/swipe-card"
+import { getSwipeTheme } from "./swipe/swipe-themes"
+
+const REELS_BACKDROP = photoBackdrop(getSwipeTheme("03"))
 
 interface VideoReelsDeckProps {
   products: GreetingCatalogProduct[]
@@ -15,6 +20,7 @@ interface VideoReelsDeckProps {
 
 /** Reels: lướt dọc toàn màn hình như TikTok/Instagram, mỗi mẫu một khung hình. */
 export function VideoReelsDeck({ products, catalogName, onSelectProduct }: VideoReelsDeckProps) {
+  const embedded = useEmbeddedPreview()
   const shortlist = useShortlist()
   const [open, setOpen] = useState<GreetingCatalogProduct | null>(null)
   const [active, setActive] = useState(0)
@@ -37,7 +43,7 @@ export function VideoReelsDeck({ products, catalogName, onSelectProduct }: Video
   if (products.length === 0) return <EmptyCatalog />
 
   return (
-    <div className="relative h-dvh w-full bg-black text-white">
+    <div className={`relative ${embedded ? "h-full" : "h-dvh"} w-full bg-black text-white`}>
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pb-8 pt-4" style={{ background: "linear-gradient(180deg,rgba(0,0,0,0.55),rgba(0,0,0,0))" }}>
         <h1 className="truncate text-body font-semibold">{catalogName}</h1>
         <span className="text-caption tabular-nums text-white/80">
@@ -51,9 +57,9 @@ export function VideoReelsDeck({ products, catalogName, onSelectProduct }: Video
             key={p.id}
             data-index={i}
             aria-label={`${p.name}, ${formatVnd(p.price)}`}
-            className="relative mx-auto h-dvh w-full max-w-[480px] snap-start snap-always overflow-hidden"
+            className={`relative mx-auto ${embedded ? "h-full" : "h-dvh"} w-full max-w-[480px] snap-start snap-always overflow-hidden`}
           >
-            <ProductImage product={p} className="absolute inset-0" />
+            <ProductImage product={p} className="absolute inset-0" backdrop={REELS_BACKDROP} />
             <div className="absolute inset-x-0 bottom-0 h-2/3" style={{ background: "linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.5) 50%,rgba(0,0,0,0.9) 100%)" }} />
 
             <div className="absolute bottom-40 right-3 z-10 flex flex-col items-center gap-5">

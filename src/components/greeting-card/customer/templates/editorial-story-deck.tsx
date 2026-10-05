@@ -4,6 +4,7 @@ import { useState } from "react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { EmptyCatalog, HeartToggle, ProductImage, formatVnd, useShortlist } from "./aux/aux-kit"
 import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
+import { rootHeight, useEmbeddedPreview } from "./aux/embedded"
 
 interface EditorialStoryDeckProps {
   products: GreetingCatalogProduct[]
@@ -14,13 +15,14 @@ interface EditorialStoryDeckProps {
 
 /** Câu chuyện: dàn trang như tạp chí — ảnh lớn, số thứ tự, lời kể về ý nghĩa mẫu hoa. */
 export function EditorialStoryDeck({ products, catalogName, onSelectProduct }: EditorialStoryDeckProps) {
+  const embedded = useEmbeddedPreview()
   const shortlist = useShortlist()
   const [open, setOpen] = useState<GreetingCatalogProduct | null>(null)
 
   if (products.length === 0) return <EmptyCatalog />
 
   return (
-    <div className="min-h-dvh w-full bg-bg text-text">
+    <div className={`${rootHeight(embedded)} w-full bg-bg text-text`}>
       <div className="mx-auto w-full max-w-[480px] pb-12">
         <header className="px-6 pb-8 pt-10 text-center">
           <p className="text-caption font-semibold uppercase tracking-[0.3em] text-primary">Câu chuyện bộ sưu tập</p>
