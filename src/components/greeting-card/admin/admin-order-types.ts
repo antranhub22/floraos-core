@@ -7,7 +7,9 @@ export interface AdminOrder {
   paid_vnd: number
   balance_vnd: number
   customer: { name: string; phone: string | null } | null
-  greeting_sessions: Array<{ send_code: string; status: string }>
+  greeting_sessions: Array<{ send_code: string; status: string; product_snapshot?: unknown }>
+  items?: Array<{ metadata?: unknown; quantity?: number; unit_price_vnd?: number }>
+  pricing_rule_ref?: unknown
   payments: Array<{ id: string; kind: string; amount_vnd: number; collected_at: string; reference: string | null }>
   created_at: string
 }

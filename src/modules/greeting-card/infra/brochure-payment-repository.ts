@@ -171,7 +171,7 @@ export class BrochurePaymentRepository {
    * là 0). Chỉ ghi khi tổng vẫn là 0 — hai người báo giá cùng lúc thì một
    * người nhận 409.
    */
-  async setQuote(ctx: TenantContext, orderId: string, totalVnd: number) {
+  async setQuote(ctx: TenantContext, orderId: string, totalVnd: number, reason: string | null = null) {
     const order = await this.loadOrder(ctx, orderId)
     const blocker = quoteBlocker({ status: order.status, totalVnd: Number(order.total_vnd) }, totalVnd)
     if (blocker) throw (order.status === "CANCELLED" || Number(order.total_vnd) > 0 ? conflict(blocker) : unprocessable(blocker))
@@ -184,8 +184,8 @@ export class BrochurePaymentRepository {
         data: {
           total_vnd: totalVnd,
           balance_vnd: totalVnd - paid,
-          pricing_rule_ref: { ...ref, awaitingQuote: false, quotedTotalVnd: totalVnd, quotedAt: new Date().toISOString() } as Prisma.InputJsonValue,
-          internal_note: [order.internal_note, `[Báo giá] ${totalVnd.toLocaleString("vi-VN")} đ`].filter(Boolean).join("\n"),
+          pricing_rule_ref: { ...ref, awaitingQuote: false, quotedTotalVnd: totalVnd, quotedAt: new Date().toISOString(), ...(reason ? { quoteReason: reason } : {}) } as Prisma.InputJsonValue,
+          internal_note: [order.internal_note, `[Báo giá] ${totalVnd.toLocaleString("vi-VN")} đ${reason ? ` — ${reason}` : ""}`].filter(Boolean).join("\n"),
         },
       })
       if (moved.count === 0) throw conflict("Đơn hàng vừa được báo giá, vui lòng tải lại")
@@ -196,7 +196,7 @@ export class BrochurePaymentRepository {
           entityType: "order",
           entityId: order.id,
           before: { totalVnd: 0 },
-          after: { totalVnd },
+          after: { totalVnd, ...(reason ? { reason } : {}) },
         },
         tx
       )

@@ -89,8 +89,11 @@ describe("greeting-card quote (mẫu chưa niêm yết giá)", () => {
     expect(await codeOf(quoteBrochureOrder(b.ctx, order.orderId, 850_000))).toBe("NOT_FOUND")
     expect(await codeOf(quoteBrochureOrder(a.ctx, order.orderId, 0))).toBe("UNPROCESSABLE_ENTITY")
 
-    const quoted = await quoteBrochureOrder(a.ctx, order.orderId, 850_000)
+    const quoted = await quoteBrochureOrder(a.ctx, order.orderId, 850_000, "Thêm hoa nhập")
     expect(quoted).toMatchObject({ totalVnd: 850_000, balanceVnd: 850_000 })
+    // Lý do giá chốt lưu kèm báo giá để Điều hành đối chiếu khi xác nhận thanh toán
+    const row = await prisma.orders.findUniqueOrThrow({ where: { id: order.orderId } })
+    expect(row.pricing_rule_ref).toMatchObject({ quotedTotalVnd: 850_000, quoteReason: "Thêm hoa nhập" })
     expect(await codeOf(quoteBrochureOrder(a.ctx, order.orderId, 900_000))).toBe("CONFLICT")
     expect(await prisma.audit_logs.count({ where: { organization_id: a.organizationId, action: "greeting_card.order.quote" } })).toBe(1)
 

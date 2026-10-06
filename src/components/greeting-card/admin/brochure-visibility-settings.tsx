@@ -3,38 +3,32 @@
 import React, { useState } from "react"
 import { Eye } from "lucide-react"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
-import {
-  VISIBILITY_SETTINGS_KEY,
-  parseVisibilityMode,
-  type VisibilityMode,
-} from "@/modules/greeting-card/domain/order-visibility"
+import type { SaleVisibilityView } from "@/modules/greeting-card/use-cases/sale-visibility"
+import type { VisibilityMode } from "@/modules/greeting-card/domain/order-visibility"
+
+const MODE_LABEL: Record<VisibilityMode, string> = { ALL: "Tất cả khách", OWN: "Chỉ khách của mình" }
 
 /**
- * Điều hành chọn nhân viên bán hàng thấy mọi đơn hay chỉ đơn từ link của chính mình.
- * Điều phối, giao hàng, kế toán, điều hành luôn thấy tất cả.
+ * Điều hành chọn mỗi sale thấy khách/đơn của mọi người hay chỉ của chính mình.
+ * Điều phối, giao hàng, kế toán, điều hành luôn thấy tất cả nên không có trong danh sách.
  */
 export function BrochureVisibilitySettings() {
-  const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
-  const [saving, setSaving] = useState(false)
+  const view = useApi<{ data: SaleVisibilityView }>("/api/v1/greeting-card/sale-visibility")
+  const [saving, setSaving] = useState<string | null>(null)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
-  const mode = org.data ? parseVisibilityMode(org.data.settings) : null
+  const data = view.data?.data
 
-  async function change(next: VisibilityMode) {
-    setSaving(true)
+  async function save(key: string, body: { userId?: string; mode: VisibilityMode | null }) {
+    setSaving(key)
     setMessage(null)
     try {
-      await apiSend(
-        "/api/v1/organizations/current",
-        "PATCH",
-        { settings: { [VISIBILITY_SETTINGS_KEY]: { mode: next } } },
-        "Không lưu được phạm vi xem đơn",
-      )
-      await org.mutate()
-      setMessage({ ok: true, text: "Đã lưu phạm vi xem đơn." })
+      await apiSend("/api/v1/greeting-card/sale-visibility", "PUT", body, "Không lưu được quyền xem")
+      await view.mutate()
+      setMessage({ ok: true, text: "Đã lưu quyền xem." })
     } catch (err) {
-      setMessage({ ok: false, text: err instanceof Error ? err.message : "Không lưu được phạm vi xem đơn" })
+      setMessage({ ok: false, text: err instanceof Error ? err.message : "Không lưu được quyền xem" })
     } finally {
-      setSaving(false)
+      setSaving(null)
     }
   }
 
@@ -42,23 +36,53 @@ export function BrochureVisibilitySettings() {
     <section className="bg-surface rounded-2xl border border-border p-5 shadow-sm flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Eye size={18} className="text-primary" aria-hidden="true" />
-        <h3 className="text-title-sm font-extrabold text-foreground">Nhân viên bán hàng xem đơn nào</h3>
+        <h3 className="text-title-sm font-extrabold text-foreground">Sale được xem khách nào</h3>
       </div>
-      {!mode ? (
+      {view.error ? (
+        <p role="alert" className="text-body-sm text-danger">{view.error.message}</p>
+      ) : !data ? (
         <div className="h-16 rounded-lg bg-surface-muted animate-pulse" aria-busy="true" />
       ) : (
-        <fieldset className="flex flex-col gap-2 text-body-sm" disabled={saving}>
-          <legend className="sr-only">Phạm vi xem đơn của nhân viên bán hàng</legend>
-          <label className="flex items-start gap-2">
-            <input type="radio" name="brochure-visibility" checked={mode === "ALL"} onChange={() => void change("ALL")} className="mt-1" />
-            <span><strong>Thấy tất cả đơn</strong> (mặc định) — mọi sale cùng theo dõi, hỗ trợ nhau chốt đơn.</span>
+        <>
+          <label className="flex flex-wrap items-center gap-2 text-body-sm">
+            <span className="font-semibold text-foreground">Mặc định cho sale mới:</span>
+            <select
+              value={data.defaultMode}
+              disabled={saving !== null}
+              onChange={(e) => void save("default", { mode: e.target.value as VisibilityMode })}
+              className="h-9 rounded-lg border border-border bg-surface px-2 text-body-sm"
+            >
+              <option value="ALL">{MODE_LABEL.ALL}</option>
+              <option value="OWN">{MODE_LABEL.OWN}</option>
+            </select>
           </label>
-          <label className="flex items-start gap-2">
-            <input type="radio" name="brochure-visibility" checked={mode === "OWN"} onChange={() => void change("OWN")} className="mt-1" />
-            <span><strong>Chỉ đơn từ link của chính mình</strong> — mỗi sale chỉ thấy link và đơn do mình gửi.</span>
-          </label>
-          <p className="text-caption text-text-muted">Điều hành, điều phối, giao hàng và kế toán luôn thấy tất cả đơn.</p>
-        </fieldset>
+          {data.members.length === 0 ? (
+            <p className="text-body-sm text-text-muted">Chưa có nhân viên bán hàng nào trong cửa hàng.</p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-border rounded-xl border border-border">
+              {data.members.map((m) => (
+                <li key={m.userId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-body-sm font-semibold text-foreground truncate">{m.name}</p>
+                    <p className="text-caption text-text-muted">{m.roleName}</p>
+                  </div>
+                  <select
+                    aria-label={`Quyền xem của ${m.name}`}
+                    value={m.mode ?? ""}
+                    disabled={saving !== null}
+                    onChange={(e) => void save(m.userId, { userId: m.userId, mode: (e.target.value || null) as VisibilityMode | null })}
+                    className="h-9 rounded-lg border border-border bg-surface px-2 text-body-sm"
+                  >
+                    <option value="">Theo mặc định ({MODE_LABEL[data.defaultMode]})</option>
+                    <option value="ALL">{MODE_LABEL.ALL}</option>
+                    <option value="OWN">{MODE_LABEL.OWN}</option>
+                  </select>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-caption text-text-muted">Điều hành, điều phối, giao hàng và kế toán luôn thấy tất cả.</p>
+        </>
       )}
       {message && (
         <p role="status" className={`text-caption font-medium ${message.ok ? "text-success" : "text-danger"}`}>{message.text}</p>

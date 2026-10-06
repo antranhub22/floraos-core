@@ -161,7 +161,9 @@ describe("greeting-card: phạm vi xem đơn của sale (mục 10)", () => {
     await prisma.organizations.update({ where: { id: a.organizationId }, data: { settings: { brochure_visibility: { mode: "OWN" } } } })
     expect(await codes(saleA)).toEqual([linkA.sendCode])
     expect(await codes(saleB)).toEqual([linkB.sendCode])
-    expect(await codes({ ...saleA, capabilities: new Set(["R1", "R9"]) })).toEqual([linkA.sendCode, linkB.sendCode].sort())
+    expect(await codes({ ...saleA, capabilities: new Set(["R1", "R4"]) })).toEqual([linkA.sendCode, linkB.sendCode].sort())
+    // Vai sale mặc định có R9 (ghi nhận thu tiền) — vẫn phải bị lọc theo chế độ OWN
+    expect(await codes({ ...saleA, capabilities: new Set(["R1", "R2", "R9"]) })).toEqual([linkA.sendCode])
   })
 })
 
@@ -226,5 +228,43 @@ describe("greeting-card: tải ảnh catalog (mục 9)", () => {
     expect(own.headers.get("content-type")).toContain("image/png")
     expect(own.headers.get("content-disposition")).toContain("bo-suu-tap-bo-c.png")
     expect((await GET(withSession(url, b.token), params)).status).toBe(404)
+  })
+})
+
+describe("greeting-card: Điều hành chọn quyền xem cho từng sale", () => {
+  let a: Tenant
+  let b: Tenant
+
+  beforeEach(async () => {
+    await resetDatabase()
+    a = await createTenant("alpha")
+    b = await createTenant("beta")
+  })
+
+  afterAll(async () => {
+    await disconnectDatabase()
+  })
+
+  it("liệt kê sale của tổ chức, chọn riêng từng người; sale tổ chức khác → 404", async () => {
+    const { RoleRepository } = await import("@/modules/organization/infra/role-repository")
+    const { getSaleVisibility, setSaleVisibility } = await import("@/modules/greeting-card/use-cases/sale-visibility")
+    const saleRole = await new RoleRepository().findSystemRoleByKey("sale")
+    const user = await prisma.users.create({ data: { id: randomUUID(), email: `lan-${randomUUID()}@vi-du.test`, name: "Lan" } })
+    await prisma.memberships.create({
+      data: { id: randomUUID(), organization_id: a.organizationId, user_id: user.id, role_id: saleRole!.id, status: "ACTIVE", joined_at: new Date() },
+    })
+
+    const before = await getSaleVisibility(a.ctx)
+    // Chủ tiệm (điều hành) luôn thấy tất cả nên không nằm trong danh sách
+    expect(before.members.map((m) => m.name)).toEqual(["Lan"])
+    expect(before.members[0]!.mode).toBeNull()
+
+    const after = await setSaleVisibility(a.ctx, { userId: user.id, mode: "OWN" })
+    expect(after.members[0]!.mode).toBe("OWN")
+    const org = await prisma.organizations.findUniqueOrThrow({ where: { id: a.organizationId } })
+    expect((org.settings as Record<string, unknown>).brochure_visibility).toEqual({ mode: "ALL", members: { [user.id]: "OWN" } })
+
+    expect(await codeOf(setSaleVisibility(b.ctx, { userId: user.id, mode: "OWN" }))).toBe("NOT_FOUND")
+    expect((await getSaleVisibility(b.ctx)).members).toEqual([])
   })
 })

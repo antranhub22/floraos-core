@@ -3,6 +3,8 @@
 import React from "react"
 import { Ban, Check, RotateCcw, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
+import { paymentCheckOf } from "@/modules/greeting-card/domain/payment-check"
 import { vnd, type AdminOrder, type OrderAction } from "./admin-order-types"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -22,6 +24,7 @@ export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; on
         <thead className="bg-surface-muted text-text-muted text-caption uppercase border-b border-border">
           <tr>
             <th className="px-4 py-3">Mã đơn</th>
+            <th className="px-4 py-3">Mẫu</th>
             <th className="px-4 py-3">Khách hàng</th>
             <th className="px-4 py-3 text-right">Tổng</th>
             <th className="px-4 py-3 text-right">Đã thu</th>
@@ -42,6 +45,9 @@ export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; on
                   <div className="text-caption text-text-muted">
                     {o.greeting_sessions[0]?.send_code ?? "—"} · {new Date(o.created_at).toLocaleString("vi-VN")}
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  <ProductCell order={o} />
                 </td>
                 <td className="px-4 py-3">
                   <div className="font-semibold text-foreground">{o.customer?.name || "Khách đặt hoa"}</div>
@@ -94,6 +100,24 @@ export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; on
           })}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+function ProductCell({ order }: { order: AdminOrder }) {
+  const c = paymentCheckOf(order)
+  return (
+    <div className="flex items-center gap-2 min-w-40">
+      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-border bg-surface">
+        <FlowerImage src={c.imageUrl} alt={c.productName} sizes="40px" fallback="icon" className="h-full w-full" />
+      </div>
+      <div className="min-w-0">
+        <div className="truncate font-semibold text-foreground">{c.productName}</div>
+        <div className="text-caption text-text-muted">
+          {c.listedPriceVnd !== null ? `Công bố ${vnd(c.listedPriceVnd)}` : "Chưa niêm yết giá"}
+          {c.reasons.length > 0 && <span className="text-warning"> · {c.reasons.length} điều chỉnh</span>}
+        </div>
+      </div>
     </div>
   )
 }
