@@ -8,9 +8,15 @@ import { queryTracking } from "@/modules/greeting-card/use-cases/query-tracking"
 /**
  * GET /api/v1/greeting-card/tracking?view=kanban|list|calendar|queue|dashboard&… — mọi view
  * "Theo dõi tiến độ" trên cùng một tập dữ liệu, cùng bộ lọc, cùng phạm vi xem (R1).
+ * `list`/`queue` trả đúng dạng danh sách phân trang chung `{ data: [...], next_cursor, total }`
+ * (bộ tải "Tải thêm" đọc thẳng `data` là mảng); view khác trả `{ data: <kết quả view> }`.
  */
 export const GET = handle(async (request) => {
   const { ctx } = await requireTenantContext(request)
   requireCapability(ctx, GREETING_CARD_CAPABILITY.orderRead)
-  return jsonResponse({ data: await queryTracking(ctx, parseTrackingQuery(new URL(request.url))) })
+  const result = await queryTracking(ctx, parseTrackingQuery(new URL(request.url)))
+  if (result.view === "list" || result.view === "queue") {
+    return jsonResponse({ view: result.view, data: result.data, next_cursor: result.next_cursor, total: result.total })
+  }
+  return jsonResponse({ data: result })
 })

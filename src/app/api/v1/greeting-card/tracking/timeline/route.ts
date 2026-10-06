@@ -15,7 +15,7 @@ const schema = z
   })
   .refine((v) => v.orderId || v.sessionId, { message: "Cần orderId hoặc sessionId" })
 
-/** GET /api/v1/greeting-card/tracking/timeline?orderId=|sessionId= — dòng thời gian một đơn/link (R1). */
+/** GET /api/v1/greeting-card/tracking/timeline?orderId=|sessionId= — dòng thời gian một đơn/link (R1): `{ segments, data: sự kiện, next_cursor, total }`. */
 export const GET = handle(async (request) => {
   const { ctx } = await requireTenantContext(request)
   requireCapability(ctx, GREETING_CARD_CAPABILITY.orderRead)
@@ -23,5 +23,7 @@ export const GET = handle(async (request) => {
   const parsed = schema.safeParse(raw)
   if (!parsed.success) throw validationFailed({ ref: "Cần orderId hoặc sessionId hợp lệ" })
   const { orderId, sessionId, limit, cursor } = parsed.data
-  return jsonResponse({ data: await getTrackingTimeline(ctx, { orderId, sessionId }, { limit, cursor }) })
+  const tl = await getTrackingTimeline(ctx, { orderId, sessionId }, { limit, cursor })
+  // Dạng danh sách phân trang chung: `data` = sự kiện, kèm các bước đã qua
+  return jsonResponse({ orderId: tl.orderId, sessionId: tl.sessionId, segments: tl.segments, data: tl.events.data, next_cursor: tl.events.next_cursor, total: tl.events.total })
 })
