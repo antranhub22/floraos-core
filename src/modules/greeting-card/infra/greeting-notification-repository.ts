@@ -1,5 +1,5 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
-import { scopedWhere, type TenantContext } from "@/core/tenancy"
+import type { TenantContext } from "@/core/tenancy"
 import { Prisma } from "@/generated/prisma/client"
 import { isUniqueViolation } from "@/modules/coordinator/infra/transaction"
 
@@ -88,14 +88,6 @@ export class GreetingNotificationRepository {
     await this.db.greeting_notifications.update({
       where: { id },
       data: { status: data.status, provider_message_id: data.providerMessageId ?? null, error: data.error?.slice(0, 500) ?? null },
-    })
-  }
-
-  async listForOrder(ctx: TenantContext, orderId: string) {
-    return this.db.greeting_notifications.findMany({
-      where: scopedWhere(ctx, { order_id: orderId }),
-      orderBy: { created_at: "asc" },
-      select: { event_key: true, channel: true, status: true, recipient_masked: true, error: true, created_at: true },
     })
   }
 }

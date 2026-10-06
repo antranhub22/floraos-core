@@ -86,17 +86,21 @@ export class BrochureOrderRepository {
     return matches.length === 1 ? matches[0] ?? null : null
   }
 
+  /** Sale phụ trách đơn (người gửi link) — `null` khi đơn không thuộc tổ chức / không phải đơn Thẻ chào. */
+  async saleOfOrder(ctx: TenantContext, orderId: string): Promise<string | null> {
+    const order = await this.db.orders.findFirst({
+      where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
+      select: { greeting_sessions: { select: { sale_id: true }, take: 1 } },
+    })
+    return order?.greeting_sessions[0]?.sale_id ?? null
+  }
+
   /** Loại + dung lượng của các asset thuộc đúng tổ chức (asset tổ chức khác không có trong kết quả). */
   async ownedAssetsMeta(ctx: TenantContext, assetIds: readonly string[]) {
     return this.db.assets.findMany({
       where: scopedWhere(ctx, { id: { in: [...new Set(assetIds)] } }),
       select: { id: true, mime_type: true, file_size: true },
     })
-  }
-
-  async assetBelongsToTenant(ctx: TenantContext, assetId: string): Promise<boolean> {
-    const asset = await this.db.assets.findFirst({ where: scopedWhere(ctx, { id: assetId }), select: { id: true } })
-    return asset !== null
   }
 
   /**

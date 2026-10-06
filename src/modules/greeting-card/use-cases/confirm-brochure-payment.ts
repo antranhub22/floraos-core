@@ -7,6 +7,7 @@ import { expectedPayment, parsePaymentPolicy } from "../domain/brochure-payment-
 import { loadPublicSession } from "./brochure-session-access"
 import { queueOrderNotification } from "./notify-customer"
 import { paymentNotifyEvent } from "../domain/customer-notifications"
+import { assertOrderInScope } from "./order-scope"
 
 /**
  * Khách bấm "Tôi đã chuyển khoản". Chỉ hợp lệ khi đã có đơn; gọi lại nhiều
@@ -45,6 +46,7 @@ export async function adminConfirmBrochurePayment(
   orders = new BrochureOrderRepository(),
   repo = new GreetingCardRepository()
 ) {
+  await assertOrderInScope(ctx, orderId, orders)
   let amountVnd = input.amountVnd
   if (amountVnd === undefined) {
     const order = await orders.findBrochureOrder(ctx, orderId)
@@ -68,6 +70,7 @@ export async function cancelBrochureOrder(
   reason: string,
   payments = new BrochurePaymentRepository()
 ) {
+  await assertOrderInScope(ctx, orderId)
   const result = await payments.cancel(ctx, orderId, reason.trim())
   queueOrderNotification(ctx.organizationId, orderId, "CANCELLED")
   return result
@@ -79,6 +82,7 @@ export async function refundBrochureOrder(
   input: { amountVnd: number; reason: string },
   payments = new BrochurePaymentRepository()
 ) {
+  await assertOrderInScope(ctx, orderId)
   return payments.refund(ctx, orderId, { amountVnd: input.amountVnd, reason: input.reason.trim() })
 }
 
@@ -90,5 +94,9 @@ export async function quoteBrochureOrder(
   reason?: string | undefined,
   payments = new BrochurePaymentRepository()
 ) {
-  return payments.setQuote(ctx, orderId, totalVnd, reason?.trim() || null)
+  await assertOrderInScope(ctx, orderId)
+  const result = await payments.setQuote(ctx, orderId, totalVnd, reason?.trim() || null)
+  // Báo khách đơn đã có giá — kèm link theo dõi để mở QR thanh toán
+  queueOrderNotification(ctx.organizationId, orderId, "QUOTED")
+  return result
 }
