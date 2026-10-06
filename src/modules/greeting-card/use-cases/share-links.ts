@@ -40,10 +40,10 @@ export async function openShareLink(code: string, knownSendCode: string | null, 
   if (!link) return null
   if (knownSendCode) {
     const existing = await repo.existingVisitorSession(link.organization_id, knownSendCode)
-    if (existing) return { sendCode: existing.send_code, catalogId: link.catalog_id }
+    if (existing) return { sendCode: existing.send_code, sessionId: existing.id, organizationId: link.organization_id, catalogId: link.catalog_id }
   }
   const session = await repo.openVisitorSession(link, computeLinkExpiry(undefined))
-  return { sendCode: session.send_code, catalogId: link.catalog_id }
+  return { sendCode: session.send_code, sessionId: session.id, organizationId: link.organization_id, catalogId: link.catalog_id }
 }
 
 /** Thông tin xem trước của link (tiêu đề, ảnh) — trả về cho mọi bên mở link, không tạo phiên. */

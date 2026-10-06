@@ -60,7 +60,7 @@ export interface GreetingCatalogProduct {
   /** Kiểu gói lớp ngoài — từ Master Index */
   wrapStyle?: string | null | undefined
   sortOrder: number
-  /** `false` = tạm hết hàng theo tồn kho chi nhánh — không hiện trên link khách, không đặt được. */
+  /** `false` = tạm hết hàng theo tồn kho chi nhánh — link riêng `/b` vẫn hiện kèm nhãn "Tạm hết", không đặt được. */
   available?: boolean | undefined
   /** Các size/biến thể bán online (đã có giá); rỗng = chỉ bán bản gốc. */
   variants?: Array<{ id: string; name: string; priceVnd: number }> | undefined

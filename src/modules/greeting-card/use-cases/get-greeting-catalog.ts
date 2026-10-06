@@ -55,8 +55,9 @@ export async function getGreetingCatalogForCustomer(
   const status = session.status as GreetingSessionStatus
 
   const urls = await repo.getAssetsStorageMap(session.organization_id, collectImageAssetIds(session.catalog.items))
-  // Mẫu tạm hết hàng không hiện cho khách
-  const products = session.catalog.items.map((item) => toCatalogProduct(item, urls)).filter((p) => p.available !== false)
+  // Mẫu tạm hết hàng vẫn hiện (đánh dấu `available: false`) để khách xem mẫu tương tự / hỏi tiệm;
+  // chọn và đặt mẫu hết hàng bị chặn ở máy chủ (`resolveOrderableProduct`).
+  const products = session.catalog.items.map((item) => toCatalogProduct(item, urls))
   const shop = await repo.getShopProfile(session.organization_id)
   const contact = (await getShopContact(session.organization_id)) ?? {
     name: shop.name, phone: shop.phone, zaloUrl: null, address: null, logoUrl: null,

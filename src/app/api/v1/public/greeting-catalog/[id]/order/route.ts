@@ -6,6 +6,7 @@ import { issuesToDetails, publicOrderBodySchema, rejectBotSubmission } from "@/m
 import { submitPublicCatalogOrder } from "@/modules/greeting-card/use-cases/submit-public-catalog-order"
 import { recordCatalogEvent } from "@/modules/greeting-card/use-cases/catalog-channel-events"
 import { log } from "@/core/observability/log"
+import { grantBrochureOwnerByCode, isHttps, serializeOwnerCookie } from "@/modules/greeting-card/use-cases/brochure-owner"
 
 const bodySchema = publicOrderBodySchema.extend({
   productId: z.string().min(1).max(64),
@@ -26,7 +27,9 @@ export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request
     await recordCatalogEvent({ catalogId: id, channel: tracking.channel, eventType: "ORDER", visitorId: tracking.visitorId, orderId: result.orderId })
       .catch((err) => log.warn("greeting-catalog: ghi sự kiện ORDER lỗi", { err: String(err) }))
   }
-  return jsonResponse(result, { status: 201 })
+  // Đơn nằm ở phiên `/b/<mã>` mới — trình duyệt vừa đặt là chủ phiên đó
+  const cookie = result.sendCode ? await grantBrochureOwnerByCode(result.sendCode, "public-catalog-order") : null
+  return jsonResponse(result, { status: 201, ...(cookie ? { headers: { "set-cookie": serializeOwnerCookie(cookie, isHttps(request)) } } : {}) })
 })
 
 export const dynamic = "force-dynamic"

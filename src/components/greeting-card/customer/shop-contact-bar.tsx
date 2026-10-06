@@ -1,11 +1,19 @@
+"use client"
+
 import { MessageCircle, Phone } from "lucide-react"
 import type { ShopContact } from "@/modules/greeting-card/domain/shop-contact"
+
+interface ShopContactBarProps {
+  shop: ShopContact
+  /** Mẫu khách đang xem: bấm Zalo thì chép sẵn tin nhắn hỏi đúng mẫu này; Gọi thì ghi nhận mẫu */
+  inquiry?: { onZalo: () => void; onCall: () => void } | undefined
+}
 
 /**
  * Thanh thông tin cửa hàng trên mọi màn khách: logo + tên, nút Gọi và Chat Zalo.
  * Khách biết đang mua của ai và hỏi được ngay khi phân vân.
  */
-export function ShopContactBar({ shop }: { shop: ShopContact }) {
+export function ShopContactBar({ shop, inquiry }: ShopContactBarProps) {
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border bg-surface/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-md items-center gap-2.5 px-4">
@@ -21,6 +29,7 @@ export function ShopContactBar({ shop }: { shop: ShopContact }) {
         {shop.phone && (
           <a
             href={`tel:${shop.phone}`}
+            onClick={inquiry?.onCall}
             aria-label={`Gọi ${shop.name}`}
             className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border px-3 text-body-sm font-semibold text-foreground hover:bg-surface-muted"
           >
@@ -33,6 +42,14 @@ export function ShopContactBar({ shop }: { shop: ShopContact }) {
             href={shop.zaloUrl}
             target="_blank"
             rel="noreferrer"
+            onClick={
+              inquiry
+                ? (e) => {
+                    e.preventDefault()
+                    inquiry.onZalo()
+                  }
+                : undefined
+            }
             aria-label={`Chat Zalo với ${shop.name}`}
             className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-3 text-body-sm font-semibold text-surface hover:bg-primary-dark"
           >

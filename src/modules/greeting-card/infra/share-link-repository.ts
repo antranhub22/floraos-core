@@ -83,7 +83,7 @@ export class ShareLinkRepository {
 
   /** Phiên khách đã mở trước đó (cookie) — chỉ nếu cùng tổ chức và chưa thu hồi. */
   async existingVisitorSession(organizationId: string, sendCode: string) {
-    return this.db.greeting_sessions.findFirst({ where: { send_code: sendCode, organization_id: organizationId, revoked_at: null }, select: { send_code: true } })
+    return this.db.greeting_sessions.findFirst({ where: { send_code: sendCode, organization_id: organizationId, revoked_at: null }, select: { id: true, send_code: true } })
   }
 
   /** Link riêng theo mã gửi + đã có mốc sao chép chưa. */

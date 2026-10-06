@@ -5,6 +5,8 @@
 **Loại tài liệu:** ảnh chụp hiện trạng để làm đầu vào Gap Analysis (Enterprise Grade → Commercial Ready). **Không** phải SSOT, **không** đề xuất thiết kế lại.
 **Nguyên tắc:** chỉ kết luận theo mã và tài liệu trong repo; chỗ mã ≠ tài liệu ghi rõ ở §16.3; chỗ thiếu bằng chứng ghi ở §17.
 
+> **Cập nhật 06/10/2026:** chủ phiên `/b` (link chuyển tiếp không lộ phiên), hướng dẫn lần đầu / tiếp tục xem, quay lại mẫu trước, mẫu hết hàng, liên hệ kèm mẫu, sự kiện hành trình — xem [`THE_CHAO_HANH_TRINH_KHACH.md`](THE_CHAO_HANH_TRINH_KHACH.md).
+
 > Không nhầm với "Thẻ chào sản phẩm A6 / M01c" (`sales-pitch-template.ts`, tab ở `/tai-anh`) — đó là thẻ in/ảnh tĩnh, ngoài phạm vi tài liệu này.
 
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { enforceRateLimit } from "@/core/http/rate-limit"
 import { openShareLink } from "@/modules/greeting-card/use-cases/share-links"
+import { grantBrochureOwner, serializeOwnerCookie } from "@/modules/greeting-card/use-cases/brochure-owner"
 
 const COOKIE_PREFIX = "fl_s_"
 const COOKIE_MAX_AGE = 30 * 86_400
@@ -15,6 +16,8 @@ const gone = () =>
  * GET /s/<mã>/mo — trình duyệt thật của khách (trang /s/<mã> tự chuyển tới đây bằng JavaScript,
  * máy quét xem trước link không chạy tới). Mỗi khách một phiên riêng tính cho người đã sao chép link,
  * nhớ qua cookie để tải lại không tạo phiên mới; rồi chuyển sang trang Thẻ chào `/b/<mã phiên>`.
+ * Trình duyệt này được trao luôn cookie chủ phiên: ai khác mở `/b/<mã phiên>` đó sẽ được đưa về đây
+ * để nhận phiên riêng, không thấy phiên của người trước.
  */
 export async function GET(request: Request, context: { params: Promise<{ code: string }> }) {
   const code = (await context.params).code.toUpperCase()
@@ -34,6 +37,8 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
   const res = new NextResponse(null, { status: 302, headers: { location: `/b/${encodeURIComponent(opened.sendCode)}` } })
   const https = (request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "")).split(",")[0]?.trim() === "https"
   res.cookies.set(cookieName, opened.sendCode, { httpOnly: true, sameSite: "lax", secure: https, maxAge: COOKIE_MAX_AGE, path: "/" })
+  const owner = await grantBrochureOwner({ id: opened.sessionId, organization_id: opened.organizationId, send_code: opened.sendCode }, "share-link")
+  res.headers.append("set-cookie", serializeOwnerCookie(owner, https))
   return res
 }
 

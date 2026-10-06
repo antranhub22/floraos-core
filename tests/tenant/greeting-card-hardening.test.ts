@@ -22,6 +22,7 @@ import { revokeSendLink } from "@/modules/greeting-card/use-cases/create-send-li
 import { getSalesFunnel } from "@/modules/greeting-card/use-cases/get-sales-funnel"
 import { POST as selectPOST } from "@/app/api/v1/public/brochure/[sendCode]/select/route"
 import { POST as orderPOST } from "@/app/api/v1/public/brochure/[sendCode]/order/route"
+import { ownerCookie } from "../helpers/brochure-owner"
 
 /**
  * Ca thử hồi quy cho đợt debug Thẻ Chào 05/10/2026 — mỗi ca khoá một lỗi
@@ -89,7 +90,7 @@ describe("greeting-card hardening", () => {
     const res = await selectPOST(
       new Request("http://x/select", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...ownerCookie(link.sendCode) },
         body: JSON.stringify({ productId: product.id, product: { id: product.id, price: 1000 } }),
       }),
       { params: Promise.resolve({ sendCode: link.sendCode }) }
@@ -159,7 +160,7 @@ describe("greeting-card hardening", () => {
     const res = await orderPOST(
       new Request("http://x/order", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...ownerCookie(link.sendCode) },
         body: JSON.stringify({ ...ORDER_INPUT, deliveryDate: "2020-01-01" }),
       }),
       { params: Promise.resolve({ sendCode: link.sendCode }) }

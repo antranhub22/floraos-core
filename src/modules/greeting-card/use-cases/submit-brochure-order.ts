@@ -7,7 +7,7 @@ import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { validateCustomerOrderInput } from "../domain/greeting-card-rules"
 import { paymentInstructionsFor } from "./payment-instructions"
 import type { CustomerOrderSubmitInput, ProductSnapshot } from "../domain/greeting-card-types"
-import { loadPublicSession, resolveOrderableProduct } from "./brochure-session-access"
+import { loadPublicSession, resolveOrderableProduct, type PublicSession } from "./brochure-session-access"
 import { placeBrochureOrder, type BrochureOrderResult } from "./place-brochure-order"
 import { quoteForProduct, type QuoteRequest, type QuoteResult } from "./brochure-quote"
 
@@ -30,22 +30,8 @@ export async function submitBrochureOrder(
   const shop = await repo.getShopProfile(session.organization_id)
 
   // Idempotent: phiên đã có đơn → trả lại đúng đơn đó (khách bấm hai lần, mạng chập chờn).
-  if (session.order_id) {
-    const existing = await orders.findOrderById(session.organization_id, session.order_id)
-    const snapshot = session.product_snapshot as unknown as ProductSnapshot | null
-    if (existing && snapshot) {
-      const total = Number(existing.total_vnd)
-      return {
-        sendCode: session.send_code,
-        orderId: existing.id,
-        orderCode: existing.code,
-        totalVnd: total,
-        quote: null,
-        productSnapshot: snapshot,
-        vietQr: paymentInstructionsFor(shop.settings, { totalVnd: total, paidVnd: Number(existing.paid_vnd), createdAt: existing.created_at }, existing.code),
-      }
-    }
-  }
+  const existing = await existingOrderResult(session, shop.settings, orders)
+  if (existing) return existing
 
   // Giờ chốt đơn / thời gian chuẩn bị của tiệm — chặn cả khi khách gửi thẳng API
   const scheduleError = deliveryScheduleError(input.deliveryDate, input.deliveryTimeSlot, parseShippingConfig(shop.settings))
@@ -58,14 +44,44 @@ export async function submitBrochureOrder(
   // Tính lại giá từ Product Master lúc đặt — không tin ảnh chụp đã lưu.
   const product = await resolveOrderableProduct(session, session.selected_product_id, repo)
 
-  return placeBrochureOrder({
-    organizationId: session.organization_id,
-    session,
-    product,
-    input,
-    notePrefix: `[Thẻ chào ${session.send_code}]`,
-    shopSettings: shop.settings,
-  })
+  try {
+    return await placeBrochureOrder({
+      organizationId: session.organization_id,
+      session,
+      product,
+      input,
+      notePrefix: `[Thẻ chào ${session.send_code}]`,
+      shopSettings: shop.settings,
+    })
+  } catch (error) {
+    // Hai tab/hai lần bấm gửi cùng lúc: giao dịch chỉ cho một đơn gắn vào phiên, lần kia bị
+    // huỷ toàn bộ. Trả lại chính đơn đã thắng thay vì báo lỗi cho khách.
+    const raced = await loadPublicSession(sendCode, repo).catch(() => null)
+    const won = raced ? await existingOrderResult(raced, shop.settings, orders) : null
+    if (won) return won
+    throw error
+  }
+}
+
+async function existingOrderResult(
+  session: PublicSession,
+  shopSettings: unknown,
+  orders: BrochureOrderRepository,
+): Promise<BrochureOrderResult | null> {
+  if (!session.order_id) return null
+  const existing = await orders.findOrderById(session.organization_id, session.order_id)
+  const snapshot = session.product_snapshot as unknown as ProductSnapshot | null
+  if (!existing || !snapshot) return null
+  const total = Number(existing.total_vnd)
+  return {
+    sendCode: session.send_code,
+    orderId: existing.id,
+    orderCode: existing.code,
+    totalVnd: total,
+    quote: null,
+    productSnapshot: snapshot,
+    vietQr: paymentInstructionsFor(shopSettings, { totalVnd: total, paidVnd: Number(existing.paid_vnd), createdAt: existing.created_at }, existing.code),
+  }
 }
 
 /** Báo giá trực tiếp trên form đặt hoa của link chào (mẫu đã chọn). */

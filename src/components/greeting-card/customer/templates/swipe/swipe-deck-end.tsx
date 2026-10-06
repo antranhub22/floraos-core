@@ -1,6 +1,7 @@
 "use client"
 
-import { Heart, RefreshCw, RotateCcw } from "lucide-react"
+import { useState } from "react"
+import { Heart, MessageCircle, Palette, RefreshCw, RotateCcw, Tags } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { photoBackdrop } from "./swipe-card"
 import { ProductInfo } from "../product-info/product-info"
@@ -13,11 +14,24 @@ interface SwipeDeckEndProps {
   total: number
   onOrder: (product: GreetingCatalogProduct) => void
   onRestart: () => void
+  /** Quay lại mẫu cuối, giữ nguyên Thích/Bỏ qua */
   onRewind: () => void
+  /** Khoảng giá có mẫu — khách chưa ưng mẫu nào thì cho lọc theo giá */
+  priceRanges?: ReadonlyArray<{ key: string; label: string; count: number }> | undefined
+  onPickPriceRange?: ((key: string) => void) | undefined
+  /** Có khi trang có ngữ cảnh liên hệ tiệm (link riêng của khách) */
+  onAskZalo?: (() => void) | undefined
+  onCustomDesign?: (() => void) | undefined
 }
 
-/** Màn hình khi đã lướt hết: danh sách mẫu đã thích để đặt ngay. */
-export function SwipeDeckEnd({ theme, liked, total, onOrder, onRestart, onRewind }: SwipeDeckEndProps) {
+/**
+ * Màn hình khi đã lướt hết: danh sách mẫu đã thích để đặt ngay. Chưa thích mẫu nào thì KHÔNG
+ * kết thúc ở đây — mời xem thêm, lọc theo giá, nhắn Zalo hoặc yêu cầu thiết kế riêng.
+ */
+export function SwipeDeckEnd({
+  theme, liked, total, onOrder, onRestart, onRewind, priceRanges = [], onPickPriceRange, onAskZalo, onCustomDesign,
+}: SwipeDeckEndProps) {
+  const [pickingPrice, setPickingPrice] = useState(false)
   const light = isLightTheme(theme)
   const panel = light ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.06)"
   const line = light ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.12)"
@@ -37,7 +51,7 @@ export function SwipeDeckEnd({ theme, liked, total, onOrder, onRestart, onRewind
         <p className="mt-1 text-body-sm" style={{ color: theme.stageMuted }}>
           {liked.length > 0
             ? "Chọn một mẫu để đặt hoa, hoặc xem lại từ đầu."
-            : `Chưa có mẫu nào trong ${total} mẫu khiến bạn ưng. Xem lại từ đầu nhé?`}
+            : `Chưa có mẫu nào trong ${total} mẫu khiến bạn ưng? Cửa hàng còn nhiều cách giúp bạn:`}
         </p>
       </div>
 
@@ -62,6 +76,32 @@ export function SwipeDeckEnd({ theme, liked, total, onOrder, onRestart, onRewind
         </ul>
       )}
 
+      {liked.length === 0 && (
+        <div className="flex flex-col gap-2">
+          <EndOption label="Xem thêm mẫu" icon={RefreshCw} line={line} panel={panel} onClick={onRestart} />
+          {priceRanges.length > 1 && onPickPriceRange && (
+            <EndOption label="Chọn theo khoảng giá" icon={Tags} line={line} panel={panel} onClick={() => setPickingPrice((v) => !v)} />
+          )}
+          {pickingPrice && (
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Khoảng giá">
+              {priceRanges.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => onPickPriceRange?.(r.key)}
+                  className="h-10 rounded-full border px-3 text-body-sm font-semibold"
+                  style={{ borderColor: line, background: panel }}
+                >
+                  {r.label} · {r.count}
+                </button>
+              ))}
+            </div>
+          )}
+          {onAskZalo && <EndOption label="Nhắn Zalo cho cửa hàng" icon={MessageCircle} line={line} panel={panel} onClick={onAskZalo} />}
+          {onCustomDesign && <EndOption label="Yêu cầu thiết kế riêng" icon={Palette} line={line} panel={panel} onClick={onCustomDesign} />}
+        </div>
+      )}
+
       <div className="mt-auto grid grid-cols-2 gap-2">
         <button
           type="button"
@@ -70,7 +110,7 @@ export function SwipeDeckEnd({ theme, liked, total, onOrder, onRestart, onRewind
           style={{ borderColor: line }}
         >
           <RotateCcw size={16} aria-hidden="true" />
-          Xem lại mẫu cuối
+          Quay lại mẫu cuối
         </button>
         <button
           type="button"
@@ -83,5 +123,20 @@ export function SwipeDeckEnd({ theme, liked, total, onOrder, onRestart, onRewind
         </button>
       </div>
     </section>
+  )
+}
+
+function EndOption(props: { label: string; icon: typeof Heart; line: string; panel: string; onClick: () => void }) {
+  const Icon = props.icon
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      className="flex h-12 items-center gap-3 rounded-2xl border px-4 text-body-sm font-semibold"
+      style={{ borderColor: props.line, background: props.panel }}
+    >
+      <Icon size={18} aria-hidden="true" />
+      {props.label}
+    </button>
   )
 }

@@ -37,16 +37,19 @@ function write<T>(key: string, value: T | null): void {
 export function useSavedState<T>(
   name: string,
   initial: T,
-): [T, (next: T | ((prev: T) => T)) => void, () => void] {
+): [T, (next: T | ((prev: T) => T)) => void, () => void, boolean] {
   const keyRef = useRef<string | null>(null)
   const restored = useRef(false)
   const [value, setValue] = useState<T>(initial)
+  // `true` sau khi đã đọc xong bộ nhớ máy khách — trước đó `value` mới chỉ là giá trị khởi tạo
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     keyRef.current = `${window.location.pathname}:${name}`
     const saved = read<T>(keyRef.current)
     if (saved !== null) setValue(saved)
     restored.current = true
+    setReady(true)
   }, [name])
 
   // Ghi sau mỗi lần đổi (bỏ qua lần dựng đầu, trước khi khôi phục)
@@ -58,5 +61,12 @@ export function useSavedState<T>(
     restored.current = false
     if (keyRef.current) write(keyRef.current, null)
   }
-  return [value, setValue, clear]
+  return [value, setValue, clear, ready]
+}
+
+/** Sửa một giá trị đã lưu của trang đang mở khi component sở hữu nó không còn hiện (vd. gắn mã đơn). */
+export function updateSavedState<T>(name: string, update: (prev: T) => T): void {
+  const key = `${window.location.pathname}:${name}`
+  const prev = read<T>(key)
+  if (prev !== null) write(key, update(prev))
 }

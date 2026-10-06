@@ -2,7 +2,15 @@
 
 import { ReorderButton } from "./reorder-button"
 import { ShopContactBar } from "./shop-contact-bar"
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
+import { CustomerJourneyContext, copyThenOpen, type CustomerJourney } from "./journey-context"
+import { useJourneyTracker } from "./use-journey-tracker"
+import { useStepHistory } from "./use-step-history"
+import { updateSavedState } from "./use-saved-state"
+import { JOURNEY_STATE_NAME } from "./templates/swipe/use-swipe-journey"
+import { productInquiryMessage } from "@/modules/greeting-card/domain/collection-browse"
+import { SOLD_OUT_MESSAGE } from "@/modules/greeting-card/domain/product-availability"
+import type { CollectionSession } from "@/modules/greeting-card/domain/collection-session"
 import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
 import type { OptionalDisplayField } from "@/modules/greeting-card/domain/display-fields"
 import { BrochureOrderForm } from "./brochure-order-form"
@@ -19,6 +27,8 @@ import type { CustomerBrochureView } from "@/modules/greeting-card/use-cases/get
 
 interface BrochureCustomerExperienceProps {
   initialData: CustomerBrochureView
+  /** Nhân viên của tiệm mở xem trước: không ghi sự kiện, không chiếm phiên của khách */
+  preview?: boolean | undefined
 }
 
 type CustomerStep = "SWIPING" | "ORDER_FORM" | "PAYMENT" | "TRACKING"
@@ -29,7 +39,7 @@ interface OrderState {
   vietQr: BrochurePaymentInstructions | null
 }
 
-export function BrochureCustomerExperience({ initialData }: BrochureCustomerExperienceProps) {
+export function BrochureCustomerExperience({ initialData, preview = false }: BrochureCustomerExperienceProps) {
   const { session, catalog, products, shop } = initialData
 
   // Determine initial step based on session status
@@ -43,12 +53,25 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
     return "SWIPING"
   })
 
-  // Báo "khách đã mở" từ trình duyệt thật (máy quét xem trước link không chạy JavaScript).
-  // Ghi một lần, không phải tải dữ liệu; lỗi mạng bỏ qua — không ảnh hưởng khách.
-  useEffect(() => {
-    if (session.status !== "CREATED") return
-    void fetch(`/api/v1/public/brochure/${encodeURIComponent(session.sendCode)}/open`, { method: "POST" }).catch(() => undefined)
-  }, [session.status, session.sendCode])
+  // "Khách đã mở" được ghi khi trình duyệt nhận chủ phiên (`/claim`) — máy quét xem trước không chạy tới.
+  const track = useJourneyTracker(session.sendCode, !preview)
+  const [currentProduct, setCurrentProduct] = useState<GreetingCatalogProduct | null>(null)
+  const [contactNote, setContactNote] = useState<string | null>(null)
+
+  const contactZalo = useCallback(
+    (message: string, productId?: string) => {
+      if (!shop.zaloUrl) return
+      track("contact_zalo_clicked", productId)
+      void copyThenOpen(shop.zaloUrl, message).then((copied) =>
+        setContactNote(copied ? "Đã chép sẵn tin nhắn — dán vào Zalo để gửi cửa hàng." : null)
+      )
+    },
+    [shop.zaloUrl, track]
+  )
+  const journey = useMemo<CustomerJourney>(
+    () => ({ shop, track, onCurrentProductChange: setCurrentProduct, contactZalo }),
+    [shop, track, contactZalo]
+  )
 
   // Ảnh chụp mẫu do SERVER dựng (giá thật từ Product Master) — client không tự ghép giá.
   const [snapshot, setSnapshot] = useState<ProductSnapshot | null>(session.productSnapshot)
@@ -62,8 +85,25 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
       : null
   )
 
+  // Back/Forward của trình duyệt đi giữa các bước; đơn đã gửi thì không quay lại form/lướt mẫu
+  useStepHistory(step, setStep, (target) => (orderResult ? target === "PAYMENT" || target === "TRACKING" : target === "SWIPING" || (target === "ORDER_FORM" && !!snapshot)))
+
+  // Khách rời trang khi đang điền đơn → bỏ dở đặt hàng (ghi một lần)
+  useEffect(() => {
+    if (step !== "ORDER_FORM") return
+    track("checkout_started", snapshot?.id)
+    const onHide = () => document.visibilityState === "hidden" && track("checkout_abandoned", snapshot?.id)
+    document.addEventListener("visibilitychange", onHide)
+    return () => document.removeEventListener("visibilitychange", onHide)
+  }, [step, snapshot?.id, track])
+
   async function handleSelectProduct(product: GreetingCatalogProduct) {
     if (selecting) return
+    if (product.available === false) {
+      setSelectError(SOLD_OUT_MESSAGE)
+      return
+    }
+    track("order_started", product.id)
     setSelectError(null)
     setSelecting(true)
     try {
@@ -97,8 +137,10 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
       throw new Error(await readApiError(res, "Không thể gửi đơn đặt hoa"))
     }
 
-    const data = (await res.json()) as OrderState
+    const data = (await res.json()) as OrderState & { orderId?: string }
     setOrderResult({ orderCode: data.orderCode, totalVnd: data.totalVnd, vietQr: data.vietQr })
+    // Gắn mã đơn vào phiên lướt mẫu trên máy: mở lại link không hỏi "tiếp tục xem" nữa
+    updateSavedState<CollectionSession>(JOURNEY_STATE_NAME, (s) => ({ ...s, orderId: data.orderId ?? null }))
     setStep("PAYMENT")
   }
 
@@ -110,8 +152,36 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
   }
 
   return (
-    <>
-    <ShopContactBar shop={shop} />
+    <CustomerJourneyContext.Provider value={preview ? null : journey}>
+    <ShopContactBar
+      shop={shop}
+      inquiry={
+        preview
+          ? undefined
+          : {
+              onZalo: () =>
+                contactZalo(
+                  currentProduct && step === "SWIPING"
+                    ? productInquiryMessage(currentProduct)
+                    : snapshot
+                      ? productInquiryMessage(snapshot)
+                      : `Tôi đang xem bộ sưu tập "${catalog.name}" và cần cửa hàng tư vấn.`,
+                  currentProduct?.id
+                ),
+              onCall: () => track("contact_call_clicked", currentProduct?.id),
+            }
+      }
+    />
+    {preview && (
+      <p className="bg-warning-bg px-4 py-2 text-center text-body-sm text-warning">
+        Bạn đang xem trước link của khách — thao tác ở đây không được lưu cho khách.
+      </p>
+    )}
+    {contactNote && (
+      <p role="status" className="bg-surface-muted px-4 py-2 text-center text-body-sm text-foreground">
+        {contactNote}
+      </p>
+    )}
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between py-6 px-4 sm:px-6">
       <div className="w-full max-w-md mx-auto mb-6 flex flex-col items-center">
 
@@ -170,6 +240,6 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
         Hệ thống Thẻ Chào & Đặt Hoa Trực Tuyến · Vận hành bởi FloraOS
       </footer>
     </div>
-    </>
+    </CustomerJourneyContext.Provider>
   )
 }
