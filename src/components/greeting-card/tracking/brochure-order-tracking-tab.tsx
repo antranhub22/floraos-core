@@ -1,112 +1,68 @@
 "use client"
 
 import React, { useState } from "react"
-import { RefreshCw, Search, Sparkles } from "lucide-react"
+import { useSWRConfig } from "swr"
+import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi } from "@/components/greeting-card/greeting-api"
-import { TrackingOrderCard } from "./tracking-order-card"
 import { MessageThread } from "@/components/greeting-card/inbox/message-thread"
-import { TrackingReport } from "./tracking-report"
-import { TrackingPendingLinks } from "./tracking-pending-links"
-import { useNow } from "@/components/greeting-card/work/use-worklist"
-import { TRACKING_CATEGORIES, distinct, filterTracking, inCategory, type TrackingCategory } from "@/modules/greeting-card/domain/tracking-filters"
-import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import type { TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
+import { TrackingToolbar } from "./views/tracking-toolbar"
+import { KanbanView } from "./views/kanban-view"
+import { ListView } from "./views/list-view"
+import { CalendarView } from "./views/calendar-view"
+import { TimelineView } from "./views/timeline-view"
+import { DashboardView } from "./views/dashboard-view"
+import { codeOf } from "./views/tracking-bits"
+import { DEFAULT_STATE, queryString, type SavedView, type TrackingViewState } from "./views/tracking-view-state"
 
-const SELECT = "h-10 rounded-xl border border-border bg-surface px-3 text-body-sm text-foreground"
-
-/** Tab Theo dõi tiến độ: toàn bộ đơn của mọi sale, mọi kênh — chỉ xem; đơn kẹt lên đầu. */
+/**
+ * Tab Theo dõi tiến độ — nhiều cách xem trên CÙNG một tập đơn/link: Kanban, Danh sách, Lịch,
+ * Timeline, Công việc, Dashboard. Bộ lọc và phạm vi dùng chung; máy chủ lọc/nhóm/phân trang.
+ */
 export function BrochureOrderTrackingTab() {
-  // Tự làm mới mỗi 30 giây — bước đổi là thấy ngay
-  const pipeline = useApi<{ data: TrackingPipelineItem[] }>("/api/v1/greeting-card/tracking-pipeline", { refreshInterval: 30_000 })
-  const items = pipeline.data?.data ?? []
-  const [category, setCategory] = useState<TrackingCategory>("ALL")
-  const [saleName, setSaleName] = useState<string | null>(null)
-  const [channel, setChannel] = useState<string | null>(null)
-  const [query, setQuery] = useState("")
-  const [notesFor, setNotesFor] = useState<{ item: TrackingPipelineItem; stepId: TrackingPipelineStepId | "GENERAL" } | null>(null)
+  const me = useApi<{ user: { id: string } }>("/api/v1/auth/me")
+  const { mutate } = useSWRConfig()
+  const [state, setState] = useState<TrackingViewState>(DEFAULT_STATE)
+  const [selected, setSelected] = useState<TrackingViewItem | null>(null)
+  const [notesFor, setNotesFor] = useState<TrackingViewItem | null>(null)
 
-  const now = useNow()
-  const q = query.trim().toLowerCase()
-  const shown = filterTracking(items, { category, saleName, channel }).filter((i) =>
-    !q || [i.orderCode, i.sendCode, i.customerName, i.customerPhone, i.productName].some((v) => v?.toLowerCase().includes(q))
-  )
+  const change = (patch: Partial<TrackingViewState>) => setState((s) => ({ ...s, ...patch }))
+  const applyView = (v: SavedView) =>
+    setState({ ...DEFAULT_STATE, columns: state.columns, ...v.state, ...(v.scope === "me" && me.data ? { saleId: me.data.user.id } : {}) })
+  // Mở một đơn: sang Timeline của đúng đơn đó (giữ bộ lọc)
+  const open = (i: TrackingViewItem) => { setSelected(i); change({ view: "timeline" }) }
+  const refresh = () => void mutate((key) => typeof key === "string" && key.includes("/api/v1/greeting-card/tracking") || (Array.isArray(key) && String(key[0]).includes("/api/v1/greeting-card/tracking")))
+
+  // Lịch tự chọn khoảng ngày; bộ lọc ngày giao chỉ gửi kèm khi không xem lịch
+  const qs = queryString(state.view === "calendar" ? { ...state, deliveryFrom: "", deliveryTo: "" } : state)
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-title font-extrabold text-foreground">Tiến độ toàn tiệm</h2>
-          <p className="mt-1 text-body-sm text-text-muted">Mọi đơn của mọi sale và kênh, cập nhật từng bước. Đơn quá thời gian chuẩn được đưa lên đầu.</p>
+          <p className="mt-1 text-body-sm text-text-muted">Cùng một danh sách đơn, xem theo cách bạn cần. Đổi cách xem vẫn giữ bộ lọc.</p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => void pipeline.mutate()} className="h-9 gap-1.5 text-caption">
-          <RefreshCw size={14} className={pipeline.isValidating ? "animate-spin" : ""} aria-hidden="true" /> Làm mới
+        <Button type="button" variant="outline" size="sm" onClick={refresh} className="h-9 gap-1.5 text-caption">
+          <RefreshCw size={14} aria-hidden="true" /> Làm mới
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc theo bước">
-        {TRACKING_CATEGORIES.map((c) => {
-          const count = items.filter((i) => inCategory(i, c.id)).length
-          const active = category === c.id
-          const alarm = c.id === "STUCK" && count > 0
-          return (
-            <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategory(c.id)}
-              className={`h-9 rounded-xl border px-3 text-caption font-bold ${
-                active ? "border-primary bg-primary text-white" : alarm ? "border-danger/40 bg-danger-bg text-danger" : "border-border bg-surface text-text-muted hover:text-foreground"
-              }`}>
-              {c.label} ({count})
-            </button>
-          )
-        })}
-      </div>
+      <TrackingToolbar state={state} onChange={change} onApplyView={applyView} />
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <select aria-label="Lọc theo sale" value={saleName ?? ""} onChange={(e) => setSaleName(e.target.value || null)} className={SELECT}>
-          <option value="">Tất cả sale</option>
-          {distinct(items.map((i) => i.saleName)).map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select aria-label="Lọc theo kênh" value={channel ?? ""} onChange={(e) => setChannel(e.target.value || null)} className={SELECT}>
-          <option value="">Tất cả kênh</option>
-          {distinct(items.map((i) => i.channel)).map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden="true" />
-          <input type="search" aria-label="Tìm đơn" value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Mã đơn, tên khách, số điện thoại, tên mẫu..."
-            className="h-10 w-full rounded-xl border border-border bg-surface pl-9 pr-3 text-body-sm text-foreground placeholder:text-text-muted" />
-        </div>
-      </div>
-
-      <TrackingReport items={shown} />
-
-      {pipeline.error ? (
-        <p role="alert" className="rounded-xl bg-danger-bg p-4 text-body-sm text-danger">{(pipeline.error as Error).message}</p>
-      ) : pipeline.isLoading ? (
-        <div className="flex flex-col gap-3" aria-busy="true">{[0, 1].map((i) => <div key={i} className="h-40 animate-pulse rounded-2xl bg-surface-muted" />)}</div>
-      ) : (
-        <>
-          <TrackingPendingLinks items={shown.filter((i) => i.type === "SESSION")} now={now}
-            onMessage={(item) => setNotesFor({ item, stepId: "GENERAL" })} />
-          <section aria-labelledby="orders-title" className="flex flex-col gap-3">
-            <h3 id="orders-title" className="text-body font-extrabold text-foreground">Đơn chính thức ({shown.filter((i) => i.type === "ORDER").length})</h3>
-            {shown.every((i) => i.type !== "ORDER") ? (
-              <div className="flex flex-col items-center rounded-2xl border border-border bg-surface p-10 text-center">
-                <Sparkles size={32} className="mb-2 text-primary/40" aria-hidden="true" />
-                <p className="text-body-sm text-text-muted">Chưa có đơn nào khớp bộ lọc. Khi khách điền form đặt hàng, đơn sẽ chuyển vào đây.</p>
-              </div>
-            ) : (
-              shown.filter((i) => i.type === "ORDER").map((item) => (
-                <TrackingOrderCard key={item.id} item={item} onOpenNotes={(itm, stepId) => setNotesFor({ item: itm, stepId: stepId ?? "GENERAL" })} />
-              ))
-            )}
-          </section>
-        </>
-      )}
+      {state.view === "kanban" && <KanbanView qs={qs} onOpen={open} />}
+      {state.view === "list" && <ListView qs={qs} state={state} onChange={change} onOpen={open} />}
+      {state.view === "queue" && <ListView qs={qs} state={state} onChange={change} onOpen={open} view="queue" />}
+      {state.view === "calendar" && <CalendarView qs={qs} from={state.deliveryFrom} to={state.deliveryTo} onOpen={open} />}
+      {state.view === "timeline" && <TimelineView qs={qs} state={state} onChange={change} selected={selected} onSelect={setSelected} onMessage={setNotesFor} />}
+      {state.view === "dashboard" && <DashboardView qs={qs} />}
 
       {notesFor && (
         <MessageThread
-          target={{ orderId: notesFor.item.orderId, sessionId: notesFor.item.sessionId }}
-          stepKey={notesFor.stepId}
-          title={`${notesFor.item.customerName} · ${notesFor.item.orderCode ? `Đơn ${notesFor.item.orderCode}` : `Link ${notesFor.item.sendCode}`}`}
+          target={{ orderId: notesFor.orderId, sessionId: notesFor.sessionId }}
+          stepKey="GENERAL"
+          title={`${notesFor.customerName} · ${codeOf(notesFor)}`}
           onClose={() => setNotesFor(null)}
         />
       )}

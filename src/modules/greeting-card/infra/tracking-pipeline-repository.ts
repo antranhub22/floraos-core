@@ -77,6 +77,34 @@ export class TrackingPipelineRepository {
     return rows
   }
 
+  /**
+   * Nguồn dòng thời gian của MỘT đơn (hoặc một link chưa có đơn) — chỉ trong tổ chức; sale bị giới
+   * hạn phạm vi được kiểm ở use-case. Đọc riêng một đối tượng, không đọc lại cả tập theo dõi.
+   */
+  async timelineSource(ctx: TenantContext, ref: { orderId?: string | undefined; sessionId?: string | undefined }) {
+    const sessionSelect = {
+      id: true, sale_id: true, created_at: true, send_code: true,
+      events: { select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" as const } },
+    }
+    if (ref.orderId) {
+      const order = await this.db.orders.findFirst({
+        where: scopedWhere(ctx, { id: ref.orderId, source: "BROCHURE" }),
+        select: {
+          id: true, code: true, created_at: true,
+          events: { select: { axis: true, from_value: true, to_value: true, reason: true, actor_id: true, created_at: true }, orderBy: { created_at: "asc" } },
+          payments: { select: { kind: true, amount_vnd: true, collected_at: true, collected_by: true, note: true }, orderBy: { collected_at: "asc" } },
+          greeting_sessions: { take: 1, select: sessionSelect },
+        },
+      })
+      return order ? { order, session: order.greeting_sessions[0] ?? null } : null
+    }
+    if (ref.sessionId) {
+      const session = await this.db.greeting_sessions.findFirst({ where: scopedWhere(ctx, { id: ref.sessionId }), select: { ...sessionSelect, order_id: true } })
+      return session ? { order: null, session } : null
+    }
+    return null
+  }
+
   /** Kênh chia sẻ (`?kenh=`) của đơn đặt từ link bộ sưu tập công khai — theo sự kiện ORDER. */
   async orderChannels(ctx: TenantContext, orderIds: string[]): Promise<Map<string, string>> {
     if (orderIds.length === 0) return new Map()

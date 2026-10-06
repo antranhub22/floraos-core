@@ -74,21 +74,31 @@ function resolveSessionStep(session: {
   return "STEP_1_OPENED"
 }
 
-export async function getTrackingPipeline(
+/** Danh sách theo dõi (Hộp việc, danh sách việc) — cùng tập dữ liệu với mọi view. */
+export async function getTrackingPipeline(ctx: TenantContext, repo = new TrackingPipelineRepository()): Promise<TrackingPipelineItem[]> {
+  return (await loadTrackingDataset(ctx, repo)).items
+}
+
+/**
+ * NGUỒN DỮ LIỆU DUY NHẤT của "Theo dõi tiến độ": mọi view (Kanban, Danh sách, Lịch, Công việc,
+ * Dashboard) và Hộp việc đều đi qua đây — cùng phạm vi xem của sale, cùng cách suy bước và SLA.
+ * Trả kèm cấu hình thời gian chuẩn đã đọc để các view tính SLA không phải đọc lại.
+ */
+export async function loadTrackingDataset(
   ctx: TenantContext,
-  repo = new TrackingPipelineRepository()
-): Promise<TrackingPipelineItem[]> {
+  repo = new TrackingPipelineRepository(),
+  now = new Date()
+): Promise<{ items: TrackingPipelineItem[]; sla: ReturnType<typeof parseStepSla> }> {
   const saleId = await resolveSaleScope(ctx)
   const [orders, activeSessions, org, fallbackOwner] = await Promise.all([
-    repo.listBrochureOrders(ctx, saleId),
-    repo.listActiveSessions(ctx, saleId),
+    repo.listBrochureOrders(ctx, saleId, now),
+    repo.listActiveSessions(ctx, saleId, now),
     getCurrentOrganization(ctx),
     defaultOwnerOf(ctx.organizationId),
   ])
   // Đơn/link cũ (trước khi có nút "Sao chép link mang tên bạn") → người phụ trách mặc định
   const ownerOf = (id: string | undefined) => (id === "public" ? fallbackOwner ?? undefined : id)
   const sla = parseStepSla(org?.settings)
-  const now = new Date()
   const channels = await repo.orderChannels(ctx, orders.map((o) => o.id))
   // Link riêng → "Link riêng của sale"; link sao chép → kênh lúc sao chép; link cũ → kênh `?kenh=` của đơn
   const channelOf = (facts: LinkFacts | null, orderId?: string) =>
@@ -248,7 +258,8 @@ export async function getTrackingPipeline(
   })
 
   // Combine and sort by lastActiveAt descending
-  return [...orderItems, ...sessionItems].sort(
+  const items = [...orderItems, ...sessionItems].sort(
     (a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime()
   )
+  return { items, sla }
 }
