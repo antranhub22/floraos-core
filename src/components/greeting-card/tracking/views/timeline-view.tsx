@@ -30,9 +30,9 @@ export function TimelineView({ qs, state, onChange, selected, onSelect, onMessag
 
 function TimelineDetail({ refQs, item, onBack, onMessage }: { refQs: string; item: TrackingViewItem; onBack: () => void; onMessage: () => void }) {
   const url = `/api/v1/greeting-card/tracking/timeline?${refQs}`
-  const head = useApi<{ data: { segments: StepSegment[] } }>(`${url}&limit=1`)
+  const head = useApi<{ segments: StepSegment[] }>(`${url}&limit=1`)
   const events = usePagedList<TimelineEvent>(url, 50)
-  const segments = head.data?.data.segments ?? []
+  const segments = head.data?.segments ?? []
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">

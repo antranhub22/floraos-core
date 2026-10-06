@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { disconnectDatabase, resetDatabase } from "../helpers/database"
-import { createTenant, type Tenant } from "../helpers/fixtures"
+import { createTenant, withSession, type Tenant } from "../helpers/fixtures"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
@@ -13,6 +13,8 @@ import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-br
 import { adminConfirmBrochurePayment } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
 import { queryTracking, type TrackingQueryParams } from "@/modules/greeting-card/use-cases/query-tracking"
 import { getTrackingTimeline } from "@/modules/greeting-card/use-cases/get-tracking-timeline"
+import { GET as trackingGet } from "@/app/api/v1/greeting-card/tracking/route"
+import { GET as timelineGet } from "@/app/api/v1/greeting-card/tracking/timeline/route"
 
 /**
  * Multi-view "Theo dõi tiến độ" (06/10/2026): một đơn thật → cùng một đối tượng xuất hiện đúng
@@ -122,5 +124,20 @@ describe("greeting-card: multi-view theo dõi tiến độ", () => {
       expect(total).toBe(0)
     }
     expect(await codeOf(getTrackingTimeline(lan, { orderId: order.orderId }, { limit: 50 }))).toBe("NOT_FOUND")
+  })
+
+  it("API trả dạng danh sách phân trang chung: `data` là mảng dòng có `sla` (giao diện Danh sách/Timeline đọc thẳng)", async () => {
+    const order = await placeOrder()
+    const list = await (await trackingGet(withSession("http://localhost/api/v1/greeting-card/tracking?view=list&limit=20", a.token))).json()
+    expect(Array.isArray(list.data)).toBe(true)
+    expect(list.data[0]).toMatchObject({ orderId: order.orderId, sla: expect.objectContaining({ state: expect.any(String) }) })
+    expect(list).toMatchObject({ next_cursor: null, total: 1 })
+
+    const kanban = await (await trackingGet(withSession("http://localhost/api/v1/greeting-card/tracking?view=kanban", a.token))).json()
+    expect(Array.isArray(kanban.data.columns)).toBe(true)
+
+    const tl = await (await timelineGet(withSession(`http://localhost/api/v1/greeting-card/tracking/timeline?orderId=${order.orderId}`, a.token))).json()
+    expect(Array.isArray(tl.data)).toBe(true)
+    expect(tl.segments.length).toBeGreaterThan(0)
   })
 })
