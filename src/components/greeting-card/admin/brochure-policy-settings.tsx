@@ -38,6 +38,7 @@ export function BrochurePolicySettings() {
               require_paid_before_production: policy.requirePaidBeforeProduction,
               require_full_before_dispatch: policy.requireFullBeforeDispatch,
               hold_minutes: policy.holdMinutes ?? 0,
+              auto_cancel_unpaid: policy.autoCancelUnpaid === true,
             },
           },
         },
@@ -93,6 +94,12 @@ export function BrochurePolicySettings() {
               {[15, 30, 60, 120].map((m) => <option key={m} value={m}>{m} phút</option>)}
             </select>
           </label>
+          {(policy.holdMinutes ?? 0) > 0 && (
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={policy.autoCancelUnpaid === true} onChange={(e) => edit({ autoCancelUnpaid: e.target.checked })} />
+              <span>Hết giờ giữ đơn: nhắc khách chuyển khoản; quá thêm 60 phút vẫn chưa chuyển thì tự huỷ đơn</span>
+            </label>
+          )}
         </div>
       )}
       <div className="flex items-center justify-between gap-3">
