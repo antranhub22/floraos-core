@@ -5,6 +5,8 @@ import { getCurrentOrganization } from "@/modules/organization/use-cases/get-cur
 import { parseStepSla, stuckOf } from "../domain/step-sla"
 import { channelLabel } from "../domain/catalog-channel"
 import { orderStepStartedAt, sessionStepStartedAt } from "../domain/pipeline-clock"
+import { linkFactsOf, pendingLinkTitle, type LinkFacts } from "../domain/link-ownership"
+import { defaultOwnerOf } from "./share-links"
 import {
   PIPELINE_STEPS,
   ROLE_LABELS,
@@ -84,26 +86,33 @@ export async function getTrackingPipeline(
   repo = new TrackingPipelineRepository()
 ): Promise<TrackingPipelineItem[]> {
   const saleId = await resolveSaleScope(ctx)
-  const [orders, activeSessions, org] = await Promise.all([
+  const [orders, activeSessions, org, fallbackOwner] = await Promise.all([
     repo.listBrochureOrders(ctx, saleId),
     repo.listActiveSessions(ctx, saleId),
     getCurrentOrganization(ctx),
+    defaultOwnerOf(ctx.organizationId),
   ])
+  // Đơn/link cũ (trước khi có nút "Sao chép link mang tên bạn") → người phụ trách mặc định
+  const ownerOf = (id: string | undefined) => (id === "public" ? fallbackOwner ?? undefined : id)
   const sla = parseStepSla(org?.settings)
-  const channels = await repo.orderChannels(ctx, orders.map((o) => o.id))
-  // Link riêng do sale gửi → kênh là chính sale đó; link bộ sưu tập công khai → kênh `?kenh=`
-  const channelOf = (saleId: string | undefined, orderId?: string) =>
-    saleId && saleId !== "public" ? "Link riêng của sale" : channelLabel(orderId ? channels.get(orderId) ?? "" : "")
   const now = new Date()
+  const channels = await repo.orderChannels(ctx, orders.map((o) => o.id))
+  // Link riêng → "Link riêng của sale"; link sao chép → kênh lúc sao chép; link cũ → kênh `?kenh=` của đơn
+  const channelOf = (facts: LinkFacts | null, orderId?: string) =>
+    facts?.kind === "PERSONAL" ? "Link riêng của sale"
+      : facts?.kind === "SHARED" ? `Link bộ sưu tập · ${channelLabel(facts.shareChannel ?? "")}`
+      : `Link chung · ${channelLabel(orderId ? channels.get(orderId) ?? "" : "")}`
 
   const stepMap = new Map(PIPELINE_STEPS.map((s) => [s.id, s]))
   const saleIds = [
-    ...orders.map((o) => o.greeting_sessions[0]?.sale_id ?? ""),
-    ...activeSessions.map((s) => s.sale_id),
+    ...orders.map((o) => ownerOf(o.greeting_sessions[0]?.sale_id) ?? ""),
+    ...activeSessions.map((s) => ownerOf(s.sale_id) ?? ""),
   ]
   const names = await repo.memberNames(ctx, saleIds)
-  const saleNameOf = (saleId: string | undefined) =>
-    !saleId ? "Chưa gán" : saleId === "public" ? "Link bộ sưu tập công khai" : names.get(saleId) ?? "Nhân viên đã rời"
+  const saleNameOf = (id: string | undefined) => {
+    const owner = ownerOf(id)
+    return !owner ? "Chưa gán" : names.get(owner) ?? "Nhân viên đã rời"
+  }
 
   // 1. Process Orders
   const orderItems: TrackingPipelineItem[] = orders.map((order) => {
@@ -191,8 +200,11 @@ export async function getTrackingPipeline(
       currentStepTitle: currentStepId === "STEP_3_FILLING_FORM" ? "Đã đặt đơn — chờ khách chuyển khoản" : currentStepDef.title,
       stepStartedAt: orderStepStartedAt(order),
       stuck: stuckOf({ currentStepId, stepStartedAt: orderStepStartedAt(order) }, sla, now),
-      saleId: session?.sale_id ?? null,
-      channel: channelOf(session?.sale_id, order.id),
+      saleId: ownerOf(session?.sale_id) ?? null,
+      channel: channelOf(session ? linkFactsOf(session) : null, order.id),
+      linkKind: session ? linkFactsOf(session).kind : "LEGACY",
+      copiedAt: session ? linkFactsOf(session).copiedAt : null,
+      expiresAt: null,
       steps,
       notes,
       lastActiveAt: order.updated_at.toISOString(),
@@ -202,6 +214,10 @@ export async function getTrackingPipeline(
 
   // 2. Process Sessions without order
   const sessionItems: TrackingPipelineItem[] = activeSessions.map((session) => {
+    const facts = linkFactsOf(session)
+    // Link riêng chưa sao chép = chưa gửi khách: chưa tính giờ "khách chưa mở"
+    const notSent = session.status === "CREATED" && facts.kind === "PERSONAL" && !facts.copiedAt
+    const startedAt = session.status === "CREATED" && facts.copiedAt ? facts.copiedAt : sessionStepStartedAt(session)
     const snapshot = loose(session.product_snapshot)
     const currentStepId = resolveSessionStep({
       status: session.status,
@@ -272,11 +288,14 @@ export async function getTrackingPipeline(
       paidVnd: 0,
       balanceVnd: Number(snapshot?.price || 0),
       currentStepId,
-      currentStepTitle: currentStepDef.title,
-      stepStartedAt: sessionStepStartedAt(session),
-      stuck: stuckOf({ currentStepId, stepStartedAt: sessionStepStartedAt(session) }, sla, now),
-      saleId: session.sale_id,
-      channel: channelOf(session.sale_id),
+      currentStepTitle: pendingLinkTitle({ status: session.status, copiedAt: facts.copiedAt, kind: facts.kind }),
+      stepStartedAt: startedAt,
+      stuck: notSent ? null : stuckOf({ currentStepId, stepStartedAt: startedAt }, sla, now),
+      saleId: ownerOf(session.sale_id) ?? null,
+      channel: channelOf(facts),
+      linkKind: facts.kind,
+      copiedAt: facts.copiedAt,
+      expiresAt: session.expires_at?.toISOString() ?? null,
       steps,
       notes,
       lastActiveAt: session.last_active_at.toISOString(),

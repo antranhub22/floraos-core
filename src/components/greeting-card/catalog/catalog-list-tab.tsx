@@ -3,12 +3,13 @@
 import React, { useState } from "react"
 import {
   BookOpen, Plus, Edit2, Trash2, Eye, Package,
-  RefreshCw, ChevronRight, Check, Loader2, Copy, ExternalLink, Download,
+  RefreshCw, ChevronRight, Check, Loader2, Copy, Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BrochurePreviewModal } from "@/components/greeting-card/customer/brochure-preview-modal"
 import { readApiError } from "@/components/greeting-card/api-error"
-import { CATALOG_CHANNELS, withChannel } from "@/modules/greeting-card/domain/catalog-channel"
+import { CATALOG_CHANNELS } from "@/modules/greeting-card/domain/catalog-channel"
+import { copyFromServer, createShareUrl } from "@/components/greeting-card/share/tracked-copy"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { CatalogCreateModal } from "./catalog-create-modal"
 
@@ -50,11 +51,16 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
     return `${window.location.origin}/g/${catalog.id}`
   }
 
-  function copyPublicLink(catalog: CatalogItem) {
-    const url = withChannel(buildPublicUrl(catalog), shareChannel)
-    void navigator.clipboard.writeText(url)
-    setCopiedCatalogId(catalog.id)
-    setTimeout(() => setCopiedCatalogId(null), 2000)
+  // Mỗi lần sao chép = một link mang tên người bấm (theo dõi từ lúc khách mở tới khi xong đơn)
+  async function copyPublicLink(catalog: CatalogItem) {
+    setActionError(null)
+    try {
+      await copyFromServer(() => createShareUrl(catalog.id, shareChannel))
+      setCopiedCatalogId(catalog.id)
+      setTimeout(() => setCopiedCatalogId(null), 2000)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Không sao chép được link")
+    }
   }
 
 
@@ -90,7 +96,7 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
             <option key={c.code} value={c.code}>{c.label}</option>
           ))}
         </select>
-        <span className="text-caption">— để biết khách đến từ đâu trong mục Hiệu quả theo kênh.</span>
+        <span className="text-caption">— link sao chép luôn mang tên bạn; khách mở link được tính cho bạn.</span>
       </label>
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
@@ -184,11 +190,7 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
                   </div>
                   <h3 className="text-body font-extrabold text-foreground truncate">{catalog.name}</h3>
                   <p className="text-caption text-text-muted font-mono mt-0.5">
-                    {orgSlug ? (
-                      <span className="text-primary">/bst/{orgSlug}/{catalog.code}</span>
-                    ) : (
-                      <span>{catalog.code}</span>
-                    )}
+                    <span>{catalog.code}</span>
                   </p>
                 </div>
               </div>
@@ -240,23 +242,13 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => copyPublicLink(catalog)}
-                  title={`Sao chép: ${withChannel(buildPublicUrl(catalog), shareChannel)}`}
-                  aria-label={`Sao chép link công khai của ${catalog.name}`}
+                  onClick={() => void copyPublicLink(catalog)}
+                  title="Sao chép link mang tên bạn — khách mở link này được tính cho bạn"
+                  aria-label={`Sao chép link bộ sưu tập ${catalog.name} mang tên bạn`}
                   className="p-1.5 rounded-lg border border-border hover:bg-surface-muted transition-colors text-text-muted hover:text-foreground"
                 >
                   {copiedCatalogId === catalog.id ? <Check size={14} className="text-success" /> : <Copy size={14} />}
                 </button>
-                <a
-                  href={buildPublicUrl(catalog)}
-                  target="_blank"
-                  rel="noreferrer"
-                  title="Mở trong tab mới"
-                  aria-label={`Mở link công khai của ${catalog.name}`}
-                  className="p-1.5 rounded-lg border border-border hover:bg-surface-muted transition-colors text-text-muted hover:text-foreground inline-flex items-center"
-                >
-                  <ExternalLink size={14} />
-                </a>
                 <a
                   href={`/api/v1/greeting-card/catalogs/${catalog.id}/collage`}
                   download

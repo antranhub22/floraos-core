@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { markPersonalLinkCopied } from "@/components/greeting-card/share/tracked-copy"
 import { Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiSend } from "@/components/greeting-card/greeting-api"
@@ -69,6 +70,7 @@ export function SalesCreateLinkModal({ catalogs, onClose, onCreated, onNavigateT
               variant="outline"
               onClick={() => {
                 void navigator.clipboard.writeText(createdLink)
+                markPersonalLinkCopied(createdLink.split("/b/")[1] ?? "")
                 setCopied(true)
               }}
               className="w-full hover:bg-primary/10 font-bold h-11 gap-1.5"

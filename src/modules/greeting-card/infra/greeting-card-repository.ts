@@ -98,12 +98,14 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
     customerPhone?: string | null
     productId: string
     snapshot: ProductSnapshot
+    /** Người phụ trách mặc định (link cũ không qua nút Sao chép); thiếu → "public". */
+    saleId?: string | null | undefined
   }) {
     return this.createSessionWithFreshCode("PUB", (sendCode) => ({
       organization_id: input.organizationId,
       catalog_id: input.catalogId,
       send_code: sendCode,
-      sale_id: "public",
+      sale_id: input.saleId || "public",
       customer_name: input.customerName ?? null,
       customer_phone: input.customerPhone ?? null,
       status: "SELECTED",

@@ -2168,6 +2168,7 @@ Trường TỰ TẠO (`origin = CUSTOM`, D13) lưu giá trị ở cột `custom_
 - `greeting_catalogs` — bộ sưu tập chào khách theo dịp (`STANDARD`) hoặc riêng cho một khách (`CLIENT`); xoá là đặt `is_active = false`.
 - `greeting_catalog_products` — sản phẩm trong catalog. **Sản phẩm phải thuộc cùng tổ chức** (kiểm ở repository từ 05/10/2026; trước đó gắn được sản phẩm của tổ chức khác).
 - `greeting_sessions` — một đường link chào khách (`send_code`, duy nhất theo tổ chức); `product_snapshot` đóng băng mẫu hoa lúc khách chốt.
+- `greeting_share_links` — link bộ sưu tập do một nhân viên sao chép (06/10/2026): người bấm "Sao chép" chịu trách nhiệm mọi khách mở link; mỗi khách một `greeting_sessions` (`sale_id` = người sao chép). Đơn từ link cũ không qua nút Sao chép giao cho `organizations.settings.brochure_default_owner.user_id` (mặc định chủ tiệm).
 - `greeting_messages` / `greeting_message_reads` — tin nhắn nội bộ theo đơn/link (06/10/2026): người gửi và vai suy từ phiên, gửi cho một vai hoặc một người, trả lời về đúng người đã nhắn; đã đọc lưu ở máy chủ (đồng bộ mọi thiết bị). Thay cho ghi chú theo bước kiểu cũ (`order_events.axis = internal_note`, `greeting_journey_events.INTERNAL_NOTE` — vẫn đọc được, không ghi mới).
 - `greeting_catalog_events` — lượt xem/xem mẫu/mở form/đặt đơn trên link bộ sưu tập công khai theo kênh chia sẻ `?kenh=` (06/10/2026); mỗi khách × bước 1 lần/ngày.
 - `greeting_journey_events` — sự kiện hành trình của khách (`OPEN`, `SELECT_PRODUCT`, `CLICK_PAID`…) và ghi chú nội bộ (`INTERNAL_NOTE`).
@@ -2256,6 +2257,23 @@ model greeting_journey_events {
   session      greeting_sessions @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, session_id])
+}
+
+model greeting_share_links {
+  id              String    @id @default(uuid())
+  organization_id String
+  code            String    @unique // mã trong `/s/<code>` — ngẫu nhiên, không đoán được
+  catalog_id      String
+  owner_id        String // người đã bấm Sao chép
+  channel         String? // ?kenh= lúc sao chép
+  created_at      DateTime  @default(now()) // = lúc sao chép
+  revoked_at      DateTime?
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  catalog      greeting_catalogs @relation(fields: [catalog_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, owner_id, created_at])
+  @@index([organization_id, catalog_id])
 }
 
 model greeting_messages {

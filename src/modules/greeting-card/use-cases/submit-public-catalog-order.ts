@@ -1,4 +1,5 @@
 import { normalizeOrderAddress } from "../domain/delivery-address"
+import { defaultOwnerOf } from "./share-links"
 import { deliveryScheduleError } from "../domain/delivery-schedule"
 import { parseShippingConfig } from "../domain/brochure-pricing"
 import { notFound, validationFailed } from "@/core/http/errors"
@@ -57,6 +58,7 @@ export async function submitPublicCatalogOrder(
   if (Object.keys(precheck.errors).length > 0) throw validationFailed(precheck.errors)
 
   const session = await repo.createPublicSession({
+    saleId: await defaultOwnerOf(catalog.organization_id),
     organizationId: catalog.organization_id,
     catalogId: catalog.id,
     customerName: input.customerName.trim(),

@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, CheckCircle2, Circle, Copy, CopyPlus, ExternalLink, Eye, Link as LinkIcon } from "lucide-react"
+import { Check, CheckCircle2, Circle, Copy, CopyPlus, Eye, Link as LinkIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { CatalogOption } from "./use-journey-catalogs"
@@ -9,8 +9,6 @@ interface ShareSummaryPanelProps {
   catalog: CatalogOption | undefined
   templateLabel: string | null
   itemCount: number
-  publicPath: string
-  publicUrl: string
   copied: boolean
   copyError: string | null
   onCopy: () => void
@@ -31,7 +29,7 @@ function ChecklistRow({ done, label }: { done: boolean; label: string }) {
 
 /** Cột tóm tắt: trạng thái sẵn sàng + link dùng chung (một nơi duy nhất cho thao tác chia sẻ). */
 export function ShareSummaryPanel(props: ShareSummaryPanelProps) {
-  const { catalog, templateLabel, itemCount, publicPath, publicUrl, copied, copyError, onCopy, onPreview, onClone } = props
+  const { catalog, templateLabel, itemCount, copied, copyError, onCopy, onPreview, onClone } = props
   const ready = Boolean(catalog) && itemCount > 0
 
   return (
@@ -68,20 +66,9 @@ export function ShareSummaryPanel(props: ShareSummaryPanelProps) {
 
         {ready ? (
           <>
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5">
-              <span className="min-w-0 flex-1 truncate font-mono text-body-sm font-semibold text-primary" title={publicUrl}>
-                {publicPath}
-              </span>
-              <a
-                href={publicUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Mở link trong thẻ mới"
-                className="rounded-lg p-1.5 text-text-muted hover:bg-surface-alt hover:text-foreground"
-              >
-                <ExternalLink size={16} aria-hidden="true" />
-              </a>
-            </div>
+            <p className="mt-4 rounded-xl border border-border bg-surface px-3 py-2.5 text-body-sm text-text-muted">
+              Mỗi lần bấm <strong className="text-foreground">Sao chép</strong> tạo một link <strong className="text-foreground">mang tên bạn</strong> — khách mở link này được tính cho bạn từ lúc mở tới khi xong đơn.
+            </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Button variant="secondary" size="sm" onClick={onPreview} className="gap-1.5 whitespace-nowrap px-3">
                 <Eye size={16} aria-hidden="true" />

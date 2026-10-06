@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { markPersonalLinkCopied } from "@/components/greeting-card/share/tracked-copy"
 import { Check, Copy, ExternalLink, Ban, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiSend } from "@/components/greeting-card/greeting-api"
@@ -30,6 +31,7 @@ export function SalesSessionTable({ sessions, hasMore, isLoadingMore, onLoadMore
 
   function copyLink(code: string) {
     void navigator.clipboard.writeText(`${window.location.origin}/b/${code}`)
+    markPersonalLinkCopied(code)
     setCopiedCode(code)
     setTimeout(() => setCopiedCode(null), 2000)
   }

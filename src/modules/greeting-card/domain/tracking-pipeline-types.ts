@@ -158,6 +158,12 @@ export interface TrackingPipelineItem {
   saleId: string | null
   /** Khách đến từ đâu: "Link riêng của sale" hoặc kênh chia sẻ link bộ sưu tập (Zalo, Facebook…, "Trực tiếp"). */
   channel: string
+  /** PERSONAL = link riêng sale tạo · SHARED = link bộ sưu tập sao chép · LEGACY = link cũ không qua nút Sao chép. */
+  linkKind: "PERSONAL" | "SHARED" | "LEGACY"
+  /** Lần sao chép đầu tiên của link riêng (`null` = chưa gửi khách). */
+  copiedAt: string | null
+  /** Hạn dùng của link (chỉ với link chưa thành đơn). */
+  expiresAt: string | null
   steps: TrackingStepState[]
   notes: InternalNoteMessage[]
   lastActiveAt: string

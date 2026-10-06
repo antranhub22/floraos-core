@@ -10,6 +10,7 @@ import { StepCustomer } from "./step-customer"
 import { StepResult } from "./step-result"
 import { TemplateSection, catalogTemplateId, templateName } from "./template-section"
 import { useCopyLink } from "./use-copy-link"
+import { createShareUrl, markPersonalLinkCopied } from "@/components/greeting-card/share/tracked-copy"
 import { LINK_EXPIRY_OPTIONS } from "@/components/greeting-card/sales/sales-types"
 import { catalogPublicPath, normalizeLinkCode, useJourneyCatalogs, type CatalogOption } from "./use-journey-catalogs"
 
@@ -130,7 +131,10 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
               customerName={customerName}
               copied={copiedKey === "send"}
               copyError={copyError}
-              onCopy={() => void copy("send", sent.shareUrl)}
+              onCopy={() => {
+                void copy("send", sent.shareUrl)
+                markPersonalLinkCopied(sent.sendCode)
+              }}
               onPreview={() => setPreview({ url: sent.shareUrl, title: `Xem trước thẻ gửi ${customerName || "khách"}` })}
               onCreateAnother={resetForAnother}
               onFinish={onFinish}
@@ -142,11 +146,9 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
           catalog={selected}
           templateLabel={selected ? templateName(catalogTemplateId(selected)) : null}
           itemCount={itemCount}
-          publicPath={publicPath}
-          publicUrl={publicUrl}
           copied={copiedKey === "public"}
           copyError={copyError}
-          onCopy={() => void copy("public", publicUrl)}
+          onCopy={() => selected && void copy("public", () => createShareUrl(selected.id))}
           onPreview={() => selected && setPreview({ url: publicUrl, title: `Xem trước: ${selected.name}` })}
           onClone={() => setDialog("clone")}
         />

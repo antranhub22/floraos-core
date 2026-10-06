@@ -281,12 +281,17 @@ describe("greeting-card: đơn kẹt theo thời gian chuẩn từng bước", (
     await disconnectDatabase()
   })
 
-  it("link gửi quá thời gian chuẩn chưa mở → kẹt, giao Sale; tắt bước thì hết kẹt", async () => {
+  it("link đã sao chép gửi khách quá thời gian chuẩn chưa mở → kẹt, giao Sale; tắt bước thì hết kẹt", async () => {
     const repo = new GreetingCardRepository()
     const product = await new ProductRepository().create(a.ctx, { code: "HOA-S", name: "Bó S", attributes: { price: 1 } })
     const catalog = await repo.createCatalog(a.ctx, { code: "bo-s", name: "Bộ S", productIds: [product.id], createdBy: a.userId })
     const link = await createSendLink(a.ctx, { catalogId: catalog.id })
     await prisma.greeting_sessions.updateMany({ where: { send_code: link.sendCode }, data: { created_at: new Date(Date.now() - 20 * 60_000) } })
+    // Giờ "khách chưa mở" tính từ lúc sao chép link gửi khách (PO 06/10/2026)
+    const session = await prisma.greeting_sessions.findFirstOrThrow({ where: { send_code: link.sendCode } })
+    await prisma.greeting_journey_events.create({
+      data: { organization_id: a.organizationId, session_id: session.id, event_type: "LINK_COPIED", created_at: new Date(Date.now() - 20 * 60_000) },
+    })
 
     const row = (await getTrackingPipeline(a.ctx)).find((i) => i.sendCode === link.sendCode)
     expect(row?.currentStepId).toBe("STEP_1_OPENED")
