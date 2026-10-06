@@ -1,4 +1,5 @@
 import type { GreetingCatalogProduct } from "./greeting-card-types"
+import { resolveProductPriceVnd } from "./brochure-commerce-rules"
 import {
   readDescription,
   readDimensions,
@@ -10,28 +11,17 @@ import {
 } from "@/modules/products/domain/master-index-fields"
 
 /**
- * Giá niêm yết của một mẫu hoa trong thẻ chào: `attributes.price` của sản phẩm,
- * nếu không có thì của biến thể đầu tiên. Trả `null` khi chưa khai báo giá.
- * Dùng chung cho link công khai, link gửi riêng và khung xem trước để cùng
- * một mẫu luôn hiện cùng một giá.
+ * Giá niêm yết của một mẫu hoa trong thẻ chào — CÙNG MỘT hàm với trang khách và máy chủ
+ * (`resolveProductPriceVnd`: `attributes.price` → `attributes.price_vnd` → biến thể đầu).
+ * Bản cũ có hàm riêng bỏ sót `price_vnd` và trả 0 thay vì "chưa có giá", nên khung xem trước
+ * nội bộ có thể hiện giá khác trang khách. Trả `null` khi chưa khai báo giá ("Liên hệ").
  */
 export function resolveCatalogProductPrice(product: {
   attributes?: unknown
   variants?: ReadonlyArray<{ attributes?: unknown }> | null | undefined
 }): number | null {
-  const pick = (attrs: unknown): number | null => {
-    if (!attrs || typeof attrs !== "object") return null
-    const price = (attrs as Record<string, unknown>).price
-    return typeof price === "number" && price > 0 ? price : null
-  }
-  return pick(product.attributes) ?? pick(product.variants?.[0]?.attributes)
+  return resolveProductPriceVnd(product.attributes, product.variants?.[0]?.attributes)
 }
-
-/**
- * Sản phẩm chưa khai báo giá: 0 = "Liên hệ" trên giao diện; đơn hàng được nhận
- * nhưng không hiện QR, cửa hàng báo giá sau. (Trước đây tự gán 500.000 ₫.)
- */
-export const FALLBACK_CATALOG_PRICE = 0
 
 interface CatalogItemLike {
   sort_order: number
@@ -63,7 +53,7 @@ export function catalogItemToProduct(item: CatalogItemLike, imageUrl: string | n
     id: p.id,
     code: p.code,
     name: p.name,
-    price: resolveCatalogProductPrice(p) ?? FALLBACK_CATALOG_PRICE,
+    price: resolveCatalogProductPrice(p),
     imageUrl,
     description: readDescription(src),
     flowersSummary: flowers.length > 0 ? flowers.join(", ") : null,

@@ -15,6 +15,7 @@ import { listPaymentEvents, markPaymentEventHandled } from "@/modules/greeting-c
 import { getSalesFunnel } from "@/modules/greeting-card/use-cases/get-sales-funnel"
 import { getChannelFunnel } from "@/modules/greeting-card/use-cases/catalog-channel-events"
 import { getTrackingPipeline } from "@/modules/greeting-card/use-cases/get-tracking-pipeline"
+import { assignBrochureFlorist } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
 
 /**
  * Phạm vi xem "chỉ khách của mình" áp cho thao tác tiền và phễu (PO 06/10/2026):
@@ -127,5 +128,12 @@ describe("greeting-card: phạm vi xem cho tiền và phễu", () => {
     const pipeline = await getTrackingPipeline(owner)
     expect(pipeline.some((i) => i.orderId === stuck.orderId)).toBe(true)
     expect(pipeline.filter((i) => i.type === "ORDER")).toHaveLength(1)
+  })
+
+  it("tác vụ xưởng ghi nhật ký kiểm toán (ai, lúc nào, đổi gì)", async () => {
+    const order = await orderBy(lan, 500_000, "XU")
+    await assignBrochureFlorist(owner, order.orderId, { floristNote: "Thợ Mai" })
+    const audit = await prisma.audit_logs.findFirstOrThrow({ where: { organization_id: a.organizationId, action: "greeting_card.order.florist_assigned" } })
+    expect(audit).toMatchObject({ entity_id: order.orderId, user_id: owner.userId })
   })
 })

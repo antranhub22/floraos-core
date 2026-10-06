@@ -1,5 +1,6 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
+import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import type { delivery_status, order_status, production_status } from "@/generated/prisma/client"
 
 export const ORDER_STATUSES: readonly order_status[] = [
@@ -161,6 +162,25 @@ export class BrochureOrderRepository {
           actor_id: ctx.userId,
         },
       })
+
+      // Tác vụ xưởng cũng vào nhật ký kiểm toán như thao tác tiền: ai làm, lúc nào, đổi gì
+      await recordAuditLog(
+        ctx,
+        {
+          action: `greeting_card.order.${input.eventType.toLowerCase()}`,
+          entityType: "order",
+          entityId: order.id,
+          before: { productionStatus: order.production_status, deliveryStatus: order.delivery_status },
+          after: {
+            ...(input.productionStatus ? { productionStatus: input.productionStatus } : {}),
+            ...(input.deliveryStatus ? { deliveryStatus: input.deliveryStatus } : {}),
+            ...(input.orderStatus ? { status: input.orderStatus } : {}),
+            ...(input.noteAppend ? { note: input.noteAppend } : {}),
+            ...(input.qcAssetIds?.length ? { assetIds: [...input.qcAssetIds] } : {}),
+          },
+        },
+        tx
+      )
 
       return { orderId: order.id, orderCode: order.code }
     })
