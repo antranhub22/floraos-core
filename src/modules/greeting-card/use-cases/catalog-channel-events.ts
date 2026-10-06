@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import type { TenantContext } from "@/core/tenancy"
 import { buildChannelFunnel, normalizeChannel, type CatalogEventType } from "../domain/catalog-channel"
 import { CatalogEventRepository } from "../infra/catalog-event-repository"
+import { resolveSaleScope } from "./order-scope"
 
 /** Băm mã khách (ngẫu nhiên trên máy khách) cùng catalog — không lưu IP hay mã thô. */
 export function hashVisitor(catalogId: string, visitorId: string): string {
@@ -22,8 +23,12 @@ export async function recordCatalogEvent(
   })
 }
 
-/** Phễu theo kênh trong `days` ngày (tuỳ chọn lọc 1 catalog). */
+/**
+ * Phễu theo kênh trong `days` ngày (tuỳ chọn lọc 1 catalog). Link chung không thuộc riêng sale nào —
+ * sale "chỉ khách của mình" nhận phễu rỗng.
+ */
 export async function getChannelFunnel(ctx: TenantContext, days: number, catalogId?: string, repo = new CatalogEventRepository()) {
+  if (await resolveSaleScope(ctx)) return { days, rows: [] }
   const since = new Date(Date.now() - days * 86_400_000)
   return { days, rows: buildChannelFunnel(await repo.countByChannel(ctx, since, catalogId)) }
 }

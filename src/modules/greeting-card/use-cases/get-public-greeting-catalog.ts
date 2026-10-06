@@ -35,7 +35,8 @@ export async function mapCatalogToPublicResult(
 ): Promise<PublicGreetingCatalogResult> {
   // Batch resolve asset storage keys (chống N+1) — giá theo Product Master, không bịa giá
   const assetMap = await repo.getAssetsStorageMap(catalog.organization_id, collectImageAssetIds(catalog.items))
-  const products: GreetingCatalogProduct[] = catalog.items.map((item) => toCatalogProduct(item, assetMap))
+  // Mẫu tạm hết hàng không hiện cho khách
+  const products: GreetingCatalogProduct[] = catalog.items.map((item) => toCatalogProduct(item, assetMap)).filter((p) => p.available !== false)
 
   const shop = await repo.getShopProfile(catalog.organization_id)
 

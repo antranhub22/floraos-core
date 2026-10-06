@@ -31,7 +31,7 @@ export type CustomerBrochureView = {
 
 /**
  * Dữ liệu trang khách `/b/[sendCode]`. Chỉ trả những gì khách cần — không
- * SĐT, không id tổ chức/sale. Lần mở đầu ghi sự kiện OPEN.
+ * SĐT, không id tổ chức/sale. Không ghi gì (xem `markBrochureOpened`).
  */
 export async function getGreetingCatalogForCustomer(
   sendCode: string,
@@ -50,16 +50,13 @@ export async function getGreetingCatalogForCustomer(
     throw error
   }
 
-  let status = session.status as GreetingSessionStatus
-  if (status === "CREATED") {
-    const now = new Date()
-    await repo.updateSession(session.id, { status: "OPENED", openedAt: now })
-    await repo.recordJourneyEvent(session.organization_id, session.id, "OPEN", { openedAt: now.toISOString() })
-    status = "OPENED"
-  }
+  // CHỈ ĐỌC: không đánh dấu "đã mở" ở đây — Zalo/Facebook tải trang này để dựng ảnh xem trước.
+  // Trình duyệt thật của khách gọi `markBrochureOpened` sau khi trang chạy (máy quét không chạy JS).
+  const status = session.status as GreetingSessionStatus
 
   const urls = await repo.getAssetsStorageMap(session.organization_id, collectImageAssetIds(session.catalog.items))
-  const products = session.catalog.items.map((item) => toCatalogProduct(item, urls))
+  // Mẫu tạm hết hàng không hiện cho khách
+  const products = session.catalog.items.map((item) => toCatalogProduct(item, urls)).filter((p) => p.available !== false)
   const shop = await repo.getShopProfile(session.organization_id)
   const contact = (await getShopContact(session.organization_id)) ?? {
     name: shop.name, phone: shop.phone, zaloUrl: null, address: null, logoUrl: null,
@@ -98,4 +95,17 @@ export async function getGreetingCatalogForCustomer(
     order,
     payment,
   }
+}
+
+/**
+ * Trình duyệt của khách báo đã mở link (gọi từ trang sau khi chạy JavaScript). Chỉ đổi
+ * CREATED → OPENED một lần; link sai/hết hạn → 404 như trang khách.
+ */
+export async function markBrochureOpened(sendCode: string, repo = new GreetingCardRepository()): Promise<{ opened: boolean }> {
+  const session = await loadPublicSession(sendCode, repo)
+  if (session.status !== "CREATED") return { opened: false }
+  const now = new Date()
+  if (!(await repo.markOpened(session.id, now))) return { opened: false }
+  await repo.recordJourneyEvent(session.organization_id, session.id, "OPEN", { openedAt: now.toISOString() })
+  return { opened: true }
 }

@@ -60,8 +60,8 @@ export function SalesFunnelStats() {
                 <th className="px-4 py-2.5 text-right">Đã gửi</th>
                 <th className="px-4 py-2.5 text-right">Đã mở</th>
                 <th className="px-4 py-2.5 text-right">Đặt đơn</th>
-                <th className="px-4 py-2.5 text-right">Đã thu tiền</th>
-                <th className="px-4 py-2.5 text-right">Doanh thu</th>
+                <th className="px-4 py-2.5 text-right">Đã thu đủ</th>
+                <th className="px-4 py-2.5 text-right">Tiền đã thu</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

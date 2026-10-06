@@ -2,12 +2,17 @@ import { normalizeOrderAddress } from "../domain/delivery-address"
 import { defaultOwnerOf } from "./share-links"
 import { deliveryScheduleError } from "../domain/delivery-schedule"
 import { parseShippingConfig } from "../domain/brochure-pricing"
-import { notFound, validationFailed } from "@/core/http/errors"
+import { conflict, notFound, validationFailed } from "@/core/http/errors"
+import { SOLD_OUT_MESSAGE } from "../domain/product-availability"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { validateCustomerOrderInput, normalizePhone } from "../domain/greeting-card-rules"
 import type { CustomerOrderSubmitInput, GreetingCatalogProduct } from "../domain/greeting-card-types"
 import { collectImageAssetIds, snapshotOf, toCatalogProduct } from "./brochure-product-mapper"
-import { placeBrochureOrder, type BrochureOrderResult } from "./place-brochure-order"
+import { assertPhoneQuota, placeBrochureOrder, type BrochureOrderResult } from "./place-brochure-order"
+import { paymentInstructionsFor } from "./payment-instructions"
+import { BrochureCheckoutRepository } from "../infra/brochure-checkout-repository"
+import { DUPLICATE_ORDER_WINDOW_MS, isSameOrder } from "../domain/order-guard"
+import type { ProductSnapshot } from "../domain/greeting-card-types"
 import { quoteForProduct, type QuoteRequest, type QuoteResult } from "./brochure-quote"
 
 export interface PublicCatalogOrderInput extends CustomerOrderSubmitInput {
@@ -27,14 +32,46 @@ async function orderableFromCatalog(
   const item = catalog.items.find((i) => i.product.id === productId)
   if (!item) throw notFound()
   const urls = await repo.getAssetsStorageMap(catalog.organization_id, collectImageAssetIds([item]))
-  return { catalog, product: toCatalogProduct(item, urls) }
+  const product = toCatalogProduct(item, urls)
+  if (product.available === false) throw conflict(SOLD_OUT_MESSAGE)
+  return { catalog, product }
+}
+
+/**
+ * Link chung không có phiên trước khi đặt nên không chống trùng theo phiên được: cùng SĐT, cùng mẫu,
+ * cùng người nhận, cùng ngày giao trong 10 phút → trả lại đơn vừa tạo (khách bấm lại / mạng chập chờn).
+ */
+async function recentDuplicate(
+  organizationId: string, catalogId: string, product: GreetingCatalogProduct, input: CustomerOrderSubmitInput,
+  shopSettings: unknown, checkout: BrochureCheckoutRepository,
+): Promise<BrochureOrderResult | null> {
+  const rows = await checkout.findRecentPublicOrders({
+    organizationId, catalogId, customerPhone: normalizePhone(input.customerPhone), productId: product.id,
+    since: new Date(Date.now() - DUPLICATE_ORDER_WINDOW_MS),
+  })
+  const incoming = { recipientPhone: normalizePhone(input.recipientPhone), deliveryDate: input.deliveryDate.trim() }
+  for (const r of rows) {
+    const o = r.order
+    if (!o || o.status === "CANCELLED") continue
+    const addr = (o.delivery_address ?? {}) as { phone?: string }
+    const win = (o.delivery_window ?? {}) as { date?: string }
+    if (!isSameOrder({ recipientPhone: addr.phone ?? null, deliveryDate: win.date ?? null }, incoming)) continue
+    const total = Number(o.total_vnd)
+    return {
+      sendCode: r.send_code, orderId: o.id, orderCode: o.code, totalVnd: total, quote: null,
+      productSnapshot: r.product_snapshot as unknown as ProductSnapshot,
+      vietQr: paymentInstructionsFor(shopSettings, { totalVnd: total, paidVnd: Number(o.paid_vnd), createdAt: o.created_at }, o.code),
+    }
+  }
+  return null
 }
 
 /** Đặt hoa trực tiếp từ link bộ sưu tập công khai `/g/...` (không qua link chào riêng). */
 export async function submitPublicCatalogOrder(
   catalogId: string,
   rawInput: PublicCatalogOrderInput,
-  repo = new GreetingCardRepository()
+  repo = new GreetingCardRepository(),
+  checkout = new BrochureCheckoutRepository()
 ): Promise<BrochureOrderResult> {
   const address = normalizeOrderAddress(rawInput)
   const input = address.input
@@ -56,6 +93,11 @@ export async function submitPublicCatalogOrder(
     shop.settings
   )
   if (Object.keys(precheck.errors).length > 0) throw validationFailed(precheck.errors)
+
+  const duplicate = await recentDuplicate(catalog.organization_id, catalog.id, product, input, shop.settings, checkout)
+  if (duplicate) return duplicate
+  // Kiểm trần đơn TRƯỚC khi tạo phiên — tránh phiên mồ côi
+  await assertPhoneQuota(catalog.organization_id, normalizePhone(input.customerPhone), checkout)
 
   const session = await repo.createPublicSession({
     saleId: await defaultOwnerOf(catalog.organization_id),

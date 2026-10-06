@@ -60,6 +60,8 @@ export interface GreetingCatalogProduct {
   /** Kiểu gói lớp ngoài — từ Master Index */
   wrapStyle?: string | null | undefined
   sortOrder: number
+  /** `false` = tạm hết hàng theo tồn kho chi nhánh — không hiện trên link khách, không đặt được. */
+  available?: boolean | undefined
   /** Các size/biến thể bán online (đã có giá); rỗng = chỉ bán bản gốc. */
   variants?: Array<{ id: string; name: string; priceVnd: number }> | undefined
 }
@@ -115,6 +117,8 @@ export interface CustomerOrderSubmitInput {
   quantity?: number | undefined
   shippingZoneId?: string | undefined
   voucherCode?: string | undefined
+  /** Ô bẫy ẩn chống máy tự điền — người thật luôn để trống. */
+  website?: string | undefined
 }
 
 export interface BrochureOrderSummary {

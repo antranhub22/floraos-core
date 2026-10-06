@@ -63,6 +63,30 @@ export class BrochureCheckoutRepository {
     }
   }
 
+  /** Số đơn Thẻ chào của một SĐT người đặt trong tổ chức từ `since` (chống đơn rác). */
+  async countRecentOrdersByPhone(organizationId: string, phone: string, since: Date): Promise<number> {
+    if (!phone) return 0
+    return this.db.orders.count({
+      where: { organization_id: organizationId, source: "BROCHURE", created_at: { gte: since }, customer: { phone } },
+    })
+  }
+
+  /** Đơn vừa đặt từ link bộ sưu tập chung có cùng SĐT + mẫu (để trả lại thay vì tạo đơn trùng). */
+  async findRecentPublicOrders(input: { organizationId: string; catalogId: string; customerPhone: string; productId: string; since: Date }) {
+    return this.db.greeting_sessions.findMany({
+      where: {
+        organization_id: input.organizationId, catalog_id: input.catalogId, customer_phone: input.customerPhone,
+        selected_product_id: input.productId, order_id: { not: null }, created_at: { gte: input.since },
+      },
+      select: {
+        id: true, send_code: true, product_snapshot: true,
+        order: { select: { id: true, code: true, total_vnd: true, paid_vnd: true, created_at: true, status: true, delivery_address: true, delivery_window: true } },
+      },
+      orderBy: { created_at: "desc" },
+      take: 5,
+    })
+  }
+
   /**
    * Khách theo SĐT. Làm NGOÀI giao dịch tạo đơn: mã `KH-xxxx` sinh theo đếm
    * có thể trùng (khách đã xoá, hai đơn đồng thời) — trùng thì lấy đuôi ngẫu

@@ -7,6 +7,8 @@ import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { decideTransfer, extractOrderCode } from "../domain/bank-transfer-matching"
 import { paymentNotifyEvent } from "../domain/customer-notifications"
 import { queueOrderNotification } from "./notify-customer"
+import { resolveSaleScope } from "./order-scope"
+import type { PaymentEventStatus } from "../infra/greeting-integration-repository"
 
 export const SEPAY_PROVIDER = "SEPAY"
 
@@ -118,6 +120,18 @@ export async function markPaymentEventHandled(
   note: string,
   repo = new GreetingIntegrationRepository()
 ) {
+  // Tiền chưa khớp không thuộc riêng sale nào — sale "chỉ khách của mình" không xử lý được
+  if (await resolveSaleScope(ctx)) throw notFound()
   if (!(await repo.markPaymentEventHandled(ctx, id, note))) throw notFound()
   return { handled: true }
+}
+
+/** Giao dịch ngân hàng (cho Điều hành). Sale "chỉ khách của mình" nhận danh sách rỗng. */
+export async function listPaymentEvents(
+  ctx: TenantContext,
+  options: { status?: PaymentEventStatus | undefined; limit: number; cursor?: string | undefined },
+  repo = new GreetingIntegrationRepository()
+) {
+  if (await resolveSaleScope(ctx)) return []
+  return repo.listPaymentEvents(ctx, options)
 }

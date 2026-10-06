@@ -748,12 +748,13 @@ Trang công khai ngoài `/api/v1` (06/10/2026): **`/s/<mã>`** — link bộ sư
 | POST · DELETE | `/greeting-card/catalogs/:id/products` | `R2` | Thân `{ productId }`; sản phẩm tổ chức khác → 404 |
 | GET · POST | `/greeting-card/send-links` | `R1` · `R2` | POST sinh mã gửi ngẫu nhiên duy nhất toàn hệ thống (`T01-XXXXXXXX`), `expiresInDays` 1–365 hoặc `null` (mặc định 30). GET kèm `link_state` ACTIVE/EXPIRED/REVOKED |
 | POST | `/greeting-card/send-links/:id/revoke` | `R2` | Thu hồi link chưa có đơn (idempotent); đã có đơn → 409 |
-| GET | `/greeting-card/stats` | `R1` | `?days=7\|30\|90` — phễu gửi → mở → chọn → đặt → thu tiền + doanh thu theo sale |
+| GET · PUT | `/greeting-card/display-settings` | `L1` · `R2` | Trường thông tin hiển thị theo từng mẫu Thẻ chào (cấp cửa hàng, `organizations.settings.greetingCardDisplay`). PUT `{ templateId, fields[] }`; mã/tên/giá luôn hiện; khoá lạ bị bỏ; mẫu không tồn tại → 400. Gác quyền từ 06/10/2026 (trả nợ #170 phần Thẻ chào) |
+| GET | `/greeting-card/stats` | `R1` | `?days=7\|30\|90` — phễu gửi → mở → chọn → đặt → thu tiền + doanh thu theo sale · `paid` = số đơn đã thu ĐỦ, `revenueVnd` = tiền thật đã thu (`paid_vnd`, đơn chưa huỷ) — trước 06/10 đơn mới cọc tính là đã thu và cộng cả tổng đơn. Sale "chỉ khách của mình" chỉ thấy dòng của mình |
 | GET | `/greeting-card/catalogs/:id/collage` | `L1` | Tải ảnh catalog PNG 1200×630 (ghép tối đa 4 mẫu JPG/PNG + tên, khoảng giá, tên tiệm) để đăng lên kênh; catalog tiệm khác/đã ẩn → 404. Cùng ảnh này làm ảnh xem trước (`og:image`) của `/g/:id` và `/bst/:orgSlug/:code` |
-| GET | `/greeting-card/stats/channels` | `R1` | `?days=7\|30\|90` — phễu link bộ sưu tập theo kênh chia sẻ (`?kenh=` zalo/facebook/instagram/tiktok/website/khac; lạ/trống = trực tiếp): khách xem → xem mẫu → mở form → đặt đơn, đếm khách không trùng |
+| GET | `/greeting-card/stats/channels` | `R1` | `?days=7\|30\|90` — phễu link bộ sưu tập theo kênh chia sẻ (`?kenh=` zalo/facebook/instagram/tiktok/website/khac; lạ/trống = trực tiếp): khách xem → xem mẫu → mở form → đặt đơn, đếm khách không trùng · Link chung không thuộc riêng sale nào: sale "chỉ khách của mình" nhận `rows: []` |
 | GET | `/greeting-card/orders` | `R1` | `?status=` (order_status), `?payment=OUTSTANDING\|PAID` (OUTSTANDING gồm cả đơn chờ báo giá — tổng 0); tiền trả dạng số |
-| POST | `/greeting-card/orders/:id/confirm-payment` | `R9` | `amountVnd?` (bỏ trống = khoản đang chờ theo chính sách cọc). Khoá lạc quan trên `paid_vnd`, ghi `order_payments` (DEPOSIT/BALANCE) + `order_events` + `audit_logs`; đã thu đủ → 409; vượt phần còn lại → 422 |
-| POST | `/greeting-card/orders/:id/quote` | `R9` | `{ totalVnd, reason? }` (lý do giá chốt ≤ 300 ký tự, lưu `pricing_rule_ref.quoteReason`, hiện cho Điều hành khi đối chiếu thanh toán) — báo giá trọn gói cho đơn đặt mẫu chưa niêm yết giá (tổng 0). Khoá lạc quan `total_vnd = 0`; đã có giá/đã huỷ → 409; số tiền sai → 422; tổ chức khác → 404; audit `greeting_card.order.quote` |
+| POST | `/greeting-card/orders/:id/confirm-payment` | `R9` | `amountVnd?` (bỏ trống = khoản đang chờ theo chính sách cọc). Khoá lạc quan trên `paid_vnd`, ghi `order_payments` (DEPOSIT/BALANCE) + `order_events` + `audit_logs`; đã thu đủ → 409; vượt phần còn lại → 422 · Sale chế độ "chỉ khách của mình" chỉ thao tác đơn của mình (khác → 404, 06/10/2026). Phiên link chỉ `COMPLETED` khi đã thu ĐỦ (đơn mới cọc vẫn hiện QR phần còn lại) |
+| POST | `/greeting-card/orders/:id/quote` | `R9` | `{ totalVnd, reason? }` (lý do giá chốt ≤ 300 ký tự, lưu `pricing_rule_ref.quoteReason`, hiện cho Điều hành khi đối chiếu thanh toán) — báo giá trọn gói cho đơn đặt mẫu chưa niêm yết giá (tổng 0). Khoá lạc quan `total_vnd = 0`; đã có giá/đã huỷ → 409; số tiền sai → 422; tổ chức khác → 404; audit `greeting_card.order.quote` · Áp phạm vi xem như `confirm-payment`; báo giá xong gửi khách mốc `QUOTED` (ZNS/SMS) kèm số tiền phải trả |
 | GET · PUT | `/greeting-card/sale-visibility` | `F2` | Quyền xem của sale (`organizations.settings.brochure_visibility = { mode, members: { userId: ALL\|OWN } }`). GET → `{ defaultMode, members[] }` (chỉ sale đang hoạt động có `R2` và không có `R4/R5/F2`); PUT `{ mode }` đổi mặc định, `{ userId, mode }` chọn riêng, `mode: null` bỏ chọn riêng; sale không thuộc tổ chức → 404. Thời gian chuẩn từng bước lưu ở `brochure_step_sla = { STEP_x: { enabled, minutes } }` qua `PATCH /organizations/current` |
 | GET · POST | `/greeting-card/messages` | `R1` · gửi `R2` | Trao đổi nội bộ của một đơn/link. GET `?orderId=\|sessionId=` → `{ label, ownerSaleName, messages[] }`. POST `{ orderId\|sessionId, stepKey, to: { kind: ROLE, role } \| { kind: OWNER_SALE } \| { kind: USER, userId }, body ≤ 2000, replyToId? }` → 201; vai người gửi suy từ năng lực (F2 = Điều hành, R4/R5 = Điều phối, còn lại Sale), không nhận từ client; `replyToId` gửi thẳng về người đã nhắn; đơn ngoài phạm vi xem (tổ chức khác, sale "chỉ khách của mình") hoặc người nhận ngoài tổ chức → 404 |
 | POST | `/greeting-card/messages/read` | `R1` | `{ messageIds[] ≤ 200 }` — đánh dấu đã đọc cho người đang đăng nhập; tin tổ chức khác bị bỏ qua |
@@ -763,29 +764,33 @@ Trang công khai ngoài `/api/v1` (06/10/2026): **`/s/<mã>`** — link bộ sư
 | POST | `/greeting-card/send-links/:id/copied` | `R2` | `:id` = mã gửi của link riêng. Ghi mốc sao chép đầu tiên của link riêng (sự kiện `LINK_COPIED`, chép lại không đổi mốc) — giờ "khách chưa mở" tính từ mốc này; link chưa sao chép không bị báo kẹt. Link ngoài phạm vi xem → 404 |
 | POST | `/greeting-card/orders/:id/discount-request` | `R2` | Sale xin giảm giá `{ percent? \| amountVnd?, reason }` → 201; gửi thẳng Điều hành (tin `kind = DISCOUNT_REQUEST`). Trần `organizations.settings.brochure_discount.max_percent` (mặc định 25%, 0 = tắt) tính trên giá đơn trước mọi lần giảm; vượt trần / đơn chưa có giá → 400; đơn huỷ hoặc đang có yêu cầu chờ → 409; đơn ngoài phạm vi xem → 404 |
 | POST | `/greeting-card/discount-requests/:id/decision` | `F2` | `{ approve, percent? \| amountVnd?, note }` — duyệt đúng mức xin, duyệt mức khác (vẫn trong trần) hoặc từ chối (bắt buộc ghi chú). Nguyên tử: yêu cầu phải còn chờ (409 nếu đã xử lý), tổng đơn chưa đổi; duyệt thì `total_vnd`/`balance_vnd` cập nhật, `pricing_rule_ref.manualDiscount = { baseTotalVnd, vnd, percent?, reason, note, approvedBy, approvedAt }` (duyệt lần sau thay lần trước), không được thấp hơn số đã thu (409). Sale nhận tin kết quả (`DISCOUNT_DECISION`); audit `greeting_card.discount.approve\|reject` |
-| POST | `/greeting-card/orders/:id/cancel` | `R6` | `{ reason }`; trả lại mã giảm giá; đơn đã giao/đã huỷ → 409; audit |
-| POST | `/greeting-card/orders/:id/refund` | `R10` | `{ amountVnd, reason }`; không vượt số đã thu (422); ghi REFUND + audit |
-| POST | `/greeting-card/orders/:id/assign-florist` | `R4` | Thứ tự xưởng + chính sách thu tiền (`brochure_policy`) chặn sai bước → 409 |
+| POST | `/greeting-card/orders/:id/cancel` | `R6` | `{ reason }`; trả lại mã giảm giá; đơn đã giao/đã huỷ → 409; audit · Áp phạm vi xem; ngoài thao tác tay, bộ quét nền tự huỷ đơn quá hạn giữ khi tiệm bật `brochure_policy.auto_cancel_unpaid` (audit `system:hold-expiry`) |
+| POST | `/greeting-card/orders/:id/refund` | `R10` | `{ amountVnd, reason }`; không vượt số đã thu (422); ghi REFUND + audit · Áp phạm vi xem |
+| POST | `/greeting-card/orders/:id/assign-florist` | `R4` | Thứ tự xưởng + chính sách thu tiền (`brochure_policy`) chặn sai bước → 409 · Mọi tác vụ xưởng (phân công, ảnh thành phẩm, giao ship, ảnh người nhận) ghi `audit_logs` `greeting_card.order.<sự kiện>` |
 | POST | `/greeting-card/orders/:id/product-photo` | `R3` | `{ assetIds }` (hoặc `{ assetId }` cũ): 1–5 ảnh JPG/PNG/WEBP + 0–2 video MP4/MOV/WEBM (≤ 50MB; ≤ 15 giây kiểm ở trình duyệt), một bản ghi QC cho cả bộ; asset phải thuộc tổ chức (khác → 404), sai giới hạn → 400 |
 | POST | `/greeting-card/orders/:id/dispatch-shipping` | `R5` | Cần hoa READY (+ thu đủ nếu chính sách bật) |
 | POST | `/greeting-card/orders/:id/recipient-photo` | `R5` | Cần đang giao; đóng đơn COMPLETED. Cùng luật ảnh/video như `product-photo`; trang theo dõi hiện thành mục "Ảnh người nhận" riêng |
-| GET | `/greeting-card/tracking-pipeline` | `R1` | Bảng theo dõi (lọc theo quyền xem của sale); mỗi dòng có `stepStartedAt` (lúc vào bước hiện tại), `stuck` (`{ stepId, owner: SALE\|ADMIN\|COORDINATOR, overdueMinutes, message }` khi quá thời gian chuẩn `brochure_step_sla`, không thì `null`) , `saleId` và `channel` ("Link riêng của sale" hoặc kênh `?kenh=` của đơn đặt từ link bộ sưu tập, theo sự kiện ORDER). Đơn đã đặt chưa chuyển khoản hiện "Đã đặt đơn — chờ khách chuyển khoản". Link đã mở (`OPENED`) tính là bước "Chọn mẫu". Trao đổi nội bộ chuyển sang `/greeting-card/messages` (06/10/2026, bỏ ghi chú theo bước kiểu cũ) |
+| GET | `/greeting-card/tracking-pipeline` | `R1` | Bảng theo dõi (lọc theo quyền xem của sale); mỗi dòng có `stepStartedAt` (lúc vào bước hiện tại), `stuck` (`{ stepId, owner: SALE\|ADMIN\|COORDINATOR, overdueMinutes, message }` khi quá thời gian chuẩn `brochure_step_sla`, không thì `null`) , `saleId` và `channel` ("Link riêng của sale" hoặc kênh `?kenh=` của đơn đặt từ link bộ sưu tập, theo sự kiện ORDER). Đơn đã đặt chưa chuyển khoản hiện "Đã đặt đơn — chờ khách chuyển khoản". Link đã mở (`OPENED`) tính là bước "Chọn mẫu". Trao đổi nội bộ chuyển sang `/greeting-card/messages` (06/10/2026, bỏ ghi chú theo bước kiểu cũ) · Đọc MỌI đơn còn việc (chưa xong, chưa huỷ) + đơn hoàn tất 7 ngày + link chưa thu hồi/còn hạn có hoạt động 30 ngày; trần an toàn 2000 dòng có log cảnh báo (trước 06/10: chỉ 100 đơn + 50 link mới nhất) |
+| GET | `/greeting-card/tracking` | `R1` | Lớp truy vấn dùng chung cho các view Theo dõi tiến độ. `view` = `list` (mặc định) · `kanban` · `calendar` (bắt buộc `from`,`to` ≤ 62 ngày) · `queue` (chỉ đơn quá hạn/sắp quá hạn) · `dashboard` (số liệu tổng hợp). Lọc chung: `q`, `category`, `steps` (CSV), `saleId`, `channel`, `type`, `sla` (`NONE\|ON_TRACK\|DUE_SOON\|OVERDUE\|ATTENTION`), `owner`, `deliveryFrom`, `deliveryTo`; sắp xếp `sort`/`dir`; phân trang `limit` (1–100, mặc định 20) + `cursor`. Bước và trạng thái thời gian chuẩn suy ra ở máy chủ từ cùng tập `tracking-pipeline` (không lưu, không bản sao); phạm vi sale áp như `tracking-pipeline` (06/10/2026) |
+| GET | `/greeting-card/tracking/timeline` | `R1` | Dòng thời gian của MỘT đơn (`orderId`) hoặc link (`sessionId`): `segments` (từng bước đã vào, thời gian ở bước so với thời gian chuẩn, `overMinutes`) dựng lại từ sự kiện theo đúng cách suy bước hiện có + `events` phân trang (`limit` ≤ 100, mặc định 50, `cursor`). Ngoài phạm vi xem của sale → 404 (06/10/2026) |
 | GET | `/greeting-card/integrations` | `R1` | Trạng thái webhook ngân hàng + kênh thông báo; KHÔNG trả khoá/bí mật |
 | POST · DELETE | `/greeting-card/integrations/payment-webhook` | `F2` | POST sinh khoá SePay mới (trả MỘT lần, chỉ lưu băm SHA-256); DELETE tắt |
 | PUT | `/greeting-card/integrations/notifications` | `F2` | `{ enabled, channel: ZNS\|ESMS, credentials?, templates? }` — credentials chỉ ghi, lưu AES-256-GCM |
 | POST | `/greeting-card/integrations/notifications/test` | `F2` | `{ phone }` gửi một tin thử |
-| GET | `/greeting-card/payment-events` | `R9` | Giao dịch ngân hàng nhận qua webhook, `?status=UNMATCHED…` |
-| POST | `/greeting-card/payment-events/:id/handle` | `R9` | `{ note }` đánh dấu đã xử lý tay |
-| GET | `/public/brochure/:sendCode` | — | Trang khách: mẫu (giá theo Product Master, `null` = "Liên hệ" — vẫn đặt được, cửa hàng báo giá sau), size, khu vực giao, đơn + hướng dẫn chuyển khoản. Không lộ SĐT/id tổ chức. Link hết hạn/thu hồi/catalog ẩn (chưa có đơn) → 404 |
+| GET | `/greeting-card/payment-events` | `R9` | Giao dịch ngân hàng nhận qua webhook, `?status=UNMATCHED…` · Sale "chỉ khách của mình" nhận danh sách rỗng |
+| POST | `/greeting-card/payment-events/:id/handle` | `R9` | `{ note }` đánh dấu đã xử lý tay · Sale "chỉ khách của mình" → 404 |
+| GET | `/public/brochure/:sendCode` | — | Trang khách: mẫu (giá theo Product Master, `null` = "Liên hệ" — vẫn đặt được, cửa hàng báo giá sau), size, khu vực giao, đơn + hướng dẫn chuyển khoản. Không lộ SĐT/id tổ chức. Link hết hạn/thu hồi/catalog ẩn (chưa có đơn) → 404 · CHỈ ĐỌC (06/10/2026): không còn ghi `OPEN` — máy quét xem trước Zalo/Facebook tải trang này. Mẫu tạm hết hàng theo `product_inventory` của chi nhánh sản phẩm không trả ra |
+| POST | `/public/brochure/:sendCode/open` | — | Trình duyệt của khách báo đã mở link (gọi sau khi trang chạy JavaScript) → `CREATED → OPENED` + sự kiện `OPEN` đúng một lần; `{ opened }`. 30 lần/phút/IP |
 | POST | `/public/brochure/:sendCode/select` | — | Chỉ nhận `productId`; ảnh chụp mẫu dựng ở server |
 | POST | `/public/greeting-catalog/:id/event` | — | `{ type: VIEW\|DETAIL\|FORM_OPEN, channel?, visitorId }` → 202; mã khách ngẫu nhiên trên máy, băm ở server (không lưu IP); mỗi khách × bước 1 lần/ngày; catalog ẩn → 404. Bước `ORDER` chỉ ghi ở server khi `POST /public/greeting-catalog/:id/order` thành công (thân đơn mang `tracking?`); lỗi ghi thống kê không làm hỏng đơn |
 | POST | `/public/brochure/:sendCode/quote` | — | Báo giá `{ variantId?, quantity?, shippingZoneId?, voucherCode?, customerPhone? }` → `{ quote, errors }` |
-| POST | `/public/brochure/:sendCode/order` | — | Tạo đơn (idempotent theo phiên); server báo giá lại, lựa chọn sai → 400 theo trường. Mẫu chưa niêm yết giá: đơn tổng 0, `quote.awaitingQuote = true`, không QR, không nhận mã giảm giá |
+| POST | `/public/brochure/:sendCode/order` | — | Tạo đơn (idempotent theo phiên); server báo giá lại, lựa chọn sai → 400 theo trường. Mẫu chưa niêm yết giá: đơn tổng 0, `quote.awaitingQuote = true`, không QR, không nhận mã giảm giá · Ô bẫy ẩn `website` có giá trị → 400; tối đa 5 đơn/giờ/SĐT người đặt → 429; mẫu hết hàng → 409 |
 | POST | `/public/brochure/:sendCode/payment-notify` | — | Khách báo đã chuyển khoản (cần có đơn) |
 | POST | `/public/brochure/:sendCode/reorder` | — | Khách đặt thêm đơn từ link đã có đơn: tạo phiên mới (mã link + mã đơn mới) cùng sale, khách, bộ sưu tập; ghi sự kiện `REORDER`; trả `{ sendCode }` mới. Link chưa có đơn → 409. 10 lần/10 phút/IP |
-| GET | `/public/brochure/tracking/:code` | — | Theo dõi theo mã đơn — chỉ đơn nguồn BROCHURE |
+| GET | `/public/brochure/tracking/:code` | — | Theo dõi theo mã đơn — chỉ đơn nguồn BROCHURE · Mặc định bản RÚT GỌN (PO 06/10/2026): tên người nhận viết tắt, chỉ phường + tỉnh, không lời nhắn thiệp, không ảnh người nhận, `order.verified = false`. `?link=<mã link của đơn>` trả đầy đủ. Không bao giờ trả SĐT |
+| POST | `/public/brochure/tracking/:code` | — | `{ phoneLast4 }` — đúng 4 số cuối SĐT người đặt → bản đầy đủ; sai → 404 (không nói sai gì). 5 lần/15 phút/IP/mã đơn |
 | POST | `/public/greeting-catalog/:id/quote` | — | Như trên cho link bộ sưu tập công khai, kèm `productId` |
-| POST | `/public/greeting-catalog/:id/order` | — | Đặt hoa từ link bộ sưu tập công khai |
+| POST | `/public/greeting-catalog/:id/order` | — | Đặt hoa từ link bộ sưu tập công khai · Cùng SĐT + mẫu + người nhận + ngày giao trong 10 phút → trả lại đơn vừa tạo (không tạo trùng); cùng ô bẫy, trần SĐT, chặn hết hàng như link riêng |
 | POST | `/public/payments/sepay` | — | Webhook SePay, `Authorization: Apikey <khoá>`; idempotent theo mã giao dịch; tự ghi thu theo mã đơn trong nội dung chuyển khoản |
 
 ## 24. Chưa có ở bản này
@@ -806,39 +811,9 @@ Endpoint mang khoá nhà cung cấp riêng của tổ chức. Quyết định D2
 | POST | `/content-engine/landing-generate` | **chưa gác** (nợ #170) | Như trên cho landing page (hero/story/perks/faq/lead), lấy ngữ cảnh từ hồ sơ kinh doanh + thương hiệu |
 | POST | `/content-engine/rewrite` | **chưa gác** (nợ #170) | Viết lại MỘT câu ≤ 500 ký tự theo `field_type`/`style`, trả 3 gợi ý; parse lỗi thì trả gợi ý dựng sẵn |
 
-### 25.2 Thẻ chào / Swipe Brochure — phía tiệm
+### 25.2–25.3 Thẻ chào (đã gộp)
 
-Bảng: đặc tả 07 mục 28. Ca thử cách ly: `tests/tenant/greeting-card.test.ts`, `tests/tenant/greeting-catalog-products-events.test.ts`.
-
-| Method | Path | Năng lực | Ghi chú |
-|---|---|---|---|
-| GET · POST | `/greeting-card/catalogs` | **chưa gác** (nợ #170) | Liệt kê / tạo catalog (`code`, `name`, `type`, `productIds?` — id không thuộc tổ chức bị bỏ qua) |
-| GET · PATCH · DELETE | `/greeting-card/catalogs/:id` | **chưa gác** (nợ #170) | DELETE là xoá mềm (`is_active = false`); tổ chức khác → 404 |
-| POST · DELETE | `/greeting-card/catalogs/:id/products` | **chưa gác** (nợ #170) | Thêm / bớt `{ productId }`; catalog hoặc sản phẩm của tổ chức khác → lỗi "không tìm thấy" |
-| GET · PUT | `/greeting-card/display-settings` | **chưa gác** (nợ #170) | Bật/tắt trường thông tin sản phẩm hiển thị theo từng mẫu Thẻ chào, cấp cửa hàng. PUT `{ templateId, fields[] }` lưu vào `organizations.settings.greetingCardDisplay` (giữ nguyên khoá cài đặt khác). Mã mẫu, tên, giá luôn hiển thị; khoá trường lạ bị bỏ; mẫu không tồn tại → 400 |
-| GET · POST | `/greeting-card/send-links` | **chưa gác** (nợ #170) | Tạo link chào khách (`send_code` tuần tự theo `prefix`), có thể kèm catalog riêng cho khách; GET lọc `sale_id`, `catalog_id`, `status` |
-| GET | `/greeting-card/orders` | **chưa gác** (nợ #170) | Đơn đến từ Thẻ chào (`orders.source = BROCHURE`), lọc `status` |
-| POST | `/greeting-card/orders/:id/confirm-payment` | **chưa gác** (nợ #170) | Tiệm xác nhận đã nhận tiền `{ reference?, note? }`; đơn tổ chức khác → lỗi "không tìm thấy" |
-| POST | `/greeting-card/orders/:id/assign-florist` | **chưa gác** (nợ #170) | Phân công thợ cắm `{ floristNote }` |
-| POST | `/greeting-card/orders/:id/product-photo` | **chưa gác** (nợ #170) | Gắn ảnh thành phẩm `{ assetId }` → `order_qc_records`; ảnh phải thuộc tổ chức (kiểm từ 05/10/2026) — trang tra cứu công khai ký URL cho ảnh này |
-| POST | `/greeting-card/orders/:id/dispatch-shipping` | **chưa gác** (nợ #170) | Giao vận chuyển `{ trackingNote }` |
-| POST | `/greeting-card/orders/:id/recipient-photo` | **chưa gác** (nợ #170) | Ảnh người nhận `{ assetId }`; cùng luật ảnh như `product-photo` |
-| GET | `/greeting-card/tracking-pipeline` | `R1` (đã gác) | Bảng theo dõi đơn theo bước — ghi chú nội bộ kiểu cũ đã bỏ 06/10/2026, thay bằng `/greeting-card/messages` |
-
-### 25.3 Thẻ chào — phía khách (công khai, không đăng nhập)
-
-Tổ chức suy từ `send_code` / id catalog trong cơ sở dữ liệu, không nhận từ client.
-
-| Method | Path | Năng lực | Ghi chú |
-|---|---|---|---|
-| GET | `/public/brochure/:sendCode` | — *(công khai)* | Khách mở link: catalog + sản phẩm; ghi sự kiện `OPEN` |
-| POST | `/public/brochure/:sendCode/select` | — *(công khai)* | Khách chọn mẫu; lưu `product_snapshot`. **Snapshot hiện lấy từ `product` client gửi lên (kể cả giá)** — nợ #171 |
-| POST | `/public/brochure/:sendCode/order` | — *(công khai)* | Khách gửi thông tin người nhận/giao hàng → tạo đơn `BROCHURE` |
-| POST | `/public/brochure/:sendCode/payment-notify` | — *(công khai)* | Khách báo đã chuyển khoản (`PAYMENT_REPORTED`); tiệm xác nhận ở `confirm-payment` |
-| GET | `/public/brochure/tracking/:code` | — *(công khai)* | Khách tra trạng thái đơn theo mã |
-| POST | `/public/greeting-catalog/:id/order` | — *(công khai)* | Đặt hoa thẳng từ catalog công khai (không qua link chào riêng) |
-
-Các route công khai ở mục này trả nguyên `err.message` khi lỗi, chưa theo hình dạng lỗi chuẩn ở mục 2 — nợ #171.
+Bảng hiện trạng 05/10/2026 của Thẻ chào (phía tiệm và phía khách) đã lỗi thời — mọi route đều đã gác mã năng lực và đã sửa các điểm nợ #171. Đặc tả đúng theo mã nằm ở **mục 23b** (gộp 06/10/2026).
 
 ### 25.3b Báo cáo vi phạm CSP (công khai)
 

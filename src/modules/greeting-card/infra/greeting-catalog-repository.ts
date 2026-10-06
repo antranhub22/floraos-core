@@ -15,6 +15,8 @@ export const CATALOG_ITEMS_INCLUDE = {
         include: {
           images: { where: { role: "MAIN" as const }, take: 1 },
           variants: { orderBy: { multiplier: "asc" as const }, take: 10 },
+          // Tồn kho theo chi nhánh — mẫu hết hàng không bán trên link khách (product-availability.ts)
+          inventory: { select: { branch_id: true, status: true, quantity_available: true } },
           // Nguồn Master Index (bản phân tích APPROVED mới nhất) cho các trường hiển thị
           analyses: {
             where: { approval_state: "APPROVED" as const },

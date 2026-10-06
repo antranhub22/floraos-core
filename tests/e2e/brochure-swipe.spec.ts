@@ -91,6 +91,14 @@ test.describe("Brochure / Thẻ Chào — Luồng chính", () => {
     expect(json.products[0]?.price).toBe(650000)
   })
 
+  test("2a. Tải dữ liệu link không tính là 'đã mở'; trình duyệt báo mở đúng một lần", async () => {
+    const first = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/open`)
+    expect(first.status()).toBe(200)
+    expect(((await first.json()) as { opened: boolean }).opened).toBe(true)
+    const again = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/open`)
+    expect(((await again.json()) as { opened: boolean }).opened).toBe(false)
+  })
+
   test("2b. Khách chọn mẫu — giá khách gửi lên bị bỏ qua", async () => {
     const res = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/select`, {
       data: { productId, product: { price: 1000 } },
@@ -150,6 +158,20 @@ test.describe("Brochure / Thẻ Chào — Luồng chính", () => {
     expect(res.status()).toBe(200)
     const json = await res.json() as { order: { status: string } }
     expect(json.order.status).toBe("CONFIRMED")
+  })
+
+  test("6b. Theo dõi theo mã đơn: rút gọn; đúng 4 số cuối SĐT mới thấy đầy đủ", async () => {
+    const anon = await request.get(`${BASE}/api/v1/public/brochure/tracking/${orderCode}`)
+    const anonJson = await anon.json() as { order: { verified: boolean; cardMessage: string | null } }
+    expect(anonJson.order).toMatchObject({ verified: false, cardMessage: null })
+    expect(JSON.stringify(anonJson)).not.toContain("0901234599")
+
+    const wrong = await request.post(`${BASE}/api/v1/public/brochure/tracking/${orderCode}`, { data: { phoneLast4: "0000" } })
+    expect(wrong.status()).toBe(404)
+    const right = await request.post(`${BASE}/api/v1/public/brochure/tracking/${orderCode}`, { data: { phoneLast4: "4599" } })
+    expect(right.status()).toBe(200)
+    const full = await right.json() as { order: { verified: boolean; cardMessage: string | null } }
+    expect(full.order).toMatchObject({ verified: true, cardMessage: "Chúc mừng E2E test!" })
   })
 
   test("7. Tenant isolation — tenant khác không thấy catalog", async () => {

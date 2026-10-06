@@ -1,14 +1,17 @@
 "use client"
 
 import { MediaGallery } from "@/components/greeting-card/media-gallery"
-import React from "react"
+import React, { useState } from "react"
 import useSWR from "swr"
-import { apiGet } from "@/components/greeting-card/greeting-api"
+import { apiGet, apiSend } from "@/components/greeting-card/greeting-api"
+import { TrackingVerifyForm } from "./tracking-verify-form"
 import { CheckCircle2, Clock, Truck, Gift, Camera, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface BrochureTrackingViewProps {
   orderCode: string
+  /** Mã link của chính khách — có thì máy chủ trả bản đầy đủ, không cần nhập SĐT. */
+  sendCode?: string | null | undefined
 }
 
 type TrackingData = {
@@ -21,6 +24,8 @@ type TrackingData = {
     totalVnd: number
     paidVnd: number
     cardMessage?: string | null
+    /** `false` = bản rút gọn cho người chỉ biết mã đơn */
+    verified?: boolean
     recipientName: string
     deliveryAddress: string
     finishedImageUrl?: string | null
@@ -36,11 +41,16 @@ type TrackingData = {
   }
 }
 
-export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
-  // SWR: tự hỏi lại mỗi 15 giây khi tab đang mở, giữ dữ liệu cũ trong lúc chờ
-  const tracking = useSWR<TrackingData>(`/api/v1/public/brochure/tracking/${orderCode}`, apiGet, {
-    refreshInterval: 15_000,
-  })
+export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingViewProps) {
+  const base = `/api/v1/public/brochure/tracking/${encodeURIComponent(orderCode)}`
+  // Đã xác minh bằng 4 số cuối SĐT: hỏi bằng POST, không tự hỏi lại (máy chủ giới hạn số lần thử)
+  const [last4, setLast4] = useState<string | null>(null)
+  const key = last4 ? [base, last4] : `${base}${sendCode ? `?link=${encodeURIComponent(sendCode)}` : ""}`
+  const tracking = useSWR<TrackingData>(
+    key,
+    (k: string | string[]) => (Array.isArray(k) ? apiSend<TrackingData>(k[0]!, "POST", { phoneLast4: k[1] }) : apiGet<TrackingData>(k)),
+    { refreshInterval: last4 ? 0 : 15_000 },
+  )
   const data = tracking.data?.status === "FOUND" ? tracking.data : null
   const loading = tracking.isLoading
   const loadTracking = () => void tracking.mutate()
@@ -168,6 +178,8 @@ export function BrochureTrackingView({ orderCode }: BrochureTrackingViewProps) {
           <p className="text-caption text-text-muted">Hoa đã được trao tận tay người nhận.</p>
         </section>
       )}
+
+      {order.verified === false && <TrackingVerifyForm orderCode={orderCode} onVerified={setLast4} />}
 
       {/* Order Details Summary */}
       <div className="flex flex-col gap-2 text-body-sm text-text-muted bg-surface-muted p-4 rounded-xl border border-border">

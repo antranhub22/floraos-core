@@ -34,6 +34,7 @@ function mapPrismaOrder(row: OrderRow): OrderRecord {
     branchId: row.branch_id,
     code: row.code,
     customerId: row.customer_id,
+    source: row.source ?? null,
     status: row.status,
     productionStatus: row.production_status,
     deliveryStatus: row.delivery_status,

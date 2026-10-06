@@ -165,3 +165,14 @@ export function generateOrderCode(seqNumber: number, date = new Date()): string 
   const suffix = String(seqNumber).padStart(4, "0")
   return `DH${yy}${mm}${dd}-${suffix}`
 }
+
+/**
+ * Đơn đến từ Thẻ chào (`source = BROCHURE`) có luật riêng: chính sách thu tiền, thứ tự xưởng,
+ * trả mã giảm giá khi huỷ, báo khách qua Zalo/SMS. Sửa ở sổ đơn chung sẽ bỏ qua các luật đó —
+ * trả lý do chặn (tiếng Việt) hoặc `null`.
+ */
+export function brochureLockReason(order: { source?: string | null | undefined }): string | null {
+  return order.source === "BROCHURE"
+    ? "Đơn này đến từ Thẻ chào — vui lòng cập nhật ở trang Thẻ chào để giữ đúng luật thu tiền và báo khách."
+    : null
+}

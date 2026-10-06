@@ -2,11 +2,13 @@
  * Thông báo khách theo mốc đơn Thẻ chào (Zalo ZNS / SMS). Pure TypeScript.
  */
 
-export const NOTIFY_EVENTS = ["ORDER_RECEIVED", "DEPOSIT_RECEIVED", "PAYMENT_COMPLETED", "READY", "DISPATCHED", "DELIVERED", "CANCELLED"] as const
+export const NOTIFY_EVENTS = ["ORDER_RECEIVED", "QUOTED", "PAYMENT_REMINDER", "DEPOSIT_RECEIVED", "PAYMENT_COMPLETED", "READY", "DISPATCHED", "DELIVERED", "CANCELLED"] as const
 export type NotifyEvent = (typeof NOTIFY_EVENTS)[number]
 
 export const NOTIFY_EVENT_LABELS: Record<NotifyEvent, string> = {
   ORDER_RECEIVED: "Đã nhận đơn",
+  QUOTED: "Đã báo giá",
+  PAYMENT_REMINDER: "Nhắc chuyển khoản",
   DEPOSIT_RECEIVED: "Đã nhận tiền cọc",
   PAYMENT_COMPLETED: "Đã thanh toán đủ",
   READY: "Hoa đã cắm xong",
@@ -51,6 +53,8 @@ function stripDiacritics(text: string): string {
 export function smsText(event: NotifyEvent, p: NotifyParams): string {
   const body: Record<NotifyEvent, string> = {
     ORDER_RECEIVED: `${p.shop_name}: Da nhan don ${p.order_code}. Cua hang se bao khi nhan duoc thanh toan va khi hoa duoc giao.`,
+    QUOTED: `${p.shop_name}: Don ${p.order_code} da co gia ${p.amount}. Mo link de xem ma QR thanh toan.`,
+    PAYMENT_REMINDER: `${p.shop_name}: Don ${p.order_code} dang cho chuyen khoan ${p.amount}. Mo link de xem ma QR.`,
     DEPOSIT_RECEIVED: `${p.shop_name}: Da nhan tien coc ${p.amount} cho don ${p.order_code}.`,
     PAYMENT_COMPLETED: `${p.shop_name}: Da nhan du ${p.amount} cho don ${p.order_code}. Cam on quy khach!`,
     READY: `${p.shop_name}: Hoa don ${p.order_code} da cam xong, chuan bi giao.`,

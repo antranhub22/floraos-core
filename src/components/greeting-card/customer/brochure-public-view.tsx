@@ -129,7 +129,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
             ← Quay lại Bộ sưu tập hoa
           </button>
         </div>
-        <BrochureTrackingView orderCode={orderResult.orderCode} />
+        <BrochureTrackingView orderCode={orderResult.orderCode} sendCode={orderResult.sendCode} />
       </div>
     )
   }

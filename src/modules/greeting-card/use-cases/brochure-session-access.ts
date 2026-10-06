@@ -1,4 +1,5 @@
-import { notFound } from "@/core/http/errors"
+import { conflict, notFound } from "@/core/http/errors"
+import { SOLD_OUT_MESSAGE } from "../domain/product-availability"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { linkAvailability, validateSendCode } from "../domain/greeting-card-rules"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
@@ -38,5 +39,7 @@ export async function resolveOrderableProduct(
   const item = session.catalog.items.find((i) => i.product.id === productId)
   if (!item) throw notFound()
   const urls = await repo.getAssetsStorageMap(session.organization_id, collectImageAssetIds([item]))
-  return toCatalogProduct(item, urls)
+  const product = toCatalogProduct(item, urls)
+  if (product.available === false) throw conflict(SOLD_OUT_MESSAGE)
+  return product
 }

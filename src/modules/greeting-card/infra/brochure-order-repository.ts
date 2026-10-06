@@ -1,5 +1,6 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
+import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import type { delivery_status, order_status, production_status } from "@/generated/prisma/client"
 
 export const ORDER_STATUSES: readonly order_status[] = [
@@ -80,10 +81,22 @@ export class BrochureOrderRepository {
         items: { take: 1 },
         // Đủ để tách ảnh thành phẩm và ảnh người nhận (mỗi loại tối đa 5 ảnh + 2 video)
         qc_records: { orderBy: { created_at: "desc" }, take: 20 },
+        // Chỉ để xác minh người xem (không trả ra ngoài)
+        customer: { select: { phone: true } },
+        greeting_sessions: { select: { send_code: true } },
       },
       take: 2,
     })
     return matches.length === 1 ? matches[0] ?? null : null
+  }
+
+  /** Sale phụ trách đơn (người gửi link) — `null` khi đơn không thuộc tổ chức / không phải đơn Thẻ chào. */
+  async saleOfOrder(ctx: TenantContext, orderId: string): Promise<string | null> {
+    const order = await this.db.orders.findFirst({
+      where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
+      select: { greeting_sessions: { select: { sale_id: true }, take: 1 } },
+    })
+    return order?.greeting_sessions[0]?.sale_id ?? null
   }
 
   /** Loại + dung lượng của các asset thuộc đúng tổ chức (asset tổ chức khác không có trong kết quả). */
@@ -92,11 +105,6 @@ export class BrochureOrderRepository {
       where: scopedWhere(ctx, { id: { in: [...new Set(assetIds)] } }),
       select: { id: true, mime_type: true, file_size: true },
     })
-  }
-
-  async assetBelongsToTenant(ctx: TenantContext, assetId: string): Promise<boolean> {
-    const asset = await this.db.assets.findFirst({ where: scopedWhere(ctx, { id: assetId }), select: { id: true } })
-    return asset !== null
   }
 
   /**
@@ -154,6 +162,25 @@ export class BrochureOrderRepository {
           actor_id: ctx.userId,
         },
       })
+
+      // Tác vụ xưởng cũng vào nhật ký kiểm toán như thao tác tiền: ai làm, lúc nào, đổi gì
+      await recordAuditLog(
+        ctx,
+        {
+          action: `greeting_card.order.${input.eventType.toLowerCase()}`,
+          entityType: "order",
+          entityId: order.id,
+          before: { productionStatus: order.production_status, deliveryStatus: order.delivery_status },
+          after: {
+            ...(input.productionStatus ? { productionStatus: input.productionStatus } : {}),
+            ...(input.deliveryStatus ? { deliveryStatus: input.deliveryStatus } : {}),
+            ...(input.orderStatus ? { status: input.orderStatus } : {}),
+            ...(input.noteAppend ? { note: input.noteAppend } : {}),
+            ...(input.qcAssetIds?.length ? { assetIds: [...input.qcAssetIds] } : {}),
+          },
+        },
+        tx
+      )
 
       return { orderId: order.id, orderCode: order.code }
     })

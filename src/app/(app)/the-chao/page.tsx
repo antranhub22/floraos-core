@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Sparkles, Send, ShieldCheck, BookOpen, RefreshCw, GitMerge, Wand2, LayoutList } from "lucide-react"
 import { TabActionHeader, type TabItem } from "@/components/ui/tab-header"
 import { cn } from "@/lib/utils"
+import { useSession } from "@/lib/session"
 import { SalesBrochureTab } from "@/components/greeting-card/sales/sales-brochure-tab"
 import { AdminBrochurePaymentTab } from "@/components/greeting-card/admin/admin-brochure-payment-tab"
 import { CatalogListTab } from "@/components/greeting-card/catalog/catalog-list-tab"
@@ -65,13 +66,24 @@ export default function TheChaoPage() {
   const { mutate } = useSWRConfig()
   const refreshAll = useCallback(() => void mutate(() => true), [mutate])
 
-  const tabs: TabItem[] = [
+  // Chỉ hiện tab người dùng có năng lực làm (ẩn hiện giao diện — máy chủ vẫn kiểm ở mọi endpoint)
+  const { can } = useSession()
+  const allowed: Record<ActiveTab, boolean> = {
+    catalog: can("L1"),
+    tracking: can("R1"),
+    sales: can("R2"),
+    payment: can("R9") || can("F2"),
+    coordinator: can("R3") || can("R4") || can("R5"),
+  }
+  const tabs: TabItem[] = ([
     { id: "catalog", icon: BookOpen, label: "Bộ sưu tập", ...(catalogCount !== null ? { badge: catalogCount } : {}) },
     { id: "tracking", icon: GitMerge, label: "Theo dõi tiến độ" },
     { id: "sales", icon: Send, label: "Bán hàng", ...(sessionCount !== null ? { badge: sessionCount } : {}) },
     { id: "payment", icon: ShieldCheck, label: "Điều hành" },
     { id: "coordinator", icon: Sparkles, label: "Điều phối" },
-  ]
+  ] satisfies TabItem[]).filter((t) => allowed[t.id as ActiveTab])
+  // Tab đang chọn bị ẩn (không đủ quyền) → mở tab đầu tiên được phép
+  const shownTab: ActiveTab = allowed[activeTab] ? activeTab : ((tabs[0]?.id as ActiveTab | undefined) ?? activeTab)
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -143,14 +155,14 @@ export default function TheChaoPage() {
         <div key={refreshKey} className="flex flex-col gap-4">
           <TabActionHeader
             tabs={tabs}
-            activeTab={activeTab}
+            activeTab={shownTab}
             onTabChange={(id) => {
               setActiveTab(id as ActiveTab)
               if (id !== "catalog") setSelectedCatalog(null)
             }}
           />
 
-          {activeTab === "catalog" &&
+          {shownTab === "catalog" &&
             (selectedCatalog ? (
               <CatalogDetailPanel
                 catalogId={selectedCatalog.id}
@@ -163,8 +175,8 @@ export default function TheChaoPage() {
             ) : (
               <CatalogListTab onSelectCatalog={(c) => setSelectedCatalog({ id: c.id, name: c.name })} />
             ))}
-          {activeTab === "tracking" && <BrochureOrderTrackingTab />}
-          {activeTab === "sales" && (
+          {shownTab === "tracking" && <BrochureOrderTrackingTab />}
+          {shownTab === "sales" && (
             <SalesBrochureTab
               onNavigateToCatalog={() => {
                 setSelectedCatalog(null)
@@ -172,8 +184,8 @@ export default function TheChaoPage() {
               }}
             />
           )}
-          {activeTab === "coordinator" && <CoordinatorBrochureTab />}
-          {activeTab === "payment" && <AdminBrochurePaymentTab />}
+          {shownTab === "coordinator" && <CoordinatorBrochureTab />}
+          {shownTab === "payment" && <AdminBrochurePaymentTab />}
         </div>
       )}
     </div>

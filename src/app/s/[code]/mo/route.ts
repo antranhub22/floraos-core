@@ -29,8 +29,11 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
   const opened = await openShareLink(code, known ? decodeURIComponent(known) : null)
   if (!opened) return gone()
 
-  const res = NextResponse.redirect(new URL(`/b/${encodeURIComponent(opened.sendCode)}`, url), 302)
-  res.cookies.set(cookieName, opened.sendCode, { httpOnly: true, sameSite: "lax", secure: url.protocol === "https:", maxAge: COOKIE_MAX_AGE, path: "/" })
+  // Location TƯƠNG ĐỐI: sau proxy của Render, `request.url` là địa chỉ nội bộ (localhost:3100) —
+  // dựng URL tuyệt đối từ nó đưa khách sang localhost. Trình duyệt tự ghép với tên miền đang mở.
+  const res = new NextResponse(null, { status: 302, headers: { location: `/b/${encodeURIComponent(opened.sendCode)}` } })
+  const https = (request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "")).split(",")[0]?.trim() === "https"
+  res.cookies.set(cookieName, opened.sendCode, { httpOnly: true, sameSite: "lax", secure: https, maxAge: COOKIE_MAX_AGE, path: "/" })
   return res
 }
 

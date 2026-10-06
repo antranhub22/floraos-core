@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest"
 import {
-  FALLBACK_CATALOG_PRICE,
   catalogItemToProduct,
   resolveCatalogProductPrice,
 } from "@/modules/greeting-card/domain/catalog-product-price"
@@ -24,9 +23,12 @@ describe("giá mẫu hoa trong thẻ chào", () => {
     expect(catalogItemToProduct(item).price).toBe(1_950_000)
   })
 
-  it("sản phẩm chưa có giá thành 0 (hiển thị \"Liên hệ\"), không tự gán 500.000", () => {
+  it("sản phẩm chưa có giá là null (hiển thị \"Giá liên hệ\"), không tự gán 500.000 hay 0", () => {
     const item = { sort_order: 0, product: { id: "p2", code: "X", name: "Bó hoa", attributes: null, variants: [] } }
-    expect(catalogItemToProduct(item).price).toBe(FALLBACK_CATALOG_PRICE)
-    expect(FALLBACK_CATALOG_PRICE).toBe(0)
+    expect(catalogItemToProduct(item).price).toBeNull()
+  })
+
+  it("đọc cả attributes.price_vnd — cùng giá với trang khách", () => {
+    expect(resolveCatalogProductPrice({ attributes: { price_vnd: 650_000 } })).toBe(650_000)
   })
 })

@@ -2,7 +2,7 @@
 
 import { ReorderButton } from "./reorder-button"
 import { ShopContactBar } from "./shop-contact-bar"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
 import type { OptionalDisplayField } from "@/modules/greeting-card/domain/display-fields"
 import { BrochureOrderForm } from "./brochure-order-form"
@@ -35,13 +35,20 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
   // Determine initial step based on session status
   const [step, setStep] = useState<CustomerStep>(() => {
     if (initialData.order) {
-      // Đơn chờ báo giá (tổng 0) chưa phải đã thanh toán — vẫn ở bước thanh toán để thấy QR khi có giá
+      // Theo số tiền thật của đơn: còn phải thu (chờ báo giá, mới cọc) → bước thanh toán để thấy QR
       const paid = initialData.order.totalVnd > 0 && initialData.order.paidVnd >= initialData.order.totalVnd
-      return paid || session.status === "COMPLETED" ? "TRACKING" : "PAYMENT"
+      return paid || initialData.order.status === "CANCELLED" ? "TRACKING" : "PAYMENT"
     }
     if (session.status === "SELECTED" && session.productSnapshot) return "ORDER_FORM"
     return "SWIPING"
   })
+
+  // Báo "khách đã mở" từ trình duyệt thật (máy quét xem trước link không chạy JavaScript).
+  // Ghi một lần, không phải tải dữ liệu; lỗi mạng bỏ qua — không ảnh hưởng khách.
+  useEffect(() => {
+    if (session.status !== "CREATED") return
+    void fetch(`/api/v1/public/brochure/${encodeURIComponent(session.sendCode)}/open`, { method: "POST" }).catch(() => undefined)
+  }, [session.status, session.sendCode])
 
   // Ảnh chụp mẫu do SERVER dựng (giá thật từ Product Master) — client không tự ghép giá.
   const [snapshot, setSnapshot] = useState<ProductSnapshot | null>(session.productSnapshot)
@@ -151,7 +158,7 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
         )}
 
         {step === "TRACKING" && orderResult && (
-          <BrochureTrackingView orderCode={orderResult.orderCode} />
+          <BrochureTrackingView orderCode={orderResult.orderCode} sendCode={session.sendCode} />
         )}
 
         {(step === "PAYMENT" || step === "TRACKING") && orderResult && (

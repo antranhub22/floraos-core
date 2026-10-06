@@ -2,16 +2,18 @@ import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import type { SaleFunnelCounts } from "../domain/sales-funnel"
 
-const PAID_STATUSES = ["CONFIRMED", "PROCESSING", "DELIVERED", "COMPLETED"] as const
-
 /** Đếm phễu Thẻ chào theo sale — gom ở DB (groupBy), không kéo từng phiên về. */
 export class GreetingStatsRepository {
   constructor(private readonly db = prisma) {}
 
-  async countFunnelBySale(ctx: TenantContext, since: Date): Promise<SaleFunnelCounts[]> {
+  /**
+   * `paid` = số đơn đã thu ĐỦ; `revenueVnd` = tiền THẬT đã thu (`paid_vnd`, đã trừ hoàn) của đơn chưa huỷ.
+   * Bản cũ coi đơn mới cọc là "đã thu" và cộng cả tổng giá trị đơn. `saleId` = chỉ số của một sale.
+   */
+  async countFunnelBySale(ctx: TenantContext, since: Date, saleId: string | null = null): Promise<SaleFunnelCounts[]> {
     const groups = await this.db.greeting_sessions.groupBy({
       by: ["sale_id"],
-      where: scopedWhere(ctx, { created_at: { gte: since } }),
+      where: scopedWhere(ctx, { created_at: { gte: since }, ...(saleId ? { sale_id: saleId } : {}) }),
       _count: { _all: true, opened_at: true, selected_at: true, order_id: true },
     })
 
@@ -19,10 +21,11 @@ export class GreetingStatsRepository {
     const paidOrders = await this.db.orders.findMany({
       where: scopedWhere(ctx, {
         source: "BROCHURE",
-        status: { in: [...PAID_STATUSES] },
+        NOT: { status: "CANCELLED" as const },
+        paid_vnd: { gt: 0 },
         created_at: { gte: since },
       }),
-      select: { source_session_id: true, total_vnd: true },
+      select: { source_session_id: true, total_vnd: true, paid_vnd: true },
       take: 10_000,
     })
     const sessionIds = paidOrders.map((o) => o.source_session_id).filter((id): id is string => !!id)
@@ -39,8 +42,10 @@ export class GreetingStatsRepository {
       const sale = o.source_session_id ? saleOfSession.get(o.source_session_id) : undefined
       if (!sale) continue
       const cur = paid.get(sale) ?? { count: 0, revenue: 0 }
-      cur.count += 1
-      cur.revenue += Number(o.total_vnd)
+      const total = Number(o.total_vnd)
+      const collected = Number(o.paid_vnd)
+      if (total > 0 && collected >= total) cur.count += 1
+      cur.revenue += collected
       paid.set(sale, cur)
     }
 

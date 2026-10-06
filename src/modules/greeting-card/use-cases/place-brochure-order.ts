@@ -1,5 +1,6 @@
 import { queueOrderNotification } from "./notify-customer"
-import { validationFailed } from "@/core/http/errors"
+import { AppError, validationFailed } from "@/core/http/errors"
+import { MAX_ORDERS_PER_PHONE_PER_HOUR, TOO_MANY_ORDERS_MESSAGE } from "../domain/order-guard"
 import { generateBrochureOrderCode, normalizePhone } from "../domain/greeting-card-rules"
 import { paymentInstructionsFor } from "./payment-instructions"
 import type {
@@ -27,6 +28,12 @@ export interface BrochureOrderResult {
   vietQr: BrochurePaymentInstructions | null
 }
 
+/** Trần đơn theo SĐT mỗi giờ — giới hạn theo IP không chặn được một người đổi mạng liên tục. */
+export async function assertPhoneQuota(organizationId: string, phone: string, checkout = new BrochureCheckoutRepository()) {
+  const recent = await checkout.countRecentOrdersByPhone(organizationId, phone, new Date(Date.now() - 3_600_000))
+  if (recent >= MAX_ORDERS_PER_PHONE_PER_HOUR) throw new AppError("RATE_LIMITED", TOO_MANY_ORDERS_MESSAGE)
+}
+
 /**
  * Báo giá lại ở server rồi tạo đơn (dùng chung cho link chào và link bộ sưu
  * tập công khai). Lựa chọn sai (size, khu vực, mã giảm giá) → 400 kèm lỗi
@@ -45,6 +52,7 @@ export async function placeBrochureOrder(
 ): Promise<BrochureOrderResult> {
   const { organizationId, session, product, input } = params
   const customerPhone = normalizePhone(input.customerPhone)
+  await assertPhoneQuota(organizationId, customerPhone, checkout)
   const priced = await quoteForProduct(
     organizationId,
     product,

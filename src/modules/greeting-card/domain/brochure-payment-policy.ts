@@ -15,6 +15,8 @@ export interface BrochurePaymentPolicy {
   requireFullBeforeDispatch: boolean
   /** Số phút giữ đơn chờ chuyển khoản lần đầu (hiện đồng hồ đếm ngược cho khách); 0 = không hiện. */
   holdMinutes?: number
+  /** Hết hạn giữ đơn + 60 phút mà khách chưa chuyển, chưa báo đã chuyển → tự huỷ đơn. Mặc định tắt. */
+  autoCancelUnpaid?: boolean
 }
 
 export const DEFAULT_PAYMENT_POLICY: BrochurePaymentPolicy = {
@@ -37,6 +39,7 @@ export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
     ...(typeof r.hold_minutes === "number" && Number.isInteger(r.hold_minutes) && r.hold_minutes >= 5 && r.hold_minutes <= 1440
       ? { holdMinutes: r.hold_minutes }
       : {}),
+    ...(r.auto_cancel_unpaid === true ? { autoCancelUnpaid: true } : {}),
   }
 }
 

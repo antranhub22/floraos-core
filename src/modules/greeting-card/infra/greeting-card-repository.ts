@@ -205,6 +205,15 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
     })
   }
 
+  /** CREATED → OPENED đúng một lần (hai tab mở cùng lúc chỉ một bên ghi). */
+  async markOpened(sessionId: string, at: Date): Promise<boolean> {
+    const res = await this.db.greeting_sessions.updateMany({
+      where: { id: sessionId, status: "CREATED" },
+      data: { status: "OPENED", opened_at: at, last_active_at: at },
+    })
+    return res.count > 0
+  }
+
   /** Thu hồi link chưa có đơn. Trả `false` khi không có link nào đổi (không tồn tại/đã thu hồi/đã có đơn). */
   async revokeSession(ctx: TenantContext, sessionId: string): Promise<boolean> {
     const result = await this.db.greeting_sessions.updateMany({

@@ -16,6 +16,8 @@ import { sendEsmsMessage, type EsmsCredentials } from "../adapters/esms-adapter"
 
 export const NOTIFY_SECRET_PURPOSE = "greeting-card-notify"
 
+const DUE_EVENTS = new Set<NotifyEvent>(["QUOTED", "PAYMENT_REMINDER"])
+
 export type NotifyOutcome = "SENT" | "FAILED" | "SKIPPED" | "DUPLICATE" | "DISABLED"
 
 function publicBaseUrl(): string {
@@ -57,7 +59,8 @@ export async function notifyOrderEvent(
     customer_name: order.customer?.name ?? "Quý khách",
     shop_name: order.organization.business_profile?.display_name || order.organization.name,
     status: NOTIFY_EVENT_LABELS[event],
-    amount: `${Number(order.paid_vnd).toLocaleString("vi-VN")} đ`,
+    // Mốc đòi tiền báo số còn phải trả; mốc đã thu báo số đã nhận
+    amount: `${(DUE_EVENTS.has(event) ? Number(order.total_vnd) - Number(order.paid_vnd) : Number(order.paid_vnd)).toLocaleString("vi-VN")} đ`,
     tracking_url: base && sendCode ? `${base}/b/${sendCode}` : "",
   }
 

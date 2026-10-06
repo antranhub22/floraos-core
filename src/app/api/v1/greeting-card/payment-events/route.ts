@@ -2,7 +2,7 @@ import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
-import { GreetingIntegrationRepository } from "@/modules/greeting-card/infra/greeting-integration-repository"
+import { listPaymentEvents } from "@/modules/greeting-card/use-cases/payment-webhook"
 import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
@@ -17,6 +17,6 @@ export const GET = handle(async (request) => {
   const status = STATUSES.find((s) => s === raw)
   if (raw && !status) throw validationFailed({ status: `Phải là một trong: ${STATUSES.join(", ")}` })
   const { limit, cursor } = parseListQuery(url)
-  const rows = await new GreetingIntegrationRepository().listPaymentEvents(ctx, { status, limit, cursor })
+  const rows = await listPaymentEvents(ctx, { status, limit, cursor })
   return jsonResponse(toPage(rows, limit))
 })

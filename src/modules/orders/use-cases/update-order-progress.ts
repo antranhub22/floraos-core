@@ -8,6 +8,7 @@ import {
   validateOrderStatusTransition,
   validateProductionStatusTransition,
   validateDeliveryStatusTransition,
+  brochureLockReason,
 } from "../domain/order-rules"
 import type { OrderRecord, UpdateOrderInput } from "../domain/order-types"
 import { OrderRepository } from "../infra/order-repository"
@@ -22,6 +23,9 @@ export async function updateOrderProgress(
   if (!existing) {
     throw new AppError("NOT_FOUND", `Không tìm thấy đơn hàng với mã ID: ${orderId}`)
   }
+
+  const brochureLock = brochureLockReason(existing)
+  if (brochureLock) throw new AppError("CONFLICT", brochureLock)
 
   // Kiểm tra chuyển trạng thái order
   if (input.status && input.status !== existing.status) {

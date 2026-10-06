@@ -3,6 +3,7 @@
  * Gác bởi trần cứng điều hành, bắt buộc lý do, ghi audit_logs.
  */
 
+import { brochureLockReason } from "../domain/order-rules"
 import { AppError } from "@/core/http/errors"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
@@ -27,6 +28,9 @@ export async function cancelOrder(
   if (!existing) {
     throw new AppError("NOT_FOUND", `Không tìm thấy đơn hàng với mã ID: ${orderId}`)
   }
+
+  const brochureLock = brochureLockReason(existing)
+  if (brochureLock) throw new AppError("CONFLICT", brochureLock)
 
   if (existing.status === "CANCELLED") {
     throw new AppError("UNPROCESSABLE_ENTITY", "Đơn hàng này đã bị hủy trước đó.")
