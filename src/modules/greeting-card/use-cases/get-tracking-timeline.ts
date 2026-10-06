@@ -48,7 +48,7 @@ export async function getTrackingTimeline(
     }
     for (const p of src.order.payments) {
       const amount = `${Number(p.amount_vnd).toLocaleString("vi-VN")} đ`
-      events.push({ ...event(p.kind === "REFUND" ? "REFUND" : "PAYMENT", p.collected_at, p.collected_by), note: `${p.kind} · ${amount}` })
+      events.push({ ...event(p.kind === "REFUND" ? "REFUND" : "PAYMENT", p.collected_at, p.collected_by), note: amount })
     }
   }
   events.sort((a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind))

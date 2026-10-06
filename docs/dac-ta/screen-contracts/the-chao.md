@@ -10,7 +10,7 @@
 - Mật độ: MEDIUM (nhân viên cửa hàng, dùng điện thoại là chính)
 
 ## 2. Hiện trạng (audit)
-- API: `/greeting-card/inbox` (R1) · `/greeting-card/messages` (R1, gửi R2) · `/greeting-card/messages/read` (R1) · `/greeting-card/messages/recipients` (R1) · `/greeting-card/tracking-pipeline` (R1) · `/greeting-card/sale-visibility` (F2)
+- API: `/greeting-card/inbox` (R1) · `/greeting-card/messages` (R1, gửi R2) · `/greeting-card/messages/read` (R1) · `/greeting-card/messages/recipients` (R1) · `/greeting-card/tracking-pipeline` (R1) · `/greeting-card/tracking` (R1) · `/greeting-card/tracking/timeline` (R1) · `/greeting-card/sale-visibility` (F2)
 - Tab: Bộ sưu tập · Theo dõi tiến độ · Bán hàng (Sale) · Điều hành · Điều phối — giữ đúng 5 tab (PO 06/10/2026)
 - Trạng thái có sẵn: tải ☑ (skeleton) rỗng ☑ lỗi ☑ (kèm Thử lại) không quyền ☑ (tab chỉ hiện khi có năng lực: Bộ sưu tập `L1`, Theo dõi `R1`, Bán hàng `R2`, Điều hành `R9`/`F2`, Điều phối `R3`/`R4`/`R5` — từ 06/10/2026; máy chủ vẫn kiểm ở mọi endpoint, thiếu quyền → 403) một phần ☑ thành công ☑
 
@@ -29,7 +29,7 @@
 - Xin giảm giá (ô soạn tin → "Xin giảm giá", chỉ đơn đã đặt): % hoặc số tiền + lý do → Điều hành duyệt ngay trong Hộp việc hoặc trong trao đổi: Duyệt như xin / Duyệt mức khác / Không duyệt (bắt buộc ghi chú); trần do Điều hành đặt trong Cài đặt, mặc định 25%
 
 - **Sao chép link** (mọi nơi có nút Sao chép): link luôn mang tên người bấm — link riêng ghi mốc gửi; link bộ sưu tập tạo `/s/<mã>` riêng. Không hiện đường link gốc để chép tay (xem trước chỉ trong khung xem trước)
-- Theo dõi tiến độ chia 2 khu: **Chờ khách đặt** (mã link, sale, giờ gửi/giờ khách mở, hạn dùng, trạng thái mở; kèm danh sách link bộ sưu tập đã sao chép: số khách mở, số đơn) và **Đơn chính thức**
+- Theo dõi tiến độ có 6 cách xem trên cùng một tập đơn/link (06/10/2026): **Kanban** (9 cột theo bước, mỗi cột có số lượng, thời gian ở bước TB/lâu nhất, số quá hạn/sắp hạn; 20 thẻ gấp nhất mỗi cột) · **Danh sách** (sắp xếp theo cột, chọn cột, tải thêm) · **Lịch** (theo ngày giao + khung giờ, tuần trước/sau) · **Timeline** (chọn một đơn → các bước đã qua so với thời gian chuẩn + sự kiện) · **Công việc** (chỉ đơn quá hạn/sắp quá hạn, gấp nhất lên đầu) · **Dashboard** (tổng hợp theo bước, thời gian ở bước, người phụ trách, còn phải thu; kèm link bộ sưu tập đã sao chép). Bộ lọc (tìm, nhóm bước, sale, thời gian chuẩn, loại, ngày giao) dùng chung và giữ nguyên khi đổi cách xem. View mẫu: Đơn của tôi, Đơn giao hôm nay, Đơn đang kẹt, Đơn quá thời gian chuẩn, Đơn cần xử lý; người dùng lưu thêm view riêng (lưu trên máy). Bấm một đơn ở view bất kỳ → Timeline của đơn đó
 
 ## 5. Content budget
 nút nổi đầu trang: 3/3 (Hộp việc · Chế độ · Làm mới) · nhóm trong Hộp việc: 3 (Cần làm · Tin nhắn · Cập nhật)
