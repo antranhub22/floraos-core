@@ -37,6 +37,17 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 
 **Quay lại sau khi báo chuyển khoản** (chưa được xác nhận): trang `/b` mở thẳng màn thanh toán và hiện "Đã báo chuyển khoản — đang chờ Điều hành xác nhận" (theo trạng thái phiên `PAYMENT_REPORTED` ở máy chủ), không hiện lại nút báo. Đặt từ link chung `/g` · `/bst`: máy khách nhớ mã phiên của đơn theo bộ sưu tập (30 ngày) — mở lại đúng link cũ được chuyển sang `/b/<mã phiên>` thay vì quay lại xem mẫu.
 
+**Mở lại đúng chỗ đã dừng** (nhớ trên máy khách, theo trang; máy chủ thắng khi đã có đơn — `domain/customer-step.ts`):
+
+| Dừng ở | Mở lại |
+|---|---|
+| Đang lướt mẫu N / màn cuối / đang lọc khoảng giá | Hỏi "Tiếp tục xem" → mẫu N, giữ bộ lọc |
+| Form đặt hoa | Về form, giữ thông tin đã gõ + size, số lượng, khu vực, mã giảm giá |
+| Bước "Xem lại đơn" | Về bước Xem lại |
+| Đã chọn mẫu nhưng quay lại xem mẫu khác | Về xem mẫu (không bị ép vào form) |
+| Thanh toán / đã báo chuyển khoản / Theo dõi đơn | Về đúng màn đó (đơn đã trả đủ hoặc huỷ → Theo dõi) |
+| Link chung `/g` · `/bst`: xem mẫu đã chọn / form | Về đúng màn, nếu mẫu còn bán |
+
 ## 4. Sự kiện hành trình
 
 `POST /api/v1/public/brochure/[sendCode]/event` (chủ phiên, giới hạn 240 lần/10 phút), lưu `greeting_journey_events` với tên viết hoa:

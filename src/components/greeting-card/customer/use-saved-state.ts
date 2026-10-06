@@ -44,16 +44,25 @@ export function useSavedState<T>(
   // `true` sau khi đã đọc xong bộ nhớ máy khách — trước đó `value` mới chỉ là giá trị khởi tạo
   const [ready, setReady] = useState(false)
 
+  // Lượt ghi chạy ngay sau khi khôi phục vẫn mang giá trị khởi tạo — bỏ qua, kẻo đè mất giá trị đã lưu
+  // trước khi phần khác của trang kịp đọc (vd. mẫu đang chọn khi khôi phục bước)
+  const skipWrite = useRef(false)
+
   useEffect(() => {
     keyRef.current = `${window.location.pathname}:${name}`
     const saved = read<T>(keyRef.current)
     if (saved !== null) setValue(saved)
     restored.current = true
+    skipWrite.current = true
     setReady(true)
   }, [name])
 
   // Ghi sau mỗi lần đổi (bỏ qua lần dựng đầu, trước khi khôi phục)
   useEffect(() => {
+    if (skipWrite.current) {
+      skipWrite.current = false
+      return
+    }
     if (restored.current && keyRef.current) write(keyRef.current, value)
   }, [value])
 
@@ -69,4 +78,13 @@ export function updateSavedState<T>(name: string, update: (prev: T) => T): void 
   const key = `${window.location.pathname}:${name}`
   const prev = read<T>(key)
   if (prev !== null) write(key, update(prev))
+}
+
+/** Đọc / ghi thẳng một giá trị đã lưu của trang đang mở (không qua state React). */
+export function readSavedState<T>(name: string): T | null {
+  return read<T>(`${window.location.pathname}:${name}`)
+}
+
+export function writeSavedState<T>(name: string, value: T | null): void {
+  write(`${window.location.pathname}:${name}`, value)
 }

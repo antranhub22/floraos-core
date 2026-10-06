@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useSavedState } from "./use-saved-state"
+import { sanitizeVariant } from "@/modules/greeting-card/domain/customer-step"
 import useSWR from "swr"
 import { readApiError } from "@/components/greeting-card/api-error"
 import type { BrochureQuote } from "@/modules/greeting-card/domain/brochure-pricing"
@@ -28,13 +29,20 @@ async function postQuote([url, body]: readonly [string, string]): Promise<QuoteR
  * hỏi lại, kết quả cũ được giữ trong lúc chờ để tổng tiền không nhấp nháy).
  * Mã giảm giá chỉ gửi khi khách bấm "Áp dụng".
  */
-export function useBrochureQuote(quoteUrl: string, extraBody: Record<string, string>, customerPhone: string) {
-  const [selection, setSelection] = useState<QuoteSelection>({
+export function useBrochureQuote(
+  quoteUrl: string,
+  extraBody: Record<string, string>,
+  customerPhone: string,
+  /** Lựa chọn nhớ trên máy theo mẫu: rời trang rồi quay lại vẫn còn size, số lượng, khu vực, mã giảm giá */
+  product: { id: string; variantIds: readonly string[] },
+) {
+  const [saved, setSelection] = useSavedState<QuoteSelection>(`order-options:${product.id}`, {
     variantId: "",
     quantity: 1,
     shippingZoneId: "",
     voucherCode: "",
   })
+  const selection = sanitizeVariant(saved, product.variantIds)
 
   const body = JSON.stringify({
     ...extraBody,
