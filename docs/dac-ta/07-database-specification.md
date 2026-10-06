@@ -2157,21 +2157,24 @@ Trường TỰ TẠO (`origin = CUSTOM`, D13) lưu giá trị ở cột `custom_
 
 ## 28. Thẻ Chào mẫu hoa — Swipe Brochure (`greeting-card`)
 
-> **Đồng bộ 05/10/2026.** Bảy bảng **TENANT** — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly; ca thử: `tests/tenant/greeting-card*.test.ts`. Lược đồ đẩy bằng `prisma db push` như build Render (thư mục migrations dừng ở 27/09/2026 — xem `TECHNICAL_DEBT.md`).
+> **Đồng bộ 06/10/2026.** Mười một bảng **TENANT** `greeting_*` — `organization_id` bắt buộc, có trong `TRUNCATE` của bộ test cách ly; ca thử: `tests/tenant/greeting-card*.test.ts`. Build Render vẫn đẩy lược đồ bằng `prisma db push`; từ 06/10/2026 có thêm migration **idempotent** `prisma/migrations/20261006120000_greeting_card` (mọi lệnh `IF NOT EXISTS`): áp lên CSDL đã có bảng thì không đổi gì, áp lên CSDL thiếu bảng thì tạo đúng như schema — đã kiểm `migrate diff` rỗng trên Postgres 16.
 
 - `greeting_sessions.send_code` sinh ngẫu nhiên, duy nhất toàn hệ thống (kiểm ở use-case; ràng buộc DB vẫn theo tổ chức để giữ link cũ `T01-001`); tra công khai trùng giữa hai tiệm → 404.
 - `expires_at`/`revoked_at` chỉ chặn link CHƯA có đơn.
 - `greeting_integrations`: khoá webhook ngân hàng chỉ lưu băm SHA-256; thông tin đăng nhập Zalo/eSMS lưu AES-256-GCM (khoá dẫn xuất HKDF từ `INTEGRATION_TOKEN_SECRET`).
 - `greeting_payment_events`: unique `(organization_id, provider, external_id)` — webhook gửi lại không ghi thu hai lần.
 - `greeting_notifications`: unique `(organization_id, order_id, event_key)` — mỗi mốc gửi một lần; FAILED được gửi lại.
-- Cấu hình tiệm nằm trong `organizations.settings`: `brochure_payment` (tài khoản nhận tiền), `brochure_policy` (cọc %, chặn xưởng), `brochure_shipping` (khu vực + phí giao).
+- Cấu hình tiệm nằm trong `organizations.settings`: `brochure_payment` (tài khoản nhận tiền), `brochure_policy` (cọc %, chặn xưởng, `hold_minutes` giữ đơn, `auto_cancel_unpaid` tự huỷ khi quá hạn — mặc định tắt), `brochure_shipping` (khu vực + phí giao, giờ chốt), `brochure_step_sla` (thời gian chuẩn từng bước), `brochure_visibility` (sale xem tất cả / chỉ khách của mình), `brochure_discount` (trần % giảm giá), `brochure_default_owner` (người phụ trách link cũ), `greetingCardDisplay` (trường hiển thị theo mẫu).
+- `greeting_notifications.status`: `SENDING → SENT | FAILED | SKIPPED`. Bộ quét nền (06/10/2026, mỗi phút trong tiến trình web) chuyển `SENDING` quá 5 phút → `FAILED`, gửi lại `FAILED` cách 30 phút trong 6 giờ đầu; mốc mới `QUOTED` (đã báo giá) và `PAYMENT_REMINDER` (nhắc chuyển khoản khi hết hạn giữ đơn).
+- `greeting_sessions.status = COMPLETED` chỉ khi đơn đã thu ĐỦ (trước 06/10/2026: ngay lần thu đầu kể cả cọc). `BROWSING` có trong mô tả cột nhưng không còn được ghi.
+- Tồn kho: mẫu có dòng `product_inventory` đúng chi nhánh của sản phẩm ở trạng thái `OUT_OF_STOCK` (hoặc `quantity_available = 0`, trừ `PRE_ORDER_ONLY`) không hiện trên link khách và không đặt được — cùng quy tắc với Product Master Index.
 - `greeting_catalogs` — bộ sưu tập chào khách theo dịp (`STANDARD`) hoặc riêng cho một khách (`CLIENT`); xoá là đặt `is_active = false`.
 - `greeting_catalog_products` — sản phẩm trong catalog. **Sản phẩm phải thuộc cùng tổ chức** (kiểm ở repository từ 05/10/2026; trước đó gắn được sản phẩm của tổ chức khác).
 - `greeting_sessions` — một đường link chào khách (`send_code`, duy nhất theo tổ chức); `product_snapshot` đóng băng mẫu hoa lúc khách chốt.
 - `greeting_share_links` — link bộ sưu tập do một nhân viên sao chép (06/10/2026): người bấm "Sao chép" chịu trách nhiệm mọi khách mở link; mỗi khách một `greeting_sessions` (`sale_id` = người sao chép). Đơn từ link cũ không qua nút Sao chép giao cho `organizations.settings.brochure_default_owner.user_id` (mặc định chủ tiệm).
 - `greeting_messages` / `greeting_message_reads` — tin nhắn nội bộ theo đơn/link (06/10/2026): người gửi và vai suy từ phiên, gửi cho một vai hoặc một người, trả lời về đúng người đã nhắn; đã đọc lưu ở máy chủ (đồng bộ mọi thiết bị). Thay hẳn ghi chú theo bước kiểu cũ (`order_events.axis = internal_note`, `greeting_journey_events.INTERNAL_NOTE`) — bỏ 06/10/2026, không đọc/ghi nữa.
 - `greeting_catalog_events` — lượt xem/xem mẫu/mở form/đặt đơn trên link bộ sưu tập công khai theo kênh chia sẻ `?kenh=` (06/10/2026); mỗi khách × bước 1 lần/ngày.
-- `greeting_journey_events` — sự kiện hành trình của khách (`OPEN`, `SELECT_PRODUCT`, `CLICK_PAID`…) và ghi chú nội bộ (`INTERNAL_NOTE`).
+- `greeting_journey_events` — sự kiện hành trình: `OPEN` (do trình duyệt khách báo, 06/10/2026), `SELECT_PRODUCT`, `SUBMIT_ORDER`, `CLICK_PAID` (kèm `purpose: BALANCE` khi báo chuyển phần còn lại), `ADMIN_CONFIRMED_PAYMENT`, `LINK_COPIED`, `SHARE_OPEN`, `LINK_REVOKED`, `REORDER`. `INTERNAL_NOTE` đã bỏ 06/10/2026 (chú thích cột trong `schema.prisma` còn ghi — sửa khi có đợt đổi schema).
 
 ```prisma
 model greeting_catalogs {

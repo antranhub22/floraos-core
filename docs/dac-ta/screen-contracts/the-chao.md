@@ -1,6 +1,6 @@
 # Screen Contract — Thẻ chào mẫu hoa (5 tab + Hộp việc)
 
-**Tuyến:** `/the-chao` · **Tệp chính:** `src/app/(app)/the-chao/page.tsx` · **Cập nhật:** 06/10/2026 · **Thẻ:** Thẻ chào
+**Tuyến:** `/the-chao` · **Tệp chính:** `src/app/(app)/the-chao/page.tsx` · **Cập nhật:** 06/10/2026 (đợt commercial-ready) · **Thẻ:** Thẻ chào
 
 ## 1. Vai và mục đích
 - Vai chính: Điều hành (`dieu_hanh`), Sale (`sale`), Điều phối (`dieu_phoi`) · mỗi vai một tab chính, chung một quy trình 9 bước
@@ -12,7 +12,7 @@
 ## 2. Hiện trạng (audit)
 - API: `/greeting-card/inbox` (R1) · `/greeting-card/messages` (R1, gửi R2) · `/greeting-card/messages/read` (R1) · `/greeting-card/messages/recipients` (R1) · `/greeting-card/tracking-pipeline` (R1) · `/greeting-card/sale-visibility` (F2)
 - Tab: Bộ sưu tập · Theo dõi tiến độ · Bán hàng (Sale) · Điều hành · Điều phối — giữ đúng 5 tab (PO 06/10/2026)
-- Trạng thái có sẵn: tải ☑ (skeleton) rỗng ☑ lỗi ☑ (kèm Thử lại) không quyền ☑ (API 403, tab ẩn theo quyền máy chủ kiểm) một phần ☑ thành công ☑
+- Trạng thái có sẵn: tải ☑ (skeleton) rỗng ☑ lỗi ☑ (kèm Thử lại) không quyền ☑ (tab chỉ hiện khi có năng lực: Bộ sưu tập `L1`, Theo dõi `R1`, Bán hàng `R2`, Điều hành `R9`/`F2`, Điều phối `R3`/`R4`/`R5` — từ 06/10/2026; máy chủ vẫn kiểm ở mọi endpoint, thiếu quyền → 403) một phần ☑ thành công ☑
 
 ## 3. Thứ bậc thông tin
 | Lớp | Nội dung | Vị trí hiển thị |
@@ -62,6 +62,12 @@ dùng lại: `FlowerImage`, `TrackingStepperView` · tạo mới: `inbox/sheet.t
 | Chiều | Kết quả | Ghi chú |
 |---|---|---|
 | Vai · Việc · IA · Thứ bậc · CTA · Trạng thái · Responsive · Trợ năng · Dữ liệu · Quyền | PASS | test cách ly `tests/tenant/greeting-card-messages.test.ts` |
+
+## 13b. Trang khách & theo dõi công khai (06/10/2026)
+- Trang `/b/<mã>` chỉ đọc; trình duyệt khách gọi `POST …/open` để ghi "đã mở" (máy quét xem trước link không tính).
+- Đơn mới cọc: mở lại link vẫn ở bước thanh toán với QR phần còn lại; màn thanh toán báo "Cửa hàng đã nhận tiền cọc" + nút xem QR phần còn lại.
+- Theo dõi theo mã đơn: mặc định rút gọn (tên viết tắt, phường + tỉnh); ô "Nhập 4 số cuối số điện thoại" để xem đầy đủ; mở từ chính link của khách thì đầy đủ sẵn.
+- Form đặt hoa có ô bẫy ẩn chống máy tự điền (không hiện, không nhận Tab, trình đọc màn hình bỏ qua).
 
 ## 14. Kết quả
 lint:ux sau: không tăng vi phạm · nợ mở: thông báo đẩy/Zalo cho tin nhắn chưa làm

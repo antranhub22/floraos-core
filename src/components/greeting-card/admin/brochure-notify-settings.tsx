@@ -5,6 +5,7 @@ import { BellRing, Loader2, Save, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
 import { NOTIFY_EVENTS, NOTIFY_EVENT_LABELS, type NotifyChannel } from "@/modules/greeting-card/domain/customer-notifications"
+import { ZnsTemplateGuide } from "./zns-template-guide"
 
 interface StatusResponse {
   data: { notify: { enabled: boolean; channel: NotifyChannel | null; configured: boolean; templates: Record<string, string> } }
@@ -119,6 +120,8 @@ export function BrochureNotifySettings() {
           </label>
         ))}
       </div>
+
+      {ch === "ZNS" && <ZnsTemplateGuide />}
 
       {ch === "ZNS" && (
         <details className="text-body-sm">
