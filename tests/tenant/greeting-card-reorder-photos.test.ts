@@ -198,3 +198,33 @@ describe("greeting-card: thống kê link bộ sưu tập theo kênh (mục 16)"
     expect(await prisma.greeting_catalog_events.count({ where: { organization_id: b.organizationId } })).toBe(0)
   })
 })
+
+describe("greeting-card: tải ảnh catalog (mục 9)", () => {
+  let a: Tenant
+  let b: Tenant
+
+  beforeEach(async () => {
+    await resetDatabase()
+    a = await createTenant("alpha")
+    b = await createTenant("beta")
+  })
+
+  afterAll(async () => {
+    await disconnectDatabase()
+  })
+
+  it("chủ catalog tải được PNG; tiệm khác nhận 404", async () => {
+    const { withSession } = await import("../helpers/fixtures")
+    const { GET } = await import("@/app/api/v1/greeting-card/catalogs/[id]/collage/route")
+    const product = await new ProductRepository().create(a.ctx, { code: "HOA-C", name: "Bó C", attributes: { price: 350000 } })
+    const catalog = await new GreetingCardRepository().createCatalog(a.ctx, { code: "bo-c", name: "Bộ C", productIds: [product.id], createdBy: a.userId })
+    const url = `http://localhost/api/v1/greeting-card/catalogs/${catalog.id}/collage`
+    const params = { params: Promise.resolve({ id: catalog.id }) }
+
+    const own = await GET(withSession(url, a.token), params)
+    expect(own.status).toBe(200)
+    expect(own.headers.get("content-type")).toContain("image/png")
+    expect(own.headers.get("content-disposition")).toContain("bo-suu-tap-bo-c.png")
+    expect((await GET(withSession(url, b.token), params)).status).toBe(404)
+  })
+})

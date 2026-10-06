@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import {
   BookOpen, Plus, Edit2, Trash2, Eye, Package,
-  RefreshCw, ChevronRight, Check, Loader2, Copy, ExternalLink,
+  RefreshCw, ChevronRight, Check, Loader2, Copy, ExternalLink, Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BrochurePreviewModal } from "@/components/greeting-card/customer/brochure-preview-modal"
@@ -256,6 +256,15 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
                   className="p-1.5 rounded-lg border border-border hover:bg-surface-muted transition-colors text-text-muted hover:text-foreground inline-flex items-center"
                 >
                   <ExternalLink size={14} />
+                </a>
+                <a
+                  href={`/api/v1/greeting-card/catalogs/${catalog.id}/collage`}
+                  download
+                  title="Tải ảnh catalog để đăng lên Zalo/Facebook"
+                  aria-label={`Tải ảnh catalog ${catalog.name}`}
+                  className="p-1.5 rounded-lg border border-border hover:bg-surface-muted transition-colors text-text-muted hover:text-foreground inline-flex items-center"
+                >
+                  <Download size={14} />
                 </a>
                 <button
                   type="button"

@@ -747,6 +747,7 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | GET · POST | `/greeting-card/send-links` | `R1` · `R2` | POST sinh mã gửi ngẫu nhiên duy nhất toàn hệ thống (`T01-XXXXXXXX`), `expiresInDays` 1–365 hoặc `null` (mặc định 30). GET kèm `link_state` ACTIVE/EXPIRED/REVOKED |
 | POST | `/greeting-card/send-links/:id/revoke` | `R2` | Thu hồi link chưa có đơn (idempotent); đã có đơn → 409 |
 | GET | `/greeting-card/stats` | `R1` | `?days=7\|30\|90` — phễu gửi → mở → chọn → đặt → thu tiền + doanh thu theo sale |
+| GET | `/greeting-card/catalogs/:id/collage` | `L1` | Tải ảnh catalog PNG 1200×630 (ghép tối đa 4 mẫu JPG/PNG + tên, khoảng giá, tên tiệm) để đăng lên kênh; catalog tiệm khác/đã ẩn → 404. Cùng ảnh này làm ảnh xem trước (`og:image`) của `/g/:id` và `/bst/:orgSlug/:code` |
 | GET | `/greeting-card/stats/channels` | `R1` | `?days=7\|30\|90` — phễu link bộ sưu tập theo kênh chia sẻ (`?kenh=` zalo/facebook/instagram/tiktok/website/khac; lạ/trống = trực tiếp): khách xem → xem mẫu → mở form → đặt đơn, đếm khách không trùng |
 | GET | `/greeting-card/orders` | `R1` | `?status=` (order_status), `?payment=OUTSTANDING\|PAID` (OUTSTANDING gồm cả đơn chờ báo giá — tổng 0); tiền trả dạng số |
 | POST | `/greeting-card/orders/:id/confirm-payment` | `R9` | `amountVnd?` (bỏ trống = khoản đang chờ theo chính sách cọc). Khoá lạc quan trên `paid_vnd`, ghi `order_payments` (DEPOSIT/BALANCE) + `order_events` + `audit_logs`; đã thu đủ → 409; vượt phần còn lại → 422 |

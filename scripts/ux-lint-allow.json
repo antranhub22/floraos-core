@@ -145,6 +145,11 @@
       "rule": "R4",
       "path": "src/app/(platform)/van-hanh/truong-du-lieu/_components/diff-confirm.tsx",
       "reason": "Toggle component: if (!open) → trigger button, else → confirm button — 2 trạng thái loại trừ nhau"
+    },
+    {
+      "rule": "R3",
+      "path": "src/components/greeting-card/og/catalog-collage-image.tsx",
+      "reason": "Ảnh OG dựng bằng next/og (satori) — không đọc được CSS token, màu phải viết thẳng"
     }
   ]
 }

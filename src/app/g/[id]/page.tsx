@@ -14,7 +14,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (data.status !== "ACTIVE") {
     return { title: "Bộ Sưu Tập Mẫu Hoa — FloraOS" }
   }
-  const firstImage = data.products.find((p) => p.imageUrl)?.imageUrl
   return {
     title: `${data.catalog.name} — Bộ Sưu Tập Mẫu Hoa`,
     description: data.catalog.description ?? `Xem bộ sưu tập hoa tươi ${data.catalog.name}`,
@@ -22,7 +21,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: `${data.catalog.name} — Bộ Sưu Tập Mẫu Hoa`,
       description: data.catalog.description ?? `Xem bộ sưu tập hoa tươi ${data.catalog.name}`,
       type: "website",
-      images: firstImage ? [{ url: firstImage }] : [],
+      // Ảnh xem trước: ảnh ghép nhiều mẫu ở opengraph-image.tsx cùng thư mục
     },
   }
 }
