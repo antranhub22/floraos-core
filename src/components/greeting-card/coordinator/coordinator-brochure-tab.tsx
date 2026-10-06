@@ -7,13 +7,11 @@ import { CoordinatorActionModal } from "./coordinator-action-modal"
 import { CoordinatorOrderCard, type BrochureOrder, type ModalState } from "./coordinator-order-card"
 import { useApi, usePagedList } from "@/components/greeting-card/greeting-api"
 import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
-import { WorkUpdates } from "@/components/greeting-card/work/work-updates"
 import { useNow, useWorklist } from "@/components/greeting-card/work/use-worklist"
 import { WORK_BUCKET_LABEL, sortWorklist, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
 
 // Điều phối chỉ lo đơn đã đặt: không có nhóm "Đang chờ khách"
 const BUCKETS: WorkBucket[] = ["ACTION", "IN_PROGRESS", "DONE"]
-const COORDINATOR_STEPS = new Set(["STEP_5_PAYMENT_CONFIRMED", "STEP_6_ARRANGING", "STEP_7_READY_QC", "STEP_8_DELIVERING", "STEP_9_COMPLETED"])
 
 export function CoordinatorBrochureTab() {
   // Chỉ đơn chưa huỷ — bảng xưởng không cần đơn đã huỷ
@@ -40,7 +38,6 @@ export function CoordinatorBrochureTab() {
   const shown = orders
     .filter((o) => (bucket ? bucketOf(o) === bucket : bucketOf(o) !== "DONE"))
     .sort((a, b) => (rank.get(a.id) ?? 1e6) - (rank.get(b.id) ?? 1e6))
-  const updates = work.items.filter((i) => i.orderId && COORDINATOR_STEPS.has(i.currentStepId))
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,8 +54,6 @@ export function CoordinatorBrochureTab() {
           <span>Làm mới</span>
         </Button>
       </div>
-
-      <WorkUpdates items={updates} now={now} storageKey={`floraos:updates:coordinator:${work.userId ?? "-"}`} />
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc việc">
         {BUCKETS.map((b) => (

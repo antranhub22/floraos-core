@@ -2168,6 +2168,7 @@ Trường TỰ TẠO (`origin = CUSTOM`, D13) lưu giá trị ở cột `custom_
 - `greeting_catalogs` — bộ sưu tập chào khách theo dịp (`STANDARD`) hoặc riêng cho một khách (`CLIENT`); xoá là đặt `is_active = false`.
 - `greeting_catalog_products` — sản phẩm trong catalog. **Sản phẩm phải thuộc cùng tổ chức** (kiểm ở repository từ 05/10/2026; trước đó gắn được sản phẩm của tổ chức khác).
 - `greeting_sessions` — một đường link chào khách (`send_code`, duy nhất theo tổ chức); `product_snapshot` đóng băng mẫu hoa lúc khách chốt.
+- `greeting_messages` / `greeting_message_reads` — tin nhắn nội bộ theo đơn/link (06/10/2026): người gửi và vai suy từ phiên, gửi cho một vai hoặc một người, trả lời về đúng người đã nhắn; đã đọc lưu ở máy chủ (đồng bộ mọi thiết bị). Thay cho ghi chú theo bước kiểu cũ (`order_events.axis = internal_note`, `greeting_journey_events.INTERNAL_NOTE` — vẫn đọc được, không ghi mới).
 - `greeting_catalog_events` — lượt xem/xem mẫu/mở form/đặt đơn trên link bộ sưu tập công khai theo kênh chia sẻ `?kenh=` (06/10/2026); mỗi khách × bước 1 lần/ngày.
 - `greeting_journey_events` — sự kiện hành trình của khách (`OPEN`, `SELECT_PRODUCT`, `CLICK_PAID`…) và ghi chú nội bộ (`INTERNAL_NOTE`).
 
@@ -2255,6 +2256,45 @@ model greeting_journey_events {
   session      greeting_sessions @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, session_id])
+}
+
+model greeting_messages {
+  id              String   @id @default(uuid())
+  organization_id String
+  order_id        String? // đơn đã đặt
+  session_id      String? // link chưa có đơn
+  step_key        String   @default("GENERAL")
+  sender_id       String
+  sender_role     String // ADMIN | SALE | COORDINATOR — suy từ năng lực
+  to_role         String? // gửi cho cả vai
+  to_user_id      String? // gửi cho một người (trả lời luôn vào đây)
+  kind            String   @default("MESSAGE")
+  body            String
+  payload         Json?
+  reply_to_id     String?
+  created_at      DateTime @default(now())
+
+  organization organizations            @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  reads        greeting_message_reads[]
+
+  @@index([organization_id, order_id])
+  @@index([organization_id, session_id])
+  @@index([organization_id, to_user_id, created_at])
+  @@index([organization_id, to_role, created_at])
+}
+
+model greeting_message_reads {
+  id              String   @id @default(uuid())
+  organization_id String
+  message_id      String
+  user_id         String
+  read_at         DateTime @default(now())
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  message      greeting_messages @relation(fields: [message_id], references: [id], onDelete: Cascade)
+
+  @@unique([message_id, user_id])
+  @@index([organization_id, user_id])
 }
 
 model greeting_catalog_events {

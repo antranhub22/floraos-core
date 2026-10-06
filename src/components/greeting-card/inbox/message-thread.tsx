@@ -1,0 +1,91 @@
+"use client"
+
+import React, { useEffect, useRef, useState } from "react"
+import { CornerUpLeft } from "lucide-react"
+import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
+import type { ThreadMessageView } from "@/modules/greeting-card/use-cases/internal-messages"
+import { MessageComposer } from "./message-composer"
+import { Sheet } from "./sheet"
+import { timeAgo } from "./use-inbox"
+
+interface Props {
+  target: { orderId?: string | null | undefined; sessionId?: string | null | undefined }
+  /** Bước đang mở (tin mới gắn vào bước này). */
+  stepKey?: string | undefined
+  title?: string | undefined
+  onClose: () => void
+  /** Hiện nút quay lại thay cho đóng hẳn (khi mở từ Hộp việc). */
+  onBack?: (() => void) | undefined
+  onChanged?: (() => void) | undefined
+}
+
+/** Trao đổi nội bộ của một đơn: ai nhắn ai, ở bước nào; trả lời đi thẳng về người đã nhắn. */
+export function MessageThread({ target, stepKey = "GENERAL", title, onClose, onBack, onChanged }: Props) {
+  const key = target.orderId ? `orderId=${target.orderId}` : `sessionId=${target.sessionId}`
+  const thread = useApi<{ data: { label: string; ownerSaleName: string | null; messages: ThreadMessageView[] } }>(
+    `/api/v1/greeting-card/messages?${key}`, { refreshInterval: 15_000 })
+  const [replyTo, setReplyTo] = useState<{ id: string; senderName: string } | null>(null)
+  const [now] = useState(() => Date.now())
+  const endRef = useRef<HTMLDivElement>(null)
+  const messages = thread.data?.data.messages ?? []
+  const unreadIds = messages.filter((m) => m.unread).map((m) => m.id).join(",")
+
+  // Mở trao đổi = đã đọc các tin gửi cho mình (đồng bộ mọi thiết bị)
+  const sentRead = useRef("")
+  useEffect(() => {
+    if (!unreadIds || sentRead.current === unreadIds) return
+    sentRead.current = unreadIds
+    void apiSend("/api/v1/greeting-card/messages/read", "POST", { messageIds: unreadIds.split(",") }, "")
+      .then(() => { void thread.mutate(); onChanged?.() }, () => { sentRead.current = "" })
+  }, [unreadIds, onChanged, thread])
+  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [messages.length])
+
+  return (
+    <Sheet
+      labelId="message-thread-title"
+      title={title ?? thread.data?.data.label ?? "Trao đổi nội bộ"}
+      onClose={onClose}
+      leading={onBack && (
+        <button type="button" onClick={onBack} className="inline-flex h-11 items-center rounded-full px-3 text-body-sm font-bold text-primary hover:bg-surface-muted">
+          ‹ Hộp việc
+        </button>
+      )}
+      footer={<MessageComposer target={target} stepKey={stepKey} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSent={() => { void thread.mutate(); onChanged?.() }} />}
+    >
+      <div className="flex flex-col gap-3 p-3" aria-live="polite">
+        {thread.data?.data.ownerSaleName && <p className="text-center text-caption text-text-muted">Sale phụ trách: {thread.data.data.ownerSaleName}</p>}
+        {thread.error ? (
+          <p role="alert" className="rounded-xl bg-danger-bg p-3 text-body-sm text-danger">{(thread.error as Error).message}</p>
+        ) : thread.isLoading ? (
+          [0, 1, 2].map((i) => <div key={i} className={`h-16 w-3/4 animate-pulse rounded-2xl bg-surface-muted ${i % 2 ? "self-end" : ""}`} />)
+        ) : messages.length === 0 ? (
+          <p className="py-10 text-center text-body-sm text-text-muted">Chưa có trao đổi nào. Chọn người nhận và gửi tin đầu tiên bên dưới.</p>
+        ) : (
+          messages.map((m) => (
+            <article key={m.id} className={`flex max-w-[85%] flex-col gap-1 ${m.mine ? "self-end items-end" : "self-start"}`}>
+              <p className="text-caption text-text-muted">
+                <strong className="text-foreground">{m.mine ? "Bạn" : m.senderName}</strong> · {m.senderRoleLabel}
+                {m.toLabel && <> → {m.toLabel}</>} · {timeAgo(m.createdAt, now)}
+              </p>
+              <div className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-body ${
+                m.mine ? "bg-primary text-white" : m.unread ? "border border-primary/40 bg-primary/5 text-foreground" : "bg-surface text-foreground border border-border"
+              }`}>
+                {m.body}
+              </div>
+              <div className="flex items-center gap-2">
+                {m.stepKey !== "GENERAL" && <span className="rounded-full bg-surface-muted px-2 text-caption text-text-muted">{m.stepTitle}</span>}
+                {!m.mine && !m.legacy && (
+                  <button type="button" onClick={() => setReplyTo({ id: m.id, senderName: m.senderName })}
+                    className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-caption font-bold text-primary hover:bg-primary/10">
+                    <CornerUpLeft size={13} aria-hidden="true" /> Trả lời
+                  </button>
+                )}
+              </div>
+            </article>
+          ))
+        )}
+        <div ref={endRef} />
+      </div>
+    </Sheet>
+  )
+}

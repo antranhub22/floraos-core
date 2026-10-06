@@ -49,7 +49,7 @@ export function TrackingOrderCard({ item, onOpenNotes }: TrackingOrderCardProps)
   const detailsId = `tracking-details-${item.id}`
 
   return (
-    <div className="bg-surface rounded-2xl border border-border p-4 shadow-xs flex flex-col gap-3 hover:border-primary/40 transition-colors">
+    <div data-focus-key={item.orderId ?? item.sessionId} className="bg-surface rounded-2xl border border-border p-4 shadow-xs flex flex-col gap-3 hover:border-primary/40 transition-colors">
       <div className="flex items-center gap-3">
         <div className="w-14 h-14 rounded-xl bg-surface border border-border overflow-hidden shrink-0">
           <FlowerImage src={item.productImageUrl} alt={item.productName} sizes="56px" fallback="icon" className="w-full h-full" />
@@ -119,7 +119,7 @@ export function TrackingOrderCard({ item, onOpenNotes }: TrackingOrderCardProps)
           className="h-9 gap-1.5 text-caption font-bold"
         >
           <MessageSquare size={14} className="text-primary" aria-hidden="true" />
-          Lưu ý nội bộ{item.notes.length > 0 ? ` (${item.notes.length})` : ""}
+          Nhắn tin nội bộ
         </Button>
       </div>
 

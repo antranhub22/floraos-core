@@ -37,12 +37,3 @@ export function sortWorklist<T extends WorkItem>(items: T[], me: StepOwner): T[]
     return Date.parse(b.stepStartedAt) - Date.parse(a.stepStartedAt)
   })
 }
-
-/** Đơn đổi bước sau lần xem gần nhất — mới nhất trước. */
-export function newUpdates<T extends WorkItem>(items: T[], lastSeenIso: string | null, limit = 8): T[] {
-  const since = lastSeenIso ? Date.parse(lastSeenIso) : Number.NEGATIVE_INFINITY
-  return items
-    .filter((i) => Date.parse(i.stepStartedAt) > since)
-    .sort((a, b) => Date.parse(b.stepStartedAt) - Date.parse(a.stepStartedAt))
-    .slice(0, limit)
-}

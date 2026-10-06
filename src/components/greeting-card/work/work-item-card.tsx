@@ -27,7 +27,7 @@ export function WorkItemCard({ item, me, onOpenNotes, actions, now }: Props) {
   const due = [item.deliveryDate?.split("-").reverse().slice(0, 2).join("/"), item.deliveryTimeSlot].filter(Boolean).join(" · ")
 
   return (
-    <article className={`flex flex-col gap-3 rounded-2xl border bg-surface p-4 shadow-xs ${mine ? "border-danger/50" : "border-border"}`}>
+    <article data-focus-key={item.orderId ?? item.sessionId} className={`flex flex-col gap-3 rounded-2xl border bg-surface p-4 shadow-xs transition-shadow ${mine ? "border-danger/50" : "border-border"}`}>
       <WorkStatus item={item} me={me} now={now}
         code={<span className="font-mono text-caption text-text-muted">{item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}</span>} />
 
@@ -65,7 +65,7 @@ export function WorkItemCard({ item, me, onOpenNotes, actions, now }: Props) {
             className="inline-flex h-9 items-center gap-1 rounded-lg border border-border px-2.5 text-caption font-bold text-foreground hover:bg-surface-muted"
           >
             <MessageSquare size={13} className="text-primary" aria-hidden="true" />
-            Ghi chú{item.notes.length > 0 ? ` (${item.notes.length})` : ""}
+            Nhắn tin
           </button>
           {actions}
         </div>

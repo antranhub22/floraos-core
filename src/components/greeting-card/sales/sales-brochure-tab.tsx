@@ -5,9 +5,8 @@ import { ChevronDown, Plus, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi, usePagedList } from "@/components/greeting-card/greeting-api"
 import { WorkItemCard } from "@/components/greeting-card/work/work-item-card"
-import { WorkUpdates } from "@/components/greeting-card/work/work-updates"
 import { useNow, useWorklist } from "@/components/greeting-card/work/use-worklist"
-import { TrackingInternalChatDrawer } from "@/components/greeting-card/tracking/tracking-internal-chat-drawer"
+import { MessageThread } from "@/components/greeting-card/inbox/message-thread"
 import { WORK_BUCKET_LABEL, sortWorklist, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
 import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { SalesSessionTable } from "./sales-session-table"
@@ -57,8 +56,6 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
           </Button>
         </div>
       </div>
-
-      <WorkUpdates items={scoped} now={now} storageKey={`floraos:updates:sale:${work.userId ?? "-"}`} />
 
       <div className="flex flex-wrap items-center gap-2">
         {canSeeAll && (
@@ -126,11 +123,11 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
         />
       )}
       {notesFor && (
-        <TrackingInternalChatDrawer
-          item={notesFor.item}
-          initialStepId={notesFor.stepId}
+        <MessageThread
+          target={{ orderId: notesFor.item.orderId, sessionId: notesFor.item.sessionId }}
+          stepKey={notesFor.stepId}
+          title={`${notesFor.item.customerName} · ${notesFor.item.orderCode ? `Đơn ${notesFor.item.orderCode}` : `Link ${notesFor.item.sendCode}`}`}
           onClose={() => setNotesFor(null)}
-          onNoteAdded={() => void work.refresh()}
         />
       )}
     </div>

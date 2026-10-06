@@ -100,7 +100,7 @@ export function CoordinatorOrderCard({
     }) ?? paymentGateBlocker(action, policy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd })
 
   return (
-    <div className={`bg-surface rounded-2xl border p-5 shadow-sm flex flex-col gap-4 ${work?.stuck?.owner === "COORDINATOR" ? "border-danger/50" : "border-border"}`}>
+    <div data-focus-key={order.id} className={`bg-surface rounded-2xl border p-5 shadow-sm flex flex-col gap-4 ${work?.stuck?.owner === "COORDINATOR" ? "border-danger/50" : "border-border"}`}>
       {work && <WorkStatus item={work} me="COORDINATOR" now={now} />}
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-border pb-3">

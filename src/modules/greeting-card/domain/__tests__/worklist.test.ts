@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { newUpdates, sortWorklist, workBucket } from "../worklist"
+import { sortWorklist, workBucket } from "../worklist"
 import { orderStepStartedAt, sessionStepStartedAt } from "../pipeline-clock"
 
 const stuck = (owner: "SALE" | "COORDINATOR", overdueMinutes: number) => ({ stepId: "STEP_1_OPENED" as const, owner, overdueMinutes, message: "" })
@@ -20,15 +20,6 @@ describe("worklist", () => {
       { id: "d", currentStepId: "STEP_6_ARRANGING" as const, stepStartedAt: "2026-10-06T10:00:00Z", stuck: stuck("COORDINATOR", 99) },
     ]
     expect(sortWorklist(items, "SALE").map((i) => i.id)).toEqual(["c", "b", "d", "a"])
-  })
-
-  it("cập nhật mới = đổi bước sau lần xem gần nhất", () => {
-    const items = [
-      { id: "x", currentStepId: "STEP_4_PAYMENT_PENDING" as const, stepStartedAt: "2026-10-06T10:00:00Z", stuck: null },
-      { id: "y", currentStepId: "STEP_2_CHOOSING" as const, stepStartedAt: "2026-10-06T08:00:00Z", stuck: null },
-    ]
-    expect(newUpdates(items, "2026-10-06T09:00:00Z").map((i) => i.id)).toEqual(["x"])
-    expect(newUpdates(items, null).map((i) => i.id)).toEqual(["x", "y"])
   })
 })
 
