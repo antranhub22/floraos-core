@@ -27,6 +27,10 @@
     "assetId": {
       "type": "string"
     },
+    "reused": {
+      "description": "true = kết quả cũ của chính ảnh này (không gọi mô hình, không thu credit)",
+      "type": "boolean"
+    },
     "components": {
       "type": "array",
       "items": {

@@ -29,6 +29,12 @@
     },
     "product_title": {
       "type": "string"
+    },
+    "reanalyze_key": {
+      "description": "Người dùng xác nhận phân tích LẠI ảnh đã có kết quả: bỏ kết quả cũ, gọi mô hình mới và thu credit; cùng khoá = cùng một lần bấm (chống trừ hai lần)",
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 64
     }
   },
   "required": [

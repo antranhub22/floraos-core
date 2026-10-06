@@ -27,6 +27,8 @@ import type {
 export interface AnalyzeProductVisionInput {
   assetId: string;
   productTitle?: string | undefined;
+  /** Có = người dùng đã xác nhận phân tích lại (trả phí): bỏ qua kết quả cũ. */
+  reanalyzeKey?: string | undefined;
 }
 
 export interface AnalyzeProductVisionOutput {
@@ -39,6 +41,8 @@ export interface AnalyzeProductVisionOutput {
   context: ProductInferredContext;
   /** `vision_ai` = mô hình vừa đọc ảnh · `m01` = kết quả M01 đã lưu (không thu credit). */
   source?: "vision_ai" | "m01";
+  /** true = kết quả cũ của chính ảnh này, không gọi mô hình, không thu credit. */
+  reused?: boolean;
 }
 
 /** Kết quả use-case = đầu ra hợp đồng + mức credit vừa thu (route đổi sang `usage` snake_case). */
@@ -66,7 +70,7 @@ export async function analyzeProductVision(
   ctx: TenantContext,
   input: AnalyzeProductVisionInput
 ): Promise<AnalyzeProductVisionResult> {
-  const { assetId, productTitle } = input;
+  const { assetId, productTitle, reanalyzeKey } = input;
   const asset = await new AssetRepository().findById(ctx, assetId);
   if (!asset) throw notFound();
   const storage = getStorageProvider();
@@ -74,14 +78,14 @@ export async function analyzeProductVision(
 
   // 1. Kết quả M01 đã có của đúng ảnh này → dùng lại, không gọi mô hình, không thu.
   const existingAnalysis = await marketIntelligenceRepo.findProductAnalysis(ctx.organizationId, assetId);
-  if (existingAnalysis) {
+  if (existingAnalysis && !reanalyzeKey) {
     const data = (existingAnalysis.edited || existingAnalysis.raw) as RawVisionAnalysis;
-    return { ...mapAnalysisToProductIntelligence(data, imageUrl, assetId, productTitle), source: "m01" };
+    return { ...mapAnalysisToProductIntelligence(data, imageUrl, assetId, productTitle), source: "m01", reused: true };
   }
 
   // 2. Một lượt gọi mô hình = một job trong sổ. Lượt trước hỏng (đã hoàn credit)
   //    thì nối khoá mới để người dùng thử lại được.
-  let key = `vision-extract:${assetId}`;
+  let key = reanalyzeKey ? `vision-extract:${assetId}:again:${reanalyzeKey}` : `vision-extract:${assetId}`;
   let enq = await enqueueJob(ctx, { feature: PRODUCT_VISION_EXTRACT_FEATURE, payload: { asset_id: assetId }, productId: asset.product_id, idempotencyKey: key });
   for (let i = 0; enq.deduped && (enq.job.status === "FAILED" || enq.job.status === "CANCELLED") && i < MAX_DEDUPE_CHAIN; i++) {
     key = `vision-extract:${assetId}:after:${enq.job.id}`;
@@ -89,7 +93,7 @@ export async function analyzeProductVision(
   }
   if (enq.deduped) {
     const cached = enq.job.output as Omit<AnalyzeProductVisionOutput, "imageUrl"> | null;
-    if (enq.job.status === "COMPLETED" && cached) return { ...cached, imageUrl, assetId, source: "vision_ai", usage: enq.usage };
+    if (enq.job.status === "COMPLETED" && cached) return { ...cached, imageUrl, assetId, source: "vision_ai", reused: true, usage: enq.usage };
     throw new AppError("CONFLICT", "Ảnh này đang được Vision AI bóc tách — chờ vài giây rồi thử lại.");
   }
 

@@ -21,12 +21,19 @@ export const visionExtractBodySchema = z.object({
   image_url: z.string().optional().describe("BỎ QUA từ 25/09/2026 — máy chủ đọc ảnh từ kho theo asset_id; giữ để client cũ không vỡ"),
   asset_id: z.string().min(1).describe("Ảnh đã lưu kho của đúng tổ chức (bắt buộc từ 25/09/2026)"),
   product_title: z.string().optional(),
+  reanalyze_key: z
+    .string()
+    .min(8)
+    .max(64)
+    .optional()
+    .describe("Người dùng xác nhận phân tích LẠI ảnh đã có kết quả: bỏ kết quả cũ, gọi mô hình mới và thu credit; cùng khoá = cùng một lần bấm (chống trừ hai lần)"),
 })
 
 export const visionExtractResultSchema = z.object({
   productName: z.string(),
   imageUrl: z.string(),
   assetId: z.string().optional(),
+  reused: z.boolean().optional().describe("true = kết quả cũ của chính ảnh này (không gọi mô hình, không thu credit)"),
   components: z.array(productFlowerComponentSchema).describe("Hoa + lá đệm (role foliage) — không có mảng riêng"),
   attributes: productVisualAttributesSchema,
   packaging: productPackagingSchema,
