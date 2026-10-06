@@ -5,7 +5,7 @@ import { RefreshCw, Search, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { TrackingOrderCard } from "./tracking-order-card"
-import { TrackingInternalChatDrawer } from "./tracking-internal-chat-drawer"
+import { MessageThread } from "@/components/greeting-card/inbox/message-thread"
 import { TrackingReport } from "./tracking-report"
 import { TRACKING_CATEGORIES, distinct, filterTracking, inCategory, type TrackingCategory } from "@/modules/greeting-card/domain/tracking-filters"
 import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
@@ -93,7 +93,12 @@ export function BrochureOrderTrackingTab() {
       )}
 
       {notesFor && (
-        <TrackingInternalChatDrawer item={notesFor.item} initialStepId={notesFor.stepId} onClose={() => setNotesFor(null)} onNoteAdded={() => void pipeline.mutate()} />
+        <MessageThread
+          target={{ orderId: notesFor.item.orderId, sessionId: notesFor.item.sessionId }}
+          stepKey={notesFor.stepId}
+          title={`${notesFor.item.customerName} · ${notesFor.item.orderCode ? `Đơn ${notesFor.item.orderCode}` : `Link ${notesFor.item.sendCode}`}`}
+          onClose={() => setNotesFor(null)}
+        />
       )}
     </div>
   )

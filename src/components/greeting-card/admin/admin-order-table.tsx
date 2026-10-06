@@ -39,7 +39,7 @@ export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; on
             const badge = STATUS_BADGE[o.status] ?? { label: o.status, className: "bg-surface-muted" }
             const cancellable = o.status !== "CANCELLED" && o.status !== "COMPLETED" && o.delivery_status !== "DELIVERED"
             return (
-              <tr key={o.id} className="hover:bg-surface-muted/50 transition-colors">
+              <tr key={o.id} data-focus-key={o.id} className="hover:bg-surface-muted/50 transition-colors">
                 <td className="px-4 py-3">
                   <div className="font-mono font-bold text-primary">{o.code}</div>
                   <div className="text-caption text-text-muted">

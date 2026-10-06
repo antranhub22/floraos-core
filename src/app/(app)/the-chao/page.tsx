@@ -15,6 +15,8 @@ import { CatalogDetailPanel } from "@/components/greeting-card/catalog/catalog-d
 import { JourneyWizard } from "@/components/greeting-card/journey/journey-wizard"
 import { CoordinatorBrochureTab } from "@/components/greeting-card/coordinator/coordinator-brochure-tab"
 import { BrochureOrderTrackingTab } from "@/components/greeting-card/tracking/brochure-order-tracking-tab"
+import { InboxButton } from "@/components/greeting-card/inbox/inbox-button"
+import type { InboxTarget } from "@/components/greeting-card/inbox/inbox-panel"
 
 type ActiveTab = "sales" | "payment" | "catalog" | "coordinator" | "tracking"
 type ViewMode = "wizard" | "manager"
@@ -39,6 +41,25 @@ export default function TheChaoPage() {
   const catalogCount = countOf(catalogList.data)
   const sessionCount = countOf(sessionList.data)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  // Từ Hộp việc: mở đúng tab rồi cuộn tới đúng thẻ đơn (chờ dữ liệu tab tải xong tối đa ~4 giây)
+  const openInboxTarget = useCallback((t: InboxTarget) => {
+    setViewMode("manager")
+    setActiveTab(t.tab)
+    const key = t.orderId ?? t.sessionId
+    if (!key) return
+    let tries = 0
+    const timer = window.setInterval(() => {
+      const el = document.querySelector<HTMLElement>(`[data-focus-key="${CSS.escape(key)}"]`)
+      if (el || ++tries > 20) {
+        window.clearInterval(timer)
+        if (!el) return
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+        el.classList.add("ring-2", "ring-primary")
+        window.setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2500)
+      }
+    }, 200)
+  }, [])
 
   // "Làm mới" = mọi danh sách SWR trên trang tải lại
   const { mutate } = useSWRConfig()
@@ -69,7 +90,8 @@ export default function TheChaoPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <InboxButton onOpenTarget={openInboxTarget} />
           <div role="tablist" aria-label="Chế độ làm việc" className="inline-flex rounded-xl border border-border bg-surface-alt p-1">
             {MODES.map((m) => {
               const active = viewMode === m.id

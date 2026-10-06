@@ -189,6 +189,8 @@ model organizations {
   greeting_payment_events   greeting_payment_events[]
   greeting_notifications    greeting_notifications[]
   greeting_catalog_events greeting_catalog_events[]
+  greeting_messages       greeting_messages[]
+  greeting_message_reads  greeting_message_reads[]
 }
 
 model workspaces {
@@ -2743,6 +2745,51 @@ model greeting_notifications {
 /// Phễu link dùng chung (`/bst`, `/g`) theo kênh — PO duyệt 06/10/2026 (mục 16).
 /// Một dòng mỗi bước của một người xem; `visitor_hash` là băm ngẫu nhiên trên máy
 /// khách (không IP, không SĐT). Đơn đặt từ link ghi thêm bước ORDER kèm order_id.
+/**
+ * Tin nhắn nội bộ Thẻ chào theo đơn/link (06/10/2026, PO duyệt): người gửi lấy từ phiên,
+ * gửi cho một vai (ADMIN/SALE/COORDINATOR) hoặc một người cụ thể; trả lời đi thẳng về
+ * người gửi. `kind` để mở rộng (vd. xin giảm giá) mà không cần bảng mới.
+ */
+model greeting_messages {
+  id              String   @id @default(uuid())
+  organization_id String
+  order_id        String? // đơn đã đặt
+  session_id      String? // link chưa có đơn
+  step_key        String   @default("GENERAL") // GENERAL | STEP_x của quy trình theo dõi
+  sender_id       String
+  sender_role     String // ADMIN | SALE | COORDINATOR — suy từ năng lực, không nhận từ client
+  to_role         String? // gửi cho cả vai
+  to_user_id      String? // gửi cho một người (trả lời luôn vào đây)
+  kind            String   @default("MESSAGE") // MESSAGE
+  body            String
+  payload         Json?
+  reply_to_id     String?
+  created_at      DateTime @default(now())
+
+  organization organizations            @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  reads        greeting_message_reads[]
+
+  @@index([organization_id, order_id])
+  @@index([organization_id, session_id])
+  @@index([organization_id, to_user_id, created_at])
+  @@index([organization_id, to_role, created_at])
+}
+
+/** Ai đã đọc tin nào — lưu ở máy chủ để điện thoại và máy tính cùng hết báo. */
+model greeting_message_reads {
+  id              String   @id @default(uuid())
+  organization_id String
+  message_id      String
+  user_id         String
+  read_at         DateTime @default(now())
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  message      greeting_messages @relation(fields: [message_id], references: [id], onDelete: Cascade)
+
+  @@unique([message_id, user_id])
+  @@index([organization_id, user_id])
+}
+
 model greeting_catalog_events {
   id              String   @id @default(uuid())
   organization_id String
