@@ -144,11 +144,14 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
     setStep("PAYMENT")
   }
 
+  // Máy chủ nhớ khách đã báo chuyển khoản: rời trang rồi quay lại vẫn thấy "đang chờ xác nhận"
+  const [reportedPaid, setReportedPaid] = useState(session.status === "PAYMENT_REPORTED")
   async function handleReportPaid() {
     const res = await fetch(`/api/v1/public/brochure/${session.sendCode}/payment-notify`, {
       method: "POST",
     })
     if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
+    setReportedPaid(true)
   }
 
   return (
@@ -223,6 +226,7 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
             vietQr={orderResult.vietQr}
             shopPhone={shop.phone}
             onReportPaid={handleReportPaid}
+            alreadyReported={reportedPaid}
             onGoToTracking={() => setStep("TRACKING")}
           />
         )}

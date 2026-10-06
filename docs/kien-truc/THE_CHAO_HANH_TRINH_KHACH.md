@@ -35,6 +35,8 @@ Trạng thái lưu trên máy khách (`localStorage`, 7 ngày, theo đường d�
 
 Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → thanh toán QR → theo dõi (mã đơn). Chống đơn trùng: phiên đã có đơn trả lại đúng đơn đó; hai lần gửi **đồng thời** (hai tab) — giao dịch chỉ cho một đơn gắn vào phiên (`order_id IS NULL`), lần kia được trả lại chính đơn thắng thay vì báo lỗi.
 
+**Quay lại sau khi báo chuyển khoản** (chưa được xác nhận): trang `/b` mở thẳng màn thanh toán và hiện "Đã báo chuyển khoản — đang chờ Điều hành xác nhận" (theo trạng thái phiên `PAYMENT_REPORTED` ở máy chủ), không hiện lại nút báo. Đặt từ link chung `/g` · `/bst`: máy khách nhớ mã phiên của đơn theo bộ sưu tập (30 ngày) — mở lại đúng link cũ được chuyển sang `/b/<mã phiên>` thay vì quay lại xem mẫu.
+
 ## 4. Sự kiện hành trình
 
 `POST /api/v1/public/brochure/[sendCode]/event` (chủ phiên, giới hạn 240 lần/10 phút), lưu `greeting_journey_events` với tên viết hoa:
