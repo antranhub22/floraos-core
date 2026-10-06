@@ -16,6 +16,8 @@ import { getSalesFunnel } from "@/modules/greeting-card/use-cases/get-sales-funn
 import { getChannelFunnel } from "@/modules/greeting-card/use-cases/catalog-channel-events"
 import { getTrackingPipeline } from "@/modules/greeting-card/use-cases/get-tracking-pipeline"
 import { assignBrochureFlorist } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
+import { updateOrderProgress } from "@/modules/orders/use-cases/update-order-progress"
+import { cancelOrder } from "@/modules/orders/use-cases/cancel-order"
 
 /**
  * Phạm vi xem "chỉ khách của mình" áp cho thao tác tiền và phễu (PO 06/10/2026):
@@ -135,5 +137,12 @@ describe("greeting-card: phạm vi xem cho tiền và phễu", () => {
     await assignBrochureFlorist(owner, order.orderId, { floristNote: "Thợ Mai" })
     const audit = await prisma.audit_logs.findFirstOrThrow({ where: { organization_id: a.organizationId, action: "greeting_card.order.florist_assigned" } })
     expect(audit).toMatchObject({ entity_id: order.orderId, user_id: owner.userId })
+  })
+
+  it("sổ đơn chung không sửa / huỷ được đơn Thẻ chào (409) — tránh lách luật thu tiền và báo khách", async () => {
+    const order = await orderBy(lan, 500_000, "SO")
+    expect(await codeOf(updateOrderProgress(owner, order.orderId, { status: "CONFIRMED" }))).toBe("CONFLICT")
+    expect(await codeOf(cancelOrder(owner, order.orderId, "thử huỷ"))).toBe("CONFLICT")
+    expect((await prisma.orders.findUniqueOrThrow({ where: { id: order.orderId } })).status).toBe("DRAFT")
   })
 })

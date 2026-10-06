@@ -2,6 +2,7 @@
  * Use-case: Assign Florist (Phân công thợ cắm hoa — M10, R4).
  */
 
+import { brochureLockReason } from "../domain/order-rules"
 import { AppError } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy/tenant-context"
 import type { OrderRecord } from "../domain/order-types"
@@ -22,6 +23,9 @@ export async function assignFlorist(
   if (!existing) {
     throw new AppError("NOT_FOUND", `Không tìm thấy đơn hàng với mã ID: ${orderId}`)
   }
+
+  const brochureLock = brochureLockReason(existing)
+  if (brochureLock) throw new AppError("CONFLICT", brochureLock)
 
   if (existing.status === "CANCELLED" || existing.status === "COMPLETED") {
     throw new AppError("UNPROCESSABLE_ENTITY", "Không thể phân công thợ cắm cho đơn đã kết thúc.")

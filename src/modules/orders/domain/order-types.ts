@@ -117,6 +117,8 @@ export interface OrderRecord {
   branchId?: string | null | undefined
   code: string
   customerId?: string | null | undefined
+  /** MANUAL | CHAT | BROCHURE — đơn BROCHURE chỉ cập nhật ở trang Thẻ chào */
+  source?: string | null | undefined
   status: OrderStatus
   productionStatus: ProductionStatus
   deliveryStatus: DeliveryStatus
