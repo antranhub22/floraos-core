@@ -10,6 +10,7 @@ import { SWIPE_SIGNAL, getSwipeTheme, isLightTheme } from "./swipe/swipe-themes"
 import { useCardSwipe, type SwipeDirection } from "./swipe/use-card-swipe"
 import { rootHeight, useEmbeddedPreview } from "./aux/embedded"
 import { useSwipeJourney } from "./swipe/use-swipe-journey"
+import { useSavedState } from "../use-saved-state"
 import { JourneyIntro } from "./swipe/journey-intro"
 import { UnavailablePanel } from "./swipe/unavailable-panel"
 import { useCustomerJourney } from "../journey-context"
@@ -67,7 +68,7 @@ export function SwipeBrochureEngine({
   const light = isLightTheme(theme)
   const contact = useCustomerJourney()
   // Lọc theo khoảng giá (khách chưa ưng mẫu nào ở màn cuối)
-  const [priceKey, setPriceKey] = useState<string | null>(null)
+  const [priceKey, setPriceKey] = useSavedState<string | null>(embedded ? "preview-price-filter" : "price-filter", null)
   const range = findPriceRange(priceKey)
   const visible = useMemo(() => (range ? products.filter((p) => inPriceRange(p.price, range)) : products), [products, range])
   // Thích / Bỏ qua / mẫu đang xem nhớ trên máy khách: tải lại, Back hay mở lại link vẫn giữ nguyên

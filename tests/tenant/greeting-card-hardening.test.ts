@@ -287,7 +287,7 @@ describe("greeting-card hardening", () => {
 
   it("không thu hồi được link đã có đơn; đơn vẫn xem được dù link quá hạn", async () => {
     const { product, catalog } = await catalogWith(a, "co-don", 500000)
-    const link = await createSendLink(a.ctx, { catalogId: catalog.id, expiresInDays: 1 })
+    const link = await createSendLink(a.ctx, { catalogId: catalog.id })
     await selectBrochureProduct(link.sendCode, product.id)
     await submitBrochureOrder(link.sendCode, ORDER_INPUT)
     expect(await codeOf(revokeSendLink(a.ctx, link.sessionId))).toBe("CONFLICT")

@@ -6,6 +6,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { CustomerJourneyContext, copyThenOpen, type CustomerJourney } from "./journey-context"
 import { useJourneyTracker } from "./use-journey-tracker"
 import { useStepHistory } from "./use-step-history"
+import { useRememberedStep } from "./use-remembered-step"
+import { canEnterCustomerStep, resumeCustomerStep, type CustomerStep } from "@/modules/greeting-card/domain/customer-step"
 import { updateSavedState } from "./use-saved-state"
 import { JOURNEY_STATE_NAME } from "./templates/swipe/use-swipe-journey"
 import { productInquiryMessage } from "@/modules/greeting-card/domain/collection-browse"
@@ -31,7 +33,6 @@ interface BrochureCustomerExperienceProps {
   preview?: boolean | undefined
 }
 
-type CustomerStep = "SWIPING" | "ORDER_FORM" | "PAYMENT" | "TRACKING"
 
 interface OrderState {
   orderCode: string
@@ -86,7 +87,11 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
   )
 
   // Back/Forward của trình duyệt đi giữa các bước; đơn đã gửi thì không quay lại form/lướt mẫu
-  useStepHistory(step, setStep, (target) => (orderResult ? target === "PAYMENT" || target === "TRACKING" : target === "SWIPING" || (target === "ORDER_FORM" && !!snapshot)))
+  const stepFacts = { hasOrder: !!orderResult, hasSnapshot: !!snapshot }
+  useStepHistory(step, setStep, (target) => canEnterCustomerStep(target, stepFacts))
+  // Rời trang rồi mở lại → về đúng bước đang đứng (vd. đã chọn mẫu nhưng quay lại xem mẫu khác thì
+  // không bị ép vào form). Đơn đã trả đủ / đã huỷ thì luôn ở Theo dõi.
+  useRememberedStep("customer-step", step, setStep, (saved) => resumeCustomerStep(saved, { ...stepFacts, serverStep: step }))
 
   // Khách rời trang khi đang điền đơn → bỏ dở đặt hàng (ghi một lần)
   useEffect(() => {
@@ -144,11 +149,14 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
     setStep("PAYMENT")
   }
 
+  // Máy chủ nhớ khách đã báo chuyển khoản: rời trang rồi quay lại vẫn thấy "đang chờ xác nhận"
+  const [reportedPaid, setReportedPaid] = useState(session.status === "PAYMENT_REPORTED")
   async function handleReportPaid() {
     const res = await fetch(`/api/v1/public/brochure/${session.sendCode}/payment-notify`, {
       method: "POST",
     })
     if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
+    setReportedPaid(true)
   }
 
   return (
@@ -223,6 +231,7 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
             vietQr={orderResult.vietQr}
             shopPhone={shop.phone}
             onReportPaid={handleReportPaid}
+            alreadyReported={reportedPaid}
             onGoToTracking={() => setStep("TRACKING")}
           />
         )}

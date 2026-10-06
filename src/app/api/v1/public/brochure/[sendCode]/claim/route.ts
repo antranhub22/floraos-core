@@ -11,7 +11,8 @@ export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (r
   await enforceRateLimit(request, { scope: "brochure-claim", limit: 30, windowMs: 60_000 })
   const { sendCode } = await context.params
   const cookie = await claimBrochureSession(request, sendCode)
-  const opened = await markBrochureOpened(sendCode)
+  // Đã nhận chủ phiên thì luôn trả cookie, kể cả khi bước báo "đã mở" lỗi (link vừa hết hạn…)
+  const opened = await markBrochureOpened(sendCode).catch(() => ({ opened: false }))
   return jsonResponse(opened, { headers: { "set-cookie": serializeOwnerCookie(cookie, isHttps(request)) } })
 })
 

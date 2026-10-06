@@ -24,6 +24,8 @@ interface BrochurePaymentViewProps {
   shopPhone?: string | null | undefined
   onReportPaid: () => Promise<void>
   onGoToTracking: () => void
+  /** Khách đã báo chuyển khoản trước đó (rời trang rồi quay lại) → hiện ngay "chờ xác nhận" */
+  alreadyReported?: boolean | undefined
 }
 
 export function BrochurePaymentView({
@@ -33,9 +35,10 @@ export function BrochurePaymentView({
   shopPhone,
   onReportPaid,
   onGoToTracking,
+  alreadyReported = false,
 }: BrochurePaymentViewProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
-  const [hasReported, setHasReported] = useState(false)
+  const [hasReported, setHasReported] = useState(alreadyReported)
   const [loading, setLoading] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
 

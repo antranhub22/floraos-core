@@ -11,7 +11,6 @@ import { StepResult } from "./step-result"
 import { TemplateSection, catalogTemplateId, templateName } from "./template-section"
 import { useCopyLink } from "./use-copy-link"
 import { createShareUrl, markPersonalLinkCopied } from "@/components/greeting-card/share/tracked-copy"
-import { LINK_EXPIRY_OPTIONS } from "@/components/greeting-card/sales/sales-types"
 import { catalogPublicPath, normalizeLinkCode, useJourneyCatalogs, type CatalogOption } from "./use-journey-catalogs"
 
 interface JourneyWizardProps {
@@ -36,7 +35,6 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
 
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
-  const [expiry, setExpiry] = useState("30")
   const [sent, setSent] = useState<{ sendCode: string; shareUrl: string } | null>(null)
 
   // Mặc định chọn bộ sưu tập đầu tiên; số mẫu hoa lấy từ danh sách (được cập nhật khi thêm/xóa mẫu)
@@ -69,12 +67,10 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
 
   async function handleCreateLink() {
     if (!selectedId) return
-    const days = LINK_EXPIRY_OPTIONS.find((o) => o.value === expiry)?.days
     const result = await data.createSendLink({
       catalogId: selectedId,
       customerName,
       customerPhone,
-      expiresInDays: days === undefined ? 30 : days,
     })
     setSent({ sendCode: result.sendCode, shareUrl: absoluteUrl(result.shareUrl) })
     setStep(3)
@@ -118,8 +114,6 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
               customerPhone={customerPhone}
               onNameChange={setCustomerName}
               onPhoneChange={setCustomerPhone}
-              expiry={expiry}
-              onExpiryChange={setExpiry}
               onBack={() => setStep(1)}
               onSubmit={handleCreateLink}
             />
