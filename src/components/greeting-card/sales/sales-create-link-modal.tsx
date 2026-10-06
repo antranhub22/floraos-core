@@ -5,7 +5,7 @@ import { markPersonalLinkCopied } from "@/components/greeting-card/share/tracked
 import { Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiSend } from "@/components/greeting-card/greeting-api"
-import { LINK_EXPIRY_OPTIONS, type CatalogOption } from "./sales-types"
+import { LINK_LIFETIME_HINT, linkExpiryLabel, type CatalogOption } from "./sales-types"
 
 interface Props {
   catalogs: CatalogOption[]
@@ -21,7 +21,7 @@ export function SalesCreateLinkModal({ catalogs, onClose, onCreated, onNavigateT
   const [catalogId, setCatalogId] = useState(catalogs[0]?.id ?? "")
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
-  const [expiry, setExpiry] = useState("30")
+  const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [createdLink, setCreatedLink] = useState<string | null>(null)
@@ -32,19 +32,18 @@ export function SalesCreateLinkModal({ catalogs, onClose, onCreated, onNavigateT
     setCreating(true)
     setError(null)
     try {
-      const option = LINK_EXPIRY_OPTIONS.find((o) => o.value === expiry)
-      const res = await apiSend<{ data: { shareUrl: string } }>(
+      const res = await apiSend<{ data: { shareUrl: string; expiresAt: string | null } }>(
         "/api/v1/greeting-card/send-links",
         "POST",
         {
           catalogId: catalogId || undefined,
           customerName: customerName.trim() || undefined,
           customerPhone: customerPhone.trim() || undefined,
-          expiresInDays: option ? option.days : 30,
         },
         "Không tạo được link chào khách"
       )
       setCreatedLink(`${window.location.origin}${res.data.shareUrl}`)
+      setExpiresAt(res.data.expiresAt)
       onCreated()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không tạo được link chào khách")
@@ -65,6 +64,7 @@ export function SalesCreateLinkModal({ catalogs, onClose, onCreated, onNavigateT
               <span>Đã tạo link Thẻ chào thành công!</span>
             </div>
             <div className="p-3 bg-surface-muted rounded-xl border border-border text-body-sm font-mono break-all">{createdLink}</div>
+            {linkExpiryLabel(expiresAt) && <p className="text-caption text-text-muted">{linkExpiryLabel(expiresAt)}</p>}
             <Button
               type="button"
               variant="outline"
@@ -110,15 +110,7 @@ export function SalesCreateLinkModal({ catalogs, onClose, onCreated, onNavigateT
               <span className="text-caption font-bold text-foreground">Số điện thoại khách (không bắt buộc)</span>
               <input type="tel" maxLength={15} placeholder="VD: 0901234567" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className={INPUT} />
             </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-caption font-bold text-foreground">Hạn dùng của link</span>
-              <select value={expiry} onChange={(e) => setExpiry(e.target.value)} className={INPUT}>
-                {LINK_EXPIRY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <span className="text-caption text-text-muted">Hết hạn mà khách chưa đặt thì link tự đóng. Link đã có đơn luôn mở được để khách theo dõi.</span>
-            </label>
+            <p className="text-caption text-text-muted">{LINK_LIFETIME_HINT}</p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={onClose} className="h-10">Hủy</Button>
               <Button type="submit" disabled={creating || catalogs.length === 0} className="bg-primary hover:bg-primary-dark text-white font-bold h-10 px-4">

@@ -1,7 +1,8 @@
 import type { TenantContext } from "@/core/tenancy"
 import { conflict, notFound } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
-import { computeLinkExpiry, normalizePhone, randomCode } from "../domain/greeting-card-rules"
+import { normalizePhone, randomCode } from "../domain/greeting-card-rules"
+import { linkExpiryFrom, parseLinkLifetimeHours } from "../domain/link-lifetime"
 
 export interface CreateSendLinkInput {
   catalogId?: string | undefined
@@ -9,8 +10,6 @@ export interface CreateSendLinkInput {
   customerName?: string | null | undefined
   customerPhone?: string | null | undefined
   prefix?: string | undefined
-  /** Số ngày link còn hiệu lực; `null` = không hết hạn; bỏ trống = mặc định 30 ngày. */
-  expiresInDays?: number | null | undefined
   // Support creating Client Catalog on the fly
   customCatalog?: {
     name: string
@@ -54,6 +53,8 @@ export async function createSendLink(
     targetCatalogId = catalogs[0].id
   }
 
+  // Hạn dùng do Điều hành cài cho cả tiệm (mặc định 24 giờ) — sale không tự chọn
+  const shop = await repo.getShopProfile(ctx.organizationId)
   const phone = input.customerPhone ? normalizePhone(input.customerPhone) : null
   const session = await repo.createSession(ctx, {
     catalogId: targetCatalogId,
@@ -61,7 +62,7 @@ export async function createSendLink(
     saleId: ctx.userId,
     customerName: input.customerName?.trim() || null,
     customerPhone: phone || null,
-    expiresAt: computeLinkExpiry(input.expiresInDays),
+    expiresAt: linkExpiryFrom(parseLinkLifetimeHours(shop.settings)),
   })
 
   return {

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { ArrowLeft, Loader2, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InlineError } from "@/components/ui/inline-error"
-import { LINK_EXPIRY_OPTIONS } from "@/components/greeting-card/sales/sales-types"
+import { LINK_LIFETIME_HINT } from "@/components/greeting-card/sales/sales-types"
 
 const PHONE_PATTERN = /^(\+?84|0)\d{9,10}$/
 
@@ -19,9 +19,6 @@ interface StepCustomerProps {
   customerPhone: string
   onNameChange: (value: string) => void
   onPhoneChange: (value: string) => void
-  /** Hạn dùng link: "7" | "30" | "90" | "never" (xem LINK_EXPIRY_OPTIONS). */
-  expiry: string
-  onExpiryChange: (value: string) => void
   onBack: () => void
   onSubmit: () => Promise<void>
 }
@@ -101,23 +98,7 @@ export function StepCustomer(props: StepCustomerProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="link-expiry" className="text-body-sm font-bold text-foreground">Hạn dùng của link</label>
-        <select
-          id="link-expiry"
-          value={props.expiry}
-          onChange={(e) => props.onExpiryChange(e.target.value)}
-          aria-describedby="link-expiry-hint"
-          className={`${inputClass} border-border`}
-        >
-          {LINK_EXPIRY_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        <p id="link-expiry-hint" className="text-caption text-text-muted">
-          Hết hạn mà khách chưa đặt thì link tự đóng. Link đã có đơn luôn mở được để khách theo dõi.
-        </p>
-      </div>
+      <p className="text-caption text-text-muted">{LINK_LIFETIME_HINT}</p>
 
       {error && <InlineError message={error} />}
 

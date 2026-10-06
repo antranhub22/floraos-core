@@ -3,6 +3,7 @@
 import React, { useEffect } from "react"
 import { X } from "lucide-react"
 import { BrochureStepSlaSettings } from "./brochure-step-sla-settings"
+import { BrochureLinkLifetimeSettings } from "./brochure-link-lifetime-settings"
 import { BrochureVisibilitySettings } from "./brochure-visibility-settings"
 import { BrochureDiscountSettings } from "./brochure-discount-settings"
 import { BrochureDefaultOwnerSettings } from "./brochure-default-owner-settings"
@@ -31,6 +32,7 @@ export function AdminSettingsDrawer({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <div className="flex flex-col gap-4 overflow-y-auto p-5">
+          <BrochureLinkLifetimeSettings />
           <BrochureStepSlaSettings />
           <BrochureVisibilitySettings />
           <BrochureDiscountSettings />

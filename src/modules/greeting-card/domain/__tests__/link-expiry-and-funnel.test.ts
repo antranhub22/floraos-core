@@ -1,14 +1,23 @@
 import { describe, it, expect } from "vitest"
-import { computeLinkExpiry, linkAvailability } from "../greeting-card-rules"
+import { linkAvailability } from "../greeting-card-rules"
+import { LINK_LIFETIME_SETTINGS_KEY, formatLinkLifetime, linkExpiryFrom, parseLinkLifetimeHours } from "../link-lifetime"
 import { buildSalesFunnel } from "../sales-funnel"
 
-describe("computeLinkExpiry", () => {
+describe("thời gian dùng được của link", () => {
   const now = new Date("2026-10-05T00:00:00Z")
-  it("mặc định 30 ngày, null = không hết hạn, kẹp về [1, 365]", () => {
-    expect(computeLinkExpiry(undefined, now)?.toISOString()).toBe("2026-11-04T00:00:00.000Z")
-    expect(computeLinkExpiry(null, now)).toBeNull()
-    expect(computeLinkExpiry(0, now)?.toISOString()).toBe("2026-10-06T00:00:00.000Z")
-    expect(computeLinkExpiry(9999, now)?.getTime()).toBe(now.getTime() + 365 * 86_400_000)
+  it("mặc định 24 giờ; giá trị cài sai hoặc ngoài [1, 720] quay về mặc định", () => {
+    expect(parseLinkLifetimeHours(null)).toBe(24)
+    expect(parseLinkLifetimeHours({ [LINK_LIFETIME_SETTINGS_KEY]: 48 })).toBe(48)
+    expect(parseLinkLifetimeHours({ [LINK_LIFETIME_SETTINGS_KEY]: 0 })).toBe(24)
+    expect(parseLinkLifetimeHours({ [LINK_LIFETIME_SETTINGS_KEY]: 721 })).toBe(24)
+    expect(parseLinkLifetimeHours({ [LINK_LIFETIME_SETTINGS_KEY]: "12" })).toBe(24)
+    expect(linkExpiryFrom(24, now).toISOString()).toBe("2026-10-06T00:00:00.000Z")
+    expect(linkExpiryFrom(3, now).toISOString()).toBe("2026-10-05T03:00:00.000Z")
+  })
+  it("hiển thị dễ đọc", () => {
+    expect(formatLinkLifetime(5)).toBe("5 giờ")
+    expect(formatLinkLifetime(72)).toBe("3 ngày")
+    expect(formatLinkLifetime(30)).toBe("1 ngày 6 giờ")
   })
 })
 

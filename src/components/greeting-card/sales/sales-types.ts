@@ -28,9 +28,13 @@ export const SESSION_STATUS_BADGE: Record<string, { label: string; className: st
   COMPLETED: { label: "Đã xác nhận thanh toán", className: "bg-success-bg text-success" },
 }
 
-export const LINK_EXPIRY_OPTIONS: Array<{ value: string; label: string; days: number | null }> = [
-  { value: "7", label: "7 ngày", days: 7 },
-  { value: "30", label: "30 ngày (mặc định)", days: 30 },
-  { value: "90", label: "90 ngày", days: 90 },
-  { value: "never", label: "Không hết hạn", days: null },
-]
+/** Hạn dùng link do Điều hành cài cho cả tiệm — sale không tự chọn. */
+export const LINK_LIFETIME_HINT =
+  "Link tự hết hạn theo thời gian Điều hành cài trong Cài đặt Thẻ chào (mặc định 24 giờ). Link đã có đơn luôn mở được để khách theo dõi."
+
+/** "Dùng được đến 14:30 07/10" */
+export function linkExpiryLabel(expiresAt: string | null | undefined): string | null {
+  if (!expiresAt) return null
+  const d = new Date(expiresAt)
+  return `Link dùng được đến ${d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} ${d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}`
+}

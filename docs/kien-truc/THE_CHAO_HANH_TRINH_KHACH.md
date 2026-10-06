@@ -40,6 +40,12 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 `POST /api/v1/public/brochure/[sendCode]/event` (chủ phiên, giới hạn 240 lần/10 phút), lưu `greeting_journey_events` với tên viết hoa:
 `collection_opened, product_viewed, product_liked, product_skipped, product_revisited, contact_zalo_clicked, contact_call_clicked, order_started, checkout_started, checkout_abandoned`. `order_completed` = mốc `SUBMIT_ORDER` máy chủ tự ghi khi tạo đơn. Dòng thời gian và bảng theo dõi của nhân viên bỏ qua các sự kiện lướt mẫu này (`BROWSING_EVENT_TYPES`).
 
+## 4b. Thời hạn link gửi khách
+
+- Điều hành cài trong **Cài đặt Thẻ chào → Thời hạn link gửi khách**: số giờ nguyên 1–720, mặc định **24 giờ**, áp dụng cho cả tiệm (`organizations.settings.brochure_link_lifetime_hours`, domain `link-lifetime.ts`). Sale không còn tự chọn hạn (bỏ 7/30/90 ngày, "Không hết hạn").
+- Link riêng tính từ lúc tạo; phiên mở từ link chia sẻ `/s/` tính từ lúc từng khách mở; "Đặt thêm đơn" nhận hạn mới (không kế thừa hạn link cũ). Chỉ áp dụng cho link tạo sau khi lưu.
+- Hết hạn mà chưa có đơn: trang `/b` hiện "Link đã hết hạn — vui lòng liên hệ {cửa hàng} để nhận link mới" kèm Gọi/Zalo (trước bước nhận chủ phiên). Link thu hồi / bộ sưu tập ngừng giữ lời nhắn chung. Link đã có đơn vẫn mở được.
+
 ## 5. Chưa làm (đợt C — cần PO duyệt đổi schema)
 
 - Phân biệt "Tạm hết" và "Hết hẳn"; lựa chọn "Cho phép thay thế tương đương" khi đặt.
