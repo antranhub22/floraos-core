@@ -190,6 +190,7 @@ model organizations {
   greeting_notifications    greeting_notifications[]
   greeting_catalog_events greeting_catalog_events[]
   greeting_messages       greeting_messages[]
+  greeting_share_links    greeting_share_links[]
   greeting_message_reads  greeting_message_reads[]
 }
 
@@ -2619,6 +2620,7 @@ model greeting_catalogs {
   sessions     greeting_sessions[]
 
   catalog_events greeting_catalog_events[]
+  share_links    greeting_share_links[]
   @@unique([organization_id, code])
   @@index([organization_id])
 }
@@ -2745,6 +2747,28 @@ model greeting_notifications {
 /// Phễu link dùng chung (`/bst`, `/g`) theo kênh — PO duyệt 06/10/2026 (mục 16).
 /// Một dòng mỗi bước của một người xem; `visitor_hash` là băm ngẫu nhiên trên máy
 /// khách (không IP, không SĐT). Đơn đặt từ link ghi thêm bước ORDER kèm order_id.
+/**
+ * Link bộ sưu tập do một nhân viên sao chép (06/10/2026, PO duyệt): người bấm "Sao chép" chịu
+ * trách nhiệm mọi khách mở link đó. Mỗi khách mở `/s/<code>` có một phiên riêng
+ * (`greeting_sessions`, `sale_id` = người sao chép) — theo dõi từ lúc mở tới khi xong đơn.
+ */
+model greeting_share_links {
+  id              String    @id @default(uuid())
+  organization_id String
+  code            String    @unique // mã trong `/s/<code>` — ngẫu nhiên, không đoán được
+  catalog_id      String
+  owner_id        String // người đã bấm Sao chép
+  channel         String? // ?kenh= lúc sao chép
+  created_at      DateTime  @default(now()) // = lúc sao chép
+  revoked_at      DateTime?
+
+  organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  catalog      greeting_catalogs @relation(fields: [catalog_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, owner_id, created_at])
+  @@index([organization_id, catalog_id])
+}
+
 /**
  * Tin nhắn nội bộ Thẻ chào theo đơn/link (06/10/2026, PO duyệt): người gửi lấy từ phiên,
  * gửi cho một vai (ADMIN/SALE/COORDINATOR) hoặc một người cụ thể; trả lời đi thẳng về

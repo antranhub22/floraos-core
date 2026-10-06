@@ -5,6 +5,7 @@ import { X } from "lucide-react"
 import { BrochureStepSlaSettings } from "./brochure-step-sla-settings"
 import { BrochureVisibilitySettings } from "./brochure-visibility-settings"
 import { BrochureDiscountSettings } from "./brochure-discount-settings"
+import { BrochureDefaultOwnerSettings } from "./brochure-default-owner-settings"
 import { BrochurePaymentSettings } from "./brochure-payment-settings"
 import { BrochureBankSyncSettings } from "./brochure-bank-sync-settings"
 import { BrochurePolicySettings } from "./brochure-policy-settings"
@@ -33,6 +34,7 @@ export function AdminSettingsDrawer({ onClose }: { onClose: () => void }) {
           <BrochureStepSlaSettings />
           <BrochureVisibilitySettings />
           <BrochureDiscountSettings />
+          <BrochureDefaultOwnerSettings />
           <BrochurePaymentSettings />
           <BrochureBankSyncSettings />
           <BrochurePolicySettings />

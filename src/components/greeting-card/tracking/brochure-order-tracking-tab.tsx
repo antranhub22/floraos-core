@@ -7,6 +7,8 @@ import { useApi } from "@/components/greeting-card/greeting-api"
 import { TrackingOrderCard } from "./tracking-order-card"
 import { MessageThread } from "@/components/greeting-card/inbox/message-thread"
 import { TrackingReport } from "./tracking-report"
+import { TrackingPendingLinks } from "./tracking-pending-links"
+import { useNow } from "@/components/greeting-card/work/use-worklist"
 import { TRACKING_CATEGORIES, distinct, filterTracking, inCategory, type TrackingCategory } from "@/modules/greeting-card/domain/tracking-filters"
 import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 
@@ -23,6 +25,7 @@ export function BrochureOrderTrackingTab() {
   const [query, setQuery] = useState("")
   const [notesFor, setNotesFor] = useState<{ item: TrackingPipelineItem; stepId: TrackingPipelineStepId | "GENERAL" } | null>(null)
 
+  const now = useNow()
   const q = query.trim().toLowerCase()
   const shown = filterTracking(items, { category, saleName, channel }).filter((i) =>
     !q || [i.orderCode, i.sendCode, i.customerName, i.customerPhone, i.productName].some((v) => v?.toLowerCase().includes(q))
@@ -79,17 +82,24 @@ export function BrochureOrderTrackingTab() {
         <p role="alert" className="rounded-xl bg-danger-bg p-4 text-body-sm text-danger">{(pipeline.error as Error).message}</p>
       ) : pipeline.isLoading ? (
         <div className="flex flex-col gap-3" aria-busy="true">{[0, 1].map((i) => <div key={i} className="h-40 animate-pulse rounded-2xl bg-surface-muted" />)}</div>
-      ) : shown.length === 0 ? (
-        <div className="flex flex-col items-center rounded-2xl border border-border bg-surface p-12 text-center">
-          <Sparkles size={36} className="mb-2 text-primary/40" aria-hidden="true" />
-          <p className="text-body font-bold text-foreground">Không có đơn nào khớp bộ lọc</p>
-        </div>
       ) : (
-        <div className="space-y-4">
-          {shown.map((item) => (
-            <TrackingOrderCard key={item.id} item={item} onOpenNotes={(itm, stepId) => setNotesFor({ item: itm, stepId: stepId ?? "GENERAL" })} />
-          ))}
-        </div>
+        <>
+          <TrackingPendingLinks items={shown.filter((i) => i.type === "SESSION")} now={now}
+            onMessage={(item) => setNotesFor({ item, stepId: "GENERAL" })} />
+          <section aria-labelledby="orders-title" className="flex flex-col gap-3">
+            <h3 id="orders-title" className="text-body font-extrabold text-foreground">Đơn chính thức ({shown.filter((i) => i.type === "ORDER").length})</h3>
+            {shown.every((i) => i.type !== "ORDER") ? (
+              <div className="flex flex-col items-center rounded-2xl border border-border bg-surface p-10 text-center">
+                <Sparkles size={32} className="mb-2 text-primary/40" aria-hidden="true" />
+                <p className="text-body-sm text-text-muted">Chưa có đơn nào khớp bộ lọc. Khi khách điền form đặt hàng, đơn sẽ chuyển vào đây.</p>
+              </div>
+            ) : (
+              shown.filter((i) => i.type === "ORDER").map((item) => (
+                <TrackingOrderCard key={item.id} item={item} onOpenNotes={(itm, stepId) => setNotesFor({ item: itm, stepId: stepId ?? "GENERAL" })} />
+              ))
+            )}
+          </section>
+        </>
       )}
 
       {notesFor && (
