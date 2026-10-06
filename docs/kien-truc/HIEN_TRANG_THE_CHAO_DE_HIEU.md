@@ -159,3 +159,25 @@ Trong 13 chỗ chưa ổn ở mục 9: **đã sửa xong 10**, **sửa một ph�
 
 Đã chạy lại **hơn 1.700 bài kiểm tra** — tất cả các bài của Thẻ chào đều đạt, và 11/11 bước "bấm thử như người thật". Chi tiết: `KHAC_PHUC_THE_CHAO.md`.
 
+
+---
+
+## 14. Cập nhật lần 2 (06/10/2026) — bảng theo dõi nhìn được nhiều kiểu 👓
+
+**Có gì mới?** Tab "Theo dõi tiến độ" giờ giống một cuốn sổ có **6 cách lật**, nhưng vẫn là **cùng một danh sách đơn** — không có bản sao nào:
+- 🗂️ **Kanban** — 9 cột như 9 cái rổ, mỗi đơn nằm trong rổ của bước nó đang ở.
+- 📄 **Danh sách** — bảng có thể xếp theo cột, chọn cột muốn xem.
+- 📅 **Lịch** — đơn xếp theo ngày giao và khung giờ.
+- 🕰️ **Timeline** — bấm một đơn để xem nó đã đi qua từng bước thế nào, bước nào **chậm hơn giờ chuẩn** bao lâu.
+- ✅ **Công việc** — chỉ những đơn **đã trễ hoặc sắp trễ**.
+- 📊 **Dashboard** — con số tổng: bao nhiêu đơn mỗi bước, bao nhiêu đơn trễ, còn bao nhiêu tiền chưa thu.
+
+Đổi cách xem thì **bộ lọc vẫn giữ nguyên**. Có sẵn 5 "kiểu lọc mẫu" (Đơn của tôi, giao hôm nay, đang kẹt, quá giờ chuẩn, cần xử lý), và bạn tự lưu thêm kiểu riêng — kiểu tự lưu chỉ nằm **trên máy đang dùng**.
+
+**Hai lỗi đã sửa:**
+- 🔗 Bấm "Sao chép" link bộ sưu tập rồi mở ra thì bị đưa sang **localhost** (không vào được). Lý do: máy chủ trên Render tự thấy mình tên là "localhost". Giờ đã sửa — **link cũ đã gửi khách vẫn dùng lại được**.
+- 💥 Mở "Danh sách", "Công việc" hay "Timeline" là cả trang **báo lỗi**. Lý do: máy chủ gói danh sách thêm một lớp giấy, màn hình mở nhầm lớp. Giờ đã sửa và có bài kiểm tra canh chừng.
+
+**Còn chờ chủ tiệm quyết** (chưa sửa, chỉ báo): khách **đặt cọc** là đơn nhảy thẳng tới bước 5; bước 4 tên "Đã thanh toán" nhưng thật ra là "khách **báo** đã chuyển khoản"; và hai chỗ trong mã nhắc tới trạng thái không bao giờ xảy ra.
+
+Đã chạy **1.672 bài kiểm tra** — tất cả đạt; và đã bấm thử cả 6 cách xem trên trình duyệt thật với đơn thật. Chi tiết: `HIEN_TRANG_THE_CHAO.md` §0.
