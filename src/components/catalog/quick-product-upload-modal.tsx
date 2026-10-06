@@ -42,6 +42,8 @@ export function QuickProductUploadModal({
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // Ảnh hiện tại đã có kết quả phân tích → bấm lại phải xác nhận (phân tích mới tốn credit)
+  const [analyzed, setAnalyzed] = useState(false)
 
   if (!isOpen) return null
 
@@ -54,6 +56,7 @@ export function QuickProductUploadModal({
   const handleFileChange = (file: File) => {
     setSelectedFile(file)
     setUploaded(null)
+    setAnalyzed(false)
     setPreviewUrl(URL.createObjectURL(file))
     if (!code) setCode(`FL-${Date.now().toString().slice(-6)}`)
   }
@@ -66,9 +69,14 @@ export function QuickProductUploadModal({
     return result
   }
 
-  /** Chỉ chạy khi người dùng bấm — mỗi lần AI đọc ảnh mới tốn 1 credit (lỗi thì hoàn). */
+  /**
+   * Chỉ chạy khi người dùng bấm. Lần đầu: dùng lại kết quả cũ của ảnh nếu có (miễn phí).
+   * Bấm lại trên ảnh đã có kết quả: hỏi xác nhận — đồng ý thì phân tích mới và trừ credit.
+   */
   const handleVisionAnalyze = async () => {
     if (!selectedFile) return
+    const again = analyzed
+    if (again && !window.confirm("Ảnh này đã có kết quả phân tích. Phân tích mới sẽ tốn 1 credit — bạn có muốn tiếp tục?")) return
     setIsAnalyzing(true)
     setErrorMessage(null)
     setNotice(null)
@@ -78,17 +86,22 @@ export function QuickProductUploadModal({
       const res = await fetch("/api/v1/market-intelligence/vision-extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ asset_id: image.assetId }),
+        body: JSON.stringify({ asset_id: image.assetId, ...(again ? { reanalyze_key: crypto.randomUUID() } : {}) }),
       })
       if (!res.ok) throw new Error(await readApiError(res, "AI chưa phân tích được ảnh này"))
-      const vision = (await res.json()) as VisionResult & { usage?: { cost_credit: number } }
-      const patch = fillEmptyFields(fields, visionToFields(vision), touched)
+      const vision = (await res.json()) as VisionResult & { reused?: boolean; usage?: { cost_credit: number } }
+      // Phân tích lại được thay các ô AI điền lần trước (người dùng chưa sửa); ô người dùng gõ vẫn giữ
+      const base = again ? { ...fields, ...Object.fromEntries([...aiFilled].map((f) => [f, ""])) } : fields
+      const patch = fillEmptyFields(base, visionToFields(vision), touched)
       const filled = Object.keys(patch) as AiField[]
       setFields((f) => ({ ...f, ...patch }))
       setAiFilled(new Set(filled))
-      const cost = vision.usage?.cost_credit ? ` · đã dùng ${vision.usage.cost_credit} credit` : ""
+      setAnalyzed(true)
+      const cost = vision.reused
+        ? " · dùng kết quả phân tích trước, không tốn credit"
+        : vision.usage?.cost_credit ? ` · đã dùng ${vision.usage.cost_credit} credit` : ""
       setNotice(filled.length > 0
-        ? `AI đã điền ${filled.length} ô còn trống — kiểm tra lại trước khi lưu${cost}.`
+        ? `AI đã điền ${filled.length} ô — kiểm tra lại trước khi lưu${cost}.`
         : `Các ô đã có nội dung, AI không ghi đè${cost}.`)
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "AI chưa phân tích được ảnh này. Bạn có thể nhập tay.")
@@ -207,7 +220,7 @@ export function QuickProductUploadModal({
             {previewUrl && (
               <Button type="button" variant="outline" onClick={() => void handleVisionAnalyze()} disabled={isAnalyzing || isSubmitting} className="mt-2 h-9 w-full text-xs font-bold gap-1.5">
                 <Sparkles size={14} className="text-primary" aria-hidden="true" />
-                {isAnalyzing ? "AI đang phân tích ảnh..." : "Phân tích ảnh bằng AI (1 credit)"}
+                {isAnalyzing ? "AI đang phân tích ảnh..." : analyzed ? "Phân tích lại (1 credit)" : "Phân tích ảnh bằng AI (1 credit)"}
               </Button>
             )}
             {previewUrl && (

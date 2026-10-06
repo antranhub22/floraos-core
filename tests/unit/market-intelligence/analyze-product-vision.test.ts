@@ -84,6 +84,17 @@ describe("analyzeProductVision — Chặng 02 thu credit", () => {
     expect(r.components[0]!.flowerType).toBe("Hồng đỏ")
   })
 
+  it("người dùng xác nhận phân tích lại: bỏ kết quả cũ, khoá mới theo lần bấm, gọi mô hình và thu", async () => {
+    vi.mocked(marketIntelligenceRepo.findProductAnalysis).mockResolvedValue({ raw: {} } as never)
+    vi.mocked(enqueueJob).mockResolvedValue({ job, deduped: false, usage: { costCredit: 1, balanceAfter: 7 } } as never)
+    vi.mocked(callCapability).mockResolvedValue({ kind: "xong", output: aiOut } as never)
+    const out = await analyzeProductVision(ctx, { assetId: "asset-1", reanalyzeKey: "click-12345678" })
+    expect(vi.mocked(enqueueJob).mock.calls[0]![1]).toMatchObject({ idempotencyKey: "vision-extract:asset-1:again:click-12345678" })
+    expect(callCapability).toHaveBeenCalledTimes(1)
+    expect(out.reused).toBeUndefined()
+    expect(out.usage?.costCredit).toBe(1)
+  })
+
   it("lượt trước hỏng (đã hoàn): nối khoá mới để thử lại được", async () => {
     vi.mocked(enqueueJob)
       .mockResolvedValueOnce({ job: { ...job, id: "cu", status: "FAILED" }, deduped: true, usage: { costCredit: 0, balanceAfter: null } } as never)

@@ -24,6 +24,7 @@ export const POST = handle(async (request) => {
   const result = await analyzeProductVision(ctx, {
     assetId: parsed.data.asset_id,
     productTitle: parsed.data.product_title,
+    reanalyzeKey: parsed.data.reanalyze_key,
   });
 
   return jsonResponse(
