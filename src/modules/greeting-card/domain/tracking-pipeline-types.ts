@@ -15,7 +15,6 @@ export type TrackingPipelineStepId =
   | "STEP_8_DELIVERING"
   | "STEP_9_COMPLETED"
 
-export type InternalNoteRole = "ADMIN" | "SALE" | "COORDINATOR" | "FLORIST"
 
 export interface StepDefinition {
   id: TrackingPipelineStepId
@@ -91,25 +90,7 @@ export const PIPELINE_STEPS: StepDefinition[] = [
   },
 ]
 
-export const ROLE_LABELS: Record<InternalNoteRole, string> = {
-  ADMIN: "Chủ tiệm / Điều hành",
-  SALE: "Tư vấn Sale",
-  COORDINATOR: "Điều phối xưởng",
-  FLORIST: "Thợ cắm hoa",
-}
 
-export interface InternalNoteMessage {
-  id: string
-  orderId?: string | null | undefined
-  sessionId?: string | null | undefined
-  stepKey: TrackingPipelineStepId | "GENERAL"
-  stepTitle: string
-  role: InternalNoteRole
-  roleLabel: string
-  senderName: string
-  content: string
-  createdAt: string
-}
 
 export interface TrackingStepState {
   id: TrackingPipelineStepId
@@ -119,7 +100,6 @@ export interface TrackingStepState {
   orderIndex: number
   status: "completed" | "current" | "pending"
   completedAt?: string | null | undefined
-  noteCount: number
 }
 
 export interface TrackingPipelineItem {
@@ -165,7 +145,6 @@ export interface TrackingPipelineItem {
   /** Hạn dùng của link (chỉ với link chưa thành đơn). */
   expiresAt: string | null
   steps: TrackingStepState[]
-  notes: InternalNoteMessage[]
   lastActiveAt: string
   createdAt: string
 }
