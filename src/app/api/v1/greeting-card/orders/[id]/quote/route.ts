@@ -9,6 +9,7 @@ import { MAX_QUOTE_VND } from "@/modules/greeting-card/domain/brochure-payment-p
 
 const schema = z.object({
   totalVnd: z.number().int("Số tiền phải là số nguyên").positive("Nhập số tiền báo giá").max(MAX_QUOTE_VND),
+  reason: z.string().trim().max(300).optional(),
 })
 
 /** POST /api/v1/greeting-card/orders/[id]/quote — báo giá đơn đặt mẫu chưa niêm yết giá (R9). */
@@ -18,5 +19,5 @@ export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request
   const { id } = await context.params
   const parsed = schema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
-  return jsonResponse({ data: await quoteBrochureOrder(ctx, id, parsed.data.totalVnd) })
+  return jsonResponse({ data: await quoteBrochureOrder(ctx, id, parsed.data.totalVnd, parsed.data.reason) })
 })

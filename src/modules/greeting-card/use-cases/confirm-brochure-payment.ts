@@ -87,7 +87,8 @@ export async function quoteBrochureOrder(
   ctx: TenantContext,
   orderId: string,
   totalVnd: number,
+  reason?: string | undefined,
   payments = new BrochurePaymentRepository()
 ) {
-  return payments.setQuote(ctx, orderId, totalVnd)
+  return payments.setQuote(ctx, orderId, totalVnd, reason?.trim() || null)
 }

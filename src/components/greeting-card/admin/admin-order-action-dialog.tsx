@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { PaymentCheckPanel } from "./payment-check-panel"
 import { Button } from "@/components/ui/button"
 import { apiSend } from "@/components/greeting-card/greeting-api"
 import { expectedPayment, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
@@ -42,7 +43,9 @@ export function AdminOrderActionDialog({
     const amountVnd = Number(amount.replace(/\D/g, ""))
     try {
       if (type === "quote") {
-        await apiSend(`/api/v1/greeting-card/orders/${order.id}/quote`, "POST", { totalVnd: amountVnd }, "Không lưu được báo giá")
+        await apiSend(`/api/v1/greeting-card/orders/${order.id}/quote`, "POST", {
+          totalVnd: amountVnd, ...(text.trim() ? { reason: text.trim() } : {}),
+        }, "Không lưu được báo giá")
         onDone(`Đã báo giá ${vnd(amountVnd)} cho đơn ${order.code}. Khách mở lại Thẻ chào sẽ thấy mã QR thanh toán.`)
       } else if (type === "collect") {
         await apiSend(`/api/v1/greeting-card/orders/${order.id}/confirm-payment`, "POST", {
@@ -84,16 +87,17 @@ export function AdminOrderActionDialog({
             <input inputMode="numeric" required value={amount} onChange={(e) => setAmount(e.target.value)} className={FIELD} />
           </label>
         )}
-        {type !== "quote" && (
+        {(type === "collect" || type === "quote") && <PaymentCheckPanel order={order} />}
+        {(
           <label className="flex flex-col gap-1">
             <span className="text-caption font-bold">
-              {type === "collect" ? "Mã giao dịch ngân hàng (không bắt buộc)" : type === "cancel" ? "Lý do huỷ *" : "Lý do hoàn tiền *"}
+              {type === "collect" ? "Mã giao dịch ngân hàng (không bắt buộc)" : type === "quote" ? "Lý do giá chốt (không bắt buộc)" : type === "cancel" ? "Lý do huỷ *" : "Lý do hoàn tiền *"}
             </span>
             <input
               value={text}
-              maxLength={type === "collect" ? 100 : 500}
-              required={type !== "collect"}
-              minLength={type === "collect" ? 0 : 3}
+              maxLength={type === "collect" ? 100 : type === "quote" ? 300 : 500}
+              required={type === "cancel" || type === "refund"}
+              minLength={type === "cancel" || type === "refund" ? 3 : 0}
               onChange={(e) => setText(e.target.value)}
               className={FIELD}
             />

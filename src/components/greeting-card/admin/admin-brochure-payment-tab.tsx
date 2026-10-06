@@ -1,26 +1,22 @@
 "use client"
 
-import { BrochureVisibilitySettings } from "./brochure-visibility-settings"
 import React, { useState } from "react"
-import { RefreshCw, ShieldCheck } from "lucide-react"
+import { RefreshCw, Settings, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi, usePagedList } from "@/components/greeting-card/greeting-api"
 import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
-import { BrochurePaymentSettings } from "./brochure-payment-settings"
-import { BrochureShippingSettings } from "./brochure-shipping-settings"
-import { BrochurePolicySettings } from "./brochure-policy-settings"
-import { BrochureBankSyncSettings } from "./brochure-bank-sync-settings"
 import { UnmatchedPaymentsPanel } from "./unmatched-payments-panel"
-import { BrochureNotifySettings } from "./brochure-notify-settings"
 import { AdminOrderTable } from "./admin-order-table"
 import { AdminOrderActionDialog } from "./admin-order-action-dialog"
+import { AdminSettingsDrawer } from "./admin-settings-drawer"
 import { ORDER_FILTERS, type AdminOrder, type OrderAction, type OrderFilterId } from "./admin-order-types"
 
-/** Tab Điều hành: cấu hình thu tiền/giao hàng + sổ thu đơn Thẻ chào. */
+/** Tab Điều hành: việc cần chủ tiệm quyết (thu tiền, báo giá, tiền chưa khớp); cài đặt nằm trong ngăn riêng. */
 export function AdminBrochurePaymentTab() {
   const [filter, setFilter] = useState<OrderFilterId>("outstanding")
   const [action, setAction] = useState<OrderAction | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const query = ORDER_FILTERS.find((f) => f.id === filter)?.query ?? ""
   const orders = usePagedList<AdminOrder>(`/api/v1/greeting-card/orders${query ? `?${query}` : ""}`)
   const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
@@ -31,26 +27,22 @@ export function AdminBrochurePaymentTab() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div>
           <h2 className="text-title font-extrabold text-foreground flex items-center gap-2">
-            <span>Duyệt Thanh Toán Thẻ Chào</span>
-            <span className="text-caption px-2.5 py-0.5 rounded-full bg-warning/15 text-warning font-bold">Kế Toán & Điều Hành</span>
+            <span>Việc chờ bạn quyết</span>
           </h2>
           <p className="text-body-sm text-text-muted mt-1">
-            Đối soát chuyển khoản, thu cọc/thu nốt, huỷ đơn và hoàn tiền cho đơn đặt qua Thẻ chào
+            Đối chiếu tiền khách chuyển với giá bán rồi xác nhận, báo giá mẫu chưa niêm yết, huỷ đơn và hoàn tiền
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => void orders.refresh()} className="gap-1.5 text-caption h-9">
-          <RefreshCw size={14} className={orders.isLoading ? "animate-spin" : ""} />
-          <span>Làm mới</span>
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <BrochurePaymentSettings />
-        <BrochureBankSyncSettings />
-        <BrochurePolicySettings />
-        <BrochureVisibilitySettings />
-        <BrochureShippingSettings />
-        <BrochureNotifySettings />
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => setSettingsOpen(true)} className="gap-1.5 text-caption h-9">
+            <Settings size={14} aria-hidden="true" />
+            <span>Cài đặt</span>
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => void orders.refresh()} className="gap-1.5 text-caption h-9">
+            <RefreshCw size={14} className={orders.isLoading ? "animate-spin" : ""} />
+            <span>Làm mới</span>
+          </Button>
+        </div>
       </div>
 
       <UnmatchedPaymentsPanel />
@@ -100,6 +92,8 @@ export function AdminBrochurePaymentTab() {
           </>
         )}
       </section>
+
+      {settingsOpen && <AdminSettingsDrawer onClose={() => setSettingsOpen(false)} />}
 
       {action && (
         <AdminOrderActionDialog
