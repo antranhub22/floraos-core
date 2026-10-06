@@ -12,6 +12,7 @@ import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-
 import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
 import { getThread, markMessagesRead, sendMessage } from "@/modules/greeting-card/use-cases/internal-messages"
 import { getInbox } from "@/modules/greeting-card/use-cases/get-inbox"
+import { decideDiscount, requestDiscount } from "@/modules/greeting-card/use-cases/discount-requests"
 
 /** Tin nhắn nội bộ + Hộp việc (06/10/2026): đúng người nhận, trả lời đúng người, cách ly tổ chức. */
 
@@ -102,5 +103,40 @@ describe("greeting-card: tin nhắn nội bộ và Hộp việc", () => {
     await prisma.organizations.update({ where: { id: a.organizationId }, data: { settings: { brochure_visibility: { mode: "OWN", members: {} } } } })
     expect(await codeOf(getThread(minh, { orderId: order.orderId }))).toBe("NOT_FOUND")
     expect((await getThread(lan, { orderId: order.orderId })).label).toContain("Đơn")
+  })
+
+  it("xin giảm giá: trần 25% mặc định; Điều hành duyệt mức khác kèm ghi chú → giá chốt cập nhật, sale nhận kết quả", async () => {
+    const order = await lanOrder()
+    const base = Number((await prisma.orders.findUniqueOrThrow({ where: { id: order.orderId } })).total_vnd)
+    expect(await codeOf(requestDiscount(lan, { orderId: order.orderId, ask: { percent: 30 }, reason: "Khách quen" }))).toBe("VALIDATION_FAILED")
+    const req = await requestDiscount(lan, { orderId: order.orderId, ask: { percent: 10 }, reason: "Khách quen đặt lần 3" })
+    expect(await codeOf(requestDiscount(lan, { orderId: order.orderId, ask: { percent: 5 }, reason: "Lần nữa" }))).toBe("CONFLICT")
+
+    const action = (await getInbox(owner)).actions.find((x) => x.kind === "DISCOUNT")
+    expect(action?.discount).toMatchObject({ requestId: req.id, requester: "Lan", percent: 10, maxPercent: 25 })
+
+    // Tổ chức khác không duyệt được; từ chối phải có lý do
+    expect(await codeOf(decideDiscount({ ...b.ctx, capabilities: new Set(["F2"]) }, { requestId: req.id, approve: true, note: "" }))).toBe("NOT_FOUND")
+    expect(await codeOf(decideDiscount(owner, { requestId: req.id, approve: false, note: "" }))).toBe("VALIDATION_FAILED")
+
+    const decided = await decideDiscount(owner, { requestId: req.id, approve: true, ask: { percent: 5 }, note: "Duyệt 5% thay vì 10%" })
+    const expectedOff = Math.floor((base * 5) / 100 / 1000) * 1000
+    expect(decided).toMatchObject({ status: "APPROVED", totalVnd: base - expectedOff })
+    const row = await prisma.orders.findUniqueOrThrow({ where: { id: order.orderId } })
+    expect(Number(row.balance_vnd)).toBe(base - expectedOff)
+    expect(row.pricing_rule_ref).toMatchObject({ manualDiscount: { baseTotalVnd: base, vnd: expectedOff, percent: 5, note: "Duyệt 5% thay vì 10%" } })
+    expect(await codeOf(decideDiscount(owner, { requestId: req.id, approve: true, note: "" }))).toBe("CONFLICT")
+
+    const lanInbox = await getInbox(lan)
+    expect(lanInbox.threads[0]).toMatchObject({ orderId: order.orderId, unread: 1, lastBody: "Duyệt 5% thay vì 10%" })
+    expect((await getInbox(owner)).actions.some((x) => x.kind === "DISCOUNT")).toBe(false)
+    expect(await prisma.audit_logs.count({ where: { organization_id: a.organizationId, action: "greeting_card.discount.approve" } })).toBe(1)
+  })
+
+  it("Điều hành hạ trần trong Cài đặt → sale không xin vượt được", async () => {
+    const order = await lanOrder()
+    await prisma.organizations.update({ where: { id: a.organizationId }, data: { settings: { brochure_discount: { max_percent: 10 } } } })
+    expect(await codeOf(requestDiscount(lan, { orderId: order.orderId, ask: { percent: 15 }, reason: "Khách quen" }))).toBe("VALIDATION_FAILED")
+    expect((await requestDiscount(lan, { orderId: order.orderId, ask: { percent: 10 }, reason: "Khách quen" })).id).toBeTruthy()
   })
 })

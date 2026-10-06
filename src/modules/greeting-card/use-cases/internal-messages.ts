@@ -6,6 +6,8 @@ import {
   type MessageRole, type RecipientChoice,
 } from "../domain/internal-message"
 import { PIPELINE_STEPS } from "../domain/tracking-pipeline-types"
+import { describeDiscount, parseMaxDiscountPercent, type DiscountPayload } from "../domain/discount-request"
+import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
 import { resolveSaleScope } from "./order-scope"
 
 export interface ThreadRef {
@@ -27,12 +29,28 @@ export interface ThreadMessageView {
   unread: boolean
   /** Ghi chú kiểu cũ (không có người nhận, không trả lời được). */
   legacy: boolean
+  kind: "MESSAGE" | "DISCOUNT_REQUEST" | "DISCOUNT_DECISION"
+  /** Xin giảm giá / kết quả duyệt: trạng thái và số tiền. */
+  discount: {
+    status: string; label: string; approvedVnd: number | null; requestId: string
+    baseTotalVnd: number; requestedVnd: number; percent: number | null
+  } | null
+}
+
+function discountView(m: { id: string; kind: string; payload: unknown; replyToId: string | null }): ThreadMessageView["discount"] {
+  if (m.kind !== "DISCOUNT_REQUEST" && m.kind !== "DISCOUNT_DECISION") return null
+  const p = (m.payload ?? {}) as DiscountPayload
+  return {
+    status: p.status, label: describeDiscount(p), approvedVnd: typeof p.approvedVnd === "number" ? p.approvedVnd : null,
+    requestId: m.kind === "DISCOUNT_REQUEST" ? m.id : m.replyToId ?? m.id,
+    baseTotalVnd: p.baseTotalVnd, requestedVnd: p.requestedVnd, percent: typeof p.percent === "number" ? p.percent : null,
+  }
 }
 
 const stepTitle = (key: string) => PIPELINE_STEPS.find((s) => s.id === key)?.shortTitle ?? "Chung"
 
 /** Đơn/link phải thuộc tổ chức và nằm trong phạm vi xem của người dùng (sale "chỉ khách của mình"). */
-async function visibleTarget(ctx: TenantContext, ref: ThreadRef, repo: GreetingMessageRepository): Promise<ThreadTarget> {
+export async function visibleTarget(ctx: TenantContext, ref: ThreadRef, repo: GreetingMessageRepository): Promise<ThreadTarget> {
   const target = await repo.findTarget(ctx, ref)
   if (!target) throw notFound()
   const scope = await resolveSaleScope(ctx)
@@ -42,7 +60,9 @@ async function visibleTarget(ctx: TenantContext, ref: ThreadRef, repo: GreetingM
 
 export async function getThread(ctx: TenantContext, ref: ThreadRef, repo = new GreetingMessageRepository()) {
   const target = await visibleTarget(ctx, ref, repo)
-  const [messages, legacy, members] = await Promise.all([repo.listThread(ctx, target), repo.listLegacyNotes(ctx, target), repo.activeMembers(ctx)])
+  const [messages, legacy, members, org] = await Promise.all([
+    repo.listThread(ctx, target), repo.listLegacyNotes(ctx, target), repo.activeMembers(ctx), getCurrentOrganization(ctx),
+  ])
   const nameOf = new Map(members.map((m) => [m.userId, m.name]))
   const me = { userId: ctx.userId, role: roleOf(ctx.capabilities) }
   const views: ThreadMessageView[] = [
@@ -51,6 +71,7 @@ export async function getThread(ctx: TenantContext, ref: ThreadRef, repo = new G
       senderName: n.senderName ?? (n.senderId ? nameOf.get(n.senderId) : null) ?? "Nhân viên",
       senderRoleLabel: n.role === "ADMIN" ? "Điều hành" : n.role === "COORDINATOR" || n.role === "FLORIST" ? "Điều phối" : "Sale",
       toLabel: null, body: n.body, createdAt: n.createdAt.toISOString(), mine: n.senderId === ctx.userId, unread: false, legacy: true,
+      kind: "MESSAGE" as const, discount: null,
     })),
     ...messages.map((m) => ({
       id: m.id, stepKey: m.stepKey, stepTitle: stepTitle(m.stepKey),
@@ -59,9 +80,15 @@ export async function getThread(ctx: TenantContext, ref: ThreadRef, repo = new G
       toLabel: recipientLabel({ toRole: m.toRole, toUserName: m.toUserId ? nameOf.get(m.toUserId) ?? "Nhân viên" : null }),
       body: m.body, createdAt: m.createdAt.toISOString(), mine: m.senderId === ctx.userId,
       unread: !m.readByMe && isAddressedTo(m, me), legacy: false,
+      kind: (m.kind === "DISCOUNT_REQUEST" || m.kind === "DISCOUNT_DECISION" ? m.kind : "MESSAGE") as ThreadMessageView["kind"],
+      discount: discountView(m),
     })),
   ].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-  return { label: target.label, ownerSaleName: target.saleId && target.saleId !== "public" ? nameOf.get(target.saleId) ?? null : null, messages: views }
+  return {
+    maxDiscountPercent: parseMaxDiscountPercent(org?.settings),
+    // Chỉ Điều hành (F2) duyệt được giảm giá — giao diện đọc để hiện nút, máy chủ vẫn kiểm
+    canDecideDiscount: ctx.capabilities.has("F2"),
+    label: target.label, ownerSaleName: target.saleId && target.saleId !== "public" ? nameOf.get(target.saleId) ?? null : null, messages: views }
 }
 
 export async function sendMessage(

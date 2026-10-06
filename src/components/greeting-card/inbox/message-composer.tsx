@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import { Loader2, Send, X } from "lucide-react"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
 import { MAX_MESSAGE_LENGTH } from "@/modules/greeting-card/domain/internal-message"
+import { DiscountRequestForm } from "./discount-request-form"
 
 interface Recipients {
   roles: Array<{ role: string; label: string }>
@@ -25,6 +26,8 @@ export function MessageComposer({ target, stepKey, replyTo, onCancelReply, onSen
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Xin giảm giá chỉ cho đơn đã đặt (link chưa có đơn thì chưa có giá chốt)
+  const [mode, setMode] = useState<"MESSAGE" | "DISCOUNT">("MESSAGE")
 
   async function send() {
     const text = body.trim()
@@ -50,8 +53,28 @@ export function MessageComposer({ target, stepKey, replyTo, onCancelReply, onSen
     }
   }
 
+  const modeSwitch = target.orderId && !replyTo && (
+    <div role="group" aria-label="Loại tin" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-muted p-1">
+      {(["MESSAGE", "DISCOUNT"] as const).map((m) => (
+        <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}
+          className={`h-10 rounded-lg text-body-sm font-bold ${mode === m ? "bg-surface text-primary shadow-xs" : "text-text-muted"}`}>
+          {m === "MESSAGE" ? "Tin nhắn" : "Xin giảm giá"}
+        </button>
+      ))}
+    </div>
+  )
+  if (mode === "DISCOUNT" && target.orderId && !replyTo) {
+    return (
+      <div className="flex flex-col gap-2 p-3">
+        {modeSwitch}
+        <DiscountRequestForm orderId={target.orderId} onSent={() => { setMode("MESSAGE"); onSent() }} />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-2 p-3">
+      {modeSwitch}
       {error && <p role="alert" className="rounded-lg bg-danger-bg px-3 py-2 text-body-sm text-danger">{error}</p>}
       {replyTo ? (
         <div className="flex items-center justify-between gap-2 rounded-lg bg-primary/5 px-3 py-1.5 text-body-sm">
