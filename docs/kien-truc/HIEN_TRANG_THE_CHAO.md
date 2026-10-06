@@ -1,7 +1,7 @@
 # Thẻ chào mẫu hoa (Swipe Brochure) — Đặc tả hiện trạng (Current State Baseline)
 
 **Phạm vi:** module `greeting-card` · trang nội bộ `/the-chao` · trang khách `/b`, `/s`, `/g`, `/bst` · **Ngày soát:** 06/10/2026 · **Nhánh soát:** `main` @ `ecb5aa3`
-**Phiên bản:** FINAL — đã gộp với bản audit thứ hai (`greeting-card-feature-spec.md`); mọi mục gộp đều đã đối chiếu lại với mã (Phụ lục A).
+**Phiên bản:** FINAL (baseline trước khắc phục) — đã gộp với bản audit thứ hai (Phụ lục A). **18 hạng mục P0/P1 đã khắc phục 06/10/2026 — xem [`KHAC_PHUC_THE_CHAO.md`](KHAC_PHUC_THE_CHAO.md).**
 **Loại tài liệu:** ảnh chụp hiện trạng để làm đầu vào Gap Analysis (Enterprise Grade → Commercial Ready). **Không** phải SSOT, **không** đề xuất thiết kế lại.
 **Nguyên tắc:** chỉ kết luận theo mã và tài liệu trong repo; chỗ mã ≠ tài liệu ghi rõ ở §16.3; chỗ thiếu bằng chứng ghi ở §17.
 

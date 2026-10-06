@@ -139,3 +139,23 @@ Một vài tài liệu cũ chưa được cập nhật:
 ---
 
 **Tóm lại:** Thẻ chào đã chạy được trọn vẹn từ lúc gửi link tới lúc trao hoa, có nhiều luật giữ an toàn cho tiền và cho từng tiệm, và đã qua 218 bài kiểm tra. Còn khoảng chục chỗ cần vá (mục 9) và một số tính năng chưa làm (mục 10) — đó sẽ là đầu vào cho bước so sánh "còn thiếu gì để bán cho doanh nghiệp lớn".
+
+---
+
+## 13. Cập nhật 06/10/2026 — đã sửa những gì? 🛠️
+
+Trong 13 chỗ chưa ổn ở mục 9: **đã sửa xong 10**, **sửa một phần 2** (chưa có ô "tôi không phải người máy" — thay bằng ô bẫy ẩn + giới hạn số đơn; công tắc tắt tính năng mới tắt được bộ quét nền) và **chưa làm 1** (trang khách vẫn chưa có "trí nhớ tạm"). Cũng làm thêm vài thứ ở mục 10:
+- 💰 Sale "chỉ xem khách của mình" giờ chỉ thu tiền, báo giá và xem doanh thu **khách của mình**; bảng doanh thu tính **tiền thật đã nhận**.
+- 👀 Máy chỉ ghi "khách đã mở" khi **khách thật** mở link, không tính Zalo/Facebook ngó trước.
+- 🔁 Khách đã cọc mở lại link vẫn thấy **mã QR phần còn lại**.
+- 🔒 Người lạ biết mã đơn chỉ thấy **bản rút gọn**; người đặt nhập **4 số cuối số điện thoại** mới thấy đầy đủ.
+- 🧾 Bấm đặt hai lần ở link chung vẫn chỉ ra **một đơn**; có **ô bẫy chống máy tự điền** và mỗi số điện thoại tối đa **5 đơn/giờ**.
+- 🌸 Bó hoa **hết hàng** trong kho của chi nhánh sẽ tự ẩn và không đặt được.
+- 📋 Bảng theo dõi giờ nhìn được **mọi đơn còn việc**, không còn giới hạn 100 đơn.
+- 🤖 Có "người trực" chạy mỗi phút: **gửi lại tin nhắn bị lỗi**, nhắn khách khi **đã có giá**, **nhắc khách chuyển khoản** khi hết giờ giữ đơn, và (nếu tiệm bật) **tự huỷ** đơn quá hạn.
+- 📒 Việc của thợ (giao thợ, chụp ảnh, giao ship) cũng được **ghi sổ** như việc tiền nong.
+- 🗂️ Mỗi người chỉ thấy **các thẻ mình có quyền dùng**; sổ đơn hàng chung **không sửa được** đơn Thẻ chào (để không ai lách luật).
+- 📖 Có **hướng dẫn đăng ký mẫu tin Zalo** ngay trong phần Cài đặt; giấy tờ đã sửa cho khớp thực tế.
+
+Đã chạy lại **hơn 1.700 bài kiểm tra** — tất cả các bài của Thẻ chào đều đạt, và 11/11 bước "bấm thử như người thật". Chi tiết: `KHAC_PHUC_THE_CHAO.md`.
+
