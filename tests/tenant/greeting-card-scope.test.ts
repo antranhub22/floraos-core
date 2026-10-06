@@ -14,6 +14,7 @@ import { adminConfirmBrochurePayment, quoteBrochureOrder } from "@/modules/greet
 import { listPaymentEvents, markPaymentEventHandled } from "@/modules/greeting-card/use-cases/payment-webhook"
 import { getSalesFunnel } from "@/modules/greeting-card/use-cases/get-sales-funnel"
 import { getChannelFunnel } from "@/modules/greeting-card/use-cases/catalog-channel-events"
+import { getTrackingPipeline } from "@/modules/greeting-card/use-cases/get-tracking-pipeline"
 
 /**
  * Phạm vi xem "chỉ khách của mình" áp cho thao tác tiền và phễu (PO 06/10/2026):
@@ -109,5 +110,22 @@ describe("greeting-card: phạm vi xem cho tiền và phễu", () => {
     const mine = await getSalesFunnel(lan, 30)
     expect(mine.rows.map((r) => r.saleId)).toEqual([lan.userId])
     expect((await getChannelFunnel(lan, 30)).rows).toEqual([])
+  })
+
+  it("bảng theo dõi không bỏ sót đơn cũ còn việc khi có nhiều đơn mới hơn; đơn xong lâu thì rời bảng", async () => {
+    const stuck = await orderBy(lan, 500_000, "CU")
+    await prisma.orders.update({ where: { id: stuck.orderId }, data: { created_at: new Date(Date.now() - 20 * 86_400_000) } })
+    const old = new Date(Date.now() - 30 * 86_400_000)
+    // 150 đơn MỚI HƠN đã hoàn tất từ lâu — bản cũ chỉ lấy 100 đơn mới nhất nên đơn kẹt ở trên rơi mất
+    await prisma.orders.createMany({
+      data: Array.from({ length: 150 }, (_, i) => ({
+        id: randomUUID(), organization_id: a.organizationId, code: `DH-XONG-${i}`, source: "BROCHURE", status: "COMPLETED" as const,
+        delivery_status: "DELIVERED" as const, total_vnd: 100_000, paid_vnd: 100_000, balance_vnd: 0, created_by: "test",
+        created_at: new Date(Date.now() - 1_000 * i), updated_at: old,
+      })),
+    })
+    const pipeline = await getTrackingPipeline(owner)
+    expect(pipeline.some((i) => i.orderId === stuck.orderId)).toBe(true)
+    expect(pipeline.filter((i) => i.type === "ORDER")).toHaveLength(1)
   })
 })
