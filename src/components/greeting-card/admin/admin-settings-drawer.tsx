@@ -4,6 +4,7 @@ import React, { useEffect } from "react"
 import { X } from "lucide-react"
 import { BrochureStepSlaSettings } from "./brochure-step-sla-settings"
 import { BrochureVisibilitySettings } from "./brochure-visibility-settings"
+import { BrochureDiscountSettings } from "./brochure-discount-settings"
 import { BrochurePaymentSettings } from "./brochure-payment-settings"
 import { BrochureBankSyncSettings } from "./brochure-bank-sync-settings"
 import { BrochurePolicySettings } from "./brochure-policy-settings"
@@ -31,6 +32,7 @@ export function AdminSettingsDrawer({ onClose }: { onClose: () => void }) {
         <div className="flex flex-col gap-4 overflow-y-auto p-5">
           <BrochureStepSlaSettings />
           <BrochureVisibilitySettings />
+          <BrochureDiscountSettings />
           <BrochurePaymentSettings />
           <BrochureBankSyncSettings />
           <BrochurePolicySettings />

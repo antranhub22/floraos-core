@@ -46,6 +46,11 @@ export function paymentCheckOf(order: {
   if (qty > 1) reasons.push(`Số lượng ×${qty}`)
   const discount = num(quote.discountVnd) ?? 0
   if (discount > 0) reasons.push(`Mã giảm giá ${str(quote.voucherCode) ?? ""}: −${vnd(discount)}`.replace("  ", " "))
+  const manual = obj(quote.manualDiscount)
+  if (num(manual.vnd)) {
+    const why = [str(manual.reason), str(manual.note)].filter(Boolean).join(" · ")
+    reasons.push(`Giảm giá được duyệt${num(manual.percent) ? ` ${num(manual.percent)}%` : ""}: −${vnd(num(manual.vnd)!)}${why ? ` — ${why}` : ""}`)
+  }
   const ship = num(quote.shippingFeeVnd) ?? 0
   const zone = str(obj(quote.shippingZone).name)
   if (ship > 0) reasons.push(`Phí giao${zone ? ` ${zone}` : ""}: +${vnd(ship)}`)

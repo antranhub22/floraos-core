@@ -5,6 +5,7 @@ import { CornerUpLeft } from "lucide-react"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
 import type { ThreadMessageView } from "@/modules/greeting-card/use-cases/internal-messages"
 import { MessageComposer } from "./message-composer"
+import { DiscountDecision } from "./discount-decision"
 import { Sheet } from "./sheet"
 import { timeAgo } from "./use-inbox"
 
@@ -22,7 +23,7 @@ interface Props {
 /** Trao đổi nội bộ của một đơn: ai nhắn ai, ở bước nào; trả lời đi thẳng về người đã nhắn. */
 export function MessageThread({ target, stepKey = "GENERAL", title, onClose, onBack, onChanged }: Props) {
   const key = target.orderId ? `orderId=${target.orderId}` : `sessionId=${target.sessionId}`
-  const thread = useApi<{ data: { label: string; ownerSaleName: string | null; messages: ThreadMessageView[] } }>(
+  const thread = useApi<{ data: { label: string; ownerSaleName: string | null; maxDiscountPercent: number; canDecideDiscount: boolean; messages: ThreadMessageView[] } }>(
     `/api/v1/greeting-card/messages?${key}`, { refreshInterval: 15_000 })
   const [replyTo, setReplyTo] = useState<{ id: string; senderName: string } | null>(null)
   const [now] = useState(() => Date.now())
@@ -70,11 +71,32 @@ export function MessageThread({ target, stepKey = "GENERAL", title, onClose, onB
               <div className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-body ${
                 m.mine ? "bg-primary text-white" : m.unread ? "border border-primary/40 bg-primary/5 text-foreground" : "bg-surface text-foreground border border-border"
               }`}>
+                {m.discount && (
+                  <p className={`mb-1 text-body-sm font-extrabold ${m.mine ? "text-white" : "text-foreground"}`}>
+                    {m.kind === "DISCOUNT_REQUEST" ? `Xin giảm ${m.discount.label}` : m.discount.status === "APPROVED"
+                      ? `Đã duyệt giảm ${(m.discount.approvedVnd ?? 0).toLocaleString("vi-VN")}đ` : "Không duyệt giảm giá"}
+                  </p>
+                )}
                 {m.body}
               </div>
+              {m.kind === "DISCOUNT_REQUEST" && m.discount && (
+                m.discount.status === "PENDING" && thread.data?.data.canDecideDiscount ? (
+                  <div className="w-full min-w-72 rounded-2xl border border-border bg-surface p-3">
+                    <DiscountDecision requestId={m.discount.requestId} baseTotalVnd={m.discount.baseTotalVnd} requestedVnd={m.discount.requestedVnd}
+                      percent={m.discount.percent} maxPercent={thread.data.data.maxDiscountPercent}
+                      onDone={() => { void thread.mutate(); onChanged?.() }} />
+                  </div>
+                ) : (
+                  <span className={`rounded-full px-2 text-caption font-bold ${
+                    m.discount.status === "APPROVED" ? "bg-success-bg text-success" : m.discount.status === "REJECTED" ? "bg-danger-bg text-danger" : "bg-warning-bg text-warning"
+                  }`}>
+                    {m.discount.status === "APPROVED" ? "Đã duyệt" : m.discount.status === "REJECTED" ? "Không duyệt" : "Chờ Điều hành duyệt"}
+                  </span>
+                )
+              )}
               <div className="flex items-center gap-2">
                 {m.stepKey !== "GENERAL" && <span className="rounded-full bg-surface-muted px-2 text-caption text-text-muted">{m.stepTitle}</span>}
-                {!m.mine && !m.legacy && (
+                {!m.mine && !m.legacy && m.kind === "MESSAGE" && (
                   <button type="button" onClick={() => setReplyTo({ id: m.id, senderName: m.senderName })}
                     className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-caption font-bold text-primary hover:bg-primary/10">
                     <CornerUpLeft size={13} aria-hidden="true" /> Trả lời

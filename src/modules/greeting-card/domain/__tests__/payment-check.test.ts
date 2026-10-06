@@ -31,4 +31,13 @@ describe("paymentCheckOf", () => {
   it("giá chốt bằng giá công bố → không có lý do", () => {
     expect(paymentCheckOf({ total_vnd: 500000, pricing_rule_ref: { unitPriceVnd: 500000, quantity: 1 }, greeting_sessions: [{ product_snapshot: { price: 500000 } }] }).reasons).toEqual([])
   })
+
+  it("giảm giá Điều hành duyệt hiện kèm lý do và ghi chú", () => {
+    const c = paymentCheckOf({
+      total_vnd: 950000,
+      pricing_rule_ref: { unitPriceVnd: 1000000, quantity: 1, manualDiscount: { vnd: 50000, percent: 5, reason: "Khách quen", note: "Duyệt 5% thay vì 10%" } },
+      greeting_sessions: [{ product_snapshot: { price: 1000000 } }],
+    })
+    expect(c.reasons).toEqual(["Giảm giá được duyệt 5%: −50.000đ — Khách quen · Duyệt 5% thay vì 10%"])
+  })
 })

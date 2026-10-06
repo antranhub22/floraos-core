@@ -11,7 +11,7 @@ export type InboxTab = "payment" | "sales" | "coordinator" | "tracking"
 
 export interface InboxAction {
   id: string
-  kind: "STUCK" | "CONFIRM_PAYMENT" | "QUOTE" | "ASSIGN" | "UNMATCHED_PAYMENTS"
+  kind: "STUCK" | "CONFIRM_PAYMENT" | "QUOTE" | "ASSIGN" | "UNMATCHED_PAYMENTS" | "DISCOUNT"
   title: string
   detail: string
   orderId: string | null
@@ -21,6 +21,16 @@ export interface InboxAction {
   tab: InboxTab
   /** Càng lớn càng gấp — kẹt quá lâu lên đầu. */
   urgency: number
+  /** Chỉ với DISCOUNT: để Điều hành duyệt/từ chối ngay trong Hộp việc. */
+  discount?: {
+    requestId: string
+    requester: string
+    reason: string
+    baseTotalVnd: number
+    requestedVnd: number
+    percent: number | null
+    maxPercent: number
+  } | undefined
 }
 
 export interface PipelineLike {

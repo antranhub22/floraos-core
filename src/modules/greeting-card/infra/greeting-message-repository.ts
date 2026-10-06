@@ -26,11 +26,12 @@ export interface StoredMessage {
   replyToId: string | null
   createdAt: Date
   readByMe: boolean
+  payload: unknown
 }
 
 const SELECT = {
   id: true, order_id: true, session_id: true, step_key: true, sender_id: true, sender_role: true,
-  to_role: true, to_user_id: true, kind: true, body: true, reply_to_id: true, created_at: true,
+  to_role: true, to_user_id: true, kind: true, body: true, reply_to_id: true, created_at: true, payload: true,
 } as const
 
 type Row = Prisma.greeting_messagesGetPayload<{ select: typeof SELECT }> & { reads?: Array<{ id: string }> }
@@ -38,7 +39,7 @@ type Row = Prisma.greeting_messagesGetPayload<{ select: typeof SELECT }> & { rea
 const toStored = (r: Row): StoredMessage => ({
   id: r.id, orderId: r.order_id, sessionId: r.session_id, stepKey: r.step_key, senderId: r.sender_id,
   senderRole: r.sender_role, toRole: r.to_role, toUserId: r.to_user_id, kind: r.kind, body: r.body,
-  replyToId: r.reply_to_id, createdAt: r.created_at, readByMe: (r.reads?.length ?? 0) > 0,
+  replyToId: r.reply_to_id, createdAt: r.created_at, readByMe: (r.reads?.length ?? 0) > 0, payload: r.payload,
 })
 
 /** Tin nhắn nội bộ Thẻ chào — mọi truy vấn khoá theo tổ chức của phiên. */

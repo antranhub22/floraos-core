@@ -7,6 +7,7 @@ import type { InboxAction, InboxTab } from "@/modules/greeting-card/domain/inbox
 import { Sheet } from "./sheet"
 import { MessageThread } from "./message-thread"
 import { timeAgo, useInbox, type InboxData } from "./use-inbox"
+import { DiscountDecision } from "./discount-decision"
 
 type Group = "actions" | "messages" | "updates"
 export interface InboxTarget { tab: InboxTab; orderId: string | null; sessionId: string | null }
@@ -59,7 +60,7 @@ export function InboxPanel({ onClose, onOpenTarget }: { onClose: () => void; onO
       ) : group === "actions" ? (
         data.actions.length === 0 ? <Empty text="Không có việc nào đang chờ bạn. Mọi đơn đều đúng tiến độ." /> : (
           <ul className="divide-y divide-border bg-surface">
-            {data.actions.map((a) => <ActionRow key={a.id} action={a} onOpen={() => open(a)}
+            {data.actions.map((a) => <ActionRow key={a.id} action={a} onOpen={() => open(a)} onDecided={() => void inbox.mutate()}
               onMessage={a.orderId || a.sessionId ? () => setThread({ orderId: a.orderId, sessionId: a.sessionId, title: a.detail }) : undefined} />)}
           </ul>
         )
@@ -102,8 +103,9 @@ export function InboxPanel({ onClose, onOpenTarget }: { onClose: () => void; onO
   )
 }
 
-function ActionRow({ action, onOpen, onMessage }: { action: InboxAction; onOpen: () => void; onMessage?: (() => void) | undefined }) {
+function ActionRow({ action, onOpen, onMessage, onDecided }: { action: InboxAction; onOpen: () => void; onMessage?: (() => void) | undefined; onDecided: () => void }) {
   const urgent = action.kind === "STUCK" || action.kind === "UNMATCHED_PAYMENTS"
+  const [done, setDone] = useState<string | null>(null)
   return (
     <li className="flex flex-col gap-2 px-4 py-3">
       <div className="flex items-center gap-3">
@@ -119,10 +121,16 @@ function ActionRow({ action, onOpen, onMessage }: { action: InboxAction; onOpen:
           <p className="truncate text-caption text-text-muted">{[action.customerName, action.detail].filter(Boolean).join(" · ")}</p>
         </div>
       </div>
+      {action.discount && !done && (
+        <div className="rounded-xl border border-border bg-surface-alt p-3">
+          <DiscountDecision {...action.discount} onDone={(msg) => { setDone(msg); onDecided() }} />
+        </div>
+      )}
+      {done && <p role="status" className="rounded-xl bg-success-bg px-3 py-2 text-body-sm text-success">{done}</p>}
       <div className="flex gap-2 pl-15">
-        <button type="button" onClick={onOpen} className="h-11 flex-1 rounded-xl bg-primary px-3 text-body-sm font-bold text-white hover:bg-primary-dark sm:flex-none">
+        {!action.discount && <button type="button" onClick={onOpen} className="h-11 flex-1 rounded-xl bg-primary px-3 text-body-sm font-bold text-white hover:bg-primary-dark sm:flex-none">
           Xử lý
-        </button>
+        </button>}
         {onMessage && (
           <button type="button" onClick={onMessage} className="h-11 flex-1 rounded-xl border border-border px-3 text-body-sm font-bold text-foreground hover:bg-surface-muted sm:flex-none">
             Nhắn tin

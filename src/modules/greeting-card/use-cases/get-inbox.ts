@@ -5,6 +5,9 @@ import { roleOf, MESSAGE_ROLE_LABEL, type MessageRole } from "../domain/internal
 import { inboxActions, inboxUpdates, type InboxAction } from "../domain/inbox"
 import { getTrackingPipeline } from "./get-tracking-pipeline"
 import { resolveSaleScope } from "./order-scope"
+import { DiscountRepository } from "../infra/discount-repository"
+import { describeDiscount, parseMaxDiscountPercent, type DiscountPayload } from "../domain/discount-request"
+import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
 
 export interface InboxThread {
   key: string
@@ -35,6 +38,23 @@ export async function getInbox(ctx: TenantContext, now = new Date()) {
 
   const actions: InboxAction[] = inboxActions(pipeline, role, ctx.userId)
   if (role === "ADMIN") {
+    const [pending, org] = await Promise.all([new DiscountRepository().listPending(ctx), getCurrentOrganization(ctx)])
+    const maxPercent = parseMaxDiscountPercent(org?.settings)
+    const names = new Map(members.map((m) => [m.userId, m.name]))
+    for (const r of pending) {
+      const p = r.payload as unknown as DiscountPayload
+      const item = pipeline.find((i) => i.orderId === r.order_id)
+      actions.unshift({
+        id: `discount:${r.id}`, kind: "DISCOUNT", title: `Xin giảm ${describeDiscount(p)}`,
+        detail: `${item?.orderCode ? `Đơn ${item.orderCode}` : "Đơn"} · ${names.get(r.sender_id) ?? "Sale"}: ${r.body}`,
+        orderId: r.order_id, sessionId: item?.sessionId || null, customerName: item?.customerName ?? null,
+        imageUrl: item?.productImageUrl ?? null, tab: "payment", urgency: 1500,
+        discount: {
+          requestId: r.id, requester: names.get(r.sender_id) ?? "Sale", reason: r.body, baseTotalVnd: p.baseTotalVnd,
+          requestedVnd: p.requestedVnd, percent: typeof p.percent === "number" ? p.percent : null, maxPercent,
+        },
+      })
+    }
     const unmatched = await new GreetingIntegrationRepository().listPaymentEvents(ctx, { status: "UNMATCHED", limit: 50 })
     if (unmatched.length > 0) {
       actions.unshift({

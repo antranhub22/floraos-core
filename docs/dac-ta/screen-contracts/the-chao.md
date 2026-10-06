@@ -26,6 +26,7 @@
 ## 4. Hành động
 - Chính (1): **Xử lý** (từ Hộp việc → mở đúng tab, cuộn tới đúng thẻ đơn và nhấn viền)
 - Phụ (≤ 2): Nhắn tin (chọn "Gửi cho": Điều hành / Điều phối / Sale phụ trách / một người) · Trả lời (về đúng người đã nhắn)
+- Xin giảm giá (ô soạn tin → "Xin giảm giá", chỉ đơn đã đặt): % hoặc số tiền + lý do → Điều hành duyệt ngay trong Hộp việc hoặc trong trao đổi: Duyệt như xin / Duyệt mức khác / Không duyệt (bắt buộc ghi chú); trần do Điều hành đặt trong Cài đặt, mặc định 25%
 
 ## 5. Content budget
 nút nổi đầu trang: 3/3 (Hộp việc · Chế độ · Làm mới) · nhóm trong Hộp việc: 3 (Cần làm · Tin nhắn · Cập nhật)
@@ -60,4 +61,4 @@ dùng lại: `FlowerImage`, `TrackingStepperView` · tạo mới: `inbox/sheet.t
 | Vai · Việc · IA · Thứ bậc · CTA · Trạng thái · Responsive · Trợ năng · Dữ liệu · Quyền | PASS | test cách ly `tests/tenant/greeting-card-messages.test.ts` |
 
 ## 14. Kết quả
-lint:ux sau: không tăng vi phạm · nợ mở: thông báo đẩy/Zalo cho tin nhắn chưa làm; xin giảm giá (đợt sau, cùng bảng `greeting_messages`, `kind`)
+lint:ux sau: không tăng vi phạm · nợ mở: thông báo đẩy/Zalo cho tin nhắn chưa làm
