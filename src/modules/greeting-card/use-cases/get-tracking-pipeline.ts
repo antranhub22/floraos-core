@@ -3,6 +3,7 @@ import type { TenantContext } from "@/core/tenancy"
 import { TrackingPipelineRepository } from "../infra/tracking-pipeline-repository"
 import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
 import { parseStepSla, stuckOf } from "../domain/step-sla"
+import { channelLabel } from "../domain/catalog-channel"
 import { orderStepStartedAt, sessionStepStartedAt } from "../domain/pipeline-clock"
 import {
   PIPELINE_STEPS,
@@ -89,6 +90,10 @@ export async function getTrackingPipeline(
     getCurrentOrganization(ctx),
   ])
   const sla = parseStepSla(org?.settings)
+  const channels = await repo.orderChannels(ctx, orders.map((o) => o.id))
+  // Link riêng do sale gửi → kênh là chính sale đó; link bộ sưu tập công khai → kênh `?kenh=`
+  const channelOf = (saleId: string | undefined, orderId?: string) =>
+    saleId && saleId !== "public" ? "Link riêng của sale" : channelLabel(orderId ? channels.get(orderId) ?? "" : "")
   const now = new Date()
 
   const stepMap = new Map(PIPELINE_STEPS.map((s) => [s.id, s]))
@@ -187,6 +192,7 @@ export async function getTrackingPipeline(
       stepStartedAt: orderStepStartedAt(order),
       stuck: stuckOf({ currentStepId, stepStartedAt: orderStepStartedAt(order) }, sla, now),
       saleId: session?.sale_id ?? null,
+      channel: channelOf(session?.sale_id, order.id),
       steps,
       notes,
       lastActiveAt: order.updated_at.toISOString(),
@@ -270,6 +276,7 @@ export async function getTrackingPipeline(
       stepStartedAt: sessionStepStartedAt(session),
       stuck: stuckOf({ currentStepId, stepStartedAt: sessionStepStartedAt(session) }, sla, now),
       saleId: session.sale_id,
+      channel: channelOf(session.sale_id),
       steps,
       notes,
       lastActiveAt: session.last_active_at.toISOString(),

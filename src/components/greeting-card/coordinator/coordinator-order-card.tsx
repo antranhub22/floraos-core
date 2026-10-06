@@ -7,6 +7,8 @@ import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/gree
 import { paymentGateBlocker, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { CoordinatorProgressStrip } from "./coordinator-progress-strip"
+import { WorkStatus } from "@/components/greeting-card/work/work-status"
+import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 
 export interface BrochureOrder {
   id: string
@@ -69,10 +71,15 @@ export function CoordinatorOrderCard({
   order,
   policy,
   onOpen,
+  work,
+  now,
 }: {
   order: BrochureOrder
   policy: BrochurePaymentPolicy
   onOpen: (m: ModalState) => void
+  /** Dòng tương ứng trong quy trình theo dõi — để hiện bước hiện tại và cảnh báo kẹt. */
+  work?: TrackingPipelineItem | undefined
+  now: number
 }) {
   const session = order.greeting_sessions[0]
   const snapshot = session?.product_snapshot || order.items[0]?.metadata
@@ -93,7 +100,8 @@ export function CoordinatorOrderCard({
     }) ?? paymentGateBlocker(action, policy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd })
 
   return (
-    <div className="bg-surface rounded-2xl border border-border p-5 shadow-sm flex flex-col gap-4">
+    <div className={`bg-surface rounded-2xl border p-5 shadow-sm flex flex-col gap-4 ${work?.stuck?.owner === "COORDINATOR" ? "border-danger/50" : "border-border"}`}>
+      {work && <WorkStatus item={work} me="COORDINATOR" now={now} />}
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-border pb-3">
         <div className="flex items-center gap-2">

@@ -156,6 +156,8 @@ export interface TrackingPipelineItem {
   stuck: StuckInfo | null
   /** Sale phụ trách (người gửi link); "public" = link bộ sưu tập công khai. */
   saleId: string | null
+  /** Khách đến từ đâu: "Link riêng của sale" hoặc kênh chia sẻ link bộ sưu tập (Zalo, Facebook…, "Trực tiếp"). */
+  channel: string
   steps: TrackingStepState[]
   notes: InternalNoteMessage[]
   lastActiveAt: string

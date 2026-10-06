@@ -1,10 +1,11 @@
 "use client"
 
 import React from "react"
-import { AlertTriangle, Clock, MessageSquare, Phone } from "lucide-react"
+import { MessageSquare, Phone } from "lucide-react"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { TrackingStepperView } from "@/components/greeting-card/tracking/tracking-stepper-view"
-import { STEP_OWNER_LABEL, formatMinutes, type StepOwner } from "@/modules/greeting-card/domain/step-sla"
+import type { StepOwner } from "@/modules/greeting-card/domain/step-sla"
+import { WorkStatus } from "./work-status"
 import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 
 interface Props {
@@ -22,31 +23,13 @@ const zaloHref = (phone: string) => `https://zalo.me/${phone.replace(/\D/g, "").
 
 /** Thẻ đơn: trạng thái hiện tại là phần to nhất; thông tin khách/mẫu gọn bên dưới. */
 export function WorkItemCard({ item, me, onOpenNotes, actions, now }: Props) {
-  const waited = Math.max(0, Math.floor((now - Date.parse(item.stepStartedAt)) / 60_000))
   const mine = item.stuck?.owner === me
   const due = [item.deliveryDate?.split("-").reverse().slice(0, 2).join("/"), item.deliveryTimeSlot].filter(Boolean).join(" · ")
 
   return (
     <article className={`flex flex-col gap-3 rounded-2xl border bg-surface p-4 shadow-xs ${mine ? "border-danger/50" : "border-border"}`}>
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className={`text-title-sm font-extrabold ${mine ? "text-danger" : "text-primary"}`}>{item.currentStepTitle}</p>
-          <p className="mt-0.5 inline-flex items-center gap-1 text-caption text-text-muted">
-            <Clock size={12} aria-hidden="true" /> Ở bước này {formatMinutes(waited)}
-          </p>
-        </div>
-        <span className="font-mono text-caption text-text-muted">{item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}</span>
-      </header>
-
-      {item.stuck && (
-        <div
-          role={mine ? "alert" : undefined}
-          className={`flex items-start gap-2 rounded-xl p-2.5 text-body-sm font-semibold ${mine ? "bg-danger-bg text-danger" : "bg-warning-bg text-warning"}`}
-        >
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-          <span>{mine ? "Cần bạn: " : `Đang chờ ${STEP_OWNER_LABEL[item.stuck.owner]}: `}{item.stuck.message}</span>
-        </div>
-      )}
+      <WorkStatus item={item} me={me} now={now}
+        code={<span className="font-mono text-caption text-text-muted">{item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}</span>} />
 
       <TrackingStepperView
         steps={item.steps}
@@ -59,13 +42,13 @@ export function WorkItemCard({ item, me, onOpenNotes, actions, now }: Props) {
         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border">
           <FlowerImage src={item.productImageUrl} alt={item.productName} sizes="48px" fallback="icon" className="h-full w-full" />
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-40">
           <p className="truncate text-body-sm font-bold text-foreground">{item.customerName}</p>
           <p className="truncate text-caption text-text-muted">
             {item.productName} · {item.totalVnd > 0 ? vnd(item.totalVnd) : "Chưa có giá"}{due ? ` · Giao ${due}` : ""}
           </p>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex w-full flex-wrap gap-1.5 sm:w-auto">
           {item.customerPhone && (
             <>
               <a href={`tel:${item.customerPhone}`} className="inline-flex h-9 items-center gap-1 rounded-lg border border-border px-2.5 text-caption font-bold text-foreground hover:bg-surface-muted">
