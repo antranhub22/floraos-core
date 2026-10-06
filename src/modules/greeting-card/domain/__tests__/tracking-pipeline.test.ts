@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
   PIPELINE_STEPS,
-  ROLE_LABELS,
   type TrackingPipelineStepId,
 } from "../tracking-pipeline-types"
 
@@ -34,12 +33,5 @@ describe("Tracking Pipeline Domain", () => {
       expect(step.shortTitle.length).toBeGreaterThan(0)
       expect(step.roleResponsible.length).toBeGreaterThan(0)
     })
-  })
-
-  it("should support all 4 internal note roles with descriptive labels", () => {
-    expect(ROLE_LABELS.ADMIN).toBe("Chủ tiệm / Điều hành")
-    expect(ROLE_LABELS.SALE).toBe("Tư vấn Sale")
-    expect(ROLE_LABELS.COORDINATOR).toBe("Điều phối xưởng")
-    expect(ROLE_LABELS.FLORIST).toBe("Thợ cắm hoa")
   })
 })

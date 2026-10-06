@@ -9,9 +9,6 @@ import { linkFactsOf, pendingLinkTitle, type LinkFacts } from "../domain/link-ow
 import { defaultOwnerOf } from "./share-links"
 import {
   PIPELINE_STEPS,
-  ROLE_LABELS,
-  type InternalNoteMessage,
-  type InternalNoteRole,
   type TrackingPipelineItem,
   type TrackingPipelineStepId,
   type TrackingStepState,
@@ -28,10 +25,6 @@ type LooseJson = {
   date?: string
   timeSlot?: string
   zone?: string
-  role?: string
-  stepKey?: string
-  senderName?: string
-  content?: string
 }
 
 function loose(value: unknown): LooseJson {
@@ -133,33 +126,11 @@ export async function getTrackingPipeline(
     const currentStepDef = stepMap.get(currentStepId) ?? PIPELINE_STEPS[0]!
     const currentIndex = currentStepDef.orderIndex
 
-    // Extract notes from order_events where axis === 'internal_note'
-    const notes: InternalNoteMessage[] = (order.events || [])
-      .filter((e) => e.axis === "internal_note")
-      .map((e) => {
-        const role = (e.to_value as InternalNoteRole) || "SALE"
-        const stepKey = (e.from_value as TrackingPipelineStepId) || "GENERAL"
-        const step = stepMap.get(stepKey as TrackingPipelineStepId)
-        return {
-          id: e.id,
-          orderId: order.id,
-          sessionId: session?.id || null,
-          stepKey,
-          stepTitle: step ? step.title : "Lưu ý chung",
-          role,
-          roleLabel: ROLE_LABELS[role] || "Nhân viên",
-          senderName: e.actor_id || "Nhân viên",
-          content: e.reason || "",
-          createdAt: e.created_at.toISOString(),
-        }
-      })
-
     const steps: TrackingStepState[] = PIPELINE_STEPS.map((def) => {
       let status: "completed" | "current" | "pending" = "pending"
       if (def.orderIndex < currentIndex) status = "completed"
       else if (def.orderIndex === currentIndex) status = "current"
 
-      const noteCount = notes.filter((n) => n.stepKey === def.id).length
       return {
         id: def.id,
         title: def.title,
@@ -167,7 +138,6 @@ export async function getTrackingPipeline(
         roleResponsible: def.roleResponsible,
         orderIndex: def.orderIndex,
         status,
-        noteCount,
       }
     })
 
@@ -206,7 +176,6 @@ export async function getTrackingPipeline(
       copiedAt: session ? linkFactsOf(session).copiedAt : null,
       expiresAt: null,
       steps,
-      notes,
       lastActiveAt: order.updated_at.toISOString(),
       createdAt: order.created_at.toISOString(),
     }
@@ -226,34 +195,11 @@ export async function getTrackingPipeline(
     const currentStepDef = stepMap.get(currentStepId) ?? PIPELINE_STEPS[0]!
     const currentIndex = currentStepDef.orderIndex
 
-    // Extract notes from greeting_journey_events with event_type === 'INTERNAL_NOTE'
-    const notes: InternalNoteMessage[] = (session.events || [])
-      .filter((e) => e.event_type === "INTERNAL_NOTE")
-      .map((e) => {
-        const meta = loose(e.metadata)
-        const role = (meta.role as InternalNoteRole) || "SALE"
-        const stepKey = (meta.stepKey as TrackingPipelineStepId) || "GENERAL"
-        const step = stepMap.get(stepKey as TrackingPipelineStepId)
-        return {
-          id: e.id,
-          orderId: null,
-          sessionId: session.id,
-          stepKey,
-          stepTitle: step ? step.title : "Lưu ý chung",
-          role,
-          roleLabel: ROLE_LABELS[role] || "Nhân viên",
-          senderName: meta.senderName || "Nhân viên",
-          content: meta.content || "",
-          createdAt: e.created_at.toISOString(),
-        }
-      })
-
     const steps: TrackingStepState[] = PIPELINE_STEPS.map((def) => {
       let status: "completed" | "current" | "pending" = "pending"
       if (def.orderIndex < currentIndex) status = "completed"
       else if (def.orderIndex === currentIndex) status = "current"
 
-      const noteCount = notes.filter((n) => n.stepKey === def.id).length
       return {
         id: def.id,
         title: def.title,
@@ -261,7 +207,6 @@ export async function getTrackingPipeline(
         roleResponsible: def.roleResponsible,
         orderIndex: def.orderIndex,
         status,
-        noteCount,
       }
     })
 
@@ -297,7 +242,6 @@ export async function getTrackingPipeline(
       copiedAt: facts.copiedAt,
       expiresAt: session.expires_at?.toISOString() ?? null,
       steps,
-      notes,
       lastActiveAt: session.last_active_at.toISOString(),
       createdAt: session.created_at.toISOString(),
     }

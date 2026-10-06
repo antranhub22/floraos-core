@@ -96,7 +96,7 @@ export function MessageThread({ target, stepKey = "GENERAL", title, onClose, onB
               )}
               <div className="flex items-center gap-2">
                 {m.stepKey !== "GENERAL" && <span className="rounded-full bg-surface-muted px-2 text-caption text-text-muted">{m.stepTitle}</span>}
-                {!m.mine && !m.legacy && m.kind === "MESSAGE" && (
+                {!m.mine && m.kind === "MESSAGE" && (
                   <button type="button" onClick={() => setReplyTo({ id: m.id, senderName: m.senderName })}
                     className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-caption font-bold text-primary hover:bg-primary/10">
                     <CornerUpLeft size={13} aria-hidden="true" /> Trả lời

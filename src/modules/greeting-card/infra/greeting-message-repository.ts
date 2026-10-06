@@ -135,26 +135,6 @@ export class GreetingMessageRepository {
     return res.count
   }
 
-  /** Ghi chú theo bước kiểu cũ (trước 06/10/2026) — chỉ đọc, để không mất lịch sử trao đổi. */
-  async listLegacyNotes(ctx: TenantContext, target: ThreadTarget): Promise<Array<{ id: string; stepKey: string; role: string; senderId: string | null; senderName: string | null; body: string; createdAt: Date }>> {
-    const [orderNotes, sessionNotes] = await Promise.all([
-      target.orderId
-        ? this.db.order_events.findMany({ where: scopedWhere(ctx, { order_id: target.orderId, axis: "internal_note" }), orderBy: { created_at: "asc" }, take: 200 })
-        : Promise.resolve([]),
-      target.sessionId
-        ? this.db.greeting_journey_events.findMany({ where: scopedWhere(ctx, { session_id: target.sessionId, event_type: "INTERNAL_NOTE" }), orderBy: { created_at: "asc" }, take: 200 })
-        : Promise.resolve([]),
-    ])
-    const meta = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : {})
-    return [
-      ...orderNotes.map((e) => ({ id: e.id, stepKey: e.from_value || "GENERAL", role: e.to_value || "SALE", senderId: e.actor_id, senderName: null, body: e.reason || "", createdAt: e.created_at })),
-      ...sessionNotes.map((e) => {
-        const m = meta(e.metadata)
-        return { id: e.id, stepKey: String(m.stepKey ?? "GENERAL"), role: String(m.role ?? "SALE"), senderId: null, senderName: typeof m.senderName === "string" ? m.senderName : null, body: String(m.content ?? ""), createdAt: e.created_at }
-      }),
-    ]
-  }
-
   /** Sale phụ trách của nhiều đơn/link một lượt (để lọc hộp việc theo quyền xem). */
   async saleOf(ctx: TenantContext, orderIds: string[], sessionIds: string[]): Promise<Map<string, string>> {
     const map = new Map<string, string>()

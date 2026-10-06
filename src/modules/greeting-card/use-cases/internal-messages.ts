@@ -27,8 +27,6 @@ export interface ThreadMessageView {
   mine: boolean
   /** Gửi cho tôi và tôi chưa đọc. */
   unread: boolean
-  /** Ghi chú kiểu cũ (không có người nhận, không trả lời được). */
-  legacy: boolean
   kind: "MESSAGE" | "DISCOUNT_REQUEST" | "DISCOUNT_DECISION"
   /** Xin giảm giá / kết quả duyệt: trạng thái và số tiền. */
   discount: {
@@ -60,26 +58,19 @@ export async function visibleTarget(ctx: TenantContext, ref: ThreadRef, repo: Gr
 
 export async function getThread(ctx: TenantContext, ref: ThreadRef, repo = new GreetingMessageRepository()) {
   const target = await visibleTarget(ctx, ref, repo)
-  const [messages, legacy, members, org] = await Promise.all([
-    repo.listThread(ctx, target), repo.listLegacyNotes(ctx, target), repo.activeMembers(ctx), getCurrentOrganization(ctx),
+  const [messages, members, org] = await Promise.all([
+    repo.listThread(ctx, target), repo.activeMembers(ctx), getCurrentOrganization(ctx),
   ])
   const nameOf = new Map(members.map((m) => [m.userId, m.name]))
   const me = { userId: ctx.userId, role: roleOf(ctx.capabilities) }
   const views: ThreadMessageView[] = [
-    ...legacy.map((n) => ({
-      id: n.id, stepKey: n.stepKey, stepTitle: stepTitle(n.stepKey),
-      senderName: n.senderName ?? (n.senderId ? nameOf.get(n.senderId) : null) ?? "Nhân viên",
-      senderRoleLabel: n.role === "ADMIN" ? "Điều hành" : n.role === "COORDINATOR" || n.role === "FLORIST" ? "Điều phối" : "Sale",
-      toLabel: null, body: n.body, createdAt: n.createdAt.toISOString(), mine: n.senderId === ctx.userId, unread: false, legacy: true,
-      kind: "MESSAGE" as const, discount: null,
-    })),
     ...messages.map((m) => ({
       id: m.id, stepKey: m.stepKey, stepTitle: stepTitle(m.stepKey),
       senderName: nameOf.get(m.senderId) ?? "Nhân viên đã rời",
       senderRoleLabel: MESSAGE_ROLE_LABEL[m.senderRole as MessageRole] ?? "Nhân viên",
       toLabel: recipientLabel({ toRole: m.toRole, toUserName: m.toUserId ? nameOf.get(m.toUserId) ?? "Nhân viên" : null }),
       body: m.body, createdAt: m.createdAt.toISOString(), mine: m.senderId === ctx.userId,
-      unread: !m.readByMe && isAddressedTo(m, me), legacy: false,
+      unread: !m.readByMe && isAddressedTo(m, me),
       kind: (m.kind === "DISCOUNT_REQUEST" || m.kind === "DISCOUNT_DECISION" ? m.kind : "MESSAGE") as ThreadMessageView["kind"],
       discount: discountView(m),
     })),

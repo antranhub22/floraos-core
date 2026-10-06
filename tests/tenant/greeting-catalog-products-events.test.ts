@@ -6,7 +6,7 @@ import { createTenant, type Tenant } from "../helpers/fixtures"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
 import { ProductRepository } from "@/modules/products/infra/product-repository"
 import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-link"
-import { createInternalNote } from "@/modules/greeting-card/use-cases/create-internal-note"
+import { markSendLinkCopied } from "@/modules/greeting-card/use-cases/share-links"
 import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
 import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
 import { uploadBrochureProductPhoto } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
@@ -95,7 +95,7 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
     expect(detailB?.items.map((i) => i.product_id)).toEqual([productB.id])
   })
 
-  it("greeting_journey_events: không ghi được ghi chú nội bộ vào phiên của tổ chức khác", async () => {
+  it("greeting_journey_events: không ghi được sự kiện vào link của tổ chức khác", async () => {
     const catB = await repo.createCatalog(tenantB.ctx, {
       code: "cat-b",
       name: "Catalog B",
@@ -107,28 +107,12 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
       select: { id: true },
     })
 
-    await expect(
-      createInternalNote(tenantA.ctx, {
-        sessionId: sessionB.id,
-        stepKey: "GENERAL",
-        role: "SALE",
-        content: "Ghi chú chen ngang",
-      })
-    ).rejects.toMatchObject({ code: "NOT_FOUND" })
+    await expect(markSendLinkCopied(tenantA.ctx, linkB.sendCode)).rejects.toMatchObject({ code: "NOT_FOUND" })
+    expect(await prisma.greeting_journey_events.count({ where: { session_id: sessionB.id, event_type: "LINK_COPIED" } })).toBe(0)
 
-    const notes = await prisma.greeting_journey_events.count({
-      where: { session_id: sessionB.id, event_type: "INTERNAL_NOTE" },
-    })
-    expect(notes).toBe(0)
-
-    await createInternalNote(tenantB.ctx, {
-      sessionId: sessionB.id,
-      stepKey: "GENERAL",
-      role: "SALE",
-      content: "Ghi chú hợp lệ",
-    })
+    await markSendLinkCopied(tenantB.ctx, linkB.sendCode)
     const own = await prisma.greeting_journey_events.findMany({
-      where: { session_id: sessionB.id, event_type: "INTERNAL_NOTE" },
+      where: { session_id: sessionB.id, event_type: "LINK_COPIED" },
       select: { organization_id: true },
     })
     expect(own).toEqual([{ organization_id: tenantB.organizationId }])

@@ -85,12 +85,6 @@ export function TrackingStepperView({
                 >
                   {isCompleted ? <CheckCircle2 size={16} /> : getStepIcon(step.id, 16)}
 
-                  {/* Badge số tin nhắn nội bộ gắn với bước này */}
-                  {step.noteCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full bg-warning text-foreground text-caption font-extrabold flex items-center justify-center shadow-xs">
-                      {step.noteCount}
-                    </span>
-                  )}
                 </button>
 
                 {/* Step Info */}
