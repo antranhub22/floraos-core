@@ -1,12 +1,12 @@
 # Thẻ chào mẫu hoa (Swipe Brochure) — Đặc tả hiện trạng (Current State Baseline)
 
 **Phạm vi:** module `greeting-card` · trang nội bộ `/the-chao` · trang khách `/b`, `/s`, `/g`, `/bst` · **Ngày soát:** 06/10/2026 · **Nhánh soát:** `main` @ `ecb5aa3`
+**Phiên bản:** FINAL — đã gộp với bản audit thứ hai (`greeting-card-feature-spec.md`); mọi mục gộp đều đã đối chiếu lại với mã (Phụ lục A).
 **Loại tài liệu:** ảnh chụp hiện trạng để làm đầu vào Gap Analysis (Enterprise Grade → Commercial Ready). **Không** phải SSOT, **không** đề xuất thiết kế lại.
 **Nguyên tắc:** chỉ kết luận theo mã và tài liệu trong repo; chỗ mã ≠ tài liệu ghi rõ ở §16.3; chỗ thiếu bằng chứng ghi ở §17.
 
 > Không nhầm với "Thẻ chào sản phẩm A6 / M01c" (`sales-pitch-template.ts`, tab ở `/tai-anh`) — đó là thẻ in/ảnh tĩnh, ngoài phạm vi tài liệu này.
 
----
 
 ## 1. Executive Summary
 
@@ -191,6 +191,8 @@ Bảng dùng chung: `orders` (+ `source`, `source_session_id`, `pricing_rule_ref
 5. Webhook SePay không đối chiếu `accountNumber` với tài khoản cấu hình; khoá API hợp lệ là đủ để ghi thu theo mã đơn.
 6. Hoạt động xưởng (phân công, ảnh, giao, hoàn tất) chỉ ghi `order_events`, **không** ghi `audit_logs`; người thao tác webhook ghi `system:sepay`.
 7. Độ dài video chỉ kiểm phía trình duyệt.
+8. Không có chống bot (captcha/Turnstile/thử thách) trên form đặt hoa công khai — chỉ giới hạn tần suất theo IP; không có chỗ nào trong `src/` dùng captcha.
+9. CSRF: không có token CSRF hay kiểm `Origin`; route nội bộ dựa vào cookie phiên `HttpOnly; Secure; SameSite=Lax` (`src/core/http/cookies.ts:2,27-28`) — trình duyệt không gửi cookie này cho POST/PUT/DELETE từ trang khác. Route công khai không dùng cookie đăng nhập.
 
 ## 11. Error Handling & Edge Cases
 
@@ -217,8 +219,9 @@ Bảng dùng chung: `orders` (+ `source`, `source_session_id`, `pricing_rule_ref
 | Quyền xem sale | N+1: mỗi thành viên 3 truy vấn (vai, năng lực, user) | `use-cases/sale-visibility.ts:29` |
 | Trang khách | Mỗi lần tải ký URL cho toàn bộ ảnh của bộ sưu tập; trang `/b` gọi use-case 2 lần (metadata + trang) | `src/app/b/[sendCode]/page.tsx` |
 | Giới hạn tần suất | Redis nếu có `REDIS_URL`, không thì bộ nhớ từng instance | `core/http/rate-limit.ts:73` |
-| Việc nền | Promise trong tiến trình Node (không hàng đợi, không worker) | `core/runtime/background.ts:12` |
-| Danh sách khác | Phân trang con trỏ 1–100 (`contracts/list-query.ts`); tin nhắn ≤ 500/đơn, hộp thư ≤ 300 tin/30 ngày | |
+| Việc nền · danh sách khác | Việc nền là Promise trong tiến trình Node (không hàng đợi, không worker); phân trang con trỏ 1–100 (`contracts/list-query.ts`); tin nhắn ≤ 500/đơn, hộp thư ≤ 300 tin/30 ngày | `core/runtime/background.ts:12` |
+| Cache | Không có: cả 5 điểm vào công khai `/b`, `/s`, `/s/…/mo`, `/g`, `/bst` đặt `dynamic = "force-dynamic"`; mỗi lượt xem đọc DB và ký lại URL ảnh | `src/app/b/[sendCode]/page.tsx:48`, `g/[id]/page.tsx:45`, `bst/…/page.tsx:50` |
+| Quan sát | Log có cấu trúc chỉ ở 5 điểm (`log.warn/error`: lỗi ghi thu SePay, lỗi gửi thông báo, mã gửi trùng, lỗi ghi sự kiện ORDER, việc nền lỗi); không có metric, không tracing (không OpenTelemetry/Sentry trong repo) | `payment-webhook.ts`, `notify-customer.ts`, `greeting-card-repository.ts` |
 
 ## 13. Current Limitations
 
@@ -233,6 +236,9 @@ Bảng dùng chung: `orders` (+ `source`, `source_session_id`, `pricing_rule_ref
 9. Không xuất dữ liệu (CSV) ngoài bảng báo cáo trên màn hình; không SLA theo khung giờ làm việc (đồng hồ chạy 24/7).
 10. Pipeline/hộp việc giới hạn 100 đơn + 50 link gần nhất (§12).
 11. Cờ `GREETING_CARD_ENABLED` không có tác dụng — không tắt được tính năng theo môi trường.
+12. Không kiểm tồn kho khi chọn mẫu/đặt đơn — dù hệ thống đã có bảng `product_inventory` (`stock_status`, `quantity_available`, `prisma/schema.prisma:682`, đang dùng ở Product Master Index); module `greeting-card` không đọc bảng này.
+13. Không gửi email cho khách (chỉ ZNS/SMS); tạo link riêng từng cái một (`POST /send-links` nhận một khách) — không sinh hàng loạt, không hẹn giờ gửi; không A/B test giao diện (mỗi bộ sưu tập một `filters.templateId`).
+14. QR là ảnh do `img.vietqr.io` dựng; nếu dịch vụ này lỗi, không có QR dựng tại chỗ — khách vẫn thấy ngân hàng/STK/số tiền/nội dung kèm nút sao chép (`customer/brochure-payment-view.tsx:126-174`).
 
 ## 14. Business Value & Benefits
 
@@ -270,8 +276,7 @@ Theo mục tiêu ghi trong mã/tài liệu (không có số liệu vận hành t
 | Xin/duyệt giảm giá | I | tenant `messages` |
 | Quyền xem sale OWN | P | áp cho đơn/link/tin/theo dõi; không áp thống kê & thao tác tiền |
 | Thông báo khách ZNS/eSMS | P | tenant `notifications`; không hàng đợi bền |
-| Thông báo khi báo giá xong | M | không có `NotifyEvent` tương ứng |
-| Thông báo đẩy cho nhân viên | M | Screen Contract §14 |
+| Thông báo khách khi báo giá xong · thông báo đẩy cho nhân viên | M | không có `NotifyEvent` tương ứng; Screen Contract §14 |
 | Phễu theo sale | I | tenant `hardening` (cách ly tổ chức) |
 | Đặt thêm đơn từ link đã có đơn | I | tenant `reorder-photos` |
 | Ẩn tab theo quyền trên `/the-chao` | M | Screen Contract §2 nói có; `page.tsx:68` hiện cả 5 tab |
@@ -282,6 +287,10 @@ Theo mục tiêu ghi trong mã/tài liệu (không có số liệu vận hành t
 | `VALID_SESSION_TRANSITIONS` | P | chỉ dùng ở `select-brochure-product.ts` |
 | Tương tác đơn Thẻ chào trong module Đơn hàng/Điều phối chung | U | §9, §17 |
 | E2E `brochure-swipe.spec.ts` | U | không chạy trong lượt soát |
+| Giới hạn tần suất công khai (I) · audit log (P: có cho thu/hoàn/báo giá/huỷ/giảm giá, không cho tác vụ xưởng) | I/P | `enforceRateLimit` ở mọi route `/public/*` và `/s/…/mo`; `recordAuditLog` |
+| Chống bot / captcha (M) · chống CSRF tường minh (P, chỉ `SameSite=Lax`) | M/P | §10.4 |
+| Kiểm tồn kho · email khách · link hàng loạt · hẹn giờ gửi · A/B test giao diện · cache trang công khai | M | §12, §13 |
+| Log có cấu trúc | P | 5 điểm; không metric, không tracing |
 
 ## 16. Evidence / Code References
 
@@ -318,3 +327,24 @@ Theo mục tiêu ghi trong mã/tài liệu (không có số liệu vận hành t
 8. Có tiệm nào đang dùng ZNS thật và mẫu ZNS đã duyệt chưa — không có bằng chứng.
 9. `crm`/`customer_service` có R1 → vào được `/the-chao`, hộp việc coi họ như Sale (nhận tin gửi vai Sale) — có chủ đích không.
 10. Ranh giới với "Catalog & QR" (`/catalog`, `catalog_links`, M06) — hai cơ chế bộ sưu tập công khai song song; chưa có tài liệu chốt quan hệ.
+
+## Phụ lục A. Đối chiếu với bản audit thứ hai (`greeting-card-feature-spec.md`)
+
+Đồng thuận phần mô tả luồng, luật giá, chính sách tiền, 9 bước, tích hợp, bảng năng lực. Các kết luận dưới đây của bản thứ hai **đã được sửa** theo mã trước khi gộp:
+
+| Bản thứ hai | Kết luận cuối (bằng chứng) |
+|---|---|
+| Không có rate limiting (G1) | Có ở mọi route công khai (`core/http/rate-limit.ts:73`) — §10.3 |
+| Không có audit trail (G3) | Partial — §15 |
+| Feature flag tắt được tính năng (S11); không có structured logging (G23) | Flag là dead code — §3.12; log Partial, 5 điểm — §12 |
+| Khách không vào bảng `customers` (G12) | Có `findOrCreateCustomer` theo SĐT, gắn `orders.customer_id` — §7.1 |
+| Máy trạng thái có `BROWSING ⇄ SELECTED` | `BROWSING` không bao giờ được ghi; `COMPLETED` ngay lần thu đầu — §6.1 |
+| 8 deck "chỉ có định nghĩa" (G14); xem trước dùng dữ liệu giả (G13) | `enterprise-luxury`, `swipe-classic` dùng engine vuốt; 6 deck có renderer đang được gọi; xem trước dùng sản phẩm thật, mẫu giả chỉ khi bộ sưu tập rỗng (`use-catalog-products.ts:82-88`) |
+| Cây API (§7.1) | `collage` GET; `sale-visibility`, `display-settings` GET/PUT; `integrations` GET; `notifications` PUT — §16.1 |
+| Nơi lưu media chưa rõ (G20); collage chưa kiểm (G21) | `assets` + URL ký 7 ngày; collage có test — §9, §15 |
+| Pipeline "load toàn bộ" (G16) | Cắt cứng 100 đơn + 50 link — §12 |
+| Webhook không retry (G17) | Idempotent, xử lý tiếp bản ghi `RECEIVED`, hàng chờ xử lý tay; thiếu DLQ — §3.5 |
+| 12 bảng; 12 tệp tenant test; SMS "dưới 160 ký tự" | 11 bảng `greeting_*`; 11 tệp tenant test; SMS cắt ở 306 ký tự |
+
+Mục của bản thứ hai **được giữ** sau khi kiểm (đã đưa vào §10.4, §12, §13, §15): chống bot, CSRF, tồn kho, email, link hàng loạt, hẹn giờ gửi, A/B test, cache, tracing, QR phụ thuộc bên thứ ba. Kết luận "mức sẵn sàng thương mại" và mức độ 🔴/🟡 của bản thứ hai **không đưa vào** — thuộc bước Gap Analysis.
+
