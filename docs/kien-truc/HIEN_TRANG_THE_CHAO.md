@@ -141,7 +141,7 @@ Bảng dùng chung: `orders` (+ `source`, `source_session_id`, `pricing_rule_ref
 
 **7.2 Cấu hình trong `organizations.settings`** (Json, hợp nhất nông theo khoá qua `PATCH /organizations/current`, F2): `brochure_payment`, `brochure_policy`, `brochure_shipping`, `brochure_step_sla`, `brochure_visibility`, `brochure_discount`, `brochure_default_owner`, `greetingCardDisplay`.
 
-**7.3 Phân tầng** — đúng quy ước: `domain/` (25 tệp thuần), `infra/` (14 repository, Prisma), `adapters/` (ZNS, eSMS, VietQR), `use-cases/` (33), `contracts/` (zod công khai, phân trang). Lược đồ chỉ đẩy bằng `prisma db push`, không có migration (nợ #173a/#143).
+**7.3 Phân tầng** — đúng quy ước: `domain/` (31 tệp thuần + 17 tệp test), `infra/` (14 repository, Prisma), `adapters/` (ZNS, eSMS, VietQR), `use-cases/` (33), `contracts/` (zod công khai, phân trang). Lược đồ chỉ đẩy bằng `prisma db push`, không có migration (nợ #173a/#143).
 
 ## 8. UI/UX Behavior
 
