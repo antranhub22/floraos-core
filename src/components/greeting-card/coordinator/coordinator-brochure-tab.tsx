@@ -7,6 +7,13 @@ import { CoordinatorActionModal } from "./coordinator-action-modal"
 import { CoordinatorOrderCard, type BrochureOrder, type ModalState } from "./coordinator-order-card"
 import { useApi, usePagedList } from "@/components/greeting-card/greeting-api"
 import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { WorkUpdates } from "@/components/greeting-card/work/work-updates"
+import { useNow, useWorklist } from "@/components/greeting-card/work/use-worklist"
+import { WORK_BUCKET_LABEL, sortWorklist, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
+
+// Điều phối chỉ lo đơn đã đặt: không có nhóm "Đang chờ khách"
+const BUCKETS: WorkBucket[] = ["ACTION", "IN_PROGRESS", "DONE"]
+const COORDINATOR_STEPS = new Set(["STEP_5_PAYMENT_CONFIRMED", "STEP_6_ARRANGING", "STEP_7_READY_QC", "STEP_8_DELIVERING", "STEP_9_COMPLETED"])
 
 export function CoordinatorBrochureTab() {
   // Chỉ đơn chưa huỷ — bảng xưởng không cần đơn đã huỷ
@@ -18,41 +25,65 @@ export function CoordinatorBrochureTab() {
   const policy = parsePaymentPolicy(org.data?.settings)
   const [modal, setModal] = useState<ModalState>({ type: "none" })
   const openModal = (m: ModalState) => setModal(m)
+  const [bucket, setBucket] = useState<WorkBucket | null>(null)
+  const work = useWorklist()
+  const now = useNow()
+  const workOf = new Map(work.items.filter((i) => i.orderId).map((i) => [i.orderId as string, i]))
+  const bucketOf = (o: BrochureOrder): WorkBucket => {
+    const w = workOf.get(o.id)
+    const b = w ? workBucket(w, "COORDINATOR") : "IN_PROGRESS"
+    return b === "WAITING_CUSTOMER" ? "IN_PROGRESS" : b
+  }
+  const counts = Object.fromEntries(BUCKETS.map((b) => [b, orders.filter((o) => bucketOf(o) === b).length])) as Record<WorkBucket, number>
+  // Việc kẹt của Điều phối lên đầu, rồi đơn vừa đổi bước; mặc định ẩn đơn đã xong
+  const rank = new Map(sortWorklist(work.items, "COORDINATOR").map((i, idx) => [i.orderId, idx]))
+  const shown = orders
+    .filter((o) => (bucket ? bucketOf(o) === bucket : bucketOf(o) !== "DONE"))
+    .sort((a, b) => (rank.get(a.id) ?? 1e6) - (rank.get(b.id) ?? 1e6))
+  const updates = work.items.filter((i) => i.orderId && COORDINATOR_STEPS.has(i.currentStepId))
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div>
-          <h2 className="text-title font-extrabold text-foreground flex items-center gap-2">
-            <span>Tiếp Nhận Đơn Từ Thẻ Chào</span>
-            <span className="text-caption px-2.5 py-0.5 rounded-full bg-info-bg text-info font-bold">
-              Điều Phối Xưởng
-            </span>
-          </h2>
+          <h2 className="text-title font-extrabold text-foreground">Việc của Điều phối</h2>
           <p className="text-body-sm text-text-muted mt-1">
-            Mỗi tác vụ cập nhật trạng thái đơn — khách tự động nhận thông báo qua link theo dõi
+            Đơn đang kẹt ở phần của bạn lên đầu. Mỗi tác vụ cập nhật bước của đơn — khách tự nhận thông báo qua link theo dõi.
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={loadOrders} className="gap-1.5 text-caption h-9">
+        <Button type="button" variant="outline" size="sm" onClick={() => { loadOrders(); void work.refresh() }} className="gap-1.5 text-caption h-9">
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           <span>Làm mới</span>
         </Button>
       </div>
 
+      <WorkUpdates items={updates} now={now} storageKey={`floraos:updates:coordinator:${work.userId ?? "-"}`} />
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc việc">
+        {BUCKETS.map((b) => (
+          <button key={b} type="button" aria-pressed={bucket === b} onClick={() => setBucket(bucket === b ? null : b)}
+            className={`h-9 rounded-xl border px-3 text-caption font-bold ${
+              bucket === b ? "border-primary bg-primary text-white" : b === "ACTION" && counts.ACTION > 0 ? "border-danger/40 bg-danger-bg text-danger" : "border-border text-text-muted hover:bg-surface-muted"
+            }`}>
+            {WORK_BUCKET_LABEL[b]} ({counts[b]})
+          </button>
+        ))}
+      </div>
+
       {/* Orders Grid */}
-      {orders.length === 0 ? (
+      {shown.length === 0 ? (
         <div className="bg-surface rounded-2xl border border-border p-12 text-center text-text-muted flex flex-col items-center">
           <Sparkles size={36} className="text-primary/40 mb-2" />
-          <p className="text-body font-bold text-foreground">Chưa có đơn hàng nào từ Thẻ chào</p>
+          <p className="text-body font-bold text-foreground">{bucket ? "Không có đơn nào trong mục này" : "Chưa có đơn nào cần làm"}</p>
           <p className="text-caption text-text-muted mt-1">
-            Khi khách hoàn tất đặt hoa qua link brochure, đơn sẽ hiển thị ngay tại đây.
+            Khi khách đặt hoa qua Thẻ chào, đơn sẽ hiển thị ngay tại đây.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {orders.map((order) => (
-            <CoordinatorOrderCard key={order.id} order={order} policy={policy} onOpen={openModal} />
+          {shown.map((order) => (
+            <CoordinatorOrderCard key={order.id} order={order} policy={policy} onOpen={openModal} work={workOf.get(order.id)} now={now} />
           ))}
         </div>
       )}
@@ -73,6 +104,7 @@ export function CoordinatorBrochureTab() {
           onDone={() => {
             setModal({ type: "none" })
             loadOrders()
+            void work.refresh()
           }}
         />
       )}

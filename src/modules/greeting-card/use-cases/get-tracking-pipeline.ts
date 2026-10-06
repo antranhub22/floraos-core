@@ -1,6 +1,10 @@
 import { resolveSaleScope } from "./order-scope"
 import type { TenantContext } from "@/core/tenancy"
 import { TrackingPipelineRepository } from "../infra/tracking-pipeline-repository"
+import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
+import { parseStepSla, stuckOf } from "../domain/step-sla"
+import { channelLabel } from "../domain/catalog-channel"
+import { orderStepStartedAt, sessionStepStartedAt } from "../domain/pipeline-clock"
 import {
   PIPELINE_STEPS,
   ROLE_LABELS,
@@ -70,7 +74,8 @@ function resolveSessionStep(session: {
 }): TrackingPipelineStepId {
   if (session.status === "PAYMENT_REPORTED") return "STEP_4_PAYMENT_PENDING"
   if (session.status === "ORDER_SUBMITTED") return "STEP_3_FILLING_FORM"
-  if (session.status === "SELECTED" || session.status === "BROWSING") return "STEP_2_CHOOSING"
+  // Đã mở link = xong bước "mở link", đang chọn mẫu
+  if (session.status === "SELECTED" || session.status === "BROWSING" || session.status === "OPENED") return "STEP_2_CHOOSING"
   return "STEP_1_OPENED"
 }
 
@@ -79,10 +84,17 @@ export async function getTrackingPipeline(
   repo = new TrackingPipelineRepository()
 ): Promise<TrackingPipelineItem[]> {
   const saleId = await resolveSaleScope(ctx)
-  const [orders, activeSessions] = await Promise.all([
+  const [orders, activeSessions, org] = await Promise.all([
     repo.listBrochureOrders(ctx, saleId),
     repo.listActiveSessions(ctx, saleId),
+    getCurrentOrganization(ctx),
   ])
+  const sla = parseStepSla(org?.settings)
+  const channels = await repo.orderChannels(ctx, orders.map((o) => o.id))
+  // Link riêng do sale gửi → kênh là chính sale đó; link bộ sưu tập công khai → kênh `?kenh=`
+  const channelOf = (saleId: string | undefined, orderId?: string) =>
+    saleId && saleId !== "public" ? "Link riêng của sale" : channelLabel(orderId ? channels.get(orderId) ?? "" : "")
+  const now = new Date()
 
   const stepMap = new Map(PIPELINE_STEPS.map((s) => [s.id, s]))
   const saleIds = [
@@ -175,7 +187,12 @@ export async function getTrackingPipeline(
       paidVnd: Number(order.paid_vnd || 0),
       balanceVnd: Number(order.balance_vnd || 0),
       currentStepId,
-      currentStepTitle: currentStepDef.title,
+      // Đơn đã gửi mà chưa chuyển khoản vẫn ở bước 3 — gọi đúng tên việc đang chờ
+      currentStepTitle: currentStepId === "STEP_3_FILLING_FORM" ? "Đã đặt đơn — chờ khách chuyển khoản" : currentStepDef.title,
+      stepStartedAt: orderStepStartedAt(order),
+      stuck: stuckOf({ currentStepId, stepStartedAt: orderStepStartedAt(order) }, sla, now),
+      saleId: session?.sale_id ?? null,
+      channel: channelOf(session?.sale_id, order.id),
       steps,
       notes,
       lastActiveAt: order.updated_at.toISOString(),
@@ -256,6 +273,10 @@ export async function getTrackingPipeline(
       balanceVnd: Number(snapshot?.price || 0),
       currentStepId,
       currentStepTitle: currentStepDef.title,
+      stepStartedAt: sessionStepStartedAt(session),
+      stuck: stuckOf({ currentStepId, stepStartedAt: sessionStepStartedAt(session) }, sla, now),
+      saleId: session.sale_id,
+      channel: channelOf(session.sale_id),
       steps,
       notes,
       lastActiveAt: session.last_active_at.toISOString(),

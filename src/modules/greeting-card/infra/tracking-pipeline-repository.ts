@@ -50,6 +50,16 @@ export class TrackingPipelineRepository {
     })
   }
 
+  /** Kênh chia sẻ (`?kenh=`) của đơn đặt từ link bộ sưu tập công khai — theo sự kiện ORDER. */
+  async orderChannels(ctx: TenantContext, orderIds: string[]): Promise<Map<string, string>> {
+    if (orderIds.length === 0) return new Map()
+    const rows = await this.db.greeting_catalog_events.findMany({
+      where: scopedWhere(ctx, { event_type: "ORDER", order_id: { in: orderIds } }),
+      select: { order_id: true, channel: true },
+    })
+    return new Map(rows.filter((r) => r.order_id).map((r) => [r.order_id as string, r.channel]))
+  }
+
   /** Tên hiển thị của các thành viên tổ chức (sale phụ trách link) — chỉ người thuộc đúng tổ chức. */
   async memberNames(ctx: TenantContext, userIds: string[]): Promise<Map<string, string>> {
     const ids = [...new Set(userIds)].filter(Boolean)

@@ -268,3 +268,33 @@ describe("greeting-card: Điều hành chọn quyền xem cho từng sale", () =
     expect((await getSaleVisibility(b.ctx)).members).toEqual([])
   })
 })
+
+describe("greeting-card: đơn kẹt theo thời gian chuẩn từng bước", () => {
+  let a: Tenant
+
+  beforeEach(async () => {
+    await resetDatabase()
+    a = await createTenant("alpha")
+  })
+
+  afterAll(async () => {
+    await disconnectDatabase()
+  })
+
+  it("link gửi quá thời gian chuẩn chưa mở → kẹt, giao Sale; tắt bước thì hết kẹt", async () => {
+    const repo = new GreetingCardRepository()
+    const product = await new ProductRepository().create(a.ctx, { code: "HOA-S", name: "Bó S", attributes: { price: 1 } })
+    const catalog = await repo.createCatalog(a.ctx, { code: "bo-s", name: "Bộ S", productIds: [product.id], createdBy: a.userId })
+    const link = await createSendLink(a.ctx, { catalogId: catalog.id })
+    await prisma.greeting_sessions.updateMany({ where: { send_code: link.sendCode }, data: { created_at: new Date(Date.now() - 20 * 60_000) } })
+
+    const row = (await getTrackingPipeline(a.ctx)).find((i) => i.sendCode === link.sendCode)
+    expect(row?.currentStepId).toBe("STEP_1_OPENED")
+    expect(row?.saleId).toBe(a.userId)
+    expect(row?.stuck).toMatchObject({ owner: "SALE", stepId: "STEP_1_OPENED" })
+    expect(row!.stuck!.overdueMinutes).toBeGreaterThanOrEqual(14)
+
+    await prisma.organizations.update({ where: { id: a.organizationId }, data: { settings: { brochure_step_sla: { STEP_1_OPENED: { enabled: false, minutes: 5 } } } } })
+    expect((await getTrackingPipeline(a.ctx)).find((i) => i.sendCode === link.sendCode)?.stuck).toBeNull()
+  })
+})

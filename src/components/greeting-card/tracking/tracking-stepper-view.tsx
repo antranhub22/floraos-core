@@ -14,12 +14,19 @@ import {
   MessageSquare,
 } from "lucide-react"
 import type { TrackingPipelineStepId, TrackingStepState } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import { STEP_OWNER_LABEL, STEP_SLA_RULES, type StepOwner } from "@/modules/greeting-card/domain/step-sla"
 
 interface TrackingStepperViewProps {
   steps: TrackingStepState[]
   currentStepId: TrackingPipelineStepId
   onSelectStepNote?: (stepId: TrackingPipelineStepId) => void
+  /** Bước hiện tại đã quá thời gian chuẩn — tô đỏ thay vì màu thường. */
+  stuck?: boolean
 }
+
+/** Cùng một quy trình ở mọi tab: mỗi bước ghi rõ phần việc của ai (Sale · Điều hành · Điều phối). */
+const OWNER_TEXT: Record<StepOwner, string> = { SALE: "text-info", ADMIN: "text-warning", COORDINATOR: "text-success" }
+const ownerOf = (id: TrackingPipelineStepId): StepOwner | null => STEP_SLA_RULES.find((r) => r.stepId === id)?.owner ?? null
 
 function getStepIcon(stepId: TrackingPipelineStepId, size = 14) {
   switch (stepId) {
@@ -47,10 +54,11 @@ function getStepIcon(stepId: TrackingPipelineStepId, size = 14) {
 export function TrackingStepperView({
   steps,
   onSelectStepNote,
+  stuck = false,
 }: TrackingStepperViewProps) {
   return (
     <div className="w-full overflow-x-auto py-2">
-      <div className="flex items-center min-w-[760px] relative">
+      <div className="flex items-center min-w-[720px] relative">
         {steps.map((step, idx) => {
           const isCompleted = step.status === "completed"
           const isCurrent = step.status === "current"
@@ -68,6 +76,8 @@ export function TrackingStepperView({
                   className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                     isCompleted
                       ? "bg-success text-white shadow-xs hover:scale-105"
+                      : isCurrent && stuck
+                      ? "bg-danger text-white ring-4 ring-danger/20 shadow-sm"
                       : isCurrent
                       ? "bg-primary text-white ring-4 ring-primary/20 shadow-sm animate-pulse"
                       : "bg-surface border border-border text-text-muted hover:border-primary/50"
@@ -84,7 +94,7 @@ export function TrackingStepperView({
                 </button>
 
                 {/* Step Info */}
-                <div className="flex flex-col items-center text-center mt-2 px-1 max-w-[90px]">
+                <div className="flex flex-col items-center text-center mt-2 px-0.5 w-full">
                   <span
                     className={`text-caption font-bold leading-tight line-clamp-1 ${
                       isCurrent
@@ -96,9 +106,14 @@ export function TrackingStepperView({
                   >
                     {step.shortTitle}
                   </span>
-                  <span className="text-caption text-text-muted mt-0.5 line-clamp-1">
-                    {step.roleResponsible.split("/")[0]}
-                  </span>
+                  {(() => {
+                    const owner = ownerOf(step.id)
+                    return (
+                      <span className={`text-caption font-semibold mt-0.5 line-clamp-1 ${owner ? OWNER_TEXT[owner] : "text-text-muted"}`}>
+                        {owner ? STEP_OWNER_LABEL[owner] : "Hoàn tất"}
+                      </span>
+                    )
+                  })()}
 
                   {/* Gợi ý mở note */}
                   <button
@@ -115,7 +130,7 @@ export function TrackingStepperView({
               {/* Connector line between steps */}
               {!isLast && (
                 <div
-                  className={`h-0.5 flex-1 mx-1 mb-8 transition-colors ${
+                  className={`h-0.5 flex-[0.35] mb-8 transition-colors ${
                     isCompleted ? "bg-success" : "bg-border"
                   }`}
                 />

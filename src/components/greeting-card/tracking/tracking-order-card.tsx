@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState } from "react"
-import { ChevronDown, Clock, MapPin, MessageSquare, UserRound } from "lucide-react"
+import { AlertTriangle, ChevronDown, Clock, MapPin, MessageSquare, UserRound } from "lucide-react"
+import { STEP_OWNER_LABEL } from "@/modules/greeting-card/domain/step-sla"
 import { Button } from "@/components/ui/button"
 import { TrackingStepperView } from "./tracking-stepper-view"
 import type {
@@ -67,6 +68,13 @@ export function TrackingOrderCard({ item, onOpenNotes }: TrackingOrderCardProps)
         </div>
       </div>
 
+      {item.stuck && (
+        <p className="flex items-start gap-2 rounded-xl bg-danger-bg p-2.5 text-body-sm font-semibold text-danger">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+          Kẹt ở phần {STEP_OWNER_LABEL[item.stuck.owner]}: {item.stuck.message}
+        </p>
+      )}
+
       <dl className="grid grid-cols-1 gap-1.5 text-caption sm:grid-cols-3">
         <div className="flex items-center gap-1.5">
           <Clock size={14} className="text-text-muted shrink-0" aria-hidden="true" />
@@ -88,6 +96,7 @@ export function TrackingOrderCard({ item, onOpenNotes }: TrackingOrderCardProps)
       <TrackingStepperView
         steps={item.steps}
         currentStepId={item.currentStepId}
+        stuck={!!item.stuck}
         onSelectStepNote={(stepId) => onOpenNotes(item, stepId)}
       />
 
@@ -118,6 +127,7 @@ export function TrackingOrderCard({ item, onOpenNotes }: TrackingOrderCardProps)
         <dl id={detailsId} className="flex flex-col gap-1.5 rounded-xl bg-surface-muted p-3">
           <DetailRow label="Mã" value={item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`} />
           <DetailRow label="Bộ sưu tập" value={item.catalogName} />
+          <DetailRow label="Kênh" value={item.channel} />
           <DetailRow label="Người đặt" value={[item.customerName, item.customerPhone].filter(Boolean).join(" · ")} />
           <DetailRow label="Người nhận" value={[item.recipientName, item.recipientPhone].filter(Boolean).join(" · ")} />
           <DetailRow label="Địa chỉ" value={item.deliveryAddress} />
