@@ -158,7 +158,7 @@ export function BrochureCustomerExperience({ initialData }: BrochureCustomerExpe
         )}
 
         {step === "TRACKING" && orderResult && (
-          <BrochureTrackingView orderCode={orderResult.orderCode} />
+          <BrochureTrackingView orderCode={orderResult.orderCode} sendCode={session.sendCode} />
         )}
 
         {(step === "PAYMENT" || step === "TRACKING") && orderResult && (

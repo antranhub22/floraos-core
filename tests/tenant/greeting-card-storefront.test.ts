@@ -15,6 +15,7 @@ import { getPublicGreetingCatalog } from "@/modules/greeting-card/use-cases/get-
 import { adminConfirmBrochurePayment } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
 import { rejectBotSubmission } from "@/modules/greeting-card/contracts/public-order-schema"
 import { MAX_ORDERS_PER_PHONE_PER_HOUR } from "@/modules/greeting-card/domain/order-guard"
+import { getBrochureTracking } from "@/modules/greeting-card/use-cases/get-brochure-tracking"
 
 /** Trang khách (06/10/2026): QR sau cọc, đếm "đã mở" đúng, chống đơn trùng/đơn rác, mẫu hết hàng. */
 
@@ -121,5 +122,32 @@ describe("greeting-card: trang khách thương mại", () => {
 
     await prisma.product_inventory.updateMany({ where: { product_id: product.id }, data: { status: "IN_STOCK" } })
     expect((await submitPublicCatalogOrder(catalog.id, { ...ORDER, productId: product.id })).orderCode).toMatch(/^DH/)
+  })
+
+  it("theo dõi theo mã đơn: mặc định rút gọn; link của khách hoặc đúng 4 số cuối SĐT mới thấy đầy đủ", async () => {
+    const { product, catalog } = await catalogWith(500_000)
+    const link = await createSendLink(owner, { catalogId: catalog.id })
+    await selectBrochureProduct(link.sendCode, product.id)
+    const order = await submitBrochureOrder(link.sendCode, {
+      ...ORDER, recipientName: "Trần Thị Bích", cardMessage: "Chúc mừng sinh nhật",
+      addressParts: { houseNumber: "45", street: "Lê Lợi", ward: "Phường Bến Thành", province: "TP. Hồ Chí Minh" },
+    })
+
+    const anon = await getBrochureTracking(order.orderCode)
+    expect(anon.status === "FOUND" && anon.order).toMatchObject({
+      verified: false, recipientName: "T. T. Bích", deliveryAddress: "Phường Bến Thành, TP. Hồ Chí Minh", cardMessage: null,
+    })
+    const wrong = await getBrochureTracking(order.orderCode, { phoneLast4: "0000" })
+    expect(wrong.status === "FOUND" && wrong.order.verified).toBe(false)
+
+    for (const proof of [{ sendCode: link.sendCode }, { phoneLast4: "4321" }]) {
+      const full = await getBrochureTracking(order.orderCode, proof)
+      expect(full.status === "FOUND" && full.order).toMatchObject({
+        verified: true, recipientName: "Trần Thị Bích", cardMessage: "Chúc mừng sinh nhật",
+        deliveryAddress: "45 Lê Lợi, Phường Bến Thành, TP. Hồ Chí Minh",
+      })
+    }
+    // Không bao giờ trả SĐT
+    expect(JSON.stringify(await getBrochureTracking(order.orderCode, { sendCode: link.sendCode }))).not.toContain("0987654321")
   })
 })

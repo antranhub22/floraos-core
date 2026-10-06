@@ -80,6 +80,9 @@ export class BrochureOrderRepository {
         items: { take: 1 },
         // Đủ để tách ảnh thành phẩm và ảnh người nhận (mỗi loại tối đa 5 ảnh + 2 video)
         qc_records: { orderBy: { created_at: "desc" }, take: 20 },
+        // Chỉ để xác minh người xem (không trả ra ngoài)
+        customer: { select: { phone: true } },
+        greeting_sessions: { select: { send_code: true } },
       },
       take: 2,
     })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { isLikelyBot, isSameOrder } from "../order-guard"
 import { isProductAvailable } from "../product-availability"
+import { areaOnly, maskPersonName, phoneLast4Matches } from "../tracking-privacy"
 
 describe("isProductAvailable", () => {
   const row = (status: string, quantity_available: number | null = null) => ({ branch_id: "b1", status, quantity_available })
@@ -28,5 +29,24 @@ describe("order-guard", () => {
   it("cùng người nhận + cùng ngày giao mới là đơn trùng", () => {
     expect(isSameOrder({ recipientPhone: "0912", deliveryDate: "2026-10-10" }, { recipientPhone: "0912", deliveryDate: "2026-10-10" })).toBe(true)
     expect(isSameOrder({ recipientPhone: "0912", deliveryDate: "2026-10-10" }, { recipientPhone: "0912", deliveryDate: "2026-10-11" })).toBe(false)
+  })
+})
+
+describe("tracking-privacy", () => {
+  it("viết tắt họ/đệm, giữ tên gọi", () => {
+    expect(maskPersonName("Nguyễn Văn An")).toBe("N. V. An")
+    expect(maskPersonName("An")).toBe("An")
+    expect(maskPersonName("")).toBe("Khách nhận")
+  })
+  it("chỉ phường + tỉnh", () => {
+    expect(areaOnly({ parts: { ward: "Phường Bến Thành", province: "TP. Hồ Chí Minh" }, street: "45 Lê Lợi, Phường Bến Thành, TP. Hồ Chí Minh" })).toBe("Phường Bến Thành, TP. Hồ Chí Minh")
+    expect(areaOnly({ street: "45 Lê Lợi, Phường Bến Thành, Quận 1, TP.HCM" })).toBe("Quận 1, TP.HCM")
+    expect(areaOnly({ street: "45 Lê Lợi" })).toBe("")
+  })
+  it("4 số cuối SĐT", () => {
+    expect(phoneLast4Matches("0987 654 321", "4321")).toBe(true)
+    expect(phoneLast4Matches("0987654321", "1234")).toBe(false)
+    expect(phoneLast4Matches("0987654321", "43a1")).toBe(false)
+    expect(phoneLast4Matches(null, "4321")).toBe(false)
   })
 })

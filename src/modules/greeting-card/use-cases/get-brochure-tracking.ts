@@ -1,16 +1,26 @@
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { mapOrderStatusToTrackingStep } from "../domain/greeting-card-rules"
+import { areaOnly, maskPersonName, phoneLast4Matches } from "../domain/tracking-privacy"
 import type { ProductSnapshot } from "../domain/greeting-card-types"
 
 const ORDER_CODE_REGEX = /^[A-Z0-9-]{4,40}$/
 
+/** Cách người xem chứng minh mình là khách: mở từ chính link của đơn, hoặc nhập 4 số cuối SĐT người đặt. */
+export interface TrackingProof {
+  sendCode?: string | null | undefined
+  phoneLast4?: string | null | undefined
+}
+
 /**
- * Trang theo dõi công khai theo mã đơn. Chỉ đơn nguồn Thẻ chào; chỉ trả tên
- * người nhận và địa chỉ đã rút gọn (không SĐT).
+ * Trang theo dõi công khai theo mã đơn. Chỉ đơn nguồn Thẻ chào; không bao giờ trả SĐT.
+ * Mã đơn nằm trong nội dung chuyển khoản nên ai cũng có thể biết — mặc định chỉ trả thông tin
+ * rút gọn (tên người nhận viết tắt, phường + tỉnh, không lời nhắn thiệp); có `proof` hợp lệ mới
+ * trả đầy đủ (PO 06/10/2026).
  */
 export async function getBrochureTracking(
   orderCode: string,
+  proof: TrackingProof = {},
   orders = new BrochureOrderRepository(),
   repo = new GreetingCardRepository()
 ) {
@@ -19,6 +29,11 @@ export async function getBrochureTracking(
 
   const order = await orders.getTrackingOrderByCode(code)
   if (!order) return { status: "NOT_FOUND" as const }
+
+  const linkCode = proof.sendCode?.trim().toUpperCase()
+  const verified =
+    (!!linkCode && order.greeting_sessions.some((s) => s.send_code === linkCode)) ||
+    (!!proof.phoneLast4 && phoneLast4Matches(order.customer?.phone, proof.phoneLast4.trim()))
 
   const step = mapOrderStatusToTrackingStep(order.status, order.production_status, order.delivery_status)
 
@@ -33,13 +48,14 @@ export async function getBrochureTracking(
       .flatMap((qc) => (Array.isArray(qc.image_asset_ids) ? qc.image_asset_ids : []))
       .filter((id): id is string => typeof id === "string")
   const productIds = idsOf("PRODUCT_PHOTO_UPLOADED")
-  const recipientIds = idsOf("RECIPIENT_PHOTO_UPLOADED")
+  // Ảnh người nhận là ảnh của một người cụ thể — chỉ hiện khi đã xác minh
+  const recipientIds = verified ? idsOf("RECIPIENT_PHOTO_UPLOADED") : []
   const urls = await repo.getAssetsStorageMap(order.organization_id, [...productIds, ...recipientIds])
   const toUrls = (ids: string[]) => ids.map((id) => urls.get(id)).filter((u): u is string => Boolean(u))
   const productPhotoUrls = toUrls(productIds)
   const recipientPhotoUrls = toUrls(recipientIds)
 
-  const deliveryAddress = (order.delivery_address as Record<string, string> | null) || {}
+  const address = (order.delivery_address as { recipientName?: string; street?: string; parts?: { ward?: string; province?: string } } | null) || {}
   const deliveryWindow = (order.delivery_window as Record<string, string> | null) || {}
 
   return {
@@ -52,9 +68,11 @@ export async function getBrochureTracking(
       totalVnd: Number(order.total_vnd),
       paidVnd: Number(order.paid_vnd),
       balanceVnd: Number(order.balance_vnd),
-      cardMessage: order.card_message,
-      recipientName: deliveryAddress.recipientName || "Khách nhận",
-      deliveryAddress: deliveryAddress.street || "",
+      /** `false` = đang xem bản rút gọn; nhập 4 số cuối SĐT người đặt để xem đầy đủ. */
+      verified,
+      cardMessage: verified ? order.card_message : null,
+      recipientName: verified ? address.recipientName || "Khách nhận" : maskPersonName(address.recipientName),
+      deliveryAddress: verified ? address.street || "" : areaOnly(address),
       deliveryDate: deliveryWindow.date || null,
       deliveryTimeSlot: deliveryWindow.timeSlot || null,
       productSnapshot: snapshot,

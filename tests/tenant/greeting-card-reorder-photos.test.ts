@@ -108,7 +108,7 @@ describe("greeting-card: đặt thêm đơn, ảnh theo dõi, sale phụ trách"
   })
 
   it("ảnh người nhận là mục riêng, không đè ảnh thành phẩm", async () => {
-    const { order } = await orderedLink()
+    const { order, link } = await orderedLink()
     const product = await asset()
     const recipient = await asset()
     await assignBrochureFlorist(a.ctx, order.orderId, { floristNote: "Thợ A" })
@@ -116,7 +116,10 @@ describe("greeting-card: đặt thêm đơn, ảnh theo dõi, sale phụ trách"
     await dispatchBrochureShipping(a.ctx, order.orderId, { trackingNote: "Ship A" })
     await uploadBrochureRecipientPhoto(a.ctx, order.orderId, { assetId: recipient.id })
 
-    const tracking = await getBrochureTracking(order.orderCode)
+    // Ảnh người nhận chỉ hiện khi mở từ chính link của khách (bản rút gọn không có)
+    const anonymous = await getBrochureTracking(order.orderCode)
+    expect(anonymous.status === "FOUND" && anonymous.order.recipientPhotoUrls).toHaveLength(0)
+    const tracking = await getBrochureTracking(order.orderCode, { sendCode: link.sendCode })
     expect(tracking.status).toBe("FOUND")
     if (tracking.status === "FOUND") {
       expect(tracking.order.productPhotoUrls).toHaveLength(1)
