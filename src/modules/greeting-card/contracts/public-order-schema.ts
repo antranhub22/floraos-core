@@ -1,4 +1,6 @@
 import { z } from "zod"
+import { validationFailed } from "@/core/http/errors"
+import { isLikelyBot } from "../domain/order-guard"
 import { ORDER_FIELD_MAX } from "../domain/greeting-card-rules"
 import { MAX_ORDER_QUANTITY } from "../domain/brochure-pricing"
 import { ADDRESS_PART_MAX } from "../domain/delivery-address"
@@ -30,7 +32,14 @@ export const publicOrderBodySchema = z.object({
   quantity: z.number().int().min(1).max(MAX_ORDER_QUANTITY).optional(),
   shippingZoneId: z.string().max(40).optional(),
   voucherCode: z.string().trim().max(40).optional(),
+  /** Ô bẫy ẩn — người thật để trống; máy tự điền thì bị từ chối. */
+  website: z.string().max(200).optional(),
 })
+
+/** Từ chối đơn do máy tự điền ô bẫy (không nói rõ lý do để máy không học được). */
+export function rejectBotSubmission(body: { website?: string | undefined }): void {
+  if (isLikelyBot(body.website)) throw validationFailed({ body: "Không gửi được đơn, vui lòng thử lại" })
+}
 
 /** Báo giá: chỉ các lựa chọn mua (+ SĐT để kiểm mã giảm giá dành riêng một khách). */
 export const publicQuoteBodySchema = z.object({

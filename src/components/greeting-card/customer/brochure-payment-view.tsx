@@ -10,10 +10,9 @@ import type { BrochurePaymentInstructions } from "@/modules/greeting-card/domain
 import Image from "next/image"
 
 const POLL_INTERVAL_MS = 5000
-const PAID_ORDER_STATUSES = new Set(["CONFIRMED", "PROCESSING", "DELIVERED", "COMPLETED"])
-
-function isPaid(order: { status: string; paidVnd: number; totalVnd: number } | undefined): boolean {
-  return !!order && ((order.totalVnd > 0 && order.paidVnd >= order.totalVnd) || PAID_ORDER_STATUSES.has(order.status))
+/** Đã thu ĐỦ theo số tiền thật — đơn mới cọc (trạng thái CONFIRMED) chưa tính là xong. */
+function isPaid(order: { paidVnd: number; totalVnd: number } | undefined): boolean {
+  return !!order && order.totalVnd > 0 && order.paidVnd >= order.totalVnd
 }
 import { BrochureQuotePending } from "./brochure-quote-pending"
 
@@ -48,6 +47,8 @@ export function BrochurePaymentView({
     { refreshInterval: (latest) => (isPaid(latest?.order) ? 0 : POLL_INTERVAL_MS), revalidateOnFocus: true }
   )
   const isPaymentConfirmed = isPaid(tracking.data?.order)
+  // QR đang hiện là QR cọc mà tiệm đã nhận cọc → mời khách tải lại để có QR phần còn lại
+  const depositReceived = vietQr?.purpose === "DEPOSIT" && (tracking.data?.order?.paidVnd ?? 0) > 0 && !isPaymentConfirmed
 
   function copyToClipboard(text: string, field: string) {
     void navigator.clipboard.writeText(text)
@@ -190,6 +191,15 @@ export function BrochurePaymentView({
             {shopPhone && <span className="block mt-1">Hotline cửa hàng: {shopPhone}</span>}
           </p>
         </>
+      )}
+
+      {depositReceived && (
+        <div role="status" className="w-full mb-3 p-3.5 rounded-xl bg-success-bg border border-success/30 text-success text-body-sm text-center">
+          <p className="font-bold">Cửa hàng đã nhận tiền cọc.</p>
+          <button type="button" onClick={() => window.location.reload()} className="mt-1 min-h-11 font-semibold underline">
+            Xem mã QR phần còn lại
+          </button>
+        </div>
       )}
 
       {/* Confirmation State Actions */}

@@ -88,10 +88,13 @@ export class BrochurePaymentRepository {
         })
       }
       if (order.source_session_id) {
-        await tx.greeting_sessions.updateMany({
-          where: { id: order.source_session_id, organization_id: ctx.organizationId },
-          data: { status: "COMPLETED" },
-        })
+        // Phiên chỉ "hoàn tất" khi đã thu ĐỦ — đơn mới cọc, khách mở lại link vẫn thấy QR phần còn lại
+        if (paidAfter >= total) {
+          await tx.greeting_sessions.updateMany({
+            where: { id: order.source_session_id, organization_id: ctx.organizationId },
+            data: { status: "COMPLETED" },
+          })
+        }
         await tx.greeting_journey_events.create({
           data: {
             organization_id: ctx.organizationId,

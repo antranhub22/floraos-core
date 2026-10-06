@@ -10,8 +10,9 @@ import { paymentNotifyEvent } from "../domain/customer-notifications"
 import { assertOrderInScope } from "./order-scope"
 
 /**
- * Khách bấm "Tôi đã chuyển khoản". Chỉ hợp lệ khi đã có đơn; gọi lại nhiều
- * lần không ghi thêm sự kiện; không kéo lùi phiên đã COMPLETED.
+ * Khách bấm "Tôi đã chuyển khoản". Chỉ hợp lệ khi đã có đơn; không kéo lùi phiên
+ * đã COMPLETED. Lần báo đầu đổi phiên sang PAYMENT_REPORTED; đơn đã cọc còn nợ thì mỗi
+ * lần báo ghi thêm sự kiện "chuyển phần còn lại".
  */
 export async function reportCustomerPayment(sendCode: string, repo = new GreetingCardRepository()) {
   const session = await loadPublicSession(sendCode, repo)
@@ -19,10 +20,19 @@ export async function reportCustomerPayment(sendCode: string, repo = new Greetin
     throw unprocessable("Bạn cần hoàn tất đặt hoa trước khi báo chuyển khoản")
   }
 
+  const paid = Number(session.order?.paid_vnd ?? 0)
+  const owing = Number(session.order?.total_vnd ?? 0) - paid
   if (session.status === "ORDER_SUBMITTED") {
     await repo.updateSession(session.id, { status: "PAYMENT_REPORTED" })
     await repo.recordJourneyEvent(session.organization_id, session.id, "CLICK_PAID", {
       orderId: session.order_id,
+      reportedAt: new Date().toISOString(),
+    })
+  } else if (paid > 0 && owing > 0) {
+    // Đã cọc, nay báo chuyển phần còn lại — ghi lại để Điều hành đối chiếu
+    await repo.recordJourneyEvent(session.organization_id, session.id, "CLICK_PAID", {
+      orderId: session.order_id,
+      purpose: "BALANCE",
       reportedAt: new Date().toISOString(),
     })
   }

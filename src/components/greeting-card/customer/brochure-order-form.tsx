@@ -19,6 +19,7 @@ import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { OrderReview } from "./order-review"
 import { useOrderDraft } from "./use-order-draft"
 import { AddressFields } from "./address-fields"
+import { HoneypotField } from "./honeypot-field"
 import { composeAddress, validateAddressParts } from "@/modules/greeting-card/domain/delivery-address"
 import { DELIVERY_SLOTS, availableSlots, deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-card/domain/delivery-schedule"
 
@@ -63,6 +64,7 @@ export function BrochureOrderForm({
     .slice(0, 10)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [review, setReview] = useState<CustomerOrderSubmitInput | null>(null)
+  const [website, setWebsite] = useState("")
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -106,6 +108,7 @@ export function BrochureOrderForm({
       addressParts,
       cardMessage,
       senderNote,
+      website,
       quantity: pricing.selection.quantity,
       ...(pricing.selection.variantId ? { variantId: pricing.selection.variantId } : {}),
       ...(pricing.selection.shippingZoneId ? { shippingZoneId: pricing.selection.shippingZoneId } : {}),
@@ -188,6 +191,7 @@ export function BrochureOrderForm({
       )}
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <HoneypotField value={website} onChange={setWebsite} />
         <BrochureOrderOptions
           variants={variants}
           basePrice={productSnapshot.price}
