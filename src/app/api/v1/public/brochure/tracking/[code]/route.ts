@@ -2,17 +2,20 @@ import { z } from "zod"
 import { notFound, validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { enforceRateLimit } from "@/core/http/rate-limit"
+import { isBrochureOwner } from "@/modules/greeting-card/use-cases/brochure-owner"
 import { getBrochureTracking } from "@/modules/greeting-card/use-cases/get-brochure-tracking"
 
 /**
  * GET /api/v1/public/brochure/tracking/[code] — khách theo dõi đơn theo mã đơn.
- * Mặc định trả bản rút gọn; `?link=<mã link>` (mở từ chính link của khách) trả đầy đủ.
+ * Mặc định trả bản rút gọn; `?link=<mã link>` kèm cookie chủ phiên của link đó trả đầy đủ.
  */
 export const GET = handle<[{ params: Promise<{ code: string }> }]>(async (request, context) => {
   await enforceRateLimit(request, { scope: "brochure-tracking", limit: 60, windowMs: 60_000 })
   const { code } = await context.params
   const link = new URL(request.url).searchParams.get("link")
-  const data = await getBrochureTracking(code, { sendCode: link })
+  // Bản đầy đủ chỉ cho chủ phiên — người nhận link chuyển tiếp chỉ thấy bản rút gọn
+  const owned = link && isBrochureOwner(request, link) ? link : null
+  const data = await getBrochureTracking(code, { sendCode: owned })
   if (data.status === "NOT_FOUND") throw notFound()
   return jsonResponse(data)
 })

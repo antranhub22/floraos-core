@@ -1,6 +1,7 @@
 import { conflict } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { loadPublicSession } from "./brochure-session-access"
+import { grantBrochureOwner, type OwnerCookie } from "./brochure-owner"
 
 /**
  * Khách muốn đặt thêm đơn trên cùng link (tặng nhiều người, đặt lại dịp khác).
@@ -12,11 +13,13 @@ import { loadPublicSession } from "./brochure-session-access"
 export async function startAnotherOrder(
   sendCode: string,
   repo = new GreetingCardRepository(),
-): Promise<{ sendCode: string }> {
+): Promise<{ sendCode: string; ownerCookie: OwnerCookie }> {
   const session = await loadPublicSession(sendCode, repo)
   if (!session.order_id) throw conflict("Link này chưa có đơn — hãy đặt đơn trên chính link này")
 
   const next = await repo.createFollowUpSession(session)
   await repo.recordJourneyEvent(session.organization_id, next.id, "REORDER", { fromSendCode: session.send_code })
-  return { sendCode: next.send_code }
+  // Phiên mới thuộc luôn trình duyệt đang là chủ phiên cũ (route đã kiểm)
+  const ownerCookie = await grantBrochureOwner({ id: next.id, organization_id: session.organization_id, send_code: next.send_code }, "reorder")
+  return { sendCode: next.send_code, ownerCookie }
 }

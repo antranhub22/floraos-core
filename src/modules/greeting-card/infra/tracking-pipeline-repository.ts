@@ -1,6 +1,10 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { log } from "@/core/observability/log"
+import { BROWSING_EVENT_TYPES } from "../domain/customer-journey-events"
+
+/** Bỏ các bước lướt mẫu vụn của khách — bảng theo dõi chỉ cần mốc nghiệp vụ. */
+const MILESTONE_EVENTS = { event_type: { notIn: [...BROWSING_EVENT_TYPES] } }
 
 /**
  * Cửa sổ của bảng theo dõi / Hộp việc. Bản cũ lấy 100 đơn + 50 link MỚI NHẤT bất kể trạng thái:
@@ -25,7 +29,7 @@ const ORDER_SELECT = {
     select: {
       id: true, send_code: true, sale_id: true, status: true, product_snapshot: true,
       catalog: { select: { id: true, name: true, code: true } },
-      events: { select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" as const } },
+      events: { where: MILESTONE_EVENTS, select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" as const } },
     },
   },
 } as const
@@ -66,7 +70,7 @@ export class TrackingPipelineRepository {
       }),
       include: {
         catalog: { select: { id: true, name: true, code: true } },
-        events: { select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" } },
+        events: { where: MILESTONE_EVENTS, select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" } },
       },
       orderBy: { last_active_at: "desc" },
       take: PIPELINE_MAX_ROWS,
@@ -84,7 +88,7 @@ export class TrackingPipelineRepository {
   async timelineSource(ctx: TenantContext, ref: { orderId?: string | undefined; sessionId?: string | undefined }) {
     const sessionSelect = {
       id: true, sale_id: true, created_at: true, send_code: true,
-      events: { select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" as const } },
+      events: { where: MILESTONE_EVENTS, select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" as const } },
     }
     if (ref.orderId) {
       const order = await this.db.orders.findFirst({

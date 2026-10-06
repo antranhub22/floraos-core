@@ -1,8 +1,7 @@
 "use client"
 
-import { useSavedState } from "../use-saved-state"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Heart, Info, RotateCcw, X } from "lucide-react"
+import { ChevronLeft, Heart, Info, RotateCcw, X } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
 import { SwipeCard, formatVnd } from "./swipe/swipe-card"
@@ -10,6 +9,11 @@ import { SwipeDeckEnd } from "./swipe/swipe-deck-end"
 import { SWIPE_SIGNAL, getSwipeTheme, isLightTheme } from "./swipe/swipe-themes"
 import { useCardSwipe, type SwipeDirection } from "./swipe/use-card-swipe"
 import { rootHeight, useEmbeddedPreview } from "./aux/embedded"
+import { useSwipeJourney } from "./swipe/use-swipe-journey"
+import { JourneyIntro } from "./swipe/journey-intro"
+import { UnavailablePanel } from "./swipe/unavailable-panel"
+import { useCustomerJourney } from "../journey-context"
+import { customDesignMessage, findPriceRange, inPriceRange, priceRangesOf, productInquiryMessage } from "@/modules/greeting-card/domain/collection-browse"
 
 interface SwipeBrochureEngineProps {
   products: GreetingCatalogProduct[]
@@ -47,8 +51,9 @@ function RoundButton(props: {
 }
 
 /**
- * Bộ thẻ vuốt chuẩn Tinder cho 12 kiểu giao diện: vuốt phải = thích,
- * vuốt trái = bỏ qua, có hoàn tác, chi tiết và danh sách đã thích.
+ * Bộ thẻ vuốt chuẩn Tinder cho 12 kiểu giao diện: vuốt phải = thích, vuốt trái = bỏ qua,
+ * quay lại mẫu trước (giữ lựa chọn), hoàn tác, chi tiết, danh sách đã thích; hướng dẫn lần
+ * đầu và hỏi tiếp tục khi mở lại link.
  */
 export function SwipeBrochureEngine({
   products,
@@ -60,67 +65,68 @@ export function SwipeBrochureEngine({
   const embedded = useEmbeddedPreview()
   const theme = useMemo(() => getSwipeTheme(styleKey), [styleKey])
   const light = isLightTheme(theme)
-  // Lượt vuốt + mẫu đã thích nhớ trên máy khách: mở lại link vẫn tiếp tục từ chỗ cũ
-  const [savedHistory, setHistory] = useSavedState<{ id: string; dir: SwipeDirection }[]>(
-    embedded ? "preview-swipes" : "swipes",
-    [],
-  )
-  const history = useMemo(() => {
-    // Bỏ lượt của mẫu đã bị gỡ khỏi bộ sưu tập; dừng ở mẫu đầu tiên lệch thứ tự
-    const out: typeof savedHistory = []
-    for (const h of savedHistory) {
-      if (products[out.length]?.id !== h.id) break
-      out.push(h)
-    }
-    return out
-  }, [savedHistory, products])
-  const index = history.length
+  const contact = useCustomerJourney()
+  // Lọc theo khoảng giá (khách chưa ưng mẫu nào ở màn cuối)
+  const [priceKey, setPriceKey] = useState<string | null>(null)
+  const range = findPriceRange(priceKey)
+  const visible = useMemo(() => (range ? products.filter((p) => inPriceRange(p.price, range)) : products), [products, range])
+  // Thích / Bỏ qua / mẫu đang xem nhớ trên máy khách: tải lại, Back hay mở lại link vẫn giữ nguyên
+  const j = useSwipeJourney(visible, catalogName, embedded)
+  const { index, current, liked } = j
   const [inspect, setInspect] = useState<GreetingCatalogProduct | null>(null)
+  const [savedToast, setSavedToast] = useState(0)
 
-  const likedIds = useMemo(() => new Set(history.filter((h) => h.dir === "like").map((h) => h.id)), [history])
-  const liked = products.filter((p) => likedIds.has(p.id))
-  const current = products[index]
+  useEffect(() => {
+    if (!savedToast) return
+    const t = window.setTimeout(() => setSavedToast(0), 1400)
+    return () => window.clearTimeout(t)
+  }, [savedToast])
 
+  const { decide: journeyDecide } = j
   const handleSwiped = useCallback(
     (dir: SwipeDirection) => {
-      const p = products[index]
-      if (!p) return
-      setHistory([...history, { id: p.id, dir }])
+      journeyDecide(dir === "like" ? "like" : "skip")
+      if (dir === "like") setSavedToast(Date.now())
     },
-    [index, products, history, setHistory],
+    [journeyDecide],
   )
 
   const swipe = useCardSwipe({
     onSwiped: handleSwiped,
     onTap: () => current && setInspect(current),
-    disabled: !current,
+    disabled: !current || j.prompt !== null,
   })
 
   const rewind = useCallback(() => {
-    if (history.length === 0 || swipe.isExiting) return
-    setHistory(history.slice(0, -1))
-  }, [history, setHistory, swipe.isExiting])
+    if (swipe.isExiting) return
+    j.undo()
+  }, [j, swipe.isExiting])
+
+  const askAbout = contact
+    ? (p: GreetingCatalogProduct) => contact.contactZalo(productInquiryMessage(p), p.id)
+    : undefined
 
   // Bàn phím: ← bỏ qua, → thích, ↑/Enter chi tiết, Backspace hoàn tác
   useEffect(() => {
     if (embedded) return
     function onKey(e: KeyboardEvent) {
-      if (inspect || (e.target instanceof HTMLElement && /INPUT|TEXTAREA/.test(e.target.tagName))) return
+      if (inspect || j.prompt || (e.target instanceof HTMLElement && /INPUT|TEXTAREA/.test(e.target.tagName))) return
       if (e.key === "ArrowLeft") swipe.fling("nope")
       else if (e.key === "ArrowRight") swipe.fling("like")
       else if (e.key === "Backspace") rewind()
+      else if (e.key === "ArrowDown") j.previous()
       else if ((e.key === "ArrowUp" || e.key === "Enter") && current) setInspect(current)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [swipe, rewind, current, inspect, embedded])
+  }, [swipe, rewind, current, inspect, embedded, j])
 
   // Tải trước ảnh của 2 thẻ kế tiếp
   useEffect(() => {
-    for (const p of products.slice(index + 1, index + 3)) {
+    for (const p of visible.slice(index + 1, index + 3)) {
       if (p.imageUrl) new Image().src = p.imageUrl
     }
-  }, [index, products])
+  }, [index, visible])
 
   const stageStyle = { background: theme.stage, color: theme.stageText }
 
@@ -133,6 +139,7 @@ export function SwipeBrochureEngine({
   }
 
   const drag = Math.abs(swipe.progress)
+  const soldOut = current?.available === false
 
   return (
     <div className={`flex ${embedded ? "h-full" : "min-h-dvh"} w-full flex-col items-center`} style={stageStyle}>
@@ -140,15 +147,33 @@ export function SwipeBrochureEngine({
         <header className="flex items-center justify-between px-1 pb-3">
           <h1 className="truncate text-body font-semibold" style={{ fontFamily: theme.font }}>{catalogName}</h1>
           <span className="shrink-0 text-caption tabular-nums" style={{ color: theme.stageMuted }}>
-            {Math.min(index + 1, products.length)} / {products.length}
+            {Math.min(index + 1, visible.length)} / {visible.length}
           </span>
         </header>
+        {range && (
+          <p className="flex items-center justify-between px-1 pb-2 text-caption" style={{ color: theme.stageMuted }}>
+            <span>Đang xem mẫu {range.label.toLowerCase()}</span>
+            <button type="button" className="font-semibold underline" onClick={() => setPriceKey(null)}>
+              Xem tất cả
+            </button>
+          </p>
+        )}
 
-        {current ? (
+        {j.prompt && j.state ? (
+          <JourneyIntro
+            theme={theme}
+            mode={j.prompt}
+            catalogName={catalogName}
+            total={visible.length}
+            progress={{ viewed: j.state.viewedProductIds.length, liked: liked.length }}
+            onStart={j.start}
+            onStartOver={j.startOver}
+          />
+        ) : current ? (
           <>
             <div className={`relative flex-1 ${embedded ? "min-h-0" : "min-h-[420px]"}`} style={{ maxHeight: 680 }}>
               {[2, 1].map((offset) => {
-                const p = products[index + offset]
+                const p = visible[index + offset]
                 if (!p) return null
                 const lift = offset === 1 ? drag : drag * 0.5
                 const scale = 1 - offset * 0.045 + lift * 0.045
@@ -159,7 +184,7 @@ export function SwipeBrochureEngine({
                     className="absolute inset-0 transition-transform duration-200"
                     style={{ transform: `translateY(${(offset - lift) * 12}px) scale(${scale})`, zIndex: 3 - offset }}
                   >
-                    <SwipeCard product={p} theme={theme} index={index + offset} total={products.length} />
+                    <SwipeCard product={p} theme={theme} index={index + offset} total={visible.length} />
                   </div>
                 )
               })}
@@ -168,16 +193,21 @@ export function SwipeBrochureEngine({
                   product={current}
                   theme={theme}
                   index={index}
-                  total={products.length}
+                  total={visible.length}
                   progress={swipe.progress}
                   onInfo={() => setInspect(current)}
                 />
               </div>
+              {savedToast > 0 && (
+                <p role="status" className="pointer-events-none absolute inset-x-0 top-1/2 z-20 mx-auto w-fit rounded-full px-4 py-2 text-body-sm font-bold shadow-lg" style={{ background: theme.ctaBg, color: theme.ctaText }}>
+                  ♥ Đã lưu mẫu
+                </p>
+              )}
             </div>
 
-            <div className="flex items-center justify-center gap-4 pt-4" role="group" aria-label="Điều khiển thẻ">
-              <RoundButton label="Hoàn tác" color={SWIPE_SIGNAL.rewind} size="sm" bg={theme.controlBg} border={theme.controlBorder} disabled={history.length === 0} onClick={rewind}>
-                <RotateCcw size={20} strokeWidth={2.5} />
+            <div className="flex items-center justify-center gap-3 pt-4" role="group" aria-label="Điều khiển thẻ">
+              <RoundButton label="Mẫu trước" color={theme.stageText} size="sm" bg={theme.controlBg} border={theme.controlBorder} disabled={!j.canGoBack} onClick={j.previous}>
+                <ChevronLeft size={22} strokeWidth={2.5} />
               </RoundButton>
               <RoundButton label="Bỏ qua" color={SWIPE_SIGNAL.nope} size="lg" bg={theme.controlBg} border={theme.controlBorder} onClick={() => swipe.fling("nope")}>
                 <X size={30} strokeWidth={3} />
@@ -188,40 +218,54 @@ export function SwipeBrochureEngine({
               <RoundButton label="Thích" color={SWIPE_SIGNAL.like} size="lg" bg={theme.controlBg} border={theme.controlBorder} onClick={() => swipe.fling("like")}>
                 <Heart size={28} strokeWidth={2.5} fill="currentColor" />
               </RoundButton>
+              <RoundButton label="Hoàn tác" color={SWIPE_SIGNAL.rewind} size="sm" bg={theme.controlBg} border={theme.controlBorder} disabled={!j.canGoBack} onClick={rewind}>
+                <RotateCcw size={20} strokeWidth={2.5} />
+              </RoundButton>
             </div>
 
+            {soldOut ? (
+              <div className="pt-4">
+                <UnavailablePanel theme={theme} product={current} products={visible} onJump={j.jumpTo} onContact={askAbout && (() => askAbout(current))} />
+              </div>
+            ) : (
             <div className="flex items-center gap-2 pt-4">
-              {liked.length > 0 && (
-                <span
-                  className="flex h-12 shrink-0 items-center gap-1.5 rounded-2xl border px-3 text-body-sm font-semibold"
-                  style={{ borderColor: light ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.2)" }}
-                  aria-label={`Đã thích ${liked.length} mẫu`}
+                {liked.length > 0 && (
+                  <span
+                    className="flex h-12 shrink-0 items-center gap-1.5 rounded-2xl border px-3 text-body-sm font-semibold"
+                    style={{ borderColor: light ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.2)" }}
+                    aria-label={`Đã thích ${liked.length} mẫu`}
+                  >
+                    <Heart size={16} fill={SWIPE_SIGNAL.like} color={SWIPE_SIGNAL.like} aria-hidden="true" />
+                    {liked.length}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onSelectProduct(current)}
+                  className="flex h-12 min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl px-5 text-body font-bold shadow-lg transition-transform active:scale-[0.98]"
+                  style={{ background: theme.ctaBg, color: theme.ctaText }}
                 >
-                  <Heart size={16} fill={SWIPE_SIGNAL.like} color={SWIPE_SIGNAL.like} aria-hidden="true" />
-                  {liked.length}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => onSelectProduct(current)}
-                className="flex h-12 min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl px-5 text-body font-bold shadow-lg transition-transform active:scale-[0.98]"
-                style={{ background: theme.ctaBg, color: theme.ctaText }}
-              >
-                <span>{selectedProductId === current.id ? "Đã chọn mẫu này" : "Đặt mẫu này"}</span>
-                <span className="tabular-nums opacity-90">{formatVnd(current.price)}</span>
-              </button>
-            </div>
+                  <span>{selectedProductId === current.id ? "Đã chọn mẫu này" : "Đặt mẫu này"}</span>
+                  <span className="tabular-nums opacity-90">{formatVnd(current.price)}</span>
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <SwipeDeckEnd
             theme={theme}
             liked={liked}
-            total={products.length}
+            total={visible.length}
             onOrder={onSelectProduct}
-            onRestart={() => {
-              setHistory([])
+            onRestart={j.restart}
+            onRewind={j.previous}
+            priceRanges={priceRangesOf(products)}
+            onPickPriceRange={(key) => {
+              setPriceKey(key)
+              j.restart()
             }}
-            onRewind={rewind}
+            onAskZalo={contact?.shop.zaloUrl ? () => contact.contactZalo(`Tôi đang xem bộ sưu tập "${catalogName}" và cần shop tư vấn thêm.`) : undefined}
+            onCustomDesign={contact?.shop.zaloUrl ? () => contact.contactZalo(customDesignMessage(catalogName)) : undefined}
           />
         )}
       </div>

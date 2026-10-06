@@ -4,16 +4,17 @@ import { ShopContactBar } from "./shop-contact-bar"
 
 /**
  * Link đã hết hạn, bị thu hồi hoặc bộ sưu tập đã ngừng — thay cho trang 404 chung,
- * để khách vẫn liên hệ được đúng cửa hàng thay vì bỏ đi.
+ * để khách vẫn liên hệ được đúng cửa hàng thay vì bỏ đi. Cũng dùng khi link riêng đã được mở
+ * trên thiết bị khác (`title`/`message` riêng).
  */
-export function LinkUnavailable({ shop }: { shop: ShopContact }) {
+export function LinkUnavailable({ shop, title, message }: { shop: ShopContact; title?: string; message?: string }) {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <ShopContactBar shop={shop} />
       <main className="mx-auto flex max-w-md flex-col items-center gap-3 px-6 py-16 text-center">
-        <h1 className="text-title font-bold">Bộ sưu tập này không còn mở</h1>
+        <h1 className="text-title font-bold">{title ?? "Bộ sưu tập này không còn mở"}</h1>
         <p className="text-body text-text-muted">
-          Link có thể đã hết hạn hoặc cửa hàng đã cập nhật mẫu mới. Liên hệ {shop.name} để nhận bộ sưu tập mới nhất.
+          {message ?? `Link có thể đã hết hạn hoặc cửa hàng đã cập nhật mẫu mới. Liên hệ ${shop.name} để nhận bộ sưu tập mới nhất.`}
         </p>
         <div className="mt-2 flex w-full flex-col gap-2">
           {shop.zaloUrl && (

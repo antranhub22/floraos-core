@@ -1,6 +1,7 @@
 import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { enforceRateLimit } from "@/core/http/rate-limit"
+import { assertBrochureOwner } from "@/modules/greeting-card/use-cases/brochure-owner"
 import { issuesToDetails, publicOrderBodySchema, rejectBotSubmission } from "@/modules/greeting-card/contracts/public-order-schema"
 import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
 
@@ -8,6 +9,7 @@ import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-br
 export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
   await enforceRateLimit(request, { scope: "brochure-order", limit: 10, windowMs: 10 * 60_000 })
   const { sendCode } = await context.params
+  assertBrochureOwner(request, sendCode)
   const parsed = publicOrderBodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed(issuesToDetails(parsed.error.issues))
   rejectBotSubmission(parsed.data)
