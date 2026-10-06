@@ -7,6 +7,7 @@
 - Phạm vi: organization
 - Việc chính: gửi khách bộ sưu tập, theo dõi từng đơn tới khi giao, xử lý việc đúng phần mình
 - Câu hỏi chính: "Hôm nay có việc gì đang chờ tôi?" — trả lời ở **Hộp việc** (nút 🔔, thấy từ mọi tab)
+- Báo việc mới trong app: Hộp việc tự làm mới mỗi 20 giây; có việc mới thì huy hiệu 🔔 nhấp nháy, trình đọc màn hình đọc "Có n việc mới", tiêu đề tab trình duyệt hiện "(n)" — chưa gửi Zalo/Web Push (cần PO duyệt nhà cung cấp)
 - Mật độ: MEDIUM (nhân viên cửa hàng, dùng điện thoại là chính)
 
 ## 2. Hiện trạng (audit)
