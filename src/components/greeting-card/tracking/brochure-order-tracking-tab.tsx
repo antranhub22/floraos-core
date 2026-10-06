@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { TrackingOrderCard } from "./tracking-order-card"
 import { TrackingInternalChatDrawer } from "./tracking-internal-chat-drawer"
+import { TrackingReport } from "./tracking-report"
 import type {
   TrackingPipelineItem,
   TrackingPipelineStepId,
@@ -221,6 +222,8 @@ export function BrochureOrderTrackingTab() {
           className="w-full h-10 pl-10 pr-4 rounded-xl border border-border bg-surface text-body-sm text-foreground placeholder:text-text-muted focus:outline-hidden focus:ring-1 focus:ring-primary shadow-xs"
         />
       </div>
+
+      <TrackingReport />
 
       {/* Main List of Cards */}
       {filteredItems.length === 0 ? (

@@ -759,7 +759,7 @@ Kiến trúc: `docs/kien-truc/FLORAOS_CREATIVE_STUDIO_ARCHITECTURE.md`; dữ li�
 | POST | `/greeting-card/orders/:id/product-photo` | `R3` | `{ assetIds }` (hoặc `{ assetId }` cũ): 1–5 ảnh JPG/PNG/WEBP + 0–2 video MP4/MOV/WEBM (≤ 50MB; ≤ 15 giây kiểm ở trình duyệt), một bản ghi QC cho cả bộ; asset phải thuộc tổ chức (khác → 404), sai giới hạn → 400 |
 | POST | `/greeting-card/orders/:id/dispatch-shipping` | `R5` | Cần hoa READY (+ thu đủ nếu chính sách bật) |
 | POST | `/greeting-card/orders/:id/recipient-photo` | `R5` | Cần đang giao; đóng đơn COMPLETED. Cùng luật ảnh/video như `product-photo`; trang theo dõi hiện thành mục "Ảnh người nhận" riêng |
-| GET · POST | `/greeting-card/tracking-pipeline` | `R1` | Bảng theo dõi; POST ghi chú nội bộ — tên người gửi lấy từ phiên |
+| GET · POST | `/greeting-card/tracking-pipeline` | `R1` | Bảng theo dõi (lọc theo quyền xem của sale); mỗi dòng có `stepStartedAt` (lúc vào bước hiện tại), `stuck` (`{ stepId, owner: SALE\|ADMIN\|COORDINATOR, overdueMinutes, message }` khi quá thời gian chuẩn `brochure_step_sla`, không thì `null`) và `saleId`. Link đã mở (`OPENED`) tính là bước "Chọn mẫu". POST ghi chú nội bộ — tên người gửi lấy từ phiên |
 | GET | `/greeting-card/integrations` | `R1` | Trạng thái webhook ngân hàng + kênh thông báo; KHÔNG trả khoá/bí mật |
 | POST · DELETE | `/greeting-card/integrations/payment-webhook` | `F2` | POST sinh khoá SePay mới (trả MỘT lần, chỉ lưu băm SHA-256); DELETE tắt |
 | PUT | `/greeting-card/integrations/notifications` | `F2` | `{ enabled, channel: ZNS\|ESMS, credentials?, templates? }` — credentials chỉ ghi, lưu AES-256-GCM |

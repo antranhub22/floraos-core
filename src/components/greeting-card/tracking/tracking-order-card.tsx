@@ -88,6 +88,7 @@ export function TrackingOrderCard({ item, onOpenNotes }: TrackingOrderCardProps)
       <TrackingStepperView
         steps={item.steps}
         currentStepId={item.currentStepId}
+        stuck={!!item.stuck}
         onSelectStepNote={(stepId) => onOpenNotes(item, stepId)}
       />
 

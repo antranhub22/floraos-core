@@ -1,11 +1,15 @@
 "use client"
 
 import React, { useState } from "react"
-import { Plus, RefreshCw, Send } from "lucide-react"
+import { ChevronDown, Plus, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi, usePagedList } from "@/components/greeting-card/greeting-api"
-import { SalesFunnelStats } from "./sales-funnel-stats"
-import { ChannelFunnelStats } from "./channel-funnel-stats"
+import { WorkItemCard } from "@/components/greeting-card/work/work-item-card"
+import { WorkUpdates } from "@/components/greeting-card/work/work-updates"
+import { useNow, useWorklist } from "@/components/greeting-card/work/use-worklist"
+import { TrackingInternalChatDrawer } from "@/components/greeting-card/tracking/tracking-internal-chat-drawer"
+import { WORK_BUCKET_LABEL, sortWorklist, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
+import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { SalesSessionTable } from "./sales-session-table"
 import { SalesCreateLinkModal } from "./sales-create-link-modal"
 import type { CatalogOption, SessionRow } from "./sales-types"
@@ -15,81 +19,92 @@ interface SalesBrochureTabProps {
   onNavigateToCatalog?: () => void
 }
 
-/** Tab Sale: tạo link chào khách, theo dõi phản hồi, hiệu quả theo nhân viên. */
+const BUCKETS: WorkBucket[] = ["ACTION", "WAITING_CUSTOMER", "IN_PROGRESS", "DONE"]
+
+/** Tab Sale: trạng thái từng khách của mình là trọng tâm; việc kẹt cần sale tác động lên đầu. */
 export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalog }: SalesBrochureTabProps = {}) {
   const [isModalOpen, setIsModalOpen] = useState(initialOpenCreate)
-  const sessions = usePagedList<SessionRow>("/api/v1/greeting-card/send-links")
+  const [scope, setScope] = useState<"MINE" | "ALL">("MINE")
+  const [bucket, setBucket] = useState<WorkBucket | null>(null)
+  const [linksOpen, setLinksOpen] = useState(false)
+  const [notesFor, setNotesFor] = useState<{ item: TrackingPipelineItem; stepId: TrackingPipelineStepId | "GENERAL" } | null>(null)
+  const work = useWorklist()
+  const now = useNow()
+  const sessions = usePagedList<SessionRow>(linksOpen ? "/api/v1/greeting-card/send-links" : null)
   const catalogs = useApi<{ data: CatalogOption[] }>("/api/v1/greeting-card/catalogs")
   const catalogList = catalogs.data?.data ?? []
 
-  const emptyState = (
-    <div className="p-10 text-center text-text-muted flex flex-col items-center max-w-md mx-auto">
-      <div className="w-14 h-14 rounded-2xl bg-surface-muted flex items-center justify-center mb-3 text-text-muted">
-        <Send size={28} />
-      </div>
-      <p className="text-body font-bold text-foreground">Chưa có link Thẻ chào nào được tạo</p>
-      {catalogList.length === 0 ? (
-        <div className="mt-2 flex flex-col items-center gap-3">
-          <p className="text-body-sm text-text-muted">
-            Bạn cần tạo ít nhất 1 Bộ Sưu Tập mẫu hoa trước khi có thể sinh link gửi chào hàng cho khách.
-          </p>
-          {onNavigateToCatalog && (
-            <Button type="button" variant="outline" size="sm" onClick={onNavigateToCatalog} className="font-bold text-body-sm h-9">
-              Đến trang tạo Bộ Sưu Tập
-            </Button>
-          )}
-        </div>
-      ) : (
-        <p className="text-body-sm text-text-muted mt-1">
-          Nhấn nút &ldquo;Tạo Thẻ Chào Mới&rdquo; ở trên để chọn mẫu hoa và sinh link gửi khách hàng.
-        </p>
-      )}
-    </div>
-  )
+  // Máy chủ đã lọc theo quyền Điều hành cấp; thấy khách của sale khác = được xem "Tất cả"
+  const canSeeAll = work.items.some((i) => i.saleId !== work.userId)
+  const scoped = scope === "MINE" || !canSeeAll ? work.items.filter((i) => i.saleId === work.userId) : work.items
+  const counts = Object.fromEntries(BUCKETS.map((b) => [b, scoped.filter((i) => workBucket(i, "SALE") === b).length])) as Record<WorkBucket, number>
+  const shown = sortWorklist(bucket ? scoped.filter((i) => workBucket(i, "SALE") === bucket) : scoped.filter((i) => workBucket(i, "SALE") !== "DONE"), "SALE")
+  const openNotes = (item: TrackingPipelineItem, stepId?: TrackingPipelineStepId) => setNotesFor({ item, stepId: stepId ?? "GENERAL" })
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-title font-extrabold text-foreground flex items-center gap-2">
-            <span>Thẻ Chào & Link Chào Khách</span>
-            <span className="text-caption px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">Kênh Bán Hàng</span>
-          </h2>
-          <p className="text-body-sm text-text-muted mt-1">
-            Tạo link bộ sưu tập mẫu hoa gửi riêng cho khách hàng, theo dõi trực tiếp lượt xem và đơn chốt
-          </p>
+          <h2 className="text-title font-extrabold text-foreground">Khách của tôi</h2>
+          <p className="mt-1 text-body-sm text-text-muted">Theo dõi từng khách đang ở bước nào; đơn cần bạn nhắc khách được đưa lên đầu.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => void sessions.refresh()} className="gap-1.5 text-caption h-9">
-            <RefreshCw size={14} className={sessions.isLoading ? "animate-spin" : ""} />
-            <span>Làm mới</span>
+          <Button type="button" variant="outline" size="sm" onClick={() => void work.refresh()} className="h-9 gap-1.5 text-caption">
+            <RefreshCw size={14} aria-hidden="true" /> Làm mới
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setIsModalOpen(true)}
-            className="bg-primary hover:bg-primary-dark text-white font-bold gap-1.5 text-body-sm h-9 shadow-sm"
-          >
-            <Plus size={16} />
-            <span>Tạo Thẻ Chào Mới</span>
+          <Button type="button" size="sm" onClick={() => setIsModalOpen(true)} className="h-9 gap-1.5 bg-primary text-body-sm font-bold text-white hover:bg-primary-dark">
+            <Plus size={16} aria-hidden="true" /> Tạo Thẻ Chào Mới
           </Button>
         </div>
       </div>
 
-      <SalesFunnelStats />
-      <ChannelFunnelStats />
+      <WorkUpdates items={scoped} now={now} storageKey={`floraos:updates:sale:${work.userId ?? "-"}`} />
 
-      <section className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <h3 className="text-body font-extrabold text-foreground">Danh sách Link Thẻ Chào Đã Tạo</h3>
-          <span className="text-caption text-text-muted">Mới nhất trước</span>
-        </div>
-        {sessions.error ? (
-          <p role="alert" className="p-4 text-body-sm text-danger">{sessions.error.message}</p>
-        ) : sessions.isLoading ? (
-          <div className="p-4 flex flex-col gap-2" aria-busy="true">
-            {[0, 1, 2, 3].map((i) => <div key={i} className="h-12 rounded-lg bg-surface-muted animate-pulse" />)}
+      <div className="flex flex-wrap items-center gap-2">
+        {canSeeAll && (
+          <div role="group" aria-label="Phạm vi khách" className="mr-2 inline-flex rounded-xl border border-border bg-surface-alt p-1">
+            {(["MINE", "ALL"] as const).map((s) => (
+              <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)}
+                className={`h-8 rounded-lg px-3 text-caption font-bold ${scope === s ? "bg-surface text-primary shadow-xs" : "text-text-muted"}`}>
+                {s === "MINE" ? "Khách của tôi" : "Tất cả khách"}
+              </button>
+            ))}
           </div>
+        )}
+        {BUCKETS.map((b) => (
+          <button key={b} type="button" aria-pressed={bucket === b} onClick={() => setBucket(bucket === b ? null : b)}
+            className={`h-9 rounded-xl border px-3 text-caption font-bold ${
+              bucket === b ? "border-primary bg-primary text-white" : b === "ACTION" && counts.ACTION > 0 ? "border-danger/40 bg-danger-bg text-danger" : "border-border text-text-muted hover:bg-surface-muted"
+            }`}>
+            {WORK_BUCKET_LABEL[b]} ({counts[b]})
+          </button>
+        ))}
+      </div>
+
+      {work.error ? (
+        <p role="alert" className="rounded-xl bg-danger-bg p-4 text-body-sm text-danger">{work.error.message}</p>
+      ) : work.isLoading ? (
+        <div className="flex flex-col gap-3" aria-busy="true">
+          {[0, 1].map((i) => <div key={i} className="h-48 animate-pulse rounded-2xl bg-surface-muted" />)}
+        </div>
+      ) : shown.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-border p-8 text-center text-body-sm text-text-muted">
+          {bucket ? "Không có khách nào trong mục này." : "Chưa có khách nào đang theo dõi. Tạo Thẻ Chào Mới để gửi khách."}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {shown.map((item) => <WorkItemCard key={item.id} item={item} me="SALE" now={now} onOpenNotes={openNotes} />)}
+        </div>
+      )}
+
+      <section className="overflow-hidden rounded-2xl border border-border bg-surface">
+        <button type="button" aria-expanded={linksOpen} onClick={() => setLinksOpen((v) => !v)}
+          className="flex w-full items-center justify-between p-4 text-left text-body font-extrabold text-foreground hover:bg-surface-muted">
+          Link đã gửi (thu hồi, mở lại)
+          <ChevronDown size={18} aria-hidden="true" className={linksOpen ? "rotate-180" : ""} />
+        </button>
+        {linksOpen && (sessions.error ? (
+          <p role="alert" className="p-4 text-body-sm text-danger">{sessions.error.message}</p>
         ) : (
           <SalesSessionTable
             sessions={sessions.items}
@@ -97,17 +112,25 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
             isLoadingMore={sessions.isLoadingMore}
             onLoadMore={() => void sessions.loadMore()}
             onChanged={() => void sessions.refresh()}
-            emptyState={emptyState}
+            emptyState={<p className="p-6 text-center text-body-sm text-text-muted">Chưa có link nào.</p>}
           />
-        )}
+        ))}
       </section>
 
       {isModalOpen && (
         <SalesCreateLinkModal
           catalogs={catalogList}
           onClose={() => setIsModalOpen(false)}
-          onCreated={() => void sessions.refresh()}
+          onCreated={() => { void work.refresh(); void sessions.refresh() }}
           onNavigateToCatalog={onNavigateToCatalog}
+        />
+      )}
+      {notesFor && (
+        <TrackingInternalChatDrawer
+          item={notesFor.item}
+          initialStepId={notesFor.stepId}
+          onClose={() => setNotesFor(null)}
+          onNoteAdded={() => void work.refresh()}
         />
       )}
     </div>

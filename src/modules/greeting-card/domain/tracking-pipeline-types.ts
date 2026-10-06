@@ -2,6 +2,7 @@
  * Domain Types for Brochure Order & Session Tracking Pipeline.
  * Pure TypeScript — No Prisma or external infrastructure imports.
  */
+import type { StuckInfo } from "./step-sla"
 
 export type TrackingPipelineStepId =
   | "STEP_1_OPENED"
@@ -149,6 +150,12 @@ export interface TrackingPipelineItem {
   balanceVnd: number
   currentStepId: TrackingPipelineStepId
   currentStepTitle: string
+  /** Lúc vào bước hiện tại (để tính quá thời gian chuẩn). */
+  stepStartedAt: string
+  /** Quá thời gian chuẩn của bước hiện tại — `null` = đang đúng tiến độ. */
+  stuck: StuckInfo | null
+  /** Sale phụ trách (người gửi link); "public" = link bộ sưu tập công khai. */
+  saleId: string | null
   steps: TrackingStepState[]
   notes: InternalNoteMessage[]
   lastActiveAt: string
