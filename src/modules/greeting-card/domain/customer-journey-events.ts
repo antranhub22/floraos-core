@@ -8,6 +8,7 @@ export const CUSTOMER_JOURNEY_EVENTS = [
   "collection_opened",
   "product_viewed",
   "product_liked",
+  "product_unliked",
   "product_skipped",
   "product_revisited",
   "contact_zalo_clicked",

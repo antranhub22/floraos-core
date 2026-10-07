@@ -6,11 +6,17 @@
 const JOURNEY_STATE_STORAGE_KEY_PREFIX = "floraos_journey_state_"
 
 export const journeyStorage = {
-  saveState(journeyId: string, state: unknown): void {
+  makeKey(journeyId: string, orgId?: string | null): string {
+    return orgId
+      ? `${JOURNEY_STATE_STORAGE_KEY_PREFIX}${orgId}_${journeyId}`
+      : `${JOURNEY_STATE_STORAGE_KEY_PREFIX}${journeyId}`
+  },
+
+  saveState(journeyId: string, state: unknown, orgId?: string | null): void {
     if (typeof window === "undefined") return
     try {
       window.sessionStorage.setItem(
-        `${JOURNEY_STATE_STORAGE_KEY_PREFIX}${journeyId}`,
+        this.makeKey(journeyId, orgId),
         JSON.stringify(state)
       )
     } catch {
@@ -18,11 +24,11 @@ export const journeyStorage = {
     }
   },
 
-  loadState<T>(journeyId: string): T | null {
+  loadState<T>(journeyId: string, orgId?: string | null): T | null {
     if (typeof window === "undefined") return null
     try {
       const raw = window.sessionStorage.getItem(
-        `${JOURNEY_STATE_STORAGE_KEY_PREFIX}${journeyId}`
+        this.makeKey(journeyId, orgId)
       )
       return raw ? (JSON.parse(raw) as T) : null
     } catch {
@@ -30,11 +36,11 @@ export const journeyStorage = {
     }
   },
 
-  clearState(journeyId: string): void {
+  clearState(journeyId: string, orgId?: string | null): void {
     if (typeof window === "undefined") return
     try {
       window.sessionStorage.removeItem(
-        `${JOURNEY_STATE_STORAGE_KEY_PREFIX}${journeyId}`
+        this.makeKey(journeyId, orgId)
       )
     } catch {
       // Bỏ qua lỗi

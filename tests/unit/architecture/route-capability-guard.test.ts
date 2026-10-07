@@ -27,6 +27,7 @@ const NO_CAPABILITY_GUARD: Record<string, string> = {
   "auth/signup": "đăng ký — chưa có phiên",
   "auth/logout": "đăng xuất phiên của chính mình",
   "auth/me": "đọc phiên của chính mình",
+  "auth/session-status": "kiểm phiên của chính mình còn sống (cảnh báo đăng nhập nơi khác)",
   "organizations": "liệt kê tổ chức mà người dùng là thành viên",
   "session/organization": "đổi tổ chức — kiểm memberships trong use-case (đặc tả 06 mục 2)",
   "sso/refresh": "làm mới phiên SSO của chính mình",

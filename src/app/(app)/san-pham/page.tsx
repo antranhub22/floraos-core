@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { ProductThumb } from "@/components/products/product-thumb"
+import { useProductList } from "@/components/products/use-product-list"
 import {
   Plus,
   Search,
@@ -10,7 +12,6 @@ import {
   Eye,
   LayoutGrid,
   LayoutList,
-  ImageOff,
   RefreshCw,
   FileSpreadsheet,
   Trash2,
@@ -32,6 +33,7 @@ type Product = {
   shape: string | null
   status: "DRAFT" | "ACTIVE" | "ARCHIVED"
   masterImageUrl?: string | undefined
+  driveLink?: string | undefined
   price_vnd: number | null
 }
 
@@ -88,19 +90,7 @@ function ProductCard({ product, isExecutive, onTrash }: ProductCardProps) {
       >
         {/* Ảnh sản phẩm */}
         <div className="relative aspect-square w-full bg-surface-alt overflow-hidden">
-          {product.masterImageUrl ? (
-            <img
-              src={product.masterImageUrl}
-              alt={product.name}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-text-muted">
-              <ImageOff size={28} strokeWidth={1.5} />
-              <span className="text-caption">Chưa có ảnh</span>
-            </div>
-          )}
+          <ProductThumb name={product.name} masterImageUrl={product.masterImageUrl} driveLink={product.driveLink} size="card" />
           <div className="absolute top-2 left-2">
             <StatusBadge status={product.status} />
           </div>
@@ -141,8 +131,6 @@ const CATEGORIES = ["Tất cả", "Bó hoa", "Giỏ hoa", "Kệ khai trương", 
 export default function SanPhamPage() {
   const router = useRouter()
   const session = useSession()
-  const [products, setProducts] = useState<Product[] | null>(null)
-  const [loi, setLoi] = useState<string | null>(null)
   const [tuKhoa, setTuKhoa] = useState("")
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [activeCategory, setActiveCategory] = useState("Tất cả")
@@ -154,25 +142,9 @@ export default function SanPhamPage() {
     session.can("G3") ||
     session.can("L4")
 
-  const napLai = useCallback(async () => {
-    setLoi(null)
-    try {
-      const res = await fetch("/api/v1/products?limit=50")
-      if (res.status === 401) {
-        router.push("/dang-nhap" as never)
-        return
-      }
-      if (!res.ok) throw new Error(`Không tải được danh sách (${res.status})`)
-      const data = (await res.json()) as { data: Product[] }
-      setProducts(data.data)
-    } catch (e) {
-      setLoi(e instanceof Error ? e.message : "Không tải được danh sách sản phẩm")
-    }
-  }, [router])
-
-  useEffect(() => {
-    napLai()
-  }, [napLai])
+  const {
+    items: products, error: loi, nextCursor, loadingMore, reload: napLai, loadMore: handleLoadMore, removeLocal,
+  } = useProductList<Product>(tuKhoa, activeCategory === "Tất cả" ? null : activeCategory)
 
   const handleConfirmTrash = async (target: TrashConfirmTarget) => {
     const res = await fetch("/api/v1/storage/trash", {
@@ -185,15 +157,11 @@ export default function SanPhamPage() {
       throw new Error(d?.message || d?.error || "Không thể chuyển sản phẩm vào thùng rác")
     }
     // Xóa khỏi danh sách hiển thị ngay
-    setProducts((prev) => (prev ? prev.filter((p) => p.id !== target.id) : prev))
+    removeLocal(target.id)
   }
 
-  const hien = (products ?? []).filter((p) => {
-    const tuKhoaOk =
-      tuKhoa.trim() === "" ? true : (p.name + p.code).toLowerCase().includes(tuKhoa.trim().toLowerCase())
-    const catOk = activeCategory === "Tất cả" ? true : p.category === activeCategory
-    return tuKhoaOk && catOk
-  })
+  // Server đã lọc theo từ khoá + danh mục
+  const hien = products ?? []
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -361,18 +329,7 @@ export default function SanPhamPage() {
                     <td className="px-4 py-3 font-semibold text-text">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden bg-surface-alt border border-border">
-                          {p.masterImageUrl ? (
-                            <img
-                              src={p.masterImageUrl}
-                              alt={p.name}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-text-muted">
-                              <ImageOff size={16} strokeWidth={1.5} />
-                            </div>
-                          )}
+                          <ProductThumb name={p.name} masterImageUrl={p.masterImageUrl} driveLink={p.driveLink} size="row" />
                         </div>
                         <div className="min-w-0">
                           <div className="truncate font-semibold text-text">{p.name}</div>
@@ -432,10 +389,28 @@ export default function SanPhamPage() {
           </div>
         )}
 
-        {/* Đếm kết quả */}
-        {products !== null && hien.length > 0 && (
-          <div className="mt-4 text-center text-caption text-text-muted">
-            Hiển thị {hien.length} / {products.length} mẫu hoa
+        {/* Load more + Đếm kết quả */}
+        {products !== null && (
+          <div className="mt-4 flex flex-col items-center gap-2">
+            {nextCursor && (
+              <button
+                type="button"
+                onClick={() => void handleLoadMore()}
+                disabled={loadingMore}
+                className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-body-sm font-semibold text-text hover:bg-surface-alt transition-colors focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60"
+              >
+                {loadingMore ? (
+                  <><RefreshCw size={14} className="animate-spin" /> Đang tải thêm...</>
+                ) : (
+                  "Tải thêm sản phẩm"
+                )}
+              </button>
+            )}
+            {hien.length > 0 && (
+              <div className="text-caption text-text-muted">
+                Hiển thị {hien.length} mẫu hoa{nextCursor ? " — còn nhiều hơn" : " (tất cả)"}
+              </div>
+            )}
           </div>
         )}
       </main>

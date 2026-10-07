@@ -1,4 +1,4 @@
-import { AppError, unauthenticated } from "@/core/http/errors"
+import { AppError, sessionSuperseded, unauthenticated } from "@/core/http/errors"
 import { readCookie, SESSION_COOKIE } from "@/core/http/cookies"
 import type { TenantContext } from "@/core/tenancy"
 import { isUsable } from "@/modules/organization/domain/session-policy"
@@ -35,7 +35,12 @@ export async function resolveSession(request: Request): Promise<ResolvedSession>
   const sessions = new SessionRepository()
   const session = await sessions.findByTokenHash(hashSessionToken(token))
   if (!session) throw unauthenticated()
-  if (!isUsable(session, new Date())) throw unauthenticated()
+  if (!isUsable(session, new Date())) {
+    // Phiên bị thay bởi lần đăng nhập ở thiết bị khác → lý do riêng để giao
+    // diện hiện cảnh báo thay vì lặng lẽ đẩy về trang đăng nhập.
+    if (await sessions.wasSupersededByNewLogin(session)) throw sessionSuperseded()
+    throw unauthenticated()
+  }
 
   const user = await new UserRepository().findById(session.user_id)
   if (!user) throw unauthenticated()

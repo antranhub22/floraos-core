@@ -17,6 +17,11 @@ export interface RateLimitRule {
   scope: string
   limit: number
   windowMs: number
+  /**
+   * `ip` (mặc định): đếm riêng từng IP. `global`: đếm chung mọi IP cho cả `scope` — dùng khi
+   * cần chặn dò theo một đối tượng (vd. một mã đơn) mà kẻ dò có thể đổi IP liên tục.
+   */
+  key?: "ip" | "global"
 }
 
 const INCR_WITH_TTL = `
@@ -27,15 +32,31 @@ return c`
 const memory = new Map<string, { count: number; resetAt: number }>()
 const MAX_MEMORY_KEYS = 10_000
 
-function clientIp(request: Request): string {
+/**
+ * Số proxy tin cậy đứng trước app (Render = 1). Proxy tự NỐI IP nó thấy vào cuối
+ * `x-forwarded-for`, nên chỉ phần tử thứ `hops` tính từ phải là thật; phần tử đầu do client
+ * tự gửi và giả được. Có thêm CDN phía trước (vd. Cloudflare) → đặt 2.
+ */
+function trustedHops(): number {
+  const n = Number(process.env.RATE_LIMIT_TRUSTED_PROXY_HOPS ?? "1")
+  return Number.isInteger(n) && n >= 1 && n <= 5 ? n : 1
+}
+
+export function clientIp(request: Request, hops = trustedHops()): string {
   const forwarded = request.headers.get("x-forwarded-for")
-  if (forwarded) return forwarded.split(",")[0]?.trim() || "unknown"
+  if (forwarded) {
+    const chain = forwarded.split(",").map((p) => p.trim()).filter(Boolean)
+    const ip = chain[Math.max(0, chain.length - hops)]
+    if (ip) return ip
+  }
   return request.headers.get("x-real-ip")?.trim() || "unknown"
 }
 
 function bucketKey(rule: RateLimitRule, request: Request, now: number): string {
-  const ipHash = createHash("sha256").update(clientIp(request)).digest("hex").slice(0, 24)
-  return `rl:${rule.scope}:${ipHash}:${Math.floor(now / rule.windowMs)}`
+  const subject = rule.key === "global"
+    ? "all"
+    : createHash("sha256").update(clientIp(request)).digest("hex").slice(0, 24)
+  return `rl:${rule.scope}:${subject}:${Math.floor(now / rule.windowMs)}`
 }
 
 function countInMemory(key: string, windowMs: number, now: number): number {

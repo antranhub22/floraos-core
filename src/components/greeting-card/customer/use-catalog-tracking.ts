@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react"
 
-type TrackedEvent = "VIEW" | "DETAIL" | "FORM_OPEN"
+type TrackedEvent = "VIEW" | "DETAIL" | "FORM_OPEN" | "LIKE" | "UNLIKE"
 const VISITOR_KEY = "floraos:visitor"
 
 /** Mã khách ngẫu nhiên trên máy (không phải danh tính) — để đếm khách không trùng. */
@@ -19,20 +19,20 @@ function visitorId(): string {
 }
 
 /**
- * Đếm lượt xem/xem chi tiết/mở form theo kênh `?kenh=`. Gửi kiểu "bắn rồi quên":
+ * Đếm lượt xem/xem chi tiết/mở form theo kênh `?kenh=`, và thả/bỏ tim (kèm `productId`). Gửi kiểu "bắn rồi quên":
  * lỗi mạng hay máy chủ không bao giờ chặn hoặc làm chậm khách.
  */
 export function useCatalogTracking(catalogId: string) {
   const ctx = useRef<{ channel: string | undefined; visitorId: string } | null>(null)
 
   const track = useCallback(
-    (type: TrackedEvent) => {
+    (type: TrackedEvent, productId?: string) => {
       try {
         ctx.current ??= { channel: new URLSearchParams(window.location.search).get("kenh") ?? undefined, visitorId: visitorId() }
         void fetch(`/api/v1/public/greeting-catalog/${catalogId}/event`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type, ...ctx.current }),
+          body: JSON.stringify({ type, ...ctx.current, ...(productId ? { productId } : {}) }),
           keepalive: true,
         }).catch(() => undefined)
       } catch {

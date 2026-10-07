@@ -1,7 +1,7 @@
 # Thẻ chào mẫu hoa (Swipe Brochure) — Đặc tả hiện trạng (Current State Baseline)
 
-**Phạm vi:** module `greeting-card` · trang nội bộ `/the-chao` · trang khách `/b`, `/s`, `/g`, `/bst` · **Cập nhật:** 06/10/2026 · **Nhánh:** `claude/sweet-fermat-ovs11r` (PR antranhub22/floraos-core#27)
-**Phiên bản:** v2 — hiện trạng SAU đợt commercial-ready (18 hạng mục, chi tiết [`KHAC_PHUC_THE_CHAO.md`](KHAC_PHUC_THE_CHAO.md)). Baseline trước khắc phục (v1, soát `main` @ `ecb5aa3`, đã gộp bản audit thứ hai) giữ nguyên ở commit `f1d1eb8` của tệp này.
+**Phạm vi:** module `greeting-card` · trang nội bộ `/the-chao` · trang khách `/b`, `/s`, `/g`, `/bst` · **Cập nhật:** 06/10/2026 · **Soát trên:** `main` sau PR antranhub22/floraos-core#27, #28, #29
+**Phiên bản:** v3 — v2 (hiện trạng SAU đợt commercial-ready, 18 hạng mục, chi tiết [`KHAC_PHUC_THE_CHAO.md`](KHAC_PHUC_THE_CHAO.md)) + Theo dõi tiến độ nhiều cách xem (#28) + 2 lỗi production đã sửa (#27, #29) — xem §0. Baseline trước khắc phục (v1, soát `main` @ `ecb5aa3`, đã gộp bản audit thứ hai) giữ nguyên ở commit `f1d1eb8` của tệp này.
 **Loại tài liệu:** ảnh chụp hiện trạng để làm đầu vào Gap Analysis (Enterprise Grade → Commercial Ready). **Không** phải SSOT, **không** đề xuất thiết kế lại.
 **Nguyên tắc:** chỉ kết luận theo mã và tài liệu trong repo; chỗ mã ≠ tài liệu ghi rõ ở §16.3; chỗ thiếu bằng chứng ghi ở §17.
 
@@ -10,12 +10,22 @@
 > Không nhầm với "Thẻ chào sản phẩm A6 / M01c" (`sales-pitch-template.ts`, tab ở `/tai-anh`) — đó là thẻ in/ảnh tĩnh, ngoài phạm vi tài liệu này.
 
 
+## 0. Thay đổi từ v2 → v3
+
+| # | Thay đổi | Ảnh hưởng | Bằng chứng |
+|---|---|---|---|
+| 1 | **Theo dõi tiến độ nhiều cách xem**: Kanban · Danh sách · Lịch · Timeline · Công việc · Dashboard trên CÙNG một tập đơn/link; bộ lọc + phạm vi sale dùng chung, giữ nguyên khi đổi cách xem; 5 view mẫu + view tự lưu trên máy | Thay danh sách thẻ cũ (bỏ `tracking-order-card`, `tracking-report`, `tracking-pending-links`) | `components/greeting-card/tracking/views/*`; PR #28 |
+| 2 | **Lớp truy vấn dùng chung** `GET /greeting-card/tracking` (lọc/sắp xếp/phân trang/nhóm ở máy chủ) + `GET /greeting-card/tracking/timeline` (các bước đã qua so với thời gian chuẩn + sự kiện) | Trình duyệt không còn nhận cả tập; bước/SLA vẫn **suy ra**, không đổi schema, không state machine mới | `use-cases/query-tracking.ts`, `get-tracking-timeline.ts`, `domain/tracking-views.ts`, `tracking-timeline.ts` |
+| 3 | **Lỗi production — link `/s/` đưa khách sang `https://localhost:3100`**: chuyển hướng dựng từ `request.url`, sau proxy Render là địa chỉ nội bộ → nay `Location` tương đối, cookie `Secure` theo `x-forwarded-proto` | Mọi link bộ sưu tập đã gửi trước đó dùng lại được, không cần gửi lại | `src/app/s/[code]/mo/route.ts`; unit `share-open-redirect`; PR #27 |
+| 4 | **Lỗi production — Danh sách/Công việc/Timeline làm sập cả trang** (`row.sla` undefined): API bọc danh sách phân trang thêm một lớp → nay trả dạng chung `{ data: [...], next_cursor, total }` | Test cũ chỉ kiểm use-case; đã thêm test gọi thẳng route | `api/v1/greeting-card/tracking/**/route.ts`; tenant `tracking-views`; PR #29 |
+| 5 | Ghi chú thu tiền trên Timeline chỉ hiện số tiền (không lộ mã `PAYMENT`) | Quy tắc UI không hiện mã kỹ thuật | `get-tracking-timeline.ts` |
+
 ## 1. Executive Summary
 
 - Thẻ chào là **kênh bán hàng tự phục vụ**: tiệm gom mẫu hoa (từ Product Master) thành **bộ sưu tập**, gửi khách một **link**; khách lướt mẫu trên điện thoại (20 giao diện), chọn mẫu, điền đơn, nhận **QR VietQR** để chuyển khoản, theo dõi đơn tới lúc giao kèm ảnh thật.
 - Phía tiệm có **quy trình 9 bước** chia cho 3 vai suy từ năng lực (Sale / Điều hành / Điều phối), **thời gian chuẩn từng bước** báo "kẹt", **Hộp việc** gom việc + tin nhắn nội bộ, **xin/duyệt giảm giá**, **đối soát SePay tự động**, **thông báo khách qua Zalo ZNS / eSMS** có **bộ quét nền** gửi lại tin lỗi, nhắc chuyển khoản và (tuỳ chọn) tự huỷ đơn quá hạn giữ, phễu theo sale và theo kênh.
-- Quy mô: 11 bảng `greeting_*` (có migration idempotent), 44 handler / 34 tệp route `/api/v1/greeting-card/*` + 13 handler công khai + 4 trang công khai + bộ quét nền khởi động từ `src/instrumentation.ts`.
-- Kiểm chứng 06/10/2026: `npm test` 224/224 tệp · 1664 ca; tenant Thẻ chào 14 tệp xanh (toàn bộ tenant 354/356 — 2 ca `product-copies` đỏ y hệt trên `main`); E2E `brochure-swipe` 11/11; typecheck, lint ratchet, UX lint, `check:docs`, `build` đạt.
+- Quy mô: 11 bảng `greeting_*` (có migration idempotent), 46 handler / 36 tệp route `/api/v1/greeting-card/*` + 13 handler công khai + 4 trang công khai + bộ quét nền khởi động từ `src/instrumentation.ts`.
+- Kiểm chứng 06/10/2026 (v3): `npm test` 226/226 tệp · 1672 ca; tenant Thẻ chào 15 tệp xanh (2 ca `product-copies` đỏ y hệt trên `main`); 6 cách xem Theo dõi tiến độ + Timeline chi tiết chạy thật trên trình duyệt (Playwright, dữ liệu đơn thật); typecheck, lint ratchet, UX lint, `check:docs`, `build` đạt. E2E `brochure-swipe` 11/11 là số của v2, chưa chạy lại.
 - Sau khắc phục, các khoảng hở P0/P1 của v1 đã đóng (phạm vi tiền & phễu, QR sau cọc, đếm "đã mở", dữ liệu trang theo dõi, pipeline cắt 100/50, đơn trùng/rác, tồn kho, thông báo bền, migration, audit xưởng, tab theo quyền, sổ đơn chung lách luật). Còn mở: nợ #179 (cờ tắt tính năng, xác minh theo IP, captcha, chú thích schema, bộ quét trong tiến trình web), #173d/e, cache trang khách, các tính năng giai đoạn sau (#176–#178).
 
 ## 2. Feature Overview & Purpose
@@ -39,7 +49,7 @@ Ký hiệu trạng thái: **I** Implemented · **P** Partial · **M** Missing ·
 **3.4 Giá & thanh toán** — giá luôn tính lại ở server bằng MỘT hàm (`resolveProductPriceVnd`, cả trang khách lẫn xem trước nội bộ); mẫu chưa có giá vẫn đặt được (tổng 0, chờ báo giá, báo khách mốc `QUOTED`); cọc theo %, sau cọc khách vẫn thấy QR phần còn lại; giữ đơn có đếm ngược + nhắc + tự huỷ tuỳ chọn; xác nhận thu có khoá lạc quan + audit; huỷ (trả mã giảm giá); hoàn tiền. Mẫu hết hàng ở chi nhánh (`product_inventory`) ẩn và không đặt được. **I**
 **3.5 Đối soát ngân hàng tự động** — webhook SePay, khoá API băm SHA-256, tìm mã đơn trong nội dung CK, idempotent theo mã giao dịch, giao dịch không khớp vào hàng chờ xử lý tay. Chỉ SePay. **P** (nợ #173d)
 **3.6 Xưởng & giao hàng** — phân công thợ → ảnh thành phẩm (1–5 ảnh + 0–2 video ≤ 15 giây) → giao ship → ảnh người nhận (đóng đơn); chặn sai thứ tự + chặn theo chính sách tiền. **I**
-**3.7 Theo dõi tiến độ** — quy trình 9 bước cho link chưa có đơn và đơn; thời gian chuẩn từng bước; lọc theo bước/sale/kênh/tìm kiếm; báo cáo bảng. Đọc mọi đơn còn việc + đơn xong 7 ngày + link còn hạn 30 ngày (trần an toàn 2000). **I**
+**3.7 Theo dõi tiến độ** — quy trình 9 bước cho link chưa có đơn và đơn; thời gian chuẩn từng bước. **6 cách xem** trên cùng một tập: *Kanban* (9 cột, số lượng, thời gian ở bước TB/lâu nhất, quá hạn/sắp hạn, 20 thẻ gấp nhất/cột) · *Danh sách* (sắp xếp theo cột, chọn cột, tải thêm) · *Lịch* (ngày giao + khung giờ, theo tuần) · *Timeline* (một đơn: từng bước so với thời gian chuẩn + sự kiện) · *Công việc* (chỉ quá hạn/sắp quá hạn) · *Dashboard* (theo bước, thời gian ở bước, người phụ trách, còn phải thu, link bộ sưu tập đã sao chép). Bộ lọc chung: tìm, nhóm bước, sale, trạng thái thời gian chuẩn, loại, ngày giao. View mẫu: Đơn của tôi, Đơn giao hôm nay, Đơn đang kẹt, Đơn quá thời gian chuẩn, Đơn cần xử lý; view tự lưu nằm trong `localStorage` (không theo người dùng giữa các máy). Đọc mọi đơn còn việc + đơn xong 7 ngày + link còn hạn 30 ngày (trần an toàn 2000), lọc/nhóm/phân trang ở máy chủ. **I**
 **3.8 Hộp việc & tin nhắn nội bộ** — việc cần làm theo vai, tin gửi cho vai/người, trả lời về đúng người, đã đọc lưu server; xin giảm giá (% hoặc số tiền, trần mặc định 25%) và duyệt/sửa mức/từ chối ngay trong hộp. **I** (thông báo đẩy/Zalo cho nhân viên: **M**, Screen Contract §14)
 **3.9 Quyền xem của sale** — mặc định ALL/OWN + chọn riêng từng sale; áp cho đơn, link, tin, theo dõi, thao tác tiền (thu, báo giá, huỷ, hoàn, tiền chưa khớp) và phễu. **I**
 **3.10 Thông báo khách** — 9 mốc (nhận đơn, đã báo giá, nhắc chuyển khoản, nhận cọc, thanh toán đủ, cắm xong, đang giao, đã giao, huỷ) qua ZNS hoặc eSMS; mỗi mốc gửi 1 lần; bộ quét nền đưa tin kẹt `SENDING` > 5 phút về `FAILED` và gửi lại cách 30 phút trong 6 giờ; gửi thử; hướng dẫn đăng ký mẫu ZNS trong Cài đặt. **I** (bền ở mức tiến trình web, chưa hàng đợi riêng — nợ #179e)
@@ -55,7 +65,7 @@ Ký hiệu trạng thái: **I** Implemented · **P** Partial · **M** Missing ·
 3. Bước 3: sao chép link `/b/<mã>` → `POST /send-links/:mã/copied` ghi mốc gửi (lỗi mạng không chặn chép).
    Chế độ "Quản lý" có 5 tab: Bộ sưu tập · Theo dõi tiến độ · Bán hàng · Điều hành · Điều phối.
 
-**4.2 Link bộ sưu tập mang tên người sao chép** — bấm "Sao chép" → `POST /share-links` tạo **mã mới mỗi lần bấm** (`share/tracked-copy.ts:22`) → khách mở `/s/<mã>` (thẻ meta xem trước, không tạo phiên) → JS chuyển `/s/<mã>/mo` (giới hạn 30 lần/10 phút/IP) → tạo phiên `SL-…` tính cho người sao chép, sự kiện `SHARE_OPEN`, cookie `fl_s_<mã>` → 302 sang `/b/<mã phiên>`.
+**4.2 Link bộ sưu tập mang tên người sao chép** — bấm "Sao chép" → `POST /share-links` tạo **mã mới mỗi lần bấm** (`share/tracked-copy.ts:22`) → khách mở `/s/<mã>` (thẻ meta xem trước, không tạo phiên) → JS chuyển `/s/<mã>/mo` (giới hạn 30 lần/10 phút/IP) → tạo phiên `SL-…` tính cho người sao chép, sự kiện `SHARE_OPEN`, cookie `fl_s_<mã>` → 302 sang `/b/<mã phiên>` (đường dẫn **tương đối** — trước v3 dựng tuyệt đối từ `request.url` nên trên Render khách bị đưa sang `localhost:3100`).
 
 **4.3 Khách trên link riêng** — `customer/brochure-customer-experience.tsx`
 1. Mở `/b/<mã>`: dựng trang chỉ đọc; trình duyệt gọi `POST …/open` → `CREATED` → `OPENED` (+ `OPEN`) đúng một lần (máy quét xem trước không tính). Link sai/hết hạn/thu hồi/bộ sưu tập ẩn (chưa có đơn) → trang "link không còn hiệu lực" kèm liên hệ tiệm.
@@ -156,7 +166,7 @@ Bảng dùng chung: `orders` (+ `source`, `source_session_id`, `pricing_rule_ref
 
 ## 8. UI/UX Behavior
 
-- **Trang `/the-chao`** (`page.tsx`): 2 chế độ "Gửi nhanh" (mặc định) / "Quản lý"; 5 tab hiện theo năng lực (Bộ sưu tập `L1`, Theo dõi `R1`, Bán hàng `R2`, Điều hành `R9`/`F2`, Điều phối `R3`/`R4`/`R5`). Nút đầu trang: Hộp việc · Chế độ · Làm mới.
+- **Trang `/the-chao`** (`page.tsx`): 2 chế độ "Gửi nhanh" (mặc định) / "Quản lý"; 5 tab hiện theo năng lực (Bộ sưu tập `L1`, Theo dõi `R1`, Bán hàng `R2`, Điều hành `R9`/`F2`, Điều phối `R3`/`R4`/`R5`). Nút đầu trang: Hộp việc · Chế độ · Làm mới. Tab Theo dõi tiến độ: thanh chuyển 6 cách xem + view mẫu/tự lưu + bộ lọc chung; bấm một đơn ở cách xem bất kỳ → Timeline của đơn đó (có nút Ghi chú/nhắn).
 - **Tầng gọi API**: SWR (`greeting-api.ts`), làm mới khi quay lại tab; danh sách phân trang con trỏ + "Tải thêm"; lỗi đọc `error.details` tiếng Việt (`api-error.ts`).
 - **Làm mới định kỳ**: Hộp việc 20s, trao đổi 15s, Theo dõi tiến độ 30s, danh sách việc 60s; trang khách: thanh toán (đến khi đủ), theo dõi 15s.
 - **Trang khách**: thanh liên hệ tiệm, 20 giao diện (`templates/greeting-template-renderer.tsx`), bước xem lại trước khi gửi, sao chép STK/số tiền/nội dung, đồng hồ giữ đơn, ô nhập 4 số cuối SĐT ở theo dõi, ô bẫy ẩn ở form, thông báo quyền riêng tư, nút đặt thêm đơn, trang "link không còn hiệu lực" có liên hệ tiệm.
@@ -207,6 +217,7 @@ Bảng dùng chung: `orders` (+ `source`, `source_session_id`, `pricing_rule_ref
 
 - Lỗi chuẩn qua `handle()`/`AppError` (400 theo trường, 401 webhook, 404, 409, 422, 429). Thông báo tiếng Việt.
 - **Đã xử lý**: gửi đơn 2 lần (link riêng: theo phiên; link chung: theo SĐT + mẫu + người nhận + ngày, 10 phút); 2 người thu tiền cùng lúc / webhook gửi lại; giao dịch dở ở `RECEIVED` được làm tiếp; mã giảm giá dùng đồng thời (409); trùng mã khách; mã gửi cũ trùng giữa 2 tiệm (404); lỗi gửi thông báo không làm hỏng thao tác chính và được gửi lại có giới hạn; tin kẹt `SENDING`; khách đã cọc mở lại link (QR phần còn lại); báo giá xong báo khách, giữ đơn tính từ lúc báo giá; máy quét xem trước không tính là mở; mẫu vừa hết hàng (409); nhiều instance cùng quét (mỗi bước ghi là `updateMany` có điều kiện).
+- **Đã sửa ở v3**: chuyển hướng `/s/…/mo` sau proxy (link sang localhost); danh sách phân trang Theo dõi tiến độ sai dạng làm sập trang.
 - **Chưa xử lý / hành vi đáng chú ý**:
   - Hoàn tiền toàn bộ không đổi trạng thái đơn; hoàn tiền không kiểm đơn đã huỷ hay chưa.
   - Chuyển khoản thừa: chỉ ghi chú "cần hoàn", không có tác vụ theo dõi riêng.
@@ -217,7 +228,8 @@ Bảng dùng chung: `orders` (+ `source`, `source_session_id`, `pricing_rule_ref
 
 | Điểm | Hiện trạng | Bằng chứng |
 |---|---|---|
-| Bảng theo dõi & Hộp việc | Đọc mọi đơn còn việc + đơn xong 7 ngày + link còn hạn hoạt động 30 ngày, chỉ cột cần; trần an toàn 2000 dòng mỗi loại, chạm trần ghi log cảnh báo; tính trong bộ nhớ | `infra/tracking-pipeline-repository.ts` |
+| Bảng theo dõi & Hộp việc | Đọc mọi đơn còn việc + đơn xong 7 ngày + link còn hạn hoạt động 30 ngày, chỉ cột cần; trần an toàn 2000 dòng mỗi loại, chạm trần ghi log cảnh báo; tính trong bộ nhớ **máy chủ** | `infra/tracking-pipeline-repository.ts` |
+| Các cách xem Theo dõi tiến độ | Máy chủ lọc/sắp xếp/nhóm rồi chỉ gửi trang cần xem: Danh sách/Công việc 25 dòng/lần, Kanban 20 thẻ/cột, Lịch ≤ 62 ngày, Dashboard chỉ số tổng hợp; Timeline đọc riêng một đơn. Mỗi lần gọi vẫn dựng lại cả tập trong bộ nhớ (chưa cache, chưa lọc ở DB) | `use-cases/query-tracking.ts`, `get-tracking-timeline.ts` |
 | Tần suất | Hộp việc gọi lại pipeline mỗi 20s/người dùng đang mở trang; theo dõi 30s; danh sách việc 60s; trao đổi 15s | `inbox/use-inbox.ts:17` |
 | Danh sách link bộ sưu tập | Đọc tới 10.000 sự kiện `SHARE_OPEN` 30 ngày rồi đếm trong bộ nhớ | `share-link-repository.ts:70` |
 | Phễu | `groupBy` ở DB cho phiên; đơn đã thu tối đa 10.000; phễu kênh `groupBy` tới 50.000 nhóm | `greeting-stats-repository.ts`, `catalog-event-repository.ts` |
@@ -269,6 +281,8 @@ Theo mục tiêu ghi trong mã/tài liệu (không có số liệu vận hành t
 | Đối soát SePay | P | tenant `bank-sync`; chỉ một nhà cung cấp |
 | Thứ tự xưởng + ảnh/video | I | tenant `reorder-photos`, `hardening` |
 | Quy trình 9 bước + thời gian chuẩn + kẹt, không cắt 100/50 | I | unit `step-sla-visibility`, `tracking-pipeline`; tenant `scope` |
+| Theo dõi tiến độ 6 cách xem + lớp truy vấn chung + Timeline | I | unit `tracking-views`; tenant `tracking-views` (một đơn đúng ở mọi view, cùng phạm vi, route trả đúng dạng) |
+| View tự lưu theo người dùng (đồng bộ giữa máy) | M | chỉ `localStorage` — PO chọn 06/10/2026 |
 | Hộp việc, tin nhắn, xin/duyệt giảm giá | I | tenant `messages` |
 | Quyền xem OWN cho đơn, tin, theo dõi, tiền, phễu | I | tenant `messages`, `scope` |
 | Phễu tính tiền thật đã thu | I | tenant `scope` |
@@ -284,14 +298,18 @@ Theo mục tiêu ghi trong mã/tài liệu (không có số liệu vận hành t
 | Cờ `GREETING_CARD_ENABLED` | P | chỉ tắt bộ quét nền |
 | Sự kiện `SWIPE_NEXT/PREV`, `OPEN_ORDER_FORM`, `TRACK_VIEW`, `INTERNAL_NOTE`; trạng thái `BROWSING`; nhánh `production_status "DONE"` | D | khai báo/so sánh nhưng không ghi |
 | `VALID_SESSION_TRANSITIONS` | P | chỉ dùng ở `select-brochure-product.ts` |
-| E2E `brochure-swipe.spec.ts` | I | 11/11 trên máy chủ thật |
+| E2E `brochure-swipe.spec.ts` | I | 11/11 trên máy chủ thật (v2) · E2E riêng cho 6 cách xem: M (đã kiểm tay bằng Playwright) |
 | Chống CSRF tường minh · log có cấu trúc · cache · email · link hàng loạt · A/B | P · P · M · M · M · M | §10.4, §12, §13 |
 
 ## 16. Evidence / Code References
 
-**16.1 Điểm vào chính** — trang: `src/app/(app)/the-chao/page.tsx`, `src/app/b/[sendCode]/page.tsx`, `src/app/s/[code]/page.tsx`, `src/app/s/[code]/mo/route.ts:19`, `src/app/g/[id]/page.tsx`, `src/app/bst/[orgSlug]/[catalogCode]/page.tsx` · API nội bộ: `src/app/api/v1/greeting-card/**` (44 handler, 34 tệp) · API công khai: `src/app/api/v1/public/brochure/**`, `public/greeting-catalog/**`, `public/payments/sepay/route.ts` · Use-case lõi: `place-brochure-order.ts`, `submit-brochure-order.ts:33`, `submit-public-catalog-order.ts:34`, `confirm-brochure-payment.ts:15,36,86`, `update-brochure-order-status.ts`, `payment-webhook.ts:50`, `get-tracking-pipeline.ts:77`, `get-inbox.ts`, `internal-messages.ts`, `discount-requests.ts`, `share-links.ts:37`, `notify-customer.ts:30` · Repository lõi: `brochure-checkout-repository.ts:99`, `brochure-payment-repository.ts:40,128`, `brochure-order-repository.ts:106`, `discount-repository.ts:43`, `greeting-card-repository.ts:19,123`.
+**16.1 Điểm vào chính** — trang: `src/app/(app)/the-chao/page.tsx`, `src/app/b/[sendCode]/page.tsx`, `src/app/s/[code]/page.tsx`, `src/app/s/[code]/mo/route.ts:19`, `src/app/g/[id]/page.tsx`, `src/app/bst/[orgSlug]/[catalogCode]/page.tsx` · API nội bộ: `src/app/api/v1/greeting-card/**` (46 handler, 36 tệp; mới: `tracking/route.ts`, `tracking/timeline/route.ts`) · API công khai: `src/app/api/v1/public/brochure/**`, `public/greeting-catalog/**`, `public/payments/sepay/route.ts` · Use-case lõi: `place-brochure-order.ts`, `submit-brochure-order.ts:33`, `submit-public-catalog-order.ts:34`, `confirm-brochure-payment.ts:15,36,86`, `update-brochure-order-status.ts`, `payment-webhook.ts:50`, `get-tracking-pipeline.ts:77`, `query-tracking.ts`, `get-tracking-timeline.ts`, `get-inbox.ts`, `internal-messages.ts`, `discount-requests.ts`, `share-links.ts:37`, `notify-customer.ts:30` · Repository lõi: `brochure-checkout-repository.ts:99`, `brochure-payment-repository.ts:40,128`, `brochure-order-repository.ts:106`, `discount-repository.ts:43`, `greeting-card-repository.ts:19,123`.
 
-**16.2 Kiểm chứng đã chạy (06/10/2026, lượt soát này)**
+**16.2 Kiểm chứng đã chạy**
+
+v3 (06/10/2026): `npm test` 226/226 tệp, 1672 ca · tenant Thẻ chào 15 tệp xanh · trình duyệt thật (dev server + dữ liệu đơn thật) qua đủ 6 cách xem + Timeline: trước sửa #29 tái hiện `TypeError … reading 'ageMinutes'`, sau sửa không lỗi · unit `share-open-redirect` đỏ trên mã cũ, xanh trên mã mới · `typecheck`, `lint:ratchet`, `lint:ux --check`, `check:docs`, `build` đạt.
+
+v2:
 
 - `npm test` (biến môi trường như CI) → 224/224 tệp, 1664 ca.
 - `npm run test:tenant` trên Postgres 16 (`floraos_test`) → 354/356; 2 ca `product-copies` đỏ y hệt trên `main` (lỗi cũ). Tenant Thẻ chào: 14 tệp xanh.
@@ -312,11 +330,12 @@ Các điểm lệch của v1 (đặc tả 06 §25.2, đặc tả 07 "Bảy bản
 
 Đã PO chốt 06/10/2026 (v1 câu 2–5): sale giữ `R9` nhưng theo phạm vi xem; OWN áp cho phễu; theo dõi công khai rút gọn + xác minh; cọc không làm phiên "hoàn tất". Đã kiểm (v1 câu 1, 6): sổ đơn chung bị khoá với đơn Thẻ chào; E2E chạy 11/11. Còn mở:
 
-1. Số liệu vận hành thật (số tiệm dùng, số đơn, tỷ lệ chuyển đổi) — không có trong repo; giá trị kinh doanh ở §14 chỉ theo ý đồ.
-2. Có tiệm nào đang dùng ZNS thật và mẫu ZNS đã duyệt chưa; webhook SePay thật — chưa kiểm trên production.
-3. `crm`/`customer_service` có R1 → vào được `/the-chao`, hộp việc coi họ như Sale — có chủ đích không.
-4. Ranh giới với "Catalog & QR" (`/catalog`, `catalog_links`, M06) — hai cơ chế bộ sưu tập công khai song song.
-5. Có cần công tắc tắt tính năng thật (nợ #179a) và captcha (#179c) trước khi mở rộng không.
+1. **Bất nhất trong cách suy bước (báo cáo, chưa sửa — chờ PO)**: (a) khách đặt cọc làm đơn sang `CONFIRMED` → nhảy thẳng B5; (b) tên ngắn B4 "Đã thanh toán" thực chất là "khách báo đã chuyển khoản"; (c) mã so `production_status === "DONE"` không có trong enum; (d) `BROWSING` không bao giờ được ghi.
+2. Số liệu vận hành thật (số tiệm dùng, số đơn, tỷ lệ chuyển đổi) — không có trong repo; giá trị kinh doanh ở §14 chỉ theo ý đồ.
+3. Có tiệm nào đang dùng ZNS thật và mẫu ZNS đã duyệt chưa; webhook SePay thật — chưa kiểm trên production.
+4. `crm`/`customer_service` có R1 → vào được `/the-chao`, hộp việc coi họ như Sale — có chủ đích không.
+5. Ranh giới với "Catalog & QR" (`/catalog`, `catalog_links`, M06) — hai cơ chế bộ sưu tập công khai song song.
+6. Có cần công tắc tắt tính năng thật (nợ #179a) và captcha (#179c) trước khi mở rộng không.
 
 ## Phụ lục A. Bản audit thứ hai
 

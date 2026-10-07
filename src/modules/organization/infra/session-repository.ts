@@ -21,8 +21,33 @@ export class SessionRepository {
     token_hash: string
     organization_id: string | null
     expires_at: Date
+    created_at?: Date
   }): Promise<sessions> {
     return this.db.sessions.create({ data: input })
+  }
+
+  /**
+   * Một tài khoản chỉ một phiên: thu hồi mọi phiên còn hiệu lực của người
+   * dùng trước khi cấp phiên mới. Gọi cùng transaction với `create`, và dùng
+   * cùng mốc `now` làm `created_at` của phiên mới — `isSupersededBy` dựa vào
+   * sự trùng mốc đó để phân biệt "bị đăng nhập nơi khác" với "tự đăng xuất".
+   */
+  async revokeAllActiveForUser(userId: string, now: Date): Promise<number> {
+    const result = await this.db.sessions.updateMany({
+      where: { user_id: userId, revoked_at: null },
+      data: { revoked_at: now },
+    })
+    return result.count
+  }
+
+  /** Có phiên mới hơn của cùng người dùng được cấp đúng lúc phiên này bị thu hồi. */
+  async wasSupersededByNewLogin(session: sessions): Promise<boolean> {
+    if (!session.revoked_at) return false
+    const newer = await this.db.sessions.findFirst({
+      where: { user_id: session.user_id, created_at: session.revoked_at, id: { not: session.id } },
+      select: { id: true },
+    })
+    return newer !== null
   }
 
   findByTokenHash(tokenHash: string): Promise<sessions | null> {

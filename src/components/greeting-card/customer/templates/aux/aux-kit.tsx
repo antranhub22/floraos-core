@@ -65,6 +65,12 @@ export function EmptyCatalog() {
  * tan vào màu khung, không lộ thành khối chữ nhật. Ảnh có bối cảnh thật gần như không đổi.
  * Luôn `object-contain`: khách phải thấy trọn mẫu hoa, không bị cắt mép.
  */
+function getDriveFolderId(link?: string | null): string | null {
+  if (!link) return null
+  const m = link.match(/folders\/([a-zA-Z0-9_-]{20,})/)
+  return m?.[1] ?? null
+}
+
 export function ProductImage({
   product,
   className,
@@ -74,12 +80,36 @@ export function ProductImage({
   className?: string
   backdrop?: string
 }) {
-  return product.imageUrl ? (
-    <span className={cn("block h-full w-full overflow-hidden", className?.includes("absolute") ? undefined : "relative", className)} style={{ background: backdrop }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={product.imageUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain" style={{ mixBlendMode: "multiply" }} />
-    </span>
-  ) : (
+  const [driveFailed, setDriveFailed] = useState(false)
+  const folderId = !product.imageUrl && !driveFailed ? getDriveFolderId(product.driveLink) : null
+  const driveProxySrc = folderId ? `/api/v1/public/drive-thumb-proxy?folder_id=${folderId}` : null
+
+  if (product.imageUrl) {
+    return (
+      <span className={cn("block h-full w-full overflow-hidden", className?.includes("absolute") ? undefined : "relative", className)} style={{ background: backdrop }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={product.imageUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain" style={{ mixBlendMode: "multiply" }} />
+      </span>
+    )
+  }
+
+  if (driveProxySrc) {
+    return (
+      <span className={cn("block h-full w-full overflow-hidden", className?.includes("absolute") ? undefined : "relative", className)} style={{ background: backdrop }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={driveProxySrc}
+          alt=""
+          loading="lazy"
+          onError={() => setDriveFailed(true)}
+          className="absolute inset-0 h-full w-full object-contain"
+          style={{ mixBlendMode: "multiply" }}
+        />
+      </span>
+    )
+  }
+
+  return (
     <div className={cn("flex h-full w-full items-center justify-center bg-surface-alt text-caption text-text-muted", className)}>
       Chưa có ảnh
     </div>

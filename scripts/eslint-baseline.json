@@ -1,5 +1,5 @@
 {
-  "total": 46,
+  "total": 45,
   "files": {
     "src/app/(app)/audit/page.tsx": {
       "react-hooks/set-state-in-effect": 1
@@ -20,9 +20,6 @@
       "react-hooks/set-state-in-effect": 1
     },
     "src/app/(app)/muc-dung/page.tsx": {
-      "react-hooks/set-state-in-effect": 1
-    },
-    "src/app/(app)/san-pham/page.tsx": {
       "react-hooks/set-state-in-effect": 1
     },
     "src/app/(app)/san-pham/tao-moi/page.tsx": {

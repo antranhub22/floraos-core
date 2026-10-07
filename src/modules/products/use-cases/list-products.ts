@@ -52,6 +52,7 @@ export async function listProducts(
         branch_id: product.branch_id,
         masterImageUrl: product.masterImageUrl,
         price_vnd: product.price_vnd,
+        driveLink: product.driveLink,
       },
       pricingRuleRows,
       { canReadPricing, branchId: ctx.branchId }

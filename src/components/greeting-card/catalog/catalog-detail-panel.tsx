@@ -5,6 +5,7 @@ import { ArrowLeft, Package, Plus, Trash2, Search, Loader2, X, CheckCircle } fro
 import { Button } from "@/components/ui/button"
 import { useCatalogItems } from "./use-catalog-items"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
+import { CatalogHeartsPanel } from "./catalog-hearts-panel"
 
 type ProductVariant = { id: string; price_vnd: number; name: string }
 type CatalogProduct = {
@@ -13,6 +14,7 @@ type CatalogProduct = {
     id: string
     name: string
     masterImageUrl?: string | undefined
+    driveLink?: string | undefined
     variants: ProductVariant[]
   }
   sort_order: number
@@ -48,9 +50,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
     if (!window.confirm("Xóa sản phẩm này khỏi bộ sưu tập?")) return
     void ci.remove(productId)
   }
-  const filteredProducts = ci.available.filter(
-    (p) => !productSearch.trim() || p.name.toLowerCase().includes(productSearch.toLowerCase())
-  )
+  const filteredProducts = ci.available
 
   if (loading && !catalog) {
     return (
@@ -132,7 +132,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                       className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-surface transition-colors"
                     >
                       <div className="w-12 h-12 rounded-lg bg-surface-alt border border-border flex items-center justify-center shrink-0 overflow-hidden">
-                        <FlowerImage src={product.masterImageUrl} alt={product.name} sizes="(max-width: 640px) 50vw, 200px" fallback="icon" className="w-full h-full" />
+                        <FlowerImage src={product.masterImageUrl} driveLink={product.driveLink} alt={product.name} sizes="(max-width: 640px) 50vw, 200px" fallback="icon" className="w-full h-full" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-body-sm font-bold text-foreground truncate">{product.name}</p>
@@ -203,7 +203,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                 className="bg-surface rounded-xl border border-border overflow-hidden flex flex-col hover:border-primary/30 hover:shadow-md transition-all duration-200 group"
               >
                 <div className="aspect-square bg-surface-muted relative overflow-hidden">
-                  <FlowerImage src={item.product.masterImageUrl} alt={item.product.name} sizes="(max-width: 640px) 50vw, 200px" fallback="icon" className="w-full h-full" />
+                  <FlowerImage src={item.product.masterImageUrl} driveLink={item.product.driveLink} alt={item.product.name} sizes="(max-width: 640px) 50vw, 200px" fallback="icon" className="w-full h-full" />
                   <div className="absolute top-2 left-2">
                     <span className="w-6 h-6 rounded-full bg-black/50 text-white text-caption font-bold flex items-center justify-center">
                       {item.sort_order + 1}
@@ -246,6 +246,8 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
           </button>
         </div>
       )}
+
+      {catalog && catalog.items.length > 0 && <CatalogHeartsPanel catalogId={catalogId} />}
 
       {catalog && catalog.items.length > 0 && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-success-bg border border-success/20 text-success">

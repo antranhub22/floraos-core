@@ -4,6 +4,7 @@ import { conflict, notFound } from "@/core/http/errors"
 import { Prisma } from "@/generated/prisma/client"
 import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 import type { GreetingCatalogType } from "../domain/greeting-card-types"
+import { AuditLogRepository, type RecordAuditLogInput } from "@/modules/audit/infra/audit-log-repository"
 
 const SIGNED_URL_TTL_MS = 7 * 86_400_000
 
@@ -108,11 +109,31 @@ export class GreetingCatalogRepository {
     })
   }
 
-  /** Bộ sưu tập đang dùng, mới nhất trước; lấy dư 1 dòng để biết còn trang sau (`toPage`). */
-  async listCatalogs(ctx: TenantContext, options: { limit?: number; cursor?: string | undefined } = {}) {
+  /** Bộ sưu tập, mới nhất trước; lấy dư 1 dòng để biết còn trang sau (`toPage`). Hỗ trợ lọc theo createdBy, trạng thái, và số ngày tạo. */
+  async listCatalogs(
+    ctx: TenantContext,
+    options: {
+      limit?: number
+      cursor?: string | undefined
+      createdBy?: string | undefined
+      status?: "active" | "archived" | "all" | undefined
+      days?: number | undefined
+    } = {}
+  ) {
     const limit = options.limit ?? 100
+    const status = options.status ?? "active"
+
+    let minCreatedAt: Date | undefined
+    if (options.days && options.days > 0) {
+      minCreatedAt = new Date(Date.now() - options.days * 24 * 60 * 60 * 1000)
+    }
+
     return this.db.greeting_catalogs.findMany({
-      where: scopedWhere(ctx, { is_active: true }),
+      where: scopedWhere(ctx, {
+        ...(status === "active" ? { is_active: true } : status === "archived" ? { is_active: false } : {}),
+        ...(options.createdBy ? { created_by: options.createdBy } : {}),
+        ...(minCreatedAt ? { created_at: { gte: minCreatedAt } } : {}),
+      }),
       include: {
         organization: { select: { id: true, name: true, slug: true } },
         _count: { select: { items: true, sessions: true } },
@@ -138,9 +159,11 @@ export class GreetingCatalogRepository {
       ...catalog,
       items: catalog.items.map((item) => {
         const mainImg = item.product.images[0]
+        const attrs = (item.product.attributes as Record<string, unknown>) ?? {}
+        const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : undefined
         return {
           ...item,
-          product: { ...item.product, masterImageUrl: mainImg ? urls.get(mainImg.asset_id) : undefined },
+          product: { ...item.product, masterImageUrl: mainImg ? urls.get(mainImg.asset_id) : undefined, driveLink },
         }
       }),
     }
@@ -179,6 +202,18 @@ export class GreetingCatalogRepository {
       data: { is_active: false },
     })
     if (result.count === 0) throw notFound()
+  }
+
+  /** Ẩn/khôi phục catalog và ghi `audit_logs` trong CÙNG transaction — không có thay đổi nào thiếu dấu vết. */
+  async setCatalogActiveWithAudit(ctx: TenantContext, id: string, isActive: boolean, audit: RecordAuditLogInput) {
+    await this.db.$transaction(async (tx) => {
+      const result = await tx.greeting_catalogs.updateMany({
+        where: scopedWhere(ctx, { id }),
+        data: { is_active: isActive },
+      })
+      if (result.count === 0) throw notFound()
+      await new AuditLogRepository(tx).record(ctx, audit)
+    })
   }
 
   async addProductToCatalog(ctx: TenantContext, catalogId: string, productId: string) {

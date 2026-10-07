@@ -94,10 +94,13 @@ describe("Greeting Card 12 Visual Swipe Styles & Engine Tests", () => {
       expect(html).toContain("Bó Hoa Hồng Red Naomi")
       expect(html).toContain("Đặt mẫu này")
       expect(html).toContain("850.000")
-      // Cử chỉ vuốt chuẩn Tinder: có nhãn THÍCH / BỎ QUA và nút hoàn tác
-      expect(html).toContain("THÍCH")
-      expect(html).toContain("BỎ QUA")
-      expect(html).toContain("Hoàn tác")
+      // Kiểu Facebook Story (PO 07/10/2026): mẫu trước/sau, nút ⓘ chi tiết, nút thả tim; bỏ THÍCH/BỎ QUA kiểu Tinder
+      expect(html).toContain("Mẫu trước")
+      expect(html).toContain("Mẫu sau")
+      expect(html).toContain("Xem chi tiết")
+      expect(html).toContain("Thả tim")
+      expect(html).not.toContain("BỎ QUA")
+      expect(html).not.toContain("Hoàn tác")
       // Ảnh sản phẩm luôn hiện trọn (không cắt mép)
       expect(html).toMatch(/<img[^>]*object-contain/)
       expect(html).not.toMatch(/<img[^>]*object-cover/)
@@ -170,7 +173,7 @@ describe("Greeting Card 12 Visual Swipe Styles & Engine Tests", () => {
       for (const tpl of SWIPE_12_STYLES) expect(html).toContain(tpl.name.replace(/&/g, "&amp;"))
       expect(html).toContain("Bó Hoa Hồng Red Naomi")
       // Khung xem trước là giao diện thật: thẻ vuốt có nút Thích, lookbook có ô lọc giá
-      expect(html).toContain(templateId === "cinematic-dark" ? "Hoàn tác" : "Lookbook")
+      expect(html).toContain(templateId === "cinematic-dark" ? "Thả tim" : "Lookbook")
     }
   })
 })

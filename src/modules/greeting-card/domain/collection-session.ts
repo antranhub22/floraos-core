@@ -1,7 +1,8 @@
 /**
  * Trạng thái lướt bộ sưu tập của MỘT khách trên MỘT trình duyệt (lưu ở máy khách, không gắn vào
  * URL). Mọi hàm thuần: nhận trạng thái cũ + thứ tự mẫu đang hiện (`order`), trả trạng thái mới.
- * Quay lại mẫu trước không xoá Thích/Bỏ qua; chỉ "Hoàn tác" mới xoá. Pure TypeScript.
+ * Lướt kiểu Story (07/10/2026): `goNext`/`goPrevious` chỉ di chuyển; thả tim là `toggleLike` trên
+ * mẫu đang xem, không tự sang mẫu khác. `decide`/`undo` giữ cho dữ liệu cũ. Pure TypeScript.
  */
 
 export interface CollectionSession {
@@ -74,6 +75,29 @@ export function decide(s: CollectionSession, order: readonly string[], decision:
   return moveTo(marked, order, idx + 1, now)
 }
 
+/** Sang mẫu kế tiếp (chạm phải / vuốt trái) — không đổi tim. Ở mẫu cuối → màn cuối. */
+export function goNext(s: CollectionSession, order: readonly string[], now: Date): CollectionSession {
+  const idx = currentIndex(s, order)
+  if (idx >= order.length) return s
+  return moveTo(s, order, idx + 1, now)
+}
+
+/** Thả / bỏ tim mẫu đang xem, đứng yên tại mẫu đó. */
+export function toggleLike(s: CollectionSession, order: readonly string[], now: Date): { session: CollectionSession; liked: boolean } {
+  const id = order[currentIndex(s, order)]
+  if (!id) return { session: s, liked: false }
+  const liked = !s.likedProductIds.includes(id)
+  return {
+    liked,
+    session: {
+      ...s,
+      likedProductIds: liked ? withId(s.likedProductIds, id) : without(s.likedProductIds, id),
+      skippedProductIds: without(s.skippedProductIds, id),
+      lastActivityAt: now.toISOString(),
+    },
+  }
+}
+
 /** Quay lại mẫu trước, GIỮ nguyên Thích/Bỏ qua đã chọn. Đang ở mẫu đầu → không đổi. */
 export function goPrevious(s: CollectionSession, order: readonly string[], now: Date): CollectionSession {
   const idx = currentIndex(s, order)
@@ -104,7 +128,7 @@ export function restart(s: CollectionSession, order: readonly string[], now: Dat
 /** Mở lại link có nên hỏi "Tiếp tục xem / Xem lại từ đầu" không. */
 export function canResume(s: CollectionSession, order: readonly string[]): boolean {
   if (s.orderId) return false
-  return s.likedProductIds.length + s.skippedProductIds.length > 0 && currentIndex(s, order) > 0
+  return currentIndex(s, order) > 0
 }
 
 /** Chuyển lịch sử vuốt của bản cũ (`[{id, dir}]`) sang trạng thái mới — khách cũ không mất mẫu đã thích. */
