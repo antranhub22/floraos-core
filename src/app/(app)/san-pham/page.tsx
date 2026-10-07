@@ -24,6 +24,7 @@ import {
   TrashConfirmModal,
   type TrashConfirmTarget,
 } from "@/components/storage/trash-confirm-modal"
+import { readApiError } from "@/components/greeting-card/api-error"
 
 type Product = {
   id: string
@@ -153,8 +154,7 @@ export default function SanPhamPage() {
       body: JSON.stringify({ id: target.id, type: target.type }),
     })
     if (!res.ok) {
-      const d = await res.json().catch(() => ({}))
-      throw new Error(d?.message || d?.error || "Không thể chuyển sản phẩm vào thùng rác")
+      throw new Error(await readApiError(res, "Không thể chuyển sản phẩm vào thùng rác"))
     }
     // Xóa khỏi danh sách hiển thị ngay
     removeLocal(target.id)

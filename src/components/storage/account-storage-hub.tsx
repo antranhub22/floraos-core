@@ -45,6 +45,7 @@ import {
 
 import { TrashConfirmModal, type TrashConfirmTarget } from "@/components/storage/trash-confirm-modal"
 import { StorageTrashTab } from "@/components/storage/storage-trash-tab"
+import { readApiError } from "@/components/greeting-card/api-error"
 
 export type StorageTab = "raw" | "approved" | "finalized" | "trash"
 
@@ -280,8 +281,7 @@ export function AccountStorageHub({
       body: JSON.stringify({ id: target.id, type: target.type }),
     })
     if (!res.ok) {
-      const d = await res.json().catch(() => ({}))
-      throw new Error(d?.message || d?.error || "Không thể chuyển vào thùng rác")
+      throw new Error(await readApiError(res, "Không thể chuyển vào thùng rác"))
     }
     // Cập nhật state UI ngay lập tức
     if (target.type === "RAW_ASSET") {
