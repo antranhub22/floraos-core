@@ -743,8 +743,8 @@ Trang công khai ngoài `/api/v1` (06/10/2026): **`/s/<mã>`** — link bộ sư
 
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
-| GET · POST | `/greeting-card/catalogs` | `L1` · `R2` | Bộ sưu tập đang dùng (mặc định trang 100). POST: `productIds` phải thuộc tổ chức (khác → 404); mã trùng → 409 |
-| GET · PATCH · DELETE | `/greeting-card/catalogs/:id` | `L1` · `R2` · `R2` | DELETE = ẩn (`is_active=false`); tổ chức khác → 404 |
+| GET · POST | `/greeting-card/catalogs` | `L1` · `R2` | Bộ sưu tập đang dùng (mặc định trang 100); `?status=active\|archived\|all`, `?created_by=<userId>`, `?days=<n>` (tạo trong n ngày). POST: `productIds` phải thuộc tổ chức (khác → 404); mã trùng → 409; ghi `audit_logs` `greeting_catalog.create` |
+| GET · PATCH · DELETE | `/greeting-card/catalogs/:id` | `L1` · `R2` · `R2` | DELETE = ẩn (`is_active=false`); tổ chức khác → 404 · Ẩn (DELETE hoặc PATCH `isActive:false`) và khôi phục (PATCH `isActive:true`) chỉ cho người tạo, hoặc người có `L4` (Điều hành) với catalog của người khác — thiếu → 403; thay đổi và `audit_logs` (`greeting_catalog.delete` / `.restore`) ghi trong cùng transaction (07/10/2026) |
 | POST · DELETE | `/greeting-card/catalogs/:id/products` | `R2` | Thân `{ productId }`; sản phẩm tổ chức khác → 404 |
 | GET · POST | `/greeting-card/send-links` | `R1` · `R2` | POST sinh mã gửi ngẫu nhiên duy nhất toàn hệ thống (`T01-XXXXXXXX`), `expiresInDays` 1–365 hoặc `null` (mặc định 30). GET kèm `link_state` ACTIVE/EXPIRED/REVOKED |
 | POST | `/greeting-card/send-links/:id/revoke` | `R2` | Thu hồi link chưa có đơn (idempotent); đã có đơn → 409 |
@@ -790,7 +790,7 @@ Trang công khai ngoài `/api/v1` (06/10/2026): **`/s/<mã>`** — link bộ sư
 | POST | `/public/brochure/:sendCode/payment-notify` | — | Khách báo đã chuyển khoản (cần có đơn) |
 | POST | `/public/brochure/:sendCode/reorder` | — | Khách đặt thêm đơn từ link đã có đơn: tạo phiên mới (mã link + mã đơn mới) cùng sale, khách, bộ sưu tập; ghi sự kiện `REORDER`; trả `{ sendCode }` mới và cookie chủ phiên của phiên mới. Link chưa có đơn → 409. 10 lần/10 phút/IP |
 | GET | `/public/brochure/tracking/:code` | — | Theo dõi theo mã đơn — chỉ đơn nguồn BROCHURE · Mặc định bản RÚT GỌN (PO 06/10/2026): tên người nhận viết tắt, chỉ phường + tỉnh, không lời nhắn thiệp, không ảnh người nhận, `order.verified = false`. `?link=<mã link của đơn>` kèm cookie chủ phiên của link đó trả đầy đủ (không có cookie → bản rút gọn). Không bao giờ trả SĐT |
-| POST | `/public/brochure/tracking/:code` | — | `{ phoneLast4 }` — đúng 4 số cuối SĐT người đặt → bản đầy đủ; sai → 404 (không nói sai gì). 5 lần/15 phút/IP/mã đơn |
+| POST | `/public/brochure/tracking/:code` | — | `{ phoneLast4 }` — đúng 4 số cuối SĐT người đặt → bản đầy đủ; sai → 404 (không nói sai gì). 5 lần/15 phút/IP/mã đơn, và tối đa 10 lần/24 giờ/mã đơn tính chung mọi IP (07/10/2026 — chặn dò bằng cách đổi IP) |
 | POST | `/public/greeting-catalog/:id/quote` | — | Như trên cho link bộ sưu tập công khai, kèm `productId` |
 | POST | `/public/greeting-catalog/:id/order` | — | Đặt hoa từ link bộ sưu tập công khai · Cùng SĐT + mẫu + người nhận + ngày giao trong 10 phút → trả lại đơn vừa tạo (không tạo trùng); cùng ô bẫy, trần SĐT, chặn hết hàng như link riêng |
 | GET | `/public/drive-thumbnail` | — | `?folder_id=` (Drive id `[A-Za-z0-9_-]{10,128}`, sai → 400) → `{ folder_id, file_id, thumbnail_url }` của file đầu tiên trong folder Drive công khai; dùng ở màn nhập hàng loạt sản phẩm. 120 lần/phút/IP; cache trong tiến trình có trần (500 mục, 6 giờ); gọi Drive timeout 5 giây (07/10/2026) |

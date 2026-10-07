@@ -28,7 +28,10 @@ const verifySchema = z.object({ phoneLast4: z.string().regex(/^\d{4}$/, "Nhập 
  */
 export const POST = handle<[{ params: Promise<{ code: string }> }]>(async (request, context) => {
   const { code } = await context.params
-  await enforceRateLimit(request, { scope: `brochure-tracking-verify:${code.toUpperCase().slice(0, 40)}`, limit: 5, windowMs: 15 * 60_000 })
+  const codeKey = code.toUpperCase().slice(0, 40)
+  await enforceRateLimit(request, { scope: `brochure-tracking-verify:${codeKey}`, limit: 5, windowMs: 15 * 60_000 })
+  // Trần CHUNG mọi IP cho từng mã đơn: đổi IP không dò được đủ 10.000 khả năng của 4 số cuối
+  await enforceRateLimit(request, { scope: `brochure-tracking-verify-code:${codeKey}`, limit: 10, windowMs: 86_400_000, key: "global" })
   const parsed = verifySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ phoneLast4: "Nhập đúng 4 số cuối" })
   const data = await getBrochureTracking(code, { phoneLast4: parsed.data.phoneLast4 })

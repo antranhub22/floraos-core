@@ -2,144 +2,62 @@ import { describe, it, expect, vi } from "vitest"
 import type { TenantContext } from "@/core/tenancy"
 import { deleteGreetingCatalog, restoreGreetingCatalog } from "../../use-cases/delete-greeting-catalog"
 import { AppError } from "@/core/http/errors"
-import type { GreetingCardRepository } from "../../infra/greeting-card-repository"
-import type { AuditLogRepository } from "@/modules/audit/infra/audit-log-repository"
 
-const asRepo = (m: object) => m as unknown as GreetingCardRepository
-const asAudit = (m: object) => m as unknown as AuditLogRepository
+type Repo = NonNullable<Parameters<typeof deleteGreetingCatalog>[2]>
 
 function makeCtx(userId: string, capabilities: string[] = ["L1", "R2"]): TenantContext {
-  return {
-    organizationId: "org-1",
-    workspaceId: "ws-1",
-    userId,
-    branchId: null,
-    capabilities: new Set(capabilities),
+  return { organizationId: "org-1", workspaceId: "ws-1", userId, branchId: null, capabilities: new Set(capabilities) }
+}
+
+function makeRepo(createdBy: string | null, isActive = true) {
+  const catalog = createdBy === null ? null : {
+    id: "cat-1", code: "bst-tet", name: "BST Tết", type: "STANDARD", created_by: createdBy, is_active: isActive,
   }
+  const mock = {
+    getCatalogById: vi.fn().mockResolvedValue(catalog),
+    setCatalogActiveWithAudit: vi.fn().mockResolvedValue(undefined),
+  }
+  return { mock, repo: mock as unknown as Repo }
 }
 
 describe("deleteGreetingCatalog & restoreGreetingCatalog", () => {
-  it("cho phép người tạo xóa catalog của chính mình và ghi audit_logs", async () => {
-    const ctx = makeCtx("user-sale-1")
-    const mockCatalog = {
-      id: "cat-1",
-      code: "bst-tet",
-      name: "BST Tết",
-      type: "STANDARD",
-      created_by: "user-sale-1",
-      is_active: true,
-    }
-
-    const mockRepo = {
-      getCatalogById: vi.fn().mockResolvedValue(mockCatalog),
-      deleteCatalog: vi.fn().mockResolvedValue(undefined),
-      updateCatalog: vi.fn().mockResolvedValue(undefined),
-    }
-
-    const mockAuditRepo = {
-      record: vi.fn().mockResolvedValue({ id: "audit-1" }),
-    }
-
-    const result = await deleteGreetingCatalog(
-      ctx,
-      "cat-1",
-      asRepo(mockRepo),
-      asAudit(mockAuditRepo)
+  it("người tạo xoá được catalog của mình — ẩn + audit trong cùng một lời gọi transaction", async () => {
+    const { mock, repo } = makeRepo("user-sale-1")
+    await expect(deleteGreetingCatalog(makeCtx("user-sale-1"), "cat-1", repo)).resolves.toEqual({ success: true })
+    expect(mock.setCatalogActiveWithAudit).toHaveBeenCalledWith(
+      expect.anything(), "cat-1", false,
+      expect.objectContaining({ action: "greeting_catalog.delete", after: { is_active: false, deleted_by: "user-sale-1" } }),
     )
-
-    expect(result).toEqual({ success: true })
-    expect(mockRepo.deleteCatalog).toHaveBeenCalledWith(ctx, "cat-1")
-    expect(mockAuditRepo.record).toHaveBeenCalledWith(ctx, expect.objectContaining({
-      action: "greeting_catalog.delete",
-      entityType: "greeting_catalog",
-      entityId: "cat-1",
-    }))
   })
 
-  it("chặn nhân viên khác xóa catalog không phải do mình tạo", async () => {
-    const ctx = makeCtx("user-sale-2") // người khác
-    const mockCatalog = {
-      id: "cat-1",
-      code: "bst-tet",
-      name: "BST Tết",
-      type: "STANDARD",
-      created_by: "user-sale-1", // tạo bởi user 1
-      is_active: true,
-    }
-
-    const mockRepo = {
-      getCatalogById: vi.fn().mockResolvedValue(mockCatalog),
-      deleteCatalog: vi.fn(),
-    }
-    const mockAuditRepo = { record: vi.fn() }
-
-    await expect(
-      deleteGreetingCatalog(ctx, "cat-1", asRepo(mockRepo), asAudit(mockAuditRepo))
-    ).rejects.toThrow(AppError)
-
-    expect(mockRepo.deleteCatalog).not.toHaveBeenCalled()
-    expect(mockAuditRepo.record).not.toHaveBeenCalled()
+  it("người khác không có L4 → CAPABILITY_DENIED, không ghi gì", async () => {
+    const { mock, repo } = makeRepo("user-sale-1")
+    await expect(deleteGreetingCatalog(makeCtx("user-sale-2"), "cat-1", repo)).rejects.toBeInstanceOf(AppError)
+    expect(mock.setCatalogActiveWithAudit).not.toHaveBeenCalled()
   })
 
-  it("Điều hành có quyền xóa bất kỳ catalog nào kể cả không do mình tạo", async () => {
-    const ctx = makeCtx("user-dieu-hanh", ["L1", "R2", "F2"]) // Năng lực Điều hành F2
-    const mockCatalog = {
-      id: "cat-1",
-      code: "bst-tet",
-      name: "BST Tết",
-      type: "STANDARD",
-      created_by: "user-sale-1",
-      is_active: true,
-    }
-
-    const mockRepo = {
-      getCatalogById: vi.fn().mockResolvedValue(mockCatalog),
-      deleteCatalog: vi.fn().mockResolvedValue(undefined),
-    }
-    const mockAuditRepo = { record: vi.fn().mockResolvedValue({ id: "audit-1" }) }
-
-    const result = await deleteGreetingCatalog(
-      ctx,
-      "cat-1",
-      asRepo(mockRepo),
-      asAudit(mockAuditRepo)
-    )
-
-    expect(result).toEqual({ success: true })
-    expect(mockRepo.deleteCatalog).toHaveBeenCalledWith(ctx, "cat-1")
-    expect(mockAuditRepo.record).toHaveBeenCalledWith(ctx, expect.objectContaining({
-      action: "greeting_catalog.delete",
-    }))
+  it("R6/R10 (huỷ đơn, hoàn tiền) KHÔNG còn đủ để xoá catalog của người khác", async () => {
+    const { mock, repo } = makeRepo("user-sale-1")
+    await expect(deleteGreetingCatalog(makeCtx("user-x", ["R6", "R10"]), "cat-1", repo)).rejects.toBeInstanceOf(AppError)
+    expect(mock.setCatalogActiveWithAudit).not.toHaveBeenCalled()
   })
 
-  it("cho phép khôi phục catalog đã xóa và ghi audit log", async () => {
-    const ctx = makeCtx("user-sale-1")
-    const mockCatalog = {
-      id: "cat-1",
-      code: "bst-tet",
-      name: "BST Tết",
-      type: "STANDARD",
-      created_by: "user-sale-1",
-      is_active: false,
-    }
+  it("có L4 (Điều hành) xoá được catalog của người khác", async () => {
+    const { mock, repo } = makeRepo("user-sale-1")
+    await deleteGreetingCatalog(makeCtx("user-admin", ["L4"]), "cat-1", repo)
+    expect(mock.setCatalogActiveWithAudit).toHaveBeenCalledWith(expect.anything(), "cat-1", false, expect.anything())
+  })
 
-    const mockRepo = {
-      getCatalogById: vi.fn().mockResolvedValue(mockCatalog),
-      updateCatalog: vi.fn().mockResolvedValue(undefined),
-    }
-    const mockAuditRepo = { record: vi.fn().mockResolvedValue({ id: "audit-1" }) }
+  it("catalog không có trong tổ chức → 404", async () => {
+    const { repo } = makeRepo(null)
+    await expect(deleteGreetingCatalog(makeCtx("user-admin", ["L4"]), "cat-1", repo)).rejects.toMatchObject({ code: "NOT_FOUND" })
+  })
 
-    const result = await restoreGreetingCatalog(
-      ctx,
-      "cat-1",
-      asRepo(mockRepo),
-      asAudit(mockAuditRepo)
+  it("người tạo khôi phục catalog đã ẩn và ghi audit restore", async () => {
+    const { mock, repo } = makeRepo("user-sale-1", false)
+    await restoreGreetingCatalog(makeCtx("user-sale-1"), "cat-1", repo)
+    expect(mock.setCatalogActiveWithAudit).toHaveBeenCalledWith(
+      expect.anything(), "cat-1", true, expect.objectContaining({ action: "greeting_catalog.restore" }),
     )
-
-    expect(result).toEqual({ success: true })
-    expect(mockRepo.updateCatalog).toHaveBeenCalledWith(ctx, "cat-1", { isActive: true })
-    expect(mockAuditRepo.record).toHaveBeenCalledWith(ctx, expect.objectContaining({
-      action: "greeting_catalog.restore",
-    }))
   })
 })

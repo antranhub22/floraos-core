@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { ProductThumb } from "@/components/products/product-thumb"
+import { useProductList } from "@/components/products/use-product-list"
 import {
   Plus,
   Search,
@@ -10,7 +12,6 @@ import {
   Eye,
   LayoutGrid,
   LayoutList,
-  ImageOff,
   RefreshCw,
   FileSpreadsheet,
   Trash2,
@@ -89,34 +90,7 @@ function ProductCard({ product, isExecutive, onTrash }: ProductCardProps) {
       >
         {/* Ảnh sản phẩm */}
         <div className="relative aspect-square w-full bg-surface-alt overflow-hidden">
-          {product.masterImageUrl ? (
-            <img
-              src={product.masterImageUrl}
-              alt={product.name}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : product.driveLink ? (() => {
-            const folderId = product.driveLink.match(/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
-            return folderId ? (
-              <img
-                src={`/api/v1/public/drive-thumb-proxy?folder_id=${folderId}`}
-                alt={product.name}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-text-muted">
-                <ImageOff size={28} strokeWidth={1.5} />
-                <span className="text-caption">Chưa có ảnh</span>
-              </div>
-            )
-          })() : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-text-muted">
-              <ImageOff size={28} strokeWidth={1.5} />
-              <span className="text-caption">Chưa có ảnh</span>
-            </div>
-          )}
+          <ProductThumb name={product.name} masterImageUrl={product.masterImageUrl} driveLink={product.driveLink} size="card" />
           <div className="absolute top-2 left-2">
             <StatusBadge status={product.status} />
           </div>
@@ -157,16 +131,10 @@ const CATEGORIES = ["Tất cả", "Bó hoa", "Giỏ hoa", "Kệ khai trương", 
 export default function SanPhamPage() {
   const router = useRouter()
   const session = useSession()
-  const [products, setProducts] = useState<Product[] | null>(null)
-  const [loi, setLoi] = useState<string | null>(null)
   const [tuKhoa, setTuKhoa] = useState("")
-  const [debouncedTuKhoa, setDebouncedTuKhoa] = useState("")
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [activeCategory, setActiveCategory] = useState("Tất cả")
   const [trashTarget, setTrashTarget] = useState<TrashConfirmTarget | null>(null)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isExecutive =
     session.roleKey === "dieu_hanh" ||
@@ -174,54 +142,9 @@ export default function SanPhamPage() {
     session.can("G3") ||
     session.can("L4")
 
-  // Debounce tìm kiếm 300ms — tránh gọi API mỗi keystroke
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setDebouncedTuKhoa(tuKhoa), 300)
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [tuKhoa])
-
-  /** Xây URL đồng nhất cho cả load đầu và load more */
-  const buildUrl = useCallback((cursor?: string | null) => {
-    const params = new URLSearchParams({ limit: "50" })
-    if (debouncedTuKhoa.trim()) params.set("search", debouncedTuKhoa.trim())
-    if (activeCategory !== "Tất cả") params.set("category", activeCategory)
-    if (cursor) params.set("cursor", cursor)
-    return `/api/v1/products?${params.toString()}`
-  }, [debouncedTuKhoa, activeCategory])
-
-  const napLai = useCallback(async () => {
-    setLoi(null)
-    setProducts(null)
-    setNextCursor(null)
-    try {
-      const res = await fetch(buildUrl())
-      if (res.status === 401) { router.push("/dang-nhap" as never); return }
-      if (!res.ok) throw new Error(`Không tải được danh sách (${res.status})`)
-      const data = (await res.json()) as { data: Product[]; next_cursor: string | null }
-      setProducts(data.data)
-      setNextCursor(data.next_cursor)
-    } catch (e) {
-      setLoi(e instanceof Error ? e.message : "Không tải được danh sách sản phẩm")
-    }
-  }, [buildUrl, router])
-
-  const handleLoadMore = async () => {
-    if (!nextCursor || loadingMore) return
-    setLoadingMore(true)
-    try {
-      const res = await fetch(buildUrl(nextCursor))
-      if (!res.ok) return
-      const data = (await res.json()) as { data: Product[]; next_cursor: string | null }
-      setProducts((prev) => [...(prev ?? []), ...data.data])
-      setNextCursor(data.next_cursor)
-    } finally {
-      setLoadingMore(false)
-    }
-  }
-
-  // Load lại khi search hoặc category thay đổi
-  useEffect(() => { napLai() }, [napLai])
+  const {
+    items: products, error: loi, nextCursor, loadingMore, reload: napLai, loadMore: handleLoadMore, removeLocal,
+  } = useProductList<Product>(tuKhoa, activeCategory === "Tất cả" ? null : activeCategory)
 
   const handleConfirmTrash = async (target: TrashConfirmTarget) => {
     const res = await fetch("/api/v1/storage/trash", {
@@ -234,10 +157,10 @@ export default function SanPhamPage() {
       throw new Error(d?.message || d?.error || "Không thể chuyển sản phẩm vào thùng rác")
     }
     // Xóa khỏi danh sách hiển thị ngay
-    setProducts((prev) => (prev ? prev.filter((p) => p.id !== target.id) : prev))
+    removeLocal(target.id)
   }
 
-  // Sau khi import xong thì xóa khỏi local list
+  // Server đã lọc theo từ khoá + danh mục
   const hien = products ?? []
 
   return (
@@ -406,32 +329,7 @@ export default function SanPhamPage() {
                     <td className="px-4 py-3 font-semibold text-text">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden bg-surface-alt border border-border">
-                          {p.masterImageUrl ? (
-                            <img
-                              src={p.masterImageUrl}
-                              alt={p.name}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : p.driveLink ? (() => {
-                            const folderId = p.driveLink.match(/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
-                            return folderId ? (
-                              <img
-                                src={`/api/v1/public/drive-thumb-proxy?folder_id=${folderId}`}
-                                alt={p.name}
-                                className="h-full w-full object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center text-text-muted">
-                                <ImageOff size={16} strokeWidth={1.5} />
-                              </div>
-                            )
-                          })() : (
-                            <div className="flex h-full w-full items-center justify-center text-text-muted">
-                              <ImageOff size={16} strokeWidth={1.5} />
-                            </div>
-                          )}
+                          <ProductThumb name={p.name} masterImageUrl={p.masterImageUrl} driveLink={p.driveLink} size="row" />
                         </div>
                         <div className="min-w-0">
                           <div className="truncate font-semibold text-text">{p.name}</div>

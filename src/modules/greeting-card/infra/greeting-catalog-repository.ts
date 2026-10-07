@@ -4,6 +4,7 @@ import { conflict, notFound } from "@/core/http/errors"
 import { Prisma } from "@/generated/prisma/client"
 import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 import type { GreetingCatalogType } from "../domain/greeting-card-types"
+import { AuditLogRepository, type RecordAuditLogInput } from "@/modules/audit/infra/audit-log-repository"
 
 const SIGNED_URL_TTL_MS = 7 * 86_400_000
 
@@ -201,6 +202,18 @@ export class GreetingCatalogRepository {
       data: { is_active: false },
     })
     if (result.count === 0) throw notFound()
+  }
+
+  /** Ẩn/khôi phục catalog và ghi `audit_logs` trong CÙNG transaction — không có thay đổi nào thiếu dấu vết. */
+  async setCatalogActiveWithAudit(ctx: TenantContext, id: string, isActive: boolean, audit: RecordAuditLogInput) {
+    await this.db.$transaction(async (tx) => {
+      const result = await tx.greeting_catalogs.updateMany({
+        where: scopedWhere(ctx, { id }),
+        data: { is_active: isActive },
+      })
+      if (result.count === 0) throw notFound()
+      await new AuditLogRepository(tx).record(ctx, audit)
+    })
   }
 
   async addProductToCatalog(ctx: TenantContext, catalogId: string, productId: string) {

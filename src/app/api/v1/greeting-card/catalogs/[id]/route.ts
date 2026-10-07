@@ -35,13 +35,12 @@ export const PATCH = handle(async (request: Request, context: Context) => {
   const parsed = updateCatalogSchema.safeParse(body)
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
 
-  if (parsed.data.isActive === true) {
-    await restoreGreetingCatalog(ctx, id)
-  } else {
-    const repo = new GreetingCardRepository()
-    await repo.updateCatalog(ctx, id, parsed.data)
-  }
+  // Ẩn/hiện luôn đi qua use-case (kiểm người tạo/L4 + audit); trường còn lại cập nhật thường
+  const { isActive, ...fields } = parsed.data
   const repo = new GreetingCardRepository()
+  if (isActive === true) await restoreGreetingCatalog(ctx, id)
+  else if (isActive === false) await deleteGreetingCatalog(ctx, id)
+  if (Object.values(fields).some((v) => v !== undefined)) await repo.updateCatalog(ctx, id, fields)
   const updated = await repo.getCatalogById(ctx, id)
   if (!updated) throw notFound()
   return jsonResponse({ data: updated })

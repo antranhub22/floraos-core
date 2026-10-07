@@ -47,6 +47,8 @@ const schema = z.object({
   // Redis dùng chung (giới hạn tần suất endpoint công khai). Trống → đếm
   // trong bộ nhớ từng instance (chỉ phù hợp dev/một instance).
   REDIS_URL: optionalUrl,
+  // Số proxy tin cậy trước app để lấy IP thật từ x-forwarded-for (Render = 1, thêm CDN = 2)
+  RATE_LIMIT_TRUSTED_PROXY_HOPS: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().int().min(1).max(5).optional()),
   // URL công khai cho link theo dõi đơn trong tin nhắn khách (fallback RENDER_EXTERNAL_URL)
   PUBLIC_APP_URL: optionalUrl,
   // === FEATURE FLAGS ===

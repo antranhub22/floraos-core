@@ -23,6 +23,12 @@ function getFolderIdFromLink(driveLink: string): string | null {
   return m?.[1] ?? null
 }
 
+/** URL proxy thumbnail cho link folder Drive; không phải link folder → null. */
+export function driveThumbProxySrc(driveLink: string | null | undefined): string | null {
+  const folderId = driveLink ? getFolderIdFromLink(driveLink) : null
+  return folderId ? `/api/v1/public/drive-thumb-proxy?folder_id=${folderId}` : null
+}
+
 export function DriveThumbImage({
   driveLink,
   alt,
@@ -50,7 +56,7 @@ export function DriveThumbImage({
     )
   }
 
-  const proxySrc = `/api/v1/public/drive-thumb-proxy?folder_id=${folderId}`
+  const proxySrc = driveThumbProxySrc(driveLink)!
 
   return (
     <span className={`relative block overflow-hidden ${className}`}>

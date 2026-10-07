@@ -11,6 +11,7 @@ import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/gree
 import { GreetingTemplateRenderer } from "./greeting-template-renderer"
 import { TemplateThumb } from "./template-thumb"
 import { useCatalogProducts } from "./use-catalog-products"
+import { driveThumbProxySrc } from "@/components/greeting-card/drive-thumb-image"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -469,15 +470,7 @@ export function TemplateSelectorSplitPane({
                   tpl={tpl}
                   isActive={activeId === tpl.id}
                   isSelected={selectedTemplateId === tpl.id}
-                  photo={
-                    products[0]?.imageUrl ??
-                    (products[0]?.driveLink
-                      ? (() => {
-                          const fId = products[0]?.driveLink?.match(/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
-                          return fId ? `/api/v1/public/drive-thumb-proxy?folder_id=${fId}` : null
-                        })()
-                      : null)
-                  }
+                  photo={products[0]?.imageUrl ?? driveThumbProxySrc(products[0]?.driveLink)}
                   onClick={() => setActiveId(tpl.id)}
                 />
               ))}

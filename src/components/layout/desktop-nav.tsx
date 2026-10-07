@@ -41,6 +41,7 @@ import {
 } from "./nav-model"
 import { DesktopNavItem } from "./desktop-nav-item"
 import { DesktopNavFooter } from "./desktop-nav-footer"
+import { loadNavGroups, loadReportsOpen, navStorageKeys, persistNavGroups } from "./nav-storage"
 
 const ICONS: Record<string, ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
   Home,
@@ -70,40 +71,12 @@ const ICONS: Record<string, ComponentType<{ size?: number; className?: string; s
   FileSpreadsheet,
 }
 
-const STORAGE_KEY_PREFIX = "floraos_nav_groups_v1"
-const REPORTS_STORAGE_KEY_PREFIX = "floraos_nav_reports_open_v1"
-
-function getStorageKeys(orgId?: string | null) {
-  return {
-    groupsKey: orgId ? `${STORAGE_KEY_PREFIX}__${orgId}` : STORAGE_KEY_PREFIX,
-    reportsKey: orgId ? `${REPORTS_STORAGE_KEY_PREFIX}__${orgId}` : REPORTS_STORAGE_KEY_PREFIX,
-  }
-}
-
-function loadStoredGroupStates(key: string): Record<string, boolean> {
-  if (typeof window === "undefined") return {}
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function persistGroupStates(key: string, states: Record<string, boolean>) {
-  try {
-    localStorage.setItem(key, JSON.stringify(states))
-  } catch {
-    // Không ném lỗi nếu localStorage bị khóa
-  }
-}
-
 export function DesktopNav() {
   const pathname = usePathname()
   const router = useRouter()
   const { can, roleUx, orgName, organization } = useSession()
   const orgId = organization?.id
-  const { groupsKey, reportsKey } = useMemo(() => getStorageKeys(orgId), [orgId])
+  const { groupsKey, reportsKey } = useMemo(() => navStorageKeys(orgId), [orgId])
 
   const navView = useMemo(() => buildNav(can, roleUx), [can, roleUx])
 
@@ -112,24 +85,10 @@ export function DesktopNav() {
   const [reportsOpen, setReportsOpen] = useState(true)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Đồng bộ trạng thái đóng mở nhóm và mục Báo cáo từ localStorage
+  // Đồng bộ trạng thái đóng mở nhóm và mục Báo cáo từ localStorage (đổi tổ chức → đọc lại)
   useEffect(() => {
-    const stored = loadStoredGroupStates(groupsKey)
-    if (Object.keys(stored).length > 0) {
-      setOpenGroups(stored)
-    } else {
-      setOpenGroups({})
-    }
-    try {
-      const storedReports = localStorage.getItem(reportsKey)
-      if (storedReports !== null) {
-        setReportsOpen(storedReports === "true")
-      } else {
-        setReportsOpen(true)
-      }
-    } catch {
-      // bỏ qua
-    }
+    setOpenGroups(loadNavGroups(groupsKey))
+    setReportsOpen(loadReportsOpen(reportsKey))
   }, [groupsKey, reportsKey])
 
   // Phím tắt '/' để tìm kiếm nhanh
@@ -173,7 +132,7 @@ export function DesktopNav() {
   function toggleGroup(key: string, currentExpanded: boolean) {
     const nextStates = { ...openGroups, [key]: !currentExpanded }
     setOpenGroups(nextStates)
-    persistGroupStates(groupsKey, nextStates)
+    persistNavGroups(groupsKey, nextStates)
   }
 
   // Kết quả tìm kiếm phẳng
