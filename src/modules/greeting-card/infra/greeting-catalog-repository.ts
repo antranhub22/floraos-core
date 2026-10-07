@@ -108,11 +108,31 @@ export class GreetingCatalogRepository {
     })
   }
 
-  /** Bộ sưu tập đang dùng, mới nhất trước; lấy dư 1 dòng để biết còn trang sau (`toPage`). */
-  async listCatalogs(ctx: TenantContext, options: { limit?: number; cursor?: string | undefined } = {}) {
+  /** Bộ sưu tập, mới nhất trước; lấy dư 1 dòng để biết còn trang sau (`toPage`). Hỗ trợ lọc theo createdBy, trạng thái, và số ngày tạo. */
+  async listCatalogs(
+    ctx: TenantContext,
+    options: {
+      limit?: number
+      cursor?: string | undefined
+      createdBy?: string | undefined
+      status?: "active" | "archived" | "all" | undefined
+      days?: number | undefined
+    } = {}
+  ) {
     const limit = options.limit ?? 100
+    const status = options.status ?? "active"
+
+    let minCreatedAt: Date | undefined
+    if (options.days && options.days > 0) {
+      minCreatedAt = new Date(Date.now() - options.days * 24 * 60 * 60 * 1000)
+    }
+
     return this.db.greeting_catalogs.findMany({
-      where: scopedWhere(ctx, { is_active: true }),
+      where: scopedWhere(ctx, {
+        ...(status === "active" ? { is_active: true } : status === "archived" ? { is_active: false } : {}),
+        ...(options.createdBy ? { created_by: options.createdBy } : {}),
+        ...(minCreatedAt ? { created_at: { gte: minCreatedAt } } : {}),
+      }),
       include: {
         organization: { select: { id: true, name: true, slug: true } },
         _count: { select: { items: true, sessions: true } },
@@ -138,9 +158,11 @@ export class GreetingCatalogRepository {
       ...catalog,
       items: catalog.items.map((item) => {
         const mainImg = item.product.images[0]
+        const attrs = (item.product.attributes as Record<string, unknown>) ?? {}
+        const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : undefined
         return {
           ...item,
-          product: { ...item.product, masterImageUrl: mainImg ? urls.get(mainImg.asset_id) : undefined },
+          product: { ...item.product, masterImageUrl: mainImg ? urls.get(mainImg.asset_id) : undefined, driveLink },
         }
       }),
     }

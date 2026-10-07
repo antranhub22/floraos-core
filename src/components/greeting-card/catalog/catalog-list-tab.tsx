@@ -13,6 +13,9 @@ import { copyFromServer, createShareUrl } from "@/components/greeting-card/share
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { CatalogCreateModal } from "./catalog-create-modal"
 
+import { useSession } from "@/lib/session"
+import { Archive, RotateCcw, Filter, User } from "lucide-react"
+
 type CatalogItem = {
   id: string
   code: string
@@ -20,6 +23,7 @@ type CatalogItem = {
   type: "STANDARD" | "CLIENT"
   description: string | null
   is_active: boolean
+  created_by: string
   created_at: string
   _count: { items: number; sessions: number }
 }
@@ -29,14 +33,39 @@ type Props = {
 }
 
 export function CatalogListTab({ onSelectCatalog }: Props) {
-  const list = useApi<{ data: CatalogItem[] }>("/api/v1/greeting-card/catalogs")
+  const { can, userInitials } = useSession()
+  const me = useApi<{ user: { id: string; name: string | null } }>("/api/v1/auth/me")
+  const currentUserId = me.data?.user.id ?? null
+  const isOperator = can("F2") || can("R6") || can("R10")
+
+  // Bộ lọc cho Điều hành và nhân sự
+  const [staffFilter, setStaffFilter] = useState<string>("")
+  const [statusFilter, setStatusFilter] = useState<"active" | "archived">("active")
+  const [daysFilter, setDaysFilter] = useState<"3" | "all">("all")
+
+  // URL query
+  const queryParams = new URLSearchParams()
+  if (statusFilter === "archived") queryParams.set("status", "archived")
+  if (staffFilter) queryParams.set("created_by", staffFilter)
+  if (daysFilter === "3") queryParams.set("days", "3")
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ""
+
+  const list = useApi<{ data: CatalogItem[] }>(`/api/v1/greeting-card/catalogs${queryString}`)
   const catalogs = list.data?.data ?? []
   const loading = list.isLoading || list.isValidating
   const loadCatalogs = () => list.mutate()
+
+  // Danh sách nhân sự để Điều hành chọn lọc theo từng người
+  const staffApi = useApi<{ data: { members: Array<{ userId: string; name: string }> } }>(
+    isOperator ? "/api/v1/greeting-card/messages/recipients" : null
+  )
+  const staffList = staffApi.data?.data.members ?? []
+
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewTitle, setPreviewTitle] = useState<string>("")
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [copiedCatalogId, setCopiedCatalogId] = useState<string | null>(null)
   const [shareChannel, setShareChannel] = useState("")
@@ -63,17 +92,32 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
     }
   }
 
-
   async function handleDelete(id: string) {
-    if (!window.confirm("Ẩn catalog này? Các link đã gửi vẫn còn hoạt động.")) return
+    if (!window.confirm("Xóa (ẩn) bộ sưu tập này? Các link đã gửi vẫn còn hoạt động và Điều hành có thể khôi phục trong vòng 3 ngày.")) return
     setDeletingId(id)
     setActionError(null)
     try {
       const res = await fetch(`/api/v1/greeting-card/catalogs/${id}`, { method: "DELETE" })
-      if (!res.ok) setActionError(await readApiError(res, "Không ẩn được bộ sưu tập"))
+      if (!res.ok) setActionError(await readApiError(res, "Không xóa được bộ sưu tập"))
       await loadCatalogs()
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  async function handleRestore(id: string) {
+    setRestoringId(id)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/v1/greeting-card/catalogs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: true }),
+      })
+      if (!res.ok) setActionError(await readApiError(res, "Không khôi phục được bộ sưu tập"))
+      await loadCatalogs()
+    } finally {
+      setRestoringId(null)
     }
   }
 
@@ -132,6 +176,78 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
         </div>
       </div>
 
+      {/* Thanh bộ lọc Quản lý: Lọc trạng thái Đang dùng / Đã xóa (lưu 3 ngày) & Lọc theo từng nhân sự */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-surface-muted/40 p-3.5 rounded-xl border border-border">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-body-sm font-semibold text-foreground flex items-center gap-1.5">
+            <Filter size={15} className="text-primary" />
+            <span>Xem:</span>
+          </span>
+          <div className="inline-flex rounded-lg border border-border bg-surface p-0.5">
+            <button
+              type="button"
+              onClick={() => setStatusFilter("active")}
+              className={`px-3 py-1 text-caption font-bold rounded-md transition-colors ${
+                statusFilter === "active" ? "bg-primary text-white shadow-xs" : "text-text-muted hover:text-foreground"
+              }`}
+            >
+              Đang hoạt động
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("archived")}
+              className={`px-3 py-1 text-caption font-bold rounded-md transition-colors flex items-center gap-1 ${
+                statusFilter === "archived" ? "bg-danger-bg text-danger shadow-xs" : "text-text-muted hover:text-foreground"
+              }`}
+            >
+              <Archive size={12} />
+              <span>Đã xóa (Lưu 3 ngày)</span>
+            </button>
+          </div>
+
+          <div className="inline-flex rounded-lg border border-border bg-surface p-0.5 ml-1">
+            <button
+              type="button"
+              onClick={() => setDaysFilter("all")}
+              className={`px-2.5 py-1 text-caption font-semibold rounded-md transition-colors ${
+                daysFilter === "all" ? "bg-surface-muted text-foreground font-bold" : "text-text-muted hover:text-foreground"
+              }`}
+            >
+              Tất cả thời gian
+            </button>
+            <button
+              type="button"
+              onClick={() => setDaysFilter("3")}
+              className={`px-2.5 py-1 text-caption font-semibold rounded-md transition-colors ${
+                daysFilter === "3" ? "bg-surface-muted text-foreground font-bold" : "text-text-muted hover:text-foreground"
+              }`}
+            >
+              Trong 3 ngày qua
+            </button>
+          </div>
+        </div>
+
+        {/* Lọc theo từng nhân sự dành cho Điều hành */}
+        {isOperator && staffList.length > 0 && (
+          <div className="flex items-center gap-2 text-body-sm text-text-muted ml-auto">
+            <User size={14} className="text-text-muted" />
+            <span>Nhân sự:</span>
+            <select
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-surface px-2.5 text-body-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="">Tất cả nhân sự</option>
+              {staffList.map((s) => (
+                <option key={s.userId} value={s.userId}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
       {isCreateOpen && (
         <CatalogCreateModal
           onClose={() => setIsCreateOpen(false)}
@@ -171,11 +287,15 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {catalogs.map((catalog) => (
-            <div
-              key={catalog.id}
-              className="bg-surface rounded-2xl border border-border p-5 flex flex-col gap-4 hover:border-primary/40 hover:shadow-md transition-all duration-200"
-            >
+          {catalogs.map((catalog) => {
+            const canDelete = isOperator || (Boolean(currentUserId) && catalog.created_by === currentUserId)
+            const canRestore = isOperator || (Boolean(currentUserId) && catalog.created_by === currentUserId)
+
+            return (
+              <div
+                key={catalog.id}
+                className="bg-surface rounded-2xl border border-border p-5 flex flex-col gap-4 hover:border-primary/40 hover:shadow-md transition-all duration-200"
+              >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -258,17 +378,41 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
                 >
                   <Download size={14} />
                 </a>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(catalog.id)}
-                  disabled={deletingId === catalog.id}
-                  aria-label={`Ẩn catalog ${catalog.name}`}
-                  className="p-1.5 rounded-lg border border-border hover:bg-danger-bg hover:border-danger/40 hover:text-danger transition-colors text-text-muted"
-                >
-                  {deletingId === catalog.id
-                    ? <Loader2 size={14} className="animate-spin" />
-                    : <Trash2 size={14} />}
-                </button>
+                {catalog.is_active ? (
+                  canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(catalog.id)}
+                      disabled={deletingId === catalog.id}
+                      aria-label={`Xóa bộ sưu tập ${catalog.name}`}
+                      title="Xóa bộ sưu tập (Lưu trữ 3 ngày)"
+                      className="p-1.5 rounded-lg border border-border hover:bg-danger-bg hover:border-danger/40 hover:text-danger transition-colors text-text-muted"
+                    >
+                      {deletingId === catalog.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={14} />
+                      )}
+                    </button>
+                  )
+                ) : (
+                  canRestore && (
+                    <button
+                      type="button"
+                      onClick={() => void handleRestore(catalog.id)}
+                      disabled={restoringId === catalog.id}
+                      aria-label={`Khôi phục bộ sưu tập ${catalog.name}`}
+                      title="Khôi phục bộ sưu tập này"
+                      className="p-1.5 rounded-lg border border-success/40 bg-success-bg text-success hover:bg-success hover:text-white transition-colors"
+                    >
+                      {restoringId === catalog.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <RotateCcw size={14} />
+                      )}
+                    </button>
+                  )
+                )}
                 <button
                   type="button"
                   onClick={() => onSelectCatalog(catalog)}
@@ -279,7 +423,8 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
                 </button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
