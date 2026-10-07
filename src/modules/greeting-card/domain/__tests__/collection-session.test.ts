@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  canResume, createCollectionSession, currentIndex, decide, fromLegacySwipes, goPrevious, jumpTo, restart, undo,
+  canResume, createCollectionSession, currentIndex, decide, fromLegacySwipes, goNext, goPrevious, jumpTo, restart, toggleLike, undo,
 } from "../collection-session"
 
 const ORDER = ["a", "b", "c"]
@@ -76,5 +76,26 @@ describe("collection-session", () => {
     expect(s.skippedProductIds).toEqual(["b"])
     expect(s.currentProductId).toBe("c")
     expect(s.onboarded).toBe(true)
+  })
+
+  it("kiểu Story: goNext chỉ di chuyển, không đổi tim; ở mẫu cuối → màn cuối rồi đứng yên", () => {
+    const s1 = goNext(fresh(), ORDER, NOW)
+    expect(s1).toMatchObject({ currentProductId: "b", likedProductIds: [], skippedProductIds: [] })
+    const end = goNext(goNext(s1, ORDER, NOW), ORDER, NOW)
+    expect(currentIndex(end, ORDER)).toBe(ORDER.length)
+    expect(goNext(end, ORDER, NOW)).toBe(end)
+  })
+
+  it("thả tim bật/tắt trên mẫu đang xem, không tự sang mẫu khác", () => {
+    const on = toggleLike(fresh(), ORDER, NOW)
+    expect(on.liked).toBe(true)
+    expect(on.session).toMatchObject({ currentProductId: "a", likedProductIds: ["a"] })
+    const off = toggleLike(on.session, ORDER, NOW)
+    expect(off.liked).toBe(false)
+    expect(off.session.likedProductIds).toEqual([])
+  })
+
+  it("mở lại link: đã đi qua mẫu đầu (dù chưa thả tim) thì hỏi tiếp tục", () => {
+    expect(canResume(goNext(fresh(), ORDER, NOW), ORDER)).toBe(true)
   })
 })

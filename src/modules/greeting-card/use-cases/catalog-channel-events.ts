@@ -11,7 +11,7 @@ export function hashVisitor(catalogId: string, visitorId: string): string {
 
 /** Ghi sự kiện công khai; trả false khi catalog không mở (route trả 404). */
 export async function recordCatalogEvent(
-  input: { catalogId: string; channel: unknown; eventType: CatalogEventType; visitorId: string; orderId?: string | null },
+  input: { catalogId: string; channel: unknown; eventType: CatalogEventType; visitorId: string; orderId?: string | null; productId?: string | undefined },
   repo = new CatalogEventRepository()
 ): Promise<boolean> {
   return repo.record({
@@ -20,6 +20,7 @@ export async function recordCatalogEvent(
     eventType: input.eventType,
     visitorHash: hashVisitor(input.catalogId, input.visitorId),
     orderId: input.orderId,
+    productId: input.productId,
   })
 }
 

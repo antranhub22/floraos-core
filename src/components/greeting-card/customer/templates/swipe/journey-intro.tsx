@@ -1,6 +1,6 @@
 "use client"
 
-import { Heart, Hand, ShoppingBag, X } from "lucide-react"
+import { Hand, Heart, ShoppingBag } from "lucide-react"
 import { SWIPE_SIGNAL, type SwipeTheme } from "./swipe-themes"
 
 interface JourneyIntroProps {
@@ -15,8 +15,8 @@ interface JourneyIntroProps {
 }
 
 const STEPS = [
-  { icon: Heart, color: SWIPE_SIGNAL.like, text: "Bấm ♥ Thích (hoặc vuốt phải) để lưu mẫu bạn ưng" },
-  { icon: X, color: SWIPE_SIGNAL.nope, text: "Bấm ✕ Bỏ qua (hoặc vuốt trái) để xem mẫu tiếp theo" },
+  { icon: Hand, color: SWIPE_SIGNAL.info, text: "Chạm bên phải ảnh (hoặc vuốt sang trái) để xem mẫu tiếp theo, chạm bên trái để quay lại" },
+  { icon: Heart, color: SWIPE_SIGNAL.like, text: "Bấm ♥ để thả tim mẫu bạn ưng, bấm ⓘ để xem chi tiết" },
   { icon: ShoppingBag, color: SWIPE_SIGNAL.info, text: "Ưng mẫu nào thì bấm Đặt mẫu này ngay, không cần xem hết" },
 ]
 

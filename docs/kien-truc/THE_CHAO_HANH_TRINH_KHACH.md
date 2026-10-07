@@ -13,7 +13,7 @@
 - Mọi API `/api/v1/public/brochure/[sendCode]/*` (xem, chọn mẫu, báo giá, đặt đơn, báo đã chuyển khoản, đặt thêm, sự kiện) trả **404** khi thiếu cookie chủ phiên. Theo dõi đơn `?link=` chỉ trả bản đầy đủ cho chủ phiên.
 - Phiên mở trước khi triển khai chưa có mốc chủ → trình duyệt đầu tiên mở lại sau triển khai nhận chủ.
 
-## 2. Lướt mẫu (bộ thẻ vuốt)
+## 2. Xem mẫu (kiểu Facebook Story — PO 07/10/2026)
 
 Trạng thái lưu trên máy khách (`localStorage`, 7 ngày, theo đường dẫn trang), domain thuần `collection-session.ts`:
 `sessionId, collectionId, currentProductId, likedProductIds, skippedProductIds, viewedProductIds, lastActivityAt, orderId` (+ `onboarded`). Lịch sử vuốt của bản cũ được chuyển sang tự động.
@@ -21,12 +21,15 @@ Trạng thái lưu trên máy khách (`localStorage`, 7 ngày, theo đường d�
 | Tình huống | Hành vi |
 |---|---|
 | Mở lần đầu | Hướng dẫn 3 bước + nút **Bắt đầu xem**; chỉ hiện một lần |
-| Thích / Bỏ qua | Nút ♥ / ✕ hoặc vuốt; Thích hiện "♥ Đã lưu mẫu" |
-| Mẫu trước | Nút ‹ (hoặc ↓): quay lại, **giữ** Thích/Bỏ qua. Nút Hoàn tác: quay lại và xoá lựa chọn |
+| Mẫu sau | Chạm **2/3 bên phải** ảnh, vuốt **sang trái**, nút › hoặc phím → |
+| Mẫu trước | Chạm **1/3 bên trái** ảnh, vuốt **sang phải**, nút ‹ hoặc phím ←; giữ nguyên tim đã thả |
+| Xem chi tiết | **Chỉ** bấm nút ⓘ (chạm ảnh không mở chi tiết) |
+| Thả tim | Nút ♥ bật/tắt trên mẫu đang xem, không tự chuyển mẫu; hiện "♥ Đã thả tim". Mỗi khách tối đa 1 tim/mẫu; cộng vào bảng **Mẫu được thả tim nhiều nhất** của bộ sưu tập (cả link riêng và link công khai) |
+| Thanh tiến trình | Vạch đã xem và đang xem tô đầy như Story; tối đa 12 vạch, kèm số "3 / 20" |
 | Đặt ngay | "Đặt mẫu này" luôn có, không cần xem hết |
-| Cuối bộ sưu tập, có mẫu thích | Danh sách mẫu đã thích, đặt từng mẫu |
-| Cuối bộ sưu tập, chưa thích mẫu nào | Xem thêm mẫu · Chọn theo khoảng giá · Nhắn Zalo cho cửa hàng · Yêu cầu thiết kế riêng |
-| Mở lại link đã lướt dở (chưa có đơn) | Hỏi **Tiếp tục xem** / **Xem lại từ đầu** |
+| Cuối bộ sưu tập, có mẫu đã thả tim | Danh sách mẫu đã thả tim, đặt từng mẫu |
+| Cuối bộ sưu tập, chưa thả tim mẫu nào | Xem thêm mẫu · Chọn theo khoảng giá · Nhắn Zalo cho cửa hàng · Yêu cầu thiết kế riêng |
+| Mở lại link đã xem dở (đã qua mẫu đầu, chưa có đơn) | Hỏi **Tiếp tục xem** / **Xem lại từ đầu** |
 | Mẫu tạm hết hàng | Vẫn hiện, khoá "Đặt mẫu này"; **Xem mẫu tương tự** · **Liên hệ shop**. Máy chủ vẫn chặn chọn/đặt (409) |
 | Gọi / Zalo | Kèm mẫu đang xem: chép sẵn tin nhắn "Tôi muốn hỏi về mẫu FL-8075 (Tên) – 650.000đ." rồi mở Zalo (link `zalo.me` không nhận nội dung soạn sẵn) |
 | Tải lại / Back / Forward | Giữ tiến độ; Back/Forward đi giữa các bước xem mẫu ↔ điền đơn; đơn đã gửi thì không quay lại form |

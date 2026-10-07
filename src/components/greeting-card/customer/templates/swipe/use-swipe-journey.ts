@@ -3,22 +3,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import {
-  canResume, createCollectionSession, currentIndex, decide, fromLegacySwipes, goPrevious, jumpTo, restart, undo,
-  type CollectionSession, type Decision,
+  canResume, createCollectionSession, currentIndex, fromLegacySwipes, goNext, goPrevious, jumpTo, restart, toggleLike,
+  type CollectionSession,
 } from "@/modules/greeting-card/domain/collection-session"
 import { useSavedState } from "../../use-saved-state"
 import { useCustomerJourney } from "../../journey-context"
+import { useHeartTracker } from "../../heart-tracker"
 
 export const JOURNEY_STATE_NAME = "journey"
 
 type Prompt = "onboarding" | "resume" | null
 
 /**
- * Trạng thái lướt bộ sưu tập của khách (Thích / Bỏ qua / quay lại / tiếp tục), nhớ trên chính
+ * Trạng thái xem bộ sưu tập kiểu Story (mẫu sau / mẫu trước / thả tim / tiếp tục), nhớ trên chính
  * trình duyệt theo trang đang mở — tải lại, Back/Forward hay đóng mở lại link vẫn giữ nguyên.
  */
 export function useSwipeJourney(products: GreetingCatalogProduct[], collectionKey: string, embedded: boolean) {
   const journey = useCustomerJourney()
+  const heartTracker = useHeartTracker()
   const order = useMemo(() => products.map((p) => p.id), [products])
   const prefix = embedded ? "preview-" : ""
   const [saved, setSaved, , ready] = useSavedState<CollectionSession | null>(`${prefix}${JOURNEY_STATE_NAME}`, null)
@@ -73,17 +75,22 @@ export function useSwipeJourney(products: GreetingCatalogProduct[], collectionKe
     liked,
     prompt,
     canGoBack: index > 0,
-    decide: (d: Decision) => {
-      if (!current) return
-      journey?.track(d === "like" ? "product_liked" : "product_skipped", current.id)
-      apply((s) => decide(s, order, d, new Date()))
+    next: () => apply((s) => goNext(s, order, new Date())),
+    /** Thả / bỏ tim mẫu đang xem — gửi lên để cộng tổng tim của bộ sưu tập. */
+    toggleLike: () => {
+      if (!current || !state) return
+      const { liked: nowLiked } = toggleLike(state, order, new Date())
+      journey?.track(nowLiked ? "product_liked" : "product_unliked", current.id)
+      if (!embedded) heartTracker?.(current.id, nowLiked)
+      apply((s) => toggleLike(s, order, new Date()).session)
+      return nowLiked
     },
+    isLiked: (id: string) => Boolean(state?.likedProductIds.includes(id)),
     previous: () => {
       const prev = products[index - 1]
       if (prev) journey?.track("product_revisited", prev.id)
       apply((s) => goPrevious(s, order, new Date()))
     },
-    undo: () => apply((s) => undo(s, order, new Date())),
     jumpTo: (id: string) => apply((s) => jumpTo(s, order, id, new Date())),
     restart: () => apply((s) => restart(s, order, new Date())),
     /** Bấm "Bắt đầu xem" / "Tiếp tục xem" */

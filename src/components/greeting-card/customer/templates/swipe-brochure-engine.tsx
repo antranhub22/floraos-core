@@ -1,13 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { ChevronLeft, Heart, Info, RotateCcw, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Heart, Info } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { EnterpriseSpecSheet } from "./enterprise-spec-sheet"
 import { SwipeCard, formatVnd } from "./swipe/swipe-card"
 import { SwipeDeckEnd } from "./swipe/swipe-deck-end"
 import { SWIPE_SIGNAL, getSwipeTheme, isLightTheme } from "./swipe/swipe-themes"
-import { useCardSwipe, type SwipeDirection } from "./swipe/use-card-swipe"
+import { useStoryNav } from "./swipe/use-story-nav"
 import { rootHeight, useEmbeddedPreview } from "./aux/embedded"
 import { useSwipeJourney } from "./swipe/use-swipe-journey"
 import { JourneyIntro } from "./swipe/journey-intro"
@@ -31,6 +31,8 @@ function RoundButton(props: {
   bg: string
   border: string
   disabled?: boolean
+  /** Nút bật/tắt (tim) — báo trạng thái cho trình đọc màn hình */
+  pressed?: boolean
   onClick: () => void
   children: React.ReactNode
 }) {
@@ -41,6 +43,7 @@ function RoundButton(props: {
       aria-label={props.label}
       title={props.label}
       disabled={props.disabled}
+      aria-pressed={props.pressed}
       onClick={props.onClick}
       className={`${dim} flex items-center justify-center rounded-full border shadow-[0_6px_20px_rgba(0,0,0,0.18)] transition-transform hover:scale-105 active:scale-90 disabled:pointer-events-none disabled:opacity-35`}
       style={{ color: props.color, background: props.bg, borderColor: props.border }}
@@ -51,9 +54,10 @@ function RoundButton(props: {
 }
 
 /**
- * Bộ thẻ vuốt chuẩn Tinder cho 12 kiểu giao diện: vuốt phải = thích, vuốt trái = bỏ qua,
- * quay lại mẫu trước (giữ lựa chọn), hoàn tác, chi tiết, danh sách đã thích; hướng dẫn lần
- * đầu và hỏi tiếp tục khi mở lại link.
+ * Xem bộ sưu tập kiểu Facebook Story cho 12 kiểu giao diện (PO 07/10/2026): chạm 2/3 phải hoặc
+ * vuốt sang trái = mẫu sau, chạm 1/3 trái hoặc vuốt sang phải = mẫu trước. Chi tiết chỉ mở bằng
+ * nút ⓘ; tim bật/tắt trên mẫu đang xem (cộng vào tổng tim của bộ sưu tập). Hướng dẫn lần đầu và
+ * hỏi tiếp tục khi mở lại link.
  */
 export function SwipeBrochureEngine({
   products,
@@ -70,7 +74,7 @@ export function SwipeBrochureEngine({
   const [priceKey, setPriceKey] = useState<string | null>(null)
   const range = findPriceRange(priceKey)
   const visible = useMemo(() => (range ? products.filter((p) => inPriceRange(p.price, range)) : products), [products, range])
-  // Thích / Bỏ qua / mẫu đang xem nhớ trên máy khách: tải lại, Back hay mở lại link vẫn giữ nguyên
+  // Tim / mẫu đang xem nhớ trên máy khách: tải lại, Back hay mở lại link vẫn giữ nguyên
   const j = useSwipeJourney(visible, catalogName, embedded)
   const { index, current, liked } = j
   const [inspect, setInspect] = useState<GreetingCatalogProduct | null>(null)
@@ -82,44 +86,29 @@ export function SwipeBrochureEngine({
     return () => window.clearTimeout(t)
   }, [savedToast])
 
-  const { decide: journeyDecide } = j
-  const handleSwiped = useCallback(
-    (dir: SwipeDirection) => {
-      journeyDecide(dir === "like" ? "like" : "skip")
-      if (dir === "like") setSavedToast(Date.now())
-    },
-    [journeyDecide],
-  )
+  const nav = useStoryNav({ onNext: j.next, onPrevious: j.previous, disabled: !current || j.prompt !== null })
 
-  const swipe = useCardSwipe({
-    onSwiped: handleSwiped,
-    onTap: () => current && setInspect(current),
-    disabled: !current || j.prompt !== null,
-  })
-
-  const rewind = useCallback(() => {
-    if (swipe.isExiting) return
-    j.undo()
-  }, [j, swipe.isExiting])
+  const toggleHeart = useCallback(() => {
+    if (j.toggleLike()) setSavedToast(Date.now())
+  }, [j])
 
   const askAbout = contact
     ? (p: GreetingCatalogProduct) => contact.contactZalo(productInquiryMessage(p), p.id)
     : undefined
 
-  // Bàn phím: ← bỏ qua, → thích, ↑/Enter chi tiết, Backspace hoàn tác
+  // Bàn phím: ← mẫu trước, → mẫu sau, Enter/↑ chi tiết, L thả tim
   useEffect(() => {
     if (embedded) return
     function onKey(e: KeyboardEvent) {
       if (inspect || j.prompt || (e.target instanceof HTMLElement && /INPUT|TEXTAREA/.test(e.target.tagName))) return
-      if (e.key === "ArrowLeft") swipe.fling("nope")
-      else if (e.key === "ArrowRight") swipe.fling("like")
-      else if (e.key === "Backspace") rewind()
-      else if (e.key === "ArrowDown") j.previous()
+      if (e.key === "ArrowLeft") j.previous()
+      else if (e.key === "ArrowRight") j.next()
+      else if (e.key.toLowerCase() === "l" && current) toggleHeart()
       else if ((e.key === "ArrowUp" || e.key === "Enter") && current) setInspect(current)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [swipe, rewind, current, inspect, embedded, j])
+  }, [current, inspect, embedded, j, toggleHeart])
 
   // Tải trước ảnh của 2 thẻ kế tiếp
   useEffect(() => {
@@ -138,7 +127,6 @@ export function SwipeBrochureEngine({
     )
   }
 
-  const drag = Math.abs(swipe.progress)
   const soldOut = current?.available === false
 
   return (
@@ -172,35 +160,12 @@ export function SwipeBrochureEngine({
         ) : current ? (
           <>
             <div className={`relative flex-1 ${embedded ? "min-h-0" : "min-h-[420px]"}`} style={{ maxHeight: 680 }}>
-              {[2, 1].map((offset) => {
-                const p = visible[index + offset]
-                if (!p) return null
-                const lift = offset === 1 ? drag : drag * 0.5
-                const scale = 1 - offset * 0.045 + lift * 0.045
-                return (
-                  <div
-                    key={p.id}
-                    aria-hidden="true"
-                    className="absolute inset-0 transition-transform duration-200"
-                    style={{ transform: `translateY(${(offset - lift) * 12}px) scale(${scale})`, zIndex: 3 - offset }}
-                  >
-                    <SwipeCard product={p} theme={theme} index={index + offset} total={visible.length} />
-                  </div>
-                )
-              })}
-              <div key={current.id} className="absolute inset-0 z-10 will-change-transform" style={swipe.style} {...swipe.handlers}>
-                <SwipeCard
-                  product={current}
-                  theme={theme}
-                  index={index}
-                  total={visible.length}
-                  progress={swipe.progress}
-                  onInfo={() => setInspect(current)}
-                />
+              <div key={current.id} className="absolute inset-0 z-10 cursor-pointer" style={nav.style} {...nav.handlers}>
+                <SwipeCard product={current} theme={theme} index={index} total={visible.length} onInfo={() => setInspect(current)} />
               </div>
               {savedToast > 0 && (
                 <p role="status" className="pointer-events-none absolute inset-x-0 top-1/2 z-20 mx-auto w-fit rounded-full px-4 py-2 text-body-sm font-bold shadow-lg" style={{ background: theme.ctaBg, color: theme.ctaText }}>
-                  ♥ Đã lưu mẫu
+                  ♥ Đã thả tim
                 </p>
               )}
             </div>
@@ -209,17 +174,14 @@ export function SwipeBrochureEngine({
               <RoundButton label="Mẫu trước" color={theme.stageText} size="sm" bg={theme.controlBg} border={theme.controlBorder} disabled={!j.canGoBack} onClick={j.previous}>
                 <ChevronLeft size={22} strokeWidth={2.5} />
               </RoundButton>
-              <RoundButton label="Bỏ qua" color={SWIPE_SIGNAL.nope} size="lg" bg={theme.controlBg} border={theme.controlBorder} onClick={() => swipe.fling("nope")}>
-                <X size={30} strokeWidth={3} />
-              </RoundButton>
               <RoundButton label="Xem chi tiết" color={SWIPE_SIGNAL.info} size="sm" bg={theme.controlBg} border={theme.controlBorder} onClick={() => setInspect(current)}>
                 <Info size={20} strokeWidth={2.5} />
               </RoundButton>
-              <RoundButton label="Thích" color={SWIPE_SIGNAL.like} size="lg" bg={theme.controlBg} border={theme.controlBorder} onClick={() => swipe.fling("like")}>
-                <Heart size={28} strokeWidth={2.5} fill="currentColor" />
+              <RoundButton label={j.isLiked(current.id) ? "Bỏ tim" : "Thả tim"} pressed={j.isLiked(current.id)} color={SWIPE_SIGNAL.like} size="lg" bg={theme.controlBg} border={theme.controlBorder} onClick={toggleHeart}>
+                <Heart size={28} strokeWidth={2.5} fill={j.isLiked(current.id) ? "currentColor" : "none"} />
               </RoundButton>
-              <RoundButton label="Hoàn tác" color={SWIPE_SIGNAL.rewind} size="sm" bg={theme.controlBg} border={theme.controlBorder} disabled={!j.canGoBack} onClick={rewind}>
-                <RotateCcw size={20} strokeWidth={2.5} />
+              <RoundButton label="Mẫu sau" color={theme.stageText} size="sm" bg={theme.controlBg} border={theme.controlBorder} onClick={j.next}>
+                <ChevronRight size={22} strokeWidth={2.5} />
               </RoundButton>
             </div>
 

@@ -2,7 +2,8 @@
 
 import { Info } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
-import { SWIPE_SIGNAL, type SwipeTheme } from "./swipe-themes"
+import type { SwipeTheme } from "./swipe-themes"
+import { driveThumbProxySrc } from "@/components/greeting-card/drive-thumb-image"
 import { ProductInfo } from "../product-info/product-info"
 import { formatVnd } from "../product-info/product-display"
 import { toProductDisplay } from "../product-info/product-display"
@@ -27,28 +28,7 @@ interface SwipeCardProps {
   brand?: string | undefined
   index: number
   total: number
-  /** -1…1 khi đang kéo thẻ trên cùng, dùng cho nhãn THÍCH / BỎ QUA */
-  progress?: number
   onInfo?: (() => void) | undefined
-}
-
-function Stamp({ label, color, opacity, side }: { label: string; color: string; opacity: number; side: "left" | "right" }) {
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute top-14 z-20 rounded-lg border-4 px-3 py-1 text-title font-extrabold tracking-widest"
-      style={{
-        [side]: 20,
-        color,
-        borderColor: color,
-        opacity,
-        transform: `rotate(${side === "left" ? -14 : 14}deg) scale(${0.9 + opacity * 0.1})`,
-        background: "rgba(255,255,255,0.06)",
-      }}
-    >
-      {label}
-    </div>
-  )
 }
 
 function ProgressBars({ index, total, light }: { index: number; total: number; light: boolean }) {
@@ -56,22 +36,21 @@ function ProgressBars({ index, total, light }: { index: number; total: number; l
   const active = total > 12 ? Math.round((index / (total - 1)) * (shown - 1)) : index
   return (
     <div className="absolute inset-x-3 top-3 z-10 flex gap-1" aria-hidden="true">
+      {/* Như Facebook Story: vạch đã xem và đang xem tô đầy, vạch chưa xem mờ */}
       {Array.from({ length: shown }, (_, i) => (
         <span
           key={i}
           className="h-1 flex-1 rounded-full"
-          style={{ background: i === active ? (light ? "rgba(24,24,27,0.85)" : "#fff") : light ? "rgba(24,24,27,0.15)" : "rgba(255,255,255,0.35)" }}
+          style={{ background: i <= active ? (light ? "rgba(24,24,27,0.85)" : "#fff") : light ? "rgba(24,24,27,0.15)" : "rgba(255,255,255,0.35)" }}
         />
       ))}
     </div>
   )
 }
 
-export function SwipeCard({ product, theme, brand, index, total, progress = 0, onInfo }: SwipeCardProps) {
+export function SwipeCard({ product, theme, brand, index, total, onInfo }: SwipeCardProps) {
   const paper = theme.info === "paper" || theme.info === "polaroid"
   const polaroid = theme.info === "polaroid"
-  const likeOpacity = Math.max(0, progress)
-  const nopeOpacity = Math.max(0, -progress)
 
   const serif = theme.font.includes("serif") && !theme.font.includes("sans")
   const fontSize = polaroid ? 30 : theme.titleUpper ? 20 : serif ? 26 : 22
@@ -120,26 +99,19 @@ export function SwipeCard({ product, theme, brand, index, total, progress = 0, o
               style={{ objectPosition: "50% 35%", filter: theme.photoFilter, mixBlendMode: "multiply" }}
             />
           </>
-        ) : product.driveLink ? (() => {
-          const folderId = product.driveLink.match(/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
-          return folderId ? (
-            <>
-              <div aria-hidden="true" className="absolute inset-0" style={{ background: photoBackdrop(theme) }} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/v1/public/drive-thumb-proxy?folder_id=${folderId}`}
-                alt=""
-                draggable={false}
-                className="absolute inset-0 h-full w-full object-contain"
-                style={{ objectPosition: "50% 35%", filter: theme.photoFilter, mixBlendMode: "multiply" }}
-              />
-            </>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-body-sm opacity-60" style={{ color: theme.muted }}>
-              Chưa có ảnh mẫu hoa
-            </div>
-          )
-        })() : (
+        ) : driveThumbProxySrc(product.driveLink) ? (
+          <>
+            <div aria-hidden="true" className="absolute inset-0" style={{ background: photoBackdrop(theme) }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={driveThumbProxySrc(product.driveLink)!}
+              alt=""
+              draggable={false}
+              className="absolute inset-0 h-full w-full object-contain"
+              style={{ objectPosition: "50% 35%", filter: theme.photoFilter, mixBlendMode: "multiply" }}
+            />
+          </>
+        ) : (
           <div className="absolute inset-0 flex items-center justify-center text-body-sm opacity-60" style={{ color: theme.muted }}>
             Chưa có ảnh mẫu hoa
           </div>
@@ -169,8 +141,6 @@ export function SwipeCard({ product, theme, brand, index, total, progress = 0, o
             {brand}
           </p>
         )}
-        <Stamp label="THÍCH" color={SWIPE_SIGNAL.like} opacity={likeOpacity} side="left" />
-        <Stamp label="BỎ QUA" color={SWIPE_SIGNAL.nope} opacity={nopeOpacity} side="right" />
 
         {!paper && (
           <div className="absolute inset-x-0 bottom-0 z-10 p-5" style={{ color: theme.text }}>

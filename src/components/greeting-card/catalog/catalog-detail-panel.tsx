@@ -5,6 +5,7 @@ import { ArrowLeft, Package, Plus, Trash2, Search, Loader2, X, CheckCircle } fro
 import { Button } from "@/components/ui/button"
 import { useCatalogItems } from "./use-catalog-items"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
+import { CatalogHeartsPanel } from "./catalog-hearts-panel"
 
 type ProductVariant = { id: string; price_vnd: number; name: string }
 type CatalogProduct = {
@@ -245,6 +246,8 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
           </button>
         </div>
       )}
+
+      {catalog && catalog.items.length > 0 && <CatalogHeartsPanel catalogId={catalogId} />}
 
       {catalog && catalog.items.length > 0 && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-success-bg border border-success/20 text-success">

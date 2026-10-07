@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useCallback, useState } from "react"
 import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
 import type { OptionalDisplayField } from "@/modules/greeting-card/domain/display-fields"
 import { BrochureOrderForm } from "./brochure-order-form"
@@ -17,6 +17,7 @@ import { ShoppingBag } from "lucide-react"
 import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { useCatalogTracking } from "./use-catalog-tracking"
+import { HeartTrackerContext } from "./heart-tracker"
 
 interface Props {
   catalog: { id: string; code: string; name: string; description: string | null; filters?: Record<string, unknown> | null }
@@ -37,6 +38,8 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
     vietQr: BrochurePaymentInstructions | null
   } | null>(null)
   const { track, orderMeta } = useCatalogTracking(catalog.id)
+  // Thả/bỏ tim trên link công khai → cộng vào bảng "mẫu nhiều tim nhất" của bộ sưu tập
+  const reportHeart = useCallback((productId: string, liked: boolean) => track(liked ? "LIKE" : "UNLIKE", productId), [track])
 
   function handleSelectFromDeck(product: GreetingCatalogProduct) {
     track("DETAIL")
@@ -186,6 +189,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
 
   // 4. MAIN GREETING TEMPLATE DECK
   return (
+    <HeartTrackerContext.Provider value={reportHeart}>
     <GreetingTemplateRenderer
       showTemplateSwitcher={false}
       templateId={(catalog.filters as Record<string, unknown> | null)?.templateId as string | undefined}
@@ -195,5 +199,6 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
       selectedProductId={selected?.id ?? null}
       onSelectProduct={handleSelectFromDeck}
     />
+    </HeartTrackerContext.Provider>
   )
 }

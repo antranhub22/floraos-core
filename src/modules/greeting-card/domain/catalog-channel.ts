@@ -10,7 +10,9 @@ export const CATALOG_CHANNELS = [
 ] as const
 
 export const DIRECT_CHANNEL = "truc-tiep"
-export const CATALOG_EVENT_TYPES = ["VIEW", "DETAIL", "FORM_OPEN", "ORDER"] as const
+export const CATALOG_EVENT_TYPES = ["VIEW", "DETAIL", "FORM_OPEN", "ORDER", "LIKE", "UNLIKE"] as const
+/** Thả/bỏ tim — không thuộc phễu kênh, chỉ dùng cho bảng "mẫu nhiều tim nhất". */
+export const HEART_EVENT_TYPES = ["LIKE", "UNLIKE"] as const
 export type CatalogEventType = (typeof CATALOG_EVENT_TYPES)[number]
 
 /** Kênh lạ/trống → "truc-tiep": không để khách tự đặt nhãn tuỳ ý vào thống kê. */
@@ -55,7 +57,7 @@ export function buildChannelFunnel(counts: ChannelCount[]): ChannelFunnelRow[] {
     if (c.eventType === "VIEW") row.views += c.visitors
     else if (c.eventType === "DETAIL") row.details += c.visitors
     else if (c.eventType === "FORM_OPEN") row.formOpens += c.visitors
-    else row.orders += c.visitors
+    else if (c.eventType === "ORDER") row.orders += c.visitors
     rows.set(c.channel, row)
   }
   return [...rows.values()]
