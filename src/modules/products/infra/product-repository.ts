@@ -152,7 +152,8 @@ export class ProductRepository {
   ): Promise<ProductPreviewRow[]> {
     const where = scopedWhere(ctx, {
       ...(filters.branchId !== undefined ? { branch_id: filters.branchId } : {}),
-      ...(filters.status !== undefined ? { status: filters.status } : {}),
+      // Không lọc status → ẩn sản phẩm đã vào thùng rác (ARCHIVED); xem lại ở Kho dữ liệu → Thùng rác.
+      status: filters.status ?? { not: "ARCHIVED" as product_status },
       ...(filters.category !== undefined ? { category: filters.category } : {}),
       ...(filters.occasionCode !== undefined
         ? { attributes: { path: ["occasionCodes"], array_contains: filters.occasionCode } }
