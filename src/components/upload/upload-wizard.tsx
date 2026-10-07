@@ -49,10 +49,12 @@ const CANH_BAO_CHO_XEP_HANG_LUOT = (2 * 60 * 1000) / NHIP_HOI_MS
 // mốc ổn định như nhau vì nhịp hỏi cố định.
 const NGUNG_THEO_DOI_LUOT = (16 * 60 * 1000) / NHIP_HOI_MS
 
-// Khoá lưu job đang/vừa chạy vào localStorage — rời trang (đóng tab, F5,
-// bấm nhầm link) không mất dấu lượt chạy: quay lại `/tai-anh` vẫn thấy đúng
-// tiến trình hoặc đúng kết quả, thay vì luôn bắt đầu lại từ bước Tải ảnh.
-const JOB_STORAGE_KEY = "floraos.tai-anh.lastJobId"
+// Khoá lưu job đang/vừa chạy vào localStorage — phân tách theo tenant (organization_id)
+// để tránh việc đổi tài khoản/tổ chức trong cùng trình duyệt bị đọc nhầm job_id của tổ chức khác.
+const JOB_STORAGE_KEY_PREFIX = "floraos.tai-anh.lastJobId"
+function getJobStorageKey(orgId?: string | null): string {
+  return orgId ? `${JOB_STORAGE_KEY_PREFIX}__${orgId}` : JOB_STORAGE_KEY_PREFIX
+}
 
 type Photo = { id: number; file: File; previewUrl: string; name: string }
 type UploadedPhoto = Photo & { assetId: string }
@@ -103,7 +105,9 @@ async function extractError(res: Response, fallback: string): Promise<string> {
 
 export function UploadWizard() {
   const router = useRouter()
-  const { can } = useSession()
+  const { can, organization } = useSession()
+  const orgId = organization?.id
+  const jobStorageKey = getJobStorageKey(orgId)
 
   const [step, setStep] = useState<Step>("upload")
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -214,7 +218,7 @@ export function UploadWizard() {
     setRunError(null)
     setStep("upload")
     try {
-      window.localStorage.removeItem(JOB_STORAGE_KEY)
+      window.localStorage.removeItem(jobStorageKey)
     } catch {
       // bỏ qua — không chặn việc bắt đầu lượt mới
     }
@@ -295,7 +299,7 @@ export function UploadWizard() {
       setBalanceAfter(created.usage.balance_after)
       setJob({ id: created.job_id, status: created.status, stage: null, result: null, error: null })
       try {
-        window.localStorage.setItem(JOB_STORAGE_KEY, created.job_id)
+        window.localStorage.setItem(jobStorageKey, created.job_id)
       } catch {
         // localStorage có thể bị chặn (chế độ riêng tư) — không chặn lượt
         // chạy, chỉ mất khả năng khôi phục nếu người dùng rời trang.
@@ -364,7 +368,7 @@ export function UploadWizard() {
       setJob({ ...job, status: "CANCELLED" })
       setRunError("Lượt phân tích đã bị huỷ.")
       try {
-        window.localStorage.removeItem(JOB_STORAGE_KEY)
+        window.localStorage.removeItem(jobStorageKey)
       } catch {
         // bỏ qua
       }
@@ -410,7 +414,7 @@ export function UploadWizard() {
     setStep("result")
     if (ordered.length === 0) {
       try {
-        window.localStorage.removeItem(JOB_STORAGE_KEY)
+        window.localStorage.removeItem(jobStorageKey)
       } catch {
         // bỏ qua
       }
@@ -418,7 +422,8 @@ export function UploadWizard() {
   }
 
   // Khôi phục lượt chạy khi mở lại `/tai-anh`: trước tiên tìm job vừa tạo ở
-  // chính tab này (`JOB_STORAGE_KEY`); nếu không có (tab mới, hoặc job đó
+  // Khôi phục lượt chạy khi mở lại `/tai-anh`: trước tiên tìm job vừa tạo ở
+  // chính tab này (`jobStorageKey`); nếu không có (tab mới, hoặc job đó
   // được tạo trước khi có cơ chế lưu này), lấy lượt phân tích mới nhất còn
   // đang chờ duyệt — vì một lượt vừa chạy xong luôn nằm ở đó cho tới khi ai
   // duyệt/từ chối. Không có gì để khôi phục thì cứ để màn hình ở bước Tải
@@ -428,7 +433,7 @@ export function UploadWizard() {
       try {
         let jobId: string | null = null
         try {
-          jobId = window.localStorage.getItem(JOB_STORAGE_KEY)
+          jobId = window.localStorage.getItem(jobStorageKey)
         } catch {
           jobId = null
         }
@@ -444,7 +449,7 @@ export function UploadWizard() {
 
         const resJob = await fetch(`/api/v1/jobs/${jobId}`)
         if (!resJob.ok) {
-          window.localStorage.removeItem(JOB_STORAGE_KEY)
+          window.localStorage.removeItem(jobStorageKey)
           return
         }
         const { job: row } = (await resJob.json()) as { job: JobState }
@@ -463,7 +468,7 @@ export function UploadWizard() {
       }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [jobStorageKey])
 
   async function saveEdit(
     analysisId: string,
@@ -585,7 +590,7 @@ export function UploadWizard() {
           onReject={rejectAnalysis}
           onFinish={() => {
             try {
-              window.localStorage.removeItem(JOB_STORAGE_KEY)
+              window.localStorage.removeItem(jobStorageKey)
             } catch {
               // bỏ qua
             }

@@ -70,22 +70,29 @@ const ICONS: Record<string, ComponentType<{ size?: number; className?: string; s
   FileSpreadsheet,
 }
 
-const STORAGE_KEY = "floraos_nav_groups_v1"
-const REPORTS_STORAGE_KEY = "floraos_nav_reports_open_v1"
+const STORAGE_KEY_PREFIX = "floraos_nav_groups_v1"
+const REPORTS_STORAGE_KEY_PREFIX = "floraos_nav_reports_open_v1"
 
-function loadStoredGroupStates(): Record<string, boolean> {
+function getStorageKeys(orgId?: string | null) {
+  return {
+    groupsKey: orgId ? `${STORAGE_KEY_PREFIX}__${orgId}` : STORAGE_KEY_PREFIX,
+    reportsKey: orgId ? `${REPORTS_STORAGE_KEY_PREFIX}__${orgId}` : REPORTS_STORAGE_KEY_PREFIX,
+  }
+}
+
+function loadStoredGroupStates(key: string): Record<string, boolean> {
   if (typeof window === "undefined") return {}
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : {}
   } catch {
     return {}
   }
 }
 
-function persistGroupStates(states: Record<string, boolean>) {
+function persistGroupStates(key: string, states: Record<string, boolean>) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(states))
+    localStorage.setItem(key, JSON.stringify(states))
   } catch {
     // Không ném lỗi nếu localStorage bị khóa
   }
@@ -94,7 +101,9 @@ function persistGroupStates(states: Record<string, boolean>) {
 export function DesktopNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { can, roleUx, orgName } = useSession()
+  const { can, roleUx, orgName, organization } = useSession()
+  const orgId = organization?.id
+  const { groupsKey, reportsKey } = useMemo(() => getStorageKeys(orgId), [orgId])
 
   const navView = useMemo(() => buildNav(can, roleUx), [can, roleUx])
 
@@ -105,19 +114,23 @@ export function DesktopNav() {
 
   // Đồng bộ trạng thái đóng mở nhóm và mục Báo cáo từ localStorage
   useEffect(() => {
-    const stored = loadStoredGroupStates()
+    const stored = loadStoredGroupStates(groupsKey)
     if (Object.keys(stored).length > 0) {
       setOpenGroups(stored)
+    } else {
+      setOpenGroups({})
     }
     try {
-      const storedReports = localStorage.getItem(REPORTS_STORAGE_KEY)
+      const storedReports = localStorage.getItem(reportsKey)
       if (storedReports !== null) {
         setReportsOpen(storedReports === "true")
+      } else {
+        setReportsOpen(true)
       }
     } catch {
       // bỏ qua
     }
-  }, [])
+  }, [groupsKey, reportsKey])
 
   // Phím tắt '/' để tìm kiếm nhanh
   useEffect(() => {
@@ -141,7 +154,7 @@ export function DesktopNav() {
   function toggleReports(nextOpen: boolean) {
     setReportsOpen(nextOpen)
     try {
-      localStorage.setItem(REPORTS_STORAGE_KEY, String(nextOpen))
+      localStorage.setItem(reportsKey, String(nextOpen))
     } catch {
       // bỏ qua
     }
@@ -160,7 +173,7 @@ export function DesktopNav() {
   function toggleGroup(key: string, currentExpanded: boolean) {
     const nextStates = { ...openGroups, [key]: !currentExpanded }
     setOpenGroups(nextStates)
-    persistGroupStates(nextStates)
+    persistGroupStates(groupsKey, nextStates)
   }
 
   // Kết quả tìm kiếm phẳng

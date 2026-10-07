@@ -3,6 +3,7 @@
 import { useState, useRef, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import * as XLSX from "xlsx"
+import { useSession } from "@/lib/session"
 import {
   ArrowLeft,
   FileSpreadsheet,
@@ -43,13 +44,24 @@ export interface ParsedProductRow {
   errorMsg?: string | undefined
 }
 
-const SESSION_KEY = "floraos_bulk_import_rows_v1"
-const SESSION_META_KEY = "floraos_bulk_import_meta_v1"
+// Gắn organization_id vào key để tránh data leak giữa các tenant (bug #T001)
+function makeSessionKeys(orgId: string | undefined) {
+  const suffix = orgId ?? "_unknown"
+  return {
+    rowsKey: `floraos_bulk_import_rows_v1__${suffix}`,
+    metaKey: `floraos_bulk_import_meta_v1__${suffix}`,
+  } as const
+}
 
 // Serializable subset of ParsedProductRow (excludes File object)
 type PersistedRow = Omit<ParsedProductRow, "matchedFile"> & { matchedFile: null }
 
-function saveRowsToSession(rows: ParsedProductRow[], excelFileName: string) {
+function saveRowsToSession(
+  rows: ParsedProductRow[],
+  excelFileName: string,
+  orgId: string | undefined
+) {
+  const { rowsKey, metaKey } = makeSessionKeys(orgId)
   try {
     const serializable: PersistedRow[] = rows.map((r) => ({
       ...r,
@@ -57,20 +69,24 @@ function saveRowsToSession(rows: ParsedProductRow[], excelFileName: string) {
       // blob URLs không hợp lệ sau reload — chỉ giữ Drive thumbnails
       previewUrl: r.previewUrl?.startsWith("blob:") ? null : r.previewUrl,
     }))
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(serializable))
-    sessionStorage.setItem(SESSION_META_KEY, JSON.stringify({ excelFileName }))
+    sessionStorage.setItem(rowsKey, JSON.stringify(serializable))
+    sessionStorage.setItem(metaKey, JSON.stringify({ excelFileName }))
   } catch {
     // sessionStorage có thể đầy — silent fail
   }
 }
 
-function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY)
-  sessionStorage.removeItem(SESSION_META_KEY)
+function clearSession(orgId: string | undefined) {
+  const { rowsKey, metaKey } = makeSessionKeys(orgId)
+  sessionStorage.removeItem(rowsKey)
+  sessionStorage.removeItem(metaKey)
 }
 
 export default function BulkImportProductsPage() {
   const router = useRouter()
+  const session = useSession()
+  // organization_id dùng để cô lập session storage theo tenant (bug #T001)
+  const orgId = session.organization?.id
   const excelInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
 
@@ -94,11 +110,13 @@ export default function BulkImportProductsPage() {
     failedItems: Array<{ code: string; error: string }>
   } | null>(null)
 
-  // Khôi phục state từ sessionStorage khi mount lại trang
+  // Khôi phục state từ sessionStorage khi mount — chỉ khôi phục data của org hiện tại
   useEffect(() => {
+    if (orgId === undefined) return // chờ session load xong
+    const { rowsKey, metaKey } = makeSessionKeys(orgId)
     try {
-      const raw = sessionStorage.getItem(SESSION_KEY)
-      const meta = sessionStorage.getItem(SESSION_META_KEY)
+      const raw = sessionStorage.getItem(rowsKey)
+      const meta = sessionStorage.getItem(metaKey)
       if (raw) {
         const restored = JSON.parse(raw) as PersistedRow[]
         if (restored.length > 0) {
@@ -113,15 +131,16 @@ export default function BulkImportProductsPage() {
     } catch {
       // Dữ liệu session bị hỏng — bỏ qua
     }
+  // orgId thay đổi (switch org) → reset state và đọc lại đúng session
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [orgId])
 
   // Lưu vào sessionStorage mỗi khi parsedRows thay đổi
   useEffect(() => {
     if (parsedRows.length > 0) {
-      saveRowsToSession(parsedRows, excelFileName)
+      saveRowsToSession(parsedRows, excelFileName, orgId)
     }
-  }, [parsedRows, excelFileName])
+  }, [parsedRows, excelFileName, orgId])
 
   // Clean up object URLs on unmount
   useEffect(() => {
@@ -707,7 +726,7 @@ export default function BulkImportProductsPage() {
                     setExcelFile(null)
                     setExcelFileName("")
                     setRestoredFromSession(false)
-                    clearSession()
+                    clearSession(orgId)
                   }}
                   className="ml-1 text-danger hover:underline focus-visible:outline-2 focus-visible:outline-primary"
                   aria-label="Xóa dữ liệu đã khôi phục"
@@ -781,7 +800,7 @@ export default function BulkImportProductsPage() {
                   setExcelFile(null)
                   setExcelFileName("")
                   setRestoredFromSession(false)
-                  clearSession()
+                  clearSession(orgId)
                 }}
               >
                 Nhập đợt khác

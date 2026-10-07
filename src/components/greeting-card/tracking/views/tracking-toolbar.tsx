@@ -1,8 +1,9 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Bookmark, Search, Trash2 } from "lucide-react"
 import { useApi } from "@/components/greeting-card/greeting-api"
+import { useSession } from "@/lib/session"
 import { TRACKING_CATEGORIES } from "@/modules/greeting-card/domain/tracking-filters"
 import {
   VIEW_TABS, loadSavedViews, presetViews, storeSavedViews,
@@ -19,21 +20,27 @@ interface Props {
 
 /** Chuyển view + bộ lọc dùng chung: đổi view giữ nguyên bộ lọc và phạm vi. */
 export function TrackingToolbar({ state, onChange, onApplyView }: Props) {
+  const { organization } = useSession()
+  const orgId = organization?.id
   const recipients = useApi<{ data: { members: Array<{ userId: string; name: string }> } }>("/api/v1/greeting-card/messages/recipients")
   const members = recipients.data?.data.members ?? []
-  const [saved, setSaved] = useState<SavedView[]>(loadSavedViews)
+  const [saved, setSaved] = useState<SavedView[]>(() => loadSavedViews(orgId))
+
+  useEffect(() => {
+    setSaved(loadSavedViews(orgId))
+  }, [orgId])
 
   function saveCurrent() {
     const name = window.prompt("Tên view (vd. Đơn của Sale Lan)")?.trim()
     if (!name) return
     const next = [...saved, { id: `u-${Date.now().toString(36)}`, name: name.slice(0, 60), state: { ...state } }]
     setSaved(next)
-    storeSavedViews(next)
+    storeSavedViews(next, orgId)
   }
   function remove(id: string) {
     const next = saved.filter((v) => v.id !== id)
     setSaved(next)
-    storeSavedViews(next)
+    storeSavedViews(next, orgId)
   }
 
   return (
