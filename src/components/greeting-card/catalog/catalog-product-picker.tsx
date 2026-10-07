@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React from "react"
 import { Search, Plus, Trash2, Loader2, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCatalogItems } from "./use-catalog-items"
@@ -8,7 +8,7 @@ import { FlowerImage } from "@/components/greeting-card/flower-image"
 
 type CatalogItem = {
   id: string
-  product: { id: string; name: string; masterImageUrl?: string | undefined }
+  product: { id: string; name: string; masterImageUrl?: string | undefined; driveLink?: string | undefined }
   sort_order: number
 }
 
@@ -21,7 +21,6 @@ interface Props {
 }
 
 export function CatalogProductPicker({ catalogId, compact = false, onItemCountChange }: Props) {
-  const [productSearch, setProductSearch] = useState("")
   const ci = useCatalogItems<{ items: CatalogItem[] }>(catalogId, onItemCountChange)
   const items = ci.catalog?.items ?? []
   const loadingItems = ci.loading
@@ -33,12 +32,6 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
   const removingId = ci.busyId
   const handleAdd = (productId: string) => void ci.add(productId)
   const handleRemove = (productId: string) => void ci.remove(productId)
-  const filtered = ci.available.filter(
-    (p) =>
-      !productSearch.trim() ||
-      p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.code.toLowerCase().includes(productSearch.toLowerCase())
-  )
 
   if (loadingItems) {
     return (
@@ -91,7 +84,7 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
               className="relative group rounded-xl border border-border bg-surface overflow-hidden"
             >
               <div className="aspect-square bg-surface-alt flex items-center justify-center overflow-hidden">
-                <FlowerImage src={item.product.masterImageUrl} alt={item.product.name} sizes="(max-width: 640px) 50vw, 160px" fallback="icon" className="w-full h-full" />
+                <FlowerImage src={item.product.masterImageUrl} driveLink={item.product.driveLink} alt={item.product.name} sizes="(max-width: 640px) 50vw, 160px" fallback="icon" className="w-full h-full" />
               </div>
               <div className="p-2">
                 <p className="text-caption font-semibold text-text line-clamp-2 leading-tight">
@@ -137,7 +130,6 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
               type="button"
               onClick={() => {
                 setShowPicker(false)
-                setProductSearch("")
               }}
               className="text-caption text-text-muted hover:text-text font-medium underline"
             >
@@ -154,8 +146,8 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
             <input
               type="text"
               placeholder="Tìm tên hoặc mã sản phẩm..."
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
+              value={ci.searchQuery}
+              onChange={(e) => ci.setSearchQuery(e.target.value)}
               className="w-full h-9 pl-8 pr-3 rounded-lg border border-border bg-background text-body-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
@@ -167,20 +159,20 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
                 <Loader2 size={16} className="animate-spin" />
                 <span className="text-body-sm">Đang tải kho sản phẩm...</span>
               </div>
-            ) : filtered.length === 0 ? (
+            ) : ci.available.length === 0 ? (
               <p className="text-body-sm text-text-muted text-center py-8">
-                {productSearch
+                {ci.searchQuery
                   ? "Không tìm thấy sản phẩm phù hợp"
                   : "Tất cả sản phẩm đã được thêm vào bộ sưu tập"}
               </p>
             ) : (
-              filtered.map((product) => (
+              ci.available.map((product) => (
                 <div
                   key={product.id}
                   className="flex items-center gap-3 p-2.5 rounded-xl border border-border bg-background hover:border-primary/30 transition-colors"
                 >
                   <div className="w-11 h-11 rounded-lg bg-surface-alt border border-border flex items-center justify-center shrink-0 overflow-hidden">
-                    <FlowerImage src={product.masterImageUrl} alt={product.name} sizes="(max-width: 640px) 50vw, 160px" fallback="icon" className="w-full h-full" />
+                    <FlowerImage src={product.masterImageUrl} driveLink={product.driveLink} alt={product.name} sizes="44px" fallback="icon" className="w-full h-full" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-body-sm font-bold text-text truncate">{product.name}</p>

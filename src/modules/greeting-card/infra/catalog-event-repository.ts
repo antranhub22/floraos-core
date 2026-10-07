@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
-import type { CatalogEventType, ChannelCount } from "../domain/catalog-channel"
+import { HEART_EVENT_TYPES, type CatalogEventType, type ChannelCount } from "../domain/catalog-channel"
 
 export interface CatalogEventInput {
   catalogId: string
@@ -9,6 +9,8 @@ export interface CatalogEventInput {
   eventType: CatalogEventType
   visitorHash: string
   orderId?: string | null | undefined
+  /** LIKE/UNLIKE: mẫu được thả/bỏ tim — phải thuộc bộ sưu tập */
+  productId?: string | null | undefined
 }
 
 /** Sự kiện xem/đặt trên link bộ sưu tập công khai — tổ chức suy ra từ catalog, không từ khách. */
@@ -22,8 +24,17 @@ export class CatalogEventRepository {
       select: { organization_id: true },
     })
     if (!catalog) return false
+    const isHeart = input.eventType === "LIKE" || input.eventType === "UNLIKE"
+    if (isHeart) {
+      // Mẫu lạ (không thuộc bộ sưu tập) → bỏ qua như không tồn tại; không ghi id tuỳ ý khách gửi
+      const inCatalog = input.productId
+        ? await this.db.greeting_catalog_products.findFirst({ where: { catalog_id: input.catalogId, product_id: input.productId }, select: { id: true } })
+        : null
+      if (!inCatalog) return false
+    }
     const dayStart = new Date(new Date().toISOString().slice(0, 10))
-    if (input.eventType !== "ORDER") {
+    // Tim không gộp theo ngày: mỗi lần thả/bỏ đều ghi, thao tác cuối quyết định (domain/catalog-hearts)
+    if (input.eventType !== "ORDER" && !isHeart) {
       const seen = await this.db.greeting_catalog_events.findFirst({
         where: {
           organization_id: catalog.organization_id,
@@ -45,6 +56,7 @@ export class CatalogEventRepository {
         event_type: input.eventType,
         visitor_hash: input.visitorHash,
         order_id: input.orderId ?? null,
+        product_id: isHeart ? input.productId! : null,
       },
     })
     return true
@@ -54,7 +66,11 @@ export class CatalogEventRepository {
   async countByChannel(ctx: TenantContext, since: Date, catalogId?: string): Promise<ChannelCount[]> {
     const rows = await this.db.greeting_catalog_events.groupBy({
       by: ["channel", "event_type", "visitor_hash"],
-      where: scopedWhere(ctx, { created_at: { gte: since }, ...(catalogId ? { catalog_id: catalogId } : {}) }),
+      where: scopedWhere(ctx, {
+        created_at: { gte: since },
+        event_type: { notIn: [...HEART_EVENT_TYPES] },
+        ...(catalogId ? { catalog_id: catalogId } : {}),
+      }),
       take: 50_000,
       orderBy: { channel: "asc" },
     })

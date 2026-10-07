@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useCallback, useState } from "react"
 import { readSavedState, useSavedState } from "./use-saved-state"
 import { useRememberedStep } from "./use-remembered-step"
 import { resumePublicStep, type PublicStep } from "@/modules/greeting-card/domain/customer-step"
@@ -20,6 +20,7 @@ import { ShoppingBag } from "lucide-react"
 import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { useCatalogTracking } from "./use-catalog-tracking"
+import { HeartTrackerContext } from "./heart-tracker"
 import { rememberCatalogOrder, useResumeCatalogOrder } from "./use-remembered-order"
 
 interface Props {
@@ -45,6 +46,8 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
     vietQr: BrochurePaymentInstructions | null
   } | null>(null)
   const { track, orderMeta } = useCatalogTracking(catalog.id)
+  // Thả/bỏ tim trên link công khai → cộng vào bảng "mẫu nhiều tim nhất" của bộ sưu tập
+  const reportHeart = useCallback((productId: string, liked: boolean) => track(liked ? "LIKE" : "UNLIKE", productId), [track])
   // Máy này đã đặt đơn từ bộ sưu tập này → về trang đơn (QR / chờ xác nhận), không quay lại xem mẫu
   const resuming = useResumeCatalogOrder(catalog.id)
   useRememberedStep("public-step", step, setStep, (saved) => resumePublicStep(saved, readSavedState<string>(SELECTED_KEY), products))
@@ -153,7 +156,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg p-4">
         <div className="w-full max-w-md bg-surface rounded-3xl shadow-xl overflow-hidden border border-border">
-          <FlowerImage src={selected.imageUrl} alt={selected.name} sizes="(max-width: 448px) 100vw, 448px" priority className="w-full aspect-square" />
+          <FlowerImage src={selected.imageUrl} driveLink={selected.driveLink} alt={selected.name} sizes="(max-width: 448px) 100vw, 448px" priority className="w-full aspect-square" />
           <div className="p-6 flex flex-col gap-4">
             <div>
               <h2 className="text-title font-extrabold text-foreground">{selected.name}</h2>
@@ -208,6 +211,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
 
   // 4. MAIN GREETING TEMPLATE DECK
   return (
+    <HeartTrackerContext.Provider value={reportHeart}>
     <GreetingTemplateRenderer
       showTemplateSwitcher={false}
       templateId={(catalog.filters as Record<string, unknown> | null)?.templateId as string | undefined}
@@ -217,5 +221,6 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
       selectedProductId={selected?.id ?? null}
       onSelectProduct={handleSelectFromDeck}
     />
+    </HeartTrackerContext.Provider>
   )
 }

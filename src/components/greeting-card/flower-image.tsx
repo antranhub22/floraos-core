@@ -7,6 +7,8 @@ import { Flower2 } from "lucide-react"
 interface FlowerImageProps {
   src: string | null | undefined
   alt: string
+  /** Link Google Drive (attributes.drive_link) — hiện ảnh Drive khi chưa có storage image. */
+  driveLink?: string | null | undefined
   /** Lớp cho khung bọc (kích thước, bo góc, viền) — ảnh luôn phủ kín khung. */
   className?: string | undefined
   /** Gợi ý độ rộng hiển thị cho trình duyệt chọn tải (vd. "(max-width: 640px) 100vw, 400px"). */
@@ -21,14 +23,24 @@ interface FlowerImageProps {
   position?: "relative" | "absolute" | undefined
 }
 
+/** Trích folder_id từ Drive link */
+function getDriveFolderId(link: string): string | null {
+  const m = link.match(/folders\/([a-zA-Z0-9_-]{20,})/)
+  return m?.[1] ?? null
+}
+
 /**
- * Ảnh mẫu hoa dùng chung: `next/image` (lazy-load, `sizes`) + ô thay thế khi
- * chưa có ảnh hoặc ảnh lỗi. `unoptimized` vì ảnh là URL lưu trữ đã ký có hạn
- * (đổi theo phiên) — tối ưu lại qua `/_next/image` vừa phí vừa hết hạn theo.
+ * Ảnh mẫu hoa dùng chung — hỗ trợ 3 nguồn theo thứ tự ưu tiên:
+ * 1. `src` (storage URL đã ký)
+ * 2. `driveLink` → proxy `/api/v1/public/drive-thumb-proxy?folder_id=...`
+ * 3. Placeholder icon
+ *
+ * `unoptimized` vì storage URL có chữ ký hết hạn theo phiên.
  */
 export function FlowerImage({
   src,
   alt,
+  driveLink,
   className = "",
   sizes = "100vw",
   priority = false,
@@ -37,12 +49,22 @@ export function FlowerImage({
   draggable,
   position = "relative",
 }: FlowerImageProps) {
-  const [failedSrc, setFailedSrc] = useState<string | null>(null)
-  const broken = !src || failedSrc === src
+  const [storageFailed, setStorageFailed] = useState(false)
+  const [driveFailed, setDriveFailed] = useState(false)
+
+  // Xác định nguồn ảnh
+  const hasStorage = !!(src && !storageFailed)
+  const folderId = !hasStorage && driveLink && !driveFailed ? getDriveFolderId(driveLink) : null
+  const driveProxySrc = folderId ? `/api/v1/public/drive-thumb-proxy?folder_id=${folderId}` : null
+  const hasDrive = !!driveProxySrc
+
+  const showPlaceholder = !hasStorage && !hasDrive
+
+  const objectFitClass = fit === "cover" ? "object-cover" : "object-contain"
 
   return (
     <span className={`${position} block overflow-hidden ${className}`}>
-      {broken ? (
+      {showPlaceholder ? (
         <span
           role="img"
           aria-label={`${alt} — chưa có ảnh`}
@@ -51,17 +73,28 @@ export function FlowerImage({
           <Flower2 size={fallback === "full" ? 40 : 18} className="text-primary/40" />
           {fallback === "full" && <span className="text-caption mt-1.5">Hình ảnh đang cập nhật</span>}
         </span>
-      ) : (
+      ) : hasStorage ? (
         <Image
-          src={src}
+          src={src!}
           alt={alt}
           fill
           sizes={sizes}
           priority={priority}
           unoptimized
           draggable={draggable}
-          onError={() => setFailedSrc(src)}
-          className={fit === "cover" ? "object-cover" : "object-contain"}
+          onError={() => setStorageFailed(true)}
+          className={objectFitClass}
+        />
+      ) : (
+        /* Drive proxy — dùng <img> vì URL không cần next/image optimization */
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={driveProxySrc!}
+          alt={alt}
+          loading={priority ? "eager" : "lazy"}
+          draggable={draggable}
+          onError={() => setDriveFailed(true)}
+          className={`absolute inset-0 h-full w-full ${objectFitClass}`}
         />
       )}
     </span>

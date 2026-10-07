@@ -42,6 +42,7 @@ import {
 } from "./nav-model"
 import { DesktopNavItem } from "./desktop-nav-item"
 import { DesktopNavFooter } from "./desktop-nav-footer"
+import { loadNavGroups, loadReportsOpen, navStorageKeys, persistNavGroups } from "./nav-storage"
 
 const ICONS: Record<string, ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
   Home,
@@ -71,31 +72,12 @@ const ICONS: Record<string, ComponentType<{ size?: number; className?: string; s
   FileSpreadsheet,
 }
 
-const STORAGE_KEY = "floraos_nav_groups_v1"
-const REPORTS_STORAGE_KEY = "floraos_nav_reports_open_v1"
-
-function loadStoredGroupStates(): Record<string, boolean> {
-  if (typeof window === "undefined") return {}
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function persistGroupStates(states: Record<string, boolean>) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(states))
-  } catch {
-    // Không ném lỗi nếu localStorage bị khóa
-  }
-}
-
 export function DesktopNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { can, roleUx, orgName } = useSession()
+  const { can, roleUx, orgName, organization } = useSession()
+  const orgId = organization?.id
+  const { groupsKey, reportsKey } = useMemo(() => navStorageKeys(orgId), [orgId])
 
   const navView = useMemo(() => buildNav(can, roleUx), [can, roleUx])
 
@@ -104,21 +86,11 @@ export function DesktopNav() {
   const [reportsOpen, setReportsOpen] = useState(true)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Đồng bộ trạng thái đóng mở nhóm và mục Báo cáo từ localStorage
+  // Đồng bộ trạng thái đóng mở nhóm và mục Báo cáo từ localStorage (đổi tổ chức → đọc lại)
   useEffect(() => {
-    const stored = loadStoredGroupStates()
-    if (Object.keys(stored).length > 0) {
-      setOpenGroups(stored)
-    }
-    try {
-      const storedReports = localStorage.getItem(REPORTS_STORAGE_KEY)
-      if (storedReports !== null) {
-        setReportsOpen(storedReports === "true")
-      }
-    } catch {
-      // bỏ qua
-    }
-  }, [])
+    setOpenGroups(loadNavGroups(groupsKey))
+    setReportsOpen(loadReportsOpen(reportsKey))
+  }, [groupsKey, reportsKey])
 
   // Phím tắt '/' để tìm kiếm nhanh
   useEffect(() => {
@@ -142,7 +114,7 @@ export function DesktopNav() {
   function toggleReports(nextOpen: boolean) {
     setReportsOpen(nextOpen)
     try {
-      localStorage.setItem(REPORTS_STORAGE_KEY, String(nextOpen))
+      localStorage.setItem(reportsKey, String(nextOpen))
     } catch {
       // bỏ qua
     }
@@ -161,7 +133,7 @@ export function DesktopNav() {
   function toggleGroup(key: string, currentExpanded: boolean) {
     const nextStates = { ...openGroups, [key]: !currentExpanded }
     setOpenGroups(nextStates)
-    persistGroupStates(nextStates)
+    persistNavGroups(groupsKey, nextStates)
   }
 
   // Kết quả tìm kiếm phẳng

@@ -10,6 +10,8 @@ import type { DbClient } from "./db-client"
 export type ProductPreviewRow = products & {
   masterImageUrl?: string | undefined
   price_vnd: number | null
+  /** Link Google Drive từ `attributes.drive_link` — fallback thumbnail khi chưa có ảnh lưu trữ. */
+  driveLink?: string | undefined
 }
 
 export type CreateProductInput = {
@@ -57,6 +59,8 @@ export type ListProductsFilters = {
   collection?: string | undefined
   priceMin?: number | undefined
   priceMax?: number | undefined
+  /** Tìm theo tên hoặc mã SKU (ILIKE, không phân biệt hoa-thường). */
+  search?: string | undefined
 }
 
 export type ListProductsPage = {
@@ -163,6 +167,14 @@ export class ProductRepository {
       ...(filters.collection !== undefined
         ? { attributes: { path: ["collection"], equals: filters.collection } }
         : {}),
+      ...(filters.search
+        ? {
+            OR: [
+              { name: { contains: filters.search, mode: "insensitive" as const } },
+              { code: { contains: filters.search, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
     })
 
     // `prisma` singleton (không phải `this.db`) vì `include` cần full PrismaClient type;
@@ -207,9 +219,10 @@ export class ProductRepository {
       const variantAttrs = (row.variants[0]?.attributes as Record<string, unknown>) ?? {}
       const priceFromVariant = typeof variantAttrs.price === "number" && variantAttrs.price > 0 ? variantAttrs.price : null
       const price_vnd = priceFromAttrs ?? priceFromVariant
+      const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : undefined
 
       const { images: _img, variants: _var, ...base } = row
-      return { ...base, masterImageUrl, price_vnd }
+      return { ...base, masterImageUrl, price_vnd, driveLink }
     })
   }
 

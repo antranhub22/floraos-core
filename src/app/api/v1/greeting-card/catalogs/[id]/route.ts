@@ -5,6 +5,7 @@ import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
+import { deleteGreetingCatalog, restoreGreetingCatalog } from "@/modules/greeting-card/use-cases/delete-greeting-catalog"
 
 const updateCatalogSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
@@ -34,8 +35,12 @@ export const PATCH = handle(async (request: Request, context: Context) => {
   const parsed = updateCatalogSchema.safeParse(body)
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
 
+  // Ẩn/hiện luôn đi qua use-case (kiểm người tạo/L4 + audit); trường còn lại cập nhật thường
+  const { isActive, ...fields } = parsed.data
   const repo = new GreetingCardRepository()
-  await repo.updateCatalog(ctx, id, parsed.data)
+  if (isActive === true) await restoreGreetingCatalog(ctx, id)
+  else if (isActive === false) await deleteGreetingCatalog(ctx, id)
+  if (Object.values(fields).some((v) => v !== undefined)) await repo.updateCatalog(ctx, id, fields)
   const updated = await repo.getCatalogById(ctx, id)
   if (!updated) throw notFound()
   return jsonResponse({ data: updated })
@@ -45,7 +50,6 @@ export const DELETE = handle(async (request: Request, context: Context) => {
   const { id } = await context.params
   const { ctx } = await requireTenantContext(request)
   requireCapability(ctx, GREETING_CARD_CAPABILITY.manage)
-  const repo = new GreetingCardRepository()
-  await repo.deleteCatalog(ctx, id)
-  return jsonResponse({ success: true })
+  const result = await deleteGreetingCatalog(ctx, id)
+  return jsonResponse(result)
 })

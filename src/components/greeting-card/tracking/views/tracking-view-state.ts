@@ -86,11 +86,14 @@ export function presetViews(): SavedView[] {
   ]
 }
 
-const STORE_KEY = "floraos:tracking:saved-views"
+const STORE_KEY_PREFIX = "floraos:tracking:saved-views"
+function getStoreKey(orgId?: string | null): string {
+  return orgId ? `${STORE_KEY_PREFIX}__${orgId}` : STORE_KEY_PREFIX
+}
 
-export function loadSavedViews(): SavedView[] {
+export function loadSavedViews(orgId?: string | null): SavedView[] {
   try {
-    const raw = window.localStorage.getItem(STORE_KEY)
+    const raw = window.localStorage.getItem(getStoreKey(orgId))
     const list = raw ? (JSON.parse(raw) as SavedView[]) : []
     return Array.isArray(list) ? list.filter((v) => v && typeof v.name === "string").slice(0, 30) : []
   } catch {
@@ -98,9 +101,9 @@ export function loadSavedViews(): SavedView[] {
   }
 }
 
-export function storeSavedViews(list: SavedView[]): void {
+export function storeSavedViews(list: SavedView[], orgId?: string | null): void {
   try {
-    window.localStorage.setItem(STORE_KEY, JSON.stringify(list.slice(0, 30)))
+    window.localStorage.setItem(getStoreKey(orgId), JSON.stringify(list.slice(0, 30)))
   } catch {
     // bộ nhớ trình duyệt bị chặn — view tự lưu không giữ được, trang vẫn chạy
   }

@@ -57,6 +57,17 @@ export function unauthenticated(): AppError {
   return new AppError("UNAUTHENTICATED", "Cần đăng nhập")
 }
 
+/** Mã lý do trong `details.reason` khi phiên bị thay bởi lần đăng nhập ở nơi khác. */
+export const SESSION_SUPERSEDED = "SESSION_SUPERSEDED"
+
+export function sessionSuperseded(): AppError {
+  return new AppError(
+    "UNAUTHENTICATED",
+    "Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác",
+    { reason: SESSION_SUPERSEDED }
+  )
+}
+
 export function validationFailed(details?: Record<string, unknown>): AppError {
   return new AppError("VALIDATION_FAILED", "Dữ liệu gửi lên không hợp lệ", details)
 }

@@ -14,7 +14,7 @@ interface SwipeDeckEndProps {
   total: number
   onOrder: (product: GreetingCatalogProduct) => void
   onRestart: () => void
-  /** Quay lại mẫu cuối, giữ nguyên Thích/Bỏ qua */
+  /** Quay lại mẫu cuối, giữ nguyên tim đã thả */
   onRewind: () => void
   /** Khoảng giá có mẫu — khách chưa ưng mẫu nào thì cho lọc theo giá */
   priceRanges?: ReadonlyArray<{ key: string; label: string; count: number }> | undefined

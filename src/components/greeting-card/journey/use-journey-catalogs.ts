@@ -71,20 +71,26 @@ export function useJourneyCatalogs() {
   const org = useSWR<{ slug?: string }>("/api/v1/organizations/current", (url: string) =>
     fetch(url).then((r) => (r.ok ? r.json() : {}))
   )
-  const catalogs = list.data ?? []
+  // Luôn trả array — tránh crash khi SWR đang revalidating (data tạm undefined)
+  const catalogs: CatalogOption[] = Array.isArray(list.data) ? list.data : []
   const orgSlug = org.data?.slug ?? ""
   const loading = list.isLoading
   const loadError = list.error instanceof Error ? list.error.message : null
 
+  const { mutate } = list
+
   /** Cập nhật lạc quan danh sách đang có (vd. số mẫu sau khi thêm/xoá trong picker). */
   const setCatalogs = useCallback(
     (update: (prev: CatalogOption[]) => CatalogOption[]) => {
-      void list.mutate((prev) => update(prev ?? []), { revalidate: false })
+      void mutate((prev) => update(Array.isArray(prev) ? prev : []), { revalidate: false })
     },
-    [list]
+    [mutate],
   )
 
-  const reload = useCallback(async (): Promise<CatalogOption[]> => (await list.mutate()) ?? [], [list])
+  const reload = useCallback(async (): Promise<CatalogOption[]> => {
+    const result = await mutate()
+    return Array.isArray(result) ? result : []
+  }, [mutate])
 
   const createCatalog = useCallback(
     async (input: { name: string; code?: string; productIds?: string[] }): Promise<string> => {

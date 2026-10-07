@@ -14,6 +14,9 @@ import { BottomNav } from "@/components/layout/bottom-nav"
 import { DesktopNav } from "@/components/layout/desktop-nav"
 import { GlobalImageZoom } from "@/components/ui/global-image-zoom"
 import { resolveAppSession } from "@/modules/organization/use-cases/resolve-app-session"
+import { SessionTakeoverWatcher } from "@/components/layout/session-takeover-watcher"
+import { checkSession } from "@/modules/organization/use-cases/check-session"
+import { SESSION_SUPERSEDED } from "@/core/http/errors"
 import { LiveRegionProvider } from "@/components/ui/live-region"
 
 import { FloraOSGlobalCopilot } from "@/components/chat/floraos-global-copilot"
@@ -27,7 +30,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const session = await resolveAppSession(cookieHeader)
   if (!session) {
-    redirect("/dang-nhap")
+    // Phiên bị thay bởi lần đăng nhập ở thiết bị khác → trang đăng nhập hiện
+    // cảnh báo thay vì im lặng.
+    const lyDo = await checkSession(new Request("http://localhost/", { headers: { cookie: cookieHeader } }))
+      .then(() => null)
+      .catch((e: { details?: { reason?: string } }) => e?.details?.reason ?? null)
+    redirect(lyDo === SESSION_SUPERSEDED ? "/dang-nhap?ly-do=thiet-bi-khac" : "/dang-nhap")
   }
 
   return (
@@ -47,6 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <BottomNav />
         </div>
         <GlobalImageZoom />
+        <SessionTakeoverWatcher />
         <FloraOSGlobalCopilot />
       </LiveRegionProvider>
     </SessionProvider>

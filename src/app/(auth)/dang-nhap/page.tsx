@@ -10,8 +10,8 @@
 // phục thật ở bản này (P12, xem TECHNICAL_DEBT.md) — bấm vào hiện thông báo
 // rõ ràng thay vì im lặng không làm gì.
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -79,6 +79,9 @@ export default function DangNhapPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Suspense fallback={null}>
+            <ThongBaoThietBiKhac />
+          </Suspense>
           {loi && (
             <div className="rounded-xl border-[1.5px] border-danger/30 bg-danger/10 px-3.5 py-2.5 text-body-sm font-medium text-danger">
               {loi}
@@ -215,6 +218,18 @@ export default function DangNhapPage() {
       <div className="pb-1 pt-9 text-center text-caption text-text-muted/70">
         © FloraOS — nền tảng cho cửa hàng hoa
       </div>
+    </div>
+  )
+}
+
+/** Bị đẩy về đây vì tài khoản vừa đăng nhập ở thiết bị khác (một tài khoản chỉ một phiên). */
+function ThongBaoThietBiKhac() {
+  const params = useSearchParams()
+  if (params.get("ly-do") !== "thiet-bi-khac") return null
+  return (
+    <div role="alert" className="rounded-xl border-[1.5px] border-warning/30 bg-warning/10 px-3.5 py-2.5 text-body-sm font-medium text-warning">
+      Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác nên phiên ở đây đã kết thúc. Nếu
+      đó không phải bạn, hãy đăng nhập lại và đổi mật khẩu.
     </div>
   )
 }

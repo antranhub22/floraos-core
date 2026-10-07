@@ -2323,9 +2323,10 @@ model greeting_catalog_events {
   organization_id String // suy từ catalog ở server, không nhận từ khách
   catalog_id      String
   channel         String // zalo | facebook | instagram | tiktok | website | khac | truc-tiep
-  event_type      String // VIEW | DETAIL | FORM_OPEN | ORDER
+  event_type      String // VIEW | DETAIL | FORM_OPEN | ORDER | LIKE | UNLIKE
   visitor_hash    String // sha256(catalog_id:mã khách ngẫu nhiên) — không lưu IP
   order_id        String?
+  product_id      String? // LIKE/UNLIKE: mẫu được thả/bỏ tim (07/10/2026)
   created_at      DateTime @default(now())
 
   organization organizations     @relation(fields: [organization_id], references: [id], onDelete: Cascade)
@@ -2333,6 +2334,7 @@ model greeting_catalog_events {
 
   @@index([organization_id, catalog_id, created_at])
   @@index([organization_id, channel])
+  @@index([organization_id, catalog_id, product_id])
 }
 
 model greeting_integrations {

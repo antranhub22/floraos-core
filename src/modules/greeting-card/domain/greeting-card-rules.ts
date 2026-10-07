@@ -67,6 +67,7 @@ export function createProductSnapshot(
     name: product.name,
     price: product.price,
     imageUrl: product.imageUrl,
+    driveLink: product.driveLink ?? null,
     description: product.description ?? null,
     flowersSummary: product.flowersSummary ?? null,
     selectedAt: timestamp,

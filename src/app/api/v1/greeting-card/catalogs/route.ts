@@ -22,7 +22,13 @@ export const GET = handle(async (request: Request) => {
   const url = new URL(request.url)
   const limit = url.searchParams.has("limit") ? parseListQuery(url).limit : 100
   const cursor = url.searchParams.get("cursor")?.trim() || undefined
-  const rows = await new GreetingCardRepository().listCatalogs(ctx, { limit, cursor })
+  const createdBy = url.searchParams.get("created_by")?.trim() || undefined
+  const statusParam = url.searchParams.get("status")?.trim()
+  const status = statusParam === "archived" || statusParam === "all" ? statusParam : "active"
+  const daysParam = url.searchParams.get("days")
+  const days = daysParam && Number(daysParam) > 0 ? Number(daysParam) : undefined
+
+  const rows = await new GreetingCardRepository().listCatalogs(ctx, { limit, cursor, createdBy, status, days })
   return jsonResponse(toPage(rows, limit))
 })
 
@@ -44,6 +50,21 @@ export const POST = handle(async (request: Request) => {
     filters: parsed.data.filters,
     productIds: parsed.data.productIds,
     createdBy: ctx.userId,
+  })
+
+  // Ghi nhật ký audit log cho Điều hành theo dõi
+  const { AuditLogRepository } = await import("@/modules/audit/infra/audit-log-repository")
+  await new AuditLogRepository().record(ctx, {
+    action: "greeting_catalog.create",
+    entityType: "greeting_catalog",
+    entityId: catalog.id,
+    after: {
+      id: catalog.id,
+      code: catalog.code,
+      name: catalog.name,
+      type: catalog.type,
+      created_by: ctx.userId,
+    },
   })
 
   return jsonResponse({ data: catalog }, { status: 201 })

@@ -1,42 +1,57 @@
 "use client"
 
 import React, { useState } from "react"
-import {
-  BookOpen, Plus, Edit2, Trash2, Eye, Package,
-  RefreshCw, ChevronRight, Check, Loader2, Copy, Download,
-} from "lucide-react"
+import { BookOpen, Plus, RefreshCw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BrochurePreviewModal } from "@/components/greeting-card/customer/brochure-preview-modal"
 import { readApiError } from "@/components/greeting-card/api-error"
 import { CATALOG_CHANNELS } from "@/modules/greeting-card/domain/catalog-channel"
 import { copyFromServer, createShareUrl } from "@/components/greeting-card/share/tracked-copy"
 import { useApi } from "@/components/greeting-card/greeting-api"
+import { useSession } from "@/lib/session"
 import { CatalogCreateModal } from "./catalog-create-modal"
-
-type CatalogItem = {
-  id: string
-  code: string
-  name: string
-  type: "STANDARD" | "CLIENT"
-  description: string | null
-  is_active: boolean
-  created_at: string
-  _count: { items: number; sessions: number }
-}
+import { CatalogCard, type CatalogItem } from "./catalog-card"
+import { CatalogListFilters, type CatalogDaysFilter, type CatalogStatusFilter } from "./catalog-list-filters"
 
 type Props = {
   onSelectCatalog: (catalog: CatalogItem) => void
 }
 
 export function CatalogListTab({ onSelectCatalog }: Props) {
-  const list = useApi<{ data: CatalogItem[] }>("/api/v1/greeting-card/catalogs")
+  const { can } = useSession()
+  const me = useApi<{ user: { id: string; name: string | null } }>("/api/v1/auth/me")
+  const currentUserId = me.data?.user.id ?? null
+  // L4 product.archive — được ẩn/khôi phục catalog của người khác (khớp server: delete-greeting-catalog.ts)
+  const isOperator = can("L4")
+
+  const [staffFilter, setStaffFilter] = useState<string>("")
+  const [statusFilter, setStatusFilter] = useState<CatalogStatusFilter>("active")
+  const [daysFilter, setDaysFilter] = useState<CatalogDaysFilter>("all")
+
+
+  // URL query
+  const queryParams = new URLSearchParams()
+  if (statusFilter === "archived") queryParams.set("status", "archived")
+  if (staffFilter) queryParams.set("created_by", staffFilter)
+  if (daysFilter === "3") queryParams.set("days", "3")
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ""
+
+  const list = useApi<{ data: CatalogItem[] }>(`/api/v1/greeting-card/catalogs${queryString}`)
   const catalogs = list.data?.data ?? []
   const loading = list.isLoading || list.isValidating
   const loadCatalogs = () => list.mutate()
+
+  // Danh sách nhân sự để Điều hành chọn lọc theo từng người
+  const staffApi = useApi<{ data: { members: Array<{ userId: string; name: string }> } }>(
+    isOperator ? "/api/v1/greeting-card/messages/recipients" : null
+  )
+  const staffList = staffApi.data?.data.members ?? []
+
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewTitle, setPreviewTitle] = useState<string>("")
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [copiedCatalogId, setCopiedCatalogId] = useState<string | null>(null)
   const [shareChannel, setShareChannel] = useState("")
@@ -63,17 +78,32 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
     }
   }
 
-
   async function handleDelete(id: string) {
-    if (!window.confirm("Ẩn catalog này? Các link đã gửi vẫn còn hoạt động.")) return
+    if (!window.confirm("Ẩn bộ sưu tập này? Các link đã gửi vẫn hoạt động; bạn hoặc Điều hành có thể khôi phục trong mục “Đã ẩn”.")) return
     setDeletingId(id)
     setActionError(null)
     try {
       const res = await fetch(`/api/v1/greeting-card/catalogs/${id}`, { method: "DELETE" })
-      if (!res.ok) setActionError(await readApiError(res, "Không ẩn được bộ sưu tập"))
+      if (!res.ok) setActionError(await readApiError(res, "Không xóa được bộ sưu tập"))
       await loadCatalogs()
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  async function handleRestore(id: string) {
+    setRestoringId(id)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/v1/greeting-card/catalogs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: true }),
+      })
+      if (!res.ok) setActionError(await readApiError(res, "Không khôi phục được bộ sưu tập"))
+      await loadCatalogs()
+    } finally {
+      setRestoringId(null)
     }
   }
 
@@ -132,6 +162,18 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
         </div>
       </div>
 
+
+      <CatalogListFilters
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        daysFilter={daysFilter}
+        setDaysFilter={setDaysFilter}
+        staffFilter={staffFilter}
+        setStaffFilter={setStaffFilter}
+        staffList={staffList}
+        showStaffFilter={isOperator}
+      />
+
       {isCreateOpen && (
         <CatalogCreateModal
           onClose={() => setIsCreateOpen(false)}
@@ -172,113 +214,22 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {catalogs.map((catalog) => (
-            <div
+            <CatalogCard
               key={catalog.id}
-              className="bg-surface rounded-2xl border border-border p-5 flex flex-col gap-4 hover:border-primary/40 hover:shadow-md transition-all duration-200"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-caption font-bold uppercase">
-                      {catalog.type === "STANDARD" ? "Tiêu chuẩn" : "Riêng khách"}
-                    </span>
-                    {!catalog.is_active && (
-                      <span className="px-2 py-0.5 rounded-full bg-danger-bg text-danger text-caption font-bold">
-                        Đã ẩn
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-body font-extrabold text-foreground truncate">{catalog.name}</h3>
-                  <p className="text-caption text-text-muted font-mono mt-0.5">
-                    <span>{catalog.code}</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5 text-caption text-text-muted">
-                  <Package size={13} />
-                  <span>
-                    <strong className="text-foreground">{catalog._count.items}</strong> mẫu hoa
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-caption text-text-muted">
-                  <Eye size={13} />
-                  <span>
-                    <strong className="text-foreground">{catalog._count.sessions}</strong> link đã gửi
-                  </span>
-                </div>
-              </div>
-
-              {catalog.description && (
-                <p className="text-caption text-text-muted line-clamp-2 border-t border-border pt-3">
-                  {catalog.description}
-                </p>
-              )}
-
-              <div className="flex items-center gap-2 mt-auto">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onSelectCatalog(catalog)}
-                  className="flex-1 text-caption gap-1.5 h-8"
-                >
-                  <Edit2 size={12} />
-                  <span>Quản lý mẫu hoa</span>
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const url = buildPublicUrl(catalog)
-                    setPreviewUrl(url)
-                    setPreviewTitle(`Xem trước: ${catalog.name} (${orgSlug}/${catalog.code})`)
-                  }}
-                  title="Xem trước giao diện thẻ chào khách hàng"
-                  aria-label={`Xem trước link công khai của ${catalog.name}`}
-                  className="p-1.5 rounded-lg border border-border hover:bg-surface-muted transition-colors text-text-muted hover:text-foreground inline-flex items-center"
-                >
-                  <Eye size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void copyPublicLink(catalog)}
-                  title="Sao chép link mang tên bạn — khách mở link này được tính cho bạn"
-                  aria-label={`Sao chép link bộ sưu tập ${catalog.name} mang tên bạn`}
-                  className="p-1.5 rounded-lg border border-border hover:bg-surface-muted transition-colors text-text-muted hover:text-foreground"
-                >
-                  {copiedCatalogId === catalog.id ? <Check size={14} className="text-success" /> : <Copy size={14} />}
-                </button>
-                <a
-                  href={`/api/v1/greeting-card/catalogs/${catalog.id}/collage`}
-                  download
-                  title="Tải ảnh catalog để đăng lên Zalo/Facebook"
-                  aria-label={`Tải ảnh catalog ${catalog.name}`}
-                  className="p-1.5 rounded-lg border border-border hover:bg-surface-muted transition-colors text-text-muted hover:text-foreground inline-flex items-center"
-                >
-                  <Download size={14} />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(catalog.id)}
-                  disabled={deletingId === catalog.id}
-                  aria-label={`Ẩn catalog ${catalog.name}`}
-                  className="p-1.5 rounded-lg border border-border hover:bg-danger-bg hover:border-danger/40 hover:text-danger transition-colors text-text-muted"
-                >
-                  {deletingId === catalog.id
-                    ? <Loader2 size={14} className="animate-spin" />
-                    : <Trash2 size={14} />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectCatalog(catalog)}
-                  aria-label={`Mở chi tiết catalog ${catalog.name}`}
-                  className="p-1.5 rounded-lg border border-border hover:bg-surface-muted transition-colors text-text-muted"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
+              catalog={catalog}
+              canManageState={isOperator || (Boolean(currentUserId) && catalog.created_by === currentUserId)}
+              copied={copiedCatalogId === catalog.id}
+              deleting={deletingId === catalog.id}
+              restoring={restoringId === catalog.id}
+              onSelect={() => onSelectCatalog(catalog)}
+              onPreview={() => {
+                setPreviewUrl(buildPublicUrl(catalog))
+                setPreviewTitle(`Xem trước: ${catalog.name} (${orgSlug}/${catalog.code})`)
+              }}
+              onCopy={() => void copyPublicLink(catalog)}
+              onDelete={() => void handleDelete(catalog.id)}
+              onRestore={() => void handleRestore(catalog.id)}
+            />
           ))}
         </div>
       )}
