@@ -5,6 +5,7 @@ import { MembershipRepository } from "@/modules/organization/infra/membership-re
 import { verifyPassword } from "@/modules/organization/infra/password-hasher"
 import { SessionRepository } from "@/modules/organization/infra/session-repository"
 import { hashSessionToken, newSessionToken } from "@/modules/organization/infra/session-token"
+import { runInTransaction } from "@/modules/organization/infra/transaction"
 import { UserRepository } from "@/modules/organization/infra/user-repository"
 
 export type LogInInput = { email: string; password: string }
@@ -28,7 +29,6 @@ function rejected(): AppError {
 export async function logIn(input: LogInInput): Promise<LogInResult> {
   const users = new UserRepository()
   const memberships = new MembershipRepository()
-  const sessions = new SessionRepository()
 
   const email = normalizeEmail(input.email)
   const user = await users.findByEmail(email)
@@ -41,11 +41,20 @@ export async function logIn(input: LogInInput): Promise<LogInResult> {
 
   const now = new Date()
   const token = newSessionToken()
-  await sessions.create({
-    user_id: user.id,
-    token_hash: hashSessionToken(token),
-    organization_id: membership?.organization_id ?? null,
-    expires_at: expiresAt(now),
+  // Một tài khoản chỉ một phiên tại một thời điểm: người đăng nhập sau thắng,
+  // mọi phiên cũ bị thu hồi cùng lúc (thiết bị cũ nhận cảnh báo — xem
+  // `resolveSession`). Gói trong transaction để không có khoảnh khắc nào hai
+  // phiên cùng sống.
+  await runInTransaction(async (tx) => {
+    const sessions = new SessionRepository(tx)
+    await sessions.revokeAllActiveForUser(user.id, now)
+    await sessions.create({
+      user_id: user.id,
+      token_hash: hashSessionToken(token),
+      organization_id: membership?.organization_id ?? null,
+      expires_at: expiresAt(now),
+      created_at: now,
+    })
   })
 
   return {
