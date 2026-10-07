@@ -569,19 +569,17 @@ export function AccountStorageHub({
                     {asset.name}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="secondary"
-                      size="sm"
+                    <button
+                      type="button"
                       onClick={() => handleSelectRaw(asset)}
-                      className="flex-1 text-xs h-7 gap-1 bg-primary hover:bg-primary/90 text-white font-semibold"
+                      className="flex flex-1 items-center justify-center rounded-lg text-xs h-7 gap-1 bg-primary hover:bg-primary-dark text-white font-semibold focus-visible:outline-2 focus-visible:outline-primary"
                     >
                       <Sparkles size={12} />
                       Phân tích
-                    </Button>
+                    </button>
                     {isExecutive && !asset.isLocal && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
+                        type="button"
                         onClick={() =>
                           setTrashTarget({
                             id: asset.id,
@@ -590,11 +588,12 @@ export function AccountStorageHub({
                             type: "RAW_ASSET",
                           })
                         }
-                        className="h-7 w-7 p-0 text-text-muted hover:text-danger hover:bg-danger-bg shrink-0 rounded-lg"
+                        aria-label="Chuyển ảnh vào thùng rác"
+                        className="flex items-center justify-center h-7 w-7 border border-border text-text-muted hover:text-danger hover:bg-danger-bg shrink-0 rounded-lg"
                         title="Chuyển vào thùng rác 30 ngày (Chỉ Điều hành)"
                       >
                         <Trash2 size={13} />
-                      </Button>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -726,10 +725,10 @@ export function AccountStorageHub({
                       <Sparkles size={13} className="text-accent" />
                       1. Sinh Copy (Sinh dữ liệu bán hàng)
                     </Button>
-                    <Button variant="secondary"
+                    <Button variant="primary"
                       size="sm"
                       onClick={() => handleSelectApproved(item, "m01c")}
-                      className="flex-1 text-xs h-8 gap-1 bg-primary hover:bg-primary/90 text-white font-bold"
+                      className="flex-1 text-xs h-8 gap-1 font-bold"
                     >
                       <Tag size={13} />
                       2. Tạo Thẻ Chào (Nghiên cứu thị trường)
