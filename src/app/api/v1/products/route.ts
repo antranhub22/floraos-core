@@ -46,6 +46,7 @@ export const GET = handle(async (request) => {
       ...(url.searchParams.has("collection") ? { collection: url.searchParams.get("collection") ?? "" } : {}),
       ...(priceMinParam !== null ? { priceMin: Number(priceMinParam) } : {}),
       ...(priceMaxParam !== null ? { priceMax: Number(priceMaxParam) } : {}),
+      ...(url.searchParams.has("search") ? { search: url.searchParams.get("search") ?? "" } : {}),
     },
     { limit, cursor: url.searchParams.get("cursor") }
   )

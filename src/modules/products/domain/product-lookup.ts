@@ -39,6 +39,11 @@ export interface ProductLookupRaw {
    * `null` = chưa có giá niêm yết — giao diện hiển thị "Liên hệ", tuyệt đối không hiển thị 0đ.
    */
   price_vnd: number | null
+  /**
+   * Link Google Drive của thư mục ảnh — `undefined` khi không có.
+   * Dùng để hiển thị thumbnail Drive trong trường hợp sản phẩm chưa có ảnh lưu trữ.
+   */
+  driveLink?: string | undefined
 }
 
 export interface ProductPricingSummary {
@@ -62,6 +67,8 @@ export interface ProductLookupResult {
   masterImageUrl?: string | undefined
   /** Giá tham chiếu — `null` nghĩa là "Liên hệ để báo giá", không phải 0đ. */
   price_vnd: number | null
+  /** Link Google Drive của thư mục ảnh (import Excel). `undefined` khi không có. */
+  driveLink?: string | undefined
   /** `null` khi năng lực `L5` không có mặt — khác `null` do tổ chức chưa cấu hình. */
   pricing: ProductPricingSummary | null
   /** Kê tên khối bị cắt, để giao diện viết đúng câu — tương ứng `bi_cat` bản gốc. */
@@ -105,6 +112,7 @@ export function filterProductLookup(
     branch_id: product.branch_id,
     masterImageUrl: product.masterImageUrl,
     price_vnd: product.price_vnd,
+    driveLink: product.driveLink,
     pricing,
     redacted_fields: redactedFields,
   }

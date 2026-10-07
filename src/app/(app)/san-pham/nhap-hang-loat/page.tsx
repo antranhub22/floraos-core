@@ -23,6 +23,8 @@ import { Card } from "@/components/ui/card"
 export interface ParsedProductRow {
   index: number
   code: string
+  loviCode?: string | undefined
+  siinCode?: string | undefined
   name: string
   price: number | null
   category: string
@@ -32,12 +34,39 @@ export interface ParsedProductRow {
   color: string
   description: string
   flowersText: string
+  driveLink?: string | undefined
   imageFileName: string
   matchedFile: File | null
   previewUrl: string | null
   uploadedAssetId?: string | null | undefined
-  status: "MATCHED" | "NO_IMAGE" | "ERROR"
+  status: "MATCHED" | "DRIVE_SYNC" | "NO_IMAGE" | "ERROR"
   errorMsg?: string | undefined
+}
+
+const SESSION_KEY = "floraos_bulk_import_rows_v1"
+const SESSION_META_KEY = "floraos_bulk_import_meta_v1"
+
+// Serializable subset of ParsedProductRow (excludes File object)
+type PersistedRow = Omit<ParsedProductRow, "matchedFile"> & { matchedFile: null }
+
+function saveRowsToSession(rows: ParsedProductRow[], excelFileName: string) {
+  try {
+    const serializable: PersistedRow[] = rows.map((r) => ({
+      ...r,
+      matchedFile: null,
+      // blob URLs không hợp lệ sau reload — chỉ giữ Drive thumbnails
+      previewUrl: r.previewUrl?.startsWith("blob:") ? null : r.previewUrl,
+    }))
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(serializable))
+    sessionStorage.setItem(SESSION_META_KEY, JSON.stringify({ excelFileName }))
+  } catch {
+    // sessionStorage có thể đầy — silent fail
+  }
+}
+
+function clearSession() {
+  sessionStorage.removeItem(SESSION_KEY)
+  sessionStorage.removeItem(SESSION_META_KEY)
 }
 
 export default function BulkImportProductsPage() {
@@ -47,9 +76,12 @@ export default function BulkImportProductsPage() {
 
   // Data states
   const [excelFile, setExcelFile] = useState<File | null>(null)
+  const [excelFileName, setExcelFileName] = useState<string>("")
   const [imageFiles, setImageFiles] = useState<Map<string, File>>(new Map())
   const [parsedRows, setParsedRows] = useState<ParsedProductRow[]>([])
+  const [driveThumbs, setDriveThumbs] = useState<Map<string, string>>(new Map())
   const [parsingError, setParsingError] = useState<string | null>(null)
+  const [restoredFromSession, setRestoredFromSession] = useState(false)
 
   // Progress & Execution states
   const [isImporting, setIsImporting] = useState(false)
@@ -62,6 +94,35 @@ export default function BulkImportProductsPage() {
     failedItems: Array<{ code: string; error: string }>
   } | null>(null)
 
+  // Khôi phục state từ sessionStorage khi mount lại trang
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY)
+      const meta = sessionStorage.getItem(SESSION_META_KEY)
+      if (raw) {
+        const restored = JSON.parse(raw) as PersistedRow[]
+        if (restored.length > 0) {
+          setParsedRows(restored as ParsedProductRow[])
+          setRestoredFromSession(true)
+        }
+      }
+      if (meta) {
+        const { excelFileName: fn } = JSON.parse(meta) as { excelFileName: string }
+        if (fn) setExcelFileName(fn)
+      }
+    } catch {
+      // Dữ liệu session bị hỏng — bỏ qua
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Lưu vào sessionStorage mỗi khi parsedRows thay đổi
+  useEffect(() => {
+    if (parsedRows.length > 0) {
+      saveRowsToSession(parsedRows, excelFileName)
+    }
+  }, [parsedRows, excelFileName])
+
   // Clean up object URLs on unmount
   useEffect(() => {
     return () => {
@@ -73,137 +134,77 @@ export default function BulkImportProductsPage() {
     }
   }, [parsedRows])
 
-  // Download template Excel file (Template Master đa sheet)
+  // Tự động phân giải Google Drive Folder thành ảnh Thumbnail trực tiếp để hiển thị lên UI
+  useEffect(() => {
+    if (parsedRows.length === 0) return
+
+    const rowsWithDrive = parsedRows.filter((r) => r.driveLink && !r.previewUrl)
+    if (rowsWithDrive.length === 0) return
+
+    let isMounted = true
+
+    // Quét song song từng cụm 20 ảnh để tối ưu tốc độ và không nghẽn mạng
+    const resolveThumbnails = async () => {
+      const BATCH_SIZE = 20
+      for (let i = 0; i < rowsWithDrive.length; i += BATCH_SIZE) {
+        if (!isMounted) break
+        const batch = rowsWithDrive.slice(i, i + BATCH_SIZE)
+        const batchResults = await Promise.allSettled(
+          batch.map(async (row) => {
+            const match = row.driveLink?.match(/folders\/([a-zA-Z0-9_-]{20,})/)
+            const folderId = match?.[1]
+            if (!folderId) return null
+
+            try {
+              const res = await fetch(`/api/v1/public/drive-thumbnail?folder_id=${folderId}`)
+              if (!res.ok) return null
+              const data = await res.json()
+              if (data.thumbnail_url) {
+                return { folderId, url: data.thumbnail_url }
+              }
+            } catch {
+              // Ignore individual Drive fetch failures
+            }
+            return null
+          })
+        )
+
+        if (isMounted) {
+          const newEntries: [string, string][] = []
+          for (const item of batchResults) {
+            if (item.status === "fulfilled" && item.value) {
+              newEntries.push([item.value.folderId, item.value.url])
+            }
+          }
+          if (newEntries.length > 0) {
+            setDriveThumbs((prev) => {
+              const next = new Map(prev)
+              for (const [fId, url] of newEntries) {
+                next.set(fId, url)
+              }
+              return next
+            })
+          }
+        }
+      }
+    }
+
+    resolveThumbnails()
+
+    return () => {
+      isMounted = false
+    }
+  }, [parsedRows])
+
+  // Download template Excel file (Enterprise-grade Template Master)
   const handleDownloadTemplate = () => {
-    // Sheet 1: Danh sách sản phẩm mẫu chi tiết
-    const templateData = [
-      {
-        "Mã SKU *": "FL-1001",
-        "Tên mẫu hoa *": "Bó hoa Nắng Hạ Rạng Rỡ",
-        "Giá bán (VNĐ)": 450000,
-        "Giá vốn (VNĐ)": 220000,
-        "Danh mục": "Bó hoa",
-        "Kiểu dáng": "Dáng tròn",
-        "Hướng nhìn": "Một mặt",
-        "Vật chứa / Giá đỡ": "Giấy gói kraft nâu",
-        "Phong cách": "Hiện đại",
-        "Tone màu chủ đạo": "Vàng ấm",
-        "Dịp phù hợp": "Sinh nhật, Chúc mừng",
-        "Tên file ảnh (tuỳ chọn)": "FL-1001.jpg",
-        "Công thức cắm hoa (BOM)": "Hồng vàng: 10 cành, Baby trắng: 5 cành, Lá bạc: 3 cành",
-        "Nơ & Ruy băng": "Nơ lụa kem sang trọng",
-        "Trạng thái": "Đang bán",
-        "Mô tả / Ý nghĩa hoa": "Mẫu hoa tươi hướng dương kết hợp hồng vàng mang lại may mắn, khởi đầu hanh thông.",
-      },
-      {
-        "Mã SKU *": "FL-1002",
-        "Tên mẫu hoa *": "Giỏ hoa Tình Yêu Ngọt Ngào",
-        "Giá bán (VNĐ)": 680000,
-        "Giá vốn (VNĐ)": 310000,
-        "Danh mục": "Giỏ hoa",
-        "Kiểu dáng": "Hàn Quốc tự nhiên",
-        "Hướng nhìn": "Đa hướng (360 độ)",
-        "Vật chứa / Giá đỡ": "Giỏ mây mộc đan tay",
-        "Phong cách": "Tự nhiên mộc mạc",
-        "Tone màu chủ đạo": "Hồng pastel",
-        "Dịp phù hợp": "Kỷ niệm, Tình yêu, Lễ tình nhân",
-        "Tên file ảnh (tuỳ chọn)": "FL-1002.png",
-        "Công thức cắm hoa (BOM)": "Hồng Ohara: 12 cành, Cát tường hồng: 6 cành, Lá chanh: 4 cành",
-        "Nơ & Ruy băng": "Nơ voan hồng pastel",
-        "Trạng thái": "Đang bán",
-        "Mô tả / Ý nghĩa hoa": "Tone màu pastel nhẹ nhàng, ngọt ngào gửi gắm lời yêu thương chân thành nhất.",
-      },
-      {
-        "Mã SKU *": "FL-1003",
-        "Tên mẫu hoa *": "Kệ hoa Khai Trương Hồng Phát",
-        "Giá bán (VNĐ)": 1500000,
-        "Giá vốn (VNĐ)": 750000,
-        "Danh mục": "Kệ hoa khai trương",
-        "Kiểu dáng": "Dáng tam giác",
-        "Hướng nhìn": "Một mặt",
-        "Vật chứa / Giá đỡ": "Kệ sắt mỹ thuật 1.6m",
-        "Phong cách": "Sang trọng Châu Âu",
-        "Tone màu chủ đạo": "Đỏ rực rỡ",
-        "Dịp phù hợp": "Khai trương, Khánh thành",
-        "Tên file ảnh (tuỳ chọn)": "FL-1003.jpg",
-        "Công thức cắm hoa (BOM)": "Đồng tiền đỏ: 20 bông, Lan mokara đỏ: 10 cành, Hồng môn đỏ: 8 búp",
-        "Nơ & Ruy băng": "Băng rôn chữ vàng + Nơ đỏ lớn",
-        "Trạng thái": "Đang bán",
-        "Mô tả / Ý nghĩa hoa": "Chúc công việc kinh doanh khởi sắc, hồng phát và thành công vượt bậc.",
-      },
-    ]
-
-    const worksheet = XLSX.utils.json_to_sheet(templateData)
-    worksheet["!cols"] = [
-      { wch: 16 }, // Mã SKU
-      { wch: 30 }, // Tên mẫu hoa
-      { wch: 16 }, // Giá bán
-      { wch: 16 }, // Giá vốn
-      { wch: 18 }, // Danh mục
-      { wch: 22 }, // Kiểu dáng
-      { wch: 18 }, // Hướng nhìn
-      { wch: 24 }, // Vật chứa
-      { wch: 20 }, // Phong cách
-      { wch: 20 }, // Tone màu
-      { wch: 24 }, // Dịp phù hợp
-      { wch: 24 }, // Tên file ảnh
-      { wch: 45 }, // Công thức BOM
-      { wch: 25 }, // Nơ ruy băng
-      { wch: 14 }, // Trạng thái
-      { wch: 55 }, // Mô tả ý nghĩa
-    ]
-
-    // Sheet 2: Từ điển quy ước giá trị chuẩn (Lookups Dictionary)
-    const lookupData = [
-      {
-        "Nhóm dữ liệu": "Danh mục sản phẩm",
-        "Giá trị chuẩn khuyến nghị": "Bó hoa, Giỏ hoa, Hộp hoa, Kệ hoa khai trương, Bình hoa, Hoa chia buồn, Cây cảnh / Quà tặng",
-        "Ghi chú hướng dẫn": "Chọn đúng danh mục để hiển thị lọc chính xác trên web và catalog.",
-      },
-      {
-        "Nhóm dữ liệu": "Kiểu dáng thiết kế (Shape)",
-        "Giá trị chuẩn khuyến nghị": "Dáng tròn, Dáng tam giác, Hàn Quốc tự nhiên, Dáng dài, Dáng thác nước, Dáng quạt, Tự do",
-        "Ghi chú hướng dẫn": "Định hình dáng cắm phục vụ tra cứu và thợ cắm hoa.",
-      },
-      {
-        "Nhóm dữ liệu": "Hướng nhìn (Facing)",
-        "Giá trị chuẩn khuyến nghị": "Một mặt, Đa hướng (360 độ), Hai mặt",
-        "Ghi chú hướng dẫn": "Mặt chính trưng bày của sản phẩm.",
-      },
-      {
-        "Nhóm dữ liệu": "Tone màu chủ đạo",
-        "Giá trị chuẩn khuyến nghị": "Đỏ rực rỡ, Hồng pastel, Vàng ấm, Trắng kem, Cam tươi, Tím mộng mơ, Xanh hy vọng, Đa sắc",
-        "Ghi chú hướng dẫn": "Giúp bộ lọc tìm kiếm theo màu hoạt động chuẩn xác.",
-      },
-      {
-        "Nhóm dữ liệu": "Dịp tặng phù hợp",
-        "Giá trị chuẩn khuyến nghị": "Sinh nhật, Khai trương, Kỷ niệm, Tình yêu, Chúc mừng, Chia buồn, Ngày lễ (8/3, 20/10)",
-        "Ghi chú hướng dẫn": "Các dịp cách nhau bằng dấu phẩy.",
-      },
-      {
-        "Nhóm dữ liệu": "Quy ước file ảnh",
-        "Giá trị chuẩn khuyến nghị": "Khớp với Mã SKU (vd: FL-1001.jpg) hoặc điền chính xác tên file vào cột 'Tên file ảnh'",
-        "Ghi chú hướng dẫn": "Hệ thống tự động tìm ảnh tương ứng trong folder đã chọn.",
-      },
-      {
-        "Nhóm dữ liệu": "Quy ước công thức hoa (BOM)",
-        "Giá trị chuẩn khuyến nghị": "Tên hoa: Số lượng [đơn vị], phân tách bằng dấu phẩy. Vd: 'Hồng đỏ: 10 cành, Baby: 5 cành'",
-        "Ghi chú hướng dẫn": "Tự động phân rã số lượng và loài hoa vào cơ sở dữ liệu xưởng.",
-      },
-    ]
-
-    const lookupWorksheet = XLSX.utils.json_to_sheet(lookupData)
-    lookupWorksheet["!cols"] = [
-      { wch: 25 },
-      { wch: 50 },
-      { wch: 45 },
-    ]
-
-    const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh_Sach_San_Pham")
-    XLSX.utils.book_append_sheet(workbook, lookupWorksheet, "Tu_Dien_Quy_Uoc_Chuan")
-
-    XLSX.writeFile(workbook, "FloraOS_Template_Master_Kho_San_Pham.xlsx")
+    // Tải trực tiếp file template chuẩn Enterprise Grade đã định dạng màu sắc, group, validation và layout chuyên nghiệp
+    const link = document.createElement("a")
+    link.href = "/templates/FloraOS_Template_Master_Kho_San_Pham.xlsx"
+    link.download = "FloraOS_Template_Master_Kho_San_Pham.xlsx"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   // Parse Excel file
@@ -212,43 +213,185 @@ export default function BulkImportProductsPage() {
     if (!file) return
 
     setExcelFile(file)
+    setExcelFileName(file.name)
+    setRestoredFromSession(false)
     setParsingError(null)
 
     const reader = new FileReader()
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target?.result
-        const wb = XLSX.read(bstr, { type: "binary" })
+        const buffer = evt.target?.result as ArrayBuffer
+        const isCsv = file.name.toLowerCase().endsWith(".csv")
+        let wb: XLSX.WorkBook
+        if (isCsv) {
+          const text = new TextDecoder("utf-8").decode(buffer)
+          wb = XLSX.read(text, { type: "string" })
+        } else {
+          wb = XLSX.read(buffer, { type: "array" })
+        }
         const wsname = wb.SheetNames[0]
-        if (!wsname) throw new Error("File Excel không có sheet nào.")
+        if (!wsname) throw new Error("File Excel/CSV không có sheet nào.")
         const ws = wb.Sheets[wsname]
-        const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws!)
+        
+        // Trích xuất dạng ma trận để định vị chính xác dòng tiêu đề thực tế (hỗ trợ cả header 1 tầng, header 2 tầng Enterprise và CSV)
+        const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws!, { header: 1 })
+        if (!matrix || matrix.length === 0) {
+          throw new Error("File không chứa dữ liệu sản phẩm.")
+        }
 
-        if (!data || data.length === 0) {
-          throw new Error("File Excel không chứa dữ liệu sản phẩm.")
+        // Tự động tìm dòng chứa tiêu đề cột (dòng có chứa SKU, Mã, Tên mẫu hoặc Tên sản phẩm)
+        let headerRowIndex = 0
+        for (let r = 0; r < Math.min(10, matrix.length); r++) {
+          const row = matrix[r] || []
+          const rowText = row.map((c) => String(c || "").toLowerCase()).join(" ")
+          if (
+            rowText.includes("sku") ||
+            rowText.includes("mã sku") ||
+            rowText.includes("tên mẫu") ||
+            rowText.includes("tên sản phẩm") ||
+            rowText.includes("mã lovi") ||
+            rowText.includes("mã siin")
+          ) {
+            headerRowIndex = r
+            break
+          }
+        }
+
+        const rawHeaders = (matrix[headerRowIndex] || []) as string[]
+        const headers = rawHeaders.map((h) => String(h || "").trim())
+
+        const data: Record<string, unknown>[] = []
+        for (let r = headerRowIndex + 1; r < matrix.length; r++) {
+          const rowVals = (matrix[r] || []) as unknown[]
+          const firstCell = String(rowVals[0] || "").trim()
+          // Bỏ qua dòng hướng dẫn phụ (bắt đầu bằng VD: hoặc vd:)
+          if (firstCell.startsWith("VD:") || firstCell.startsWith("vd:")) continue
+
+          const rowObj: Record<string, unknown> = {}
+          let hasData = false
+          for (let c = 0; c < headers.length; c++) {
+            const h = headers[c]
+            if (h) {
+              const val = rowVals[c]
+              rowObj[h] = val
+              if (val !== undefined && val !== null && String(val).trim() !== "") {
+                hasData = true
+              }
+            }
+          }
+          if (hasData) {
+            data.push(rowObj)
+          }
+        }
+
+        if (data.length === 0) {
+          throw new Error("File không chứa bản ghi dữ liệu sản phẩm hợp lệ.")
         }
 
         const rows: ParsedProductRow[] = data.map((d, index) => {
-          // Trích xuất linh hoạt theo các tên cột tiếng Việt hoặc tiếng Anh của Template Master
+          // Trích xuất linh hoạt theo các tên cột tiếng Việt hoặc tiếng Anh của Template Master (hỗ trợ cả chuẩn mới và cũ)
           const rawCode = String(
-            d["Mã SKU *"] ?? d["Mã sản phẩm (SKU) *"] ?? d["Mã sản phẩm"] ?? d["SKU"] ?? d["code"] ?? ""
+            d["Mã SKU Chuẩn (FloraOS) *"] ??
+            d["Mã SKU Chuẩn (FloraOS)"] ??
+            d["Mã SKU *"] ??
+            d["Mã sản phẩm (SKU) *"] ??
+            d["Mã Lovi (Loviinet)"] ??
+            d["Mã Siin (Siin Store)"] ??
+            d["Mã Lovi"] ??
+            d["Mã Siin"] ??
+            d["Mã sản phẩm"] ??
+            d["SKU"] ??
+            d["code"] ??
+            ""
           ).trim()
           const rawName = String(
-            d["Tên mẫu hoa *"] ?? d["Tên sản phẩm"] ?? d["name"] ?? ""
+            d["Tên mẫu hoa *"] ??
+            d["Tên mẫu hoa"] ??
+            d["Tên sản phẩm *"] ??
+            d["Tên sản phẩm"] ??
+            d["name"] ??
+            ""
           ).trim()
-          const rawPrice = d["Giá bán (VNĐ)"] ?? d["Giá bán"] ?? d["price"] ?? null
-          const category = String(d["Danh mục"] ?? d["category"] ?? "Bó hoa").trim()
-          const shape = String(d["Kiểu dáng"] ?? d["shape"] ?? "Dáng tròn").trim()
+          const rawPrice =
+            d["Giá niêm yết B2C (VNĐ) *"] ??
+            d["Giá niêm yết B2C (VNĐ)"] ??
+            d["Giá niêm yết B2C"] ??
+            d["Giá bán (VNĐ)"] ??
+            d["Giá bán"] ??
+            d["price"] ??
+            null
+          const category = String(
+            d["Danh mục chuẩn *"] ??
+            d["Danh mục chuẩn"] ??
+            d["Danh mục"] ??
+            d["Kiểu cách"] ??
+            d["category"] ??
+            "Bó hoa"
+          ).trim()
+          const shape = String(
+            d["Kiểu dáng / Dáng cắm"] ??
+            d["Kiểu dáng"] ??
+            d["Kiểu cách"] ??
+            d["shape"] ??
+            "Dáng tròn"
+          ).trim()
           const facing = String(d["Hướng nhìn"] ?? d["facing"] ?? "Một mặt").trim()
-          const container = String(d["Vật chứa / Giá đỡ"] ?? d["Vật chứa"] ?? d["container"] ?? "").trim()
-          const color = String(d["Tone màu chủ đạo"] ?? d["Màu sắc"] ?? d["color"] ?? "").trim()
-          const description = String(d["Mô tả / Ý nghĩa hoa"] ?? d["Mô tả / Ghi chú"] ?? d["Mô tả"] ?? d["description"] ?? "").trim()
-          const flowersText = String(d["Công thức cắm hoa (BOM)"] ?? d["Công thức hoa (BOM)"] ?? d["BOM"] ?? "").trim()
-          const imageFileName = String(d["Tên file ảnh (tuỳ chọn)"] ?? d["Tên ảnh"] ?? d["image"] ?? "").trim()
+          const container = String(
+            d["Quy cách đóng gói & Bảo quản"] ??
+            d["Quy cách đóng gói"] ??
+            d["Vật chứa / Giá đỡ"] ??
+            d["Vật chứa"] ??
+            d["container"] ??
+            ""
+          ).trim()
+          const color = String(
+            d["Tone màu chủ đạo"] ??
+            d["Màu sắc / Tone màu"] ??
+            d["Màu sắc"] ??
+            d["color"] ??
+            ""
+          ).trim()
+          const description = String(
+            d["Câu chuyện hoa (Copywriting bán hàng)"] ??
+            d["Câu chuyện hoa (copy bán hàng)"] ??
+            d["Mô tả / Ý nghĩa hoa"] ??
+            d["Mô tả / Ghi chú"] ??
+            d["Mô tả"] ??
+            d["description"] ??
+            ""
+          ).trim()
+          const flowersText = String(
+            d["Hoa chính (BOM)"] ??
+            d["Hoa chính (nguyên liệu quyết định)"] ??
+            d["Công thức cắm hoa (BOM)"] ??
+            d["Công thức hoa (BOM)"] ??
+            d["BOM"] ??
+            ""
+          ).trim()
+          const imageFileName = String(
+            d["Tên file ảnh (hoặc URL ảnh) *"] ??
+            d["Tên file ảnh chuẩn hóa ( FloraOS Media )"] ??
+            d["Tên file ảnh chuẩn hóa"] ??
+            d["Ảnh thành phẩm chuẩn"] ??
+            d["Tên file ảnh (tuỳ chọn)"] ??
+            d["Tên file ảnh"] ??
+            d["Tên ảnh"] ??
+            d["image"] ??
+            ""
+          ).trim()
+
+          const loviCode = String(d["Mã Lovi (Loviinet)"] ?? d["Mã Lovi"] ?? "").trim()
+          const siinCode = String(d["Mã Siin (Siin Store)"] ?? d["Mã Siin"] ?? "").trim()
+          const driveLink = String(
+            d["Link ảnh thành phẩm chuẩn (Drive)"] ??
+            d["Link ảnh Drive"] ??
+            d["Google Drive"] ??
+            ""
+          ).trim()
 
           const price = typeof rawPrice === "number" ? rawPrice : Number(String(rawPrice).replace(/\D/g, "")) || null
 
-          let status: ParsedProductRow["status"] = "NO_IMAGE"
+          let status: ParsedProductRow["status"] = driveLink ? "DRIVE_SYNC" : "NO_IMAGE"
           let errorMsg: string | undefined
 
           if (!rawCode || !rawName) {
@@ -259,6 +402,8 @@ export default function BulkImportProductsPage() {
           return {
             index: index + 1,
             code: rawCode,
+            loviCode: loviCode || undefined,
+            siinCode: siinCode || undefined,
             name: rawName,
             price,
             category,
@@ -268,6 +413,7 @@ export default function BulkImportProductsPage() {
             color,
             description,
             flowersText,
+            driveLink: driveLink || undefined,
             imageFileName,
             matchedFile: null,
             previewUrl: null,
@@ -283,7 +429,7 @@ export default function BulkImportProductsPage() {
         setParsedRows([])
       }
     }
-    reader.readAsBinaryString(file)
+    reader.readAsArrayBuffer(file)
   }
 
   // Parse Image files / folder
@@ -342,7 +488,7 @@ export default function BulkImportProductsPage() {
         ...row,
         matchedFile: null,
         previewUrl: null,
-        status: "NO_IMAGE" as const,
+        status: row.driveLink ? ("DRIVE_SYNC" as const) : ("NO_IMAGE" as const),
       }
     })
 
@@ -353,9 +499,10 @@ export default function BulkImportProductsPage() {
   const stats = useMemo(() => {
     const total = parsedRows.length
     const matched = parsedRows.filter((r) => r.status === "MATCHED").length
+    const driveSynced = parsedRows.filter((r) => r.status === "DRIVE_SYNC").length
     const noImage = parsedRows.filter((r) => r.status === "NO_IMAGE").length
     const errors = parsedRows.filter((r) => r.status === "ERROR").length
-    return { total, matched, noImage, errors }
+    return { total, matched, driveSynced, noImage, errors }
   }, [parsedRows])
 
   // Upload single asset helper
@@ -466,6 +613,9 @@ export default function BulkImportProductsPage() {
           price_vnd: row.price,
           color: row.color || null,
           description: row.description || null,
+          drive_link: row.driveLink || null,
+          lovi_code: row.loviCode || null,
+          siin_code: row.siinCode || null,
           bom: {
             flowers: parseFlowersText(row.flowersText),
           },
@@ -473,26 +623,49 @@ export default function BulkImportProductsPage() {
         image_asset_id: row.uploadedAssetId ?? null,
       }))
 
-      const batchRes = await fetch("/api/v1/products/batch-import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: payloadItems,
-          skip_duplicates: true,
-        }),
-      })
+      // Gửi theo từng batch 250 sản phẩm để không vượt trần schema max 500 và chống timeout
+      const BATCH_CHUNK = 250
+      let totalCreated = 0
+      let totalSkipped = 0
+      let totalFailed = 0
+      const allFailedItems: Array<{ code: string; error: string }> = []
 
-      if (!batchRes.ok) {
-        throw new Error("Không thể thực hiện nạp dữ liệu hàng loạt.")
+      for (let i = 0; i < payloadItems.length; i += BATCH_CHUNK) {
+        const chunk = payloadItems.slice(i, i + BATCH_CHUNK)
+        setImportProgress({
+          current: Math.min(i + chunk.length, payloadItems.length),
+          total: payloadItems.length,
+          phase: `Đang lưu sản phẩm (${Math.min(i + chunk.length, payloadItems.length)}/${payloadItems.length})...`,
+        })
+
+        const batchRes = await fetch("/api/v1/products/batch-import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: chunk,
+            skip_duplicates: true,
+          }),
+        })
+
+        if (!batchRes.ok) {
+          throw new Error("Không thể thực hiện nạp dữ liệu hàng loạt.")
+        }
+
+        const chunkResult = await batchRes.json()
+        totalCreated += chunkResult.created_count || 0
+        totalSkipped += chunkResult.skipped_count || 0
+        totalFailed += chunkResult.failed_count || 0
+        if (chunkResult.failed && Array.isArray(chunkResult.failed)) {
+          allFailedItems.push(...chunkResult.failed)
+        }
       }
 
-      const result = await batchRes.json()
       setImportResult({
         success: true,
-        createdCount: result.created_count,
-        skippedCount: result.skipped_count,
-        failedCount: result.failed_count,
-        failedItems: result.failed ?? [],
+        createdCount: totalCreated,
+        skippedCount: totalSkipped,
+        failedCount: totalFailed,
+        failedItems: allFailedItems,
       })
     } catch (err) {
       setImportResult({
@@ -523,6 +696,26 @@ export default function BulkImportProductsPage() {
           <div>
             <div className="text-caption text-text-muted">Kho sản phẩm cửa hàng</div>
             <h1 className="text-title font-extrabold text-primary">Nhập sản phẩm hàng loạt (Excel + Ảnh)</h1>
+            {restoredFromSession && parsedRows.length > 0 && (
+              <div className="mt-0.5 flex items-center gap-1.5 text-caption font-semibold text-success">
+                <CheckCircle2 size={12} />
+                <span>Đã khôi phục {parsedRows.length} sản phẩm từ phiên trước</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setParsedRows([])
+                    setExcelFile(null)
+                    setExcelFileName("")
+                    setRestoredFromSession(false)
+                    clearSession()
+                  }}
+                  className="ml-1 text-danger hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+                  aria-label="Xóa dữ liệu đã khôi phục"
+                >
+                  (Xóa)
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -586,6 +779,9 @@ export default function BulkImportProductsPage() {
                   setImportResult(null)
                   setParsedRows([])
                   setExcelFile(null)
+                  setExcelFileName("")
+                  setRestoredFromSession(false)
+                  clearSession()
                 }}
               >
                 Nhập đợt khác
@@ -625,7 +821,7 @@ export default function BulkImportProductsPage() {
 
             <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
               <span className="text-caption font-medium text-text truncate max-w-[200px]">
-                {excelFile ? excelFile.name : "Chưa chọn file"}
+                {excelFile ? excelFile.name : excelFileName ? `${excelFileName} (đã lưu)` : "Chưa chọn file"}
               </span>
               <Button
                 size="sm"
@@ -696,8 +892,15 @@ export default function BulkImportProductsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3.5">
             <div className="flex items-center gap-4 text-body-sm font-semibold">
               <span className="text-text">Tổng cộng: <b>{stats.total}</b></span>
-              <span className="text-success">🟢 Đã khớp ảnh: <b>{stats.matched}</b></span>
-              <span className="text-warning">🟡 Chưa có ảnh: <b>{stats.noImage}</b></span>
+              {stats.matched > 0 && (
+                <span className="text-success">🟢 Khớp ảnh máy tính: <b>{stats.matched}</b></span>
+              )}
+              {stats.driveSynced > 0 && (
+                <span className="text-primary font-bold">☁️ Đã gắn Google Drive: <b>{stats.driveSynced}</b></span>
+              )}
+              {stats.noImage > 0 && (
+                <span className="text-warning">🟡 Chưa có ảnh: <b>{stats.noImage}</b></span>
+              )}
               {stats.errors > 0 && (
                 <span className="text-danger">🔴 Lỗi dữ liệu: <b>{stats.errors}</b></span>
               )}
@@ -743,7 +946,45 @@ export default function BulkImportProductsPage() {
                               className="h-full w-full object-cover"
                             />
                           </div>
-                        ) : (
+                        ) : row.driveLink ? (() => {
+                          const folderId = row.driveLink.match(/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
+                          const thumbUrl = folderId ? driveThumbs.get(folderId) : undefined
+
+                          if (thumbUrl) {
+                            return (
+                              <a
+                                href={row.driveLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group relative block h-12 w-12 rounded-lg border border-border overflow-hidden bg-surface-alt shadow-xs hover:border-primary transition-all"
+                                title="Ảnh từ Google Drive (Nhấp để mở thư mục gốc)"
+                              >
+                                <img
+                                  src={thumbUrl}
+                                  alt={row.name}
+                                  className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-200"
+                                  loading="lazy"
+                                />
+                                <span className="absolute bottom-0 right-0 bg-black/60 px-1 py-0.2 text-caption font-bold text-white backdrop-blur-xs rounded-tl">
+                                  Drive
+                                </span>
+                              </a>
+                            )
+                          }
+
+                          return (
+                            <a
+                              href={row.driveLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex h-12 w-12 flex-col items-center justify-center rounded-lg border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+                              title="Đang tải ảnh Google Drive (Nhấp để mở thư mục gốc)"
+                            >
+                              <ImageIcon size={16} className="animate-pulse" />
+                              <span className="text-caption font-semibold">Drive ↗</span>
+                            </a>
+                          )
+                        })() : (
                           <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface-alt/40 text-text-muted">
                             <ImageIcon size={16} />
                             <span className="text-caption">Chưa ảnh</span>
@@ -751,7 +992,13 @@ export default function BulkImportProductsPage() {
                         )}
                       </td>
                       <td className="px-3 py-2.5 font-bold text-primary">
-                        {row.code || "—"}
+                        <div>{row.code || "—"}</div>
+                        {(row.loviCode || row.siinCode) && (
+                          <div className="text-caption text-text-muted font-normal">
+                            {row.loviCode && <span>LV: {row.loviCode} </span>}
+                            {row.siinCode && <span>SIIN: {row.siinCode}</span>}
+                          </div>
+                        )}
                       </td>
                       <td className="px-3 py-2.5 font-semibold text-text">
                         <div>{row.name || "—"}</div>
@@ -772,6 +1019,11 @@ export default function BulkImportProductsPage() {
                         {row.status === "MATCHED" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-success-bg px-2 py-0.5 text-caption font-bold text-success">
                             <Check size={12} /> Đã khớp ảnh
+                          </span>
+                        )}
+                        {row.status === "DRIVE_SYNC" && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-caption font-bold text-primary" title={row.driveLink}>
+                            ☁️ Đã gắn Drive
                           </span>
                         )}
                         {row.status === "NO_IMAGE" && (

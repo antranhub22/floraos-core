@@ -34,6 +34,7 @@ export interface ProductSnapshot {
   name: string
   price: number
   imageUrl: string | null
+  driveLink?: string | null | undefined
   description?: string | null | undefined
   flowersSummary?: string | null | undefined
   selectedAt: string
@@ -46,6 +47,8 @@ export interface GreetingCatalogProduct {
   /** `null` = chưa có giá trong Product Master → hiển thị "Liên hệ"; vẫn đặt được, cửa hàng báo giá sau. */
   price: number | null
   imageUrl: string | null
+  /** Link Google Drive (attributes.drive_link) — fallback khi chưa có ảnh lưu trữ. */
+  driveLink?: string | null | undefined
   description?: string | null | undefined
   meaning?: string | null | undefined
   occasion?: string | null | undefined

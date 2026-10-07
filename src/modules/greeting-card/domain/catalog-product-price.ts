@@ -49,12 +49,15 @@ export function catalogItemToProduct(item: CatalogItemLike, imageUrl: string | n
   const flowers = readFlowerNames(src)
   const occasions = readOccasions(src)
   const dims = readDimensions(src)
+  const attrs = (p.attributes as Record<string, unknown>) ?? {}
+  const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : null
   return {
     id: p.id,
     code: p.code,
     name: p.name,
     price: resolveCatalogProductPrice(p),
     imageUrl,
+    driveLink,
     description: readDescription(src),
     flowersSummary: flowers.length > 0 ? flowers.join(", ") : null,
     occasion: occasions.length > 0 ? occasions.join(", ") : null,

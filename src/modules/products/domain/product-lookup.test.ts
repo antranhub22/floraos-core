@@ -59,6 +59,7 @@ describe("filterProductLookup", () => {
         "status",
         "branch_id",
         "masterImageUrl",
+        "driveLink",
         "price_vnd",
         "pricing",
         "redacted_fields",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -32,6 +32,7 @@ type Product = {
   shape: string | null
   status: "DRAFT" | "ACTIVE" | "ARCHIVED"
   masterImageUrl?: string | undefined
+  driveLink?: string | undefined
   price_vnd: number | null
 }
 
@@ -95,7 +96,22 @@ function ProductCard({ product, isExecutive, onTrash }: ProductCardProps) {
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
-          ) : (
+          ) : product.driveLink ? (() => {
+            const folderId = product.driveLink.match(/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
+            return folderId ? (
+              <img
+                src={`/api/v1/public/drive-thumb-proxy?folder_id=${folderId}`}
+                alt={product.name}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-text-muted">
+                <ImageOff size={28} strokeWidth={1.5} />
+                <span className="text-caption">Chưa có ảnh</span>
+              </div>
+            )
+          })() : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-text-muted">
               <ImageOff size={28} strokeWidth={1.5} />
               <span className="text-caption">Chưa có ảnh</span>
@@ -144,9 +160,13 @@ export default function SanPhamPage() {
   const [products, setProducts] = useState<Product[] | null>(null)
   const [loi, setLoi] = useState<string | null>(null)
   const [tuKhoa, setTuKhoa] = useState("")
+  const [debouncedTuKhoa, setDebouncedTuKhoa] = useState("")
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [activeCategory, setActiveCategory] = useState("Tất cả")
   const [trashTarget, setTrashTarget] = useState<TrashConfirmTarget | null>(null)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isExecutive =
     session.roleKey === "dieu_hanh" ||
@@ -154,25 +174,54 @@ export default function SanPhamPage() {
     session.can("G3") ||
     session.can("L4")
 
+  // Debounce tìm kiếm 300ms — tránh gọi API mỗi keystroke
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedTuKhoa(tuKhoa), 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [tuKhoa])
+
+  /** Xây URL đồng nhất cho cả load đầu và load more */
+  const buildUrl = useCallback((cursor?: string | null) => {
+    const params = new URLSearchParams({ limit: "50" })
+    if (debouncedTuKhoa.trim()) params.set("search", debouncedTuKhoa.trim())
+    if (activeCategory !== "Tất cả") params.set("category", activeCategory)
+    if (cursor) params.set("cursor", cursor)
+    return `/api/v1/products?${params.toString()}`
+  }, [debouncedTuKhoa, activeCategory])
+
   const napLai = useCallback(async () => {
     setLoi(null)
+    setProducts(null)
+    setNextCursor(null)
     try {
-      const res = await fetch("/api/v1/products?limit=50")
-      if (res.status === 401) {
-        router.push("/dang-nhap" as never)
-        return
-      }
+      const res = await fetch(buildUrl())
+      if (res.status === 401) { router.push("/dang-nhap" as never); return }
       if (!res.ok) throw new Error(`Không tải được danh sách (${res.status})`)
-      const data = (await res.json()) as { data: Product[] }
+      const data = (await res.json()) as { data: Product[]; next_cursor: string | null }
       setProducts(data.data)
+      setNextCursor(data.next_cursor)
     } catch (e) {
       setLoi(e instanceof Error ? e.message : "Không tải được danh sách sản phẩm")
     }
-  }, [router])
+  }, [buildUrl, router])
 
-  useEffect(() => {
-    napLai()
-  }, [napLai])
+  const handleLoadMore = async () => {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const res = await fetch(buildUrl(nextCursor))
+      if (!res.ok) return
+      const data = (await res.json()) as { data: Product[]; next_cursor: string | null }
+      setProducts((prev) => [...(prev ?? []), ...data.data])
+      setNextCursor(data.next_cursor)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
+  // Load lại khi search hoặc category thay đổi
+  useEffect(() => { napLai() }, [napLai])
 
   const handleConfirmTrash = async (target: TrashConfirmTarget) => {
     const res = await fetch("/api/v1/storage/trash", {
@@ -188,12 +237,8 @@ export default function SanPhamPage() {
     setProducts((prev) => (prev ? prev.filter((p) => p.id !== target.id) : prev))
   }
 
-  const hien = (products ?? []).filter((p) => {
-    const tuKhoaOk =
-      tuKhoa.trim() === "" ? true : (p.name + p.code).toLowerCase().includes(tuKhoa.trim().toLowerCase())
-    const catOk = activeCategory === "Tất cả" ? true : p.category === activeCategory
-    return tuKhoaOk && catOk
-  })
+  // Sau khi import xong thì xóa khỏi local list
+  const hien = products ?? []
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -368,7 +413,21 @@ export default function SanPhamPage() {
                               className="h-full w-full object-cover"
                               loading="lazy"
                             />
-                          ) : (
+                          ) : p.driveLink ? (() => {
+                            const folderId = p.driveLink.match(/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
+                            return folderId ? (
+                              <img
+                                src={`/api/v1/public/drive-thumb-proxy?folder_id=${folderId}`}
+                                alt={p.name}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-text-muted">
+                                <ImageOff size={16} strokeWidth={1.5} />
+                              </div>
+                            )
+                          })() : (
                             <div className="flex h-full w-full items-center justify-center text-text-muted">
                               <ImageOff size={16} strokeWidth={1.5} />
                             </div>
@@ -432,10 +491,28 @@ export default function SanPhamPage() {
           </div>
         )}
 
-        {/* Đếm kết quả */}
-        {products !== null && hien.length > 0 && (
-          <div className="mt-4 text-center text-caption text-text-muted">
-            Hiển thị {hien.length} / {products.length} mẫu hoa
+        {/* Load more + Đếm kết quả */}
+        {products !== null && (
+          <div className="mt-4 flex flex-col items-center gap-2">
+            {nextCursor && (
+              <button
+                type="button"
+                onClick={() => void handleLoadMore()}
+                disabled={loadingMore}
+                className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-body-sm font-semibold text-text hover:bg-surface-alt transition-colors focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60"
+              >
+                {loadingMore ? (
+                  <><RefreshCw size={14} className="animate-spin" /> Đang tải thêm...</>
+                ) : (
+                  "Tải thêm sản phẩm"
+                )}
+              </button>
+            )}
+            {hien.length > 0 && (
+              <div className="text-caption text-text-muted">
+                Hiển thị {hien.length} mẫu hoa{nextCursor ? " — còn nhiều hơn" : " (tất cả)"}
+              </div>
+            )}
           </div>
         )}
       </main>

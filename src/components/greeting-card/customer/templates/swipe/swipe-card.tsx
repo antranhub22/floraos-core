@@ -120,7 +120,26 @@ export function SwipeCard({ product, theme, brand, index, total, progress = 0, o
               style={{ objectPosition: "50% 35%", filter: theme.photoFilter, mixBlendMode: "multiply" }}
             />
           </>
-        ) : (
+        ) : product.driveLink ? (() => {
+          const folderId = product.driveLink.match(/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
+          return folderId ? (
+            <>
+              <div aria-hidden="true" className="absolute inset-0" style={{ background: photoBackdrop(theme) }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/v1/public/drive-thumb-proxy?folder_id=${folderId}`}
+                alt=""
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-contain"
+                style={{ objectPosition: "50% 35%", filter: theme.photoFilter, mixBlendMode: "multiply" }}
+              />
+            </>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-body-sm opacity-60" style={{ color: theme.muted }}>
+              Chưa có ảnh mẫu hoa
+            </div>
+          )
+        })() : (
           <div className="absolute inset-0 flex items-center justify-center text-body-sm opacity-60" style={{ color: theme.muted }}>
             Chưa có ảnh mẫu hoa
           </div>

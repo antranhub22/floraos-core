@@ -61,11 +61,15 @@ export function useCatalogProducts(
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         if (cancelled || !json?.data?.items) return
-        type RawItem = Parameters<typeof catalogItemToProduct>[0] & { product: { masterImageUrl?: string } }
+        type RawItem = Parameters<typeof catalogItemToProduct>[0] & { product: { masterImageUrl?: string; driveLink?: string } }
         // Cùng hàm dựng với trang khách — khung xem trước hiện đúng những gì khách sẽ thấy
-        const mapped: GreetingCatalogProduct[] = (json.data.items as RawItem[]).map((item) =>
-          catalogItemToProduct(item, item.product.masterImageUrl ?? null),
-        )
+        const mapped: GreetingCatalogProduct[] = (json.data.items as RawItem[]).map((item) => {
+          const prod = catalogItemToProduct(item, item.product.masterImageUrl ?? null)
+          if (item.product.driveLink && !prod.driveLink) {
+            prod.driveLink = item.product.driveLink
+          }
+          return prod
+        })
         if (mapped.length > 0 && !cancelled) setLoadedProducts(mapped)
       })
       .catch(() => {})

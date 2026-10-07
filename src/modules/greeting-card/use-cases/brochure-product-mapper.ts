@@ -44,12 +44,15 @@ export function toCatalogProduct(item: CatalogItemRow, imageUrls: Map<string, st
   const flowers = readFlowerNames(src)
   const occasions = readOccasions(src)
   const dims = readDimensions(src)
+  const attrs = (p.attributes as Record<string, unknown>) ?? {}
+  const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : null
   return {
     id: p.id,
     code: p.code,
     name: p.name,
     price: resolveProductPriceVnd(p.attributes, p.variants[0]?.attributes),
     imageUrl: mainImg ? imageUrls.get(mainImg.asset_id) ?? null : null,
+    driveLink,
     description: readDescription(src),
     flowersSummary: flowers.length > 0 ? flowers.join(", ") : null,
     occasion: occasions.length > 0 ? occasions.join(", ") : null,
