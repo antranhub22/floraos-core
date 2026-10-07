@@ -1,6 +1,11 @@
-const ExcelJS = require("exceljs");
-const path = require("path");
-const fs = require("fs");
+// Sinh file mẫu nhập kho sản phẩm: `node scripts/build-product-import-template.mjs`
+// Đầu ra: public/templates/ (nút "Tải file mẫu" ở /san-pham/nhap-hang-loat).
+import ExcelJS from "exceljs";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 async function buildEnterpriseTemplate() {
   const wb = new ExcelJS.Workbook();
@@ -370,15 +375,17 @@ async function buildEnterpriseTemplate() {
     });
   });
 
-  const outPath1 = "/Users/tuan/Projects/floraos-core/docs/Dongbo_excel/FloraOS_Template_Master_Kho_San_Pham.xlsx";
-  const outPathPublic = "/Users/tuan/Projects/floraos-core/public/templates/FloraOS_Template_Master_Kho_San_Pham.xlsx";
+  const fileName = "FloraOS_Template_Master_Kho_San_Pham.xlsx";
+  const outPathPublic = path.join(ROOT, "public/templates", fileName);
+  fs.mkdirSync(path.dirname(outPathPublic), { recursive: true });
 
-  await wb.xlsx.writeFile(outPath1);
   await wb.xlsx.writeFile(outPathPublic);
 
   console.log("Enterprise Grade Template 1 successfully created at:");
-  console.log("  -", outPath1);
   console.log("  -", outPathPublic);
 }
 
-buildEnterpriseTemplate().catch(console.error);
+buildEnterpriseTemplate().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

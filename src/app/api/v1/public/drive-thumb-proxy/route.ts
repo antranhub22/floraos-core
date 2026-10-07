@@ -1,76 +1,40 @@
 import { handle } from "@/core/http/response"
 import { validationFailed } from "@/core/http/errors"
+import { enforceRateLimit } from "@/core/http/rate-limit"
 import { NextResponse } from "next/server"
-
-/** Cache in-memory: folderId → fileId (file đầu tiên trong folder) */
-const fileIdCache = new Map<string, string | null>()
+import {
+  fetchThumbnail,
+  isValidDriveId,
+  resolveFirstFileId,
+} from "@/modules/greeting-card/adapters/google-drive-thumbnail"
 
 /**
  * GET /api/v1/public/drive-thumb-proxy?folder_id=...
- * Proxy ảnh thumbnail từ Google Drive về client.
- * Server fetch lh3.googleusercontent.com rồi stream ảnh — browser không cần auth Google.
+ * Proxy ảnh thumbnail đầu tiên của folder Google Drive công khai (trang khách xem catalog).
+ * Public nên có rate limit, kiểm tra id, timeout và trần kích thước trong adapter.
  */
 export const GET = handle(async (request) => {
-  const url = new URL(request.url)
-  const folderId = url.searchParams.get("folder_id")?.trim()
-
-  if (!folderId || folderId.length < 10) {
-    throw validationFailed({ issues: [{ path: ["folder_id"], message: "Thiếu folder_id" }] })
+  await enforceRateLimit(request, { scope: "drive-thumb-proxy", limit: 120, windowMs: 60_000 })
+  const folderId = new URL(request.url).searchParams.get("folder_id")?.trim()
+  if (!isValidDriveId(folderId)) {
+    throw validationFailed({ issues: [{ path: ["folder_id"], message: "folder_id không hợp lệ" }] })
   }
 
-  // 1. Lấy fileId từ cache hoặc fetch Drive HTML
-  let fileId: string | null | undefined = fileIdCache.get(folderId)
+  const fileId = await resolveFirstFileId(folderId)
+  if (!fileId) return new NextResponse(null, { status: 404 })
 
-  if (fileId === undefined) {
-    try {
-      const driveUrl = `https://drive.google.com/embeddedfolderview?id=${folderId}#list`
-      const resp = await fetch(driveUrl, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; FloraOS/1.0)" },
-        next: { revalidate: 86400 },
-      })
-      if (resp.ok) {
-        const html = await resp.text()
-        const m = [...html.matchAll(/entry-([a-zA-Z0-9_-]{25,})/g)]
-        fileId = m[0]?.[1] ?? null
-      } else {
-        fileId = null
-      }
-    } catch {
-      fileId = null
-    }
-    fileIdCache.set(folderId, fileId)
-  }
+  const thumb = await fetchThumbnail(fileId)
+  if (!thumb) return new NextResponse(null, { status: 404 })
 
-  if (!fileId) {
-    return new NextResponse(null, { status: 404 })
-  }
-
-  // 2. Proxy ảnh từ lh3 — server fetch để bypass browser CORS/auth
-  const thumbUrl = `https://lh3.googleusercontent.com/d/${fileId}=w400`
-  try {
-    const imgResp = await fetch(thumbUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; FloraOS/1.0)",
-        Accept: "image/*",
-      },
-    })
-
-    if (!imgResp.ok) {
-      return new NextResponse(null, { status: 404 })
-    }
-
-    const contentType = imgResp.headers.get("content-type") ?? "image/jpeg"
-    const buffer = await imgResp.arrayBuffer()
-
-    return new NextResponse(buffer, {
-      status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400, stale-while-revalidate=3600",
-        "Content-Length": String(buffer.byteLength),
-      },
-    })
-  } catch {
-    return new NextResponse(null, { status: 502 })
-  }
+  return new NextResponse(thumb.body, {
+    status: 200,
+    headers: {
+      "Content-Type": thumb.contentType,
+      "Cache-Control": "public, max-age=86400, stale-while-revalidate=3600",
+      "Content-Length": String(thumb.body.byteLength),
+      "X-Content-Type-Options": "nosniff",
+    },
+  })
 })
+
+export const dynamic = "force-dynamic"

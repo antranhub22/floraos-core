@@ -120,6 +120,7 @@ export default function BulkImportProductsPage() {
       if (raw) {
         const restored = JSON.parse(raw) as PersistedRow[]
         if (restored.length > 0) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- khôi phục từ sessionStorage chỉ đọc được phía client sau khi biết orgId
           setParsedRows(restored as ParsedProductRow[])
           setRestoredFromSession(true)
         }

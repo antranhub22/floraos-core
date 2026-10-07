@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useState } from "react"
 import { Bookmark, Search, Trash2 } from "lucide-react"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { useSession } from "@/lib/session"
@@ -25,10 +25,12 @@ export function TrackingToolbar({ state, onChange, onApplyView }: Props) {
   const recipients = useApi<{ data: { members: Array<{ userId: string; name: string }> } }>("/api/v1/greeting-card/messages/recipients")
   const members = recipients.data?.data.members ?? []
   const [saved, setSaved] = useState<SavedView[]>(() => loadSavedViews(orgId))
-
-  useEffect(() => {
+  const [savedOrgId, setSavedOrgId] = useState(orgId)
+  // Đổi tổ chức → đọc lại view đã lưu của tổ chức đó (điều chỉnh state khi render, không cần effect)
+  if (savedOrgId !== orgId) {
+    setSavedOrgId(orgId)
     setSaved(loadSavedViews(orgId))
-  }, [orgId])
+  }
 
   function saveCurrent() {
     const name = window.prompt("Tên view (vd. Đơn của Sale Lan)")?.trim()

@@ -793,6 +793,8 @@ Trang công khai ngoài `/api/v1` (06/10/2026): **`/s/<mã>`** — link bộ sư
 | POST | `/public/brochure/tracking/:code` | — | `{ phoneLast4 }` — đúng 4 số cuối SĐT người đặt → bản đầy đủ; sai → 404 (không nói sai gì). 5 lần/15 phút/IP/mã đơn |
 | POST | `/public/greeting-catalog/:id/quote` | — | Như trên cho link bộ sưu tập công khai, kèm `productId` |
 | POST | `/public/greeting-catalog/:id/order` | — | Đặt hoa từ link bộ sưu tập công khai · Cùng SĐT + mẫu + người nhận + ngày giao trong 10 phút → trả lại đơn vừa tạo (không tạo trùng); cùng ô bẫy, trần SĐT, chặn hết hàng như link riêng |
+| GET | `/public/drive-thumbnail` | — | `?folder_id=` (Drive id `[A-Za-z0-9_-]{10,128}`, sai → 400) → `{ folder_id, file_id, thumbnail_url }` của file đầu tiên trong folder Drive công khai; dùng ở màn nhập hàng loạt sản phẩm. 120 lần/phút/IP; cache trong tiến trình có trần (500 mục, 6 giờ); gọi Drive timeout 5 giây (07/10/2026) |
+| GET | `/public/drive-thumb-proxy` | — | `?folder_id=` như trên → trả thẳng ảnh thumbnail (trang khách Thẻ chào). Chỉ nhận `content-type: image/*`, tối đa 5 MB, `nosniff`; không có ảnh → 404. 120 lần/phút/IP (07/10/2026) |
 | POST | `/public/payments/sepay` | — | Webhook SePay, `Authorization: Apikey <khoá>`; idempotent theo mã giao dịch; tự ghi thu theo mã đơn trong nội dung chuyển khoản |
 
 ## 24. Chưa có ở bản này

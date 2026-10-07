@@ -2,6 +2,11 @@ import { describe, it, expect, vi } from "vitest"
 import type { TenantContext } from "@/core/tenancy"
 import { deleteGreetingCatalog, restoreGreetingCatalog } from "../../use-cases/delete-greeting-catalog"
 import { AppError } from "@/core/http/errors"
+import type { GreetingCardRepository } from "../../infra/greeting-card-repository"
+import type { AuditLogRepository } from "@/modules/audit/infra/audit-log-repository"
+
+const asRepo = (m: object) => m as unknown as GreetingCardRepository
+const asAudit = (m: object) => m as unknown as AuditLogRepository
 
 function makeCtx(userId: string, capabilities: string[] = ["L1", "R2"]): TenantContext {
   return {
@@ -38,8 +43,8 @@ describe("deleteGreetingCatalog & restoreGreetingCatalog", () => {
     const result = await deleteGreetingCatalog(
       ctx,
       "cat-1",
-      mockRepo as any,
-      mockAuditRepo as any
+      asRepo(mockRepo),
+      asAudit(mockAuditRepo)
     )
 
     expect(result).toEqual({ success: true })
@@ -69,7 +74,7 @@ describe("deleteGreetingCatalog & restoreGreetingCatalog", () => {
     const mockAuditRepo = { record: vi.fn() }
 
     await expect(
-      deleteGreetingCatalog(ctx, "cat-1", mockRepo as any, mockAuditRepo as any)
+      deleteGreetingCatalog(ctx, "cat-1", asRepo(mockRepo), asAudit(mockAuditRepo))
     ).rejects.toThrow(AppError)
 
     expect(mockRepo.deleteCatalog).not.toHaveBeenCalled()
@@ -96,8 +101,8 @@ describe("deleteGreetingCatalog & restoreGreetingCatalog", () => {
     const result = await deleteGreetingCatalog(
       ctx,
       "cat-1",
-      mockRepo as any,
-      mockAuditRepo as any
+      asRepo(mockRepo),
+      asAudit(mockAuditRepo)
     )
 
     expect(result).toEqual({ success: true })
@@ -127,8 +132,8 @@ describe("deleteGreetingCatalog & restoreGreetingCatalog", () => {
     const result = await restoreGreetingCatalog(
       ctx,
       "cat-1",
-      mockRepo as any,
-      mockAuditRepo as any
+      asRepo(mockRepo),
+      asAudit(mockAuditRepo)
     )
 
     expect(result).toEqual({ success: true })
