@@ -2,6 +2,7 @@
 
 import React from "react"
 import * as LucideIcons from "lucide-react"
+import { COMING_SOON_LABEL } from "@/lib/feature-lock"
 import type { JourneyDefinition } from "@/modules/journey/domain/journey-model"
 
 interface ActionCardProps {
@@ -23,6 +24,8 @@ export function ActionCard({ journey, onSelect, disabled = false }: ActionCardPr
       type="button"
       onClick={() => onSelect(journey)}
       disabled={disabled}
+      aria-disabled={disabled || undefined}
+      title={disabled ? COMING_SOON_LABEL : undefined}
       className={`group relative flex flex-col text-left p-4 rounded-xl border transition-all duration-200 ${
         disabled
           ? "opacity-50 cursor-not-allowed bg-surface-alt border-border"
@@ -42,7 +45,11 @@ export function ActionCard({ journey, onSelect, disabled = false }: ActionCardPr
           <IconComponent className="w-5 h-5" aria-hidden="true" />
         </div>
 
-        {journey.badgeText && (
+        {disabled ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-caption font-semibold bg-surface-alt text-text-muted border border-border">
+            {COMING_SOON_LABEL}
+          </span>
+        ) : journey.badgeText && (
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-caption font-semibold ${
               isCombo
@@ -72,6 +79,8 @@ export function ActionCard({ journey, onSelect, disabled = false }: ActionCardPr
             ? `${journey.steps.length} bước liền mạch`
             : isAi
             ? "Trò chuyện ngay"
+            : disabled
+            ? COMING_SOON_LABEL
             : "Bắt đầu ngay"}
         </span>
         <LucideIcons.ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />

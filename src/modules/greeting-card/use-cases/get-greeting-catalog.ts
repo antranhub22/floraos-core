@@ -10,6 +10,7 @@ import type {
   PublicBrochureSessionView,
 } from "../domain/greeting-card-types"
 import { loadPublicSession } from "./brochure-session-access"
+import { linkAvailability } from "../domain/greeting-card-rules"
 import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
 import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
 import type { ShopContact } from "../domain/shop-contact"
@@ -36,7 +37,7 @@ export type CustomerBrochureView = {
 export async function getGreetingCatalogForCustomer(
   sendCode: string,
   repo = new GreetingCardRepository()
-): Promise<CustomerBrochureView | { status: "NOT_FOUND" } | { status: "UNAVAILABLE"; shop: ShopContact }> {
+): Promise<CustomerBrochureView | { status: "NOT_FOUND" } | { status: "UNAVAILABLE"; reason: "EXPIRED" | "CLOSED"; shop: ShopContact }> {
   let session
   try {
     session = await loadPublicSession(sendCode, repo)
@@ -45,7 +46,10 @@ export async function getGreetingCatalogForCustomer(
       // Link có thật nhưng đã hết hạn / thu hồi / bộ sưu tập ngừng: cho khách cách liên hệ tiệm
       const raw = await repo.getPublicSessionBySendCode(sendCode).catch(() => null)
       const contact = raw ? await getShopContact(raw.organization_id) : null
-      return contact ? { status: "UNAVAILABLE", shop: contact } : { status: "NOT_FOUND" }
+      if (!raw || !contact) return { status: "NOT_FOUND" }
+      // Hết hạn (theo thời hạn Điều hành cài) → lời nhắn riêng; thu hồi / bộ sưu tập ngừng → lời nhắn chung
+      const expired = linkAvailability({ expiresAt: raw.expires_at, revokedAt: raw.revoked_at, hasOrder: raw.order_id !== null }) === "EXPIRED"
+      return { status: "UNAVAILABLE", reason: expired ? "EXPIRED" : "CLOSED", shop: contact }
     }
     throw error
   }

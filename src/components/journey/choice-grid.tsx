@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import { Sparkles, SlidersHorizontal, Search } from "lucide-react"
 import type { JourneyDefinition } from "@/modules/journey/domain/journey-model"
 import { useSession } from "@/lib/session"
+import { isJourneyLocked } from "@/lib/feature-lock"
 import { UserMenu } from "@/components/layout/user-menu"
 import { ActionCard } from "./action-card"
 
@@ -142,6 +143,7 @@ export function ChoiceGrid({
               key={journey.id}
               journey={journey}
               onSelect={onSelectJourney}
+              disabled={isJourneyLocked(journey.id)}
             />
           ))}
         </div>

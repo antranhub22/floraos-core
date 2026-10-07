@@ -15,8 +15,6 @@ const createSendLinkSchema = z.object({
   customerName: z.string().max(100).nullable().optional(),
   customerPhone: z.string().max(20).nullable().optional(),
   prefix: z.string().max(10).optional(),
-  // null = không hết hạn; bỏ trống = mặc định 30 ngày
-  expiresInDays: z.number().int().min(1).max(365).nullable().optional(),
   customCatalog: z
     .object({
       name: z.string().max(120),
@@ -46,7 +44,6 @@ export const POST = handle(async (request: Request) => {
     customerName: parsed.data.customerName,
     customerPhone: parsed.data.customerPhone,
     prefix: parsed.data.prefix,
-    expiresInDays: parsed.data.expiresInDays,
     customCatalog: parsed.data.customCatalog
       ? {
           name: parsed.data.customCatalog.name,

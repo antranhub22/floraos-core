@@ -127,7 +127,7 @@ export function useJourneyCatalogs() {
   )
 
   const createSendLink = useCallback(
-    async (input: { catalogId: string; customerName: string; customerPhone: string; expiresInDays: number | null }) => {
+    async (input: { catalogId: string; customerName: string; customerPhone: string }) => {
       const res = await fetch("/api/v1/greeting-card/send-links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,7 +135,6 @@ export function useJourneyCatalogs() {
           catalogId: input.catalogId,
           customerName: input.customerName.trim() || undefined,
           customerPhone: input.customerPhone.trim() || undefined,
-          expiresInDays: input.expiresInDays,
         }),
       })
       if (!res.ok) throw new Error(await readError(res, "Không tạo được link gửi khách. Vui lòng thử lại."))

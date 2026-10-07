@@ -18,6 +18,7 @@ import { useBrochureQuote } from "./use-brochure-quote"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { OrderReview } from "./order-review"
 import { useOrderDraft } from "./use-order-draft"
+import { useSavedState } from "./use-saved-state"
 import { AddressFields } from "./address-fields"
 import { HoneypotField } from "./honeypot-field"
 import { composeAddress, validateAddressParts } from "@/modules/greeting-card/domain/delivery-address"
@@ -57,13 +58,14 @@ export function BrochureOrderForm({
   const deliveryAddress = composeAddress(addressParts)
 
   const [loading, setLoading] = useState(false)
-  const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone)
+  const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone, { id: productSnapshot.id, variantIds: variants.map((v) => v.id) })
   const minDate = earliestDeliveryDate(shipping)
   const maxDate = new Date(Date.parse(`${minDate}T00:00:00Z`) + MAX_DELIVERY_LEAD_DAYS * 86_400_000)
     .toISOString()
     .slice(0, 10)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [review, setReview] = useState<CustomerOrderSubmitInput | null>(null)
+  // Bước "Xem lại đơn" nhớ trên máy: rời trang lúc đang xem lại thì quay về đúng bước này
+  const [review, setReview, clearReview] = useSavedState<CustomerOrderSubmitInput | null>(`order-review:${productSnapshot.id}`, null)
   const [website, setWebsite] = useState("")
 
   async function handleSubmit(e: React.FormEvent) {
@@ -123,6 +125,7 @@ export function BrochureOrderForm({
     try {
       await onSubmit(review)
       clearDraft()
+      clearReview()
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Đã có lỗi xảy ra khi đặt hoa")
     } finally {

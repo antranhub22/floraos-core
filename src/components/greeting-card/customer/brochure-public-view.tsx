@@ -1,6 +1,9 @@
 "use client"
 
 import React, { useCallback, useState } from "react"
+import { readSavedState, useSavedState } from "./use-saved-state"
+import { useRememberedStep } from "./use-remembered-step"
+import { resumePublicStep, type PublicStep } from "@/modules/greeting-card/domain/customer-step"
 import { GreetingTemplateRenderer } from "./templates/greeting-template-renderer"
 import type { OptionalDisplayField } from "@/modules/greeting-card/domain/display-fields"
 import { BrochureOrderForm } from "./brochure-order-form"
@@ -18,6 +21,7 @@ import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pri
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { useCatalogTracking } from "./use-catalog-tracking"
 import { HeartTrackerContext } from "./heart-tracker"
+import { rememberCatalogOrder, useResumeCatalogOrder } from "./use-remembered-order"
 
 interface Props {
   catalog: { id: string; code: string; name: string; description: string | null; filters?: Record<string, unknown> | null }
@@ -25,11 +29,15 @@ interface Props {
   shipping: ShippingConfig
 }
 
-type PublicStep = "SWIPING" | "PREVIEW" | "ORDER_FORM" | "PAYMENT" | "TRACKING"
+
+const SELECTED_KEY = "public-selected"
 
 export function BrochurePublicView({ catalog, products, shipping }: Props) {
   const [step, setStep] = useState<PublicStep>("SWIPING")
-  const [selected, setSelected] = useState<GreetingCatalogProduct | null>(null)
+  // Mẫu đang chọn + bước đang đứng nhớ trên máy: rời trang lúc xem mẫu đã chọn / điền form thì quay lại đúng chỗ
+  const [selectedId, setSelectedId] = useSavedState<string | null>(SELECTED_KEY, null)
+  const selected = products.find((p) => p.id === selectedId) ?? null
+  const setSelected = (p: GreetingCatalogProduct | null) => setSelectedId(p?.id ?? null)
   const [orderResult, setOrderResult] = useState<{
     sendCode: string
     orderId: string
@@ -40,6 +48,9 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
   const { track, orderMeta } = useCatalogTracking(catalog.id)
   // Thả/bỏ tim trên link công khai → cộng vào bảng "mẫu nhiều tim nhất" của bộ sưu tập
   const reportHeart = useCallback((productId: string, liked: boolean) => track(liked ? "LIKE" : "UNLIKE", productId), [track])
+  // Máy này đã đặt đơn từ bộ sưu tập này → về trang đơn (QR / chờ xác nhận), không quay lại xem mẫu
+  const resuming = useResumeCatalogOrder(catalog.id)
+  useRememberedStep("public-step", step, setStep, (saved) => resumePublicStep(saved, readSavedState<string>(SELECTED_KEY), products))
 
   function handleSelectFromDeck(product: GreetingCatalogProduct) {
     track("DETAIL")
@@ -65,7 +76,10 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
     setStep("PAYMENT")
     // Đổi địa chỉ sang link riêng của đơn (không tải lại trang): khách tải lại hoặc
     // mở lại vẫn thấy QR và tiến độ, thay vì quay về màn lướt mẫu và mất mã đơn.
-    if (data?.sendCode) window.history.replaceState(null, "", `/b/${encodeURIComponent(data.sendCode)}`)
+    if (data?.sendCode) {
+      rememberCatalogOrder(catalog.id, data.sendCode)
+      window.history.replaceState(null, "", `/b/${encodeURIComponent(data.sendCode)}`)
+    }
   }
 
   // Giá hiển thị trên form chỉ để khách xem — server tự tính lại giá khi tạo đơn.
@@ -183,6 +197,14 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
             </button>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (resuming) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background p-6 text-center text-body text-text-muted" aria-busy="true">
+        Đang mở đơn hàng của bạn…
       </div>
     )
   }

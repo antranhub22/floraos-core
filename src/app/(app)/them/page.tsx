@@ -30,6 +30,7 @@ import {
   Cpu,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
+import { COMING_SOON_LABEL, isRouteLocked } from "@/lib/feature-lock"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -126,7 +127,7 @@ export default function ThemPage() {
 
   function renderGroupEntry(item: NavEntry) {
     const Icon = ICONS[item.iconKey] || Tag
-    const isComingSoon = item.status === "COMING_SOON"
+    const isComingSoon = item.status === "COMING_SOON" || isRouteLocked(item.href)
 
     if (isComingSoon) {
       return (
@@ -140,7 +141,7 @@ export default function ThemPage() {
             <span className="text-sm font-medium">{item.label}</span>
           </div>
           <span className="rounded-full bg-surface-alt px-2 py-0.5 text-xs font-extrabold uppercase tracking-wide">
-            Sắp có
+            {COMING_SOON_LABEL}
           </span>
         </div>
       )

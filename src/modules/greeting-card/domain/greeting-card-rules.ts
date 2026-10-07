@@ -250,15 +250,7 @@ export function mapOrderStatusToTrackingStep(
 
 // ── Hạn dùng link ─────────────────────────────────────────────────────────────
 
-export const DEFAULT_LINK_EXPIRY_DAYS = 30
-export const MAX_LINK_EXPIRY_DAYS = 365
-
-/** `null` = không hết hạn. Số ngày ngoài [1, 365] bị kẹp về biên. */
-export function computeLinkExpiry(days: number | null | undefined, now: Date = new Date()): Date | null {
-  if (days === null) return null
-  const d = Math.min(Math.max(Math.round(days ?? DEFAULT_LINK_EXPIRY_DAYS), 1), MAX_LINK_EXPIRY_DAYS)
-  return new Date(now.getTime() + d * 86_400_000)
-}
+// Thời gian dùng được của link mới: xem `link-lifetime.ts` (Điều hành cài theo giờ).
 
 export type LinkAvailability = "ACTIVE" | "EXPIRED" | "REVOKED"
 
