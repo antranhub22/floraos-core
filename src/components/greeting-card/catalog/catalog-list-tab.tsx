@@ -34,6 +34,12 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
   if (statusFilter === "archived") queryParams.set("status", "archived")
   if (staffFilter) queryParams.set("created_by", staffFilter)
   if (daysFilter === "3") queryParams.set("days", "3")
+  const isFiltered = statusFilter !== "active" || staffFilter !== "" || daysFilter !== "all"
+  const clearFilters = () => {
+    setStatusFilter("active")
+    setStaffFilter("")
+    setDaysFilter("all")
+  }
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ""
 
   const list = useApi<{ data: CatalogItem[] }>(`/api/v1/greeting-card/catalogs${queryString}`)
@@ -189,6 +195,18 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
         <div className="flex items-center justify-center py-16 text-text-muted">
           <Loader2 size={24} className="animate-spin mr-2" />
           <span className="text-body-sm">Đang tải danh sách...</span>
+        </div>
+      ) : catalogs.length === 0 && isFiltered ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="text-center">
+            <p className="text-title-sm font-bold text-foreground">Không có bộ sưu tập nào khớp bộ lọc</p>
+            <p className="text-body-sm text-text-muted mt-1">
+              Thử xem tất cả thời gian, tất cả nhân sự hoặc mục đang hoạt động
+            </p>
+          </div>
+          <Button type="button" variant="secondary" onClick={clearFilters} className="mt-2">
+            Bỏ lọc
+          </Button>
         </div>
       ) : catalogs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
