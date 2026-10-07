@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { TrashItem } from "@/modules/storage/domain/trash-types"
+import { readApiError } from "@/components/greeting-card/api-error"
 
 interface StorageTrashTabProps {
   onItemRestored?: () => void
@@ -65,8 +66,7 @@ export function StorageTrashTab({ onItemRestored }: StorageTrashTabProps) {
         body: JSON.stringify({ type: item.type }),
       })
       if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error(d?.message || d?.error || "Không thể khôi phục mục này")
+        throw new Error(await readApiError(res, "Không thể khôi phục mục này"))
       }
       setSuccessMsg(`Đã khôi phục thành công: ${item.name}`)
       await loadTrash()
@@ -92,8 +92,7 @@ export function StorageTrashTab({ onItemRestored }: StorageTrashTabProps) {
         method: "DELETE",
       })
       if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error(d?.message || d?.error || "Không thể xóa vĩnh viễn mục này")
+        throw new Error(await readApiError(res, "Không thể xóa vĩnh viễn mục này"))
       }
       setSuccessMsg(`Đã xóa vĩnh viễn: ${item.name}`)
       await loadTrash()
