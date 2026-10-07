@@ -33,6 +33,7 @@ import {
   FileSpreadsheet,
 } from "lucide-react"
 import { useSession } from "@/lib/session"
+import { isRouteLocked } from "@/lib/feature-lock"
 import { cn, stripVietnamese } from "@/lib/utils"
 import {
   buildNav,
@@ -179,7 +180,7 @@ export function DesktopNav() {
   function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && searchResults.length > 0) {
       const target = searchResults[0]!
-      if (target.status !== "COMING_SOON") {
+      if (target.status !== "COMING_SOON" && !isRouteLocked(target.href)) {
         setSearchQuery("")
         router.push(target.href as never)
       }

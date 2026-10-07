@@ -3,6 +3,7 @@
 import type { ComponentType } from "react"
 import { Tag } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { COMING_SOON_LABEL, isRouteLocked } from "@/lib/feature-lock"
 import type { NavEntry } from "./nav-model"
 
 interface DesktopNavItemProps {
@@ -22,11 +23,11 @@ export function DesktopNavItem({
 }: DesktopNavItemProps) {
   const Icon = iconComponent || Tag
 
-  if (item.status === "COMING_SOON") {
+  if (item.status === "COMING_SOON" || isRouteLocked(item.href)) {
     return (
       <div
         aria-disabled="true"
-        title="Đang phát triển"
+        title={COMING_SOON_LABEL}
         className={cn(
           "flex w-full cursor-not-allowed items-center justify-between rounded-lg px-2.5 font-medium text-text-muted opacity-60",
           isSubItem ? "h-8 text-body-sm" : "h-9 text-meta"
@@ -37,7 +38,7 @@ export function DesktopNavItem({
           <span className="truncate">{item.label}</span>
         </div>
         <span className="shrink-0 rounded-full bg-surface-alt px-1.5 py-0.5 text-caption font-extrabold uppercase tracking-wide">
-          Sắp có
+          {COMING_SOON_LABEL}
         </span>
       </div>
     )

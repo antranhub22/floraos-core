@@ -6,6 +6,7 @@
  */
 
 import type { RoleUxDefinition } from "@/modules/organization/domain/role-ux-catalog"
+import { isRouteLocked } from "@/lib/feature-lock"
 
 export type NavGroupKey =
   | "viec-chinh"
@@ -326,7 +327,7 @@ export function buildNav(
       if (pinnedHrefs.has(href)) continue
       const found = NAV_ENTRIES.find((entry) => entry.href === href)
       // Mục COMING_SOON không bao giờ vào "Việc chính" (tiêu chí T3.1)
-      if (found && found.status !== "COMING_SOON" && isAccessible(found)) {
+      if (found && found.status !== "COMING_SOON" && !isRouteLocked(found.href) && isAccessible(found)) {
         viecChinhEntries.push(found)
         pinnedHrefs.add(found.href)
       }
@@ -386,7 +387,7 @@ export function mobileSecondSlot(
     const found = NAV_ENTRIES.find((entry) => entry.href === href)
     if (
       found &&
-      found.status !== "COMING_SOON" &&
+      found.status !== "COMING_SOON" && !isRouteLocked(found.href) &&
       (!found.capability || can(found.capability))
     ) {
       return found
