@@ -8,6 +8,8 @@
  * Luật thuần — không import React.
  */
 
+import { STORE_JOURNEYS } from "@/modules/journey/domain/journey-catalog"
+
 /** Tuyến (và mọi tuyến con) bị khóa: sidebar làm mờ + trang hiện "Sắp ra mắt". */
 export const LOCKED_ROUTE_PREFIXES: readonly string[] = [
   "/hoi-thoai",
@@ -18,20 +20,26 @@ export const LOCKED_ROUTE_PREFIXES: readonly string[] = [
   "/noi-dung",
   "/lich-dang",
   "/kho-templates",
+  // Nhóm "Vận hành" trên sidebar (PO 08/10/2026)
+  "/dieu-phoi",
+  "/job",
+  "/duyet",
+  "/so-lieu",
+  "/muc-dung",
+  "/audit",
 ]
 
-/** Thẻ chức năng trên trang chủ bị khóa (theo `JourneyDefinition.id`). */
-export const LOCKED_JOURNEY_IDS: readonly string[] = [
-  "market-intelligence-explore",
-  "create-marketing-copy",
-  "create-audio-voiceover",
-  "create-marketing-image",
-  "create-product-video",
-  "create-catalog-collection",
-  "manage-customers",
-  "launch-product-combo",
-  "customer-service-chatbot",
-]
+/**
+ * Trang chủ cửa hàng trên production: CHỈ các thẻ này hoạt động (PO 08/10/2026 —
+ * chỉ mở Thẻ chào mẫu hoa). Mọi thẻ khác của cửa hàng bị khóa "Sắp ra mắt".
+ * Thẻ quản trị nền tảng / chuỗi không thuộc trang chủ cửa hàng nên không bị ảnh hưởng.
+ */
+export const UNLOCKED_STORE_JOURNEY_IDS: readonly string[] = ["greeting-card-hub"]
+
+/** Thẻ chức năng trên trang chủ cửa hàng bị khóa (theo `JourneyDefinition.id`). */
+export const LOCKED_JOURNEY_IDS: readonly string[] = STORE_JOURNEYS.map((j) => j.id).filter(
+  (id) => !UNLOCKED_STORE_JOURNEY_IDS.includes(id)
+)
 
 export const COMING_SOON_LABEL = "Sắp ra mắt"
 
