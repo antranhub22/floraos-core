@@ -77,6 +77,8 @@ Ví dụ:
 - **Thời gian giao có thể thay đổi** — Có thể thay đổi trong trường hợp bất khả kháng hoặc không thể liên hệ người nhận.
 - **Hủy/hoàn tiền** — Áp dụng theo trạng thái xử lý thực tế của đơn hàng.
 
+Bộ mặc định đang dùng (PO chốt 08/10/2026 — 6 Cam kết, 7 Thỏa thuận; thay "Hoa theo mùa" bằng "Thay đổi thông tin đơn hàng") là `DEFAULT_COMMITMENTS` / `DEFAULT_AGREEMENTS` trong `src/modules/greeting-card/domain/store-policy.ts`. Đây chỉ là mặc định: mỗi tiệm được sửa, thêm, xóa hoặc khôi phục trong Hồ sơ tiệm.
+
 Mỗi mục cần có:
 - **Version hiển thị cho khách:** ngắn gọn, rõ ràng, mang tính marketing/trust-building.
 - **Giải thích/quy định nội bộ:** chi tiết hơn trong khu vực quản trị.
