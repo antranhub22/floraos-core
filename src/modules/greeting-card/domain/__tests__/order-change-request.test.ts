@@ -4,6 +4,7 @@ import {
   changeLockReason,
   changesForCustomer,
   orderColumnsFromSnapshot,
+  quoteFactsOf,
   shippingFeeDelta,
   snapshotFromOrder,
   type OrderChangeSnapshot,
@@ -108,6 +109,14 @@ describe("shippingFeeDelta", () => {
   it("phí giảm → giữ nguyên tổng (0)", () => {
     expect(shippingFeeDelta({ ...quote, shippingFeeVnd: 80_000 }, 30_000, SHIPPING)).toBe(0)
   })
+  it("tiệm miễn phí giao mọi đơn hoặc đơn dùng ưu đãi miễn ship → 0", () => {
+    expect(shippingFeeDelta(quote, 80_000, { freeShippingOverVnd: null, freeShippingAll: true })).toBe(0)
+    const facts = quoteFactsOf({ ...quote, policies: { promotion: { id: "p", kind: "FREE_SHIPPING" } } })
+    expect(facts.waivesShipping).toBe(true)
+    expect(shippingFeeDelta(facts, 80_000, SHIPPING)).toBe(0)
+    expect(shippingFeeDelta(quoteFactsOf(quote), 80_000, SHIPPING)).toBe(50_000)
+  })
+
   it("đủ mức miễn phí giao hoặc đơn chờ báo giá → 0", () => {
     expect(shippingFeeDelta(quote, 80_000, { freeShippingOverVnd: 400_000 })).toBe(0)
     expect(shippingFeeDelta({ ...quote, awaitingQuote: true }, 80_000, SHIPPING)).toBe(0)
