@@ -9,6 +9,7 @@ import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracki
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { paymentGateBlocker } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { sortByDelivery } from "@/modules/greeting-card/domain/coordinator-board"
 import { BrochureOrderDetailModal, type OrderDetailModalTarget } from "@/components/greeting-card/brochure-order-detail-modal"
 
 export type CoordinatorKanbanColId =
@@ -71,19 +72,8 @@ export function CoordinatorKanbanView({
       <div className="flex gap-3 overflow-x-auto pb-4 pt-1" aria-label="Bảng Kanban Điều phối">
         {COORDINATOR_KANBAN_COLS.map((col) => {
           const Icon = col.icon
-          const colOrders = grouped.get(col.id) ?? []
-
-          // SẮP XẾP ƯU TIÊN THEO MỐC THỜI GIAN GIAO HÀNG TRONG TỪNG CỘT
-          colOrders.sort((a, b) => {
-            const dateA = a.delivery_window?.date || ""
-            const dateB = b.delivery_window?.date || ""
-            if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB)
-            if (dateA && !dateB) return -1
-            if (!dateA && dateB) return 1
-            const slotA = a.delivery_window?.timeSlot || ""
-            const slotB = b.delivery_window?.timeSlot || ""
-            return slotA.localeCompare(slotB)
-          })
+          // Đơn giao sớm nhất (ngày + giờ bắt đầu khung, kể cả "Giờ cụ thể") lên đầu cột
+          const colOrders = sortByDelivery(grouped.get(col.id) ?? [])
 
           return (
             <section
@@ -124,7 +114,7 @@ export function CoordinatorKanbanView({
                         orderId: o.id,
                         orderCode: o.code,
                         sendCode: o.greeting_sessions[0]?.send_code,
-                        customerName: work?.customerName || o.delivery_address?.recipientName,
+                        customerName: work?.customerName,
                         customerPhone: work?.customerPhone,
                         recipientName: o.delivery_address?.recipientName,
                         recipientPhone: o.delivery_address?.phone,

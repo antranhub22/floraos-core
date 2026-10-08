@@ -1,23 +1,23 @@
 "use client"
 
-import React, { useState } from "react"
-import { Heart, Sparkles, RefreshCw, FileText, ArrowRight, CheckCircle2, ChevronDown } from "lucide-react"
+import { Heart, FileText, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ReorderButton } from "./reorder-button"
+
+/** Mục trên trang theo dõi mà hai nút "Xem lại" cuộn tới. */
+export const THANK_YOU_TARGET = { details: "order-details-section", progress: "progress-evidence-section" } as const
+
+const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" })
 
 interface CustomerThankYouCardProps {
   orderCode: string
+  /** Có link → nút "Đặt đơn mới" mở link mới (mã đơn mới), đơn này giữ nguyên. */
   sendCode?: string | null | undefined
-  onViewOrderInfo: () => void
-  onViewProgress: () => void
-  onReorder: () => void
 }
 
 export function CustomerThankYouCard({
   orderCode,
   sendCode,
-  onViewOrderInfo,
-  onViewProgress,
-  onReorder,
 }: CustomerThankYouCardProps) {
   return (
     <section
@@ -48,7 +48,7 @@ export function CustomerThankYouCard({
           <Button
             type="button"
             variant="outline"
-            onClick={onViewOrderInfo}
+            onClick={() => scrollTo(THANK_YOU_TARGET.details)}
             className="h-11 w-full justify-center gap-2 rounded-xl border-border bg-surface text-body-sm font-bold text-foreground hover:bg-surface-muted cursor-pointer"
           >
             <FileText size={16} className="text-primary" />
@@ -59,7 +59,7 @@ export function CustomerThankYouCard({
           <Button
             type="button"
             variant="secondary"
-            onClick={onViewProgress}
+            onClick={() => scrollTo(THANK_YOU_TARGET.progress)}
             className="h-11 w-full justify-center gap-2 rounded-xl text-body-sm font-bold text-foreground hover:bg-surface-muted cursor-pointer"
           >
             <CheckCircle2 size={16} className="text-success" />
@@ -67,16 +67,7 @@ export function CustomerThankYouCard({
           </Button>
 
           {/* Nút 3: Đặt đơn mới */}
-          <Button
-            type="button"
-            variant="primary"
-            onClick={onReorder}
-            className="h-12 w-full justify-center gap-2 rounded-xl bg-primary text-body font-extrabold text-white shadow-md hover:bg-primary-dark cursor-pointer"
-          >
-            <Sparkles size={16} />
-            <span>Đặt đơn mới</span>
-            <ArrowRight size={16} />
-          </Button>
+          {sendCode && <ReorderButton sendCode={sendCode} label="Đặt đơn mới" primary />}
         </div>
       </div>
     </section>

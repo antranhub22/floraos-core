@@ -205,6 +205,11 @@ export function validateCustomerOrderInput(
  */
 export const TRACKING_STEP_COUNT = 5
 
+/** Đơn đã giao xong (bước cuối) — chỉ lúc này khách mới thấy lời cảm ơn. Đang giao/giao hỏng/đã hủy thì chưa. */
+export function isTrackingCompleted(orderStatus: string, deliveryStatus: string): boolean {
+  return orderStatus !== "CANCELLED" && (deliveryStatus === "DELIVERED" || orderStatus === "COMPLETED")
+}
+
 export function mapOrderStatusToTrackingStep(
   orderStatus: string,
   productionStatus: string,

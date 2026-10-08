@@ -110,7 +110,7 @@ export function BrochureUserGuideModal() {
                     <ul className="list-disc list-inside space-y-1.5 text-caption sm:text-body-sm text-text-muted">
                       <li><strong>Duyệt thanh toán tiền về:</strong> Vào tab Điều hành để đối soát các đơn khách báo chuyển khoản. Bấm xác nhận để đơn tự động chuyển vào hàng đợi cắm hoa của xưởng.</li>
                       <li><strong>Xử lý đề xuất Hủy / Hoàn tiền:</strong> Sale hoặc Điều phối chỉ có quyền đề xuất; Điều hành là người quyết định cuối cùng (Approve/Reject). Hệ thống lưu vết đầy đủ lý do và người duyệt.</li>
-                      <li><strong>Giải quyết tranh chấp nhờ Sơ đồ Milestones:</strong> Nhấp vào bất kỳ đơn hàng nào để mở Pop-up chi tiết → chọn tab <em>&quot;Sơ đồ Lịch sử Milestones&quot;</em>. Tại đây có đủ timestamp khách chọn mẫu, chấp nhận thỏa thuận, ảnh thành phẩm khách duyệt, ảnh giao hoa tận tay. Bấm <em>&quot;Sao chép tóm tắt đối soát&quot;</em> để gửi khách qua Zalo.</li>
+                      <li><strong>Giải quyết tranh chấp nhờ Lịch sử đơn hàng:</strong> Nhấp vào bất kỳ đơn hàng nào để mở cửa sổ chi tiết → chọn tab <em>&quot;Lịch sử đơn hàng&quot;</em>. Tại đây có đủ thời điểm khách chọn mẫu, chấp nhận thỏa thuận, ảnh thành phẩm khách duyệt, ảnh giao hoa tận tay. Bấm <em>&quot;Sao chép tóm tắt đối soát&quot;</em> để gửi khách qua Zalo.</li>
                     </ul>
                   </div>
                 </div>

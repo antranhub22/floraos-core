@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { CheckCircle2, Clock, Copy, Check, ShieldCheck, Camera, Truck, AlertCircle } from "lucide-react"
+import { CheckCircle2, Clock, Copy, Check, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import type { TimelineEvent, StepSegment } from "@/modules/greeting-card/domain/tracking-timeline"
@@ -71,7 +71,7 @@ export function EvidenceTimelineDiagram({
       `Mẫu hoa: ${productName || "---"}`,
       `Giá trị: ${(totalVnd ?? 0).toLocaleString("vi-VN")} đ | Đã thanh toán: ${(paidVnd ?? 0).toLocaleString("vi-VN")} đ`,
       ``,
-      `--- LỊCH SỬ DIỄN TIẾN & MỐC BẰNG CHỨNG (MILESTONES) ---`,
+      `--- LỊCH SỬ DIỄN TIẾN & MỐC BẰNG CHỨNG ---`,
     ]
 
     if (events.length === 0) {
@@ -97,7 +97,7 @@ export function EvidenceTimelineDiagram({
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} className="text-primary" />
           <h4 className="text-body-sm font-extrabold text-foreground">
-            Sơ đồ Lịch sử Milestones & Bằng chứng xác nhận
+            Lịch sử đơn hàng & bằng chứng xác nhận
           </h4>
         </div>
         <Button

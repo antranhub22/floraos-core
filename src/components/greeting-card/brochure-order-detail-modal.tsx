@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
-import { X, Calendar, Clock, MapPin, User, Phone, Flower2, HeartHandshake, ShieldAlert, CheckCircle2, MessageSquare, ExternalLink } from "lucide-react"
+import React, { useEffect, useState } from "react"
+import { X, Clock, MapPin, User, Phone, Flower2, CheckCircle2, MessageSquare, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { EvidenceTimelineDiagram } from "./evidence-timeline-diagram"
@@ -41,6 +41,12 @@ interface BrochureOrderDetailModalProps {
 
 export function BrochureOrderDetailModal({ target, onClose, onOpenNotes }: BrochureOrderDetailModalProps) {
   const [activeTab, setActiveTab] = useState<"info" | "timeline">("info")
+  useEffect(() => {
+    if (!target) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [target, onClose])
 
   if (!target) return null
 
@@ -130,7 +136,7 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes }: Broch
               activeTab === "timeline" ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-foreground"
             }`}
           >
-            Sơ đồ Lịch sử Milestones
+            Lịch sử đơn hàng
           </button>
         </div>
 

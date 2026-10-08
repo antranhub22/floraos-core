@@ -235,7 +235,7 @@ export const KNOWLEDGE_MODULES: ModuleKnowledgeSpec[] = [
     tips: [
       "🌸 Khách có đồng hồ đếm ngược 10 phút để duyệt ảnh thành phẩm trước khi giao",
       "⚡ Bấm vào thẻ đơn hàng trên Kanban để xem toàn bộ thông tin người nhận, lời chúc thiệp",
-      "📜 Trích xuất Sơ đồ Milestones để gửi bằng chứng đối soát minh bạch cho khách khi có tranh chấp",
+      "📜 Trích xuất Lịch sử đơn hàng để gửi bằng chứng đối soát minh bạch cho khách khi có tranh chấp",
     ],
     copilotPrompt: "Hướng dẫn toàn bộ quy trình Thẻ Chào mẫu hoa cho Điều hành, Sale và Điều phối?",
   },

@@ -35,7 +35,7 @@ describe("Nâng cấp Thẻ Chào Mẫu Hoa (Yêu cầu 9/10)", () => {
     expect(kbOverview).not.toBeNull()
     expect(kbOverview?.id).toBe("the_chao_tong_quan")
 
-    const kbAdmin = querySaasKnowledge("Điều hành xác nhận tiền về và đối soát milestones")
+    const kbAdmin = querySaasKnowledge("Điều hành xác nhận tiền về và đối soát lịch sử đơn")
     expect(kbAdmin).not.toBeNull()
     expect(kbAdmin?.id).toBe("the_chao_dieu_hanh")
 
@@ -99,5 +99,27 @@ describe("Nâng cấp Thẻ Chào Mẫu Hoa (Yêu cầu 9/10)", () => {
     const cols = groupSaleKanban<TestItem>([itemNormalEarly, itemStuckLate])
     const paymentCol = cols.find((c) => c.step.id === "STEP_4_PAYMENT_PENDING")!
     expect(paymentCol.items.map((i) => i.id)).toEqual(["stuck-late", "normal-early"])
+  })
+})
+
+describe("groupSaleKanban — xếp theo giờ giao", () => {
+  const base = { currentStepId: "STEP_6_ARRANGING" as TrackingPipelineStepId, stepStartedAt: "2026-10-09T01:00:00Z", deliveryDate: "2026-10-09" }
+  const col = (items: Array<typeof base & { id: string; deliveryTimeSlot: string | null; stuck: StuckInfo | null }>) =>
+    groupSaleKanban(items).find((c) => c.step.id === "STEP_6_ARRANGING")!.items.map((i) => i.id)
+
+  it("'Giờ cụ thể' xếp theo giờ thật, không dồn xuống cuối; thiếu khung giờ xếp sau", () => {
+    expect(col([
+      { ...base, id: "slot-10", deliveryTimeSlot: "10:00 - 12:00", stuck: null },
+      { ...base, id: "none", deliveryTimeSlot: null, stuck: null },
+      { ...base, id: "custom-09", deliveryTimeSlot: "Giờ cụ thể: 09:30", stuck: null },
+    ])).toEqual(["custom-09", "slot-10", "none"])
+  })
+
+  it("Nhiều việc kẹt của Sale: kẹt lâu hơn đứng trước", () => {
+    const stuck = (overdueMinutes: number): StuckInfo => ({ stepId: "STEP_6_ARRANGING", owner: "SALE", overdueMinutes, message: "Kẹt" })
+    expect(col([
+      { ...base, id: "late-5", deliveryTimeSlot: "08:00 - 10:00", stuck: stuck(5) },
+      { ...base, id: "late-40", deliveryTimeSlot: "20:00 - 22:00", stuck: stuck(40) },
+    ])).toEqual(["late-40", "late-5"])
   })
 })
