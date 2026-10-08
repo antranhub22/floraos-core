@@ -24,11 +24,14 @@ import { HoneypotField } from "./honeypot-field"
 import { composeAddress, validateAddressParts } from "@/modules/greeting-card/domain/delivery-address"
 import { DELIVERY_SLOTS, availableSlots, deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-card/domain/delivery-schedule"
 
+import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
+
 interface BrochureOrderFormProps {
   productSnapshot: ProductSnapshot
   /** Size/biến thể bán online của mẫu đã chọn. */
   variants: Array<{ id: string; name: string; priceVnd: number }>
   shipping: ShippingConfig
+  appliedPolicies?: PublicAppliedPolicies | null | undefined
   /** Endpoint báo giá + phần thân cố định (vd. `productId` ở link công khai). */
   quoteUrl: string
   quoteExtraBody?: Record<string, string> | undefined
@@ -44,6 +47,7 @@ export function BrochureOrderForm({
   productSnapshot,
   variants,
   shipping,
+  appliedPolicies,
   quoteUrl,
   quoteExtraBody = {},
   onBack,
@@ -57,6 +61,9 @@ export function BrochureOrderForm({
   } = useOrderDraft()
   const deliveryAddress = composeAddress(addressParts)
 
+  const [selectedPromotionId, setSelectedPromotionId] = useState<string>(() => {
+    return appliedPolicies?.promotions[0]?.id ?? ""
+  })
   const [loading, setLoading] = useState(false)
   const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone, { id: productSnapshot.id, variantIds: variants.map((v) => v.id) })
   const minDate = earliestDeliveryDate(shipping)
@@ -112,6 +119,8 @@ export function BrochureOrderForm({
       senderNote,
       website,
       quantity: pricing.selection.quantity,
+      selectedPromotionId: selectedPromotionId || undefined,
+      confirmedTerms: true,
       ...(pricing.selection.variantId ? { variantId: pricing.selection.variantId } : {}),
       ...(pricing.selection.shippingZoneId ? { shippingZoneId: pricing.selection.shippingZoneId } : {}),
       ...(pricing.selection.voucherCode ? { voucherCode: pricing.selection.voucherCode } : {}),
@@ -141,6 +150,7 @@ export function BrochureOrderForm({
           variantName={variants.find((v) => v.id === review.variantId)?.name ?? null}
           input={review}
           quote={pricing.quote}
+          appliedPolicies={appliedPolicies}
           submitting={loading}
           error={errorMessage}
           onEdit={() => setReview(null)}
@@ -151,7 +161,7 @@ export function BrochureOrderForm({
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-6 shadow-sm">
+    <div className="w-full max-w-xl lg:max-w-2xl mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-7 shadow-sm">
       <div className="flex items-center justify-between pb-4 border-b border-border mb-5">
         <Button
           type="button"
@@ -205,6 +215,34 @@ export function BrochureOrderForm({
           errors={pricing.errors}
           loading={pricing.loading}
         />
+
+        {/* Khối chọn 01 Ưu đãi (Spec #2: Khách chọn 01 ưu đãi) */}
+        {appliedPolicies && appliedPolicies.promotions.length > 0 && (
+          <div className="p-3.5 rounded-xl border border-primary/30 bg-primary/5 flex flex-col gap-2">
+            <label className="text-body-sm font-extrabold text-foreground flex items-center justify-between">
+              <span>Ưu đãi áp dụng ({appliedPolicies.promotions.length} ưu đãi)</span>
+              <span className="text-caption font-normal text-primary">Tặng kèm theo đơn</span>
+            </label>
+            {appliedPolicies.allowCustomerPromotionChoice && appliedPolicies.promotions.length > 1 ? (
+              <select
+                value={selectedPromotionId}
+                onChange={(e) => setSelectedPromotionId(e.target.value)}
+                className="w-full h-11 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                {appliedPolicies.promotions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title} — {p.customerText}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="text-body-sm text-foreground bg-background p-2.5 rounded-lg border border-border">
+                <span className="font-bold text-primary">{appliedPolicies.promotions[0]?.title}: </span>
+                <span>{appliedPolicies.promotions[0]?.customerText}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Người đặt */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

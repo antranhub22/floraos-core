@@ -189,14 +189,43 @@ export function CoordinatorImageUpload({ orderId, endpoint, label, onSuccess, on
         </div>
       )}
 
-      <div className="flex gap-2 justify-end">
-        <Button type="button" variant="outline" size="sm" onClick={onCancel} className="h-9 text-caption">
-          <X size={14} className="mr-1" aria-hidden="true" />
-          Huỷ
-        </Button>
-        <Button type="button" size="sm" disabled={images === 0 || state === "uploading"} onClick={() => void handleUpload()} className="h-9 text-caption">
-          {state === "uploading" ? "Đang tải lên..." : `Lưu ${picked.length} tệp`}
-        </Button>
+      {/* Tác vụ Bỏ qua ảnh nếu giao gấp (Spec #13) */}
+      <div className="pt-2 border-t border-border flex items-center justify-between">
+        <button
+          type="button"
+          disabled={state === "uploading"}
+          onClick={async () => {
+            if (!window.confirm(`Xác nhận bỏ qua ${label} để giao gấp? Hệ thống sẽ ghi nhận trạng thái Skipped.`)) return
+            setState("uploading")
+            setErrorMsg("")
+            try {
+              const res = await fetch(`/api/v1/greeting-card/orders/${orderId}/${endpoint}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ skipPhoto: true, skipReason: "Giao gấp theo yêu cầu" }),
+              })
+              if (!res.ok) throw new Error(await readApiError(res, "Lỗi khi bỏ qua ảnh"))
+              setState("success")
+              setTimeout(onSuccess, 1000)
+            } catch (err) {
+              setState("error")
+              setErrorMsg(err instanceof Error ? err.message : "Lỗi không xác định")
+            }
+          }}
+          className="text-caption font-semibold text-text-muted hover:text-danger underline transition-colors"
+        >
+          Giao gấp — Bỏ qua {label.toLowerCase()}
+        </button>
+
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onCancel} className="h-9 text-caption">
+            <X size={14} className="mr-1" aria-hidden="true" />
+            Huỷ
+          </Button>
+          <Button type="button" size="sm" disabled={images === 0 || state === "uploading"} onClick={() => void handleUpload()} className="h-9 text-caption">
+            {state === "uploading" ? "Đang tải lên..." : `Lưu ${picked.length} tệp`}
+          </Button>
+        </div>
       </div>
     </div>
   )

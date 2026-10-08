@@ -11,6 +11,8 @@ import type {
 import { GREETING_TEMPLATES } from "./greeting-template-catalog"
 import { enabledFieldsFor, readDisplaySettings, type OptionalDisplayField } from "./display-fields"
 
+import { resolveAppliedPolicies, type PublicAppliedPolicies } from "./store-policy"
+
 export type { GreetingTemplateId, GreetingCardTemplateDef, TemplateCategory }
 export { GREETING_TEMPLATES }
 
@@ -34,16 +36,20 @@ export function resolveGreetingTemplateId(candidate?: string | null): GreetingTe
 
 /**
  * Phần cấu hình được phép gửi ra trang khách: mẫu đang dùng và các trường thông tin
- * cửa hàng bật cho mẫu đó. Các khóa khác của `filters` (bộ lọc dịp, mức giá…) và của
- * `organizations.settings` là dữ liệu nội bộ, không gửi ra.
+ * cửa hàng bật cho mẫu đó, kèm theo các chính sách (ưu đãi, cam kết, thỏa thuận) áp dụng.
  */
 export function toPublicCatalogFilters(
   raw: unknown,
   orgSettings?: unknown,
-): { templateId: string; displayFields: OptionalDisplayField[] } | null {
+): {
+  templateId: string
+  displayFields: OptionalDisplayField[]
+  appliedPolicies?: PublicAppliedPolicies
+} | null {
   const rawId = raw && typeof raw === "object" ? (raw as Record<string, unknown>).templateId : undefined
   const templateId = resolveGreetingTemplateId(typeof rawId === "string" ? rawId : null)
   const displayFields = enabledFieldsFor(readDisplaySettings(orgSettings), templateId)
+  const appliedPolicies = resolveAppliedPolicies(raw, orgSettings)
   if (typeof rawId !== "string" && orgSettings === undefined) return null
-  return { templateId, displayFields }
+  return { templateId, displayFields, appliedPolicies }
 }

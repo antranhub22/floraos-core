@@ -3,6 +3,7 @@ import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { mapOrderStatusToTrackingStep } from "../domain/greeting-card-rules"
 import { areaOnly, maskPersonName, phoneLast4Matches } from "../domain/tracking-privacy"
 import type { ProductSnapshot } from "../domain/greeting-card-types"
+import { parseStepSla, calculateExpectedStepTimeline } from "../domain/step-sla"
 
 const ORDER_CODE_REGEX = /^[A-Z0-9-]{4,40}$/
 
@@ -58,6 +59,61 @@ export async function getBrochureTracking(
   const address = (order.delivery_address as { recipientName?: string; street?: string; parts?: { ward?: string; province?: string } } | null) || {}
   const deliveryWindow = (order.delivery_window as Record<string, string> | null) || {}
 
+  // SPEC #3: Customer Approval cho ảnh sản phẩm hoàn thiện
+  const productPhotoQc = order.qc_records.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
+  const customerApprovedQc = order.qc_records.find((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
+
+  // Countdown cấu hình trong Collection Settings (mặc định 10 phút)
+  const sessionWithCatalog = order.greeting_sessions.find((s) => s.catalog?.filters)
+  const catalogFilters = sessionWithCatalog?.catalog?.filters as Record<string, unknown> | null | undefined
+  const appliedPolicies = catalogFilters?.appliedPolicies as { photoApprovalCountdownMinutes?: number } | undefined
+  const countdownMinutes = appliedPolicies?.photoApprovalCountdownMinutes ?? 10
+
+  let photoApproval: {
+    status: "NONE" | "PENDING" | "APPROVED" | "AUTO_APPROVED"
+    uploadedAt: string | null
+    countdownMinutes: number
+    approvedAt: string | null
+  } = {
+    status: "NONE",
+    uploadedAt: null,
+    countdownMinutes,
+    approvedAt: null,
+  }
+
+  if (productPhotoQc && productPhotoUrls.length > 0) {
+    const uploadedAt = productPhotoQc.created_at
+    const uploadedTime = uploadedAt.getTime()
+    const now = Date.now()
+    const isExpired = now >= uploadedTime + countdownMinutes * 60_000
+
+    if (customerApprovedQc) {
+      photoApproval = {
+        status: "APPROVED",
+        uploadedAt: uploadedAt.toISOString(),
+        countdownMinutes,
+        approvedAt: customerApprovedQc.created_at.toISOString(),
+      }
+    } else if (isExpired) {
+      photoApproval = {
+        status: "AUTO_APPROVED",
+        uploadedAt: uploadedAt.toISOString(),
+        countdownMinutes,
+        approvedAt: new Date(uploadedTime + countdownMinutes * 60_000).toISOString(),
+      }
+    } else {
+      photoApproval = {
+        status: "PENDING",
+        uploadedAt: uploadedAt.toISOString(),
+        countdownMinutes,
+        approvedAt: null,
+      }
+    }
+  }
+
+  const slaConfig = parseStepSla((order as { organization?: { settings?: unknown } }).organization?.settings)
+  const timeline = calculateExpectedStepTimeline(deliveryWindow.date, deliveryWindow.timeSlot, slaConfig)
+
   return {
     status: "FOUND" as const,
     order: {
@@ -80,8 +136,10 @@ export async function getBrochureTracking(
       finishedImageUrl: productPhotoUrls[0] ?? null,
       productPhotoUrls,
       recipientPhotoUrls,
+      photoApproval,
       createdAt: order.created_at.toISOString(),
       updatedAt: order.updated_at.toISOString(),
+      timeline,
     },
     trackingStep: step,
   }

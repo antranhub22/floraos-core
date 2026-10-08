@@ -98,12 +98,16 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
 
   // 1. ORDER FORM STEP
   if (step === "ORDER_FORM" && activeSnapshot) {
+    const appliedPolicies = (catalog.filters as Record<string, unknown> | null | undefined)?.appliedPolicies as
+      | import("@/modules/greeting-card/domain/store-policy").PublicAppliedPolicies
+      | undefined
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col justify-start py-6 px-4 sm:px-6">
         <BrochureOrderForm
           productSnapshot={activeSnapshot}
           variants={selected?.variants ?? []}
           shipping={shipping}
+          appliedPolicies={appliedPolicies}
           quoteUrl={`/api/v1/public/greeting-catalog/${catalog.id}/quote`}
           quoteExtraBody={{ productId: activeSnapshot.id }}
           onBack={() => setStep("PREVIEW")}
@@ -137,7 +141,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
   if (step === "TRACKING" && orderResult) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col justify-start py-6 px-4 sm:px-6">
-        <div className="w-full max-w-lg mx-auto mb-4">
+        <div className="w-full max-w-xl lg:max-w-2xl mx-auto mb-4">
           <button
             type="button"
             onClick={() => setStep("SWIPING")}

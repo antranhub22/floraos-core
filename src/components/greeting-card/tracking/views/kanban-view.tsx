@@ -4,7 +4,7 @@ import React from "react"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { formatMinutes } from "@/modules/greeting-card/domain/step-sla"
 import type { KanbanColumn, TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
-import { SlaBadge, ViewState, codeOf, vnd } from "./tracking-bits"
+import { SlaBadge, ViewState, codeOf, vnd, responsibleEmployee } from "./tracking-bits"
 
 /** Kanban 9 bước: máy chủ nhóm sẵn, mỗi cột chỉ gửi 20 thẻ gấp nhất (đếm vẫn đủ). */
 export function KanbanView({ qs, onOpen }: { qs: string; onOpen: (i: TrackingViewItem) => void }) {
@@ -29,7 +29,7 @@ export function KanbanView({ qs, onOpen }: { qs: string; onOpen: (i: TrackingVie
               <button key={i.id} type="button" onClick={() => onOpen(i)} data-focus-key={i.orderId ?? i.sessionId}
                 className={`flex flex-col gap-1 rounded-xl border bg-surface p-2 text-left text-caption hover:border-primary ${i.sla.state === "OVERDUE" ? "border-danger/50" : "border-border"}`}>
                 <span className="font-bold text-foreground">{i.customerName}</span>
-                <span className="text-text-muted">{codeOf(i)} · {i.saleName}</span>
+                <span className="text-text-muted">{codeOf(i)} · {responsibleEmployee(i)}</span>
                 <span className="text-text-muted">{i.productName} · {vnd(i.totalVnd)}</span>
                 <SlaBadge item={i} />
               </button>

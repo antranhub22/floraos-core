@@ -13,18 +13,21 @@ export class ShopContactRepository {
       where: { id: organizationId },
       select: {
         name: true,
-        business_profile: { select: { display_name: true, phone: true, address: true } },
-        brand_profile: { select: { logo_asset_id: true } },
+        business_profile: { select: { display_name: true, phone: true, address: true, social_links: true } },
+        brand_profile: { select: { logo_asset_id: true, brand_assets: true } },
       },
     })
     if (!org) return null
     const logoId = org.brand_profile?.logo_asset_id ?? null
     const logoUrl = logoId ? await this.assets.getAssetStorageUrl(organizationId, logoId) : null
+    const brandAssets = org.brand_profile?.brand_assets as { qr_code?: string } | null
+    const zaloQrUrl = brandAssets?.qr_code || null
     return {
       name: org.business_profile?.display_name || org.name || "Tiệm hoa",
       phone: org.business_profile?.phone ?? null,
       address: org.business_profile?.address ?? null,
       logoUrl,
+      zaloQrUrl,
     }
   }
 

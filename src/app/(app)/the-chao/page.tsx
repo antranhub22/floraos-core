@@ -17,6 +17,7 @@ import { JourneyWizard } from "@/components/greeting-card/journey/journey-wizard
 import { CoordinatorBrochureTab } from "@/components/greeting-card/coordinator/coordinator-brochure-tab"
 import { BrochureOrderTrackingTab } from "@/components/greeting-card/tracking/brochure-order-tracking-tab"
 import { InboxButton } from "@/components/greeting-card/inbox/inbox-button"
+import { BrochureUserGuideModal } from "@/components/greeting-card/brochure-user-guide-modal"
 import type { InboxTarget } from "@/components/greeting-card/inbox/inbox-panel"
 
 type ActiveTab = "sales" | "payment" | "catalog" | "coordinator" | "tracking"
@@ -103,6 +104,7 @@ export default function TheChaoPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <BrochureUserGuideModal />
           <InboxButton onOpenTarget={openInboxTarget} />
           <div role="tablist" aria-label="Chế độ làm việc" className="inline-flex rounded-xl border border-border bg-surface-alt p-1">
             {MODES.map((m) => {

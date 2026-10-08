@@ -74,7 +74,11 @@ export interface OrderProgressState {
  * bốn tác vụ theo thứ tự bất kỳ — giao ship trước khi cắm xong, hay chụp ảnh
  * người nhận trên đơn đã huỷ.
  */
-export function coordinatorActionBlocker(action: CoordinatorAction, s: OrderProgressState): string | null {
+export function coordinatorActionBlocker(
+  action: CoordinatorAction,
+  s: OrderProgressState,
+  options?: { skipPhoto?: boolean }
+): string | null {
   if (s.status === "CANCELLED") return "Đơn hàng đã huỷ"
   if (s.status === "COMPLETED" || s.deliveryStatus === "DELIVERED") return "Đơn hàng đã giao xong"
 
@@ -88,7 +92,7 @@ export function coordinatorActionBlocker(action: CoordinatorAction, s: OrderProg
       return null
     case "dispatch-shipping":
       if (shipped) return "Đơn đã giao cho shipper"
-      if (s.productionStatus !== "READY") return "Cần chụp ảnh thành phẩm trước khi giao ship"
+      if (s.productionStatus !== "READY" && !options?.skipPhoto) return "Cần chụp ảnh thành phẩm trước khi giao ship"
       return null
     case "recipient-photo":
       if (!shipped) return "Cần giao ship trước khi chụp ảnh người nhận"

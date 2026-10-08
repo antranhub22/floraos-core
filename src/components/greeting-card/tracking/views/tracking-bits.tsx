@@ -7,6 +7,15 @@ import type { SlaInfo, TrackingViewItem } from "@/modules/greeting-card/domain/t
 export const vnd = (n: number) => (n > 0 ? `${n.toLocaleString("vi-VN")} đ` : "Chờ báo giá")
 export const codeOf = (i: TrackingViewItem) => (i.orderCode ? `Đơn ${i.orderCode}` : `Link ${i.sendCode}`)
 
+/** Mã nhân viên / Người phụ trách đơn hàng (Spec #7) */
+export const responsibleEmployee = (i: TrackingViewItem) => {
+  if (i.saleId) {
+    const shortId = i.saleId.length > 8 ? i.saleId.slice(0, 8).toUpperCase() : i.saleId.toUpperCase()
+    return `${i.saleName} (NV-${shortId})`
+  }
+  return i.saleName
+}
+
 const SLA_STYLE: Record<SlaInfo["state"], { label: string; cls: string }> = {
   OVERDUE: { label: "Quá hạn", cls: "bg-danger-bg text-danger" },
   DUE_SOON: { label: "Sắp quá hạn", cls: "bg-warning-bg text-warning" },

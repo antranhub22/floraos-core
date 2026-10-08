@@ -1,10 +1,12 @@
 "use client"
 
-import { ArrowLeft, Check } from "lucide-react"
+import { ArrowLeft, Check, Gift, ShieldCheck, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { BrochureQuote } from "@/modules/greeting-card/domain/brochure-pricing"
 import type { CustomerOrderSubmitInput, ProductSnapshot } from "@/modules/greeting-card/domain/greeting-card-types"
+import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
 import { PrivacyNotice } from "./privacy-notice"
+import React, { useState } from "react"
 
 const vnd = (n: number) => `${n.toLocaleString("vi-VN")} đ`
 
@@ -32,13 +34,17 @@ export function OrderReview(props: {
   variantName: string | null
   input: CustomerOrderSubmitInput
   quote: BrochureQuote | null
+  appliedPolicies?: PublicAppliedPolicies | null | undefined
   submitting: boolean
   error: string | null
   onEdit: () => void
   onConfirm: () => void
 }) {
-  const { product, input, quote } = props
+  const { product, input, quote, appliedPolicies } = props
   const awaitingQuote = quote?.awaitingQuote || (quote?.totalVnd ?? product.price) <= 0
+  const [termsAgreed, setTermsAgreed] = useState(input.confirmedTerms ?? true)
+
+  const selectedPromo = appliedPolicies?.promotions.find((p) => p.id === input.selectedPromotionId)
 
   return (
     <section aria-labelledby="order-review-title" className="flex flex-col gap-4">
@@ -65,13 +71,79 @@ export function OrderReview(props: {
         {input.cardMessage?.trim() && <Row label="Lời nhắn thiệp" value={`“${input.cardMessage.trim()}”`} />}
       </dl>
 
+      {/* 3 KHỐI CHÍNH SÁCH: ƯU ĐÃI, CAM KẾT, THỎA THUẬN (SPEC #2 & #5) */}
+      <div className="space-y-3">
+        {selectedPromo && (
+          <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-1">
+            <h4 className="text-caption font-extrabold uppercase tracking-wider text-primary flex items-center gap-1.5">
+              <Gift size={14} />
+              <span>Ưu đãi áp dụng cho đơn hàng</span>
+            </h4>
+            <p className="text-body-sm font-bold text-foreground">{selectedPromo.title}</p>
+            <p className="text-caption text-text-muted">{selectedPromo.customerText}</p>
+          </div>
+        )}
+
+        {appliedPolicies?.commitments && appliedPolicies.commitments.length > 0 && (
+          <div className="p-3.5 rounded-xl border border-success/20 bg-success/5 space-y-2">
+            <h4 className="text-caption font-extrabold uppercase tracking-wider text-success flex items-center gap-1.5">
+              <ShieldCheck size={14} />
+              <span>Cam kết của cửa hàng ({appliedPolicies.commitments.length})</span>
+            </h4>
+            <ul className="space-y-1.5 text-caption text-text-muted">
+              {appliedPolicies.commitments.map((c) => (
+                <li key={c.id} className="flex items-start gap-1.5">
+                  <span className="text-success font-bold">✓</span>
+                  <span><strong className="text-foreground">{c.title}:</strong> {c.customerText}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {appliedPolicies?.agreements && appliedPolicies.agreements.length > 0 && (
+          <div className="p-3.5 rounded-xl border border-border bg-surface-muted space-y-2">
+            <h4 className="text-caption font-extrabold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+              <FileText size={14} />
+              <span>Thỏa thuận khi thực hiện đơn ({appliedPolicies.agreements.length})</span>
+            </h4>
+            <ul className="space-y-1.5 text-caption text-text-muted">
+              {appliedPolicies.agreements.map((a) => (
+                <li key={a.id} className="flex items-start gap-1.5">
+                  <span className="text-text-muted font-bold">•</span>
+                  <span><strong className="text-foreground">{a.title}:</strong> {a.customerText}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* CHECKBOX XÁC NHẬN THỎA THUẬN (SPEC #2 D, #5) */}
+      <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-background cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={termsAgreed}
+          onChange={(e) => setTermsAgreed(e.target.checked)}
+          className="mt-0.5 rounded border-border text-primary focus:ring-primary w-4 h-4"
+        />
+        <span className="text-caption leading-relaxed text-foreground">
+          Tôi đã đọc và hiểu các <strong>Thỏa thuận với khách hàng</strong> áp dụng cho đơn hàng này.
+        </span>
+      </label>
+
       {props.error && (
         <p role="alert" className="rounded-xl border border-danger/30 bg-danger-bg p-3 text-body-sm text-danger">
           {props.error}
         </p>
       )}
 
-      <Button type="button" onClick={props.onConfirm} disabled={props.submitting} className="h-12 w-full gap-2 rounded-xl text-body font-extrabold">
+      <Button
+        type="button"
+        onClick={props.onConfirm}
+        disabled={props.submitting || !termsAgreed}
+        className="h-12 w-full gap-2 rounded-xl text-body font-extrabold"
+      >
         <Check size={18} aria-hidden="true" />
         {props.submitting ? "Đang gửi đơn hàng..." : awaitingQuote ? "Xác nhận gửi đơn" : "Xác nhận đặt hoa & thanh toán"}
       </Button>

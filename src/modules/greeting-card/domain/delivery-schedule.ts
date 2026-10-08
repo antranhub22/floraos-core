@@ -8,11 +8,15 @@ import type { ShippingConfig } from "./brochure-pricing"
 const VN_OFFSET_MS = 7 * 3_600_000
 
 /** Khung giờ giao + giờ kết thúc (giờ VN). `null` = thoả thuận riêng, luôn chọn được. */
-export const DELIVERY_SLOTS: readonly { label: string; endHour: number | null }[] = [
-  { label: "Buổi sáng (8h - 12h)", endHour: 12 },
-  { label: "Buổi chiều (13h - 17h)", endHour: 17 },
-  { label: "Buổi tối (18h - 21h)", endHour: 21 },
-  { label: "Giờ cụ thể (liên hệ)", endHour: null },
+export const DELIVERY_SLOTS: readonly { label: string; startHour: number | null; endHour: number | null }[] = [
+  { label: "08:00 - 10:00 (Sáng sớm)", startHour: 8, endHour: 10 },
+  { label: "10:00 - 12:00 (Trưa)", startHour: 10, endHour: 12 },
+  { label: "14:00 - 16:00 (Chiều)", startHour: 14, endHour: 16 },
+  { label: "18:00 - 20:00 (Tối)", startHour: 18, endHour: 20 },
+  { label: "Buổi sáng (8h - 12h)", startHour: 8, endHour: 12 },
+  { label: "Buổi chiều (13h - 17h)", startHour: 13, endHour: 17 },
+  { label: "Buổi tối (18h - 21h)", startHour: 18, endHour: 21 },
+  { label: "Giờ cụ thể (liên hệ)", startHour: null, endHour: null },
 ]
 
 function vnClock(now: Date): { date: string; hour: number } {
@@ -40,7 +44,10 @@ export function availableSlots(date: string, cfg: Schedule, now: Date = new Date
 /** Ngày sớm nhất còn giao được: hôm nay, hoặc ngày mai khi hôm nay hết khung giờ. */
 export function earliestDeliveryDate(cfg: Schedule, now: Date = new Date()): string {
   const { date: today } = vnClock(now)
-  const todaySlots = availableSlots(today, cfg, now).filter((l) => l !== DELIVERY_SLOTS[3]!.label)
+  const todaySlots = availableSlots(today, cfg, now).filter((l) => {
+    const slot = DELIVERY_SLOTS.find((s) => s.label === l)
+    return slot && slot.endHour !== null
+  })
   return todaySlots.length > 0 ? today : nextDay(today)
 }
 
