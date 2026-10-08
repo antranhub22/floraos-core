@@ -29,7 +29,7 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
   const canEditCatalog = useSession().can("L3")
   const data = useJourneyCatalogs()
   const { catalogs, setCatalogs, orgSlug } = data
-  const { copy, copiedKey, copyError } = useCopyLink()
+  const { copy, copiedKey, copyError, copyFallback } = useCopyLink()
 
   const [step, setStep] = useState<JourneyStep>(1)
   const [pickedId, setPickedId] = useState("")
@@ -146,6 +146,7 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
           itemCount={itemCount}
           copied={copiedKey === "public"}
           copyError={copyError}
+          copyFallback={copyFallback}
           onCopy={() => selected && void copy("public", () => createShareUrl(selected.id))}
           onPreview={() => selected && setPreview({ url: publicUrl, title: `Xem trước: ${selected.name}` })}
           onClone={() => setDialog("clone")}
