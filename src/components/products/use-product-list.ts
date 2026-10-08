@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 
-const PAGE_SIZE = "50"
+const PAGE_SIZE = "100"
 const SEARCH_DEBOUNCE_MS = 300
 
 type Page<T> = { data: T[]; next_cursor: string | null }

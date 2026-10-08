@@ -189,7 +189,24 @@ export const SAAS_KNOWLEDGE_BASE: SaasKnowledgeItem[] = [
     actionLabel: "Cấu Hình Kênh Chat M08",
   },
 
-  // 8. TỔNG HỢP — CẨM NANG NHẬP LIỆU CHUẨN SSOT
+  // 8. M03 — KHO SẢN PHẨM & BẢO MẬT LINK GOOGLE DRIVE
+  {
+    id: "m03_excel_drive_security",
+    moduleCode: "M03",
+    title: "Nhập sản phẩm từ Excel & Bảo mật link Google Drive",
+    keywords: ["google drive", "link drive", "quyền riêng tư", "bảo mật link", "drive thumbnail", "nhập excel", "công khai", "người xem", "kho ảnh", "lộ link"],
+    summary: "Hướng dẫn phân quyền thư mục Google Drive ở chế độ 'Người xem' (Viewer) cho kho ảnh mẫu hoa, và giải pháp bảo mật tối đa bằng cách kéo thả folder ảnh trực tiếp từ máy tính lên FloraOS Native Storage có mã hóa HMAC.",
+    steps: [
+      "Trên Google Drive: Tạo riêng thư mục '[FloraOS] Kho Ảnh Mẫu', tuyệt đối không để chung với tài liệu tài chính hay hợp đồng",
+      "Cài đặt chia sẻ: Chọn 'Bất kỳ ai có đường liên kết' -> Đặt vai trò 'Người xem' (Viewer) để chỉ cho xem ảnh mẫu bán hàng, không thể sửa hay xóa",
+      "Để bảo mật tuyệt đối và hiển thị ảnh tức thì: Tại màn hình '/san-pham/nhap-hang-loat', kéo thả cả folder ảnh từ máy tính vào ô '2. Thư mục ảnh sản phẩm'",
+      "Hệ thống FloraOS sẽ lưu ảnh vào Cloud Storage riêng của tiệm, bảo vệ bằng Signed URL có chữ ký HMAC tự hết hạn sau 24h",
+    ],
+    routePath: "/san-pham/nhap-hang-loat",
+    actionLabel: "Mở Nhập Hàng Loạt & Ảnh",
+  },
+
+  // 9. TỔNG HỢP — CẨM NANG NHẬP LIỆU CHUẨN SSOT
   {
     id: "kb_input_guide",
     moduleCode: "KB",
@@ -224,6 +241,7 @@ export function detectUserIntent(query: string): "SAAS_HELP" | "FLOWER_SALES" {
     "phân tầng", "rfm", "hạng vip", "hạng vàng", "khách hàng",
     "dựng video", "video studio", "storyboard", "mã qr", "catalog",
     "đếm cành", "bóc tách", "tải ảnh", "cài đặt giá", "giá sàn", "chi phí",
+    "google drive", "link drive", "bảo mật drive", "quyền riêng tư drive", "lộ link",
     "tích hợp đa kênh", "kết nối facebook", "kết nối zalo", "nhúng website", "biểu phí",
   ]
 
