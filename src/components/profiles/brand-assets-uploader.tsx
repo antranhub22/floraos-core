@@ -448,7 +448,7 @@ export function BrandAssetsUploader({
             </button>
           </div>
           <p className="text-caption text-text-muted mb-3">
-            Khách bấm "Mã QR" trên trang đặt hoa sẽ thấy mã này để kết nối Zalo với tiệm. Không tải mã QR ngân hàng vào đây — mã thanh toán được tạo tự động theo từng đơn từ tài khoản nhận tiền ở tab Doanh nghiệp.
+            Khách bấm &quot;Mã QR&quot; trên trang đặt hoa sẽ thấy mã này để kết nối Zalo với tiệm. Không tải mã QR ngân hàng vào đây — mã thanh toán được tạo tự động theo từng đơn từ tài khoản nhận tiền ở tab Doanh nghiệp.
           </p>
           {/* Khuyến cáo upload mã QR */}
           <PhotoUploadGuidance
