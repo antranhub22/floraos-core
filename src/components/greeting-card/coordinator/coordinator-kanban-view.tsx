@@ -130,7 +130,7 @@ export function CoordinatorKanbanView({
                           <p className="text-caption font-semibold text-foreground truncate">
                             {snapshot?.name || o.items[0]?.description || "Hoa tươi theo mẫu"}
                           </p>
-                          <p className="text-[11px] text-text-muted truncate">
+                          <p className="text-caption text-text-muted truncate">
                             {o.delivery_address?.recipientName || "Khách nhận"} · {o.delivery_window?.timeSlot || "Trong ngày"}
                           </p>
                         </div>

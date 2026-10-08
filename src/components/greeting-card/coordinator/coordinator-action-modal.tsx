@@ -51,7 +51,18 @@ export function CoordinatorActionModal({ modal, onClose, onDone }: { modal: Acti
       />
     )
   }
+  return <CoordinatorTaskModal modal={modal} onClose={onClose} onDone={onDone} />
+}
 
+function CoordinatorTaskModal({
+  modal,
+  onClose,
+  onDone,
+}: {
+  modal: Exclude<ActiveModal, { type: "cancel-proposal" }>
+  onClose: () => void
+  onDone: () => void
+}) {
   const cfg = CONFIG[modal.type]
   const Icon = cfg.icon
   const [note, setNote] = useState("")

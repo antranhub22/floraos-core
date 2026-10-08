@@ -7,6 +7,7 @@ import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import {
   type CancellationPayload,
   type CancellationProposal,
+  resolveRefundVnd,
   validateCancellationProposal,
 } from "../domain/cancellation-request"
 import type { MessageRole } from "../domain/internal-message"
@@ -116,8 +117,10 @@ export class CancellationRepository {
       })
       if (!order) throw notFound()
 
+      if (input.approve && order.status === "CANCELLED") throw conflict("Đơn hàng này đã bị hủy trước đó.")
+
       const refundVnd = input.approve
-        ? Math.max(0, Math.round(input.actualRefundVnd ?? payload.refundAmountVnd ?? 0))
+        ? resolveRefundVnd(payload.type, Number(order.paid_vnd), payload.refundAmountVnd, input.actualRefundVnd)
         : 0
 
       if (input.approve && refundVnd > Number(order.paid_vnd)) {
@@ -144,8 +147,8 @@ export class CancellationRepository {
         const newPaid = Number(order.paid_vnd) - refundVnd
         const newBalance = Number(order.total_vnd) - newPaid
 
-        await tx.orders.update({
-          where: { id: order.id },
+        await tx.orders.updateMany({
+          where: scopedWhere(ctx, { id: order.id }),
           data: {
             paid_vnd: newPaid,
             balance_vnd: newBalance,
@@ -156,8 +159,8 @@ export class CancellationRepository {
       // 2. Nếu duyệt hủy đơn (CANCEL_ONLY hoặc FULL_REFUND) -> chuyển trạng thái orders thành CANCELLED
       const shouldCancelOrder = input.approve && (payload.type === "CANCEL_ONLY" || payload.type === "FULL_REFUND")
       if (shouldCancelOrder) {
-        await tx.orders.update({
-          where: { id: order.id },
+        await tx.orders.updateMany({
+          where: scopedWhere(ctx, { id: order.id }),
           data: { status: "CANCELLED" },
         })
 
@@ -229,12 +232,24 @@ export class CancellationRepository {
     })
   }
 
+  /** Loại đề xuất đang chờ duyệt — route dùng để gác năng lực trước khi gọi `decide`. */
+  async getPendingType(ctx: TenantContext, requestId: string): Promise<CancellationPayload["type"] | null> {
+    const req = await this.db.greeting_messages.findFirst({
+      where: scopedWhere(ctx, { id: requestId, kind: "CANCELLATION_REQUEST" }),
+      select: { payload: true },
+    })
+    if (!req) return null
+    const type = obj(req.payload).type
+    return type === "CANCEL_ONLY" || type === "FULL_REFUND" || type === "PARTIAL_REFUND" ? type : null
+  }
+
   /** Lấy danh sách đề xuất hủy/hoàn tiền đang chờ duyệt cho Điều hành */
   async listPending(ctx: TenantContext) {
     return this.db.greeting_messages.findMany({
       where: scopedWhere(ctx, { kind: "CANCELLATION_REQUEST", payload: { path: ["status"], equals: "PENDING" } }),
       select: { id: true, order_id: true, sender_id: true, body: true, payload: true, created_at: true },
       orderBy: { created_at: "asc" },
+      take: 200,
     })
   }
 }

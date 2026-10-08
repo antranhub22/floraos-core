@@ -44,7 +44,7 @@ export function CancellationProposalModal({
     e.preventDefault()
     setError(null)
 
-    const refundNum = Number(refundAmount) || 0
+    const refundNum = Math.round(Number(refundAmount) || 0)
     const validationError = validateCancellationProposal(
       {
         type,

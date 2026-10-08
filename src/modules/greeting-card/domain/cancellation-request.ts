@@ -75,3 +75,29 @@ export function validateCancellationProposal(
 
   return null
 }
+
+/**
+ * Số tiền hoàn thực tế khi Điều hành duyệt — máy chủ tự tính, không tin client:
+ * Hủy đơn không hoàn → 0; Hoàn toàn phần → đúng số đã thu; Hoàn một phần → số Điều hành
+ * chốt (hoặc số đề xuất), không âm.
+ */
+export function resolveRefundVnd(
+  type: CancellationType,
+  paidVnd: number,
+  requestedVnd: number | undefined,
+  actualVnd: number | undefined,
+): number {
+  if (type === "CANCEL_ONLY") return 0
+  if (type === "FULL_REFUND") return Math.max(0, Math.round(paidVnd))
+  return Math.max(0, Math.round(actualVnd ?? requestedVnd ?? 0))
+}
+
+/** Năng lực cần để duyệt/từ chối: hủy đơn → R6, có hoàn tiền → R10 (trần cứng điều hành). */
+export function decisionCapabilities(
+  type: CancellationType,
+  caps: { orderCancel: string; paymentRefund: string },
+): string[] {
+  if (type === "CANCEL_ONLY") return [caps.orderCancel]
+  if (type === "FULL_REFUND") return [caps.orderCancel, caps.paymentRefund]
+  return [caps.paymentRefund]
+}

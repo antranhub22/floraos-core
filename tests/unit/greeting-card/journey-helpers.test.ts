@@ -38,15 +38,15 @@ describe("isValidPhone", () => {
 describe("toPublicCatalogFilters", () => {
   const all = ["flowers", "color", "style", "dimensions", "wrapStyle", "category", "description"]
   it("chỉ gửi mẫu + trường hiển thị, bỏ bộ lọc nội bộ của bộ sưu tập", () => {
-    expect(toPublicCatalogFilters({ templateId: "lookbook-grid", priceMax: 500000 })).toEqual({
-      templateId: "lookbook-grid",
-      displayFields: all,
-    })
+    const out = toPublicCatalogFilters({ templateId: "lookbook-grid", priceMax: 500000 })
+    expect(out).toMatchObject({ templateId: "lookbook-grid", displayFields: all })
+    expect(Object.keys(out ?? {}).sort()).toEqual(["appliedPolicies", "displayFields", "templateId"])
+    expect(JSON.stringify(out)).not.toContain("priceMax")
   })
   it("đọc cấu hình bật/tắt của cửa hàng cho đúng mẫu, bỏ khoá cài đặt khác", () => {
     const settings = { cho_phep_tu_duyet: true, greetingCardDisplay: { "lookbook-grid": ["dimensions", "bogus"] } }
     const out = toPublicCatalogFilters({ templateId: "lookbook-grid" }, settings)
-    expect(out).toEqual({ templateId: "lookbook-grid", displayFields: ["dimensions"] })
+    expect(out).toMatchObject({ templateId: "lookbook-grid", displayFields: ["dimensions"] })
     expect(JSON.stringify(out)).not.toContain("cho_phep_tu_duyet")
   })
   it("trả null khi không có templateId và không có cài đặt cửa hàng", () => {

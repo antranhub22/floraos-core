@@ -13,7 +13,13 @@ const TOMORROW = "2026-10-21"
 describe("giờ chốt đơn & thời gian chuẩn bị", () => {
   it("không cấu hình: hôm nay vẫn chọn được, chỉ bỏ khung đã qua", () => {
     expect(earliestDeliveryDate({}, at(10))).toBe(TODAY)
-    expect(availableSlots(TODAY, {}, at(13))).toEqual(["Buổi chiều (13h - 17h)", "Buổi tối (18h - 21h)", "Giờ cụ thể (liên hệ)"])
+    expect(availableSlots(TODAY, {}, at(13))).toEqual([
+      "14:00 - 16:00 (Chiều)",
+      "18:00 - 20:00 (Tối)",
+      "Buổi chiều (13h - 17h)",
+      "Buổi tối (18h - 21h)",
+      "Giờ cụ thể (liên hệ)",
+    ])
   })
 
   it("qua giờ chốt: sớm nhất là ngày mai và báo lỗi rõ ràng", () => {
@@ -59,6 +65,7 @@ describe("thông tin liên hệ cửa hàng", () => {
       zaloUrl: "https://zalo.me/0901234567",
       address: null,
       logoUrl: null,
+      zaloQrUrl: null,
     })
   })
 })

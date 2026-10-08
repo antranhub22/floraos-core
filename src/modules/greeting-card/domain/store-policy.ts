@@ -73,11 +73,28 @@ export const STORE_POLICIES_SETTINGS_KEY = "store_policies"
 export function parseStorePolicies(settings: unknown): StorePoliciesConfig {
   const root = settings && typeof settings === "object" ? (settings as Record<string, unknown>) : {}
   const raw = root[STORE_POLICIES_SETTINGS_KEY] as Partial<StorePoliciesConfig> | undefined
+  const promotions = cleanItems<PromotionItem>(raw?.promotions, "description")
+  const commitments = cleanItems<CommitmentItem>(raw?.commitments, "customerText")
+  const agreements = cleanItems<AgreementItem>(raw?.agreements, "customerText")
   return {
-    promotions: Array.isArray(raw?.promotions) && raw.promotions.length > 0 ? raw.promotions : DEFAULT_PROMOTIONS,
-    commitments: Array.isArray(raw?.commitments) && raw.commitments.length > 0 ? raw.commitments : DEFAULT_COMMITMENTS,
-    agreements: Array.isArray(raw?.agreements) && raw.agreements.length > 0 ? raw.agreements : DEFAULT_AGREEMENTS,
+    promotions: promotions.length > 0 ? promotions : DEFAULT_PROMOTIONS,
+    commitments: commitments.length > 0 ? commitments : DEFAULT_COMMITMENTS,
+    agreements: agreements.length > 0 ? agreements : DEFAULT_AGREEMENTS,
   }
+}
+
+const MAX_POLICY_ITEMS = 50
+
+/** Bỏ mục hỏng (thiếu id/tiêu đề/nội dung dạng chuỗi) — dữ liệu này hiện ra trang công khai. */
+function cleanItems<T>(value: unknown, textKey: "description" | "customerText"): T[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((v): v is Record<string, unknown> =>
+      Boolean(v) && typeof v === "object" &&
+      typeof (v as Record<string, unknown>).id === "string" &&
+      typeof (v as Record<string, unknown>).title === "string" &&
+      typeof (v as Record<string, unknown>)[textKey] === "string")
+    .slice(0, MAX_POLICY_ITEMS) as T[]
 }
 
 export type PublicAppliedPolicies = {

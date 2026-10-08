@@ -139,7 +139,7 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
                     {active && <Check size={12} />}
                   </div>
                 </div>
-                <p className="text-[11px] text-text-muted line-clamp-2">{p.description}</p>
+                <p className="text-caption text-text-muted line-clamp-2">{p.description}</p>
               </button>
             )
           })}
@@ -170,7 +170,7 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
                     {active && <Check size={12} />}
                   </div>
                 </div>
-                <p className="text-[11px] text-text-muted line-clamp-2">{c.customerText}</p>
+                <p className="text-caption text-text-muted line-clamp-2">{c.customerText}</p>
               </button>
             )
           })}
@@ -201,7 +201,7 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
                     {active && <Check size={12} />}
                   </div>
                 </div>
-                <p className="text-[11px] text-text-muted line-clamp-2">{a.customerText}</p>
+                <p className="text-caption text-text-muted line-clamp-2">{a.customerText}</p>
               </button>
             )
           })}

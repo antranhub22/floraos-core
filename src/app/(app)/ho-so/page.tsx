@@ -226,6 +226,8 @@ function StorePoliciesSection() {
     }
   }
 
+  // Editor giữ bản nháp riêng — chỉ dựng khi đã có dữ liệu thật, tránh ghi đè mặc định lên chính sách đã lưu
+  if (!policies) return <p className="text-body-sm text-text-muted">Đang tải chính sách…</p>
   return (
     <StorePoliciesEditor
       initialPolicies={policies}

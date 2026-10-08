@@ -176,7 +176,7 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
                   {s.label}
                 </span>
                 {stepTimeLabel && (
-                  <span className="text-[10.5px] font-medium text-text-muted leading-tight">
+                  <span className="text-caption font-medium text-text-muted leading-tight">
                     {stepTimeLabel}
                   </span>
                 )}
@@ -210,7 +210,7 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
           <p className="text-caption text-text-muted">Hoa được chụp nghiệm thu trước khi giao.</p>
 
           {/* KHUNG XÁC NHẬN HÌNH ẢNH SẢN PHẨM & ĐỒNG HỒ ĐẾM NGƯỢC (SPEC #3) */}
-          {order.photoApproval?.status === "PENDING" && order.photoApproval.uploadedAt && (
+          {sendCode && order.photoApproval?.status === "PENDING" && order.photoApproval.uploadedAt && (
             <PhotoApprovalCard
               orderCode={order.code}
               sendCode={sendCode}
