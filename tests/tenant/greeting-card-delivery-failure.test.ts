@@ -17,7 +17,8 @@ import { getBrochureTracking } from "@/modules/greeting-card/use-cases/get-broch
 const DATE = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10)
 const ORDER = {
   customerName: "Khách Quen", customerPhone: "0987654321", recipientName: "Người Nhận", recipientPhone: "0912345678",
-  confirmedTerms: true, deliveryDate: DATE, deliveryTimeSlot: "08:00 - 10:00", deliveryAddress: "1 Lê Lợi, Q1", cardMessage: "Chúc mừng",
+  confirmedTerms: true, selectedPromotionId: "promo-free-card", // ưu đãi tặng kèm — không đổi số tiền bài này kiểm
+  deliveryDate: DATE, deliveryTimeSlot: "08:00 - 10:00", deliveryAddress: "1 Lê Lợi, Q1", cardMessage: "Chúc mừng",
 }
 const PROOF = { phoneLast4: "4321" }
 

@@ -15,7 +15,8 @@ const HOLIDAY = new Date(Date.now() + 20 * 86_400_000).toISOString().slice(0, 10
 const NORMAL = new Date(Date.now() + 21 * 86_400_000).toISOString().slice(0, 10)
 const order = (date: string, phone: string) => ({
   customerName: "Khách", customerPhone: phone, recipientName: "Người Nhận", recipientPhone: "0912345678",
-  confirmedTerms: true, deliveryDate: date, deliveryTimeSlot: "08:00 - 10:00", deliveryAddress: "1 Lê Lợi, Q1",
+  confirmedTerms: true, selectedPromotionId: "promo-free-card", // ưu đãi tặng kèm — không đổi số tiền bài này kiểm
+  deliveryDate: date, deliveryTimeSlot: "08:00 - 10:00", deliveryAddress: "1 Lê Lợi, Q1",
 })
 
 async function codeOf(p: Promise<unknown>): Promise<string | undefined> {
