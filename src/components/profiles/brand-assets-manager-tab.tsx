@@ -70,7 +70,7 @@ export function BrandAssetsManagerTab({
   const storefrontCount = brandAssets?.storefront_photos?.length || 0
   const hasLogo = Boolean(logoAssetId)
   const hasVideo = Boolean(brandAssets?.intro_video)
-  const hasQr = Boolean(brandAssets?.qr_code)
+  const hasQr = Boolean(brandAssets?.zalo_qr)
 
   return (
     <div className="space-y-6">
@@ -149,7 +149,7 @@ export function BrandAssetsManagerTab({
           <div className="rounded-xl border border-border bg-surface-alt/60 p-3 flex items-center gap-2.5">
             <div className={`h-2.5 w-2.5 rounded-full ${hasQr ? "bg-success" : "bg-warning"}`} />
             <div>
-              <div className="text-caption font-bold text-text">Mã QR thanh toán</div>
+              <div className="text-caption font-bold text-text">Mã QR Zalo</div>
               <div className="text-caption text-text-muted">
                 {hasQr ? "Đã kết nối" : "Chưa có ảnh"}
               </div>

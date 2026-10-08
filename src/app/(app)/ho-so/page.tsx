@@ -14,6 +14,7 @@ import { GreetingLineOverrideForm } from "@/components/profiles/greeting-line-ov
 import { OccasionsSettingsForm } from "@/components/organization/occasions-settings-form"
 import { ProfileJourneyWorkspace } from "@/components/profiles/journey/profile-journey-workspace"
 import { StorePoliciesEditor } from "@/components/profiles/store-policies-editor"
+import { BrochurePaymentSettings } from "@/components/greeting-card/admin/brochure-payment-settings"
 import { useApi, apiSend } from "@/components/greeting-card/greeting-api"
 import {
   parseStorePolicies,
@@ -153,11 +154,15 @@ export default function ProfilePage() {
       ) : (
         <div>
           {activeTab === "business" && (
-            <BusinessProfileForm
-              initialData={business}
-              onSave={saveBusiness}
-              saving={saving}
-            />
+            <div className="space-y-6">
+              <BusinessProfileForm
+                initialData={business}
+                onSave={saveBusiness}
+                saving={saving}
+              />
+              {/* Thanh toán: tài khoản ngân hàng → hệ thống tự tạo VietQR theo từng đơn (đúng số tiền, mã đơn) */}
+              <BrochurePaymentSettings />
+            </div>
           )}
 
           {activeTab === "brand" && (

@@ -110,6 +110,7 @@ export class BusinessProfileFactReader implements IFactReader {
           if (ba.storefront_photos) addBrandFact('storefront_photos', ba.storefront_photos)
           if (ba.intro_video) addBrandFact('intro_video', ba.intro_video)
           if (ba.qr_code) addBrandFact('qr_code', ba.qr_code)
+          if (ba.zalo_qr) addBrandFact('zalo_qr', ba.zalo_qr)
         }
       }
     }

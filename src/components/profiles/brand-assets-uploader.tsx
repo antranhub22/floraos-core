@@ -22,7 +22,7 @@ import {
 export interface BrandAssetsData {
   storefront_photos?: string[]
   intro_video?: string
-  qr_code?: string
+  zalo_qr?: string // chỉ mã QR Zalo; `qr_code` cũ (từng nhận mã ngân hàng) không còn dùng
 }
 
 export interface BrandAssetsUploaderProps {
@@ -112,7 +112,7 @@ export function BrandAssetsUploader({
 
   const storefrontPhotos = brandAssets?.storefront_photos || []
   const introVideo = brandAssets?.intro_video || ""
-  const qrCode = brandAssets?.qr_code || ""
+  const qrCode = brandAssets?.zalo_qr || ""
 
   const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -182,7 +182,7 @@ export function BrandAssetsUploader({
     setErrorMessage(null)
     try {
       const { viewUrl } = await uploadFileToAssets(file)
-      onBrandAssetsChange({ ...brandAssets, qr_code: viewUrl })
+      onBrandAssetsChange({ ...brandAssets, zalo_qr: viewUrl })
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Tải mã QR thất bại")
     } finally {
@@ -423,12 +423,12 @@ export function BrandAssetsUploader({
           )}
         </div>
 
-        {/* Mã QR Thanh toán & Zalo */}
+        {/* Mã QR Zalo — thanh toán dùng VietQR tự tạo theo đơn từ tài khoản nhận tiền (tab Doanh nghiệp) */}
         <div className="rounded-xl border border-border bg-surface-alt p-4">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-body font-bold text-text flex items-center gap-2">
               <QrCode size={16} className="text-primary" />
-              <span>Ảnh Mã QR Zalo / Ngân hàng</span>
+              <span>Mã QR Zalo của tiệm</span>
             </h4>
             <input
               ref={qrInputRef}
@@ -448,7 +448,7 @@ export function BrandAssetsUploader({
             </button>
           </div>
           <p className="text-caption text-text-muted mb-3">
-            Hiển thị ở chân trang Landing Page & Catalog để khách quét thanh toán nhanh.
+            Khách bấm &quot;Mã QR&quot; trên trang đặt hoa sẽ thấy mã này để kết nối Zalo với tiệm. Không tải mã QR ngân hàng vào đây — mã thanh toán được tạo tự động theo từng đơn từ tài khoản nhận tiền ở tab Doanh nghiệp.
           </p>
           {/* Khuyến cáo upload mã QR */}
           <PhotoUploadGuidance
@@ -460,12 +460,12 @@ export function BrandAssetsUploader({
           />
           {qrCode ? (
             <div className="relative rounded-xl overflow-hidden border border-border bg-surface aspect-16/9 flex items-center justify-center p-2">
-              <img src={qrCode} alt="Mã QR" className="max-h-full max-w-full object-contain" />
+              <img src={qrCode} alt="Mã QR Zalo" className="max-h-full max-w-full object-contain" />
               <button
                 type="button"
                 aria-label="Xóa mã QR"
                 title="Xóa mã QR"
-                onClick={() => onBrandAssetsChange({ ...brandAssets, qr_code: "" })}
+                onClick={() => onBrandAssetsChange({ ...brandAssets, zalo_qr: "" })}
                 className="absolute top-2 right-2 rounded-lg bg-surface/80 p-1 text-danger hover:bg-surface transition-colors"
               >
                 <Trash2 size={14} />

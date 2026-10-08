@@ -49,6 +49,16 @@ export function safeImageUrl(value: unknown): string | null {
 }
 
 /**
+ * Ảnh ở cửa sổ "Quét mã kết nối Zalo": CHỈ ô Mã QR Zalo (`zalo_qr`). Ô `qr_code` cũ từng được
+ * hướng dẫn tải mã QR ngân hàng (và dữ liệu mẫu là VietQR giả) nên không dùng — PO 08/10/2026.
+ * Không có → trang khách tự sinh QR từ link Zalo.
+ */
+export function zaloQrUrlFromBrandAssets(brandAssets: unknown): string | null {
+  if (!brandAssets || typeof brandAssets !== "object") return null
+  return safeImageUrl((brandAssets as Record<string, unknown>).zalo_qr)
+}
+
+/**
  * Hồ sơ mẫu "Tiệm Hoa Mộc Lan" (dữ liệu trải nghiệm) — PO 08/10/2026: không để khách thấy tên/SĐT mẫu.
  * Tiệm còn hồ sơ mẫu thì máy chủ chặn tạo link gửi khách cho tới khi sửa Hồ sơ tiệm.
  */
