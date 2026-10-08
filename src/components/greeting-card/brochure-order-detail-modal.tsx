@@ -222,11 +222,11 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes }: Broch
 
                 {/* Thiệp chúc mừng */}
                 {target.cardMessage ? (
-                  <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 p-3 flex flex-col gap-1 mt-1">
-                    <span className="text-caption font-bold text-amber-900 flex items-center gap-1">
+                  <div className="rounded-xl border border-warning/30 bg-warning-bg p-3 flex flex-col gap-1 mt-1">
+                    <span className="text-caption font-bold text-warning-text flex items-center gap-1">
                       💌 Lời chúc trên thiệp mừng:
                     </span>
-                    <p className="text-body-sm italic text-amber-950">&ldquo;{target.cardMessage}&rdquo;</p>
+                    <p className="text-body-sm italic text-foreground">&ldquo;{target.cardMessage}&rdquo;</p>
                   </div>
                 ) : (
                   <p className="text-caption text-text-muted italic">Không kèm nội dung thiệp.</p>

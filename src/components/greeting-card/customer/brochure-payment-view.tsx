@@ -268,6 +268,7 @@ export function BrochurePaymentView({
             type="button"
             disabled
             variant="outline"
+            onClick={() => {}}
             className="w-full h-11 text-body-sm text-text-muted opacity-60 cursor-not-allowed rounded-xl flex items-center justify-center gap-2"
           >
             <span>Theo dõi tiến độ đơn hàng (Chờ xác nhận)</span>
@@ -292,6 +293,7 @@ export function BrochurePaymentView({
             type="button"
             disabled
             variant="outline"
+            onClick={() => {}}
             className="w-full h-11 text-body-sm text-text-muted opacity-50 cursor-not-allowed rounded-xl flex items-center justify-center gap-2"
           >
             <span>Theo dõi tiến độ đơn hàng (Chờ thanh toán)</span>
