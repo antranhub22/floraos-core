@@ -1,15 +1,15 @@
 "use client"
 
 import React from "react"
-import { BadgeCheck, CheckCircle2, Clock, Gift, Truck } from "lucide-react"
+import { BadgeCheck, Clock, Flower2, Gift, Truck } from "lucide-react"
 import { TRACKING_STEP_COUNT } from "@/modules/greeting-card/domain/greeting-card-rules"
 
 const STEPS = [
   { label: "Tiếp nhận", icon: Clock },
-  { label: "Đã xác nhận", icon: BadgeCheck },
+  { label: "Xác nhận", icon: BadgeCheck },
   { label: "Cắm hoa", icon: Gift },
   { label: "Đang giao", icon: Truck },
-  { label: "Hoàn tất", icon: CheckCircle2 },
+  { label: "Hoàn tất", icon: Flower2 },
 ] as const
 
 function clock(iso: string): string {
@@ -31,7 +31,9 @@ export function TrackingSteps({
   createdAt: string
   timeline?: { arranging?: { displayRange: string }; delivering?: { displayRange: string } } | null | undefined
 }) {
-  const timeLabels = [clock(createdAt), "", timeline?.arranging?.displayRange ?? "", timeline?.delivering?.displayRange ?? "", ""]
+  // "17:30 - 19:30" → "17:30–19:30": gọn để nằm trên một dòng trong cột hẹp
+  const range = (r: string | undefined) => (r ?? "").replace(/\s*-\s*/g, "–")
+  const timeLabels = [clock(createdAt), "", range(timeline?.arranging?.displayRange), range(timeline?.delivering?.displayRange), ""]
   return (
     <ol className="grid grid-cols-5 gap-1 sm:gap-2 mt-2">
       {STEPS.map((s, idx) => {
@@ -52,10 +54,10 @@ export function TrackingSteps({
             >
               <Icon size={16} aria-hidden="true" />
             </div>
-            <span className={`text-caption font-bold leading-tight ${isCurrent ? "text-primary" : isCompleted ? "text-success" : "text-text-muted"}`}>
+            <span className={`text-caption font-bold leading-tight whitespace-nowrap ${isCurrent ? "text-primary" : isCompleted ? "text-success" : "text-text-muted"}`}>
               {s.label}
             </span>
-            {timeLabels[idx] && <span className="text-caption font-medium text-text-muted leading-tight">{timeLabels[idx]}</span>}
+            {timeLabels[idx] && <span className="text-caption font-medium text-text-muted leading-tight tracking-tight whitespace-nowrap">{timeLabels[idx]}</span>}
           </li>
         )
       })}
