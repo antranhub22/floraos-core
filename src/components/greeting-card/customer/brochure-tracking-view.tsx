@@ -1,13 +1,15 @@
 "use client"
 
 import { MediaGallery } from "@/components/greeting-card/media-gallery"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import useSWR from "swr"
 import { apiGet, apiSend } from "@/components/greeting-card/greeting-api"
 import { TrackingVerifyForm } from "./tracking-verify-form"
 import { CheckCircle2, Clock, Camera, RefreshCw } from "lucide-react"
 import { TrackingSteps } from "./tracking-steps"
 import { OrderChangePanel, type OrderChangeData } from "./order-change-panel"
+import { TrackingPaymentCard, type TrackingPayment } from "./tracking-payment-card"
+import { PaymentFailedNotice } from "./payment-failed-notice"
 import { SubstitutePanel, type SubstituteData } from "./substitute-panel"
 import { Button } from "@/components/ui/button"
 
@@ -15,6 +17,9 @@ interface BrochureTrackingViewProps {
   orderCode: string
   /** Mã link của chính khách — có thì máy chủ trả bản đầy đủ, không cần nhập SĐT. */
   sendCode?: string | null | undefined
+  /** Nút "Đặt lại đơn mới" khi đơn không hoàn thành vì thanh toán thất bại. */
+  failedCta?: React.ReactNode
+  onPaymentFailed?: (() => void) | undefined
 }
 
 type TrackingData = {
@@ -26,6 +31,8 @@ type TrackingData = {
     deliveryStatus: string
     totalVnd: number
     paidVnd: number
+    /** Kế hoạch + các đợt thanh toán (máy chủ mới; client cũ có thể thiếu) */
+    payment?: TrackingPayment
     cardMessage?: string | null
     /** `false` = bản rút gọn cho người chỉ biết mã đơn */
     verified?: boolean
@@ -61,7 +68,7 @@ type TrackingData = {
   }
 }
 
-export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingViewProps) {
+export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPaymentFailed }: BrochureTrackingViewProps) {
   const base = `/api/v1/public/brochure/tracking/${encodeURIComponent(orderCode)}`
   // Đã xác minh bằng 4 số cuối SĐT: hỏi bằng POST, không tự hỏi lại (máy chủ giới hạn số lần thử)
   const [last4, setLast4] = useState<string | null>(null)
@@ -72,6 +79,10 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
     { refreshInterval: last4 ? 0 : 15_000 },
   )
   const data = tracking.data?.status === "FOUND" ? tracking.data : null
+  const paymentFailed = data?.order.payment?.status === "PAYMENT_FAILED"
+  useEffect(() => {
+    if (paymentFailed) onPaymentFailed?.()
+  }, [paymentFailed, onPaymentFailed])
   const loading = tracking.isLoading
   const loadTracking = () => void tracking.mutate()
 
@@ -121,6 +132,8 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
           <span>Cập nhật</span>
         </Button>
       </div>
+
+      {paymentFailed && <PaymentFailedNotice orderCode={order.code} cta={failedCta} />}
 
       {/* Progress Bar & Current Status Card */}
       <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 flex flex-col gap-3">
@@ -186,6 +199,7 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
         </section>
       )}
 
+      {order.payment && !paymentFailed && <TrackingPaymentCard payment={order.payment} sendCode={sendCode} />}
       {order.verified === false && <TrackingVerifyForm orderCode={orderCode} onVerified={setLast4} />}
       {order.deliveryFailure && (
         <div role="status" className="rounded-2xl border border-warning/30 bg-warning-bg p-4 flex flex-col gap-1 text-body-sm">

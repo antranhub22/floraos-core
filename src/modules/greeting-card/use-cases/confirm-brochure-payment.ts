@@ -4,6 +4,7 @@ import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { expectedPayment, parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { policyForOrder } from "../domain/payment-plan"
 import { loadPublicSession } from "./brochure-session-access"
 import { queueOrderNotification } from "./notify-customer"
 import { paymentNotifyEvent } from "../domain/customer-notifications"
@@ -42,7 +43,7 @@ export async function reportCustomerPayment(sendCode: string, repo = new Greetin
 
 /**
  * Điều hành xác nhận đã nhận tiền. Không truyền số tiền → lấy đúng khoản
- * khách được yêu cầu chuyển (cọc theo chính sách tiệm, hoặc phần còn lại).
+ * khách được yêu cầu chuyển (cọc theo kế hoạch thanh toán của đơn, hoặc phần còn lại).
  */
 export async function adminConfirmBrochurePayment(
   ctx: TenantContext,
@@ -62,7 +63,8 @@ export async function adminConfirmBrochurePayment(
     const order = await orders.findBrochureOrder(ctx, orderId)
     if (!order) throw notFound()
     const shop = await repo.getShopProfile(ctx.organizationId)
-    amountVnd = expectedPayment(parsePaymentPolicy(shop.settings), Number(order.total_vnd), Number(order.paid_vnd)).amountVnd
+    const policy = policyForOrder(parsePaymentPolicy(shop.settings), order.pricing_rule_ref)
+    amountVnd = expectedPayment(policy, Number(order.total_vnd), Number(order.paid_vnd)).amountVnd
   }
   const result = await payments.recordIncomingPayment(ctx, orderId, {
     amountVnd,

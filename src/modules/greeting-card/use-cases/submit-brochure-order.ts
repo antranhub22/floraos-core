@@ -56,6 +56,7 @@ export async function submitBrochureOrder(
       notePrefix: `[Thẻ chào ${session.send_code}]`,
       shopSettings: shop.settings,
       catalogFilters: session.catalog.filters,
+      catalogId: session.catalog_id,
     })
   } catch (error) {
     // Hai tab/hai lần bấm gửi cùng lúc: giao dịch chỉ cho một đơn gắn vào phiên, lần kia bị
@@ -84,7 +85,7 @@ async function existingOrderResult(
     totalVnd: total,
     quote: null,
     productSnapshot: snapshot,
-    vietQr: paymentInstructionsFor(shopSettings, { totalVnd: total, paidVnd: Number(existing.paid_vnd), createdAt: existing.created_at }, existing.code),
+    vietQr: paymentInstructionsFor(shopSettings, { totalVnd: total, paidVnd: Number(existing.paid_vnd), createdAt: existing.created_at, pricingRuleRef: existing.pricing_rule_ref }, existing.code),
   }
 }
 
@@ -99,7 +100,7 @@ export async function quoteBrochureSession(
   const product = await resolveOrderableProduct(session, session.selected_product_id, repo)
   const shop = await repo.getShopProfile(session.organization_id)
   const promo = promotionForQuote(session.catalog.filters, shop.settings, req.selectedPromotionId)
-  const result = await quoteForProduct(session.organization_id, product, req, shop.settings, undefined, promo.promotion, session.catalog.filters)
+  const result = await quoteForProduct(session.organization_id, product, req, shop.settings, undefined, promo.promotion, session.catalog.filters, session.catalog_id)
   const fullSlots = await fullSlotsOn(session.organization_id, req.deliveryDate, shop.settings)
   return { ...result, fullSlots, ...(promo.error ? { errors: { ...result.errors, selectedPromotionId: promo.error } } : {}) }
 }

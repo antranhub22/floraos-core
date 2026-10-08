@@ -8,6 +8,7 @@ import { resolveProductPriceVnd } from "./brochure-commerce-rules"
 import { DELIVERY_SLOT_IDS } from "./delivery-schedule"
 import { promotionDiscountVnd, promotionWaivesShipping, type PromotionPricing } from "./promotion-pricing"
 import { parseSlotCapacity, type SlotCapacityConfig } from "./slot-capacity"
+import { parsePaymentPlans, paymentCodesEnabled, type PaymentPlanSnapshot } from "./payment-plan"
 
 export const MAX_ORDER_QUANTITY = 20
 
@@ -76,6 +77,17 @@ export interface ShippingConfig {
   vouchersEnabled?: boolean
   /** Trần đơn mỗi khung giờ (`slot_capacity`); thiếu = 100 đơn/khung (`slot-capacity.ts`). */
   slotCapacity?: SlotCapacityConfig
+  /**
+   * Hiện ô "mã thanh toán" (tiệm có mã đặt cọc đang bật). KHÔNG đọc từ `brochure_shipping` — use-case
+   * trả trang khách gắn thêm từ `brochure_payment_plans` (`withPaymentCodeFlag`).
+   */
+  paymentCodesEnabled?: boolean
+}
+
+/** Cấu hình giao hoa gửi trang khách + cờ ô mã thanh toán (không lộ danh sách mã). */
+export function withPaymentCodeFlag(settings: unknown): ShippingConfig {
+  const shipping = parseShippingConfig(settings)
+  return paymentCodesEnabled(parsePaymentPlans(settings)) ? { ...shipping, paymentCodesEnabled: true } : shipping
 }
 
 /** Đọc `organizations.settings.brochure_shipping`; sai/thiếu → không khu vực nào (phí 0, báo sau). */
@@ -174,6 +186,11 @@ export interface BrochureQuote {
   /** Phụ phí ngày lễ đã cộng vào tổng (không bị mã giảm giá trừ). */
   holidaySurchargeVnd?: number
   holidayName?: string
+  /**
+   * Kế hoạch thanh toán (Payment Policy + mã thanh toán nếu có) và số phải trả hôm nay / trả sau.
+   * KHÔNG ảnh hưởng `totalVnd`. Lưu nguyên vào `pricing_rule_ref.paymentPlan` khi tạo đơn.
+   */
+  paymentPlan?: PaymentPlanSnapshot & { dueNowVnd: number; dueLaterVnd: number }
 }
 
 export function computeQuote(input: QuoteInput): BrochureQuote {

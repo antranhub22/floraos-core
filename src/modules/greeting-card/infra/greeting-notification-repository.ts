@@ -47,9 +47,10 @@ export class GreetingNotificationRepository {
         code: true,
         total_vnd: true,
         paid_vnd: true,
+        pricing_rule_ref: true,
         source_session_id: true,
         customer: { select: { name: true, phone: true } },
-        organization: { select: { name: true, business_profile: { select: { display_name: true } } } },
+        organization: { select: { name: true, settings: true, business_profile: { select: { display_name: true } } } },
       },
     })
   }

@@ -216,17 +216,27 @@ export class BrochurePaymentRepository {
   }
 
   /** Huỷ đơn + trả lại mã giảm giá đã dùng. Tiền đã thu KHÔNG tự hoàn — hoàn bằng thao tác riêng (R10). */
-  async cancel(ctx: TenantContext, orderId: string, reason: string) {
+  /** `paymentFailed` = huỷ vì hết hạn thanh toán: đánh dấu `pricing_rule_ref.paymentFailed` để báo PAYMENT_FAILED. */
+  async cancel(ctx: TenantContext, orderId: string, reason: string, opts: { paymentFailed?: boolean } = {}) {
     const order = await this.loadOrder(ctx, orderId)
     const blocker = cancelBlocker({ status: order.status, deliveryStatus: order.delivery_status })
     if (blocker) throw conflict(blocker)
 
     return this.db.$transaction(async (tx) => {
       const moved = await tx.orders.updateMany({
-        where: { id: order.id, organization_id: ctx.organizationId, status: order.status },
+        // Huỷ vì hết hạn thanh toán: tiền vừa vào (webhook) thì không huỷ nữa
+        where: { id: order.id, organization_id: ctx.organizationId, status: order.status, ...(opts.paymentFailed ? { paid_vnd: 0 } : {}) },
         data: {
           status: "CANCELLED",
           internal_note: [order.internal_note, `[Huỷ] ${reason}`].filter(Boolean).join("\n"),
+          ...(opts.paymentFailed
+            ? {
+                pricing_rule_ref: {
+                  ...((order.pricing_rule_ref ?? {}) as Record<string, unknown>),
+                  paymentFailed: { reason: "PAYMENT_TIMEOUT", at: new Date().toISOString() },
+                } as Prisma.InputJsonValue,
+              }
+            : {}),
         },
       })
       if (moved.count === 0) throw conflict("Đơn hàng vừa thay đổi trạng thái, vui lòng tải lại")
@@ -252,7 +262,7 @@ export class BrochurePaymentRepository {
           entityType: "order",
           entityId: order.id,
           before: { status: order.status },
-          after: { status: "CANCELLED", reason },
+          after: { status: "CANCELLED", reason, ...(opts.paymentFailed ? { paymentStatus: "PAYMENT_FAILED" } : {}) },
         },
         tx
       )

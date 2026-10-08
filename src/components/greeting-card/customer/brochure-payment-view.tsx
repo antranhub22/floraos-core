@@ -1,7 +1,7 @@
 "use client"
 
 import { HoldCountdown } from "./hold-countdown"
-import React, { useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import useSWR from "swr"
 import { apiGet } from "@/components/greeting-card/greeting-api"
 import { Check, Copy, QrCode, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react"
@@ -18,6 +18,9 @@ function isPaid(order: { paidVnd: number; totalVnd: number } | undefined): boole
   return !!order && order.totalVnd > 0 && order.paidVnd > 0
 }
 import { BrochureQuotePending } from "./brochure-quote-pending"
+import { PaymentFailedNotice } from "./payment-failed-notice"
+
+type PolledTracking = { status: string; order?: { status: string; paidVnd: number; totalVnd: number; payment?: { status: string } } }
 
 interface BrochurePaymentViewProps {
   orderCode: string
@@ -29,6 +32,10 @@ interface BrochurePaymentViewProps {
   onGoToTracking: () => void
   /** Khách đã báo chuyển khoản trước đó (rời trang rồi quay lại) → hiện ngay "chờ xác nhận" */
   alreadyReported?: boolean | undefined
+  /** Thanh toán thất bại (hết hạn thanh toán, đơn tự huỷ) — trang cha đổi nút dưới thành "Đặt lại đơn mới". */
+  onPaymentFailed?: (() => void) | undefined
+  /** Nút kêu gọi đặt lại đơn, hiện trong thông báo "Đơn hàng không hoàn thành". */
+  failedCta?: React.ReactNode
 }
 
 export function BrochurePaymentView({
@@ -39,6 +46,8 @@ export function BrochurePaymentView({
   onReportPaid,
   onGoToTracking,
   alreadyReported = false,
+  onPaymentFailed,
+  failedCta,
 }: BrochurePaymentViewProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [hasReported, setHasReported] = useState(alreadyReported)
@@ -47,12 +56,21 @@ export function BrochurePaymentView({
 
   // Hỏi trạng thái đơn định kỳ (SWR) để tự hiện "đã thanh toán" khi Điều hành/ngân hàng xác nhận.
   // Dừng khi đã xác nhận; SWR tự bỏ lượt khi tab đang ẩn.
-  const tracking = useSWR<{ status: string; order?: { status: string; paidVnd: number; totalVnd: number } }>(
+  const tracking = useSWR<PolledTracking>(
     `/api/v1/public/brochure/tracking/${orderCode}`,
     apiGet,
-    { refreshInterval: (latest) => (isPaid(latest?.order) ? 0 : POLL_INTERVAL_MS), revalidateOnFocus: true }
+    { refreshInterval: (latest) => (isPaid(latest?.order) || latest?.order?.status === "CANCELLED" ? 0 : POLL_INTERVAL_MS), revalidateOnFocus: true }
   )
   const isPaymentConfirmed = isPaid(tracking.data?.order)
+  // Hết hạn thanh toán: máy chủ huỷ đơn (bộ quét mỗi phút); trình duyệt báo ngay khi đồng hồ về 0
+  const [deadlinePassed, setDeadlinePassed] = useState(false)
+  const onDeadline = useCallback(() => setDeadlinePassed(true), [])
+  const paymentFailed =
+    tracking.data?.order?.payment?.status === "PAYMENT_FAILED" ||
+    (deadlinePassed && vietQr?.cancelOnExpiry === true && !isPaymentConfirmed && !hasReported)
+  useEffect(() => {
+    if (paymentFailed) onPaymentFailed?.()
+  }, [paymentFailed, onPaymentFailed])
   const depositOnly = isPaymentConfirmed && (tracking.data?.order?.paidVnd ?? 0) < (tracking.data?.order?.totalVnd ?? 0)
 
   function copyToClipboard(text: string, field: string) {
@@ -76,6 +94,7 @@ export function BrochurePaymentView({
 
   // Mẫu chưa có giá ("Liên hệ"): không hiện QR 0 đồng, cửa hàng sẽ báo giá trước khi thu tiền
   if (totalVnd <= 0) return <BrochureQuotePending orderCode={orderCode} onGoToTracking={onGoToTracking} />
+  if (paymentFailed) return <PaymentFailedNotice orderCode={orderCode} cta={failedCta} />
 
   return (
     <div className="w-full max-w-md mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-6 shadow-sm flex flex-col items-center text-center">
@@ -91,11 +110,16 @@ export function BrochurePaymentView({
         <p className="text-caption text-text-muted mb-4">
           Mở ứng dụng ngân hàng bất kỳ để quét mã QR thanh toán nhanh
         </p>
-        {vietQr.holdUntil && !isPaymentConfirmed && !hasReported && <HoldCountdown until={vietQr.holdUntil} />}
+        {vietQr.holdUntil && !isPaymentConfirmed && !hasReported && (
+          <HoldCountdown until={vietQr.holdUntil} deadline={vietQr.cancelOnExpiry === true} onExpire={onDeadline} />
+        )}
+        {vietQr.cancelOnExpiry && !isPaymentConfirmed && !hasReported && (
+          <p className="mb-4 -mt-2 text-caption text-text-muted">Hết thời gian mà chưa chuyển khoản và chưa bấm “Tôi đã chuyển khoản”, đơn sẽ tự huỷ.</p>
+        )}
           {vietQr.purpose !== "FULL" && (
             <p className="text-body-sm text-foreground mb-3">
               Tổng giá trị đơn: <strong>{vietQr.orderTotalVnd.toLocaleString("vi-VN")} đ</strong>
-              {vietQr.purpose === "DEPOSIT" && " — phần còn lại cửa hàng sẽ thu sau theo thoả thuận."}
+              {vietQr.purpose === "DEPOSIT" && ` — phần còn lại ${(vietQr.orderTotalVnd - vietQr.amount).toLocaleString("vi-VN")} đ thanh toán sau khi hoa hoàn thành và cửa hàng gửi ảnh xác nhận.`}
             </p>
           )}
 

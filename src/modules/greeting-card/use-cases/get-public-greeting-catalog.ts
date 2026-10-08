@@ -1,6 +1,6 @@
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
-import { parseShippingConfig, type ShippingConfig } from "../domain/brochure-pricing"
+import { withPaymentCodeFlag, type ShippingConfig } from "../domain/brochure-pricing"
 import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
 import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
 import type { ShopContact } from "../domain/shop-contact"
@@ -42,7 +42,7 @@ export async function mapCatalogToPublicResult(
 
   return {
     status: "ACTIVE",
-    shipping: parseShippingConfig(shop.settings),
+    shipping: withPaymentCodeFlag(shop.settings),
     shop: await getShopContact(catalog.organization_id),
     catalog: {
       id: catalog.id,

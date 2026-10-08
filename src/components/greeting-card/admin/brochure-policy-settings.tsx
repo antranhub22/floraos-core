@@ -7,6 +7,7 @@ import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
 import {
   BROCHURE_POLICY_SETTINGS_KEY,
   parsePaymentPolicy,
+  serializePaymentPolicy,
   type BrochurePaymentPolicy,
 } from "@/modules/greeting-card/domain/brochure-payment-policy"
 
@@ -33,13 +34,8 @@ export function BrochurePolicySettings() {
         "PATCH",
         {
           settings: {
-            [BROCHURE_POLICY_SETTINGS_KEY]: {
-              deposit_percent: policy.depositPercent,
-              require_paid_before_production: policy.requirePaidBeforeProduction,
-              require_full_before_dispatch: policy.requireFullBeforeDispatch,
-              hold_minutes: policy.holdMinutes ?? 0,
-              auto_cancel_unpaid: policy.autoCancelUnpaid === true,
-            },
+            // Ghi đủ mọi trường — giữ cả hạn thanh toán / giao hoa đặt ở Hồ sơ cửa hàng
+            [BROCHURE_POLICY_SETTINGS_KEY]: serializePaymentPolicy(policy),
           },
         },
         "Không lưu được chính sách thu tiền"
@@ -79,11 +75,12 @@ export function BrochurePolicySettings() {
             <input type="checkbox" checked={policy.requirePaidBeforeProduction} onChange={(e) => edit({ requirePaidBeforeProduction: e.target.checked })} />
             <span>Chỉ cắm hoa khi đã nhận cọc/thanh toán</span>
           </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={policy.requireFullBeforeDispatch} onChange={(e) => edit({ requireFullBeforeDispatch: e.target.checked })} />
-            <span>Chỉ giao hoa khi đã thu đủ tiền</span>
-          </label>
-          <label className="flex items-center gap-2">
+          <p className="text-caption text-text-muted">
+            Giao hoa {policy.requireFullBeforeDispatch ? "bắt buộc thu đủ tiền trước" : "không bắt buộc thu đủ trước"}
+            {policy.paymentTimeoutMinutes ? ` · tự huỷ đơn chưa thanh toán sau ${policy.paymentTimeoutMinutes} phút` : ""}
+            {" "}— đổi ở Hồ sơ cửa hàng → Chính sách & Cam kết, cùng các mức đặt cọc (mã thanh toán).
+          </p>
+          {!policy.paymentTimeoutMinutes && <label className="flex items-center gap-2">
             <span className="text-text-muted">Giữ đơn chờ chuyển khoản</span>
             <select
               value={policy.holdMinutes ?? 0}
@@ -93,8 +90,8 @@ export function BrochurePolicySettings() {
               <option value={0}>Không hiện đồng hồ</option>
               {[15, 30, 60, 120].map((m) => <option key={m} value={m}>{m} phút</option>)}
             </select>
-          </label>
-          {(policy.holdMinutes ?? 0) > 0 && (
+          </label>}
+          {!policy.paymentTimeoutMinutes && (policy.holdMinutes ?? 0) > 0 && (
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={policy.autoCancelUnpaid === true} onChange={(e) => edit({ autoCancelUnpaid: e.target.checked })} />
               <span>Hết giờ giữ đơn: nhắc khách chuyển khoản; quá thêm 60 phút vẫn chưa chuyển thì tự huỷ đơn</span>

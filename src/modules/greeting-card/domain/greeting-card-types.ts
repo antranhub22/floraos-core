@@ -125,6 +125,8 @@ export interface CustomerOrderSubmitInput {
   quantity?: number | undefined
   shippingZoneId?: string | undefined
   voucherCode?: string | undefined
+  /** Mã thanh toán (DC30…) — đổi cách thu tiền, không giảm giá. */
+  paymentCode?: string | undefined
   /** Ưu đãi khách chọn (01 ưu đãi theo spec #2) */
   selectedPromotionId?: string | undefined
   /** Khách xác nhận thỏa thuận & cam kết (spec #2, #5) */
@@ -168,6 +170,8 @@ export interface BrochurePaymentInstructions {
   transferMemo: string
   /** Hạn giữ đơn chờ chuyển khoản (ISO) — trang khách hiện đếm ngược; null = không giữ hạn. */
   holdUntil?: string | null
+  /** Hết `holdUntil` mà chưa nhận tiền, khách chưa báo đã chuyển → thanh toán thất bại, đơn tự huỷ. */
+  cancelOnExpiry?: boolean
 }
 
 /** Phần phiên trả ra trang công khai — KHÔNG chứa SĐT khách, id tổ chức, id sale. */

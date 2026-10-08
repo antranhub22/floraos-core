@@ -82,7 +82,13 @@ export function OrderReview(props: {
         )}
         {quote?.promotionDiscountVnd ? <Row label={`Ưu đãi${selectedPromo ? ` (${selectedPromo.title})` : ""}`} value={`− ${vnd(quote.promotionDiscountVnd)}`} /> : null}
         {quote?.holidaySurchargeVnd ? <Row label={`Phụ phí ngày lễ (${quote.holidayName ?? ""})`} value={`+ ${vnd(quote.holidaySurchargeVnd)}`} /> : null}
-        <Row label="Tổng thanh toán" value={awaitingQuote ? "Cửa hàng báo giá sau" : vnd(quote?.totalVnd ?? product.price)} strong />
+        <Row label="Tổng đơn hàng" value={awaitingQuote ? "Cửa hàng báo giá sau" : vnd(quote?.totalVnd ?? product.price)} strong />
+        {!awaitingQuote && quote?.paymentPlan && quote.paymentPlan.dueLaterVnd > 0 && (
+          <>
+            <Row label={`Đặt cọc hôm nay (${quote.paymentPlan.depositPercent}%)`} value={vnd(quote.paymentPlan.dueNowVnd)} strong />
+            <Row label="Thanh toán sau khi hoa hoàn thành" value={vnd(quote.paymentPlan.dueLaterVnd)} />
+          </>
+        )}
       </dl>
 
       <dl className="rounded-xl border border-border px-4 py-2 divide-y divide-border">

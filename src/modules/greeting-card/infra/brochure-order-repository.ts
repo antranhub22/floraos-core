@@ -116,7 +116,7 @@ export class BrochureOrderRepository {
   async findOrderById(organizationId: string, orderId: string) {
     return this.db.orders.findFirst({
       where: { id: orderId, organization_id: organizationId },
-      select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, created_at: true },
+      select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, created_at: true, pricing_rule_ref: true },
     })
   }
 
@@ -133,6 +133,7 @@ export class BrochureOrderRepository {
         greeting_sessions: {
           select: {
             send_code: true,
+            status: true,
             catalog: { select: { filters: true } },
           },
         },

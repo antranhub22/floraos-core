@@ -29,3 +29,20 @@ describe("holdAction", () => {
     expect(holdAction(order({ totalVnd: 0 }), policy, now)).toBe("NONE")
   })
 })
+
+describe("holdAction — hạn thanh toán 30 phút (PO 08/10/2026)", () => {
+  const timeout = { depositPercent: 0, requirePaidBeforeProduction: false, requireFullBeforeDispatch: false, paymentTimeoutMinutes: 30 }
+  it("chưa đủ 30 phút → chưa làm gì", () => {
+    expect(holdAction(order({ createdAt: ago(29) }), timeout, now)).toBe("NONE")
+  })
+  it("đủ 30 phút, chưa nhận tiền, khách chưa bấm 'Tôi đã chuyển khoản' → thanh toán thất bại, huỷ ngay", () => {
+    expect(holdAction(order({ createdAt: ago(30) }), timeout, now)).toBe("FAIL_PAYMENT")
+  })
+  it("khách đã bấm 'Tôi đã chuyển khoản' hoặc đã nhận tiền → không huỷ", () => {
+    expect(holdAction(order({ createdAt: ago(45), customerReportedPaid: true }), timeout, now)).toBe("NONE")
+    expect(holdAction(order({ createdAt: ago(45), paidVnd: 100_000 }), timeout, now)).toBe("NONE")
+  })
+  it("hạn thanh toán thắng giữ đơn cũ (không chờ thêm 60 phút)", () => {
+    expect(holdAction(order({ createdAt: ago(31) }), { ...timeout, holdMinutes: 120, autoCancelUnpaid: true }, now)).toBe("FAIL_PAYMENT")
+  })
+})

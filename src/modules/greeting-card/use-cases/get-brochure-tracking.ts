@@ -9,6 +9,9 @@ import { snapshotFromOrder } from "../domain/order-change-request"
 import { customerChangeSection } from "./order-change"
 import { customerSubstituteSection } from "./substitute"
 import { latestFailureForCustomer } from "../domain/delivery-failure"
+import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { orderPaymentSummary } from "../domain/payment-summary"
+import { paymentInstructionsFor } from "./payment-instructions"
 
 const ORDER_CODE_REGEX = /^[A-Z0-9-]{4,40}$/
 
@@ -119,6 +122,12 @@ export async function getBrochureTracking(
   const orgSettings = (order as { organization?: { settings?: unknown } }).organization?.settings
   const slaConfig = parseStepSla(orgSettings)
   const timeline = calculateExpectedStepTimeline(deliveryWindow.date, deliveryWindow.timeSlot, slaConfig)
+  const money = { totalVnd: Number(order.total_vnd), paidVnd: Number(order.paid_vnd), pricingRuleRef: order.pricing_rule_ref }
+  const payment = orderPaymentSummary(
+    { ...money, status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status },
+    parsePaymentPolicy(orgSettings).depositPercent,
+    { reported: money.paidVnd === 0 && order.greeting_sessions.some((s) => s.status === "PAYMENT_REPORTED") },
+  )
 
   return {
     status: "FOUND" as const,
@@ -146,6 +155,11 @@ export async function getBrochureTracking(
       createdAt: order.created_at.toISOString(),
       updatedAt: order.updated_at.toISOString(),
       timeline,
+      /** Kế hoạch + các đợt thanh toán; khi hoa đã xong mà còn nợ: mã QR trả phần còn lại. */
+      payment: {
+        ...payment,
+        balanceInstructions: payment.balanceDue ? paymentInstructionsFor(orgSettings, money, order.code) : null,
+      },
       /** Lần giao gần nhất không thành công (ghi chú của shipper chỉ cho người đặt đã xác minh). */
       deliveryFailure: order.delivery_status === "FAILED" ? latestFailureForCustomer(order.delivery_window, verified) : null,
       /** Chỉ người đặt đã xác minh: đổi thông tin đơn (thông tin hiện tại để điền sẵn form + lịch sử yêu cầu). */
@@ -156,6 +170,9 @@ export async function getBrochureTracking(
       /** Chỉ người đặt đã xác minh: tiệm đề xuất mẫu thay thế (khách chọn mẫu / nhờ tiệm chọn / xin huỷ). */
       substitute: verified ? await customerSubstituteSection(order) : null,
     },
-    trackingStep: step,
+    // Huỷ vì hết hạn thanh toán: báo "không hoàn thành" thay cho "cửa hàng đã huỷ"
+    trackingStep: payment.status === "PAYMENT_FAILED"
+      ? { ...step, title: "Đơn hàng không hoàn thành", description: "Chưa nhận được thanh toán trong thời hạn nên đơn đã tự huỷ." }
+      : step,
   }
 }

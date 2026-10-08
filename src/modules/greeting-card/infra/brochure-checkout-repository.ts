@@ -8,6 +8,7 @@ import type { BrochureQuote, VoucherFacts } from "../domain/brochure-pricing"
 import type { OrderPolicySnapshot } from "../domain/order-policies"
 import type { ProductSnapshot } from "../domain/greeting-card-types"
 import { countBySlot, slotFullMessage } from "../domain/slot-capacity"
+import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 
 export interface CreateBrochureOrderData {
   organizationId: string
@@ -34,9 +35,21 @@ export interface CreateBrochureOrderData {
   policies?: OrderPolicySnapshot | undefined
   /** Trần đơn của khung giờ khách chọn — kiểm lại trong giao dịch, có khoá (PO 08/10/2026). */
   slotGuard?: { slotId: string; max: number } | null | undefined
+  /** Mã thanh toán đã áp (DC30…) — kiểm lại lượt dùng trong giao dịch, có khoá, và ghi audit. */
+  paymentCodeGuard?: { code: string; maxUses: number | null } | null | undefined
 }
 
 type Db = Pick<typeof prisma, "orders">
+
+/** Số đơn chưa huỷ đã dùng một mã thanh toán (đọc từ bản chụp `pricing_rule_ref.paymentPlan`). */
+function paymentCodeUses(db: Db, organizationId: string, code: string): Promise<number> {
+  return db.orders.count({
+    where: {
+      organization_id: organizationId, status: { not: "CANCELLED" },
+      pricing_rule_ref: { path: ["paymentPlan", "paymentCode"], equals: code },
+    },
+  })
+}
 
 /** Khung giờ đã lưu của các đơn Thẻ chào chưa huỷ, giao ngày `date` (YYYY-MM-DD). */
 async function timeSlotsOn(db: Db, organizationId: string, date: string): Promise<Array<string | null>> {
@@ -88,6 +101,10 @@ export class BrochureCheckoutRepository {
     }
   }
 
+  async countPaymentCodeUses(organizationId: string, code: string): Promise<number> {
+    return paymentCodeUses(this.db, organizationId, code)
+  }
+
   /** Số đơn Thẻ chào của một SĐT người đặt trong tổ chức từ `since` (chống đơn rác). */
   async countRecentOrdersByPhone(organizationId: string, phone: string, since: Date): Promise<number> {
     if (!phone) return 0
@@ -110,7 +127,7 @@ export class BrochureCheckoutRepository {
       },
       select: {
         id: true, send_code: true, product_snapshot: true,
-        order: { select: { id: true, code: true, total_vnd: true, paid_vnd: true, created_at: true, status: true, delivery_address: true, delivery_window: true } },
+        order: { select: { id: true, code: true, total_vnd: true, paid_vnd: true, created_at: true, status: true, delivery_address: true, delivery_window: true, pricing_rule_ref: true } },
       },
       orderBy: { created_at: "desc" },
       take: 5,
@@ -170,6 +187,14 @@ export class BrochureCheckoutRepository {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`brochure-slot:${data.organizationId}:${data.deliveryDate}:${data.slotGuard.slotId}`}))`
         const taken = countBySlot(await timeSlotsOn(tx, data.organizationId, data.deliveryDate)).get(data.slotGuard.slotId) ?? 0
         if (taken >= data.slotGuard.max) throw validationFailed({ deliveryTimeSlot: slotFullMessage(data.deliveryTimeSlot) })
+      }
+      const codeGuard = data.paymentCodeGuard
+      if (codeGuard?.maxUses) {
+        // Hai khách tranh lượt cuối của cùng một mã → chỉ một người được
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`payment-code:${data.organizationId}:${codeGuard.code}`}))`
+        if ((await paymentCodeUses(tx, data.organizationId, codeGuard.code)) >= codeGuard.maxUses) {
+          throw validationFailed({ paymentCode: "Mã thanh toán đã hết lượt sử dụng" })
+        }
       }
       const order = await tx.orders.create({
         data: {
@@ -241,6 +266,19 @@ export class BrochureCheckoutRepository {
           metadata: { orderId: order.id, orderCode: order.code, amount: quote.totalVnd },
         },
       })
+      if (codeGuard) {
+        // Truy vết mã thanh toán: mã nào, đơn nào, lúc nào, ai áp (khách tự nhập trên trang đặt hoa)
+        await recordAuditLog(
+          { organizationId: data.organizationId, workspaceId: "", userId: "customer", branchId: null, capabilities: new Set() },
+          {
+            action: "greeting_card.payment_code.apply",
+            entityType: "order",
+            entityId: order.id,
+            after: { paymentCode: codeGuard.code, orderCode: order.code, policy: quote.paymentPlan?.policy ?? null, appliedBy: "CUSTOMER", result: "SUCCESS" },
+          },
+          tx,
+        )
+      }
 
       return order
     })
