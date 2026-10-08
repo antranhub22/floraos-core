@@ -75,8 +75,8 @@ describe("giờ cụ thể khách tự nhập", () => {
 describe("ưu đãi & thỏa thuận lúc đặt hoa", () => {
   const policies = (over: Partial<PublicAppliedPolicies> = {}): PublicAppliedPolicies => ({
     promotions: [
-      { id: "p1", title: "Tặng thiệp", customerText: "Thiệp viết tay" },
-      { id: "p2", title: "Thêm 3 cành", customerText: "Hồng thêm" },
+      { id: "p1", title: "Tặng thiệp", customerText: "Thiệp viết tay", kind: "GIFT", percent: null },
+      { id: "p2", title: "Thêm 3 cành", customerText: "Hồng thêm", kind: "GIFT", percent: null },
     ],
     commitments: [],
     agreements: [

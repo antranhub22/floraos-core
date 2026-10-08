@@ -6,9 +6,11 @@
  * Máy chủ chụp lại đúng ưu đãi + các thỏa thuận khách đã đồng ý để lưu cùng đơn.
  */
 import type { PublicAppliedPolicies } from "./store-policy"
+import type { PromotionPricing } from "./promotion-pricing"
 
 export interface OrderPolicySnapshot {
-  promotion: { id: string; title: string; customerText: string } | null
+  /** `kind`/`percent` lưu kèm để báo giá sau (mẫu chưa niêm yết giá) vẫn trừ đúng ưu đãi khách đã chọn. */
+  promotion: ({ id: string; title: string; customerText: string } & PromotionPricing) | null
   agreements: Array<{ id: string; title: string }>
   termsConfirmed: boolean
 }
@@ -21,18 +23,9 @@ export function resolveOrderPolicies(
   applied: PublicAppliedPolicies,
   input: { selectedPromotionId?: string | undefined; confirmedTerms?: boolean | undefined },
 ): OrderPolicyResult {
-  let promotion: OrderPolicySnapshot["promotion"] = null
-  if (applied.promotions.length > 0) {
-    const chosenId = applied.allowCustomerPromotionChoice ? input.selectedPromotionId : undefined
-    if (chosenId) {
-      promotion = applied.promotions.find((p) => p.id === chosenId) ?? null
-      if (!promotion) {
-        return { ok: false, field: "selectedPromotionId", message: "Ưu đãi đã chọn không còn áp dụng. Vui lòng chọn lại." }
-      }
-    } else {
-      promotion = applied.promotions[0] ?? null
-    }
-  }
+  const chosen = selectPromotion(applied, input.selectedPromotionId)
+  if (!chosen.ok) return { ok: false, field: "selectedPromotionId", message: chosen.message }
+  const promotion = chosen.promotion
 
   const needsConfirm = applied.agreements.length > 0
   if (needsConfirm && input.confirmedTerms !== true) {
@@ -42,11 +35,30 @@ export function resolveOrderPolicies(
   return {
     ok: true,
     snapshot: {
-      promotion: promotion ? { id: promotion.id, title: promotion.title, customerText: promotion.customerText } : null,
+      promotion: promotion
+        ? { id: promotion.id, title: promotion.title, customerText: promotion.customerText, kind: promotion.kind, percent: promotion.percent }
+        : null,
       agreements: applied.agreements.map((a) => ({ id: a.id, title: a.title })),
       termsConfirmed: needsConfirm,
     },
   }
+}
+
+type AppliedPromotion = PublicAppliedPolicies["promotions"][number]
+
+/**
+ * Ưu đãi áp cho đơn: tối đa 01, chỉ ưu đãi bộ sưu tập đang áp dụng. Tiệm không cho khách chọn →
+ * luôn là ưu đãi đầu tiên (bỏ qua lựa chọn client gửi). Dùng chung cho báo giá và tạo đơn.
+ */
+export function selectPromotion(
+  applied: PublicAppliedPolicies,
+  selectedPromotionId: string | undefined,
+): { ok: true; promotion: AppliedPromotion | null } | { ok: false; message: string } {
+  if (applied.promotions.length === 0) return { ok: true, promotion: null }
+  const chosenId = applied.allowCustomerPromotionChoice ? selectedPromotionId : undefined
+  if (!chosenId) return { ok: true, promotion: applied.promotions[0] ?? null }
+  const found = applied.promotions.find((p) => p.id === chosenId)
+  return found ? { ok: true, promotion: found } : { ok: false, message: "Ưu đãi đã chọn không còn áp dụng. Vui lòng chọn lại." }
 }
 
 /** Dòng ghi chú cho xưởng/Điều phối thấy ngay ưu đãi phải tặng kèm. */

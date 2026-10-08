@@ -26,7 +26,7 @@ export function PromotionPicker({
       <legend className="sr-only">Ưu đãi</legend>
       <div className="text-body-sm font-extrabold text-foreground flex items-center justify-between">
         <span>{canChoose ? `Chọn 01 ưu đãi (${promos.length} lựa chọn)` : "Ưu đãi áp dụng"}</span>
-        <span className="text-caption font-normal text-primary">Tặng kèm theo đơn</span>
+        <span className="text-caption font-normal text-primary">Mỗi đơn 01 ưu đãi</span>
       </div>
       {shown.map((p) => (
         <label

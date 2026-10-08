@@ -1,7 +1,7 @@
 # Thẻ chào mẫu hoa — Báo cáo khắc phục đợt commercial-ready (06/10/2026)
 
 **Đầu vào:** 18 hạng mục P0/P1 rút từ bản audit [`HIEN_TRANG_THE_CHAO.md`](HIEN_TRANG_THE_CHAO.md). **Nhánh:** `claude/sweet-fermat-ovs11r`.
-**PO chốt trước khi làm (06/10/2026):** (1) giữ `R9` cho Sale/Điều phối nhưng áp phạm vi "chỉ khách của mình" cho thao tác tiền; (2) sale "chỉ khách của mình" chỉ thấy số liệu của mình; (3) trang theo dõi công khai rút gọn + xác minh 4 số cuối SĐT; (4) không đổi hạ tầng (không sửa `render.yaml`, không sửa `schema.prisma`).
+**PO chốt trước khi làm (06/10/2026):** (1) ~~giữ `R9` cho Sale/Điều phối nhưng áp phạm vi "chỉ khách của mình" cho thao tác tiền~~ — **ĐÃ THAY bởi quyết định PO 08/10/2026: chỉ Điều hành xác nhận tiền/báo giá (`R11`, trần cứng), xem [`KE_HOACH_THE_CHAO_LE_20_10.md`](KE_HOACH_THE_CHAO_LE_20_10.md) Q4**; (2) sale "chỉ khách của mình" chỉ thấy số liệu của mình; (3) trang theo dõi công khai rút gọn + xác minh 4 số cuối SĐT; (4) không đổi hạ tầng (không sửa `render.yaml`, không sửa `schema.prisma`).
 
 ## 1. Kết quả theo hạng mục
 

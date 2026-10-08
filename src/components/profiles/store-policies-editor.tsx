@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { Gift, ShieldCheck, FileText, Plus, Trash2, Check, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { PromotionKindField } from "./promotion-kind-field"
 import {
   type StorePoliciesConfig,
   type PromotionItem,
@@ -44,7 +45,7 @@ export function StorePoliciesEditor({ initialPolicies, onSave, saving }: Props) 
   // --- Helpers for Promotions ---
   const addPromo = () => {
     const id = `promo-${Date.now()}`
-    setPromotions([...promotions, { id, title: "Ưu đãi mới", description: "Mô tả ưu đãi tặng cho khách hàng" }])
+    setPromotions([...promotions, { id, title: "Ưu đãi mới", description: "Mô tả ưu đãi tặng cho khách hàng", kind: "GIFT" }])
   }
   const removePromo = (id: string) => setPromotions(promotions.filter((p) => p.id !== id))
   const updatePromo = (id: string, patch: Partial<PromotionItem>) =>
@@ -153,6 +154,7 @@ export function StorePoliciesEditor({ initialPolicies, onSave, saving }: Props) 
                   placeholder="Mô tả quyền lợi nhận được..."
                   className="text-caption text-text-muted bg-transparent border-none focus:ring-0 focus:outline-none resize-none p-0"
                 />
+                <PromotionKindField item={p} onChange={(patch) => updatePromo(p.id, patch)} />
               </div>
             ))}
           </div>

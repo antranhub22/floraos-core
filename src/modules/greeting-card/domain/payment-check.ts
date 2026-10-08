@@ -14,6 +14,8 @@ export interface PaymentCheck {
   agreedTotalVnd: number
   /** Các khoản làm giá chốt khác giá công bố, theo thứ tự tính. */
   reasons: string[]
+  /** Ưu đãi khách đã chọn lúc đặt (cả loại tặng kèm, không đổi tiền) — để Điều hành/xưởng thấy. */
+  promotion: string | null
 }
 
 type Loose = Record<string, unknown>
@@ -54,6 +56,18 @@ export function paymentCheckOf(order: {
   const ship = num(quote.shippingFeeVnd) ?? 0
   const zone = str(obj(quote.shippingZone).name)
   if (ship > 0) reasons.push(`Phí giao${zone ? ` ${zone}` : ""}: +${vnd(ship)}`)
+  const promo = obj(obj(quote.policies).promotion)
+  const promoTitle = str(promo.title)
+  const promoVnd = num(quote.promotionDiscountVnd) ?? 0
+  if (promoVnd > 0) reasons.push(`Ưu đãi ${promoTitle ?? ""}: −${vnd(promoVnd)}`.replace("  ", " "))
+  const pendingPercent = quote.awaitingQuote === true && promo.kind === "PERCENT_OFF" ? num(promo.percent) : null
+  const promotion = !promoTitle
+    ? null
+    : pendingPercent
+      ? `${promoTitle} — máy tự trừ ${pendingPercent}% trên giá bạn báo`
+      : promo.kind === "PERCENT_OFF" || promo.kind === "FREE_SHIPPING"
+        ? promoTitle
+        : `${promoTitle} (tặng kèm, không đổi tiền)`
 
   return {
     productName: str(snap.name) ?? str(meta.name) ?? "Mẫu hoa",
@@ -63,5 +77,6 @@ export function paymentCheckOf(order: {
     listedPriceVnd: listed && listed > 0 ? listed : null,
     agreedTotalVnd: order.total_vnd,
     reasons,
+    promotion,
   }
 }

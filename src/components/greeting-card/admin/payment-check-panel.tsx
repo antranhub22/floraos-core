@@ -29,6 +29,12 @@ export function PaymentCheckPanel({ order }: { order: AdminOrder }) {
             <dd className={`font-extrabold ${differs ? "text-warning" : "text-foreground"}`}>{vnd(c.agreedTotalVnd)}</dd>
           </div>
         </div>
+        {c.promotion && (
+          <div className="mt-1 flex gap-1">
+            <dt className="text-text-muted">Ưu đãi khách chọn:</dt>
+            <dd className="font-semibold text-success">{c.promotion}</dd>
+          </div>
+        )}
         {c.reasons.length > 0 && (
           <div className="mt-1">
             <dt className="text-text-muted">Vì sao khác giá công bố:</dt>

@@ -25,7 +25,6 @@ import { deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-
 import { DeliveryTimePicker } from "./delivery-time-picker"
 import { PromotionPicker } from "./promotion-picker"
 import { SelectedProductHeader } from "./selected-product-header"
-
 import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
 
 interface BrochureOrderFormProps {
@@ -65,7 +64,8 @@ export function BrochureOrderForm({
 
   const [selectedPromotionId, setSelectedPromotionId] = useState<string>(appliedPolicies?.promotions[0]?.id ?? "")
   const [loading, setLoading] = useState(false)
-  const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone, { id: productSnapshot.id, variantIds: variants.map((v) => v.id) })
+  const quoteBody = { ...quoteExtraBody, ...(selectedPromotionId ? { selectedPromotionId } : {}), ...(deliveryDate ? { deliveryDate } : {}) }
+  const pricing = useBrochureQuote(quoteUrl, quoteBody, customerPhone, { id: productSnapshot.id, variantIds: variants.map((v) => v.id) })
   const minDate = earliestDeliveryDate(shipping)
   const maxDate = new Date(Date.parse(`${minDate}T00:00:00Z`) + MAX_DELIVERY_LEAD_DAYS * 86_400_000)
     .toISOString()
@@ -296,7 +296,7 @@ export function BrochureOrderForm({
               id={`${uid}-deliveryTimeSlot`}
               date={deliveryDate}
               value={deliveryTimeSlot}
-              shipping={shipping}
+              shipping={shipping} fullSlots={pricing.fullSlots}
               inputClassName={INPUT}
               onChange={setDeliveryTimeSlot}
             />

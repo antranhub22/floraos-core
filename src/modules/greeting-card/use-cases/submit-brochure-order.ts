@@ -9,7 +9,8 @@ import { paymentInstructionsFor } from "./payment-instructions"
 import type { CustomerOrderSubmitInput, ProductSnapshot } from "../domain/greeting-card-types"
 import { loadPublicSession, resolveOrderableProduct, type PublicSession } from "./brochure-session-access"
 import { placeBrochureOrder, type BrochureOrderResult } from "./place-brochure-order"
-import { quoteForProduct, type QuoteRequest, type QuoteResult } from "./brochure-quote"
+import { promotionForQuote, quoteForProduct, type QuoteRequest, type QuoteResult } from "./brochure-quote"
+import { fullSlotsOn } from "./slot-availability"
 
 export { DEFAULT_TIME_SLOT, type BrochureOrderResult } from "./place-brochure-order"
 
@@ -95,5 +96,8 @@ export async function quoteBrochureSession(
   if (!session.selected_product_id) throw unprocessable("Vui lòng chọn mẫu hoa trước")
   const product = await resolveOrderableProduct(session, session.selected_product_id, repo)
   const shop = await repo.getShopProfile(session.organization_id)
-  return quoteForProduct(session.organization_id, product, req, shop.settings)
+  const promo = promotionForQuote(session.catalog.filters, shop.settings, req.selectedPromotionId)
+  const result = await quoteForProduct(session.organization_id, product, req, shop.settings, undefined, promo.promotion)
+  const fullSlots = await fullSlotsOn(session.organization_id, req.deliveryDate, shop.settings)
+  return { ...result, fullSlots, ...(promo.error ? { errors: { ...result.errors, selectedPromotionId: promo.error } } : {}) }
 }

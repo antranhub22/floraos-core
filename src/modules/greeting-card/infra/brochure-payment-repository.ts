@@ -4,6 +4,7 @@ import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { conflict, notFound, unprocessable } from "@/core/http/errors"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import { cancelBlocker, quoteBlocker } from "../domain/brochure-payment-policy"
+import { quotedTotalAfterPromotion } from "../domain/promotion-pricing"
 
 export interface IncomingPayment {
   amountVnd: number
@@ -174,12 +175,15 @@ export class BrochurePaymentRepository {
    * là 0). Chỉ ghi khi tổng vẫn là 0 — hai người báo giá cùng lúc thì một
    * người nhận 409.
    */
-  async setQuote(ctx: TenantContext, orderId: string, totalVnd: number, reason: string | null = null) {
+  async setQuote(ctx: TenantContext, orderId: string, enteredVnd: number, reason: string | null = null) {
     const order = await this.loadOrder(ctx, orderId)
-    const blocker = quoteBlocker({ status: order.status, totalVnd: Number(order.total_vnd) }, totalVnd)
+    const blocker = quoteBlocker({ status: order.status, totalVnd: Number(order.total_vnd) }, enteredVnd)
     if (blocker) throw (order.status === "CANCELLED" || Number(order.total_vnd) > 0 ? conflict(blocker) : unprocessable(blocker))
     const paid = Number(order.paid_vnd)
     const ref = (order.pricing_rule_ref ?? {}) as Record<string, unknown>
+    // Ưu đãi "Giảm %" khách đã chọn lúc đặt được trừ ngay trên giá Điều hành báo (PO 08/10/2026)
+    const { totalVnd, promotionDiscountVnd } = quotedTotalAfterPromotion(ref, enteredVnd)
+    const promoNote = promotionDiscountVnd > 0 ? ` (đã trừ ưu đãi ${promotionDiscountVnd.toLocaleString("vi-VN")} đ)` : ""
 
     return this.db.$transaction(async (tx) => {
       const moved = await tx.orders.updateMany({
@@ -187,8 +191,12 @@ export class BrochurePaymentRepository {
         data: {
           total_vnd: totalVnd,
           balance_vnd: totalVnd - paid,
-          pricing_rule_ref: { ...ref, awaitingQuote: false, quotedTotalVnd: totalVnd, quotedAt: new Date().toISOString(), ...(reason ? { quoteReason: reason } : {}) } as Prisma.InputJsonValue,
-          internal_note: [order.internal_note, `[Báo giá] ${totalVnd.toLocaleString("vi-VN")} đ${reason ? ` — ${reason}` : ""}`].filter(Boolean).join("\n"),
+          pricing_rule_ref: {
+            ...ref, awaitingQuote: false, quotedTotalVnd: totalVnd, quotedAt: new Date().toISOString(),
+            ...(promotionDiscountVnd > 0 ? { quotedBeforePromotionVnd: enteredVnd, promotionDiscountVnd } : {}),
+            ...(reason ? { quoteReason: reason } : {}),
+          } as Prisma.InputJsonValue,
+          internal_note: [order.internal_note, `[Báo giá] ${totalVnd.toLocaleString("vi-VN")} đ${promoNote}${reason ? ` — ${reason}` : ""}`].filter(Boolean).join("\n"),
         },
       })
       if (moved.count === 0) throw conflict("Đơn hàng vừa được báo giá, vui lòng tải lại")
@@ -199,11 +207,11 @@ export class BrochurePaymentRepository {
           entityType: "order",
           entityId: order.id,
           before: { totalVnd: 0 },
-          after: { totalVnd, ...(reason ? { reason } : {}) },
+          after: { totalVnd, ...(promotionDiscountVnd > 0 ? { enteredVnd, promotionDiscountVnd } : {}), ...(reason ? { reason } : {}) },
         },
         tx
       )
-      return { orderId: order.id, orderCode: order.code, totalVnd, balanceVnd: totalVnd - paid }
+      return { orderId: order.id, orderCode: order.code, totalVnd, balanceVnd: totalVnd - paid, promotionDiscountVnd }
     })
   }
 

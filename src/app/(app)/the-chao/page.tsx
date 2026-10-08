@@ -73,7 +73,7 @@ export default function TheChaoPage() {
     catalog: can("L1"),
     tracking: can("R1"),
     sales: can("R2"),
-    payment: can("R9") || can("F2"),
+    payment: can("R11"),
     coordinator: can("R3") || can("R4") || can("R5"),
   }
   const tabs: TabItem[] = ([

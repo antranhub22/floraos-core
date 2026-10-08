@@ -1,6 +1,6 @@
 # Screen Contract — Thẻ chào mẫu hoa (5 tab + Hộp việc)
 
-**Tuyến:** `/the-chao` · **Tệp chính:** `src/app/(app)/the-chao/page.tsx` · **Cập nhật:** 06/10/2026 (đợt commercial-ready) · **Thẻ:** Thẻ chào
+**Tuyến:** `/the-chao` · **Tệp chính:** `src/app/(app)/the-chao/page.tsx` · **Cập nhật:** 08/10/2026 (chuẩn bị 20/10: chỉ Điều hành xác nhận tiền, ưu đãi tính tiền, trần đơn mỗi khung giờ) · 06/10/2026 (đợt commercial-ready) · **Thẻ:** Thẻ chào
 
 ## 1. Vai và mục đích
 - Vai chính: Điều hành (`dieu_hanh`), Sale (`sale`), Điều phối (`dieu_phoi`) · mỗi vai một tab chính, chung một quy trình 9 bước
@@ -13,7 +13,7 @@
 ## 2. Hiện trạng (audit)
 - API: `/greeting-card/inbox` (R1) · `/greeting-card/messages` (R1, gửi R2) · `/greeting-card/messages/read` (R1) · `/greeting-card/messages/recipients` (R1) · `/greeting-card/tracking-pipeline` (R1) · `/greeting-card/tracking` (R1) · `/greeting-card/tracking/timeline` (R1) · `/greeting-card/sale-visibility` (F2)
 - Tab: Bộ sưu tập · Theo dõi tiến độ · Bán hàng (Sale) · Điều hành · Điều phối — giữ đúng 5 tab (PO 06/10/2026)
-- Trạng thái có sẵn: tải ☑ (skeleton) rỗng ☑ lỗi ☑ (kèm Thử lại) không quyền ☑ (tab chỉ hiện khi có năng lực: Bộ sưu tập `L1`, Theo dõi `R1`, Bán hàng `R2`, Điều hành `R9`/`F2`, Điều phối `R3`/`R4`/`R5` — từ 06/10/2026; máy chủ vẫn kiểm ở mọi endpoint, thiếu quyền → 403) một phần ☑ thành công ☑
+- Trạng thái có sẵn: tải ☑ (skeleton) rỗng ☑ lỗi ☑ (kèm Thử lại) không quyền ☑ (tab chỉ hiện khi có năng lực: Bộ sưu tập `L1`, Theo dõi `R1`, Bán hàng `R2`, Điều hành `R11` (chỉ Điều hành — PO 08/10/2026, thay `R9`/`F2`), Điều phối `R3`/`R4`/`R5` — từ 06/10/2026; máy chủ vẫn kiểm ở mọi endpoint, thiếu quyền → 403) một phần ☑ thành công ☑
 
 ## 3. Thứ bậc thông tin
 | Lớp | Nội dung | Vị trí hiển thị |
@@ -69,6 +69,13 @@ dùng lại: `FlowerImage`, `TrackingStepperView` · tạo mới: `inbox/sheet.t
 - Đơn mới cọc: mở lại link vẫn ở bước thanh toán với QR phần còn lại; màn thanh toán báo "Cửa hàng đã nhận tiền cọc" + nút xem QR phần còn lại.
 - Theo dõi theo mã đơn: mặc định rút gọn (tên viết tắt, phường + tỉnh); ô "Nhập 4 số cuối số điện thoại" để xem đầy đủ; mở từ chính link của khách thì đầy đủ sẵn.
 - Form đặt hoa có ô bẫy ẩn chống máy tự điền (không hiện, không nhận Tab, trình đọc màn hình bỏ qua).
+
+## 13c. Chuẩn bị 20/10 (PO 08/10/2026)
+- Tab "Điều hành" (thu tiền, báo giá, giao dịch ngân hàng) chỉ hiện với `R11` — trần cứng Điều hành; Sale và Điều phối không thấy nút "Thu tiền" (cả ở Sổ đơn hàng).
+- Form đặt hoa: 3 ưu đãi mặc định (Giảm 10% trên tổng đơn · Tặng thiệp · Thêm phụ liệu), khách chọn tối đa 01; "Giảm %" hiện dòng "Ưu đãi: −… đ" ở bảng tiền và màn Xem lại; ô mã giảm giá ẩn khi tiệm chưa bật; phí giao "Miễn phí" khi tiệm bật miễn phí giao mọi đơn.
+- Chọn khung giờ: khung đủ đơn hiện "(đã kín)" và không chọn được; gửi đơn vào khung vừa kín → lỗi ngay ở ô khung giờ.
+- Cài đặt → Khu vực, phí giao & giờ nhận đơn: "Số đơn tối đa mỗi khung giờ" (chung, mặc định 100; riêng từng khung), "Miễn phí giao hoa cho mọi đơn", "Cho khách nhập mã giảm giá".
+- Hộp "Thu tiền" và thẻ đơn Điều phối hiện "Ưu đãi khách chọn".
 
 ## 14. Kết quả
 lint:ux sau: không tăng vi phạm · nợ mở: thông báo đẩy/Zalo cho tin nhắn chưa làm
