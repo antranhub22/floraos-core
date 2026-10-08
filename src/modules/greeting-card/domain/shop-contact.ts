@@ -39,3 +39,11 @@ export function toShopContact(raw: {
     logoUrl: raw.logoUrl,
   }
 }
+
+/** Ảnh QR hiện trên trang công khai: chỉ nhận `https://` hoặc đường dẫn nội bộ `/…` (chặn `javascript:`, `//host`). */
+export function safeImageUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const v = value.trim()
+  if (v.startsWith("/") && !v.startsWith("//")) return v
+  return /^https:\/\/[^\s]+$/i.test(v) ? v : null
+}

@@ -5,6 +5,7 @@
  */
 
 import { resolveProductPriceVnd } from "./brochure-commerce-rules"
+import { DELIVERY_SLOT_IDS } from "./delivery-schedule"
 
 export const MAX_ORDER_QUANTITY = 20
 
@@ -63,6 +64,10 @@ export interface ShippingConfig {
   sameDayCutoffHour?: number | null
   /** Số giờ cần để cắm + giao trước khi hết khung giờ khách chọn (mặc định 0). */
   prepHours?: number
+  /** Id khung giờ 2 tiếng đang bật (`delivery_slots`); thiếu = bật tất cả. */
+  slotIds?: string[]
+  /** Cho khách nhập giờ cụ thể (`allow_custom_time`); thiếu = cho phép. */
+  allowCustomTime?: boolean
 }
 
 /** Đọc `organizations.settings.brochure_shipping`; sai/thiếu → không khu vực nào (phí 0, báo sau). */
@@ -87,6 +92,7 @@ export function parseShippingConfig(settings: unknown): ShippingConfig {
     // Chỉ thêm khoá khi tiệm đã cấu hình — cấu hình cũ giữ nguyên hình dạng
     ...(typeof cutoff === "number" && Number.isInteger(cutoff) && cutoff >= 1 && cutoff <= 23 ? { sameDayCutoffHour: cutoff } : {}),
     ...(typeof prep === "number" && Number.isFinite(prep) && prep > 0 && prep <= 24 ? { prepHours: Math.round(prep) } : {}),
+    ...parseSlotSettings(raw.delivery_slots, raw.allow_custom_time),
   }
 }
 
@@ -185,4 +191,13 @@ export function awaitingQuote(quantity: number, zone: ShippingZone | null): Broc
     voucherCode: null,
     awaitingQuote: true,
   }
+}
+
+/** Khung giờ bật/tắt: chỉ giữ id hợp lệ; tắt hết khung và tắt giờ cụ thể → về mặc định (luôn còn lựa chọn). */
+function parseSlotSettings(slots: unknown, allowCustom: unknown): Pick<ShippingConfig, "slotIds" | "allowCustomTime"> {
+  const out: Pick<ShippingConfig, "slotIds" | "allowCustomTime"> = {}
+  if (Array.isArray(slots)) out.slotIds = DELIVERY_SLOT_IDS.filter((id) => slots.includes(id))
+  if (allowCustom === false) out.allowCustomTime = false
+  if (out.slotIds?.length === 0 && out.allowCustomTime === false) return {}
+  return out
 }

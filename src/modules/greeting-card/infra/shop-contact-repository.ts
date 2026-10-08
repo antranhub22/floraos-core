@@ -1,4 +1,5 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
+import { safeImageUrl } from "../domain/shop-contact"
 import { GreetingCatalogRepository } from "./greeting-catalog-repository"
 
 /** Đọc thông tin công khai của tiệm (tên, SĐT, địa chỉ, logo) cho trang khách. */
@@ -21,7 +22,7 @@ export class ShopContactRepository {
     const logoId = org.brand_profile?.logo_asset_id ?? null
     const logoUrl = logoId ? await this.assets.getAssetStorageUrl(organizationId, logoId) : null
     const brandAssets = org.brand_profile?.brand_assets as { qr_code?: string } | null
-    const zaloQrUrl = brandAssets?.qr_code || null
+    const zaloQrUrl = safeImageUrl(brandAssets?.qr_code)
     return {
       name: org.business_profile?.display_name || org.name || "Tiệm hoa",
       phone: org.business_profile?.phone ?? null,
@@ -39,3 +40,4 @@ export class ShopContactRepository {
     return org?.id ?? null
   }
 }
+

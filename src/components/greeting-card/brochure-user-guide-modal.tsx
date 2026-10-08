@@ -42,6 +42,7 @@ export function BrochureUserGuideModal() {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
+                aria-label="Đóng hướng dẫn"
                 className="text-text-muted hover:text-foreground p-1 rounded-lg"
               >
                 <X size={20} />

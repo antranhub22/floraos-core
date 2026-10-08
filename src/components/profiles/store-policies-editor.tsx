@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import { Gift, ShieldCheck, FileText, Plus, Trash2, Check, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,14 +25,6 @@ export function StorePoliciesEditor({ initialPolicies, onSave, saving }: Props) 
   const [agreements, setAgreements] = useState<AgreementItem[]>(initialPolicies?.agreements ?? DEFAULT_AGREEMENTS)
   const [activeSection, setActiveSection] = useState<"promo" | "commit" | "agree">("promo")
   const [saveSuccess, setSaveSuccess] = useState(false)
-
-  useEffect(() => {
-    if (initialPolicies) {
-      if (initialPolicies.promotions?.length) setPromotions(initialPolicies.promotions)
-      if (initialPolicies.commitments?.length) setCommitments(initialPolicies.commitments)
-      if (initialPolicies.agreements?.length) setAgreements(initialPolicies.agreements)
-    }
-  }, [initialPolicies])
 
   const handleResetDefaults = () => {
     if (!window.confirm("Khôi phục danh sách Ưu đãi, Cam kết và Thỏa thuận về mặc định ban đầu?")) return
@@ -209,7 +201,7 @@ export function StorePoliciesEditor({ initialPolicies, onSave, saving }: Props) 
                   value={c.internalText || ""}
                   onChange={(e) => updateCommit(c.id, { internalText: e.target.value })}
                   placeholder="Quy định nội bộ cho nhân viên (tùy chọn)..."
-                  className="text-[11px] text-text-muted/70 italic bg-transparent border-t border-border/40 pt-1 focus:outline-none"
+                  className="text-caption text-text-muted/70 italic bg-transparent border-t border-border/40 pt-1 focus:outline-none"
                 />
               </div>
             ))}
@@ -259,7 +251,7 @@ export function StorePoliciesEditor({ initialPolicies, onSave, saving }: Props) 
                   value={a.internalText || ""}
                   onChange={(e) => updateAgree(a.id, { internalText: e.target.value })}
                   placeholder="Quy chuẩn xử lý nội bộ..."
-                  className="text-[11px] text-text-muted/70 italic bg-transparent border-t border-border/40 pt-1 focus:outline-none"
+                  className="text-caption text-text-muted/70 italic bg-transparent border-t border-border/40 pt-1 focus:outline-none"
                 />
               </div>
             ))}

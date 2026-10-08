@@ -9,6 +9,8 @@ import {
   parseShippingConfig,
   type ShippingConfig,
 } from "@/modules/greeting-card/domain/brochure-pricing"
+import { enabledSlots, customTimeAllowed } from "@/modules/greeting-card/domain/delivery-schedule"
+import { DeliverySlotToggles } from "./delivery-slot-toggles"
 
 interface ZoneDraft {
   id: string
@@ -18,7 +20,7 @@ interface ZoneDraft {
 
 const FIELD = "h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
 
-type Draft = { zones: ZoneDraft[]; freeOver: string; cutoff: string; prep: string }
+type Draft = { zones: ZoneDraft[]; freeOver: string; cutoff: string; prep: string; slotIds: string[]; allowCustomTime: boolean }
 
 function toDraft(config: ShippingConfig): Draft {
   return {
@@ -26,6 +28,8 @@ function toDraft(config: ShippingConfig): Draft {
     freeOver: config.freeShippingOverVnd ? String(config.freeShippingOverVnd) : "",
     cutoff: config.sameDayCutoffHour != null ? String(config.sameDayCutoffHour) : "",
     prep: config.prepHours ? String(config.prepHours) : "",
+    slotIds: enabledSlots(config).map((s) => s.id),
+    allowCustomTime: customTimeAllowed(config),
   }
 }
 
@@ -55,6 +59,10 @@ export function BrochureShippingSettings() {
   async function save(e: React.FormEvent) {
     e.preventDefault()
     if (!current) return
+    if (current.slotIds.length === 0 && !current.allowCustomTime) {
+      setMessage({ ok: false, text: "Cần bật ít nhất một khung giờ giao hoặc cho nhập giờ cụ thể." })
+      return
+    }
     const zones = current.zones
       .map((z) => ({ id: z.id, name: z.name.trim(), fee_vnd: Number(z.fee.replace(/\D/g, "")) }))
       .filter((z) => z.name)
@@ -64,6 +72,8 @@ export function BrochureShippingSettings() {
         free_shipping_over_vnd: current.freeOver ? Number(current.freeOver.replace(/\D/g, "")) : null,
         same_day_cutoff_hour: hourOrNull(current.cutoff, 1, 23),
         prep_hours: hourOrNull(current.prep, 0, 24) ?? 0,
+        delivery_slots: current.slotIds,
+        allow_custom_time: current.allowCustomTime,
       },
     }
     setSaving(true)
@@ -171,6 +181,11 @@ export function BrochureShippingSettings() {
               <span className="text-text-muted">giờ trước khi giao</span>
             </label>
           </div>
+          <DeliverySlotToggles
+            slotIds={current.slotIds}
+            allowCustomTime={current.allowCustomTime}
+            onChange={(next) => edit({ ...current, ...next })}
+          />
         </>
       )}
 

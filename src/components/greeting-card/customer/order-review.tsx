@@ -38,11 +38,13 @@ export function OrderReview(props: {
   submitting: boolean
   error: string | null
   onEdit: () => void
-  onConfirm: () => void
+  onConfirm: (confirmedTerms: boolean) => void
 }) {
   const { product, input, quote, appliedPolicies } = props
   const awaitingQuote = quote?.awaitingQuote || (quote?.totalVnd ?? product.price) <= 0
-  const [termsAgreed, setTermsAgreed] = useState(input.confirmedTerms ?? true)
+  // Có thỏa thuận → khách phải tự tick (không tick sẵn); máy chủ cũng chặn nếu thiếu
+  const needsTerms = (appliedPolicies?.agreements.length ?? 0) > 0
+  const [termsAgreed, setTermsAgreed] = useState(false)
 
   const selectedPromo = appliedPolicies?.promotions.find((p) => p.id === input.selectedPromotionId)
 
@@ -120,7 +122,7 @@ export function OrderReview(props: {
       </div>
 
       {/* CHECKBOX XÁC NHẬN THỎA THUẬN (SPEC #2 D, #5) */}
-      <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-background cursor-pointer select-none">
+      {needsTerms && <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-background cursor-pointer select-none">
         <input
           type="checkbox"
           checked={termsAgreed}
@@ -128,9 +130,9 @@ export function OrderReview(props: {
           className="mt-0.5 rounded border-border text-primary focus:ring-primary w-4 h-4"
         />
         <span className="text-caption leading-relaxed text-foreground">
-          Tôi đã đọc và hiểu các <strong>Thỏa thuận với khách hàng</strong> áp dụng cho đơn hàng này.
+          Tôi đã đọc và đồng ý với {appliedPolicies?.agreements.length} <strong>thỏa thuận</strong> ở trên cho đơn hàng này.
         </span>
-      </label>
+      </label>}
 
       {props.error && (
         <p role="alert" className="rounded-xl border border-danger/30 bg-danger-bg p-3 text-body-sm text-danger">
@@ -140,8 +142,8 @@ export function OrderReview(props: {
 
       <Button
         type="button"
-        onClick={props.onConfirm}
-        disabled={props.submitting || !termsAgreed}
+        onClick={() => props.onConfirm(needsTerms && termsAgreed)}
+        disabled={props.submitting || (needsTerms && !termsAgreed)}
         className="h-12 w-full gap-2 rounded-xl text-body font-extrabold"
       >
         <Check size={18} aria-hidden="true" />
