@@ -36,4 +36,11 @@ describe("feature-lock", () => {
     expect(open).toEqual(["greeting-card-hub"])
     expect(isJourneyLocked("view-platform-overview", true)).toBe(false)
   })
+
+  it("production: khóa toàn bộ nhóm Vận hành trên sidebar", () => {
+    for (const href of ["/dieu-phoi", "/job", "/duyet/abc", "/so-lieu", "/muc-dung", "/audit"]) {
+      expect(isRouteLocked(href, true)).toBe(true)
+    }
+    expect(isRouteLocked("/the-chao", true)).toBe(false)
+  })
 })

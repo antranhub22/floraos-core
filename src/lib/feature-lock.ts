@@ -20,6 +20,13 @@ export const LOCKED_ROUTE_PREFIXES: readonly string[] = [
   "/noi-dung",
   "/lich-dang",
   "/kho-templates",
+  // Nhóm "Vận hành" trên sidebar (PO 08/10/2026)
+  "/dieu-phoi",
+  "/job",
+  "/duyet",
+  "/so-lieu",
+  "/muc-dung",
+  "/audit",
 ]
 
 /**
