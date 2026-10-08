@@ -6,6 +6,7 @@ import { policyLabel, policyOf, readPaymentPlan, type PaymentPlanSource } from "
 import {
   balanceDue,
   orderPaymentStatus,
+  paymentFailedOf,
   paymentMilestones,
   PAYMENT_STATUS_LABEL,
   type OrderPaymentStatus,
@@ -45,7 +46,10 @@ export function orderPaymentSummary(
   const plan = readPaymentPlan(order.pricingRuleRef)
   const pct = plan?.depositPercent ?? shopDepositPercent
   const policy = plan?.policy ?? policyOf(pct)
-  const status = orderPaymentStatus({ totalVnd: order.totalVnd, paidVnd: order.paidVnd, ...flags })
+  const status = orderPaymentStatus({
+    totalVnd: order.totalVnd, paidVnd: order.paidVnd, reported: flags.reported === true,
+    failed: flags.failed === true || paymentFailedOf(order.pricingRuleRef),
+  })
   return {
     policy,
     policyLabel: policyLabel(policy),

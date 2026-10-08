@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { cancelBlocker, expectedPayment, parsePaymentPolicy, paymentGateBlocker, quoteBlocker } from "../brochure-payment-policy"
+import { cancelBlocker, expectedPayment, parsePaymentPolicy, paymentGateBlocker, paymentHoldUntil, quoteBlocker, serializePaymentPolicy } from "../brochure-payment-policy"
 
 describe("parsePaymentPolicy", () => {
   it("mặc định trả đủ, không chặn; % cọc ngoài 1–99 bị bỏ", () => {
@@ -48,5 +48,22 @@ describe("đơn chờ báo giá (tổng 0)", () => {
     expect(quoteBlocker({ status: "CANCELLED", totalVnd: 0 }, 850_000)).not.toBeNull()
     expect(quoteBlocker({ status: "DRAFT", totalVnd: 0 }, 0)).not.toBeNull()
     expect(quoteBlocker({ status: "DRAFT", totalVnd: 0 }, 1.5)).not.toBeNull()
+  })
+})
+
+describe("hạn thanh toán + ghi chính sách", () => {
+  it("đọc payment_timeout_minutes 5–1440; ngoài khoảng bỏ", () => {
+    expect(parsePaymentPolicy({ brochure_policy: { payment_timeout_minutes: 30 } }).paymentTimeoutMinutes).toBe(30)
+    expect(parsePaymentPolicy({ brochure_policy: { payment_timeout_minutes: 0 } }).paymentTimeoutMinutes).toBeUndefined()
+    expect(parsePaymentPolicy({ brochure_policy: { payment_timeout_minutes: 3 } }).paymentTimeoutMinutes).toBeUndefined()
+  })
+  it("ghi rồi đọc lại không mất trường nào (hai màn cài đặt cùng ghi brochure_policy)", () => {
+    const p = { depositPercent: 30, requirePaidBeforeProduction: true, requireFullBeforeDispatch: true, holdMinutes: 15, autoCancelUnpaid: true, paymentTimeoutMinutes: 30 }
+    expect(parsePaymentPolicy({ brochure_policy: serializePaymentPolicy(p) })).toEqual(p)
+  })
+  it("hạn thanh toán thắng giữ đơn khi tính hạn hiện cho khách", () => {
+    const createdAt = new Date("2026-10-08T03:00:00Z")
+    expect(paymentHoldUntil({ depositPercent: 0, requirePaidBeforeProduction: false, requireFullBeforeDispatch: false, holdMinutes: 120, paymentTimeoutMinutes: 30 }, { paidVnd: 0, createdAt }))
+      .toBe("2026-10-08T03:30:00.000Z")
   })
 })

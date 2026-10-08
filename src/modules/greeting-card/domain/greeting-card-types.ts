@@ -170,6 +170,8 @@ export interface BrochurePaymentInstructions {
   transferMemo: string
   /** Hạn giữ đơn chờ chuyển khoản (ISO) — trang khách hiện đếm ngược; null = không giữ hạn. */
   holdUntil?: string | null
+  /** Hết `holdUntil` mà chưa nhận tiền, khách chưa báo đã chuyển → thanh toán thất bại, đơn tự huỷ. */
+  cancelOnExpiry?: boolean
 }
 
 /** Phần phiên trả ra trang công khai — KHÔNG chứa SĐT khách, id tổ chức, id sale. */

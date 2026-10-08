@@ -167,6 +167,9 @@ export async function getBrochureTracking(
         ? { current: { ...snapshotFromOrder(order), recipientPhone: "" }, shipping: parseShippingConfig(orgSettings), ...(await customerChangeSection(order)) }
         : null,
     },
-    trackingStep: step,
+    // Huỷ vì hết hạn thanh toán: báo "không hoàn thành" thay cho "cửa hàng đã huỷ"
+    trackingStep: payment.status === "PAYMENT_FAILED"
+      ? { ...step, title: "Đơn hàng không hoàn thành", description: "Chưa nhận được thanh toán trong thời hạn nên đơn đã tự huỷ." }
+      : step,
   }
 }

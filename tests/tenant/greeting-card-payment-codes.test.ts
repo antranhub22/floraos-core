@@ -7,7 +7,8 @@ import { ProductRepository } from "@/modules/products/infra/product-repository"
 import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-link"
 import { quoteBrochureSession, submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
 import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
-import { adminConfirmBrochurePayment } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
+import { adminConfirmBrochurePayment, reportCustomerPayment } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
+import { runBackgroundSweep } from "@/modules/greeting-card/use-cases/background-sweep"
 import { assignBrochureFlorist, uploadBrochureProductPhoto } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
 import { getBrochureTracking } from "@/modules/greeting-card/use-cases/get-brochure-tracking"
 
@@ -111,5 +112,35 @@ describe("greeting-card: mã thanh toán đặt cọc", () => {
     const after = await getBrochureTracking(placed.orderCode, { sendCode })
     expect(after.status === "FOUND" && after.order.payment).toMatchObject({ status: "PAID", remainingVnd: 0, balanceDue: false, balanceInstructions: null })
     expect(after.status === "FOUND" && after.order.payment.milestones.map((m) => m.status)).toEqual(["PAID", "PAID"])
+  })
+
+  it("hạn thanh toán 30 phút: không chuyển, không báo → thanh toán thất bại, đơn huỷ, trả lượt mã; đã báo chuyển → giữ đơn", async () => {
+    const org = await prisma.organizations.findUniqueOrThrow({ where: { id: a.organizationId } })
+    const settings = org.settings as Record<string, unknown>
+    await prisma.organizations.update({
+      where: { id: a.organizationId },
+      data: { settings: { ...settings, brochure_policy: { deposit_percent: 0, payment_timeout_minutes: 30 } } },
+    })
+    const silent = await linkFor(a, "bst-1")
+    const placed = await submitBrochureOrder(silent, order("DC30"))
+    expect(placed.vietQr).toMatchObject({ cancelOnExpiry: true })
+    const reporter = await linkFor(a, "bst-2")
+    const kept = await submitBrochureOrder(reporter, { ...order(), customerPhone: "0977654321" })
+    await reportCustomerPayment(reporter)
+
+    await runBackgroundSweep(new Date(Date.now() + 29 * 60_000))
+    expect((await prisma.orders.findUniqueOrThrow({ where: { id: placed.orderId } })).status).toBe("DRAFT")
+
+    await runBackgroundSweep(new Date(Date.now() + 31 * 60_000))
+    const failed = await prisma.orders.findUniqueOrThrow({ where: { id: placed.orderId } })
+    expect(failed.status).toBe("CANCELLED")
+    expect(failed.pricing_rule_ref).toMatchObject({ paymentFailed: { reason: "PAYMENT_TIMEOUT" } })
+    expect((await prisma.orders.findUniqueOrThrow({ where: { id: kept.orderId } })).status).toBe("DRAFT")
+
+    const tracking = await getBrochureTracking(placed.orderCode, { sendCode: silent })
+    expect(tracking.status === "FOUND" && tracking.order.payment.status).toBe("PAYMENT_FAILED")
+    expect(tracking.status === "FOUND" && tracking.trackingStep.title).toBe("Đơn hàng không hoàn thành")
+    // Đơn huỷ trả lại lượt dùng của mã DC30 (giới hạn 1 lượt)
+    expect((await quoteBrochureSession(await linkFor(a, "bst-3"), { paymentCode: "DC30" })).errors).toEqual({})
   })
 })

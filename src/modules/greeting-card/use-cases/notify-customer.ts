@@ -13,10 +13,17 @@ import {
 } from "../domain/customer-notifications"
 import { sendZnsMessage, type FetchLike, type ZnsCredentials } from "../adapters/zalo-zns-adapter"
 import { sendEsmsMessage, type EsmsCredentials } from "../adapters/esms-adapter"
+import { expectedPayment, parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { policyForOrder } from "../domain/payment-plan"
 
 export const NOTIFY_SECRET_PURPOSE = "greeting-card-notify"
 
 const DUE_EVENTS = new Set<NotifyEvent>(["QUOTED", "PAYMENT_REMINDER"])
+
+function dueNowVnd(order: { total_vnd: unknown; paid_vnd: unknown; pricing_rule_ref: unknown; organization: { settings: unknown } }): number {
+  const policy = policyForOrder(parsePaymentPolicy(order.organization.settings), order.pricing_rule_ref)
+  return expectedPayment(policy, Number(order.total_vnd), Number(order.paid_vnd)).amountVnd
+}
 
 export type NotifyOutcome = "SENT" | "FAILED" | "SKIPPED" | "DUPLICATE" | "DISABLED"
 
@@ -59,8 +66,9 @@ export async function notifyOrderEvent(
     customer_name: order.customer?.name ?? "Quý khách",
     shop_name: order.organization.business_profile?.display_name || order.organization.name,
     status: NOTIFY_EVENT_LABELS[event],
-    // Mốc đòi tiền báo số còn phải trả; mốc đã thu báo số đã nhận
-    amount: `${(DUE_EVENTS.has(event) ? Number(order.total_vnd) - Number(order.paid_vnd) : Number(order.paid_vnd)).toLocaleString("vi-VN")} đ`,
+    // Mốc đòi tiền báo đúng khoản phải chuyển LẦN NÀY (cọc theo kế hoạch của đơn, hoặc phần còn lại)
+    // — trùng số tiền trên mã QR; mốc đã thu báo số đã nhận
+    amount: `${(DUE_EVENTS.has(event) ? dueNowVnd(order) : Number(order.paid_vnd)).toLocaleString("vi-VN")} đ`,
     tracking_url: base && sendCode ? `${base}/b/${sendCode}` : "",
   }
 

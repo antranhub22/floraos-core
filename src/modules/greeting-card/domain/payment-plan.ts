@@ -238,3 +238,32 @@ export function policyForOrder<P extends { depositPercent: number }>(shopPolicy:
   const plan = readPaymentPlan(pricingRuleRef)
   return plan ? { ...shopPolicy, depositPercent: plan.depositPercent } : shopPolicy
 }
+
+/**
+ * Lỗi cấu hình (tiếng Việt) để màn cài đặt chặn lưu thay vì âm thầm bỏ dòng sai lúc đọc.
+ * Rỗng = hợp lệ.
+ */
+export function paymentPlansErrors(config: PaymentPlansConfig): string[] {
+  const errors: string[] = []
+  const seen = new Set<string>()
+  config.codes.forEach((c, i) => {
+    const at = `Mã thứ ${i + 1}`
+    const code = normalizePaymentCode(c.code)
+    if (!CODE_RE.test(code)) errors.push(`${at}: mã gồm 2–40 chữ in hoa/số (VD: DC30)`)
+    else if (seen.has(code)) errors.push(`${at}: mã ${code} bị trùng`)
+    seen.add(code)
+    if (depositPercentOf(c.policy) === null) errors.push(`${at}: mức đặt cọc phải từ 1% đến 99%`)
+    if (c.startsOn && c.endsOn && c.endsOn < c.startsOn) errors.push(`${at}: ngày kết thúc trước ngày bắt đầu`)
+    if (c.minOrderVnd !== null && c.maxOrderVnd !== null && c.minOrderVnd > c.maxOrderVnd) errors.push(`${at}: giá trị đơn tối thiểu lớn hơn tối đa`)
+  })
+  if (config.codes.length > MAX_PAYMENT_CODES) errors.push(`Tối đa ${MAX_PAYMENT_CODES} mã thanh toán`)
+  config.campaigns.forEach((c, i) => {
+    const at = `Đợt thứ ${i + 1}`
+    if (!c.name.trim()) errors.push(`${at}: cần tên đợt`)
+    if (!DATE_RE.test(c.startsOn) || !DATE_RE.test(c.endsOn)) errors.push(`${at}: cần ngày bắt đầu và kết thúc`)
+    else if (c.endsOn < c.startsOn) errors.push(`${at}: ngày kết thúc trước ngày bắt đầu`)
+    if (depositPercentOf(c.policy) === null) errors.push(`${at}: cách thu không hợp lệ`)
+  })
+  if (config.campaigns.length > MAX_POLICY_CAMPAIGNS) errors.push(`Tối đa ${MAX_POLICY_CAMPAIGNS} đợt`)
+  return errors
+}

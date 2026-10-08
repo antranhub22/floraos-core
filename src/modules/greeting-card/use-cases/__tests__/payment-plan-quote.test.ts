@@ -16,9 +16,10 @@ const settings = {
 }
 const now = new Date("2026-10-08T03:00:00Z")
 
-function checkout(uses = 0) {
+function checkout(uses = 0, voucher: unknown = null) {
   const countPaymentCodeUses = vi.fn().mockResolvedValue(uses)
-  return { countPaymentCodeUses, repo: { countPaymentCodeUses } as unknown as Checkout }
+  const findVoucher = vi.fn().mockResolvedValue(voucher)
+  return { countPaymentCodeUses, repo: { countPaymentCodeUses, findVoucher } as unknown as Checkout }
 }
 const input = (paymentCode?: string) => ({ paymentCode, totalVnd: 2_000_000, catalogId: "cat-1", deliveryDate: "2026-10-12" })
 
@@ -48,6 +49,15 @@ describe("resolvePaymentPlan — mã thanh toán chỉ kiểm ở máy chủ", (
       expect(r.rule).toBeNull()
       expect(r.plan).toMatchObject({ policy: "FULL_PAYMENT", source: "SHOP_DEFAULT", paymentCode: null })
     }
+  })
+
+  it("gõ nhầm mã giảm giá vào ô mã thanh toán → chỉ sang ô Mã giảm giá (khi tiệm bật mã giảm giá)", async () => {
+    const withVouchers = { ...settings, brochure_shipping: { voucher_enabled: true } }
+    const r = await resolvePaymentPlan("org-1", withVouchers, input("GIAM10"), checkout(0, { id: "v1" }).repo, now)
+    expect(r.error).toMatch(/mã giảm giá/)
+    expect(r.plan.policy).toBe("FULL_PAYMENT")
+    // Tiệm tắt mã giảm giá → không gợi ý ô đang ẩn
+    expect((await resolvePaymentPlan("org-1", settings, input("GIAM10"), checkout(0, { id: "v1" }).repo, now)).error).toMatch(/không tồn tại/)
   })
 
   it("khách nhập phần trăm thay vì mã → không được chấp nhận", async () => {

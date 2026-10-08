@@ -5,7 +5,7 @@ import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import { NOTIFY_EVENTS, type NotifyEvent } from "../domain/customer-notifications"
 import {
-  AUTO_CANCEL_REASON, RETRY_BACKOFF_MS, RETRY_WINDOW_MS, STALE_SENDING_MS, holdAction,
+  AUTO_CANCEL_REASON, PAYMENT_TIMEOUT_REASON, RETRY_BACKOFF_MS, RETRY_WINDOW_MS, STALE_SENDING_MS, holdAction,
 } from "../domain/background-sweep"
 import { notifyOrderEvent, queueOrderNotification } from "./notify-customer"
 
@@ -60,8 +60,9 @@ export async function runBackgroundSweep(
       if (action === "REMIND") {
         // Mốc nhắc chống trùng theo (đơn, mốc) — mỗi đơn chỉ nhắc một lần
         if ((await notifyOrderEvent(o.organization_id, o.id, "PAYMENT_REMINDER")) === "SENT") result.reminded += 1
-      } else if (action === "CANCEL") {
-        await payments.cancel(systemContext(o.organization_id), o.id, AUTO_CANCEL_REASON)
+      } else if (action === "CANCEL" || action === "FAIL_PAYMENT") {
+        const failed = action === "FAIL_PAYMENT"
+        await payments.cancel(systemContext(o.organization_id), o.id, failed ? PAYMENT_TIMEOUT_REASON : AUTO_CANCEL_REASON, { paymentFailed: failed })
         queueOrderNotification(o.organization_id, o.id, "CANCELLED")
         result.cancelled += 1
       }

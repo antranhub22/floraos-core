@@ -26,6 +26,7 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
   const [voucherInput, setVoucherInput] = useState(selection.voucherCode)
 
   return (
+    <>
     <div className="flex flex-col gap-3 p-3 rounded-xl border border-border bg-surface-muted/50">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {variants.length > 0 && (
@@ -105,9 +106,6 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
         {errors.voucherCode && <span className="text-caption text-danger">{errors.voucherCode}</span>}
       </div>}
 
-      {shipping.paymentCodesEnabled && (
-        <PaymentCodeField value={selection.paymentCode} onApply={(code) => onChange({ paymentCode: code })} quote={quote} error={errors.paymentCode} />
-      )}
 
       {quote?.awaitingQuote ? (
         <p role="status" className="text-body-sm text-text-muted border-t border-border pt-2">
@@ -137,5 +135,10 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
         </dl>
       )}
     </div>
+    {/* Mã thanh toán: khối riêng, không lẫn với mã giảm giá */}
+    {shipping.paymentCodesEnabled && (
+      <PaymentCodeField value={selection.paymentCode} onApply={(code) => onChange({ paymentCode: code })} quote={quote} error={errors.paymentCode} />
+    )}
+    </>
   )
 }

@@ -6,7 +6,12 @@ import { Plus } from "lucide-react"
 import { readApiError } from "@/components/greeting-card/api-error"
 
 /** "Đặt thêm một đơn khác": mở link mới (mã đơn mới), đơn hiện tại giữ nguyên. */
-export function ReorderButton({ sendCode }: { sendCode: string }) {
+export function ReorderButton({ sendCode, label = "Đặt thêm một đơn khác", primary = false }: {
+  sendCode: string
+  label?: string
+  /** Nút chính (đơn trước không hoàn thành → kêu gọi đặt lại). */
+  primary?: boolean
+}) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,10 +36,12 @@ export function ReorderButton({ sendCode }: { sendCode: string }) {
         type="button"
         onClick={() => void start()}
         disabled={busy}
-        className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-border px-4 text-body-sm font-semibold text-primary hover:bg-surface-muted disabled:opacity-60"
+        className={`inline-flex h-11 items-center gap-1.5 rounded-xl px-4 text-body-sm font-semibold disabled:opacity-60 ${
+          primary ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-border text-primary hover:bg-surface-muted"
+        }`}
       >
         <Plus size={16} aria-hidden="true" />
-        {busy ? "Đang mở đơn mới..." : "Đặt thêm một đơn khác"}
+        {busy ? "Đang mở đơn mới..." : label}
       </button>
       {error && <p role="alert" className="text-caption text-danger">{error}</p>}
     </div>

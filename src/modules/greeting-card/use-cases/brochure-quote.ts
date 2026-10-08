@@ -15,7 +15,7 @@ import { selectPromotion } from "../domain/order-policies"
 import { BrochureCheckoutRepository } from "../infra/brochure-checkout-repository"
 import { holidayOn, holidaySurcharge, parseHolidayPolicy } from "../domain/holiday-policy"
 import { paymentSplit } from "../domain/payment-schedule"
-import type { PaymentCodeRule } from "../domain/payment-plan"
+import { findPaymentCode, parsePaymentPlans, type PaymentCodeRule } from "../domain/payment-plan"
 import { resolvePaymentPlan } from "./payment-plan-quote"
 
 export interface QuoteRequest {
@@ -133,7 +133,10 @@ async function priceProduct(
   if (code) {
     const found = await checkout.findVoucher(organizationId, code)
     if (!found) {
-      errors.voucherCode = "Mã giảm giá không tồn tại"
+      // Mã thanh toán (DC30…) không phải mã giảm giá — chỉ khách sang đúng ô
+      errors.voucherCode = findPaymentCode(parsePaymentPlans(shopSettings), code)
+        ? "Đây là mã thanh toán (đặt cọc) — vui lòng nhập ở ô Mã thanh toán"
+        : "Mã giảm giá không tồn tại"
     } else {
       const customerId = await checkout.findCustomerIdByPhone(organizationId, normalizePhone(req.customerPhone))
       const blocker = voucherBlocker(found, unitPriceVnd * quantity, customerId)

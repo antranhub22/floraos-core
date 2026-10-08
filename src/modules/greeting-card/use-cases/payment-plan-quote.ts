@@ -1,5 +1,6 @@
 import { log } from "@/core/observability/log"
 import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { parseShippingConfig } from "../domain/brochure-pricing"
 import {
   defaultPaymentPlan,
   findPaymentCode,
@@ -41,7 +42,12 @@ export async function resolvePaymentPlan(
   if (!code) return { plan: fallback, rule: null, error: null }
 
   const rule = findPaymentCode(config, code)
-  const error = rule
+  // Khách gõ nhầm mã giảm giá vào ô mã thanh toán → chỉ đúng ô cần nhập
+  const misplaced = !rule && parseShippingConfig(shopSettings).vouchersEnabled === true &&
+    (await checkout.findVoucher(organizationId, code)) !== null
+  const error = misplaced
+    ? "Đây là mã giảm giá — vui lòng nhập ở ô Mã giảm giá"
+    : rule
     ? paymentCodeBlocker(rule, {
         today,
         orderTotalVnd: input.totalVnd,

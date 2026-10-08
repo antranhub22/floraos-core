@@ -96,6 +96,17 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
         }
       : null
 
+  // Đơn không hoàn thành (hết hạn thanh toán) → quay lại bộ sưu tập để đặt đơn mới
+  const restartCta = (
+    <button
+      type="button"
+      onClick={() => setStep("SWIPING")}
+      className="mt-2 inline-flex h-11 items-center rounded-xl bg-primary px-5 text-body-sm font-bold text-primary-foreground hover:bg-primary/90"
+    >
+      Đặt lại đơn mới
+    </button>
+  )
+
   // 1. ORDER FORM STEP
   if (step === "ORDER_FORM" && activeSnapshot) {
     const appliedPolicies = (catalog.filters as Record<string, unknown> | null | undefined)?.appliedPolicies as
@@ -132,6 +143,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
             if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
           }}
           onGoToTracking={() => setStep("TRACKING")}
+          failedCta={restartCta}
         />
       </div>
     )
@@ -150,7 +162,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
             ← Quay lại Bộ sưu tập hoa
           </button>
         </div>
-        <BrochureTrackingView orderCode={orderResult.orderCode} sendCode={orderResult.sendCode} />
+        <BrochureTrackingView orderCode={orderResult.orderCode} sendCode={orderResult.sendCode} failedCta={restartCta} />
       </div>
     )
   }

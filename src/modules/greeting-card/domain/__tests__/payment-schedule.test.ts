@@ -90,3 +90,17 @@ describe("orderPaymentSummary — cho Admin/Sale và trang theo dõi", () => {
     expect(s).toMatchObject({ policy: "FULL_PAYMENT", paymentCode: null, status: "UNPAID" })
   })
 })
+
+describe("PAYMENT_FAILED — đơn tự huỷ vì hết hạn thanh toán", () => {
+  it("bản đánh dấu trên đơn → trạng thái thanh toán thất bại", () => {
+    const s = orderPaymentSummary(
+      { totalVnd: 2_000_000, paidVnd: 0, status: "CANCELLED", productionStatus: "WAITING", deliveryStatus: "PENDING", pricingRuleRef: { paymentFailed: { reason: "PAYMENT_TIMEOUT", at: "2026-10-08T03:30:00Z" } } },
+      0,
+    )
+    expect(s).toMatchObject({ status: "PAYMENT_FAILED", statusLabel: "Thanh toán không thành công" })
+  })
+  it("đơn huỷ tay (không đánh dấu) → không phải thanh toán thất bại", () => {
+    const s = orderPaymentSummary({ totalVnd: 2_000_000, paidVnd: 0, status: "CANCELLED", productionStatus: "WAITING", deliveryStatus: "PENDING", pricingRuleRef: {} }, 0)
+    expect(s.status).toBe("UNPAID")
+  })
+})

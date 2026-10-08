@@ -16,5 +16,7 @@ export function paymentInstructionsFor(
 ): BrochurePaymentInstructions | null {
   const policy = policyForOrder(parsePaymentPolicy(shopSettings), order.pricingRuleRef)
   const base = buildPaymentInstructions(parseBrochurePaymentConfig(shopSettings), order, policy, orderCode)
-  return base ? { ...base, holdUntil: paymentHoldUntil(policy, order) } : null
+  if (!base) return null
+  const holdUntil = paymentHoldUntil(policy, order)
+  return { ...base, holdUntil, ...(holdUntil && policy.paymentTimeoutMinutes ? { cancelOnExpiry: true } : {}) }
 }

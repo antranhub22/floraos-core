@@ -9,6 +9,7 @@ import {
   planFromCode,
   policyForOrder,
   readPaymentPlan,
+  paymentPlansErrors,
   serializePaymentPlans,
   vnToday,
   type PaymentCodeRule,
@@ -122,5 +123,23 @@ describe("vnToday", () => {
   it("theo giờ Việt Nam", () => {
     expect(vnToday(new Date("2026-10-08T18:00:00Z"))).toBe("2026-10-09")
     expect(vnToday(new Date("2026-10-08T16:59:00Z"))).toBe("2026-10-08")
+  })
+})
+
+describe("paymentPlansErrors — màn Hồ sơ chặn lưu cấu hình sai", () => {
+  const ok = parsePaymentPlans(settings)
+  it("cấu hình hợp lệ", () => expect(paymentPlansErrors(ok)).toEqual([]))
+  it("mã trống / trùng / sai ngày / sai khoảng giá / đợt thiếu tên", () => {
+    const bad = {
+      codes: [rule({ code: "" }), rule(), rule(), rule({ code: "DC9", startsOn: "2026-10-10", endsOn: "2026-10-01" }), rule({ code: "DC8", minOrderVnd: 5, maxOrderVnd: 1 })],
+      campaigns: [{ id: "x", name: " ", policy: "FULL_PAYMENT", active: true, startsOn: "", endsOn: "" }],
+    }
+    const errors = paymentPlansErrors(bad)
+    expect(errors.some((e) => /Mã thứ 1: mã gồm/.test(e))).toBe(true)
+    expect(errors.some((e) => /Mã thứ 3: mã DC30 bị trùng/.test(e))).toBe(true)
+    expect(errors.some((e) => /Mã thứ 4: ngày kết thúc/.test(e))).toBe(true)
+    expect(errors.some((e) => /Mã thứ 5: giá trị đơn tối thiểu/.test(e))).toBe(true)
+    expect(errors.some((e) => /Đợt thứ 1: cần tên/.test(e))).toBe(true)
+    expect(errors.some((e) => /Đợt thứ 1: cần ngày/.test(e))).toBe(true)
   })
 })

@@ -14,6 +14,8 @@ import { GreetingLineOverrideForm } from "@/components/profiles/greeting-line-ov
 import { OccasionsSettingsForm } from "@/components/organization/occasions-settings-form"
 import { ProfileJourneyWorkspace } from "@/components/profiles/journey/profile-journey-workspace"
 import { StorePoliciesEditor } from "@/components/profiles/store-policies-editor"
+import { PaymentPolicySection } from "@/components/profiles/payment-policy-section"
+import { DepositLevelsSection } from "@/components/profiles/deposit-levels-section"
 import { useApi, apiSend } from "@/components/greeting-card/greeting-api"
 import {
   parseStorePolicies,
@@ -180,6 +182,9 @@ export default function ProfilePage() {
             <div className="space-y-6">
               {/* Quản lý tập trung Ưu đãi, Cam kết & Thỏa thuận (Task #2) */}
               <StorePoliciesSection />
+              {/* Chính sách thanh toán: giao hoa có cần thu đủ trước, hạn thanh toán, mức đặt cọc (mã thanh toán) */}
+              <PaymentPolicySection />
+              <DepositLevelsSection />
               <SalesDefaultsForm
                 initialBrandData={brand}
                 onSave={saveBrand}

@@ -58,6 +58,9 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
   const track = useJourneyTracker(session.sendCode, !preview)
   const [currentProduct, setCurrentProduct] = useState<GreetingCatalogProduct | null>(null)
   const [contactNote, setContactNote] = useState<string | null>(null)
+  // Hết hạn thanh toán, đơn tự huỷ → đổi nút dưới thành "Đặt lại đơn mới"
+  const [paymentFailed, setPaymentFailed] = useState(false)
+  const onPaymentFailed = useCallback(() => setPaymentFailed(true), [])
 
   const contactZalo = useCallback(
     (message: string, productId?: string) => {
@@ -252,15 +255,17 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
               setTrackingUnlocked(true)
               setStep("TRACKING")
             }}
+            onPaymentFailed={onPaymentFailed}
           />
         )}
 
         {step === "TRACKING" && orderResult && (
-          <BrochureTrackingView orderCode={orderResult.orderCode} sendCode={session.sendCode} />
+          <BrochureTrackingView orderCode={orderResult.orderCode} sendCode={session.sendCode} onPaymentFailed={onPaymentFailed} />
         )}
 
         {(step === "PAYMENT" || step === "TRACKING") && orderResult && (
-          <ReorderButton sendCode={session.sendCode} />
+          // Đơn không hoàn thành (thanh toán thất bại) → nút chính kêu gọi đặt lại ngay dưới thông báo
+          <ReorderButton sendCode={session.sendCode} {...(paymentFailed ? { label: "Đặt lại đơn mới", primary: true } : {})} />
         )}
       </div>
 

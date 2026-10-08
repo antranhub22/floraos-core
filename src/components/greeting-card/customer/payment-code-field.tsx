@@ -8,8 +8,8 @@ const FIELD = "w-full h-10 px-3 rounded-lg border border-border bg-background te
 const vnd = (n: number) => `${n.toLocaleString("vi-VN")} đ`
 
 /**
- * Ô nhập mã thanh toán (đặt cọc). Khách chỉ nhập MÃ do tiệm cấp — không tự chọn phần trăm.
- * Máy chủ kiểm mã; ô này chỉ hiện kết quả báo giá trả về. Mã thanh toán không giảm giá.
+ * Ô nhập mã thanh toán (đặt cọc) — khối RIÊNG, tách khỏi mã giảm giá. Khách chỉ nhập MÃ do tiệm cấp,
+ * không tự chọn phần trăm. Máy chủ kiểm mã; ô này chỉ hiện kết quả báo giá trả về. Không giảm giá.
  */
 export function PaymentCodeField({
   value,
@@ -27,8 +27,9 @@ export function PaymentCodeField({
   const applied = !error && plan?.source === "PAYMENT_CODE" && plan.paymentCode ? plan : null
 
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-caption font-bold text-foreground">Mã thanh toán (đặt cọc)</span>
+    <section aria-labelledby="payment-code-title" className="flex flex-col gap-1 p-3 rounded-xl border border-primary/30 bg-primary/5">
+      <h3 id="payment-code-title" className="text-caption font-bold text-foreground">Mã thanh toán (đặt cọc)</h3>
+      <p className="text-caption text-text-muted">Nhập mã cửa hàng gửi bạn để đặt cọc trước một phần. Đây không phải mã giảm giá — tổng đơn không đổi.</p>
       <div className="flex gap-2">
         <input
           type="text"
@@ -47,7 +48,19 @@ export function PaymentCodeField({
           <Wallet size={14} /> Áp dụng
         </button>
       </div>
-      {error && <span className="text-caption text-danger">{error}</span>}
+      {error && <span role="alert" className="text-caption text-danger">{error}</span>}
+      {value && (
+        <button
+          type="button"
+          onClick={() => {
+            setInput("")
+            onApply("")
+          }}
+          className="self-start text-caption text-text-muted underline"
+        >
+          Bỏ mã, thanh toán theo mặc định
+        </button>
+      )}
       {applied && (
         <div role="status" className="rounded-lg bg-success-bg p-2.5 text-caption text-success flex gap-2">
           <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
@@ -64,7 +77,7 @@ export function PaymentCodeField({
           </div>
         </div>
       )}
-    </div>
+    </section>
   )
 }
 

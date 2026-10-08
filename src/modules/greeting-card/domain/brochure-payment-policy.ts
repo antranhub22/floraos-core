@@ -17,7 +17,19 @@ export interface BrochurePaymentPolicy {
   holdMinutes?: number
   /** Hết hạn giữ đơn + 60 phút mà khách chưa chuyển, chưa báo đã chuyển → tự huỷ đơn. Mặc định tắt. */
   autoCancelUnpaid?: boolean
+  /**
+   * Hạn thanh toán (PO 08/10/2026), tính từ lúc khách thấy thông tin chuyển khoản: hết hạn mà chưa
+   * nhận được tiền và khách chưa bấm "Tôi đã chuyển khoản" → thanh toán thất bại, đơn tự huỷ ngay
+   * (không chờ thêm). Có giá trị thì thay `holdMinutes` cho đồng hồ của khách. Thiếu = tắt.
+   */
+  paymentTimeoutMinutes?: number
 }
+
+/** Hạn thanh toán gợi ý khi Điều hành bật (PO 08/10/2026). */
+export const DEFAULT_PAYMENT_TIMEOUT_MINUTES = 30
+
+const minutesIn = (v: unknown): number | null =>
+  typeof v === "number" && Number.isInteger(v) && v >= 5 && v <= 1440 ? v : null
 
 export const DEFAULT_PAYMENT_POLICY: BrochurePaymentPolicy = {
   depositPercent: 0,
@@ -30,16 +42,32 @@ export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
   const raw = root[BROCHURE_POLICY_SETTINGS_KEY]
   if (!raw || typeof raw !== "object") return DEFAULT_PAYMENT_POLICY
   const r = raw as Record<string, unknown>
+  const hold = minutesIn(r.hold_minutes)
+  const timeout = minutesIn(r.payment_timeout_minutes)
   const pct = typeof r.deposit_percent === "number" && Number.isFinite(r.deposit_percent) ? Math.round(r.deposit_percent) : 0
   return {
     depositPercent: pct >= 1 && pct <= 99 ? pct : 0,
     requirePaidBeforeProduction: r.require_paid_before_production === true,
     requireFullBeforeDispatch: r.require_full_before_dispatch === true,
     // Chỉ thêm khoá khi tiệm bật giữ đơn — chính sách cũ giữ nguyên hình dạng
-    ...(typeof r.hold_minutes === "number" && Number.isInteger(r.hold_minutes) && r.hold_minutes >= 5 && r.hold_minutes <= 1440
-      ? { holdMinutes: r.hold_minutes }
-      : {}),
+    ...(hold ? { holdMinutes: hold } : {}),
     ...(r.auto_cancel_unpaid === true ? { autoCancelUnpaid: true } : {}),
+    ...(timeout ? { paymentTimeoutMinutes: timeout } : {}),
+  }
+}
+
+/**
+ * Ghi chính sách về dạng lưu (`brochure_policy`). Mọi màn sửa chính sách đều ghi qua hàm này —
+ * PATCH `/organizations/current` thay NGUYÊN khoá `brochure_policy`, thiếu trường là mất cài đặt.
+ */
+export function serializePaymentPolicy(policy: BrochurePaymentPolicy): Record<string, unknown> {
+  return {
+    deposit_percent: policy.depositPercent,
+    require_paid_before_production: policy.requirePaidBeforeProduction,
+    require_full_before_dispatch: policy.requireFullBeforeDispatch,
+    hold_minutes: policy.holdMinutes ?? 0,
+    auto_cancel_unpaid: policy.autoCancelUnpaid === true,
+    payment_timeout_minutes: policy.paymentTimeoutMinutes ?? 0,
   }
 }
 
@@ -101,12 +129,15 @@ export function quoteBlocker(order: { status: string; totalVnd: number }, totalV
   return null
 }
 
-/** Hạn giữ đơn (ISO) khi tiệm bật giữ đơn và khách chưa trả đồng nào; ngược lại `null`. */
+/**
+ * Hạn giữ đơn (ISO) khi tiệm bật hạn thanh toán / giữ đơn và khách chưa trả đồng nào; ngược lại
+ * `null`. Hạn thanh toán (`paymentTimeoutMinutes`) thắng giữ đơn cũ (`holdMinutes`).
+ */
 export function paymentHoldUntil(
   policy: BrochurePaymentPolicy,
   order: { paidVnd: number; createdAt?: Date | undefined },
 ): string | null {
-  const minutes = policy.holdMinutes ?? 0
+  const minutes = policy.paymentTimeoutMinutes ?? policy.holdMinutes ?? 0
   if (minutes <= 0 || order.paidVnd > 0 || !order.createdAt) return null
   return new Date(order.createdAt.getTime() + minutes * 60_000).toISOString()
 }

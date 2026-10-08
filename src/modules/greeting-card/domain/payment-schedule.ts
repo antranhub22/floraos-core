@@ -56,6 +56,12 @@ export function paymentMilestones(totalVnd: number, depositPercent: number, paid
  * Trạng thái thanh toán của đơn. `reported` = khách báo đã chuyển nhưng tiệm chưa xác nhận;
  * `failed` = lần chuyển gần nhất không khớp được đơn (sai số tiền/nội dung) và chưa có khoản thu mới.
  */
+/** Đơn bị huỷ vì hết hạn thanh toán (`pricing_rule_ref.paymentFailed`, ghi lúc huỷ). */
+export function paymentFailedOf(pricingRuleRef: unknown): boolean {
+  const ref = pricingRuleRef && typeof pricingRuleRef === "object" ? (pricingRuleRef as Record<string, unknown>) : {}
+  return !!ref.paymentFailed && typeof ref.paymentFailed === "object"
+}
+
 export function orderPaymentStatus(f: { totalVnd: number; paidVnd: number; reported?: boolean; failed?: boolean }): OrderPaymentStatus {
   if (f.totalVnd > 0 && f.paidVnd >= f.totalVnd) return "PAID"
   if (f.failed) return "PAYMENT_FAILED"
@@ -68,7 +74,7 @@ export const PAYMENT_STATUS_LABEL: Record<OrderPaymentStatus, string> = {
   PAYMENT_PENDING: "Chờ xác nhận chuyển khoản",
   PARTIALLY_PAID: "Đã đặt cọc",
   PAID: "Đã thanh toán đủ",
-  PAYMENT_FAILED: "Chuyển khoản chưa khớp",
+  PAYMENT_FAILED: "Thanh toán không thành công",
 }
 
 export interface PaymentSplit {
