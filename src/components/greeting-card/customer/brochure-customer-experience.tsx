@@ -46,8 +46,8 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
   // Determine initial step based on session status
   const [step, setStep] = useState<CustomerStep>(() => {
     if (initialData.order) {
-      // Theo số tiền thật của đơn: còn phải thu (chờ báo giá, mới cọc) → bước thanh toán để thấy QR
-      const paid = initialData.order.totalVnd > 0 && initialData.order.paidVnd >= initialData.order.totalVnd
+      // Điều hành đã nhận tiền (đủ hoặc cọc) → Theo dõi; chưa nhận / chờ báo giá → bước thanh toán
+      const paid = initialData.order.totalVnd > 0 && initialData.order.paidVnd > 0
       return paid || initialData.order.status === "CANCELLED" ? "TRACKING" : "PAYMENT"
     }
     if (session.status === "SELECTED" && session.productSnapshot) return "ORDER_FORM"

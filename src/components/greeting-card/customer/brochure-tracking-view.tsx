@@ -212,8 +212,8 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
         </div>
         <div className="flex justify-between">
           <span>Thanh toán:</span>
-          <span className={`font-bold ${isPaid ? "text-success" : "text-warning"}`}>
-            {awaitingQuote ? "Chờ cửa hàng báo giá" : isPaid ? "Đã thanh toán" : "Chờ xác nhận chuyển khoản"}
+          <span className={`font-bold ${isPaid || order.paidVnd > 0 ? "text-success" : "text-warning"}`}>
+            {awaitingQuote ? "Chờ cửa hàng báo giá" : isPaid ? "Đã thanh toán" : order.paidVnd > 0 ? "Đã nhận tiền cọc" : "Chờ xác nhận chuyển khoản"}
           </span>
         </div>
         {order.cardMessage && (

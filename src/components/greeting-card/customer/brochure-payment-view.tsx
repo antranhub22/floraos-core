@@ -10,9 +10,12 @@ import type { BrochurePaymentInstructions } from "@/modules/greeting-card/domain
 import Image from "next/image"
 
 const POLL_INTERVAL_MS = 5000
-/** Đã thu ĐỦ theo số tiền thật — đơn mới cọc (trạng thái CONFIRMED) chưa tính là xong. */
+/**
+ * Điều hành đã xác nhận nhận tiền — đơn cọc đã nhận cọc cũng coi như xong phần thanh toán của khách
+ * (phần còn lại thu sau theo thoả thuận), PO 08/10/2026.
+ */
 function isPaid(order: { paidVnd: number; totalVnd: number } | undefined): boolean {
-  return !!order && order.totalVnd > 0 && order.paidVnd >= order.totalVnd
+  return !!order && order.totalVnd > 0 && order.paidVnd > 0
 }
 import { BrochureQuotePending } from "./brochure-quote-pending"
 
@@ -50,8 +53,7 @@ export function BrochurePaymentView({
     { refreshInterval: (latest) => (isPaid(latest?.order) ? 0 : POLL_INTERVAL_MS), revalidateOnFocus: true }
   )
   const isPaymentConfirmed = isPaid(tracking.data?.order)
-  // QR đang hiện là QR cọc mà tiệm đã nhận cọc → mời khách tải lại để có QR phần còn lại
-  const depositReceived = vietQr?.purpose === "DEPOSIT" && (tracking.data?.order?.paidVnd ?? 0) > 0 && !isPaymentConfirmed
+  const depositOnly = isPaymentConfirmed && (tracking.data?.order?.paidVnd ?? 0) < (tracking.data?.order?.totalVnd ?? 0)
 
   function copyToClipboard(text: string, field: string) {
     void navigator.clipboard.writeText(text)
@@ -196,18 +198,6 @@ export function BrochurePaymentView({
         </>
       )}
 
-      {depositReceived && (
-        <div role="status" className="w-full mb-3 p-3.5 rounded-xl bg-success-bg border border-success/30 text-success text-body-sm text-center">
-          <p className="font-bold">Cửa hàng đã nhận tiền cọc.</p>
-          <button type="button" onClick={() => window.location.reload()} className="mt-1 min-h-11 font-semibold underline">
-            Xem mã QR phần còn lại
-          </button>
-          <Button type="button" variant="secondary" onClick={onGoToTracking} className="mt-2 w-full gap-2">
-            Theo dõi tiến độ Đơn hàng <ArrowRight size={16} aria-hidden="true" />
-          </Button>
-        </div>
-      )}
-
       {/* Confirmation State Actions */}
       {isPaymentConfirmed ? (
         <div className="w-full flex flex-col gap-3.5">
@@ -217,10 +207,11 @@ export function BrochurePaymentView({
             </div>
             <div className="text-center">
               <p className="text-title-sm font-extrabold text-success">
-                Đã thanh toán thành công!
+                {depositOnly ? "Đã nhận tiền cọc thành công!" : "Đã thanh toán thành công!"}
               </p>
               <p className="text-body-sm text-text-muted mt-1">
-                Điều hành cửa hàng đã xác nhận nhận tiền cho đơn #{orderCode}. Đơn hàng đang được chuẩn bị cắm hoa.
+                Điều hành cửa hàng đã xác nhận nhận {depositOnly ? "tiền cọc" : "tiền"} cho đơn #{orderCode}. Đơn hàng đang được chuẩn bị cắm hoa.
+                {depositOnly && " Phần còn lại cửa hàng sẽ thu sau theo thoả thuận."}
               </p>
             </div>
           </div>
