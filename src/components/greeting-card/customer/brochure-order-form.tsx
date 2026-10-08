@@ -25,6 +25,7 @@ import { deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-
 import { DeliveryTimePicker } from "./delivery-time-picker"
 import { PromotionPicker } from "./promotion-picker"
 import { SelectedProductHeader } from "./selected-product-header"
+import { OrderNotesFields } from "./order-notes-fields"
 
 import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
 
@@ -57,9 +58,10 @@ export function BrochureOrderForm({
 }: BrochureOrderFormProps) {
   const uid = useId()
   const {
-    customerName, customerPhone, recipientName, recipientPhone, deliveryDate, deliveryTimeSlot, addressParts, cardMessage, senderNote,
+    customerName, customerPhone, recipientName, recipientPhone, deliveryDate, deliveryTimeSlot, addressParts,
+    cardMessage, senderNote, deliveryNote, mapUrl,
     setCustomerName, setCustomerPhone, setRecipientName, setRecipientPhone, setDeliveryDate, setDeliveryTimeSlot, setAddressParts,
-    setCardMessage, setSenderNote, clearDraft,
+    setNotes, clearDraft,
   } = useOrderDraft()
   const deliveryAddress = composeAddress(addressParts)
 
@@ -82,7 +84,7 @@ export function BrochureOrderForm({
     // Cùng bộ luật với server (SĐT, ngày giao theo giờ VN, độ dài) — báo lỗi ngay, đỡ một vòng mạng.
     const check = validateCustomerOrderInput({
       customerName, customerPhone, recipientName, recipientPhone,
-      deliveryDate, deliveryTimeSlot, deliveryAddress, cardMessage, senderNote,
+      deliveryDate, deliveryTimeSlot, deliveryAddress, cardMessage, senderNote, deliveryNote, mapUrl,
     })
     const scheduleError = !deliveryDate ? null
       : deliveryTimeSlot.trim() ? deliveryScheduleError(deliveryDate, deliveryTimeSlot, shipping) : "Vui lòng chọn khung giờ giao hoa"
@@ -118,6 +120,8 @@ export function BrochureOrderForm({
       addressParts,
       cardMessage,
       senderNote,
+      deliveryNote,
+      mapUrl,
       website,
       quantity: pricing.selection.quantity,
       selectedPromotionId: selectedPromotionId || undefined,
@@ -305,35 +309,12 @@ export function BrochureOrderForm({
 
         <AddressFields idPrefix={uid} value={addressParts} inputClassName={INPUT} onChange={setAddressParts} />
 
-        {/* Lời nhắn thiệp */}
-        <div>
-          <label htmlFor={`${uid}-cardMessage`} className="block text-body-sm font-bold text-foreground mb-1">
-            Nội dung thiệp mừng / băng rôn
-          </label>
-          <textarea
-            rows={2}
-            placeholder="VD: Chúc mừng ngày 20/10 người phụ nữ tuyệt vời của anh..."
-            value={cardMessage}
-            maxLength={ORDER_FIELD_MAX.cardMessage}
-            id={`${uid}-cardMessage`} onChange={(e) => setCardMessage(e.target.value)}
-            className={`${INPUT} h-auto p-3 resize-none`}
-          />
-        </div>
-
-        {/* Ghi chú thêm */}
-        <div>
-          <label htmlFor={`${uid}-senderNote`} className="block text-body-sm font-bold text-foreground mb-1">
-            Ghi chú thêm cho thợ cắm hoa
-          </label>
-          <input
-            type="text"
-            placeholder="VD: Giao hoa nhẹ tay, gọi trước khi đến 15 phút"
-            value={senderNote}
-            maxLength={ORDER_FIELD_MAX.senderNote}
-            id={`${uid}-senderNote`} onChange={(e) => setSenderNote(e.target.value)}
-            className={INPUT}
-          />
-        </div>
+        <OrderNotesFields
+          idPrefix={uid}
+          value={{ cardMessage, senderNote, deliveryNote, mapUrl }}
+          inputClassName={INPUT}
+          onChange={setNotes}
+        />
 
         {/* Submit Button */}
         <Button

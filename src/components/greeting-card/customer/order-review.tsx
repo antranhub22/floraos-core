@@ -71,6 +71,9 @@ export function OrderReview(props: {
         <Row label="Giao lúc" value={`${viDate(input.deliveryDate)} · ${input.deliveryTimeSlot ?? ""}`} />
         <Row label="Địa chỉ" value={input.deliveryAddress} />
         {input.cardMessage?.trim() && <Row label="Lời nhắn thiệp" value={`“${input.cardMessage.trim()}”`} />}
+        {input.senderNote?.trim() && <Row label="Ghi chú cho cửa hàng" value={input.senderNote.trim()} />}
+        {input.deliveryNote?.trim() && <Row label="Ghi chú cho người giao" value={input.deliveryNote.trim()} />}
+        {input.mapUrl?.trim() && <Row label="Vị trí bản đồ" value="Đã gửi link Google Maps" />}
       </dl>
 
       {/* 3 KHỐI CHÍNH SÁCH: ƯU ĐÃI, CAM KẾT, THỎA THUẬN (SPEC #2 & #5) */}

@@ -1,6 +1,6 @@
 # Thẻ chào mẫu hoa — Hành trình khách trên link bộ sưu tập
 
-**Phạm vi:** trang khách `/b/<mã phiên>` (và `/s/<mã>` dẫn vào đó) · **Cập nhật:** 06/10/2026 · **Nhánh:** `Caitien_Tinhhuong_TheChaomauhoa`
+**Phạm vi:** trang khách `/b/<mã phiên>` (và `/s/<mã>` dẫn vào đó) · **Cập nhật:** 08/10/2026 · **Nhánh:** `Caitien_Tinhhuong_TheChaomauhoa`
 **Quan hệ:** bổ sung cho [`HIEN_TRANG_THE_CHAO.md`](HIEN_TRANG_THE_CHAO.md) §4 (luồng) và §10 (bảo mật). Đợt A + B của yêu cầu "Customer Journey – Shared Collection Link"; đợt C (đổi schema) chưa làm — xem §5.
 
 ## 1. Chủ phiên — link chuyển tiếp không lộ phiên người trước
@@ -62,6 +62,12 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 - Link riêng tính từ lúc tạo; phiên mở từ link chia sẻ `/s/` tính từ lúc từng khách mở; "Đặt thêm đơn" nhận hạn mới (không kế thừa hạn link cũ). Chỉ áp dụng cho link tạo sau khi lưu.
 - Hết hạn mà chưa có đơn: trang `/b` hiện "Link đã hết hạn — vui lòng liên hệ {cửa hàng} để nhận link mới" kèm Gọi/Zalo (trước bước nhận chủ phiên). Link thu hồi / bộ sưu tập ngừng giữ lời nhắn chung. Link đã có đơn vẫn mở được.
 
+## 4b. Ghi chú trên form đặt hoa & trang theo dõi (08/10/2026)
+
+- Form đặt hoa có **ba loại ghi chú tách riêng** (`order-notes-fields.tsx`): lời nhắn thiệp (có bộ đếm `n/500 ký tự`) → `orders.card_message`; ghi chú cho cửa hàng / thợ cắm hoa (`senderNote`) → `orders.internal_note`; ghi chú cho người giao hoa (`deliveryNote`, tối đa 300 ký tự) → `orders.delivery_address.notes`.
+- Ô **Link vị trí trên Google Maps** (không bắt buộc, `mapUrl`) → `orders.delivery_address.mapUrl`. Chỉ nhận `https` trên host Google Maps (`maps.app.goo.gl`, `maps.google.com[.vn]`, `goo.gl/maps`, `[www.]google.com[.vn]/maps`); link khác báo lỗi ở form và bị máy chủ bỏ (`domain/delivery-note.ts`). Thẻ đơn ở màn Điều phối hiện "Người giao lưu ý" + nút "Mở bản đồ". Không dùng API bản đồ trả phí.
+- Trang theo dõi có **5 bước**: Tiếp nhận → **Đã xác nhận** → Cắm hoa → Đang giao → Hoàn tất (`mapOrderStatusToTrackingStep`, `tracking-steps.tsx`). "Đã xác nhận" khi đơn rời `DRAFT` (tiệm ghi nhận tiền/cọc) hoặc đã phân công thợ; `QUALITY_CHECK` tính là bước Cắm hoa.
+
 ## 5. Chưa làm (đợt C — cần PO duyệt đổi schema)
 
 - Phân biệt "Tạm hết" và "Hết hẳn"; lựa chọn "Cho phép thay thế tương đương" khi đặt.
@@ -70,4 +76,4 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 
 ## 6. Mã nguồn
 
-`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events}.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`
+`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events,delivery-note}.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`

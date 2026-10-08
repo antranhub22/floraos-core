@@ -22,6 +22,8 @@ export interface CreateBrochureOrderData {
   deliveryDate: string
   deliveryTimeSlot: string
   cardMessage?: string | null | undefined
+  /** Ghi chú cho người giao + link bản đồ — gộp vào `delivery_address` */
+  delivery?: { notes?: string; mapUrl?: string } | undefined
   note?: string | null | undefined
   snapshot: ProductSnapshot
   variant: { id: string; name: string } | null
@@ -151,6 +153,7 @@ export class BrochureCheckoutRepository {
             street: data.deliveryAddress,
             ...(data.addressParts ? { parts: { ...data.addressParts } } : {}),
             ...(quote.shippingZone ? { zone: quote.shippingZone.name } : {}),
+            ...data.delivery,
           },
           created_by: "customer-brochure",
           items: {

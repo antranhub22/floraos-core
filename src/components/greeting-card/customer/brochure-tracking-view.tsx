@@ -5,7 +5,8 @@ import React, { useState } from "react"
 import useSWR from "swr"
 import { apiGet, apiSend } from "@/components/greeting-card/greeting-api"
 import { TrackingVerifyForm } from "./tracking-verify-form"
-import { CheckCircle2, Clock, Truck, Gift, Camera, RefreshCw } from "lucide-react"
+import { CheckCircle2, Clock, Camera, RefreshCw } from "lucide-react"
+import { TrackingSteps } from "./tracking-steps"
 import { Button } from "@/components/ui/button"
 
 interface BrochureTrackingViewProps {
@@ -89,13 +90,6 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
   const awaitingQuote = order.totalVnd <= 0
   const isPaid = !awaitingQuote && order.paidVnd >= order.totalVnd
 
-  const steps = [
-    { label: "Tiếp nhận", icon: Clock },
-    { label: "Cắm hoa", icon: Gift },
-    { label: "Đang giao", icon: Truck },
-    { label: "Hoàn tất", icon: CheckCircle2 },
-  ]
-
   return (
     <div className="w-full max-w-xl lg:max-w-2xl mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-7 shadow-sm flex flex-col gap-6">
       {/* Header */}
@@ -135,55 +129,7 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
           {trackingStep.description}
         </p>
 
-        {/* 4 Steps Indicator with Actual & Expected Timeline (Spec #12) */}
-        <div className="grid grid-cols-4 gap-2 mt-2">
-          {steps.map((s, idx) => {
-            const Icon = s.icon
-            const isCompleted = trackingStep.stepIndex > idx + 1 || (trackingStep.stepIndex === 4)
-            const isCurrent = trackingStep.stepIndex === idx + 1
-
-            // Spec #12: Tiếp nhận = thời điểm thực tế; Các bước sau = khoảng thời gian dự kiến
-            let stepTimeLabel = ""
-            if (idx === 0) {
-              const dt = new Date(order.createdAt)
-              stepTimeLabel = !Number.isNaN(dt.getTime())
-                ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`
-                : ""
-            } else if (idx === 1 && order.timeline?.arranging) {
-              stepTimeLabel = order.timeline.arranging.displayRange
-            } else if (idx === 2 && order.timeline?.delivering) {
-              stepTimeLabel = order.timeline.delivering.displayRange
-            }
-
-            return (
-              <div key={s.label} className="flex flex-col items-center gap-1 text-center">
-                <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
-                    isCompleted
-                      ? "bg-success text-white"
-                      : isCurrent
-                      ? "bg-primary text-white shadow-sm ring-4 ring-primary/20"
-                      : "bg-surface-muted text-text-muted border border-border"
-                  }`}
-                >
-                  <Icon size={16} />
-                </div>
-                <span
-                  className={`text-caption font-bold ${
-                    isCurrent ? "text-primary" : isCompleted ? "text-success" : "text-text-muted"
-                  }`}
-                >
-                  {s.label}
-                </span>
-                {stepTimeLabel && (
-                  <span className="text-caption font-medium text-text-muted leading-tight">
-                    {stepTimeLabel}
-                  </span>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <TrackingSteps stepIndex={trackingStep.stepIndex} createdAt={order.createdAt} timeline={order.timeline} />
       </div>
 
       {/* Ảnh thành phẩm và ảnh người nhận: hai mục riêng, ảnh sau không đè ảnh trước */}

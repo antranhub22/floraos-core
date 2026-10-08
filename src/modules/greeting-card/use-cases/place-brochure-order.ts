@@ -15,6 +15,7 @@ import { quoteForProduct } from "./brochure-quote"
 import { resolveAppliedPolicies } from "../domain/store-policy"
 import { promotionNote, resolveOrderPolicies } from "../domain/order-policies"
 import { snapshotOf } from "./brochure-product-mapper"
+import { deliveryNoteFields } from "../domain/delivery-note"
 
 export const DEFAULT_TIME_SLOT = "Trong ngày"
 
@@ -93,6 +94,7 @@ export async function placeBrochureOrder(
       deliveryDate: input.deliveryDate.trim(),
       deliveryTimeSlot: input.deliveryTimeSlot?.trim() || DEFAULT_TIME_SLOT,
       cardMessage: input.cardMessage?.trim() || null,
+      delivery: deliveryNoteFields(input),
       note,
       snapshot,
       variant: priced.variant ? { id: priced.variant.id, name: priced.variant.name } : null,

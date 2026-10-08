@@ -9,6 +9,7 @@ import type {
   GreetingCatalogProduct,
   CustomerOrderSubmitInput,
 } from "./greeting-card-types"
+import { deliveryNoteErrors } from "./delivery-note"
 
 /**
  * Mã gửi = `<PREFIX>-<phần ngẫu nhiên>`. Phần đuôi cũ là số thứ tự (`T01-001`)
@@ -184,12 +185,20 @@ export function validateCustomerOrderInput(
   if ((input.deliveryTimeSlot?.length ?? 0) > ORDER_FIELD_MAX.timeSlot) {
     errors.deliveryTimeSlot = "Khung giờ giao không hợp lệ"
   }
+  Object.assign(errors, deliveryNoteErrors(input))
 
   return {
     valid: Object.keys(errors).length === 0,
     errors,
   }
 }
+
+/**
+ * Bước hiện trên trang theo dõi của khách (5 bước): Tiếp nhận → Đã xác nhận → Cắm hoa → Đang giao
+ * → Hoàn tất. "Đã xác nhận" = cửa hàng đã nhận thanh toán/tiền cọc (đơn rời DRAFT) hoặc đã phân
+ * công thợ cho đơn không bắt thu trước.
+ */
+export const TRACKING_STEP_COUNT = 5
 
 export function mapOrderStatusToTrackingStep(
   orderStatus: string,
@@ -212,7 +221,7 @@ export function mapOrderStatusToTrackingStep(
 
   if (deliveryStatus === "DELIVERED" || orderStatus === "COMPLETED") {
     return {
-      stepIndex: 4,
+      stepIndex: 5,
       title: "Giao hoa thành công",
       description: "Đơn hoa đã được trao tận tay người nhận với tình cảm trọn vẹn.",
       percentage: 100,
@@ -221,30 +230,39 @@ export function mapOrderStatusToTrackingStep(
 
   if (deliveryStatus === "DELIVERING" || deliveryStatus === "DISPATCHED") {
     return {
-      stepIndex: 3,
+      stepIndex: 4,
       title: "Đang trên đường giao hoa",
       description: "Shipper đang cẩn thận vận chuyển bình/bó hoa đến địa chỉ nhận.",
-      percentage: 75,
+      percentage: 80,
     }
   }
 
-  if (productionStatus === "READY" || productionStatus === "ARRANGING") {
+  if (productionStatus === "READY" || productionStatus === "ARRANGING" || productionStatus === "QUALITY_CHECK") {
     return {
-      stepIndex: 2,
+      stepIndex: 3,
       title: productionStatus === "READY" ? "Hoa đã cắm xong" : "Nghệ nhân đang cắm hoa",
       description:
         productionStatus === "READY"
           ? "Bình hoa hoàn thiện đã qua kiểm duyệt chất lượng và sẵn sàng giao."
           : "Florist đang tỉ mỉ lựa chọn từng cành hoa tươi và phối mẫu theo yêu cầu.",
-      percentage: 50,
+      percentage: 60,
+    }
+  }
+
+  if (orderStatus === "CONFIRMED" || orderStatus === "PROCESSING" || productionStatus === "ASSIGNED") {
+    return {
+      stepIndex: 2,
+      title: "Cửa hàng đã xác nhận đơn",
+      description: "Cửa hàng đã xác nhận đơn hàng và sẽ cắm hoa theo đúng lịch giao bạn đã chọn.",
+      percentage: 40,
     }
   }
 
   return {
     stepIndex: 1,
     title: "Đã tiếp nhận đơn hàng",
-    description: "Cửa hàng đã nhận thông tin đặt hoa và đang chuẩn bị nguyên liệu.",
-    percentage: 25,
+    description: "Cửa hàng đã nhận thông tin đặt hoa. Đơn sẽ được xác nhận khi cửa hàng kiểm tra xong thanh toán.",
+    percentage: 20,
   }
 }
 

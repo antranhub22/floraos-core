@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera } from "lucide-react"
+import { MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { paymentGateBlocker, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
@@ -9,6 +9,7 @@ import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { CoordinatorProgressStrip } from "./coordinator-progress-strip"
 import { WorkStatus } from "@/components/greeting-card/work/work-status"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import { readDeliveryNote } from "@/modules/greeting-card/domain/delivery-note"
 
 export interface BrochureOrder {
   id: string
@@ -19,7 +20,7 @@ export interface BrochureOrder {
   total_vnd: number
   paid_vnd: number
   card_message: string | null
-  delivery_address: { recipientName?: string; phone?: string; street?: string } | null
+  delivery_address: { recipientName?: string; phone?: string; street?: string; notes?: string; mapUrl?: string } | null
   delivery_window: { date?: string; timeSlot?: string } | null
   items: Array<{
     id: string
@@ -87,6 +88,7 @@ export function CoordinatorOrderCard({
   const recipient = order.delivery_address?.recipientName || "Khách nhận"
   const phone = order.delivery_address?.phone || ""
   const address = order.delivery_address?.street || ""
+  const delivery = readDeliveryNote(order.delivery_address)
   const date = order.delivery_window?.date || ""
   const timeSlot = order.delivery_window?.timeSlot || "Trong ngày"
   const awaitingQuote = order.total_vnd <= 0
@@ -159,6 +161,16 @@ export function CoordinatorOrderCard({
           <MapPin size={14} className="text-primary shrink-0" />
           <span className="truncate">{recipient} ({phone}) — {address}</span>
         </div>
+        {(delivery.note || delivery.mapUrl) && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-text">
+            {delivery.note && <span><span className="font-bold">Người giao lưu ý:</span> {delivery.note}</span>}
+            {delivery.mapUrl && (
+              <a href={delivery.mapUrl} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 font-bold text-primary hover:underline">
+                <ExternalLink size={12} aria-hidden="true" /> Mở bản đồ
+              </a>
+            )}
+          </div>
+        )}
         {order.card_message && (
           <div className="text-caption italic text-text border-t border-border pt-1.5 mt-0.5">
             Thiệp: &ldquo;{order.card_message}&rdquo;

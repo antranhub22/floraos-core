@@ -114,7 +114,12 @@ export interface CustomerOrderSubmitInput {
   /** Địa chỉ tách 5 ô (form mới); `deliveryAddress` là dòng ghép đầy đủ để tương thích */
   addressParts?: AddressParts | undefined
   cardMessage?: string | undefined
+  /** Ghi chú cho cửa hàng / thợ cắm hoa */
   senderNote?: string | undefined
+  /** Ghi chú cho người giao hoa (gọi trước, gửi bảo vệ…) */
+  deliveryNote?: string | undefined
+  /** Link chia sẻ vị trí từ Google Maps (không bắt buộc) */
+  mapUrl?: string | undefined
   /** Lựa chọn mua — server tính lại giá từ các lựa chọn này, không nhận giá từ client. */
   variantId?: string | undefined
   quantity?: number | undefined
