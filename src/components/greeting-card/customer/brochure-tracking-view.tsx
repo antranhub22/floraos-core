@@ -7,6 +7,7 @@ import { apiGet, apiSend } from "@/components/greeting-card/greeting-api"
 import { TrackingVerifyForm } from "./tracking-verify-form"
 import { CheckCircle2, Clock, Camera, RefreshCw } from "lucide-react"
 import { TrackingSteps } from "./tracking-steps"
+import { OrderChangePanel, type OrderChangeData } from "./order-change-panel"
 import { Button } from "@/components/ui/button"
 
 interface BrochureTrackingViewProps {
@@ -27,6 +28,8 @@ type TrackingData = {
     cardMessage?: string | null
     /** `false` = bản rút gọn cho người chỉ biết mã đơn */
     verified?: boolean
+    /** Chỉ khi đã xác minh: đổi thông tin đơn + lịch sử */
+    change?: OrderChangeData | null
     recipientName: string
     deliveryAddress: string
     finishedImageUrl?: string | null
@@ -179,6 +182,9 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
       )}
 
       {order.verified === false && <TrackingVerifyForm orderCode={orderCode} onVerified={setLast4} />}
+      {order.change && (
+        <OrderChangePanel orderCode={orderCode} proof={{ sendCode, last4 }} change={order.change} onChanged={loadTracking} />
+      )}
 
       {/* Order Details Summary */}
       <div className="flex flex-col gap-2 text-body-sm text-text-muted bg-surface-muted p-4 rounded-xl border border-border">

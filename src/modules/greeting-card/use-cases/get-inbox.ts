@@ -1,13 +1,15 @@
 import type { TenantContext } from "@/core/tenancy"
 import { GreetingMessageRepository } from "../infra/greeting-message-repository"
 import { GreetingIntegrationRepository } from "../infra/greeting-integration-repository"
-import { roleOf, MESSAGE_ROLE_LABEL, type MessageRole } from "../domain/internal-message"
+import { roleOf, MESSAGE_ROLE_LABEL, CUSTOMER_SENDER_ID, CUSTOMER_SENDER_LABEL, type MessageRole } from "../domain/internal-message"
 import { inboxActions, inboxUpdates, type InboxAction } from "../domain/inbox"
 import { getTrackingPipeline } from "./get-tracking-pipeline"
 import { resolveSaleScope } from "./order-scope"
 import { DiscountRepository } from "../infra/discount-repository"
 import { describeDiscount, parseMaxDiscountPercent, type DiscountPayload } from "../domain/discount-request"
 import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
+import { GREETING_CARD_CAPABILITY } from "../domain/greeting-card-capabilities"
+import { changeRequestActions } from "./order-change"
 
 export interface InboxThread {
   key: string
@@ -37,6 +39,8 @@ export async function getInbox(ctx: TenantContext, now = new Date()) {
   ])
 
   const actions: InboxAction[] = inboxActions(pipeline, role, ctx.userId)
+  // Khách xin đổi thông tin đơn → người có quyền sửa đơn (R3) duyệt
+  if (ctx.capabilities.has(GREETING_CARD_CAPABILITY.orderUpdate)) actions.unshift(...(await changeRequestActions(ctx, pipeline)))
   if (role === "ADMIN") {
     const [pending, org] = await Promise.all([new DiscountRepository().listPending(ctx), getCurrentOrganization(ctx)])
     const maxPercent = parseMaxDiscountPercent(org?.settings)
@@ -76,7 +80,7 @@ export async function getInbox(ctx: TenantContext, now = new Date()) {
     const t = threads.get(key) ?? {
       key, orderId: m.orderId, sessionId: m.sessionId,
       title: item ? `${item.customerName} · ${item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}` : "Trao đổi về đơn",
-      lastBody: m.body, lastSender: `${nameOf.get(m.senderId) ?? "Nhân viên"} (${MESSAGE_ROLE_LABEL[m.senderRole as MessageRole] ?? "Nhân viên"})`,
+      lastBody: m.body, lastSender: m.senderId === CUSTOMER_SENDER_ID ? CUSTOMER_SENDER_LABEL : `${nameOf.get(m.senderId) ?? "Nhân viên"} (${MESSAGE_ROLE_LABEL[m.senderRole as MessageRole] ?? "Nhân viên"})`,
       lastAt: m.createdAt.toISOString(), unread: 0, unreadIds: [],
     }
     if (!m.readByMe) {

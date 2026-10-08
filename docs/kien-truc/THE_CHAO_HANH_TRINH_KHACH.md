@@ -68,6 +68,15 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 - Ô **Link vị trí trên Google Maps** (không bắt buộc, `mapUrl`) → `orders.delivery_address.mapUrl`. Chỉ nhận `https` trên host Google Maps (`maps.app.goo.gl`, `maps.google.com[.vn]`, `goo.gl/maps`, `[www.]google.com[.vn]/maps`); link khác báo lỗi ở form và bị máy chủ bỏ (`domain/delivery-note.ts`). Thẻ đơn ở màn Điều phối hiện "Người giao lưu ý" + nút "Mở bản đồ". Không dùng API bản đồ trả phí.
 - Trang theo dõi có **5 bước**: Tiếp nhận → **Đã xác nhận** → Cắm hoa → Đang giao → Hoàn tất (`mapOrderStatusToTrackingStep`, `tracking-steps.tsx`). "Đã xác nhận" khi đơn rời `DRAFT` (tiệm ghi nhận tiền/cọc) hoặc đã phân công thợ; `QUALITY_CHECK` tính là bước Cắm hoa.
 
+## 4c. Khách xin đổi thông tin đơn sau khi đặt (08/10/2026)
+
+- Trang theo dõi (bản đầy đủ — mở từ link của đơn hoặc đã nhập 4 số cuối SĐT) có khối **"Thay đổi thông tin đơn"**: nút "Đổi giờ giao, địa chỉ hoặc người nhận" mở form điền sẵn thông tin hiện tại (SĐT người nhận để trống = giữ số cũ — trang theo dõi không trả SĐT). Đổi được: ngày + khung giờ (cùng luật giờ chốt/chuẩn bị như lúc đặt), tên/SĐT người nhận, địa chỉ 5 ô, khu vực giao, lời nhắn thiệp, ghi chú cho người giao, link bản đồ, kèm lời nhắn cho cửa hàng.
+- Gửi xong đơn **chưa đổi**: yêu cầu (`greeting_messages.kind = ORDER_CHANGE_REQUEST`, người gửi `customer`, gửi Điều phối) chờ nhân viên có `R3` duyệt trong **Hộp việc** (xem trước → sau từng ô; từ chối phải ghi lời nhắn cho khách). Mỗi đơn chỉ một yêu cầu chờ.
+- **Khoá từ lúc bắt đầu cắm hoa** (PO chốt 08/10/2026): `production_status` khác `WAITING`/`ASSIGNED`, đã giao ship, đã xong hoặc đã huỷ → không gửi được, yêu cầu đang chờ cũng không duyệt được (chỉ từ chối).
+- Đổi khu vực giao: phí **tăng** → cộng phần chênh vào tổng (khách trả qua mã QR phần còn lại); phí **giảm** → giữ nguyên tổng (PO chốt).
+- Khách thấy **thông báo** kết quả gần nhất (đã cập nhật / chưa đổi + lời nhắn của cửa hàng) và **lịch sử thay đổi** (trước → sau, giờ gửi, giờ xử lý). Sale phụ trách nhận tin `ORDER_CHANGE_DECISION`; audit `greeting_card.order_change.approve|reject`.
+- Chưa có: tin SMS/Zalo báo khách khi đơn được cập nhật (khách xem trên trang theo dõi).
+
 ## 5. Chưa làm (đợt C — cần PO duyệt đổi schema)
 
 - Phân biệt "Tạm hết" và "Hết hẳn"; lựa chọn "Cho phép thay thế tương đương" khi đặt.
@@ -76,4 +85,4 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 
 ## 6. Mã nguồn
 
-`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events,delivery-note}.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`
+`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events,delivery-note,order-change-request}.ts` · `use-cases/order-change.ts` · `infra/order-change-repository.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`

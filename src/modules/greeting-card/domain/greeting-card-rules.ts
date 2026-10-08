@@ -109,6 +109,11 @@ export const MAX_DELIVERY_LEAD_DAYS = 365
 const VN_PHONE_REGEX = /^(0|\+84)[35789][0-9]{8}$/
 const VN_OFFSET_MS = 7 * 3_600_000
 
+/** SĐT di động Việt Nam 10 số (0… hoặc +84…). */
+export function isValidVnPhone(phone: string | undefined | null): boolean {
+  return VN_PHONE_REGEX.test(normalizePhone(phone))
+}
+
 export function normalizePhone(phone: string | undefined | null): string {
   return (phone ?? "").replace(/[\s.-]+/g, "")
 }

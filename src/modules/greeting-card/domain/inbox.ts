@@ -5,13 +5,14 @@
 import type { MessageRole } from "./internal-message"
 import type { StuckInfo } from "./step-sla"
 import type { TrackingPipelineStepId } from "./tracking-pipeline-types"
+import type { ChangeItem } from "./order-change-request"
 
 /** Tab nơi xử lý việc đó trên trang Thẻ chào. */
 export type InboxTab = "payment" | "sales" | "coordinator" | "tracking"
 
 export interface InboxAction {
   id: string
-  kind: "STUCK" | "CONFIRM_PAYMENT" | "QUOTE" | "ASSIGN" | "UNMATCHED_PAYMENTS" | "DISCOUNT"
+  kind: "STUCK" | "CONFIRM_PAYMENT" | "QUOTE" | "ASSIGN" | "UNMATCHED_PAYMENTS" | "DISCOUNT" | "CHANGE_REQUEST"
   title: string
   detail: string
   orderId: string | null
@@ -30,6 +31,14 @@ export interface InboxAction {
     requestedVnd: number
     percent: number | null
     maxPercent: number
+  } | undefined
+  /** Chỉ với CHANGE_REQUEST: khách xin đổi gì — duyệt/từ chối ngay trong Hộp việc. */
+  change?: {
+    requestId: string
+    changes: ChangeItem[]
+    note: string | null
+    expectedFeeDeltaVnd: number
+    requestedAt: string
   } | undefined
 }
 
