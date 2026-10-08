@@ -7,12 +7,14 @@ import { linkExpiryFrom, parseLinkLifetimeHours } from "../domain/link-lifetime"
 import { normalizeChannel, DIRECT_CHANNEL, channelLabel } from "../domain/catalog-channel"
 import { LINK_COPIED_EVENT, SHARE_CODE_REGEX, parseDefaultOwnerId, resolveDefaultOwner } from "../domain/link-ownership"
 import { resolveSaleScope } from "./order-scope"
+import { assertShopReadyForCustomers } from "./get-shop-contact"
 
 /**
  * Bấm "Sao chép" link bộ sưu tập: tạo link `/s/<mã>` mang tên người đang đăng nhập.
  * Mọi khách mở link này đều tính cho người đó, tính giờ từ lúc khách mở.
  */
 export async function createShareLink(ctx: TenantContext, input: { catalogId: string; channel?: string | null | undefined }, repo = new ShareLinkRepository()) {
+  await assertShopReadyForCustomers(ctx.organizationId)
   const channel = normalizeChannel(input.channel)
   const link = await repo.create(ctx, { catalogId: input.catalogId, channel: channel === DIRECT_CHANNEL ? null : channel })
   return { code: link.code, path: `/s/${link.code}`, createdAt: link.created_at.toISOString() }

@@ -8,6 +8,17 @@ export const ORDER_STATUSES: readonly order_status[] = [
 ]
 
 /** Đơn hàng nguồn Thẻ chào: tạo đơn, thu tiền, tra cứu, cập nhật xưởng. */
+/** Mã đơn, mã link (không phân biệt hoa thường) hoặc số điện thoại khách (chỉ so phần số). */
+function searchConditions(q: string) {
+  const text = q.trim()
+  const digits = text.replace(/\D/g, "")
+  return [
+    { code: { contains: text, mode: "insensitive" as const } },
+    { greeting_sessions: { some: { send_code: { contains: text, mode: "insensitive" as const } } } },
+    ...(digits.length >= 3 ? [{ customer: { phone: { contains: digits } } }] : []),
+  ]
+}
+
 export class BrochureOrderRepository {
   constructor(private readonly db = prisma) {}
 
@@ -17,6 +28,36 @@ export class BrochureOrderRepository {
    * `paid_vnd >= total_vnd` theo thứ tự chữ ("1000000" < "850000") nên đơn
    * đã thu đủ vẫn hiện "Chưa thu tiền".
    */
+  /**
+   * Bảng việc Điều phối: mọi đơn Thẻ chào chưa huỷ còn việc, cộng đơn đã giao trong 24 giờ qua;
+   * tuỳ chọn một ngày giao. Trần `COORDINATOR_BOARD_MAX`, xếp ở use-case theo giờ giao.
+   */
+  async listCoordinatorBoard(ctx: TenantContext, options: { date?: string | undefined; saleId?: string | undefined; doneSince: Date; max: number }) {
+    const rows = await this.db.orders.findMany({
+      where: scopedWhere(ctx, {
+        source: "BROCHURE",
+        NOT: { status: "CANCELLED" as const },
+        OR: [{ delivery_status: { not: "DELIVERED" as const } }, { updated_at: { gte: options.doneSince } }],
+        ...(options.date ? { delivery_window: { path: ["date"], equals: options.date } } : {}),
+        ...(options.saleId ? { greeting_sessions: { some: { sale_id: options.saleId } } } : {}),
+      }),
+      include: {
+        customer: { select: { id: true, code: true, name: true, phone: true } },
+        items: true,
+        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true } },
+      },
+      orderBy: [{ created_at: "asc" }, { id: "asc" }],
+      take: options.max,
+    })
+    return rows.map((o) => ({
+      ...o,
+      total_vnd: Number(o.total_vnd),
+      paid_vnd: Number(o.paid_vnd),
+      balance_vnd: Number(o.balance_vnd),
+      items: o.items.map((i) => ({ ...i, unit_price_vnd: Number(i.unit_price_vnd) })),
+    }))
+  }
+
   async listBrochureOrders(
     ctx: TenantContext,
     options: {
@@ -25,6 +66,10 @@ export class BrochureOrderRepository {
       payment?: "OUTSTANDING" | "PAID" | undefined
       /** Chỉ đơn từ link do sale này gửi (chế độ xem "chỉ đơn của mình") */
       saleId?: string | undefined
+      /** Tìm theo mã đơn / mã link / số điện thoại khách (Điều hành đối chiếu sao kê) */
+      q?: string | undefined
+      /** Chỉ đơn khách đã bấm "Tôi đã chuyển khoản" */
+      reported?: boolean | undefined
       limit: number
       cursor?: string | undefined
     }
@@ -39,6 +84,8 @@ export class BrochureOrderRepository {
           ? { OR: [{ balance_vnd: { gt: 0 } }, { total_vnd: 0 }], NOT: { status: "CANCELLED" as const } }
           : {}),
         ...(options.payment === "PAID" ? { balance_vnd: { lte: 0 }, total_vnd: { gt: 0 } } : {}),
+        ...(options.reported ? { greeting_sessions: { some: { status: "PAYMENT_REPORTED" as const, ...(options.saleId ? { sale_id: options.saleId } : {}) } } } : {}),
+        ...(options.q ? { AND: [{ OR: searchConditions(options.q) }] } : {}),
       }),
       include: {
         customer: { select: { id: true, code: true, name: true, phone: true } },

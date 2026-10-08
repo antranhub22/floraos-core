@@ -86,7 +86,7 @@ describe("greeting-card: ưu đãi, thỏa thuận và khung giờ lúc đặt h
     const order = await prisma.orders.findUniqueOrThrow({ where: { id: res.orderId } })
     const policies = (order.pricing_rule_ref as { policies?: unknown }).policies
     expect(policies).toEqual({
-      promotion: { id: "p2", title: "Thêm 3 cành", customerText: "Hồng thêm" },
+      promotion: { id: "p2", title: "Thêm 3 cành", customerText: "Hồng thêm", kind: "GIFT", percent: null },
       agreements: [{ id: "a1", title: "Hoa thay thế" }, { id: "a2", title: "Màu sai khác" }],
       termsConfirmed: true,
     })

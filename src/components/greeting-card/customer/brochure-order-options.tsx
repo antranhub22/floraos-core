@@ -20,7 +20,7 @@ interface Props {
 const FIELD = "w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
 const vnd = (n: number) => `${n.toLocaleString("vi-VN")} đ`
 
-/** Size, số lượng, khu vực giao, mã giảm giá + bảng tổng tiền do server tính. */
+/** Size, số lượng, khu vực giao, mã giảm giá (khi tiệm bật) + bảng tổng tiền do server tính (đã trừ ưu đãi). */
 export function BrochureOrderOptions({ variants, basePrice, shipping, selection, onChange, quote, errors, loading }: Props) {
   const [voucherInput, setVoucherInput] = useState(selection.voucherCode)
 
@@ -71,16 +71,18 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
           <select value={selection.shippingZoneId} onChange={(e) => onChange({ shippingZoneId: e.target.value })} className={FIELD}>
             <option value="">— Chọn khu vực —</option>
             {shipping.zones.map((z) => (
-              <option key={z.id} value={z.id}>{z.name} — {z.feeVnd > 0 ? vnd(z.feeVnd) : "Miễn phí"}</option>
+              <option key={z.id} value={z.id}>{z.name} — {z.feeVnd > 0 && !shipping.freeShippingAll ? vnd(z.feeVnd) : "Miễn phí"}</option>
             ))}
           </select>
-          {shipping.freeShippingOverVnd !== null && (
+          {shipping.freeShippingAll ? (
+            <span className="text-caption text-success">Miễn phí giao hoa cho mọi đơn</span>
+          ) : shipping.freeShippingOverVnd !== null && (
             <span className="text-caption text-text-muted">Miễn phí giao cho đơn từ {vnd(shipping.freeShippingOverVnd)}</span>
           )}
         </label>
       )}
 
-      <div className="flex flex-col gap-1">
+      {shipping.vouchersEnabled && <div className="flex flex-col gap-1">
         <span className="text-caption font-bold text-foreground">Mã giảm giá</span>
         <div className="flex gap-2">
           <input
@@ -100,7 +102,7 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
           </button>
         </div>
         {errors.voucherCode && <span className="text-caption text-danger">{errors.voucherCode}</span>}
-      </div>
+      </div>}
 
       {quote?.awaitingQuote ? (
         <p role="status" className="text-body-sm text-text-muted border-t border-border pt-2">
@@ -114,8 +116,11 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
           )}
           <div className="flex justify-between">
             <dt className="text-text-muted">Phí giao hoa</dt>
-            <dd>{shipping.zones.length === 0 ? "Cửa hàng báo sau" : quote?.shippingZone ? (quote.shippingFeeVnd > 0 ? vnd(quote.shippingFeeVnd) : "Miễn phí") : "—"}</dd>
+            <dd>{shipping.freeShippingAll ? "Miễn phí" : shipping.zones.length === 0 ? "Cửa hàng báo sau" : quote?.shippingZone ? (quote.shippingFeeVnd > 0 ? vnd(quote.shippingFeeVnd) : "Miễn phí") : "—"}</dd>
           </div>
+          {quote?.promotionDiscountVnd ? (
+            <div className="flex justify-between text-success"><dt>Ưu đãi</dt><dd>−{vnd(quote.promotionDiscountVnd)}</dd></div>
+          ) : null}
           {quote?.holidaySurchargeVnd ? (
             <div className="flex justify-between"><dt className="text-text-muted">Phụ phí ngày lễ ({quote.holidayName})</dt><dd>+{vnd(quote.holidaySurchargeVnd)}</dd></div>
           ) : null}

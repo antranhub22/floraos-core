@@ -111,7 +111,7 @@ describe("greeting-card tenant isolation", () => {
       customerPhone: "0987654321",
       recipientName: "Người nhận B",
       recipientPhone: "0912345678",
-      confirmedTerms: true,
+      confirmedTerms: true, selectedPromotionId: "promo-discount-10",
       deliveryDate: inTenDays(),
       deliveryAddress: "123 Đường B, Quận 1, TP.HCM",
     })

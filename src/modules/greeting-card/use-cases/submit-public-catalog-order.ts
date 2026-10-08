@@ -13,7 +13,8 @@ import { paymentInstructionsFor } from "./payment-instructions"
 import { BrochureCheckoutRepository } from "../infra/brochure-checkout-repository"
 import { DUPLICATE_ORDER_WINDOW_MS, isSameOrder } from "../domain/order-guard"
 import type { ProductSnapshot } from "../domain/greeting-card-types"
-import { quoteForProduct, type QuoteRequest, type QuoteResult } from "./brochure-quote"
+import { promotionForQuote, quoteForProduct, type QuoteRequest, type QuoteResult } from "./brochure-quote"
+import { assertSlotOpen, fullSlotsOn } from "./slot-availability"
 
 export interface PublicCatalogOrderInput extends CustomerOrderSubmitInput {
   productId: string
@@ -92,6 +93,7 @@ export async function submitPublicCatalogOrder(
     { ...input, customerPhone: normalizePhone(input.customerPhone) },
     shop.settings,
     undefined,
+    null,
     catalog.filters,
   )
   if (Object.keys(precheck.errors).length > 0) throw validationFailed(precheck.errors)
@@ -100,8 +102,9 @@ export async function submitPublicCatalogOrder(
   if (duplicate) return duplicate
   // Ngày lễ đủ số đơn tối đa → không nhận thêm (sau bước chống trùng: khách bấm lại vẫn nhận lại đơn cũ)
   await assertHolidayCapacity(catalog.organization_id, input.deliveryDate, shop.settings)
-  // Kiểm trần đơn TRƯỚC khi tạo phiên — tránh phiên mồ côi
+  // Kiểm trần đơn (theo SĐT, theo khung giờ) TRƯỚC khi tạo phiên — tránh phiên mồ côi
   await assertPhoneQuota(catalog.organization_id, normalizePhone(input.customerPhone), checkout)
+  await assertSlotOpen(catalog.organization_id, input, shop.settings, checkout)
 
   const session = await repo.createPublicSession({
     saleId: await defaultOwnerOf(catalog.organization_id),
@@ -133,5 +136,8 @@ export async function quotePublicCatalog(
 ): Promise<QuoteResult> {
   const { catalog, product } = await orderableFromCatalog(catalogId, productId, repo)
   const shop = await repo.getShopProfile(catalog.organization_id)
-  return quoteForProduct(catalog.organization_id, product, req, shop.settings, undefined, catalog.filters)
+  const promo = promotionForQuote(catalog.filters, shop.settings, req.selectedPromotionId)
+  const result = await quoteForProduct(catalog.organization_id, product, req, shop.settings, undefined, promo.promotion, catalog.filters)
+  const fullSlots = await fullSlotsOn(catalog.organization_id, req.deliveryDate, shop.settings)
+  return { ...result, fullSlots, ...(promo.error ? { errors: { ...result.errors, selectedPromotionId: promo.error } } : {}) }
 }

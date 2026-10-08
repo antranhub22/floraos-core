@@ -139,7 +139,7 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
                 }`}
               >
                 <div className="flex items-center justify-between font-bold text-caption">
-                  <span>{p.title}</span>
+                  <span>{p.title}{p.active === false ? " (Điều hành đang tạm tắt)" : ""}</span>
                   <div className={`w-4 h-4 rounded-md border flex items-center justify-center ${active ? "bg-primary border-primary text-white" : "border-border"}`}>
                     {active && <Check size={12} />}
                   </div>

@@ -18,6 +18,8 @@ import { CoordinatorBrochureTab } from "@/components/greeting-card/coordinator/c
 import { BrochureOrderTrackingTab } from "@/components/greeting-card/tracking/brochure-order-tracking-tab"
 import { InboxButton } from "@/components/greeting-card/inbox/inbox-button"
 import { BrochureUserGuideModal } from "@/components/greeting-card/brochure-user-guide-modal"
+import { ShopProfileReadiness } from "@/components/greeting-card/shop-profile-readiness"
+import { defaultTheChaoView } from "@/components/greeting-card/default-view"
 import type { InboxTarget } from "@/components/greeting-card/inbox/inbox-panel"
 
 type ActiveTab = "sales" | "payment" | "catalog" | "coordinator" | "tracking"
@@ -31,9 +33,10 @@ const MODES: { id: ViewMode; label: string; icon: typeof Wand2 }[] = [
 
 export default function TheChaoPage() {
   const router = useRouter()
-  // "wizard": luồng 3 bước gửi thẻ · "manager": bảng quản lý chi tiết
-  const [viewMode, setViewMode] = useState<ViewMode>("wizard")
-  const [activeTab, setActiveTab] = useState<ActiveTab>("catalog")
+  const { can } = useSession()
+  // "wizard": luồng 3 bước gửi thẻ · "manager": bảng quản lý chi tiết — mở theo vai (Điều hành/Điều phối/Sale)
+  const [viewMode, setViewMode] = useState<ViewMode>(() => defaultTheChaoView(can).viewMode)
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => defaultTheChaoView(can).activeTab)
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogBasic | null>(null)
   // Số đếm cho huy hiệu tab (SWR). Danh sách phân trang: quá 100 thì hiện "100+".
   const catalogList = useApi<{ data: unknown[]; next_cursor: string | null }>("/api/v1/greeting-card/catalogs?limit=100")
@@ -68,12 +71,11 @@ export default function TheChaoPage() {
   const refreshAll = useCallback(() => void mutate(() => true), [mutate])
 
   // Chỉ hiện tab người dùng có năng lực làm (ẩn hiện giao diện — máy chủ vẫn kiểm ở mọi endpoint)
-  const { can } = useSession()
   const allowed: Record<ActiveTab, boolean> = {
     catalog: can("L1"),
     tracking: can("R1"),
     sales: can("R2"),
-    payment: can("R9") || can("F2"),
+    payment: can("R11"),
     coordinator: can("R3") || can("R4") || can("R5"),
   }
   const tabs: TabItem[] = ([
@@ -143,6 +145,8 @@ export default function TheChaoPage() {
           </button>
         </div>
       </header>
+
+      <ShopProfileReadiness />
 
       {viewMode === "wizard" ? (
         <JourneyWizard

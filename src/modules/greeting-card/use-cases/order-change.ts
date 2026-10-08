@@ -9,6 +9,7 @@ import {
   changeLockReason,
   changesForCustomer,
   holidaySurchargeDelta,
+  quoteFactsOf,
   shippingFeeDelta,
   snapshotFromOrder,
   type ChangeItem,
@@ -21,6 +22,7 @@ import { OrderChangeRepository } from "../infra/order-change-repository"
 import { isBrochureOwner } from "./brochure-owner"
 import { holidayOn, holidaySurcharge, parseHolidayPolicy } from "../domain/holiday-policy"
 import { assertHolidayCapacity } from "./holiday-capacity"
+import { assertSlotOpen } from "./slot-availability"
 
 /** Cách khách chứng minh là người đặt: mở từ chính link của đơn (cookie chủ phiên) hoặc 4 số cuối SĐT. */
 export interface ChangeProof {
@@ -30,7 +32,6 @@ export interface ChangeProof {
 
 type Loose = Record<string, unknown>
 const obj = (v: unknown): Loose => (v && typeof v === "object" && !Array.isArray(v) ? (v as Loose) : {})
-const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0)
 
 /**
  * Khách gửi yêu cầu đổi thông tin đơn từ trang theo dõi. Không chứng minh được là người đặt,
@@ -62,6 +63,8 @@ export async function submitOrderChange(
   if (!built.ok) throw validationFailed(built.errors)
   const dateChanged = built.after.deliveryDate !== before.deliveryDate
   if (dateChanged) await assertHolidayCapacity(order.organization_id, built.after.deliveryDate, order.organization.settings, { excludeOrderId: order.id })
+  // Dời sang khung giờ đã kín đơn (trần theo khung của tiệm) → không nhận
+  if (dateChanged || built.after.deliveryTimeSlot !== before.deliveryTimeSlot) await assertSlotOpen(order.organization_id, built.after, order.organization.settings)
 
   const ref = obj(order.pricing_rule_ref)
   const zoneFee = built.after.shippingZoneId !== before.shippingZoneId
@@ -71,7 +74,7 @@ export async function submitOrderChange(
     ? holidaySurcharge(holidayOn(built.after.deliveryDate, holidays), order.greeting_sessions[0]?.catalog?.filters)
     : null
   const expectedFeeDeltaVnd = shippingFeeDelta(
-    { awaitingQuote: ref.awaitingQuote === true, subtotalVnd: num(ref.subtotalVnd), discountVnd: num(ref.discountVnd), shippingFeeVnd: num(ref.shippingFeeVnd) },
+    quoteFactsOf(ref),
     zoneFee,
     shipping,
   ) + (surcharge ? holidaySurchargeDelta(ref, surcharge.vnd) : 0)
@@ -132,6 +135,9 @@ export async function decideOrderChange(
     const p = pending?.payload as unknown as OrderChangePayload | undefined
     if (pending?.order_id && p && p.after.deliveryDate !== p.before.deliveryDate) {
       await assertHolidayCapacity(ctx.organizationId, p.after.deliveryDate, settings, { excludeOrderId: pending.order_id })
+    }
+    if (p && (p.after.deliveryDate !== p.before.deliveryDate || p.after.deliveryTimeSlot !== p.before.deliveryTimeSlot)) {
+      await assertSlotOpen(ctx.organizationId, p.after, settings)
     }
   }
   return repo.decide(ctx, { requestId: input.requestId, approve: input.approve, note, shipping: parseShippingConfig(settings), holidays: parseHolidayPolicy(settings) })

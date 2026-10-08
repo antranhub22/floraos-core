@@ -1,12 +1,12 @@
 import { expect, test, type APIRequestContext } from "@playwright/test"
 
 /**
- * E2E Test — Swipe Brochure / Thẻ Chào (03/10/2026)
+ * E2E Test — Swipe Brochure / Thẻ Chào (03/10/2026, cập nhật 08/10 cho lễ 20/10)
  *
  * Luồng đầu cuối:
- *   Sale đăng nhập → tạo catalog → tạo link /b/T01-xxx
- *   → Khách mở link → xem mẫu hoa → báo thanh toán
- *   → Admin xác nhận → Khách xem tracking
+ *   Điều hành đăng ký → sửa Hồ sơ tiệm (hồ sơ mẫu bị chặn gửi link) → tạo catalog → tạo link /b/T01-xxx
+ *   → Khách nhận phiên → xem mẫu hoa → chọn ưu đãi "Giảm 10%" → đặt → báo thanh toán
+ *   → Điều hành xác nhận → Khách xem tracking → mở lại ở trình duyệt khác bằng 4 số cuối SĐT
  *
  * Yêu cầu: docker compose up -d + npm run dev đang chạy tại localhost:3100
  */
@@ -44,10 +44,17 @@ test.describe("Brochure / Thẻ Chào — Luồng chính", () => {
   let sendCode: string
   let orderId: string
   let orderCode: string
+  let claimOpened: boolean
   const deliveryDate = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10)
 
   test("1. Tạo catalog và link gửi khách", async () => {
     await registerTenant(request, Date.now().toString())
+
+    // Tiệm mới (môi trường dev) mang hồ sơ mẫu "Tiệm Hoa Mộc Lan" — máy chủ chặn gửi link tới khi sửa
+    const profileRes = await request.put(`${BASE}/api/v1/business-profile`, {
+      data: { display_name: "Tiệm Hoa E2E", phone: "0901234567", address: "1 Lê Lợi, Quận 1" },
+    })
+    expect(profileRes.status()).toBe(200)
 
     // Tạo sản phẩm có giá (Thẻ chào không bán mẫu chưa có giá)
     const prodRes = await request.post(`${BASE}/api/v1/products`, {
@@ -78,6 +85,10 @@ test.describe("Brochure / Thẻ Chào — Luồng chính", () => {
   test("2. Khách mở link brochure công khai", async () => {
     expect(sendCode).toBeTruthy()
 
+    // Trình duyệt đầu tiên chạy trang nhận chủ phiên; API phiên chỉ trả cho chủ phiên
+    const claim = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/claim`)
+    expect(claim.status()).toBe(200)
+    claimOpened = ((await claim.json()) as { opened: boolean }).opened
     const res = await request.get(`${BASE}/api/v1/public/brochure/${sendCode}`)
     expect(res.status()).toBe(200)
 
@@ -91,10 +102,8 @@ test.describe("Brochure / Thẻ Chào — Luồng chính", () => {
     expect(json.products[0]?.price).toBe(650000)
   })
 
-  test("2a. Tải dữ liệu link không tính là 'đã mở'; trình duyệt báo mở đúng một lần", async () => {
-    const first = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/open`)
-    expect(first.status()).toBe(200)
-    expect(((await first.json()) as { opened: boolean }).opened).toBe(true)
+  test("2a. Trình duyệt nhận phiên = báo đã mở, đúng một lần", async () => {
+    expect(claimOpened).toBe(true)
     const again = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/open`)
     expect(((await again.json()) as { opened: boolean }).opened).toBe(false)
   })
@@ -108,11 +117,21 @@ test.describe("Brochure / Thẻ Chào — Luồng chính", () => {
     expect(json.snapshot.price).toBe(650000)
   })
 
-  test("3. Khách đặt hoa qua brochure", async () => {
+  test("3. Khách đặt hoa qua brochure — ưu đãi Giảm 10% trên tổng đơn", async () => {
     expect(sendCode).toBeTruthy()
+
+    const quote = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/quote`, {
+      data: { selectedPromotionId: "promo-discount-10", deliveryDate },
+    })
+    expect(quote.status()).toBe(200)
+    const quoteJson = await quote.json() as { quote: { totalVnd: number; promotionDiscountVnd?: number }; fullSlots: string[] }
+    expect(quoteJson.quote).toMatchObject({ totalVnd: 585000, promotionDiscountVnd: 65000 })
+    expect(quoteJson.fullSlots).toEqual([])
 
     const res = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/order`, {
       data: {
+        confirmedTerms: true,
+        selectedPromotionId: "promo-discount-10",
         customerName: "Khách E2E",
         customerPhone: "0901234599",
         recipientName: "Người nhận E2E",
@@ -128,7 +147,7 @@ test.describe("Brochure / Thẻ Chào — Luồng chính", () => {
     orderId = json.orderId
     orderCode = json.orderCode
     expect(orderId).toBeTruthy()
-    expect(json.totalVnd).toBe(650000)
+    expect(json.totalVnd).toBe(585000)
   })
 
   test("4. Khách báo đã chuyển khoản", async () => {
@@ -185,10 +204,22 @@ test.describe("Brochure / Thẻ Chào — Luồng chính", () => {
     expect(ids).not.toContain(catalogId)
   })
 
-  test("8. Public page /b/[sendCode] trả 200", async ({ page }) => {
+  test("8. Trình duyệt khác: link đã có đơn hỏi 4 số cuối SĐT, đúng số thì vào lại được phiên", async ({ page, playwright }) => {
     expect(sendCode).toBeTruthy()
     const res = await page.goto(`${BASE}/b/${sendCode}`)
     expect(res?.status()).toBe(200)
-    await expect(page.locator("body")).toBeVisible()
+    await expect(page.getByText("4 số cuối").first()).toBeVisible()
+
+    const other = await playwright.request.newContext()
+    try {
+      expect((await other.get(`${BASE}/api/v1/public/brochure/${sendCode}`)).status()).toBe(404)
+      const wrong = await other.post(`${BASE}/api/v1/public/brochure/${sendCode}/unlock`, { data: { phoneLast4: "0000" } })
+      expect(wrong.status()).toBe(404)
+      const right = await other.post(`${BASE}/api/v1/public/brochure/${sendCode}/unlock`, { data: { phoneLast4: "4599" } })
+      expect(right.status()).toBe(200)
+      expect((await other.get(`${BASE}/api/v1/public/brochure/${sendCode}`)).status()).toBe(200)
+    } finally {
+      await other.dispose()
+    }
   })
 })

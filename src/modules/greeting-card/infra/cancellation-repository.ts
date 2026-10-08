@@ -11,6 +11,7 @@ import {
   validateCancellationProposal,
 } from "../domain/cancellation-request"
 import type { MessageRole } from "../domain/internal-message"
+import { cancelBlocker } from "../domain/brochure-payment-policy"
 
 type Loose = Record<string, unknown>
 const obj = (v: unknown): Loose => (v && typeof v === "object" ? (v as Loose) : {})
@@ -20,7 +21,7 @@ export class CancellationRepository {
 
   async getOrderSummary(ctx: TenantContext, orderId: string) {
     const o = await this.db.orders.findFirst({
-      where: scopedWhere(ctx, { id: orderId }),
+      where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
       select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, balance_vnd: true },
     })
     if (!o) return null
@@ -113,11 +114,15 @@ export class CancellationRepository {
 
       const order = await tx.orders.findFirst({
         where: scopedWhere(ctx, { id: req.order_id }),
-        select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, balance_vnd: true },
+        select: { id: true, code: true, status: true, delivery_status: true, total_vnd: true, paid_vnd: true, balance_vnd: true },
       })
       if (!order) throw notFound()
 
+      const cancels = payload.type === "CANCEL_ONLY" || payload.type === "FULL_REFUND"
       if (input.approve && order.status === "CANCELLED") throw conflict("Đơn hàng này đã bị hủy trước đó.")
+      // Cùng luật với nút Huỷ của sổ thu: đơn đã giao xong không huỷ được (hoàn một phần vẫn được)
+      const blocker = input.approve && cancels ? cancelBlocker({ status: order.status, deliveryStatus: order.delivery_status }) : null
+      if (blocker) throw conflict(blocker)
 
       const refundVnd = input.approve
         ? resolveRefundVnd(payload.type, Number(order.paid_vnd), payload.refundAmountVnd, input.actualRefundVnd)
@@ -147,21 +152,29 @@ export class CancellationRepository {
         const newPaid = Number(order.paid_vnd) - refundVnd
         const newBalance = Number(order.total_vnd) - newPaid
 
-        await tx.orders.updateMany({
-          where: scopedWhere(ctx, { id: order.id }),
+        // Khoá lạc quan trên số đã thu: hai thao tác hoàn cùng lúc không ghi đè nhau
+        const moved = await tx.orders.updateMany({
+          where: scopedWhere(ctx, { id: order.id, paid_vnd: order.paid_vnd }),
           data: {
             paid_vnd: newPaid,
             balance_vnd: newBalance,
           },
         })
+        if (moved.count === 0) throw conflict("Đơn hàng vừa được cập nhật thanh toán, vui lòng tải lại")
       }
 
       // 2. Nếu duyệt hủy đơn (CANCEL_ONLY hoặc FULL_REFUND) -> chuyển trạng thái orders thành CANCELLED
-      const shouldCancelOrder = input.approve && (payload.type === "CANCEL_ONLY" || payload.type === "FULL_REFUND")
+      const shouldCancelOrder = input.approve && cancels
       if (shouldCancelOrder) {
-        await tx.orders.updateMany({
-          where: scopedWhere(ctx, { id: order.id }),
+        const cancelled = await tx.orders.updateMany({
+          where: scopedWhere(ctx, { id: order.id, status: order.status }),
           data: { status: "CANCELLED" },
+        })
+        if (cancelled.count === 0) throw conflict("Đơn hàng vừa thay đổi trạng thái, vui lòng tải lại")
+        // Trả lại mã giảm giá khách đã dùng — như nút Huỷ của sổ thu
+        await tx.vouchers.updateMany({
+          where: { organization_id: ctx.organizationId, order_id: order.id },
+          data: { is_used: false, used_at: null, order_id: null },
         })
 
         await tx.order_events.create({

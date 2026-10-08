@@ -5,6 +5,7 @@ import { brochureViewer } from "@/modules/greeting-card/use-cases/brochure-owner
 import { staffOrganizationId } from "@/modules/greeting-card/use-cases/staff-viewer"
 import { ownerCookieName } from "@/modules/greeting-card/domain/session-owner"
 import { BrochureClaimGate } from "@/components/greeting-card/customer/brochure-claim-gate"
+import { BrochureUnlockGate } from "@/components/greeting-card/customer/brochure-unlock-gate"
 import { getGreetingCatalogForCustomer } from "@/modules/greeting-card/use-cases/get-greeting-catalog"
 import type { ShopContact } from "@/modules/greeting-card/domain/shop-contact"
 import { LinkUnavailable } from "@/components/greeting-card/customer/link-unavailable"
@@ -52,6 +53,8 @@ export default async function PublicBrochurePage({ params }: PageProps) {
     ownerToken: (await cookies()).get(ownerCookieName(sendCode))?.value ?? null,
     staffOrganizationId: await staffOrganizationId(await headers()),
   })
+  // Phiên đã có đơn: trình duyệt khác mở lại bằng 4 số cuối SĐT người đặt (PO 08/10/2026)
+  if (viewer?.viewer === "OTHER" && data.order) return <BrochureUnlockGate sendCode={sendCode} shop={data.shop} />
   if (viewer?.viewer === "OTHER" && viewer.shareCode) redirect(`/s/${viewer.shareCode}/mo`)
   if (viewer?.viewer === "UNCLAIMED") return <BrochureClaimGate sendCode={sendCode} />
   if (viewer?.viewer === "OTHER") {

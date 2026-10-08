@@ -1,12 +1,13 @@
 import type { AddressParts } from "../domain/delivery-address"
 import { prisma } from "@/core/tenancy/infra/prisma"
-import { conflict } from "@/core/http/errors"
+import { conflict, validationFailed } from "@/core/http/errors"
 import { Prisma } from "@/generated/prisma/client"
 import { isUniqueViolation } from "@/modules/coordinator/infra/transaction"
 import { randomCode } from "../domain/greeting-card-rules"
 import type { BrochureQuote, VoucherFacts } from "../domain/brochure-pricing"
 import type { OrderPolicySnapshot } from "../domain/order-policies"
 import type { ProductSnapshot } from "../domain/greeting-card-types"
+import { countBySlot, slotFullMessage } from "../domain/slot-capacity"
 
 export interface CreateBrochureOrderData {
   organizationId: string
@@ -31,6 +32,25 @@ export interface CreateBrochureOrderData {
   voucherId: string | null
   /** Bản chụp ưu đãi/thỏa thuận khách đã đồng ý (Spec #2, #5). */
   policies?: OrderPolicySnapshot | undefined
+  /** Trần đơn của khung giờ khách chọn — kiểm lại trong giao dịch, có khoá (PO 08/10/2026). */
+  slotGuard?: { slotId: string; max: number } | null | undefined
+}
+
+type Db = Pick<typeof prisma, "orders">
+
+/** Khung giờ đã lưu của các đơn Thẻ chào chưa huỷ, giao ngày `date` (YYYY-MM-DD). */
+async function timeSlotsOn(db: Db, organizationId: string, date: string): Promise<Array<string | null>> {
+  const rows = await db.orders.findMany({
+    where: {
+      organization_id: organizationId, source: "BROCHURE", status: { not: "CANCELLED" },
+      delivery_window: { path: ["date"], equals: date },
+    },
+    select: { delivery_window: true },
+  })
+  return rows.map((r) => {
+    const slot = (r.delivery_window as { timeSlot?: unknown } | null)?.timeSlot
+    return typeof slot === "string" ? slot : null
+  })
 }
 
 /**
@@ -74,6 +94,11 @@ export class BrochureCheckoutRepository {
     return this.db.orders.count({
       where: { organization_id: organizationId, source: "BROCHURE", created_at: { gte: since }, customer: { phone } },
     })
+  }
+
+  /** Số đơn chưa huỷ theo khung giờ của một ngày giao (để hiện "đã kín" và kiểm trước khi tạo phiên). */
+  async countOrdersBySlot(organizationId: string, date: string): Promise<Map<string, number>> {
+    return countBySlot(await timeSlotsOn(this.db, organizationId, date))
   }
 
   /** Đơn vừa đặt từ link bộ sưu tập chung có cùng SĐT + mẫu (để trả lại thay vì tạo đơn trùng). */
@@ -140,6 +165,12 @@ export class BrochureCheckoutRepository {
   async createBrochureOrder(data: CreateBrochureOrderData, customerId: string) {
     const { quote } = data
     return this.db.$transaction(async (tx) => {
+      if (data.slotGuard) {
+        // Khoá theo (tổ chức, ngày, khung): hai khách tranh suất cuối cùng lúc → chỉ một người được
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`brochure-slot:${data.organizationId}:${data.deliveryDate}:${data.slotGuard.slotId}`}))`
+        const taken = countBySlot(await timeSlotsOn(tx, data.organizationId, data.deliveryDate)).get(data.slotGuard.slotId) ?? 0
+        if (taken >= data.slotGuard.max) throw validationFailed({ deliveryTimeSlot: slotFullMessage(data.deliveryTimeSlot) })
+      }
       const order = await tx.orders.create({
         data: {
           organization_id: data.organizationId,

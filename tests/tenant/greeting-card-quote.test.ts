@@ -23,7 +23,7 @@ import {
 const inTenDays = () => new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10)
 const ORDER = {
   customerName: "K", customerPhone: "0987654321", recipientName: "N", recipientPhone: "0912345678",
-  confirmedTerms: true,
+  confirmedTerms: true, selectedPromotionId: "promo-free-card", // ưu đãi tặng kèm — không đổi số tiền bài này kiểm
   deliveryDate: inTenDays(), deliveryAddress: "12 Lê Lợi, Q1",
 }
 
@@ -56,7 +56,7 @@ describe("greeting-card quote (mẫu chưa niêm yết giá)", () => {
       data: {
         settings: {
           brochure_payment: { bank_id: "VCB", account_no: "0011223344", account_name: "TIEM A" },
-          brochure_shipping: { zones: [{ id: "q1", name: "Quận 1", fee_vnd: 30_000 }] },
+          brochure_shipping: { zones: [{ id: "q1", name: "Quận 1", fee_vnd: 30_000 }], voucher_enabled: true },
         },
       },
     })

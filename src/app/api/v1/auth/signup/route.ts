@@ -5,6 +5,7 @@ import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { SESSION_TTL_SECONDS } from "@/modules/organization/domain/session-policy"
 import { signUp } from "@/modules/organization/use-cases/sign-up"
+import { demoDataEnabled } from "@/modules/organization/domain/demo-data"
 
 const schema = z.object({
   email: z.string(),
@@ -22,7 +23,8 @@ export const POST = handle(async (request) => {
     password: parsed.data.password,
     name: parsed.data.name ?? null,
     organizationName: parsed.data.organization_name,
-    seedProfile: true,
+    // Máy chủ thật: tiệm mới có hồ sơ trống, không mang hồ sơ mẫu "Tiệm Hoa Mộc Lan" (PO 08/10/2026)
+    seedProfile: demoDataEnabled(process.env),
   })
 
   return jsonResponse(

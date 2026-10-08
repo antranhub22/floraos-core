@@ -195,11 +195,15 @@ export function buildOrderChange(
  * Đơn chờ báo giá (tổng 0) hoặc đơn đủ mức miễn phí giao → 0.
  */
 export function shippingFeeDelta(
-  quote: { awaitingQuote?: boolean | undefined; subtotalVnd?: number | undefined; discountVnd?: number | undefined; shippingFeeVnd?: number | undefined },
+  quote: {
+    awaitingQuote?: boolean | undefined; subtotalVnd?: number | undefined; discountVnd?: number | undefined; shippingFeeVnd?: number | undefined
+    /** Đơn dùng ưu đãi "Miễn phí giao hoa" */
+    waivesShipping?: boolean | undefined
+  },
   newZoneFeeVnd: number | null,
-  shipping: Pick<ShippingConfig, "freeShippingOverVnd">,
+  shipping: Pick<ShippingConfig, "freeShippingOverVnd" | "freeShippingAll">,
 ): number {
-  if (quote.awaitingQuote || newZoneFeeVnd === null) return 0
+  if (quote.awaitingQuote || newZoneFeeVnd === null || quote.waivesShipping || shipping.freeShippingAll === true) return 0
   const afterDiscount = (quote.subtotalVnd ?? 0) - (quote.discountVnd ?? 0)
   const free = shipping.freeShippingOverVnd !== null && afterDiscount >= shipping.freeShippingOverVnd
   const newFee = free ? 0 : newZoneFeeVnd
@@ -264,4 +268,17 @@ export function changesForCustomer(changes: ChangeItem[]): ChangeItem[] {
 export function holidaySurchargeDelta(pricingRef: unknown, newSurchargeVnd: number): number {
   const prev = rec(pricingRef).holidaySurchargeVnd
   return Math.max(0, newSurchargeVnd - (typeof prev === "number" && prev > 0 ? prev : 0))
+}
+
+/** Phần báo giá đã lưu của đơn (`pricing_rule_ref`) dùng để tính phí giao chênh khi đổi khu vực. */
+export function quoteFactsOf(pricingRef: unknown) {
+  const ref = rec(pricingRef)
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0)
+  return {
+    awaitingQuote: ref.awaitingQuote === true,
+    subtotalVnd: n(ref.subtotalVnd),
+    discountVnd: n(ref.discountVnd),
+    shippingFeeVnd: n(ref.shippingFeeVnd),
+    waivesShipping: rec(rec(ref.policies).promotion).kind === "FREE_SHIPPING",
+  }
 }

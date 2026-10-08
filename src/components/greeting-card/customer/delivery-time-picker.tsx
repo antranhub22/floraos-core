@@ -18,13 +18,14 @@ const pad = (n: number) => String(n).padStart(2, "0")
 
 /**
  * Chọn khung giờ giao 2 tiếng (chỉ khung tiệm bật và còn kịp) hoặc "Giờ cụ thể" — khách tự nhập
- * HH:MM. Giá trị lưu: nhãn khung, hoặc `Giờ cụ thể: HH:MM`.
+ * HH:MM. Giá trị lưu: nhãn khung, hoặc `Giờ cụ thể: HH:MM`. Khung đã đủ đơn hiện "đã kín".
  */
 export function DeliveryTimePicker({
   id,
   date,
   value,
   shipping,
+  fullSlots = [],
   inputClassName,
   onChange,
 }: {
@@ -32,6 +33,8 @@ export function DeliveryTimePicker({
   date: string
   value: string
   shipping: ShippingConfig
+  /** Khung đã đủ đơn (máy chủ báo theo ngày) — hiện "đã kín", không chọn được. */
+  fullSlots?: readonly string[]
   inputClassName: string
   onChange: (value: string) => void
 }) {
@@ -52,7 +55,9 @@ export function DeliveryTimePicker({
           {slots.length === 0 && !allowCustom ? "Ngày này không còn khung giờ — chọn ngày khác" : "Chọn khung giờ giao"}
         </option>
         {slots.map((slot) => (
-          <option key={slot} value={slot}>{slot}</option>
+          <option key={slot} value={slot} disabled={fullSlots.includes(slot)}>
+            {fullSlots.includes(slot) ? `${slot} (đã kín)` : slot}
+          </option>
         ))}
         {allowCustom && <option value={CUSTOM}>Giờ cụ thể (tự nhập)</option>}
       </select>

@@ -62,6 +62,9 @@ export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; on
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-2.5 py-0.5 rounded-full text-caption font-bold ${badge.className}`}>{badge.label}</span>
+                  {balance > 0 && o.status !== "CANCELLED" && o.greeting_sessions[0]?.status === "PAYMENT_REPORTED" && (
+                    <div className="mt-1 text-caption font-bold text-info">Khách báo đã chuyển</div>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1.5">

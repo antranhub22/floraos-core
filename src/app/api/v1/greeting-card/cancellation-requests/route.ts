@@ -6,6 +6,7 @@ import { requireTenantContext } from "@/modules/organization/use-cases/resolve-s
 import { CancellationRepository } from "@/modules/greeting-card/infra/cancellation-repository"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 import { roleOf } from "@/modules/greeting-card/domain/internal-message"
+import { assertOrderInScope } from "@/modules/greeting-card/use-cases/order-scope"
 
 const createSchema = z.object({
   orderId: z.string().min(1, "Mã đơn hàng không được để trống"),
@@ -28,6 +29,8 @@ export const POST = handle(async (req: Request) => {
   const parsed = createSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
 
+  // Sale "chỉ khách của mình" không đề xuất huỷ/hoàn đơn của sale khác (404 như mọi thao tác tiền)
+  await assertOrderInScope(ctx, parsed.data.orderId)
   const result = await new CancellationRepository().createProposal(ctx, {
     orderId: parsed.data.orderId,
     senderRole: senderRole ?? "SALE",

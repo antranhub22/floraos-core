@@ -13,12 +13,15 @@ import { OrderCard, type OrderItemCardProps } from "@/components/orders/order-ca
 import { EmptyState } from "@/components/ui/empty-state"
 import { SalesBrochureTab } from "@/components/greeting-card/sales/sales-brochure-tab"
 import { AdminBrochurePaymentTab } from "@/components/greeting-card/admin/admin-brochure-payment-tab"
+import { useSession } from "@/lib/session"
 
 type MobileFilter = "all" | "new" | "arranging" | "delivery" | "completed"
 type ActiveMainTab = "kanban" | "brochure_sales" | "brochure_payment"
 
 export default function DonHangPage() {
   const router = useRouter()
+  // Tab xác nhận tiền Thẻ chào chỉ dành cho Điều hành (R11 — PO 08/10/2026); máy chủ vẫn kiểm ở mọi endpoint
+  const canConfirmTransfer = useSession().can("R11")
   const [activeTab, setActiveTab] = useState<ActiveMainTab>("kanban")
   const [orders, setOrders] = useState<OrderItemCardProps[]>([])
   const [loading, setLoading] = useState(true)
@@ -154,7 +157,7 @@ export default function DonHangPage() {
           <span>Thẻ Chào & Link Chào Khách (Sale)</span>
         </button>
 
-        <button
+        {canConfirmTransfer && <button
           type="button"
           onClick={() => setActiveTab("brochure_payment")}
           className={`flex items-center gap-2 py-2.5 px-4 text-body-sm font-bold border-b-2 transition-colors ${
@@ -165,13 +168,13 @@ export default function DonHangPage() {
         >
           <ShieldCheck size={16} />
           <span>Duyệt TT Thẻ Chào (Điều hành)</span>
-        </button>
+        </button>}
       </div>
 
       {/* 2. Nội dung chính cuộn dọc */}
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
         {activeTab === "brochure_sales" && <SalesBrochureTab />}
-        {activeTab === "brochure_payment" && <AdminBrochurePaymentTab />}
+        {activeTab === "brochure_payment" && canConfirmTransfer && <AdminBrochurePaymentTab />}
 
         {activeTab === "kanban" && (
           <>

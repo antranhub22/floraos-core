@@ -12,6 +12,7 @@ import {
   changeLockReason,
   holidaySurchargeDelta,
   orderColumnsFromSnapshot,
+  quoteFactsOf,
   shippingFeeDelta,
   type OrderChangePayload,
 } from "../domain/order-change-request"
@@ -138,7 +139,7 @@ export class OrderChangeRepository {
         const zoneChanged = (after.shippingZoneId ?? "") !== (before.shippingZoneId ?? "")
         const zoneFee = zoneChanged ? input.shipping.zones.find((z) => z.id === after.shippingZoneId)?.feeVnd ?? null : null
         if (zoneChanged && zoneFee === null) throw conflict("Khu vực giao khách chọn không còn trong bảng phí — vui lòng từ chối và liên hệ khách")
-        const quote = { awaitingQuote: ref.awaitingQuote === true, subtotalVnd: num(ref.subtotalVnd), discountVnd: num(ref.discountVnd), shippingFeeVnd: num(ref.shippingFeeVnd) }
+        const quote = quoteFactsOf(ref)
         const zoneDeltaVnd = zoneChanged ? shippingFeeDelta(quote, zoneFee, input.shipping) : 0
         feeDeltaVnd = zoneDeltaVnd + holidayDeltaVnd
         newTotal = Number(order.total_vnd) + feeDeltaVnd

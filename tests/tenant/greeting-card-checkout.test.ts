@@ -20,7 +20,7 @@ const BASE_INPUT = {
   customerPhone: "0987654321",
   recipientName: "Người nhận",
   recipientPhone: "0912345678",
-  confirmedTerms: true,
+  confirmedTerms: true, selectedPromotionId: "promo-free-card", // ưu đãi tặng kèm — không đổi số tiền bài này kiểm
   deliveryAddress: "12 Lê Lợi, Quận 1",
 }
 
@@ -57,7 +57,7 @@ describe("greeting-card checkout", () => {
     })
     await prisma.organizations.update({
       where: { id: t.organizationId },
-      data: { settings: { brochure_shipping: { zones: [{ id: "q1", name: "Quận 1", fee_vnd: 30000 }] } } },
+      data: { settings: { brochure_shipping: { zones: [{ id: "q1", name: "Quận 1", fee_vnd: 30000 }], voucher_enabled: true } } },
     })
     const link = await createSendLink(t.ctx, { catalogId: catalog.id })
     await selectBrochureProduct(link.sendCode, product.id)
@@ -71,7 +71,7 @@ describe("greeting-card checkout", () => {
     })
 
     const quoted = await quoteBrochureSession(link.sendCode, {
-      variantId: variant.id, quantity: 2, shippingZoneId: "q1", voucherCode: "flora10",
+      variantId: variant.id, quantity: 2, shippingZoneId: "q1", voucherCode: "flora10", selectedPromotionId: "promo-free-card",
     })
     expect(quoted.errors).toEqual({})
     expect(quoted.quote).toMatchObject({ subtotalVnd: 2_000_000, discountVnd: 150000, shippingFeeVnd: 30000, totalVnd: 1_880_000 })
@@ -113,7 +113,7 @@ describe("greeting-card checkout", () => {
     ).toBe("VALIDATION_FAILED")
     expect(await prisma.greeting_sessions.count({ where: { organization_id: a.organizationId } })).toBe(before)
 
-    const q = await quotePublicCatalog(catalog.id, product.id, { variantId: variant.id, shippingZoneId: "q1" })
+    const q = await quotePublicCatalog(catalog.id, product.id, { variantId: variant.id, shippingZoneId: "q1", selectedPromotionId: "promo-free-card" })
     expect(q.quote.totalVnd).toBe(1_030_000)
     const order = await submitPublicCatalogOrder(catalog.id, {
       ...BASE_INPUT, deliveryDate: inTenDays(), productId: product.id, variantId: variant.id, shippingZoneId: "q1",

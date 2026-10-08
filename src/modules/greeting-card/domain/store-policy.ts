@@ -5,13 +5,18 @@
  * - Thỏa thuận = Tình huống có thể xảy ra và khách đã được thông báo trước (bắt buộc xác nhận trước khi đặt).
  * Pure TypeScript.
  */
+import { promotionPricingOf, type PromotionKind } from "./promotion-pricing"
 
 export interface PromotionItem {
   id: string
   title: string
   description: string
-  /** Ví dụ: số cành, voucher vnd, % giảm... */
+  /** Loại tính tiền (PO 08/10/2026); thiếu → suy từ `config.percent`, còn lại là Tặng kèm. */
+  kind?: PromotionKind | undefined
+  /** Ví dụ: `{ percent: 10 }` cho Giảm %. */
   config?: Record<string, unknown> | undefined
+  /** Điều hành bật/tắt theo từng thời điểm trong Hồ sơ tiệm (PO 08/10/2026); thiếu = đang áp dụng. */
+  active?: boolean | undefined
 }
 
 export interface CommitmentItem {
@@ -34,17 +39,14 @@ export interface StorePoliciesConfig {
   agreements: AgreementItem[]
 }
 
-/** 9 Ưu đãi mẫu chuẩn hóa của ngành hoa */
+/**
+ * Ưu đãi mặc định — đúng 3 lựa chọn PO chốt 08/10/2026 (khách chọn tối đa 01): Giảm 10% trên tổng
+ * đơn (trừ tiền thật), Tặng thiệp, Thêm phụ liệu. Thay 9 ưu đãi mẫu cũ chỉ ghi chú mà không trừ tiền.
+ */
 export const DEFAULT_PROMOTIONS: PromotionItem[] = [
-  { id: "promo-free-ship", title: "Miễn phí giao hoa", description: "Tặng phí giao hàng tiêu chuẩn cho đơn hàng này." },
-  { id: "promo-discount-10", title: "Giảm 10%", description: "Giảm ngay 10% giá trị hoa của đơn hàng.", config: { percent: 10 } },
-  { id: "promo-free-card", title: "Tặng thiệp", description: "Tặng 01 thiệp chúc mừng thiết kế kèm lời nhắn in trang trọng." },
-  { id: "promo-free-gift", title: "Tặng quà kèm hoa", description: "Tặng 01 món quà đặc biệt được cửa hàng lựa chọn tinh tế." },
-  { id: "promo-extra-flowers", title: "Tặng thêm hoa", description: "Tặng thêm 03–05 cành hoa phụ phù hợp với tone màu thiết kế.", config: { extraStems: "3-5" } },
-  { id: "promo-accessory", title: "Tặng phụ kiện", description: "Tặng 01 phụ kiện trang trí / nơ ruy băng lụa cao cấp." },
-  { id: "promo-upgrade", title: "Nâng cấp bó hoa", description: "Tăng mật độ hoa giúp sản phẩm thêm phần đầy đặn, sum suê." },
-  { id: "promo-next-voucher", title: "Ưu đãi đơn tiếp theo", description: "Tặng voucher 50.000đ áp dụng cho lần đặt hoa tiếp theo.", config: { voucherVnd: 50000 } },
-  { id: "promo-member-points", title: "Tặng điểm thành viên", description: "Tích lũy thêm điểm thưởng thành viên vào tài khoản.", config: { points: 100 } },
+  { id: "promo-discount-10", title: "Giảm 10%", description: "Giảm 10% trên tổng giá trị đơn hàng.", kind: "PERCENT_OFF", config: { percent: 10 } },
+  { id: "promo-free-card", title: "Tặng thiệp", description: "Tặng 01 thiệp chúc mừng kèm lời nhắn của bạn.", kind: "GIFT" },
+  { id: "promo-accessory", title: "Thêm phụ liệu", description: "Thêm phụ liệu trang trí để bó hoa đẹp hơn.", kind: "GIFT" },
 ]
 
 /** 6 Cam kết cốt lõi */
@@ -98,7 +100,7 @@ function cleanItems<T>(value: unknown, textKey: "description" | "customerText"):
 }
 
 export type PublicAppliedPolicies = {
-  promotions: Array<{ id: string; title: string; customerText: string }>
+  promotions: Array<{ id: string; title: string; customerText: string; kind: PromotionKind; percent: number | null }>
   commitments: Array<{ id: string; title: string; customerText: string }>
   agreements: Array<{ id: string; title: string; customerText: string }>
   allowCustomerPromotionChoice: boolean
@@ -121,8 +123,9 @@ export function resolveAppliedPolicies(
   const commitFilter = applied?.commitmentIds
   const agreeFilter = applied?.agreementIds
 
-  const promotions = (promoFilter ? all.promotions.filter((p) => promoFilter.includes(p.id)) : all.promotions).map(
-    ({ id, title, description }) => ({ id, title, customerText: description })
+  const activePromotions = all.promotions.filter((p) => p.active !== false)
+  const promotions = (promoFilter ? activePromotions.filter((p) => promoFilter.includes(p.id)) : activePromotions).map(
+    (p) => ({ id: p.id, title: p.title, customerText: p.description, ...promotionPricingOf(p) })
   )
   const commitments = (commitFilter ? all.commitments.filter((c) => commitFilter.includes(c.id)) : all.commitments).map(
     ({ id, title, customerText }) => ({ id, title, customerText })

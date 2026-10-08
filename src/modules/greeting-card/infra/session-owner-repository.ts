@@ -16,6 +16,16 @@ export class SessionOwnerRepository {
     return rows.length === 1 ? rows[0]! : null
   }
 
+  /** SĐT người đặt của đơn gắn với phiên (`null` = phiên chưa có đơn) — để mở lại link ở trình duyệt khác. */
+  async orderPhoneOf(organizationId: string, sessionId: string): Promise<string | null> {
+    const row = await this.db.greeting_sessions.findFirst({
+      where: { id: sessionId, organization_id: organizationId, order_id: { not: null } },
+      select: { customer_phone: true, order: { select: { customer: { select: { phone: true } } } } },
+    })
+    if (!row) return null
+    return row.order?.customer?.phone ?? row.customer_phone ?? ""
+  }
+
   async isClaimed(organizationId: string, sessionId: string): Promise<boolean> {
     const row = await this.db.greeting_journey_events.findFirst({
       where: { organization_id: organizationId, session_id: sessionId, event_type: OWNER_CLAIMED_EVENT },

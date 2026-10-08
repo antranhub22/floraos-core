@@ -6,6 +6,7 @@ import { requireTenantContext } from "@/modules/organization/use-cases/resolve-s
 import { CancellationRepository } from "@/modules/greeting-card/infra/cancellation-repository"
 import { decisionCapabilities } from "@/modules/greeting-card/domain/cancellation-request"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
+import { queueOrderNotification } from "@/modules/greeting-card/use-cases/notify-customer"
 
 const decisionSchema = z.object({
   approve: z.boolean(),
@@ -36,5 +37,7 @@ export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request
     actualRefundVnd: parsed.data.actualRefundVnd,
   })
 
+  // Báo khách khi đơn bị huỷ theo đề xuất (như nút Huỷ của sổ thu)
+  if (result.orderStatus === "CANCELLED" && parsed.data.approve) queueOrderNotification(ctx.organizationId, result.orderId, "CANCELLED")
   return jsonResponse({ data: result })
 })

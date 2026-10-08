@@ -166,7 +166,7 @@ Bảng dùng chung: `orders` (+ `source`, `source_session_id`, `pricing_rule_ref
 
 ## 8. UI/UX Behavior
 
-- **Trang `/the-chao`** (`page.tsx`): 2 chế độ "Gửi nhanh" (mặc định) / "Quản lý"; 5 tab hiện theo năng lực (Bộ sưu tập `L1`, Theo dõi `R1`, Bán hàng `R2`, Điều hành `R9`/`F2`, Điều phối `R3`/`R4`/`R5`). Nút đầu trang: Hộp việc · Chế độ · Làm mới. Tab Theo dõi tiến độ: thanh chuyển 6 cách xem + view mẫu/tự lưu + bộ lọc chung; bấm một đơn ở cách xem bất kỳ → Timeline của đơn đó (có nút Ghi chú/nhắn).
+- **Trang `/the-chao`** (`page.tsx`): 2 chế độ "Gửi nhanh" (mặc định) / "Quản lý"; 5 tab hiện theo năng lực (Bộ sưu tập `L1`, Theo dõi `R1`, Bán hàng `R2`, Điều hành `R11` (từ 08/10/2026; trước là `R9`/`F2`), Điều phối `R3`/`R4`/`R5`). Nút đầu trang: Hộp việc · Chế độ · Làm mới. Tab Theo dõi tiến độ: thanh chuyển 6 cách xem + view mẫu/tự lưu + bộ lọc chung; bấm một đơn ở cách xem bất kỳ → Timeline của đơn đó (có nút Ghi chú/nhắn).
 - **Tầng gọi API**: SWR (`greeting-api.ts`), làm mới khi quay lại tab; danh sách phân trang con trỏ + "Tải thêm"; lỗi đọc `error.details` tiếng Việt (`api-error.ts`).
 - **Làm mới định kỳ**: Hộp việc 20s, trao đổi 15s, Theo dõi tiến độ 30s, danh sách việc 60s; trang khách: thanh toán (đến khi đủ), theo dõi 15s.
 - **Trang khách**: thanh liên hệ tiệm, 20 giao diện (`templates/greeting-template-renderer.tsx`), bước xem lại trước khi gửi, sao chép STK/số tiền/nội dung, đồng hồ giữ đơn, ô nhập 4 số cuối SĐT ở theo dõi, ô bẫy ẩn ở form, thông báo quyền riêng tư, nút đặt thêm đơn, trang "link không còn hiệu lực" có liên hệ tiệm.
@@ -195,7 +195,7 @@ Bảng dùng chung: `orders` (+ `source`, `source_session_id`, `pricing_rule_ref
 | Xem bộ sưu tập, ảnh ghép | L1 | dieu_hanh, dieu_phoi, sale, product_manager, marketing, crm |
 | Tạo/sửa bộ sưu tập, link, gửi tin, xin giảm | R2 | dieu_hanh, dieu_phoi, sale |
 | Xem đơn, theo dõi, hộp việc, tin, thống kê, tích hợp (đọc) | R1 | + crm, customer_service |
-| Ghi thu, báo giá, xem/xử lý giao dịch không khớp | R9 + phạm vi xem (B23) | dieu_hanh, dieu_phoi, sale (PO 06/10/2026: giữ) |
+| Ghi thu, báo giá, xem/xử lý giao dịch không khớp | R11 (trần cứng Điều hành) | dieu_hanh — **PO 08/10/2026 thay quyết định 06/10 (giữ R9 cho sale/điều phối)** |
 | Phân công thợ · ảnh thành phẩm · giao ship/ảnh người nhận | R4 · R3 · R5 | dieu_hanh, dieu_phoi |
 | Huỷ · hoàn tiền (trần cứng) | R6 · R10 | dieu_hanh |
 | Cấu hình tích hợp, quyền xem sale, duyệt giảm giá | F2 | dieu_hanh |
@@ -328,7 +328,7 @@ Các điểm lệch của v1 (đặc tả 06 §25.2, đặc tả 07 "Bảy bản
 
 ## 17. Open Questions & Unclear Areas
 
-Đã PO chốt 06/10/2026 (v1 câu 2–5): sale giữ `R9` nhưng theo phạm vi xem; OWN áp cho phễu; theo dõi công khai rút gọn + xác minh; cọc không làm phiên "hoàn tất". Đã kiểm (v1 câu 1, 6): sổ đơn chung bị khoá với đơn Thẻ chào; E2E chạy 11/11. Còn mở:
+Đã PO chốt 06/10/2026 (v1 câu 2–5): ~~sale giữ `R9` nhưng theo phạm vi xem~~ (ĐÃ THAY 08/10/2026: chỉ Điều hành, `R11`); OWN áp cho phễu; theo dõi công khai rút gọn + xác minh; cọc không làm phiên "hoàn tất". Đã kiểm (v1 câu 1, 6): sổ đơn chung bị khoá với đơn Thẻ chào; E2E chạy 11/11. Còn mở:
 
 1. **Bất nhất trong cách suy bước (báo cáo, chưa sửa — chờ PO)**: (a) khách đặt cọc làm đơn sang `CONFIRMED` → nhảy thẳng B5; (b) tên ngắn B4 "Đã thanh toán" thực chất là "khách báo đã chuyển khoản"; (c) mã so `production_status === "DONE"` không có trong enum; (d) `BROWSING` không bao giờ được ghi.
 2. Số liệu vận hành thật (số tiệm dùng, số đơn, tỷ lệ chuyển đổi) — không có trong repo; giá trị kinh doanh ở §14 chỉ theo ý đồ.

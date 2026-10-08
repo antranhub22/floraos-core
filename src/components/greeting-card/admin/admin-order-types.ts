@@ -16,7 +16,11 @@ export interface AdminOrder {
 
 export type OrderAction = { type: "quote" | "collect" | "cancel" | "refund"; order: AdminOrder }
 
+/** Kết quả thao tác: lời báo cho Điều hành + (khi vừa thu tiền) tin soạn sẵn để gửi khách qua Zalo. */
+export type ActionResult = { message: string; customerMessage?: string | undefined }
+
 export const ORDER_FILTERS = [
+  { id: "reported", label: "Khách báo đã chuyển", query: "payment=OUTSTANDING&reported=1" },
   { id: "outstanding", label: "Còn phải thu", query: "payment=OUTSTANDING" },
   { id: "paid", label: "Đã thu đủ", query: "payment=PAID" },
   { id: "cancelled", label: "Đã huỷ", query: "status=CANCELLED" },

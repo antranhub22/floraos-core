@@ -19,7 +19,7 @@ interface Props {
 }
 
 const vnd = (n: number) => `${n.toLocaleString("vi-VN")}đ`
-const zaloHref = (phone: string) => `https://zalo.me/${phone.replace(/\D/g, "").replace(/^84/, "0")}`
+export const zaloHref = (phone: string) => `https://zalo.me/${phone.replace(/\D/g, "").replace(/^84/, "0")}`
 
 /** Thẻ đơn: trạng thái hiện tại là phần to nhất; thông tin khách/mẫu gọn bên dưới. */
 export function WorkItemCard({ item, me, onOpenNotes, actions, now }: Props) {
