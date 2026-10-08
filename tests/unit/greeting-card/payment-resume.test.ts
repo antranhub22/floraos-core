@@ -3,6 +3,7 @@ import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { BrochurePaymentView } from "@/components/greeting-card/customer/brochure-payment-view"
 import { rememberCatalogOrder } from "@/components/greeting-card/customer/use-remembered-order"
+import type { BrochurePaymentInstructions } from "@/modules/greeting-card/domain/greeting-card-types"
 
 /**
  * Khách báo đã chuyển khoản rồi rời trang trước khi Điều hành xác nhận: mở lại phải thấy đúng
@@ -15,11 +16,23 @@ describe("khách quay lại sau khi báo chuyển khoản", () => {
     const html = renderToStaticMarkup(createElement(BrochurePaymentView, { ...props, alreadyReported: true }))
     expect(html).toContain("Đã báo chuyển khoản thành công")
     expect(html).toContain("Đang chờ Điều hành")
+    expect(html).not.toContain("Theo dõi tiến độ Đơn hàng")
   })
 
   it("chưa báo → vẫn là màn thanh toán bình thường", () => {
     const html = renderToStaticMarkup(createElement(BrochurePaymentView, props))
     expect(html).not.toContain("Đã báo chuyển khoản thành công")
+  })
+
+  it("có mã QR, chưa báo chuyển khoản → không có lối bỏ qua sang Theo dõi tiến độ", () => {
+    const vietQr: BrochurePaymentInstructions = {
+      purpose: "FULL", orderTotalVnd: 650000, qrUrl: "https://img.vietqr.io/x.png", bankName: "VCB",
+      accountNo: "0123", accountName: "TIEM HOA", amount: 650000, transferMemo: "DH-1",
+    }
+    const html = renderToStaticMarkup(createElement(BrochurePaymentView, { ...props, vietQr }))
+    expect(html).toContain("TÔI ĐÃ CHUYỂN KHOẢN THANH TOÁN")
+    expect(html).not.toContain("Bỏ qua")
+    expect(html).not.toContain("Theo dõi tiến độ Đơn hàng")
   })
 
   describe("link bộ sưu tập chung nhớ đơn đã đặt trên máy", () => {

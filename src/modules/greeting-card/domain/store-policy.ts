@@ -49,25 +49,28 @@ export const DEFAULT_PROMOTIONS: PromotionItem[] = [
   { id: "promo-accessory", title: "Thêm phụ liệu", description: "Thêm phụ liệu trang trí để bó hoa đẹp hơn.", kind: "GIFT" },
 ]
 
-/** 6 Cam kết cốt lõi */
+/**
+ * 6 Cam kết cốt lõi — nội dung PO chốt 08/10/2026. Chỉ là mặc định: tiệm sửa/thêm/xóa trong
+ * Hồ sơ tiệm; đã lưu `store_policies` thì không còn dùng bộ này.
+ */
 export const DEFAULT_COMMITMENTS: CommitmentItem[] = [
-  { id: "commit-match-sample", title: "Đúng mẫu đã chọn", customerText: "Sản phẩm được thực hiện theo đúng mẫu, phong cách và thiết kế đã lựa chọn.", internalText: "Thợ cắm đối chiếu chặt chẽ với ảnh mẫu trước khi chuyển QC." },
-  { id: "commit-match-value", title: "Đúng giá trị sản phẩm", customerText: "Sản phẩm được cung cấp đúng giá trị và khối lượng hoa tương xứng với mức giá.", internalText: "Đảm bảo đúng chủng loại và số lượng hoa chính theo BOM." },
-  { id: "commit-delivery-time", title: "Giao trong khung giờ đã chọn", customerText: "Giao hoa đúng khung giờ quý khách đã chọn khi đặt hàng.", internalText: "Điều phối điều xe trước 45 phút so với mốc hẹn khách." },
-  { id: "commit-qc", title: "Kiểm tra trước khi giao", customerText: "Sản phẩm được kiểm tra chất lượng và độ tươi nghiêm ngặt trước khi xuất xưởng.", internalText: "Chụp ảnh QC và đối chiếu checklist kiểm định." },
-  { id: "commit-send-photo", title: "Gửi ảnh sản phẩm", customerText: "Gửi hình ảnh sản phẩm hoàn thiện để quý khách xem trước khi giao hàng.", internalText: "Tải ảnh sản phẩm hoàn thiện lên hệ thống cho khách xem." },
-  { id: "commit-support", title: "Hỗ trợ khách hàng", customerText: "Tiếp nhận và hỗ trợ mọi phản hồi nhanh chóng theo chính sách chăm sóc của tiệm.", internalText: "Chăm sóc sau giao trong vòng 24h." },
+  { id: "commit-match-sample", title: "Đúng mẫu – đúng tone màu", customerText: "Sản phẩm được thực hiện theo mẫu quý khách đã chọn, giữ đúng phong cách, tone màu và bố cục chính của thiết kế.", internalText: "Thợ cắm đối chiếu chặt chẽ với ảnh mẫu (phong cách, tone màu, bố cục) trước khi chuyển QC." },
+  { id: "commit-match-value", title: "Đúng hoa chính – đúng cấu phần", customerText: "Đúng loại hoa chính, số lượng và các hạng mục đã được xác nhận trong đơn hàng.", internalText: "Đảm bảo đúng chủng loại, số lượng hoa chính và các hạng mục đã xác nhận theo BOM." },
+  { id: "commit-qc", title: "Hoa tươi – kiểm tra trước khi giao", customerText: "Hoa và sản phẩm hoàn thiện đều được kiểm tra chất lượng, độ tươi và hình thức trước khi rời tiệm.", internalText: "Chụp ảnh QC và đối chiếu checklist kiểm định." },
+  { id: "commit-send-photo", title: "Xem ảnh hoa thật trước khi giao", customerText: "Quý khách được xem ảnh sản phẩm thực tế sau khi hoàn thiện, trước khi đơn hàng được giao đi.", internalText: "Tải ảnh sản phẩm hoàn thiện lên hệ thống cho khách xem." },
+  { id: "commit-delivery-time", title: "Giao đúng khung giờ đã xác nhận", customerText: "Tiệm chủ động chuẩn bị và điều phối để giao hoa trong khung giờ quý khách đã chọn và được xác nhận.", internalText: "Điều phối điều xe trước 45 phút so với mốc hẹn khách." },
+  { id: "commit-support", title: "Tiệm chịu trách nhiệm đến cùng", customerText: "Mọi phản hồi về sản phẩm hoặc giao hàng đều được tiệm tiếp nhận và phối hợp xử lý nhanh chóng.", internalText: "Chăm sóc sau giao trong vòng 24h." },
 ]
 
-/** 7 Thỏa thuận minh bạch với khách hàng */
+/** 7 Thỏa thuận minh bạch với khách hàng — nội dung PO chốt 08/10/2026; tiệm được sửa như Cam kết. */
 export const DEFAULT_AGREEMENTS: AgreementItem[] = [
-  { id: "agree-substitute-flowers", title: "Hoa có thể được thay thế", customerText: "Một số loại hoa phụ có thể được thay thế nếu không có sẵn hoặc không đạt độ nở đẹp nhất tại thời điểm thực hiện.", internalText: "Chỉ thay hoa phụ có màu sắc tương đồng." },
-  { id: "agree-color-variation", title: "Màu sắc có thể sai khác nhẹ", customerText: "Màu sắc thực tế có thể có sai khác tự nhiên do đặc tính sinh học của hoa tươi và ánh sáng hiển thị.", internalText: "Giải thích rõ yếu tố tự nhiên nếu khách thắc mắc." },
-  { id: "agree-natural-variance", title: "Sản phẩm có thể khác mẫu", customerText: "Sản phẩm thủ công thực tế có thể có khác biệt tự nhiên so với ảnh mẫu nhưng vẫn giữ nguyên phong cách và tổng thể thiết kế.", internalText: "Tôn trọng tính thủ công độc bản của nghệ nhân." },
-  { id: "agree-seasonal", title: "Hoa theo mùa", customerText: "Một số loại hoa nhập hoặc phụ kiện trang trí có thể thay đổi tùy thuộc vào mùa vụ và nguồn cung ứng.", internalText: "Báo khách nếu có giống hoa theo mùa đặc thù." },
-  { id: "agree-main-flower-replacement", title: "Thay thế hoa chính", customerText: "Nếu cần thay thế hoa chính do chất lượng hoa không đạt, cửa hàng sẽ ưu tiên loại hoa tương đương hoặc có giá trị cao hơn.", internalText: "Phải liên hệ xin ý kiến khách nếu thay hoa chính." },
-  { id: "agree-delivery-adjustment", title: "Thời gian giao có thể thay đổi", customerText: "Thời gian giao hoa có thể xê dịch trong trường hợp thời tiết bất khả kháng hoặc người nhận chưa kịp nghe máy.", internalText: "Tài xế gọi tối thiểu 3 cuộc trước khi hẹn lại." },
-  { id: "agree-cancellation-policy", title: "Chính sách Hủy / Hoàn tiền", customerText: "Việc hủy hoặc hoàn tiền áp dụng theo tiến độ thực tế (khi xưởng chưa cắm hoa hoặc theo thỏa thuận cụ thể).", internalText: "Áp dụng theo workflow duyệt của Điều hành." },
+  { id: "agree-substitute-flowers", title: "Hoa phụ có thể thay tương đương", customerText: "Nếu hoa phụ hoặc phụ kiện không có sẵn hay chưa đạt độ đẹp tại thời điểm thực hiện, tiệm có thể thay bằng loại tương đương, giữ nguyên tone màu, phong cách và tổng thể thiết kế.", internalText: "Chỉ thay hoa phụ/phụ kiện có màu sắc tương đồng." },
+  { id: "agree-color-variation", title: "Màu sắc có thể khác nhẹ", customerText: "Hoa tươi là sản phẩm tự nhiên nên màu sắc, kích thước và độ nở từng bông có thể khác nhẹ so với hình ảnh trên màn hình. Tiệm ưu tiên giữ đúng tone màu tổng thể của mẫu.", internalText: "Giải thích rõ yếu tố tự nhiên nếu khách thắc mắc." },
+  { id: "agree-natural-variance", title: "Sản phẩm làm thủ công", customerText: "Mỗi sản phẩm được cắm và hoàn thiện bằng tay nên có thể khác nhỏ về hình dáng hoặc bố cục so với ảnh mẫu, nhưng vẫn giữ phong cách và tinh thần thiết kế đã chọn.", internalText: "Tôn trọng tính thủ công độc bản của nghệ nhân." },
+  { id: "agree-main-flower-replacement", title: "Hoa chính chỉ thay sau khi trao đổi", customerText: "Nếu hoa chính không đạt tiêu chuẩn hoặc không thể cung cấp, tiệm sẽ liên hệ để cùng quý khách thống nhất phương án thay thế trước khi thực hiện.", internalText: "Bắt buộc liên hệ và được khách đồng ý trước khi thay hoa chính." },
+  { id: "agree-delivery-adjustment", title: "Giờ giao có thể điều chỉnh", customerText: "Khi không liên lạc được người nhận, thông tin giao hàng thay đổi, thời tiết xấu hoặc có sự cố ngoài khả năng kiểm soát, giờ giao có thể được điều chỉnh. Tiệm sẽ chủ động thông báo và cùng quý khách chọn phương án phù hợp.", internalText: "Tài xế gọi tối thiểu 3 cuộc trước khi hẹn lại." },
+  { id: "agree-order-change", title: "Thay đổi thông tin đơn hàng", customerText: "Sau khi đơn đã được xác nhận hoặc bắt đầu thực hiện, việc đổi mẫu, địa chỉ, giờ giao hay nội dung đơn có thể ảnh hưởng đến chi phí và thời gian giao. Tiệm sẽ thông báo trước khi áp dụng.", internalText: "Báo khách chi phí/thời gian phát sinh và chờ khách đồng ý trước khi áp dụng thay đổi." },
+  { id: "agree-cancellation-policy", title: "Hủy đơn và hoàn tiền", customerText: "Quý khách có thể yêu cầu hủy đơn trước khi tiệm bắt đầu thực hiện. Sau khi đơn đã được chuẩn bị hoặc hoàn thiện, việc hủy hoặc hoàn tiền sẽ được giải quyết theo tình trạng thực tế của đơn.", internalText: "Áp dụng theo workflow duyệt của Điều hành." },
 ]
 
 export const STORE_POLICIES_SETTINGS_KEY = "store_policies"

@@ -10,9 +10,12 @@ import type { BrochurePaymentInstructions } from "@/modules/greeting-card/domain
 import Image from "next/image"
 
 const POLL_INTERVAL_MS = 5000
-/** Đã thu ĐỦ theo số tiền thật — đơn mới cọc (trạng thái CONFIRMED) chưa tính là xong. */
+/**
+ * Điều hành đã xác nhận nhận tiền — đơn cọc đã nhận cọc cũng coi như xong phần thanh toán của khách
+ * (phần còn lại thu sau theo thoả thuận), PO 08/10/2026.
+ */
 function isPaid(order: { paidVnd: number; totalVnd: number } | undefined): boolean {
-  return !!order && order.totalVnd > 0 && order.paidVnd >= order.totalVnd
+  return !!order && order.totalVnd > 0 && order.paidVnd > 0
 }
 import { BrochureQuotePending } from "./brochure-quote-pending"
 
@@ -50,8 +53,7 @@ export function BrochurePaymentView({
     { refreshInterval: (latest) => (isPaid(latest?.order) ? 0 : POLL_INTERVAL_MS), revalidateOnFocus: true }
   )
   const isPaymentConfirmed = isPaid(tracking.data?.order)
-  // QR đang hiện là QR cọc mà tiệm đã nhận cọc → mời khách tải lại để có QR phần còn lại
-  const depositReceived = vietQr?.purpose === "DEPOSIT" && (tracking.data?.order?.paidVnd ?? 0) > 0 && !isPaymentConfirmed
+  const depositOnly = isPaymentConfirmed && (tracking.data?.order?.paidVnd ?? 0) < (tracking.data?.order?.totalVnd ?? 0)
 
   function copyToClipboard(text: string, field: string) {
     void navigator.clipboard.writeText(text)
@@ -196,15 +198,6 @@ export function BrochurePaymentView({
         </>
       )}
 
-      {depositReceived && (
-        <div role="status" className="w-full mb-3 p-3.5 rounded-xl bg-success-bg border border-success/30 text-success text-body-sm text-center">
-          <p className="font-bold">Cửa hàng đã nhận tiền cọc.</p>
-          <button type="button" onClick={() => window.location.reload()} className="mt-1 min-h-11 font-semibold underline">
-            Xem mã QR phần còn lại
-          </button>
-        </div>
-      )}
-
       {/* Confirmation State Actions */}
       {isPaymentConfirmed ? (
         <div className="w-full flex flex-col gap-3.5">
@@ -214,10 +207,11 @@ export function BrochurePaymentView({
             </div>
             <div className="text-center">
               <p className="text-title-sm font-extrabold text-success">
-                Đã thanh toán thành công!
+                {depositOnly ? "Đã nhận tiền cọc thành công!" : "Đã thanh toán thành công!"}
               </p>
               <p className="text-body-sm text-text-muted mt-1">
-                Điều hành cửa hàng đã xác nhận nhận tiền cho đơn #{orderCode}. Đơn hàng đang được chuẩn bị cắm hoa.
+                Điều hành cửa hàng đã xác nhận nhận {depositOnly ? "tiền cọc" : "tiền"} cho đơn #{orderCode}. Đơn hàng đang được chuẩn bị cắm hoa.
+                {depositOnly && " Phần còn lại cửa hàng sẽ thu sau theo thoả thuận."}
               </p>
             </div>
           </div>
@@ -243,16 +237,9 @@ export function BrochurePaymentView({
               Đang chờ Điều hành cửa hàng đối soát xác nhận (hệ thống sẽ tự động cập nhật ngay khi nhận được tiền)...
             </p>
           </div>
-
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onGoToTracking}
-            className="w-full h-11 font-extrabold text-body-sm flex items-center justify-center gap-2 rounded-xl cursor-pointer"
-          >
-            <span>Theo dõi tiến độ Đơn hàng</span>
-            <ArrowRight size={16} />
-          </Button>
+          <p className="text-caption text-text-muted text-center">
+            Nút Theo dõi tiến độ sẽ mở ngay khi cửa hàng xác nhận đã nhận tiền.
+          </p>
         </div>
       ) : vietQr ? (
         <div className="w-full flex flex-col gap-2.5">
@@ -268,16 +255,9 @@ export function BrochurePaymentView({
             <Check size={18} />
             <span>{loading ? "Đang xử lý..." : "TÔI ĐÃ CHUYỂN KHOẢN THANH TOÁN"}</span>
           </button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onGoToTracking}
-            className="text-caption text-text-muted hover:text-foreground cursor-pointer"
-          >
-            Bỏ qua & xem Theo dõi tiến độ Đơn hàng
-          </Button>
+          <p className="text-caption text-text-muted">
+            Sau khi chuyển khoản, nhấn nút trên. Cửa hàng xác nhận đã nhận tiền thì bạn sẽ theo dõi được tiến độ đơn hàng.
+          </p>
         </div>
       ) : (
         <Button
