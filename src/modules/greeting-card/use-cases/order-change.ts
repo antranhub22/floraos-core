@@ -33,6 +33,19 @@ export interface ChangeProof {
 type Loose = Record<string, unknown>
 const obj = (v: unknown): Loose => (v && typeof v === "object" && !Array.isArray(v) ? (v as Loose) : {})
 
+/** Người xem là người đặt: chủ phiên của chính link đơn, hoặc đúng 4 số cuối SĐT người đặt. */
+export function isVerifiedCustomer(
+  request: Request,
+  order: { greeting_sessions: Array<{ send_code: string }>; customer: { phone: string | null } | null },
+  proof: ChangeProof,
+): boolean {
+  const link = proof.sendCode?.trim().toUpperCase()
+  return (
+    (!!link && order.greeting_sessions.some((s) => s.send_code === link) && isBrochureOwner(request, link)) ||
+    (!!proof.phoneLast4 && phoneLast4Matches(order.customer?.phone, proof.phoneLast4.trim()))
+  )
+}
+
 /**
  * Khách gửi yêu cầu đổi thông tin đơn từ trang theo dõi. Không chứng minh được là người đặt,
  * sai mã hay đơn không phải Thẻ chào → 404 (không lộ đơn tồn tại).
@@ -47,11 +60,7 @@ export async function submitOrderChange(
 ) {
   const order = await repo.findPublicOrder(orderCode)
   if (!order) throw notFound()
-  const link = proof.sendCode?.trim().toUpperCase()
-  const verified =
-    (!!link && order.greeting_sessions.some((s) => s.send_code === link) && isBrochureOwner(request, link)) ||
-    (!!proof.phoneLast4 && phoneLast4Matches(order.customer?.phone, proof.phoneLast4.trim()))
-  if (!verified) throw notFound()
+  if (!isVerifiedCustomer(request, order, proof)) throw notFound()
 
   const lock = changeLockReason({ status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status })
   if (lock) throw conflict(lock)

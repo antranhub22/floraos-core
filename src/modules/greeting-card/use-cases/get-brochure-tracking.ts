@@ -7,6 +7,7 @@ import { parseStepSla, calculateExpectedStepTimeline } from "../domain/step-sla"
 import { parseShippingConfig } from "../domain/brochure-pricing"
 import { snapshotFromOrder } from "../domain/order-change-request"
 import { customerChangeSection } from "./order-change"
+import { customerSubstituteSection } from "./substitute"
 import { latestFailureForCustomer } from "../domain/delivery-failure"
 import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import { orderPaymentSummary } from "../domain/payment-summary"
@@ -166,6 +167,8 @@ export async function getBrochureTracking(
         // Không trả SĐT (luật của trang theo dõi): ô SĐT người nhận để trống = giữ nguyên số cũ
         ? { current: { ...snapshotFromOrder(order), recipientPhone: "" }, shipping: parseShippingConfig(orgSettings), ...(await customerChangeSection(order)) }
         : null,
+      /** Chỉ người đặt đã xác minh: tiệm đề xuất mẫu thay thế (khách chọn mẫu / nhờ tiệm chọn / xin huỷ). */
+      substitute: verified ? await customerSubstituteSection(order) : null,
     },
     // Huỷ vì hết hạn thanh toán: báo "không hoàn thành" thay cho "cửa hàng đã huỷ"
     trackingStep: payment.status === "PAYMENT_FAILED"

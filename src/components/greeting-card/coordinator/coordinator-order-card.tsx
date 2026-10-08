@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera, ExternalLink, PackageX } from "lucide-react"
+import { MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera, ExternalLink, PackageX, Shuffle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { paymentGateBlocker, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
@@ -11,6 +11,7 @@ import { WorkStatus } from "@/components/greeting-card/work/work-status"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { readDeliveryNote } from "@/modules/greeting-card/domain/delivery-note"
 import { readDeliveryFailures } from "@/modules/greeting-card/domain/delivery-failure"
+import { substituteLockReason } from "@/modules/greeting-card/domain/substitute-proposal"
 
 export interface BrochureOrder {
   id: string
@@ -47,6 +48,7 @@ export type ModalState =
   | { type: "dispatch"; orderId: string; orderCode: string }
   | { type: "recipient-photo"; orderId: string; orderCode: string }
   | { type: "delivery-failed"; orderId: string; orderCode: string }
+  | { type: "substitute"; orderId: string; orderCode: string }
   | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number }
 
 function productionLabel(status: string) {
@@ -271,6 +273,19 @@ export function CoordinatorOrderCard({
           >
             <PackageX size={13} />
             Giao không thành công
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!!substituteLockReason({ status: order.status, deliveryStatus: order.delivery_status })}
+            title={substituteLockReason({ status: order.status, deliveryStatus: order.delivery_status }) ?? "Không làm được mẫu khách chọn — gửi khách mẫu khác để chọn"}
+            onClick={() => onOpen({ type: "substitute", orderId: order.id, orderCode: order.code })}
+            className="col-span-2 text-caption gap-1.5 h-8"
+          >
+            <Shuffle size={13} />
+            Đề xuất mẫu khác
           </Button>
 
           <button

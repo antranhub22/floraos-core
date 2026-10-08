@@ -185,14 +185,14 @@ export const VIDEO_GUIDANCE = {
 }
 
 export const QR_GUIDANCE = {
-  tier: { min: 0, optimal: 1, max: 2 },
-  categoryLabel: "mã QR",
+  tier: { min: 0, optimal: 1, max: 1 },
+  categoryLabel: "mã QR Zalo",
   benefits: [
-    "Hiển thị ở chân Landing Page để khách quét thanh toán / theo dõi Zalo",
-    "Giảm bước trung gian — khách không cần gõ số tài khoản",
+    "Khách quét để kết bạn / nhắn Zalo với tiệm ngay trên trang đặt hoa",
+    "Giảm bước trung gian — khách không cần tìm số Zalo",
   ],
   tips: [
-    "Chụp mã QR rõ ràng, đủ ánh sáng, không bị mờ hay vỡ pixel",
-    "Ưu tiên mã QR ngân hàng tổng hợp (VietQR) để nhận từ mọi ứng dụng",
+    "Lấy mã trong Zalo: Cá nhân → mã QR của tôi, rồi lưu ảnh",
+    "Chụp rõ ràng, không mờ hay vỡ pixel; không dùng mã QR ngân hàng",
   ],
 }

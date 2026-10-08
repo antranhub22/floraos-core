@@ -6,6 +6,7 @@ import type { BrochureQuote } from "@/modules/greeting-card/domain/brochure-pric
 import type { CustomerOrderSubmitInput, ProductSnapshot } from "@/modules/greeting-card/domain/greeting-card-types"
 import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
 import { PrivacyNotice } from "./privacy-notice"
+import { FlowerImage } from "@/components/greeting-card/flower-image"
 import React, { useState } from "react"
 
 const vnd = (n: number) => `${n.toLocaleString("vi-VN")} đ`
@@ -53,6 +54,23 @@ export function OrderReview(props: {
       <h2 id="order-review-title" className="text-title font-extrabold text-foreground">
         Xem lại đơn trước khi đặt
       </h2>
+
+      {/* Ảnh mẫu đã chọn — khách nhìn lại đúng bó hoa trước khi xác nhận */}
+      <figure className="flex items-center gap-4 rounded-xl border border-border bg-surface-muted p-3">
+        <FlowerImage
+          src={product.imageUrl}
+          driveLink={product.driveLink}
+          alt={`Ảnh mẫu ${product.name}`}
+          sizes="(min-width: 640px) 128px, 96px"
+          fallback="icon"
+          className="h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-border sm:h-32 sm:w-32"
+        />
+        <figcaption className="min-w-0 flex-1">
+          <p className="text-caption text-text-muted">Mẫu bạn đã chọn</p>
+          <p className="text-body font-extrabold text-foreground">{product.name}</p>
+          {props.variantName && <p className="text-body-sm text-text-muted">{props.variantName}</p>}
+        </figcaption>
+      </figure>
 
       <dl className="rounded-xl border border-border bg-surface-muted px-4 py-2 divide-y divide-border">
         <Row label="Mẫu hoa" value={props.variantName ? `${product.name} · ${props.variantName}` : product.name} />
