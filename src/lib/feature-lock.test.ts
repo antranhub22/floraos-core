@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { isFeatureLockEnabled, isJourneyLocked, isRouteLocked } from "./feature-lock"
+import { STORE_JOURNEYS } from "@/modules/journey/domain/journey-catalog"
 
 describe("feature-lock", () => {
   it("chỉ bật khi NEXT_PUBLIC_APP_ENV=production", () => {
@@ -27,6 +28,12 @@ describe("feature-lock", () => {
 
   it("khóa đúng thẻ trang chủ khi bật", () => {
     expect(isJourneyLocked("manage-customers", true)).toBe(true)
-    expect(isJourneyLocked("view-store-overview", true)).toBe(false)
+    expect(isJourneyLocked("view-store-overview", true)).toBe(true)
+  })
+
+  it("production: trang chủ cửa hàng chỉ mở Thẻ chào mẫu hoa", () => {
+    const open = STORE_JOURNEYS.filter((j) => !isJourneyLocked(j.id, true)).map((j) => j.id)
+    expect(open).toEqual(["greeting-card-hub"])
+    expect(isJourneyLocked("view-platform-overview", true)).toBe(false)
   })
 })
