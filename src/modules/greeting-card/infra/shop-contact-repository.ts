@@ -2,7 +2,7 @@ import { prisma } from "@/core/tenancy/infra/prisma"
 import { zaloQrUrlFromBrandAssets } from "../domain/shop-contact"
 import { GreetingCatalogRepository } from "./greeting-catalog-repository"
 
-/** Đọc thông tin công khai của tiệm (tên, SĐT, địa chỉ, logo) cho trang khách. */
+/** Đọc thông tin công khai của tiệm (tên, SĐT, địa chỉ, email, website, logo, chính sách) cho trang khách. */
 export class ShopContactRepository {
   constructor(
     private readonly db = prisma,
@@ -14,7 +14,8 @@ export class ShopContactRepository {
       where: { id: organizationId },
       select: {
         name: true,
-        business_profile: { select: { display_name: true, phone: true, address: true, social_links: true } },
+        settings: true,
+        business_profile: { select: { display_name: true, phone: true, address: true, email: true, website: true, social_links: true } },
         brand_profile: { select: { logo_asset_id: true, brand_assets: true } },
       },
     })
@@ -26,6 +27,10 @@ export class ShopContactRepository {
       name: org.business_profile?.display_name || org.name || "Tiệm hoa",
       phone: org.business_profile?.phone ?? null,
       address: org.business_profile?.address ?? null,
+      email: org.business_profile?.email ?? null,
+      website: org.business_profile?.website ?? null,
+      socialLinks: org.business_profile?.social_links ?? null,
+      settings: org.settings,
       logoUrl,
       zaloQrUrl,
     }

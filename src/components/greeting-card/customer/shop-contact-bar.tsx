@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MessageCircle, QrCode, X } from "lucide-react"
+import { ChevronDown, MessageCircle, QrCode, X } from "lucide-react"
 import type { ShopContact } from "@/modules/greeting-card/domain/shop-contact"
 import { generateQRCodeDataUrl } from "@/core/media/qr-engine"
+import { SHOP_INFO_EVENT, ShopInfoSheet, ShopLogo, type ShopInfoSection } from "./shop-info-sheet"
 
 interface ShopContactBarProps {
   shop: ShopContact
@@ -13,11 +14,20 @@ interface ShopContactBarProps {
 
 /**
  * Thanh thông tin cửa hàng trên mọi màn khách: logo + tên, nút Chat Zalo và QR Code kết nối Zalo.
- * Không hiển thị nút Gọi điện thoại (theo yêu cầu #11).
+ * Không hiển thị nút Gọi điện thoại (theo yêu cầu #11). Chạm logo/tên → khung "Thông tin cửa hàng"
+ * (hotline, email, website, cam kết — PO 08/10/2026).
  */
 export function ShopContactBar({ shop, inquiry }: ShopContactBarProps) {
   const [showQrModal, setShowQrModal] = useState(false)
   const [generatedQr, setGeneratedQr] = useState<string | null>(null)
+  const [infoSection, setInfoSection] = useState<ShopInfoSection | null>(null)
+
+  // Nơi khác trên trang (bước xác nhận đơn) mở khung cam kết qua sự kiện
+  useEffect(() => {
+    const open = (e: Event) => setInfoSection((e as CustomEvent<ShopInfoSection>).detail ?? "info")
+    window.addEventListener(SHOP_INFO_EVENT, open)
+    return () => window.removeEventListener(SHOP_INFO_EVENT, open)
+  }, [])
 
   // Nếu tiệm chưa upload ảnh QR riêng nhưng có zaloUrl, tự sinh QR code từ zaloUrl
   useEffect(() => {
@@ -32,15 +42,17 @@ export function ShopContactBar({ shop, inquiry }: ShopContactBarProps) {
     <>
       <header className="sticky top-0 z-30 w-full border-b border-border bg-surface/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-md items-center gap-2.5 px-4">
-          {shop.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={shop.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-full border border-border object-cover" />
-          ) : (
-            <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-body font-bold text-primary">
-              {shop.name.trim().charAt(0).toUpperCase()}
-            </span>
-          )}
-          <p className="min-w-0 flex-1 truncate text-body font-bold text-foreground">{shop.name}</p>
+          <button
+            type="button"
+            onClick={() => setInfoSection("info")}
+            aria-haspopup="dialog"
+            aria-label={`Thông tin cửa hàng ${shop.name}`}
+            className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-full text-left"
+          >
+            <ShopLogo shop={shop} />
+            <span className="min-w-0 truncate text-body font-bold text-foreground">{shop.name}</span>
+            <ChevronDown size={16} className="shrink-0 text-text-muted" aria-hidden="true" />
+          </button>
 
           {/* Nút xem QR Code Zalo (từ hồ sơ cửa hàng) */}
           {qrImageUrl && (
@@ -78,6 +90,8 @@ export function ShopContactBar({ shop, inquiry }: ShopContactBarProps) {
           )}
         </div>
       </header>
+
+      {infoSection && <ShopInfoSheet shop={shop} section={infoSection} onClose={() => setInfoSection(null)} />}
 
       {/* Modal hiển thị QR Code Zalo */}
       {showQrModal && qrImageUrl && (

@@ -1,13 +1,17 @@
 import { conflict } from "@/core/http/errors"
 import { DEMO_SHOP_PROFILE_MESSAGE, isDemoShopContact, toShopContact, type ShopContact } from "../domain/shop-contact"
 import { ShopContactRepository } from "../infra/shop-contact-repository"
+import { parseStorePolicies } from "../domain/store-policy"
 
 export async function getShopContact(
   organizationId: string,
   repo = new ShopContactRepository(),
 ): Promise<ShopContact | null> {
   const raw = await repo.findByOrganizationId(organizationId)
-  return raw ? toShopContact(raw) : null
+  if (!raw) return null
+  const { settings, ...contact } = raw
+  // Cam kết lấy từ Chính sách trong Hồ sơ tiệm (PO 08/10/2026), áp chung mọi link của tiệm
+  return toShopContact({ ...contact, commitments: parseStorePolicies(settings).commitments })
 }
 
 export async function getShopContactBySlug(

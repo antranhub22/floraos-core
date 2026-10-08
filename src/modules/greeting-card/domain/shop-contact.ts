@@ -13,6 +13,66 @@ export interface ShopContact {
   zaloQrUrl?: string | null | undefined
   address: string | null
   logoUrl: string | null
+  /** Thông tin tạo niềm tin trong khung "Thông tin cửa hàng" (PO 08/10/2026); thiếu = ẩn. */
+  email?: string | null | undefined
+  websites?: string[] | undefined
+  socialLinks?: ShopLink[] | undefined
+  /** Cam kết từ Chính sách trong Hồ sơ tiệm (chỉ phần dành cho khách). */
+  commitments?: ShopCommitment[] | undefined
+}
+
+export interface ShopLink {
+  label: string
+  url: string
+}
+
+export interface ShopCommitment {
+  id: string
+  title: string
+  customerText: string
+}
+
+export const MAX_SHOP_WEBSITES = 5
+const SOCIAL_LABELS: Array<[string, string]> = [["facebook", "Facebook"], ["instagram", "Instagram"], ["tiktok", "TikTok"]]
+
+/** Link công khai: chỉ `http(s)://` (thiếu giao thức → thêm `https://`); chặn `javascript:`, chuỗi có khoảng trắng. */
+export function safeWebUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const v = value.trim()
+  if (!v || /\s/.test(v)) return null
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v.replace(/^\/+/, "")}`
+  try {
+    const url = new URL(withScheme)
+    return (url.protocol === "https:" || url.protocol === "http:") && url.hostname.includes(".") ? url.toString() : null
+  } catch {
+    return null
+  }
+}
+
+/** `https://www.tiemhoa.vn/` → `tiemhoa.vn` (chữ hiện cho khách). */
+export function websiteLabel(url: string): string {
+  return url.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "")
+}
+
+/** Website chính (`business_profiles.website`) + "Website khác" (`social_links.websites`), bỏ trùng, tối đa 5. */
+export function shopWebsites(website: unknown, socialLinks: unknown): string[] {
+  const extra = socialLinks && typeof socialLinks === "object" ? (socialLinks as Record<string, unknown>).websites : null
+  const all = [website, ...(Array.isArray(extra) ? extra : [])].map(safeWebUrl).filter((u): u is string => !!u)
+  return [...new Set(all)].slice(0, MAX_SHOP_WEBSITES)
+}
+
+export function shopSocialLinks(socialLinks: unknown): ShopLink[] {
+  if (!socialLinks || typeof socialLinks !== "object") return []
+  const raw = socialLinks as Record<string, unknown>
+  return SOCIAL_LABELS.flatMap(([key, label]) => {
+    const url = safeWebUrl(raw[key])
+    return url ? [{ label, url }] : []
+  })
+}
+
+export function safeEmail(value: unknown): string | null {
+  const v = typeof value === "string" ? value.trim() : ""
+  return /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(v) && v.length <= 254 ? v : null
 }
 
 /** Số di động VN dạng 0xxxxxxxxx (Zalo cá nhân/OA mở theo số này). */
@@ -28,6 +88,10 @@ export function toShopContact(raw: {
   address: string | null
   logoUrl: string | null
   zaloQrUrl?: string | null | undefined
+  email?: string | null | undefined
+  website?: string | null | undefined
+  socialLinks?: unknown
+  commitments?: ReadonlyArray<{ id: string; title: string; customerText: string }> | undefined
 }): ShopContact {
   const phone = raw.phone?.replace(/\s+/g, "") || null
   return {
@@ -37,6 +101,12 @@ export function toShopContact(raw: {
     zaloQrUrl: raw.zaloQrUrl ?? null,
     address: raw.address?.trim() || null,
     logoUrl: raw.logoUrl,
+    ...(raw.email !== undefined ? { email: safeEmail(raw.email) } : {}),
+    ...(raw.website !== undefined || raw.socialLinks !== undefined
+      ? { websites: shopWebsites(raw.website, raw.socialLinks), socialLinks: shopSocialLinks(raw.socialLinks) }
+      : {}),
+    // Chỉ nội dung dành cho khách — không lộ ghi chú nội bộ (`internalText`)
+    ...(raw.commitments ? { commitments: raw.commitments.map(({ id, title, customerText }) => ({ id, title, customerText })) } : {}),
   }
 }
 
