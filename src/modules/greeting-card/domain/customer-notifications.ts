@@ -70,3 +70,15 @@ export function smsText(event: NotifyEvent, p: NotifyParams): string {
 export function paymentNotifyEvent(balanceAfterVnd: number): NotifyEvent {
   return balanceAfterVnd > 0 ? "DEPOSIT_RECEIVED" : "PAYMENT_COMPLETED"
 }
+
+/**
+ * Tin soạn sẵn báo khách "cửa hàng đã nhận tiền" — Điều hành/Sale chép gửi qua Zalo khi tiệm chưa
+ * bật Zalo ZNS/SMS (PO 08/10/2026). Có dấu (gửi tay qua Zalo, không tính phí SMS).
+ */
+export function customerPaymentMessage(p: { orderCode: string; amountVnd: number; balanceVnd: number; trackingUrl: string | null }): string {
+  const money = (n: number) => `${n.toLocaleString("vi-VN")} đ`
+  const head = p.balanceVnd > 0
+    ? `Cửa hàng đã nhận ${money(p.amountVnd)} cho đơn hoa ${p.orderCode}, còn ${money(p.balanceVnd)}.`
+    : `Cửa hàng đã nhận đủ ${money(p.amountVnd)} cho đơn hoa ${p.orderCode}. Cảm ơn anh/chị!`
+  return p.trackingUrl ? `${head} Theo dõi đơn và ảnh hoa tại: ${p.trackingUrl}` : head
+}

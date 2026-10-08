@@ -18,9 +18,11 @@ interface Props {
   compact?: boolean
   /** Callback sau khi thêm/xóa để wizard cập nhật itemCount */
   onItemCountChange?: (count: number) => void
+  /** Chỉ xem (người không được sửa bộ sưu tập dùng chung — vd. Sale ở "Gửi nhanh") */
+  readOnly?: boolean
 }
 
-export function CatalogProductPicker({ catalogId, compact = false, onItemCountChange }: Props) {
+export function CatalogProductPicker({ catalogId, compact = false, onItemCountChange, readOnly = false }: Props) {
   const ci = useCatalogItems<{ items: CatalogItem[] }>(catalogId, onItemCountChange)
   const items = ci.catalog?.items ?? []
   const loadingItems = ci.loading
@@ -31,7 +33,11 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
   const addingId = ci.busyId
   const removingId = ci.busyId
   const handleAdd = (productId: string) => void ci.add(productId)
-  const handleRemove = (productId: string) => void ci.remove(productId)
+  // Bộ sưu tập dùng chung cho mọi link đã gửi: xoá mẫu phải hỏi lại (PO 08/10/2026)
+  const handleRemove = (productId: string, name: string) => {
+    if (!window.confirm(`Xoá "${name}" khỏi bộ sưu tập? Mẫu sẽ biến mất khỏi mọi link đã gửi khách.`)) return
+    void ci.remove(productId)
+  }
 
   if (loadingItems) {
     return (
@@ -58,7 +64,7 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
             </p>
           )}
         </div>
-        <Button
+        {!readOnly && <Button
           type="button"
           size="sm"
           onClick={() => void openPicker()}
@@ -66,7 +72,7 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
         >
           <Plus size={15} />
           Thêm mẫu hoa
-        </Button>
+        </Button>}
       </div>
 
       {/* Selected product chips */}
@@ -91,19 +97,19 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
                   {item.product.name}
                 </p>
               </div>
-              <button
+              {!readOnly && <button
                 type="button"
-                onClick={() => void handleRemove(item.product.id)}
+                onClick={() => handleRemove(item.product.id, item.product.name)}
                 disabled={removingId === item.product.id}
                 aria-label={`Xóa ${item.product.name}`}
-                className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg bg-black/50 hover:bg-danger/80 text-white"
+                className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-black/50 hover:bg-danger/80 text-white"
               >
                 {removingId === item.product.id ? (
                   <Loader2 size={11} className="animate-spin" />
                 ) : (
-                  <Trash2 size={11} />
+                  <Trash2 size={13} />
                 )}
-              </button>
+              </button>}
             </div>
           ))}
         </div>

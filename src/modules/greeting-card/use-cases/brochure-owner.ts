@@ -2,6 +2,7 @@ import { notFound } from "@/core/http/errors"
 import { readCookie } from "@/core/http/cookies"
 import { validateSendCode } from "../domain/greeting-card-rules"
 import { decideViewer, ownerCookieName, OWNER_COOKIE_MAX_AGE, type BrochureViewer } from "../domain/session-owner"
+import { phoneLast4Matches } from "../domain/tracking-privacy"
 import { SessionOwnerRepository } from "../infra/session-owner-repository"
 import { signOwnerToken, verifyOwnerToken } from "../infra/session-owner-token"
 
@@ -57,6 +58,20 @@ export async function claimBrochureSession(
   if (isBrochureOwner(request, session.send_code)) return cookieFor(session.send_code)
   if (!(await repo.claim(session.organization_id, session.id, "first-open"))) throw notFound()
   return cookieFor(session.send_code)
+}
+
+/**
+ * Khách mở lại link riêng ĐÃ CÓ ĐƠN ở trình duyệt/máy khác (Zalo → Safari, link theo dõi trong tin nhắn,
+ * người nhà chuyển khoản hộ): đúng 4 số cuối SĐT người đặt thì trình duyệt này cũng thành chủ phiên.
+ * Phiên chưa có đơn hoặc sai số → 404 (không lộ phiên có tồn tại). Bên gọi giới hạn số lần thử.
+ */
+export async function unlockBrochureSession(sendCode: string, phoneLast4: string, repo = new SessionOwnerRepository()): Promise<OwnerCookie> {
+  if (!validateSendCode(sendCode)) throw notFound()
+  const session = await repo.findSession(sendCode)
+  if (!session) throw notFound()
+  const phone = await repo.orderPhoneOf(session.organization_id, session.id)
+  if (phone === null || !phoneLast4Matches(phone, phoneLast4)) throw notFound()
+  return grantBrochureOwner(session, "phone-verified", repo)
 }
 
 /**

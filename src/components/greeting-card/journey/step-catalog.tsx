@@ -25,6 +25,8 @@ interface StepCatalogProps {
   onNext: () => void
   /** Phần chọn giao diện khách xem, hiển thị dưới danh sách mẫu hoa. */
   templateSlot?: ReactNode
+  /** Không sửa được mẫu/giao diện của bộ sưu tập dùng chung (Sale chỉ chọn — PO 08/10/2026) */
+  readOnly?: boolean
 }
 
 export function StepCatalog(props: StepCatalogProps) {
@@ -109,7 +111,7 @@ export function StepCatalog(props: StepCatalogProps) {
 
       {selectedId && (
         <div className="rounded-2xl border border-border bg-surface-muted p-4 sm:p-5">
-          <CatalogProductPicker catalogId={selectedId} compact onItemCountChange={props.onItemCountChange} />
+          <CatalogProductPicker catalogId={selectedId} compact onItemCountChange={props.onItemCountChange} readOnly={props.readOnly === true} />
         </div>
       )}
 

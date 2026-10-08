@@ -76,6 +76,11 @@ dùng lại: `FlowerImage`, `TrackingStepperView` · tạo mới: `inbox/sheet.t
 - Chọn khung giờ: khung đủ đơn hiện "(đã kín)" và không chọn được; gửi đơn vào khung vừa kín → lỗi ngay ở ô khung giờ.
 - Cài đặt → Khu vực, phí giao & giờ nhận đơn: "Số đơn tối đa mỗi khung giờ" (chung, mặc định 100; riêng từng khung), "Miễn phí giao hoa cho mọi đơn", "Cho khách nhập mã giảm giá".
 - Hộp "Thu tiền" và thẻ đơn Điều phối hiện "Ưu đãi khách chọn".
+- Đợt 2: mở `/the-chao` vào thẳng chỗ làm theo năng lực — `R11` (Điều hành) → Quản lý · tab Điều hành; `R3`/`R4`/`R5` (Điều phối) → Quản lý · tab Điều phối; còn lại (Sale) → Gửi nhanh.
+- Tab Điều phối đọc `/greeting-card/coordinator-board`: mọi đơn đang làm + đơn xong/huỷ 24 giờ qua, xếp theo ngày + giờ giao, chip "Mọi ngày · Hôm nay · Ngày mai" + chọn ngày, tự làm mới 30 giây; quá 1000 đơn hiện ghi chú, không có "Tải thêm".
+- Tab Điều hành: ô "Tìm mã đơn, mã link hoặc số điện thoại" (≥ 3 ký tự, bỏ qua bộ lọc), bộ lọc "Khách báo đã chuyển"; xác nhận thu tiền xong hiện tin báo khách soạn sẵn kèm link theo dõi và nút "Sao chép tin".
+- Sale (không `L3`) xem bộ sưu tập ở chế độ chỉ đọc trong Gửi nhanh; xoá mẫu khỏi bộ sưu tập luôn hỏi lại.
+- Trang khách `/b/<mã>` mở ở trình duyệt khác khi link đã có đơn: ô "4 số cuối số điện thoại người đặt" để vào lại đơn (thay vì báo link không tồn tại).
 
 ## 14. Kết quả
 lint:ux sau: không tăng vi phạm · nợ mở: thông báo đẩy/Zalo cho tin nhắn chưa làm

@@ -21,6 +21,18 @@
 
 Lưu ý hành vi: trang khách **chọn sẵn ưu đãi đầu tiên** ("Giảm 10%"), khách đổi được; đơn không chọn khung giờ ("Trong ngày") không tính vào trần khung nào.
 
+## 0b. Tiến độ Đợt 2 (08/10/2026, làm sớm hơn lịch 12–14/10)
+
+| Hạng mục | Kết quả | Bằng chứng |
+|---|---|---|
+| F. Mở lại link ở trình duyệt khác | Xong: link đã có đơn hỏi 4 số cuối SĐT người đặt; đúng → vào lại phiên; 5 lần/15 phút, 10 lần/ngày mỗi link | tenant `greeting-card-unlock` 3/3, E2E bước 8 |
+| G. Bảng Điều phối | Xong: đọc mọi đơn đang làm (tối đa 1000) + xong/huỷ 24 giờ qua, xếp theo ngày + giờ giao, lọc Hôm nay/Ngày mai/chọn ngày, tự làm mới 30 giây | unit + tenant `coordinator-board` |
+| H. Sale không xoá nhầm mẫu | Xong ở giao diện: Gửi nhanh chỉ đọc khi không có `L3`; xoá mẫu luôn hỏi lại. Máy chủ chưa chặn thêm (Sale vẫn có `R2`) | đi tay trên staging |
+| I. Đề xuất huỷ/hoàn | Xong: chặn huỷ đơn đã giao (409), khoá lạc quan hoàn tiền, trả mã giảm giá, báo khách `CANCELLED`, chặn đơn ngoài phạm vi Sale | tenant `greeting-card-cancellation` (+2, đỏ trên mã cũ) |
+| J. Tiện thao tác | Xong: tìm theo mã đơn/mã link/SĐT, lọc "Khách báo đã chuyển"; mở Thẻ chào đúng chỗ theo năng lực — Điều hành → **tab Điều hành** (thay Hộp việc: nơi có bộ lọc "Khách báo đã chuyển"), Điều phối → tab Điều phối, Sale → Gửi nhanh | unit `default-view` |
+| K. Tin báo khách | Xong phần chính: xác nhận tiền xong hiện tin soạn sẵn + nút "Sao chép tin". **Chưa làm** giờ "đã nhận tiền lúc hh:mm" trên trang khách (trang đã báo "Đã thanh toán thành công!") | — |
+| L. E2E | Cập nhật `brochure-swipe.spec.ts`: hồ sơ tiệm, nhận chủ phiên, ưu đãi Giảm 10%, mở lại bằng 4 số cuối | `playwright test tests/e2e/brochure-swipe.spec.ts` |
+
 ## 1. Quyết định của PO ngày 08/10 (thay mọi quyết định cũ trái với nó)
 
 | # | Quyết định | Thay thế quyết định cũ |
