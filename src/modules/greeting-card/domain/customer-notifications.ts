@@ -2,7 +2,7 @@
  * Thông báo khách theo mốc đơn Thẻ chào (Zalo ZNS / SMS). Pure TypeScript.
  */
 
-export const NOTIFY_EVENTS = ["ORDER_RECEIVED", "QUOTED", "PAYMENT_REMINDER", "DEPOSIT_RECEIVED", "PAYMENT_COMPLETED", "READY", "DISPATCHED", "DELIVERY_FAILED", "DELIVERED", "CANCELLED"] as const
+export const NOTIFY_EVENTS = ["ORDER_RECEIVED", "QUOTED", "PAYMENT_REMINDER", "DEPOSIT_RECEIVED", "PAYMENT_COMPLETED", "SUBSTITUTE_PROPOSED", "READY", "DISPATCHED", "DELIVERY_FAILED", "DELIVERED", "CANCELLED"] as const
 export type NotifyEvent = (typeof NOTIFY_EVENTS)[number]
 
 export const NOTIFY_EVENT_LABELS: Record<NotifyEvent, string> = {
@@ -11,6 +11,7 @@ export const NOTIFY_EVENT_LABELS: Record<NotifyEvent, string> = {
   PAYMENT_REMINDER: "Nhắc chuyển khoản",
   DEPOSIT_RECEIVED: "Đã nhận tiền cọc",
   PAYMENT_COMPLETED: "Đã thanh toán đủ",
+  SUBSTITUTE_PROPOSED: "Tiệm đề xuất mẫu thay thế",
   READY: "Hoa đã cắm xong",
   DISPATCHED: "Đang giao hoa",
   DELIVERY_FAILED: "Giao hoa chưa thành công",
@@ -58,6 +59,7 @@ export function smsText(event: NotifyEvent, p: NotifyParams): string {
     PAYMENT_REMINDER: `${p.shop_name}: Don ${p.order_code} dang cho chuyen khoan ${p.amount}. Mo link de xem ma QR.`,
     DEPOSIT_RECEIVED: `${p.shop_name}: Da nhan tien coc ${p.amount} cho don ${p.order_code}.`,
     PAYMENT_COMPLETED: `${p.shop_name}: Da nhan du ${p.amount} cho don ${p.order_code}. Cam on quy khach!`,
+    SUBSTITUTE_PROPOSED: `${p.shop_name}: Mau hoa don ${p.order_code} tam thoi khong lam duoc. Mo link de chon mau thay the hoac phan hoi cua hang.`,
     READY: `${p.shop_name}: Hoa don ${p.order_code} da cam xong, chuan bi giao.`,
     DISPATCHED: `${p.shop_name}: Don ${p.order_code} dang duoc giao den nguoi nhan.`,
     DELIVERY_FAILED: `${p.shop_name}: Don ${p.order_code} chua giao duoc. Cua hang se lien he hen giao lai, hoac mo link de doi gio/dia chi giao.`,

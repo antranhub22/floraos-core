@@ -92,6 +92,13 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 - **Phụ phí theo bộ sưu tập**: chỉ cộng khi bộ sưu tập bật "Áp dụng phụ phí ngày lễ" (Chính sách & Cam kết của bộ sưu tập → `filters.appliedPolicies.applyHolidaySurcharge`). Báo giá gửi kèm ngày giao; dòng "Phụ phí ngày lễ (tên)" hiện ở form, bước xem lại và khi Điều hành đối chiếu thanh toán. Khách dời sang ngày lễ có phụ phí → cộng phần tăng khi duyệt; dời khỏi ngày lễ → giữ nguyên tổng.
 - Chưa có: ô chọn khung giờ trên form khách chưa ẩn sẵn khung đã qua giờ chốt ngày lễ (máy chủ vẫn chặn và báo lỗi); bật phụ phí ngay trong hộp thoại tạo bộ sưu tập (hiện bật ở phần chính sách của bộ sưu tập sau khi tạo).
 
+## 4f. Đề xuất mẫu thay thế (08/10/2026)
+
+- Tiệm không làm được mẫu khách chọn (hết hoa, hoa về kém): thẻ đơn ở tab Điều phối có nút **"Đề xuất mẫu khác"** (người có quyền sửa đơn) → chọn 1–3 mẫu **còn bán trong cùng bộ sưu tập** + lý do khách sẽ đọc. Khoá khi hoa đã giao shipper, đã giao xong hoặc đơn đã huỷ; mỗi đơn chỉ một đề xuất chờ trả lời.
+- Khách được báo (SMS/Zalo mốc `SUBSTITUTE_PROPOSED` nếu tiệm bật; ZNS cần đăng ký mẫu) và trả lời trên trang theo dõi (đã xác minh): **chọn một mẫu** · **nhờ tiệm chọn mẫu tương đương** · **xin huỷ đơn** (bắt buộc ghi lý do). Câu trả lời + thời điểm lưu lại làm bằng chứng khách đã đồng ý, và hiện lại trên trang theo dõi.
+- **Tổng tiền giữ nguyên** (khung thoả thuận "ưu tiên hoa tương đương hoặc giá trị cao hơn"). Chọn mẫu → đơn đổi sang mẫu mới (ảnh, tên trên trang theo dõi và thẻ Điều phối); mọi lựa chọn ghi một dòng `[Đổi mẫu]` vào ghi chú nội bộ cho thợ cắm và báo Điều phối. Xin huỷ → tiệm liên hệ và dùng luồng **đề xuất huỷ / hoàn tiền** hiện có (không tự huỷ).
+- Chưa có: việc "Khách đã trả lời đổi mẫu" riêng trong Hộp việc (hiện là tin nhắn gửi Điều phối + dòng ghi chú trên đơn); đề xuất mẫu ngoài bộ sưu tập; chênh lệch giá khi khách muốn trả thêm cho mẫu đắt hơn.
+
 ## 5. Chưa làm (đợt C — cần PO duyệt đổi schema)
 
 - Phân biệt "Tạm hết" và "Hết hẳn"; lựa chọn "Cho phép thay thế tương đương" khi đặt.
@@ -100,4 +107,4 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 
 ## 6. Mã nguồn
 
-`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events,delivery-note,order-change-request,delivery-failure,holiday-policy}.ts` · `use-cases/order-change.ts` · `infra/{order-change-repository,delivery-failure-repository}.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`
+`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events,delivery-note,order-change-request,delivery-failure,holiday-policy,substitute-proposal}.ts` · `use-cases/{order-change,substitute}.ts` · `infra/{order-change-repository,delivery-failure-repository,substitute-repository}.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`

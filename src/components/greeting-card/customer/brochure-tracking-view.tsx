@@ -8,6 +8,7 @@ import { TrackingVerifyForm } from "./tracking-verify-form"
 import { CheckCircle2, Clock, Camera, RefreshCw } from "lucide-react"
 import { TrackingSteps } from "./tracking-steps"
 import { OrderChangePanel, type OrderChangeData } from "./order-change-panel"
+import { SubstitutePanel, type SubstituteData } from "./substitute-panel"
 import { Button } from "@/components/ui/button"
 
 interface BrochureTrackingViewProps {
@@ -30,6 +31,8 @@ type TrackingData = {
     verified?: boolean
     /** Chỉ khi đã xác minh: đổi thông tin đơn + lịch sử */
     change?: OrderChangeData | null
+    /** Chỉ khi đã xác minh: tiệm đề xuất mẫu thay thế */
+    substitute?: SubstituteData | null
     /** Lần giao gần nhất không thành công (ghi chú chỉ khi đã xác minh) */
     deliveryFailure?: { at: string; reasonLabel: string; note: string | null; feeVnd: number; attempts: number } | null
     recipientName: string
@@ -193,6 +196,9 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
             {order.change ? "Cửa hàng sẽ liên hệ để hẹn giao lại. Bạn có thể đổi giờ, địa chỉ hoặc người nhận ngay bên dưới." : "Cửa hàng sẽ liên hệ để hẹn giao lại. Xác minh bằng 4 số cuối SĐT người đặt để đổi giờ hoặc địa chỉ giao."}
           </p>
         </div>
+      )}
+      {order.substitute && (
+        <SubstitutePanel orderCode={orderCode} proof={{ sendCode, last4 }} substitute={order.substitute} onChanged={loadTracking} />
       )}
       {order.change && (
         <OrderChangePanel orderCode={orderCode} proof={{ sendCode, last4 }} change={order.change} onChanged={loadTracking} />
