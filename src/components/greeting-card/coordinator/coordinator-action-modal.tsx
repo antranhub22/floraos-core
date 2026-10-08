@@ -8,6 +8,7 @@ import { CoordinatorImageUpload } from "./coordinator-image-upload"
 import { CancellationProposalModal } from "@/components/greeting-card/inbox/cancellation-proposal-modal"
 import type { ModalState } from "./coordinator-order-card"
 import { DeliveryFailedModal } from "./delivery-failed-modal"
+import { SubstituteProposalModal } from "./substitute-proposal-modal"
 
 type ActiveModal = Exclude<ModalState, { type: "none" }>
 
@@ -55,6 +56,9 @@ export function CoordinatorActionModal({ modal, onClose, onDone }: { modal: Acti
   if (modal.type === "delivery-failed") {
     return <DeliveryFailedModal orderId={modal.orderId} orderCode={modal.orderCode} onClose={onClose} onDone={onDone} />
   }
+  if (modal.type === "substitute") {
+    return <SubstituteProposalModal orderId={modal.orderId} orderCode={modal.orderCode} onClose={onClose} onDone={onDone} />
+  }
   return <CoordinatorTaskModal modal={modal} onClose={onClose} onDone={onDone} />
 }
 
@@ -63,7 +67,7 @@ function CoordinatorTaskModal({
   onClose,
   onDone,
 }: {
-  modal: Exclude<ActiveModal, { type: "cancel-proposal" } | { type: "delivery-failed" }>
+  modal: Exclude<ActiveModal, { type: "cancel-proposal" } | { type: "delivery-failed" } | { type: "substitute" }>
   onClose: () => void
   onDone: () => void
 }) {
