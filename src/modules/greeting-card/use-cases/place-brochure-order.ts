@@ -12,6 +12,8 @@ import type {
 import type { BrochureQuote } from "../domain/brochure-pricing"
 import { BrochureCheckoutRepository } from "../infra/brochure-checkout-repository"
 import { quoteForProduct } from "./brochure-quote"
+import { resolveAppliedPolicies } from "../domain/store-policy"
+import { promotionNote, resolveOrderPolicies } from "../domain/order-policies"
 import { snapshotOf } from "./brochure-product-mapper"
 
 export const DEFAULT_TIME_SLOT = "Trong ngày"
@@ -47,6 +49,8 @@ export async function placeBrochureOrder(
     input: CustomerOrderSubmitInput
     notePrefix: string
     shopSettings: unknown
+    /** `filters` của bộ sưu tập — nguồn ưu đãi/thỏa thuận đang áp dụng. */
+    catalogFilters: unknown
   },
   checkout = new BrochureCheckoutRepository()
 ): Promise<BrochureOrderResult> {
@@ -61,6 +65,8 @@ export async function placeBrochureOrder(
     checkout
   )
   if (Object.keys(priced.errors).length > 0) throw validationFailed(priced.errors)
+  const policies = resolveOrderPolicies(resolveAppliedPolicies(params.catalogFilters, params.shopSettings), input)
+  if (!policies.ok) throw validationFailed({ [policies.field]: policies.message })
 
   const snapshot = snapshotOf(product)
   const customerId = await checkout.findOrCreateCustomer({
@@ -70,7 +76,7 @@ export async function placeBrochureOrder(
     deliveryAddress: input.deliveryAddress.trim(),
   })
 
-  const note = [params.notePrefix, priced.quote.awaitingQuote ? "[Chờ báo giá]" : "", input.senderNote?.trim() ?? ""]
+  const note = [params.notePrefix, priced.quote.awaitingQuote ? "[Chờ báo giá]" : "", promotionNote(policies.snapshot), input.senderNote?.trim() ?? ""]
     .filter(Boolean)
     .join(" ")
   const order = await checkout.createBrochureOrder(
@@ -92,6 +98,7 @@ export async function placeBrochureOrder(
       variant: priced.variant ? { id: priced.variant.id, name: priced.variant.name } : null,
       quote: priced.quote,
       voucherId: priced.voucher?.id ?? null,
+      policies: policies.snapshot,
     },
     customerId
   )

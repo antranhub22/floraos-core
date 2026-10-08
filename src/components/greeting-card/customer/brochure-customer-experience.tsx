@@ -218,6 +218,11 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
             productSnapshot={snapshot}
             variants={products.find((p) => p.id === snapshot.id)?.variants ?? []}
             shipping={initialData.shipping}
+            appliedPolicies={
+              (catalog.filters as Record<string, unknown> | null | undefined)?.appliedPolicies as
+                | import("@/modules/greeting-card/domain/store-policy").PublicAppliedPolicies
+                | undefined
+            }
             quoteUrl={`/api/v1/public/brochure/${session.sendCode}/quote`}
             onBack={() => setStep("SWIPING")}
             onSubmit={handleSubmitOrder}

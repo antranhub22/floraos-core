@@ -32,6 +32,10 @@ export const publicOrderBodySchema = z.object({
   quantity: z.number().int().min(1).max(MAX_ORDER_QUANTITY).optional(),
   shippingZoneId: z.string().max(40).optional(),
   voucherCode: z.string().trim().max(40).optional(),
+  /** Đúng MỘT ưu đãi khách chọn — máy chủ kiểm lại theo bộ sưu tập. */
+  selectedPromotionId: z.string().max(80).optional(),
+  /** Khách đã tick xác nhận thỏa thuận. */
+  confirmedTerms: z.boolean().optional(),
   /** Ô bẫy ẩn — người thật để trống; máy tự điền thì bị từ chối. */
   website: z.string().max(200).optional(),
 })

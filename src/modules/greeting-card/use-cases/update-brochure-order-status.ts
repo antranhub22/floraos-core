@@ -32,8 +32,13 @@ async function loadForAction(
   return order
 }
 
-/** Đầu vào ảnh: `assetIds` (1–5 ảnh + 0–2 video) hoặc `assetId` (client cũ, một ảnh). */
-export type PhotoInput = { assetId?: string | undefined; assetIds?: string[] | undefined }
+/** Đầu vào ảnh: `assetIds` (1–5 ảnh + 0–2 video) hoặc `assetId` (client cũ, một ảnh), hoặc bỏ qua nếu giao gấp. */
+export type PhotoInput = {
+  assetId?: string | undefined
+  assetIds?: string[] | undefined
+  skipPhoto?: boolean | undefined
+  skipReason?: string | undefined
+}
 
 /**
  * Mọi asset phải thuộc đúng tổ chức (khác → 404) và bộ tệp đúng giới hạn ảnh/video.
@@ -70,6 +75,15 @@ export async function uploadBrochureProductPhoto(
   repo = new BrochureOrderRepository()
 ) {
   const order = await loadForAction(ctx, orderId, "product-photo", repo)
+  if (input.skipPhoto) {
+    const result = await repo.applyProgress(ctx, order, {
+      eventType: "PRODUCT_PHOTO_SKIPPED",
+      productionStatus: "READY",
+      noteAppend: `[Bỏ qua ảnh thành phẩm] ${input.skipReason?.trim() || "Giao gấp theo yêu cầu"}`,
+    })
+    queueOrderNotification(ctx.organizationId, order.id, "READY")
+    return result
+  }
   const assetIds = await ownedMediaIds(ctx, input, repo)
   const result = await repo.applyProgress(ctx, order, {
     eventType: "PRODUCT_PHOTO_UPLOADED",
@@ -103,6 +117,16 @@ export async function uploadBrochureRecipientPhoto(
   repo = new BrochureOrderRepository()
 ) {
   const order = await loadForAction(ctx, orderId, "recipient-photo", repo)
+  if (input.skipPhoto) {
+    const result = await repo.applyProgress(ctx, order, {
+      eventType: "RECIPIENT_PHOTO_SKIPPED",
+      deliveryStatus: "DELIVERED",
+      orderStatus: "COMPLETED",
+      noteAppend: `[Bỏ qua ảnh bàn giao] ${input.skipReason?.trim() || "Khách nhận trực tiếp / Giao gấp"}`,
+    })
+    queueOrderNotification(ctx.organizationId, order.id, "DELIVERED")
+    return result
+  }
   const assetIds = await ownedMediaIds(ctx, input, repo)
   const result = await repo.applyProgress(ctx, order, {
     eventType: "RECIPIENT_PHOTO_UPLOADED",

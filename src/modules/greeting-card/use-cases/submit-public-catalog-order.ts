@@ -116,6 +116,7 @@ export async function submitPublicCatalogOrder(
     input,
     notePrefix: `[Đặt từ Link công khai /g/${catalog.code}]`,
     shopSettings: shop.settings,
+    catalogFilters: catalog.filters,
   })
 }
 

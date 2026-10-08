@@ -6,6 +6,7 @@ import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
 import type { ThreadMessageView } from "@/modules/greeting-card/use-cases/internal-messages"
 import { MessageComposer } from "./message-composer"
 import { DiscountDecision } from "./discount-decision"
+import { CancellationDecision } from "./cancellation-decision"
 import { Sheet } from "./sheet"
 import { timeAgo } from "./use-inbox"
 
@@ -92,6 +93,47 @@ export function MessageThread({ target, stepKey = "GENERAL", title, onClose, onB
                   }`}>
                     {m.discount.status === "APPROVED" ? "Đã duyệt" : m.discount.status === "REJECTED" ? "Không duyệt" : "Chờ Điều hành duyệt"}
                   </span>
+                )
+              )}
+
+              {/* Đề xuất Hủy / Hoàn tiền (Task #1) */}
+              {m.kind === "CANCELLATION_REQUEST" && m.cancellation && (
+                m.cancellation.status === "PENDING" && (thread.data?.data as unknown as { canDecideCancellation?: boolean })?.canDecideCancellation ? (
+                  <div className="w-full min-w-72 rounded-2xl border border-border bg-surface p-3">
+                    <CancellationDecision
+                      requestId={m.cancellation.requestId}
+                      type={m.cancellation.type}
+                      refundAmountVnd={m.cancellation.refundAmountVnd}
+                      reason={m.cancellation.reason}
+                      onDone={() => { void thread.mutate(); onChanged?.() }}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1 rounded-xl bg-surface p-2.5 border border-border">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-caption font-bold ${
+                        m.cancellation.status === "APPROVED"
+                          ? "bg-success-bg text-success"
+                          : m.cancellation.status === "REJECTED"
+                          ? "bg-danger-bg text-danger"
+                          : "bg-warning-bg text-warning"
+                      }`}>
+                        {m.cancellation.status === "APPROVED"
+                          ? "Đã duyệt hủy/hoàn"
+                          : m.cancellation.status === "REJECTED"
+                          ? "Từ chối"
+                          : "Chờ Điều hành duyệt"}
+                      </span>
+                      {m.cancellation.refundAmountVnd > 0 && (
+                        <span className="text-caption font-mono font-bold text-danger">
+                          Hoàn {m.cancellation.refundAmountVnd.toLocaleString("vi-VN")}đ
+                        </span>
+                      )}
+                    </div>
+                    {m.cancellation.note && (
+                      <p className="text-caption text-text-muted">Phản hồi: {m.cancellation.note}</p>
+                    )}
+                  </div>
                 )
               )}
               <div className="flex items-center gap-2">

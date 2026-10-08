@@ -120,6 +120,10 @@ export interface CustomerOrderSubmitInput {
   quantity?: number | undefined
   shippingZoneId?: string | undefined
   voucherCode?: string | undefined
+  /** Ưu đãi khách chọn (01 ưu đãi theo spec #2) */
+  selectedPromotionId?: string | undefined
+  /** Khách xác nhận thỏa thuận & cam kết (spec #2, #5) */
+  confirmedTerms?: boolean | undefined
   /** Ô bẫy ẩn chống máy tự điền — người thật luôn để trống. */
   website?: string | undefined
 }

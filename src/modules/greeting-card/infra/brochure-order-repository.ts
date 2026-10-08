@@ -83,7 +83,15 @@ export class BrochureOrderRepository {
         qc_records: { orderBy: { created_at: "desc" }, take: 20 },
         // Chỉ để xác minh người xem (không trả ra ngoài)
         customer: { select: { phone: true } },
-        greeting_sessions: { select: { send_code: true } },
+        greeting_sessions: {
+          select: {
+            send_code: true,
+            catalog: { select: { filters: true } },
+          },
+        },
+        organization: {
+          select: { settings: true },
+        },
       },
       take: 2,
     })

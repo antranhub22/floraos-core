@@ -42,6 +42,7 @@ export type ModalState =
   | { type: "product-photo"; orderId: string; orderCode: string }
   | { type: "dispatch"; orderId: string; orderCode: string }
   | { type: "recipient-photo"; orderId: string; orderCode: string }
+  | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number }
 
 function productionLabel(status: string) {
   const map: Record<string, string> = {
@@ -231,6 +232,22 @@ export function CoordinatorOrderCard({
             <ImageIcon size={13} />
             Ảnh người nhận
           </Button>
+
+          <button
+            type="button"
+            onClick={() =>
+              onOpen({
+                type: "cancel-proposal",
+                orderId: order.id,
+                orderCode: order.code,
+                totalVnd: order.total_vnd,
+                paidVnd: order.paid_vnd,
+              })
+            }
+            className="col-span-2 text-caption text-text-muted hover:text-danger hover:underline text-center pt-1 transition-colors"
+          >
+            Đề xuất Hủy / Hoàn tiền đơn này
+          </button>
         </div>
       )}
     </div>

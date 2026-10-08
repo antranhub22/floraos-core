@@ -13,6 +13,13 @@ import { SalesDefaultsForm } from "@/components/profiles/sales-defaults-form"
 import { GreetingLineOverrideForm } from "@/components/profiles/greeting-line-override-form"
 import { OccasionsSettingsForm } from "@/components/organization/occasions-settings-form"
 import { ProfileJourneyWorkspace } from "@/components/profiles/journey/profile-journey-workspace"
+import { StorePoliciesEditor } from "@/components/profiles/store-policies-editor"
+import { useApi, apiSend } from "@/components/greeting-card/greeting-api"
+import {
+  parseStorePolicies,
+  STORE_POLICIES_SETTINGS_KEY,
+  type StorePoliciesConfig,
+} from "@/modules/greeting-card/domain/store-policy"
 
 const EXPERT_MODE_STORAGE_KEY = "floraos_profile_expert_mode"
 
@@ -171,6 +178,8 @@ export default function ProfilePage() {
 
           {activeTab === "sales" && (
             <div className="space-y-6">
+              {/* Quản lý tập trung Ưu đãi, Cam kết & Thỏa thuận (Task #2) */}
+              <StorePoliciesSection />
               <SalesDefaultsForm
                 initialBrandData={brand}
                 onSave={saveBrand}
@@ -187,5 +196,43 @@ export default function ProfilePage() {
         </div>
       )}
     </div>
+  )
+}
+
+function StorePoliciesSection() {
+  const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
+  const [saving, setSaving] = useState(false)
+  const policies = org.data ? parseStorePolicies(org.data.settings) : null
+
+  async function handleSave(updatedPolicies: StorePoliciesConfig): Promise<boolean> {
+    setSaving(true)
+    try {
+      await apiSend(
+        "/api/v1/organizations/current",
+        "PATCH",
+        {
+          settings: {
+            [STORE_POLICIES_SETTINGS_KEY]: updatedPolicies,
+          },
+        },
+        "Không lưu được chính sách & cam kết"
+      )
+      await org.mutate()
+      return true
+    } catch {
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Editor giữ bản nháp riêng — chỉ dựng khi đã có dữ liệu thật, tránh ghi đè mặc định lên chính sách đã lưu
+  if (!policies) return <p className="text-body-sm text-text-muted">Đang tải chính sách…</p>
+  return (
+    <StorePoliciesEditor
+      initialPolicies={policies}
+      onSave={handleSave}
+      saving={saving || org.isLoading}
+    />
   )
 }

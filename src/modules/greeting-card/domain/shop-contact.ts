@@ -9,6 +9,8 @@ export interface ShopContact {
   phone: string | null
   /** Link mở chat Zalo theo SĐT, hoặc `null` khi không có SĐT di động VN */
   zaloUrl: string | null
+  /** Ảnh/mã QR kết nối Zalo của tiệm (từ Hồ sơ cửa hàng), hoặc `null` */
+  zaloQrUrl?: string | null | undefined
   address: string | null
   logoUrl: string | null
 }
@@ -25,13 +27,23 @@ export function toShopContact(raw: {
   phone: string | null
   address: string | null
   logoUrl: string | null
+  zaloQrUrl?: string | null | undefined
 }): ShopContact {
   const phone = raw.phone?.replace(/\s+/g, "") || null
   return {
     name: raw.name,
     phone,
     zaloUrl: zaloChatUrl(phone),
+    zaloQrUrl: raw.zaloQrUrl ?? null,
     address: raw.address?.trim() || null,
     logoUrl: raw.logoUrl,
   }
+}
+
+/** Ảnh QR hiện trên trang công khai: chỉ nhận `https://` hoặc đường dẫn nội bộ `/…` (chặn `javascript:`, `//host`). */
+export function safeImageUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const v = value.trim()
+  if (v.startsWith("/") && !v.startsWith("//")) return v
+  return /^https:\/\/[^\s]+$/i.test(v) ? v : null
 }

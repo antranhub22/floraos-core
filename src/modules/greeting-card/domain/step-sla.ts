@@ -89,3 +89,100 @@ export function formatMinutes(min: number): string {
   const d = Math.floor(h / 24)
   return h % 24 ? `${d} ngày ${h % 24} giờ` : `${d} ngày`
 }
+
+export interface ExpectedStepSchedule {
+  stepKey: "ARRANGING" | "QC" | "DELIVERING"
+  label: string
+  startIso: string
+  endIso: string
+  displayRange: string
+}
+
+/**
+ * Tính ngược timeline dự kiến cho các bước sản xuất & giao hàng (Spec #9 & #12).
+ * Từ Delivery Time Window và cấu hình SLA các bước:
+ * - Bước 8: Giao hoa (DELIVERING) -> kết thúc lúc delivery window end (hoặc start nếu không rõ)
+ * - Bước 7: QC / Đóng gói (READY_QC) -> kết thúc lúc bắt đầu giao
+ * - Bước 6: Cắm hoa (ARRANGING) -> kết thúc lúc bắt đầu QC
+ */
+export function calculateExpectedStepTimeline(
+  deliveryDate: string | null | undefined,
+  deliveryTimeSlot: string | null | undefined,
+  slaConfig: Record<TrackingPipelineStepId, StepSlaSetting>
+): {
+  arranging?: ExpectedStepSchedule
+  readyQc?: ExpectedStepSchedule
+  delivering?: ExpectedStepSchedule
+} | null {
+  if (!deliveryDate) return null
+
+  // Tìm giờ giao đích
+  let targetHour = 10
+  let targetMinute = 0
+
+  if (deliveryTimeSlot) {
+    const timeMatch = deliveryTimeSlot.match(/(\d{1,2}):?(\d{2})?\s*-\s*(\d{1,2}):?(\d{2})?/)
+    if (timeMatch) {
+      const hStr = timeMatch[3] ?? timeMatch[1] ?? "10"
+      targetHour = parseInt(hStr, 10)
+      targetMinute = parseInt(timeMatch[4] ?? "0", 10)
+    } else if (/(\d{1,2}):(\d{2})/.test(deliveryTimeSlot)) {
+      // Giờ cụ thể khách nhập ("Giờ cụ thể: 15:30")
+      const [, h, m] = /(\d{1,2}):(\d{2})/.exec(deliveryTimeSlot) ?? []
+      targetHour = parseInt(h ?? "10", 10)
+      targetMinute = parseInt(m ?? "0", 10)
+    } else if (deliveryTimeSlot.includes("12h")) {
+      targetHour = 12
+    } else if (deliveryTimeSlot.includes("17h")) {
+      targetHour = 17
+    } else if (deliveryTimeSlot.includes("21h") || deliveryTimeSlot.includes("20h")) {
+      targetHour = 20
+    }
+  }
+
+  const d = new Date(`${deliveryDate}T00:00:00+07:00`)
+  if (Number.isNaN(d.getTime())) return null
+
+  const deliveryEndMs = d.getTime() + (targetHour * 60 + targetMinute) * 60_000
+
+  const deliverMinutes = slaConfig.STEP_8_DELIVERING?.minutes ?? 60
+  const qcMinutes = slaConfig.STEP_7_READY_QC?.minutes ?? 20
+  const arrangeMinutes = slaConfig.STEP_6_ARRANGING?.minutes ?? 60
+
+  const deliverStartMs = deliveryEndMs - deliverMinutes * 60_000
+  const qcStartMs = deliverStartMs - qcMinutes * 60_000
+  const arrangeStartMs = qcStartMs - arrangeMinutes * 60_000
+
+  const fmtHm = (ms: number) => {
+    const dt = new Date(ms)
+    // Offset +7
+    const vnDt = new Date(dt.getTime() + 7 * 3600_000)
+    const h = String(vnDt.getUTCHours()).padStart(2, "0")
+    const m = String(vnDt.getUTCMinutes()).padStart(2, "0")
+    return `${h}:${m}`
+  }
+
+  return {
+    arranging: {
+      stepKey: "ARRANGING",
+      label: "Cắm hoa",
+      startIso: new Date(arrangeStartMs).toISOString(),
+      endIso: new Date(qcStartMs).toISOString(),
+      displayRange: `${fmtHm(arrangeStartMs)} - ${fmtHm(qcStartMs)}`,
+    },
+    readyQc: {
+      stepKey: "QC",
+      label: "Duyệt ảnh & QC",
+      startIso: new Date(qcStartMs).toISOString(),
+      endIso: new Date(deliverStartMs).toISOString(),
+      displayRange: `${fmtHm(qcStartMs)} - ${fmtHm(deliverStartMs)}`,
+    },
+    delivering: {
+      stepKey: "DELIVERING",
+      label: "Đang giao hoa",
+      startIso: new Date(deliverStartMs).toISOString(),
+      endIso: new Date(deliveryEndMs).toISOString(),
+      displayRange: `${fmtHm(deliverStartMs)} - ${fmtHm(deliveryEndMs)}`,
+    },
+  }
+}

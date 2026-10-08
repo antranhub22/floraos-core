@@ -15,20 +15,25 @@ import type {
 import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
 import { BrochureOrderOptions } from "./brochure-order-options"
 import { useBrochureQuote } from "./use-brochure-quote"
-import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { OrderReview } from "./order-review"
 import { useOrderDraft } from "./use-order-draft"
 import { useSavedState } from "./use-saved-state"
 import { AddressFields } from "./address-fields"
 import { HoneypotField } from "./honeypot-field"
 import { composeAddress, validateAddressParts } from "@/modules/greeting-card/domain/delivery-address"
-import { DELIVERY_SLOTS, availableSlots, deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-card/domain/delivery-schedule"
+import { deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-card/domain/delivery-schedule"
+import { DeliveryTimePicker } from "./delivery-time-picker"
+import { PromotionPicker } from "./promotion-picker"
+import { SelectedProductHeader } from "./selected-product-header"
+
+import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
 
 interface BrochureOrderFormProps {
   productSnapshot: ProductSnapshot
   /** Size/biến thể bán online của mẫu đã chọn. */
   variants: Array<{ id: string; name: string; priceVnd: number }>
   shipping: ShippingConfig
+  appliedPolicies?: PublicAppliedPolicies | null | undefined
   /** Endpoint báo giá + phần thân cố định (vd. `productId` ở link công khai). */
   quoteUrl: string
   quoteExtraBody?: Record<string, string> | undefined
@@ -44,6 +49,7 @@ export function BrochureOrderForm({
   productSnapshot,
   variants,
   shipping,
+  appliedPolicies,
   quoteUrl,
   quoteExtraBody = {},
   onBack,
@@ -57,6 +63,7 @@ export function BrochureOrderForm({
   } = useOrderDraft()
   const deliveryAddress = composeAddress(addressParts)
 
+  const [selectedPromotionId, setSelectedPromotionId] = useState<string>(appliedPolicies?.promotions[0]?.id ?? "")
   const [loading, setLoading] = useState(false)
   const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone, { id: productSnapshot.id, variantIds: variants.map((v) => v.id) })
   const minDate = earliestDeliveryDate(shipping)
@@ -77,7 +84,8 @@ export function BrochureOrderForm({
       customerName, customerPhone, recipientName, recipientPhone,
       deliveryDate, deliveryTimeSlot, deliveryAddress, cardMessage, senderNote,
     })
-    const scheduleError = deliveryDate ? deliveryScheduleError(deliveryDate, deliveryTimeSlot, shipping) : null
+    const scheduleError = !deliveryDate ? null
+      : deliveryTimeSlot.trim() ? deliveryScheduleError(deliveryDate, deliveryTimeSlot, shipping) : "Vui lòng chọn khung giờ giao hoa"
     if (scheduleError) {
       check.errors.deliveryDate = scheduleError
       check.valid = false
@@ -112,18 +120,19 @@ export function BrochureOrderForm({
       senderNote,
       website,
       quantity: pricing.selection.quantity,
+      selectedPromotionId: selectedPromotionId || undefined,
       ...(pricing.selection.variantId ? { variantId: pricing.selection.variantId } : {}),
       ...(pricing.selection.shippingZoneId ? { shippingZoneId: pricing.selection.shippingZoneId } : {}),
       ...(pricing.selection.voucherCode ? { voucherCode: pricing.selection.voucherCode } : {}),
     })
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(confirmedTerms: boolean) {
     if (!review) return
     setErrorMessage(null)
     setLoading(true)
     try {
-      await onSubmit(review)
+      await onSubmit({ ...review, confirmedTerms })
       clearDraft()
       clearReview()
     } catch (err) {
@@ -141,17 +150,18 @@ export function BrochureOrderForm({
           variantName={variants.find((v) => v.id === review.variantId)?.name ?? null}
           input={review}
           quote={pricing.quote}
+          appliedPolicies={appliedPolicies}
           submitting={loading}
           error={errorMessage}
           onEdit={() => setReview(null)}
-          onConfirm={() => void handleConfirm()}
+          onConfirm={(agreed) => void handleConfirm(agreed)}
         />
       </div>
     )
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-6 shadow-sm">
+    <div className="w-full max-w-xl lg:max-w-2xl mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-7 shadow-sm">
       <div className="flex items-center justify-between pb-4 border-b border-border mb-5">
         <Button
           type="button"
@@ -168,19 +178,7 @@ export function BrochureOrderForm({
         </span>
       </div>
 
-      {/* Product Snapshot Header */}
-      <div className="flex items-center gap-3.5 p-3 rounded-xl bg-surface-muted border border-border mb-5">
-        <FlowerImage src={productSnapshot.imageUrl} driveLink={productSnapshot.driveLink} alt={productSnapshot.name} sizes="64px" fallback="icon" className="w-16 h-16 rounded-lg shrink-0 border border-border" />
-        <div className="flex-1 min-w-0">
-          <div className="text-caption text-text-muted">Mẫu đã chọn:</div>
-          <div className="text-body font-extrabold text-foreground truncate">
-            {productSnapshot.name}
-          </div>
-          <div className="text-body-sm font-extrabold text-primary">
-            {productSnapshot.price > 0 ? `${productSnapshot.price.toLocaleString("vi-VN")} đ` : "Liên hệ"}
-          </div>
-        </div>
-      </div>
+      <SelectedProductHeader product={productSnapshot} />
 
       {errorMessage && (
         <div
@@ -205,6 +203,10 @@ export function BrochureOrderForm({
           errors={pricing.errors}
           loading={pricing.loading}
         />
+
+        {appliedPolicies && (
+          <PromotionPicker policies={appliedPolicies} value={selectedPromotionId} onChange={setSelectedPromotionId} />
+        )}
 
         {/* Người đặt */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -290,15 +292,14 @@ export function BrochureOrderForm({
             <label htmlFor={`${uid}-deliveryTimeSlot`} className="block text-body-sm font-bold text-foreground mb-1">
               Khung giờ mong muốn
             </label>
-            <select
+            <DeliveryTimePicker
+              id={`${uid}-deliveryTimeSlot`}
+              date={deliveryDate}
               value={deliveryTimeSlot}
-              id={`${uid}-deliveryTimeSlot`} onChange={(e) => setDeliveryTimeSlot(e.target.value)}
-              className={INPUT}
-            >
-              {(deliveryDate ? availableSlots(deliveryDate, shipping) : DELIVERY_SLOTS.map((x) => x.label)).map((slot) => (
-                <option key={slot} value={slot}>{slot}</option>
-              ))}
-            </select>
+              shipping={shipping}
+              inputClassName={INPUT}
+              onChange={setDeliveryTimeSlot}
+            />
           </div>
         </div>
 

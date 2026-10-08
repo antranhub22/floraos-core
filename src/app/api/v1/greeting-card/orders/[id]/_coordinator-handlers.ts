@@ -16,8 +16,10 @@ const photoSchema = z
   .object({
     assetId: z.string().min(1).max(64).optional(),
     assetIds: z.array(z.string().min(1).max(64)).min(1).max(7).optional(),
+    skipPhoto: z.boolean().optional(),
+    skipReason: z.string().trim().max(300).optional(),
   })
-  .refine((v) => v.assetId || v.assetIds, { message: "Thiếu ảnh" })
+  .refine((v) => v.skipPhoto || v.assetId || v.assetIds, { message: "Thiếu ảnh hoặc chưa chọn bỏ qua" })
 const shipSchema = z.object({ trackingNote: z.string().trim().min(1, "Nhập thông tin vận chuyển").max(500) })
 
 type RouteCtx = { params: Promise<{ id: string }> }

@@ -18,6 +18,7 @@ import { createShareLink, listShareLinks, markSendLinkCopied, openShareLink } fr
 
 const ORDER = {
   customerName: "Khách Hoa", customerPhone: "0987654321", recipientName: "Người Nhận", recipientPhone: "0912345678",
+  confirmedTerms: true,
   deliveryDate: new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10), deliveryAddress: "1 Lê Lợi, Q1",
 }
 

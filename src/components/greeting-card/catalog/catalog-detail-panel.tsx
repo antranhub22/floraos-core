@@ -1,11 +1,12 @@
 "use client"
 
 import React, { useState } from "react"
-import { ArrowLeft, Package, Plus, Trash2, Search, Loader2, X, CheckCircle } from "lucide-react"
+import { ArrowLeft, Package, Plus, Trash2, Search, Loader2, X, CheckCircle, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCatalogItems } from "./use-catalog-items"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { CatalogHeartsPanel } from "./catalog-hearts-panel"
+import { CatalogPoliciesSettings } from "./catalog-policies-settings"
 
 type ProductVariant = { id: string; price_vnd: number; name: string }
 type CatalogProduct = {
@@ -25,6 +26,7 @@ type CatalogDetail = {
   name: string
   type: string
   description: string | null
+  filters?: Record<string, unknown> | null
   _count: { sessions: number }
   items: CatalogProduct[]
 }
@@ -36,6 +38,7 @@ type Props = {
 }
 
 export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
+  const [showPolicies, setShowPolicies] = useState(false)
   const [productSearch, setProductSearch] = useState("")
   const ci = useCatalogItems<CatalogDetail>(catalogId)
   const catalog = ci.catalog
@@ -83,16 +86,38 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
             </p>
           </div>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => void openAddProduct()}
-          className="bg-primary hover:bg-primary-dark text-white font-bold gap-1.5 text-body-sm h-9 shadow-sm"
-        >
-          <Plus size={16} />
-          <span>Thêm Mẫu Hoa</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={showPolicies ? "primary" : "outline"}
+            size="sm"
+            onClick={() => setShowPolicies((prev) => !prev)}
+            className="gap-1.5 font-bold text-body-sm h-9"
+          >
+            <ShieldCheck size={16} />
+            <span>{showPolicies ? "Xem Mẫu Hoa" : "Chính sách & Cam kết"}</span>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void openAddProduct()}
+            className="bg-primary hover:bg-primary-dark text-white font-bold gap-1.5 text-body-sm h-9 shadow-sm"
+          >
+            <Plus size={16} />
+            <span>Thêm Mẫu Hoa</span>
+          </Button>
+        </div>
       </div>
+
+      {showPolicies && (
+        <CatalogPoliciesSettings
+          catalogId={catalogId}
+          currentFilters={catalog?.filters ?? null}
+          onSaved={() => {
+            // refresh
+          }}
+        />
+      )}
 
       {/* Add Product Modal */}
       {isAddOpen && (

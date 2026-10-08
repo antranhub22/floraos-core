@@ -5,6 +5,7 @@ import { Camera, Image as ImageIcon, Truck, UserCheck, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiSend } from "@/components/greeting-card/greeting-api"
 import { CoordinatorImageUpload } from "./coordinator-image-upload"
+import { CancellationProposalModal } from "@/components/greeting-card/inbox/cancellation-proposal-modal"
 import type { ModalState } from "./coordinator-order-card"
 
 type ActiveModal = Exclude<ModalState, { type: "none" }>
@@ -36,8 +37,32 @@ const CONFIG = {
   },
 } as const
 
-/** Hộp thoại một tác vụ xưởng: ghi chú (florist, ship) hoặc tải ảnh (thành phẩm, người nhận). */
+/** Hộp thoại một tác vụ xưởng: ghi chú (florist, ship), tải ảnh (thành phẩm, người nhận), hoặc đề xuất hủy đơn. */
 export function CoordinatorActionModal({ modal, onClose, onDone }: { modal: ActiveModal; onClose: () => void; onDone: () => void }) {
+  if (modal.type === "cancel-proposal") {
+    return (
+      <CancellationProposalModal
+        orderId={modal.orderId}
+        orderCode={modal.orderCode}
+        totalVnd={modal.totalVnd}
+        paidVnd={modal.paidVnd}
+        onClose={onClose}
+        onSuccess={onDone}
+      />
+    )
+  }
+  return <CoordinatorTaskModal modal={modal} onClose={onClose} onDone={onDone} />
+}
+
+function CoordinatorTaskModal({
+  modal,
+  onClose,
+  onDone,
+}: {
+  modal: Exclude<ActiveModal, { type: "cancel-proposal" }>
+  onClose: () => void
+  onDone: () => void
+}) {
   const cfg = CONFIG[modal.type]
   const Icon = cfg.icon
   const [note, setNote] = useState("")

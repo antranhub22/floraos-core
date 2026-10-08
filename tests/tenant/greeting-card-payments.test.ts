@@ -58,6 +58,7 @@ describe("greeting-card payments", () => {
     await selectBrochureProduct(link.sendCode, product.id)
     const order = await submitBrochureOrder(link.sendCode, {
       customerName: "K", customerPhone: "0987654321", recipientName: "N", recipientPhone: "0912345678",
+      confirmedTerms: true,
       deliveryDate: inTenDays(), deliveryAddress: "12 Lê Lợi, Q1", ...(voucherCode ? { voucherCode } : {}),
     })
     return { link, order }

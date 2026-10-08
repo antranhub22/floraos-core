@@ -9,8 +9,8 @@ export type CatalogDaysFilter = "3" | "all"
 type Props = {
   statusFilter: CatalogStatusFilter
   setStatusFilter: (v: CatalogStatusFilter) => void
-  daysFilter: CatalogDaysFilter
-  setDaysFilter: (v: CatalogDaysFilter) => void
+  daysFilter?: CatalogDaysFilter
+  setDaysFilter?: (v: CatalogDaysFilter) => void
   staffFilter: string
   setStaffFilter: (v: string) => void
   /** Danh sách nhân sự — chỉ người được quản lý catalog của người khác mới thấy bộ lọc này. */
@@ -18,9 +18,9 @@ type Props = {
   showStaffFilter: boolean
 }
 
-/** Thanh lọc danh sách bộ sưu tập: đang hoạt động / đã ẩn, thời gian tạo, nhân sự tạo. */
+/** Thanh lọc danh sách bộ sưu tập: đang hoạt động / đã ẩn, nhân sự tạo. */
 export function CatalogListFilters({
-  statusFilter, setStatusFilter, daysFilter, setDaysFilter, staffFilter, setStaffFilter, staffList, showStaffFilter,
+  statusFilter, setStatusFilter, staffFilter, setStaffFilter, staffList, showStaffFilter,
 }: Props) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 bg-surface-muted/40 p-3.5 rounded-xl border border-border">
@@ -48,27 +48,6 @@ export function CatalogListFilters({
           >
             <Archive size={12} />
             <span>Đã ẩn</span>
-          </button>
-        </div>
-
-        <div className="inline-flex rounded-lg border border-border bg-surface p-0.5 ml-1">
-          <button
-            type="button"
-            onClick={() => setDaysFilter("all")}
-            className={`px-2.5 py-1 text-caption font-semibold rounded-md transition-colors ${
-              daysFilter === "all" ? "bg-surface-muted text-foreground font-bold" : "text-text-muted hover:text-foreground"
-            }`}
-          >
-            Tất cả thời gian
-          </button>
-          <button
-            type="button"
-            onClick={() => setDaysFilter("3")}
-            className={`px-2.5 py-1 text-caption font-semibold rounded-md transition-colors ${
-              daysFilter === "3" ? "bg-surface-muted text-foreground font-bold" : "text-text-muted hover:text-foreground"
-            }`}
-          >
-            Trong 3 ngày qua
           </button>
         </div>
       </div>

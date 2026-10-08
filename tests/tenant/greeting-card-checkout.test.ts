@@ -20,6 +20,7 @@ const BASE_INPUT = {
   customerPhone: "0987654321",
   recipientName: "Người nhận",
   recipientPhone: "0912345678",
+  confirmedTerms: true,
   deliveryAddress: "12 Lê Lợi, Quận 1",
 }
 

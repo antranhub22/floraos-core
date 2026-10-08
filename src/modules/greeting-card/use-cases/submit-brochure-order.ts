@@ -52,6 +52,7 @@ export async function submitBrochureOrder(
       input,
       notePrefix: `[Thẻ chào ${session.send_code}]`,
       shopSettings: shop.settings,
+      catalogFilters: session.catalog.filters,
     })
   } catch (error) {
     // Hai tab/hai lần bấm gửi cùng lúc: giao dịch chỉ cho một đơn gắn vào phiên, lần kia bị
