@@ -122,6 +122,16 @@ describe("Greeting Card Domain Rules", () => {
       }, NOW)
       expect(result.errors.cardMessage).toBeDefined()
     })
+
+    it("báo lỗi khi link bản đồ không phải Google Maps, nhận link chia sẻ hợp lệ", () => {
+      const base = {
+        customerName: "A", customerPhone: "0901234567", recipientName: "B", recipientPhone: "0912345678",
+        deliveryDate: "2026-10-20", deliveryAddress: "123 Nguyễn Huệ",
+      }
+      expect(validateCustomerOrderInput({ ...base, mapUrl: "https://evil.example/maps" }, NOW).errors.mapUrl).toBeDefined()
+      expect(validateCustomerOrderInput({ ...base, mapUrl: "https://maps.app.goo.gl/AbC123" }, NOW).valid).toBe(true)
+      expect(validateCustomerOrderInput({ ...base, deliveryNote: "x".repeat(301) }, NOW).errors.deliveryNote).toBeDefined()
+    })
   })
 
   describe("validateDeliveryDate", () => {
@@ -140,16 +150,36 @@ describe("Greeting Card Domain Rules", () => {
   })
 
   describe("mapOrderStatusToTrackingStep", () => {
-    it("should map delivered status to step 4", () => {
+    it("should map delivered status to the last step (5)", () => {
       const step = mapOrderStatusToTrackingStep("COMPLETED", "READY", "DELIVERED")
-      expect(step.stepIndex).toBe(4)
+      expect(step.stepIndex).toBe(5)
       expect(step.percentage).toBe(100)
     })
 
-    it("should map arranging status to step 2", () => {
-      const step = mapOrderStatusToTrackingStep("PROCESSING", "ARRANGING", "PENDING")
+    it("should map arranging and quality-check to step 3", () => {
+      expect(mapOrderStatusToTrackingStep("PROCESSING", "ARRANGING", "PENDING").stepIndex).toBe(3)
+      expect(mapOrderStatusToTrackingStep("PROCESSING", "QUALITY_CHECK", "PENDING").stepIndex).toBe(3)
+    })
+
+    it("keeps an unpaid draft order at step 1 (received, not yet confirmed)", () => {
+      const step = mapOrderStatusToTrackingStep("DRAFT", "WAITING", "PENDING")
+      expect(step.stepIndex).toBe(1)
+      expect(step.percentage).toBe(20)
+    })
+
+    it("shows 'Đã xác nhận' (step 2) once payment/deposit is recorded", () => {
+      const step = mapOrderStatusToTrackingStep("CONFIRMED", "WAITING", "PENDING")
       expect(step.stepIndex).toBe(2)
-      expect(step.percentage).toBe(50)
+      expect(step.title).toMatch(/xác nhận/)
+    })
+
+    it("treats an assigned florist as confirmed for shops that do not collect payment first", () => {
+      expect(mapOrderStatusToTrackingStep("DRAFT", "ASSIGNED", "PENDING").stepIndex).toBe(2)
+    })
+
+    it("maps dispatched orders to step 4 and cancelled orders to -1", () => {
+      expect(mapOrderStatusToTrackingStep("PROCESSING", "READY", "DISPATCHED").stepIndex).toBe(4)
+      expect(mapOrderStatusToTrackingStep("CANCELLED", "WAITING", "PENDING").stepIndex).toBe(-1)
     })
   })
 })

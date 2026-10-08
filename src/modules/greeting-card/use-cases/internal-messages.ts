@@ -2,7 +2,7 @@ import { notFound, validationFailed } from "@/core/http/errors"
 import type { TenantContext } from "@/core/tenancy"
 import { GreetingMessageRepository, type ThreadTarget } from "../infra/greeting-message-repository"
 import {
-  MAX_MESSAGE_LENGTH, MESSAGE_ROLE_LABEL, recipientLabel, resolveRecipient, roleOf, isAddressedTo,
+  MAX_MESSAGE_LENGTH, MESSAGE_ROLE_LABEL, recipientLabel, resolveRecipient, roleOf, isAddressedTo, CUSTOMER_SENDER_ID, CUSTOMER_SENDER_LABEL,
   type MessageRole, type RecipientChoice,
 } from "../domain/internal-message"
 import { PIPELINE_STEPS } from "../domain/tracking-pipeline-types"
@@ -92,8 +92,8 @@ export async function getThread(ctx: TenantContext, ref: ThreadRef, repo = new G
   const views: ThreadMessageView[] = [
     ...messages.map((m) => ({
       id: m.id, stepKey: m.stepKey, stepTitle: stepTitle(m.stepKey),
-      senderName: nameOf.get(m.senderId) ?? "Nhân viên đã rời",
-      senderRoleLabel: MESSAGE_ROLE_LABEL[m.senderRole as MessageRole] ?? "Nhân viên",
+      senderName: m.senderId === CUSTOMER_SENDER_ID ? CUSTOMER_SENDER_LABEL : nameOf.get(m.senderId) ?? "Nhân viên đã rời",
+      senderRoleLabel: m.senderId === CUSTOMER_SENDER_ID ? "Trang theo dõi" : MESSAGE_ROLE_LABEL[m.senderRole as MessageRole] ?? "Nhân viên",
       toLabel: recipientLabel({ toRole: m.toRole, toUserName: m.toUserId ? nameOf.get(m.toUserId) ?? "Nhân viên" : null }),
       body: m.body, createdAt: m.createdAt.toISOString(), mine: m.senderId === ctx.userId,
       unread: !m.readByMe && isAddressedTo(m, me),

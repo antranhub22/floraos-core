@@ -13,6 +13,7 @@ import type { PromotionPricing } from "../domain/promotion-pricing"
 import { resolveAppliedPolicies } from "../domain/store-policy"
 import { selectPromotion } from "../domain/order-policies"
 import { BrochureCheckoutRepository } from "../infra/brochure-checkout-repository"
+import { holidayOn, holidaySurcharge, parseHolidayPolicy } from "../domain/holiday-policy"
 
 export interface QuoteRequest {
   variantId?: string | undefined
@@ -22,7 +23,7 @@ export interface QuoteRequest {
   customerPhone?: string | undefined
   /** Ưu đãi khách chọn — máy chủ tra lại trong ưu đãi bộ sưu tập đang áp dụng. */
   selectedPromotionId?: string | undefined
-  /** Ngày giao khách đang chọn — để báo các khung giờ đã kín (`fullSlots`). */
+  /** Ngày giao khách đang chọn — để báo các khung giờ đã kín (`fullSlots`) và tính phụ phí ngày lễ. */
   deliveryDate?: string | undefined
 }
 
@@ -60,7 +61,9 @@ export async function quoteForProduct(
   req: QuoteRequest,
   shopSettings: unknown,
   checkout = new BrochureCheckoutRepository(),
-  promotion: PromotionPricing | null = null
+  promotion: PromotionPricing | null = null,
+  /** `catalog.filters` của bộ sưu tập khách đang đặt — quyết định có phụ phí ngày lễ không */
+  catalogFilters?: unknown,
 ): Promise<QuoteResult> {
   const errors: Record<string, string> = {}
 
@@ -100,5 +103,7 @@ export async function quoteForProduct(
     }
   }
 
-  return { quote: computeQuote({ unitPriceVnd, quantity, zone, shipping, voucher, promotion }), variant, voucher, errors }
+  const holiday = req.deliveryDate ? holidayOn(req.deliveryDate.trim(), parseHolidayPolicy(shopSettings)) : null
+  const surcharge = holidaySurcharge(holiday, catalogFilters)
+  return { quote: computeQuote({ unitPriceVnd, quantity, zone, shipping, voucher, promotion, surcharge }), variant, voucher, errors }
 }

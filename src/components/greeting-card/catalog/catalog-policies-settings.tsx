@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import { Gift, ShieldCheck, FileText, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
+import { parseHolidayPolicy } from "@/modules/greeting-card/domain/holiday-policy"
 import {
   parseStorePolicies,
   type StorePoliciesConfig,
@@ -25,7 +26,9 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
     agreementIds?: string[]
     allowCustomerPromotionChoice?: boolean
     photoApprovalCountdownMinutes?: number
+    applyHolidaySurcharge?: boolean
   } | undefined) ?? {}
+  const holidays = org.data ? parseHolidayPolicy(org.data.settings).filter((h) => h.surchargeVnd > 0) : []
 
   const [selectedPromos, setSelectedPromos] = useState<string[]>(
     rawPolicyConfig.promotionIds ?? policies?.promotions.map((p) => p.id) ?? []
@@ -43,6 +46,7 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
     rawPolicyConfig.photoApprovalCountdownMinutes ?? 10
   )
 
+  const [applyHolidaySurcharge, setApplyHolidaySurcharge] = useState<boolean>(rawPolicyConfig.applyHolidaySurcharge === true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
 
@@ -64,6 +68,7 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
           agreementIds: selectedAgrees,
           allowCustomerPromotionChoice: allowPromoChoice,
           photoApprovalCountdownMinutes: countdownMinutes,
+          applyHolidaySurcharge,
         },
       }
 
@@ -206,6 +211,25 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
             )
           })}
         </div>
+      </div>
+
+      {/* PHỤ PHÍ NGÀY LỄ — giờ chốt & số đơn tối đa ngày lễ áp cả tiệm, phụ phí chỉ khi bộ sưu tập bật */}
+      <div className="space-y-2 pt-3 border-t border-border">
+        <label className="flex items-center gap-2 cursor-pointer text-body-sm font-extrabold text-foreground">
+          <input
+            type="checkbox"
+            checked={applyHolidaySurcharge}
+            onChange={(e) => setApplyHolidaySurcharge(e.target.checked)}
+            className="rounded border-border text-primary focus:ring-primary"
+          />
+          <span>Áp dụng phụ phí ngày lễ cho bộ sưu tập này</span>
+        </label>
+        <p className="text-caption text-text-muted">
+          {holidays.length > 0
+            ? `Khách chọn ngày giao trùng ngày lễ sẽ cộng phụ phí: ${holidays.map((h) => `${h.name} +${h.surchargeVnd.toLocaleString("vi-VN")}đ`).join(" · ")}.`
+            : "Chưa có ngày lễ nào có phụ phí — khai trong Cài đặt Thẻ chào → Ngày lễ."}{" "}
+          Giờ chốt nhận đơn và số đơn tối đa ngày lễ luôn áp cho cả tiệm.
+        </p>
       </div>
 
       {/* 4. CẤU HÌNH THỜI GIAN DUYỆT ẢNH HOÀN THIỆN (SPEC #3) */}

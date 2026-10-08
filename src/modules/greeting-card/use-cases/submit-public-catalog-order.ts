@@ -1,7 +1,7 @@
 import { normalizeOrderAddress } from "../domain/delivery-address"
 import { defaultOwnerOf } from "./share-links"
-import { deliveryScheduleError } from "../domain/delivery-schedule"
-import { parseShippingConfig } from "../domain/brochure-pricing"
+import { orderScheduleError } from "../domain/holiday-policy"
+import { assertHolidayCapacity } from "./holiday-capacity"
 import { conflict, notFound, validationFailed } from "@/core/http/errors"
 import { SOLD_OUT_MESSAGE } from "../domain/product-availability"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
@@ -83,7 +83,7 @@ export async function submitPublicCatalogOrder(
   const { catalog, product } = await orderableFromCatalog(catalogId, input.productId, repo)
   const shop = await repo.getShopProfile(catalog.organization_id)
   // Giờ chốt đơn / thời gian chuẩn bị của tiệm — chặn cả khi khách gửi thẳng API
-  const scheduleError = deliveryScheduleError(input.deliveryDate, input.deliveryTimeSlot, parseShippingConfig(shop.settings))
+  const scheduleError = orderScheduleError(input.deliveryDate, input.deliveryTimeSlot, shop.settings)
   if (scheduleError) throw validationFailed({ deliveryDate: scheduleError })
 
   // Kiểm lựa chọn TRƯỚC khi tạo phiên — tránh phiên mồ côi khi khách chọn sai khu vực/mã giảm giá
@@ -91,12 +91,17 @@ export async function submitPublicCatalogOrder(
     catalog.organization_id,
     product,
     { ...input, customerPhone: normalizePhone(input.customerPhone) },
-    shop.settings
+    shop.settings,
+    undefined,
+    null,
+    catalog.filters,
   )
   if (Object.keys(precheck.errors).length > 0) throw validationFailed(precheck.errors)
 
   const duplicate = await recentDuplicate(catalog.organization_id, catalog.id, product, input, shop.settings, checkout)
   if (duplicate) return duplicate
+  // Ngày lễ đủ số đơn tối đa → không nhận thêm (sau bước chống trùng: khách bấm lại vẫn nhận lại đơn cũ)
+  await assertHolidayCapacity(catalog.organization_id, input.deliveryDate, shop.settings)
   // Kiểm trần đơn (theo SĐT, theo khung giờ) TRƯỚC khi tạo phiên — tránh phiên mồ côi
   await assertPhoneQuota(catalog.organization_id, normalizePhone(input.customerPhone), checkout)
   await assertSlotOpen(catalog.organization_id, input, shop.settings, checkout)
@@ -132,7 +137,7 @@ export async function quotePublicCatalog(
   const { catalog, product } = await orderableFromCatalog(catalogId, productId, repo)
   const shop = await repo.getShopProfile(catalog.organization_id)
   const promo = promotionForQuote(catalog.filters, shop.settings, req.selectedPromotionId)
-  const result = await quoteForProduct(catalog.organization_id, product, req, shop.settings, undefined, promo.promotion)
+  const result = await quoteForProduct(catalog.organization_id, product, req, shop.settings, undefined, promo.promotion, catalog.filters)
   const fullSlots = await fullSlotsOn(catalog.organization_id, req.deliveryDate, shop.settings)
   return { ...result, fullSlots, ...(promo.error ? { errors: { ...result.errors, selectedPromotionId: promo.error } } : {}) }
 }

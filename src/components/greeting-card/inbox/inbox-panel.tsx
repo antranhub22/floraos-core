@@ -8,6 +8,7 @@ import { Sheet } from "./sheet"
 import { MessageThread } from "./message-thread"
 import { timeAgo, useInbox, type InboxData } from "./use-inbox"
 import { DiscountDecision } from "./discount-decision"
+import { ChangeDecision } from "./change-decision"
 
 type Group = "actions" | "messages" | "updates"
 export interface InboxTarget { tab: InboxTab; orderId: string | null; sessionId: string | null }
@@ -126,9 +127,14 @@ function ActionRow({ action, onOpen, onMessage, onDecided }: { action: InboxActi
           <DiscountDecision {...action.discount} onDone={(msg) => { setDone(msg); onDecided() }} />
         </div>
       )}
+      {action.change && !done && (
+        <div className="rounded-xl border border-border bg-surface-alt p-3">
+          <ChangeDecision {...action.change} onDone={(msg) => { setDone(msg); onDecided() }} />
+        </div>
+      )}
       {done && <p role="status" className="rounded-xl bg-success-bg px-3 py-2 text-body-sm text-success">{done}</p>}
       <div className="flex gap-2 pl-15">
-        {!action.discount && <button type="button" onClick={onOpen} className="h-11 flex-1 rounded-xl bg-primary px-3 text-body-sm font-bold text-white hover:bg-primary-dark sm:flex-none">
+        {!action.discount && !action.change && <button type="button" onClick={onOpen} className="h-11 flex-1 rounded-xl bg-primary px-3 text-body-sm font-bold text-white hover:bg-primary-dark sm:flex-none">
           Xử lý
         </button>}
         {onMessage && (

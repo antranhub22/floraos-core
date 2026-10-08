@@ -5,7 +5,9 @@ import React, { useState } from "react"
 import useSWR from "swr"
 import { apiGet, apiSend } from "@/components/greeting-card/greeting-api"
 import { TrackingVerifyForm } from "./tracking-verify-form"
-import { CheckCircle2, Clock, Truck, Gift, Camera, RefreshCw } from "lucide-react"
+import { CheckCircle2, Clock, Camera, RefreshCw } from "lucide-react"
+import { TrackingSteps } from "./tracking-steps"
+import { OrderChangePanel, type OrderChangeData } from "./order-change-panel"
 import { Button } from "@/components/ui/button"
 
 interface BrochureTrackingViewProps {
@@ -26,6 +28,10 @@ type TrackingData = {
     cardMessage?: string | null
     /** `false` = bản rút gọn cho người chỉ biết mã đơn */
     verified?: boolean
+    /** Chỉ khi đã xác minh: đổi thông tin đơn + lịch sử */
+    change?: OrderChangeData | null
+    /** Lần giao gần nhất không thành công (ghi chú chỉ khi đã xác minh) */
+    deliveryFailure?: { at: string; reasonLabel: string; note: string | null; feeVnd: number; attempts: number } | null
     recipientName: string
     deliveryAddress: string
     finishedImageUrl?: string | null
@@ -89,13 +95,6 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
   const awaitingQuote = order.totalVnd <= 0
   const isPaid = !awaitingQuote && order.paidVnd >= order.totalVnd
 
-  const steps = [
-    { label: "Tiếp nhận", icon: Clock },
-    { label: "Cắm hoa", icon: Gift },
-    { label: "Đang giao", icon: Truck },
-    { label: "Hoàn tất", icon: CheckCircle2 },
-  ]
-
   return (
     <div className="w-full max-w-xl lg:max-w-2xl mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-7 shadow-sm flex flex-col gap-6">
       {/* Header */}
@@ -135,55 +134,7 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
           {trackingStep.description}
         </p>
 
-        {/* 4 Steps Indicator with Actual & Expected Timeline (Spec #12) */}
-        <div className="grid grid-cols-4 gap-2 mt-2">
-          {steps.map((s, idx) => {
-            const Icon = s.icon
-            const isCompleted = trackingStep.stepIndex > idx + 1 || (trackingStep.stepIndex === 4)
-            const isCurrent = trackingStep.stepIndex === idx + 1
-
-            // Spec #12: Tiếp nhận = thời điểm thực tế; Các bước sau = khoảng thời gian dự kiến
-            let stepTimeLabel = ""
-            if (idx === 0) {
-              const dt = new Date(order.createdAt)
-              stepTimeLabel = !Number.isNaN(dt.getTime())
-                ? `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`
-                : ""
-            } else if (idx === 1 && order.timeline?.arranging) {
-              stepTimeLabel = order.timeline.arranging.displayRange
-            } else if (idx === 2 && order.timeline?.delivering) {
-              stepTimeLabel = order.timeline.delivering.displayRange
-            }
-
-            return (
-              <div key={s.label} className="flex flex-col items-center gap-1 text-center">
-                <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
-                    isCompleted
-                      ? "bg-success text-white"
-                      : isCurrent
-                      ? "bg-primary text-white shadow-sm ring-4 ring-primary/20"
-                      : "bg-surface-muted text-text-muted border border-border"
-                  }`}
-                >
-                  <Icon size={16} />
-                </div>
-                <span
-                  className={`text-caption font-bold ${
-                    isCurrent ? "text-primary" : isCompleted ? "text-success" : "text-text-muted"
-                  }`}
-                >
-                  {s.label}
-                </span>
-                {stepTimeLabel && (
-                  <span className="text-caption font-medium text-text-muted leading-tight">
-                    {stepTimeLabel}
-                  </span>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <TrackingSteps stepIndex={trackingStep.stepIndex} createdAt={order.createdAt} timeline={order.timeline} />
       </div>
 
       {/* Ảnh thành phẩm và ảnh người nhận: hai mục riêng, ảnh sau không đè ảnh trước */}
@@ -233,6 +184,19 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
       )}
 
       {order.verified === false && <TrackingVerifyForm orderCode={orderCode} onVerified={setLast4} />}
+      {order.deliveryFailure && (
+        <div role="status" className="rounded-2xl border border-warning/30 bg-warning-bg p-4 flex flex-col gap-1 text-body-sm">
+          <p className="font-extrabold text-warning">Lần giao {order.deliveryFailure.attempts > 1 ? `thứ ${order.deliveryFailure.attempts} ` : ""}chưa thành công: {order.deliveryFailure.reasonLabel}</p>
+          {order.deliveryFailure.note && <p className="text-foreground">Shipper ghi: {order.deliveryFailure.note}</p>}
+          {order.deliveryFailure.feeVnd > 0 && <p className="text-foreground">Phí giao lại: {order.deliveryFailure.feeVnd.toLocaleString("vi-VN")}đ (đã cộng vào đơn).</p>}
+          <p className="text-text-muted">
+            {order.change ? "Cửa hàng sẽ liên hệ để hẹn giao lại. Bạn có thể đổi giờ, địa chỉ hoặc người nhận ngay bên dưới." : "Cửa hàng sẽ liên hệ để hẹn giao lại. Xác minh bằng 4 số cuối SĐT người đặt để đổi giờ hoặc địa chỉ giao."}
+          </p>
+        </div>
+      )}
+      {order.change && (
+        <OrderChangePanel orderCode={orderCode} proof={{ sendCode, last4 }} change={order.change} onChanged={loadTracking} />
+      )}
 
       {/* Order Details Summary */}
       <div className="flex flex-col gap-2 text-body-sm text-text-muted bg-surface-muted p-4 rounded-xl border border-border">

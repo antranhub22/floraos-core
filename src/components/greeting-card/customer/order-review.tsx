@@ -63,6 +63,7 @@ export function OrderReview(props: {
           <Row label={`Phí giao (${quote.shippingZone.name})`} value={quote.shippingFeeVnd > 0 ? vnd(quote.shippingFeeVnd) : "Miễn phí"} />
         )}
         {quote?.promotionDiscountVnd ? <Row label={`Ưu đãi${selectedPromo ? ` (${selectedPromo.title})` : ""}`} value={`− ${vnd(quote.promotionDiscountVnd)}`} /> : null}
+        {quote?.holidaySurchargeVnd ? <Row label={`Phụ phí ngày lễ (${quote.holidayName ?? ""})`} value={`+ ${vnd(quote.holidaySurchargeVnd)}`} /> : null}
         <Row label="Tổng thanh toán" value={awaitingQuote ? "Cửa hàng báo giá sau" : vnd(quote?.totalVnd ?? product.price)} strong />
       </dl>
 
@@ -72,6 +73,9 @@ export function OrderReview(props: {
         <Row label="Giao lúc" value={`${viDate(input.deliveryDate)} · ${input.deliveryTimeSlot ?? ""}`} />
         <Row label="Địa chỉ" value={input.deliveryAddress} />
         {input.cardMessage?.trim() && <Row label="Lời nhắn thiệp" value={`“${input.cardMessage.trim()}”`} />}
+        {input.senderNote?.trim() && <Row label="Ghi chú cho cửa hàng" value={input.senderNote.trim()} />}
+        {input.deliveryNote?.trim() && <Row label="Ghi chú cho người giao" value={input.deliveryNote.trim()} />}
+        {input.mapUrl?.trim() && <Row label="Vị trí bản đồ" value="Đã gửi link Google Maps" />}
       </dl>
 
       {/* 3 KHỐI CHÍNH SÁCH: ƯU ĐÃI, CAM KẾT, THỎA THUẬN (SPEC #2 & #5) */}

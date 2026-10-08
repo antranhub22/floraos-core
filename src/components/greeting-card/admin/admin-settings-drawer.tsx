@@ -11,6 +11,7 @@ import { BrochurePaymentSettings } from "./brochure-payment-settings"
 import { BrochureBankSyncSettings } from "./brochure-bank-sync-settings"
 import { BrochurePolicySettings } from "./brochure-policy-settings"
 import { BrochureShippingSettings } from "./brochure-shipping-settings"
+import { BrochureHolidaySettings } from "./brochure-holiday-settings"
 import { BrochureNotifySettings } from "./brochure-notify-settings"
 
 /** Ngăn Cài đặt của Điều hành — tách khỏi hộp việc để tab chỉ còn việc cần quyết. */
@@ -41,6 +42,7 @@ export function AdminSettingsDrawer({ onClose }: { onClose: () => void }) {
           <BrochureBankSyncSettings />
           <BrochurePolicySettings />
           <BrochureShippingSettings />
+          <BrochureHolidaySettings />
           <BrochureNotifySettings />
         </div>
       </div>

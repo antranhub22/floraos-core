@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera } from "lucide-react"
+import { MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera, ExternalLink, PackageX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { paymentGateBlocker, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
@@ -9,6 +9,8 @@ import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { CoordinatorProgressStrip } from "./coordinator-progress-strip"
 import { WorkStatus } from "@/components/greeting-card/work/work-status"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import { readDeliveryNote } from "@/modules/greeting-card/domain/delivery-note"
+import { readDeliveryFailures } from "@/modules/greeting-card/domain/delivery-failure"
 
 export interface BrochureOrder {
   id: string
@@ -19,8 +21,8 @@ export interface BrochureOrder {
   total_vnd: number
   paid_vnd: number
   card_message: string | null
-  delivery_address: { recipientName?: string; phone?: string; street?: string } | null
-  delivery_window: { date?: string; timeSlot?: string } | null
+  delivery_address: { recipientName?: string; phone?: string; street?: string; notes?: string; mapUrl?: string } | null
+  delivery_window: { date?: string; timeSlot?: string; failures?: unknown } | null
   items: Array<{
     id: string
     description: string
@@ -44,6 +46,7 @@ export type ModalState =
   | { type: "product-photo"; orderId: string; orderCode: string }
   | { type: "dispatch"; orderId: string; orderCode: string }
   | { type: "recipient-photo"; orderId: string; orderCode: string }
+  | { type: "delivery-failed"; orderId: string; orderCode: string }
   | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number }
 
 function productionLabel(status: string) {
@@ -89,6 +92,9 @@ export function CoordinatorOrderCard({
   const recipient = order.delivery_address?.recipientName || "Khách nhận"
   const phone = order.delivery_address?.phone || ""
   const address = order.delivery_address?.street || ""
+  const delivery = readDeliveryNote(order.delivery_address)
+  const failures = readDeliveryFailures(order.delivery_window)
+  const lastFailure = order.delivery_status === "FAILED" ? failures.at(-1) : undefined
   const date = order.delivery_window?.date || ""
   const timeSlot = order.delivery_window?.timeSlot || "Trong ngày"
   const awaitingQuote = order.total_vnd <= 0
@@ -161,6 +167,22 @@ export function CoordinatorOrderCard({
           <MapPin size={14} className="text-primary shrink-0" />
           <span className="truncate">{recipient} ({phone}) — {address}</span>
         </div>
+        {(delivery.note || delivery.mapUrl) && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-text">
+            {delivery.note && <span><span className="font-bold">Người giao lưu ý:</span> {delivery.note}</span>}
+            {delivery.mapUrl && (
+              <a href={delivery.mapUrl} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 font-bold text-primary hover:underline">
+                <ExternalLink size={12} aria-hidden="true" /> Mở bản đồ
+              </a>
+            )}
+          </div>
+        )}
+        {lastFailure && (
+          <div role="status" className="rounded-lg bg-warning-bg px-2 py-1.5 text-caption text-warning">
+            <span className="font-bold">Giao lần {failures.length} chưa thành công:</span> {lastFailure.reasonLabel}
+            {lastFailure.note ? ` — ${lastFailure.note}` : ""}. Hẹn lại với khách rồi bấm &ldquo;Giao lại&rdquo;.
+          </div>
+        )}
         {order.card_message && (
           <div className="text-caption italic text-text border-t border-border pt-1.5 mt-0.5">
             Thiệp: &ldquo;{order.card_message}&rdquo;
@@ -222,7 +244,7 @@ export function CoordinatorOrderCard({
             className="text-caption gap-1.5 h-8"
           >
             <Truck size={13} />
-            Giao Ship
+            {order.delivery_status === "FAILED" ? "Giao lại" : "Giao Ship"}
           </Button>
 
           <Button
@@ -236,6 +258,19 @@ export function CoordinatorOrderCard({
           >
             <ImageIcon size={13} />
             Ảnh người nhận
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!!blockerOf("delivery-failed")}
+            title={blockerOf("delivery-failed") ?? undefined}
+            onClick={() => onOpen({ type: "delivery-failed", orderId: order.id, orderCode: order.code })}
+            className="col-span-2 text-caption gap-1.5 h-8"
+          >
+            <PackageX size={13} />
+            Giao không thành công
           </Button>
 
           <button

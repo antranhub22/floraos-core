@@ -167,6 +167,7 @@ export async function loadTrackingDataset(
       deliveryDate: deliveryWindow?.date ?? null,
       deliveryTimeSlot: deliveryWindow?.timeSlot ?? null,
       deliveryZone: deliveryAddress?.zone ?? null,
+      deliveryFailed: order.delivery_status === "FAILED",
       saleName: saleNameOf(session?.sale_id),
       cardMessage: order.card_message ?? null,
       productName: snapshot?.name || order.items[0]?.description || "Mẫu hoa Thẻ chào",

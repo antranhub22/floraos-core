@@ -6,6 +6,10 @@ import { coordinatorActionBlocker, type CoordinatorAction } from "../domain/broc
 import { paymentGateBlocker, parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { queueOrderNotification } from "./notify-customer"
+import {
+  DELIVERY_FAILURE_LABEL, deliveryFailureError, parseRedeliveryFee, redeliveryFeeFor, type DeliveryFailureReason,
+} from "../domain/delivery-failure"
+import { DeliveryFailureRepository } from "../infra/delivery-failure-repository"
 
 /** Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). */
 async function loadForAction(
@@ -135,5 +139,31 @@ export async function uploadBrochureRecipientPhoto(
     qcAssetIds: assetIds,
   })
   queueOrderNotification(ctx.organizationId, order.id, "DELIVERED")
+  return result
+}
+
+/**
+ * Shipper không giao được: ghi lý do, đơn sang "giao không thành công" (khách được đổi giờ/địa chỉ
+ * trên trang theo dõi), tính phí giao lại nếu tiệm cài và Điều phối chọn tính. Giao ship lại như thường.
+ */
+export async function markBrochureDeliveryFailed(
+  ctx: TenantContext,
+  orderId: string,
+  input: { reason: DeliveryFailureReason; note?: string | undefined; chargeFee?: boolean | undefined },
+  repo = new BrochureOrderRepository(),
+) {
+  const error = deliveryFailureError(input)
+  if (error) throw validationFailed({ note: error })
+  const order = await loadForAction(ctx, orderId, "delivery-failed", repo)
+  const shop = await new GreetingCardRepository().getShopProfile(ctx.organizationId)
+  const feeVnd = redeliveryFeeFor({ chargeFee: input.chargeFee === true, configuredFeeVnd: parseRedeliveryFee(shop.settings), totalVnd: Number(order.total_vnd) })
+  const result = await new DeliveryFailureRepository().recordFailure(ctx, order, {
+    failure: {
+      at: new Date().toISOString(), reason: input.reason, reasonLabel: DELIVERY_FAILURE_LABEL[input.reason],
+      note: input.note?.trim() || null, feeVnd, by: ctx.userId,
+    },
+    feeVnd,
+  })
+  queueOrderNotification(ctx.organizationId, order.id, "DELIVERY_FAILED")
   return result
 }

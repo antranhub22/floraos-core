@@ -121,6 +121,9 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
           {quote?.promotionDiscountVnd ? (
             <div className="flex justify-between text-success"><dt>Ưu đãi</dt><dd>−{vnd(quote.promotionDiscountVnd)}</dd></div>
           ) : null}
+          {quote?.holidaySurchargeVnd ? (
+            <div className="flex justify-between"><dt className="text-text-muted">Phụ phí ngày lễ ({quote.holidayName})</dt><dd>+{vnd(quote.holidaySurchargeVnd)}</dd></div>
+          ) : null}
           <div className="flex justify-between font-extrabold text-body">
             <dt>Tổng thanh toán</dt>
             <dd className="text-primary">{quote ? vnd(quote.totalVnd) : "—"}</dd>

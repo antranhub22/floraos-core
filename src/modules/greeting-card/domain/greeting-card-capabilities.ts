@@ -21,6 +21,8 @@ export const GREETING_CARD_CAPABILITY = {
   assignFlorist: "R4",
   /** Chụp ảnh thành phẩm — R3 order.update */
   productionUpdate: "R3",
+  /** Duyệt yêu cầu đổi thông tin đơn của khách — R3 order.update */
+  orderUpdate: "R3",
   /** Giao ship, ảnh người nhận — R5 delivery.manage */
   deliveryManage: "R5",
   /** Huỷ đơn — R6 order.cancel (trần cứng điều hành) */

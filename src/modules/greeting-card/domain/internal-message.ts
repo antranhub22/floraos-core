@@ -7,6 +7,9 @@ import type { StepOwner } from "./step-sla"
 export type MessageRole = StepOwner // ADMIN | SALE | COORDINATOR
 export const MESSAGE_ROLE_LABEL: Record<MessageRole, string> = { ADMIN: "Điều hành", SALE: "Sale", COORDINATOR: "Điều phối" }
 export const MAX_MESSAGE_LENGTH = 2000
+/** Người gửi của tin do khách tạo từ trang theo dõi (vd. xin đổi thông tin đơn) — không phải nhân viên. */
+export const CUSTOMER_SENDER_ID = "customer"
+export const CUSTOMER_SENDER_LABEL = "Khách hàng"
 
 /**
  * Vai chính để nhận tin và việc: Điều hành (F2) > Điều phối (R4/R5) > Sale (R2).

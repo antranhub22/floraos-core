@@ -13,6 +13,8 @@ const EMPTY = {
   addressParts: { houseNumber: "", street: "", ward: "", province: "" } as AddressParts,
   cardMessage: "",
   senderNote: "",
+  deliveryNote: "",
+  mapUrl: "",
 }
 
 type Draft = typeof EMPTY
@@ -22,7 +24,9 @@ type Draft = typeof EMPTY
  * vẫn còn thông tin đang điền. Xoá sau khi đặt thành công.
  */
 export function useOrderDraft() {
-  const [draft, setDraft, clearDraft] = useSavedState<Draft>("order-draft", EMPTY)
+  const [saved, setDraft, clearDraft] = useSavedState<Draft>("order-draft", EMPTY)
+  // Nháp lưu từ bản cũ thiếu các ô mới → lấp bằng giá trị rỗng
+  const draft = { ...EMPTY, ...saved }
   const field = <K extends keyof Draft>(k: K) => (v: Draft[K]) => setDraft({ ...draft, [k]: v })
   return {
     ...draft,
@@ -33,8 +37,7 @@ export function useOrderDraft() {
     setDeliveryDate: field("deliveryDate"),
     setDeliveryTimeSlot: field("deliveryTimeSlot"),
     setAddressParts: field("addressParts"),
-    setCardMessage: field("cardMessage"),
-    setSenderNote: field("senderNote"),
+    setNotes: (patch: Partial<Pick<Draft, "cardMessage" | "senderNote" | "deliveryNote" | "mapUrl">>) => setDraft({ ...draft, ...patch }),
     clearDraft,
   }
 }

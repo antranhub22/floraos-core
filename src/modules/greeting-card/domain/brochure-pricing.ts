@@ -154,6 +154,8 @@ export interface QuoteInput {
   voucher: VoucherFacts | null
   /** Ưu đãi khách chọn (tối đa 01) — máy chủ tự tính, không nhận số tiền từ client. */
   promotion?: PromotionPricing | null | undefined
+  /** Phụ phí ngày lễ (bộ sưu tập bật áp dụng + ngày giao là ngày lễ có phụ phí) */
+  surcharge?: { vnd: number; name: string } | null | undefined
 }
 
 export interface BrochureQuote {
@@ -169,6 +171,9 @@ export interface BrochureQuote {
   promotionDiscountVnd?: number
   /** Mẫu chưa niêm yết giá: đơn được nhận với tổng 0, cửa hàng báo giá sau. */
   awaitingQuote?: boolean
+  /** Phụ phí ngày lễ đã cộng vào tổng (không bị mã giảm giá trừ). */
+  holidaySurchargeVnd?: number
+  holidayName?: string
 }
 
 export function computeQuote(input: QuoteInput): BrochureQuote {
@@ -183,16 +188,18 @@ export function computeQuote(input: QuoteInput): BrochureQuote {
   const shippingFeeVnd = input.zone && !free ? input.zone.feeVnd : 0
   // PO 08/10/2026: "Giảm %" tính trên TỔNG đơn (tiền hoa sau mã giảm giá + phí giao)
   const promoVnd = promotionDiscountVnd(input.promotion, afterDiscount + shippingFeeVnd)
+  const surchargeVnd = input.surcharge && input.surcharge.vnd > 0 ? input.surcharge.vnd : 0
   return {
     unitPriceVnd: input.unitPriceVnd,
     quantity,
     subtotalVnd,
     discountVnd,
     shippingFeeVnd,
-    totalVnd: afterDiscount + shippingFeeVnd - promoVnd,
+    totalVnd: afterDiscount + shippingFeeVnd - promoVnd + surchargeVnd,
     ...(promoVnd > 0 ? { promotionDiscountVnd: promoVnd } : {}),
     shippingZone: input.zone ? { id: input.zone.id, name: input.zone.name } : null,
     voucherCode: input.voucher?.code ?? null,
+    ...(surchargeVnd > 0 && input.surcharge ? { holidaySurchargeVnd: surchargeVnd, holidayName: input.surcharge.name } : {}),
   }
 }
 
