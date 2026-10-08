@@ -10,6 +10,7 @@ import { MessageThread } from "@/components/greeting-card/inbox/message-thread"
 import { WORK_BUCKET_LABEL, sortWorklist, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
 import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { SalesSessionTable } from "./sales-session-table"
+import { SalesKanbanView } from "./sales-kanban-view"
 import { SalesCreateLinkModal } from "./sales-create-link-modal"
 import type { CatalogOption, SessionRow } from "./sales-types"
 
@@ -25,6 +26,7 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
   const [isModalOpen, setIsModalOpen] = useState(initialOpenCreate)
   const [scope, setScope] = useState<"MINE" | "ALL">("MINE")
   const [bucket, setBucket] = useState<WorkBucket | null>(null)
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban")
   const [linksOpen, setLinksOpen] = useState(false)
   const [notesFor, setNotesFor] = useState<{ item: TrackingPipelineItem; stepId: TrackingPipelineStepId | "GENERAL" } | null>(null)
   const work = useWorklist()
@@ -57,25 +59,35 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {canSeeAll && (
-          <div role="group" aria-label="Phạm vi khách" className="mr-2 inline-flex rounded-xl border border-border bg-surface-alt p-1">
-            {(["MINE", "ALL"] as const).map((s) => (
-              <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)}
-                className={`h-8 rounded-lg px-3 text-caption font-bold ${scope === s ? "bg-surface text-primary shadow-xs" : "text-text-muted"}`}>
-                {s === "MINE" ? "Khách của tôi" : "Tất cả khách"}
-              </button>
-            ))}
-          </div>
-        )}
-        {BUCKETS.map((b) => (
-          <button key={b} type="button" aria-pressed={bucket === b} onClick={() => setBucket(bucket === b ? null : b)}
-            className={`h-9 rounded-xl border px-3 text-caption font-bold ${
-              bucket === b ? "border-primary bg-primary text-white" : b === "ACTION" && counts.ACTION > 0 ? "border-danger/40 bg-danger-bg text-danger" : "border-border text-text-muted hover:bg-surface-muted"
-            }`}>
-            {WORK_BUCKET_LABEL[b]} ({counts[b]})
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {canSeeAll && (
+            <div role="group" aria-label="Phạm vi khách" className="mr-2 inline-flex rounded-xl border border-border bg-surface-alt p-1">
+              {(["MINE", "ALL"] as const).map((s) => (
+                <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)}
+                  className={`h-8 rounded-lg px-3 text-caption font-bold ${scope === s ? "bg-surface text-primary shadow-xs" : "text-text-muted"}`}>
+                  {s === "MINE" ? "Khách của tôi" : "Tất cả khách"}
+                </button>
+              ))}
+            </div>
+          )}
+          {BUCKETS.map((b) => (
+            <button key={b} type="button" aria-pressed={bucket === b} onClick={() => setBucket(bucket === b ? null : b)}
+              className={`h-9 rounded-xl border px-3 text-caption font-bold ${
+                bucket === b ? "border-primary bg-primary text-white" : b === "ACTION" && counts.ACTION > 0 ? "border-danger/40 bg-danger-bg text-danger" : "border-border text-text-muted hover:bg-surface-muted"
+              }`}>
+              {WORK_BUCKET_LABEL[b]} ({counts[b]})
+            </button>
+          ))}
+        </div>
+        <div role="group" aria-label="Cách xem" className="flex items-center rounded-xl border border-border bg-surface p-1">
+          {(["kanban", "list"] as const).map((v) => (
+            <button key={v} type="button" aria-pressed={viewMode === v} onClick={() => setViewMode(v)}
+              className={`rounded-lg px-3 py-1 text-caption font-bold transition-colors ${viewMode === v ? "bg-primary text-white" : "text-text-muted hover:text-foreground"}`}>
+              {v === "kanban" ? "Kanban" : "Danh sách thẻ"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {work.error ? (
@@ -88,6 +100,8 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
         <p className="rounded-2xl border border-dashed border-border p-8 text-center text-body-sm text-text-muted">
           {bucket ? "Không có khách nào trong mục này." : "Chưa có khách nào đang theo dõi. Tạo Thẻ Chào Mới để gửi khách."}
         </p>
+      ) : viewMode === "kanban" ? (
+        <SalesKanbanView items={shown} now={now} onOpenNotes={openNotes} showSale={scope === "ALL" && canSeeAll} doneHidden={bucket === null} />
       ) : (
         <div className="flex flex-col gap-3">
           {shown.map((item) => <WorkItemCard key={item.id} item={item} me="SALE" now={now} onOpenNotes={openNotes} />)}

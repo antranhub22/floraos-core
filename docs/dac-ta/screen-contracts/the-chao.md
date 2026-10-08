@@ -30,6 +30,7 @@
 - Xin giảm giá (ô soạn tin → "Xin giảm giá", chỉ đơn đã đặt): % hoặc số tiền + lý do → Điều hành duyệt ngay trong Hộp việc hoặc trong trao đổi: Duyệt như xin / Duyệt mức khác / Không duyệt (bắt buộc ghi chú); trần do Điều hành đặt trong Cài đặt, mặc định 25%
 
 - **Sao chép link** (mọi nơi có nút Sao chép): link luôn mang tên người bấm — link riêng ghi mốc gửi; link bộ sưu tập tạo `/s/<mã>` riêng. Không hiện đường link gốc để chép tay (xem trước chỉ trong khung xem trước)
+- Bán hàng (Sale) có 2 cách xem trên cùng tập khách/đơn của quy trình theo dõi (08/10/2026, như Điều phối): **Kanban** (mặc định — 9 cột, mỗi bước 1→9 một cột riêng, ghi rõ ai phụ trách bước và số thẻ "cần bạn"; trong cột việc kẹt của Sale lên đầu; thẻ: khách, mã đơn/link, mẫu, giá trị, thời gian ở bước, cảnh báo kẹt, Gọi/Zalo/Nhắn tin) · **Danh sách thẻ** (thẻ đầy đủ có thanh 9 bước). Phạm vi "Khách của tôi/Tất cả khách" và lọc nhóm việc dùng chung cho cả hai; mặc định ẩn khách đã xong (cột Bước 9 nhắc bấm lọc "Xong")
 - Theo dõi tiến độ có 6 cách xem trên cùng một tập đơn/link (06/10/2026): **Kanban** (9 cột theo bước, mỗi cột có số lượng, thời gian ở bước TB/lâu nhất, số quá hạn/sắp hạn; 20 thẻ gấp nhất mỗi cột) · **Danh sách** (sắp xếp theo cột, chọn cột, tải thêm) · **Lịch** (theo ngày giao + khung giờ, tuần trước/sau) · **Timeline** (chọn một đơn → các bước đã qua so với thời gian chuẩn + sự kiện) · **Công việc** (chỉ đơn quá hạn/sắp quá hạn, gấp nhất lên đầu) · **Dashboard** (tổng hợp theo bước, thời gian ở bước, người phụ trách, còn phải thu; kèm link bộ sưu tập đã sao chép). Bộ lọc (tìm, nhóm bước, sale, thời gian chuẩn, loại, ngày giao) dùng chung và giữ nguyên khi đổi cách xem. View mẫu: Đơn của tôi, Đơn giao hôm nay, Đơn đang kẹt, Đơn quá thời gian chuẩn, Đơn cần xử lý; người dùng lưu thêm view riêng (lưu trên máy). Bấm một đơn ở view bất kỳ → Timeline của đơn đó
 
 ## 5. Content budget
@@ -51,7 +52,7 @@ không dùng
 nguồn sự thật: `greeting_messages`, `greeting_message_reads` (đã đọc lưu máy chủ — đồng bộ điện thoại/máy tính), quy trình theo dõi (`stepStartedAt`, `stuck`) · vai người gửi suy từ năng lực (F2 → Điều hành, R4/R5 → Điều phối, còn lại Sale), không do người dùng chọn · sale "chỉ khách của mình" không mở được trao đổi đơn người khác (404)
 
 ## 11. Component
-dùng lại: `FlowerImage`, `TrackingStepperView` · tạo mới: `inbox/sheet.tsx` (khung bảng trượt mobile-first dùng chung cho Hộp việc và trao đổi), `inbox/inbox-panel.tsx`, `inbox/message-thread.tsx`, `inbox/message-composer.tsx`, `work/work-status.tsx` — chưa có mẫu bảng trượt toàn màn hình trên điện thoại trong hệ thống
+dùng lại: `FlowerImage`, `TrackingStepperView` · tạo mới: `sales/sales-kanban-view.tsx` (Kanban 9 bước của Sale, nhóm bằng `groupSaleKanban` trong domain), `inbox/sheet.tsx` (khung bảng trượt mobile-first dùng chung cho Hộp việc và trao đổi), `inbox/inbox-panel.tsx`, `inbox/message-thread.tsx`, `inbox/message-composer.tsx`, `work/work-status.tsx` — chưa có mẫu bảng trượt toàn màn hình trên điện thoại trong hệ thống
 
 ## 12. Ma trận quyết định
 | Hiện tại | Mục tiêu | Quyết định | Lý do | Bằng chứng |
