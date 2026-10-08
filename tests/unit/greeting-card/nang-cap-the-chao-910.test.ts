@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { groupSaleKanban } from "@/modules/greeting-card/domain/sale-kanban"
 import { detectUserIntent, querySaasKnowledge } from "@/modules/chat-assistant/domain/saas-knowledge-base"
 import type { TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import type { StuckInfo } from "@/modules/greeting-card/domain/step-sla"
 
 describe("Nâng cấp Thẻ Chào Mẫu Hoa (Yêu cầu 9/10)", () => {
   it("groupSaleKanban: ưu tiên đơn có mốc thời gian giao hàng sớm hơn lên đầu cột", () => {
@@ -65,23 +66,37 @@ describe("Nâng cấp Thẻ Chào Mẫu Hoa (Yêu cầu 9/10)", () => {
   })
 
   it("groupSaleKanban: ưu tiên đơn stuck của Sale lên trước kể cả giờ giao sau", () => {
-    const itemNormalEarly = {
+    interface TestItem {
+      id: string
+      currentStepId: TrackingPipelineStepId
+      stepStartedAt: string
+      deliveryDate: string
+      deliveryTimeSlot: string
+      stuck: StuckInfo | null
+    }
+
+    const itemNormalEarly: TestItem = {
       id: "normal-early",
-      currentStepId: "STEP_4_PAYMENT_PENDING" as TrackingPipelineStepId,
+      currentStepId: "STEP_4_PAYMENT_PENDING",
       stepStartedAt: "2026-10-09T01:00:00Z",
       deliveryDate: "2026-10-09",
       deliveryTimeSlot: "08:00 - 10:00",
       stuck: null,
     }
-    const itemStuckLate = {
+    const itemStuckLate: TestItem = {
       id: "stuck-late",
-      currentStepId: "STEP_4_PAYMENT_PENDING" as TrackingPipelineStepId,
+      currentStepId: "STEP_4_PAYMENT_PENDING",
       stepStartedAt: "2026-10-09T01:00:00Z",
       deliveryDate: "2026-10-09",
       deliveryTimeSlot: "14:00 - 16:00",
-      stuck: { owner: "SALE" as const, reason: "Khách chưa thanh toán" },
+      stuck: {
+        stepId: "STEP_4_PAYMENT_PENDING",
+        owner: "SALE",
+        overdueMinutes: 10,
+        message: "Khách chưa thanh toán",
+      },
     }
-    const cols = groupSaleKanban([itemNormalEarly, itemStuckLate])
+    const cols = groupSaleKanban<TestItem>([itemNormalEarly, itemStuckLate])
     const paymentCol = cols.find((c) => c.step.id === "STEP_4_PAYMENT_PENDING")!
     expect(paymentCol.items.map((i) => i.id)).toEqual(["stuck-late", "normal-early"])
   })
