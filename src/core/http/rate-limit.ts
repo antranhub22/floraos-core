@@ -22,6 +22,8 @@ export interface RateLimitRule {
    * cần chặn dò theo một đối tượng (vd. một mã đơn) mà kẻ dò có thể đổi IP liên tục.
    */
   key?: "ip" | "global"
+  /** Đếm theo một khoá riêng (vd. email đăng nhập — băm trước khi lưu) thay cho IP. */
+  subject?: string
 }
 
 const INCR_WITH_TTL = `
@@ -53,9 +55,11 @@ export function clientIp(request: Request, hops = trustedHops()): string {
 }
 
 function bucketKey(rule: RateLimitRule, request: Request, now: number): string {
-  const subject = rule.key === "global"
-    ? "all"
-    : createHash("sha256").update(clientIp(request)).digest("hex").slice(0, 24)
+  const subject = rule.subject !== undefined
+    ? createHash("sha256").update(`s:${rule.subject}`).digest("hex").slice(0, 24)
+    : rule.key === "global"
+      ? "all"
+      : createHash("sha256").update(clientIp(request)).digest("hex").slice(0, 24)
   return `rl:${rule.scope}:${subject}:${Math.floor(now / rule.windowMs)}`
 }
 

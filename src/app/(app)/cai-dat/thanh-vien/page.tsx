@@ -19,13 +19,15 @@ import { useSession } from "@/lib/session"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
-import { InviteMemberDialog, type RoleOption, type BranchOption } from "./_components/invite-member-dialog"
+import { type RoleOption, type BranchOption } from "./_components/invite-member-dialog"
+import { AddStaffDialog } from "./_components/add-staff-dialog"
 import { ChangeRoleDialog } from "./_components/change-role-dialog"
 import { MemberTable, type MemberListItem } from "./_components/member-table"
 
 export default function QuanLyThanhVienPage() {
   const { can } = useSession()
-  const canInvite = can("F3")
+  // PO 08/10/2026: Điều hành tạo tài khoản dùng được ngay (A3) thay cho lời mời chưa có bước nhận
+  const canInvite = can("A3")
   const canRemove = can("F4")
   const canManageRole = can("F5")
 
@@ -35,6 +37,7 @@ export default function QuanLyThanhVienPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   const [inviteOpen, setInviteOpen] = useState(false)
   const [changeRoleTarget, setChangeRoleTarget] = useState<{
@@ -49,11 +52,14 @@ export default function QuanLyThanhVienPage() {
     setLoading(true)
     setError(null)
     try {
-      const [membersRes, rolesRes, branchesRes] = await Promise.all([
+      const [membersRes, rolesRes, branchesRes, meRes] = await Promise.all([
         fetch("/api/v1/members"),
         fetch("/api/v1/roles"),
         fetch("/api/v1/branches").catch(() => null),
+        fetch("/api/v1/auth/me").catch(() => null),
       ])
+      // Ẩn "Đặt lại mật khẩu / Tạm khoá" trên chính dòng của mình (máy chủ cũng chặn)
+      if (meRes?.ok) setCurrentUserId(((await meRes.json()) as { user?: { id?: string } }).user?.id ?? null)
 
       if (!membersRes.ok) throw new Error("Không thể tải danh sách thành viên.")
       const membersData = await membersRes.json()
@@ -146,7 +152,7 @@ export default function QuanLyThanhVienPage() {
               onClick={() => setInviteOpen(true)}
             >
               <UserPlus size={16} />
-              <span>Mời Thành Viên</span>
+              <span>Thêm nhân viên</span>
             </Button>
           )}
         </div>
@@ -158,9 +164,9 @@ export default function QuanLyThanhVienPage() {
         badgeIcon={Shield}
         title="Nguyên Tắc Phân Quyền & Quản Lý Thành Viên Tiệm"
         titleIcon={Users}
-        description="Chủ tiệm và Người điều hành có quyền mời nhân sự mới qua email, bổ nhiệm vai trò tương ứng và chỉ định chi nhánh làm việc trong chuỗi cửa hàng."
+        description="Điều hành tạo tài khoản cho từng nhân viên (mỗi người một tài khoản), gán vai trò, đặt lại mật khẩu hoặc tạm khoá khi cần."
         tips={[
-          "⚡ Nhân viên mới nhận lời mời sẽ tự động có quyền theo vai trò được gán",
+          "⚡ Tài khoản mới dùng được ngay bằng mật khẩu tạm — nhắc nhân viên tự đổi mật khẩu sau lần vào đầu",
           "🔒 Quyền hạn được kiểm tra bảo mật ở cả giao diện lẫn máy chủ",
           "🏢 Với chuỗi tiệm, chọn chi nhánh để nhân viên chỉ thấy dữ liệu cửa hàng của họ",
         ]}
@@ -239,18 +245,16 @@ export default function QuanLyThanhVienPage() {
           loading={loading}
           searchQuery={searchQuery}
           canManageRole={canManageRole}
+          canResetPassword={can("A7")}
+          canToggleActive={can("A5")}
+          currentUserId={currentUserId}
+          onChanged={() => void fetchData()}
           onSelectMember={setChangeRoleTarget}
         />
       </div>
 
       {/* Modals */}
-      <InviteMemberDialog
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        roles={roles}
-        branches={branches}
-        onSuccess={() => void fetchData()}
-      />
+      <AddStaffDialog open={inviteOpen} onOpenChange={setInviteOpen} roles={roles} onSuccess={() => void fetchData()} />
 
       <ChangeRoleDialog
         open={changeRoleTarget !== null}

@@ -24,7 +24,7 @@ import { GET as timelineGet } from "@/app/api/v1/greeting-card/tracking/timeline
 const DELIVERY = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
 const ORDER = {
   customerName: "Khách Quen", customerPhone: "0987654321", recipientName: "Người Nhận", recipientPhone: "0912345678",
-  confirmedTerms: true,
+  confirmedTerms: true, selectedPromotionId: "promo-free-card", // ưu đãi tặng kèm — không đổi số tiền bài này kiểm
   deliveryDate: DELIVERY, deliveryTimeSlot: "08:00 - 10:00", deliveryAddress: "1 Lê Lợi, Q1",
 }
 const base = (view: TrackingQueryParams["view"]): TrackingQueryParams => ({ view, filter: {}, sort: { field: "urgency", dir: "desc" }, limit: 20 })

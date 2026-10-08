@@ -28,6 +28,7 @@
     "nap:danh-muc": "tsx --env-file-if-exists=.env scripts/nap-avi-gift-vao-core.ts",
     "nap:phan-tich": "tsx --env-file-if-exists=.env scripts/nap-avi-gift-phan-tich.ts",
     "nap:credit": "tsx --env-file-if-exists=.env scripts/nap-credit.ts",
+    "khoa:tai-khoan-mau": "tsx --env-file-if-exists=.env scripts/khoa-tai-khoan-mau.ts",
     "doi-chieu": "tsx --env-file-if-exists=.env scripts/doi-chieu-avi-gift.ts",
     "hoan-credit": "tsx --env-file-if-exists=.env scripts/hoan-credit.ts",
     "mat-khau": "tsx --env-file-if-exists=.env scripts/dat-lai-mat-khau.ts",

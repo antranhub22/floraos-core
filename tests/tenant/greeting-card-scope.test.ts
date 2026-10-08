@@ -26,7 +26,7 @@ import { cancelOrder } from "@/modules/orders/use-cases/cancel-order"
 
 const ORDER = {
   customerName: "Khách Quen", customerPhone: "0987654321", recipientName: "Người Nhận", recipientPhone: "0912345678",
-  confirmedTerms: true,
+  confirmedTerms: true, selectedPromotionId: "promo-free-card", // ưu đãi tặng kèm — không đổi số tiền bài này kiểm
   deliveryDate: new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10), deliveryAddress: "1 Lê Lợi, Q1",
 }
 

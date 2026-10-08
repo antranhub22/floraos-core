@@ -22,7 +22,7 @@ import { PATCH as roleCapsPatch } from "@/app/api/v1/roles/[id]/capabilities/rou
 const DELIVERY = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
 const ORDER = {
   customerName: "Khách Quen", customerPhone: "0987654321", recipientName: "Người Nhận", recipientPhone: "0912345678",
-  confirmedTerms: true, deliveryDate: DELIVERY, deliveryTimeSlot: "08:00 - 10:00", deliveryAddress: "1 Lê Lợi, Q1",
+  confirmedTerms: true, selectedPromotionId: "promo-free-card", deliveryDate: DELIVERY, deliveryTimeSlot: "08:00 - 10:00", deliveryAddress: "1 Lê Lợi, Q1", // ưu đãi tặng kèm — không đổi số tiền bài này kiểm
 }
 const params = (id: string) => ({ params: Promise.resolve({ id }) })
 const url = (path: string) => `http://localhost/api/v1${path}`

@@ -18,6 +18,7 @@ import { CoordinatorBrochureTab } from "@/components/greeting-card/coordinator/c
 import { BrochureOrderTrackingTab } from "@/components/greeting-card/tracking/brochure-order-tracking-tab"
 import { InboxButton } from "@/components/greeting-card/inbox/inbox-button"
 import { BrochureUserGuideModal } from "@/components/greeting-card/brochure-user-guide-modal"
+import { ShopProfileReadiness } from "@/components/greeting-card/shop-profile-readiness"
 import type { InboxTarget } from "@/components/greeting-card/inbox/inbox-panel"
 
 type ActiveTab = "sales" | "payment" | "catalog" | "coordinator" | "tracking"
@@ -143,6 +144,8 @@ export default function TheChaoPage() {
           </button>
         </div>
       </header>
+
+      <ShopProfileReadiness />
 
       {viewMode === "wizard" ? (
         <JourneyWizard

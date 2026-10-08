@@ -44,7 +44,7 @@ describe("greeting-card bank sync (SePay)", () => {
     await selectBrochureProduct(link.sendCode, product.id)
     return submitBrochureOrder(link.sendCode, {
       customerName: "K", customerPhone: "0987654321", recipientName: "N", recipientPhone: "0912345678",
-      confirmedTerms: true,
+      confirmedTerms: true, selectedPromotionId: "promo-free-card", // ưu đãi tặng kèm — không đổi số tiền bài này kiểm
       deliveryDate: inTenDays(), deliveryAddress: "12 Lê Lợi, Q1",
     })
   }

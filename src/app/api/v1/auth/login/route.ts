@@ -3,6 +3,8 @@ import { z } from "zod"
 import { serializeSessionCookie, serializeSsoCookie } from "@/core/http/cookies"
 import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
+import { enforceRateLimit } from "@/core/http/rate-limit"
+import { normalizeEmail } from "@/modules/organization/domain/credentials"
 import { SESSION_TTL_SECONDS } from "@/modules/organization/domain/session-policy"
 import { logIn } from "@/modules/organization/use-cases/log-in"
 import { ssoClaimsFor, SSO_TOKEN_TTL_SECONDS } from "@/modules/sso/domain/sso-claims"
@@ -16,6 +18,11 @@ const schema = z.object({
 export const POST = handle(async (request) => {
   const parsed = schema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
+
+  // Chặn dò mật khẩu (PO 08/10/2026): theo email (10 lần/15 phút) và theo IP (40 lần/15 phút —
+  // cả tiệm dùng chung wifi vẫn đủ cho mọi người đăng nhập đầu ca)
+  await enforceRateLimit(request, { scope: "login-ip", limit: 40, windowMs: 15 * 60_000 })
+  await enforceRateLimit(request, { scope: "login-email", limit: 10, windowMs: 15 * 60_000, subject: normalizeEmail(parsed.data.email) })
 
   const result = await logIn(parsed.data)
 

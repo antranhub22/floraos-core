@@ -49,12 +49,13 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
 | POST | `/auth/signup` | — | Tạo người dùng và tổ chức trải nghiệm |
-| POST | `/auth/login` | — | |
+| POST | `/auth/login` | — | Chặn dò mật khẩu: 10 lần/15 phút mỗi email, 40 lần/15 phút mỗi IP → 429 (08/10/2026) |
 | POST | `/auth/logout` | — | |
 | GET | `/auth/me` | — | Người dùng, tổ chức hiện tại, danh sách năng lực đã tính |
 | GET | `/auth/session-status` | — | Kiểm nhanh phiên còn sống; giao diện hỏi mỗi 15 giây và khi quay lại tab |
 | GET | `/organizations` | — | Các tổ chức người dùng là thành viên |
 | POST | `/session/organization` | — | Đổi tổ chức đang hoạt động |
+| POST | `/session/password` | `A2` | Tự đổi mật khẩu `{ current_password, new_password }` (≥ 10 ký tự, khác mật khẩu cũ); sai mật khẩu hiện tại → 400; giữ phiên đang dùng, đăng xuất các máy khác; ghi audit (08/10/2026) |
 | GET | `/organizations/current` | `F1` | |
 | PATCH | `/organizations/current` | `F2` | |
 
@@ -78,8 +79,11 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 | Method | Path | Năng lực |
 |---|---|---|
 | GET | `/members` | `F1` |
+| POST | `/members` | `A3` |
 | POST | `/members/invite` | `F3` |
 | DELETE | `/members/:id` | `F4` |
+| POST | `/members/:id/reset-password` | `A7` |
+| PATCH | `/members/:id/status` | `A5` |
 | PATCH | `/members/:id/role` | `F5` |
 | GET | `/roles` | `F1` |
 | POST | `/roles` | `F5` |
@@ -89,6 +93,8 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 | PATCH | `/branches/:id` | `F7` |
 | GET | `/workspaces` | `F1` |
 | POST | `/workspaces` | `F8` |
+
+**Tài khoản nhân viên (PO 08/10/2026).** `POST /members` `{ name, email, role_id, branch_id? }` tạo người dùng + thành viên **đang hoạt động** trong một giao dịch, trả `temporaryPassword` (12 ký tự, hiện một lần, `Cache-Control: no-store`); email đã có tài khoản FloraOS → 409 (không chiếm tài khoản người khác — dùng `/members/invite`). `POST /members/:id/reset-password` cấp mật khẩu tạm mới và đăng xuất người đó ở mọi máy; người đó còn là thành viên tiệm khác → 409; chính mình → 422. `PATCH /members/:id/status` `{ active }` tạm khoá (`SUSPENDED`, thu hồi ngay phiên ở tiệm này, giữ dữ liệu) hoặc mở lại. `A3`/`A5`/`A7` trần cứng Điều hành; thành viên tiệm khác → 404; mọi thao tác ghi `audit_logs` (không ghi mật khẩu).
 
 `PATCH /roles/:id/capabilities` ghi vào `capability_overrides`. Yêu cầu bật một mã bị trần cứng chặn trả 403 `CAPABILITY_DENIED` và **không** ghi gì — trần cứng cắt sau bảng công tắc.
 

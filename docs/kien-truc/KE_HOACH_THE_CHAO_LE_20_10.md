@@ -1,7 +1,7 @@
 # Thẻ chào mẫu hoa — Kế hoạch thực thi cho ngày 20/10/2026
 
 **Ngày lập:** 08/10/2026 · **Đầu vào:** báo cáo kiểm tra [`KIEM_TRA_THE_CHAO_LE_20_10.md`](KIEM_TRA_THE_CHAO_LE_20_10.md) và câu trả lời của PO ngày 08/10.
-**Trạng thái:** CHỜ PO DUYỆT. Chưa sửa mã.
+**Trạng thái:** PO duyệt 08/10/2026. **Đợt 1 đã làm xong trên nhánh** (xem mục 0) — chờ gộp vào `main` để lên máy chủ thật.
 **Mốc thời gian:**
 - Mã cuối cùng lên máy chủ thật: **15/10**.
 - **Đóng băng 16/10 → 21/10.**
@@ -9,13 +9,25 @@
 
 ---
 
+## 0. Tiến độ Đợt 1 (08/10/2026)
+
+| Hạng mục | Kết quả | Bằng chứng |
+|---|---|---|
+| A. Tài khoản nhân viên | Xong: "Thêm nhân viên" + mật khẩu tạm, đặt lại mật khẩu, tạm khoá/mở, tự đổi mật khẩu, chặn dò mật khẩu đăng nhập, nhật ký | tenant `staff-accounts` 7/7 |
+| B. Tiệm sạch | Xong: `render.yaml` `SEED_DEV_DATA="false"`; tiệm đăng ký mới hồ sơ trống; chặn gửi link khi hồ sơ còn mẫu Mộc Lan; thẻ nhắc hoàn tất hồ sơ; script `npm run khoa:tai-khoan-mau` | tenant `greeting-card-shop-ready` |
+| C. Chỉ Điều hành xác nhận tiền | Xong: `R11` trần cứng | tenant `greeting-card-transfer-confirm` 3/3 |
+| D. Ưu đãi tính tiền thật | Xong: 3 ưu đãi theo Q3, miễn phí giao mọi đơn, ẩn mã giảm giá | tenant `greeting-card-promotion-slot`, unit `promotion-and-slot-capacity` |
+| E. Trần đơn mỗi khung giờ | Xong: mặc định 100, chỉnh từng khung, khoá chống tranh suất | tenant `greeting-card-promotion-slot` (10 khách tranh 3 suất → đúng 3 đơn) |
+
+Lưu ý hành vi: trang khách **chọn sẵn ưu đãi đầu tiên** ("Giảm 10%"), khách đổi được; đơn không chọn khung giờ ("Trong ngày") không tính vào trần khung nào.
+
 ## 1. Quyết định của PO ngày 08/10 (thay mọi quyết định cũ trái với nó)
 
 | # | Quyết định | Thay thế quyết định cũ |
 |---|---|---|
 | Q1 | Điều hành tự tạo tài khoản cho Sale và Điều phối ngay trong ứng dụng | — |
 | Q2 | "Tiệm Hoa Mộc Lan" chỉ là dữ liệu mẫu. Máy chủ thật phải sạch: tiệm mới không mang dữ liệu mẫu | — |
-| Q3 | Ưu đãi 20/10 gồm: **Giảm 10%** · **Miễn phí ship + tặng thiệp** · **Thêm phụ liệu cho bó hoa đẹp hơn** | 9 ưu đãi mẫu tự hiện |
+| Q3 | Ưu đãi 20/10 (khách chọn tối đa 01): **Giảm 10% trên tổng đơn** · **Tặng thiệp** · **Thêm phụ liệu cho bó hoa đẹp hơn**. **Miễn phí giao cho TẤT CẢ đơn** (công tắc của tiệm, không phải ưu đãi). **Ẩn mã giảm giá** (chưa dùng) | 9 ưu đãi mẫu tự hiện |
 | Q4 | **Chỉ Điều hành** được xác nhận tiền (vì Điều hành giữ tài khoản ngân hàng). Đây là quyết định duy nhất | **Bỏ** quyết định 06/10 "giữ R9 cho Sale/Điều phối" |
 | Q5 | Zalo OA / tin nhắn: chưa dùng. Chỉ chuẩn bị sẵn, làm sau lễ | — |
 | Q6 | Giới hạn số đơn cho từng khung giờ, chỉnh trong Cài đặt, **mặc định 100 đơn/khung** | — |
