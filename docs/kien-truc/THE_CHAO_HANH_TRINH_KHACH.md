@@ -85,6 +85,13 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 - Khách thấy trên trang theo dõi: bước "Giao hoa chưa thành công", lý do (ghi chú của shipper chỉ khi đã xác minh), phí giao lại nếu có, và được **đổi giờ / địa chỉ / người nhận** qua "Thay đổi thông tin đơn" dù hoa đã cắm xong — trừ lời nhắn thiệp (thiệp đã in). Tin SMS/Zalo mốc `DELIVERY_FAILED` (tiệm bật thông báo; ZNS cần đăng ký mẫu cho mốc này).
 - Chưa có: "mang về tiệm chờ khách đến nhận"; tin nhắn mỗi mốc chỉ gửi **một lần cho mỗi đơn**, nên lần giao hỏng thứ hai và lần giao lại không gửi tin mới (khách xem trên trang theo dõi).
 
+## 4e. Quy định ngày lễ (08/10/2026)
+
+- Điều hành khai trong **Cài đặt Thẻ chào → Ngày lễ** (`organizations.settings.brochure_holidays.days`): tên, ngày (lặp hằng năm `MM-DD` — có nút thêm nhanh 14/02, 08/03, 20/10, 20/11, 24/12 — hoặc ngày cụ thể `YYYY-MM-DD` cho Tết âm lịch), giờ chốt nhận đơn giao trong ngày, số đơn tối đa (mặc định **500**), phụ phí.
+- **Áp cả tiệm** (PO chốt): giờ chốt ngày lễ thay giờ chốt thường; ngày lễ đã đủ số đơn tối đa (đếm mọi đơn chưa huỷ giao ngày đó) → form đặt hoa và yêu cầu dời ngày đều bị từ chối "cửa hàng đã nhận đủ đơn". Hai đơn gửi đúng cùng lúc có thể vượt trần một vài đơn (không khoá).
+- **Phụ phí theo bộ sưu tập**: chỉ cộng khi bộ sưu tập bật "Áp dụng phụ phí ngày lễ" (Chính sách & Cam kết của bộ sưu tập → `filters.appliedPolicies.applyHolidaySurcharge`). Báo giá gửi kèm ngày giao; dòng "Phụ phí ngày lễ (tên)" hiện ở form, bước xem lại và khi Điều hành đối chiếu thanh toán. Khách dời sang ngày lễ có phụ phí → cộng phần tăng khi duyệt; dời khỏi ngày lễ → giữ nguyên tổng.
+- Chưa có: ô chọn khung giờ trên form khách chưa ẩn sẵn khung đã qua giờ chốt ngày lễ (máy chủ vẫn chặn và báo lỗi); bật phụ phí ngay trong hộp thoại tạo bộ sưu tập (hiện bật ở phần chính sách của bộ sưu tập sau khi tạo).
+
 ## 5. Chưa làm (đợt C — cần PO duyệt đổi schema)
 
 - Phân biệt "Tạm hết" và "Hết hẳn"; lựa chọn "Cho phép thay thế tương đương" khi đặt.
@@ -93,4 +100,4 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 
 ## 6. Mã nguồn
 
-`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events,delivery-note,order-change-request,delivery-failure}.ts` · `use-cases/order-change.ts` · `infra/{order-change-repository,delivery-failure-repository}.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`
+`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events,delivery-note,order-change-request,delivery-failure,holiday-policy}.ts` · `use-cases/order-change.ts` · `infra/{order-change-repository,delivery-failure-repository}.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`

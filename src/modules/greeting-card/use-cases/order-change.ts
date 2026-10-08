@@ -8,6 +8,7 @@ import {
   cardMessageLocked,
   changeLockReason,
   changesForCustomer,
+  holidaySurchargeDelta,
   shippingFeeDelta,
   snapshotFromOrder,
   type ChangeItem,
@@ -18,6 +19,8 @@ import {
 import type { InboxAction, PipelineLike } from "../domain/inbox"
 import { OrderChangeRepository } from "../infra/order-change-repository"
 import { isBrochureOwner } from "./brochure-owner"
+import { holidayOn, holidaySurcharge, parseHolidayPolicy } from "../domain/holiday-policy"
+import { assertHolidayCapacity } from "./holiday-capacity"
 
 /** Cách khách chứng minh là người đặt: mở từ chính link của đơn (cookie chủ phiên) hoặc 4 số cuối SĐT. */
 export interface ChangeProof {
@@ -54,18 +57,24 @@ export async function submitOrderChange(
 
   const shipping = parseShippingConfig(order.organization.settings)
   const before = snapshotFromOrder(order)
-  const built = buildOrderChange(before, input, shipping, now, { cardLocked: cardMessageLocked({ productionStatus: order.production_status }) })
+  const holidays = parseHolidayPolicy(order.organization.settings)
+  const built = buildOrderChange(before, input, shipping, now, { cardLocked: cardMessageLocked({ productionStatus: order.production_status }), holidays })
   if (!built.ok) throw validationFailed(built.errors)
+  const dateChanged = built.after.deliveryDate !== before.deliveryDate
+  if (dateChanged) await assertHolidayCapacity(order.organization_id, built.after.deliveryDate, order.organization.settings, { excludeOrderId: order.id })
 
   const ref = obj(order.pricing_rule_ref)
   const zoneFee = built.after.shippingZoneId !== before.shippingZoneId
     ? shipping.zones.find((z) => z.id === built.after.shippingZoneId)?.feeVnd ?? null
     : null
+  const surcharge = dateChanged && ref.awaitingQuote !== true
+    ? holidaySurcharge(holidayOn(built.after.deliveryDate, holidays), order.greeting_sessions[0]?.catalog?.filters)
+    : null
   const expectedFeeDeltaVnd = shippingFeeDelta(
     { awaitingQuote: ref.awaitingQuote === true, subtotalVnd: num(ref.subtotalVnd), discountVnd: num(ref.discountVnd), shippingFeeVnd: num(ref.shippingFeeVnd) },
     zoneFee,
     shipping,
-  )
+  ) + (surcharge ? holidaySurchargeDelta(ref, surcharge.vnd) : 0)
   const payload: OrderChangePayload = {
     status: "PENDING", before, after: built.after, changes: built.changes, note: built.note,
     requestedAt: now.toISOString(), ...(expectedFeeDeltaVnd > 0 ? { expectedFeeDeltaVnd } : {}),
@@ -116,8 +125,16 @@ export async function decideOrderChange(
 ) {
   const note = input.note.trim()
   if (!input.approve && note.length < 3) throw validationFailed({ note: "Ghi lý do không đổi để khách biết (ít nhất 3 ký tự)" })
-  const shipping = parseShippingConfig((await getCurrentOrganization(ctx))?.settings)
-  return repo.decide(ctx, { requestId: input.requestId, approve: input.approve, note, shipping })
+  const settings = (await getCurrentOrganization(ctx))?.settings
+  if (input.approve) {
+    // Dời sang ngày lễ đã đủ đơn → không duyệt được (kiểm lại lúc duyệt, ngày có thể vừa đầy)
+    const pending = (await repo.listPending(ctx)).find((r) => r.id === input.requestId)
+    const p = pending?.payload as unknown as OrderChangePayload | undefined
+    if (pending?.order_id && p && p.after.deliveryDate !== p.before.deliveryDate) {
+      await assertHolidayCapacity(ctx.organizationId, p.after.deliveryDate, settings, { excludeOrderId: pending.order_id })
+    }
+  }
+  return repo.decide(ctx, { requestId: input.requestId, approve: input.approve, note, shipping: parseShippingConfig(settings), holidays: parseHolidayPolicy(settings) })
 }
 
 /** Việc "Khách xin đổi thông tin" trong Hộp việc — cho người có quyền sửa đơn. */

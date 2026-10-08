@@ -55,6 +55,8 @@ export const publicQuoteBodySchema = z.object({
   shippingZoneId: z.string().max(40).optional(),
   voucherCode: z.string().trim().max(40).optional(),
   customerPhone: z.string().max(20).optional(),
+  /** Ngày giao — để báo phụ phí ngày lễ */
+  deliveryDate: z.string().max(10).optional(),
 })
 
 export function issuesToDetails(issues: z.core.$ZodIssue[]): Record<string, string> {

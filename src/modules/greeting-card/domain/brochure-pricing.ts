@@ -141,6 +141,8 @@ export interface QuoteInput {
   zone: ShippingZone | null
   shipping: ShippingConfig
   voucher: VoucherFacts | null
+  /** Phụ phí ngày lễ (bộ sưu tập bật áp dụng + ngày giao là ngày lễ có phụ phí) */
+  surcharge?: { vnd: number; name: string } | null | undefined
 }
 
 export interface BrochureQuote {
@@ -154,6 +156,9 @@ export interface BrochureQuote {
   voucherCode: string | null
   /** Mẫu chưa niêm yết giá: đơn được nhận với tổng 0, cửa hàng báo giá sau. */
   awaitingQuote?: boolean
+  /** Phụ phí ngày lễ đã cộng vào tổng (không bị mã giảm giá trừ). */
+  holidaySurchargeVnd?: number
+  holidayName?: string
 }
 
 export function computeQuote(input: QuoteInput): BrochureQuote {
@@ -163,15 +168,17 @@ export function computeQuote(input: QuoteInput): BrochureQuote {
   const afterDiscount = subtotalVnd - discountVnd
   const free = input.shipping.freeShippingOverVnd !== null && afterDiscount >= input.shipping.freeShippingOverVnd
   const shippingFeeVnd = input.zone && !free ? input.zone.feeVnd : 0
+  const surchargeVnd = input.surcharge && input.surcharge.vnd > 0 ? input.surcharge.vnd : 0
   return {
     unitPriceVnd: input.unitPriceVnd,
     quantity,
     subtotalVnd,
     discountVnd,
     shippingFeeVnd,
-    totalVnd: afterDiscount + shippingFeeVnd,
+    totalVnd: afterDiscount + shippingFeeVnd + surchargeVnd,
     shippingZone: input.zone ? { id: input.zone.id, name: input.zone.name } : null,
     voucherCode: input.voucher?.code ?? null,
+    ...(surchargeVnd > 0 && input.surcharge ? { holidaySurchargeVnd: surchargeVnd, holidayName: input.surcharge.name } : {}),
   }
 }
 

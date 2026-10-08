@@ -10,6 +10,7 @@ import {
 } from "../domain/brochure-pricing"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
 import { BrochureCheckoutRepository } from "../infra/brochure-checkout-repository"
+import { holidayOn, holidaySurcharge, parseHolidayPolicy } from "../domain/holiday-policy"
 
 export interface QuoteRequest {
   variantId?: string | undefined
@@ -17,6 +18,8 @@ export interface QuoteRequest {
   shippingZoneId?: string | undefined
   voucherCode?: string | undefined
   customerPhone?: string | undefined
+  /** Ngày giao `YYYY-MM-DD` — để tính phụ phí ngày lễ (nếu bộ sưu tập bật) */
+  deliveryDate?: string | undefined
 }
 
 export interface QuoteResult {
@@ -36,7 +39,9 @@ export async function quoteForProduct(
   product: GreetingCatalogProduct,
   req: QuoteRequest,
   shopSettings: unknown,
-  checkout = new BrochureCheckoutRepository()
+  checkout = new BrochureCheckoutRepository(),
+  /** `catalog.filters` của bộ sưu tập khách đang đặt — quyết định có phụ phí ngày lễ không */
+  catalogFilters?: unknown,
 ): Promise<QuoteResult> {
   const errors: Record<string, string> = {}
 
@@ -75,5 +80,7 @@ export async function quoteForProduct(
     }
   }
 
-  return { quote: computeQuote({ unitPriceVnd, quantity, zone, shipping, voucher }), variant, voucher, errors }
+  const holiday = req.deliveryDate ? holidayOn(req.deliveryDate.trim(), parseHolidayPolicy(shopSettings)) : null
+  const surcharge = holidaySurcharge(holiday, catalogFilters)
+  return { quote: computeQuote({ unitPriceVnd, quantity, zone, shipping, voucher, surcharge }), variant, voucher, errors }
 }

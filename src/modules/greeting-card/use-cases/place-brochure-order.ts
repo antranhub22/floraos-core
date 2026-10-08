@@ -63,7 +63,8 @@ export async function placeBrochureOrder(
     product,
     { ...input, customerPhone },
     params.shopSettings,
-    checkout
+    checkout,
+    params.catalogFilters,
   )
   if (Object.keys(priced.errors).length > 0) throw validationFailed(priced.errors)
   const policies = resolveOrderPolicies(resolveAppliedPolicies(params.catalogFilters, params.shopSettings), input)

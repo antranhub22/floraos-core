@@ -62,6 +62,7 @@ export function OrderReview(props: {
         {quote?.shippingZone && (
           <Row label={`Phí giao (${quote.shippingZone.name})`} value={quote.shippingFeeVnd > 0 ? vnd(quote.shippingFeeVnd) : "Miễn phí"} />
         )}
+        {quote?.holidaySurchargeVnd ? <Row label={`Phụ phí ngày lễ (${quote.holidayName ?? ""})`} value={`+ ${vnd(quote.holidaySurchargeVnd)}`} /> : null}
         <Row label="Tổng thanh toán" value={awaitingQuote ? "Cửa hàng báo giá sau" : vnd(quote?.totalVnd ?? product.price)} strong />
       </dl>
 

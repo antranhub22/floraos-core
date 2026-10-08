@@ -11,6 +11,7 @@ import { composeAddress, validateAddressParts, type AddressParts } from "./deliv
 import { deliveryNoteErrors, normalizeMapUrl } from "./delivery-note"
 import { deliveryScheduleError } from "./delivery-schedule"
 import type { ShippingConfig } from "./brochure-pricing"
+import { holidayOn, scheduleForDate, type HolidayDay } from "./holiday-policy"
 
 export const CHANGE_NOTE_MAX = 500
 export type ChangeStatus = "PENDING" | "APPROVED" | "REJECTED"
@@ -130,7 +131,7 @@ export function buildOrderChange(
   input: OrderChangeInput,
   shipping: ShippingConfig,
   now: Date = new Date(),
-  options: { cardLocked?: boolean | undefined } = {},
+  options: { cardLocked?: boolean | undefined; holidays?: readonly HolidayDay[] | undefined } = {},
 ): ChangeBuildResult {
   const errors: Record<string, string> = {}
   const after: OrderChangeSnapshot = { ...before }
@@ -140,7 +141,9 @@ export function buildOrderChange(
     after.deliveryTimeSlot = (input.deliveryTimeSlot ?? before.deliveryTimeSlot).trim()
     if (after.deliveryDate !== before.deliveryDate || after.deliveryTimeSlot !== before.deliveryTimeSlot) {
       const err = validateDeliveryDate(after.deliveryDate, now)
-        ?? (after.deliveryTimeSlot ? deliveryScheduleError(after.deliveryDate, after.deliveryTimeSlot, shipping, now) : "Vui lòng chọn khung giờ giao hoa")
+        ?? (after.deliveryTimeSlot
+          ? deliveryScheduleError(after.deliveryDate, after.deliveryTimeSlot, scheduleForDate(shipping, holidayOn(after.deliveryDate, options.holidays ?? [])), now)
+          : "Vui lòng chọn khung giờ giao hoa")
       if (err) errors.deliveryDate = err
     }
   }
@@ -255,4 +258,10 @@ export function orderColumnsFromSnapshot(currentAddress: unknown, s: OrderChange
 export function changesForCustomer(changes: ChangeItem[]): ChangeItem[] {
   const mask = (p: string) => (p.replace(/\D/g, "").length >= 3 ? `••• ${p.replace(/\D/g, "").slice(-3)}` : "•••")
   return changes.map((c) => (c.field === "recipientPhone" ? { ...c, before: mask(c.before), after: mask(c.after) } : c))
+}
+
+/** Phụ phí ngày lễ cộng thêm khi khách dời ngày giao: chỉ phần TĂNG so với phụ phí đã tính (giảm thì giữ nguyên tổng). */
+export function holidaySurchargeDelta(pricingRef: unknown, newSurchargeVnd: number): number {
+  const prev = rec(pricingRef).holidaySurchargeVnd
+  return Math.max(0, newSurchargeVnd - (typeof prev === "number" && prev > 0 ? prev : 0))
 }

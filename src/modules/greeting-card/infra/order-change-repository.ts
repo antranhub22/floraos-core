@@ -6,9 +6,11 @@ import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import type { ShippingConfig } from "../domain/brochure-pricing"
 import { deliveryScheduleError } from "../domain/delivery-schedule"
+import { holidayOn, holidaySurcharge, scheduleForDate, type HolidayDay } from "../domain/holiday-policy"
 import {
   cardMessageLocked,
   changeLockReason,
+  holidaySurchargeDelta,
   orderColumnsFromSnapshot,
   shippingFeeDelta,
   type OrderChangePayload,
@@ -42,7 +44,7 @@ export class OrderChangeRepository {
       select: {
         ...ORDER_SELECT,
         customer: { select: { phone: true } },
-        greeting_sessions: { select: { send_code: true, sale_id: true }, take: 5 },
+        greeting_sessions: { select: { send_code: true, sale_id: true, catalog: { select: { filters: true } } }, take: 5 },
         organization: { select: { settings: true } },
       },
       take: 2,
@@ -94,7 +96,9 @@ export class OrderChangeRepository {
    * Duyệt/từ chối một lần, nguyên tử. Duyệt: đơn phải còn chưa cắm hoa, giờ giao mới còn kịp,
    * tổng đơn chưa đổi từ lúc đọc; phí giao tăng thì cộng phần chênh vào tổng (giảm thì giữ nguyên).
    */
-  async decide(ctx: TenantContext, input: { requestId: string; approve: boolean; note: string; shipping: ShippingConfig; now?: Date | undefined }) {
+  async decide(ctx: TenantContext, input: {
+    requestId: string; approve: boolean; note: string; shipping: ShippingConfig; holidays: readonly HolidayDay[]; now?: Date | undefined
+  }) {
     const now = input.now ?? new Date()
     return this.db.$transaction(async (tx) => {
       const req = await tx.greeting_messages.findFirst({
@@ -106,7 +110,7 @@ export class OrderChangeRepository {
       if (payload.status !== "PENDING") throw conflict("Yêu cầu này đã được xử lý")
       const order = await tx.orders.findFirst({
         where: scopedWhere(ctx, { id: req.order_id, source: "BROCHURE" }),
-        select: { ...ORDER_SELECT, greeting_sessions: { select: { sale_id: true }, take: 1 } },
+        select: { ...ORDER_SELECT, greeting_sessions: { select: { sale_id: true, catalog: { select: { filters: true } } }, take: 1 } },
       })
       if (!order) throw notFound()
 
@@ -119,28 +123,39 @@ export class OrderChangeRepository {
         if (after.cardMessage !== before.cardMessage && cardMessageLocked({ productionStatus: order.production_status })) {
           throw conflict("Thiệp đã in kèm hoa nên không đổi lời nhắn được nữa — vui lòng từ chối và báo khách")
         }
-        if (after.deliveryDate !== before.deliveryDate || after.deliveryTimeSlot !== before.deliveryTimeSlot) {
-          const err = deliveryScheduleError(after.deliveryDate, after.deliveryTimeSlot, input.shipping, now)
+        const dateChanged = after.deliveryDate !== before.deliveryDate
+        if (dateChanged || after.deliveryTimeSlot !== before.deliveryTimeSlot) {
+          const holiday = holidayOn(after.deliveryDate, input.holidays)
+          const err = deliveryScheduleError(after.deliveryDate, after.deliveryTimeSlot, scheduleForDate(input.shipping, holiday), now)
           if (err) throw conflict(`Giờ giao khách xin đổi không còn kịp: ${err}`)
         }
         const ref = obj(order.pricing_rule_ref)
+        // Dời sang ngày lễ có phụ phí (bộ sưu tập bật áp dụng): cộng phần tăng; đơn chờ báo giá không tính
+        const surcharge = dateChanged && ref.awaitingQuote !== true
+          ? holidaySurcharge(holidayOn(after.deliveryDate, input.holidays), order.greeting_sessions[0]?.catalog?.filters)
+          : null
+        const holidayDeltaVnd = surcharge ? holidaySurchargeDelta(ref, surcharge.vnd) : 0
         const zoneChanged = (after.shippingZoneId ?? "") !== (before.shippingZoneId ?? "")
         const zoneFee = zoneChanged ? input.shipping.zones.find((z) => z.id === after.shippingZoneId)?.feeVnd ?? null : null
         if (zoneChanged && zoneFee === null) throw conflict("Khu vực giao khách chọn không còn trong bảng phí — vui lòng từ chối và liên hệ khách")
         const quote = { awaitingQuote: ref.awaitingQuote === true, subtotalVnd: num(ref.subtotalVnd), discountVnd: num(ref.discountVnd), shippingFeeVnd: num(ref.shippingFeeVnd) }
-        feeDeltaVnd = zoneChanged ? shippingFeeDelta(quote, zoneFee, input.shipping) : 0
+        const zoneDeltaVnd = zoneChanged ? shippingFeeDelta(quote, zoneFee, input.shipping) : 0
+        feeDeltaVnd = zoneDeltaVnd + holidayDeltaVnd
         newTotal = Number(order.total_vnd) + feeDeltaVnd
         const manual = obj(ref.manualDiscount)
-        const nextRef = zoneChanged
-          ? {
-              ...ref,
-              shippingZone: { id: after.shippingZoneId, name: after.shippingZoneName },
-              shippingFeeVnd: num(ref.shippingFeeVnd) + feeDeltaVnd,
-              ...(typeof ref.totalVnd === "number" ? { totalVnd: ref.totalVnd + feeDeltaVnd } : {}),
-              ...(typeof manual.baseTotalVnd === "number" ? { manualDiscount: { ...manual, baseTotalVnd: manual.baseTotalVnd + feeDeltaVnd } } : {}),
-              shippingChange: { fromZone: before.shippingZoneName, toZone: after.shippingZoneName, newZoneFeeVnd: zoneFee, chargedDeltaVnd: feeDeltaVnd, requestId: req.id },
-            }
-          : ref
+        const nextRef = {
+          ...ref,
+          ...(zoneChanged
+            ? {
+                shippingZone: { id: after.shippingZoneId, name: after.shippingZoneName },
+                shippingFeeVnd: num(ref.shippingFeeVnd) + zoneDeltaVnd,
+                shippingChange: { fromZone: before.shippingZoneName, toZone: after.shippingZoneName, newZoneFeeVnd: zoneFee, chargedDeltaVnd: zoneDeltaVnd, requestId: req.id },
+              }
+            : {}),
+          ...(holidayDeltaVnd > 0 && surcharge ? { holidaySurchargeVnd: num(ref.holidaySurchargeVnd) + holidayDeltaVnd, holidayName: surcharge.name } : {}),
+          ...(feeDeltaVnd > 0 && typeof ref.totalVnd === "number" ? { totalVnd: ref.totalVnd + feeDeltaVnd } : {}),
+          ...(feeDeltaVnd > 0 && typeof manual.baseTotalVnd === "number" ? { manualDiscount: { ...manual, baseTotalVnd: manual.baseTotalVnd + feeDeltaVnd } } : {}),
+        }
         const cols = orderColumnsFromSnapshot(order.delivery_address, after, order.delivery_window)
         const moved = await tx.orders.updateMany({
           where: {

@@ -67,7 +67,9 @@ export function BrochureOrderForm({
 
   const [selectedPromotionId, setSelectedPromotionId] = useState<string>(appliedPolicies?.promotions[0]?.id ?? "")
   const [loading, setLoading] = useState(false)
-  const pricing = useBrochureQuote(quoteUrl, quoteExtraBody, customerPhone, { id: productSnapshot.id, variantIds: variants.map((v) => v.id) })
+  // Ngày giao đi kèm báo giá để máy chủ tính phụ phí ngày lễ (nếu bộ sưu tập áp dụng)
+  const quoteBody = deliveryDate ? { ...quoteExtraBody, deliveryDate } : quoteExtraBody
+  const pricing = useBrochureQuote(quoteUrl, quoteBody, customerPhone, { id: productSnapshot.id, variantIds: variants.map((v) => v.id) })
   const minDate = earliestDeliveryDate(shipping)
   const maxDate = new Date(Date.parse(`${minDate}T00:00:00Z`) + MAX_DELIVERY_LEAD_DAYS * 86_400_000)
     .toISOString()

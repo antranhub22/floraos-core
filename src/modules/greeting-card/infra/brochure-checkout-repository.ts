@@ -97,6 +97,18 @@ export class BrochureCheckoutRepository {
    * có thể trùng (khách đã xoá, hai đơn đồng thời) — trùng thì lấy đuôi ngẫu
    * nhiên, thay vì làm hỏng cả đơn.
    */
+  /** Số đơn chưa huỷ của tiệm giao ngày `date` (mọi nguồn — năng lực xưởng/shipper là của cả tiệm). */
+  async countOrdersOnDeliveryDate(organizationId: string, date: string, excludeOrderId?: string | undefined) {
+    return this.db.orders.count({
+      where: {
+        organization_id: organizationId,
+        status: { not: "CANCELLED" },
+        delivery_window: { path: ["date"], equals: date },
+        ...(excludeOrderId ? { id: { not: excludeOrderId } } : {}),
+      },
+    })
+  }
+
   async findOrCreateCustomer(data: Pick<CreateBrochureOrderData, "organizationId" | "customerPhone" | "customerName" | "deliveryAddress">) {
     const where = { organization_id: data.organizationId, phone: data.customerPhone }
     const existing = await this.db.customers.findFirst({ where, select: { id: true } })

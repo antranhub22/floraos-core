@@ -1,6 +1,6 @@
 import { normalizeOrderAddress } from "../domain/delivery-address"
-import { deliveryScheduleError } from "../domain/delivery-schedule"
-import { parseShippingConfig } from "../domain/brochure-pricing"
+import { orderScheduleError } from "../domain/holiday-policy"
+import { assertHolidayCapacity } from "./holiday-capacity"
 import { unprocessable, validationFailed } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
@@ -34,8 +34,10 @@ export async function submitBrochureOrder(
   if (existing) return existing
 
   // Giờ chốt đơn / thời gian chuẩn bị của tiệm — chặn cả khi khách gửi thẳng API
-  const scheduleError = deliveryScheduleError(input.deliveryDate, input.deliveryTimeSlot, parseShippingConfig(shop.settings))
+  const scheduleError = orderScheduleError(input.deliveryDate, input.deliveryTimeSlot, shop.settings)
   if (scheduleError) throw validationFailed({ deliveryDate: scheduleError })
+
+  await assertHolidayCapacity(session.organization_id, input.deliveryDate, shop.settings)
 
   // Không còn "tự lấy mẫu đầu tiên" như bản cũ: khách phải chọn mẫu.
   if (!session.selected_product_id) {
@@ -95,5 +97,5 @@ export async function quoteBrochureSession(
   if (!session.selected_product_id) throw unprocessable("Vui lòng chọn mẫu hoa trước")
   const product = await resolveOrderableProduct(session, session.selected_product_id, repo)
   const shop = await repo.getShopProfile(session.organization_id)
-  return quoteForProduct(session.organization_id, product, req, shop.settings)
+  return quoteForProduct(session.organization_id, product, req, shop.settings, undefined, session.catalog.filters)
 }
