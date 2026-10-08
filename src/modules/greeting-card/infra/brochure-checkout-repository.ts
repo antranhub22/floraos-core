@@ -5,6 +5,7 @@ import { Prisma } from "@/generated/prisma/client"
 import { isUniqueViolation } from "@/modules/coordinator/infra/transaction"
 import { randomCode } from "../domain/greeting-card-rules"
 import type { BrochureQuote, VoucherFacts } from "../domain/brochure-pricing"
+import type { OrderPolicySnapshot } from "../domain/order-policies"
 import type { ProductSnapshot } from "../domain/greeting-card-types"
 
 export interface CreateBrochureOrderData {
@@ -26,6 +27,8 @@ export interface CreateBrochureOrderData {
   variant: { id: string; name: string } | null
   quote: BrochureQuote
   voucherId: string | null
+  /** Bản chụp ưu đãi/thỏa thuận khách đã đồng ý (Spec #2, #5). */
+  policies?: OrderPolicySnapshot | undefined
 }
 
 /**
@@ -137,7 +140,8 @@ export class BrochureCheckoutRepository {
           paid_vnd: 0,
           balance_vnd: quote.totalVnd,
           voucher_id: data.voucherId,
-          pricing_rule_ref: { source: "BROCHURE_QUOTE", ...quote } as unknown as Prisma.InputJsonValue,
+          // Ưu đãi + thỏa thuận khách đã đồng ý lúc đặt — bản chụp, không đổi khi tiệm sửa chính sách sau
+          pricing_rule_ref: { source: "BROCHURE_QUOTE", ...quote, policies: data.policies ?? null } as unknown as Prisma.InputJsonValue,
           card_message: data.cardMessage ?? null,
           internal_note: data.note ?? null,
           delivery_window: { date: data.deliveryDate, timeSlot: data.deliveryTimeSlot },

@@ -9,7 +9,7 @@ const EMPTY = {
   recipientName: "",
   recipientPhone: "",
   deliveryDate: "",
-  deliveryTimeSlot: "Buổi sáng (8h - 12h)",
+  deliveryTimeSlot: "",
   addressParts: { houseNumber: "", street: "", ward: "", province: "" } as AddressParts,
   cardMessage: "",
   senderNote: "",

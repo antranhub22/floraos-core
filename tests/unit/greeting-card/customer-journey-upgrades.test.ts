@@ -11,29 +11,23 @@ const TODAY = "2026-10-20"
 const TOMORROW = "2026-10-21"
 
 describe("giờ chốt đơn & thời gian chuẩn bị", () => {
-  it("không cấu hình: hôm nay vẫn chọn được, chỉ bỏ khung đã qua", () => {
+  it("không cấu hình: hôm nay vẫn chọn được, chỉ bỏ khung 2 tiếng đã qua", () => {
     expect(earliestDeliveryDate({}, at(10))).toBe(TODAY)
-    expect(availableSlots(TODAY, {}, at(13))).toEqual([
-      "14:00 - 16:00 (Chiều)",
-      "18:00 - 20:00 (Tối)",
-      "Buổi chiều (13h - 17h)",
-      "Buổi tối (18h - 21h)",
-      "Giờ cụ thể (liên hệ)",
-    ])
+    expect(availableSlots(TODAY, {}, at(13))).toEqual(["12:00 - 14:00", "14:00 - 16:00", "16:00 - 18:00", "18:00 - 20:00", "20:00 - 22:00"])
   })
 
   it("qua giờ chốt: sớm nhất là ngày mai và báo lỗi rõ ràng", () => {
     const cfg = { sameDayCutoffHour: 16 }
     expect(earliestDeliveryDate(cfg, at(17))).toBe(TOMORROW)
-    expect(deliveryScheduleError(TODAY, "Buổi tối (18h - 21h)", cfg, at(17))).toContain("16h")
-    expect(deliveryScheduleError(TOMORROW, "Buổi sáng (8h - 12h)", cfg, at(17))).toBeNull()
+    expect(deliveryScheduleError(TODAY, "18:00 - 20:00", cfg, at(17))).toContain("16h")
+    expect(deliveryScheduleError(TOMORROW, "08:00 - 10:00", cfg, at(17))).toBeNull()
   })
 
   it("thời gian chuẩn bị loại khung giờ không kịp", () => {
     const cfg = { prepHours: 3 }
-    expect(availableSlots(TODAY, cfg, at(10))).not.toContain("Buổi sáng (8h - 12h)")
-    expect(deliveryScheduleError(TODAY, "Buổi sáng (8h - 12h)", cfg, at(10))).toContain("Khung giờ")
-    expect(deliveryScheduleError(TODAY, "Buổi chiều (13h - 17h)", cfg, at(10))).toBeNull()
+    expect(availableSlots(TODAY, cfg, at(10))).not.toContain("10:00 - 12:00")
+    expect(deliveryScheduleError(TODAY, "10:00 - 12:00", cfg, at(10))).toContain("Khung giờ")
+    expect(deliveryScheduleError(TODAY, "14:00 - 16:00", cfg, at(10))).toBeNull()
   })
 
   it("ngày tương lai mở đủ khung giờ", () => {

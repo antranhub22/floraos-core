@@ -126,6 +126,11 @@ export function calculateExpectedStepTimeline(
       const hStr = timeMatch[3] ?? timeMatch[1] ?? "10"
       targetHour = parseInt(hStr, 10)
       targetMinute = parseInt(timeMatch[4] ?? "0", 10)
+    } else if (/(\d{1,2}):(\d{2})/.test(deliveryTimeSlot)) {
+      // Giờ cụ thể khách nhập ("Giờ cụ thể: 15:30")
+      const [, h, m] = /(\d{1,2}):(\d{2})/.exec(deliveryTimeSlot) ?? []
+      targetHour = parseInt(h ?? "10", 10)
+      targetMinute = parseInt(m ?? "0", 10)
     } else if (deliveryTimeSlot.includes("12h")) {
       targetHour = 12
     } else if (deliveryTimeSlot.includes("17h")) {

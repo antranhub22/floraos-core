@@ -22,6 +22,7 @@ import { getBrochureTracking } from "@/modules/greeting-card/use-cases/get-broch
 const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10)
 const ORDER = {
   customerName: "Khách Quen", customerPhone: "0987654321", recipientName: "Người Nhận", recipientPhone: "0912345678",
+  confirmedTerms: true,
   deliveryDate: day(10), deliveryAddress: "1 Lê Lợi, Q1",
 }
 

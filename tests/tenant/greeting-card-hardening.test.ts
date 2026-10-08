@@ -35,6 +35,7 @@ const ORDER_INPUT = {
   customerPhone: "0987654321",
   recipientName: "Người Nhận",
   recipientPhone: "0912345678",
+  confirmedTerms: true,
   deliveryDate: inTenDays(),
   deliveryAddress: "123 Đường Hoa, Quận 1, TP.HCM",
 }
