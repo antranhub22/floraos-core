@@ -7,6 +7,7 @@ import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import type { ShippingConfig } from "../domain/brochure-pricing"
 import { deliveryScheduleError } from "../domain/delivery-schedule"
 import {
+  cardMessageLocked,
   changeLockReason,
   orderColumnsFromSnapshot,
   shippingFeeDelta,
@@ -115,6 +116,9 @@ export class OrderChangeRepository {
         const lock = changeLockReason({ status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status })
         if (lock) throw conflict(lock)
         const { after, before } = payload
+        if (after.cardMessage !== before.cardMessage && cardMessageLocked({ productionStatus: order.production_status })) {
+          throw conflict("Thiệp đã in kèm hoa nên không đổi lời nhắn được nữa — vui lòng từ chối và báo khách")
+        }
         if (after.deliveryDate !== before.deliveryDate || after.deliveryTimeSlot !== before.deliveryTimeSlot) {
           const err = deliveryScheduleError(after.deliveryDate, after.deliveryTimeSlot, input.shipping, now)
           if (err) throw conflict(`Giờ giao khách xin đổi không còn kịp: ${err}`)
@@ -137,11 +141,13 @@ export class OrderChangeRepository {
               shippingChange: { fromZone: before.shippingZoneName, toZone: after.shippingZoneName, newZoneFeeVnd: zoneFee, chargedDeltaVnd: feeDeltaVnd, requestId: req.id },
             }
           : ref
-        const cols = orderColumnsFromSnapshot(order.delivery_address, after)
+        const cols = orderColumnsFromSnapshot(order.delivery_address, after, order.delivery_window)
         const moved = await tx.orders.updateMany({
           where: {
             id: order.id, organization_id: ctx.organizationId, total_vnd: order.total_vnd,
-            status: { not: "CANCELLED" }, production_status: { in: [...EDITABLE_PRODUCTION] },
+            status: { not: "CANCELLED" },
+            // Chưa cắm hoa, hoặc giao không thành công đang chờ hẹn lại
+            OR: [{ production_status: { in: [...EDITABLE_PRODUCTION] } }, { delivery_status: "FAILED" }],
           },
           data: {
             delivery_window: cols.delivery_window as Prisma.InputJsonValue,

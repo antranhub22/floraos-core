@@ -30,6 +30,8 @@ type TrackingData = {
     verified?: boolean
     /** Chỉ khi đã xác minh: đổi thông tin đơn + lịch sử */
     change?: OrderChangeData | null
+    /** Lần giao gần nhất không thành công (ghi chú chỉ khi đã xác minh) */
+    deliveryFailure?: { at: string; reasonLabel: string; note: string | null; feeVnd: number; attempts: number } | null
     recipientName: string
     deliveryAddress: string
     finishedImageUrl?: string | null
@@ -182,6 +184,16 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
       )}
 
       {order.verified === false && <TrackingVerifyForm orderCode={orderCode} onVerified={setLast4} />}
+      {order.deliveryFailure && (
+        <div role="status" className="rounded-2xl border border-warning/30 bg-warning-bg p-4 flex flex-col gap-1 text-body-sm">
+          <p className="font-extrabold text-warning">Lần giao {order.deliveryFailure.attempts > 1 ? `thứ ${order.deliveryFailure.attempts} ` : ""}chưa thành công: {order.deliveryFailure.reasonLabel}</p>
+          {order.deliveryFailure.note && <p className="text-foreground">Shipper ghi: {order.deliveryFailure.note}</p>}
+          {order.deliveryFailure.feeVnd > 0 && <p className="text-foreground">Phí giao lại: {order.deliveryFailure.feeVnd.toLocaleString("vi-VN")}đ (đã cộng vào đơn).</p>}
+          <p className="text-text-muted">
+            {order.change ? "Cửa hàng sẽ liên hệ để hẹn giao lại. Bạn có thể đổi giờ, địa chỉ hoặc người nhận ngay bên dưới." : "Cửa hàng sẽ liên hệ để hẹn giao lại. Xác minh bằng 4 số cuối SĐT người đặt để đổi giờ hoặc địa chỉ giao."}
+          </p>
+        </div>
+      )}
       {order.change && (
         <OrderChangePanel orderCode={orderCode} proof={{ sendCode, last4 }} change={order.change} onChanged={loadTracking} />
       )}

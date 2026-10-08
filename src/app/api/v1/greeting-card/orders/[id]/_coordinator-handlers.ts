@@ -8,8 +8,10 @@ import {
   uploadBrochureProductPhoto,
   dispatchBrochureShipping,
   uploadBrochureRecipientPhoto,
+  markBrochureDeliveryFailed,
 } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
+import { DELIVERY_FAILURE_REASONS, FAILURE_NOTE_MAX } from "@/modules/greeting-card/domain/delivery-failure"
 
 const floristSchema = z.object({ floristNote: z.string().trim().min(1, "Nhập ghi chú phân công florist").max(500) })
 const photoSchema = z
@@ -21,6 +23,11 @@ const photoSchema = z
   })
   .refine((v) => v.skipPhoto || v.assetId || v.assetIds, { message: "Thiếu ảnh hoặc chưa chọn bỏ qua" })
 const shipSchema = z.object({ trackingNote: z.string().trim().min(1, "Nhập thông tin vận chuyển").max(500) })
+const failedSchema = z.object({
+  reason: z.enum(DELIVERY_FAILURE_REASONS),
+  note: z.string().trim().max(FAILURE_NOTE_MAX).optional(),
+  chargeFee: z.boolean().optional(),
+})
 
 type RouteCtx = { params: Promise<{ id: string }> }
 
@@ -54,3 +61,6 @@ export const dispatchShippingPOST = coordinatorHandler(GREETING_CARD_CAPABILITY.
 
 /** POST /api/v1/greeting-card/orders/[id]/recipient-photo */
 export const recipientPhotoPOST = coordinatorHandler(GREETING_CARD_CAPABILITY.deliveryManage, photoSchema, uploadBrochureRecipientPhoto)
+
+/** POST /api/v1/greeting-card/orders/[id]/delivery-failed — shipper không giao được, hẹn giao lại */
+export const deliveryFailedPOST = coordinatorHandler(GREETING_CARD_CAPABILITY.deliveryManage, failedSchema, markBrochureDeliveryFailed)

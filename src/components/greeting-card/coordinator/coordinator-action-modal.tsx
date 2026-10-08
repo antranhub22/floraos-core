@@ -7,6 +7,7 @@ import { apiSend } from "@/components/greeting-card/greeting-api"
 import { CoordinatorImageUpload } from "./coordinator-image-upload"
 import { CancellationProposalModal } from "@/components/greeting-card/inbox/cancellation-proposal-modal"
 import type { ModalState } from "./coordinator-order-card"
+import { DeliveryFailedModal } from "./delivery-failed-modal"
 
 type ActiveModal = Exclude<ModalState, { type: "none" }>
 
@@ -51,6 +52,9 @@ export function CoordinatorActionModal({ modal, onClose, onDone }: { modal: Acti
       />
     )
   }
+  if (modal.type === "delivery-failed") {
+    return <DeliveryFailedModal orderId={modal.orderId} orderCode={modal.orderCode} onClose={onClose} onDone={onDone} />
+  }
   return <CoordinatorTaskModal modal={modal} onClose={onClose} onDone={onDone} />
 }
 
@@ -59,7 +63,7 @@ function CoordinatorTaskModal({
   onClose,
   onDone,
 }: {
-  modal: Exclude<ActiveModal, { type: "cancel-proposal" }>
+  modal: Exclude<ActiveModal, { type: "cancel-proposal" } | { type: "delivery-failed" }>
   onClose: () => void
   onDone: () => void
 }) {

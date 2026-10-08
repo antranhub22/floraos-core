@@ -11,6 +11,8 @@ export interface OrderChangeData {
   current: OrderChangeSnapshot
   shipping: ShippingConfig
   lockedReason: string | null
+  /** Thiệp đã in kèm hoa — không đổi lời nhắn được nữa */
+  cardLocked?: boolean
   pending: ChangeView | null
   history: ChangeView[]
 }
@@ -106,6 +108,7 @@ export function OrderChangePanel({
           proof={proof}
           current={change.current}
           shipping={change.shipping}
+          cardLocked={change.cardLocked === true}
           onClose={() => setEditing(false)}
           onSent={() => { setEditing(false); setSent(true); onChanged() }}
         />

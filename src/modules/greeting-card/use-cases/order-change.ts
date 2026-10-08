@@ -5,6 +5,7 @@ import { parseShippingConfig } from "../domain/brochure-pricing"
 import { phoneLast4Matches } from "../domain/tracking-privacy"
 import {
   buildOrderChange,
+  cardMessageLocked,
   changeLockReason,
   changesForCustomer,
   shippingFeeDelta,
@@ -53,7 +54,7 @@ export async function submitOrderChange(
 
   const shipping = parseShippingConfig(order.organization.settings)
   const before = snapshotFromOrder(order)
-  const built = buildOrderChange(before, input, shipping, now)
+  const built = buildOrderChange(before, input, shipping, now, { cardLocked: cardMessageLocked({ productionStatus: order.production_status }) })
   if (!built.ok) throw validationFailed(built.errors)
 
   const ref = obj(order.pricing_rule_ref)
@@ -101,6 +102,7 @@ export async function customerChangeSection(
   }))
   return {
     lockedReason: changeLockReason({ status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status }),
+    cardLocked: cardMessageLocked({ productionStatus: order.production_status }),
     pending: history.find((h) => h.status === "PENDING") ?? null,
     history,
   }

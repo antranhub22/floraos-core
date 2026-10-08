@@ -12,7 +12,7 @@ export type InboxTab = "payment" | "sales" | "coordinator" | "tracking"
 
 export interface InboxAction {
   id: string
-  kind: "STUCK" | "CONFIRM_PAYMENT" | "QUOTE" | "ASSIGN" | "UNMATCHED_PAYMENTS" | "DISCOUNT" | "CHANGE_REQUEST"
+  kind: "STUCK" | "CONFIRM_PAYMENT" | "QUOTE" | "ASSIGN" | "UNMATCHED_PAYMENTS" | "DISCOUNT" | "CHANGE_REQUEST" | "REDELIVER"
   title: string
   detail: string
   orderId: string | null
@@ -58,6 +58,8 @@ export interface PipelineLike {
   stepStartedAt: string
   stuck: StuckInfo | null
   saleId: string | null
+  /** Lần giao gần nhất không thành công — chờ Điều phối giao lại */
+  deliveryFailed?: boolean | undefined
 }
 
 const TAB_OF_ROLE: Record<MessageRole, InboxTab> = { ADMIN: "payment", SALE: "sales", COORDINATOR: "coordinator" }
@@ -78,6 +80,8 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
       out.push({ ...base, id: `quote:${i.id}`, kind: "QUOTE", title: "Báo giá mẫu chưa niêm yết", detail: `${code(i)} · ${i.productName}`, tab: "payment", urgency: 500 })
     } else if (role === "ADMIN" && i.currentStepId === "STEP_4_PAYMENT_PENDING") {
       out.push({ ...base, id: `pay:${i.id}`, kind: "CONFIRM_PAYMENT", title: "Đối chiếu và xác nhận tiền", detail: `${code(i)} · khách báo đã chuyển`, tab: "payment", urgency: 400 })
+    } else if (role === "COORDINATOR" && i.deliveryFailed) {
+      out.push({ ...base, id: `redeliver:${i.id}`, kind: "REDELIVER", title: "Giao không thành công — hẹn giao lại", detail: `${code(i)} · ${i.productName}`, tab: "coordinator", urgency: 900 })
     } else if (role === "COORDINATOR" && i.currentStepId === "STEP_5_PAYMENT_CONFIRMED") {
       out.push({ ...base, id: `assign:${i.id}`, kind: "ASSIGN", title: "Phân công thợ cắm hoa", detail: `${code(i)} · ${i.productName}`, tab: "coordinator", urgency: 300 })
     }

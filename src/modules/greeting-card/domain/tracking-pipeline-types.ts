@@ -119,6 +119,8 @@ export interface TrackingPipelineItem {
   deliveryTimeSlot?: string | null | undefined
   /** Khu vực giao khách chọn (theo bảng phí giao của tiệm) */
   deliveryZone?: string | null | undefined
+  /** Lần giao gần nhất không thành công — chờ giao lại */
+  deliveryFailed?: boolean | undefined
   /** Sale phụ trách = người tạo/gửi link; link dùng chung → "Link dùng chung" */
   saleName: string
   cardMessage?: string | null | undefined

@@ -233,6 +233,15 @@ export function mapOrderStatusToTrackingStep(
     }
   }
 
+  if (deliveryStatus === "FAILED") {
+    return {
+      stepIndex: 4,
+      title: "Giao hoa chưa thành công",
+      description: "Shipper chưa giao được hoa. Cửa hàng sẽ liên hệ để hẹn giao lại — bạn cũng có thể đổi giờ hoặc địa chỉ giao ngay trên trang này.",
+      percentage: 80,
+    }
+  }
+
   if (deliveryStatus === "DELIVERING" || deliveryStatus === "DISPATCHED") {
     return {
       stepIndex: 4,

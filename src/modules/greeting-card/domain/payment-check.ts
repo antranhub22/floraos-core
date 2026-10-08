@@ -51,6 +51,8 @@ export function paymentCheckOf(order: {
     const why = [str(manual.reason), str(manual.note)].filter(Boolean).join(" · ")
     reasons.push(`Giảm giá được duyệt${num(manual.percent) ? ` ${num(manual.percent)}%` : ""}: −${vnd(num(manual.vnd)!)}${why ? ` — ${why}` : ""}`)
   }
+  const redeliver = num(quote.redeliveryFeesVnd) ?? 0
+  if (redeliver > 0) reasons.push(`Phí giao lại: +${vnd(redeliver)}`)
   const ship = num(quote.shippingFeeVnd) ?? 0
   const zone = str(obj(quote.shippingZone).name)
   if (ship > 0) reasons.push(`Phí giao${zone ? ` ${zone}` : ""}: +${vnd(ship)}`)

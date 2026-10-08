@@ -77,6 +77,14 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 - Khách thấy **thông báo** kết quả gần nhất (đã cập nhật / chưa đổi + lời nhắn của cửa hàng) và **lịch sử thay đổi** (trước → sau, giờ gửi, giờ xử lý). Sale phụ trách nhận tin `ORDER_CHANGE_DECISION`; audit `greeting_card.order_change.approve|reject`.
 - Chưa có: tin SMS/Zalo báo khách khi đơn được cập nhật (khách xem trên trang theo dõi).
 
+## 4d. Giao không thành công / hẹn giao lại (08/10/2026)
+
+- Thẻ đơn ở tab Điều phối có nút **"Giao không thành công"** (chỉ khi đơn đang giao): chọn lý do (không nghe máy · không có ai nhận · sai địa chỉ · từ chối nhận · lý do khác — bắt buộc ghi rõ), ghi chú, và có **tính phí giao lại** không (mặc định có; bỏ chọn khi lỗi do cửa hàng/shipper).
+- Đơn sang `delivery_status = FAILED`, mỗi lần hỏng lưu vào `delivery_window.failures`. Thẻ đơn hiện "Giao lần N chưa thành công…", nút "Giao Ship" đổi thành **"Giao lại"**; Hộp việc của Điều phối có việc "Giao không thành công — hẹn giao lại".
+- **Phí giao lại** Điều hành cài trong Cài đặt → Khu vực, phí giao & giờ nhận đơn (`brochure_shipping.redelivery_fee_vnd`, bỏ trống = không thu). Có tính thì cộng vào tổng đơn (khách trả qua QR phần còn lại); đơn chờ báo giá không tính.
+- Khách thấy trên trang theo dõi: bước "Giao hoa chưa thành công", lý do (ghi chú của shipper chỉ khi đã xác minh), phí giao lại nếu có, và được **đổi giờ / địa chỉ / người nhận** qua "Thay đổi thông tin đơn" dù hoa đã cắm xong — trừ lời nhắn thiệp (thiệp đã in). Tin SMS/Zalo mốc `DELIVERY_FAILED` (tiệm bật thông báo; ZNS cần đăng ký mẫu cho mốc này).
+- Chưa có: "mang về tiệm chờ khách đến nhận"; tin nhắn mỗi mốc chỉ gửi **một lần cho mỗi đơn**, nên lần giao hỏng thứ hai và lần giao lại không gửi tin mới (khách xem trên trang theo dõi).
+
 ## 5. Chưa làm (đợt C — cần PO duyệt đổi schema)
 
 - Phân biệt "Tạm hết" và "Hết hẳn"; lựa chọn "Cho phép thay thế tương đương" khi đặt.
@@ -85,4 +93,4 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 
 ## 6. Mã nguồn
 
-`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events,delivery-note,order-change-request}.ts` · `use-cases/order-change.ts` · `infra/order-change-repository.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`
+`src/modules/greeting-card/domain/{session-owner,collection-session,collection-browse,customer-journey-events,delivery-note,order-change-request,delivery-failure}.ts` · `use-cases/order-change.ts` · `infra/{order-change-repository,delivery-failure-repository}.ts` · `use-cases/{brochure-owner,customer-journey,staff-viewer}.ts` · `infra/{session-owner-repository,session-owner-token}.ts` · `src/app/b/[sendCode]/page.tsx` · `src/components/greeting-card/customer/{brochure-claim-gate,journey-context,use-journey-tracker,use-step-history}.tsx?` · `templates/swipe/{use-swipe-journey,journey-intro,unavailable-panel}.tsx?`

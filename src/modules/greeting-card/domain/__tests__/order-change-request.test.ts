@@ -40,6 +40,13 @@ describe("changeLockReason", () => {
     expect(changeLockReason({ status: "DRAFT", productionStatus: "ASSIGNED", deliveryStatus: "PENDING" })).toBeNull()
   })
 
+  it("giao không thành công → mở lại để hẹn giao lại, nhưng khoá lời nhắn thiệp", () => {
+    expect(changeLockReason({ status: "PROCESSING", productionStatus: "READY", deliveryStatus: "FAILED" })).toBeNull()
+    const r = buildOrderChange(BEFORE, { cardMessage: "Khác", deliveryTimeSlot: "14:00 - 16:00" }, SHIPPING, NOW, { cardLocked: true })
+    expect(!r.ok && r.errors.cardMessage).toMatch(/Thiệp đã in/)
+    expect(buildOrderChange(BEFORE, { deliveryTimeSlot: "14:00 - 16:00" }, SHIPPING, NOW, { cardLocked: true }).ok).toBe(true)
+  })
+
   it("khoá từ lúc bắt đầu cắm hoa (PO chốt), khi đã giao ship, đã xong hoặc đã huỷ", () => {
     expect(changeLockReason({ status: "PROCESSING", productionStatus: "ARRANGING", deliveryStatus: "PENDING" })).toMatch(/cắm hoa/)
     expect(changeLockReason({ status: "PROCESSING", productionStatus: "READY", deliveryStatus: "PENDING" })).toMatch(/cắm hoa/)
@@ -117,7 +124,8 @@ describe("snapshotFromOrder / orderColumnsFromSnapshot", () => {
   it("đọc đơn cũ không lỗi và giữ khoá lạ khi ghi lại", () => {
     const snap = snapshotFromOrder(order)
     expect(snap).toMatchObject({ recipientName: "Trần Thị B", shippingZoneId: "q1", deliveryNote: "Gọi trước", cardMessage: "", addressParts: null })
-    const cols = orderColumnsFromSnapshot(order.delivery_address, { ...snap, deliveryNote: "" })
+    const cols = orderColumnsFromSnapshot(order.delivery_address, { ...snap, deliveryNote: "" }, { date: "x", failures: [{ at: "t" }] })
+    expect(cols.delivery_window).toMatchObject({ date: "2026-10-20", failures: [{ at: "t" }] })
     expect(cols.delivery_address).toMatchObject({ extra: 1, recipientName: "Trần Thị B", zone: "Quận 1" })
     expect("notes" in cols.delivery_address).toBe(false)
     expect(cols.card_message).toBeNull()

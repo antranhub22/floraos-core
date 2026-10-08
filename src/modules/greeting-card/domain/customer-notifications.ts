@@ -2,7 +2,7 @@
  * Thông báo khách theo mốc đơn Thẻ chào (Zalo ZNS / SMS). Pure TypeScript.
  */
 
-export const NOTIFY_EVENTS = ["ORDER_RECEIVED", "QUOTED", "PAYMENT_REMINDER", "DEPOSIT_RECEIVED", "PAYMENT_COMPLETED", "READY", "DISPATCHED", "DELIVERED", "CANCELLED"] as const
+export const NOTIFY_EVENTS = ["ORDER_RECEIVED", "QUOTED", "PAYMENT_REMINDER", "DEPOSIT_RECEIVED", "PAYMENT_COMPLETED", "READY", "DISPATCHED", "DELIVERY_FAILED", "DELIVERED", "CANCELLED"] as const
 export type NotifyEvent = (typeof NOTIFY_EVENTS)[number]
 
 export const NOTIFY_EVENT_LABELS: Record<NotifyEvent, string> = {
@@ -13,6 +13,7 @@ export const NOTIFY_EVENT_LABELS: Record<NotifyEvent, string> = {
   PAYMENT_COMPLETED: "Đã thanh toán đủ",
   READY: "Hoa đã cắm xong",
   DISPATCHED: "Đang giao hoa",
+  DELIVERY_FAILED: "Giao hoa chưa thành công",
   DELIVERED: "Giao hoa thành công",
   CANCELLED: "Đơn bị huỷ",
 }
@@ -59,6 +60,7 @@ export function smsText(event: NotifyEvent, p: NotifyParams): string {
     PAYMENT_COMPLETED: `${p.shop_name}: Da nhan du ${p.amount} cho don ${p.order_code}. Cam on quy khach!`,
     READY: `${p.shop_name}: Hoa don ${p.order_code} da cam xong, chuan bi giao.`,
     DISPATCHED: `${p.shop_name}: Don ${p.order_code} dang duoc giao den nguoi nhan.`,
+    DELIVERY_FAILED: `${p.shop_name}: Don ${p.order_code} chua giao duoc. Cua hang se lien he hen giao lai, hoac mo link de doi gio/dia chi giao.`,
     DELIVERED: `${p.shop_name}: Don ${p.order_code} da giao thanh cong. Cam on quy khach!`,
     CANCELLED: `${p.shop_name}: Don ${p.order_code} da duoc huy. Lien he cua hang neu can ho tro.`,
   }

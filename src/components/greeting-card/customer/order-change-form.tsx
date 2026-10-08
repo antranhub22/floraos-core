@@ -46,6 +46,7 @@ export function OrderChangeForm({
   proof,
   current,
   shipping,
+  cardLocked = false,
   onClose,
   onSent,
 }: {
@@ -53,6 +54,7 @@ export function OrderChangeForm({
   proof: { sendCode?: string | null | undefined; last4?: string | null | undefined }
   current: OrderChangeSnapshot
   shipping: ShippingConfig
+  cardLocked?: boolean
   onClose: () => void
   onSent: () => void
 }) {
@@ -132,11 +134,15 @@ export function OrderChangeForm({
         </div>
       )}
 
+      {cardLocked ? (
+        <p className="text-caption text-text-muted">Thiệp đã in kèm hoa nên không đổi lời nhắn được nữa.</p>
+      ) : (
       <div>
         <label htmlFor={`${uid}-card`} className={LABEL}>Nội dung thiệp mừng / băng rôn</label>
         <textarea id={`${uid}-card`} rows={2} value={v.cardMessage} maxLength={ORDER_FIELD_MAX.cardMessage} onChange={(e) => set({ cardMessage: e.target.value })} className={`${INPUT} h-auto p-3 resize-none`} />
         <p className="mt-1 text-right text-caption text-text-muted">{v.cardMessage.length}/{ORDER_FIELD_MAX.cardMessage} ký tự</p>
       </div>
+      )}
       <div>
         <label htmlFor={`${uid}-dnote`} className={LABEL}>Ghi chú cho người giao hoa</label>
         <input id={`${uid}-dnote`} value={v.deliveryNote} maxLength={DELIVERY_NOTE_MAX} onChange={(e) => set({ deliveryNote: e.target.value })} className={INPUT} />

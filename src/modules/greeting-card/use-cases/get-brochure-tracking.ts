@@ -7,6 +7,7 @@ import { parseStepSla, calculateExpectedStepTimeline } from "../domain/step-sla"
 import { parseShippingConfig } from "../domain/brochure-pricing"
 import { snapshotFromOrder } from "../domain/order-change-request"
 import { customerChangeSection } from "./order-change"
+import { latestFailureForCustomer } from "../domain/delivery-failure"
 
 const ORDER_CODE_REGEX = /^[A-Z0-9-]{4,40}$/
 
@@ -144,6 +145,8 @@ export async function getBrochureTracking(
       createdAt: order.created_at.toISOString(),
       updatedAt: order.updated_at.toISOString(),
       timeline,
+      /** Lần giao gần nhất không thành công (ghi chú của shipper chỉ cho người đặt đã xác minh). */
+      deliveryFailure: order.delivery_status === "FAILED" ? latestFailureForCustomer(order.delivery_window, verified) : null,
       /** Chỉ người đặt đã xác minh: đổi thông tin đơn (thông tin hiện tại để điền sẵn form + lịch sử yêu cầu). */
       change: verified
         // Không trả SĐT (luật của trang theo dõi): ô SĐT người nhận để trống = giữ nguyên số cũ

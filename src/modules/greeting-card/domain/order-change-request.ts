@@ -85,10 +85,17 @@ export interface OrderChangePayload {
 export function changeLockReason(o: { status: string; productionStatus: string; deliveryStatus: string }): string | null {
   if (o.status === "CANCELLED") return "Đơn hàng đã huỷ"
   if (o.status === "COMPLETED" || o.deliveryStatus === "DELIVERED") return "Đơn hàng đã giao xong"
+  // Giao không thành công: khách được hẹn lại giờ/địa chỉ dù hoa đã cắm xong (trừ lời nhắn thiệp — xem `cardMessageLocked`)
+  if (o.deliveryStatus === "FAILED") return null
   if (o.deliveryStatus === "DISPATCHED" || o.deliveryStatus === "DELIVERING" || (o.productionStatus !== "WAITING" && o.productionStatus !== "ASSIGNED")) {
     return "Cửa hàng đã bắt đầu cắm hoa nên không đổi thông tin trên trang được nữa. Vui lòng gọi cửa hàng để được hỗ trợ."
   }
   return null
+}
+
+/** Thiệp in kèm hoa từ lúc bắt đầu cắm — sau đó không đổi lời nhắn được nữa (kể cả khi hẹn giao lại). */
+export function cardMessageLocked(o: { productionStatus: string }): boolean {
+  return o.productionStatus !== "WAITING" && o.productionStatus !== "ASSIGNED"
 }
 
 const show = (s: string, empty = "(trống)") => (s.trim() ? s.trim() : empty)
@@ -123,6 +130,7 @@ export function buildOrderChange(
   input: OrderChangeInput,
   shipping: ShippingConfig,
   now: Date = new Date(),
+  options: { cardLocked?: boolean | undefined } = {},
 ): ChangeBuildResult {
   const errors: Record<string, string> = {}
   const after: OrderChangeSnapshot = { ...before }
@@ -164,6 +172,7 @@ export function buildOrderChange(
   if (input.cardMessage !== undefined) {
     after.cardMessage = input.cardMessage.trim()
     if (after.cardMessage.length > ORDER_FIELD_MAX.cardMessage) errors.cardMessage = `Lời nhắn thiệp tối đa ${ORDER_FIELD_MAX.cardMessage} ký tự`
+    else if (options.cardLocked && after.cardMessage !== before.cardMessage) errors.cardMessage = "Thiệp đã in kèm hoa nên không đổi lời nhắn được nữa"
   }
   Object.assign(errors, deliveryNoteErrors(input))
   if (input.deliveryNote !== undefined) after.deliveryNote = input.deliveryNote.trim()
@@ -222,11 +231,12 @@ export function snapshotFromOrder(o: { delivery_window: unknown; delivery_addres
 }
 
 /** Ghi ảnh chụp "sau" ngược vào các cột của đơn (giữ nguyên khoá khác trong `delivery_address`). */
-export function orderColumnsFromSnapshot(currentAddress: unknown, s: OrderChangeSnapshot) {
+export function orderColumnsFromSnapshot(currentAddress: unknown, s: OrderChangeSnapshot, currentWindow?: unknown) {
   const rest = { ...rec(currentAddress) }
   for (const key of ["notes", "mapUrl", "parts", "zone"]) delete rest[key]
   return {
-    delivery_window: { date: s.deliveryDate, timeSlot: s.deliveryTimeSlot },
+    // Giữ khoá khác của `delivery_window` (vd. `failures` — các lần giao không thành công)
+    delivery_window: { ...rec(currentWindow), date: s.deliveryDate, timeSlot: s.deliveryTimeSlot },
     delivery_address: {
       ...rest,
       recipientName: s.recipientName,

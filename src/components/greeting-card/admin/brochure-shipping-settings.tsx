@@ -11,6 +11,7 @@ import {
 } from "@/modules/greeting-card/domain/brochure-pricing"
 import { enabledSlots, customTimeAllowed } from "@/modules/greeting-card/domain/delivery-schedule"
 import { DeliverySlotToggles } from "./delivery-slot-toggles"
+import { MAX_REDELIVERY_FEE_VND, parseRedeliveryFee } from "@/modules/greeting-card/domain/delivery-failure"
 
 interface ZoneDraft {
   id: string
@@ -20,10 +21,11 @@ interface ZoneDraft {
 
 const FIELD = "h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
 
-type Draft = { zones: ZoneDraft[]; freeOver: string; cutoff: string; prep: string; slotIds: string[]; allowCustomTime: boolean }
+type Draft = { zones: ZoneDraft[]; freeOver: string; cutoff: string; prep: string; slotIds: string[]; allowCustomTime: boolean; redelivery: string }
 
-function toDraft(config: ShippingConfig): Draft {
+function toDraft(config: ShippingConfig, redeliveryFeeVnd: number): Draft {
   return {
+    redelivery: redeliveryFeeVnd ? String(redeliveryFeeVnd) : "",
     zones: config.zones.map((z) => ({ id: z.id, name: z.name, fee: String(z.feeVnd) })),
     freeOver: config.freeShippingOverVnd ? String(config.freeShippingOverVnd) : "",
     cutoff: config.sameDayCutoffHour != null ? String(config.sameDayCutoffHour) : "",
@@ -50,7 +52,7 @@ export function BrochureShippingSettings() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
   // Bản nháp khởi tạo từ dữ liệu đã lưu ở lần sửa đầu tiên — không cần effect đồng bộ.
-  const current = draft ?? (org.data ? toDraft(parseShippingConfig(org.data.settings)) : null)
+  const current = draft ?? (org.data ? toDraft(parseShippingConfig(org.data.settings), parseRedeliveryFee(org.data.settings)) : null)
   const edit = (next: Draft) => {
     setDraft(next)
     setMessage(null)
@@ -74,6 +76,8 @@ export function BrochureShippingSettings() {
         prep_hours: hourOrNull(current.prep, 0, 24) ?? 0,
         delivery_slots: current.slotIds,
         allow_custom_time: current.allowCustomTime,
+        // Phí khi giao không thành công phải giao lại (0 = không thu)
+        redelivery_fee_vnd: Math.min(Number(current.redelivery.replace(/\D/g, "")) || 0, MAX_REDELIVERY_FEE_VND),
       },
     }
     setSaving(true)
@@ -179,6 +183,17 @@ export function BrochureShippingSettings() {
                 className={`${FIELD} w-16`}
               />
               <span className="text-text-muted">giờ trước khi giao</span>
+            </label>
+            <label className="flex items-center gap-2 text-body-sm">
+              <span className="text-text-muted">Phí giao lại khi giao không thành công</span>
+              <input
+                inputMode="numeric"
+                value={current.redelivery}
+                placeholder="Bỏ trống = không thu"
+                onChange={(e) => edit({ ...current, redelivery: e.target.value })}
+                className={`${FIELD} w-40`}
+              />
+              <span className="text-text-muted">đ</span>
             </label>
           </div>
           <DeliverySlotToggles

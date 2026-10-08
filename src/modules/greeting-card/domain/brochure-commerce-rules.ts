@@ -61,7 +61,7 @@ export function parseBrochurePaymentConfig(settings: unknown): BrochurePaymentCo
 
 // ── Thứ tự tác vụ xưởng (Điều phối) ──────────────────────────────────────────
 
-export type CoordinatorAction = "assign-florist" | "product-photo" | "dispatch-shipping" | "recipient-photo"
+export type CoordinatorAction = "assign-florist" | "product-photo" | "dispatch-shipping" | "recipient-photo" | "delivery-failed"
 
 export interface OrderProgressState {
   status: string
@@ -96,6 +96,9 @@ export function coordinatorActionBlocker(
       return null
     case "recipient-photo":
       if (!shipped) return "Cần giao ship trước khi chụp ảnh người nhận"
+      return null
+    case "delivery-failed":
+      if (!shipped) return "Chỉ ghi giao không thành công khi đơn đang được giao"
       return null
   }
 }

@@ -62,6 +62,7 @@ export const EVENT_LABEL: Record<string, string> = {
   FLORIST_ASSIGNED: "Phân công thợ cắm hoa",
   PRODUCT_PHOTO_UPLOADED: "Tải ảnh thành phẩm",
   SHIPPING_DISPATCHED: "Giao cho shipper",
+  DELIVERY_FAILED: "Giao không thành công",
   RECIPIENT_PHOTO_UPLOADED: "Giao thành công — ảnh người nhận",
   ORDER_CANCELLED: "Huỷ đơn",
   LINK_REVOKED: "Thu hồi link",
