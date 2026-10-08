@@ -12,8 +12,11 @@ export const GREETING_CARD_CAPABILITY = {
   manage: "R2",
   /** Xem đơn + bảng theo dõi + nhắn nội bộ — R1 order.read */
   orderRead: "R1",
-  /** Xác nhận đã nhận tiền — R9 order.payment.record */
-  paymentRecord: "R9",
+  /**
+   * Xác nhận tiền chuyển khoản, báo giá, xử lý giao dịch ngân hàng — R11 (trần cứng Điều hành).
+   * PO 08/10/2026: chỉ Điều hành (người giữ tài khoản) — thay quyết định 06/10 dùng R9.
+   */
+  paymentRecord: "R11",
   /** Phân công florist — R4 order.assign */
   assignFlorist: "R4",
   /** Chụp ảnh thành phẩm — R3 order.update */

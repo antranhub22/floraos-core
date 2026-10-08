@@ -19,9 +19,11 @@ export const GET = handle(async (request) => {
   const payment = (["OUTSTANDING", "PAID"] as const).find((p) => p === paymentParam)
   if (paymentParam && !payment) throw validationFailed({ payment: "Phải là OUTSTANDING hoặc PAID" })
   const { limit, cursor } = parseListQuery(url)
+  const q = url.searchParams.get("q")?.trim().slice(0, 40) || undefined
+  const reported = url.searchParams.get("reported") === "1"
 
   const repo = new BrochureOrderRepository()
   const saleId = (await resolveSaleScope(ctx)) ?? undefined
-  const rows = await repo.listBrochureOrders(ctx, { status, payment, saleId, limit, cursor })
+  const rows = await repo.listBrochureOrders(ctx, { status, payment, saleId, q, reported, limit, cursor })
   return jsonResponse(toPage(rows, limit))
 })

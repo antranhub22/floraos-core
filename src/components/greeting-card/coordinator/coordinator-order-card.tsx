@@ -33,6 +33,8 @@ export interface BrochureOrder {
     send_code: string
     product_snapshot?: { name?: string; imageUrl?: string }
   }>
+  /** Bản chụp báo giá + ưu đãi khách chọn (`policies.promotion`) lúc đặt. */
+  pricing_rule_ref?: { policies?: { promotion?: { title?: string } | null } | null } | null
   created_at: string
 }
 
@@ -163,6 +165,9 @@ export function CoordinatorOrderCard({
           <div className="text-caption italic text-text border-t border-border pt-1.5 mt-0.5">
             Thiệp: &ldquo;{order.card_message}&rdquo;
           </div>
+        )}
+        {order.pricing_rule_ref?.policies?.promotion?.title && (
+          <div className="text-caption font-bold text-success">Ưu đãi khách chọn: {order.pricing_rule_ref.policies.promotion.title}</div>
         )}
       </div>
 

@@ -9,15 +9,19 @@ import { UnmatchedPaymentsPanel } from "./unmatched-payments-panel"
 import { AdminOrderTable } from "./admin-order-table"
 import { AdminOrderActionDialog } from "./admin-order-action-dialog"
 import { AdminSettingsDrawer } from "./admin-settings-drawer"
-import { ORDER_FILTERS, type AdminOrder, type OrderAction, type OrderFilterId } from "./admin-order-types"
+import { ORDER_FILTERS, type ActionResult, type AdminOrder, type OrderAction, type OrderFilterId } from "./admin-order-types"
+import { CopyCustomerMessage } from "./copy-customer-message"
 
 /** Tab Điều hành: việc cần chủ tiệm quyết (thu tiền, báo giá, tiền chưa khớp); cài đặt nằm trong ngăn riêng. */
 export function AdminBrochurePaymentTab() {
   const [filter, setFilter] = useState<OrderFilterId>("outstanding")
   const [action, setAction] = useState<OrderAction | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<ActionResult | null>(null)
+  const [search, setSearch] = useState("")
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const query = ORDER_FILTERS.find((f) => f.id === filter)?.query ?? ""
+  // Tìm theo mã đơn / mã link / SĐT khách bỏ qua bộ lọc — để đối chiếu nội dung chuyển khoản trên sao kê
+  const term = search.trim()
+  const query = term.length >= 3 ? `q=${encodeURIComponent(term)}` : ORDER_FILTERS.find((f) => f.id === filter)?.query ?? ""
   const orders = usePagedList<AdminOrder>(`/api/v1/greeting-card/orders${query ? `?${query}` : ""}`)
   const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
   const policy = parsePaymentPolicy(org.data?.settings)
@@ -50,7 +54,8 @@ export function AdminBrochurePaymentTab() {
       {notice && (
         <div role="status" className="p-3.5 rounded-xl bg-success-bg border border-success/30 text-success text-body-sm font-bold flex items-center gap-2">
           <ShieldCheck size={20} />
-          <span>{notice}</span>
+          <span className="flex-1">{notice.message}</span>
+          {notice.customerMessage && <CopyCustomerMessage text={notice.customerMessage} />}
         </div>
       )}
 
@@ -70,6 +75,14 @@ export function AdminBrochurePaymentTab() {
               {f.label}
             </button>
           ))}
+          <input
+            type="search"
+            aria-label="Tìm đơn theo mã hoặc số điện thoại"
+            placeholder="Tìm mã đơn / SĐT khách…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="ml-auto h-8 w-full sm:w-56 rounded-lg border border-border bg-surface px-3 text-caption text-foreground"
+          />
         </div>
         {orders.error ? (
           <p role="alert" className="p-4 text-body-sm text-danger">{orders.error.message}</p>
@@ -100,9 +113,9 @@ export function AdminBrochurePaymentTab() {
           action={action}
           policy={policy}
           onClose={() => setAction(null)}
-          onDone={(message) => {
+          onDone={(result) => {
             setAction(null)
-            setNotice(message)
+            setNotice(result)
             void orders.refresh()
           }}
         />

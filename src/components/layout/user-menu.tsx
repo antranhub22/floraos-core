@@ -5,9 +5,10 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, UserRound } from "lucide-react"
+import { KeyRound, LogOut, UserRound } from "lucide-react"
 import { useSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
+import { ChangePasswordDialog } from "./change-password-dialog"
 
 export interface UserMenuProps {
   initials: string
@@ -19,8 +20,9 @@ export function UserMenu({ initials, direction = "down", size = "md" }: UserMenu
   const router = useRouter()
   const [mo, setMo] = useState(false)
   const [dangXuat, setDangXuat] = useState(false)
+  const [doiMatKhau, setDoiMatKhau] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const { roleUx, userName, orgName } = useSession()
+  const { roleUx, userName, orgName, can } = useSession()
 
   useEffect(() => {
     if (!mo) return
@@ -110,6 +112,20 @@ export function UserMenu({ initials, direction = "down", size = "md" }: UserMenu
               </span>
             </button>
 
+            {can("A2") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMo(false)
+                  setDoiMatKhau(true)
+                }}
+                className="flex w-full items-center gap-2 border-b border-border px-3.5 py-2.5 text-left text-body-sm font-semibold text-text hover:bg-surface-alt transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary cursor-pointer"
+              >
+                <KeyRound size={16} strokeWidth={1.8} aria-hidden="true" />
+                <span>Đổi mật khẩu</span>
+              </button>
+            )}
+
             {/* Nút đăng xuất */}
             <button
               type="button"
@@ -123,6 +139,7 @@ export function UserMenu({ initials, direction = "down", size = "md" }: UserMenu
           </div>
         </>
       )}
+      <ChangePasswordDialog open={doiMatKhau} onOpenChange={setDoiMatKhau} />
     </div>
   )
 }

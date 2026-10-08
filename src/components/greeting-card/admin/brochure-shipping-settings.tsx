@@ -11,6 +11,8 @@ import {
 } from "@/modules/greeting-card/domain/brochure-pricing"
 import { enabledSlots, customTimeAllowed } from "@/modules/greeting-card/domain/delivery-schedule"
 import { DeliverySlotToggles } from "./delivery-slot-toggles"
+import { SlotCapacityFields, type SlotCapacityDraft } from "./slot-capacity-fields"
+import { DEFAULT_SLOT_CAPACITY, MAX_SLOT_CAPACITY } from "@/modules/greeting-card/domain/slot-capacity"
 
 interface ZoneDraft {
   id: string
@@ -20,7 +22,10 @@ interface ZoneDraft {
 
 const FIELD = "h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
 
-type Draft = { zones: ZoneDraft[]; freeOver: string; cutoff: string; prep: string; slotIds: string[]; allowCustomTime: boolean }
+type Draft = {
+  zones: ZoneDraft[]; freeOver: string; cutoff: string; prep: string; slotIds: string[]; allowCustomTime: boolean
+  freeAll: boolean; vouchers: boolean; capacity: SlotCapacityDraft
+}
 
 function toDraft(config: ShippingConfig): Draft {
   return {
@@ -30,7 +35,19 @@ function toDraft(config: ShippingConfig): Draft {
     prep: config.prepHours ? String(config.prepHours) : "",
     slotIds: enabledSlots(config).map((s) => s.id),
     allowCustomTime: customTimeAllowed(config),
+    freeAll: config.freeShippingAll === true,
+    vouchers: config.vouchersEnabled === true,
+    capacity: {
+      all: String(config.slotCapacity?.defaultMax ?? DEFAULT_SLOT_CAPACITY),
+      perSlot: Object.fromEntries(Object.entries(config.slotCapacity?.perSlot ?? {}).map(([k, v]) => [k, String(v)])),
+    },
   }
+}
+
+/** "" → null; số nguyên 0…10.000 (máy chủ cũng bỏ giá trị lạ). */
+function capOrNull(v: string): number | null {
+  const n = Number(v.replace(/\D/g, ""))
+  return v.trim() && Number.isInteger(n) && n >= 0 && n <= MAX_SLOT_CAPACITY ? n : null
 }
 
 /** "" → null; ngoài khoảng → null (máy chủ cũng bỏ giá trị lạ). */
@@ -74,6 +91,14 @@ export function BrochureShippingSettings() {
         prep_hours: hourOrNull(current.prep, 0, 24) ?? 0,
         delivery_slots: current.slotIds,
         allow_custom_time: current.allowCustomTime,
+        free_shipping_all: current.freeAll,
+        voucher_enabled: current.vouchers,
+        slot_capacity: {
+          default: capOrNull(current.capacity.all) ?? DEFAULT_SLOT_CAPACITY,
+          per_slot: Object.fromEntries(
+            Object.entries(current.capacity.perSlot).flatMap(([k, v]) => (capOrNull(v) === null ? [] : [[k, capOrNull(v)]]))
+          ),
+        },
       },
     }
     setSaving(true)
@@ -186,6 +211,17 @@ export function BrochureShippingSettings() {
             allowCustomTime={current.allowCustomTime}
             onChange={(next) => edit({ ...current, ...next })}
           />
+          <SlotCapacityFields value={current.capacity} onChange={(capacity) => edit({ ...current, capacity })} />
+          <div className="flex flex-col gap-2 border-t border-border pt-3 text-body-sm">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={current.freeAll} onChange={(e) => edit({ ...current, freeAll: e.target.checked })} className="accent-primary" />
+              <span><strong>Miễn phí giao hoa cho mọi đơn</strong> (khách không trả phí giao ở mọi khu vực)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={current.vouchers} onChange={(e) => edit({ ...current, vouchers: e.target.checked })} className="accent-primary" />
+              <span>Cho khách nhập <strong>mã giảm giá</strong> (tắt = ẩn ô nhập mã)</span>
+            </label>
+          </div>
         </>
       )}
 

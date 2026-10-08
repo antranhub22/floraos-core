@@ -50,7 +50,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
   const removingId = ci.busyId
   const handleAddProduct = (productId: string) => void ci.add(productId)
   function handleRemoveProduct(productId: string) {
-    if (!window.confirm("Xóa sản phẩm này khỏi bộ sưu tập?")) return
+    if (!window.confirm("Xoá mẫu này khỏi bộ sưu tập? Mẫu sẽ biến mất khỏi mọi link đã gửi khách.")) return
     void ci.remove(productId)
   }
   const filteredProducts = ci.available
@@ -239,7 +239,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                     onClick={() => void handleRemoveProduct(item.product.id)}
                     disabled={removingId === item.product.id}
                     aria-label={`Xóa ${item.product.name} khỏi bộ sưu tập`}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-black/50 hover:bg-danger/80 text-white"
+                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/50 hover:bg-danger/80 text-white"
                   >
                     {removingId === item.product.id
                       ? <Loader2 size={12} className="animate-spin" />

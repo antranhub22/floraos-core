@@ -16,6 +16,8 @@ export interface QuoteSelection {
 interface QuoteResponse {
   quote: BrochureQuote
   errors: Record<string, string>
+  /** Khung giờ đã đủ đơn của ngày khách đang chọn. */
+  fullSlots?: string[]
 }
 
 async function postQuote([url, body]: readonly [string, string]): Promise<QuoteResponse> {
@@ -58,6 +60,7 @@ export function useBrochureQuote(
     update: (patch: Partial<QuoteSelection>) => setSelection((prev) => ({ ...prev, ...patch })),
     quote: swr.data?.quote ?? null,
     errors: swr.data?.errors ?? {},
+    fullSlots: swr.data?.fullSlots ?? [],
     loading: swr.isValidating,
     error: swr.error as Error | undefined,
   }

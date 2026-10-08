@@ -10,6 +10,7 @@ import { StepCustomer } from "./step-customer"
 import { StepResult } from "./step-result"
 import { TemplateSection, catalogTemplateId, templateName } from "./template-section"
 import { useCopyLink } from "./use-copy-link"
+import { useSession } from "@/lib/session"
 import { createShareUrl, markPersonalLinkCopied } from "@/components/greeting-card/share/tracked-copy"
 import { catalogPublicPath, normalizeLinkCode, useJourneyCatalogs, type CatalogOption } from "./use-journey-catalogs"
 
@@ -24,6 +25,8 @@ function absoluteUrl(path: string): string {
 }
 
 export function JourneyWizard({ onFinish }: JourneyWizardProps) {
+  // Sửa mẫu/giao diện bộ sưu tập dùng chung: người được sửa sản phẩm (L3 — Điều hành, Điều phối); Sale chỉ chọn
+  const canEditCatalog = useSession().can("L3")
   const data = useJourneyCatalogs()
   const { catalogs, setCatalogs, orgSlug } = data
   const { copy, copiedKey, copyError } = useCopyLink()
@@ -104,7 +107,8 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
               onCreate={() => setDialog("create")}
               onItemCountChange={handleItemCountChange}
               onNext={() => setStep(2)}
-              templateSlot={selected && <TemplateSection catalog={selected} onSave={data.saveTemplate} />}
+              readOnly={!canEditCatalog}
+              templateSlot={selected && canEditCatalog && <TemplateSection catalog={selected} onSave={data.saveTemplate} />}
             />
           )}
           {step === 2 && selected && (

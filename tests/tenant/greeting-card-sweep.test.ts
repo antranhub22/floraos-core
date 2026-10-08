@@ -16,7 +16,7 @@ import { runBackgroundSweep } from "@/modules/greeting-card/use-cases/background
 
 const ORDER = {
   customerName: "Khách Quen", customerPhone: "0987654321", recipientName: "Người Nhận", recipientPhone: "0912345678",
-  confirmedTerms: true,
+  confirmedTerms: true, selectedPromotionId: "promo-discount-10",
   deliveryDate: new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10), deliveryAddress: "1 Lê Lợi, Q1",
 }
 

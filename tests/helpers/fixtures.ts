@@ -90,3 +90,31 @@ export function withSso(
 export async function readJson(response: Response): Promise<Record<string, unknown>> {
   return (await response.json()) as Record<string, unknown>
 }
+
+/**
+ * Thêm một nhân viên ĐANG HOẠT ĐỘNG vào tổ chức với vai hệ thống `roleKey`, kèm phiên đăng nhập
+ * thật (cookie) — để gọi thẳng route và để máy chủ tự suy năng lực từ vai, không cấy năng lực tay.
+ */
+export async function addStaffWithSession(
+  tenant: Tenant,
+  roleKey: "dieu_hanh" | "dieu_phoi" | "sale",
+  label: string
+): Promise<{ userId: string; token: string; email: string }> {
+  const { randomUUID } = await import("node:crypto")
+  const { prisma } = await import("@/core/tenancy/infra/prisma")
+  const { RoleRepository } = await import("@/modules/organization/infra/role-repository")
+  const { newSessionToken, hashSessionToken } = await import("@/modules/organization/infra/session-token")
+  const { expiresAt } = await import("@/modules/organization/domain/session-policy")
+  const role = await new RoleRepository().findSystemRoleByKey(roleKey)
+  if (!role) throw new Error(`Thiếu vai hệ thống ${roleKey}`)
+  const email = `${label}-${randomUUID().slice(0, 8)}@vi-du.test`
+  const user = await prisma.users.create({ data: { id: randomUUID(), email, name: label } })
+  await prisma.memberships.create({
+    data: { id: randomUUID(), organization_id: tenant.organizationId, user_id: user.id, role_id: role.id, status: "ACTIVE", joined_at: new Date() },
+  })
+  const token = newSessionToken()
+  await prisma.sessions.create({
+    data: { user_id: user.id, token_hash: hashSessionToken(token), organization_id: tenant.organizationId, expires_at: expiresAt(new Date()) },
+  })
+  return { userId: user.id, token, email }
+}

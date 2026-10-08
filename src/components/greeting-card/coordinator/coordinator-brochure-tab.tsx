@@ -6,20 +6,26 @@ import { Button } from "@/components/ui/button"
 import { CoordinatorActionModal } from "./coordinator-action-modal"
 import { CoordinatorOrderCard, type BrochureOrder, type ModalState } from "./coordinator-order-card"
 import { CoordinatorKanbanView } from "./coordinator-kanban-view"
-import { useApi, usePagedList } from "@/components/greeting-card/greeting-api"
+import { useApi } from "@/components/greeting-card/greeting-api"
 import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { useNow, useWorklist } from "@/components/greeting-card/work/use-worklist"
-import { WORK_BUCKET_LABEL, sortWorklist, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
+import { WORK_BUCKET_LABEL, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
 
 // Điều phối chỉ lo đơn đã đặt: không có nhóm "Đang chờ khách"
 const BUCKETS: WorkBucket[] = ["ACTION", "IN_PROGRESS", "DONE"]
 
+/** Ngày theo giờ Việt Nam (YYYY-MM-DD), lệch `addDays` ngày. */
+function vnDate(addDays = 0): string {
+  return new Date(Date.now() + addDays * 86_400_000).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" })
+}
+
 export function CoordinatorBrochureTab() {
-  // Chỉ đơn chưa huỷ — bảng xưởng không cần đơn đã huỷ
-  const list = usePagedList<BrochureOrder>("/api/v1/greeting-card/orders")
-  const orders = list.items.filter((o) => o.status !== "CANCELLED")
-  const loading = list.isLoading
-  const loadOrders = () => void list.refresh()
+  // Bảng việc: MỌI đơn còn việc (không cắt trang), máy chủ đã xếp theo ngày + giờ giao gần nhất
+  const [day, setDay] = useState<string>("")
+  const board = useApi<{ data: BrochureOrder[]; truncated: boolean }>(`/api/v1/greeting-card/coordinator-board${day ? `?date=${day}` : ""}`, { refreshInterval: 30_000 })
+  const orders = board.data?.data ?? []
+  const loading = board.isLoading
+  const loadOrders = () => void board.mutate()
   const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
   const policy = parsePaymentPolicy(org.data?.settings)
   const [modal, setModal] = useState<ModalState>({ type: "none" })
@@ -35,11 +41,13 @@ export function CoordinatorBrochureTab() {
     return b === "WAITING_CUSTOMER" ? "IN_PROGRESS" : b
   }
   const counts = Object.fromEntries(BUCKETS.map((b) => [b, orders.filter((o) => bucketOf(o) === b).length])) as Record<WorkBucket, number>
-  // Việc kẹt của Điều phối lên đầu, rồi đơn vừa đổi bước; mặc định ẩn đơn đã xong
-  const rank = new Map(sortWorklist(work.items, "COORDINATOR").map((i, idx) => [i.orderId, idx]))
-  const shown = orders
-    .filter((o) => (bucket ? bucketOf(o) === bucket : bucketOf(o) !== "DONE"))
-    .sort((a, b) => (rank.get(a.id) ?? 1e6) - (rank.get(b.id) ?? 1e6))
+  // Giữ thứ tự giờ giao của máy chủ; mặc định ẩn đơn đã xong
+  const shown = orders.filter((o) => (bucket ? bucketOf(o) === bucket : bucketOf(o) !== "DONE"))
+  const dayChips: Array<{ id: string; label: string }> = [
+    { id: "", label: "Mọi ngày" },
+    { id: vnDate(0), label: "Hôm nay" },
+    { id: vnDate(1), label: "Ngày mai" },
+  ]
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,7 +56,7 @@ export function CoordinatorBrochureTab() {
         <div>
           <h2 className="text-title font-extrabold text-foreground">Việc của Điều phối</h2>
           <p className="text-body-sm text-text-muted mt-1">
-            Đơn đang kẹt ở phần của bạn lên đầu. Mỗi tác vụ cập nhật bước của đơn — khách tự nhận thông báo qua link theo dõi.
+            Đơn xếp theo ngày và giờ giao gần nhất. Mỗi tác vụ cập nhật bước của đơn — khách tự thấy trên link theo dõi.
           </p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={() => { loadOrders(); void work.refresh() }} className="gap-1.5 text-caption h-9">
@@ -67,6 +75,17 @@ export function CoordinatorBrochureTab() {
               {WORK_BUCKET_LABEL[b]} ({counts[b]})
             </button>
           ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Ngày giao">
+          {dayChips.map((c) => (
+            <button key={c.label} type="button" aria-pressed={day === c.id} onClick={() => setDay(c.id)}
+              className={`h-9 rounded-xl border px-3 text-caption font-bold ${day === c.id ? "border-primary bg-primary text-white" : "border-border text-text-muted hover:bg-surface-muted"}`}>
+              {c.label}
+            </button>
+          ))}
+          <input type="date" aria-label="Chọn ngày giao" value={day} onChange={(e) => setDay(e.target.value)}
+            className="h-9 rounded-xl border border-border bg-surface px-2 text-caption text-foreground" />
         </div>
 
         {/* View Mode Toggle (Spec #14) */}
@@ -116,13 +135,10 @@ export function CoordinatorBrochureTab() {
           ))}
         </div>
       )}
-      {list.hasMore && (
-        <div className="flex justify-center">
-          <Button type="button" variant="outline" size="sm" disabled={list.isLoadingMore} onClick={() => void list.loadMore()}>
-            {list.isLoadingMore ? "Đang tải..." : "Tải thêm đơn"}
-          </Button>
-        </div>
+      {board.data?.truncated && (
+        <p role="status" className="text-center text-caption text-warning">Có quá nhiều đơn — chọn một ngày giao để xem đủ.</p>
       )}
+      {board.error && <p role="alert" className="text-center text-caption text-danger">{board.error.message}</p>}
 
       {/* Modal overlay */}
       {modal.type !== "none" && (

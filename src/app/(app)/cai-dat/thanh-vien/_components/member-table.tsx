@@ -4,6 +4,7 @@ import { Users, Building, Shield, UserCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { SkeletonBlock } from "@/components/ui/skeleton"
+import { MemberAccountActions } from "./member-account-actions"
 
 export interface MemberListItem {
   id: string
@@ -21,6 +22,11 @@ interface MemberTableProps {
   loading: boolean
   searchQuery: string
   canManageRole: boolean
+  /** `A7` đặt lại mật khẩu, `A5` tạm khoá/mở — trần cứng Điều hành. */
+  canResetPassword: boolean
+  canToggleActive: boolean
+  currentUserId: string | null
+  onChanged: () => void
   onSelectMember: (target: {
     id: string
     name: string | null
@@ -36,6 +42,10 @@ export function MemberTable({
   loading,
   searchQuery,
   canManageRole,
+  canResetPassword,
+  canToggleActive,
+  currentUserId,
+  onChanged,
   onSelectMember,
 }: MemberTableProps) {
   if (loading) {
@@ -75,6 +85,8 @@ export function MemberTable({
             const branchName = m.branch_id ? branchMap.get(m.branch_id) || "Chi nhánh" : "Toàn cửa hàng"
             const initial = (m.user.name || m.user.email).charAt(0).toUpperCase()
             const isInvited = m.status === "INVITED"
+            const isSuspended = m.status === "SUSPENDED"
+            const isSelf = m.user.id === currentUserId
 
             return (
               <tr key={m.id} className="hover:bg-surface-alt/40 transition-colors">
@@ -111,13 +123,22 @@ export function MemberTable({
 
                 {/* Trạng thái */}
                 <td className="py-3.5 px-4">
-                  <Badge tone={isInvited ? "warning" : "success"}>
-                    {isInvited ? "Chờ kích hoạt" : "Đang hoạt động"}
+                  <Badge tone={isInvited || isSuspended ? "warning" : "success"}>
+                    {isSuspended ? "Đang tạm khoá" : isInvited ? "Chờ kích hoạt" : "Đang hoạt động"}
                   </Badge>
                 </td>
 
                 {/* Tác vụ */}
                 <td className="py-3.5 px-4 text-right">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                  {!isSelf && (
+                    <MemberAccountActions
+                      member={{ id: m.id, name: m.user.name, email: m.user.email, status: m.status }}
+                      canResetPassword={canResetPassword}
+                      canToggleActive={canToggleActive}
+                      onChanged={onChanged}
+                    />
+                  )}
                   {canManageRole && (
                     <Button
                       type="button"
@@ -137,6 +158,7 @@ export function MemberTable({
                       <span>Phân vai</span>
                     </Button>
                   )}
+                  </div>
                 </td>
               </tr>
             )

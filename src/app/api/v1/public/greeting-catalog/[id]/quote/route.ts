@@ -14,8 +14,8 @@ export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request
   const parsed = bodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed(issuesToDetails(parsed.error.issues))
   const { productId, ...req } = parsed.data
-  const { quote, errors } = await quotePublicCatalog(id, productId, req)
-  return jsonResponse({ quote, errors })
+  const { quote, errors, fullSlots } = await quotePublicCatalog(id, productId, req)
+  return jsonResponse({ quote, errors, fullSlots: fullSlots ?? [] })
 })
 
 export const dynamic = "force-dynamic"

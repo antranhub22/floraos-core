@@ -6,6 +6,8 @@
 
 import { resolveProductPriceVnd } from "./brochure-commerce-rules"
 import { DELIVERY_SLOT_IDS } from "./delivery-schedule"
+import { promotionDiscountVnd, promotionWaivesShipping, type PromotionPricing } from "./promotion-pricing"
+import { parseSlotCapacity, type SlotCapacityConfig } from "./slot-capacity"
 
 export const MAX_ORDER_QUANTITY = 20
 
@@ -68,6 +70,12 @@ export interface ShippingConfig {
   slotIds?: string[]
   /** Cho khách nhập giờ cụ thể (`allow_custom_time`); thiếu = cho phép. */
   allowCustomTime?: boolean
+  /** Miễn phí giao cho MỌI đơn (`free_shipping_all`, PO 08/10/2026); thiếu = tính phí theo khu vực. */
+  freeShippingAll?: boolean
+  /** Cho khách nhập mã giảm giá (`voucher_enabled`); thiếu = ẩn ô nhập, máy chủ bỏ qua mã gửi lên. */
+  vouchersEnabled?: boolean
+  /** Trần đơn mỗi khung giờ (`slot_capacity`); thiếu = 100 đơn/khung (`slot-capacity.ts`). */
+  slotCapacity?: SlotCapacityConfig
 }
 
 /** Đọc `organizations.settings.brochure_shipping`; sai/thiếu → không khu vực nào (phí 0, báo sau). */
@@ -93,6 +101,9 @@ export function parseShippingConfig(settings: unknown): ShippingConfig {
     ...(typeof cutoff === "number" && Number.isInteger(cutoff) && cutoff >= 1 && cutoff <= 23 ? { sameDayCutoffHour: cutoff } : {}),
     ...(typeof prep === "number" && Number.isFinite(prep) && prep > 0 && prep <= 24 ? { prepHours: Math.round(prep) } : {}),
     ...parseSlotSettings(raw.delivery_slots, raw.allow_custom_time),
+    ...(raw.free_shipping_all === true ? { freeShippingAll: true } : {}),
+    ...(raw.voucher_enabled === true ? { vouchersEnabled: true } : {}),
+    ...(raw.slot_capacity ? { slotCapacity: parseSlotCapacity(raw.slot_capacity) } : {}),
   }
 }
 
@@ -141,6 +152,8 @@ export interface QuoteInput {
   zone: ShippingZone | null
   shipping: ShippingConfig
   voucher: VoucherFacts | null
+  /** Ưu đãi khách chọn (tối đa 01) — máy chủ tự tính, không nhận số tiền từ client. */
+  promotion?: PromotionPricing | null | undefined
 }
 
 export interface BrochureQuote {
@@ -152,6 +165,8 @@ export interface BrochureQuote {
   totalVnd: number
   shippingZone: { id: string; name: string } | null
   voucherCode: string | null
+  /** Số tiền ưu đãi "Giảm %" đã trừ trên tổng đơn (chỉ có khi > 0). */
+  promotionDiscountVnd?: number
   /** Mẫu chưa niêm yết giá: đơn được nhận với tổng 0, cửa hàng báo giá sau. */
   awaitingQuote?: boolean
 }
@@ -161,15 +176,21 @@ export function computeQuote(input: QuoteInput): BrochureQuote {
   const subtotalVnd = input.unitPriceVnd * quantity
   const discountVnd = input.voucher ? voucherDiscountVnd(input.voucher, subtotalVnd) : 0
   const afterDiscount = subtotalVnd - discountVnd
-  const free = input.shipping.freeShippingOverVnd !== null && afterDiscount >= input.shipping.freeShippingOverVnd
+  const free =
+    input.shipping.freeShippingAll === true ||
+    promotionWaivesShipping(input.promotion) ||
+    (input.shipping.freeShippingOverVnd !== null && afterDiscount >= input.shipping.freeShippingOverVnd)
   const shippingFeeVnd = input.zone && !free ? input.zone.feeVnd : 0
+  // PO 08/10/2026: "Giảm %" tính trên TỔNG đơn (tiền hoa sau mã giảm giá + phí giao)
+  const promoVnd = promotionDiscountVnd(input.promotion, afterDiscount + shippingFeeVnd)
   return {
     unitPriceVnd: input.unitPriceVnd,
     quantity,
     subtotalVnd,
     discountVnd,
     shippingFeeVnd,
-    totalVnd: afterDiscount + shippingFeeVnd,
+    totalVnd: afterDiscount + shippingFeeVnd - promoVnd,
+    ...(promoVnd > 0 ? { promotionDiscountVnd: promoVnd } : {}),
     shippingZone: input.zone ? { id: input.zone.id, name: input.zone.name } : null,
     voucherCode: input.voucher?.code ?? null,
   }

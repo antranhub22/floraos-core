@@ -12,8 +12,8 @@ export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (r
   assertBrochureOwner(request, sendCode)
   const parsed = publicQuoteBodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed(issuesToDetails(parsed.error.issues))
-  const { quote, errors } = await quoteBrochureSession(sendCode, parsed.data)
-  return jsonResponse({ quote, errors })
+  const { quote, errors, fullSlots } = await quoteBrochureSession(sendCode, parsed.data)
+  return jsonResponse({ quote, errors, fullSlots: fullSlots ?? [] })
 })
 
 export const dynamic = "force-dynamic"

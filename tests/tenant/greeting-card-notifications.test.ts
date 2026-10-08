@@ -47,7 +47,7 @@ describe("greeting-card notifications", () => {
     await selectBrochureProduct(link.sendCode, product.id)
     return submitBrochureOrder(link.sendCode, {
       customerName: "Lan", customerPhone: "0912345678", recipientName: "N", recipientPhone: "0987654321",
-      confirmedTerms: true,
+      confirmedTerms: true, selectedPromotionId: "promo-discount-10",
       deliveryDate: inTenDays(), deliveryAddress: "12 Lê Lợi, Q1",
     })
   }

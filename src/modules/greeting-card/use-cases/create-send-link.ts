@@ -1,4 +1,5 @@
 import type { TenantContext } from "@/core/tenancy"
+import { assertShopReadyForCustomers } from "./get-shop-contact"
 import { conflict, notFound } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { normalizePhone, randomCode } from "../domain/greeting-card-rules"
@@ -24,6 +25,7 @@ export async function createSendLink(
   input: CreateSendLinkInput,
   repo = new GreetingCardRepository()
 ) {
+  await assertShopReadyForCustomers(ctx.organizationId)
   let targetCatalogId = input.catalogId
 
   // If Sale provided a custom catalog (Client Catalog)

@@ -77,4 +77,34 @@ describe("đề xuất hủy / hoàn tiền Thẻ chào", () => {
     expect(res.refundVnd).toBe(0)
     expect(await prisma.order_payments.count({ where: { order_id: orderId } })).toBe(0)
   })
+
+  it("đơn đã giao xong: không duyệt huỷ được (409), đề xuất vẫn chờ; huỷ được thì trả lại mã giảm giá (Đợt 2-I)", async () => {
+    const delivered = await order(a, 500_000)
+    await prisma.orders.update({ where: { id: delivered }, data: { delivery_status: "DELIVERED", status: "COMPLETED" } })
+    const p1 = await repo.createProposal(a.ctx, { orderId: delivered, senderRole: "SALE", proposal: { type: "CANCEL_ONLY", reason: "Khách đổi ý", refundAmountVnd: 0 } })
+    await expect(repo.decide(a.ctx, { requestId: p1.id, approve: true, note: "" })).rejects.toMatchObject({ code: "CONFLICT" })
+    expect((await prisma.orders.findUniqueOrThrow({ where: { id: delivered } })).status).toBe("COMPLETED")
+    expect(await repo.listPending(a.ctx)).toHaveLength(1)
+
+    const open = await order(a, 0)
+    const v = await prisma.vouchers.create({ data: { organization_id: a.organizationId, code: "GIAM", discount_value: 10, is_used: true, order_id: open } })
+    const p2 = await repo.createProposal(a.ctx, { orderId: open, senderRole: "SALE", proposal: { type: "CANCEL_ONLY", reason: "Khách huỷ", refundAmountVnd: 0 } })
+    await repo.decide(a.ctx, { requestId: p2.id, approve: true, note: "" })
+    expect((await prisma.vouchers.findUniqueOrThrow({ where: { id: v.id } }))).toMatchObject({ is_used: false, order_id: null })
+  })
+
+  it("hai lần duyệt hoàn cùng lúc trên một đơn: không ghi đè số đã thu, tổng hoàn không vượt số đã thu", async () => {
+    const orderId = await order(a, 300_000)
+    const p1 = await repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "PARTIAL_REFUND", reason: "Hoa dập", refundAmountVnd: 200_000 } })
+    const p2 = await repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "PARTIAL_REFUND", reason: "Giao trễ", refundAmountVnd: 200_000 } })
+    const results = await Promise.allSettled([
+      repo.decide(a.ctx, { requestId: p1.id, approve: true, note: "" }),
+      repo.decide(a.ctx, { requestId: p2.id, approve: true, note: "" }),
+    ])
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1)
+    const after = await prisma.orders.findUniqueOrThrow({ where: { id: orderId } })
+    expect(Number(after.paid_vnd)).toBe(100_000)
+    const refunds = await prisma.order_payments.findMany({ where: { order_id: orderId, kind: "REFUND" } })
+    expect(refunds.reduce((sum, r) => sum + Number(r.amount_vnd), 0)).toBe(200_000)
+  })
 })

@@ -35,7 +35,7 @@ const ORDER_INPUT = {
   customerPhone: "0987654321",
   recipientName: "Người Nhận",
   recipientPhone: "0912345678",
-  confirmedTerms: true,
+  confirmedTerms: true, selectedPromotionId: "promo-free-card", // ưu đãi tặng kèm — không đổi số tiền bài này kiểm
   deliveryDate: inTenDays(),
   deliveryAddress: "123 Đường Hoa, Quận 1, TP.HCM",
 }

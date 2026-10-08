@@ -15,6 +15,7 @@ import { quoteForProduct } from "./brochure-quote"
 import { resolveAppliedPolicies } from "../domain/store-policy"
 import { promotionNote, resolveOrderPolicies } from "../domain/order-policies"
 import { snapshotOf } from "./brochure-product-mapper"
+import { slotGuardFor } from "./slot-availability"
 
 export const DEFAULT_TIME_SLOT = "Trong ngày"
 
@@ -57,16 +58,18 @@ export async function placeBrochureOrder(
   const { organizationId, session, product, input } = params
   const customerPhone = normalizePhone(input.customerPhone)
   await assertPhoneQuota(organizationId, customerPhone, checkout)
+  const policies = resolveOrderPolicies(resolveAppliedPolicies(params.catalogFilters, params.shopSettings), input)
+  if (!policies.ok) throw validationFailed({ [policies.field]: policies.message })
+  const promotion = policies.snapshot.promotion
   const priced = await quoteForProduct(
     organizationId,
     product,
     { ...input, customerPhone },
     params.shopSettings,
-    checkout
+    checkout,
+    promotion ? { kind: promotion.kind, percent: promotion.percent } : null
   )
   if (Object.keys(priced.errors).length > 0) throw validationFailed(priced.errors)
-  const policies = resolveOrderPolicies(resolveAppliedPolicies(params.catalogFilters, params.shopSettings), input)
-  if (!policies.ok) throw validationFailed({ [policies.field]: policies.message })
 
   const snapshot = snapshotOf(product)
   const customerId = await checkout.findOrCreateCustomer({
@@ -99,6 +102,7 @@ export async function placeBrochureOrder(
       quote: priced.quote,
       voucherId: priced.voucher?.id ?? null,
       policies: policies.snapshot,
+      slotGuard: slotGuardFor(params.shopSettings, input.deliveryTimeSlot),
     },
     customerId
   )

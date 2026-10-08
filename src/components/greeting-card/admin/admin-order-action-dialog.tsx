@@ -5,7 +5,8 @@ import { PaymentCheckPanel } from "./payment-check-panel"
 import { Button } from "@/components/ui/button"
 import { apiSend } from "@/components/greeting-card/greeting-api"
 import { expectedPayment, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
-import { vnd, type OrderAction } from "./admin-order-types"
+import { vnd, type ActionResult, type OrderAction } from "./admin-order-types"
+import { customerPaymentMessage } from "@/modules/greeting-card/domain/customer-notifications"
 
 const FIELD = "w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
 
@@ -26,7 +27,7 @@ export function AdminOrderActionDialog({
   action: OrderAction
   policy: BrochurePaymentPolicy
   onClose: () => void
-  onDone: (message: string) => void
+  onDone: (result: ActionResult) => void
 }) {
   const { order, type } = action
   const suggested =
@@ -46,18 +47,26 @@ export function AdminOrderActionDialog({
         await apiSend(`/api/v1/greeting-card/orders/${order.id}/quote`, "POST", {
           totalVnd: amountVnd, ...(text.trim() ? { reason: text.trim() } : {}),
         }, "Không lưu được báo giá")
-        onDone(`Đã báo giá ${vnd(amountVnd)} cho đơn ${order.code}. Khách mở lại Thẻ chào sẽ thấy mã QR thanh toán.`)
+        onDone({ message: `Đã báo giá ${vnd(amountVnd)} cho đơn ${order.code}. Khách mở lại Thẻ chào sẽ thấy mã QR thanh toán.` })
       } else if (type === "collect") {
         await apiSend(`/api/v1/greeting-card/orders/${order.id}/confirm-payment`, "POST", {
           amountVnd, ...(text.trim() ? { reference: text.trim() } : {}),
         }, "Không ghi nhận được thanh toán")
-        onDone(`Đã ghi nhận ${vnd(amountVnd)} cho đơn ${order.code}.`)
+        onDone({
+          message: `Đã ghi nhận ${vnd(amountVnd)} cho đơn ${order.code}.`,
+          customerMessage: customerPaymentMessage({
+            orderCode: order.code,
+            amountVnd,
+            balanceVnd: Math.max(0, order.total_vnd - order.paid_vnd - amountVnd),
+            trackingUrl: order.greeting_sessions[0]?.send_code ? `${window.location.origin}/b/${order.greeting_sessions[0].send_code}` : null,
+          }),
+        })
       } else if (type === "cancel") {
         await apiSend(`/api/v1/greeting-card/orders/${order.id}/cancel`, "POST", { reason: text }, "Không huỷ được đơn")
-        onDone(`Đã huỷ đơn ${order.code}${order.paid_vnd > 0 ? " — nhớ hoàn tiền cho khách nếu cần" : ""}.`)
+        onDone({ message: `Đã huỷ đơn ${order.code}${order.paid_vnd > 0 ? " — nhớ hoàn tiền cho khách nếu cần" : ""}.` })
       } else {
         await apiSend(`/api/v1/greeting-card/orders/${order.id}/refund`, "POST", { amountVnd, reason: text }, "Không ghi nhận được hoàn tiền")
-        onDone(`Đã ghi nhận hoàn ${vnd(amountVnd)} cho đơn ${order.code}.`)
+        onDone({ message: `Đã ghi nhận hoàn ${vnd(amountVnd)} cho đơn ${order.code}.` })
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Thao tác không thành công")
