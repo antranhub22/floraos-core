@@ -50,6 +50,7 @@ export type ModalState =
   | { type: "delivery-failed"; orderId: string; orderCode: string }
   | { type: "substitute"; orderId: string; orderCode: string }
   | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number }
+  | { type: "detail"; order: BrochureOrder }
 
 function productionLabel(status: string) {
   const map: Record<string, string> = {
@@ -115,14 +116,21 @@ export function CoordinatorOrderCard({
       {work && <WorkStatus item={work} me="COORDINATOR" now={now} />}
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-border pb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-title-sm font-extrabold text-foreground">#{order.code}</span>
+        <button
+          type="button"
+          onClick={() => onOpen({ type: "detail", order })}
+          className="flex items-center gap-2 text-left group cursor-pointer"
+        >
+          <span className="text-title-sm font-extrabold text-foreground group-hover:text-primary transition-colors">
+            #{order.code}
+          </span>
           {session?.send_code && (
             <span className="text-caption px-2 py-0.5 rounded-md bg-surface-muted text-text-muted font-mono font-bold">
               {session.send_code}
             </span>
           )}
-        </div>
+          <span className="text-caption text-primary underline font-medium ml-1">Xem chi tiết</span>
+        </button>
         <span className="text-body-sm font-extrabold text-primary">
           {order.total_vnd.toLocaleString("vi-VN")} đ
         </span>
@@ -160,10 +168,10 @@ export function CoordinatorOrderCard({
       />
 
       {/* Logistics */}
-      <div className="bg-surface-muted rounded-xl p-3 flex flex-col gap-1.5 text-body-sm text-text-muted">
-        <div className="flex items-center gap-2 text-foreground font-medium">
-          <Calendar size={14} className="text-primary shrink-0" />
-          <span>Giao: {date} · {timeSlot}</span>
+      <div className="bg-surface-muted rounded-xl p-3 flex flex-col gap-2 text-body-sm text-text-muted">
+        <div className="flex items-center gap-2 rounded-lg bg-primary/10 border border-primary/20 px-3 py-1.5 text-body-sm font-extrabold text-primary">
+          <Calendar size={16} className="text-primary shrink-0" />
+          <span>Khung giờ giao: {timeSlot || "Trong ngày"}{date ? ` · ${date}` : ""}</span>
         </div>
         <div className="flex items-center gap-2">
           <MapPin size={14} className="text-primary shrink-0" />
