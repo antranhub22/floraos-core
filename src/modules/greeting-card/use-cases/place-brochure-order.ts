@@ -53,6 +53,8 @@ export async function placeBrochureOrder(
     shopSettings: unknown
     /** `filters` của bộ sưu tập — nguồn ưu đãi/thỏa thuận đang áp dụng. */
     catalogFilters: unknown
+    /** Bộ sưu tập — phạm vi áp dụng của mã thanh toán. */
+    catalogId?: string | null | undefined
   },
   checkout = new BrochureCheckoutRepository()
 ): Promise<BrochureOrderResult> {
@@ -70,6 +72,7 @@ export async function placeBrochureOrder(
     checkout,
     promotion ? { kind: promotion.kind, percent: promotion.percent } : null,
     params.catalogFilters,
+    params.catalogId ?? null,
   )
   if (Object.keys(priced.errors).length > 0) throw validationFailed(priced.errors)
 
@@ -106,6 +109,7 @@ export async function placeBrochureOrder(
       voucherId: priced.voucher?.id ?? null,
       policies: policies.snapshot,
       slotGuard: slotGuardFor(params.shopSettings, input.deliveryTimeSlot),
+      paymentCodeGuard: priced.paymentCodeRule ? { code: priced.paymentCodeRule.code, maxUses: priced.paymentCodeRule.maxUses } : null,
     },
     customerId
   )
@@ -119,6 +123,10 @@ export async function placeBrochureOrder(
     totalVnd: priced.quote.totalVnd,
     quote: priced.quote,
     productSnapshot: snapshot,
-    vietQr: paymentInstructionsFor(params.shopSettings, { totalVnd: priced.quote.totalVnd, paidVnd: 0, createdAt: new Date() }, order.code),
+    vietQr: paymentInstructionsFor(
+      params.shopSettings,
+      { totalVnd: priced.quote.totalVnd, paidVnd: 0, createdAt: new Date(), pricingRuleRef: { paymentPlan: priced.quote.paymentPlan } },
+      order.code,
+    ),
   }
 }

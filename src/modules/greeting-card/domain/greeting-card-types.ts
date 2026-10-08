@@ -125,6 +125,8 @@ export interface CustomerOrderSubmitInput {
   quantity?: number | undefined
   shippingZoneId?: string | undefined
   voucherCode?: string | undefined
+  /** Mã thanh toán (DC30…) — đổi cách thu tiền, không giảm giá. */
+  paymentCode?: string | undefined
   /** Ưu đãi khách chọn (01 ưu đãi theo spec #2) */
   selectedPromotionId?: string | undefined
   /** Khách xác nhận thỏa thuận & cam kết (spec #2, #5) */

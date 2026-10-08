@@ -8,6 +8,7 @@ import { TrackingVerifyForm } from "./tracking-verify-form"
 import { CheckCircle2, Clock, Camera, RefreshCw } from "lucide-react"
 import { TrackingSteps } from "./tracking-steps"
 import { OrderChangePanel, type OrderChangeData } from "./order-change-panel"
+import { TrackingPaymentCard, type TrackingPayment } from "./tracking-payment-card"
 import { Button } from "@/components/ui/button"
 
 interface BrochureTrackingViewProps {
@@ -25,6 +26,8 @@ type TrackingData = {
     deliveryStatus: string
     totalVnd: number
     paidVnd: number
+    /** Kế hoạch + các đợt thanh toán (máy chủ mới; client cũ có thể thiếu) */
+    payment?: TrackingPayment
     cardMessage?: string | null
     /** `false` = bản rút gọn cho người chỉ biết mã đơn */
     verified?: boolean
@@ -183,6 +186,7 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
         </section>
       )}
 
+      {order.payment && <TrackingPaymentCard payment={order.payment} sendCode={sendCode} />}
       {order.verified === false && <TrackingVerifyForm orderCode={orderCode} onVerified={setLast4} />}
       {order.deliveryFailure && (
         <div role="status" className="rounded-2xl border border-warning/30 bg-warning-bg p-4 flex flex-col gap-1 text-body-sm">

@@ -11,6 +11,8 @@ export interface QuoteSelection {
   quantity: number
   shippingZoneId: string
   voucherCode: string
+  /** Mã thanh toán (đặt cọc) — máy chủ kiểm, không giảm giá. */
+  paymentCode: string
 }
 
 interface QuoteResponse {
@@ -43,8 +45,10 @@ export function useBrochureQuote(
     quantity: 1,
     shippingZoneId: "",
     voucherCode: "",
+    paymentCode: "",
   })
-  const selection = sanitizeVariant(saved, product.variantIds)
+  // Lựa chọn đã nhớ trên máy từ trước khi có mã thanh toán → thiếu khoá `paymentCode`
+  const selection = { ...sanitizeVariant(saved, product.variantIds), paymentCode: saved.paymentCode ?? "" }
 
   const body = JSON.stringify({
     ...extraBody,
@@ -52,6 +56,7 @@ export function useBrochureQuote(
     ...(selection.variantId ? { variantId: selection.variantId } : {}),
     ...(selection.shippingZoneId ? { shippingZoneId: selection.shippingZoneId } : {}),
     ...(selection.voucherCode ? { voucherCode: selection.voucherCode, customerPhone } : {}),
+    ...(selection.paymentCode ? { paymentCode: selection.paymentCode } : {}),
   })
   const swr = useSWR([quoteUrl, body] as const, postQuote, { keepPreviousData: true, revalidateOnFocus: false })
 

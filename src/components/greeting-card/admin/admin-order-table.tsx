@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { paymentCheckOf } from "@/modules/greeting-card/domain/payment-check"
 import { vnd, type AdminOrder, type OrderAction } from "./admin-order-types"
+import { AdminPaymentPlanCell } from "./admin-payment-plan-cell"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Chờ thanh toán", className: "bg-warning-bg text-warning" },
@@ -17,7 +18,12 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 }
 
 /** Bảng đơn Thẻ chào cho Điều hành: tiền đã thu/còn lại + thu, huỷ, hoàn. */
-export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; onAction: (a: OrderAction) => void }) {
+export function AdminOrderTable({ orders, onAction, shopDepositPercent = 0 }: {
+  orders: AdminOrder[]
+  onAction: (a: OrderAction) => void
+  /** % cọc hiện tại của tiệm — cho đơn cũ chưa chụp kế hoạch thanh toán */
+  shopDepositPercent?: number
+}) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-body-sm">
@@ -57,8 +63,7 @@ export function AdminOrderTable({ orders, onAction }: { orders: AdminOrder[]; on
                   {awaitingQuote ? <span className="text-warning">Chờ báo giá</span> : vnd(o.total_vnd)}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <div className={balance > 0 ? "font-bold text-warning" : "font-bold text-success"}>{vnd(o.paid_vnd)}</div>
-                  {balance > 0 && o.status !== "CANCELLED" && <div className="text-caption text-text-muted">còn {vnd(balance)}</div>}
+                  <AdminPaymentPlanCell order={o} shopDepositPercent={shopDepositPercent} />
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-2.5 py-0.5 rounded-full text-caption font-bold ${badge.className}`}>{badge.label}</span>

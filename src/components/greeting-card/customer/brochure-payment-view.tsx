@@ -95,7 +95,7 @@ export function BrochurePaymentView({
           {vietQr.purpose !== "FULL" && (
             <p className="text-body-sm text-foreground mb-3">
               Tổng giá trị đơn: <strong>{vietQr.orderTotalVnd.toLocaleString("vi-VN")} đ</strong>
-              {vietQr.purpose === "DEPOSIT" && " — phần còn lại cửa hàng sẽ thu sau theo thoả thuận."}
+              {vietQr.purpose === "DEPOSIT" && ` — phần còn lại ${(vietQr.orderTotalVnd - vietQr.amount).toLocaleString("vi-VN")} đ thanh toán sau khi hoa hoàn thành và cửa hàng gửi ảnh xác nhận.`}
             </p>
           )}
 

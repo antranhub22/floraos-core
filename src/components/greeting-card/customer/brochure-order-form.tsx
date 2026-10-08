@@ -126,6 +126,8 @@ export function BrochureOrderForm({
       ...(pricing.selection.variantId ? { variantId: pricing.selection.variantId } : {}),
       ...(pricing.selection.shippingZoneId ? { shippingZoneId: pricing.selection.shippingZoneId } : {}),
       ...(pricing.selection.voucherCode ? { voucherCode: pricing.selection.voucherCode } : {}),
+      // Mã thanh toán bị máy chủ từ chối không gửi kèm đơn — đơn theo cách thu mặc định
+      ...(pricing.selection.paymentCode && !pricing.errors.paymentCode ? { paymentCode: pricing.selection.paymentCode } : {}),
     })
   }
 

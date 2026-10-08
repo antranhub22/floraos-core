@@ -5,6 +5,7 @@ import { PaymentCheckPanel } from "./payment-check-panel"
 import { Button } from "@/components/ui/button"
 import { apiSend } from "@/components/greeting-card/greeting-api"
 import { expectedPayment, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { policyForOrder } from "@/modules/greeting-card/domain/payment-plan"
 import { vnd, type ActionResult, type OrderAction } from "./admin-order-types"
 import { customerPaymentMessage } from "@/modules/greeting-card/domain/customer-notifications"
 
@@ -31,7 +32,7 @@ export function AdminOrderActionDialog({
 }) {
   const { order, type } = action
   const suggested =
-    type === "collect" ? expectedPayment(policy, order.total_vnd, order.paid_vnd).amountVnd : type === "refund" ? order.paid_vnd : 0
+    type === "collect" ? expectedPayment(policyForOrder(policy, order.pricing_rule_ref), order.total_vnd, order.paid_vnd).amountVnd : type === "refund" ? order.paid_vnd : 0
   const [amount, setAmount] = useState(suggested ? String(suggested) : "")
   const [text, setText] = useState("")
   const [busy, setBusy] = useState(false)

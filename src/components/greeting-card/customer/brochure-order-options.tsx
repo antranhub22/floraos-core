@@ -5,6 +5,7 @@ import { Minus, Plus, Ticket } from "lucide-react"
 import type { ShippingConfig, BrochureQuote } from "@/modules/greeting-card/domain/brochure-pricing"
 import { MAX_ORDER_QUANTITY } from "@/modules/greeting-card/domain/brochure-pricing"
 import type { QuoteSelection } from "./use-brochure-quote"
+import { PaymentCodeField, PaymentDueRows } from "./payment-code-field"
 
 interface Props {
   variants: Array<{ id: string; name: string; priceVnd: number }>
@@ -20,7 +21,7 @@ interface Props {
 const FIELD = "w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
 const vnd = (n: number) => `${n.toLocaleString("vi-VN")} đ`
 
-/** Size, số lượng, khu vực giao, mã giảm giá (khi tiệm bật) + bảng tổng tiền do server tính (đã trừ ưu đãi). */
+/** Size, số lượng, khu vực giao, mã giảm giá (khi tiệm bật), mã thanh toán (khi tiệm có mã) + bảng tổng tiền do server tính (đã trừ ưu đãi). */
 export function BrochureOrderOptions({ variants, basePrice, shipping, selection, onChange, quote, errors, loading }: Props) {
   const [voucherInput, setVoucherInput] = useState(selection.voucherCode)
 
@@ -104,6 +105,10 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
         {errors.voucherCode && <span className="text-caption text-danger">{errors.voucherCode}</span>}
       </div>}
 
+      {shipping.paymentCodesEnabled && (
+        <PaymentCodeField value={selection.paymentCode} onApply={(code) => onChange({ paymentCode: code })} quote={quote} error={errors.paymentCode} />
+      )}
+
       {quote?.awaitingQuote ? (
         <p role="status" className="text-body-sm text-text-muted border-t border-border pt-2">
           Mẫu này chưa niêm yết giá. Cửa hàng sẽ báo giá trọn gói (gồm phí giao) sau khi nhận đơn — bạn chưa cần thanh toán lúc này.
@@ -125,9 +130,10 @@ export function BrochureOrderOptions({ variants, basePrice, shipping, selection,
             <div className="flex justify-between"><dt className="text-text-muted">Phụ phí ngày lễ ({quote.holidayName})</dt><dd>+{vnd(quote.holidaySurchargeVnd)}</dd></div>
           ) : null}
           <div className="flex justify-between font-extrabold text-body">
-            <dt>Tổng thanh toán</dt>
+            <dt>Tổng đơn hàng</dt>
             <dd className="text-primary">{quote ? vnd(quote.totalVnd) : "—"}</dd>
           </div>
+          <PaymentDueRows quote={quote} />
         </dl>
       )}
     </div>

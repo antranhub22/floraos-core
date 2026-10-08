@@ -10,6 +10,7 @@ import { BrochureDefaultOwnerSettings } from "./brochure-default-owner-settings"
 import { BrochurePaymentSettings } from "./brochure-payment-settings"
 import { BrochureBankSyncSettings } from "./brochure-bank-sync-settings"
 import { BrochurePolicySettings } from "./brochure-policy-settings"
+import { PaymentPlanSettings } from "./payment-plan-settings"
 import { BrochureShippingSettings } from "./brochure-shipping-settings"
 import { BrochureHolidaySettings } from "./brochure-holiday-settings"
 import { BrochureNotifySettings } from "./brochure-notify-settings"
@@ -41,6 +42,7 @@ export function AdminSettingsDrawer({ onClose }: { onClose: () => void }) {
           <BrochurePaymentSettings />
           <BrochureBankSyncSettings />
           <BrochurePolicySettings />
+          <PaymentPlanSettings />
           <BrochureShippingSettings />
           <BrochureHolidaySettings />
           <BrochureNotifySettings />

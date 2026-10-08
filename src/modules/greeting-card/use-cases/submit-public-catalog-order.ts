@@ -61,7 +61,7 @@ async function recentDuplicate(
     return {
       sendCode: r.send_code, orderId: o.id, orderCode: o.code, totalVnd: total, quote: null,
       productSnapshot: r.product_snapshot as unknown as ProductSnapshot,
-      vietQr: paymentInstructionsFor(shopSettings, { totalVnd: total, paidVnd: Number(o.paid_vnd), createdAt: o.created_at }, o.code),
+      vietQr: paymentInstructionsFor(shopSettings, { totalVnd: total, paidVnd: Number(o.paid_vnd), createdAt: o.created_at, pricingRuleRef: o.pricing_rule_ref }, o.code),
     }
   }
   return null
@@ -95,6 +95,7 @@ export async function submitPublicCatalogOrder(
     undefined,
     null,
     catalog.filters,
+    catalog.id,
   )
   if (Object.keys(precheck.errors).length > 0) throw validationFailed(precheck.errors)
 
@@ -124,6 +125,7 @@ export async function submitPublicCatalogOrder(
     notePrefix: `[Đặt từ Link công khai /g/${catalog.code}]`,
     shopSettings: shop.settings,
     catalogFilters: catalog.filters,
+    catalogId: catalog.id,
   })
 }
 
@@ -137,7 +139,7 @@ export async function quotePublicCatalog(
   const { catalog, product } = await orderableFromCatalog(catalogId, productId, repo)
   const shop = await repo.getShopProfile(catalog.organization_id)
   const promo = promotionForQuote(catalog.filters, shop.settings, req.selectedPromotionId)
-  const result = await quoteForProduct(catalog.organization_id, product, req, shop.settings, undefined, promo.promotion, catalog.filters)
+  const result = await quoteForProduct(catalog.organization_id, product, req, shop.settings, undefined, promo.promotion, catalog.filters, catalog.id)
   const fullSlots = await fullSlotsOn(catalog.organization_id, req.deliveryDate, shop.settings)
   return { ...result, fullSlots, ...(promo.error ? { errors: { ...result.errors, selectedPromotionId: promo.error } } : {}) }
 }

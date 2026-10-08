@@ -3,6 +3,7 @@ export interface AdminOrder {
   code: string
   status: string
   delivery_status: string
+  production_status?: string
   total_vnd: number
   paid_vnd: number
   balance_vnd: number

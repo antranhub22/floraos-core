@@ -35,6 +35,8 @@ export const publicOrderBodySchema = z.object({
   quantity: z.number().int().min(1).max(MAX_ORDER_QUANTITY).optional(),
   shippingZoneId: z.string().max(40).optional(),
   voucherCode: z.string().trim().max(40).optional(),
+  /** Mã thanh toán (đặt cọc) — KHÔNG phải mã giảm giá; máy chủ kiểm. */
+  paymentCode: z.string().trim().max(40).optional(),
   /** Đúng MỘT ưu đãi khách chọn — máy chủ kiểm lại theo bộ sưu tập. */
   selectedPromotionId: z.string().max(80).optional(),
   /** Khách đã tick xác nhận thỏa thuận. */
@@ -54,6 +56,7 @@ export const publicQuoteBodySchema = z.object({
   quantity: z.number().int().min(1).max(MAX_ORDER_QUANTITY).optional(),
   shippingZoneId: z.string().max(40).optional(),
   voucherCode: z.string().trim().max(40).optional(),
+  paymentCode: z.string().trim().max(40).optional(),
   customerPhone: z.string().max(20).optional(),
   selectedPromotionId: z.string().max(80).optional(),
   /** Ngày giao — để báo khung giờ đã kín và phụ phí ngày lễ */

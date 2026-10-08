@@ -1,7 +1,7 @@
 import { AppError } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { paymentInstructionsFor } from "./payment-instructions"
-import { parseShippingConfig, type ShippingConfig } from "../domain/brochure-pricing"
+import { withPaymentCodeFlag, type ShippingConfig } from "../domain/brochure-pricing"
 import type {
   BrochurePaymentInstructions,
   GreetingCatalogProduct,
@@ -76,7 +76,7 @@ export async function getGreetingCatalogForCustomer(
         paidVnd: Number(session.order.paid_vnd),
       }
     : null
-  const payment = order && order.status !== "CANCELLED" ? paymentInstructionsFor(shop.settings, { ...order, createdAt: session.order?.created_at }, order.code) : null
+  const payment = order && order.status !== "CANCELLED" ? paymentInstructionsFor(shop.settings, { ...order, createdAt: session.order?.created_at, pricingRuleRef: session.order?.pricing_rule_ref }, order.code) : null
 
   return {
     status: "ACTIVE",
@@ -96,7 +96,7 @@ export async function getGreetingCatalogForCustomer(
       filters: toPublicCatalogFilters(session.catalog.filters, session.organization?.settings),
     },
     products,
-    shipping: parseShippingConfig(shop.settings),
+    shipping: withPaymentCodeFlag(shop.settings),
     order,
     payment,
   }

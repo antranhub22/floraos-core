@@ -14,12 +14,17 @@ import { resolveAppliedPolicies } from "../domain/store-policy"
 import { selectPromotion } from "../domain/order-policies"
 import { BrochureCheckoutRepository } from "../infra/brochure-checkout-repository"
 import { holidayOn, holidaySurcharge, parseHolidayPolicy } from "../domain/holiday-policy"
+import { paymentSplit } from "../domain/payment-schedule"
+import type { PaymentCodeRule } from "../domain/payment-plan"
+import { resolvePaymentPlan } from "./payment-plan-quote"
 
 export interface QuoteRequest {
   variantId?: string | undefined
   quantity?: number | undefined
   shippingZoneId?: string | undefined
   voucherCode?: string | undefined
+  /** Mã thanh toán (DC30…) — đổi cách thu (cọc/trả đủ), KHÔNG giảm giá. Máy chủ kiểm. */
+  paymentCode?: string | undefined
   customerPhone?: string | undefined
   /** Ưu đãi khách chọn — máy chủ tra lại trong ưu đãi bộ sưu tập đang áp dụng. */
   selectedPromotionId?: string | undefined
@@ -35,6 +40,8 @@ export interface QuoteResult {
   errors: Record<string, string>
   /** Nhãn khung giờ đã đủ đơn của `deliveryDate` (chỉ báo giá trên trang khách trả). */
   fullSlots?: string[]
+  /** Mã thanh toán hợp lệ đã áp (chỉ dùng ở máy chủ khi tạo đơn). */
+  paymentCodeRule?: PaymentCodeRule | null
 }
 
 /**
@@ -64,6 +71,38 @@ export async function quoteForProduct(
   promotion: PromotionPricing | null = null,
   /** `catalog.filters` của bộ sưu tập khách đang đặt — quyết định có phụ phí ngày lễ không */
   catalogFilters?: unknown,
+  /** Bộ sưu tập khách đang đặt — mã thanh toán có thể chỉ áp cho một số bộ sưu tập. */
+  catalogId: string | null = null,
+): Promise<QuoteResult> {
+  const priced = await priceProduct(organizationId, product, req, shopSettings, checkout, promotion, catalogFilters)
+  const resolved = await resolvePaymentPlan(
+    organizationId,
+    shopSettings,
+    {
+      paymentCode: req.paymentCode,
+      totalVnd: priced.quote.awaitingQuote ? null : priced.quote.totalVnd,
+      catalogId,
+      deliveryDate: req.deliveryDate,
+    },
+    checkout,
+  )
+  const split = paymentSplit(priced.quote.totalVnd, resolved.plan.depositPercent)
+  return {
+    ...priced,
+    quote: { ...priced.quote, paymentPlan: { ...resolved.plan, dueNowVnd: split.dueNowVnd, dueLaterVnd: split.dueLaterVnd } },
+    errors: resolved.error ? { ...priced.errors, paymentCode: resolved.error } : priced.errors,
+    paymentCodeRule: resolved.rule,
+  }
+}
+
+async function priceProduct(
+  organizationId: string,
+  product: GreetingCatalogProduct,
+  req: QuoteRequest,
+  shopSettings: unknown,
+  checkout: BrochureCheckoutRepository,
+  promotion: PromotionPricing | null,
+  catalogFilters: unknown,
 ): Promise<QuoteResult> {
   const errors: Record<string, string> = {}
 
