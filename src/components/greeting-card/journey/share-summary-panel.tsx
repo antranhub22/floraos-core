@@ -11,6 +11,8 @@ interface ShareSummaryPanelProps {
   itemCount: number
   copied: boolean
   copyError: string | null
+  /** Link vừa tạo nhưng trình duyệt chặn chép — hiện ra để chép tay. */
+  copyFallback?: string | null | undefined
   onCopy: () => void
   onPreview: () => void
   onClone: () => void
@@ -29,7 +31,7 @@ function ChecklistRow({ done, label }: { done: boolean; label: string }) {
 
 /** Cột tóm tắt: trạng thái sẵn sàng + link dùng chung (một nơi duy nhất cho thao tác chia sẻ). */
 export function ShareSummaryPanel(props: ShareSummaryPanelProps) {
-  const { catalog, templateLabel, itemCount, copied, copyError, onCopy, onPreview, onClone } = props
+  const { catalog, templateLabel, itemCount, copied, copyError, copyFallback, onCopy, onPreview, onClone } = props
   const ready = Boolean(catalog) && itemCount > 0
 
   return (
@@ -83,6 +85,11 @@ export function ShareSummaryPanel(props: ShareSummaryPanelProps) {
               <p role="alert" className="mt-2 text-caption text-danger">
                 {copyError}
               </p>
+            )}
+            {copyFallback && (
+              <output className="mt-2 block break-all rounded-xl border border-border bg-background p-2.5 font-mono text-caption text-foreground select-all">
+                {copyFallback}
+              </output>
             )}
             <button
               type="button"
