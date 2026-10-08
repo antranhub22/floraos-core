@@ -260,7 +260,12 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
         )}
 
         {step === "TRACKING" && orderResult && (
-          <BrochureTrackingView orderCode={orderResult.orderCode} sendCode={session.sendCode} onPaymentFailed={onPaymentFailed} />
+          <BrochureTrackingView
+            orderCode={orderResult.orderCode}
+            sendCode={session.sendCode}
+            onPaymentFailed={onPaymentFailed}
+            onReorder={() => setStep("SWIPING")}
+          />
         )}
 
         {(step === "PAYMENT" || step === "TRACKING") && orderResult && (

@@ -11,6 +11,7 @@ import { OrderChangePanel, type OrderChangeData } from "./order-change-panel"
 import { TrackingPaymentCard, type TrackingPayment } from "./tracking-payment-card"
 import { PaymentFailedNotice } from "./payment-failed-notice"
 import { SubstitutePanel, type SubstituteData } from "./substitute-panel"
+import { CustomerThankYouCard } from "./customer-thank-you-card"
 import { Button } from "@/components/ui/button"
 
 interface BrochureTrackingViewProps {
@@ -20,6 +21,7 @@ interface BrochureTrackingViewProps {
   /** Nút "Đặt lại đơn mới" khi đơn không hoàn thành vì thanh toán thất bại. */
   failedCta?: React.ReactNode
   onPaymentFailed?: (() => void) | undefined
+  onReorder?: (() => void) | undefined
 }
 
 type TrackingData = {
@@ -68,7 +70,7 @@ type TrackingData = {
   }
 }
 
-export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPaymentFailed }: BrochureTrackingViewProps) {
+export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPaymentFailed, onReorder }: BrochureTrackingViewProps) {
   const base = `/api/v1/public/brochure/tracking/${encodeURIComponent(orderCode)}`
   // Đã xác minh bằng 4 số cuối SĐT: hỏi bằng POST, không tự hỏi lại (máy chủ giới hạn số lần thử)
   const [last4, setLast4] = useState<string | null>(null)
@@ -108,6 +110,16 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
   const recipientPhotos = order.recipientPhotoUrls ?? []
   const awaitingQuote = order.totalVnd <= 0
   const isPaid = !awaitingQuote && order.paidVnd >= order.totalVnd
+  const isCompleted =
+    order.status === "COMPLETED" ||
+    order.deliveryStatus === "DELIVERED" ||
+    trackingStep.stepIndex === 4 ||
+    trackingStep.percentage === 100
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id)
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+  }
 
   return (
     <div className="w-full max-w-xl lg:max-w-2xl mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-7 shadow-sm flex flex-col gap-6">
@@ -135,6 +147,23 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
 
       {paymentFailed && <PaymentFailedNotice orderCode={order.code} cta={failedCta} />}
 
+      {/* Màn hình Cảm ơn khách hàng khi đơn hàng đã hoàn tất (Mục #4) */}
+      {isCompleted && (
+        <CustomerThankYouCard
+          orderCode={order.code}
+          sendCode={sendCode}
+          onViewOrderInfo={() => scrollToSection("order-details-section")}
+          onViewProgress={() => scrollToSection("progress-evidence-section")}
+          onReorder={() => {
+            if (onReorder) {
+              onReorder()
+            } else if (sendCode) {
+              window.location.href = `/b/${encodeURIComponent(sendCode)}?reorder=1`
+            }
+          }}
+        />
+      )}
+
       {/* Progress Bar & Current Status Card */}
       <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -154,6 +183,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
       </div>
 
       {/* Ảnh thành phẩm và ảnh người nhận: hai mục riêng, ảnh sau không đè ảnh trước */}
+      <div id="progress-evidence-section" className="flex flex-col gap-4">
       {productPhotos.length > 0 && (
         <section className="flex flex-col gap-3 p-4 rounded-2xl bg-surface-muted border border-border">
           <div className="flex items-center justify-between">
@@ -198,6 +228,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
           <p className="text-caption text-text-muted">Hoa đã được trao tận tay người nhận.</p>
         </section>
       )}
+      </div>
 
       {order.payment && !paymentFailed && <TrackingPaymentCard payment={order.payment} sendCode={sendCode} />}
       {order.verified === false && <TrackingVerifyForm orderCode={orderCode} onVerified={setLast4} />}
@@ -219,7 +250,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
       )}
 
       {/* Order Details Summary */}
-      <div className="flex flex-col gap-2 text-body-sm text-text-muted bg-surface-muted p-4 rounded-xl border border-border">
+      <div id="order-details-section" className="flex flex-col gap-2 text-body-sm text-text-muted bg-surface-muted p-4 rounded-xl border border-border">
         <div className="flex justify-between gap-3">
           <span className="shrink-0">Người nhận:</span>
           <span className="font-bold text-foreground text-right break-words">{order.recipientName}</span>

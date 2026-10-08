@@ -262,8 +262,17 @@ export function BrochurePaymentView({
             </p>
           </div>
           <p className="text-caption text-text-muted text-center">
-            Nút Theo dõi tiến độ sẽ mở ngay khi cửa hàng xác nhận đã nhận tiền.
+            Nút Theo dõi tiến độ sẽ được kích hoạt ngay khi cửa hàng xác nhận đã nhận tiền.
           </p>
+          <Button
+            type="button"
+            disabled
+            variant="outline"
+            className="w-full h-11 text-body-sm text-text-muted opacity-60 cursor-not-allowed rounded-xl flex items-center justify-center gap-2"
+          >
+            <span>Theo dõi tiến độ đơn hàng (Chờ xác nhận)</span>
+            <ArrowRight size={16} />
+          </Button>
         </div>
       ) : vietQr ? (
         <div className="w-full flex flex-col gap-2.5">
@@ -279,8 +288,17 @@ export function BrochurePaymentView({
             <Check size={18} />
             <span>{loading ? "Đang xử lý..." : "TÔI ĐÃ CHUYỂN KHOẢN THANH TOÁN"}</span>
           </button>
+          <Button
+            type="button"
+            disabled
+            variant="outline"
+            className="w-full h-11 text-body-sm text-text-muted opacity-50 cursor-not-allowed rounded-xl flex items-center justify-center gap-2"
+          >
+            <span>Theo dõi tiến độ đơn hàng (Chờ thanh toán)</span>
+            <ArrowRight size={16} />
+          </Button>
           <p className="text-caption text-text-muted">
-            Sau khi chuyển khoản, nhấn nút trên. Cửa hàng xác nhận đã nhận tiền thì bạn sẽ theo dõi được tiến độ đơn hàng.
+            Sau khi chuyển khoản, nhấn &quot;Tôi đã chuyển khoản thanh toán&quot;. Cửa hàng xác nhận đã nhận tiền thì nút Theo dõi tiến độ sẽ được kích hoạt.
           </p>
         </div>
       ) : (

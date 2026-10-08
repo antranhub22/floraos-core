@@ -212,4 +212,31 @@ export const KNOWLEDGE_MODULES: ModuleKnowledgeSpec[] = [
     ],
     copilotPrompt: "Quy trình in phiếu cắm hoa giấu giá và đo lường SLA đơn hàng?",
   },
+
+  // 8. THẺ CHÀO — Thẻ Chào Mẫu Hoa & Link Đặt Hoa Trực Tuyến
+  {
+    id: "the_chao_mau_hoa",
+    code: "THẺ CHÀO",
+    title: "Thẻ Chào Mẫu Hoa, Bán Hàng Đa Kênh & Theo Dõi Tiến Độ",
+    badgeLabel: "THẺ CHÀO MẪU HOA 9 BƯỚC",
+    summary: "Quy trình gửi link bộ sưu tập cho khách lướt chọn mẫu hoa, tự động tạo đơn, thanh toán chuyển khoản VietQR, nghiệm thu ảnh 10 phút và theo dõi tiến độ.",
+    routePath: "/the-chao",
+    actionButtonLabel: "Mở Phân Hệ Thẻ Chào Mẫu Hoa",
+    atomicFields: [
+      { name: "Bộ sưu tập nguồn", dataType: "Select", required: true, description: "Bộ sưu tập mẫu hoa gửi khách", example: "Bộ sưu tập Hoa Sinh Nhật Mùa Thu" },
+      { name: "Mã nhân viên phụ trách", dataType: "Text", required: true, description: "Mã nhân viên sale gửi link để ghi nhận hoa hồng", example: "NV-SALE-02" },
+      { name: "Khung giờ giao hàng", dataType: "Select", required: true, description: "Khung giờ khách hẹn nhận hoa", example: "10:00 - 12:00" },
+      { name: "Xác nhận tiền về", dataType: "Boolean", required: true, description: "Điều hành xác nhận tiền chuyển khoản về tài khoản", example: "Đã xác nhận" },
+      { name: "Ảnh hoa thành phẩm", dataType: "Image", required: true, description: "Ảnh xưởng hoa chụp nghiệm thu trước khi giao", example: "anh-hoa-thanh-pham.jpg" },
+      { name: "Ảnh người nhận hoa", dataType: "Image", required: true, description: "Ảnh shipper chụp bàn giao hoa tận tay cho người nhận", example: "anh-giao-hoa-thanh-cong.jpg" },
+    ],
+    goodPractice: "Kiểm tra biến động số dư ngân hàng và bấm 'Xác nhận tiền về' để kích hoạt nút theo dõi tiến độ cho khách.",
+    badPractice: "Bàn giao hoa cho shipper khi chưa kiểm tra tiền về hoặc chưa tải ảnh nghiệm thu.",
+    tips: [
+      "🌸 Khách có đồng hồ đếm ngược 10 phút để duyệt ảnh thành phẩm trước khi giao",
+      "⚡ Bấm vào thẻ đơn hàng trên Kanban để xem toàn bộ thông tin người nhận, lời chúc thiệp",
+      "📜 Trích xuất Sơ đồ Milestones để gửi bằng chứng đối soát minh bạch cho khách khi có tranh chấp",
+    ],
+    copilotPrompt: "Hướng dẫn toàn bộ quy trình Thẻ Chào mẫu hoa cho Điều hành, Sale và Điều phối?",
+  },
 ]
