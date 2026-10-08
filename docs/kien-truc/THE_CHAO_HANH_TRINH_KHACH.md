@@ -99,6 +99,13 @@ Luồng không đổi: chọn mẫu → thông tin giao → xem lại đơn → 
 - **Tổng tiền giữ nguyên** (khung thoả thuận "ưu tiên hoa tương đương hoặc giá trị cao hơn"). Chọn mẫu → đơn đổi sang mẫu mới (ảnh, tên trên trang theo dõi và thẻ Điều phối); mọi lựa chọn ghi một dòng `[Đổi mẫu]` vào ghi chú nội bộ cho thợ cắm và báo Điều phối. Xin huỷ → tiệm liên hệ và dùng luồng **đề xuất huỷ / hoàn tiền** hiện có (không tự huỷ).
 - Chưa có: việc "Khách đã trả lời đổi mẫu" riêng trong Hộp việc (hiện là tin nhắn gửi Điều phối + dòng ghi chú trên đơn); đề xuất mẫu ngoài bộ sưu tập; chênh lệch giá khi khách muốn trả thêm cho mẫu đắt hơn.
 
+## 4g. Thông tin cửa hàng trên thanh trên cùng (08/10/2026)
+
+- Thanh trên cùng của mọi màn khách giữ gọn (logo, tên, Mã QR, Zalo). Khách **chạm logo/tên** (có dấu ⌄) → khung "Thông tin cửa hàng": logo + tên, **hotline** (chỉ hiển thị để tạo niềm tin, không bấm gọi — PO chốt), email, website (website chính + "Website khác", tối đa 5), Facebook/Instagram/TikTok, địa chỉ — ô nào tiệm chưa khai thì ẩn.
+- Nguồn: Hồ sơ cửa hàng (`business_profiles.email`, `website`, `social_links` — "Website khác" lưu `social_links.websites`, không đổi schema). Link chỉ nhận `http(s)`.
+- Nút **"Cam kết của cửa hàng"** trong khung (thu gọn, bấm mới mở): lấy từ **Chính sách trong Hồ sơ tiệm** (`settings.store_policies.commitments`, chỉ `customerText`, không lộ ghi chú nội bộ), áp chung mọi link của tiệm.
+- Bước "Xem lại đơn" không còn liệt kê cam kết — chỉ còn nút "Xem cam kết của cửa hàng" mở đúng khung trên. Ưu đãi và Thoả thuận (kèm ô xác nhận) giữ nguyên ở bước này.
+
 ## 5. Chưa làm (đợt C — cần PO duyệt đổi schema)
 
 - Phân biệt "Tạm hết" và "Hết hẳn"; lựa chọn "Cho phép thay thế tương đương" khi đặt.

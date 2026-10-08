@@ -19,6 +19,8 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
   const [email, setEmail] = useState("")
   const [address, setAddress] = useState("")
   const [website, setWebsite] = useState("")
+  /** Website khác (mỗi dòng một địa chỉ) — lưu `social_links.websites`, hiện trên trang khách Thẻ chào */
+  const [otherWebsites, setOtherWebsites] = useState("")
   const [taxCode, setTaxCode] = useState("")
   const [description, setDescription] = useState("")
   const [openTime, setOpenTime] = useState("08:00")
@@ -44,7 +46,8 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
       if (hours?.open) setOpenTime(hours.open)
       if (hours?.close) setCloseTime(hours.close)
 
-      const socials = initialData.social_links as { facebook?: string; zalo?: string; instagram?: string } | null
+      const socials = initialData.social_links as { facebook?: string; zalo?: string; instagram?: string; websites?: unknown } | null
+      if (Array.isArray(socials?.websites)) setOtherWebsites(socials.websites.filter((w): w is string => typeof w === "string").join("\n"))
       if (socials?.facebook) setFacebookUrl(socials.facebook)
       if (socials?.zalo) setZaloUrl(socials.zalo)
       if (socials?.instagram) setInstagramUrl(socials.instagram)
@@ -84,6 +87,7 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
         facebook: facebookUrl.trim() || null,
         zalo: zaloUrl.trim() || null,
         instagram: instagramUrl.trim() || null,
+        websites: otherWebsites.split(/[\n,]+/).map((w) => w.trim()).filter(Boolean).slice(0, 5),
       },
     }
 
@@ -242,6 +246,20 @@ export function BusinessProfileForm({ initialData, onSave, saving }: BusinessPro
                 className="w-full rounded-xl border border-border bg-surface pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="profile-other-websites" className="block text-xs font-semibold text-text mb-1.5">
+              Website khác (mỗi dòng một địa chỉ, tối đa 5)
+            </label>
+            <textarea
+              id="profile-other-websites"
+              rows={2}
+              value={otherWebsites}
+              onChange={(e) => setOtherWebsites(e.target.value)}
+              placeholder={"https://shop.tiemhoathaomoc.vn\nhttps://hoacuoi.tiemhoathaomoc.vn"}
+              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs sm:text-sm text-text transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
           </div>
 
           <div>

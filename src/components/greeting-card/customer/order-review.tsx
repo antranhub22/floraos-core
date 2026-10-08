@@ -6,6 +6,7 @@ import type { BrochureQuote } from "@/modules/greeting-card/domain/brochure-pric
 import type { CustomerOrderSubmitInput, ProductSnapshot } from "@/modules/greeting-card/domain/greeting-card-types"
 import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
 import { PrivacyNotice } from "./privacy-notice"
+import { openShopInfo } from "./shop-info-sheet"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import React, { useState } from "react"
 
@@ -102,7 +103,7 @@ export function OrderReview(props: {
         {input.mapUrl?.trim() && <Row label="Vị trí bản đồ" value="Đã gửi link Google Maps" />}
       </dl>
 
-      {/* 3 KHỐI CHÍNH SÁCH: ƯU ĐÃI, CAM KẾT, THỎA THUẬN (SPEC #2 & #5) */}
+      {/* CHÍNH SÁCH: ƯU ĐÃI, (lối mở) CAM KẾT, THỎA THUẬN (SPEC #2 & #5) */}
       <div className="space-y-3">
         {selectedPromo && (
           <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-1">
@@ -115,22 +116,15 @@ export function OrderReview(props: {
           </div>
         )}
 
-        {appliedPolicies?.commitments && appliedPolicies.commitments.length > 0 && (
-          <div className="p-3.5 rounded-xl border border-success/20 bg-success/5 space-y-2">
-            <h4 className="text-caption font-extrabold uppercase tracking-wider text-success flex items-center gap-1.5">
-              <ShieldCheck size={14} />
-              <span>Cam kết của cửa hàng ({appliedPolicies.commitments.length})</span>
-            </h4>
-            <ul className="space-y-1.5 text-caption text-text-muted">
-              {appliedPolicies.commitments.map((c) => (
-                <li key={c.id} className="flex items-start gap-1.5">
-                  <span className="text-success font-bold">✓</span>
-                  <span><strong className="text-foreground">{c.title}:</strong> {c.customerText}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* Cam kết chuyển lên khung "Thông tin cửa hàng" ở thanh trên cùng (PO 08/10/2026) — ở đây chỉ còn lối mở */}
+        <button
+          type="button"
+          onClick={() => openShopInfo("commitments")}
+          className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-success/20 bg-success/5 px-3.5 text-left text-body-sm font-bold text-success"
+        >
+          <ShieldCheck size={16} aria-hidden="true" />
+          <span>Xem cam kết của cửa hàng</span>
+        </button>
 
         {appliedPolicies?.agreements && appliedPolicies.agreements.length > 0 && (
           <div className="p-3.5 rounded-xl border border-border bg-surface-muted space-y-2">
