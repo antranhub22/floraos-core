@@ -92,7 +92,6 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
     return !!order && canViewTracking({
       totalVnd: order.totalVnd,
       paidVnd: order.paidVnd,
-      reportedPaid: session.status === "PAYMENT_REPORTED",
       hasPaymentQr: !!initialData.payment,
       cancelled: order.status === "CANCELLED",
     })
@@ -169,7 +168,6 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
     })
     if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
     setReportedPaid(true)
-    setTrackingUnlocked(true)
   }
 
   return (

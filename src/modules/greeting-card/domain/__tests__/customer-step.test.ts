@@ -19,7 +19,7 @@ describe("link riêng /b — về đúng bước khi mở lại", () => {
     expect(resumeCustomerStep("TRACKING", noOrder)).toBeNull()
   })
 
-  it("có đơn chưa trả đủ nhưng đã báo chuyển khoản: đang ở Theo dõi → về Theo dõi; không về xem mẫu / form", () => {
+  it("có đơn đã được xác nhận nhận cọc: đang ở Theo dõi → về Theo dõi; không về xem mẫu / form", () => {
     const unpaid = { hasOrder: true, hasSnapshot: true, trackingUnlocked: true, serverStep: "PAYMENT" as const }
     expect(resumeCustomerStep("TRACKING", unpaid)).toBe("TRACKING")
     expect(resumeCustomerStep("SWIPING", unpaid)).toBeNull()
@@ -39,14 +39,17 @@ describe("link riêng /b — về đúng bước khi mở lại", () => {
 })
 
 describe("canViewTracking — phải chuyển khoản mới xem tiến độ (PO 08/10/2026)", () => {
-  const base = { totalVnd: 650_000, paidVnd: 0, reportedPaid: false, hasPaymentQr: true, cancelled: false }
+  const base = { totalVnd: 650_000, paidVnd: 0, hasPaymentQr: true, cancelled: false }
 
   it("có mã QR, chưa báo, tiệm chưa nhận tiền → không xem được", () => {
     expect(canViewTracking(base)).toBe(false)
   })
 
-  it("đã báo chuyển khoản hoặc tiệm đã nhận tiền (kể cả cọc) → xem được", () => {
-    expect(canViewTracking({ ...base, reportedPaid: true })).toBe(true)
+  it("khách mới báo chuyển khoản, Điều hành chưa xác nhận → chưa xem được", () => {
+    expect(canViewTracking({ ...base, paidVnd: 0 })).toBe(false)
+  })
+
+  it("Điều hành đã xác nhận nhận tiền (kể cả cọc) → xem được", () => {
     expect(canViewTracking({ ...base, paidVnd: 200_000 })).toBe(true)
     expect(canViewTracking({ ...base, paidVnd: 650_000 })).toBe(true)
   })

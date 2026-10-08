@@ -202,6 +202,9 @@ export function BrochurePaymentView({
           <button type="button" onClick={() => window.location.reload()} className="mt-1 min-h-11 font-semibold underline">
             Xem mã QR phần còn lại
           </button>
+          <Button type="button" variant="secondary" onClick={onGoToTracking} className="mt-2 w-full gap-2">
+            Theo dõi tiến độ Đơn hàng <ArrowRight size={16} aria-hidden="true" />
+          </Button>
         </div>
       )}
 
@@ -243,16 +246,9 @@ export function BrochurePaymentView({
               Đang chờ Điều hành cửa hàng đối soát xác nhận (hệ thống sẽ tự động cập nhật ngay khi nhận được tiền)...
             </p>
           </div>
-
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onGoToTracking}
-            className="w-full h-11 font-extrabold text-body-sm flex items-center justify-center gap-2 rounded-xl cursor-pointer"
-          >
-            <span>Theo dõi tiến độ Đơn hàng</span>
-            <ArrowRight size={16} />
-          </Button>
+          <p className="text-caption text-text-muted text-center">
+            Nút Theo dõi tiến độ sẽ mở ngay khi cửa hàng xác nhận đã nhận tiền.
+          </p>
         </div>
       ) : vietQr ? (
         <div className="w-full flex flex-col gap-2.5">
@@ -269,7 +265,7 @@ export function BrochurePaymentView({
             <span>{loading ? "Đang xử lý..." : "TÔI ĐÃ CHUYỂN KHOẢN THANH TOÁN"}</span>
           </button>
           <p className="text-caption text-text-muted">
-            Sau khi chuyển khoản, nhấn nút trên để theo dõi tiến độ đơn hàng.
+            Sau khi chuyển khoản, nhấn nút trên. Cửa hàng xác nhận đã nhận tiền thì bạn sẽ theo dõi được tiến độ đơn hàng.
           </p>
         </div>
       ) : (

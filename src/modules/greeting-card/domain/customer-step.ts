@@ -19,19 +19,19 @@ export function canEnterCustomerStep(target: CustomerStep, s: CustomerStepFacts)
 }
 
 /**
- * Khách phải chuyển khoản rồi mới xem được Theo dõi tiến độ, không có nút bỏ qua (PO 08/10/2026).
- * "Đã chuyển khoản" = khách đã báo chuyển khoản hoặc tiệm đã nhận tiền (kể cả tiền cọc).
+ * Quy trình PO 08/10/2026: khách chuyển khoản → Điều hành xác nhận đã nhận tiền → khách thấy
+ * "thanh toán thành công" và nút Theo dõi tiến độ. Khách tự báo "đã chuyển khoản" CHƯA đủ.
+ * "Đã nhận tiền" = `paidVnd > 0` (kể cả tiền cọc — phần còn lại thu sau theo thoả thuận).
  * Ngoại lệ vì khách không có gì để chuyển: đơn đã huỷ, mẫu chưa có giá (chờ báo giá),
  * tiệm chưa cấu hình tài khoản nhận tiền (không có mã QR, tiệm tự liên hệ thu tiền).
  */
 export function canViewTracking(o: {
   totalVnd: number
   paidVnd: number
-  reportedPaid: boolean
   hasPaymentQr: boolean
   cancelled: boolean
 }): boolean {
-  return o.cancelled || o.totalVnd <= 0 || !o.hasPaymentQr || o.reportedPaid || o.paidVnd > 0
+  return o.cancelled || o.totalVnd <= 0 || !o.hasPaymentQr || o.paidVnd > 0
 }
 
 /** Link riêng `/b`: bước sẽ hiện khi mở lại, `null` = giữ bước máy chủ chọn. */

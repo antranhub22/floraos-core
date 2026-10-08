@@ -16,6 +16,7 @@ describe("khách quay lại sau khi báo chuyển khoản", () => {
     const html = renderToStaticMarkup(createElement(BrochurePaymentView, { ...props, alreadyReported: true }))
     expect(html).toContain("Đã báo chuyển khoản thành công")
     expect(html).toContain("Đang chờ Điều hành")
+    expect(html).not.toContain("Theo dõi tiến độ Đơn hàng")
   })
 
   it("chưa báo → vẫn là màn thanh toán bình thường", () => {
