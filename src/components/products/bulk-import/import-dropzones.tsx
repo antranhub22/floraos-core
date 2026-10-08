@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useRef } from "react"
-import { Check, Download, FileCheck, FileSpreadsheet, FolderUp } from "lucide-react"
+import { Check, Download, FileCheck, FileSpreadsheet, FolderUp, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
@@ -87,6 +87,13 @@ export function ImportDropzones({ excelFile, excelFileName, imageCount, isImport
           <p className="mt-1 text-body-sm text-text-muted">
             Chọn cả folder hoặc nhiều ảnh cùng lúc. Tên ảnh đặt trùng mã sản phẩm (vd: <code>FL-1001.jpg</code>).
           </p>
+          {/* Security tip */}
+          <div className="mt-3 flex items-start gap-2 rounded-lg bg-success-bg border border-success/30 px-3 py-2">
+            <ShieldCheck size={14} className="text-success mt-0.5 shrink-0" />
+            <p className="text-caption text-success font-medium leading-relaxed">
+              <span className="font-bold">Bảo mật tốt hơn link Google Drive:</span> Ảnh được lưu vào kho riêng của tiệm và bảo vệ bằng Signed URL tự hết hạn sau 24h — không ai truy cập được nếu không đăng nhập FloraOS.
+            </p>
+          </div>
         </div>
 
         <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
