@@ -46,4 +46,43 @@ describe("Nâng cấp Thẻ Chào Mẫu Hoa (Yêu cầu 9/10)", () => {
     expect(kbCoordinator).not.toBeNull()
     expect(kbCoordinator?.id).toBe("the_chao_dieu_phoi")
   })
+
+  it("SALE_KANBAN_COLS có đủ 9 cột chuẩn đồng bộ với PIPELINE_STEPS", () => {
+    const cols = groupSaleKanban([])
+    expect(cols).toHaveLength(9)
+    const stepIds = cols.map((c) => c.step.id)
+    expect(stepIds).toEqual([
+      "STEP_1_OPENED",
+      "STEP_2_CHOOSING",
+      "STEP_3_FILLING_FORM",
+      "STEP_4_PAYMENT_PENDING",
+      "STEP_5_PAYMENT_CONFIRMED",
+      "STEP_6_ARRANGING",
+      "STEP_7_READY_QC",
+      "STEP_8_DELIVERING",
+      "STEP_9_COMPLETED",
+    ])
+  })
+
+  it("groupSaleKanban: ưu tiên đơn stuck của Sale lên trước kể cả giờ giao sau", () => {
+    const itemNormalEarly = {
+      id: "normal-early",
+      currentStepId: "STEP_4_PAYMENT_PENDING" as TrackingPipelineStepId,
+      stepStartedAt: "2026-10-09T01:00:00Z",
+      deliveryDate: "2026-10-09",
+      deliveryTimeSlot: "08:00 - 10:00",
+      stuck: null,
+    }
+    const itemStuckLate = {
+      id: "stuck-late",
+      currentStepId: "STEP_4_PAYMENT_PENDING" as TrackingPipelineStepId,
+      stepStartedAt: "2026-10-09T01:00:00Z",
+      deliveryDate: "2026-10-09",
+      deliveryTimeSlot: "14:00 - 16:00",
+      stuck: { owner: "SALE" as const, reason: "Khách chưa thanh toán" },
+    }
+    const cols = groupSaleKanban([itemNormalEarly, itemStuckLate])
+    const paymentCol = cols.find((c) => c.step.id === "STEP_4_PAYMENT_PENDING")!
+    expect(paymentCol.items.map((i) => i.id)).toEqual(["stuck-late", "normal-early"])
+  })
 })
