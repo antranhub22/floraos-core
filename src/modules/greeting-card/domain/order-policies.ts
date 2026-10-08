@@ -1,7 +1,8 @@
 /**
  * Ưu đãi & Thỏa thuận áp vào một đơn Thẻ chào lúc khách đặt (Spec #2, #5). Pure TypeScript.
  * - Mỗi đơn nhận TỐI ĐA 01 ưu đãi, và chỉ ưu đãi bộ sưu tập đang áp dụng.
- *   Tiệm không cho khách chọn → luôn là ưu đãi đầu tiên, bỏ qua lựa chọn client gửi.
+ *   Có từ 2 ưu đãi trở lên và cho khách chọn → khách BẮT BUỘC tự chọn, không chọn sẵn (PO 08/10/2026).
+ *   Tiệm không cho khách chọn (hoặc chỉ 1 ưu đãi) → luôn là ưu đãi đầu tiên, bỏ qua lựa chọn client gửi.
  * - Bộ sưu tập có thỏa thuận → khách phải xác nhận đã đọc trước khi đặt.
  * Máy chủ chụp lại đúng ưu đãi + các thỏa thuận khách đã đồng ý để lưu cùng đơn.
  */
@@ -23,7 +24,7 @@ export function resolveOrderPolicies(
   applied: PublicAppliedPolicies,
   input: { selectedPromotionId?: string | undefined; confirmedTerms?: boolean | undefined },
 ): OrderPolicyResult {
-  const chosen = selectPromotion(applied, input.selectedPromotionId)
+  const chosen = selectPromotion(applied, input.selectedPromotionId, { required: true })
   if (!chosen.ok) return { ok: false, field: "selectedPromotionId", message: chosen.message }
   const promotion = chosen.promotion
 
@@ -46,17 +47,27 @@ export function resolveOrderPolicies(
 
 type AppliedPromotion = PublicAppliedPolicies["promotions"][number]
 
+export const PROMOTION_CHOICE_MISSING = "Vui lòng chọn 01 ưu đãi cho đơn hoa."
+
+/** Khách phải tự chọn ưu đãi: tiệm cho khách chọn và có từ 2 ưu đãi đang áp dụng trở lên. */
+export function customerChoosesPromotion(applied: Pick<PublicAppliedPolicies, "promotions" | "allowCustomerPromotionChoice">): boolean {
+  return applied.allowCustomerPromotionChoice && applied.promotions.length > 1
+}
+
 /**
- * Ưu đãi áp cho đơn: tối đa 01, chỉ ưu đãi bộ sưu tập đang áp dụng. Tiệm không cho khách chọn →
- * luôn là ưu đãi đầu tiên (bỏ qua lựa chọn client gửi). Dùng chung cho báo giá và tạo đơn.
+ * Ưu đãi áp cho đơn: tối đa 01, chỉ ưu đãi bộ sưu tập đang áp dụng. Khách không được chọn →
+ * luôn là ưu đãi đầu tiên (bỏ qua lựa chọn client gửi). Khách được chọn mà chưa chọn: báo giá tính
+ * không ưu đãi; tạo đơn (`required`) báo lỗi. Dùng chung cho báo giá và tạo đơn.
  */
 export function selectPromotion(
   applied: PublicAppliedPolicies,
   selectedPromotionId: string | undefined,
+  options: { required?: boolean } = {},
 ): { ok: true; promotion: AppliedPromotion | null } | { ok: false; message: string } {
   if (applied.promotions.length === 0) return { ok: true, promotion: null }
-  const chosenId = applied.allowCustomerPromotionChoice ? selectedPromotionId : undefined
-  if (!chosenId) return { ok: true, promotion: applied.promotions[0] ?? null }
+  if (!customerChoosesPromotion(applied)) return { ok: true, promotion: applied.promotions[0] ?? null }
+  const chosenId = selectedPromotionId
+  if (!chosenId) return options.required ? { ok: false, message: PROMOTION_CHOICE_MISSING } : { ok: true, promotion: null }
   const found = applied.promotions.find((p) => p.id === chosenId)
   return found ? { ok: true, promotion: found } : { ok: false, message: "Ưu đãi đã chọn không còn áp dụng. Vui lòng chọn lại." }
 }

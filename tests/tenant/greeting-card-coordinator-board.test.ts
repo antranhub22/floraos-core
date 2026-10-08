@@ -30,7 +30,7 @@ describe("greeting-card: bảng việc Điều phối", () => {
       await selectBrochureProduct(link.sendCode, product.id)
       const o = await submitBrochureOrder(link.sendCode, {
         customerName: `K${i}`, customerPhone: `09${String(10_000_000 + i).slice(-8)}`, recipientName: "N", recipientPhone: "0912345678",
-        confirmedTerms: true, deliveryDate: day(i % 2 === 0 ? 5 : 4), deliveryTimeSlot: SLOTS[i % 3]!, deliveryAddress: "1 Lê Lợi",
+        confirmedTerms: true, selectedPromotionId: "promo-discount-10", deliveryDate: day(i % 2 === 0 ? 5 : 4), deliveryTimeSlot: SLOTS[i % 3]!, deliveryAddress: "1 Lê Lợi",
       })
       ids.push(o.orderId)
     }

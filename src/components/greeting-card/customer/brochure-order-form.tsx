@@ -3,15 +3,8 @@
 import React, { useId, useState } from "react"
 import { ArrowLeft, Send, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  ORDER_FIELD_MAX,
-  MAX_DELIVERY_LEAD_DAYS,
-  validateCustomerOrderInput,
-} from "@/modules/greeting-card/domain/greeting-card-rules"
-import type {
-  ProductSnapshot,
-  CustomerOrderSubmitInput,
-} from "@/modules/greeting-card/domain/greeting-card-types"
+import { ORDER_FIELD_MAX, MAX_DELIVERY_LEAD_DAYS, validateCustomerOrderInput } from "@/modules/greeting-card/domain/greeting-card-rules"
+import type { ProductSnapshot, CustomerOrderSubmitInput } from "@/modules/greeting-card/domain/greeting-card-types"
 import type { ShippingConfig } from "@/modules/greeting-card/domain/brochure-pricing"
 import { BrochureOrderOptions } from "./brochure-order-options"
 import { useBrochureQuote } from "./use-brochure-quote"
@@ -24,6 +17,7 @@ import { composeAddress, validateAddressParts } from "@/modules/greeting-card/do
 import { deliveryScheduleError, earliestDeliveryDate } from "@/modules/greeting-card/domain/delivery-schedule"
 import { DeliveryTimePicker } from "./delivery-time-picker"
 import { PromotionPicker } from "./promotion-picker"
+import { customerChoosesPromotion, PROMOTION_CHOICE_MISSING } from "@/modules/greeting-card/domain/order-policies"
 import { SelectedProductHeader } from "./selected-product-header"
 import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
 
@@ -62,14 +56,12 @@ export function BrochureOrderForm({
   } = useOrderDraft()
   const deliveryAddress = composeAddress(addressParts)
 
-  const [selectedPromotionId, setSelectedPromotionId] = useState<string>(appliedPolicies?.promotions[0]?.id ?? "")
+  const [selectedPromotionId, setSelectedPromotionId] = useState<string>(appliedPolicies && !customerChoosesPromotion(appliedPolicies) ? appliedPolicies.promotions[0]?.id ?? "" : "")
   const [loading, setLoading] = useState(false)
   const quoteBody = { ...quoteExtraBody, ...(selectedPromotionId ? { selectedPromotionId } : {}), ...(deliveryDate ? { deliveryDate } : {}) }
   const pricing = useBrochureQuote(quoteUrl, quoteBody, customerPhone, { id: productSnapshot.id, variantIds: variants.map((v) => v.id) })
   const minDate = earliestDeliveryDate(shipping)
-  const maxDate = new Date(Date.parse(`${minDate}T00:00:00Z`) + MAX_DELIVERY_LEAD_DAYS * 86_400_000)
-    .toISOString()
-    .slice(0, 10)
+  const maxDate = new Date(Date.parse(`${minDate}T00:00:00Z`) + MAX_DELIVERY_LEAD_DAYS * 86_400_000).toISOString().slice(0, 10)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   // Bước "Xem lại đơn" nhớ trên máy: rời trang lúc đang xem lại thì quay về đúng bước này
   const [review, setReview, clearReview] = useSavedState<CustomerOrderSubmitInput | null>(`order-review:${productSnapshot.id}`, null)
@@ -94,6 +86,11 @@ export function BrochureOrderForm({
     if (Object.keys(addressErrors).length > 0) {
       delete check.errors.deliveryAddress // báo đúng ô còn thiếu thay vì "địa chỉ chung"
       Object.assign(check.errors, addressErrors)
+      check.valid = false
+    }
+    // Có ≥ 2 ưu đãi cho khách chọn → không chọn sẵn, khách phải tự chọn (PO 08/10/2026)
+    if (appliedPolicies && customerChoosesPromotion(appliedPolicies) && !selectedPromotionId) {
+      check.errors.selectedPromotionId = PROMOTION_CHOICE_MISSING
       check.valid = false
     }
     if (shipping.zones.length > 0 && !pricing.selection.shippingZoneId) {

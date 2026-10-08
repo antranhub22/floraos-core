@@ -2,10 +2,11 @@
 
 import React from "react"
 import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
+import { customerChoosesPromotion } from "@/modules/greeting-card/domain/order-policies"
 
 /**
- * Khách nhận ĐÚNG 01 ưu đãi (Spec #2): nút radio nên không chọn được hai. Tiệm không cho
- * khách chọn → chỉ hiện ưu đãi đầu tiên (máy chủ cũng ép như vậy).
+ * Khách nhận ĐÚNG 01 ưu đãi (Spec #2): nút radio nên không chọn được hai, không chọn sẵn — khách tự chọn
+ * (PO 08/10/2026). Tiệm không cho khách chọn → chỉ hiện ưu đãi đầu tiên (máy chủ cũng ép như vậy).
  */
 export function PromotionPicker({
   policies,
@@ -18,7 +19,7 @@ export function PromotionPicker({
 }) {
   const promos = policies.promotions
   if (promos.length === 0) return null
-  const canChoose = policies.allowCustomerPromotionChoice && promos.length > 1
+  const canChoose = customerChoosesPromotion(policies)
   const shown = canChoose ? promos : promos.slice(0, 1)
 
   return (
@@ -26,7 +27,7 @@ export function PromotionPicker({
       <legend className="sr-only">Ưu đãi</legend>
       <div className="text-body-sm font-extrabold text-foreground flex items-center justify-between">
         <span>{canChoose ? `Chọn 01 ưu đãi (${promos.length} lựa chọn)` : "Ưu đãi áp dụng"}</span>
-        <span className="text-caption font-normal text-primary">Mỗi đơn 01 ưu đãi</span>
+        <span className="text-caption font-normal text-primary">{canChoose && !value ? "Bắt buộc chọn" : "Mỗi đơn 01 ưu đãi"}</span>
       </div>
       {shown.map((p) => (
         <label

@@ -22,7 +22,7 @@ const order = (over: Record<string, unknown> = {}) => {
   seq += 1
   return {
     customerName: `Khách ${seq}`, customerPhone: `09${String(10_000_000 + seq).slice(-8)}`, recipientName: "Người Nhận",
-    recipientPhone: "0912345678", confirmedTerms: true, deliveryDate: DELIVERY, deliveryTimeSlot: SLOT,
+    recipientPhone: "0912345678", confirmedTerms: true, selectedPromotionId: "promo-discount-10", deliveryDate: DELIVERY, deliveryTimeSlot: SLOT,
     deliveryAddress: "1 Lê Lợi, Q1", shippingZoneId: "q1", ...over,
   }
 }
@@ -68,6 +68,14 @@ describe("greeting-card: ưu đãi tính tiền + trần khung giờ", () => {
 
   afterAll(async () => {
     await disconnectDatabase()
+  })
+
+  it("khách phải tự chọn ưu đãi: báo giá chưa chọn không trừ; đặt đơn chưa chọn bị chặn, không tạo đơn", async () => {
+    const code = await newLink(priced)
+    const quote = await quoteBrochureSession(code, { shippingZoneId: "q1" })
+    expect(quote.quote.promotionDiscountVnd).toBeUndefined()
+    expect(await codeOf(submitBrochureOrder(code, order({ selectedPromotionId: undefined })))).toBe("VALIDATION_FAILED")
+    expect(await prisma.orders.count({ where: { organization_id: a.organizationId } })).toBe(0)
   })
 
   it("Giảm 10% trừ thật trên tổng đơn: báo giá, đơn và mã QR cùng một số; Tặng thiệp không đổi tiền", async () => {

@@ -72,7 +72,7 @@ dùng lại: `FlowerImage`, `TrackingStepperView` · tạo mới: `inbox/sheet.t
 
 ## 13c. Chuẩn bị 20/10 (PO 08/10/2026)
 - Tab "Điều hành" (thu tiền, báo giá, giao dịch ngân hàng) chỉ hiện với `R11` — trần cứng Điều hành; Sale và Điều phối không thấy nút "Thu tiền" (cả ở Sổ đơn hàng).
-- Form đặt hoa: 3 ưu đãi mặc định (Giảm 10% trên tổng đơn · Tặng thiệp · Thêm phụ liệu), khách chọn tối đa 01; "Giảm %" hiện dòng "Ưu đãi: −… đ" ở bảng tiền và màn Xem lại; ô mã giảm giá ẩn khi tiệm chưa bật; phí giao "Miễn phí" khi tiệm bật miễn phí giao mọi đơn.
+- Form đặt hoa: 3 ưu đãi mặc định (Giảm 10% trên tổng đơn · Tặng thiệp · Thêm phụ liệu), khách chọn tối đa 01 và **phải tự chọn** khi có từ 2 ưu đãi (không chọn sẵn, chưa chọn → "Vui lòng chọn 01 ưu đãi cho đơn hoa."); chỉ hiện ưu đãi Điều hành đang bật (Hồ sơ tiệm → Chính sách → "Đang áp dụng"); "Giảm %" hiện dòng "Ưu đãi: −… đ" ở bảng tiền và màn Xem lại; ô mã giảm giá ẩn khi tiệm chưa bật; phí giao "Miễn phí" khi tiệm bật miễn phí giao mọi đơn.
 - Chọn khung giờ: khung đủ đơn hiện "(đã kín)" và không chọn được; gửi đơn vào khung vừa kín → lỗi ngay ở ô khung giờ.
 - Cài đặt → Khu vực, phí giao & giờ nhận đơn: "Số đơn tối đa mỗi khung giờ" (chung, mặc định 100; riêng từng khung), "Miễn phí giao hoa cho mọi đơn", "Cho khách nhập mã giảm giá".
 - Hộp "Thu tiền" và thẻ đơn Điều phối hiện "Ưu đãi khách chọn".

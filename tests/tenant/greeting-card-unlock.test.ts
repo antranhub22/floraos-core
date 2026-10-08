@@ -16,7 +16,7 @@ import { GET as brochureGet } from "@/app/api/v1/public/brochure/[sendCode]/rout
  */
 const ORDER = {
   customerName: "Khách", customerPhone: "0987 65 5678", recipientName: "Người Nhận", recipientPhone: "0912345678",
-  confirmedTerms: true, deliveryDate: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10), deliveryAddress: "1 Lê Lợi, Q1",
+  confirmedTerms: true, selectedPromotionId: "promo-discount-10", deliveryDate: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10), deliveryAddress: "1 Lê Lợi, Q1",
 }
 const params = (sendCode: string) => ({ params: Promise.resolve({ sendCode }) })
 const unlock = (code: string, phoneLast4: string) =>

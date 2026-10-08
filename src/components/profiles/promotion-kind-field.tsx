@@ -7,6 +7,7 @@ import type { PromotionItem } from "@/modules/greeting-card/domain/store-policy"
 /**
  * Loại tính tiền của một ưu đãi: "Giảm %" trừ thật trên tổng đơn, "Miễn phí giao" đưa phí giao về 0,
  * "Tặng kèm" không đổi tiền (xưởng làm theo ghi chú). Máy chủ tự tính, khách không sửa được.
+ * "Đang áp dụng": Điều hành bật/tắt ưu đãi theo từng thời điểm mà không phải xoá (PO 08/10/2026).
  */
 export function PromotionKindField({ item, onChange }: { item: PromotionItem; onChange: (patch: Partial<PromotionItem>) => void }) {
   const pricing = promotionPricingOf(item)
@@ -14,6 +15,15 @@ export function PromotionKindField({ item, onChange }: { item: PromotionItem; on
     onChange(kind === "PERCENT_OFF" ? { kind, config: { ...item.config, percent: pricing.percent ?? 10 } } : { kind })
   return (
     <div className="flex flex-wrap items-center gap-2 text-caption">
+      <label className="flex min-h-8 items-center gap-1.5 font-semibold text-foreground">
+        <input
+          type="checkbox"
+          checked={item.active !== false}
+          onChange={(e) => onChange({ active: e.target.checked })}
+          className="h-4 w-4 accent-primary"
+        />
+        <span>{item.active !== false ? "Đang áp dụng" : "Tạm tắt — khách không thấy"}</span>
+      </label>
       <select
         aria-label="Loại ưu đãi"
         value={pricing.kind}

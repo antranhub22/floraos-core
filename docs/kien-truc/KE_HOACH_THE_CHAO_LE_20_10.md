@@ -19,7 +19,7 @@
 | D. Ưu đãi tính tiền thật | Xong: 3 ưu đãi theo Q3, miễn phí giao mọi đơn, ẩn mã giảm giá | tenant `greeting-card-promotion-slot`, unit `promotion-and-slot-capacity` |
 | E. Trần đơn mỗi khung giờ | Xong: mặc định 100, chỉnh từng khung, khoá chống tranh suất | tenant `greeting-card-promotion-slot` (10 khách tranh 3 suất → đúng 3 đơn) |
 
-Lưu ý hành vi: trang khách **chọn sẵn ưu đãi đầu tiên** ("Giảm 10%"), khách đổi được; đơn không chọn khung giờ ("Trong ngày") không tính vào trần khung nào.
+Lưu ý hành vi: ~~trang khách chọn sẵn ưu đãi đầu tiên~~ → **PO 08/10 (sau Đợt 2): không chọn sẵn, khách bắt buộc tự chọn 01 trong các ưu đãi đang áp dụng**; Điều hành bật/tắt từng ưu đãi theo từng thời điểm ở Hồ sơ tiệm → Chính sách ("Đang áp dụng"); đơn không chọn khung giờ ("Trong ngày") không tính vào trần khung nào.
 
 ## 0b. Tiến độ Đợt 2 (08/10/2026, làm sớm hơn lịch 12–14/10)
 
@@ -171,7 +171,7 @@ Không hạng mục nào sửa cấu trúc cơ sở dữ liệu (`schema.prisma`
 | # | Việc | Hạn |
 |---|---|---|
 | H1 | Kiểm/khai đủ 4 biến `STORAGE_*` (kho ảnh R2 hoặc S3). Không có thì ảnh mất mỗi lần khởi động lại | 10/10 |
-| H2 | Gói máy chủ: nâng lên gói 2 GB RAM cho 15–22/10, **hoặc** đổi `NODE_OPTIONS` thành `--max-old-space-size=384` nếu giữ gói 512 MB (đổi trong `render.yaml`, cần duyệt riêng) | 14/10 |
+| H2 | Gói máy chủ: **PO 08/10 chốt nâng lên gói 2 GB RAM vào ngày 16/10** (ngày chạy chính thức), giữ đến hết 22/10. Không đổi `render.yaml`. ⏰ Nhắc PO sáng 16/10 | **16/10** |
 | H3 | Sao lưu cơ sở dữ liệu tay ngày 15/10 và mỗi tối 18, 19, 20/10 | 15/10 |
 | H4 | **Tắt Auto-Deploy** trên Render từ 16/10, bật lại 22/10 | 16/10 |
 | H5 | Chạy script khoá tài khoản mẫu (B4) | 11/10 |

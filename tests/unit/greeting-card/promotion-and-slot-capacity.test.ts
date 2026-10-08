@@ -6,7 +6,7 @@ import {
   quotedTotalAfterPromotion,
 } from "@/modules/greeting-card/domain/promotion-pricing"
 import { DEFAULT_PROMOTIONS, resolveAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
-import { selectPromotion } from "@/modules/greeting-card/domain/order-policies"
+import { customerChoosesPromotion, PROMOTION_CHOICE_MISSING, resolveOrderPolicies, selectPromotion } from "@/modules/greeting-card/domain/order-policies"
 import { paymentCheckOf } from "@/modules/greeting-card/domain/payment-check"
 import {
   capacityOf,
@@ -40,6 +40,26 @@ describe("ưu đãi mặc định và loại tính tiền", () => {
     expect(selectPromotion(applied, "promo-free-card")).toMatchObject({ ok: true, promotion: { id: "promo-free-card" } })
     expect(selectPromotion(applied, "promo-free-ship")).toMatchObject({ ok: false })
     expect(selectPromotion({ ...applied, allowCustomerPromotionChoice: false }, "promo-free-card")).toMatchObject({ promotion: { id: "promo-discount-10" } })
+  })
+
+  it("không chọn sẵn: báo giá chưa chọn → không ưu đãi; đặt đơn chưa chọn → lỗi bắt chọn (PO 08/10/2026)", () => {
+    const applied = resolveAppliedPolicies({}, {})
+    expect(customerChoosesPromotion(applied)).toBe(true)
+    expect(selectPromotion(applied, undefined)).toEqual({ ok: true, promotion: null })
+    expect(selectPromotion(applied, undefined, { required: true })).toEqual({ ok: false, message: PROMOTION_CHOICE_MISSING })
+    expect(resolveOrderPolicies(applied, { confirmedTerms: true })).toMatchObject({ ok: false, field: "selectedPromotionId" })
+    const single = { ...applied, promotions: applied.promotions.slice(0, 1) }
+    expect(customerChoosesPromotion(single)).toBe(false)
+    expect(selectPromotion(single, undefined, { required: true })).toMatchObject({ ok: true, promotion: { id: "promo-discount-10" } })
+  })
+
+  it("Điều hành tạm tắt ưu đãi trong Hồ sơ tiệm → khách không thấy, không chọn được", () => {
+    const settings = { store_policies: { promotions: DEFAULT_PROMOTIONS.map((p) => (p.id === "promo-discount-10" ? { ...p, active: false } : p)) } }
+    const applied = resolveAppliedPolicies({}, settings)
+    expect(applied.promotions.map((p) => p.id)).toEqual(["promo-free-card", "promo-accessory"])
+    expect(selectPromotion(applied, "promo-discount-10", { required: true })).toMatchObject({ ok: false })
+    const allOff = resolveAppliedPolicies({}, { store_policies: { promotions: DEFAULT_PROMOTIONS.map((p) => ({ ...p, active: false })) } })
+    expect(resolveOrderPolicies(allOff, { confirmedTerms: true })).toMatchObject({ ok: true, snapshot: { promotion: null } })
   })
 })
 

@@ -15,6 +15,8 @@ export interface PromotionItem {
   kind?: PromotionKind | undefined
   /** Ví dụ: `{ percent: 10 }` cho Giảm %. */
   config?: Record<string, unknown> | undefined
+  /** Điều hành bật/tắt theo từng thời điểm trong Hồ sơ tiệm (PO 08/10/2026); thiếu = đang áp dụng. */
+  active?: boolean | undefined
 }
 
 export interface CommitmentItem {
@@ -121,7 +123,8 @@ export function resolveAppliedPolicies(
   const commitFilter = applied?.commitmentIds
   const agreeFilter = applied?.agreementIds
 
-  const promotions = (promoFilter ? all.promotions.filter((p) => promoFilter.includes(p.id)) : all.promotions).map(
+  const activePromotions = all.promotions.filter((p) => p.active !== false)
+  const promotions = (promoFilter ? activePromotions.filter((p) => promoFilter.includes(p.id)) : activePromotions).map(
     (p) => ({ id: p.id, title: p.title, customerText: p.description, ...promotionPricingOf(p) })
   )
   const commitments = (commitFilter ? all.commitments.filter((c) => commitFilter.includes(c.id)) : all.commitments).map(
