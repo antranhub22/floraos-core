@@ -70,7 +70,7 @@ export function OrderChangePanel({
   const decided = latest && latest.status !== "PENDING" ? latest : null
 
   return (
-    <section aria-labelledby="order-change-title" className="flex flex-col gap-3">
+    <section aria-labelledby="order-change-title" className="flex flex-col gap-3 rounded-xl border border-border bg-surface-muted p-4">
       <h3 id="order-change-title" className="text-body font-extrabold text-foreground">Thay đổi thông tin đơn</h3>
 
       {decided && (
@@ -113,7 +113,7 @@ export function OrderChangePanel({
           onSent={() => { setEditing(false); setSent(true); onChanged() }}
         />
       ) : (
-        <Button type="button" variant="outline" onClick={() => setEditing(true)} className="h-11 gap-2 self-start rounded-xl">
+        <Button type="button" variant="outline" onClick={() => setEditing(true)} className="h-11 w-full gap-2 rounded-xl">
           <PencilLine size={16} aria-hidden="true" /> Đổi giờ giao, địa chỉ hoặc người nhận
         </Button>
       )}

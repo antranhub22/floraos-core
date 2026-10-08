@@ -98,13 +98,13 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
   return (
     <div className="w-full max-w-xl lg:max-w-2xl mx-auto bg-surface rounded-2xl border border-border p-5 sm:p-7 shadow-sm flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-border">
-        <div>
+      <div className="flex items-start justify-between gap-3 pb-4 border-b border-border">
+        <div className="min-w-0">
           <span className="text-caption font-bold uppercase tracking-wider text-primary">
             Theo dõi tiến độ Đơn hàng
           </span>
           <h2 className="text-title font-extrabold text-foreground">
-            Đơn hàng #{order.code}
+            Đơn hàng <span className="whitespace-nowrap">#{order.code}</span>
           </h2>
         </div>
         <Button
@@ -112,7 +112,7 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
           variant="outline"
           size="sm"
           onClick={loadTracking}
-          className="gap-1.5 text-caption h-8"
+          className="gap-1.5 text-caption h-8 shrink-0 whitespace-nowrap"
         >
           <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
           <span>Cập nhật</span>
@@ -200,13 +200,13 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
 
       {/* Order Details Summary */}
       <div className="flex flex-col gap-2 text-body-sm text-text-muted bg-surface-muted p-4 rounded-xl border border-border">
-        <div className="flex justify-between">
-          <span>Người nhận:</span>
-          <span className="font-bold text-foreground">{order.recipientName}</span>
+        <div className="flex justify-between gap-3">
+          <span className="shrink-0">Người nhận:</span>
+          <span className="font-bold text-foreground text-right break-words">{order.recipientName}</span>
         </div>
-        <div className="flex justify-between">
-          <span>Địa chỉ giao:</span>
-          <span className="font-bold text-foreground text-right max-w-xs truncate">
+        <div className="flex justify-between gap-3">
+          <span className="shrink-0">Địa chỉ giao:</span>
+          <span className="min-w-0 font-bold text-foreground text-right break-words">
             {order.deliveryAddress}
           </span>
         </div>
@@ -221,7 +221,7 @@ export function BrochureTrackingView({ orderCode, sendCode }: BrochureTrackingVi
             <span className="text-caption font-semibold text-text-muted block mb-0.5">
               Lời nhắn thiệp:
             </span>
-            <p className="text-body-sm italic text-foreground bg-surface p-2.5 rounded-lg border border-border">
+            <p className="text-body-sm italic text-foreground border-l-2 border-primary/40 pl-3 py-0.5">
               &ldquo;{order.cardMessage}&rdquo;
             </p>
           </div>
