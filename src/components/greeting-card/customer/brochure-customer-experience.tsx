@@ -7,7 +7,7 @@ import { CustomerJourneyContext, copyThenOpen, type CustomerJourney } from "./jo
 import { useJourneyTracker } from "./use-journey-tracker"
 import { useStepHistory } from "./use-step-history"
 import { useRememberedStep } from "./use-remembered-step"
-import { canEnterCustomerStep, resumeCustomerStep, type CustomerStep } from "@/modules/greeting-card/domain/customer-step"
+import { canEnterCustomerStep, canViewTracking, resumeCustomerStep, type CustomerStep } from "@/modules/greeting-card/domain/customer-step"
 import { updateSavedState } from "./use-saved-state"
 import { JOURNEY_STATE_NAME } from "./templates/swipe/use-swipe-journey"
 import { productInquiryMessage } from "@/modules/greeting-card/domain/collection-browse"
@@ -86,8 +86,20 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
       : null
   )
 
+  // Chưa chuyển khoản thì không vào Theo dõi; màn thanh toán chỉ hiện nút Theo dõi khi đã được phép
+  const [trackingUnlocked, setTrackingUnlocked] = useState(() => {
+    const order = initialData.order
+    return !!order && canViewTracking({
+      totalVnd: order.totalVnd,
+      paidVnd: order.paidVnd,
+      reportedPaid: session.status === "PAYMENT_REPORTED",
+      hasPaymentQr: !!initialData.payment,
+      cancelled: order.status === "CANCELLED",
+    })
+  })
+
   // Back/Forward của trình duyệt đi giữa các bước; đơn đã gửi thì không quay lại form/lướt mẫu
-  const stepFacts = { hasOrder: !!orderResult, hasSnapshot: !!snapshot }
+  const stepFacts = { hasOrder: !!orderResult, hasSnapshot: !!snapshot, trackingUnlocked }
   useStepHistory(step, setStep, (target) => canEnterCustomerStep(target, stepFacts))
   // Rời trang rồi mở lại → về đúng bước đang đứng (vd. đã chọn mẫu nhưng quay lại xem mẫu khác thì
   // không bị ép vào form). Đơn đã trả đủ / đã huỷ thì luôn ở Theo dõi.
@@ -157,6 +169,7 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
     })
     if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
     setReportedPaid(true)
+    setTrackingUnlocked(true)
   }
 
   return (
@@ -237,7 +250,10 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
             shopPhone={shop.phone}
             onReportPaid={handleReportPaid}
             alreadyReported={reportedPaid}
-            onGoToTracking={() => setStep("TRACKING")}
+            onGoToTracking={() => {
+              setTrackingUnlocked(true)
+              setStep("TRACKING")
+            }}
           />
         )}
 

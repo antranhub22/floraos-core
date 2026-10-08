@@ -268,16 +268,9 @@ export function BrochurePaymentView({
             <Check size={18} />
             <span>{loading ? "Đang xử lý..." : "TÔI ĐÃ CHUYỂN KHOẢN THANH TOÁN"}</span>
           </button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onGoToTracking}
-            className="text-caption text-text-muted hover:text-foreground cursor-pointer"
-          >
-            Bỏ qua & xem Theo dõi tiến độ Đơn hàng
-          </Button>
+          <p className="text-caption text-text-muted">
+            Sau khi chuyển khoản, nhấn nút trên để theo dõi tiến độ đơn hàng.
+          </p>
         </div>
       ) : (
         <Button

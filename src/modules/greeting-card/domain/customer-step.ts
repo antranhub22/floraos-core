@@ -6,14 +6,38 @@
 export type CustomerStep = "SWIPING" | "ORDER_FORM" | "PAYMENT" | "TRACKING"
 export type PublicStep = "SWIPING" | "PREVIEW" | "ORDER_FORM" | "PAYMENT" | "TRACKING"
 
-export function canEnterCustomerStep(target: CustomerStep, s: { hasOrder: boolean; hasSnapshot: boolean }): boolean {
-  return s.hasOrder ? target === "PAYMENT" || target === "TRACKING" : target === "SWIPING" || (target === "ORDER_FORM" && s.hasSnapshot)
+export interface CustomerStepFacts {
+  hasOrder: boolean
+  hasSnapshot: boolean
+  /** `canViewTracking` — chưa chuyển khoản thì không vào Theo dõi, kể cả bằng Back/Forward hay mở lại trang. */
+  trackingUnlocked: boolean
+}
+
+export function canEnterCustomerStep(target: CustomerStep, s: CustomerStepFacts): boolean {
+  if (!s.hasOrder) return target === "SWIPING" || (target === "ORDER_FORM" && s.hasSnapshot)
+  return target === "PAYMENT" || (target === "TRACKING" && s.trackingUnlocked)
+}
+
+/**
+ * Khách phải chuyển khoản rồi mới xem được Theo dõi tiến độ, không có nút bỏ qua (PO 08/10/2026).
+ * "Đã chuyển khoản" = khách đã báo chuyển khoản hoặc tiệm đã nhận tiền (kể cả tiền cọc).
+ * Ngoại lệ vì khách không có gì để chuyển: đơn đã huỷ, mẫu chưa có giá (chờ báo giá),
+ * tiệm chưa cấu hình tài khoản nhận tiền (không có mã QR, tiệm tự liên hệ thu tiền).
+ */
+export function canViewTracking(o: {
+  totalVnd: number
+  paidVnd: number
+  reportedPaid: boolean
+  hasPaymentQr: boolean
+  cancelled: boolean
+}): boolean {
+  return o.cancelled || o.totalVnd <= 0 || !o.hasPaymentQr || o.reportedPaid || o.paidVnd > 0
 }
 
 /** Link riêng `/b`: bước sẽ hiện khi mở lại, `null` = giữ bước máy chủ chọn. */
 export function resumeCustomerStep(
   saved: CustomerStep,
-  s: { hasOrder: boolean; hasSnapshot: boolean; serverStep: CustomerStep },
+  s: CustomerStepFacts & { serverStep: CustomerStep },
 ): CustomerStep | null {
   // Đơn đã trả đủ / đã huỷ → máy chủ chọn Theo dõi; không quay lại màn thanh toán
   if (s.hasOrder && s.serverStep === "TRACKING") return null
