@@ -111,7 +111,18 @@ export async function loadTrackingDataset(
     ...orders.map((o) => ownerOf(o.greeting_sessions[0]?.sale_id) ?? ""),
     ...activeSessions.map((s) => ownerOf(s.sale_id) ?? ""),
   ]
-  const names = await repo.memberNames(ctx, saleIds)
+  const coordinatorIds = orders
+    .map(
+      (o) =>
+        o.coordination?.coordinator_id ||
+        o.events.find((e) => (e.axis === "production" || e.axis === "delivery") && e.actor_id)?.actor_id ||
+        o.qc_records[0]?.inspector_id ||
+        o.assignments[0]?.assigned_by ||
+        ""
+    )
+    .filter(Boolean)
+
+  const names = await repo.memberNames(ctx, [...saleIds, ...coordinatorIds])
   const saleNameOf = (id: string | undefined) => {
     const owner = ownerOf(id)
     return !owner ? "Chưa gán" : names.get(owner) ?? "Nhân viên đã rời"
@@ -135,6 +146,25 @@ export async function loadTrackingDataset(
 
     const currentStepDef = stepMap.get(currentStepId) ?? PIPELINE_STEPS[0]!
     const currentIndex = currentStepDef.orderIndex
+
+    const inCoordination =
+      ["STEP_6_ARRANGING", "STEP_7_READY_QC", "STEP_8_DELIVERING", "STEP_9_COMPLETED"].includes(currentStepId) ||
+      ["ASSIGNED", "ARRANGING", "QUALITY_CHECK", "READY", "DONE"].includes(order.production_status) ||
+      ["DISPATCHED", "DELIVERING", "DELIVERED", "FAILED"].includes(order.delivery_status)
+
+    const rawCoordId =
+      order.coordination?.coordinator_id ||
+      order.events.find((e) => (e.axis === "production" || e.axis === "delivery") && e.actor_id)?.actor_id ||
+      order.qc_records[0]?.inspector_id ||
+      order.assignments[0]?.assigned_by ||
+      null
+
+    const coordinatorId = rawCoordId ? ownerOf(rawCoordId) ?? rawCoordId : null
+    const coordinatorName = coordinatorId
+      ? names.get(coordinatorId) ?? "Nhân viên đã rời"
+      : inCoordination
+        ? "Chưa gán"
+        : null
 
     const steps: TrackingStepState[] = PIPELINE_STEPS.map((def) => {
       let status: "completed" | "current" | "pending" = "pending"
@@ -195,6 +225,8 @@ export async function loadTrackingDataset(
       stepStartedAt: orderStepStartedAt(order),
       stuck: stuckOf({ currentStepId, stepStartedAt: orderStepStartedAt(order) }, sla, now),
       saleId: ownerOf(session?.sale_id) ?? null,
+      coordinatorId: coordinatorId ?? null,
+      coordinatorName: coordinatorName ?? null,
       channel: channelOf(session ? linkFactsOf(session) : null, order.id),
       linkKind: session ? linkFactsOf(session).kind : "LEGACY",
       copiedAt: session ? linkFactsOf(session).copiedAt : null,
@@ -272,6 +304,8 @@ export async function loadTrackingDataset(
       stepStartedAt: startedAt,
       stuck: notSent ? null : stuckOf({ currentStepId, stepStartedAt: startedAt }, sla, now),
       saleId: ownerOf(session.sale_id) ?? null,
+      coordinatorId: null,
+      coordinatorName: null,
       channel: channelOf(facts),
       linkKind: facts.kind,
       copiedAt: facts.copiedAt,

@@ -8,6 +8,7 @@ import { groupSaleKanban } from "@/modules/greeting-card/domain/sale-kanban"
 import { STEP_OWNER_LABEL, formatMinutes } from "@/modules/greeting-card/domain/step-sla"
 import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { BrochureOrderDetailModal, type OrderDetailModalTarget } from "@/components/greeting-card/brochure-order-detail-modal"
+import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
 
 interface Props {
   items: TrackingPipelineItem[]
@@ -83,7 +84,10 @@ export function SalesKanbanView({ items, now, onOpenNotes, showSale, doneHidden 
                         totalVnd: item.totalVnd,
                         paidVnd: item.paidVnd,
                         balanceVnd: item.balanceVnd,
+                        saleId: item.saleId,
                         saleName: item.saleName,
+                        coordinatorId: item.coordinatorId,
+                        coordinatorName: item.coordinatorName,
                         currentStepId: item.currentStepId,
                         currentStepTitle: item.currentStepTitle,
                         status: item.orderStatus,
@@ -152,6 +156,8 @@ function SaleKanbanCard({
             {item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}
           </span>
         </div>
+
+        <StaffNametagGroup item={item} />
 
         {/* MỐC THỜI GIAN GIAO HÀNG TO NỔI BẬT */}
         {(item.deliveryTimeSlot || item.deliveryDate) && (

@@ -11,6 +11,7 @@ import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/gree
 import { paymentGateBlocker } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { sortByDelivery } from "@/modules/greeting-card/domain/coordinator-board"
 import { BrochureOrderDetailModal, type OrderDetailModalTarget } from "@/components/greeting-card/brochure-order-detail-modal"
+import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
 
 export type CoordinatorKanbanColId =
   | "PENDING"
@@ -127,7 +128,10 @@ export function CoordinatorKanbanView({
                         totalVnd: o.total_vnd,
                         paidVnd: o.paid_vnd,
                         balanceVnd: Math.max(0, o.total_vnd - o.paid_vnd),
-                        saleName: work?.saleName,
+                        saleId: work?.saleId ?? o.saleId,
+                        saleName: work?.saleName ?? o.saleName,
+                        coordinatorId: work?.coordinatorId ?? o.coordinatorId,
+                        coordinatorName: work?.coordinatorName ?? o.coordinatorName,
                         currentStepId: col.id,
                         currentStepTitle: col.label,
                         status: o.status,
@@ -151,13 +155,30 @@ export function CoordinatorKanbanView({
                           className="flex flex-col gap-2 text-left w-full cursor-pointer group"
                         >
                           <div className="flex items-start justify-between gap-1 border-b border-border/60 pb-1.5 w-full">
-                            <span className="text-caption font-bold text-foreground group-hover:text-primary transition-colors">
-                              #{o.code}
-                            </span>
-                            <span className="text-caption font-extrabold text-primary">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-caption font-bold text-foreground group-hover:text-primary transition-colors">
+                                #{o.code}
+                              </span>
+                              {o.greeting_sessions[0]?.send_code && (
+                                <span className="font-mono text-caption text-text-muted bg-surface-alt px-1.5 py-0.5 rounded">
+                                  {o.greeting_sessions[0].send_code}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-caption font-extrabold text-primary shrink-0">
                               {o.total_vnd.toLocaleString("vi-VN")} đ
                             </span>
                           </div>
+
+                          <StaffNametagGroup
+                            item={work}
+                            fallbackSaleName={o.saleName}
+                            fallbackSaleId={o.saleId}
+                            fallbackCoordinatorName={o.coordinatorName}
+                            fallbackCoordinatorId={o.coordinatorId}
+                            forceStage="coordinator"
+                            compact
+                          />
 
                           {/* MỐC THỜI GIAN GIAO HÀNG TO NỔI BẬT */}
                           <div className="rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-1 text-caption font-extrabold text-primary flex items-center gap-1.5 w-full">
