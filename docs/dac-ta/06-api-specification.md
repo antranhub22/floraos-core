@@ -112,7 +112,7 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 | GET | `/products` | `L1` | Lọc theo `branch_id`, `status`, `category` |
 | POST | `/products` | `L2` | |
 | GET · PATCH | `/products/:id` | `L1` · `L3` | |
-| POST | `/products/batch-import` | `L2` | Nhập đồng loạt tối đa 500 sản phẩm (Excel/thư mục ảnh đã parse); `skip_duplicates` mặc định `true`. Bổ sung vào đặc tả 05/10/2026 |
+| POST | `/products/batch-import` | `L2` | Nhập đồng loạt tối đa 500 sản phẩm (Excel/thư mục ảnh đã parse); `skip_duplicates` mặc định `true`. Mã đã có + kèm `image_asset_id` → chỉ bù ảnh chính nếu sản phẩm chưa có ảnh (không ghi đè dữ liệu/ảnh sẵn có), trả `images_attached_count` (09/10/2026). Bổ sung vào đặc tả 05/10/2026 |
 | POST | `/products/drive-thumbnails` | `L2` | Body `{ folder_ids: string[] }` (1–50 Drive id) → `{ thumbnails: { [folder_id]: url \| null } }`; màn nhập hàng loạt gom lô thay cho gọi `/public/drive-thumbnail` từng folder (trần 120/phút/IP làm file >120 dòng mất ảnh). 60 lần/phút/người dùng; server phân giải tối đa 6 luồng song song; client thử lại 429/5xx tối đa 4 lần (09/10/2026) |
 | GET | `/products/:id/images` | **CHƯA XÂY** `G1` | |
 | PUT | `/products/:id/images` | **CHƯA XÂY** `G2` | Đặt lại thứ tự và vai trò ảnh |

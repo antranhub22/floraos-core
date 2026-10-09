@@ -68,13 +68,13 @@ export async function runBulkImport(rows: ParsedProductRow[], onProgress: (p: Im
   }
 
   const items = valid.map((row) => toBatchItem(row, assetIds.get(row.index) ?? null))
-  const result: ImportResult = { success: true, createdCount: 0, skippedCount: 0, failedCount: 0, failedItems: [] }
+  const result: ImportResult = { success: true, createdCount: 0, skippedCount: 0, imagesAttachedCount: 0, failedCount: 0, failedItems: [] }
 
   for (let i = 0; i < items.length; i += BATCH_CHUNK) {
     const chunk = items.slice(i, i + BATCH_CHUNK)
     const done = Math.min(i + chunk.length, items.length)
     onProgress({ current: done, total: items.length, phase: `Đang lưu sản phẩm (${done}/${items.length})...` })
-    let body: { created_count?: number; skipped_count?: number; failed_count?: number; failed?: Array<{ code: string; error: string }> } | null = null
+    let body: { created_count?: number; skipped_count?: number; images_attached_count?: number; failed_count?: number; failed?: Array<{ code: string; error: string }> } | null = null
     try {
       const res = await fetch("/api/v1/products/batch-import", {
         method: "POST",
@@ -94,6 +94,7 @@ export async function runBulkImport(rows: ParsedProductRow[], onProgress: (p: Im
     }
     result.createdCount += body.created_count ?? 0
     result.skippedCount += body.skipped_count ?? 0
+    result.imagesAttachedCount += body.images_attached_count ?? 0
     result.failedCount += body.failed_count ?? 0
     if (Array.isArray(body.failed)) result.failedItems.push(...body.failed)
   }

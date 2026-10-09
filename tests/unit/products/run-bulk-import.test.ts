@@ -32,4 +32,10 @@ describe("runBulkImport", () => {
     expect(result.failedCount).toBe(50)
     expect(result.failedItems[0]?.code).toBe("FL-250")
   })
+
+  it("cộng dồn số ảnh được bù cho mã đã có", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ created_count: 0, skipped_count: 250, images_attached_count: 7, failed_count: 0 }))))
+    const result = await runBulkImport(rows, () => {})
+    expect(result.imagesAttachedCount).toBe(14)
+  })
 })

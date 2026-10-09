@@ -26,6 +26,8 @@ export interface ImportResult {
   success: boolean
   createdCount: number
   skippedCount: number
+  /** Mã đã có, chưa có ảnh — lần này được bù ảnh từ thư mục tải lên. */
+  imagesAttachedCount: number
   failedCount: number
   failedItems: Array<{ code: string; error: string }>
 }
