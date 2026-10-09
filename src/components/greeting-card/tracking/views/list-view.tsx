@@ -27,8 +27,10 @@ function cell(c: ListColumn, i: TrackingViewItem): React.ReactNode {
 }
 
 /** Danh sách: lọc, sắp xếp, phân trang ở máy chủ; chọn cột hiển thị. */
-export function ListView({ qs, state, onChange, onOpen, view = "list" }: {
-  qs: string; state: TrackingViewState; onChange: (p: Partial<TrackingViewState>) => void; onOpen: (i: TrackingViewItem) => void; view?: "list" | "queue"
+export function ListView({ qs, state, onChange, onOpen, onDetail, view = "list" }: {
+  qs: string; state: TrackingViewState; onChange: (p: Partial<TrackingViewState>) => void; onOpen: (i: TrackingViewItem) => void
+  onDetail?: ((i: TrackingViewItem) => void) | undefined
+  view?: "list" | "queue"
 }) {
   const list = usePagedList<TrackingViewItem>(`/api/v1/greeting-card/tracking?view=${view}&${qs}`, 25)
   const cols = LIST_COLUMNS.filter((c) => state.columns.includes(c.id))
@@ -66,6 +68,7 @@ export function ListView({ qs, state, onChange, onOpen, view = "list" }: {
                     </th>
                   )
                 })}
+                {onDetail && <th className="px-3 py-2 text-right">Tác vụ</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -76,6 +79,17 @@ export function ListView({ qs, state, onChange, onOpen, view = "list" }: {
                       {n === 0 ? <button type="button" onClick={() => onOpen(i)} className="text-left font-semibold text-primary hover:underline">{cell(c.id, i)}</button> : cell(c.id, i)}
                     </td>
                   ))}
+                  {onDetail && (
+                    <td className="px-3 py-2 text-right align-top">
+                      <button
+                        type="button"
+                        onClick={() => onDetail(i)}
+                        className="rounded-lg border border-border px-2 py-1 text-caption font-semibold text-foreground hover:bg-surface-muted hover:text-primary"
+                      >
+                        Chi tiết
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

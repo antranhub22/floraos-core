@@ -75,7 +75,18 @@ const SLA_RANK: Record<SlaState, number> = { OVERDUE: 3, DUE_SOON: 2, ON_TRACK: 
 
 export function matchesFilter(i: TrackingViewItem, f: TrackingFilter): boolean {
   const q = f.q?.trim().toLowerCase()
-  if (q && ![i.orderCode, i.sendCode, i.customerName, i.customerPhone, i.productName, i.recipientName].some((v) => v?.toLowerCase().includes(q))) return false
+  if (q) {
+    const cleanQ = q.replace(/^#/, "")
+    const qDigits = q.replace(/\D/g, "")
+    const hasLetters = /[a-zA-Z\u00C0-\u024F\u1EA0-\u1EF9]/.test(q)
+    const phoneDigits = (i.customerPhone || "").replace(/\D/g, "")
+    const recipientDigits = (i.recipientPhone || "").replace(/\D/g, "")
+    const phoneMatch = !hasLetters && qDigits.length >= 3 && (phoneDigits.includes(qDigits) || recipientDigits.includes(qDigits))
+    const textMatch = [i.orderCode, i.sendCode, i.customerName, i.customerPhone, i.productName, i.recipientName, i.recipientPhone].some(
+      (v) => v?.toLowerCase().includes(q) || (cleanQ && v?.toLowerCase().includes(cleanQ))
+    )
+    if (!phoneMatch && !textMatch) return false
+  }
   if (f.category && !inCategory(i, f.category)) return false
   if (f.steps?.length && !f.steps.includes(i.currentStepId)) return false
   if (f.saleId && i.saleId !== f.saleId) return false

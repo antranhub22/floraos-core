@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Bookmark, Search, Trash2 } from "lucide-react"
+import { Bookmark, Search, Trash2, X } from "lucide-react"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { useSession } from "@/lib/session"
 import { TRACKING_CATEGORIES } from "@/modules/greeting-card/domain/tracking-filters"
@@ -78,7 +78,17 @@ export function TrackingToolbar({ state, onChange, onApplyView }: Props) {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden="true" />
           <input type="search" aria-label="Tìm đơn" value={state.q} onChange={(e) => onChange({ q: e.target.value })}
             placeholder="Mã đơn, tên khách, số điện thoại, tên mẫu..."
-            className="h-10 w-full rounded-xl border border-border bg-surface pl-9 pr-3 text-body-sm text-foreground placeholder:text-text-muted" />
+            className="h-10 w-full rounded-xl border border-border bg-surface pl-9 pr-8 text-body-sm text-foreground placeholder:text-text-muted focus:border-primary focus:outline-hidden" />
+          {state.q && (
+            <button
+              type="button"
+              aria-label="Xoá tìm kiếm"
+              onClick={() => onChange({ q: "" })}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-foreground"
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          )}
         </div>
         <select aria-label="Nhóm bước" value={state.category} onChange={(e) => onChange({ category: e.target.value as TrackingViewState["category"] })} className={SELECT}>
           <option value="">Mọi bước</option>

@@ -8,14 +8,24 @@ export const ORDER_STATUSES: readonly order_status[] = [
 ]
 
 /** Đơn hàng nguồn Thẻ chào: tạo đơn, thu tiền, tra cứu, cập nhật xưởng. */
-/** Mã đơn, mã link (không phân biệt hoa thường) hoặc số điện thoại khách (chỉ so phần số). */
+/** Mã đơn, mã link, tên khách hàng (không phân biệt hoa thường) hoặc số điện thoại khách (so phần số). */
 function searchConditions(q: string) {
   const text = q.trim()
+  const cleanText = text.replace(/^#/, "").trim()
   const digits = text.replace(/\D/g, "")
+  const hasLetters = /[a-zA-Z\u00C0-\u024F\u1EA0-\u1EF9]/.test(text)
   return [
     { code: { contains: text, mode: "insensitive" as const } },
+    ...(cleanText && cleanText !== text ? [{ code: { contains: cleanText, mode: "insensitive" as const } }] : []),
+    { customer: { name: { contains: text, mode: "insensitive" as const } } },
     { greeting_sessions: { some: { send_code: { contains: text, mode: "insensitive" as const } } } },
-    ...(digits.length >= 3 ? [{ customer: { phone: { contains: digits } } }] : []),
+    { greeting_sessions: { some: { customer_name: { contains: text, mode: "insensitive" as const } } } },
+    ...(!hasLetters && digits.length >= 3
+      ? [
+          { customer: { phone: { contains: digits } } },
+          { greeting_sessions: { some: { customer_phone: { contains: digits } } } },
+        ]
+      : []),
   ]
 }
 

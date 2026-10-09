@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { RefreshCw, Sparkles } from "lucide-react"
+import { RefreshCw, Search, Sparkles, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CoordinatorActionModal } from "./coordinator-action-modal"
 import { CoordinatorOrderCard, type BrochureOrder, type ModalState } from "./coordinator-order-card"
@@ -23,7 +23,15 @@ function vnDate(addDays = 0): string {
 export function CoordinatorBrochureTab() {
   // Bảng việc: MỌI đơn còn việc (không cắt trang), máy chủ đã xếp theo ngày + giờ giao gần nhất
   const [day, setDay] = useState<string>("")
-  const board = useApi<{ data: BrochureOrder[]; truncated: boolean }>(`/api/v1/greeting-card/coordinator-board${day ? `?date=${day}` : ""}`, { refreshInterval: 30_000 })
+  const [search, setSearch] = useState<string>("")
+  const term = search.trim().toLowerCase()
+  const cleanTerm = term.replace(/^#/, "")
+  const termDigits = term.replace(/\D/g, "")
+  // Khi đang tìm kiếm: quét trên toàn bộ đơn của xưởng (không giới hạn ngày đang chọn)
+  const board = useApi<{ data: BrochureOrder[]; truncated: boolean }>(
+    `/api/v1/greeting-card/coordinator-board${term ? "" : day ? `?date=${day}` : ""}`,
+    { refreshInterval: 30_000 },
+  )
   const orders = board.data?.data ?? []
   const loading = board.isLoading
   const loadOrders = () => void board.mutate()
@@ -41,9 +49,30 @@ export function CoordinatorBrochureTab() {
     const b = w ? workBucket(w, "COORDINATOR") : "IN_PROGRESS"
     return b === "WAITING_CUSTOMER" ? "IN_PROGRESS" : b
   }
-  const counts = Object.fromEntries(BUCKETS.map((b) => [b, orders.filter((o) => bucketOf(o) === b).length])) as Record<WorkBucket, number>
-  // Giữ thứ tự giờ giao của máy chủ; mặc định ẩn đơn đã xong
-  const shown = orders.filter((o) => (bucket ? bucketOf(o) === bucket : bucketOf(o) !== "DONE"))
+
+  const hasLetters = /[a-zA-Z\u00C0-\u024F\u1EA0-\u1EF9]/.test(term)
+  const matchesSearch = (o: BrochureOrder) => {
+    if (!term) return true
+    const phoneDigits = (o.customer?.phone || "").replace(/\D/g, "")
+    const recipientDigits = (o.delivery_address?.phone || "").replace(/\D/g, "")
+    const phoneMatch = !hasLetters && termDigits.length >= 3 && (phoneDigits.includes(termDigits) || recipientDigits.includes(termDigits))
+    const textMatch = [
+      o.code,
+      o.greeting_sessions?.[0]?.send_code,
+      o.customer?.name,
+      o.customer?.phone,
+      o.delivery_address?.recipientName,
+      o.delivery_address?.phone,
+      o.items?.[0]?.description,
+      o.greeting_sessions?.[0]?.product_snapshot?.name,
+    ].some((v) => v?.toLowerCase().includes(term) || (cleanTerm && v?.toLowerCase().includes(cleanTerm)))
+    return phoneMatch || textMatch
+  }
+
+  const filtered = term ? orders.filter(matchesSearch) : orders
+  const counts = Object.fromEntries(BUCKETS.map((b) => [b, filtered.filter((o) => bucketOf(o) === b).length])) as Record<WorkBucket, number>
+  // Giữ thứ tự giờ giao của máy chủ; mặc định ẩn đơn đã xong trừ khi đang tìm kiếm
+  const shown = term ? filtered : orders.filter((o) => (bucket ? bucketOf(o) === bucket : bucketOf(o) !== "DONE"))
   const dayChips: Array<{ id: string; label: string }> = [
     { id: "", label: "Mọi ngày" },
     { id: vnDate(0), label: "Hôm nay" },
@@ -67,48 +96,82 @@ export function CoordinatorBrochureTab() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc việc">
-          {BUCKETS.map((b) => (
-            <button key={b} type="button" aria-pressed={bucket === b} onClick={() => setBucket(bucket === b ? null : b)}
-              className={`h-9 rounded-xl border px-3 text-caption font-bold ${
-                bucket === b ? "border-primary bg-primary text-white" : b === "ACTION" && counts.ACTION > 0 ? "border-danger/40 bg-danger-bg text-danger" : "border-border text-text-muted hover:bg-surface-muted"
-              }`}>
-              {WORK_BUCKET_LABEL[b]} ({counts[b]})
-            </button>
-          ))}
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc việc">
+            {BUCKETS.map((b) => (
+              <button key={b} type="button" aria-pressed={bucket === b} onClick={() => setBucket(bucket === b ? null : b)}
+                className={`h-9 rounded-xl border px-3 text-caption font-bold ${
+                  bucket === b ? "border-primary bg-primary text-white" : b === "ACTION" && counts.ACTION > 0 ? "border-danger/40 bg-danger-bg text-danger" : "border-border text-text-muted hover:bg-surface-muted"
+                }`}>
+                {WORK_BUCKET_LABEL[b]} ({counts[b]})
+              </button>
+            ))}
+          </div>
+
+          <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden="true" />
+            <input
+              type="search"
+              aria-label="Tìm kiếm đơn hàng theo tên khách, mã đơn, số điện thoại"
+              placeholder="Tìm tên khách, mã đơn, SĐT…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 w-full rounded-xl border border-border bg-surface pl-9 pr-8 text-caption text-foreground placeholder:text-text-muted focus:border-primary focus:outline-hidden"
+            />
+            {search && (
+              <button
+                type="button"
+                aria-label="Xoá tìm kiếm"
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-foreground"
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Ngày giao">
-          {dayChips.map((c) => (
-            <button key={c.label} type="button" aria-pressed={day === c.id} onClick={() => setDay(c.id)}
-              className={`h-9 rounded-xl border px-3 text-caption font-bold ${day === c.id ? "border-primary bg-primary text-white" : "border-border text-text-muted hover:bg-surface-muted"}`}>
-              {c.label}
-            </button>
-          ))}
-          <input type="date" aria-label="Chọn ngày giao" value={day} onChange={(e) => setDay(e.target.value)}
-            className="h-9 rounded-xl border border-border bg-surface px-2 text-caption text-foreground" />
-        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Ngày giao">
+            {term ? (
+              <span className="text-caption font-semibold text-text-muted italic px-2">
+                (Đang tìm trên mọi ngày)
+              </span>
+            ) : (
+              <>
+                {dayChips.map((c) => (
+                  <button key={c.label} type="button" aria-pressed={day === c.id} onClick={() => setDay(c.id)}
+                    className={`h-9 rounded-xl border px-3 text-caption font-bold ${day === c.id ? "border-primary bg-primary text-white" : "border-border text-text-muted hover:bg-surface-muted"}`}>
+                    {c.label}
+                  </button>
+                ))}
+                <input type="date" aria-label="Chọn ngày giao" value={day} onChange={(e) => setDay(e.target.value)}
+                  className="h-9 rounded-xl border border-border bg-surface px-2 text-caption text-foreground" />
+              </>
+            )}
+          </div>
 
-        {/* View Mode Toggle (Spec #14) */}
-        <div className="flex items-center rounded-xl border border-border bg-surface p-1">
-          <button
-            type="button"
-            onClick={() => setViewMode("kanban")}
-            className={`px-3 py-1 text-caption font-bold rounded-lg transition-colors ${
-              viewMode === "kanban" ? "bg-primary text-white" : "text-text-muted hover:text-foreground"
-            }`}
-          >
-            Kanban
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("grid")}
-            className={`px-3 py-1 text-caption font-bold rounded-lg transition-colors ${
-              viewMode === "grid" ? "bg-primary text-white" : "text-text-muted hover:text-foreground"
-            }`}
-          >
-            Lưới thẻ
-          </button>
+          {/* View Mode Toggle (Spec #14) */}
+          <div className="flex items-center rounded-xl border border-border bg-surface p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("kanban")}
+              className={`px-3 py-1 text-caption font-bold rounded-lg transition-colors ${
+                viewMode === "kanban" ? "bg-primary text-white" : "text-text-muted hover:text-foreground"
+              }`}
+            >
+              Kanban
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`px-3 py-1 text-caption font-bold rounded-lg transition-colors ${
+                viewMode === "grid" ? "bg-primary text-white" : "text-text-muted hover:text-foreground"
+              }`}
+            >
+              Lưới thẻ
+            </button>
+          </div>
         </div>
       </div>
 
@@ -116,9 +179,11 @@ export function CoordinatorBrochureTab() {
       {shown.length === 0 ? (
         <div className="bg-surface rounded-2xl border border-border p-12 text-center text-text-muted flex flex-col items-center">
           <Sparkles size={36} className="text-primary/40 mb-2" />
-          <p className="text-body font-bold text-foreground">{bucket ? "Không có đơn nào trong mục này" : "Chưa có đơn nào cần làm"}</p>
+          <p className="text-body font-bold text-foreground">
+            {term ? `Không tìm thấy đơn nào phù hợp với "${search.trim()}"` : bucket ? "Không có đơn nào trong mục này" : "Chưa có đơn nào cần làm"}
+          </p>
           <p className="text-caption text-text-muted mt-1">
-            Khi khách đặt hoa qua Thẻ chào, đơn sẽ hiển thị ngay tại đây.
+            {term ? "Thử tìm theo tên khách, mã đơn khác hoặc số điện thoại." : "Khi khách đặt hoa qua Thẻ chào, đơn sẽ hiển thị ngay tại đây."}
           </p>
         </div>
       ) : viewMode === "kanban" ? (
