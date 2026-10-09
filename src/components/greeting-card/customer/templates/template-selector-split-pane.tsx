@@ -342,7 +342,7 @@ function LivePreviewPane({
             </div>
             <p className="text-caption text-text-muted">
               {safeIdx + 1} / {products.length}
-              {isRealData && <span className="text-primary font-semibold"> · Thật</span>}
+              {isRealData ? <span className="text-primary font-semibold"> · Thật</span> : <span className="block text-text-muted">Ảnh minh hoạ — thêm mẫu hoa để xem ảnh thật</span>}
             </p>
           </div>
         )}

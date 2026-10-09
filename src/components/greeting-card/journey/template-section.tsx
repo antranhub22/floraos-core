@@ -18,6 +18,11 @@ export function catalogTemplateId(catalog: CatalogOption | undefined): GreetingT
   return resolveGreetingTemplateId(typeof raw === "string" ? raw : null)
 }
 
+/** Khoá dựng khung xem trước: số mẫu đổi → tải lại để ảnh thật vừa thêm hiện ngay (không kẹt ảnh mẫu). */
+export function previewPaneKey(catalog: Pick<CatalogOption, "id" | "itemCount">): string {
+  return `${catalog.id}:${catalog.itemCount}`
+}
+
 export function templateName(id: GreetingTemplateId): string {
   return GREETING_TEMPLATES[id]?.name ?? id
 }
@@ -53,7 +58,7 @@ export function TemplateSection({ catalog, onSave }: TemplateSectionProps) {
   return (
     <section aria-label="Giao diện khách xem" className="flex flex-col gap-3">
       <TemplateSelectorSplitPane
-        key={catalog.id}
+        key={previewPaneKey(catalog)}
         selectedTemplateId={pendingId ?? savedId}
         onSelectTemplate={(id) => void handleSelect(id)}
         catalogId={catalog.id}

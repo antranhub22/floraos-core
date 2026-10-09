@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { catalogPublicPath, normalizeLinkCode } from "@/components/greeting-card/journey/use-journey-catalogs"
 import { isValidPhone } from "@/components/greeting-card/journey/step-customer"
 import { toPublicCatalogFilters } from "@/modules/greeting-card/domain/greeting-template-registry"
-import { catalogTemplateId } from "@/components/greeting-card/journey/template-section"
+import { catalogTemplateId, previewPaneKey } from "@/components/greeting-card/journey/template-section"
 
 describe("normalizeLinkCode", () => {
   it("bỏ dấu tiếng Việt và ký tự lạ thành gạch ngang", () => {
@@ -63,5 +63,14 @@ describe("catalogTemplateId", () => {
   it("rơi về mặc định khi chưa chọn hoặc id lạ", () => {
     expect(catalogTemplateId({ ...base, filters: null })).toBe("editorial-luxury")
     expect(catalogTemplateId({ ...base, filters: { templateId: "khong-ton-tai" } })).toBe("editorial-luxury")
+  })
+})
+
+describe("previewPaneKey", () => {
+  it("đổi khi thêm mẫu vào bộ sưu tập để khung xem trước tải lại ảnh thật", () => {
+    expect(previewPaneKey({ id: "c1", itemCount: 0 })).not.toBe(previewPaneKey({ id: "c1", itemCount: 9 }))
+  })
+  it("giữ nguyên khi bộ sưu tập và số mẫu không đổi", () => {
+    expect(previewPaneKey({ id: "c1", itemCount: 9 })).toBe(previewPaneKey({ id: "c1", itemCount: 9 }))
   })
 })
