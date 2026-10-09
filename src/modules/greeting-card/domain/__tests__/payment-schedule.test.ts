@@ -57,11 +57,28 @@ describe("orderPaymentStatus", () => {
   it("đơn chờ báo giá (tổng 0) chưa phải PAID", () => {
     expect(orderPaymentStatus({ totalVnd: 0, paidVnd: 0 })).toBe("UNPAID")
   })
+  it("hỗ trợ tuỳ chọn requireFullBeforeDispatch: false → Mốc 2 due là AFTER_DELIVERY", () => {
+    const s = buildPaymentSchedule(2_000_000, 30, { requireFullBeforeDispatch: false })
+    expect(s[1]?.due).toBe("AFTER_DELIVERY")
+  })
 })
 
-describe("balanceDue — chờ thanh toán phần còn lại sau khi hoa xong", () => {
+describe("balanceDue — cả 2 cơ chế (thu trước giao và thu sau giao)", () => {
   const base = { status: "CONFIRMED", productionStatus: "READY", deliveryStatus: "PENDING", totalVnd: 2_000_000, paidVnd: 600_000 }
-  it("đã cọc + hoa xong → chờ trả phần còn lại", () => expect(balanceDue(base)).toBe(true))
+  it("Cơ chế 1 (mặc định / requireFullBeforeDispatch: true): đã cọc + hoa xong → chờ trả phần còn lại", () => {
+    expect(balanceDue(base)).toBe(true)
+    expect(balanceDue(base, { requireFullBeforeDispatch: true })).toBe(true)
+    // Đã giao xong thì Cơ chế 1 không còn là cổng chặn trước giao
+    expect(balanceDue({ ...base, deliveryStatus: "DELIVERED" }, { requireFullBeforeDispatch: true })).toBe(false)
+  })
+  it("Cơ chế 2 (requireFullBeforeDispatch: false): đã cọc + hoa xong hoặc đã giao → vẫn chờ trả phần còn lại", () => {
+    expect(balanceDue(base, { requireFullBeforeDispatch: false })).toBe(true)
+    expect(balanceDue({ ...base, deliveryStatus: "DELIVERING" }, { requireFullBeforeDispatch: false })).toBe(true)
+    expect(balanceDue({ ...base, deliveryStatus: "DELIVERED" }, { requireFullBeforeDispatch: false })).toBe(true)
+    expect(balanceDue({ ...base, status: "COMPLETED", deliveryStatus: "DELIVERED" }, { requireFullBeforeDispatch: false })).toBe(true)
+    // Đã trả đủ thì hết nợ
+    expect(balanceDue({ ...base, paidVnd: 2_000_000, deliveryStatus: "DELIVERED" }, { requireFullBeforeDispatch: false })).toBe(false)
+  })
   it("hoa chưa xong / đã trả đủ / chưa cọc / đã huỷ → không", () => {
     expect(balanceDue({ ...base, productionStatus: "ARRANGING" })).toBe(false)
     expect(balanceDue({ ...base, paidVnd: 2_000_000 })).toBe(false)

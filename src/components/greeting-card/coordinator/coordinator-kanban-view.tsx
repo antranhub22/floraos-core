@@ -237,19 +237,26 @@ export function CoordinatorKanbanView({
                                 Ảnh TP
                               </Button>
                             )}
-                            {col.id === "READY" && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={!!blockerOf("dispatch-shipping")}
-                                onClick={() => onOpen({ type: "dispatch", orderId: o.id, orderCode: o.code })}
-                                className="h-7 text-caption gap-1 px-2 flex-1"
-                              >
-                                <Truck size={12} />
-                                Giao Ship
-                              </Button>
-                            )}
+                            {col.id === "READY" && (() => {
+                              const isWaitingSecondPayment =
+                                o.paid_vnd > 0 &&
+                                o.paid_vnd < o.total_vnd &&
+                                policy.requireFullBeforeDispatch
+                              return (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!!blockerOf("dispatch-shipping")}
+                                  title={blockerOf("dispatch-shipping") ?? undefined}
+                                  onClick={() => onOpen({ type: "dispatch", orderId: o.id, orderCode: o.code })}
+                                  className={`h-7 text-caption gap-1 px-2 flex-1 ${isWaitingSecondPayment ? "border-warning/50 text-warning bg-warning-bg/30" : ""}`}
+                                >
+                                  <Truck size={12} />
+                                  {isWaitingSecondPayment ? "Chờ TT lần 2" : "Giao Ship"}
+                                </Button>
+                              )
+                            })()}
                             {col.id === "DELIVERING" && (
                               <Button
                                 type="button"

@@ -260,18 +260,27 @@ export function CoordinatorOrderCard({
             Chụp thành phẩm
           </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!!blockerOf("dispatch-shipping")}
-            title={blockerOf("dispatch-shipping") ?? undefined}
-            onClick={() => onOpen({ type: "dispatch", orderId: order.id, orderCode: order.code })}
-            className="text-caption gap-1.5 h-8"
-          >
-            <Truck size={13} />
-            {order.delivery_status === "FAILED" ? "Giao lại" : "Giao Ship"}
-          </Button>
+          {(() => {
+            const isWaitingSecondPayment =
+              order.paid_vnd > 0 &&
+              order.paid_vnd < order.total_vnd &&
+              policy.requireFullBeforeDispatch &&
+              (order.production_status === "READY" || order.production_status === "DONE")
+            return (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!!blockerOf("dispatch-shipping")}
+                title={blockerOf("dispatch-shipping") ?? undefined}
+                onClick={() => onOpen({ type: "dispatch", orderId: order.id, orderCode: order.code })}
+                className={`text-caption gap-1.5 h-8 ${isWaitingSecondPayment ? "border-warning/50 text-warning bg-warning-bg/30" : ""}`}
+              >
+                <Truck size={13} />
+                {order.delivery_status === "FAILED" ? "Giao lại" : isWaitingSecondPayment ? "Chờ TT lần 2" : "Giao Ship"}
+              </Button>
+            )
+          })()}
 
           <Button
             type="button"

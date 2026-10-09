@@ -120,7 +120,11 @@ export function paymentGateBlocker(
   }
   if (action === "dispatch-shipping" && policy.requireFullBeforeDispatch) {
     if (money.totalVnd <= 0) return "Đơn chưa báo giá — báo giá và thu đủ tiền trước khi giao hoa"
-    if (money.paidVnd < money.totalVnd) return "Tiệm yêu cầu thu đủ tiền trước khi giao hoa"
+    if (money.paidVnd < money.totalVnd) {
+      return money.paidVnd > 0
+        ? "Đơn đặt cọc chưa thanh toán lần 2 — Tiệm yêu cầu thu đủ tiền trước khi giao hoa"
+        : "Tiệm yêu cầu thu đủ tiền trước khi giao hoa"
+    }
   }
   return null
 }

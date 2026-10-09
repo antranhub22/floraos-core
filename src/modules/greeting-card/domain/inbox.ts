@@ -12,7 +12,19 @@ export type InboxTab = "payment" | "sales" | "coordinator" | "tracking"
 
 export interface InboxAction {
   id: string
-  kind: "STUCK" | "CONFIRM_PAYMENT" | "QUOTE" | "ASSIGN" | "UNMATCHED_PAYMENTS" | "DISCOUNT" | "CHANGE_REQUEST" | "REDELIVER" | "CANCELLATION_REQUEST"
+  kind:
+    | "STUCK"
+    | "CONFIRM_PAYMENT"
+    | "QUOTE"
+    | "ASSIGN"
+    | "UNMATCHED_PAYMENTS"
+    | "DISCOUNT"
+    | "CHANGE_REQUEST"
+    | "REDELIVER"
+    | "CANCELLATION_REQUEST"
+    | "REMIND_BALANCE_PAYMENT"
+    | "WAITING_SECOND_PAYMENT"
+    | "COLLECT_POST_DELIVERY_BALANCE"
   title: string
   detail: string
   orderId: string | null
@@ -53,8 +65,12 @@ export interface PipelineLike {
   productName: string
   productImageUrl?: string | null | undefined
   totalVnd: number
+  paidVnd?: number | undefined
+  balanceVnd?: number | undefined
   currentStepId: TrackingPipelineStepId
   currentStepTitle: string
+  productionStatus?: string | null | undefined
+  deliveryStatus?: string | null | undefined
   stepStartedAt: string
   stuck: StuckInfo | null
   saleId: string | null
@@ -76,10 +92,48 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
       out.push({ ...base, id: `stuck:${i.id}`, kind: "STUCK", title: i.stuck.message, detail: `${code(i)} · ${i.productName}`, tab: TAB_OF_ROLE[role], urgency: 1000 + i.stuck.overdueMinutes })
       continue
     }
+
+    const paid = i.paidVnd ?? 0
+    const total = i.totalVnd
+    const balance = i.balanceVnd ?? Math.max(0, total - paid)
+    const hasDeposit = paid > 0 && balance > 0
+    const isReady = i.productionStatus === "READY" || i.currentStepId === "STEP_7_READY_QC"
+    const isDelivered = i.deliveryStatus === "DELIVERED" || i.currentStepId === "STEP_9_COMPLETED"
+
     if (role === "ADMIN" && i.type === "ORDER" && i.totalVnd <= 0 && i.currentStepId !== "STEP_9_COMPLETED") {
       out.push({ ...base, id: `quote:${i.id}`, kind: "QUOTE", title: "Báo giá mẫu chưa niêm yết", detail: `${code(i)} · ${i.productName}`, tab: "payment", urgency: 500 })
     } else if (role === "ADMIN" && i.currentStepId === "STEP_4_PAYMENT_PENDING") {
       out.push({ ...base, id: `pay:${i.id}`, kind: "CONFIRM_PAYMENT", title: "Đối chiếu và xác nhận tiền", detail: `${code(i)} · khách báo đã chuyển`, tab: "payment", urgency: 400 })
+    } else if ((role === "ADMIN" || role === "SALE") && i.type === "ORDER" && hasDeposit && isDelivered) {
+      out.push({
+        ...base,
+        id: `collect-post-delivery:${i.id}`,
+        kind: "COLLECT_POST_DELIVERY_BALANCE",
+        title: "Thu phần tiền còn lại sau giao",
+        detail: `${code(i)} · Còn nợ ${balance.toLocaleString("vi-VN")} đ`,
+        tab: role === "ADMIN" ? "payment" : "sales",
+        urgency: 420,
+      })
+    } else if (role === "SALE" && i.type === "ORDER" && hasDeposit && isReady && !isDelivered) {
+      out.push({
+        ...base,
+        id: `remind-second-pay:${i.id}`,
+        kind: "REMIND_BALANCE_PAYMENT",
+        title: "Nhắc khách xác nhận hoa & thanh toán lần 2",
+        detail: `${code(i)} · Còn thiếu ${balance.toLocaleString("vi-VN")} đ để giao ship`,
+        tab: "sales",
+        urgency: 480,
+      })
+    } else if (role === "COORDINATOR" && i.type === "ORDER" && hasDeposit && isReady && !isDelivered) {
+      out.push({
+        ...base,
+        id: `wait-second-pay:${i.id}`,
+        kind: "WAITING_SECOND_PAYMENT",
+        title: "Chờ khách thanh toán lần 2 để giao hoa",
+        detail: `${code(i)} · Đã có ảnh thành phẩm, còn nợ ${balance.toLocaleString("vi-VN")} đ`,
+        tab: "coordinator",
+        urgency: 280,
+      })
     } else if (role === "COORDINATOR" && i.deliveryFailed) {
       out.push({ ...base, id: `redeliver:${i.id}`, kind: "REDELIVER", title: "Giao không thành công — hẹn giao lại", detail: `${code(i)} · ${i.productName}`, tab: "coordinator", urgency: 900 })
     } else if (role === "COORDINATOR" && i.currentStepId === "STEP_5_PAYMENT_CONFIRMED") {
