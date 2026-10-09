@@ -27,6 +27,10 @@ async function main(): Promise<void> {
   const { seedDecisionRegistry } = await import("./seed/decision-registry")
   await seedDecisionRegistry()
 
+  // Đồng bộ & kích hoạt tài khoản Siin Store (chạy trên cả production / Render)
+  const { syncSiinStoreAccount } = await import("./seed/sync-siin-store")
+  await syncSiinStoreAccount()
+
   // Dev fixture: chạy trong dev hoặc khi cờ SEED_DEV_DATA=true được bật (demo / staging deploy)
   if (process.env.NODE_ENV !== "production" || process.env.SEED_DEV_DATA === "true") {
     const { seedDevShopMoclan } = await import("./seed/dev-shop-moclan")
