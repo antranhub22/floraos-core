@@ -8,6 +8,10 @@ import { paymentCheckOf } from "@/modules/greeting-card/domain/payment-check"
 import { vnd, type AdminOrder, type OrderAction } from "./admin-order-types"
 import { AdminPaymentPlanCell } from "./admin-payment-plan-cell"
 
+import { readPaymentPlan } from "@/modules/greeting-card/domain/payment-plan"
+import { depositAmountVnd } from "@/modules/greeting-card/domain/payment-schedule"
+import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Chờ thanh toán", className: "bg-warning-bg text-warning" },
   CONFIRMED: { label: "Đã xác nhận", className: "bg-info-bg text-info" },
@@ -18,11 +22,17 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 }
 
 /** Bảng đơn Thẻ chào cho Điều hành: tiền đã thu/còn lại + thu, huỷ, hoàn. */
-export function AdminOrderTable({ orders, onAction, shopDepositPercent = 0 }: {
+export function AdminOrderTable({
+  orders,
+  onAction,
+  shopDepositPercent = 0,
+  policy,
+}: {
   orders: AdminOrder[]
   onAction: (a: OrderAction) => void
   /** % cọc hiện tại của tiệm — cho đơn cũ chưa chụp kế hoạch thanh toán */
   shopDepositPercent?: number
+  policy?: BrochurePaymentPolicy | undefined
 }) {
   return (
     <div className="overflow-x-auto">
@@ -44,6 +54,48 @@ export function AdminOrderTable({ orders, onAction, shopDepositPercent = 0 }: {
             const awaitingQuote = o.total_vnd <= 0 && o.status !== "CANCELLED"
             const badge = STATUS_BADGE[o.status] ?? { label: o.status, className: "bg-surface-muted" }
             const cancellable = o.status !== "CANCELLED" && o.status !== "COMPLETED" && o.delivery_status !== "DELIVERED"
+
+            const plan = readPaymentPlan(o.pricing_rule_ref)
+            const pct = plan?.depositPercent ?? shopDepositPercent
+            const depositAmount = depositAmountVnd(o.total_vnd, pct)
+            const isDepositOrder = pct > 0 && depositAmount < o.total_vnd
+            const isDepositPaid = isDepositOrder && o.paid_vnd >= depositAmount
+            const isFullyPaid = o.total_vnd > 0 && o.paid_vnd >= o.total_vnd
+            const requireFull = policy?.requireFullBeforeDispatch !== false
+
+            // Kiểm tra tiến độ hoa & duyệt ảnh đối với đơn thu trước giao
+            const isReady = o.production_status === "READY"
+            const isPhotoApproved = o.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
+            const productPhotoQc = o.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
+            const isAutoApproved = !!productPhotoQc && (Date.now() >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
+            const canCollectBalanceBeforeDispatch = isReady && (isPhotoApproved || isAutoApproved)
+            const canCollectBalanceAfterDelivery = o.delivery_status === "DELIVERED"
+
+            let collectButton: { label: string; className: string } | null = null
+            if (!isFullyPaid && balance > 0 && o.status !== "CANCELLED" && !awaitingQuote) {
+              if (!isDepositOrder) {
+                collectButton = {
+                  label: `Thu tiền (${vnd(o.total_vnd)})`,
+                  className: "h-8 bg-success hover:bg-success/90 text-white text-caption font-bold gap-1",
+                }
+              } else if (!isDepositPaid) {
+                collectButton = {
+                  label: `Thu tiền cọc (${vnd(depositAmount)})`,
+                  className: "h-8 bg-primary hover:bg-primary-dark text-white text-caption font-bold gap-1",
+                }
+              } else if (requireFull && canCollectBalanceBeforeDispatch) {
+                collectButton = {
+                  label: `Thu lần 2 (${vnd(balance)})`,
+                  className: "h-8 bg-success hover:bg-success/90 text-white text-caption font-bold gap-1",
+                }
+              } else if (!requireFull && canCollectBalanceAfterDelivery) {
+                collectButton = {
+                  label: `Thu lần 2 (${vnd(balance)})`,
+                  className: "h-8 bg-success hover:bg-success/90 text-white text-caption font-bold gap-1",
+                }
+              }
+            }
+
             return (
               <tr key={o.id} data-focus-key={o.id} className="hover:bg-surface-muted/50 transition-colors">
                 <td className="px-4 py-3">
@@ -72,17 +124,51 @@ export function AdminOrderTable({ orders, onAction, shopDepositPercent = 0 }: {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-1.5">
+                  <div className="flex justify-end items-center gap-1.5 flex-wrap">
                     {awaitingQuote && (
                       <Button type="button" size="sm" variant="outline" onClick={() => onAction({ type: "quote", order: o })} className="h-8 text-caption gap-1">
                         <Tag size={13} /> Báo giá
                       </Button>
                     )}
-                    {balance > 0 && o.status !== "CANCELLED" && (
-                      <Button type="button" size="sm" onClick={() => onAction({ type: "collect", order: o })} className="h-8 bg-success hover:bg-success/90 text-white text-caption gap-1">
-                        <Check size={13} /> Thu tiền
+
+                    {/* 1. Đã thu đủ 100% */}
+                    {isFullyPaid && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-bold bg-success/15 text-success">
+                        <Check size={12} /> Đã thu đủ
+                      </span>
+                    )}
+
+                    {/* 2. Nút thu tiền duy nhất khi đủ điều kiện */}
+                    {collectButton && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => onAction({ type: "collect", order: o })}
+                        className={collectButton.className}
+                      >
+                        <Check size={13} /> {collectButton.label}
                       </Button>
                     )}
+
+                    {/* 3. Badge trạng thái cho đơn cọc chưa đủ điều kiện thu lần 2 */}
+                    {!collectButton && isDepositOrder && isDepositPaid && balance > 0 && o.status !== "CANCELLED" && !awaitingQuote && (
+                      requireFull ? (
+                        isReady ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-warning-bg text-warning border border-warning/30" title="Chờ khách duyệt ảnh sản phẩm hoặc hết 10 phút đếm ngược">
+                            ⏳ Đã cọc · Chờ duyệt ảnh
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-success/10 text-success border border-success/30" title="Đã nhận tiền cọc thành công. Chờ xưởng cắm hoa xong mới thu lần 2.">
+                            ✓ Đã cọc · Chờ hoa xong
+                          </span>
+                        )
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-info/10 text-info border border-info/30" title="Đã nhận tiền cọc. Phần còn lại sẽ thu sau khi giao hoa thành công.">
+                          ✓ Đã cọc · Thu sau giao
+                        </span>
+                      )
+                    )}
+
                     {o.paid_vnd > 0 && (
                       <Button type="button" size="sm" variant="outline" onClick={() => onAction({ type: "refund", order: o })} className="h-8 text-caption gap-1">
                         <RotateCcw size={13} /> Hoàn tiền

@@ -1,10 +1,11 @@
 import type { TenantContext } from "@/core/tenancy"
-import { notFound, unprocessable } from "@/core/http/errors"
+import { conflict, notFound, unprocessable } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { expectedPayment, parsePaymentPolicy } from "../domain/brochure-payment-policy"
-import { policyForOrder } from "../domain/payment-plan"
+import { policyForOrder, readPaymentPlan } from "../domain/payment-plan"
+import { depositAmountVnd } from "../domain/payment-schedule"
 import { loadPublicSession } from "./brochure-session-access"
 import { queueOrderNotification } from "./notify-customer"
 import { paymentNotifyEvent } from "../domain/customer-notifications"
@@ -44,6 +45,7 @@ export async function reportCustomerPayment(sendCode: string, repo = new Greetin
 /**
  * Điều hành xác nhận đã nhận tiền. Không truyền số tiền → lấy đúng khoản
  * khách được yêu cầu chuyển (cọc theo kế hoạch thanh toán của đơn, hoặc phần còn lại).
+ * Đối với đơn đặt cọc, phần còn lại (Lần 2) bị chặn không cho thu sớm nếu chưa đủ điều kiện (PO 10/10/2026).
  */
 export async function adminConfirmBrochurePayment(
   ctx: TenantContext,
@@ -58,13 +60,42 @@ export async function adminConfirmBrochurePayment(
   repo = new GreetingCardRepository()
 ) {
   await assertOrderInScope(ctx, orderId, orders)
+  const order = await orders.findBrochureOrder(ctx, orderId)
+  if (!order) throw notFound()
+  const shop = await repo.getShopProfile(ctx.organizationId)
+  const policy = policyForOrder(parsePaymentPolicy(shop.settings), order.pricing_rule_ref)
+  const total = Number(order.total_vnd)
+  const paid = Number(order.paid_vnd)
+
+  const plan = readPaymentPlan(order.pricing_rule_ref)
+  const pct = plan?.depositPercent ?? policy.depositPercent
+  const deposit = depositAmountVnd(total, pct)
+  const isDepositOrder = pct > 0 && deposit < total
+
+  // Chặn thu lần 2 nếu đơn đặt cọc chưa đến bước được phép thu phần còn lại
+  if (isDepositOrder && paid >= deposit && paid < total) {
+    if (policy.requireFullBeforeDispatch) {
+      const isReady = order.production_status === "READY"
+      if (!isReady) {
+        throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Phần còn lại chỉ được thu sau khi xưởng hoàn thành cắm hoa và khách xác nhận ảnh.")
+      }
+      const orderWithQc = order as { qc_records?: Array<{ notes: string | null; created_at: Date }> }
+      const hasPhotoApproved = orderWithQc.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
+      const productPhotoQc = orderWithQc.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
+      const isAutoApproved = !!productPhotoQc && Date.now() >= productPhotoQc.created_at.getTime() + 10 * 60_000
+      if (!hasPhotoApproved && !isAutoApproved) {
+        throw conflict("Đơn hàng đang chờ khách duyệt ảnh thành phẩm trước khi giao. Chưa thể ghi nhận thanh toán lần 2.")
+      }
+    } else {
+      if (order.delivery_status !== "DELIVERED") {
+        throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công.")
+      }
+    }
+  }
+
   let amountVnd = input.amountVnd
   if (amountVnd === undefined) {
-    const order = await orders.findBrochureOrder(ctx, orderId)
-    if (!order) throw notFound()
-    const shop = await repo.getShopProfile(ctx.organizationId)
-    const policy = policyForOrder(parsePaymentPolicy(shop.settings), order.pricing_rule_ref)
-    amountVnd = expectedPayment(policy, Number(order.total_vnd), Number(order.paid_vnd)).amountVnd
+    amountVnd = expectedPayment(policy, total, paid).amountVnd
   }
   const result = await payments.recordIncomingPayment(ctx, orderId, {
     amountVnd,

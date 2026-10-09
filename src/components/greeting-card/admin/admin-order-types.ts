@@ -12,6 +12,7 @@ export interface AdminOrder {
   items?: Array<{ metadata?: unknown; quantity?: number; unit_price_vnd?: number }>
   pricing_rule_ref?: unknown
   payments: Array<{ id: string; kind: string; amount_vnd: number; collected_at: string; reference: string | null }>
+  qc_records?: Array<{ notes: string | null; created_at: string | Date }>
   created_at: string
 }
 
