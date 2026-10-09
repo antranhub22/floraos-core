@@ -33,10 +33,16 @@ export interface AgreementItem {
   internalText?: string | undefined
 }
 
+export interface IntakePromotionCtaConfig {
+  enabled: boolean
+  percent: number
+}
+
 export interface StorePoliciesConfig {
   promotions: PromotionItem[]
   commitments: CommitmentItem[]
   agreements: AgreementItem[]
+  intakePromotionCta?: IntakePromotionCtaConfig | undefined
 }
 
 /**
@@ -81,10 +87,16 @@ export function parseStorePolicies(settings: unknown): StorePoliciesConfig {
   const promotions = cleanItems<PromotionItem>(raw?.promotions, "description")
   const commitments = cleanItems<CommitmentItem>(raw?.commitments, "customerText")
   const agreements = cleanItems<AgreementItem>(raw?.agreements, "customerText")
+  const rawCta = raw?.intakePromotionCta
+  const intakePromotionCta: IntakePromotionCtaConfig = {
+    enabled: typeof rawCta?.enabled === "boolean" ? rawCta.enabled : true,
+    percent: typeof rawCta?.percent === "number" && rawCta.percent > 0 && rawCta.percent <= 100 ? rawCta.percent : 10,
+  }
   return {
     promotions: promotions.length > 0 ? promotions : DEFAULT_PROMOTIONS,
     commitments: commitments.length > 0 ? commitments : DEFAULT_COMMITMENTS,
     agreements: agreements.length > 0 ? agreements : DEFAULT_AGREEMENTS,
+    intakePromotionCta,
   }
 }
 
@@ -107,6 +119,7 @@ export type PublicAppliedPolicies = {
   commitments: Array<{ id: string; title: string; customerText: string }>
   agreements: Array<{ id: string; title: string; customerText: string }>
   allowCustomerPromotionChoice: boolean
+  intakePromotionCta?: IntakePromotionCtaConfig | undefined
 }
 
 export function resolveAppliedPolicies(
@@ -120,6 +133,7 @@ export function resolveAppliedPolicies(
     commitmentIds?: string[]
     agreementIds?: string[]
     allowCustomerPromotionChoice?: boolean
+    intakePromotionCta?: Partial<IntakePromotionCtaConfig>
   } | undefined
 
   const promoFilter = applied?.promotionIds
@@ -137,10 +151,17 @@ export function resolveAppliedPolicies(
     ({ id, title, customerText }) => ({ id, title, customerText })
   )
 
+  const catalogCta = applied?.intakePromotionCta
+  const intakePromotionCta: IntakePromotionCtaConfig = {
+    enabled: typeof catalogCta?.enabled === "boolean" ? catalogCta.enabled : all.intakePromotionCta?.enabled ?? true,
+    percent: typeof catalogCta?.percent === "number" && catalogCta.percent > 0 ? catalogCta.percent : all.intakePromotionCta?.percent ?? 10,
+  }
+
   return {
     promotions,
     commitments,
     agreements,
     allowCustomerPromotionChoice: applied?.allowCustomerPromotionChoice ?? true,
+    intakePromotionCta,
   }
 }

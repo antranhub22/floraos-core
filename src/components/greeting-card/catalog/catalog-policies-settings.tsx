@@ -74,6 +74,7 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
       const updatedFilters = {
         ...(currentFilters ?? {}),
         appliedPolicies: {
+          ...((currentFilters?.appliedPolicies as Record<string, unknown> | undefined) ?? {}),
           promotionIds: selectedPromos,
           commitmentIds: selectedCommits,
           agreementIds: selectedAgrees,

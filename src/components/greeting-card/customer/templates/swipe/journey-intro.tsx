@@ -1,7 +1,10 @@
 "use client"
 
+import React, { useState } from "react"
 import { Hand, Heart, ShoppingBag } from "lucide-react"
 import { SWIPE_SIGNAL, type SwipeTheme } from "./swipe-themes"
+import { JourneyContactForm } from "./journey-contact-form"
+import { useOrderDraft } from "../../use-order-draft"
 
 interface JourneyIntroProps {
   theme: SwipeTheme
@@ -10,19 +13,61 @@ interface JourneyIntroProps {
   total: number
   /** Mẫu đã xem / đã thích — cho hộp hỏi tiếp tục */
   progress: { viewed: number; liked: number }
+  initialCustomerName?: string | null | undefined
+  promotionCta?: { enabled: boolean; percent: number } | undefined
   onStart: () => void
   onStartOver: () => void
 }
 
-const STEPS = [
-  { icon: Hand, color: SWIPE_SIGNAL.info, text: "Chạm bên phải ảnh (hoặc vuốt sang trái) để xem mẫu tiếp theo, chạm bên trái để quay lại" },
-  { icon: Heart, color: SWIPE_SIGNAL.like, text: "Bấm ♥ để thả tim mẫu bạn ưng, bấm ⓘ để xem chi tiết" },
-  { icon: ShoppingBag, color: SWIPE_SIGNAL.info, text: "Ưng mẫu nào thì bấm Đặt mẫu này ngay, không cần xem hết" },
+const GUIDE_STEPS = [
+  { icon: Hand, color: SWIPE_SIGNAL.info, text: "Chạm hoặc vuốt để xem" },
+  { icon: Heart, color: SWIPE_SIGNAL.like, text: "Thả tim mẫu bạn thích" },
+  { icon: ShoppingBag, color: SWIPE_SIGNAL.info, text: "Đặt mua mẫu này" },
 ]
 
-/** Hướng dẫn lần đầu mở link, hoặc hỏi "Tiếp tục xem / Xem lại từ đầu" khi mở lại. */
-export function JourneyIntro({ theme, mode, catalogName, total, progress, onStart, onStartOver }: JourneyIntroProps) {
+/**
+ * Hướng dẫn lần đầu mở link (2 chặng: Nhập thông tin -> Hướng dẫn siêu ngắn),
+ * hoặc hỏi "Tiếp tục xem / Xem lại từ đầu" khi mở lại link.
+ */
+export function JourneyIntro({
+  theme,
+  mode,
+  catalogName,
+  total,
+  progress,
+  initialCustomerName,
+  promotionCta,
+  onStart,
+  onStartOver,
+}: JourneyIntroProps) {
+  const { customerName, customerPhone, customerEmail, setContactInfo } = useOrderDraft()
+  const [stage, setStage] = useState<"contact" | "guide">("contact")
+
   const panel = { background: theme.controlBg, borderColor: theme.controlBorder }
+
+  // Chặng 1: Nhập Họ tên (bắt buộc), SĐT & Email (tùy chọn)
+  if (mode === "onboarding" && stage === "contact") {
+    return (
+      <JourneyContactForm
+        theme={theme}
+        catalogName={catalogName}
+        initialName={customerName || initialCustomerName || ""}
+        initialPhone={customerPhone}
+        initialEmail={customerEmail}
+        promotionCta={promotionCta}
+        onNext={(contact) => {
+          setContactInfo({
+            customerName: contact.name,
+            customerPhone: contact.phone,
+            customerEmail: contact.email,
+          })
+          setStage("guide")
+        }}
+      />
+    )
+  }
+
+  // Chặng 2 (Hướng dẫn siêu ngắn) hoặc Mở lại (Resume)
   return (
     <section
       role="dialog"
@@ -31,7 +76,10 @@ export function JourneyIntro({ theme, mode, catalogName, total, progress, onStar
       className="flex flex-1 flex-col justify-center gap-5 py-6"
     >
       <div className="text-center">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border" style={{ ...panel, color: SWIPE_SIGNAL.like }}>
+        <span
+          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border shadow-2xs"
+          style={{ ...panel, color: SWIPE_SIGNAL.like }}
+        >
           <Hand size={26} aria-hidden="true" />
         </span>
         <h2 id="journey-intro-title" className="mt-3 text-title font-semibold" style={{ fontFamily: theme.font }}>
@@ -39,15 +87,15 @@ export function JourneyIntro({ theme, mode, catalogName, total, progress, onStar
         </h2>
         <p className="mt-1 text-body-sm" style={{ color: theme.stageMuted }}>
           {mode === "onboarding"
-            ? `${total} mẫu hoa đang chờ bạn. Chỉ mất vài giây để chọn:`
+            ? `${total} mẫu hoa đang chờ bạn:`
             : `Bạn đã xem ${progress.viewed}/${total} mẫu${progress.liked > 0 ? ` và thích ${progress.liked} mẫu` : ""}.`}
         </p>
       </div>
 
       {mode === "onboarding" && (
         <ul className="flex flex-col gap-2.5">
-          {STEPS.map(({ icon: Icon, color, text }) => (
-            <li key={text} className="flex items-center gap-3 rounded-2xl border p-3 text-body-sm" style={panel}>
+          {GUIDE_STEPS.map(({ icon: Icon, color, text }) => (
+            <li key={text} className="flex items-center gap-3 rounded-2xl border p-3.5 text-body font-medium shadow-2xs" style={panel}>
               <Icon size={20} color={color} aria-hidden="true" className="shrink-0" />
               <span>{text}</span>
             </li>
@@ -60,14 +108,29 @@ export function JourneyIntro({ theme, mode, catalogName, total, progress, onStar
           type="button"
           onClick={onStart}
           autoFocus
-          className="h-12 rounded-2xl text-body font-bold shadow-lg"
+          className="h-12 rounded-2xl text-body font-bold shadow-lg transition-transform active:scale-[0.98]"
           style={{ background: theme.ctaBg, color: theme.ctaText }}
         >
-          {mode === "onboarding" ? "Bắt đầu xem" : "Tiếp tục xem"}
+          {mode === "onboarding" ? "Bắt đầu" : "Tiếp tục xem"}
         </button>
         {mode === "resume" && (
-          <button type="button" onClick={onStartOver} className="h-12 rounded-2xl border text-body-sm font-semibold" style={{ borderColor: theme.controlBorder }}>
+          <button
+            type="button"
+            onClick={onStartOver}
+            className="h-12 rounded-2xl border text-body-sm font-semibold transition-transform active:scale-[0.98]"
+            style={{ borderColor: theme.controlBorder }}
+          >
             Xem lại từ đầu
+          </button>
+        )}
+        {mode === "onboarding" && (
+          <button
+            type="button"
+            onClick={() => setStage("contact")}
+            className="mt-1 text-center text-caption underline opacity-75"
+            style={{ color: theme.stageMuted }}
+          >
+            Sửa lại thông tin của bạn
           </button>
         )}
       </div>

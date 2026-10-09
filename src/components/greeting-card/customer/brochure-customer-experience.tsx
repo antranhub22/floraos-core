@@ -222,6 +222,12 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
               products={products}
               catalogName={catalog.name}
               selectedProductId={snapshot?.id || session.selectedProductId || null}
+              initialCustomerName={session.customerName}
+              appliedPolicies={
+                (catalog.filters as Record<string, unknown> | null | undefined)?.appliedPolicies as
+                  | import("@/modules/greeting-card/domain/store-policy").PublicAppliedPolicies
+                  | undefined
+              }
               onSelectProduct={handleSelectProduct}
             />
           </>

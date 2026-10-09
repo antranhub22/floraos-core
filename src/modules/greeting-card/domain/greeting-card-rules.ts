@@ -160,6 +160,11 @@ export function validateCustomerOrderInput(
     errors.customerPhone = "Số điện thoại người đặt không hợp lệ (10 số)"
   }
 
+  const customerEmail = input.customerEmail?.trim() ?? ""
+  if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    errors.customerEmail = "Email người đặt không hợp lệ"
+  }
+
   const recipientName = input.recipientName?.trim() ?? ""
   if (!recipientName) {
     errors.recipientName = "Vui lòng nhập họ tên người nhận hoa"

@@ -24,6 +24,7 @@ export function StorePoliciesEditor({ initialPolicies, onSave, saving }: Props) 
   const [promotions, setPromotions] = useState<PromotionItem[]>(initialPolicies?.promotions ?? DEFAULT_PROMOTIONS)
   const [commitments, setCommitments] = useState<CommitmentItem[]>(initialPolicies?.commitments ?? DEFAULT_COMMITMENTS)
   const [agreements, setAgreements] = useState<AgreementItem[]>(initialPolicies?.agreements ?? DEFAULT_AGREEMENTS)
+  const [intakeCta, setIntakeCta] = useState(() => initialPolicies?.intakePromotionCta ?? { enabled: true, percent: 10 })
   const [activeSection, setActiveSection] = useState<"promo" | "commit" | "agree">("promo")
   const [saveSuccess, setSaveSuccess] = useState(false)
 
@@ -32,10 +33,11 @@ export function StorePoliciesEditor({ initialPolicies, onSave, saving }: Props) 
     setPromotions(DEFAULT_PROMOTIONS)
     setCommitments(DEFAULT_COMMITMENTS)
     setAgreements(DEFAULT_AGREEMENTS)
+    setIntakeCta({ enabled: true, percent: 10 })
   }
 
   const handleSave = async () => {
-    const ok = await onSave({ promotions, commitments, agreements })
+    const ok = await onSave({ promotions, commitments, agreements, intakePromotionCta: intakeCta })
     if (ok) {
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -129,6 +131,48 @@ export function StorePoliciesEditor({ initialPolicies, onSave, saving }: Props) 
               <Plus size={14} /> Thêm ưu đãi
             </Button>
           </div>
+
+          {/* Cấu hình CTA Ưu đãi Chặng 1 khi mở link */}
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={intakeCta.enabled}
+                  onChange={(e) => setIntakeCta({ ...intakeCta, enabled: e.target.checked })}
+                  className="h-4 w-4 accent-primary rounded"
+                />
+                <span className="text-body-sm font-bold text-foreground">
+                  Bật dòng ưu đãi khi khách mở link Thẻ Chào (Chặng 1)
+                </span>
+              </label>
+
+              {intakeCta.enabled && (
+                <div className="flex items-center gap-1.5 text-body-sm">
+                  <span className="text-text-muted">Mức giảm:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={intakeCta.percent}
+                    onChange={(e) => {
+                      const val = Math.min(100, Math.max(1, Number(e.target.value) || 1))
+                      setIntakeCta({ ...intakeCta, percent: val })
+                    }}
+                    className="h-8 w-16 px-2 text-center rounded-lg border border-border bg-background text-body-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <span className="font-bold text-primary">%</span>
+                </div>
+              )}
+            </div>
+
+            {intakeCta.enabled && (
+              <p className="text-caption text-text-muted">
+                Xem trước: <strong className="text-foreground">"Nhận quà {intakeCta.percent}% giảm giá khi Đặt mua hoa trực tiếp tại link này!"</strong>
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {promotions.map((p) => (
               <div key={p.id} className="p-3.5 rounded-xl border border-border bg-surface-muted/30 flex flex-col gap-2 relative group">

@@ -25,6 +25,8 @@ interface GreetingTemplateRendererProps {
   products: GreetingCatalogProduct[]
   catalogName: string
   selectedProductId: string | null
+  initialCustomerName?: string | null | undefined
+  appliedPolicies?: import("@/modules/greeting-card/domain/store-policy").PublicAppliedPolicies | undefined
   onSelectProduct: (product: GreetingCatalogProduct) => void
   showTemplateSwitcher?: boolean | undefined
   /** Dựng thu nhỏ trong khung xem trước của trang quản lý */
@@ -38,6 +40,8 @@ export function GreetingTemplateRenderer({
   products,
   catalogName,
   selectedProductId,
+  initialCustomerName,
+  appliedPolicies,
   onSelectProduct,
   showTemplateSwitcher = false,
   embedded = false,
@@ -138,6 +142,8 @@ export function GreetingTemplateRenderer({
           products={products}
           catalogName={catalogName}
           selectedProductId={selectedProductId}
+          initialCustomerName={initialCustomerName}
+          promotionCta={appliedPolicies?.intakePromotionCta}
           onSelectProduct={onSelectProduct}
           styleKey={activeTemplate}
         />

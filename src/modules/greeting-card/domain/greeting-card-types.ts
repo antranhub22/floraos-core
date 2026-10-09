@@ -106,6 +106,7 @@ export interface GreetingSessionRecord {
 export interface CustomerOrderSubmitInput {
   customerName: string
   customerPhone: string
+  customerEmail?: string | undefined
   recipientName: string
   recipientPhone: string
   deliveryDate: string // YYYY-MM-DD

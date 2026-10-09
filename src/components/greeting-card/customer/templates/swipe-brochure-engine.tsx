@@ -20,6 +20,8 @@ interface SwipeBrochureEngineProps {
   products: GreetingCatalogProduct[]
   catalogName: string
   selectedProductId: string | null
+  initialCustomerName?: string | null | undefined
+  promotionCta?: { enabled: boolean; percent: number } | undefined
   onSelectProduct: (product: GreetingCatalogProduct) => void
   /** Số kiểu ("01"…"12") hoặc id mẫu */
   styleKey?: string
@@ -64,6 +66,8 @@ export function SwipeBrochureEngine({
   products,
   catalogName,
   selectedProductId,
+  initialCustomerName,
+  promotionCta,
   onSelectProduct,
   styleKey = "01",
 }: SwipeBrochureEngineProps) {
@@ -155,6 +159,8 @@ export function SwipeBrochureEngine({
             catalogName={catalogName}
             total={visible.length}
             progress={{ viewed: j.state.viewedProductIds.length, liked: liked.length }}
+            initialCustomerName={initialCustomerName}
+            promotionCta={promotionCta}
             onStart={j.start}
             onStartOver={j.startOver}
           />

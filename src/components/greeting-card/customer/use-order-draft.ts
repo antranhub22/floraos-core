@@ -6,6 +6,7 @@ import { useSavedState } from "./use-saved-state"
 const EMPTY = {
   customerName: "",
   customerPhone: "",
+  customerEmail: "",
   recipientName: "",
   recipientPhone: "",
   deliveryDate: "",
@@ -32,6 +33,15 @@ export function useOrderDraft() {
     ...draft,
     setCustomerName: field("customerName"),
     setCustomerPhone: field("customerPhone"),
+    setCustomerEmail: field("customerEmail"),
+    setContactInfo: (info: { customerName: string; customerPhone?: string; customerEmail?: string }) =>
+      setDraft((prev) => ({
+        ...EMPTY,
+        ...prev,
+        customerName: info.customerName,
+        customerPhone: info.customerPhone ?? prev.customerPhone,
+        customerEmail: info.customerEmail ?? prev.customerEmail,
+      })),
     setRecipientName: field("recipientName"),
     setRecipientPhone: field("recipientPhone"),
     setDeliveryDate: field("deliveryDate"),

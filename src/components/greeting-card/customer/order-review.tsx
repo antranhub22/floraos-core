@@ -93,7 +93,7 @@ export function OrderReview(props: {
       </dl>
 
       <dl className="rounded-xl border border-border px-4 py-2 divide-y divide-border">
-        <Row label="Người đặt" value={`${input.customerName} · ${input.customerPhone}`} />
+        <Row label="Người đặt" value={`${input.customerName} · ${input.customerPhone}${input.customerEmail ? ` · ${input.customerEmail}` : ""}`} />
         <Row label="Người nhận" value={`${input.recipientName} · ${input.recipientPhone}`} />
         <Row label="Giao lúc" value={`${viDate(input.deliveryDate)} · ${input.deliveryTimeSlot ?? ""}`} />
         <Row label="Địa chỉ" value={input.deliveryAddress} />
