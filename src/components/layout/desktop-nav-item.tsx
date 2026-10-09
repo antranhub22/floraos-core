@@ -49,18 +49,25 @@ export function DesktopNavItem({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex w-full items-center justify-between rounded-lg px-2.5 font-medium transition-colors text-left",
+        "group relative flex w-full items-center justify-between rounded-lg px-2.5 font-medium transition-all text-left",
         isSubItem ? "h-8 text-body-sm" : "h-9 text-meta",
         active
-          ? "bg-surface-alt font-bold text-primary"
-          : "text-text-muted hover:bg-surface-alt hover:text-text"
+          ? "bg-selected font-bold text-primary shadow-xs border border-primary/25"
+          : "text-text-muted hover:bg-surface-alt hover:text-text border border-transparent"
       )}
       aria-current={active ? "page" : undefined}
     >
+      {/* Dải chỉ báo màu mận ở cạnh trái khi active */}
+      {active && (
+        <span
+          className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary"
+          aria-hidden="true"
+        />
+      )}
       <div className="flex items-center gap-2.5 truncate">
         <Icon
           size={isSubItem ? 15 : 16}
-          strokeWidth={active ? 2.2 : 1.9}
+          strokeWidth={active ? 2.4 : 1.9}
           className={active ? "text-primary" : "text-text-muted group-hover:text-text"}
         />
         <span className="truncate">{item.label}</span>

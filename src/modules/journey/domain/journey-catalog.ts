@@ -13,6 +13,25 @@ import type { JourneyDefinition } from "./journey-model"
  */
 export const STORE_JOURNEYS: JourneyDefinition[] = [
   {
+    id: "greeting-card-hub",
+    goal: "Thẻ Chào mẫu hoa",
+    description: "Tạo bộ sưu tập hoa, gửi link cho khách lướt chọn mẫu, theo dõi thanh toán và điều phối cắm hoa giao đến tay người nhận",
+    icon: "Sparkles",
+    badgeText: "Tính năng trọng tâm",
+    roleScope: "STORE",
+    category: "SINGLE",
+    primaryHref: "/the-chao",
+    steps: [
+      {
+        id: "manage-greeting-catalog",
+        label: "Quản lý Bộ Sưu Tập & Đơn hàng",
+        inputType: "NONE" as const,
+        isOptional: false,
+        nextStepId: null,
+      },
+    ],
+  },
+  {
     id: "view-store-overview",
     goal: "Xem báo cáo",
     description: "Nắm bắt doanh thu, đơn hàng, mức độ sử dụng FloraOS và kho tư liệu đã tạo",
@@ -329,24 +348,6 @@ export const STORE_JOURNEYS: JourneyDefinition[] = [
         id: "chatbot-channel-settings",
         label: "Kênh tư vấn & nhận đơn",
         inputType: "CONFIG_SELECT",
-        isOptional: false,
-        nextStepId: null,
-      },
-    ],
-  },
-  {
-    id: "greeting-card-hub",
-    goal: "Thẻ Chào mẫu hoa",
-    description: "Tạo bộ sưu tập hoa, gửi link cho khách lướt chọn mẫu, theo dõi thanh toán và điều phối cắm hoa giao đến tay người nhận",
-    icon: "Sparkles",
-    roleScope: "STORE",
-    category: "SINGLE",
-    primaryHref: "/the-chao",
-    steps: [
-      {
-        id: "manage-greeting-catalog",
-        label: "Quản lý Bộ Sưu Tập & Đơn hàng",
-        inputType: "NONE" as const,
         isOptional: false,
         nextStepId: null,
       },

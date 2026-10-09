@@ -271,16 +271,22 @@ export function DesktopNav() {
                         onClick={() => toggleReports(!reportsOpen)}
                         aria-expanded={reportsOpen}
                         className={cn(
-                          "group flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-meta font-medium transition-colors text-left",
+                          "group relative flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-meta font-medium transition-all text-left",
                           isReportActive && !reportsOpen
-                            ? "bg-surface-alt font-bold text-primary"
-                            : "text-text-muted hover:bg-surface-alt hover:text-text"
+                            ? "bg-selected font-bold text-primary shadow-xs border border-primary/25"
+                            : "text-text-muted hover:bg-surface-alt hover:text-text border border-transparent"
                         )}
                       >
+                        {isReportActive && !reportsOpen && (
+                          <span
+                            className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary"
+                            aria-hidden="true"
+                          />
+                        )}
                         <div className="flex items-center gap-2.5 truncate">
                           <BarChart3
                             size={16}
-                            strokeWidth={isReportActive ? 2.2 : 1.9}
+                            strokeWidth={isReportActive ? 2.4 : 1.9}
                             className={isReportActive ? "text-primary" : "text-text-muted group-hover:text-text"}
                           />
                           <span className="truncate">Báo cáo</span>
