@@ -27,6 +27,11 @@ export const LOCKED_ROUTE_PREFIXES: readonly string[] = [
   "/so-lieu",
   "/muc-dung",
   "/audit",
+  // Sidebar: Tính giá (Sản phẩm) + Tri thức, Chính sách AI, Kết nối kênh (Thiết lập) — PO 09/10/2026
+  "/gia",
+  "/tri-thuc",
+  "/cai-dat-ai",
+  "/ket-noi",
 ]
 
 /**

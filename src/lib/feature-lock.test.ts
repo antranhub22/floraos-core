@@ -15,6 +15,13 @@ describe("feature-lock", () => {
     expect(isRouteLocked("/kho-templates", true)).toBe(true)
   })
 
+  it("production: khóa Tính giá, Tri thức, Chính sách AI, Kết nối kênh trên sidebar", () => {
+    for (const href of ["/gia", "/tri-thuc", "/cai-dat-ai", "/ket-noi"]) {
+      expect(isRouteLocked(href, true)).toBe(true)
+    }
+    expect(isRouteLocked("/bao-gia", true)).toBe(false)
+  })
+
   it("không khóa tuyến khác hoặc tuyến chỉ trùng tiền tố chữ", () => {
     expect(isRouteLocked("/khach-hang", true)).toBe(false)
     expect(isRouteLocked("/videos", true)).toBe(false)
