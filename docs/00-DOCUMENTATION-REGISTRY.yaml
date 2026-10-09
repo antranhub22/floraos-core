@@ -752,6 +752,20 @@ documents:
     supersedes: []
     superseded_by: "docs/kien-truc/FLORAOS_TEMPLATE_SYSTEM_SSOT.md"
 
+  - id: "DOC-05-AS-IS-SPEC-2026-10-07"
+    path: "docs/kien-truc/as-is/README.md"
+    title: "As-Is System Specification — ảnh chụp hiện trạng dựng từ mã (07/10/2026, commit 9b4a54b)"
+    domain: "Governance"
+    layer: "Level 5"
+    purpose: "Mô tả hệ thống đang có trong mã (module, quyền, luồng, đối tượng, API, CSDL, tích hợp, triển khai) và ghi nhận mâu thuẫn tài liệu↔mã; không phải đặc tả đích, TRANG_THAI.md vẫn là nguồn trạng thái"
+    status: "SUPPORTING"
+    authority: "Level 5"
+    canonical: false
+    ssot: false
+    owner: "Engineering Lead"
+    dependencies: ["docs/kien-truc/TRANG_THAI.md", "prisma/schema.prisma"]
+    supersedes: []
+
   # =========================================================================
   # ARCHIVED / HISTORICAL / MERGED DOCUMENTS (NON-AUTHORITATIVE)
   # =========================================================================
