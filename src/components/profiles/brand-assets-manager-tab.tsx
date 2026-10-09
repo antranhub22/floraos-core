@@ -28,12 +28,14 @@ export function BrandAssetsManagerTab({
   saving,
 }: BrandAssetsManagerTabProps) {
   const [logoAssetId, setLogoAssetId] = useState("")
+  const [logoUrl, setLogoUrl] = useState("")
   const [brandAssets, setBrandAssets] = useState<BrandAssetsData>({})
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   useEffect(() => {
     if (initialData) {
       setLogoAssetId(initialData.logo_asset_id || "")
+      setLogoUrl(initialData.logo_url || "")
       if (initialData.brand_assets) {
         setBrandAssets(initialData.brand_assets as BrandAssetsData)
       }
@@ -162,6 +164,7 @@ export function BrandAssetsManagerTab({
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs">
         <BrandAssetsUploader
           logoAssetId={logoAssetId}
+          initialLogoUrl={logoUrl}
           onLogoChange={setLogoAssetId}
           brandAssets={brandAssets}
           onBrandAssetsChange={setBrandAssets}
