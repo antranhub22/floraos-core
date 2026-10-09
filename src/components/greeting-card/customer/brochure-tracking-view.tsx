@@ -190,7 +190,14 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
               uploadedAt={order.photoApproval.uploadedAt}
               countdownMinutes={order.photoApproval.countdownMinutes}
               hasBalanceDue={!isPaid && order.paidVnd > 0}
-              onApproved={() => void loadTracking()}
+              onApproved={() => {
+                void loadTracking()
+                if (!isPaid && order.paidVnd > 0) {
+                  setTimeout(() => {
+                    document.getElementById("tracking-payment-title")?.scrollIntoView({ behavior: "smooth" })
+                  }, 400)
+                }
+              }}
             />
           )}
         </section>
@@ -242,7 +249,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
         <div className="flex justify-between">
           <span>Thanh toán:</span>
           <span className={`font-bold ${isPaid || order.paidVnd > 0 ? "text-success" : "text-warning"}`}>
-            {awaitingQuote ? "Chờ cửa hàng báo giá" : isPaid ? "Đã thanh toán" : order.paidVnd > 0 ? "Đã nhận tiền cọc" : "Chờ xác nhận chuyển khoản"}
+            {awaitingQuote ? "Chờ cửa hàng báo giá" : isPaid ? "Đã thanh toán đủ" : order.paidVnd > 0 ? (order.payment?.balanceDue ? "Đã nhận cọc · Chờ thanh toán lần 2" : "Đã nhận tiền cọc") : "Chờ xác nhận chuyển khoản"}
           </span>
         </div>
         {order.cardMessage && (

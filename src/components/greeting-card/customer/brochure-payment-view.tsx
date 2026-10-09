@@ -235,7 +235,7 @@ export function BrochurePaymentView({
               </p>
               <p className="text-body-sm text-text-muted mt-1">
                 Điều hành cửa hàng đã xác nhận nhận {depositOnly ? "tiền cọc" : "tiền"} cho đơn #{orderCode}. Đơn hàng đang được chuẩn bị cắm hoa.
-                {depositOnly && " Phần còn lại cửa hàng sẽ thu sau theo thoả thuận."}
+                {depositOnly && " Phần còn lại bạn sẽ thanh toán sau khi xác nhận ảnh hoa hoàn thiện."}
               </p>
             </div>
           </div>
