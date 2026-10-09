@@ -13,6 +13,7 @@ import { OrderCard, type OrderItemCardProps } from "@/components/orders/order-ca
 import { EmptyState } from "@/components/ui/empty-state"
 import { SalesBrochureTab } from "@/components/greeting-card/sales/sales-brochure-tab"
 import { AdminBrochurePaymentTab } from "@/components/greeting-card/admin/admin-brochure-payment-tab"
+import { ExportOrdersButton } from "@/components/orders/export-orders-button"
 import { useSession } from "@/lib/session"
 
 type MobileFilter = "all" | "new" | "arranging" | "delivery" | "completed"
@@ -20,8 +21,10 @@ type ActiveMainTab = "kanban" | "brochure_sales" | "brochure_payment"
 
 export default function DonHangPage() {
   const router = useRouter()
+  const session = useSession()
   // Tab xác nhận tiền Thẻ chào chỉ dành cho Điều hành (R11 — PO 08/10/2026); máy chủ vẫn kiểm ở mọi endpoint
-  const canConfirmTransfer = useSession().can("R11")
+  const canConfirmTransfer = session.can("R11")
+  const canExport = session.can("R1")
   const [activeTab, setActiveTab] = useState<ActiveMainTab>("kanban")
   const [orders, setOrders] = useState<OrderItemCardProps[]>([])
   const [loading, setLoading] = useState(true)
@@ -126,6 +129,12 @@ export default function DonHangPage() {
           >
             <ArrowLeft size={14} /> Trang chủ
           </Button>
+          {canExport && (
+            <ExportOrdersButton
+              filename="don-hang.xlsx"
+              label="Xuất Excel"
+            />
+          )}
         </div>
       </header>
 
@@ -324,16 +333,7 @@ export default function DonHangPage() {
       <ChatOrderCheckoutModal
         isOpen={chatModalOpen}
         onClose={() => setChatModalOpen(false)}
-        initialDraft={{
-          recipientName: null,
-          recipientPhone: null,
-          deliveryAddress: null,
-          deliveryTime: null,
-          occasion: null,
-          cardMessage: null,
-          flowerStyleOrTone: null,
-          budgetVnd: null,
-        }}
+        initialDraft={{ recipientName: null, recipientPhone: null, deliveryAddress: null, deliveryTime: null, occasion: null, cardMessage: null, flowerStyleOrTone: null, budgetVnd: null }}
         onOrderCreated={() => loadOrders()}
       />
     </div>
