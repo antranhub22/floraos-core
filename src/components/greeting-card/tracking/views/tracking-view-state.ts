@@ -21,7 +21,7 @@ export const VIEW_TABS: Array<{ id: ViewKind; label: string }> = [
 export const LIST_COLUMNS = [
   { id: "code", label: "Mã đơn/link" },
   { id: "customer", label: "Khách" },
-  { id: "sale", label: "Sale" },
+  { id: "sale", label: "Nhân sự phụ trách" },
   { id: "step", label: "Bước hiện tại" },
   { id: "age", label: "Ở bước" },
   { id: "sla", label: "Thời gian chuẩn" },

@@ -22,8 +22,10 @@ const ORDER_SELECT = {
   customer: { select: { name: true, phone: true } },
   items: { take: 1, select: { metadata: true, description: true, unit_price_vnd: true } },
   payments: { select: { collected_at: true } },
-  events: { select: { axis: true, created_at: true } },
-  qc_records: { select: { created_at: true } },
+  events: { select: { axis: true, created_at: true, actor_id: true, reason: true }, orderBy: { created_at: "desc" as const } },
+  qc_records: { select: { created_at: true, inspector_id: true } },
+  coordination: { select: { coordinator_id: true } },
+  assignments: { take: 1, select: { assignee_id: true, assigned_by: true }, orderBy: { assigned_at: "desc" as const } },
   greeting_sessions: {
     take: 1,
     select: {

@@ -144,6 +144,10 @@ export interface TrackingPipelineItem {
   stuck: StuckInfo | null
   /** Sale phụ trách (người gửi link); "public" = link bộ sưu tập công khai. */
   saleId: string | null
+  /** Điều phối phụ trách (khi đơn chuyển sang giai đoạn điều phối) */
+  coordinatorId?: string | null | undefined
+  /** Tên điều phối phụ trách */
+  coordinatorName?: string | null | undefined
   /** Khách đến từ đâu: "Link riêng của sale" hoặc kênh chia sẻ link bộ sưu tập (Zalo, Facebook…, "Trực tiếp"). */
   channel: string
   /** PERSONAL = link riêng sale tạo · SHARED = link bộ sưu tập sao chép · LEGACY = link cũ không qua nút Sao chép. */

@@ -6,7 +6,7 @@ import { formatMinutes } from "@/modules/greeting-card/domain/step-sla"
 import type { StepSegment, TimelineEvent } from "@/modules/greeting-card/domain/tracking-timeline"
 import type { TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
 import { ListView } from "./list-view"
-import { codeOf, responsibleEmployee } from "./tracking-bits"
+import { codeOf, StaffNametagGroup } from "./tracking-bits"
 import type { TrackingViewState } from "./tracking-view-state"
 
 const when = (s: string) => new Date(s).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
@@ -49,9 +49,11 @@ function TimelineDetail({ refQs, item, onBack, onMessage, onDetail }: { refQs: s
           </button>
         </div>
       </div>
-      <div>
-        <h3 className="text-body font-extrabold text-foreground">{item.customerName} · {codeOf(item)}</h3>
-        <p className="text-caption text-text-muted mt-0.5">Nhân viên phụ trách: <strong>{responsibleEmployee(item)}</strong></p>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-body font-extrabold text-foreground">{item.customerName} · {codeOf(item)}</h3>
+          <StaffNametagGroup item={item} />
+        </div>
       </div>
       {head.error ? <p role="alert" className="text-body-sm text-danger">{(head.error as Error).message}</p> : (
         <ol className="flex flex-col gap-2" aria-label="Các bước đã qua">

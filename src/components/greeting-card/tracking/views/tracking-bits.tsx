@@ -7,11 +7,13 @@ import type { SlaInfo, TrackingViewItem } from "@/modules/greeting-card/domain/t
 export const vnd = (n: number) => (n > 0 ? `${n.toLocaleString("vi-VN")} đ` : "Chờ báo giá")
 export const codeOf = (i: TrackingViewItem) => (i.orderCode ? `Đơn ${i.orderCode}` : `Link ${i.sendCode}`)
 
+import { formatStaffCode, StaffNametag, StaffNametagGroup, isCoordinationStage } from "@/components/greeting-card/staff-nametag"
+export { StaffNametag, StaffNametagGroup, formatStaffCode, isCoordinationStage }
+
 /** Mã nhân viên / Người phụ trách đơn hàng (Spec #7) */
 export const responsibleEmployee = (i: TrackingViewItem) => {
   if (i.saleId) {
-    const shortId = i.saleId.length > 8 ? i.saleId.slice(0, 8).toUpperCase() : i.saleId.toUpperCase()
-    return `${i.saleName} (NV-${shortId})`
+    return `${i.saleName} (${formatStaffCode(i.saleId)})`
   }
   return i.saleName
 }

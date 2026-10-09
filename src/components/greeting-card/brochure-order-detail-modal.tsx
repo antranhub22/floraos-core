@@ -7,6 +7,7 @@ import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { EvidenceTimelineDiagram } from "./evidence-timeline-diagram"
 import { zaloHref } from "@/components/greeting-card/work/work-item-card"
 import { OrderDetailFooter } from "./order-detail-footer"
+import { StaffNametagGroup } from "./staff-nametag"
 
 export interface OrderDetailModalTarget {
   orderId?: string | null | undefined
@@ -27,7 +28,10 @@ export interface OrderDetailModalTarget {
   totalVnd?: number | null | undefined
   paidVnd?: number | null | undefined
   balanceVnd?: number | null | undefined
+  saleId?: string | null | undefined
   saleName?: string | null | undefined
+  coordinatorId?: string | null | undefined
+  coordinatorName?: string | null | undefined
   /** ID bước pipeline hiện tại — dùng để kiểm tra rào chắn hủy */
   currentStepId?: string | null | undefined
   currentStepTitle?: string | null | undefined
@@ -77,8 +81,8 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
         >
         {/* Header */}
         <header className="flex items-center justify-between border-b border-border p-5">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-title-sm font-extrabold text-foreground">
                 {target.orderCode ? `#${target.orderCode}` : `Link ${target.sendCode}`}
               </span>
@@ -87,10 +91,20 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
                   {target.currentStepTitle}
                 </span>
               )}
+              <StaffNametagGroup
+                item={{
+                  currentStepId: target.currentStepId ?? undefined,
+                  productionStatus: target.productionStatus,
+                  deliveryStatus: target.deliveryStatus,
+                  saleId: target.saleId,
+                  saleName: target.saleName ?? undefined,
+                  coordinatorId: target.coordinatorId,
+                  coordinatorName: target.coordinatorName ?? undefined,
+                }}
+              />
             </div>
-            <p className="text-caption text-text-muted mt-0.5">
+            <p className="text-caption text-text-muted">
               Khách hàng: <strong className="text-foreground">{target.customerName || "Khách lẻ"}</strong>
-              {target.saleName && ` · Sale: ${target.saleName}`}
             </p>
           </div>
           <button

@@ -6,7 +6,7 @@ import { usePagedList } from "@/components/greeting-card/greeting-api"
 import { formatMinutes } from "@/modules/greeting-card/domain/step-sla"
 import type { SortField, TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
 import { LIST_COLUMNS, type ListColumn, type TrackingViewState } from "./tracking-view-state"
-import { SlaBadge, ViewState, codeOf, vnd, responsibleEmployee } from "./tracking-bits"
+import { SlaBadge, ViewState, codeOf, vnd, StaffNametagGroup } from "./tracking-bits"
 
 const SORTABLE: Partial<Record<ListColumn, SortField>> = { customer: "customerName", step: "step", age: "age", sla: "urgency", total: "totalVnd", delivery: "deliveryDate" }
 
@@ -14,7 +14,7 @@ function cell(c: ListColumn, i: TrackingViewItem): React.ReactNode {
   switch (c) {
     case "code": return codeOf(i)
     case "customer": return i.customerName
-    case "sale": return responsibleEmployee(i)
+    case "sale": return <StaffNametagGroup item={i} />
     case "step": return i.currentStepTitle
     case "age": return formatMinutes(i.sla.ageMinutes)
     case "sla": return <SlaBadge item={i} compact />

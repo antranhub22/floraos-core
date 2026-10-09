@@ -12,6 +12,7 @@ import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracki
 import { readDeliveryNote } from "@/modules/greeting-card/domain/delivery-note"
 import { readDeliveryFailures } from "@/modules/greeting-card/domain/delivery-failure"
 import { substituteLockReason } from "@/modules/greeting-card/domain/substitute-proposal"
+import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
 
 export interface BrochureOrder {
   id: string
@@ -39,6 +40,10 @@ export interface BrochureOrder {
   customer?: { id?: string; code?: string; name?: string; phone?: string } | null
   /** Bản chụp báo giá + ưu đãi khách chọn (`policies.promotion`) lúc đặt. */
   pricing_rule_ref?: { policies?: { promotion?: { title?: string } | null } | null } | null
+  saleId?: string | null | undefined
+  saleName?: string | null | undefined
+  coordinatorId?: string | null | undefined
+  coordinatorName?: string | null | undefined
   created_at: string
 }
 
@@ -116,22 +121,32 @@ export function CoordinatorOrderCard({
     <div data-focus-key={order.id} className={`bg-surface rounded-2xl border p-5 shadow-sm flex flex-col gap-4 ${work?.stuck?.owner === "COORDINATOR" ? "border-danger/50" : "border-border"}`}>
       {work && <WorkStatus item={work} me="COORDINATOR" now={now} />}
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-border pb-3">
-        <button
-          type="button"
-          onClick={() => onOpen({ type: "detail", order })}
-          className="flex items-center gap-2 text-left group cursor-pointer"
-        >
-          <span className="text-title-sm font-extrabold text-foreground group-hover:text-primary transition-colors">
-            #{order.code}
-          </span>
-          {session?.send_code && (
-            <span className="text-caption px-2 py-0.5 rounded-md bg-surface-muted text-text-muted font-mono font-bold">
-              {session.send_code}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onOpen({ type: "detail", order })}
+            className="flex items-center gap-2 text-left group cursor-pointer"
+          >
+            <span className="text-title-sm font-extrabold text-foreground group-hover:text-primary transition-colors">
+              #{order.code}
             </span>
-          )}
-          <span className="text-caption text-primary underline font-medium ml-1">Xem chi tiết</span>
-        </button>
+            {session?.send_code && (
+              <span className="text-caption px-2 py-0.5 rounded-md bg-surface-muted text-text-muted font-mono font-bold">
+                {session.send_code}
+              </span>
+            )}
+            <span className="text-caption text-primary underline font-medium ml-1">Xem chi tiết</span>
+          </button>
+          <StaffNametagGroup
+            item={work}
+            fallbackSaleName={order.saleName}
+            fallbackSaleId={order.saleId}
+            fallbackCoordinatorName={order.coordinatorName}
+            fallbackCoordinatorId={order.coordinatorId}
+            forceStage="coordinator"
+          />
+        </div>
         <span className="text-body-sm font-extrabold text-primary">
           {order.total_vnd.toLocaleString("vi-VN")} đ
         </span>

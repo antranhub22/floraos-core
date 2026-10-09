@@ -7,6 +7,7 @@ import { TrackingStepperView } from "@/components/greeting-card/tracking/trackin
 import type { StepOwner } from "@/modules/greeting-card/domain/step-sla"
 import { WorkStatus } from "./work-status"
 import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
 
 interface Props {
   item: TrackingPipelineItem
@@ -29,7 +30,12 @@ export function WorkItemCard({ item, me, onOpenNotes, actions, now }: Props) {
   return (
     <article data-focus-key={item.orderId ?? item.sessionId} className={`flex flex-col gap-3 rounded-2xl border bg-surface p-4 shadow-xs transition-shadow ${mine ? "border-danger/50" : "border-border"}`}>
       <WorkStatus item={item} me={me} now={now}
-        code={<span className="font-mono text-caption text-text-muted">{item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}</span>} />
+        code={
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="font-mono text-caption text-text-muted">{item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}</span>
+            <StaffNametagGroup item={item} />
+          </div>
+        } />
 
       <TrackingStepperView
         steps={item.steps}

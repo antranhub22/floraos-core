@@ -54,18 +54,57 @@ export class BrochureOrderRepository {
       include: {
         customer: { select: { id: true, code: true, name: true, phone: true } },
         items: true,
-        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true } },
+        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true, sale_id: true } },
+        coordination: { select: { coordinator_id: true } },
+        assignments: { take: 1, select: { assignee_id: true, assigned_by: true }, orderBy: { assigned_at: "desc" as const } },
+        events: { select: { axis: true, created_at: true, actor_id: true, reason: true }, orderBy: { created_at: "desc" as const } },
       },
       orderBy: [{ created_at: "asc" }, { id: "asc" }],
       take: options.max,
     })
-    return rows.map((o) => ({
-      ...o,
-      total_vnd: Number(o.total_vnd),
-      paid_vnd: Number(o.paid_vnd),
-      balance_vnd: Number(o.balance_vnd),
-      items: o.items.map((i) => ({ ...i, unit_price_vnd: Number(i.unit_price_vnd) })),
-    }))
+    const userIds = rows
+      .flatMap((o) => [
+        o.greeting_sessions[0]?.sale_id,
+        o.coordination?.coordinator_id,
+        o.events.find((e) => (e.axis === "production" || e.axis === "delivery") && e.actor_id)?.actor_id,
+        o.assignments[0]?.assigned_by,
+      ])
+      .filter((id): id is string => Boolean(id))
+    const names = await this.memberNames(ctx, userIds)
+
+    return rows.map((o) => {
+      const saleId = o.greeting_sessions[0]?.sale_id ?? null
+      const rawCoordId =
+        o.coordination?.coordinator_id ||
+        o.events.find((e) => (e.axis === "production" || e.axis === "delivery") && e.actor_id)?.actor_id ||
+        o.assignments[0]?.assigned_by ||
+        null
+      const coordinatorId = rawCoordId ?? null
+      const saleName = saleId ? names.get(saleId) ?? "Nhân viên đã rời" : "Chưa gán"
+      const coordinatorName = coordinatorId ? names.get(coordinatorId) ?? "Nhân viên đã rời" : "Chưa gán"
+
+      return {
+        ...o,
+        total_vnd: Number(o.total_vnd),
+        paid_vnd: Number(o.paid_vnd),
+        balance_vnd: Number(o.balance_vnd),
+        saleId,
+        saleName,
+        coordinatorId,
+        coordinatorName,
+        items: o.items.map((i) => ({ ...i, unit_price_vnd: Number(i.unit_price_vnd) })),
+      }
+    })
+  }
+
+  async memberNames(ctx: TenantContext, userIds: string[]): Promise<Map<string, string>> {
+    const ids = [...new Set(userIds)].filter(Boolean)
+    if (ids.length === 0) return new Map()
+    const rows = await this.db.memberships.findMany({
+      where: scopedWhere(ctx, { user_id: { in: ids } }),
+      select: { user_id: true, user: { select: { name: true, email: true } } },
+    })
+    return new Map(rows.map((r) => [r.user_id, r.user.name?.trim() || r.user.email.split("@")[0] || "Nhân viên"]))
   }
 
   async listBrochureOrders(
