@@ -22,13 +22,24 @@ export class CancellationRepository {
   async getOrderSummary(ctx: TenantContext, orderId: string) {
     const o = await this.db.orders.findFirst({
       where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
-      select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, balance_vnd: true },
+      select: {
+        id: true,
+        code: true,
+        status: true,
+        production_status: true,
+        delivery_status: true,
+        total_vnd: true,
+        paid_vnd: true,
+        balance_vnd: true,
+      },
     })
     if (!o) return null
     return {
       id: o.id,
       code: o.code,
       status: o.status,
+      productionStatus: o.production_status,
+      deliveryStatus: o.delivery_status,
       totalVnd: Number(o.total_vnd),
       paidVnd: Number(o.paid_vnd),
       balanceVnd: Number(o.balance_vnd),

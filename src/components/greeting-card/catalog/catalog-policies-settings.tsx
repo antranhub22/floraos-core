@@ -9,6 +9,13 @@ import {
   parseStorePolicies,
   type StorePoliciesConfig,
 } from "@/modules/greeting-card/domain/store-policy"
+import {
+  parseStepTimeoutPolicy,
+  parseCatalogTimeoutOverride,
+  CATALOG_TIMEOUT_OVERRIDE_KEY,
+  type CatalogTimeoutOverride as CatalogTimeoutOverrideType,
+} from "@/modules/greeting-card/domain/step-timeout-policy"
+import { CatalogStepTimeoutOverride } from "./catalog-step-timeout-override"
 
 interface Props {
   catalogId: string
@@ -47,6 +54,10 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
   )
 
   const [applyHolidaySurcharge, setApplyHolidaySurcharge] = useState<boolean>(rawPolicyConfig.applyHolidaySurcharge === true)
+  const storeStepPolicy = parseStepTimeoutPolicy(org.data?.settings)
+  const [timeoutOverride, setTimeoutOverride] = useState<CatalogTimeoutOverrideType | null>(() =>
+    parseCatalogTimeoutOverride(currentFilters)
+  )
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
 
@@ -70,6 +81,7 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
           photoApprovalCountdownMinutes: countdownMinutes,
           applyHolidaySurcharge,
         },
+        [CATALOG_TIMEOUT_OVERRIDE_KEY]: timeoutOverride,
       }
 
       await apiSend(
@@ -251,6 +263,13 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
           </p>
         </div>
       </div>
+
+      {/* 5. CẤU HÌNH THỜI HẠN & TỰ ĐỘNG HỦY ĐƠN THEO BƯỚC CỦA BỘ SƯU TẬP */}
+      <CatalogStepTimeoutOverride
+        storePolicy={storeStepPolicy}
+        override={timeoutOverride}
+        onChange={setTimeoutOverride}
+      />
     </div>
   )
 }

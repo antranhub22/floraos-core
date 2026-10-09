@@ -17,7 +17,7 @@ export const PIPELINE_MAX_ROWS = 2000
 
 const ORDER_SELECT = {
   id: true, code: true, status: true, production_status: true, delivery_status: true,
-  total_vnd: true, paid_vnd: true, balance_vnd: true, card_message: true,
+  total_vnd: true, paid_vnd: true, balance_vnd: true, card_message: true, pricing_rule_ref: true,
   delivery_address: true, delivery_window: true, created_at: true, updated_at: true,
   customer: { select: { name: true, phone: true } },
   items: { take: 1, select: { metadata: true, description: true, unit_price_vnd: true } },
@@ -40,11 +40,13 @@ export class TrackingPipelineRepository {
   async listBrochureOrders(ctx: TenantContext, saleId: string | null = null, now = new Date()) {
     const doneSince = new Date(now.getTime() - PIPELINE_DONE_DAYS * 86_400_000)
     const rows = await this.db.orders.findMany({
-      // Đơn đã huỷ không còn bước nào để theo dõi; đơn hoàn tất chỉ giữ 7 ngày gần nhất
+      // Đơn đang xử lý; đơn hoàn tất hoặc đã huỷ giữ 7 ngày gần nhất để đối soát/xem lại
       where: scopedWhere(ctx, {
         source: "BROCHURE",
-        NOT: { status: "CANCELLED" as const },
-        OR: [{ status: { not: "COMPLETED" as const }, delivery_status: { not: "DELIVERED" as const } }, { updated_at: { gte: doneSince } }],
+        OR: [
+          { status: { notIn: ["COMPLETED" as const, "CANCELLED" as const] }, delivery_status: { not: "DELIVERED" as const } },
+          { updated_at: { gte: doneSince } },
+        ],
         ...(saleId ? { greeting_sessions: { some: { sale_id: saleId } } } : {}),
       }),
       select: ORDER_SELECT,
@@ -59,13 +61,16 @@ export class TrackingPipelineRepository {
 
   async listActiveSessions(ctx: TenantContext, saleId: string | null = null, now = new Date()) {
     const idleSince = new Date(now.getTime() - PIPELINE_IDLE_LINK_DAYS * 86_400_000)
+    const doneSince = new Date(now.getTime() - PIPELINE_DONE_DAYS * 86_400_000)
     const rows = await this.db.greeting_sessions.findMany({
-      // Link chưa có đơn, chưa thu hồi, còn hạn, có hoạt động trong 30 ngày
+      // Link còn hạn chưa có đơn, hoặc link đã huỷ/hết hạn trong 7 ngày gần nhất
       where: scopedWhere(ctx, {
         order_id: null,
-        revoked_at: null,
         last_active_at: { gte: idleSince },
-        OR: [{ expires_at: null }, { expires_at: { gt: now } }],
+        OR: [
+          { revoked_at: null, OR: [{ expires_at: null }, { expires_at: { gt: now } }] },
+          { updated_at: { gte: doneSince } },
+        ],
         ...(saleId ? { sale_id: saleId } : {}),
       }),
       include: {

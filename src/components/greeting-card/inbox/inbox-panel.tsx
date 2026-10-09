@@ -105,7 +105,7 @@ export function InboxPanel({ onClose, onOpenTarget }: { onClose: () => void; onO
 }
 
 function ActionRow({ action, onOpen, onMessage, onDecided }: { action: InboxAction; onOpen: () => void; onMessage?: (() => void) | undefined; onDecided: () => void }) {
-  const urgent = action.kind === "STUCK" || action.kind === "UNMATCHED_PAYMENTS"
+  const urgent = action.kind === "STUCK" || action.kind === "UNMATCHED_PAYMENTS" || action.kind === "CANCELLATION_REQUEST"
   const [done, setDone] = useState<string | null>(null)
   return (
     <li className="flex flex-col gap-2 px-4 py-3">

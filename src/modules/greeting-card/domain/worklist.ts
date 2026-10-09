@@ -5,24 +5,27 @@
 import type { StepOwner, StuckInfo } from "./step-sla"
 import type { TrackingPipelineStepId } from "./tracking-pipeline-types"
 
-export type WorkBucket = "ACTION" | "WAITING_CUSTOMER" | "IN_PROGRESS" | "DONE"
+export type WorkBucket = "ACTION" | "WAITING_CUSTOMER" | "IN_PROGRESS" | "DONE" | "CANCELLED"
 
 export const WORK_BUCKET_LABEL: Record<WorkBucket, string> = {
   ACTION: "Cần tôi làm",
   WAITING_CUSTOMER: "Đang chờ khách",
   IN_PROGRESS: "Đang làm đơn",
   DONE: "Xong",
+  CANCELLED: "Đã huỷ / Quá hạn",
 }
 
 interface WorkItem {
   currentStepId: TrackingPipelineStepId
   stepStartedAt: string
   stuck: StuckInfo | null
+  isCancelled?: boolean | undefined
 }
 
 const CUSTOMER_STEPS: TrackingPipelineStepId[] = ["STEP_1_OPENED", "STEP_2_CHOOSING", "STEP_3_FILLING_FORM"]
 
 export function workBucket(item: WorkItem, me: StepOwner): WorkBucket {
+  if (item.isCancelled) return "CANCELLED"
   if (item.currentStepId === "STEP_9_COMPLETED") return "DONE"
   if (item.stuck?.owner === me) return "ACTION"
   return CUSTOMER_STEPS.includes(item.currentStepId) ? "WAITING_CUSTOMER" : "IN_PROGRESS"

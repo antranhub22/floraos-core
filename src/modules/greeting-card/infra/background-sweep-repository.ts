@@ -34,10 +34,58 @@ export class BackgroundSweepRepository {
       select: {
         id: true, organization_id: true, created_at: true, total_vnd: true, paid_vnd: true, status: true, pricing_rule_ref: true,
         organization: { select: { settings: true } },
-        greeting_sessions: { take: 1, select: { status: true } },
+        greeting_sessions: { take: 1, select: { status: true, catalog: { select: { filters: true } } } },
       },
       orderBy: { created_at: "asc" },
       take,
     })
   }
+
+  /** Phiên Thẻ chào chưa có đơn, chưa thu hồi trong `since` để kiểm tra quá hạn mở link hoặc quá hạn chọn mẫu. */
+  async listPendingSessions(since: Date, take = 500) {
+    return this.db.greeting_sessions.findMany({
+      where: {
+        order_id: null,
+        revoked_at: null,
+        created_at: { gte: since },
+      },
+      select: {
+        id: true,
+        organization_id: true,
+        send_code: true,
+        status: true,
+        opened_at: true,
+        selected_at: true,
+        last_active_at: true,
+        created_at: true,
+        organization: { select: { settings: true } },
+        catalog: { select: { filters: true } },
+      },
+      orderBy: { created_at: "asc" },
+      take,
+    })
+  }
+
+  /** Thu hồi / vô hiệu phiên quá hạn và ghi vết sự kiện hành trình. */
+  async expireSession(organizationId: string, sessionId: string, reason: string, now = new Date()): Promise<void> {
+    await this.db.$transaction([
+      this.db.greeting_sessions.update({
+        where: { id: sessionId },
+        data: {
+          revoked_at: now,
+          expires_at: now,
+          revoked_by: "system:timeout-sweep",
+        },
+      }),
+      this.db.greeting_journey_events.create({
+        data: {
+          organization_id: organizationId,
+          session_id: sessionId,
+          event_type: "INTERNAL_NOTE",
+          metadata: { note: reason, action: "EXPIRE_SESSION", expiredAt: now.toISOString() },
+        },
+      }),
+    ])
+  }
 }
+

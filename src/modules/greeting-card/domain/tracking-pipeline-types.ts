@@ -132,6 +132,12 @@ export interface TrackingPipelineItem {
   balanceVnd: number
   currentStepId: TrackingPipelineStepId
   currentStepTitle: string
+  /** Trạng thái đơn hàng (DRAFT | CONFIRMED | CANCELLED | COMPLETED) */
+  orderStatus?: string | null | undefined
+  /** Trạng thái sản xuất (WAITING | ASSIGNED | ARRANGING | QUALITY_CHECK | READY) */
+  productionStatus?: string | null | undefined
+  /** Trạng thái giao hàng (PENDING | DISPATCHED | DELIVERING | DELIVERED | FAILED) */
+  deliveryStatus?: string | null | undefined
   /** Lúc vào bước hiện tại (để tính quá thời gian chuẩn). */
   stepStartedAt: string
   /** Quá thời gian chuẩn của bước hiện tại — `null` = đang đúng tiến độ. */
@@ -146,6 +152,10 @@ export interface TrackingPipelineItem {
   copiedAt: string | null
   /** Hạn dùng của link (chỉ với link chưa thành đơn). */
   expiresAt: string | null
+  /** Đã huỷ / hết hạn / quá hạn */
+  isCancelled?: boolean | undefined
+  /** Lý do huỷ / quá hạn (ví dụ: Tự huỷ quá hạn mở link, Tự huỷ quá hạn chuyển khoản cọc,...) */
+  cancelReason?: string | null | undefined
   steps: TrackingStepState[]
   lastActiveAt: string
   createdAt: string

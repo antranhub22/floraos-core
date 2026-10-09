@@ -35,15 +35,46 @@ export interface CancellationPayload extends CancellationProposal {
 }
 
 /**
+ * Kiểm tra xem đơn hàng có đủ điều kiện để nhân viên đề xuất hủy/hoàn tiền hay không.
+ * Nguyên tắc: Chỉ được phép đề xuất hủy trước khi cắm hoa (productionStatus === "WAITING" hoặc chưa cắm).
+ */
+export function canProposeCancellation(order: {
+  status: string
+  productionStatus?: string | null | undefined
+  deliveryStatus?: string | null | undefined
+}): { allowed: boolean; reason?: string } {
+  if (order.status === "CANCELLED") {
+    return { allowed: false, reason: "Đơn hàng này đã bị hủy trước đó." }
+  }
+  if (order.status === "COMPLETED" || order.deliveryStatus === "DELIVERED") {
+    return { allowed: false, reason: "Đơn hàng đã giao hoàn tất, không thể hủy." }
+  }
+  if (order.productionStatus && order.productionStatus !== "WAITING") {
+    return {
+      allowed: false,
+      reason: "Hoa đã bắt đầu cắm hoặc đã hoàn thành, không thể đề xuất hủy đơn. Vui lòng liên hệ trực tiếp Điều hành.",
+    }
+  }
+  return { allowed: true }
+}
+
+/**
  * Kiểm tra tính hợp lệ của đề xuất hủy / hoàn tiền.
  * Trả về chuỗi lỗi tiếng Việt nếu không hợp lệ, hoặc null nếu hợp lệ.
  */
 export function validateCancellationProposal(
   proposal: CancellationProposal,
-  order: { status: string; totalVnd: number; paidVnd: number }
+  order: {
+    status: string
+    totalVnd: number
+    paidVnd: number
+    productionStatus?: string | null | undefined
+    deliveryStatus?: string | null | undefined
+  }
 ): string | null {
-  if (order.status === "CANCELLED") {
-    return "Đơn hàng này đã bị hủy trước đó."
+  const check = canProposeCancellation(order)
+  if (!check.allowed) {
+    return check.reason ?? "Không thể đề xuất hủy/hoàn cho đơn này."
   }
   if (!proposal.reason || proposal.reason.trim().length < 3) {
     return "Vui lòng nhập lý do hủy/hoàn tiền chi tiết (tối thiểu 3 ký tự)."

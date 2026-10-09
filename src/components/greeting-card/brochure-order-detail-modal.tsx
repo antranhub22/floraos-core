@@ -1,11 +1,12 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { X, Clock, MapPin, User, Phone, Flower2, CheckCircle2, MessageSquare, ExternalLink } from "lucide-react"
+import { X, Clock, MapPin, User, Phone, Flower2, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { EvidenceTimelineDiagram } from "./evidence-timeline-diagram"
 import { zaloHref } from "@/components/greeting-card/work/work-item-card"
+import { OrderDetailFooter } from "./order-detail-footer"
 
 export interface OrderDetailModalTarget {
   orderId?: string | null | undefined
@@ -27,19 +28,26 @@ export interface OrderDetailModalTarget {
   paidVnd?: number | null | undefined
   balanceVnd?: number | null | undefined
   saleName?: string | null | undefined
+  /** ID bước pipeline hiện tại — dùng để kiểm tra rào chắn hủy */
+  currentStepId?: string | null | undefined
   currentStepTitle?: string | null | undefined
+  /** Trạng thái sản xuất (WAITING | ARRANGING | READY ...) */
+  productionStatus?: string | null | undefined
+  deliveryStatus?: string | null | undefined
   status?: string | null | undefined
   channel?: string | null | undefined
   createdAt?: string | null | undefined
 }
 
-interface BrochureOrderDetailModalProps {
+export interface BrochureOrderDetailModalProps {
   target: OrderDetailModalTarget | null
   onClose: () => void
   onOpenNotes?: ((target: OrderDetailModalTarget) => void) | undefined
+  /** Callback khi Sale đề xuất hủy/hoàn thành công — tải lại danh sách */
+  onCancellationProposed?: (() => void) | undefined
 }
 
-export function BrochureOrderDetailModal({ target, onClose, onOpenNotes }: BrochureOrderDetailModalProps) {
+export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCancellationProposed }: BrochureOrderDetailModalProps) {
   const [activeTab, setActiveTab] = useState<"info" | "timeline">("info")
   useEffect(() => {
     if (!target) return
@@ -54,18 +62,19 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes }: Broch
   const isDeposit = (target.paidVnd ?? 0) > 0 && !isPaid
 
   return (
-    <div
-      role="presentation"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
-      onClick={onClose}
-    >
+    <>
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="detail-modal-title"
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        role="presentation"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+        onClick={onClose}
       >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="detail-modal-title"
+          className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <header className="flex items-center justify-between border-b border-border p-5">
           <div className="flex flex-col">
@@ -277,38 +286,14 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes }: Broch
         </div>
 
         {/* Footer Actions */}
-        <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface-alt p-4">
-          <div className="flex items-center gap-2">
-            {target.sendCode && (
-              <a
-                href={`/b/${target.sendCode}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-caption font-bold text-foreground hover:bg-surface"
-              >
-                <ExternalLink size={14} /> Mở link khách
-              </a>
-            )}
-            {onOpenNotes && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onClose()
-                  onOpenNotes(target)
-                }}
-                className="h-9 gap-1 text-caption font-bold"
-              >
-                <MessageSquare size={14} /> Nhắn tin / Ghi chú
-              </Button>
-            )}
-          </div>
-          <Button type="button" onClick={onClose} className="h-9 px-4 text-caption font-bold">
-            Đóng
-          </Button>
-        </footer>
+        <OrderDetailFooter
+          target={target}
+          onClose={onClose}
+          onOpenNotes={onOpenNotes}
+          onCancellationProposed={onCancellationProposed}
+        />
       </div>
     </div>
+    </>
   )
 }

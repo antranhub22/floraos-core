@@ -65,6 +65,14 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
     }))
   }
 
+  async getCatalogFilters(ctx: TenantContext, id: string) {
+    const catalog = await this.db.greeting_catalogs.findFirst({
+      where: scopedWhere(ctx, { id }),
+      select: { filters: true },
+    })
+    return catalog?.filters ?? null
+  }
+
   /**
    * Phiên mới cho "đặt thêm đơn" từ một link đã có đơn: cùng tổ chức, bộ sưu tập,
    * sale phụ trách và khách — mỗi đơn có link + mã đơn riêng, không đụng đơn cũ.

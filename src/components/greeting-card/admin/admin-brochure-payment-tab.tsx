@@ -11,6 +11,7 @@ import { AdminOrderActionDialog } from "./admin-order-action-dialog"
 import { AdminSettingsDrawer } from "./admin-settings-drawer"
 import { ORDER_FILTERS, type ActionResult, type AdminOrder, type OrderAction, type OrderFilterId } from "./admin-order-types"
 import { CopyCustomerMessage } from "./copy-customer-message"
+import { PendingCancellationPanel } from "./pending-cancellation-panel"
 
 /** Tab Điều hành: việc cần chủ tiệm quyết (thu tiền, báo giá, tiền chưa khớp); cài đặt nằm trong ngăn riêng. */
 export function AdminBrochurePaymentTab() {
@@ -50,6 +51,8 @@ export function AdminBrochurePaymentTab() {
       </div>
 
       <UnmatchedPaymentsPanel />
+
+      <PendingCancellationPanel />
 
       {notice && (
         <div role="status" className="p-3.5 rounded-xl bg-success-bg border border-success/30 text-success text-body-sm font-bold flex items-center gap-2">

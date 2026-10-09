@@ -17,6 +17,7 @@ import { StorePoliciesEditor } from "@/components/profiles/store-policies-editor
 import { PaymentPolicySection } from "@/components/profiles/payment-policy-section"
 import { DepositLevelsSection } from "@/components/profiles/deposit-levels-section"
 import { BrochurePaymentSettings } from "@/components/greeting-card/admin/brochure-payment-settings"
+import { BrochureStepTimeoutSettings } from "@/components/greeting-card/admin/brochure-step-timeout-settings"
 import { useApi, apiSend } from "@/components/greeting-card/greeting-api"
 import {
   parseStorePolicies,
@@ -190,6 +191,8 @@ export default function ProfilePage() {
               {/* Chính sách thanh toán: giao hoa có cần thu đủ trước, hạn thanh toán, mức đặt cọc (mã thanh toán) */}
               <PaymentPolicySection />
               <DepositLevelsSection />
+              {/* Thời hạn & Tự động huỷ đơn theo bước của tiệm */}
+              <BrochureStepTimeoutSettings />
               <SalesDefaultsForm
                 initialBrandData={brand}
                 onSave={saveBrand}

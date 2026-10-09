@@ -40,10 +40,27 @@ export const DEFAULT_PAYMENT_POLICY: BrochurePaymentPolicy = {
 export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
   const root = settings && typeof settings === "object" ? (settings as Record<string, unknown>) : {}
   const raw = root[BROCHURE_POLICY_SETTINGS_KEY]
-  if (!raw || typeof raw !== "object") return DEFAULT_PAYMENT_POLICY
+  const stepRaw = root["step_timeout_policy"] as Record<string, unknown> | undefined
+
+  if (!raw || typeof raw !== "object") {
+    if (stepRaw && typeof stepRaw === "object") {
+      const stepTimeout = minutesIn(stepRaw.unpaid_expiry_minutes)
+      const autoCancel = stepRaw.auto_cancel_unpaid !== false
+      if (stepTimeout && autoCancel) {
+        return {
+          ...DEFAULT_PAYMENT_POLICY,
+          autoCancelUnpaid: true,
+          paymentTimeoutMinutes: stepTimeout,
+        }
+      }
+    }
+    return DEFAULT_PAYMENT_POLICY
+  }
+
   const r = raw as Record<string, unknown>
   const hold = minutesIn(r.hold_minutes)
-  const timeout = minutesIn(r.payment_timeout_minutes)
+  const timeout = minutesIn(r.payment_timeout_minutes) ?? (stepRaw && stepRaw.auto_cancel_unpaid !== false ? minutesIn(stepRaw.unpaid_expiry_minutes) : null)
+  const autoCancel = r.auto_cancel_unpaid === true || (stepRaw?.auto_cancel_unpaid === true)
   const pct = typeof r.deposit_percent === "number" && Number.isFinite(r.deposit_percent) ? Math.round(r.deposit_percent) : 0
   return {
     depositPercent: pct >= 1 && pct <= 99 ? pct : 0,
@@ -51,7 +68,7 @@ export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
     requireFullBeforeDispatch: r.require_full_before_dispatch === true,
     // Chỉ thêm khoá khi tiệm bật giữ đơn — chính sách cũ giữ nguyên hình dạng
     ...(hold ? { holdMinutes: hold } : {}),
-    ...(r.auto_cancel_unpaid === true ? { autoCancelUnpaid: true } : {}),
+    ...(autoCancel ? { autoCancelUnpaid: true } : {}),
     ...(timeout ? { paymentTimeoutMinutes: timeout } : {}),
   }
 }

@@ -4,6 +4,7 @@ import { ShareLinkRepository } from "../infra/share-link-repository"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { GreetingMessageRepository } from "../infra/greeting-message-repository"
 import { linkExpiryFrom, parseLinkLifetimeHours } from "../domain/link-lifetime"
+import { resolveEffectiveStepTimeoutPolicy } from "../domain/step-timeout-policy"
 import { normalizeChannel, DIRECT_CHANNEL, channelLabel } from "../domain/catalog-channel"
 import { LINK_COPIED_EVENT, SHARE_CODE_REGEX, parseDefaultOwnerId, resolveDefaultOwner } from "../domain/link-ownership"
 import { resolveSaleScope } from "./order-scope"
@@ -44,9 +45,13 @@ export async function openShareLink(code: string, knownSendCode: string | null, 
     const existing = await repo.existingVisitorSession(link.organization_id, knownSendCode)
     if (existing) return { sendCode: existing.send_code, sessionId: existing.id, organizationId: link.organization_id, catalogId: link.catalog_id }
   }
-  // Mỗi khách có hạn riêng tính từ lúc mở, theo số giờ Điều hành cài
+  // Mỗi khách có hạn riêng tính từ lúc mở, theo cài đặt của tiệm / bộ sưu tập
   const shop = await new GreetingCardRepository().getShopProfile(link.organization_id)
-  const session = await repo.openVisitorSession(link, linkExpiryFrom(parseLinkLifetimeHours(shop.settings)))
+  const effectivePolicy = resolveEffectiveStepTimeoutPolicy(shop.settings, link.catalog?.filters)
+  const expiryHours = effectivePolicy.autoCancelBrowsing
+    ? effectivePolicy.browsingExpiryHours
+    : parseLinkLifetimeHours(shop.settings)
+  const session = await repo.openVisitorSession(link, linkExpiryFrom(expiryHours))
   return { sendCode: session.send_code, sessionId: session.id, organizationId: link.organization_id, catalogId: link.catalog_id }
 }
 

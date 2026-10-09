@@ -20,7 +20,7 @@ interface SalesBrochureTabProps {
   onNavigateToCatalog?: () => void
 }
 
-const BUCKETS: WorkBucket[] = ["ACTION", "WAITING_CUSTOMER", "IN_PROGRESS", "DONE"]
+const BUCKETS: WorkBucket[] = ["ACTION", "WAITING_CUSTOMER", "IN_PROGRESS", "DONE", "CANCELLED"]
 
 /** Tab Sale: trạng thái từng khách của mình là trọng tâm; việc kẹt cần sale tác động lên đầu. */
 export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalog }: SalesBrochureTabProps = {}) {
@@ -70,7 +70,7 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
       ? filtered
       : bucket
         ? filtered.filter((i) => workBucket(i, "SALE") === bucket)
-        : filtered.filter((i) => workBucket(i, "SALE") !== "DONE"),
+        : filtered.filter((i) => workBucket(i, "SALE") !== "DONE" && workBucket(i, "SALE") !== "CANCELLED"),
     "SALE",
   )
   const openNotes = (item: TrackingPipelineItem, stepId?: TrackingPipelineStepId) => setNotesFor({ item, stepId: stepId ?? "GENERAL" })
@@ -204,7 +204,11 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
                       paidVnd: item.paidVnd,
                       balanceVnd: item.balanceVnd,
                       saleName: item.saleName,
+                      currentStepId: item.currentStepId,
                       currentStepTitle: item.currentStepTitle,
+                      status: item.orderStatus,
+                      productionStatus: item.productionStatus,
+                      deliveryStatus: item.deliveryStatus,
                       channel: item.channel,
                       createdAt: item.createdAt,
                     })

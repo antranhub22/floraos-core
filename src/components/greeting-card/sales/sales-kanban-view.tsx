@@ -84,7 +84,11 @@ export function SalesKanbanView({ items, now, onOpenNotes, showSale, doneHidden 
                         paidVnd: item.paidVnd,
                         balanceVnd: item.balanceVnd,
                         saleName: item.saleName,
+                        currentStepId: item.currentStepId,
                         currentStepTitle: item.currentStepTitle,
+                        status: item.orderStatus,
+                        productionStatus: item.productionStatus,
+                        deliveryStatus: item.deliveryStatus,
                         channel: item.channel,
                         createdAt: item.createdAt,
                       })

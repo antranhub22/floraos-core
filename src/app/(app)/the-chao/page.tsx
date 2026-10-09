@@ -45,6 +45,11 @@ export default function TheChaoPage() {
     r ? (r.next_cursor ? "100+" : r.data.length) : null
   const catalogCount = countOf(catalogList.data)
   const sessionCount = countOf(sessionList.data)
+  const cancellationList = useApi<{ data: unknown[] }>(
+    can("R11") ? "/api/v1/greeting-card/cancellation-requests" : null,
+    { refreshInterval: 20_000 }
+  )
+  const pendingCancelCount = cancellationList.data?.data.length ? cancellationList.data.data.length : null
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Từ Hộp việc: mở đúng tab rồi cuộn tới đúng thẻ đơn (chờ dữ liệu tab tải xong tối đa ~4 giây)
@@ -82,7 +87,7 @@ export default function TheChaoPage() {
     { id: "catalog", icon: BookOpen, label: "Bộ sưu tập", ...(catalogCount !== null ? { badge: catalogCount } : {}) },
     { id: "tracking", icon: GitMerge, label: "Theo dõi tiến độ" },
     { id: "sales", icon: Send, label: "Bán hàng", ...(sessionCount !== null ? { badge: sessionCount } : {}) },
-    { id: "payment", icon: ShieldCheck, label: "Điều hành" },
+    { id: "payment", icon: ShieldCheck, label: "Điều hành", ...(pendingCancelCount !== null ? { badge: pendingCancelCount } : {}) },
     { id: "coordinator", icon: Sparkles, label: "Điều phối" },
   ] satisfies TabItem[]).filter((t) => allowed[t.id as ActiveTab])
   // Tab đang chọn bị ẩn (không đủ quyền) → mở tab đầu tiên được phép

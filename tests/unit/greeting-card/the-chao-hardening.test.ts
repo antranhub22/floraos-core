@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  canProposeCancellation,
   decisionCapabilities,
   resolveRefundVnd,
   validateCancellationProposal,
@@ -31,13 +32,37 @@ describe("decisionCapabilities — trần cứng điều hành", () => {
   })
 })
 
+describe("canProposeCancellation & rào chắn trước khi cắm hoa", () => {
+  it("cho phép đề xuất khi đơn WAITING (chưa cắm hoa)", () => {
+    expect(canProposeCancellation({ status: "CONFIRMED", productionStatus: "WAITING" }).allowed).toBe(true)
+    expect(canProposeCancellation({ status: "CONFIRMED" }).allowed).toBe(true)
+  })
+
+  it("chặn đề xuất khi đơn đang cắm hoa (ARRANGING) hoặc đã cắm xong (READY)", () => {
+    const arranging = canProposeCancellation({ status: "CONFIRMED", productionStatus: "ARRANGING" })
+    expect(arranging.allowed).toBe(false)
+    expect(arranging.reason).toMatch(/cắm/i)
+
+    const ready = canProposeCancellation({ status: "CONFIRMED", productionStatus: "READY" })
+    expect(ready.allowed).toBe(false)
+  })
+
+  it("chặn đề xuất khi đơn đã giao hoàn tất hoặc đã hủy", () => {
+    expect(canProposeCancellation({ status: "CANCELLED" }).allowed).toBe(false)
+    expect(canProposeCancellation({ status: "COMPLETED", deliveryStatus: "DELIVERED" }).allowed).toBe(false)
+  })
+})
+
 describe("validateCancellationProposal", () => {
-  const order = { status: "CONFIRMED", totalVnd: 1_000_000, paidVnd: 500_000 }
+  const order = { status: "CONFIRMED", totalVnd: 1_000_000, paidVnd: 500_000, productionStatus: "WAITING" }
   it("chặn hoàn một phần bằng/vượt số đã thu", () => {
     expect(validateCancellationProposal({ type: "PARTIAL_REFUND", reason: "Khách đổi ý", refundAmountVnd: 500_000 }, order)).not.toBeNull()
   })
   it("chặn đề xuất trên đơn đã hủy", () => {
     expect(validateCancellationProposal({ type: "CANCEL_ONLY", reason: "Trùng đơn", refundAmountVnd: 0 }, { ...order, status: "CANCELLED" })).not.toBeNull()
+  })
+  it("chặn đề xuất khi hoa đã bắt đầu cắm", () => {
+    expect(validateCancellationProposal({ type: "CANCEL_ONLY", reason: "Khách xin hủy", refundAmountVnd: 0 }, { ...order, productionStatus: "ARRANGING" })).toMatch(/cắm/i)
   })
   it("nhận hoàn một phần hợp lệ", () => {
     expect(validateCancellationProposal({ type: "PARTIAL_REFUND", reason: "Thiếu hoa", refundAmountVnd: 100_000 }, order)).toBeNull()
