@@ -157,10 +157,17 @@ export async function getBrochureTracking(
       createdAt: order.created_at.toISOString(),
       updatedAt: order.updated_at.toISOString(),
       timeline,
-      /** Kế hoạch + các đợt thanh toán; khi hoa đã xong mà còn nợ: mã QR trả phần còn lại. */
+      /** Kế hoạch + các đợt thanh toán; khi hoa đã xong mà còn nợ: mã QR trả phần còn lại.
+       *  Thu trước giao: QR chỉ hiện SAU KHI khách xác nhận ảnh (hoặc hết hạn tự xác nhận) —
+       *  không hiện cùng lúc với khung duyệt ảnh (PO 09/10/2026). */
       payment: {
         ...payment,
-        balanceInstructions: payment.balanceDue ? paymentInstructionsFor(orgSettings, money, order.code) : null,
+        balanceInstructions: (() => {
+          if (!payment.balanceDue) return null
+          // Thu trước giao + đang chờ khách duyệt ảnh → chưa hiện QR lần 2
+          if (policy.requireFullBeforeDispatch && photoApproval.status === "PENDING") return null
+          return paymentInstructionsFor(orgSettings, money, order.code)
+        })(),
       },
       /** Lần giao gần nhất không thành công (ghi chú của shipper chỉ cho người đặt đã xác minh). */
       deliveryFailure: order.delivery_status === "FAILED" ? latestFailureForCustomer(order.delivery_window, verified) : null,

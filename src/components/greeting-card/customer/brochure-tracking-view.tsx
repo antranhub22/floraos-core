@@ -189,6 +189,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
               sendCode={sendCode}
               uploadedAt={order.photoApproval.uploadedAt}
               countdownMinutes={order.photoApproval.countdownMinutes}
+              hasBalanceDue={!isPaid && order.paidVnd > 0}
               onApproved={() => void loadTracking()}
             />
           )}
@@ -206,7 +207,8 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
       )}
       </div>
 
-      {order.payment && !paymentFailed && <TrackingPaymentCard payment={order.payment} sendCode={sendCode} />}
+      {/* Thu trước giao: ẩn thẻ thanh toán lần 2 khi đang chờ khách duyệt ảnh (PO 09/10/2026) */}
+      {order.payment && !paymentFailed && order.photoApproval?.status !== "PENDING" && <TrackingPaymentCard payment={order.payment} sendCode={sendCode} />}
       {order.verified === false && <TrackingVerifyForm orderCode={orderCode} onVerified={setLast4} />}
       {order.deliveryFailure && (
         <div role="status" className="rounded-2xl border border-warning/30 bg-warning-bg p-4 flex flex-col gap-1 text-body-sm">
@@ -263,12 +265,15 @@ function PhotoApprovalCard({
   sendCode,
   uploadedAt,
   countdownMinutes,
+  hasBalanceDue = false,
   onApproved,
 }: {
   orderCode: string
   sendCode?: string | null | undefined
   uploadedAt: string
   countdownMinutes: number
+  /** Đơn đặt cọc còn nợ: sau xác nhận ảnh sẽ hiện mã QR thanh toán lần 2. */
+  hasBalanceDue?: boolean
   onApproved: () => void
 }) {
   const [approving, setApproving] = useState(false)
@@ -323,8 +328,10 @@ function PhotoApprovalCard({
       </div>
 
       <p className="text-caption text-text-muted leading-relaxed">
-        Vui lòng xem kỹ ảnh hoa thành phẩm ở trên. Sau khi đồng hồ kết thúc, hệ thống sẽ{" "}
-        <strong>tự động xác nhận</strong> để xưởng tiến hành bàn giao đơn cho tài xế giao hoa.
+        Vui lòng xem kỹ ảnh hoa thành phẩm ở trên.{" "}
+        {hasBalanceDue
+          ? <>Sau khi xác nhận, bạn sẽ được hướng dẫn <strong>thanh toán phần còn lại</strong> để cửa hàng tiến hành giao hoa.</>
+          : <>Sau khi đồng hồ kết thúc, hệ thống sẽ <strong>tự động xác nhận</strong> để xưởng tiến hành bàn giao đơn cho tài xế giao hoa.</>}
       </p>
 
       {error && <p className="text-caption text-danger">{error}</p>}
@@ -337,7 +344,7 @@ function PhotoApprovalCard({
         className="h-10 w-full gap-1.5 rounded-xl font-bold bg-primary text-white"
       >
         <CheckCircle2 size={16} />
-        <span>{approving ? "Đang xác nhận..." : "Tôi đồng ý với hình ảnh sản phẩm này"}</span>
+        <span>{approving ? "Đang xác nhận..." : hasBalanceDue ? "Xác nhận ảnh và tiếp tục thanh toán" : "Tôi đồng ý với hình ảnh sản phẩm này"}</span>
       </Button>
     </div>
   )
