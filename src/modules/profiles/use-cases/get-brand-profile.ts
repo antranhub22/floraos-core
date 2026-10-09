@@ -1,5 +1,8 @@
 import type { TenantContext } from "@/core/tenancy"
 import { BrandProfileRepository } from "@/modules/profiles/infra/brand-profile-repository"
+import { AssetRepository } from "@/modules/assets/infra/asset-repository"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
+import { ASSET_VIEW_URL_TTL_SECONDS } from "@/modules/assets/use-cases/get-asset-view-url"
 
 export type BrandProfileDetail = {
   primary_color: string | null
@@ -10,6 +13,7 @@ export type BrandProfileDetail = {
   font_heading: string | null
   font_body: string | null
   logo_asset_id: string | null
+  logo_url: string | null
   tone_of_voice: string | null
   hashtags: Record<string, unknown> | null
   cta_templates: Record<string, unknown> | null
@@ -25,6 +29,31 @@ export type BrandProfileDetail = {
 export async function getBrandProfile(ctx: TenantContext): Promise<BrandProfileDetail | null> {
   const profile = await new BrandProfileRepository().current(ctx)
   if (!profile) return null
+
+  let logoUrl: string | null = null
+  if (profile.logo_asset_id) {
+    if (
+      profile.logo_asset_id.startsWith("/") ||
+      profile.logo_asset_id.startsWith("http://") ||
+      profile.logo_asset_id.startsWith("https://")
+    ) {
+      logoUrl = profile.logo_asset_id
+    } else {
+      try {
+        const asset = await new AssetRepository().findById(ctx, profile.logo_asset_id)
+        if (asset) {
+          logoUrl = await getStorageProvider().signedUrl(
+            asset.storage_key,
+            ASSET_VIEW_URL_TTL_SECONDS,
+            "GET"
+          )
+        }
+      } catch {
+        // an toàn: không ném lỗi nếu không ký được URL
+      }
+    }
+  }
+
   return {
     primary_color: profile.primary_color,
     secondary_color: profile.secondary_color,
@@ -34,6 +63,7 @@ export async function getBrandProfile(ctx: TenantContext): Promise<BrandProfileD
     font_heading: profile.font_heading,
     font_body: profile.font_body,
     logo_asset_id: profile.logo_asset_id,
+    logo_url: logoUrl,
     tone_of_voice: profile.tone_of_voice,
     hashtags: (profile.hashtags as Record<string, unknown> | null) ?? null,
     cta_templates: (profile.cta_templates as Record<string, unknown> | null) ?? null,
