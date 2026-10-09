@@ -10,7 +10,7 @@ import type { ModalState } from "./coordinator-order-card"
 import { DeliveryFailedModal } from "./delivery-failed-modal"
 import { SubstituteProposalModal } from "./substitute-proposal-modal"
 
-type ActiveModal = Exclude<ModalState, { type: "none" }>
+type ActiveModal = Exclude<ModalState, { type: "none" | "detail" }>
 
 const CONFIG = {
   florist: {

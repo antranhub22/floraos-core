@@ -11,6 +11,8 @@ import { OrderChangePanel, type OrderChangeData } from "./order-change-panel"
 import { TrackingPaymentCard, type TrackingPayment } from "./tracking-payment-card"
 import { PaymentFailedNotice } from "./payment-failed-notice"
 import { SubstitutePanel, type SubstituteData } from "./substitute-panel"
+import { CustomerThankYouCard, THANK_YOU_TARGET } from "./customer-thank-you-card"
+import { isTrackingCompleted } from "@/modules/greeting-card/domain/greeting-card-rules"
 import { Button } from "@/components/ui/button"
 
 interface BrochureTrackingViewProps {
@@ -135,6 +137,9 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
 
       {paymentFailed && <PaymentFailedNotice orderCode={order.code} cta={failedCta} />}
 
+      {/* Đơn đã hoàn tất: lời cảm ơn + xem lại đơn, tiến độ, đặt đơn mới */}
+      {isTrackingCompleted(order.status, order.deliveryStatus) && <CustomerThankYouCard orderCode={order.code} sendCode={sendCode} />}
+
       {/* Progress Bar & Current Status Card */}
       <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -154,6 +159,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
       </div>
 
       {/* Ảnh thành phẩm và ảnh người nhận: hai mục riêng, ảnh sau không đè ảnh trước */}
+      <div id={THANK_YOU_TARGET.progress} className="flex flex-col gap-4">
       {productPhotos.length > 0 && (
         <section className="flex flex-col gap-3 p-4 rounded-2xl bg-surface-muted border border-border">
           <div className="flex items-center justify-between">
@@ -198,6 +204,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
           <p className="text-caption text-text-muted">Hoa đã được trao tận tay người nhận.</p>
         </section>
       )}
+      </div>
 
       {order.payment && !paymentFailed && <TrackingPaymentCard payment={order.payment} sendCode={sendCode} />}
       {order.verified === false && <TrackingVerifyForm orderCode={orderCode} onVerified={setLast4} />}
@@ -219,7 +226,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
       )}
 
       {/* Order Details Summary */}
-      <div className="flex flex-col gap-2 text-body-sm text-text-muted bg-surface-muted p-4 rounded-xl border border-border">
+      <div id={THANK_YOU_TARGET.details} className="flex flex-col gap-2 text-body-sm text-text-muted bg-surface-muted p-4 rounded-xl border border-border">
         <div className="flex justify-between gap-3">
           <span className="shrink-0">Người nhận:</span>
           <span className="font-bold text-foreground text-right break-words">{order.recipientName}</span>

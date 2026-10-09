@@ -10,6 +10,7 @@ import { useApi } from "@/components/greeting-card/greeting-api"
 import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { useNow, useWorklist } from "@/components/greeting-card/work/use-worklist"
 import { WORK_BUCKET_LABEL, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
+import { BrochureOrderDetailModal } from "@/components/greeting-card/brochure-order-detail-modal"
 
 // Điều phối chỉ lo đơn đã đặt: không có nhóm "Đang chờ khách"
 const BUCKETS: WorkBucket[] = ["ACTION", "IN_PROGRESS", "DONE"]
@@ -141,7 +142,33 @@ export function CoordinatorBrochureTab() {
       {board.error && <p role="alert" className="text-center text-caption text-danger">{board.error.message}</p>}
 
       {/* Modal overlay */}
-      {modal.type !== "none" && (
+      {modal.type === "detail" && (
+        <BrochureOrderDetailModal
+          target={{
+            orderId: modal.order.id,
+            orderCode: modal.order.code,
+            sendCode: modal.order.greeting_sessions[0]?.send_code,
+            customerName: workOf.get(modal.order.id)?.customerName,
+            customerPhone: workOf.get(modal.order.id)?.customerPhone,
+            saleName: workOf.get(modal.order.id)?.saleName,
+            recipientName: modal.order.delivery_address?.recipientName,
+            recipientPhone: modal.order.delivery_address?.phone,
+            deliveryAddress: modal.order.delivery_address?.street || [modal.order.delivery_address?.street, modal.order.delivery_address?.notes].filter(Boolean).join(" · "),
+            deliveryDate: modal.order.delivery_window?.date,
+            deliveryTimeSlot: modal.order.delivery_window?.timeSlot,
+            cardMessage: modal.order.card_message,
+            productName: modal.order.greeting_sessions[0]?.product_snapshot?.name || modal.order.items[0]?.description || "Hoa tươi theo mẫu",
+            productImageUrl: modal.order.greeting_sessions[0]?.product_snapshot?.imageUrl,
+            totalVnd: modal.order.total_vnd,
+            paidVnd: modal.order.paid_vnd,
+            balanceVnd: Math.max(0, modal.order.total_vnd - modal.order.paid_vnd),
+            status: modal.order.status,
+            createdAt: modal.order.created_at,
+          }}
+          onClose={() => setModal({ type: "none" })}
+        />
+      )}
+      {modal.type !== "none" && modal.type !== "detail" && (
         <CoordinatorActionModal
           key={`${modal.type}:${modal.orderId}`}
           modal={modal}
