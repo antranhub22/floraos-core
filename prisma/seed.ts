@@ -31,10 +31,6 @@ async function main(): Promise<void> {
   const { syncSiinStoreAccount } = await import("./seed/sync-siin-store")
   await syncSiinStoreAccount()
 
-  // Dọn dẹp dữ liệu đơn hàng và phiên Thẻ Chào thử nghiệm của Siin Store trên Render
-  const { cleanSiinStoreOrders } = await import("./seed/clean-siin-store-orders")
-  await cleanSiinStoreOrders()
-
   // Dev fixture: chạy trong dev hoặc khi cờ SEED_DEV_DATA=true được bật (demo / staging deploy)
   if (process.env.NODE_ENV !== "production" || process.env.SEED_DEV_DATA === "true") {
     const { seedDevShopMoclan } = await import("./seed/dev-shop-moclan")
