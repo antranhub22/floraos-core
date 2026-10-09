@@ -137,7 +137,9 @@ describe("Cơ chế thu lần 2 sau khi duyệt ảnh — Thu trước giao (PO 
 
   it("gating: khi khách đã duyệt ảnh (APPROVED) hoặc tự động duyệt (AUTO_APPROVED), hiển thị QR thanh toán lần 2", () => {
     const requireFull = true
-    expect(requireFull && "APPROVED" === "PENDING" ? false : true).toBe(true)
-    expect(requireFull && "AUTO_APPROVED" === "PENDING" ? false : true).toBe(true)
+    const isApproved: string = "APPROVED"
+    const isAutoApproved: string = "AUTO_APPROVED"
+    expect(requireFull && isApproved === "PENDING" ? false : true).toBe(true)
+    expect(requireFull && isAutoApproved === "PENDING" ? false : true).toBe(true)
   })
 })
