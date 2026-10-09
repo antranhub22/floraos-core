@@ -52,7 +52,14 @@ function stripDiacritics(text: string): string {
  * Nội dung SMS (không dấu — tin brandname có dấu tính gấp đôi phí và dễ lỗi
  * mã hoá). Giữ dưới 160 ký tự khi có thể.
  */
-export function smsText(event: NotifyEvent, p: NotifyParams): string {
+export function smsText(event: NotifyEvent, p: NotifyParams, options?: { isBalanceDue?: boolean }): string {
+  const readyText = options?.isBalanceDue
+    ? `${p.shop_name}: Hoa don ${p.order_code} da cam xong. Mo link xem anh va thanh toan ${p.amount} con lai de giao hoa.`
+    : `${p.shop_name}: Hoa don ${p.order_code} da cam xong, chuan bi giao.`
+  const deliveredText = options?.isBalanceDue
+    ? `${p.shop_name}: Don ${p.order_code} da giao thanh cong. Vui long mo link thanh toan ${p.amount} con lai. Cam on quy khach!`
+    : `${p.shop_name}: Don ${p.order_code} da giao thanh cong. Cam on quy khach!`
+
   const body: Record<NotifyEvent, string> = {
     ORDER_RECEIVED: `${p.shop_name}: Da nhan don ${p.order_code}. Cua hang se bao khi nhan duoc thanh toan va khi hoa duoc giao.`,
     QUOTED: `${p.shop_name}: Don ${p.order_code} da co gia ${p.amount}. Mo link de xem ma QR thanh toan.`,
@@ -60,10 +67,10 @@ export function smsText(event: NotifyEvent, p: NotifyParams): string {
     DEPOSIT_RECEIVED: `${p.shop_name}: Da nhan tien coc ${p.amount} cho don ${p.order_code}.`,
     PAYMENT_COMPLETED: `${p.shop_name}: Da nhan du ${p.amount} cho don ${p.order_code}. Cam on quy khach!`,
     SUBSTITUTE_PROPOSED: `${p.shop_name}: Mau hoa don ${p.order_code} tam thoi khong lam duoc. Mo link de chon mau thay the hoac phan hoi cua hang.`,
-    READY: `${p.shop_name}: Hoa don ${p.order_code} da cam xong, chuan bi giao.`,
+    READY: readyText,
     DISPATCHED: `${p.shop_name}: Don ${p.order_code} dang duoc giao den nguoi nhan.`,
     DELIVERY_FAILED: `${p.shop_name}: Don ${p.order_code} chua giao duoc. Cua hang se lien he hen giao lai, hoac mo link de doi gio/dia chi giao.`,
-    DELIVERED: `${p.shop_name}: Don ${p.order_code} da giao thanh cong. Cam on quy khach!`,
+    DELIVERED: deliveredText,
     CANCELLED: `${p.shop_name}: Don ${p.order_code} da duoc huy. Lien he cua hang neu can ho tro.`,
   }
   const link = p.tracking_url ? ` Theo doi: ${p.tracking_url}` : ""
@@ -85,4 +92,15 @@ export function customerPaymentMessage(p: { orderCode: string; amountVnd: number
     ? `Cửa hàng đã nhận ${money(p.amountVnd)} cho đơn hoa ${p.orderCode}, còn ${money(p.balanceVnd)}.`
     : `Cửa hàng đã nhận đủ ${money(p.amountVnd)} cho đơn hoa ${p.orderCode}. Cảm ơn anh/chị!`
   return p.trackingUrl ? `${head} Theo dõi đơn và ảnh hoa tại: ${p.trackingUrl}` : head
+}
+
+/**
+ * Tin soạn sẵn Sale nhắn khách duyệt ảnh thành phẩm và thanh toán lần 2 (đơn đặt cọc).
+ * Có dấu (chép gửi nhanh qua Zalo, không tính phí SMS).
+ */
+export function customerSecondPaymentReminderMessage(p: { orderCode: string; balanceVnd: number; trackingUrl: string | null }): string {
+  const money = `${p.balanceVnd.toLocaleString("vi-VN")} đ`
+  const head = `Dạ chào anh/chị, hoa cho đơn ${p.orderCode} đã cắm xong hoàn thiện ạ!`
+  const body = `Anh/chị mở link kiểm tra ảnh hoa thực tế và thanh toán số tiền còn lại là ${money} để cửa hàng tiến hành giao hoa nhé ạ:`
+  return p.trackingUrl ? `${head} ${body} ${p.trackingUrl}` : `${head} ${body}`
 }

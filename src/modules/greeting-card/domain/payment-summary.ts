@@ -42,6 +42,7 @@ export function orderPaymentSummary(
   /** % cọc hiện tại của tiệm — chỉ dùng cho đơn cũ chưa có bản chụp kế hoạch. */
   shopDepositPercent: number,
   flags: { reported?: boolean; failed?: boolean } = {},
+  options?: { requireFullBeforeDispatch?: boolean }
 ): OrderPaymentSummary {
   const plan = readPaymentPlan(order.pricingRuleRef)
   const pct = plan?.depositPercent ?? shopDepositPercent
@@ -62,7 +63,7 @@ export function orderPaymentSummary(
     remainingVnd: Math.max(0, order.totalVnd - order.paidVnd),
     status,
     statusLabel: PAYMENT_STATUS_LABEL[status],
-    milestones: order.totalVnd > 0 ? paymentMilestones(order.totalVnd, pct, order.paidVnd) : [],
-    balanceDue: balanceDue(order),
+    milestones: order.totalVnd > 0 ? paymentMilestones(order.totalVnd, pct, order.paidVnd, options) : [],
+    balanceDue: balanceDue(order, options),
   }
 }

@@ -6,8 +6,12 @@
 
 export type MilestoneKind = "FULL" | "DEPOSIT" | "BALANCE"
 export type MilestoneStatus = "PAID" | "PARTIALLY_PAID" | "PENDING"
-/** ON_ORDER = trả khi đặt; AFTER_PRODUCT_PHOTO = trả sau khi hoa xong và tiệm gửi ảnh. */
-export type MilestoneDue = "ON_ORDER" | "AFTER_PRODUCT_PHOTO"
+/**
+ * ON_ORDER = trả khi đặt;
+ * AFTER_PRODUCT_PHOTO = trả sau khi hoa xong và tiệm gửi ảnh (thu trước khi giao);
+ * AFTER_DELIVERY = trả sau khi giao hoa (thu sau khi giao).
+ */
+export type MilestoneDue = "ON_ORDER" | "AFTER_PRODUCT_PHOTO" | "AFTER_DELIVERY"
 
 export interface PaymentMilestone {
   seq: number
@@ -30,21 +34,35 @@ export function depositAmountVnd(totalVnd: number, depositPercent: number): numb
 /**
  * Lịch thu: cọc + phần còn lại, hoặc một lần trả đủ (không cọc, hay cọc làm tròn đã bằng tổng).
  * Tổng các mốc luôn bằng tổng đơn — mã thanh toán không làm đổi tổng tiền.
+ * Hỗ trợ 2 cơ chế:
+ * - `requireFullBeforeDispatch !== false` (mặc định): Thu trước giao (Mốc 2: AFTER_PRODUCT_PHOTO).
+ * - `requireFullBeforeDispatch === false`: Thu sau giao (Mốc 2: AFTER_DELIVERY).
  */
-export function buildPaymentSchedule(totalVnd: number, depositPercent: number): Array<Omit<PaymentMilestone, "paidVnd" | "status">> {
+export function buildPaymentSchedule(
+  totalVnd: number,
+  depositPercent: number,
+  options?: { requireFullBeforeDispatch?: boolean }
+): Array<Omit<PaymentMilestone, "paidVnd" | "status">> {
   const total = Math.max(0, Math.round(totalVnd))
   const deposit = depositAmountVnd(total, depositPercent)
   if (deposit <= 0 || deposit >= total) return [{ seq: 1, kind: "FULL", due: "ON_ORDER", percent: 100, amountVnd: total }]
+  const requireFull = options?.requireFullBeforeDispatch ?? true
+  const secondDue: MilestoneDue = requireFull ? "AFTER_PRODUCT_PHOTO" : "AFTER_DELIVERY"
   return [
     { seq: 1, kind: "DEPOSIT", due: "ON_ORDER", percent: depositPercent, amountVnd: deposit },
-    { seq: 2, kind: "BALANCE", due: "AFTER_PRODUCT_PHOTO", percent: 100 - depositPercent, amountVnd: total - deposit },
+    { seq: 2, kind: "BALANCE", due: secondDue, percent: 100 - depositPercent, amountVnd: total - deposit },
   ]
 }
 
 /** Gán số đã thu lần lượt vào từng mốc theo thứ tự. */
-export function paymentMilestones(totalVnd: number, depositPercent: number, paidVnd: number): PaymentMilestone[] {
+export function paymentMilestones(
+  totalVnd: number,
+  depositPercent: number,
+  paidVnd: number,
+  options?: { requireFullBeforeDispatch?: boolean }
+): PaymentMilestone[] {
   let left = Math.max(0, paidVnd)
-  return buildPaymentSchedule(totalVnd, depositPercent).map((m) => {
+  return buildPaymentSchedule(totalVnd, depositPercent, options).map((m) => {
     const paid = Math.min(left, m.amountVnd)
     left -= paid
     const status: MilestoneStatus = paid >= m.amountVnd && m.amountVnd > 0 ? "PAID" : paid > 0 ? "PARTIALLY_PAID" : "PENDING"
@@ -81,24 +99,41 @@ export interface PaymentSplit {
   totalVnd: number
   /** Phải trả hôm nay (lúc đặt). */
   dueNowVnd: number
-  /** Trả sau khi hoa hoàn thành và tiệm gửi ảnh. */
+  /** Trả sau khi hoa hoàn thành hoặc sau khi giao hàng. */
   dueLaterVnd: number
   depositPercent: number
 }
 
 /** Số tiền hiển thị cho khách lúc đặt: hôm nay / thanh toán sau. */
-export function paymentSplit(totalVnd: number, depositPercent: number): PaymentSplit {
-  const schedule = buildPaymentSchedule(totalVnd, depositPercent)
+export function paymentSplit(totalVnd: number, depositPercent: number, options?: { requireFullBeforeDispatch?: boolean }): PaymentSplit {
+  const schedule = buildPaymentSchedule(totalVnd, depositPercent, options)
   const now = schedule[0]?.amountVnd ?? 0
   const later = schedule[1]?.amountVnd ?? 0
   return { totalVnd: Math.max(0, Math.round(totalVnd)), dueNowVnd: now, dueLaterVnd: later, depositPercent: later > 0 ? depositPercent : 0 }
 }
 
 /**
- * Đơn đang chờ khách trả phần còn lại: đã cọc, còn nợ, hoa đã xong (xưởng báo READY sau khi
- * gửi ảnh), đơn chưa huỷ/chưa giao xong.
+ * Đơn đang chờ khách trả phần còn lại: đã cọc, còn nợ, chưa huỷ.
+ * - Cơ chế 1 (`requireFullBeforeDispatch !== false`, mặc định): Thu trước giao.
+ *   Kích hoạt khi hoa xong (READY/DONE) và chưa giao xong (DELIVERED).
+ * - Cơ chế 2 (`requireFullBeforeDispatch === false`): Thu sau giao.
+ *   Kích hoạt khi hoa xong, đang giao hoặc đã giao xong, cho đến khi trả đủ 100%.
  */
-export function balanceDue(o: { status: string; productionStatus: string; deliveryStatus: string; totalVnd: number; paidVnd: number }): boolean {
-  if (o.status === "CANCELLED" || o.status === "COMPLETED" || o.deliveryStatus === "DELIVERED") return false
-  return o.paidVnd > 0 && o.paidVnd < o.totalVnd && o.productionStatus === "READY"
+export function balanceDue(
+  o: { status: string; productionStatus: string; deliveryStatus: string; totalVnd: number; paidVnd: number },
+  options?: { requireFullBeforeDispatch?: boolean }
+): boolean {
+  if (o.status === "CANCELLED") return false
+  if (o.paidVnd <= 0 || o.paidVnd >= o.totalVnd) return false
+
+  const requireFull = options?.requireFullBeforeDispatch ?? true
+  const isReady = o.productionStatus === "READY" || o.productionStatus === "DONE"
+
+  if (requireFull) {
+    if (o.status === "COMPLETED" || o.deliveryStatus === "DELIVERED") return false
+    return isReady
+  } else {
+    const isDeliveringOrDelivered = o.deliveryStatus === "DELIVERING" || o.deliveryStatus === "DELIVERED"
+    return isReady || isDeliveringOrDelivered || o.status === "COMPLETED"
+  }
 }

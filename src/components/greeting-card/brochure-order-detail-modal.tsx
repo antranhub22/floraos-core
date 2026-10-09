@@ -294,6 +294,24 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
                     {isPaid ? "Đã thanh toán đủ" : isDeposit ? "Đã thanh toán một phần (Cọc)" : "Chưa thanh toán"}
                   </span>
                 </div>
+                {isDeposit && (target.balanceVnd ?? 0) > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warning/30 bg-warning-bg/40 p-2.5">
+                    <span className="text-caption font-bold text-warning-text">
+                      ⚠️ Đơn cọc — Cần thanh toán lần 2: {(target.balanceVnd ?? 0).toLocaleString("vi-VN")} đ
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = target.sendCode ? `${window.location.origin}/b/${target.sendCode}` : ""
+                        const msg = `Dạ chào anh/chị, hoa cho đơn #${target.orderCode || target.sendCode} đã cắm xong hoàn thiện ạ! Anh/chị mở link kiểm tra ảnh hoa và thanh toán phần còn lại ${(target.balanceVnd ?? 0).toLocaleString("vi-VN")} đ để cửa hàng tiến hành giao hoa nhé ạ:${url ? ` ${url}` : ""}`
+                        void navigator.clipboard.writeText(msg)
+                      }}
+                      className="rounded-lg border border-border bg-surface px-2.5 py-1 text-caption font-bold text-foreground hover:bg-surface-muted transition-colors"
+                    >
+                      📋 Chép tin nhắc khách
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

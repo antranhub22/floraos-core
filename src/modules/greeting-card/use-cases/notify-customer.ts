@@ -61,6 +61,11 @@ export async function notifyOrderEvent(
 
   const sendCode = order.source_session_id ? await repo.sendCodeOf(organizationId, order.source_session_id) : null
   const base = publicBaseUrl()
+  const paid = Number(order.paid_vnd)
+  const total = Number(order.total_vnd)
+  const isBalanceDue = paid > 0 && paid < total && (event === "READY" || event === "DELIVERED")
+  const isDueEvent = DUE_EVENTS.has(event) || isBalanceDue
+
   const params: NotifyParams = {
     order_code: order.code,
     customer_name: order.customer?.name ?? "Quý khách",
@@ -68,7 +73,7 @@ export async function notifyOrderEvent(
     status: NOTIFY_EVENT_LABELS[event],
     // Mốc đòi tiền báo đúng khoản phải chuyển LẦN NÀY (cọc theo kế hoạch của đơn, hoặc phần còn lại)
     // — trùng số tiền trên mã QR; mốc đã thu báo số đã nhận
-    amount: `${(DUE_EVENTS.has(event) ? dueNowVnd(order) : Number(order.paid_vnd)).toLocaleString("vi-VN")} đ`,
+    amount: `${(isDueEvent ? dueNowVnd(order) : paid).toLocaleString("vi-VN")} đ`,
     tracking_url: base && sendCode ? `${base}/b/${sendCode}` : "",
   }
 
@@ -86,7 +91,7 @@ export async function notifyOrderEvent(
       messageId = result.messageId
     } else {
       const result = await sendEsmsMessage(
-        { creds: creds as EsmsCredentials, phone, content: smsText(event, params), requestId: claim.id },
+        { creds: creds as EsmsCredentials, phone, content: smsText(event, params, { isBalanceDue }), requestId: claim.id },
         fetchImpl
       )
       messageId = result.messageId

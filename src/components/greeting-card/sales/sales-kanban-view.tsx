@@ -215,6 +215,19 @@ function SaleKanbanCard({
             </a>
           </>
         )}
+        {item.paidVnd > 0 && item.balanceVnd > 0 && item.currentStepId === "STEP_7_READY_QC" && (
+          <button
+            type="button"
+            onClick={() => {
+              const url = typeof window !== "undefined" ? `${window.location.origin}/b/${item.sendCode}` : ""
+              const msg = `Dạ chào anh/chị, hoa cho đơn #${item.orderCode || item.sendCode} đã cắm xong hoàn thiện ạ! Anh/chị mở link kiểm tra ảnh hoa và thanh toán phần còn lại ${item.balanceVnd.toLocaleString("vi-VN")} đ để cửa hàng giao nhé:${url ? ` ${url}` : ""}`
+              if (typeof navigator !== "undefined") void navigator.clipboard.writeText(msg)
+            }}
+            className="inline-flex h-8 items-center gap-1 rounded-lg border border-warning/40 bg-warning-bg/40 px-2 text-caption font-bold text-warning-text hover:bg-warning-bg transition-colors"
+          >
+            📋 Nhắc TT lần 2
+          </button>
+        )}
         <button type="button" onClick={() => onOpenNotes(item, item.currentStepId)} className={ACTION}>
           <MessageSquare size={12} className="text-primary" aria-hidden="true" /> Nhắn tin
         </button>

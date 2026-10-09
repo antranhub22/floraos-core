@@ -28,6 +28,10 @@ describe("paymentGateBlocker / cancelBlocker", () => {
     expect(paymentGateBlocker("dispatch-shipping", policy, { totalVnd: 100, paidVnd: 30 })).toMatch(/thu đủ/)
     expect(paymentGateBlocker("recipient-photo", policy, { totalVnd: 100, paidVnd: 0 })).toBeNull()
   })
+  it("Cơ chế 2 (requireFullBeforeDispatch: false): không chặn giao hàng dù mới cọc", () => {
+    const lax = { ...policy, requireFullBeforeDispatch: false }
+    expect(paymentGateBlocker("dispatch-shipping", lax, { totalVnd: 100, paidVnd: 30 })).toBeNull()
+  })
   it("không huỷ đơn đã giao hoặc đã huỷ", () => {
     expect(cancelBlocker({ status: "CONFIRMED", deliveryStatus: "DELIVERED" })).not.toBeNull()
     expect(cancelBlocker({ status: "CANCELLED", deliveryStatus: "PENDING" })).not.toBeNull()

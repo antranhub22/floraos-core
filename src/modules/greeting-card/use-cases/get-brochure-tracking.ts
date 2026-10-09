@@ -123,10 +123,12 @@ export async function getBrochureTracking(
   const slaConfig = parseStepSla(orgSettings)
   const timeline = calculateExpectedStepTimeline(deliveryWindow.date, deliveryWindow.timeSlot, slaConfig)
   const money = { totalVnd: Number(order.total_vnd), paidVnd: Number(order.paid_vnd), pricingRuleRef: order.pricing_rule_ref }
+  const policy = parsePaymentPolicy(orgSettings)
   const payment = orderPaymentSummary(
     { ...money, status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status },
-    parsePaymentPolicy(orgSettings).depositPercent,
+    policy.depositPercent,
     { reported: money.paidVnd === 0 && order.greeting_sessions.some((s) => s.status === "PAYMENT_REPORTED") },
+    { requireFullBeforeDispatch: policy.requireFullBeforeDispatch },
   )
 
   return {

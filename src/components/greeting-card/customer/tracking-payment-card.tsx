@@ -53,14 +53,18 @@ export function TrackingPaymentCard({ payment, sendCode }: { payment: TrackingPa
           <li key={m.seq} className="flex justify-between">
             <span>{m.kind === "DEPOSIT" ? `Đặt cọc ${m.percent}%` : m.kind === "BALANCE" ? `Phần còn lại ${m.percent}%` : "Thanh toán đủ"} · {vnd(m.amountVnd)}</span>
             <span className={m.status === "PAID" ? "font-bold text-success" : "text-text-muted"}>
-              {m.status === "PAID" ? "Đã thanh toán" : m.status === "PARTIALLY_PAID" ? "Đã trả một phần" : m.kind === "BALANCE" ? "Trả sau khi hoa hoàn thành" : "Chờ thanh toán"}
+              {m.status === "PAID" ? "Đã thanh toán" : m.status === "PARTIALLY_PAID" ? "Đã trả một phần" : m.kind === "BALANCE" ? (m.due === "AFTER_DELIVERY" ? "Trả sau khi giao hoa" : "Trả sau khi hoa hoàn thành") : "Chờ thanh toán"}
             </span>
           </li>
         ))}
       </ul>
       {payment.balanceDue && qr && (
         <div className="flex flex-col items-center gap-2 border-t border-border pt-3">
-          <p className="text-body-sm text-foreground text-center">Hoa của bạn đã hoàn thành. Vui lòng thanh toán phần còn lại để cửa hàng giao hoa.</p>
+          <p className="text-body-sm text-foreground text-center">
+            {payment.milestones.some((m) => m.due === "AFTER_DELIVERY")
+              ? "Vui lòng thanh toán phần còn lại qua mã QR bên dưới hoặc cho shipper khi nhận hoa."
+              : "Hoa của bạn đã hoàn thành. Vui lòng thanh toán phần còn lại để cửa hàng tiến hành giao hoa."}
+          </p>
           <div className="p-2 bg-white rounded-xl border border-border">
             <Image src={qr.qrUrl} alt={`Mã QR thanh toán ${vnd(qr.amount)}`} width={176} height={176} unoptimized className="w-44 h-44 object-contain" />
           </div>
@@ -76,7 +80,11 @@ export function TrackingPaymentCard({ payment, sendCode }: { payment: TrackingPa
         </div>
       )}
       {payment.balanceDue && !qr && (
-        <p className="text-body-sm text-foreground border-t border-border pt-2">Hoa đã hoàn thành. Cửa hàng sẽ liên hệ để nhận phần còn lại {vnd(payment.remainingVnd)}.</p>
+        <p className="text-body-sm text-foreground border-t border-border pt-2">
+          {payment.milestones.some((m) => m.due === "AFTER_DELIVERY")
+            ? `Cửa hàng sẽ liên hệ để nhận phần còn lại ${vnd(payment.remainingVnd)} khi giao hoa.`
+            : `Hoa đã hoàn thành. Cửa hàng sẽ liên hệ để nhận phần còn lại ${vnd(payment.remainingVnd)}.`}
+        </p>
       )}
     </section>
   )
