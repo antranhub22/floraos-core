@@ -71,3 +71,6 @@ Claude outputs/
 
 # Kết quả đo chất lượng ảnh biến thể (scripts/cham-bien-the.py) — ảnh sinh ra, không commit
 var/cham-bien-the/
+
+# Dữ liệu thật của khách (bảng giá/biên lợi nhuận) — không commit
+docs/Dongbo_excel_cho ALG/
