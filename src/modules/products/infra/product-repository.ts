@@ -5,6 +5,7 @@ import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 
 import type { DbClient } from "./db-client"
+import { attachMainImageIfMissing, linkMainImage, refreshDriveLinkIfNotDrive } from "./product-main-image"
 
 /** Kết quả trả về từ `listWithPreview` — bản ghi sản phẩm kèm ảnh chính và giá. */
 export type ProductPreviewRow = products & {
@@ -227,6 +228,16 @@ export class ProductRepository {
     })
   }
 
+  /** Bù ảnh chính cho mã đã có (nhập lại kèm ảnh) — không thay ảnh sẵn có. */
+  attachMainImageIfMissing(ctx: TenantContext, code: string, assetId: string): Promise<boolean> {
+    return attachMainImageIfMissing(this.db, ctx, code, assetId)
+  }
+
+  /** Thay link ảnh không phải Drive bằng link Drive mới khi nhập lại (xem `product-main-image.ts`). */
+  refreshDriveLinkIfNotDrive(ctx: TenantContext, code: string, driveLink: unknown): Promise<boolean> {
+    return refreshDriveLinkIfNotDrive(this.db, ctx, code, driveLink)
+  }
+
   async create(ctx: TenantContext, input: CreateProductInput): Promise<products> {
     const product = await this.db.products.create({
       data: scopedData(ctx, {
@@ -242,33 +253,7 @@ export class ProductRepository {
       }),
     })
 
-    if (input.imageAssetId) {
-      // Gán liên kết ảnh chính vào product_images
-      await this.db.product_images.upsert({
-        where: {
-          organization_id_product_id_asset_id_role: {
-            organization_id: ctx.organizationId,
-            product_id: product.id,
-            asset_id: input.imageAssetId,
-            role: "MAIN",
-          },
-        },
-        update: { position: 0 },
-        create: {
-          organization_id: ctx.organizationId,
-          product_id: product.id,
-          asset_id: input.imageAssetId,
-          role: "MAIN",
-          position: 0,
-        },
-      })
-
-      // Cập nhật product_id trên bản ghi asset (nếu chưa có)
-      await this.db.assets.updateMany({
-        where: scopedWhere(ctx, { id: input.imageAssetId }),
-        data: { product_id: product.id },
-      })
-    }
+    if (input.imageAssetId) await linkMainImage(this.db, ctx, product.id, input.imageAssetId)
 
     return product
   }

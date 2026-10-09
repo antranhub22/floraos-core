@@ -22,6 +22,12 @@ export function ImportResultPanel({ result, onBack, onReset }: Props) {
       <div className="mt-2 text-body-sm flex flex-wrap gap-4 font-medium">
         <div>✅ Đã tạo mới: <b>{result.createdCount}</b> sản phẩm</div>
         <div>⏩ Bỏ qua (trùng mã): <b>{result.skippedCount}</b></div>
+        {result.driveLinksUpdatedCount > 0 && (
+          <div>🔗 Cập nhật link ảnh Google Drive: <b>{result.driveLinksUpdatedCount}</b></div>
+        )}
+        {result.imagesAttachedCount > 0 && (
+          <div>🖼️ Bổ sung ảnh cho sản phẩm đã có: <b>{result.imagesAttachedCount}</b></div>
+        )}
         {result.failedCount > 0 && (
           <div className="text-danger">❌ Lỗi: <b>{result.failedCount}</b></div>
         )}

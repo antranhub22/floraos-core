@@ -112,7 +112,7 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 | GET | `/products` | `L1` | Lọc theo `branch_id`, `status`, `category` |
 | POST | `/products` | `L2` | |
 | GET · PATCH | `/products/:id` | `L1` · `L3` | |
-| POST | `/products/batch-import` | `L2` | Nhập đồng loạt tối đa 500 sản phẩm (Excel/thư mục ảnh đã parse); `skip_duplicates` mặc định `true`. Bổ sung vào đặc tả 05/10/2026 |
+| POST | `/products/batch-import` | `L2` | Nhập đồng loạt tối đa 500 sản phẩm (Excel/thư mục ảnh đã parse); `skip_duplicates` mặc định `true`. Mã đã có + kèm `image_asset_id` → chỉ bù ảnh chính nếu sản phẩm chưa có ảnh (không ghi đè dữ liệu/ảnh sẵn có), trả `images_attached_count`; link ảnh đang lưu không phải Google Drive (trống/trang web) được thay bằng link Drive trong file → `drive_links_updated_count` (09/10/2026). Bổ sung vào đặc tả 05/10/2026 |
 | POST | `/products/drive-thumbnails` | `L2` | Body `{ folder_ids: string[] }` (1–50 Drive id) → `{ thumbnails: { [folder_id]: url \| null } }`; màn nhập hàng loạt gom lô thay cho gọi `/public/drive-thumbnail` từng folder (trần 120/phút/IP làm file >120 dòng mất ảnh). 60 lần/phút/người dùng; server phân giải tối đa 6 luồng song song; client thử lại 429/5xx tối đa 4 lần (09/10/2026) |
 | GET | `/products/:id/images` | **CHƯA XÂY** `G1` | |
 | PUT | `/products/:id/images` | **CHƯA XÂY** `G2` | Đặt lại thứ tự và vai trò ảnh |
@@ -817,7 +817,7 @@ Trang công khai ngoài `/api/v1` (06/10/2026): **`/s/<mã>`** — link bộ sư
 | POST | `/public/greeting-catalog/:id/quote` | — | Như trên cho link bộ sưu tập công khai, kèm `productId` |
 | POST | `/public/greeting-catalog/:id/order` | — | Đặt hoa từ link bộ sưu tập công khai · Cùng SĐT + mẫu + người nhận + ngày giao trong 10 phút → trả lại đơn vừa tạo (không tạo trùng); cùng ô bẫy, trần SĐT, chặn hết hàng như link riêng | · Cùng luật ưu đãi, miễn phí giao, trần khung giờ (kiểm trước khi tạo phiên) (08/10/2026)
 | GET | `/public/drive-thumbnail` | — | `?folder_id=` (Drive id `[A-Za-z0-9_-]{10,128}`, sai → 400) → `{ folder_id, file_id, thumbnail_url }` của file đầu tiên trong folder Drive công khai; dùng cho trang khách (màn nhập hàng loạt chuyển sang `POST /products/drive-thumbnails` từ 09/10/2026). 120 lần/phút/IP; cache trong tiến trình có trần (3000 mục, 6 giờ; kết quả rỗng chỉ nhớ 5 phút); gọi Drive timeout 5 giây (07/10/2026) |
-| GET | `/public/drive-thumb-proxy` | — | `?folder_id=` như trên → trả thẳng ảnh thumbnail (trang khách Thẻ chào). Chỉ nhận `content-type: image/*`, tối đa 5 MB, `nosniff`; không có ảnh → 404. 120 lần/phút/IP (07/10/2026) |
+| GET | `/public/drive-thumb-proxy` | — | `?folder_id=` như trên, hoặc `?file_id=` (link tệp `/file/d/<id>`, từ 09/10/2026) → trả thẳng ảnh thumbnail (trang khách Thẻ chào). Chỉ nhận `content-type: image/*`, tối đa 5 MB, `nosniff`; không có ảnh → 404. 120 lần/phút/IP (07/10/2026) |
 | POST | `/public/payments/sepay` | — | Webhook SePay, `Authorization: Apikey <khoá>`; idempotent theo mã giao dịch; tự ghi thu theo mã đơn trong nội dung chuyển khoản |
 
 ## 24. Chưa có ở bản này

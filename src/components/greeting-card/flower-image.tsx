@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import Image from "next/image"
 import { Flower2 } from "lucide-react"
+import { driveThumbProxySrc } from "./drive-thumb-image"
 
 interface FlowerImageProps {
   src: string | null | undefined
@@ -23,11 +24,6 @@ interface FlowerImageProps {
   position?: "relative" | "absolute" | undefined
 }
 
-/** Trích folder_id từ Drive link */
-function getDriveFolderId(link: string): string | null {
-  const m = link.match(/folders\/([a-zA-Z0-9_-]{20,})/)
-  return m?.[1] ?? null
-}
 
 /**
  * Ảnh mẫu hoa dùng chung — hỗ trợ 3 nguồn theo thứ tự ưu tiên:
@@ -54,8 +50,7 @@ export function FlowerImage({
 
   // Xác định nguồn ảnh
   const hasStorage = !!(src && !storageFailed)
-  const folderId = !hasStorage && driveLink && !driveFailed ? getDriveFolderId(driveLink) : null
-  const driveProxySrc = folderId ? `/api/v1/public/drive-thumb-proxy?folder_id=${folderId}` : null
+  const driveProxySrc = !hasStorage && !driveFailed ? driveThumbProxySrc(driveLink) : null
   const hasDrive = !!driveProxySrc
 
   const showPlaceholder = !hasStorage && !hasDrive

@@ -4,11 +4,11 @@ import { AlertTriangle, Check, FileSpreadsheet, Image as ImageIcon, RefreshCw } 
 import { parseDriveLink, type ParsedProductRow } from "./types"
 import type { DriveThumbState } from "./use-drive-thumbs"
 
-export type ImportStats = { total: number; matched: number; driveSynced: number; noImage: number; errors: number }
+export type ImportStats = { total: number; matched: number; driveSynced: number; noImage: number; errors: number; notDriveLinks: number }
 
 export function importStats(rows: ParsedProductRow[]): ImportStats {
   const count = (s: ParsedProductRow["status"]) => rows.filter((r) => r.status === s).length
-  return { total: rows.length, matched: count("MATCHED"), driveSynced: count("DRIVE_SYNC"), noImage: count("NO_IMAGE"), errors: count("ERROR") }
+  return { total: rows.length, matched: count("MATCHED"), driveSynced: count("DRIVE_SYNC"), noImage: count("NO_IMAGE"), errors: count("ERROR"), notDriveLinks: rows.filter((r) => !r.previewUrl && r.driveLink && !parseDriveLink(r.driveLink)).length }
 }
 
 type Props = {
@@ -36,6 +36,11 @@ export function ImportPreview({ rows, stats, isImporting, progressPhase, driveTh
             )}
             {stats.noImage > 0 && (
               <span className="text-warning">🟡 Chưa có ảnh: <b>{stats.noImage}</b></span>
+            )}
+            {stats.notDriveLinks > 0 && (
+              <span className="text-warning" title="Cột ảnh Drive đang chứa link trang web, không lấy được ảnh. Hãy kéo thư mục ảnh vào hoặc thay bằng link thư mục Google Drive.">
+                ⚠️ Link không phải Google Drive: <b>{stats.notDriveLinks}</b>
+              </span>
             )}
             {stats.errors > 0 && (
               <span className="text-danger">🔴 Lỗi dữ liệu: <b>{stats.errors}</b></span>

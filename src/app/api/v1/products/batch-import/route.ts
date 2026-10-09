@@ -46,11 +46,22 @@ export const POST = handle(async (request) => {
   const skippedCodes: string[] = []
   const failedItems: Array<{ code: string; error: string }> = []
   const writtenInRun = new Set<string>()
+  const imagesAttached: string[] = []
+  const driveLinksUpdated: string[] = []
 
   for (const item of items) {
     if (existingCodes.has(item.code) || writtenInRun.has(item.code)) {
       if (skip_duplicates) {
         skippedCodes.push(item.code)
+        // Mã đã có nhưng lần này kèm ảnh → bù ảnh nếu sản phẩm đang thiếu (không ghi đè dữ liệu khác).
+        if (!writtenInRun.has(item.code)) {
+          try {
+            if (item.image_asset_id && (await repo.attachMainImageIfMissing(ctx, item.code, item.image_asset_id))) imagesAttached.push(item.code)
+            if (await repo.refreshDriveLinkIfNotDrive(ctx, item.code, item.attributes?.drive_link)) driveLinksUpdated.push(item.code)
+          } catch (err) {
+            failedItems.push({ code: item.code, error: err instanceof Error ? err.message : "Lỗi gắn ảnh" })
+          }
+        }
         continue
       } else {
         failedItems.push({ code: item.code, error: "Mã sản phẩm đã tồn tại" })
@@ -90,6 +101,8 @@ export const POST = handle(async (request) => {
     total_requested: items.length,
     created_count: createdProducts.length,
     skipped_count: skippedCodes.length,
+    images_attached_count: imagesAttached.length,
+    drive_links_updated_count: driveLinksUpdated.length,
     failed_count: failedItems.length,
     created: createdProducts,
     skipped: skippedCodes,

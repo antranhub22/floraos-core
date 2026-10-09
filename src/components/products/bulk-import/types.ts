@@ -26,6 +26,10 @@ export interface ImportResult {
   success: boolean
   createdCount: number
   skippedCount: number
+  /** Mã đã có, chưa có ảnh — lần này được bù ảnh từ thư mục tải lên. */
+  imagesAttachedCount: number
+  /** Mã đã có, link ảnh cũ không phải Drive — được thay bằng link Drive trong file. */
+  driveLinksUpdatedCount: number
   failedCount: number
   failedItems: Array<{ code: string; error: string }>
 }
