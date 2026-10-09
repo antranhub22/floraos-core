@@ -36,7 +36,27 @@ export interface ImportProgress {
   phase: string
 }
 
+export type DriveRef = { kind: "folder" | "file"; id: string }
+
+/**
+ * Nhận diện link Drive: `.../folders/<id>` (folder) hoặc `/file/d/<id>`, `open?id=`, `uc?id=` (file).
+ * Link lạ → undefined (ô ảnh báo "Link không hợp lệ" thay vì chờ mãi).
+ */
+export function parseDriveLink(link: string | undefined): DriveRef | undefined {
+  if (!link) return undefined
+  const folder = link.match(/\/folders\/([a-zA-Z0-9_-]{10,})/)?.[1]
+  if (folder) return { kind: "folder", id: folder }
+  const file = link.match(/\/file\/d\/([a-zA-Z0-9_-]{10,})/)?.[1] ?? link.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)?.[1]
+  return file ? { kind: "file", id: file } : undefined
+}
+
 /** Folder id trong link Drive dạng `.../folders/<id>`. */
 export function driveFolderId(link: string | undefined): string | undefined {
-  return link?.match(/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
+  const ref = parseDriveLink(link)
+  return ref?.kind === "folder" ? ref.id : undefined
+}
+
+/** Thumbnail trực tiếp của một file Drive công khai (không cần gọi server). */
+export function driveFileThumbnail(fileId: string): string {
+  return `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w400`
 }

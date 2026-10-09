@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest"
-import { BoundedCache, extractFirstFileId, isValidDriveId } from "../google-drive-thumbnail"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { BoundedCache, extractFirstFileId, isValidDriveId, resolveFirstFileIds } from "../google-drive-thumbnail"
 
 describe("google-drive-thumbnail adapter", () => {
   it("chỉ nhận Drive id an toàn — chặn chèn tham số/URL", () => {
@@ -26,5 +26,25 @@ describe("google-drive-thumbnail adapter", () => {
     expect(cache.get("b", 10)).toBeUndefined()
     expect(cache.get("a", 10)).toBe(1)
     expect(cache.get("a", 5000)).toBeUndefined()
+  })
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("phân giải nhiều folder với số luồng có trần; folder khoá → null", async () => {
+    let inFlight = 0
+    let peak = 0
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      inFlight++
+      peak = Math.max(peak, inFlight)
+      await new Promise((r) => setTimeout(r, 1))
+      inFlight--
+      const locked = url.includes("lockedFolder")
+      return new Response(locked ? "<html>sign in</html>" : `<div id="entry-${"f".repeat(30)}"></div>`)
+    }))
+    const ids = [...Array.from({ length: 10 }, (_, i) => `okFolder${i}xxxxxxxxxxxx`), "lockedFolderxxxxxxxxx"]
+    const out = await resolveFirstFileIds(ids, 3)
+    expect(peak).toBeLessThanOrEqual(3)
+    expect(out.get("okFolder0xxxxxxxxxxxx")).toBe("f".repeat(30))
+    expect(out.get("lockedFolderxxxxxxxxx")).toBeNull()
   })
 })

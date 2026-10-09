@@ -1,43 +1,48 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { driveFolderId, type ParsedProductRow } from "./types"
+import { useEffect, useMemo, useState } from "react"
+import { loadDriveThumbs } from "./drive-thumb-loader"
+import { driveFileThumbnail, parseDriveLink, type DriveRef, type ParsedProductRow } from "./types"
 
-const BATCH_SIZE = 20
+export type DriveThumbState = {
+  /** Drive id (folder hoặc file) → URL thumbnail. */
+  thumbs: Map<string, string>
+  /** Drive id đã thử nhưng không lấy được ảnh (folder khoá quyền, trống, lỗi). */
+  missing: Set<string>
+}
 
-/** Phân giải link folder Drive của các dòng thành URL thumbnail (từng cụm 20, bỏ qua lỗi lẻ). */
-export function useDriveThumbs(rows: ParsedProductRow[]): Map<string, string> {
-  const [thumbs, setThumbs] = useState<Map<string, string>>(new Map())
+/** Phân giải link Drive của các dòng thành thumbnail: link file dùng thẳng, link folder gom lô hỏi server. */
+export function useDriveThumbs(rows: ParsedProductRow[]): DriveThumbState {
+  const [folders, setFolders] = useState<DriveThumbState>({ thumbs: new Map(), missing: new Set() })
+
+  const refs = useMemo(
+    () => rows.filter((r) => !r.previewUrl).map((r) => parseDriveLink(r.driveLink)).filter((r): r is DriveRef => r !== undefined),
+    [rows],
+  )
 
   useEffect(() => {
-    const folderIds = [...new Set(rows.filter((r) => !r.previewUrl).map((r) => driveFolderId(r.driveLink)).filter((id): id is string => Boolean(id)))]
+    const folderIds = [...new Set(refs.filter((r) => r.kind === "folder").map((r) => r.id))]
     if (folderIds.length === 0) return
     let alive = true
 
-    void (async () => {
-      for (let i = 0; i < folderIds.length && alive; i += BATCH_SIZE) {
-        const results = await Promise.allSettled(
-          folderIds.slice(i, i + BATCH_SIZE).map(async (folderId) => {
-            const res = await fetch(`/api/v1/public/drive-thumbnail?folder_id=${encodeURIComponent(folderId)}`)
-            const data = res.ok ? ((await res.json()) as { thumbnail_url?: string | null }) : null
-            return data?.thumbnail_url ? ([folderId, data.thumbnail_url] as const) : null
-          }),
-        )
-        const found = results.flatMap((r) => (r.status === "fulfilled" && r.value ? [r.value] : []))
-        if (alive && found.length > 0) {
-          setThumbs((prev) => {
-            const next = new Map(prev)
-            for (const [id, url] of found) next.set(id, url)
-            return next
-          })
-        }
-      }
-    })()
+    void loadDriveThumbs(
+      folderIds,
+      (found, missing) =>
+        setFolders((prev) => ({
+          thumbs: new Map([...prev.thumbs, ...found]),
+          missing: new Set([...prev.missing, ...missing]),
+        })),
+      { isAlive: () => alive },
+    )
 
     return () => {
       alive = false
     }
-  }, [rows])
+  }, [refs])
 
-  return thumbs
+  return useMemo(() => {
+    const thumbs = new Map(folders.thumbs)
+    for (const r of refs) if (r.kind === "file") thumbs.set(r.id, driveFileThumbnail(r.id))
+    return { thumbs, missing: folders.missing }
+  }, [refs, folders])
 }
