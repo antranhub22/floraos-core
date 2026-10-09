@@ -132,6 +132,17 @@ describe("Greeting Card Domain Rules", () => {
       expect(validateCustomerOrderInput({ ...base, mapUrl: "https://maps.app.goo.gl/AbC123" }, NOW).valid).toBe(true)
       expect(validateCustomerOrderInput({ ...base, deliveryNote: "x".repeat(301) }, NOW).errors.deliveryNote).toBeDefined()
     })
+
+    it("chấp nhận email hợp lệ và từ chối email sai định dạng", () => {
+      const base = {
+        customerName: "A", customerPhone: "0901234567", recipientName: "B", recipientPhone: "0912345678",
+        deliveryDate: "2026-10-20", deliveryAddress: "123 Nguyễn Huệ",
+      }
+      expect(validateCustomerOrderInput({ ...base, customerEmail: "invalid-email" }, NOW).errors.customerEmail).toBeDefined()
+      expect(validateCustomerOrderInput({ ...base, customerEmail: "lan@example.com" }, NOW).valid).toBe(true)
+      expect(validateCustomerOrderInput({ ...base, customerEmail: "" }, NOW).valid).toBe(true)
+      expect(validateCustomerOrderInput(base, NOW).valid).toBe(true)
+    })
   })
 
   describe("validateDeliveryDate", () => {

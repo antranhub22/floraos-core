@@ -13,6 +13,7 @@ import { DELIVERY_NOTE_MAX, MAP_URL_MAX } from "../domain/delivery-note"
 export const publicOrderBodySchema = z.object({
   customerName: z.string().max(ORDER_FIELD_MAX.name),
   customerPhone: z.string().max(20),
+  customerEmail: z.string().max(120).optional(),
   recipientName: z.string().max(ORDER_FIELD_MAX.name),
   recipientPhone: z.string().max(20),
   deliveryDate: z.string().max(10),

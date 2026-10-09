@@ -82,6 +82,7 @@ export async function placeBrochureOrder(
     customerPhone,
     customerName: input.customerName.trim(),
     deliveryAddress: input.deliveryAddress.trim(),
+    email: input.customerEmail?.trim() || undefined,
   })
 
   const note = [params.notePrefix, priced.quote.awaitingQuote ? "[Chờ báo giá]" : "", promotionNote(policies.snapshot), input.senderNote?.trim() ?? ""]
@@ -94,6 +95,7 @@ export async function placeBrochureOrder(
       code: generateBrochureOrderCode(),
       customerName: input.customerName.trim(),
       customerPhone,
+      customerEmail: input.customerEmail?.trim() || null,
       recipientName: input.recipientName.trim(),
       recipientPhone: normalizePhone(input.recipientPhone),
       deliveryAddress: input.deliveryAddress.trim(),

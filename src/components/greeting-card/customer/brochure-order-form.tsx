@@ -51,9 +51,9 @@ export function BrochureOrderForm({
 }: BrochureOrderFormProps) {
   const uid = useId()
   const {
-    customerName, customerPhone, recipientName, recipientPhone, deliveryDate, deliveryTimeSlot, addressParts,
+    customerName, customerPhone, customerEmail, recipientName, recipientPhone, deliveryDate, deliveryTimeSlot, addressParts,
     cardMessage, senderNote, deliveryNote, mapUrl,
-    setCustomerName, setCustomerPhone, setRecipientName, setRecipientPhone, setDeliveryDate, setDeliveryTimeSlot, setAddressParts,
+    setCustomerName, setCustomerPhone, setCustomerEmail, setRecipientName, setRecipientPhone, setDeliveryDate, setDeliveryTimeSlot, setAddressParts,
     setNotes, clearDraft,
   } = useOrderDraft()
   const deliveryAddress = composeAddress(addressParts)
@@ -76,7 +76,7 @@ export function BrochureOrderForm({
 
     // Cùng bộ luật với server (SĐT, ngày giao theo giờ VN, độ dài) — báo lỗi ngay, đỡ một vòng mạng.
     const check = validateCustomerOrderInput({
-      customerName, customerPhone, recipientName, recipientPhone,
+      customerName, customerPhone, customerEmail, recipientName, recipientPhone,
       deliveryDate, deliveryTimeSlot, deliveryAddress, cardMessage, senderNote, deliveryNote, mapUrl,
     })
     const scheduleError = !deliveryDate ? null
@@ -110,6 +110,7 @@ export function BrochureOrderForm({
     setReview({
       customerName,
       customerPhone,
+      customerEmail: customerEmail.trim() || undefined,
       recipientName,
       recipientPhone,
       deliveryDate,
@@ -213,19 +214,15 @@ export function BrochureOrderForm({
         )}
 
         {/* Người đặt */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label htmlFor={`${uid}-customerName`} className="block text-body-sm font-bold text-foreground mb-1">
               Họ tên của bạn <span className="text-danger">*</span>
             </label>
             <input
-              type="text"
-              required
-              placeholder="VD: Nguyễn Văn A"
-              value={customerName}
-              maxLength={ORDER_FIELD_MAX.name}
-              id={`${uid}-customerName`} autoComplete="name" onChange={(e) => setCustomerName(e.target.value)}
-              className={INPUT}
+              type="text" required placeholder="VD: Nguyễn Văn A" value={customerName}
+              maxLength={ORDER_FIELD_MAX.name} id={`${uid}-customerName`} autoComplete="name"
+              onChange={(e) => setCustomerName(e.target.value)} className={INPUT}
             />
           </div>
           <div>
@@ -233,13 +230,19 @@ export function BrochureOrderForm({
               Số điện thoại của bạn <span className="text-danger">*</span>
             </label>
             <input
-              type="tel"
-              required
-              placeholder="VD: 0901234567"
-              value={customerPhone}
-              maxLength={15}
-              id={`${uid}-customerPhone`} autoComplete="tel" inputMode="tel" onChange={(e) => setCustomerPhone(e.target.value)}
-              className={INPUT}
+              type="tel" required placeholder="VD: 0901234567" value={customerPhone}
+              maxLength={15} id={`${uid}-customerPhone`} autoComplete="tel" inputMode="tel"
+              onChange={(e) => setCustomerPhone(e.target.value)} className={INPUT}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${uid}-customerEmail`} className="block text-body-sm font-bold text-foreground mb-1">
+              Email <span className="text-caption font-normal text-text-muted">(tùy chọn)</span>
+            </label>
+            <input
+              type="email" placeholder="VD: email@example.com" value={customerEmail}
+              maxLength={100} id={`${uid}-customerEmail`} autoComplete="email"
+              onChange={(e) => setCustomerEmail(e.target.value)} className={INPUT}
             />
           </div>
         </div>

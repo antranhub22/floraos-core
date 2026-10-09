@@ -16,6 +16,7 @@ export interface CreateBrochureOrderData {
   code: string
   customerName: string
   customerPhone: string
+  customerEmail?: string | null | undefined
   recipientName: string
   recipientPhone: string
   deliveryAddress: string
@@ -151,17 +152,22 @@ export class BrochureCheckoutRepository {
     })
   }
 
-  async findOrCreateCustomer(data: Pick<CreateBrochureOrderData, "organizationId" | "customerPhone" | "customerName" | "deliveryAddress">) {
+  async findOrCreateCustomer(data: Pick<CreateBrochureOrderData, "organizationId" | "customerPhone" | "customerName" | "deliveryAddress"> & { email?: string | undefined }) {
     const where = { organization_id: data.organizationId, phone: data.customerPhone }
-    const existing = await this.db.customers.findFirst({ where, select: { id: true } })
-    if (existing) return existing.id
+    const existing = await this.db.customers.findFirst({ where, select: { id: true, email: true } })
+    if (existing) {
+      if (data.email && !existing.email) {
+        await this.db.customers.update({ where: { id: existing.id }, data: { email: data.email } }).catch(() => null)
+      }
+      return existing.id
+    }
 
     const count = await this.db.customers.count({ where: { organization_id: data.organizationId } })
     const candidates = [`KH-${String(count + 1).padStart(4, "0")}`, `KH-${randomCode(6)}`, `KH-${randomCode(8)}`]
     for (const code of candidates) {
       try {
         const created = await this.db.customers.create({
-          data: { ...where, code, name: data.customerName, address: data.deliveryAddress },
+          data: { ...where, code, name: data.customerName, address: data.deliveryAddress, email: data.email || null },
           select: { id: true },
         })
         return created.id
