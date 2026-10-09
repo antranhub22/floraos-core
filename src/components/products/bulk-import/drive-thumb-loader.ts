@@ -8,7 +8,7 @@ export const MAX_ATTEMPTS = 4
 const BASE_BACKOFF_MS = 2_000
 
 export type ThumbBatchResult = { thumbnails: Record<string, string | null> }
-export type FetchBatch = (folderIds: string[]) => Promise<{ status: number; body?: ThumbBatchResult }>
+export type FetchBatch = (folderIds: string[]) => Promise<{ status: number; body?: ThumbBatchResult | undefined }>
 
 export const fetchBatchViaApi: FetchBatch = async (folderIds) => {
   const res = await fetch("/api/v1/products/drive-thumbnails", {
