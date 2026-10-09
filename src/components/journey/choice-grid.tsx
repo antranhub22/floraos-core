@@ -7,6 +7,7 @@ import { useSession } from "@/lib/session"
 import { isJourneyLocked } from "@/lib/feature-lock"
 import { UserMenu } from "@/components/layout/user-menu"
 import { ActionCard } from "./action-card"
+import { FeaturedSpotlightCard } from "./featured-spotlight-card"
 
 interface ChoiceGridProps {
   title: string
@@ -14,6 +15,7 @@ interface ChoiceGridProps {
   journeys: JourneyDefinition[]
   onSelectJourney: (journey: JourneyDefinition) => void
   onSwitchToExpertMode?: () => void
+  featuredJourneyId?: string
 }
 
 export function ChoiceGrid({
@@ -22,12 +24,36 @@ export function ChoiceGrid({
   journeys,
   onSelectJourney,
   onSwitchToExpertMode,
+  featuredJourneyId = "greeting-card-hub",
 }: ChoiceGridProps) {
   const { userInitials } = useSession()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL")
 
+  const featuredJourney = journeys.find((j) => j.id === featuredJourneyId)
+
+  const isFeaturedMatchingSearch =
+    !featuredJourney ||
+    searchQuery.trim() === "" ||
+    featuredJourney.goal.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    featuredJourney.description.toLowerCase().includes(searchQuery.toLowerCase())
+
+  const isFeaturedMatchingCategory =
+    !featuredJourney ||
+    selectedCategory === "ALL" ||
+    (selectedCategory === "SINGLE" && featuredJourney.category === "SINGLE") ||
+    (selectedCategory === "COMBO" && featuredJourney.category === "COMBO") ||
+    (selectedCategory === "AI_SUGGEST" && featuredJourney.category === "AI_SUGGEST")
+
+  const showFeaturedSpotlight = Boolean(
+    featuredJourney && isFeaturedMatchingSearch && isFeaturedMatchingCategory
+  )
+
   const filteredJourneys = journeys.filter((j) => {
+    if (showFeaturedSpotlight && j.id === featuredJourneyId) {
+      return false
+    }
+
     const matchesSearch =
       searchQuery.trim() === "" ||
       j.goal.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -135,6 +161,15 @@ export function ChoiceGrid({
         </div>
       </div>
 
+      {/* Featured Spotlight Card */}
+      {showFeaturedSpotlight && featuredJourney && (
+        <FeaturedSpotlightCard
+          journey={featuredJourney}
+          onSelect={onSelectJourney}
+          disabled={isJourneyLocked(featuredJourney.id)}
+        />
+      )}
+
       {/* Grid Cards */}
       {filteredJourneys.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -147,13 +182,13 @@ export function ChoiceGrid({
             />
           ))}
         </div>
-      ) : (
+      ) : !showFeaturedSpotlight ? (
         <div className="text-center py-12 border border-dashed border-border rounded-xl bg-surface">
           <p className="text-body text-text-muted">
             Không tìm thấy tác vụ phù hợp với từ khóa &ldquo;{searchQuery}&rdquo;.
           </p>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
