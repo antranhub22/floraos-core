@@ -6,11 +6,11 @@ import type { BrochurePaymentRepository } from "../../infra/brochure-payment-rep
 import type { GreetingCardRepository } from "../../infra/greeting-card-repository"
 
 const ctx: TenantContext = {
-  tenantId: "org-1",
   organizationId: "org-1",
+  workspaceId: "ws-1",
   userId: "user-admin",
-  roles: ["ORGANIZATION_ADMIN"],
-  permissions: [],
+  branchId: null,
+  capabilities: new Set(["greeting_card.order.payment.record"]),
 }
 
 function createMockServices(orderOverrides: Record<string, unknown> = {}, shopSettings: Record<string, unknown> = {}) {
@@ -46,9 +46,13 @@ function createMockServices(orderOverrides: Record<string, unknown> = {}, shopSe
 
   const payments = {
     recordIncomingPayment: vi.fn().mockResolvedValue({
-      order: { id: "order-1", total_vnd: 1_000_000, paid_vnd: 500_000, status: "CONFIRMED" },
-      payment: { id: "pay-1", amount_vnd: 500_000 },
-      isFirstDeposit: true,
+      orderId: "order-1",
+      orderCode: "DH001",
+      status: "CONFIRMED",
+      paidVnd: 500_000,
+      balanceVnd: 500_000,
+      kind: "DEPOSIT",
+      paymentId: "pay-1",
     }),
   } as unknown as BrochurePaymentRepository
 
@@ -59,7 +63,7 @@ describe("adminConfirmBrochurePayment — bảo vệ đơn đặt cọc không b
   it("Lần 1: Thu tiền cọc cho đơn cọc 50% khi chưa thanh toán gì → thành công", async () => {
     const { orders, repo, payments } = createMockServices()
     const res = await adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)
-    expect(res.payment.amount_vnd).toBe(500_000)
+    expect(res.paymentId).toBe("pay-1")
     expect(payments.recordIncomingPayment).toHaveBeenCalledWith(
       ctx,
       "order-1",

@@ -76,6 +76,8 @@ export interface PipelineLike {
   saleId: string | null
   /** Lần giao gần nhất không thành công — chờ Điều phối giao lại */
   deliveryFailed?: boolean | undefined
+  sessionStatus?: string | null | undefined
+  customerReportedPaid?: boolean | undefined
 }
 
 const TAB_OF_ROLE: Record<MessageRole, InboxTab> = { ADMIN: "payment", SALE: "sales", COORDINATOR: "coordinator" }
@@ -99,8 +101,19 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
     const hasDeposit = paid > 0 && balance > 0
     const isReady = i.productionStatus === "READY" || i.currentStepId === "STEP_7_READY_QC"
     const isDelivered = i.deliveryStatus === "DELIVERED" || i.currentStepId === "STEP_9_COMPLETED"
+    const isReported = Boolean(i.customerReportedPaid || i.sessionStatus === "PAYMENT_REPORTED")
 
-    if (role === "ADMIN" && i.type === "ORDER" && i.totalVnd <= 0 && i.currentStepId !== "STEP_9_COMPLETED") {
+    if (role === "ADMIN" && i.type === "ORDER" && hasDeposit && isReported) {
+      out.push({
+        ...base,
+        id: `approve-balance-pay:${i.id}`,
+        kind: "CONFIRM_PAYMENT",
+        title: "Khách báo đã chuyển phần còn lại",
+        detail: `${code(i)} · Cần xác nhận số tiền ${balance.toLocaleString("vi-VN")} đ`,
+        tab: "payment",
+        urgency: 1200,
+      })
+    } else if (role === "ADMIN" && i.type === "ORDER" && i.totalVnd <= 0 && i.currentStepId !== "STEP_9_COMPLETED") {
       out.push({ ...base, id: `quote:${i.id}`, kind: "QUOTE", title: "Báo giá mẫu chưa niêm yết", detail: `${code(i)} · ${i.productName}`, tab: "payment", urgency: 500 })
     } else if (role === "ADMIN" && i.currentStepId === "STEP_4_PAYMENT_PENDING") {
       out.push({ ...base, id: `pay:${i.id}`, kind: "CONFIRM_PAYMENT", title: "Đối chiếu và xác nhận tiền", detail: `${code(i)} · khách báo đã chuyển`, tab: "payment", urgency: 400 })

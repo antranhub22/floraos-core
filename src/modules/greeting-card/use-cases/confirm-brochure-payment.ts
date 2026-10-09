@@ -31,7 +31,8 @@ export async function reportCustomerPayment(sendCode: string, repo = new Greetin
       reportedAt: new Date().toISOString(),
     })
   } else if (paid > 0 && owing > 0) {
-    // Đã cọc, nay báo chuyển phần còn lại — ghi lại để Điều hành đối chiếu
+    // Đã cọc, nay báo chuyển phần còn lại — cập nhật phiên sang PAYMENT_REPORTED để Điều hành nhận notification & duyệt
+    await repo.updateSession(session.id, { status: "PAYMENT_REPORTED" })
     await repo.recordJourneyEvent(session.organization_id, session.id, "CLICK_PAID", {
       orderId: session.order_id,
       purpose: "BALANCE",
@@ -45,7 +46,8 @@ export async function reportCustomerPayment(sendCode: string, repo = new Greetin
 /**
  * Điều hành xác nhận đã nhận tiền. Không truyền số tiền → lấy đúng khoản
  * khách được yêu cầu chuyển (cọc theo kế hoạch thanh toán của đơn, hoặc phần còn lại).
- * Đối với đơn đặt cọc, phần còn lại (Lần 2) bị chặn không cho thu sớm nếu chưa đủ điều kiện (PO 10/10/2026).
+ * Đối với đơn đặt cọc, phần còn lại (Lần 2) bị chặn không cho thu sớm nếu chưa đủ điều kiện
+ * VÀ khách chưa báo chuyển tiền (PO 10/10/2026).
  */
 export async function adminConfirmBrochurePayment(
   ctx: TenantContext,
@@ -72,23 +74,28 @@ export async function adminConfirmBrochurePayment(
   const deposit = depositAmountVnd(total, pct)
   const isDepositOrder = pct > 0 && deposit < total
 
-  // Chặn thu lần 2 nếu đơn đặt cọc chưa đến bước được phép thu phần còn lại
+  // Chặn thu lần 2 nếu đơn đặt cọc chưa đến bước được phép thu phần còn lại VÀ khách chưa báo chuyển tiền
   if (isDepositOrder && paid >= deposit && paid < total) {
-    if (policy.requireFullBeforeDispatch) {
-      const isReady = order.production_status === "READY"
-      if (!isReady) {
-        throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Phần còn lại chỉ được thu sau khi xưởng hoàn thành cắm hoa và khách xác nhận ảnh.")
-      }
-      const orderWithQc = order as { qc_records?: Array<{ notes: string | null; created_at: Date }> }
-      const hasPhotoApproved = orderWithQc.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
-      const productPhotoQc = orderWithQc.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-      const isAutoApproved = !!productPhotoQc && Date.now() >= productPhotoQc.created_at.getTime() + 10 * 60_000
-      if (!hasPhotoApproved && !isAutoApproved) {
-        throw conflict("Đơn hàng đang chờ khách duyệt ảnh thành phẩm trước khi giao. Chưa thể ghi nhận thanh toán lần 2.")
-      }
-    } else {
-      if (order.delivery_status !== "DELIVERED") {
-        throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công.")
+    const orderWithSessions = order as { greeting_sessions?: Array<{ status: string }> }
+    const isReported = orderWithSessions.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED")
+
+    if (!isReported) {
+      if (policy.requireFullBeforeDispatch) {
+        const isReady = order.production_status === "READY"
+        if (!isReady) {
+          throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Phần còn lại chỉ được thu sau khi xưởng hoàn thành cắm hoa và khách xác nhận ảnh.")
+        }
+        const orderWithQc = order as { qc_records?: Array<{ notes: string | null; created_at: Date }> }
+        const hasPhotoApproved = orderWithQc.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
+        const productPhotoQc = orderWithQc.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
+        const isAutoApproved = !!productPhotoQc && Date.now() >= productPhotoQc.created_at.getTime() + 10 * 60_000
+        if (!hasPhotoApproved && !isAutoApproved) {
+          throw conflict("Đơn hàng đang chờ khách duyệt ảnh thành phẩm trước khi giao. Chưa thể ghi nhận thanh toán lần 2.")
+        }
+      } else {
+        if (order.delivery_status !== "DELIVERED") {
+          throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công.")
+        }
       }
     }
   }

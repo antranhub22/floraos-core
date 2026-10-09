@@ -70,10 +70,17 @@ export function AdminOrderTable({
             const isAutoApproved = !!productPhotoQc && (Date.now() >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
             const canCollectBalanceBeforeDispatch = isReady && (isPhotoApproved || isAutoApproved)
             const canCollectBalanceAfterDelivery = o.delivery_status === "DELIVERED"
+            const isReportedPaid = balance > 0 && o.status !== "CANCELLED" && o.greeting_sessions[0]?.status === "PAYMENT_REPORTED"
 
             let collectButton: { label: string; className: string } | null = null
             if (!isFullyPaid && balance > 0 && o.status !== "CANCELLED" && !awaitingQuote) {
-              if (!isDepositOrder) {
+              if (isReportedPaid) {
+                // Khách đã bấm chuyển khoản -> Ưu tiên hiện nút Phê duyệt cho Điều hành
+                collectButton = {
+                  label: isDepositPaid ? `Phê duyệt đợt 2 (${vnd(balance)})` : `Phê duyệt cọc (${vnd(depositAmount)})`,
+                  className: "h-8 bg-success hover:bg-success/90 text-white text-caption font-bold gap-1 shadow-sm ring-2 ring-success/40",
+                }
+              } else if (!isDepositOrder) {
                 collectButton = {
                   label: `Thu tiền (${vnd(o.total_vnd)})`,
                   className: "h-8 bg-success hover:bg-success/90 text-white text-caption font-bold gap-1",

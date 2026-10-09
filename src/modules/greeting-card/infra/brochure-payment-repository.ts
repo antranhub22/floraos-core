@@ -53,7 +53,12 @@ export class BrochurePaymentRepository {
 
     const paidAfter = paidBefore + input.amountVnd
     const kind = paidAfter < total ? "DEPOSIT" : "BALANCE"
-    const nextStatus = order.status === "DRAFT" ? "CONFIRMED" : order.status
+    const nextStatus =
+      order.status === "DRAFT"
+        ? "CONFIRMED"
+        : paidAfter >= total && order.delivery_status === "DELIVERED"
+        ? "COMPLETED"
+        : order.status
 
     return this.db.$transaction(async (tx) => {
       const moved = await tx.orders.updateMany({
@@ -89,11 +94,16 @@ export class BrochurePaymentRepository {
         })
       }
       if (order.source_session_id) {
-        // Phiên chỉ "hoàn tất" khi đã thu ĐỦ — đơn mới cọc, khách mở lại link vẫn thấy QR phần còn lại
+        // Phiên chỉ "hoàn tất" khi đã thu ĐỦ — đơn mới cọc, chuyển về ORDER_SUBMITTED để dọn dẹp PAYMENT_REPORTED đợt 1
         if (paidAfter >= total) {
           await tx.greeting_sessions.updateMany({
             where: { id: order.source_session_id, organization_id: ctx.organizationId },
             data: { status: "COMPLETED" },
+          })
+        } else {
+          await tx.greeting_sessions.updateMany({
+            where: { id: order.source_session_id, organization_id: ctx.organizationId },
+            data: { status: "ORDER_SUBMITTED" },
           })
         }
         await tx.greeting_journey_events.create({

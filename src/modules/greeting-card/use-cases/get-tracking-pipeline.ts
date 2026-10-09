@@ -214,6 +214,8 @@ export async function loadTrackingDataset(
             : "Đơn hàng đã huỷ")
         : (currentStepId === "STEP_3_FILLING_FORM" ? "Đã đặt đơn — chờ khách chuyển khoản" : currentStepDef.title),
       orderStatus: order.status,
+      sessionStatus: session?.status || null,
+      customerReportedPaid: session?.status === "PAYMENT_REPORTED",
       productionStatus: order.production_status,
       deliveryStatus: order.delivery_status,
       isCancelled: order.status === "CANCELLED",
@@ -300,6 +302,8 @@ export async function loadTrackingDataset(
         ? (sessionCancelReason ?? "Link đã huỷ / hết hạn")
         : pendingLinkTitle({ status: session.status, copiedAt: facts.copiedAt, kind: facts.kind }),
       isCancelled: isSessionCancelled,
+      sessionStatus: session.status,
+      customerReportedPaid: session.status === "PAYMENT_REPORTED",
       cancelReason: sessionCancelReason,
       stepStartedAt: startedAt,
       stuck: notSent ? null : stuckOf({ currentStepId, stepStartedAt: startedAt }, sla, now),

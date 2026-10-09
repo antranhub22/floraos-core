@@ -48,24 +48,27 @@ export function AdminOrderActionDialog({
   const isAutoApproved = !!productPhotoQc && (Date.now() >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
   const canCollectBeforeDispatch = isReady && (isPhotoApproved || isAutoApproved)
   const canCollectAfterDelivery = order.delivery_status === "DELIVERED"
+  const isReported = order.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED")
 
   let isBlocked = false
   let blockReason: string | null = null
 
   if (type === "collect" && isDepositOrder && isDepositPaid) {
-    if (requireFull) {
-      if (!canCollectBeforeDispatch) {
-        isBlocked = true
-        if (!isReady) {
-          blockReason = "Đơn hàng đã được ghi nhận tiền cọc (Đợt 1). Xưởng chưa hoàn thành cắm hoa, chưa thể thu phần còn lại."
-        } else {
-          blockReason = "Đơn hàng đang chờ khách xác nhận ảnh hoa thành phẩm (hoặc đếm ngược 10 phút). Khách xác nhận ảnh xong mới tiến hành thu tiền Đợt 2 trước khi giao hoa."
+    if (!isReported) {
+      if (requireFull) {
+        if (!canCollectBeforeDispatch) {
+          isBlocked = true
+          if (!isReady) {
+            blockReason = "Đơn hàng đã được ghi nhận tiền cọc (Đợt 1). Xưởng chưa hoàn thành cắm hoa, chưa thể thu phần còn lại."
+          } else {
+            blockReason = "Đơn hàng đang chờ khách xác nhận ảnh hoa thành phẩm (hoặc đếm ngược 10 phút). Khách xác nhận ảnh xong mới tiến hành thu tiền Đợt 2 trước khi giao hoa."
+          }
         }
-      }
-    } else {
-      if (!canCollectAfterDelivery) {
-        isBlocked = true
-        blockReason = "Đơn hàng đã được ghi nhận tiền cọc (Đợt 1). Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công."
+      } else {
+        if (!canCollectAfterDelivery) {
+          isBlocked = true
+          blockReason = "Đơn hàng đã được ghi nhận tiền cọc (Đợt 1). Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công."
+        }
       }
     }
   }
@@ -89,7 +92,15 @@ export function AdminOrderActionDialog({
   let submitButtonLabel: string = TITLES[type]
 
   if (type === "collect") {
-    if (isDepositOrder && !isDepositPaid) {
+    if (isReported) {
+      dialogTitle = isDepositPaid
+        ? `Phê duyệt thanh toán phần còn lại (Đợt 2)`
+        : `Phê duyệt tiền cọc (Đợt 1 — ${pct}%)`
+      amountLabel = isDepositPaid ? "Số tiền còn lại đã nhận (đ)" : "Số tiền cọc đã nhận (đ)"
+      submitButtonLabel = isDepositPaid
+        ? `Phê duyệt đã nhận (${vnd(suggested)})`
+        : `Phê duyệt nhận cọc (${vnd(suggested)})`
+    } else if (isDepositOrder && !isDepositPaid) {
       dialogTitle = `Thu tiền cọc (Đợt 1 — ${pct}%)`
       amountLabel = `Số tiền cọc đã nhận (đ)`
       submitButtonLabel = `Xác nhận nhận cọc (${vnd(suggested)})`
@@ -151,6 +162,18 @@ export function AdminOrderActionDialog({
         <p className="text-body-sm text-text-muted">
           Tổng đơn {vnd(order.total_vnd)} · Đã thu {vnd(order.paid_vnd)} · Còn {vnd(Math.max(0, order.total_vnd - order.paid_vnd))}
         </p>
+
+        {type === "collect" && isReported && (
+          <div role="status" className="p-3.5 rounded-xl bg-success-bg border border-success/30 text-success text-body-sm flex items-start gap-2.5">
+            <Info size={18} className="shrink-0 mt-0.5 text-success" aria-hidden="true" />
+            <div className="flex flex-col gap-0.5">
+              <span className="font-bold text-caption text-success">Khách đã bấm báo chuyển khoản</span>
+              <p className="text-body-sm text-foreground/80 leading-relaxed">
+                Khách hàng đã xác nhận chuyển {isDepositPaid ? "phần còn lại" : "tiền cọc"} {vnd(suggested)}. Vui lòng đối soát tài khoản ngân hàng và bấm phê duyệt.
+              </p>
+            </div>
+          </div>
+        )}
 
         {isBlocked && blockReason && (
           <div role="alert" className="p-3.5 rounded-xl bg-warning-bg border border-warning/40 text-warning text-body-sm flex items-start gap-2.5">

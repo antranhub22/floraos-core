@@ -134,6 +134,10 @@ export interface TrackingPipelineItem {
   currentStepTitle: string
   /** Trạng thái đơn hàng (DRAFT | CONFIRMED | CANCELLED | COMPLETED) */
   orderStatus?: string | null | undefined
+  /** Trạng thái phiên Thẻ chào (ORDER_SUBMITTED | PAYMENT_REPORTED | COMPLETED...) */
+  sessionStatus?: string | null | undefined
+  /** Khách đã bấm Tôi đã chuyển khoản — đang chờ xác nhận */
+  customerReportedPaid?: boolean | undefined
   /** Trạng thái sản xuất (WAITING | ASSIGNED | ARRANGING | QUALITY_CHECK | READY) */
   productionStatus?: string | null | undefined
   /** Trạng thái giao hàng (PENDING | DISPATCHED | DELIVERING | DELIVERED | FAILED) */
