@@ -9,11 +9,12 @@ import { SkeletonBlock } from "@/components/ui/skeleton"
 import { CreateCustomerModal } from "@/components/crm/create-customer-modal"
 import { CustomerDetailModal } from "@/components/crm/customer-detail-modal"
 import { OccasionCarePanel } from "@/components/crm/occasion-care-panel"
+import { ExportCustomersButton } from "@/components/crm/export-customers-button"
 import { useSession } from "@/lib/session"
 import type { CustomerMasterIndex, OccasionReminder } from "@/modules/crm/domain/customer-master-index"
 
 export default function CRMPage() {
-  const { orgName } = useSession()
+  const { orgName, can } = useSession()
   const [customers, setCustomers] = useState<CustomerMasterIndex[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -86,6 +87,9 @@ export default function CRMPage() {
 
         {/* Top-Right Action Header */}
         <div className="flex items-center gap-2">
+          {(can("Q1") || can("Q5")) && (
+            <ExportCustomersButton tier={tierFilter} search={search} />
+          )}
           <Button
             size="sm"
             onClick={() => setIsCreateOpen(true)}

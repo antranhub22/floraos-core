@@ -20,6 +20,7 @@ import { InboxButton } from "@/components/greeting-card/inbox/inbox-button"
 import { BrochureUserGuideModal } from "@/components/greeting-card/brochure-user-guide-modal"
 import { ShopProfileReadiness } from "@/components/greeting-card/shop-profile-readiness"
 import { defaultTheChaoView } from "@/components/greeting-card/default-view"
+import { ExportOrdersButton } from "@/components/orders/export-orders-button"
 import type { InboxTarget } from "@/components/greeting-card/inbox/inbox-panel"
 
 type ActiveTab = "sales" | "payment" | "catalog" | "coordinator" | "tracking"
@@ -148,6 +149,14 @@ export default function TheChaoPage() {
           >
             <RefreshCw size={16} aria-hidden="true" />
           </button>
+          {(can("R11") || can("R1")) && (
+            <ExportOrdersButton
+              apiPath="/api/v1/orders/export"
+              extraParams={{ source: "BROCHURE" }}
+              filename="the-chao-don-hang.xlsx"
+              label="Xuất Excel"
+            />
+          )}
         </div>
       </header>
 
