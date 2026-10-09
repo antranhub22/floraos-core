@@ -6,8 +6,10 @@
 
 const DRIVE_ID = /^[A-Za-z0-9_-]{10,128}$/
 const FILE_ENTRY = /entry-([A-Za-z0-9_-]{25,128})/g
-const CACHE_MAX = 500
+const CACHE_MAX = 3000
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000
+/** Kết quả rỗng (folder khoá/lỗi mạng) chỉ nhớ ngắn — mở quyền xong là thấy ảnh sớm. */
+const MISS_TTL_MS = 5 * 60 * 1000
 const FETCH_TIMEOUT_MS = 5_000
 export const MAX_THUMB_BYTES = 5 * 1024 * 1024
 const UA = "Mozilla/5.0 (compatible; FloraOS/1.0)"
@@ -54,12 +56,14 @@ export class BoundedCache<V> {
   }
 }
 
-const fileIdCache = new BoundedCache<string | null>()
+const fileIdCache = new BoundedCache<string>()
+const missCache = new BoundedCache<true>(CACHE_MAX, MISS_TTL_MS)
 
 export async function resolveFirstFileId(folderId: string): Promise<string | null> {
   if (!isValidDriveId(folderId)) return null
   const cached = fileIdCache.get(folderId)
   if (cached !== undefined) return cached
+  if (missCache.get(folderId)) return null
   let fileId: string | null = null
   try {
     const resp = await fetch(`https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}`, {
@@ -70,8 +74,23 @@ export async function resolveFirstFileId(folderId: string): Promise<string | nul
   } catch {
     fileId = null
   }
-  fileIdCache.set(folderId, fileId)
+  if (fileId) fileIdCache.set(folderId, fileId)
+  else missCache.set(folderId, true)
   return fileId
+}
+
+/** Phân giải nhiều folder với số luồng có trần — không dội Google bằng cả trăm request cùng lúc. */
+export async function resolveFirstFileIds(folderIds: string[], concurrency = 6): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>()
+  let next = 0
+  const worker = async () => {
+    while (next < folderIds.length) {
+      const id = folderIds[next++] as string
+      out.set(id, await resolveFirstFileId(id))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, folderIds.length) }, worker))
+  return out
 }
 
 export function thumbnailUrl(fileId: string): string {

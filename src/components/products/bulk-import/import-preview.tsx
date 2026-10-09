@@ -1,7 +1,8 @@
 "use client"
 
 import { AlertTriangle, Check, FileSpreadsheet, Image as ImageIcon, RefreshCw } from "lucide-react"
-import { driveFolderId, type ParsedProductRow } from "./types"
+import { parseDriveLink, type ParsedProductRow } from "./types"
+import type { DriveThumbState } from "./use-drive-thumbs"
 
 export type ImportStats = { total: number; matched: number; driveSynced: number; noImage: number; errors: number }
 
@@ -15,7 +16,7 @@ type Props = {
   stats: ImportStats
   isImporting: boolean
   progressPhase: string
-  driveThumbs: Map<string, string>
+  driveThumbs: DriveThumbState
 }
 
 /** Thanh tổng hợp đối chiếu + bảng xem trước từng dòng (hoặc trạng thái trống). */
@@ -82,8 +83,9 @@ export function ImportPreview({ rows, stats, isImporting, progressPhase, driveTh
                           />
                         </div>
                       ) : row.driveLink ? (() => {
-                        const folderId = driveFolderId(row.driveLink)
-                        const thumbUrl = folderId ? driveThumbs.get(folderId) : undefined
+                        const driveId = parseDriveLink(row.driveLink)?.id
+                        const thumbUrl = driveId ? driveThumbs.thumbs.get(driveId) : undefined
+                        const unavailable = !driveId || driveThumbs.missing.has(driveId)
 
                         if (thumbUrl) {
                           return (
@@ -112,10 +114,14 @@ export function ImportPreview({ rows, stats, isImporting, progressPhase, driveTh
                             href={row.driveLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex h-12 w-12 flex-col items-center justify-center rounded-lg border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
-                            title="Đang tải ảnh Google Drive (Nhấp để mở thư mục gốc)"
+                            className={unavailable
+                              ? "flex h-12 w-12 flex-col items-center justify-center rounded-lg border border-warning/40 bg-warning/5 text-warning hover:bg-warning/10 transition-colors"
+                              : "flex h-12 w-12 flex-col items-center justify-center rounded-lg border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"}
+                            title={unavailable
+                              ? "Không xem được ảnh: link Drive không đúng dạng thư mục/tệp, thư mục trống hoặc chưa chia sẻ công khai (Nhấp để mở)"
+                              : "Đang tải ảnh Google Drive (Nhấp để mở thư mục gốc)"}
                           >
-                            <ImageIcon size={16} className="animate-pulse" />
+                            <ImageIcon size={16} className={unavailable ? undefined : "animate-pulse"} />
                             <span className="text-caption font-semibold">Drive ↗</span>
                           </a>
                         )
