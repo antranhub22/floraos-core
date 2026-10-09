@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { RefreshCw, Settings, ShieldCheck } from "lucide-react"
+import { RefreshCw, Settings, ShieldCheck, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi, usePagedList } from "@/components/greeting-card/greeting-api"
 import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
@@ -19,9 +19,9 @@ export function AdminBrochurePaymentTab() {
   const [notice, setNotice] = useState<ActionResult | null>(null)
   const [search, setSearch] = useState("")
   const [settingsOpen, setSettingsOpen] = useState(false)
-  // Tìm theo mã đơn / mã link / SĐT khách bỏ qua bộ lọc — để đối chiếu nội dung chuyển khoản trên sao kê
+  // Tìm theo tên khách / mã đơn / mã link / SĐT khách bỏ qua bộ lọc — để đối chiếu nhanh
   const term = search.trim()
-  const query = term.length >= 3 ? `q=${encodeURIComponent(term)}` : ORDER_FILTERS.find((f) => f.id === filter)?.query ?? ""
+  const query = term.length >= 1 ? `q=${encodeURIComponent(term)}` : ORDER_FILTERS.find((f) => f.id === filter)?.query ?? ""
   const orders = usePagedList<AdminOrder>(`/api/v1/greeting-card/orders${query ? `?${query}` : ""}`)
   const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
   const policy = parsePaymentPolicy(org.data?.settings)
@@ -75,14 +75,27 @@ export function AdminBrochurePaymentTab() {
               {f.label}
             </button>
           ))}
-          <input
-            type="search"
-            aria-label="Tìm đơn theo mã hoặc số điện thoại"
-            placeholder="Tìm mã đơn / SĐT khách…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="ml-auto h-8 w-full sm:w-56 rounded-lg border border-border bg-surface px-3 text-caption text-foreground"
-          />
+          <div className="relative ml-auto w-full sm:w-64">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden="true" />
+            <input
+              type="search"
+              aria-label="Tìm kiếm đơn hàng theo tên khách, mã đơn, số điện thoại"
+              placeholder="Tìm tên khách, mã đơn, SĐT…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 w-full rounded-lg border border-border bg-surface pl-8 pr-7 text-caption text-foreground placeholder:text-text-muted focus:border-primary focus:outline-hidden"
+            />
+            {search && (
+              <button
+                type="button"
+                aria-label="Xoá tìm kiếm"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-foreground"
+              >
+                <X size={12} aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
         {orders.error ? (
           <p role="alert" className="p-4 text-body-sm text-danger">{orders.error.message}</p>

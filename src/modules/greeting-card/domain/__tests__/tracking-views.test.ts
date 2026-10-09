@@ -44,6 +44,21 @@ describe("các view trên cùng tập", () => {
     expect(p).toMatchObject({ next_cursor: "2", total: 3 })
     expect(paginate(items, 2, p.next_cursor!).data).toHaveLength(1)
   })
+  it("tìm kiếm theo tên khách, mã đơn (có/không #), mã link, SĐT (dạng thô/số)", () => {
+    const list = [
+      item({ id: "1", orderCode: "DH-88", customerName: "Nguyễn Thu Hà", customerPhone: "0912.345.678" }),
+      item({ id: "2", orderCode: "DH-99", sendCode: "T02-XYZ", customerName: "Trần Minh", customerPhone: "0988000111", recipientName: "Lê Thu", recipientPhone: "0933444555" }),
+    ]
+    expect(filterAndSort(list, { q: "Thu Hà" }, { field: "urgency", dir: "desc" }).map((i) => i.id)).toEqual(["1"])
+    expect(filterAndSort(list, { q: "#DH-88" }, { field: "urgency", dir: "desc" }).map((i) => i.id)).toEqual(["1"])
+    expect(filterAndSort(list, { q: "dh-88" }, { field: "urgency", dir: "desc" }).map((i) => i.id)).toEqual(["1"])
+    expect(filterAndSort(list, { q: "T02-XYZ" }, { field: "urgency", dir: "desc" }).map((i) => i.id)).toEqual(["2"])
+    expect(filterAndSort(list, { q: "0912345678" }, { field: "urgency", dir: "desc" }).map((i) => i.id)).toEqual(["1"])
+    expect(filterAndSort(list, { q: "345678" }, { field: "urgency", dir: "desc" }).map((i) => i.id)).toEqual(["1"])
+    expect(filterAndSort(list, { q: "Lê Thu" }, { field: "urgency", dir: "desc" }).map((i) => i.id)).toEqual(["2"])
+    expect(filterAndSort(list, { q: "0933444555" }, { field: "urgency", dir: "desc" }).map((i) => i.id)).toEqual(["2"])
+    expect(filterAndSort(list, { q: "không_tồn_tại" }, { field: "urgency", dir: "desc" })).toHaveLength(0)
+  })
   it("Kanban đủ 9 cột, đếm đúng; Lịch theo ngày + khung giờ; Dashboard tổng hợp", () => {
     const cols = kanbanColumns(items, 1)
     expect(cols).toHaveLength(9)

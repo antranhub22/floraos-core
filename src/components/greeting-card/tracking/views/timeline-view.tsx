@@ -12,9 +12,10 @@ import type { TrackingViewState } from "./tracking-view-state"
 const when = (s: string) => new Date(s).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
 
 /** Dòng thời gian: chọn một đơn/link ở danh sách → từng bước đã qua so với thời gian chuẩn + mọi sự kiện. */
-export function TimelineView({ qs, state, onChange, selected, onSelect, onMessage }: {
+export function TimelineView({ qs, state, onChange, selected, onSelect, onMessage, onDetail }: {
   qs: string; state: TrackingViewState; onChange: (p: Partial<TrackingViewState>) => void
   selected: TrackingViewItem | null; onSelect: (i: TrackingViewItem | null) => void; onMessage: (i: TrackingViewItem) => void
+  onDetail?: (i: TrackingViewItem) => void
 }) {
   if (!selected) {
     return (
@@ -25,10 +26,10 @@ export function TimelineView({ qs, state, onChange, selected, onSelect, onMessag
     )
   }
   const ref = selected.orderId ? `orderId=${selected.orderId}` : `sessionId=${selected.sessionId}`
-  return <TimelineDetail refQs={ref} item={selected} onBack={() => onSelect(null)} onMessage={() => onMessage(selected)} />
+  return <TimelineDetail refQs={ref} item={selected} onBack={() => onSelect(null)} onMessage={() => onMessage(selected)} onDetail={onDetail ? () => onDetail(selected) : undefined} />
 }
 
-function TimelineDetail({ refQs, item, onBack, onMessage }: { refQs: string; item: TrackingViewItem; onBack: () => void; onMessage: () => void }) {
+function TimelineDetail({ refQs, item, onBack, onMessage, onDetail }: { refQs: string; item: TrackingViewItem; onBack: () => void; onMessage: () => void; onDetail?: (() => void) | undefined }) {
   const url = `/api/v1/greeting-card/tracking/timeline?${refQs}`
   const head = useApi<{ segments: StepSegment[] }>(`${url}&limit=1`)
   const events = usePagedList<TimelineEvent>(url, 50)
@@ -37,7 +38,16 @@ function TimelineDetail({ refQs, item, onBack, onMessage }: { refQs: string; ite
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button type="button" onClick={onBack} className="min-h-11 text-body-sm font-semibold text-primary">← Chọn đơn khác</button>
-        <button type="button" onClick={onMessage} className="min-h-11 rounded-xl border border-border px-3 text-body-sm font-semibold">Ghi chú / nhắn</button>
+        <div className="flex items-center gap-2">
+          {onDetail && (
+            <button type="button" onClick={onDetail} className="min-h-11 rounded-xl border border-border bg-surface px-3 text-body-sm font-semibold text-foreground hover:bg-surface-muted">
+              Xem chi tiết đơn
+            </button>
+          )}
+          <button type="button" onClick={onMessage} className="min-h-11 rounded-xl border border-border bg-surface px-3 text-body-sm font-semibold text-foreground hover:bg-surface-muted">
+            Ghi chú / nhắn
+          </button>
+        </div>
       </div>
       <div>
         <h3 className="text-body font-extrabold text-foreground">{item.customerName} · {codeOf(item)}</h3>

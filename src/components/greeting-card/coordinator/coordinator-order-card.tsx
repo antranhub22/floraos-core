@@ -36,6 +36,7 @@ export interface BrochureOrder {
     send_code: string
     product_snapshot?: { name?: string; imageUrl?: string }
   }>
+  customer?: { id?: string; code?: string; name?: string; phone?: string } | null
   /** Bản chụp báo giá + ưu đãi khách chọn (`policies.promotion`) lúc đặt. */
   pricing_rule_ref?: { policies?: { promotion?: { title?: string } | null } | null } | null
   created_at: string
