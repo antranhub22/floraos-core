@@ -141,6 +141,7 @@ export class BrochureOrderRepository {
         items: true,
         payments: true,
         greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true } },
+        qc_records: { select: { notes: true, created_at: true } },
       },
       orderBy: [{ created_at: "desc" }, { id: "desc" }],
       take: options.limit + 1, // dư 1 dòng để biết còn trang sau
@@ -159,6 +160,9 @@ export class BrochureOrderRepository {
   async findBrochureOrder(ctx: TenantContext, orderId: string) {
     return this.db.orders.findFirst({
       where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
+      include: {
+        qc_records: { select: { notes: true, created_at: true } },
+      },
     })
   }
 

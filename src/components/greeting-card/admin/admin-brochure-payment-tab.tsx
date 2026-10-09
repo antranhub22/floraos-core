@@ -110,7 +110,7 @@ export function AdminBrochurePaymentTab() {
           <p className="p-8 text-center text-body-sm text-text-muted">Không có đơn nào trong mục này.</p>
         ) : (
           <>
-            <AdminOrderTable orders={orders.items} onAction={setAction} shopDepositPercent={policy.depositPercent} />
+            <AdminOrderTable orders={orders.items} onAction={setAction} shopDepositPercent={policy.depositPercent} policy={policy} />
             {orders.hasMore && (
               <div className="p-3 border-t border-border flex justify-center">
                 <Button type="button" variant="outline" size="sm" disabled={orders.isLoadingMore} onClick={() => void orders.loadMore()}>
