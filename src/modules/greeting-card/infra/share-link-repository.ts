@@ -29,7 +29,10 @@ export class ShareLinkRepository {
   async findActive(code: string) {
     return this.db.greeting_share_links.findFirst({
       where: { code, revoked_at: null, catalog: { is_active: true } },
-      select: { id: true, organization_id: true, catalog_id: true, owner_id: true, channel: true, code: true },
+      select: {
+        id: true, organization_id: true, catalog_id: true, owner_id: true, channel: true, code: true,
+        catalog: { select: { filters: true } },
+      },
     })
   }
 

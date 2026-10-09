@@ -4,6 +4,7 @@ import { conflict, notFound } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { normalizePhone, randomCode } from "../domain/greeting-card-rules"
 import { linkExpiryFrom, parseLinkLifetimeHours } from "../domain/link-lifetime"
+import { resolveEffectiveStepTimeoutPolicy } from "../domain/step-timeout-policy"
 
 export interface CreateSendLinkInput {
   catalogId?: string | undefined
@@ -55,8 +56,15 @@ export async function createSendLink(
     targetCatalogId = catalogs[0].id
   }
 
-  // Hạn dùng do Điều hành cài cho cả tiệm (mặc định 24 giờ) — sale không tự chọn
-  const shop = await repo.getShopProfile(ctx.organizationId)
+  // Hạn dùng: Thẻ Chào ghi đè > Cài đặt Hồ sơ tiệm > Mặc định hệ thống
+  const [shop, catalogFilters] = await Promise.all([
+    repo.getShopProfile(ctx.organizationId),
+    repo.getCatalogFilters(ctx, targetCatalogId),
+  ])
+  const effectivePolicy = resolveEffectiveStepTimeoutPolicy(shop.settings, catalogFilters)
+  const expiryHours = effectivePolicy.autoCancelUnopened
+    ? effectivePolicy.unopenedExpiryHours
+    : parseLinkLifetimeHours(shop.settings)
   const phone = input.customerPhone ? normalizePhone(input.customerPhone) : null
   const session = await repo.createSession(ctx, {
     catalogId: targetCatalogId,
@@ -64,7 +72,7 @@ export async function createSendLink(
     saleId: ctx.userId,
     customerName: input.customerName?.trim() || null,
     customerPhone: phone || null,
-    expiresAt: linkExpiryFrom(parseLinkLifetimeHours(shop.settings)),
+    expiresAt: linkExpiryFrom(expiryHours),
   })
 
   return {

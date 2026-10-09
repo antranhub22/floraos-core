@@ -12,7 +12,7 @@ export type InboxTab = "payment" | "sales" | "coordinator" | "tracking"
 
 export interface InboxAction {
   id: string
-  kind: "STUCK" | "CONFIRM_PAYMENT" | "QUOTE" | "ASSIGN" | "UNMATCHED_PAYMENTS" | "DISCOUNT" | "CHANGE_REQUEST" | "REDELIVER"
+  kind: "STUCK" | "CONFIRM_PAYMENT" | "QUOTE" | "ASSIGN" | "UNMATCHED_PAYMENTS" | "DISCOUNT" | "CHANGE_REQUEST" | "REDELIVER" | "CANCELLATION_REQUEST"
   title: string
   detail: string
   orderId: string | null

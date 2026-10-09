@@ -20,7 +20,7 @@ export function startBackgroundSweep(): void {
     running = true
     runBackgroundSweep()
       .then((r) => {
-        if (r.staleFailed + r.retried + r.reminded + r.cancelled > 0) log.info("greeting_card.sweep", { feature: "greeting-card", ...r })
+        if (r.staleFailed + r.retried + r.reminded + r.cancelled + (r.sessionsExpired || 0) > 0) log.info("greeting_card.sweep", { feature: "greeting-card", ...r })
       })
       .catch((error: unknown) => {
         log.error("greeting_card.sweep_failed", { feature: "greeting-card", message: error instanceof Error ? error.message : String(error) })

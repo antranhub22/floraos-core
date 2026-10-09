@@ -2,6 +2,7 @@ import { conflict, notFound } from "@/core/http/errors"
 import { SOLD_OUT_MESSAGE } from "../domain/product-availability"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { linkAvailability, validateSendCode } from "../domain/greeting-card-rules"
+import { resolveEffectiveStepTimeoutPolicy, isSessionBrowsingExpired } from "../domain/step-timeout-policy"
 import type { GreetingCatalogProduct } from "../domain/greeting-card-types"
 import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mapper"
 
@@ -24,6 +25,15 @@ export async function loadPublicSession(sendCode: string, repo: GreetingCardRepo
     hasOrder: session.order_id !== null,
   })
   if (availability !== "ACTIVE") throw notFound()
+
+  // JIT Evaluation: Kiểm tra quá hạn chọn mẫu (browsing timeout) khi khách chưa có đơn
+  if (!session.order_id && session.opened_at) {
+    const policy = resolveEffectiveStepTimeoutPolicy(session.organization?.settings, session.catalog?.filters)
+    if (isSessionBrowsingExpired({ openedAt: session.opened_at, status: session.status, lastActiveAt: session.last_active_at }, policy)) {
+      throw notFound()
+    }
+  }
+
   return session
 }
 

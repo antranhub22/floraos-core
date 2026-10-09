@@ -178,7 +178,20 @@ export async function loadTrackingDataset(
       balanceVnd: Number(order.balance_vnd || 0),
       currentStepId,
       // Đơn đã gửi mà chưa chuyển khoản vẫn ở bước 3 — gọi đúng tên việc đang chờ
-      currentStepTitle: currentStepId === "STEP_3_FILLING_FORM" ? "Đã đặt đơn — chờ khách chuyển khoản" : currentStepDef.title,
+      currentStepTitle: order.status === "CANCELLED"
+        ? (((order.pricing_rule_ref as { paymentFailed?: { reason?: string } } | null)?.paymentFailed?.reason === "PAYMENT_TIMEOUT")
+            ? "Tự huỷ: Hết hạn thanh toán cọc"
+            : "Đơn hàng đã huỷ")
+        : (currentStepId === "STEP_3_FILLING_FORM" ? "Đã đặt đơn — chờ khách chuyển khoản" : currentStepDef.title),
+      orderStatus: order.status,
+      productionStatus: order.production_status,
+      deliveryStatus: order.delivery_status,
+      isCancelled: order.status === "CANCELLED",
+      cancelReason: order.status === "CANCELLED"
+        ? (((order.pricing_rule_ref as { paymentFailed?: { reason?: string } } | null)?.paymentFailed?.reason === "PAYMENT_TIMEOUT")
+            ? "Tự huỷ: Hết hạn thanh toán cọc"
+            : "Đơn hàng đã huỷ")
+        : null,
       stepStartedAt: orderStepStartedAt(order),
       stuck: stuckOf({ currentStepId, stepStartedAt: orderStepStartedAt(order) }, sla, now),
       saleId: ownerOf(session?.sale_id) ?? null,
@@ -221,6 +234,13 @@ export async function loadTrackingDataset(
       }
     })
 
+    const isSessionCancelled = session.revoked_at !== null || (session.expires_at !== null && session.expires_at <= now)
+    const sessionCancelReason = isSessionCancelled
+      ? (session.revoked_at !== null
+          ? (session.opened_at === null ? "Tự huỷ: Quá hạn mở link" : "Tự huỷ: Quá hạn chọn mẫu")
+          : (session.opened_at === null ? "Hết hạn mở link" : "Hết hạn chọn mẫu"))
+      : null
+
     return {
       id: `session-${session.id}`,
       type: "SESSION",
@@ -244,7 +264,11 @@ export async function loadTrackingDataset(
       paidVnd: 0,
       balanceVnd: Number(snapshot?.price || 0),
       currentStepId,
-      currentStepTitle: pendingLinkTitle({ status: session.status, copiedAt: facts.copiedAt, kind: facts.kind }),
+      currentStepTitle: isSessionCancelled
+        ? (sessionCancelReason ?? "Link đã huỷ / hết hạn")
+        : pendingLinkTitle({ status: session.status, copiedAt: facts.copiedAt, kind: facts.kind }),
+      isCancelled: isSessionCancelled,
+      cancelReason: sessionCancelReason,
       stepStartedAt: startedAt,
       stuck: notSent ? null : stuckOf({ currentStepId, stepStartedAt: startedAt }, sla, now),
       saleId: ownerOf(session.sale_id) ?? null,

@@ -10,6 +10,7 @@ describe("worklist", () => {
     expect(workBucket({ currentStepId: "STEP_1_OPENED", stepStartedAt: "", stuck: stuck("SALE", 3) }, "COORDINATOR")).toBe("WAITING_CUSTOMER")
     expect(workBucket({ currentStepId: "STEP_6_ARRANGING", stepStartedAt: "", stuck: null }, "SALE")).toBe("IN_PROGRESS")
     expect(workBucket({ currentStepId: "STEP_9_COMPLETED", stepStartedAt: "", stuck: stuck("SALE", 3) }, "SALE")).toBe("DONE")
+    expect(workBucket({ currentStepId: "STEP_1_OPENED", stepStartedAt: "", stuck: null, isCancelled: true }, "SALE")).toBe("CANCELLED")
   })
 
   it("việc kẹt quá lâu nhất lên đầu, sau đó đơn vừa đổi bước", () => {

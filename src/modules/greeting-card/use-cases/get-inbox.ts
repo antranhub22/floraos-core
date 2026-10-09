@@ -6,6 +6,8 @@ import { inboxActions, inboxUpdates, type InboxAction } from "../domain/inbox"
 import { getTrackingPipeline } from "./get-tracking-pipeline"
 import { resolveSaleScope } from "./order-scope"
 import { DiscountRepository } from "../infra/discount-repository"
+import { CancellationRepository } from "../infra/cancellation-repository"
+import { CANCELLATION_TYPE_LABEL, type CancellationPayload, type CancellationType } from "../domain/cancellation-request"
 import { describeDiscount, parseMaxDiscountPercent, type DiscountPayload } from "../domain/discount-request"
 import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
 import { GREETING_CARD_CAPABILITY } from "../domain/greeting-card-capabilities"
@@ -42,9 +44,30 @@ export async function getInbox(ctx: TenantContext, now = new Date()) {
   // Khách xin đổi thông tin đơn → người có quyền sửa đơn (R3) duyệt
   if (ctx.capabilities.has(GREETING_CARD_CAPABILITY.orderUpdate)) actions.unshift(...(await changeRequestActions(ctx, pipeline)))
   if (role === "ADMIN") {
-    const [pending, org] = await Promise.all([new DiscountRepository().listPending(ctx), getCurrentOrganization(ctx)])
+    const [pending, pendingCancellations, org] = await Promise.all([
+      new DiscountRepository().listPending(ctx),
+      new CancellationRepository().listPending(ctx),
+      getCurrentOrganization(ctx),
+    ])
     const maxPercent = parseMaxDiscountPercent(org?.settings)
     const names = new Map(members.map((m) => [m.userId, m.name]))
+    for (const r of pendingCancellations) {
+      const p = (r.payload && typeof r.payload === "object" ? r.payload : {}) as unknown as CancellationPayload
+      const item = pipeline.find((i) => i.orderId === r.order_id)
+      const typeLabel = CANCELLATION_TYPE_LABEL[p.type as CancellationType] ?? "Hủy / Hoàn tiền"
+      actions.unshift({
+        id: `cancellation:${r.id}`,
+        kind: "CANCELLATION_REQUEST",
+        title: `Đề xuất: ${typeLabel}`,
+        detail: `${item?.orderCode ? `Đơn #${item.orderCode}` : (p.orderCode ? `Đơn #${p.orderCode}` : "Đơn")} · ${names.get(r.sender_id) ?? "Nhân viên"}: ${p.reason}`,
+        orderId: r.order_id,
+        sessionId: item?.sessionId || null,
+        customerName: item?.customerName ?? null,
+        imageUrl: item?.productImageUrl ?? null,
+        tab: "payment",
+        urgency: 2500,
+      })
+    }
     for (const r of pending) {
       const p = r.payload as unknown as DiscountPayload
       const item = pipeline.find((i) => i.orderId === r.order_id)

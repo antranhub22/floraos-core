@@ -228,6 +228,8 @@ export function CoordinatorBrochureTab() {
             paidVnd: modal.order.paid_vnd,
             balanceVnd: Math.max(0, modal.order.total_vnd - modal.order.paid_vnd),
             status: modal.order.status,
+            productionStatus: modal.order.production_status,
+            deliveryStatus: modal.order.delivery_status,
             createdAt: modal.order.created_at,
           }}
           onClose={() => setModal({ type: "none" })}

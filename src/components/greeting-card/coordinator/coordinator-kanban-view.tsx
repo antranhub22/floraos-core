@@ -128,8 +128,11 @@ export function CoordinatorKanbanView({
                         paidVnd: o.paid_vnd,
                         balanceVnd: Math.max(0, o.total_vnd - o.paid_vnd),
                         saleName: work?.saleName,
+                        currentStepId: col.id,
                         currentStepTitle: col.label,
                         status: o.status,
+                        productionStatus: o.production_status,
+                        deliveryStatus: o.delivery_status,
                         createdAt: o.created_at,
                       })
                     }

@@ -7,6 +7,12 @@ import { NOTIFY_EVENTS, type NotifyEvent } from "../domain/customer-notification
 import {
   AUTO_CANCEL_REASON, PAYMENT_TIMEOUT_REASON, RETRY_BACKOFF_MS, RETRY_WINDOW_MS, STALE_SENDING_MS, holdAction,
 } from "../domain/background-sweep"
+import {
+  resolveEffectiveStepTimeoutPolicy,
+  isSessionUnopenedExpired,
+  isSessionBrowsingExpired,
+  formatTimeoutDuration,
+} from "../domain/step-timeout-policy"
 import { notifyOrderEvent, queueOrderNotification } from "./notify-customer"
 
 const HOLD_LOOKBACK_MS = 7 * 86_400_000
@@ -16,6 +22,7 @@ export interface SweepResult {
   retried: number
   reminded: number
   cancelled: number
+  sessionsExpired: number
 }
 
 /** Ngữ cảnh "hệ thống" cho thao tác tự động — audit ghi rõ nguồn, không mang năng lực của ai. */
@@ -24,7 +31,8 @@ function systemContext(organizationId: string): TenantContext {
 }
 
 /**
- * Một vòng quét: (1) tin kẹt → lỗi, (2) gửi lại tin lỗi có giới hạn, (3) nhắc/huỷ đơn quá hạn giữ.
+ * Một vòng quét: (1) tin kẹt → lỗi, (2) gửi lại tin lỗi có giới hạn, (3) nhắc/huỷ đơn quá hạn giữ,
+ * (4) quét và huỷ/thu hồi các phiên quá hạn mở link hoặc quá hạn chọn mẫu theo chính sách.
  * Không bao giờ ném lỗi ra ngoài — lỗi từng đơn được ghi log, vòng sau làm tiếp.
  */
 export async function runBackgroundSweep(
@@ -32,7 +40,7 @@ export async function runBackgroundSweep(
   repo = new BackgroundSweepRepository(),
   payments = new BrochurePaymentRepository(),
 ): Promise<SweepResult> {
-  const result: SweepResult = { staleFailed: 0, retried: 0, reminded: 0, cancelled: 0 }
+  const result: SweepResult = { staleFailed: 0, retried: 0, reminded: 0, cancelled: 0, sessionsExpired: 0 }
 
   result.staleFailed = await repo.failStaleSending(new Date(now.getTime() - STALE_SENDING_MS))
 
@@ -74,5 +82,40 @@ export async function runBackgroundSweep(
       })
     }
   }
+
+  // Quét các phiên Thẻ chào quá hạn mở link hoặc quá hạn chọn mẫu
+  for (const s of await repo.listPendingSessions(new Date(now.getTime() - HOLD_LOOKBACK_MS))) {
+    try {
+      const policy = resolveEffectiveStepTimeoutPolicy(s.organization?.settings, s.catalog?.filters)
+
+      // 1. Quá hạn mở link: Khách không mở sau X giờ
+      if (isSessionUnopenedExpired({ createdAt: s.created_at, openedAt: s.opened_at }, policy, now)) {
+        const reason = `Tự hủy: Quá hạn mở link (${formatTimeoutDuration(policy.unopenedExpiryHours, "hours")})`
+        await repo.expireSession(s.organization_id, s.id, reason, now)
+        result.sessionsExpired += 1
+        continue
+      }
+
+      // 2. Quá hạn chọn mẫu: Khách đã mở nhưng ngưng thao tác quá Y giờ
+      if (
+        isSessionBrowsingExpired(
+          { openedAt: s.opened_at, selectedAt: s.selected_at, status: s.status, lastActiveAt: s.last_active_at },
+          policy,
+          now
+        )
+      ) {
+        const reason = `Tự hủy: Quá hạn chọn mẫu hoa (${formatTimeoutDuration(policy.browsingExpiryHours, "hours")})`
+        await repo.expireSession(s.organization_id, s.id, reason, now)
+        result.sessionsExpired += 1
+      }
+    } catch (error) {
+      log.warn("greeting_card.sweep_session_skipped", {
+        organizationId: s.organization_id, feature: "greeting-card", sessionId: s.id,
+        message: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
   return result
 }
+

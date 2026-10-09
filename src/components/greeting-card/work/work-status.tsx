@@ -13,9 +13,18 @@ export function WorkStatus({ item, me, now, code }: { item: TrackingPipelineItem
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className={`text-title-sm font-extrabold ${mine ? "text-danger" : "text-primary"}`}>{item.currentStepTitle}</p>
+          <p className={`text-title-sm font-extrabold ${item.isCancelled ? "text-danger" : mine ? "text-danger" : "text-primary"}`}>
+            {item.currentStepTitle}
+          </p>
+          {item.isCancelled && item.cancelReason && (
+            <div className="mt-1">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-caption font-bold bg-danger-bg text-danger">
+                {item.cancelReason}
+              </span>
+            </div>
+          )}
           <p className="mt-0.5 inline-flex items-center gap-1 text-caption text-text-muted">
-            <Clock size={12} aria-hidden="true" /> Ở bước này {formatMinutes(waited)}
+            <Clock size={12} aria-hidden="true" /> {item.isCancelled ? "Đã ghi nhận dừng xử lý" : `Ở bước này ${formatMinutes(waited)}`}
           </p>
         </div>
         {code}

@@ -101,7 +101,11 @@ export function BrochureOrderTrackingTab() {
             paidVnd: detailFor.paidVnd,
             balanceVnd: detailFor.balanceVnd,
             saleName: detailFor.saleName,
+            currentStepId: detailFor.currentStepId,
             currentStepTitle: detailFor.currentStepTitle,
+            status: detailFor.orderStatus,
+            productionStatus: detailFor.productionStatus,
+            deliveryStatus: detailFor.deliveryStatus,
             createdAt: detailFor.createdAt,
           }}
           onClose={() => setDetailFor(null)}
