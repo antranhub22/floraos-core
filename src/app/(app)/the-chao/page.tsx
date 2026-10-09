@@ -145,7 +145,7 @@ export default function TheChaoPage() {
             }}
             aria-label="Làm mới dữ liệu"
             title="Làm mới dữ liệu"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface text-text-muted hover:bg-surface-alt hover:text-foreground"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-muted hover:bg-surface hover:text-foreground active:bg-surface active:text-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <RefreshCw size={16} aria-hidden="true" />
           </button>

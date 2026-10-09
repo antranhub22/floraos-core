@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react"
 import { Bell } from "lucide-react"
 import { InboxPanel, type InboxTarget } from "./inbox-panel"
 import { useInbox } from "./use-inbox"
+import { cn } from "@/lib/utils"
 import { newItemsSince, stripCountPrefix, titleWithCount } from "@/modules/greeting-card/domain/inbox-alert"
 
 /** Nút 🔔 Hộp việc ở đầu trang Thẻ chào — thấy được từ mọi tab, số việc cập nhật mỗi 20 giây;
@@ -31,11 +32,22 @@ export function InboxButton({ onOpenTarget }: { onOpenTarget: (t: InboxTarget) =
   useEffect(() => () => { document.title = stripCountPrefix(document.title) }, [])
   return (
     <>
-      <button type="button" onClick={() => { setFresh(0); setOpen(true) }} aria-haspopup="dialog"
+      <button
+        type="button"
+        onClick={() => { setFresh(0); setOpen(true) }}
+        aria-haspopup="dialog"
+        aria-expanded={open}
         aria-label={total > 0 ? `Hộp việc: ${total} việc và tin chưa xử lý` : "Hộp việc"}
-        className="relative inline-flex h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-body-sm font-bold text-foreground hover:bg-surface-alt">
-        <Bell size={18} aria-hidden="true" />
-        <span className="hidden sm:inline">Hộp việc</span>
+        title={total > 0 ? `Hộp việc: ${total} việc và tin chưa xử lý` : "Hộp việc"}
+        className={cn(
+          "relative inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-all",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+          open
+            ? "border-border bg-surface text-primary shadow-xs"
+            : "border-border bg-surface-alt text-text-muted hover:bg-surface hover:text-foreground active:bg-surface active:text-primary",
+        )}
+      >
+        <Bell size={18} aria-hidden="true" className={open ? "text-primary" : "text-text-muted"} />
         {total > 0 && (
           <span aria-hidden="true" className={`absolute -right-1.5 -top-1.5 min-w-5 rounded-full bg-danger px-1.5 text-center text-caption font-bold text-white ${fresh > 0 ? "animate-pulse ring-2 ring-danger/40" : ""}`}>
             {total > 99 ? "99+" : total}

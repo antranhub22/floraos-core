@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { HelpCircle, X, BookOpen, CheckCircle2, Shield, Users, Sparkles, Clock, AlertTriangle, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 type RoleGuideTab = "admin" | "sales" | "coordinator"
 
@@ -15,10 +16,17 @@ export function BrochureUserGuideModal() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-caption font-bold text-foreground hover:bg-surface-alt hover:text-primary transition-colors"
+        aria-expanded={open}
+        className={cn(
+          "inline-flex h-11 items-center gap-1.5 rounded-xl border px-3 text-caption font-bold transition-all",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+          open
+            ? "border-border bg-surface text-primary shadow-xs"
+            : "border-border bg-surface-alt text-text-muted hover:bg-surface hover:text-foreground active:bg-surface active:text-primary",
+        )}
         title="Hướng dẫn sử dụng link đặt hoa"
       >
-        <HelpCircle size={16} className="text-primary" aria-hidden="true" />
+        <HelpCircle size={16} className={open ? "text-primary" : "text-text-muted"} aria-hidden="true" />
         <span className="hidden sm:inline">Hướng dẫn link đặt hoa</span>
       </button>
 
