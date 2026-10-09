@@ -42,6 +42,13 @@ export function BrandAssetsManagerTab({
     }
   }, [initialData])
 
+  const handleLogoChange = (newAssetId: string, previewUrl?: string) => {
+    setLogoAssetId(newAssetId)
+    if (previewUrl !== undefined) {
+      setLogoUrl(previewUrl)
+    }
+  }
+
   const handleSave = async () => {
     if (!initialData) return
 
@@ -165,7 +172,7 @@ export function BrandAssetsManagerTab({
         <BrandAssetsUploader
           logoAssetId={logoAssetId}
           initialLogoUrl={logoUrl}
-          onLogoChange={setLogoAssetId}
+          onLogoChange={handleLogoChange}
           brandAssets={brandAssets}
           onBrandAssetsChange={setBrandAssets}
           disabled={saving}

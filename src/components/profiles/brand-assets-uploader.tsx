@@ -23,7 +23,7 @@ export interface BrandAssetsData {
 export interface BrandAssetsUploaderProps {
   logoAssetId: string
   initialLogoUrl?: string
-  onLogoChange: (newLogo: string) => void
+  onLogoChange: (newLogo: string, previewUrl?: string) => void
   brandAssets?: BrandAssetsData | null
   onBrandAssetsChange: (assets: BrandAssetsData) => void
   disabled?: boolean
@@ -47,22 +47,18 @@ export function BrandAssetsUploader({
   useEffect(() => {
     if (initialLogoUrl) {
       setLogoPreview(initialLogoUrl)
-      return
-    }
-    if (!logoAssetId) {
-      setLogoPreview("")
-      return
-    }
-
-    let active = true
-    resolveAssetViewUrl(logoAssetId).then((url) => {
-      if (active && url) {
-        setLogoPreview(url)
+    } else if (logoAssetId) {
+      let active = true
+      resolveAssetViewUrl(logoAssetId).then((url) => {
+        if (active && url) {
+          setLogoPreview(url)
+        }
+      })
+      return () => {
+        active = false
       }
-    })
-
-    return () => {
-      active = false
+    } else {
+      setLogoPreview("")
     }
   }, [logoAssetId, initialLogoUrl])
 
@@ -78,7 +74,7 @@ export function BrandAssetsUploader({
     try {
       const { assetId, viewUrl } = await uploadBrandAsset(file)
       setLogoPreview(viewUrl)
-      onLogoChange(assetId)
+      onLogoChange(assetId, viewUrl)
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Tải logo thất bại")
     } finally {
@@ -191,7 +187,7 @@ export function BrandAssetsUploader({
                 disabled={disabled || logoUploading}
                 onClick={() => {
                   setLogoPreview("")
-                  onLogoChange("")
+                  onLogoChange("", "")
                 }}
                 className="inline-flex items-center justify-center rounded-xl border border-border bg-surface p-2.5 text-text-muted hover:text-danger hover:border-danger transition-colors disabled:opacity-50"
                 title="Xóa logo"
