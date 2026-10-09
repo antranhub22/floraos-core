@@ -38,6 +38,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "db:seed:dev": "tsx --env-file-if-exists=.env prisma/seed/dev-shop-moclan.ts",
+    "clean:siin-orders": "tsx --env-file-if-exists=.env prisma/seed/clean-siin-store-orders.ts",
     "db:studio": "prisma studio",
     "nap:loai": "tsx --env-file-if-exists=.env scripts/nap-danh-muc-loai.ts",
     "cham:bo-anh-vang": "python3 scripts/cham-bo-anh-vang.py",
