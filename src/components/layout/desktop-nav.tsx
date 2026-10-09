@@ -180,7 +180,7 @@ export function DesktopNav() {
               FloraOS
             </div>
             <div className="truncate text-caption text-text-muted font-medium">
-              {orgName || "Cửa hàng hoa"}
+              {(orgName || "Cửa hàng hoa").replace(/\s*\(\s*dev\s*\)/gi, "").trim()}
             </div>
           </div>
         </div>

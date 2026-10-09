@@ -37,14 +37,17 @@ export const resolveAppSession = cache(async function resolveAppSession(
 
   const described = await describeSession(resolved)
 
+  const rawOrgName = described.organization?.name ?? "FloraOS"
+  const cleanOrgName = rawOrgName.replace(/\s*\(\s*dev\s*\)/gi, "").trim()
+
   return {
     userName: described.user.name ?? described.user.email,
     userInitials: viettatTen(described.user.name, described.user.email),
-    orgName: described.organization?.name ?? "FloraOS",
+    orgName: cleanOrgName,
     workspaceKind: (described.workspace?.kind as MockSession["workspaceKind"]) ?? "PRODUCTION",
     capabilities: described.capabilities,
     organization: described.organization
-      ? { id: described.organization.id, name: described.organization.name }
+      ? { id: described.organization.id, name: cleanOrgName }
       : undefined,
     // Đặc tả 03b (Role UX): khoá vai + loại tổ chức để chọn trang chủ/thứ tự
     // điều hướng theo vai. Đã có sẵn trong `describeSession` (GET /auth/me).

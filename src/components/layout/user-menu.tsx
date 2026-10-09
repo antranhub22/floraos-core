@@ -88,7 +88,7 @@ export function UserMenu({ initials, direction = "down", size = "md" }: UserMenu
                 {userName || "Người dùng"}
               </div>
               <div className="truncate text-caption text-text-muted">
-                {roleUx?.label ?? orgName}
+                {roleUx?.label ?? (orgName || "").replace(/\s*\(\s*dev\s*\)/gi, "").trim()}
               </div>
             </div>
 

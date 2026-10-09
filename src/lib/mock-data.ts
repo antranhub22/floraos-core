@@ -187,10 +187,10 @@ export type MockSession = {
 export const MOCK_SESSION: MockSession = {
   userName: "Tony Nguyễn",
   userInitials: "TN",
-  orgName: "Tiệm hoa Mộc Lan",
+  orgName: "Siin Store",
   workspaceKind: "PRODUCTION",
   capabilities: ["H3", "I2", "B4"],
-  organization: { id: "org_mock_default", name: "Tiệm hoa Mộc Lan" },
+  organization: { id: "org_mock_default", name: "Siin Store" },
 }
 
 export const SAMPLE_PRODUCTS = [
