@@ -53,11 +53,11 @@ export const POST = handle(async (request) => {
     if (existingCodes.has(item.code) || writtenInRun.has(item.code)) {
       if (skip_duplicates) {
         skippedCodes.push(item.code)
-        // Mã đã có nhưng lần này kèm ảnh → bù ảnh nếu sản phẩm đang thiếu (không ghi đè dữ liệu khác).
+        // Mã đã có nhưng lần này kèm ảnh/link mới → ghi đè ảnh và drive_link để đồng bộ dữ liệu.
         if (!writtenInRun.has(item.code)) {
           try {
-            if (item.image_asset_id && (await repo.attachMainImageIfMissing(ctx, item.code, item.image_asset_id))) imagesAttached.push(item.code)
-            if (await repo.refreshDriveLinkIfNotDrive(ctx, item.code, item.attributes?.drive_link)) driveLinksUpdated.push(item.code)
+            if (item.image_asset_id && (await repo.upsertMainImage(ctx, item.code, item.image_asset_id))) imagesAttached.push(item.code)
+            if (await repo.refreshDriveLink(ctx, item.code, item.attributes?.drive_link)) driveLinksUpdated.push(item.code)
           } catch (err) {
             failedItems.push({ code: item.code, error: err instanceof Error ? err.message : "Lỗi gắn ảnh" })
           }
