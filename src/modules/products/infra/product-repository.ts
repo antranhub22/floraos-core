@@ -5,7 +5,7 @@ import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 
 import type { DbClient } from "./db-client"
-import { attachMainImageIfMissing, linkMainImage, refreshDriveLinkIfNotDrive } from "./product-main-image"
+import { attachMainImageIfMissing, linkMainImage, refreshDriveLinkIfNotDrive, refreshDriveLink, upsertMainImage } from "./product-main-image"
 
 /** Kết quả trả về từ `listWithPreview` — bản ghi sản phẩm kèm ảnh chính và giá. */
 export type ProductPreviewRow = products & {
@@ -228,14 +228,26 @@ export class ProductRepository {
     })
   }
 
-  /** Bù ảnh chính cho mã đã có (nhập lại kèm ảnh) — không thay ảnh sẵn có. */
+  /** Bù ảnh chính cho mã đã có (nhập lại kèm ảnh) — không thay ảnh sẵn có.
+   * @deprecated Dùng `upsertMainImage` thay thế. */
   attachMainImageIfMissing(ctx: TenantContext, code: string, assetId: string): Promise<boolean> {
     return attachMainImageIfMissing(this.db, ctx, code, assetId)
   }
 
-  /** Thay link ảnh không phải Drive bằng link Drive mới khi nhập lại (xem `product-main-image.ts`). */
+  /** Thay ảnh chính của sản phẩm, ghi đè ảnh cũ nếu có. Dùng khi nhập lại Excel. */
+  upsertMainImage(ctx: TenantContext, code: string, assetId: string): Promise<boolean> {
+    return upsertMainImage(this.db, ctx, code, assetId)
+  }
+
+  /** Thay link ảnh không phải Drive bằng link Drive mới khi nhập lại (xem `product-main-image.ts`).
+   * @deprecated Dùng `refreshDriveLink` thay thế. */
   refreshDriveLinkIfNotDrive(ctx: TenantContext, code: string, driveLink: unknown): Promise<boolean> {
     return refreshDriveLinkIfNotDrive(this.db, ctx, code, driveLink)
+  }
+
+  /** Luôn cập nhật drive_link mới, ghi đè cả khi sản phẩm đã có Drive link cũ. Dùng khi nhập lại Excel. */
+  refreshDriveLink(ctx: TenantContext, code: string, driveLink: unknown): Promise<boolean> {
+    return refreshDriveLink(this.db, ctx, code, driveLink)
   }
 
   async create(ctx: TenantContext, input: CreateProductInput): Promise<products> {
