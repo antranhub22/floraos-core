@@ -54,7 +54,7 @@ export const CATALOG_STYLE_OPTIONS: Array<{
  * Sinh nội dung giới thiệu bộ sưu tập Catalogue theo phong cách đã chọn
  */
 export function generateCatalogContent(input: CatalogContentInput): GeneratedCatalogContent {
-  const shop = input.shopName || "Tiệm Hoa Mộc Lan"
+  const shop = input.shopName || "Siin Store"
   const collection = input.collectionName || "Bộ Sưu Tập Mẫu Hoa Tuyển Chọn"
   const occasion = input.occasion ? `cho dịp ${input.occasion}` : "dành cho những khoảnh khắc đáng nhớ"
 

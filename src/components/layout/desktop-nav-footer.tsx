@@ -58,8 +58,8 @@ export function DesktopNavFooter() {
             <div className="truncate text-caption font-bold text-text" title={userName}>
               {userName || "Người dùng"}
             </div>
-            <div className="truncate text-caption text-text-muted" title={roleUx?.label ?? orgName}>
-              {roleUx?.label ?? orgName}
+            <div className="truncate text-caption text-text-muted" title={roleUx?.label ?? (orgName || "").replace(/\s*\(\s*dev\s*\)/gi, "").trim()}>
+              {roleUx?.label ?? (orgName || "").replace(/\s*\(\s*dev\s*\)/gi, "").trim()}
             </div>
           </div>
         </div>

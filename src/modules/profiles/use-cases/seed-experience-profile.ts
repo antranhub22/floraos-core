@@ -4,22 +4,22 @@ import { BrandProfileRepository } from "../infra/brand-profile-repository"
 import type { TenantContext } from "@/core/tenancy"
 
 export const MOC_LAN_BUSINESS_PROFILE = {
-  display_name: "Tiệm Hoa Mộc Lan",
-  legal_name: "Hộ Kinh Doanh Hoa Tươi Mộc Lan",
+  display_name: "Siin Store",
+  legal_name: "Công ty TNHH Siin Store",
   phone: "0900 123 456",
-  email: "contact@tiemhoamoclan.vn",
-  address: "Số 88 Đường Hoa Mộc Lan, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
-  website: "https://tiemhoamoclan.vn",
+  email: "hello@siinstore.vn",
+  address: "42 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
+  website: "https://siinstore.vn",
   tax_code: "0318999888",
-  description: "Tiệm hoa nghệ thuật Mộc Lan — Chuyên hoa thiết kế, hoa sinh nhật, hoa sự kiện và hoa cưới cao cấp",
+  description: "Siin Store — Cửa hàng hoa tươi cao cấp, chuyên hoa thiết kế, hoa sinh nhật, hoa sự kiện và hoa cưới",
   operating_hours: {
     open: "07:30",
     close: "21:30",
   },
   social_links: {
-    facebook: "https://facebook.com/tiemhoamoclan",
+    facebook: "https://facebook.com/siinstore",
     zalo: "https://zalo.me/0900123456",
-    instagram: "https://instagram.com/tiemhoamoclan",
+    instagram: "https://instagram.com/siinstore",
   },
 }
 
@@ -31,13 +31,13 @@ export const MOC_LAN_BRAND_PROFILE = {
   text_color: "#111827",
   font_heading: "Playfair Display",
   font_body: "Inter",
-  logo_asset_id: "/brand/moc-lan-logo.jpg",
+  logo_asset_id: "/brand/siin-store-logo.jpg",
   tone_of_voice: "romantic",
   hashtags: {
-    default: ["#tiemhoamoclan", "#hoatuoisaigon", "#hoathietke", "#hoasinhnhat", "#hoatinhyeu"],
+    default: ["#siinstore", "#hoatuoisaigon", "#hoathietke", "#hoasinhnhat", "#hoatinhyeu"],
   },
   cta_templates: {
-    default: "Nhắn tin Zalo hoặc gọi ngay Hotline để nghệ nhân Mộc Lan tư vấn mẫu hoa độc bản dành riêng cho bạn!",
+    default: "Nhắn tin Zalo hoặc gọi ngay Hotline để đội ngũ Siin Store tư vấn mẫu hoa độc bản dành riêng cho bạn!",
     free_gifts: [
       "Tặng thiệp chúc mừng thiết kế riêng theo thông điệp",
       "Tặng gói nước dưỡng hoa Chrysal giúp hoa tươi lâu 5 - 7 ngày",
@@ -57,8 +57,7 @@ export const MOC_LAN_BRAND_PROFILE = {
 
 /**
  * Nạp 100% dữ liệu mẫu chuẩn cho workspace trải nghiệm (EXPERIENCE).
- * Đảm bảo người dùng mới mở màn hình /ho-so, Thẻ chào hàng M01c, E-Catalog
- * đều có dữ liệu hoàn chỉnh, không bị rỗng.
+ * CHỈ tạo nếu chưa có hồ sơ — không ghi đè dữ liệu thật đã cập nhật qua UI.
  */
 export async function seedExperienceMasterProfile(
   db: DbClient,
@@ -75,8 +74,21 @@ export async function seedExperienceMasterProfile(
   const bizRepo = new BusinessProfileRepository(db)
   const brandRepo = new BrandProfileRepository(db)
 
-  await Promise.all([
-    bizRepo.upsert(dummyCtx, MOC_LAN_BUSINESS_PROFILE),
-    brandRepo.upsert(dummyCtx, MOC_LAN_BRAND_PROFILE),
+  const [existingBiz, existingBrand] = await Promise.all([
+    bizRepo.current(dummyCtx),
+    brandRepo.current(dummyCtx),
   ])
+
+  const tasks: Promise<unknown>[] = []
+  if (!existingBiz) {
+    tasks.push(bizRepo.upsert(dummyCtx, MOC_LAN_BUSINESS_PROFILE))
+  }
+  if (!existingBrand) {
+    tasks.push(brandRepo.upsert(dummyCtx, MOC_LAN_BRAND_PROFILE))
+  }
+
+  if (tasks.length > 0) {
+    await Promise.all(tasks)
+  }
 }
+

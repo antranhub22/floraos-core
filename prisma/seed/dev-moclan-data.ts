@@ -1,5 +1,5 @@
 /**
- * Dev Fixture Data: Tiệm Hoa Mộc Lan
+ * Dev Fixture Data: Siin Store
  *
  * Chứa toàn bộ dữ liệu mẫu (Constant Data Fixtures):
  *   • Thông tin tổ chức, user owner, membership
@@ -10,8 +10,8 @@
 
 export const MOCLAN_CONSTANTS = {
   ORG_ID: "dev-moclan-org-0000-0000-000000000001",
-  ORG_SLUG: "moc-lan-dev",
-  ORG_NAME: "Tiệm Hoa Mộc Lan (Dev)",
+  ORG_SLUG: "siin-store",
+  ORG_NAME: "Siin Store",
   USER_ID: "dev-moclan-usr-0000-0000-000000000001",
   MEMBERSHIP_ID: "dev-moclan-mbr-0000-0000-000000000001",
 }
@@ -19,19 +19,19 @@ export const MOCLAN_CONSTANTS = {
 export const MOCLAN_BUSINESS_PROFILE = {
   id: "dev-moclan-biz-0000-0000-000000000001",
   organization_id: MOCLAN_CONSTANTS.ORG_ID,
-  legal_name: "Công ty TNHH Hoa Tươi Mộc Lan",
-  display_name: "Tiệm Hoa Mộc Lan",
+  legal_name: "Công ty TNHH Siin Store",
+  display_name: "Siin Store",
   phone: "0901234567",
-  email: "lienhe@tiemhoamoclan.vn",
+  email: "hello@siinstore.vn",
   address: "42 Nguyễn Huệ, Quận 1, TP.HCM",
-  website: "https://tiemhoamoclan.vn",
+  website: "https://siinstore.vn",
   tax_code: "0312345678",
   description:
-    "Tiệm hoa tươi cao cấp chuyên thiết kế hoa theo phong cách nghệ thuật. Thành lập năm 2018, hơn 5000 tác phẩm đã được trao tay khách hàng tại TP.HCM.",
+    "Siin Store — Cửa hàng hoa tươi cao cấp chuyên thiết kế hoa theo phong cách nghệ thuật. Thành lập năm 2018, hơn 5000 tác phẩm đã được trao tay khách hàng tại TP.HCM.",
   social_links: {
-    facebook: "https://facebook.com/tiemhoamoclan",
-    instagram: "https://instagram.com/tiemhoamoclan",
-    tiktok: "https://tiktok.com/@tiemhoamoclan",
+    facebook: "https://facebook.com/siinstore",
+    instagram: "https://instagram.com/siinstore",
+    tiktok: "https://tiktok.com/@siinstore",
     zalo: "https://zalo.me/0901234567",
   },
   operating_hours: {
@@ -55,12 +55,12 @@ export const MOCLAN_BRAND_PROFILE = {
   text_color: "#1a0010",
   font_heading: "Cormorant Garamond",
   font_body: "Inter",
-  logo_asset_id: "/brand/moc-lan-logo.jpg",
+  logo_asset_id: "/brand/siin-store-logo.jpg",
   tone_of_voice:
     "Thanh lịch, ấm áp, tinh tế. Giao tiếp bằng tiếng Việt, xưng hô thân thiện nhưng lịch sự. Tập trung vào cảm xúc và nghệ thuật của hoa.",
   hashtags: {
     default: [
-      "#tiemhoamoclan",
+      "#siinstore",
       "#hoatuoihochiminh",
       "#hoatuoi",
       "#hoasinhNhat",
@@ -72,7 +72,7 @@ export const MOCLAN_BRAND_PROFILE = {
   },
   cta_templates: {
     default:
-      "Đặt hoa ngay — Giao tận nơi trong 2h nội thành TP.HCM. Hotline: 0901 234 567",
+      "Đặt hoa ngay — Giao tận nơi trong 2h nội thành TP.HCM. Hotline: 0901 234 567 | Siin Store",
   },
   default_offers: {
     free_gifts: [
@@ -98,8 +98,8 @@ export const MOCLAN_BRAND_PROFILE = {
       "/brand/storefront/store-workshop-04.jpg",
       "/brand/storefront/store-showcase-05.jpg",
     ],
-    intro_video: "/brand/moc-lan-intro.mp4",
-    qr_code: "/brand/moc-lan-qr.svg",
+    intro_video: "/brand/siin-store-intro.mp4",
+    qr_code: "/brand/siin-store-qr.svg",
   },
 }
 
