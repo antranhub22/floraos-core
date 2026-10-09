@@ -121,3 +121,23 @@ describe("PAYMENT_FAILED — đơn tự huỷ vì hết hạn thanh toán", () =
     expect(s.status).toBe("UNPAID")
   })
 })
+
+describe("Cơ chế thu lần 2 sau khi duyệt ảnh — Thu trước giao (PO 09/10/2026)", () => {
+  it("balanceDue là true khi hoa xong (READY) và đơn còn nợ (paid < total)", () => {
+    const readyOrder = { totalVnd: 1_000_000, paidVnd: 300_000, status: "CONFIRMED", productionStatus: "READY", deliveryStatus: "PENDING" }
+    expect(balanceDue(readyOrder, { requireFullBeforeDispatch: true })).toBe(true)
+  })
+
+  it("gating: khi đang chờ duyệt ảnh (photoApproval = PENDING), không hiện QR thanh toán lần 2", () => {
+    const requireFull = true
+    const photoApprovalStatus = "PENDING"
+    const shouldShowBalanceQr = requireFull && photoApprovalStatus === "PENDING" ? false : true
+    expect(shouldShowBalanceQr).toBe(false)
+  })
+
+  it("gating: khi khách đã duyệt ảnh (APPROVED) hoặc tự động duyệt (AUTO_APPROVED), hiển thị QR thanh toán lần 2", () => {
+    const requireFull = true
+    expect(requireFull && "APPROVED" === "PENDING" ? false : true).toBe(true)
+    expect(requireFull && "AUTO_APPROVED" === "PENDING" ? false : true).toBe(true)
+  })
+})

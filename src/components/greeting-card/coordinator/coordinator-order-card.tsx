@@ -108,6 +108,7 @@ export function CoordinatorOrderCard({
   const timeSlot = order.delivery_window?.timeSlot || "Trong ngày"
   const awaitingQuote = order.total_vnd <= 0
   const isPaid = !awaitingQuote && order.paid_vnd >= order.total_vnd
+  const isDeposit = !awaitingQuote && !isPaid && order.paid_vnd > 0
   const isDelivered = order.delivery_status === "DELIVERED" || order.status === "COMPLETED"
   // Cùng luật thứ tự với server — nút sai bước bị khoá kèm lý do (tooltip)
   const blockerOf = (action: CoordinatorAction) =>
@@ -221,8 +222,8 @@ export function CoordinatorOrderCard({
 
       {/* Payment status */}
       <div className="flex items-center justify-between text-caption">
-        <span className={isPaid ? "text-success font-bold" : "text-warning font-bold"}>
-          {awaitingQuote ? "● Chờ báo giá" : isPaid ? "● Đã thanh toán" : "● Chưa thu tiền"}
+        <span className={isPaid ? "text-success font-bold" : isDeposit ? "text-warning font-bold" : "text-warning font-bold"}>
+          {awaitingQuote ? "● Chờ báo giá" : isPaid ? "● Đã thanh toán đủ" : isDeposit ? "● Đã cọc (Chờ TT lần 2)" : "● Chưa thu tiền"}
         </span>
         {isDelivered && (
           <span className="flex items-center gap-1 text-success font-bold">
