@@ -82,4 +82,23 @@ describe("batch-import — bù ảnh cho mã đã có", () => {
     expect(body.created_count).toBe(1)
     expect(await mainImages(a, "SP-CHUNG")).toHaveLength(0)
   })
+
+  it("nhập lại: link trang web cũ được thay bằng link Drive, link Drive sẵn có giữ nguyên", async () => {
+    const web = "https://siinstore.com/shop/hoa-chia-buon/ke-hoa"
+    const drive = "https://drive.google.com/file/d/1XHMNgd25xRYA7T1t2yQ0siCXswGqKwtZ/view?usp=sharing"
+    const send = (code: string, link: string) =>
+      batchImportRoute(withSession(URL_BATCH, a.token, {
+        method: "POST",
+        body: JSON.stringify({ items: [{ code, name: code, attributes: { drive_link: link } }], skip_duplicates: true }),
+      }))
+    await send("WEB-1", web)
+    await send("DRV-1", "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWx")
+
+    expect((await readJson(await send("WEB-1", drive))).drive_links_updated_count).toBe(1)
+    expect((await readJson(await send("DRV-1", drive))).drive_links_updated_count).toBe(0)
+    const link = async (code: string) =>
+      ((await prisma.products.findFirstOrThrow({ where: { organization_id: a.organizationId, code } })).attributes as Record<string, unknown>).drive_link
+    expect(await link("WEB-1")).toBe(drive)
+    expect(await link("DRV-1")).toBe("https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWx")
+  })
 })

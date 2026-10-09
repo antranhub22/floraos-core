@@ -9,18 +9,21 @@ import {
 } from "@/modules/greeting-card/adapters/google-drive-thumbnail"
 
 /**
- * GET /api/v1/public/drive-thumb-proxy?folder_id=...
- * Proxy ảnh thumbnail đầu tiên của folder Google Drive công khai (trang khách xem catalog).
+ * GET /api/v1/public/drive-thumb-proxy?folder_id=... | ?file_id=...
+ * Proxy thumbnail Google Drive công khai (trang khách xem catalog): `folder_id` → ảnh đầu
+ * tiên trong thư mục; `file_id` → chính tệp đó (link `/file/d/<id>` trong Excel).
  * Public nên có rate limit, kiểm tra id, timeout và trần kích thước trong adapter.
  */
 export const GET = handle(async (request) => {
   await enforceRateLimit(request, { scope: "drive-thumb-proxy", limit: 120, windowMs: 60_000 })
-  const folderId = new URL(request.url).searchParams.get("folder_id")?.trim()
-  if (!isValidDriveId(folderId)) {
-    throw validationFailed({ issues: [{ path: ["folder_id"], message: "folder_id không hợp lệ" }] })
+  const params = new URL(request.url).searchParams
+  const folderId = params.get("folder_id")?.trim()
+  const directFileId = params.get("file_id")?.trim()
+  if (directFileId !== undefined ? !isValidDriveId(directFileId) : !isValidDriveId(folderId)) {
+    throw validationFailed({ issues: [{ path: [directFileId !== undefined ? "file_id" : "folder_id"], message: "Drive id không hợp lệ" }] })
   }
 
-  const fileId = await resolveFirstFileId(folderId)
+  const fileId = directFileId ?? (await resolveFirstFileId(folderId as string))
   if (!fileId) return new NextResponse(null, { status: 404 })
 
   const thumb = await fetchThumbnail(fileId)

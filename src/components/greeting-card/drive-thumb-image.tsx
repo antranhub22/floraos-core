@@ -18,15 +18,17 @@ interface DriveThumbImageProps {
  * Server tự fetch lh3.googleusercontent.com nên browser không cần auth Google.
  * Không cần state async — URL proxy được tính toán đồng bộ từ driveLink.
  */
-function getFolderIdFromLink(driveLink: string): string | null {
-  const m = driveLink.match(/folders\/([a-zA-Z0-9_-]{20,})/)
-  return m?.[1] ?? null
-}
-
-/** URL proxy thumbnail cho link folder Drive; không phải link folder → null. */
+/**
+ * URL proxy thumbnail cho link Drive — thư mục (`/folders/<id>`, lấy ảnh đầu tiên) hoặc
+ * tệp (`/file/d/<id>`, `open?id=`, `uc?id=`). Link khác (trang web bán hàng…) → null.
+ */
 export function driveThumbProxySrc(driveLink: string | null | undefined): string | null {
-  const folderId = driveLink ? getFolderIdFromLink(driveLink) : null
-  return folderId ? `/api/v1/public/drive-thumb-proxy?folder_id=${folderId}` : null
+  if (!driveLink) return null
+  const folderId = driveLink.match(/\/folders\/([a-zA-Z0-9_-]{20,})/)?.[1]
+  if (folderId) return `/api/v1/public/drive-thumb-proxy?folder_id=${folderId}`
+  if (!driveLink.includes("drive.google.com")) return null
+  const fileId = driveLink.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/)?.[1] ?? driveLink.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)?.[1]
+  return fileId ? `/api/v1/public/drive-thumb-proxy?file_id=${fileId}` : null
 }
 
 export function DriveThumbImage({
@@ -37,9 +39,9 @@ export function DriveThumbImage({
 }: DriveThumbImageProps) {
   const [broken, setBroken] = useState(false)
 
-  const folderId = getFolderIdFromLink(driveLink)
+  const proxySrc = driveThumbProxySrc(driveLink)
 
-  if (!folderId || broken) {
+  if (!proxySrc || broken) {
     return (
       <span className={`relative block overflow-hidden ${className}`}>
         <span
@@ -55,8 +57,6 @@ export function DriveThumbImage({
       </span>
     )
   }
-
-  const proxySrc = driveThumbProxySrc(driveLink)!
 
   return (
     <span className={`relative block overflow-hidden ${className}`}>

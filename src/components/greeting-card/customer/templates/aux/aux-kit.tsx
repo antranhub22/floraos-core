@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react"
 import { Heart } from "lucide-react"
 import type { GreetingCatalogProduct } from "@/modules/greeting-card/domain/greeting-card-types"
 import { cn } from "@/lib/utils"
+import { driveThumbProxySrc } from "@/components/greeting-card/drive-thumb-image"
 import { formatVnd, toProductDisplay } from "../product-info/product-display"
 import { ProductInfo } from "../product-info/product-info"
 import { rootHeight, useEmbeddedPreview } from "./embedded"
@@ -65,11 +66,6 @@ export function EmptyCatalog() {
  * tan vào màu khung, không lộ thành khối chữ nhật. Ảnh có bối cảnh thật gần như không đổi.
  * Luôn `object-contain`: khách phải thấy trọn mẫu hoa, không bị cắt mép.
  */
-function getDriveFolderId(link?: string | null): string | null {
-  if (!link) return null
-  const m = link.match(/folders\/([a-zA-Z0-9_-]{20,})/)
-  return m?.[1] ?? null
-}
 
 export function ProductImage({
   product,
@@ -81,8 +77,7 @@ export function ProductImage({
   backdrop?: string
 }) {
   const [driveFailed, setDriveFailed] = useState(false)
-  const folderId = !product.imageUrl && !driveFailed ? getDriveFolderId(product.driveLink) : null
-  const driveProxySrc = folderId ? `/api/v1/public/drive-thumb-proxy?folder_id=${folderId}` : null
+  const driveProxySrc = !product.imageUrl && !driveFailed ? driveThumbProxySrc(product.driveLink) : null
 
   if (product.imageUrl) {
     return (
