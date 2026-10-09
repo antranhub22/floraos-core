@@ -65,10 +65,11 @@ export type BrandProfileInput = {
   font_body?: string | null | undefined
   logo_asset_id?: string | null | undefined
   tone_of_voice?: string | null | undefined
-  hashtags?: Record<string, unknown> | null | undefined
-  cta_templates?: Record<string, unknown> | null | undefined
-  default_offers?: Record<string, unknown> | null | undefined
-  forbidden_styles?: Record<string, unknown> | null | undefined
+  hashtags?: unknown
+  cta_templates?: unknown
+  default_offers?: unknown
+  forbidden_styles?: unknown
+  brand_assets?: unknown
 }
 
 /**

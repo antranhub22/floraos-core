@@ -13,7 +13,10 @@ export const GET = handle(async (request) => {
   return jsonResponse(await getBrandProfile(ctx))
 })
 
-const jsonObject = z.record(z.string(), z.unknown()).nullable().optional()
+const jsonField = z
+  .union([z.record(z.string(), z.unknown()), z.array(z.unknown()), z.string()])
+  .nullable()
+  .optional()
 const color = z.string().nullable().optional()
 
 const putSchema = z.object({
@@ -26,10 +29,11 @@ const putSchema = z.object({
   font_body: z.string().nullable().optional(),
   logo_asset_id: z.string().nullable().optional(),
   tone_of_voice: z.string().nullable().optional(),
-  hashtags: jsonObject,
-  cta_templates: jsonObject,
-  default_offers: jsonObject,
-  forbidden_styles: jsonObject,
+  hashtags: jsonField,
+  cta_templates: jsonField,
+  default_offers: jsonField,
+  forbidden_styles: jsonField,
+  brand_assets: jsonField,
 })
 
 export const PUT = handle(async (request) => {
