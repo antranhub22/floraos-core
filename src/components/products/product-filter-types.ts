@@ -12,6 +12,9 @@ export type OccasionId =
   | "chuc_mung"
   | "tan_gia"
   | "cuoi_hoi"
+  | "ngay_phu_nu"
+  | "nha_giao"
+  | "tot_nghiep"
 
 export interface OccasionDef {
   id: OccasionId
@@ -156,6 +159,46 @@ export const OCCASIONS: readonly OccasionDef[] = [
       "đám cưới",
     ],
   },
+  {
+    id: "ngay_phu_nu",
+    label: "Ngày 8/3 và 20/10",
+    shortLabel: "8/3 & 20/10",
+    keywords: [
+      "8/3",
+      "20/10",
+      "phụ nữ",
+      "phu nu",
+      "quốc tế phụ nữ",
+      "phụ nữ việt nam",
+      "mẹ",
+      "cô giáo",
+    ],
+  },
+  {
+    id: "nha_giao",
+    label: "Ngày 20/11",
+    shortLabel: "20/11",
+    keywords: [
+      "20/11",
+      "nhà giáo",
+      "nha giao",
+      "thầy cô",
+      "thay co",
+      "tri ân thầy cô",
+    ],
+  },
+  {
+    id: "tot_nghiep",
+    label: "Tốt nghiệp",
+    shortLabel: "Tốt nghiệp",
+    keywords: [
+      "tốt nghiệp",
+      "tot nghiep",
+      "cử nhân",
+      "cu nhan",
+      "lễ tốt nghiệp",
+    ],
+  },
 ]
 
 export type PriceRangeId =
@@ -184,28 +227,28 @@ export const PRICE_RANGES: readonly PriceRangeDef[] = [
   },
   {
     id: "under_500k",
-    label: "Dưới 500.000đ",
+    label: "Dưới 500.000 ₫",
     shortLabel: "< 500k",
     min: 0,
     max: 500_000,
   },
   {
     id: "500k_1m",
-    label: "500.000đ — 1.000.000đ",
+    label: "500.000–1.000.000 ₫",
     shortLabel: "500k - 1tr",
     min: 500_000,
     max: 1_000_000,
   },
   {
     id: "1m_2m",
-    label: "1.000.000đ — 2.000.000đ",
+    label: "1.000.000–2.000.000 ₫",
     shortLabel: "1tr - 2tr",
     min: 1_000_000,
     max: 2_000_000,
   },
   {
     id: "over_2m",
-    label: "Trên 2.000.000đ",
+    label: "Trên 2.000.000 ₫",
     shortLabel: "> 2tr",
     min: 2_000_000,
     max: null,

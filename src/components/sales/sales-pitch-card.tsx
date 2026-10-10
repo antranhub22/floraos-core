@@ -107,7 +107,7 @@ export function SalesPitchCard({
 
   // Không dùng tên thương hiệu/hotline giả trông như thật làm fallback — nếu
   // pitchData chưa có (hồ sơ tenant trống), phải hiện rõ đây là chỗ cần cập nhật.
-  const [shopName, setShopName] = useState(pitchData.shopName ?? "Chưa cập nhật tên tiệm")
+  const [shopName, setShopName] = useState(pitchData.shopName ?? "Chưa cập nhật tên cửa hàng")
   const [shopHotline, setShopHotline] = useState(pitchData.shopHotline ?? "Chưa cập nhật hotline")
   const [customNote, setCustomNote] = useState(pitchData.customNote ?? "")
 
@@ -434,7 +434,7 @@ export function SalesPitchCard({
           ? [
               {
                 id: "finalize",
-                label: "Chốt duyệt Final",
+                label: "Duyệt nội dung",
                 icon: CheckCircle2,
                 variant: "success",
                 onClick: handleFinalize,
@@ -443,7 +443,7 @@ export function SalesPitchCard({
           : [
               {
                 id: "finalized-badge",
-                label: "Đã Chốt Final",
+                label: "Đã duyệt",
                 icon: CheckCircle2,
                 variant: "outline",
                 disabled: true,
@@ -489,7 +489,7 @@ export function SalesPitchCard({
         },
         {
           id: "copy-card",
-          label: copiedImage ? "Đã copy ảnh!" : "Copy ảnh Zalo",
+          label: copiedImage ? "Đã sao chép ảnh!" : "Sao chép ảnh Zalo",
           icon: copiedImage ? Check : Copy,
           variant: "outline",
           loading: isExporting,
@@ -500,21 +500,21 @@ export function SalesPitchCard({
       const overflow: TabOverflowAction[] = [
         {
           id: "dl-png",
-          label: "Tải ảnh PNG (Retina 2x)",
+          label: "Tải ảnh PNG",
           icon: Download,
           disabled: isExporting,
           onClick: handleDownloadPng,
         },
         {
           id: "dl-jpeg",
-          label: "Tải ảnh JPEG (Nén 95%)",
+          label: "Tải ảnh JPEG",
           icon: ImageIcon,
           disabled: isExporting,
           onClick: handleDownloadJpeg,
         },
         {
           id: "dl-pdf",
-          label: "Xuất file PDF (Khổ A6 in ấn)",
+          label: "Xuất file PDF (khổ A6)",
           icon: FileDown,
           disabled: isExporting,
           onClick: handleDownloadPdf,
@@ -541,21 +541,21 @@ export function SalesPitchCard({
       const primary: TabAction[] = [
         {
           id: "open-script-library",
-          label: "Thư viện 14 kịch bản",
+          label: "Thư viện kịch bản",
           icon: BookOpen,
           variant: "outline",
           onClick: () => setIsScriptLibraryOpen(true),
         },
         {
           id: "create-order-script",
-          label: "Chốt đơn mẫu này",
+          label: "Tạo đơn từ mẫu này",
           icon: ShoppingBag,
           variant: "outline",
           onClick: () => setIsOrderModalOpen(true),
         },
         {
           id: "copy-script",
-          label: copied ? "Đã copy kịch bản!" : "Sao chép kịch bản",
+          label: copied ? "Đã sao chép kịch bản!" : "Sao chép kịch bản",
           icon: copied ? Check : Copy,
           variant: "primary",
           onClick: handleCopyZalo,
@@ -571,7 +571,7 @@ export function SalesPitchCard({
         },
         {
           id: "goto-card",
-          label: "Xem Thẻ chào khách A6",
+          label: "Xem thẻ chào A6",
           icon: Eye,
           onClick: () => setActiveTab("card"),
         },
@@ -599,7 +599,7 @@ export function SalesPitchCard({
   const tabItems: TabItem[] = [
     { id: "edit", label: "Chỉnh sửa thông tin", icon: Pencil },
     { id: "card", label: "Thẻ chào khách", icon: Eye, badge: "A6", badgeTone: "accent" },
-    { id: "script", label: "Kịch bản tư vấn Zalo", icon: MessageSquareText, badge: "1-Chạm", badgeTone: "success" },
+    { id: "script", label: "Kịch bản tư vấn", icon: MessageSquareText, badgeTone: "success" },
   ]
 
   // eslint-disable-next-line react-hooks/refs -- chỉ dựng danh sách nút; cardRef được đọc trong onClick (xuất ảnh), không đọc lúc render
@@ -614,9 +614,9 @@ export function SalesPitchCard({
             <CheckCircle2 size={22} strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-bold">Xuất bản Thẻ Chào Sản Phẩm thành công!</h4>
+            <h4 className="text-sm font-bold">Lưu thẻ chào mẫu hoa thành công!</h4>
             <p className="text-xs opacity-90">
-              Thẻ đã được chốt duyệt Final và lưu vào <strong>Kho lưu trữ &gt; Sale Pitch đã hoàn thành</strong>.
+              Thẻ đã được duyệt và lưu vào <strong>Kho ảnh & nội dung</strong>.
             </p>
           </div>
         </div>
@@ -629,9 +629,9 @@ export function SalesPitchCard({
             <CheckCircle2 size={22} strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-bold">Tạo đơn hàng thành công từ Thẻ chào!</h4>
+            <h4 className="text-sm font-bold">Tạo đơn hàng thành công!</h4>
             <p className="text-xs opacity-90">
-              Đơn hàng đã được đẩy sang phân hệ <strong>Vận hành Đơn hàng (Kanban)</strong> với đầy đủ công thức hoa và sẵn sàng in phiếu cho xưởng cắm hoa.
+              Đơn hàng đã được chuyển sang mục <strong>Đơn hàng</strong> với đầy đủ thành phần hoa để chuẩn bị cắm hoa.
             </p>
           </div>
         </div>
@@ -641,21 +641,21 @@ export function SalesPitchCard({
       <div className="flex items-center justify-between gap-4 rounded-2xl bg-surface p-4 border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-caption font-bold text-accent uppercase tracking-wider">Nghiên cứu thị trường — Công cụ Sales Rep</span>
+            <span className="text-caption font-bold text-accent uppercase tracking-wider">Tư vấn bán hàng</span>
             {status === "FINALIZED" ? (
               <Badge className="bg-success/15 text-success dark:text-success border border-success/30 font-bold text-caption gap-1 py-0.5">
                 <CheckCircle2 size={12} strokeWidth={2.5} />
-                ĐÃ CHỐT DUYỆT FINAL
+                ĐÃ DUYỆT
               </Badge>
             ) : (
               <Badge tone="neutral" className="font-semibold text-caption py-0.5">
-                Bản nháp đang biên tập
+                Bản nháp
               </Badge>
             )}
           </div>
-          <h2 className="mt-0.5 text-lg sm:text-xl font-extrabold text-text tracking-tight">Thẻ Chào Sản Phẩm & Kịch Bản Bán Hàng</h2>
+          <h2 className="mt-0.5 text-lg sm:text-xl font-extrabold text-text tracking-tight">Thẻ chào mẫu hoa và kịch bản tư vấn</h2>
           <p className="text-xs text-text-muted mt-0.5">
-            Cho phép tùy chỉnh 100% các trường thông tin hoa, giá và quà tặng trước khi chốt xuất bản.
+            Chỉnh sửa thông tin hoa, giá bán và quà tặng trước khi sử dụng.
           </p>
         </div>
       </div>
@@ -675,7 +675,7 @@ export function SalesPitchCard({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3 mb-4">
             <div className="flex items-center gap-2">
               <Pencil size={18} className="text-primary" />
-              <h3 className="text-sm font-bold text-text">Trình biên tập toàn diện Thẻ Chào Sản Phẩm (Nghiên cứu thị trường)</h3>
+              <h3 className="text-sm font-bold text-text">Chỉnh sửa thông tin thẻ chào</h3>
             </div>
             <div className="flex items-center gap-1 bg-surface-alt p-1 rounded-xl border border-border">
               <button
@@ -685,7 +685,7 @@ export function SalesPitchCard({
                   editTab === "general" ? "bg-surface shadow-sm text-primary font-bold" : "text-text-muted hover:text-text"
                 }`}
               >
-                1. Thông tin chung & Báo giá
+                1. Thông tin chung và giá
               </button>
               <button
                 type="button"
@@ -694,7 +694,7 @@ export function SalesPitchCard({
                   editTab === "bom" ? "bg-surface shadow-sm text-primary font-bold" : "text-text-muted hover:text-text"
                 }`}
               >
-                2. Thành phần hoa & Cấu phần (BOM)
+                2. Thành phần hoa
               </button>
               <button
                 type="button"
@@ -703,7 +703,7 @@ export function SalesPitchCard({
                   editTab === "gifts" ? "bg-surface shadow-sm text-primary font-bold" : "text-text-muted hover:text-text"
                 }`}
               >
-                3. Quà tặng & Cam kết dịch vụ
+                3. Quà tặng và cam kết
               </button>
             </div>
           </div>
@@ -713,7 +713,7 @@ export function SalesPitchCard({
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="sm:col-span-2">
-                  <label className="text-caption font-bold text-text-muted block mb-1">Tên sản phẩm chào khách</label>
+                  <label className="text-caption font-bold text-text-muted block mb-1">Tên mẫu hoa</label>
                   <input
                     type="text"
                     value={productName}
@@ -863,7 +863,7 @@ export function SalesPitchCard({
             </div>
           )}
 
-          {/* Tab 2: Thành phần hoa & Cấu phần (BOM) */}
+          {/* Tab 2: Thành phần hoa */}
           {editTab === "bom" && (
             <div className="flex flex-col gap-5">
               {/* Hoa chính */}

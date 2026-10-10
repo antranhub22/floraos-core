@@ -15,13 +15,13 @@ export function M01aGuidanceCard({ className }: M01aGuidanceCardProps) {
     <FeatureGuidanceCard
       badgeLabel="Hướng dẫn chụp ảnh hoa"
       badgeIcon={Info}
-      title="Tải ảnh sản phẩm & Nhận diện tự động"
+      title="Chụp ảnh thế nào để AI nhận diện chính xác hơn"
       titleIcon={Camera}
-      description="Tải ảnh hoa chụp từ thiết bị để AI tự động nhận diện loại hoa, đếm số lượng cành, phân tích tông màu và xác định phong cách thiết kế."
+      description="Chụp chính diện, đủ sáng và phông nền gọn để AI nhận diện đúng loại hoa và số cành."
       tips={[
-        "📸 Chụp góc chính diện hoặc 45°",
-        "💡 Đủ sáng, rõ nét hoa & lá",
-        "⚡ Tối đa 10 ảnh mỗi lần",
+        "📸 Chụp đủ cả bó hoặc giỏ hoa, không để che phần gốc hay ngọn",
+        "💡 Tránh chụp ngược sáng hoặc để bóng đổ gắt lên cánh hoa",
+        "✨ Ảnh càng rõ nét, AI càng nhận ra đúng lá phụ và phụ kiện",
       ]}
       className={className}
     />

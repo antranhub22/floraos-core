@@ -31,14 +31,14 @@ export function StatusBadge({ status }: { status: ProductItem["status"] }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-caption font-bold text-warning">
         <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
-        Lưu trữ
+        Đã lưu trữ
       </span>
     )
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-surface-alt px-2 py-0.5 text-caption font-bold text-text-muted">
       <span className="h-1.5 w-1.5 rounded-full bg-text-muted" aria-hidden="true" />
-      Nháp
+      Bản nháp
     </span>
   )
 }
@@ -49,7 +49,7 @@ export function PriceLabel({ price }: { price: number | null }) {
   }
   return (
     <span className="text-caption font-semibold text-primary">
-      {price.toLocaleString("vi-VN")}đ
+      {price.toLocaleString("vi-VN")} ₫
     </span>
   )
 }
@@ -103,7 +103,7 @@ export function ProductCard({ product, isExecutive, onTrash }: ProductCardProps)
           }}
           aria-label={`Chuyển "${product.name}" vào thùng rác`}
           className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/55 text-white hover:bg-danger hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-danger"
-          title="Xóa sản phẩm (Chỉ Điều hành)"
+          title="Chuyển vào thùng rác"
         >
           <Trash2 size={13} />
         </button>

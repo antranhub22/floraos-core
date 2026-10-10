@@ -106,7 +106,7 @@ export default function SanPhamPage() {
           <button
             type="button"
             onClick={() => napLai()}
-            aria-label="Tải lại danh sách"
+            aria-label="Làm mới"
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-text-muted hover:bg-surface-alt transition-colors focus-visible:outline-2 focus-visible:outline-primary"
           >
             <RefreshCw size={15} />
@@ -118,7 +118,7 @@ export default function SanPhamPage() {
             title="Nhập sản phẩm đồng loạt từ file Excel và folder ảnh"
           >
             <FileSpreadsheet size={14} className="text-success" />
-            <span className="hidden sm:inline">Nhập Excel & Ảnh</span>
+            <span className="hidden sm:inline">Nhập từ Excel</span>
           </button>
           <button
             type="button"
@@ -127,7 +127,7 @@ export default function SanPhamPage() {
             title="Upload ảnh hoa → AI phân tích tự động"
           >
             <Sparkles size={14} className="text-primary" />
-            <span className="hidden sm:inline">Phân tích AI</span>
+            <span className="hidden sm:inline">Quét ảnh hoa</span>
           </button>
           <Button
             size="sm"
@@ -135,7 +135,7 @@ export default function SanPhamPage() {
             className="flex items-center gap-1.5 h-9"
           >
             <Plus size={15} strokeWidth={2.2} />
-            <span>Thêm sản phẩm</span>
+            <span>Thêm mẫu hoa</span>
           </Button>
         </div>
       </header>
@@ -165,15 +165,15 @@ export default function SanPhamPage() {
           </div>
         ) : filteredProducts.length === 0 ? (
           <EmptyState
-            title={rawProducts.length === 0 ? "Kho sản phẩm trống" : "Không tìm thấy mẫu phù hợp"}
+            title={rawProducts.length === 0 ? "Chưa có mẫu hoa nào trong kho" : "Không tìm thấy mẫu hoa phù hợp"}
             reason={
               rawProducts.length === 0
-                ? "Upload ảnh hoa hoặc nhập file Excel để nạp mẫu hoa vào kho."
+                ? "Tải ảnh hoa hoặc nhập file Excel để thêm mẫu hoa vào kho."
                 : "Thử tìm kiếm với từ khoá khác, điều chỉnh khoảng giá hoặc chọn dịp khác."
             }
             action={
               rawProducts.length === 0
-                ? { label: "Upload ảnh → Tạo sản phẩm", onClick: () => router.push("/tai-anh" as never) }
+                ? { label: "Quét ảnh hoa", onClick: () => router.push("/tai-anh" as never) }
                 : { label: "Xóa tất cả bộ lọc", onClick: handleResetFilters }
             }
           />
@@ -230,7 +230,7 @@ export default function SanPhamPage() {
                     <span>Đang tải thêm...</span>
                   </>
                 ) : (
-                  "Tải thêm sản phẩm"
+                  "Xem thêm mẫu hoa"
                 )}
               </button>
             )}

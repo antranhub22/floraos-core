@@ -36,7 +36,7 @@ const DEFAULT_CATEGORIES = [
   "Tất cả",
   "Bó hoa",
   "Giỏ hoa",
-  "Kệ khai trương",
+  "Kệ hoa khai trương",
   "Hoa chia buồn",
   "Hộp hoa",
   "Bình hoa",
@@ -96,8 +96,8 @@ export function ProductSearchFilterBar({
               const val = e.target.value
               onChange((prev) => ({ ...prev, search: val }))
             }}
-            placeholder="Tìm theo tên mẫu, mã SKU, loài hoa hoặc dịp tặng..."
-            aria-label="Tìm kiếm sản phẩm"
+            placeholder="Tìm theo tên hoặc mã mẫu hoa…"
+            aria-label="Tìm kiếm mẫu hoa"
             className="h-10 w-full rounded-xl border border-border bg-surface pl-10 pr-9 text-body-sm text-text outline-none transition-colors focus:border-primary focus-visible:outline-2 focus-visible:outline-primary"
           />
           {filters.search && (
