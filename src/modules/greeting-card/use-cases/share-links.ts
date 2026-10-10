@@ -48,9 +48,15 @@ export async function openShareLink(code: string, knownSendCode: string | null, 
   // Mỗi khách có hạn riêng tính từ lúc mở, theo cài đặt của tiệm / bộ sưu tập
   const shop = await new GreetingCardRepository().getShopProfile(link.organization_id)
   const effectivePolicy = resolveEffectiveStepTimeoutPolicy(shop.settings, link.catalog?.filters)
-  const expiryHours = effectivePolicy.autoCancelBrowsing
-    ? effectivePolicy.browsingExpiryHours
-    : parseLinkLifetimeHours(shop.settings)
+  const explicitLifetime = parseLinkLifetimeHours(shop.settings)
+  const hasExplicitSetting = (shop.settings && typeof shop.settings === "object"
+    ? (shop.settings as Record<string, unknown>)["brochure_link_lifetime_hours"]
+    : undefined) !== undefined
+  const expiryHours = hasExplicitSetting
+    ? explicitLifetime
+    : effectivePolicy.autoCancelBrowsing
+      ? effectivePolicy.browsingExpiryHours
+      : explicitLifetime
   const session = await repo.openVisitorSession(link, linkExpiryFrom(expiryHours))
   return { sendCode: session.send_code, sessionId: session.id, organizationId: link.organization_id, catalogId: link.catalog_id }
 }

@@ -62,9 +62,16 @@ export async function createSendLink(
     repo.getCatalogFilters(ctx, targetCatalogId),
   ])
   const effectivePolicy = resolveEffectiveStepTimeoutPolicy(shop.settings, catalogFilters)
-  const expiryHours = effectivePolicy.autoCancelUnopened
-    ? effectivePolicy.unopenedExpiryHours
-    : parseLinkLifetimeHours(shop.settings)
+  const explicitLifetime = parseLinkLifetimeHours(shop.settings)
+  // Thứ tự ưu tiên: cài riêng của tiệm (brochure_link_lifetime_hours) > step timeout policy > mặc định 24h
+  const hasExplicitSetting = (shop.settings && typeof shop.settings === "object"
+    ? (shop.settings as Record<string, unknown>)["brochure_link_lifetime_hours"]
+    : undefined) !== undefined
+  const expiryHours = hasExplicitSetting
+    ? explicitLifetime
+    : effectivePolicy.autoCancelUnopened
+      ? effectivePolicy.unopenedExpiryHours
+      : explicitLifetime
   const phone = input.customerPhone ? normalizePhone(input.customerPhone) : null
   const session = await repo.createSession(ctx, {
     catalogId: targetCatalogId,

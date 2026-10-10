@@ -40,10 +40,11 @@ export interface ProductLookupRaw {
    */
   price_vnd: number | null
   /**
-   * Link Google Drive của thư mục ảnh — `undefined` khi không có.
+   /** Link Google Drive của thư mục ảnh — `undefined` khi không có.
    * Dùng để hiển thị thumbnail Drive trong trường hợp sản phẩm chưa có ảnh lưu trữ.
    */
   driveLink?: string | undefined
+  attributes?: Record<string, unknown> | null
 }
 
 export interface ProductPricingSummary {
@@ -73,6 +74,7 @@ export interface ProductLookupResult {
   pricing: ProductPricingSummary | null
   /** Kê tên khối bị cắt, để giao diện viết đúng câu — tương ứng `bi_cat` bản gốc. */
   redacted_fields: string[]
+  attributes?: Record<string, unknown> | null | undefined
 }
 
 /**
@@ -110,9 +112,10 @@ export function filterProductLookup(
     container: product.container,
     status: product.status,
     branch_id: product.branch_id,
-    masterImageUrl: product.masterImageUrl,
-    price_vnd: product.price_vnd,
-    driveLink: product.driveLink,
+    masterImageUrl: product.masterImageUrl ?? ((product.attributes?.imageUrl) as string | undefined),
+    price_vnd: product.price_vnd ?? ((product.attributes?.price_vnd ?? product.attributes?.price) as number | null) ?? null,
+    driveLink: product.driveLink ?? ((product.attributes?.drive_link) as string | undefined),
+    attributes: product.attributes ?? null,
     pricing,
     redacted_fields: redactedFields,
   }

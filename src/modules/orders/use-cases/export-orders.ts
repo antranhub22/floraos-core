@@ -10,24 +10,16 @@
  *   • Giới hạn tối đa 5000 dòng
  */
 
-import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy"
+import { queryOrdersForExport } from "../infra/order-export-query"
 import * as XLSX from "xlsx"
 
-const MAX_ROWS = 5000
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 
-function toVnDateString(date: Date): string {
+function toVnDateString(date: Date | null): string {
+  if (!date) return ""
   const vn = new Date(date.getTime() + VN_OFFSET_MS)
   return vn.toISOString().replace("T", " ").slice(0, 19)
-}
-
-function parseVnDateStart(dateStr: string): Date {
-  return new Date(new Date(dateStr + "T00:00:00+07:00").getTime())
-}
-
-function parseVnDateEnd(dateStr: string): Date {
-  return new Date(new Date(dateStr + "T23:59:59+07:00").getTime())
 }
 
 function statusLabel(status: string): string {
@@ -84,54 +76,9 @@ export async function exportOrdersToExcel(
   ctx: TenantContext,
   input: ExportOrdersInput
 ): Promise<Uint8Array> {
-  const where = {
-    organization_id: ctx.organizationId,
-    ...(input.source ? { source: input.source } : {}),
-    ...(input.fromDate || input.toDate
-      ? {
-          created_at: {
-            ...(input.fromDate ? { gte: parseVnDateStart(input.fromDate) } : {}),
-            ...(input.toDate ? { lte: parseVnDateEnd(input.toDate) } : {}),
-          },
-        }
-      : {}),
-  }
-
-  const orders = await prisma.orders.findMany({
-    where,
-    orderBy: { created_at: "desc" },
-    take: MAX_ROWS,
-    include: {
-      items: true,
-      customer: {
-        select: { id: true, code: true, name: true, phone: true, tier: true },
-      },
-      payments: {
-        select: {
-          id: true,
-          kind: true,
-          amount_vnd: true,
-          payment_method: true,
-          reference: true,
-          collected_at: true,
-          collected_by: true,
-          note: true,
-        },
-        orderBy: { collected_at: "asc" },
-      },
-      greeting_sessions: {
-        select: {
-          id: true,
-          send_code: true,
-          sale_id: true,
-          customer_name: true,
-          customer_phone: true,
-          status: true,
-        },
-        take: 3,
-      },
-    },
-  })
+  const parsedFrom = input.fromDate ? new Date(new Date(input.fromDate + "T00:00:00+07:00").getTime()) : undefined
+  const parsedTo = input.toDate ? new Date(new Date(input.toDate + "T23:59:59+07:00").getTime()) : undefined
+  const orders = await queryOrdersForExport(ctx, { source: input.source, fromDate: parsedFrom, toDate: parsedTo })
 
   // ── Sheet 1: Danh sách đơn hàng ─────────────────────────────────────────
   const orderRows = orders.map((o, idx) => {

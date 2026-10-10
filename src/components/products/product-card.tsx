@@ -58,39 +58,45 @@ export interface ProductCardProps {
   product: ProductItem
   isExecutive?: boolean
   onTrash?: (product: ProductItem) => void
+  onImageClick?: (product: ProductItem) => void
 }
 
-export function ProductCard({ product, isExecutive, onTrash }: ProductCardProps) {
+export function ProductCard({ product, isExecutive, onTrash, onImageClick }: ProductCardProps) {
   return (
     <div className="group flex flex-col rounded-2xl border border-border bg-surface overflow-hidden transition-all hover:border-primary/40 hover:shadow-md relative">
+      {/* Vùng ảnh sản phẩm: Bấm để mở Bảng thông số sản phẩm & Phân tích AI */}
+      <button
+        type="button"
+        onClick={() => onImageClick?.(product)}
+        aria-label={`Xem bảng thông số và phân tích AI cho ${product.name}`}
+        className="relative aspect-square w-full bg-surface-alt overflow-hidden text-left focus-visible:outline-2 focus-visible:outline-primary cursor-pointer group/img"
+      >
+        <ProductThumb
+          name={product.name}
+          masterImageUrl={product.masterImageUrl}
+          driveLink={product.driveLink}
+          size="card"
+        />
+        <div className="absolute top-2 left-2 pointer-events-none">
+          <StatusBadge status={product.status} />
+        </div>
+      </button>
+
+      {/* Thông tin sản phẩm: Bấm vào tên để chuyển sang trang chi tiết */}
       <Link
         href={`/san-pham/${product.id}` as never}
-        className="flex flex-col flex-1 focus-visible:outline-2 focus-visible:outline-primary"
+        className="flex flex-col flex-1 p-3 focus-visible:outline-2 focus-visible:outline-primary"
       >
-        {/* Ảnh sản phẩm */}
-        <div className="relative aspect-square w-full bg-surface-alt overflow-hidden">
-          <ProductThumb
-            name={product.name}
-            masterImageUrl={product.masterImageUrl}
-            driveLink={product.driveLink}
-            size="card"
-          />
-          <div className="absolute top-2 left-2">
-            <StatusBadge status={product.status} />
-          </div>
+        <div className="truncate text-body-sm font-bold text-text group-hover:text-primary transition-colors">
+          {product.name}
         </div>
-
-        {/* Thông tin */}
-        <div className="flex flex-col gap-1 p-3">
-          <div className="truncate text-body-sm font-bold text-text">{product.name}</div>
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate text-caption text-text-muted">
-              {product.category ?? "Chưa phân loại"}
-            </span>
-            <PriceLabel price={product.price_vnd} />
-          </div>
-          <div className="mt-1 text-caption text-text-muted font-mono">#{product.code}</div>
+        <div className="flex items-center justify-between gap-2 mt-1">
+          <span className="truncate text-caption text-text-muted">
+            {product.category ?? "Chưa phân loại"}
+          </span>
+          <PriceLabel price={product.price_vnd} />
         </div>
+        <div className="mt-1 text-caption text-text-muted font-mono">#{product.code}</div>
       </Link>
 
       {/* Nút xóa – chỉ Điều hành */}

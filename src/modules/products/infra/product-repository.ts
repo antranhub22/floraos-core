@@ -49,6 +49,7 @@ export type UpdateProductInput = {
   container?: string | null | undefined
   status?: product_status | undefined
   attributes?: Record<string, unknown> | null | undefined
+  imageAssetId?: string | null | undefined
 }
 
 export type ListProductsFilters = {
@@ -224,7 +225,10 @@ export class ProductRepository {
       const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : undefined
 
       const { images: _img, variants: _var, ...base } = row
-      return { ...base, masterImageUrl, price_vnd, driveLink }
+      const resolvedMasterImageUrl =
+        masterImageUrl ??
+        (typeof attrs.imageUrl === "string" && attrs.imageUrl ? attrs.imageUrl : undefined)
+      return { ...base, masterImageUrl: resolvedMasterImageUrl, price_vnd, driveLink }
     })
   }
 
@@ -301,6 +305,9 @@ export class ProductRepository {
       },
     })
     if (result.count === 0) return null
+    if (input.imageAssetId) {
+      await linkMainImage(this.db, ctx, id, input.imageAssetId)
+    }
     return this.findById(ctx, id)
   }
 

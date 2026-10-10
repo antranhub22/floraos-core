@@ -108,6 +108,34 @@ export function validateCancellationProposal(
 }
 
 /**
+ * Kiểm tra dữ liệu đề xuất (không kiểm tra trạng thái vòng đời đơn hàng).
+ * Dùng khi tạo đề xuất (createProposal) — trạng thái đơn do Điều hành kiểm khi duyệt (decide).
+ */
+export function validateCancellationProposalData(
+  proposal: CancellationProposal,
+  order: { totalVnd: number; paidVnd: number }
+): string | null {
+  if (!proposal.reason || proposal.reason.trim().length < 3) {
+    return "Vui lòng nhập lý do hủy/hoàn tiền chi tiết (tối thiểu 3 ký tự)."
+  }
+  const refund = Math.max(0, Math.round(proposal.refundAmountVnd || 0))
+  if (proposal.type === "FULL_REFUND" && order.paidVnd <= 0) {
+    return "Đơn hàng chưa thu tiền, không thể hoàn tiền toàn phần (chọn Hủy đơn)."
+  }
+  if (proposal.type === "PARTIAL_REFUND") {
+    if (order.paidVnd <= 0) return "Đơn hàng chưa có khoản thu nào để hoàn tiền."
+    if (refund <= 0) return "Số tiền hoàn một phần phải lớn hơn 0đ."
+    if (refund >= order.paidVnd) {
+      return `Số tiền hoàn một phần phải nhỏ hơn tổng số tiền đã thu (${order.paidVnd.toLocaleString("vi-VN")}đ). Nếu hoàn toàn bộ, hãy chọn Hoàn tiền toàn phần.`
+    }
+  }
+  if (refund > order.paidVnd) {
+    return `Số tiền hoàn không được vượt quá số tiền khách đã trả (${order.paidVnd.toLocaleString("vi-VN")}đ).`
+  }
+  return null
+}
+
+/**
  * Số tiền hoàn thực tế khi Điều hành duyệt — máy chủ tự tính, không tin client:
  * Hủy đơn không hoàn → 0; Hoàn toàn phần → đúng số đã thu; Hoàn một phần → số Điều hành
  * chốt (hoặc số đề xuất), không âm.

@@ -8,7 +8,7 @@ import {
   type CancellationPayload,
   type CancellationProposal,
   resolveRefundVnd,
-  validateCancellationProposal,
+  validateCancellationProposalData,
 } from "../domain/cancellation-request"
 import type { MessageRole } from "../domain/internal-message"
 import { cancelBlocker } from "../domain/brochure-payment-policy"
@@ -61,7 +61,7 @@ export class CancellationRepository {
     const order = await this.getOrderSummary(ctx, input.orderId)
     if (!order) throw notFound()
 
-    const err = validateCancellationProposal(input.proposal, order)
+    const err = validateCancellationProposalData(input.proposal, order)
     if (err) throw validationFailed({ proposal: err })
 
     const payload: CancellationPayload = {

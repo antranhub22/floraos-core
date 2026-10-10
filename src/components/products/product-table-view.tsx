@@ -10,9 +10,10 @@ export interface ProductTableViewProps {
   products: ProductItem[]
   isExecutive?: boolean
   onTrash?: (product: ProductItem) => void
+  onImageClick?: (product: ProductItem) => void
 }
 
-export function ProductTableView({ products, isExecutive, onTrash }: ProductTableViewProps) {
+export function ProductTableView({ products, isExecutive, onTrash, onImageClick }: ProductTableViewProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
       <table className="w-full text-left text-body-sm">
@@ -30,14 +31,20 @@ export function ProductTableView({ products, isExecutive, onTrash }: ProductTabl
             <tr key={p.id} className="transition-colors hover:bg-surface-alt/50">
               <td className="px-4 py-3 font-semibold text-text">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden bg-surface-alt border border-border">
+                  <button
+                    type="button"
+                    onClick={() => onImageClick?.(p)}
+                    title={`Xem bảng thông số & phân tích AI cho ${p.name}`}
+                    aria-label={`Xem bảng thông số & phân tích AI cho ${p.name}`}
+                    className="h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden bg-surface-alt border border-border hover:border-primary/50 transition-colors focus-visible:outline-2 focus-visible:outline-primary cursor-pointer text-left"
+                  >
                     <ProductThumb
                       name={p.name}
                       masterImageUrl={p.masterImageUrl}
                       driveLink={p.driveLink}
                       size="row"
                     />
-                  </div>
+                  </button>
                   <div className="min-w-0">
                     <div className="truncate font-semibold text-text">{p.name}</div>
                     <div className="text-caption text-text-muted font-mono">#{p.code}</div>

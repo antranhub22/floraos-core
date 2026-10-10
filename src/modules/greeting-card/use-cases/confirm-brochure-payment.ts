@@ -1,5 +1,5 @@
 import type { TenantContext } from "@/core/tenancy"
-import { conflict, notFound, unprocessable } from "@/core/http/errors"
+import { notFound, unprocessable } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
@@ -87,32 +87,6 @@ export async function adminConfirmBrochurePayment(
   const pct = plan?.depositPercent ?? policy.depositPercent
   const deposit = depositAmountVnd(total, pct)
   const isDepositOrder = pct > 0 && deposit < total
-
-  // Chặn thu lần 2 nếu đơn đặt cọc chưa đến bước được phép thu phần còn lại VÀ khách chưa báo chuyển tiền
-  if (isDepositOrder && paid >= deposit && paid < total) {
-    const orderWithSessions = order as { greeting_sessions?: Array<{ status: string }> }
-    const isReported = orderWithSessions.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED")
-
-    if (!isReported) {
-      if (policy.requireFullBeforeDispatch) {
-        const isReady = order.production_status === "READY"
-        if (!isReady) {
-          throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Phần còn lại chỉ được thu sau khi xưởng hoàn thành cắm hoa và khách xác nhận ảnh.")
-        }
-        const orderWithQc = order as { qc_records?: Array<{ notes: string | null; created_at: Date }> }
-        const hasPhotoApproved = orderWithQc.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
-        const productPhotoQc = orderWithQc.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-        const isAutoApproved = !!productPhotoQc && Date.now() >= productPhotoQc.created_at.getTime() + 10 * 60_000
-        if (!hasPhotoApproved && !isAutoApproved) {
-          throw conflict("Đơn hàng đang chờ khách duyệt ảnh thành phẩm trước khi giao. Chưa thể ghi nhận thanh toán lần 2.")
-        }
-      } else {
-        if (order.delivery_status !== "DELIVERED") {
-          throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công.")
-        }
-      }
-    }
-  }
 
   let amountVnd = input.amountVnd
   if (amountVnd === undefined) {

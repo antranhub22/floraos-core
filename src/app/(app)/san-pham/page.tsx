@@ -22,6 +22,7 @@ import {
   filterAndSortProducts,
   type ProductFilterState,
 } from "@/components/products/product-filter-types"
+import { AiProductEnrichmentModal } from "@/components/products/ai-product-enrichment-modal"
 
 const BASE_CATEGORIES = [
   "Tất cả",
@@ -40,6 +41,7 @@ export default function SanPhamPage() {
   const [filters, setFilters] = useState<ProductFilterState>(DEFAULT_FILTER_STATE)
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
   const [trashTarget, setTrashTarget] = useState<TrashConfirmTarget | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null)
 
   const isExecutive =
     session.roleKey === "dieu_hanh" ||
@@ -187,6 +189,7 @@ export default function SanPhamPage() {
                 key={p.id}
                 product={p}
                 isExecutive={isExecutive}
+                onImageClick={(prod) => setSelectedProduct(prod)}
                 onTrash={(prod) =>
                   setTrashTarget({
                     id: prod.id,
@@ -204,6 +207,7 @@ export default function SanPhamPage() {
           <ProductTableView
             products={filteredProducts}
             isExecutive={isExecutive}
+            onImageClick={(prod) => setSelectedProduct(prod)}
             onTrash={(prod) =>
               setTrashTarget({
                 id: prod.id,
@@ -252,6 +256,20 @@ export default function SanPhamPage() {
         onClose={() => setTrashTarget(null)}
         onConfirm={handleConfirmTrash}
       />
+
+      {/* Modal Bảng thông số sản phẩm & Phân tích AI */}
+      {selectedProduct && (
+        <AiProductEnrichmentModal
+          isOpen={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          productId={selectedProduct.id}
+          initialProduct={selectedProduct}
+          onSuccess={() => {
+            napLai()
+            setSelectedProduct(null)
+          }}
+        />
+      )}
     </div>
   )
 }
