@@ -61,31 +61,27 @@ export default function ProfilePage() {
   const tabs: TabItem[] = [
     {
       id: "business",
-      label: "Hồ sơ kinh doanh",
+      label: "Thông tin cửa hàng",
       icon: Building2,
     },
     {
       id: "brand",
       label: "Nhận diện thương hiệu",
       icon: Palette,
-      badge: "5 Màu Hex",
-      badgeTone: "accent",
     },
     {
       id: "assets",
-      label: "Tài nguyên thương hiệu",
+      label: "Khung ảnh và mẫu in",
       icon: Sparkles,
-      badge: "Master",
-      badgeTone: "accent",
     },
     {
       id: "sales",
-      label: "Chính sách & Cam kết",
+      label: "Chính sách và cam kết",
       icon: ShieldCheck,
     },
     {
       id: "occasions",
-      label: "Dịp lễ & Giọng văn",
+      label: "Dịp lễ và giọng văn",
       icon: CalendarHeart,
     },
   ]
