@@ -6,6 +6,7 @@ import type { JourneyDefinition } from "@/modules/journey/domain/journey-model"
 import { useSession } from "@/lib/session"
 import { isJourneyLocked } from "@/lib/feature-lock"
 import { UserMenu } from "@/components/layout/user-menu"
+import { useI18n } from "@/lib/i18n"
 import { ActionCard } from "./action-card"
 import { FeaturedSpotlightCard } from "./featured-spotlight-card"
 
@@ -27,6 +28,7 @@ export function ChoiceGrid({
   featuredJourneyId = "greeting-card-hub",
 }: ChoiceGridProps) {
   const { userInitials } = useSession()
+  const { t, dict } = useI18n()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL")
 
@@ -93,7 +95,7 @@ export function ChoiceGrid({
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-border bg-surface hover:bg-surface-alt text-body-sm font-medium text-text transition-colors cursor-pointer"
             >
               <SlidersHorizontal className="w-4 h-4 text-text-muted" aria-hidden="true" />
-              <span>Xem bảng số liệu</span>
+              <span>{dict.home.header.expertModeButton}</span>
             </button>
           )}
           <UserMenu initials={userInitials || "U"} direction="down" />
@@ -112,7 +114,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Tất cả ({journeys.length})
+            {t("home.filters.all", { count: journeys.length })}
           </button>
           <button
             type="button"
@@ -123,7 +125,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Việc đơn lẻ
+            {dict.home.filters.singleTask}
           </button>
           <button
             type="button"
@@ -134,7 +136,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Quy trình trọn gói
+            {dict.home.filters.workflow}
           </button>
           <button
             type="button"
@@ -145,7 +147,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Trợ lý AI
+            {dict.home.filters.aiAssistant}
           </button>
         </div>
 
@@ -155,7 +157,7 @@ export function ChoiceGrid({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm công việc…"
+            placeholder={dict.home.filters.searchPlaceholder}
             className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-border bg-surface text-body-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary transition-colors"
           />
         </div>
@@ -185,7 +187,7 @@ export function ChoiceGrid({
       ) : !showFeaturedSpotlight ? (
         <div className="text-center py-12 border border-dashed border-border rounded-xl bg-surface">
           <p className="text-body text-text-muted">
-            Không có kết quả cho &ldquo;{searchQuery}&rdquo;. Hãy thử từ khóa khác.
+            {t("home.filters.emptySearch", { query: searchQuery })}
           </p>
         </div>
       ) : null}

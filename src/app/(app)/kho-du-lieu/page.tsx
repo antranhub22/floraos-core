@@ -4,8 +4,10 @@ import Link from "next/link"
 import { AccountStorageHub } from "@/components/storage/account-storage-hub"
 import { Button } from "@/components/ui/button"
 import { Camera, Plus, Sparkles, Folder } from "lucide-react"
+import { useI18n } from "@/lib/i18n"
 
 export default function KhoDuLieuPage() {
+  const { dict } = useI18n()
   return (
     <div className="flex flex-1 flex-col overflow-y-auto p-6 max-w-7xl mx-auto w-full">
       {/* Top Header Bar */}
@@ -15,9 +17,9 @@ export default function KhoDuLieuPage() {
             <Folder size={22} strokeWidth={2.2} />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-text">Kho ảnh & nội dung</h1>
+            <h1 className="text-2xl font-black tracking-tight text-text">{dict.storage.header.title}</h1>
             <p className="text-body-sm text-text-muted mt-0.5">
-              Lưu ảnh gốc, ảnh đã duyệt và kịch bản tư vấn của cửa hàng. Mục đã xóa được giữ 30 ngày trong Thùng rác.
+              {dict.storage.header.description}
             </p>
           </div>
         </div>
@@ -26,7 +28,7 @@ export default function KhoDuLieuPage() {
           <Link href="/tai-anh">
             <Button variant="primary" className="flex items-center gap-2 font-bold h-10 px-4 shadow-xs">
               <Camera size={16} strokeWidth={2} />
-              Tải ảnh mới
+              {dict.storage.header.uploadButton}
             </Button>
           </Link>
         </div>

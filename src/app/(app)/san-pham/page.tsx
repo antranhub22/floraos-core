@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useSession } from "@/lib/session"
+import { useI18n } from "@/lib/i18n"
 import {
   TrashConfirmModal,
   type TrashConfirmTarget,
@@ -35,6 +36,7 @@ const BASE_CATEGORIES = [
 export default function SanPhamPage() {
   const router = useRouter()
   const session = useSession()
+  const { t } = useI18n()
   const [filters, setFilters] = useState<ProductFilterState>(DEFAULT_FILTER_STATE)
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
   const [trashTarget, setTrashTarget] = useState<TrashConfirmTarget | null>(null)
@@ -99,14 +101,14 @@ export default function SanPhamPage() {
       {/* Header tác vụ */}
       <header className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3.5 gap-3">
         <div>
-          <div className="text-caption text-text-muted">Kho mẫu hoa</div>
-          <h1 className="text-title font-extrabold text-primary">Mẫu hoa</h1>
+          <div className="text-caption text-text-muted">{t("products.header.category")}</div>
+          <h1 className="text-title font-extrabold text-primary">{t("products.header.title")}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => napLai()}
-            aria-label="Làm mới"
+            aria-label={t("products.header.refresh")}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-text-muted hover:bg-surface-alt transition-colors focus-visible:outline-2 focus-visible:outline-primary"
           >
             <RefreshCw size={15} />
@@ -118,7 +120,7 @@ export default function SanPhamPage() {
             title="Nhập sản phẩm đồng loạt từ file Excel và folder ảnh"
           >
             <FileSpreadsheet size={14} className="text-success" />
-            <span className="hidden sm:inline">Nhập từ Excel</span>
+            <span className="hidden sm:inline">{t("products.header.importExcel")}</span>
           </button>
           <button
             type="button"
@@ -127,7 +129,7 @@ export default function SanPhamPage() {
             title="Upload ảnh hoa → AI phân tích tự động"
           >
             <Sparkles size={14} className="text-primary" />
-            <span className="hidden sm:inline">Quét ảnh hoa</span>
+            <span className="hidden sm:inline">{t("products.header.scanPhoto")}</span>
           </button>
           <Button
             size="sm"
@@ -135,7 +137,7 @@ export default function SanPhamPage() {
             className="flex items-center gap-1.5 h-9"
           >
             <Plus size={15} strokeWidth={2.2} />
-            <span>Thêm mẫu hoa</span>
+            <span>{t("products.header.createFlower")}</span>
           </Button>
         </div>
       </header>

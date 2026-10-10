@@ -9,6 +9,7 @@ import { ArrowLeft, Sparkles, Send, ShieldCheck, BookOpen, RefreshCw, GitMerge, 
 import { TabActionHeader, type TabItem } from "@/components/ui/tab-header"
 import { cn } from "@/lib/utils"
 import { useSession } from "@/lib/session"
+import { useI18n } from "@/lib/i18n"
 import { SalesBrochureTab } from "@/components/greeting-card/sales/sales-brochure-tab"
 import { AdminBrochurePaymentTab } from "@/components/greeting-card/admin/admin-brochure-payment-tab"
 import { CatalogListTab } from "@/components/greeting-card/catalog/catalog-list-tab"
@@ -35,6 +36,7 @@ const MODES: { id: ViewMode; label: string; icon: typeof Wand2 }[] = [
 export default function TheChaoPage() {
   const router = useRouter()
   const { can } = useSession()
+  const { dict } = useI18n()
   // "wizard": luồng 3 bước gửi thẻ · "manager": bảng quản lý chi tiết — mở theo vai (Điều hành/Điều phối/Sale)
   const [viewMode, setViewMode] = useState<ViewMode>(() => defaultTheChaoView(can).viewMode)
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => defaultTheChaoView(can).activeTab)
@@ -85,11 +87,11 @@ export default function TheChaoPage() {
     coordinator: can("R3") || can("R4") || can("R5"),
   }
   const tabs: TabItem[] = ([
-    { id: "catalog", icon: BookOpen, label: "Bộ sưu tập", ...(catalogCount !== null ? { badge: catalogCount } : {}) },
-    { id: "tracking", icon: GitMerge, label: "Theo dõi đơn" },
-    { id: "sales", icon: Send, label: "Bán hàng", ...(sessionCount !== null ? { badge: sessionCount } : {}) },
-    { id: "payment", icon: ShieldCheck, label: "Điều hành", ...(pendingCancelCount !== null ? { badge: pendingCancelCount } : {}) },
-    { id: "coordinator", icon: Sparkles, label: "Điều phối" },
+    { id: "catalog", icon: BookOpen, label: dict.greetingCard.tabs.catalogs, ...(catalogCount !== null ? { badge: catalogCount } : {}) },
+    { id: "tracking", icon: GitMerge, label: dict.greetingCard.tabs.tracking },
+    { id: "sales", icon: Send, label: dict.greetingCard.tabs.sales, ...(sessionCount !== null ? { badge: sessionCount } : {}) },
+    { id: "payment", icon: ShieldCheck, label: dict.greetingCard.tabs.operation, ...(pendingCancelCount !== null ? { badge: pendingCancelCount } : {}) },
+    { id: "coordinator", icon: Sparkles, label: dict.greetingCard.tabs.coordination },
   ] satisfies TabItem[]).filter((t) => allowed[t.id as ActiveTab])
   // Tab đang chọn bị ẩn (không đủ quyền) → mở tab đầu tiên được phép
   const shownTab: ActiveTab = allowed[activeTab] ? activeTab : ((tabs[0]?.id as ActiveTab | undefined) ?? activeTab)
@@ -103,11 +105,11 @@ export default function TheChaoPage() {
             className="mb-2 inline-flex items-center gap-1 text-body-sm font-medium text-text-muted hover:text-foreground"
           >
             <ArrowLeft size={14} aria-hidden="true" />
-            Đơn hàng
+            {dict.greetingCard.header.breadcrumb}
           </Link>
-          <h1 className="text-title font-bold text-foreground">Thẻ chào mẫu hoa</h1>
+          <h1 className="text-title font-bold text-foreground">{dict.greetingCard.header.title}</h1>
           <p className="mt-1 max-w-2xl text-body-sm text-text-muted">
-            Gửi khách bộ sưu tập hoa để xem, chọn mẫu, đặt hàng và thanh toán ngay trên điện thoại.
+            {dict.greetingCard.header.description}
           </p>
         </div>
 

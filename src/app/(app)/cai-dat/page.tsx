@@ -24,10 +24,12 @@ import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
 import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
+import { useI18n } from "@/lib/i18n"
 import type { Route } from "next"
 
 export default function CaiDatTiemPage() {
   const { orgName, can } = useSession()
+  const { dict } = useI18n()
   const canEdit = can("F2") || can("H4") // Quyền chỉnh sửa hồ sơ / điều hành
 
   const {
@@ -83,9 +85,9 @@ export default function CaiDatTiemPage() {
     <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto w-full">
       {/* 1. Hướng dẫn chuẩn hóa K1 */}
       <FeatureGuidanceCard
-        badgeLabel="CÀI ĐẶT CẬA HÀNG"
+        badgeLabel={dict.settings.header.guidanceBadge}
         badgeIcon={Settings}
-        title="Quản lý thông tin chung và các thiết lập nâng cao của cửa hàng."
+        title={dict.settings.header.guidanceTitle}
         titleIcon={Store}
         description="Chỉnh sửa tên cửa hàng, hotline, địa chỉ và giờ mở cửa. Những thông tin này tự động đồng bộ sang thẻ chào khách và tin nhắn Zalo."
         tips={[

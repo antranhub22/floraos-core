@@ -3,18 +3,20 @@
 import React from "react"
 import { Package } from "lucide-react"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
+import { useI18n } from "@/lib/i18n"
 
 export function OrderGuidanceCard() {
+  const { dict } = useI18n()
   return (
     <FeatureGuidanceCard
-      tag="HƯỚNG DẪN XỬ LÝ ĐƠN HÀNG"
+      tag={dict.orders.guidance.badge}
       icon={Package}
-      title="Quy trình cắm hoa và giao hàng"
-      description="Mỗi đơn hàng có phiếu cắm hoa cho thợ và phiếu giao hoa kèm mã QR để xác nhận giao thành công."
+      title={dict.orders.guidance.title}
+      description={dict.orders.guidance.description}
       tips={[
-        "✂️ Phiếu cắm hoa ghi rõ số lượng từng loại hoa, giấy gói và tông màu chuẩn",
-        "📸 Chụp ảnh thành phẩm gửi khách duyệt trước khi giao",
-        "🛵 In phiếu giao hoa kèm thiệp và thông tin người nhận",
+        `✂️ ${dict.orders.guidance.tips.recipe}`,
+        `📸 ${dict.orders.guidance.tips.qcPhoto}`,
+        `🛵 ${dict.orders.guidance.tips.deliverySlip}`,
       ]}
     />
   )
