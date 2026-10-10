@@ -4,7 +4,7 @@
  * khung 2 tiếng chứa giờ đó; đơn không chọn khung ("Trong ngày") không tính vào khung nào.
  * Pure TypeScript.
  */
-import { DELIVERY_SLOTS, isCustomTimeSlot, parseCustomTime } from "./delivery-schedule"
+import { DELIVERY_SLOTS, isCustomTimeSlot, parseCustomTime, parseSlotStartHour } from "./delivery-schedule"
 
 export const DEFAULT_SLOT_CAPACITY = 100
 export const MAX_SLOT_CAPACITY = 10_000
@@ -49,7 +49,19 @@ export function slotIdOfTimeSlot(timeSlot: string | null | undefined): string | 
     if (hour >= last.endHour) return last.id
     return DELIVERY_SLOTS.find((s) => hour >= s.startHour && hour < s.endHour)?.id ?? null
   }
-  return DELIVERY_SLOTS.find((s) => s.label === value)?.id ?? null
+  const exact = DELIVERY_SLOTS.find((s) => s.label === value)
+  if (exact) return exact.id
+
+  const startHour = parseSlotStartHour(value)
+  if (startHour !== null) {
+    const first = DELIVERY_SLOTS[0]!
+    const last = DELIVERY_SLOTS[DELIVERY_SLOTS.length - 1]!
+    if (startHour < first.startHour) return first.id
+    if (startHour >= last.endHour) return last.id
+    return DELIVERY_SLOTS.find((s) => startHour >= s.startHour && startHour < s.endHour)?.id ?? null
+  }
+
+  return null
 }
 
 /** Đếm đơn theo khung từ danh sách khung giờ đã lưu của các đơn cùng ngày. */

@@ -11,6 +11,7 @@ import {
   customTimeLabel,
   enabledSlots,
   isCustomTimeSlot,
+  readyHour,
 } from "@/modules/greeting-card/domain/delivery-schedule"
 
 const CUSTOM = "__custom__"
@@ -43,6 +44,10 @@ export function DeliveryTimePicker({
   const custom = isCustomTimeSlot(value)
   const customTime = custom ? value.slice(CUSTOM_TIME_PREFIX.length) : ""
 
+  const ready = date ? readyHour(date, shipping) : null
+  const minHour = ready != null ? Math.max(CUSTOM_TIME_MIN_HOUR, ready) : CUSTOM_TIME_MIN_HOUR
+  const minTimeStr = `${pad(Math.floor(minHour))}:${pad(Math.ceil((minHour % 1) * 60))}`
+
   return (
     <div className="flex flex-col gap-2">
       <select
@@ -67,7 +72,7 @@ export function DeliveryTimePicker({
           <input
             type="time"
             aria-label="Giờ giao cụ thể"
-            min={`${pad(CUSTOM_TIME_MIN_HOUR)}:00`}
+            min={minTimeStr}
             max={`${pad(CUSTOM_TIME_MAX_HOUR)}:00`}
             step={900}
             value={customTime}

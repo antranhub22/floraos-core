@@ -5,7 +5,7 @@
  * Khách không chọn được ngày/khung giờ mà tiệm không kịp giao hoặc đã tắt.
  */
 
-import type { ShippingConfig } from "./brochure-pricing"
+import { DEFAULT_PREP_HOURS, type ShippingConfig } from "./brochure-pricing"
 
 const VN_OFFSET_MS = 7 * 3_600_000
 
@@ -62,6 +62,29 @@ export function isCustomTimeSlot(slot: string | undefined | null): boolean {
   return Boolean(slot?.trim().startsWith(CUSTOM_TIME_PREFIX.trim()))
 }
 
+/** Làm tròn tiến lên mốc 30 phút gần nhất (vd: 13.0 -> 13.0; 13.5833 (13:35) -> 14.0 (14:00); 13.25 -> 13.5 (13:30)). */
+export function roundUpTo30Minutes(hour: number): number {
+  const minutes = Math.round(hour * 60)
+  const roundedMinutes = Math.ceil(minutes / 30) * 30
+  return roundedMinutes / 60
+}
+
+/** Định dạng nhãn khung 2 tiếng từ startHour và endHour (vd: 13, 15 -> "13:00 - 15:00"). */
+export function formatSlotLabel(startHour: number, endHour: number): string {
+  const startH = Math.floor(startHour)
+  const startM = Math.round((startHour % 1) * 60)
+  const endH = Math.floor(endHour)
+  const endM = Math.round((endHour % 1) * 60)
+  return `${pad(startH)}:${pad(startM)} - ${pad(endH)}:${pad(endM)}`
+}
+
+/** Tách giờ bắt đầu từ nhãn khung "HH:MM - HH:MM"; null nếu không hợp lệ. */
+export function parseSlotStartHour(slot: string): number | null {
+  const m = /^(\d{2}):(\d{2})\s*-\s*(\d{2}):(\d{2})$/.exec(slot.trim())
+  if (!m) return null
+  return Number(m[1]) + Number(m[2]) / 60
+}
+
 function vnClock(now: Date): { date: string; hour: number } {
   const vn = new Date(now.getTime() + VN_OFFSET_MS)
   return { date: vn.toISOString().slice(0, 10), hour: vn.getUTCHours() + vn.getUTCMinutes() / 60 }
@@ -74,18 +97,34 @@ function nextDay(date: string): string {
 }
 
 /** Giờ sớm nhất còn kịp giao trong ngày `date`; `null` = hôm nay đã qua giờ chốt; 0 = ngày tương lai. */
-function readyHour(date: string, cfg: Schedule, now: Date): number | null {
+export function readyHour(date: string, cfg: Schedule, now: Date = new Date()): number | null {
   const { date: today, hour } = vnClock(now)
   if (date !== today) return 0
   if (cfg.sameDayCutoffHour != null && hour >= cfg.sameDayCutoffHour) return null
-  return hour + (cfg.prepHours ?? 0)
+  const prep = cfg.prepHours ?? DEFAULT_PREP_HOURS
+  return hour + prep
 }
 
-/** Nhãn khung 2 tiếng còn chọn được cho ngày `date` (đã bỏ khung tiệm tắt / không kịp). */
+/**
+ * Nhãn khung 2 tiếng còn chọn được cho ngày `date`:
+ * - Ngày tương lai: toàn bộ khung tiệm đang bật.
+ * - Hôm nay: chỉ hiển thị các ca chuẩn có giờ bắt đầu (startHour) cách thời điểm
+ *   hiện tại ít nhất bằng thời gian chuẩn bị (lead time / prepHours, mặc định 2h).
+ *   Không chèn ca lẻ gây chồng chéo khung giờ.
+ */
 export function availableSlots(date: string, cfg: Schedule, now: Date = new Date()): string[] {
   const ready = readyHour(date, cfg, now)
   if (ready === null) return []
-  return enabledSlots(cfg).filter((s) => s.endHour > ready).map((s) => s.label)
+  const enabled = enabledSlots(cfg)
+  if (enabled.length === 0) return []
+
+  const { date: today } = vnClock(now)
+  if (date !== today) {
+    return enabled.map((s) => s.label)
+  }
+
+  // Hôm nay: chỉ hiển thị các ca chuẩn có startHour >= ready (đảm bảo thợ có ít nhất prepHours chuẩn bị)
+  return enabled.filter((s) => s.startHour >= ready).map((s) => s.label)
 }
 
 /** Còn hẹn giờ cụ thể được trong ngày `date` không. */
@@ -124,17 +163,27 @@ export function deliveryScheduleError(
       return `Vui lòng nhập giờ cụ thể dạng HH:MM, từ ${pad(CUSTOM_TIME_MIN_HOUR)}:00 đến ${pad(CUSTOM_TIME_MAX_HOUR)}:00.`
     }
     const ready = readyHour(date, cfg, now)
-    if (ready === null || hour < ready) return "Giờ này cửa hàng không còn kịp chuẩn bị. Vui lòng chọn giờ muộn hơn."
+    if (ready === null || hour < ready) return "Khung giờ này cửa hàng không còn kịp chuẩn bị. Vui lòng chọn giờ muộn hơn."
     return null
   }
 
-  if (!enabledSlots(cfg).some((s) => s.label === value)) {
-    return "Khung giờ này cửa hàng không nhận giao. Vui lòng chọn khung giờ khác."
+  const available = availableSlots(date, cfg, now)
+  if (available.includes(value)) {
+    return null
   }
-  if (!availableSlots(date, cfg, now).includes(value)) {
+
+  const enabled = enabledSlots(cfg)
+  if (enabled.some((s) => s.label === value)) {
     return "Khung giờ này cửa hàng không còn kịp chuẩn bị. Vui lòng chọn khung giờ muộn hơn."
   }
-  return null
+  const parsedStart = parseSlotStartHour(value)
+  if (parsedStart !== null) {
+    const ready = readyHour(date, cfg, now)
+    if (ready !== null && parsedStart < ready) {
+      return "Khung giờ này cửa hàng không còn kịp chuẩn bị. Vui lòng chọn khung giờ muộn hơn."
+    }
+  }
+  return "Khung giờ này cửa hàng không nhận giao. Vui lòng chọn khung giờ khác."
 }
 
 function pad(n: number): string {
