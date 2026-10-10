@@ -25,6 +25,14 @@ export interface InboxAction {
     | "REMIND_BALANCE_PAYMENT"
     | "WAITING_SECOND_PAYMENT"
     | "COLLECT_POST_DELIVERY_BALANCE"
+    | "FOLLOW_UP_LEAD"
+    | "REMIND_DEPOSIT"
+    | "CLAIM_ORDER"
+    | "SEND_PHOTO_QC"
+    | "DELIVERY_FAILED_SALE_CONTACT"
+    | "CHECK_ARRANGING_PROGRESS"
+    | "QC_INSPECTION"
+    | "ASSIGN_SHIPPER"
   title: string
   detail: string
   orderId: string | null
@@ -74,6 +82,7 @@ export interface PipelineLike {
   stepStartedAt: string
   stuck: StuckInfo | null
   saleId: string | null
+  coordinatorId?: string | null | undefined
   /** Lần giao gần nhất không thành công — chờ Điều phối giao lại */
   deliveryFailed?: boolean | undefined
   sessionStatus?: string | null | undefined
@@ -84,12 +93,19 @@ const TAB_OF_ROLE: Record<MessageRole, InboxTab> = { ADMIN: "payment", SALE: "sa
 const COORDINATOR_STEPS = new Set<TrackingPipelineStepId>(["STEP_5_PAYMENT_CONFIRMED", "STEP_6_ARRANGING", "STEP_7_READY_QC", "STEP_8_DELIVERING", "STEP_9_COMPLETED"])
 const code = (i: PipelineLike) => (i.orderCode ? `Đơn ${i.orderCode}` : `Link ${i.sendCode}`)
 
-/** Việc cần làm của một vai từ quy trình theo dõi (sale: chỉ đơn của chính mình). */
+/** Việc cần làm của một vai từ quy trình theo dõi. */
 export function inboxActions(items: PipelineLike[], role: MessageRole, userId: string): InboxAction[] {
-  const mine = role === "SALE" ? items.filter((i) => i.saleId === userId) : items
   const out: InboxAction[] = []
-  for (const i of mine) {
+
+  for (const i of items) {
+    const isMySale = i.saleId === userId
+    const isUnassignedSale = i.type === "ORDER" && (!i.saleId || i.saleId === "public") && i.currentStepId !== "STEP_9_COMPLETED"
+    
+    // Lọc theo vai trò: Sale chỉ nhận đơn của mình hoặc đơn chưa có người phụ trách
+    if (role === "SALE" && !isMySale && !isUnassignedSale) continue
+
     const base = { orderId: i.orderId ?? null, sessionId: i.sessionId || null, customerName: i.customerName, imageUrl: i.productImageUrl ?? null }
+
     if (i.stuck?.owner === role) {
       out.push({ ...base, id: `stuck:${i.id}`, kind: "STUCK", title: i.stuck.message, detail: `${code(i)} · ${i.productName}`, tab: TAB_OF_ROLE[role], urgency: 1000 + i.stuck.overdueMinutes })
       continue
@@ -99,60 +115,184 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
     const total = i.totalVnd
     const balance = i.balanceVnd ?? Math.max(0, total - paid)
     const hasDeposit = paid > 0 && balance > 0
-    const isReady = i.productionStatus === "READY" || i.currentStepId === "STEP_7_READY_QC"
+    const isReady = (i.productionStatus === "READY" || i.currentStepId === "STEP_7_READY_QC") && i.currentStepId !== "STEP_3_FILLING_FORM" && i.currentStepId !== "STEP_4_PAYMENT_PENDING"
     const isDelivered = i.deliveryStatus === "DELIVERED" || i.currentStepId === "STEP_9_COMPLETED"
     const isReported = Boolean(i.customerReportedPaid || i.sessionStatus === "PAYMENT_REPORTED")
 
-    if (role === "ADMIN" && i.type === "ORDER" && hasDeposit && isReported) {
-      out.push({
-        ...base,
-        id: `approve-balance-pay:${i.id}`,
-        kind: "CONFIRM_PAYMENT",
-        title: "Khách báo đã chuyển phần còn lại",
-        detail: `${code(i)} · Cần xác nhận số tiền ${balance.toLocaleString("vi-VN")} đ`,
-        tab: "payment",
-        urgency: 1200,
-      })
-    } else if (role === "ADMIN" && i.type === "ORDER" && i.totalVnd <= 0 && i.currentStepId !== "STEP_9_COMPLETED") {
-      out.push({ ...base, id: `quote:${i.id}`, kind: "QUOTE", title: "Báo giá mẫu chưa niêm yết", detail: `${code(i)} · ${i.productName}`, tab: "payment", urgency: 500 })
-    } else if (role === "ADMIN" && i.currentStepId === "STEP_4_PAYMENT_PENDING") {
-      out.push({ ...base, id: `pay:${i.id}`, kind: "CONFIRM_PAYMENT", title: "Đối chiếu và xác nhận tiền", detail: `${code(i)} · khách báo đã chuyển`, tab: "payment", urgency: 400 })
-    } else if ((role === "ADMIN" || role === "SALE") && i.type === "ORDER" && hasDeposit && isDelivered) {
-      out.push({
-        ...base,
-        id: `collect-post-delivery:${i.id}`,
-        kind: "COLLECT_POST_DELIVERY_BALANCE",
-        title: "Thu phần tiền còn lại sau giao",
-        detail: `${code(i)} · Còn nợ ${balance.toLocaleString("vi-VN")} đ`,
-        tab: role === "ADMIN" ? "payment" : "sales",
-        urgency: 420,
-      })
-    } else if (role === "SALE" && i.type === "ORDER" && hasDeposit && isReady && !isDelivered) {
-      out.push({
-        ...base,
-        id: `remind-second-pay:${i.id}`,
-        kind: "REMIND_BALANCE_PAYMENT",
-        title: "Nhắc khách xác nhận hoa & thanh toán lần 2",
-        detail: `${code(i)} · Còn thiếu ${balance.toLocaleString("vi-VN")} đ để giao ship`,
-        tab: "sales",
-        urgency: 480,
-      })
-    } else if (role === "COORDINATOR" && i.type === "ORDER" && hasDeposit && isReady && !isDelivered) {
-      out.push({
-        ...base,
-        id: `wait-second-pay:${i.id}`,
-        kind: "WAITING_SECOND_PAYMENT",
-        title: "Chờ khách thanh toán lần 2 để giao hoa",
-        detail: `${code(i)} · Đã có ảnh thành phẩm, còn nợ ${balance.toLocaleString("vi-VN")} đ`,
-        tab: "coordinator",
-        urgency: 280,
-      })
-    } else if (role === "COORDINATOR" && i.deliveryFailed) {
-      out.push({ ...base, id: `redeliver:${i.id}`, kind: "REDELIVER", title: "Giao không thành công — hẹn giao lại", detail: `${code(i)} · ${i.productName}`, tab: "coordinator", urgency: 900 })
-    } else if (role === "COORDINATOR" && i.currentStepId === "STEP_5_PAYMENT_CONFIRMED") {
-      out.push({ ...base, id: `assign:${i.id}`, kind: "ASSIGN", title: "Phân công thợ cắm hoa", detail: `${code(i)} · ${i.productName}`, tab: "coordinator", urgency: 300 })
+    // --- 1. NGHIỆP VỤ ĐIỀU HÀNH (ADMIN) ---
+    if (role === "ADMIN") {
+      if (i.type === "ORDER" && hasDeposit && isReported) {
+        out.push({
+          ...base,
+          id: `approve-balance-pay:${i.id}`,
+          kind: "CONFIRM_PAYMENT",
+          title: "Khách báo đã chuyển phần còn lại",
+          detail: `${code(i)} · Cần xác nhận số tiền ${balance.toLocaleString("vi-VN")} đ`,
+          tab: "payment",
+          urgency: 1200,
+        })
+      } else if (i.type === "ORDER" && i.totalVnd <= 0 && i.currentStepId !== "STEP_9_COMPLETED") {
+        out.push({ ...base, id: `quote:${i.id}`, kind: "QUOTE", title: "Báo giá mẫu chưa niêm yết", detail: `${code(i)} · ${i.productName}`, tab: "payment", urgency: 500 })
+      } else if (i.currentStepId === "STEP_4_PAYMENT_PENDING") {
+        out.push({ ...base, id: `pay:${i.id}`, kind: "CONFIRM_PAYMENT", title: "Đối chiếu và xác nhận tiền", detail: `${code(i)} · khách báo đã chuyển`, tab: "payment", urgency: 400 })
+      } else if (i.type === "ORDER" && hasDeposit && isDelivered) {
+        out.push({
+          ...base,
+          id: `collect-post-delivery:${i.id}`,
+          kind: "COLLECT_POST_DELIVERY_BALANCE",
+          title: "Thu phần tiền còn lại sau giao",
+          detail: `${code(i)} · Còn nợ ${balance.toLocaleString("vi-VN")} đ`,
+          tab: "payment",
+          urgency: 420,
+        })
+      }
+    }
+
+    // --- 2. NGHIỆP VỤ SALE ---
+    if (role === "SALE") {
+      if (isUnassignedSale) {
+        out.push({
+          ...base,
+          id: `claim-order:${i.id}`,
+          kind: "CLAIM_ORDER",
+          title: "Tiếp nhận đơn mới chưa có Sale phụ trách",
+          detail: `${code(i)} · ${i.customerName} · ${i.productName}`,
+          tab: "sales",
+          urgency: 700,
+        })
+      } else if (isMySale) {
+        if (i.deliveryFailed && !isDelivered) {
+          out.push({
+            ...base,
+            id: `delivery-failed-contact:${i.id}`,
+            kind: "DELIVERY_FAILED_SALE_CONTACT",
+            title: "Giao không thành công — Liên hệ lại người nhận",
+            detail: `${code(i)} · Kiểm tra lại SĐT/địa chỉ để điều phối giao lại`,
+            tab: "sales",
+            urgency: 850,
+          })
+        } else if (i.type === "ORDER" && hasDeposit && isReady && !isDelivered) {
+          out.push({
+            ...base,
+            id: `remind-second-pay:${i.id}`,
+            kind: "REMIND_BALANCE_PAYMENT",
+            title: "Nhắc khách xác nhận hoa & thanh toán lần 2",
+            detail: `${code(i)} · Còn thiếu ${balance.toLocaleString("vi-VN")} đ để giao ship`,
+            tab: "sales",
+            urgency: 650,
+          })
+        } else if (i.type === "ORDER" && !hasDeposit && isReady && !isDelivered) {
+          out.push({
+            ...base,
+            id: `send-photo-qc:${i.id}`,
+            kind: "SEND_PHOTO_QC",
+            title: "Gửi ảnh hoa thành phẩm cho khách duyệt",
+            detail: `${code(i)} · Hoa đã cắm xong, gửi ảnh xác nhận trước khi giao`,
+            tab: "sales",
+            urgency: 620,
+          })
+        } else if (i.type === "ORDER" && hasDeposit && isDelivered) {
+          out.push({
+            ...base,
+            id: `collect-post-delivery:${i.id}`,
+            kind: "COLLECT_POST_DELIVERY_BALANCE",
+            title: "Thu phần tiền còn lại sau giao",
+            detail: `${code(i)} · Còn nợ ${balance.toLocaleString("vi-VN")} đ`,
+            tab: "sales",
+            urgency: 420,
+          })
+        } else if (i.currentStepId === "STEP_4_PAYMENT_PENDING" && !isReported && paid === 0) {
+          out.push({
+            ...base,
+            id: `remind-deposit:${i.id}`,
+            kind: "REMIND_DEPOSIT",
+            title: "Nhắc khách thanh toán tiền cọc",
+            detail: `${code(i)} · Cần đặt cọc để xưởng chuẩn bị hoa`,
+            tab: "sales",
+            urgency: 550,
+          })
+        } else if (i.currentStepId === "STEP_3_FILLING_FORM") {
+          out.push({
+            ...base,
+            id: `follow-up-lead:${i.id}`,
+            kind: "FOLLOW_UP_LEAD",
+            title: "Hỗ trợ khách đang điền form đặt hoa",
+            detail: `${code(i)} · ${i.customerName} đang chọn mẫu/nhập đơn`,
+            tab: "sales",
+            urgency: 350,
+          })
+        }
+      }
+    }
+
+    // --- 3. NGHIỆP VỤ ĐIỀU PHỐI (COORDINATOR) ---
+    if (role === "COORDINATOR") {
+      if (i.deliveryFailed) {
+        out.push({
+          ...base,
+          id: `redeliver:${i.id}`,
+          kind: "REDELIVER",
+          title: "Giao không thành công — Hẹn giao lại",
+          detail: `${code(i)} · ${i.productName} · Cần xếp tài xế hoặc đổi giờ giao`,
+          tab: "coordinator",
+          urgency: 950,
+        })
+      } else if (i.currentStepId === "STEP_5_PAYMENT_CONFIRMED") {
+        out.push({
+          ...base,
+          id: `assign:${i.id}`,
+          kind: "ASSIGN",
+          title: "Phân công thợ cắm hoa",
+          detail: `${code(i)} · ${i.productName}`,
+          tab: "coordinator",
+          urgency: 750,
+        })
+      } else if (i.currentStepId === "STEP_6_ARRANGING" || i.productionStatus === "ARRANGING") {
+        out.push({
+          ...base,
+          id: `check-arranging:${i.id}`,
+          kind: "CHECK_ARRANGING_PROGRESS",
+          title: "Theo dõi tiến độ thợ cắm hoa",
+          detail: `${code(i)} · Xưởng đang cắm · Đôn đốc hoàn thành đúng giờ`,
+          tab: "coordinator",
+          urgency: 400,
+        })
+      } else if (isReady && !isDelivered) {
+        if (i.productionStatus !== "READY") {
+          out.push({
+            ...base,
+            id: `qc-inspect:${i.id}`,
+            kind: "QC_INSPECTION",
+            title: "Kiểm tra chất lượng (QC) & Chụp ảnh thành phẩm",
+            detail: `${code(i)} · Thợ đã cắm xong, cần kiểm tra và tải ảnh QC`,
+            tab: "coordinator",
+            urgency: 720,
+          })
+        } else if (hasDeposit) {
+          out.push({
+            ...base,
+            id: `wait-second-pay:${i.id}`,
+            kind: "WAITING_SECOND_PAYMENT",
+            title: "Chờ khách thanh toán lần 2 để giao hoa",
+            detail: `${code(i)} · Đã có ảnh thành phẩm, còn nợ ${balance.toLocaleString("vi-VN")} đ`,
+            tab: "coordinator",
+            urgency: 280,
+          })
+        } else {
+          out.push({
+            ...base,
+            id: `assign-shipper:${i.id}`,
+            kind: "ASSIGN_SHIPPER",
+            title: "Sẵn sàng giao — Điều phối tài xế / Shipper",
+            detail: `${code(i)} · Đã hoàn thiện, cần gán tài xế xuất giao`,
+            tab: "coordinator",
+            urgency: 680,
+          })
+        }
+      }
     }
   }
+
   return out.sort((a, b) => b.urgency - a.urgency)
 }
 

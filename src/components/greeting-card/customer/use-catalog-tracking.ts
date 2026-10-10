@@ -42,7 +42,9 @@ export function useCatalogTracking(catalogId: string) {
     [catalogId]
   )
 
-  useEffect(() => track("VIEW"), [track])
+  useEffect(() => {
+    void track("VIEW")
+  }, [track])
 
   /** Kênh + mã khách gửi kèm đơn để máy chủ ghi bước ORDER. */
   const orderMeta = useCallback(() => {

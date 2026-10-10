@@ -17,30 +17,60 @@ const ROW = "flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface
 
 /** Hộp việc: một chỗ cho việc cần làm, tin nhắn và cập nhật — xử lý hoặc mở đúng đơn ngay. */
 export function InboxPanel({ onClose, onOpenTarget }: { onClose: () => void; onOpenTarget: (t: InboxTarget) => void }) {
-  const inbox = useInbox()
+  const [roleOverride, setRoleOverride] = useState<"ADMIN" | "SALE" | "COORDINATOR" | undefined>(undefined)
+  const inbox = useInbox(roleOverride)
   const data: InboxData | undefined = inbox.data?.data
   const [group, setGroup] = useState<Group>(() => (data && data.counts.actions === 0 && data.counts.unreadMessages > 0 ? "messages" : "actions"))
   const [thread, setThread] = useState<{ orderId: string | null; sessionId: string | null; title: string } | null>(null)
   const [now] = useState(() => Date.now())
-
-  if (thread) {
-    return (
-      <MessageThread target={thread} title={thread.title} onClose={onClose} onBack={() => setThread(null)} onChanged={() => void inbox.mutate()} />
-    )
-  }
-
   const tabs: Array<{ id: Group; label: string; count: number }> = [
     { id: "actions", label: "Cần làm", count: data?.counts.actions ?? 0 },
     { id: "messages", label: "Tin nhắn", count: data?.counts.unreadMessages ?? 0 },
-    { id: "updates", label: "Cập nhật", count: 0 },
+    { id: "updates", label: "Cập nhật", count: data?.updates.length ?? 0 },
   ]
   const open = (a: { tab: InboxTab; orderId: string | null; sessionId: string | null }) => {
     onOpenTarget(a)
     onClose()
   }
 
+  // Dùng ternary trong một return duy nhất — tránh Sheet mount/unmount không nhất quán
+  // gây lỗi "destroy is not a function" khi switch giữa hai nhánh render
+  if (thread) {
+    return (
+      <MessageThread target={thread} title={thread.title} onClose={onClose} onBack={() => setThread(null)} onChanged={() => void inbox.mutate()} />
+    )
+  }
+
+  const roleLabel = data?.role === "ADMIN" ? "Điều hành" : data?.role === "SALE" ? "Sale" : "Điều phối"
+
   return (
-    <Sheet labelId="inbox-title" title="Hộp việc" onClose={onClose}>
+    <Sheet labelId="inbox-title" title={`Hộp việc · ${roleLabel}`} onClose={onClose}>
+      {data?.canSwitchRole && (
+        <div className="flex items-center justify-between border-b border-border bg-surface-alt px-3 py-2 text-caption">
+          <span className="font-semibold text-text-muted">Góc nhìn vai trò:</span>
+          <div role="group" aria-label="Chọn vai xem hộp việc" className="inline-flex rounded-lg border border-border bg-surface p-0.5">
+            {[
+              { id: "ADMIN" as const, label: "Điều hành" },
+              { id: "SALE" as const, label: "Sale" },
+              { id: "COORDINATOR" as const, label: "Điều phối" },
+            ].map((r) => {
+              const active = (roleOverride ?? data.role) === r.id
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setRoleOverride(r.id)}
+                  className={`rounded-md px-2.5 py-1 text-caption font-bold transition-colors ${
+                    active ? "bg-primary text-white shadow-xs" : "text-text-muted hover:text-foreground"
+                  }`}
+                >
+                  {r.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
       <div role="tablist" aria-label="Nhóm trong Hộp việc" className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-border bg-surface p-2">
         {tabs.map((t) => (
           <button key={t.id} type="button" role="tab" aria-selected={group === t.id} onClick={() => setGroup(t.id)}
@@ -104,8 +134,28 @@ export function InboxPanel({ onClose, onOpenTarget }: { onClose: () => void; onO
   )
 }
 
+const ACTION_LABEL: Partial<Record<InboxAction["kind"], string>> = {
+  CLAIM_ORDER: "Nhận đơn",
+  REMIND_DEPOSIT: "Nhắc cọc",
+  FOLLOW_UP_LEAD: "Tư vấn",
+  REMIND_BALANCE_PAYMENT: "Nhắc thanh toán",
+  SEND_PHOTO_QC: "Gửi ảnh hoa",
+  DELIVERY_FAILED_SALE_CONTACT: "Liên hệ khách",
+  ASSIGN: "Gán thợ",
+  CHECK_ARRANGING_PROGRESS: "Xem tiến độ",
+  QC_INSPECTION: "Kiểm tra QC",
+  WAITING_SECOND_PAYMENT: "Xem đơn",
+  ASSIGN_SHIPPER: "Gán shipper",
+  REDELIVER: "Hẹn giao lại",
+}
+
 function ActionRow({ action, onOpen, onMessage, onDecided }: { action: InboxAction; onOpen: () => void; onMessage?: (() => void) | undefined; onDecided: () => void }) {
-  const urgent = action.kind === "STUCK" || action.kind === "UNMATCHED_PAYMENTS" || action.kind === "CANCELLATION_REQUEST"
+  const urgent =
+    action.kind === "STUCK" ||
+    action.kind === "UNMATCHED_PAYMENTS" ||
+    action.kind === "CANCELLATION_REQUEST" ||
+    action.kind === "DELIVERY_FAILED_SALE_CONTACT" ||
+    action.kind === "REDELIVER"
   const [done, setDone] = useState<string | null>(null)
   return (
     <li className="flex flex-col gap-2 px-4 py-3">
@@ -134,9 +184,11 @@ function ActionRow({ action, onOpen, onMessage, onDecided }: { action: InboxActi
       )}
       {done && <p role="status" className="rounded-xl bg-success-bg px-3 py-2 text-body-sm text-success">{done}</p>}
       <div className="flex gap-2 pl-15">
-        {!action.discount && !action.change && <button type="button" onClick={onOpen} className="h-11 flex-1 rounded-xl bg-primary px-3 text-body-sm font-bold text-white hover:bg-primary-dark sm:flex-none">
-          Xử lý
-        </button>}
+        {!action.discount && !action.change && (
+          <button type="button" onClick={onOpen} className="h-11 flex-1 rounded-xl bg-primary px-3 text-body-sm font-bold text-white hover:bg-primary-dark sm:flex-none">
+            {ACTION_LABEL[action.kind] ?? "Xử lý"}
+          </button>
+        )}
         {onMessage && (
           <button type="button" onClick={onMessage} className="h-11 flex-1 rounded-xl border border-border px-3 text-body-sm font-bold text-foreground hover:bg-surface-muted sm:flex-none">
             Nhắn tin

@@ -6,6 +6,7 @@ import type { InboxThread } from "@/modules/greeting-card/use-cases/get-inbox"
 
 export interface InboxData {
   role: "ADMIN" | "SALE" | "COORDINATOR"
+  canSwitchRole?: boolean
   actions: InboxAction[]
   threads: InboxThread[]
   updates: Array<{ id: string; orderId: string | null; sessionId: string | null; customerName: string; title: string; code: string; at: string }>
@@ -13,8 +14,9 @@ export interface InboxData {
 }
 
 /** Hộp việc của tôi — tự làm mới mỗi 20 giây khi tab trình duyệt đang mở. */
-export function useInbox() {
-  return useApi<{ data: InboxData }>("/api/v1/greeting-card/inbox", { refreshInterval: 20_000 })
+export function useInbox(roleOverride?: "ADMIN" | "SALE" | "COORDINATOR") {
+  const url = roleOverride ? `/api/v1/greeting-card/inbox?role=${roleOverride}` : "/api/v1/greeting-card/inbox"
+  return useApi<{ data: InboxData }>(url, { refreshInterval: 20_000 })
 }
 
 export function timeAgo(iso: string, now: number): string {

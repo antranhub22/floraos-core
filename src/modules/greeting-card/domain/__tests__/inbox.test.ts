@@ -76,4 +76,141 @@ describe("inboxActions — cơ chế thanh toán lần 2 và thu nợ sau giao",
     const coordActions = inboxActions([fullPaidOrder], "COORDINATOR", "coord-1")
     expect(coordActions.find((a) => a.kind === "WAITING_SECOND_PAYMENT")).toBeUndefined()
   })
+
+  describe("Bộ quy tắc nhắc việc cho Sale", () => {
+    it("Đơn từ link chung chưa gán sale → Sale thấy action CLAIM_ORDER để nhận đơn", () => {
+      const unassignedOrder: PipelineLike = {
+        ...baseOrder,
+        saleId: "public",
+        currentStepId: "STEP_4_PAYMENT_PENDING",
+      }
+      const actions = inboxActions([unassignedOrder], "SALE", "sale-99")
+      const claim = actions.find((a) => a.kind === "CLAIM_ORDER")
+      expect(claim).toBeDefined()
+      expect(claim?.title).toContain("Tiếp nhận đơn mới")
+      expect(claim?.tab).toBe("sales")
+    })
+
+    it("Khách đang điền form đặt hoa → Sale nhận action FOLLOW_UP_LEAD", () => {
+      const fillingOrder: PipelineLike = {
+        ...baseOrder,
+        currentStepId: "STEP_3_FILLING_FORM",
+        productionStatus: "WAITING",
+        paidVnd: 0,
+        balanceVnd: 1_000_000,
+      }
+      const actions = inboxActions([fillingOrder], "SALE", "sale-99")
+      const follow = actions.find((a) => a.kind === "FOLLOW_UP_LEAD")
+      expect(follow).toBeDefined()
+      expect(follow?.title).toContain("Hỗ trợ khách đang điền form")
+      expect(follow?.tab).toBe("sales")
+    })
+
+    it("Đơn đã gửi nhưng chưa cọc → Sale nhận action REMIND_DEPOSIT", () => {
+      const pendingDepositOrder: PipelineLike = {
+        ...baseOrder,
+        currentStepId: "STEP_4_PAYMENT_PENDING",
+        productionStatus: "WAITING",
+        paidVnd: 0,
+        balanceVnd: 1_000_000,
+        customerReportedPaid: false,
+      }
+      const actions = inboxActions([pendingDepositOrder], "SALE", "sale-99")
+      const remind = actions.find((a) => a.kind === "REMIND_DEPOSIT")
+      expect(remind).toBeDefined()
+      expect(remind?.title).toContain("Nhắc khách thanh toán tiền cọc")
+    })
+
+    it("Hoa đã cắm xong & đơn đã thanh toán 100% → Sale nhận action SEND_PHOTO_QC gửi ảnh hoa cho khách", () => {
+      const fullPaidReady: PipelineLike = {
+        ...baseOrder,
+        paidVnd: 1_000_000,
+        balanceVnd: 0,
+        currentStepId: "STEP_7_READY_QC",
+        productionStatus: "READY",
+      }
+      const actions = inboxActions([fullPaidReady], "SALE", "sale-99")
+      const sendPhoto = actions.find((a) => a.kind === "SEND_PHOTO_QC")
+      expect(sendPhoto).toBeDefined()
+      expect(sendPhoto?.title).toContain("Gửi ảnh hoa thành phẩm")
+    })
+
+    it("Giao hàng thất bại → Sale nhận action DELIVERY_FAILED_SALE_CONTACT để gọi lại khách", () => {
+      const failedDelivery: PipelineLike = {
+        ...baseOrder,
+        currentStepId: "STEP_8_DELIVERING",
+        deliveryFailed: true,
+      }
+      const actions = inboxActions([failedDelivery], "SALE", "sale-99")
+      const contact = actions.find((a) => a.kind === "DELIVERY_FAILED_SALE_CONTACT")
+      expect(contact).toBeDefined()
+      expect(contact?.title).toContain("Giao không thành công")
+      expect(contact?.urgency).toBeGreaterThanOrEqual(850)
+    })
+  })
+
+  describe("Bộ quy tắc nhắc việc cho Điều phối", () => {
+    it("Tiền cọc đã xác nhận (Bước 5) → Điều phối nhận action ASSIGN phân công thợ", () => {
+      const step5Order: PipelineLike = {
+        ...baseOrder,
+        currentStepId: "STEP_5_PAYMENT_CONFIRMED",
+      }
+      const actions = inboxActions([step5Order], "COORDINATOR", "coord-1")
+      const assign = actions.find((a) => a.kind === "ASSIGN")
+      expect(assign).toBeDefined()
+      expect(assign?.title).toContain("Phân công thợ cắm hoa")
+      expect(assign?.tab).toBe("coordinator")
+    })
+
+    it("Xưởng đang cắm hoa (Bước 6) → Điều phối nhận action CHECK_ARRANGING_PROGRESS", () => {
+      const step6Order: PipelineLike = {
+        ...baseOrder,
+        currentStepId: "STEP_6_ARRANGING",
+        productionStatus: "ARRANGING",
+      }
+      const actions = inboxActions([step6Order], "COORDINATOR", "coord-1")
+      const check = actions.find((a) => a.kind === "CHECK_ARRANGING_PROGRESS")
+      expect(check).toBeDefined()
+      expect(check?.title).toContain("Theo dõi tiến độ thợ cắm hoa")
+    })
+
+    it("Bước 7 nhưng chưa xong QC → Điều phối nhận action QC_INSPECTION", () => {
+      const qcOrder: PipelineLike = {
+        ...baseOrder,
+        currentStepId: "STEP_7_READY_QC",
+        productionStatus: "QUALITY_CHECK",
+      }
+      const actions = inboxActions([qcOrder], "COORDINATOR", "coord-1")
+      const qc = actions.find((a) => a.kind === "QC_INSPECTION")
+      expect(qc).toBeDefined()
+      expect(qc?.title).toContain("Kiểm tra chất lượng (QC)")
+    })
+
+    it("Bước 7 đã QC xong và đơn đã thanh toán 100% → Điều phối nhận action ASSIGN_SHIPPER", () => {
+      const readyToShipOrder: PipelineLike = {
+        ...baseOrder,
+        currentStepId: "STEP_7_READY_QC",
+        productionStatus: "READY",
+        paidVnd: 1_000_000,
+        balanceVnd: 0,
+      }
+      const actions = inboxActions([readyToShipOrder], "COORDINATOR", "coord-1")
+      const shipper = actions.find((a) => a.kind === "ASSIGN_SHIPPER")
+      expect(shipper).toBeDefined()
+      expect(shipper?.title).toContain("Sẵn sàng giao — Điều phối tài xế")
+    })
+
+    it("Giao hàng thất bại → Điều phối nhận action REDELIVER hẹn giao lại", () => {
+      const failedDelivery: PipelineLike = {
+        ...baseOrder,
+        currentStepId: "STEP_8_DELIVERING",
+        deliveryFailed: true,
+      }
+      const actions = inboxActions([failedDelivery], "COORDINATOR", "coord-1")
+      const redeliver = actions.find((a) => a.kind === "REDELIVER")
+      expect(redeliver).toBeDefined()
+      expect(redeliver?.title).toContain("Hẹn giao lại")
+      expect(redeliver?.tab).toBe("coordinator")
+    })
+  })
 })

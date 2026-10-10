@@ -30,8 +30,10 @@ export interface InboxThread {
  * Hộp việc của người đang đăng nhập: việc cần làm (theo vai), tin nhắn gửi cho mình
  * (gom theo đơn), và đơn vừa đổi bước. Một lần gọi cho cả nút chuông lẫn bảng.
  */
-export async function getInbox(ctx: TenantContext, now = new Date()) {
-  const role: MessageRole = roleOf(ctx.capabilities) ?? "SALE"
+export async function getInbox(ctx: TenantContext, targetRole?: MessageRole | undefined, now = new Date()) {
+  const canSwitchRole = ctx.capabilities.has("F2")
+  const defaultRole: MessageRole = roleOf(ctx.capabilities) ?? "SALE"
+  const role: MessageRole = canSwitchRole && targetRole ? targetRole : defaultRole
   const repo = new GreetingMessageRepository()
   const [pipeline, messages, members, scope] = await Promise.all([
     getTrackingPipeline(ctx),
@@ -119,5 +121,5 @@ export async function getInbox(ctx: TenantContext, now = new Date()) {
     title: i.currentStepTitle, code: i.orderCode ? `Đơn ${i.orderCode}` : `Link ${i.sendCode}`, at: i.stepStartedAt,
   }))
   const unreadMessages = threadList.reduce((n, t) => n + t.unread, 0)
-  return { role, actions, threads: threadList.slice(0, 50), updates, counts: { actions: actions.length, unreadMessages, total: actions.length + unreadMessages } }
+  return { role, canSwitchRole, actions, threads: threadList.slice(0, 50), updates, counts: { actions: actions.length, unreadMessages, total: actions.length + unreadMessages } }
 }
