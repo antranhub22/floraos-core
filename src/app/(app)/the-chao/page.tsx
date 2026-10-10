@@ -86,7 +86,7 @@ export default function TheChaoPage() {
   }
   const tabs: TabItem[] = ([
     { id: "catalog", icon: BookOpen, label: "Bộ sưu tập", ...(catalogCount !== null ? { badge: catalogCount } : {}) },
-    { id: "tracking", icon: GitMerge, label: "Theo dõi tiến độ" },
+    { id: "tracking", icon: GitMerge, label: "Theo dõi đơn" },
     { id: "sales", icon: Send, label: "Bán hàng", ...(sessionCount !== null ? { badge: sessionCount } : {}) },
     { id: "payment", icon: ShieldCheck, label: "Điều hành", ...(pendingCancelCount !== null ? { badge: pendingCancelCount } : {}) },
     { id: "coordinator", icon: Sparkles, label: "Điều phối" },
@@ -103,11 +103,11 @@ export default function TheChaoPage() {
             className="mb-2 inline-flex items-center gap-1 text-body-sm font-medium text-text-muted hover:text-foreground"
           >
             <ArrowLeft size={14} aria-hidden="true" />
-            Sổ đơn hàng
+            Đơn hàng
           </Link>
           <h1 className="text-title font-bold text-foreground">Thẻ chào mẫu hoa</h1>
           <p className="mt-1 max-w-2xl text-body-sm text-text-muted">
-            Gửi khách một bộ sưu tập để lướt xem, chọn mẫu và tự đặt hoa, thanh toán ngay trên điện thoại.
+            Gửi khách bộ sưu tập hoa để xem, chọn mẫu, đặt hàng và thanh toán ngay trên điện thoại.
           </p>
         </div>
 
@@ -143,8 +143,8 @@ export default function TheChaoPage() {
               setRefreshKey((k) => k + 1)
               router.refresh()
             }}
-            aria-label="Làm mới dữ liệu"
-            title="Làm mới dữ liệu"
+            aria-label="Làm mới"
+            title="Làm mới"
             className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-muted hover:bg-surface hover:text-foreground active:bg-surface active:text-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <RefreshCw size={16} aria-hidden="true" />
@@ -154,7 +154,7 @@ export default function TheChaoPage() {
               apiPath="/api/v1/orders/export"
               extraParams={{ source: "BROCHURE" }}
               filename="the-chao-don-hang.xlsx"
-              label="Xuất Excel"
+              label="Xuất file Excel"
             />
           )}
         </div>

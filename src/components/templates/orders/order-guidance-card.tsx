@@ -9,12 +9,12 @@ export function OrderGuidanceCard() {
     <FeatureGuidanceCard
       tag="HƯỚNG DẪN XỬ LÝ ĐƠN HÀNG"
       icon={Package}
-      title="Quy trình xưởng hoa & Giao vận chính xác"
-      description="Chuyển hóa đơn hàng thành phiếu cắm hoa chi tiết cho nghệ nhân cắm hoa (Florist Ticket) và phiếu giao hoa kèm mã QR xác nhận hoàn tất."
+      title="Quy trình cắm hoa và giao hàng"
+      description="Mỗi đơn hàng có phiếu cắm hoa cho thợ và phiếu giao hoa kèm mã QR để xác nhận giao thành công."
       tips={[
-        "✂️ Phiếu thợ cắm hoa phân rã rõ ràng: Số lượng từng loại cành hoa, giấy gói và tone màu chuẩn",
-        "📸 Chụp ảnh nghiệm thu thành phẩm trước khi giao để gửi khách duyệt",
-        "🛵 In phiếu giao hàng khổ A6 kèm thiệp chúc mừng và thông tin người nhận",
+        "✂️ Phiếu cắm hoa ghi rõ số lượng từng loại hoa, giấy gói và tông màu chuẩn",
+        "📸 Chụp ảnh thành phẩm gửi khách duyệt trước khi giao",
+        "🛵 In phiếu giao hoa kèm thiệp và thông tin người nhận",
       ]}
     />
   )

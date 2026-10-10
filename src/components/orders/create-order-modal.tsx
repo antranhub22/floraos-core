@@ -134,11 +134,11 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
     e.preventDefault()
     setError(null)
     if (!recipientName.trim() || !phone.trim() || !street.trim()) {
-      setError("Vui lòng điền đầy đủ tên, số điện thoại và địa chỉ nhận hoa.")
+      setError("Chưa đủ thông tin giao hoa. Vui lòng nhập họ tên, số điện thoại và địa chỉ người nhận.")
       return
     }
     if (items.some((it) => !it.description.trim() || it.unitPriceVnd <= 0)) {
-      setError("Vui lòng kiểm tra lại thông tin hoa và đơn giá của các mục.")
+      setError("Đơn giá mỗi mục phải lớn hơn 0 ₫. Vui lòng kiểm tra lại tên hoa và giá tiền.")
       return
     }
     setLoading(true)
@@ -164,7 +164,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
       })
       if (!res.ok) {
         const data = await res.json() as { message?: string }
-        throw new Error(data.message ?? "Tạo đơn hàng thất bại.")
+        throw new Error(data.message ?? "Chưa tạo được đơn hàng do lỗi hệ thống. Vui lòng thử lại sau ít phút hoặc liên hệ hỗ trợ.")
       }
       onSuccess()
       onClose()
@@ -180,14 +180,14 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
       <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary-subtle text-primary">
         <Sparkles className="h-3.5 w-3.5" />
       </span>
-      Tạo Đơn Hàng Hoa Mới
+      Tạo đơn hàng mới
     </span>
   )
 
   const dialogFooter = (
     <div className="flex w-full items-center justify-between">
       <div className="flex items-center gap-2">
-        <span className="text-body-sm font-semibold text-text-muted">Tổng tiền tạm tính:</span>
+        <span className="text-body-sm font-semibold text-text-muted">Tạm tính:</span>
         <span className="text-title font-bold text-primary">
           {totalVnd.toLocaleString("vi-VN")} đ
         </span>
@@ -196,7 +196,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
         <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Hủy</Button>
         <Button form="create-order-form" type="submit" disabled={loading} className="font-semibold">
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Xác nhận tạo đơn
+          Tạo đơn hàng
         </Button>
       </div>
     </div>
@@ -207,7 +207,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
       open={isOpen}
       onOpenChange={(open) => { if (!open) onClose() }}
       title={dialogTitle}
-      description="Đồng bộ Master Index & Công thức cắm hoa"
+      description="Chọn mẫu có sẵn từ kho mẫu hoa hoặc nhập trực tiếp."
       size="lg"
       footer={dialogFooter}
     >
@@ -223,7 +223,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 text-caption font-bold text-guidance-text">
                 <Flower2 className="h-4 w-4 text-guidance" />
-                ⚡ Chọn mẫu nhanh từ Master Index (Đầy đủ BOM &amp; Ảnh)
+                Chọn nhanh từ kho mẫu hoa
               </span>
               <span className="text-caption font-medium text-guidance">{masterProducts.length} mẫu sẵn sàng</span>
             </div>
@@ -232,7 +232,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
               value={selectedProductId}
               onChange={(e) => handleSelectMasterProduct(e.target.value)}
             >
-              <option value="">-- Bấm để chọn mẫu hoa có sẵn trong Master Catalog --</option>
+              <option value="">-- Chọn mẫu hoa có sẵn trong kho --</option>
               {masterProducts.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} [{p.code}] — {p.pricing?.quotePriceVnd ? `${Number(p.pricing.quotePriceVnd).toLocaleString("vi-VN")} đ` : "Chưa có giá"} ({p.category})
@@ -245,17 +245,17 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block font-semibold text-text">Người nhận *</label>
-            <input type="text" className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Họ tên người nhận hoa" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} required />
+            <input type="text" className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Họ và tên người nhận hoa" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} required />
           </div>
           <div>
-            <label className="mb-1 block font-semibold text-text">Số điện thoại *</label>
-            <input type="text" className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="0909xxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+            <label className="mb-1 block font-semibold text-text">Số điện thoại người nhận *</label>
+            <input type="text" className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Ví dụ: 0909xxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} required />
           </div>
         </div>
 
         <div>
           <label className="mb-1 block font-semibold text-text">Địa chỉ giao hoa *</label>
-          <input type="text" className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Số nhà, tên đường, phường, quận..." value={street} onChange={(e) => setStreet(e.target.value)} required />
+          <input type="text" className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Số nhà, tên đường, phường/xã, tỉnh/thành phố" value={street} onChange={(e) => setStreet(e.target.value)} required />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -266,21 +266,21 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
           <div>
             <label className="mb-1 block font-semibold text-text">Khung giờ giao</label>
             <select className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)}>
-              <option value="07:30 - 09:30">Sáng sớm (07:30 - 09:30)</option>
-              <option value="09:30 - 11:30">Sáng (09:30 - 11:30)</option>
-              <option value="13:30 - 15:30">Chiều (13:30 - 15:30)</option>
-              <option value="15:30 - 17:30">Chiều muộn (15:30 - 17:30)</option>
-              <option value="18:00 - 20:00">Tối (18:00 - 20:00)</option>
-              <option value="Giao gấp hỏa tốc">Giao gấp hỏa tốc (60 phút)</option>
+              <option value="07:30 - 09:30">Sáng sớm (07:30–09:30)</option>
+              <option value="09:30 - 11:30">Sáng (09:30–11:30)</option>
+              <option value="13:30 - 15:30">Chiều (13:30–15:30)</option>
+              <option value="15:30 - 17:30">Chiều muộn (15:30–17:30)</option>
+              <option value="18:00 - 20:00">Tối (18:00–20:00)</option>
+              <option value="Giao gấp hỏa tốc">Giao gấp trong 60 phút</option>
             </select>
           </div>
         </div>
 
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label className="font-semibold text-text">Danh sách mẫu hoa &amp; phụ kiện *</label>
+            <label className="font-semibold text-text">Mẫu hoa và phụ kiện *</label>
             <button type="button" onClick={addItem} className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline">
-              <Plus className="h-3.5 w-3.5" /> Thêm mục
+              <Plus className="h-3.5 w-3.5" /> Thêm mẫu hoa
             </button>
           </div>
           <div className="space-y-2">
@@ -288,7 +288,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
               <div key={idx} className="flex items-center gap-2">
                 <input type="text" className="flex-1 rounded-md border border-border bg-surface px-3 py-1.5 text-body-sm" placeholder="Tên mẫu hoa hoặc mô tả yêu cầu" value={it.description} onChange={(e) => updateItem(idx, "description", e.target.value)} required />
                 <input type="number" min="1" className="w-16 rounded-md border border-border bg-surface px-2 py-1.5 text-center text-body-sm" value={it.quantity} onChange={(e) => updateItem(idx, "quantity", Math.max(1, parseInt(e.target.value) || 1))} />
-                <input type="number" step="10000" min="0" className="w-32 rounded-md border border-border bg-surface px-2 py-1.5 text-right text-body-sm" placeholder="Đơn giá" value={it.unitPriceVnd} onChange={(e) => updateItem(idx, "unitPriceVnd", parseInt(e.target.value) || 0)} />
+                <input type="number" step="10000" min="0" className="w-32 rounded-md border border-border bg-surface px-2 py-1.5 text-right text-body-sm" placeholder="Đơn giá (₫)" value={it.unitPriceVnd} onChange={(e) => updateItem(idx, "unitPriceVnd", parseInt(e.target.value) || 0)} />
                 {items.length > 1 && (
                   <button type="button" onClick={() => removeItem(idx)} aria-label="Xóa dòng" className="flex h-9 w-9 items-center justify-center rounded-md text-text-muted hover:bg-surface-raised hover:text-danger">
                     <Trash2 className="h-4 w-4" />
@@ -300,13 +300,13 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess, initialData }: Cr
         </div>
 
         <div>
-          <label className="mb-1 block font-semibold text-text">Lời nhắn thiệp mừng</label>
-          <textarea rows={2} className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Nội dung in/viết lên thiệp..." value={cardMessage} onChange={(e) => setCardMessage(e.target.value)} />
+          <label className="mb-1 block font-semibold text-text">Lời nhắn trên thiệp</label>
+          <textarea rows={2} className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Nội dung in hoặc viết lên thiệp…" value={cardMessage} onChange={(e) => setCardMessage(e.target.value)} />
         </div>
 
         <div>
-          <label className="mb-1 block font-semibold text-text">Ghi chú thợ cắm hoa (BOM / Phong cách)</label>
-          <input type="text" className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Tone màu, giấy gói, hoa chính..." value={internalNote} onChange={(e) => setInternalNote(e.target.value)} />
+          <label className="mb-1 block font-semibold text-text">Ghi chú cho thợ cắm hoa</label>
+          <input type="text" className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Tông màu, giấy gói, hoa chính…" value={internalNote} onChange={(e) => setInternalNote(e.target.value)} />
         </div>
       </form>
     </Dialog>

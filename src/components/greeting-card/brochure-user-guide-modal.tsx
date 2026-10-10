@@ -24,10 +24,10 @@ export function BrochureUserGuideModal() {
             ? "border-border bg-surface text-primary shadow-xs"
             : "border-border bg-surface-alt text-text-muted hover:bg-surface hover:text-foreground active:bg-surface active:text-primary",
         )}
-        title="Hướng dẫn sử dụng link đặt hoa"
+        title="Hướng dẫn dùng thẻ chào"
       >
         <HelpCircle size={16} className={open ? "text-primary" : "text-text-muted"} aria-hidden="true" />
-        <span className="hidden sm:inline">Hướng dẫn link đặt hoa</span>
+        <span className="hidden sm:inline">Hướng dẫn thẻ chào</span>
       </button>
 
       {open && (
@@ -47,7 +47,7 @@ export function BrochureUserGuideModal() {
               <div className="flex items-center gap-2">
                 <BookOpen size={20} className="text-primary" />
                 <h2 id="guide-modal-title" className="text-title-sm font-extrabold text-foreground">
-                  Cẩm nang nghiệp vụ Thẻ Chào & Link Đặt Hoa
+                  Hướng dẫn dùng Thẻ chào mẫu hoa
                 </h2>
               </div>
               <button
@@ -72,7 +72,7 @@ export function BrochureUserGuideModal() {
                 }`}
               >
                 <Shield size={16} />
-                <span>Điều hành / Chủ tiệm</span>
+                <span>Điều hành và kế toán</span>
               </button>
               <button
                 type="button"
@@ -84,7 +84,7 @@ export function BrochureUserGuideModal() {
                 }`}
               >
                 <Users size={16} />
-                <span>Bán hàng (Sale)</span>
+                <span>Nhân viên bán hàng</span>
               </button>
               <button
                 type="button"
@@ -96,7 +96,7 @@ export function BrochureUserGuideModal() {
                 }`}
               >
                 <Sparkles size={16} />
-                <span>Điều phối & Xưởng</span>
+                <span>Điều phối và thợ cắm hoa</span>
               </button>
             </div>
 
