@@ -20,7 +20,7 @@ interface ChoiceGridProps {
 
 export function ChoiceGrid({
   title,
-  subtitle = "Chọn một tác vụ để bắt đầu hành trình làm việc có định hướng",
+  subtitle = "Chọn một công việc bên dưới để bắt đầu.",
   journeys,
   onSelectJourney,
   onSwitchToExpertMode,
@@ -75,7 +75,7 @@ export function ChoiceGrid({
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-selected text-primary text-caption font-semibold mb-2">
             <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>HÀNH TRÌNH TÁC VỤ THÔNG MINH</span>
+            <span>Bắt đầu nhanh</span>
           </div>
           <h1 className="text-display font-extrabold text-text tracking-tight">
             {title}
@@ -93,7 +93,7 @@ export function ChoiceGrid({
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-border bg-surface hover:bg-surface-alt text-body-sm font-medium text-text transition-colors cursor-pointer"
             >
               <SlidersHorizontal className="w-4 h-4 text-text-muted" aria-hidden="true" />
-              <span>Chế độ chuyên gia</span>
+              <span>Xem bảng số liệu</span>
             </button>
           )}
           <UserMenu initials={userInitials || "U"} direction="down" />
@@ -123,7 +123,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Tác vụ đơn
+            Việc đơn lẻ
           </button>
           <button
             type="button"
@@ -134,7 +134,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Gói quy trình
+            Quy trình trọn gói
           </button>
           <button
             type="button"
@@ -145,7 +145,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Trợ lý ảo
+            Trợ lý AI
           </button>
         </div>
 
@@ -155,7 +155,7 @@ export function ChoiceGrid({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm tác vụ mong muốn..."
+            placeholder="Tìm công việc…"
             className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-border bg-surface text-body-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary transition-colors"
           />
         </div>
@@ -185,7 +185,7 @@ export function ChoiceGrid({
       ) : !showFeaturedSpotlight ? (
         <div className="text-center py-12 border border-dashed border-border rounded-xl bg-surface">
           <p className="text-body text-text-muted">
-            Không tìm thấy tác vụ phù hợp với từ khóa &ldquo;{searchQuery}&rdquo;.
+            Không có kết quả cho &ldquo;{searchQuery}&rdquo;. Hãy thử từ khóa khác.
           </p>
         </div>
       ) : null}
