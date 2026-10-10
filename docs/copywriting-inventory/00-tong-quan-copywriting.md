@@ -1,13 +1,13 @@
 # HỆ THỐNG NỘI DUNG GIAO DIỆN (UI COPY DECK) — FLORAOS PRODUCTION
 
 > **Ngày khởi tạo**: 10/10/2026  
-> **Mục đích**: Bảng đối chiếu và chuẩn hóa 100% câu chữ hiển thị trên giao diện của 10 chức năng đang hoạt động (active) trên môi trường Production của FloraOS.  
-> **Người biên tập / Chuẩn hóa**: Chủ sản phẩm (PO / Merchant Admin).  
-> **Trạng thái**: Chờ điền nội dung chuẩn hóa mới.
+> **Cập nhật gần nhất**: 10/10/2026 (Phê duyệt bởi PO / Merchant Admin)  
+> **Mục đích**: Bảng đối chiếu và chuẩn hóa 100% câu chữ hiển thị trên giao diện của các chức năng đang hoạt động (active) trên môi trường Production của FloraOS.  
+> **Trạng thái**: Đã chuẩn hóa toàn diện & Khóa từ điển SSOT.
 
 ---
 
-## 1. Danh sách 10 mục Production được bóc tách nội dung
+## 1. Danh sách các phân hệ Production được bóc tách nội dung
 
 | # | Mã phân hệ | Tên màn hình / Mục sidebar | Tuyến đường (Route) | File tài liệu chi tiết |
 |---|---|---|---|---|
@@ -18,15 +18,37 @@
 | 5 | `CREATE` | **Tạo mẫu hoa mới** | `/san-pham/tao-moi` | [05-tao-mau-hoa-moi.md](./05-tao-mau-hoa-moi.md) |
 | 6 | `IMPORT` | **Nhập từ Excel & Ảnh** | `/san-pham/nhap-hang-loat` | [06-nhap-tu-excel.md](./06-nhap-tu-excel.md) |
 | 7 | `SCAN` | **Quét ảnh hoa** | `/tai-anh` | [07-quet-anh-hoa.md](./07-quet-anh-hoa.md) |
-| 8 | `MEDIA` | **Kho dữ liệu** | `/kho-du-lieu` | [08-kho-du-lieu.md](./08-kho-du-lieu.md) |
+| 8 | `MEDIA` | **Kho ảnh & nội dung** | `/kho-du-lieu` | [08-kho-du-lieu.md](./08-kho-du-lieu.md) |
 | 9 | `PROFILE` | **Hồ sơ cửa hàng** | `/ho-so` | [09-ho-so-cua-hang.md](./09-ho-so-cua-hang.md) |
-| 10 | `SETTING` | **Cài đặt hệ thống** | `/cai-dat` | [10-cai-dat.md](./10-cai-dat.md) |
+| 10 | `SETTING` | **Cài đặt & Thành viên** | `/cai-dat` | [10-cai-dat.md](./10-cai-dat.md) |
+| 11 | `COMMON` | **Thông báo & Trạng thái** | Toàn hệ thống | [11-thong-bao-va-trang-thai.md](./11-thong-bao-va-trang-thai.md) |
 
 ---
 
-## 2. Quy ước đặt Mã định danh phần tử (Copy ID)
+## 2. Từ điển Thuật ngữ Chuẩn hóa (SSOT Terminology)
 
-Mỗi câu chữ đều được gắn một **Mã định danh duy nhất (Unique Copy Key)** theo cấu trúc:
+Bảng từ điển này là **Nguồn sự thật tối cao (Single Source of Truth)** được Chủ sản phẩm (PO) phê duyệt chính thức ngày 10/10/2026. Mọi câu chữ trên UI và tài liệu bắt buộc phải tuân thủ nghiêm ngặt:
+
+| Khái niệm | Đang dùng rải rác | Thuật ngữ CHUẨN HÓA | Ghi chú quy chuẩn |
+| :--- | :--- | :--- | :--- |
+| **Phân hệ Lưu trữ** | Kho dữ liệu · Trung tâm lưu trữ | **Kho ảnh & nội dung** | Tên menu `/kho-du-lieu` và H1 |
+| **Tab Thẻ chào** | Duyệt TT · Điều hành & Điều phối | **Điều hành**, **Điều phối** | Giữ theo chuẩn phân quyền RBAC & Role UX |
+| **Đơn vị kinh doanh** | tiệm · shop · tiệm hoa | **cửa hàng** | "tiệm" chỉ dùng trong lời chào kịch bản gửi khách |
+| **Dịp tặng hoa** | 4 dịp đơn lẻ | **Khai trương · Sinh nhật · Tình yêu · Chia buồn · 8/3 & 20/10 · 20/11 · Tốt nghiệp** | Đầy đủ 7 dịp cao điểm tại Việt Nam |
+| **Đối tượng hoa** | Sản phẩm · Master Index · BOM | **Mẫu hoa** (đối tượng) · **Kho mẫu hoa** (tập hợp) | Bỏ hoàn toàn Master Index, BOM khỏi UI |
+| **Thành phần cắm** | BOM · Công thức BOM · Cành hoa | **Thành phần hoa** | Gồm hoa chính, hoa phụ, lá đệm, phụ kiện |
+| **Phiếu cho thợ** | Florist Ticket · Phiếu thợ | **Phiếu cắm hoa** | In cho thợ cắm hoa theo dõi |
+| **Kịch bản bán lẻ** | Sale Pitch · Kịch bản Zalo | **Kịch bản tư vấn** | Soạn sẵn cho nhân viên bán hàng |
+| **Thao tác tải lại** | Làm mới dữ liệu · Tải lại danh sách | **Làm mới** | 1 từ ngắn gọn, kèm icon |
+| **Trạng thái đơn** | Mobile vs Kanban lệch nhau | **Mới tiếp nhận → Đang cắm hoa → Đang giao → Hoàn tất** | Thống nhất 100% giữa mobile và desktop |
+| **Tiền tệ** | đ · VNĐ | **₫** (vd: `650.000 ₫`; nhãn: `(₫)`) | Chuẩn tiền tệ quốc gia |
+| **Hành động xóa** | Đưa vào thùng rác · Xóa | **Chuyển vào thùng rác** (xóa tạm 30 ngày) · **Xóa vĩnh viễn** | Nêu rõ hệ quả và cách hoàn tác |
+
+---
+
+## 3. Quy ước Mã định danh phần tử (Copy ID)
+
+Cấu trúc mã chuẩn hóa:
 ```text
 [MÃ PHÂN HỆ]-[LOẠI THÀNH PHẦN]-[SỐ THỨ TỰ]
 ```
@@ -41,36 +63,26 @@ Mỗi câu chữ đều được gắn một **Mã định danh duy nhất (Uniq
 * `TH`: Tiêu đề cột trong bảng (`Table Header`)
 * `BDG`: Huy hiệu, nhãn trạng thái (`Badge / Status Tag`)
 * `GDC`: Khối hướng dẫn thao tác chuẩn (`Feature Guidance Card`)
-* `EMP`: Trạng thái khi chưa có dữ liệu (`Empty State`)
+* `EMP`: Trạng thái khi chưa có dữ liệu hoặc không có kết quả (`Empty State`)
 * `MOD`: Tiêu đề, nội dung cảnh báo trong hộp thoại (`Modal / Dialog`)
 * `MSG`: Thông báo nổi góc màn hình (`Toast / Success / Error Message`)
+* `ERR`: Thông báo lỗi tại ô nhập liệu (`Field Validation Error`)
+* `CFM`: Hộp thoại xác nhận hành động nguy hiểm (`Confirmation Modal`)
 
 ---
 
-## 3. Hướng dẫn cách điền và chuẩn hóa
+## 4. Quy chuẩn Văn phong, Định dạng & Microcopy
 
-Trong mỗi file tài liệu chi tiết:
-1. **Cột "Nội dung HIỆN TẠI trên UI"**: Là câu chữ chính xác đang chạy trong mã nguồn hiện tại.
-2. **Cột "Nội dung BẠN CHUẨN HÓA (Mới)"**: Là ô trống để bạn nhập câu chữ mong muốn.
-   - *Nếu giữ nguyên:* Có thể để trống hoặc ghi `-`.
-   - *Nếu thay đổi:* Gõ trực tiếp câu chữ mới bạn muốn hiển thị.
-3. **Ký hiệu biến động `{{...}}`**: 
-   - Một số câu chữ có chứa biến số động (ví dụ: `Tổng cộng: {{count}} đơn hàng`, `Chào {{shopName}}!`). 
-   - Khi chỉnh sửa, vui lòng **giữ nguyên phần trong ngoặc nhọn `{{...}}`** để hệ thống tự động điền số liệu.
-4. **Quy tắc giọng điệu (Tone of Voice) cho Cửa hàng hoa**:
-   - Tươi sáng, thanh lịch, tinh tế và ấm áp.
-   - Trực quan, dễ hiểu đối với nhân viên bán hoa, thợ cắm hoa và chủ tiệm.
-   - Tuyệt đối tránh từ ngữ kỹ thuật lập trình (như *ID, Payload, Response, Render, Record, Null...*).
-
----
-
-## 4. Quy trình áp dụng ngược lại vào Mã nguồn
-
-```mermaid
-flowchart LR
-    A[PO điền câu chữ chuẩn hóa] --> B[Agent rà soát đối chiếu Copy ID]
-    B --> C[Cập nhật trực tiếp vào Component/Page]
-    C --> D[Chạy Lint UX R8 + Typecheck]
-    D --> E[Kiểm tra giao diện hoàn tất]
-```
-Sau khi bạn điền xong bất kỳ file nào, Agent sẽ đọc trực tiếp cột mới và cập nhật thẳng vào file mã nguồn tương ứng.
+1. **Sentence case toàn diện**: 
+   - Viết hoa chữ cái đầu câu: *Tạo đơn hàng mới*, *Quét ảnh hoa*, *Thành phần hoa*.
+   - Tuyệt đối tránh Title Case lạm dụng (*Tạo Đơn Hàng Hoa Mới*) hoặc ALL CAPS (*HÀNH TRÌNH TÁC VỤ*).
+2. **Ký tự bắt buộc và số thứ tự**:
+   - Dấu bắt buộc `*` do Component tự render kèm `aria-required="true"`, không chèn `*` thô vào chuỗi.
+   - Số thứ tự `1.`, `2.` do Component danh sách / step indicator tự sinh, không gõ cứng vào nhãn.
+3. **Emoji & Icons**:
+   - Chuyển toàn bộ emoji text (`📸`, `💡`, `✨`, `✂️`, `🛵`) sang thư viện icon SVG chuẩn (**Lucide React Icons**) để tránh lỗi vỡ font trên Android/iOS.
+4. **Công thức thông báo lỗi 3 vế**:
+   - `[Chuyện gì đã xảy ra]. [Vì sao xảy ra]. [Bạn có thể làm gì tiếp theo].`
+   - *Ví dụ:* "Chưa tạo được đơn hàng. Kết nối bị gián đoạn nên đơn chưa được lưu. Hãy kiểm tra kết nối mạng và thử lại sau ít phút."
+5. **Bảo toàn biến số động `{{...}}`**:
+   - Luôn giữ nguyên tên biến trong ngoặc nhọn: `{{count}}`, `{{shopName}}`, `{{name}}`, `{{created}}`, `{{updated}}`.
