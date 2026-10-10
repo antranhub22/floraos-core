@@ -414,7 +414,7 @@ export function SalesOrderIntakeModal({
             <div className="p-4 rounded-xl border border-alert-200 bg-alert-50/50 flex flex-col gap-2">
               <div className="font-bold text-alert-950 flex items-center gap-1.5">
                 <Sparkles size={14} className="text-alert-600" />
-                <span>⚡ Chọn mẫu nhanh từ Product Master Index:</span>
+                <span>⚡ Chọn mẫu nhanh từ Danh Mục Sản Phẩm Mẫu:</span>
               </div>
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {masterProducts.slice(0, 5).map((p) => (
@@ -705,7 +705,7 @@ export function SalesOrderIntakeModal({
             <span className="font-extrabold text-text text-sm flex items-center justify-between border-b border-border pb-1.5">
               <span className="flex items-center gap-1.5">
                 <Flower2 size={16} className="text-alert-600" />
-                2. Mẫu Sản Phẩm & Công Thức Cắm Hoa (Atomic BOM)
+                2. Mẫu Sản Phẩm & Công Thức Cắm Hoa
               </span>
               <span className="text-caption font-bold text-alert-700 bg-alert-50 border border-alert-200 px-2 py-0.5 rounded-full">
                 📸 Chuẩn Input Kỹ Thuật Đầu Vào
@@ -900,7 +900,7 @@ export function SalesOrderIntakeModal({
             {/* Atomic Flowers Table */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="font-bold text-text">Công thức hoa nguyên tử (BOM):</label>
+                <label className="font-bold text-text">Công thức cành hoa chi tiết:</label>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddFlower} className="h-6 text-caption gap-1">
                   <Plus size={11} />
                   Thêm cành hoa
@@ -1002,7 +1002,7 @@ export function SalesOrderIntakeModal({
                 selectedProductBom.accessories.length > 0) && (
                 <div className="rounded-xl border border-border bg-surface-alt/60 p-3 flex flex-col gap-2 text-caption">
                   <span className="font-bold text-text-muted">
-                    Lá/gói/phụ kiện theo mẫu đã chọn (từ Master Index — chỉ đọc):
+                    Lá/gói/phụ kiện theo mẫu đã chọn (từ Danh Mục Mẫu — chỉ đọc):
                   </span>
                   {selectedProductBom.foliage.length > 0 && (
                     <div>
@@ -1254,7 +1254,7 @@ export function SalesOrderIntakeModal({
                   : "bg-sand-50 text-sand-800 border-sand-200"
               }`}>
                 <span>{flowers.length > 0 ? "✓" : "!"}</span>
-                <span className="truncate">6. Công thức cành BOM</span>
+                <span className="truncate">6. Công thức cành hoa</span>
               </div>
 
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border font-semibold ${

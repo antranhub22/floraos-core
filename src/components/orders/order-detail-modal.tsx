@@ -256,7 +256,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
             {activeTab === "florist" && (
               <div className="space-y-4">
                 <div className="rounded-lg bg-info-bg/70 border border-info/30 p-3 text-caption text-info">
-                  ℹ️ <strong>Nguyên tắc bảo mật:</strong> Lát cắt dữ liệu cho xưởng cắm hoa chỉ hiển thị BOM, ảnh mẫu và thời hạn. Toàn bộ giá vốn, giá bán đã được lọc bỏ.
+                  ℹ️ <strong>Nguyên tắc bảo mật:</strong> Lát cắt dữ liệu cho xưởng cắm hoa chỉ hiển thị định lượng hoa, ảnh mẫu và thời hạn. Toàn bộ giá vốn, giá bán đã được lọc bỏ.
                 </div>
                 <FloristTicketCard
                   orderCode={order.code}

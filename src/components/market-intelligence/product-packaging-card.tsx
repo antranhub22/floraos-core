@@ -89,7 +89,7 @@ export function ProductPackagingCard({ packaging, onChange }: ProductPackagingCa
       <div className="flex items-center justify-between border-b border-cool-100 pb-2.5">
         <span className="text-xs font-bold text-cool-800 flex items-center gap-1.5">
           <Gift size={14} className="text-blush-600" />
-          Phụ liệu, Thiệp & Đóng gói (BOM Phụ)
+          Phụ liệu, Thiệp & Đóng gói
         </span>
         <span className="text-caption font-medium text-cool-400">Atomic Disaggregated</span>
       </div>

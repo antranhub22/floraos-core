@@ -376,7 +376,7 @@ export function PartnerProductCard(props: PartnerProductCardProps) {
               <div className="flex items-center gap-1.5 mb-2.5">
                 <Scissors size={13} className="text-primary" />
                 <span className="text-xs font-extrabold text-primary-dark uppercase tracking-wide">
-                  Công Thức Cành Hoa (BOM)
+                  Công Thức Cành Hoa
                 </span>
                 <Badge tone="danger" className="text-caption font-black ml-1">
                   {flowers.length} loại

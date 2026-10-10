@@ -393,11 +393,11 @@ export function ControlTowerDashboard({
       <FeatureGuidanceCard
         badgeLabel="HƯỚNG DẪN ĐIỀU PHỐI ĐƠN HÀNG (M12)"
         title="Tháp Vận Hành Điều Phối & Giám Sát Đơn Hàng Ngành Hoa"
-        description="Quản lý toàn bộ tiến trình từ thẩm định đơn, phân công đối tác xưởng ngoài, AI QC kiểm định chất lượng đối chiếu Master Index đến trao hoa tận tay người nhận (POD)."
+        description="Quản lý toàn bộ tiến trình từ thẩm định đơn, phân công đối tác xưởng ngoài, AI QC kiểm định chất lượng đến trao hoa tận tay người nhận (POD)."
         tips={[
           "⚡ Một Đơn Hàng Duy Nhất (SSOT): Tự động đồng bộ với 11 chức năng còn lại",
-          "🎯 Atomic BOM: Đối tác cắm hoa nhìn thấy chính xác công thức cành hoa từ Master Index",
-          "🤖 AI Vision QC: So khớp ảnh thành phẩm của thợ với ảnh mẫu trước khi cho phép giao",
+          "🎯 Công thức cắm hoa: Đối tác nhìn thấy chính xác danh sách nguyên liệu từ đơn",
+          "🤖 AI QC ảnh: So khớp ảnh thành phẩm của thợ với ảnh mẫu trước khi cho phép giao",
           "📋 28 Templates chuẩn hóa: T01 (Tiếp nhận) ➔ T02-T06 (Kế hoạch & Phân công) ➔ T07-T11 (Cắm hoa) ➔ T14-T15 (AI QC) ➔ T20-T21 (POD) ➔ T25-T27 (Đóng đơn)",
         ]}
       />

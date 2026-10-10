@@ -248,7 +248,7 @@ export function StorageSidebar({
               filter === "approved" ? "bg-info text-white font-bold" : "bg-surface-alt text-text-muted hover:text-text"
             }`}
           >
-            Đã duyệt BOM ({approvedAnalyses.length})
+            Đã duyệt định lượng ({approvedAnalyses.length})
           </button>
           <button
             type="button"

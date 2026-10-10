@@ -85,10 +85,10 @@ export function AIQCReportCard({
 
         <div className="flex flex-col gap-4">
           <div>
-            <span className="text-xs font-bold text-text-muted block mb-2">TIÊU CHÍ ĐỐI CHIẾU MASTER INDEX</span>
+            <span className="text-xs font-bold text-text-muted block mb-2">TIÊU CHÍ ĐỐI CHIẾU MẪU CHUẨN</span>
             <div className="rounded-xl border border-border bg-surface-alt p-3.5 space-y-2.5 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-text font-medium">Khớp loài hoa & số lượng cành (BOM):</span>
+                <span className="text-text font-medium">Khớp loài hoa & số lượng cành:</span>
                 <span className="font-bold text-mint-700 flex items-center gap-1">
                   <Check size={14} />
                   {checklist?.flowerMatchScore || 95}%

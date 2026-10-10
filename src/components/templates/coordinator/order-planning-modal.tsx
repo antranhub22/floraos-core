@@ -135,7 +135,7 @@ export function OrderPlanningModal({
             {order.flowers && order.flowers.length > 0 && (
               <div className="pt-2 border-t border-dashed border-border/80">
                 <span className="text-caption font-bold text-text-muted block mb-1">
-                  Công thức cành hoa (BOM) cần đối tác chuẩn bị:
+                  Công thức cành hoa cần đối tác chuẩn bị:
                 </span>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {order.flowers.map((fl, i) => (
