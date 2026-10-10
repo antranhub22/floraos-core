@@ -1,0 +1,56 @@
+import type { OpsKnowledgeNode } from "./schema"
+
+export const NODE_03_THE_CHAO: OpsKnowledgeNode = {
+  id: "node-03-the-chao",
+  moduleIndex: 3,
+  moduleTitle: "Chức năng 03: Thẻ Chào Mẫu Hoa",
+  topicTitle: "Brochure Mẫu Hoa Trực Tuyến & Cọc Tiền VietQR Tự Động",
+  routePath: "/the-chao",
+  targetRoles: ["ALL", "QUAN_LY", "BAN_HANG"],
+  keywords: [
+    "thẻ chào", "tạo thẻ", "bộ sưu tập", "tạo bộ sưu tập", "thẻ bộ sưu tập", "bộ sưu tập mẫu",
+    "thẻ", "thẻ mẫu", "thẻ chào mẫu", "thẻ chào mẫu hoa", "brochure", "link chào", "link đặt hoa",
+    "link bộ sưu tập", "gửi zalo", "vietqr", "cọc tiền", "đặt cọc", "phễu cọc", "gửi nhanh",
+    "quản lý", "hộp việc", "gán thợ", "tạo link"
+  ],
+  intents: ["tao_link_the_chao", "gui_mau_hoa_zalo", "quan_ly_coc_vietqr", "chuyen_che_do_quan_ly_the_chao"],
+  summary: "Kênh bán hàng di động giúp nhân viên tạo link xem hoa kèm mã VietQR gửi Zalo cho khách trong 30 giây. Khách tự chọn mẫu, ghi lời chúc thiệp và quét mã cọc tiền tự động.",
+  stepByStepSOP: [
+    {
+      stepNumber: 1,
+      actionText: "Vào mục 'Thẻ chào': Mở ở menu bên trái, sau đó bấm nút 'Gửi nhanh' ở góc trên",
+      expectedResult: "Màn hình mở giao diện tạo link di động gửi khách",
+    },
+    {
+      stepNumber: 2,
+      actionText: "Bước 1 - Chọn bộ sưu tập: Chọn dịp hoa (Sinh nhật, Khai trương...) và chọn các mẫu hoa ưng ý",
+      expectedResult: "Danh sách mẫu hoa được thêm vào thẻ chào gửi khách",
+    },
+    {
+      stepNumber: 3,
+      actionText: "Bước 2 - Lời chào & Tỷ lệ cọc: Nhập tên khách hàng, lời chúc của tiệm và chọn mức cọc 50% hoặc 100%",
+      expectedResult: "Hệ thống tự động gắn hotline tiệm và mã VietQR nhận tiền",
+    },
+    {
+      stepNumber: 4,
+      actionText: "Bước 3 - Lấy link gửi Zalo: Bấm 'Tạo link', sau đó bấm 'Sao chép link' để dán vào Zalo gửi cho khách",
+      expectedResult: "Khách mở link trên điện thoại để xem hoa, gõ thiệp và quét mã QR đặt cọc",
+    },
+    {
+      stepNumber: 5,
+      actionText: "Theo dõi đơn cọc: Bấm 'Quản lý' hoặc bấm biểu tượng 'Hộp việc' ở góc trên để xem thông báo khách vừa chuyển tiền",
+      expectedResult: "Hệ thống tự động hiển thị đơn cọc mới để duyệt tiền và phân công thợ cắm hoa",
+    },
+  ],
+  caveatsAndGotchas: [
+    "Tiệm cần cài đặt số tài khoản ngân hàng ở mục 'Hồ sơ' thì mã VietQR mới nhận được tiền cọc từ khách.",
+    "Hộp việc tự động cập nhật mỗi 20 giây để báo ngay cho nhân viên khi khách chuyển khoản thành công.",
+    "Lời chúc thiệp hoặc chữ in băng rôn do khách tự gõ sẽ chuyển thẳng vào phiếu xưởng, tránh thợ cắm ghi sai chính tả.",
+  ],
+  actionLabel: "Mở Bảng Thẻ Chào Mẫu Hoa",
+  quickPrompts: [
+    "Cách tạo link Thẻ chào gửi Zalo cho khách chọn hoa?",
+    "Khách quét mã VietQR đặt cọc tự động như thế nào?",
+    "Xem thông báo đơn cọc mới ở đâu?",
+  ],
+}

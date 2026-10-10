@@ -25,6 +25,7 @@ export interface ChatMessageMetadata {
   targetRoute?: string | undefined
   actionLabel?: string | undefined
   actionSteps?: string[] | undefined
+  assistantType?: "OPS_COPILOT" | "SALES_CONCIERGE" | undefined
 }
 
 export interface ChatMessage {

@@ -131,7 +131,7 @@ export function matchProductsFromMasterIndex(
         sampleImageUrl: p.masterImageUrl,
         priceVnd: price,
         category: p.category,
-        wrapStyle: p.bom.wrapStyle,
+        wrapStyle: p.bom?.wrapStyle || "Tiêu chuẩn",
         reason,
       },
       score,

@@ -4,7 +4,7 @@
  * Áp dụng chốt chặn tài nguyên và ghi nhận usage credit theo quy định của FloraOS-core.
  */
 
-import { DifyChatProvider } from "../adapters/dify-chat-provider"
+import { SalesConciergeProvider } from "../sales-concierge/adapters/sales-concierge-provider"
 import { ChatChannelRepository } from "../infra/chat-channel-repository"
 import { isChannelSubscriptionActive } from "../domain/channel-integration-rules"
 import type { SupportedChatChannel } from "../domain/channel-integration-types"
@@ -30,7 +30,7 @@ export async function handleIncomingChannelMessage(
   input: HandleChannelMessageInput,
   deps = {
     channelRepo: new ChatChannelRepository(),
-    chatProvider: new DifyChatProvider(),
+    chatProvider: new SalesConciergeProvider(),
   }
 ): Promise<HandleChannelMessageResult> {
   const { organizationId, channel, externalSenderId, messageText } = input

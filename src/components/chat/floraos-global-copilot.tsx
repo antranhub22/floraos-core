@@ -125,11 +125,11 @@ export function FloraOSGlobalCopilot() {
         }
       }
 
-      // 3. Gửi tin nhắn đến server
+      // 3. Gửi tin nhắn đến server (Định danh rõ loại trợ lý OPS_COPILOT)
       const res = await fetch(`/api/v1/chat/conversations/${currentConvId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: text }),
+        body: JSON.stringify({ query: text, assistantType: "OPS_COPILOT" }),
       })
 
       const data = await res.json()
@@ -210,10 +210,10 @@ export function FloraOSGlobalCopilot() {
               </span>
               <div>
                 <div className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
-                  FloraOS SaaS Copilot
+                  FloraOS Ops Copilot
                   <span className="inline-block h-2 w-2 rounded-full bg-success animate-pulse" />
                 </div>
-                <div className="text-caption font-medium text-text-muted">Hỏi đáp vận hành & Tư vấn hoa 24/7</div>
+                <div className="text-caption font-medium text-text-muted">Trợ lý Vận hành & Hướng dẫn SaaS cho tiệm hoa</div>
               </div>
             </div>
             <button
@@ -233,19 +233,19 @@ export function FloraOSGlobalCopilot() {
                   <Sparkles className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="font-bold text-foreground text-sm">Xin chào! Em có thể giúp gì cho tiệm?</div>
+                  <div className="font-bold text-foreground text-sm">Xin chào! Em có thể hỗ trợ gì về hệ thống?</div>
                   <p className="text-caption text-muted-foreground mt-1 max-w-[280px] mx-auto">
-                    Anh/chị có thể hỏi về cách sử dụng tính năng trên hệ thống hoặc nhờ tư vấn mẫu hoa và chốt đơn!
+                    Anh/chị có thể hỏi về cách thao tác các tính năng: bóc tách ảnh hoa, cấu hình giá sàn, in phiếu xưởng ẩn giá, CRM khách hàng...
                   </p>
                 </div>
 
                 <div className="space-y-1.5 w-full pt-2">
-                  <div className="text-caption font-bold text-muted-foreground text-left px-1">💡 Câu hỏi gợi ý:</div>
+                  <div className="text-caption font-bold text-muted-foreground text-left px-1">💡 Hướng dẫn thao tác nhanh:</div>
                   {[
-                    "Làm sao in phiếu cắm hoa giấu giá cho thợ?",
-                    "Cách quét ngày kỷ niệm khách hàng?",
-                    "Làm sao xuất mã QR catalog gửi Zalo?",
-                    "Tư vấn bó hoa sinh nhật bạn gái tầm 500k",
+                    "Làm sao in phiếu cắm hoa giấu giá cho thợ xưởng?",
+                    "Cách tạo link thẻ chào gửi Zalo và cọc VietQR?",
+                    "Tải file Excel mẫu để nhập sản phẩm hàng loạt?",
+                    "Cách cấp tài khoản nhân viên mới trong 10 giây?",
                   ].map((q, idx) => (
                     <button
                       key={idx}
@@ -260,10 +260,14 @@ export function FloraOSGlobalCopilot() {
               </div>
             ) : (
               <>
-                {messages.map((m) => (
+                {messages.map((m, idx) => (
                   <CopilotMessageItem
                     key={m.id}
                     message={m}
+                    isLatestAssistant={idx === messages.length - 1 && m.senderType === "ASSISTANT"}
+                    onTypingProgress={() => {
+                      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+                    }}
                     creatingOrderFor={creatingOrderFor}
                     onQuickCreateOrder={handleQuickCreateOrder}
                     onNavigate={(route) => {

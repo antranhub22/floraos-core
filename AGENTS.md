@@ -210,6 +210,19 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
   - **BẮT BUỘC HỎI & CHỐT VỚI CHỦ SẢN PHẨM TRƯỚC KHI THỰC HIỆN (Mandatory User Consultation Rule)**:
     - Mọi khi bắt đầu thực hiện, thiết kế, hoặc can thiệp vào bất kỳ chức năng nào có hành vi **người dùng tải ảnh lên (user upload ảnh)**, Agent **TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý SUY ĐOÁN** hoặc âm thầm nối toàn bộ/bỏ bớt các bước.
     - Agent **BẮT BUỘC PHẢI DỪNG LẠI HỎI TRỰC TIẾP CHỦ SẢN PHẨM (USER)** để chốt danh sách cụ thể các chặng và tác nghiệp cần thực thi trong Journey 14 bước này trước khi viết hoặc sửa bất kỳ dòng code nào.
+- **Quy Chuẩn Đồng Bộ Tài Liệu Hướng Dẫn & Tri Thức OPS Copilot (OPS Copilot & Docs Sync Standard, PO 10/10/2026)**:
+  - **Mối liên hệ bắt buộc Code ↔ Tài liệu ↔ OPS Copilot (Triad Sync)**: Bất kỳ thay đổi nào liên quan đến giao diện người dùng, bổ sung/sửa đổi tab, nút bấm tác vụ, luồng duyệt đơn, trạng thái xuất bản, hoặc cấu hình trên các trang `src/app/(app)/...` **BẮT BUỘC** phải cập nhật đồng thời vào 2 nơi trong cùng một lần bàn giao:
+    1. **Tài liệu Hướng dẫn Sử dụng SSOT**: `docs/production-feature-map/Huong_Dan_Su_Dung_FloraOS_DungchoDIEUHANH.md` (hoặc các file phân hệ con tương ứng).
+    2. **Node Tri thức của OPS Copilot**: `src/modules/chat-assistant/ops-copilot/knowledge-base/node-*.ts`.
+  - **Khái niệm Hoàn thành (Definition of Done)**: Một tác vụ sửa đổi webapp CHƯA ĐƯỢC COI LÀ HOÀN THÀNH nếu tài liệu hướng dẫn và tri thức của OPS Copilot chưa được cập nhật tương ứng.
+  - **Vành Đai Bảo Mật & Chống Rò Rỉ Thông Tin Nhạy Cảm (Zero-Leakage Security Perimeter)**:
+    - *Chỉ ghi nhận Lớp Giao Diện Người Dùng (User-Facing Surface Only)*: Tài liệu hướng dẫn và Knowledge Base của OPS Copilot chỉ được mô tả **những gì nhân viên tiệm hoa nhìn thấy và thao tác trực tiếp trên trình duyệt**.
+    - *Danh mục CẤM KỴ TUYỆT ĐỐI (Strict Blacklist)*:
+      1. **CẤM** đưa tên nhà cung cấp AI bên thứ ba (OpenAI, Anthropic, Dify, Ollama...), giá vốn API, hoặc chi phí hạ tầng của nền tảng.
+      2. **CẤM** đưa tên biến môi trường (`.env`), database schema Postgres, câu lệnh SQL, hoặc mã lỗi kỹ thuật / call stack trace.
+      3. **CẤM** đưa mã năng lực kỹ thuật thô (`A1`, `A3`, `F4`, `T2`, `L1`) — bắt buộc dịch thành tên vai trò nghiệp vụ (*Quản lý cửa hàng, Thợ cắm hoa, Nhân viên bán hàng*).
+      4. **CẤM** tiết lộ bất kỳ thông tin nào về kiến trúc đa tenant, ID hệ thống, hoặc dữ liệu của các tiệm hoa khác.
+      5. **CẤM** dùng thuật ngữ kỹ thuật thô vi phạm UX Lint R8 & R12 (`BOM`, `Master Index`, `PII`, `M01a`, `Khu vực D`...).
 
 ## Thứ tự pha — điều kiện chặn
 

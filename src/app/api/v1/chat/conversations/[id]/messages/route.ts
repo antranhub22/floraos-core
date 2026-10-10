@@ -25,6 +25,11 @@ export const POST = handle(async (request, context: { params: Promise<{ id: stri
 
   const { id } = await context.params
   const body = await request.json()
-  const result = await sendChatMessage(ctx, id, body.query || body.content || "")
+  const result = await sendChatMessage(
+    ctx,
+    id,
+    body.query || body.content || "",
+    body.assistantType
+  )
   return jsonResponse(result)
 })

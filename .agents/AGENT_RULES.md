@@ -125,6 +125,13 @@ API Route (src/app/api/v1/) → handle() → requireTenantContext() → requireC
 | 5 | Duplicate images in Creative Studio | Local fallback returned raw unsegmented bytes | Use `StudioLocalImageProvider` with active segmentation |
 | 6 | Flaky tests in parallel runs | Shared DB race condition across test files | Keep `fileParallelism: false` in `vitest.config.ts` |
 
+## 15. OPS COPILOT KNOWLEDGE SYNC & ZERO-LEAKAGE PERIMETER
+- **Mandatory Triad Sync**: Any modification to webapp UI, routes, action buttons, or business workflows (`src/app/(app)/`) MUST update both:
+  1. User Guide SSOT (`docs/production-feature-map/Huong_Dan_Su_Dung_FloraOS_DungchoDIEUHANH.md`)
+  2. OPS Copilot Knowledge Nodes (`src/modules/chat-assistant/ops-copilot/knowledge-base/node-*.ts`)
+- **Zero-Leakage Security Perimeter**: User-facing manual & Copilot knowledge MUST ONLY contain what shop staff see and interact with on the browser.
+  - **STRICTLY PROHIBITED**: Third-party AI providers (OpenAI, Anthropic, Dify), API raw costs, `.env` variables, database schema/SQL, raw capability codes (`A3`, `F4`, `T2`), internal stack traces, and multi-tenant infrastructure internals.
+
 ---
 
 # ⚡ PART III: ON-DEMAND SKILLS REGISTRY (Workflow Tier)
