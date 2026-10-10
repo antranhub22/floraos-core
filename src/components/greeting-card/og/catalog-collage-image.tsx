@@ -26,12 +26,64 @@ function Tiles({ images }: { images: string[] }) {
   )
 }
 
+function EmptyTiles({ shopName }: { shopName: string | null }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 500,
+        height: 630,
+        background: "linear-gradient(135deg, #FFF0F5 0%, #FCE4EC 60%, #F8BBD0 100%)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 140,
+          height: 140,
+          borderRadius: 70,
+          background: "#FFFFFF",
+          fontSize: 70,
+        }}
+      >
+        🌸
+      </div>
+      <div
+        style={{
+          marginTop: 24,
+          fontSize: 26,
+          fontWeight: 700,
+          color: C.primary,
+          letterSpacing: 2,
+        }}
+      >
+        {shopName || "Tiệm Hoa Tươi"}
+      </div>
+      <div
+        style={{
+          marginTop: 8,
+          fontSize: 18,
+          color: C.muted,
+        }}
+      >
+        Bộ Sưu Tập Hoa Tươi
+      </div>
+    </div>
+  )
+}
+
 /** Ảnh ghép 1200×630 cho link bộ sưu tập: tối đa 4 mẫu + tên, khoảng giá, tên tiệm. */
 export function renderCatalogCollage(data: CatalogCollageData, init?: ResponseInit) {
+  const hasImages = data.images.length > 0
   return new ImageResponse(
     (
       <div style={{ display: "flex", width: "100%", height: "100%", background: C.bg }}>
-        {data.images.length > 0 && <Tiles images={data.images} />}
+        {hasImages ? <Tiles images={data.images} /> : <EmptyTiles shopName={data.shopName} />}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, padding: 56, gap: 20 }}>
           {data.shopName && <div style={{ fontSize: 30, color: C.muted }}>{data.shopName}</div>}
           <div style={{ fontSize: 60, fontWeight: 700, color: C.text, lineHeight: 1.15 }}>{data.catalogName}</div>

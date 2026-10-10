@@ -1,6 +1,7 @@
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { getPublicGreetingCatalog } from "./get-public-greeting-catalog"
 import { getPublicGreetingCatalogBySlug } from "./get-public-greeting-catalog-by-slug"
+import { getGreetingCatalogForCustomer } from "./get-greeting-catalog"
 
 export const COLLAGE_MAX_IMAGES = 4
 
@@ -41,12 +42,30 @@ async function loadImages(urls: string[]): Promise<string[]> {
     if (out.length >= COLLAGE_MAX_IMAGES) break
     const key = storageKeyOf(url)
     const mime = key ? MIME_BY_EXT[key.split(".").pop()?.toLowerCase() ?? ""] : undefined
-    if (!key || !mime) continue
-    try {
-      const bytes = await getStorageProvider().get(key)
-      out.push(`data:${mime};base64,${Buffer.from(bytes).toString("base64")}`)
-    } catch {
-      // ảnh hỏng/mất: bỏ qua, ảnh ghép vẫn dựng với các ảnh còn lại
+    if (key && mime) {
+      try {
+        const bytes = await getStorageProvider().get(key)
+        out.push(`data:${mime};base64,${Buffer.from(bytes).toString("base64")}`)
+        continue
+      } catch {
+        // ảnh hỏng/mất: thử tiếp các nguồn khác
+      }
+    }
+    // Hỗ trợ ảnh từ URL tuyệt đối (CDN hoặc proxy ảnh công khai)
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(2500) })
+        if (res.ok) {
+          const contentType = res.headers.get("content-type")?.toLowerCase() || ""
+          if (contentType.includes("jpeg") || contentType.includes("jpg") || contentType.includes("png")) {
+            const buffer = await res.arrayBuffer()
+            const imageMime = contentType.includes("png") ? "image/png" : "image/jpeg"
+            out.push(`data:${imageMime};base64,${Buffer.from(buffer).toString("base64")}`)
+          }
+        }
+      } catch {
+        // bỏ qua nếu lỗi mạng hoặc timeout
+      }
     }
   }
   return out
@@ -68,4 +87,15 @@ export async function catalogCollageById(catalogId: string): Promise<CatalogColl
 
 export async function catalogCollageBySlug(orgSlug: string, catalogCode: string): Promise<CatalogCollageData | null> {
   return toCollage(await getPublicGreetingCatalogBySlug(orgSlug, catalogCode))
+}
+
+export async function catalogCollageBySendCode(sendCode: string): Promise<CatalogCollageData | null> {
+  const data = await getGreetingCatalogForCustomer(sendCode)
+  if (data.status !== "ACTIVE") return null
+  return {
+    catalogName: data.catalog.name,
+    shopName: data.shop?.name ?? null,
+    priceLabel: priceLabelOf(data.products.map((p) => p.price)),
+    images: await loadImages(data.products.map((p) => p.imageUrl).filter((u): u is string => !!u)),
+  }
 }

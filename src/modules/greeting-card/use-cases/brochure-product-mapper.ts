@@ -45,13 +45,17 @@ export function toCatalogProduct(item: CatalogItemRow, imageUrls: Map<string, st
   const occasions = readOccasions(src)
   const dims = readDimensions(src)
   const attrs = (p.attributes as Record<string, unknown>) ?? {}
-  const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : null
+  const fallbackImageUrl = typeof attrs.imageUrl === "string" && attrs.imageUrl ? attrs.imageUrl : null
+  const driveFileId = fallbackImageUrl ? fallbackImageUrl.match(/[?&]file_id=([a-zA-Z0-9_-]+)/)?.[1] : null
+  const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link
+    ? attrs.drive_link
+    : (driveFileId ? `https://drive.google.com/file/d/${driveFileId}/view` : null)
   return {
     id: p.id,
     code: p.code,
     name: p.name,
     price: resolveProductPriceVnd(p.attributes, p.variants[0]?.attributes),
-    imageUrl: mainImg ? imageUrls.get(mainImg.asset_id) ?? null : null,
+    imageUrl: (mainImg ? imageUrls.get(mainImg.asset_id) ?? null : null) ?? fallbackImageUrl,
     driveLink,
     description: readDescription(src),
     flowersSummary: flowers.length > 0 ? flowers.join(", ") : null,

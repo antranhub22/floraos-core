@@ -160,10 +160,15 @@ export class GreetingCatalogRepository {
       items: catalog.items.map((item) => {
         const mainImg = item.product.images[0]
         const attrs = (item.product.attributes as Record<string, unknown>) ?? {}
-        const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : undefined
+        const fallbackImageUrl = typeof attrs.imageUrl === "string" && attrs.imageUrl ? attrs.imageUrl : undefined
+        const masterImageUrl = (mainImg ? urls.get(mainImg.asset_id) : undefined) ?? fallbackImageUrl
+        const driveFileId = fallbackImageUrl ? fallbackImageUrl.match(/[?&]file_id=([a-zA-Z0-9_-]+)/)?.[1] : undefined
+        const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link
+          ? attrs.drive_link
+          : (driveFileId ? `https://drive.google.com/file/d/${driveFileId}/view` : undefined)
         return {
           ...item,
-          product: { ...item.product, masterImageUrl: mainImg ? urls.get(mainImg.asset_id) : undefined, driveLink },
+          product: { ...item.product, masterImageUrl, driveLink },
         }
       }),
     }

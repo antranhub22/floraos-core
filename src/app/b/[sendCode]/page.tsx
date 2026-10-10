@@ -1,6 +1,6 @@
 import { Metadata } from "next"
 import { cookies, headers } from "next/headers"
-import { notFound, redirect } from "next/navigation"
+import { redirect } from "next/navigation"
 import { brochureViewer } from "@/modules/greeting-card/use-cases/brochure-owner"
 import { staffOrganizationId } from "@/modules/greeting-card/use-cases/staff-viewer"
 import { ownerCookieName } from "@/modules/greeting-card/domain/session-owner"
@@ -19,23 +19,37 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { sendCode } = await params
   const data = await getGreetingCatalogForCustomer(sendCode)
 
+  if (data.status === "UNAVAILABLE") {
+    return {
+      title: `Thẻ Chào Mẫu Hoa — ${data.shop.name}`,
+      description: `Bộ sưu tập hoa tươi từ ${data.shop.name}.`,
+    }
+  }
+
   if (data.status !== "ACTIVE") {
     return {
-      title: "Thẻ Chào Mẫu Hoa — FloraOS",
+      title: "Thẻ Chào Mẫu Hoa",
       description: "Xem bộ sưu tập hoa tươi trực tuyến.",
     }
   }
 
-  const firstImage = data.products.find((p) => p.imageUrl)?.imageUrl
+  const title = `${data.catalog.name} — Thẻ Chào Hoa Tươi`
+  const description = data.catalog.description || `Xem bộ sưu tập hoa tươi mới nhất từ ${data.shop.name}`
 
   return {
-    title: `${data.catalog.name} — Thẻ Chào Hoa Tươi`,
-    description: data.catalog.description || `Xem bộ sưu tập hoa tươi mới nhất`,
+    title,
+    description,
     openGraph: {
-      title: `${data.catalog.name} — Thẻ Chào Hoa Tươi`,
-      description: data.catalog.description || `Xem bộ sưu tập hoa tươi mới nhất`,
+      title,
+      description,
       type: "website",
-      images: firstImage ? [{ url: firstImage }] : [],
+      siteName: data.shop.name,
+      // Ảnh xem trước: ảnh ghép tự động tại opengraph-image.tsx cùng thư mục
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
     },
   }
 }
@@ -45,7 +59,14 @@ export default async function PublicBrochurePage({ params }: PageProps) {
   // Phiên thuộc trình duyệt đã mở đầu tiên: người nhận link chuyển tiếp không thấy lựa chọn / đơn
   // của người trước. Dữ liệu phiên chỉ được dựng ra HTML sau khi đã xác định là chủ phiên.
   const data = await getGreetingCatalogForCustomer(sendCode)
-  if (data.status === "NOT_FOUND") notFound()
+  if (data.status === "NOT_FOUND") {
+    return (
+      <LinkUnavailable
+        title="Link không tồn tại hoặc đã hết hạn"
+        message="Link xem mẫu hoa này không còn hiệu lực hoặc đã hết thời gian sử dụng. Vui lòng liên hệ người gửi hoặc cửa hàng để nhận link mới."
+      />
+    )
+  }
   // Link hết hạn / đóng: báo ngay cho mọi người mở, không cần nhận chủ phiên
   if (data.status === "UNAVAILABLE") return <UnavailableLink reason={data.reason} shop={data.shop} />
 
