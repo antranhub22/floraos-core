@@ -2656,6 +2656,10 @@ model greeting_sessions {
   selected_product_id String?
   product_snapshot    Json? // Đóng băng ảnh, tên, giá mẫu hoa lúc khách chốt
   order_id            String?
+  /// Ảnh chuyển khoản lần 1 (đặt cọc / trả đủ) do khách tải lên
+  payment_proof_asset_id          String?
+  /// Ảnh chuyển khoản lần 2 (phần còn lại) do khách tải lên
+  payment_proof_balance_asset_id  String?
   opened_at           DateTime?
   selected_at         DateTime?
   /// Hết hạn link (null = không hết hạn). Hết hạn/thu hồi mà chưa có đơn → link trả 404.

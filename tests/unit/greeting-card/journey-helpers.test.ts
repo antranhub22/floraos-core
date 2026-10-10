@@ -39,8 +39,8 @@ describe("toPublicCatalogFilters", () => {
   const all = ["flowers", "color", "style", "dimensions", "wrapStyle", "category", "description"]
   it("chỉ gửi mẫu + trường hiển thị, bỏ bộ lọc nội bộ của bộ sưu tập", () => {
     const out = toPublicCatalogFilters({ templateId: "lookbook-grid", priceMax: 500000 })
-    expect(out).toMatchObject({ templateId: "lookbook-grid", displayFields: all })
-    expect(Object.keys(out ?? {}).sort()).toEqual(["appliedPolicies", "displayFields", "templateId"])
+    expect(out).toMatchObject({ templateId: "lookbook-grid", displayFields: all, requirePaymentProof: true })
+    expect(Object.keys(out ?? {}).sort()).toEqual(["appliedPolicies", "displayFields", "requirePaymentProof", "templateId"])
     expect(JSON.stringify(out)).not.toContain("priceMax")
   })
   it("đọc cấu hình bật/tắt của cửa hàng cho đúng mẫu, bỏ khoá cài đặt khác", () => {

@@ -9,7 +9,7 @@ import { snapshotFromOrder } from "../domain/order-change-request"
 import { customerChangeSection } from "./order-change"
 import { customerSubstituteSection } from "./substitute"
 import { latestFailureForCustomer } from "../domain/delivery-failure"
-import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { parsePaymentPolicy, resolveRequirePaymentProof } from "../domain/brochure-payment-policy"
 import { orderPaymentSummary } from "../domain/payment-summary"
 import { paymentInstructionsFor } from "./payment-instructions"
 
@@ -162,6 +162,7 @@ export async function getBrochureTracking(
        *  không hiện cùng lúc với khung duyệt ảnh (PO 09/10/2026). */
       payment: {
         ...payment,
+        requirePaymentProof: resolveRequirePaymentProof(policy, catalogFilters),
         balanceInstructions: (() => {
           if (!payment.balanceDue) return null
           // Thu trước giao + đang chờ khách duyệt ảnh → chưa hiện QR lần 2

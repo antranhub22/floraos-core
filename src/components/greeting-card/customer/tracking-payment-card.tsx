@@ -8,7 +8,12 @@ import { readApiError } from "@/components/greeting-card/api-error"
 import type { BrochurePaymentInstructions } from "@/modules/greeting-card/domain/greeting-card-types"
 import type { OrderPaymentSummary } from "@/modules/greeting-card/domain/payment-summary"
 
-export type TrackingPayment = OrderPaymentSummary & { balanceInstructions: BrochurePaymentInstructions | null }
+import { PaymentProofUploader } from "./payment-proof-uploader"
+
+export type TrackingPayment = OrderPaymentSummary & {
+  balanceInstructions: BrochurePaymentInstructions | null
+  requirePaymentProof?: boolean
+}
 
 const vnd = (n: number) => `${n.toLocaleString("vi-VN")}đ`
 
@@ -20,6 +25,10 @@ export function TrackingPaymentCard({ payment, sendCode }: { payment: TrackingPa
   const [reported, setReported] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [proofAssetId, setProofAssetId] = useState<string | null>(null)
+
+  const requireProof = payment.requirePaymentProof !== false
+  const canReport = !requireProof || !!proofAssetId
   const qr = payment.balanceInstructions
   if (payment.totalVnd <= 0 || payment.milestones.length < 2) return null
 
@@ -28,7 +37,11 @@ export function TrackingPaymentCard({ payment, sendCode }: { payment: TrackingPa
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`/api/v1/public/brochure/${sendCode}/payment-notify`, { method: "POST" })
+      const res = await fetch(`/api/v1/public/brochure/${sendCode}/payment-notify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proofAssetId: proofAssetId || undefined }),
+      })
       if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
       setReported(true)
     } catch (err) {
@@ -72,9 +85,30 @@ export function TrackingPaymentCard({ payment, sendCode }: { payment: TrackingPa
             {qr.bankName} · {qr.accountNo} · {qr.accountName}<br />Nội dung chuyển khoản: <strong className="text-foreground">{qr.transferMemo}</strong>
           </p>
           {sendCode && (
-            <Button type="button" onClick={() => void report()} disabled={busy || reported} className="w-full">
-              {reported ? "Đã báo cửa hàng — chờ xác nhận" : `Tôi đã thanh toán ${vnd(qr.amount)}`}
-            </Button>
+            <div className="w-full flex flex-col gap-2">
+              {requireProof && !reported && (
+                <PaymentProofUploader
+                  sendCode={sendCode}
+                  purpose="BALANCE"
+                  onUploaded={(id) => setProofAssetId(id)}
+                  onRemoved={() => setProofAssetId(null)}
+                  disabled={busy || reported}
+                />
+              )}
+              <Button
+                type="button"
+                onClick={() => void report()}
+                disabled={busy || reported || !canReport}
+                className="w-full"
+              >
+                {reported ? "Đã báo cửa hàng — chờ xác nhận" : `Tôi đã thanh toán ${vnd(qr.amount)}`}
+              </Button>
+              {!reported && !canReport && (
+                <p className="text-caption text-warning font-medium text-center">
+                  Vui lòng tải ảnh chuyển khoản để xác nhận
+                </p>
+              )}
+            </div>
           )}
           {error && <p role="alert" className="text-caption text-danger">{error}</p>}
         </div>

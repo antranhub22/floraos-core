@@ -12,6 +12,7 @@ import { GREETING_TEMPLATES } from "./greeting-template-catalog"
 import { enabledFieldsFor, readDisplaySettings, type OptionalDisplayField } from "./display-fields"
 
 import { resolveAppliedPolicies, type PublicAppliedPolicies } from "./store-policy"
+import { parsePaymentPolicy, resolveRequirePaymentProof } from "./brochure-payment-policy"
 
 export type { GreetingTemplateId, GreetingCardTemplateDef, TemplateCategory }
 export { GREETING_TEMPLATES }
@@ -36,7 +37,8 @@ export function resolveGreetingTemplateId(candidate?: string | null): GreetingTe
 
 /**
  * Phần cấu hình được phép gửi ra trang khách: mẫu đang dùng và các trường thông tin
- * cửa hàng bật cho mẫu đó, kèm theo các chính sách (ưu đãi, cam kết, thỏa thuận) áp dụng.
+ * cửa hàng bật cho mẫu đó, kèm theo các chính sách (ưu đãi, cam kết, thỏa thuận) áp dụng
+ * và cơ chế bắt buộc tải ảnh chuyển khoản.
  */
 export function toPublicCatalogFilters(
   raw: unknown,
@@ -45,11 +47,15 @@ export function toPublicCatalogFilters(
   templateId: string
   displayFields: OptionalDisplayField[]
   appliedPolicies?: PublicAppliedPolicies
+  requirePaymentProof: boolean
 } | null {
   const rawId = raw && typeof raw === "object" ? (raw as Record<string, unknown>).templateId : undefined
   const templateId = resolveGreetingTemplateId(typeof rawId === "string" ? rawId : null)
   const displayFields = enabledFieldsFor(readDisplaySettings(orgSettings), templateId)
   const appliedPolicies = resolveAppliedPolicies(raw, orgSettings)
+  const paymentPolicy = parsePaymentPolicy(orgSettings)
+  const requirePaymentProof = resolveRequirePaymentProof(paymentPolicy, raw)
   if (typeof rawId !== "string" && orgSettings === undefined) return null
-  return { templateId, displayFields, appliedPolicies }
+  return { templateId, displayFields, appliedPolicies, requirePaymentProof }
 }
+

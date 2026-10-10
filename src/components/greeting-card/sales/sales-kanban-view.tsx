@@ -94,6 +94,8 @@ export function SalesKanbanView({ items, now, onOpenNotes, showSale, doneHidden 
                         productionStatus: item.productionStatus,
                         deliveryStatus: item.deliveryStatus,
                         channel: item.channel,
+                        paymentProofUrl: item.paymentProofUrl,
+                        paymentProofBalanceUrl: item.paymentProofBalanceUrl,
                         createdAt: item.createdAt,
                       })
                     }

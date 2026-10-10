@@ -23,6 +23,10 @@ export interface BrochurePaymentPolicy {
    * (không chờ thêm). Có giá trị thì thay `holdMinutes` cho đồng hồ của khách. Thiếu = tắt.
    */
   paymentTimeoutMinutes?: number
+  /**
+   * Bắt buộc khách tải ảnh chuyển khoản trước khi bấm "Tôi đã chuyển khoản"; mặc định BẬT (true).
+   */
+  requirePaymentProof?: boolean
 }
 
 /** Hạn thanh toán gợi ý khi Điều hành bật (PO 08/10/2026). */
@@ -35,6 +39,7 @@ export const DEFAULT_PAYMENT_POLICY: BrochurePaymentPolicy = {
   depositPercent: 0,
   requirePaidBeforeProduction: false,
   requireFullBeforeDispatch: false,
+  requirePaymentProof: true,
 }
 
 export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
@@ -62,10 +67,13 @@ export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
   const timeout = minutesIn(r.payment_timeout_minutes) ?? (stepRaw && stepRaw.auto_cancel_unpaid !== false ? minutesIn(stepRaw.unpaid_expiry_minutes) : null)
   const autoCancel = r.auto_cancel_unpaid === true || (stepRaw?.auto_cancel_unpaid === true)
   const pct = typeof r.deposit_percent === "number" && Number.isFinite(r.deposit_percent) ? Math.round(r.deposit_percent) : 0
+  const requireProof = r.require_payment_proof !== false
+
   return {
     depositPercent: pct >= 1 && pct <= 99 ? pct : 0,
     requirePaidBeforeProduction: r.require_paid_before_production === true,
     requireFullBeforeDispatch: r.require_full_before_dispatch === true,
+    requirePaymentProof: requireProof,
     // Chỉ thêm khoá khi tiệm bật giữ đơn — chính sách cũ giữ nguyên hình dạng
     ...(hold ? { holdMinutes: hold } : {}),
     ...(autoCancel ? { autoCancelUnpaid: true } : {}),
@@ -85,7 +93,25 @@ export function serializePaymentPolicy(policy: BrochurePaymentPolicy): Record<st
     hold_minutes: policy.holdMinutes ?? 0,
     auto_cancel_unpaid: policy.autoCancelUnpaid === true,
     payment_timeout_minutes: policy.paymentTimeoutMinutes ?? 0,
+    require_payment_proof: policy.requirePaymentProof !== false,
   }
+}
+
+/**
+ * Phân giải cơ chế bắt buộc ảnh chuyển khoản giữa Cài đặt Bộ sưu tập (catalog filters)
+ * và Chính sách tiệm. Catalog ghi đè tiệm; nếu không ghi đè thì theo tiệm; mặc định là true (BẬT).
+ */
+export function resolveRequirePaymentProof(
+  policy: BrochurePaymentPolicy,
+  catalogFilters?: unknown,
+): boolean {
+  const filters = catalogFilters && typeof catalogFilters === "object"
+    ? (catalogFilters as Record<string, unknown>)
+    : {}
+  if (typeof filters.requirePaymentProof === "boolean") {
+    return filters.requirePaymentProof
+  }
+  return policy.requirePaymentProof ?? true
 }
 
 export type PaymentPurpose = "FULL" | "DEPOSIT" | "BALANCE"

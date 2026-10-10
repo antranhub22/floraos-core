@@ -165,9 +165,11 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
 
   // Máy chủ nhớ khách đã báo chuyển khoản: rời trang rồi quay lại vẫn thấy "đang chờ xác nhận"
   const [reportedPaid, setReportedPaid] = useState(session.status === "PAYMENT_REPORTED")
-  async function handleReportPaid() {
+  async function handleReportPaid(proofAssetId?: string) {
     const res = await fetch(`/api/v1/public/brochure/${session.sendCode}/payment-notify`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proofAssetId }),
     })
     if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
     setReportedPaid(true)
@@ -252,11 +254,15 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
         {step === "PAYMENT" && orderResult && (
           <BrochurePaymentView
             orderCode={orderResult.orderCode}
+            sendCode={session.sendCode}
             totalVnd={orderResult.totalVnd}
             vietQr={orderResult.vietQr}
             shopPhone={shop.phone}
             onReportPaid={handleReportPaid}
             alreadyReported={reportedPaid}
+            requirePaymentProof={
+              (catalog.filters as Record<string, unknown> | null | undefined)?.requirePaymentProof !== false
+            }
             onGoToTracking={() => {
               setTrackingUnlocked(true)
               setStep("TRACKING")

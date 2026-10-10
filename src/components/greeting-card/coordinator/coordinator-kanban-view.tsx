@@ -137,6 +137,8 @@ export function CoordinatorKanbanView({
                         status: o.status,
                         productionStatus: o.production_status,
                         deliveryStatus: o.delivery_status,
+                        paymentProofUrl: work?.paymentProofUrl,
+                        paymentProofBalanceUrl: work?.paymentProofBalanceUrl,
                         createdAt: o.created_at,
                       })
                     }

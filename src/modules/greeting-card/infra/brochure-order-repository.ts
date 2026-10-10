@@ -140,7 +140,7 @@ export class BrochureOrderRepository {
         customer: { select: { id: true, code: true, name: true, phone: true } },
         items: true,
         payments: true,
-        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true } },
+        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true, payment_proof_asset_id: true, payment_proof_balance_asset_id: true } },
         qc_records: { select: { notes: true, created_at: true } },
       },
       orderBy: [{ created_at: "desc" }, { id: "desc" }],

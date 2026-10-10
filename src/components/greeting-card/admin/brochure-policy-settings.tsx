@@ -75,6 +75,10 @@ export function BrochurePolicySettings() {
             <input type="checkbox" checked={policy.requirePaidBeforeProduction} onChange={(e) => edit({ requirePaidBeforeProduction: e.target.checked })} />
             <span>Chỉ cắm hoa khi đã nhận cọc/thanh toán</span>
           </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={policy.requirePaymentProof !== false} onChange={(e) => edit({ requirePaymentProof: e.target.checked })} />
+            <span>Bắt buộc khách tải ảnh chuyển khoản khi xác nhận thanh toán</span>
+          </label>
           <p className="text-caption text-text-muted">
             Giao hoa {policy.requireFullBeforeDispatch ? "bắt buộc thu đủ tiền trước" : "không bắt buộc thu đủ trước"}
             {policy.paymentTimeoutMinutes ? ` · tự huỷ đơn chưa thanh toán sau ${policy.paymentTimeoutMinutes} phút` : ""}

@@ -16,7 +16,11 @@ import { assertOrderInScope } from "./order-scope"
  * đã COMPLETED. Lần báo đầu đổi phiên sang PAYMENT_REPORTED; đơn đã cọc còn nợ thì mỗi
  * lần báo ghi thêm sự kiện "chuyển phần còn lại".
  */
-export async function reportCustomerPayment(sendCode: string, repo = new GreetingCardRepository()) {
+export async function reportCustomerPayment(
+  sendCode: string,
+  input: { proofAssetId?: string | undefined } = {},
+  repo = new GreetingCardRepository()
+) {
   const session = await loadPublicSession(sendCode, repo)
   if (!session.order_id) {
     throw unprocessable("Bạn cần hoàn tất đặt hoa trước khi báo chuyển khoản")
@@ -24,18 +28,28 @@ export async function reportCustomerPayment(sendCode: string, repo = new Greetin
 
   const paid = Number(session.order?.paid_vnd ?? 0)
   const owing = Number(session.order?.total_vnd ?? 0) - paid
+  const proofAssetId = input.proofAssetId?.trim() || undefined
+
   if (session.status === "ORDER_SUBMITTED") {
-    await repo.updateSession(session.id, { status: "PAYMENT_REPORTED" })
+    await repo.updateSession(session.id, {
+      status: "PAYMENT_REPORTED",
+      ...(proofAssetId ? { paymentProofAssetId: proofAssetId } : {}),
+    })
     await repo.recordJourneyEvent(session.organization_id, session.id, "CLICK_PAID", {
       orderId: session.order_id,
+      ...(proofAssetId ? { proofAssetId } : {}),
       reportedAt: new Date().toISOString(),
     })
   } else if (paid > 0 && owing > 0) {
     // Đã cọc, nay báo chuyển phần còn lại — cập nhật phiên sang PAYMENT_REPORTED để Điều hành nhận notification & duyệt
-    await repo.updateSession(session.id, { status: "PAYMENT_REPORTED" })
+    await repo.updateSession(session.id, {
+      status: "PAYMENT_REPORTED",
+      ...(proofAssetId ? { paymentProofBalanceAssetId: proofAssetId } : {}),
+    })
     await repo.recordJourneyEvent(session.organization_id, session.id, "CLICK_PAID", {
       orderId: session.order_id,
       purpose: "BALANCE",
+      ...(proofAssetId ? { proofAssetId } : {}),
       reportedAt: new Date().toISOString(),
     })
   }
@@ -104,11 +118,26 @@ export async function adminConfirmBrochurePayment(
   if (amountVnd === undefined) {
     amountVnd = expectedPayment(policy, total, paid).amountVnd
   }
+
+  // Tự động gán bằng chứng chuyển khoản do khách gửi nếu có
+  let evidenceAssetId: string | null = null
+  if (order.source_session_id) {
+    const session = await repo.findSessionById(order.source_session_id)
+    if (session) {
+      if (paid === 0 && session.payment_proof_asset_id) {
+        evidenceAssetId = session.payment_proof_asset_id
+      } else if (paid > 0 && session.payment_proof_balance_asset_id) {
+        evidenceAssetId = session.payment_proof_balance_asset_id
+      }
+    }
+  }
+
   const result = await payments.recordIncomingPayment(ctx, orderId, {
     amountVnd,
     method: "BANK_TRANSFER",
     reference: input.reference?.trim() || `BROCHURE-${orderId.slice(0, 8)}`,
     note: input.note?.trim() || "Xác nhận chuyển khoản qua Thẻ chào",
+    evidenceAssetId,
   })
   queueOrderNotification(ctx.organizationId, orderId, paymentNotifyEvent(result.balanceVnd))
   return result

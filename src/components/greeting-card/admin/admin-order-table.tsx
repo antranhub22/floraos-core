@@ -129,7 +129,13 @@ export function AdminOrderTable({
                   {balance > 0 && o.status !== "CANCELLED" && o.greeting_sessions[0]?.status === "PAYMENT_REPORTED" && (
                     <div className="mt-1 text-caption font-bold text-info">Khách báo đã chuyển</div>
                   )}
+                  {(o.paymentProofUrl || o.paymentProofBalanceUrl) && (
+                    <div className="mt-1 flex items-center gap-1 text-caption text-text-muted">
+                      📸 <span>Có ảnh CK</span>
+                    </div>
+                  )}
                 </td>
+
                 <td className="px-4 py-3">
                   <div className="flex justify-end items-center gap-1.5 flex-wrap">
                     {awaitingQuote && (

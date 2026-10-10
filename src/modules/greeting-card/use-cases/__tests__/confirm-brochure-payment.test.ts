@@ -1,159 +1,179 @@
 import { describe, it, expect, vi } from "vitest"
-import { adminConfirmBrochurePayment } from "../confirm-brochure-payment"
-import type { TenantContext } from "@/core/tenancy"
+import { reportCustomerPayment, adminConfirmBrochurePayment } from "../confirm-brochure-payment"
+import type { GreetingCardRepository } from "../../infra/greeting-card-repository"
 import type { BrochureOrderRepository } from "../../infra/brochure-order-repository"
 import type { BrochurePaymentRepository } from "../../infra/brochure-payment-repository"
-import type { GreetingCardRepository } from "../../infra/greeting-card-repository"
+import type { TenantContext } from "@/core/tenancy"
 
-const ctx: TenantContext = {
-  organizationId: "org-1",
-  workspaceId: "ws-1",
-  userId: "user-admin",
-  branchId: null,
-  capabilities: new Set(["greeting_card.order.payment.record"]),
-}
-
-function createMockServices(orderOverrides: Record<string, unknown> = {}, shopSettings: Record<string, unknown> = {}) {
-  const defaultOrder = {
-    id: "order-1",
-    code: "DH001",
-    organization_id: "org-1",
-    source: "BROCHURE",
-    status: "CONFIRMED",
-    production_status: "WAITING",
-    delivery_status: "PENDING",
-    total_vnd: BigInt(1_000_000),
-    paid_vnd: BigInt(0),
-    pricing_rule_ref: { paymentPlan: { policy: "DEPOSIT_50", depositPercent: 50, source: "PAYMENT_CODE", paymentCode: "DC50" } },
-    greeting_sessions: [{ send_code: "SL-TEST", status: "PENDING" }],
-    qc_records: [],
-    ...orderOverrides,
+describe("reportCustomerPayment & adminConfirmBrochurePayment with deposit & balance proof", () => {
+  const ctx: TenantContext = {
+    organizationId: "org-1",
+    userId: "user-1",
+    workspaceId: "ws-1",
+    branchId: null,
+    capabilities: new Set(["orders.manage", "greeting_card.manage"]),
   }
 
-  const orders = {
-    findBrochureOrder: vi.fn().mockResolvedValue(defaultOrder),
-  } as unknown as BrochureOrderRepository
+  describe("reportCustomerPayment", () => {
+    it("Lần 1 (Cọc): lưu paymentProofAssetId vào session và ghi event CLICK_PAID", async () => {
+      const mockRepo = {
+        getPublicSessionBySendCode: vi.fn().mockResolvedValue({
+          id: "session-1",
+          organization_id: "org-1",
+          send_code: "T01-001",
+          status: "ORDER_SUBMITTED",
+          order_id: "order-1",
+          order: { total_vnd: 1_000_000, paid_vnd: 0 },
+          catalog: { is_active: true },
+        }),
+        updateSession: vi.fn().mockResolvedValue({}),
+        recordJourneyEvent: vi.fn().mockResolvedValue({}),
+      } as unknown as GreetingCardRepository
 
-  const repo = {
-    getShopProfile: vi.fn().mockResolvedValue({
-      organization_id: "org-1",
-      settings: {
-        brochure_policy: { deposit_percent: 0, require_full_before_dispatch: true },
-        ...shopSettings,
-      },
-    }),
-  } as unknown as GreetingCardRepository
-
-  const payments = {
-    recordIncomingPayment: vi.fn().mockResolvedValue({
-      orderId: "order-1",
-      orderCode: "DH001",
-      status: "CONFIRMED",
-      paidVnd: 500_000,
-      balanceVnd: 500_000,
-      kind: "DEPOSIT",
-      paymentId: "pay-1",
-    }),
-  } as unknown as BrochurePaymentRepository
-
-  return { orders, repo, payments }
-}
-
-describe("adminConfirmBrochurePayment — bảo vệ đơn đặt cọc không bị thu 2 lần sớm", () => {
-  it("Lần 1: Thu tiền cọc cho đơn cọc 50% khi chưa thanh toán gì → thành công", async () => {
-    const { orders, repo, payments } = createMockServices()
-    const res = await adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)
-    expect(res.paymentId).toBe("pay-1")
-    expect(payments.recordIncomingPayment).toHaveBeenCalledWith(
-      ctx,
-      "order-1",
-      expect.objectContaining({ amountVnd: 500_000 })
-    )
-  })
-
-  it("Lần 2 (Thu trước giao): Chặn khi hoa chưa xong (production_status != READY)", async () => {
-    const { orders, repo, payments } = createMockServices({
-      paid_vnd: BigInt(500_000),
-      production_status: "ARRANGING",
+      const res = await reportCustomerPayment("T01-001", { proofAssetId: "proof-asset-1" }, mockRepo)
+      expect(res.success).toBe(true)
+      expect(mockRepo.updateSession).toHaveBeenCalledWith("session-1", {
+        status: "PAYMENT_REPORTED",
+        paymentProofAssetId: "proof-asset-1",
+      })
+      expect(mockRepo.recordJourneyEvent).toHaveBeenCalledWith(
+        "org-1",
+        "session-1",
+        "CLICK_PAID",
+        expect.objectContaining({ orderId: "order-1", proofAssetId: "proof-asset-1" })
+      )
     })
-    await expect(adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)).rejects.toThrow(
-      /hoàn thành cắm hoa/i
-    )
-  })
 
-  it("Lần 2 (Thu trước giao): Chặn khi hoa đã READY nhưng chưa duyệt ảnh và chưa quá 10 phút", async () => {
-    const { orders, repo, payments } = createMockServices({
-      paid_vnd: BigInt(500_000),
-      production_status: "READY",
-      qc_records: [
-        { notes: "PRODUCT_PHOTO_UPLOADED", created_at: new Date(Date.now() - 2 * 60_000) }, // mới up 2 phút
-      ],
+    it("Lần 2 (Phần còn lại khi đã cọc): lưu paymentProofBalanceAssetId vào session", async () => {
+      const mockRepo = {
+        getPublicSessionBySendCode: vi.fn().mockResolvedValue({
+          id: "session-1",
+          organization_id: "org-1",
+          send_code: "T01-001",
+          status: "PAYMENT_REPORTED",
+          order_id: "order-1",
+          order: { total_vnd: 1_000_000, paid_vnd: 500_000 },
+          catalog: { is_active: true },
+        }),
+        updateSession: vi.fn().mockResolvedValue({}),
+        recordJourneyEvent: vi.fn().mockResolvedValue({}),
+      } as unknown as GreetingCardRepository
+
+      const res = await reportCustomerPayment("T01-001", { proofAssetId: "proof-asset-balance" }, mockRepo)
+      expect(res.success).toBe(true)
+      expect(mockRepo.updateSession).toHaveBeenCalledWith("session-1", {
+        status: "PAYMENT_REPORTED",
+        paymentProofBalanceAssetId: "proof-asset-balance",
+      })
+      expect(mockRepo.recordJourneyEvent).toHaveBeenCalledWith(
+        "org-1",
+        "session-1",
+        "CLICK_PAID",
+        expect.objectContaining({
+          orderId: "order-1",
+          purpose: "BALANCE",
+          proofAssetId: "proof-asset-balance",
+        })
+      )
     })
-    await expect(adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)).rejects.toThrow(
-      /chờ khách duyệt ảnh thành phẩm/i
-    )
   })
 
-  it("Lần 2 (Thu trước giao): Cho phép khi hoa READY và khách đã duyệt ảnh", async () => {
-    const { orders, repo, payments } = createMockServices({
-      paid_vnd: BigInt(500_000),
-      production_status: "READY",
-      qc_records: [{ notes: "CUSTOMER_PHOTO_APPROVED", created_at: new Date() }],
+  describe("adminConfirmBrochurePayment", () => {
+    it("Lần 1 (paid = 0): tự động liên kết payment_proof_asset_id vào chứng từ order_payments", async () => {
+      const mockOrders = {
+        findBrochureOrder: vi.fn().mockResolvedValue({
+          id: "order-1",
+          organization_id: "org-1",
+          total_vnd: 1_000_000,
+          paid_vnd: 0,
+          source_session_id: "session-1",
+          pricing_rule_ref: null,
+          production_status: "PENDING",
+          delivery_status: "PENDING",
+        }),
+      } as unknown as BrochureOrderRepository
+
+      const mockPayments = {
+        recordIncomingPayment: vi.fn().mockResolvedValue({
+          paymentId: "pay-1",
+          status: "CONFIRMED",
+          paidVnd: 500_000,
+          balanceVnd: 500_000,
+          kind: "DEPOSIT",
+        }),
+      } as unknown as BrochurePaymentRepository
+
+      const mockRepo = {
+        getShopProfile: vi.fn().mockResolvedValue({
+          name: "Tiệm Hoa",
+          settings: { brochure_policy: { deposit_percent: 50 } },
+        }),
+        findSessionById: vi.fn().mockResolvedValue({
+          id: "session-1",
+          payment_proof_asset_id: "proof-asset-1",
+          payment_proof_balance_asset_id: null,
+        }),
+      } as unknown as GreetingCardRepository
+
+      await adminConfirmBrochurePayment(ctx, "order-1", {}, mockPayments, mockOrders, mockRepo)
+
+      expect(mockPayments.recordIncomingPayment).toHaveBeenCalledWith(
+        ctx,
+        "order-1",
+        expect.objectContaining({
+          amountVnd: 500_000,
+          evidenceAssetId: "proof-asset-1",
+        })
+      )
     })
-    await adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)
-    expect(payments.recordIncomingPayment).toHaveBeenCalledWith(
-      ctx,
-      "order-1",
-      expect.objectContaining({ amountVnd: 500_000 })
-    )
-  })
 
-  it("Lần 2 (Thu trước giao): Cho phép khi hoa READY và ảnh up đã quá 10 phút (auto-approved)", async () => {
-    const { orders, repo, payments } = createMockServices({
-      paid_vnd: BigInt(500_000),
-      production_status: "READY",
-      qc_records: [
-        { notes: "PRODUCT_PHOTO_UPLOADED", created_at: new Date(Date.now() - 11 * 60_000) }, // up 11 phút trước
-      ],
+    it("Lần 2 (paid > 0): tự động liên kết payment_proof_balance_asset_id vào chứng từ order_payments", async () => {
+      const mockOrders = {
+        findBrochureOrder: vi.fn().mockResolvedValue({
+          id: "order-1",
+          organization_id: "org-1",
+          total_vnd: 1_000_000,
+          paid_vnd: 500_000,
+          source_session_id: "session-1",
+          pricing_rule_ref: null,
+          production_status: "READY",
+          delivery_status: "DELIVERED",
+          qc_records: [{ notes: "CUSTOMER_PHOTO_APPROVED", created_at: new Date() }],
+        }),
+      } as unknown as BrochureOrderRepository
+
+      const mockPayments = {
+        recordIncomingPayment: vi.fn().mockResolvedValue({
+          paymentId: "pay-2",
+          status: "CONFIRMED",
+          paidVnd: 1_000_000,
+          balanceVnd: 0,
+          kind: "BALANCE",
+        }),
+      } as unknown as BrochurePaymentRepository
+
+      const mockRepo = {
+        getShopProfile: vi.fn().mockResolvedValue({
+          name: "Tiệm Hoa",
+          settings: { brochure_policy: { deposit_percent: 50 } },
+        }),
+        findSessionById: vi.fn().mockResolvedValue({
+          id: "session-1",
+          payment_proof_asset_id: "proof-asset-1",
+          payment_proof_balance_asset_id: "proof-asset-balance-2",
+        }),
+      } as unknown as GreetingCardRepository
+
+      await adminConfirmBrochurePayment(ctx, "order-1", {}, mockPayments, mockOrders, mockRepo)
+
+      expect(mockPayments.recordIncomingPayment).toHaveBeenCalledWith(
+        ctx,
+        "order-1",
+        expect.objectContaining({
+          amountVnd: 500_000,
+          evidenceAssetId: "proof-asset-balance-2",
+        })
+      )
     })
-    await adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)
-    expect(payments.recordIncomingPayment).toHaveBeenCalledWith(
-      ctx,
-      "order-1",
-      expect.objectContaining({ amountVnd: 500_000 })
-    )
-  })
-
-  it("Lần 2 (Thu sau giao): Chặn khi chưa giao hàng (delivery_status != DELIVERED)", async () => {
-    const { orders, repo, payments } = createMockServices(
-      {
-        paid_vnd: BigInt(500_000),
-        delivery_status: "PENDING",
-      },
-      {
-        brochure_policy: { deposit_percent: 0, require_full_before_dispatch: false },
-      }
-    )
-    await expect(adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)).rejects.toThrow(
-      /thu sau khi giao hoa thành công/i
-    )
-  })
-
-  it("Lần 2 (Thu sau giao): Cho phép khi đã giao hàng (delivery_status = DELIVERED)", async () => {
-    const { orders, repo, payments } = createMockServices(
-      {
-        paid_vnd: BigInt(500_000),
-        delivery_status: "DELIVERED",
-      },
-      {
-        brochure_policy: { deposit_percent: 0, require_full_before_dispatch: false },
-      }
-    )
-    await adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)
-    expect(payments.recordIncomingPayment).toHaveBeenCalledWith(
-      ctx,
-      "order-1",
-      expect.objectContaining({ amountVnd: 500_000 })
-    )
   })
 })

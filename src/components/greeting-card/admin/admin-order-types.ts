@@ -14,6 +14,10 @@ export interface AdminOrder {
   payments: Array<{ id: string; kind: string; amount_vnd: number; collected_at: string; reference: string | null }>
   qc_records?: Array<{ notes: string | null; created_at: string | Date }>
   created_at: string
+  /** URL ảnh chuyển khoản Lần 1 (Cọc/Trả đủ) do khách tải lên — đã ký, hết hạn sau 1h. */
+  paymentProofUrl?: string | null | undefined
+  /** URL ảnh chuyển khoản Lần 2 (Phần còn lại) do khách tải lên — đã ký, hết hạn sau 1h. */
+  paymentProofBalanceUrl?: string | null | undefined
 }
 
 export type OrderAction = { type: "quote" | "collect" | "cancel" | "refund"; order: AdminOrder }

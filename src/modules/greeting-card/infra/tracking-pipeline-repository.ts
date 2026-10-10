@@ -30,6 +30,7 @@ const ORDER_SELECT = {
     take: 1,
     select: {
       id: true, send_code: true, sale_id: true, status: true, product_snapshot: true,
+      payment_proof_asset_id: true, payment_proof_balance_asset_id: true,
       catalog: { select: { id: true, name: true, code: true } },
       events: { where: MILESTONE_EVENTS, select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" as const } },
     },
@@ -95,6 +96,7 @@ export class TrackingPipelineRepository {
   async timelineSource(ctx: TenantContext, ref: { orderId?: string | undefined; sessionId?: string | undefined }) {
     const sessionSelect = {
       id: true, sale_id: true, created_at: true, send_code: true,
+      payment_proof_asset_id: true, payment_proof_balance_asset_id: true,
       events: { where: MILESTONE_EVENTS, select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" as const } },
     }
     if (ref.orderId) {
@@ -104,6 +106,7 @@ export class TrackingPipelineRepository {
           id: true, code: true, created_at: true,
           events: { select: { axis: true, from_value: true, to_value: true, reason: true, actor_id: true, created_at: true }, orderBy: { created_at: "asc" } },
           payments: { select: { kind: true, amount_vnd: true, collected_at: true, collected_by: true, note: true }, orderBy: { collected_at: "asc" } },
+          qc_records: { select: { notes: true, image_asset_ids: true, created_at: true }, orderBy: { created_at: "asc" } },
           greeting_sessions: { take: 1, select: sessionSelect },
         },
       })

@@ -109,8 +109,11 @@ export function BrochureOrderTrackingTab() {
             status: detailFor.orderStatus,
             productionStatus: detailFor.productionStatus,
             deliveryStatus: detailFor.deliveryStatus,
+            paymentProofUrl: detailFor.paymentProofUrl,
+            paymentProofBalanceUrl: detailFor.paymentProofBalanceUrl,
             createdAt: detailFor.createdAt,
           }}
+
           onClose={() => setDetailFor(null)}
           onOpenNotes={() => {
             setNotesFor(detailFor)

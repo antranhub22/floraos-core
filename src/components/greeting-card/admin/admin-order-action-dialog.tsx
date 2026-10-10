@@ -10,6 +10,7 @@ import { depositAmountVnd } from "@/modules/greeting-card/domain/payment-schedul
 import { vnd, type ActionResult, type OrderAction } from "./admin-order-types"
 import { customerPaymentMessage } from "@/modules/greeting-card/domain/customer-notifications"
 import { AlertTriangle, Info } from "lucide-react"
+import { OrderPaymentProofView } from "@/components/greeting-card/order-payment-proof-view"
 
 const FIELD = "w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
 
@@ -173,6 +174,13 @@ export function AdminOrderActionDialog({
               </p>
             </div>
           </div>
+        )}
+
+        {type === "collect" && (order.paymentProofUrl || order.paymentProofBalanceUrl) && (
+          <OrderPaymentProofView
+            paymentProofUrl={order.paymentProofUrl}
+            paymentProofBalanceUrl={order.paymentProofBalanceUrl}
+          />
         )}
 
         {isBlocked && blockReason && (

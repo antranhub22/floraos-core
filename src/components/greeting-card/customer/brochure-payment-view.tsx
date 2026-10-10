@@ -19,16 +19,18 @@ function isPaid(order: { paidVnd: number; totalVnd: number } | undefined): boole
 }
 import { BrochureQuotePending } from "./brochure-quote-pending"
 import { PaymentFailedNotice } from "./payment-failed-notice"
+import { PaymentProofUploader } from "./payment-proof-uploader"
 
 type PolledTracking = { status: string; order?: { status: string; paidVnd: number; totalVnd: number; payment?: { status: string } } }
 
 interface BrochurePaymentViewProps {
   orderCode: string
+  sendCode?: string | undefined
   totalVnd: number
   /** `null` khi tiệm chưa cấu hình tài khoản nhận tiền — cửa hàng tự liên hệ khách. */
   vietQr: BrochurePaymentInstructions | null
   shopPhone?: string | null | undefined
-  onReportPaid: () => Promise<void>
+  onReportPaid: (proofAssetId?: string) => Promise<void>
   onGoToTracking: () => void
   /** Khách đã báo chuyển khoản trước đó (rời trang rồi quay lại) → hiện ngay "chờ xác nhận" */
   alreadyReported?: boolean | undefined
@@ -36,10 +38,13 @@ interface BrochurePaymentViewProps {
   onPaymentFailed?: (() => void) | undefined
   /** Nút kêu gọi đặt lại đơn, hiện trong thông báo "Đơn hàng không hoàn thành". */
   failedCta?: React.ReactNode
+  /** Bắt buộc tải ảnh chuyển khoản; mặc định BẬT (true). */
+  requirePaymentProof?: boolean | undefined
 }
 
 export function BrochurePaymentView({
   orderCode,
+  sendCode,
   totalVnd,
   vietQr,
   shopPhone,
@@ -48,11 +53,14 @@ export function BrochurePaymentView({
   alreadyReported = false,
   onPaymentFailed,
   failedCta,
+  requirePaymentProof = true,
 }: BrochurePaymentViewProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [hasReported, setHasReported] = useState(alreadyReported)
   const [loading, setLoading] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
+  const [proofAssetId, setProofAssetId] = useState<string | null>(null)
+  const canSubmit = !requirePaymentProof || !!proofAssetId
 
   // Hỏi trạng thái đơn định kỳ (SWR) để tự hiện "đã thanh toán" khi Điều hành/ngân hàng xác nhận.
   // Dừng khi đã xác nhận; SWR tự bỏ lượt khi tab đang ẩn.
@@ -83,7 +91,7 @@ export function BrochurePaymentView({
     setLoading(true)
     setReportError(null)
     try {
-      await onReportPaid()
+      await onReportPaid(proofAssetId || undefined)
       setHasReported(true)
     } catch (err) {
       setReportError(err instanceof Error ? err.message : "Không gửi được thông báo, vui lòng thử lại")
@@ -277,18 +285,33 @@ export function BrochurePaymentView({
         </div>
       ) : vietQr ? (
         <div className="w-full flex flex-col gap-2.5">
+          {requirePaymentProof && sendCode && (
+            <PaymentProofUploader
+              sendCode={sendCode}
+              purpose="DEPOSIT"
+              onUploaded={(id) => setProofAssetId(id)}
+              onRemoved={() => setProofAssetId(null)}
+              disabled={loading}
+            />
+          )}
+
           {reportError && (
             <p role="alert" className="text-caption text-danger font-medium">{reportError}</p>
           )}
           <button
             type="button"
-            disabled={loading}
+            disabled={loading || !canSubmit}
             onClick={handleReportPaid}
-            className="w-full h-12 bg-success hover:bg-success/90 text-white font-extrabold text-body flex items-center justify-center gap-2 rounded-xl shadow-md cursor-pointer transition-colors disabled:opacity-50"
+            className="w-full h-12 bg-success hover:bg-success/90 text-white font-extrabold text-body flex items-center justify-center gap-2 rounded-xl shadow-md cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Check size={18} />
             <span>{loading ? "Đang xử lý..." : "TÔI ĐÃ CHUYỂN KHOẢN THANH TOÁN"}</span>
           </button>
+          {!canSubmit && (
+            <p className="text-caption text-warning font-medium text-center">
+              Vui lòng tải ảnh chuyển khoản để xác nhận
+            </p>
+          )}
           <Button
             type="button"
             disabled

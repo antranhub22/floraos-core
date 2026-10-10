@@ -1,13 +1,30 @@
 import { describe, it, expect } from "vitest"
-import { cancelBlocker, expectedPayment, parsePaymentPolicy, paymentGateBlocker, paymentHoldUntil, quoteBlocker, serializePaymentPolicy } from "../brochure-payment-policy"
+import {
+  cancelBlocker,
+  expectedPayment,
+  parsePaymentPolicy,
+  paymentGateBlocker,
+  paymentHoldUntil,
+  quoteBlocker,
+  resolveRequirePaymentProof,
+  serializePaymentPolicy,
+} from "../brochure-payment-policy"
 
 describe("parsePaymentPolicy", () => {
-  it("mặc định trả đủ, không chặn; % cọc ngoài 1–99 bị bỏ", () => {
-    expect(parsePaymentPolicy(null)).toEqual({ depositPercent: 0, requirePaidBeforeProduction: false, requireFullBeforeDispatch: false })
+  it("mặc định trả đủ, không chặn; % cọc ngoài 1–99 bị bỏ; mặc định requirePaymentProof = true", () => {
+    expect(parsePaymentPolicy(null)).toEqual({
+      depositPercent: 0,
+      requirePaidBeforeProduction: false,
+      requireFullBeforeDispatch: false,
+      requirePaymentProof: true,
+    })
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 150 } }).depositPercent).toBe(0)
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 30, require_full_before_dispatch: true } })).toMatchObject({
-      depositPercent: 30, requireFullBeforeDispatch: true,
+      depositPercent: 30,
+      requireFullBeforeDispatch: true,
+      requirePaymentProof: true,
     })
+    expect(parsePaymentPolicy({ brochure_policy: { require_payment_proof: false } }).requirePaymentProof).toBe(false)
   })
 })
 
@@ -62,7 +79,15 @@ describe("hạn thanh toán + ghi chính sách", () => {
     expect(parsePaymentPolicy({ brochure_policy: { payment_timeout_minutes: 3 } }).paymentTimeoutMinutes).toBeUndefined()
   })
   it("ghi rồi đọc lại không mất trường nào (hai màn cài đặt cùng ghi brochure_policy)", () => {
-    const p = { depositPercent: 30, requirePaidBeforeProduction: true, requireFullBeforeDispatch: true, holdMinutes: 15, autoCancelUnpaid: true, paymentTimeoutMinutes: 30 }
+    const p = {
+      depositPercent: 30,
+      requirePaidBeforeProduction: true,
+      requireFullBeforeDispatch: true,
+      requirePaymentProof: true,
+      holdMinutes: 15,
+      autoCancelUnpaid: true,
+      paymentTimeoutMinutes: 30,
+    }
     expect(parsePaymentPolicy({ brochure_policy: serializePaymentPolicy(p) })).toEqual(p)
   })
   it("hạn thanh toán thắng giữ đơn khi tính hạn hiện cho khách", () => {
@@ -71,3 +96,19 @@ describe("hạn thanh toán + ghi chính sách", () => {
       .toBe("2026-10-08T03:30:00.000Z")
   })
 })
+
+describe("resolveRequirePaymentProof", () => {
+  const policy = { depositPercent: 0, requirePaidBeforeProduction: false, requireFullBeforeDispatch: false, requirePaymentProof: true }
+
+  it("ưu tiên cài đặt bộ sưu tập khi có chỉ định rõ ràng", () => {
+    expect(resolveRequirePaymentProof(policy, { requirePaymentProof: false })).toBe(false)
+    expect(resolveRequirePaymentProof({ ...policy, requirePaymentProof: false }, { requirePaymentProof: true })).toBe(true)
+  })
+
+  it("dùng chính sách tiệm khi bộ sưu tập không ghi đè", () => {
+    expect(resolveRequirePaymentProof(policy, {})).toBe(true)
+    expect(resolveRequirePaymentProof(policy, null)).toBe(true)
+    expect(resolveRequirePaymentProof({ ...policy, requirePaymentProof: false }, {})).toBe(false)
+  })
+})
+

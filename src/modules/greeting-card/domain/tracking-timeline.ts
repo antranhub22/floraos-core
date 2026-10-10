@@ -18,6 +18,8 @@ export interface TimelineEvent {
   entersStep: TrackingPipelineStepId | null
   actorId: string | null
   note: string | null
+  /** URL ảnh đính kèm sự kiện (ảnh thành phẩm, ảnh người nhận, ảnh chuyển khoản) — đã ký. */
+  imageUrls?: string[] | undefined
 }
 
 export interface StepSegment {

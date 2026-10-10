@@ -8,6 +8,7 @@ import { EvidenceTimelineDiagram } from "./evidence-timeline-diagram"
 import { zaloHref } from "@/components/greeting-card/work/work-item-card"
 import { OrderDetailFooter } from "./order-detail-footer"
 import { StaffNametagGroup } from "./staff-nametag"
+import { OrderPaymentProofView } from "./order-payment-proof-view"
 
 export interface OrderDetailModalTarget {
   orderId?: string | null | undefined
@@ -40,6 +41,10 @@ export interface OrderDetailModalTarget {
   deliveryStatus?: string | null | undefined
   status?: string | null | undefined
   channel?: string | null | undefined
+  /** Ảnh chuyển khoản lần 1 (cọc/trả đủ) do khách tải lên */
+  paymentProofUrl?: string | null | undefined
+  /** Ảnh chuyển khoản lần 2 (phần còn lại) do khách tải lên */
+  paymentProofBalanceUrl?: string | null | undefined
   createdAt?: string | null | undefined
 }
 
@@ -312,6 +317,12 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
                     </button>
                   </div>
                 )}
+
+                {/* Ảnh chuyển khoản do khách tải lên */}
+                <OrderPaymentProofView
+                  paymentProofUrl={target.paymentProofUrl}
+                  paymentProofBalanceUrl={target.paymentProofBalanceUrl}
+                />
               </div>
             </div>
           )}

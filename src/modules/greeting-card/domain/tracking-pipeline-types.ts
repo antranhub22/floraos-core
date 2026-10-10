@@ -138,6 +138,10 @@ export interface TrackingPipelineItem {
   sessionStatus?: string | null | undefined
   /** Khách đã bấm Tôi đã chuyển khoản — đang chờ xác nhận */
   customerReportedPaid?: boolean | undefined
+  /** Ảnh chuyển khoản lần 1 do khách tải lên */
+  paymentProofUrl?: string | null | undefined
+  /** Ảnh chuyển khoản lần 2 do khách tải lên */
+  paymentProofBalanceUrl?: string | null | undefined
   /** Trạng thái sản xuất (WAITING | ASSIGNED | ARRANGING | QUALITY_CHECK | READY) */
   productionStatus?: string | null | undefined
   /** Trạng thái giao hàng (PENDING | DISPATCHED | DELIVERING | DELIVERED | FAILED) */

@@ -1,0 +1,106 @@
+import { randomUUID } from "crypto"
+import { validationFailed, unprocessable } from "@/core/http/errors"
+import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
+import { GreetingCardRepository } from "../infra/greeting-card-repository"
+import { loadPublicSession } from "./brochure-session-access"
+
+const MAX_PAYMENT_PROOF_BYTES = 5 * 1024 * 1024 // 5 MB
+
+export function sniffImage(bytes: Uint8Array): { ext: "jpg" | "png" | "webp"; mimeType: string } | null {
+  if (bytes.length < 12) return null
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { ext: "jpg", mimeType: "image/jpeg" }
+  }
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return { ext: "png", mimeType: "image/png" }
+  }
+  // WebP: RIFF .... WEBP
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return { ext: "webp", mimeType: "image/webp" }
+  }
+  return null
+}
+
+export interface UploadPaymentProofInput {
+  sendCode: string
+  file: File | Blob
+  purpose: "DEPOSIT" | "BALANCE"
+}
+
+export async function uploadPaymentProof(
+  input: UploadPaymentProofInput,
+  repo = new GreetingCardRepository()
+) {
+  const session = await loadPublicSession(input.sendCode, repo)
+  if (!session.order_id) {
+    throw unprocessable("Bạn cần hoàn tất đặt hoa trước khi tải ảnh chuyển khoản")
+  }
+
+  const arrayBuffer = await input.file.arrayBuffer()
+  const bytes = new Uint8Array(arrayBuffer)
+
+  if (bytes.byteLength === 0) {
+    throw validationFailed({ file: "Tệp tải lên không được rỗng" })
+  }
+  if (bytes.byteLength > MAX_PAYMENT_PROOF_BYTES) {
+    throw validationFailed({ file: "Ảnh chuyển khoản tối đa 5MB" })
+  }
+
+  const sniffed = sniffImage(bytes)
+  if (!sniffed) {
+    throw validationFailed({ file: "Định dạng ảnh không hợp lệ — chỉ nhận JPG, PNG hoặc WebP" })
+  }
+
+  const assetId = randomUUID()
+  const storageKey = `org/${session.organization_id}/payment-proof/${assetId}.${sniffed.ext}`
+
+  const storage = getStorageProvider()
+  await storage.put(storageKey, Buffer.from(bytes), sniffed.mimeType)
+
+  await repo.createPaymentProofAsset({
+    id: assetId,
+    organizationId: session.organization_id,
+    storageKey,
+    mimeType: sniffed.mimeType,
+    fileSize: bytes.byteLength,
+    createdBy: session.sale_id || "customer",
+    metadata: {
+      source: "BROCHURE_PAYMENT_PROOF",
+      sendCode: input.sendCode,
+      purpose: input.purpose === "BALANCE" ? "BALANCE" : "DEPOSIT",
+    },
+  })
+
+  if (input.purpose === "BALANCE") {
+    await repo.updateSession(session.id, { paymentProofBalanceAssetId: assetId })
+  } else {
+    await repo.updateSession(session.id, { paymentProofAssetId: assetId })
+  }
+
+  const url = await storage.signedUrl(storageKey, 3600)
+
+  return {
+    assetId,
+    url,
+  }
+}

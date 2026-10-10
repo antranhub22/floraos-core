@@ -1,6 +1,7 @@
 import { resolveSaleScope } from "./order-scope"
 import type { TenantContext } from "@/core/tenancy"
 import { TrackingPipelineRepository } from "../infra/tracking-pipeline-repository"
+import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
 import { parseStepSla, stuckOf } from "../domain/step-sla"
 import { channelLabel } from "../domain/catalog-channel"
@@ -128,6 +129,20 @@ export async function loadTrackingDataset(
     return !owner ? "Chưa gán" : names.get(owner) ?? "Nhân viên đã rời"
   }
 
+  // Tải danh sách URL ảnh chuyển khoản của khách theo lô (tránh N+1)
+  const proofAssetIds = [
+    ...orders.flatMap((o) => [
+      o.greeting_sessions[0]?.payment_proof_asset_id,
+      o.greeting_sessions[0]?.payment_proof_balance_asset_id,
+    ]),
+    ...activeSessions.flatMap((s) => [
+      s.payment_proof_asset_id,
+      s.payment_proof_balance_asset_id,
+    ]),
+  ].filter((id): id is string => typeof id === "string" && id.length > 0)
+
+  const proofUrls = await new GreetingCardRepository().getAssetsStorageMap(ctx.organizationId, proofAssetIds)
+
   // 1. Process Orders
   const orderItems: TrackingPipelineItem[] = orders.map((order) => {
     const session = order.greeting_sessions[0]
@@ -216,6 +231,8 @@ export async function loadTrackingDataset(
       orderStatus: order.status,
       sessionStatus: session?.status || null,
       customerReportedPaid: session?.status === "PAYMENT_REPORTED",
+      paymentProofUrl: session?.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id) ?? null : null,
+      paymentProofBalanceUrl: session?.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id) ?? null : null,
       productionStatus: order.production_status,
       deliveryStatus: order.delivery_status,
       isCancelled: order.status === "CANCELLED",
@@ -304,6 +321,8 @@ export async function loadTrackingDataset(
       isCancelled: isSessionCancelled,
       sessionStatus: session.status,
       customerReportedPaid: session.status === "PAYMENT_REPORTED",
+      paymentProofUrl: session.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id) ?? null : null,
+      paymentProofBalanceUrl: session.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id) ?? null : null,
       cancelReason: sessionCancelReason,
       stepStartedAt: startedAt,
       stuck: notSent ? null : stuckOf({ currentStepId, stepStartedAt: startedAt }, sla, now),

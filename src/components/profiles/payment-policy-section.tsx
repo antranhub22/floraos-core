@@ -105,6 +105,21 @@ export function PaymentPolicySection() {
               “Tôi đã chuyển khoản” → thanh toán không thành công, đơn tự huỷ và khách được mời đặt lại đơn mới.
             </p>
           </fieldset>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="font-bold text-foreground mb-1">Xác nhận chuyển khoản</legend>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={policy.requirePaymentProof !== false}
+                onChange={(e) => edit({ requirePaymentProof: e.target.checked })}
+              />
+              <span className="font-semibold text-foreground">Bắt buộc khách tải ảnh chụp màn hình chuyển khoản</span>
+            </label>
+            <p className="text-caption text-text-muted">
+              Khi bật, khách bắt buộc phải tải ảnh chụp giao dịch thành công mới bấm được nút &ldquo;Tôi đã chuyển khoản&rdquo; (áp dụng cho cả lần cọc và thanh toán phần còn lại). Mặc định: Bật.
+            </p>
+          </fieldset>
         </div>
       )}
       <div className="flex items-center justify-between gap-3">

@@ -11,6 +11,7 @@ export interface IncomingPayment {
   method: "BANK_TRANSFER" | "CASH" | "OTHER"
   reference: string
   note: string
+  evidenceAssetId?: string | null | undefined
 }
 
 export interface PaymentResult {
@@ -77,6 +78,7 @@ export class BrochurePaymentRepository {
           reference: input.reference,
           collected_by: ctx.userId,
           note: input.note,
+          evidence_asset_id: input.evidenceAssetId ?? null,
         },
       })
 

@@ -134,11 +134,14 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
       <div className="min-h-screen bg-background text-foreground flex flex-col justify-start py-6 px-4 sm:px-6">
         <BrochurePaymentView
           orderCode={orderResult.orderCode}
+          sendCode={orderResult.sendCode}
           totalVnd={orderResult.totalVnd}
           vietQr={orderResult.vietQr}
-          onReportPaid={async () => {
+          onReportPaid={async (proofAssetId?: string) => {
             const res = await fetch(`/api/v1/public/brochure/${orderResult.sendCode}/payment-notify`, {
               method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ proofAssetId }),
             })
             if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
           }}
