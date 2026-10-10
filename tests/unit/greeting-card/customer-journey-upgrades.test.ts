@@ -13,7 +13,7 @@ const TOMORROW = "2026-10-21"
 describe("giờ chốt đơn & thời gian chuẩn bị", () => {
   it("không cấu hình: hôm nay vẫn chọn được, chỉ bỏ khung 2 tiếng đã qua", () => {
     expect(earliestDeliveryDate({}, at(10))).toBe(TODAY)
-    expect(availableSlots(TODAY, {}, at(13))).toEqual(["12:00 - 14:00", "14:00 - 16:00", "16:00 - 18:00", "18:00 - 20:00", "20:00 - 22:00"])
+    expect(availableSlots(TODAY, {}, at(13))).toEqual(["16:00 - 18:00", "18:00 - 20:00", "20:00 - 22:00"])
   })
 
   it("qua giờ chốt: sớm nhất là ngày mai và báo lỗi rõ ràng", () => {

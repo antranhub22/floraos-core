@@ -15,9 +15,9 @@ export default function KhoDuLieuPage() {
             <Folder size={22} strokeWidth={2.2} />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-text">Kho Dữ Liệu Sản Phẩm</h1>
+            <h1 className="text-2xl font-black tracking-tight text-text">Kho ảnh & nội dung</h1>
             <p className="text-body-sm text-text-muted mt-0.5">
-              Kho lưu trữ trung tâm phân loại 3 phân vùng độc lập cho tài khoản của bạn.
+              Lưu ảnh gốc, ảnh đã duyệt và kịch bản tư vấn của cửa hàng. Mục đã xóa được giữ 30 ngày trong Thùng rác.
             </p>
           </div>
         </div>
@@ -26,7 +26,7 @@ export default function KhoDuLieuPage() {
           <Link href="/tai-anh">
             <Button variant="primary" className="flex items-center gap-2 font-bold h-10 px-4 shadow-xs">
               <Camera size={16} strokeWidth={2} />
-              + Tải ảnh mới để phân tích
+              Tải ảnh mới
             </Button>
           </Link>
         </div>

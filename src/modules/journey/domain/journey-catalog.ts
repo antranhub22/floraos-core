@@ -69,12 +69,12 @@ export const STORE_JOURNEYS: JourneyDefinition[] = [
   },
   {
     id: "analyze-product-photo",
-    goal: "Tạo Thẻ sản phẩm từ ảnh",
-    description: "Chụp ảnh hoa tại tiệm để tự động phân tích loại hoa, ước tính chi phí và tạo mẫu bán",
+    goal: "Tạo mẫu hoa từ ảnh chụp",
+    description: "Chụp ảnh hoa, AI nhận diện các loại hoa và tạo sẵn mẫu hoa để bán",
     icon: "Camera",
     roleScope: "STORE",
     category: "SINGLE",
-    primaryHref: "/san-pham",
+    primaryHref: "/tai-anh",
     steps: [
       {
         id: "upload-product-photo",
@@ -246,10 +246,9 @@ export const STORE_JOURNEYS: JourneyDefinition[] = [
   },
   {
     id: "create-order",
-    goal: "Tiếp nhận & Xử lý đơn hàng (Dành cho Điện Hoa)",
-    description: "Nhập thông tin người nhận, mẫu hoa, thời gian giao và in phiếu giao việc cho thợ cắm",
+    goal: "Xử lý đơn hàng",
+    description: "Theo dõi đơn từ lúc chốt, giao việc cho thợ cắm đến khi hoa tới tay người nhận",
     icon: "ShoppingCart",
-    badgeText: "Điện Hoa",
     roleScope: "STORE",
     category: "SINGLE",
     primaryHref: "/don-hang",

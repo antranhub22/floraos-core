@@ -7,7 +7,7 @@ import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guida
 export function OrderGuidanceCard() {
   return (
     <FeatureGuidanceCard
-      tag="HƯỚNG DẪN QUẢN LÝ ĐƠN HÀNG M09"
+      tag="HƯỚNG DẪN XỬ LÝ ĐƠN HÀNG"
       icon={Package}
       title="Quy trình xưởng hoa & Giao vận chính xác"
       description="Chuyển hóa đơn hàng thành phiếu cắm hoa chi tiết cho nghệ nhân cắm hoa (Florist Ticket) và phiếu giao hoa kèm mã QR xác nhận hoàn tất."

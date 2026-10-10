@@ -42,7 +42,11 @@ export const LOCKED_ROUTE_PREFIXES: readonly string[] = [
  * chỉ mở Thẻ chào mẫu hoa). Mọi thẻ khác của cửa hàng bị khóa "Sắp ra mắt".
  * Thẻ quản trị nền tảng / chuỗi không thuộc trang chủ cửa hàng nên không bị ảnh hưởng.
  */
-export const UNLOCKED_STORE_JOURNEY_IDS: readonly string[] = ["greeting-card-hub"]
+export const UNLOCKED_STORE_JOURNEY_IDS: readonly string[] = [
+  "greeting-card-hub",
+  "create-order",
+  "analyze-product-photo",
+]
 
 /** Thẻ chức năng trên trang chủ cửa hàng bị khóa (theo `JourneyDefinition.id`). */
 export const LOCKED_JOURNEY_IDS: readonly string[] = STORE_JOURNEYS.map((j) => j.id).filter(

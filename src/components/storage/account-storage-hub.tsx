@@ -401,21 +401,21 @@ export function AccountStorageHub({
           tabs={[
             {
               id: "raw",
-              label: "1. Ảnh Gốc",
+              label: "Ảnh gốc",
               icon: Folder,
               badge: allRawAssets.length,
               badgeTone: "neutral",
             },
             {
               id: "approved",
-              label: "2. Ảnh Đã Duyệt (M01a)",
+              label: "Ảnh đã duyệt",
               icon: Layers,
               badge: approvedItems.length,
               badgeTone: "accent",
             },
             {
               id: "finalized",
-              label: "3. Sale Pitch Hoàn Thành",
+              label: "Kịch bản tư vấn",
               icon: CheckCircle2,
               badge: internalFinalizedPitches.length,
               badgeTone: "success",
@@ -424,7 +424,7 @@ export function AccountStorageHub({
               ? [
                   {
                     id: "trash",
-                    label: "4. Thùng Rác (30 ngày)",
+                    label: "Thùng rác (30 ngày)",
                     icon: Trash2,
                     badge: trashCount,
                     badgeTone: "danger" as const,

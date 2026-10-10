@@ -99,7 +99,7 @@ export default function SanPhamPage() {
       {/* Header tác vụ */}
       <header className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3.5 gap-3">
         <div>
-          <div className="text-caption text-text-muted">Kho sản phẩm của hàng</div>
+          <div className="text-caption text-text-muted">Kho mẫu hoa</div>
           <h1 className="text-title font-extrabold text-primary">Mẫu hoa</h1>
         </div>
         <div className="flex items-center gap-2">
