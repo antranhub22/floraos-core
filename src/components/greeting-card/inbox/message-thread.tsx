@@ -40,7 +40,9 @@ export function MessageThread({ target, stepKey = "GENERAL", title, onClose, onB
     void apiSend("/api/v1/greeting-card/messages/read", "POST", { messageIds: unreadIds.split(",") }, "")
       .then(() => { void thread.mutate(); onChanged?.() }, () => { sentRead.current = "" })
   }, [unreadIds, onChanged, thread])
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [messages.length])
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" })
+  }, [messages.length])
 
   return (
     <Sheet
