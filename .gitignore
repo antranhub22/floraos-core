@@ -26,6 +26,7 @@ cookies.txt
 
 # Kho vận hành và dữ liệu tổ chức không vào git
 du-lieu-van-hanh/
+backups/
 *.xlsx
 !docs/**/*.xlsx
 golden/images/

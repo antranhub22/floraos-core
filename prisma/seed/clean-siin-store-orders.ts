@@ -57,6 +57,11 @@ export async function cleanSiinStoreOrders(): Promise<void> {
       data: { order_id: null },
     })
 
+    await tx.vouchers.updateMany({
+      where: { organization_id: orgId, order_id: { not: null } },
+      data: { order_id: null, is_used: false, used_at: null },
+    })
+
     const delSessions = await tx.greeting_sessions.deleteMany({ where: { organization_id: orgId } })
 
     // 2. Dọn dẹp các bảng phụ thuộc Đơn hàng (Orders)

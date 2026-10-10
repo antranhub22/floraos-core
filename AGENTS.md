@@ -21,6 +21,9 @@ Nền tảng SaaS đa tenant cho cửa hàng hoa. `src/` (Next.js + Prisma/Postg
 | Test cách ly tenant | `npm run test:tenant` — *bắt buộc xanh trước mọi merge* |
 | Kiểm chuẩn UX Lint | `npm run lint:ux` (hoặc `npm run lint:ux -- --check` theo ratchet) |
 | Test UX E2E & Trợ năng | `npm run test:e2e:ux` (kiểm tra phân luồng vai, 404, mốc trợ năng, WCAG 2.2 AA qua axe-core, visual regression) |
+| Dọn sạch bàn giao (Quét thử) | `npm run handover:clean:dry` (Local) · `npm run handover:clean:prod:dry` (Render Prod) |
+| Dọn sạch bàn giao (Thực thi) | `npm run handover:clean -- --confirm` (Local) · `npm run handover:clean:prod -- --confirm` (Render Prod) · tùy chọn `--slug=<shop>` |
+| Khôi phục thảm họa bàn giao | `npm run handover:restore -- --file=backups/... --confirm` (Local) · `npm run handover:restore:prod -- --file=backups/... --confirm` (Prod) |
 
 ## Quy ước
 
@@ -310,6 +313,11 @@ Xếp hạng BUILD cho thứ đã tồn tại ở một trong ba repo là lỗi 
 - Biến `DATABASE_URL` export ra shell theo `cd` sang repo khác, và `process.loadEnvFile()` KHÔNG ghi đè biến đã có sẵn. Chạy `set -a && source .env` trong `LocalBudd` rồi `cd` sang đây là đủ để `npx prisma db push` của core trỏ vào Supabase của LocalBudd — suýt xảy ra 09/10. Trước mọi lệnh Prisma: `echo "[$DATABASE_URL]"` phải rỗng, và nhìn dòng `Datasource "db"` nó in ra.
 - `prisma generate` KHÔNG chạy được trong VM của `device_bash`: nó tải nhị phân từ `binaries.prisma.sh` và host đó trả 403 qua proxy của VM (`PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` không giúp — bước sau vẫn phải tải chính tệp engine). Hệ quả cụ thể: thêm model vào `schema.prisma` thì `npx tsc --noEmit` báo `Property 'x' does not exist on type 'DbClient'` cho tới khi ai đó chạy `prisma generate` trên Terminal Mac thật. Phân loại lỗi `tsc` trước khi đi sửa: lỗi dạng đó là lỗi CHỜ, không phải lỗi mã.
 - `npm test` loại `tests/tenant/**` theo thiết kế; gọi thẳng `npx vitest run` sẽ kéo cả bộ test cách ly vào và nó TỪ CHỐI chạy vì database không kết thúc bằng `_test`. Dùng đúng hai lệnh: `npm test` và `npm run test:tenant`.
+- **Quy chuẩn dọn dẹp & bàn giao sạch cho Tenant (Clean Handover Standard)**:
+  - Khi nghiệm thu xong UAT hoặc chuẩn bị bàn giao môi trường sạch cho khách hàng (như Siin Store, AVI GIFT), **TUYỆT ĐỐI CẤM** chạy lệnh DELETE chay bảng đơn hàng hay xóa thủ công thiếu transaction.
+  - Bắt buộc dùng pipeline chuẩn hóa `scripts/handover-clean-tenant.ts` (lệnh `npm run handover:clean` / `npm run handover:clean:prod`).
+  - Phải tuân thủ 5 chốt chặn an toàn: (1) Cách ly tenant tuyệt đối theo `organization_id`; (2) Toàn bộ xóa bọc trong 1 `prisma.$transaction`; (3) Master Data Integrity Guard (tự động so sánh số lượng sản phẩm, mẫu thiệp, tài khoản nhân sự trước/sau khi xóa — nếu hao hụt lập tức ném lỗi Rollback 100%); (4) Chạy `--dry-run` quét trước khi xác nhận `--confirm`; (5) Ghi nhật ký vào `audit_logs` (`handover.clean_tenant`).
+  - Tệp `.env.production` lưu `DATABASE_URL` của Render Production (có `sslmode=require`) đã nằm trong `.gitignore`, dùng cho lệnh `npm run handover:clean:prod`. Chi tiết tại `docs/kien-truc/QUY_TRINH_BAN_GIAO_SACH_TENANT.md`.
 - `next dev` (Next 16) TỰ CHÈN khối `<!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
