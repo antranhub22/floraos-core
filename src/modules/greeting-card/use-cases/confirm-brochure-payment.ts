@@ -190,6 +190,57 @@ export async function coordinatorConfirmBalancePayment(
   return result
 }
 
+/**
+ * Điều phối xác nhận tiền đặt cọc (hoặc toàn bộ tiền nếu đơn không cọc) cho đơn hàng qua ảnh bill.
+ * Chỉ hoạt động khi policy cho phép Điều phối và chưa có tiền cọc (paid_vnd <= 0).
+ * Thao tác này tương đương với sự phê duyệt của Điều hành đối với tiền cọc.
+ */
+export async function coordinatorConfirmDepositPayment(
+  ctx: TenantContext,
+  orderId: string,
+  input: { note?: string | null | undefined } = {},
+  payments = new BrochurePaymentRepository(),
+  orders = new BrochureOrderRepository(),
+  repo = new GreetingCardRepository()
+) {
+  await assertOrderInScope(ctx, orderId, orders)
+  const order = await orders.findBrochureOrder(ctx, orderId)
+  if (!order) throw notFound()
+
+  const total = Number(order.total_vnd)
+  const paid = Number(order.paid_vnd)
+  if (paid > 0) throw conflict("Đơn hàng đã được ghi nhận tiền cọc trước đó")
+  if (total <= 0) throw conflict("Đơn hàng chưa có giá, không thể xác nhận cọc")
+
+  const shop = await repo.getShopProfile(ctx.organizationId)
+  const policy = policyForOrder(parsePaymentPolicy(shop.settings), order.pricing_rule_ref)
+  const plan = readPaymentPlan(order.pricing_rule_ref)
+  const pct = plan?.depositPercent ?? policy.depositPercent
+  const deposit = depositAmountVnd(total, pct)
+  const isDepositOrder = pct > 0 && deposit < total
+  const amountVnd = isDepositOrder ? deposit : total
+
+  // Lấy bằng chứng ảnh bill lần 1 từ phiên
+  let evidenceAssetId: string | null = null
+  if (order.source_session_id) {
+    const session = await repo.findSessionById(order.source_session_id)
+    if (session?.payment_proof_asset_id) {
+      evidenceAssetId = session.payment_proof_asset_id
+    }
+  }
+
+  const noteText = input.note?.trim() || `[Điều phối xác nhận] Đã duyệt tiền ${isDepositOrder ? `cọc ${pct}%` : "100%"} (qua ảnh bill)`
+  const result = await payments.recordIncomingPayment(ctx, orderId, {
+    amountVnd,
+    method: "BANK_TRANSFER",
+    reference: `COORDINATOR-DEPOSIT-${orderId.slice(0, 8)}`,
+    note: noteText,
+    evidenceAssetId,
+  })
+  queueOrderNotification(ctx.organizationId, orderId, paymentNotifyEvent(result.balanceVnd))
+  return result
+}
+
 /** Cửa hàng báo giá cho đơn đặt mẫu chưa niêm yết giá; sau đó khách thấy mã QR thanh toán. */
 export async function quoteBrochureOrder(
   ctx: TenantContext,

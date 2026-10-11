@@ -75,7 +75,8 @@ export async function getBrochureTracking(
   const sessionWithCatalog = order.greeting_sessions.find((s) => s.catalog?.filters)
   const catalogFilters = sessionWithCatalog?.catalog?.filters as Record<string, unknown> | null | undefined
   const appliedPolicies = catalogFilters?.appliedPolicies as { photoApprovalCountdownMinutes?: number } | undefined
-  const countdownMinutes = appliedPolicies?.photoApprovalCountdownMinutes ?? 10
+  const storePolicy = parsePaymentPolicy(order.organization?.settings)
+  const countdownMinutes = appliedPolicies?.photoApprovalCountdownMinutes ?? storePolicy.productPhotoReviewMinutes ?? 10
 
   let photoApproval: {
     status: "NONE" | "PENDING" | "APPROVED" | "AUTO_APPROVED"

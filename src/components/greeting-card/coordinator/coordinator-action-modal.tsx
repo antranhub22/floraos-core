@@ -11,6 +11,7 @@ import { DeliveryFailedModal } from "./delivery-failed-modal"
 import { SubstituteProposalModal } from "./substitute-proposal-modal"
 import { CoordinatorAcceptRejectModal } from "./coordinator-accept-reject-modal"
 import { CoordinatorConfirmBalanceModal } from "./coordinator-confirm-balance-modal"
+import { CoordinatorConfirmDepositModal } from "./coordinator-confirm-deposit-modal"
 
 type ActiveModal = Exclude<ModalState, { type: "none" | "detail" }>
 
@@ -76,6 +77,18 @@ export function CoordinatorActionModal({ modal, onClose, onDone }: { modal: Acti
       />
     )
   }
+  if (modal.type === "confirm-deposit") {
+    return (
+      <CoordinatorConfirmDepositModal
+        orderId={modal.orderId}
+        orderCode={modal.orderCode}
+        depositVnd={modal.depositVnd}
+        proofUrl={modal.proofUrl}
+        onClose={onClose}
+        onDone={() => onDone()}
+      />
+    )
+  }
   return <CoordinatorTaskModal modal={modal} onClose={onClose} onDone={onDone} />
 }
 
@@ -84,7 +97,7 @@ function CoordinatorTaskModal({
   onClose,
   onDone,
 }: {
-  modal: Exclude<ActiveModal, { type: "cancel-proposal" } | { type: "delivery-failed" } | { type: "substitute" } | { type: "accept-order" } | { type: "reject-order" } | { type: "confirm-balance" }>
+  modal: Exclude<ActiveModal, { type: "cancel-proposal" } | { type: "delivery-failed" } | { type: "substitute" } | { type: "accept-order" } | { type: "reject-order" } | { type: "confirm-balance" } | { type: "confirm-deposit" }>
   onClose: () => void
   onDone: () => void
 }) {

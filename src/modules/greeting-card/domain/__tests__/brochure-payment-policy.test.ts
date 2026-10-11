@@ -9,6 +9,7 @@ import {
   resolveRequirePaymentProof,
   resolveTrackingTriggerPolicy,
   serializePaymentPolicy,
+  applyHolidayAutoPreset,
 } from "../brochure-payment-policy"
 
 describe("parsePaymentPolicy", () => {
@@ -22,6 +23,10 @@ describe("parsePaymentPolicy", () => {
       requireProductPhotoQC: true,
       requireRecipientPhoto: true,
       cancellationApprovalTimeoutMinutes: 15,
+      holidayAutoMode: false,
+      autoApprovePaymentWithProof: false,
+      autoApprovePaymentWithProofMinutes: 15,
+      productPhotoReviewMinutes: 10,
     })
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 150 } }).depositPercent).toBe(0)
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 30, require_full_before_dispatch: true } })).toMatchObject({
@@ -33,6 +38,8 @@ describe("parsePaymentPolicy", () => {
     expect(parsePaymentPolicy({ brochure_policy: { require_product_photo_qc: false } }).requireProductPhotoQC).toBe(false)
     expect(parsePaymentPolicy({ brochure_policy: { require_recipient_photo: false } }).requireRecipientPhoto).toBe(false)
     expect(parsePaymentPolicy({ brochure_policy: { cancellation_approval_timeout_minutes: 30 } }).cancellationApprovalTimeoutMinutes).toBe(30)
+    expect(parsePaymentPolicy({ brochure_policy: { holiday_auto_mode: true } }).holidayAutoMode).toBe(true)
+    expect(parsePaymentPolicy({ brochure_policy: { auto_approve_payment_with_proof: true } }).autoApprovePaymentWithProof).toBe(true)
   })
 })
 
@@ -96,6 +103,10 @@ describe("hạn thanh toán + ghi chính sách", () => {
       requireProductPhotoQC: true,
       requireRecipientPhoto: true,
       cancellationApprovalTimeoutMinutes: 15,
+      holidayAutoMode: false,
+      autoApprovePaymentWithProof: false,
+      autoApprovePaymentWithProofMinutes: 15,
+      productPhotoReviewMinutes: 10,
       holdMinutes: 15,
       autoCancelUnpaid: true,
       paymentTimeoutMinutes: 30,
@@ -104,6 +115,24 @@ describe("hạn thanh toán + ghi chính sách", () => {
       balancePaymentTriggerPolicy: "PAYMENT_OR_COORDINATOR" as const,
     }
     expect(parsePaymentPolicy({ brochure_policy: serializePaymentPolicy(p) })).toEqual(p)
+  })
+  it("applyHolidayAutoPreset: bật chuyển sang chế độ cao điểm, tắt chuyển về chuẩn", () => {
+    const base = parsePaymentPolicy(null)
+    const holiday = applyHolidayAutoPreset(base, true)
+    expect(holiday.holidayAutoMode).toBe(true)
+    expect(holiday.trackingTriggerPolicy).toBe("PAYMENT_OR_COORDINATOR")
+    expect(holiday.balancePaymentTriggerPolicy).toBe("PAYMENT_OR_COORDINATOR")
+    expect(holiday.autoApprovePaymentWithProof).toBe(true)
+    expect(holiday.cancellationApprovalTimeoutMinutes).toBe(30)
+    expect(holiday.paymentTimeoutMinutes).toBe(30)
+    expect(holiday.requireProductPhotoQC).toBe(false)
+    expect(holiday.requireRecipientPhoto).toBe(false)
+
+    const normal = applyHolidayAutoPreset(holiday, false)
+    expect(normal.holidayAutoMode).toBe(false)
+    expect(normal.cancellationApprovalTimeoutMinutes).toBe(15)
+    expect(normal.requireProductPhotoQC).toBe(true)
+    expect(normal.requireRecipientPhoto).toBe(true)
   })
   it("balancePaymentTriggerPolicy có thể cài riêng độc lập với trackingTriggerPolicy", () => {
     const p = {

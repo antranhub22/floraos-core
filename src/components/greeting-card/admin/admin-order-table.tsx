@@ -103,6 +103,10 @@ export function AdminOrderTable({
               }
             }
 
+            const coordinatorPayment = o.payments?.find(
+              (p) => p.reference?.startsWith("COORDINATOR-") || p.note?.includes("[Điều phối")
+            )
+
             return (
               <tr key={o.id} data-focus-key={o.id} className="hover:bg-surface-muted/50 transition-colors">
                 <td className="px-4 py-3">
@@ -134,6 +138,11 @@ export function AdminOrderTable({
                       📸 <span>Có ảnh CK</span>
                     </div>
                   )}
+                  {coordinatorPayment && (
+                    <div className="mt-1 flex items-center gap-1 text-caption font-bold text-success bg-success-bg/60 px-2 py-0.5 rounded-md border border-success/30">
+                      🛡️ <span>Điều phối đã Xác nhận</span>
+                    </div>
+                  )}
                 </td>
 
                 <td className="px-4 py-3">
@@ -147,7 +156,7 @@ export function AdminOrderTable({
                     {/* 1. Đã thu đủ 100% */}
                     {isFullyPaid && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-bold bg-success/15 text-success">
-                        <Check size={12} /> Đã thu đủ
+                        <Check size={12} /> {coordinatorPayment ? "Đã thu đủ (Đ/P duyệt)" : "Đã thu đủ"}
                       </span>
                     )}
 
@@ -168,16 +177,16 @@ export function AdminOrderTable({
                       requireFull ? (
                         isReady ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-warning-bg text-warning border border-warning/30" title="Chờ khách duyệt ảnh sản phẩm hoặc hết 10 phút đếm ngược">
-                            ⏳ Đã cọc · Chờ duyệt ảnh
+                            ⏳ {coordinatorPayment ? "Đ/P đã duyệt cọc" : "Đã cọc"} · Chờ duyệt ảnh
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-success/10 text-success border border-success/30" title="Đã nhận tiền cọc thành công. Chờ xưởng cắm hoa xong mới thu lần 2.">
-                            ✓ Đã cọc · Chờ hoa xong
+                            ✓ {coordinatorPayment ? "Đ/P đã duyệt cọc" : "Đã cọc"} · Chờ hoa xong
                           </span>
                         )
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-info/10 text-info border border-info/30" title="Đã nhận tiền cọc. Phần còn lại sẽ thu sau khi giao hoa thành công.">
-                          ✓ Đã cọc · Thu sau giao
+                          ✓ {coordinatorPayment ? "Đ/P đã duyệt cọc" : "Đã cọc"} · Thu sau giao
                         </span>
                       )
                     )}

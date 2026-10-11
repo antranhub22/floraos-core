@@ -162,7 +162,7 @@ export class BrochureOrderRepository {
       where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
       include: {
         qc_records: { select: { notes: true, created_at: true } },
-        greeting_sessions: { select: { id: true, send_code: true, status: true } },
+        greeting_sessions: { select: { id: true, send_code: true, status: true, payment_proof_asset_id: true } },
       },
     })
   }

@@ -64,6 +64,7 @@ export type ModalState =
   | { type: "accept-order"; orderId: string; orderCode: string }
   | { type: "reject-order"; orderId: string; orderCode: string }
   | { type: "confirm-balance"; orderId: string; orderCode: string; balanceVnd: number; proofUrl: string | null }
+  | { type: "confirm-deposit"; orderId: string; orderCode: string; depositVnd: number; proofUrl: string | null }
   | { type: "detail"; order: BrochureOrder }
 
 const PRODUCTION_LABELS: Record<string, string> = {

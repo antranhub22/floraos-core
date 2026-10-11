@@ -68,6 +68,34 @@ export function CoordinatorCardDecisionBlocks({
         </div>
       )}
 
+      {/* Khối Xác nhận Tiền Cọc Đợt 1 nếu đơn đã vào sản xuất nhưng cọc chưa duyệt mà có bill */}
+      {acceptBlocker !== null && order.paid_vnd <= 0 && Boolean(paymentProofUrl) && (
+        <div className="flex flex-col gap-2 p-3 rounded-xl border-2 border-dashed border-success/50 bg-success-bg/40">
+          <p className="text-body-sm font-bold text-success text-center flex items-center justify-center gap-1.5">
+            <Banknote size={16} />
+            Khách đã gửi bill tiền cọc (Đợt 1) — Chờ Xác nhận
+          </p>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() =>
+              onOpen({
+                type: "confirm-deposit",
+                orderId: order.id,
+                orderCode: order.code,
+                depositVnd: Math.round(order.total_vnd * 0.5),
+                proofUrl: paymentProofUrl ?? null,
+              })
+            }
+            className="h-9 text-body-sm font-extrabold gap-1.5 bg-success hover:bg-success/90 text-white w-full"
+          >
+            <CheckCircle2 size={15} />
+            Xác nhận Tiền Cọc Đợt 1
+          </Button>
+        </div>
+      )}
+
       {/* 2. Khối Xác nhận Thanh toán Lần 2 — Đơn đặt cọc, hoa xong, khách đã báo bill lần 2
           NOTE: Hiện khi khách báo bill lần 2 (hasBalanceReported) bất kể chính sách thu khi nào.
           requireFullBeforeDispatch chỉ ảnh hưởng đến việc có chặn dispatch hay không — không ẩn xác nhận. */}

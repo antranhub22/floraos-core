@@ -12,6 +12,7 @@ import {
 import { DeliveryFailureRepository } from "../infra/delivery-failure-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { CancellationRepository } from "../infra/cancellation-repository"
+import { coordinatorConfirmDepositPayment } from "./confirm-brochure-payment"
 
 /** Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). */
 async function loadForAction(
@@ -188,6 +189,22 @@ export async function coordinatorAcceptBrochureOrder(
   const order = await repo.findBrochureOrder(ctx, orderId)
   if (!order) throw notFound()
   if (order.status === "CANCELLED") throw conflict("Đơn hàng đã huỷ, không thể tiếp nhận")
+
+  // Nếu đơn chưa ghi nhận tiền cọc mà khách đã có bill hoặc báo chuyển khoản:
+  // Tự động phê duyệt tiền cọc tương đương với sự phê duyệt của Điều hành!
+  const paid = Number(order.paid_vnd)
+  const total = Number(order.total_vnd)
+  const session = order.greeting_sessions?.[0]
+  const hasProofOrReported = Boolean(session?.payment_proof_asset_id || session?.status === "PAYMENT_REPORTED")
+
+  if (paid <= 0 && total > 0 && hasProofOrReported) {
+    try {
+      await coordinatorConfirmDepositPayment(ctx, orderId, { note: input.note })
+    } catch {
+      // Bỏ qua nếu có lỗi ghi thanh toán để không chặn tiến độ xưởng
+    }
+  }
+
   const result = await repo.applyProgress(ctx, order, {
     eventType: "COORDINATOR_ACCEPTED",
     productionStatus: "ASSIGNED",

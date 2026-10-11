@@ -150,6 +150,16 @@
       "rule": "R3",
       "path": "src/components/greeting-card/og/catalog-collage-image.tsx",
       "reason": "Ảnh OG dựng bằng next/og (satori) — không đọc được CSS token, màu phải viết thẳng"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/greeting-card/coordinator/coordinator-card-decision-blocks.tsx",
+      "reason": "3 khối conditional loại trừ nhau (acceptBlocker null, xác nhận cọc, xác nhận lần 2) — không hiện cùng lúc"
+    },
+    {
+      "rule": "R4",
+      "path": "src/components/greeting-card/order-detail-footer.tsx",
+      "reason": "Khối xác nhận cọc, lần 2, và tiếp nhận đơn là conditional blocks loại trừ nhau — không hiện đồng thời"
     }
   ]
 }

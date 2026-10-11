@@ -8,6 +8,7 @@ import { canProposeCancellation } from "@/modules/greeting-card/domain/cancellat
 import { coordinatorAcceptanceBlocker } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { CoordinatorAcceptRejectModal } from "./coordinator/coordinator-accept-reject-modal"
 import { CoordinatorConfirmBalanceModal } from "./coordinator/coordinator-confirm-balance-modal"
+import { CoordinatorConfirmDepositModal } from "./coordinator/coordinator-confirm-deposit-modal"
 import type { OrderDetailModalTarget, BrochureOrderDetailModalProps } from "./brochure-order-detail-modal"
 
 /** Footer action bar + cancellation proposal modal — tách riêng khỏi BrochureOrderDetailModal để tuân thủ giới hạn SRP 350 dòng. */
@@ -22,6 +23,7 @@ export function OrderDetailFooter({
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showAcceptRejectModal, setShowAcceptRejectModal] = useState<"accept" | "reject" | null>(null)
   const [showConfirmBalanceModal, setShowConfirmBalanceModal] = useState(false)
+  const [showConfirmDepositModal, setShowConfirmDepositModal] = useState(false)
 
   const acceptBlocker = target.orderId
     ? coordinatorAcceptanceBlocker(
@@ -51,12 +53,51 @@ export function OrderDetailFooter({
   const isDepositOrder = paidVnd > 0 && paidVnd < totalVnd
   const balanceVnd = Math.max(0, totalVnd - paidVnd)
   const hasBalanceProofOrReport = Boolean(target.paymentProofBalanceUrl || target.customerReportedPaid)
+  const hasDepositProofOrReport = Boolean(target.paymentProofUrl || target.customerReportedPaid)
   const canConfirmBalance = can("R11") || can("R4") || can("R3")
   const needsBalanceConfirmation = target.orderId && isDepositOrder && hasBalanceProofOrReport && canConfirmBalance
+  const needsDepositConfirmation =
+    Boolean(target.orderId) &&
+    paidVnd === 0 &&
+    totalVnd > 0 &&
+    hasDepositProofOrReport &&
+    canConfirmBalance &&
+    !needsAcceptance
 
   return (
     <>
       <footer className="flex flex-col gap-2 border-t border-border bg-surface-alt p-4">
+        {needsDepositConfirmation && (
+          <div className="flex flex-col gap-2 p-3 rounded-xl border-2 border-dashed border-success/50 bg-success-bg/40 mb-1">
+            <p className="text-body-sm font-bold text-success text-center flex items-center justify-center gap-1.5">
+              <Banknote size={16} />
+              Khách đã gửi bill tiền cọc (Đợt 1) — Chờ Điều phối xác nhận
+            </p>
+            <p className="text-caption text-text-muted text-center">
+              {target.paymentProofUrl && (
+                <a
+                  href={target.paymentProofUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline font-bold"
+                >
+                  Xem ảnh bill cọc
+                </a>
+              )}
+            </p>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => setShowConfirmDepositModal(true)}
+              className="h-9 text-body-sm font-extrabold gap-1.5 bg-success hover:bg-success/90 text-white w-full"
+            >
+              <CheckCircle2 size={15} />
+              Xác nhận Tiền Cọc Đợt 1
+            </Button>
+          </div>
+        )}
+
         {needsBalanceConfirmation && (
           <div className="flex flex-col gap-2 p-3 rounded-xl border-2 border-dashed border-warning/50 bg-warning-bg/40 mb-1">
             <p className="text-body-sm font-bold text-warning text-center flex items-center justify-center gap-1.5">
@@ -219,6 +260,22 @@ export function OrderDetailFooter({
           onClose={() => setShowConfirmBalanceModal(false)}
           onDone={() => {
             setShowConfirmBalanceModal(false)
+            void mutate((key) => typeof key === "string" && (key.includes("tracking") || key.includes("coordinator") || key.includes("orders")))
+            onCancellationProposed?.()
+            onClose()
+          }}
+        />
+      )}
+
+      {showConfirmDepositModal && target.orderId && (
+        <CoordinatorConfirmDepositModal
+          orderId={target.orderId}
+          orderCode={target.orderCode ?? "---"}
+          depositVnd={Math.round(totalVnd * 0.5)}
+          proofUrl={target.paymentProofUrl ?? null}
+          onClose={() => setShowConfirmDepositModal(false)}
+          onDone={() => {
+            setShowConfirmDepositModal(false)
             void mutate((key) => typeof key === "string" && (key.includes("tracking") || key.includes("coordinator") || key.includes("orders")))
             onCancellationProposed?.()
             onClose()

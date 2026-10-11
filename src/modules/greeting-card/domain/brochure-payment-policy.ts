@@ -61,6 +61,23 @@ export interface BrochurePaymentPolicy {
    * Mặc định: 15 phút. Quá thời gian này sẽ tự động hủy đơn và chuyển hoàn tiền.
    */
   cancellationApprovalTimeoutMinutes?: number
+  /**
+   * Chế độ AUTO Ngày Lễ / Cao điểm (Holiday Auto-Preset):
+   * Khi bật, tự động áp dụng bộ cấu hình giải phóng vận hành, mở phân quyền cho Điều phối
+   * và tăng tốc độ xử lý đơn hàng. Mặc định: TẮT (false).
+   */
+  holidayAutoMode?: boolean
+  /**
+   * Tự động duyệt thanh toán khi khách đã tải ảnh bill chuyển khoản quá N phút mà chưa ai duyệt.
+   * Mặc định: TẮT (false). Khi bật (đặc biệt trong ngày lễ), thời gian mặc định là 15 phút.
+   */
+  autoApprovePaymentWithProof?: boolean
+  autoApprovePaymentWithProofMinutes?: number
+  /**
+   * Thời gian đếm ngược duyệt ảnh hoa thành phẩm (phút).
+   * Hết thời gian này nếu khách không phản hồi thì tự động duyệt và mở Giao Ship. Mặc định: 10 phút.
+   */
+  productPhotoReviewMinutes?: number
 }
 
 /** Hạn thanh toán gợi ý khi Điều hành bật (PO 08/10/2026). */
@@ -80,6 +97,41 @@ export const DEFAULT_PAYMENT_POLICY: BrochurePaymentPolicy = {
   requireProductPhotoQC: true,
   requireRecipientPhoto: true,
   cancellationApprovalTimeoutMinutes: DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES,
+  holidayAutoMode: false,
+  autoApprovePaymentWithProof: false,
+  autoApprovePaymentWithProofMinutes: 15,
+  productPhotoReviewMinutes: 10,
+}
+
+/**
+ * Tự động chuyển đổi toàn bộ chính sách theo Chế độ Cao điểm / Ngày lễ (AUTO Preset).
+ */
+export function applyHolidayAutoPreset(policy: BrochurePaymentPolicy, enable: boolean): BrochurePaymentPolicy {
+  if (enable) {
+    return {
+      ...policy,
+      holidayAutoMode: true,
+      trackingTriggerPolicy: "PAYMENT_OR_COORDINATOR",
+      balancePaymentTriggerPolicy: "PAYMENT_OR_COORDINATOR",
+      autoApprovePaymentWithProof: true,
+      autoApprovePaymentWithProofMinutes: 15,
+      cancellationApprovalTimeoutMinutes: 30, // Chuyển sau 30 phút theo chỉ đạo PO
+      paymentTimeoutMinutes: 30,             // Rút ngắn còn 30 phút
+      autoCancelUnpaid: true,
+      requireProductPhotoQC: false,          // Không bắt buộc ảnh QC
+      requireRecipientPhoto: false,          // Không bắt buộc ảnh người nhận
+      productPhotoReviewMinutes: 10,         // Vẫn giữ tiêu chuẩn 10' đếm ngược
+    }
+  }
+  return {
+    ...policy,
+    holidayAutoMode: false,
+    autoApprovePaymentWithProof: false,
+    cancellationApprovalTimeoutMinutes: DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES,
+    requireProductPhotoQC: true,
+    requireRecipientPhoto: true,
+    productPhotoReviewMinutes: 10,
+  }
 }
 
 export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
@@ -128,6 +180,10 @@ export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
     cancellationApprovalTimeoutMinutes: cancelTimeout,
     trackingTriggerPolicy: triggerPolicy,
     balancePaymentTriggerPolicy: balanceTriggerPolicy,
+    holidayAutoMode: r.holiday_auto_mode === true,
+    autoApprovePaymentWithProof: r.auto_approve_payment_with_proof === true,
+    autoApprovePaymentWithProofMinutes: minutesIn(r.auto_approve_payment_with_proof_minutes) ?? 15,
+    productPhotoReviewMinutes: minutesIn(r.product_photo_review_minutes) ?? 10,
     // Chỉ thêm khoá khi tiệm bật giữ đơn — chính sách cũ giữ nguyên hình dạng
     ...(hold ? { holdMinutes: hold } : {}),
     ...(autoCancel ? { autoCancelUnpaid: true } : {}),
@@ -153,6 +209,10 @@ export function serializePaymentPolicy(policy: BrochurePaymentPolicy): Record<st
     cancellation_approval_timeout_minutes: policy.cancellationApprovalTimeoutMinutes ?? DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES,
     tracking_trigger_policy: policy.trackingTriggerPolicy ?? DEFAULT_TRACKING_TRIGGER_POLICY,
     balance_payment_trigger_policy: policy.balancePaymentTriggerPolicy ?? policy.trackingTriggerPolicy ?? DEFAULT_TRACKING_TRIGGER_POLICY,
+    holiday_auto_mode: policy.holidayAutoMode === true,
+    auto_approve_payment_with_proof: policy.autoApprovePaymentWithProof === true,
+    auto_approve_payment_with_proof_minutes: policy.autoApprovePaymentWithProofMinutes ?? 15,
+    product_photo_review_minutes: policy.productPhotoReviewMinutes ?? 10,
   }
 }
 
