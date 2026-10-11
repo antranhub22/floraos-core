@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Loader2, Save, Truck } from "lucide-react"
+import { AlertTriangle, Loader2, Save, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
 import {
@@ -122,6 +122,57 @@ export function PaymentPolicySection() {
           </fieldset>
 
           <fieldset className="flex flex-col gap-2">
+            <legend className="font-bold text-foreground mb-1">Kiểm định chất lượng & Hình ảnh thực tế</legend>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={policy.requireProductPhotoQC !== false}
+                onChange={(e) => edit({ requireProductPhotoQC: e.target.checked })}
+              />
+              <span className="font-semibold text-foreground">Bắt buộc chụp ảnh hoa thành phẩm (QC) trước khi Giao Ship</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={policy.requireRecipientPhoto !== false}
+                onChange={(e) => edit({ requireRecipientPhoto: e.target.checked })}
+              />
+              <span className="font-semibold text-foreground">Bắt buộc chụp ảnh người nhận hoa lúc giao thành công</span>
+            </label>
+            {(policy.requireProductPhotoQC === false || policy.requireRecipientPhoto === false) && (
+              <div className="p-3 rounded-xl border border-warning/40 bg-warning-bg/40 text-caption text-warning flex flex-col gap-1">
+                <span className="font-bold flex items-center gap-1.5">
+                  <AlertTriangle size={15} className="shrink-0" />
+                  CẢNH BÁO QUẢN TRỊ RỦI RO CHẤT LƯỢNG
+                </span>
+                <p className="leading-relaxed">
+                  Tắt yêu cầu ảnh sẽ bỏ qua chốt chặn kiểm tra. Thợ và shipper vẫn có thể tải ảnh tự nguyện, nhưng đơn sẽ không bị chặn nút giao và hoàn tất.
+                </p>
+              </div>
+            )}
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="font-bold text-foreground mb-1">Thời gian chờ duyệt khi Điều phối từ chối nhận đơn (SLA)</legend>
+            <label className="flex items-center justify-between gap-2">
+              <span className="text-text-muted">Tự động hủy đơn và hoàn tiền nếu Điều hành không phản hồi sau</span>
+              <select
+                aria-label="Thời gian SLA tự động hủy đơn"
+                value={policy.cancellationApprovalTimeoutMinutes ?? 15}
+                onChange={(e) => edit({ cancellationApprovalTimeoutMinutes: Number(e.target.value) })}
+                className="h-9 px-2 rounded-lg border border-border bg-background"
+              >
+                {[5, 10, 15, 30, 60].map((m) => (
+                  <option key={m} value={m}>{m} phút {m === 15 ? "(Mặc định)" : ""}</option>
+                ))}
+              </select>
+            </label>
+            <p className="text-caption text-text-muted">
+              Bảo vệ uy tín tiệm: Khi Điều phối từ chối (hết hoa/quá tải) mà Điều hành bận không duyệt kịp, hệ thống tự động hủy đơn và chuyển hoàn tiền cho khách.
+            </p>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-2">
             <legend className="font-bold text-foreground mb-1">Cơ chế kích hoạt bước tiếp theo (Theo dõi tiến độ)</legend>
             <label className="flex items-start gap-2 rounded-lg border border-border p-3 cursor-pointer has-[:checked]:border-primary">
               <input
@@ -154,6 +205,42 @@ export function PaymentPolicySection() {
               </span>
             </label>
           </fieldset>
+
+          {policy.requireFullBeforeDispatch && (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="font-bold text-foreground mb-1">Xác nhận Thanh toán Lần 2 (đặt cọc → trước khi giao ship)</legend>
+              <label className="flex items-start gap-2 rounded-lg border border-border p-3 cursor-pointer has-[:checked]:border-primary">
+                <input
+                  type="radio"
+                  name="profile-balance-trigger"
+                  className="mt-1"
+                  checked={(policy.balancePaymentTriggerPolicy ?? policy.trackingTriggerPolicy ?? "PAYMENT_OR_COORDINATOR") !== "PAYMENT_ONLY"}
+                  onChange={() => edit({ balancePaymentTriggerPolicy: "PAYMENT_OR_COORDINATOR" })}
+                />
+                <span>
+                  <span className="font-semibold text-foreground">Cho phép Điều phối duyệt qua ảnh bill</span>
+                  <span className="block text-caption text-text-muted">
+                    Điều hành xác nhận tiền HOẶC Điều phối bấm &ldquo;Xác nhận đã nhận tiền (Lần 2)&rdquo; đều mở khóa Giao Ship.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 rounded-lg border border-border p-3 cursor-pointer has-[:checked]:border-primary">
+                <input
+                  type="radio"
+                  name="profile-balance-trigger"
+                  className="mt-1"
+                  checked={(policy.balancePaymentTriggerPolicy ?? policy.trackingTriggerPolicy ?? "PAYMENT_OR_COORDINATOR") === "PAYMENT_ONLY"}
+                  onChange={() => edit({ balancePaymentTriggerPolicy: "PAYMENT_ONLY" })}
+                />
+                <span>
+                  <span className="font-semibold text-foreground">Chỉ Điều hành mới được duyệt thanh toán Lần 2</span>
+                  <span className="block text-caption text-text-muted">
+                    Bắt buộc Điều hành phải đối soát tiền chuyển khoản và xác nhận thì nút Giao Ship mới mở.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+          )}
         </div>
       )}
       <div className="flex items-center justify-between gap-3">
