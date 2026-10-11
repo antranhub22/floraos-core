@@ -1,10 +1,13 @@
-"use client"
-
 import React, { useState } from "react"
-import { AlertTriangle, ExternalLink, MessageSquare } from "lucide-react"
+import { AlertTriangle, Banknote, CheckCircle2, ExternalLink, MessageSquare, ShieldCheck, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useSession } from "@/lib/session"
+import { useSWRConfig } from "swr"
 import { CancellationProposalModal } from "@/components/greeting-card/inbox/cancellation-proposal-modal"
 import { canProposeCancellation } from "@/modules/greeting-card/domain/cancellation-request"
+import { coordinatorAcceptanceBlocker } from "@/modules/greeting-card/domain/brochure-commerce-rules"
+import { CoordinatorAcceptRejectModal } from "./coordinator/coordinator-accept-reject-modal"
+import { CoordinatorConfirmBalanceModal } from "./coordinator/coordinator-confirm-balance-modal"
 import type { OrderDetailModalTarget, BrochureOrderDetailModalProps } from "./brochure-order-detail-modal"
 
 /** Footer action bar + cancellation proposal modal — tách riêng khỏi BrochureOrderDetailModal để tuân thủ giới hạn SRP 350 dòng. */
@@ -14,7 +17,26 @@ export function OrderDetailFooter({
   onOpenNotes,
   onCancellationProposed,
 }: Omit<BrochureOrderDetailModalProps, "target"> & { target: OrderDetailModalTarget }) {
+  const { can } = useSession()
+  const { mutate } = useSWRConfig()
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showAcceptRejectModal, setShowAcceptRejectModal] = useState<"accept" | "reject" | null>(null)
+  const [showConfirmBalanceModal, setShowConfirmBalanceModal] = useState(false)
+
+  const acceptBlocker = target.orderId
+    ? coordinatorAcceptanceBlocker(
+        {
+          status: target.status ?? "DRAFT",
+          productionStatus: target.productionStatus ?? "WAITING",
+          deliveryStatus: target.deliveryStatus ?? "PENDING",
+        },
+        {
+          paidVnd: target.paidVnd ?? 0,
+          paymentProofUrl: target.paymentProofUrl,
+        }
+      )
+    : "Chưa có đơn hàng"
+  const needsAcceptance = acceptBlocker === null
 
   const cancellationCheck = target.orderId
     ? canProposeCancellation({
@@ -24,9 +46,84 @@ export function OrderDetailFooter({
       })
     : { allowed: false, reason: "Chưa có đơn hàng để hủy" }
 
+  const totalVnd = target.totalVnd ?? 0
+  const paidVnd = target.paidVnd ?? 0
+  const isDepositOrder = paidVnd > 0 && paidVnd < totalVnd
+  const balanceVnd = Math.max(0, totalVnd - paidVnd)
+  const hasBalanceProofOrReport = Boolean(target.paymentProofBalanceUrl || target.customerReportedPaid)
+  const canConfirmBalance = can("R11") || can("R4") || can("R3")
+  const needsBalanceConfirmation = target.orderId && isDepositOrder && hasBalanceProofOrReport && canConfirmBalance
+
   return (
     <>
       <footer className="flex flex-col gap-2 border-t border-border bg-surface-alt p-4">
+        {needsBalanceConfirmation && (
+          <div className="flex flex-col gap-2 p-3 rounded-xl border-2 border-dashed border-warning/50 bg-warning-bg/40 mb-1">
+            <p className="text-body-sm font-bold text-warning text-center flex items-center justify-center gap-1.5">
+              <Banknote size={16} />
+              Khách đã chuyển khoản Lần 2 — Chờ Xác nhận để mở Giao Ship
+            </p>
+            <p className="text-caption text-text-muted text-center">
+              Số tiền còn lại:{" "}
+              <span className="font-extrabold text-foreground">{balanceVnd.toLocaleString("vi-VN")} đ</span>
+              {target.paymentProofBalanceUrl && (
+                <>
+                  {" · "}
+                  <a
+                    href={target.paymentProofBalanceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline font-bold"
+                  >
+                    Xem ảnh bill lần 2
+                  </a>
+                </>
+              )}
+            </p>
+            <Button
+              type="button"
+              variant="warning"
+              size="sm"
+              onClick={() => setShowConfirmBalanceModal(true)}
+              className="h-9 text-body-sm font-extrabold gap-1.5 bg-warning hover:bg-warning/90 text-white w-full"
+            >
+              <CheckCircle2 size={15} />
+              Xác nhận Đã Nhận Đủ Tiền (Lần 2)
+            </Button>
+          </div>
+        )}
+
+        {needsAcceptance && target.orderId && (
+          <div className="flex flex-col gap-2 p-3 rounded-xl border-2 border-dashed border-success/40 bg-success-bg/30 mb-1">
+            <p className="text-body-sm font-bold text-success text-center flex items-center justify-center gap-1.5">
+              <ShieldCheck size={16} />
+              Đơn hàng chờ Điều phối xác nhận nhận đơn
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => setShowAcceptRejectModal("accept")}
+                className="h-9 text-body-sm font-extrabold gap-1.5 bg-success hover:bg-success/90 text-white"
+              >
+                <CheckCircle2 size={15} />
+                Xác nhận Nhận đơn
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAcceptRejectModal("reject")}
+                className="h-9 text-body-sm font-bold gap-1.5 border-danger/40 text-danger hover:bg-danger-bg"
+              >
+                <XCircle size={15} />
+                Từ chối (Hoàn tiền)
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {target.sendCode && (
@@ -51,7 +148,7 @@ export function OrderDetailFooter({
               </Button>
             )}
           </div>
-          <Button type="button" onClick={onClose} className="h-9 px-4 text-caption font-bold">
+          <Button type="button" variant="outline" onClick={onClose} className="h-9 px-4 text-caption font-bold">
             Đóng
           </Button>
         </div>
@@ -93,6 +190,36 @@ export function OrderDetailFooter({
           onClose={() => setShowCancelModal(false)}
           onSuccess={() => {
             setShowCancelModal(false)
+            onCancellationProposed?.()
+            onClose()
+          }}
+        />
+      )}
+
+      {showAcceptRejectModal && target.orderId && (
+        <CoordinatorAcceptRejectModal
+          mode={showAcceptRejectModal}
+          orderId={target.orderId}
+          orderCode={target.orderCode ?? "---"}
+          onClose={() => setShowAcceptRejectModal(null)}
+          onDone={() => {
+            setShowAcceptRejectModal(null)
+            onCancellationProposed?.()
+            onClose()
+          }}
+        />
+      )}
+
+      {showConfirmBalanceModal && target.orderId && (
+        <CoordinatorConfirmBalanceModal
+          orderId={target.orderId}
+          orderCode={target.orderCode ?? "---"}
+          balanceVnd={balanceVnd}
+          proofUrl={target.paymentProofBalanceUrl ?? null}
+          onClose={() => setShowConfirmBalanceModal(false)}
+          onDone={() => {
+            setShowConfirmBalanceModal(false)
+            void mutate((key) => typeof key === "string" && (key.includes("tracking") || key.includes("coordinator") || key.includes("orders")))
             onCancellationProposed?.()
             onClose()
           }}

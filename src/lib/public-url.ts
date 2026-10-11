@@ -13,7 +13,7 @@ export function publicAppUrl(): string {
 
   if (configured) return configured
 
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV === "development") {
     const port = process.env["PORT"] || "3100"
     return `http://localhost:${port}`
   }

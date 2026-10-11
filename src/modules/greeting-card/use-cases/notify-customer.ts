@@ -90,8 +90,9 @@ export async function notifyOrderEvent(
       }
       messageId = result.messageId
     } else {
+      const skippedPhoto = (order as { qc_records?: Array<{ notes?: string | null }> }).qc_records?.some((qc) => qc.notes === "PRODUCT_PHOTO_SKIPPED") ?? false
       const result = await sendEsmsMessage(
-        { creds: creds as EsmsCredentials, phone, content: smsText(event, params, { isBalanceDue }), requestId: claim.id },
+        { creds: creds as EsmsCredentials, phone, content: smsText(event, params, { isBalanceDue, skippedPhoto }), requestId: claim.id },
         fetchImpl
       )
       messageId = result.messageId

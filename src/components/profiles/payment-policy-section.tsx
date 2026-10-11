@@ -120,6 +120,40 @@ export function PaymentPolicySection() {
               Khi bật, khách bắt buộc phải tải ảnh chụp giao dịch thành công mới bấm được nút &ldquo;Tôi đã chuyển khoản&rdquo; (áp dụng cho cả lần cọc và thanh toán phần còn lại). Mặc định: Bật.
             </p>
           </fieldset>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="font-bold text-foreground mb-1">Cơ chế kích hoạt bước tiếp theo (Theo dõi tiến độ)</legend>
+            <label className="flex items-start gap-2 rounded-lg border border-border p-3 cursor-pointer has-[:checked]:border-primary">
+              <input
+                type="radio"
+                name="profile-tracking-trigger"
+                className="mt-1"
+                checked={policy.trackingTriggerPolicy !== "PAYMENT_ONLY"}
+                onChange={() => edit({ trackingTriggerPolicy: "PAYMENT_OR_COORDINATOR" })}
+              />
+              <span>
+                <span className="font-semibold text-foreground">Cho phép thêm Điều phối xác nhận Nhận đơn</span>
+                <span className="block text-caption text-text-muted">
+                  Điều hành xác nhận tiền HOẶC Điều phối bấm nhận đơn đều mở màn hình theo dõi tiến độ cho khách.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 rounded-lg border border-border p-3 cursor-pointer has-[:checked]:border-primary">
+              <input
+                type="radio"
+                name="profile-tracking-trigger"
+                className="mt-1"
+                checked={policy.trackingTriggerPolicy === "PAYMENT_ONLY"}
+                onChange={() => edit({ trackingTriggerPolicy: "PAYMENT_ONLY" })}
+              />
+              <span>
+                <span className="font-semibold text-foreground">Chỉ Điều hành xác nhận đã thanh toán</span>
+                <span className="block text-caption text-text-muted">
+                  Bắt buộc Điều hành phải xác nhận đã nhận tiền (đủ hoặc cọc) thì khách mới được mở theo dõi tiến độ.
+                </span>
+              </span>
+            </label>
+          </fieldset>
         </div>
       )}
       <div className="flex items-center justify-between gap-3">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { AUTO_CANCEL_GRACE_MS, holdAction } from "../background-sweep"
+import { AUTO_CANCEL_GRACE_MS, AUTO_CONFIRM_PAYMENT_GRACE_MS, holdAction } from "../background-sweep"
 
 const now = new Date("2026-10-06T10:00:00Z")
 const ago = (min: number) => new Date(now.getTime() - min * 60_000)
@@ -44,5 +44,8 @@ describe("holdAction — hạn thanh toán 30 phút (PO 08/10/2026)", () => {
   })
   it("hạn thanh toán thắng giữ đơn cũ (không chờ thêm 60 phút)", () => {
     expect(holdAction(order({ createdAt: ago(31) }), { ...timeout, holdMinutes: 120, autoCancelUnpaid: true }, now)).toBe("FAIL_PAYMENT")
+  })
+  it("thời hạn tự động xác nhận chuyển khoản có bill là 15 phút", () => {
+    expect(AUTO_CONFIRM_PAYMENT_GRACE_MS).toBe(15 * 60_000)
   })
 })

@@ -1,13 +1,13 @@
 "use client"
 
 import React, { useState } from "react"
-import { Clock, UserCheck, Flower2, Camera, Truck, CheckCircle2 } from "lucide-react"
+import { Clock, UserCheck, Flower2, Camera, Truck, CheckCircle2, ShieldCheck, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { BrochureOrder, ModalState } from "./coordinator-order-card"
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
-import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
+import { coordinatorActionBlocker, coordinatorAcceptanceBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { paymentGateBlocker } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { sortByDelivery } from "@/modules/greeting-card/domain/coordinator-board"
 import { BrochureOrderDetailModal, type OrderDetailModalTarget } from "@/components/greeting-card/brochure-order-detail-modal"
@@ -51,6 +51,7 @@ interface CoordinatorKanbanViewProps {
   onOpen: (m: ModalState) => void
   workOf: Map<string, TrackingPipelineItem>
   now: number
+  onRefresh?: (() => void) | undefined
 }
 
 export function CoordinatorKanbanView({
@@ -58,6 +59,7 @@ export function CoordinatorKanbanView({
   policy,
   onOpen,
   workOf,
+  onRefresh,
 }: CoordinatorKanbanViewProps) {
   const [detailTarget, setDetailTarget] = useState<OrderDetailModalTarget | null>(null)
   const grouped = new Map<CoordinatorKanbanColId, BrochureOrder[]>()
@@ -104,11 +106,15 @@ export function CoordinatorKanbanView({
                     const isStuck = work?.stuck?.owner === "COORDINATOR"
 
                     const blockerOf = (action: CoordinatorAction) =>
-                      coordinatorActionBlocker(action, {
-                        status: o.status,
-                        productionStatus: o.production_status,
-                        deliveryStatus: o.delivery_status,
-                      }) ?? paymentGateBlocker(action, policy, { totalVnd: o.total_vnd, paidVnd: o.paid_vnd })
+                      coordinatorActionBlocker(
+                        action,
+                        {
+                          status: o.status,
+                          productionStatus: o.production_status,
+                          deliveryStatus: o.delivery_status,
+                        },
+                        { skipPhoto: policy.requireProductPhotoQC === false }
+                      ) ?? paymentGateBlocker(action, policy, { totalVnd: o.total_vnd, paidVnd: o.paid_vnd })
 
                     const openDetail = () => {
                       setDetailTarget({
@@ -213,19 +219,50 @@ export function CoordinatorKanbanView({
                         {/* Quick Action buttons depending on state */}
                         {col.id !== "DELIVERED" && (
                           <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/40">
-                            {col.id === "PENDING" && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={!!blockerOf("assign-florist")}
-                                onClick={() => onOpen({ type: "florist", orderId: o.id, orderCode: o.code })}
-                                className="h-7 text-caption gap-1 px-2 flex-1"
-                              >
-                                <UserCheck size={12} />
-                                Giao Florist
-                              </Button>
-                            )}
+                            {col.id === "PENDING" && (() => {
+                              const paymentProofUrl = work?.paymentProofUrl || o.payment_proof_url
+                              const acceptBlocker = coordinatorAcceptanceBlocker(
+                                { status: o.status, productionStatus: o.production_status, deliveryStatus: o.delivery_status },
+                                { paidVnd: o.paid_vnd, paymentProofUrl },
+                              )
+                              if (acceptBlocker !== null) return (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!!blockerOf("assign-florist")}
+                                  onClick={() => onOpen({ type: "florist", orderId: o.id, orderCode: o.code })}
+                                  className="h-7 text-caption gap-1 px-2 flex-1"
+                                >
+                                  <UserCheck size={12} />
+                                  Giao Florist
+                                </Button>
+                              )
+                              return (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="primary"
+                                    onClick={() => onOpen({ type: "accept-order", orderId: o.id, orderCode: o.code })}
+                                    className="h-7 text-caption gap-1 px-2 flex-1 bg-success hover:bg-success/90 text-white font-extrabold"
+                                  >
+                                    <ShieldCheck size={12} />
+                                    Nhận đơn
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => onOpen({ type: "reject-order", orderId: o.id, orderCode: o.code })}
+                                    className="h-7 text-caption gap-1 px-2 border-danger/40 text-danger hover:bg-danger-bg"
+                                  >
+                                    <XCircle size={12} />
+                                    Từ chối
+                                  </Button>
+                                </>
+                              )
+                            })()}
                             {(col.id === "ASSIGNED" || col.id === "ARRANGING") && (
                               <Button
                                 type="button"
@@ -288,6 +325,10 @@ export function CoordinatorKanbanView({
         <BrochureOrderDetailModal
           target={detailTarget}
           onClose={() => setDetailTarget(null)}
+          onCancellationProposed={() => {
+            setDetailTarget(null)
+            onRefresh?.()
+          }}
         />
       )}
     </>

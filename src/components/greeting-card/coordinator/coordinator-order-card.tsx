@@ -13,6 +13,7 @@ import { readDeliveryNote } from "@/modules/greeting-card/domain/delivery-note"
 import { readDeliveryFailures } from "@/modules/greeting-card/domain/delivery-failure"
 import { substituteLockReason } from "@/modules/greeting-card/domain/substitute-proposal"
 import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
+import { CoordinatorCardDecisionBlocks } from "./coordinator-card-decision-blocks"
 
 export interface BrochureOrder {
   id: string
@@ -36,6 +37,8 @@ export interface BrochureOrder {
     id: string
     send_code: string
     product_snapshot?: { name?: string; imageUrl?: string }
+    /** Phiên có trạng thái PAYMENT_REPORTED = khách đã báo chuyển khoản lần 2 */
+    status?: string
   }>
   customer?: { id?: string; code?: string; name?: string; phone?: string } | null
   /** Bản chụp báo giá + ưu đãi khách chọn (`policies.promotion`) lúc đặt. */
@@ -44,6 +47,8 @@ export interface BrochureOrder {
   saleName?: string | null | undefined
   coordinatorId?: string | null | undefined
   coordinatorName?: string | null | undefined
+  payment_proof_url?: string | null | undefined
+  payment_proof_balance_url?: string | null | undefined
   created_at: string
 }
 
@@ -56,30 +61,23 @@ export type ModalState =
   | { type: "delivery-failed"; orderId: string; orderCode: string }
   | { type: "substitute"; orderId: string; orderCode: string }
   | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number }
+  | { type: "accept-order"; orderId: string; orderCode: string }
+  | { type: "reject-order"; orderId: string; orderCode: string }
+  | { type: "confirm-balance"; orderId: string; orderCode: string; balanceVnd: number; proofUrl: string | null }
   | { type: "detail"; order: BrochureOrder }
 
-function productionLabel(status: string) {
-  const map: Record<string, string> = {
-    WAITING: "Chờ cắm hoa",
-    ASSIGNED: "Đã phân công",
-    ARRANGING: "Đang cắm hoa",
-    QUALITY_CHECK: "Đang kiểm tra",
-    READY: "Hoa đã hoàn thiện",
-    DONE: "Đã xong",
-  }
-  return map[status] ?? status
+const PRODUCTION_LABELS: Record<string, string> = {
+  WAITING: "Chờ cắm hoa", ASSIGNED: "Đã phân công", ARRANGING: "Đang cắm hoa",
+  QUALITY_CHECK: "Đang kiểm tra", READY: "Hoa đã hoàn thiện", DONE: "Đã xong",
 }
 
-function deliveryLabel(status: string) {
-  const map: Record<string, string> = {
-    PENDING: "Chưa giao",
-    DELIVERING: "Đang giao",
-    DISPATCHED: "Đã bàn giao Ship",
-    DELIVERED: "Giao thành công",
-    FAILED: "Giao thất bại",
-  }
-  return map[status] ?? status
+const DELIVERY_LABELS: Record<string, string> = {
+  PENDING: "Chưa giao", DELIVERING: "Đang giao", DISPATCHED: "Đã bàn giao Ship",
+  DELIVERED: "Giao thành công", FAILED: "Giao thất bại",
 }
+
+function productionLabel(s: string) { return PRODUCTION_LABELS[s] ?? s }
+function deliveryLabel(s: string) { return DELIVERY_LABELS[s] ?? s }
 
 /** Thẻ một đơn Thẻ chào trong tab Điều phối: mẫu, giao nhận, thanh toán, bốn tác vụ xưởng. */
 export function CoordinatorOrderCard({
@@ -112,11 +110,15 @@ export function CoordinatorOrderCard({
   const isDelivered = order.delivery_status === "DELIVERED" || order.status === "COMPLETED"
   // Cùng luật thứ tự với server — nút sai bước bị khoá kèm lý do (tooltip)
   const blockerOf = (action: CoordinatorAction) =>
-    coordinatorActionBlocker(action, {
-      status: order.status,
-      productionStatus: order.production_status,
-      deliveryStatus: order.delivery_status,
-    }) ?? paymentGateBlocker(action, policy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd })
+    coordinatorActionBlocker(
+      action,
+      {
+        status: order.status,
+        productionStatus: order.production_status,
+        deliveryStatus: order.delivery_status,
+      },
+      { skipPhoto: policy.requireProductPhotoQC === false }
+    ) ?? paymentGateBlocker(action, policy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd })
 
   return (
     <div data-focus-key={order.id} className={`bg-surface rounded-2xl border p-5 shadow-sm flex flex-col gap-4 ${work?.stuck?.owner === "COORDINATOR" ? "border-danger/50" : "border-border"}`}>
@@ -231,6 +233,9 @@ export function CoordinatorOrderCard({
           </span>
         )}
       </div>
+
+      {/* Khối quyết định của Điều phối & Xác nhận/Nhắc thanh toán lần 2 */}
+      <CoordinatorCardDecisionBlocks order={order} policy={policy} work={work} onOpen={onOpen} />
 
       {/* Action bar — 4 tác vụ */}
       {!isDelivered && (

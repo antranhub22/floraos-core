@@ -1,5 +1,5 @@
 import type { TenantContext } from "@/core/tenancy"
-import { notFound, unprocessable } from "@/core/http/errors"
+import { notFound, unprocessable, conflict } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
@@ -70,6 +70,7 @@ export async function adminConfirmBrochurePayment(
     amountVnd?: number | undefined
     reference?: string | null | undefined
     note?: string | null | undefined
+    confirmationType?: "MANUAL_ADMIN" | "AUTO_SYSTEM_15M" | undefined
   } = {},
   payments = new BrochurePaymentRepository(),
   orders = new BrochureOrderRepository(),
@@ -106,11 +107,17 @@ export async function adminConfirmBrochurePayment(
     }
   }
 
+  const isAuto = input.confirmationType === "AUTO_SYSTEM_15M"
+  const defaultRef = isAuto ? "AUTO_SYSTEM_15M" : `BROCHURE-${orderId.slice(0, 8)}`
+  const defaultNote = isAuto
+    ? "Hệ thống tự động xác nhận chuyển khoản sau 15 phút (có ảnh bill hợp lệ)"
+    : "Xác nhận chuyển khoản qua Thẻ chào (Điều hành duyệt)"
+
   const result = await payments.recordIncomingPayment(ctx, orderId, {
     amountVnd,
     method: "BANK_TRANSFER",
-    reference: input.reference?.trim() || `BROCHURE-${orderId.slice(0, 8)}`,
-    note: input.note?.trim() || "Xác nhận chuyển khoản qua Thẻ chào",
+    reference: input.reference?.trim() || defaultRef,
+    note: input.note?.trim() || defaultNote,
     evidenceAssetId,
   })
   queueOrderNotification(ctx.organizationId, orderId, paymentNotifyEvent(result.balanceVnd))
@@ -137,6 +144,50 @@ export async function refundBrochureOrder(
 ) {
   await assertOrderInScope(ctx, orderId)
   return payments.refund(ctx, orderId, { amountVnd: input.amountVnd, reason: input.reason.trim() })
+}
+
+/**
+ * Điều phối xác nhận đã nhận đủ tiền thanh toán lần 2 (balance) cho đơn đặt cọc.
+ * Chỉ được gọi khi policy = PAYMENT_OR_COORDINATOR và điều kiện đủ (hoa xong, khách báo bill).
+ * Ghi nhận payment tương tự adminConfirmBrochurePayment nhưng note ghi rõ "Điều phối duyệt".
+ */
+export async function coordinatorConfirmBalancePayment(
+  ctx: TenantContext,
+  orderId: string,
+  input: { note?: string | null | undefined } = {},
+  payments = new BrochurePaymentRepository(),
+  orders = new BrochureOrderRepository(),
+  repo = new GreetingCardRepository()
+) {
+  await assertOrderInScope(ctx, orderId, orders)
+  const order = await orders.findBrochureOrder(ctx, orderId)
+  if (!order) throw notFound()
+
+  const total = Number(order.total_vnd)
+  const paid = Number(order.paid_vnd)
+  const balance = Math.max(0, total - paid)
+  if (balance <= 0) throw conflict("Đơn hàng đã thanh toán đủ, không cần xác nhận lần 2")
+  if (paid <= 0) throw conflict("Đơn hàng chưa có cọc, không thể xác nhận thanh toán lần 2")
+
+  // Lấy bằng chứng ảnh bill lần 2 từ phiên
+  let evidenceAssetId: string | null = null
+  if (order.source_session_id) {
+    const session = await repo.findSessionById(order.source_session_id)
+    if (session?.payment_proof_balance_asset_id) {
+      evidenceAssetId = session.payment_proof_balance_asset_id
+    }
+  }
+
+  const noteText = input.note?.trim() || "Điều phối xác nhận đã nhận đủ thanh toán lần 2 (qua ảnh bill)"
+  const result = await payments.recordIncomingPayment(ctx, orderId, {
+    amountVnd: balance,
+    method: "BANK_TRANSFER",
+    reference: `COORDINATOR-BALANCE-${orderId.slice(0, 8)}`,
+    note: noteText,
+    evidenceAssetId,
+  })
+  queueOrderNotification(ctx.organizationId, orderId, paymentNotifyEvent(result.balanceVnd))
+  return result
 }
 
 /** Cửa hàng báo giá cho đơn đặt mẫu chưa niêm yết giá; sau đó khách thấy mã QR thanh toán. */

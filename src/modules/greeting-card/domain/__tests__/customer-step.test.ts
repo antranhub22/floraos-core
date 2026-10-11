@@ -59,6 +59,20 @@ describe("canViewTracking — phải chuyển khoản mới xem tiến độ (PO
     expect(canViewTracking({ ...base, totalVnd: 0 })).toBe(true)
     expect(canViewTracking({ ...base, hasPaymentQr: false })).toBe(true)
   })
+
+  it("Điều phối đã xác nhận nhận đơn (kể cả khi tiền chưa duyệt) → xem được tiến độ khi chính sách mặc định là PAYMENT_OR_COORDINATOR", () => {
+    expect(canViewTracking({ ...base, orderStatus: "CONFIRMED" })).toBe(true)
+    expect(canViewTracking({ ...base, productionStatus: "ASSIGNED" })).toBe(true)
+    expect(canViewTracking({ ...base, productionStatus: "ARRANGING" })).toBe(true)
+  })
+
+  it("chính sách PAYMENT_ONLY: bắt buộc phải có tiền mới kích hoạt theo dõi tiến độ", () => {
+    // Điều phối đã nhận đơn nhưng chưa có tiền → CHẶN (false)
+    expect(canViewTracking({ ...base, orderStatus: "CONFIRMED", triggerPolicy: "PAYMENT_ONLY" })).toBe(false)
+    expect(canViewTracking({ ...base, productionStatus: "ASSIGNED", triggerPolicy: "PAYMENT_ONLY" })).toBe(false)
+    // Đã có tiền cọc hoặc trả đủ → CHO PHÉP (true)
+    expect(canViewTracking({ ...base, paidVnd: 200_000, triggerPolicy: "PAYMENT_ONLY" })).toBe(true)
+  })
 })
 
 describe("link chung /g · /bst — về đúng bước khi mở lại", () => {

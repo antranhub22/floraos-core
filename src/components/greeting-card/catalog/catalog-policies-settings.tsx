@@ -15,7 +15,12 @@ import {
   CATALOG_TIMEOUT_OVERRIDE_KEY,
   type CatalogTimeoutOverride as CatalogTimeoutOverrideType,
 } from "@/modules/greeting-card/domain/step-timeout-policy"
+import {
+  parsePaymentPolicy,
+  type TrackingTriggerPolicy,
+} from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { CatalogStepTimeoutOverride } from "./catalog-step-timeout-override"
+import { CatalogTrackingTriggerOverride } from "./catalog-tracking-trigger-override"
 
 interface Props {
   catalogId: string
@@ -60,9 +65,14 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
       : null
   })
   const storeStepPolicy = parseStepTimeoutPolicy(org.data?.settings)
+  const storePaymentPolicy = parsePaymentPolicy(org.data?.settings)
   const [timeoutOverride, setTimeoutOverride] = useState<CatalogTimeoutOverrideType | null>(() =>
     parseCatalogTimeoutOverride(currentFilters)
   )
+  const [trackingTriggerOverride, setTrackingTriggerOverride] = useState<TrackingTriggerPolicy | null>(() => {
+    const t = currentFilters?.trackingTriggerPolicy
+    return t === "PAYMENT_ONLY" || t === "PAYMENT_OR_COORDINATOR" ? t : null
+  })
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
 
@@ -89,6 +99,7 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
         },
         [CATALOG_TIMEOUT_OVERRIDE_KEY]: timeoutOverride,
         requirePaymentProof: requirePaymentProofOverride,
+        trackingTriggerPolicy: trackingTriggerOverride,
       }
 
       await apiSend(
@@ -317,6 +328,13 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
           Áp dụng cho khách xác nhận chuyển khoản đặt cọc và thanh toán phần còn lại của bộ sưu tập này.
         </p>
       </div>
+
+      {/* 7. CẤU HÌNH CƠ CHẾ KÍCH HOẠT BƯỚC TIẾP THEO (GHI ĐÈ THEO BỘ SƯU TẬP) */}
+      <CatalogTrackingTriggerOverride
+        storeTriggerPolicy={storePaymentPolicy.trackingTriggerPolicy}
+        overrideValue={trackingTriggerOverride}
+        onChange={setTrackingTriggerOverride}
+      />
     </div>
   )
 }

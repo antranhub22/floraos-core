@@ -12,6 +12,8 @@ export const RETRY_BACKOFF_MS = 30 * 60_000
 export const RETRY_WINDOW_MS = 6 * 3_600_000
 /** Sau hạn giữ đơn bao lâu thì tự huỷ (khi tiệm bật). */
 export const AUTO_CANCEL_GRACE_MS = 60 * 60_000
+/** Sau bao lâu từ khi khách báo chuyển khoản kèm bill thì tự động xác nhận đã nhận tiền (15 phút). */
+export const AUTO_CONFIRM_PAYMENT_GRACE_MS = 15 * 60_000
 export const AUTO_CANCEL_REASON = "Tự huỷ: quá hạn giữ đơn mà chưa nhận được chuyển khoản"
 export const PAYMENT_TIMEOUT_REASON = "Thanh toán không thành công: hết hạn thanh toán mà chưa nhận được chuyển khoản"
 

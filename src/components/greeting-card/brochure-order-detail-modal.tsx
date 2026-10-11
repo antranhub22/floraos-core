@@ -45,6 +45,8 @@ export interface OrderDetailModalTarget {
   paymentProofUrl?: string | null | undefined
   /** Ảnh chuyển khoản lần 2 (phần còn lại) do khách tải lên */
   paymentProofBalanceUrl?: string | null | undefined
+  /** Khách đã bấm báo chuyển khoản / có ảnh bill lần 2 */
+  customerReportedPaid?: boolean | undefined
   createdAt?: string | null | undefined
 }
 

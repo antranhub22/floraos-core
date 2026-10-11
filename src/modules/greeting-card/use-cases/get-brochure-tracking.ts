@@ -164,9 +164,9 @@ export async function getBrochureTracking(
         ...payment,
         requirePaymentProof: resolveRequirePaymentProof(policy, catalogFilters),
         balanceInstructions: (() => {
-          if (!payment.balanceDue) return null
-          // Thu trước giao + đang chờ khách duyệt ảnh → chưa hiện QR lần 2
-          if (policy.requireFullBeforeDispatch && photoApproval.status === "PENDING") return null
+          if (order.status === "CANCELLED" || payment.remainingVnd <= 0) return null
+          // Thu trước giao + đang chờ khách duyệt ảnh (và đã cọc) → hoãn hiện QR lần 2
+          if (policy.requireFullBeforeDispatch && photoApproval.status === "PENDING" && payment.paidVnd > 0) return null
           return paymentInstructionsFor(orgSettings, money, order.code)
         })(),
       },

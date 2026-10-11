@@ -51,6 +51,7 @@ export class GreetingNotificationRepository {
         source_session_id: true,
         customer: { select: { name: true, phone: true } },
         organization: { select: { name: true, settings: true, business_profile: { select: { display_name: true } } } },
+        qc_records: { select: { notes: true } },
       },
     })
   }

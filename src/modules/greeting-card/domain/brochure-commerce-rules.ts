@@ -70,6 +70,26 @@ export interface OrderProgressState {
 }
 
 /**
+ * Đơn cần Điều phối xác nhận nhận đơn? Trả `null` nếu nút Xác nhận nên hiện,
+ * hoặc lý do chặn nếu đơn không ở trạng thái chờ xác nhận.
+ * Điều kiện: đơn DRAFT + đã có ảnh chuyển khoản hoặc đã nhận tiền + production chưa bắt đầu.
+ */
+export function coordinatorAcceptanceBlocker(
+  s: OrderProgressState,
+  payment: { paidVnd: number; paymentProofUrl?: string | null | undefined },
+): string | null {
+  if (s.status === "CANCELLED") return "Đơn hàng đã huỷ"
+  if (s.status === "COMPLETED" || s.deliveryStatus === "DELIVERED") return "Đơn hàng đã giao xong"
+  if (s.status === "CONFIRMED" || s.status === "PROCESSING") return "Đơn đã được xác nhận nhận đơn"
+  if (s.productionStatus === "ASSIGNED" || s.productionStatus === "ARRANGING" || s.productionStatus === "READY") {
+    return "Đơn đã vào sản xuất"
+  }
+  const hasProof = Boolean(payment.paymentProofUrl)
+  if (payment.paidVnd <= 0 && !hasProof) return "Chưa có thông tin chuyển khoản từ khách"
+  return null
+}
+
+/**
  * Trả lý do chặn (tiếng Việt) hoặc `null` nếu được làm. Bản cũ cho bấm cả
  * bốn tác vụ theo thứ tự bất kỳ — giao ship trước khi cắm xong, hay chụp ảnh
  * người nhận trên đơn đã huỷ.

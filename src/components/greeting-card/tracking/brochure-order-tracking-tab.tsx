@@ -111,6 +111,7 @@ export function BrochureOrderTrackingTab() {
             deliveryStatus: detailFor.deliveryStatus,
             paymentProofUrl: detailFor.paymentProofUrl,
             paymentProofBalanceUrl: detailFor.paymentProofBalanceUrl,
+            customerReportedPaid: Boolean(detailFor.customerReportedPaid || detailFor.paymentProofBalanceUrl),
             createdAt: detailFor.createdAt,
           }}
 

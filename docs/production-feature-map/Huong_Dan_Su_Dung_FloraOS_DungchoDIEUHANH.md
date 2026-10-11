@@ -146,20 +146,43 @@ Trang **Thẻ Chào Mẫu Hoa** (`/the-chao`) là kênh bán hàng di động v�
 #### B. Chế độ "Quản lý" (5 Tab chuyên sâu)
 * **Bước 1**: Nhấp chọn nút **"Quản lý"** (icon `LayoutList`).
 * **Bước 2**: Chọn tab tương ứng:
-  * *Tab 1: Bộ sưu tập (`catalog` - L1)*: Quản lý danh mục mẫu hoa, giá bán dịp lễ.
-  * *Tab 2: Theo dõi tiến độ (`tracking` - R1)*: Giám sát phễu chuyển đổi từ gửi link đến cọc.
-  * *Tab 3: Bán hàng (`sales` - R2)*: Xem danh sách các phiên gửi link và lượt khách xem.
-  * *Tab 4: Điều hành (`payment` - R11)*: Duyệt tiền cọc và xử lý yêu cầu hủy/hoàn cọc.
-  * *Tab 5: Điều phối (`coordinator` - R3/R4/R5)*: Chỉ định thợ cắm hoa cho đơn từ thẻ chào.
+  * *Tab 1: Bộ sưu tập (`catalog` - L1)*: Quản lý danh mục mẫu hoa, giá bán dịp lễ, và ghi đè chính sách cho từng bộ sưu tập.
+  * *Tab 2: Theo dõi tiến độ (`tracking` - R1)*: Giám sát phễu chuyển đổi từ gửi link đến cọc, hiển thị chi tiết các mốc song song (Duyệt cọc, Thợ cắm, Ảnh QC, Chờ thanh toán lần 2, Giao ship).
+  * *Tab 3: Bán hàng (`sales` - R2)*: Xem danh sách các phiên gửi link, lượt khách xem và tương tác của khách.
+  * *Tab 4: Điều hành (`payment` - R11)*: Duyệt tiền cọc/thanh toán, xác nhận thanh toán lần 2, và phê duyệt các đề xuất hủy/hoàn tiền từ Điều phối. Khi Điều hành bấm **"Xác nhận đã nhận tiền"** (hoặc sau 15' hệ thống tự động đối soát bill hợp lệ), khách hàng lập tức nhận thông báo *"Chuyển khoản thành công"* (kèm cam kết Điều phối tiếp nhận trong 30' hoặc hoàn tiền 100%).
+  * *Tab 5: Điều phối (`coordinator` - R4)*: Thẩm định khả năng cung ứng của xưởng và điều phối sản xuất:
+    * **Thẩm định nhận đơn (Tiếp nhận / Từ chối)**: Với mọi đơn đã thanh toán hoặc có cọc, Điều phối có 2 nút hành động quan trọng:
+      * **"Nhận đơn"**: Xác nhận xưởng đủ nguyên liệu và năng lực sản xuất; chuyển đơn sang trạng thái sẵn sàng cắm hoa và gửi thông báo cho khách.
+      * **"Từ chối nhận đơn"**: Khi xưởng hết hoa, quá tải hoặc ngoài khu vực giao. Điều phối nhập lý do từ chối -> Hệ thống tạo Đề xuất Hủy & Hoàn tiền 100% gửi lên Điều hành phê duyệt.
+      * **Cơ chế SLA Tự Động Hủy Đơn (Auto-Cancel on Timeout)**: Nếu Điều hành không phản hồi đề xuất từ chối của Điều phối trong khung thời gian quy định (mặc định 15 phút, có thể cấu hình từ 5 đến 120 phút tại Cài đặt tiệm), hệ thống quét nền (Background Sweep) sẽ **tự động duyệt hủy đơn và hoàn tiền 100%** cho khách hàng để đảm bảo trải nghiệm dịch vụ.
+    * **Xác nhận thanh toán Lần 2 & Kích hoạt Giao Ship**:
+      * Đối với đơn đặt cọc, sau khi cắm hoa hoàn tất, khách hàng chuyển khoản phần tiền còn lại (Lần 2).
+      * Khi khách gửi ảnh chuyển khoản lần 2, hệ thống tự động gửi **Thông báo Hộp việc khẩn cấp (Urgency cao)** và gắn **Badge cảnh báo màu đỏ** trên Thẻ đơn đồng thời cho cả Điều hành và Điều phối.
+      * Nút **"Xác nhận đã nhận tiền (Lần 2)"** xuất hiện trên Thẻ đơn trong Tab Điều phối và Tab Theo dõi. Sau khi bấm xác nhận, nút **"Giao Ship"** lập tức được mở khóa (unblock) để giao hàng ngay.
+      * Điều hành có thể phân quyền linh hoạt qua chính sách `balance_payment_trigger_policy`: *Cho phép thêm Điều phối xác nhận lần 2* (mặc định) hoặc *Chỉ Điều hành mới được duyệt tiền*.
+    * **Chính sách 3 Lớp Bắt buộc Ảnh (Ảnh thành phẩm & Ảnh người nhận)**:
+      * Điều hành có thể cấu hình tại Cài đặt Cửa hàng (`/ho-so` hoặc `/the-chao` -> Cài đặt) và từng Bộ sưu tập:
+        * `Không bắt buộc ảnh thành phẩm (QC)`: Bỏ qua bước chờ ảnh QC, không chặn giao hàng khi chưa có ảnh hoa.
+        * `Không bắt buộc ảnh người nhận`: Bỏ qua bước chờ ảnh giao nhận, cho phép hoàn tất đơn hàng trực tiếp.
+      * **Tính năng linh hoạt cho thợ & shipper**: Dù đã thiết lập *Không bắt buộc*, trên thẻ đơn của Điều phối **vẫn luôn hiển thị nút Tải ảnh/Chụp ảnh** để Điều phối, thợ cắm hoa hoặc tài xế có thể chủ động tải ảnh lưu hồ sơ hoặc gửi khách khi cần thiết.
+
+  * **Cơ chế kích hoạt bước tiếp theo (Theo dõi tiến độ)**: Điều hành có toàn quyền thiết lập ở 2 cấp độ:
+    1. *Cài đặt Cửa hàng (`/the-chao` -> Quản lý -> Cài đặt hoặc `/ho-so` -> Chính sách & Cam kết)*: Thiết lập cơ chế mặc định cho toàn tiệm với 2 lựa chọn: (a) *Cho phép thêm Điều phối xác nhận Nhận đơn* (linh hoạt: Điều hành duyệt tiền HOẶC Điều phối nhận đơn đều kích hoạt mở theo dõi tiến độ cho khách); hoặc (b) *Chỉ Điều hành xác nhận đã thanh toán* (chặt chẽ: Bắt buộc Điều hành phải xác nhận đã nhận tiền/cọc thì mới kích hoạt bước tiếp theo).
+    2. *Cài đặt Bộ sưu tập (`Tab 1: Bộ sưu tập` -> Chọn BST -> Chính sách & Cam kết)*: Cho phép từng bộ sưu tập linh hoạt kế thừa từ cài đặt cửa hàng (mặc định) hoặc ghi đè riêng (`Chỉ Điều hành xác nhận thanh toán` hoặc `Cho phép thêm Điều phối nhận đơn`).
 
 #### C. Hộp việc Thông minh (InboxButton)
-* **Thao tác**: Nhấp icon **Hộp việc** trên Header -> Nhấp vào thông báo cọc mới hoặc đổi giờ giao.
+* **Thao tác**: Nhấp icon **Hộp việc** trên Header -> Nhấp vào thông báo cọc mới, ảnh chuyển khoản lần 2, đề xuất hủy đơn hoặc đổi giờ giao.
 * **Kết quả**: Màn hình tự động chuyển đúng tab và cuộn mượt đến thẻ đơn cần xử lý.
 
 ### 5. Tình huống thực tế và lưu ý quan trọng
-* **Tình huống thực tế**: Khách hỏi mẫu khai trương 1.5 - 2 triệu. Sale mở *Gửi nhanh*, chọn bộ *Kệ Hoa Khai Trương*, điền tên khách, tạo link gửi Zalo. Khách chọn mẫu 1.8 triệu, gõ chữ băng rôn và quét QR cọc 500k.
-* **Lưu ý quan trọng**: Kiểm tra thanh **ShopProfileReadiness** trên Header. Nếu thiếu tài khoản ngân hàng nhận cọc, thanh sẽ phát cảnh báo. Thông báo cọc mới cập nhật tự động mỗi 20 giây.
-* **[CẦN XÁC MINH]**: Tên nhãn nút bấm chi tiết để chọn thợ cắm hoa ở Tab 5 chưa có văn bản cụ thể trong tài liệu nguồn.
+* **Tình huống thực tế**:
+  1. *Khách cọc đơn tiệm quá tải*: Khách chọn mẫu 2 triệu, cọc 600k. Đơn chuyển sang Tab 5 Điều phối. Do hết hoa mẫu này, Điều phối bấm **"Từ chối nhận đơn"** kèm lý do *"Hết hoa lan hồ điệp tím"*. Đơn chuyển sang chờ Điều hành duyệt hoàn tiền. Nếu Điều hành đang bận không online trong 15 phút, hệ thống tự động hủy đơn và ghi nhận hoàn tiền 600k, khách nhận thông báo xin lỗi kèm voucher đền bù.
+  2. *Thanh toán lần 2 để giao hàng*: Đơn cọc 50%, thợ cắm xong hoa gửi ảnh lên link khách. Khách xem ảnh ưng ý và chuyển nốt 50% còn lại rồi tải bill chuyển khoản. Thẻ đơn trên Tab Điều phối sáng badge đỏ *"Đã có bill CK lần 2"*. Điều phối bấm **"Xác nhận đã nhận tiền (Lần 2)"**, nút **"Giao Ship"** mở sáng, Điều phối gán tài xế xuất giao ngay lập tức mà không cần chờ kế toán duyệt.
+* **Lưu ý quan trọng**:
+  * Kiểm tra thanh **ShopProfileReadiness** trên Header. Nếu thiếu tài khoản ngân hàng nhận cọc, thanh sẽ phát cảnh báo.
+  * Thông báo cọc mới cập nhật tự động mỗi 20 giây.
+  * Nút **Xác nhận Nhận đơn** và **Từ chối nhận đơn** chỉ hiển thị khi có Điều phối/Điều hành và đơn hàng đã có cọc hoặc ảnh bill hợp lệ.
+  * Thời gian chờ duyệt hủy tự động mặc định là **15 phút**, có thể điều chỉnh từ **5 đến 120 phút** trong Cài đặt tiệm.
 
 ### 6. Các chức năng liên quan
 * **Đơn Hàng (`/don-hang`)**, **Sản Phẩm & Giá (`/san-pham`)**, **Hồ Sơ Cửa Hàng (`/ho-so`)**.

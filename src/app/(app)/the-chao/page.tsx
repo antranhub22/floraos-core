@@ -53,6 +53,22 @@ export default function TheChaoPage() {
     { refreshInterval: 20_000 }
   )
   const pendingCancelCount = cancellationList.data?.data.length ? cancellationList.data.data.length : null
+
+  // Đếm đơn chờ Điều phối xác nhận bill lần 2 để hiển thị badge cảnh báo trên tab Điều phối
+  const coordinatorBoardData = useApi<{ data: Array<{ paid_vnd: number; total_vnd: number; greeting_sessions: Array<{ status?: string }> }> }>(
+    can("R3") || can("R4") || can("R5") ? "/api/v1/greeting-card/coordinator-board" : null,
+    { refreshInterval: 20_000 }
+  )
+  const pendingBalanceConfirmCount = coordinatorBoardData.data?.data
+    ? coordinatorBoardData.data.data.filter(
+        (o) =>
+          o.paid_vnd > 0 &&
+          o.paid_vnd < o.total_vnd &&
+          o.greeting_sessions.some((s) => s.status === "PAYMENT_REPORTED")
+      ).length
+    : null
+  const coordinatorBadge = pendingBalanceConfirmCount && pendingBalanceConfirmCount > 0 ? pendingBalanceConfirmCount : null
+
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Từ Hộp việc: mở đúng tab rồi cuộn tới đúng thẻ đơn (chờ dữ liệu tab tải xong tối đa ~4 giây)
@@ -91,7 +107,12 @@ export default function TheChaoPage() {
     { id: "tracking", icon: GitMerge, label: dict.greetingCard.tabs.tracking },
     { id: "sales", icon: Send, label: dict.greetingCard.tabs.sales, ...(sessionCount !== null ? { badge: sessionCount } : {}) },
     { id: "payment", icon: ShieldCheck, label: dict.greetingCard.tabs.operation, ...(pendingCancelCount !== null ? { badge: pendingCancelCount } : {}) },
-    { id: "coordinator", icon: Sparkles, label: dict.greetingCard.tabs.coordination },
+    {
+      id: "coordinator",
+      icon: Sparkles,
+      label: dict.greetingCard.tabs.coordination,
+      ...(coordinatorBadge !== null ? { badge: coordinatorBadge, badgeTone: "warning" as const } : {}),
+    },
   ] satisfies TabItem[]).filter((t) => allowed[t.id as ActiveTab])
   // Tab đang chọn bị ẩn (không đủ quyền) → mở tab đầu tiên được phép
   const shownTab: ActiveTab = allowed[activeTab] ? activeTab : ((tabs[0]?.id as ActiveTab | undefined) ?? activeTab)

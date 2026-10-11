@@ -2,10 +2,11 @@ import type { TenantContext } from "@/core/tenancy"
 import { log } from "@/core/observability/log"
 import { BackgroundSweepRepository } from "../infra/background-sweep-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
-import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { CancellationRepository } from "../infra/cancellation-repository"
+import { parsePaymentPolicy, DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES } from "../domain/brochure-payment-policy"
 import { NOTIFY_EVENTS, type NotifyEvent } from "../domain/customer-notifications"
 import {
-  AUTO_CANCEL_REASON, PAYMENT_TIMEOUT_REASON, RETRY_BACKOFF_MS, RETRY_WINDOW_MS, STALE_SENDING_MS, holdAction,
+  AUTO_CANCEL_REASON, AUTO_CONFIRM_PAYMENT_GRACE_MS, PAYMENT_TIMEOUT_REASON, RETRY_BACKOFF_MS, RETRY_WINDOW_MS, STALE_SENDING_MS, holdAction,
 } from "../domain/background-sweep"
 import {
   resolveEffectiveStepTimeoutPolicy,
@@ -14,6 +15,7 @@ import {
   formatTimeoutDuration,
 } from "../domain/step-timeout-policy"
 import { notifyOrderEvent, queueOrderNotification } from "./notify-customer"
+import { adminConfirmBrochurePayment } from "./confirm-brochure-payment"
 
 const HOLD_LOOKBACK_MS = 7 * 86_400_000
 
@@ -23,6 +25,7 @@ export interface SweepResult {
   reminded: number
   cancelled: number
   sessionsExpired: number
+  autoConfirmed: number
 }
 
 /** Ngữ cảnh "hệ thống" cho thao tác tự động — audit ghi rõ nguồn, không mang năng lực của ai. */
@@ -32,7 +35,8 @@ function systemContext(organizationId: string): TenantContext {
 
 /**
  * Một vòng quét: (1) tin kẹt → lỗi, (2) gửi lại tin lỗi có giới hạn, (3) nhắc/huỷ đơn quá hạn giữ,
- * (4) quét và huỷ/thu hồi các phiên quá hạn mở link hoặc quá hạn chọn mẫu theo chính sách.
+ * (4) tự động xác nhận chuyển khoản sau 15 phút khi có bill,
+ * (5) quét và huỷ/thu hồi các phiên quá hạn mở link hoặc quá hạn chọn mẫu theo chính sách.
  * Không bao giờ ném lỗi ra ngoài — lỗi từng đơn được ghi log, vòng sau làm tiếp.
  */
 export async function runBackgroundSweep(
@@ -40,7 +44,7 @@ export async function runBackgroundSweep(
   repo = new BackgroundSweepRepository(),
   payments = new BrochurePaymentRepository(),
 ): Promise<SweepResult> {
-  const result: SweepResult = { staleFailed: 0, retried: 0, reminded: 0, cancelled: 0, sessionsExpired: 0 }
+  const result: SweepResult = { staleFailed: 0, retried: 0, reminded: 0, cancelled: 0, sessionsExpired: 0, autoConfirmed: 0 }
 
   result.staleFailed = await repo.failStaleSending(new Date(now.getTime() - STALE_SENDING_MS))
 
@@ -83,6 +87,29 @@ export async function runBackgroundSweep(
     }
   }
 
+  // Quét các đơn khách đã gửi bill chuyển khoản quá 15 phút chưa được duyệt -> Tự động xác nhận
+  const autoConfirmCutoff = new Date(now.getTime() - AUTO_CONFIRM_PAYMENT_GRACE_MS)
+  for (const o of await repo.listPendingPaymentProofOrders(autoConfirmCutoff)) {
+    try {
+      await adminConfirmBrochurePayment(
+        systemContext(o.organization_id),
+        o.id,
+        {
+          confirmationType: "AUTO_SYSTEM_15M",
+          reference: "AUTO_SYSTEM_15M",
+          note: "Hệ thống tự động xác nhận chuyển khoản sau 15 phút (có ảnh bill hợp lệ)",
+        },
+        payments
+      )
+      result.autoConfirmed += 1
+    } catch (error) {
+      log.warn("greeting_card.auto_confirm_payment_skipped", {
+        organizationId: o.organization_id, feature: "greeting-card", orderId: o.id,
+        message: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
   // Quét các phiên Thẻ chào quá hạn mở link hoặc quá hạn chọn mẫu
   for (const s of await repo.listPendingSessions(new Date(now.getTime() - HOLD_LOOKBACK_MS))) {
     try {
@@ -114,6 +141,45 @@ export async function runBackgroundSweep(
         message: error instanceof Error ? error.message : String(error),
       })
     }
+  }
+
+  // 6. Quét các yêu cầu từ chối nhận đơn của Điều phối quá hạn chờ Điều hành duyệt (mặc định 15 phút) -> Tự động hủy
+  try {
+    const cancellationRepo = new CancellationRepository()
+    // Lấy rộng: tất cả PENDING từ ≥ 5 phút trước (mức cấu hình thấp nhất cho phép).
+    // Kiểm chính xác từng bản ghi theo policy cụ thể của từng tiệm ở bước dưới.
+    const MIN_TIMEOUT_MINUTES = 5
+    const expiredCutoff = new Date(now.getTime() - MIN_TIMEOUT_MINUTES * 60_000)
+    const expiredRejections = await cancellationRepo.listExpiredCoordinatorRejections(expiredCutoff)
+    for (const req of expiredRejections) {
+      try {
+        const policy = parsePaymentPolicy(req.organization?.settings)
+        const timeoutMinutes = policy.cancellationApprovalTimeoutMinutes ?? DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES
+        const threshold = new Date(req.created_at.getTime() + timeoutMinutes * 60_000)
+        if (now >= threshold) {
+          await cancellationRepo.autoApproveExpired(req.organization_id, req.id, now, timeoutMinutes)
+          result.cancelled += 1
+          log.info("greeting_card.cancellation_auto_approved_timeout", {
+            organizationId: req.organization_id,
+            feature: "greeting-card",
+            requestId: req.id,
+            orderId: req.order_id,
+          })
+        }
+      } catch (error) {
+        log.warn("greeting_card.cancellation_auto_approve_skipped", {
+          organizationId: req.organization_id,
+          feature: "greeting-card",
+          requestId: req.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+  } catch (error) {
+    log.warn("greeting_card.sweep_cancellations_failed", {
+      feature: "greeting-card",
+      message: error instanceof Error ? error.message : String(error),
+    })
   }
 
   return result

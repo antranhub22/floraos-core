@@ -276,4 +276,54 @@ export class CancellationRepository {
       take: 200,
     })
   }
+
+  /**
+   * Quét các yêu cầu từ chối nhận đơn từ Điều phối đang chờ duyệt (PENDING)
+   * và đã quá thời gian timeout (created_at <= before).
+   */
+  async listExpiredCoordinatorRejections(before: Date, take = 50) {
+    return this.db.greeting_messages.findMany({
+      where: {
+        kind: "CANCELLATION_REQUEST",
+        sender_role: "COORDINATOR",
+        created_at: { lte: before },
+        payload: { path: ["status"], equals: "PENDING" },
+      },
+      select: {
+        id: true,
+        organization_id: true,
+        order_id: true,
+        sender_id: true,
+        body: true,
+        payload: true,
+        created_at: true,
+        organization: { select: { settings: true } },
+      },
+      orderBy: { created_at: "asc" },
+      take,
+    })
+  }
+
+  /**
+   * Tự động duyệt hủy đơn theo đề xuất của Điều phối khi quá hạn N phút (SLA timeout).
+   */
+  async autoApproveExpired(
+    organizationId: string,
+    requestId: string,
+    now = new Date(),
+    timeoutMinutes = 15
+  ) {
+    const sysCtx: TenantContext = {
+      organizationId,
+      workspaceId: "system",
+      userId: "system:cancellation-timeout",
+      branchId: null,
+      capabilities: new Set(["R6", "R10", "R11"]),
+    }
+    return this.decide(sysCtx, {
+      requestId,
+      approve: true,
+      note: `Hệ thống tự động phê duyệt hủy đơn do Điều hành không phản hồi trong thời gian quy định (${timeoutMinutes} phút).`,
+    })
+  }
 }

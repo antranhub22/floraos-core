@@ -46,9 +46,14 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
   // Determine initial step based on session status
   const [step, setStep] = useState<CustomerStep>(() => {
     if (initialData.order) {
-      // Điều hành đã nhận tiền (đủ hoặc cọc) → Theo dõi; chưa nhận / chờ báo giá → bước thanh toán
+      const triggerPolicy = initialData.trackingTriggerPolicy ?? "PAYMENT_OR_COORDINATOR"
+      const isAccepted =
+        initialData.order.status === "CONFIRMED" ||
+        initialData.order.status === "PROCESSING" ||
+        (Boolean(initialData.order.productionStatus) && initialData.order.productionStatus !== "WAITING")
       const paid = initialData.order.totalVnd > 0 && initialData.order.paidVnd > 0
-      return paid || initialData.order.status === "CANCELLED" ? "TRACKING" : "PAYMENT"
+      const canTrigger = triggerPolicy === "PAYMENT_ONLY" ? paid : paid || isAccepted
+      return canTrigger || initialData.order.status === "CANCELLED" ? "TRACKING" : "PAYMENT"
     }
     if (session.status === "SELECTED" && session.productSnapshot) return "ORDER_FORM"
     return "SWIPING"
@@ -89,7 +94,7 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
       : null
   )
 
-  // Chưa chuyển khoản thì không vào Theo dõi; màn thanh toán chỉ hiện nút Theo dõi khi đã được phép
+  // Chưa chuyển khoản/chưa nhận đơn thì không vào Theo dõi; màn thanh toán chỉ hiện nút Theo dõi khi đã được phép
   const [trackingUnlocked, setTrackingUnlocked] = useState(() => {
     const order = initialData.order
     return !!order && canViewTracking({
@@ -97,6 +102,9 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
       paidVnd: order.paidVnd,
       hasPaymentQr: !!initialData.payment,
       cancelled: order.status === "CANCELLED",
+      orderStatus: order.status,
+      productionStatus: order.productionStatus,
+      triggerPolicy: initialData.trackingTriggerPolicy,
     })
   })
 
@@ -263,6 +271,7 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
             requirePaymentProof={
               (catalog.filters as Record<string, unknown> | null | undefined)?.requirePaymentProof !== false
             }
+            triggerPolicy={initialData.trackingTriggerPolicy}
             onGoToTracking={() => {
               setTrackingUnlocked(true)
               setStep("TRACKING")

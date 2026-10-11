@@ -230,7 +230,7 @@ export async function loadTrackingDataset(
         : (currentStepId === "STEP_3_FILLING_FORM" ? "Đã đặt đơn — chờ khách chuyển khoản" : currentStepDef.title),
       orderStatus: order.status,
       sessionStatus: session?.status || null,
-      customerReportedPaid: session?.status === "PAYMENT_REPORTED",
+      customerReportedPaid: session?.status === "PAYMENT_REPORTED" || Boolean(session?.payment_proof_balance_asset_id),
       paymentProofUrl: session?.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id) ?? null : null,
       paymentProofBalanceUrl: session?.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id) ?? null : null,
       productionStatus: order.production_status,

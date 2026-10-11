@@ -193,6 +193,10 @@ export function CoordinatorBrochureTab() {
           onOpen={openModal}
           workOf={workOf}
           now={now}
+          onRefresh={() => {
+            loadOrders()
+            void work.refresh()
+          }}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -233,9 +237,16 @@ export function CoordinatorBrochureTab() {
             status: modal.order.status,
             productionStatus: modal.order.production_status,
             deliveryStatus: modal.order.delivery_status,
+            paymentProofUrl: workOf.get(modal.order.id)?.paymentProofUrl || modal.order.payment_proof_url,
+            paymentProofBalanceUrl: workOf.get(modal.order.id)?.paymentProofBalanceUrl || modal.order.payment_proof_balance_url,
             createdAt: modal.order.created_at,
           }}
           onClose={() => setModal({ type: "none" })}
+          onCancellationProposed={() => {
+            setModal({ type: "none" })
+            loadOrders()
+            void work.refresh()
+          }}
         />
       )}
       {modal.type !== "none" && modal.type !== "detail" && (

@@ -87,5 +87,39 @@ export class BackgroundSweepRepository {
       }),
     ])
   }
+
+  /**
+   * Đơn Thẻ chào khách đã báo chuyển khoản (PAYMENT_REPORTED) có ảnh uỷ nhiệm chi,
+   * chưa thu tiền (paid_vnd = 0) và đã quá 15 phút tính từ lúc báo chuyển khoản.
+   */
+  async listPendingPaymentProofOrders(before: Date, take = 100) {
+    return this.db.orders.findMany({
+      where: {
+        source: "BROCHURE",
+        status: "DRAFT",
+        paid_vnd: 0,
+        total_vnd: { gt: 0 },
+        greeting_sessions: {
+          some: {
+            status: "PAYMENT_REPORTED",
+            payment_proof_asset_id: { not: null },
+            updated_at: { lte: before },
+          },
+        },
+      },
+      select: {
+        id: true,
+        organization_id: true,
+        total_vnd: true,
+        paid_vnd: true,
+        greeting_sessions: {
+          where: { status: "PAYMENT_REPORTED", payment_proof_asset_id: { not: null } },
+          select: { id: true, payment_proof_asset_id: true, updated_at: true },
+          take: 1,
+        },
+      },
+      take,
+    })
+  }
 }
 

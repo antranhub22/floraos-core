@@ -9,6 +9,8 @@ import {
   dispatchBrochureShipping,
   uploadBrochureRecipientPhoto,
   markBrochureDeliveryFailed,
+  coordinatorAcceptBrochureOrder,
+  coordinatorRejectBrochureOrder,
 } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 import { DELIVERY_FAILURE_REASONS, FAILURE_NOTE_MAX } from "@/modules/greeting-card/domain/delivery-failure"
@@ -64,3 +66,12 @@ export const recipientPhotoPOST = coordinatorHandler(GREETING_CARD_CAPABILITY.de
 
 /** POST /api/v1/greeting-card/orders/[id]/delivery-failed — shipper không giao được, hẹn giao lại */
 export const deliveryFailedPOST = coordinatorHandler(GREETING_CARD_CAPABILITY.deliveryManage, failedSchema, markBrochureDeliveryFailed)
+
+const acceptSchema = z.object({ note: z.string().trim().max(500).optional() })
+const rejectSchema = z.object({ reason: z.string().trim().min(1, "Nhập lý do từ chối nhận đơn").max(500) })
+
+/** POST /api/v1/greeting-card/orders/[id]/accept — Điều phối tiếp nhận đơn hàng */
+export const acceptOrderPOST = coordinatorHandler(GREETING_CARD_CAPABILITY.assignFlorist, acceptSchema, coordinatorAcceptBrochureOrder)
+
+/** POST /api/v1/greeting-card/orders/[id]/reject — Điều phối từ chối nhận đơn (gửi đề xuất hủy/hoàn tiền lên Điều hành) */
+export const rejectOrderPOST = coordinatorHandler(GREETING_CARD_CAPABILITY.assignFlorist, rejectSchema, coordinatorRejectBrochureOrder)

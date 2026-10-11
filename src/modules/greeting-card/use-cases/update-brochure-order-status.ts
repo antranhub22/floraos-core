@@ -10,6 +10,8 @@ import {
   DELIVERY_FAILURE_LABEL, deliveryFailureError, parseRedeliveryFee, redeliveryFeeFor, type DeliveryFailureReason,
 } from "../domain/delivery-failure"
 import { DeliveryFailureRepository } from "../infra/delivery-failure-repository"
+import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
+import { CancellationRepository } from "../infra/cancellation-repository"
 
 /** Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). */
 async function loadForAction(
@@ -20,15 +22,20 @@ async function loadForAction(
 ) {
   const order = await repo.findBrochureOrder(ctx, orderId)
   if (!order) throw notFound()
-  const blocker = coordinatorActionBlocker(action, {
-    status: order.status,
-    productionStatus: order.production_status,
-    deliveryStatus: order.delivery_status,
-  })
-  if (blocker) throw conflict(blocker)
-  // Chính sách thu tiền của tiệm (cọc trước khi cắm, thu đủ trước khi giao)
+  // Chính sách thu tiền và kiểm định ảnh của tiệm
   const shop = await new GreetingCardRepository().getShopProfile(ctx.organizationId)
-  const moneyBlocker = paymentGateBlocker(action, parsePaymentPolicy(shop.settings), {
+  const policy = parsePaymentPolicy(shop.settings)
+  const blocker = coordinatorActionBlocker(
+    action,
+    {
+      status: order.status,
+      productionStatus: order.production_status,
+      deliveryStatus: order.delivery_status,
+    },
+    { skipPhoto: policy.requireProductPhotoQC === false }
+  )
+  if (blocker) throw conflict(blocker)
+  const moneyBlocker = paymentGateBlocker(action, policy, {
     totalVnd: Number(order.total_vnd),
     paidVnd: Number(order.paid_vnd),
   })
@@ -166,4 +173,61 @@ export async function markBrochureDeliveryFailed(
   })
   queueOrderNotification(ctx.organizationId, order.id, "DELIVERY_FAILED")
   return result
+}
+
+/**
+ * Điều phối thẩm định và xác nhận TIẾP NHẬN đơn hàng.
+ * Đổi trạng thái xưởng sang ASSIGNED/ARRANGING, ghi chú tiếp nhận và gửi thông báo cho khách.
+ */
+export async function coordinatorAcceptBrochureOrder(
+  ctx: TenantContext,
+  orderId: string,
+  input: { note?: string | undefined } = {},
+  repo = new BrochureOrderRepository()
+) {
+  const order = await repo.findBrochureOrder(ctx, orderId)
+  if (!order) throw notFound()
+  if (order.status === "CANCELLED") throw conflict("Đơn hàng đã huỷ, không thể tiếp nhận")
+  const result = await repo.applyProgress(ctx, order, {
+    eventType: "COORDINATOR_ACCEPTED",
+    productionStatus: "ASSIGNED",
+    orderStatus: order.status === "DRAFT" ? "CONFIRMED" : order.status,
+    noteAppend: `[Điều phối tiếp nhận] ${input.note?.trim() || "Xác nhận xưởng nhận đơn"}`,
+  })
+  queueOrderNotification(ctx.organizationId, order.id, "ORDER_ACCEPTED")
+  return result
+}
+
+/**
+ * Điều phối THẨM ĐỊNH VÀ TỪ CHỐI đơn hàng (do hết hoa, quá tải, ngoài giờ/khu vực giao).
+ * Huỷ đơn, ghi nhận lý do từ chối và kích hoạt quy trình hoàn tiền 100% cho khách hàng.
+ */
+export async function coordinatorRejectBrochureOrder(
+  ctx: TenantContext,
+  orderId: string,
+  input: { reason: string },
+  cancellationRepo = new CancellationRepository(),
+  repo = new BrochureOrderRepository()
+) {
+  const order = await repo.findBrochureOrder(ctx, orderId)
+  if (!order) throw notFound()
+  if (order.status === "CANCELLED") throw conflict("Đơn hàng đã được huỷ trước đó")
+  const reasonText = input.reason?.trim() || "Điều phối từ chối nhận đơn (quá tải hoặc không đáp ứng mẫu hoa)"
+  
+  // Điều phối từ chối nhận đơn -> gửi Đề xuất Hủy & Hoàn tiền toàn phần lên Điều hành phê duyệt
+  const result = await cancellationRepo.createProposal(ctx, {
+    orderId,
+    senderRole: "COORDINATOR",
+    proposal: {
+      type: Number(order.paid_vnd) > 0 ? "FULL_REFUND" : "CANCEL_ONLY",
+      reason: `[Điều phối từ chối nhận đơn] ${reasonText}`,
+      refundAmountVnd: Number(order.paid_vnd),
+      note: "Điều phối xác định không thể cung ứng đơn hàng theo yêu cầu khách.",
+    },
+  })
+  return {
+    success: true,
+    message: "Đã gửi yêu cầu từ chối nhận đơn và hoàn tiền tới Điều hành xét duyệt.",
+    proposalId: result.id,
+  }
 }

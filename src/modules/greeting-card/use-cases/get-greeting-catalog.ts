@@ -15,6 +15,7 @@ import { collectImageAssetIds, toCatalogProduct } from "./brochure-product-mappe
 import { toPublicCatalogFilters } from "../domain/greeting-template-registry"
 import type { ShopContact } from "../domain/shop-contact"
 import { getShopContact } from "./get-shop-contact"
+import { parsePaymentPolicy, resolveTrackingTriggerPolicy, type TrackingTriggerPolicy } from "../domain/brochure-payment-policy"
 
 export type CustomerBrochureView = {
   status: "ACTIVE"
@@ -23,11 +24,13 @@ export type CustomerBrochureView = {
   shop: ShopContact
   catalog: { id: string; code: string; name: string; description: string | null; filters?: Record<string, unknown> | null }
   products: GreetingCatalogProduct[]
-  order: { id: string; code: string; status: string; totalVnd: number; paidVnd: number } | null
+  order: { id: string; code: string; status: string; productionStatus?: string | null; totalVnd: number; paidVnd: number } | null
   /** Khu vực giao + phí của tiệm để khách chọn trên form. */
   shipping: ShippingConfig
   /** Hướng dẫn chuyển khoản cho đơn hiện có — `null` khi chưa có đơn hoặc tiệm chưa cấu hình. */
   payment: BrochurePaymentInstructions | null
+  /** Cơ chế kích hoạt bước tiếp theo (PAYMENT_ONLY hoặc PAYMENT_OR_COORDINATOR). */
+  trackingTriggerPolicy?: TrackingTriggerPolicy
 }
 
 /**
@@ -72,11 +75,14 @@ export async function getGreetingCatalogForCustomer(
         id: session.order.id,
         code: session.order.code,
         status: session.order.status,
+        productionStatus: session.order.production_status ?? null,
         totalVnd: Number(session.order.total_vnd),
         paidVnd: Number(session.order.paid_vnd),
       }
     : null
   const payment = order && order.status !== "CANCELLED" ? paymentInstructionsFor(shop.settings, { ...order, createdAt: session.order?.created_at, pricingRuleRef: session.order?.pricing_rule_ref }, order.code) : null
+  const paymentPolicy = parsePaymentPolicy(shop.settings)
+  const trackingTriggerPolicy = resolveTrackingTriggerPolicy(paymentPolicy, session.catalog.filters)
 
   return {
     status: "ACTIVE",
@@ -99,6 +105,7 @@ export async function getGreetingCatalogForCustomer(
     shipping: withPaymentCodeFlag(shop.settings),
     order,
     payment,
+    trackingTriggerPolicy,
   }
 }
 

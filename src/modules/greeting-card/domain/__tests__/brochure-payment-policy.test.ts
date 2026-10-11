@@ -7,6 +7,7 @@ import {
   paymentHoldUntil,
   quoteBlocker,
   resolveRequirePaymentProof,
+  resolveTrackingTriggerPolicy,
   serializePaymentPolicy,
 } from "../brochure-payment-policy"
 
@@ -17,6 +18,10 @@ describe("parsePaymentPolicy", () => {
       requirePaidBeforeProduction: false,
       requireFullBeforeDispatch: false,
       requirePaymentProof: true,
+      trackingTriggerPolicy: "PAYMENT_OR_COORDINATOR",
+      requireProductPhotoQC: true,
+      requireRecipientPhoto: true,
+      cancellationApprovalTimeoutMinutes: 15,
     })
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 150 } }).depositPercent).toBe(0)
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 30, require_full_before_dispatch: true } })).toMatchObject({
@@ -25,6 +30,9 @@ describe("parsePaymentPolicy", () => {
       requirePaymentProof: true,
     })
     expect(parsePaymentPolicy({ brochure_policy: { require_payment_proof: false } }).requirePaymentProof).toBe(false)
+    expect(parsePaymentPolicy({ brochure_policy: { require_product_photo_qc: false } }).requireProductPhotoQC).toBe(false)
+    expect(parsePaymentPolicy({ brochure_policy: { require_recipient_photo: false } }).requireRecipientPhoto).toBe(false)
+    expect(parsePaymentPolicy({ brochure_policy: { cancellation_approval_timeout_minutes: 30 } }).cancellationApprovalTimeoutMinutes).toBe(30)
   })
 })
 
@@ -42,12 +50,13 @@ describe("paymentGateBlocker / cancelBlocker", () => {
   it("chặn cắm hoa khi chưa thu đồng nào, chặn giao khi chưa thu đủ", () => {
     expect(paymentGateBlocker("assign-florist", policy, { totalVnd: 100, paidVnd: 0 })).toMatch(/cắm hoa/)
     expect(paymentGateBlocker("assign-florist", policy, { totalVnd: 100, paidVnd: 30 })).toBeNull()
-    expect(paymentGateBlocker("dispatch-shipping", policy, { totalVnd: 100, paidVnd: 30 })).toMatch(/thu đủ/)
+    expect(paymentGateBlocker("dispatch-shipping", policy, { totalVnd: 100, paidVnd: 30 })).toMatch(/lần 2/)
     expect(paymentGateBlocker("recipient-photo", policy, { totalVnd: 100, paidVnd: 0 })).toBeNull()
   })
-  it("Cơ chế 2 (requireFullBeforeDispatch: false): không chặn giao hàng dù mới cọc", () => {
+  it("Cơ chế 2 (requireFullBeforeDispatch: false): đơn đặt cọc vẫn phải đợi xác nhận lần 2 trước khi giao ship", () => {
     const lax = { ...policy, requireFullBeforeDispatch: false }
-    expect(paymentGateBlocker("dispatch-shipping", lax, { totalVnd: 100, paidVnd: 30 })).toBeNull()
+    expect(paymentGateBlocker("dispatch-shipping", lax, { totalVnd: 100, paidVnd: 30 })).toMatch(/lần 2/)
+    expect(paymentGateBlocker("dispatch-shipping", lax, { totalVnd: 100, paidVnd: 100 })).toBeNull()
   })
   it("không huỷ đơn đã giao hoặc đã huỷ", () => {
     expect(cancelBlocker({ status: "CONFIRMED", deliveryStatus: "DELIVERED" })).not.toBeNull()
@@ -84,11 +93,30 @@ describe("hạn thanh toán + ghi chính sách", () => {
       requirePaidBeforeProduction: true,
       requireFullBeforeDispatch: true,
       requirePaymentProof: true,
+      requireProductPhotoQC: true,
+      requireRecipientPhoto: true,
+      cancellationApprovalTimeoutMinutes: 15,
       holdMinutes: 15,
       autoCancelUnpaid: true,
       paymentTimeoutMinutes: 30,
+      trackingTriggerPolicy: "PAYMENT_OR_COORDINATOR" as const,
+      // balancePaymentTriggerPolicy kế thừa từ trackingTriggerPolicy khi không cài riêng
+      balancePaymentTriggerPolicy: "PAYMENT_OR_COORDINATOR" as const,
     }
     expect(parsePaymentPolicy({ brochure_policy: serializePaymentPolicy(p) })).toEqual(p)
+  })
+  it("balancePaymentTriggerPolicy có thể cài riêng độc lập với trackingTriggerPolicy", () => {
+    const p = {
+      depositPercent: 50,
+      requirePaidBeforeProduction: false,
+      requireFullBeforeDispatch: true,
+      requirePaymentProof: true,
+      trackingTriggerPolicy: "PAYMENT_OR_COORDINATOR" as const,
+      balancePaymentTriggerPolicy: "PAYMENT_ONLY" as const,
+    }
+    const parsed = parsePaymentPolicy({ brochure_policy: serializePaymentPolicy(p) })
+    expect(parsed.trackingTriggerPolicy).toBe("PAYMENT_OR_COORDINATOR")
+    expect(parsed.balancePaymentTriggerPolicy).toBe("PAYMENT_ONLY")
   })
   it("hạn thanh toán thắng giữ đơn khi tính hạn hiện cho khách", () => {
     const createdAt = new Date("2026-10-08T03:00:00Z")
@@ -109,6 +137,27 @@ describe("resolveRequirePaymentProof", () => {
     expect(resolveRequirePaymentProof(policy, {})).toBe(true)
     expect(resolveRequirePaymentProof(policy, null)).toBe(true)
     expect(resolveRequirePaymentProof({ ...policy, requirePaymentProof: false }, {})).toBe(false)
+  })
+})
+
+describe("resolveTrackingTriggerPolicy", () => {
+  const defaultPolicy = {
+    depositPercent: 0,
+    requirePaidBeforeProduction: false,
+    requireFullBeforeDispatch: false,
+    requirePaymentProof: true,
+    trackingTriggerPolicy: "PAYMENT_OR_COORDINATOR" as const,
+  }
+
+  it("ưu tiên ghi đè ở bộ sưu tập khi có chỉ định PAYMENT_ONLY hoặc PAYMENT_OR_COORDINATOR", () => {
+    expect(resolveTrackingTriggerPolicy(defaultPolicy, { trackingTriggerPolicy: "PAYMENT_ONLY" })).toBe("PAYMENT_ONLY")
+    expect(resolveTrackingTriggerPolicy({ ...defaultPolicy, trackingTriggerPolicy: "PAYMENT_ONLY" }, { trackingTriggerPolicy: "PAYMENT_OR_COORDINATOR" })).toBe("PAYMENT_OR_COORDINATOR")
+  })
+
+  it("kế thừa từ cài đặt cửa hàng khi bộ sưu tập không ghi đè", () => {
+    expect(resolveTrackingTriggerPolicy(defaultPolicy, {})).toBe("PAYMENT_OR_COORDINATOR")
+    expect(resolveTrackingTriggerPolicy({ ...defaultPolicy, trackingTriggerPolicy: "PAYMENT_ONLY" }, {})).toBe("PAYMENT_ONLY")
+    expect(resolveTrackingTriggerPolicy(defaultPolicy, null)).toBe("PAYMENT_OR_COORDINATOR")
   })
 })
 

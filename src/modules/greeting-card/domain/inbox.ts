@@ -237,13 +237,13 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
           tab: "coordinator",
           urgency: 950,
         })
-      } else if (i.currentStepId === "STEP_5_PAYMENT_CONFIRMED") {
+      } else if (i.currentStepId === "STEP_5_PAYMENT_CONFIRMED" || (i.currentStepId === "STEP_4_PAYMENT_PENDING" && isReported)) {
         out.push({
           ...base,
           id: `assign:${i.id}`,
           kind: "ASSIGN",
-          title: "Phân công thợ cắm hoa",
-          detail: `${code(i)} · ${i.productName}`,
+          title: "Phân công thợ cắm hoa — Thẩm định nhận đơn",
+          detail: `${code(i)} · ${i.productName} · Đã có bill chuyển khoản · Nhận đơn hoặc từ chối hoàn tiền`,
           tab: "coordinator",
           urgency: 750,
         })
@@ -269,15 +269,27 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
             urgency: 720,
           })
         } else if (hasDeposit) {
-          out.push({
-            ...base,
-            id: `wait-second-pay:${i.id}`,
-            kind: "WAITING_SECOND_PAYMENT",
-            title: "Chờ khách thanh toán lần 2 để giao hoa",
-            detail: `${code(i)} · Đã có ảnh thành phẩm, còn nợ ${balance.toLocaleString("vi-VN")} đ`,
-            tab: "coordinator",
-            urgency: 280,
-          })
+          if (isReported) {
+            out.push({
+              ...base,
+              id: `confirm-second-pay:${i.id}`,
+              kind: "CONFIRM_PAYMENT",
+              title: "Khách đã chuyển tiền Lần 2 — Xác nhận để giao hoa",
+              detail: `${code(i)} · Đã có bill CK lần 2 · Cần xác nhận ${balance.toLocaleString("vi-VN")} đ để mở Giao Ship`,
+              tab: "coordinator",
+              urgency: 920,
+            })
+          } else {
+            out.push({
+              ...base,
+              id: `wait-second-pay:${i.id}`,
+              kind: "WAITING_SECOND_PAYMENT",
+              title: "Chờ khách thanh toán lần 2 để giao hoa",
+              detail: `${code(i)} · Đã có ảnh thành phẩm, còn nợ ${balance.toLocaleString("vi-VN")} đ`,
+              tab: "coordinator",
+              urgency: 280,
+            })
+          }
         } else {
           out.push({
             ...base,
