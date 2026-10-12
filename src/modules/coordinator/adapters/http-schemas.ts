@@ -158,6 +158,7 @@ export const assignPartnerSchema = z.object({
   partnerId: id,
   notes: text(1000).optional(),
   overrideCapacity: z.boolean().optional(),
+  agreedCraftFeeVnd: z.number().int().nonnegative().max(1_000_000_000).optional(),
 })
 
 export const productionUpdateSchema = z.object({

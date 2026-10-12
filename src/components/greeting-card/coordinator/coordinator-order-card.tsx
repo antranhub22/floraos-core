@@ -31,12 +31,12 @@ export interface BrochureOrder {
     description: string
     quantity: number
     unit_price_vnd: number
-    metadata?: { name?: string; imageUrl?: string }
+    metadata?: { name?: string; imageUrl?: string; flowersSummary?: string | null | undefined }
   }>
   greeting_sessions: Array<{
     id: string
     send_code: string
-    product_snapshot?: { name?: string; imageUrl?: string }
+    product_snapshot?: { name?: string; imageUrl?: string; flowersSummary?: string | null | undefined }
     /** Phiên có trạng thái PAYMENT_REPORTED = khách đã báo chuyển khoản lần 2 */
     status?: string
   }>

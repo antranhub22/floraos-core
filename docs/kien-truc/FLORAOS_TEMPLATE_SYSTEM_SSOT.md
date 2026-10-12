@@ -315,7 +315,9 @@ src/
 | `exception-resolution-card.tsx` | Exception Card (T22) | Thẻ ghi nhận và xử lý sự cố phát sinh (hết hoa, đổi mẫu, trễ shipper) | `orderCode`, `exceptionCode`, `type`, `severity`, `description`, `resolutionPlan` |
 | `order-closure-learning-card.tsx` | Closure & SLA Card (T25/T26/T27) | Thẻ nghiệm thu đơn, đánh giá SLA, giải ngân thợ/xưởng và trích xuất bài học vận hành | `orderCode`, `customerRating`, `completionTime`, `slaMet`, `payoutAmount`, `learningNotes` |
 | `payment-ledger-modal.tsx` | Ledger Modal (T17/F14) | Modal sổ thu của đơn: tổng tiền, đã thu, còn phải thu + lịch sử dòng thu (cọc/thu nốt/hoàn), ghi thêm dòng thu mới | `isOpen`, `order`, `onClose`, `onRecorded` |
-
+| `florist-job-card.tsx` | Florist Job Card | Thẻ gia công cắm hoa gửi thợ/xưởng: ảnh mẫu, giá gia công gợi ý 50% (cho phép sửa), nguyên phụ liệu BOM, thiệp, che SĐT khách (PII), hạn cắm xong, Copy ảnh Clipboard & Copy text Zalo | `orderCode`, `recipeTitle`, `unitPriceVnd`, `targetReadyTime`, `sampleImageUrl`, `flowers`, `onConfirmAcceptance`, `onCancelOrder` |
+| `confirm-craft-acceptance-modal.tsx` | Confirmation Modal | Modal xác nhận nhận đơn và chốt giá gia công cuối cùng ghi nhận chi phí đơn hàng, tự động tính tỷ lệ % giá bán và cảnh báo biên lợi nhuận > 60% | `open`, `onOpenChange`, `orderCode`, `unitPriceVnd`, `suggestedCraftFeeVnd`, `partners`, `onConfirm` |
+| `cancel-florist-order-modal.tsx` | Cancellation Modal | Modal hủy không nhận đơn gia công kèm 5 Quick-Tags lý do chọn nhanh + ghi chú lưu vết kiểm toán | `open`, `onOpenChange`, `orderCode`, `recipeTitle`, `onConfirmCancel` |
 
 ---
 

@@ -8,6 +8,9 @@ import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guida
 import { CoordinatorOrderBriefCard } from "@/components/templates/coordinator/coordinator-order-brief-card"
 import { PartnerProductCard } from "@/components/templates/coordinator/partner-product-card"
 import { PartnerProductionCard } from "@/components/templates/coordinator/partner-production-card"
+import { FloristJobCard } from "@/components/templates/coordinator/florist-job-card"
+import { ConfirmCraftAcceptanceModal } from "@/components/templates/coordinator/confirm-craft-acceptance-modal"
+import { CancelFloristOrderModal } from "@/components/templates/coordinator/cancel-florist-order-modal"
 import { AIQCReportCard } from "@/components/templates/coordinator/ai-qc-report-card"
 import { DeliveryPODCard } from "@/components/templates/coordinator/delivery-pod-card"
 import { ExceptionResolutionCard } from "@/components/templates/coordinator/exception-resolution-card"
@@ -117,6 +120,10 @@ export function ControlTowerDashboard({
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false)
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [isCraftAcceptModalOpen, setIsCraftAcceptModalOpen] = useState(false)
+  const [isCraftCancelModalOpen, setIsCraftCancelModalOpen] = useState(false)
+  const [suggestedFeeForAccept, setSuggestedFeeForAccept] = useState(0)
+  const [partners, setPartners] = useState<import("./coordinator-api").CoordinationPartner[]>([])
   const [resolutionDrafts, setResolutionDrafts] = useState<Record<string, string>>({})
   const [newException, setNewException] = useState({ type: "CUSTOMER_CHANGE", severity: "MEDIUM", description: "" })
   const [cancelReason, setCancelReason] = useState("")
@@ -134,7 +141,7 @@ export function ControlTowerDashboard({
     : []
 
   const refresh = useCallback(
-    () =>
+    () => {
       coordinatorApi
         .listOrders()
         .then((list) => {
@@ -142,7 +149,13 @@ export function ControlTowerDashboard({
           setLoadError(null)
         })
         .catch((error: unknown) => setLoadError(errorMessage(error)))
-        .finally(() => setLoading(false)),
+        .finally(() => setLoading(false))
+
+      coordinatorApi
+        .listPartners()
+        .then((partnerList) => setPartners(partnerList))
+        .catch(() => {})
+    },
     []
   )
 
@@ -217,6 +230,26 @@ export function ControlTowerDashboard({
       })
     )
     setIsAssignModalOpen(false)
+  }
+
+  const handleCraftAccept = async (data: { partnerId: string; agreedCraftFeeVnd: number; notes?: string | undefined }) => {
+    if (!selectedOrder) return
+    const updated = await coordinatorApi.assignPartner(selectedOrder.id, {
+      partnerId: data.partnerId,
+      agreedCraftFeeVnd: data.agreedCraftFeeVnd,
+      ...(data.notes ? { notes: data.notes } : {}),
+    })
+    applyUpdate(updated)
+    setNotice(`Đã chốt nhận đơn #${updated.orderCode} với giá gia công ${fmtVnd(data.agreedCraftFeeVnd)}.`)
+    setIsCraftAcceptModalOpen(false)
+  }
+
+  const handleCraftCancel = async (reason: string) => {
+    if (!selectedOrder) return
+    const updated = await coordinatorApi.cancel(selectedOrder.id, reason)
+    applyUpdate(updated)
+    setNotice(`Đã hủy nhận đơn gia công #${updated.orderCode}.`)
+    setIsCraftCancelModalOpen(false)
   }
 
   const handleProductionUpdate = async (params: {
@@ -690,6 +723,11 @@ export function ControlTowerDashboard({
                     <span>
                       Xưởng: <strong>{selectedOrder.partnerName ?? "Chưa phân công"}</strong> · Tiến độ{" "}
                       <strong>{selectedOrder.productionProgress}%</strong>
+                      {typeof selectedOrder.partnerPayoutVnd === "number" && (
+                        <span className="ml-2 text-primary font-bold">
+                          · Giá chốt: {fmtVnd(selectedOrder.partnerPayoutVnd)}
+                        </span>
+                      )}
                     </span>
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => setIsAssignModalOpen(true)} className="text-xs h-7 px-2.5 font-bold">
@@ -706,10 +744,12 @@ export function ControlTowerDashboard({
                       </Button>
                     </div>
                   </div>
-                  <PartnerProductionCard
+                  <FloristJobCard
                     orderCode={selectedOrder.orderCode}
                     recipeTitle={selectedOrder.productTitle}
+                    unitPriceVnd={selectedOrder.unitPriceVnd}
                     targetReadyTime={selectedOrder.deliveryTargetTime}
+                    deliveryTargetTime={selectedOrder.deliveryTargetTime}
                     sampleImageUrl={selectedOrder.sampleImageUrl}
                     flowers={bomFlowersOf(selectedOrder)}
                     foliage={selectedOrder.foliage}
@@ -718,8 +758,16 @@ export function ControlTowerDashboard({
                     cardMessage={selectedOrder.cardMessage}
                     partnerInstruction={selectedOrder.partnerInstruction}
                     partnerName={selectedOrder.partnerName ?? undefined}
+                    recipientName={selectedOrder.recipientName}
+                    recipientPhone={selectedOrder.recipientPhone}
+                    deliveryAddress={selectedOrder.deliveryAddress}
                     customFields={partnerVisibleCustomFields}
-                    onMarkReady={() => setIsProductionUpdateModalOpen(true)}
+                    onConfirmAcceptance={(suggestedFee) => {
+                      setSuggestedFeeForAccept(suggestedFee)
+                      setIsCraftAcceptModalOpen(true)
+                    }}
+                    onCancelOrder={() => setIsCraftCancelModalOpen(true)}
+                    onPrint={() => window.print()}
                   />
                 </div>
               )}
@@ -907,6 +955,24 @@ export function ControlTowerDashboard({
             order={selectedOrder}
             onClose={() => setIsPaymentModalOpen(false)}
             onRecorded={(order) => applyUpdate(order)}
+          />
+          <ConfirmCraftAcceptanceModal
+            open={isCraftAcceptModalOpen}
+            onOpenChange={setIsCraftAcceptModalOpen}
+            orderCode={selectedOrder.orderCode}
+            recipeTitle={selectedOrder.productTitle}
+            unitPriceVnd={selectedOrder.unitPriceVnd}
+            suggestedCraftFeeVnd={suggestedFeeForAccept || Math.round(selectedOrder.unitPriceVnd * 0.5)}
+            partners={partners}
+            currentPartnerId={selectedOrder.partner?.id ?? null}
+            onConfirm={handleCraftAccept}
+          />
+          <CancelFloristOrderModal
+            open={isCraftCancelModalOpen}
+            onOpenChange={setIsCraftCancelModalOpen}
+            orderCode={selectedOrder.orderCode}
+            recipeTitle={selectedOrder.productTitle}
+            onConfirmCancel={handleCraftCancel}
           />
         </>
       )}

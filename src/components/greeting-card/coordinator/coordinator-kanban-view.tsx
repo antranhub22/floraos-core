@@ -131,6 +131,7 @@ export function CoordinatorKanbanView({
                         cardMessage: o.card_message,
                         productName: snapshot?.name || o.items[0]?.description || "Hoa tươi theo mẫu",
                         productImageUrl: snapshot?.imageUrl,
+                        flowersSummary: snapshot?.flowersSummary,
                         totalVnd: o.total_vnd,
                         paidVnd: o.paid_vnd,
                         balanceVnd: Math.max(0, o.total_vnd - o.paid_vnd),

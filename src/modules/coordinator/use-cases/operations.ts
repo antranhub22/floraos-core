@@ -94,7 +94,7 @@ async function openExceptionInTx(
 export async function assignPartner(
   ctx: TenantContext,
   orderIdOrCode: string,
-  input: { partnerId: string; notes?: string | undefined; overrideCapacity?: boolean | undefined }
+  input: { partnerId: string; notes?: string | undefined; overrideCapacity?: boolean | undefined; agreedCraftFeeVnd?: number | undefined }
 ): Promise<CoordinatorOrderView> {
   const orderId = await runCoordinatorTx(async (tx) => {
     const repo = new CoordinatorRepository(tx)
@@ -116,24 +116,36 @@ export async function assignPartner(
 
     const note = input.notes?.trim()
     const nextAction = `Xưởng ${partner.name} đang cắm theo BOM`
+    const coordinationUpdates: Parameters<CoordinatorRepository["updateCoordination"]>[2] = {
+      partner_id: partner.id,
+      next_action: nextAction,
+    }
+    if (typeof input.agreedCraftFeeVnd === "number" && input.agreedCraftFeeVnd >= 0) {
+      coordinationUpdates.partner_payout_vnd = input.agreedCraftFeeVnd
+    }
+
     if (stage === "IN_PRODUCTION") {
-      await repo.updateCoordination(ctx, row.id, { partner_id: partner.id, next_action: nextAction })
+      await repo.updateCoordination(ctx, row.id, coordinationUpdates)
     } else {
-      await transition(ctx, repo, row, "IN_PRODUCTION", `Phân công ${partner.name}`, { partner_id: partner.id }, nextAction)
+      await transition(ctx, repo, row, "IN_PRODUCTION", `Phân công ${partner.name}`, coordinationUpdates, nextAction)
     }
+
+    const meta = (row.coordination!.metadata ?? {}) as Record<string, unknown>
+    const nextMeta: Record<string, unknown> = { ...meta }
     if (note) {
-      // ĐP-1.7 (26/09/2026): trước bản này, ghi chú phân công cho ĐỐI TÁC bị
-      // nối luôn vào `internal_note` — vốn là ghi chú NỘI BỘ của điều phối
-      // viên, không phải chỉ dẫn gửi cho xưởng. Từ nay lưu riêng vào
-      // `order_coordinations.metadata.partnerInstruction`; view trả riêng
-      // trường `partnerInstruction`. Ghi chú kiểu cũ đã nối vào `internal_note`
-      // trước bản này giữ nguyên, không hồi tố.
-      const meta = (row.coordination!.metadata ?? {}) as Record<string, unknown>
-      await repo.updateCoordination(ctx, row.id, {
-        metadata: { ...meta, partnerInstruction: note },
-      })
+      nextMeta.partnerInstruction = note
     }
-    await audit(ctx, tx, "coordinator.partner.assign", row.id, { partnerId: row.coordination!.partner_id }, { partnerId: partner.id })
+    if (typeof input.agreedCraftFeeVnd === "number" && input.agreedCraftFeeVnd >= 0) {
+      nextMeta.agreedCraftFeeVnd = input.agreedCraftFeeVnd
+    }
+    if (note || typeof input.agreedCraftFeeVnd === "number") {
+      await repo.updateMetadata(ctx, row.id, nextMeta)
+    }
+
+    await audit(ctx, tx, "coordinator.partner.assign", row.id, { partnerId: row.coordination!.partner_id }, {
+      partnerId: partner.id,
+      agreedCraftFeeVnd: input.agreedCraftFeeVnd,
+    })
     return row.id
   })
   return getOrderView(ctx, orderId)

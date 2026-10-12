@@ -231,6 +231,7 @@ export function CoordinatorBrochureTab() {
             cardMessage: modal.order.card_message,
             productName: modal.order.greeting_sessions[0]?.product_snapshot?.name || modal.order.items[0]?.description || "Hoa tươi theo mẫu",
             productImageUrl: modal.order.greeting_sessions[0]?.product_snapshot?.imageUrl,
+            flowersSummary: modal.order.greeting_sessions[0]?.product_snapshot?.flowersSummary,
             totalVnd: modal.order.total_vnd,
             paidVnd: modal.order.paid_vnd,
             balanceVnd: Math.max(0, modal.order.total_vnd - modal.order.paid_vnd),
