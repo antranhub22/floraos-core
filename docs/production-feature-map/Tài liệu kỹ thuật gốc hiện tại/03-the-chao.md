@@ -56,6 +56,18 @@ Khi khách nhận link từ nhân viên:
   - Thông báo: *"Khách [Chị Mai] yêu cầu đổi giờ giao sang 15h"*.
   - Cảnh báo: *"Yêu cầu hủy đơn & hoàn cọc cần duyệt"*.
 
+### 2.4. Quản trị Đơn Hàng & Cổng Thanh Toán 2 Đợt (Tab Điều hành)
+- **Đơn đặt cọc (Deposit Plan):** Khách cọc trước tỷ lệ quy định (vd: 50%), phần còn lại thu trước khi giao hoặc sau khi giao theo chính sách của tiệm.
+- **Cơ chế Bỏ qua duyệt ảnh:**
+  - Nếu tiệm có tải ảnh thành phẩm: Khách có 10 phút đếm ngược trên link theo dõi để bấm duyệt ảnh trước khi mở nút thu tiền lần 2.
+  - Nếu tiệm không tải ảnh thành phẩm (đơn giao gấp, khách quen): Hệ thống tự động bỏ qua bước duyệt ảnh, hiển thị ngay nút **`Thu lần 2`** khi hoa đã cắm xong (`READY`).
+
+### 2.5. Quyền Quyết Định Giao Ship của Điều Phối (Tab Điều phối)
+- Điều phối viên có toàn quyền kiểm soát và đẩy tiến độ đơn:
+  - Khi xưởng cắm xong, Điều phối có nút **`Xác nhận thu đủ (Lần 2)`** trực tiếp trên thẻ đơn.
+  - Cho phép xác nhận ngay cả khi khách chưa gửi bill qua web (trả tiền mặt, COD shipper thu, hoặc chuyển khoản riêng).
+  - Ngay sau khi xác nhận, nút **`Giao Ship`** lập tức được mở khóa để gán tài xế mà không bị chặn lại.
+
 ---
 
 ## 3. Luồng nghiệp vụ & Tình huống sử dụng thực tế
