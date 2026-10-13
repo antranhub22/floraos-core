@@ -47,7 +47,8 @@ export function AdminOrderActionDialog({
   const isPhotoApproved = order.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
   const productPhotoQc = order.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
   const isAutoApproved = !!productPhotoQc && (Date.now() >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
-  const canCollectBeforeDispatch = isReady && (isPhotoApproved || isAutoApproved)
+  // Nếu không tải ảnh lên (!productPhotoQc), coi như tiệm bỏ qua duyệt ảnh -> cho phép thu lần 2 ngay khi cắm xong (isReady)
+  const canCollectBeforeDispatch = isReady && (!productPhotoQc || isPhotoApproved || isAutoApproved)
   const canCollectAfterDelivery = order.delivery_status === "DELIVERED"
   const isReported = order.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED")
 

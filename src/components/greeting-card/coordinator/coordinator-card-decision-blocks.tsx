@@ -132,39 +132,57 @@ export function CoordinatorCardDecisionBlocks({
 
       {/* 3. Khối Nhắc khách Thanh toán Lần 2 — Hoa xong nhưng khách chưa báo bill lần 2 */}
       {isDepositOrder && isReadyForDispatch && !hasBalanceReported && (
-        <div className="flex flex-col gap-1.5 p-2.5 rounded-xl border border-warning/40 bg-warning-bg/30">
+        <div className="flex flex-col gap-2 p-2.5 rounded-xl border border-warning/40 bg-warning-bg/30">
           <div className="flex items-center justify-between text-caption">
             <span className="font-bold text-warning flex items-center gap-1">
-              <Banknote size={14} /> Chờ khách thanh toán Lần 2:
+              <Banknote size={14} /> Chờ thanh toán Lần 2:
             </span>
             <span className="font-extrabold text-foreground">{balanceVnd.toLocaleString("vi-VN")}đ</span>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const sendCode = order.greeting_sessions[0]?.send_code
-              const trackingUrl = sendCode && typeof window !== "undefined" ? `${window.location.origin}/b/${sendCode}` : null
-              const skippedPhoto = !order.delivery_window // fallback
-              const msg = customerSecondPaymentReminderMessage({
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const sendCode = order.greeting_sessions[0]?.send_code
+                const trackingUrl = sendCode && typeof window !== "undefined" ? `${window.location.origin}/b/${sendCode}` : null
+                const skippedPhoto = !order.delivery_window // fallback
+                const msg = customerSecondPaymentReminderMessage({
+                  orderCode: order.code,
+                  balanceVnd,
+                  trackingUrl,
+                  skippedPhoto,
+                })
+                if (typeof navigator !== "undefined") {
+                  void navigator.clipboard.writeText(msg).then(() => {
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2500)
+                  })
+                }
+              }}
+              className="h-8 text-caption font-bold gap-1 border-warning/40 text-warning hover:bg-warning/10 w-full"
+            >
+              {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+              <span>{copied ? "Đã chép Zalo" : "Chép tin nhắc lần 2"}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => onOpen({
+                type: "confirm-balance",
+                orderId: order.id,
                 orderCode: order.code,
                 balanceVnd,
-                trackingUrl,
-                skippedPhoto,
-              })
-              if (typeof navigator !== "undefined") {
-                void navigator.clipboard.writeText(msg).then(() => {
-                  setCopied(true)
-                  setTimeout(() => setCopied(false), 2500)
-                })
-              }
-            }}
-            className="h-8 text-caption font-bold gap-1 border-warning/40 text-warning hover:bg-warning/10 w-full"
-          >
-            {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
-            <span>{copied ? "Đã chép tin nhắn Zalo" : "Chép tin nhắc thanh toán Lần 2"}</span>
-          </Button>
+                proofUrl: order.payment_proof_balance_url ?? null,
+              })}
+              className="h-8 text-caption font-bold gap-1 bg-success hover:bg-success/90 text-white w-full shadow-xs"
+            >
+              <CheckCircle2 size={13} />
+              <span>Xác nhận thu đủ (Lần 2)</span>
+            </Button>
+          </div>
         </div>
       )}
     </>

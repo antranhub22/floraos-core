@@ -68,7 +68,8 @@ export function AdminOrderTable({
             const isPhotoApproved = o.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
             const productPhotoQc = o.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
             const isAutoApproved = !!productPhotoQc && (Date.now() >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
-            const canCollectBalanceBeforeDispatch = isReady && (isPhotoApproved || isAutoApproved)
+            // Nếu không tải ảnh lên (!productPhotoQc), coi như tiệm bỏ qua duyệt ảnh -> cho phép thu lần 2 ngay khi cắm xong (isReady)
+            const canCollectBalanceBeforeDispatch = isReady && (!productPhotoQc || isPhotoApproved || isAutoApproved)
             const canCollectBalanceAfterDelivery = o.delivery_status === "DELIVERED"
             const isReportedPaid = balance > 0 && o.status !== "CANCELLED" && o.greeting_sessions[0]?.status === "PAYMENT_REPORTED"
 
