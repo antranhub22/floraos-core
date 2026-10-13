@@ -24,6 +24,7 @@ import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
 import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
+import { DispatchReminderPolicyCard } from "@/components/coordinator/dispatch-reminder-policy-card"
 import { useI18n } from "@/lib/i18n"
 import type { Route } from "next"
 
@@ -329,6 +330,9 @@ export default function CaiDatTiemPage() {
           </form>
         )}
       </div>
+
+      {/* 4. Nhắc Nghiệp Vụ Điều Phối (M0..M5) */}
+      <DispatchReminderPolicyCard canEdit={canEdit} />
     </div>
   )
 }

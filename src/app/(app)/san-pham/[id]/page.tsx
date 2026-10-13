@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { driveThumbProxySrc } from "@/components/greeting-card/drive-thumb-image"
 import { AiProductEnrichmentModal } from "@/components/products/ai-product-enrichment-modal"
+import { ProductReminderOverrideCard } from "@/components/coordinator/product-reminder-override-card"
+import { useSession } from "@/lib/session"
 import {
   ProductOverviewCard,
   ProductDesignCard,
@@ -36,6 +38,8 @@ export default function ProductDetailPage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
   const productId = params.id
+  const { can } = useSession()
+  const canEdit = can("F2") || can("H4")
 
   const [product, setProduct] = useState<ProductDetail | null>(null)
   const [loi, setLoi] = useState<string | null>(null)
@@ -181,6 +185,12 @@ export default function ProductDetailPage() {
                 <span className="font-semibold text-text">{product.status}</span>
               </div>
             </Card>
+
+            {/* Nhóm 6: Cấu hình mốc nhắc việc Điều phối riêng cho mẫu hoa này */}
+            <ProductReminderOverrideCard
+              productId={productId}
+              canEdit={canEdit}
+            />
 
             {/* Nhóm 6: Lối tắt tác vụ AI */}
             <Card className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-primary/5 border-primary/20">

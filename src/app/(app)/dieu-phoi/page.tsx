@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import { Radio, RefreshCw, Plus, LayoutDashboard, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ControlTowerDashboard } from "@/components/coordinator/control-tower-dashboard"
+import { CoordinatorReminderBar } from "@/components/coordinator/coordinator-reminder-bar"
 import { CoordinatorBrochureTab } from "@/components/greeting-card/coordinator/coordinator-brochure-tab"
 import { UserMenu } from "@/components/layout/user-menu"
 import { useSession } from "@/lib/session"
@@ -58,6 +59,9 @@ export default function DieuPhoiPage() {
           <UserMenu initials={userInitials} />
         </div>
       </div>
+
+      {/* ── Thanh Nhắc Nghiệp Vụ Điều Phối (M0..M5) ─────────────────── */}
+      <CoordinatorReminderBar />
 
       {/* Coordinator Tabs Switcher */}
       <div className="flex items-center gap-2 border-b border-border bg-surface px-4 py-1 rounded-xl">
