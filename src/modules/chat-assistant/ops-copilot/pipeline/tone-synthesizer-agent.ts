@@ -158,7 +158,7 @@ function templateFallback(intent: ParsedIntent, facts: KnowledgeFactSheet): Poli
   }
 
   const stepsFormatted = facts.steps.map((s) => {
-    let cleanAction = purifyDevJargon(s.actionText).replace(/^Bước\s*\d+\s*[-:]\s*/i, "").trim()
+    const cleanAction = purifyDevJargon(s.actionText).replace(/^Bước\s*\d+\s*[-:]\s*/i, "").trim()
     if (cleanAction.includes(":")) {
       const parts = cleanAction.split(":")
       const header = parts[0]?.trim()

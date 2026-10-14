@@ -60,6 +60,7 @@ export function AiProductEnrichmentModal({
   useEffect(() => {
     if (!isOpen) return
     const { values: initValues, previewUrl } = extractInitialFormValues(initialProduct)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- nạp lại form từ sản phẩm (props) mỗi lần mở hộp thoại, chủ đích
     setValues(initValues)
     setImagePreview(previewUrl)
     setImageFile(null)
