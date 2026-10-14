@@ -133,3 +133,18 @@ export function verifyBillAgainstOrder(input: VerifyBillInput): PaymentProofAnal
     analyzedAt: new Date().toISOString(),
   }
 }
+
+/**
+ * Bill có mã giao dịch đã xuất hiện trên ảnh bill của đơn khác (khách dùng lại bill cũ) → nghi vấn,
+ * không bao giờ được tự duyệt (PO 14/10/2026).
+ */
+export function markDuplicateBill(analysis: PaymentProofAnalysisResult, duplicate: boolean): PaymentProofAnalysisResult {
+  if (!duplicate) return analysis
+  return {
+    ...analysis,
+    status: "SUSPICIOUS",
+    confidenceScore: Math.min(analysis.confidenceScore, 0.3),
+    reasons: [...analysis.reasons, `Mã giao dịch ${analysis.extracted.transactionCode ?? ""} đã được dùng cho một ảnh chuyển khoản khác`],
+  }
+}
+
