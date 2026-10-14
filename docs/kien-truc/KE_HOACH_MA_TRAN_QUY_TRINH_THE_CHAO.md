@@ -49,6 +49,7 @@ Phân hệ **Thẻ Chào Mẫu Hoa** hiện đang vận hành theo chuỗi 9 bư
 
 ### Trụ cột 3: Tự Động Hóa Trước, Con Người Can Thiệp Sau (Automate by Default)
 * Tự động duyệt tiền cọc nếu Webhook ngân hàng khớp mã đơn hoặc AI phân tích bill đạt độ tin cậy tuyệt đối (100% Match).
+  * *Hiện trạng (soát 14/10/2026):* vòng quét nền (`runBackgroundSweep` → `shouldAutoConfirmProof`) chỉ tự ghi nhận khi tiệm bật `autoApprovePaymentWithProof`, đã qua `autoApprovePaymentWithProofMinutes` kể từ lúc khách báo, và kết quả AI là `MATCHED`. Mặc định tắt → Điều hành duyệt tay. Bill lệch/không đọc được luôn chờ người duyệt.
 * Chỉ điều hướng cảnh báo khẩn cấp cho Điều hành khi phát hiện nghi vấn gian lận/sai lệch số tiền.
 * Khách duyệt ảnh theo cơ chế đếm ngược 10 phút: Khách không phản hồi thì hệ thống tự động nghiệm thu (Auto-pass) để shipper đi giao kịp giờ.
 

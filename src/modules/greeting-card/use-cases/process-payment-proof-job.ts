@@ -55,7 +55,7 @@ export async function processPaymentProofVisionJob(
     }
 
     // 2. Lấy dữ liệu ảnh từ storage qua Repo
-    const asset = await repo.findAssetForVerification(assetId)
+    const asset = await repo.findAssetForVerification(organizationId, assetId)
 
     if (!asset) return null
 
@@ -124,7 +124,7 @@ export async function processPaymentProofVisionJob(
 
     // 4. Lưu kết quả phân tích vào Asset Metadata
     const currentMeta = (asset.metadata as Record<string, unknown>) || {}
-    await repo.updateAssetMetadata(assetId, {
+    await repo.updateAssetMetadata(organizationId, assetId, {
       ...currentMeta,
       ai_analysis: analysis,
     })

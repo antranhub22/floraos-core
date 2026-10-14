@@ -90,7 +90,7 @@ export function CoordinatorReminderCard({
               MILESTONE_BADGE_STYLE[reminder.milestone]
             }`}
           >
-            {reminder.milestone}: {reminder.title}
+            {reminder.title}
           </span>
           <button
             type="button"

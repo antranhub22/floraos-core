@@ -6,7 +6,8 @@ import { CancellationRepository } from "../infra/cancellation-repository"
 import { parsePaymentPolicy, DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES } from "../domain/brochure-payment-policy"
 import { NOTIFY_EVENTS, type NotifyEvent } from "../domain/customer-notifications"
 import {
-  AUTO_CANCEL_REASON, AUTO_CONFIRM_PAYMENT_GRACE_MS, PAYMENT_TIMEOUT_REASON, RETRY_BACKOFF_MS, RETRY_WINDOW_MS, STALE_SENDING_MS, holdAction,
+  AUTO_CANCEL_REASON, MIN_AUTO_CONFIRM_PROOF_MS, PAYMENT_TIMEOUT_REASON, RETRY_BACKOFF_MS, RETRY_WINDOW_MS, STALE_SENDING_MS,
+  holdAction, shouldAutoConfirmProof,
 } from "../domain/background-sweep"
 import {
   resolveEffectiveStepTimeoutPolicy,
@@ -35,7 +36,7 @@ function systemContext(organizationId: string): TenantContext {
 
 /**
  * Một vòng quét: (1) tin kẹt → lỗi, (2) gửi lại tin lỗi có giới hạn, (3) nhắc/huỷ đơn quá hạn giữ,
- * (4) tự động xác nhận chuyển khoản sau 15 phút khi có bill,
+ * (4) tự xác nhận tiền từ ảnh bill CHỈ khi tiệm bật và AI đối soát khớp (`shouldAutoConfirmProof`),
  * (5) quét và huỷ/thu hồi các phiên quá hạn mở link hoặc quá hạn chọn mẫu theo chính sách.
  * Không bao giờ ném lỗi ra ngoài — lỗi từng đơn được ghi log, vòng sau làm tiếp.
  */
@@ -87,24 +88,19 @@ export async function runBackgroundSweep(
     }
   }
 
-  // Quét các đơn khách đã gửi bill chuyển khoản quá 15 phút chưa được duyệt -> Tự động xác nhận
-  const autoConfirmCutoff = new Date(now.getTime() - AUTO_CONFIRM_PAYMENT_GRACE_MS)
-  for (const o of await repo.listPendingPaymentProofOrders(autoConfirmCutoff)) {
+  // Bill khách đã gửi: chỉ tự xác nhận khi tiệm bật và AI đối soát khớp; còn lại chờ Điều hành duyệt
+  for (const o of await repo.listPendingPaymentProofOrders(new Date(now.getTime() - MIN_AUTO_CONFIRM_PROOF_MS))) {
+    if (!shouldAutoConfirmProof(o, parsePaymentPolicy(o.settings), now)) continue
     try {
-      await adminConfirmBrochurePayment(
-        systemContext(o.organization_id),
-        o.id,
-        {
-          confirmationType: "AUTO_SYSTEM_15M",
-          reference: "AUTO_SYSTEM_15M",
-          note: "Hệ thống tự động xác nhận chuyển khoản sau 15 phút (có ảnh bill hợp lệ)",
-        },
-        payments
-      )
+      await adminConfirmBrochurePayment(systemContext(o.organizationId), o.id, {
+        confirmationType: "AUTO_SYSTEM_15M",
+        reference: "AUTO_SYSTEM_15M",
+        note: "Hệ thống tự động xác nhận chuyển khoản (tiệm bật tự duyệt, bill khớp tài khoản và số tiền)",
+      }, payments)
       result.autoConfirmed += 1
     } catch (error) {
       log.warn("greeting_card.auto_confirm_payment_skipped", {
-        organizationId: o.organization_id, feature: "greeting-card", orderId: o.id,
+        organizationId: o.organizationId, feature: "greeting-card", orderId: o.id,
         message: error instanceof Error ? error.message : String(error),
       })
     }

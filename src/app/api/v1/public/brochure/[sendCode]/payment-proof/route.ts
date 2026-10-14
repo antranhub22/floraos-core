@@ -8,7 +8,7 @@ import { uploadPaymentProof } from "@/modules/greeting-card/use-cases/upload-pay
 export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
   await enforceRateLimit(request, { scope: "brochure-proof", limit: 5, windowMs: 60_000 })
   const { sendCode } = await context.params
-  assertBrochureOwner(request, sendCode)
+  await assertBrochureOwner(request, sendCode)
 
   const formData = await request.formData()
   const file = formData.get("file")

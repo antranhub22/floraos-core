@@ -99,4 +99,36 @@ describe("uploadPaymentProof", () => {
       expect.objectContaining({ paymentProofBalanceAssetId: res.assetId })
     )
   })
+
+  function repoWithOrder(order: Record<string, unknown>) {
+    return {
+      getPublicSessionBySendCode: vi.fn().mockResolvedValue({
+        id: "session-1",
+        organization_id: "org-1",
+        send_code: "T01-001",
+        status: "PAYMENT_REPORTED",
+        order_id: "order-1",
+        order,
+        catalog: { is_active: true },
+      }),
+      updateSession: vi.fn().mockResolvedValue({}),
+      createPaymentProofAsset: vi.fn().mockResolvedValue({ id: "mock-asset-id" }),
+    } as unknown as GreetingCardRepository
+  }
+  const jpeg = () => new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0])], { type: "image/jpeg" })
+
+  it("từ chối khi đơn đã huỷ hoặc đã thanh toán đủ", async () => {
+    await expect(
+      uploadPaymentProof({ sendCode: "T01-001", file: jpeg(), purpose: "DEPOSIT" }, repoWithOrder({ status: "CANCELLED", total_vnd: 1_000_000, paid_vnd: 0 }))
+    ).rejects.toThrow(/đã huỷ/i)
+    await expect(
+      uploadPaymentProof({ sendCode: "T01-001", file: jpeg(), purpose: "BALANCE" }, repoWithOrder({ status: "CONFIRMED", total_vnd: 1_000_000, paid_vnd: 1_000_000 }))
+    ).rejects.toThrow(/thanh toán đủ/i)
+  })
+
+  it("đã nhận cọc thì ảnh mới luôn là Lần 2 — không ghi đè chứng từ Lần 1", async () => {
+    const repo = repoWithOrder({ status: "CONFIRMED", total_vnd: 1_000_000, paid_vnd: 500_000 })
+    const res = await uploadPaymentProof({ sendCode: "T01-001", file: jpeg(), purpose: "DEPOSIT" }, repo)
+    expect(repo.updateSession).toHaveBeenCalledWith("session-1", { paymentProofBalanceAssetId: res.assetId })
+  })
 })

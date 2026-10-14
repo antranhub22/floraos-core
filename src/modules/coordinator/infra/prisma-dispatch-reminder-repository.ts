@@ -6,6 +6,7 @@
 
 import type { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/core/tenancy/infra/prisma"
+import { notFound } from "@/core/http/errors"
 import type {
   IDispatchReminderRepository,
   OrderWithReminderData,
@@ -212,15 +213,17 @@ export class PrismaDispatchReminderRepository implements IDispatchReminderReposi
       where: { id: productId, organization_id: organizationId },
       select: { attributes: true },
     })
+    // Mẫu hoa không thuộc cửa hàng này → 404, không bao giờ ghi sang cửa hàng khác
+    if (!product) throw notFound()
 
-    const existingAttrs = (product?.attributes as Record<string, unknown> | null) ?? {}
+    const existingAttrs = (product.attributes as Record<string, unknown> | null) ?? {}
     const updatedAttrs = {
       ...existingAttrs,
       coordinator_reminder_overrides: overrides,
     }
 
-    await prisma.products.update({
-      where: { id: productId },
+    await prisma.products.updateMany({
+      where: { id: productId, organization_id: organizationId },
       data: { attributes: updatedAttrs as unknown as Prisma.InputJsonValue },
     })
   }

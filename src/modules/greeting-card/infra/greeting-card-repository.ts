@@ -336,9 +336,9 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
     })
   }
 
-  async updateAssetMetadata(assetId: string, metadata: Record<string, unknown>) {
-    return this.db.assets.update({
-      where: { id: assetId },
+  async updateAssetMetadata(organizationId: string, assetId: string, metadata: Record<string, unknown>) {
+    return this.db.assets.updateMany({
+      where: { id: assetId, organization_id: organizationId },
       data: {
         metadata: metadata as unknown as Prisma.InputJsonValue,
       },
@@ -361,9 +361,9 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
     })
   }
 
-  async findAssetForVerification(assetId: string) {
-    return this.db.assets.findUnique({
-      where: { id: assetId },
+  async findAssetForVerification(organizationId: string, assetId: string) {
+    return this.db.assets.findFirst({
+      where: { id: assetId, organization_id: organizationId },
       select: { storage_key: true, mime_type: true, metadata: true },
     })
   }

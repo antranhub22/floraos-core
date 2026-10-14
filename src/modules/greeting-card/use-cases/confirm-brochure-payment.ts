@@ -28,7 +28,7 @@ export async function reportCustomerPayment(
 
   const paid = Number(session.order?.paid_vnd ?? 0)
   const owing = Number(session.order?.total_vnd ?? 0) - paid
-  const proofAssetId = input.proofAssetId?.trim() || undefined
+  const proofAssetId = await ownedProofAssetId(session.organization_id, sendCode, input.proofAssetId, repo)
 
   if (session.status === "ORDER_SUBMITTED") {
     await repo.updateSession(session.id, {
@@ -88,6 +88,7 @@ export async function adminConfirmBrochurePayment(
   const pct = plan?.depositPercent ?? policy.depositPercent
   const deposit = depositAmountVnd(total, pct)
   const isDepositOrder = pct > 0 && deposit < total
+  if (isDepositOrder && paid >= deposit && paid < total) assertBalanceCollectible(order, policy)
 
   let amountVnd = input.amountVnd
   if (amountVnd === undefined) {
@@ -168,6 +169,8 @@ export async function coordinatorConfirmBalancePayment(
   const balance = Math.max(0, total - paid)
   if (balance <= 0) throw conflict("Đơn hàng đã thanh toán đủ, không cần xác nhận lần 2")
   if (paid <= 0) throw conflict("Đơn hàng chưa có cọc, không thể xác nhận thanh toán lần 2")
+  const shop = await repo.getShopProfile(ctx.organizationId)
+  assertBalanceCollectible(order, policyForOrder(parsePaymentPolicy(shop.settings), order.pricing_rule_ref))
 
   // Lấy bằng chứng ảnh bill lần 2 từ phiên
   let evidenceAssetId: string | null = null
@@ -239,6 +242,55 @@ export async function coordinatorConfirmDepositPayment(
   })
   queueOrderNotification(ctx.organizationId, orderId, paymentNotifyEvent(result.balanceVnd))
   return result
+}
+
+/**
+ * Phần còn lại (Lần 2) của đơn đặt cọc chỉ được ghi nhận khi khách đã báo chuyển khoản, hoặc
+ * đơn đã tới bước được thu: thu trước giao → hoa xong và khách duyệt ảnh (tự duyệt sau 10 phút);
+ * thu sau giao → đã giao thành công (PO 10/10/2026).
+ */
+function assertBalanceCollectible(
+  order: {
+    production_status: string
+    delivery_status: string
+    greeting_sessions?: Array<{ status: string }>
+    qc_records?: Array<{ notes: string | null; created_at: Date }>
+  },
+  policy: { requireFullBeforeDispatch: boolean }
+) {
+  if (order.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED")) return
+  if (!policy.requireFullBeforeDispatch) {
+    if (order.delivery_status !== "DELIVERED") {
+      throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công.")
+    }
+    return
+  }
+  if (order.production_status !== "READY") {
+    throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Phần còn lại chỉ được thu sau khi xưởng hoàn thành cắm hoa và khách xác nhận ảnh.")
+  }
+  const hasPhotoApproved = order.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
+  const productPhotoQc = order.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
+  const isAutoApproved = !!productPhotoQc && Date.now() >= productPhotoQc.created_at.getTime() + 10 * 60_000
+  if (!hasPhotoApproved && !isAutoApproved) {
+    throw conflict("Đơn hàng đang chờ khách duyệt ảnh thành phẩm trước khi giao. Chưa thể ghi nhận thanh toán lần 2.")
+  }
+}
+
+/**
+ * Mã ảnh bill do khách gửi kèm chỉ được nhận khi đúng là ảnh khách vừa tải qua chính link này
+ * (cùng cửa hàng, cùng mã gửi) — chặn gắn ảnh của đơn/cửa hàng khác làm chứng từ.
+ */
+async function ownedProofAssetId(
+  organizationId: string,
+  sendCode: string,
+  raw: string | undefined,
+  repo: GreetingCardRepository
+): Promise<string | undefined> {
+  const id = raw?.trim()
+  if (!id) return undefined
+  const asset = await repo.findAssetForVerification(organizationId, id)
+  const meta = asset?.metadata as { source?: unknown; sendCode?: unknown } | null | undefined
+  return meta?.source === "BROCHURE_PAYMENT_PROOF" && meta.sendCode === sendCode ? id : undefined
 }
 
 /** Cửa hàng báo giá cho đơn đặt mẫu chưa niêm yết giá; sau đó khách thấy mã QR thanh toán. */

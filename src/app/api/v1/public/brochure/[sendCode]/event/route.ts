@@ -15,7 +15,7 @@ const bodySchema = z.object({
 export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
   await enforceRateLimit(request, { scope: "brochure-journey-event", limit: 240, windowMs: 10 * 60_000 })
   const { sendCode } = await context.params
-  assertBrochureOwner(request, sendCode)
+  await assertBrochureOwner(request, sendCode)
   const parsed = bodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ event: "Sự kiện không hợp lệ" })
   return jsonResponse(await recordCustomerJourneyEvent(sendCode, parsed.data))

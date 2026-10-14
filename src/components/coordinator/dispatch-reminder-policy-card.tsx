@@ -157,7 +157,7 @@ export function DispatchReminderPolicySection({ canEdit }: DispatchReminderPolic
         <Info size={15} className="text-primary shrink-0 mt-0.5" />
         <p className="text-caption text-text-muted leading-relaxed">
           Hệ thống sẽ tự động nhắc Điều phối viên thực hiện đúng nghiệp vụ tại mỗi mốc thời gian.
-          Mốc <strong>M4 (Dặn shipper chụp ảnh POD)</strong> kích hoạt ngay khi nhập SĐT shipper, không cần cấu hình thời gian.
+          Mốc <strong>Dặn shipper chụp ảnh lúc giao</strong> kích hoạt ngay khi nhập SĐT shipper, không cần cấu hình thời gian.
           Cấu hình theo từng mẫu hoa được thiết lập riêng tại trang Chi tiết sản phẩm.
         </p>
       </div>
@@ -244,7 +244,7 @@ export function DispatchReminderPolicyCard({ canEdit }: DispatchReminderPolicySe
         </div>
         <div>
           <h2 className="text-base font-extrabold text-text">
-            Nhắc Nghiệp Vụ Điều Phối (M0..M5)
+            Nhắc Nghiệp Vụ Điều Phối
           </h2>
           <p className="text-caption text-text-muted mt-0.5">
             Chuỗi mốc thời gian nhắc việc tự động kịp thời & chính xác — Đúng giờ · Đúng người · Đúng nghiệp vụ

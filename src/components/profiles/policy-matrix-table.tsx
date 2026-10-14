@@ -117,7 +117,7 @@ export function PolicyMatrixTable({ policy, onChange, disabled }: Props) {
               <PolicyRow
                 icon={<Clock size={17} className="text-foreground" />}
                 title="Tự động duyệt thanh toán khi có ảnh chụp bill"
-                description="Khách đã tải bill mà sau 15' chưa ai bấm duyệt, hệ thống tự động xác nhận để đơn vào cắm hoa kịp giờ."
+                description="Bill khách tải lên khớp đúng tài khoản và số tiền mà quá thời gian chọn chưa ai bấm duyệt, hệ thống tự xác nhận để đơn vào cắm hoa kịp giờ. Bill lệch hoặc không đọc được luôn chờ người duyệt."
                 isOn={isAutoApproveProof}
                 onToggle={(val) => onChange({ autoApprovePaymentWithProof: val })}
                 extraControl={

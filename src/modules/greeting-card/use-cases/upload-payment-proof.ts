@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto"
-import { validationFailed, unprocessable } from "@/core/http/errors"
+import { conflict, validationFailed, unprocessable } from "@/core/http/errors"
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { loadPublicSession } from "./brochure-session-access"
@@ -55,6 +55,13 @@ export async function uploadPaymentProof(
   if (!session.order_id) {
     throw unprocessable("Bạn cần hoàn tất đặt hoa trước khi tải ảnh chuyển khoản")
   }
+  const order = session.order
+  const paid = Number(order?.paid_vnd ?? 0)
+  const total = Number(order?.total_vnd ?? 0)
+  if (order?.status === "CANCELLED") throw conflict("Đơn hàng đã huỷ, không cần gửi ảnh chuyển khoản")
+  if (total > 0 && paid >= total) throw conflict("Đơn hàng đã thanh toán đủ, không cần gửi thêm ảnh chuyển khoản")
+  // Đã nhận tiền Lần 1 thì ảnh mới chỉ có thể là Lần 2 — không ghi đè chứng từ Lần 1 đã đối soát
+  const purpose = paid > 0 ? "BALANCE" : input.purpose
 
   const arrayBuffer = await input.file.arrayBuffer()
   const bytes = new Uint8Array(arrayBuffer)
@@ -87,11 +94,11 @@ export async function uploadPaymentProof(
     metadata: {
       source: "BROCHURE_PAYMENT_PROOF",
       sendCode: input.sendCode,
-      purpose: input.purpose === "BALANCE" ? "BALANCE" : "DEPOSIT",
+      purpose,
     },
   })
 
-  if (input.purpose === "BALANCE") {
+  if (purpose === "BALANCE") {
     await repo.updateSession(session.id, { paymentProofBalanceAssetId: assetId })
   } else {
     await repo.updateSession(session.id, { paymentProofAssetId: assetId })
@@ -104,7 +111,7 @@ export async function uploadPaymentProof(
         assetId,
         organizationId: session.organization_id,
         sendCode: input.sendCode,
-        purpose: input.purpose,
+        purpose,
       })
     })
     .catch(() => undefined)

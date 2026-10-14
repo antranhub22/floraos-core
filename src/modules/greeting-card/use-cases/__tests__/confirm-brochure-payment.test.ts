@@ -15,6 +15,8 @@ describe("reportCustomerPayment & adminConfirmBrochurePayment with deposit & bal
   }
 
   describe("reportCustomerPayment", () => {
+    const ownProof = vi.fn().mockResolvedValue({ metadata: { source: "BROCHURE_PAYMENT_PROOF", sendCode: "T01-001" } })
+
     it("Lần 1 (Cọc): lưu paymentProofAssetId vào session và ghi event CLICK_PAID", async () => {
       const mockRepo = {
         getPublicSessionBySendCode: vi.fn().mockResolvedValue({
@@ -28,6 +30,7 @@ describe("reportCustomerPayment & adminConfirmBrochurePayment with deposit & bal
         }),
         updateSession: vi.fn().mockResolvedValue({}),
         recordJourneyEvent: vi.fn().mockResolvedValue({}),
+        findAssetForVerification: ownProof,
       } as unknown as GreetingCardRepository
 
       const res = await reportCustomerPayment("T01-001", { proofAssetId: "proof-asset-1" }, mockRepo)
@@ -57,6 +60,7 @@ describe("reportCustomerPayment & adminConfirmBrochurePayment with deposit & bal
         }),
         updateSession: vi.fn().mockResolvedValue({}),
         recordJourneyEvent: vi.fn().mockResolvedValue({}),
+        findAssetForVerification: ownProof,
       } as unknown as GreetingCardRepository
 
       const res = await reportCustomerPayment("T01-001", { proofAssetId: "proof-asset-balance" }, mockRepo)
