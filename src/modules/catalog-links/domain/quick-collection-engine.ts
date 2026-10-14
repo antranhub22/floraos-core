@@ -58,10 +58,46 @@ export interface QuickCollectionResult {
 function normalize(str: string | null | undefined): string {
   if (!str) return ""
   return str
-    .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "") // bỏ combining diacritical marks
+    .replace(/[đĐ]/gi, "d")          // đ/Đ không qua NFD → xử lý riêng
+    .toLowerCase()
+    .replace(/\s+/g, " ")
     .trim()
+}
+
+/**
+ * Ánh xạ HAI CHIỀU: mã DB tiếng Anh + nhãn UI tiếng Việt → canonical key.
+ * Cho phép "Lẵng hoa", "ARRANGEMENT", "lang hoa" đều → "lang-hoa".
+ */
+const CATEGORY_CANONICAL: Record<string, string> = {
+  // Mã DB tiếng Anh
+  bouquet: "bo-hoa",
+  basket: "gio-hoa",
+  vase: "binh-hoa",
+  box: "hop-hoa",
+  stand: "ke-hoa",
+  arrangement: "lang-hoa",
+  // Nhãn tiếng Việt (sau normalize)
+  "bo hoa": "bo-hoa",
+  "gio hoa": "gio-hoa",
+  "binh hoa": "binh-hoa",
+  "hop hoa": "hop-hoa",
+  "ke hoa": "ke-hoa",
+  "lang hoa": "lang-hoa",
+  lang: "lang-hoa",
+  // Shape values thường gặp
+  round: "bo-hoa",
+  triangle: "gio-hoa",
+  cascade: "binh-hoa",
+  heart: "hop-hoa",
+  vertical: "ke-hoa",
+}
+
+/** Trả canonical key hoặc null nếu không nhận dạng được. */
+function categoryCanonical(value: string | null | undefined): string | null {
+  if (!value) return null
+  return CATEGORY_CANONICAL[normalize(value)] ?? null
 }
 
 /**
@@ -131,14 +167,37 @@ export function scoreProductForCollection(
     }
   }
 
-  // 3. Loại sản phẩm (Bó hoa, Giỏ hoa, Kệ hoa...) (Weight 20)
+  // 3. Loại sản phẩm — canonical key matching (Weight 20, penalty -30)
+  // Ánh xạ hai chiều: "Lẵng hoa" và "ARRANGEMENT" đều → "lang-hoa"
   if (criteria.category && criteria.category.trim() !== "") {
-    const normCritCat = normalize(criteria.category)
-    const prodCat = normalize(product.category)
-    const prodShape = normalize(product.shape)
-    if (prodCat.includes(normCritCat) || normCritCat.includes(prodCat) || prodShape.includes(normCritCat)) {
-      score += 20
-      tags.push(criteria.category)
+    const filterKey = categoryCanonical(criteria.category)
+    const productKey =
+      categoryCanonical(product.category) ?? categoryCanonical(product.shape)
+
+    if (filterKey) {
+      if (productKey === filterKey) {
+        score += 20
+        tags.push(criteria.category)
+      } else if (productKey !== null) {
+        // Sản phẩm có category khác → penalty
+        score -= 30
+      }
+      // productKey === null: chưa phân loại → không cộng/trừ (uncertain)
+    } else {
+      // Fallback: so sánh chuỗi chuẩn hoá khi không có canonical key
+      const normCritCat = normalize(criteria.category)
+      const prodCat = normalize(product.category)
+      const prodShape = normalize(product.shape)
+      const prodName = normalize(product.name)
+      if (
+        prodCat.includes(normCritCat) ||
+        normCritCat.includes(prodCat) ||
+        prodShape.includes(normCritCat) ||
+        prodName.includes(normCritCat)
+      ) {
+        score += 20
+        tags.push(criteria.category)
+      }
     }
   }
 
