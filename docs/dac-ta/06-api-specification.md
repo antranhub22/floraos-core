@@ -474,6 +474,7 @@ Liên kết thu hồi được nhưng không xoá được: một mã QR đã d�
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
 | GET | `/crm/customers` | `Q1` · `Q2` | Sắp theo ngày đặc biệt gần nhất theo mặc định |
+| GET | `/crm/customers/export` | `Q1` · `Q5` | Xuất / sao lưu khách ra Excel (.xlsx) hoặc JSON (`format`); lọc `tier`, `search` |
 | POST | `/crm/customers` | `Q2` | |
 | GET | `/crm/customers/:id` | `Q1` · `Q3` · `Q4` | |
 | PATCH | `/crm/customers/:id` | `Q3` · `Q4` | |
@@ -496,6 +497,7 @@ Nội dung nhắc mua sinh từ dịp và sản phẩm. Không endpoint nào g�
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
 | GET | `/orders` | `R1` | Lọc theo ngày, trạng thái, chi nhánh, người được phân công |
+| GET | `/orders/export` | `R1` · `R11` | Xuất đơn ra Excel (.xlsx); lọc `from_date`, `to_date`, `source`. Đơn từ brochure (`source=BROCHURE`) chấp nhận `R11` |
 | POST | `/orders` | `R2` | |
 | GET · PATCH | `/orders/:id` | `R1` · `R3` | |
 | POST | `/orders/:id/assign` | `R4` | |
