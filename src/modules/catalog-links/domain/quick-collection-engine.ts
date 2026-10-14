@@ -135,10 +135,9 @@ export function generateQuickCollection(
 
   /**
    * Chiến lược 2 tầng:
-   * 1. Hard-filter theo category/occasion/flowerType (các tiêu chí có canonical mapping)
-   *    → đảm bảo chỉ hiện sản phẩm đúng loại khi user chọn rõ ràng
-   * 2. Nếu pool sau hard-filter rỗng (kho chưa có sản phẩm loại đó) → fallback toàn bộ
-   *    để UI không hiện trống, kèm cờ báo fallback
+   * 1. Hard-filter theo category/occasion/flowerType
+   *    → chỉ hiện sản phẩm đúng loại khi user chọn rõ ràng
+   * 2. Nếu không có sản phẩm khớp → trả về rỗng (UI hiện thông báo kho chưa có)
    */
   const hardFiltered = activeCandidates.filter((p) => {
     if (criteria.category && !matchCategory(p, criteria.category)) return false
@@ -147,24 +146,26 @@ export function generateQuickCollection(
     return true
   })
 
-  // Dùng hard-filtered pool nếu có sản phẩm, ngược lại fallback toàn bộ
-  const pool = hardFiltered.length > 0 ? hardFiltered : activeCandidates
-  const isFallback = hardFiltered.length === 0 && (
+  // Nếu không có sản phẩm khớp → trả về rỗng ngay, không fallback
+  if (hardFiltered.length === 0 && (
     Boolean(criteria.category) || Boolean(criteria.occasion) || Boolean(criteria.flowerType)
-  )
+  )) {
+    const generatedName = buildGeneratedName(criteria)
+    const baseSlug = toSlug(criteria.customerName || criteria.occasion || criteria.category || "bst") || "bst"
+    return {
+      selectedProducts: [],
+      totalMatched: 0,
+      generatedName,
+      suggestedSlug: `${baseSlug}-${Math.random().toString(36).substring(2, 7)}`,
+      customerMessage: buildCustomerMessage([], criteria),
+      personalizedGreeting: criteria.customerName?.trim()
+        ? `Mẫu hoa chọn riêng cho ${criteria.customerName.trim()}`
+        : undefined,
+    }
+  }
 
   // Score + sort + giới hạn trong pool đã lọc
-  // Với pool fallback: bỏ category/occasion/flowerType khỏi criteria để không bị penalty
-  const scoringCriteria: ProductFilterCriteria = isFallback
-    ? {
-        ...(criteria.priceMin !== undefined ? { priceMin: criteria.priceMin } : {}),
-        ...(criteria.priceMax !== undefined ? { priceMax: criteria.priceMax } : {}),
-        ...(criteria.priceRanges?.length ? { priceRanges: criteria.priceRanges } : {}),
-        ...(criteria.colorTone ? { colorTone: criteria.colorTone } : {}),
-      }
-    : filterCriteria
-
-  const ranked = rankProducts(pool, scoringCriteria, { limit })
+  const ranked = rankProducts(hardFiltered, filterCriteria, { limit })
   const selectedProducts = ranked.map((s) => s.product as QuickCollectionCandidate)
 
   // Sinh metadata
@@ -178,8 +179,8 @@ export function generateQuickCollection(
     ? `Mẫu hoa chọn riêng cho ${criteria.customerName.trim()}`
     : undefined
 
-  // totalMatched = số sản phẩm trong pool đã lọc (không tính fallback)
-  const totalMatched = isFallback ? 0 : hardFiltered.length
+  // totalMatched = số sản phẩm thực sự khớp filter cứng
+  const totalMatched = hardFiltered.length
 
   return {
     selectedProducts,

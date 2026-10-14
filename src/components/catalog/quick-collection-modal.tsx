@@ -568,8 +568,17 @@ export function QuickCollectionModal({
               </span>
             </div>
             {liveResult.selectedProducts.length === 0 ? (
-              <div className="p-4 rounded-xl border border-dashed border-border bg-surface-alt text-center text-caption text-text-muted">
-                Chưa có mẫu phù hợp. Hãy thử đổi khoảng giá hoặc bớt bộ lọc.
+              <div className="p-4 rounded-xl border border-dashed border-border bg-surface-alt text-center space-y-1">
+                <div className="text-caption font-bold text-text-muted">
+                  {category || occasion || flowerType
+                    ? "🔍 Kho chưa có sản phẩm loại này"
+                    : "🔍 Chưa có mẫu phù hợp"}
+                </div>
+                <div className="text-caption text-text-muted">
+                  {category || occasion || flowerType
+                    ? "Hãy bỏ chọn bộ lọc hoặc thêm sản phẩm loại này vào kho."
+                    : "Hãy thử đổi khoảng giá hoặc bớt bộ lọc."}
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
