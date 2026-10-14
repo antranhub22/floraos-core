@@ -139,3 +139,4 @@ API Route (src/app/api/v1/) → handle() → requireTenantContext() → requireC
 | Prisma schema updates, DB migrations, data modeling | [`database-schema`](skills/database-schema/SKILL.md) |
 | Writing tests, debugging Vitest / Playwright, tenant tests | [`testing`](skills/testing/SKILL.md) |
 | Creative Studio features, 14-step Product-to-Market Journey | [`creative-studio`](skills/creative-studio/SKILL.md) |
+| Feature mapping, production specs audit, UI documentation | [`feature-mapping`](skills/feature-mapping/SKILL.md) |

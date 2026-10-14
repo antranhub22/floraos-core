@@ -623,6 +623,20 @@ documents:
     dependencies: ["docs/dac-ta/Checklist_Thuc_Thi.md"]
     supersedes: ["docs/kien-truc/DASHBOARD_VAN_HANH_NEN_TANG.md"]
 
+  - id: "DOC-05-QUY-TRINH-BAN-GIAO-SACH"
+    path: "docs/kien-truc/QUY_TRINH_BAN_GIAO_SACH_TENANT.md"
+    title: "Quy trình Kỹ thuật Bàn giao Sạch cho Tenant (Clean Handover SOP)"
+    domain: "Operations"
+    layer: "Level 5"
+    purpose: "Quy chuẩn SOP tự động dọn dẹp dữ liệu giao dịch mẫu trước khi bàn giao cho khách hàng (Zero Downtime, ACID Transaction, Master Data Guard)"
+    status: "APPROVED"
+    authority: "Level 5"
+    canonical: true
+    ssot: true
+    owner: "Platform Lead"
+    dependencies: ["docs/kien-truc/FLORAOS_SAAS_TARGET_ARCHITECTURE_V2.md"]
+    supersedes: []
+
   - id: "DOC-05-KE-HOACH-NANG-CAP-UIUX"
     path: "docs/kien-truc/KE_HOACH_NANG_CAP_UIUX.md"
     title: "Kế hoạch Thực thi chi tiết — Nâng cấp UI/UX toàn hệ thống (bản giao việc cho AI Agent, v2.0)"
