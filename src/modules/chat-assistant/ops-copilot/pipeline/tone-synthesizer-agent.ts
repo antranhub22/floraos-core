@@ -4,13 +4,12 @@
  * Chuyên trách tổng hợp câu trả lời tự nhiên bằng cách đưa FactSheet vào LLM,
  * yêu cầu trả lời theo văn phong nhân viên tiệm hoa Việt Nam thực thụ.
  *
- * Thứ tự ưu tiên LLM:
- *   1. OpenAI (gpt-4o-mini) — nếu có OPENAI_API_KEY
- *   2. Ollama / Qwen cục bộ — nếu có OLLAMA_URL
- *   3. Template fallback — khi không có LLM nào khả dụng
+ * Gọi mô hình chỉ qua cổng AI (`ChatAnswerFn` → `callCapability("chat_answer")`); cổng chọn
+ * mô hình theo chính sách tiệm. Không gọi được → mẫu tĩnh.
  */
 
 import type { ParsedIntent, KnowledgeFactSheet, PolishedDraft } from "./pipeline-types"
+import type { ChatAnswerFn } from "../../adapters/chat-answer-gateway"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,67 +93,6 @@ Các bước thực hiện:
 ${stepsContext}${caveatsContext}${relatedContext}
 
 Hãy trả lời câu hỏi trên theo đúng thông tin trên bằng ngôn ngữ tự nhiên, không liệt kê máy móc.`
-}
-
-// ---------------------------------------------------------------------------
-// LLM calls
-// ---------------------------------------------------------------------------
-
-async function callOpenAI(systemPrompt: string, userPrompt: string): Promise<string | null> {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return null
-  const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"
-  try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: 300,
-        temperature: 0.5,
-      }),
-    })
-    if (!res.ok) return null
-    const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
-    return data.choices?.[0]?.message?.content?.trim() ?? null
-  } catch {
-    return null
-  }
-}
-
-async function callOllamaQwen(systemPrompt: string, userPrompt: string): Promise<string | null> {
-  const ollamaUrl = process.env.OLLAMA_URL || "http://127.0.0.1:11434"
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
-    const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: "qwen2.5:7b",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: 300,
-        temperature: 0.5,
-      }),
-    })
-    clearTimeout(timeoutId)
-    if (!res.ok) return null
-    const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
-    return data.choices?.[0]?.message?.content?.trim() ?? null
-  } catch {
-    return null
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -287,33 +225,21 @@ function templateFallback(intent: ParsedIntent, facts: KnowledgeFactSheet): Poli
 // ---------------------------------------------------------------------------
 
 export class ToneSynthesizerAgent {
+  /** `answer` gọi AI qua cổng (`chatAnswerViaGateway`); không truyền → luôn dùng mẫu tĩnh. */
+  constructor(private readonly answer?: ChatAnswerFn | undefined) {}
+
   /**
-   * Tổng hợp câu trả lời thông qua LLM (OpenAI → Ollama → Template fallback).
+   * Tổng hợp câu trả lời qua cổng AI → mẫu tĩnh khi không gọi được mô hình.
    * Luôn trả về kết quả — không bao giờ throw.
    */
   async synthesize(intent: ParsedIntent, facts: KnowledgeFactSheet): Promise<PolishedDraft> {
     // Các trường hợp đặc biệt không cần LLM (overview, unresolved) → template ngay
-    if (facts.isOverview || !facts.nodeId) {
+    if (facts.isOverview || !facts.nodeId || !this.answer) {
       return templateFallback(intent, facts)
     }
 
-    const systemPrompt = buildSystemPrompt()
-    const userPrompt = buildUserPrompt(intent, facts)
-
-    // 1. Thử OpenAI
-    const openaiReply = await callOpenAI(systemPrompt, userPrompt)
-    if (openaiReply) {
-      return buildPolishedDraft(openaiReply, intent, facts)
-    }
-
-    // 2. Thử Ollama/Qwen cục bộ
-    const qwenReply = await callOllamaQwen(systemPrompt, userPrompt)
-    if (qwenReply) {
-      return buildPolishedDraft(qwenReply, intent, facts)
-    }
-
-    // 3. Fallback: template tĩnh
-    return templateFallback(intent, facts)
+    const reply = await this.answer({ system: buildSystemPrompt(), prompt: buildUserPrompt(intent, facts), maxTokens: 300 })
+    return reply ? buildPolishedDraft(reply, intent, facts) : templateFallback(intent, facts)
   }
 }
 
