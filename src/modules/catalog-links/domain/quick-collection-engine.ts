@@ -8,7 +8,7 @@
  *   - Hàm `generateQuickCollection` — orchestrator gọi SSOT rồi sinh metadata
  */
 
-import { rankProducts, scoreProduct } from "@/lib/product-filter"
+import { rankProducts, scoreProduct, matchCategory, matchOccasion, matchFlowerType } from "@/lib/product-filter"
 import type { ProductFilterCriteria, PriceRange, FilterableProduct } from "@/lib/product-filter"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -119,7 +119,6 @@ export function generateQuickCollection(
   const limit = Math.max(1, Math.min(20, criteria.productLimit ?? 6))
 
   // Ánh xạ QuickCollectionCriteria → ProductFilterCriteria (SSOT format)
-  // Dùng conditional spread để chấp exactOptionalPropertyTypes
   const filterCriteria: ProductFilterCriteria = {
     ...(criteria.occasion ? { occasion: criteria.occasion } : {}),
     ...(criteria.category ? { category: criteria.category } : {}),
@@ -130,8 +129,42 @@ export function generateQuickCollection(
     ...(criteria.priceRanges?.length ? { priceRanges: criteria.priceRanges } : {}),
   }
 
-  // Gọi SSOT engine: lọc ACTIVE + chấm điểm + sort + giới hạn
-  const ranked = rankProducts(candidates as FilterableProduct[], filterCriteria, { limit })
+  const activeCandidates = (candidates as FilterableProduct[]).filter(
+    (p) => !p.status || p.status === "ACTIVE"
+  )
+
+  /**
+   * Chiến lược 2 tầng:
+   * 1. Hard-filter theo category/occasion/flowerType (các tiêu chí có canonical mapping)
+   *    → đảm bảo chỉ hiện sản phẩm đúng loại khi user chọn rõ ràng
+   * 2. Nếu pool sau hard-filter rỗng (kho chưa có sản phẩm loại đó) → fallback toàn bộ
+   *    để UI không hiện trống, kèm cờ báo fallback
+   */
+  const hardFiltered = activeCandidates.filter((p) => {
+    if (criteria.category && !matchCategory(p, criteria.category)) return false
+    if (criteria.occasion && !matchOccasion(p, criteria.occasion)) return false
+    if (criteria.flowerType && !matchFlowerType(p, criteria.flowerType)) return false
+    return true
+  })
+
+  // Dùng hard-filtered pool nếu có sản phẩm, ngược lại fallback toàn bộ
+  const pool = hardFiltered.length > 0 ? hardFiltered : activeCandidates
+  const isFallback = hardFiltered.length === 0 && (
+    Boolean(criteria.category) || Boolean(criteria.occasion) || Boolean(criteria.flowerType)
+  )
+
+  // Score + sort + giới hạn trong pool đã lọc
+  // Với pool fallback: bỏ category/occasion/flowerType khỏi criteria để không bị penalty
+  const scoringCriteria: ProductFilterCriteria = isFallback
+    ? {
+        ...(criteria.priceMin !== undefined ? { priceMin: criteria.priceMin } : {}),
+        ...(criteria.priceMax !== undefined ? { priceMax: criteria.priceMax } : {}),
+        ...(criteria.priceRanges?.length ? { priceRanges: criteria.priceRanges } : {}),
+        ...(criteria.colorTone ? { colorTone: criteria.colorTone } : {}),
+      }
+    : filterCriteria
+
+  const ranked = rankProducts(pool, scoringCriteria, { limit })
   const selectedProducts = ranked.map((s) => s.product as QuickCollectionCandidate)
 
   // Sinh metadata
@@ -145,9 +178,8 @@ export function generateQuickCollection(
     ? `Mẫu hoa chọn riêng cho ${criteria.customerName.trim()}`
     : undefined
 
-  // totalMatched = số sản phẩm đạt ngưỡng điểm >= base (50)
-  const allRanked = rankProducts(candidates as FilterableProduct[], filterCriteria)
-  const totalMatched = allRanked.filter((s) => s.score >= 50).length
+  // totalMatched = số sản phẩm trong pool đã lọc (không tính fallback)
+  const totalMatched = isFallback ? 0 : hardFiltered.length
 
   return {
     selectedProducts,
