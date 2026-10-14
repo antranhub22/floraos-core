@@ -51,7 +51,7 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
     code: p.code || p.id,
     name: p.name,
     price: p.price_vnd ?? null,
-    category: p.category || undefined,
+    category: p.category ?? null,
     colorTheme: "Đa sắc",
     occasions: ["Sinh nhật", "Khai trương", "Kỷ niệm"],
     imageUrl: p.masterImageUrl || undefined,

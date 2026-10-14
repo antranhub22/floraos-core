@@ -131,7 +131,7 @@ export default function CatalogWebsitePage() {
     code: p.code || p.id,
     name: p.name,
     price: p.price ?? null,
-    category: p.category || undefined,
+    category: p.category ?? null,
     colorTheme: "Đa sắc",
     occasions: ["Sinh nhật", "Kỷ niệm", "Khai trương"],
     imageUrl: p.imageUrl || undefined,

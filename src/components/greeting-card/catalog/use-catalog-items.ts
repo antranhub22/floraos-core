@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
-import { lookupNormalized, normalizeText } from "@/lib/normalize-text"
+import { filterProducts } from "@/lib/product-filter"
+import type { ProductFilterCriteria } from "@/lib/product-filter"
 
 export type AvailableProduct = {
   id: string
@@ -26,67 +27,12 @@ const PICKER_LIMIT = 100
 const SEARCH_DEBOUNCE_MS = 280
 
 /**
- * Ánh xạ HAI CHIỀU: mọi biến thể (mã DB tiếng Anh + nhãn UI tiếng Việt đã chuẩn hoá)
- * → canonical key thống nhất.
- *
- * Ví dụ: product.category = "STAND" hoặc "Kệ hoa" hoặc "ke hoa" đều → "ke-hoa".
- * Filter chip "Kệ hoa" → normalizeText → "ke hoa" → "ke-hoa" → khớp.
- */
-const CATEGORY_CANONICAL: Record<string, string> = {
-  // ── Mã DB tiếng Anh ──
-  bouquet: "bo-hoa",
-  basket: "gio-hoa",
-  vase: "binh-hoa",
-  box: "hop-hoa",
-  stand: "ke-hoa",
-  arrangement: "lang-hoa",
-  // ── Nhãn tiếng Việt (sau normalizeText) ──
-  "bo hoa": "bo-hoa",
-  "gio hoa": "gio-hoa",
-  "binh hoa": "binh-hoa",
-  "hop hoa": "hop-hoa",
-  "ke hoa": "ke-hoa",
-  "lang hoa": "lang-hoa",
-  lang: "lang-hoa",
-  // ── Shape values thường gặp ──
-  round: "bo-hoa",
-  triangle: "gio-hoa",
-  cascade: "binh-hoa",
-  heart: "hop-hoa",
-  vertical: "ke-hoa",
-}
-
-/** Tra canonical key cho category/shape bất kỳ, sau khi chuẩn hoá. */
-function categoryCanonical(value: string | null | undefined): string | null {
-  if (!value) return null
-  return CATEGORY_CANONICAL[normalizeText(value)] ?? null
-}
-
-/** Từ khoá fallback trong tên sản phẩm khi attributes.occasionCodes chưa điền. */
-const OCCASION_NAME_KEYWORDS: Record<string, string[]> = {
-  "Sinh nhật": ["sinh nhat", "birthday"],
-  "Khai trương": ["khai truong", "khai nghiep"],
-  "Kỷ niệm": ["ky niem", "anniversary"],
-  "Chúc mừng": ["chuc mung", "congratulation"],
-  "Chia buồn": ["chia buon", "tang le"],
-}
-
-/** Từ khoá fallback trong tên sản phẩm khi attributes.color chưa điền. */
-const COLOR_NAME_KEYWORDS: Record<string, string[]> = {
-  Pastel: ["pastel"],
-  Đỏ: ["do", "red", "hong"],
-  Vàng: ["vang", "yellow"],
-  Hồng: ["hong", "pink", "rose"],
-  Trắng: ["trang", "white"],
-}
-
-/**
  * Mẫu hoa trong một bộ sưu tập + kho sản phẩm để thêm vào (SWR).
  *
  * Chiến lược lọc:
- * - Server-side: `search` (ILIKE name/code) — không phụ thuộc chất lượng attributes
- * - Client-side: category, occasion, color, flowerType, priceRange
- *   → canonical key + soft match → chịu được mọi biến thể (mã DB Anh, nhãn Việt, dấu/hoa/thường)
+ * - Server-side: `search` (ILIKE name/code) khi người dùng gõ vào ô tìm kiếm
+ * - Client-side: mọi filter còn lại qua `filterProducts()` từ SSOT `@/lib/product-filter`
+ *   → đảm bảo hoạt động đúng dù dữ liệu sản phẩm chưa đầy đủ (thiếu attributes)
  */
 export function useCatalogItems<TDetail extends { items: Array<{ product: { id: string } }> }>(
   catalogId: string,
@@ -118,7 +64,7 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     }
   }, [searchQuery])
 
-  // Server-side chỉ lọc search (ILIKE). Mọi filter khác xử lý client-side.
+  // Server-side chỉ lọc text search (ILIKE name/code). Mọi filter khác client-side.
   const productsUrl = (() => {
     if (!pickerOpen) return null
     const params = new URLSearchParams()
@@ -168,81 +114,31 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
 
   const rawAvailable = (products.data?.data ?? []).filter((p) => !existing.has(p.id))
 
-  const filteredAvailable = rawAvailable.filter((product) => {
-    const price = product.price_vnd ?? 0
-    const attrs = (product.attributes as Record<string, unknown>) ?? {}
-    const normName = normalizeText(product.name ?? "")
+  // Ánh xạ selectedBudgets → PriceRange[] cho SSOT engine
+  const BUDGET_RANGES: Record<string, { min: number; max: number }> = {
+    b1: { min: 0, max: 500_000 },
+    b2: { min: 500_000, max: 800_000 },
+    b3: { min: 800_000, max: 1_500_000 },
+    b4: { min: 1_500_000, max: 999_999_999 },
+  }
+  const priceRanges = selectedBudgets
+    .map((id) => BUDGET_RANGES[id])
+    .filter(Boolean) as { min: number; max: number }[]
 
-    // 1. Khoảng giá — client-side (API chưa lọc được attributes.price)
-    if (selectedBudgets.length > 0) {
-      const match = selectedBudgets.some((bId) => {
-        if (bId === "b1") return price > 0 && price <= 500_000
-        if (bId === "b2") return price >= 500_000 && price <= 800_000
-        if (bId === "b3") return price >= 800_000 && price <= 1_500_000
-        if (bId === "b4") return price >= 1_500_000
-        return false
-      })
-      if (!match) return false
-    }
+  // Tạo criteria theo chuẩn SSOT — dùng conditional spread để chập exactOptionalPropertyTypes
+  const criteria: ProductFilterCriteria = {
+    ...(priceRanges.length > 0 ? { priceRanges } : {}),
+    ...(filterOccasion ? { occasion: filterOccasion } : {}),
+    ...(filterCategory ? { category: filterCategory } : {}),
+    ...(filterFlowerType ? { flowerType: filterFlowerType } : {}),
+    ...(filterColorTone ? { colorTone: filterColorTone } : {}),
+  }
 
-    // 2. Dáng hoa — canonical key (chịu BOUQUET / "Bó hoa" / "bo hoa" / ROUND…)
-    if (filterCategory) {
-      const filterKey = categoryCanonical(filterCategory)
-      if (filterKey) {
-        const productKey =
-          categoryCanonical(product.category) ?? categoryCanonical(product.shape)
-        const matchCanonical = productKey === filterKey
-        // Fallback: tên sản phẩm chứa từ khoá chuẩn hoá
-        const matchName = normName.includes(normalizeText(filterCategory))
-        if (!matchCanonical && !matchName) return false
-      }
-    }
-
-    // 3. Dịp tặng — khớp attributes nếu có, fallback tên sản phẩm
-    if (filterOccasion) {
-      const occasionsArr: string[] = Array.isArray(attrs.occasionCodes)
-        ? (attrs.occasionCodes as string[])
-        : Array.isArray(product.occasions)
-          ? (product.occasions as string[])
-          : []
-      if (occasionsArr.length > 0) {
-        const occ = normalizeText(filterOccasion)
-        if (!occasionsArr.some((o) => normalizeText(String(o)).includes(occ))) return false
-      } else {
-        const kws = lookupNormalized(OCCASION_NAME_KEYWORDS, filterOccasion) ?? []
-        if (!kws.some((kw) => normName.includes(normalizeText(kw)))) return false
-      }
-    }
-
-    // 4. Loại hoa — khớp tên hoặc attributes.flowerTypes
-    if (filterFlowerType) {
-      const fl = normalizeText(filterFlowerType)
-      const ftArr: string[] = Array.isArray(attrs.flowerTypes)
-        ? (attrs.flowerTypes as string[])
-        : Array.isArray(product.flowerTypes)
-          ? (product.flowerTypes as string[])
-          : []
-      if (!normName.includes(fl) && !ftArr.some((f) => normalizeText(String(f)).includes(fl)))
-        return false
-    }
-
-    // 5. Tone màu — khớp attributes.color nếu có, fallback tên sản phẩm
-    if (filterColorTone) {
-      const colorVal = normalizeText(
-        String(product.colorTheme ?? attrs.color ?? attrs.colorTheme ?? "")
-      )
-      const kws = lookupNormalized(COLOR_NAME_KEYWORDS, filterColorTone) ?? [
-        normalizeText(filterColorTone),
-      ]
-      if (colorVal) {
-        if (!kws.some((kw) => colorVal.includes(normalizeText(kw)))) return false
-      } else {
-        if (!kws.some((kw) => normName.includes(normalizeText(kw)))) return false
-      }
-    }
-
-    return true
-  })
+  // Lọc qua SSOT engine — cast để tương thích FilterableProduct
+  const filteredAvailable = filterProducts(
+    rawAvailable as import("@/lib/product-filter").FilterableProduct[],
+    criteria
+  ) as AvailableProduct[]
 
   return {
     catalog,
@@ -271,6 +167,7 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     setFilterColorTone,
     resetFilters,
     hasActiveFilters,
+    /** Sản phẩm sau khi lọc qua SSOT product-filter engine */
     available: filteredAvailable,
     rawCount: rawAvailable.length,
     add: (productId: string) => change("POST", productId),

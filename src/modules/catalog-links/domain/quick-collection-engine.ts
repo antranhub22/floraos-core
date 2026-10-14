@@ -1,49 +1,38 @@
 /**
  * Pure TypeScript Domain Engine cho Bộ Sưu Tập Nhanh (Quick Collection Generator).
- * Không phụ thuộc Prisma, DB hay UI. Tuân thủ Clean Architecture & Zero-leak.
+ *
+ * Lọc & chấm điểm sản phẩm đã được chuyển vào SSOT `@/lib/product-filter`.
+ * File này chỉ giữ:
+ *   - Types riêng của Quick Collection (QuickCollectionCandidate, QuickCollectionResult…)
+ *   - Hàm sinh metadata (tên BST, slug, tin nhắn gửi khách)
+ *   - Hàm `generateQuickCollection` — orchestrator gọi SSOT rồi sinh metadata
  */
 
-export interface PriceRange {
-  min: number
-  max: number
-  label?: string
-}
+import { rankProducts, scoreProduct } from "@/lib/product-filter"
+import type { ProductFilterCriteria, PriceRange, FilterableProduct } from "@/lib/product-filter"
 
-export interface QuickCollectionCriteria {
-  // Tiêu chí bắt buộc hoặc tùy chọn
-  occasion?: string | undefined
-  category?: string | undefined
-  flowerType?: string | undefined
-  colorTone?: string | undefined
-  priceMin?: number | undefined
-  priceMax?: number | undefined
-  priceRanges?: PriceRange[] | undefined // Hỗ trợ chọn nhiều khung giá cùng lúc
-  productLimit?: number | undefined // Số lượng sản phẩm muốn đưa vào (mặc định 6)
-  
-  // Thông tin cá nhân hóa (Personalized Customer Link)
-  customerName?: string | undefined
-  customerPhone?: string | undefined
-  customTitle?: string | undefined
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Types đặc thù của Quick Collection
+// ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Sản phẩm ứng viên cho Quick Collection.
+ * Các optional field dùng `string | null | undefined` (tương thích với mọi caller).
+ */
 export interface QuickCollectionCandidate {
   id: string
   code: string
   name: string
+  /** Giá tham chiếu (VND). null = Liên hệ báo giá. */
   price: number | null
   category?: string | null | undefined
   shape?: string | null | undefined
   colorTheme?: string | null | undefined
-  occasions?: string[] | undefined
-  flowerTypes?: string[] | undefined
+  occasions?: string[]
+  flowerTypes?: string[]
   imageUrl?: string | null | undefined
-  status?: string | undefined
-}
-
-export interface ScoredCollectionProduct {
-  product: QuickCollectionCandidate
-  matchScore: number // 0 - 100
-  matchTags: string[]
+  status?: string
+  attributes?: Record<string, unknown> | null | undefined
 }
 
 export interface QuickCollectionResult {
@@ -55,185 +44,73 @@ export interface QuickCollectionResult {
   personalizedGreeting?: string | undefined
 }
 
-function normalize(str: string | null | undefined): string {
-  if (!str) return ""
+/** Re-export để các caller không cần import thêm từ lib */
+export type { PriceRange }
+
+export interface QuickCollectionCriteria {
+  occasion?: string | undefined
+  category?: string | undefined
+  flowerType?: string | undefined
+  colorTone?: string | undefined
+  priceMin?: number | undefined
+  priceMax?: number | undefined
+  priceRanges?: PriceRange[] | undefined
+  productLimit?: number | undefined
+  customerName?: string | undefined
+  customerPhone?: string | undefined
+  customTitle?: string | undefined
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers sinh metadata
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Chuẩn hoá chuỗi để tạo slug (không dấu, thường, dấu-gạch). */
+function toSlug(str: string): string {
   return str
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // bỏ combining diacritical marks
-    .replace(/[đĐ]/gi, "d")          // đ/Đ không qua NFD → xử lý riêng
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/gi, "d")
     .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
 }
 
-/**
- * Ánh xạ HAI CHIỀU: mã DB tiếng Anh + nhãn UI tiếng Việt → canonical key.
- * Cho phép "Lẵng hoa", "ARRANGEMENT", "lang hoa" đều → "lang-hoa".
- */
-const CATEGORY_CANONICAL: Record<string, string> = {
-  // Mã DB tiếng Anh
-  bouquet: "bo-hoa",
-  basket: "gio-hoa",
-  vase: "binh-hoa",
-  box: "hop-hoa",
-  stand: "ke-hoa",
-  arrangement: "lang-hoa",
-  // Nhãn tiếng Việt (sau normalize)
-  "bo hoa": "bo-hoa",
-  "gio hoa": "gio-hoa",
-  "binh hoa": "binh-hoa",
-  "hop hoa": "hop-hoa",
-  "ke hoa": "ke-hoa",
-  "lang hoa": "lang-hoa",
-  lang: "lang-hoa",
-  // Shape values thường gặp
-  round: "bo-hoa",
-  triangle: "gio-hoa",
-  cascade: "binh-hoa",
-  heart: "hop-hoa",
-  vertical: "ke-hoa",
+function buildGeneratedName(criteria: QuickCollectionCriteria): string {
+  if (criteria.customTitle?.trim()) return criteria.customTitle.trim()
+  const parts: string[] = []
+  if (criteria.customerName?.trim()) {
+    parts.push(`Dành Riêng Cho ${criteria.customerName.trim()}`)
+  } else {
+    parts.push("Bộ Sưu Tập Hoa")
+  }
+  if (criteria.occasion) parts.push(criteria.occasion)
+  if (criteria.category) parts.push(criteria.category)
+  if (criteria.colorTone) parts.push(`Tone ${criteria.colorTone}`)
+  return parts.join(" — ")
 }
 
-/** Trả canonical key hoặc null nếu không nhận dạng được. */
-function categoryCanonical(value: string | null | undefined): string | null {
-  if (!value) return null
-  return CATEGORY_CANONICAL[normalize(value)] ?? null
-}
-
-/**
- * Tính điểm tương thích sản phẩm dựa trên tiêu chí người dùng đưa ra.
- */
-export function scoreProductForCollection(
-  product: QuickCollectionCandidate,
+function buildCustomerMessage(
+  products: QuickCollectionCandidate[],
   criteria: QuickCollectionCriteria
-): { score: number; tags: string[] } {
-  let score = 50 // Điểm cơ sở
-  const tags: string[] = []
-
-  // 1. Khoảng giá (Weight 30)
-  const price = product.price ?? 0
-  const ranges = criteria.priceRanges
-  const min = criteria.priceMin
-  const max = criteria.priceMax
-
-  if (ranges && ranges.length > 0) {
-    // Có danh sách nhiều khoảng giá được chọn
-    const inAnyExact = ranges.some((r) => price >= r.min && price <= r.max)
-    const inAnyNear = ranges.some((r) => price >= r.min * 0.85 && price <= r.max * 1.15)
-
-    if (inAnyExact) {
-      score += 30
-      tags.push("Đúng tầm giá")
-    } else if (inAnyNear) {
-      score += 15
-      tags.push("Gần tầm giá")
-    } else {
-      score -= 25
-    }
-  } else if (min !== undefined && max !== undefined) {
-    if (price >= min && price <= max) {
-      score += 30
-      tags.push("Đúng tầm giá")
-    } else if (price >= min * 0.85 && price <= max * 1.15) {
-      score += 15
-      tags.push("Gần tầm giá")
-    } else {
-      score -= 25
-    }
-  } else if (min !== undefined) {
-    if (price >= min) {
-      score += 20
-      tags.push(`Từ ${(min / 1000).toLocaleString()}k`)
-    } else {
-      score -= 20
-    }
-  } else if (max !== undefined) {
-    if (price <= max) {
-      score += 20
-      tags.push(`Dưới ${(max / 1000).toLocaleString()}k`)
-    } else {
-      score -= 25
-    }
+): string {
+  const count = products.length
+  const name = criteria.customerName?.trim()
+  if (name) {
+    return `Dạ em chào ${name} ạ! Tiệm gửi ${name} link xem ${count} mẫu hoa chọn riêng cho mình: {URL}\n${name} xem ưng mẫu nào báo em chuẩn bị ngay nhé ạ!`
   }
-
-  // 2. Dịp tặng (Weight 25)
-  if (criteria.occasion && criteria.occasion.trim() !== "") {
-    const normCritOcc = normalize(criteria.occasion)
-    const productOccs = (product.occasions || []).map(normalize)
-    const matched = productOccs.some((occ) => occ.includes(normCritOcc) || normCritOcc.includes(occ))
-    if (matched) {
-      score += 25
-      tags.push(`Dịp ${criteria.occasion}`)
-    }
-  }
-
-  // 3. Loại sản phẩm — canonical key matching (Weight 20, penalty -30)
-  // Ánh xạ hai chiều: "Lẵng hoa" và "ARRANGEMENT" đều → "lang-hoa"
-  if (criteria.category && criteria.category.trim() !== "") {
-    const filterKey = categoryCanonical(criteria.category)
-    const productKey =
-      categoryCanonical(product.category) ?? categoryCanonical(product.shape)
-
-    if (filterKey) {
-      if (productKey === filterKey) {
-        score += 20
-        tags.push(criteria.category)
-      } else if (productKey !== null) {
-        // Sản phẩm có category khác → penalty
-        score -= 30
-      }
-      // productKey === null: chưa phân loại → không cộng/trừ (uncertain)
-    } else {
-      // Fallback: so sánh chuỗi chuẩn hoá khi không có canonical key
-      const normCritCat = normalize(criteria.category)
-      const prodCat = normalize(product.category)
-      const prodShape = normalize(product.shape)
-      const prodName = normalize(product.name)
-      if (
-        prodCat.includes(normCritCat) ||
-        normCritCat.includes(prodCat) ||
-        prodShape.includes(normCritCat) ||
-        prodName.includes(normCritCat)
-      ) {
-        score += 20
-        tags.push(criteria.category)
-      }
-    }
-  }
-
-  // 4. Loại hoa (Hoa hồng, Lan hồ điệp...) (Weight 15)
-  if (criteria.flowerType && criteria.flowerType.trim() !== "") {
-    const normCritFlower = normalize(criteria.flowerType)
-    const prodName = normalize(product.name)
-    const prodFlowers = (product.flowerTypes || []).map(normalize)
-    const matched = prodFlowers.some((f) => f.includes(normCritFlower) || normCritFlower.includes(f)) || prodName.includes(normCritFlower)
-    if (matched) {
-      score += 15
-      tags.push(criteria.flowerType)
-    }
-  }
-
-  // 5. Tone màu (Weight 10)
-  if (criteria.colorTone && criteria.colorTone.trim() !== "") {
-    const normCritColor = normalize(criteria.colorTone)
-    const prodColor = normalize(product.colorTheme)
-    const prodName = normalize(product.name)
-    if (prodColor.includes(normCritColor) || prodName.includes(normCritColor)) {
-      score += 10
-      tags.push(`Tone ${criteria.colorTone}`)
-    }
-  }
-
-  // Ưu tiên sản phẩm có ảnh thật
-  if (product.imageUrl) {
-    score += 5
-  }
-
-  return { score: Math.max(0, score), tags }
+  return `Dạ tiệm gửi anh/chị link ${count} mẫu hoa theo yêu cầu: {URL}\nAnh/chị ưng mẫu nào nhắn tiệm hỗ trợ ngay nhé ạ!`
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Main: generateQuickCollection
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Tuyển chọn các sản phẩm phù hợp nhất và cấu trúc dữ liệu cho bộ sưu tập.
+ * Tuyển chọn sản phẩm phù hợp nhất và sinh metadata cho bộ sưu tập nhanh.
+ *
+ * Lọc + chấm điểm do SSOT `rankProducts()` xử lý.
+ * File này chỉ chịu trách nhiệm sinh tên, slug, và tin nhắn gửi khách.
  */
 export function generateQuickCollection(
   candidates: QuickCollectionCandidate[],
@@ -241,63 +118,70 @@ export function generateQuickCollection(
 ): QuickCollectionResult {
   const limit = Math.max(1, Math.min(20, criteria.productLimit ?? 6))
 
-  // Lọc chỉ lấy sản phẩm ACTIVE nếu có status
-  const validCandidates = candidates.filter((p) => !p.status || p.status === "ACTIVE")
-
-  // Chấm điểm và phân loại
-  const scored: ScoredCollectionProduct[] = validCandidates.map((product) => {
-    const { score, tags } = scoreProductForCollection(product, criteria)
-    return { product, matchScore: score, matchTags: tags }
-  })
-
-  // Sắp xếp theo matchScore giảm dần
-  scored.sort((a, b) => b.matchScore - a.matchScore)
-
-  const selectedProducts = scored.slice(0, limit).map((s) => s.product)
-
-  // Sinh tiêu đề bộ sưu tập
-  let generatedName = criteria.customTitle?.trim() || ""
-  if (!generatedName) {
-    const parts: string[] = []
-    if (criteria.customerName?.trim()) {
-      parts.push(`Dành Riêng Cho ${criteria.customerName.trim()}`)
-    } else {
-      parts.push("Bộ Sưu Tập Hoa")
-    }
-
-    if (criteria.occasion) parts.push(criteria.occasion)
-    if (criteria.category) parts.push(criteria.category)
-    if (criteria.colorTone) parts.push(`Tone ${criteria.colorTone}`)
-
-    generatedName = parts.join(" — ")
+  // Ánh xạ QuickCollectionCriteria → ProductFilterCriteria (SSOT format)
+  // Dùng conditional spread để chấp exactOptionalPropertyTypes
+  const filterCriteria: ProductFilterCriteria = {
+    ...(criteria.occasion ? { occasion: criteria.occasion } : {}),
+    ...(criteria.category ? { category: criteria.category } : {}),
+    ...(criteria.flowerType ? { flowerType: criteria.flowerType } : {}),
+    ...(criteria.colorTone ? { colorTone: criteria.colorTone } : {}),
+    ...(criteria.priceMin !== undefined ? { priceMin: criteria.priceMin } : {}),
+    ...(criteria.priceMax !== undefined ? { priceMax: criteria.priceMax } : {}),
+    ...(criteria.priceRanges?.length ? { priceRanges: criteria.priceRanges } : {}),
   }
 
-  // Sinh slug định danh ngẫu nhiên
-  const baseSlug = normalize(criteria.customerName || criteria.occasion || criteria.category || "bst")
-    .replace(/[^a-z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "") || "bst"
-  const randomSuffix = Math.random().toString(36).substring(2, 7)
-  const suggestedSlug = `${baseSlug}-${randomSuffix}`
+  // Gọi SSOT engine: lọc ACTIVE + chấm điểm + sort + giới hạn
+  const ranked = rankProducts(candidates as FilterableProduct[], filterCriteria, { limit })
+  const selectedProducts = ranked.map((s) => s.product as QuickCollectionCandidate)
 
-  // Soạn sẵn tin nhắn gửi khách hàng (Zalo / SMS / Messenger)
-  let customerMessage = ""
-  if (criteria.customerName?.trim()) {
-    customerMessage = `Dạ em chào ${criteria.customerName.trim()} ạ! Tiệm gửi ${criteria.customerName.trim()} link xem ${selectedProducts.length} mẫu hoa chọn riêng cho mình: {URL}\n${criteria.customerName.trim()} xem ưng mẫu nào báo em chuẩn bị ngay nhé ạ!`
-  } else {
-    customerMessage = `Dạ tiệm gửi anh/chị link ${selectedProducts.length} mẫu hoa theo yêu cầu: {URL}\nAnh/chị ưng mẫu nào nhắn tiệm hỗ trợ ngay nhé ạ!`
-  }
-
+  // Sinh metadata
+  const generatedName = buildGeneratedName(criteria)
+  const baseSlug = toSlug(
+    criteria.customerName || criteria.occasion || criteria.category || "bst"
+  ) || "bst"
+  const suggestedSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 7)}`
+  const customerMessage = buildCustomerMessage(selectedProducts, criteria)
   const personalizedGreeting = criteria.customerName?.trim()
     ? `Mẫu hoa chọn riêng cho ${criteria.customerName.trim()}`
     : undefined
 
+  // totalMatched = số sản phẩm đạt ngưỡng điểm >= base (50)
+  const allRanked = rankProducts(candidates as FilterableProduct[], filterCriteria)
+  const totalMatched = allRanked.filter((s) => s.score >= 50).length
+
   return {
     selectedProducts,
-    totalMatched: scored.filter((s) => s.matchScore >= 50).length,
+    totalMatched,
     generatedName,
     suggestedSlug,
     customerMessage,
     personalizedGreeting,
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Re-export scoring types cho caller cần dùng
+// ─────────────────────────────────────────────────────────────────────────────
+export type { ScoredProduct } from "@/lib/product-filter"
+export { scoreProduct, rankProducts } from "@/lib/product-filter"
+
+/**
+ * @deprecated Dùng `scoreProduct` từ `@/lib/product-filter` thay thế.
+ * Giữ lại để tương thích ngược với test hiện tại.
+ */
+export function scoreProductForCollection(
+  product: QuickCollectionCandidate,
+  criteria: QuickCollectionCriteria
+): { score: number; tags: string[] } {
+  const filterCriteria: ProductFilterCriteria = {
+    ...(criteria.occasion ? { occasion: criteria.occasion } : {}),
+    ...(criteria.category ? { category: criteria.category } : {}),
+    ...(criteria.flowerType ? { flowerType: criteria.flowerType } : {}),
+    ...(criteria.colorTone ? { colorTone: criteria.colorTone } : {}),
+    ...(criteria.priceMin !== undefined ? { priceMin: criteria.priceMin } : {}),
+    ...(criteria.priceMax !== undefined ? { priceMax: criteria.priceMax } : {}),
+    ...(criteria.priceRanges?.length ? { priceRanges: criteria.priceRanges } : {}),
+  }
+  const scored = scoreProduct(product as FilterableProduct, filterCriteria)
+  return { score: scored.score, tags: scored.matchTags }
 }

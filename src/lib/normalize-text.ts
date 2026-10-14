@@ -9,7 +9,8 @@
  * Hàm này THUẦN TÚY (pure) — không phụ thuộc browser/Node API ngoài
  * String.normalize (có sẵn trong mọi JS runtime hiện đại).
  */
-export function normalizeText(input: string): string {
+export function normalizeText(input: string | null | undefined): string {
+  if (!input) return ""
   return input
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // bỏ combining diacritical marks
@@ -29,8 +30,9 @@ export function normalizeText(input: string): string {
  */
 export function lookupNormalized<V>(
   map: Record<string, V>,
-  label: string
+  label: string | null | undefined
 ): V | undefined {
+  if (!label) return undefined
   const needle = normalizeText(label)
   for (const [key, value] of Object.entries(map)) {
     if (normalizeText(key) === needle) return value

@@ -161,7 +161,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-body-sm font-bold text-foreground truncate">{product.name}</p>
-                        {product.price_vnd !== null ? (
+                        {product.price_vnd != null ? (
                           <p className="text-caption text-primary font-semibold">
                             {product.price_vnd.toLocaleString("vi-VN")}đ
                           </p>
