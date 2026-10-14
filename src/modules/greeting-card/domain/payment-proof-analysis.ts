@@ -81,7 +81,9 @@ export function verifyBillAgainstOrder(input: VerifyBillInput): PaymentProofAnal
   }
 
   // 2. Kiểm tra số tài khoản nhận tiền
-  let accountMatched = true
+  // Tiệm chưa cài tài khoản nhận tiền → không thể xác nhận bill chuyển đúng chỗ, không bao giờ "khớp"
+  let accountMatched = Boolean(shopBank?.accountNo)
+  if (!accountMatched) reasons.push("Tiệm chưa cài số tài khoản nhận tiền nên chưa đối chiếu được tài khoản thụ hưởng")
   if (shopBank && shopBank.accountNo) {
     if (!extracted.receiverAccountNumber) {
       accountMatched = false
