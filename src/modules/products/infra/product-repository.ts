@@ -126,7 +126,7 @@ export class ProductRepository {
         ? { attributes: { path: ["occasionCodes"], array_contains: filters.occasionCode } }
         : {}),
       ...(filters.color !== undefined
-        ? { attributes: { path: ["color"], equals: filters.color } }
+        ? { attributes: { path: ["color"], string_contains: filters.color } }
         : {}),
       ...(filters.collection !== undefined
         ? { attributes: { path: ["collection"], equals: filters.collection } }
@@ -164,7 +164,7 @@ export class ProductRepository {
         ? { attributes: { path: ["occasionCodes"], array_contains: filters.occasionCode } }
         : {}),
       ...(filters.color !== undefined
-        ? { attributes: { path: ["color"], equals: filters.color } }
+        ? { attributes: { path: ["color"], string_contains: filters.color } }
         : {}),
       ...(filters.collection !== undefined
         ? { attributes: { path: ["collection"], equals: filters.collection } }
