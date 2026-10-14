@@ -65,7 +65,7 @@ export class DismissalRestoreRepository {
 
     await this.db.$transaction(async (tx) => {
       const moved = await tx.orders.updateMany({
-        where: scopedWhere(ctx, { id: order.id, status: "CANCELLED", paid_vnd: 0 }),
+        where: scopedWhere(ctx, { id: order.id, status: "CANCELLED" as order_status, paid_vnd: 0 }),
         data: { status: prev, pricing_rule_ref: json({ ...ref, dismissal: null, dismissalHistory: [...history, { ...d, ...stamp }] }) },
       })
       if (moved.count === 0) throw conflict("Đơn hàng vừa thay đổi, vui lòng tải lại")

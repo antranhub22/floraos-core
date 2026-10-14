@@ -42,20 +42,18 @@ export function KanbanCard({
 }: KanbanCardProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
   const [copied, setCopied] = useState(false)
-  const [countdown, setCountdown] = useState<string | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+  const pendingDismissal = item.dismissal?.status === "PENDING" ? item.dismissal : null
 
-  // Đếm ngược phê duyệt tự động (5 phút) cho đề xuất đang PENDING
+  // Đếm ngược phê duyệt tự động (5 phút): đồng hồ chỉ chạy khi có đề xuất PENDING; chuỗi hiển thị
+  // tính lúc render từ `now` — không setState đồng bộ trong effect
   useEffect(() => {
-    const d = item.dismissal
-    if (!d || d.status !== "PENDING") { setCountdown(null); return }
-    const tick = () => {
-      const ms = remainingDismissalMs(d.proposedAt, Date.now())
-      setCountdown(ms > 0 ? fmtCountdown(ms) : "00:00")
-    }
-    tick()
-    const id = setInterval(tick, 1000)
+    if (!pendingDismissal) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [item.dismissal])
+  }, [pendingDismissal])
+  const countdownMs = pendingDismissal ? remainingDismissalMs(pendingDismissal.proposedAt, now) : null
+  const countdown = countdownMs === null ? null : countdownMs > 0 ? fmtCountdown(countdownMs) : "00:00"
 
   const handleCopyLink = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation()

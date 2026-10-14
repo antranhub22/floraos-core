@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import type { Prisma } from "@/generated/prisma/client"
+import type { order_status, Prisma } from "@/generated/prisma/client"
 import { conflict } from "@/core/http/errors"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import { canProposeDismissal, type DismissalInfo } from "../domain/dismissal-policy"
@@ -43,8 +43,8 @@ export async function writeOrderDismissal(tx: Tx, ctx: TenantContext, order: Ord
   const ref = obj(order.pricing_rule_ref)
   const stored: DismissalInfo & { previousStatus?: string } = approve ? { ...info, previousStatus: order.status } : info
   const moved = await tx.orders.updateMany({
-    where: scopedWhere(ctx, { id: order.id, status: order.status, ...(approve ? { paid_vnd: 0 } : {}) }),
-    data: { ...(approve ? { status: "CANCELLED" } : {}), pricing_rule_ref: json({ ...ref, dismissal: stored }) },
+    where: scopedWhere(ctx, { id: order.id, status: order.status as order_status, ...(approve ? { paid_vnd: 0 } : {}) }),
+    data: { ...(approve ? { status: "CANCELLED" as order_status } : {}), pricing_rule_ref: json({ ...ref, dismissal: stored }) },
   })
   if (moved.count === 0) throw conflict("Đơn hàng vừa thay đổi (có thể khách vừa thanh toán), vui lòng tải lại")
   if (!approve) return
