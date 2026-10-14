@@ -28,6 +28,7 @@ const SEARCH_DEBOUNCE_MS = 280
 /**
  * Ánh xạ nhãn UI tiếng Việt → mã DB tiếng Anh cho `category`.
  * DB lưu theo BOUQUET / BASKET / VASE / BOX / STAND / ARRANGEMENT.
+ * lookupNormalized() cho phép mọi biến thể dấu/hoa thường đều khớp.
  */
 const CATEGORY_UI_TO_DB: Record<string, string> = {
   "Bó hoa": "BOUQUET",
@@ -39,26 +40,25 @@ const CATEGORY_UI_TO_DB: Record<string, string> = {
 }
 
 /**
- * Ánh xạ nhãn UI tiếng Việt → mã dịp tặng trong `attributes.occasionCodes`.
- * Ví dụ DB: ["sinh-nhat", "khai-truong"].
+ * Từ khoá tìm trong tên sản phẩm khi `attributes.occasionCodes` chưa được điền.
+ * Chuẩn hoá sẵn qua normalizeText để so sánh.
  */
-const OCCASION_UI_TO_DB: Record<string, string> = {
-  "Sinh nhật": "sinh-nhat",
-  "Khai trương": "khai-truong",
-  "Kỷ niệm": "ky-niem",
-  "Chúc mừng": "chuc-mung",
-  "Chia buồn": "chia-buon",
+const OCCASION_NAME_KEYWORDS: Record<string, string[]> = {
+  "Sinh nhật": ["sinh nhat", "birthday", "sinh nhật"],
+  "Khai trương": ["khai truong", "khai trương", "khai nghiep", "khai nghiệp"],
+  "Kỷ niệm": ["ky niem", "kỷ niệm", "anniversary"],
+  "Chúc mừng": ["chuc mung", "chúc mừng", "congratulation"],
+  "Chia buồn": ["chia buon", "chia buồn", "tang le", "tang lễ"],
 }
 
 /**
- * Ánh xạ nhãn UI tone màu → giá trị `attributes.color` trong DB.
- * DB thường lưu tiếng Anh hoặc tiếng Việt không dấu.
+ * Từ khoá tìm trong tên sản phẩm khi `attributes.color` chưa được điền.
  */
-const COLOR_UI_TO_DB: Record<string, string[]> = {
+const COLOR_NAME_KEYWORDS: Record<string, string[]> = {
   Pastel: ["pastel"],
-  Đỏ: ["do", "red", "đỏ"],
+  Đỏ: ["do", "red", "đỏ", "hong"],
   Vàng: ["vang", "yellow", "vàng"],
-  Hồng: ["hong", "pink", "hồng"],
+  Hồng: ["hong", "pink", "hồng", "rose"],
   Trắng: ["trang", "white", "trắng"],
 }
 
@@ -66,8 +66,11 @@ const COLOR_UI_TO_DB: Record<string, string[]> = {
  * Mẫu hoa trong một bộ sưu tập + kho sản phẩm để thêm vào (SWR). Dùng chung
  * cho wizard (picker gọn) và bảng quản lý chi tiết.
  *
- * Lọc server-side (`category`, `occasionCode`, `color`, `search`) để hoạt động
- * đúng với kho lớn (1000+ sản phẩm). Debounce 280ms tránh gọi API mỗi keystroke.
+ * Chiến lược lọc:
+ * - Server-side (DB query): `category` (cột thật) + `search` (tên/mã)
+ * - Client-side (soft match): `occasion`, `color`, `flowerType`, `priceRange`
+ *   → khớp attributes nếu có, fallback về khớp tên sản phẩm nếu attributes chưa điền.
+ *   Đảm bảo hoạt động ngay cả khi dữ liệu sản phẩm chưa hoàn chỉnh.
  */
 export function useCatalogItems<TDetail extends { items: Array<{ product: { id: string } }> }>(
   catalogId: string,
@@ -100,7 +103,13 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     }
   }, [searchQuery])
 
-  // Xây dựng URL gọi API với server-side filters — chỉ gọi khi picker đang mở
+  /**
+   * URL API — chỉ truyền server-side filters mà DB có cột thật:
+   *   - `category` (cột `products.category` → BOUQUET/BASKET/…)
+   *   - `search` (ILIKE trên name + code)
+   * Các filter còn lại (occasion, color, flowerType, priceRange) xử lý client-side
+   * để đảm bảo hoạt động khi attributes chưa được điền đầy đủ.
+   */
   const productsUrl = (() => {
     if (!pickerOpen) return null
     const params = new URLSearchParams()
@@ -115,22 +124,6 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
       const dbCode = lookupNormalized(CATEGORY_UI_TO_DB, filterCategory)
       if (dbCode) params.set("category", dbCode)
     }
-
-    // Server-side: occasion code (sinh-nhat, khai-truong…)
-    if (filterOccasion) {
-      const dbCode = lookupNormalized(OCCASION_UI_TO_DB, filterOccasion)
-      if (dbCode) params.set("occasion_code", dbCode)
-    }
-
-    // Server-side: color (first alias)
-    if (filterColorTone) {
-      const aliases = lookupNormalized(COLOR_UI_TO_DB, filterColorTone)
-      if (aliases?.[0]) params.set("color", aliases[0])
-    }
-
-    // Server-side: price range (gửi min/max để DB lọc)
-    // Giá tham chiếu nằm trong attributes.price — server chưa hỗ trợ lọc giá qua API,
-    // nên khoảng giá vẫn lọc client-side bên dưới.
 
     return `/api/v1/products?${params.toString()}`
   })()
@@ -175,12 +168,18 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
 
   const rawAvailable = (products.data?.data ?? []).filter((p) => !existing.has(p.id))
 
-  // Client-side: khoảng giá (API chưa hỗ trợ lọc giá qua attributes.price)
-  // + loại hoa (flowerTypes trong attributes) + màu (fallback nếu server không lọc được)
+  /**
+   * Client-side filtering — soft match:
+   * Ưu tiên khớp attributes nếu có dữ liệu, fallback về khớp tên sản phẩm.
+   * Điều này đảm bảo bộ lọc vẫn hoạt động khi sản phẩm chưa được gán đầy đủ
+   * occasionCodes / color / flowerTypes trong attributes.
+   */
   const filteredAvailable = rawAvailable.filter((product) => {
     const price = product.price_vnd ?? 0
+    const attrs = (product.attributes as Record<string, unknown>) ?? {}
+    const normName = normalizeText(product.name ?? "")
 
-    // 1. Khoảng giá — client-side vì API chưa hỗ trợ lọc attributes.price
+    // 1. Khoảng giá — client-side (API chưa lọc được attributes.price)
     if (selectedBudgets.length > 0) {
       const matchAnyBudget = selectedBudgets.some((bId) => {
         if (bId === "b1") return price > 0 && price <= 500_000
@@ -192,21 +191,60 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
       if (!matchAnyBudget) return false
     }
 
-    // 2. Loại hoa — client-side: khớp tên sản phẩm hoặc attributes.flowerTypes
-    // normalizeText chịu được mọi biến thể dấu/hoa thường ở cả hai phía
+    // 2. Dịp tặng — soft match: attributes.occasionCodes → fallback tên sản phẩm
+    if (filterOccasion) {
+      const occasionsArr: string[] = Array.isArray(attrs.occasionCodes)
+        ? (attrs.occasionCodes as string[])
+        : Array.isArray(product.occasions)
+          ? (product.occasions as string[])
+          : []
+
+      if (occasionsArr.length > 0) {
+        // Có dữ liệu → khớp chính xác
+        const occ = normalizeText(filterOccasion)
+        const matchOcc = occasionsArr.some((o) => normalizeText(String(o)).includes(occ))
+        if (!matchOcc) return false
+      } else {
+        // Chưa có dữ liệu → soft match theo tên sản phẩm
+        const keywords = lookupNormalized(OCCASION_NAME_KEYWORDS, filterOccasion) ?? []
+        const matchName = keywords.some((kw) => normName.includes(normalizeText(kw)))
+        if (!matchName) return false
+      }
+    }
+
+    // 3. Loại hoa — soft match: attributes.flowerTypes → fallback tên sản phẩm
     if (filterFlowerType) {
       const fl = normalizeText(filterFlowerType)
-      const attrs = (product.attributes as Record<string, unknown>) ?? {}
-      const flowerTypesArr = Array.isArray(attrs.flowerTypes)
+      const flowerTypesArr: string[] = Array.isArray(attrs.flowerTypes)
         ? (attrs.flowerTypes as string[])
         : Array.isArray(product.flowerTypes)
           ? (product.flowerTypes as string[])
           : []
-      const normName = normalizeText(product.name ?? "")
+
       const matchFlower =
         normName.includes(fl) ||
         flowerTypesArr.some((f) => normalizeText(String(f)).includes(fl))
       if (!matchFlower) return false
+    }
+
+    // 4. Tone màu — soft match: attributes.color → fallback tên sản phẩm
+    if (filterColorTone) {
+      const colorVal = normalizeText(
+        String(product.colorTheme ?? attrs.color ?? attrs.colorTheme ?? "")
+      )
+      const keywords = lookupNormalized(COLOR_NAME_KEYWORDS, filterColorTone) ?? [
+        normalizeText(filterColorTone),
+      ]
+
+      if (colorVal) {
+        // Có dữ liệu → khớp attributes.color
+        const matchColor = keywords.some((kw) => colorVal.includes(normalizeText(kw)))
+        if (!matchColor) return false
+      } else {
+        // Chưa có dữ liệu → soft match theo tên sản phẩm
+        const matchName = keywords.some((kw) => normName.includes(normalizeText(kw)))
+        if (!matchName) return false
+      }
     }
 
     return true
