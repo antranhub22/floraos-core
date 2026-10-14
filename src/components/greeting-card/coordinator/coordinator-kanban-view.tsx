@@ -50,6 +50,7 @@ interface CoordinatorKanbanViewProps {
   workOf: Map<string, TrackingPipelineItem>
   now: number
   onRefresh?: (() => void) | undefined
+  workflowPolicy?: import("@/modules/greeting-card/domain/brochure-workflow-policy").BrochureWorkflowPolicy | undefined
 }
 
 export function CoordinatorKanbanView({
@@ -59,6 +60,7 @@ export function CoordinatorKanbanView({
   workOf,
   now,
   onRefresh,
+  workflowPolicy,
 }: CoordinatorKanbanViewProps) {
   const [detailTarget, setDetailTarget] = useState<OrderDetailModalTarget | null>(null)
   const grouped = new Map<CoordinatorKanbanColId, BrochureOrder[]>()
@@ -149,6 +151,7 @@ export function CoordinatorKanbanView({
               policy={policy}
               onOpen={onOpen}
               onOpenDetail={() => setDetailTarget(buildDetailTarget(o, col))}
+              workflowPolicy={workflowPolicy}
             />
           )
 

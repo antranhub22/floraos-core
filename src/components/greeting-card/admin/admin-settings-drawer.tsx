@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react"
 import { X } from "lucide-react"
+import { BrochureWorkflowSettings } from "./brochure-workflow-settings"
 import { BrochureStepTimeoutSettings } from "./brochure-step-timeout-settings"
 import { BrochureStepSlaSettings } from "./brochure-step-sla-settings"
 import { BrochureLinkLifetimeSettings } from "./brochure-link-lifetime-settings"
@@ -34,6 +35,7 @@ export function AdminSettingsDrawer({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <div className="flex flex-col gap-4 overflow-y-auto p-5">
+          <BrochureWorkflowSettings />
           <BrochureStepTimeoutSettings />
           <BrochureLinkLifetimeSettings />
           <BrochureStepSlaSettings />

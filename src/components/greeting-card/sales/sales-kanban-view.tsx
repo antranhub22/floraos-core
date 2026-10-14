@@ -11,6 +11,7 @@ import { BrochureOrderDetailModal, type OrderDetailModalTarget } from "@/compone
 import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
 import { classifyOrderTimeTier, type OrderTimeTier } from "@/modules/greeting-card/domain/order-time-tier"
 import { TierCollapsibleSection } from "@/components/greeting-card/coordinator/tier-collapsible-section"
+import { isUrgentOrder } from "@/modules/greeting-card/domain/brochure-workflow-policy"
 
 interface Props {
   items: TrackingPipelineItem[]
@@ -195,9 +196,13 @@ function SaleKanbanCard({
 }) {
   const mine = item.stuck?.owner === "SALE"
   const waited = Math.max(0, Math.floor((now - Date.parse(item.stepStartedAt)) / 60_000))
+  const isUrgent = isUrgentOrder({
+    deliveryDate: item.deliveryDate,
+    deliveryTimeSlot: item.deliveryTimeSlot,
+  })
 
   let tierBorder = "border-border"
-  if (tier === "OVERDUE" || mine) {
+  if (isUrgent || tier === "OVERDUE" || mine) {
     tierBorder = "border-danger/60 bg-danger-bg/10"
   } else if (tier === "URGENT") {
     tierBorder = "border-warning/70 bg-warning-bg/15 shadow-xs"
@@ -219,16 +224,19 @@ function SaleKanbanCard({
             <span className="min-w-0 truncate text-body-sm font-bold text-foreground group-hover:text-primary transition-colors">
               {item.customerName}
             </span>
-            {tier === "OVERDUE" && (
+            {isUrgent ? (
+              <span className="rounded-md bg-danger-bg px-1.5 py-0.5 text-caption font-extrabold text-danger shrink-0 animate-pulse">
+                HỎA TỐC
+              </span>
+            ) : tier === "OVERDUE" ? (
               <span className="rounded-md bg-danger-bg px-1.5 py-0.5 text-caption font-extrabold text-danger shrink-0">
                 Quá hạn
               </span>
-            )}
-            {tier === "URGENT" && (
+            ) : tier === "URGENT" ? (
               <span className="rounded-md bg-warning-bg px-1.5 py-0.5 text-caption font-extrabold text-warning shrink-0 animate-pulse">
                 Sắp đến hạn
               </span>
-            )}
+            ) : null}
           </div>
           <span className="shrink-0 font-mono text-caption text-text-muted">
             {item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}

@@ -8,26 +8,41 @@ import type { BrochureOrder, ModalState } from "./coordinator-order-card"
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { customerSecondPaymentReminderMessage } from "@/modules/greeting-card/domain/customer-notifications"
+import {
+  isUrgentOrder,
+  shouldRequireCoordinatorAcceptance,
+  canRoleApproveDeposit,
+  type BrochureWorkflowPolicy,
+} from "@/modules/greeting-card/domain/brochure-workflow-policy"
 
 export function CoordinatorCardDecisionBlocks({
   order,
   policy,
   work,
   onOpen,
+  workflowPolicy,
 }: {
   order: BrochureOrder
   policy: BrochurePaymentPolicy
   work?: TrackingPipelineItem | undefined
   onOpen: (m: ModalState) => void
+  workflowPolicy?: BrochureWorkflowPolicy | undefined
 }) {
   const [copied, setCopied] = useState(false)
 
+  const isUrgent = isUrgentOrder({
+    deliveryDate: order.delivery_window?.date,
+    deliveryTimeSlot: order.delivery_window?.timeSlot,
+  })
+
   // 1. Khối Xác nhận nhận đơn — chỉ hiện khi đơn đã thanh toán nhưng chưa được Điều phối duyệt
   const paymentProofUrl = work?.paymentProofUrl || order.payment_proof_url
-  const acceptBlocker = coordinatorAcceptanceBlocker(
+  const requireAcceptance = workflowPolicy ? shouldRequireCoordinatorAcceptance(workflowPolicy, isUrgent) : true
+  const rawAcceptBlocker = coordinatorAcceptanceBlocker(
     { status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status },
     { paidVnd: order.paid_vnd, paymentProofUrl },
   )
+  const acceptBlocker = requireAcceptance ? rawAcceptBlocker : "BYPASSED"
 
   const isDepositOrder = order.paid_vnd > 0 && order.paid_vnd < order.total_vnd
   const isReadyForDispatch = order.production_status === "READY" || order.production_status === "DONE"
@@ -68,33 +83,47 @@ export function CoordinatorCardDecisionBlocks({
         </div>
       )}
 
-      {/* Khối Xác nhận Tiền Cọc Đợt 1 nếu đơn đã vào sản xuất nhưng cọc chưa duyệt mà có bill */}
-      {acceptBlocker !== null && order.paid_vnd <= 0 && Boolean(paymentProofUrl) && (
-        <div className="flex flex-col gap-2 p-3 rounded-xl border-2 border-dashed border-success/50 bg-success-bg/40">
-          <p className="text-body-sm font-bold text-success text-center flex items-center justify-center gap-1.5">
-            <Banknote size={16} />
-            Khách đã gửi bill tiền cọc (Đợt 1) — Chờ Xác nhận
-          </p>
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={() =>
-              onOpen({
-                type: "confirm-deposit",
-                orderId: order.id,
-                orderCode: order.code,
-                depositVnd: Math.round(order.total_vnd * 0.5),
-                proofUrl: paymentProofUrl ?? null,
-              })
-            }
-            className="h-9 text-body-sm font-extrabold gap-1.5 bg-success hover:bg-success/90 text-white w-full"
-          >
-            <CheckCircle2 size={15} />
-            Xác nhận Tiền Cọc Đợt 1
-          </Button>
-        </div>
-      )}
+      {/* Khối Xác nhận Tiền Cọc Đợt 1 nếu có bill và Điều phối có quyền hoặc được ủy quyền */}
+      {(() => {
+        const isOverdueSla = Boolean(work?.stuck)
+        const canApprove = workflowPolicy
+          ? canRoleApproveDeposit("COORDINATOR", workflowPolicy, { isOverdueSla, isUrgent })
+          : true
+
+        if (!canApprove || order.paid_vnd > 0 || !Boolean(paymentProofUrl)) return null
+
+        const isEscalation = workflowPolicy?.requireAdminDepositApproval && isOverdueSla
+        return (
+          <div className="flex flex-col gap-2 p-3 rounded-xl border-2 border-dashed border-success/50 bg-success-bg/40">
+            <p className="text-body-sm font-bold text-success text-center flex items-center justify-center gap-1.5">
+              <Banknote size={16} />
+              {isUrgent
+                ? "Duyệt cọc nhanh (Đơn hỏa tốc)"
+                : isEscalation
+                ? "Ủy quyền duyệt cọc (Quá hạn SLA)"
+                : "Khách đã gửi bill tiền cọc (Đợt 1) — Chờ Xác nhận"}
+            </p>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() =>
+                onOpen({
+                  type: "confirm-deposit",
+                  orderId: order.id,
+                  orderCode: order.code,
+                  depositVnd: Math.round(order.total_vnd * 0.5),
+                  proofUrl: paymentProofUrl ?? null,
+                })
+              }
+              className="h-9 text-body-sm font-extrabold gap-1.5 bg-success hover:bg-success/90 text-white w-full"
+            >
+              <CheckCircle2 size={15} />
+              {isEscalation ? "Duyệt cọc ủy quyền" : "Xác nhận Tiền Cọc Đợt 1"}
+            </Button>
+          </div>
+        )
+      })()}
 
       {/* 2. Khối Xác nhận Thanh toán Lần 2 — Đơn đặt cọc, hoa xong, khách đã báo bill lần 2
           NOTE: Hiện khi khách báo bill lần 2 (hasBalanceReported) bất kể chính sách thu khi nào.

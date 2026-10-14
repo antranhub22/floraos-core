@@ -12,6 +12,12 @@ import { coordinatorActionBlocker, coordinatorAcceptanceBlocker, type Coordinato
 import { paymentGateBlocker } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
 import type { CoordinatorKanbanColDef } from "./coordinator-kanban-view"
+import {
+  isUrgentOrder,
+  canBypassFinishedPhoto,
+  shouldRequireCoordinatorAcceptance,
+  type BrochureWorkflowPolicy,
+} from "@/modules/greeting-card/domain/brochure-workflow-policy"
 
 interface CoordinatorKanbanCardProps {
   order: BrochureOrder
@@ -21,6 +27,7 @@ interface CoordinatorKanbanCardProps {
   policy: BrochurePaymentPolicy
   onOpen: (m: ModalState) => void
   onOpenDetail: () => void
+  workflowPolicy?: BrochureWorkflowPolicy | undefined
 }
 
 export function CoordinatorKanbanCard({
@@ -31,9 +38,16 @@ export function CoordinatorKanbanCard({
   policy,
   onOpen,
   onOpenDetail,
+  workflowPolicy,
 }: CoordinatorKanbanCardProps) {
   const snapshot = o.greeting_sessions[0]?.product_snapshot || o.items[0]?.metadata
   const isStuck = work?.stuck?.owner === "COORDINATOR"
+
+  const isUrgent = isUrgentOrder({
+    deliveryDate: o.delivery_window?.date,
+    deliveryTimeSlot: o.delivery_window?.timeSlot,
+  })
+  const canSkipPhoto = workflowPolicy ? canBypassFinishedPhoto(workflowPolicy, isUrgent) : policy.requireProductPhotoQC === false
 
   const blockerOf = (action: CoordinatorAction) =>
     coordinatorActionBlocker(
@@ -43,7 +57,7 @@ export function CoordinatorKanbanCard({
         productionStatus: o.production_status,
         deliveryStatus: o.delivery_status,
       },
-      { skipPhoto: policy.requireProductPhotoQC === false }
+      { skipPhoto: canSkipPhoto },
     ) ?? paymentGateBlocker(action, policy, { totalVnd: o.total_vnd, paidVnd: o.paid_vnd })
 
   // Viền và nền theo tầng thời gian
@@ -144,10 +158,12 @@ export function CoordinatorKanbanCard({
         <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/40">
           {col.id === "PENDING" && (() => {
             const paymentProofUrl = work?.paymentProofUrl || o.payment_proof_url
-            const acceptBlocker = coordinatorAcceptanceBlocker(
+            const requireAcceptance = workflowPolicy ? shouldRequireCoordinatorAcceptance(workflowPolicy, isUrgent) : true
+            const rawAcceptBlocker = coordinatorAcceptanceBlocker(
               { status: o.status, productionStatus: o.production_status, deliveryStatus: o.delivery_status },
               { paidVnd: o.paid_vnd, paymentProofUrl },
             )
+            const acceptBlocker = requireAcceptance ? rawAcceptBlocker : "BYPASSED"
             if (acceptBlocker !== null) return (
               <Button
                 type="button"
