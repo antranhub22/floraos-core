@@ -2,7 +2,7 @@ import type { TenantContext } from "@/core/tenancy"
 import { conflict, notFound, validationFailed } from "@/core/http/errors"
 import { mediaSelectionError } from "../domain/media-limits"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
-import { coordinatorActionBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
+import { coordinatorAcceptanceBlocker, coordinatorActionBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
 import { paymentGateBlocker, parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { queueOrderNotification } from "./notify-customer"
@@ -13,6 +13,7 @@ import { DeliveryFailureRepository } from "../infra/delivery-failure-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { CancellationRepository } from "../infra/cancellation-repository"
 import { coordinatorConfirmDepositPayment } from "./confirm-brochure-payment"
+import { canRoleApproveDeposit, isUrgentOrder, parseBrochureWorkflowPolicy } from "../domain/brochure-workflow-policy"
 
 /** Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). */
 async function loadForAction(
@@ -184,11 +185,18 @@ export async function coordinatorAcceptBrochureOrder(
   ctx: TenantContext,
   orderId: string,
   input: { note?: string | undefined } = {},
-  repo = new BrochureOrderRepository()
+  repo = new BrochureOrderRepository(),
+  shops = new GreetingCardRepository()
 ) {
   const order = await repo.findBrochureOrder(ctx, orderId)
   if (!order) throw notFound()
-  if (order.status === "CANCELLED") throw conflict("Đơn hàng đã huỷ, không thể tiếp nhận")
+  // Cùng luật với nút trên giao diện: đơn đã huỷ/đã giao/đã tiếp nhận/đã vào sản xuất, hoặc chưa có
+  // thông tin chuyển khoản nào → không tiếp nhận (gọi thẳng API cũng bị chặn)
+  const acceptBlocker = coordinatorAcceptanceBlocker(
+    { status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status },
+    { paidVnd: Number(order.paid_vnd), paymentProofUrl: order.greeting_sessions?.[0]?.payment_proof_asset_id ?? null }
+  )
+  if (acceptBlocker) throw conflict(acceptBlocker)
 
   // Nếu đơn chưa ghi nhận tiền cọc mà khách đã có bill hoặc báo chuyển khoản:
   // Tự động phê duyệt tiền cọc tương đương với sự phê duyệt của Điều hành!
@@ -197,13 +205,22 @@ export async function coordinatorAcceptBrochureOrder(
   const session = order.greeting_sessions?.[0]
   const hasProofOrReported = Boolean(session?.payment_proof_asset_id || session?.status === "PAYMENT_REPORTED")
 
-  if (paid <= 0 && total > 0 && hasProofOrReported) {
-    try {
-      await coordinatorConfirmDepositPayment(ctx, orderId, { note: input.note })
-    } catch {
-      // Bỏ qua nếu có lỗi ghi thanh toán để không chặn tiến độ xưởng
-    }
+  // Ghi nhận cọc thay Điều hành chỉ khi chính sách tiệm cho Điều phối duyệt cọc (như /confirm-deposit)
+  const shop = await shops.getShopProfile(ctx.organizationId)
+  const deliveryWindow = order.delivery_window as { date?: string; timeSlot?: string } | null
+  const minutesWaiting = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60_000)
+  const workflow = parseBrochureWorkflowPolicy(shop.settings)
+  const mayConfirmDeposit = canRoleApproveDeposit("COORDINATOR", workflow, {
+    isUrgent: isUrgentOrder({ deliveryDate: deliveryWindow?.date, deliveryTimeSlot: deliveryWindow?.timeSlot }),
+    isOverdueSla: minutesWaiting >= workflow.slaEscalationMinutes,
+  })
+  let paidNow = paid
+  if (paid <= 0 && total > 0 && hasProofOrReported && mayConfirmDeposit) {
+    paidNow = (await coordinatorConfirmDepositPayment(ctx, orderId, { note: input.note })).paidVnd
   }
+  // Cùng chốt tiền như khi gán thợ: tiệm bắt thu trước khi cắm mà chưa thu → chưa được tiếp nhận
+  const moneyBlocker = paymentGateBlocker("assign-florist", parsePaymentPolicy(shop.settings), { totalVnd: total, paidVnd: paidNow })
+  if (moneyBlocker) throw conflict(`${moneyBlocker}. Chờ Điều hành xác nhận tiền cọc rồi tiếp nhận đơn.`)
 
   const result = await repo.applyProgress(ctx, order, {
     eventType: "COORDINATOR_ACCEPTED",
@@ -230,6 +247,10 @@ export async function coordinatorRejectBrochureOrder(
   if (!order) throw notFound()
   if (order.status === "CANCELLED") throw conflict("Đơn hàng đã được huỷ trước đó")
   const reasonText = input.reason?.trim() || "Điều phối từ chối nhận đơn (quá tải hoặc không đáp ứng mẫu hoa)"
+  // Bấm lặp / hai người cùng bấm → không tạo hai đề xuất huỷ cho một đơn
+  if ((await cancellationRepo.listPending(ctx)).some((r) => r.order_id === orderId)) {
+    throw conflict("Đơn này đã có đề xuất huỷ đang chờ Điều hành duyệt")
+  }
   
   // Điều phối từ chối nhận đơn -> gửi Đề xuất Hủy & Hoàn tiền toàn phần lên Điều hành phê duyệt
   const result = await cancellationRepo.createProposal(ctx, {

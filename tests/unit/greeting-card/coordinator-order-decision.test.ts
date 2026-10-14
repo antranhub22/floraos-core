@@ -16,7 +16,28 @@ const ctx: TenantContext = {
   capabilities: new Set(["R4", "R6", "R11"]),
 }
 
+const shopWith = (settings: Record<string, unknown>) =>
+  ({ getShopProfile: vi.fn().mockResolvedValue({ name: "Tiệm", settings }) }) as unknown as GreetingCardRepository
+
 describe("Điều phối tiếp nhận và từ chối đơn hàng", () => {
+  it("tiệm bắt Điều hành duyệt cọc + thu trước khi cắm: Điều phối tiếp nhận đơn có bill → không tự ghi tiền, chặn tiếp nhận", async () => {
+    const order = {
+      id: "order-9", code: "DH-9", status: "DRAFT", production_status: "WAITING", delivery_status: "PENDING",
+      total_vnd: 500_000, paid_vnd: 0, created_at: new Date(), delivery_window: null,
+      greeting_sessions: [{ status: "PAYMENT_REPORTED", payment_proof_asset_id: "proof-1" }],
+    }
+    const repo = {
+      findBrochureOrder: vi.fn().mockResolvedValue(order),
+      applyProgress: vi.fn(),
+    } as unknown as BrochureOrderRepository
+    const strict = {
+      brochure_workflow_policy: { require_admin_deposit_approval: true, allow_sla_escalation: false },
+      brochure_policy: { require_paid_before_production: true },
+    }
+    await expect(coordinatorAcceptBrochureOrder(ctx, "order-9", {}, repo, shopWith(strict))).rejects.toThrow(/Chờ Điều hành xác nhận tiền cọc/)
+    expect(repo.applyProgress).not.toHaveBeenCalled()
+  })
+
   it("Điều phối tiếp nhận đơn thành công → chuyển sang ASSIGNED và gửi thông báo", async () => {
     const mockOrder = {
       id: "order-1",
@@ -26,6 +47,7 @@ describe("Điều phối tiếp nhận và từ chối đơn hàng", () => {
       delivery_status: "PENDING",
       total_vnd: 500_000,
       paid_vnd: 0,
+      greeting_sessions: [{ status: "PAYMENT_REPORTED", payment_proof_asset_id: "proof-1" }],
     }
 
     const mockRepo = {
@@ -37,7 +59,8 @@ describe("Điều phối tiếp nhận và từ chối đơn hàng", () => {
       ctx,
       "order-1",
       { note: "Đủ hoa lan, tiếp nhận đơn" },
-      mockRepo
+      mockRepo,
+      shopWith({})
     )
 
     expect(result).toEqual({ success: true })
@@ -69,6 +92,7 @@ describe("Điều phối tiếp nhận và từ chối đơn hàng", () => {
     } as unknown as BrochureOrderRepository
 
     const mockCancellationRepo = {
+      listPending: vi.fn().mockResolvedValue([]),
       getOrderSummary: vi.fn().mockResolvedValue({
         id: "order-2",
         code: "DH-2",
@@ -217,5 +241,12 @@ describe("Điều phối tiếp nhận và từ chối đơn hàng", () => {
         { paidVnd: 500_000, paymentProofUrl: "https://r2.floraos.vn/proof.jpg" }
       )
     ).toBe("Đơn đã vào sản xuất")
+  })
+
+  it("gọi thẳng API tiếp nhận đơn đã vào sản xuất → chặn, không kéo trạng thái xưởng lùi", async () => {
+    const order = { id: "o", code: "DH", status: "CONFIRMED", production_status: "READY", delivery_status: "PENDING", total_vnd: 1, paid_vnd: 1 }
+    const repo = { findBrochureOrder: vi.fn().mockResolvedValue(order), applyProgress: vi.fn() } as unknown as BrochureOrderRepository
+    await expect(coordinatorAcceptBrochureOrder(ctx, "o", {}, repo, shopWith({}))).rejects.toThrow(/đã được xác nhận|vào sản xuất/)
+    expect(repo.applyProgress).not.toHaveBeenCalled()
   })
 })

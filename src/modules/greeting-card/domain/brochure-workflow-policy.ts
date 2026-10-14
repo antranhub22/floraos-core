@@ -184,7 +184,8 @@ export function isUrgentOrder(
       const m = parseInt(match[2], 10)
       const parts = order.deliveryDate.split("-").map(Number)
       if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
-        const slotDate = new Date(parts[0], parts[1] - 1, parts[2], h, m, 0, 0)
+        // Khung giờ giao là giờ Việt Nam (UTC+7) — không phụ thuộc múi giờ máy chủ
+        const slotDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], h - 7, m, 0, 0))
         const diffMinutes = (slotDate.getTime() - now.getTime()) / 60_000
         if (diffMinutes > 0 && diffMinutes <= 120) return true
       }

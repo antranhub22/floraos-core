@@ -92,7 +92,8 @@ describe("Brochure Workflow Policy Domain Tests", () => {
     })
 
     it("recognizes orders delivering within 2 hours today as urgent", () => {
-      const now = new Date(2026, 9, 14, 9, 0, 0, 0)
+      // 9:00 giờ Việt Nam — khung giờ giao là giờ VN, không phụ thuộc múi giờ máy chủ (máy chủ chạy UTC)
+      const now = new Date("2026-10-14T09:00:00+07:00")
       // slot at 10:30 (1.5 hours later)
       const order = {
         deliveryDate: "2026-10-14",
