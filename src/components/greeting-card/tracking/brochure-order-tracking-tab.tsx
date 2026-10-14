@@ -40,18 +40,8 @@ export function BrochureOrderTrackingTab() {
   const qs = queryString(state.view === "calendar" ? { ...state, deliveryFrom: "", deliveryTo: "" } : state)
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-title font-extrabold text-foreground">Tiến độ toàn tiệm</h2>
-          <p className="mt-1 text-body-sm text-text-muted">Cùng một danh sách đơn, xem theo cách bạn cần. Đổi cách xem vẫn giữ bộ lọc.</p>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={refresh} className="h-9 gap-1.5 text-caption">
-          <RefreshCw size={14} aria-hidden="true" /> Làm mới
-        </Button>
-      </div>
-
-      <TrackingToolbar state={state} onChange={change} onApplyView={applyView} />
+    <div className="flex flex-col gap-4">
+      <TrackingToolbar state={state} onChange={change} onApplyView={applyView} onRefresh={refresh} />
 
       {state.view === "kanban" && <KanbanView qs={qs} onOpen={open} />}
       {state.view === "list" && <ListView qs={qs} state={state} onChange={change} onOpen={open} onDetail={(i) => setDetailFor(i)} />}

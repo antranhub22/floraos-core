@@ -1,0 +1,69 @@
+"use client"
+
+import React, { useState } from "react"
+import { AlertCircle, ChevronDown, ChevronRight, Clock, Calendar } from "lucide-react"
+
+interface TierSectionProps {
+  type: "OVERDUE" | "FUTURE"
+  count: number
+  children: React.ReactNode
+  defaultExpanded?: boolean
+}
+
+export function TierCollapsibleSection({
+  type,
+  count,
+  children,
+  defaultExpanded = false,
+}: TierSectionProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
+
+  if (count === 0) return null
+
+  if (type === "OVERDUE") {
+    return (
+      <div className="flex flex-col gap-1.5 rounded-xl border border-danger/30 bg-danger-bg/20 p-1.5">
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-caption font-bold text-danger hover:bg-danger-bg/40 transition-colors"
+          aria-expanded={expanded}
+        >
+          <div className="flex items-center gap-1.5">
+            <AlertCircle size={14} className="shrink-0 text-danger animate-pulse" />
+            <span>{count} đơn quá hạn</span>
+          </div>
+          <div className="flex items-center gap-1 text-caption text-danger/80">
+            <span>{expanded ? "Thu gọn" : "Xem"}</span>
+            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </div>
+        </button>
+
+        {expanded && <div className="flex flex-col gap-2 pt-1">{children}</div>}
+      </div>
+    )
+  }
+
+  // Tương lai (FUTURE)
+  return (
+    <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-surface-muted/40 p-1.5 mt-1">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-caption font-medium text-text-muted hover:bg-surface-muted transition-colors"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-center gap-1.5">
+          <Calendar size={13} className="shrink-0 text-text-muted" />
+          <span>{count} đơn ca sau & đặt trước</span>
+        </div>
+        <div className="flex items-center gap-1 text-caption text-text-muted">
+          <span>{expanded ? "Thu gọn" : "Xem"}</span>
+          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </div>
+      </button>
+
+      {expanded && <div className="flex flex-col gap-2 pt-1">{children}</div>}
+    </div>
+  )
+}
