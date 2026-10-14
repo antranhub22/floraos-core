@@ -28,6 +28,7 @@ describe("parsePaymentPolicy", () => {
       autoApprovePaymentWithProofMinutes: 15,
       productPhotoReviewMinutes: 10,
       allowShipperCash: false,
+      aiReadPaymentProof: false,
     })
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 150 } }).depositPercent).toBe(0)
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 30, require_full_before_dispatch: true } })).toMatchObject({
@@ -109,6 +110,7 @@ describe("hạn thanh toán + ghi chính sách", () => {
       autoApprovePaymentWithProofMinutes: 15,
       productPhotoReviewMinutes: 10,
       allowShipperCash: false,
+      aiReadPaymentProof: false,
       holdMinutes: 15,
       autoCancelUnpaid: true,
       paymentTimeoutMinutes: 30,

@@ -81,6 +81,11 @@ export interface BrochurePaymentPolicy {
   productPhotoReviewMinutes?: number
   /** Shipper được thu tiền mặt phần còn lại khi giao. Mặc định TẮT: khách luôn chuyển khoản (PO 14/10/2026). */
   allowShipperCash?: boolean
+  /**
+   * AI (GPT-4o) đọc ảnh bill để đối soát tài khoản/số tiền. Mặc định TẮT để không tốn token (PO 14/10/2026).
+   * Bật = ảnh bill (tên, số tài khoản, số tiền của khách) được gửi sang OpenAI để đọc.
+   */
+  aiReadPaymentProof?: boolean
 }
 
 /** Hạn thanh toán gợi ý khi Điều hành bật (PO 08/10/2026). */
@@ -105,6 +110,7 @@ export const DEFAULT_PAYMENT_POLICY: BrochurePaymentPolicy = {
   autoApprovePaymentWithProofMinutes: 15,
   productPhotoReviewMinutes: 10,
   allowShipperCash: false,
+  aiReadPaymentProof: false,
 }
 
 /**
@@ -189,6 +195,7 @@ export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
     autoApprovePaymentWithProofMinutes: minutesIn(r.auto_approve_payment_with_proof_minutes) ?? 15,
     productPhotoReviewMinutes: minutesIn(r.product_photo_review_minutes) ?? 10,
     allowShipperCash: r.allow_shipper_cash === true,
+    aiReadPaymentProof: r.ai_read_payment_proof === true,
     // Chỉ thêm khoá khi tiệm bật giữ đơn — chính sách cũ giữ nguyên hình dạng
     ...(hold ? { holdMinutes: hold } : {}),
     ...(autoCancel ? { autoCancelUnpaid: true } : {}),
@@ -219,6 +226,7 @@ export function serializePaymentPolicy(policy: BrochurePaymentPolicy): Record<st
     auto_approve_payment_with_proof_minutes: policy.autoApprovePaymentWithProofMinutes ?? 15,
     product_photo_review_minutes: policy.productPhotoReviewMinutes ?? 10,
     allow_shipper_cash: policy.allowShipperCash === true,
+    ai_read_payment_proof: policy.aiReadPaymentProof === true,
   }
 }
 

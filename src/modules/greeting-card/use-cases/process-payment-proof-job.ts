@@ -12,6 +12,7 @@ import {
   type PaymentProofExtraction,
 } from "../domain/payment-proof-analysis"
 import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
+import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import type { TenantContext } from "@/core/tenancy"
 
 export interface ProcessPaymentProofInput {
@@ -40,6 +41,9 @@ export async function processPaymentProofVisionJob(
     if (!session || !session.order) {
       return null
     }
+
+    // Tiệm chưa bật "AI đọc bill" (mặc định) → không gọi AI, không tốn token; Điều hành duyệt tay
+    if (parsePaymentPolicy(session.organization.settings).aiReadPaymentProof !== true) return null
 
     const shopBank = parseBrochurePaymentConfig(session.organization.settings)
     const order = session.order
@@ -82,9 +86,10 @@ export async function processPaymentProofVisionJob(
       const aiResult = await callCapability(
         {
           capability: "content_generation",
-          // Bill chứa số tài khoản, tên và giao dịch của khách → dữ liệu cá nhân: chỉ mô hình không đưa
-          // dữ liệu rời hạ tầng. Không có mô hình như vậy → UNREADABLE → Điều hành đối soát tay.
-          privacy: "SENSITIVE",
+          // PO 14/10/2026: tiệm tự bật thì cho GPT-4o (OpenAI) đọc bill — dữ liệu bill rời hạ tầng,
+          // nên chỉ chạy khi công tắc bật; mức SHOP, ghim đúng mô hình GPT-4o (đọc ảnh tốt nhất hiện có).
+          privacy: "SHOP",
+          pinnedModelKey: "openai_structured",
           entity: { type: "payment_proof_analysis", id: assetId },
         },
         createPaymentProofVisionAdapter(

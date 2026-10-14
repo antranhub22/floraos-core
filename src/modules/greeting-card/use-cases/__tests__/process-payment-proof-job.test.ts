@@ -12,14 +12,38 @@ import { processPaymentProofVisionJob } from "../process-payment-proof-job"
 import type { GreetingCardRepository } from "../../infra/greeting-card-repository"
 import type { PaymentProofRepository } from "../../infra/payment-proof-repository"
 
-/** Ảnh bill chứa dữ liệu tài chính cá nhân của khách → luôn gọi AI ở mức SENSITIVE, chỉ đọc/ghi ảnh của đúng tiệm. */
+const AI_ON = { brochure_policy: { ai_read_payment_proof: true } }
+
+/**
+ * PO 14/10/2026: AI đọc bill bằng GPT-4o là công tắc trong cài đặt, mặc định TẮT (không tốn token).
+ * Tắt → không gọi AI, không đọc ảnh; bật → GPT-4o, chỉ đọc/ghi ảnh của đúng tiệm.
+ */
 describe("processPaymentProofVisionJob", () => {
-  it("gọi AI với sàn SENSITIVE; AI không chạy được → UNREADABLE để Điều hành duyệt tay", async () => {
+  it("tiệm chưa bật AI đọc bill (mặc định) → không gọi AI, không tải ảnh", async () => {
+    callCapability.mockClear()
     const repo = {
       findSessionForVerification: vi.fn().mockResolvedValue({
         sale_id: null,
         order: { total_vnd: 1_000_000, balance_vnd: 1_000_000, pricing_rule_ref: null },
         organization: { settings: {} },
+      }),
+      findAssetForVerification: vi.fn(),
+      updateAssetMetadata: vi.fn(),
+    } as unknown as GreetingCardRepository
+
+    const res = await processPaymentProofVisionJob({ assetId: "a0", organizationId: "org-1", sendCode: "T01-001", purpose: "DEPOSIT" }, repo)
+
+    expect(res).toBeNull()
+    expect(callCapability).not.toHaveBeenCalled()
+    expect(repo.findAssetForVerification).not.toHaveBeenCalled()
+  })
+
+  it("bật → gọi GPT-4o (ghim mô hình); AI không chạy được → UNREADABLE để Điều hành duyệt tay", async () => {
+    const repo = {
+      findSessionForVerification: vi.fn().mockResolvedValue({
+        sale_id: null,
+        order: { total_vnd: 1_000_000, balance_vnd: 1_000_000, pricing_rule_ref: null },
+        organization: { settings: AI_ON },
       }),
       findAssetForVerification: vi.fn().mockResolvedValue({ storage_key: "k", mime_type: "image/jpeg", metadata: {} }),
       updateAssetMetadata: vi.fn().mockResolvedValue({ count: 1 }),
@@ -27,7 +51,7 @@ describe("processPaymentProofVisionJob", () => {
 
     const res = await processPaymentProofVisionJob({ assetId: "a1", organizationId: "org-1", sendCode: "T01-001", purpose: "DEPOSIT" }, repo)
 
-    expect(callCapability.mock.calls[0]?.[0]).toMatchObject({ privacy: "SENSITIVE" })
+    expect(callCapability.mock.calls[0]?.[0]).toMatchObject({ privacy: "SHOP", pinnedModelKey: "openai_structured" })
     expect(repo.findAssetForVerification).toHaveBeenCalledWith("org-1", "a1")
     expect(repo.updateAssetMetadata).toHaveBeenCalledWith("org-1", "a1", expect.objectContaining({ ai_analysis: expect.objectContaining({ status: "UNREADABLE" }) }))
     expect(res?.status).toBe("UNREADABLE")
@@ -42,7 +66,7 @@ describe("processPaymentProofVisionJob", () => {
       findSessionForVerification: vi.fn().mockResolvedValue({
         sale_id: null,
         order: { total_vnd: 1_000_000, balance_vnd: 1_000_000, pricing_rule_ref: null },
-        organization: { settings: { brochure_payment: { bankId: "VCB", accountNo: "0123456789", accountName: "TIEM HOA" } } },
+        organization: { settings: { ...AI_ON, brochure_payment: { bankId: "VCB", accountNo: "0123456789", accountName: "TIEM HOA" } } },
       }),
       findAssetForVerification: vi.fn().mockResolvedValue({ storage_key: "k", mime_type: "image/jpeg", metadata: {} }),
       updateAssetMetadata: vi.fn().mockResolvedValue({ count: 1 }),

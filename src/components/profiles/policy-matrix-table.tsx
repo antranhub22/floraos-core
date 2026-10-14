@@ -124,11 +124,22 @@ export function PolicyMatrixTable({ policy, onChange, disabled }: Props) {
                 disabled={disabled}
               />
 
+              {/* 3b. AI ĐỌC BILL (mặc định TẮT — PO 14/10/2026) */}
+              <PolicyRow
+                icon={<Clock size={17} className="text-foreground" />}
+                title="AI đọc ảnh bill chuyển khoản"
+                description="Bật: AI tự đọc tài khoản nhận, số tiền, mã giao dịch trên bill và đánh dấu bill khớp, lệch hoặc nghi trùng để duyệt nhanh. Ảnh bill được gửi sang dịch vụ AI bên ngoài và có tính phí theo lượt. Tắt (mặc định): người duyệt tự xem ảnh bill."
+                isOn={policy.aiReadPaymentProof === true}
+                onToggle={(val) => onChange({ aiReadPaymentProof: val })}
+                statusText={policy.aiReadPaymentProof ? "AI đọc mọi bill khách gửi" : "Người duyệt tự xem bill"}
+                disabled={disabled}
+              />
+
               {/* 4. TỰ ĐỘNG DUYỆT BILL SAU 15 PHÚT */}
               <PolicyRow
                 icon={<Clock size={17} className="text-foreground" />}
                 title="Tự động duyệt thanh toán khi có ảnh chụp bill"
-                description="Bill khách tải lên khớp đúng tài khoản và số tiền mà quá thời gian chọn chưa ai bấm duyệt, hệ thống tự xác nhận để đơn vào cắm hoa kịp giờ. Bill lệch hoặc không đọc được luôn chờ người duyệt."
+                description="Bill khách tải lên khớp đúng tài khoản và số tiền mà quá thời gian chọn chưa ai bấm duyệt, hệ thống tự xác nhận để đơn vào cắm hoa kịp giờ. Bill lệch hoặc không đọc được luôn chờ người duyệt. Cần bật “AI đọc ảnh bill”."
                 isOn={isAutoApproveProof}
                 onToggle={(val) => onChange({ autoApprovePaymentWithProof: val })}
                 extraControl={
