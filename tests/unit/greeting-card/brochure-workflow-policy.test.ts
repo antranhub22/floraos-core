@@ -40,6 +40,11 @@ describe("Brochure Workflow Policy Domain Tests", () => {
       expect(policy.preset).toBe("CUSTOM")
     })
 
+    it("tiệm có cấu hình cũ PAYMENT_OR_COORDINATOR vẫn chỉ Điều hành duyệt cọc (PO 14/10/2026)", () => {
+      const policy = parseBrochureWorkflowPolicy({ brochure_policy: { tracking_trigger_policy: "PAYMENT_OR_COORDINATOR" } })
+      expect(policy.requireAdminDepositApproval).toBe(true)
+    })
+
     it("parses LEAN preset accurately", () => {
       const payload = {
         [BROCHURE_WORKFLOW_POLICY_KEY]: serializeWorkflowPolicy(LEAN_WORKFLOW_POLICY),

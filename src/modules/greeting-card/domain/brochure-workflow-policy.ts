@@ -103,7 +103,8 @@ export function parseBrochureWorkflowPolicy(settings: unknown): BrochureWorkflow
       const trackingTrigger = legacy.tracking_trigger_policy
 
       const partial: Omit<BrochureWorkflowPolicy, "preset"> = {
-        requireAdminDepositApproval: trackingTrigger === "PAYMENT_ONLY",
+        // PO 14/10/2026: mặc định mọi tiệm chỉ Điều hành duyệt cọc — cấu hình cũ không nới quyền này
+        requireAdminDepositApproval: true,
         requireCoordinatorAcceptance: trackingTrigger !== "PAYMENT_ONLY",
         requireFinishedPhoto: requirePhotoQC,
         customerApprovalMode: requirePhotoQC ? "AUTO_PASS_10M" : "BYPASS",
