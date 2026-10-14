@@ -5,6 +5,13 @@
 
 export const DISMISSAL_TIMEOUT_MS = 5 * 60 * 1000 // 5 phút
 
+/** Quyền duyệt/bỏ trực tiếp/khôi phục: R4 (Điều hành, Điều phối). Sale chỉ có R1 → chỉ đề xuất. */
+export const DISMISSAL_DECIDE_CAPABILITY = "R4"
+
+export function canDecideDismissal(capabilities: ReadonlySet<string> | readonly string[]): boolean {
+  return Array.isArray(capabilities) ? capabilities.includes(DISMISSAL_DECIDE_CAPABILITY) : (capabilities as ReadonlySet<string>).has(DISMISSAL_DECIDE_CAPABILITY)
+}
+
 export const DISMISSAL_REASONS = [
   { id: "CHANGED_MIND", label: "Khách đổi ý không mua nữa" },
   { id: "PRICE_CHECK_ONLY", label: "Khách chỉ vào khảo giá" },
@@ -36,6 +43,13 @@ export interface DismissalInfo {
   decidedByName?: string | undefined
   decidedAt?: string | undefined
   autoDismissed?: boolean | undefined
+}
+
+/** Đọc phòng thủ bản ghi bỏ hiển thị lưu trong JSON (null/rác → không có). */
+export function dismissalOf(v: unknown): DismissalInfo | undefined {
+  if (!v || typeof v !== "object") return undefined
+  const d = v as Partial<DismissalInfo>
+  return d.status === "PENDING" || d.status === "APPROVED" || d.status === "REJECTED" ? (d as DismissalInfo) : undefined
 }
 
 /**

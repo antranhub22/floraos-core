@@ -169,7 +169,7 @@ export function KanbanCard({
           <span className="text-cool-600 font-medium truncate">
             {item.dismissal?.reason || "Đã bỏ hiển thị"}
           </span>
-          {onRestore && (
+          {onRestore && item.dismissal?.status === "APPROVED" && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onRestore(item) }}

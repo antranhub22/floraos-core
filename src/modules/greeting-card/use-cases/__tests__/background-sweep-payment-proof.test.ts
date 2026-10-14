@@ -5,6 +5,11 @@ vi.mock("../../infra/cancellation-follow-up-repository", () => ({
     listExpiredCoordinatorRejections = vi.fn().mockResolvedValue([])
   },
 }))
+vi.mock("../../infra/dismissal-repository", () => ({
+  DismissalRepository: class {
+    listExpired = vi.fn().mockResolvedValue([])
+  },
+}))
 vi.mock("../confirm-brochure-payment", () => ({
   adminConfirmBrochurePayment: vi.fn().mockResolvedValue({ paymentId: "pay-1" }),
 }))

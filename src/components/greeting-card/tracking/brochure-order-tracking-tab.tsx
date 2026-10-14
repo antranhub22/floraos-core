@@ -18,6 +18,7 @@ import { codeOf } from "./views/tracking-bits"
 import { DEFAULT_STATE, queryString, type SavedView, type TrackingViewState } from "./views/tracking-view-state"
 
 import { DismissProposalModal } from "./views/dismiss-proposal-modal"
+import { canDecideDismissal } from "@/modules/greeting-card/domain/dismissal-policy"
 
 /**
  * Tab Theo dõi tiến độ — nhiều cách xem trên CÙNG một tập đơn/link: Kanban, Danh sách, Lịch,
@@ -34,9 +35,8 @@ export function BrochureOrderTrackingTab() {
 
   const capabilities = me.data?.capabilities ?? []
   // Điều hành / Admin có quyền duyệt bỏ hiển thị và thao tác quản trị
-  const canDecide = capabilities.includes("greeting_card.manage") ||
-    capabilities.includes("greeting_card.assign_florist") ||
-    capabilities.includes("organization.manage")
+  // /auth/me trả MÃ quyền (R4…), không phải tên — so tên thì nút duyệt không bao giờ hiện
+  const canDecide = canDecideDismissal(capabilities)
 
   const change = (patch: Partial<TrackingViewState>) => setState((s) => ({ ...s, ...patch }))
   const applyView = (v: SavedView) =>

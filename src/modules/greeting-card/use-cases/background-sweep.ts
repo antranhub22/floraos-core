@@ -3,6 +3,8 @@ import { log } from "@/core/observability/log"
 import { BackgroundSweepRepository } from "../infra/background-sweep-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { CancellationFollowUpRepository } from "../infra/cancellation-follow-up-repository"
+import { DismissalRepository } from "../infra/dismissal-repository"
+import { DISMISSAL_TIMEOUT_MS } from "../domain/dismissal-policy"
 import { parsePaymentPolicy, DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES } from "../domain/brochure-payment-policy"
 import { NOTIFY_EVENTS, type NotifyEvent } from "../domain/customer-notifications"
 import {
@@ -27,6 +29,7 @@ export interface SweepResult {
   cancelled: number
   sessionsExpired: number
   autoConfirmed: number
+  dismissed: number
 }
 
 /** Ngữ cảnh "hệ thống" cho thao tác tự động — audit ghi rõ nguồn, không mang năng lực của ai. */
@@ -45,7 +48,7 @@ export async function runBackgroundSweep(
   repo = new BackgroundSweepRepository(),
   payments = new BrochurePaymentRepository(),
 ): Promise<SweepResult> {
-  const result: SweepResult = { staleFailed: 0, retried: 0, reminded: 0, cancelled: 0, sessionsExpired: 0, autoConfirmed: 0 }
+  const result: SweepResult = { staleFailed: 0, retried: 0, reminded: 0, cancelled: 0, sessionsExpired: 0, autoConfirmed: 0, dismissed: 0 }
 
   result.staleFailed = await repo.failStaleSending(new Date(now.getTime() - STALE_SENDING_MS))
 
@@ -178,6 +181,25 @@ export async function runBackgroundSweep(
       feature: "greeting-card",
       message: error instanceof Error ? error.message : String(error),
     })
+  }
+
+  // 7. Đề xuất bỏ hiển thị của Sale quá 5 phút chưa ai duyệt → tự duyệt THẬT (ghi DB, lịch sử, audit),
+  // không chỉ "trông như đã duyệt" lúc đọc. Đơn khách vừa trả tiền thì tự duyệt bị từ chối, giữ nguyên.
+  try {
+    const dismissals = new DismissalRepository()
+    for (const d of await dismissals.listExpired(new Date(now.getTime() - DISMISSAL_TIMEOUT_MS))) {
+      try {
+        await dismissals.autoApprove(d.organizationId, d)
+        result.dismissed += 1
+      } catch (error) {
+        log.warn("greeting_card.dismissal_auto_approve_skipped", {
+          organizationId: d.organizationId, feature: "greeting-card", targetId: d.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+  } catch (error) {
+    log.warn("greeting_card.sweep_dismissals_failed", { feature: "greeting-card", message: error instanceof Error ? error.message : String(error) })
   }
 
   return result

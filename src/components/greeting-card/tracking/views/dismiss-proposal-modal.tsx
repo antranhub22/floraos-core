@@ -52,7 +52,7 @@ export function DismissProposalModal({ item, onClose, onSuccess }: DismissPropos
 
       if (!res.ok) {
         const body = await res.json().catch(() => null)
-        throw new Error(body?.message || "Không thể thực hiện đề xuất bỏ hiển thị")
+        throw new Error(body?.error?.message || "Không thể thực hiện đề xuất bỏ hiển thị")
       }
 
       onSuccess()

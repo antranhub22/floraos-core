@@ -16,7 +16,7 @@ const dismissSchema = z.object({
 
 /**
  * POST /api/v1/greeting-card/tracking/dismiss
- * Sale đề xuất hoặc Điều hành trực tiếp hủy bỏ hiển thị đơn/link chưa thanh toán.
+ * Sale (R1) đề xuất; người có R4 (Điều hành/Điều phối) bỏ hiển thị trực tiếp đơn/link chưa thanh toán.
  */
 export const POST = handle(async (req: Request) => {
   const { ctx } = await requireTenantContext(req)

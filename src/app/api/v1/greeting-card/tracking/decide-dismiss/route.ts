@@ -3,7 +3,7 @@ import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
-import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
+import { DISMISSAL_DECIDE_CAPABILITY } from "@/modules/greeting-card/domain/dismissal-policy"
 import { decideDismissal } from "@/modules/greeting-card/use-cases/decide-dismissal"
 
 const decideSchema = z.object({
@@ -15,11 +15,11 @@ const decideSchema = z.object({
 
 /**
  * POST /api/v1/greeting-card/tracking/decide-dismiss
- * Điều hành phê duyệt hoặc từ chối đề xuất hủy bỏ hiển thị.
+ * Điều hành/Điều phối (R4) phê duyệt hoặc từ chối đề xuất bỏ hiển thị.
  */
 export const POST = handle(async (req: Request) => {
   const { ctx } = await requireTenantContext(req)
-  requireCapability(ctx, GREETING_CARD_CAPABILITY.orderRead)
+  requireCapability(ctx, DISMISSAL_DECIDE_CAPABILITY)
 
   const body = await req.json().catch(() => null)
   const parsed = decideSchema.safeParse(body)

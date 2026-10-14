@@ -1,10 +1,14 @@
 import type { TenantContext } from "@/core/tenancy"
-import { DismissalRepository } from "../infra/dismissal-repository"
+import { requireCapability } from "@/core/rbac/capabilities"
+import { DismissalRestoreRepository } from "../infra/dismissal-restore-repository"
+import { DISMISSAL_DECIDE_CAPABILITY } from "../domain/dismissal-policy"
 
+/** Khôi phục đơn/link đã bỏ hiển thị — cùng quyền với duyệt bỏ hiển thị (R4). */
 export async function restoreDismissal(
   ctx: TenantContext,
   input: { id: string; type: "ORDER" | "SESSION"; reason?: string },
-  repo = new DismissalRepository(),
+  repo = new DismissalRestoreRepository(),
 ) {
+  requireCapability(ctx, DISMISSAL_DECIDE_CAPABILITY)
   return repo.restore(ctx, input)
 }

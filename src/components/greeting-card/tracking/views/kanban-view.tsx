@@ -25,34 +25,23 @@ export function KanbanView({ qs, onOpen, canDecide = false, onDismiss }: KanbanV
   )
   const cols = res.data?.data.columns ?? []
 
-  const handleDecide = useCallback(async (item: TrackingViewItem, approve: boolean) => {
+  // Lỗi từ máy chủ (đơn vừa được thanh toán, không đủ quyền…) phải báo cho người bấm, không nuốt im
+  const post = useCallback(async (path: string, body: Record<string, unknown>) => {
     try {
-      await fetch("/api/v1/greeting-card/tracking/decide-dismiss", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: item.orderId ?? item.sessionId,
-          type: item.orderId ? "ORDER" : "SESSION",
-          approve,
-        }),
-      })
-      res.mutate?.()
-    } catch { /* kết nối lỗi, bỏ qua */ }
+      const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      if (!r.ok) {
+        const err = (await r.json().catch(() => null)) as { error?: { message?: string } } | null
+        window.alert(err?.error?.message ?? "Không thực hiện được, vui lòng thử lại.")
+      }
+    } catch {
+      window.alert("Mất kết nối, vui lòng thử lại.")
+    }
+    res.mutate?.()
   }, [res])
 
-  const handleRestore = useCallback(async (item: TrackingViewItem) => {
-    try {
-      await fetch("/api/v1/greeting-card/tracking/restore", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: item.orderId ?? item.sessionId,
-          type: item.orderId ? "ORDER" : "SESSION",
-        }),
-      })
-      res.mutate?.()
-    } catch { /* kết nối lỗi, bỏ qua */ }
-  }, [res])
+  const target = (item: TrackingViewItem) => ({ id: item.orderId ?? item.sessionId, type: item.orderId ? "ORDER" : "SESSION" })
+  const handleDecide = useCallback((item: TrackingViewItem, approve: boolean) => post("/api/v1/greeting-card/tracking/decide-dismiss", { ...target(item), approve }), [post])
+  const handleRestore = useCallback((item: TrackingViewItem) => post("/api/v1/greeting-card/tracking/restore", target(item)), [post])
 
   const renderCard = (i: TrackingViewItem, tier: OrderTimeTier) => (
     <KanbanCard
@@ -62,8 +51,8 @@ export function KanbanView({ qs, onOpen, canDecide = false, onDismiss }: KanbanV
       onOpen={onOpen}
       canDecide={canDecide}
       {...(onDismiss ? { onDismiss } : {})}
-      onDecide={handleDecide}
-      onRestore={handleRestore}
+      {...(canDecide ? { onDecide: (item: TrackingViewItem, approve: boolean) => { void handleDecide(item, approve) } } : {})}
+      {...(canDecide ? { onRestore: (item: TrackingViewItem) => { void handleRestore(item) } } : {})}
     />
   )
 

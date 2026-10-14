@@ -1,411 +1,130 @@
-import { randomUUID } from "node:crypto"
-import type { Prisma } from "@/generated/prisma/client"
-import { conflict, notFound, validationFailed } from "@/core/http/errors"
+import { conflict, notFound } from "@/core/http/errors"
 import { prisma } from "@/core/tenancy/infra/prisma"
-import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
+import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
+import type { DismissalInfo, DismissalProposalInput } from "../domain/dismissal-policy"
 import {
-  canProposeDismissal,
-  type DismissalInfo,
-  type DismissalProposalInput,
-} from "../domain/dismissal-policy"
+  obj, orderDismissible, sessionDismissible, writeOrderDismissal, writeSessionDismissal,
+} from "./dismissal-store"
 
-type Loose = Record<string, unknown>
-const obj = (v: unknown): Loose => (v && typeof v === "object" ? (v as Loose) : {})
+const ORDER_SELECT = { id: true, status: true, paid_vnd: true, production_status: true, pricing_rule_ref: true } as const
+const SESSION_SELECT = { id: true, revoked_at: true, expires_at: true, status: true, product_snapshot: true } as const
+type Target = { id: string; type: "ORDER" | "SESSION" }
 
+/** Ngữ cảnh hệ thống cho tự duyệt quá hạn — audit ghi rõ nguồn, không mang năng lực của ai. */
+function systemContext(organizationId: string): TenantContext {
+  return { organizationId, workspaceId: "", userId: "system:dismissal-timeout", branchId: null, capabilities: new Set() }
+}
+
+/**
+ * Bỏ hiển thị đơn/link chưa thanh toán: Sale đề xuất (chờ duyệt, quá hạn thì bộ quét nền tự duyệt),
+ * Điều hành/Điều phối duyệt hoặc bỏ trực tiếp. Mọi lần ghi khoá lạc quan + audit; đơn huỷ có lịch sử.
+ */
 export class DismissalRepository {
   constructor(private readonly db = prisma) {}
 
-  private async resolveUserName(ctx: TenantContext): Promise<string> {
-    const membership = await this.db.memberships.findFirst({
+  private async userName(ctx: TenantContext): Promise<string> {
+    if (ctx.userId.startsWith("system:")) return "Hệ thống"
+    const m = await this.db.memberships.findFirst({
       where: scopedWhere(ctx, { user_id: ctx.userId }),
       select: { user: { select: { name: true, email: true } } },
     })
-    return membership?.user.name?.trim() || membership?.user.email.split("@")[0] || "Nhân viên"
+    return m?.user.name?.trim() || m?.user.email.split("@")[0] || "Nhân viên"
   }
 
-  /**
-   * Đề xuất hoặc hủy bỏ trực tiếp hiển thị của đơn / link Thẻ chào.
-   */
-  async propose(
-    ctx: TenantContext,
-    input: DismissalProposalInput,
-    isCoordinatorOrAdmin: boolean,
-  ): Promise<{ directApproved: boolean; dismissal: DismissalInfo }> {
-    const now = new Date()
-    const nowIso = now.toISOString()
-    const userName = await this.resolveUserName(ctx)
-
-    if (!input.reasonText || input.reasonText.trim().length < 2) {
-      throw validationFailed({ reasonText: "Vui lòng nhập lý do hủy/bỏ hiển thị chi tiết." })
+  private async load(ctx: TenantContext, t: Target) {
+    if (t.type === "ORDER") {
+      const order = await this.db.orders.findFirst({ where: scopedWhere(ctx, { id: t.id }), select: ORDER_SELECT })
+      if (!order) throw notFound()
+      return { kind: "ORDER" as const, order, current: obj(obj(order.pricing_rule_ref).dismissal) as unknown as DismissalInfo }
     }
+    const session = await this.db.greeting_sessions.findFirst({ where: scopedWhere(ctx, { id: t.id }), select: SESSION_SELECT })
+    if (!session) throw notFound()
+    return { kind: "SESSION" as const, session, current: obj(obj(session.product_snapshot)._dismissal) as unknown as DismissalInfo }
+  }
 
-    const fullReason = input.note
-      ? `${input.reasonText} (${input.note.trim()})`
-      : input.reasonText.trim()
+  private async write(ctx: TenantContext, loaded: Awaited<ReturnType<DismissalRepository["load"]>>, info: DismissalInfo, action: string, now: Date) {
+    await this.db.$transaction(async (tx) => {
+      if (loaded.kind === "ORDER") await writeOrderDismissal(tx, ctx, loaded.order, info, now)
+      else await writeSessionDismissal(tx, ctx, loaded.session, info, now)
+      await recordAuditLog(ctx, {
+        action: `${loaded.kind === "ORDER" ? "order" : "session"}.dismiss.${action}`,
+        entityType: loaded.kind === "ORDER" ? "order" : "greeting_session",
+        entityId: loaded.kind === "ORDER" ? loaded.order.id : loaded.session.id,
+        before: { dismissal: loaded.current?.status ? loaded.current : null },
+        after: { dismissal: info },
+      }, tx)
+    })
+  }
 
-    const initialDismissal: DismissalInfo = {
-      status: isCoordinatorOrAdmin ? "APPROVED" : "PENDING",
-      reason: fullReason,
+  async propose(ctx: TenantContext, input: DismissalProposalInput, direct: boolean): Promise<{ directApproved: boolean; dismissal: DismissalInfo }> {
+    const now = new Date()
+    const loaded = await this.load(ctx, input)
+    const check = loaded.kind === "ORDER" ? orderDismissible(loaded.order) : sessionDismissible(loaded.session, now)
+    if (!check.allowed) throw conflict(check.reason ?? "Không thể bỏ hiển thị mục này.")
+    if (loaded.current?.status === "PENDING") throw conflict("Mục này đã có đề xuất bỏ hiển thị đang chờ duyệt.")
+
+    const name = await this.userName(ctx)
+    const note = input.note?.trim() || undefined
+    const dismissal: DismissalInfo = {
+      status: direct ? "APPROVED" : "PENDING",
+      reason: note ? `${input.reasonText.trim()} (${note})` : input.reasonText.trim(),
       category: input.reasonId,
-      note: input.note?.trim() || undefined,
+      note,
       proposedBy: ctx.userId,
-      proposedByName: userName,
-      proposedAt: nowIso,
-      ...(isCoordinatorOrAdmin
-        ? {
-            decidedBy: ctx.userId,
-            decidedByName: userName,
-            decidedAt: nowIso,
-          }
-        : {}),
+      proposedByName: name,
+      proposedAt: now.toISOString(),
+      ...(direct ? { decidedBy: ctx.userId, decidedByName: name, decidedAt: now.toISOString() } : {}),
     }
-
-    if (input.type === "SESSION") {
-      const session = await this.db.greeting_sessions.findFirst({
-        where: scopedWhere(ctx, { id: input.id }),
-      })
-      if (!session) throw notFound()
-
-      const check = canProposeDismissal({
-        isCancelled: session.revoked_at !== null || (session.expires_at !== null && session.expires_at <= now),
-        paidVnd: 0,
-        currentStepId: session.status === "SELECTED" ? "STEP_2_CHOOSING" : "STEP_1_OPENED",
-      })
-      if (!check.allowed) throw conflict(check.reason ?? "Không thể hủy link này.")
-
-      const snapshot = obj(session.product_snapshot)
-
-      if (isCoordinatorOrAdmin) {
-        // Điều hành duyệt trực tiếp
-        await this.db.$transaction([
-          this.db.greeting_sessions.update({
-            where: { id: session.id },
-            data: {
-              revoked_at: now,
-              revoked_by: ctx.userId,
-              expires_at: now,
-              product_snapshot: {
-                ...snapshot,
-                _dismissal: initialDismissal as unknown as Prisma.InputJsonValue,
-              },
-            },
-          }),
-          this.db.greeting_journey_events.create({
-            data: scopedData(ctx, {
-              id: randomUUID(),
-              session_id: session.id,
-              event_type: "DISMISSED",
-              metadata: initialDismissal as unknown as Prisma.InputJsonValue,
-            }),
-          }),
-        ])
-      } else {
-        // Sale đề xuất -> Chờ duyệt trong 5 phút
-        await this.db.$transaction([
-          this.db.greeting_sessions.update({
-            where: { id: session.id },
-            data: {
-              product_snapshot: {
-                ...snapshot,
-                _dismissal: initialDismissal as unknown as Prisma.InputJsonValue,
-              },
-            },
-          }),
-          this.db.greeting_journey_events.create({
-            data: scopedData(ctx, {
-              id: randomUUID(),
-              session_id: session.id,
-              event_type: "DISMISS_PROPOSED",
-              metadata: initialDismissal as unknown as Prisma.InputJsonValue,
-            }),
-          }),
-        ])
-      }
-
-      await recordAuditLog(ctx, {
-        action: isCoordinatorOrAdmin ? "session.dismiss.direct" : "session.dismiss.propose",
-        entityType: "greeting_session",
-        entityId: session.id,
-        before: { revoked_at: session.revoked_at },
-        after: { dismissal: initialDismissal },
-      })
-
-      return { directApproved: isCoordinatorOrAdmin, dismissal: initialDismissal }
-    }
-
-    // ORDER
-    const order = await this.db.orders.findFirst({
-      where: scopedWhere(ctx, { id: input.id }),
-      include: { greeting_sessions: { take: 1 } },
-    })
-    if (!order) throw notFound()
-
-    const check = canProposeDismissal({
-      isCancelled: order.status === "CANCELLED",
-      paidVnd: Number(order.paid_vnd || 0),
-      currentStepId: order.production_status ? "STEP_6_ARRANGING" : "STEP_3_FILLING_FORM",
-    })
-    if (!check.allowed) throw conflict(check.reason ?? "Không thể hủy đơn này.")
-
-    const ref = obj(order.pricing_rule_ref)
-
-    if (isCoordinatorOrAdmin) {
-      await this.db.$transaction(async (tx) => {
-        await tx.orders.update({
-          where: { id: order.id },
-          data: {
-            status: "CANCELLED",
-            pricing_rule_ref: {
-              ...ref,
-              dismissal: initialDismissal as unknown as Prisma.InputJsonValue,
-            },
-          },
-        })
-        if (order.greeting_sessions[0]) {
-          await tx.greeting_sessions.update({
-            where: { id: order.greeting_sessions[0].id },
-            data: { revoked_at: now, revoked_by: ctx.userId },
-          })
-        }
-      })
-    } else {
-      await this.db.orders.update({
-        where: { id: order.id },
-        data: {
-          pricing_rule_ref: {
-            ...ref,
-            dismissal: initialDismissal as unknown as Prisma.InputJsonValue,
-          },
-        },
-      })
-    }
-
-    await recordAuditLog(ctx, {
-      action: isCoordinatorOrAdmin ? "order.dismiss.direct" : "order.dismiss.propose",
-      entityType: "order",
-      entityId: order.id,
-      before: { status: order.status },
-      after: { dismissal: initialDismissal },
-    })
-
-    return { directApproved: isCoordinatorOrAdmin, dismissal: initialDismissal }
+    await this.write(ctx, loaded, dismissal, direct ? "direct" : "propose", now)
+    return { directApproved: direct, dismissal }
   }
 
-  /**
-   * Điều hành phê duyệt hoặc từ chối đề xuất hủy bỏ hiển thị.
-   */
-  async decide(
-    ctx: TenantContext,
-    input: { id: string; type: "ORDER" | "SESSION"; approve: boolean; note?: string },
-  ): Promise<{ status: "APPROVED" | "REJECTED" }> {
+  async decide(ctx: TenantContext, input: Target & { approve: boolean; note?: string; auto?: boolean }): Promise<{ status: "APPROVED" | "REJECTED" }> {
     const now = new Date()
-    const nowIso = now.toISOString()
-    const userName = await this.resolveUserName(ctx)
-    const decisionStatus = input.approve ? "APPROVED" : "REJECTED"
-
-    if (input.type === "SESSION") {
-      const session = await this.db.greeting_sessions.findFirst({
-        where: scopedWhere(ctx, { id: input.id }),
-      })
-      if (!session) throw notFound()
-
-      const snapshot = obj(session.product_snapshot)
-      const current = obj(snapshot._dismissal) as unknown as DismissalInfo
-      if (!current || current.status !== "PENDING") {
-        throw conflict("Yêu cầu này không ở trạng thái chờ duyệt.")
-      }
-
-      const updatedDismissal: DismissalInfo = {
-        ...current,
-        status: decisionStatus,
-        decidedBy: ctx.userId,
-        decidedByName: userName,
-        decidedAt: nowIso,
-        note: input.note ? `${current.note || ""}; Phản hồi: ${input.note.trim()}` : current.note,
-      }
-
-      await this.db.$transaction([
-        this.db.greeting_sessions.update({
-          where: { id: session.id },
-          data: {
-            ...(input.approve ? { revoked_at: now, revoked_by: ctx.userId, expires_at: now } : {}),
-            product_snapshot: {
-              ...snapshot,
-              _dismissal: updatedDismissal as unknown as Prisma.InputJsonValue,
-            },
-          },
-        }),
-        this.db.greeting_journey_events.create({
-          data: scopedData(ctx, {
-            id: randomUUID(),
-            session_id: session.id,
-            event_type: input.approve ? "DISMISSED" : "DISMISS_REJECTED",
-            metadata: updatedDismissal as unknown as Prisma.InputJsonValue,
-          }),
-        }),
-      ])
-
-      await recordAuditLog(ctx, {
-        action: input.approve ? "session.dismiss.approve" : "session.dismiss.reject",
-        entityType: "greeting_session",
-        entityId: session.id,
-        before: { dismissal: current },
-        after: { dismissal: updatedDismissal },
-      })
-
-      return { status: decisionStatus }
-    }
-
-    // ORDER
-    const order = await this.db.orders.findFirst({
-      where: scopedWhere(ctx, { id: input.id }),
-      include: { greeting_sessions: { take: 1 } },
-    })
-    if (!order) throw notFound()
-
-    const ref = obj(order.pricing_rule_ref)
-    const current = obj(ref.dismissal) as unknown as DismissalInfo
-    if (!current || current.status !== "PENDING") {
-      throw conflict("Đơn này không có yêu cầu hủy nào đang chờ duyệt.")
-    }
-
-    const updatedDismissal: DismissalInfo = {
+    const loaded = await this.load(ctx, input)
+    const current = loaded.current
+    if (current?.status !== "PENDING") throw conflict("Không có đề xuất bỏ hiển thị nào đang chờ duyệt.")
+    const status = input.approve ? "APPROVED" : "REJECTED"
+    const name = input.auto ? "Hệ thống (tự duyệt khi quá hạn)" : await this.userName(ctx)
+    const reply = input.note?.trim()
+    const decided: DismissalInfo = {
       ...current,
-      status: decisionStatus,
+      status,
       decidedBy: ctx.userId,
-      decidedByName: userName,
-      decidedAt: nowIso,
-      note: input.note ? `${current.note || ""}; Phản hồi: ${input.note.trim()}` : current.note,
+      decidedByName: name,
+      decidedAt: now.toISOString(),
+      ...(input.auto ? { autoDismissed: true } : {}),
+      note: reply ? `${current.note ? `${current.note}; ` : ""}Phản hồi: ${reply}` : current.note,
     }
-
-    await this.db.$transaction(async (tx) => {
-      await tx.orders.update({
-        where: { id: order.id },
-        data: {
-          ...(input.approve ? { status: "CANCELLED" } : {}),
-          pricing_rule_ref: {
-            ...ref,
-            dismissal: updatedDismissal as unknown as Prisma.InputJsonValue,
-          },
-        },
-      })
-      if (input.approve && order.greeting_sessions[0]) {
-        await tx.greeting_sessions.update({
-          where: { id: order.greeting_sessions[0].id },
-          data: { revoked_at: now, revoked_by: ctx.userId },
-        })
-      }
-    })
-
-    await recordAuditLog(ctx, {
-      action: input.approve ? "order.dismiss.approve" : "order.dismiss.reject",
-      entityType: "order",
-      entityId: order.id,
-      before: { dismissal: current },
-      after: { dismissal: updatedDismissal },
-    })
-
-    return { status: decisionStatus }
+    await this.write(ctx, loaded, decided, input.auto ? "auto_approve" : input.approve ? "approve" : "reject", now)
+    return { status }
   }
 
-  /**
-   * Khôi phục đơn hàng / link Thẻ chào đã hủy hoặc đã bỏ hiển thị.
-   */
-  async restore(
-    ctx: TenantContext,
-    input: { id: string; type: "ORDER" | "SESSION"; reason?: string },
-  ): Promise<void> {
-    const now = new Date()
-    const userName = await this.resolveUserName(ctx)
-    const restoreNote = input.reason?.trim() || "Khôi phục lại tiến độ theo yêu cầu"
-
-    if (input.type === "SESSION") {
-      const session = await this.db.greeting_sessions.findFirst({
-        where: scopedWhere(ctx, { id: input.id }),
-      })
-      if (!session) throw notFound()
-
-      const snapshot = obj(session.product_snapshot)
-      const futureExpiry = new Date(now.getTime() + 7 * 86_400_000)
-
-      await this.db.$transaction([
-        this.db.greeting_sessions.update({
-          where: { id: session.id },
-          data: {
-            revoked_at: null,
-            revoked_by: null,
-            expires_at: futureExpiry,
-            product_snapshot: {
-              ...snapshot,
-              _dismissal: null,
-            },
-          },
-        }),
-        this.db.greeting_journey_events.create({
-          data: scopedData(ctx, {
-            id: randomUUID(),
-            session_id: session.id,
-            event_type: "RESTORED",
-            metadata: {
-              restoredBy: ctx.userId,
-              restoredByName: userName,
-              restoredAt: now.toISOString(),
-              reason: restoreNote,
-            },
-          }),
-        }),
-      ])
-
-      await recordAuditLog(ctx, {
-        action: "session.restore",
-        entityType: "greeting_session",
-        entityId: session.id,
-        before: { revoked_at: session.revoked_at },
-        after: { revoked_at: null, restoredBy: ctx.userId, reason: restoreNote },
-      })
-      return
+  /** Đề xuất còn chờ, tạo trước `before` — bộ quét nền tự duyệt (lọc theo JSON, mọi tiệm). */
+  async listExpired(before: Date, take = 50) {
+    const pending = { equals: "PENDING" }
+    const [orders, sessions] = await Promise.all([
+      this.db.orders.findMany({
+        where: { pricing_rule_ref: { path: ["dismissal", "status"], ...pending } },
+        select: { id: true, organization_id: true, pricing_rule_ref: true }, take,
+      }),
+      this.db.greeting_sessions.findMany({
+        where: { product_snapshot: { path: ["_dismissal", "status"], ...pending } },
+        select: { id: true, organization_id: true, product_snapshot: true }, take,
+      }),
+    ])
+    const expired = (d: unknown) => {
+      const t = Date.parse(String(obj(d).proposedAt))
+      return Number.isFinite(t) && t <= before.getTime()
     }
+    return [
+      ...orders.filter((o) => expired(obj(o.pricing_rule_ref).dismissal)).map((o) => ({ type: "ORDER" as const, id: o.id, organizationId: o.organization_id })),
+      ...sessions.filter((s) => expired(obj(s.product_snapshot)._dismissal)).map((s) => ({ type: "SESSION" as const, id: s.id, organizationId: s.organization_id })),
+    ]
+  }
 
-    // ORDER
-    const order = await this.db.orders.findFirst({
-      where: scopedWhere(ctx, { id: input.id }),
-      include: { greeting_sessions: { take: 1 } },
-    })
-    if (!order) throw notFound()
-
-    const ref = obj(order.pricing_rule_ref)
-    const newStatus = Number(order.paid_vnd || 0) > 0 ? "CONFIRMED" : "DRAFT"
-
-    await this.db.$transaction(async (tx) => {
-      await tx.orders.update({
-        where: { id: order.id },
-        data: {
-          status: newStatus,
-          pricing_rule_ref: {
-            ...ref,
-            dismissal: null,
-          },
-        },
-      })
-      if (order.greeting_sessions[0]) {
-        await tx.greeting_sessions.update({
-          where: { id: order.greeting_sessions[0].id },
-          data: {
-            revoked_at: null,
-            revoked_by: null,
-            expires_at: new Date(now.getTime() + 7 * 86_400_000),
-          },
-        })
-      }
-    })
-
-    await recordAuditLog(ctx, {
-      action: "order.restore",
-      entityType: "order",
-      entityId: order.id,
-      before: { status: order.status },
-      after: { status: newStatus, restoredBy: ctx.userId, reason: restoreNote },
-    })
+  async autoApprove(organizationId: string, t: Target) {
+    return this.decide(systemContext(organizationId), { ...t, approve: true, auto: true })
   }
 }
