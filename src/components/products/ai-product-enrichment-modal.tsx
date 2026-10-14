@@ -56,7 +56,6 @@ export function AiProductEnrichmentModal({
   const [notice, setNotice] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [contentSuggestions, setContentSuggestions] = useState<string[]>([])
-  const [debugInfo, setDebugInfo] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -182,13 +181,9 @@ export function AiProductEnrichmentModal({
       return
     }
 
-    const namedFlowers = values.flowers.filter((f) => f.name.trim().length > 0)
 
     setIsSubmitting(true)
     setErrorMsg(null)
-    setDebugInfo(
-      `[DEBUG] Đang lưu: tên="${values.name}" | ${namedFlowers.length} loài hoa | mô tả=${values.description ? values.description.slice(0, 30) + "..." : "(trống)"}`
-    )
 
     try {
       let finalAssetId = values.imageAssetId
@@ -211,17 +206,9 @@ export function AiProductEnrichmentModal({
       const responseBody = await res.json().catch(() => null)
 
       if (!res.ok) {
-        setDebugInfo(JSON.stringify({ status: res.status, payload: patchData, response: responseBody }, null, 2))
-        let msg = `Không thể cập nhật sản phẩm (HTTP ${res.status})`
-        if (responseBody?.error?.message) msg = responseBody.error.message
-        else if (responseBody?.error?.issues?.length) {
-          const issues = responseBody.error.issues as Array<{ path: string[]; message: string }>
-          msg = issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")
-        }
-        throw new Error(msg)
+        throw new Error(responseBody?.error?.message || "Không lưu được sản phẩm, vui lòng kiểm tra lại thông tin và thử lại")
       }
 
-      setDebugInfo(`[OK HTTP ${res.status}] Đã lưu: name="${responseBody?.name}" | status=${responseBody?.status} | category=${responseBody?.category}`)
       await new Promise((r) => setTimeout(r, 400))
 
       onSuccess()
@@ -286,11 +273,6 @@ export function AiProductEnrichmentModal({
           <div className="mx-5 mt-4 flex items-start gap-2 rounded-xl border border-danger/30 bg-danger-bg p-3 text-body-sm font-medium text-danger">
             <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
-          </div>
-        )}
-        {debugInfo && (
-          <div className="mx-5 mt-2 rounded-xl border border-info/30 bg-surface-alt px-4 py-2.5">
-            <pre className="text-caption text-text-muted whitespace-pre-wrap break-all">{debugInfo}</pre>
           </div>
         )}
 
