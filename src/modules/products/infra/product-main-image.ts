@@ -1,10 +1,21 @@
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
+import { notFound } from "@/core/http/errors"
 
 import type { DbClient } from "./db-client"
 import type { InputJsonValue } from "./entities"
 
+/**
+ * `product_images.asset_id` không có khoá ngoại tới `assets` — nên phải tự chặn: asset của cửa hàng
+ * khác (hoặc không tồn tại) → 404, không bao giờ gắn rồi ký URL ảnh của tenant khác.
+ */
+export async function assertOwnedAsset(db: DbClient, ctx: TenantContext, assetId: string): Promise<void> {
+  const asset = await db.assets.findFirst({ where: scopedWhere(ctx, { id: assetId }), select: { id: true } })
+  if (!asset) throw notFound()
+}
+
 /** Gắn asset làm ảnh chính (MAIN) của sản phẩm và ghi `product_id` lên asset. */
 export async function linkMainImage(db: DbClient, ctx: TenantContext, productId: string, assetId: string): Promise<void> {
+  await assertOwnedAsset(db, ctx, assetId)
   await db.product_images.upsert({
     where: {
       organization_id_product_id_asset_id_role: {
@@ -21,6 +32,15 @@ export async function linkMainImage(db: DbClient, ctx: TenantContext, productId:
     where: scopedWhere(ctx, { id: assetId }),
     data: { product_id: productId },
   })
+}
+
+/** Sửa tay ảnh chính (`PATCH /products/:id`): thay hẳn ảnh MAIN cũ, không để hai ảnh MAIN cùng lúc. */
+export async function replaceMainImage(db: DbClient, ctx: TenantContext, productId: string, assetId: string): Promise<void> {
+  await assertOwnedAsset(db, ctx, assetId)
+  await db.product_images.deleteMany({
+    where: scopedWhere(ctx, { product_id: productId, role: "MAIN", NOT: { asset_id: assetId } }),
+  })
+  await linkMainImage(db, ctx, productId, assetId)
 }
 
 /**

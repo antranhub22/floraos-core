@@ -198,8 +198,10 @@ export class PrismaDispatchReminderRepository implements IDispatchReminderReposi
       where: { id: productId, organization_id: organizationId },
       select: { attributes: true },
     })
+    // Mẫu hoa không thuộc cửa hàng này → 404, không để lộ là "chưa cấu hình"
+    if (!product) throw notFound()
 
-    if (!product?.attributes) return null
+    if (!product.attributes) return null
     const attrs = product.attributes as Record<string, unknown>
     return (attrs.coordinator_reminder_overrides as TemplateReminderOverrides) ?? null
   }
@@ -244,7 +246,15 @@ export class PrismaDispatchReminderRepository implements IDispatchReminderReposi
       },
     })
 
-    if (!coord) return
+    if (!coord) {
+      // Đơn của cửa hàng khác (hoặc không tồn tại) → 404, không bao giờ báo "đã xác nhận" giả
+      const order = await prisma.orders.findFirst({
+        where: { id: params.orderId, organization_id: params.organizationId },
+        select: { id: true },
+      })
+      if (!order) throw notFound()
+      return
+    }
 
     const existingMeta = (coord.metadata as Record<string, unknown> | null) ?? {}
     const existingReminders =

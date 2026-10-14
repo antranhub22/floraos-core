@@ -25,6 +25,7 @@ export function I18nProvider({ children, initialLocale = DEFAULT_LOCALE }: I18nP
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as SupportedLocale | null
       if (saved && SUPPORTED_LOCALES.includes(saved)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- đọc ngôn ngữ đã lưu sau hydrate để tránh lệch SSR, chủ đích
         setLocaleState(saved)
       }
     } catch {

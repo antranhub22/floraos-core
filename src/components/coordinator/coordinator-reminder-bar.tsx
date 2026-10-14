@@ -59,6 +59,7 @@ export function CoordinatorReminderBar({ onSelectOrder }: CoordinatorReminderBar
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải nhắc việc khi mount rồi làm mới định kỳ; setState nằm trong hàm tải
     void fetchReminders()
     const timer = setInterval(() => {
       void fetchReminders()

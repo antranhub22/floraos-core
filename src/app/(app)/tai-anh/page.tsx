@@ -1083,7 +1083,7 @@ export default function TaiAnhPage() {
 
   function handleApprove1() {
     if (!analysisId || !canApprove) {
-      setErrorMsg("Không có năng lực H3 (duyệt phân tích)")
+      setErrorMsg("Tài khoản của bạn chưa được cấp quyền duyệt kết quả phân tích")
       return
     }
     setShowApproveConfirmModal(true)
@@ -1091,7 +1091,7 @@ export default function TaiAnhPage() {
 
   async function doApproveAnalysis(createProduct: boolean) {
     if (!analysisId || !canApprove) {
-      setErrorMsg("Không có năng lực H3 (duyệt phân tích)")
+      setErrorMsg("Tài khoản của bạn chưa được cấp quyền duyệt kết quả phân tích")
       return
     }
     setApprovingAnalysis(true)

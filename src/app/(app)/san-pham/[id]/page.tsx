@@ -62,6 +62,7 @@ export default function ProductDetailPage() {
   }, [productId, router])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu sản phẩm khi mount/đổi id; setState nằm trong hàm tải
     napLai()
   }, [napLai])
 

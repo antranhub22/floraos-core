@@ -30,6 +30,7 @@ export function CoordinatorReminderSettingsModal({
 
   useEffect(() => {
     if (!isOpen) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải cấu hình mỗi lần mở hộp thoại, chủ đích
     setIsLoading(true)
     setErrorMessage(null)
     setSuccessMessage(null)

@@ -41,6 +41,7 @@ export function CopilotMessageItem({
 
   useEffect(() => {
     if (!shouldType) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- khởi động lại hiệu ứng gõ chữ khi tin nhắn đổi, chủ đích
       setDisplayedText(message.content)
       setIsTyping(false)
       return

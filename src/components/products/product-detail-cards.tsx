@@ -109,11 +109,20 @@ export function ProductDesignCard({
   )
 }
 
+/** Một dòng thành phần hoa đọc từ `attributes.bom.flowers` (JSON tự do, mọi trường có thể thiếu). */
+export interface BomFlowerView {
+  name?: string
+  role?: string
+  color?: string
+  quantity?: number | string
+  unit?: string
+}
+
 export function ProductBomCard({
   flowers,
   onOpenModal,
 }: {
-  flowers: any[]
+  flowers: BomFlowerView[]
   onOpenModal: () => void
 }) {
   return (
@@ -137,7 +146,7 @@ export function ProductBomCard({
 
       {flowers.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
-          {flowers.map((item: any, idx: number) => (
+          {flowers.map((item, idx) => (
             <div
               key={idx}
               className="flex items-center justify-between rounded-xl border border-border bg-surface-alt/50 p-2.5"

@@ -1,7 +1,7 @@
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import type { DbClient } from "./db-client"
 import type { InputJsonValue } from "./entities"
-import { linkMainImage, upsertMainImage } from "./product-main-image"
+import { assertOwnedAsset, upsertMainImage } from "./product-main-image"
 
 export type BatchUpdateItemInput = {
   code: string
@@ -32,6 +32,8 @@ export async function updateExistingProductFromBatch(
     select: { id: true, attributes: true },
   })
   if (!product) return false
+  // Ảnh của cửa hàng khác → 404 trước khi ghi bất cứ gì (không cập nhật nửa vời)
+  if (item.image_asset_id) await assertOwnedAsset(db, ctx, item.image_asset_id)
 
   const existingAttrs = (product.attributes ?? {}) as Record<string, unknown>
   const newAttrs = item.attributes ? { ...existingAttrs, ...item.attributes } : existingAttrs

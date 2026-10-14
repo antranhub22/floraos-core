@@ -54,7 +54,8 @@ export function OrderDetailFooter({
   const balanceVnd = Math.max(0, totalVnd - paidVnd)
   const hasBalanceProofOrReport = Boolean(target.paymentProofBalanceUrl || target.customerReportedPaid)
   const hasDepositProofOrReport = Boolean(target.paymentProofUrl || target.customerReportedPaid)
-  const canConfirmBalance = can("R11") || can("R4") || can("R3")
+  // Khớp server: modal gọi confirm-deposit/confirm-balance — cả hai gác R4 (Điều phối)
+  const canConfirmBalance = can("R4")
   const needsBalanceConfirmation = target.orderId && isDepositOrder && hasBalanceProofOrReport && canConfirmBalance
   const needsDepositConfirmation =
     Boolean(target.orderId) &&

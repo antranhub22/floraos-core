@@ -6,7 +6,7 @@ import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 import { categoryAndSearchWhere } from "./product-list-where"
 
 import type { DbClient } from "./db-client"
-import { attachMainImageIfMissing, linkMainImage, refreshDriveLinkIfNotDrive, refreshDriveLink, upsertMainImage } from "./product-main-image"
+import { assertOwnedAsset, attachMainImageIfMissing, linkMainImage, refreshDriveLinkIfNotDrive, refreshDriveLink, replaceMainImage, upsertMainImage } from "./product-main-image"
 import { updateExistingProductFromBatch, type BatchUpdateItemInput } from "./product-batch-update"
 
 /** Kết quả trả về từ `listWithPreview` — bản ghi sản phẩm kèm ảnh chính và giá. */
@@ -192,7 +192,7 @@ export class ProductRepository {
     const storageKeyById = new Map<string, string>()
     if (assetIds.length > 0) {
       const assets = await prisma.assets.findMany({
-        where: { id: { in: assetIds } },
+        where: { id: { in: assetIds }, organization_id: ctx.organizationId },
         select: { id: true, storage_key: true },
       })
       for (const a of assets) storageKeyById.set(a.id, a.storage_key)
@@ -257,6 +257,7 @@ export class ProductRepository {
   }
 
   async create(ctx: TenantContext, input: CreateProductInput): Promise<products> {
+    if (input.imageAssetId) await assertOwnedAsset(this.db, ctx, input.imageAssetId)
     const product = await this.db.products.create({
       data: scopedData(ctx, {
         code: input.code,
@@ -290,6 +291,7 @@ export class ProductRepository {
     id: string,
     input: UpdateProductInput
   ): Promise<products | null> {
+    if (input.imageAssetId) await assertOwnedAsset(this.db, ctx, input.imageAssetId)
     const result = await this.db.products.updateMany({
       where: scopedWhere(ctx, { id }),
       data: {
@@ -307,9 +309,7 @@ export class ProductRepository {
       },
     })
     if (result.count === 0) return null
-    if (input.imageAssetId) {
-      await linkMainImage(this.db, ctx, id, input.imageAssetId)
-    }
+    if (input.imageAssetId) await replaceMainImage(this.db, ctx, id, input.imageAssetId)
     return this.findById(ctx, id)
   }
 

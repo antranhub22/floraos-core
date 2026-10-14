@@ -13,6 +13,7 @@ import { BudgetMatchingModal } from "@/components/sales/budget-matching-modal"
 import { QuickCollectionModal } from "@/components/catalog/quick-collection-modal"
 import type { ProductMatchCandidate } from "@/modules/products/domain/budget-flower-matcher"
 import type { QuickCollectionCandidate } from "@/modules/catalog-links/domain/quick-collection-engine"
+import { toQuickCollectionCandidate } from "@/modules/catalog-links/domain/quick-collection-candidate"
 
 /**
  * Trang Catalog & Website.
@@ -126,17 +127,7 @@ export default function CatalogWebsitePage() {
     highlightFlowers: [],
   }))
 
-  const quickCandidates: QuickCollectionCandidate[] = products.map((p) => ({
-    id: p.id,
-    code: p.code || p.id,
-    name: p.name,
-    price: p.price ?? null,
-    category: p.category ?? null,
-    colorTheme: "Đa sắc",
-    occasions: ["Sinh nhật", "Kỷ niệm", "Khai trương"],
-    imageUrl: p.imageUrl || undefined,
-    status: p.status,
-  }))
+  const quickCandidates: QuickCollectionCandidate[] = products.map(toQuickCollectionCandidate)
 
   return (
     <div className="flex h-full flex-col overflow-hidden">

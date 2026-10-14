@@ -56,11 +56,11 @@ export function AiProductEnrichmentModal({
   const [notice, setNotice] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [contentSuggestions, setContentSuggestions] = useState<string[]>([])
-  const [debugInfo, setDebugInfo] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
     const { values: initValues, previewUrl } = extractInitialFormValues(initialProduct)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- nạp lại form từ sản phẩm (props) mỗi lần mở hộp thoại, chủ đích
     setValues(initValues)
     setImagePreview(previewUrl)
     setImageFile(null)
@@ -182,13 +182,8 @@ export function AiProductEnrichmentModal({
       return
     }
 
-    const namedFlowers = values.flowers.filter((f) => f.name.trim().length > 0)
-
     setIsSubmitting(true)
     setErrorMsg(null)
-    setDebugInfo(
-      `[DEBUG] Đang lưu: tên="${values.name}" | ${namedFlowers.length} loài hoa | mô tả=${values.description ? values.description.slice(0, 30) + "..." : "(trống)"}`
-    )
 
     try {
       let finalAssetId = values.imageAssetId
@@ -211,18 +206,14 @@ export function AiProductEnrichmentModal({
       const responseBody = await res.json().catch(() => null)
 
       if (!res.ok) {
-        setDebugInfo(JSON.stringify({ status: res.status, payload: patchData, response: responseBody }, null, 2))
-        let msg = `Không thể cập nhật sản phẩm (HTTP ${res.status})`
-        if (responseBody?.error?.message) msg = responseBody.error.message
-        else if (responseBody?.error?.issues?.length) {
-          const issues = responseBody.error.issues as Array<{ path: string[]; message: string }>
-          msg = issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")
-        }
+        // Không hiện mã HTTP hay tên trường kỹ thuật cho người dùng — chỉ câu tiếng Việt
+        const issues = (responseBody?.error?.issues ?? []) as Array<{ message?: string }>
+        const msg =
+          responseBody?.error?.message ||
+          issues.map((i) => i.message).filter(Boolean).join("; ") ||
+          "Không thể cập nhật sản phẩm. Vui lòng thử lại."
         throw new Error(msg)
       }
-
-      setDebugInfo(`[OK HTTP ${res.status}] Đã lưu: name="${responseBody?.name}" | status=${responseBody?.status} | category=${responseBody?.category}`)
-      await new Promise((r) => setTimeout(r, 400))
 
       onSuccess()
       onClose()
@@ -286,11 +277,6 @@ export function AiProductEnrichmentModal({
           <div className="mx-5 mt-4 flex items-start gap-2 rounded-xl border border-danger/30 bg-danger-bg p-3 text-body-sm font-medium text-danger">
             <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
-          </div>
-        )}
-        {debugInfo && (
-          <div className="mx-5 mt-2 rounded-xl border border-info/30 bg-surface-alt px-4 py-2.5">
-            <pre className="text-caption text-text-muted whitespace-pre-wrap break-all">{debugInfo}</pre>
           </div>
         )}
 

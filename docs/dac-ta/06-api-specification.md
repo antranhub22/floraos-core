@@ -111,7 +111,7 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 |---|---|---|---|
 | GET | `/products` | `L1` | Lọc theo `branch_id`, `status`, `category` |
 | POST | `/products` | `L2` | |
-| GET · PATCH | `/products/:id` | `L1` · `L3` | |
+| GET · PATCH | `/products/:id` | `L1` · `L3` | PATCH `image_asset_id` thay ảnh chính; asset của tổ chức khác → 404 (14/10/2026) |
 | POST | `/products/batch-import` | `L2` | Nhập đồng loạt tối đa 500 sản phẩm (Excel/thư mục ảnh đã parse); `skip_duplicates` mặc định `true`. Mã đã có + kèm `image_asset_id` → chỉ bù ảnh chính nếu sản phẩm chưa có ảnh (không ghi đè dữ liệu/ảnh sẵn có), trả `images_attached_count`; link ảnh đang lưu không phải Google Drive (trống/trang web) được thay bằng link Drive trong file → `drive_links_updated_count` (09/10/2026). Bổ sung vào đặc tả 05/10/2026 |
 | POST | `/products/drive-thumbnails` | `L2` | Body `{ folder_ids: string[] }` (1–50 Drive id) → `{ thumbnails: { [folder_id]: url \| null } }`; màn nhập hàng loạt gom lô thay cho gọi `/public/drive-thumbnail` từng folder (trần 120/phút/IP làm file >120 dòng mất ảnh). 60 lần/phút/người dùng; server phân giải tối đa 6 luồng song song; client thử lại 429/5xx tối đa 4 lần (09/10/2026) |
 | GET | `/products/:id/images` | **CHƯA XÂY** `G1` | |
@@ -456,7 +456,7 @@ Cùng khuôn với M01: `raw` giữ bản máy sinh, `PATCH` ghi vào `edited`, 
 | GET · POST | `/integration/catalog-links` | `J1` (nhánh SSO) | Mới 18/09 (RS-3) — `LocalBudd` gọi thay mặt người dùng đang đăng nhập |
 | PATCH | `/integration/catalog-links/:slug` | `J1` (nhánh SSO) | Mới 18/09 (RS-3) |
 | POST | `/integration/catalog-links/:slug/revoke` | `J2` (nhánh SSO) | Mới 18/09 (RS-3) |
-| GET | `/public/catalog/:slug` | — *(công khai)* | Storefront khách xem; ảnh ký HMAC |
+| GET | `/public/catalog/:slug` | — *(công khai)* | Storefront khách xem; ảnh ký HMAC; `customer` chỉ có tên/lời chào, không bao giờ có số điện thoại |
 | POST | `/public/catalog/:slug/lead` | — *(công khai)* | Form Lead Capture: `{ phone, message? }` ghi vào `metadata.leads` của `catalog_links`; tổ chức suy từ bản ghi, không nhận từ client. Bổ sung vào đặc tả 05/10/2026 |
 
 **Chưa có:** `GET /catalog-links/:slug/qr` (ảnh PNG mã QR để in) ở core — `LocalBudd` tự sinh QR phía route của nó (`qrcode`, trỏ về `/c/:slug` của chính nó), core cũng có `src/core/media/qr-engine.ts` sinh QR phía giao diện, không qua endpoint. Xem **RS-7**.
@@ -530,7 +530,7 @@ Mọi route nhận `:id` là id HOẶC mã đơn (`FLR-YYMMDD-NNNN`); tổ chứ
 | POST | `/coordinator/orders/:id/qc` | `R3` | Người kiểm kết luận; không đạt bắt buộc lý do; `REJECTED` mở sự cố `QC_FAILURE` |
 | POST | `/coordinator/orders/:id/delivery` | `R5` | Sự kiện giao; thành công bắt buộc ảnh POD hoặc tên người ký; thất bại mở sự cố |
 | GET | `/coordinator/reminders` | `R1` | Mốc nhắc việc Điều phối đang bật của các đơn |
-| POST | `/coordinator/reminders/acknowledge` | `R3` | `{ orderId, milestone, action, snoozeMinutes?, note? }` |
+| POST | `/coordinator/reminders/acknowledge` | `R3` | `{ orderId, milestone, action, snoozeMinutes?, note? }`; đơn của tổ chức khác → 404 |
 | GET · PUT | `/coordinator/settings/reminders` | `D1` (đọc) · `R12` (sửa) | Thời điểm nhắc việc cấp tổ chức (phút, 0–1440) (14/10/2026: sửa đòi `R12`) |
 | GET · PUT | `/coordinator/templates/:id/reminders` | `R1` (đọc) · `R12` (sửa) | Ghi đè thời điểm nhắc theo mẫu hoa; mẫu của tổ chức khác → 404 |
 | GET | `/orders/export` | `R1` (nguồn `BROCHURE`: `R1` hoặc `R11`) | `?from_date` `?to_date` `?source=BROCHURE\|MANUAL\|CHAT` → tệp Excel đơn hàng của tổ chức |

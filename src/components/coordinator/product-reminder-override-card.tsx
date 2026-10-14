@@ -38,6 +38,7 @@ export function ProductReminderOverrideCard({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải cấu hình khi mount/đổi sản phẩm
     setIsLoading(true)
     Promise.all([
       fetch("/api/v1/coordinator/settings/reminders").then((r) => r.json()),

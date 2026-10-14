@@ -94,6 +94,7 @@ export function DispatchReminderPolicySection({ canEdit }: DispatchReminderPolic
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải cấu hình chính sách khi mount
     setIsLoading(true)
     fetch("/api/v1/coordinator/settings/reminders")
       .then((res) => {

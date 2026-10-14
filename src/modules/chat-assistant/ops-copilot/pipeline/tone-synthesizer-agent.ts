@@ -1,13 +1,10 @@
 /**
- * Agent 3: Tone & Copywriting Synthesizer Agent — LLM Edition.
+ * Agent 3: Tone & Copywriting Synthesizer Agent.
  *
- * Chuyên trách tổng hợp câu trả lời tự nhiên bằng cách đưa FactSheet vào LLM,
- * yêu cầu trả lời theo văn phong nhân viên tiệm hoa Việt Nam thực thụ.
- *
- * Thứ tự ưu tiên LLM:
- *   1. OpenAI (gpt-4o-mini) — nếu có OPENAI_API_KEY
- *   2. Ollama / Qwen cục bộ — nếu có OLLAMA_URL
- *   3. Template fallback — khi không có LLM nào khả dụng
+ * Tổng hợp câu trả lời theo văn phong nhân viên tiệm hoa từ FactSheet bằng mẫu câu cố định.
+ * KHÔNG gọi thẳng nhà cung cấp AI (OpenAI/Ollama): mọi lệnh gọi AI phải qua `callCapability`
+ * (`src/core/ai/gateway.ts`) — bản gọi thẳng trước đây đã gỡ khi soát chuẩn bàn giao 14/10/2026;
+ * nối lại qua cổng AI cần đăng ký năng lực AI riêng (chờ PO).
  */
 
 import type { ParsedIntent, KnowledgeFactSheet, PolishedDraft } from "./pipeline-types"
@@ -48,117 +45,7 @@ function purifyDevJargon(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// System prompt builder
-// ---------------------------------------------------------------------------
-
-function buildSystemPrompt(): string {
-  return `Bạn là Trợ lý Vận hành FloraOS — nhân viên hỗ trợ nội bộ của tiệm hoa.
-Nhiệm vụ: Trả lời câu hỏi của chủ tiệm / nhân viên về cách sử dụng phần mềm FloraOS.
-
-QUY TẮC BẮT BUỘC:
-- Viết hoàn toàn bằng tiếng Việt, ấm áp, lịch sự như đồng nghiệp thân thiện.
-- TUYỆT ĐỐI không dùng mã kỹ thuật, tên component, đường dẫn file, ký hiệu lập trình.
-- Không dùng markdown bold (**) quá nhiều — chỉ in đậm tên tính năng chính (tối đa 2-3 lần).
-- Không liệt kê quá 5 bước; nếu nhiều hơn, gộp các bước nhỏ vào nhau.
-- Không mở đầu bằng "Dạ" nếu đã có lời chào ở trước.
-- Kết thúc bằng 1 câu khích lệ hoặc gợi mở hành động tiếp theo ngắn gọn.
-- Độ dài tối đa: 150 từ.`
-}
-
-function buildUserPrompt(intent: ParsedIntent, facts: KnowledgeFactSheet): string {
-  // Nếu không tìm thấy node → hỏi lại
-  if (!facts.nodeId) {
-    return `Người dùng hỏi: "${intent.rawQuery}"
-Hệ thống chưa tìm thấy hướng dẫn phù hợp.
-Hãy trả lời thân thiện, thừa nhận chưa rõ và gợi ý người dùng đặt lại câu hỏi cụ thể hơn (ví dụ: tên tính năng, thao tác muốn làm).`
-  }
-
-  // Tổng hợp FactSheet thành context ngắn gọn
-  const stepsContext = facts.steps
-    .map((s) => `Bước ${s.stepNumber}: ${purifyDevJargon(s.actionText)}`)
-    .join("\n")
-
-  const caveatsContext = facts.caveats.length > 0
-    ? `\nLưu ý quan trọng: ${facts.caveats.slice(0, 2).map(purifyDevJargon).join("; ")}`
-    : ""
-
-  const relatedContext = facts.relatedLinks.length > 0
-    ? `\nTính năng liên quan: ${facts.relatedLinks[0]!.title}`
-    : ""
-
-  return `Người dùng hỏi: "${intent.rawQuery}"
-Tính năng: ${facts.topicTitle ?? facts.moduleTitle ?? "FloraOS"}
-Tóm tắt: ${facts.summary}
-
-Các bước thực hiện:
-${stepsContext}${caveatsContext}${relatedContext}
-
-Hãy trả lời câu hỏi trên theo đúng thông tin trên bằng ngôn ngữ tự nhiên, không liệt kê máy móc.`
-}
-
-// ---------------------------------------------------------------------------
-// LLM calls
-// ---------------------------------------------------------------------------
-
-async function callOpenAI(systemPrompt: string, userPrompt: string): Promise<string | null> {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return null
-  const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"
-  try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: 300,
-        temperature: 0.5,
-      }),
-    })
-    if (!res.ok) return null
-    const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
-    return data.choices?.[0]?.message?.content?.trim() ?? null
-  } catch {
-    return null
-  }
-}
-
-async function callOllamaQwen(systemPrompt: string, userPrompt: string): Promise<string | null> {
-  const ollamaUrl = process.env.OLLAMA_URL || "http://127.0.0.1:11434"
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
-    const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: "qwen2.5:7b",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: 300,
-        temperature: 0.5,
-      }),
-    })
-    clearTimeout(timeoutId)
-    if (!res.ok) return null
-    const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
-    return data.choices?.[0]?.message?.content?.trim() ?? null
-  } catch {
-    return null
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Template fallback (giữ lại để đảm bảo unit tests không phụ thuộc LLM)
+// Template
 // ---------------------------------------------------------------------------
 
 function templateFallback(intent: ParsedIntent, facts: KnowledgeFactSheet): PolishedDraft {
@@ -220,7 +107,7 @@ function templateFallback(intent: ParsedIntent, facts: KnowledgeFactSheet): Poli
   }
 
   const stepsFormatted = facts.steps.map((s) => {
-    let cleanAction = purifyDevJargon(s.actionText).replace(/^Bước\s*\d+\s*[-:]\s*/i, "").trim()
+    const cleanAction = purifyDevJargon(s.actionText).replace(/^Bước\s*\d+\s*[-:]\s*/i, "").trim()
     if (cleanAction.includes(":")) {
       const parts = cleanAction.split(":")
       const header = parts[0]?.trim()
@@ -287,52 +174,8 @@ function templateFallback(intent: ParsedIntent, facts: KnowledgeFactSheet): Poli
 // ---------------------------------------------------------------------------
 
 export class ToneSynthesizerAgent {
-  /**
-   * Tổng hợp câu trả lời thông qua LLM (OpenAI → Ollama → Template fallback).
-   * Luôn trả về kết quả — không bao giờ throw.
-   */
+  /** Tổng hợp câu trả lời từ FactSheet. Luôn trả về kết quả — không bao giờ throw. */
   async synthesize(intent: ParsedIntent, facts: KnowledgeFactSheet): Promise<PolishedDraft> {
-    // Các trường hợp đặc biệt không cần LLM (overview, unresolved) → template ngay
-    if (facts.isOverview || !facts.nodeId) {
-      return templateFallback(intent, facts)
-    }
-
-    const systemPrompt = buildSystemPrompt()
-    const userPrompt = buildUserPrompt(intent, facts)
-
-    // 1. Thử OpenAI
-    const openaiReply = await callOpenAI(systemPrompt, userPrompt)
-    if (openaiReply) {
-      return buildPolishedDraft(openaiReply, intent, facts)
-    }
-
-    // 2. Thử Ollama/Qwen cục bộ
-    const qwenReply = await callOllamaQwen(systemPrompt, userPrompt)
-    if (qwenReply) {
-      return buildPolishedDraft(qwenReply, intent, facts)
-    }
-
-    // 3. Fallback: template tĩnh
     return templateFallback(intent, facts)
-  }
-}
-
-/** Đóng gói câu trả lời LLM vào PolishedDraft với metadata đầy đủ */
-function buildPolishedDraft(
-  llmText: string,
-  intent: ParsedIntent,
-  facts: KnowledgeFactSheet
-): PolishedDraft {
-  const crossModuleBlock = facts.relatedLinks.length > 0
-    ? `\n\n🔗 **Liên kết nghiệp vụ liên quan:** [${facts.relatedLinks[0]!.title}](${facts.relatedLinks[0]!.route})`
-    : ""
-
-  return {
-    greeting: "",
-    bodyText: llmText + crossModuleBlock,
-    targetRoute: facts.routePath ?? undefined,
-    actionLabel: facts.actionLabel ?? undefined,
-    actionSteps: facts.steps.map((s) => purifyDevJargon(s.actionText)),
-    relatedLinks: facts.relatedLinks,
   }
 }
