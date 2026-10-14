@@ -20,6 +20,15 @@ import {
   type TemplateReminderOverrides,
 } from "../domain/dispatch-reminder-types"
 
+/** "YYYY-MM-DD" + "HH:MM…" (giờ Việt Nam) → thời điểm; sai định dạng → null. */
+function slotStartAt(date: unknown, timeSlot: unknown): Date | null {
+  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date) || typeof timeSlot !== "string") return null
+  const m = /^(\d{1,2}):(\d{2})/.exec(timeSlot.trim())
+  if (!m) return null
+  const at = new Date(`${date}T${m[1]!.padStart(2, "0")}:${m[2]}:00+07:00`)
+  return Number.isNaN(at.getTime()) ? null : at
+}
+
 export class PrismaDispatchReminderRepository implements IDispatchReminderRepository {
   async getActiveOrdersForReminders(
     organizationId: string
@@ -36,7 +45,9 @@ export class PrismaDispatchReminderRepository implements IDispatchReminderReposi
           take: 1,
         },
       },
-      take: 100,
+      // Giới hạn cố định nhưng có thứ tự: đơn mới nhất trước (không lấy 100 đơn ngẫu nhiên)
+      orderBy: { created_at: "desc" },
+      take: 200,
     })
 
     // Lấy thông tin attributes của các product liên quan
@@ -83,6 +94,9 @@ export class PrismaDispatchReminderRepository implements IDispatchReminderReposi
         const dw = order.delivery_window as Record<string, unknown>
         if (typeof dw.targetAt === "string") {
           deliveryTime = new Date(dw.targetAt)
+        } else {
+          // Đơn Thẻ chào lưu { date, timeSlot } — giờ giao là đầu khung, giờ Việt Nam
+          deliveryTime = slotStartAt(dw.date, dw.timeSlot)
         }
       }
 
