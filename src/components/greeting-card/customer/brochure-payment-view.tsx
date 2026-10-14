@@ -4,9 +4,10 @@ import { HoldCountdown } from "./hold-countdown"
 import React, { useCallback, useEffect, useState } from "react"
 import useSWR from "swr"
 import { apiGet } from "@/components/greeting-card/greeting-api"
-import { Check, Copy, QrCode, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react"
+import { Check, Copy, QrCode, ArrowRight, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { BrochurePaymentInstructions } from "@/modules/greeting-card/domain/greeting-card-types"
+import type { TrackingTriggerPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import Image from "next/image"
 
 const POLL_INTERVAL_MS = 5000
@@ -19,16 +20,19 @@ function isPaid(order: { paidVnd: number; totalVnd: number } | undefined): boole
 }
 import { BrochureQuotePending } from "./brochure-quote-pending"
 import { PaymentFailedNotice } from "./payment-failed-notice"
+import { PaymentProofUploader } from "./payment-proof-uploader"
+import { BrochurePaymentConfirmedBanner } from "./brochure-payment-confirmed-banner"
 
-type PolledTracking = { status: string; order?: { status: string; paidVnd: number; totalVnd: number; payment?: { status: string } } }
+type PolledTracking = { status: string; order?: { status: string; productionStatus?: string; paidVnd: number; totalVnd: number; payment?: { status: string } } }
 
 interface BrochurePaymentViewProps {
   orderCode: string
+  sendCode?: string | undefined
   totalVnd: number
   /** `null` khi tiệm chưa cấu hình tài khoản nhận tiền — cửa hàng tự liên hệ khách. */
   vietQr: BrochurePaymentInstructions | null
   shopPhone?: string | null | undefined
-  onReportPaid: () => Promise<void>
+  onReportPaid: (proofAssetId?: string) => Promise<void>
   onGoToTracking: () => void
   /** Khách đã báo chuyển khoản trước đó (rời trang rồi quay lại) → hiện ngay "chờ xác nhận" */
   alreadyReported?: boolean | undefined
@@ -36,10 +40,15 @@ interface BrochurePaymentViewProps {
   onPaymentFailed?: (() => void) | undefined
   /** Nút kêu gọi đặt lại đơn, hiện trong thông báo "Đơn hàng không hoàn thành". */
   failedCta?: React.ReactNode
+  /** Bắt buộc tải ảnh chuyển khoản; mặc định BẬT (true). */
+  requirePaymentProof?: boolean | undefined
+  /** Cơ chế kích hoạt bước tiếp theo (PAYMENT_ONLY hoặc PAYMENT_OR_COORDINATOR). */
+  triggerPolicy?: TrackingTriggerPolicy | undefined
 }
 
 export function BrochurePaymentView({
   orderCode,
+  sendCode,
   totalVnd,
   vietQr,
   shopPhone,
@@ -48,11 +57,15 @@ export function BrochurePaymentView({
   alreadyReported = false,
   onPaymentFailed,
   failedCta,
+  requirePaymentProof = true,
+  triggerPolicy,
 }: BrochurePaymentViewProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [hasReported, setHasReported] = useState(alreadyReported)
   const [loading, setLoading] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
+  const [proofAssetId, setProofAssetId] = useState<string | null>(null)
+  const canSubmit = !requirePaymentProof || !!proofAssetId
 
   // Hỏi trạng thái đơn định kỳ (SWR) để tự hiện "đã thanh toán" khi Điều hành/ngân hàng xác nhận.
   // Dừng khi đã xác nhận; SWR tự bỏ lượt khi tab đang ẩn.
@@ -62,12 +75,21 @@ export function BrochurePaymentView({
     { refreshInterval: (latest) => (isPaid(latest?.order) || latest?.order?.status === "CANCELLED" ? 0 : POLL_INTERVAL_MS), revalidateOnFocus: true }
   )
   const isPaymentConfirmed = isPaid(tracking.data?.order)
+  const isOrderAccepted =
+    tracking.data?.order?.status === "CONFIRMED" ||
+    tracking.data?.order?.status === "PROCESSING" ||
+    (Boolean(tracking.data?.order?.productionStatus) && tracking.data?.order?.productionStatus !== "WAITING")
+  const canGoToTracking =
+    triggerPolicy === "PAYMENT_ONLY"
+      ? isPaymentConfirmed
+      : isPaymentConfirmed || isOrderAccepted
+
   // Hết hạn thanh toán: máy chủ huỷ đơn (bộ quét mỗi phút); trình duyệt báo ngay khi đồng hồ về 0
   const [deadlinePassed, setDeadlinePassed] = useState(false)
   const onDeadline = useCallback(() => setDeadlinePassed(true), [])
   const paymentFailed =
     tracking.data?.order?.payment?.status === "PAYMENT_FAILED" ||
-    (deadlinePassed && vietQr?.cancelOnExpiry === true && !isPaymentConfirmed && !hasReported)
+    (deadlinePassed && vietQr?.cancelOnExpiry === true && !canGoToTracking && !hasReported)
   useEffect(() => {
     if (paymentFailed) onPaymentFailed?.()
   }, [paymentFailed, onPaymentFailed])
@@ -83,7 +105,7 @@ export function BrochurePaymentView({
     setLoading(true)
     setReportError(null)
     try {
-      await onReportPaid()
+      await onReportPaid(proofAssetId || undefined)
       setHasReported(true)
     } catch (err) {
       setReportError(err instanceof Error ? err.message : "Không gửi được thông báo, vui lòng thử lại")
@@ -223,46 +245,35 @@ export function BrochurePaymentView({
       )}
 
       {/* Confirmation State Actions */}
-      {isPaymentConfirmed ? (
-        <div className="w-full flex flex-col gap-3.5">
-          <div className="p-4 rounded-2xl bg-success-bg border border-success/30 text-success flex flex-col items-center justify-center gap-2">
-            <div className="w-12 h-12 rounded-full bg-success/15 text-success flex items-center justify-center">
-              <CheckCircle2 size={28} />
-            </div>
-            <div className="text-center">
-              <p className="text-title-sm font-extrabold text-success">
-                {depositOnly ? "Đã nhận tiền cọc thành công!" : "Đã thanh toán thành công!"}
-              </p>
-              <p className="text-body-sm text-text-muted mt-1">
-                Điều hành cửa hàng đã xác nhận nhận {depositOnly ? "tiền cọc" : "tiền"} cho đơn #{orderCode}. Đơn hàng đang được chuẩn bị cắm hoa.
-                {depositOnly && " Phần còn lại bạn sẽ thanh toán sau khi xác nhận ảnh hoa hoàn thiện."}
-              </p>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="primary"
-            onClick={onGoToTracking}
-            className="w-full h-12 font-extrabold text-body flex items-center justify-center gap-2 rounded-xl shadow-md bg-primary hover:bg-primary-dark text-white cursor-pointer"
-          >
-            <span>Theo dõi tiến độ Đơn hàng</span>
-            <ArrowRight size={18} />
-          </Button>
-        </div>
+      {canGoToTracking ? (
+        <BrochurePaymentConfirmedBanner
+          isPaymentConfirmed={isPaymentConfirmed}
+          isOrderAccepted={isOrderAccepted}
+          depositOnly={depositOnly}
+          onGoToTracking={onGoToTracking}
+        />
       ) : hasReported ? (
         <div className="w-full flex flex-col gap-3">
-          <div className="p-3.5 rounded-xl bg-success-bg border border-success/30 text-success text-body-sm flex flex-col items-center justify-center gap-1.5 text-center">
-            <div className="flex items-center gap-2 font-bold">
-              <ShieldCheck size={18} />
+          <div className="p-3.5 rounded-xl bg-info-bg border border-info/30 text-info text-body-sm flex flex-col items-center justify-center gap-1.5 text-center">
+            <div className="flex items-center gap-2 font-bold text-foreground">
+              <ShieldCheck size={18} className="text-info" />
               <span>Đã báo chuyển khoản thành công!</span>
             </div>
+            <p className="text-body-sm text-foreground font-semibold">
+              Thời gian xác nhận chuyển khoản sẽ trong vòng 15’
+            </p>
             <p className="text-caption text-text-muted">
-              Đang chờ Điều hành cửa hàng đối soát xác nhận (hệ thống sẽ tự động cập nhật ngay khi nhận được tiền)...
+              {isOrderAccepted
+                ? "Xưởng đã tiếp nhận đơn! Đang chờ Điều hành đối soát chuyển khoản để kích hoạt màn hình theo dõi tiến độ..."
+                : triggerPolicy === "PAYMENT_ONLY"
+                ? "Đang chờ Điều hành đối soát chuyển khoản (hệ thống tự động duyệt sau 15’ khi có ảnh bill hợp lệ)..."
+                : "Đang chờ Điều hành đối soát chuyển khoản (hệ thống tự động duyệt sau 15’ khi có ảnh bill hợp lệ) hoặc Điều phối xác nhận tiếp nhận đơn..."}
             </p>
           </div>
           <p className="text-caption text-text-muted text-center">
-            Nút Theo dõi tiến độ sẽ được kích hoạt ngay khi cửa hàng xác nhận đã nhận tiền.
+            {triggerPolicy === "PAYMENT_ONLY"
+              ? "Nút Theo dõi tiến độ sẽ được kích hoạt ngay khi cửa hàng xác nhận đã nhận tiền."
+              : "Nút Theo dõi tiến độ sẽ được kích hoạt ngay khi cửa hàng xác nhận đã nhận tiền hoặc tiếp nhận đơn."}
           </p>
           <Button
             type="button"
@@ -277,18 +288,33 @@ export function BrochurePaymentView({
         </div>
       ) : vietQr ? (
         <div className="w-full flex flex-col gap-2.5">
+          {requirePaymentProof && sendCode && (
+            <PaymentProofUploader
+              sendCode={sendCode}
+              purpose="DEPOSIT"
+              onUploaded={(id) => setProofAssetId(id)}
+              onRemoved={() => setProofAssetId(null)}
+              disabled={loading}
+            />
+          )}
+
           {reportError && (
             <p role="alert" className="text-caption text-danger font-medium">{reportError}</p>
           )}
           <button
             type="button"
-            disabled={loading}
+            disabled={loading || !canSubmit}
             onClick={handleReportPaid}
-            className="w-full h-12 bg-success hover:bg-success/90 text-white font-extrabold text-body flex items-center justify-center gap-2 rounded-xl shadow-md cursor-pointer transition-colors disabled:opacity-50"
+            className="w-full h-12 bg-success hover:bg-success/90 text-white font-extrabold text-body flex items-center justify-center gap-2 rounded-xl shadow-md cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Check size={18} />
             <span>{loading ? "Đang xử lý..." : "TÔI ĐÃ CHUYỂN KHOẢN THANH TOÁN"}</span>
           </button>
+          {!canSubmit && (
+            <p className="text-caption text-warning font-medium text-center">
+              Vui lòng tải ảnh chuyển khoản để xác nhận
+            </p>
+          )}
           <Button
             type="button"
             disabled

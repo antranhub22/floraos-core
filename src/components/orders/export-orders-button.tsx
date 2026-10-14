@@ -9,6 +9,7 @@
 import React, { useState, useRef, useEffect } from "react"
 import { Download, Loader2, CalendarRange, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useSession } from "@/lib/session"
 import { Input } from "@/components/ui/input"
 
 interface ExportOrdersButtonProps {
@@ -29,7 +30,13 @@ function thirtyDaysAgoStr(): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function ExportOrdersButton({
+/** PO 14/10/2026: xuất Excel chỉ Điều hành (quyền R13); người khác xin Điều hành cấp quyền ở màn phân quyền. */
+export function ExportOrdersButton(props: ExportOrdersButtonProps) {
+  const { can } = useSession()
+  return can("R13") ? <ExportOrdersButtonInner {...props} /> : null
+}
+
+function ExportOrdersButtonInner({
   apiPath = "/api/v1/orders/export",
   label = "Xuất Excel",
   filename = "don-hang.xlsx",

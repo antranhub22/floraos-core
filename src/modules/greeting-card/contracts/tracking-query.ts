@@ -26,6 +26,7 @@ const schema = z.object({
   dir: z.enum(["asc", "desc"]).default("desc"),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.string().regex(/^\d{1,6}$/).optional(),
+  statusMode: z.enum(["ACTIVE", "DISMISSED", "ALL"]).default("ACTIVE"),
 })
 
 /** `?view=&q=&steps=A,B&sla=&...` → tham số lớp truy vấn. Lịch tối đa 62 ngày. */
@@ -42,6 +43,7 @@ export function parseTrackingQuery(url: URL): TrackingQueryParams {
     filter: {
       q: d.q, category: d.category as TrackingQueryParams["filter"]["category"], steps: steps as TrackingQueryParams["filter"]["steps"],
       saleId: d.saleId, channel: d.channel, type: d.type, sla: d.sla, owner: d.owner, deliveryFrom: d.deliveryFrom, deliveryTo: d.deliveryTo,
+      statusMode: d.statusMode,
     },
     sort: { field: d.sort, dir: d.dir },
     limit: d.limit,

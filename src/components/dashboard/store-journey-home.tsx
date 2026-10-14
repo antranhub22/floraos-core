@@ -92,7 +92,7 @@ export function StoreJourneyHome() {
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-primary" aria-hidden="true" />
             <span className="text-body-sm font-semibold text-text">
-              Bạn đang ở Chế độ chuyên gia (Bảng điều khiển trực tiếp)
+              Bạn đang xem bảng số liệu trực tiếp.
             </span>
           </div>
           <button
@@ -101,7 +101,7 @@ export function StoreJourneyHome() {
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface border border-border hover:bg-surface-alt text-caption font-bold text-primary transition-colors cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Chuyển sang Chế độ hành trình tác vụ</span>
+            <span>Về trang chọn công việc</span>
           </button>
         </div>
         <StoreGrowthCenter />
@@ -151,7 +151,7 @@ export function StoreJourneyHome() {
                 onClick={() => router.push((activeJourney.primaryHref || "/") as never)}
                 className="px-5 py-2.5 rounded-lg bg-primary text-surface text-body-sm font-bold hover:bg-primary-dark transition-colors cursor-pointer"
               >
-                Mở giao diện tác vụ chi tiết
+                Mở giao diện chi tiết
               </button>
             )}
           </div>
@@ -163,8 +163,8 @@ export function StoreJourneyHome() {
   // 4. Mặc định: Lưới lựa chọn Hành trình tác vụ (ChoiceGrid)
   return (
     <ChoiceGrid
-      title="BẠN MUỐN LÀM GÌ CHO CỬA HÀNG?"
-      subtitle="Chọn một tác vụ để bắt đầu hành trình làm việc có định hướng cho cửa hàng hoa"
+      title="Hôm nay bạn muốn làm gì cho cửa hàng?"
+      subtitle="Chọn một công việc bên dưới để bắt đầu."
       journeys={STORE_JOURNEYS}
       onSelectJourney={handleSelectJourney}
       onSwitchToExpertMode={() => handleToggleExpertMode(true)}

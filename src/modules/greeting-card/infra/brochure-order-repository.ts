@@ -54,7 +54,7 @@ export class BrochureOrderRepository {
       include: {
         customer: { select: { id: true, code: true, name: true, phone: true } },
         items: true,
-        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true, sale_id: true } },
+        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true, sale_id: true, payment_proof_asset_id: true, payment_proof_balance_asset_id: true } },
         coordination: { select: { coordinator_id: true } },
         assignments: { take: 1, select: { assignee_id: true, assigned_by: true }, orderBy: { assigned_at: "desc" as const } },
         events: { select: { axis: true, created_at: true, actor_id: true, reason: true }, orderBy: { created_at: "desc" as const } },
@@ -140,7 +140,7 @@ export class BrochureOrderRepository {
         customer: { select: { id: true, code: true, name: true, phone: true } },
         items: true,
         payments: true,
-        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true } },
+        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true, payment_proof_asset_id: true, payment_proof_balance_asset_id: true } },
         qc_records: { select: { notes: true, created_at: true } },
       },
       orderBy: [{ created_at: "desc" }, { id: "desc" }],
@@ -162,7 +162,7 @@ export class BrochureOrderRepository {
       where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
       include: {
         qc_records: { select: { notes: true, created_at: true } },
-        greeting_sessions: { select: { id: true, send_code: true, status: true } },
+        greeting_sessions: { select: { id: true, send_code: true, status: true, payment_proof_asset_id: true } },
       },
     })
   }

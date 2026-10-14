@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useSession } from "@/lib/session"
+import { useI18n } from "@/lib/i18n"
 import {
   TrashConfirmModal,
   type TrashConfirmTarget,
@@ -21,6 +22,7 @@ import {
   filterAndSortProducts,
   type ProductFilterState,
 } from "@/components/products/product-filter-types"
+import { AiProductEnrichmentModal } from "@/components/products/ai-product-enrichment-modal"
 
 const BASE_CATEGORIES = [
   "Tất cả",
@@ -35,9 +37,11 @@ const BASE_CATEGORIES = [
 export default function SanPhamPage() {
   const router = useRouter()
   const session = useSession()
+  const { t } = useI18n()
   const [filters, setFilters] = useState<ProductFilterState>(DEFAULT_FILTER_STATE)
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
   const [trashTarget, setTrashTarget] = useState<TrashConfirmTarget | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null)
 
   const isExecutive =
     session.roleKey === "dieu_hanh" ||
@@ -99,14 +103,14 @@ export default function SanPhamPage() {
       {/* Header tác vụ */}
       <header className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3.5 gap-3">
         <div>
-          <div className="text-caption text-text-muted">Kho sản phẩm của hàng</div>
-          <h1 className="text-title font-extrabold text-primary">Mẫu hoa</h1>
+          <div className="text-caption text-text-muted">{t("products.header.category")}</div>
+          <h1 className="text-title font-extrabold text-primary">{t("products.header.title")}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => napLai()}
-            aria-label="Tải lại danh sách"
+            aria-label={t("products.header.refresh")}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-text-muted hover:bg-surface-alt transition-colors focus-visible:outline-2 focus-visible:outline-primary"
           >
             <RefreshCw size={15} />
@@ -118,7 +122,7 @@ export default function SanPhamPage() {
             title="Nhập sản phẩm đồng loạt từ file Excel và folder ảnh"
           >
             <FileSpreadsheet size={14} className="text-success" />
-            <span className="hidden sm:inline">Nhập Excel & Ảnh</span>
+            <span className="hidden sm:inline">{t("products.header.importExcel")}</span>
           </button>
           <button
             type="button"
@@ -127,7 +131,7 @@ export default function SanPhamPage() {
             title="Upload ảnh hoa → AI phân tích tự động"
           >
             <Sparkles size={14} className="text-primary" />
-            <span className="hidden sm:inline">Phân tích AI</span>
+            <span className="hidden sm:inline">{t("products.header.scanPhoto")}</span>
           </button>
           <Button
             size="sm"
@@ -135,7 +139,7 @@ export default function SanPhamPage() {
             className="flex items-center gap-1.5 h-9"
           >
             <Plus size={15} strokeWidth={2.2} />
-            <span>Thêm sản phẩm</span>
+            <span>{t("products.header.createFlower")}</span>
           </Button>
         </div>
       </header>
@@ -165,15 +169,15 @@ export default function SanPhamPage() {
           </div>
         ) : filteredProducts.length === 0 ? (
           <EmptyState
-            title={rawProducts.length === 0 ? "Kho sản phẩm trống" : "Không tìm thấy mẫu phù hợp"}
+            title={rawProducts.length === 0 ? "Chưa có mẫu hoa nào trong kho" : "Không tìm thấy mẫu hoa phù hợp"}
             reason={
               rawProducts.length === 0
-                ? "Upload ảnh hoa hoặc nhập file Excel để nạp mẫu hoa vào kho."
+                ? "Tải ảnh hoa hoặc nhập file Excel để thêm mẫu hoa vào kho."
                 : "Thử tìm kiếm với từ khoá khác, điều chỉnh khoảng giá hoặc chọn dịp khác."
             }
             action={
               rawProducts.length === 0
-                ? { label: "Upload ảnh → Tạo sản phẩm", onClick: () => router.push("/tai-anh" as never) }
+                ? { label: "Quét ảnh hoa", onClick: () => router.push("/tai-anh" as never) }
                 : { label: "Xóa tất cả bộ lọc", onClick: handleResetFilters }
             }
           />
@@ -185,6 +189,7 @@ export default function SanPhamPage() {
                 key={p.id}
                 product={p}
                 isExecutive={isExecutive}
+                onImageClick={(prod) => setSelectedProduct(prod)}
                 onTrash={(prod) =>
                   setTrashTarget({
                     id: prod.id,
@@ -202,6 +207,7 @@ export default function SanPhamPage() {
           <ProductTableView
             products={filteredProducts}
             isExecutive={isExecutive}
+            onImageClick={(prod) => setSelectedProduct(prod)}
             onTrash={(prod) =>
               setTrashTarget({
                 id: prod.id,
@@ -230,7 +236,7 @@ export default function SanPhamPage() {
                     <span>Đang tải thêm...</span>
                   </>
                 ) : (
-                  "Tải thêm sản phẩm"
+                  "Xem thêm mẫu hoa"
                 )}
               </button>
             )}
@@ -250,6 +256,20 @@ export default function SanPhamPage() {
         onClose={() => setTrashTarget(null)}
         onConfirm={handleConfirmTrash}
       />
+
+      {/* Modal Bảng thông số sản phẩm & Phân tích AI */}
+      {selectedProduct && (
+        <AiProductEnrichmentModal
+          isOpen={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          productId={selectedProduct.id}
+          initialProduct={selectedProduct}
+          onSuccess={() => {
+            napLai()
+            setSelectedProduct(null)
+          }}
+        />
+      )}
     </div>
   )
 }

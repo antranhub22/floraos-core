@@ -46,9 +46,14 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
   // Determine initial step based on session status
   const [step, setStep] = useState<CustomerStep>(() => {
     if (initialData.order) {
-      // Điều hành đã nhận tiền (đủ hoặc cọc) → Theo dõi; chưa nhận / chờ báo giá → bước thanh toán
+      const triggerPolicy = initialData.trackingTriggerPolicy ?? "PAYMENT_OR_COORDINATOR"
+      const isAccepted =
+        initialData.order.status === "CONFIRMED" ||
+        initialData.order.status === "PROCESSING" ||
+        (Boolean(initialData.order.productionStatus) && initialData.order.productionStatus !== "WAITING")
       const paid = initialData.order.totalVnd > 0 && initialData.order.paidVnd > 0
-      return paid || initialData.order.status === "CANCELLED" ? "TRACKING" : "PAYMENT"
+      const canTrigger = triggerPolicy === "PAYMENT_ONLY" ? paid : paid || isAccepted
+      return canTrigger || initialData.order.status === "CANCELLED" ? "TRACKING" : "PAYMENT"
     }
     if (session.status === "SELECTED" && session.productSnapshot) return "ORDER_FORM"
     return "SWIPING"
@@ -89,7 +94,7 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
       : null
   )
 
-  // Chưa chuyển khoản thì không vào Theo dõi; màn thanh toán chỉ hiện nút Theo dõi khi đã được phép
+  // Chưa chuyển khoản/chưa nhận đơn thì không vào Theo dõi; màn thanh toán chỉ hiện nút Theo dõi khi đã được phép
   const [trackingUnlocked, setTrackingUnlocked] = useState(() => {
     const order = initialData.order
     return !!order && canViewTracking({
@@ -97,6 +102,9 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
       paidVnd: order.paidVnd,
       hasPaymentQr: !!initialData.payment,
       cancelled: order.status === "CANCELLED",
+      orderStatus: order.status,
+      productionStatus: order.productionStatus,
+      triggerPolicy: initialData.trackingTriggerPolicy,
     })
   })
 
@@ -165,9 +173,11 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
 
   // Máy chủ nhớ khách đã báo chuyển khoản: rời trang rồi quay lại vẫn thấy "đang chờ xác nhận"
   const [reportedPaid, setReportedPaid] = useState(session.status === "PAYMENT_REPORTED")
-  async function handleReportPaid() {
+  async function handleReportPaid(proofAssetId?: string) {
     const res = await fetch(`/api/v1/public/brochure/${session.sendCode}/payment-notify`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proofAssetId }),
     })
     if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
     setReportedPaid(true)
@@ -252,11 +262,16 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
         {step === "PAYMENT" && orderResult && (
           <BrochurePaymentView
             orderCode={orderResult.orderCode}
+            sendCode={session.sendCode}
             totalVnd={orderResult.totalVnd}
             vietQr={orderResult.vietQr}
             shopPhone={shop.phone}
             onReportPaid={handleReportPaid}
             alreadyReported={reportedPaid}
+            requirePaymentProof={
+              (catalog.filters as Record<string, unknown> | null | undefined)?.requirePaymentProof !== false
+            }
+            triggerPolicy={initialData.trackingTriggerPolicy}
             onGoToTracking={() => {
               setTrackingUnlocked(true)
               setStep("TRACKING")

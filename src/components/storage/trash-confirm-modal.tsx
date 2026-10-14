@@ -55,8 +55,8 @@ export function TrashConfirmModal({ target, onClose, onConfirm }: TrashConfirmMo
               <Trash2 size={20} />
             </div>
             <div>
-              <h3 className="text-body font-black text-foreground">
-                Xác Nhận Chuyển Vào Thùng Rác
+              <h3 className="text-body font-black text-foreground truncate max-w-xs">
+                Chuyển “{target.name}” vào thùng rác?
               </h3>
               <span className="text-caption text-text-muted font-bold">
                 Quyền Điều Hành • Lưu trữ 30 ngày
@@ -125,7 +125,7 @@ export function TrashConfirmModal({ target, onClose, onConfirm }: TrashConfirmMo
             disabled={submitting}
             className="h-10 px-4 text-body-sm font-bold"
           >
-            Hủy bỏ
+            Hủy
           </Button>
           <Button
             type="button"
@@ -141,7 +141,7 @@ export function TrashConfirmModal({ target, onClose, onConfirm }: TrashConfirmMo
             ) : (
               <>
                 <Trash2 size={16} />
-                <span>Xác nhận xóa</span>
+                <span>Chuyển vào thùng rác</span>
               </>
             )}
           </Button>

@@ -139,7 +139,7 @@ export default function AiSettingsPage() {
         badgeIcon={Shield}
         title="Chính Sách & Trần Sử Dụng AI Tổ Chức"
         titleIcon={Cpu}
-        description="Kiểm soát danh mục mô hình AI được phép chạy, sàn bảo vệ dữ liệu khách hàng (PII) và trần chi phí credit theo từng phân hệ nghiệp vụ."
+        description="Kiểm soát danh mục mô hình AI được phép chạy, sàn bảo vệ thông tin khách hàng và trần chi phí theo từng phân hệ nghiệp vụ."
         tips={[
           "🔒 Năng lực chạm dữ liệu khách hàng luôn bị khóa sàn bảo mật SENSITIVE (Luật YC-K1)",
           "⚡ Mô hình chỉ được gọi khi vượt qua 4 tiêu chuẩn cấp phép thương mại và kiểm định bộ ảnh vàng",

@@ -32,6 +32,24 @@ export interface CancellationPayload extends CancellationProposal {
   decidedAt?: string | undefined
   decidedNote?: string | undefined
   actualRefundVnd?: number | undefined
+  /** Hệ thống tự duyệt vì Điều hành không phản hồi kịp hạn (không phải người bấm). */
+  autoApproved?: boolean | undefined
+  /** Việc Điều hành còn phải làm sau khi hệ thống tự huỷ — hiện ở Hộp việc tới khi đánh dấu xong. */
+  followUp?: CancellationFollowUp | undefined
+}
+
+export interface CancellationFollowUp {
+  status: "PENDING" | "DONE"
+  /** Số tiền phải chuyển hoàn cho khách (hệ thống không tự chuyển tiền, chưa ghi sổ thu). */
+  refundDueVnd: number
+  doneBy?: string | undefined
+  doneAt?: string | undefined
+  note?: string | undefined
+}
+
+/** Đơn tự huỷ còn chờ Điều hành xử lý (hoàn tiền / liên hệ khách). */
+export function needsFollowUp(payload: Pick<CancellationPayload, "status" | "followUp">): boolean {
+  return payload.status === "APPROVED" && payload.followUp?.status === "PENDING"
 }
 
 /**
@@ -108,6 +126,34 @@ export function validateCancellationProposal(
 }
 
 /**
+ * Kiểm tra dữ liệu đề xuất (không kiểm tra trạng thái vòng đời đơn hàng).
+ * Dùng khi tạo đề xuất (createProposal) — trạng thái đơn do Điều hành kiểm khi duyệt (decide).
+ */
+export function validateCancellationProposalData(
+  proposal: CancellationProposal,
+  order: { totalVnd: number; paidVnd: number }
+): string | null {
+  if (!proposal.reason || proposal.reason.trim().length < 3) {
+    return "Vui lòng nhập lý do hủy/hoàn tiền chi tiết (tối thiểu 3 ký tự)."
+  }
+  const refund = Math.max(0, Math.round(proposal.refundAmountVnd || 0))
+  if (proposal.type === "FULL_REFUND" && order.paidVnd <= 0) {
+    return "Đơn hàng chưa thu tiền, không thể hoàn tiền toàn phần (chọn Hủy đơn)."
+  }
+  if (proposal.type === "PARTIAL_REFUND") {
+    if (order.paidVnd <= 0) return "Đơn hàng chưa có khoản thu nào để hoàn tiền."
+    if (refund <= 0) return "Số tiền hoàn một phần phải lớn hơn 0đ."
+    if (refund >= order.paidVnd) {
+      return `Số tiền hoàn một phần phải nhỏ hơn tổng số tiền đã thu (${order.paidVnd.toLocaleString("vi-VN")}đ). Nếu hoàn toàn bộ, hãy chọn Hoàn tiền toàn phần.`
+    }
+  }
+  if (refund > order.paidVnd) {
+    return `Số tiền hoàn không được vượt quá số tiền khách đã trả (${order.paidVnd.toLocaleString("vi-VN")}đ).`
+  }
+  return null
+}
+
+/**
  * Số tiền hoàn thực tế khi Điều hành duyệt — máy chủ tự tính, không tin client:
  * Hủy đơn không hoàn → 0; Hoàn toàn phần → đúng số đã thu; Hoàn một phần → số Điều hành
  * chốt (hoặc số đề xuất), không âm.
@@ -131,4 +177,10 @@ export function decisionCapabilities(
   if (type === "CANCEL_ONLY") return [caps.orderCancel]
   if (type === "FULL_REFUND") return [caps.orderCancel, caps.paymentRefund]
   return [caps.paymentRefund]
+}
+
+/** Nội dung tin báo Điều hành khi hệ thống tự duyệt huỷ đơn. */
+export function autoApprovedNotice(orderCode: string, timeoutMinutes: number, refundDueVnd: number): string {
+  const refund = refundDueVnd > 0 ? ` Cần chuyển hoàn ${refundDueVnd.toLocaleString("vi-VN")}đ cho khách rồi bấm "Đã hoàn tiền cho khách" trong Hộp việc.` : ""
+  return `Đơn ${orderCode} đã tự huỷ do quá ${timeoutMinutes} phút chưa có quyết định cho đề xuất từ chối nhận đơn của Điều phối.${refund}`
 }

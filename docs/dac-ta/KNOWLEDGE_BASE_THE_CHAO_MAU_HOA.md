@@ -74,18 +74,26 @@ Chức năng **Thẻ Chào Mẫu Hoa** là giải pháp bán hàng đa kênh hi�
 - **Sắp xếp ưu tiên thời gian giao hàng:** Các đơn hàng cần giao sớm nhất trong ngày tự động được đẩy lên đầu cột để thợ hoa cắm trước, tránh nguy cơ trễ hẹn SLA.
 - Nhấp vào thẻ đơn để xem chi tiết mẫu hoa, ảnh chụp thực tế, ghi chú kỹ thuật cắm hoa và nội dung thiệp mừng.
 
-### B. Nghiệm thu Ảnh Thành phẩm & Đếm ngược duyệt ảnh
+### B. Nghiệm thu Ảnh Thành phẩm & Cơ chế Bỏ qua duyệt ảnh
 - Khi hoa cắm hoàn thiện, bấm nút **"Ảnh TP"** trên thẻ đơn để chụp và tải ảnh hoa lên hệ thống.
-- Hệ thống gửi ảnh ngay lập tức đến link theo dõi của khách hàng kèm **đồng hồ đếm ngược 10 phút**.
-- *Nếu khách bấm đồng ý:* Đơn hoàn tất duyệt ngay.
-- *Nếu khách không phản hồi sau 10 phút:* Hệ thống **tự động xác nhận** để xưởng kịp bàn giao đơn cho shipper giao đúng giờ hẹn.
+- **Trường hợp có tải ảnh:** Hệ thống gửi ảnh ngay lập tức đến link theo dõi của khách hàng kèm **đồng hồ đếm ngược 10 phút**.
+  - *Nếu khách bấm đồng ý:* Đơn hoàn tất duyệt ngay, mở cổng thu tiền Đợt 2.
+  - *Nếu khách không phản hồi sau 10 phút:* Hệ thống **tự động xác nhận (Auto-approved)** để xưởng kịp thu tiền và giao ship.
+- **Trường hợp không tải ảnh (Bỏ qua duyệt ảnh):**
+  - Nếu tiệm/xưởng không tải ảnh thành phẩm lên (đơn gấp, khách quen, hoặc không áp dụng gửi ảnh), ngay khi hoa chuyển sang trạng thái **Đã cắm xong (`READY`)**, hệ thống tự động **bỏ qua bước chờ duyệt ảnh** và mở ngay nút **"Thu lần 2"** trên bảng Điều hành.
 
-### C. Xử lý Tình huống Khẩn cấp (Giao gấp bỏ qua ảnh)
+### C. Quyền Quyết Định Thu Tiền & Giao Ship của Điều Phối
+- **Quyền quyết định thuộc về Điều hành & Điều phối:** 
+  - Kể cả khi khách **chưa thanh toán lần 2**, **chưa gửi ảnh bill**, hoặc khách thanh toán riêng ngoài hệ thống (tiền mặt, COD cho shipper thu, chuyển khoản trực tiếp cho chủ tiệm):
+  - Điều phối có nút **"Xác nhận thu đủ (Lần 2)"** trực tiếp trên thẻ đơn ở tab Điều phối.
+  - Khi Điều phối hoặc Điều hành bấm xác nhận, hệ thống ghi nhận đã thu đủ tiền và **mở khóa ngay nút "Giao Ship"** để phân công tài xế chuyển hoa đi đúng giờ hẹn, không bị ách tắc quy trình giao vận.
+
+### D. Xử lý Tình huống Khẩn cấp (Giao gấp bỏ qua ảnh)
 - Trong trường hợp khách đặt gấp, hoa cần chuyển đi ngay cho sự kiện bắt đầu:
 - Điều phối có thể bấm nút **"Bỏ qua ảnh sản phẩm hoàn thiện"** để chuyển thẳng sang bước giao hàng.
 - Hệ thống ghi nhận trạng thái *"Skipped"* một cách minh bạch trong lịch sử đơn.
 
-### D. Bàn giao Shipper & Nghiệm thu Người nhận
+### E. Bàn giao Shipper & Nghiệm thu Người nhận
 - Bấm **"Giao Ship"** để cập nhật thông tin tài xế và số điện thoại liên hệ.
 - Khi giao hoa thành công, tài xế chụp ảnh người nhận tươi cười nhận hoa và Điều phối tải lên mục **"Ảnh nhận"**.
 - Đơn hàng chuyển sang trạng thái Hoàn tất, lưu trữ vĩnh viễn làm bằng chứng đối soát.

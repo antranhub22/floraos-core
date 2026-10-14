@@ -372,14 +372,14 @@ export function AccountStorageHub({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-meta font-bold text-accent uppercase tracking-wider">FloraOS Media Hub</span>
-              <Badge className="bg-primary/10 text-primary font-semibold text-caption">Kho Lưu Trữ Tài Khoản</Badge>
+              <span className="text-meta font-bold text-accent uppercase tracking-wider">Kho ảnh & nội dung</span>
+              <Badge tone="neutral" className="font-semibold text-caption">Cửa hàng</Badge>
             </div>
             <h2 className="mt-1 text-xl font-extrabold text-text tracking-tight">
-              Quản Lý Dữ Liệu Sản Phẩm & Sale Pitch
+              Kho ảnh và kịch bản tư vấn
             </h2>
             <p className="text-body-sm text-text-muted mt-0.5">
-              Phân loại 3 phân vùng chuẩn hóa: Ảnh gốc, Ảnh đã duyệt chờ sinh dữ liệu, và Sale Pitch đã hoàn thành.
+              Lưu ảnh gốc, ảnh đã duyệt và kịch bản tư vấn của cửa hàng. Mục đã xóa được giữ 30 ngày trong Thùng rác.
             </p>
           </div>
 
@@ -390,7 +390,7 @@ export function AccountStorageHub({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm trong kho..."
+              placeholder="Tìm theo tên hoa, mã mẫu hoa, dịp tặng hoặc thành phần…"
               className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border bg-surface-alt text-body-sm outline-none focus:border-primary transition-colors"
             />
           </div>
@@ -401,21 +401,21 @@ export function AccountStorageHub({
           tabs={[
             {
               id: "raw",
-              label: "1. Ảnh Gốc",
+              label: "Ảnh gốc",
               icon: Folder,
               badge: allRawAssets.length,
               badgeTone: "neutral",
             },
             {
               id: "approved",
-              label: "2. Ảnh Đã Duyệt (M01a)",
+              label: "Ảnh đã duyệt",
               icon: Layers,
               badge: approvedItems.length,
               badgeTone: "accent",
             },
             {
               id: "finalized",
-              label: "3. Sale Pitch Hoàn Thành",
+              label: "Kịch bản tư vấn",
               icon: CheckCircle2,
               badge: internalFinalizedPitches.length,
               badgeTone: "success",
@@ -424,7 +424,7 @@ export function AccountStorageHub({
               ? [
                   {
                     id: "trash",
-                    label: "4. Thùng Rác (30 ngày)",
+                    label: "Thùng rác (30 ngày)",
                     icon: Trash2,
                     badge: trashCount,
                     badgeTone: "danger" as const,
@@ -439,7 +439,7 @@ export function AccountStorageHub({
               ? [
                   {
                     id: "upload-new",
-                    label: "+ Tải ảnh mới",
+                    label: "Tải ảnh mới",
                     icon: Plus,
                     variant: "primary",
                     onClick: () => router.push("/tai-anh"),
@@ -458,7 +458,7 @@ export function AccountStorageHub({
               : [
                   {
                     id: "create-pitch",
-                    label: "+ Tạo Thẻ Chào mới",
+                    label: "Tạo thẻ chào mới",
                     icon: Plus,
                     variant: "primary",
                     onClick: () => router.push("/tai-anh?tab=m01c"),
@@ -608,7 +608,7 @@ export function AccountStorageHub({
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-text-muted uppercase tracking-wider">
-              Danh sách sản phẩm đã chốt cấu phần BOM ({filteredApprovedItems.length})
+              Danh sách ảnh đã duyệt ({filteredApprovedItems.length})
             </span>
             <Button
               variant="outline"
@@ -634,7 +634,7 @@ export function AccountStorageHub({
               <Layers size={32} className="mx-auto text-text-muted mb-2 opacity-50" />
               <div className="text-sm font-bold text-text">Chưa có phân tích nào được phê duyệt</div>
               <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
-                Hãy chuyển sang tab &quot;Nhận diện sản phẩm: Phân tích kỹ thuật&quot; để nhận diện và duyệt BOM sản phẩm trước khi sinh dữ liệu bán hàng.
+                Hãy chuyển sang trang Quét ảnh hoa để nhận diện và duyệt ảnh trước khi tạo bài giới thiệu và tư vấn.
               </p>
             </Card>
           )}
@@ -690,7 +690,7 @@ export function AccountStorageHub({
                       <div>
                         <div className="flex items-center gap-1.5 flex-wrap mb-1">
                           <Badge tone="success" className="text-caption py-0 px-1.5 font-bold gap-1">
-                            <CheckCircle2 size={10} /> ĐÃ DUYỆT BOM
+                            <CheckCircle2 size={10} /> ĐÃ DUYỆT
                           </Badge>
                           <span className="text-caption text-text-muted font-medium">{displayStyle}</span>
                           {displayOccasion && (
@@ -723,7 +723,7 @@ export function AccountStorageHub({
                       className="flex-1 text-xs h-8 gap-1 border-border font-semibold text-text hover:text-primary"
                     >
                       <Sparkles size={13} className="text-accent" />
-                      1. Sinh Copy (Sinh dữ liệu bán hàng)
+                      Tạo bài giới thiệu
                     </Button>
                     <Button variant="primary"
                       size="sm"
@@ -731,7 +731,7 @@ export function AccountStorageHub({
                       className="flex-1 text-xs h-8 gap-1 font-bold"
                     >
                       <Tag size={13} />
-                      2. Tạo Thẻ Chào (Nghiên cứu thị trường)
+                      Tạo thẻ chào
                     </Button>
                     {isExecutive && (
                       <Button
@@ -764,19 +764,19 @@ export function AccountStorageHub({
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-text-muted uppercase tracking-wider">
-              Danh sách Thẻ Chào Khách đã xuất bản Final ({filteredFinalizedPitches.length})
+              Danh sách kịch bản tư vấn ({filteredFinalizedPitches.length})
             </span>
             <span className="text-xs text-text-muted">
-              Nhấn &quot;Copy nhanh Zalo&quot; để gửi khách hàng ngay lập tức
+              Bấm &quot;Sao chép kịch bản&quot; để gửi khách hàng.
             </span>
           </div>
 
           {filteredFinalizedPitches.length === 0 && (
             <Card className="p-8 text-center bg-surface-alt border-dashed">
               <CheckCircle2 size={32} className="mx-auto text-success mb-2 opacity-60" />
-              <div className="text-sm font-bold text-text">Chưa có Sale Pitch nào được chốt duyệt Final</div>
+              <div className="text-sm font-bold text-text">Chưa có kịch bản tư vấn nào</div>
               <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
-                Khi bạn chỉnh sửa Thẻ Chào Sản Phẩm tại tab &quot;Nghiên cứu thị trường: Thẻ chào sản phẩm&quot; và bấm <strong>&quot;Chốt duyệt &amp; Xuất bản Final&quot;</strong>, thẻ sẽ tự động lưu vào kho này để sử dụng lâu dài.
+                Khi bạn duyệt thẻ chào mẫu hoa và kịch bản tư vấn, nội dung sẽ được lưu vào đây để dùng lại.
               </p>
             </Card>
           )}
@@ -816,7 +816,7 @@ export function AccountStorageHub({
                       <div>
                         <div className="flex items-center justify-between gap-1 mb-1">
                           <Badge className="bg-success/15 text-success dark:text-success font-bold text-caption py-0 px-1.5 border border-success/30 gap-0.5">
-                            <CheckCircle2 size={10} strokeWidth={2.5} /> FINAL
+                            <CheckCircle2 size={10} strokeWidth={2.5} /> ĐÃ DUYỆT
                           </Badge>
                           <span className="text-meta font-extrabold text-primary">
                             {formatCurrencyVnd(pitch.priceVnd)}
@@ -858,7 +858,7 @@ export function AccountStorageHub({
                       onClick={() => handleSelectFinalized(pitch)}
                       className="flex-1 text-xs h-8 gap-1 font-semibold text-text hover:text-primary"
                     >
-                      <Eye size={13} /> Xem Thẻ Chào
+                      <Eye size={13} /> Xem thẻ chào
                     </Button>
 
                     <Button variant="secondary"
@@ -869,7 +869,7 @@ export function AccountStorageHub({
                       }`}
                     >
                       {isCopied ? <Check size={13} strokeWidth={2.5} /> : <Copy size={13} />}
-                      {isCopied ? "Đã copy!" : "Copy kịch bản Zalo"}
+                      {isCopied ? "Đã sao chép!" : "Sao chép kịch bản"}
                     </Button>
 
                     <Button
@@ -877,7 +877,7 @@ export function AccountStorageHub({
                       size="sm"
                       onClick={() => handleDeletePitch(pitchKey)}
                       className="h-8 w-8 p-0 text-text-muted hover:text-danger hover:bg-danger-bg"
-                      title="Xóa Thẻ Chào này"
+                      title="Xóa thẻ chào này"
                     >
                       <Trash2 size={13} />
                     </Button>

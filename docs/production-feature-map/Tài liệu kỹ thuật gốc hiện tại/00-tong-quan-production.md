@@ -10,16 +10,16 @@
 
 | # | Nhóm | Tên mục | Đường dẫn | Tài liệu chi tiết |
 |---|---|---|---|---|
-| 1 | — | Trang chủ | `/` | [01-trang-chu.md](./01-trang-chu.md) |
-| 2 | Bán hàng & Khách | Đơn hàng | `/don-hang` | [02-don-hang.md](./02-don-hang.md) |
-| 3 | Bán hàng & Khách | Thẻ chào mẫu hoa | `/the-chao` | [03-the-chao.md](./03-the-chao.md) |
-| 4 | Sản phẩm | Sản phẩm & Giá | `/san-pham` | [04-san-pham-va-gia.md](./04-san-pham-va-gia.md) |
-| 5 | Sản phẩm | Tạo mẫu hoa mới | `/san-pham/tao-moi` | [05-tao-mau-hoa-moi.md](./05-tao-mau-hoa-moi.md) |
-| 6 | Sản phẩm | Nhập từ Excel & Ảnh | `/san-pham/nhap-hang-loat` | [06-nhap-tu-excel.md](./06-nhap-tu-excel.md) |
-| 7 | Sản phẩm | Quét ảnh hoa | `/tai-anh` | [07-quet-anh-hoa.md](./07-quet-anh-hoa.md) |
-| 8 | Sản phẩm | Kho dữ liệu | `/kho-du-lieu` | [08-kho-du-lieu.md](./08-kho-du-lieu.md) |
-| 9 | Thiết lập | Hồ sơ cửa hàng | `/ho-so` | [09-ho-so-cua-hang.md](./09-ho-so-cua-hang.md) |
-| 10 | Thiết lập | Cài đặt | `/cai-dat` | [10-cai-dat.md](./10-cai-dat.md) |
+| 1 | — | Trang chủ | `/` | [01-trang-chu.md](01-trang-chu.md) |
+| 2 | Bán hàng & Khách | Đơn hàng | `/don-hang` | [02-don-hang.md](02-don-hang.md) |
+| 3 | Bán hàng & Khách | Thẻ chào mẫu hoa | `/the-chao` | [03-the-chao.md](03-the-chao.md) |
+| 4 | Sản phẩm | Sản phẩm & Giá | `/san-pham` | [04-san-pham-va-gia.md](04-san-pham-va-gia.md) |
+| 5 | Sản phẩm | Tạo mẫu hoa mới | `/san-pham/tao-moi` | [05-tao-mau-hoa-moi.md](05-tao-mau-hoa-moi.md) |
+| 6 | Sản phẩm | Nhập từ Excel & Ảnh | `/san-pham/nhap-hang-loat` | [06-nhap-tu-excel.md](06-nhap-tu-excel.md) |
+| 7 | Sản phẩm | Quét ảnh hoa | `/tai-anh` | [07-quet-anh-hoa.md](07-quet-anh-hoa.md) |
+| 8 | Sản phẩm | Kho dữ liệu | `/kho-du-lieu` | [08-kho-du-lieu.md](08-kho-du-lieu.md) |
+| 9 | Thiết lập | Hồ sơ cửa hàng | `/ho-so` | [09-ho-so-cua-hang.md](09-ho-so-cua-hang.md) |
+| 10 | Thiết lập | Cài đặt | `/cai-dat` | [10-cai-dat.md](10-cai-dat.md) |
 
 ---
 

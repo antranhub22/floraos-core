@@ -253,6 +253,10 @@ export class CoordinatorRepository {
     await this.updateCoordination(ctx, orderId, { custom_fields: customFields as Prisma.InputJsonValue })
   }
 
+  async updateMetadata(ctx: TenantContext, orderId: string, metadata: Record<string, unknown>): Promise<void> {
+    await this.updateCoordination(ctx, orderId, { metadata: metadata as Prisma.InputJsonValue })
+  }
+
   /**
    * ĐP-4a (26/09/2026, PO D2) — sổ thu. Một dòng `order_payments` MỘT tổ chức
    * (`scopedData`), cộng cập nhật `orders.paid_vnd`/`balance_vnd` trong CÙNG

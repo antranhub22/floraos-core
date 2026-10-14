@@ -2,7 +2,7 @@ import type { TenantContext } from "@/core/tenancy"
 import { conflict, notFound, validationFailed } from "@/core/http/errors"
 import { mediaSelectionError } from "../domain/media-limits"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
-import { coordinatorActionBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
+import { coordinatorAcceptanceBlocker, coordinatorActionBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
 import { paymentGateBlocker, parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { queueOrderNotification } from "./notify-customer"
@@ -10,6 +10,10 @@ import {
   DELIVERY_FAILURE_LABEL, deliveryFailureError, parseRedeliveryFee, redeliveryFeeFor, type DeliveryFailureReason,
 } from "../domain/delivery-failure"
 import { DeliveryFailureRepository } from "../infra/delivery-failure-repository"
+import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
+import { CancellationRepository } from "../infra/cancellation-repository"
+import { coordinatorConfirmDepositPayment } from "./confirm-brochure-payment"
+import { canRoleApproveDeposit, isUrgentOrder, parseBrochureWorkflowPolicy } from "../domain/brochure-workflow-policy"
 
 /** Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). */
 async function loadForAction(
@@ -20,15 +24,20 @@ async function loadForAction(
 ) {
   const order = await repo.findBrochureOrder(ctx, orderId)
   if (!order) throw notFound()
-  const blocker = coordinatorActionBlocker(action, {
-    status: order.status,
-    productionStatus: order.production_status,
-    deliveryStatus: order.delivery_status,
-  })
-  if (blocker) throw conflict(blocker)
-  // Chính sách thu tiền của tiệm (cọc trước khi cắm, thu đủ trước khi giao)
+  // Chính sách thu tiền và kiểm định ảnh của tiệm
   const shop = await new GreetingCardRepository().getShopProfile(ctx.organizationId)
-  const moneyBlocker = paymentGateBlocker(action, parsePaymentPolicy(shop.settings), {
+  const policy = parsePaymentPolicy(shop.settings)
+  const blocker = coordinatorActionBlocker(
+    action,
+    {
+      status: order.status,
+      productionStatus: order.production_status,
+      deliveryStatus: order.delivery_status,
+    },
+    { skipPhoto: policy.requireProductPhotoQC === false }
+  )
+  if (blocker) throw conflict(blocker)
+  const moneyBlocker = paymentGateBlocker(action, policy, {
     totalVnd: Number(order.total_vnd),
     paidVnd: Number(order.paid_vnd),
   })
@@ -166,4 +175,97 @@ export async function markBrochureDeliveryFailed(
   })
   queueOrderNotification(ctx.organizationId, order.id, "DELIVERY_FAILED")
   return result
+}
+
+/**
+ * Điều phối thẩm định và xác nhận TIẾP NHẬN đơn hàng.
+ * Đổi trạng thái xưởng sang ASSIGNED/ARRANGING, ghi chú tiếp nhận và gửi thông báo cho khách.
+ */
+export async function coordinatorAcceptBrochureOrder(
+  ctx: TenantContext,
+  orderId: string,
+  input: { note?: string | undefined } = {},
+  repo = new BrochureOrderRepository(),
+  shops = new GreetingCardRepository()
+) {
+  const order = await repo.findBrochureOrder(ctx, orderId)
+  if (!order) throw notFound()
+  // Cùng luật với nút trên giao diện: đơn đã huỷ/đã giao/đã tiếp nhận/đã vào sản xuất, hoặc chưa có
+  // thông tin chuyển khoản nào → không tiếp nhận (gọi thẳng API cũng bị chặn)
+  const acceptBlocker = coordinatorAcceptanceBlocker(
+    { status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status },
+    { paidVnd: Number(order.paid_vnd), paymentProofUrl: order.greeting_sessions?.[0]?.payment_proof_asset_id ?? null }
+  )
+  if (acceptBlocker) throw conflict(acceptBlocker)
+
+  // Nếu đơn chưa ghi nhận tiền cọc mà khách đã có bill hoặc báo chuyển khoản:
+  // Tự động phê duyệt tiền cọc tương đương với sự phê duyệt của Điều hành!
+  const paid = Number(order.paid_vnd)
+  const total = Number(order.total_vnd)
+  const session = order.greeting_sessions?.[0]
+  const hasProofOrReported = Boolean(session?.payment_proof_asset_id || session?.status === "PAYMENT_REPORTED")
+
+  // Ghi nhận cọc thay Điều hành chỉ khi chính sách tiệm cho Điều phối duyệt cọc (như /confirm-deposit)
+  const shop = await shops.getShopProfile(ctx.organizationId)
+  const deliveryWindow = order.delivery_window as { date?: string; timeSlot?: string } | null
+  const minutesWaiting = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60_000)
+  const workflow = parseBrochureWorkflowPolicy(shop.settings)
+  const mayConfirmDeposit = canRoleApproveDeposit("COORDINATOR", workflow, {
+    isUrgent: isUrgentOrder({ deliveryDate: deliveryWindow?.date, deliveryTimeSlot: deliveryWindow?.timeSlot }),
+    isOverdueSla: minutesWaiting >= workflow.slaEscalationMinutes,
+  })
+  let paidNow = paid
+  if (paid <= 0 && total > 0 && hasProofOrReported && mayConfirmDeposit) {
+    paidNow = (await coordinatorConfirmDepositPayment(ctx, orderId, { note: input.note })).paidVnd
+  }
+  // Cùng chốt tiền như khi gán thợ: tiệm bắt thu trước khi cắm mà chưa thu → chưa được tiếp nhận
+  const moneyBlocker = paymentGateBlocker("assign-florist", parsePaymentPolicy(shop.settings), { totalVnd: total, paidVnd: paidNow })
+  if (moneyBlocker) throw conflict(`${moneyBlocker}. Chờ Điều hành xác nhận tiền cọc rồi tiếp nhận đơn.`)
+
+  const result = await repo.applyProgress(ctx, order, {
+    eventType: "COORDINATOR_ACCEPTED",
+    productionStatus: "ASSIGNED",
+    orderStatus: order.status === "DRAFT" ? "CONFIRMED" : order.status,
+    noteAppend: `[Điều phối tiếp nhận] ${input.note?.trim() || "Xác nhận xưởng nhận đơn"}`,
+  })
+  queueOrderNotification(ctx.organizationId, order.id, "ORDER_ACCEPTED")
+  return result
+}
+
+/**
+ * Điều phối THẨM ĐỊNH VÀ TỪ CHỐI đơn hàng (do hết hoa, quá tải, ngoài giờ/khu vực giao).
+ * Huỷ đơn, ghi nhận lý do từ chối và kích hoạt quy trình hoàn tiền 100% cho khách hàng.
+ */
+export async function coordinatorRejectBrochureOrder(
+  ctx: TenantContext,
+  orderId: string,
+  input: { reason: string },
+  cancellationRepo = new CancellationRepository(),
+  repo = new BrochureOrderRepository()
+) {
+  const order = await repo.findBrochureOrder(ctx, orderId)
+  if (!order) throw notFound()
+  if (order.status === "CANCELLED") throw conflict("Đơn hàng đã được huỷ trước đó")
+  const reasonText = input.reason?.trim() || "Điều phối từ chối nhận đơn (quá tải hoặc không đáp ứng mẫu hoa)"
+  // Bấm lặp / hai người cùng bấm → không tạo hai đề xuất huỷ cho một đơn
+  if ((await cancellationRepo.listPending(ctx)).some((r) => r.order_id === orderId)) {
+    throw conflict("Đơn này đã có đề xuất huỷ đang chờ Điều hành duyệt")
+  }
+  
+  // Điều phối từ chối nhận đơn -> gửi Đề xuất Hủy & Hoàn tiền toàn phần lên Điều hành phê duyệt
+  const result = await cancellationRepo.createProposal(ctx, {
+    orderId,
+    senderRole: "COORDINATOR",
+    proposal: {
+      type: Number(order.paid_vnd) > 0 ? "FULL_REFUND" : "CANCEL_ONLY",
+      reason: `[Điều phối từ chối nhận đơn] ${reasonText}`,
+      refundAmountVnd: Number(order.paid_vnd),
+      note: "Điều phối xác định không thể cung ứng đơn hàng theo yêu cầu khách.",
+    },
+  })
+  return {
+    success: true,
+    message: "Đã gửi yêu cầu từ chối nhận đơn và hoàn tiền tới Điều hành xét duyệt.",
+    proposalId: result.id,
+  }
 }

@@ -13,15 +13,15 @@ export interface M01bGuidanceCardProps {
 export function M01bGuidanceCard({ className }: M01bGuidanceCardProps) {
   return (
     <FeatureGuidanceCard
-      badgeLabel="Hướng dẫn sinh nội dung M01b"
+      badgeLabel="Hướng dẫn soạn nội dung bán hàng"
       badgeIcon={Info}
       title="Kho sản phẩm & phân tích đã duyệt"
       titleIcon={Sparkles}
-      description="Chọn một sản phẩm từ kho đã duyệt đặc điểm (M01a) để AI tự động sinh nội dung bán hàng (M01b: tên gợi ý, mô tả thương mại, thẻ SEO, dịp tặng, phân khúc giá)."
+      description="Chọn một mẫu hoa từ kho đã duyệt để AI tự động soạn nội dung bán hàng: tên gợi ý, mô tả sản phẩm, thẻ tìm kiếm, dịp tặng và phân khúc giá."
       tips={[
-        "✨ Tự động đọc từ Product Master đã duyệt",
+        "✨ Tự động đọc từ mẫu hoa đã duyệt",
         "📝 Tùy chỉnh trực tiếp trước khi duyệt",
-        "🎯 Chuẩn hóa theo Brand Profile",
+        "🎯 Chuẩn hóa theo hồ sơ cửa hàng",
       ]}
       className={className}
     />

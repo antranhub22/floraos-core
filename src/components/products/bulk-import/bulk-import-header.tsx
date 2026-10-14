@@ -20,18 +20,18 @@ export function BulkImportHeader({ restoredCount, validCount, isImporting, onBac
         <button
           type="button"
           onClick={onBack}
-          aria-label="Quay lại kho sản phẩm"
+          aria-label="Quay lại Mẫu hoa & giá"
           className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-text hover:bg-surface-alt transition-colors focus-visible:outline-2 focus-visible:outline-primary"
         >
           <ArrowLeft size={16} />
         </button>
         <div>
-          <div className="text-caption text-text-muted">Kho sản phẩm cửa hàng</div>
-          <h1 className="text-title font-extrabold text-primary">Nhập sản phẩm hàng loạt (Excel + Ảnh)</h1>
+          <div className="text-caption text-text-muted">Kho mẫu hoa</div>
+          <h1 className="text-title font-extrabold text-primary">Nhập mẫu hoa từ Excel và ảnh</h1>
           {restoredCount > 0 && (
             <div className="mt-0.5 flex items-center gap-1.5 text-caption font-semibold text-success">
               <CheckCircle2 size={12} />
-              <span>Đã khôi phục {restoredCount} sản phẩm từ phiên trước</span>
+              <span>Đã khôi phục {restoredCount} mẫu hoa từ phiên trước</span>
               <button
                 type="button"
                 onClick={onClearRestored}
@@ -64,7 +64,7 @@ export function BulkImportHeader({ restoredCount, validCount, isImporting, onBac
           className="flex items-center gap-1.5"
         >
           <CheckCircle2 size={15} strokeWidth={2.2} />
-          <span>{isImporting ? "Đang xử lý..." : `Bắt đầu nạp (${validCount} mẫu)`}</span>
+          <span>{isImporting ? "Đang thêm mẫu hoa vào kho…" : `Thêm vào kho mẫu hoa (${validCount})`}</span>
         </Button>
       </div>
     </header>

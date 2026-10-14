@@ -17,16 +17,21 @@ export function ImportResultPanel({ result, onBack, onReset }: Props) {
     >
       <div className="flex items-center gap-2 text-title-sm font-bold">
         {result.success ? <CheckCircle2 size={20} className="text-success" /> : <AlertTriangle size={20} className="text-danger" />}
-        <span>{result.success ? "Nạp sản phẩm hoàn tất!" : "Nạp chưa xong — một phần sản phẩm chưa được lưu"}</span>
+        <span>{result.success ? "Đã nhập xong" : "Chưa hoàn tất — một phần mẫu hoa chưa được lưu"}</span>
       </div>
       <div className="mt-2 text-body-sm flex flex-wrap gap-4 font-medium">
-        <div>✅ Đã tạo mới: <b>{result.createdCount}</b> sản phẩm</div>
-        <div>⏩ Bỏ qua (trùng mã): <b>{result.skippedCount}</b></div>
+        <div>✅ Đã thêm mới: <b>{result.createdCount}</b> mẫu hoa</div>
+        {result.updatedCount > 0 && (
+          <div>🔄 Đã cập nhật (thông tin & ảnh): <b>{result.updatedCount}</b> mẫu hoa</div>
+        )}
+        {result.skippedCount > 0 && result.updatedCount === 0 && (
+          <div>⏩ Bỏ qua (trùng mã): <b>{result.skippedCount}</b></div>
+        )}
         {result.driveLinksUpdatedCount > 0 && (
           <div>🔗 Cập nhật link ảnh Google Drive: <b>{result.driveLinksUpdatedCount}</b></div>
         )}
         {result.imagesAttachedCount > 0 && (
-          <div>🖼️ Bổ sung ảnh cho sản phẩm đã có: <b>{result.imagesAttachedCount}</b></div>
+          <div>🖼️ Bổ sung ảnh cho mẫu hoa đã có: <b>{result.imagesAttachedCount}</b></div>
         )}
         {result.failedCount > 0 && (
           <div className="text-danger">❌ Lỗi: <b>{result.failedCount}</b></div>
@@ -45,7 +50,7 @@ export function ImportResultPanel({ result, onBack, onReset }: Props) {
           size="sm"
           onClick={onBack}
         >
-          Về danh sách kho sản phẩm
+          Xem kho mẫu hoa
         </Button>
         <Button
           variant="outline"

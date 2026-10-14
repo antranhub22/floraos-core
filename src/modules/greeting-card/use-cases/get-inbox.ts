@@ -7,6 +7,7 @@ import { getTrackingPipeline } from "./get-tracking-pipeline"
 import { resolveSaleScope } from "./order-scope"
 import { DiscountRepository } from "../infra/discount-repository"
 import { CancellationRepository } from "../infra/cancellation-repository"
+import { CancellationFollowUpRepository } from "../infra/cancellation-follow-up-repository"
 import { CANCELLATION_TYPE_LABEL, type CancellationPayload, type CancellationType } from "../domain/cancellation-request"
 import { describeDiscount, parseMaxDiscountPercent, type DiscountPayload } from "../domain/discount-request"
 import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
@@ -46,9 +47,10 @@ export async function getInbox(ctx: TenantContext, targetRole?: MessageRole | un
   // Khách xin đổi thông tin đơn → người có quyền sửa đơn (R3) duyệt
   if (ctx.capabilities.has(GREETING_CARD_CAPABILITY.orderUpdate)) actions.unshift(...(await changeRequestActions(ctx, pipeline)))
   if (role === "ADMIN") {
-    const [pending, pendingCancellations, org] = await Promise.all([
+    const [pending, pendingCancellations, followUps, org] = await Promise.all([
       new DiscountRepository().listPending(ctx),
       new CancellationRepository().listPending(ctx),
+      new CancellationFollowUpRepository().listPending(ctx),
       getCurrentOrganization(ctx),
     ])
     const maxPercent = parseMaxDiscountPercent(org?.settings)
@@ -68,6 +70,18 @@ export async function getInbox(ctx: TenantContext, targetRole?: MessageRole | un
         imageUrl: item?.productImageUrl ?? null,
         tab: "payment",
         urgency: 2500,
+      })
+    }
+    for (const r of followUps) {
+      const item = pipeline.find((i) => i.orderId === r.order_id)
+      const due = r.payload.followUp?.refundDueVnd ?? 0
+      actions.unshift({
+        id: `cancel-follow-up:${r.id}`, kind: "CANCELLATION_FOLLOW_UP",
+        title: due > 0 ? `Đơn tự huỷ — cần hoàn ${due.toLocaleString("vi-VN")}đ cho khách` : "Đơn tự huỷ — cần liên hệ khách",
+        detail: `Đơn #${item?.orderCode ?? r.payload.orderCode} · quá hạn chưa duyệt đề xuất từ chối nhận đơn`,
+        orderId: r.order_id, sessionId: item?.sessionId || null, customerName: item?.customerName ?? null,
+        imageUrl: item?.productImageUrl ?? null, tab: "payment", urgency: 2600,
+        followUp: { requestId: r.id, refundDueVnd: due, reason: r.payload.reason },
       })
     }
     for (const r of pending) {
@@ -105,7 +119,7 @@ export async function getInbox(ctx: TenantContext, targetRole?: MessageRole | un
     const t = threads.get(key) ?? {
       key, orderId: m.orderId, sessionId: m.sessionId,
       title: item ? `${item.customerName} · ${item.orderCode ? `Đơn ${item.orderCode}` : `Link ${item.sendCode}`}` : "Trao đổi về đơn",
-      lastBody: m.body, lastSender: m.senderId === CUSTOMER_SENDER_ID ? CUSTOMER_SENDER_LABEL : `${nameOf.get(m.senderId) ?? "Nhân viên"} (${MESSAGE_ROLE_LABEL[m.senderRole as MessageRole] ?? "Nhân viên"})`,
+      lastBody: m.body, lastSender: m.senderId === CUSTOMER_SENDER_ID ? CUSTOMER_SENDER_LABEL : m.senderId.startsWith("system:") ? "Hệ thống" : `${nameOf.get(m.senderId) ?? "Nhân viên"} (${MESSAGE_ROLE_LABEL[m.senderRole as MessageRole] ?? "Nhân viên"})`,
       lastAt: m.createdAt.toISOString(), unread: 0, unreadIds: [],
     }
     if (!m.readByMe) {

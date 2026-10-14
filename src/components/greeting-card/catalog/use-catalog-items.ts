@@ -2,29 +2,37 @@
 
 import { useState, useEffect, useRef } from "react"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
+import { filterProducts } from "@/lib/product-filter"
+import type { ProductFilterCriteria } from "@/lib/product-filter"
 
 export type AvailableProduct = {
   id: string
   name: string
   code: string
   category: string | null
+  shape?: string | null | undefined
   /** URL ảnh chính — từ SSOT API `/api/v1/products`. `undefined` khi chưa có ảnh. */
   masterImageUrl?: string | undefined
   /** Giá tham chiếu — `null` = Liên hệ báo giá. */
   price_vnd: number | null
   /** Link Google Drive (import Excel) — fallback thumbnail khi chưa có ảnh storage. */
   driveLink?: string | undefined
+  occasions?: string[] | undefined
+  flowerTypes?: string[] | undefined
+  colorTheme?: string | null | undefined
+  attributes?: Record<string, unknown> | null | undefined
 }
 
-const PICKER_LIMIT = 50
+const PICKER_LIMIT = 100
 const SEARCH_DEBOUNCE_MS = 280
 
 /**
- * Mẫu hoa trong một bộ sưu tập + kho sản phẩm để thêm vào (SWR). Dùng chung
- * cho wizard (picker gọn) và bảng quản lý chi tiết.
+ * Mẫu hoa trong một bộ sưu tập + kho sản phẩm để thêm vào (SWR).
  *
- * Tìm kiếm server-side (`search` param) để hoạt động đúng với kho lớn (1000+ sản phẩm).
- * Debounce 280ms tránh gọi API mỗi keystroke.
+ * Chiến lược lọc:
+ * - Server-side: `search` (ILIKE name/code) khi người dùng gõ vào ô tìm kiếm
+ * - Client-side: mọi filter còn lại qua `filterProducts()` từ SSOT `@/lib/product-filter`
+ *   → đảm bảo hoạt động đúng dù dữ liệu sản phẩm chưa đầy đủ (thiếu attributes)
  */
 export function useCatalogItems<TDetail extends { items: Array<{ product: { id: string } }> }>(
   catalogId: string,
@@ -40,7 +48,12 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Debounce: chỉ cập nhật debouncedSearch sau SEARCH_DEBOUNCE_MS ms im lặng
+  const [selectedBudgets, setSelectedBudgets] = useState<string[]>([])
+  const [filterOccasion, setFilterOccasion] = useState<string>("")
+  const [filterCategory, setFilterCategory] = useState<string>("")
+  const [filterFlowerType, setFilterFlowerType] = useState<string>("")
+  const [filterColorTone, setFilterColorTone] = useState<string>("")
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
@@ -51,10 +64,16 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     }
   }, [searchQuery])
 
-  // Xây dựng URL gọi API — chỉ gọi khi picker đang mở
-  const productsUrl = pickerOpen
-    ? `/api/v1/products?limit=${PICKER_LIMIT}&status=ACTIVE${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ""}`
-    : null
+  // Server-side lọc text search và category (dáng hoa) để quét toàn bộ CSDL
+  const productsUrl = (() => {
+    if (!pickerOpen) return null
+    const params = new URLSearchParams()
+    params.set("limit", String(PICKER_LIMIT))
+    params.set("status", "ACTIVE")
+    if (debouncedSearch) params.set("search", debouncedSearch)
+    if (filterCategory) params.set("category", filterCategory)
+    return `/api/v1/products?${params.toString()}`
+  })()
 
   const products = useApi<{ data: AvailableProduct[] }>(productsUrl)
 
@@ -78,6 +97,50 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
 
   const catalog = detail.data?.data ?? null
   const existing = new Set(catalog?.items.map((i) => i.product.id) ?? [])
+
+  const resetFilters = () => {
+    setSelectedBudgets([])
+    setFilterOccasion("")
+    setFilterCategory("")
+    setFilterFlowerType("")
+    setFilterColorTone("")
+  }
+
+  const hasActiveFilters =
+    selectedBudgets.length > 0 ||
+    Boolean(filterOccasion) ||
+    Boolean(filterCategory) ||
+    Boolean(filterFlowerType) ||
+    Boolean(filterColorTone)
+
+  const rawAvailable = (products.data?.data ?? []).filter((p) => !existing.has(p.id))
+
+  // Ánh xạ selectedBudgets → PriceRange[] cho SSOT engine
+  const BUDGET_RANGES: Record<string, { min: number; max: number }> = {
+    b1: { min: 0, max: 500_000 },
+    b2: { min: 500_000, max: 800_000 },
+    b3: { min: 800_000, max: 1_500_000 },
+    b4: { min: 1_500_000, max: 999_999_999 },
+  }
+  const priceRanges = selectedBudgets
+    .map((id) => BUDGET_RANGES[id])
+    .filter(Boolean) as { min: number; max: number }[]
+
+  // Tạo criteria theo chuẩn SSOT — dùng conditional spread để chập exactOptionalPropertyTypes
+  const criteria: ProductFilterCriteria = {
+    ...(priceRanges.length > 0 ? { priceRanges } : {}),
+    ...(filterOccasion ? { occasion: filterOccasion } : {}),
+    ...(filterCategory ? { category: filterCategory } : {}),
+    ...(filterFlowerType ? { flowerType: filterFlowerType } : {}),
+    ...(filterColorTone ? { colorTone: filterColorTone } : {}),
+  }
+
+  // Lọc qua SSOT engine — cast để tương thích FilterableProduct
+  const filteredAvailable = filterProducts(
+    rawAvailable as import("@/lib/product-filter").FilterableProduct[],
+    criteria
+  ) as AvailableProduct[]
+
   return {
     catalog,
     loading: detail.isLoading,
@@ -88,12 +151,26 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
       setPickerOpen(false)
       setSearchQuery("")
       setDebouncedSearch("")
+      resetFilters()
     },
     loadingProducts: products.isLoading,
     searchQuery,
     setSearchQuery,
-    /** Sản phẩm chưa có trong bộ sưu tập (server đã lọc theo search, client chỉ loại trùng). */
-    available: (products.data?.data ?? []).filter((p) => !existing.has(p.id)),
+    selectedBudgets,
+    setSelectedBudgets,
+    filterOccasion,
+    setFilterOccasion,
+    filterCategory,
+    setFilterCategory,
+    filterFlowerType,
+    setFilterFlowerType,
+    filterColorTone,
+    setFilterColorTone,
+    resetFilters,
+    hasActiveFilters,
+    /** Sản phẩm sau khi lọc qua SSOT product-filter engine */
+    available: filteredAvailable,
+    rawCount: rawAvailable.length,
     add: (productId: string) => change("POST", productId),
     remove: (productId: string) => change("DELETE", productId),
     busyId,

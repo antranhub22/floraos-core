@@ -21,6 +21,18 @@ export interface CreateSendLinkInput {
   } | undefined
 }
 
+/**
+ * Bộ sưu tập tạo nhanh khi gửi link chỉ nhận khoá hiển thị. Các khoá chính sách (bắt buộc ảnh bill,
+ * cơ chế duyệt thanh toán…) chỉ sửa ở màn cài đặt bộ sưu tập — không để người tạo link ghi đè chính sách tiệm.
+ */
+const CUSTOM_CATALOG_FILTER_KEYS = ["templateId", "occasion", "category", "flowerType", "colorTone"] as const
+
+export function displayFiltersOnly(filters: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
+  if (!filters) return null
+  const picked = Object.fromEntries(CUSTOM_CATALOG_FILTER_KEYS.filter((k) => filters[k] !== undefined).map((k) => [k, filters[k]]))
+  return Object.keys(picked).length > 0 ? picked : null
+}
+
 export async function createSendLink(
   ctx: TenantContext,
   input: CreateSendLinkInput,
@@ -36,7 +48,7 @@ export async function createSendLink(
       name: input.customCatalog.name || "Bộ sưu tập riêng theo yêu cầu",
       type: "CLIENT",
       description: input.customCatalog.description ?? null,
-      filters: input.customCatalog.filters ?? null,
+      filters: displayFiltersOnly(input.customCatalog.filters),
       productIds: input.customCatalog.productIds,
       createdBy: ctx.userId,
     })
@@ -62,9 +74,16 @@ export async function createSendLink(
     repo.getCatalogFilters(ctx, targetCatalogId),
   ])
   const effectivePolicy = resolveEffectiveStepTimeoutPolicy(shop.settings, catalogFilters)
-  const expiryHours = effectivePolicy.autoCancelUnopened
-    ? effectivePolicy.unopenedExpiryHours
-    : parseLinkLifetimeHours(shop.settings)
+  const explicitLifetime = parseLinkLifetimeHours(shop.settings)
+  // Thứ tự ưu tiên: cài riêng của tiệm (brochure_link_lifetime_hours) > step timeout policy > mặc định 24h
+  const hasExplicitSetting = (shop.settings && typeof shop.settings === "object"
+    ? (shop.settings as Record<string, unknown>)["brochure_link_lifetime_hours"]
+    : undefined) !== undefined
+  const expiryHours = hasExplicitSetting
+    ? explicitLifetime
+    : effectivePolicy.autoCancelUnopened
+      ? effectivePolicy.unopenedExpiryHours
+      : explicitLifetime
   const phone = input.customerPhone ? normalizePhone(input.customerPhone) : null
   const session = await repo.createSession(ctx, {
     catalogId: targetCatalogId,

@@ -29,7 +29,7 @@ export function ImportPreview({ rows, stats, isImporting, progressPhase, driveTh
           <div className="flex items-center gap-4 text-body-sm font-semibold">
             <span className="text-text">Tổng cộng: <b>{stats.total}</b></span>
             {stats.matched > 0 && (
-              <span className="text-success">🟢 Khớp ảnh máy tính: <b>{stats.matched}</b></span>
+              <span className="text-success">🟢 Đã ghép ảnh: <b>{stats.matched}</b></span>
             )}
             {stats.driveSynced > 0 && (
               <span className="text-primary font-bold">☁️ Đã gắn Google Drive: <b>{stats.driveSynced}</b></span>
@@ -43,7 +43,7 @@ export function ImportPreview({ rows, stats, isImporting, progressPhase, driveTh
               </span>
             )}
             {stats.errors > 0 && (
-              <span className="text-danger">🔴 Lỗi dữ liệu: <b>{stats.errors}</b></span>
+              <span className="text-danger">🔴 Có lỗi: <b>{stats.errors}</b></span>
             )}
           </div>
           {isImporting && (
@@ -64,12 +64,12 @@ export function ImportPreview({ rows, stats, isImporting, progressPhase, driveTh
                 <tr>
                   <th className="px-3 py-2.5 w-12 text-center">#</th>
                   <th className="px-3 py-2.5 w-20">Ảnh</th>
-                  <th className="px-3 py-2.5 w-28">Mã SKU</th>
-                  <th className="px-3 py-2.5">Tên sản phẩm</th>
+                  <th className="px-3 py-2.5 w-28">Mã mẫu hoa</th>
+                  <th className="px-3 py-2.5">Tên mẫu hoa</th>
                   <th className="px-3 py-2.5 w-28">Danh mục</th>
-                  <th className="px-3 py-2.5 w-28 text-right">Giá bán</th>
-                  <th className="px-3 py-2.5">Công thức (BOM)</th>
-                  <th className="px-3 py-2.5 w-32 text-center">Trạng thái</th>
+                  <th className="px-3 py-2.5 w-28 text-right">Giá niêm yết (₫)</th>
+                  <th className="px-3 py-2.5">Thành phần hoa</th>
+                  <th className="px-3 py-2.5 w-32 text-center">Ghép ảnh</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

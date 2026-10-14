@@ -1,5 +1,4 @@
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
 import { getPublicGreetingCatalogBySlug } from "@/modules/greeting-card/use-cases/get-public-greeting-catalog-by-slug"
 import { LinkUnavailable } from "@/components/greeting-card/customer/link-unavailable"
 import { ShopContactBar } from "@/components/greeting-card/customer/shop-contact-bar"
@@ -14,16 +13,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { orgSlug, catalogCode } = await params
   const data = await getPublicGreetingCatalogBySlug(orgSlug, catalogCode)
   if (data.status !== "ACTIVE") {
-    return { title: "Bộ Sưu Tập Mẫu Hoa — FloraOS" }
+    return { title: "Bộ Sưu Tập Mẫu Hoa" }
   }
+  const title = `${data.catalog.name} — Bộ Sưu Tập Mẫu Hoa`
+  const description = data.catalog.description ?? `Xem bộ sưu tập hoa tươi ${data.catalog.name}`
   return {
-    title: `${data.catalog.name} — Bộ Sưu Tập Mẫu Hoa`,
-    description: data.catalog.description ?? `Xem bộ sưu tập hoa tươi ${data.catalog.name}`,
+    title,
+    description,
     openGraph: {
-      title: `${data.catalog.name} — Bộ Sưu Tập Mẫu Hoa`,
-      description: data.catalog.description ?? `Xem bộ sưu tập hoa tươi ${data.catalog.name}`,
+      title,
+      description,
       type: "website",
+      siteName: data.shop?.name ?? undefined,
       // Ảnh xem trước: ảnh ghép nhiều mẫu ở opengraph-image.tsx cùng thư mục
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
     },
   }
 }
@@ -36,7 +43,12 @@ export default async function PublicGreetingCatalogSlugPage({ params }: PageProp
     // Đúng cửa hàng nhưng bộ sưu tập đã ngừng/sai mã: hiện liên hệ tiệm thay vì 404 chung
     const shop = await getShopContactBySlug(orgSlug)
     if (shop) return <LinkUnavailable shop={shop} />
-    notFound()
+    return (
+      <LinkUnavailable
+        title="Link không tồn tại hoặc đã hết hạn"
+        message="Bộ sưu tập mẫu hoa này không còn hiệu lực. Vui lòng liên hệ cửa hàng để nhận link mới."
+      />
+    )
   }
 
   return (

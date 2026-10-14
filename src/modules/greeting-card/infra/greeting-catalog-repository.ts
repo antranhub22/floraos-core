@@ -160,10 +160,15 @@ export class GreetingCatalogRepository {
       items: catalog.items.map((item) => {
         const mainImg = item.product.images[0]
         const attrs = (item.product.attributes as Record<string, unknown>) ?? {}
-        const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : undefined
+        const fallbackImageUrl = typeof attrs.imageUrl === "string" && attrs.imageUrl ? attrs.imageUrl : undefined
+        const masterImageUrl = (mainImg ? urls.get(mainImg.asset_id) : undefined) ?? fallbackImageUrl
+        const driveFileId = fallbackImageUrl ? fallbackImageUrl.match(/[?&]file_id=([a-zA-Z0-9_-]+)/)?.[1] : undefined
+        const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link
+          ? attrs.drive_link
+          : (driveFileId ? `https://drive.google.com/file/d/${driveFileId}/view` : undefined)
         return {
           ...item,
-          product: { ...item.product, masterImageUrl: mainImg ? urls.get(mainImg.asset_id) : undefined, driveLink },
+          product: { ...item.product, masterImageUrl, driveLink },
         }
       }),
     }
@@ -263,6 +268,27 @@ export class GreetingCatalogRepository {
     })
     const exp = Date.now() + SIGNED_URL_TTL_MS
     for (const a of assets) map.set(a.id, signedStorageUrl(a.storage_key, exp))
+    return map
+  }
+
+  async getPaymentProofAssetsMap(
+    organizationId: string,
+    assetIds: string[]
+  ): Promise<Map<string, { url: string; analysis?: import("../domain/payment-proof-analysis").PaymentProofAnalysisResult | null }>> {
+    const map = new Map<string, { url: string; analysis?: import("../domain/payment-proof-analysis").PaymentProofAnalysisResult | null }>()
+    if (assetIds.length === 0) return map
+    const assets = await this.db.assets.findMany({
+      where: { id: { in: [...new Set(assetIds)] }, organization_id: organizationId },
+      select: { id: true, storage_key: true, metadata: true },
+    })
+    const exp = Date.now() + SIGNED_URL_TTL_MS
+    for (const a of assets) {
+      const meta = (a.metadata as Record<string, unknown> | null) ?? {}
+      map.set(a.id, {
+        url: signedStorageUrl(a.storage_key, exp),
+        analysis: (meta.ai_analysis as import("../domain/payment-proof-analysis").PaymentProofAnalysisResult | undefined) ?? null,
+      })
+    }
     return map
   }
 

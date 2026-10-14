@@ -4,7 +4,8 @@
  * Áp dụng chốt chặn tài nguyên và ghi nhận usage credit theo quy định của FloraOS-core.
  */
 
-import { DifyChatProvider } from "../adapters/dify-chat-provider"
+import { SalesConciergeProvider } from "../sales-concierge/adapters/sales-concierge-provider"
+import { chatAnswerViaGateway } from "../adapters/chat-answer-gateway"
 import { ChatChannelRepository } from "../infra/chat-channel-repository"
 import { isChannelSubscriptionActive } from "../domain/channel-integration-rules"
 import type { SupportedChatChannel } from "../domain/channel-integration-types"
@@ -28,9 +29,8 @@ export interface HandleChannelMessageResult {
 
 export async function handleIncomingChannelMessage(
   input: HandleChannelMessageInput,
-  deps = {
+  deps: { channelRepo: ChatChannelRepository; chatProvider?: SalesConciergeProvider | undefined } = {
     channelRepo: new ChatChannelRepository(),
-    chatProvider: new DifyChatProvider(),
   }
 ): Promise<HandleChannelMessageResult> {
   const { organizationId, channel, externalSenderId, messageText } = input
@@ -97,7 +97,8 @@ export async function handleIncomingChannelMessage(
   const masterProducts = await listProductMasterIndex(dummyCtx, 30).catch(() => [])
 
   // 6. Kích hoạt AI Provider để phân tích & trích xuất hoa từ Product Master Index
-  const aiOutput = await deps.chatProvider.send({
+  const chatProvider = deps.chatProvider ?? new SalesConciergeProvider(chatAnswerViaGateway(dummyCtx, conversationId))
+  const aiOutput = await chatProvider.send({
     query: messageText,
     conversationId,
     masterProducts,

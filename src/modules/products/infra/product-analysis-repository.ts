@@ -187,13 +187,13 @@ export class ProductAnalysisRepository {
   async approve(
     ctx: TenantContext,
     id: string,
-    productId: string,
+    productId: string | null,
     input: ApproveAnalysisInput
   ): Promise<product_analyses | null> {
     const result = await this.db.product_analyses.updateMany({
       where: scopedWhere(ctx, { id, NOT: { approval_state: "APPROVED" as approval_state } }),
       data: {
-        product_id: productId,
+        ...(productId !== undefined ? { product_id: productId } : {}),
         approval_state: "APPROVED" as approval_state,
         approved_by: input.approvedBy,
         approved_at: input.approvedAt,

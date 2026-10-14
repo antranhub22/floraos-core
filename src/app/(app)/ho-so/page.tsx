@@ -6,6 +6,7 @@ import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FeatureGuidanceCard } from "@/components/ui/feature-guidance-card"
 import { TabActionHeader, type TabItem, type TabAction, type TabOverflowAction } from "@/components/ui/tab-header"
 import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
+import { useI18n } from "@/lib/i18n"
 import { BusinessProfileForm } from "@/components/profiles/business-profile-form"
 import { BrandProfileForm } from "@/components/profiles/brand-profile-form"
 import { BrandAssetsManagerTab } from "@/components/profiles/brand-assets-manager-tab"
@@ -28,6 +29,7 @@ import {
 const EXPERT_MODE_STORAGE_KEY = "floraos_profile_expert_mode"
 
 export default function ProfilePage() {
+  const { dict } = useI18n()
   const [activeTab, setActiveTab] = useState<string>("business")
   const [isExpertMode, setIsExpertMode] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -61,31 +63,27 @@ export default function ProfilePage() {
   const tabs: TabItem[] = [
     {
       id: "business",
-      label: "Hồ sơ kinh doanh",
+      label: dict.profile.tabs.businessInfo,
       icon: Building2,
     },
     {
       id: "brand",
-      label: "Nhận diện thương hiệu",
+      label: dict.profile.tabs.branding,
       icon: Palette,
-      badge: "5 Màu Hex",
-      badgeTone: "accent",
     },
     {
       id: "assets",
-      label: "Tài nguyên thương hiệu",
+      label: dict.profile.tabs.assets,
       icon: Sparkles,
-      badge: "Master",
-      badgeTone: "accent",
     },
     {
       id: "sales",
-      label: "Chính sách & Cam kết",
+      label: dict.profile.tabs.policy,
       icon: ShieldCheck,
     },
     {
       id: "occasions",
-      label: "Dịp lễ & Giọng văn",
+      label: dict.profile.tabs.toneOfVoice,
       icon: CalendarHeart,
     },
   ]

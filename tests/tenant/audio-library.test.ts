@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { afterAll, beforeEach, describe, expect, it } from "vitest"
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { POST as postAudioJob } from "@/app/api/v1/audio/jobs/route"
 import { DELETE as deleteTrack } from "@/app/api/v1/audio/music-tracks/[id]/route"
@@ -46,12 +46,14 @@ describe("cách ly tenant — thư viện âm thanh Khu vực C", () => {
   let b: Tenant
 
   beforeEach(async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 200 })))
     await resetDatabase()
     a = await createTenant("alpha")
     b = await createTenant("beta")
   })
 
   afterAll(async () => {
+    vi.unstubAllGlobals()
     await disconnectDatabase()
   })
 

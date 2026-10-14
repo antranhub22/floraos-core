@@ -1,5 +1,4 @@
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
 import { getPublicCatalog } from "@/modules/catalog-links/use-cases/get-public-catalog"
 import { CatalogStorefront } from "@/components/catalog/catalog-storefront"
 
@@ -13,7 +12,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (data.status !== "ACTIVE") {
     return {
-      title: "Catalog Mẫu Hoa — FloraOS",
+      title: "Catalog Mẫu Hoa",
       description: "Xem bộ sưu tập hoa tươi trực tuyến.",
     }
   }
@@ -35,10 +34,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PublicCatalogPage({ params }: PageProps) {
   const { slug } = await params
   const data = await getPublicCatalog(slug)
-
-  if (data.status === "NOT_FOUND") {
-    notFound()
-  }
 
   return <CatalogStorefront initialData={data} />
 }

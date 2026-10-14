@@ -38,27 +38,23 @@ export function BrandAssetsUploader({
   disabled = false,
 }: BrandAssetsUploaderProps) {
   const [logoUploading, setLogoUploading] = useState(false)
-  const [logoPreview, setLogoPreview] = useState<string>(initialLogoUrl || "")
+  // URL giải mã từ logoAssetId khi cha chưa có sẵn URL — gắn theo assetId để không hiện ảnh cũ
+  const [resolvedLogo, setResolvedLogo] = useState<{ assetId: string; url: string } | null>(null)
+  const logoPreview =
+    initialLogoUrl || (resolvedLogo && resolvedLogo.assetId === logoAssetId ? resolvedLogo.url : "")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const logoInputRef = useRef<HTMLInputElement>(null)
 
   // Đồng bộ và giải mã URL ảnh logo khi logoAssetId hoặc initialLogoUrl thay đổi
   useEffect(() => {
-    if (initialLogoUrl) {
-      setLogoPreview(initialLogoUrl)
-    } else if (logoAssetId) {
-      let active = true
-      resolveAssetViewUrl(logoAssetId).then((url) => {
-        if (active && url) {
-          setLogoPreview(url)
-        }
-      })
-      return () => {
-        active = false
-      }
-    } else {
-      setLogoPreview("")
+    if (initialLogoUrl || !logoAssetId) return
+    let active = true
+    resolveAssetViewUrl(logoAssetId).then((url) => {
+      if (active && url) setResolvedLogo({ assetId: logoAssetId, url })
+    })
+    return () => {
+      active = false
     }
   }, [logoAssetId, initialLogoUrl])
 
@@ -73,7 +69,6 @@ export function BrandAssetsUploader({
     setErrorMessage(null)
     try {
       const { assetId, viewUrl } = await uploadBrandAsset(file)
-      setLogoPreview(viewUrl)
       onLogoChange(assetId, viewUrl)
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Tải logo thất bại")
@@ -186,7 +181,6 @@ export function BrandAssetsUploader({
                 type="button"
                 disabled={disabled || logoUploading}
                 onClick={() => {
-                  setLogoPreview("")
                   onLogoChange("", "")
                 }}
                 className="inline-flex items-center justify-center rounded-xl border border-border bg-surface p-2.5 text-text-muted hover:text-danger hover:border-danger transition-colors disabled:opacity-50"

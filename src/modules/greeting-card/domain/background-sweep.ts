@@ -39,3 +39,23 @@ export function holdAction(
   if (policy.autoCancelUnpaid && !order.customerReportedPaid && expired >= AUTO_CANCEL_GRACE_MS) return "CANCEL"
   return order.customerReportedPaid ? "NONE" : "REMIND"
 }
+
+/** Mốc sớm nhất có thể tự duyệt bill (mức phút nhỏ nhất tiệm được chọn) — dùng để lọc thô khi quét. */
+export const MIN_AUTO_CONFIRM_PROOF_MS = 10 * 60_000
+
+/**
+ * Tự ghi nhận đã nhận tiền từ ảnh bill khách tải lên chỉ khi: tiệm BẬT "Tự động duyệt thanh toán
+ * khi có ảnh bill", đã qua đủ số phút tiệm chọn kể từ lúc khách báo, VÀ AI đối soát bill khớp hoàn
+ * toàn (đúng tài khoản tiệm, đúng số tiền, giao dịch thành công). Mặc định tắt → Điều hành duyệt tay.
+ */
+export function shouldAutoConfirmProof(
+  input: { reportedAt: Date | null; analysisStatus: string | null },
+  policy: { autoApprovePaymentWithProof?: boolean | undefined; autoApprovePaymentWithProofMinutes?: number | undefined },
+  now: Date
+): boolean {
+  if (policy.autoApprovePaymentWithProof !== true) return false
+  if (input.analysisStatus !== "MATCHED" || !input.reportedAt) return false
+  const minutes = policy.autoApprovePaymentWithProofMinutes ?? 15
+  return now.getTime() >= input.reportedAt.getTime() + minutes * 60_000
+}
+

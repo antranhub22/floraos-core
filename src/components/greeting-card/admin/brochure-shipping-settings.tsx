@@ -34,7 +34,7 @@ function toDraft(config: ShippingConfig, redeliveryFeeVnd: number): Draft {
     zones: config.zones.map((z) => ({ id: z.id, name: z.name, fee: String(z.feeVnd) })),
     freeOver: config.freeShippingOverVnd ? String(config.freeShippingOverVnd) : "",
     cutoff: config.sameDayCutoffHour != null ? String(config.sameDayCutoffHour) : "",
-    prep: config.prepHours ? String(config.prepHours) : "",
+    prep: config.prepHours != null ? String(config.prepHours) : "2",
     slotIds: enabledSlots(config).map((s) => s.id),
     allowCustomTime: customTimeAllowed(config),
     freeAll: config.freeShippingAll === true,
@@ -56,6 +56,13 @@ function capOrNull(v: string): number | null {
 function hourOrNull(v: string, min: number, max: number): number | null {
   const n = Number(v.replace(/\D/g, ""))
   return v.trim() && Number.isInteger(n) && n >= min && n <= max ? n : null
+}
+
+/** "" → null; số thập phân min…max (vd: 1.5, 2; chấp nhận cả dấu phẩy). */
+function decimalOrNull(v: string, min: number, max: number): number | null {
+  const trimmed = v.trim().replace(",", ".")
+  const n = Number(trimmed)
+  return trimmed && Number.isFinite(n) && n >= min && n <= max ? Math.round(n * 10) / 10 : null
 }
 
 /**
@@ -90,7 +97,7 @@ export function BrochureShippingSettings() {
         zones,
         free_shipping_over_vnd: current.freeOver ? Number(current.freeOver.replace(/\D/g, "")) : null,
         same_day_cutoff_hour: hourOrNull(current.cutoff, 1, 23),
-        prep_hours: hourOrNull(current.prep, 0, 24) ?? 0,
+        prep_hours: decimalOrNull(current.prep, 0, 24) ?? 2,
         delivery_slots: current.slotIds,
         allow_custom_time: current.allowCustomTime,
         free_shipping_all: current.freeAll,
@@ -199,15 +206,15 @@ export function BrochureShippingSettings() {
               <span className="text-text-muted">giờ (bỏ trống = không giới hạn)</span>
             </label>
             <label className="flex items-center gap-2 text-body-sm">
-              <span className="text-text-muted">Cần chuẩn bị</span>
+              <span className="text-text-muted">Chuẩn bị tối thiểu</span>
               <input
-                inputMode="numeric"
+                inputMode="decimal"
                 value={current.prep}
-                placeholder="VD: 3"
+                placeholder="2"
                 onChange={(e) => edit({ ...current, prep: e.target.value })}
-                className={`${FIELD} w-16`}
+                className={`${FIELD} w-16 text-center`}
               />
-              <span className="text-text-muted">giờ trước khi giao</span>
+              <span className="text-text-muted">giờ trước khi giao (mặc định 2h)</span>
             </label>
             <label className="flex items-center gap-2 text-body-sm">
               <span className="text-text-muted">Phí giao lại khi giao không thành công</span>
@@ -220,6 +227,9 @@ export function BrochureShippingSettings() {
               />
               <span className="text-text-muted">đ</span>
             </label>
+            <p className="w-full text-caption text-text-muted mt-1">
+              Khung giờ khách chọn sẽ cách thời điểm đặt ít nhất bằng thời gian chuẩn bị (làm tròn lên mốc 30 phút). VD: khách đặt lúc 11:35 thì khung sớm nhất là 14:00 - 16:00.
+            </p>
           </div>
           <DeliverySlotToggles
             slotIds={current.slotIds}

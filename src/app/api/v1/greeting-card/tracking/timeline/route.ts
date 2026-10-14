@@ -25,5 +25,5 @@ export const GET = handle(async (request) => {
   const { orderId, sessionId, limit, cursor } = parsed.data
   const tl = await getTrackingTimeline(ctx, { orderId, sessionId }, { limit, cursor })
   // Dạng danh sách phân trang chung: `data` = sự kiện, kèm các bước đã qua
-  return jsonResponse({ orderId: tl.orderId, sessionId: tl.sessionId, segments: tl.segments, data: tl.events.data, next_cursor: tl.events.next_cursor, total: tl.events.total })
+  return jsonResponse({ orderId: tl.orderId, sessionId: tl.sessionId, segments: tl.segments, data: tl.events.data, next_cursor: tl.events.next_cursor, total: tl.events.total, allImageUrls: tl.allImageUrls })
 })

@@ -196,6 +196,8 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
       productSnapshot?: ProductSnapshot | null | undefined
       openedAt?: Date | undefined
       selectedAt?: Date | undefined
+      paymentProofAssetId?: string | null | undefined
+      paymentProofBalanceAssetId?: string | null | undefined
     }
   ) {
     return this.db.greeting_sessions.update({
@@ -208,8 +210,16 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
           : {}),
         ...(data.openedAt !== undefined ? { opened_at: data.openedAt } : {}),
         ...(data.selectedAt !== undefined ? { selected_at: data.selectedAt } : {}),
+        ...(data.paymentProofAssetId !== undefined ? { payment_proof_asset_id: data.paymentProofAssetId } : {}),
+        ...(data.paymentProofBalanceAssetId !== undefined ? { payment_proof_balance_asset_id: data.paymentProofBalanceAssetId } : {}),
         last_active_at: new Date(),
       },
+    })
+  }
+
+  async findSessionById(sessionId: string) {
+    return this.db.greeting_sessions.findUnique({
+      where: { id: sessionId },
     })
   }
 
@@ -301,4 +311,60 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
     }))
   }
 
+  async createPaymentProofAsset(input: {
+    id: string
+    organizationId: string
+    storageKey: string
+    mimeType: string
+    fileSize: number
+    createdBy: string
+    metadata: Record<string, unknown>
+  }) {
+    return this.db.assets.create({
+      data: {
+        id: input.id,
+        organization_id: input.organizationId,
+        kind: "ORIGINAL",
+        state: "READY",
+        version: 1,
+        storage_key: input.storageKey,
+        mime_type: input.mimeType,
+        file_size: input.fileSize,
+        created_by: input.createdBy,
+        metadata: input.metadata as unknown as Prisma.InputJsonValue,
+      },
+    })
+  }
+
+  async updateAssetMetadata(organizationId: string, assetId: string, metadata: Record<string, unknown>) {
+    return this.db.assets.updateMany({
+      where: { id: assetId, organization_id: organizationId },
+      data: {
+        metadata: metadata as unknown as Prisma.InputJsonValue,
+      },
+    })
+  }
+
+  async findSessionForVerification(organizationId: string, sendCode: string) {
+    return this.db.greeting_sessions.findUnique({
+      where: { organization_id_send_code: { organization_id: organizationId, send_code: sendCode } },
+      include: {
+        order: {
+          include: {
+            items: true,
+          },
+        },
+        organization: {
+          select: { settings: true },
+        },
+      },
+    })
+  }
+
+  async findAssetForVerification(organizationId: string, assetId: string) {
+    return this.db.assets.findFirst({
+      where: { id: assetId, organization_id: organizationId },
+      select: { storage_key: true, mime_type: true, metadata: true },
+    })
+  }
 }

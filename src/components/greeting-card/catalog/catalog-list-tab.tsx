@@ -121,28 +121,28 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
         </div>
       )}
       <label className="flex flex-wrap items-center gap-2 text-body-sm text-text-muted">
-        Link sao chép dùng cho kênh
+        Sao chép link cho kênh
         <select
           value={shareChannel}
           onChange={(e) => setShareChannel(e.target.value)}
           className="h-9 rounded-lg border border-border bg-surface px-2 text-body-sm text-foreground"
         >
-          <option value="">Không ghi kênh</option>
+          <option value="">Không chọn kênh</option>
           {CATALOG_CHANNELS.map((c) => (
             <option key={c.code} value={c.code}>{c.label}</option>
           ))}
         </select>
-        <span className="text-caption">— link sao chép luôn mang tên bạn; khách mở link được tính cho bạn.</span>
+        <span className="text-caption">Link này gắn với tên bạn. Đơn khách đặt từ link sẽ được tính cho bạn.</span>
       </label>
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div>
           <h2 className="text-title font-extrabold text-foreground flex items-center gap-2">
             <BookOpen size={20} />
-            <span>Quản lý Bộ sưu tập Thẻ Chào</span>
+            <span>Quản lý bộ sưu tập</span>
           </h2>
           <p className="text-body-sm text-text-muted mt-1">
-            Tạo và chỉnh sửa các bộ sưu tập mẫu hoa để gửi cho khách hàng
+            Tạo và chỉnh sửa các bộ sưu tập mẫu hoa để gửi cho khách hàng.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export function CatalogListTab({ onSelectCatalog }: Props) {
             className="bg-primary hover:bg-primary-dark text-white font-bold gap-1.5 text-body-sm h-9 shadow-sm"
           >
             <Plus size={16} />
-            <span>Tạo Bộ Sưu Tập</span>
+            <span>Tạo bộ sưu tập</span>
           </Button>
         </div>
       </div>

@@ -45,11 +45,11 @@ export function FeaturedSpotlightCard({
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-warning-bg text-warning-text border border-warning text-caption font-bold tracking-wide uppercase">
               <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>{journey.badgeText || "Tính năng trọng tâm"}</span>
+              <span>{journey.badgeText || "Nổi bật"}</span>
             </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-success-bg text-success text-caption font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-success" />
-              <span>Sẵn sàng phục vụ</span>
+              <span>Sẵn sàng sử dụng</span>
             </span>
           </div>
 
@@ -66,15 +66,15 @@ export function FeaturedSpotlightCard({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
             <div className="flex items-center gap-2 text-body-sm font-medium text-text">
               <CheckCircle2 className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
-              <span>Gửi link chọn mẫu qua Zalo</span>
+              <span>Gửi link qua Zalo</span>
             </div>
             <div className="flex items-center gap-2 text-body-sm font-medium text-text">
               <CheckCircle2 className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
-              <span>Khách tự chọn & gửi lời chúc</span>
+              <span>Khách tự chọn mẫu và gửi lời chúc</span>
             </div>
             <div className="flex items-center gap-2 text-body-sm font-medium text-text">
               <CheckCircle2 className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
-              <span>Tự động nhận đơn & điều phối</span>
+              <span>Đơn vào hệ thống và giao việc cho thợ</span>
             </div>
           </div>
         </div>
@@ -82,11 +82,11 @@ export function FeaturedSpotlightCard({
         {/* Khối Call-To-Action bên phải */}
         <div className="flex lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-border">
           <div className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary group-hover:bg-primary-dark text-surface text-body-sm font-bold shadow-md group-hover:shadow-lg transition-all duration-200">
-            <span>{disabled ? COMING_SOON_LABEL : "Mở Thẻ Chào & Tạo Link"}</span>
+            <span>{disabled ? COMING_SOON_LABEL : "Tạo link đặt hoa"}</span>
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
           </div>
           <span className="text-caption font-medium text-text-muted">
-            Khuyên dùng mỗi ngày cho tiệm
+            Nên dùng mỗi ngày cho cửa hàng
           </span>
         </div>
       </div>

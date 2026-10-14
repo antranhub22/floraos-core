@@ -47,7 +47,7 @@ describe("greeting-card: bộ quét nền", () => {
   const holdPolicy = (t: Tenant, autoCancel: boolean) =>
     prisma.organizations.update({
       where: { id: t.organizationId },
-      data: { settings: { brochure_policy: { hold_minutes: 15, auto_cancel_unpaid: autoCancel } } },
+      data: { settings: { brochure_policy: { hold_minutes: 15, auto_cancel_unpaid: autoCancel, require_payment_proof: false } } },
     })
 
   const ageOrder = (id: string, minutes: number) =>

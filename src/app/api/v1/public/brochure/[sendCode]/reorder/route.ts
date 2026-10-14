@@ -7,7 +7,7 @@ import { startAnotherOrder } from "@/modules/greeting-card/use-cases/start-anoth
 export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
   await enforceRateLimit(request, { scope: "brochure-reorder", limit: 10, windowMs: 10 * 60_000 })
   const { sendCode } = await context.params
-  assertBrochureOwner(request, sendCode)
+  await assertBrochureOwner(request, sendCode)
   const { sendCode: next, ownerCookie } = await startAnotherOrder(sendCode)
   return jsonResponse({ sendCode: next }, { status: 201, headers: { "set-cookie": serializeOwnerCookie(ownerCookie, isHttps(request)) } })
 })

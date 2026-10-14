@@ -81,7 +81,7 @@ export default function CRMPage() {
           </div>
           <h1 className="text-title font-extrabold text-foreground">CRM & Khách Hàng Ngành Hoa</h1>
           <p className="text-caption text-text-muted mt-0.5">
-            Hồ sơ khách hàng hợp nhất (Customer Master Index) · Phân tầng RFM tự động · Nhắc hẹn ngày kỷ niệm
+            Hồ sơ khách hàng hợp nhất · Phân tầng RFM tự động · Nhắc hẹn ngày kỷ niệm
           </p>
         </div>
 

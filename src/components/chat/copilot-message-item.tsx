@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { Bot, BookOpen, ExternalLink, Flower2, ShoppingBag, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { ChatMessageMetadata } from "@/modules/chat-assistant/domain/chat-types"
@@ -15,6 +15,8 @@ interface CopilotMessageItemProps {
   creatingOrderFor: string | null
   onQuickCreateOrder: (productId: string) => void
   onNavigate: (route: string) => void
+  isLatestAssistant?: boolean | undefined
+  onTypingProgress?: (() => void) | undefined
 }
 
 export function CopilotMessageItem({
@@ -22,6 +24,8 @@ export function CopilotMessageItem({
   creatingOrderFor,
   onQuickCreateOrder,
   onNavigate,
+  isLatestAssistant = false,
+  onTypingProgress,
 }: CopilotMessageItemProps) {
   const isUser = message.senderType === "USER"
   const isSystem = message.senderType === "SYSTEM"
@@ -29,6 +33,46 @@ export function CopilotMessageItem({
   const suggestedFlowers = meta.suggestedFlowers || []
   const targetRoute = meta.targetRoute
   const actionLabel = meta.actionLabel
+
+  // Hiệu ứng gõ chữ (Typewriter Effect) cho câu trả lời mới nhất của AI
+  const shouldType = !isUser && !isSystem && isLatestAssistant
+  const [displayedText, setDisplayedText] = useState(shouldType ? "" : message.content)
+  const [isTyping, setIsTyping] = useState(shouldType)
+
+  useEffect(() => {
+    if (!shouldType) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- khởi động lại hiệu ứng gõ chữ khi tin nhắn đổi, chủ đích
+      setDisplayedText(message.content)
+      setIsTyping(false)
+      return
+    }
+
+    let currentIndex = 0
+    setIsTyping(true)
+    setDisplayedText("")
+
+    const totalChars = message.content.length
+    // Tự động điều chỉnh tốc độ: câu dài gõ theo cụm 3-4 ký tự để hoàn tất trong 1.5 - 2.5s
+    const step = totalChars > 400 ? 4 : totalChars > 200 ? 3 : totalChars > 100 ? 2 : 1
+    const intervalTime = 14
+
+    const timer = setInterval(() => {
+      currentIndex += step
+      if (currentIndex >= totalChars) {
+        setDisplayedText(message.content)
+        setIsTyping(false)
+        clearInterval(timer)
+        onTypingProgress?.()
+      } else {
+        setDisplayedText(message.content.slice(0, currentIndex))
+        if (currentIndex % 35 < step) {
+          onTypingProgress?.()
+        }
+      }
+    }, intervalTime)
+
+    return () => clearInterval(timer)
+  }, [message.content, shouldType])
 
   if (isSystem) {
     return (
@@ -48,18 +92,21 @@ export function CopilotMessageItem({
 
       <div className="max-w-[85%] space-y-2">
         <div
-          className={`rounded-2xl px-3.5 py-2 text-xs leading-relaxed whitespace-pre-line ${
+          className={`rounded-2xl px-3.5 py-2 text-xs leading-relaxed whitespace-pre-line transition-all ${
             isUser
               ? "bg-primary text-white font-medium rounded-br-none"
-              : "bg-surface-raised border border-border text-foreground rounded-bl-none shadow-2xs"
+              : "bg-surface-raised border border-border text-foreground rounded-bl-none shadow-2xs select-text"
           }`}
         >
-          {message.content}
+          {displayedText}
+          {isTyping && (
+            <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-primary rounded-xs animate-pulse align-middle" />
+          )}
         </div>
 
-        {/* NÚT DEEP LINK CHUYỂN TRANG NHANH KHI HỎI VẬN HÀNH SAAS */}
-        {targetRoute && actionLabel && (
-          <div className="pt-1">
+        {/* NÚT DEEP LINK CHUYỂN TRANG NHANH KHI HỎI VẬN HÀNH SAAS (Hiện mượt sau khi gõ xong) */}
+        {!isTyping && targetRoute && actionLabel && (
+          <div className="pt-1 animate-in fade-in duration-300">
             <Button
               size="sm"
               onClick={() => onNavigate(targetRoute)}
@@ -72,9 +119,9 @@ export function CopilotMessageItem({
           </div>
         )}
 
-        {/* THẺ MẪU HOA GỢI Ý TỪ MASTER INDEX */}
-        {suggestedFlowers.length > 0 && (
-          <div className="space-y-2 pt-1">
+        {/* THẺ MẪU HOA GỢI Ý TỪ MASTER INDEX (Hiện mượt sau khi gõ xong) */}
+        {!isTyping && suggestedFlowers.length > 0 && (
+          <div className="space-y-2 pt-1 animate-in fade-in duration-300">
             {suggestedFlowers.map((f) => (
               <div
                 key={f.productId}

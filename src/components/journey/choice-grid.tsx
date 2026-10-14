@@ -6,6 +6,7 @@ import type { JourneyDefinition } from "@/modules/journey/domain/journey-model"
 import { useSession } from "@/lib/session"
 import { isJourneyLocked } from "@/lib/feature-lock"
 import { UserMenu } from "@/components/layout/user-menu"
+import { useI18n } from "@/lib/i18n"
 import { ActionCard } from "./action-card"
 import { FeaturedSpotlightCard } from "./featured-spotlight-card"
 
@@ -20,13 +21,14 @@ interface ChoiceGridProps {
 
 export function ChoiceGrid({
   title,
-  subtitle = "Chọn một tác vụ để bắt đầu hành trình làm việc có định hướng",
+  subtitle = "Chọn một công việc bên dưới để bắt đầu.",
   journeys,
   onSelectJourney,
   onSwitchToExpertMode,
   featuredJourneyId = "greeting-card-hub",
 }: ChoiceGridProps) {
   const { userInitials } = useSession()
+  const { t, dict } = useI18n()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL")
 
@@ -75,7 +77,7 @@ export function ChoiceGrid({
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-selected text-primary text-caption font-semibold mb-2">
             <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>HÀNH TRÌNH TÁC VỤ THÔNG MINH</span>
+            <span>Bắt đầu nhanh</span>
           </div>
           <h1 className="text-display font-extrabold text-text tracking-tight">
             {title}
@@ -93,7 +95,7 @@ export function ChoiceGrid({
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-border bg-surface hover:bg-surface-alt text-body-sm font-medium text-text transition-colors cursor-pointer"
             >
               <SlidersHorizontal className="w-4 h-4 text-text-muted" aria-hidden="true" />
-              <span>Chế độ chuyên gia</span>
+              <span>{dict.home.header.expertModeButton}</span>
             </button>
           )}
           <UserMenu initials={userInitials || "U"} direction="down" />
@@ -112,7 +114,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Tất cả ({journeys.length})
+            {t("home.filters.all", { count: journeys.length })}
           </button>
           <button
             type="button"
@@ -123,7 +125,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Tác vụ đơn
+            {dict.home.filters.singleTask}
           </button>
           <button
             type="button"
@@ -134,7 +136,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Gói quy trình
+            {dict.home.filters.workflow}
           </button>
           <button
             type="button"
@@ -145,7 +147,7 @@ export function ChoiceGrid({
                 : "bg-surface border border-border text-text hover:bg-surface-alt"
             }`}
           >
-            Trợ lý ảo
+            {dict.home.filters.aiAssistant}
           </button>
         </div>
 
@@ -155,7 +157,7 @@ export function ChoiceGrid({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm tác vụ mong muốn..."
+            placeholder={dict.home.filters.searchPlaceholder}
             className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-border bg-surface text-body-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary transition-colors"
           />
         </div>
@@ -185,7 +187,7 @@ export function ChoiceGrid({
       ) : !showFeaturedSpotlight ? (
         <div className="text-center py-12 border border-dashed border-border rounded-xl bg-surface">
           <p className="text-body text-text-muted">
-            Không tìm thấy tác vụ phù hợp với từ khóa &ldquo;{searchQuery}&rdquo;.
+            {t("home.filters.emptySearch", { query: searchQuery })}
           </p>
         </div>
       ) : null}

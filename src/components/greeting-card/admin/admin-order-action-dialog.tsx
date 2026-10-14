@@ -10,6 +10,8 @@ import { depositAmountVnd } from "@/modules/greeting-card/domain/payment-schedul
 import { vnd, type ActionResult, type OrderAction } from "./admin-order-types"
 import { customerPaymentMessage } from "@/modules/greeting-card/domain/customer-notifications"
 import { AlertTriangle, Info } from "lucide-react"
+import { useNow } from "@/components/greeting-card/work/use-worklist"
+import { OrderPaymentProofView } from "@/components/greeting-card/order-payment-proof-view"
 
 const FIELD = "w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
 
@@ -33,6 +35,7 @@ export function AdminOrderActionDialog({
   onDone: (result: ActionResult) => void
 }) {
   const { order, type } = action
+  const now = useNow()
 
   const plan = readPaymentPlan(order.pricing_rule_ref)
   const pct = plan?.depositPercent ?? policy.depositPercent
@@ -45,8 +48,9 @@ export function AdminOrderActionDialog({
   const isReady = order.production_status === "READY"
   const isPhotoApproved = order.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
   const productPhotoQc = order.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-  const isAutoApproved = !!productPhotoQc && (Date.now() >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
-  const canCollectBeforeDispatch = isReady && (isPhotoApproved || isAutoApproved)
+  const isAutoApproved = !!productPhotoQc && (now >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
+  // Nếu không tải ảnh lên (!productPhotoQc), coi như tiệm bỏ qua duyệt ảnh -> cho phép thu lần 2 ngay khi cắm xong (isReady)
+  const canCollectBeforeDispatch = isReady && (!productPhotoQc || isPhotoApproved || isAutoApproved)
   const canCollectAfterDelivery = order.delivery_status === "DELIVERED"
   const isReported = order.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED")
 
@@ -65,7 +69,8 @@ export function AdminOrderActionDialog({
           }
         }
       } else {
-        if (!canCollectAfterDelivery) {
+        // Khớp server: shipper không thu tiền mặt (mặc định) → khách chuyển khoản lần 2 lúc nào cũng thu được
+        if (policy.allowShipperCash === true && !canCollectAfterDelivery) {
           isBlocked = true
           blockReason = "Đơn hàng đã được ghi nhận tiền cọc (Đợt 1). Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công."
         }
@@ -173,6 +178,15 @@ export function AdminOrderActionDialog({
               </p>
             </div>
           </div>
+        )}
+
+        {type === "collect" && (order.paymentProofUrl || order.paymentProofBalanceUrl) && (
+          <OrderPaymentProofView
+            paymentProofUrl={order.paymentProofUrl}
+            paymentProofAnalysis={order.paymentProofAnalysis}
+            paymentProofBalanceUrl={order.paymentProofBalanceUrl}
+            paymentProofBalanceAnalysis={order.paymentProofBalanceAnalysis}
+          />
         )}
 
         {isBlocked && blockReason && (

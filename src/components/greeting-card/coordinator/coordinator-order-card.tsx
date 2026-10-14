@@ -13,6 +13,13 @@ import { readDeliveryNote } from "@/modules/greeting-card/domain/delivery-note"
 import { readDeliveryFailures } from "@/modules/greeting-card/domain/delivery-failure"
 import { substituteLockReason } from "@/modules/greeting-card/domain/substitute-proposal"
 import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
+import { CoordinatorCardDecisionBlocks } from "./coordinator-card-decision-blocks"
+import {
+  isUrgentOrder,
+  canBypassFinishedPhoto,
+  shouldBlockDispatchForBalance,
+  type BrochureWorkflowPolicy,
+} from "@/modules/greeting-card/domain/brochure-workflow-policy"
 
 export interface BrochureOrder {
   id: string
@@ -25,26 +32,12 @@ export interface BrochureOrder {
   card_message: string | null
   delivery_address: { recipientName?: string; phone?: string; street?: string; notes?: string; mapUrl?: string } | null
   delivery_window: { date?: string; timeSlot?: string; failures?: unknown } | null
-  items: Array<{
-    id: string
-    description: string
-    quantity: number
-    unit_price_vnd: number
-    metadata?: { name?: string; imageUrl?: string }
-  }>
-  greeting_sessions: Array<{
-    id: string
-    send_code: string
-    product_snapshot?: { name?: string; imageUrl?: string }
-  }>
+  items: Array<{ id: string; description: string; quantity: number; unit_price_vnd: number; metadata?: { name?: string; imageUrl?: string; flowersSummary?: string | null } }>
+  greeting_sessions: Array<{ id: string; send_code: string; product_snapshot?: { name?: string; imageUrl?: string; flowersSummary?: string | null }; status?: string }>
   customer?: { id?: string; code?: string; name?: string; phone?: string } | null
-  /** Bản chụp báo giá + ưu đãi khách chọn (`policies.promotion`) lúc đặt. */
   pricing_rule_ref?: { policies?: { promotion?: { title?: string } | null } | null } | null
-  saleId?: string | null | undefined
-  saleName?: string | null | undefined
-  coordinatorId?: string | null | undefined
-  coordinatorName?: string | null | undefined
-  created_at: string
+  saleId?: string | null; saleName?: string | null; coordinatorId?: string | null; coordinatorName?: string | null
+  payment_proof_url?: string | null; payment_proof_balance_url?: string | null; created_at: string
 }
 
 export type ModalState =
@@ -55,46 +48,39 @@ export type ModalState =
   | { type: "recipient-photo"; orderId: string; orderCode: string }
   | { type: "delivery-failed"; orderId: string; orderCode: string }
   | { type: "substitute"; orderId: string; orderCode: string }
+  | { type: "accept-order"; orderId: string; orderCode: string }
+  | { type: "reject-order"; orderId: string; orderCode: string }
   | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number }
+  | { type: "confirm-balance"; orderId: string; orderCode: string; balanceVnd: number; proofUrl: string | null }
+  | { type: "confirm-deposit"; orderId: string; orderCode: string; depositVnd: number | null; proofUrl: string | null }
   | { type: "detail"; order: BrochureOrder }
 
-function productionLabel(status: string) {
-  const map: Record<string, string> = {
-    WAITING: "Chờ cắm hoa",
-    ASSIGNED: "Đã phân công",
-    ARRANGING: "Đang cắm hoa",
-    QUALITY_CHECK: "Đang kiểm tra",
-    READY: "Hoa đã hoàn thiện",
-    DONE: "Đã xong",
-  }
-  return map[status] ?? status
+const PRODUCTION_LABELS: Record<string, string> = {
+  WAITING: "Chờ cắm hoa", ASSIGNED: "Đã phân công", ARRANGING: "Đang cắm hoa",
+  QUALITY_CHECK: "Đang kiểm tra", READY: "Hoa đã hoàn thiện", DONE: "Đã xong",
+}
+const DELIVERY_LABELS: Record<string, string> = {
+  PENDING: "Chưa giao", DELIVERING: "Đang giao", DISPATCHED: "Đã bàn giao Ship",
+  DELIVERED: "Giao thành công", FAILED: "Giao thất bại",
 }
 
-function deliveryLabel(status: string) {
-  const map: Record<string, string> = {
-    PENDING: "Chưa giao",
-    DELIVERING: "Đang giao",
-    DISPATCHED: "Đã bàn giao Ship",
-    DELIVERED: "Giao thành công",
-    FAILED: "Giao thất bại",
-  }
-  return map[status] ?? status
-}
+function productionLabel(s: string) { return PRODUCTION_LABELS[s] ?? s }
+function deliveryLabel(s: string) { return DELIVERY_LABELS[s] ?? s }
 
-/** Thẻ một đơn Thẻ chào trong tab Điều phối: mẫu, giao nhận, thanh toán, bốn tác vụ xưởng. */
 export function CoordinatorOrderCard({
   order,
   policy,
   onOpen,
   work,
   now,
+  workflowPolicy,
 }: {
   order: BrochureOrder
   policy: BrochurePaymentPolicy
   onOpen: (m: ModalState) => void
-  /** Dòng tương ứng trong quy trình theo dõi — để hiện bước hiện tại và cảnh báo kẹt. */
   work?: TrackingPipelineItem | undefined
   now: number
+  workflowPolicy?: BrochureWorkflowPolicy | undefined
 }) {
   const session = order.greeting_sessions[0]
   const snapshot = session?.product_snapshot || order.items[0]?.metadata
@@ -110,13 +96,23 @@ export function CoordinatorOrderCard({
   const isPaid = !awaitingQuote && order.paid_vnd >= order.total_vnd
   const isDeposit = !awaitingQuote && !isPaid && order.paid_vnd > 0
   const isDelivered = order.delivery_status === "DELIVERED" || order.status === "COMPLETED"
-  // Cùng luật thứ tự với server — nút sai bước bị khoá kèm lý do (tooltip)
+
+  const isUrgent = isUrgentOrder({
+    deliveryDate: order.delivery_window?.date,
+    deliveryTimeSlot: order.delivery_window?.timeSlot,
+  })
+  const canSkipPhoto = workflowPolicy ? canBypassFinishedPhoto(workflowPolicy, isUrgent) : policy.requireProductPhotoQC === false
+
   const blockerOf = (action: CoordinatorAction) =>
-    coordinatorActionBlocker(action, {
-      status: order.status,
-      productionStatus: order.production_status,
-      deliveryStatus: order.delivery_status,
-    }) ?? paymentGateBlocker(action, policy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd })
+    coordinatorActionBlocker(
+      action,
+      {
+        status: order.status,
+        productionStatus: order.production_status,
+        deliveryStatus: order.delivery_status,
+      },
+      { skipPhoto: canSkipPhoto },
+    ) ?? paymentGateBlocker(action, policy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd })
 
   return (
     <div data-focus-key={order.id} className={`bg-surface rounded-2xl border p-5 shadow-sm flex flex-col gap-4 ${work?.stuck?.owner === "COORDINATOR" ? "border-danger/50" : "border-border"}`}>
@@ -135,6 +131,11 @@ export function CoordinatorOrderCard({
             {session?.send_code && (
               <span className="text-caption px-2 py-0.5 rounded-md bg-surface-muted text-text-muted font-mono font-bold">
                 {session.send_code}
+              </span>
+            )}
+            {isUrgent && (
+              <span className="text-caption px-2 py-0.5 rounded-md bg-danger-bg text-danger font-extrabold animate-pulse">
+                HỎA TỐC
               </span>
             )}
             <span className="text-caption text-primary underline font-medium ml-1">Xem chi tiết</span>
@@ -232,6 +233,9 @@ export function CoordinatorOrderCard({
         )}
       </div>
 
+      {/* Khối quyết định của Điều phối & Xác nhận/Nhắc thanh toán lần 2 */}
+      <CoordinatorCardDecisionBlocks order={order} policy={policy} work={work} onOpen={onOpen} workflowPolicy={workflowPolicy} />
+
       {/* Action bar — 4 tác vụ */}
       {!isDelivered && (
         <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
@@ -262,10 +266,13 @@ export function CoordinatorOrderCard({
           </Button>
 
           {(() => {
+            const isBlockedByBalance = workflowPolicy
+              ? shouldBlockDispatchForBalance(workflowPolicy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd }, isUrgent)
+              : policy.requireFullBeforeDispatch
             const isWaitingSecondPayment =
               order.paid_vnd > 0 &&
               order.paid_vnd < order.total_vnd &&
-              policy.requireFullBeforeDispatch &&
+              isBlockedByBalance &&
               (order.production_status === "READY" || order.production_status === "DONE")
             return (
               <Button
@@ -324,15 +331,7 @@ export function CoordinatorOrderCard({
 
           <button
             type="button"
-            onClick={() =>
-              onOpen({
-                type: "cancel-proposal",
-                orderId: order.id,
-                orderCode: order.code,
-                totalVnd: order.total_vnd,
-                paidVnd: order.paid_vnd,
-              })
-            }
+            onClick={() => onOpen({ type: "cancel-proposal", orderId: order.id, orderCode: order.code, totalVnd: order.total_vnd, paidVnd: order.paid_vnd })}
             className="col-span-2 text-caption text-text-muted hover:text-danger hover:underline text-center pt-1 transition-colors"
           >
             Đề xuất Hủy / Hoàn tiền đơn này

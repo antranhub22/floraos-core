@@ -23,6 +23,7 @@ interface StepCatalogProps {
   onCreate: () => void
   onItemCountChange: (count: number) => void
   onNext: () => void
+  onQuickGenerate?: () => void
   /** Phần chọn giao diện khách xem, hiển thị dưới danh sách mẫu hoa. */
   templateSlot?: ReactNode
   /** Không sửa được mẫu/giao diện của bộ sưu tập dùng chung (Sale chỉ chọn — PO 08/10/2026) */
@@ -41,12 +42,25 @@ export function StepCatalog(props: StepCatalogProps) {
           </h2>
           <p className="mt-1 text-body-sm text-text-muted">Khách sẽ lướt xem các mẫu hoa trong bộ sưu tập bạn chọn.</p>
         </div>
-        {catalogs.length > 0 && (
-          <Button variant="outline" size="sm" onClick={props.onCreate} className="shrink-0 gap-1.5">
-            <Plus size={16} aria-hidden="true" />
-            Bộ sưu tập mới
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {props.onQuickGenerate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={props.onQuickGenerate}
+              className="gap-1.5 font-bold border-primary/40 text-primary hover:bg-primary/10"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Tạo nhanh BST (&lt;10s)
+            </Button>
+          )}
+          {catalogs.length > 0 && (
+            <Button variant="outline" size="sm" onClick={props.onCreate} className="gap-1.5">
+              <Plus size={16} aria-hidden="true" />
+              Bộ sưu tập mới
+            </Button>
+          )}
+        </div>
       </header>
 
       {loadError && <InlineError message={loadError} onRetry={props.onRetry} />}

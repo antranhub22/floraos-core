@@ -53,6 +53,7 @@ export async function listProducts(
         masterImageUrl: product.masterImageUrl,
         price_vnd: product.price_vnd,
         driveLink: product.driveLink,
+        attributes: (product.attributes as Record<string, unknown>) ?? null,
       },
       pricingRuleRows,
       { canReadPricing, branchId: ctx.branchId }

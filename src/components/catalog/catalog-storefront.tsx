@@ -184,12 +184,19 @@ export function CatalogStorefront({ initialData }: CatalogStorefrontProps) {
         ) : (
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-dark via-primary to-primary-dark text-white p-6 sm:p-8 shadow-lg">
             <div className="relative z-10 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white/90 text-xs font-bold tracking-wide uppercase mb-3">
-                <Sparkles size={13} />
-                <span>Catalog Mẫu Hoa Trực Tuyến</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">{catalog.name}</h1>
-              {catalog.description && <p className="mt-2 text-white/80 text-sm leading-relaxed">{catalog.description}</p>}
+              {initialData.customer?.name ? (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/20 border border-accent/40 text-accent font-extrabold text-caption tracking-wide uppercase mb-3">
+                  <Sparkles size={13} className="text-accent" />
+                  <span>Dành riêng cho {initialData.customer.name}</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white/90 text-caption font-bold tracking-wide uppercase mb-3">
+                  <Sparkles size={13} />
+                  <span>Bộ Sưu Tập Mẫu Hoa Tuyển Chọn</span>
+                </div>
+              )}
+              <h1 className="text-title sm:text-display font-black tracking-tight leading-snug">{catalog.name}</h1>
+              {catalog.description && <p className="mt-2 text-white/80 text-body-sm leading-relaxed">{catalog.description}</p>}
             </div>
             <div className="absolute right-[-20px] bottom-[-20px] opacity-10 pointer-events-none">
               <Flower2 size={240} />
@@ -329,7 +336,14 @@ export function CatalogStorefront({ initialData }: CatalogStorefrontProps) {
       </div>
 
       {/* Modals & Footer */}
-      {selectedProduct && <ProductDetailModal product={selectedProduct} shop={shop} onClose={() => setSelectedProduct(null)} />}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          shop={shop}
+          customer={initialData.customer}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
       {showShareModal && <ShareCatalogModal slug={catalog.slug} name={catalog.name} description={catalog.description} onClose={() => setShowShareModal(false)} />}
       <footer className="mt-12 text-center text-xs text-text-muted max-w-4xl mx-auto px-4">
         <div className="border-t border-border pt-6">

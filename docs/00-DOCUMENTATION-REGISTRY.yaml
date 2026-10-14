@@ -1,8 +1,8 @@
 version: "1.0"
 governance:
   constitution: "docs/00-DOCUMENTATION-CONSTITUTION.md"
-  updated_at: "2026-10-02T19:28:00+07:00"
-  total_documents: 67
+  updated_at: "2026-10-14T17:10:00+07:00"
+  total_documents: 68
 
 documents:
   # =========================================================================
@@ -691,6 +691,20 @@ documents:
     ssot: false
     owner: "Product Owner / Chief Architect"
     dependencies: ["docs/FLORAOS_CORE_JOURNEY_FIRST_UX_ARCHITECTURE_FINAL.md", "docs/dac-ta/03b-role-ux.md", "docs/kien-truc/KE_HOACH_THUC_THI_NANG_CAP_ROLE_CAPABILITY_ARCHITECTURE.md"]
+    supersedes: []
+
+  - id: "DOC-05-KE-HOACH-MA-TRAN-THE-CHAO"
+    path: "docs/kien-truc/KE_HOACH_MA_TRAN_QUY_TRINH_THE_CHAO.md"
+    title: "Kế hoạch Thực thi: Ma Trận Bật/Tắt & Tối Ưu Quy Trình Thẻ Chào Mẫu Hoa"
+    domain: "Sales & Greeting Card"
+    layer: "Level 5"
+    purpose: "Kế hoạch thực thi 4 pha theo 5 trụ cột: 3 Preset vận hành (Tinh gọn, Tiêu chuẩn, Nghiêm ngặt), Đường hầm hỏa tốc, Tự động hóa trước con người can thiệp sau, Ủy quyền quá hạn SLA và Giao diện Quản trị trực quan có khóa an toàn"
+    status: "CANONICAL"
+    authority: "Level 5"
+    canonical: true
+    ssot: true
+    owner: "Product Owner / System Architect"
+    dependencies: ["docs/kien-truc/HIEN_TRANG_THE_CHAO.md", "docs/dac-ta/03b-role-ux.md"]
     supersedes: []
 
   - id: "DOC-05-SPEC-JOURNEY-UX-LANDING-CATALOG"

@@ -31,6 +31,18 @@ const HEX_COLOR_REGEX = /#[0-9a-fA-F]{3,8}\b/g
 // R8 Pattern
 const TECH_CODE_REGEX = /\bM\d{2}[a-z]?\b|Khu vực [A-F](?:-[A-F])?|\bSSOT\b|Chức năng \d+|\bP\d{2}\b/
 
+// R12 — Từ kỹ thuật cấm xuất hiện trên giao diện người dùng
+// Mỗi entry: [pattern, gợi ý thay thế]
+// Lưu ý: "credit" và "hex" là thuật ngữ sản phẩm nội bộ đã thiết lập — không kiểm tra.
+const BANNED_TERMS_R12: [RegExp, string][] = [
+  [/\bBOM\b/g, '"Phiếu nguyên liệu" hoặc "Định mức nguyên liệu"'],
+  [/\bMaster Index\b/gi, '"Danh sách tổng hợp" hoặc "Định mức tổng"'],
+  [/\bPII\b/g, '"Thông tin khách hàng" hoặc "Dữ liệu cá nhân"'],
+  [/\bVision Engine\b/gi, '"Bộ nhận diện ảnh" hoặc "Phân tích ảnh hoa"'],
+  [/của hàng/g, '"cửa hàng" (đầy đủ dấu)'],
+  [/\bFlorist Ticket\b/gi, '"Phiếu cắm hoa"'],
+]
+
 // R9 Pattern
 const LOADING_TEXT_REGEX = /^\s*Đang tải(?:\.{3}|…)?\s*$/
 
@@ -541,6 +553,51 @@ export const checkR11: RuleFunction = (sourceFile, context) => {
   return violations
 }
 
+/** R12 — Từ kỹ thuật cấm xuất hiện trong văn bản giao diện */
+export const checkR12: RuleFunction = (sourceFile, context) => {
+  const violations: Violation[] = []
+  const VISIBLE_PROPS = new Set(["label", "title", "placeholder", "badgeLabel", "description", "tips"])
+
+  function checkText(text: string, node: ts.Node, propName?: string) {
+    for (const [pattern, suggestion] of BANNED_TERMS_R12) {
+      const match = text.match(pattern)
+      if (match) {
+        const pos = getPosition(sourceFile, node)
+        const location = propName ? `prop ${propName}` : "văn bản JSX"
+        violations.push({
+          rule: "R12",
+          file: context.relativeFilePath,
+          line: pos.line,
+          column: pos.column,
+          snippet: match[0],
+          message: `Từ cấm "${match[0]}" trong ${location} — thay bằng ${suggestion} (Copywriting Standard R12).`,
+        })
+      }
+    }
+  }
+
+  function visit(node: ts.Node) {
+    // Kiểm tra JSX text node trực tiếp
+    if (ts.isJsxText(node)) {
+      const text = node.getText(sourceFile).trim()
+      if (text) checkText(text, node)
+    }
+    // Kiểm tra props hiển thị văn bản
+    else if (ts.isJsxAttribute(node)) {
+      const attrName = getAttrName(node)
+      if (VISIBLE_PROPS.has(attrName) && node.initializer) {
+        if (ts.isStringLiteral(node.initializer)) {
+          checkText(node.initializer.text, node, attrName)
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return violations
+}
+
 export const ALL_RULES: Record<string, RuleFunction> = {
   R1: checkR1,
   R2: checkR2,
@@ -553,4 +610,5 @@ export const ALL_RULES: Record<string, RuleFunction> = {
   R9: checkR9,
   R10: checkR10,
   R11: checkR11,
+  R12: checkR12,
 }

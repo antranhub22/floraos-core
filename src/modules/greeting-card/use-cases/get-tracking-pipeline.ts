@@ -1,6 +1,7 @@
 import { resolveSaleScope } from "./order-scope"
 import type { TenantContext } from "@/core/tenancy"
 import { TrackingPipelineRepository } from "../infra/tracking-pipeline-repository"
+import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
 import { parseStepSla, stuckOf } from "../domain/step-sla"
 import { channelLabel } from "../domain/catalog-channel"
@@ -13,6 +14,7 @@ import {
   type TrackingPipelineStepId,
   type TrackingStepState,
 } from "../domain/tracking-pipeline-types"
+import { dismissalOf } from "../domain/dismissal-policy"
 
 /** Trường JSON lỏng (ảnh chụp mẫu, địa chỉ, khung giờ, metadata ghi chú) — đọc phòng thủ, không `any`. */
 type LooseJson = {
@@ -128,6 +130,20 @@ export async function loadTrackingDataset(
     return !owner ? "Chưa gán" : names.get(owner) ?? "Nhân viên đã rời"
   }
 
+  // Tải danh sách URL ảnh chuyển khoản của khách theo lô (tránh N+1)
+  const proofAssetIds = [
+    ...orders.flatMap((o) => [
+      o.greeting_sessions[0]?.payment_proof_asset_id,
+      o.greeting_sessions[0]?.payment_proof_balance_asset_id,
+    ]),
+    ...activeSessions.flatMap((s) => [
+      s.payment_proof_asset_id,
+      s.payment_proof_balance_asset_id,
+    ]),
+  ].filter((id): id is string => typeof id === "string" && id.length > 0)
+
+  const proofUrls = await new GreetingCardRepository().getPaymentProofAssetsMap(ctx.organizationId, proofAssetIds)
+
   // 1. Process Orders
   const orderItems: TrackingPipelineItem[] = orders.map((order) => {
     const session = order.greeting_sessions[0]
@@ -181,6 +197,12 @@ export async function loadTrackingDataset(
       }
     })
 
+    const orderDismissal = dismissalOf((order.pricing_rule_ref as { dismissal?: unknown } | null)?.dismissal)
+    const isOrderCancelled = order.status === "CANCELLED" || orderDismissal?.status === "APPROVED"
+    const orderCancelReason = orderDismissal?.status === "APPROVED" ? orderDismissal.reason || "Đã bỏ hiển thị"
+      : order.status !== "CANCELLED" ? null
+      : (order.pricing_rule_ref as { paymentFailed?: { reason?: string } } | null)?.paymentFailed?.reason === "PAYMENT_TIMEOUT"
+        ? "Tự huỷ: Hết hạn thanh toán cọc" : "Đơn hàng đã huỷ"
     return {
       id: order.id,
       type: "ORDER",
@@ -208,22 +230,19 @@ export async function loadTrackingDataset(
       balanceVnd: Number(order.balance_vnd || 0),
       currentStepId,
       // Đơn đã gửi mà chưa chuyển khoản vẫn ở bước 3 — gọi đúng tên việc đang chờ
-      currentStepTitle: order.status === "CANCELLED"
-        ? (((order.pricing_rule_ref as { paymentFailed?: { reason?: string } } | null)?.paymentFailed?.reason === "PAYMENT_TIMEOUT")
-            ? "Tự huỷ: Hết hạn thanh toán cọc"
-            : "Đơn hàng đã huỷ")
-        : (currentStepId === "STEP_3_FILLING_FORM" ? "Đã đặt đơn — chờ khách chuyển khoản" : currentStepDef.title),
+      currentStepTitle: isOrderCancelled ? (orderCancelReason ?? "Đơn hàng đã huỷ") : (currentStepId === "STEP_3_FILLING_FORM" ? "Đã đặt đơn — chờ khách chuyển khoản" : currentStepDef.title),
       orderStatus: order.status,
       sessionStatus: session?.status || null,
-      customerReportedPaid: session?.status === "PAYMENT_REPORTED",
+      customerReportedPaid: session?.status === "PAYMENT_REPORTED" || Boolean(session?.payment_proof_balance_asset_id),
+      paymentProofUrl: session?.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id)?.url ?? null : null,
+      paymentProofAnalysis: session?.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id)?.analysis ?? null : null,
+      paymentProofBalanceUrl: session?.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.url ?? null : null,
+      paymentProofBalanceAnalysis: session?.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.analysis ?? null : null,
       productionStatus: order.production_status,
       deliveryStatus: order.delivery_status,
-      isCancelled: order.status === "CANCELLED",
-      cancelReason: order.status === "CANCELLED"
-        ? (((order.pricing_rule_ref as { paymentFailed?: { reason?: string } } | null)?.paymentFailed?.reason === "PAYMENT_TIMEOUT")
-            ? "Tự huỷ: Hết hạn thanh toán cọc"
-            : "Đơn hàng đã huỷ")
-        : null,
+      isCancelled: isOrderCancelled,
+      cancelReason: orderCancelReason,
+      dismissal: orderDismissal,
       stepStartedAt: orderStepStartedAt(order),
       stuck: stuckOf({ currentStepId, stepStartedAt: orderStepStartedAt(order) }, sla, now),
       saleId: ownerOf(session?.sale_id) ?? null,
@@ -268,12 +287,13 @@ export async function loadTrackingDataset(
       }
     })
 
-    const isSessionCancelled = session.revoked_at !== null || (session.expires_at !== null && session.expires_at <= now)
-    const sessionCancelReason = isSessionCancelled
-      ? (session.revoked_at !== null
-          ? (session.opened_at === null ? "Tự huỷ: Quá hạn mở link" : "Tự huỷ: Quá hạn chọn mẫu")
-          : (session.opened_at === null ? "Hết hạn mở link" : "Hết hạn chọn mẫu"))
-      : null
+    const sessionDismissal = dismissalOf((snapshot as Record<string, unknown>)._dismissal)
+    const isSessionCancelled = sessionDismissal?.status === "APPROVED" || session.revoked_at !== null || (session.expires_at !== null && session.expires_at <= now)
+    const sessionCancelReason = sessionDismissal?.status === "APPROVED" ? sessionDismissal.reason || "Đã bỏ hiển thị"
+      : !isSessionCancelled ? null
+      : session.revoked_at !== null
+        ? (session.opened_at === null ? "Tự huỷ: Quá hạn mở link" : "Tự huỷ: Quá hạn chọn mẫu")
+        : (session.opened_at === null ? "Hết hạn mở link" : "Hết hạn chọn mẫu")
 
     return {
       id: `session-${session.id}`,
@@ -304,7 +324,12 @@ export async function loadTrackingDataset(
       isCancelled: isSessionCancelled,
       sessionStatus: session.status,
       customerReportedPaid: session.status === "PAYMENT_REPORTED",
+      paymentProofUrl: session.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id)?.url ?? null : null,
+      paymentProofAnalysis: session.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id)?.analysis ?? null : null,
+      paymentProofBalanceUrl: session.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.url ?? null : null,
+      paymentProofBalanceAnalysis: session.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.analysis ?? null : null,
       cancelReason: sessionCancelReason,
+      dismissal: sessionDismissal,
       stepStartedAt: startedAt,
       stuck: notSent ? null : stuckOf({ currentStepId, stepStartedAt: startedAt }, sla, now),
       saleId: ownerOf(session.sale_id) ?? null,

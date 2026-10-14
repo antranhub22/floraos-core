@@ -10,7 +10,10 @@ import { CatalogGuidanceCard } from "@/components/templates/catalog/catalog-guid
 import { CatalogManagementTab, type CatalogProduct, type CatalogLinkItem } from "@/components/catalog/catalog-management-tab"
 import { LandingCampaignTab } from "@/components/catalog/landing-campaign-tab"
 import { BudgetMatchingModal } from "@/components/sales/budget-matching-modal"
+import { QuickCollectionModal } from "@/components/catalog/quick-collection-modal"
 import type { ProductMatchCandidate } from "@/modules/products/domain/budget-flower-matcher"
+import type { QuickCollectionCandidate } from "@/modules/catalog-links/domain/quick-collection-engine"
+import { toQuickCollectionCandidate } from "@/modules/catalog-links/domain/quick-collection-candidate"
 
 /**
  * Trang Catalog & Website.
@@ -22,6 +25,7 @@ export default function CatalogWebsitePage() {
   const router = useRouter()
   const [tab, setTab] = useState<"catalog" | "landing">("catalog")
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false)
+  const [isQuickCollectionOpen, setIsQuickCollectionOpen] = useState(false)
   const [products, setProducts] = useState<CatalogProduct[]>([])
   const [catalogLinks, setCatalogLinks] = useState<CatalogLinkItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -30,7 +34,7 @@ export default function CatalogWebsitePage() {
   const fetchProducts = useCallback(async () => {
     try {
       const [prodRes, analysisRes] = await Promise.all([
-        fetch("/api/v1/products"),
+        fetch("/api/v1/products?limit=100&status=ACTIVE"),
         fetch("/api/v1/vision/analyses?approval_state=APPROVED").catch(() => null),
       ])
       if (prodRes.status === 401) { router.push("/dang-nhap"); return }
@@ -123,10 +127,13 @@ export default function CatalogWebsitePage() {
     highlightFlowers: [],
   }))
 
+  const quickCandidates: QuickCollectionCandidate[] = products.map(toQuickCollectionCandidate)
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <PageHeader
         onBack={() => router.push("/")}
+        onOpenQuickCollection={() => setIsQuickCollectionOpen(true)}
         onOpenBudgetMatcher={() => setIsBudgetModalOpen(true)}
       />
 
@@ -164,6 +171,13 @@ export default function CatalogWebsitePage() {
         )}
       </div>
 
+      <QuickCollectionModal
+        open={isQuickCollectionOpen}
+        onOpenChange={setIsQuickCollectionOpen}
+        products={quickCandidates}
+        onCreatedLink={refreshAll}
+      />
+
       <BudgetMatchingModal
         open={isBudgetModalOpen}
         onOpenChange={setIsBudgetModalOpen}
@@ -177,15 +191,27 @@ export default function CatalogWebsitePage() {
 
 function PageHeader({
   onBack,
+  onOpenQuickCollection,
   onOpenBudgetMatcher,
 }: {
   onBack: () => void
+  onOpenQuickCollection?: (() => void) | undefined
   onOpenBudgetMatcher?: (() => void) | undefined
 }) {
   return (
     <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-[18px] py-4">
       <div className="text-title font-extrabold text-primary">Catalog & Website</div>
       <div className="flex items-center gap-2">
+        {onOpenQuickCollection && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onOpenQuickCollection}
+            className="flex items-center gap-1.5 text-xs font-bold"
+          >
+            <Sparkles size={14} /> Tạo nhanh BST (&lt;10s)
+          </Button>
+        )}
         {onOpenBudgetMatcher && (
           <Button
             variant="outline"
@@ -193,7 +219,7 @@ function PageHeader({
             onClick={onOpenBudgetMatcher}
             className="flex items-center gap-1.5 text-xs"
           >
-            <Sparkles size={14} /> Tìm hoa theo ngân sách
+            Tìm hoa theo ngân sách
           </Button>
         )}
         <Button variant="ghost" onClick={onBack} className="flex items-center gap-1.5">

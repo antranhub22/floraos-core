@@ -168,7 +168,7 @@ export function StorePoliciesEditor({ initialPolicies, onSave, saving }: Props) 
 
             {intakeCta.enabled && (
               <p className="text-caption text-text-muted">
-                Xem trước: <strong className="text-foreground">"Nhận quà {intakeCta.percent}% giảm giá khi Đặt mua hoa trực tiếp tại link này!"</strong>
+                Xem trước: <strong className="text-foreground">&ldquo;Nhận quà {intakeCta.percent}% giảm giá khi Đặt mua hoa trực tiếp tại link này!&rdquo;</strong>
               </p>
             )}
           </div>

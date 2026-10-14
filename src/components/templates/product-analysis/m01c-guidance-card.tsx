@@ -13,13 +13,13 @@ export interface M01cGuidanceCardProps {
 export function M01cGuidanceCard({ className }: M01cGuidanceCardProps) {
   return (
     <FeatureGuidanceCard
-      badgeLabel="Hướng dẫn tạo thẻ chào M01c"
+      badgeLabel="Hướng dẫn tạo thẻ chào mẫu hoa"
       badgeIcon={Info}
       title="Tạo Thẻ Chào Sản Phẩm từ Kho đã duyệt"
       titleIcon={FileText}
-      description="Chọn một sản phẩm đã duyệt để tự động tổng hợp thông số hoa (M01a) và nội dung thương mại (M01b) thành Thẻ Chào & Báo Giá hoàn chỉnh cho nhân viên tư vấn bán hàng."
+      description="Chọn một mẫu hoa đã duyệt để tự động tổng hợp thành phần hoa và nội dung tư vấn thành Thẻ chào & Báo giá hoàn chỉnh cho nhân viên bán hàng."
       tips={[
-        "📋 Tổng hợp cấu phần hoa & kịch bản chốt đơn",
+        "📋 Tổng hợp thành phần hoa & kịch bản chốt đơn",
         "💬 Copy 1 chạm gửi Zalo / Chat",
         "🖼️ Xuất ảnh báo giá A6 / PNG",
       ]}

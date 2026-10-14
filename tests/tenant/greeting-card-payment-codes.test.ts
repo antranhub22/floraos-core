@@ -119,7 +119,7 @@ describe("greeting-card: mã thanh toán đặt cọc", () => {
     const settings = org.settings as Record<string, unknown>
     await prisma.organizations.update({
       where: { id: a.organizationId },
-      data: { settings: { ...settings, brochure_policy: { deposit_percent: 0, payment_timeout_minutes: 30 } } },
+      data: { settings: { ...settings, brochure_policy: { deposit_percent: 0, payment_timeout_minutes: 30, require_payment_proof: false } } },
     })
     const silent = await linkFor(a, "bst-1")
     const placed = await submitBrochureOrder(silent, order("DC30"))

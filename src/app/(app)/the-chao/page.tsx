@@ -9,6 +9,7 @@ import { ArrowLeft, Sparkles, Send, ShieldCheck, BookOpen, RefreshCw, GitMerge, 
 import { TabActionHeader, type TabItem } from "@/components/ui/tab-header"
 import { cn } from "@/lib/utils"
 import { useSession } from "@/lib/session"
+import { useI18n } from "@/lib/i18n"
 import { SalesBrochureTab } from "@/components/greeting-card/sales/sales-brochure-tab"
 import { AdminBrochurePaymentTab } from "@/components/greeting-card/admin/admin-brochure-payment-tab"
 import { CatalogListTab } from "@/components/greeting-card/catalog/catalog-list-tab"
@@ -35,6 +36,7 @@ const MODES: { id: ViewMode; label: string; icon: typeof Wand2 }[] = [
 export default function TheChaoPage() {
   const router = useRouter()
   const { can } = useSession()
+  const { dict } = useI18n()
   // "wizard": luồng 3 bước gửi thẻ · "manager": bảng quản lý chi tiết — mở theo vai (Điều hành/Điều phối/Sale)
   const [viewMode, setViewMode] = useState<ViewMode>(() => defaultTheChaoView(can).viewMode)
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => defaultTheChaoView(can).activeTab)
@@ -51,6 +53,22 @@ export default function TheChaoPage() {
     { refreshInterval: 20_000 }
   )
   const pendingCancelCount = cancellationList.data?.data.length ? cancellationList.data.data.length : null
+
+  // Đếm đơn chờ Điều phối xác nhận bill lần 2 để hiển thị badge cảnh báo trên tab Điều phối
+  const coordinatorBoardData = useApi<{ data: Array<{ paid_vnd: number; total_vnd: number; greeting_sessions: Array<{ status?: string }> }> }>(
+    can("R3") || can("R4") || can("R5") ? "/api/v1/greeting-card/coordinator-board" : null,
+    { refreshInterval: 20_000 }
+  )
+  const pendingBalanceConfirmCount = coordinatorBoardData.data?.data
+    ? coordinatorBoardData.data.data.filter(
+        (o) =>
+          o.paid_vnd > 0 &&
+          o.paid_vnd < o.total_vnd &&
+          o.greeting_sessions.some((s) => s.status === "PAYMENT_REPORTED")
+      ).length
+    : null
+  const coordinatorBadge = pendingBalanceConfirmCount && pendingBalanceConfirmCount > 0 ? pendingBalanceConfirmCount : null
+
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Từ Hộp việc: mở đúng tab rồi cuộn tới đúng thẻ đơn (chờ dữ liệu tab tải xong tối đa ~4 giây)
@@ -85,11 +103,16 @@ export default function TheChaoPage() {
     coordinator: can("R3") || can("R4") || can("R5"),
   }
   const tabs: TabItem[] = ([
-    { id: "catalog", icon: BookOpen, label: "Bộ sưu tập", ...(catalogCount !== null ? { badge: catalogCount } : {}) },
-    { id: "tracking", icon: GitMerge, label: "Theo dõi tiến độ" },
-    { id: "sales", icon: Send, label: "Bán hàng", ...(sessionCount !== null ? { badge: sessionCount } : {}) },
-    { id: "payment", icon: ShieldCheck, label: "Điều hành", ...(pendingCancelCount !== null ? { badge: pendingCancelCount } : {}) },
-    { id: "coordinator", icon: Sparkles, label: "Điều phối" },
+    { id: "catalog", icon: BookOpen, label: dict.greetingCard.tabs.catalogs, ...(catalogCount !== null ? { badge: catalogCount } : {}) },
+    { id: "tracking", icon: GitMerge, label: dict.greetingCard.tabs.tracking },
+    { id: "sales", icon: Send, label: dict.greetingCard.tabs.sales, ...(sessionCount !== null ? { badge: sessionCount } : {}) },
+    { id: "payment", icon: ShieldCheck, label: dict.greetingCard.tabs.operation, ...(pendingCancelCount !== null ? { badge: pendingCancelCount } : {}) },
+    {
+      id: "coordinator",
+      icon: Sparkles,
+      label: dict.greetingCard.tabs.coordination,
+      ...(coordinatorBadge !== null ? { badge: coordinatorBadge, badgeTone: "warning" as const } : {}),
+    },
   ] satisfies TabItem[]).filter((t) => allowed[t.id as ActiveTab])
   // Tab đang chọn bị ẩn (không đủ quyền) → mở tab đầu tiên được phép
   const shownTab: ActiveTab = allowed[activeTab] ? activeTab : ((tabs[0]?.id as ActiveTab | undefined) ?? activeTab)
@@ -103,11 +126,11 @@ export default function TheChaoPage() {
             className="mb-2 inline-flex items-center gap-1 text-body-sm font-medium text-text-muted hover:text-foreground"
           >
             <ArrowLeft size={14} aria-hidden="true" />
-            Sổ đơn hàng
+            {dict.greetingCard.header.breadcrumb}
           </Link>
-          <h1 className="text-title font-bold text-foreground">Thẻ chào mẫu hoa</h1>
+          <h1 className="text-title font-bold text-foreground">{dict.greetingCard.header.title}</h1>
           <p className="mt-1 max-w-2xl text-body-sm text-text-muted">
-            Gửi khách một bộ sưu tập để lướt xem, chọn mẫu và tự đặt hoa, thanh toán ngay trên điện thoại.
+            {dict.greetingCard.header.description}
           </p>
         </div>
 
@@ -143,8 +166,8 @@ export default function TheChaoPage() {
               setRefreshKey((k) => k + 1)
               router.refresh()
             }}
-            aria-label="Làm mới dữ liệu"
-            title="Làm mới dữ liệu"
+            aria-label="Làm mới"
+            title="Làm mới"
             className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-muted hover:bg-surface hover:text-foreground active:bg-surface active:text-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <RefreshCw size={16} aria-hidden="true" />
@@ -154,7 +177,7 @@ export default function TheChaoPage() {
               apiPath="/api/v1/orders/export"
               extraParams={{ source: "BROCHURE" }}
               filename="the-chao-don-hang.xlsx"
-              label="Xuất Excel"
+              label="Xuất file Excel"
             />
           )}
         </div>

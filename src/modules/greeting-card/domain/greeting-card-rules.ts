@@ -285,7 +285,7 @@ export function mapOrderStatusToTrackingStep(
   return {
     stepIndex: 1,
     title: "Đã tiếp nhận đơn hàng",
-    description: "Cửa hàng đã nhận thông tin đặt hoa. Đơn sẽ được xác nhận khi cửa hàng kiểm tra xong thanh toán.",
+    description: "Cửa hàng đã nhận thông tin đặt hoa. Xác nhận chuyển khoản trong 15’, sau đó Điều phối sẽ xác nhận nhận đơn trong 30’ (hoàn tiền nếu không thể nhận đơn).",
     percentage: 20,
   }
 }

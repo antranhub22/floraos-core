@@ -40,10 +40,11 @@ export interface ProductLookupRaw {
    */
   price_vnd: number | null
   /**
-   * Link Google Drive của thư mục ảnh — `undefined` khi không có.
+   /** Link Google Drive của thư mục ảnh — `undefined` khi không có.
    * Dùng để hiển thị thumbnail Drive trong trường hợp sản phẩm chưa có ảnh lưu trữ.
    */
   driveLink?: string | undefined
+  attributes?: Record<string, unknown> | null
 }
 
 export interface ProductPricingSummary {
@@ -73,7 +74,15 @@ export interface ProductLookupResult {
   pricing: ProductPricingSummary | null
   /** Kê tên khối bị cắt, để giao diện viết đúng câu — tương ứng `bi_cat` bản gốc. */
   redacted_fields: string[]
+  attributes?: Record<string, unknown> | null | undefined
 }
+
+/**
+ * Khoá trong `attributes` chỉ người có `L5` (`pricing.read`) được thấy: thành phần hoa (BOM — lộ
+ * công thức/giá vốn) và giá sàn/trần nội bộ. Giá bán niêm yết (`price`, `price_vnd`) vẫn đi ra để
+ * Sale tư vấn khách (PO 14/10/2026).
+ */
+export const PRICING_ONLY_ATTRIBUTE_KEYS = ["bom", "priceGuard"] as const
 
 /**
  * Lọc một bản ghi sản phẩm theo năng lực của người xem. Kê tên trường sản
@@ -100,6 +109,17 @@ export function filterProductLookup(
     redactedFields.push("pricing")
   }
 
+  let attributes = product.attributes ?? null
+  if (!options.canReadPricing && attributes) {
+    const hidden = PRICING_ONLY_ATTRIBUTE_KEYS.filter((k) => k in attributes!)
+    if (hidden.length > 0) {
+      attributes = Object.fromEntries(
+        Object.entries(attributes).filter(([k]) => !(PRICING_ONLY_ATTRIBUTE_KEYS as readonly string[]).includes(k))
+      )
+      redactedFields.push(...hidden)
+    }
+  }
+
   return {
     id: product.id,
     code: product.code,
@@ -110,9 +130,10 @@ export function filterProductLookup(
     container: product.container,
     status: product.status,
     branch_id: product.branch_id,
-    masterImageUrl: product.masterImageUrl,
-    price_vnd: product.price_vnd,
-    driveLink: product.driveLink,
+    masterImageUrl: product.masterImageUrl ?? ((product.attributes?.imageUrl) as string | undefined),
+    price_vnd: product.price_vnd ?? ((product.attributes?.price_vnd ?? product.attributes?.price) as number | null) ?? null,
+    driveLink: product.driveLink ?? ((product.attributes?.drive_link) as string | undefined),
+    attributes,
     pricing,
     redacted_fields: redactedFields,
   }

@@ -16,6 +16,7 @@ import { SmartFlowerImage } from "./smart-flower-image"
 interface ProductDetailModalProps {
   product: PublicCatalogProduct
   shop: PublicCatalogShop
+  customer?: { name?: string | undefined; phone?: string | undefined } | undefined
   onClose: () => void
 }
 
@@ -24,18 +25,23 @@ function formatVnd(amount: number | null) {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
 }
 
-function getZaloUrl(product: PublicCatalogProduct, shop: PublicCatalogShop) {
+function getZaloUrl(
+  product: PublicCatalogProduct,
+  shop: PublicCatalogShop,
+  customer?: { name?: string | undefined; phone?: string | undefined } | undefined
+) {
   const phone = shop.phone ? shop.phone.replace(/[^0-9]/g, "") : ""
   const priceText = product.price ? formatVnd(product.price) : "chưa có giá"
+  const senderText = customer?.name ? `Tôi là ${customer.name}` : "Tôi"
   const text = encodeURIComponent(
-    `Chào ${shop.name}, tôi muốn tư vấn & đặt mẫu hoa: ${product.name} (Mã: ${product.code}, Giá: ${priceText}).`
+    `Chào ${shop.name}, ${senderText} muốn tư vấn & đặt mẫu hoa: ${product.name} (Mã: ${product.code}, Giá: ${priceText}).`
   )
   return phone ? `https://zalo.me/${phone}?text=${text}` : `https://zalo.me/?text=${text}`
 }
 
 export { formatVnd, getZaloUrl }
 
-export function ProductDetailModal({ product, shop, onClose }: ProductDetailModalProps) {
+export function ProductDetailModal({ product, shop, customer, onClose }: ProductDetailModalProps) {
   return (
     <Dialog
       open={true}
@@ -56,7 +62,7 @@ export function ProductDetailModal({ product, shop, onClose }: ProductDetailModa
             </a>
           )}
           <a
-            href={getZaloUrl(product, shop)}
+            href={getZaloUrl(product, shop, customer)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-extrabold text-white shadow-xs hover:bg-primary-dark transition-colors focus-visible:outline-2 focus-visible:outline-primary"

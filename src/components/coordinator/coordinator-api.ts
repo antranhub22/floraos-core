@@ -108,8 +108,10 @@ export const coordinatorApi = {
   createOrder: (body: CreateOrderRequest) => orderCall(`${BASE}/orders`, post(body)),
   updateStage: (id: string, stage: string, nextAction?: string) =>
     orderCall(`${BASE}/orders/${id}/stage`, { method: "PATCH", body: JSON.stringify({ stage, nextAction }) }),
-  assignPartner: (id: string, body: { partnerId: string; notes?: string; overrideCapacity?: boolean }) =>
-    orderCall(`${BASE}/orders/${id}/assign-partner`, post(body)),
+  assignPartner: (
+    id: string,
+    body: { partnerId: string; notes?: string; overrideCapacity?: boolean; agreedCraftFeeVnd?: number }
+  ) => orderCall(`${BASE}/orders/${id}/assign-partner`, post(body)),
   production: (
     id: string,
     body: {

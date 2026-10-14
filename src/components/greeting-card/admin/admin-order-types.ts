@@ -11,9 +11,15 @@ export interface AdminOrder {
   greeting_sessions: Array<{ send_code: string; status: string; product_snapshot?: unknown }>
   items?: Array<{ metadata?: unknown; quantity?: number; unit_price_vnd?: number }>
   pricing_rule_ref?: unknown
-  payments: Array<{ id: string; kind: string; amount_vnd: number; collected_at: string; reference: string | null }>
+  payments: Array<{ id: string; kind: string; amount_vnd: number; collected_at: string; reference: string | null; note?: string | null }>
   qc_records?: Array<{ notes: string | null; created_at: string | Date }>
   created_at: string
+  /** URL ảnh chuyển khoản Lần 1 (Cọc/Trả đủ) do khách tải lên — đã ký, hết hạn sau 1h. */
+  paymentProofUrl?: string | null | undefined
+  paymentProofAnalysis?: import("@/modules/greeting-card/domain/payment-proof-analysis").PaymentProofAnalysisResult | null | undefined
+  /** URL ảnh chuyển khoản Lần 2 (Phần còn lại) do khách tải lên — đã ký, hết hạn sau 1h. */
+  paymentProofBalanceUrl?: string | null | undefined
+  paymentProofBalanceAnalysis?: import("@/modules/greeting-card/domain/payment-proof-analysis").PaymentProofAnalysisResult | null | undefined
 }
 
 export type OrderAction = { type: "quote" | "collect" | "cancel" | "refund"; order: AdminOrder }

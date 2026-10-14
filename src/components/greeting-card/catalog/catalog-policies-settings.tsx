@@ -15,7 +15,12 @@ import {
   CATALOG_TIMEOUT_OVERRIDE_KEY,
   type CatalogTimeoutOverride as CatalogTimeoutOverrideType,
 } from "@/modules/greeting-card/domain/step-timeout-policy"
+import {
+  parsePaymentPolicy,
+  type TrackingTriggerPolicy,
+} from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { CatalogStepTimeoutOverride } from "./catalog-step-timeout-override"
+import { CatalogTrackingTriggerOverride } from "./catalog-tracking-trigger-override"
 
 interface Props {
   catalogId: string
@@ -54,10 +59,20 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
   )
 
   const [applyHolidaySurcharge, setApplyHolidaySurcharge] = useState<boolean>(rawPolicyConfig.applyHolidaySurcharge === true)
+  const [requirePaymentProofOverride, setRequirePaymentProofOverride] = useState<boolean | null>(() => {
+    return typeof currentFilters?.requirePaymentProof === "boolean"
+      ? (currentFilters.requirePaymentProof as boolean)
+      : null
+  })
   const storeStepPolicy = parseStepTimeoutPolicy(org.data?.settings)
+  const storePaymentPolicy = parsePaymentPolicy(org.data?.settings)
   const [timeoutOverride, setTimeoutOverride] = useState<CatalogTimeoutOverrideType | null>(() =>
     parseCatalogTimeoutOverride(currentFilters)
   )
+  const [trackingTriggerOverride, setTrackingTriggerOverride] = useState<TrackingTriggerPolicy | null>(() => {
+    const t = currentFilters?.trackingTriggerPolicy
+    return t === "PAYMENT_ONLY" || t === "PAYMENT_OR_COORDINATOR" ? t : null
+  })
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
 
@@ -83,6 +98,8 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
           applyHolidaySurcharge,
         },
         [CATALOG_TIMEOUT_OVERRIDE_KEY]: timeoutOverride,
+        requirePaymentProof: requirePaymentProofOverride,
+        trackingTriggerPolicy: trackingTriggerOverride,
       }
 
       await apiSend(
@@ -270,6 +287,53 @@ export function CatalogPoliciesSettings({ catalogId, currentFilters, onSaved }: 
         storePolicy={storeStepPolicy}
         override={timeoutOverride}
         onChange={setTimeoutOverride}
+      />
+
+      {/* 6. CẤU HÌNH BẮT BUỘC ẢNH CHUYỂN KHOẢN (GHI ĐÈ THEO BỘ SƯU TẬP) */}
+      <div className="space-y-2 pt-3 border-t border-border">
+        <h4 className="text-body-sm font-extrabold text-foreground flex items-center gap-1.5">
+          <ShieldCheck size={15} className="text-primary" />
+          <span>Ảnh chụp chuyển khoản</span>
+        </h4>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 cursor-pointer text-body-sm">
+            <input
+              type="radio"
+              name="require-payment-proof-override"
+              checked={requirePaymentProofOverride === null}
+              onChange={() => setRequirePaymentProofOverride(null)}
+            />
+            <span className="font-semibold text-foreground">Theo chính sách tiệm (Mặc định)</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer text-body-sm">
+            <input
+              type="radio"
+              name="require-payment-proof-override"
+              checked={requirePaymentProofOverride === true}
+              onChange={() => setRequirePaymentProofOverride(true)}
+            />
+            <span className="font-semibold text-foreground">Bắt buộc tải ảnh chuyển khoản</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer text-body-sm">
+            <input
+              type="radio"
+              name="require-payment-proof-override"
+              checked={requirePaymentProofOverride === false}
+              onChange={() => setRequirePaymentProofOverride(false)}
+            />
+            <span className="font-semibold text-foreground">Không bắt buộc tải ảnh (Cho phép bỏ qua)</span>
+          </label>
+        </div>
+        <p className="text-caption text-text-muted">
+          Áp dụng cho khách xác nhận chuyển khoản đặt cọc và thanh toán phần còn lại của bộ sưu tập này.
+        </p>
+      </div>
+
+      {/* 7. CẤU HÌNH CƠ CHẾ KÍCH HOẠT BƯỚC TIẾP THEO (GHI ĐÈ THEO BỘ SƯU TẬP) */}
+      <CatalogTrackingTriggerOverride
+        storeTriggerPolicy={storePaymentPolicy.trackingTriggerPolicy}
+        overrideValue={trackingTriggerOverride}
+        onChange={setTrackingTriggerOverride}
       />
     </div>
   )

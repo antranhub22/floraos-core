@@ -2,6 +2,7 @@ import type { TenantContext } from "@/core/tenancy"
 import { log } from "@/core/observability/log"
 import { COORDINATOR_BOARD_MAX, DONE_VISIBLE_MS, sortByDelivery } from "../domain/coordinator-board"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
+import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { resolveSaleScope } from "./order-scope"
 
 /**
@@ -18,5 +19,27 @@ export async function getCoordinatorBoard(ctx: TenantContext, input: { date?: st
   })
   const truncated = rows.length >= COORDINATOR_BOARD_MAX
   if (truncated) log.warn("greeting_card.coordinator_board_truncated", { organizationId: ctx.organizationId, feature: "greeting-card", max: COORDINATOR_BOARD_MAX })
-  return { data: sortByDelivery(rows), truncated }
+
+  // Batch-resolve ảnh chuyển khoản lần 1 & lần 2 (tránh N+1, ký asset đúng tổ chức)
+  const proofAssetIds = rows
+    .flatMap((o) => [
+      o.greeting_sessions[0]?.payment_proof_asset_id,
+      o.greeting_sessions[0]?.payment_proof_balance_asset_id,
+    ])
+    .filter((id): id is string => typeof id === "string" && id.length > 0)
+  const proofUrls = proofAssetIds.length > 0
+    ? await new GreetingCardRepository().getAssetsStorageMap(ctx.organizationId, proofAssetIds)
+    : new Map<string, string>()
+
+  const rowsWithProof = rows.map((o) => ({
+    ...o,
+    payment_proof_url: o.greeting_sessions[0]?.payment_proof_asset_id
+      ? (proofUrls.get(o.greeting_sessions[0].payment_proof_asset_id) ?? null)
+      : null,
+    payment_proof_balance_url: o.greeting_sessions[0]?.payment_proof_balance_asset_id
+      ? (proofUrls.get(o.greeting_sessions[0].payment_proof_balance_asset_id) ?? null)
+      : null,
+  }))
+
+  return { data: sortByDelivery(rowsWithProof), truncated }
 }

@@ -7,6 +7,7 @@ import { listCatalogLinks } from "@/modules/catalog-links/use-cases/list-catalog
 import { getCatalogLinkBySlug } from "@/modules/catalog-links/use-cases/get-catalog-link"
 import { updateCatalogLink } from "@/modules/catalog-links/use-cases/update-catalog-link"
 import { revokeCatalogLink } from "@/modules/catalog-links/use-cases/revoke-catalog-link"
+import { getPublicCatalog } from "@/modules/catalog-links/use-cases/get-public-catalog"
 import { validationFailed, notFound } from "@/core/http/errors"
 
 describe("catalog-links tenant isolation", () => {
@@ -184,5 +185,19 @@ describe("catalog-links tenant isolation", () => {
       return
     }
     throw new Error("Expected createCatalogLink to throw")
+  })
+  it("link công khai cá nhân hoá theo tên khách nhưng không bao giờ lộ số điện thoại", async () => {
+    await createCatalogLink(tenantA.ctx, {
+      slug: "rieng-cho-chi-lan",
+      name: "Gợi ý riêng",
+      description: null,
+      filters: { customerName: "Chị Lan", customerPhone: "0987654321", personalizedGreeting: "Chúc mừng sinh nhật" },
+    })
+
+    const result = await getPublicCatalog("rieng-cho-chi-lan")
+    expect(result.status).toBe("ACTIVE")
+    if (result.status !== "ACTIVE") return
+    expect(result.customer?.name).toBe("Chị Lan")
+    expect(JSON.stringify(result)).not.toContain("0987654321")
   })
 })

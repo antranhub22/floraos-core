@@ -76,7 +76,7 @@ export function ActionCard({ journey, onSelect, disabled = false }: ActionCardPr
       <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-caption font-medium text-text-muted group-hover:text-primary">
         <span>
           {isCombo
-            ? `${journey.steps.length} bước liền mạch`
+            ? `${journey.steps.length} bước`
             : isAi
             ? "Trò chuyện ngay"
             : disabled

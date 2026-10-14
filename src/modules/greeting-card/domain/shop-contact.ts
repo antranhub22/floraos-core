@@ -135,7 +135,7 @@ export function zaloQrUrlFromBrandAssets(brandAssets: unknown): string | null {
 export const DEMO_SHOP_NAME = "Tiệm Hoa Mộc Lan"
 export const DEMO_SHOP_PHONE_DIGITS = "0900123456"
 export const DEMO_SHOP_PROFILE_MESSAGE =
-  "Hồ sơ tiệm vẫn là thông tin mẫu (Tiệm Hoa Mộc Lan). Vào Hồ sơ tiệm sửa tên, số điện thoại, địa chỉ thật trước khi gửi link cho khách."
+  "Hồ sơ cửa hàng vẫn là thông tin mẫu (Tiệm Hoa Mộc Lan). Vào Hồ sơ cửa hàng sửa tên, số điện thoại, địa chỉ thật trước khi gửi link cho khách."
 
 export function isDemoShopContact(contact: { name: string | null | undefined; phone: string | null | undefined }): boolean {
   const digits = (contact.phone ?? "").replace(/\D/g, "")
@@ -145,6 +145,6 @@ export function isDemoShopContact(contact: { name: string | null | undefined; ph
 /** Việc cần làm trên hồ sơ trước khi bán (hiện ở màn Thẻ chào); `null` = sẵn sàng. */
 export function shopProfileGap(contact: { name: string | null | undefined; phone: string | null | undefined } | null): string | null {
   if (contact && isDemoShopContact(contact)) return DEMO_SHOP_PROFILE_MESSAGE
-  if (!contact?.phone?.trim()) return "Hồ sơ tiệm chưa có số điện thoại — khách sẽ không gọi hoặc nhắn Zalo cho tiệm được từ trang đặt hoa."
+  if (!contact?.phone?.trim()) return "Hồ sơ cửa hàng chưa có số điện thoại — khách sẽ không gọi hoặc nhắn Zalo cho cửa hàng được từ trang đặt hoa."
   return null
 }

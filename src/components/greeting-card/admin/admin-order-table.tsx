@@ -11,6 +11,8 @@ import { AdminPaymentPlanCell } from "./admin-payment-plan-cell"
 import { readPaymentPlan } from "@/modules/greeting-card/domain/payment-plan"
 import { depositAmountVnd } from "@/modules/greeting-card/domain/payment-schedule"
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { PaymentProofBadge } from "./payment-proof-badge"
+import { useNow } from "@/components/greeting-card/work/use-worklist"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Chờ thanh toán", className: "bg-warning-bg text-warning" },
@@ -34,6 +36,8 @@ export function AdminOrderTable({
   shopDepositPercent?: number
   policy?: BrochurePaymentPolicy | undefined
 }) {
+  // Mốc tự duyệt ảnh sau 10 phút — đồng hồ cập nhật mỗi phút, không gọi Date.now() lúc render
+  const now = useNow()
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-body-sm">
@@ -67,8 +71,9 @@ export function AdminOrderTable({
             const isReady = o.production_status === "READY"
             const isPhotoApproved = o.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
             const productPhotoQc = o.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-            const isAutoApproved = !!productPhotoQc && (Date.now() >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
-            const canCollectBalanceBeforeDispatch = isReady && (isPhotoApproved || isAutoApproved)
+            const isAutoApproved = !!productPhotoQc && (now >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
+            // Nếu không tải ảnh lên (!productPhotoQc), coi như tiệm bỏ qua duyệt ảnh -> cho phép thu lần 2 ngay khi cắm xong (isReady)
+            const canCollectBalanceBeforeDispatch = isReady && (!productPhotoQc || isPhotoApproved || isAutoApproved)
             const canCollectBalanceAfterDelivery = o.delivery_status === "DELIVERED"
             const isReportedPaid = balance > 0 && o.status !== "CANCELLED" && o.greeting_sessions[0]?.status === "PAYMENT_REPORTED"
 
@@ -103,6 +108,10 @@ export function AdminOrderTable({
               }
             }
 
+            const coordinatorPayment = o.payments?.find(
+              (p) => p.reference?.startsWith("COORDINATOR-") || p.note?.includes("[Điều phối")
+            )
+
             return (
               <tr key={o.id} data-focus-key={o.id} className="hover:bg-surface-muted/50 transition-colors">
                 <td className="px-4 py-3">
@@ -129,7 +138,29 @@ export function AdminOrderTable({
                   {balance > 0 && o.status !== "CANCELLED" && o.greeting_sessions[0]?.status === "PAYMENT_REPORTED" && (
                     <div className="mt-1 text-caption font-bold text-info">Khách báo đã chuyển</div>
                   )}
+                  {(o.paymentProofUrl || o.paymentProofBalanceUrl) && (
+                    <div className="mt-1.5 flex flex-col gap-1 items-start">
+                      {o.paymentProofUrl && (
+                        <PaymentProofBadge
+                          hasProofUrl={true}
+                          analysis={o.paymentProofAnalysis}
+                        />
+                      )}
+                      {o.paymentProofBalanceUrl && (
+                        <PaymentProofBadge
+                          hasProofUrl={true}
+                          analysis={o.paymentProofBalanceAnalysis}
+                        />
+                      )}
+                    </div>
+                  )}
+                  {coordinatorPayment && (
+                    <div className="mt-1 flex items-center gap-1 text-caption font-bold text-success bg-success-bg/60 px-2 py-0.5 rounded-md border border-success/30">
+                      🛡️ <span>Điều phối đã Xác nhận</span>
+                    </div>
+                  )}
                 </td>
+
                 <td className="px-4 py-3">
                   <div className="flex justify-end items-center gap-1.5 flex-wrap">
                     {awaitingQuote && (
@@ -141,7 +172,7 @@ export function AdminOrderTable({
                     {/* 1. Đã thu đủ 100% */}
                     {isFullyPaid && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-bold bg-success/15 text-success">
-                        <Check size={12} /> Đã thu đủ
+                        <Check size={12} /> {coordinatorPayment ? "Đã thu đủ (Đ/P duyệt)" : "Đã thu đủ"}
                       </span>
                     )}
 
@@ -162,16 +193,16 @@ export function AdminOrderTable({
                       requireFull ? (
                         isReady ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-warning-bg text-warning border border-warning/30" title="Chờ khách duyệt ảnh sản phẩm hoặc hết 10 phút đếm ngược">
-                            ⏳ Đã cọc · Chờ duyệt ảnh
+                            ⏳ {coordinatorPayment ? "Đ/P đã duyệt cọc" : "Đã cọc"} · Chờ duyệt ảnh
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-success/10 text-success border border-success/30" title="Đã nhận tiền cọc thành công. Chờ xưởng cắm hoa xong mới thu lần 2.">
-                            ✓ Đã cọc · Chờ hoa xong
+                            ✓ {coordinatorPayment ? "Đ/P đã duyệt cọc" : "Đã cọc"} · Chờ hoa xong
                           </span>
                         )
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-info/10 text-info border border-info/30" title="Đã nhận tiền cọc. Phần còn lại sẽ thu sau khi giao hoa thành công.">
-                          ✓ Đã cọc · Thu sau giao
+                          ✓ {coordinatorPayment ? "Đ/P đã duyệt cọc" : "Đã cọc"} · Thu sau giao
                         </span>
                       )
                     )}

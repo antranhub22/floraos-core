@@ -26,10 +26,10 @@ export function ShopProfileReadiness() {
       </p>
       {can("F2") ? (
         <Link href={"/ho-so" as Route} className="shrink-0 rounded-lg border border-warning-border bg-surface px-3 py-2 text-body-sm font-bold text-warning hover:bg-surface-alt">
-          Mở Hồ sơ tiệm
+          Mở hồ sơ cửa hàng
         </Link>
       ) : (
-        <span className="shrink-0 text-caption text-text-muted">Báo Điều hành cập nhật Hồ sơ tiệm</span>
+        <span className="shrink-0 text-caption text-text-muted">Hồ sơ cửa hàng chưa đủ thông tin. Hãy báo Điều hành cập nhật để tạo link đặt hoa.</span>
       )}
     </div>
   )

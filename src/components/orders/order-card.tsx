@@ -45,7 +45,7 @@ export function OrderCard({
           {order.deliveryAddress?.recipientName ?? "Khách lẻ"}
         </div>
         <div className="text-text-muted truncate text-caption">
-          {order.deliveryAddress?.street ?? "Nhận tại tiệm"}
+          {order.deliveryAddress?.street ?? "Nhận tại cửa hàng"}
         </div>
       </div>
 
@@ -67,7 +67,7 @@ export function OrderCard({
           {order.totalVnd.toLocaleString("vi-VN")} đ
         </span>
         <span className="text-caption text-primary flex items-center gap-1 font-semibold">
-          <Eye size={13} aria-hidden="true" /> Chi tiết
+          <Eye size={13} aria-hidden="true" /> Xem chi tiết
         </span>
       </div>
     </button>

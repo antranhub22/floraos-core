@@ -8,6 +8,7 @@ import { CoordinatorOrderCard, type BrochureOrder, type ModalState } from "./coo
 import { CoordinatorKanbanView } from "./coordinator-kanban-view"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { parseBrochureWorkflowPolicy } from "@/modules/greeting-card/domain/brochure-workflow-policy"
 import { useNow, useWorklist } from "@/components/greeting-card/work/use-worklist"
 import { WORK_BUCKET_LABEL, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
 import { BrochureOrderDetailModal } from "@/components/greeting-card/brochure-order-detail-modal"
@@ -37,6 +38,7 @@ export function CoordinatorBrochureTab() {
   const loadOrders = () => void board.mutate()
   const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
   const policy = parsePaymentPolicy(org.data?.settings)
+  const workflowPolicy = parseBrochureWorkflowPolicy(org.data?.settings)
   const [modal, setModal] = useState<ModalState>({ type: "none" })
   const openModal = (m: ModalState) => setModal(m)
   const [bucket, setBucket] = useState<WorkBucket | null>(null)
@@ -193,11 +195,16 @@ export function CoordinatorBrochureTab() {
           onOpen={openModal}
           workOf={workOf}
           now={now}
+          workflowPolicy={workflowPolicy}
+          onRefresh={() => {
+            loadOrders()
+            void work.refresh()
+          }}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {shown.map((order) => (
-            <CoordinatorOrderCard key={order.id} order={order} policy={policy} onOpen={openModal} work={workOf.get(order.id)} now={now} />
+            <CoordinatorOrderCard key={order.id} order={order} policy={policy} onOpen={openModal} work={workOf.get(order.id)} now={now} workflowPolicy={workflowPolicy} />
           ))}
         </div>
       )}
@@ -227,15 +234,23 @@ export function CoordinatorBrochureTab() {
             cardMessage: modal.order.card_message,
             productName: modal.order.greeting_sessions[0]?.product_snapshot?.name || modal.order.items[0]?.description || "Hoa tươi theo mẫu",
             productImageUrl: modal.order.greeting_sessions[0]?.product_snapshot?.imageUrl,
+            flowersSummary: modal.order.greeting_sessions[0]?.product_snapshot?.flowersSummary,
             totalVnd: modal.order.total_vnd,
             paidVnd: modal.order.paid_vnd,
             balanceVnd: Math.max(0, modal.order.total_vnd - modal.order.paid_vnd),
             status: modal.order.status,
             productionStatus: modal.order.production_status,
             deliveryStatus: modal.order.delivery_status,
+            paymentProofUrl: workOf.get(modal.order.id)?.paymentProofUrl || modal.order.payment_proof_url,
+            paymentProofBalanceUrl: workOf.get(modal.order.id)?.paymentProofBalanceUrl || modal.order.payment_proof_balance_url,
             createdAt: modal.order.created_at,
           }}
           onClose={() => setModal({ type: "none" })}
+          onCancellationProposed={() => {
+            setModal({ type: "none" })
+            loadOrders()
+            void work.refresh()
+          }}
         />
       )}
       {modal.type !== "none" && modal.type !== "detail" && (

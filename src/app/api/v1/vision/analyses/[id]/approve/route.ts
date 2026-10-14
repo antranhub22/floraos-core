@@ -13,5 +13,15 @@ export const POST = handle(async (request, context: { params: Promise<{ id: stri
   requireCapability(ctx, "H3")
 
   const { id } = await context.params
-  return jsonResponse(await approveAnalysis(ctx, id))
+  let createProduct = true
+  try {
+    const body = (await request.json().catch(() => null)) as { create_product?: boolean } | null
+    if (typeof body?.create_product === "boolean") {
+      createProduct = body.create_product
+    }
+  } catch {
+    // ignore
+  }
+
+  return jsonResponse(await approveAnalysis(ctx, id, { createProduct }))
 })

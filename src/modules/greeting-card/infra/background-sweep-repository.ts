@@ -87,5 +87,49 @@ export class BackgroundSweepRepository {
       }),
     ])
   }
-}
 
+  /**
+   * Đơn Thẻ chào chưa thu đồng nào mà khách đã báo chuyển khoản kèm ảnh bill từ trước `before`,
+   * kèm cài đặt tiệm và trạng thái đối soát AI của bill — bước quét chỉ tự duyệt khi tiệm bật.
+   */
+  async listPendingPaymentProofOrders(before: Date, take = 100) {
+    const orders = await this.db.orders.findMany({
+      where: {
+        source: "BROCHURE",
+        status: "DRAFT",
+        paid_vnd: 0,
+        total_vnd: { gt: 0 },
+        greeting_sessions: {
+          some: { status: "PAYMENT_REPORTED", payment_proof_asset_id: { not: null }, updated_at: { lte: before } },
+        },
+      },
+      select: {
+        id: true,
+        organization_id: true,
+        organization: { select: { settings: true } },
+        greeting_sessions: {
+          where: { status: "PAYMENT_REPORTED", payment_proof_asset_id: { not: null } },
+          select: { payment_proof_asset_id: true, updated_at: true },
+          take: 1,
+        },
+      },
+      take,
+    })
+    const proofIds = orders.flatMap((o) => o.greeting_sessions.map((s) => s.payment_proof_asset_id ?? ""))
+    const assets = proofIds.length
+      ? await this.db.assets.findMany({ where: { id: { in: proofIds } }, select: { id: true, organization_id: true, metadata: true } })
+      : []
+    return orders.map((o) => {
+      const session = o.greeting_sessions[0]
+      const asset = assets.find((a) => a.id === session?.payment_proof_asset_id && a.organization_id === o.organization_id)
+      const analysis = (asset?.metadata as { ai_analysis?: { status?: unknown } } | null)?.ai_analysis
+      return {
+        id: o.id,
+        organizationId: o.organization_id,
+        settings: o.organization.settings,
+        reportedAt: session?.updated_at ?? null,
+        analysisStatus: typeof analysis?.status === "string" ? analysis.status : null,
+      }
+    })
+  }
+}

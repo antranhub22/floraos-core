@@ -24,6 +24,7 @@ export interface CatalogProduct {
   collection?: string | null
   price?: number | null
   imageUrl?: string | null
+  attributes?: Record<string, unknown> | null
 }
 
 export type { CatalogLinkItem }

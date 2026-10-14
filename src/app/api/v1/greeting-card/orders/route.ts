@@ -3,6 +3,7 @@ import { handle, jsonResponse } from "@/core/http/response"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { BrochureOrderRepository, ORDER_STATUSES } from "@/modules/greeting-card/infra/brochure-order-repository"
+import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
 import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
 import { resolveSaleScope } from "@/modules/greeting-card/use-cases/order-scope"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
@@ -25,5 +26,36 @@ export const GET = handle(async (request) => {
   const repo = new BrochureOrderRepository()
   const saleId = (await resolveSaleScope(ctx)) ?? undefined
   const rows = await repo.listBrochureOrders(ctx, { status, payment, saleId, q, reported, limit, cursor })
-  return jsonResponse(toPage(rows, limit))
+
+  // Batch-resolve ảnh chuyển khoản và kết quả phân tích AI (tránh N+1) — chỉ ký asset của đúng tổ chức
+  const proofAssetIds = rows
+    .flatMap((o) => [
+      o.greeting_sessions[0]?.payment_proof_asset_id,
+      o.greeting_sessions[0]?.payment_proof_balance_asset_id,
+    ])
+    .filter((id): id is string => typeof id === "string" && id.length > 0)
+
+  const proofAssetsMap = proofAssetIds.length > 0
+    ? await new GreetingCardRepository().getPaymentProofAssetsMap(ctx.organizationId, proofAssetIds)
+    : new Map<string, { url: string; analysis?: unknown }>()
+
+  const rowsWithProof = rows.map((o) => {
+    const proof1 = o.greeting_sessions[0]?.payment_proof_asset_id
+      ? proofAssetsMap.get(o.greeting_sessions[0].payment_proof_asset_id)
+      : null
+    const proof2 = o.greeting_sessions[0]?.payment_proof_balance_asset_id
+      ? proofAssetsMap.get(o.greeting_sessions[0].payment_proof_balance_asset_id)
+      : null
+
+    return {
+      ...o,
+      paymentProofUrl: proof1?.url ?? null,
+      paymentProofAnalysis: proof1?.analysis ?? null,
+      paymentProofBalanceUrl: proof2?.url ?? null,
+      paymentProofBalanceAnalysis: proof2?.analysis ?? null,
+    }
+  })
+
+  return jsonResponse(toPage(rowsWithProof, limit))
 })
+

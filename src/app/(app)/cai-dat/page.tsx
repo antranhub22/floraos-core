@@ -24,10 +24,13 @@ import { useTenantProfile } from "@/lib/hooks/use-tenant-profile"
 import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { FeatureGuidanceCard } from "@/components/templates/shared/feature-guidance-card"
+import { DispatchReminderPolicyCard } from "@/components/coordinator/dispatch-reminder-policy-card"
+import { useI18n } from "@/lib/i18n"
 import type { Route } from "next"
 
 export default function CaiDatTiemPage() {
   const { orgName, can } = useSession()
+  const { dict } = useI18n()
   const canEdit = can("F2") || can("H4") // Quyền chỉnh sửa hồ sơ / điều hành
 
   const {
@@ -83,15 +86,15 @@ export default function CaiDatTiemPage() {
     <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto w-full">
       {/* 1. Hướng dẫn chuẩn hóa K1 */}
       <FeatureGuidanceCard
-        badgeLabel="TRUNG TÂM CÀI ĐẶT TIỆM"
+        badgeLabel={dict.settings.header.guidanceBadge}
         badgeIcon={Settings}
-        title="Cấu Hình Hoạt Động & Liên Kết Thiết Lập Chuyên Sâu"
+        title={dict.settings.header.guidanceTitle}
         titleIcon={Store}
-        description="Chỉnh sửa thông số cơ bản hiển thị trên hóa đơn, phiếu giao hàng và tin nhắn tư vấn tự động; đồng thời truy cập các khu vực cấu hình chuyên sâu của tiệm."
+        description="Chỉnh sửa tên cửa hàng, hotline, địa chỉ và giờ mở cửa. Những thông tin này tự động đồng bộ sang thẻ chào khách và tin nhắn Zalo."
         tips={[
-          "⚡ Tên tiệm, hotline và địa chỉ tự động đồng bộ sang Thẻ chào khách A6 và tin nhắn Zalo",
-          "🔒 Cấu hình AI và Bộ máy phân tích chỉ dành cho nhân sự có thẩm quyền điều hành",
-          "🌐 Kết nối tài khoản mạng xã hội để kích hoạt xuất bản bài đăng tự động đa kênh",
+          "⚡ Tên cửa hàng, hotline và địa chỉ đồng bộ sang Thẻ chào A6 và tin nhắn Zalo",
+          "🔒 Thiết lập AI và kết nối mạng xã hội chỉ dành cho tài khoản Điều hành",
+          "🌐 Liên kết tài khoản mạng xã hội để đăng bài tự động đa kênh",
         ]}
       />
 
@@ -124,10 +127,10 @@ export default function CaiDatTiemPage() {
                 <Building2 size={18} />
               </div>
               <div className="text-sm font-bold text-text group-hover:text-primary transition-colors">
-                Hồ Sơ & Thương Hiệu
+                Hồ sơ và thương hiệu
               </div>
               <p className="text-xs text-text-muted leading-relaxed">
-                5 mã màu hex, nhận diện thương hiệu, cam kết & dịp lễ.
+                Logo, màu sắc thương hiệu, chính sách cọc, cam kết và dịp lễ.
               </p>
             </div>
             <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-primary pt-2 border-t border-border/60">
@@ -144,14 +147,14 @@ export default function CaiDatTiemPage() {
                 <Cpu size={18} />
               </div>
               <div className="text-sm font-bold text-text group-hover:text-accent transition-colors">
-                Chính Sách AI
+                Thiết lập AI
               </div>
               <p className="text-xs text-text-muted leading-relaxed">
-                Sàn bảo mật PII, trần chi phí credit & ưu tiên nhà cung cấp.
+                Bảo vệ thông tin khách hàng, giới hạn chi phí dùng AI và chọn nhà cung cấp AI.
               </p>
             </div>
             <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-accent pt-2 border-t border-border/60">
-              <span>Quản trị AI</span> <ArrowRight size={13} />
+              <span>Thiết lập AI</span> <ArrowRight size={13} />
             </div>
           </Link>
 
@@ -164,10 +167,10 @@ export default function CaiDatTiemPage() {
                 <Share2 size={18} />
               </div>
               <div className="text-sm font-bold text-text group-hover:text-accent transition-colors">
-                Kênh Mạng Xã Hội
+                Kết nối mạng xã hội
               </div>
               <p className="text-xs text-text-muted leading-relaxed">
-                Kết nối Facebook, Instagram, TikTok & Zalo OA.
+                Kết nối Facebook, Instagram, TikTok và Zalo OA.
               </p>
             </div>
             <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-accent pt-2 border-t border-border/60">
@@ -184,14 +187,14 @@ export default function CaiDatTiemPage() {
                 <Server size={18} />
               </div>
               <div className="text-sm font-bold text-text group-hover:text-primary transition-colors">
-                Bộ Máy Phân Tích
+                Phân tích ảnh hoa
               </div>
               <p className="text-xs text-text-muted leading-relaxed">
-                Động cơ nhận diện thị giác Vision Engine tổ chức.
+                Chọn cách AI nhận diện ảnh hoa cho toàn bộ cửa hàng.
               </p>
             </div>
             <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-primary pt-2 border-t border-border/60">
-              <span>Chọn bộ máy</span> <ArrowRight size={13} />
+              <span>Thiết lập nhận diện</span> <ArrowRight size={13} />
             </div>
           </Link>
 
@@ -204,14 +207,14 @@ export default function CaiDatTiemPage() {
                 <Users size={18} />
               </div>
               <div className="text-sm font-bold text-text group-hover:text-primary transition-colors">
-                Đội Ngũ & Phân Quyền
+                Thành viên và phân quyền
               </div>
               <p className="text-xs text-text-muted leading-relaxed">
-                Mời nhân viên mới, phân vai trò và gán chi nhánh chuỗi tiệm.
+                Mời thành viên mới, phân vai trò và chi nhánh làm việc.
               </p>
             </div>
             <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-primary pt-2 border-t border-border/60">
-              <span>Quản trị nhân sự</span> <ArrowRight size={13} />
+              <span>Quản lý thành viên</span> <ArrowRight size={13} />
             </div>
           </Link>
         </div>
@@ -221,7 +224,7 @@ export default function CaiDatTiemPage() {
       <div className="p-6 rounded-2xl border border-border bg-surface shadow-xs">
         <div className="mb-4">
           <h2 className="text-base font-extrabold text-text flex items-center gap-2">
-            <Store size={18} className="text-primary" /> Thông Số Cơ Bản Của Tiệm
+            <Store size={18} className="text-primary" /> Thông tin cơ bản của cửa hàng
           </h2>
           <p className="text-xs text-text-muted mt-0.5">
             Các trường thông tin dưới đây áp dụng tức thì cho hóa đơn, phiếu cắm hoa và kịch bản tư vấn.
@@ -230,15 +233,15 @@ export default function CaiDatTiemPage() {
 
         {loading ? (
           <div className="py-4">
-            <SkeletonBlock lines={4} label="Đang tải thông số tiệm..." />
+            <SkeletonBlock lines={4} label="Đang tải thông tin cửa hàng..." />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Tên tiệm */}
+              {/* Tên cửa hàng */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-text flex items-center gap-1.5">
-                  <Store size={13} className="text-text-muted" /> Tên tiệm hiển thị
+                  <Store size={13} className="text-text-muted" /> Tên cửa hàng
                 </label>
                 <input
                   type="text"
@@ -293,7 +296,7 @@ export default function CaiDatTiemPage() {
               {/* Giờ mở cửa */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-text flex items-center gap-1.5">
-                  <Clock size={13} className="text-text-muted" /> Giờ phục vụ
+                  <Clock size={13} className="text-text-muted" /> Giờ mở cửa
                 </label>
                 <input
                   type="text"
@@ -320,13 +323,16 @@ export default function CaiDatTiemPage() {
                   className="text-xs font-bold gap-1.5 shadow-xs"
                 >
                   <Save size={13} />
-                  {saving ? "Đang lưu..." : "Lưu cài đặt tiệm"}
+                  {saving ? "Đang lưu..." : "Lưu thay đổi"}
                 </Button>
               </div>
             )}
           </form>
         )}
       </div>
+
+      {/* 4. Nhắc Nghiệp Vụ Điều Phối (M0..M5) */}
+      <DispatchReminderPolicyCard canEdit={can("R12")} />
     </div>
   )
 }

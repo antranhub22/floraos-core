@@ -13,6 +13,10 @@ import { useCopyLink } from "./use-copy-link"
 import { useSession } from "@/lib/session"
 import { createShareUrl, markPersonalLinkCopied } from "@/components/greeting-card/share/tracked-copy"
 import { catalogPublicPath, normalizeLinkCode, useJourneyCatalogs, type CatalogOption } from "./use-journey-catalogs"
+import { QuickCollectionModal } from "@/components/catalog/quick-collection-modal"
+import { useApi } from "@/components/greeting-card/greeting-api"
+import type { QuickCollectionCandidate } from "@/modules/catalog-links/domain/quick-collection-engine"
+import { toQuickCollectionCandidate, type QuickCollectionProductRow } from "@/modules/catalog-links/domain/quick-collection-candidate"
 
 interface JourneyWizardProps {
   onFinish?: () => void
@@ -39,6 +43,11 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
   const [sent, setSent] = useState<{ sendCode: string; shareUrl: string } | null>(null)
+  const [isQuickModalOpen, setIsQuickModalOpen] = useState(false)
+
+  // Tải danh sách sản phẩm để cấp vào QuickCollectionModal
+  const productsRes = useApi<{ data: QuickCollectionProductRow[] }>("/api/v1/products?limit=100&status=ACTIVE")
+  const quickCandidates: QuickCollectionCandidate[] = (productsRes.data?.data || []).map(toQuickCollectionCandidate)
 
   // Mặc định chọn bộ sưu tập đầu tiên; số mẫu hoa lấy từ danh sách (được cập nhật khi thêm/xóa mẫu)
   const selectedId = pickedId || catalogs[0]?.id || ""
@@ -105,6 +114,7 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
               onRetry={() => void data.reload()}
               onSelect={selectCatalog}
               onCreate={() => setDialog("create")}
+              onQuickGenerate={() => setIsQuickModalOpen(true)}
               onItemCountChange={handleItemCountChange}
               onNext={() => setStep(2)}
               readOnly={!canEditCatalog}
@@ -166,6 +176,17 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
       />
 
       {preview && <BrochurePreviewModal url={preview.url} title={preview.title} onClose={() => setPreview(null)} />}
+
+      <QuickCollectionModal
+        open={isQuickModalOpen}
+        onOpenChange={setIsQuickModalOpen}
+        products={quickCandidates}
+        onCreatedLink={() => void data.reload()}
+        onCreatedGreetingCatalog={(newCatId) => {
+          setPickedId(newCatId)
+          void data.reload()
+        }}
+      />
     </div>
   )
 }

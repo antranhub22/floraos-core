@@ -9,7 +9,7 @@ import { snapshotFromOrder } from "../domain/order-change-request"
 import { customerChangeSection } from "./order-change"
 import { customerSubstituteSection } from "./substitute"
 import { latestFailureForCustomer } from "../domain/delivery-failure"
-import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { parsePaymentPolicy, resolveRequirePaymentProof } from "../domain/brochure-payment-policy"
 import { orderPaymentSummary } from "../domain/payment-summary"
 import { paymentInstructionsFor } from "./payment-instructions"
 
@@ -75,7 +75,8 @@ export async function getBrochureTracking(
   const sessionWithCatalog = order.greeting_sessions.find((s) => s.catalog?.filters)
   const catalogFilters = sessionWithCatalog?.catalog?.filters as Record<string, unknown> | null | undefined
   const appliedPolicies = catalogFilters?.appliedPolicies as { photoApprovalCountdownMinutes?: number } | undefined
-  const countdownMinutes = appliedPolicies?.photoApprovalCountdownMinutes ?? 10
+  const storePolicy = parsePaymentPolicy(order.organization?.settings)
+  const countdownMinutes = appliedPolicies?.photoApprovalCountdownMinutes ?? storePolicy.productPhotoReviewMinutes ?? 10
 
   let photoApproval: {
     status: "NONE" | "PENDING" | "APPROVED" | "AUTO_APPROVED"
@@ -162,10 +163,11 @@ export async function getBrochureTracking(
        *  không hiện cùng lúc với khung duyệt ảnh (PO 09/10/2026). */
       payment: {
         ...payment,
+        requirePaymentProof: resolveRequirePaymentProof(policy, catalogFilters),
         balanceInstructions: (() => {
-          if (!payment.balanceDue) return null
-          // Thu trước giao + đang chờ khách duyệt ảnh → chưa hiện QR lần 2
-          if (policy.requireFullBeforeDispatch && photoApproval.status === "PENDING") return null
+          if (order.status === "CANCELLED" || payment.remainingVnd <= 0) return null
+          // Thu trước giao + đang chờ khách duyệt ảnh (và đã cọc) → hoãn hiện QR lần 2
+          if (policy.requireFullBeforeDispatch && photoApproval.status === "PENDING" && payment.paidVnd > 0) return null
           return paymentInstructionsFor(orgSettings, money, order.code)
         })(),
       },

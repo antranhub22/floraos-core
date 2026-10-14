@@ -3,9 +3,11 @@ import type { InputJsonValue, product_status, products } from "./entities"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
+import { categoryAndSearchWhere } from "./product-list-where"
 
 import type { DbClient } from "./db-client"
-import { attachMainImageIfMissing, linkMainImage, refreshDriveLinkIfNotDrive, refreshDriveLink, upsertMainImage } from "./product-main-image"
+import { assertOwnedAsset, attachMainImageIfMissing, linkMainImage, refreshDriveLinkIfNotDrive, refreshDriveLink, replaceMainImage, upsertMainImage } from "./product-main-image"
+import { updateExistingProductFromBatch, type BatchUpdateItemInput } from "./product-batch-update"
 
 /** Kết quả trả về từ `listWithPreview` — bản ghi sản phẩm kèm ảnh chính và giá. */
 export type ProductPreviewRow = products & {
@@ -36,9 +38,7 @@ export type UpdateProductIdentityInput = {
   attributes: Record<string, unknown>
 }
 
-/** `PATCH /products/:id` (`L3`, đặc tả 06 mục 6) — sửa tay, tách khỏi
- *  `updateIdentity` (chỉ dùng nội bộ khi duyệt phân tích ảnh, `H3`). Mọi
- *  trường tuỳ chọn — hợp nhất nông với bản ghi hiện có (khác PUT). */
+/** `PATCH /products/:id` (`L3`) — sửa tay, hợp nhất nông với bản ghi hiện có. */
 export type UpdateProductInput = {
   code?: string | undefined
   name?: string | undefined
@@ -49,6 +49,7 @@ export type UpdateProductInput = {
   container?: string | null | undefined
   status?: product_status | undefined
   attributes?: Record<string, unknown> | null | undefined
+  imageAssetId?: string | null | undefined
 }
 
 export type ListProductsFilters = {
@@ -126,7 +127,7 @@ export class ProductRepository {
         ? { attributes: { path: ["occasionCodes"], array_contains: filters.occasionCode } }
         : {}),
       ...(filters.color !== undefined
-        ? { attributes: { path: ["color"], equals: filters.color } }
+        ? { attributes: { path: ["color"], string_contains: filters.color } }
         : {}),
       ...(filters.collection !== undefined
         ? { attributes: { path: ["collection"], equals: filters.collection } }
@@ -159,23 +160,15 @@ export class ProductRepository {
       ...(filters.branchId !== undefined ? { branch_id: filters.branchId } : {}),
       // Không lọc status → ẩn sản phẩm đã vào thùng rác (ARCHIVED); xem lại ở Kho dữ liệu → Thùng rác.
       status: filters.status ?? { not: "ARCHIVED" as product_status },
-      ...(filters.category !== undefined ? { category: filters.category } : {}),
+      ...categoryAndSearchWhere(filters),
       ...(filters.occasionCode !== undefined
         ? { attributes: { path: ["occasionCodes"], array_contains: filters.occasionCode } }
         : {}),
       ...(filters.color !== undefined
-        ? { attributes: { path: ["color"], equals: filters.color } }
+        ? { attributes: { path: ["color"], string_contains: filters.color } }
         : {}),
       ...(filters.collection !== undefined
         ? { attributes: { path: ["collection"], equals: filters.collection } }
-        : {}),
-      ...(filters.search
-        ? {
-            OR: [
-              { name: { contains: filters.search, mode: "insensitive" as const } },
-              { code: { contains: filters.search, mode: "insensitive" as const } },
-            ],
-          }
         : {}),
     })
 
@@ -199,7 +192,7 @@ export class ProductRepository {
     const storageKeyById = new Map<string, string>()
     if (assetIds.length > 0) {
       const assets = await prisma.assets.findMany({
-        where: { id: { in: assetIds } },
+        where: { id: { in: assetIds }, organization_id: ctx.organizationId },
         select: { id: true, storage_key: true },
       })
       for (const a of assets) storageKeyById.set(a.id, a.storage_key)
@@ -224,7 +217,10 @@ export class ProductRepository {
       const driveLink = typeof attrs.drive_link === "string" && attrs.drive_link ? attrs.drive_link : undefined
 
       const { images: _img, variants: _var, ...base } = row
-      return { ...base, masterImageUrl, price_vnd, driveLink }
+      const resolvedMasterImageUrl =
+        masterImageUrl ??
+        (typeof attrs.imageUrl === "string" && attrs.imageUrl ? attrs.imageUrl : undefined)
+      return { ...base, masterImageUrl: resolvedMasterImageUrl, price_vnd, driveLink }
     })
   }
 
@@ -232,6 +228,11 @@ export class ProductRepository {
    * @deprecated Dùng `upsertMainImage` thay thế. */
   attachMainImageIfMissing(ctx: TenantContext, code: string, assetId: string): Promise<boolean> {
     return attachMainImageIfMissing(this.db, ctx, code, assetId)
+  }
+
+  /** Gắn asset làm ảnh chính (MAIN) của sản phẩm. */
+  linkMainImage(ctx: TenantContext, productId: string, assetId: string): Promise<void> {
+    return linkMainImage(this.db, ctx, productId, assetId)
   }
 
   /** Thay ảnh chính của sản phẩm, ghi đè ảnh cũ nếu có. Dùng khi nhập lại Excel. */
@@ -250,7 +251,13 @@ export class ProductRepository {
     return refreshDriveLink(this.db, ctx, code, driveLink)
   }
 
+  /** Cập nhật toàn bộ thông tin và ảnh cho sản phẩm đã tồn tại khi tái nhập từ Excel & Ảnh. */
+  updateExistingFromBatch(ctx: TenantContext, item: BatchUpdateItemInput): Promise<boolean> {
+    return updateExistingProductFromBatch(this.db, ctx, item)
+  }
+
   async create(ctx: TenantContext, input: CreateProductInput): Promise<products> {
+    if (input.imageAssetId) await assertOwnedAsset(this.db, ctx, input.imageAssetId)
     const product = await this.db.products.create({
       data: scopedData(ctx, {
         code: input.code,
@@ -284,6 +291,7 @@ export class ProductRepository {
     id: string,
     input: UpdateProductInput
   ): Promise<products | null> {
+    if (input.imageAssetId) await assertOwnedAsset(this.db, ctx, input.imageAssetId)
     const result = await this.db.products.updateMany({
       where: scopedWhere(ctx, { id }),
       data: {
@@ -301,20 +309,11 @@ export class ProductRepository {
       },
     })
     if (result.count === 0) return null
+    if (input.imageAssetId) await replaceMainImage(this.db, ctx, id, input.imageAssetId)
     return this.findById(ctx, id)
   }
 
-  /**
-   * Ghi kết quả đã duyệt vào Product Master. Thay toàn bộ bốn trường nhận
-   * dạng và `attributes` bằng bản đọc mới nhất — mỗi lượt duyệt là nguồn sự
-   * thật hiện hành, không hợp nhất với `attributes` cũ (một giả định đơn
-   * giản hoá, ghi ở `TECHNICAL_DEBT.md`).
-   *
-   * `updateMany` + đọc lại, không `update({where: scopedWhere(...)})` —
-   * `where` của `update()` phải là khoá duy nhất; `scopedWhere` thêm
-   * `organization_id` vào mệnh đề nên không còn khớp hình dạng đó (cùng lý
-   * do `GenerationJobRepository.cancelIfPending` dùng `updateMany`).
-   */
+  /** Ghi kết quả đã duyệt vào Product Master. Thay thế bốn trường nhận dạng và attributes. */
   async updateIdentity(
     ctx: TenantContext,
     id: string,

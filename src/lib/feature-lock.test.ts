@@ -38,9 +38,9 @@ describe("feature-lock", () => {
     expect(isJourneyLocked("view-store-overview", true)).toBe(true)
   })
 
-  it("production: trang chủ cửa hàng chỉ mở Thẻ chào mẫu hoa", () => {
+  it("production: trang chủ cửa hàng mở các thẻ đã hoạt động", () => {
     const open = STORE_JOURNEYS.filter((j) => !isJourneyLocked(j.id, true)).map((j) => j.id)
-    expect(open).toEqual(["greeting-card-hub"])
+    expect(open).toEqual(["greeting-card-hub", "analyze-product-photo", "create-order"])
     expect(isJourneyLocked("view-platform-overview", true)).toBe(false)
   })
 

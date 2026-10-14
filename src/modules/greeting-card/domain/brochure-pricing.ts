@@ -59,13 +59,15 @@ export interface ShippingZone {
   feeVnd: number
 }
 
+export const DEFAULT_PREP_HOURS = 2
+
 export interface ShippingConfig {
   zones: ShippingZone[]
   /** Miễn phí giao khi tạm tính (sau giảm giá) từ mức này; null = không miễn. */
   freeShippingOverVnd: number | null
   /** Sau giờ này (0–23, giờ VN) không nhận giao trong ngày; null = không giới hạn. */
   sameDayCutoffHour?: number | null
-  /** Số giờ cần để cắm + giao trước khi hết khung giờ khách chọn (mặc định 0). */
+  /** Thời gian xử lý & chuẩn bị đơn tối thiểu trước khi giao (lead time, giờ; mặc định DEFAULT_PREP_HOURS = 2h). */
   prepHours?: number
   /** Id khung giờ 2 tiếng đang bật (`delivery_slots`); thiếu = bật tất cả. */
   slotIds?: string[]
@@ -111,7 +113,7 @@ export function parseShippingConfig(settings: unknown): ShippingConfig {
     freeShippingOverVnd: positiveInt(raw.free_shipping_over_vnd),
     // Chỉ thêm khoá khi tiệm đã cấu hình — cấu hình cũ giữ nguyên hình dạng
     ...(typeof cutoff === "number" && Number.isInteger(cutoff) && cutoff >= 1 && cutoff <= 23 ? { sameDayCutoffHour: cutoff } : {}),
-    ...(typeof prep === "number" && Number.isFinite(prep) && prep > 0 && prep <= 24 ? { prepHours: Math.round(prep) } : {}),
+    ...(typeof prep === "number" && Number.isFinite(prep) && prep >= 0 && prep <= 24 ? { prepHours: Math.round(prep * 10) / 10 } : {}),
     ...parseSlotSettings(raw.delivery_slots, raw.allow_custom_time),
     ...(raw.free_shipping_all === true ? { freeShippingAll: true } : {}),
     ...(raw.voucher_enabled === true ? { vouchersEnabled: true } : {}),

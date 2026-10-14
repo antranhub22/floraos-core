@@ -158,6 +158,146 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
             />
           </div>
 
+          {/* Quick Search Filters (Khoảng giá, Dịp tặng, Dáng hoa, Loại hoa, Tone màu) */}
+          <div className="p-2.5 rounded-xl border border-border bg-surface space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-caption font-bold text-text flex items-center gap-1">
+                ⚡ Lọc nhanh mẫu hoa
+              </span>
+              {ci.hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={ci.resetFilters}
+                  className="text-caption text-primary hover:underline font-medium"
+                >
+                  Xóa bộ lọc
+                </button>
+              )}
+            </div>
+
+            {/* 1. Khoảng giá */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-caption text-text-muted shrink-0 w-16">Khoảng giá:</span>
+              {[
+                { id: "b1", label: "< 500k" },
+                { id: "b2", label: "500k - 800k" },
+                { id: "b3", label: "800k - 1.5tr" },
+                { id: "b4", label: "> 1.5tr" },
+              ].map((b) => {
+                const isSelected = ci.selectedBudgets.includes(b.id)
+                return (
+                  <button
+                    type="button"
+                    key={b.id}
+                    onClick={() =>
+                      ci.setSelectedBudgets(
+                        isSelected
+                          ? ci.selectedBudgets.filter((id) => id !== b.id)
+                          : [...ci.selectedBudgets, b.id]
+                      )
+                    }
+                    className={`px-2 py-0.5 rounded-lg text-caption font-medium transition border ${
+                      isSelected
+                        ? "border-primary bg-primary text-white font-bold"
+                        : "border-border bg-surface text-text-muted hover:border-primary/40"
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* 2. Dịp tặng */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-caption text-text-muted shrink-0 w-16">Dịp tặng:</span>
+              {["Sinh nhật", "Khai trương", "Kỷ niệm", "Chúc mừng", "Chia buồn"].map((occ) => {
+                const isSelected = ci.filterOccasion === occ
+                return (
+                  <button
+                    type="button"
+                    key={occ}
+                    onClick={() => ci.setFilterOccasion(isSelected ? "" : occ)}
+                    className={`px-2 py-0.5 rounded-lg text-caption font-medium transition border ${
+                      isSelected
+                        ? "border-primary bg-primary text-white font-bold"
+                        : "border-border bg-surface text-text-muted hover:border-primary/40"
+                    }`}
+                  >
+                    {occ}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* 3. Dáng hoa */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-caption text-text-muted shrink-0 w-16">Dáng hoa:</span>
+              {["Bó hoa", "Giỏ hoa", "Kệ hoa", "Lẵng hoa", "Hộp hoa", "Bình hoa"].map((cat) => {
+                const isSelected = ci.filterCategory === cat
+                return (
+                  <button
+                    type="button"
+                    key={cat}
+                    onClick={() => ci.setFilterCategory(isSelected ? "" : cat)}
+                    className={`px-2 py-0.5 rounded-lg text-caption font-medium transition border ${
+                      isSelected
+                        ? "border-primary bg-primary/10 text-primary font-bold"
+                        : "border-border bg-surface text-text-muted hover:border-primary/40"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* 4. Loại hoa & Tone màu */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-border">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-caption text-text-muted shrink-0 w-16">Loại hoa:</span>
+                {["Hoa hồng", "Lan hồ điệp", "Hướng dương", "Baby"].map((fl) => {
+                  const isSelected = ci.filterFlowerType === fl
+                  return (
+                    <button
+                      type="button"
+                      key={fl}
+                      onClick={() => ci.setFilterFlowerType(isSelected ? "" : fl)}
+                      className={`px-2 py-0.5 rounded-lg text-caption font-medium transition border ${
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary font-bold"
+                          : "border-border bg-surface text-text-muted hover:border-primary/40"
+                      }`}
+                    >
+                      {fl}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-caption text-text-muted shrink-0 w-16">Tone màu:</span>
+                {["Pastel", "Đỏ", "Vàng", "Hồng", "Trắng"].map((col) => {
+                  const isSelected = ci.filterColorTone === col
+                  return (
+                    <button
+                      type="button"
+                      key={col}
+                      onClick={() => ci.setFilterColorTone(isSelected ? "" : col)}
+                      className={`px-2 py-0.5 rounded-lg text-caption font-medium transition border ${
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary font-bold"
+                          : "border-border bg-surface text-text-muted hover:border-primary/40"
+                      }`}
+                    >
+                      {col}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
           {/* Product list */}
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
             {loadingProducts ? (
@@ -167,8 +307,8 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
               </div>
             ) : ci.available.length === 0 ? (
               <p className="text-body-sm text-text-muted text-center py-8">
-                {ci.searchQuery
-                  ? "Không tìm thấy sản phẩm phù hợp"
+                {ci.searchQuery || ci.hasActiveFilters
+                  ? "Không tìm thấy sản phẩm phù hợp tiêu chí lọc"
                   : "Tất cả sản phẩm đã được thêm vào bộ sưu tập"}
               </p>
             ) : (
@@ -183,7 +323,7 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
                   <div className="flex-1 min-w-0">
                     <p className="text-body-sm font-bold text-text truncate">{product.name}</p>
                     <p className="text-caption text-text-muted font-mono">{product.code}</p>
-                    {product.price_vnd !== null ? (
+                    {product.price_vnd != null ? (
                       <p className="text-caption text-primary font-semibold">
                         {product.price_vnd.toLocaleString("vi-VN")}đ
                       </p>

@@ -6,11 +6,10 @@
  *   2. JSON: File backup cấu trúc đầy đủ phục vụ lưu trữ dự phòng, khôi phục.
  */
 
-import { prisma } from "@/core/tenancy/infra/prisma"
 import type { TenantContext } from "@/core/tenancy"
+import { queryCustomersForExport } from "../infra/customer-export-query"
 import * as XLSX from "xlsx"
 
-const MAX_CUSTOMERS = 10000
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 
 function toVnDateString(date: Date | null): string {
@@ -50,30 +49,7 @@ export async function exportCustomers(
   const now = new Date()
   const dateSuffix = now.toISOString().slice(0, 10).replace(/-/g, "")
 
-  const where = {
-    organization_id: ctx.organizationId,
-    ...(input.tier ? { tier: input.tier as never } : {}),
-    ...(input.search
-      ? {
-          OR: [
-            { name: { contains: input.search, mode: "insensitive" as const } },
-            { phone: { contains: input.search } },
-            { code: { contains: input.search, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
-  }
-
-  const customersList = await prisma.customers.findMany({
-    where,
-    orderBy: { created_at: "desc" },
-    take: MAX_CUSTOMERS,
-    include: {
-      occasions: {
-        orderBy: { date: "asc" },
-      },
-    },
-  })
+  const customersList = await queryCustomersForExport(ctx, { tier: input.tier, search: input.search })
 
   if (format === "json") {
     let totalOccasions = 0

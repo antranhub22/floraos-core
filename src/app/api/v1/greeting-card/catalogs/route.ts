@@ -5,6 +5,7 @@ import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
 import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
+import { catalogPolicyKeysChanged } from "@/modules/greeting-card/domain/catalog-policy-keys"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 const createCatalogSchema = z.object({
@@ -40,6 +41,8 @@ export const POST = handle(async (request: Request) => {
   if (!parsed.success) {
     throw validationFailed({ issues: parsed.error.issues })
   }
+  // Bộ sưu tập mới mang sẵn khoá chính sách (ảnh bill, duyệt thanh toán, thời hạn) → cần quyền sửa cấu hình tiệm
+  if (catalogPolicyKeysChanged(null, parsed.data.filters)) requireCapability(ctx, "F2")
 
   const repo = new GreetingCardRepository()
   const catalog = await repo.createCatalog(ctx, {

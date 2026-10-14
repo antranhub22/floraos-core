@@ -1,3 +1,4 @@
+import { depositAmountVnd } from "./payment-schedule"
 /**
  * Payment Policy + Payment Code cho đơn Thẻ chào. Pure TypeScript.
  *
@@ -237,6 +238,16 @@ export function readPaymentPlan(pricingRuleRef: unknown): PaymentPlanSnapshot | 
 export function policyForOrder<P extends { depositPercent: number }>(shopPolicy: P, pricingRuleRef: unknown): P {
   const plan = readPaymentPlan(pricingRuleRef)
   return plan ? { ...shopPolicy, depositPercent: plan.depositPercent } : shopPolicy
+}
+
+/**
+ * Khoản Lần 1 của một đơn (cọc theo kế hoạch thanh toán của đơn, hoặc toàn bộ khi không cọc) — một
+ * công thức chung cho máy chủ ghi sổ và giao diện hiển thị, để hai bên không lệch nhau.
+ */
+export function firstPaymentAmountVnd(totalVnd: number, pricingRuleRef: unknown, shopDepositPercent: number): number {
+  const pct = readPaymentPlan(pricingRuleRef)?.depositPercent ?? shopDepositPercent
+  const deposit = depositAmountVnd(totalVnd, pct)
+  return pct > 0 && deposit < totalVnd ? deposit : totalVnd
 }
 
 /**

@@ -15,6 +15,7 @@ import { SalesBrochureTab } from "@/components/greeting-card/sales/sales-brochur
 import { AdminBrochurePaymentTab } from "@/components/greeting-card/admin/admin-brochure-payment-tab"
 import { ExportOrdersButton } from "@/components/orders/export-orders-button"
 import { useSession } from "@/lib/session"
+import { useI18n } from "@/lib/i18n"
 
 type MobileFilter = "all" | "new" | "arranging" | "delivery" | "completed"
 type ActiveMainTab = "kanban" | "brochure_sales" | "brochure_payment"
@@ -22,6 +23,7 @@ type ActiveMainTab = "kanban" | "brochure_sales" | "brochure_payment"
 export default function DonHangPage() {
   const router = useRouter()
   const session = useSession()
+  const { t } = useI18n()
   // Tab xác nhận tiền Thẻ chào chỉ dành cho Điều hành (R11 — PO 08/10/2026); máy chủ vẫn kiểm ở mọi endpoint
   const canConfirmTransfer = session.can("R11")
   const canExport = session.can("R1")
@@ -94,15 +96,15 @@ export default function DonHangPage() {
       <header className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 sm:px-6 py-4">
         <div>
           <div className="text-caption font-bold uppercase tracking-wider text-text-muted">
-            Bán hàng & Vận hành đơn
+            {t("orders.header.category")}
           </div>
-          <h1 className="text-title font-extrabold text-foreground">Đơn Hàng & Kênh Chào Bán</h1>
+          <h1 className="text-title font-extrabold text-foreground">{t("orders.header.title")}</h1>
         </div>
 
         {/* Top-Right Action Header: 1 primary + 2 secondary/ghost */}
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 font-semibold">
-            <Plus size={16} /> Tạo đơn mới
+            <Plus size={16} /> {t("orders.header.createOrder")}
           </Button>
           <Button
             variant="outline"
@@ -110,7 +112,7 @@ export default function DonHangPage() {
             onClick={() => setChatModalOpen(true)}
             className="flex items-center gap-1.5 font-semibold text-primary border-primary/30 hover:bg-primary/5"
           >
-            <MessageSquarePlus size={14} /> Tạo từ chat
+            <MessageSquarePlus size={14} /> {t("orders.header.createFromChat")}
           </Button>
           <Button
             variant="outline"
@@ -119,7 +121,7 @@ export default function DonHangPage() {
             disabled={loading}
             className="hidden sm:inline-flex items-center gap-1.5"
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Làm mới
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> {t("orders.header.refresh")}
           </Button>
           <Button
             variant="ghost"
@@ -127,12 +129,12 @@ export default function DonHangPage() {
             onClick={() => router.push("/")}
             className="hidden sm:inline-flex items-center gap-1.5"
           >
-            <ArrowLeft size={14} /> Trang chủ
+            <ArrowLeft size={14} /> {t("orders.header.home")}
           </Button>
           {canExport && (
             <ExportOrdersButton
               filename="don-hang.xlsx"
-              label="Xuất Excel"
+              label={t("orders.header.exportExcel")}
             />
           )}
         </div>
@@ -150,7 +152,7 @@ export default function DonHangPage() {
           }`}
         >
           <ShoppingBag size={16} />
-          <span>Tất cả đơn hàng (Kanban)</span>
+          <span>{t("orders.tabs.allOrders")}</span>
         </button>
 
         <button
@@ -163,7 +165,7 @@ export default function DonHangPage() {
           }`}
         >
           <Send size={16} />
-          <span>Thẻ Chào & Link Chào Khách (Sale)</span>
+          <span>{t("orders.tabs.brochureLinks")}</span>
         </button>
 
         {canConfirmTransfer && <button
@@ -176,7 +178,7 @@ export default function DonHangPage() {
           }`}
         >
           <ShieldCheck size={16} />
-          <span>Duyệt TT Thẻ Chào (Điều hành)</span>
+          <span>{t("orders.tabs.paymentApproval")}</span>
         </button>}
       </div>
 
@@ -194,25 +196,25 @@ export default function DonHangPage() {
               <div className="w-full sm:w-80">
                 <input
                   type="text"
-                  placeholder="Tìm theo mã đơn, người nhận, SĐT..."
+                  placeholder={t("orders.filters.searchPlaceholder")}
                   className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-body-sm outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-primary"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
               <div className="text-caption text-text-muted">
-                Tổng cộng: <span className="font-bold text-foreground">{filteredOrders.length}</span> đơn hàng
+                <span className="font-bold text-foreground">{filteredOrders.length}</span> {t("common.terms.order").toLowerCase()}
               </div>
             </div>
 
             {/* Bộ lọc trạng thái trên Mobile (< lg) */}
             <div className="flex lg:hidden overflow-x-auto gap-2 pb-1 text-caption">
               {[
-                { id: "all" as const, label: "Tất cả", count: filteredOrders.length },
-                { id: "new" as const, label: "Mới", count: colNew.length },
-                { id: "arranging" as const, label: "Đang cắm", count: colArranging.length },
-                { id: "delivery" as const, label: "Vận chuyển", count: colDelivery.length },
-                { id: "completed" as const, label: "Hoàn tất", count: colCompleted.length },
+                { id: "all" as const, label: t("orders.filters.mobile.all"), count: filteredOrders.length },
+                { id: "new" as const, label: t("orders.filters.mobile.new"), count: colNew.length },
+                { id: "arranging" as const, label: t("orders.filters.mobile.arranging"), count: colArranging.length },
+                { id: "delivery" as const, label: t("orders.filters.mobile.delivering"), count: colDelivery.length },
+                { id: "completed" as const, label: t("orders.filters.mobile.completed"), count: colCompleted.length },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -240,8 +242,8 @@ export default function DonHangPage() {
             <div className="flex flex-col gap-3 lg:hidden">
               {mobileOrders.length === 0 ? (
                 <EmptyState
-                  title="Không có đơn hàng nào"
-                  reason="Chưa có đơn hàng nào ở trạng thái này hoặc không khớp với từ khoá tìm kiếm."
+                  title="Chưa có đơn hàng nào"
+                  reason="Chưa có đơn hàng nào ở trạng thái này hoặc không khớp với từ khóa tìm kiếm. Bạn có thể tạo đơn hàng mới ngay."
                   action={{
                     label: "Tạo đơn mới",
                     onClick: () => setCreateOpen(true),
@@ -260,7 +262,7 @@ export default function DonHangPage() {
                 <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-info" aria-hidden="true" />
-                    <span className="font-bold text-caption uppercase text-text">1. Mới tiếp nhận</span>
+                    <span className="font-bold text-caption uppercase text-text">{t("orders.columns.newOrders")}</span>
                   </div>
                   <Badge tone="neutral" className="text-caption font-bold">
                     {colNew.length}
@@ -277,7 +279,7 @@ export default function DonHangPage() {
                 <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden="true" />
-                    <span className="font-bold text-caption uppercase text-text">2. Đang cắm hoa</span>
+                    <span className="font-bold text-caption uppercase text-text">{t("orders.columns.inProduction")}</span>
                   </div>
                   <Badge tone="neutral" className="text-caption font-bold">
                     {colArranging.length}
@@ -294,7 +296,7 @@ export default function DonHangPage() {
                 <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-warning" aria-hidden="true" />
-                    <span className="font-bold text-caption uppercase text-text">3. Đang giao hàng</span>
+                    <span className="font-bold text-caption uppercase text-text">{t("orders.columns.outForDelivery")}</span>
                   </div>
                   <Badge tone="neutral" className="text-caption font-bold">
                     {colDelivery.length}
@@ -311,7 +313,7 @@ export default function DonHangPage() {
                 <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden="true" />
-                    <span className="font-bold text-caption uppercase text-text">4. Hoàn tất</span>
+                    <span className="font-bold text-caption uppercase text-text">{t("orders.columns.delivered")}</span>
                   </div>
                   <Badge tone="neutral" className="text-caption font-bold">
                     {colCompleted.length}

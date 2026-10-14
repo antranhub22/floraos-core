@@ -90,7 +90,7 @@ export function PartnerProductionCard({
           <div>
             <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Layers size={13} className="text-alert-600" />
-              <span>CÔNG THỨC HOA NGUYÊN TỬ (MASTER INDEX BOM)</span>
+              <span>CÔNG THỨC HOA & ĐỊNH LƯỢNG CHI TIẾT</span>
             </div>
             <div className="rounded-xl border border-border overflow-hidden">
               <table className="w-full text-left text-xs">

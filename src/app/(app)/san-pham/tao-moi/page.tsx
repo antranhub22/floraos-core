@@ -39,15 +39,15 @@ const CATEGORIES = [
 ]
 
 const SHAPES = [
-  "Dáng tròn",
-  "Dáng tam giác",
-  "Dáng tự nhiên / Phong cách Hàn",
-  "Dáng dài",
-  "Dáng thác nước",
-  "Dáng quạt",
+  "Tròn",
+  "Tam giác",
+  "Tự nhiên (phong cách Hàn Quốc)",
+  "Dài, thẳng",
+  "Thác nước",
+  "Hình quạt",
 ]
 
-const FACINGS = ["Một mặt", "Đa hướng (360 độ)", "Hai mặt"]
+const FACINGS = ["Một mặt", "Nhiều mặt (360°)", "Hai mặt"]
 
 const FLOWER_ROLES = ["Chủ đạo", "Phụ", "Điểm nhấn", "Lấp đầy"]
 
@@ -149,11 +149,11 @@ export default function CreateProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) {
-      setErrorMsg("Vui lòng nhập tên sản phẩm.")
+      setErrorMsg("Vui lòng nhập tên mẫu hoa.")
       return
     }
     if (!code.trim()) {
-      setErrorMsg("Vui lòng nhập mã sản phẩm.")
+      setErrorMsg("Vui lòng nhập mã mẫu hoa.")
       return
     }
 
@@ -281,7 +281,7 @@ export default function CreateProductPage() {
             <ArrowLeft size={16} />
           </button>
           <div>
-            <div className="text-caption text-text-muted">Kho sản phẩm cửa hàng</div>
+            <div className="text-caption text-text-muted">Kho mẫu hoa</div>
             <h1 className="text-title font-extrabold text-primary">Tạo mẫu hoa mới</h1>
           </div>
         </div>
@@ -296,7 +296,7 @@ export default function CreateProductPage() {
             title="Dùng AI nhận diện ảnh và tự sinh công thức"
           >
             <Sparkles size={14} className="text-primary" />
-            <span className="hidden sm:inline">Phân tích AI</span>
+            <span className="hidden sm:inline">Quét ảnh hoa</span>
           </Button>
           <Button
             type="button"
@@ -306,7 +306,7 @@ export default function CreateProductPage() {
             className="flex items-center gap-1.5"
           >
             <CheckCircle2 size={15} strokeWidth={2.2} />
-            <span>{submitting ? "Đang lưu..." : "Lưu vào kho"}</span>
+            <span>{submitting ? "Đang lưu..." : "Lưu vào kho mẫu hoa"}</span>
           </Button>
         </div>
       </header>
@@ -326,7 +326,7 @@ export default function CreateProductPage() {
             <Card className="p-5 sm:p-6 space-y-5">
               <div className="flex items-center gap-2 text-title-sm font-bold text-text">
                 <ImageIcon size={18} className="text-primary" />
-                <span>Ảnh đại diện & Thông tin chung</span>
+                <span>Ảnh đại diện và thông tin chung</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -357,8 +357,8 @@ export default function CreateProductPage() {
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <Upload size={20} />
                       </div>
-                      <div className="text-body-sm font-medium text-text">Chọn hoặc kéo thả ảnh</div>
-                      <div className="text-caption text-text-muted">PNG, JPG, WEBP (tối đa 15MB)</div>
+                      <div className="text-body-sm font-medium text-text">Kéo thả ảnh vào đây hoặc bấm để chọn file</div>
+                      <div className="text-caption text-text-muted">Hỗ trợ JPG, PNG, WebP, tối đa 15 MB</div>
                     </div>
                   )}
                   <input
@@ -389,13 +389,13 @@ export default function CreateProductPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-caption font-semibold text-text mb-1">
-                        Mã sản phẩm (SKU) <span className="text-danger">*</span>
+                        Mã mẫu hoa (SKU) <span className="text-danger">*</span>
                       </label>
                       <input
                         type="text"
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
-                        placeholder="FL-1001"
+                        placeholder="Để trống để tự tạo mã (hoặc nhập BH-001)"
                         required
                         className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-body-sm outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-primary uppercase"
                       />
@@ -403,7 +403,7 @@ export default function CreateProductPage() {
 
                     <div>
                       <label className="block text-caption font-semibold text-text mb-1">
-                        Giá tham chiếu (VNĐ)
+                        Giá niêm yết (₫)
                       </label>
                       <input
                         type="text"
@@ -412,7 +412,7 @@ export default function CreateProductPage() {
                           const val = e.target.value.replace(/\D/g, "")
                           setPriceVnd(val ? Number(val).toLocaleString("vi-VN") : "")
                         }}
-                        placeholder="Ví dụ: 550,000"
+                        placeholder="Ví dụ: 650.000"
                         className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-body-sm outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-primary"
                       />
                     </div>
@@ -436,15 +436,15 @@ export default function CreateProductPage() {
 
                     <div>
                       <label className="block text-caption font-semibold text-text mb-1">
-                        Trạng thái kinh doanh
+                        Trạng thái bán
                       </label>
                       <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value as "ACTIVE" | "DRAFT")}
                         className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-body-sm outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-primary"
                       >
-                        <option value="ACTIVE">Đang bán (Hiển thị ngay)</option>
-                        <option value="DRAFT">Lưu nháp</option>
+                        <option value="ACTIVE">Đang bán</option>
+                        <option value="DRAFT">Bản nháp</option>
                       </select>
                     </div>
                   </div>
@@ -456,13 +456,13 @@ export default function CreateProductPage() {
             <Card className="p-5 sm:p-6 space-y-4">
               <div className="flex items-center gap-2 text-title-sm font-bold text-text">
                 <Layers size={18} className="text-primary" />
-                <span>Định dạng & Phong cách cắm</span>
+                <span>Kiểu dáng và hướng nhìn</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-caption font-semibold text-text mb-1">
-                    Kiểu dáng
+                    Kiểu dáng cắm
                   </label>
                   <select
                     value={shape}
@@ -477,7 +477,7 @@ export default function CreateProductPage() {
 
                 <div>
                   <label className="block text-caption font-semibold text-text mb-1">
-                    Hướng nhìn
+                    Mặt nhìn
                   </label>
                   <select
                     value={facing}
@@ -492,20 +492,20 @@ export default function CreateProductPage() {
 
                 <div>
                   <label className="block text-caption font-semibold text-text mb-1">
-                    Vật chứa / Giá đỡ
+                    Vật chứa / bao bì
                   </label>
                   <input
                     type="text"
                     value={container}
                     onChange={(e) => setContainer(e.target.value)}
-                    placeholder="Giỏ mây, Bình gốm, Giấy báo..."
+                    placeholder="Ví dụ: giấy gói Hàn Quốc, giỏ mây tròn"
                     className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-body-sm outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-primary"
                   />
                 </div>
 
                 <div>
                   <label className="block text-caption font-semibold text-text mb-1">
-                    Tone màu chủ đạo
+                    Tông màu chủ đạo
                   </label>
                   <input
                     type="text"
@@ -518,19 +518,19 @@ export default function CreateProductPage() {
               </div>
             </Card>
 
-            {/* Nhóm 3: Công thức hoa (BOM) */}
+            {/* Nhóm 3: Thành phần hoa */}
             <Card className="p-5 sm:p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-title-sm font-bold text-text">
                   <FileText size={18} className="text-primary" />
-                  <span>Công thức cắm hoa (BOM nguyên liệu)</span>
+                  <span>Thành phần hoa</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleAddFlower}
                   className="inline-flex items-center gap-1 text-caption font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"
                 >
-                  <Plus size={14} /> Thêm loài hoa
+                  <Plus size={14} /> Thêm thành phần hoa
                 </button>
               </div>
 
@@ -616,13 +616,13 @@ export default function CreateProductPage() {
 
             {/* Nhóm 4: Mô tả & Ghi chú */}
             <Card className="p-5 sm:p-6 space-y-4">
-              <div className="text-title-sm font-bold text-text">Mô tả & Ghi chú sản phẩm</div>
+              <div className="text-title-sm font-bold text-text">Câu chuyện và thông điệp mẫu hoa</div>
               <div>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Ghi chú ý nghĩa hoa, lưu ý bảo quản hoặc lời chúc gợi ý..."
+                  placeholder="Mô tả ý nghĩa mẫu hoa, cảm xúc gửi gắm hoặc hướng dẫn chăm sóc giúp hoa tươi lâu…"
                   className="w-full rounded-xl border border-border bg-surface p-3 text-body-sm outline-none focus:border-primary focus-visible:outline-2 focus-visible:outline-primary"
                 />
               </div>
@@ -635,7 +635,7 @@ export default function CreateProductPage() {
                 variant="outline"
                 onClick={() => router.push("/san-pham" as never)}
               >
-                Hủy bỏ
+                Hủy
               </Button>
               <Button
                 type="submit"
@@ -643,7 +643,7 @@ export default function CreateProductPage() {
                 className="flex items-center gap-1.5"
               >
                 <CheckCircle2 size={16} />
-                <span>{submitting ? "Đang lưu mẫu hoa..." : "Lưu vào kho sản phẩm"}</span>
+                <span>{submitting ? "Đang lưu mẫu hoa..." : "Lưu vào kho mẫu hoa"}</span>
               </Button>
             </div>
           </form>

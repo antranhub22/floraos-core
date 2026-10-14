@@ -7,8 +7,9 @@ import { reportCustomerPayment } from "@/modules/greeting-card/use-cases/confirm
 export const POST = handle<[{ params: Promise<{ sendCode: string }> }]>(async (request, context) => {
   await enforceRateLimit(request, { scope: "brochure-paid", limit: 10, windowMs: 60_000 })
   const { sendCode } = await context.params
-  assertBrochureOwner(request, sendCode)
-  return jsonResponse(await reportCustomerPayment(sendCode))
+  await assertBrochureOwner(request, sendCode)
+  const body = (await request.json().catch(() => ({}))) as { proofAssetId?: string }
+  return jsonResponse(await reportCustomerPayment(sendCode, { proofAssetId: body.proofAssetId }))
 })
 
 export const dynamic = "force-dynamic"

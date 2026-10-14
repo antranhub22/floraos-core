@@ -31,14 +31,14 @@ export function StatusBadge({ status }: { status: ProductItem["status"] }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-0.5 text-caption font-bold text-warning">
         <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
-        Lưu trữ
+        Đã lưu trữ
       </span>
     )
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-surface-alt px-2 py-0.5 text-caption font-bold text-text-muted">
       <span className="h-1.5 w-1.5 rounded-full bg-text-muted" aria-hidden="true" />
-      Nháp
+      Bản nháp
     </span>
   )
 }
@@ -49,7 +49,7 @@ export function PriceLabel({ price }: { price: number | null }) {
   }
   return (
     <span className="text-caption font-semibold text-primary">
-      {price.toLocaleString("vi-VN")}đ
+      {price.toLocaleString("vi-VN")} ₫
     </span>
   )
 }
@@ -58,39 +58,45 @@ export interface ProductCardProps {
   product: ProductItem
   isExecutive?: boolean
   onTrash?: (product: ProductItem) => void
+  onImageClick?: (product: ProductItem) => void
 }
 
-export function ProductCard({ product, isExecutive, onTrash }: ProductCardProps) {
+export function ProductCard({ product, isExecutive, onTrash, onImageClick }: ProductCardProps) {
   return (
     <div className="group flex flex-col rounded-2xl border border-border bg-surface overflow-hidden transition-all hover:border-primary/40 hover:shadow-md relative">
+      {/* Vùng ảnh sản phẩm: Bấm để mở Bảng thông số sản phẩm & Phân tích AI */}
+      <button
+        type="button"
+        onClick={() => onImageClick?.(product)}
+        aria-label={`Xem bảng thông số và phân tích AI cho ${product.name}`}
+        className="relative aspect-square w-full bg-surface-alt overflow-hidden text-left focus-visible:outline-2 focus-visible:outline-primary cursor-pointer group/img"
+      >
+        <ProductThumb
+          name={product.name}
+          masterImageUrl={product.masterImageUrl}
+          driveLink={product.driveLink}
+          size="card"
+        />
+        <div className="absolute top-2 left-2 pointer-events-none">
+          <StatusBadge status={product.status} />
+        </div>
+      </button>
+
+      {/* Thông tin sản phẩm: Bấm vào tên để chuyển sang trang chi tiết */}
       <Link
         href={`/san-pham/${product.id}` as never}
-        className="flex flex-col flex-1 focus-visible:outline-2 focus-visible:outline-primary"
+        className="flex flex-col flex-1 p-3 focus-visible:outline-2 focus-visible:outline-primary"
       >
-        {/* Ảnh sản phẩm */}
-        <div className="relative aspect-square w-full bg-surface-alt overflow-hidden">
-          <ProductThumb
-            name={product.name}
-            masterImageUrl={product.masterImageUrl}
-            driveLink={product.driveLink}
-            size="card"
-          />
-          <div className="absolute top-2 left-2">
-            <StatusBadge status={product.status} />
-          </div>
+        <div className="truncate text-body-sm font-bold text-text group-hover:text-primary transition-colors">
+          {product.name}
         </div>
-
-        {/* Thông tin */}
-        <div className="flex flex-col gap-1 p-3">
-          <div className="truncate text-body-sm font-bold text-text">{product.name}</div>
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate text-caption text-text-muted">
-              {product.category ?? "Chưa phân loại"}
-            </span>
-            <PriceLabel price={product.price_vnd} />
-          </div>
-          <div className="mt-1 text-caption text-text-muted font-mono">#{product.code}</div>
+        <div className="flex items-center justify-between gap-2 mt-1">
+          <span className="truncate text-caption text-text-muted">
+            {product.category ?? "Chưa phân loại"}
+          </span>
+          <PriceLabel price={product.price_vnd} />
         </div>
+        <div className="mt-1 text-caption text-text-muted font-mono">#{product.code}</div>
       </Link>
 
       {/* Nút xóa – chỉ Điều hành */}
@@ -103,7 +109,7 @@ export function ProductCard({ product, isExecutive, onTrash }: ProductCardProps)
           }}
           aria-label={`Chuyển "${product.name}" vào thùng rác`}
           className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/55 text-white hover:bg-danger hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-danger"
-          title="Xóa sản phẩm (Chỉ Điều hành)"
+          title="Chuyển vào thùng rác"
         >
           <Trash2 size={13} />
         </button>

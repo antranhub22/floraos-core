@@ -2,11 +2,12 @@
  * Thông báo khách theo mốc đơn Thẻ chào (Zalo ZNS / SMS). Pure TypeScript.
  */
 
-export const NOTIFY_EVENTS = ["ORDER_RECEIVED", "QUOTED", "PAYMENT_REMINDER", "DEPOSIT_RECEIVED", "PAYMENT_COMPLETED", "SUBSTITUTE_PROPOSED", "READY", "DISPATCHED", "DELIVERY_FAILED", "DELIVERED", "CANCELLED"] as const
+export const NOTIFY_EVENTS = ["ORDER_RECEIVED", "ORDER_ACCEPTED", "QUOTED", "PAYMENT_REMINDER", "DEPOSIT_RECEIVED", "PAYMENT_COMPLETED", "SUBSTITUTE_PROPOSED", "READY", "DISPATCHED", "DELIVERY_FAILED", "DELIVERED", "CANCELLED"] as const
 export type NotifyEvent = (typeof NOTIFY_EVENTS)[number]
 
 export const NOTIFY_EVENT_LABELS: Record<NotifyEvent, string> = {
   ORDER_RECEIVED: "Đã nhận đơn",
+  ORDER_ACCEPTED: "Đã xác nhận nhận đơn",
   QUOTED: "Đã báo giá",
   PAYMENT_REMINDER: "Nhắc chuyển khoản",
   DEPOSIT_RECEIVED: "Đã nhận tiền cọc",
@@ -52,8 +53,12 @@ function stripDiacritics(text: string): string {
  * Nội dung SMS (không dấu — tin brandname có dấu tính gấp đôi phí và dễ lỗi
  * mã hoá). Giữ dưới 160 ký tự khi có thể.
  */
-export function smsText(event: NotifyEvent, p: NotifyParams, options?: { isBalanceDue?: boolean }): string {
-  const readyText = options?.isBalanceDue
+export function smsText(event: NotifyEvent, p: NotifyParams, options?: { isBalanceDue?: boolean; skippedPhoto?: boolean }): string {
+  const readyText = options?.skippedPhoto
+    ? options?.isBalanceDue
+      ? `${p.shop_name}: Hoa don ${p.order_code} da hoan thanh. Mo link thanh toan ${p.amount} con lai de giao hoa.`
+      : `${p.shop_name}: Hoa don ${p.order_code} da hoan thanh, chuan bi giao.`
+    : options?.isBalanceDue
     ? `${p.shop_name}: Hoa don ${p.order_code} da cam xong. Mo link xem anh va thanh toan ${p.amount} con lai de giao hoa.`
     : `${p.shop_name}: Hoa don ${p.order_code} da cam xong, chuan bi giao.`
   const deliveredText = options?.isBalanceDue
@@ -62,10 +67,11 @@ export function smsText(event: NotifyEvent, p: NotifyParams, options?: { isBalan
 
   const body: Record<NotifyEvent, string> = {
     ORDER_RECEIVED: `${p.shop_name}: Da nhan don ${p.order_code}. Cua hang se bao khi nhan duoc thanh toan va khi hoa duoc giao.`,
+    ORDER_ACCEPTED: `${p.shop_name}: Da xac nhan nhan don ${p.order_code}. Xuong hoa da tiep nhan va dang chuan bi cam hoa.`,
     QUOTED: `${p.shop_name}: Don ${p.order_code} da co gia ${p.amount}. Mo link de xem ma QR thanh toan.`,
     PAYMENT_REMINDER: `${p.shop_name}: Don ${p.order_code} dang cho chuyen khoan ${p.amount}. Mo link de xem ma QR.`,
-    DEPOSIT_RECEIVED: `${p.shop_name}: Da nhan tien coc ${p.amount} cho don ${p.order_code}.`,
-    PAYMENT_COMPLETED: `${p.shop_name}: Da nhan du ${p.amount} cho don ${p.order_code}. Cam on quy khach!`,
+    DEPOSIT_RECEIVED: `${p.shop_name}: Chuyen khoan thanh cong! Da nhan tien coc ${p.amount} cho don ${p.order_code}. Cua hang se xac nhan don trong vong 30' (hoan tien neu khong the phuc vu).`,
+    PAYMENT_COMPLETED: `${p.shop_name}: Chuyen khoan thanh cong! Da nhan du ${p.amount} cho don ${p.order_code}. Cua hang se xac nhan don trong vong 30' (hoan tien neu khong the phuc vu).`,
     SUBSTITUTE_PROPOSED: `${p.shop_name}: Mau hoa don ${p.order_code} tam thoi khong lam duoc. Mo link de chon mau thay the hoac phan hoi cua hang.`,
     READY: readyText,
     DISPATCHED: `${p.shop_name}: Don ${p.order_code} dang duoc giao den nguoi nhan.`,
@@ -89,18 +95,44 @@ export function paymentNotifyEvent(balanceAfterVnd: number): NotifyEvent {
 export function customerPaymentMessage(p: { orderCode: string; amountVnd: number; balanceVnd: number; trackingUrl: string | null }): string {
   const money = (n: number) => `${n.toLocaleString("vi-VN")} đ`
   const head = p.balanceVnd > 0
-    ? `Cửa hàng đã nhận ${money(p.amountVnd)} cho đơn hoa ${p.orderCode}, còn ${money(p.balanceVnd)}.`
-    : `Cửa hàng đã nhận đủ ${money(p.amountVnd)} cho đơn hoa ${p.orderCode}. Cảm ơn anh/chị!`
-  return p.trackingUrl ? `${head} Theo dõi đơn và ảnh hoa tại: ${p.trackingUrl}` : head
+    ? `Cửa hàng xác nhận: Chuyển khoản thành công! Đã nhận ${money(p.amountVnd)} (tiền cọc) cho đơn hoa ${p.orderCode}, còn ${money(p.balanceVnd)}.`
+    : `Cửa hàng xác nhận: Chuyển khoản thành công! Đã nhận đủ ${money(p.amountVnd)} cho đơn hoa ${p.orderCode}.`
+  const confirmText = `Cửa hàng sẽ xác nhận đơn hàng trong vòng 30’ (Điểm Điều phối kiểm tra nhận đơn hoặc hoàn tiền cho khách nếu không thể phục vụ).`
+  return p.trackingUrl ? `${head} ${confirmText} Theo dõi đơn và ảnh hoa tại: ${p.trackingUrl}` : `${head} ${confirmText}`
+}
+
+/**
+ * Tin soạn sẵn báo khách "cửa hàng đã xác nhận nhận đơn" — Điều phối/Sale chép gửi qua Zalo.
+ */
+export function customerOrderAcceptedMessage(p: { orderCode: string; trackingUrl: string | null }): string {
+  const head = `Cửa hàng thông báo: Đã xác nhận nhận đơn hoa ${p.orderCode}! Xưởng đã tiếp nhận đơn và đang chuẩn bị nguyên liệu cắm hoa.`
+  return p.trackingUrl ? `${head} Theo dõi tiến độ đơn hàng và ảnh hoa tại: ${p.trackingUrl}` : head
+}
+
+/**
+ * Tin soạn sẵn báo khách khi đã tải ảnh chuyển khoản và chờ xác nhận (SLA 15 phút).
+ */
+export function customerPaymentProofReportedMessage(p: { orderCode: string; trackingUrl: string | null }): string {
+  const head = `Cửa hàng đã nhận ảnh chuyển khoản cho đơn ${p.orderCode}. Thời gian xác nhận chuyển khoản sẽ trong vòng 15’.`
+  return p.trackingUrl ? `${head} Theo dõi tiến độ tại: ${p.trackingUrl}` : head
 }
 
 /**
  * Tin soạn sẵn Sale nhắn khách duyệt ảnh thành phẩm và thanh toán lần 2 (đơn đặt cọc).
  * Có dấu (chép gửi nhanh qua Zalo, không tính phí SMS).
  */
-export function customerSecondPaymentReminderMessage(p: { orderCode: string; balanceVnd: number; trackingUrl: string | null }): string {
+export function customerSecondPaymentReminderMessage(p: {
+  orderCode: string
+  balanceVnd: number
+  trackingUrl: string | null
+  skippedPhoto?: boolean
+}): string {
   const money = `${p.balanceVnd.toLocaleString("vi-VN")} đ`
-  const head = `Dạ chào anh/chị, hoa cho đơn ${p.orderCode} đã cắm xong hoàn thiện ạ!`
-  const body = `Anh/chị mở link kiểm tra ảnh hoa thực tế và thanh toán số tiền còn lại là ${money} để cửa hàng tiến hành giao hoa nhé ạ:`
+  const head = p.skippedPhoto
+    ? `Dạ chào anh/chị, hoa cho đơn ${p.orderCode} đã hoàn thành và đang chuẩn bị giao gấp ạ!`
+    : `Dạ chào anh/chị, hoa cho đơn ${p.orderCode} đã cắm xong hoàn thiện ạ!`
+  const body = p.skippedPhoto
+    ? `Anh/chị mở link thanh toán số tiền còn lại là ${money} để cửa hàng tiến hành giao hoa nhé ạ:`
+    : `Anh/chị mở link kiểm tra ảnh hoa thực tế và thanh toán số tiền còn lại là ${money} để cửa hàng tiến hành giao hoa nhé ạ:`
   return p.trackingUrl ? `${head} ${body} ${p.trackingUrl}` : `${head} ${body}`
 }

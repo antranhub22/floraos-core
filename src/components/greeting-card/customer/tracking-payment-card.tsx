@@ -8,7 +8,12 @@ import { readApiError } from "@/components/greeting-card/api-error"
 import type { BrochurePaymentInstructions } from "@/modules/greeting-card/domain/greeting-card-types"
 import type { OrderPaymentSummary } from "@/modules/greeting-card/domain/payment-summary"
 
-export type TrackingPayment = OrderPaymentSummary & { balanceInstructions: BrochurePaymentInstructions | null }
+import { PaymentProofUploader } from "./payment-proof-uploader"
+
+export type TrackingPayment = OrderPaymentSummary & {
+  balanceInstructions: BrochurePaymentInstructions | null
+  requirePaymentProof?: boolean
+}
 
 const vnd = (n: number) => `${n.toLocaleString("vi-VN")}đ`
 
@@ -20,6 +25,10 @@ export function TrackingPaymentCard({ payment, sendCode }: { payment: TrackingPa
   const [reported, setReported] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [proofAssetId, setProofAssetId] = useState<string | null>(null)
+
+  const requireProof = payment.requirePaymentProof !== false
+  const canReport = !requireProof || !!proofAssetId
   const qr = payment.balanceInstructions
   if (payment.totalVnd <= 0 || payment.milestones.length < 2) return null
 
@@ -28,7 +37,11 @@ export function TrackingPaymentCard({ payment, sendCode }: { payment: TrackingPa
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`/api/v1/public/brochure/${sendCode}/payment-notify`, { method: "POST" })
+      const res = await fetch(`/api/v1/public/brochure/${sendCode}/payment-notify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proofAssetId: proofAssetId || undefined }),
+      })
       if (!res.ok) throw new Error(await readApiError(res, "Không gửi được thông báo, vui lòng thử lại"))
       setReported(true)
     } catch (err) {
@@ -58,12 +71,16 @@ export function TrackingPaymentCard({ payment, sendCode }: { payment: TrackingPa
           </li>
         ))}
       </ul>
-      {payment.balanceDue && qr && (
+      {qr && (
         <div className="flex flex-col items-center gap-2 border-t border-border pt-3">
           <p className="text-body-sm text-foreground text-center">
-            {payment.milestones.some((m) => m.due === "AFTER_DELIVERY")
-              ? "Vui lòng thanh toán phần còn lại qua mã QR bên dưới hoặc cho shipper khi nhận hoa."
-              : "Hoa của bạn đã hoàn thành. Vui lòng thanh toán phần còn lại để cửa hàng tiến hành giao hoa."}
+            {payment.paidVnd > 0
+              ? payment.milestones.some((m) => m.due === "AFTER_DELIVERY")
+                ? "Vui lòng thanh toán phần còn lại qua mã QR bên dưới hoặc cho shipper khi nhận hoa."
+                : "Hoa của bạn đã hoàn thành. Vui lòng thanh toán phần còn lại để cửa hàng tiến hành giao hoa."
+              : payment.milestones.length > 1
+              ? "Vui lòng chuyển khoản tiền đặt cọc qua mã QR bên dưới để xác nhận đơn:"
+              : "Vui lòng chuyển khoản qua mã QR bên dưới để thanh toán đơn hàng:"}
           </p>
           <div className="p-2 bg-white rounded-xl border border-border">
             <Image src={qr.qrUrl} alt={`Mã QR thanh toán ${vnd(qr.amount)}`} width={176} height={176} unoptimized className="w-44 h-44 object-contain" />
@@ -72,18 +89,50 @@ export function TrackingPaymentCard({ payment, sendCode }: { payment: TrackingPa
             {qr.bankName} · {qr.accountNo} · {qr.accountName}<br />Nội dung chuyển khoản: <strong className="text-foreground">{qr.transferMemo}</strong>
           </p>
           {sendCode && (
-            <Button type="button" onClick={() => void report()} disabled={busy || reported} className="w-full">
-              {reported ? "Đã báo cửa hàng — chờ xác nhận" : `Tôi đã thanh toán ${vnd(qr.amount)}`}
-            </Button>
+            <div className="w-full flex flex-col gap-2">
+              {requireProof && !reported && (
+                <PaymentProofUploader
+                  sendCode={sendCode}
+                  purpose={payment.paidVnd > 0 ? "BALANCE" : "DEPOSIT"}
+                  onUploaded={(id) => setProofAssetId(id)}
+                  onRemoved={() => setProofAssetId(null)}
+                  disabled={busy || reported}
+                />
+              )}
+              <Button
+                type="button"
+                onClick={() => void report()}
+                disabled={busy || reported || !canReport}
+                className="w-full"
+              >
+                {reported
+                  ? "Đã báo cửa hàng — chờ xác nhận"
+                  : payment.paidVnd > 0
+                  ? `Tôi đã thanh toán phần còn lại ${vnd(qr.amount)}`
+                  : `Tôi đã chuyển khoản ${vnd(qr.amount)}`}
+              </Button>
+              {reported && (
+                <p className="text-caption text-text-muted font-medium text-center">
+                  Thời gian xác nhận chuyển khoản sẽ trong vòng 15’
+                </p>
+              )}
+              {!reported && !canReport && (
+                <p className="text-caption text-warning font-medium text-center">
+                  Vui lòng tải ảnh chuyển khoản để xác nhận
+                </p>
+              )}
+            </div>
           )}
           {error && <p role="alert" className="text-caption text-danger">{error}</p>}
         </div>
       )}
-      {payment.balanceDue && !qr && (
+      {!qr && payment.remainingVnd > 0 && (
         <p className="text-body-sm text-foreground border-t border-border pt-2">
-          {payment.milestones.some((m) => m.due === "AFTER_DELIVERY")
-            ? `Cửa hàng sẽ liên hệ để nhận phần còn lại ${vnd(payment.remainingVnd)} khi giao hoa.`
-            : `Hoa đã hoàn thành. Cửa hàng sẽ liên hệ để nhận phần còn lại ${vnd(payment.remainingVnd)}.`}
+          {payment.paidVnd > 0
+            ? payment.milestones.some((m) => m.due === "AFTER_DELIVERY")
+              ? `Cửa hàng sẽ liên hệ để nhận phần còn lại ${vnd(payment.remainingVnd)} khi giao hoa.`
+              : `Hoa đã hoàn thành. Cửa hàng sẽ liên hệ để nhận phần còn lại ${vnd(payment.remainingVnd)}.`
+            : `Cửa hàng sẽ liên hệ để hướng dẫn thanh toán ${vnd(payment.remainingVnd)}.`}
         </p>
       )}
     </section>

@@ -109,7 +109,7 @@ export function ProfileJourneyWorkspace({
             <div className="flex items-center gap-1.5 text-caption">
               <CheckCircle2 size={13} className={hasColors && hasLogo ? "text-success" : "text-text-muted"} />
               <span className={hasColors && hasLogo ? "text-text font-medium" : "text-text-muted"}>
-                Nhận diện thị giác ({hasColors && hasLogo ? "Đạt" : "Cần thêm"})
+                Nhận diện thương hiệu ({hasColors && hasLogo ? "Đạt" : "Cần thêm"})
               </span>
             </div>
 
@@ -151,7 +151,7 @@ export function ProfileJourneyWorkspace({
                 1. Thiết lập nhanh để nhận đơn
               </h4>
               <p className="text-caption text-text-muted mt-1.5 leading-relaxed">
-                Chỉ mất 2 phút: Nhập tên tiệm, số hotline, địa chỉ xưởng hoa và giờ phục vụ để sẵn sàng chốt đơn khách.
+                Chỉ mất 2 phút: Nhập tên cửa hàng, số hotline, địa chỉ và giờ mở cửa để sẵn sàng chốt đơn khách.
               </p>
             </div>
 
@@ -182,10 +182,10 @@ export function ProfileJourneyWorkspace({
                 )}
               </div>
               <h4 className="text-body font-bold text-text group-hover:text-primary transition-colors">
-                2. Nhận diện thị giác & Tài nguyên
+                2. Nhận diện thương hiệu
               </h4>
               <p className="text-caption text-text-muted mt-1.5 leading-relaxed">
-                Tải lên Logo tiệm, bộ 5 màu Hex cẩm nang, bộ ảnh showroom và video intro để đóng watermark tự động.
+                Tải lên Logo cửa hàng, chọn bộ màu sắc, ảnh showroom và video giới thiệu để đóng watermark tự động.
               </p>
             </div>
 
@@ -195,14 +195,14 @@ export function ProfileJourneyWorkspace({
                 onClick={() => onSelectTab("brand")}
                 className="flex-1 inline-flex items-center justify-center rounded-xl bg-surface-alt px-3 py-2 text-caption font-bold text-text hover:bg-primary hover:text-white transition-all"
               >
-                <span>5 Mã Màu Hex</span>
+                <span>Màu sắc thương hiệu</span>
               </button>
               <button
                 type="button"
                 onClick={() => onSelectTab("assets")}
                 className="flex-1 inline-flex items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 px-3 py-2 text-caption font-bold hover:bg-primary hover:text-white transition-all"
               >
-                <span>Upload Logo & Media</span>
+                <span>Logo và khung ảnh</span>
               </button>
             </div>
           </div>
@@ -222,10 +222,10 @@ export function ProfileJourneyWorkspace({
                 )}
               </div>
               <h4 className="text-body font-bold text-text group-hover:text-primary transition-colors">
-                3. Chính sách bán & Giọng văn AI
+                3. Chính sách và giọng văn AI
               </h4>
               <p className="text-caption text-text-muted mt-1.5 leading-relaxed">
-                Chọn gói đặc quyền quà tặng, cam kết đổi mới trong 4h và định vị tông giọng trợ lý AI tư vấn Zalo.
+                Chọn quà tặng kèm, cam kết dịch vụ và thiết lập giọng văn trợ lý AI tư vấn Zalo.
               </p>
             </div>
 
@@ -235,14 +235,14 @@ export function ProfileJourneyWorkspace({
                 onClick={() => onSelectTab("sales")}
                 className="flex-1 inline-flex items-center justify-center rounded-xl bg-surface-alt px-3 py-2 text-caption font-bold text-text hover:bg-primary hover:text-white transition-all"
               >
-                <span>Chính sách & Cam kết</span>
+                <span>Chính sách và cam kết</span>
               </button>
               <button
                 type="button"
                 onClick={() => onSelectTab("occasions")}
                 className="flex-1 inline-flex items-center justify-center rounded-xl bg-surface-alt px-3 py-2 text-caption font-bold text-text hover:bg-primary hover:text-white transition-all"
               >
-                <span>Dịp lễ & Lời chào</span>
+                <span>Dịp lễ và lời chào</span>
               </button>
             </div>
           </div>
@@ -292,7 +292,7 @@ export function ProfileJourneyWorkspace({
             >
               <div>
                 <div className="text-body-sm font-bold text-text group-hover:text-primary transition-colors">
-                  Tạo Video Marketing
+                  Tự động gắn Watermark logo cửa hàng
                 </div>
                 <div className="text-caption text-text-muted mt-0.5">Tự động gắn Watermark logo tiệm</div>
               </div>

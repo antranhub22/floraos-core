@@ -153,7 +153,15 @@ test.describe("Brochure / Thẻ Chào — Luồng chính", () => {
   test("4. Khách báo đã chuyển khoản", async () => {
     expect(sendCode).toBeTruthy()
 
-    const res = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/payment-notify`)
+    // Tiệm mặc định bắt buộc ảnh bill (máy chủ kiểm) — tải ảnh PNG nhỏ trước khi báo
+    const png = Buffer.from("89504E470D0A1A0A0000000D4948445200000001000000010806000000", "hex")
+    const proof = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/payment-proof`, {
+      multipart: { file: { name: "bill.png", mimeType: "image/png", buffer: png }, purpose: "DEPOSIT" },
+    })
+    expect(proof.status()).toBeLessThan(300)
+    const { assetId } = (await proof.json()) as { assetId: string }
+
+    const res = await request.post(`${BASE}/api/v1/public/brochure/${sendCode}/payment-notify`, { data: { proofAssetId: assetId } })
     expect(res.status()).toBeLessThan(300)
   })
 
