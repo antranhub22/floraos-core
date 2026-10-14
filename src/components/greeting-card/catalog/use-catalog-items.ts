@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
+import { lookupNormalized, normalizeText } from "@/lib/normalize-text"
 
 export type AvailableProduct = {
   id: string
@@ -109,20 +110,21 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     if (debouncedSearch) params.set("search", debouncedSearch)
 
     // Server-side: category → DB code (BOUQUET, BASKET…)
+    // lookupNormalized chịu được mọi biến thể dấu/hoa thường
     if (filterCategory) {
-      const dbCode = CATEGORY_UI_TO_DB[filterCategory]
+      const dbCode = lookupNormalized(CATEGORY_UI_TO_DB, filterCategory)
       if (dbCode) params.set("category", dbCode)
     }
 
     // Server-side: occasion code (sinh-nhat, khai-truong…)
     if (filterOccasion) {
-      const dbCode = OCCASION_UI_TO_DB[filterOccasion]
+      const dbCode = lookupNormalized(OCCASION_UI_TO_DB, filterOccasion)
       if (dbCode) params.set("occasion_code", dbCode)
     }
 
     // Server-side: color (first alias)
     if (filterColorTone) {
-      const aliases = COLOR_UI_TO_DB[filterColorTone]
+      const aliases = lookupNormalized(COLOR_UI_TO_DB, filterColorTone)
       if (aliases?.[0]) params.set("color", aliases[0])
     }
 
@@ -191,18 +193,19 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     }
 
     // 2. Loại hoa — client-side: khớp tên sản phẩm hoặc attributes.flowerTypes
+    // normalizeText chịu được mọi biến thể dấu/hoa thường ở cả hai phía
     if (filterFlowerType) {
-      const fl = filterFlowerType.toLowerCase()
+      const fl = normalizeText(filterFlowerType)
       const attrs = (product.attributes as Record<string, unknown>) ?? {}
       const flowerTypesArr = Array.isArray(attrs.flowerTypes)
         ? (attrs.flowerTypes as string[])
         : Array.isArray(product.flowerTypes)
           ? (product.flowerTypes as string[])
           : []
-      const normName = (product.name ?? "").toLowerCase()
+      const normName = normalizeText(product.name ?? "")
       const matchFlower =
         normName.includes(fl) ||
-        flowerTypesArr.some((f) => String(f).toLowerCase().includes(fl))
+        flowerTypesArr.some((f) => normalizeText(String(f)).includes(fl))
       if (!matchFlower) return false
     }
 
