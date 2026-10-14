@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useSession } from "@/lib/session"
 import { CoordinatorReminderCard } from "./coordinator-reminder-card"
 import { CoordinatorReminderSettingsModal } from "./coordinator-reminder-settings-modal"
 import type {
@@ -32,6 +33,7 @@ interface CoordinatorReminderBarProps {
 }
 
 export function CoordinatorReminderBar({ onSelectOrder }: CoordinatorReminderBarProps) {
+  const canConfigure = useSession().can("R12")
   const [data, setData] = useState<RemindersResponse>({
     reminders: [],
     totalActive: 0,
@@ -159,6 +161,7 @@ export function CoordinatorReminderBar({ onSelectOrder }: CoordinatorReminderBar
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {canConfigure && (
             <Button
               type="button"
               variant="outline"
@@ -171,6 +174,7 @@ export function CoordinatorReminderBar({ onSelectOrder }: CoordinatorReminderBar
               <Settings2 size={13} />
               <span className="hidden sm:inline">Cài đặt mốc</span>
             </Button>
+            )}
 
             <Button
               type="button"

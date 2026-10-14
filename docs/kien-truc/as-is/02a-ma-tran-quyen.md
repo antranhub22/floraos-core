@@ -208,6 +208,8 @@
 | R8 | `order.card_message.manage` | ● | ● | ● | · | · | · | ● | · | — | **không** |
 | R9 | `order.payment.record` | ● | ● | ● | · | · | · | · | · | — | server + UI |
 | R10 | `order.payment.refund` | ● | · | · | · | · | · | · | · | ĐH | server |
+| R11 | `order.transfer.confirm` | ● | · | · | · | · | · | · | · | ĐH | server + UI |
+| R12 | `order.coordinator_reminder.configure` | ● | ● | · | · | · | · | · | · | — | server (14/10/2026) |
 
 ### Q — CRM
 

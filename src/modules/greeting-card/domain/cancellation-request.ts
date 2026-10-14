@@ -32,6 +32,24 @@ export interface CancellationPayload extends CancellationProposal {
   decidedAt?: string | undefined
   decidedNote?: string | undefined
   actualRefundVnd?: number | undefined
+  /** Hệ thống tự duyệt vì Điều hành không phản hồi kịp hạn (không phải người bấm). */
+  autoApproved?: boolean | undefined
+  /** Việc Điều hành còn phải làm sau khi hệ thống tự huỷ — hiện ở Hộp việc tới khi đánh dấu xong. */
+  followUp?: CancellationFollowUp | undefined
+}
+
+export interface CancellationFollowUp {
+  status: "PENDING" | "DONE"
+  /** Số tiền phải chuyển hoàn cho khách (hệ thống không tự chuyển tiền, chưa ghi sổ thu). */
+  refundDueVnd: number
+  doneBy?: string | undefined
+  doneAt?: string | undefined
+  note?: string | undefined
+}
+
+/** Đơn tự huỷ còn chờ Điều hành xử lý (hoàn tiền / liên hệ khách). */
+export function needsFollowUp(payload: Pick<CancellationPayload, "status" | "followUp">): boolean {
+  return payload.status === "APPROVED" && payload.followUp?.status === "PENDING"
 }
 
 /**
@@ -159,4 +177,10 @@ export function decisionCapabilities(
   if (type === "CANCEL_ONLY") return [caps.orderCancel]
   if (type === "FULL_REFUND") return [caps.orderCancel, caps.paymentRefund]
   return [caps.paymentRefund]
+}
+
+/** Nội dung tin báo Điều hành khi hệ thống tự duyệt huỷ đơn. */
+export function autoApprovedNotice(orderCode: string, timeoutMinutes: number, refundDueVnd: number): string {
+  const refund = refundDueVnd > 0 ? ` Cần chuyển hoàn ${refundDueVnd.toLocaleString("vi-VN")}đ cho khách rồi bấm "Đã hoàn tiền cho khách" trong Hộp việc.` : ""
+  return `Đơn ${orderCode} đã tự huỷ do quá ${timeoutMinutes} phút chưa có quyết định cho đề xuất từ chối nhận đơn của Điều phối.${refund}`
 }

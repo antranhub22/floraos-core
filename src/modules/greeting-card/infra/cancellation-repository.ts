@@ -7,6 +7,7 @@ import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import {
   type CancellationPayload,
   type CancellationProposal,
+  autoApprovedNotice,
   resolveRefundVnd,
   validateCancellationProposalData,
 } from "../domain/cancellation-request"
@@ -111,8 +112,11 @@ export class CancellationRepository {
       approve: boolean
       note: string
       actualRefundVnd?: number | undefined
+      /** Hệ thống tự duyệt do quá hạn: không ghi sổ hoàn (chưa chuyển tiền) mà giao việc cho Điều hành. */
+      autoTimeoutMinutes?: number | undefined
     }
   ) {
+    const auto = input.autoTimeoutMinutes !== undefined
     return this.db.$transaction(async (tx) => {
       const req = await tx.greeting_messages.findFirst({
         where: scopedWhere(ctx, { id: input.requestId, kind: "CANCELLATION_REQUEST" }),
@@ -146,7 +150,7 @@ export class CancellationRepository {
       const now = new Date()
 
       // 1. Nếu duyệt và có hoàn tiền -> ghi sổ thu order_payments (kind: REFUND)
-      if (input.approve && refundVnd > 0) {
+      if (input.approve && refundVnd > 0 && !auto) {
         await tx.order_payments.create({
           data: scopedData(ctx, {
             id: randomUUID(),
@@ -196,7 +200,7 @@ export class CancellationRepository {
             from_value: order.status,
             to_value: "CANCELLED",
             actor_id: ctx.userId,
-            reason: `Đã duyệt đề xuất hủy đơn: ${input.note || payload.reason}`,
+            reason: `${auto ? "Hệ thống tự duyệt" : "Đã duyệt"} đề xuất hủy đơn: ${input.note || payload.reason}`,
           }),
         })
       }
@@ -208,7 +212,8 @@ export class CancellationRepository {
         decidedBy: ctx.userId,
         decidedAt: now.toISOString(),
         decidedNote: input.note || undefined,
-        actualRefundVnd: refundVnd,
+        actualRefundVnd: auto ? 0 : refundVnd,
+        ...(auto ? { autoApproved: true, followUp: { status: "PENDING" as const, refundDueVnd: refundVnd } } : {}),
       }
 
       const updatedReq = await tx.greeting_messages.updateMany({
@@ -233,9 +238,21 @@ export class CancellationRepository {
         }),
       })
 
+      // 4b. Tự duyệt → báo Điều hành: đơn đã huỷ, còn phải hoàn tiền / liên hệ khách
+      if (auto) {
+        await tx.greeting_messages.create({
+          data: scopedData(ctx, {
+            id: randomUUID(), order_id: order.id, step_key: "GENERAL", sender_id: ctx.userId, sender_role: "ADMIN",
+            to_role: "ADMIN", kind: "CANCELLATION_AUTO_APPROVED", reply_to_id: req.id,
+            body: autoApprovedNotice(order.code, input.autoTimeoutMinutes ?? 0, refundVnd),
+            payload: decidedPayload as unknown as Prisma.InputJsonValue,
+          }),
+        })
+      }
+
       // 5. Ghi audit log
       await recordAuditLog(ctx, {
-        action: input.approve ? "order.cancellation.approve" : "order.cancellation.reject",
+        action: auto ? "order.cancellation.auto_approve" : input.approve ? "order.cancellation.approve" : "order.cancellation.reject",
         entityType: "order",
         entityId: order.id,
         before: { status: order.status, paidVnd: Number(order.paid_vnd) },
@@ -274,56 +291,6 @@ export class CancellationRepository {
       select: { id: true, order_id: true, sender_id: true, body: true, payload: true, created_at: true },
       orderBy: { created_at: "asc" },
       take: 200,
-    })
-  }
-
-  /**
-   * Quét các yêu cầu từ chối nhận đơn từ Điều phối đang chờ duyệt (PENDING)
-   * và đã quá thời gian timeout (created_at <= before).
-   */
-  async listExpiredCoordinatorRejections(before: Date, take = 50) {
-    return this.db.greeting_messages.findMany({
-      where: {
-        kind: "CANCELLATION_REQUEST",
-        sender_role: "COORDINATOR",
-        created_at: { lte: before },
-        payload: { path: ["status"], equals: "PENDING" },
-      },
-      select: {
-        id: true,
-        organization_id: true,
-        order_id: true,
-        sender_id: true,
-        body: true,
-        payload: true,
-        created_at: true,
-        organization: { select: { settings: true } },
-      },
-      orderBy: { created_at: "asc" },
-      take,
-    })
-  }
-
-  /**
-   * Tự động duyệt hủy đơn theo đề xuất của Điều phối khi quá hạn N phút (SLA timeout).
-   */
-  async autoApproveExpired(
-    organizationId: string,
-    requestId: string,
-    now = new Date(),
-    timeoutMinutes = 15
-  ) {
-    const sysCtx: TenantContext = {
-      organizationId,
-      workspaceId: "system",
-      userId: "system:cancellation-timeout",
-      branchId: null,
-      capabilities: new Set(["R6", "R10", "R11"]),
-    }
-    return this.decide(sysCtx, {
-      requestId,
-      approve: true,
-      note: `Hệ thống tự động phê duyệt hủy đơn do Điều hành không phản hồi trong thời gian quy định (${timeoutMinutes} phút).`,
     })
   }
 }

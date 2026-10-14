@@ -16,73 +16,12 @@ import type {
   DispatchReminderPolicyConfig,
   TemplateReminderOverrides,
 } from "@/modules/coordinator/domain/dispatch-reminder-types"
+import { OVERRIDE_META } from "./product-reminder-override-meta"
 
 interface ProductReminderOverrideCardProps {
   productId: string
   canEdit: boolean
 }
-
-const OVERRIDE_META: {
-  key: keyof TemplateReminderOverrides
-  code: string
-  label: string
-  unit: string
-  min: number
-  max: number
-  defaultKey: keyof DispatchReminderPolicyConfig
-  colorClass: string
-}[] = [
-  {
-    key: "m0MinutesAfterPaid",
-    code: "M0",
-    label: "In thẻ gia công",
-    unit: "phút sau thanh toán",
-    min: 1,
-    max: 360,
-    defaultKey: "m0MinutesAfterPaid",
-    colorClass: "text-primary",
-  },
-  {
-    key: "m1MinutesBeforeDelivery",
-    code: "M1",
-    label: "Xác nhận bắt đầu cắm hoa",
-    unit: "phút trước giao",
-    min: 10,
-    max: 720,
-    defaultKey: "m1MinutesBeforeDelivery",
-    colorClass: "text-warning",
-  },
-  {
-    key: "m2MinutesBeforeDelivery",
-    code: "M2",
-    label: "Hoàn thành & Book ship",
-    unit: "phút trước giao",
-    min: 10,
-    max: 360,
-    defaultKey: "m2MinutesBeforeDelivery",
-    colorClass: "text-info",
-  },
-  {
-    key: "m3MinutesAfterShipperAssigned",
-    code: "M3",
-    label: "Xác nhận shipper lấy hàng",
-    unit: "phút sau gán shipper",
-    min: 5,
-    max: 120,
-    defaultKey: "m3MinutesAfterShipperAssigned",
-    colorClass: "text-warning",
-  },
-  {
-    key: "m5MinutesAfterDelivery",
-    code: "M5",
-    label: "Chăm sóc sau giao",
-    unit: "phút sau giờ giao",
-    min: 5,
-    max: 360,
-    defaultKey: "m5MinutesAfterDelivery",
-    colorClass: "text-success",
-  },
-]
 
 export function ProductReminderOverrideCard({
   productId,
@@ -288,7 +227,7 @@ export function ProductReminderOverrideCard({
                     type="button"
                     role="switch"
                     aria-checked={isEnabled}
-                    aria-label={`Bật/tắt ghi đè mốc ${m.code}`}
+                    aria-label={`Bật/tắt ghi đè mốc ${m.label}`}
                     disabled={!canEdit}
                     onClick={() => toggleKey(m.key)}
                     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
@@ -304,9 +243,6 @@ export function ProductReminderOverrideCard({
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className={`text-caption font-extrabold ${isEnabled ? m.colorClass : "text-text-muted"}`}>
-                        {m.code}
-                      </span>
                       <span className="text-body-sm font-medium text-text truncate">
                         {m.label}
                       </span>
@@ -329,7 +265,7 @@ export function ProductReminderOverrideCard({
                       value={currentVal}
                       disabled={!canEdit || isSaving}
                       onChange={(e) => handleChangeValue(m.key, Number(e.target.value))}
-                      aria-label={`Giá trị ghi đè mốc ${m.code}`}
+                      aria-label={`Giá trị ghi đè mốc ${m.label}`}
                       className="w-18 h-8 text-center text-body-sm font-bold rounded-lg border border-primary/40 bg-background text-text focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
                     />
                     <span className="text-caption text-text-muted whitespace-nowrap">

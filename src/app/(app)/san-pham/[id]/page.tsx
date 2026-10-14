@@ -189,7 +189,7 @@ export default function ProductDetailPage() {
             {/* Nhóm 6: Cấu hình mốc nhắc việc Điều phối riêng cho mẫu hoa này */}
             <ProductReminderOverrideCard
               productId={productId}
-              canEdit={canEdit}
+              canEdit={can("R12")}
             />
 
             {/* Nhóm 6: Lối tắt tác vụ AI */}

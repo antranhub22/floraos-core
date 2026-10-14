@@ -2,7 +2,7 @@ import type { TenantContext } from "@/core/tenancy"
 import { log } from "@/core/observability/log"
 import { BackgroundSweepRepository } from "../infra/background-sweep-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
-import { CancellationRepository } from "../infra/cancellation-repository"
+import { CancellationFollowUpRepository } from "../infra/cancellation-follow-up-repository"
 import { parsePaymentPolicy, DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES } from "../domain/brochure-payment-policy"
 import { NOTIFY_EVENTS, type NotifyEvent } from "../domain/customer-notifications"
 import {
@@ -141,7 +141,7 @@ export async function runBackgroundSweep(
 
   // 6. Quét các yêu cầu từ chối nhận đơn của Điều phối quá hạn chờ Điều hành duyệt (mặc định 15 phút) -> Tự động hủy
   try {
-    const cancellationRepo = new CancellationRepository()
+    const cancellationRepo = new CancellationFollowUpRepository()
     // Lấy rộng: tất cả PENDING từ ≥ 5 phút trước (mức cấu hình thấp nhất cho phép).
     // Kiểm chính xác từng bản ghi theo policy cụ thể của từng tiệm ở bước dưới.
     const MIN_TIMEOUT_MINUTES = 5
@@ -153,7 +153,9 @@ export async function runBackgroundSweep(
         const timeoutMinutes = policy.cancellationApprovalTimeoutMinutes ?? DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES
         const threshold = new Date(req.created_at.getTime() + timeoutMinutes * 60_000)
         if (now >= threshold) {
-          await cancellationRepo.autoApproveExpired(req.organization_id, req.id, now, timeoutMinutes)
+          const decided = await cancellationRepo.autoApproveExpired(req.organization_id, req.id, timeoutMinutes)
+          // Báo khách như khi Điều hành tự bấm duyệt huỷ
+          if (decided.orderStatus === "CANCELLED") queueOrderNotification(req.organization_id, decided.orderId, "CANCELLED")
           result.cancelled += 1
           log.info("greeting_card.cancellation_auto_approved_timeout", {
             organizationId: req.organization_id,

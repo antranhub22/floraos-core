@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest"
 
-vi.mock("../../infra/cancellation-repository", () => ({
-  CancellationRepository: class {
+vi.mock("../../infra/cancellation-follow-up-repository", () => ({
+  CancellationFollowUpRepository: class {
     listExpiredCoordinatorRejections = vi.fn().mockResolvedValue([])
   },
 }))

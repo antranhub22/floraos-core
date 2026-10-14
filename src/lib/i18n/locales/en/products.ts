@@ -1,0 +1,82 @@
+/**
+ * products.ts — English dictionary section `products` (mirrors vi/products.ts)
+ */
+
+export const productsEn = {
+  header: {
+    category: "Flower Catalog",
+    title: "Bouquets",
+    refresh: "Refresh",
+    importExcel: "Import Excel",
+    scanPhoto: "Scan Photo",
+    createFlower: "Add Bouquet",
+  },
+  filters: {
+    searchPlaceholder: "Search by bouquet name or code…",
+    allCategories: "All Categories",
+    categories: {
+      bouquet: "Bouquet",
+      basket: "Flower Basket",
+      stand: "Opening Stand",
+      vase: "Vase",
+      box: "Flower Box",
+      condolence: "Condolence",
+    },
+    occasions: {
+      opening: "Grand Opening",
+      birthday: "Birthday",
+      love: "Love & Romance",
+      condolence: "Sympathy",
+      womenDay: "Women's Day",
+      teacherDay: "Teachers' Day",
+      graduation: "Graduation",
+    },
+    priceRanges: {
+      under500k: "Under 500,000 ₫",
+      from500kTo1m: "500,000–1,000,000 ₫",
+      from1mTo2m: "1,000,000–2,000,000 ₫",
+      above2m: "Over 2,000,000 ₫",
+    },
+  },
+  status: {
+    active: "Available",
+    draft: "Draft",
+    archived: "Archived",
+    moveToTrash: "Move to Trash",
+    loadMore: "Load More Bouquets",
+  },
+  createForm: {
+    title: "Create New Bouquet",
+    generalInfo: "General Bouquet Information",
+    nameLabel: "Bouquet Name",
+    namePlaceholder: "E.g., Radiant Red Rose Bouquet",
+    codeLabel: "Bouquet Code",
+    codePlaceholder: "Auto-generated or custom code",
+    categoryLabel: "Category",
+    priceLabel: "Listed Price (₫)",
+    costLabel: "Estimated Cost (₫)",
+    recipeTitle: "Detailed Stem Formula",
+    addFlowerButton: "Add Flower Stem",
+    flowerNameLabel: "Flower Variety",
+    quantityLabel: "Stem Count",
+    colorLabel: "Color / Tone",
+    wrappingTitle: "Packaging & Wrapping Paper",
+    dimensionTitle: "Estimated Size (Height x Width)",
+  },
+  importExcel: {
+    title: "Import Catalog from Excel",
+    instruction: "Upload sample Excel file (.xlsx) containing products and image links.",
+    downloadTemplate: "Download Template",
+    uploadArea: "Drag and drop Excel file here or click to browse",
+    previewTitle: "Preview Products",
+    confirmImport: "Confirm Import",
+  },
+  scanPhoto: {
+    title: "Scan Photo & AI Detection",
+    instruction: "Take a photo of a bouquet in shop; AI analyzes flowers, stem counts, and estimates price.",
+    uploadArea: "Upload Bouquet Photo (JPG, PNG)",
+    analyzing: "Analyzing floral composition with AI…",
+    resultTitle: "Detection Results",
+    createProductButton: "Create Bouquet from Result",
+  },
+} as const

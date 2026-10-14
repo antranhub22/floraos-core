@@ -332,7 +332,7 @@ export default function CaiDatTiemPage() {
       </div>
 
       {/* 4. Nhắc Nghiệp Vụ Điều Phối (M0..M5) */}
-      <DispatchReminderPolicyCard canEdit={canEdit} />
+      <DispatchReminderPolicyCard canEdit={can("R12")} />
     </div>
   )
 }

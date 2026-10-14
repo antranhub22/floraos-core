@@ -3,7 +3,7 @@ import type { InputJsonValue, product_status, products } from "./entities"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
-import { getCategoryVariants } from "@/lib/product-filter"
+import { categoryAndSearchWhere } from "./product-list-where"
 
 import type { DbClient } from "./db-client"
 import { attachMainImageIfMissing, linkMainImage, refreshDriveLinkIfNotDrive, refreshDriveLink, upsertMainImage } from "./product-main-image"
@@ -160,16 +160,7 @@ export class ProductRepository {
       ...(filters.branchId !== undefined ? { branch_id: filters.branchId } : {}),
       // Không lọc status → ẩn sản phẩm đã vào thùng rác (ARCHIVED); xem lại ở Kho dữ liệu → Thùng rác.
       status: filters.status ?? { not: "ARCHIVED" as product_status },
-      ...(filters.category !== undefined && filters.category.trim() !== ""
-        ? {
-            OR: [
-              { category: { equals: filters.category, mode: "insensitive" as const } },
-              { category: { in: getCategoryVariants(filters.category), mode: "insensitive" as const } },
-              { shape: { equals: filters.category, mode: "insensitive" as const } },
-              { shape: { in: getCategoryVariants(filters.category), mode: "insensitive" as const } },
-            ],
-          }
-        : {}),
+      ...categoryAndSearchWhere(filters),
       ...(filters.occasionCode !== undefined
         ? { attributes: { path: ["occasionCodes"], array_contains: filters.occasionCode } }
         : {}),
@@ -178,14 +169,6 @@ export class ProductRepository {
         : {}),
       ...(filters.collection !== undefined
         ? { attributes: { path: ["collection"], equals: filters.collection } }
-        : {}),
-      ...(filters.search
-        ? {
-            OR: [
-              { name: { contains: filters.search, mode: "insensitive" as const } },
-              { code: { contains: filters.search, mode: "insensitive" as const } },
-            ],
-          }
         : {}),
     })
 

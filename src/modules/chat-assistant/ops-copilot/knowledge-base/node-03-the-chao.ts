@@ -11,7 +11,8 @@ export const NODE_03_THE_CHAO: OpsKnowledgeNode = {
     "thẻ chào", "tạo thẻ", "bộ sưu tập", "tạo bộ sưu tập", "thẻ bộ sưu tập", "bộ sưu tập mẫu",
     "thẻ", "thẻ mẫu", "thẻ chào mẫu", "thẻ chào mẫu hoa", "brochure", "link chào", "link đặt hoa",
     "link bộ sưu tập", "gửi zalo", "vietqr", "cọc tiền", "đặt cọc", "phễu cọc", "gửi nhanh",
-    "quản lý", "hộp việc", "gán thợ", "tạo link"
+    "quản lý", "hộp việc", "gán thợ", "tạo link", "ảnh bill", "ảnh chuyển khoản",
+    "tự duyệt", "tự huỷ", "hoàn tiền"
   ],
   intents: ["tao_link_the_chao", "gui_mau_hoa_zalo", "quan_ly_coc_vietqr", "chuyen_che_do_quan_ly_the_chao"],
   summary: "Kênh bán hàng di động giúp nhân viên tạo link xem hoa kèm mã VietQR gửi Zalo cho khách trong 30 giây. Khách tự chọn mẫu, ghi lời chúc thiệp và quét mã cọc tiền tự động.",
@@ -46,11 +47,15 @@ export const NODE_03_THE_CHAO: OpsKnowledgeNode = {
     "Tiệm cần cài đặt số tài khoản ngân hàng ở mục 'Hồ sơ' thì mã VietQR mới nhận được tiền cọc từ khách.",
     "Hộp việc tự động cập nhật mỗi 20 giây để báo ngay cho nhân viên khi khách chuyển khoản thành công.",
     "Lời chúc thiệp hoặc chữ in băng rôn do khách tự gõ sẽ chuyển thẳng vào phiếu xưởng, tránh thợ cắm ghi sai chính tả.",
+    "Khách phải tải ảnh chuyển khoản trước khi bấm 'Tôi đã chuyển khoản' (trừ khi tiệm tắt yêu cầu ảnh bill). Mặc định tiệm tự đối chiếu và bấm xác nhận — hệ thống không tự ghi nhận tiền.",
+    "Chỉ khi tiệm bật 'Tự động duyệt thanh toán khi có ảnh chụp bill' ở Hồ sơ cửa hàng, hệ thống mới tự xác nhận sau số phút đã chọn, và chỉ với bill đúng tài khoản tiệm, đúng số tiền. Bill lệch hoặc không đọc được luôn chờ người duyệt.",
+    "Điều phối từ chối nhận đơn mà Điều hành chưa duyệt kịp hạn thì đơn tự huỷ và báo khách, nhưng tiền không tự chuyển: Hộp việc của Điều hành hiện 'Đơn tự huỷ — cần hoàn …đ cho khách'. Chuyển khoản hoàn xong thì bấm 'Đã hoàn tiền cho khách' để ghi sổ.",
   ],
   actionLabel: "Mở Bảng Thẻ Chào Mẫu Hoa",
   quickPrompts: [
     "Cách tạo link Thẻ chào gửi Zalo cho khách chọn hoa?",
     "Khách quét mã VietQR đặt cọc tự động như thế nào?",
     "Xem thông báo đơn cọc mới ở đâu?",
+    "Đơn tự huỷ cần hoàn tiền thì xử lý thế nào?",
   ],
 }

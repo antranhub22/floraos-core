@@ -21,9 +21,9 @@ const VAI_TO_KEY: Record<string, "dieu_hanh" | "dieu_phoi" | "sale"> = {
 const HARVESTED_CODES = MOI_MA.filter((ma) => /^[A-E]\d+$/.test(ma))
 
 describe("danh mục năng lực — đặc tả 02", () => {
-  it("152 mã: 76 thu hoạch (A–E) cộng 76 mã mới (F–L, U1–U4, H5–H6, R1–R11, Q1–Q9, T1–T4, I4–I5, P3–P4, V1–V3) — ĐP-4a thêm R9/R10 (sổ thu), PO 08/10 thêm R11", () => {
+  it("153 mã: 76 thu hoạch (A–E) cộng 77 mã mới (F–L, U1–U4, H5–H6, R1–R12, Q1–Q9, T1–T4, I4–I5, P3–P4, V1–V3) — ĐP-4a thêm R9/R10 (sổ thu), PO 08/10 thêm R11, PO 14/10 thêm R12 (cấu hình nhắc việc Điều phối)", () => {
     expect(HARVESTED_CODES.length).toBe(76)
-    expect(ALL_CAPABILITY_CODES.length).toBe(152)
+    expect(ALL_CAPABILITY_CODES.length).toBe(153)
   })
 
   it("18 mã thu hoạch có trần cứng, tổng cả catalog là 44 — ĐP-4a thêm R10 (hoàn tiền), PO 08/10 thêm R11", () => {

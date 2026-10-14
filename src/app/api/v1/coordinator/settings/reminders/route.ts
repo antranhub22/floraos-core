@@ -33,12 +33,12 @@ export const GET = handle(async (request) => {
 })
 
 /**
- * `PUT /api/v1/coordinator/settings/reminders` (D1)
+ * `PUT /api/v1/coordinator/settings/reminders` (R12)
  * Cập nhật cấu hình chính sách nhắc việc điều phối cấp tổ chức.
  */
 export const PUT = handle(async (request) => {
   const { ctx } = await requireTenantContext(request)
-  requireCapability(ctx, "D1")
+  requireCapability(ctx, "R12")
 
   const raw = await request.json().catch(() => null)
   const parsed = updatePolicySchema.safeParse(raw)

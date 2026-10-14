@@ -180,7 +180,7 @@ describe("adminConfirmBrochurePayment — bảo vệ đơn đặt cọc không b
 })
 
 describe("reportCustomerPayment — chỉ nhận ảnh bill khách tải qua chính link này", () => {
-  function sessionRepo(metadata: Record<string, unknown> | null) {
+  function sessionRepo(metadata: Record<string, unknown> | null, filters: Record<string, unknown> = { requirePaymentProof: false }) {
     return {
       getPublicSessionBySendCode: vi.fn().mockResolvedValue({
         id: "session-1",
@@ -189,7 +189,7 @@ describe("reportCustomerPayment — chỉ nhận ảnh bill khách tải qua ch�
         status: "ORDER_SUBMITTED",
         order_id: "order-1",
         order: { total_vnd: 1_000_000, paid_vnd: 0 },
-        catalog: { is_active: true },
+        catalog: { is_active: true, filters },
       }),
       updateSession: vi.fn().mockResolvedValue({}),
       recordJourneyEvent: vi.fn().mockResolvedValue({}),
@@ -208,5 +208,12 @@ describe("reportCustomerPayment — chỉ nhận ảnh bill khách tải qua ch�
     const repo = sessionRepo({ source: "BROCHURE_PAYMENT_PROOF", sendCode: "T01-999" })
     await reportCustomerPayment("T01-001", { proofAssetId: "other-link-asset" }, repo)
     expect(repo.updateSession).toHaveBeenCalledWith("session-1", { status: "PAYMENT_REPORTED" })
+  })
+
+  it("tiệm bắt buộc ảnh bill mà khách báo không kèm ảnh hợp lệ → máy chủ chặn, không đổi trạng thái", async () => {
+    const repo = sessionRepo({ source: "BROCHURE_PAYMENT_PROOF", sendCode: "T01-999" }, {})
+    await expect(reportCustomerPayment("T01-001", { proofAssetId: "other-link-asset" }, repo)).rejects.toThrow(/tải ảnh chuyển khoản/)
+    await expect(reportCustomerPayment("T01-001", {}, repo)).rejects.toThrow(/tải ảnh chuyển khoản/)
+    expect(repo.updateSession).not.toHaveBeenCalled()
   })
 })

@@ -3,7 +3,7 @@ import { notFound, unprocessable, conflict } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
-import { expectedPayment, parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { expectedPayment, parsePaymentPolicy, resolveRequirePaymentProof } from "../domain/brochure-payment-policy"
 import { policyForOrder, readPaymentPlan } from "../domain/payment-plan"
 import { depositAmountVnd } from "../domain/payment-schedule"
 import { loadPublicSession } from "./brochure-session-access"
@@ -29,6 +29,14 @@ export async function reportCustomerPayment(
   const paid = Number(session.order?.paid_vnd ?? 0)
   const owing = Number(session.order?.total_vnd ?? 0) - paid
   const proofAssetId = await ownedProofAssetId(session.organization_id, sendCode, input.proofAssetId, repo)
+  // Tiệm/catalog bắt buộc ảnh bill → máy chủ cũng chặn (không chỉ giao diện): cần ảnh hợp lệ gửi kèm
+  // hoặc ảnh đã tải trước đó cho đúng lần thanh toán này
+  const willRecord = session.status === "ORDER_SUBMITTED" || (paid > 0 && owing > 0)
+  const storedProof = paid > 0 ? session.payment_proof_balance_asset_id : session.payment_proof_asset_id
+  const proofRequired = resolveRequirePaymentProof(parsePaymentPolicy(session.organization?.settings), session.catalog?.filters)
+  if (willRecord && proofRequired && !proofAssetId && !storedProof) {
+    throw unprocessable("Vui lòng tải ảnh chuyển khoản trước khi báo đã chuyển")
+  }
 
   if (session.status === "ORDER_SUBMITTED") {
     await repo.updateSession(session.id, {

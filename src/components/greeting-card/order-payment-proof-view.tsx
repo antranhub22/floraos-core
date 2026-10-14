@@ -92,13 +92,13 @@ function ProofVerificationCard({
           )}
 
           {analysis?.status === "UNREADABLE" && (
-            // Đã phân tích xong — kết quả: ảnh này không phải biên lai ngân hàng
+            // Không đối chiếu tự động được (AI không đọc được ảnh, hoặc không chạy vì ảnh chứa dữ liệu cá nhân)
             <div className="flex items-start gap-1.5 p-2 rounded-lg bg-warning-bg border border-warning/30">
               <AlertTriangle size={12} className="text-warning shrink-0 mt-0.5" />
               <div className="flex flex-col gap-0.5">
-                <span className="text-caption font-bold text-warning">Không nhận diện được biên lai</span>
+                <span className="text-caption font-bold text-warning">Chưa đối chiếu tự động</span>
                 <span className="text-caption text-text-muted leading-relaxed">
-                  Ảnh tải lên không chứa thông tin chuyển khoản ngân hàng. Vui lòng kiểm tra thủ công.
+                  Hệ thống chưa đọc được số liệu trên ảnh này. Vui lòng xem ảnh và đối chiếu với sao kê ngân hàng trước khi xác nhận.
                 </span>
               </div>
             </div>

@@ -41,12 +41,12 @@ export const GET = handle(async (request, context: unknown) => {
 })
 
 /**
- * `PUT /api/v1/coordinator/templates/[id]/reminders` (R3)
+ * `PUT /api/v1/coordinator/templates/[id]/reminders` (R12)
  * Cập nhật cấu hình override nhắc việc cho một Thẻ chào mẫu hoa.
  */
 export const PUT = handle(async (request, context: unknown) => {
   const { ctx } = await requireTenantContext(request)
-  requireCapability(ctx, "R3")
+  requireCapability(ctx, "R12")
 
   const { id: productId } = await (context as RouteContext).params
   const raw = await request.json().catch(() => null)

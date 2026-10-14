@@ -228,6 +228,7 @@ const CORE_NEW: Record<string, Omit<CapabilityDefinition, "code">> = {
   // PO 08/10/2026 (thay quyết định 06/10 "giữ R9 cho Sale/Điều phối" ở Thẻ chào): chỉ Điều hành —
   // người giữ tài khoản ngân hàng — xác nhận tiền chuyển khoản và báo giá đơn Thẻ chào. Trần cứng.
   R11: { name: "order.transfer.confirm", group: "order_operations", label: "Xác nhận tiền chuyển khoản và báo giá đơn Thẻ chào", defaultRoles: ["dieu_hanh"], hardCap: ["dieu_hanh"] },
+  R12: { name: "order.coordinator_reminder.configure", group: "order_operations", label: "Sửa thời điểm nhắc việc Điều phối (chung và theo mẫu hoa)", defaultRoles: ["dieu_hanh", "dieu_phoi"] },
   // Q — CRM & Khách hàng ngành hoa (M09, P21)
   Q1: { name: "crm.customer.read", group: "crm", label: "Xem thông tin khách hàng và hồ sơ RFM", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm", "customer_service"] },
   Q2: { name: "crm.customer.create", group: "crm", label: "Thêm khách hàng mới", defaultRoles: ["dieu_hanh", "dieu_phoi", "sale", "crm", "customer_service"] },

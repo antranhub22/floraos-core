@@ -79,7 +79,9 @@ export async function processPaymentProofVisionJob(
       const aiResult = await callCapability(
         {
           capability: "content_generation",
-          privacy: "SHOP",
+          // Bill chứa số tài khoản, tên và giao dịch của khách → dữ liệu cá nhân: chỉ mô hình không đưa
+          // dữ liệu rời hạ tầng. Không có mô hình như vậy → UNREADABLE → Điều hành đối soát tay.
+          privacy: "SENSITIVE",
           entity: { type: "payment_proof_analysis", id: assetId },
         },
         createPaymentProofVisionAdapter(

@@ -33,6 +33,7 @@ export interface InboxAction {
     | "CHECK_ARRANGING_PROGRESS"
     | "QC_INSPECTION"
     | "ASSIGN_SHIPPER"
+    | "CANCELLATION_FOLLOW_UP"
   title: string
   detail: string
   orderId: string | null
@@ -52,6 +53,8 @@ export interface InboxAction {
     percent: number | null
     maxPercent: number
   } | undefined
+  /** Chỉ với CANCELLATION_FOLLOW_UP: đơn hệ thống tự huỷ, Điều hành xác nhận đã hoàn tiền / liên hệ khách. */
+  followUp?: { requestId: string; refundDueVnd: number; reason: string } | undefined
   /** Chỉ với CHANGE_REQUEST: khách xin đổi gì — duyệt/từ chối ngay trong Hộp việc. */
   change?: {
     requestId: string
