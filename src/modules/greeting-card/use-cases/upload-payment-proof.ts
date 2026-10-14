@@ -97,6 +97,18 @@ export async function uploadPaymentProof(
     await repo.updateSession(session.id, { paymentProofAssetId: assetId })
   }
 
+  // Chạy ngầm AI Vision bóc tách và đối soát bill (fire-and-forget, không chờ kết quả để không làm nghẽn khách)
+  import("./process-payment-proof-job")
+    .then(({ processPaymentProofVisionJob }) => {
+      void processPaymentProofVisionJob({
+        assetId,
+        organizationId: session.organization_id,
+        sendCode: input.sendCode,
+        purpose: input.purpose,
+      })
+    })
+    .catch(() => undefined)
+
   const url = await storage.signedUrl(storageKey, 3600)
 
   return {

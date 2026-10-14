@@ -45,8 +45,10 @@ export interface OrderDetailModalTarget {
   channel?: string | null | undefined
   /** Ảnh chuyển khoản lần 1 (cọc/trả đủ) do khách tải lên */
   paymentProofUrl?: string | null | undefined
+  paymentProofAnalysis?: import("@/modules/greeting-card/domain/payment-proof-analysis").PaymentProofAnalysisResult | null | undefined
   /** Ảnh chuyển khoản lần 2 (phần còn lại) do khách tải lên */
   paymentProofBalanceUrl?: string | null | undefined
+  paymentProofBalanceAnalysis?: import("@/modules/greeting-card/domain/payment-proof-analysis").PaymentProofAnalysisResult | null | undefined
   /** Khách đã bấm báo chuyển khoản / có ảnh bill lần 2 */
   customerReportedPaid?: boolean | undefined
   createdAt?: string | null | undefined

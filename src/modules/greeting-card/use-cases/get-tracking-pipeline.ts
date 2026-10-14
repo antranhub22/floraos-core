@@ -141,7 +141,7 @@ export async function loadTrackingDataset(
     ]),
   ].filter((id): id is string => typeof id === "string" && id.length > 0)
 
-  const proofUrls = await new GreetingCardRepository().getAssetsStorageMap(ctx.organizationId, proofAssetIds)
+  const proofUrls = await new GreetingCardRepository().getPaymentProofAssetsMap(ctx.organizationId, proofAssetIds)
 
   // 1. Process Orders
   const orderItems: TrackingPipelineItem[] = orders.map((order) => {
@@ -231,8 +231,10 @@ export async function loadTrackingDataset(
       orderStatus: order.status,
       sessionStatus: session?.status || null,
       customerReportedPaid: session?.status === "PAYMENT_REPORTED" || Boolean(session?.payment_proof_balance_asset_id),
-      paymentProofUrl: session?.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id) ?? null : null,
-      paymentProofBalanceUrl: session?.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id) ?? null : null,
+      paymentProofUrl: session?.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id)?.url ?? null : null,
+      paymentProofAnalysis: session?.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id)?.analysis ?? null : null,
+      paymentProofBalanceUrl: session?.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.url ?? null : null,
+      paymentProofBalanceAnalysis: session?.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.analysis ?? null : null,
       productionStatus: order.production_status,
       deliveryStatus: order.delivery_status,
       isCancelled: order.status === "CANCELLED",
@@ -321,8 +323,10 @@ export async function loadTrackingDataset(
       isCancelled: isSessionCancelled,
       sessionStatus: session.status,
       customerReportedPaid: session.status === "PAYMENT_REPORTED",
-      paymentProofUrl: session.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id) ?? null : null,
-      paymentProofBalanceUrl: session.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id) ?? null : null,
+      paymentProofUrl: session.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id)?.url ?? null : null,
+      paymentProofAnalysis: session.payment_proof_asset_id ? proofUrls.get(session.payment_proof_asset_id)?.analysis ?? null : null,
+      paymentProofBalanceUrl: session.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.url ?? null : null,
+      paymentProofBalanceAnalysis: session.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.analysis ?? null : null,
       cancelReason: sessionCancelReason,
       stepStartedAt: startedAt,
       stuck: notSent ? null : stuckOf({ currentStepId, stepStartedAt: startedAt }, sla, now),

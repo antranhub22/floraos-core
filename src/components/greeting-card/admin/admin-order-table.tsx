@@ -11,6 +11,7 @@ import { AdminPaymentPlanCell } from "./admin-payment-plan-cell"
 import { readPaymentPlan } from "@/modules/greeting-card/domain/payment-plan"
 import { depositAmountVnd } from "@/modules/greeting-card/domain/payment-schedule"
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { PaymentProofBadge } from "./payment-proof-badge"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Chờ thanh toán", className: "bg-warning-bg text-warning" },
@@ -135,8 +136,19 @@ export function AdminOrderTable({
                     <div className="mt-1 text-caption font-bold text-info">Khách báo đã chuyển</div>
                   )}
                   {(o.paymentProofUrl || o.paymentProofBalanceUrl) && (
-                    <div className="mt-1 flex items-center gap-1 text-caption text-text-muted">
-                      📸 <span>Có ảnh CK</span>
+                    <div className="mt-1.5 flex flex-col gap-1 items-start">
+                      {o.paymentProofUrl && (
+                        <PaymentProofBadge
+                          hasProofUrl={true}
+                          analysis={o.paymentProofAnalysis}
+                        />
+                      )}
+                      {o.paymentProofBalanceUrl && (
+                        <PaymentProofBadge
+                          hasProofUrl={true}
+                          analysis={o.paymentProofBalanceAnalysis}
+                        />
+                      )}
                     </div>
                   )}
                   {coordinatorPayment && (

@@ -151,7 +151,9 @@ export function OrderDetailInfoTab({ target }: OrderDetailInfoTabProps) {
         {/* Ảnh chuyển khoản do khách tải lên */}
         <OrderPaymentProofView
           paymentProofUrl={target.paymentProofUrl}
+          paymentProofAnalysis={target.paymentProofAnalysis}
           paymentProofBalanceUrl={target.paymentProofBalanceUrl}
+          paymentProofBalanceAnalysis={target.paymentProofBalanceAnalysis}
         />
       </div>
     </div>

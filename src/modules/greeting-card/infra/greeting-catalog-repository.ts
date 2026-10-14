@@ -271,6 +271,27 @@ export class GreetingCatalogRepository {
     return map
   }
 
+  async getPaymentProofAssetsMap(
+    organizationId: string,
+    assetIds: string[]
+  ): Promise<Map<string, { url: string; analysis?: import("../domain/payment-proof-analysis").PaymentProofAnalysisResult | null }>> {
+    const map = new Map<string, { url: string; analysis?: import("../domain/payment-proof-analysis").PaymentProofAnalysisResult | null }>()
+    if (assetIds.length === 0) return map
+    const assets = await this.db.assets.findMany({
+      where: { id: { in: [...new Set(assetIds)] }, organization_id: organizationId },
+      select: { id: true, storage_key: true, metadata: true },
+    })
+    const exp = Date.now() + SIGNED_URL_TTL_MS
+    for (const a of assets) {
+      const meta = (a.metadata as Record<string, unknown> | null) ?? {}
+      map.set(a.id, {
+        url: signedStorageUrl(a.storage_key, exp),
+        analysis: (meta.ai_analysis as import("../domain/payment-proof-analysis").PaymentProofAnalysisResult | undefined) ?? null,
+      })
+    }
+    return map
+  }
+
   async getAssetStorageUrl(organizationId: string, assetId: string): Promise<string | null> {
     const map = await this.getAssetsStorageMap(organizationId, [assetId])
     return map.get(assetId) ?? null

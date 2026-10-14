@@ -180,7 +180,9 @@ export function AdminOrderActionDialog({
         {type === "collect" && (order.paymentProofUrl || order.paymentProofBalanceUrl) && (
           <OrderPaymentProofView
             paymentProofUrl={order.paymentProofUrl}
+            paymentProofAnalysis={order.paymentProofAnalysis}
             paymentProofBalanceUrl={order.paymentProofBalanceUrl}
+            paymentProofBalanceAnalysis={order.paymentProofBalanceAnalysis}
           />
         )}
 

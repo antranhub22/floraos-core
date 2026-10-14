@@ -335,4 +335,36 @@ export class GreetingCardRepository extends GreetingCatalogRepository {
       },
     })
   }
+
+  async updateAssetMetadata(assetId: string, metadata: Record<string, unknown>) {
+    return this.db.assets.update({
+      where: { id: assetId },
+      data: {
+        metadata: metadata as unknown as Prisma.InputJsonValue,
+      },
+    })
+  }
+
+  async findSessionForVerification(organizationId: string, sendCode: string) {
+    return this.db.greeting_sessions.findUnique({
+      where: { organization_id_send_code: { organization_id: organizationId, send_code: sendCode } },
+      include: {
+        order: {
+          include: {
+            items: true,
+          },
+        },
+        organization: {
+          select: { settings: true },
+        },
+      },
+    })
+  }
+
+  async findAssetForVerification(assetId: string) {
+    return this.db.assets.findUnique({
+      where: { id: assetId },
+      select: { storage_key: true, mime_type: true, metadata: true },
+    })
+  }
 }

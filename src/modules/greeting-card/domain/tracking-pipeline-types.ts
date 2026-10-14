@@ -140,8 +140,10 @@ export interface TrackingPipelineItem {
   customerReportedPaid?: boolean | undefined
   /** Ảnh chuyển khoản lần 1 do khách tải lên */
   paymentProofUrl?: string | null | undefined
+  paymentProofAnalysis?: import("./payment-proof-analysis").PaymentProofAnalysisResult | null | undefined
   /** Ảnh chuyển khoản lần 2 do khách tải lên */
   paymentProofBalanceUrl?: string | null | undefined
+  paymentProofBalanceAnalysis?: import("./payment-proof-analysis").PaymentProofAnalysisResult | null | undefined
   /** Trạng thái sản xuất (WAITING | ASSIGNED | ARRANGING | QUALITY_CHECK | READY) */
   productionStatus?: string | null | undefined
   /** Trạng thái giao hàng (PENDING | DISPATCHED | DELIVERING | DELIVERED | FAILED) */

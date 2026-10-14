@@ -27,7 +27,7 @@ export const GET = handle(async (request) => {
   const saleId = (await resolveSaleScope(ctx)) ?? undefined
   const rows = await repo.listBrochureOrders(ctx, { status, payment, saleId, q, reported, limit, cursor })
 
-  // Batch-resolve ảnh chuyển khoản (tránh N+1) — chỉ ký asset của đúng tổ chức
+  // Batch-resolve ảnh chuyển khoản và kết quả phân tích AI (tránh N+1) — chỉ ký asset của đúng tổ chức
   const proofAssetIds = rows
     .flatMap((o) => [
       o.greeting_sessions[0]?.payment_proof_asset_id,
@@ -35,19 +35,26 @@ export const GET = handle(async (request) => {
     ])
     .filter((id): id is string => typeof id === "string" && id.length > 0)
 
-  const proofUrls = proofAssetIds.length > 0
-    ? await new GreetingCardRepository().getAssetsStorageMap(ctx.organizationId, proofAssetIds)
-    : new Map<string, string>()
+  const proofAssetsMap = proofAssetIds.length > 0
+    ? await new GreetingCardRepository().getPaymentProofAssetsMap(ctx.organizationId, proofAssetIds)
+    : new Map<string, { url: string; analysis?: unknown }>()
 
-  const rowsWithProof = rows.map((o) => ({
-    ...o,
-    paymentProofUrl: o.greeting_sessions[0]?.payment_proof_asset_id
-      ? (proofUrls.get(o.greeting_sessions[0].payment_proof_asset_id) ?? null)
-      : null,
-    paymentProofBalanceUrl: o.greeting_sessions[0]?.payment_proof_balance_asset_id
-      ? (proofUrls.get(o.greeting_sessions[0].payment_proof_balance_asset_id) ?? null)
-      : null,
-  }))
+  const rowsWithProof = rows.map((o) => {
+    const proof1 = o.greeting_sessions[0]?.payment_proof_asset_id
+      ? proofAssetsMap.get(o.greeting_sessions[0].payment_proof_asset_id)
+      : null
+    const proof2 = o.greeting_sessions[0]?.payment_proof_balance_asset_id
+      ? proofAssetsMap.get(o.greeting_sessions[0].payment_proof_balance_asset_id)
+      : null
+
+    return {
+      ...o,
+      paymentProofUrl: proof1?.url ?? null,
+      paymentProofAnalysis: proof1?.analysis ?? null,
+      paymentProofBalanceUrl: proof2?.url ?? null,
+      paymentProofBalanceAnalysis: proof2?.analysis ?? null,
+    }
+  })
 
   return jsonResponse(toPage(rowsWithProof, limit))
 })
