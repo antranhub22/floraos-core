@@ -5,8 +5,8 @@
 
 export const DISMISSAL_TIMEOUT_MS = 5 * 60 * 1000 // 5 phút
 
-/** Quyền duyệt/bỏ trực tiếp/khôi phục: R4 (Điều hành, Điều phối). Sale chỉ có R1 → chỉ đề xuất. */
-export const DISMISSAL_DECIDE_CAPABILITY = "R4"
+/** Quyền duyệt/bỏ trực tiếp/khôi phục: R6 — chỉ Điều hành (PO 14/10/2026). Sale, Điều phối chỉ đề xuất. */
+export const DISMISSAL_DECIDE_CAPABILITY = "R6"
 
 export function canDecideDismissal(capabilities: ReadonlySet<string> | readonly string[]): boolean {
   return Array.isArray(capabilities) ? capabilities.includes(DISMISSAL_DECIDE_CAPABILITY) : (capabilities as ReadonlySet<string>).has(DISMISSAL_DECIDE_CAPABILITY)

@@ -29,16 +29,17 @@ describe("bỏ hiển thị đơn — các chốt chặn", () => {
     expect(orderDismissible(order({ status: "CANCELLED" })).allowed).toBe(false)
   })
 
-  it("quyền duyệt là mã R4, kiểm được cả mảng mã từ /auth/me", () => {
-    expect(canDecideDismissal(["R1", "R4"])).toBe(true)
+  it("chỉ Điều hành (R6) duyệt; Điều phối (R4) chỉ đề xuất; kiểm được mảng mã từ /auth/me", () => {
+    expect(canDecideDismissal(["R1", "R6"])).toBe(true)
+    expect(canDecideDismissal(["R1", "R4"])).toBe(false)
     expect(canDecideDismissal(["R1", "greeting_card.manage"])).toBe(false)
-    expect(canDecideDismissal(new Set(["R4"]))).toBe(true)
+    expect(canDecideDismissal(new Set(["R6"]))).toBe(true)
   })
 
-  it("Sale chỉ có R1 → không duyệt, không khôi phục được (không chạm DB)", async () => {
+  it("Sale/Điều phối không có R6 → không duyệt, không khôi phục được (không chạm DB)", async () => {
     const repo = { decide: vi.fn(), restore: vi.fn() }
-    await expect(decideDismissal(ctx(["R1"]), { id: "o-1", type: "ORDER", approve: true }, repo as never)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" })
-    await expect(restoreDismissal(ctx(["R1"]), { id: "o-1", type: "ORDER" }, repo as never)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" })
+    await expect(decideDismissal(ctx(["R1", "R4"]), { id: "o-1", type: "ORDER", approve: true }, repo as never)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" })
+    await expect(restoreDismissal(ctx(["R1", "R4"]), { id: "o-1", type: "ORDER" }, repo as never)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" })
     expect(repo.decide).not.toHaveBeenCalled()
     expect(repo.restore).not.toHaveBeenCalled()
   })

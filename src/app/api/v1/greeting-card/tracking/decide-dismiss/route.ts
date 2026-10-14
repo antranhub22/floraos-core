@@ -15,7 +15,7 @@ const decideSchema = z.object({
 
 /**
  * POST /api/v1/greeting-card/tracking/decide-dismiss
- * Điều hành/Điều phối (R4) phê duyệt hoặc từ chối đề xuất bỏ hiển thị.
+ * Điều hành (R6) phê duyệt hoặc từ chối đề xuất bỏ hiển thị.
  */
 export const POST = handle(async (req: Request) => {
   const { ctx } = await requireTenantContext(req)

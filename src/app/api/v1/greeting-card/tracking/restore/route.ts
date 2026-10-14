@@ -14,7 +14,7 @@ const restoreSchema = z.object({
 
 /**
  * POST /api/v1/greeting-card/tracking/restore
- * Điều hành/Điều phối (R4) khôi phục đơn/link đã BỎ HIỂN THỊ (không phải đơn huỷ theo quy trình huỷ/hoàn).
+ * Điều hành (R6) khôi phục đơn/link đã BỎ HIỂN THỊ (không phải đơn huỷ theo quy trình huỷ/hoàn).
  */
 export const POST = handle(async (req: Request) => {
   const { ctx } = await requireTenantContext(req)
