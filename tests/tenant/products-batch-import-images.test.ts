@@ -101,4 +101,57 @@ describe("batch-import — bù ảnh cho mã đã có", () => {
     expect(await link("WEB-1")).toBe(drive)
     expect(await link("DRV-1")).toBe("https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWx")
   })
+
+  it("nhập lại với overwrite_existing: cập nhật toàn diện thông tin, giá, BOM và ảnh", async () => {
+    const asset1 = await seedAsset(a.ctx)
+    const asset2 = await seedAsset(a.ctx)
+
+    // Tạo ban đầu
+    await batchImportRoute(withSession(URL_BATCH, a.token, {
+      method: "POST",
+      body: JSON.stringify({
+        items: [{
+          code: "SP-OVERWRITE",
+          name: "Hoa Cũ",
+          category: "Cũ",
+          attributes: { price: 500000, color: "Đỏ", drive_link: "https://drive.google.com/file/d/old/view" },
+          image_asset_id: asset1,
+        }],
+        skip_duplicates: true,
+      }),
+    }))
+
+    // Nhập lại với thông tin và ảnh mới + overwrite_existing = true
+    const res = await batchImportRoute(withSession(URL_BATCH, a.token, {
+      method: "POST",
+      body: JSON.stringify({
+        items: [{
+          code: "SP-OVERWRITE",
+          name: "Hoa Mới Cập Nhật",
+          category: "Mới",
+          attributes: { price: 850000, color: "Vàng", drive_link: "https://drive.google.com/file/d/new/view" },
+          image_asset_id: asset2,
+        }],
+        skip_duplicates: true,
+        overwrite_existing: true,
+      }),
+    }))
+
+    const body = await readJson(res)
+    expect(body.updated_count).toBe(1)
+
+    const updatedProduct = await prisma.products.findFirstOrThrow({
+      where: { organization_id: a.organizationId, code: "SP-OVERWRITE" },
+    })
+    expect(updatedProduct.name).toBe("Hoa Mới Cập Nhật")
+    expect(updatedProduct.category).toBe("Mới")
+    const attrs = updatedProduct.attributes as Record<string, unknown>
+    expect(attrs.price).toBe(850000)
+    expect(attrs.color).toBe("Vàng")
+    expect(attrs.drive_link).toBe("https://drive.google.com/file/d/new/view")
+
+    // Ảnh chính đã được cập nhật sang asset2
+    const images = await mainImages(a, "SP-OVERWRITE")
+    expect(images.map((i) => i.asset_id)).toEqual([asset2])
+  })
 })

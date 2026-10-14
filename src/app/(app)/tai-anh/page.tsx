@@ -15,6 +15,7 @@ import { buildHandoffSearchParams } from "@/modules/creative-production/domain/b
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Dialog } from "@/components/ui/dialog"
 import { useSession } from "@/lib/session"
 import { ApprovedAnalysesSelector } from "./ApprovedAnalysesSelector"
 import { AccountStorageHub, type RawAssetItem, type ApprovedAnalysisItem } from "@/components/storage/account-storage-hub"
@@ -302,6 +303,8 @@ export default function TaiAnhPage() {
   const [saved1, setSaved1] = useState(false)
   const [saved2, setSaved2] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [showApproveConfirmModal, setShowApproveConfirmModal] = useState(false)
+  const [approvingAnalysis, setApprovingAnalysis] = useState(false)
   const [loadingAssets, setLoadingAssets] = useState(false)
   const [approvedAnalysesList, setApprovedAnalysesList] = useState<ApprovedAnalysisItem[]>([])
   const [loadingApprovedList, setLoadingApprovedList] = useState(false)
@@ -1078,14 +1081,25 @@ export default function TaiAnhPage() {
     }
   }
 
-  async function handleApprove1() {
+  function handleApprove1() {
     if (!analysisId || !canApprove) {
       setErrorMsg("Không có năng lực H3 (duyệt phân tích)")
       return
     }
+    setShowApproveConfirmModal(true)
+  }
+
+  async function doApproveAnalysis(createProduct: boolean) {
+    if (!analysisId || !canApprove) {
+      setErrorMsg("Không có năng lực H3 (duyệt phân tích)")
+      return
+    }
+    setApprovingAnalysis(true)
+    setErrorMsg(null)
     try {
       const res = await apiFetch(`/api/v1/vision/analyses/${analysisId}/approve`, {
         method: "POST",
+        body: JSON.stringify({ create_product: createProduct }),
       })
       if (!res.ok) {
         let message = "Không duyệt được"
@@ -1094,6 +1108,7 @@ export default function TaiAnhPage() {
           message = body.error?.message ?? message
         } catch { /* ignore */ }
         setErrorMsg(message)
+        setShowApproveConfirmModal(false)
         return
       }
       const data = (await res.json()) as { approval_state: string }
@@ -1101,10 +1116,14 @@ export default function TaiAnhPage() {
       setApprovalState(data.approval_state as "PENDING" | "APPROVED" | "REJECTED")
       setSaved1(true)
       setSaved1(false)
+      setShowApproveConfirmModal(false)
       await loadAnalysis(analysisId)
       setTimeout(() => goSuggest(), 800)
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Lỗi duyệt")
+      setShowApproveConfirmModal(false)
+    } finally {
+      setApprovingAnalysis(false)
     }
   }
 
@@ -1537,6 +1556,57 @@ export default function TaiAnhPage() {
                 </div>
               </div>
             )}
+
+            {/* Modal xác nhận đưa vào Sản phẩm & Giá hay chỉ lưu Kho dữ liệu */}
+            <Dialog
+              open={showApproveConfirmModal}
+              onOpenChange={setShowApproveConfirmModal}
+              title="Xác nhận duyệt kết quả phân tích"
+              description="Bạn có muốn đưa kết quả phân tích này vào danh mục Sản phẩm & Giá của cửa hàng không?"
+              size="md"
+            >
+              <div className="space-y-4 py-2">
+                <div className="rounded-xl border border-border bg-surface-alt/60 p-3.5 text-body-sm text-text-muted leading-relaxed">
+                  <p className="font-semibold text-text mb-1.5">Lựa chọn lưu trữ:</p>
+                  <ul className="list-disc pl-5 space-y-1 text-caption">
+                    <li>
+                      <strong className="text-text">Đồng ý đưa vào Sản phẩm & Giá</strong>: Tạo sản phẩm mới trong danh mục, hiển thị trên trang bán hàng và đồng thời lưu vào Kho dữ liệu.
+                    </li>
+                    <li>
+                      <strong className="text-text">Chỉ lưu vào Kho dữ liệu</strong>: Lưu an toàn trong Kho dữ liệu để tham khảo, tạo nội dung bán hàng hoặc bài viết sau này mà không đưa vào Sản phẩm & Giá.
+                    </li>
+                  </ul>
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={approvingAnalysis}
+                    onClick={() => setShowApproveConfirmModal(false)}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={approvingAnalysis}
+                    onClick={() => doApproveAnalysis(false)}
+                    className="border-primary/40 text-primary hover:bg-primary/5 font-semibold"
+                  >
+                    {approvingAnalysis ? "Đang xử lý..." : "Chỉ lưu Kho dữ liệu"}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={approvingAnalysis}
+                    onClick={() => doApproveAnalysis(true)}
+                    className="font-bold shadow-xs"
+                  >
+                    {approvingAnalysis ? "Đang xử lý..." : "Đồng ý đưa vào Sản phẩm & Giá"}
+                  </Button>
+                </div>
+              </div>
+            </Dialog>
           </div>
         )}
 

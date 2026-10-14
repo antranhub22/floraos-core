@@ -6,6 +6,7 @@ import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 
 import type { DbClient } from "./db-client"
 import { attachMainImageIfMissing, linkMainImage, refreshDriveLinkIfNotDrive, refreshDriveLink, upsertMainImage } from "./product-main-image"
+import { updateExistingProductFromBatch, type BatchUpdateItemInput } from "./product-batch-update"
 
 /** Kết quả trả về từ `listWithPreview` — bản ghi sản phẩm kèm ảnh chính và giá. */
 export type ProductPreviewRow = products & {
@@ -36,9 +37,7 @@ export type UpdateProductIdentityInput = {
   attributes: Record<string, unknown>
 }
 
-/** `PATCH /products/:id` (`L3`, đặc tả 06 mục 6) — sửa tay, tách khỏi
- *  `updateIdentity` (chỉ dùng nội bộ khi duyệt phân tích ảnh, `H3`). Mọi
- *  trường tuỳ chọn — hợp nhất nông với bản ghi hiện có (khác PUT). */
+/** `PATCH /products/:id` (`L3`) — sửa tay, hợp nhất nông với bản ghi hiện có. */
 export type UpdateProductInput = {
   code?: string | undefined
   name?: string | undefined
@@ -238,6 +237,11 @@ export class ProductRepository {
     return attachMainImageIfMissing(this.db, ctx, code, assetId)
   }
 
+  /** Gắn asset làm ảnh chính (MAIN) của sản phẩm. */
+  linkMainImage(ctx: TenantContext, productId: string, assetId: string): Promise<void> {
+    return linkMainImage(this.db, ctx, productId, assetId)
+  }
+
   /** Thay ảnh chính của sản phẩm, ghi đè ảnh cũ nếu có. Dùng khi nhập lại Excel. */
   upsertMainImage(ctx: TenantContext, code: string, assetId: string): Promise<boolean> {
     return upsertMainImage(this.db, ctx, code, assetId)
@@ -252,6 +256,11 @@ export class ProductRepository {
   /** Luôn cập nhật drive_link mới, ghi đè cả khi sản phẩm đã có Drive link cũ. Dùng khi nhập lại Excel. */
   refreshDriveLink(ctx: TenantContext, code: string, driveLink: unknown): Promise<boolean> {
     return refreshDriveLink(this.db, ctx, code, driveLink)
+  }
+
+  /** Cập nhật toàn bộ thông tin và ảnh cho sản phẩm đã tồn tại khi tái nhập từ Excel & Ảnh. */
+  updateExistingFromBatch(ctx: TenantContext, item: BatchUpdateItemInput): Promise<boolean> {
+    return updateExistingProductFromBatch(this.db, ctx, item)
   }
 
   async create(ctx: TenantContext, input: CreateProductInput): Promise<products> {
@@ -311,17 +320,7 @@ export class ProductRepository {
     return this.findById(ctx, id)
   }
 
-  /**
-   * Ghi kết quả đã duyệt vào Product Master. Thay toàn bộ bốn trường nhận
-   * dạng và `attributes` bằng bản đọc mới nhất — mỗi lượt duyệt là nguồn sự
-   * thật hiện hành, không hợp nhất với `attributes` cũ (một giả định đơn
-   * giản hoá, ghi ở `TECHNICAL_DEBT.md`).
-   *
-   * `updateMany` + đọc lại, không `update({where: scopedWhere(...)})` —
-   * `where` của `update()` phải là khoá duy nhất; `scopedWhere` thêm
-   * `organization_id` vào mệnh đề nên không còn khớp hình dạng đó (cùng lý
-   * do `GenerationJobRepository.cancelIfPending` dùng `updateMany`).
-   */
+  /** Ghi kết quả đã duyệt vào Product Master. Thay thế bốn trường nhận dạng và attributes. */
   async updateIdentity(
     ctx: TenantContext,
     id: string,

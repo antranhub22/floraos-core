@@ -25,6 +25,8 @@ export interface ImportResult {
   /** false = có lô không gửi được; các con số vẫn phản ánh phần ĐÃ lưu trước đó. */
   success: boolean
   createdCount: number
+  /** Mã đã có trong hệ thống và được cập nhật thông tin/ảnh/link Drive mới. */
+  updatedCount: number
   skippedCount: number
   /** Mã đã có, chưa có ảnh — lần này được bù ảnh từ thư mục tải lên. */
   imagesAttachedCount: number

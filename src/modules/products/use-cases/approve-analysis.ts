@@ -33,7 +33,16 @@ import { getAnalysis, type AnalysisDetail } from "./get-analysis"
  * chưa có căn cứ tường minh trong đặc tả, ghi ở `TECHNICAL_DEBT.md` để chủ
  * sản phẩm xác nhận.
  */
-export async function approveAnalysis(ctx: TenantContext, id: string): Promise<AnalysisDetail> {
+export type ApproveAnalysisOptions = {
+  createProduct?: boolean | undefined
+}
+
+export async function approveAnalysis(
+  ctx: TenantContext,
+  id: string,
+  options: ApproveAnalysisOptions = {}
+): Promise<AnalysisDetail> {
+  const { createProduct = true } = options
   const analysisRepo = new ProductAnalysisRepository()
   const current = await analysisRepo.findById(ctx, id)
   if (!current) throw notFound()
@@ -52,20 +61,26 @@ export async function approveAnalysis(ctx: TenantContext, id: string): Promise<A
     const analysisRepoTx = new ProductAnalysisRepository(tx)
 
     let productId = current.product_id
-    if (productId) {
-      const updated = await productRepo.updateIdentity(ctx, productId, fields)
-      if (!updated) throw new AppError("INTERNAL", "Sản phẩm liên kết không còn tồn tại")
-    } else {
-      const created = await productRepo.create(ctx, {
-        code: draftProductCode(randomUUID()),
-        name: draftProductName(fields),
-        category: fields.category,
-        shape: fields.shape,
-        facing: fields.facing,
-        container: fields.container,
-        attributes: fields.attributes,
-      })
-      productId = created.id
+    if (createProduct) {
+      if (productId) {
+        const updated = await productRepo.updateIdentity(ctx, productId, fields)
+        if (!updated) throw new AppError("INTERNAL", "Sản phẩm liên kết không còn tồn tại")
+        if (current.asset_id) {
+          await productRepo.linkMainImage(ctx, productId, current.asset_id)
+        }
+      } else {
+        const created = await productRepo.create(ctx, {
+          code: draftProductCode(randomUUID()),
+          name: draftProductName(fields),
+          category: fields.category,
+          shape: fields.shape,
+          facing: fields.facing,
+          container: fields.container,
+          attributes: fields.attributes,
+          imageAssetId: current.asset_id ?? undefined,
+        })
+        productId = created.id
+      }
     }
 
     const approved = await analysisRepoTx.approve(ctx, id, productId, {

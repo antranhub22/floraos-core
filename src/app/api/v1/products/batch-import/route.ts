@@ -21,6 +21,7 @@ const batchSchema = z.object({
   items: z.array(itemSchema).min(1).max(500),
   skip_duplicates: z.boolean().optional().default(true),
   overwrite_existing_images: z.boolean().optional().default(false),
+  overwrite_existing: z.boolean().optional().default(false),
 })
 
 export type BatchImportItem = z.infer<typeof itemSchema>
@@ -36,7 +37,8 @@ export const POST = handle(async (request) => {
   const parsed = batchSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
 
-  const { items, skip_duplicates, overwrite_existing_images } = parsed.data
+  const { items, skip_duplicates, overwrite_existing_images, overwrite_existing } = parsed.data
+  const shouldOverwrite = overwrite_existing || overwrite_existing_images
   const repo = new ProductRepository()
 
   // 1. Kiểm tra mã trùng hàng loạt
@@ -44,6 +46,7 @@ export const POST = handle(async (request) => {
   const existingCodes = await repo.listExistingCodes(ctx, inputCodes)
 
   const createdProducts: Array<{ id: string; code: string; name: string }> = []
+  const updatedCodes: string[] = []
   const skippedCodes: string[] = []
   const failedItems: Array<{ code: string; error: string }> = []
   const writtenInRun = new Set<string>()
@@ -54,21 +57,24 @@ export const POST = handle(async (request) => {
     if (existingCodes.has(item.code) || writtenInRun.has(item.code)) {
       if (skip_duplicates) {
         skippedCodes.push(item.code)
-        // Mã đã có: nếu kèm ảnh/link mới → bù ảnh/link cho sản phẩm (hoặc ghi đè nếu bật cờ).
+        // Mã đã có: nếu bật cờ overwrite hoặc có dữ liệu mới → cập nhật thông tin và bù ảnh/link cho sản phẩm.
         if (!writtenInRun.has(item.code)) {
           try {
-            if (item.image_asset_id) {
-              const attached = overwrite_existing_images
-                ? await repo.upsertMainImage(ctx, item.code, item.image_asset_id)
-                : await repo.attachMainImageIfMissing(ctx, item.code, item.image_asset_id)
-              if (attached) imagesAttached.push(item.code)
+            if (shouldOverwrite) {
+              const updated = await repo.updateExistingFromBatch(ctx, item)
+              if (updated) updatedCodes.push(item.code)
+              if (item.image_asset_id) imagesAttached.push(item.code)
+              if (item.attributes?.drive_link) driveLinksUpdated.push(item.code)
+            } else {
+              if (item.image_asset_id) {
+                const attached = await repo.attachMainImageIfMissing(ctx, item.code, item.image_asset_id)
+                if (attached) imagesAttached.push(item.code)
+              }
+              const linkUpdated = await repo.refreshDriveLinkIfNotDrive(ctx, item.code, item.attributes?.drive_link)
+              if (linkUpdated) driveLinksUpdated.push(item.code)
             }
-            const linkUpdated = overwrite_existing_images
-              ? await repo.refreshDriveLink(ctx, item.code, item.attributes?.drive_link)
-              : await repo.refreshDriveLinkIfNotDrive(ctx, item.code, item.attributes?.drive_link)
-            if (linkUpdated) driveLinksUpdated.push(item.code)
           } catch (err) {
-            failedItems.push({ code: item.code, error: err instanceof Error ? err.message : "Lỗi gắn ảnh" })
+            failedItems.push({ code: item.code, error: err instanceof Error ? err.message : "Lỗi cập nhật sản phẩm" })
           }
         }
         continue
@@ -109,11 +115,13 @@ export const POST = handle(async (request) => {
     success: true,
     total_requested: items.length,
     created_count: createdProducts.length,
+    updated_count: updatedCodes.length,
     skipped_count: skippedCodes.length,
     images_attached_count: imagesAttached.length,
     drive_links_updated_count: driveLinksUpdated.length,
     failed_count: failedItems.length,
     created: createdProducts,
+    updated: updatedCodes,
     skipped: skippedCodes,
     failed: failedItems,
   }, { status: 201 })
