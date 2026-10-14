@@ -8,6 +8,7 @@ import type { BrochureOrder, ModalState } from "./coordinator-order-card"
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { customerSecondPaymentReminderMessage } from "@/modules/greeting-card/domain/customer-notifications"
+import { firstPaymentAmountVnd } from "@/modules/greeting-card/domain/payment-plan"
 import {
   isUrgentOrder,
   shouldRequireCoordinatorAcceptance,
@@ -112,7 +113,7 @@ export function CoordinatorCardDecisionBlocks({
                   type: "confirm-deposit",
                   orderId: order.id,
                   orderCode: order.code,
-                  depositVnd: Math.round(order.total_vnd * 0.5),
+                  depositVnd: firstPaymentAmountVnd(order.total_vnd, order.pricing_rule_ref, policy.depositPercent),
                   proofUrl: paymentProofUrl ?? null,
                 })
               }
