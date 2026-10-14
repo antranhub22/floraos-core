@@ -46,6 +46,11 @@ export type PublicCatalogResult =
         enabledSections?: Record<string, boolean> | undefined
         styleVariant?: string | undefined
       } | undefined
+      customer?: {
+        name?: string | undefined
+        phone?: string | undefined
+        greeting?: string | undefined
+      } | undefined
     }
   | {
       status: "REVOKED"
@@ -282,6 +287,14 @@ export async function getPublicCatalog(slug: string): Promise<PublicCatalogResul
             generatedPackage: (filters.generatedPackage as Record<string, unknown>) || undefined,
             enabledSections: (filters.enabledSections as Record<string, boolean>) || undefined,
             styleVariant: typeof filters.styleVariant === "string" ? filters.styleVariant : undefined,
+          }
+        : undefined,
+    customer:
+      filters.customerName || filters.customerPhone || filters.personalizedGreeting
+        ? {
+            name: typeof filters.customerName === "string" ? filters.customerName : undefined,
+            phone: typeof filters.customerPhone === "string" ? filters.customerPhone : undefined,
+            greeting: typeof filters.personalizedGreeting === "string" ? filters.personalizedGreeting : undefined,
           }
         : undefined,
   }

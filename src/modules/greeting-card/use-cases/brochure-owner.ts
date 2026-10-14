@@ -17,13 +17,26 @@ export function isBrochureOwner(request: Request, sendCode: string): boolean {
   return verifyOwnerToken(sendCode, readCookie(request, ownerCookieName(sendCode)))
 }
 
+export async function isBrochureOwnerOrStaff(request: Request, sendCode: string): Promise<boolean> {
+  if (isBrochureOwner(request, sendCode)) return true
+  try {
+    const { staffOrganizationId } = await import("./staff-viewer")
+    const { SessionOwnerRepository } = await import("../infra/session-owner-repository")
+    const orgId = await staffOrganizationId(request.headers)
+    if (!orgId) return false
+    const session = await new SessionOwnerRepository().findSession(sendCode)
+    return session?.organization_id === orgId
+  } catch {
+    return false
+  }
+}
+
 /**
- * Gác cho mọi API công khai đọc/ghi phiên `/b/<mã>`: không phải chủ phiên → 404 (không lộ
- * là phiên có tồn tại). Người nhận link chuyển tiếp vì vậy không chọn mẫu, đặt đơn hay xem
- * đơn hộ người trước được.
+ * Gác cho mọi API công khai đọc/ghi phiên `/b/<mã>`: không phải chủ phiên hoặc nhân viên tiệm → 404
  */
-export function assertBrochureOwner(request: Request, sendCode: string): void {
-  if (!isBrochureOwner(request, sendCode)) throw notFound()
+export async function assertBrochureOwner(request: Request, sendCode: string): Promise<void> {
+  const allowed = await isBrochureOwnerOrStaff(request, sendCode)
+  if (!allowed) throw notFound()
 }
 
 /** Người đang xem trang `/b/<mã>` là ai — trang dựa vào đây để hiện phiên, xin nhận phiên hay chuyển hướng. */
