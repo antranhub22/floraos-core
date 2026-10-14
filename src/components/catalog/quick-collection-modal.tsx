@@ -111,6 +111,7 @@ export function QuickCollectionModal({
   const [priceMax, setPriceMax] = useState<number | undefined>(undefined)
   const [productLimit, setProductLimit] = useState<number>(6)
   const [templateId, setTemplateId] = useState<string>("editorial-luxury")
+  const [refreshSeed, setRefreshSeed] = useState<number>(0)
 
   // Creation State
   const [isPublishing, setIsPublishing] = useState(false)
@@ -143,6 +144,7 @@ export function QuickCollectionModal({
       productLimit,
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
+      refreshSeed: refreshSeed > 0 ? refreshSeed : undefined,
     }
     return generateQuickCollection(products, criteria)
   }, [
@@ -157,6 +159,7 @@ export function QuickCollectionModal({
     productLimit,
     customerName,
     customerPhone,
+    refreshSeed,
   ])
 
   // Handle Publish Link (< 2s)
@@ -243,6 +246,7 @@ export function QuickCollectionModal({
     setStep("criteria")
     setPublishedUrl(null)
     setErrorMessage(null)
+    setRefreshSeed(0)
   }
 
   return (
@@ -563,9 +567,22 @@ export function QuickCollectionModal({
                 <Sparkles size={13} className="text-accent" />
                 Mẫu hoa đề xuất ({liveResult.selectedProducts.length} mẫu)
               </span>
-              <span className="text-caption text-text-muted">
-                {liveResult.generatedName}
-              </span>
+              <div className="flex items-center gap-2">
+                {liveResult.selectedProducts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setRefreshSeed((s) => s + 1)}
+                    title="Chọn bộ mẫu khác"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-lg border border-border bg-surface text-caption text-text-muted hover:border-primary/40 hover:text-primary transition-all"
+                  >
+                    <RefreshCw size={11} />
+                    Chọn mẫu khác
+                  </button>
+                )}
+                <span className="text-caption text-text-muted">
+                  {liveResult.generatedName}
+                </span>
+              </div>
             </div>
             {liveResult.selectedProducts.length === 0 ? (
               <div className="p-4 rounded-xl border border-dashed border-border bg-surface-alt text-center space-y-1">

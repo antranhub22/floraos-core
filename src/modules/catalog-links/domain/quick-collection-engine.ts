@@ -59,6 +59,8 @@ export interface QuickCollectionCriteria {
   customerName?: string | undefined
   customerPhone?: string | undefined
   customTitle?: string | undefined
+  /** Tăng giá trị này để shuffle lại kết quả (chọn subset khác trong pool đã lọc). */
+  refreshSeed?: number | undefined
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,6 +76,23 @@ function toSlug(str: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
+}
+
+/**
+ * Shuffle mảng theo thuật toán Fisher-Yates với seed đơn giản.
+ * Đảm bảo cùng seed → cùng thứ tự; seed khác → thứ tự khác.
+ */
+function seededShuffle<T>(arr: T[], seed: number): T[] {
+  const result = [...arr]
+  let s = seed
+  for (let i = result.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) & 0xffffffff
+    const j = Math.abs(s) % (i + 1)
+    const tmp = result[i] as T
+    result[i] = result[j] as T
+    result[j] = tmp
+  }
+  return result
 }
 
 function buildGeneratedName(criteria: QuickCollectionCriteria): string {
@@ -164,8 +183,13 @@ export function generateQuickCollection(
     }
   }
 
+  // Áp dụng shuffle nếu có refreshSeed (để chọn subset khác trong pool đã lọc)
+  const pool = criteria.refreshSeed !== undefined && criteria.refreshSeed > 0
+    ? seededShuffle(hardFiltered, criteria.refreshSeed)
+    : hardFiltered
+
   // Score + sort + giới hạn trong pool đã lọc
-  const ranked = rankProducts(hardFiltered, filterCriteria, { limit })
+  const ranked = rankProducts(pool, filterCriteria, { limit })
   const selectedProducts = ranked.map((s) => s.product as QuickCollectionCandidate)
 
   // Sinh metadata
