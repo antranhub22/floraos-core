@@ -1,3 +1,4 @@
+import { notFound } from "@/core/http/errors"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
 
 import type { DbClient } from "./db-client"
@@ -5,6 +6,9 @@ import type { InputJsonValue } from "./entities"
 
 /** Gắn asset làm ảnh chính (MAIN) của sản phẩm và ghi `product_id` lên asset. */
 export async function linkMainImage(db: DbClient, ctx: TenantContext, productId: string, assetId: string): Promise<void> {
+  // ID ảnh có thể đến từ client (sửa sản phẩm, nhập lại Excel) — chỉ gắn ảnh của chính tổ chức (khác → 404)
+  const owned = await db.assets.findFirst({ where: scopedWhere(ctx, { id: assetId }), select: { id: true } })
+  if (!owned) throw notFound()
   await db.product_images.upsert({
     where: {
       organization_id_product_id_asset_id_role: {
@@ -31,6 +35,9 @@ export async function linkMainImage(db: DbClient, ctx: TenantContext, productId:
 export async function upsertMainImage(db: DbClient, ctx: TenantContext, code: string, assetId: string): Promise<boolean> {
   const product = await db.products.findFirst({ where: scopedWhere(ctx, { code }), select: { id: true } })
   if (!product) return false
+  // Kiểm ảnh mới thuộc tổ chức TRƯỚC khi xoá ảnh cũ — ảnh bị từ chối thì không mất ảnh đang có
+  const owned = await db.assets.findFirst({ where: scopedWhere(ctx, { id: assetId }), select: { id: true } })
+  if (!owned) throw notFound()
   // Xóa ảnh MAIN cũ (nếu có) trước khi gắn ảnh mới
   await db.product_images.deleteMany({
     where: scopedWhere(ctx, { product_id: product.id, role: "MAIN" }),
