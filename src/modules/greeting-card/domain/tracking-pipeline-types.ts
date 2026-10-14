@@ -170,6 +170,8 @@ export interface TrackingPipelineItem {
   isCancelled?: boolean | undefined
   /** Lý do huỷ / quá hạn (ví dụ: Tự huỷ quá hạn mở link, Tự huỷ quá hạn chuyển khoản cọc,...) */
   cancelReason?: string | null | undefined
+  /** Thông tin đề xuất / quyết định hủy bỏ hiển thị (nếu có) */
+  dismissal?: import("./dismissal-policy").DismissalInfo | undefined
   steps: TrackingStepState[]
   lastActiveAt: string
   createdAt: string

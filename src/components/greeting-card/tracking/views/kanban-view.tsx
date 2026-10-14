@@ -1,43 +1,70 @@
 "use client"
 
-import React from "react"
+import React, { useCallback } from "react"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { formatMinutes } from "@/modules/greeting-card/domain/step-sla"
 import type { KanbanColumn, TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
-import { SlaBadge, ViewState, codeOf, vnd, StaffNametagGroup } from "./tracking-bits"
+import { ViewState } from "./tracking-bits"
 import { classifyOrderTimeTier, type OrderTimeTier } from "@/modules/greeting-card/domain/order-time-tier"
 import { TierCollapsibleSection } from "@/components/greeting-card/coordinator/tier-collapsible-section"
+import { KanbanCard } from "./kanban-card"
+
+interface KanbanViewProps {
+  qs: string
+  onOpen: (i: TrackingViewItem) => void
+  canDecide?: boolean
+  onDismiss?: (item: TrackingViewItem) => void
+}
 
 /** Kanban 9 bước: phân tầng hiển thị theo thời gian để tập trung vào đơn cần xử lý ngay. */
-export function KanbanView({ qs, onOpen }: { qs: string; onOpen: (i: TrackingViewItem) => void }) {
+export function KanbanView({ qs, onOpen, canDecide = false, onDismiss }: KanbanViewProps) {
+  const apiPath = `/api/v1/greeting-card/tracking?view=kanban&limit=20&${qs}`
   const res = useApi<{ data: { columns: KanbanColumn[]; total: number } }>(
-    `/api/v1/greeting-card/tracking?view=kanban&limit=20&${qs}`,
+    apiPath,
     { refreshInterval: 30_000 }
   )
   const cols = res.data?.data.columns ?? []
 
+  const handleDecide = useCallback(async (item: TrackingViewItem, approve: boolean) => {
+    try {
+      await fetch("/api/v1/greeting-card/tracking/decide-dismiss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: item.orderId ?? item.sessionId,
+          type: item.orderId ? "ORDER" : "SESSION",
+          approve,
+        }),
+      })
+      res.mutate?.()
+    } catch { /* kết nối lỗi, bỏ qua */ }
+  }, [res])
+
+  const handleRestore = useCallback(async (item: TrackingViewItem) => {
+    try {
+      await fetch("/api/v1/greeting-card/tracking/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: item.orderId ?? item.sessionId,
+          type: item.orderId ? "ORDER" : "SESSION",
+        }),
+      })
+      res.mutate?.()
+    } catch { /* kết nối lỗi, bỏ qua */ }
+  }, [res])
+
   const renderCard = (i: TrackingViewItem, tier: OrderTimeTier) => (
-    <button
+    <KanbanCard
       key={i.id}
-      type="button"
-      onClick={() => onOpen(i)}
-      data-focus-key={i.orderId ?? i.sessionId}
-      className={`flex flex-col gap-1.5 rounded-xl border bg-surface p-2.5 text-left text-caption transition-colors hover:border-primary ${
-        tier === "OVERDUE"
-          ? "border-danger/60 bg-danger-bg/10"
-          : tier === "URGENT"
-          ? "border-warning/70 bg-warning-bg/15 shadow-xs"
-          : "border-border"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-1 w-full">
-        <span className="font-bold text-foreground truncate">{i.customerName}</span>
-        <span className="font-mono text-caption text-text-muted shrink-0">{codeOf(i)}</span>
-      </div>
-      <StaffNametagGroup item={i} />
-      <span className="text-text-muted">{i.productName} · {vnd(i.totalVnd)}</span>
-      <SlaBadge item={i} />
-    </button>
+      item={i}
+      tier={tier}
+      onOpen={onOpen}
+      canDecide={canDecide}
+      {...(onDismiss ? { onDismiss } : {})}
+      onDecide={handleDecide}
+      onRestore={handleRestore}
+    />
   )
 
   return (

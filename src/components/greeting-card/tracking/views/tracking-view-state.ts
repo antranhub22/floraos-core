@@ -47,11 +47,13 @@ export interface TrackingViewState {
   sort: SortField
   dir: "asc" | "desc"
   columns: ListColumn[]
+  statusMode: "ACTIVE" | "DISMISSED" | "ALL"
 }
 
 export const DEFAULT_STATE: TrackingViewState = {
   view: "kanban", q: "", category: "", saleId: "", type: "", sla: "", owner: "",
   deliveryFrom: "", deliveryTo: "", sort: "urgency", dir: "desc", columns: DEFAULT_COLUMNS,
+  statusMode: "ACTIVE",
 }
 
 /** Tham số lớp truy vấn — chỉ gửi trường có giá trị. `view` là view của máy chủ (timeline dùng list). */
@@ -60,6 +62,7 @@ export function queryString(s: TrackingViewState, extra: Record<string, string |
   const add = (k: string, v: string | number | undefined) => { if (v !== undefined && v !== "") p.set(k, String(v)) }
   add("q", s.q.trim()); add("category", s.category); add("saleId", s.saleId); add("type", s.type); add("sla", s.sla)
   add("owner", s.owner); add("deliveryFrom", s.deliveryFrom); add("deliveryTo", s.deliveryTo); add("sort", s.sort); add("dir", s.dir)
+  if (s.statusMode && s.statusMode !== "ACTIVE") p.set("statusMode", s.statusMode)
   for (const [k, v] of Object.entries(extra)) add(k, v)
   return p.toString()
 }

@@ -14,6 +14,7 @@ import {
   type TrackingPipelineStepId,
   type TrackingStepState,
 } from "../domain/tracking-pipeline-types"
+import { isDismissalTimedOut, type DismissalInfo } from "../domain/dismissal-policy"
 
 /** Trường JSON lỏng (ảnh chụp mẫu, địa chỉ, khung giờ, metadata ghi chú) — đọc phòng thủ, không `any`. */
 type LooseJson = {
@@ -196,6 +197,31 @@ export async function loadTrackingDataset(
       }
     })
 
+    const ref = loose(order.pricing_rule_ref) as Record<string, unknown>
+    let orderDismissal = ref.dismissal as DismissalInfo | undefined
+    let isOrderCancelled = order.status === "CANCELLED"
+    let orderCancelReason = order.status === "CANCELLED"
+      ? (((order.pricing_rule_ref as { paymentFailed?: { reason?: string } } | null)?.paymentFailed?.reason === "PAYMENT_TIMEOUT")
+          ? "Tự huỷ: Hết hạn thanh toán cọc"
+          : "Đơn hàng đã huỷ")
+      : null
+
+    if (orderDismissal && orderDismissal.status === "PENDING" && isDismissalTimedOut(orderDismissal.proposedAt, now.getTime())) {
+      orderDismissal = {
+        ...orderDismissal,
+        status: "APPROVED",
+        autoDismissed: true,
+        decidedBy: "system:5m-timeout",
+        decidedByName: "Hệ thống (Tự động duyệt sau 5 phút)",
+        decidedAt: new Date(Date.parse(orderDismissal.proposedAt) + 5 * 60 * 1000).toISOString(),
+      }
+      isOrderCancelled = true
+      orderCancelReason = `Tự động hủy hiển thị sau 5 phút không phản hồi từ Điều hành (${orderDismissal.reason})`
+    } else if (orderDismissal && orderDismissal.status === "APPROVED") {
+      isOrderCancelled = true
+      orderCancelReason = orderDismissal.reason || "Đã hủy bỏ hiển thị"
+    }
+
     return {
       id: order.id,
       type: "ORDER",
@@ -223,10 +249,8 @@ export async function loadTrackingDataset(
       balanceVnd: Number(order.balance_vnd || 0),
       currentStepId,
       // Đơn đã gửi mà chưa chuyển khoản vẫn ở bước 3 — gọi đúng tên việc đang chờ
-      currentStepTitle: order.status === "CANCELLED"
-        ? (((order.pricing_rule_ref as { paymentFailed?: { reason?: string } } | null)?.paymentFailed?.reason === "PAYMENT_TIMEOUT")
-            ? "Tự huỷ: Hết hạn thanh toán cọc"
-            : "Đơn hàng đã huỷ")
+      currentStepTitle: isOrderCancelled
+        ? (orderCancelReason ?? "Đơn hàng đã huỷ")
         : (currentStepId === "STEP_3_FILLING_FORM" ? "Đã đặt đơn — chờ khách chuyển khoản" : currentStepDef.title),
       orderStatus: order.status,
       sessionStatus: session?.status || null,
@@ -237,12 +261,9 @@ export async function loadTrackingDataset(
       paymentProofBalanceAnalysis: session?.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.analysis ?? null : null,
       productionStatus: order.production_status,
       deliveryStatus: order.delivery_status,
-      isCancelled: order.status === "CANCELLED",
-      cancelReason: order.status === "CANCELLED"
-        ? (((order.pricing_rule_ref as { paymentFailed?: { reason?: string } } | null)?.paymentFailed?.reason === "PAYMENT_TIMEOUT")
-            ? "Tự huỷ: Hết hạn thanh toán cọc"
-            : "Đơn hàng đã huỷ")
-        : null,
+      isCancelled: isOrderCancelled,
+      cancelReason: orderCancelReason,
+      dismissal: orderDismissal,
       stepStartedAt: orderStepStartedAt(order),
       stuck: stuckOf({ currentStepId, stepStartedAt: orderStepStartedAt(order) }, sla, now),
       saleId: ownerOf(session?.sale_id) ?? null,
@@ -287,12 +308,30 @@ export async function loadTrackingDataset(
       }
     })
 
-    const isSessionCancelled = session.revoked_at !== null || (session.expires_at !== null && session.expires_at <= now)
-    const sessionCancelReason = isSessionCancelled
+    let isSessionCancelled = session.revoked_at !== null || (session.expires_at !== null && session.expires_at <= now)
+    let sessionCancelReason = isSessionCancelled
       ? (session.revoked_at !== null
           ? (session.opened_at === null ? "Tự huỷ: Quá hạn mở link" : "Tự huỷ: Quá hạn chọn mẫu")
           : (session.opened_at === null ? "Hết hạn mở link" : "Hết hạn chọn mẫu"))
       : null
+
+    const snapObj = snapshot as Record<string, unknown>
+    let sessionDismissal = snapObj._dismissal as DismissalInfo | undefined
+    if (sessionDismissal && sessionDismissal.status === "PENDING" && isDismissalTimedOut(sessionDismissal.proposedAt, now.getTime())) {
+      sessionDismissal = {
+        ...sessionDismissal,
+        status: "APPROVED",
+        autoDismissed: true,
+        decidedBy: "system:5m-timeout",
+        decidedByName: "Hệ thống (Tự động duyệt sau 5 phút)",
+        decidedAt: new Date(Date.parse(sessionDismissal.proposedAt) + 5 * 60 * 1000).toISOString(),
+      }
+      isSessionCancelled = true
+      sessionCancelReason = `Tự động hủy hiển thị sau 5 phút không phản hồi từ Điều hành (${sessionDismissal.reason})`
+    } else if (sessionDismissal && sessionDismissal.status === "APPROVED") {
+      isSessionCancelled = true
+      sessionCancelReason = sessionDismissal.reason || "Đã hủy bỏ hiển thị"
+    }
 
     return {
       id: `session-${session.id}`,
@@ -328,6 +367,7 @@ export async function loadTrackingDataset(
       paymentProofBalanceUrl: session.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.url ?? null : null,
       paymentProofBalanceAnalysis: session.payment_proof_balance_asset_id ? proofUrls.get(session.payment_proof_balance_asset_id)?.analysis ?? null : null,
       cancelReason: sessionCancelReason,
+      dismissal: sessionDismissal,
       stepStartedAt: startedAt,
       stuck: notSent ? null : stuckOf({ currentStepId, stepStartedAt: startedAt }, sla, now),
       saleId: ownerOf(session.sale_id) ?? null,

@@ -3,7 +3,7 @@
 import React from "react"
 import { UserCheck, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { TrackingPipelineItem, TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import type { TrackingPipelineStepId } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 
 /**
  * Định dạng mã nhân viên từ ID người dùng.
@@ -15,6 +15,35 @@ export function formatStaffCode(id: string | null | undefined): string {
   const clean = id.replace(/[^a-zA-Z0-9]/g, "")
   const short = clean.length > 6 ? clean.slice(0, 6).toUpperCase() : clean.toUpperCase()
   return `NV-${short}`
+}
+
+/** Bảng màu nhận diện nhân viên — 6 tông R1-compliant (palette aliases đã đăng ký ở globals.css) */
+const STAFF_COLOR_PALETTE = [
+  { bg: "bg-orchid-100", border: "border-orchid-200", text: "text-orchid-800", badge: "bg-orchid-600" },
+  { bg: "bg-ocean-100",  border: "border-ocean-200",  text: "text-ocean-800",  badge: "bg-ocean-600"  },
+  { bg: "bg-azure-100",  border: "border-azure-200",  text: "text-azure-800",  badge: "bg-azure-600"  },
+  { bg: "bg-mint-100",   border: "border-mint-200",   text: "text-mint-800",   badge: "bg-mint-600"   },
+  { bg: "bg-sand-100",   border: "border-sand-200",   text: "text-sand-800",   badge: "bg-sand-700"   },
+  { bg: "bg-lagoon-100", border: "border-lagoon-200", text: "text-lagoon-800", badge: "bg-lagoon-600" },
+] as const
+
+/** Hash đơn giản (FNV-1a 32-bit) để ánh xạ ID → chỉ số màu xác định */
+function hashToIndex(id: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = (h * 0x01000193) >>> 0
+  }
+  return h % STAFF_COLOR_PALETTE.length
+}
+
+/**
+ * Trả về bộ class màu nhận diện nhân viên cho một ID.
+ * Cùng ID luôn ra cùng màu; nhân viên nhìn vào màu nhận ngay đơn của mình.
+ */
+export function getStaffColor(id: string | null | undefined) {
+  if (!id || id === "public") return STAFF_COLOR_PALETTE[0]
+  return STAFF_COLOR_PALETTE[hashToIndex(id)]
 }
 
 /**

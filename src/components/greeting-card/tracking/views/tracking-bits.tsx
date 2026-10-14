@@ -18,22 +18,41 @@ export const responsibleEmployee = (i: TrackingViewItem) => {
   return i.saleName
 }
 
+import { Clock, AlertCircle, CheckCircle2 } from "lucide-react"
+
 const SLA_STYLE: Record<SlaInfo["state"], { label: string; cls: string }> = {
-  OVERDUE: { label: "Quá hạn", cls: "bg-danger-bg text-danger" },
-  DUE_SOON: { label: "Sắp quá hạn", cls: "bg-warning-bg text-warning" },
-  ON_TRACK: { label: "Đúng tiến độ", cls: "bg-success-bg text-success" },
-  NONE: { label: "Không tính giờ", cls: "bg-surface-muted text-text-muted" },
+  OVERDUE: { label: "Quá hạn", cls: "bg-danger-bg text-danger font-bold" },
+  DUE_SOON: { label: "Sắp quá hạn", cls: "bg-warning-bg text-warning font-bold" },
+  ON_TRACK: { label: "Đúng tiến độ", cls: "bg-success-bg text-success font-medium" },
+  NONE: { label: "Đã ở bước này", cls: "bg-surface-muted text-text-muted font-medium" },
 }
 
 /** Nhãn thời gian chuẩn: trạng thái + đã ở bước bao lâu / chuẩn bao lâu. */
 export function SlaBadge({ item, compact = false }: { item: TrackingViewItem; compact?: boolean }) {
+  if (item.sla.state === "NONE") {
+    const age = formatMinutes(item.sla.ageMinutes)
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-caption font-medium text-text-muted">
+        <Clock size={11} className="shrink-0" aria-hidden="true" />
+        <span>{compact ? age : `Đã ở bước này ${age}`}</span>
+      </span>
+    )
+  }
+
   const s = SLA_STYLE[item.sla.state]
   const detail = item.sla.state === "OVERDUE" && item.stuck
     ? `quá ${formatMinutes(item.stuck.overdueMinutes)}`
     : item.sla.minutes !== null ? `${formatMinutes(item.sla.ageMinutes)} / ${formatMinutes(item.sla.minutes)}` : formatMinutes(item.sla.ageMinutes)
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-semibold ${s.cls}`}>
-      {s.label}{compact ? "" : ` · ${detail}`}
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption ${s.cls}`}>
+      {item.sla.state === "OVERDUE" ? (
+        <AlertCircle size={11} className="shrink-0" aria-hidden="true" />
+      ) : item.sla.state === "DUE_SOON" ? (
+        <Clock size={11} className="shrink-0" aria-hidden="true" />
+      ) : (
+        <CheckCircle2 size={11} className="shrink-0" aria-hidden="true" />
+      )}
+      <span>{s.label}{compact ? "" : ` · ${detail}`}</span>
     </span>
   )
 }
