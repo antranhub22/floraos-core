@@ -11,17 +11,15 @@
  */
 
 import { handle } from "@/core/http/response"
-import { hasCapability, requireCapability } from "@/core/rbac/capabilities"
+import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { exportCustomers } from "@/modules/crm/use-cases/export-customers"
 
 export const GET = handle(async (request) => {
   const { ctx } = await requireTenantContext(request)
 
-  // Q5 là năng lực xuất tệp riêng, Q1 là năng lực đọc khách hàng chung
-  if (!hasCapability(ctx, "Q5") && !hasCapability(ctx, "Q1")) {
-    requireCapability(ctx, "Q1")
-  }
+  // PO 14/10/2026: xuất Excel chỉ Điều hành; người khác cần Điều hành cấp quyền R13
+  requireCapability(ctx, "R13")
 
   const url = new URL(request.url)
   const formatParam = url.searchParams.get("format")

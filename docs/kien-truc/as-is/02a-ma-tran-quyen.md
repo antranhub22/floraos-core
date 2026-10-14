@@ -210,6 +210,7 @@
 | R10 | `order.payment.refund` | ● | · | · | · | · | · | · | · | ĐH | server |
 | R11 | `order.transfer.confirm` | ● | · | · | · | · | · | · | · | ĐH | server + UI |
 | R12 | `order.coordinator_reminder.configure` | ● | ● | · | · | · | · | · | · | — | server (14/10/2026) |
+| R13 | `data.export` | ● | · | · | · | · | · | · | · | — | server + UI (14/10/2026: xuất Excel đơn hàng/khách hàng chỉ Điều hành; cấp cho người khác qua màn phân quyền) |
 
 ### Q — CRM
 

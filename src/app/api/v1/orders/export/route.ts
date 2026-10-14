@@ -10,7 +10,7 @@
  */
 
 import { handle } from "@/core/http/response"
-import { hasCapability, requireCapability } from "@/core/rbac/capabilities"
+import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { exportOrdersToExcel } from "@/modules/orders/use-cases/export-orders"
 
@@ -21,13 +21,8 @@ export const GET = handle(async (request) => {
   const toDate = url.searchParams.get("to_date") ?? undefined
   const source = url.searchParams.get("source") ?? undefined // BROCHURE | MANUAL | CHAT
 
-  if (source === "BROCHURE") {
-    if (!hasCapability(ctx, "R1") && !hasCapability(ctx, "R11")) {
-      requireCapability(ctx, "R1")
-    }
-  } else {
-    requireCapability(ctx, "R1")
-  }
+  // PO 14/10/2026: xuất Excel chỉ Điều hành; người khác cần Điều hành cấp quyền R13
+  requireCapability(ctx, "R13")
 
   const buffer = await exportOrdersToExcel(ctx, { fromDate, toDate, source })
 
