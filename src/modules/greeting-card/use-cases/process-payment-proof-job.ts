@@ -1,11 +1,13 @@
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
+import { PaymentProofRepository } from "../infra/payment-proof-repository"
 import { callCapability } from "@/core/ai/gateway"
 import { aiGatewayDeps } from "@/core/ai/wiring"
 import { createContentLLM } from "@/core/ai/adapters/multi-llm-provider"
 import { createPaymentProofVisionAdapter } from "../adapters/payment-proof-vision-adapter"
 import {
   verifyBillAgainstOrder,
+  markDuplicateBill,
   type PaymentProofAnalysisResult,
   type PaymentProofExtraction,
 } from "../domain/payment-proof-analysis"
@@ -26,7 +28,8 @@ export interface ProcessPaymentProofInput {
  */
 export async function processPaymentProofVisionJob(
   input: ProcessPaymentProofInput,
-  repo = new GreetingCardRepository()
+  repo = new GreetingCardRepository(),
+  proofs = new PaymentProofRepository()
 ): Promise<PaymentProofAnalysisResult | null> {
   const { assetId, organizationId, sendCode, purpose } = input
 
@@ -117,11 +120,10 @@ export async function processPaymentProofVisionJob(
         analyzedAt: new Date().toISOString(),
       }
     } else {
-      analysis = verifyBillAgainstOrder({
-        extracted,
-        expectedAmountVnd,
-        shopBank,
-      })
+      const duplicate = extracted.transactionCode
+        ? await proofs.transactionCodeUsedElsewhere(organizationId, extracted.transactionCode, assetId)
+        : false
+      analysis = markDuplicateBill(verifyBillAgainstOrder({ extracted, expectedAmountVnd, shopBank }), duplicate)
     }
 
     // 4. Lưu kết quả phân tích vào Asset Metadata

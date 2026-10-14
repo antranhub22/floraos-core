@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   isAccountNumberMatching,
+  markDuplicateBill,
   normalizeAccountNumber,
   verifyBillAgainstOrder,
   type PaymentProofExtraction,
@@ -89,5 +90,27 @@ describe("payment-proof-analysis domain", () => {
         expect(res.status).toBe("ACCOUNT_MISMATCH")
       }
     })
+  })
+})
+
+describe("markDuplicateBill", () => {
+  const base = {
+    status: "MATCHED" as const,
+    extracted: { amountVnd: 500000, isSuccessStatus: true, transactionCode: "FT123456" },
+    expectedAmountVnd: 500000,
+    amountDifferenceVnd: 0,
+    confidenceScore: 0.95,
+    reasons: [],
+    analyzedAt: "2026-10-14T00:00:00.000Z",
+  }
+
+  it("bill dùng lại (mã giao dịch đã có ở ảnh khác) → SUSPICIOUS, không còn MATCHED", () => {
+    const res = markDuplicateBill(base, true)
+    expect(res.status).toBe("SUSPICIOUS")
+    expect(res.reasons.join(" ")).toContain("FT123456")
+  })
+
+  it("không trùng → giữ nguyên kết quả", () => {
+    expect(markDuplicateBill(base, false)).toBe(base)
   })
 })
