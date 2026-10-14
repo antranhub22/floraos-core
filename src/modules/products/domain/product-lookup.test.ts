@@ -68,4 +68,18 @@ describe("filterProductLookup", () => {
     )
     expect(serialized).toBeDefined()
   })
+  it("không có L5: ẩn BOM và giá sàn/trần trong attributes, vẫn giữ giá bán niêm yết", () => {
+    const withAttrs: ProductLookupRaw = {
+      ...PRODUCT,
+      attributes: { price: 450_000, color: "Hồng", bom: { flowers: [{ name: "Hồng", quantity: 10 }] }, priceGuard: { floorVnd: 1, ceilingVnd: 2 } },
+    }
+    const hidden = filterProductLookup(withAttrs, RULE_ROWS, { canReadPricing: false, branchId: null })
+    expect(hidden.attributes).toEqual({ price: 450_000, color: "Hồng" })
+    expect(hidden.price_vnd).toBe(450_000)
+    expect(hidden.redacted_fields).toEqual(expect.arrayContaining(["pricing", "bom", "priceGuard"]))
+
+    const full = filterProductLookup(withAttrs, RULE_ROWS, { canReadPricing: true, branchId: null })
+    expect(full.attributes).toHaveProperty("bom")
+    expect(full.attributes).toHaveProperty("priceGuard")
+  })
 })

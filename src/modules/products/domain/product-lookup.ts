@@ -78,6 +78,13 @@ export interface ProductLookupResult {
 }
 
 /**
+ * Khoá trong `attributes` chỉ người có `L5` (`pricing.read`) được thấy: thành phần hoa (BOM — lộ
+ * công thức/giá vốn) và giá sàn/trần nội bộ. Giá bán niêm yết (`price`, `price_vnd`) vẫn đi ra để
+ * Sale tư vấn khách (PO 14/10/2026).
+ */
+export const PRICING_ONLY_ATTRIBUTE_KEYS = ["bom", "priceGuard"] as const
+
+/**
  * Lọc một bản ghi sản phẩm theo năng lực của người xem. Kê tên trường sản
  * phẩm luôn đi ra nguyên vẹn; khối `pricing` cắt theo `canReadPricing` (`L5`).
  * `masterImageUrl` và `price_vnd` luôn đi ra (không nhạy cảm).
@@ -102,6 +109,17 @@ export function filterProductLookup(
     redactedFields.push("pricing")
   }
 
+  let attributes = product.attributes ?? null
+  if (!options.canReadPricing && attributes) {
+    const hidden = PRICING_ONLY_ATTRIBUTE_KEYS.filter((k) => k in attributes!)
+    if (hidden.length > 0) {
+      attributes = Object.fromEntries(
+        Object.entries(attributes).filter(([k]) => !(PRICING_ONLY_ATTRIBUTE_KEYS as readonly string[]).includes(k))
+      )
+      redactedFields.push(...hidden)
+    }
+  }
+
   return {
     id: product.id,
     code: product.code,
@@ -115,7 +133,7 @@ export function filterProductLookup(
     masterImageUrl: product.masterImageUrl ?? ((product.attributes?.imageUrl) as string | undefined),
     price_vnd: product.price_vnd ?? ((product.attributes?.price_vnd ?? product.attributes?.price) as number | null) ?? null,
     driveLink: product.driveLink ?? ((product.attributes?.drive_link) as string | undefined),
-    attributes: product.attributes ?? null,
+    attributes,
     pricing,
     redacted_fields: redactedFields,
   }
