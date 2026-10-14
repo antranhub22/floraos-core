@@ -61,6 +61,8 @@ export interface TrackingFilter {
   /** Ngày giao (YYYY-MM-DD, giờ VN) */
   deliveryFrom?: string | undefined
   deliveryTo?: string | undefined
+  /** Chế độ hiển thị trạng thái: ACTIVE (đang hoạt động - mặc định), DISMISSED (đã hủy/bỏ hiển thị), ALL (tất cả) */
+  statusMode?: "ACTIVE" | "DISMISSED" | "ALL" | undefined
 }
 
 export const SORT_FIELDS = ["urgency", "stepStartedAt", "age", "step", "totalVnd", "deliveryDate", "createdAt", "customerName"] as const
@@ -74,6 +76,10 @@ const STEP_INDEX = new Map(PIPELINE_STEPS.map((s) => [s.id, s.orderIndex]))
 const SLA_RANK: Record<SlaState, number> = { OVERDUE: 3, DUE_SOON: 2, ON_TRACK: 1, NONE: 0 }
 
 export function matchesFilter(i: TrackingViewItem, f: TrackingFilter): boolean {
+  const statusMode = f.statusMode ?? "ACTIVE"
+  if (statusMode === "ACTIVE" && i.isCancelled) return false
+  if (statusMode === "DISMISSED" && !i.isCancelled) return false
+
   const q = f.q?.trim().toLowerCase()
   if (q) {
     const cleanQ = q.replace(/^#/, "")

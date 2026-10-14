@@ -83,6 +83,7 @@ export function TrackingToolbar({ state, onChange, onApplyView, onRefresh }: Pro
     state.sla ? 1 : 0,
     state.deliveryFrom ? 1 : 0,
     state.deliveryTo ? 1 : 0,
+    state.statusMode !== "ACTIVE" ? 1 : 0,
   ].reduce((a, b) => a + b, 0)
 
   return (
@@ -285,6 +286,17 @@ export function TrackingToolbar({ state, onChange, onApplyView, onRefresh }: Pro
               className={`${SELECT} flex-1`}
             />
           </label>
+
+          <select
+            aria-label="Trạng thái hiển thị"
+            value={state.statusMode}
+            onChange={(e) => onChange({ statusMode: e.target.value as TrackingViewState["statusMode"] })}
+            className={SELECT}
+          >
+            <option value="ACTIVE">Đang hoạt động</option>
+            <option value="DISMISSED">Đã hủy / Bỏ hiển thị</option>
+            <option value="ALL">Tất cả</option>
+          </select>
         </div>
       )}
     </div>
