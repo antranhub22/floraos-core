@@ -10,7 +10,7 @@ export const obj = (v: unknown): Loose => (v && typeof v === "object" && !Array.
 const json = (v: unknown) => v as Prisma.InputJsonValue
 
 /** Ảnh chụp đơn đủ để kiểm và khoá lạc quan (trạng thái + số đã thu không đổi giữa lúc đọc và lúc ghi). */
-export interface OrderRow { id: string; status: string; paid_vnd: unknown; production_status: string | null; pricing_rule_ref: unknown }
+export interface OrderRow { id: string; status: order_status; paid_vnd: unknown; production_status: string | null; pricing_rule_ref: unknown }
 export interface SessionRow { id: string; revoked_at: Date | null; expires_at: Date | null; status: string; product_snapshot: unknown }
 
 export function orderDismissible(o: OrderRow) {
@@ -43,7 +43,7 @@ export async function writeOrderDismissal(tx: Tx, ctx: TenantContext, order: Ord
   const ref = obj(order.pricing_rule_ref)
   const stored: DismissalInfo & { previousStatus?: string } = approve ? { ...info, previousStatus: order.status } : info
   const moved = await tx.orders.updateMany({
-    where: scopedWhere(ctx, { id: order.id, status: order.status as order_status, ...(approve ? { paid_vnd: 0 } : {}) }),
+    where: scopedWhere(ctx, { id: order.id, status: order.status, ...(approve ? { paid_vnd: 0 } : {}) }),
     data: { ...(approve ? { status: "CANCELLED" as order_status } : {}), pricing_rule_ref: json({ ...ref, dismissal: stored }) },
   })
   if (moved.count === 0) throw conflict("Đơn hàng vừa thay đổi (có thể khách vừa thanh toán), vui lòng tải lại")

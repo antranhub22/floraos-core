@@ -7,9 +7,10 @@ import { orderDismissible } from "@/modules/greeting-card/infra/dismissal-store"
 import { decideDismissal } from "@/modules/greeting-card/use-cases/decide-dismissal"
 import { restoreDismissal } from "@/modules/greeting-card/use-cases/restore-dismissal"
 import type { TenantContext } from "@/core/tenancy"
+import type { OrderRow } from "@/modules/greeting-card/infra/dismissal-store"
 
 const ctx = (caps: string[]): TenantContext => ({ organizationId: "org-1", workspaceId: "w", userId: "u-1", branchId: null, capabilities: new Set(caps) })
-const order = (over: Record<string, unknown> = {}) => ({ id: "o-1", status: "DRAFT", paid_vnd: 0, production_status: "WAITING", pricing_rule_ref: null, ...over })
+const order = (over: Partial<OrderRow> = {}): OrderRow => ({ id: "o-1", status: "DRAFT", paid_vnd: 0, production_status: "WAITING", pricing_rule_ref: null, ...over })
 
 /**
  * Soát 14/10/2026 nhánh Tinh_chinh_cac_tinh_nang: (1) mọi đơn đều có production_status mặc định
