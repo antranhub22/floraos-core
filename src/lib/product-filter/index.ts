@@ -20,6 +20,7 @@ export type {
 export {
   CATEGORY_CANONICAL,
   categoryCanonical,
+  getCategoryVariants,
   OCCASION_SLUG_MAP,
   OCCASION_NAME_KEYWORDS,
   FLOWER_NAME_KEYWORDS,

@@ -33,7 +33,7 @@ export default function CatalogWebsitePage() {
   const fetchProducts = useCallback(async () => {
     try {
       const [prodRes, analysisRes] = await Promise.all([
-        fetch("/api/v1/products"),
+        fetch("/api/v1/products?limit=100&status=ACTIVE"),
         fetch("/api/v1/vision/analyses?approval_state=APPROVED").catch(() => null),
       ])
       if (prodRes.status === 401) { router.push("/dang-nhap"); return }

@@ -64,13 +64,14 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     }
   }, [searchQuery])
 
-  // Server-side chỉ lọc text search (ILIKE name/code). Mọi filter khác client-side.
+  // Server-side lọc text search và category (dáng hoa) để quét toàn bộ CSDL
   const productsUrl = (() => {
     if (!pickerOpen) return null
     const params = new URLSearchParams()
     params.set("limit", String(PICKER_LIMIT))
     params.set("status", "ACTIVE")
     if (debouncedSearch) params.set("search", debouncedSearch)
+    if (filterCategory) params.set("category", filterCategory)
     return `/api/v1/products?${params.toString()}`
   })()
 

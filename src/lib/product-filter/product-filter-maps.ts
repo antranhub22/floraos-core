@@ -39,13 +39,22 @@ export const CATEGORY_CANONICAL: Record<string, string> = {
   box: "hop-hoa",
   stand: "ke-hoa",
   arrangement: "lang-hoa",
-  // ── Nhãn UI tiếng Việt (sau normalizeText) ──
+  // ── Nhãn UI tiếng Việt & biến thể danh mục CSDL (sau normalizeText) ──
   "bo hoa": "bo-hoa",
   "gio hoa": "gio-hoa",
   "binh hoa": "binh-hoa",
+  "binh hoa / u hoa de ban": "binh-hoa",
+  "binh hoa u hoa de ban": "binh-hoa",
+  "u hoa de ban": "binh-hoa",
   "hop hoa": "hop-hoa",
   "ke hoa": "ke-hoa",
+  "ke hoa khai truong": "ke-hoa",
   "lang hoa": "lang-hoa",
+  "hoa chia buon": "ke-hoa", // Hoặc kệ hoa viếng
+  "chau hoa / lan ho diep": "chau-hoa",
+  "chau hoa lan ho diep": "chau-hoa",
+  "chau hoa": "chau-hoa",
+  "lan ho diep": "chau-hoa",
   lang: "lang-hoa",
   // ── Shape values thường gặp ──
   round: "bo-hoa",
@@ -59,6 +68,21 @@ export const CATEGORY_CANONICAL: Record<string, string> = {
 export function categoryCanonical(value: string | null | undefined): string | null {
   if (!value) return null
   return CATEGORY_CANONICAL[normalizeText(value)] ?? null
+}
+
+/**
+ * Trả về danh sách tất cả các biến thể category (DB code, UI label...) thuộc cùng canonical slug.
+ * Dùng cho truy vấn SQL `category IN (...)` ở tầng repository.
+ */
+export function getCategoryVariants(canonicalOrLabel: string): string[] {
+  const targetSlug = categoryCanonical(canonicalOrLabel) ?? canonicalOrLabel
+  const variants: string[] = []
+  for (const [key, slug] of Object.entries(CATEGORY_CANONICAL)) {
+    if (slug === targetSlug) {
+      variants.push(key)
+    }
+  }
+  return Array.from(new Set(variants))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
