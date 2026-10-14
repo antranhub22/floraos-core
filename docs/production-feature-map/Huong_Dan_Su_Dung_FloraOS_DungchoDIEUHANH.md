@@ -115,6 +115,8 @@ Trang **Đơn Hàng & Kênh Chào Bán** (`/don-hang`) là trung tâm xử lý d
 #### C. Duyệt tiền cọc chuyển khoản (Tab 3 - Quyền R11)
 * **Bước 1**: Nhấp chọn **Tab 3: Duyệt TT Thẻ Chào (Điều hành)**. -> *Kết quả*: Hiển thị các đơn hàng khách đã quét mã VietQR cọc tiền.
 * **Bước 2**: Kiểm tra app ngân hàng báo có, nhấp **"Xác nhận đã nhận tiền"**. -> *Kết quả*: Đơn chuyển từ DRAFT sang CONFIRMED và tự động nhảy sang cột *Đang cắm hoa*.
+* **Shipper thu tiền mặt** (Hồ sơ cửa hàng → Chính sách, mặc định TẮT): khi tắt, khách luôn chuyển khoản phần còn lại (Lần 2); Điều hành xác nhận tiền bất cứ lúc nào, xác nhận xong mới giao ship. Khi bật, đơn đặt cọc được giao ship, shipper thu tiền mặt phần còn lại và tiệm ghi nhận sau khi giao xong.
+* **Xuất Excel** đơn hàng / khách hàng: chỉ Điều hành. Nhân viên khác cần xuất thì xin Điều hành cấp quyền "Xuất dữ liệu ra Excel" ở màn phân quyền thành viên.
 * **Ảnh bill khách tải lên**: Khách phải tải ảnh chuyển khoản trước khi bấm *"Tôi đã chuyển khoản"* (trừ khi tiệm tắt yêu cầu ảnh bill). Ảnh hiện ngay trên đơn để đối chiếu. Mặc định **tiệm tự duyệt** — hệ thống không tự ghi nhận tiền. Chỉ khi tiệm bật *"Tự động duyệt thanh toán khi có ảnh chụp bill"* ở Hồ sơ cửa hàng, hệ thống mới tự xác nhận sau số phút đã chọn, và chỉ với bill đọc được, đúng tài khoản tiệm, đúng số tiền; bill lệch hoặc không đọc được luôn chờ người duyệt.
 
 ### 5. Tình huống thực tế và lưu ý quan trọng

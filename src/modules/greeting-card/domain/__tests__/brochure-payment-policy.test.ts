@@ -27,6 +27,7 @@ describe("parsePaymentPolicy", () => {
       autoApprovePaymentWithProof: false,
       autoApprovePaymentWithProofMinutes: 15,
       productPhotoReviewMinutes: 10,
+      allowShipperCash: false,
     })
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 150 } }).depositPercent).toBe(0)
     expect(parsePaymentPolicy({ brochure_policy: { deposit_percent: 30, require_full_before_dispatch: true } })).toMatchObject({
@@ -107,6 +108,7 @@ describe("hạn thanh toán + ghi chính sách", () => {
       autoApprovePaymentWithProof: false,
       autoApprovePaymentWithProofMinutes: 15,
       productPhotoReviewMinutes: 10,
+      allowShipperCash: false,
       holdMinutes: 15,
       autoCancelUnpaid: true,
       paymentTimeoutMinutes: 30,
@@ -190,3 +192,23 @@ describe("resolveTrackingTriggerPolicy", () => {
   })
 })
 
+
+describe("shipper thu tiền mặt (PO 14/10/2026)", () => {
+  const deposit = { totalVnd: 1_000_000, paidVnd: 500_000 }
+
+  it("mặc định TẮT: đơn đặt cọc chưa thu lần 2 không được giao ship (khách phải chuyển khoản)", () => {
+    const policy = parsePaymentPolicy({ brochure_policy: { require_full_before_dispatch: false } })
+    expect(policy.allowShipperCash).toBe(false)
+    expect(paymentGateBlocker("dispatch-shipping", policy, deposit)).toMatch(/lần 2/)
+  })
+
+  it("BẬT: shipper thu phần còn lại khi giao → được giao ship", () => {
+    const policy = parsePaymentPolicy({ brochure_policy: { require_full_before_dispatch: false, allow_shipper_cash: true } })
+    expect(paymentGateBlocker("dispatch-shipping", policy, deposit)).toBeNull()
+  })
+
+  it("BẬT nhưng tiệm bắt thu đủ trước khi giao → vẫn chặn", () => {
+    const policy = parsePaymentPolicy({ brochure_policy: { require_full_before_dispatch: true, allow_shipper_cash: true } })
+    expect(paymentGateBlocker("dispatch-shipping", policy, deposit)).not.toBeNull()
+  })
+})
