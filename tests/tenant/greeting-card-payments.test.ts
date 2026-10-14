@@ -13,7 +13,7 @@ import {
   cancelBrochureOrder,
   refundBrochureOrder,
 } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
-import { assignBrochureFlorist } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
+import { assignBrochureFlorist, uploadBrochureProductPhoto } from "@/modules/greeting-card/use-cases/update-brochure-order-status"
 
 /** Đặt cọc, thu nốt, chặn xưởng theo chính sách, huỷ đơn (trả mã giảm giá), hoàn tiền — order_payments. */
 
@@ -76,6 +76,11 @@ describe("greeting-card payments", () => {
 
     const view = await getGreetingCatalogForCustomer(link.sendCode)
     expect(view.status === "ACTIVE" && view.payment).toMatchObject({ amount: 700_000, purpose: "BALANCE" })
+
+    // Tiệm bắt thu đủ trước giao: phần còn lại chỉ thu khi hoa đã xong (PO 10/10/2026); tiệm bỏ qua ảnh
+    // thành phẩm thì không có ảnh chờ khách duyệt — hoa xong là thu được, không kẹt đơn
+    expect(await codeOf(adminConfirmBrochurePayment(a.ctx, order.orderId))).toBe("CONFLICT")
+    await uploadBrochureProductPhoto(a.ctx, order.orderId, { skipPhoto: true, skipReason: "test" })
 
     expect(await codeOf(adminConfirmBrochurePayment(a.ctx, order.orderId, { amountVnd: 800_000 }))).toBe("UNPROCESSABLE_ENTITY")
     const bal = await adminConfirmBrochurePayment(a.ctx, order.orderId)

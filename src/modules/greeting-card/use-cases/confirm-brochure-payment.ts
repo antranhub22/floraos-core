@@ -282,6 +282,9 @@ function assertBalanceCollectible(
   }
   const hasPhotoApproved = order.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
   const productPhotoQc = order.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
+  // Tiệm bỏ qua ảnh thành phẩm → không có ảnh nào để khách duyệt; hoa xong là đủ để thu,
+  // nếu không đơn kẹt vĩnh viễn (chưa thu thì chưa giao, chờ duyệt ảnh không bao giờ có) — soát 14/10/2026
+  if (!productPhotoQc) return
   const isAutoApproved = !!productPhotoQc && Date.now() >= productPhotoQc.created_at.getTime() + 10 * 60_000
   if (!hasPhotoApproved && !isAutoApproved) {
     throw conflict("Đơn hàng đang chờ khách duyệt ảnh thành phẩm trước khi giao. Chưa thể ghi nhận thanh toán lần 2.")

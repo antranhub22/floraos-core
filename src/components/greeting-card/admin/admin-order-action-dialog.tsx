@@ -67,7 +67,8 @@ export function AdminOrderActionDialog({
           }
         }
       } else {
-        if (!canCollectAfterDelivery) {
+        // Khớp server: shipper không thu tiền mặt (mặc định) → khách chuyển khoản lần 2 lúc nào cũng thu được
+        if (policy.allowShipperCash === true && !canCollectAfterDelivery) {
           isBlocked = true
           blockReason = "Đơn hàng đã được ghi nhận tiền cọc (Đợt 1). Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công."
         }
