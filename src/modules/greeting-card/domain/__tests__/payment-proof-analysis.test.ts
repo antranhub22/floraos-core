@@ -82,5 +82,12 @@ describe("payment-proof-analysis domain", () => {
       expect(res.status).toBe("SUSPICIOUS")
       expect(res.reasons[0]).toContain("không phải thành công")
     })
+
+    it("tiệm chưa cài tài khoản nhận tiền → không bao giờ MATCHED (không được tự duyệt)", () => {
+      for (const bank of [null, {}, { accountNo: "" }]) {
+        const res = verifyBillAgainstOrder({ extracted: validExtraction, expectedAmountVnd: 500000, shopBank: bank })
+        expect(res.status).toBe("ACCOUNT_MISMATCH")
+      }
+    })
   })
 })

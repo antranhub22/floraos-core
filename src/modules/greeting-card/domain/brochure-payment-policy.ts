@@ -5,6 +5,7 @@
  */
 
 import type { CoordinatorAction } from "./brochure-commerce-rules"
+import type { PaymentPurpose } from "./brochure-policy-resolvers"
 
 export const BROCHURE_POLICY_SETTINGS_KEY = "brochure_policy"
 
@@ -78,6 +79,8 @@ export interface BrochurePaymentPolicy {
    * Hết thời gian này nếu khách không phản hồi thì tự động duyệt và mở Giao Ship. Mặc định: 10 phút.
    */
   productPhotoReviewMinutes?: number
+  /** Shipper được thu tiền mặt phần còn lại khi giao. Mặc định TẮT: khách luôn chuyển khoản (PO 14/10/2026). */
+  allowShipperCash?: boolean
 }
 
 /** Hạn thanh toán gợi ý khi Điều hành bật (PO 08/10/2026). */
@@ -101,6 +104,7 @@ export const DEFAULT_PAYMENT_POLICY: BrochurePaymentPolicy = {
   autoApprovePaymentWithProof: false,
   autoApprovePaymentWithProofMinutes: 15,
   productPhotoReviewMinutes: 10,
+  allowShipperCash: false,
 }
 
 /**
@@ -184,6 +188,7 @@ export function parsePaymentPolicy(settings: unknown): BrochurePaymentPolicy {
     autoApprovePaymentWithProof: r.auto_approve_payment_with_proof === true,
     autoApprovePaymentWithProofMinutes: minutesIn(r.auto_approve_payment_with_proof_minutes) ?? 15,
     productPhotoReviewMinutes: minutesIn(r.product_photo_review_minutes) ?? 10,
+    allowShipperCash: r.allow_shipper_cash === true,
     // Chỉ thêm khoá khi tiệm bật giữ đơn — chính sách cũ giữ nguyên hình dạng
     ...(hold ? { holdMinutes: hold } : {}),
     ...(autoCancel ? { autoCancelUnpaid: true } : {}),
@@ -213,62 +218,11 @@ export function serializePaymentPolicy(policy: BrochurePaymentPolicy): Record<st
     auto_approve_payment_with_proof: policy.autoApprovePaymentWithProof === true,
     auto_approve_payment_with_proof_minutes: policy.autoApprovePaymentWithProofMinutes ?? 15,
     product_photo_review_minutes: policy.productPhotoReviewMinutes ?? 10,
+    allow_shipper_cash: policy.allowShipperCash === true,
   }
 }
 
-/**
- * Phân giải cơ chế bắt buộc ảnh chuyển khoản giữa Cài đặt Bộ sưu tập (catalog filters)
- * và Chính sách tiệm. Catalog ghi đè tiệm; nếu không ghi đè thì theo tiệm; mặc định là true (BẬT).
- */
-export function resolveRequirePaymentProof(
-  policy: BrochurePaymentPolicy,
-  catalogFilters?: unknown,
-): boolean {
-  const filters = catalogFilters && typeof catalogFilters === "object"
-    ? (catalogFilters as Record<string, unknown>)
-    : {}
-  if (typeof filters.requirePaymentProof === "boolean") {
-    return filters.requirePaymentProof
-  }
-  return policy.requirePaymentProof ?? true
-}
-
-/**
- * Phân giải cơ chế kích hoạt bước tiếp theo giữa Cài đặt Bộ sưu tập (catalog filters)
- * và Chính sách tiệm. Catalog ghi đè tiệm; nếu không ghi đè thì theo tiệm; mặc định là "PAYMENT_OR_COORDINATOR".
- */
-export function resolveTrackingTriggerPolicy(
-  policy: BrochurePaymentPolicy,
-  catalogFilters?: unknown,
-): TrackingTriggerPolicy {
-  const filters = catalogFilters && typeof catalogFilters === "object"
-    ? (catalogFilters as Record<string, unknown>)
-    : {}
-  if (filters.trackingTriggerPolicy === "PAYMENT_ONLY" || filters.trackingTriggerPolicy === "PAYMENT_OR_COORDINATOR") {
-    return filters.trackingTriggerPolicy
-  }
-  return policy.trackingTriggerPolicy ?? DEFAULT_TRACKING_TRIGGER_POLICY
-}
-
-/**
- * Phân giải cơ chế xác nhận thanh toán lần 2 (balance) giữa Cài đặt Bộ sưu tập
- * và Chính sách tiệm. Catalog ghi đè tiệm; nếu không ghi đè thì theo policy.balancePaymentTriggerPolicy;
- * nếu vẫn chưa có thì kế thừa trackingTriggerPolicy; mặc định cuối cùng là "PAYMENT_OR_COORDINATOR".
- */
-export function resolveBalancePaymentTriggerPolicy(
-  policy: BrochurePaymentPolicy,
-  catalogFilters?: unknown,
-): TrackingTriggerPolicy {
-  const filters = catalogFilters && typeof catalogFilters === "object"
-    ? (catalogFilters as Record<string, unknown>)
-    : {}
-  if (filters.balancePaymentTriggerPolicy === "PAYMENT_ONLY" || filters.balancePaymentTriggerPolicy === "PAYMENT_OR_COORDINATOR") {
-    return filters.balancePaymentTriggerPolicy
-  }
-  return policy.balancePaymentTriggerPolicy ?? policy.trackingTriggerPolicy ?? DEFAULT_TRACKING_TRIGGER_POLICY
-}
-
-export type PaymentPurpose = "FULL" | "DEPOSIT" | "BALANCE"
+export { resolveRequirePaymentProof, resolveTrackingTriggerPolicy, resolveBalancePaymentTriggerPolicy } from "./brochure-policy-resolvers"
 
 /**
  * Số tiền khách nên chuyển LẦN NÀY: lần đầu theo % cọc (làm tròn lên nghìn),
@@ -308,9 +262,10 @@ export function paymentGateBlocker(
   }
   if (action === "dispatch-shipping") {
     const hasQuote = money.totalVnd > 0
-    // Đơn đặt cọc: luôn chặn cho đến khi Điều hành / Điều phối xác nhận lần 2
-    // (sau xác nhận paid_vnd += balance → paid_vnd = total_vnd → không còn blocked)
-    if (hasQuote && money.paidVnd > 0 && money.paidVnd < money.totalVnd) {
+    // Đơn đặt cọc: chặn cho đến khi Điều hành / Điều phối xác nhận lần 2 — trừ khi tiệm cho shipper
+    // thu tiền mặt phần còn lại lúc giao (và không bắt thu đủ trước khi giao) (PO 14/10/2026)
+    const shipperCollects = policy.allowShipperCash === true && !policy.requireFullBeforeDispatch
+    if (hasQuote && money.paidVnd > 0 && money.paidVnd < money.totalVnd && !shipperCollects) {
       return "Đơn đặt cọc — cần Điều hành hoặc Điều phối xác nhận đã nhận tiền lần 2 trước khi giao ship"
     }
     // Đơn chưa báo giá hoặc chưa thu tiền: chặn nếu tiệm yêu cầu thu đủ trước khi giao

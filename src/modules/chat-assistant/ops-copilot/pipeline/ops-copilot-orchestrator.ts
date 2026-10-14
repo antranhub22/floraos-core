@@ -46,7 +46,7 @@ export class OpsCopilotOrchestrator {
     // Tầng 2: Tra cứu tri thức chuẩn hóa SSOT (10 Module), bảo vệ vành đai dữ liệu
     const factSheet = this.researchAgent.research(intent)
 
-    // Tầng 3: Tổng hợp ngôn từ tự nhiên qua LLM (OpenAI → Ollama → template fallback)
+    // Tầng 3: Tổng hợp ngôn từ tự nhiên qua cổng AI (không gọi được → mẫu tĩnh)
     const draft = await this.toneAgent.synthesize(intent, factSheet)
 
     // Tầng 4: Kiểm duyệt an toàn, chặn rò rỉ mã lỗi, chuẩn hóa nút bấm

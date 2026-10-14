@@ -124,14 +124,23 @@ describe("adminConfirmBrochurePayment — bảo vệ đơn đặt cọc không b
     )
   })
 
-  it("Lần 2 (Thu sau giao): Chặn khi chưa giao hàng (delivery_status != DELIVERED)", async () => {
+  it("Lần 2 (Thu sau giao, shipper không thu tiền mặt — mặc định): ghi nhận chuyển khoản trước khi giao", async () => {
+    const { orders, repo, payments } = createMockServices(
+      { paid_vnd: BigInt(500_000), delivery_status: "PENDING" },
+      { brochure_policy: { deposit_percent: 0, require_full_before_dispatch: false } }
+    )
+    await adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)
+    expect(payments.recordIncomingPayment).toHaveBeenCalledWith(ctx, "order-1", expect.objectContaining({ amountVnd: 500_000 }))
+  })
+
+  it("Lần 2 (Thu sau giao, shipper thu tiền mặt): Chặn khi chưa giao hàng (delivery_status != DELIVERED)", async () => {
     const { orders, repo, payments } = createMockServices(
       {
         paid_vnd: BigInt(500_000),
         delivery_status: "PENDING",
       },
       {
-        brochure_policy: { deposit_percent: 0, require_full_before_dispatch: false },
+        brochure_policy: { deposit_percent: 0, require_full_before_dispatch: false, allow_shipper_cash: true },
       }
     )
     await expect(adminConfirmBrochurePayment(ctx, "order-1", {}, payments, orders, repo)).rejects.toThrow(

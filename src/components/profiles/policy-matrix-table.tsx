@@ -97,6 +97,17 @@ export function PolicyMatrixTable({ policy, onChange, disabled }: Props) {
                 disabled={disabled}
               />
 
+              {/* 2b. SHIPPER THU TIỀN MẶT (mặc định TẮT — PO 14/10/2026) */}
+              <PolicyRow
+                icon={<Truck size={17} className="text-foreground" />}
+                title="Cho phép shipper thu tiền mặt phần còn lại"
+                description="Tắt (mặc định): khách luôn chuyển khoản phần còn lại; tiệm xác nhận tiền xong mới giao. Bật: được giao đơn đặt cọc, shipper thu tiền mặt khi giao và tiệm ghi nhận sau khi giao xong."
+                isOn={policy.allowShipperCash === true}
+                onToggle={(val) => onChange({ allowShipperCash: val })}
+                statusText={policy.allowShipperCash ? "Shipper thu tiền mặt khi giao" : "Khách luôn chuyển khoản"}
+                disabled={disabled}
+              />
+
               {/* 3. ĐIỀU PHỐI ĐƯỢC DUYỆT BILL & XÁC NHẬN */}
               <PolicyRow
                 icon={<Users size={17} className="text-foreground" />}

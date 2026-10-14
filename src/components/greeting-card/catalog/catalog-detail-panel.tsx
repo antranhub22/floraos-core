@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { ArrowLeft, Package, Plus, Trash2, Search, Loader2, X, CheckCircle, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useSession } from "@/lib/session"
 import { useCatalogItems } from "./use-catalog-items"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { CatalogHeartsPanel } from "./catalog-hearts-panel"
@@ -39,6 +40,8 @@ type Props = {
 
 export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
   const [showPolicies, setShowPolicies] = useState(false)
+  // Chính sách theo bộ sưu tập ghi đè chính sách tiệm → chỉ người sửa được cấu hình tiệm (máy chủ cũng kiểm)
+  const canEditPolicies = useSession().can("F2")
   const [productSearch, setProductSearch] = useState("")
   const ci = useCatalogItems<CatalogDetail>(catalogId)
   const catalog = ci.catalog
@@ -87,6 +90,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {canEditPolicies && (
           <Button
             type="button"
             variant={showPolicies ? "primary" : "outline"}
@@ -97,6 +101,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
             <ShieldCheck size={16} />
             <span>{showPolicies ? "Xem Mẫu Hoa" : "Chính sách & Cam kết"}</span>
           </Button>
+          )}
           <Button
             type="button"
             size="sm"
@@ -109,7 +114,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
         </div>
       </div>
 
-      {showPolicies && (
+      {showPolicies && canEditPolicies && (
         <CatalogPoliciesSettings
           catalogId={catalogId}
           currentFilters={catalog?.filters ?? null}

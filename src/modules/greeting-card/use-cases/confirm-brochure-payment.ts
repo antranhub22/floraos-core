@@ -255,7 +255,8 @@ export async function coordinatorConfirmDepositPayment(
 /**
  * Phần còn lại (Lần 2) của đơn đặt cọc chỉ được ghi nhận khi khách đã báo chuyển khoản, hoặc
  * đơn đã tới bước được thu: thu trước giao → hoa xong và khách duyệt ảnh (tự duyệt sau 10 phút);
- * thu sau giao → đã giao thành công (PO 10/10/2026).
+ * thu sau giao → đã giao thành công khi shipper thu tiền mặt; shipper không thu tiền mặt → thu bằng
+ * chuyển khoản bất cứ lúc nào (PO 10/10 + 14/10/2026).
  */
 function assertBalanceCollectible(
   order: {
@@ -264,9 +265,12 @@ function assertBalanceCollectible(
     greeting_sessions?: Array<{ status: string }>
     qc_records?: Array<{ notes: string | null; created_at: Date }>
   },
-  policy: { requireFullBeforeDispatch: boolean }
+  policy: { requireFullBeforeDispatch: boolean; allowShipperCash?: boolean | undefined }
 ) {
   if (order.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED")) return
+  // Shipper không thu tiền mặt (mặc định) → khách chuyển khoản lần 2 bất cứ lúc nào, Điều hành ghi nhận
+  // ngay; không chờ giao xong (tránh kẹt: chưa thu thì chưa giao, chưa giao thì chưa thu) (PO 14/10/2026)
+  if (!policy.requireFullBeforeDispatch && policy.allowShipperCash !== true) return
   if (!policy.requireFullBeforeDispatch) {
     if (order.delivery_status !== "DELIVERED") {
       throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công.")

@@ -9,7 +9,8 @@ import { apiSend } from "@/components/greeting-card/greeting-api"
 interface CoordinatorConfirmDepositModalProps {
   orderId: string
   orderCode: string
-  depositVnd: number
+  /** Khoản Lần 1 tính sẵn theo kế hoạch thanh toán của đơn; `null` = chưa biết (máy chủ tự tính). */
+  depositVnd: number | null
   proofUrl: string | null
   onClose: () => void
   onDone: (msg?: string) => void
@@ -39,13 +40,15 @@ export function CoordinatorConfirmDepositModal({
     setBusy(true)
     setError(null)
     try {
-      await apiSend(
+      const res = await apiSend<{ data?: { paidVnd?: number } }>(
         `/api/v1/greeting-card/orders/${orderId}/confirm-deposit`,
         "POST",
         { note: note.trim() || undefined },
         "Không xác nhận được tiền cọc",
       )
-      onDone(`Đã xác nhận tiền cọc ${depositVnd.toLocaleString("vi-VN")}đ cho đơn #${orderCode}.`)
+      // Báo đúng số tiền máy chủ đã ghi sổ (không dùng số ước tính trên giao diện)
+      const recorded = res.data?.paidVnd ?? depositVnd
+      onDone(recorded != null ? `Đã xác nhận ${recorded.toLocaleString("vi-VN")}đ cho đơn #${orderCode}.` : `Đã xác nhận tiền cọc cho đơn #${orderCode}.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Thao tác không thành công")
     } finally {
@@ -74,7 +77,7 @@ export function CoordinatorConfirmDepositModal({
         <p className="text-body-sm text-text-muted">
           Số tiền cọc cần thu:{" "}
           <span className="font-extrabold text-foreground">
-            {depositVnd.toLocaleString("vi-VN")}đ
+            {depositVnd != null ? `${depositVnd.toLocaleString("vi-VN")}đ` : "theo kế hoạch thanh toán của đơn"}
           </span>
         </p>
 
@@ -107,7 +110,7 @@ export function CoordinatorConfirmDepositModal({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             maxLength={500}
-            placeholder="VD: Khớp bill chuyển khoản tiền cọc 50%"
+            placeholder="VD: Khớp bill chuyển khoản tiền cọc"
             className="w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
           />
         </label>

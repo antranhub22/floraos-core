@@ -1,6 +1,7 @@
 import { getStorageProvider } from "@/modules/assets/adapters/storage-provider-factory"
 import { getPublicGreetingCatalog } from "./get-public-greeting-catalog"
 import { getPublicGreetingCatalogBySlug } from "./get-public-greeting-catalog-by-slug"
+import { PUBLIC_IMAGE_MAX_BYTES, isSafePublicImageUrl } from "../domain/public-image-url"
 import { getGreetingCatalogForCustomer } from "./get-greeting-catalog"
 
 export const COLLAGE_MAX_IMAGES = 4
@@ -52,13 +53,16 @@ async function loadImages(urls: string[]): Promise<string[]> {
       }
     }
     // Hỗ trợ ảnh từ URL tuyệt đối (CDN hoặc proxy ảnh công khai)
-    if (url.startsWith("http://") || url.startsWith("https://")) {
+    if (isSafePublicImageUrl(url)) {
       try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(2500) })
-        if (res.ok) {
+        // Không theo chuyển hướng: một URL công khai có thể chuyển sang địa chỉ nội bộ
+        const res = await fetch(url, { signal: AbortSignal.timeout(2500), redirect: "error" })
+        const size = Number(res.headers.get("content-length") ?? "0")
+        if (res.ok && size <= PUBLIC_IMAGE_MAX_BYTES) {
           const contentType = res.headers.get("content-type")?.toLowerCase() || ""
           if (contentType.includes("jpeg") || contentType.includes("jpg") || contentType.includes("png")) {
             const buffer = await res.arrayBuffer()
+            if (buffer.byteLength > PUBLIC_IMAGE_MAX_BYTES) continue
             const imageMime = contentType.includes("png") ? "image/png" : "image/jpeg"
             out.push(`data:${imageMime};base64,${Buffer.from(buffer).toString("base64")}`)
           }

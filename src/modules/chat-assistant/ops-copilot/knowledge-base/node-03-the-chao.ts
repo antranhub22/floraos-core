@@ -49,6 +49,7 @@ export const NODE_03_THE_CHAO: OpsKnowledgeNode = {
     "Lời chúc thiệp hoặc chữ in băng rôn do khách tự gõ sẽ chuyển thẳng vào phiếu xưởng, tránh thợ cắm ghi sai chính tả.",
     "Khách phải tải ảnh chuyển khoản trước khi bấm 'Tôi đã chuyển khoản' (trừ khi tiệm tắt yêu cầu ảnh bill). Mặc định tiệm tự đối chiếu và bấm xác nhận — hệ thống không tự ghi nhận tiền.",
     "Chỉ khi tiệm bật 'Tự động duyệt thanh toán khi có ảnh chụp bill' ở Hồ sơ cửa hàng, hệ thống mới tự xác nhận sau số phút đã chọn, và chỉ với bill đúng tài khoản tiệm, đúng số tiền. Bill lệch hoặc không đọc được luôn chờ người duyệt.",
+    "Mặc định shipper không thu tiền mặt: khách chuyển khoản phần còn lại, tiệm xác nhận tiền xong mới giao. Muốn shipper thu tiền mặt khi giao thì bật 'Cho phép shipper thu tiền mặt phần còn lại' ở Hồ sơ cửa hàng.",
     "Điều phối từ chối nhận đơn mà Điều hành chưa duyệt kịp hạn thì đơn tự huỷ và báo khách, nhưng tiền không tự chuyển: Hộp việc của Điều hành hiện 'Đơn tự huỷ — cần hoàn …đ cho khách'. Chuyển khoản hoàn xong thì bấm 'Đã hoàn tiền cho khách' để ghi sổ.",
   ],
   actionLabel: "Mở Bảng Thẻ Chào Mẫu Hoa",

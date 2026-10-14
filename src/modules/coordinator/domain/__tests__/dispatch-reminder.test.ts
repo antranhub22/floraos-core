@@ -117,6 +117,13 @@ describe("dispatch-reminder domain", () => {
 
     const schedule = calculateMilestoneSchedule(sampleInput, config)
 
+    it("tin nhắc xưởng ghi giờ giao theo giờ Việt Nam, không theo múi giờ máy chủ", () => {
+      // 15:00Z = 22:00 giờ Việt Nam
+      const reminders = evaluateOrderReminders(sampleInput, schedule, new Date("2026-10-12T15:30:00.000Z"))
+      const m1 = reminders.find((r) => r.milestone === "M1")
+      expect(m1?.messageTemplate).toContain("22:00")
+    })
+
     it("không kích hoạt mốc nào khi chưa đến giờ scheduledAt", () => {
       const currentTime = new Date("2026-10-12T12:05:00.000Z") // trước M0 (12:10)
       const reminders = evaluateOrderReminders(sampleInput, schedule, currentTime)

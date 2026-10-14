@@ -1,13 +1,15 @@
 /**
- * Agent 3: Tone & Copywriting Synthesizer Agent.
+ * Agent 3: Tone & Copywriting Synthesizer Agent — LLM Edition.
  *
- * Tổng hợp câu trả lời theo văn phong nhân viên tiệm hoa từ FactSheet bằng mẫu câu cố định.
- * KHÔNG gọi thẳng nhà cung cấp AI (OpenAI/Ollama): mọi lệnh gọi AI phải qua `callCapability`
- * (`src/core/ai/gateway.ts`) — bản gọi thẳng trước đây đã gỡ khi soát chuẩn bàn giao 14/10/2026;
- * nối lại qua cổng AI cần đăng ký năng lực AI riêng (chờ PO).
+ * Chuyên trách tổng hợp câu trả lời tự nhiên bằng cách đưa FactSheet vào LLM,
+ * yêu cầu trả lời theo văn phong nhân viên tiệm hoa Việt Nam thực thụ.
+ *
+ * Gọi mô hình chỉ qua cổng AI (`ChatAnswerFn` → `callCapability("chat_answer")`); cổng chọn
+ * mô hình theo chính sách tiệm. Không gọi được → mẫu tĩnh.
  */
 
 import type { ParsedIntent, KnowledgeFactSheet, PolishedDraft } from "./pipeline-types"
+import type { ChatAnswerFn } from "../../adapters/chat-answer-gateway"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -45,7 +47,56 @@ function purifyDevJargon(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Template
+// System prompt builder
+// ---------------------------------------------------------------------------
+
+function buildSystemPrompt(): string {
+  return `Bạn là Trợ lý Vận hành FloraOS — nhân viên hỗ trợ nội bộ của tiệm hoa.
+Nhiệm vụ: Trả lời câu hỏi của chủ tiệm / nhân viên về cách sử dụng phần mềm FloraOS.
+
+QUY TẮC BẮT BUỘC:
+- Viết hoàn toàn bằng tiếng Việt, ấm áp, lịch sự như đồng nghiệp thân thiện.
+- TUYỆT ĐỐI không dùng mã kỹ thuật, tên component, đường dẫn file, ký hiệu lập trình.
+- Không dùng markdown bold (**) quá nhiều — chỉ in đậm tên tính năng chính (tối đa 2-3 lần).
+- Không liệt kê quá 5 bước; nếu nhiều hơn, gộp các bước nhỏ vào nhau.
+- Không mở đầu bằng "Dạ" nếu đã có lời chào ở trước.
+- Kết thúc bằng 1 câu khích lệ hoặc gợi mở hành động tiếp theo ngắn gọn.
+- Độ dài tối đa: 150 từ.`
+}
+
+function buildUserPrompt(intent: ParsedIntent, facts: KnowledgeFactSheet): string {
+  // Nếu không tìm thấy node → hỏi lại
+  if (!facts.nodeId) {
+    return `Người dùng hỏi: "${intent.rawQuery}"
+Hệ thống chưa tìm thấy hướng dẫn phù hợp.
+Hãy trả lời thân thiện, thừa nhận chưa rõ và gợi ý người dùng đặt lại câu hỏi cụ thể hơn (ví dụ: tên tính năng, thao tác muốn làm).`
+  }
+
+  // Tổng hợp FactSheet thành context ngắn gọn
+  const stepsContext = facts.steps
+    .map((s) => `Bước ${s.stepNumber}: ${purifyDevJargon(s.actionText)}`)
+    .join("\n")
+
+  const caveatsContext = facts.caveats.length > 0
+    ? `\nLưu ý quan trọng: ${facts.caveats.slice(0, 2).map(purifyDevJargon).join("; ")}`
+    : ""
+
+  const relatedContext = facts.relatedLinks.length > 0
+    ? `\nTính năng liên quan: ${facts.relatedLinks[0]!.title}`
+    : ""
+
+  return `Người dùng hỏi: "${intent.rawQuery}"
+Tính năng: ${facts.topicTitle ?? facts.moduleTitle ?? "FloraOS"}
+Tóm tắt: ${facts.summary}
+
+Các bước thực hiện:
+${stepsContext}${caveatsContext}${relatedContext}
+
+Hãy trả lời câu hỏi trên theo đúng thông tin trên bằng ngôn ngữ tự nhiên, không liệt kê máy móc.`
+}
+
+// ---------------------------------------------------------------------------
+// Template fallback (giữ lại để đảm bảo unit tests không phụ thuộc LLM)
 // ---------------------------------------------------------------------------
 
 function templateFallback(intent: ParsedIntent, facts: KnowledgeFactSheet): PolishedDraft {
@@ -107,7 +158,7 @@ function templateFallback(intent: ParsedIntent, facts: KnowledgeFactSheet): Poli
   }
 
   const stepsFormatted = facts.steps.map((s) => {
-    const cleanAction = purifyDevJargon(s.actionText).replace(/^Bước\s*\d+\s*[-:]\s*/i, "").trim()
+    let cleanAction = purifyDevJargon(s.actionText).replace(/^Bước\s*\d+\s*[-:]\s*/i, "").trim()
     if (cleanAction.includes(":")) {
       const parts = cleanAction.split(":")
       const header = parts[0]?.trim()
@@ -174,8 +225,40 @@ function templateFallback(intent: ParsedIntent, facts: KnowledgeFactSheet): Poli
 // ---------------------------------------------------------------------------
 
 export class ToneSynthesizerAgent {
-  /** Tổng hợp câu trả lời từ FactSheet. Luôn trả về kết quả — không bao giờ throw. */
+  /** `answer` gọi AI qua cổng (`chatAnswerViaGateway`); không truyền → luôn dùng mẫu tĩnh. */
+  constructor(private readonly answer?: ChatAnswerFn | undefined) {}
+
+  /**
+   * Tổng hợp câu trả lời qua cổng AI → mẫu tĩnh khi không gọi được mô hình.
+   * Luôn trả về kết quả — không bao giờ throw.
+   */
   async synthesize(intent: ParsedIntent, facts: KnowledgeFactSheet): Promise<PolishedDraft> {
-    return templateFallback(intent, facts)
+    // Các trường hợp đặc biệt không cần LLM (overview, unresolved) → template ngay
+    if (facts.isOverview || !facts.nodeId || !this.answer) {
+      return templateFallback(intent, facts)
+    }
+
+    const reply = await this.answer({ system: buildSystemPrompt(), prompt: buildUserPrompt(intent, facts), maxTokens: 300 })
+    return reply ? buildPolishedDraft(reply, intent, facts) : templateFallback(intent, facts)
+  }
+}
+
+/** Đóng gói câu trả lời LLM vào PolishedDraft với metadata đầy đủ */
+function buildPolishedDraft(
+  llmText: string,
+  intent: ParsedIntent,
+  facts: KnowledgeFactSheet
+): PolishedDraft {
+  const crossModuleBlock = facts.relatedLinks.length > 0
+    ? `\n\n🔗 **Liên kết nghiệp vụ liên quan:** [${facts.relatedLinks[0]!.title}](${facts.relatedLinks[0]!.route})`
+    : ""
+
+  return {
+    greeting: "",
+    bodyText: llmText + crossModuleBlock,
+    targetRoute: facts.routePath ?? undefined,
+    actionLabel: facts.actionLabel ?? undefined,
+    actionSteps: facts.steps.map((s) => purifyDevJargon(s.actionText)),
+    relatedLinks: facts.relatedLinks,
   }
 }

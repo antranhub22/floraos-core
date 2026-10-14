@@ -13,7 +13,9 @@ import type { ChatMessage } from "../domain/chat-types"
 import { ChatRepository } from "../infra/chat-repository"
 import { OpsCopilotEngine } from "../ops-copilot/domain/ops-copilot-engine"
 import { askOpsCopilot } from "../ops-copilot/use-cases/ask-ops-copilot"
+import { OpsCopilotOrchestrator, ToneSynthesizerAgent } from "../ops-copilot/pipeline"
 import { SalesConciergeProvider } from "../sales-concierge/adapters/sales-concierge-provider"
+import { chatAnswerViaGateway } from "../adapters/chat-answer-gateway"
 
 export async function sendChatMessage(
   ctx: TenantContext,
@@ -21,7 +23,7 @@ export async function sendChatMessage(
   query: string,
   assistantType?: "OPS_COPILOT" | "SALES_CONCIERGE",
   repo: ChatRepository = new ChatRepository(),
-  salesProvider: SalesConciergeProvider = new SalesConciergeProvider()
+  salesProvider: SalesConciergeProvider = new SalesConciergeProvider(chatAnswerViaGateway(ctx, conversationId))
 ): Promise<{ userMessage: ChatMessage; assistantMessage: ChatMessage }> {
   if (!query.trim()) {
     throw validationFailed({ query: "Nội dung tin nhắn không được để trống" })
@@ -47,7 +49,9 @@ export async function sendChatMessage(
       },
       {
         repo,
-        engine: new OpsCopilotEngine(),
+        engine: new OpsCopilotEngine(
+          new OpsCopilotOrchestrator({ toneAgent: new ToneSynthesizerAgent(chatAnswerViaGateway(ctx, conversationId)) })
+        ),
       }
     )
   }

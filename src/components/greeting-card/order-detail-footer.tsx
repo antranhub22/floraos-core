@@ -272,7 +272,7 @@ export function OrderDetailFooter({
         <CoordinatorConfirmDepositModal
           orderId={target.orderId}
           orderCode={target.orderCode ?? "---"}
-          depositVnd={Math.round(totalVnd * 0.5)}
+          depositVnd={null}
           proofUrl={target.paymentProofUrl ?? null}
           onClose={() => setShowConfirmDepositModal(false)}
           onDone={() => {

@@ -474,7 +474,7 @@ Liên kết thu hồi được nhưng không xoá được: một mã QR đã d�
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
 | GET | `/crm/customers` | `Q1` · `Q2` | Sắp theo ngày đặc biệt gần nhất theo mặc định |
-| GET | `/crm/customers/export` | `Q1` hoặc `Q5` | `?format` `?tier` `?search` → tệp danh sách khách hàng của tổ chức |
+| GET | `/crm/customers/export` | `R13` (chỉ Điều hành; người khác cần Điều hành cấp quyền — PO 14/10/2026) | `?format` `?tier` `?search` → tệp danh sách khách hàng của tổ chức |
 | POST | `/crm/customers` | `Q2` | |
 | GET | `/crm/customers/:id` | `Q1` · `Q3` · `Q4` | |
 | PATCH | `/crm/customers/:id` | `Q3` · `Q4` | |
@@ -533,7 +533,7 @@ Mọi route nhận `:id` là id HOẶC mã đơn (`FLR-YYMMDD-NNNN`); tổ chứ
 | POST | `/coordinator/reminders/acknowledge` | `R3` | `{ orderId, milestone, action, snoozeMinutes?, note? }`; đơn của tổ chức khác → 404 |
 | GET · PUT | `/coordinator/settings/reminders` | `D1` (đọc) · `R12` (sửa) | Thời điểm nhắc việc cấp tổ chức (phút, 0–1440) (14/10/2026: sửa đòi `R12`) |
 | GET · PUT | `/coordinator/templates/:id/reminders` | `R1` (đọc) · `R12` (sửa) | Ghi đè thời điểm nhắc theo mẫu hoa; mẫu của tổ chức khác → 404 |
-| GET | `/orders/export` | `R1` (nguồn `BROCHURE`: `R1` hoặc `R11`) | `?from_date` `?to_date` `?source=BROCHURE\|MANUAL\|CHAT` → tệp Excel đơn hàng của tổ chức |
+| GET | `/orders/export` | `R13` (chỉ Điều hành; người khác cần Điều hành cấp quyền — PO 14/10/2026) | `?from_date` `?to_date` `?source=BROCHURE\|MANUAL\|CHAT` → tệp Excel đơn hàng của tổ chức |
 | POST | `/coordinator/orders/:id/exceptions` | `R3` | Đưa đơn về `EXCEPTION`, nhớ bước cũ |
 | POST | `/coordinator/exceptions/:id/resolve` | `R3` | Hết sự cố mở → đơn tự về bước cũ |
 | POST | `/coordinator/orders/:id/close` | `R3` | Chỉ khi `DELIVERED` và không còn sự cố; chốt điểm + tiền công đối tác |

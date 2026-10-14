@@ -9,6 +9,13 @@ import { listProductMasterIndex } from "@/modules/products/use-cases/get-product
 import type { ProductMasterIndex } from "@/modules/products/domain/product-master-index"
 import type { CustomerMasterIndex } from "@/modules/crm/domain/customer-master-index"
 import { SalesConciergeProvider } from "../adapters/sales-concierge-provider"
+import { chatAnswerViaGateway } from "../../adapters/chat-answer-gateway"
+import type { TenantContext } from "@/core/tenancy"
+
+/** Ngữ cảnh "khách mua hoa" — không mang năng lực của nhân viên nào. */
+const shopperContext = (organizationId: string): TenantContext => ({
+  organizationId, workspaceId: "system", userId: "shopper", branchId: null, capabilities: new Set<string>(),
+})
 import type { SalesConsultantOutput } from "../domain/sales-concierge-types"
 
 export interface ConsultFlowerSalesInput {
@@ -21,9 +28,7 @@ export interface ConsultFlowerSalesInput {
 
 export async function consultFlowerSales(
   input: ConsultFlowerSalesInput,
-  deps = {
-    provider: new SalesConciergeProvider(),
-  }
+  deps: { provider?: SalesConciergeProvider | undefined } = {}
 ): Promise<SalesConsultantOutput> {
   const query = input.query.trim()
   if (!query) {
@@ -33,17 +38,12 @@ export async function consultFlowerSales(
   // Nạp danh mục hoa nếu chưa có
   let products = input.masterProducts
   if (!products) {
-    const dummyCtx = {
-      organizationId: input.organizationId,
-      workspaceId: "system",
-      userId: "shopper",
-      branchId: null,
-      capabilities: new Set<string>(),
-    }
+    const dummyCtx = shopperContext(input.organizationId)
     products = await listProductMasterIndex(dummyCtx, 30).catch(() => [])
   }
 
-  return deps.provider.send({
+  const provider = deps.provider ?? new SalesConciergeProvider(chatAnswerViaGateway(shopperContext(input.organizationId), input.conversationId))
+  return provider.send({
     query,
     conversationId: input.conversationId,
     customer: input.customer,

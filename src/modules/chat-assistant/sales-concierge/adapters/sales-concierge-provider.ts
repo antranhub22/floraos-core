@@ -2,9 +2,11 @@
  * Sales Concierge AI Provider Adapter.
  * Trợ lý AI Bán hoa cho Khách hàng tiệm hoa.
  * TUYỆT ĐỐI KHÔNG chứa tri thức vận hành SaaS nội bộ (Zero-Leakage Guarantee).
+ *
+ * Câu trả lời AI chỉ đi qua cổng AI (`ChatAnswerFn` → `callCapability`), không gọi thẳng nhà cung cấp.
+ * Không gửi thông tin cá nhân của khách (tên, số điện thoại, hạng) cho mô hình — chỉ câu hỏi và mẫu gợi ý.
  */
 
-import { env } from "@/lib/env"
 import {
   extractBudgetFromQuery,
   extractOccasionFromQuery,
@@ -16,223 +18,45 @@ import type {
   SalesConsultantInput,
   SalesConsultantOutput,
 } from "../domain/sales-concierge-types"
+import type { ChatAnswerFn } from "../../adapters/chat-answer-gateway"
 
-export class SalesConciergeProvider {
-  private apiKey: string | undefined
-  private apiUrl: string
-  private openaiApiKey: string | undefined
-  private ollamaUrl: string
-
-  constructor() {
-    this.apiKey = process.env.DIFY_API_KEY
-    this.apiUrl = process.env.DIFY_API_URL || "https://api.dify.ai/v1"
-    this.openaiApiKey = env.OPENAI_API_KEY || process.env.OPENAI_API_KEY
-    this.ollamaUrl = process.env.OLLAMA_URL || "http://127.0.0.1:11434"
-  }
-
-  async send(input: SalesConsultantInput): Promise<SalesConsultantOutput> {
-    const budget = extractBudgetFromQuery(input.query)
-    const occasion = extractOccasionFromQuery(input.query)
-    const suggestedFlowers = matchProductsFromMasterIndex(
-      input.masterProducts,
-      budget,
-      occasion
-    )
-
-    // 1. Ưu tiên Dify nếu có cấu hình
-    if (this.apiKey) {
-      const difyReply = await this.callDify(input, budget, occasion, suggestedFlowers)
-      if (difyReply) return difyReply
-    }
-
-    // 2. Gọi OpenAI API (gpt-4o-mini) nếu có key
-    if (this.openaiApiKey) {
-      const openaiReply = await this.callOpenAI(input, budget, occasion, suggestedFlowers)
-      if (openaiReply) return openaiReply
-    }
-
-    // 3. Gọi Local Qwen (Ollama)
-    const qwenReply = await this.callOllamaQwen(input, budget, occasion, suggestedFlowers)
-    if (qwenReply) return qwenReply
-
-    // 4. Fallback an toàn: Rule Engine tiệm hoa
-    return this.generateLocalFlowerSalesReply(input, budget, occasion, suggestedFlowers)
-  }
-
-  private async callDify(
-    input: SalesConsultantInput,
-    budget: number | null,
-    occasion: string | null,
-    suggestedFlowers: SuggestedFlowerCard[]
-  ): Promise<SalesConsultantOutput | null> {
-    try {
-      const res = await fetch(`${this.apiUrl}/chat-messages`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs: {
-            customer_name: input.customer?.name || "Quý khách",
-            customer_tier: input.customer?.metrics.tier || "Khách mới",
-            fav_flowers: input.customer?.preferences.preferredFlowers.join(", ") || "",
-            budget: budget ? `${budget.toLocaleString("vi-VN")} đ` : "Chưa rõ",
-            occasion: occasion || "Tự do",
-          },
-          query: input.query,
-          response_mode: "blocking",
-          conversation_id: input.conversationId.length === 36 ? input.conversationId : undefined,
-          user: input.customer?.phone || "anonymous_shopper",
-        }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        return {
-          replyText: data.answer || "Dạ, em xin phép tư vấn mẫu hoa phù hợp nhất cho anh/chị ạ.",
-          suggestedFlowers,
-          detectedBudget: budget ?? undefined,
-          detectedOccasion: occasion ?? undefined,
-        }
-      }
-    } catch {
-      // Chuyển sang fallback
-    }
-    return null
-  }
-
-  private async callOpenAI(
-    input: SalesConsultantInput,
-    budget: number | null,
-    occasion: string | null,
-    suggestedFlowers: SuggestedFlowerCard[]
-  ): Promise<SalesConsultantOutput | null> {
-    try {
-      const catalogSummary =
-        suggestedFlowers.length > 0
-          ? suggestedFlowers
-              .slice(0, 5)
-              .map(
-                (p) =>
-                  `- ${p.productName} (Giá: ${formatQuotePriceForChat(p.priceVnd)}, Phong cách: ${p.wrapStyle || "Hiện đại"})`
-              )
-              .join("\n")
-          : "Hiện các mẫu hoa thiết kế đang được cập nhật thêm."
-
-      const customerContext = input.customer
-        ? `Khách hàng: ${input.customer.name}`
-        : "Khách hàng"
-
-      const systemPrompt = `Bạn là Chuyên viên Tư vấn Hoa Tươi duyên dáng, nhiệt tình của tiệm hoa.
+const SALES_SYSTEM_PROMPT = `Bạn là Chuyên viên Tư vấn Hoa Tươi duyên dáng, nhiệt tình của tiệm hoa.
 Nhiệm vụ:
 - Giao tiếp lễ phép, ấm áp, tinh tế bằng tiếng Việt với khách mua hoa.
 - Tư vấn mẫu hoa phù hợp theo ngân sách, tone màu và dịp tặng hoa (sinh nhật, khai trương, kỷ niệm, chia buồn...).
 - Nếu có mẫu hoa phù hợp, gợi ý khách xem và nhấn nút chốt đơn mẫu hoa yêu thích.
 - Nếu chưa có mẫu hoa hoàn toàn trùng khớp, giải thích nhẹ nhàng và gợi ý tư vấn cắm hoa theo yêu cầu riêng.
 - Tuyệt đối KHÔNG nhắc đến các thuật ngữ kỹ thuật phần mềm hoặc mã hệ thống nội bộ.
-- Trả lời ngắn gọn, sinh động trong 2-3 câu.
+- Trả lời ngắn gọn, sinh động trong 2-3 câu.`
 
-Khách hàng: ${customerContext}
-Mẫu hoa gợi ý:
-${catalogSummary}`
+export class SalesConciergeProvider {
+  /** Không truyền `answer` → chỉ dùng bộ trả lời theo luật của tiệm (không gọi AI). */
+  constructor(private readonly answer?: ChatAnswerFn | undefined) {}
 
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.openaiApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: input.query },
-          ],
-          max_tokens: 350,
-          temperature: 0.7,
-        }),
-      })
+  async send(input: SalesConsultantInput): Promise<SalesConsultantOutput> {
+    const budget = extractBudgetFromQuery(input.query)
+    const occasion = extractOccasionFromQuery(input.query)
+    const suggestedFlowers = matchProductsFromMasterIndex(input.masterProducts, budget, occasion)
 
-      if (!res.ok) return null
-
-      const data = await res.json()
-      const answer = data.choices?.[0]?.message?.content?.trim()
-      if (!answer) return null
-
-      return {
-        replyText: answer,
-        suggestedFlowers,
-        detectedBudget: budget ?? undefined,
-        detectedOccasion: occasion ?? undefined,
-      }
-    } catch {
-      return null
-    }
-  }
-
-  private async callOllamaQwen(
-    input: SalesConsultantInput,
-    budget: number | null,
-    occasion: string | null,
-    suggestedFlowers: SuggestedFlowerCard[]
-  ): Promise<SalesConsultantOutput | null> {
-    try {
+    if (this.answer) {
       const catalogSummary =
         suggestedFlowers.length > 0
           ? suggestedFlowers
               .slice(0, 5)
-              .map(
-                (p) =>
-                  `- ${p.productName} (Giá: ${formatQuotePriceForChat(p.priceVnd)})`
-              )
+              .map((p) => `- ${p.productName} (Giá: ${formatQuotePriceForChat(p.priceVnd)}, Phong cách: ${p.wrapStyle || "Hiện đại"})`)
               .join("\n")
-          : "Đang cập nhật thêm mẫu mới."
-
-      const systemPrompt = `Bạn là Trợ lý Hoa Tươi của tiệm hoa.
-Nhiệm vụ:
-- Tư vấn hoa tươi cho khách hàng chu đáo, thân thiện, lễ phép bằng tiếng Việt.
-- Gợi ý mẫu hoa theo dịp và ngân sách của khách.
-- Tuyệt đối không đề cập đến bất kỳ thuật ngữ phần mềm quản trị nào.
-- Trả lời súc tích trong 2-3 câu.
-
-Mẫu hoa gợi ý:
-${catalogSummary}`
-
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 6000)
-
-      const res = await fetch(`${this.ollamaUrl}/v1/chat/completions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: "qwen2.5:7b",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: input.query },
-          ],
-          max_tokens: 300,
-          temperature: 0.7,
-        }),
+          : "Hiện các mẫu hoa thiết kế đang được cập nhật thêm."
+      const reply = await this.answer({
+        system: `${SALES_SYSTEM_PROMPT}\n\nMẫu hoa gợi ý:\n${catalogSummary}`,
+        prompt: input.query,
+        maxTokens: 350,
       })
-
-      clearTimeout(timeoutId)
-      if (!res.ok) return null
-
-      const data = await res.json()
-      const answer = data.choices?.[0]?.message?.content?.trim()
-      if (!answer) return null
-
-      return {
-        replyText: answer,
-        suggestedFlowers,
-        detectedBudget: budget ?? undefined,
-        detectedOccasion: occasion ?? undefined,
+      if (reply) {
+        return { replyText: reply, suggestedFlowers, detectedBudget: budget ?? undefined, detectedOccasion: occasion ?? undefined }
       }
-    } catch {
-      return null
     }
+
+    return this.generateLocalFlowerSalesReply(input, budget, occasion, suggestedFlowers)
   }
 
   private generateLocalFlowerSalesReply(

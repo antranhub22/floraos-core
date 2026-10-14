@@ -60,7 +60,6 @@ export function AiProductEnrichmentModal({
   useEffect(() => {
     if (!isOpen) return
     const { values: initValues, previewUrl } = extractInitialFormValues(initialProduct)
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- nạp lại form từ sản phẩm (props) mỗi lần mở hộp thoại, chủ đích
     setValues(initValues)
     setImagePreview(previewUrl)
     setImageFile(null)
@@ -182,6 +181,7 @@ export function AiProductEnrichmentModal({
       return
     }
 
+
     setIsSubmitting(true)
     setErrorMsg(null)
 
@@ -206,14 +206,10 @@ export function AiProductEnrichmentModal({
       const responseBody = await res.json().catch(() => null)
 
       if (!res.ok) {
-        // Không hiện mã HTTP hay tên trường kỹ thuật cho người dùng — chỉ câu tiếng Việt
-        const issues = (responseBody?.error?.issues ?? []) as Array<{ message?: string }>
-        const msg =
-          responseBody?.error?.message ||
-          issues.map((i) => i.message).filter(Boolean).join("; ") ||
-          "Không thể cập nhật sản phẩm. Vui lòng thử lại."
-        throw new Error(msg)
+        throw new Error(responseBody?.error?.message || "Không lưu được sản phẩm, vui lòng kiểm tra lại thông tin và thử lại")
       }
+
+      await new Promise((r) => setTimeout(r, 400))
 
       onSuccess()
       onClose()

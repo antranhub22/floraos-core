@@ -25,8 +25,10 @@ interface MilestoneDefinition {
 
 function formatTimeString(date: Date | null): string {
   if (!date) return "--:--"
-  const hours = date.getHours().toString().padStart(2, "0")
-  const minutes = date.getMinutes().toString().padStart(2, "0")
+  // Giờ Việt Nam (UTC+7) — máy chủ chạy UTC
+  const vn = new Date(date.getTime() + 7 * 3_600_000)
+  const hours = vn.getUTCHours().toString().padStart(2, "0")
+  const minutes = vn.getUTCMinutes().toString().padStart(2, "0")
   return `${hours}:${minutes}`
 }
 
