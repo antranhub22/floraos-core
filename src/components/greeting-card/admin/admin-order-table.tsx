@@ -12,6 +12,7 @@ import { readPaymentPlan } from "@/modules/greeting-card/domain/payment-plan"
 import { depositAmountVnd } from "@/modules/greeting-card/domain/payment-schedule"
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { PaymentProofBadge } from "./payment-proof-badge"
+import { useNow } from "@/components/greeting-card/work/use-worklist"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Chờ thanh toán", className: "bg-warning-bg text-warning" },
@@ -35,6 +36,8 @@ export function AdminOrderTable({
   shopDepositPercent?: number
   policy?: BrochurePaymentPolicy | undefined
 }) {
+  // Mốc tự duyệt ảnh sau 10 phút — đồng hồ cập nhật mỗi phút, không gọi Date.now() lúc render
+  const now = useNow()
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-body-sm">
@@ -68,7 +71,7 @@ export function AdminOrderTable({
             const isReady = o.production_status === "READY"
             const isPhotoApproved = o.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
             const productPhotoQc = o.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-            const isAutoApproved = !!productPhotoQc && (Date.now() >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
+            const isAutoApproved = !!productPhotoQc && (now >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
             // Nếu không tải ảnh lên (!productPhotoQc), coi như tiệm bỏ qua duyệt ảnh -> cho phép thu lần 2 ngay khi cắm xong (isReady)
             const canCollectBalanceBeforeDispatch = isReady && (!productPhotoQc || isPhotoApproved || isAutoApproved)
             const canCollectBalanceAfterDelivery = o.delivery_status === "DELIVERED"
