@@ -43,22 +43,24 @@ export function BrandAssetsUploader({
 
   const logoInputRef = useRef<HTMLInputElement>(null)
 
-  // Đồng bộ và giải mã URL ảnh logo khi logoAssetId hoặc initialLogoUrl thay đổi
+  // Đồng bộ ảnh logo khi logoAssetId hoặc initialLogoUrl thay đổi (điều chỉnh state trong render)
+  const [syncedLogo, setSyncedLogo] = useState({ logoAssetId, initialLogoUrl })
+  if (syncedLogo.logoAssetId !== logoAssetId || syncedLogo.initialLogoUrl !== initialLogoUrl) {
+    setSyncedLogo({ logoAssetId, initialLogoUrl })
+    setLogoPreview(initialLogoUrl || "")
+  }
+
+  // Giải mã URL xem ảnh khi chỉ có logoAssetId
   useEffect(() => {
-    if (initialLogoUrl) {
-      setLogoPreview(initialLogoUrl)
-    } else if (logoAssetId) {
-      let active = true
-      resolveAssetViewUrl(logoAssetId).then((url) => {
-        if (active && url) {
-          setLogoPreview(url)
-        }
-      })
-      return () => {
-        active = false
+    if (initialLogoUrl || !logoAssetId) return
+    let active = true
+    resolveAssetViewUrl(logoAssetId).then((url) => {
+      if (active && url) {
+        setLogoPreview(url)
       }
-    } else {
-      setLogoPreview("")
+    })
+    return () => {
+      active = false
     }
   }, [logoAssetId, initialLogoUrl])
 

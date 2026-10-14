@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import { Ban, Check, RotateCcw, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
@@ -34,6 +34,7 @@ export function AdminOrderTable({
   shopDepositPercent?: number
   policy?: BrochurePaymentPolicy | undefined
 }) {
+  const [now] = useState(() => Date.now())
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-body-sm">
@@ -67,7 +68,7 @@ export function AdminOrderTable({
             const isReady = o.production_status === "READY"
             const isPhotoApproved = o.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
             const productPhotoQc = o.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-            const isAutoApproved = !!productPhotoQc && (Date.now() >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
+            const isAutoApproved = !!productPhotoQc && (now >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
             const canCollectBalanceBeforeDispatch = isReady && (isPhotoApproved || isAutoApproved)
             const canCollectBalanceAfterDelivery = o.delivery_status === "DELIVERED"
             const isReportedPaid = balance > 0 && o.status !== "CANCELLED" && o.greeting_sessions[0]?.status === "PAYMENT_REPORTED"
