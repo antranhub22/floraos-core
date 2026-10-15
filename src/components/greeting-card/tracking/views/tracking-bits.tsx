@@ -32,7 +32,7 @@ export function SlaBadge({ item, compact = false }: { item: TrackingViewItem; co
   if (item.sla.state === "NONE") {
     const age = formatMinutes(item.sla.ageMinutes)
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-caption font-medium text-text-muted">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-surface-muted px-2 py-0.5 text-caption font-medium text-text-muted">
         <Clock size={11} className="shrink-0" aria-hidden="true" />
         <span>{compact ? age : `Đã ở bước này ${age}`}</span>
       </span>
@@ -44,7 +44,7 @@ export function SlaBadge({ item, compact = false }: { item: TrackingViewItem; co
     ? `quá ${formatMinutes(item.stuck.overdueMinutes)}`
     : item.sla.minutes !== null ? `${formatMinutes(item.sla.ageMinutes)} / ${formatMinutes(item.sla.minutes)}` : formatMinutes(item.sla.ageMinutes)
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption ${s.cls}`}>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-caption ${s.cls}`}>
       {item.sla.state === "OVERDUE" ? (
         <AlertCircle size={11} className="shrink-0" aria-hidden="true" />
       ) : item.sla.state === "DUE_SOON" ? (
