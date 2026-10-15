@@ -24,9 +24,9 @@ describe("quy trình đề xuất Hủy/Hoàn tiền Thẻ chào — domain logi
       expect(canProposeCancellation({ status: "CONFIRMED", deliveryStatus: "DELIVERED" }).allowed).toBe(false)
     })
 
-    it("chặn khi hoa đã bắt đầu cắm hoặc đã xong (ARRANGING, READY, ASSIGNED)", () => {
+    it("chặn khi thợ đang cắm (ARRANGING, ASSIGNED); đã cắm xong (READY) thì được đề xuất", () => {
       expect(canProposeCancellation({ status: "CONFIRMED", productionStatus: "ARRANGING" }).allowed).toBe(false)
-      expect(canProposeCancellation({ status: "CONFIRMED", productionStatus: "READY" }).allowed).toBe(false)
+      expect(canProposeCancellation({ status: "CONFIRMED", productionStatus: "READY" }).allowed).toBe(true)
       expect(canProposeCancellation({ status: "CONFIRMED", productionStatus: "ASSIGNED" }).allowed).toBe(false)
     })
   })

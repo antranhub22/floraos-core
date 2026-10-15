@@ -54,7 +54,8 @@ export function needsFollowUp(payload: Pick<CancellationPayload, "status" | "fol
 
 /**
  * Kiểm tra xem đơn hàng có đủ điều kiện để nhân viên đề xuất hủy/hoàn tiền hay không.
- * Nguyên tắc: Chỉ được phép đề xuất hủy trước khi cắm hoa (productionStatus === "WAITING" hoặc chưa cắm).
+ * Nguyên tắc: đề xuất được khi chưa cắm, khi đã cắm xong chờ giao, hoặc khi đang giao (PO 15/10/2026);
+ * chặn lúc thợ đang cắm (đã phân công / đang cắm / chờ kiểm) — liên hệ trực tiếp Điều hành.
  */
 export function canProposeCancellation(order: {
   status: string
@@ -69,10 +70,12 @@ export function canProposeCancellation(order: {
   }
   // Đơn đang giao: được đề xuất huỷ, kèm cảnh báo, và phải có người duyệt (PO 15/10/2026, mục 6)
   if (isInTransit(order.deliveryStatus)) return { allowed: true }
+  // Hoa đã cắm xong, chưa giao: được đề xuất huỷ — Điều hành duyệt (PO 15/10/2026)
+  if (order.productionStatus === "READY") return { allowed: true }
   if (order.productionStatus && order.productionStatus !== "WAITING") {
     return {
       allowed: false,
-      reason: "Hoa đã bắt đầu cắm hoặc đã hoàn thành, không thể đề xuất hủy đơn. Vui lòng liên hệ trực tiếp Điều hành.",
+      reason: "Thợ đang cắm hoa, chưa đề xuất hủy được. Vui lòng liên hệ trực tiếp Điều hành.",
     }
   }
   return { allowed: true }

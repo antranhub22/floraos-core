@@ -42,7 +42,7 @@ describe("canDecideCancellation — duyệt huỷ không chuyển tiền (PO 15/
 describe("canProposeCancellation & rào chắn trước khi cắm hoa", () => {
   it("đơn đang giao vẫn đề xuất huỷ được (cần người duyệt, PO 15/10/2026)", () => {
     expect(canProposeCancellation({ status: "PROCESSING", productionStatus: "READY", deliveryStatus: "DELIVERING" }).allowed).toBe(true)
-    expect(canProposeCancellation({ status: "PROCESSING", productionStatus: "READY", deliveryStatus: "PENDING" }).allowed).toBe(false)
+    expect(canProposeCancellation({ status: "PROCESSING", productionStatus: "READY", deliveryStatus: "PENDING" }).allowed).toBe(true)
   })
 
   it("cho phép đề xuất khi đơn WAITING (chưa cắm hoa)", () => {
@@ -50,13 +50,13 @@ describe("canProposeCancellation & rào chắn trước khi cắm hoa", () => {
     expect(canProposeCancellation({ status: "CONFIRMED" }).allowed).toBe(true)
   })
 
-  it("chặn đề xuất khi đơn đang cắm hoa (ARRANGING) hoặc đã cắm xong (READY)", () => {
+  it("chặn đề xuất khi thợ đang cắm (ARRANGING); đã cắm xong chưa giao (READY) thì được (PO 15/10/2026)", () => {
     const arranging = canProposeCancellation({ status: "CONFIRMED", productionStatus: "ARRANGING" })
     expect(arranging.allowed).toBe(false)
     expect(arranging.reason).toMatch(/cắm/i)
 
     const ready = canProposeCancellation({ status: "CONFIRMED", productionStatus: "READY" })
-    expect(ready.allowed).toBe(false)
+    expect(ready.allowed).toBe(true)
   })
 
   it("chặn đề xuất khi đơn đã giao hoàn tất hoặc đã hủy", () => {

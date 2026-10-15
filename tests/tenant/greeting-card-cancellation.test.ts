@@ -78,6 +78,14 @@ describe("đề xuất hủy / hoàn tiền Thẻ chào", () => {
     await expect(followUps.complete(a.ctx, id, "")).rejects.toMatchObject({ code: "CONFLICT" })
   })
 
+  it("hoa đã cắm xong, chưa giao: đề xuất huỷ được và Điều hành duyệt được (PO 15/10/2026)", async () => {
+    const orderId = await order(a, 0)
+    await prisma.orders.update({ where: { id: orderId }, data: { production_status: "READY" } })
+    const { id } = await repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "CANCEL_ONLY", reason: "Khách đổi ý", refundAmountVnd: 0 } })
+    await repo.decide(a.ctx, { requestId: id, approve: true, note: "" })
+    expect((await prisma.orders.findUniqueOrThrow({ where: { id: orderId } })).status).toBe("CANCELLED")
+  })
+
   it("huỷ đơn đang giao: hệ thống không tự duyệt khi quá hạn (cần người duyệt)", async () => {
     const orderId = await order(a, 0)
     await prisma.orders.update({ where: { id: orderId }, data: { delivery_status: "DELIVERING" } })
