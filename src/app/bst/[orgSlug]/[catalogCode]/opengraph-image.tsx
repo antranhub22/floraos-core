@@ -9,5 +9,5 @@ export const alt = "Bộ sưu tập mẫu hoa"
 export default async function Image({ params }: { params: Promise<{ orgSlug: string; catalogCode: string }> }) {
   const { orgSlug, catalogCode } = await params
   const data = await catalogCollageBySlug(orgSlug, catalogCode)
-  return renderCatalogCollage(data ?? { catalogName: "Bộ sưu tập mẫu hoa", shopName: null, priceLabel: null, images: [] })
+  return renderCatalogCollage(data ?? { catalogName: "Bộ sưu tập mẫu hoa", shopName: null, priceLabel: null, logo: null, productCount: 0, images: [] })
 }

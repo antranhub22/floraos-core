@@ -11,8 +11,8 @@ export default async function Image({ params }: { params: Promise<{ code: string
   const { code } = await params
   const preview = await shareLinkPreview(code.toUpperCase())
   if (!preview) {
-    return renderCatalogCollage({ catalogName: "Bộ Sưu Tập Mẫu Hoa", shopName: null, priceLabel: null, images: [] })
+    return renderCatalogCollage({ catalogName: "Bộ Sưu Tập Mẫu Hoa", shopName: null, priceLabel: null, logo: null, productCount: 0, images: [] })
   }
   const data = await catalogCollageById(preview.catalogId)
-  return renderCatalogCollage(data ?? { catalogName: preview.name, shopName: null, priceLabel: null, images: [] })
+  return renderCatalogCollage(data ?? { catalogName: preview.name, shopName: null, priceLabel: null, logo: null, productCount: 0, images: [] })
 }

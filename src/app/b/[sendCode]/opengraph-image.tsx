@@ -9,5 +9,5 @@ export const alt = "Thẻ chào mẫu hoa tươi"
 export default async function Image({ params }: { params: Promise<{ sendCode: string }> }) {
   const { sendCode } = await params
   const data = await catalogCollageBySendCode(sendCode)
-  return renderCatalogCollage(data ?? { catalogName: "Thẻ Chào Mẫu Hoa", shopName: null, priceLabel: null, images: [] })
+  return renderCatalogCollage(data ?? { catalogName: "Thẻ Chào Mẫu Hoa", shopName: null, priceLabel: null, logo: null, productCount: 0, images: [] })
 }
