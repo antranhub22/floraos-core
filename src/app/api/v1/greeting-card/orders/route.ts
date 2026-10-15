@@ -6,6 +6,7 @@ import { BrochureOrderRepository, ORDER_STATUSES } from "@/modules/greeting-card
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
 import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
 import { resolveSaleScope } from "@/modules/greeting-card/use-cases/order-scope"
+import { withOrderProductImages } from "@/modules/greeting-card/use-cases/order-product-images"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 export const GET = handle(async (request) => {
@@ -56,6 +57,6 @@ export const GET = handle(async (request) => {
     }
   })
 
-  return jsonResponse(toPage(rowsWithProof, limit))
+  return jsonResponse(toPage(await withOrderProductImages(ctx, rowsWithProof), limit))
 })
 

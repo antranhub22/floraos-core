@@ -233,7 +233,7 @@ export function CoordinatorBrochureTab() {
             deliveryTimeSlot: modal.order.delivery_window?.timeSlot,
             cardMessage: modal.order.card_message,
             productName: modal.order.greeting_sessions[0]?.product_snapshot?.name || modal.order.items[0]?.description || "Hoa tươi theo mẫu",
-            productImageUrl: modal.order.greeting_sessions[0]?.product_snapshot?.imageUrl,
+            productImageUrl: modal.order.greeting_sessions[0]?.product_snapshot?.imageUrl || modal.order.items[0]?.metadata?.imageUrl,
             flowersSummary: modal.order.greeting_sessions[0]?.product_snapshot?.flowersSummary,
             totalVnd: modal.order.total_vnd,
             paidVnd: modal.order.paid_vnd,
